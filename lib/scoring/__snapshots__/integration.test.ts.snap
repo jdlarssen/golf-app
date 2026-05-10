@@ -1,0 +1,22 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`full game scoring integration > computes correct leaderboard end-to-end 1`] = `
+[
+  {
+    "id": 2,
+    "total": 66,
+  },
+  {
+    "id": 3,
+    "total": 66,
+  },
+  {
+    "id": 1,
+    "total": 68,
+  },
+  {
+    "id": 4,
+    "total": 70,
+  },
+]
+`;
