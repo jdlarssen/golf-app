@@ -20,13 +20,43 @@ describe('rankTeams', () => {
   });
 
   it('cascades to back 6 when back 9 ties', () => {
-    // Same total, same back 9 sum, different back 6 sum
+    // Same total (66), same back 9 sum (30), different back 6 sum (18 vs 19).
+    // Holes 1-9 identical; holes 10-12 absorb the difference so back-9 stays equal
+    // while back-6 differs.
     const teams = [
-      { id: 1, holes: [...Array.from({ length: 12 }, () => 4), 5, 5, 4, 3, 3, 3] },  // total 71, back 9 = 35, back 6 = 21
-      { id: 2, holes: [...Array.from({ length: 12 }, () => 4), 3, 3, 5, 5, 5, 3] },  // total 71, back 9 = 35, back 6 = 23
+      // total 66, back 9 = 30, back 6 = 18
+      { id: 1, holes: [4, 4, 4, 4, 4, 4, 4, 4, 4,  4, 4, 4,  3, 3, 3, 3, 3, 3] },
+      // total 66, back 9 = 30, back 6 = 19
+      { id: 2, holes: [4, 4, 4, 4, 4, 4, 4, 4, 4,  3, 4, 4,  3, 3, 3, 4, 3, 3] },
     ];
     const result = rankTeams(teams);
     expect(result.map((t) => t.id)).toEqual([1, 2]);  // team 1 has lower back 6
+  });
+
+  it('cascades to back 3 when back 9 and back 6 tie', () => {
+    // Same total (72), same back 9 (36), same back 6 (24), different back 3 (9 vs 15).
+    // Holes 1-12 identical; holes 13-15 vs 16-18 split differently to keep back-6 equal.
+    const teams = [
+      // back 6 holes = [5,5,5,3,3,3] → back-3 = 9
+      { id: 1, holes: [4, 4, 4, 4, 4, 4, 4, 4, 4,  4, 4, 4,  5, 5, 5, 3, 3, 3] },
+      // back 6 holes = [3,3,3,5,5,5] → back-3 = 15
+      { id: 2, holes: [4, 4, 4, 4, 4, 4, 4, 4, 4,  4, 4, 4,  3, 3, 3, 5, 5, 5] },
+    ];
+    const result = rankTeams(teams);
+    expect(result.map((t) => t.id)).toEqual([1, 2]);  // team 1 has lower back 3
+  });
+
+  it('cascades to hole 18 when back 9 / 6 / 3 tie', () => {
+    // Same total (73), back 9 (37), back 6 (25), back 3 (13); different hole 18 (3 vs 4).
+    // Holes 1-15 identical; holes 16-18 sum to 13 both but with different hole-18 values.
+    const teams = [
+      // holes 16-18 = [5,5,3] → hole 18 = 3
+      { id: 1, holes: [4, 4, 4, 4, 4, 4, 4, 4, 4,  4, 4, 4,  4, 4, 4,  5, 5, 3] },
+      // holes 16-18 = [4,5,4] → hole 18 = 4
+      { id: 2, holes: [4, 4, 4, 4, 4, 4, 4, 4, 4,  4, 4, 4,  4, 4, 4,  4, 5, 4] },
+    ];
+    const result = rankTeams(teams);
+    expect(result.map((t) => t.id)).toEqual([1, 2]);  // team 1 has lower hole 18
   });
 
   it('marks teams as tied when all tiebreakers match', () => {

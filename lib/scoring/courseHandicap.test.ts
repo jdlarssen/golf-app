@@ -18,8 +18,10 @@ describe('calculateCourseHandicap', () => {
     expect(calculateCourseHandicap({ hcpIndex: 10, slope: 113, courseRating: 70, par: 72 })).toBe(8);
   });
 
-  it('rounds half up', () => {
-    expect(calculateCourseHandicap({ hcpIndex: 10, slope: 130, courseRating: 72, par: 72 })).toBe(12);
+  it('uses half-away-from-zero rounding (round(2.5) === 3)', () => {
+    // Raw value: 2.5 * (113/113) + (72 - 72) = 2.5 exactly.
+    // Math.round rounds .5 away from zero (3), distinguishing from banker's rounding (2).
+    expect(calculateCourseHandicap({ hcpIndex: 2.5, slope: 113, courseRating: 72, par: 72 })).toBe(3);
   });
 });
 
