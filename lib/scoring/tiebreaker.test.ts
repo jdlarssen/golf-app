@@ -71,6 +71,28 @@ describe('rankTeams', () => {
     const result = rankTeams(teams);
     expect(result[0].tiedWith).toContain(2);
     expect(result[1].tiedWith).toContain(1);
+    expect(result[0].rank).toBe(result[1].rank);  // shared rank for full tie
+  });
+
+  it('shares the same rank between fully-tied teams', () => {
+    const holes = [
+      ...Array.from({ length: 9 }, () => 4),
+      ...Array.from({ length: 9 }, () => 4),
+    ];
+    const teams = [
+      { id: 1, holes: [...holes] },
+      { id: 2, holes: [...holes] },
+      { id: 3, holes: Array.from({ length: 18 }, () => 5) },  // worse total
+    ];
+    const result = rankTeams(teams);
+    // Teams 1 and 2 are tied at rank 1; team 3 gets rank 3 (NOT 2)
+    expect(result[0].rank).toBe(1);
+    expect(result[1].rank).toBe(1);
+    expect(result[2].rank).toBe(3);
+    // tiedWith also correctly populated
+    expect(result[0].tiedWith).toEqual([result[1].id]);
+    expect(result[1].tiedWith).toEqual([result[0].id]);
+    expect(result[2].tiedWith).toEqual([]);
   });
 
   it('sets rank starting at 1', () => {

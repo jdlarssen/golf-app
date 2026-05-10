@@ -33,6 +33,17 @@ export interface HoleTeamScore {
   teamNet: number | null;
 }
 
+/**
+ * Sums team scores across holes that have a non-null teamNet.
+ *
+ * - `total` is the sum of the holes that have a score. If `missingHoles` is non-empty,
+ *   `total` is a PARTIAL sum — comparing it directly against another team's `total`
+ *   is only meaningful when both have empty `missingHoles`.
+ * - `missingHoles` lists hole numbers where teamNet was null (both players had null gross).
+ *
+ * Callers that compare team totals (e.g. a leaderboard) MUST check missingHoles
+ * is empty for both teams or treat the comparison as invalid.
+ */
 export function teamTotal(holes: HoleTeamScore[]): { total: number; missingHoles: number[] } {
   const missingHoles: number[] = [];
   let total = 0;

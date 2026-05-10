@@ -63,4 +63,14 @@ describe('teamTotal', () => {
     ];
     expect(teamTotal(holes)).toEqual({ total: 4, missingHoles: [2] });
   });
+  it('returns partial total when some holes are missing', () => {
+    const holes = [
+      { holeNumber: 1, teamNet: 4 },
+      { holeNumber: 2, teamNet: null },
+      { holeNumber: 3, teamNet: 3 },
+    ];
+    const result = teamTotal(holes);
+    expect(result.total).toBe(7);  // 4 + 3, partial — caller must check missingHoles
+    expect(result.missingHoles).toEqual([2]);
+  });
 });

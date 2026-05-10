@@ -46,11 +46,21 @@ export function rankTeams(teams: TeamForRanking[]): RankedTeam[] {
           other.hole18 === t.hole18,
       )
       .map((o) => o.id);
+    // Shared rank for ties: find the first index in withTotals whose all 5 tier
+    // values match this team's. That index + 1 is the rank.
+    const firstTiedIndex = withTotals.findIndex(
+      (other) =>
+        other.total === t.total &&
+        other.back9 === t.back9 &&
+        other.back6 === t.back6 &&
+        other.back3 === t.back3 &&
+        other.hole18 === t.hole18,
+    );
     return {
       id: t.id,
       holes: t.holes,
       total: t.total,
-      rank: i + 1,
+      rank: firstTiedIndex + 1,
       tiedWith,
     };
   });
