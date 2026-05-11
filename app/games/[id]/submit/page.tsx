@@ -14,7 +14,7 @@ type SearchParams = Promise<{
   error?: string | string[];
 }>;
 
-type GameStatus = 'draft' | 'active' | 'finished';
+type GameStatus = 'draft' | 'scheduled' | 'active' | 'finished';
 
 const ERROR_MESSAGES: Record<string, string> = {
   db: 'Klarte ikke å lagre leveringen. Prøv igjen.',

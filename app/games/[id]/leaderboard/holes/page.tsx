@@ -21,7 +21,7 @@ import {
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ mode?: string | string[] }>;
 
-type GameStatus = 'draft' | 'active' | 'finished';
+type GameStatus = 'draft' | 'scheduled' | 'active' | 'finished';
 
 type GameRow = {
   id: string;

@@ -17,16 +17,18 @@ type SearchParams = Promise<{
   error?: string | string[];
 }>;
 
-type GameStatus = 'draft' | 'active' | 'finished';
+type GameStatus = 'draft' | 'scheduled' | 'active' | 'finished';
 
 const STATUS_LABELS: Record<GameStatus, string> = {
   draft: 'Utkast',
+  scheduled: 'Planlagt',
   active: 'Pågående',
   finished: 'Avsluttet',
 };
 
 const STATUS_BADGE_CLASSES: Record<GameStatus, string> = {
   draft: 'bg-warning/10 text-warning border-warning/30',
+  scheduled: 'bg-accent/10 text-accent border-accent/30',
   active: 'bg-primary-soft text-primary border-primary/20',
   finished: 'bg-accent/[0.10] text-accent border-accent/30',
 };
@@ -434,6 +436,7 @@ export default async function GameDetailPage({
         {game.status === 'draft' && (
           <StartGameButton startAction={startAction} gameName={game.name} />
         )}
+        {/* TODO(scheduled): add a scheduled-state CTA (e.g. "Start nå" or countdown). Handled in phase E1/E2. */}
 
         {game.status === 'active' && (
           <Card>

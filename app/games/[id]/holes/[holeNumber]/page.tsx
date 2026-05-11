@@ -5,7 +5,7 @@ import { HoleClient, type ClientPlayer } from './HoleClient';
 
 type Params = Promise<{ id: string; holeNumber: string }>;
 
-type GameStatus = 'draft' | 'active' | 'finished';
+type GameStatus = 'draft' | 'scheduled' | 'active' | 'finished';
 
 type GameRow = {
   id: string;
@@ -71,6 +71,7 @@ export default async function HolePage({ params }: { params: Params }) {
 
   if (gameError || !game) notFound();
 
+  // TODO(scheduled): scheduled games should also bounce here (no scores yet). Handled in phase E1/E2.
   if (game.status === 'draft') {
     redirect('/');
   }

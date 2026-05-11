@@ -96,7 +96,7 @@ export async function adminApproveScorecard(
     .from('games')
     .select('status')
     .eq('id', gameId)
-    .single<{ status: 'draft' | 'active' | 'finished' }>();
+    .single<{ status: 'draft' | 'scheduled' | 'active' | 'finished' }>();
   if (!game) redirect(`${detailPath}?error=not_found`);
   if (game!.status !== 'active') {
     redirect(`${detailPath}?error=not_active`);
@@ -169,4 +169,4 @@ export async function endGame(gameId: string) {
   redirect(`${detailPath}?status=finished`);
 }
 
-type GameStatus = 'draft' | 'active' | 'finished';
+type GameStatus = 'draft' | 'scheduled' | 'active' | 'finished';

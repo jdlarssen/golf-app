@@ -30,7 +30,7 @@ async function loadAndAuthorize(gameId: string, playerUserId: string) {
     .from('games')
     .select('status')
     .eq('id', gameId)
-    .single<{ status: 'draft' | 'active' | 'finished' }>();
+    .single<{ status: 'draft' | 'scheduled' | 'active' | 'finished' }>();
   if (!game || game.status !== 'active') {
     redirect(`/games/${gameId}/approve?error=not_active`);
   }

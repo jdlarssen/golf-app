@@ -38,7 +38,7 @@ export type ClientPlayer = {
 export interface HoleClientProps {
   gameId: string;
   gameName: string;
-  gameStatus: 'draft' | 'active' | 'finished';
+  gameStatus: 'draft' | 'scheduled' | 'active' | 'finished';
   currentHole: number;
   par: number;
   strokeIndex: number;

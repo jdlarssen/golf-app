@@ -38,10 +38,11 @@ function formatDate(iso: string): string {
   }
 }
 
-type GameStatus = 'draft' | 'active' | 'finished';
+type GameStatus = 'draft' | 'scheduled' | 'active' | 'finished';
 
 const STATUS_LABELS: Record<GameStatus, string> = {
   draft: 'Utkast',
+  scheduled: 'Planlagt',
   active: 'Pågående',
   finished: 'Avsluttet',
 };
@@ -49,6 +50,8 @@ const STATUS_LABELS: Record<GameStatus, string> = {
 const STATUS_BADGE_CLASSES: Record<GameStatus, string> = {
   draft:
     'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700',
+  scheduled:
+    'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-900',
   active:
     'bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-300 border border-green-200 dark:border-green-900',
   finished:

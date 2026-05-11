@@ -9,7 +9,7 @@ import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 
 type Params = Promise<{ id: string }>;
 
-type GameStatus = 'draft' | 'active' | 'finished';
+type GameStatus = 'draft' | 'scheduled' | 'active' | 'finished';
 
 type GameRow = {
   id: string;
@@ -51,6 +51,7 @@ export default async function ScorecardPage({ params }: { params: Params }) {
     .single<GameRow>();
   if (gameError || !game) notFound();
 
+  // TODO(scheduled): scheduled games should also bounce here (no scores yet). Handled in phase E1/E2.
   if (game.status === 'draft') {
     redirect('/');
   }

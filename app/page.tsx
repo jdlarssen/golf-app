@@ -59,7 +59,7 @@ export default async function Home({
     games: {
       id: string;
       name: string;
-      status: 'draft' | 'active' | 'finished';
+      status: 'draft' | 'scheduled' | 'active' | 'finished';
       ended_at: string | null;
       courses: { name: string } | null;
     } | null;
@@ -70,6 +70,7 @@ export default async function Home({
       'game_id, team_number, flight_number, games!inner(id, name, status, ended_at, courses(name))',
     )
     .eq('user_id', user.id)
+    // TODO(scheduled): decide whether scheduled games should appear here (likely yes, in a separate "Planlagt"-section). Handled in phase E1/E2.
     .in('games.status', ['active', 'draft'])
     .returns<GameRow[]>();
   const activeGames = (rawActive ?? [])
@@ -104,6 +105,7 @@ export default async function Home({
 
   const STATUS_LABELS = {
     draft: 'Utkast',
+    scheduled: 'Planlagt',
     active: 'Pågående',
     finished: 'Avsluttet',
   } as const;
@@ -279,15 +281,17 @@ function StatusPill({
   status,
   label,
 }: {
-  status: 'draft' | 'active' | 'finished';
+  status: 'draft' | 'scheduled' | 'active' | 'finished';
   label: string;
 }) {
   const classes =
     status === 'active'
       ? 'bg-primary-soft text-primary border-primary/20'
-      : status === 'draft'
-        ? 'bg-warning/10 text-warning border-warning/30'
-        : 'bg-border/40 text-muted border-border';
+      : status === 'scheduled'
+        ? 'bg-accent/10 text-accent border-accent/30'
+        : status === 'draft'
+          ? 'bg-warning/10 text-warning border-warning/30'
+          : 'bg-border/40 text-muted border-border';
   return (
     <span
       className={`inline-flex items-center text-[10px] font-medium uppercase tracking-widest px-2 py-0.5 rounded-full border ${classes}`}

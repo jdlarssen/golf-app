@@ -14,7 +14,7 @@ type SearchParams = Promise<{
   error?: string | string[];
 }>;
 
-type GameStatus = 'draft' | 'active' | 'finished';
+type GameStatus = 'draft' | 'scheduled' | 'active' | 'finished';
 
 const STATUS_BANNERS: Record<string, string> = {
   approved: '✓ Scorekort godkjent.',
