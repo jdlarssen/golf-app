@@ -14,7 +14,7 @@ Supabase Auth bruker konfigurerbare HTML-maler for alle auth-mailer. Her er Tør
 
 | Mal | Brukes av Tørny? | Beskrivelse |
 |---|---|---|
-| **Magic Link** | ✅ Ja, primær | Sendes ved alle logins og admin-invitasjoner (via `signInWithOtp`) |
+| **Magic Link** | ✅ Ja, primær | Sendes ved alle logins, admin-invitasjoner, og venneinvitasjoner (conditional på `.Data.inviter_name`) |
 | **Invite user** | ⚠️ Reserve | Vi bruker `signInWithOtp` i stedet, men hvis vi senere bytter til `auth.admin.inviteUserByEmail()` trigges denne |
 | **Change Email Address** | ⚠️ Hvis brukt | Trigges hvis bruker bytter mail via Auth (ikke i UI per nå, men kan skje via dashboard) |
 | **Confirm Signup** | ❌ Ikke i bruk | Vi bruker ikke `signUp` flow. Branded likevel for konsistens. |
@@ -26,7 +26,7 @@ Alle malene under bruker samme Tørny-stil (forest-and-champagne) for visuell ko
 
 ## 1. Magic Link — primær login
 
-**Subject:** `Logg inn på Tørny`
+**Subject:** `{{ if .Data.inviter_name }}{{ .Data.inviter_name }} har invitert deg til Tørny{{ else }}Logg inn på Tørny{{ end }}`
 
 **Body:**
 
@@ -58,9 +58,11 @@ Alle malene under bruker samme Tørny-stil (forest-and-champagne) for visuell ko
           </tr>
           <tr>
             <td style="padding: 24px 32px 8px 32px;">
-              <h1 style="font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: 500; color: #1A2E1F; margin: 0 0 12px 0; line-height: 1.3;">Klikk for å logge inn</h1>
+              <h1 style="font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: 500; color: #1A2E1F; margin: 0 0 12px 0; line-height: 1.3;">
+                {{ if .Data.inviter_name }}{{ .Data.inviter_name }} vil ha deg med på Tørny{{ else }}Klikk for å logge inn{{ end }}
+              </h1>
               <p style="font-size: 15px; color: #1A2E1F; margin: 0 0 24px 0; line-height: 1.5;">
-                Hei! Klikk knappen under for å åpne Tørny. Lenken er gyldig i 1 time.
+                {{ if .Data.inviter_name }}{{ .Data.inviter_name }} har invitert deg til Tørny — fyr opp golfturneringen på minutter. Klikk knappen under for å lage din konto. Lenken er gyldig i 1 time.{{ else }}Hei! Klikk knappen under for å åpne Tørny. Lenken er gyldig i 1 time.{{ end }}
               </p>
             </td>
           </tr>
@@ -70,7 +72,7 @@ Alle malene under bruker samme Tørny-stil (forest-and-champagne) for visuell ko
                 <tr>
                   <td align="center">
                     <a href="{{ .ConfirmationURL }}" style="display: inline-block; background-color: #1B4332; color: #FFFFFF; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-size: 16px; font-weight: 500; letter-spacing: -0.01em;">
-                      Logg inn på Tørny
+                      {{ if .Data.inviter_name }}Lag konto{{ else }}Logg inn på Tørny{{ end }}
                     </a>
                   </td>
                 </tr>
