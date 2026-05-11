@@ -41,6 +41,8 @@ type FlightPlayerRow = {
 type ScoreRow = {
   user_id: string;
   strokes: number | null;
+  client_updated_at: string | null;
+  updated_at: string | null;
 };
 
 export default async function HolePage({ params }: { params: Params }) {
@@ -100,17 +102,17 @@ export default async function HolePage({ params }: { params: Params }) {
   const playerIds = players.map((p) => p.user_id);
 
   // Existing scores at this hole for the flight.
-  const scoresByUser: Record<string, number | null> = {};
+  const scoresByUser: Record<string, ScoreRow> = {};
   if (playerIds.length > 0) {
     const { data: scores, error: scoresError } = await supabase
       .from('scores')
-      .select('user_id, strokes')
+      .select('user_id, strokes, client_updated_at, updated_at')
       .eq('game_id', id)
       .eq('hole_number', holeNumber)
       .in('user_id', playerIds)
       .returns<ScoreRow[]>();
     if (scoresError) throw scoresError;
-    for (const s of scores ?? []) scoresByUser[s.user_id] = s.strokes;
+    for (const s of scores ?? []) scoresByUser[s.user_id] = s;
   }
 
   function displayName(p: FlightPlayerRow): {
@@ -153,7 +155,8 @@ export default async function HolePage({ params }: { params: Params }) {
               const isMe = p.user_id === user.id;
               const ch = p.course_handicap ?? 0;
               const extra = strokesForHole(ch, hole.stroke_index);
-              const initial = scoresByUser[p.user_id] ?? null;
+              const scoreRow = scoresByUser[p.user_id];
+              const initial = scoreRow?.strokes ?? null;
               const { name, nickname } = displayName(p);
               return (
                 <li
@@ -185,6 +188,8 @@ export default async function HolePage({ params }: { params: Params }) {
                     userId={p.user_id}
                     holeNumber={holeNumber}
                     initialStrokes={initial}
+                    initialClientUpdatedAt={scoreRow?.client_updated_at ?? null}
+                    initialServerUpdatedAt={scoreRow?.updated_at ?? null}
                     myUserId={user.id}
                     disabled={disabled}
                   />

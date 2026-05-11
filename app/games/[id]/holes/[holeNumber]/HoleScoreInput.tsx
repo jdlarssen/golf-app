@@ -1,89 +1,172 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { getBrowserClient } from '@/lib/supabase/client';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { localDb, scoreKey } from '@/lib/sync/db';
+import { writeScore } from '@/lib/sync/writeScore';
+import { startSyncListener, drainQueue } from '@/lib/sync/syncWorker';
 
-type Status = 'idle' | 'saving' | 'saved' | 'error';
+type Status = 'unsynced' | 'synced' | 'idle' | 'error';
 
 export function HoleScoreInput({
   gameId,
   userId,
   holeNumber,
   initialStrokes,
+  initialClientUpdatedAt,
+  initialServerUpdatedAt,
   myUserId,
   disabled,
 }: {
   gameId: string;
-  userId: string; // The player whose score this is
+  userId: string;
   holeNumber: number;
   initialStrokes: number | null;
-  myUserId: string; // Who's entering (auth user)
+  initialClientUpdatedAt: string | null; // from DB
+  initialServerUpdatedAt: string | null; // from DB
+  myUserId: string;
   disabled?: boolean;
 }) {
-  const [value, setValue] = useState<string>(
-    initialStrokes != null ? String(initialStrokes) : '',
-  );
-  const [status, setStatus] = useState<Status>('idle');
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const clearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const id = scoreKey(gameId, userId, holeNumber);
 
+  // Local subscription to Dexie row. If there's no Dexie row yet, fall back to server-provided initial values.
+  const localRow = useLiveQuery(() => localDb.scores.get(id), [id]);
+  const queueItem = useLiveQuery(() => localDb.syncQueue.get(id), [id]);
+
+  // On mount, seed Dexie with the server's value if Dexie has nothing or older.
   useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const existing = await localDb.scores.get(id);
+      const seedClientUpdatedAt =
+        initialClientUpdatedAt ?? '1970-01-01T00:00:00.000Z';
+      if (!existing || existing.clientUpdatedAt < seedClientUpdatedAt) {
+        if (cancelled) return;
+        await localDb.scores.put({
+          id,
+          gameId,
+          userId,
+          holeNumber,
+          strokes: initialStrokes,
+          enteredBy: '',
+          clientUpdatedAt: seedClientUpdatedAt,
+          serverUpdatedAt: initialServerUpdatedAt,
+        });
+      }
+    })();
     return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      if (clearRef.current) clearTimeout(clearRef.current);
+      cancelled = true;
     };
+  }, [
+    id,
+    gameId,
+    userId,
+    holeNumber,
+    initialStrokes,
+    initialClientUpdatedAt,
+    initialServerUpdatedAt,
+  ]);
+
+  // Boot the sync listener once.
+  useEffect(() => {
+    startSyncListener();
   }, []);
+
+  // Derive displayed string from the local row.
+  const displayed: string =
+    localRow?.strokes != null
+      ? String(localRow.strokes)
+      : localRow
+        ? ''
+        : initialStrokes != null
+          ? String(initialStrokes)
+          : '';
+
+  const [value, setValue] = useState<string>(displayed);
+  // Sync the controlled value when local source updates externally (e.g. realtime in Phase 9).
+  useEffect(() => {
+    setValue(displayed);
+  }, [displayed]);
+
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    },
+    [],
+  );
 
   function onChange(e: React.ChangeEvent<HTMLInputElement>) {
     const next = e.target.value;
     setValue(next);
-    setStatus('idle');
-
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (clearRef.current) {
-      clearTimeout(clearRef.current);
-      clearRef.current = null;
-    }
-    debounceRef.current = setTimeout(() => save(next), 500);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => save(next), 500);
   }
 
   async function save(rawValue: string) {
     const trimmed = rawValue.trim();
-    const strokes = trimmed === '' ? null : Number(trimmed);
-    if (
-      trimmed !== '' &&
-      (!Number.isInteger(strokes) || strokes! < 1 || strokes! > 20)
-    ) {
-      setStatus('error');
+    if (trimmed === '') {
+      // Empty input: treat as null (clears the hole)
+      await writeScore({
+        gameId,
+        userId,
+        holeNumber,
+        strokes: null,
+        enteredBy: myUserId,
+      });
+      void drainQueue();
       return;
     }
-    setStatus('saving');
-    const supabase = getBrowserClient();
-    const { error } = await supabase.from('scores').upsert(
-      {
-        game_id: gameId,
-        user_id: userId,
-        hole_number: holeNumber,
-        strokes,
-        entered_by: myUserId,
-        client_updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'game_id,user_id,hole_number' },
-    );
-    setStatus(error ? 'error' : 'saved');
-    if (!error) {
-      // Drop status indicator after a couple seconds.
-      clearRef.current = setTimeout(() => setStatus('idle'), 2000);
+    const n = Number(trimmed);
+    if (!Number.isInteger(n) || n < 1 || n > 20) {
+      // Invalid — don't write
+      return;
     }
+    await writeScore({
+      gameId,
+      userId,
+      holeNumber,
+      strokes: n,
+      enteredBy: myUserId,
+    });
+    void drainQueue();
   }
 
-  const dotColor =
-    status === 'saving'
-      ? '#f59e0b'
-      : status === 'saved'
-        ? '#16a34a'
-        : status === 'error'
-          ? '#dc2626'
+  // Status indicator state:
+  // - queueItem present → unsynced (yellow dot)
+  // - no queue, localRow has serverUpdatedAt → synced (green dot, transient)
+  // - else → idle (no dot)
+  let status: Status;
+  if (queueItem) {
+    status = 'unsynced';
+  } else if (
+    localRow?.serverUpdatedAt &&
+    localRow.clientUpdatedAt <= localRow.serverUpdatedAt
+  ) {
+    status = 'synced';
+  } else {
+    status = 'idle';
+  }
+
+  // Auto-fade 'synced' after a few seconds for clean UX.
+  const [showSyncedDot, setShowSyncedDot] = useState(false);
+  useEffect(() => {
+    if (status === 'synced') {
+      setShowSyncedDot(true);
+      const t = setTimeout(() => setShowSyncedDot(false), 2000);
+      return () => clearTimeout(t);
+    } else {
+      setShowSyncedDot(false);
+    }
+  }, [status]);
+
+  const dotColor: string =
+    status === 'unsynced'
+      ? '#f59e0b' // yellow
+      : (status as Status) === 'error'
+        ? '#dc2626' // red
+        : status === 'synced' && showSyncedDot
+          ? '#16a34a' // green
           : 'transparent';
 
   return (
