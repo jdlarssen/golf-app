@@ -15,12 +15,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Golf-app",
-  description: "Best ball netto-app for kompiser",
-  applicationName: "Golf-app",
+  title: "Tørny",
+  description: "Turneringsapp for golf — for kompiser og klubber",
+  applicationName: "Tørny",
   appleWebApp: {
     capable: true,
-    title: "Golf-app",
+    title: "Tørny",
     statusBarStyle: "default",
   },
   formatDetection: {
