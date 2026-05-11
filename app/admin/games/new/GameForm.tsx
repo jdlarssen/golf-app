@@ -17,17 +17,53 @@ export type PlayerOption = {
   hcp_index: number;
 };
 
+const TEAM_NUMBERS = [1, 2, 3, 4] as const;
+type TeamNumber = (typeof TEAM_NUMBERS)[number];
+
+export type InitialValues = {
+  name?: string;
+  course_id?: string;
+  tee_box_id?: string;
+  scheduled_tee_off_at?: string;
+  hcp_allowance_pct?: string;
+  require_peer_approval?: boolean;
+  players?: Array<{
+    user_id: string;
+    team_number: TeamNumber;
+    flight_number: number;
+  }>;
+};
+
 type Props = {
   courses: CourseOption[];
   players: PlayerOption[];
   createDraftAction: (formData: FormData) => void | Promise<void>;
   createAndStartAction: (formData: FormData) => void | Promise<void>;
+  initialValues?: InitialValues;
 };
 
-const TEAM_NUMBERS = [1, 2, 3, 4] as const;
-type TeamNumber = (typeof TEAM_NUMBERS)[number];
-
 const FLIGHT_NUMBERS = [1, 2, 3, 4] as const;
+
+// Derive team/flight maps from the optional initialValues.players array so the
+// edit page (D4) can pre-fill these without re-implementing the math.
+function deriveAssignmentsFromInitial(initial: InitialValues | undefined) {
+  if (!initial?.players) {
+    return {
+      selectedPlayerIds: [] as string[],
+      teamByPlayer: {} as Record<string, TeamNumber>,
+      flightByPlayer: {} as Record<string, number>,
+    };
+  }
+  const selectedPlayerIds: string[] = [];
+  const teamByPlayer: Record<string, TeamNumber> = {};
+  const flightByPlayer: Record<string, number> = {};
+  for (const row of initial.players) {
+    selectedPlayerIds.push(row.user_id);
+    teamByPlayer[row.user_id] = row.team_number;
+    flightByPlayer[row.user_id] = row.flight_number;
+  }
+  return { selectedPlayerIds, teamByPlayer, flightByPlayer };
+}
 
 // Fisher–Yates shuffle backed by crypto.getRandomValues for fair, unbiased
 // team draws. Math.random would technically work but is not guaranteed
@@ -49,20 +85,48 @@ export function GameForm({
   players,
   createDraftAction,
   createAndStartAction,
+  initialValues,
 }: Props) {
-  const [courseId, setCourseId] = useState<string>('');
-  const [teeBoxId, setTeeBoxId] = useState<string>('');
-  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
+  // `name` is controlled now (was uncontrolled) so initialValues can pre-fill
+  // it on the edit page (D4). Default to '' when not provided.
+  const [name, setName] = useState<string>(initialValues?.name ?? '');
+  const [courseId, setCourseId] = useState<string>(
+    initialValues?.course_id ?? '',
+  );
+  const [teeBoxId, setTeeBoxId] = useState<string>(
+    initialValues?.tee_box_id ?? '',
+  );
+  // Required for "Lagre og publiser" (D2 wires this into button disabled
+  // state). Drafts may omit it. Empty string === "not set".
+  const [scheduledTeeOffAt, setScheduledTeeOffAt] = useState<string>(
+    initialValues?.scheduled_tee_off_at ?? '',
+  );
+  const initialAssignments = useMemo(
+    () => deriveAssignmentsFromInitial(initialValues),
+    [initialValues],
+  );
+  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>(
+    initialAssignments.selectedPlayerIds,
+  );
   // Team assignment is keyed by player id so it survives changes to the player
   // selection order. A missing entry means "not assigned to any team yet".
   const [teamByPlayer, setTeamByPlayer] = useState<Record<string, TeamNumber>>(
-    {},
+    initialAssignments.teamByPlayer,
   );
   const [flightByPlayer, setFlightByPlayer] = useState<Record<string, number>>(
-    {},
+    initialAssignments.flightByPlayer,
   );
-  const [hcpAllowance, setHcpAllowance] = useState<string>('100');
-  const [requirePeerApproval, setRequirePeerApproval] = useState(false);
+  const [hcpAllowance, setHcpAllowance] = useState<string>(
+    initialValues?.hcp_allowance_pct ?? '100',
+  );
+  const [requirePeerApproval, setRequirePeerApproval] = useState(
+    initialValues?.require_peer_approval ?? false,
+  );
+
+  // Flag exposed for D2 to drive the "Lagre og publiser" button's disabled
+  // state. Drafts can be saved without a tee-off; publishing cannot.
+  const hasTeeOff = scheduledTeeOffAt !== '';
+  void hasTeeOff;
 
   const selectedCourse = useMemo(
     () => courses.find((c) => c.id === courseId) ?? null,
@@ -266,6 +330,8 @@ export function GameForm({
           type="text"
           label="Spillnavn"
           placeholder="f.eks. Stiklestad 17. mai"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
           required
         />
 
@@ -322,6 +388,16 @@ export function GameForm({
             ))}
           </select>
         </div>
+
+        <Input
+          id="scheduled_tee_off_at"
+          name="scheduled_tee_off_at"
+          type="datetime-local"
+          label="Tee-off"
+          value={scheduledTeeOffAt}
+          onChange={(e) => setScheduledTeeOffAt(e.target.value)}
+          hint="Påkrevd ved publisering. Valgfritt for utkast."
+        />
       </section>
 
       {/* Section 2: Players */}
