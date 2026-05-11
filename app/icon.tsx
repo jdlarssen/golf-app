@@ -21,7 +21,7 @@ export default function Icon() {
           letterSpacing: '-0.05em',
         }}
       >
-        G
+        T
       </div>
     ),
     { ...size },

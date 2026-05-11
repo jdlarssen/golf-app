@@ -68,7 +68,7 @@ export default async function InvitationsPage({
     <AppShell>
       <PageHeader
         title="Invitasjoner"
-        subtitle="Inviter spillere til golf-app"
+        subtitle="Inviter spillere til Tørny"
         action={
           <Link
             href="/"

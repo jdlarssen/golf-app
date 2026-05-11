@@ -3,9 +3,9 @@ import type { MetadataRoute } from 'next';
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: '/',
-    name: 'Golf-app',
-    short_name: 'Golf-app',
-    description: 'Best ball netto-app for kompiser',
+    name: 'Tørny',
+    short_name: 'Tørny',
+    description: 'Tørny — turneringsapp for golf',
     start_url: '/',
     display: 'standalone',
     background_color: '#fafafa',

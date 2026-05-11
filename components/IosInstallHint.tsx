@@ -43,16 +43,16 @@ export function IosInstallHint() {
   return (
     <div
       role="dialog"
-      aria-label="Installer Golf-app"
+      aria-label="Installer Tørny"
       className="fixed inset-x-3 bottom-3 z-50 rounded-xl bg-zinc-900 text-zinc-100 px-4 py-3 shadow-lg text-sm"
     >
       <div className="flex items-start gap-3">
         <p className="flex-1 leading-snug">
-          For best opplevelse: trykk på{' '}
+          For å installere Tørny: trykk på{' '}
           <span aria-label="del-knappen" role="img">
             ⎙
           </span>{' '}
-          og velg «Legg til på hjemskjerm».
+          og velg «Legg til på Hjem-skjerm».
         </p>
         <button
           type="button"
