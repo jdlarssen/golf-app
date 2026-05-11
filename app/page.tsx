@@ -1,7 +1,23 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
+import { AppShell } from '@/components/ui/AppShell';
+import { Card } from '@/components/ui/Card';
+import { Banner } from '@/components/ui/Banner';
+import { PageHeader } from '@/components/ui/PageHeader';
 
-export default async function Home() {
+type SearchParams = Promise<{ profile?: string | string[] }>;
+
+function first(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) return value[0];
+  return value;
+}
+
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
   const supabase = await getServerClient();
   const {
     data: { user },
@@ -29,21 +45,60 @@ export default async function Home() {
     throw profileError;
   }
 
-  return (
-    <main className="min-h-screen p-6 max-w-md mx-auto">
-      <h1 className="text-2xl font-semibold mb-2">
-        Hei, {profile?.name ?? 'spiller'} 👋
-      </h1>
-      {profile?.is_admin && (
-        <p className="text-sm text-gray-600">Du er admin.</p>
-      )}
-      <p className="mt-6 text-gray-500">Mer kommer her snart.</p>
+  const params = await searchParams;
+  const profileUpdated = first(params.profile) === 'updated';
 
-      <form action="/logout" method="post" className="mt-12">
-        <button type="submit" className="text-sm text-red-600 underline">
-          Logg ut
-        </button>
-      </form>
-    </main>
+  return (
+    <AppShell>
+      <PageHeader title={`Hei, ${profile?.name ?? 'spiller'} 👋`} />
+
+      {profileUpdated && (
+        <div className="mb-4">
+          <Banner tone="success">✓ Profilen din er oppdatert.</Banner>
+        </div>
+      )}
+
+      <nav className="space-y-3">
+        <Link href="/profile" className="block">
+          <Card className="min-h-[44px] flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+            <span className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+              Min profil
+            </span>
+            <span aria-hidden className="text-zinc-400">
+              →
+            </span>
+          </Card>
+        </Link>
+
+        {profile?.is_admin && (
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 mb-2 mt-4">
+              Admin
+            </p>
+            <Link href="/admin/invitations" className="block">
+              <Card className="min-h-[44px] flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+                <span className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+                  Invitasjoner
+                </span>
+                <span aria-hidden className="text-zinc-400">
+                  →
+                </span>
+              </Card>
+            </Link>
+          </div>
+        )}
+
+        <form action="/logout" method="post" className="pt-4">
+          <button
+            type="submit"
+            className="w-full min-h-[44px] text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg px-4 py-2.5 transition-colors"
+          >
+            Logg ut
+          </button>
+        </form>
+      </nav>
+
+      <p className="mt-8 text-sm text-zinc-500">Mer kommer her snart.</p>
+    </AppShell>
   );
 }

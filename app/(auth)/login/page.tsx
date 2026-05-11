@@ -1,4 +1,9 @@
 import { sendMagicLink } from './actions';
+import { AppShell } from '@/components/ui/AppShell';
+import { Card } from '@/components/ui/Card';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
+import { Banner } from '@/components/ui/Banner';
 
 type SearchParams = Promise<{
   error?: string | string[];
@@ -33,58 +38,50 @@ export default async function LoginPage({
   const showSuccess = status === 'sent';
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4">
-      <div className="max-w-sm mx-auto mt-16 p-6 bg-white rounded-lg shadow">
-        <h1 className="text-2xl font-semibold mb-6 text-center">Logg inn</h1>
+    <AppShell>
+      <div className="mt-8">
+        <Card>
+          <h1 className="text-2xl font-semibold mb-6 text-center text-zinc-900 dark:text-zinc-100">
+            Logg inn
+          </h1>
 
-        {showSuccess && (
-          <div
-            role="status"
-            className="bg-green-50 border border-green-200 text-green-800 p-3 rounded mb-4 text-sm"
-          >
-            ✓ Sjekk e-posten din. Klikk lenken vi sendte til {sentEmail} for å
-            logge inn.
-          </div>
-        )}
+          {showSuccess && (
+            <div role="status" className="mb-4">
+              <Banner tone="success">
+                ✓ Sjekk e-posten din. Klikk lenken vi sendte til {sentEmail} for
+                å logge inn.
+              </Banner>
+            </div>
+          )}
 
-        {errorMessage && (
-          <div
-            role="alert"
-            className="bg-red-50 border border-red-200 text-red-700 p-3 rounded mb-4 text-sm"
-          >
-            {errorMessage}
-          </div>
-        )}
+          {errorMessage && (
+            <div role="alert" className="mb-4">
+              <Banner tone="error">{errorMessage}</Banner>
+            </div>
+          )}
 
-        <form action={sendMagicLink} className="space-y-4">
-          <input type="hidden" name="next" value={next} />
+          <form action={sendMagicLink} className="space-y-4">
+            <input type="hidden" name="next" value={next} />
 
-          <div>
-            <label htmlFor="email" className="text-sm font-medium text-gray-700">
-              E-post
-            </label>
-            <input
+            <Input
               id="email"
               name="email"
               type="email"
-              required
+              label="E-post"
               autoComplete="email"
-              className="w-full border rounded px-3 py-2 mt-1"
+              required
             />
-          </div>
 
-          <button
-            type="submit"
-            className="w-full bg-green-600 text-white py-2 rounded font-medium mt-4 hover:bg-green-700 transition-colors"
-          >
-            Send meg lenke
-          </button>
-        </form>
+            <Button type="submit" className="w-full mt-2">
+              Send meg lenke
+            </Button>
+          </form>
 
-        <p className="text-xs text-gray-500 mt-6 text-center">
-          Vi sender deg en lenke på mail. Klikk den for å logge inn.
-        </p>
+          <p className="text-xs text-zinc-500 mt-6 text-center">
+            Vi sender deg en lenke på mail. Klikk den for å logge inn.
+          </p>
+        </Card>
       </div>
-    </main>
+    </AppShell>
   );
 }
