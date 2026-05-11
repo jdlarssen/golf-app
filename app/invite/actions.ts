@@ -56,17 +56,18 @@ export async function sendFriendInvite(formData: FormData) {
 
   // Block invites to addresses that already have a Tørny account.
   // Prevents user_metadata.inviter_name pollution and confusing
-  // "X has invited you" mails to existing users.
-  const { data: existing, error: existingError } = await supabase
-    .from('users')
-    .select('id')
-    .eq('email', email)
-    .maybeSingle();
+  // "X has invited you" mails to existing users. The SECURITY DEFINER
+  // RPC bypasses RLS so we get a truthful answer regardless of whether
+  // the inviter shares a game with the invitee.
+  const { data: isRegistered, error: existingError } = await supabase.rpc(
+    'email_is_registered',
+    { p_email: email },
+  );
 
   if (existingError) {
     redirect('/invite?error=unknown');
   }
-  if (existing) {
+  if (isRegistered) {
     redirect('/invite?error=already_user');
   }
 
