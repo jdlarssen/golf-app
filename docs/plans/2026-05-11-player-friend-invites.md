@@ -899,3 +899,35 @@ Same as the design doc's verification section — copied here for executor conve
 - `getServerClient()` already swallows cookie-write errors in read-only contexts (Server Components); Route Handlers and Server Actions write cookies fine.
 - The `invitations` table's `token` column is NOT NULL UNIQUE, hence the `randomUUID()` per row even though the real auth token is owned by Supabase Auth. Same pattern as admin invite.
 - If you encounter a bug during execution, do NOT quick-fix — invoke `superpowers:systematic-debugging` first per project convention.
+
+---
+
+## Post-implementation notes
+
+Two deviations from the original task code shipped as separate atomic fix commits caught by code review during execution. Future replays of this plan should incorporate them inline:
+
+### Deviation 1: `getQuotaState` filters by `game_id IS NULL`
+
+**Why:** Task 3 originally counted ALL invitations attributed to the inviter. For admin users (whose existing admin SELECT policy returns every row regardless of `game_id`), this would inflate the friend-invite quota with admin's game-scoped invites. RLS hides game-scoped rows from non-admin selectors so non-admin players were unaffected, but explicit filtering is correct and self-documenting.
+
+**Fix (commit `4da1b0e`):** Added `.is('game_id', null)` between `.eq('invited_by', userId)` and `.gte('created_at', windowStart)` in the PostgREST chain. Tests extended: boundary cases at `count = limit - 1` (allowed) and `count > limit` (still exhausted), plus a spy assertion confirming the filter is actually applied.
+
+### Deviation 2: `already_user` check uses a SECURITY DEFINER RPC
+
+**Why:** Task 4 originally did `select id from users where email = $email`. The `users` RLS policy only returns rows visible to the caller (self, admin, or shared-game peers). A non-admin player inviting a friend who already has Tørny but with whom they share no games would see zero rows and the guard would fail open — mail goes out, invitations row inserted, quota slot burned. Exactly the friend-invite case.
+
+**Fix (commit `4294c71`):** New migration `0009_email_is_registered_rpc.sql` defines `public.email_is_registered(p_email text) returns boolean` as `security definer stable` with hardened `search_path` and `revoke all from public + grant execute to authenticated`. Server action calls `supabase.rpc('email_is_registered', { p_email: email })` instead of the SELECT. Returns only a boolean — no PII leak.
+
+### Deviation 3: Keyboard-focus ring on /profile invite Card
+
+**Why:** Task 6 wrapped the Card in `<Link>` but didn't add `focus-visible:ring`, breaking keyboard discoverability.
+
+**Fix (commit `2cefb10`):** Added `block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2` to the Link className. Matches the pattern in `components/ui/Button.tsx`.
+
+### Manual deployment now requires TWO migrations
+
+Update Step A of the deployment guidance:
+- `supabase/migrations/0008_player_friend_invites_rls.sql` — RLS policies (run first)
+- `supabase/migrations/0009_email_is_registered_rpc.sql` — SECURITY DEFINER RPC (run second)
+
+Both must be applied before `/invite` will work in production.
