@@ -49,17 +49,34 @@ export default async function Home({
   const profileUpdated = first(params.profile) === 'updated';
 
   // Games the user participates in that are draft or active.
-  type ActiveGameRow = {
+  type GameRow = {
     game_id: string;
-    games: { id: string; name: string; status: 'draft' | 'active' | 'finished' } | null;
+    games: {
+      id: string;
+      name: string;
+      status: 'draft' | 'active' | 'finished';
+      ended_at: string | null;
+    } | null;
   };
-  const { data: rawGames } = await supabase
+  const { data: rawActive } = await supabase
     .from('game_players')
-    .select('game_id, games!inner(id, name, status)')
+    .select('game_id, games!inner(id, name, status, ended_at)')
     .eq('user_id', user.id)
     .in('games.status', ['active', 'draft'])
-    .returns<ActiveGameRow[]>();
-  const activeGames = (rawGames ?? [])
+    .returns<GameRow[]>();
+  const activeGames = (rawActive ?? [])
+    .map((row) => row.games)
+    .filter((g): g is NonNullable<typeof g> => g != null);
+
+  // Finished games the user participated in, newest first.
+  const { data: rawFinished } = await supabase
+    .from('game_players')
+    .select('game_id, games!inner(id, name, status, ended_at)')
+    .eq('user_id', user.id)
+    .eq('games.status', 'finished')
+    .order('ended_at', { foreignTable: 'games', ascending: false })
+    .returns<GameRow[]>();
+  const finishedGames = (rawFinished ?? [])
     .map((row) => row.games)
     .filter((g): g is NonNullable<typeof g> => g != null);
 
@@ -94,6 +111,35 @@ export default async function Home({
                     </span>
                     <span className="block text-xs text-zinc-500">
                       {STATUS_LABELS[g.status]}
+                    </span>
+                  </span>
+                  <span aria-hidden className="text-zinc-400 ml-3">
+                    →
+                  </span>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {finishedGames.length > 0 && (
+          <div className="space-y-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 mb-2 mt-4">
+              Avsluttede spill
+            </p>
+            {finishedGames.map((g) => (
+              <Link
+                key={g.id}
+                href={`/games/${g.id}/leaderboard`}
+                className="block"
+              >
+                <Card className="min-h-[44px] flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-base font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                      {g.name}
+                    </span>
+                    <span className="block text-xs text-zinc-500">
+                      🏆 Leaderboard
                     </span>
                   </span>
                   <span aria-hidden className="text-zinc-400 ml-3">
