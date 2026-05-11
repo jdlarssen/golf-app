@@ -5,7 +5,7 @@ import {
   scoreTone,
   deltaLabel,
   type ScoreTone,
-} from '../../lib/scoring/scoreTone';
+} from '@/lib/scoring/scoreTone';
 
 export interface ScoreCardProps {
   playerId: string;
