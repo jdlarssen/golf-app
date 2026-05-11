@@ -176,20 +176,20 @@ export default async function Home({
 
       {isEmptyState ? (
         <footer className="mt-14 pt-6 border-t border-border/60">
-          <ul className="flex flex-col gap-3 items-center">
+          <ul className="flex flex-col gap-1 items-center">
             <li>
               <Link
                 href="/profile"
-                className="text-sm text-muted hover:text-text transition-colors"
+                className="inline-flex items-center min-h-[44px] px-3 text-sm text-muted hover:text-text transition-colors"
               >
                 Min profil
               </Link>
             </li>
             {profile?.is_admin && (
-              <li className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm text-muted">
+              <li className="flex flex-wrap items-center justify-center text-sm text-muted">
                 <Link
                   href="/admin/courses"
-                  className="hover:text-text transition-colors"
+                  className="inline-flex items-center min-h-[44px] px-3 hover:text-text transition-colors"
                 >
                   Baner
                 </Link>
@@ -198,7 +198,7 @@ export default async function Home({
                 </span>
                 <Link
                   href="/admin/invitations"
-                  className="hover:text-text transition-colors"
+                  className="inline-flex items-center min-h-[44px] px-3 hover:text-text transition-colors"
                 >
                   Invitasjoner
                 </Link>
@@ -207,7 +207,7 @@ export default async function Home({
                 </span>
                 <Link
                   href="/admin/games"
-                  className="hover:text-text transition-colors"
+                  className="inline-flex items-center min-h-[44px] px-3 hover:text-text transition-colors"
                 >
                   Spill
                 </Link>
@@ -217,7 +217,7 @@ export default async function Home({
               <form action="/logout" method="post">
                 <button
                   type="submit"
-                  className="text-sm text-muted hover:text-danger transition-colors"
+                  className="inline-flex items-center min-h-[44px] px-3 text-sm text-muted hover:text-danger transition-colors"
                 >
                   Logg ut
                 </button>
