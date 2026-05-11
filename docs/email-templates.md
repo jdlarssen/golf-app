@@ -78,10 +78,7 @@ Alle malene under bruker samme Tørny-stil (forest-and-champagne) for visuell ko
                 </tr>
               </table>
               <p style="font-size: 13px; color: #5C5347; margin: 24px 0 0 0; line-height: 1.5;">
-                Knappen funker ikke? Kopier denne lenken inn i nettleseren:
-              </p>
-              <p style="font-size: 12px; color: #5C5347; margin: 8px 0 0 0; word-break: break-all; font-family: 'SF Mono', Consolas, Monaco, monospace;">
-                {{ .ConfirmationURL }}
+                Knappen funker ikke? <a href="{{ .ConfirmationURL }}" style="color: #1B4332; text-decoration: underline;">Åpne lenken direkte</a>.
               </p>
             </td>
           </tr>
@@ -162,10 +159,7 @@ Brukes hvis vi senere bytter fra `signInWithOtp` til `auth.admin.inviteUserByEma
                 </tr>
               </table>
               <p style="font-size: 13px; color: #5C5347; margin: 24px 0 0 0; line-height: 1.5;">
-                Knappen funker ikke? Kopier denne lenken inn i nettleseren:
-              </p>
-              <p style="font-size: 12px; color: #5C5347; margin: 8px 0 0 0; word-break: break-all; font-family: 'SF Mono', Consolas, Monaco, monospace;">
-                {{ .ConfirmationURL }}
+                Knappen funker ikke? <a href="{{ .ConfirmationURL }}" style="color: #1B4332; text-decoration: underline;">Åpne lenken direkte</a>.
               </p>
             </td>
           </tr>
@@ -246,10 +240,7 @@ Trigges når en bruker bytter e-postadresse — sendes til den NYE adressen for 
                 </tr>
               </table>
               <p style="font-size: 13px; color: #5C5347; margin: 24px 0 0 0; line-height: 1.5;">
-                Knappen funker ikke? Kopier denne lenken inn i nettleseren:
-              </p>
-              <p style="font-size: 12px; color: #5C5347; margin: 8px 0 0 0; word-break: break-all; font-family: 'SF Mono', Consolas, Monaco, monospace;">
-                {{ .ConfirmationURL }}
+                Knappen funker ikke? <a href="{{ .ConfirmationURL }}" style="color: #1B4332; text-decoration: underline;">Åpne lenken direkte</a>.
               </p>
             </td>
           </tr>
@@ -329,10 +320,7 @@ Sendes når `signInWithOtp({ shouldCreateUser: true })` kalles for en e-postadre
                 </tr>
               </table>
               <p style="font-size: 13px; color: #5C5347; margin: 24px 0 0 0; line-height: 1.5;">
-                Knappen funker ikke? Kopier denne lenken inn i nettleseren:
-              </p>
-              <p style="font-size: 12px; color: #5C5347; margin: 8px 0 0 0; word-break: break-all; font-family: 'SF Mono', Consolas, Monaco, monospace;">
-                {{ .ConfirmationURL }}
+                Knappen funker ikke? <a href="{{ .ConfirmationURL }}" style="color: #1B4332; text-decoration: underline;">Åpne lenken direkte</a>.
               </p>
             </td>
           </tr>
@@ -408,10 +396,7 @@ Sendes når `signInWithOtp({ shouldCreateUser: true })` kalles for en e-postadre
                 </tr>
               </table>
               <p style="font-size: 13px; color: #5C5347; margin: 24px 0 0 0; line-height: 1.5;">
-                Knappen funker ikke? Kopier denne lenken inn i nettleseren:
-              </p>
-              <p style="font-size: 12px; color: #5C5347; margin: 8px 0 0 0; word-break: break-all; font-family: 'SF Mono', Consolas, Monaco, monospace;">
-                {{ .ConfirmationURL }}
+                Knappen funker ikke? <a href="{{ .ConfirmationURL }}" style="color: #1B4332; text-decoration: underline;">Åpne lenken direkte</a>.
               </p>
             </td>
           </tr>
