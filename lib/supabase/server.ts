@@ -10,8 +10,14 @@ export async function getServerClient() {
       cookies: {
         getAll: () => cookieStore.getAll(),
         setAll: (toSet) => {
-          for (const { name, value, options } of toSet) {
-            cookieStore.set(name, value, options);
+          // Server Components in Next.js 16 forbid cookie writes. Middleware
+          // (proxy.ts) handles session refresh, so swallowing here is safe.
+          try {
+            for (const { name, value, options } of toSet) {
+              cookieStore.set(name, value, options);
+            }
+          } catch {
+            // Read-only context — ignore.
           }
         },
       },
