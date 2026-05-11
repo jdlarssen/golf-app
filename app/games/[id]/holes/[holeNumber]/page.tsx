@@ -140,11 +140,12 @@ export default async function HolePage({ params }: { params: Params }) {
   return (
     <AppShell>
       <PageHeader
-        title={`Hull ${holeNumber} av 18`}
+        title={`Hull ${holeNumber}`}
+        subtitle={`av 18`}
         action={
           <Link
             href={`/games/${id}/scorecard`}
-            className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+            className="text-sm text-muted hover:text-text transition-colors"
           >
             Mitt kort
           </Link>
@@ -152,15 +153,40 @@ export default async function HolePage({ params }: { params: Params }) {
       />
 
       <div className="space-y-4">
+        {/* Hole metadata: hole number BIG, par + SI as serif support. */}
         <Card>
-          <p className="text-sm text-zinc-700 dark:text-zinc-300">
-            <span className="font-medium">Par {hole.par}</span>
-            <span className="text-zinc-500"> · SI {hole.stroke_index}</span>
-          </p>
+          <div className="flex items-center justify-between gap-6">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+                Hull
+              </p>
+              <p className="font-serif text-5xl font-medium tabular-nums leading-none mt-1 text-text">
+                {holeNumber}
+              </p>
+            </div>
+            <div className="flex items-end gap-6 text-right">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+                  Par
+                </p>
+                <p className="font-serif text-3xl font-medium tabular-nums leading-none mt-1 text-text">
+                  {hole.par}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+                  SI
+                </p>
+                <p className="font-serif text-3xl font-medium tabular-nums leading-none mt-1 text-text">
+                  {hole.stroke_index}
+                </p>
+              </div>
+            </div>
+          </div>
         </Card>
 
         <Card className="p-0 overflow-hidden">
-          <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+          <ul className="divide-y divide-border">
             {players.map((p) => {
               const isMe = p.user_id === user.id;
               const ch = p.course_handicap ?? 0;
@@ -171,27 +197,33 @@ export default async function HolePage({ params }: { params: Params }) {
               return (
                 <li
                   key={p.user_id}
-                  className={`flex items-center justify-between gap-3 px-4 py-4 ${
-                    isMe ? 'bg-green-50 dark:bg-green-950/30' : ''
+                  className={`flex items-center justify-between gap-3 px-5 py-4 ${
+                    isMe ? 'bg-primary-soft' : ''
                   }`}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-base font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                    <p className="text-base font-medium tracking-tight text-text truncate">
                       {name}
                       {nickname && (
-                        <span className="text-zinc-500 italic font-normal">
+                        <span className="text-muted italic font-normal">
                           {' '}
                           «{nickname}»
                         </span>
                       )}
                     </p>
-                    <p className="text-xs text-zinc-500 mt-0.5">
-                      {extra > 0
-                        ? `+${extra} slag`
-                        : extra < 0
-                          ? `${extra} slag`
-                          : 'Ingen ekstra slag'}
-                    </p>
+                    {extra !== 0 && (
+                      <p className="mt-1">
+                        <span
+                          className={`inline-flex items-center text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full ${
+                            extra > 0
+                              ? 'bg-accent/[0.12] text-accent border border-accent/30'
+                              : 'bg-border/40 text-muted border border-border'
+                          }`}
+                        >
+                          {extra > 0 ? `+${extra} slag` : `${extra} slag`}
+                        </span>
+                      </p>
+                    )}
                   </div>
                   <HoleScoreInput
                     gameId={id}
@@ -210,33 +242,33 @@ export default async function HolePage({ params }: { params: Params }) {
           </ul>
         </Card>
 
-        <nav className="flex items-center justify-between gap-3 pt-2">
+        <nav className="flex items-center justify-between gap-3 pt-2 text-sm">
           {prev >= 1 ? (
             <Link
               href={`/games/${id}/holes/${prev}`}
-              className="flex-1 min-h-[44px] flex items-center justify-center rounded-lg border border-zinc-300 dark:border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+              className="flex-1 min-h-[44px] flex items-center justify-center rounded-full border border-border px-4 py-2.5 font-medium tracking-tight text-text hover:bg-primary-soft transition-colors"
             >
-              ← Forrige hull
+              ← Forrige
             </Link>
           ) : (
-            <span className="flex-1 min-h-[44px] flex items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-800 px-4 py-2.5 text-sm font-medium text-zinc-400 dark:text-zinc-600 cursor-not-allowed">
-              ← Forrige hull
+            <span className="flex-1 min-h-[44px] flex items-center justify-center rounded-full border border-border px-4 py-2.5 font-medium tracking-tight text-muted/60 cursor-not-allowed">
+              ← Forrige
             </span>
           )}
-          <span className="px-2 text-xs text-zinc-500 whitespace-nowrap">
-            Hull {holeNumber}/18
+          <span className="px-2 text-xs text-muted whitespace-nowrap tabular-nums">
+            {holeNumber} / 18
           </span>
           {next <= 18 ? (
             <Link
               href={`/games/${id}/holes/${next}`}
-              className="flex-1 min-h-[44px] flex items-center justify-center rounded-lg border border-zinc-300 dark:border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+              className="flex-1 min-h-[44px] flex items-center justify-center rounded-full border border-border px-4 py-2.5 font-medium tracking-tight text-text hover:bg-primary-soft transition-colors"
             >
-              Neste hull →
+              Neste →
             </Link>
           ) : (
             <Link
               href={`/games/${id}/scorecard`}
-              className="flex-1 min-h-[44px] flex items-center justify-center rounded-lg bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 text-sm font-medium transition-colors"
+              className="flex-1 min-h-[44px] flex items-center justify-center rounded-full bg-primary hover:bg-primary-hover hover:-translate-y-px text-white px-4 py-2.5 font-medium tracking-tight transition-[background-color,transform,opacity] duration-100"
             >
               Mitt scorekort →
             </Link>

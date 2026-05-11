@@ -175,17 +175,19 @@ export function HoleScoreInput({
     }
   }, [status]);
 
+  // CSS variables read from the document so the synced/unsynced dot picks up
+  // both light and dark themes without hardcoding hex values.
   const dotColor: string =
     status === 'unsynced'
-      ? '#f59e0b'
+      ? 'var(--warning)'
       : (status as Status) === 'error'
-        ? '#dc2626'
+        ? 'var(--danger)'
         : status === 'synced' && showSyncedDot
-          ? '#16a34a'
+          ? 'var(--success)'
           : 'transparent';
 
   const buttonClass =
-    'w-11 h-11 shrink-0 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:bg-zinc-300 dark:active:bg-zinc-600 text-zinc-700 dark:text-zinc-300 text-xl font-medium leading-none disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center select-none transition-colors';
+    'w-11 h-11 shrink-0 rounded-xl bg-border/50 hover:bg-border active:bg-border text-text text-xl font-medium leading-none disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center select-none transition-colors';
 
   const currentNumber = Number(value);
   const canDecrement =
@@ -215,7 +217,7 @@ export function HoleScoreInput({
         disabled={disabled}
         placeholder={String(par)}
         aria-label="Brutto slag"
-        className="w-14 h-11 rounded-lg border border-zinc-300 dark:border-zinc-700 px-2 text-center text-lg font-medium bg-white dark:bg-zinc-900 placeholder-zinc-400 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-green-600 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        className="w-14 h-11 rounded-xl border border-border px-2 text-center text-lg font-serif font-medium tabular-nums bg-surface text-text placeholder-muted/60 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
       />
       <button
         type="button"
