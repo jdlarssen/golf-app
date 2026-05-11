@@ -7,7 +7,6 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import {
   computeLeaderboard,
   parseMode,
-  positionBadge,
   teamMembersLabel,
   type LbHole,
   type LbPlayer,
@@ -153,6 +152,11 @@ export default async function LeaderboardPage({
   // Sort by rank for display.
   const orderedLines = [...lines].sort((a, b) => a.rank - b.rank);
 
+  // The leader's total is the reference for "+N" deltas shown below other
+  // teams. Use rank-1; if multiple teams are tied for 1st they all show the
+  // same total so the delta math still works.
+  const leaderTotal = orderedLines.find((l) => l.rank === 1)?.total ?? 0;
+
   const subtitle =
     [game.name, game.courses?.name].filter(Boolean).join(' · ') || undefined;
 
@@ -164,7 +168,7 @@ export default async function LeaderboardPage({
         action={
           <Link
             href="/"
-            className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+            className="text-sm text-muted hover:text-text transition-colors"
           >
             ← Hjem
           </Link>
@@ -173,30 +177,32 @@ export default async function LeaderboardPage({
 
       <ModeToggle gameId={id} mode={mode} basePath="/leaderboard" />
 
-      <div className="space-y-3 mt-4">
+      <div className="space-y-3 mt-5">
         {orderedLines.length === 0 && (
           <Card>
-            <p className="text-sm text-zinc-500">
-              Ingen lag å vise.
-            </p>
+            <p className="text-sm text-muted">Ingen lag å vise.</p>
           </Card>
         )}
         {orderedLines.map((line) => (
-          <TeamCard key={line.teamNumber} line={line} />
+          <TeamCard
+            key={line.teamNumber}
+            line={line}
+            leaderTotal={leaderTotal}
+          />
         ))}
       </div>
 
-      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-2">
         <Link
           href={`/games/${id}/leaderboard/holes?mode=${mode}`}
           className="block"
         >
-          <div className="w-full min-h-[44px] border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 px-4 py-2.5 rounded-full font-medium transition-colors text-center text-sm">
+          <div className="w-full min-h-[44px] border border-border hover:bg-primary-soft text-text px-4 py-2.5 rounded-full font-medium tracking-tight text-center text-sm transition-colors">
             Hull for hull →
           </div>
         </Link>
         <Link href={`/games/${id}/scorecard`} className="block">
-          <div className="w-full min-h-[44px] border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 px-4 py-2.5 rounded-full font-medium transition-colors text-center text-sm">
+          <div className="w-full min-h-[44px] border border-border hover:bg-primary-soft text-text px-4 py-2.5 rounded-full font-medium tracking-tight text-center text-sm transition-colors">
             Mitt scorekort →
           </div>
         </Link>
@@ -205,39 +211,100 @@ export default async function LeaderboardPage({
   );
 }
 
-function TeamCard({ line }: { line: TeamLine }) {
-  const badge = positionBadge(line.rank);
+/**
+ * Position badge — rank-aware label + accent colour.
+ *
+ * Inlined into TeamCard because the visual treatment (gold for 1st, silver
+ * for 2nd, bronze for 3rd) is tied to surrounding card styling.
+ */
+function rankAccent(rank: number): {
+  cardClass: string;
+  badge: string;
+  badgeClass: string;
+} {
+  if (rank === 1) {
+    return {
+      cardClass:
+        'border-accent bg-accent/[0.06] shadow-[0_2px_12px_rgba(201,169,97,0.15)]',
+      badge: '🥇',
+      badgeClass: 'text-accent',
+    };
+  }
+  if (rank === 2) {
+    return {
+      cardClass: 'border-muted/40',
+      badge: '🥈',
+      badgeClass: 'text-muted',
+    };
+  }
+  if (rank === 3) {
+    return {
+      cardClass: 'border-warning/40',
+      badge: '🥉',
+      badgeClass: 'text-warning',
+    };
+  }
+  return { cardClass: '', badge: `${rank}.`, badgeClass: 'text-muted' };
+}
+
+function TeamCard({
+  line,
+  leaderTotal,
+}: {
+  line: TeamLine;
+  leaderTotal: number;
+}) {
+  const accent = rankAccent(line.rank);
   const members = teamMembersLabel(line.players);
   const missing = line.missingHoles.length;
+  const isLeader = line.rank === 1;
+  const delta = line.total - leaderTotal;
+
   return (
-    <Card>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-            <span className="mr-1">{badge}</span> Lag {line.teamNumber}
-          </p>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400 truncate">
-            {members || '(uten spillere)'}
-          </p>
-          {line.tiedWith.length > 0 && (
-            <p className="text-xs text-zinc-500 mt-1">
-              Delt {line.rank}. plass med{' '}
-              {line.tiedWith.map((id) => `Lag ${id}`).join(', ')}
+    <div className={`lb-row ${isLeader ? '' : ''}`}>
+      <Card className={accent.cardClass}>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-baseline gap-2">
+              <span className={`text-lg ${accent.badgeClass}`}>
+                {accent.badge}
+              </span>
+              <p className="font-serif text-xl font-medium tracking-tight text-text">
+                Lag {line.teamNumber}
+              </p>
+            </div>
+            <p className="text-sm text-muted truncate mt-1">
+              {members || '(uten spillere)'}
             </p>
-          )}
-          {missing > 0 && (
-            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-              ⚠️ {missing} hull mangler
+            {line.tiedWith.length > 0 && (
+              <p className="text-xs text-muted mt-1">
+                Delt {line.rank}. plass med{' '}
+                {line.tiedWith.map((id) => `Lag ${id}`).join(', ')}
+              </p>
+            )}
+            {missing > 0 && (
+              <p className="text-xs text-warning mt-1">
+                ⚠️ {missing} hull mangler
+              </p>
+            )}
+          </div>
+          <div className="text-right shrink-0">
+            <p
+              className={`font-serif tabular-nums font-medium text-text leading-none ${
+                isLeader ? 'text-4xl' : 'text-3xl'
+              }`}
+            >
+              {line.total}
             </p>
-          )}
+            {!isLeader && delta > 0 && (
+              <p className="text-xs text-muted tabular-nums mt-1.5">
+                +{delta}
+              </p>
+            )}
+          </div>
         </div>
-        <div className="text-right shrink-0">
-          <p className="text-3xl font-bold tabular-nums text-zinc-900 dark:text-zinc-100">
-            {line.total}
-          </p>
-        </div>
-      </div>
-    </Card>
+      </Card>
+    </div>
   );
 }
 
@@ -256,16 +323,16 @@ export function ModeToggle({
     <div
       role="tablist"
       aria-label="Modus"
-      className="inline-flex rounded-full bg-zinc-100 dark:bg-zinc-800 p-1"
+      className="inline-flex rounded-full bg-primary-soft p-1"
     >
       <Link
         role="tab"
         aria-selected={mode === 'netto'}
         href={`${base}?mode=netto`}
-        className={`min-h-[36px] px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+        className={`min-h-[36px] px-4 py-1.5 rounded-full text-sm font-medium tracking-tight transition-all ${
           mode === 'netto'
-            ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-sm'
-            : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+            ? 'bg-surface text-text shadow-sm'
+            : 'text-muted hover:text-text'
         }`}
       >
         Netto
@@ -274,10 +341,10 @@ export function ModeToggle({
         role="tab"
         aria-selected={mode === 'brutto'}
         href={`${base}?mode=brutto`}
-        className={`min-h-[36px] px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+        className={`min-h-[36px] px-4 py-1.5 rounded-full text-sm font-medium tracking-tight transition-all ${
           mode === 'brutto'
-            ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-sm'
-            : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+            ? 'bg-surface text-text shadow-sm'
+            : 'text-muted hover:text-text'
         }`}
       >
         Brutto
