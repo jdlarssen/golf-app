@@ -291,28 +291,50 @@ export default async function GameDetailPage({
                   <th className="px-2 py-1.5 font-medium">Lag</th>
                   <th className="px-2 py-1.5 font-medium">Flight</th>
                   <th className="px-2 py-1.5 font-medium text-right">CH</th>
+                  {game.status !== 'draft' && (
+                    <th className="px-2 py-1.5 font-medium">Status</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
-                {players.map((p) => (
-                  <tr
-                    key={p.user_id}
-                    className="border-t border-zinc-200 dark:border-zinc-800"
-                  >
-                    <td className="px-2 py-1.5 text-zinc-900 dark:text-zinc-100">
-                      {displayName(p)}
-                    </td>
-                    <td className="px-2 py-1.5 text-zinc-700 dark:text-zinc-300">
-                      {p.team_number}
-                    </td>
-                    <td className="px-2 py-1.5 text-zinc-700 dark:text-zinc-300">
-                      {p.flight_number}
-                    </td>
-                    <td className="px-2 py-1.5 text-right text-zinc-700 dark:text-zinc-300">
-                      {p.course_handicap ?? '—'}
-                    </td>
-                  </tr>
-                ))}
+                {players.map((p) => {
+                  let statusLabel: string;
+                  let statusClass: string;
+                  if (!p.submitted_at) {
+                    statusLabel = '⏳ Spiller';
+                    statusClass = 'text-zinc-500';
+                  } else if (game.require_peer_approval && !p.approved_at) {
+                    statusLabel = '⏳ Venter godkjenning';
+                    statusClass = 'text-amber-600 dark:text-amber-400';
+                  } else {
+                    statusLabel = '✓ Levert';
+                    statusClass = 'text-green-700 dark:text-green-400';
+                  }
+                  return (
+                    <tr
+                      key={p.user_id}
+                      className="border-t border-zinc-200 dark:border-zinc-800"
+                    >
+                      <td className="px-2 py-1.5 text-zinc-900 dark:text-zinc-100">
+                        {displayName(p)}
+                      </td>
+                      <td className="px-2 py-1.5 text-zinc-700 dark:text-zinc-300">
+                        {p.team_number}
+                      </td>
+                      <td className="px-2 py-1.5 text-zinc-700 dark:text-zinc-300">
+                        {p.flight_number}
+                      </td>
+                      <td className="px-2 py-1.5 text-right text-zinc-700 dark:text-zinc-300">
+                        {p.course_handicap ?? '—'}
+                      </td>
+                      {game.status !== 'draft' && (
+                        <td className={`px-2 py-1.5 text-xs ${statusClass}`}>
+                          {statusLabel}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
