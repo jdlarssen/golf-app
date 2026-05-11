@@ -318,7 +318,7 @@ export default async function GameDetailPage({
           </div>
         </Card>
 
-        {game.status === 'active' && (() => {
+        {game.status === 'active' && game.require_peer_approval && (() => {
           const pending = players.filter(
             (p) => p.submitted_at != null && p.approved_at == null,
           );
