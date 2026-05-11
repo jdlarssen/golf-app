@@ -174,120 +174,173 @@ export default async function Home({
         <PageHeader title={`Hei, ${profile?.name ?? 'spiller'} 👋`} />
       )}
 
-      <nav className={isEmptyState ? 'mt-10 space-y-6' : 'space-y-6'}>
-        {activeGames.length > 0 && (
-          <Section label="Aktive spill">
-            {activeGames.map((g) => (
-              <Link key={g.id} href={`/games/${g.id}`} className="block">
-                <Card className="min-h-[44px] hover:border-primary/30 transition-colors p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <span className="block font-serif text-lg font-medium tracking-tight text-text truncate">
-                        {g.name}
-                      </span>
-                      <span className="block text-xs text-muted mt-1 truncate">
-                        {[
-                          g.courses?.name,
-                          `Lag ${g.teamNumber} · Flight ${g.flightNumber}`,
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <StatusPill status={g.status} label={STATUS_LABELS[g.status]} />
-                      <span aria-hidden className="text-muted">
-                        →
-                      </span>
-                    </div>
-                  </div>
-                </Card>
-              </Link>
-            ))}
-          </Section>
-        )}
-
-        {finishedGames.length > 0 && (
-          <Section label="Avsluttede spill">
-            {finishedGames.map((g) => (
+      {isEmptyState ? (
+        <footer className="mt-14 pt-6 border-t border-border/60">
+          <ul className="flex flex-col gap-3 items-center">
+            <li>
               <Link
-                key={g.id}
-                href={`/games/${g.id}/leaderboard`}
-                className="block"
+                href="/profile"
+                className="text-sm text-muted hover:text-text transition-colors"
               >
-                <Card className="min-h-[44px] hover:border-primary/30 transition-colors p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <span className="block font-serif text-lg font-medium tracking-tight text-text truncate">
-                        {g.name}
-                      </span>
-                      <span className="block text-xs text-muted mt-1 truncate">
-                        {[g.courses?.name, 'Leaderboard']
-                          .filter(Boolean)
-                          .join(' · ')}
+                Min profil
+              </Link>
+            </li>
+            {profile?.is_admin && (
+              <li className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm text-muted">
+                <Link
+                  href="/admin/courses"
+                  className="hover:text-text transition-colors"
+                >
+                  Baner
+                </Link>
+                <span aria-hidden className="text-border">
+                  ·
+                </span>
+                <Link
+                  href="/admin/invitations"
+                  className="hover:text-text transition-colors"
+                >
+                  Invitasjoner
+                </Link>
+                <span aria-hidden className="text-border">
+                  ·
+                </span>
+                <Link
+                  href="/admin/games"
+                  className="hover:text-text transition-colors"
+                >
+                  Spill
+                </Link>
+              </li>
+            )}
+            <li>
+              <form action="/logout" method="post">
+                <button
+                  type="submit"
+                  className="text-sm text-muted hover:text-danger transition-colors"
+                >
+                  Logg ut
+                </button>
+              </form>
+            </li>
+          </ul>
+        </footer>
+      ) : (
+        <nav className="space-y-6">
+          {activeGames.length > 0 && (
+            <Section label="Aktive spill">
+              {activeGames.map((g) => (
+                <Link key={g.id} href={`/games/${g.id}`} className="block">
+                  <Card className="min-h-[44px] hover:border-primary/30 transition-colors p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <span className="block font-serif text-lg font-medium tracking-tight text-text truncate">
+                          {g.name}
+                        </span>
+                        <span className="block text-xs text-muted mt-1 truncate">
+                          {[
+                            g.courses?.name,
+                            `Lag ${g.teamNumber} · Flight ${g.flightNumber}`,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <StatusPill status={g.status} label={STATUS_LABELS[g.status]} />
+                        <span aria-hidden className="text-muted">
+                          →
+                        </span>
+                      </div>
+                    </div>
+                  </Card>
+                </Link>
+              ))}
+            </Section>
+          )}
+
+          {finishedGames.length > 0 && (
+            <Section label="Avsluttede spill">
+              {finishedGames.map((g) => (
+                <Link
+                  key={g.id}
+                  href={`/games/${g.id}/leaderboard`}
+                  className="block"
+                >
+                  <Card className="min-h-[44px] hover:border-primary/30 transition-colors p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <span className="block font-serif text-lg font-medium tracking-tight text-text truncate">
+                          {g.name}
+                        </span>
+                        <span className="block text-xs text-muted mt-1 truncate">
+                          {[g.courses?.name, 'Leaderboard']
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </span>
+                      </div>
+                      <span aria-hidden className="text-accent shrink-0">
+                        🏆
                       </span>
                     </div>
-                    <span aria-hidden className="text-accent shrink-0">
-                      🏆
-                    </span>
-                  </div>
+                  </Card>
+                </Link>
+              ))}
+            </Section>
+          )}
+
+          <Section label="Profil">
+            <Link href="/profile" className="block">
+              <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
+                <span className="text-base font-medium text-text">Min profil</span>
+                <span aria-hidden className="text-muted">
+                  →
+                </span>
+              </Card>
+            </Link>
+          </Section>
+
+          {profile?.is_admin && (
+            <Section label="Admin" accent>
+              <Link href="/admin/courses" className="block">
+                <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
+                  <span className="text-base font-medium text-text">Baner</span>
+                  <span aria-hidden className="text-muted">
+                    →
+                  </span>
                 </Card>
               </Link>
-            ))}
-          </Section>
-        )}
+              <Link href="/admin/invitations" className="block">
+                <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
+                  <span className="text-base font-medium text-text">
+                    Invitasjoner
+                  </span>
+                  <span aria-hidden className="text-muted">
+                    →
+                  </span>
+                </Card>
+              </Link>
+              <Link href="/admin/games" className="block">
+                <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
+                  <span className="text-base font-medium text-text">Spill</span>
+                  <span aria-hidden className="text-muted">
+                    →
+                  </span>
+                </Card>
+              </Link>
+            </Section>
+          )}
 
-        <Section label="Profil">
-          <Link href="/profile" className="block">
-            <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
-              <span className="text-base font-medium text-text">Min profil</span>
-              <span aria-hidden className="text-muted">
-                →
-              </span>
-            </Card>
-          </Link>
-        </Section>
-
-        {profile?.is_admin && (
-          <Section label="Admin" accent>
-            <Link href="/admin/courses" className="block">
-              <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
-                <span className="text-base font-medium text-text">Baner</span>
-                <span aria-hidden className="text-muted">
-                  →
-                </span>
-              </Card>
-            </Link>
-            <Link href="/admin/invitations" className="block">
-              <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
-                <span className="text-base font-medium text-text">
-                  Invitasjoner
-                </span>
-                <span aria-hidden className="text-muted">
-                  →
-                </span>
-              </Card>
-            </Link>
-            <Link href="/admin/games" className="block">
-              <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
-                <span className="text-base font-medium text-text">Spill</span>
-                <span aria-hidden className="text-muted">
-                  →
-                </span>
-              </Card>
-            </Link>
-          </Section>
-        )}
-
-        <form action="/logout" method="post" className="pt-2">
-          <button
-            type="submit"
-            className="w-full min-h-[44px] text-sm font-medium tracking-tight text-danger hover:bg-danger/[0.08] rounded-full px-4 py-2.5 transition-colors"
-          >
-            Logg ut
-          </button>
-        </form>
-      </nav>
+          <form action="/logout" method="post" className="pt-2">
+            <button
+              type="submit"
+              className="w-full min-h-[44px] text-sm font-medium tracking-tight text-danger hover:bg-danger/[0.08] rounded-full px-4 py-2.5 transition-colors"
+            >
+              Logg ut
+            </button>
+          </form>
+        </nav>
+      )}
 
       {!isEmptyState && (
         <p className="mt-10 text-xs text-muted text-center">
