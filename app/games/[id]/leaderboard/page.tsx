@@ -14,6 +14,7 @@ import {
   type LeaderboardMode,
   type TeamLine,
 } from '@/lib/leaderboard';
+import { LeaderboardConfetti } from './LeaderboardConfetti';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ mode?: string | string[] }>;
@@ -162,6 +163,7 @@ export default async function LeaderboardPage({
 
   return (
     <AppShell>
+      <LeaderboardConfetti gameId={id} />
       <PageHeader
         title="Leaderboard"
         subtitle={subtitle}
