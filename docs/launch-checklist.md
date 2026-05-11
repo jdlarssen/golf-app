@@ -41,9 +41,10 @@ For deg som admin (Jørgen). Hold dette dokumentet åpent på telefonen din når
 5. Sjekk flights — default er flight 1 (lag 1+2) og flight 2 (lag 3+4). Endre om dere går i andre konstellasjoner.
 6. **HCP-allowance:** 100 (default)
 7. **Peer-godkjenning:** av (default — dere stoler på hverandre)
-8. Klikk **«Lagre og start»**
+8. **Tee-off:** sett dato og klokkeslett for når runden skal starte
+9. Klikk **«Lagre og publiser»**
 
-Spillet er nå aktivt. Hver spiller får en grønn «Pågående»-merket runde på hjemmesiden sin.
+Spillet er nå **planlagt** — synlig for alle spillerne med en champagne «Planlagt»-pille. Du kan fortsatt redigere lag, flighter eller tee-off helt fram til du trykker **«Start runden nå»** på admin-spillsiden. Når du trykker start: status flippes til pågående, spillerne kan begynne å taste slag.
 
 ### Få alle inn i appen før første tee
 

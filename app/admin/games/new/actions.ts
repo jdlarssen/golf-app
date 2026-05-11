@@ -139,7 +139,15 @@ async function createGameInternal(
     if (!raw) {
       redirect('/admin/games/new?error=tee_off_required');
     }
-    scheduledTeeOffAt = parseOsloDateTimeLocal(raw);
+    // parseOsloDateTimeLocal can throw RangeError on malformed strings
+    // (DevTools tinkering, non-Chromium browsers emitting unexpected formats).
+    // Redirect to the same error code rather than surfacing Next's error
+    // overlay, preserving the file's redirect-on-validation-error invariant.
+    try {
+      scheduledTeeOffAt = parseOsloDateTimeLocal(raw);
+    } catch {
+      redirect('/admin/games/new?error=tee_off_required');
+    }
   }
 
   const supabase = await getServerClient();
