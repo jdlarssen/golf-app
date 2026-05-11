@@ -11,11 +11,23 @@ export default async function Home() {
     redirect('/login');
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('users')
     .select('name, is_admin')
     .eq('id', user.id)
     .single();
+
+  // PGRST116 = "Cannot coerce the result to a single JSON object" → no row
+  // for this auth user yet. Send them to the profile-completion flow.
+  if (profileError && profileError.code === 'PGRST116') {
+    redirect('/complete-profile');
+  }
+
+  // Any other error: surface it. We don't want to silently render "spiller"
+  // and mask a real DB / RLS problem.
+  if (profileError) {
+    throw profileError;
+  }
 
   return (
     <main className="min-h-screen p-6 max-w-md mx-auto">
