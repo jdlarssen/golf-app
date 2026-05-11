@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { AppShell } from '@/components/ui/AppShell';
+import { BackLink } from '@/components/ui/BackLink';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -176,12 +177,7 @@ export default async function GameHomePage({
       <PageHeader
         title={game.name}
         action={
-          <Link
-            href="/"
-            className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-          >
-            ← Hjem
-          </Link>
+          <BackLink href="/">← Hjem</BackLink>
         }
       />
 

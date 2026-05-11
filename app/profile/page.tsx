@@ -122,7 +122,7 @@ export default async function ProfilePage({
             <Button type="submit">Lagre</Button>
             <Link
               href="/"
-              className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+              className="text-sm text-muted hover:text-text transition-colors"
             >
               Avbryt
             </Link>

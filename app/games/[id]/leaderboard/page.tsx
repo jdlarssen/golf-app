@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { AppShell } from '@/components/ui/AppShell';
+import { BackLink } from '@/components/ui/BackLink';
 import { Card } from '@/components/ui/Card';
 import { PageHeader } from '@/components/ui/PageHeader';
 import {
@@ -168,12 +169,7 @@ export default async function LeaderboardPage({
         title="Leaderboard"
         subtitle={subtitle}
         action={
-          <Link
-            href="/"
-            className="text-sm text-muted hover:text-text transition-colors"
-          >
-            ← Hjem
-          </Link>
+          <BackLink href="/">← Hjem</BackLink>
         }
       />
 

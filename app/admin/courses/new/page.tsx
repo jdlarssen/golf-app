@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import { AppShell } from '@/components/ui/AppShell';
+import { BackLink } from '@/components/ui/BackLink';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -42,12 +42,7 @@ export default async function NewCoursePage({
         title="Ny bane"
         subtitle="Legg til en ny golfbane med hull og tee-bokser"
         action={
-          <Link
-            href="/admin/courses"
-            className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-          >
-            Tilbake
-          </Link>
+          <BackLink href="/admin/courses">Tilbake</BackLink>
         }
       />
 

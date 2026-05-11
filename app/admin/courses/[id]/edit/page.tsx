@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { BackLink } from '@/components/ui/BackLink';
 import { getServerClient } from '@/lib/supabase/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
@@ -100,12 +100,7 @@ export default async function EditCoursePage({
         title="Rediger bane"
         subtitle={course.name}
         action={
-          <Link
-            href="/admin/courses"
-            className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-          >
-            Tilbake
-          </Link>
+          <BackLink href="/admin/courses">Tilbake</BackLink>
         }
       />
 
