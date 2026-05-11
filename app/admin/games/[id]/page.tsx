@@ -6,7 +6,8 @@ import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StartGameButton } from './StartGameButton';
-import { startGame } from './actions';
+import { ApprovePlayerButton } from './ApprovePlayerButton';
+import { startGame, adminApproveScorecard } from './actions';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -34,11 +35,13 @@ const STATUS_BADGE_CLASSES: Record<GameStatus, string> = {
 const STATUS_BANNERS: Record<string, string> = {
   draft_created: '✓ Spillet ble lagret som utkast.',
   started: '✓ Spillet er startet. Course handicap er låst for hver spiller.',
+  admin_approved: '✓ Scorekort godkjent på vegne av flighten.',
 };
 
 const ERROR_MESSAGES: Record<string, string> = {
   not_found: 'Spillet ble ikke funnet.',
   not_draft: 'Bare utkast kan startes.',
+  not_active: 'Spillet er ikke aktivt — handlingen er ikke tillatt.',
   db_tee: 'Klarte ikke å lese tee-boksen fra databasen. Prøv igjen.',
   db_players: 'Klarte ikke å oppdatere spillerne. Prøv igjen.',
   db_game: 'Klarte ikke å oppdatere spillet. Prøv igjen.',
@@ -68,6 +71,8 @@ type GamePlayerRow = {
   team_number: number;
   flight_number: number;
   course_handicap: number | null;
+  submitted_at: string | null;
+  approved_at: string | null;
   users: { name: string; nickname: string | null; hcp_index: number | string } | null;
 };
 
@@ -101,7 +106,7 @@ export default async function GameDetailPage({
   const { data: rawPlayers, error: playersError } = await supabase
     .from('game_players')
     .select(
-      'user_id, team_number, flight_number, course_handicap, users!game_players_user_id_fkey(name, nickname, hcp_index)',
+      'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, users!game_players_user_id_fkey(name, nickname, hcp_index)',
     )
     .eq('game_id', id)
     .returns<GamePlayerRow[]>();
@@ -292,14 +297,55 @@ export default async function GameDetailPage({
           </div>
         </Card>
 
+        {game.status === 'active' && (() => {
+          const pending = players.filter(
+            (p) => p.submitted_at != null && p.approved_at == null,
+          );
+          return (
+            <Card>
+              <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
+                Innleverte scorekort
+              </h2>
+              {pending.length === 0 ? (
+                <p className="text-sm text-zinc-500">
+                  Ingen scorekort venter på godkjenning akkurat nå.
+                </p>
+              ) : (
+                <ul className="divide-y divide-zinc-200 dark:divide-zinc-800 -mx-2">
+                  {pending.map((p) => {
+                    const approve = adminApproveScorecard.bind(
+                      null,
+                      id,
+                      p.user_id,
+                    );
+                    return (
+                      <li
+                        key={p.user_id}
+                        className="px-2 py-3 flex items-center justify-between gap-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                            {displayName(p)}
+                          </p>
+                          <p className="text-xs text-zinc-500 mt-0.5">
+                            Flight {p.flight_number} · Lag {p.team_number}
+                          </p>
+                        </div>
+                        <ApprovePlayerButton
+                          approveAction={approve}
+                          playerName={displayName(p)}
+                        />
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </Card>
+          );
+        })()}
+
         {game.status === 'draft' && (
           <StartGameButton startAction={startAction} gameName={game.name} />
-        )}
-
-        {game.status === 'active' && (
-          <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 px-4 py-3 text-sm text-zinc-500">
-            Til hull 1 (kommer i neste fase)
-          </div>
         )}
 
         {game.status === 'finished' && (

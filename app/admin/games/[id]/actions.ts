@@ -78,3 +78,41 @@ export async function startGame(gameId: string) {
 
   redirect(`${detailPath}?status=started`);
 }
+
+/**
+ * Admin override: approve a submitted scorecard regardless of flight
+ * membership. Same idempotent guard as the peer flow (only updates rows
+ * that are still pending approval). Refuses to run on non-active games.
+ */
+export async function adminApproveScorecard(
+  gameId: string,
+  playerUserId: string,
+) {
+  const { supabase, user } = await requireAdmin();
+  const detailPath = `/admin/games/${gameId}`;
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('status')
+    .eq('id', gameId)
+    .single<{ status: 'draft' | 'active' | 'finished' }>();
+  if (!game) redirect(`${detailPath}?error=not_found`);
+  if (game!.status !== 'active') {
+    redirect(`${detailPath}?error=not_active`);
+  }
+
+  const { error } = await supabase
+    .from('game_players')
+    .update({
+      approved_at: new Date().toISOString(),
+      approved_by_user_id: user.id,
+      rejection_reason: null,
+    })
+    .eq('game_id', gameId)
+    .eq('user_id', playerUserId)
+    .not('submitted_at', 'is', null)
+    .is('approved_at', null);
+  if (error) redirect(`${detailPath}?error=db_players`);
+
+  redirect(`${detailPath}?status=admin_approved`);
+}
