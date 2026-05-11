@@ -145,9 +145,13 @@ export default async function Home({
             eller sett opp din egen runde.
           </p>
           <div className="mt-8 flex flex-col gap-2.5 w-full max-w-[280px]">
+            {/* Passive primary per design spec — on iOS Safari (primary target)
+                `mailto:` opens Mail.app, which lets the user navigate to their
+                inbox. Web/desktop behavior is a blank compose; acceptable for
+                a bootstrap empty-state CTA. */}
             <Link
               href="mailto:"
-              className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-primary text-bg font-sans text-sm font-semibold px-[18px] py-[14px]"
+              className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-primary text-white font-sans text-sm font-semibold px-[18px] py-[14px]"
             >
               Sjekk innboksen for invitasjon
             </Link>
