@@ -64,6 +64,10 @@ Plan: kjør disse gjennom Claude Design ([claude.ai/design](https://claude.ai/de
 - [ ] Subtle skeleton-loading mens man venter på server-data (i dag er det rene blank states)
 - [ ] Bedre overgang mellom hull (i dag direkte navigasjon)
 
+### Dark mode
+
+- [ ] Dark-mode-tokens er definert i `app/globals.css`, men flatene er ikke verifisert i dark mode og noen ser halvferdige ut. Per 2026-05-11 tvinger `app/layout.tsx` light mode via `data-theme="light"` + `colorScheme: "light"`. Fjern tvangen og audit hver flate når dark mode skal aktiveres på ekte.
+
 ---
 
 ## ⚙️ Tekniske forbedringer
