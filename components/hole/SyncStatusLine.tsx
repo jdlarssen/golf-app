@@ -1,0 +1,46 @@
+import type { CSSProperties, JSX } from 'react';
+
+export interface SyncStatusLineProps {
+  syncing: boolean;
+  savedAt: string;
+}
+
+const containerStyle: CSSProperties = {
+  marginTop: 6,
+  fontSize: 11.5,
+  color: 'var(--text-muted)',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6,
+  padding: '4px 4px 0',
+};
+
+const dotBaseStyle: CSSProperties = {
+  width: 6,
+  height: 6,
+  borderRadius: '50%',
+  display: 'inline-block',
+  transition: 'background 200ms',
+};
+
+export function SyncStatusLine(props: SyncStatusLineProps): JSX.Element {
+  const { syncing, savedAt } = props;
+  const dotStyle: CSSProperties = {
+    ...dotBaseStyle,
+    background: syncing ? '#D89B3A' : '#4A7C59',
+  };
+  let text: string;
+  if (syncing) {
+    text = 'Sender…';
+  } else if (savedAt.length > 0) {
+    text = `Lagret · ${savedAt}`;
+  } else {
+    text = 'Lagret nylig';
+  }
+  return (
+    <div style={containerStyle}>
+      <span data-testid="sync-dot" style={dotStyle} />
+      <span>{text}</span>
+    </div>
+  );
+}
