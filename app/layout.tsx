@@ -1,17 +1,23 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Fraunces, Inter } from "next/font/google";
 import "./globals.css";
 import { PwaBoot } from "@/components/PwaBoot";
 import { IosInstallHint } from "@/components/IosInstallHint";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+// Inter — body, UI labels, forms. Variable font for crisp small-size rendering.
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin", "latin-ext"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+// Fraunces — display serif for h1/h2, brand mark, and big numbers on the
+// leaderboard. Includes the Norwegian glyphs we need (ø, å, æ, Ø, Å, Æ).
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
+  subsets: ["latin", "latin-ext"],
+  display: "swap",
+  axes: ["opsz", "SOFT"],
 });
 
 export const metadata: Metadata = {
@@ -31,8 +37,8 @@ export const metadata: Metadata = {
 // Next.js 16 requires themeColor / colorScheme / viewport in a separate
 // `viewport` export — they are deprecated under `metadata`.
 export const viewport: Viewport = {
-  themeColor: "#16a34a",
-  colorScheme: "light",
+  themeColor: "#1b4332",
+  colorScheme: "light dark",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -46,9 +52,9 @@ export default function RootLayout({
   return (
     <html
       lang="nb-NO"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${inter.variable} ${fraunces.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col font-sans">
         {children}
         <IosInstallHint />
         <PwaBoot />
