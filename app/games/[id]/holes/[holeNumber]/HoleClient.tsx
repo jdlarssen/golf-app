@@ -188,6 +188,11 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   // Onboarding banner: visible only on hole 1, and only if not dismissed.
   // We track "dismissed" rather than "show" so we never assign state inside an
   // effect on subsequent renders — the visibility is purely derived.
+  //
+  // The lazy initializer reads localStorage synchronously to avoid a banner
+  // flash on every page load. Trade-off: a returning user landing on hole 1
+  // may see a one-paint banner-mismatch warning in dev (React rehydration).
+  // Acceptable: the banner is only on hole 1 and dismisses on first interaction.
   const [dismissed, setDismissed] = useState<boolean>(() => {
     try {
       return localStorage.getItem(ONBOARDING_KEY) === '1';

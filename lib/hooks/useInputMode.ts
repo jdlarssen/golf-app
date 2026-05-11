@@ -17,6 +17,10 @@ export function useInputMode(): [InputMode, (m: InputMode) => void] {
     try {
       const stored = window.localStorage.getItem(STORAGE_KEY);
       if (isInputMode(stored)) {
+        // Hydrate from localStorage post-mount. We can't use a lazy initializer
+        // because that would diverge between server (no localStorage → default)
+        // and client (saved value), causing a hydration mismatch.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setModeState(stored);
       }
     } catch {

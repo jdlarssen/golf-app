@@ -22,7 +22,9 @@ export interface ScoreCardProps {
 }
 
 const MIN_STROKES = 1;
-const MAX_STROKES = 12;
+// Net double bogey for a 54 HCP on slope 155 lands at ~12 gross on par 5;
+// 15 leaves room for honest blow-up entries while still rejecting typos.
+const MAX_STROKES = 15;
 const LONG_PRESS_MS = 500;
 const MOVE_THRESHOLD = 4;
 const SWIPE_THRESHOLD = 16;

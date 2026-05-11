@@ -144,12 +144,12 @@ describe('ScoreCard — swipe interaction', () => {
     expect(onSetScore).toHaveBeenCalledWith('p1', 3);
   });
 
-  it('swipe up clamps at 12 when score is already 12', () => {
-    const { card, onSetScore } = setup({ score: 12, par: 4, mode: 'swipe' });
+  it('swipe up clamps at 15 when score is already 15', () => {
+    const { card, onSetScore } = setup({ score: 15, par: 4, mode: 'swipe' });
     fireEvent.pointerDown(card, { clientY: 100, pointerId: 1 });
     fireEvent.pointerMove(card, { clientY: 70, pointerId: 1 });
     fireEvent.pointerUp(card, { clientY: 70, pointerId: 1 });
-    expect(onSetScore).toHaveBeenCalledWith('p1', 12);
+    expect(onSetScore).toHaveBeenCalledWith('p1', 15);
   });
 
   it('swipe down clamps at 1 when score is already 1', () => {

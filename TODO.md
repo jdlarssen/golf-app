@@ -73,7 +73,7 @@ Plan: kjør disse gjennom Claude Design ([claude.ai/design](https://claude.ai/de
 - [ ] E2E-test for hele invitasjons-flyten (ny bruker registrerer seg og spiller en runde)
 - [ ] E2E-test for offline-sync (Playwright kan sjokke offline)
 - [ ] Unit-tester for server actions (submitScorecard, approveScorecard, endGame, createGame)
-- [ ] Pre-existing ESLint warnings i `HoleScoreInput.tsx`, `IosInstallHint.tsx`, `integration.test.ts` — fix dem
+- [ ] Pre-existing ESLint warnings i `components/IosInstallHint.tsx`, `app/games/[id]/leaderboard/LeaderboardConfetti.tsx`, `lib/scoring/integration.test.ts` — fix dem
 
 ### Performance
 
