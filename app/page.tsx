@@ -49,37 +49,58 @@ export default async function Home({
   const params = await searchParams;
   const profileUpdated = first(params.profile) === 'updated';
 
-  // Games the user participates in that are draft or active.
+  // Games the user participates in that are draft or active. Pull in the
+  // course name plus the player's own team/flight so each card carries some
+  // weight beyond just the game name.
   type GameRow = {
     game_id: string;
+    team_number: number;
+    flight_number: number;
     games: {
       id: string;
       name: string;
       status: 'draft' | 'active' | 'finished';
       ended_at: string | null;
+      courses: { name: string } | null;
     } | null;
   };
   const { data: rawActive } = await supabase
     .from('game_players')
-    .select('game_id, games!inner(id, name, status, ended_at)')
+    .select(
+      'game_id, team_number, flight_number, games!inner(id, name, status, ended_at, courses(name))',
+    )
     .eq('user_id', user.id)
     .in('games.status', ['active', 'draft'])
     .returns<GameRow[]>();
   const activeGames = (rawActive ?? [])
-    .map((row) => row.games)
-    .filter((g): g is NonNullable<typeof g> => g != null);
+    .filter((row): row is GameRow & { games: NonNullable<GameRow['games']> } =>
+      row.games != null,
+    )
+    .map((row) => ({
+      ...row.games,
+      teamNumber: row.team_number,
+      flightNumber: row.flight_number,
+    }));
 
   // Finished games the user participated in, newest first.
   const { data: rawFinished } = await supabase
     .from('game_players')
-    .select('game_id, games!inner(id, name, status, ended_at)')
+    .select(
+      'game_id, team_number, games!inner(id, name, status, ended_at, courses(name))',
+    )
     .eq('user_id', user.id)
     .eq('games.status', 'finished')
     .order('ended_at', { foreignTable: 'games', ascending: false })
     .returns<GameRow[]>();
   const finishedGames = (rawFinished ?? [])
-    .map((row) => row.games)
-    .filter((g): g is NonNullable<typeof g> => g != null);
+    .filter((row): row is GameRow & { games: NonNullable<GameRow['games']> } =>
+      row.games != null,
+    )
+    .map((row) => ({
+      ...row.games,
+      teamNumber: row.team_number,
+      flightNumber: row.flight_number,
+    }));
 
   const STATUS_LABELS = {
     draft: 'Utkast',
@@ -98,121 +119,180 @@ export default async function Home({
         </div>
       )}
 
-      <nav className="space-y-3">
+      <nav className="space-y-6">
         {activeGames.length > 0 && (
-          <div className="space-y-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 mb-2">
-              Aktive spill
-            </p>
+          <Section label="Aktive spill">
             {activeGames.map((g) => (
               <Link key={g.id} href={`/games/${g.id}`} className="block">
-                <Card className="min-h-[44px] flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-base font-medium text-zinc-900 dark:text-zinc-100 truncate">
-                      {g.name}
-                    </span>
-                    <span className="block text-xs text-zinc-500">
-                      {STATUS_LABELS[g.status]}
-                    </span>
-                  </span>
-                  <span aria-hidden className="text-zinc-400 ml-3">
-                    →
-                  </span>
+                <Card className="min-h-[44px] hover:border-primary/30 transition-colors p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <span className="block font-serif text-lg font-medium tracking-tight text-text truncate">
+                        {g.name}
+                      </span>
+                      <span className="block text-xs text-muted mt-1 truncate">
+                        {[
+                          g.courses?.name,
+                          `Lag ${g.teamNumber} · Flight ${g.flightNumber}`,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <StatusPill status={g.status} label={STATUS_LABELS[g.status]} />
+                      <span aria-hidden className="text-muted">
+                        →
+                      </span>
+                    </div>
+                  </div>
                 </Card>
               </Link>
             ))}
-          </div>
+          </Section>
         )}
 
         {finishedGames.length > 0 && (
-          <div className="space-y-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 mb-2 mt-4">
-              Avsluttede spill
-            </p>
+          <Section label="Avsluttede spill">
             {finishedGames.map((g) => (
               <Link
                 key={g.id}
                 href={`/games/${g.id}/leaderboard`}
                 className="block"
               >
-                <Card className="min-h-[44px] flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-base font-medium text-zinc-900 dark:text-zinc-100 truncate">
-                      {g.name}
+                <Card className="min-h-[44px] hover:border-primary/30 transition-colors p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <span className="block font-serif text-lg font-medium tracking-tight text-text truncate">
+                        {g.name}
+                      </span>
+                      <span className="block text-xs text-muted mt-1 truncate">
+                        {[g.courses?.name, 'Leaderboard']
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
+                    </div>
+                    <span aria-hidden className="text-accent shrink-0">
+                      🏆
                     </span>
-                    <span className="block text-xs text-zinc-500">
-                      🏆 Leaderboard
-                    </span>
-                  </span>
-                  <span aria-hidden className="text-zinc-400 ml-3">
-                    →
-                  </span>
+                  </div>
                 </Card>
               </Link>
             ))}
-          </div>
+          </Section>
         )}
 
-        <Link href="/profile" className="block">
-          <Card className="min-h-[44px] flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
-            <span className="text-base font-medium text-zinc-900 dark:text-zinc-100">
-              Min profil
-            </span>
-            <span aria-hidden className="text-zinc-400">
-              →
-            </span>
-          </Card>
-        </Link>
+        <Section label="Profil">
+          <Link href="/profile" className="block">
+            <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
+              <span className="text-base font-medium text-text">Min profil</span>
+              <span aria-hidden className="text-muted">
+                →
+              </span>
+            </Card>
+          </Link>
+        </Section>
 
         {profile?.is_admin && (
-          <div className="space-y-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 mb-2 mt-4">
-              Admin
-            </p>
+          <Section label="Admin" accent>
             <Link href="/admin/courses" className="block">
-              <Card className="min-h-[44px] flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
-                <span className="text-base font-medium text-zinc-900 dark:text-zinc-100">
-                  Baner
-                </span>
-                <span aria-hidden className="text-zinc-400">
+              <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
+                <span className="text-base font-medium text-text">Baner</span>
+                <span aria-hidden className="text-muted">
                   →
                 </span>
               </Card>
             </Link>
             <Link href="/admin/invitations" className="block">
-              <Card className="min-h-[44px] flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
-                <span className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+              <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
+                <span className="text-base font-medium text-text">
                   Invitasjoner
                 </span>
-                <span aria-hidden className="text-zinc-400">
+                <span aria-hidden className="text-muted">
                   →
                 </span>
               </Card>
             </Link>
             <Link href="/admin/games" className="block">
-              <Card className="min-h-[44px] flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
-                <span className="text-base font-medium text-zinc-900 dark:text-zinc-100">
-                  Spill
-                </span>
-                <span aria-hidden className="text-zinc-400">
+              <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
+                <span className="text-base font-medium text-text">Spill</span>
+                <span aria-hidden className="text-muted">
                   →
                 </span>
               </Card>
             </Link>
-          </div>
+          </Section>
         )}
 
-        <form action="/logout" method="post" className="pt-4">
+        <form action="/logout" method="post" className="pt-2">
           <button
             type="submit"
-            className="w-full min-h-[44px] text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg px-4 py-2.5 transition-colors"
+            className="w-full min-h-[44px] text-sm font-medium tracking-tight text-danger hover:bg-danger/[0.08] rounded-full px-4 py-2.5 transition-colors"
           >
             Logg ut
           </button>
         </form>
       </nav>
 
-      <p className="mt-8 text-sm text-zinc-500">Mer kommer her snart.</p>
+      <p className="mt-10 text-xs text-muted text-center">
+        Mer kommer her snart.
+      </p>
     </AppShell>
+  );
+}
+
+/**
+ * Section divider used to group cards on the home page. Optional `accent`
+ * variant renders the label in champagne — used to set admin apart from the
+ * player-facing surfaces above.
+ */
+function Section({
+  label,
+  accent = false,
+  children,
+}: {
+  label: string;
+  accent?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-3">
+        <p
+          className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${
+            accent ? 'text-accent' : 'text-muted'
+          }`}
+        >
+          {label}
+        </p>
+        <div
+          className={`h-px flex-1 ${accent ? 'bg-accent/30' : 'bg-border'}`}
+        />
+      </div>
+      <div className="space-y-3">{children}</div>
+    </div>
+  );
+}
+
+/** Compact status pill rendered next to the game name on active cards. */
+function StatusPill({
+  status,
+  label,
+}: {
+  status: 'draft' | 'active' | 'finished';
+  label: string;
+}) {
+  const classes =
+    status === 'active'
+      ? 'bg-primary-soft text-primary border-primary/20'
+      : status === 'draft'
+        ? 'bg-warning/10 text-warning border-warning/30'
+        : 'bg-border/40 text-muted border-border';
+  return (
+    <span
+      className={`inline-flex items-center text-[10px] font-medium uppercase tracking-widest px-2 py-0.5 rounded-full border ${classes}`}
+    >
+      {label}
+    </span>
   );
 }
