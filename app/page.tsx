@@ -88,6 +88,10 @@ export default async function Home({
 
   return (
     <AppShell>
+      <div className="flex items-center gap-2 mb-2">
+        <div className="w-7 h-7 rounded-md bg-green-600 text-white flex items-center justify-center text-sm font-bold">T</div>
+        <span className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Tørny</span>
+      </div>
       <PageHeader title={`Hei, ${profile?.name ?? 'spiller'} 👋`} />
 
       {profileUpdated && (
