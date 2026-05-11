@@ -20,6 +20,7 @@ type GameRow = {
 type MyPlayerRow = {
   user_id: string;
   course_handicap: number | null;
+  submitted_at: string | null;
 };
 
 type HoleRow = {
@@ -55,7 +56,7 @@ export default async function ScorecardPage({ params }: { params: Params }) {
 
   const { data: me, error: meError } = await supabase
     .from('game_players')
-    .select('user_id, course_handicap')
+    .select('user_id, course_handicap, submitted_at')
     .eq('game_id', id)
     .eq('user_id', user.id)
     .maybeSingle<MyPlayerRow>();
@@ -166,20 +167,30 @@ export default async function ScorecardPage({ params }: { params: Params }) {
           </table>
         </Card>
 
-        <Link href={`/games/${id}/holes/${continueHole}`} className="block">
-          <div className="w-full min-h-[44px] bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-medium transition-colors text-center text-base">
-            Tilbake til hull {continueHole} →
-          </div>
-        </Link>
-
-        <div className="pt-2">
-          <Link
-            href={`/games/${id}`}
-            className="block text-center text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
-          >
-            Til spilloversikt
+        {me.submitted_at ? (
+          <Link href={`/games/${id}`} className="block">
+            <div className="w-full min-h-[44px] bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-medium transition-colors text-center text-base">
+              Tilbake til spillet →
+            </div>
           </Link>
-        </div>
+        ) : (
+          <>
+            <Link href={`/games/${id}/holes/${continueHole}`} className="block">
+              <div className="w-full min-h-[44px] bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-medium transition-colors text-center text-base">
+                Tilbake til hull {continueHole} →
+              </div>
+            </Link>
+
+            <div className="pt-2">
+              <Link
+                href={`/games/${id}`}
+                className="block text-center text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+              >
+                Til spilloversikt
+              </Link>
+            </div>
+          </>
+        )}
       </div>
     </AppShell>
   );
