@@ -187,6 +187,7 @@ export default async function HolePage({ params }: { params: Params }) {
                     gameId={id}
                     userId={p.user_id}
                     holeNumber={holeNumber}
+                    par={hole.par}
                     initialStrokes={initial}
                     initialClientUpdatedAt={scoreRow?.client_updated_at ?? null}
                     initialServerUpdatedAt={scoreRow?.updated_at ?? null}

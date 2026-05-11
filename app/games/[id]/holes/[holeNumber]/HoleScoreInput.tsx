@@ -8,10 +8,14 @@ import { startSyncListener, drainQueue } from '@/lib/sync/syncWorker';
 
 type Status = 'unsynced' | 'synced' | 'idle' | 'error';
 
+const MIN_STROKES = 1;
+const MAX_STROKES = 20;
+
 export function HoleScoreInput({
   gameId,
   userId,
   holeNumber,
+  par,
   initialStrokes,
   initialClientUpdatedAt,
   initialServerUpdatedAt,
@@ -21,19 +25,19 @@ export function HoleScoreInput({
   gameId: string;
   userId: string;
   holeNumber: number;
+  par: number;
   initialStrokes: number | null;
-  initialClientUpdatedAt: string | null; // from DB
-  initialServerUpdatedAt: string | null; // from DB
+  initialClientUpdatedAt: string | null;
+  initialServerUpdatedAt: string | null;
   myUserId: string;
   disabled?: boolean;
 }) {
   const id = scoreKey(gameId, userId, holeNumber);
 
-  // Local subscription to Dexie row. If there's no Dexie row yet, fall back to server-provided initial values.
   const localRow = useLiveQuery(() => localDb.scores.get(id), [id]);
   const queueItem = useLiveQuery(() => localDb.syncQueue.get(id), [id]);
 
-  // On mount, seed Dexie with the server's value if Dexie has nothing or older.
+  // Seed Dexie with the server's value on mount.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -67,12 +71,10 @@ export function HoleScoreInput({
     initialServerUpdatedAt,
   ]);
 
-  // Boot the sync listener once.
   useEffect(() => {
     startSyncListener();
   }, []);
 
-  // Derive displayed string from the local row.
   const displayed: string =
     localRow?.strokes != null
       ? String(localRow.strokes)
@@ -83,7 +85,6 @@ export function HoleScoreInput({
           : '';
 
   const [value, setValue] = useState<string>(displayed);
-  // Sync the controlled value when local source updates externally (e.g. realtime in Phase 9).
   useEffect(() => {
     setValue(displayed);
   }, [displayed]);
@@ -96,17 +97,37 @@ export function HoleScoreInput({
     [],
   );
 
+  function scheduleSave(raw: string) {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => save(raw), 500);
+  }
+
   function onChange(e: React.ChangeEvent<HTMLInputElement>) {
     const next = e.target.value;
     setValue(next);
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => save(next), 500);
+    scheduleSave(next);
+  }
+
+  function step(delta: number) {
+    if (disabled) return;
+    let next: number;
+    if (value.trim() === '') {
+      // Empty input: stepping in either direction lands on par as a natural
+      // starting point for typical golf scoring.
+      next = par;
+    } else {
+      const cur = Number(value);
+      next = Number.isInteger(cur) ? cur + delta : par;
+    }
+    next = Math.max(MIN_STROKES, Math.min(MAX_STROKES, next));
+    const nextStr = String(next);
+    setValue(nextStr);
+    scheduleSave(nextStr);
   }
 
   async function save(rawValue: string) {
     const trimmed = rawValue.trim();
     if (trimmed === '') {
-      // Empty input: treat as null (clears the hole)
       await writeScore({
         gameId,
         userId,
@@ -118,8 +139,7 @@ export function HoleScoreInput({
       return;
     }
     const n = Number(trimmed);
-    if (!Number.isInteger(n) || n < 1 || n > 20) {
-      // Invalid — don't write
+    if (!Number.isInteger(n) || n < MIN_STROKES || n > MAX_STROKES) {
       return;
     }
     await writeScore({
@@ -132,10 +152,6 @@ export function HoleScoreInput({
     void drainQueue();
   }
 
-  // Status indicator state:
-  // - queueItem present → unsynced (yellow dot)
-  // - no queue, localRow has serverUpdatedAt → synced (green dot, transient)
-  // - else → idle (no dot)
   let status: Status;
   if (queueItem) {
     status = 'unsynced';
@@ -148,7 +164,6 @@ export function HoleScoreInput({
     status = 'idle';
   }
 
-  // Auto-fade 'synced' after a few seconds for clean UX.
   const [showSyncedDot, setShowSyncedDot] = useState(false);
   useEffect(() => {
     if (status === 'synced') {
@@ -162,30 +177,57 @@ export function HoleScoreInput({
 
   const dotColor: string =
     status === 'unsynced'
-      ? '#f59e0b' // yellow
+      ? '#f59e0b'
       : (status as Status) === 'error'
-        ? '#dc2626' // red
+        ? '#dc2626'
         : status === 'synced' && showSyncedDot
-          ? '#16a34a' // green
+          ? '#16a34a'
           : 'transparent';
 
+  const buttonClass =
+    'w-11 h-11 shrink-0 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:bg-zinc-300 dark:active:bg-zinc-600 text-zinc-700 dark:text-zinc-300 text-xl font-medium leading-none disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center select-none transition-colors';
+
+  const currentNumber = Number(value);
+  const canDecrement =
+    !disabled && (value.trim() === '' || (Number.isInteger(currentNumber) && currentNumber > MIN_STROKES));
+  const canIncrement =
+    !disabled && (value.trim() === '' || (Number.isInteger(currentNumber) && currentNumber < MAX_STROKES));
+
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={() => step(-1)}
+        disabled={!canDecrement}
+        className={buttonClass}
+        aria-label="Trekk fra ett slag"
+      >
+        −
+      </button>
       <input
         type="number"
         inputMode="numeric"
-        min={1}
-        max={20}
+        min={MIN_STROKES}
+        max={MAX_STROKES}
         step={1}
         value={value}
         onChange={onChange}
         disabled={disabled}
-        className="w-20 min-h-[44px] rounded-lg border border-zinc-300 dark:border-zinc-700 px-3 py-2 text-center text-lg font-medium bg-white dark:bg-zinc-900 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-600"
-        placeholder="—"
+        placeholder={String(par)}
         aria-label="Brutto slag"
+        className="w-14 h-11 rounded-lg border border-zinc-300 dark:border-zinc-700 px-2 text-center text-lg font-medium bg-white dark:bg-zinc-900 placeholder-zinc-400 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-green-600 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
       />
+      <button
+        type="button"
+        onClick={() => step(1)}
+        disabled={!canIncrement}
+        className={buttonClass}
+        aria-label="Legg til ett slag"
+      >
+        +
+      </button>
       <span
-        className="w-3 h-3 rounded-full inline-block"
+        className="w-2.5 h-2.5 rounded-full inline-block ml-1"
         aria-label={status}
         style={{ backgroundColor: dotColor }}
       />
