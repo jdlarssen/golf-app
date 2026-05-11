@@ -2,7 +2,7 @@
 
 type Props = {
   // Pre-bound server action; submitting the form is enough to invoke it.
-  action: () => void | Promise<void>;
+  startAction: () => void | Promise<void>;
 };
 
 /**
@@ -11,21 +11,25 @@ type Props = {
  * the roster is frozen, course handicaps are locked, and players can
  * begin entering strokes.
  */
-export function StartScheduledGameButton({ action }: Props) {
+export function StartScheduledGameButton({ startAction }: Props) {
   return (
-    <form action={action}>
+    <form
+      action={startAction}
+      onSubmit={(e) => {
+        // onSubmit is more robust than onClick — catches keyboard Enter
+        // and programmatic submit, matching the sibling StartGameButton.
+        if (
+          !confirm(
+            'Starter du runden nå? Spillere kan begynne å taste slag. Redigering låses.',
+          )
+        ) {
+          e.preventDefault();
+        }
+      }}
+    >
       <button
         type="submit"
-        onClick={(e) => {
-          if (
-            !confirm(
-              'Starter du runden nå? Spillere kan begynne å taste slag. Redigering låses.',
-            )
-          ) {
-            e.preventDefault();
-          }
-        }}
-        className="w-full min-h-[44px] bg-primary text-white dark:text-bg font-medium rounded-xl px-4 py-3"
+        className="w-full min-h-[44px] bg-primary hover:bg-primary-hover text-white dark:text-bg font-medium rounded-xl px-4 py-3 transition-colors"
       >
         Start runden nå
       </button>

@@ -51,12 +51,11 @@ const STATUS_BANNERS: Record<string, string> = {
 const ERROR_MESSAGES: Record<string, string> = {
   not_found: 'Spillet ble ikke funnet.',
   not_draft: 'Bare utkast kan startes.',
-  not_startable: 'Spillet kan ikke startes (det er ikke planlagt).',
+  not_scheduled: 'Spillet kan ikke startes (det er ikke planlagt).',
   not_active: 'Spillet er ikke aktivt — kan ikke avsluttes.',
   not_editable:
     'Spillet kan ikke redigeres lenger — det er allerede startet eller avsluttet.',
   no_players: 'Ingen spillere på dette spillet.',
-  roster_empty: 'Ingen spillere registrert.',
   not_all_submitted:
     'Alle spillere må ha levert scorekort før spillet kan avsluttes.',
   not_all_approved:
@@ -459,7 +458,7 @@ export default async function GameDetailPage({
                 Når du starter runden låses course handicap for hver spiller,
                 redigering stenges, og spillerne kan begynne å taste slag.
               </p>
-              <StartScheduledGameButton action={startScheduledAction} />
+              <StartScheduledGameButton startAction={startScheduledAction} />
             </Card>
 
             <Card>

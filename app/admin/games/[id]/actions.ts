@@ -58,7 +58,7 @@ export async function startScheduledGame(gameId: string) {
     }>();
   if (gameError || !game) redirect(`${detailPath}?error=not_found`);
   if (game!.status !== 'scheduled') {
-    redirect(`${detailPath}?error=not_startable`);
+    redirect(`${detailPath}?error=not_scheduled`);
   }
   const tee = game!.tee_boxes;
   if (!tee) redirect(`${detailPath}?error=tee_missing`);
@@ -71,7 +71,7 @@ export async function startScheduledGame(gameId: string) {
     .returns<{ user_id: string; users: { hcp_index: number | string } | null }[]>();
   if (rosterError) redirect(`${detailPath}?error=db_players`);
   if (!roster || roster.length === 0) {
-    redirect(`${detailPath}?error=roster_empty`);
+    redirect(`${detailPath}?error=no_players`);
   }
 
   // 3. Compute course_handicap per player, then write it back.
