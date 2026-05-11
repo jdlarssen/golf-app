@@ -132,7 +132,11 @@ export default async function Home({
       {isEmptyState && (
         <section className="flex flex-col items-center text-center">
           <ChampagneMedallion className="mb-7">
-            <PinFlag size={72} className="text-primary" />
+            {/* Dark mode: sage primary on dark-forest medallion was only ~3.2:1
+                contrast on the 2px pole. Switch to cream `text-text` so the
+                pole reads as an etched silhouette while the champagne flag
+                head (hardcoded #C9A961) remains the visual focal point. */}
+            <PinFlag size={72} className="text-primary dark:text-text" />
           </ChampagneMedallion>
           <Kicker tone="accent" className="mb-2.5">
             KLUBBHUSET ER ÅPENT
@@ -149,9 +153,13 @@ export default async function Home({
                 `mailto:` opens Mail.app, which lets the user navigate to their
                 inbox. Web/desktop behavior is a blank compose; acceptable for
                 a bootstrap empty-state CTA. */}
+            {/* Dark mode: `bg-primary` resolves to lighter sage (#6b9f6f);
+                white text on sage is ~2.84:1 (below WCAG AA for 14px text).
+                Swap to dark `text-bg` (#0f1612) for ~6.5:1 — same lift the
+                CTA gets visually in dark mode, but readable. */}
             <Link
               href="mailto:"
-              className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-primary text-white font-sans text-sm font-semibold px-[18px] py-[14px]"
+              className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-primary text-white dark:text-bg font-sans text-sm font-semibold px-[18px] py-[14px]"
             >
               Sjekk innboksen for invitasjon
             </Link>
@@ -175,7 +183,10 @@ export default async function Home({
       )}
 
       {isEmptyState ? (
-        <footer className="mt-14 pt-6 border-t border-border/60">
+        // Dark mode: `border-border/60` (#2d3f32 at 60% alpha) on the very
+        // dark bg #0f1612 sits at ~1.34:1 — risks disappearing entirely. Bump
+        // to /80 in dark mode for a visible-but-quiet hairline.
+        <footer className="mt-14 pt-6 border-t border-border/60 dark:border-border/80">
           <ul className="flex flex-col gap-1 items-center">
             <li>
               <Link
