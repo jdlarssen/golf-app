@@ -17,6 +17,51 @@ Mobil-først PWA for å arrangere golf-turneringer. Skalerer fra 4 kompiser til 
 
 Sluttbrukeren har **null programmeringserfaring**. Tilbakemeldinger må være på norsk, instruksjoner må være kopier-lim-klare eller GUI-baserte. Aldri be brukeren lese kode.
 
+## Samarbeidsmodell — hvem gjør hva
+
+Denne arbeidsdelingen har vist seg å fungere bra. Hold deg til den.
+
+### Brukeren gjør (manuelt i nettleser-UIer)
+
+- **Supabase Dashboard:** kjører SQL i SQL Editor (alt jeg leverer som SQL — bruker limer inn), konfigurerer Auth UI (mal-subjects/body, URL Configuration, SMTP-settings), oppretter brukere i Authentication-fanen
+- **Vercel Dashboard:** legger til Custom Domain, env-variabler, godkjenner deploys hvis nødvendig
+- **Resend Dashboard:** verifiserer domene, kopierer API-keys, sjekker mail-logger
+- **Domene-registrar (Domeneshop, Cloudflare, etc.):** legger til DNS-records jeg gir
+- **Mail-klient:** mottar test-mailer, deler skjermbilder eller logg-data
+- **Telefon/nettleser:** tester appen visuelt, deler skjermbilder
+- **Beslutninger:** navn, brand-stil, hvilke features som skal prioriteres, hvilke alternativ å velge mellom
+
+### Du (Claude) gjør (alt annet)
+
+- **All kode:** Edit/Write/Bash for filendringer, npm-kommandoer
+- **Git:** stage, commit (med atomic-disiplin), push til main — Vercel deployer automatisk
+- **DNS-diagnostikk:** dig/curl via Bash for å sjekke propagering
+- **SQL-skriving:** lager migrasjonsfiler i `supabase/migrations/`, men EKSEKVERER aldri SQL direkte mot Supabase (du har ikke tilgang)
+- **Diagnostikk:** legger til console.logs eller inline-debug i koden, leser server-side errors fra Vercel via brukerens skjermbilder
+- **Plan, design, brainstorming:** med skills som `superpowers:brainstorming`, `superpowers:writing-plans`, etc.
+- **Subagent-koordinering:** dispatcher implementer/reviewer-subagenter for store endringer
+- **Forklare hvordan og hvorfor:** lange forklaringer er OK når det hjelper bruker å beslutte
+
+### Når noe må gjøres i et UI hos en tredjepart
+
+Følg denne malen i meldingen til brukeren:
+
+1. **Hvor:** «Gå til Supabase → Authentication → URL Configuration» (eksakt navigasjons-bredkrumstier)
+2. **Hva å endre:** tabeller eller eksakt tekst å lime inn, gjerne i kode-blokker
+3. **Hva du forventer å se etter:** «Skal si Success. No rows returned» eller «Grønn hake ved domenet»
+4. **Hva du gjør hvis det ikke ser slik ut:** ta skjermbilde, lim inn her
+
+Aldri si bare «sett dette i Supabase» — alltid med eksakt sti og kopier-lim-klare verdier.
+
+### Aldri gjør disse (uten eksplisitt godkjenning)
+
+- Foreslå eller utføre `git push --force`
+- Slette branches eller commits
+- Endre `lib/scoring/` uten ny test først
+- Rename Dexie-databasen (heter `'golf-app'` av historisk grunn — endring sletter brukernes lokale data)
+- Skifte ut Resend/Supabase/Vercel for andre tjenester uten å diskutere
+- Bestille ting brukeren må betale for (domener, abonnementer)
+
 ## Tech stack
 
 - Next.js 16 (App Router) + TypeScript
