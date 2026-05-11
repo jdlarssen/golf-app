@@ -51,9 +51,13 @@ export function subscribeGameScores(gameId: string): () => void {
         event: '*',
         schema: 'public',
         table: 'scores',
-        filter: `game_id=eq.${gameId}`,
+        // Temporarily removed filter to diagnose whether ANY events arrive.
+        // If events show up here, the filter syntax was the issue.
+        // If still nothing, RLS or replication is the issue.
       },
       (payload) => {
+        // eslint-disable-next-line no-console
+        console.log('[realtime DEBUG] raw payload — no filter:', payload);
         // eslint-disable-next-line no-console
         console.log('[realtime] event received', {
           eventType: payload.eventType,
