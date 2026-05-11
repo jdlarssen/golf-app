@@ -48,6 +48,27 @@ export default async function Home({
   const params = await searchParams;
   const profileUpdated = first(params.profile) === 'updated';
 
+  // Games the user participates in that are draft or active.
+  type ActiveGameRow = {
+    game_id: string;
+    games: { id: string; name: string; status: 'draft' | 'active' | 'finished' } | null;
+  };
+  const { data: rawGames } = await supabase
+    .from('game_players')
+    .select('game_id, games!inner(id, name, status)')
+    .eq('user_id', user.id)
+    .in('games.status', ['active', 'draft'])
+    .returns<ActiveGameRow[]>();
+  const activeGames = (rawGames ?? [])
+    .map((row) => row.games)
+    .filter((g): g is NonNullable<typeof g> => g != null);
+
+  const STATUS_LABELS = {
+    draft: 'Utkast',
+    active: 'Pågående',
+    finished: 'Avsluttet',
+  } as const;
+
   return (
     <AppShell>
       <PageHeader title={`Hei, ${profile?.name ?? 'spiller'} 👋`} />
@@ -59,6 +80,31 @@ export default async function Home({
       )}
 
       <nav className="space-y-3">
+        {activeGames.length > 0 && (
+          <div className="space-y-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 mb-2">
+              Aktive spill
+            </p>
+            {activeGames.map((g) => (
+              <Link key={g.id} href={`/games/${g.id}`} className="block">
+                <Card className="min-h-[44px] flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-base font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                      {g.name}
+                    </span>
+                    <span className="block text-xs text-zinc-500">
+                      {STATUS_LABELS[g.status]}
+                    </span>
+                  </span>
+                  <span aria-hidden className="text-zinc-400 ml-3">
+                    →
+                  </span>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
+
         <Link href="/profile" className="block">
           <Card className="min-h-[44px] flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
             <span className="text-base font-medium text-zinc-900 dark:text-zinc-100">
