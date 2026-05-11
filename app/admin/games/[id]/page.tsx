@@ -6,8 +6,9 @@ import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StartGameButton } from './StartGameButton';
+import { EndGameButton } from './EndGameButton';
 import { ApprovePlayerButton } from './ApprovePlayerButton';
-import { startGame, adminApproveScorecard } from './actions';
+import { startGame, adminApproveScorecard, endGame } from './actions';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -36,12 +37,19 @@ const STATUS_BANNERS: Record<string, string> = {
   draft_created: '✓ Spillet ble lagret som utkast.',
   started: '✓ Spillet er startet. Course handicap er låst for hver spiller.',
   admin_approved: '✓ Scorekort godkjent på vegne av flighten.',
+  finished: '✓ Spillet er avsluttet. Leaderboard er åpen for alle.',
 };
 
 const ERROR_MESSAGES: Record<string, string> = {
   not_found: 'Spillet ble ikke funnet.',
   not_draft: 'Bare utkast kan startes.',
-  not_active: 'Spillet er ikke aktivt — handlingen er ikke tillatt.',
+  not_active: 'Spillet er ikke aktivt — kan ikke avsluttes.',
+  no_players: 'Ingen spillere på dette spillet.',
+  not_all_submitted:
+    'Alle spillere må ha levert scorekort før spillet kan avsluttes.',
+  not_all_approved:
+    'Alle scorekort må være godkjent før spillet kan avsluttes.',
+  db_finish: 'Klarte ikke å avslutte spillet. Prøv igjen.',
   db_tee: 'Klarte ikke å lese tee-boksen fra databasen. Prøv igjen.',
   db_players: 'Klarte ikke å oppdatere spillerne. Prøv igjen.',
   db_game: 'Klarte ikke å oppdatere spillet. Prøv igjen.',
@@ -135,6 +143,19 @@ export default async function GameDetailPage({
   }
 
   const startAction = startGame.bind(null, id);
+  const endAction = endGame.bind(null, id);
+
+  // Readiness preview for the end-game button (only meaningful when active).
+  const notSubmittedCount = players.filter((p) => !p.submitted_at).length;
+  const pendingApprovalCount = game.require_peer_approval
+    ? players.filter(
+        (p) => p.submitted_at != null && p.approved_at == null,
+      ).length
+    : 0;
+  const everyPlayerReady =
+    players.length > 0 &&
+    notSubmittedCount === 0 &&
+    pendingApprovalCount === 0;
 
   return (
     <AppShell>
@@ -348,10 +369,48 @@ export default async function GameDetailPage({
           <StartGameButton startAction={startAction} gameName={game.name} />
         )}
 
+        {game.status === 'active' && (
+          <Card>
+            <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
+              Avslutt spillet
+            </h2>
+            {everyPlayerReady ? (
+              <div className="space-y-2">
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  Alle spillere har levert{game.require_peer_approval && ' og godkjent'} scorekort. Spillet kan avsluttes — leaderboard blir
+                  åpen for alle deltakere.
+                </p>
+                <EndGameButton endAction={endAction} />
+              </div>
+            ) : (
+              <div className="rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 px-3 py-2.5 text-sm text-amber-900 dark:text-amber-200">
+                {notSubmittedCount > 0 && (
+                  <p>
+                    {notSubmittedCount} av {players.length} spillere har ikke
+                    levert.
+                  </p>
+                )}
+                {pendingApprovalCount > 0 && (
+                  <p>
+                    {pendingApprovalCount} scorekort venter på godkjenning.
+                  </p>
+                )}
+              </div>
+            )}
+          </Card>
+        )}
+
         {game.status === 'finished' && (
-          <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 px-4 py-3 text-sm text-zinc-500">
-            Se resultat (kommer i neste fase)
-          </div>
+          <Card>
+            <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
+              Resultat
+            </h2>
+            <Link href={`/games/${id}/leaderboard`} className="block">
+              <div className="w-full min-h-[44px] bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium transition-colors text-center text-base">
+                🏆 Se leaderboard →
+              </div>
+            </Link>
+          </Card>
         )}
       </div>
     </AppShell>
