@@ -55,14 +55,7 @@ export async function sendInvitation(formData: FormData) {
     if (msg.includes('rate') || msg.includes('too many')) {
       code = 'rate_limited';
     }
-    // Temporary debug: surface the raw Supabase message so we can see what
-    // actually failed. Remove once SMTP / invitation flow is stable.
-    const qs = new URLSearchParams({
-      error: code,
-      raw: (otpError.message ?? '').slice(0, 300),
-      status: String(otpError.status ?? ''),
-    });
-    redirect(`/admin/invitations?${qs.toString()}`);
+    redirect(`/admin/invitations?error=${code}`);
   }
 
   // Audit log. Supabase's own magic-link token is the actual mechanism; we
