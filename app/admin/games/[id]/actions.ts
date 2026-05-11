@@ -25,6 +25,87 @@ async function requireAdmin() {
   return { supabase, user };
 }
 
+/**
+ * Admin: flip a scheduled game to active. This is the moment scoring becomes
+ * possible — score writes are RLS-gated on status='active' and the leaderboard
+ * reads `game_players.course_handicap` to compute strokes.
+ *
+ * The publish path (D2 createAndStartAction) deliberately leaves
+ * `course_handicap = null` because the round hasn't started yet and the roster
+ * can still be edited. We freeze handicaps HERE, immediately before flipping
+ * to 'active', so they reflect each player's hcp_index at tee-off time.
+ *
+ * If the function crashes mid-loop, some players have course_handicap set and
+ * some don't, but the game is still 'scheduled' so the admin can retry —
+ * each retry re-computes and overwrites (idempotent).
+ */
+export async function startScheduledGame(gameId: string) {
+  const { supabase } = await requireAdmin();
+  const detailPath = `/admin/games/${gameId}`;
+
+  // 1. Verify status is still 'scheduled' and load tee-box + allowance.
+  const { data: game, error: gameError } = await supabase
+    .from('games')
+    .select(
+      'id, status, hcp_allowance_pct, tee_boxes(slope, course_rating, par_total)',
+    )
+    .eq('id', gameId)
+    .single<{
+      id: string;
+      status: GameStatus;
+      hcp_allowance_pct: number;
+      tee_boxes: { slope: number; course_rating: number; par_total: number } | null;
+    }>();
+  if (gameError || !game) redirect(`${detailPath}?error=not_found`);
+  if (game!.status !== 'scheduled') {
+    redirect(`${detailPath}?error=not_startable`);
+  }
+  const tee = game!.tee_boxes;
+  if (!tee) redirect(`${detailPath}?error=tee_missing`);
+
+  // 2. Load all players + their hcp_index.
+  const { data: roster, error: rosterError } = await supabase
+    .from('game_players')
+    .select('user_id, users!game_players_user_id_fkey(hcp_index)')
+    .eq('game_id', gameId)
+    .returns<{ user_id: string; users: { hcp_index: number | string } | null }[]>();
+  if (rosterError) redirect(`${detailPath}?error=db_players`);
+  if (!roster || roster.length === 0) {
+    redirect(`${detailPath}?error=roster_empty`);
+  }
+
+  // 3. Compute course_handicap per player, then write it back.
+  for (const row of roster!) {
+    if (!row.users) continue; // defensive — shouldn't happen given FK constraint
+    const raw = calculateCourseHandicap({
+      hcpIndex: Number(row.users.hcp_index),
+      slope: tee!.slope,
+      courseRating: Number(tee!.course_rating),
+      par: tee!.par_total,
+    });
+    const allowed = applyAllowance(raw, game!.hcp_allowance_pct);
+    const { error: updateError } = await supabase
+      .from('game_players')
+      .update({ course_handicap: allowed })
+      .eq('game_id', gameId)
+      .eq('user_id', row.user_id);
+    if (updateError) redirect(`${detailPath}?error=db_players`);
+  }
+
+  // 4. Flip status to active with optimistic-lock guard (re-check, in case
+  // E1's auto-start fallback beat us to it from the player-side page).
+  const { error: flipError } = await supabase
+    .from('games')
+    .update({ status: 'active', started_at: new Date().toISOString() })
+    .eq('id', gameId)
+    .eq('status', 'scheduled');
+  if (flipError) redirect(`${detailPath}?error=db_game`);
+
+  revalidatePath(`/admin/games/${gameId}`);
+  revalidatePath(`/games/${gameId}`);
+  redirect(`${detailPath}?status=started`);
+}
+
 export async function startGame(gameId: string) {
   const { supabase } = await requireAdmin();
   const detailPath = `/admin/games/${gameId}`;

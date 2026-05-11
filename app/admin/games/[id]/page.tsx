@@ -7,9 +7,15 @@ import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StartGameButton } from './StartGameButton';
+import { StartScheduledGameButton } from './StartScheduledGameButton';
 import { EndGameButton } from './EndGameButton';
 import { ApprovePlayerButton } from './ApprovePlayerButton';
-import { startGame, adminApproveScorecard, endGame } from './actions';
+import {
+  startGame,
+  startScheduledGame,
+  adminApproveScorecard,
+  endGame,
+} from './actions';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -37,7 +43,7 @@ const STATUS_BANNERS: Record<string, string> = {
   draft_created: '✓ Spillet ble lagret som utkast.',
   scheduled: '✓ Spillet er publisert. Spillerne ser det nå i Mine spill.',
   updated: '✓ Endringene er lagret.',
-  started: '✓ Spillet er startet. Course handicap er låst for hver spiller.',
+  started: '✓ Runden er i gang. Spillerne kan taste slag.',
   admin_approved: '✓ Scorekort godkjent på vegne av flighten.',
   finished: '✓ Spillet er avsluttet. Leaderboard er åpen for alle.',
 };
@@ -45,16 +51,19 @@ const STATUS_BANNERS: Record<string, string> = {
 const ERROR_MESSAGES: Record<string, string> = {
   not_found: 'Spillet ble ikke funnet.',
   not_draft: 'Bare utkast kan startes.',
+  not_startable: 'Spillet kan ikke startes (det er ikke planlagt).',
   not_active: 'Spillet er ikke aktivt — kan ikke avsluttes.',
   not_editable:
     'Spillet kan ikke redigeres lenger — det er allerede startet eller avsluttet.',
   no_players: 'Ingen spillere på dette spillet.',
+  roster_empty: 'Ingen spillere registrert.',
   not_all_submitted:
     'Alle spillere må ha levert scorekort før spillet kan avsluttes.',
   not_all_approved:
     'Alle scorekort må være godkjent før spillet kan avsluttes.',
   db_finish: 'Klarte ikke å avslutte spillet. Prøv igjen.',
   db_tee: 'Klarte ikke å lese tee-boksen fra databasen. Prøv igjen.',
+  tee_missing: 'Tee-box mangler — kan ikke beregne handicap.',
   db_players: 'Klarte ikke å oppdatere spillerne. Prøv igjen.',
   db_game: 'Klarte ikke å oppdatere spillet. Prøv igjen.',
 };
@@ -185,6 +194,7 @@ export default async function GameDetailPage({
   }
 
   const startAction = startGame.bind(null, id);
+  const startScheduledAction = startScheduledGame.bind(null, id);
   const endAction = endGame.bind(null, id);
 
   // Readiness preview for the end-game button (only meaningful when active).
@@ -442,21 +452,31 @@ export default async function GameDetailPage({
         )}
 
         {game.status === 'scheduled' && (
-          <Card>
-            <SectionLabel>Rediger spillet</SectionLabel>
-            <p className="text-sm text-muted mb-3">
-              Spillet er i planlagt-fasen. Du kan fortsatt endre bane,
-              tee-off, spillere, lag og innstillinger inntil runden startes.
-            </p>
-            <Link
-              href={`/admin/games/${id}/edit`}
-              className="block w-full min-h-[44px] bg-primary hover:bg-primary-hover text-white px-4 py-3 rounded-full font-medium tracking-tight text-center transition-colors"
-            >
-              Rediger spillet
-            </Link>
-          </Card>
+          <>
+            <Card>
+              <SectionLabel>Start runden</SectionLabel>
+              <p className="text-sm text-muted mb-3">
+                Når du starter runden låses course handicap for hver spiller,
+                redigering stenges, og spillerne kan begynne å taste slag.
+              </p>
+              <StartScheduledGameButton action={startScheduledAction} />
+            </Card>
+
+            <Card>
+              <SectionLabel>Rediger spillet</SectionLabel>
+              <p className="text-sm text-muted mb-3">
+                Spillet er i planlagt-fasen. Du kan fortsatt endre bane,
+                tee-off, spillere, lag og innstillinger inntil runden startes.
+              </p>
+              <Link
+                href={`/admin/games/${id}/edit`}
+                className="block w-full min-h-[44px] bg-primary hover:bg-primary-hover text-white px-4 py-3 rounded-full font-medium tracking-tight text-center transition-colors"
+              >
+                Rediger spillet
+              </Link>
+            </Card>
+          </>
         )}
-        {/* TODO(scheduled): add a scheduled-state "Start nå"/countdown CTA. Handled in phase E1/E2. */}
 
         {game.status === 'active' && (
           <Card>
