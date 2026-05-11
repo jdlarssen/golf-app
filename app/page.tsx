@@ -6,6 +6,11 @@ import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { BrandMark } from '@/components/ui/BrandMark';
+import { ChampagneMedallion } from '@/components/ui/ChampagneMedallion';
+import { Kicker } from '@/components/ui/Kicker';
+import { PullQuote } from '@/components/ui/PullQuote';
+import { PinFlag } from '@/components/icons/PinFlag';
+import { firstName } from '@/lib/firstName';
 
 type SearchParams = Promise<{ profile?: string | string[] }>;
 
@@ -110,10 +115,13 @@ export default async function Home({
     finished: 'Avsluttet',
   } as const;
 
+  const isEmptyState =
+    activeGames.length === 0 && finishedGames.length === 0;
+  const firstNameValue = firstName(profile?.name) ?? 'spiller';
+
   return (
     <AppShell>
       <BrandMark className="mb-6" />
-      <PageHeader title={`Hei, ${profile?.name ?? 'spiller'} 👋`} />
 
       {profileUpdated && (
         <div className="mb-4">
@@ -121,7 +129,48 @@ export default async function Home({
         </div>
       )}
 
-      <nav className="space-y-6">
+      {isEmptyState && (
+        <section className="flex flex-col items-center text-center">
+          <ChampagneMedallion className="mb-7">
+            <PinFlag size={72} className="text-primary" />
+          </ChampagneMedallion>
+          <Kicker tone="accent" className="mb-2.5">
+            KLUBBHUSET ER ÅPENT
+          </Kicker>
+          <h1 className="font-serif text-[30px] font-medium tracking-[-0.02em] leading-tight text-text">
+            Velkommen, {firstNameValue}.
+          </h1>
+          <p className="mt-3 font-sans text-sm leading-relaxed text-muted max-w-[280px]">
+            Ingen aktive turneringer enda. Bli med via en invitasjon i innboksen,
+            eller sett opp din egen runde.
+          </p>
+          <div className="mt-8 flex flex-col gap-2.5 w-full max-w-[280px]">
+            <Link
+              href="mailto:"
+              className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-primary text-bg font-sans text-sm font-semibold px-[18px] py-[14px]"
+            >
+              Sjekk innboksen for invitasjon
+            </Link>
+            {profile?.is_admin && (
+              <Link
+                href="/admin/games/new"
+                className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-surface text-text border border-border font-sans text-sm font-semibold px-[18px] py-[14px]"
+              >
+                Opprett en turnering
+              </Link>
+            )}
+          </div>
+          <PullQuote className="mt-8">
+            En god runde begynner med god planlegging.
+          </PullQuote>
+        </section>
+      )}
+
+      {!isEmptyState && (
+        <PageHeader title={`Hei, ${profile?.name ?? 'spiller'} 👋`} />
+      )}
+
+      <nav className={isEmptyState ? 'mt-10 space-y-6' : 'space-y-6'}>
         {activeGames.length > 0 && (
           <Section label="Aktive spill">
             {activeGames.map((g) => (
@@ -236,9 +285,11 @@ export default async function Home({
         </form>
       </nav>
 
-      <p className="mt-10 text-xs text-muted text-center">
-        Mer kommer her snart.
-      </p>
+      {!isEmptyState && (
+        <p className="mt-10 text-xs text-muted text-center">
+          Mer kommer her snart.
+        </p>
+      )}
     </AppShell>
   );
 }
