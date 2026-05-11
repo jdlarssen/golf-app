@@ -224,6 +224,8 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     gap,
     transition: 'border-color 160ms',
     userSelect: 'none',
+    WebkitUserSelect: 'none',
+    WebkitTouchCallout: 'none',
     touchAction: mode === 'swipe' ? 'none' : 'auto',
     cursor: disabled
       ? 'not-allowed'
