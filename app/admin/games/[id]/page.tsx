@@ -25,12 +25,9 @@ const STATUS_LABELS: Record<GameStatus, string> = {
 };
 
 const STATUS_BADGE_CLASSES: Record<GameStatus, string> = {
-  draft:
-    'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700',
-  active:
-    'bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-300 border border-green-200 dark:border-green-900',
-  finished:
-    'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-900',
+  draft: 'bg-warning/10 text-warning border-warning/30',
+  active: 'bg-primary-soft text-primary border-primary/20',
+  finished: 'bg-accent/[0.10] text-accent border-accent/30',
 };
 
 const STATUS_BANNERS: Record<string, string> = {
@@ -83,6 +80,15 @@ type GamePlayerRow = {
   approved_at: string | null;
   users: { name: string; nickname: string | null; hcp_index: number | string } | null;
 };
+
+/** Small uppercase champagne label used to title each Card section. */
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-accent mb-3">
+      {children}
+    </p>
+  );
+}
 
 export default async function GameDetailPage({
   params,
@@ -138,7 +144,10 @@ export default async function GameDetailPage({
   // Live progress: hole_number and user_id only (NO strokes — avoid spoilers).
   // Admin sees how far each flight has come without seeing the values.
   type ProgressRow = { user_id: string; hole_number: number };
-  let progressByFlight: Record<number, { maxHole: number; filledCells: number; totalCells: number }> = {};
+  const progressByFlight: Record<
+    number,
+    { maxHole: number; filledCells: number; totalCells: number }
+  > = {};
   if (game.status === 'active') {
     const { data: progressRows } = await supabase
       .from('scores')
@@ -190,16 +199,16 @@ export default async function GameDetailPage({
         action={
           <Link
             href="/admin/games"
-            className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+            className="text-sm text-muted hover:text-text transition-colors"
           >
             Tilbake
           </Link>
         }
       />
 
-      <div className="mb-4">
+      <div className="mb-5">
         <span
-          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_BADGE_CLASSES[game.status]}`}
+          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest border ${STATUS_BADGE_CLASSES[game.status]}`}
         >
           {STATUS_LABELS[game.status]}
         </span>
@@ -219,14 +228,12 @@ export default async function GameDetailPage({
 
       <div className="space-y-4">
         <Card>
-          <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
-            Bane
-          </h2>
-          <p className="text-base text-zinc-900 dark:text-zinc-100">
+          <SectionLabel>Bane</SectionLabel>
+          <p className="font-serif text-xl font-medium tracking-tight text-text">
             {game.courses?.name ?? '(ukjent bane)'}
           </p>
           {game.tee_boxes && (
-            <p className="text-xs text-zinc-500 mt-1">
+            <p className="text-xs text-muted mt-1.5 tabular-nums">
               Tee: {game.tee_boxes.name} · Slope {game.tee_boxes.slope} · CR{' '}
               {Number(game.tee_boxes.course_rating).toFixed(1)} · Par{' '}
               {game.tee_boxes.par_total}
@@ -236,13 +243,11 @@ export default async function GameDetailPage({
 
         {game.status === 'active' && (
           <Card>
-            <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
-              Fremgang per flight
-            </h2>
-            <p className="text-xs text-zinc-500 mb-3">
+            <SectionLabel>Fremgang per flight</SectionLabel>
+            <p className="text-xs text-muted mb-4">
               Hvor langt hver flight har kommet — uten å avsløre tall.
             </p>
-            <ul className="space-y-3">
+            <ul className="space-y-4">
               {[1, 2, 3, 4]
                 .filter((f) => byFlight[f].length > 0)
                 .map((f) => {
@@ -250,19 +255,19 @@ export default async function GameDetailPage({
                   const pct = p ? Math.round((p.filledCells / p.totalCells) * 100) : 0;
                   return (
                     <li key={f}>
-                      <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                      <div className="flex items-center justify-between text-sm mb-1.5">
+                        <span className="font-medium tracking-tight text-text">
                           Flight {f}
                         </span>
-                        <span className="text-zinc-500 text-xs">
+                        <span className="text-muted text-xs tabular-nums">
                           {p && p.maxHole > 0 ? `Hull ${p.maxHole}` : 'Ikke startet'}
                           {' · '}
-                          {p ? `${p.filledCells}/${p.totalCells} tastet` : '0/0'}
+                          {p ? `${p.filledCells}/${p.totalCells}` : '0/0'}
                         </span>
                       </div>
-                      <div className="w-full h-2 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+                      <div className="w-full h-1.5 rounded-full bg-border overflow-hidden">
                         <div
-                          className="h-full bg-green-600 transition-all"
+                          className="h-full bg-primary transition-all duration-300"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
@@ -274,27 +279,22 @@ export default async function GameDetailPage({
         )}
 
         <Card>
-          <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
-            Lag
-          </h2>
+          <SectionLabel>Lag</SectionLabel>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[1, 2, 3, 4].map((team) => (
               <div
                 key={team}
-                className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-3"
+                className="border border-border rounded-xl p-3"
               >
-                <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 mb-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted mb-2">
                   Lag {team}
                 </p>
                 {byTeam[team].length === 0 ? (
-                  <p className="text-sm text-zinc-500">(tom)</p>
+                  <p className="text-sm text-muted">(tom)</p>
                 ) : (
                   <ul className="space-y-1">
                     {byTeam[team].map((p) => (
-                      <li
-                        key={p.user_id}
-                        className="text-sm text-zinc-900 dark:text-zinc-100"
-                      >
+                      <li key={p.user_id} className="text-sm text-text">
                         {displayName(p)}
                       </li>
                     ))}
@@ -306,21 +306,19 @@ export default async function GameDetailPage({
         </Card>
 
         <Card>
-          <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
-            Flights
-          </h2>
+          <SectionLabel>Flights</SectionLabel>
           <ul className="space-y-2">
             {[1, 2, 3, 4]
               .filter((f) => byFlight[f].length > 0)
               .map((f) => (
                 <li
                   key={f}
-                  className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-3"
+                  className="border border-border rounded-xl p-3"
                 >
-                  <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 mb-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted mb-1">
                     Flight {f}
                   </p>
-                  <p className="text-sm text-zinc-900 dark:text-zinc-100">
+                  <p className="text-sm text-text">
                     {byFlight[f].map(displayName).join(', ')}
                   </p>
                 </li>
@@ -329,35 +327,31 @@ export default async function GameDetailPage({
         </Card>
 
         <Card>
-          <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
-            Innstillinger
-          </h2>
-          <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-sm">
-            <dt className="text-zinc-500">HCP-allowance</dt>
-            <dd className="text-zinc-900 dark:text-zinc-100 text-right">
+          <SectionLabel>Innstillinger</SectionLabel>
+          <dl className="grid grid-cols-[1fr_auto] gap-y-2 text-sm">
+            <dt className="text-muted">HCP-allowance</dt>
+            <dd className="text-text text-right tabular-nums">
               {game.hcp_allowance_pct} %
             </dd>
-            <dt className="text-zinc-500">Peer-godkjenning</dt>
-            <dd className="text-zinc-900 dark:text-zinc-100 text-right">
+            <dt className="text-muted">Peer-godkjenning</dt>
+            <dd className="text-text text-right">
               {game.require_peer_approval ? 'På' : 'Av'}
             </dd>
           </dl>
         </Card>
 
         <Card>
-          <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
-            Spillere
-          </h2>
+          <SectionLabel>Spillere</SectionLabel>
           <div className="overflow-x-auto -mx-2">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm tabular-nums">
               <thead>
-                <tr className="text-left text-xs text-zinc-500">
-                  <th className="px-2 py-1.5 font-medium">Navn</th>
-                  <th className="px-2 py-1.5 font-medium">Lag</th>
-                  <th className="px-2 py-1.5 font-medium">Flight</th>
-                  <th className="px-2 py-1.5 font-medium text-right">CH</th>
+                <tr className="text-left text-[10px] font-semibold uppercase tracking-widest text-muted">
+                  <th className="px-2 py-1.5 font-semibold">Navn</th>
+                  <th className="px-2 py-1.5 font-semibold">Lag</th>
+                  <th className="px-2 py-1.5 font-semibold">Flight</th>
+                  <th className="px-2 py-1.5 font-semibold text-right">CH</th>
                   {game.status !== 'draft' && (
-                    <th className="px-2 py-1.5 font-medium">Status</th>
+                    <th className="px-2 py-1.5 font-semibold">Status</th>
                   )}
                 </tr>
               </thead>
@@ -367,33 +361,24 @@ export default async function GameDetailPage({
                   let statusClass: string;
                   if (!p.submitted_at) {
                     statusLabel = '⏳ Spiller';
-                    statusClass = 'text-zinc-500';
+                    statusClass = 'text-muted';
                   } else if (game.require_peer_approval && !p.approved_at) {
-                    statusLabel = '⏳ Venter godkjenning';
-                    statusClass = 'text-amber-600 dark:text-amber-400';
+                    statusLabel = '⏳ Venter';
+                    statusClass = 'text-warning';
                   } else {
                     statusLabel = '✓ Levert';
-                    statusClass = 'text-green-700 dark:text-green-400';
+                    statusClass = 'text-success';
                   }
                   return (
-                    <tr
-                      key={p.user_id}
-                      className="border-t border-zinc-200 dark:border-zinc-800"
-                    >
-                      <td className="px-2 py-1.5 text-zinc-900 dark:text-zinc-100">
-                        {displayName(p)}
-                      </td>
-                      <td className="px-2 py-1.5 text-zinc-700 dark:text-zinc-300">
-                        {p.team_number}
-                      </td>
-                      <td className="px-2 py-1.5 text-zinc-700 dark:text-zinc-300">
-                        {p.flight_number}
-                      </td>
-                      <td className="px-2 py-1.5 text-right text-zinc-700 dark:text-zinc-300">
+                    <tr key={p.user_id} className="border-t border-border">
+                      <td className="px-2 py-2 text-text">{displayName(p)}</td>
+                      <td className="px-2 py-2 text-text">{p.team_number}</td>
+                      <td className="px-2 py-2 text-text">{p.flight_number}</td>
+                      <td className="px-2 py-2 text-right text-text">
                         {p.course_handicap ?? '—'}
                       </td>
                       {game.status !== 'draft' && (
-                        <td className={`px-2 py-1.5 text-xs ${statusClass}`}>
+                        <td className={`px-2 py-2 text-xs ${statusClass}`}>
                           {statusLabel}
                         </td>
                       )}
@@ -411,15 +396,13 @@ export default async function GameDetailPage({
           );
           return (
             <Card>
-              <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
-                Innleverte scorekort
-              </h2>
+              <SectionLabel>Innleverte scorekort</SectionLabel>
               {pending.length === 0 ? (
-                <p className="text-sm text-zinc-500">
+                <p className="text-sm text-muted">
                   Ingen scorekort venter på godkjenning akkurat nå.
                 </p>
               ) : (
-                <ul className="divide-y divide-zinc-200 dark:divide-zinc-800 -mx-2">
+                <ul className="divide-y divide-border -mx-2">
                   {pending.map((p) => {
                     const approve = adminApproveScorecard.bind(
                       null,
@@ -432,10 +415,10 @@ export default async function GameDetailPage({
                         className="px-2 py-3 flex items-center justify-between gap-3"
                       >
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                          <p className="text-sm font-medium tracking-tight text-text truncate">
                             {displayName(p)}
                           </p>
-                          <p className="text-xs text-zinc-500 mt-0.5">
+                          <p className="text-xs text-muted mt-0.5">
                             Flight {p.flight_number} · Lag {p.team_number}
                           </p>
                         </div>
@@ -458,19 +441,19 @@ export default async function GameDetailPage({
 
         {game.status === 'active' && (
           <Card>
-            <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
-              Avslutt spillet
-            </h2>
+            <SectionLabel>Avslutt spillet</SectionLabel>
             {everyPlayerReady ? (
-              <div className="space-y-2">
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                  Alle spillere har levert{game.require_peer_approval && ' og godkjent'} scorekort. Spillet kan avsluttes — leaderboard blir
-                  åpen for alle deltakere.
+              <div className="space-y-3">
+                <p className="text-sm text-muted">
+                  Alle spillere har levert
+                  {game.require_peer_approval && ' og godkjent'} scorekort.
+                  Spillet kan avsluttes — leaderboard blir åpen for alle
+                  deltakere.
                 </p>
                 <EndGameButton endAction={endAction} />
               </div>
             ) : (
-              <div className="rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 px-3 py-2.5 text-sm text-amber-900 dark:text-amber-200">
+              <div className="rounded-xl border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning">
                 {notSubmittedCount > 0 && (
                   <p>
                     {notSubmittedCount} av {players.length} spillere har ikke
@@ -489,11 +472,9 @@ export default async function GameDetailPage({
 
         {game.status === 'finished' && (
           <Card>
-            <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
-              Resultat
-            </h2>
+            <SectionLabel>Resultat</SectionLabel>
             <Link href={`/games/${id}/leaderboard`} className="block">
-              <div className="w-full min-h-[44px] bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium transition-colors text-center text-base">
+              <div className="w-full min-h-[44px] bg-primary hover:bg-primary-hover text-white px-4 py-3 rounded-full font-medium tracking-tight text-center transition-colors">
                 🏆 Se leaderboard →
               </div>
             </Link>
