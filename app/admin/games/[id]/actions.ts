@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import {
   calculateCourseHandicap,
@@ -116,3 +117,56 @@ export async function adminApproveScorecard(
 
   redirect(`${detailPath}?status=admin_approved`);
 }
+
+/**
+ * Admin: end an active game. All players must have submitted, and (if peer
+ * approval is required) all submissions must be approved. Flips the game to
+ * `finished` and stamps `ended_at`, which opens the leaderboard for everyone.
+ */
+export async function endGame(gameId: string) {
+  const { supabase } = await requireAdmin();
+  const detailPath = `/admin/games/${gameId}`;
+
+  // Verify game is active
+  const { data: game } = await supabase
+    .from('games')
+    .select('id, status, require_peer_approval')
+    .eq('id', gameId)
+    .single<{ id: string; status: GameStatus; require_peer_approval: boolean }>();
+  if (!game || game.status !== 'active') {
+    redirect(`${detailPath}?error=not_active`);
+  }
+
+  // Verify every player has submitted; if require_peer_approval, every
+  // submission must also be approved.
+  const { data: players } = await supabase
+    .from('game_players')
+    .select('submitted_at, approved_at')
+    .eq('game_id', gameId)
+    .returns<{ submitted_at: string | null; approved_at: string | null }[]>();
+
+  if (!players || players.length === 0) {
+    redirect(`${detailPath}?error=no_players`);
+  }
+  for (const p of players!) {
+    if (!p.submitted_at) {
+      redirect(`${detailPath}?error=not_all_submitted`);
+    }
+    if (game!.require_peer_approval && !p.approved_at) {
+      redirect(`${detailPath}?error=not_all_approved`);
+    }
+  }
+
+  const { error } = await supabase
+    .from('games')
+    .update({ status: 'finished', ended_at: new Date().toISOString() })
+    .eq('id', gameId);
+
+  if (error) redirect(`${detailPath}?error=db_finish`);
+
+  revalidatePath(`/admin/games/${gameId}`);
+  revalidatePath(`/games/${gameId}`);
+  redirect(`${detailPath}?status=finished`);
+}
+
+type GameStatus = 'draft' | 'active' | 'finished';
