@@ -41,6 +41,8 @@ async function mergeIncoming(row: ScoreRowFromDb): Promise<void> {
  */
 export function subscribeGameScores(gameId: string): () => void {
   const supabase = getBrowserClient();
+  // eslint-disable-next-line no-console
+  console.log('[realtime] subscribing to scores for game', gameId);
   const channel = supabase
     .channel(`scores:${gameId}`)
     .on(
@@ -52,14 +54,36 @@ export function subscribeGameScores(gameId: string): () => void {
         filter: `game_id=eq.${gameId}`,
       },
       (payload) => {
+        // eslint-disable-next-line no-console
+        console.log('[realtime] event received', {
+          eventType: payload.eventType,
+          new: payload.new,
+          old: payload.old,
+        });
         const row = (payload.new ?? payload.old) as Partial<ScoreRowFromDb>;
-        if (!row || !row.game_id || !row.user_id || row.hole_number == null) return;
-        void mergeIncoming(row as ScoreRowFromDb);
+        if (!row || !row.game_id || !row.user_id || row.hole_number == null) {
+          // eslint-disable-next-line no-console
+          console.warn('[realtime] event payload missing required fields, ignored');
+          return;
+        }
+        void mergeIncoming(row as ScoreRowFromDb).then(() => {
+          // eslint-disable-next-line no-console
+          console.log('[realtime] merged into local db', {
+            userId: row.user_id,
+            holeNumber: row.hole_number,
+            strokes: row.strokes,
+          });
+        });
       },
     )
-    .subscribe();
+    .subscribe((status, err) => {
+      // eslint-disable-next-line no-console
+      console.log('[realtime] subscription status:', status, err ?? '');
+    });
 
   return () => {
+    // eslint-disable-next-line no-console
+    console.log('[realtime] unsubscribing from scores for game', gameId);
     void supabase.removeChannel(channel);
   };
 }
