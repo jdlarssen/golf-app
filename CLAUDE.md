@@ -115,6 +115,13 @@ Ved tvil: hvis oppgaven kan beskrives ferdig i én prompt og forventes å produs
 - UI primitives: bruk eksisterende i `components/ui/` — ikke duplisér
 - Mobile-first, tap-targets ≥44px
 
+### Brand
+
+- **Tagline (canonical):** «Tørny — fyr opp golfturneringen på minutter»
+- **Subordinate form** (ved siden av BrandMark, for å unngå navn-repetisjon): «Fyr opp golfturneringen på minutter»
+- **Brand-stemme:** Sporty kompis-energi. Action-verb framfor passiv beskrivelse. Norske idiomer framfor «smart»-engelsk.
+- **BrandMark-subtitle** («Turnering» under logo) er logo-lockup, **ikke** tagline — endres ikke uten visuell redesign.
+
 ## Arkitektur
 
 ### Datamodell
