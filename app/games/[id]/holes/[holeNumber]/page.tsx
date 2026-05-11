@@ -127,8 +127,10 @@ export default async function HolePage({ params }: { params: Params }) {
 
   const playersForClient: ClientPlayer[] = flight.map((p) => {
     const name = p.users?.name ?? '(ukjent spiller)';
-    const nickname = p.users?.nickname ?? null;
-    const display = nickname && nickname.length > 0 ? nickname : name;
+    const rawNickname = p.users?.nickname ?? null;
+    const nickname =
+      rawNickname && rawNickname.trim().length > 0 ? rawNickname : null;
+    const display = nickname ?? name;
     const ch = p.course_handicap ?? 0;
     const scoreRow = scoresByUser[p.user_id];
     return {

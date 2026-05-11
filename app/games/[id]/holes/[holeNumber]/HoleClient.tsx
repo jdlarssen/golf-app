@@ -133,6 +133,8 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   }, []);
 
   // Seed Dexie with server values on mount / hole change.
+  // players is stable per render because the parent is a server component.
+  // If this ever becomes a client-rendered parent, swap to a derived stable key.
   useEffect(() => {
     let cancelled = false;
     (async () => {
