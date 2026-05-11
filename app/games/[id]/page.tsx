@@ -267,15 +267,31 @@ export default async function GameHomePage({
         {isActive ? (
           <PrimaryCta gameId={id} state={state} strokesCount={strokesCount} />
         ) : game.status === 'finished' ? (
-          <Link href={`/games/${id}/scorecard`} className="block">
-            <div className="w-full min-h-[44px] bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-medium transition-colors text-center text-base">
-              Se resultat →
+          <Link href={`/games/${id}/leaderboard`} className="block">
+            <div className="w-full min-h-[44px] bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium transition-colors text-center text-base">
+              🏆 Se leaderboard →
             </div>
           </Link>
         ) : (
           <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 px-4 py-3 text-sm text-zinc-500 text-center">
             Spillet er ikke startet ennå.
           </div>
+        )}
+
+        {game.status === 'finished' && (
+          <Link
+            href={`/games/${id}/leaderboard/holes`}
+            className="block"
+          >
+            <Card className="min-h-[44px] flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+              <span className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+                Hull for hull
+              </span>
+              <span aria-hidden className="text-zinc-400">
+                →
+              </span>
+            </Card>
+          </Link>
         )}
 
         <Link href={`/games/${id}/scorecard`} className="block">
