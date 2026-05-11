@@ -43,6 +43,7 @@ function makeMockClient(rows: { created_at: string }[]) {
   const builder = {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
+    is: vi.fn().mockReturnThis(),
     gte: vi.fn().mockReturnThis(),
     order: vi.fn().mockResolvedValue({ data: rows, error: null }),
   };
@@ -107,6 +108,7 @@ describe('getQuotaState', () => {
     const errorBuilder = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
       gte: vi.fn().mockReturnThis(),
       order: vi.fn().mockResolvedValue({
         data: null,
@@ -118,5 +120,61 @@ describe('getQuotaState', () => {
     } as unknown as FakeSupabase;
 
     await expect(getQuotaState(client as never, 'user-1')).rejects.toThrow();
+  });
+
+  it('treats count === DAILY_INVITE_LIMIT - 1 as not exhausted', async () => {
+    // 9 invites in last 24h — just under the limit
+    const rows = Array.from({ length: DAILY_INVITE_LIMIT - 1 }, (_, i) => ({
+      created_at: new Date(Date.now() - (i + 1) * 60 * 60 * 1000).toISOString(),
+    }));
+    const client = makeMockClient(rows);
+
+    const state = await getQuotaState(client as never, 'user-1');
+
+    expect(state.count).toBe(DAILY_INVITE_LIMIT - 1);
+    expect(state.isExhausted).toBe(false);
+    expect(state.nextSlotAt).toBeNull();
+  });
+
+  it('treats count above the limit as exhausted with nextSlotAt computed', async () => {
+    // 11 invites — one over the limit; oldest sets the nextSlotAt
+    const oldest = new Date('2026-05-10T11:30:00Z');
+    const rows = [
+      { created_at: oldest.toISOString() },
+      ...Array.from({ length: DAILY_INVITE_LIMIT }, (_, i) => ({
+        created_at: new Date(
+          Date.now() - (i + 1) * 30 * 60 * 1000,
+        ).toISOString(),
+      })),
+    ];
+    const client = makeMockClient(rows);
+
+    const state = await getQuotaState(client as never, 'user-1');
+
+    expect(state.count).toBe(DAILY_INVITE_LIMIT + 1);
+    expect(state.isExhausted).toBe(true);
+    expect(state.nextSlotAt?.toISOString()).toBe(
+      new Date(oldest.getTime() + QUOTA_WINDOW_MS).toISOString(),
+    );
+  });
+
+  it('filters out game-scoped invites via the .is(game_id, null) clause', async () => {
+    const rows = [
+      { created_at: new Date(Date.now() - 60 * 60 * 1000).toISOString() },
+    ];
+    const builder = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: rows, error: null }),
+    };
+    const client = {
+      from: vi.fn().mockReturnValue(builder),
+    } as unknown as FakeSupabase;
+
+    await getQuotaState(client as never, 'user-1');
+
+    expect(builder.is).toHaveBeenCalledWith('game_id', null);
   });
 });

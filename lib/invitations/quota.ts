@@ -29,6 +29,7 @@ export async function getQuotaState(
     .from('invitations')
     .select('created_at')
     .eq('invited_by', userId)
+    .is('game_id', null)
     .gte('created_at', windowStart)
     .order('created_at', { ascending: true });
 
