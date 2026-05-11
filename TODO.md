@@ -43,6 +43,7 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 - [ ] Sende mail til alle spillere når admin trykker «Avslutt spillet» («Resultatet er klart!»)
 - [ ] Sende mail til admin når en spiller leverer scorekort (slik at admin kan begynne å godkjenne)
 - [ ] (Senere) push-varsler via Web Push API — krever VAPID-nøkler og service worker oppgradering
+- [ ] **In-app innboks / varslings-senter** *(større feature — egen milestone)* — sentralisert flate der innloggede brukere ser invitasjoner til nye spill, godkjennings-forespørsler fra flight-medlemmer, runde-starter-snart-meldinger, scorekort-godkjent, og leaderboard-finished. Krever ny tabell (`notifications` med `user_id`, `type`, `payload jsonb`, `read_at`, `created_at`), realtime-push av nye varsler, UI-flate (header-ikon med badge + dropdown/side), read/unread-state, evt. push-notifikasjoner via Web Push. Avhenger av Phase E.5 (e-post-på-game-add) for den enkleste varseltypen — varselsystemet bør gjøre mer enn det e-post allerede gjør. Diskutert 2026-05-11; må gjennom egen brainstorming-runde for å designe varselstypene og prioriteringen.
 
 ---
 

@@ -1387,6 +1387,87 @@ git commit -m "fix(games): dark-mode pass for state #2"
 
 ---
 
+## Phase E.5 — Email notification when admin adds player to a game
+
+**Motivation:** State #1's empty state currently tells non-admins "Du er klar. Admin setter opp neste runde." That's accurate for the current data flow (players just see new games appear on their home page when admin adds them), but it relies on the player periodically opening the app. An email when admin publishes a scheduled game (or adds a player to an existing scheduled game) would:
+
+- Match the design's original CTA assumption that tournaments arrive by invite
+- Give players a clear "you're in {turneringsnavn} — tee-off lørdag kl 14:24" message in their inbox
+- Bridge to the eventual in-app notifications system (Phase Z or separate milestone) without requiring it first
+
+**Scope:** Single email type — "you've been added to a game". Sent at two trigger points:
+1. When admin publishes a game (status `draft → scheduled`) — one email per player on the roster
+2. When admin edits a scheduled game and adds a NEW player to the roster — email only the newly-added player
+
+NOT in scope for E.5:
+- Email when player is removed from a roster
+- Email when admin edits non-roster fields (tee-off time, course, etc.)
+- Email when round actually starts (separate notification type — push or in-app, not email)
+
+### Task E5.1: Resend email template "Du er med på {turneringsnavn}"
+
+**Files:**
+- Create: `supabase/email-templates/game-add-notification.html` (or wherever Resend templates live in this project — check existing structure under `docs/email-templates.md` for the conventions)
+
+**Step 1:** Read `docs/email-templates.md` to understand the project's email template conventions (Supabase Auth uses inline templates pasted into the Supabase Dashboard; Resend transactional emails may use a different mechanism — verify before guessing).
+
+**Step 2:** Design the email body. Norwegian copy, forest-and-champagne styling consistent with existing magic-link mails. Required fields:
+- Greeting: `Hei, {firstName}.`
+- Subject: `Du er med på {tournament_name}`
+- Body: «{adminName} har meldt deg på {tournament_name} på {courseName}. Tee-off {dayName} {date} kl {time}.»
+- Flight info (optional in v1): name + HCP of flight-mates
+- CTA: link to `/games/{game_id}` (deep-link to the state #2 venterom)
+- Footer: «Du får denne meldingen fordi du er registrert hos Tørny. Logg inn for å se detaljer.»
+
+**Step 3:** Save template + commit.
+
+### Task E5.2: Server action to send the email
+
+**Files:**
+- Create: `lib/email/sendGameAddNotification.ts`
+- Modify: `app/admin/games/new/actions.ts` (call after successful publish)
+- Modify: `app/admin/games/[id]/edit/actions.ts` (call after successful add-player on edit)
+
+**Step 1:** Inspect existing transactional email plumbing in the project. There's likely an existing helper for Resend SMTP (or the project uses Supabase's auth-mail-only setup). Check `lib/supabase/` and any `lib/email/` directory. If no transactional setup exists, add `lib/email/sendTransactional.ts` first as a thin wrapper.
+
+**Step 2:** Implement `sendGameAddNotification({ to, firstName, adminName, gameName, courseName, teeOffAt, gameId })` as a server-side function. Send via Resend SMTP using existing creds (already in env).
+
+**Step 3:** Wire into `createAndPublishAction` and `updateGameAction`:
+- After successful insert/update, query the new player list
+- For each new player (compared to previous state on edit, or all on first publish), call `sendGameAddNotification`
+- Run sends in parallel via `Promise.all` (or sequentially with `for await` if rate-limiting matters)
+- Errors are logged but do NOT block the publish/edit transaction (email is best-effort)
+
+**Step 4:** Add a feature flag or env-var gate so we can disable the emails temporarily if needed (e.g. during prod incidents). Default: enabled in production, disabled in dev (avoid spamming yourself with test invitations).
+
+**Step 5:** Manual test: create a game with yourself as a player, confirm email arrives.
+
+**Step 6:** Commit each piece atomically.
+
+### Task E5.3: Update state #1 CTA copy to acknowledge email arrival
+
+**Files:**
+- Modify: `app/page.tsx`
+
+Once E.5 ships, the non-admin empty-state body can be more confident:
+- Before: `Du er klar. Admin setter opp neste runde.`
+- After: `Du er klar. Admin sender e-post når neste runde er satt opp.`
+
+Trivial copy fix; commit separately so it's bisectable.
+
+### Acceptance criteria for Phase E.5
+
+- [ ] Resend template exists, renders cleanly in major email clients (Gmail, Apple Mail, Outlook web)
+- [ ] Email body uses Norwegian; tone matches existing magic-link mails
+- [ ] Email is sent on first publish (all players notified)
+- [ ] Email is sent on edit-with-new-player (only new player notified)
+- [ ] Email is NOT sent on edit-without-roster-change
+- [ ] Email failures don't block the admin action
+- [ ] Dev mode default = disabled (no spam during local testing)
+- [ ] State #1 copy reflects the new flow
+
+---
+
 ## Phase F — Leaderboard partial-reveal (state #3 + #3.5)
 
 ### Task F1: Server-side branch — state #3 vs state #3.5 vs full
