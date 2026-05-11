@@ -131,23 +131,28 @@ async function createGameInternal(
     redirect(`/admin/games/new?error=${payload.errorCode}`);
   }
 
-  // Tee-off is required for publish; D3 will allow drafts to optionally
-  // carry one through. For now drafts ignore the field.
+  // Tee-off handling:
+  // - Publish: required. Empty or malformed input redirects with an error.
+  // - Draft: optional. Empty or malformed input silently persists as NULL,
+  //   so an admin can save a draft without committing to a tee-off yet,
+  //   and a valid value carries forward when the draft is later published.
   let scheduledTeeOffAt: string | null = null;
-  if (mode === 'publish') {
-    const raw = String(formData.get('scheduled_tee_off_at') ?? '').trim();
-    if (!raw) {
-      redirect('/admin/games/new?error=tee_off_required');
-    }
-    // parseOsloDateTimeLocal can throw RangeError on malformed strings
-    // (DevTools tinkering, non-Chromium browsers emitting unexpected formats).
-    // Redirect to the same error code rather than surfacing Next's error
-    // overlay, preserving the file's redirect-on-validation-error invariant.
+  const rawTeeOff = String(formData.get('scheduled_tee_off_at') ?? '').trim();
+  if (rawTeeOff) {
     try {
-      scheduledTeeOffAt = parseOsloDateTimeLocal(raw);
+      scheduledTeeOffAt = parseOsloDateTimeLocal(rawTeeOff);
     } catch {
-      redirect('/admin/games/new?error=tee_off_required');
+      // parseOsloDateTimeLocal can throw RangeError on malformed strings
+      // (DevTools tinkering, non-Chromium browsers emitting unexpected
+      // formats). Publish surfaces this as a validation error; draft
+      // tolerates it as "no tee-off provided".
+      if (mode === 'publish') {
+        redirect('/admin/games/new?error=tee_off_required');
+      }
+      scheduledTeeOffAt = null;
     }
+  } else if (mode === 'publish') {
+    redirect('/admin/games/new?error=tee_off_required');
   }
 
   const supabase = await getServerClient();
