@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { GameForm, type CourseOption, type PlayerOption } from './GameForm';
-import { createGameDraft, createAndStartGame } from './actions';
+import { createGameDraft, createAndPublishGame } from './actions';
 
 type SearchParams = Promise<{ error?: string | string[] }>;
 
@@ -25,6 +25,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   db_tee: 'Klarte ikke å lese tee-boksen fra databasen. Prøv igjen.',
   db_players:
     'Klarte ikke å lagre spillerne på spillet. Prøv igjen, eller sjekk Supabase-loggene.',
+  tee_off_required: 'Tee-off-tidspunkt er påkrevd ved publisering.',
 };
 
 function first(value: string | string[] | undefined): string | undefined {
@@ -123,7 +124,7 @@ export default async function NewGamePage({
           courses={courses}
           players={players}
           createDraftAction={createGameDraft}
-          createAndStartAction={createAndStartGame}
+          createAndPublishAction={createAndPublishGame}
         />
       </Card>
     </AppShell>

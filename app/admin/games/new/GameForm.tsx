@@ -24,12 +24,15 @@ export type InitialValues = {
   name?: string;
   course_id?: string;
   tee_box_id?: string;
+  /** Format: 'YYYY-MM-DDTHH:mm' in Europe/Oslo local time (matches datetime-local input). */
   scheduled_tee_off_at?: string;
   hcp_allowance_pct?: string;
   require_peer_approval?: boolean;
   players?: Array<{
     user_id: string;
-    team_number: TeamNumber;
+    // Widened to `number` at the prop boundary; deriveAssignmentsFromInitial
+    // validates/narrows to TeamNumber when populating internal state.
+    team_number: number;
     flight_number: number;
   }>;
 };
@@ -38,14 +41,21 @@ type Props = {
   courses: CourseOption[];
   players: PlayerOption[];
   createDraftAction: (formData: FormData) => void | Promise<void>;
-  createAndStartAction: (formData: FormData) => void | Promise<void>;
+  createAndPublishAction: (formData: FormData) => void | Promise<void>;
   initialValues?: InitialValues;
 };
 
 const FLIGHT_NUMBERS = [1, 2, 3, 4] as const;
 
+function isTeamNumber(n: number): n is TeamNumber {
+  return n === 1 || n === 2 || n === 3 || n === 4;
+}
+
 // Derive team/flight maps from the optional initialValues.players array so the
-// edit page (D4) can pre-fill these without re-implementing the math.
+// edit page (D4) can pre-fill these without re-implementing the math. Rows
+// with an out-of-range team_number are dropped (treated as unassigned),
+// which keeps the prop boundary forgiving without smuggling bad data into
+// internal state.
 function deriveAssignmentsFromInitial(initial: InitialValues | undefined) {
   if (!initial?.players) {
     return {
@@ -59,7 +69,9 @@ function deriveAssignmentsFromInitial(initial: InitialValues | undefined) {
   const flightByPlayer: Record<string, number> = {};
   for (const row of initial.players) {
     selectedPlayerIds.push(row.user_id);
-    teamByPlayer[row.user_id] = row.team_number;
+    if (isTeamNumber(row.team_number)) {
+      teamByPlayer[row.user_id] = row.team_number;
+    }
     flightByPlayer[row.user_id] = row.flight_number;
   }
   return { selectedPlayerIds, teamByPlayer, flightByPlayer };
@@ -84,7 +96,7 @@ export function GameForm({
   courses,
   players,
   createDraftAction,
-  createAndStartAction,
+  createAndPublishAction,
   initialValues,
 }: Props) {
   // `name` is controlled now (was uncontrolled) so initialValues can pre-fill
@@ -96,15 +108,15 @@ export function GameForm({
   const [teeBoxId, setTeeBoxId] = useState<string>(
     initialValues?.tee_box_id ?? '',
   );
-  // Required for "Lagre og publiser" (D2 wires this into button disabled
-  // state). Drafts may omit it. Empty string === "not set".
+  // Required for "Lagre og publiser"; drives the button's disabled state via
+  // `canPublish` below. Drafts may omit it. Empty string === "not set".
   const [scheduledTeeOffAt, setScheduledTeeOffAt] = useState<string>(
     initialValues?.scheduled_tee_off_at ?? '',
   );
-  const initialAssignments = useMemo(
-    () => deriveAssignmentsFromInitial(initialValues),
-    [initialValues],
-  );
+  // initialValues is read once at mount — D4's edit page passes a stable
+  // snapshot from the DB. If the parent ever needs to push live updates,
+  // reset via key prop instead.
+  const initialAssignments = deriveAssignmentsFromInitial(initialValues);
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>(
     initialAssignments.selectedPlayerIds,
   );
@@ -123,10 +135,9 @@ export function GameForm({
     initialValues?.require_peer_approval ?? false,
   );
 
-  // Flag exposed for D2 to drive the "Lagre og publiser" button's disabled
-  // state. Drafts can be saved without a tee-off; publishing cannot.
+  // Drafts can be saved without a tee-off; publishing cannot. `canPublish`
+  // below combines this with the rest of the validity gates.
   const hasTeeOff = scheduledTeeOffAt !== '';
-  void hasTeeOff;
 
   const selectedCourse = useMemo(
     () => courses.find((c) => c.id === courseId) ?? null,
@@ -276,6 +287,10 @@ export function GameForm({
     flightsComplete &&
     allowanceValid;
 
+  // Publishing additionally requires a tee-off time. Drafts skip this gate
+  // (D3 will let drafts optionally carry one through anyway).
+  const canPublish = canSubmit && hasTeeOff;
+
   function playerLabel(p: PlayerOption): string {
     const hcp = p.hcp_index.toFixed(1);
     if (p.nickname) return `${p.name} «${p.nickname}» — HCP ${hcp}`;
@@ -389,6 +404,9 @@ export function GameForm({
           </select>
         </div>
 
+        {/* `datetime-local` emits 'YYYY-MM-DDTHH:mm' in browser local time (no
+            offset). Server interprets in Europe/Oslo before persisting as
+            timestamptz. See actions.ts. */}
         <Input
           id="scheduled_tee_off_at"
           name="scheduled_tee_off_at"
@@ -598,11 +616,11 @@ export function GameForm({
       <section className="space-y-3 pt-2">
         <Button
           type="submit"
-          formAction={createAndStartAction}
+          formAction={createAndPublishAction}
           className="w-full"
-          disabled={!canSubmit}
+          disabled={!canPublish}
         >
-          Lagre og start
+          Lagre og publiser
         </Button>
         <Button
           type="submit"

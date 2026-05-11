@@ -2,10 +2,10 @@
 
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
-import {
-  calculateCourseHandicap,
-  applyAllowance,
-} from '@/lib/scoring/courseHandicap';
+// Course handicap is no longer frozen at create-time: the new flow has the
+// admin press "Start runden nå" (D5) to flip 'scheduled' → 'active' and
+// freeze handicaps then. Until D5 lands, scheduled rows persist with
+// course_handicap=null.
 
 type GamePlayerInput = {
   user_id: string;
@@ -22,6 +22,32 @@ type ParsedPayload = {
   players: GamePlayerInput[];
   errorCode?: string;
 };
+
+// Parse a 'YYYY-MM-DDTHH:mm' string (as emitted by <input type="datetime-local">)
+// as wall-clock time in Europe/Oslo and return the corresponding UTC ISO string.
+//
+// Strategy: ask Intl what the timezone-name short label is for the given Oslo
+// wall-clock date (CET = GMT+1, CEST = GMT+2). Append the matching offset
+// suffix and let `new Date()` parse the offset-bearing string into UTC.
+// This handles DST transitions correctly for any non-ambiguous wall-clock
+// instant. (Ambiguous instants — the autumn fall-back hour — are vanishingly
+// rare for golf tee-offs and fall back to the post-transition offset.)
+function parseOsloDateTimeLocal(s: string): string {
+  const [datePart] = s.split('T');
+  const [y, m, d] = datePart.split('-').map(Number);
+  // Probe at noon UTC on the target date: avoids straddling the midnight
+  // DST boundary and yields the right offset for the day.
+  const probe = new Date(Date.UTC(y, m - 1, d, 12, 0));
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Oslo',
+    timeZoneName: 'short',
+  });
+  const tzPart = fmt
+    .formatToParts(probe)
+    .find((p) => p.type === 'timeZoneName')?.value;
+  const offset = tzPart === 'GMT+2' ? '+02:00' : '+01:00';
+  return new Date(`${s}:00${offset}`).toISOString();
+}
 
 function buildGameInsertPayload(formData: FormData): ParsedPayload {
   const name = String(formData.get('name') ?? '').trim();
@@ -88,18 +114,32 @@ function buildGameInsertPayload(formData: FormData): ParsedPayload {
 }
 
 export async function createGameDraft(formData: FormData) {
-  await createGameInternal(formData, false);
+  await createGameInternal(formData, 'draft');
 }
 
-export async function createAndStartGame(formData: FormData) {
-  await createGameInternal(formData, true);
+export async function createAndPublishGame(formData: FormData) {
+  await createGameInternal(formData, 'publish');
 }
 
-async function createGameInternal(formData: FormData, start: boolean) {
+async function createGameInternal(
+  formData: FormData,
+  mode: 'draft' | 'publish',
+) {
   const payload = buildGameInsertPayload(formData);
 
   if (payload.errorCode) {
     redirect(`/admin/games/new?error=${payload.errorCode}`);
+  }
+
+  // Tee-off is required for publish; D3 will allow drafts to optionally
+  // carry one through. For now drafts ignore the field.
+  let scheduledTeeOffAt: string | null = null;
+  if (mode === 'publish') {
+    const raw = String(formData.get('scheduled_tee_off_at') ?? '').trim();
+    if (!raw) {
+      redirect('/admin/games/new?error=tee_off_required');
+    }
+    scheduledTeeOffAt = parseOsloDateTimeLocal(raw);
   }
 
   const supabase = await getServerClient();
@@ -123,9 +163,13 @@ async function createGameInternal(formData: FormData, start: boolean) {
       tee_box_id: payload.tee_box_id,
       hcp_allowance_pct: payload.hcp_allowance_pct,
       require_peer_approval: payload.require_peer_approval,
-      status: start ? 'active' : 'draft',
+      // Publishing puts the game in 'scheduled' state — visible to players,
+      // but not yet active. The admin separately presses "Start runden nå"
+      // (D5) to flip status to 'active' and freeze handicaps.
+      status: mode === 'publish' ? 'scheduled' : 'draft',
+      scheduled_tee_off_at: scheduledTeeOffAt,
       created_by: user.id,
-      started_at: start ? new Date().toISOString() : null,
+      started_at: null,
     })
     .select('id')
     .single();
@@ -134,46 +178,19 @@ async function createGameInternal(formData: FormData, start: boolean) {
     redirect('/admin/games/new?error=db_game');
   }
 
-  // When starting immediately, freeze each player's course handicap using the
-  // selected tee's slope/rating and the configured allowance.
-  const frozenHandicaps: Record<string, number> = {};
-  if (start) {
-    const userIds = payload.players.map((p) => p.user_id);
-    const { data: users, error: usersError } = await supabase
-      .from('users')
-      .select('id, hcp_index')
-      .in('id', userIds);
-    if (usersError || !users) redirect('/admin/games/new?error=db_users');
-
-    const { data: tee, error: teeError } = await supabase
-      .from('tee_boxes')
-      .select('slope, course_rating, par_total')
-      .eq('id', payload.tee_box_id)
-      .single();
-    if (teeError || !tee) redirect('/admin/games/new?error=db_tee');
-
-    for (const u of users!) {
-      const raw = calculateCourseHandicap({
-        hcpIndex: Number(u.hcp_index),
-        slope: tee!.slope,
-        courseRating: Number(tee!.course_rating),
-        par: tee!.par_total,
-      });
-      frozenHandicaps[u.id] = applyAllowance(raw, payload.hcp_allowance_pct);
-    }
-  }
-
   const rows = payload.players.map((p) => ({
     game_id: game!.id,
     user_id: p.user_id,
     team_number: p.team_number,
     flight_number: p.flight_number,
-    course_handicap: start ? (frozenHandicaps[p.user_id] ?? null) : null,
+    // Course handicap is no longer frozen at create-time. Both 'scheduled'
+    // and 'draft' rows defer this until the round actually starts (D5).
+    course_handicap: null,
   }));
   const { error: gpError } = await supabase.from('game_players').insert(rows);
   if (gpError) redirect('/admin/games/new?error=db_players');
 
   redirect(
-    `/admin/games/${game!.id}?status=${start ? 'started' : 'draft_created'}`,
+    `/admin/games/${game!.id}?status=${mode === 'publish' ? 'scheduled' : 'draft_created'}`,
   );
 }
