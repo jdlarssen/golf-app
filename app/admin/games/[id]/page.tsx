@@ -135,6 +135,32 @@ export default async function GameDetailPage({
     if (byFlight[p.flight_number]) byFlight[p.flight_number].push(p);
   }
 
+  // Live progress: hole_number and user_id only (NO strokes — avoid spoilers).
+  // Admin sees how far each flight has come without seeing the values.
+  type ProgressRow = { user_id: string; hole_number: number };
+  let progressByFlight: Record<number, { maxHole: number; filledCells: number; totalCells: number }> = {};
+  if (game.status === 'active') {
+    const { data: progressRows } = await supabase
+      .from('scores')
+      .select('user_id, hole_number')
+      .eq('game_id', id)
+      .not('strokes', 'is', null)
+      .returns<ProgressRow[]>();
+    const rows = progressRows ?? [];
+    for (const f of [1, 2, 3, 4]) {
+      const flightPlayers = byFlight[f];
+      if (flightPlayers.length === 0) continue;
+      const userIds = new Set(flightPlayers.map((p) => p.user_id));
+      const flightRows = rows.filter((r) => userIds.has(r.user_id));
+      const maxHole = flightRows.reduce((m, r) => Math.max(m, r.hole_number), 0);
+      progressByFlight[f] = {
+        maxHole,
+        filledCells: flightRows.length,
+        totalCells: flightPlayers.length * 18,
+      };
+    }
+  }
+
   function displayName(p: GamePlayerRow): string {
     if (!p.users) return '(ukjent spiller)';
     return p.users.nickname
@@ -207,6 +233,45 @@ export default async function GameDetailPage({
             </p>
           )}
         </Card>
+
+        {game.status === 'active' && (
+          <Card>
+            <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
+              Fremgang per flight
+            </h2>
+            <p className="text-xs text-zinc-500 mb-3">
+              Hvor langt hver flight har kommet — uten å avsløre tall.
+            </p>
+            <ul className="space-y-3">
+              {[1, 2, 3, 4]
+                .filter((f) => byFlight[f].length > 0)
+                .map((f) => {
+                  const p = progressByFlight[f];
+                  const pct = p ? Math.round((p.filledCells / p.totalCells) * 100) : 0;
+                  return (
+                    <li key={f}>
+                      <div className="flex items-center justify-between text-sm mb-1">
+                        <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                          Flight {f}
+                        </span>
+                        <span className="text-zinc-500 text-xs">
+                          {p && p.maxHole > 0 ? `Hull ${p.maxHole}` : 'Ikke startet'}
+                          {' · '}
+                          {p ? `${p.filledCells}/${p.totalCells} tastet` : '0/0'}
+                        </span>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+                        <div
+                          className="h-full bg-green-600 transition-all"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </li>
+                  );
+                })}
+            </ul>
+          </Card>
+        )}
 
         <Card>
           <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
