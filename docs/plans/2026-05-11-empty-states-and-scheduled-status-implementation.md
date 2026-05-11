@@ -1059,14 +1059,21 @@ git commit -m "feat(admin): allow editing scheduled games before round starts"
 
 ---
 
-### Task D5: "Start runden nå" admin action
+### Task D5: "Start runden nå" admin action (+ freeze course handicaps)
 
 **Files:**
 - Modify: `app/admin/games/[id]/page.tsx`
 - Modify: `app/admin/games/[id]/actions.ts` (or create if not present)
 
+**Important context from D2:** the previous `createAndStartAction` froze each player's `course_handicap` at game-create time using `calculateCourseHandicap` + `applyAllowance` from `lib/scoring/courseHandicap.ts`. D2 correctly removed this from the publish path (since publish now only schedules; the round hasn't started). **D5 MUST re-introduce the handicap freeze step here, because once status flips to `active`, score-entry begins and the leaderboard expects every `game_players` row to have `course_handicap` set.** Without this step, scheduled games go live with `course_handicap = null` and downstream scoring breaks.
+
 **Step 1:** Add a server action `startScheduledGame(gameId)`:
 - Re-check: status must be 'scheduled' (otherwise throw)
+- Compute course handicaps for every player on the roster:
+  - Fetch the game's `tee_box_id` and `hcp_allowance_pct`
+  - Fetch the tee-box's `slope`, `course_rating`, `par_total`
+  - For each player in `game_players`: fetch their current `users.hcp_index`, compute `calculateCourseHandicap({ hcpIndex, slope, courseRating, parTotal })`, apply `applyAllowance(handicap, allowancePct)`, store the integer result
+  - Batch-update `game_players.course_handicap` for all players in this game
 - Update: status='active', started_at=now()
 - Realtime will broadcast the UPDATE automatically
 
@@ -1075,19 +1082,71 @@ git commit -m "feat(admin): allow editing scheduled games before round starts"
 'use server';
 import { getServerClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import {
+  calculateCourseHandicap,
+  applyAllowance,
+} from '@/lib/scoring/courseHandicap';
 
 export async function startScheduledGame(gameId: string) {
   const supabase = await getServerClient();
-  const { error } = await supabase
+
+  // 1. Verify status is still 'scheduled' and load tee-box + allowance.
+  const { data: game, error: gameErr } = await supabase
+    .from('games')
+    .select(
+      'id, status, hcp_allowance_pct, tee_boxes(slope, course_rating, par_total)',
+    )
+    .eq('id', gameId)
+    .single();
+  if (gameErr) throw gameErr;
+  if (game.status !== 'scheduled') {
+    throw new Error('Spillet kan ikke startes — det er ikke planlagt.');
+  }
+  const tee = game.tee_boxes;
+  if (!tee) throw new Error('Tee-box mangler.');
+
+  // 2. Load all players + their hcp_index.
+  const { data: roster, error: rosterErr } = await supabase
+    .from('game_players')
+    .select('user_id, users(hcp_index)')
+    .eq('game_id', gameId);
+  if (rosterErr) throw rosterErr;
+
+  // 3. Compute course_handicap per player.
+  const updates = roster.map((row) => {
+    const raw = calculateCourseHandicap({
+      hcpIndex: row.users.hcp_index,
+      slope: tee.slope,
+      courseRating: tee.course_rating,
+      parTotal: tee.par_total,
+    });
+    const final = applyAllowance(raw, game.hcp_allowance_pct);
+    return { user_id: row.user_id, course_handicap: final };
+  });
+
+  // 4. Batch-update course_handicap via upsert (game_id, user_id is PK).
+  for (const u of updates) {
+    await supabase
+      .from('game_players')
+      .update({ course_handicap: u.course_handicap })
+      .eq('game_id', gameId)
+      .eq('user_id', u.user_id);
+  }
+
+  // 5. Flip status to active with optimistic-lock guard.
+  const { error: flipErr } = await supabase
     .from('games')
     .update({ status: 'active', started_at: new Date().toISOString() })
     .eq('id', gameId)
-    .eq('status', 'scheduled'); // optimistic-lock: only flip if still scheduled
-  if (error) throw error;
+    .eq('status', 'scheduled'); // re-check, in case auto-start beat us
+  if (flipErr) throw flipErr;
+
   revalidatePath(`/admin/games/${gameId}`);
   revalidatePath(`/games/${gameId}`);
 }
 ```
+
+**Note on transactional safety:** the per-player updates happen sequentially before the status flip. If the function crashes mid-loop, some players have `course_handicap` set and some don't, and the game is still `scheduled` so the admin can retry. The retry would re-compute and overwrite — idempotent. A future improvement could wrap everything in a `SECURITY DEFINER` Postgres function with proper transaction semantics, but for friend-tier (4 players) the sequential approach is fine.
 
 **Step 2:** In `app/admin/games/[id]/page.tsx`, render a "Start runden nå" button when status='scheduled', with a `<form action={startScheduledGame.bind(null, id)}>`. Use a native HTML confirm dialog or a `<button>` with `onClick` confirmation in a client component.
 
