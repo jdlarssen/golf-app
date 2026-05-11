@@ -144,7 +144,10 @@ export default async function ProfilePage({
             </div>
           </Card>
         ) : (
-          <Link href="/invite" className="block">
+          <Link
+            href="/invite"
+            className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          >
             <Card>
               <div className="flex items-center justify-between">
                 <div>
