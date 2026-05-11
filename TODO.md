@@ -8,6 +8,11 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 
 ## 🛠️ Funksjonelt — bør fikses før klubb-skala
 
+### Hull-skjerm (oppfølging av quick-win-1)
+
+- [ ] **Netto/brutto-toggle på score-pillen.** I dag viser pillen brutto-delta mot par (Erik på par 3 med +1 slag og 4 brutto viser "+1"). Bør være konfigurerbart om man viser brutto-delta (`+1`) eller netto-delta (`E` for Eriks tilfelle siden 4 − 1 slag = par). Innstillingen skal ligge i samme settings-sheet som klikk-og-dra/buttons-toggle. Persisterer som `localStorage["torny-score-display"] = "gross" | "net"`. Default: TBD (sannsynligvis netto siden det er det som faktisk teller for scoringen).
+- [ ] **Readability-audit i light mode**: nå som vi tvinger lys palett, gå gjennom alle flater og verifiser kontrast/lesbarhet. Konkret eksempel å starte med: hull-stripe-numrene for framtidige hull bruker `--text-muted` (#5C5347 på linen #F8F6F0) — passerer WCAG AA på tall men kan oppleves bleke. Sjekk også tournament-name-tekst i header som er muted-uppercase-tight, og evt. andre flater som tidligere lente seg på dark-mode-kontraster.
+
 ### Recovery / admin overrides
 
 - [ ] UI for å «kansellere» en levering (admin reverserer `submitted_at` på en spiller). I dag krever det rå SQL.
