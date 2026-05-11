@@ -839,19 +839,21 @@ STOP. Do not commit. Surface the failure clearly and let the user decide whether
 
 ## Manual deployment steps (Claude prepares messages, user executes)
 
-After the implementation commits are merged to `main` (Vercel auto-deploys), the user must do **two manual steps** in third-party UIs. Claude prepares a copy-paste-ready message for each.
+After the implementation commits are merged to `main` (Vercel auto-deploys), the user must do **two manual steps** in third-party UIs (the SQL step runs **two migrations**, see below). Claude prepares a copy-paste-ready message for each.
 
-### Step A: Apply the RLS migration in Supabase
+### Step A: Apply both SQL migrations in Supabase
+
+The feature requires **two migrations** to be applied in order. Run them as two separate queries in the SQL Editor — do not merge them into one paste.
 
 **Where:** Supabase Dashboard → SQL Editor → New query
 
-**What to paste:** the full contents of `supabase/migrations/0008_player_friend_invites_rls.sql`
+**A1 — RLS policies:** paste the full contents of `supabase/migrations/0008_player_friend_invites_rls.sql` → **Run**
 
-**Click:** Run
+**A2 — Existence-check RPC:** paste the full contents of `supabase/migrations/0009_email_is_registered_rpc.sql` → **Run**
 
-**What to look for:** Result panel shows "Success. No rows returned" (or similar — no error banner)
+**What to look for:** both queries return "Success. No rows returned" (or similar — no error banner)
 
-**If it doesn't look right:** screenshot the error, paste it in chat. Most likely failure mode is the policy names already existing — in which case nothing to do.
+**If it doesn't look right:** screenshot the error, paste it in chat. Most likely failure mode is the policy/function names already existing — in which case nothing to do. Migration 0009 is **required** before `/invite` will work — without the RPC, every friend-invite attempt redirects to `/invite?error=unknown`.
 
 ### Step B: Update the Magic Link template in Supabase Auth
 
