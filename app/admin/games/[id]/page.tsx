@@ -84,7 +84,7 @@ export default async function GameDetailPage({
   const errorMessage = ERROR_MESSAGES[first(sp.error) ?? ''] ?? undefined;
 
   const supabase = await getServerClient();
-  const { data: game, error: gameError } = await supabase
+  const gameResult = await supabase
     .from('games')
     .select(
       'id, name, status, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, started_at, ended_at, courses(name), tee_boxes(name, slope, course_rating, par_total)',
@@ -92,11 +92,7 @@ export default async function GameDetailPage({
     .eq('id', id)
     .single<GameRow>();
 
-  if (gameError || !game) {
-    notFound();
-  }
-
-  const { data: rawPlayers, error: playersError } = await supabase
+  const playersResult = await supabase
     .from('game_players')
     .select(
       'user_id, team_number, flight_number, course_handicap, users(name, nickname, hcp_index)',
@@ -104,9 +100,60 @@ export default async function GameDetailPage({
     .eq('game_id', id)
     .returns<GamePlayerRow[]>();
 
-  if (playersError) throw playersError;
+  // Temporary diagnostic block: render any error inline so we can see what's
+  // actually failing. Remove once the page loads cleanly.
+  if (gameResult.error || playersResult.error || !gameResult.data) {
+    return (
+      <AppShell>
+        <PageHeader title="Diagnose" />
+        <Card className="mb-4">
+          <h2 className="text-sm font-medium mb-2">Game query</h2>
+          <pre className="text-xs bg-zinc-900 text-zinc-100 p-3 rounded font-mono whitespace-pre-wrap break-all">
+{JSON.stringify(
+  {
+    gameId: id,
+    error: gameResult.error
+      ? {
+          code: gameResult.error.code,
+          message: gameResult.error.message,
+          details: gameResult.error.details,
+          hint: gameResult.error.hint,
+        }
+      : null,
+    data: gameResult.data,
+  },
+  null,
+  2,
+)}
+          </pre>
+        </Card>
+        <Card>
+          <h2 className="text-sm font-medium mb-2">Players query</h2>
+          <pre className="text-xs bg-zinc-900 text-zinc-100 p-3 rounded font-mono whitespace-pre-wrap break-all">
+{JSON.stringify(
+  {
+    error: playersResult.error
+      ? {
+          code: playersResult.error.code,
+          message: playersResult.error.message,
+          details: playersResult.error.details,
+          hint: playersResult.error.hint,
+        }
+      : null,
+    rowCount: playersResult.data?.length ?? 0,
+    sample: playersResult.data?.[0],
+  },
+  null,
+  2,
+)}
+          </pre>
+        </Card>
+      </AppShell>
+    );
+  }
 
-  const players = rawPlayers ?? [];
+  const game = gameResult.data;
+  const players = playersResult.data ?? [];
 
   // Group by team (1..4). Each team has up to 2 players.
   const byTeam: Record<number, GamePlayerRow[]> = { 1: [], 2: [], 3: [], 4: [] };
