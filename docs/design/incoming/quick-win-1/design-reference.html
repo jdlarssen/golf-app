@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>Tørny — Hull-skjerm prototype</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html{color-scheme:light;}
+  html,body{margin:0;background:#e6dec8;background:linear-gradient(180deg,#efe9d8,#e0d6bc);min-height:100vh;font-family:'Inter',system-ui,sans-serif;color:#1A2E1F;}
+  /* Force light palette inside the prototype regardless of OS dark mode */
+  .torny-light{
+    --bg:#F8F6F0; --surface:#FFFFFF; --surface-2:#F0EDE5;
+    --text:#1A2E1F; --text-muted:#5C5347;
+    --border:#E5E0D3; --primary:#1B4332; --accent:#C9A961;
+    --success:#4A7C59; --danger:#B8463E; --warning:#D89B3A;
+    color-scheme:light;
+  }
+  body{padding:24px 12px 60px;display:flex;flex-direction:column;align-items:center;gap:24px;}
+  .lede{max-width:480px;text-align:center;color:var(--text-muted);font-size:13px;line-height:1.5;}
+  .lede b{color:var(--text);font-weight:600;}
+  .legend{font-size:11px;color:var(--text-muted);margin-top:18px;display:flex;gap:18px;flex-wrap:wrap;justify-content:center;}
+  .legend span{padding:4px 10px;border:1px solid var(--border);border-radius:9999px;background:var(--surface);}
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+</head>
+<body>
+<div style="text-align:center;">
+  <div style="font-family:var(--font-serif);font-size:30px;font-weight:500;color:var(--text);letter-spacing:-0.01em;">Hull-skjerm · ny score-input</div>
+  <p class="lede" style="margin-top:8px;">Default-score = <b>par</b>. <b>Klikk</b> et spillerkort for å bekrefte par. <b>Klikk-og-dra opp/ned</b> (eller sveip på mobil) for +1/−1. <b>Hold museknappen inne i 0.5s</b> for eagle / dobbel-bogey / +slag.</p>
+</div>
+<div id="root"></div>
+<div class="legend">
+  <span>klikk = par</span>
+  <span>dra ↑ = +1</span>
+  <span>dra ↓ = −1</span>
+  <span>hold inne = meny</span>
+</div>
+
+<script type="text/babel">
+const { useState, useRef, useEffect } = React;
+
+const PLAYERS_INIT = [
+  { id:1, name:"Sindre", hcp:14, score:null, plus:1, confirmed:false },
+  { id:2, name:"Erik", hcp:8, score:null, plus:0, confirmed:false },
+  { id:3, name:"Andreas", hcp:22, score:null, plus:1, confirmed:false },
+  { id:4, name:"Kristian", hcp:18, score:null, plus:1, confirmed:false },
+];
+
+const HOLES = [
+  {n:1,par:4,len:340},{n:2,par:3,len:165},{n:3,par:5,len:512},{n:4,par:4,len:380},
+  {n:5,par:4,len:402},{n:6,par:3,len:178},{n:7,par:4,len:355},{n:8,par:5,len:498},
+  {n:9,par:4,len:368},{n:10,par:4,len:392},{n:11,par:3,len:172},{n:12,par:5,len:520},
+  {n:13,par:4,len:345},{n:14,par:4,len:412},{n:15,par:3,len:158},{n:16,par:5,len:540},
+  {n:17,par:4,len:362},{n:18,par:4,len:398},
+];
+
+function deltaLabel(score, par){
+  if(score == null) return "—";
+  const d = score - par;
+  if(d === 0) return "E";
+  if(d > 0) return "+"+d;
+  return String(d);
+}
+function deltaTone(score, par){
+  if(score == null) return "muted";
+  const d = score - par;
+  if(d < 0) return "under";
+  if(d === 0) return "par";
+  if(d === 1) return "over1";
+  return "over2";
+}
+
+function ScoreCard({ player, par, onSet, onLong, onStep, mode }) {
+  const startY = useRef(null);
+  const longTimer = useRef(null);
+  const moved = useRef(false);
+  const [drag, setDrag] = useState(0);
+
+  const score = player.score;
+  const display = score == null ? par : score;
+  const tone = deltaTone(score, par);
+  const dl = deltaLabel(score, par);
+  const isButtons = mode === "buttons";
+
+  function onPointerDown(e){
+    if(isButtons) return;
+    if(e.target.closest("[data-stepper]")) return;
+    startY.current = e.clientY;
+    moved.current = false;
+    setDrag(0);
+    longTimer.current = setTimeout(() => {
+      if(!moved.current){ onLong(player.id); }
+    }, 500);
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  }
+  function onPointerMove(e){
+    if(startY.current == null) return;
+    const dy = e.clientY - startY.current;
+    if(Math.abs(dy) > 4){ moved.current = true; clearTimeout(longTimer.current); }
+    setDrag(Math.max(-40, Math.min(40, dy)));
+  }
+  function onPointerUp(e){
+    clearTimeout(longTimer.current);
+    if(startY.current == null) return;
+    const dy = e.clientY - startY.current;
+    startY.current = null;
+    setDrag(0);
+    if(Math.abs(dy) < 8){
+      // tap = par
+      onSet(player.id, par);
+    } else if(dy < -16) {
+      // swipe up = +1
+      onSet(player.id, (score == null ? par : score) + 1);
+    } else if(dy > 16) {
+      // swipe down = -1
+      onSet(player.id, (score == null ? par : score) - 1);
+    }
+  }
+
+  function onCardTap(){
+    if(!isButtons) return;
+    onSet(player.id, par);
+  }
+
+  const arrowOpacity = Math.min(1, Math.abs(drag) / 30);
+  const arrow = drag < -8 ? "↑" : drag > 8 ? "↓" : "";
+
+  return (
+    <div
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      onClick={isButtons ? onCardTap : undefined}
+      style={{
+        position:"relative",
+        background: "#FFFFFF",
+        border: `1px solid ${player.confirmed ? "rgba(201,169,97,0.5)" : "#E5E0D3"}`,
+        borderRadius:16,
+        padding: isButtons ? "12px 12px 12px 16px" : "14px 16px",
+        display:"flex",alignItems:"center",gap:isButtons ? 10 : 14,
+        userSelect:"none",touchAction:isButtons ? "auto" : "none",cursor: isButtons ? "pointer" : "grab",
+        transition:"border-color 160ms",
+        boxShadow: "0 1px 2px rgba(26,46,31,0.04), 0 2px 6px rgba(26,46,31,0.03)",
+        transform: drag !== 0 ? `translateY(${drag * 0.25}px)` : "none",
+      }}
+    >
+      {/* avatar */}
+      <div style={{width:36,height:36,borderRadius:"50%",background:"#1B4332",color:"#F0EDE5",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"var(--font-serif)",fontWeight:500,fontSize:15,letterSpacing:"-0.02em"}}>{player.name[0]}</div>
+      {/* name + hcp + slag */}
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{display:"flex",alignItems:"baseline",gap:8}}>
+          <span style={{fontFamily:"var(--font-serif)",fontWeight:500,fontSize:17,letterSpacing:"-0.005em"}}>{player.name}</span>
+          {player.plus>0 ? <span style={{fontSize:9.5,fontWeight:600,letterSpacing:"0.18em",textTransform:"uppercase",color:"#C9A961"}}>+{player.plus} slag</span> : null}
+        </div>
+        <div style={{fontSize:11,color:"var(--text-muted)",marginTop:2,letterSpacing:"0.005em"}}>
+          {player.confirmed ? "Bekreftet" : (score == null ? (isButtons ? "Tap kort = par. Bruk − / +." : "Tap = par. Sveip for +/−.") : "Justert · tap igjen for å bekrefte")}
+        </div>
+      </div>
+      {/* score */}
+      <div style={{display:"flex",alignItems:"center",gap:10,position:"relative"}}>
+        {arrow ? <div style={{position:"absolute",left:-26,top:8,fontSize:18,color:"#C9A961",opacity:arrowOpacity,fontWeight:600}}>{arrow}</div> : null}
+        <div style={{
+          fontFamily:"var(--font-serif)",
+          fontWeight:600,
+          fontSize:38,
+          letterSpacing:"-0.02em",
+          fontVariantNumeric:"tabular-nums",
+          color: score == null ? "#9A8F7C" : (deltaTone(score,par)==="under" ? "#2F5A3C" : deltaTone(score,par)==="over2" ? "#7A2F2A" : "#1A2E1F"),
+          opacity: score == null ? 0.55 : 1,
+          minWidth:42,textAlign:"right",
+          lineHeight:1,
+        }}>{display}</div>
+        <div style={{
+          fontFamily:"var(--font-sans)",
+          fontWeight:600,
+          fontSize:11,
+          letterSpacing:"0.06em",
+          padding:"3px 7px",borderRadius:9999,
+          background: tone==="under" ? "rgba(74,124,89,0.16)" : tone==="par" ? "rgba(92,83,71,0.10)" : tone==="over1" ? "rgba(216,155,58,0.18)" : tone==="over2" ? "rgba(184,70,62,0.16)" : "rgba(92,83,71,0.10)",
+          color: tone==="under" ? "#2F5A3C" : tone==="par" ? "#5C5347" : tone==="over1" ? "#7A5410" : tone==="over2" ? "#7A2F2A" : "#5C5347",
+          fontVariantNumeric:"tabular-nums",
+          minWidth:28,textAlign:"center",
+        }}>{dl}</div>
+      </div>
+      {isButtons ? (
+        <div data-stepper style={{display:"flex",flexDirection:"column",gap:6,marginLeft:4}}>
+          <button onClick={e=>{e.stopPropagation(); onStep(player.id, +1);}} style={{
+            width:38,height:30,border:"1px solid #E5E0D3",borderRadius:9,
+            background:"#FFFFFF",color:"#1A2E1F",fontSize:16,fontWeight:600,cursor:"pointer",
+            display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,
+          }} aria-label="+1">+</button>
+          <button onClick={e=>{e.stopPropagation(); onStep(player.id, -1);}} style={{
+            width:38,height:30,border:"1px solid #E5E0D3",borderRadius:9,
+            background:"#FFFFFF",color:"#1A2E1F",fontSize:18,fontWeight:600,cursor:"pointer",
+            display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,
+          }} aria-label="−1">−</button>
+          <button onClick={e=>{e.stopPropagation(); onLong(player.id);}} style={{
+            height:18,border:"none",borderRadius:6,background:"transparent",color:"#5C5347",fontSize:14,cursor:"pointer",padding:0,lineHeight:1,letterSpacing:"0.1em",
+          }} aria-label="Mer">⋯</button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function App(){
+  const [holeIdx, setHoleIdx] = useState(6);
+  const [players, setPlayers] = useState(PLAYERS_INIT);
+  const [sheet, setSheet] = useState(null); // {playerId}
+  const [syncing, setSyncing] = useState(false);
+  const [savedAt, setSavedAt] = useState("14:32");
+  const [showHint, setShowHint] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [inputMode, setInputMode] = useState(() => {
+    try { return localStorage.getItem("torny-input-mode") || "swipe"; }
+    catch { return "swipe"; }
+  });
+  function pickInputMode(m){
+    setInputMode(m);
+    try { localStorage.setItem("torny-input-mode", m); } catch {}
+  }
+
+  const hole = HOLES[holeIdx];
+
+  function setScore(pid, n){
+    setShowHint(false);
+    setPlayers(ps => ps.map(p => p.id===pid ? {...p, score:n, confirmed: n != null} : p));
+    setSyncing(true);
+    setTimeout(()=>{ setSyncing(false); setSavedAt(new Date().toLocaleTimeString("nb-NO",{hour:"2-digit",minute:"2-digit"})); }, 700);
+  }
+  function longPress(pid){ setSheet({pid}); }
+  function stepScore(pid, delta){
+    setShowHint(false);
+    setPlayers(ps => ps.map(p => {
+      if(p.id !== pid) return p;
+      const base = p.score == null ? hole.par : p.score;
+      const next = Math.max(1, Math.min(12, base + delta));
+      return {...p, score: next, confirmed: true};
+    }));
+    setSyncing(true);
+    setTimeout(()=>{ setSyncing(false); setSavedAt(new Date().toLocaleTimeString("nb-NO",{hour:"2-digit",minute:"2-digit"})); }, 700);
+  }
+
+  function applyFromSheet(n){
+    if(sheet){ setScore(sheet.pid, n); setSheet(null); }
+  }
+
+  function nextHole(){
+    if(holeIdx < 17){
+      setHoleIdx(holeIdx+1);
+      setPlayers(PLAYERS_INIT.map(p=>({...p, score:null, confirmed:false})));
+    }
+  }
+
+  return (
+    <IOSDevice>
+      <div className="torny-light" style={{position:"absolute",inset:0,background:"#F8F6F0",overflow:"hidden",display:"flex",flexDirection:"column",color:"#1A2E1F",paddingTop:54,paddingBottom:34}}>
+        {/* Header */}
+        <div style={{padding:"14px 18px 8px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <button style={{background:"none",border:"none",fontSize:18,color:"var(--text)",cursor:"pointer",padding:6,marginLeft:-6}} aria-label="Tilbake">‹</button>
+          <div style={{fontFamily:"var(--font-sans)",fontSize:10,fontWeight:600,letterSpacing:"0.20em",textTransform:"uppercase",color:"var(--text-muted)"}}>Lørdagsslaget</div>
+          <button onClick={()=>setSettingsOpen(true)} style={{background:"rgba(229,224,211,0.5)",border:"1px solid #E5E0D3",borderRadius:9999,width:34,height:30,fontSize:16,color:"#1A2E1F",cursor:"pointer",padding:0,marginRight:-2,display:"flex",alignItems:"center",justifyContent:"center",letterSpacing:"0.05em",lineHeight:1}} aria-label="Innstillinger">⋯</button>
+        </div>
+
+        {/* Hole strip 1-18 */}
+        <div style={{padding:"6px 14px 8px",overflowX:"auto",whiteSpace:"nowrap"}}>
+          <div style={{display:"inline-flex",gap:4}}>
+            {HOLES.map((h,i)=>{
+              const done = i < holeIdx;
+              const cur = i === holeIdx;
+              return (
+                <button key={h.n} onClick={()=>setHoleIdx(i)} style={{
+                  width:26,height:32,
+                  border:"none",
+                  borderRadius:7,
+                  background: cur ? "#1B4332" : done ? "#EFE9DA" : "transparent",
+                  color: cur ? "#F0EDE5" : done ? "var(--text)" : "var(--text-muted)",
+                  fontFamily:"var(--font-serif)",
+                  fontWeight:cur?600:500,
+                  fontSize:13,
+                  letterSpacing:"-0.01em",
+                  cursor:"pointer",
+                  fontVariantNumeric:"tabular-nums",
+                  border: done && !cur ? "1px solid var(--border)" : "none",
+                }}>{h.n}</button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Hero hole number */}
+        <div style={{padding:"10px 24px 12px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1px solid var(--border)"}}>
+          <div style={{display:"flex",alignItems:"baseline",gap:10}}>
+            <div style={{fontFamily:"var(--font-sans)",fontSize:10,fontWeight:600,letterSpacing:"0.20em",textTransform:"uppercase",color:"#C9A961"}}>Hull</div>
+            <div style={{fontFamily:"var(--font-serif)",fontWeight:600,fontSize:44,letterSpacing:"-0.03em",color:"var(--text)",lineHeight:1,fontVariantNumeric:"tabular-nums"}}>{hole.n}</div>
+          </div>
+          <div style={{textAlign:"right",lineHeight:1.4}}>
+            <div style={{fontFamily:"var(--font-serif)",fontSize:20,fontWeight:500,color:"var(--text)",letterSpacing:"-0.01em",fontVariantNumeric:"tabular-nums"}}>Par {hole.par}</div>
+            <div style={{fontSize:11,color:"var(--text-muted)",fontVariantNumeric:"tabular-nums"}}>{hole.len} m · indeks {hole.n}</div>
+          </div>
+        </div>
+
+        {/* Onboarding hint */}
+        {showHint ? (
+          <div style={{margin:"14px 14px 0",padding:"10px 14px",background:"#1B4332",color:"#F0EDE5",borderRadius:12,display:"flex",alignItems:"center",gap:10,fontSize:12,lineHeight:1.4,position:"relative"}}>
+            <div style={{width:22,height:22,borderRadius:"50%",background:"#C9A961",color:"#1B4332",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:12,flexShrink:0}}>↓</div>
+            <div><b style={{fontWeight:600,color:"#C9A961"}}>Prøv dette:</b> Klikk det øverste kortet (Sindre) for å sette par 4. Klikk-og-dra det opp eller ned for +1/−1.</div>
+            <button onClick={()=>setShowHint(false)} style={{position:"absolute",top:6,right:8,background:"none",border:"none",color:"#C9A961",cursor:"pointer",fontSize:14,padding:4,lineHeight:1}} aria-label="Lukk">×</button>
+          </div>
+        ) : null}
+
+        {/* Score cards */}
+        <div style={{padding:"14px 14px 14px",display:"flex",flexDirection:"column",gap:10,flex:1,overflowY:"auto"}}>
+          <style>{`@keyframes pulseRing{0%,100%{opacity:0.9;transform:scale(1)}50%{opacity:0.3;transform:scale(1.015)}}`}</style>
+          {players.map((p,i) => (
+            <div key={p.id} style={{position:"relative"}}>
+              {showHint && i===0 ? (
+                <React.Fragment>
+                  <div style={{position:"absolute",inset:-3,borderRadius:18,border:"2px solid #C9A961",pointerEvents:"none",animation:"pulseRing 1.6s ease-in-out infinite",zIndex:1}}></div>
+                  <div style={{position:"absolute",right:-4,top:"50%",transform:"translate(100%, -50%)",fontFamily:"var(--font-sans)",fontSize:10,fontWeight:700,letterSpacing:"0.18em",textTransform:"uppercase",color:"#1B4332",background:"#C9A961",padding:"5px 8px",borderRadius:6,whiteSpace:"nowrap",pointerEvents:"none",zIndex:2,boxShadow:"0 2px 6px rgba(26,46,31,0.15)"}}>← klikk her</div>
+                </React.Fragment>
+              ) : null}
+              <ScoreCard player={p} par={hole.par} onSet={setScore} onLong={longPress} onStep={stepScore} mode={inputMode} />
+            </div>
+          ))}
+          {/* Sync status — sentence not spinner */}
+          <div style={{marginTop:6,fontSize:11.5,color:"var(--text-muted)",display:"flex",alignItems:"center",gap:6,padding:"4px 4px 0"}}>
+            <span style={{width:6,height:6,borderRadius:"50%",background: syncing ? "#D89B3A" : "#4A7C59",display:"inline-block",transition:"background 200ms"}}></span>
+            <span>{syncing ? "Sender…" : `Lagret · ${savedAt}`}</span>
+          </div>
+        </div>
+
+        {/* Bottom — next hole */}
+        <div style={{padding:"10px 16px 18px",borderTop:"1px solid var(--border)",background:"var(--surface)"}}>
+          <button onClick={nextHole} disabled={!players.every(p=>p.confirmed)} style={{
+            width:"100%",
+            padding:"15px 18px",
+            border:"none",
+            borderRadius:14,
+            background: players.every(p=>p.confirmed) ? "#1B4332" : "#D9D2C0",
+            color: players.every(p=>p.confirmed) ? "#F8F6F0" : "#9A8F7C",
+            fontFamily:"var(--font-sans)",
+            fontWeight:600,
+            fontSize:15,
+            letterSpacing:"0.005em",
+            cursor: players.every(p=>p.confirmed) ? "pointer" : "not-allowed",
+            transition:"transform 120ms, box-shadow 120ms",
+          }}>{players.every(p=>p.confirmed) ? `Neste hull · ${hole.n + 1}` : "Bekreft alle scorer"}</button>
+        </div>
+
+        {/* Settings sheet */}
+        {settingsOpen ? (
+          <div onClick={()=>setSettingsOpen(false)} style={{position:"absolute",inset:0,background:"rgba(15,22,18,0.4)",display:"flex",alignItems:"flex-end",zIndex:10}}>
+            <div onClick={e=>e.stopPropagation()} style={{width:"100%",background:"#FFFFFF",borderTopLeftRadius:18,borderTopRightRadius:18,padding:"20px 18px 24px"}}>
+              <div style={{width:36,height:4,background:"#E5E0D3",borderRadius:9999,margin:"0 auto 16px"}}></div>
+              <div style={{fontFamily:"'Inter',sans-serif",fontSize:10,fontWeight:600,letterSpacing:"0.20em",textTransform:"uppercase",color:"#C9A961",marginBottom:6}}>Innstillinger</div>
+              <div style={{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:500,letterSpacing:"-0.01em",color:"#1A2E1F",marginBottom:18}}>Hvordan vil du legge inn score?</div>
+              {[
+                {id:"swipe", title:"Klikk og dra", body:"Tap kort = par. Sveip opp/ned for +1/−1. Raskest."},
+                {id:"buttons", title:"+ / − knapper", body:"Tap kort = par. Bruk knapper på siden for justering. Best for små skjermer."},
+              ].map(opt => {
+                const sel = inputMode === opt.id;
+                return (
+                  <button key={opt.id} onClick={()=>{pickInputMode(opt.id); setSettingsOpen(false);}} style={{
+                    display:"block",width:"100%",textAlign:"left",
+                    padding:"14px 16px",marginBottom:8,
+                    background: sel ? "#F0EDE5" : "#FFFFFF",
+                    border:`1px solid ${sel ? "#C9A961" : "#E5E0D3"}`,
+                    borderRadius:12,cursor:"pointer",
+                  }}>
+                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
+                      <span style={{width:16,height:16,borderRadius:"50%",border:`2px solid ${sel?"#C9A961":"#C7BFAA"}`,background:sel?"#C9A961":"transparent",display:"inline-block",position:"relative"}}>
+                        {sel ? <span style={{position:"absolute",inset:3,background:"#1B4332",borderRadius:"50%"}}></span> : null}
+                      </span>
+                      <span style={{fontFamily:"'Fraunces',serif",fontSize:16,fontWeight:500,color:"#1A2E1F"}}>{opt.title}</span>
+                    </div>
+                    <div style={{fontSize:12,color:"#5C5347",marginLeft:26,lineHeight:1.45}}>{opt.body}</div>
+                  </button>
+                );
+              })}
+              <div style={{fontSize:11,color:"#5C5347",textAlign:"center",marginTop:10}}>Valget lagres på enheten.</div>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Long-press sheet */}
+        {sheet ? (
+          <div onClick={()=>setSheet(null)} style={{position:"absolute",inset:0,background:"rgba(15,22,18,0.4)",display:"flex",alignItems:"flex-end",zIndex:10}}>
+            <div onClick={e=>e.stopPropagation()} style={{width:"100%",background:"var(--surface)",borderTopLeftRadius:18,borderTopRightRadius:18,padding:"20px 18px 24px"}}>
+              <div style={{width:36,height:4,background:"var(--border)",borderRadius:9999,margin:"0 auto 16px"}}></div>
+              <div style={{fontFamily:"var(--font-sans)",fontSize:10,fontWeight:600,letterSpacing:"0.20em",textTransform:"uppercase",color:"var(--accent)",marginBottom:14}}>Spesifikk score</div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
+                {[hole.par-2,hole.par-1,hole.par,hole.par+1,hole.par+2,hole.par+3,hole.par+4,hole.par+5].map(n=>(
+                  <button key={n} onClick={()=>applyFromSheet(n)} style={{
+                    padding:"14px 0",
+                    border:"1px solid var(--border)",
+                    borderRadius:12,
+                    background:"var(--bg)",
+                    fontFamily:"var(--font-serif)",
+                    fontWeight:600,
+                    fontSize:22,
+                    fontVariantNumeric:"tabular-nums",
+                    color:"var(--text)",
+                    cursor:"pointer",
+                  }}>{n}</button>
+                ))}
+              </div>
+              <div style={{fontSize:11,color:"var(--text-muted)",textAlign:"center",marginTop:14}}>Tap for å sette. Hold-inne åpner alltid denne.</div>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </IOSDevice>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
