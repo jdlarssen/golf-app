@@ -12,6 +12,7 @@ type SearchParams = Promise<{
   status?: string | string[];
   email?: string | string[];
   error?: string | string[];
+  raw?: string | string[];
 }>;
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -50,6 +51,8 @@ export default async function InvitationsPage({
   const sentEmail = first(params.email) ?? '';
   const errorCode = first(params.error);
   const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
+  const rawError = first(params.raw);
+  const rawStatus = first((params as Record<string, string | string[] | undefined>).status);
 
   const supabase = await getServerClient();
   const { data: invitations, error } = await supabase
@@ -89,7 +92,15 @@ export default async function InvitationsPage({
 
       {errorMessage && (
         <div className="mb-4">
-          <Banner tone="error">{errorMessage}</Banner>
+          <Banner tone="error">
+            <div>{errorMessage}</div>
+            {(rawError || rawStatus) && (
+              <pre className="mt-2 text-xs font-mono whitespace-pre-wrap break-all opacity-80">
+                {rawStatus ? `[status ${rawStatus}] ` : ''}
+                {rawError}
+              </pre>
+            )}
+          </Banner>
         </div>
       )}
 
