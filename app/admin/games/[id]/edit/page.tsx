@@ -211,8 +211,8 @@ export default async function EditGamePage({
 
       <div className="mb-4">
         <Banner tone="info">
-          Spillet er i planlagt-fasen. Endringer pushes ut til spillerne
-          umiddelbart.
+          Spillet er i planlagt-fasen. Spillerne ser endringene neste gang
+          de åpner appen.
         </Banner>
       </div>
 

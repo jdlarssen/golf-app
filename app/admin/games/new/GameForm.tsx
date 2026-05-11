@@ -117,6 +117,23 @@ export function GameForm({
   editMode = false,
   updateAction,
 }: Props) {
+  // Fail-on-render rather than silent fail-on-submit. The action props are
+  // optional in TS to keep both flows expressible from a single component,
+  // but at runtime exactly one shape is required.
+  if (editMode && !updateAction) {
+    throw new Error(
+      'GameForm: editMode=true requires updateAction. ' +
+        'Pass an updateAction or set editMode=false.',
+    );
+  }
+  if (!editMode && (!createDraftAction || !createAndPublishAction)) {
+    throw new Error(
+      'GameForm: create flow requires both createDraftAction and ' +
+        'createAndPublishAction. Pass them or set editMode=true with an ' +
+        'updateAction.',
+    );
+  }
+
   // `name` is controlled now (was uncontrolled) so initialValues can pre-fill
   // it on the edit page (D4). Default to '' when not provided.
   const [name, setName] = useState<string>(initialValues?.name ?? '');
