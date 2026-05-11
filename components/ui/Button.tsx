@@ -3,12 +3,12 @@ import { ButtonHTMLAttributes } from 'react';
 type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
 
 const styles: Record<Variant, string> = {
-  primary: 'bg-green-600 hover:bg-green-700 text-white',
+  primary:
+    'bg-primary hover:bg-primary-hover text-white hover:-translate-y-px shadow-sm',
   secondary:
-    'bg-zinc-100 hover:bg-zinc-200 text-zinc-900 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-100',
-  danger: 'bg-red-600 hover:bg-red-700 text-white',
-  ghost:
-    'bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300',
+    'bg-transparent border border-border hover:bg-primary-soft text-text',
+  danger: 'bg-danger hover:opacity-90 text-white',
+  ghost: 'bg-transparent hover:bg-primary-soft text-text',
 };
 
 export function Button({
@@ -19,7 +19,7 @@ export function Button({
   return (
     <button
       {...props}
-      className={`${styles[variant]} px-4 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+      className={`${styles[variant]} px-4 py-2.5 rounded-full font-medium tracking-tight transition-[background-color,transform,opacity] duration-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${className}`}
     />
   );
 }

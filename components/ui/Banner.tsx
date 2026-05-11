@@ -3,9 +3,9 @@ import { ReactNode } from 'react';
 type Tone = 'success' | 'error' | 'info';
 
 const tones: Record<Tone, string> = {
-  success: 'bg-green-50 border-green-200 text-green-800',
-  error: 'bg-red-50 border-red-200 text-red-700',
-  info: 'bg-blue-50 border-blue-200 text-blue-700',
+  success: 'bg-primary-soft border-success/40 text-success',
+  error: 'bg-danger/[0.08] border-danger/30 text-danger',
+  info: 'bg-accent/[0.10] border-accent/40 text-text',
 };
 
 export function Banner({
@@ -16,7 +16,9 @@ export function Banner({
   children: ReactNode;
 }) {
   return (
-    <div className={`border rounded-lg px-4 py-3 text-sm ${tones[tone]}`}>
+    <div
+      className={`border rounded-xl px-4 py-3 text-sm font-medium tracking-tight ${tones[tone]}`}
+    >
       {children}
     </div>
   );
