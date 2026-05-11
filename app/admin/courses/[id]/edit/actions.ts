@@ -126,3 +126,32 @@ export async function updateCourse(courseId: string, formData: FormData) {
 
   redirect(`/admin/courses?status=updated&name=${encodeURIComponent(name)}`);
 }
+
+export async function deleteCourse(courseId: string) {
+  const { supabase } = await requireAdmin();
+
+  // Guard: refuse to delete if any games reference this course. Avoids
+  // surprising FK-violation errors and preserves history.
+  const { data: gameUsage, error: gameUsageError } = await supabase
+    .from('games')
+    .select('id')
+    .eq('course_id', courseId)
+    .limit(1);
+  if (gameUsageError) {
+    redirect('/admin/courses?error=delete_failed');
+  }
+  if (gameUsage && gameUsage.length > 0) {
+    redirect('/admin/courses?error=in_use');
+  }
+
+  // course_holes and tee_boxes cascade via FK on the courses table.
+  const { error: deleteError } = await supabase
+    .from('courses')
+    .delete()
+    .eq('id', courseId);
+  if (deleteError) {
+    redirect('/admin/courses?error=delete_failed');
+  }
+
+  redirect('/admin/courses?status=deleted');
+}

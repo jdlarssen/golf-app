@@ -6,7 +6,8 @@ import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { CourseForm } from '../../CourseForm';
-import { updateCourse } from './actions';
+import { updateCourse, deleteCourse } from './actions';
+import { DeleteCourseButton } from './DeleteCourseButton';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;
@@ -89,6 +90,7 @@ export default async function EditCoursePage({
   // Pre-bind the course id so the form's action handler only deals with the
   // FormData payload — keeps CourseForm reusable across create + edit.
   const updateAction = updateCourse.bind(null, id);
+  const deleteAction = deleteCourse.bind(null, id);
 
   return (
     <AppShell>
@@ -122,6 +124,13 @@ export default async function EditCoursePage({
           }}
         />
       </Card>
+
+      <div className="mt-6">
+        <DeleteCourseButton
+          deleteAction={deleteAction}
+          courseName={course.name}
+        />
+      </div>
     </AppShell>
   );
 }
