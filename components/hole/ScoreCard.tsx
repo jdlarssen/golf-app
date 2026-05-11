@@ -76,7 +76,6 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startY = useRef<number | null>(null);
   const moved = useRef<boolean>(false);
-  const lastDy = useRef<number>(0);
   const dragRef = useRef<HTMLDivElement | null>(null);
 
   const tone: ScoreTone = scoreTone(score, par);
@@ -139,7 +138,6 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     }
     startY.current = e.clientY;
     moved.current = false;
-    lastDy.current = 0;
     clearLongPress();
     longPressTimer.current = setTimeout(() => {
       if (!moved.current) {
@@ -152,7 +150,6 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     if (disabled || mode !== 'swipe') return;
     if (startY.current == null) return;
     const dy = e.clientY - startY.current;
-    lastDy.current = dy;
     if (Math.abs(dy) > MOVE_THRESHOLD) {
       moved.current = true;
       clearLongPress();

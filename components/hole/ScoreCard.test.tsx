@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { ScoreCard, type ScoreCardProps } from './ScoreCard';
 
 // jsdom doesn't implement setPointerCapture; stub it so pointer flows don't throw.
@@ -275,5 +275,3 @@ describe('ScoreCard — disabled', () => {
   });
 });
 
-// Keep `within` referenced even if unused so future tests can grow with it.
-void within;
