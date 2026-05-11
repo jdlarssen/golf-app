@@ -22,6 +22,7 @@ type MyPlayerRow = {
   user_id: string;
   flight_number: number;
   course_handicap: number | null;
+  submitted_at: string | null;
 };
 
 type HoleRow = {
@@ -35,6 +36,7 @@ type FlightPlayerRow = {
   team_number: number;
   flight_number: number;
   course_handicap: number | null;
+  submitted_at: string | null;
   users: { name: string; nickname: string | null } | null;
 };
 
@@ -72,12 +74,20 @@ export default async function HolePage({ params }: { params: Params }) {
 
   const { data: me, error: meError } = await supabase
     .from('game_players')
-    .select('user_id, flight_number, course_handicap')
+    .select('user_id, flight_number, course_handicap, submitted_at')
     .eq('game_id', id)
     .eq('user_id', user.id)
     .maybeSingle<MyPlayerRow>();
   if (meError) throw meError;
   if (!me) notFound();
+
+  // Once the player has submitted their scorecard, the hole pages are
+  // read-only and confusing to land on (their own row would be disabled
+  // and they can't change anything). Bounce them home where the right
+  // state-based info is shown.
+  if (me.submitted_at) {
+    redirect(`/games/${id}`);
+  }
 
   const { data: hole, error: holeError } = await supabase
     .from('course_holes')
@@ -91,7 +101,7 @@ export default async function HolePage({ params }: { params: Params }) {
   const { data: flightPlayers, error: flightError } = await supabase
     .from('game_players')
     .select(
-      'user_id, team_number, flight_number, course_handicap, users!game_players_user_id_fkey(name, nickname)',
+      'user_id, team_number, flight_number, course_handicap, submitted_at, users!game_players_user_id_fkey(name, nickname)',
     )
     .eq('game_id', id)
     .eq('flight_number', me.flight_number)
@@ -123,7 +133,7 @@ export default async function HolePage({ params }: { params: Params }) {
     return { name: p.users.name, nickname: p.users.nickname };
   }
 
-  const disabled = game.status !== 'active';
+  const gameInactive = game.status !== 'active';
   const prev = holeNumber - 1;
   const next = holeNumber + 1;
 
@@ -192,7 +202,7 @@ export default async function HolePage({ params }: { params: Params }) {
                     initialClientUpdatedAt={scoreRow?.client_updated_at ?? null}
                     initialServerUpdatedAt={scoreRow?.updated_at ?? null}
                     myUserId={user.id}
-                    disabled={disabled}
+                    disabled={gameInactive || p.submitted_at != null}
                   />
                 </li>
               );
