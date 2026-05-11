@@ -49,6 +49,15 @@ Sluttbrukeren har **null programmeringserfaring**. Tilbakemeldinger må være p�
 - Bruk `superpowers:systematic-debugging`-skill ved bug-rapport
 - Legg til diagnostikk (console.log eller inline rendering) FØR du foreslår løsning
 
+### Arbeidsflyt — subagenter vs direkte
+
+- **Substansielle oppgaver** (ny phase, ny side fra null, refaktorering over flere filer, ny komponent med tester): dispatch implementer-subagent via `Agent`-tool. Etterpå: spec-reviewer + code-quality-reviewer per workflow i `superpowers:subagent-driven-development`-skill. Holder hovedchat-konteksten ren.
+- **Småfikser** (typo, en-linje-bug, justering av kopi): rediger direkte. Subagent er overkill.
+- **Debugging og utforskning:** direkte (les filer, sjekk DNS, kjør curl). Subagent kun hvis det er tydelig avgrenset feltarbeid.
+- **TDD for ren logikk** (scoring, sync, math): subagent-disiplin. Skriv test → feile → implementer → grønn → commit.
+
+Ved tvil: hvis oppgaven kan beskrives ferdig i én prompt og forventes å produsere 5+ filer eller mer enn 100 LOC — bruk subagent.
+
 ### Stil
 
 - Forest-and-champagne palett (definert i `app/globals.css`):
