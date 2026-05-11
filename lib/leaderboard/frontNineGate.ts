@@ -41,6 +41,8 @@ export function isFrontNineOpen(opts: {
 
   // A team is "front-9 complete" if every member has all 9 front holes filled.
   for (const userIds of teamGroups.values()) {
+    // Guard against vacuous truth from [].every(...): an empty team must
+    // never satisfy the gate.
     if (userIds.length === 0) continue;
     const allComplete = userIds.every((uid) => {
       const set = filledByUser.get(uid);
