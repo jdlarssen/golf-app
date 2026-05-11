@@ -159,3 +159,67 @@ body {
     display: none;
   }
 }
+
+/* -----------------------------------------------------------------------------
+ * Champagne medallion — circular gradient surface with champagne hairline ring
+ * and soft drop shadow. Used in empty-state hero illustrations.
+ *
+ * The ring and the drop shadow are folded into a single `box-shadow` on
+ * `.ring-medallion` so the inset ring composes cleanly with the outer shadow
+ * (Tailwind's `ring` + `shadow` utilities can otherwise stomp on each other).
+ * Components should apply BOTH `bg-medallion` and `ring-medallion`; the
+ * standalone `shadow-medallion` exists as an escape hatch when a caller wants
+ * the shadow without the ring.
+ * ---------------------------------------------------------------------------*/
+@layer utilities {
+  .bg-medallion {
+    background: radial-gradient(
+      circle at 50% 38%,
+      #ffffff 0%,
+      #f0ede5 70%,
+      #e5e0d3 100%
+    );
+  }
+
+  .shadow-medallion {
+    box-shadow: 0 2px 12px rgba(26, 46, 31, 0.04);
+  }
+
+  .ring-medallion {
+    box-shadow:
+      inset 0 0 0 1px rgba(201, 169, 97, 0.35),
+      0 2px 12px rgba(26, 46, 31, 0.04);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .bg-medallion {
+    background: radial-gradient(
+      circle at 50% 38%,
+      #1f4a37 0%,
+      #163a2a 70%,
+      #0f2c1f 100%
+    );
+  }
+
+  :root:not([data-theme='light']) .ring-medallion {
+    box-shadow:
+      inset 0 0 0 1px rgba(201, 169, 97, 0.4),
+      0 2px 12px rgba(26, 46, 31, 0.04);
+  }
+}
+
+[data-theme='dark'] .bg-medallion {
+  background: radial-gradient(
+    circle at 50% 38%,
+    #1f4a37 0%,
+    #163a2a 70%,
+    #0f2c1f 100%
+  );
+}
+
+[data-theme='dark'] .ring-medallion {
+  box-shadow:
+    inset 0 0 0 1px rgba(201, 169, 97, 0.4),
+    0 2px 12px rgba(26, 46, 31, 0.04);
+}
