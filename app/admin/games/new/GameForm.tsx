@@ -40,9 +40,25 @@ export type InitialValues = {
 type Props = {
   courses: CourseOption[];
   players: PlayerOption[];
-  createDraftAction: (formData: FormData) => void | Promise<void>;
-  createAndPublishAction: (formData: FormData) => void | Promise<void>;
+  /**
+   * Required for the create flow (editMode === false / unset). Ignored when
+   * `editMode === true` since the edit page only ever uses `updateAction`.
+   */
+  createDraftAction?: (formData: FormData) => void | Promise<void>;
+  /** Same shape and rules as `createDraftAction`. */
+  createAndPublishAction?: (formData: FormData) => void | Promise<void>;
   initialValues?: InitialValues;
+  /**
+   * When true, the form renders a single "Lagre endringer"-button wired to
+   * `updateAction` and hides the create-flow draft/publish pair. Used by the
+   * scheduled-game edit page (D4). Defaults to false (create flow).
+   */
+  editMode?: boolean;
+  /**
+   * The server action invoked by the single submit button when `editMode` is
+   * true. Required when `editMode === true`; ignored otherwise.
+   */
+  updateAction?: (formData: FormData) => void | Promise<void>;
 };
 
 const FLIGHT_NUMBERS = [1, 2, 3, 4] as const;
@@ -98,6 +114,8 @@ export function GameForm({
   createDraftAction,
   createAndPublishAction,
   initialValues,
+  editMode = false,
+  updateAction,
 }: Props) {
   // `name` is controlled now (was uncontrolled) so initialValues can pre-fill
   // it on the edit page (D4). Default to '' when not provided.
@@ -614,23 +632,40 @@ export function GameForm({
 
       {/* Section 6: Submit */}
       <section className="space-y-3 pt-2">
-        <Button
-          type="submit"
-          formAction={createAndPublishAction}
-          className="w-full"
-          disabled={!canPublish}
-        >
-          Lagre og publiser
-        </Button>
-        <Button
-          type="submit"
-          variant="secondary"
-          formAction={createDraftAction}
-          className="w-full"
-          disabled={!canSubmit}
-        >
-          Lagre som utkast
-        </Button>
+        {editMode ? (
+          // Edit flow (D4): the game is already 'scheduled', so there's no
+          // draft/publish split — just a single save button. Tee-off is
+          // required (same gate as publish), since you can't un-set a
+          // tee-off on a scheduled game.
+          <Button
+            type="submit"
+            formAction={updateAction}
+            className="w-full"
+            disabled={!canPublish}
+          >
+            Lagre endringer
+          </Button>
+        ) : (
+          <>
+            <Button
+              type="submit"
+              formAction={createAndPublishAction}
+              className="w-full"
+              disabled={!canPublish}
+            >
+              Lagre og publiser
+            </Button>
+            <Button
+              type="submit"
+              variant="secondary"
+              formAction={createDraftAction}
+              className="w-full"
+              disabled={!canSubmit}
+            >
+              Lagre som utkast
+            </Button>
+          </>
+        )}
       </section>
     </form>
   );

@@ -35,6 +35,8 @@ const STATUS_BADGE_CLASSES: Record<GameStatus, string> = {
 
 const STATUS_BANNERS: Record<string, string> = {
   draft_created: '✓ Spillet ble lagret som utkast.',
+  scheduled: '✓ Spillet er publisert. Spillerne ser det nå i Mine spill.',
+  updated: '✓ Endringene er lagret.',
   started: '✓ Spillet er startet. Course handicap er låst for hver spiller.',
   admin_approved: '✓ Scorekort godkjent på vegne av flighten.',
   finished: '✓ Spillet er avsluttet. Leaderboard er åpen for alle.',
@@ -44,6 +46,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   not_found: 'Spillet ble ikke funnet.',
   not_draft: 'Bare utkast kan startes.',
   not_active: 'Spillet er ikke aktivt — kan ikke avsluttes.',
+  not_editable:
+    'Spillet kan ikke redigeres lenger — det er allerede startet eller avsluttet.',
   no_players: 'Ingen spillere på dette spillet.',
   not_all_submitted:
     'Alle spillere må ha levert scorekort før spillet kan avsluttes.',
@@ -436,7 +440,23 @@ export default async function GameDetailPage({
         {game.status === 'draft' && (
           <StartGameButton startAction={startAction} gameName={game.name} />
         )}
-        {/* TODO(scheduled): add a scheduled-state CTA (e.g. "Start nå" or countdown). Handled in phase E1/E2. */}
+
+        {game.status === 'scheduled' && (
+          <Card>
+            <SectionLabel>Rediger spillet</SectionLabel>
+            <p className="text-sm text-muted mb-3">
+              Spillet er i planlagt-fasen. Du kan fortsatt endre bane,
+              tee-off, spillere, lag og innstillinger inntil runden startes.
+            </p>
+            <Link
+              href={`/admin/games/${id}/edit`}
+              className="block w-full min-h-[44px] bg-primary hover:bg-primary-hover text-white px-4 py-3 rounded-full font-medium tracking-tight text-center transition-colors"
+            >
+              Rediger spillet
+            </Link>
+          </Card>
+        )}
+        {/* TODO(scheduled): add a scheduled-state "Start nå"/countdown CTA. Handled in phase E1/E2. */}
 
         {game.status === 'active' && (
           <Card>
