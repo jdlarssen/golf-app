@@ -75,6 +75,16 @@ export default async function Home({
             <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 mb-2 mt-4">
               Admin
             </p>
+            <Link href="/admin/courses" className="block">
+              <Card className="min-h-[44px] flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+                <span className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+                  Baner
+                </span>
+                <span aria-hidden className="text-zinc-400">
+                  →
+                </span>
+              </Card>
+            </Link>
             <Link href="/admin/invitations" className="block">
               <Card className="min-h-[44px] flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
                 <span className="text-base font-medium text-zinc-900 dark:text-zinc-100">
@@ -85,10 +95,10 @@ export default async function Home({
                 </span>
               </Card>
             </Link>
-            <Link href="/admin/courses" className="block">
+            <Link href="/admin/games" className="block">
               <Card className="min-h-[44px] flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
                 <span className="text-base font-medium text-zinc-900 dark:text-zinc-100">
-                  Baner
+                  Spill
                 </span>
                 <span aria-hidden className="text-zinc-400">
                   →
