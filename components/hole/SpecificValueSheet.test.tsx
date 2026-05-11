@@ -77,7 +77,7 @@ describe('SpecificValueSheet', () => {
         onClose={onClose}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: '6' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sett score til 6' }));
     expect(onPick).toHaveBeenCalledWith(6);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -94,5 +94,33 @@ describe('SpecificValueSheet', () => {
     );
     fireEvent.click(screen.getByTestId('specific-value-backdrop'));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('pressing Escape calls onClose', () => {
+    const onClose = vi.fn();
+    render(
+      <SpecificValueSheet
+        open={true}
+        par={4}
+        onPick={() => {}}
+        onClose={onClose}
+      />,
+    );
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('each value button has aria-label "Sett score til N"', () => {
+    render(
+      <SpecificValueSheet
+        open={true}
+        par={4}
+        onPick={() => {}}
+        onClose={() => {}}
+      />,
+    );
+    expect(
+      screen.getByRole('button', { name: 'Sett score til 4' }),
+    ).toBeInTheDocument();
   });
 });

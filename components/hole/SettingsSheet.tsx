@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import type { CSSProperties, JSX, MouseEvent } from 'react';
 import type { InputMode } from '@/lib/hooks/useInputMode';
 
@@ -137,6 +138,18 @@ const captionStyle: CSSProperties = {
 
 export function SettingsSheet(props: SettingsSheetProps): JSX.Element | null {
   const { open, mode, onPick, onClose } = props;
+
+  useEffect(() => {
+    if (!open) return;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open, onClose]);
+
   if (!open) return null;
 
   function handleSheetClick(e: MouseEvent<HTMLDivElement>) {
@@ -154,34 +167,38 @@ export function SettingsSheet(props: SettingsSheetProps): JSX.Element | null {
         onClick={handleSheetClick}
         data-testid="settings-sheet"
         role="dialog"
+        aria-modal="true"
         aria-label="Innstillinger"
       >
         <div style={handleStyle} aria-hidden="true" />
         <div style={kickerStyle}>INNSTILLINGER</div>
         <div style={titleStyle}>Hvordan vil du legge inn score?</div>
-        {OPTIONS.map((opt) => {
-          const selected = mode === opt.id;
-          return (
-            <button
-              key={opt.id}
-              type="button"
-              onClick={() => {
-                onPick(opt.id);
-                onClose();
-              }}
-              style={cardStyle(selected)}
-              aria-pressed={selected}
-            >
-              <div style={rowStyle}>
-                <span style={radioStyle(selected)}>
-                  {selected ? <span style={radioInnerStyle} /> : null}
-                </span>
-                <span style={optionTitleStyle}>{opt.title}</span>
-              </div>
-              <div style={optionBodyStyle}>{opt.body}</div>
-            </button>
-          );
-        })}
+        <div role="radiogroup" aria-label="Inntastingsmodus">
+          {OPTIONS.map((opt) => {
+            const selected = mode === opt.id;
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => {
+                  onPick(opt.id);
+                  onClose();
+                }}
+                style={cardStyle(selected)}
+                role="radio"
+                aria-checked={selected}
+              >
+                <div style={rowStyle}>
+                  <span style={radioStyle(selected)}>
+                    {selected ? <span style={radioInnerStyle} /> : null}
+                  </span>
+                  <span style={optionTitleStyle}>{opt.title}</span>
+                </div>
+                <div style={optionBodyStyle}>{opt.body}</div>
+              </button>
+            );
+          })}
+        </div>
         <div style={captionStyle}>Valget lagres på enheten.</div>
       </div>
     </div>

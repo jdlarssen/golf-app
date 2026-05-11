@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import type { CSSProperties, JSX, MouseEvent } from 'react';
 
 export interface SpecificValueSheetProps {
@@ -74,6 +75,18 @@ export function SpecificValueSheet(
   props: SpecificValueSheetProps,
 ): JSX.Element | null {
   const { open, par, onPick, onClose } = props;
+
+  useEffect(() => {
+    if (!open) return;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open, onClose]);
+
   if (!open) return null;
 
   function handleSheetClick(e: MouseEvent<HTMLDivElement>) {
@@ -97,6 +110,7 @@ export function SpecificValueSheet(
         onClick={handleSheetClick}
         data-testid="specific-value-sheet"
         role="dialog"
+        aria-modal="true"
         aria-label="Spesifikk score"
       >
         <div style={handleStyle} aria-hidden="true" />
@@ -111,6 +125,7 @@ export function SpecificValueSheet(
                 onClose();
               }}
               style={buttonStyle}
+              aria-label={`Sett score til ${v}`}
             >
               {v}
             </button>

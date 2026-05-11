@@ -74,4 +74,18 @@ describe('SettingsSheet', () => {
     fireEvent.click(screen.getByTestId('settings-sheet'));
     expect(onClose).not.toHaveBeenCalled();
   });
+
+  it('pressing Escape calls onClose', () => {
+    const onClose = vi.fn();
+    render(
+      <SettingsSheet
+        open
+        mode="swipe"
+        onPick={() => {}}
+        onClose={onClose}
+      />,
+    );
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 });
