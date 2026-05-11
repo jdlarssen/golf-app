@@ -4,17 +4,20 @@ import { useState } from 'react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 
+// Numeric fields are stored as strings so React's controlled inputs preserve
+// in-progress decimal entry like "72." before the user types the next digit.
+// The server action converts them via Number() when reading FormData.
 export type HoleData = {
   hole_number: number;
-  par: number;
-  stroke_index: number;
+  par: string;
+  stroke_index: string;
 };
 
 export type TeeBoxData = {
   name: string;
-  slope: number;
-  course_rating: number;
-  par_total: number;
+  slope: string;
+  course_rating: string;
+  par_total: string;
 };
 
 export type CourseFormInitialData = {
@@ -36,12 +39,17 @@ type Props = {
 
 const DEFAULT_HOLES: HoleData[] = Array.from({ length: 18 }, (_, i) => ({
   hole_number: i + 1,
-  par: 4,
-  stroke_index: i + 1,
+  par: '4',
+  stroke_index: String(i + 1),
 }));
 
-// Render five hidden slots even if the user has only filled in a couple — the
-// server action reads `tee_0_*` through `tee_4_*` and ignores empty rows.
+const DEFAULT_TEE: TeeBoxData = {
+  name: '',
+  slope: '113',
+  course_rating: '70.0',
+  par_total: '72',
+};
+
 const MAX_TEE_BOXES = 5;
 
 export function CourseForm({
@@ -56,7 +64,7 @@ export function CourseForm({
   const [teeBoxes, setTeeBoxes] = useState<TeeBoxData[]>(
     initialData?.teeBoxes && initialData.teeBoxes.length > 0
       ? initialData.teeBoxes
-      : [{ name: '', slope: 113, course_rating: 70, par_total: 72 }],
+      : [DEFAULT_TEE],
   );
 
   function updateHole(index: number, patch: Partial<HoleData>) {
@@ -73,10 +81,7 @@ export function CourseForm({
 
   function addTee() {
     if (teeBoxes.length >= MAX_TEE_BOXES) return;
-    setTeeBoxes((prev) => [
-      ...prev,
-      { name: '', slope: 113, course_rating: 70, par_total: 72 },
-    ]);
+    setTeeBoxes((prev) => [...prev, { ...DEFAULT_TEE }]);
   }
 
   function removeTee(index: number) {
@@ -122,9 +127,7 @@ export function CourseForm({
                 step={1}
                 label="Par"
                 value={hole.par}
-                onChange={(e) =>
-                  updateHole(index, { par: Number(e.target.value) })
-                }
+                onChange={(e) => updateHole(index, { par: e.target.value })}
                 required
               />
               <Input
@@ -138,7 +141,7 @@ export function CourseForm({
                 label="Stroke-indeks"
                 value={hole.stroke_index}
                 onChange={(e) =>
-                  updateHole(index, { stroke_index: Number(e.target.value) })
+                  updateHole(index, { stroke_index: e.target.value })
                 }
                 required
               />
@@ -194,7 +197,7 @@ export function CourseForm({
                   placeholder="113"
                   value={tee.slope}
                   onChange={(e) =>
-                    updateTee(index, { slope: Number(e.target.value) })
+                    updateTee(index, { slope: e.target.value })
                   }
                   required
                 />
@@ -210,9 +213,7 @@ export function CourseForm({
                   placeholder="70.0"
                   value={tee.course_rating}
                   onChange={(e) =>
-                    updateTee(index, {
-                      course_rating: Number(e.target.value),
-                    })
+                    updateTee(index, { course_rating: e.target.value })
                   }
                   required
                 />
@@ -229,7 +230,7 @@ export function CourseForm({
                 placeholder="72"
                 value={tee.par_total}
                 onChange={(e) =>
-                  updateTee(index, { par_total: Number(e.target.value) })
+                  updateTee(index, { par_total: e.target.value })
                 }
                 required
               />

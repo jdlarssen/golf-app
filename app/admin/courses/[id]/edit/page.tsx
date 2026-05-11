@@ -74,17 +74,19 @@ export default async function EditCoursePage({
   if (holesResult.error) throw holesResult.error;
   if (teesResult.error) throw teesResult.error;
 
+  // Numeric fields are stringified so the form's controlled inputs preserve
+  // in-progress decimal entry (see CourseForm.tsx for context).
   const initialHoles = (holesResult.data ?? []).map((h) => ({
     hole_number: h.hole_number,
-    par: h.par,
-    stroke_index: h.stroke_index,
+    par: String(h.par),
+    stroke_index: String(h.stroke_index),
   }));
 
   const initialTees = (teesResult.data ?? []).map((t) => ({
     name: t.name,
-    slope: t.slope,
-    course_rating: Number(t.course_rating),
-    par_total: t.par_total,
+    slope: String(t.slope),
+    course_rating: String(t.course_rating),
+    par_total: String(t.par_total),
   }));
 
   // Pre-bind the course id so the form's action handler only deals with the
