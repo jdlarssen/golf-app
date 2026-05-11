@@ -30,8 +30,9 @@ export const config = {
   //   - _next/static, _next/image (build output / image optimizer)
   //   - api/* (handled by their own auth, if any)
   //   - login, register (must be reachable while logged out)
+  //   - auth/callback (magic-link exchange — MUST run without a session)
   //   - favicon.ico, *.svg/png/jpg/jpeg/gif/webp/ico (static assets)
   matcher: [
-    '/((?!_next/static|_next/image|api/|login|register|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/((?!_next/static|_next/image|api/|login|register|auth/callback|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 };
