@@ -3,9 +3,13 @@ import { notFound, redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
+import { Banner } from '@/components/ui/Banner';
 import { PageHeader } from '@/components/ui/PageHeader';
 
 type Params = Promise<{ id: string }>;
+type SearchParams = Promise<{
+  status?: string | string[];
+}>;
 
 type GameStatus = 'draft' | 'active' | 'finished';
 
@@ -24,12 +28,22 @@ const STATUS_BADGE_CLASSES: Record<GameStatus, string> = {
     'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-900',
 };
 
+const STATUS_BANNERS: Record<string, string> = {
+  submitted: '✓ Scorekortet er levert.',
+};
+
+function first(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) return value[0];
+  return value;
+}
+
 type GameRow = {
   id: string;
   name: string;
   status: GameStatus;
   course_id: string;
   tee_box_id: string;
+  require_peer_approval: boolean;
   courses: { name: string } | null;
   tee_boxes: { name: string; slope: number; course_rating: number; par_total: number } | null;
 };
@@ -39,10 +53,54 @@ type MyPlayerRow = {
   team_number: number;
   flight_number: number;
   course_handicap: number | null;
+  submitted_at: string | null;
+  approved_at: string | null;
+  rejection_reason: string | null;
 };
 
-export default async function GameHomePage({ params }: { params: Params }) {
+type FlightMatePlayerRow = {
+  user_id: string;
+  flight_number: number;
+  submitted_at: string | null;
+  approved_at: string | null;
+};
+
+type UiState =
+  | 'not_started'
+  | 'in_progress'
+  | 'ready_to_submit'
+  | 'submitted_pending_approval'
+  | 'submitted_approved';
+
+function computeState(opts: {
+  strokesCount: number;
+  submittedAt: string | null;
+  approvedAt: string | null;
+  requirePeerApproval: boolean;
+}): UiState {
+  const { strokesCount, submittedAt, approvedAt, requirePeerApproval } = opts;
+  if (submittedAt) {
+    if (requirePeerApproval && !approvedAt) {
+      return 'submitted_pending_approval';
+    }
+    return 'submitted_approved';
+  }
+  if (strokesCount === 0) return 'not_started';
+  if (strokesCount >= 18) return 'ready_to_submit';
+  return 'in_progress';
+}
+
+export default async function GameHomePage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  searchParams: SearchParams;
+}) {
   const { id } = await params;
+  const sp = await searchParams;
+  const statusBanner = STATUS_BANNERS[first(sp.status) ?? ''] ?? undefined;
+
   const supabase = await getServerClient();
 
   const {
@@ -54,7 +112,7 @@ export default async function GameHomePage({ params }: { params: Params }) {
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, status, course_id, tee_box_id, courses(name), tee_boxes(name, slope, course_rating, par_total)',
+      'id, name, status, course_id, tee_box_id, require_peer_approval, courses(name), tee_boxes(name, slope, course_rating, par_total)',
     )
     .eq('id', id)
     .single<GameRow>();
@@ -65,7 +123,9 @@ export default async function GameHomePage({ params }: { params: Params }) {
   // 404 — RLS would block this query anyway, but treat both cases the same.
   const { data: me, error: meError } = await supabase
     .from('game_players')
-    .select('user_id, team_number, flight_number, course_handicap')
+    .select(
+      'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, rejection_reason',
+    )
     .eq('game_id', id)
     .eq('user_id', user.id)
     .maybeSingle<MyPlayerRow>();
@@ -77,6 +137,37 @@ export default async function GameHomePage({ params }: { params: Params }) {
   if (game.status === 'draft') {
     redirect('/');
   }
+
+  // How many holes have a strokes value? Used to decide CTA copy.
+  const { count: strokesCountRaw } = await supabase
+    .from('scores')
+    .select('hole_number', { count: 'exact', head: true })
+    .eq('game_id', id)
+    .eq('user_id', user.id)
+    .not('strokes', 'is', null);
+  const strokesCount = strokesCountRaw ?? 0;
+
+  // Flight-mates needing approval (only relevant when peer approval is on).
+  let pendingApprovalsForMe = 0;
+  if (game.require_peer_approval && game.status === 'active') {
+    const { data: mates } = await supabase
+      .from('game_players')
+      .select('user_id, flight_number, submitted_at, approved_at')
+      .eq('game_id', id)
+      .eq('flight_number', me.flight_number)
+      .returns<FlightMatePlayerRow[]>();
+    pendingApprovalsForMe = (mates ?? []).filter(
+      (m) =>
+        m.user_id !== user.id && m.submitted_at != null && m.approved_at == null,
+    ).length;
+  }
+
+  const state = computeState({
+    strokesCount,
+    submittedAt: me.submitted_at,
+    approvedAt: me.approved_at,
+    requirePeerApproval: game.require_peer_approval,
+  });
 
   const isActive = game.status === 'active';
 
@@ -101,6 +192,40 @@ export default async function GameHomePage({ params }: { params: Params }) {
           {STATUS_LABELS[game.status]}
         </span>
       </div>
+
+      {statusBanner && (
+        <div className="mb-4">
+          <Banner tone="success">{statusBanner}</Banner>
+        </div>
+      )}
+
+      {me.rejection_reason && (
+        <div className="mb-4">
+          <Banner tone="info">
+            Scorekortet ditt ble avvist: «{me.rejection_reason}». Rediger
+            hullene og lever på nytt.
+          </Banner>
+        </div>
+      )}
+
+      {pendingApprovalsForMe > 0 && (
+        <div className="mb-4">
+          <Banner tone="info">
+            <div className="flex items-center justify-between gap-3">
+              <span>
+                {pendingApprovalsForMe} spillere i flighten din venter på
+                godkjenning
+              </span>
+              <Link
+                href={`/games/${id}/approve`}
+                className="text-sm font-medium text-blue-700 underline whitespace-nowrap"
+              >
+                Gjennomgå →
+              </Link>
+            </div>
+          </Banner>
+        </div>
+      )}
 
       <div className="space-y-4">
         <Card>
@@ -140,15 +265,13 @@ export default async function GameHomePage({ params }: { params: Params }) {
         </Card>
 
         {isActive ? (
-          <Link href={`/games/${id}/holes/1`} className="block">
+          <PrimaryCta gameId={id} state={state} strokesCount={strokesCount} />
+        ) : game.status === 'finished' ? (
+          <Link href={`/games/${id}/scorecard`} className="block">
             <div className="w-full min-h-[44px] bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-medium transition-colors text-center text-base">
-              Start runden →
+              Se resultat →
             </div>
           </Link>
-        ) : game.status === 'finished' ? (
-          <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 px-4 py-3 text-sm text-zinc-500 text-center">
-            Runden er avsluttet.
-          </div>
         ) : (
           <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 px-4 py-3 text-sm text-zinc-500 text-center">
             Spillet er ikke startet ennå.
@@ -176,5 +299,77 @@ export default async function GameHomePage({ params }: { params: Params }) {
         </div>
       </div>
     </AppShell>
+  );
+}
+
+function PrimaryCta({
+  gameId,
+  state,
+  strokesCount,
+}: {
+  gameId: string;
+  state: UiState;
+  strokesCount: number;
+}) {
+  const subtext =
+    state === 'in_progress' || state === 'ready_to_submit'
+      ? `${strokesCount} av 18 hull tastet inn`
+      : null;
+
+  if (state === 'not_started') {
+    return (
+      <div className="space-y-1.5">
+        <Link href={`/games/${gameId}/holes/1`} className="block">
+          <div className="w-full min-h-[44px] bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-medium transition-colors text-center text-base">
+            Start runden →
+          </div>
+        </Link>
+      </div>
+    );
+  }
+
+  if (state === 'in_progress') {
+    return (
+      <div className="space-y-1.5">
+        <Link href={`/games/${gameId}/holes/1`} className="block">
+          <div className="w-full min-h-[44px] bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-medium transition-colors text-center text-base">
+            Fortsett runden →
+          </div>
+        </Link>
+        {subtext && (
+          <p className="text-center text-xs text-zinc-500">{subtext}</p>
+        )}
+      </div>
+    );
+  }
+
+  if (state === 'ready_to_submit') {
+    return (
+      <div className="space-y-1.5">
+        <Link href={`/games/${gameId}/submit`} className="block">
+          <div className="w-full min-h-[44px] bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-medium transition-colors text-center text-base">
+            Gjennomgå og lever →
+          </div>
+        </Link>
+        {subtext && (
+          <p className="text-center text-xs text-zinc-500">{subtext}</p>
+        )}
+      </div>
+    );
+  }
+
+  if (state === 'submitted_pending_approval') {
+    return (
+      <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300 text-center">
+        Scorekort levert — venter på godkjenning fra en i flighten din.
+      </div>
+    );
+  }
+
+  // submitted_approved
+  return (
+    <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300 text-center">
+      Scorekort levert og godkjent. Venter på at admin avslutter spillet.
+    </div>
   );
 }
