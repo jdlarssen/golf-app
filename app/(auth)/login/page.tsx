@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
+import { BrandMark } from '@/components/ui/BrandMark';
 
 type SearchParams = Promise<{
   error?: string | string[];
@@ -41,11 +42,8 @@ export default async function LoginPage({
     <AppShell>
       <div className="mt-8">
         <Card>
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-7 h-7 rounded-md bg-green-600 text-white flex items-center justify-center text-sm font-bold">T</div>
-            <span className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">Tørny</span>
-          </div>
-          <h1 className="text-2xl font-semibold mb-6 text-center text-zinc-900 dark:text-zinc-100">
+          <BrandMark className="mb-6 justify-center" />
+          <h1 className="font-serif text-3xl font-medium tracking-tight mb-6 text-center text-text">
             Logg inn
           </h1>
 
@@ -81,7 +79,7 @@ export default async function LoginPage({
             </Button>
           </form>
 
-          <p className="text-xs text-zinc-500 mt-6 text-center">
+          <p className="text-xs text-muted mt-6 text-center">
             Vi sender deg en lenke på mail. Klikk den for å logge inn.
           </p>
         </Card>
