@@ -145,33 +145,24 @@ export default async function Home({
             Velkommen, {firstNameValue}.
           </h1>
           <p className="mt-3 font-sans text-sm leading-relaxed text-muted max-w-[280px]">
-            Ingen aktive turneringer enda. Bli med via en invitasjon i innboksen,
-            eller sett opp din egen runde.
+            {profile?.is_admin
+              ? 'Ingen turneringer enda. Sett opp første runde og kom i gang.'
+              : 'Du er klar. Admin setter opp neste runde.'}
           </p>
-          <div className="mt-8 flex flex-col gap-2.5 w-full max-w-[280px]">
-            {/* Passive primary per design spec — on iOS Safari (primary target)
-                `mailto:` opens Mail.app, which lets the user navigate to their
-                inbox. Web/desktop behavior is a blank compose; acceptable for
-                a bootstrap empty-state CTA. */}
-            {/* Dark mode: `bg-primary` resolves to lighter sage (#6b9f6f);
-                white text on sage is ~2.84:1 (below WCAG AA for 14px text).
-                Swap to dark `text-bg` (#0f1612) for ~6.5:1 — same lift the
-                CTA gets visually in dark mode, but readable. */}
-            <Link
-              href="mailto:"
-              className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-primary text-white dark:text-bg font-sans text-sm font-semibold px-[18px] py-[14px]"
-            >
-              Sjekk innboksen for invitasjon
-            </Link>
-            {profile?.is_admin && (
+          {profile?.is_admin && (
+            <div className="mt-8 w-full max-w-[280px]">
+              {/* Dark mode: `bg-primary` resolves to lighter sage (#6b9f6f);
+                  white text on sage is ~2.84:1 (below WCAG AA for 14px text).
+                  Swap to dark `text-bg` (#0f1612) for ~6.5:1 — same lift the
+                  CTA gets visually in dark mode, but readable. */}
               <Link
                 href="/admin/games/new"
-                className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-surface text-text border border-border font-sans text-sm font-semibold px-[18px] py-[14px]"
+                className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-primary text-white dark:text-bg font-sans text-sm font-semibold px-[18px] py-[14px] w-full"
               >
                 Opprett en turnering
               </Link>
-            )}
-          </div>
+            </div>
+          )}
           <PullQuote className="mt-8">
             En god runde begynner med god planlegging.
           </PullQuote>
