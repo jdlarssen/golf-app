@@ -190,6 +190,16 @@ export default async function LeaderboardPage({
     });
   }
 
+  if (view === 'state3.5') {
+    return renderState35({
+      gameId: id,
+      mode,
+      players,
+      holes,
+      scores,
+    });
+  }
+
   // Compute both modes up front; pick which to render.
   const linesNetto = computeLeaderboard({ mode: 'netto', players, holes, scores });
   const linesBrutto = computeLeaderboard({ mode: 'brutto', players, holes, scores });
@@ -495,6 +505,98 @@ function renderState3(opts: {
       </ul>
 
       <PullQuote className="px-6 pt-1 pb-4">Lykke til.</PullQuote>
+    </AppShell>
+  );
+}
+
+/**
+ * State #3.5 — "Front 9 åpen, back 9 låst". Rendered when status='active' and
+ * at least one team has fully completed front 9 (both players × all 9 holes).
+ *
+ * The leaderboard is computed against scores+holes clipped to the front 9,
+ * so partial teams naturally get `missingHoles.length > 0` and the existing
+ * TeamCard renders "⚠️ N hull mangler" — which reads correctly on a 9-hole
+ * view ("3 hull mangler" of the 9). Back 9 stays hidden behind the locked
+ * block until status flips to 'finished'.
+ */
+function renderState35(opts: {
+  gameId: string;
+  mode: LeaderboardMode;
+  players: LbPlayer[];
+  holes: LbHole[];
+  scores: LbScore[];
+}) {
+  const { gameId, mode, players, holes, scores } = opts;
+
+  const frontNineHoles = holes.filter(
+    (h) => h.holeNumber >= 1 && h.holeNumber <= 9,
+  );
+  const frontNineScores = scores.filter(
+    (s) => s.holeNumber >= 1 && s.holeNumber <= 9,
+  );
+
+  const lines = computeLeaderboard({
+    mode,
+    players,
+    holes: frontNineHoles,
+    scores: frontNineScores,
+  });
+  const orderedLines = [...lines].sort((a, b) => a.rank - b.rank);
+  const leaderTotal = orderedLines.find((l) => l.rank === 1)?.total ?? 0;
+
+  return (
+    <AppShell>
+      {/* Reuse the pre-round realtime — same scores-INSERT subscription
+          works here too. When a new score lands the page refreshes; the
+          server re-evaluates view (may stay #3.5 or eventually flip to
+          'full' when admin ends the game). */}
+      <PreRoundLeaderboardRealtime gameId={gameId} />
+
+      <header className="mb-4 flex items-center justify-between gap-4">
+        <BackLink href="/">← Hjem</BackLink>
+        <Kicker tone="accent">LEADERBOARD</Kicker>
+        <span className="w-12" aria-hidden />
+      </header>
+
+      {/* FRONT 9 champagne pill — signals this isn't the final standing. */}
+      <div className="flex justify-center mb-5">
+        <span className="inline-flex items-center text-[10px] font-semibold uppercase tracking-[0.18em] px-3 py-1 rounded-full bg-accent/10 text-accent border border-accent/30">
+          FRONT 9
+        </span>
+      </div>
+
+      <div className="flex justify-center mb-5">
+        <ModeToggle gameId={gameId} mode={mode} basePath="/leaderboard" />
+      </div>
+
+      <div className="space-y-3 px-4">
+        {orderedLines.length === 0 && (
+          <Card>
+            <p className="text-sm text-muted">Ingen lag å vise.</p>
+          </Card>
+        )}
+        {orderedLines.map((line) => (
+          <TeamCard
+            key={line.teamNumber}
+            line={line}
+            leaderTotal={leaderTotal}
+          />
+        ))}
+      </div>
+
+      {/* Locked back 9 block — back-9 scores stay hidden until the game is
+          finished so the climax doesn't get spoiled mid-round. */}
+      <div className="mx-4 mt-6 rounded-2xl border border-dashed border-border bg-surface/50 px-5 py-6 text-center">
+        <p className="font-serif text-[16px] font-medium text-text">
+          🤫 Vi sees ved hull 18.
+        </p>
+        <p className="mt-2 font-sans text-xs text-muted">
+          Alle scorekort må være levert og godkjent før resten av tabellen
+          vises.
+        </p>
+      </div>
+
+      <PullQuote className="px-6 pt-4 pb-4">Lykke til.</PullQuote>
     </AppShell>
   );
 }
