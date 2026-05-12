@@ -1,5 +1,5 @@
 import { Suspense, cache } from 'react';
-import Link from 'next/link';
+import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { BackLink } from '@/components/ui/BackLink';
@@ -13,16 +13,15 @@ import {
   PokalIcon,
 } from '@/components/icons';
 import { firstName } from '@/lib/firstName';
+import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 
-// Request-scoped cache for the Supabase client + authed user. Each Suspense
-// boundary below calls this; React.cache dedupes so we hit Supabase Auth
-// exactly once per request instead of three times.
+// Request-scoped Supabase client + verified user id. The id is forwarded by
+// proxy.ts (which already verified the session) so the three Suspense bodies
+// below don't each pay another Supabase Auth round-trip.
 const getAdminContext = cache(async () => {
   const supabase = await getServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return { supabase, user };
+  const userId = await getProxyVerifiedUserId();
+  return { supabase, userId };
 });
 
 const MONTHS_NB = [
@@ -134,11 +133,11 @@ async function GreetingCard({
   dateLine: string;
   timeOfDay: string;
 }) {
-  const { supabase, user } = await getAdminContext();
+  const { supabase, userId } = await getAdminContext();
   const { data: profile } = await supabase
     .from('users')
     .select('name')
-    .eq('id', user!.id)
+    .eq('id', userId!)
     .single();
   const firstNameValue = firstName(profile?.name) ?? 'saksbehandler';
 
@@ -278,7 +277,7 @@ async function TilesGrid() {
   return (
     <div className="mb-2 grid grid-cols-2 gap-2.5">
       {tiles.map((tile, i) => (
-        <Link
+        <SmartLink
           key={tile.label}
           href={tile.href}
           className="reveal-up min-h-[108px] rounded-2xl px-3.5 pt-3.5 pb-3 text-left"
@@ -316,7 +315,7 @@ async function TilesGrid() {
           >
             {tile.meta}
           </p>
-        </Link>
+        </SmartLink>
       ))}
     </div>
   );

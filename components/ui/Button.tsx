@@ -1,5 +1,6 @@
 import { ButtonHTMLAttributes } from 'react';
-import Link, { type LinkProps } from 'next/link';
+import { type LinkProps } from 'next/link';
+import { SmartLink } from './SmartLink';
 
 type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
 
@@ -48,11 +49,11 @@ export function LinkButton({
   children?: React.ReactNode;
 }) {
   return (
-    <Link
+    <SmartLink
       {...props}
       className={`${BASE_CLASSES} ${VARIANTS[variant]} ${full ? 'w-full' : ''} ${className}`}
     >
       {children}
-    </Link>
+    </SmartLink>
   );
 }

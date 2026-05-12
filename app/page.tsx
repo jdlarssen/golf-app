@@ -1,7 +1,8 @@
 import { Suspense, cache } from 'react';
-import Link from 'next/link';
+import { SmartLink } from '@/components/ui/SmartLink';
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
+import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
@@ -22,15 +23,13 @@ function first(value: string | string[] | undefined): string | undefined {
   return value;
 }
 
-// Request-scoped Supabase client + authed user. Shared between the shell's
-// /login-redirect gate and the suspended body so we only hit Supabase Auth
-// once per request.
+// Request-scoped Supabase client + verified user id. The user id is forwarded
+// by proxy.ts (which already called auth.getUser to refresh the session) so
+// we don't pay another Supabase Auth round-trip per page render.
 const getHomeContext = cache(async () => {
   const supabase = await getServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return { supabase, user };
+  const userId = await getProxyVerifiedUserId();
+  return { supabase, userId };
 });
 
 export default async function Home({
@@ -38,8 +37,8 @@ export default async function Home({
 }: {
   searchParams: SearchParams;
 }) {
-  const { user } = await getHomeContext();
-  if (!user) {
+  const { userId } = await getHomeContext();
+  if (!userId) {
     redirect('/login');
   }
 
@@ -66,7 +65,7 @@ export default async function Home({
 // ─── Body ────────────────────────────────────────────────────────────────
 
 async function HomeBody() {
-  const { supabase, user } = await getHomeContext();
+  const { supabase, userId } = await getHomeContext();
 
   type GameRow = {
     game_id: string;
@@ -87,14 +86,14 @@ async function HomeBody() {
     supabase
       .from('users')
       .select('name, is_admin')
-      .eq('id', user!.id)
+      .eq('id', userId!)
       .single(),
     supabase
       .from('game_players')
       .select(
         'game_id, team_number, flight_number, games!inner(id, name, status, ended_at, courses(name))',
       )
-      .eq('user_id', user!.id)
+      .eq('user_id', userId!)
       .in('games.status', ['draft', 'scheduled', 'active'])
       .returns<GameRow[]>(),
     supabase
@@ -102,7 +101,7 @@ async function HomeBody() {
       .select(
         'game_id, team_number, games!inner(id, name, status, ended_at, courses(name))',
       )
-      .eq('user_id', user!.id)
+      .eq('user_id', userId!)
       .eq('games.status', 'finished')
       .order('ended_at', { foreignTable: 'games', ascending: false })
       .returns<GameRow[]>(),
@@ -183,21 +182,21 @@ async function HomeBody() {
         <footer className="mt-14 pt-6 border-t border-border/60 dark:border-border/80">
           <ul className="flex flex-col gap-1 items-center">
             <li>
-              <Link
+              <SmartLink
                 href="/profile"
                 className="inline-flex items-center min-h-[44px] px-3 text-sm text-muted hover:text-text transition-colors"
               >
                 Min profil
-              </Link>
+              </SmartLink>
             </li>
             {profile?.is_admin && (
               <li>
-                <Link
+                <SmartLink
                   href="/admin"
                   className="inline-flex items-center min-h-[44px] px-3 text-sm text-muted hover:text-text transition-colors"
                 >
                   Sekretariatet
-                </Link>
+                </SmartLink>
               </li>
             )}
             <li>
@@ -224,7 +223,7 @@ async function HomeBody() {
         {activeGames.length > 0 && (
           <Section label="Mine spill">
             {activeGames.map((g) => (
-              <Link key={g.id} href={`/games/${g.id}`} className="block">
+              <SmartLink key={g.id} href={`/games/${g.id}`} className="block">
                 <Card className="min-h-[44px] hover:border-primary/30 transition-colors p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
@@ -251,7 +250,7 @@ async function HomeBody() {
                     </div>
                   </div>
                 </Card>
-              </Link>
+              </SmartLink>
             ))}
           </Section>
         )}
@@ -259,7 +258,7 @@ async function HomeBody() {
         {finishedGames.length > 0 && (
           <Section label="Avsluttede spill">
             {finishedGames.map((g) => (
-              <Link
+              <SmartLink
                 key={g.id}
                 href={`/games/${g.id}/leaderboard`}
                 className="block"
@@ -281,13 +280,13 @@ async function HomeBody() {
                     </span>
                   </div>
                 </Card>
-              </Link>
+              </SmartLink>
             ))}
           </Section>
         )}
 
         <Section label="Profil">
-          <Link href="/profile" className="block">
+          <SmartLink href="/profile" className="block">
             <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
               <span className="text-base font-medium text-text">
                 Min profil
@@ -296,12 +295,12 @@ async function HomeBody() {
                 →
               </span>
             </Card>
-          </Link>
+          </SmartLink>
         </Section>
 
         {profile?.is_admin && (
           <Section label="Admin" accent>
-            <Link href="/admin" className="block">
+            <SmartLink href="/admin" className="block">
               <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
                 <span className="text-base font-medium text-text">
                   Sekretariatet
@@ -310,7 +309,7 @@ async function HomeBody() {
                   →
                 </span>
               </Card>
-            </Link>
+            </SmartLink>
           </Section>
         )}
 

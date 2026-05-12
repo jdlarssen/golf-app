@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createMiddlewareClient } from '@/lib/supabase/middleware';
 
 export async function proxy(request: NextRequest) {
-  const { supabase, response } = createMiddlewareClient(request);
+  const { supabase, response, setRequestHeader } = createMiddlewareClient(request);
 
   // Refresh session and read user. Cookies set during this call are forwarded
   // via the response builder.
@@ -21,6 +21,11 @@ export async function proxy(request: NextRequest) {
     url.search = `?next=${encodeURIComponent(currentPath)}`;
     return NextResponse.redirect(url);
   }
+
+  // Forward verified user id to the route handler so server components don't
+  // need to call auth.getUser() again. Saves a Supabase Auth round-trip per
+  // request (~80 ms) — adds up across the layout + page + Suspense bodies.
+  setRequestHeader('x-torny-user-id', user.id);
 
   return response();
 }

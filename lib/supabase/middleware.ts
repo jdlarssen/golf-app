@@ -13,7 +13,13 @@ import { NextRequest, NextResponse } from 'next/server';
  * Pattern follows the Supabase Next.js SSR docs.
  */
 export function createMiddlewareClient(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  const requestHeaders = new Headers(request.headers);
+
+  function buildResponse() {
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
+  let response = buildResponse();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -27,7 +33,7 @@ export function createMiddlewareClient(request: NextRequest) {
           for (const { name, value } of toSet) {
             request.cookies.set(name, value);
           }
-          response = NextResponse.next({ request });
+          response = buildResponse();
           for (const { name, value, options } of toSet) {
             response.cookies.set(name, value, options);
           }
@@ -36,5 +42,19 @@ export function createMiddlewareClient(request: NextRequest) {
     },
   );
 
-  return { supabase, response: () => response };
+  return {
+    supabase,
+    response: () => response,
+    // Stash a value onto the request headers that's forwarded to the route
+    // handler. Used to pass the verified user id downstream so server
+    // components don't need to call auth.getUser() again (saves ~80 ms).
+    setRequestHeader(name: string, value: string) {
+      requestHeaders.set(name, value);
+      const oldCookies = response.cookies.getAll();
+      response = buildResponse();
+      for (const cookie of oldCookies) {
+        response.cookies.set(cookie);
+      }
+    },
+  };
 }

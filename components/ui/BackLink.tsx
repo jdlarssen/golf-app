@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { SmartLink } from './SmartLink';
 
 export function BackLink({
   href,
@@ -9,11 +9,11 @@ export function BackLink({
   children: ReactNode;
 }) {
   return (
-    <Link
+    <SmartLink
       href={href}
       className="text-sm text-muted hover:text-text transition-colors"
     >
       {children}
-    </Link>
+    </SmartLink>
   );
 }
