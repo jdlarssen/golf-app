@@ -323,6 +323,7 @@ export default async function GameHomePage({
 
   const isActive = game.status === 'active';
   const isDraft = game.status === 'draft';
+  const isFinished = game.status === 'finished';
   const draftTeeOffDate =
     isDraft && game.scheduled_tee_off_at
       ? new Date(game.scheduled_tee_off_at)
@@ -344,7 +345,7 @@ export default async function GameHomePage({
 
       {isDraft && (
         <div className="mb-4">
-          <Banner tone="info">
+          <Banner tone="warning">
             Utkast — admin planlegger fortsatt. Detaljer kan endre seg.
           </Banner>
         </div>
@@ -462,7 +463,7 @@ export default async function GameHomePage({
               requirePeerApproval={game.require_peer_approval}
             />
           </Suspense>
-        ) : game.status === 'finished' ? (
+        ) : isFinished ? (
           <LinkButton href={`/games/${id}/leaderboard`} full>
             🏆 Se leaderboard →
           </LinkButton>
