@@ -215,6 +215,15 @@ body {
   color: var(--text);
   font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   font-feature-settings: 'ss01', 'cv11';
+  /* Pin Fraunces optical-size axis to 14 (text grade) globally. Auto-opsz
+   * at headline sizes (24-32px) tips Fraunces into its display grade,
+   * which dials up the wonky descenders and decorative serifs the brand
+   * spec explicitly rejects ("restraint over ornament"). 14 keeps the
+   * functional, member-book letterforms at all sizes. Ignored by Inter
+   * since it has no opsz axis. font-weight via CSS keeps working — per
+   * CSS Fonts L4, font-weight overrides font-variation-settings for the
+   * wght axis unless wght is explicitly set here (it's not). */
+  font-variation-settings: 'opsz' 14;
 }
 
 /* Headings avoid orphans (single dangling words on the last line); pullquotes
