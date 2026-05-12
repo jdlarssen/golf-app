@@ -238,7 +238,7 @@ function LeaderCard({
             Leder · {line.rank}. plass
           </span>
           <span
-            className="my-1 font-serif tabular-nums text-[64px] font-semibold leading-none tracking-[-0.04em] text-accent"
+            className="score-num my-1 text-[64px] leading-none tracking-[-0.04em] text-accent"
             style={{ textShadow: '0 1px 0 rgba(184,148,70,0.3)' }}
           >
             {line.rank}
@@ -260,7 +260,7 @@ function LeaderCard({
             <span className="block text-[10px] font-semibold uppercase tracking-[0.20em] text-muted">
               Total netto
             </span>
-            <span className="mt-0.5 block font-serif text-[34px] font-semibold leading-none tracking-[-0.02em] tabular-nums text-text">
+            <span className="score-num mt-0.5 block text-[34px] leading-none tracking-[-0.02em] text-text">
               {line.total}
             </span>
           </div>
@@ -269,7 +269,7 @@ function LeaderCard({
               Mot par
             </span>
             <span
-              className={`mt-0.5 block font-serif text-[34px] font-semibold leading-none tracking-[-0.02em] tabular-nums ${
+              className={`score-num mt-0.5 block text-[34px] leading-none tracking-[-0.02em] ${
                 vsPar < 0 ? 'text-score-under-fg' : 'text-text'
               }`}
             >
@@ -320,7 +320,7 @@ function TeamRow({
         className="reveal-up flex items-center gap-3.5 rounded-[14px] border border-border bg-surface px-4 py-3.5 shadow-[0_1px_2px_rgba(26,46,31,0.04),0_2px_6px_rgba(26,46,31,0.03)] active:scale-[0.99]"
         style={{ animationDelay: `${140 + staggerIndex * 80}ms` }}
       >
-        <span className="w-6 shrink-0 text-center font-serif text-[20px] font-medium tabular-nums text-muted">
+        <span className="score-num w-6 shrink-0 text-center text-[20px] text-muted">
           {line.rank}
         </span>
         <div className="min-w-0 flex-1">
@@ -339,7 +339,7 @@ function TeamRow({
           </p>
         </div>
         <div className="shrink-0 text-right">
-          <span className="block font-serif text-[22px] font-semibold leading-none tracking-[-0.02em] tabular-nums text-text">
+          <span className="score-num block text-[22px] leading-none tracking-[-0.02em] text-text">
             {line.total}
           </span>
           <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">

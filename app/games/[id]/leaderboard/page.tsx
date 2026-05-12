@@ -295,14 +295,14 @@ function TeamCard({
           </div>
           <div className="text-right shrink-0">
             <p
-              className={`font-serif tabular-nums font-medium text-text leading-none ${
+              className={`score-num text-text leading-none ${
                 isLeader ? 'text-4xl' : 'text-3xl'
               }`}
             >
               {line.total}
             </p>
             {!isLeader && delta > 0 && (
-              <p className="text-xs text-muted tabular-nums mt-1.5">
+              <p className="inline-num text-xs text-muted mt-1.5">
                 +{delta}
               </p>
             )}
