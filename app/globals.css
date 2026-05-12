@@ -226,6 +226,21 @@ body {
   font-variation-settings: 'opsz' 14;
 }
 
+/* iOS Safari: a long-press on any button/link surfaces the system "Open in
+ * New Tab / Copy Link" callout and a text-selection highlight, instead of
+ * firing the click handler. Suppress both on interactive elements globally.
+ * Scope is deliberately narrow — inputs/textareas/headings/body text are NOT
+ * touched so genuine text selection still works where users expect it. */
+a,
+button,
+[role='button'],
+label,
+summary {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 /* Headings avoid orphans (single dangling words on the last line); pullquotes
  * balance to even line-lengths. Both degrade gracefully on older browsers. */
 h1, h2, h3, h4, h5, h6 {
