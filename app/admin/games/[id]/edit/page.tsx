@@ -15,7 +15,11 @@ import {
   type PlayerOption,
   type InitialValues,
 } from '@/app/admin/games/new/GameForm';
-import { updateGameAction } from './actions';
+import {
+  saveDraftAction,
+  publishFromDraftAction,
+  updateScheduledAction,
+} from './actions';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;
@@ -59,8 +63,10 @@ type GameRow = {
   id: string;
   name: string;
   status: 'draft' | 'scheduled' | 'active' | 'finished';
-  course_id: string;
-  tee_box_id: string;
+  // Nullable since migration 0011 — drafts may not have a course or tee
+  // assigned yet.
+  course_id: string | null;
+  tee_box_id: string | null;
   scheduled_tee_off_at: string | null;
   hcp_allowance_pct: number;
   require_peer_approval: boolean;
@@ -141,10 +147,10 @@ export default async function EditGamePage({
   }
   const game = gameRes.data;
 
-  // Edits are only allowed while the game is in 'scheduled'. Once it flips to
-  // 'active' or 'finished', state changes (handicaps, scores) make the roster
-  // and tee-off effectively immutable.
-  if (game.status !== 'scheduled') {
+  // Edits are allowed while the game is still in 'draft' or 'scheduled'.
+  // Once it flips to 'active' or 'finished', state changes (handicaps, scores)
+  // make the roster and tee-off effectively immutable.
+  if (game.status !== 'draft' && game.status !== 'scheduled') {
     redirect(`/admin/games/${id}?error=not_editable`);
   }
 
@@ -172,8 +178,9 @@ export default async function EditGamePage({
       <div className="mt-4 space-y-2">
         {errorMessage && <Banner tone="error">{errorMessage}</Banner>}
         <Banner tone="info">
-          Spillet er i planlagt-fasen. Spillerne ser endringene neste gang
-          de åpner appen.
+          {game.status === 'draft'
+            ? 'Spillet er fortsatt et utkast — bare du ser det. Fyll inn det som mangler og publiser når dere er klare.'
+            : 'Spillet er i planlagt-fasen. Spillerne ser endringene neste gang de åpner appen.'}
         </Banner>
         <Suspense fallback={null}>
           <PlayerShortageBanner />
@@ -264,8 +271,10 @@ async function EditGameFormBody({
 
   const initialValues: InitialValues = {
     name: game.name,
-    course_id: game.course_id,
-    tee_box_id: game.tee_box_id,
+    // course_id / tee_box_id may be null on a draft. The form treats undefined
+    // as "not chosen yet", so coerce with ??.
+    course_id: game.course_id ?? undefined,
+    tee_box_id: game.tee_box_id ?? undefined,
     scheduled_tee_off_at: formatForDateTimeLocalInOslo(
       game.scheduled_tee_off_at,
     ),
@@ -278,15 +287,32 @@ async function EditGameFormBody({
     })),
   };
 
-  const updateAction = updateGameAction.bind(null, gameId);
+  if (game.status === 'draft') {
+    return (
+      <GameForm
+        courses={courses}
+        players={playerOptions}
+        initialValues={initialValues}
+        mode={{
+          kind: 'edit-draft',
+          gameId,
+          saveDraftAction,
+          publishAction: publishFromDraftAction,
+        }}
+      />
+    );
+  }
 
   return (
     <GameForm
       courses={courses}
       players={playerOptions}
       initialValues={initialValues}
-      editMode
-      updateAction={updateAction}
+      mode={{
+        kind: 'edit-scheduled',
+        gameId,
+        updateAction: updateScheduledAction,
+      }}
     />
   );
 }

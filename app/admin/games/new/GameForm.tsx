@@ -37,28 +37,34 @@ export type InitialValues = {
   }>;
 };
 
+/**
+ * Discriminated union describing which flow the form is wired for. Each `kind`
+ * carries exactly the actions it needs — TypeScript narrows per call site so
+ * we no longer need runtime guards to police missing/extra action props.
+ */
+export type GameFormMode =
+  | {
+      kind: 'create';
+      createDraftAction: (formData: FormData) => Promise<void>;
+      createAndPublishAction: (formData: FormData) => Promise<void>;
+    }
+  | {
+      kind: 'edit-draft';
+      gameId: string;
+      saveDraftAction: (gameId: string, formData: FormData) => Promise<void>;
+      publishAction: (gameId: string, formData: FormData) => Promise<void>;
+    }
+  | {
+      kind: 'edit-scheduled';
+      gameId: string;
+      updateAction: (gameId: string, formData: FormData) => Promise<void>;
+    };
+
 type Props = {
   courses: CourseOption[];
   players: PlayerOption[];
-  /**
-   * Required for the create flow (editMode === false / unset). Ignored when
-   * `editMode === true` since the edit page only ever uses `updateAction`.
-   */
-  createDraftAction?: (formData: FormData) => void | Promise<void>;
-  /** Same shape and rules as `createDraftAction`. */
-  createAndPublishAction?: (formData: FormData) => void | Promise<void>;
+  mode: GameFormMode;
   initialValues?: InitialValues;
-  /**
-   * When true, the form renders a single "Lagre endringer"-button wired to
-   * `updateAction` and hides the create-flow draft/publish pair. Used by the
-   * scheduled-game edit page (D4). Defaults to false (create flow).
-   */
-  editMode?: boolean;
-  /**
-   * The server action invoked by the single submit button when `editMode` is
-   * true. Required when `editMode === true`; ignored otherwise.
-   */
-  updateAction?: (formData: FormData) => void | Promise<void>;
 };
 
 const FLIGHT_NUMBERS = [1, 2, 3, 4] as const;
@@ -108,32 +114,7 @@ function cryptoShuffle<T>(input: T[]): T[] {
   return arr;
 }
 
-export function GameForm({
-  courses,
-  players,
-  createDraftAction,
-  createAndPublishAction,
-  initialValues,
-  editMode = false,
-  updateAction,
-}: Props) {
-  // Fail-on-render rather than silent fail-on-submit. The action props are
-  // optional in TS to keep both flows expressible from a single component,
-  // but at runtime exactly one shape is required.
-  if (editMode && !updateAction) {
-    throw new Error(
-      'GameForm: editMode=true requires updateAction. ' +
-        'Pass an updateAction or set editMode=false.',
-    );
-  }
-  if (!editMode && (!createDraftAction || !createAndPublishAction)) {
-    throw new Error(
-      'GameForm: create flow requires both createDraftAction and ' +
-        'createAndPublishAction. Pass them or set editMode=true with an ' +
-        'updateAction.',
-    );
-  }
-
+export function GameForm({ courses, players, mode, initialValues }: Props) {
   // `name` is controlled now (was uncontrolled) so initialValues can pre-fill
   // it on the edit page (D4). Default to '' when not provided.
   const [name, setName] = useState<string>(initialValues?.name ?? '');
@@ -325,6 +306,25 @@ export function GameForm({
   // Publishing additionally requires a tee-off time. Drafts skip this gate
   // (D3 will let drafts optionally carry one through anyway).
   const canPublish = canSubmit && hasTeeOff;
+
+  // Human-readable list of what's still missing for a publish. Used as helper
+  // text under the disabled «Publiser»-button. Order mirrors the form
+  // sections so the message scans top-to-bottom.
+  const missingForPublish: string[] = [];
+  if (courseId === '') missingForPublish.push('bane');
+  if (teeBoxId === '') missingForPublish.push('tee-boks');
+  if (!hasTeeOff) missingForPublish.push('tee-off-tid');
+  if (selectedPlayerIds.length < 8) {
+    const remaining = 8 - selectedPlayerIds.length;
+    missingForPublish.push(
+      `${remaining} ${remaining === 1 ? 'spiller' : 'spillere'}`,
+    );
+  } else if (!teamsComplete) {
+    missingForPublish.push('lag-fordeling');
+  } else if (!flightsComplete) {
+    missingForPublish.push('flight-fordeling');
+  }
+  if (!allowanceValid) missingForPublish.push('gyldig HCP-allowance');
 
   function playerLabel(p: PlayerOption): string {
     const hcp = p.hcp_index.toFixed(1);
@@ -651,37 +651,71 @@ export function GameForm({
 
       {/* Section 6: Submit */}
       <section className="space-y-3 pt-2">
-        {editMode ? (
-          // Edit flow (D4): the game is already 'scheduled', so there's no
-          // draft/publish split — just a single save button. Tee-off is
-          // required (same gate as publish), since you can't un-set a
-          // tee-off on a scheduled game.
+        {mode.kind === 'edit-scheduled' && (
+          // The game is already 'scheduled', so there's no draft/publish
+          // split — just a single save button. Tee-off is required (same
+          // gate as publish) since you can't un-set a tee-off on a scheduled
+          // game.
           <Button
             type="submit"
-            formAction={updateAction}
+            formAction={mode.updateAction.bind(null, mode.gameId)}
             className="w-full"
             disabled={!canPublish}
           >
             Lagre endringer
           </Button>
-        ) : (
+        )}
+
+        {mode.kind === 'create' && (
           <>
             <Button
               type="submit"
-              formAction={createAndPublishAction}
+              formAction={mode.createAndPublishAction}
               className="w-full"
               disabled={!canPublish}
             >
-              Lagre og publiser
+              Publiser
             </Button>
+            {!canPublish && missingForPublish.length > 0 && (
+              <p className="text-xs text-muted text-center">
+                Mangler: {missingForPublish.join(', ')}
+              </p>
+            )}
             <Button
               type="submit"
               variant="secondary"
-              formAction={createDraftAction}
+              formAction={mode.createDraftAction}
               className="w-full"
-              disabled={!canSubmit}
+              disabled={name.trim() === ''}
             >
-              Lagre som utkast
+              Lagre utkast
+            </Button>
+          </>
+        )}
+
+        {mode.kind === 'edit-draft' && (
+          <>
+            <Button
+              type="submit"
+              formAction={mode.publishAction.bind(null, mode.gameId)}
+              className="w-full"
+              disabled={!canPublish}
+            >
+              Publiser
+            </Button>
+            {!canPublish && missingForPublish.length > 0 && (
+              <p className="text-xs text-muted text-center">
+                Mangler: {missingForPublish.join(', ')}
+              </p>
+            )}
+            <Button
+              type="submit"
+              variant="secondary"
+              formAction={mode.saveDraftAction.bind(null, mode.gameId)}
+              className="w-full"
+              disabled={name.trim() === ''}
+            >
+              Lagre utkast
             </Button>
           </>
         )}

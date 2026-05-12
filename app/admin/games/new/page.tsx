@@ -169,8 +169,11 @@ async function GameFormBody() {
     <GameForm
       courses={courses}
       players={players}
-      createDraftAction={createGameDraft}
-      createAndPublishAction={createAndPublishGame}
+      mode={{
+        kind: 'create',
+        createDraftAction: createGameDraft,
+        createAndPublishAction: createAndPublishGame,
+      }}
     />
   );
 }

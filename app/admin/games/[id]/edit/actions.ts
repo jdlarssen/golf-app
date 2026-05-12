@@ -27,10 +27,6 @@ export async function updateScheduledAction(
   await updateGameInternal(gameId, formData, 'update_scheduled');
 }
 
-// Back-compat alias so the edit page keeps compiling until Phase 4
-// rewrites its call sites to choose the right action per starting status.
-export { updateScheduledAction as updateGameAction };
-
 async function updateGameInternal(
   gameId: string,
   formData: FormData,
