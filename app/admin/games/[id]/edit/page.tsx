@@ -1,11 +1,11 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getServerClient } from '@/lib/supabase/server';
-import { AppShell } from '@/components/ui/AppShell';
+import { AdminShell } from '@/components/ui/AdminShell';
 import { BackLink } from '@/components/ui/BackLink';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
-import { PageHeader } from '@/components/ui/PageHeader';
+import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import {
   GameForm,
   type CourseOption,
@@ -196,28 +196,33 @@ export default async function EditGamePage({
   const updateAction = updateGameAction.bind(null, id);
 
   return (
-    <AppShell>
-      <PageHeader
-        title={`Rediger ${game!.name}`}
-        subtitle="Endre bane, spillere, lag eller innstillinger"
-        action={<BackLink href={`/admin/games/${id}`}>Tilbake</BackLink>}
-      />
+    <AdminShell>
+      <div className="-mt-3 mb-2 flex items-center justify-between">
+        <BackLink href={`/admin/games/${id}`}>Tilbake</BackLink>
+        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          Spill · protokoll
+        </p>
+        <span className="w-[80px]" aria-hidden />
+      </div>
 
-      {errorMessage && (
-        <div className="mb-4">
-          <Banner tone="error">{errorMessage}</Banner>
-        </div>
-      )}
+      <BrassRibbon kicker="Rediger spill" />
 
-      <div className="mb-4">
+      <div className="px-1">
+        <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
+          {game!.name}
+        </h1>
+        <p className="font-sans text-[11.5px] text-muted">
+          Endre bane, spillere, lag eller innstillinger
+        </p>
+      </div>
+
+      <div className="mt-4 space-y-2">
+        {errorMessage && <Banner tone="error">{errorMessage}</Banner>}
         <Banner tone="info">
           Spillet er i planlagt-fasen. Spillerne ser endringene neste gang
           de åpner appen.
         </Banner>
-      </div>
-
-      {playerOptions.length < 8 && (
-        <div className="mb-4">
+        {playerOptions.length < 8 && (
           <Banner tone="info">
             Du trenger 8 registrerte spillere. Inviter flere fra{' '}
             <Link
@@ -228,18 +233,20 @@ export default async function EditGamePage({
             </Link>
             -siden.
           </Banner>
-        </div>
-      )}
+        )}
+      </div>
 
-      <Card>
-        <GameForm
-          courses={courses}
-          players={playerOptions}
-          initialValues={initialValues}
-          editMode
-          updateAction={updateAction}
-        />
-      </Card>
-    </AppShell>
+      <div className="mt-5">
+        <Card>
+          <GameForm
+            courses={courses}
+            players={playerOptions}
+            initialValues={initialValues}
+            editMode
+            updateAction={updateAction}
+          />
+        </Card>
+      </div>
+    </AdminShell>
   );
 }

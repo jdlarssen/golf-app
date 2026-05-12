@@ -1,10 +1,10 @@
 import Link from 'next/link';
 import { getServerClient } from '@/lib/supabase/server';
-import { AppShell } from '@/components/ui/AppShell';
+import { AdminShell } from '@/components/ui/AdminShell';
 import { BackLink } from '@/components/ui/BackLink';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
-import { PageHeader } from '@/components/ui/PageHeader';
+import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { GameForm, type CourseOption, type PlayerOption } from './GameForm';
 import { createGameDraft, createAndPublishGame } from './actions';
 
@@ -20,7 +20,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   bad_team: 'Hver spiller må tilhøre et lag (1–4).',
   bad_flight: 'Hver spiller må tilhøre en flight (1–4).',
   team_balance: 'Hvert lag må ha nøyaktig 2 spillere.',
-  db_game: 'Klarte ikke å lagre spillet. Prøv igjen, eller sjekk Supabase-loggene.',
+  db_game:
+    'Klarte ikke å lagre spillet. Prøv igjen, eller sjekk Supabase-loggene.',
   db_users: 'Klarte ikke å lese spillere fra databasen. Prøv igjen.',
   db_tee: 'Klarte ikke å lese tee-boksen fra databasen. Prøv igjen.',
   db_players:
@@ -89,23 +90,34 @@ export default async function NewGamePage({
   }));
 
   return (
-    <AppShell>
-      <PageHeader
-        title="Nytt spill"
-        subtitle="Velg bane, spillere, lag og innstillinger"
-        action={
-          <BackLink href="/admin/games">Tilbake</BackLink>
-        }
-      />
+    <AdminShell>
+      <div className="-mt-3 mb-2 flex items-center justify-between">
+        <BackLink href="/admin/games">Tilbake</BackLink>
+        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          Spill · protokoll
+        </p>
+        <span className="w-[80px]" aria-hidden />
+      </div>
+
+      <BrassRibbon kicker="Nytt spill" />
+
+      <div className="px-1">
+        <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
+          Sett opp ny runde
+        </h1>
+        <p className="font-sans text-[11.5px] text-muted">
+          Bane, spillere, lag og innstillinger
+        </p>
+      </div>
 
       {errorMessage && (
-        <div className="mb-4">
+        <div className="mt-4">
           <Banner tone="error">{errorMessage}</Banner>
         </div>
       )}
 
       {players.length < 8 && (
-        <div className="mb-4">
+        <div className="mt-4">
           <Banner tone="info">
             Du trenger 8 registrerte spillere. Inviter flere fra{' '}
             <Link
@@ -119,14 +131,16 @@ export default async function NewGamePage({
         </div>
       )}
 
-      <Card>
-        <GameForm
-          courses={courses}
-          players={players}
-          createDraftAction={createGameDraft}
-          createAndPublishAction={createAndPublishGame}
-        />
-      </Card>
-    </AppShell>
+      <div className="mt-5">
+        <Card>
+          <GameForm
+            courses={courses}
+            players={players}
+            createDraftAction={createGameDraft}
+            createAndPublishAction={createAndPublishGame}
+          />
+        </Card>
+      </div>
+    </AdminShell>
   );
 }
