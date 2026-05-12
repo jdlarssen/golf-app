@@ -4,12 +4,16 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 // Enable with `?perf=1` (sticky for the session). Disable with `?perf=0`.
-// Measures click → next paint after pathname change, so total user-perceived
-// latency. Hidden unless explicitly enabled — has zero impact in normal use.
+// Splits navigation timing into two legs:
+//   paint: click → first paint after pathname change (often the skeleton)
+//   data : click → <PerfReady /> mounts (server data has rendered)
+// Hidden unless explicitly enabled — has zero impact in normal use.
 
-type NavRecord = { path: string; ms: number };
+type NavRecord = { path: string; paintMs: number | null; dataMs: number | null };
 
 const PERF_EVENT = 'torny-perf-change';
+const READY_EVENT = 'torny-perf-ready';
+
 const subscribe = (cb: () => void) => {
   window.addEventListener(PERF_EVENT, cb);
   return () => window.removeEventListener(PERF_EVENT, cb);
@@ -48,27 +52,45 @@ export function PerfHud() {
     return () => window.removeEventListener('click', onClick, true);
   }, [enabled]);
 
+  // Leg 1: click → first paint (skeleton or page commit)
   useEffect(() => {
     if (!enabled) return;
     if (prevPathRef.current === pathname) return;
     const startedAt = clickAtRef.current;
     prevPathRef.current = pathname;
     if (startedAt == null) return;
-    // Two RAFs — first commits the new DOM, second fires after paint.
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        const ms = Math.round(performance.now() - startedAt);
-        setLast({ path: pathname, ms });
-        clickAtRef.current = null;
+        const paintMs = Math.round(performance.now() - startedAt);
+        setLast({ path: pathname, paintMs, dataMs: null });
       });
     });
   }, [enabled, pathname]);
 
+  // Leg 2: click → PerfReady mount (server data committed)
+  useEffect(() => {
+    if (!enabled) return;
+    const onReady = () => {
+      const startedAt = clickAtRef.current;
+      if (startedAt == null) return;
+      const dataMs = Math.round(performance.now() - startedAt);
+      setLast((prev) => (prev ? { ...prev, dataMs } : prev));
+      clickAtRef.current = null;
+    };
+    window.addEventListener(READY_EVENT, onReady);
+    return () => window.removeEventListener(READY_EVENT, onReady);
+  }, [enabled]);
+
   if (!enabled || !last) return null;
 
-  const tone = last.ms < 400 ? 'good' : last.ms < 1200 ? 'warn' : 'bad';
+  // Tone by the slowest known leg (data if present, else paint).
+  const benchmark = last.dataMs ?? last.paintMs ?? 0;
+  const tone = benchmark < 400 ? 'good' : benchmark < 1200 ? 'warn' : 'bad';
   const bg = tone === 'good' ? '#1B4332' : tone === 'warn' ? '#C9A961' : '#8C1E1E';
   const fg = tone === 'warn' ? '#1B4332' : '#F8F6F0';
+
+  const paintLabel = last.paintMs == null ? '—' : `${last.paintMs}`;
+  const dataLabel = last.dataMs == null ? '—' : `${last.dataMs}`;
 
   return (
     <div
@@ -88,7 +110,7 @@ export function PerfHud() {
         pointerEvents: 'none',
       }}
     >
-      → {last.path} · {last.ms} ms
+      → {last.path} · paint {paintLabel} · data {dataLabel} ms
     </div>
   );
 }

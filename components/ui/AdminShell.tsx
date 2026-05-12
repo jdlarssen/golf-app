@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { PerfReady } from '@/components/PerfReady';
 
 /**
  * Warm-linen wrapper for admin "Sekretariatet" surfaces. Sits at the same
@@ -9,6 +10,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-admin-bg text-text">
       <main className="max-w-md mx-auto px-5 py-8 pb-24">{children}</main>
+      <PerfReady />
     </div>
   );
 }
