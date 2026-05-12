@@ -7,7 +7,12 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 // Splits navigation timing into two legs:
 //   paint: click → first paint after pathname change (often the skeleton)
 //   data : click → <PerfReady /> mounts (server data has rendered)
-// Hidden unless explicitly enabled — has zero impact in normal use.
+//
+// The two legs may fire in either order. Leg 2 (PerfReady) is deeper in
+// the tree so its effect typically fires first; Leg 1 (pathname change)
+// is queued behind two RAFs to wait for paint. Both legs merge into the
+// same NavRecord by matching on path — so whichever lands first sets a
+// partial record, and the second one fills in its half.
 
 type NavRecord = { path: string; paintMs: number | null; dataMs: number | null };
 
@@ -52,7 +57,8 @@ export function PerfHud() {
     return () => window.removeEventListener('click', onClick, true);
   }, [enabled]);
 
-  // Leg 1: click → first paint (skeleton or page commit)
+  // Leg 1: pathname change → record path + paintMs.
+  // Waits two RAFs so we measure post-paint, not just post-commit.
   useEffect(() => {
     if (!enabled) return;
     if (prevPathRef.current === pathname) return;
@@ -62,20 +68,35 @@ export function PerfHud() {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         const paintMs = Math.round(performance.now() - startedAt);
-        setLast({ path: pathname, paintMs, dataMs: null });
+        setLast((prev) => {
+          // Leg 2 may have written dataMs for this path already.
+          if (prev && prev.path === pathname) {
+            return { path: pathname, paintMs, dataMs: prev.dataMs };
+          }
+          return { path: pathname, paintMs, dataMs: null };
+        });
       });
     });
   }, [enabled, pathname]);
 
-  // Leg 2: click → PerfReady mount (server data committed)
+  // Leg 2: <PerfReady /> mount → record dataMs.
+  // Read the path from window.location at fire-time — the listener's closure
+  // may have a stale pathname (effect cleanups run after the dispatch).
   useEffect(() => {
     if (!enabled) return;
     const onReady = () => {
       const startedAt = clickAtRef.current;
       if (startedAt == null) return;
       const dataMs = Math.round(performance.now() - startedAt);
-      setLast((prev) => (prev ? { ...prev, dataMs } : prev));
-      clickAtRef.current = null;
+      const path = window.location.pathname;
+      setLast((prev) => {
+        if (prev && prev.path === path) {
+          return { ...prev, dataMs };
+        }
+        return { path, paintMs: null, dataMs };
+      });
+      // Do NOT clear clickAtRef — Leg 1 may still need it. Next click
+      // overwrites it, which is enough to scope each measurement.
     };
     window.addEventListener(READY_EVENT, onReady);
     return () => window.removeEventListener(READY_EVENT, onReady);
@@ -83,7 +104,6 @@ export function PerfHud() {
 
   if (!enabled || !last) return null;
 
-  // Tone by the slowest known leg (data if present, else paint).
   const benchmark = last.dataMs ?? last.paintMs ?? 0;
   const tone = benchmark < 400 ? 'good' : benchmark < 1200 ? 'warn' : 'bad';
   const bg = tone === 'good' ? '#1B4332' : tone === 'warn' ? '#C9A961' : '#8C1E1E';
