@@ -98,7 +98,12 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 
 ### Spillformat-fleksibilitet *(blokkerer klubb-skala)*
 
-- [ ] **Variabelt antall lag og spillere per lag.** I dag er det hardkodet 4 lag × 2 spillere = nøyaktig 8 spillere. Krever ny brainstorming: hvor mange lag støtter vi (2/3/4/fritt?), hvor mange per lag (2/variabelt?), single-player-modus («solo stableford»)? Påvirker DB-CHECKs (game_players.team_number, flight_number), GameForm-validering (teamsComplete, eightSelected), og scoring-laget (best-ball antar 2-spiller-lag). Bør tas som egen milestone med dedikert design-runde. Diskutert 2026-05-12; user kommentar: «Vi skal være 8 spillere når vi skal spille, men det er ikke noe jeg ønsker å ha hardkodet.»
+- [ ] **Players-first + valgbar spillmodus + variabel lagstruktur.** I dag er det hardkodet 4 lag × 2 spillere = nøyaktig 8 spillere, og spillformat låses til best-ball-netto ved create. Den riktige mentale modellen Jørgen vil ha (diskutert 2026-05-12): admin legger til spillere FØRST som rene checkboxer (ingen auto-tilordning til lag), velger deretter spillmodus, og DA presenteres lag/flight-strukturen som modusen krever — best-ball trenger 4×2, solo stableford ingen lag, scramble fritt antall per lag osv. Krever:
+  - DB-migrasjon: `game_players.team_number` og `flight_number` blir nullable, ny kolonne `games.game_mode text` med enum-CHECK eller egen tabell
+  - Validation: gamePayload.ts publish-mode må gate per game_mode istedenfor hardkodet 8-balanced
+  - Scoring-abstraksjon: `lib/scoring/` får et mode-router-lag i front av bestBall.ts; nye moduler per format
+  - UI-restruktur: GameForm splittes i seksjoner som rendres dynamisk per modus; auto-tilordnings-hack-en i `togglePlayer` (`nextAvailableTeam`) rives ut når dette lander
+  - Bør tas som egen milestone med dedikert brainstorming og plan. Påvirker også «In-app innboks»-flyten (varseltype per modus). Jørgens kommentar 2026-05-12: «Vi skal være 8 spillere når vi skal spille, men det er ikke noe jeg ønsker å ha hardkodet.»
 - [ ] **Søkbar spillerlistor-UI.** Når kompisgjengen vokser fra 8 til 100+ brukere blir den flate avhukingslisten i admin-spilloppretting umulig å navigere. Trenger typeahead-input som tagger valgte spillere (chip-style UI), eller paginerte filtrerte resultater. Knyttet til klubb-skala-arbeidet. Diskutert 2026-05-12.
 
 ### Spillformater *(avhenger av spillformat-fleksibilitet over)*
