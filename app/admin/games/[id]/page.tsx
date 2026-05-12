@@ -1,11 +1,12 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
-import { AppShell } from '@/components/ui/AppShell';
+import { AdminShell } from '@/components/ui/AdminShell';
 import { BackLink } from '@/components/ui/BackLink';
-import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
-import { PageHeader } from '@/components/ui/PageHeader';
+import { BrassRibbon } from '@/components/ui/BrassRibbon';
+import { MiniRibbon } from '@/components/ui/MiniRibbon';
+import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { StartGameButton } from './StartGameButton';
 import { StartScheduledGameButton } from './StartScheduledGameButton';
 import { EndGameButton } from './EndGameButton';
@@ -25,18 +26,11 @@ type SearchParams = Promise<{
 
 type GameStatus = 'draft' | 'scheduled' | 'active' | 'finished';
 
-const STATUS_LABELS: Record<GameStatus, string> = {
-  draft: 'Utkast',
-  scheduled: 'Planlagt',
-  active: 'Pågående',
-  finished: 'Avsluttet',
-};
-
-const STATUS_BADGE_CLASSES: Record<GameStatus, string> = {
-  draft: 'bg-warning/10 text-warning border-warning/30',
-  scheduled: 'bg-accent/10 text-accent border-accent/30',
-  active: 'bg-primary-soft text-primary border-primary/20',
-  finished: 'bg-accent/[0.10] text-accent border-accent/30',
+const STATUS_TO_TONE: Record<GameStatus, StatusChipTone> = {
+  draft: 'utkast',
+  scheduled: 'påmelding',
+  active: 'aktiv',
+  finished: 'signert',
 };
 
 const STATUS_BANNERS: Record<string, string> = {
@@ -67,9 +61,34 @@ const ERROR_MESSAGES: Record<string, string> = {
   db_game: 'Klarte ikke å oppdatere spillet. Prøv igjen.',
 };
 
+const MONTHS_NB = [
+  'jan',
+  'feb',
+  'mar',
+  'apr',
+  'mai',
+  'jun',
+  'jul',
+  'aug',
+  'sep',
+  'okt',
+  'nov',
+  'des',
+];
+
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
   return value;
+}
+
+function shortNb(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  try {
+    const d = new Date(iso);
+    return `${d.getDate()}. ${MONTHS_NB[d.getMonth()]}`;
+  } catch {
+    return null;
+  }
 }
 
 type GameRow = {
@@ -82,8 +101,15 @@ type GameRow = {
   tee_box_id: string;
   started_at: string | null;
   ended_at: string | null;
+  scheduled_tee_off_at: string | null;
+  created_at: string;
   courses: { name: string } | null;
-  tee_boxes: { name: string; slope: number; course_rating: number; par_total: number } | null;
+  tee_boxes: {
+    name: string;
+    slope: number;
+    course_rating: number;
+    par_total: number;
+  } | null;
 };
 
 type GamePlayerRow = {
@@ -93,17 +119,12 @@ type GamePlayerRow = {
   course_handicap: number | null;
   submitted_at: string | null;
   approved_at: string | null;
-  users: { name: string; nickname: string | null; hcp_index: number | string } | null;
+  users: {
+    name: string;
+    nickname: string | null;
+    hcp_index: number | string;
+  } | null;
 };
-
-/** Small uppercase champagne label used to title each Card section. */
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-accent mb-3">
-      {children}
-    </p>
-  );
-}
 
 export default async function GameDetailPage({
   params,
@@ -121,7 +142,7 @@ export default async function GameDetailPage({
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, status, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, started_at, ended_at, courses(name), tee_boxes(name, slope, course_rating, par_total)',
+      'id, name, status, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, started_at, ended_at, scheduled_tee_off_at, created_at, courses(name), tee_boxes(name, slope, course_rating, par_total)',
     )
     .eq('id', id)
     .single<GameRow>();
@@ -176,7 +197,10 @@ export default async function GameDetailPage({
       if (flightPlayers.length === 0) continue;
       const userIds = new Set(flightPlayers.map((p) => p.user_id));
       const flightRows = rows.filter((r) => userIds.has(r.user_id));
-      const maxHole = flightRows.reduce((m, r) => Math.max(m, r.hole_number), 0);
+      const maxHole = flightRows.reduce(
+        (m, r) => Math.max(m, r.hole_number),
+        0,
+      );
       progressByFlight[f] = {
         maxHole,
         filledCells: flightRows.length,
@@ -199,84 +223,174 @@ export default async function GameDetailPage({
   // Readiness preview for the end-game button (only meaningful when active).
   const notSubmittedCount = players.filter((p) => !p.submitted_at).length;
   const pendingApprovalCount = game.require_peer_approval
-    ? players.filter(
-        (p) => p.submitted_at != null && p.approved_at == null,
-      ).length
+    ? players.filter((p) => p.submitted_at != null && p.approved_at == null)
+        .length
     : 0;
   const everyPlayerReady =
     players.length > 0 &&
     notSubmittedCount === 0 &&
     pendingApprovalCount === 0;
 
-  return (
-    <AppShell>
-      <PageHeader
-        title={game.name}
-        action={
-          <BackLink href="/admin/games">Tilbake</BackLink>
-        }
-      />
+  // Virtual "Sak {YYYY}-{NNN}": no DB column, derived from the position of
+  // this game within its creation year. Stable as long as games aren't
+  // re-dated. NNN zero-padded to 3 digits.
+  const createdAt = new Date(game.created_at);
+  const year = createdAt.getFullYear();
+  const yearStartIso = `${year}-01-01T00:00:00Z`;
+  const yearEndIso = `${year + 1}-01-01T00:00:00Z`;
+  const { count: positionInYear } = await supabase
+    .from('games')
+    .select('id', { count: 'exact', head: true })
+    .gte('created_at', yearStartIso)
+    .lt('created_at', yearEndIso)
+    .lte('created_at', game.created_at);
+  const sakNumber = `Sak ${year}-${String(positionInYear ?? 1).padStart(3, '0')}`;
 
-      <div className="mb-5">
-        <span
-          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest border ${STATUS_BADGE_CLASSES[game.status]}`}
-        >
-          {STATUS_LABELS[game.status]}
-        </span>
+  // Date subtitle: best timestamp available for the lifecycle stage.
+  const subtitleDate =
+    shortNb(game.ended_at) ??
+    shortNb(game.started_at) ??
+    shortNb(game.scheduled_tee_off_at) ??
+    shortNb(game.created_at);
+
+  const teamCount = [1, 2, 3, 4].filter((t) => byTeam[t].length > 0).length;
+  const submittedCount = players.filter((p) => p.submitted_at != null).length;
+
+  return (
+    <AdminShell>
+      <div className="-mt-3 mb-2 flex items-center justify-between">
+        <BackLink href="/admin/games">Tilbake</BackLink>
+        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          Spill · protokoll
+        </p>
+        <span className="w-[80px]" aria-hidden />
       </div>
 
-      {statusBanner && (
-        <div className="mb-4">
-          <Banner tone="success">{statusBanner}</Banner>
+      <BrassRibbon kicker="Spill · protokoll" />
+
+      {/* Title block */}
+      <div className="px-1">
+        <div className="mb-1.5 flex items-center gap-2">
+          <StatusChip tone={STATUS_TO_TONE[game.status]} />
+          <span className="font-sans text-[11px] tabular-nums text-muted">
+            {sakNumber}
+          </span>
+        </div>
+        <h1 className="font-serif text-[26px] font-medium leading-snug tracking-[-0.015em] text-text">
+          {game.name}
+        </h1>
+        <p className="mt-1 font-sans text-xs tabular-nums text-muted">
+          {[
+            game.courses?.name,
+            'Best ball netto',
+            subtitleDate,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </p>
+      </div>
+
+      {(statusBanner || errorMessage) && (
+        <div className="mt-4 space-y-2">
+          {statusBanner && <Banner tone="success">{statusBanner}</Banner>}
+          {errorMessage && <Banner tone="error">{errorMessage}</Banner>}
         </div>
       )}
 
-      {errorMessage && (
-        <div className="mb-4">
-          <Banner tone="error">{errorMessage}</Banner>
-        </div>
-      )}
+      {/* Card 1 — Påmelding */}
+      <SectionCard ribbon="Påmelding">
+        <Row
+          label="Spillere"
+          value={`${players.length}`}
+          tone={players.length > 0 ? 'full' : undefined}
+        />
+        <Row
+          label="Levert scorekort"
+          value={`${submittedCount} / ${players.length}`}
+          sub={
+            game.status === 'active' && notSubmittedCount > 0
+              ? `${notSubmittedCount} venter`
+              : undefined
+          }
+        />
+        <Row label="Antall lag" value={`${teamCount} / 4`} />
+      </SectionCard>
 
-      <div className="space-y-4">
-        <Card>
-          <SectionLabel>Bane</SectionLabel>
-          <p className="font-serif text-xl font-medium tracking-tight text-text">
-            {game.courses?.name ?? '(ukjent bane)'}
-          </p>
-          {game.tee_boxes && (
-            <p className="text-xs text-muted mt-1.5 tabular-nums">
-              Tee: {game.tee_boxes.name} · Slope {game.tee_boxes.slope} · CR{' '}
-              {Number(game.tee_boxes.course_rating).toFixed(1)} · Par{' '}
-              {game.tee_boxes.par_total}
-            </p>
-          )}
-        </Card>
+      {/* Card 2 — Format */}
+      <SectionCard ribbon="Format">
+        <Row label="Spillform" value="Best ball netto" />
+        <Row
+          label="Handicap-justering"
+          value={`${game.hcp_allowance_pct} %`}
+        />
+        <Row
+          label="Peer-godkjenning"
+          value={game.require_peer_approval ? 'På' : 'Av'}
+        />
+        {game.scheduled_tee_off_at && (
+          <Row
+            label="Tee-off"
+            value={
+              new Intl.DateTimeFormat('no-NO', {
+                day: '2-digit',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit',
+              }).format(new Date(game.scheduled_tee_off_at))
+            }
+          />
+        )}
+      </SectionCard>
 
-        {game.status === 'active' && (
-          <Card>
-            <SectionLabel>Fremgang per flight</SectionLabel>
-            <p className="text-xs text-muted mb-4">
+      {/* Card 3 — Banen */}
+      <SectionCard ribbon="Banen">
+        <Row
+          label="Bane"
+          value={game.courses?.name ?? '(ukjent)'}
+        />
+        {game.tee_boxes && (
+          <>
+            <Row label="Tee" value={game.tee_boxes.name} />
+            <Row label="Par" value={`${game.tee_boxes.par_total}`} />
+            <Row
+              label="CR / SR"
+              value={`${Number(game.tee_boxes.course_rating).toFixed(1)} / ${game.tee_boxes.slope}`}
+            />
+          </>
+        )}
+      </SectionCard>
+
+      {/* Operational sections — kept full-fidelity ────────────────────── */}
+
+      {game.status === 'active' && (
+        <SectionCard ribbon="Fremgang">
+          <div className="px-3.5 pt-3 pb-3.5">
+            <p className="mb-3 text-xs text-muted">
               Hvor langt hver flight har kommet — uten å avsløre tall.
             </p>
-            <ul className="space-y-4">
+            <ul className="space-y-3.5">
               {[1, 2, 3, 4]
                 .filter((f) => byFlight[f].length > 0)
                 .map((f) => {
                   const p = progressByFlight[f];
-                  const pct = p ? Math.round((p.filledCells / p.totalCells) * 100) : 0;
+                  const pct = p
+                    ? Math.round((p.filledCells / p.totalCells) * 100)
+                    : 0;
                   return (
                     <li key={f}>
-                      <div className="flex items-center justify-between text-sm mb-1.5">
+                      <div className="mb-1 flex items-center justify-between text-sm">
                         <span className="font-medium tracking-tight text-text">
                           Flight {f}
                         </span>
-                        <span className="text-muted text-xs tabular-nums">
-                          {p && p.maxHole > 0 ? `Hull ${p.maxHole}` : 'Ikke startet'}
+                        <span className="text-xs tabular-nums text-muted">
+                          {p && p.maxHole > 0
+                            ? `Hull ${p.maxHole}`
+                            : 'Ikke startet'}
                           {' · '}
                           {p ? `${p.filledCells}/${p.totalCells}` : '0/0'}
                         </span>
                       </div>
-                      <div className="w-full h-1.5 rounded-full bg-border overflow-hidden">
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-border">
                         <div
                           className="h-full bg-primary transition-all duration-300"
                           style={{ width: `${pct}%` }}
@@ -286,47 +400,47 @@ export default async function GameDetailPage({
                   );
                 })}
             </ul>
-          </Card>
-        )}
-
-        <Card>
-          <SectionLabel>Lag</SectionLabel>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {[1, 2, 3, 4].map((team) => (
-              <div
-                key={team}
-                className="border border-border rounded-xl p-3"
-              >
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted mb-2">
-                  Lag {team}
-                </p>
-                {byTeam[team].length === 0 ? (
-                  <p className="text-sm text-muted">(tom)</p>
-                ) : (
-                  <ul className="space-y-1">
-                    {byTeam[team].map((p) => (
-                      <li key={p.user_id} className="text-sm text-text">
-                        {displayName(p)}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            ))}
           </div>
-        </Card>
+        </SectionCard>
+      )}
 
-        <Card>
-          <SectionLabel>Flights</SectionLabel>
-          <ul className="space-y-2">
+      <SectionCard ribbon="Lag">
+        <div className="grid grid-cols-1 gap-2.5 px-3.5 pb-3.5 pt-3 sm:grid-cols-2">
+          {[1, 2, 3, 4].map((team) => (
+            <div
+              key={team}
+              className="rounded-xl border border-border px-3 py-2.5"
+            >
+              <p className="mb-1.5 font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+                Lag {team}
+              </p>
+              {byTeam[team].length === 0 ? (
+                <p className="text-sm text-muted">(tom)</p>
+              ) : (
+                <ul className="space-y-0.5">
+                  {byTeam[team].map((p) => (
+                    <li key={p.user_id} className="text-sm text-text">
+                      {displayName(p)}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+
+      {[1, 2, 3, 4].some((f) => byFlight[f].length > 0) && (
+        <SectionCard ribbon="Flights">
+          <ul className="space-y-2 px-3.5 pb-3.5 pt-3">
             {[1, 2, 3, 4]
               .filter((f) => byFlight[f].length > 0)
               .map((f) => (
                 <li
                   key={f}
-                  className="border border-border rounded-xl p-3"
+                  className="rounded-xl border border-border px-3 py-2.5"
                 >
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted mb-1">
+                  <p className="mb-0.5 font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
                     Flight {f}
                   </p>
                   <p className="text-sm text-text">
@@ -335,32 +449,19 @@ export default async function GameDetailPage({
                 </li>
               ))}
           </ul>
-        </Card>
+        </SectionCard>
+      )}
 
-        <Card>
-          <SectionLabel>Innstillinger</SectionLabel>
-          <dl className="grid grid-cols-[1fr_auto] gap-y-2 text-sm">
-            <dt className="text-muted">HCP-allowance</dt>
-            <dd className="text-text text-right tabular-nums">
-              {game.hcp_allowance_pct} %
-            </dd>
-            <dt className="text-muted">Peer-godkjenning</dt>
-            <dd className="text-text text-right">
-              {game.require_peer_approval ? 'På' : 'Av'}
-            </dd>
-          </dl>
-        </Card>
-
-        <Card>
-          <SectionLabel>Spillere</SectionLabel>
-          <div className="overflow-x-auto -mx-2">
+      {players.length > 0 && (
+        <SectionCard ribbon="Spillere">
+          <div className="overflow-x-auto px-2 pb-3.5 pt-2">
             <table className="w-full text-sm tabular-nums">
               <thead>
                 <tr className="text-left text-[10px] font-semibold uppercase tracking-widest text-muted">
                   <th className="px-2 py-1.5 font-semibold">Navn</th>
                   <th className="px-2 py-1.5 font-semibold">Lag</th>
                   <th className="px-2 py-1.5 font-semibold">Flight</th>
-                  <th className="px-2 py-1.5 font-semibold text-right">CH</th>
+                  <th className="px-2 py-1.5 text-right font-semibold">CH</th>
                   {game.status !== 'draft' && (
                     <th className="px-2 py-1.5 font-semibold">Status</th>
                   )}
@@ -381,7 +482,11 @@ export default async function GameDetailPage({
                     statusClass = 'text-success';
                   }
                   return (
-                    <tr key={p.user_id} className="border-t border-border">
+                    <tr
+                      key={p.user_id}
+                      className="border-t"
+                      style={{ borderColor: 'var(--row-divider-warm)' }}
+                    >
                       <td className="px-2 py-2 text-text">{displayName(p)}</td>
                       <td className="px-2 py-2 text-text">{p.team_number}</td>
                       <td className="px-2 py-2 text-text">{p.flight_number}</td>
@@ -399,21 +504,22 @@ export default async function GameDetailPage({
               </tbody>
             </table>
           </div>
-        </Card>
+        </SectionCard>
+      )}
 
-        {game.status === 'active' && game.require_peer_approval && (() => {
-          const pending = players.filter(
-            (p) => p.submitted_at != null && p.approved_at == null,
-          );
-          return (
-            <Card>
-              <SectionLabel>Innleverte scorekort</SectionLabel>
+      {game.status === 'active' && game.require_peer_approval && (() => {
+        const pending = players.filter(
+          (p) => p.submitted_at != null && p.approved_at == null,
+        );
+        return (
+          <SectionCard ribbon="Innleverte scorekort">
+            <div className="px-3.5 pb-3.5 pt-3">
               {pending.length === 0 ? (
                 <p className="text-sm text-muted">
                   Ingen scorekort venter på godkjenning akkurat nå.
                 </p>
               ) : (
-                <ul className="divide-y divide-border -mx-2">
+                <ul className="-mx-2 divide-y divide-border">
                   {pending.map((p) => {
                     const approve = adminApproveScorecard.bind(
                       null,
@@ -423,13 +529,13 @@ export default async function GameDetailPage({
                     return (
                       <li
                         key={p.user_id}
-                        className="px-2 py-3 flex items-center justify-between gap-3"
+                        className="flex items-center justify-between gap-3 px-2 py-3"
                       >
                         <div className="min-w-0">
-                          <p className="text-sm font-medium tracking-tight text-text truncate">
+                          <p className="truncate text-sm font-medium tracking-tight text-text">
                             {displayName(p)}
                           </p>
-                          <p className="text-xs text-muted mt-0.5">
+                          <p className="mt-0.5 text-xs text-muted">
                             Flight {p.flight_number} · Lag {p.team_number}
                           </p>
                         </div>
@@ -442,44 +548,51 @@ export default async function GameDetailPage({
                   })}
                 </ul>
               )}
-            </Card>
-          );
-        })()}
+            </div>
+          </SectionCard>
+        );
+      })()}
 
-        {game.status === 'draft' && (
+      {/* Status-specific CTA cards ─────────────────────────────────────── */}
+
+      {game.status === 'draft' && (
+        <div className="mt-4">
           <StartGameButton startAction={startAction} gameName={game.name} />
-        )}
+        </div>
+      )}
 
-        {game.status === 'scheduled' && (
-          <>
-            <Card>
-              <SectionLabel>Start runden</SectionLabel>
-              <p className="text-sm text-muted mb-3">
+      {game.status === 'scheduled' && (
+        <>
+          <SectionCard ribbon="Start runden">
+            <div className="px-3.5 pb-3.5 pt-3">
+              <p className="mb-3 text-sm text-muted">
                 Når du starter runden låses course handicap for hver spiller,
                 redigering stenges, og spillerne kan begynne å taste slag.
               </p>
               <StartScheduledGameButton startAction={startScheduledAction} />
-            </Card>
+            </div>
+          </SectionCard>
 
-            <Card>
-              <SectionLabel>Rediger spillet</SectionLabel>
-              <p className="text-sm text-muted mb-3">
+          <SectionCard ribbon="Rediger spillet">
+            <div className="px-3.5 pb-3.5 pt-3">
+              <p className="mb-3 text-sm text-muted">
                 Spillet er i planlagt-fasen. Du kan fortsatt endre bane,
                 tee-off, spillere, lag og innstillinger inntil runden startes.
               </p>
               <Link
                 href={`/admin/games/${id}/edit`}
-                className="block w-full min-h-[44px] bg-primary hover:bg-primary-hover text-white px-4 py-3 rounded-full font-medium tracking-tight text-center transition-colors"
+                className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover"
               >
                 Rediger spillet
               </Link>
-            </Card>
-          </>
-        )}
+            </div>
+          </SectionCard>
+        </>
+      )}
 
-        {game.status === 'active' && (
-          <Card>
-            <SectionLabel>Avslutt spillet</SectionLabel>
+      {game.status === 'active' && (
+        <SectionCard ribbon="Avslutt spillet">
+          <div className="px-3.5 pb-3.5 pt-3">
             {everyPlayerReady ? (
               <div className="space-y-3">
                 <p className="text-sm text-muted">
@@ -505,20 +618,96 @@ export default async function GameDetailPage({
                 )}
               </div>
             )}
-          </Card>
-        )}
+          </div>
+        </SectionCard>
+      )}
 
-        {game.status === 'finished' && (
-          <Card>
-            <SectionLabel>Resultat</SectionLabel>
-            <Link href={`/games/${id}/leaderboard`} className="block">
-              <div className="w-full min-h-[44px] bg-primary hover:bg-primary-hover text-white px-4 py-3 rounded-full font-medium tracking-tight text-center transition-colors">
-                🏆 Se leaderboard →
-              </div>
+      {game.status === 'finished' && (
+        <SectionCard ribbon="Resultat">
+          <div className="px-3.5 pb-3.5 pt-3">
+            <Link
+              href={`/games/${id}/leaderboard`}
+              className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover"
+            >
+              🏆 Se leaderboard →
             </Link>
-          </Card>
+          </div>
+        </SectionCard>
+      )}
+
+      <p className="mt-6 text-center font-serif text-[11px] italic leading-relaxed text-muted">
+        Opprettet {shortNb(game.created_at)} ·{' '}
+        {String(positionInYear ?? 1).padStart(3, '0')}. sak i {year}.
+      </p>
+    </AdminShell>
+  );
+}
+
+/**
+ * "Section card" — a Card with a MiniRibbon header. Mini-ribbon sits outside
+ * the card surface (per spec), the body owns the chrome.
+ */
+function SectionCard({
+  ribbon,
+  children,
+}: {
+  ribbon: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="mt-1.5">
+      <MiniRibbon>{ribbon}</MiniRibbon>
+      <div
+        className="overflow-hidden rounded-xl border border-border bg-surface"
+        style={{
+          boxShadow: '0 1px 2px rgba(26, 46, 31, 0.03)',
+        }}
+      >
+        {children}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * "Row" — ledger-style label/value pair with optional italic sub-line.
+ * Used inside the spec's Påmelding/Format/Banen cards.
+ */
+function Row({
+  label,
+  value,
+  sub,
+  tone,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  tone?: 'full';
+}) {
+  return (
+    <div
+      className="grid items-baseline gap-3.5 px-3.5 py-2.5 first:border-t-0"
+      style={{
+        gridTemplateColumns: '1fr auto',
+        borderTop: '1px solid var(--row-divider-warm)',
+      }}
+    >
+      <div>
+        <p className="font-sans text-[12.5px] font-medium text-text">{label}</p>
+        {sub && (
+          <p className="mt-0.5 font-serif text-[11px] italic text-muted">
+            {sub}
+          </p>
         )}
       </div>
-    </AppShell>
+      <p
+        className="text-right font-serif text-[15px] font-medium tabular-nums tracking-[-0.005em]"
+        style={{
+          color: tone === 'full' ? '#2f5a3c' : 'var(--text)',
+        }}
+      >
+        {value}
+      </p>
+    </div>
   );
 }
