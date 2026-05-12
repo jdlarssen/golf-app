@@ -1,3 +1,4 @@
+import { Suspense, cache } from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
@@ -10,6 +11,7 @@ import { BrandMark } from '@/components/ui/BrandMark';
 import { ChampagneMedallion } from '@/components/ui/ChampagneMedallion';
 import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { PinFlag } from '@/components/icons/PinFlag';
 import { firstName } from '@/lib/firstName';
 
@@ -20,44 +22,52 @@ function first(value: string | string[] | undefined): string | undefined {
   return value;
 }
 
+// Request-scoped Supabase client + authed user. Shared between the shell's
+// /login-redirect gate and the suspended body so we only hit Supabase Auth
+// once per request.
+const getHomeContext = cache(async () => {
+  const supabase = await getServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return { supabase, user };
+});
+
 export default async function Home({
   searchParams,
 }: {
   searchParams: SearchParams;
 }) {
-  const supabase = await getServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const { user } = await getHomeContext();
   if (!user) {
     redirect('/login');
-  }
-
-  const { data: profile, error: profileError } = await supabase
-    .from('users')
-    .select('name, is_admin')
-    .eq('id', user.id)
-    .single();
-
-  // PGRST116 = "Cannot coerce the result to a single JSON object" → no row
-  // for this auth user yet. Send them to the profile-completion flow.
-  if (profileError && profileError.code === 'PGRST116') {
-    redirect('/complete-profile');
-  }
-
-  // Any other error: surface it. We don't want to silently render "spiller"
-  // and mask a real DB / RLS problem.
-  if (profileError) {
-    throw profileError;
   }
 
   const params = await searchParams;
   const profileUpdated = first(params.profile) === 'updated';
 
-  // Games the user participates in that are draft or active. Pull in the
-  // course name plus the player's own team/flight so each card carries some
-  // weight beyond just the game name.
+  return (
+    <AppShell>
+      <BrandMark className="mb-6" />
+
+      {profileUpdated && (
+        <div className="mb-4">
+          <Banner tone="success">✓ Profilen din er oppdatert.</Banner>
+        </div>
+      )}
+
+      <Suspense fallback={<HomeBodySkeleton />}>
+        <HomeBody />
+      </Suspense>
+    </AppShell>
+  );
+}
+
+// ─── Body ────────────────────────────────────────────────────────────────
+
+async function HomeBody() {
+  const { supabase, user } = await getHomeContext();
+
   type GameRow = {
     game_id: string;
     team_number: number;
@@ -70,15 +80,46 @@ export default async function Home({
       courses: { name: string } | null;
     } | null;
   };
-  const { data: rawActive } = await supabase
-    .from('game_players')
-    .select(
-      'game_id, team_number, flight_number, games!inner(id, name, status, ended_at, courses(name))',
-    )
-    .eq('user_id', user.id)
-    .in('games.status', ['draft', 'scheduled', 'active'])
-    .returns<GameRow[]>();
-  const activeGames = (rawActive ?? [])
+
+  // Parallel-fetch profile, active games, finished games — they don't depend
+  // on each other and roughly triple-tripled the latency when run serially.
+  const [profileRes, rawActiveRes, rawFinishedRes] = await Promise.all([
+    supabase
+      .from('users')
+      .select('name, is_admin')
+      .eq('id', user!.id)
+      .single(),
+    supabase
+      .from('game_players')
+      .select(
+        'game_id, team_number, flight_number, games!inner(id, name, status, ended_at, courses(name))',
+      )
+      .eq('user_id', user!.id)
+      .in('games.status', ['draft', 'scheduled', 'active'])
+      .returns<GameRow[]>(),
+    supabase
+      .from('game_players')
+      .select(
+        'game_id, team_number, games!inner(id, name, status, ended_at, courses(name))',
+      )
+      .eq('user_id', user!.id)
+      .eq('games.status', 'finished')
+      .order('ended_at', { foreignTable: 'games', ascending: false })
+      .returns<GameRow[]>(),
+  ]);
+
+  const { data: profile, error: profileError } = profileRes;
+
+  // PGRST116 = "Cannot coerce the result to a single JSON object" → no row
+  // for this auth user yet. Send them to the profile-completion flow.
+  if (profileError && profileError.code === 'PGRST116') {
+    redirect('/complete-profile');
+  }
+  if (profileError) {
+    throw profileError;
+  }
+
+  const activeGames = (rawActiveRes.data ?? [])
     .filter((row): row is GameRow & { games: NonNullable<GameRow['games']> } =>
       row.games != null,
     )
@@ -88,17 +129,7 @@ export default async function Home({
       flightNumber: row.flight_number,
     }));
 
-  // Finished games the user participated in, newest first.
-  const { data: rawFinished } = await supabase
-    .from('game_players')
-    .select(
-      'game_id, team_number, games!inner(id, name, status, ended_at, courses(name))',
-    )
-    .eq('user_id', user.id)
-    .eq('games.status', 'finished')
-    .order('ended_at', { foreignTable: 'games', ascending: false })
-    .returns<GameRow[]>();
-  const finishedGames = (rawFinished ?? [])
+  const finishedGames = (rawFinishedRes.data ?? [])
     .filter((row): row is GameRow & { games: NonNullable<GameRow['games']> } =>
       row.games != null,
     )
@@ -119,23 +150,11 @@ export default async function Home({
     activeGames.length === 0 && finishedGames.length === 0;
   const firstNameValue = firstName(profile?.name) ?? 'spiller';
 
-  return (
-    <AppShell>
-      <BrandMark className="mb-6" />
-
-      {profileUpdated && (
-        <div className="mb-4">
-          <Banner tone="success">✓ Profilen din er oppdatert.</Banner>
-        </div>
-      )}
-
-      {isEmptyState && (
+  if (isEmptyState) {
+    return (
+      <>
         <section className="flex flex-col items-center text-center">
           <ChampagneMedallion className="mb-7">
-            {/* Dark mode: sage primary on dark-forest medallion was only ~3.2:1
-                contrast on the 2px pole. Switch to cream `text-text` so the
-                pole reads as an etched silhouette while the champagne flag
-                head (hardcoded #C9A961) remains the visual focal point. */}
             <PinFlag size={72} className="text-primary dark:text-text" />
           </ChampagneMedallion>
           <Kicker tone="accent" className="mb-2.5">
@@ -160,16 +179,7 @@ export default async function Home({
             En god runde begynner med god planlegging.
           </PullQuote>
         </section>
-      )}
 
-      {!isEmptyState && (
-        <PageHeader title={`Hei, ${profile?.name ?? 'spiller'} 👋`} />
-      )}
-
-      {isEmptyState ? (
-        // Dark mode: `border-border/60` (#2d3f32 at 60% alpha) on the very
-        // dark bg #0f1612 sits at ~1.34:1 — risks disappearing entirely. Bump
-        // to /80 in dark mode for a visible-but-quiet hairline.
         <footer className="mt-14 pt-6 border-t border-border/60 dark:border-border/80">
           <ul className="flex flex-col gap-1 items-center">
             <li>
@@ -202,121 +212,177 @@ export default async function Home({
             </li>
           </ul>
         </footer>
-      ) : (
-        <nav className="space-y-6">
-          {activeGames.length > 0 && (
-            <Section label="Mine spill">
-              {activeGames.map((g) => (
-                <Link key={g.id} href={`/games/${g.id}`} className="block">
-                  <Card className="min-h-[44px] hover:border-primary/30 transition-colors p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <span className="block font-serif text-lg font-medium tracking-tight text-text truncate">
-                          {g.name}
-                        </span>
-                        <span className="block text-xs text-muted mt-1 truncate">
-                          {[
-                            g.courses?.name,
-                            `Lag ${g.teamNumber} · Flight ${g.flightNumber}`,
-                          ]
-                            .filter(Boolean)
-                            .join(' · ')}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <StatusPill status={g.status} label={STATUS_LABELS[g.status]} />
-                        <span aria-hidden className="text-muted">
-                          →
-                        </span>
-                      </div>
-                    </div>
-                  </Card>
-                </Link>
-              ))}
-            </Section>
-          )}
+      </>
+    );
+  }
 
-          {finishedGames.length > 0 && (
-            <Section label="Avsluttede spill">
-              {finishedGames.map((g) => (
-                <Link
-                  key={g.id}
-                  href={`/games/${g.id}/leaderboard`}
-                  className="block"
-                >
-                  <Card className="min-h-[44px] hover:border-primary/30 transition-colors p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <span className="block font-serif text-lg font-medium tracking-tight text-text truncate">
-                          {g.name}
-                        </span>
-                        <span className="block text-xs text-muted mt-1 truncate">
-                          {[g.courses?.name, 'Leaderboard']
-                            .filter(Boolean)
-                            .join(' · ')}
-                        </span>
-                      </div>
-                      <span aria-hidden className="text-accent shrink-0">
-                        🏆
+  return (
+    <>
+      <PageHeader title={`Hei, ${profile?.name ?? 'spiller'} 👋`} />
+
+      <nav className="space-y-6">
+        {activeGames.length > 0 && (
+          <Section label="Mine spill">
+            {activeGames.map((g) => (
+              <Link key={g.id} href={`/games/${g.id}`} className="block">
+                <Card className="min-h-[44px] hover:border-primary/30 transition-colors p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <span className="block font-serif text-lg font-medium tracking-tight text-text truncate">
+                        {g.name}
+                      </span>
+                      <span className="block text-xs text-muted mt-1 truncate">
+                        {[
+                          g.courses?.name,
+                          `Lag ${g.teamNumber} · Flight ${g.flightNumber}`,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
                       </span>
                     </div>
-                  </Card>
-                </Link>
-              ))}
-            </Section>
-          )}
+                    <div className="flex items-center gap-3 shrink-0">
+                      <StatusPill
+                        status={g.status}
+                        label={STATUS_LABELS[g.status]}
+                      />
+                      <span aria-hidden className="text-muted">
+                        →
+                      </span>
+                    </div>
+                  </div>
+                </Card>
+              </Link>
+            ))}
+          </Section>
+        )}
 
-          <Section label="Profil">
-            <Link href="/profile" className="block">
+        {finishedGames.length > 0 && (
+          <Section label="Avsluttede spill">
+            {finishedGames.map((g) => (
+              <Link
+                key={g.id}
+                href={`/games/${g.id}/leaderboard`}
+                className="block"
+              >
+                <Card className="min-h-[44px] hover:border-primary/30 transition-colors p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <span className="block font-serif text-lg font-medium tracking-tight text-text truncate">
+                        {g.name}
+                      </span>
+                      <span className="block text-xs text-muted mt-1 truncate">
+                        {[g.courses?.name, 'Leaderboard']
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
+                    </div>
+                    <span aria-hidden className="text-accent shrink-0">
+                      🏆
+                    </span>
+                  </div>
+                </Card>
+              </Link>
+            ))}
+          </Section>
+        )}
+
+        <Section label="Profil">
+          <Link href="/profile" className="block">
+            <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
+              <span className="text-base font-medium text-text">
+                Min profil
+              </span>
+              <span aria-hidden className="text-muted">
+                →
+              </span>
+            </Card>
+          </Link>
+        </Section>
+
+        {profile?.is_admin && (
+          <Section label="Admin" accent>
+            <Link href="/admin" className="block">
               <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
-                <span className="text-base font-medium text-text">Min profil</span>
+                <span className="text-base font-medium text-text">
+                  Sekretariatet
+                </span>
                 <span aria-hidden className="text-muted">
                   →
                 </span>
               </Card>
             </Link>
           </Section>
+        )}
 
-          {profile?.is_admin && (
-            <Section label="Admin" accent>
-              <Link href="/admin" className="block">
-                <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
-                  <span className="text-base font-medium text-text">
-                    Sekretariatet
-                  </span>
-                  <span aria-hidden className="text-muted">
-                    →
-                  </span>
-                </Card>
-              </Link>
-            </Section>
-          )}
+        <form action="/logout" method="post" className="pt-2">
+          <button
+            type="submit"
+            className="w-full min-h-[44px] text-sm font-medium tracking-tight text-danger hover:bg-danger/[0.08] rounded-full px-4 py-2.5 transition-colors"
+          >
+            Logg ut
+          </button>
+        </form>
+      </nav>
 
-          <form action="/logout" method="post" className="pt-2">
-            <button
-              type="submit"
-              className="w-full min-h-[44px] text-sm font-medium tracking-tight text-danger hover:bg-danger/[0.08] rounded-full px-4 py-2.5 transition-colors"
-            >
-              Logg ut
-            </button>
-          </form>
-        </nav>
-      )}
-
-      {!isEmptyState && (
-        <p className="mt-10 text-xs text-muted text-center">
-          Mer kommer her snart.
-        </p>
-      )}
-    </AppShell>
+      <p className="mt-10 text-xs text-muted text-center">
+        Mer kommer her snart.
+      </p>
+    </>
   );
 }
 
-/**
- * Section divider used to group cards on the home page. Optional `accent`
- * variant renders the label in champagne — used to set admin apart from the
- * player-facing surfaces above.
- */
+// ─── Body skeleton ───────────────────────────────────────────────────────
+
+function HomeBodySkeleton() {
+  return (
+    <>
+      <div className="mb-6">
+        <Skeleton className="h-9 w-3/5" />
+      </div>
+
+      <nav className="space-y-6">
+        <SectionSkeleton labelWidth={80} cardCount={1} delay={0} />
+        <SectionSkeleton labelWidth={140} cardCount={1} delay={120} />
+        <SectionSkeleton labelWidth={60} cardCount={1} delay={240} />
+      </nav>
+    </>
+  );
+}
+
+function SectionSkeleton({
+  labelWidth,
+  cardCount,
+  delay,
+}: {
+  labelWidth: number;
+  cardCount: number;
+  delay: number;
+}) {
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-3">
+        <Skeleton
+          className="h-2.5"
+          style={{ width: labelWidth }}
+          delay={delay}
+        />
+        <div className="h-px flex-1 bg-border" />
+      </div>
+      <div className="space-y-3">
+        {Array.from({ length: cardCount }).map((_, i) => (
+          <Skeleton
+            key={i}
+            className="h-[72px] rounded-2xl"
+            delay={delay + 30 + i * 30}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────
+
 function Section({
   label,
   accent = false,
@@ -345,7 +411,6 @@ function Section({
   );
 }
 
-/** Compact status pill rendered next to the game name on active cards. */
 function StatusPill({
   status,
   label,
