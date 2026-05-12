@@ -213,73 +213,79 @@ function LeaderCard({
   const drilldownHref = `/games/${gameId}/leaderboard/holes?team=${line.teamNumber}&mode=${mode}`;
 
   return (
-    <div
-      className="leader-card leader-shimmer reveal-up relative mb-3 rounded-[18px] px-[22px] pt-[22px] pb-5"
-      style={{ animationDelay: '60ms' }}
-    >
-      {/* Decorative laurels flanking the rank. opacity-55 per spec. */}
-      <div className="pointer-events-none absolute left-3.5 top-[18px] text-accent opacity-55">
-        <Laurel height={68} />
-      </div>
-      <div
-        className="pointer-events-none absolute right-3.5 top-[18px] text-accent opacity-55"
-        style={{ transform: 'scaleX(-1)' }}
-      >
-        <Laurel height={68} />
-      </div>
-
-      <div className="relative flex flex-col items-center">
-        <span className="leader-badge-pulse text-[10px] font-semibold uppercase tracking-[0.20em] text-accent">
-          Leder · {line.rank}. plass
-        </span>
-        <span
-          className="my-1 font-serif tabular-nums text-[64px] font-semibold leading-none tracking-[-0.04em] text-accent"
-          style={{ textShadow: '0 1px 0 rgba(184,148,70,0.3)' }}
+    // Two-layer structure: outer wrapper owns the entry animation (reveal-up),
+    // inner wrapper owns the chrome + shimmer (leader-card + leader-shimmer).
+    // Both classes set the `animation` shorthand; the CSS cascade lets the
+    // later-declared rule win, so stacking them on a single element silently
+    // dropped one of the two animations and left the card at the reveal-up
+    // baseline (opacity: 0). Splitting them onto separate elements lets each
+    // animation own its own property.
+    <div className="reveal-up mb-3" style={{ animationDelay: '60ms' }}>
+      <div className="leader-card leader-shimmer relative rounded-[18px] px-[22px] pt-[22px] pb-5">
+        {/* Decorative laurels flanking the rank. opacity-55 per spec. */}
+        <div className="pointer-events-none absolute left-3.5 top-[18px] text-accent opacity-55">
+          <Laurel height={68} />
+        </div>
+        <div
+          className="pointer-events-none absolute right-3.5 top-[18px] text-accent opacity-55"
+          style={{ transform: 'scaleX(-1)' }}
         >
-          {line.rank}
-        </span>
-        <div className="mt-1 flex items-center gap-2">
-          <PinFlagSm size={14} />
-          <h2 className="m-0 font-serif text-[26px] font-medium tracking-[-0.015em] text-text">
-            Lag {line.teamNumber}
-          </h2>
-          <PinFlagSm size={14} />
+          <Laurel height={68} />
         </div>
-      </div>
 
-      <div
-        className="mt-[18px] flex items-end justify-between pt-3.5"
-        style={{ borderTop: '1px solid rgba(201,169,97,0.4)' }}
-      >
-        <div className="text-left">
-          <span className="block text-[10px] font-semibold uppercase tracking-[0.20em] text-muted">
-            Total netto
-          </span>
-          <span className="mt-0.5 block font-serif text-[34px] font-semibold leading-none tracking-[-0.02em] tabular-nums text-text">
-            {line.total}
-          </span>
-        </div>
-        <div className="text-right">
-          <span className="block text-[10px] font-semibold uppercase tracking-[0.20em] text-muted">
-            Mot par
+        <div className="relative flex flex-col items-center">
+          <span className="leader-badge-pulse text-[10px] font-semibold uppercase tracking-[0.20em] text-accent">
+            Leder · {line.rank}. plass
           </span>
           <span
-            className={`mt-0.5 block font-serif text-[34px] font-semibold leading-none tracking-[-0.02em] tabular-nums ${
-              vsPar < 0 ? 'text-score-under-fg' : 'text-text'
-            }`}
+            className="my-1 font-serif tabular-nums text-[64px] font-semibold leading-none tracking-[-0.04em] text-accent"
+            style={{ textShadow: '0 1px 0 rgba(184,148,70,0.3)' }}
           >
-            {formatVsPar(vsPar)}
+            {line.rank}
           </span>
+          <div className="mt-1 flex items-center gap-2">
+            <PinFlagSm size={14} />
+            <h2 className="m-0 font-serif text-[26px] font-medium tracking-[-0.015em] text-text">
+              Lag {line.teamNumber}
+            </h2>
+            <PinFlagSm size={14} />
+          </div>
         </div>
+
+        <div
+          className="mt-[18px] flex items-end justify-between pt-3.5"
+          style={{ borderTop: '1px solid rgba(201,169,97,0.4)' }}
+        >
+          <div className="text-left">
+            <span className="block text-[10px] font-semibold uppercase tracking-[0.20em] text-muted">
+              Total netto
+            </span>
+            <span className="mt-0.5 block font-serif text-[34px] font-semibold leading-none tracking-[-0.02em] tabular-nums text-text">
+              {line.total}
+            </span>
+          </div>
+          <div className="text-right">
+            <span className="block text-[10px] font-semibold uppercase tracking-[0.20em] text-muted">
+              Mot par
+            </span>
+            <span
+              className={`mt-0.5 block font-serif text-[34px] font-semibold leading-none tracking-[-0.02em] tabular-nums ${
+                vsPar < 0 ? 'text-score-under-fg' : 'text-text'
+              }`}
+            >
+              {formatVsPar(vsPar)}
+            </span>
+          </div>
+        </div>
+
+        <p className="mt-3.5 text-center text-[12px] text-muted">{playersLine}</p>
+
+        <Link
+          href={drilldownHref}
+          aria-label={`Vis hull-for-hull for lag ${line.teamNumber}`}
+          className="absolute inset-0 rounded-[18px]"
+        />
       </div>
-
-      <p className="mt-3.5 text-center text-[12px] text-muted">{playersLine}</p>
-
-      <Link
-        href={drilldownHref}
-        aria-label={`Vis hull-for-hull for lag ${line.teamNumber}`}
-        className="absolute inset-0 rounded-[18px]"
-      />
     </div>
   );
 }
