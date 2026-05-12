@@ -279,7 +279,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   const bottomHref = !allConfirmed
     ? undefined
     : isLastHole
-      ? `/games/${gameId}/scorecard`
+      ? `/games/${gameId}/submit`
       : `/games/${gameId}/holes/${next}`;
 
   const bottomDisabled = !allConfirmed || disabled;
