@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Button } from '@/components/ui/Button';
 
 type Props = {
   playerUserId: string;
@@ -26,20 +27,18 @@ export function ReviewActions({
       {!showReject ? (
         <div className="grid grid-cols-2 gap-2">
           <form action={approveAction}>
-            <button
-              type="submit"
-              className="w-full min-h-[44px] bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors text-sm"
-            >
+            <Button type="submit" className="w-full">
               Godkjenn ✓
-            </button>
+            </Button>
           </form>
-          <button
+          <Button
             type="button"
+            variant="secondary"
             onClick={() => setShowReject(true)}
-            className="w-full min-h-[44px] bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 px-4 py-2.5 rounded-lg font-medium transition-colors text-sm"
+            className="w-full"
           >
             Avvis
-          </button>
+          </Button>
         </div>
       ) : (
         <form
@@ -60,7 +59,7 @@ export function ReviewActions({
           className="space-y-2"
         >
           <input type="hidden" name="player_user_id" value={playerUserId} />
-          <label className="block text-xs text-zinc-500">
+          <label className="block text-xs text-muted">
             Grunn til avvisning (kort)
           </label>
           <textarea
@@ -68,22 +67,20 @@ export function ReviewActions({
             rows={2}
             maxLength={500}
             placeholder="F.eks. «Hull 7 var 5 slag, ikke 4.»"
-            className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 px-3 py-2 text-sm bg-white dark:bg-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-green-600"
+            className="w-full rounded-xl border border-border bg-surface text-text px-3 py-2 text-sm placeholder-muted/70 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
           />
           <div className="grid grid-cols-2 gap-2">
-            <button
+            <Button
               type="button"
+              variant="secondary"
               onClick={() => setShowReject(false)}
-              className="w-full min-h-[44px] bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 px-4 py-2.5 rounded-lg font-medium transition-colors text-sm"
+              className="w-full"
             >
               Avbryt
-            </button>
-            <button
-              type="submit"
-              className="w-full min-h-[44px] bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors text-sm"
-            >
+            </Button>
+            <Button type="submit" variant="danger" className="w-full">
               Send avvisning
-            </button>
+            </Button>
           </div>
         </form>
       )}

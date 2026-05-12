@@ -184,7 +184,7 @@ export default async function ApprovePage({
       <div className="space-y-4">
         {pending.length === 0 ? (
           <Card>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="text-sm text-muted">
               Ingen scorekort venter på godkjenning i flighten din akkurat nå.
             </p>
           </Card>
@@ -201,33 +201,38 @@ export default async function ApprovePage({
 
             return (
               <Card key={p.user_id} className="p-0 overflow-hidden">
-                <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-3">
+                <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-base font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                    <p className="font-serif text-base font-medium text-text truncate">
                       {name}
                     </p>
-                    <p className="text-xs text-zinc-500 mt-0.5">
-                      Brutto: {total} · Spilte hull: {played.length}/18
+                    <p className="text-xs text-muted mt-0.5">
+                      Brutto: <span className="score-num">{total}</span> ·
+                      Spilte hull:{' '}
+                      <span className="score-num">{played.length}</span>
+                      <span className="inline-num">/18</span>
                     </p>
                   </div>
                 </div>
 
-                <details className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800">
-                  <summary className="text-sm text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                <details className="px-4 py-3 border-b border-border">
+                  <summary className="text-sm text-muted cursor-pointer hover:text-text transition-colors">
                     Vis 18-hulls-kort
                   </summary>
                   <div className="overflow-x-auto mt-3 -mx-2">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="text-left text-xs text-zinc-500">
-                          <th className="px-2 py-1.5 font-medium">Hull</th>
-                          <th className="px-2 py-1.5 font-medium text-right">
+                        <tr className="text-left">
+                          <th className="px-2 py-1.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+                            Hull
+                          </th>
+                          <th className="px-2 py-1.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
                             Par
                           </th>
-                          <th className="px-2 py-1.5 font-medium text-right">
+                          <th className="px-2 py-1.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
                             SI
                           </th>
-                          <th className="px-2 py-1.5 font-medium text-right">
+                          <th className="px-2 py-1.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
                             Slag
                           </th>
                         </tr>
@@ -238,18 +243,18 @@ export default async function ApprovePage({
                           return (
                             <tr
                               key={h.hole_number}
-                              className="border-t border-zinc-200 dark:border-zinc-800"
+                              className="border-t border-border"
                             >
-                              <td className="px-2 py-1.5 text-zinc-900 dark:text-zinc-100">
+                              <td className="score-num px-2 py-1.5 text-text">
                                 {h.hole_number}
                               </td>
-                              <td className="px-2 py-1.5 text-right text-zinc-700 dark:text-zinc-300">
+                              <td className="score-num px-2 py-1.5 text-right text-muted">
                                 {h.par}
                               </td>
-                              <td className="px-2 py-1.5 text-right text-zinc-700 dark:text-zinc-300">
+                              <td className="score-num px-2 py-1.5 text-right text-muted">
                                 {h.stroke_index}
                               </td>
-                              <td className="px-2 py-1.5 text-right text-zinc-900 dark:text-zinc-100">
+                              <td className="score-num px-2 py-1.5 text-right text-text">
                                 {s ?? '—'}
                               </td>
                             </tr>
