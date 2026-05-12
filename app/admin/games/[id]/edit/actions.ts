@@ -7,23 +7,57 @@ import {
   parseOsloDateTimeLocal,
 } from '@/lib/games/gamePayload';
 
-export async function updateGameAction(gameId: string, formData: FormData) {
-  const payload = buildGameInsertPayload(formData, 'publish');
+type UpdateMode = 'save_draft' | 'publish' | 'update_scheduled';
+
+export async function saveDraftAction(gameId: string, formData: FormData) {
+  await updateGameInternal(gameId, formData, 'save_draft');
+}
+
+export async function publishFromDraftAction(
+  gameId: string,
+  formData: FormData,
+) {
+  await updateGameInternal(gameId, formData, 'publish');
+}
+
+export async function updateScheduledAction(
+  gameId: string,
+  formData: FormData,
+) {
+  await updateGameInternal(gameId, formData, 'update_scheduled');
+}
+
+// Back-compat alias so the edit page keeps compiling until Phase 4
+// rewrites its call sites to choose the right action per starting status.
+export { updateScheduledAction as updateGameAction };
+
+async function updateGameInternal(
+  gameId: string,
+  formData: FormData,
+  mode: UpdateMode,
+) {
+  const payloadMode = mode === 'save_draft' ? 'draft' : 'publish';
+  const payload = buildGameInsertPayload(formData, payloadMode);
 
   if (payload.errorCode) {
     redirect(`/admin/games/${gameId}/edit?error=${payload.errorCode}`);
   }
 
-  // Tee-off is required for scheduled games — you can't un-set it mid-schedule
-  // without effectively unpublishing, which isn't a flow we support here.
+  // Tee-off is required when publishing or editing a scheduled game (you
+  // can't have a scheduled game without a tee-off). For save_draft it's
+  // optional — drafts tolerate partial data.
   let scheduledTeeOffAt: string | null = null;
   const rawTeeOff = String(formData.get('scheduled_tee_off_at') ?? '').trim();
-  if (!rawTeeOff) {
-    redirect(`/admin/games/${gameId}/edit?error=tee_off_required`);
-  }
-  try {
-    scheduledTeeOffAt = parseOsloDateTimeLocal(rawTeeOff);
-  } catch {
+  if (rawTeeOff) {
+    try {
+      scheduledTeeOffAt = parseOsloDateTimeLocal(rawTeeOff);
+    } catch {
+      if (mode !== 'save_draft') {
+        redirect(`/admin/games/${gameId}/edit?error=tee_off_required`);
+      }
+      scheduledTeeOffAt = null;
+    }
+  } else if (mode !== 'save_draft') {
     redirect(`/admin/games/${gameId}/edit?error=tee_off_required`);
   }
 
@@ -40,10 +74,12 @@ export async function updateGameAction(gameId: string, formData: FormData) {
     .single();
   if (!profile?.is_admin) redirect('/');
 
-  // Optimistic lock: only UPDATE if the game is still 'scheduled'. If another
-  // admin (or this admin in another tab) has flipped status to 'active' or
-  // 'finished' in the meantime, the UPDATE matches 0 rows — we detect that
-  // by re-reading the row and bouncing back to the detail page.
+  // Optimistic lock: only update if the row's current status matches the
+  // mode's allowed starting state. Prevents accidental status transitions
+  // when admin has another tab open (e.g. draft was already published).
+  const allowedFromStatus = mode === 'update_scheduled' ? 'scheduled' : 'draft';
+  const nextStatus = mode === 'publish' ? 'scheduled' : allowedFromStatus;
+
   const { data: updated, error: updateError } = await supabase
     .from('games')
     .update({
@@ -53,11 +89,12 @@ export async function updateGameAction(gameId: string, formData: FormData) {
       scheduled_tee_off_at: scheduledTeeOffAt,
       hcp_allowance_pct: payload.hcp_allowance_pct,
       require_peer_approval: payload.require_peer_approval,
-      // status and started_at are intentionally not touched — only D5's
-      // "Start runden nå" flow transitions out of 'scheduled'.
+      status: nextStatus,
+      // started_at is intentionally not touched — only D5's "Start runden nå"
+      // flow transitions out of 'scheduled'.
     })
     .eq('id', gameId)
-    .eq('status', 'scheduled')
+    .eq('status', allowedFromStatus)
     .select('id')
     .single();
 
@@ -68,11 +105,11 @@ export async function updateGameAction(gameId: string, formData: FormData) {
     redirect(`/admin/games/${gameId}?error=not_editable`);
   }
 
-  // Replace the roster wholesale. The game is 'scheduled', so no `scores`
-  // rows exist yet (handicaps haven't been frozen, scores can't be written),
-  // making delete+insert safe — no cascade fallout to worry about.
-  // A diff-based approach would shave a few writes but adds material
-  // complexity for an 8-row table; not worth it.
+  // Replace the roster wholesale. For both 'draft' and 'scheduled' starting
+  // states no `scores` rows exist yet (handicaps haven't been frozen — that
+  // happens at "Start runden nå"), making delete+insert safe. A diff-based
+  // approach would shave a few writes but adds material complexity for an
+  // 8-row table; not worth it.
   const { error: deleteError } = await supabase
     .from('game_players')
     .delete()
@@ -81,21 +118,27 @@ export async function updateGameAction(gameId: string, formData: FormData) {
     redirect(`/admin/games/${gameId}/edit?error=db_players`);
   }
 
-  const rows = payload.players.map((p) => ({
-    game_id: gameId,
-    user_id: p.user_id,
-    team_number: p.team_number,
-    flight_number: p.flight_number,
-    // Same rule as the publish path: handicaps are frozen at D5
-    // (Start runden nå), not at edit-time.
-    course_handicap: null,
-  }));
-  const { error: insertError } = await supabase
-    .from('game_players')
-    .insert(rows);
-  if (insertError) {
-    redirect(`/admin/games/${gameId}/edit?error=db_players`);
+  if (payload.players.length > 0) {
+    const rows = payload.players.map((p) => ({
+      game_id: gameId,
+      user_id: p.user_id,
+      team_number: p.team_number,
+      flight_number: p.flight_number,
+      // Same rule as the publish path: handicaps are frozen at D5
+      // (Start runden nå), not at edit-time.
+      course_handicap: null,
+    }));
+    const { error: insertError } = await supabase
+      .from('game_players')
+      .insert(rows);
+    if (insertError) {
+      redirect(`/admin/games/${gameId}/edit?error=db_players`);
+    }
   }
 
-  redirect(`/admin/games/${gameId}?status=updated`);
+  redirect(
+    `/admin/games/${gameId}?status=${
+      mode === 'publish' ? 'scheduled' : 'updated'
+    }`,
+  );
 }
