@@ -5,7 +5,6 @@ import { AppShell } from '@/components/ui/AppShell';
 import { BackLink } from '@/components/ui/BackLink';
 import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
-import { PageHeader } from '@/components/ui/PageHeader';
 import { PullQuote } from '@/components/ui/PullQuote';
 import { HourGlass } from '@/components/icons/HourGlass';
 import { firstName } from '@/lib/firstName';
@@ -24,8 +23,8 @@ import {
   type LeaderboardMode,
   type TeamLine,
 } from '@/lib/leaderboard';
-import { LeaderboardConfetti } from './LeaderboardConfetti';
 import { PreRoundLeaderboardRealtime } from './PreRoundLeaderboard';
+import { State4View } from './State4View';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ mode?: string | string[] }>;
@@ -200,69 +199,20 @@ export default async function LeaderboardPage({
     });
   }
 
-  // Compute both modes up front; pick which to render.
-  const linesNetto = computeLeaderboard({ mode: 'netto', players, holes, scores });
-  const linesBrutto = computeLeaderboard({ mode: 'brutto', players, holes, scores });
-  const lines = mode === 'netto' ? linesNetto : linesBrutto;
-
-  // Sort by rank for display.
+  const lines = computeLeaderboard({ mode, players, holes, scores });
   const orderedLines = [...lines].sort((a, b) => a.rank - b.rank);
+  const coursePar = holes.reduce((sum, h) => sum + h.par, 0);
 
-  // The leader's total is the reference for "+N" deltas shown below other
-  // teams. Use rank-1; if multiple teams are tied for 1st they all show the
-  // same total so the delta math still works.
-  const leaderTotal = orderedLines.find((l) => l.rank === 1)?.total ?? 0;
-
-  const subtitle =
-    [game.name, game.courses?.name].filter(Boolean).join(' · ') || undefined;
-
+  // State #4 — full reveal. Designed in quick-win-5; lives in its own client
+  // view so the Replay pill and confetti can share state.
   return (
-    <AppShell>
-      {/* Confetti is the "spillet er over" celebratory beat — only fire on
-          the full leaderboard (status=finished), not on the state #3.5
-          placeholder render which is still mid-round. */}
-      {view === 'full' && <LeaderboardConfetti gameId={id} />}
-      <PageHeader
-        title="Leaderboard"
-        subtitle={subtitle}
-        action={
-          <BackLink href="/">← Hjem</BackLink>
-        }
-      />
-
-      <ModeToggle gameId={id} mode={mode} basePath="/leaderboard" />
-
-      <div className="space-y-3 mt-5">
-        {orderedLines.length === 0 && (
-          <Card>
-            <p className="text-sm text-muted">Ingen lag å vise.</p>
-          </Card>
-        )}
-        {orderedLines.map((line) => (
-          <TeamCard
-            key={line.teamNumber}
-            line={line}
-            leaderTotal={leaderTotal}
-          />
-        ))}
-      </div>
-
-      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <Link
-          href={`/games/${id}/leaderboard/holes?mode=${mode}`}
-          className="block"
-        >
-          <div className="w-full min-h-[44px] border border-border hover:bg-primary-soft text-text px-4 py-2.5 rounded-full font-medium tracking-tight text-center text-sm transition-colors">
-            Hull for hull →
-          </div>
-        </Link>
-        <Link href={`/games/${id}/scorecard`} className="block">
-          <div className="w-full min-h-[44px] border border-border hover:bg-primary-soft text-text px-4 py-2.5 rounded-full font-medium tracking-tight text-center text-sm transition-colors">
-            Mitt scorekort →
-          </div>
-        </Link>
-      </div>
-    </AppShell>
+    <State4View
+      gameId={id}
+      gameName={game.name}
+      teams={orderedLines}
+      mode={mode}
+      coursePar={coursePar}
+    />
   );
 }
 

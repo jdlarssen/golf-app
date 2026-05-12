@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Design-handoff prototypes — they're reference JSX inside design/ for
+    // pattern-matching, not part of the app source. Linting them creates
+    // noise (e.g. they assume a global `React`).
+    "docs/design/**",
   ]),
 ]);
 

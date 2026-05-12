@@ -248,18 +248,18 @@ body {
     var(--leader-fill-top) 0%,
     var(--leader-fill-bottom) 100%
   );
-  /* Resting shadow — what the shimmer animation lands on. Inline-matching
-   * the 100% keyframe so first paint (before animation runs) already looks
-   * settled. */
+  /* Outer drop shadows live here. The inset champagne hairline is owned
+   * entirely by the shimmer keyframe (`fill-mode: both`) so animation start
+   * and end states are continuous with what's rendered during the 240ms
+   * delay phase. Without this split, the hairline would snap from "drawn"
+   * → "blank" → "drawn" when the keyframe takes over. */
   box-shadow:
-    inset 0 0 0 1px var(--leader-hairline),
     0 1px 2px rgba(26, 46, 31, 0.04),
     0 4px 16px rgba(26, 46, 31, 0.08);
 }
 
 .leader-shimmer {
-  animation: leader-shimmer 1600ms cubic-bezier(0.22, 1, 0.36, 1) 240ms 1
-    forwards;
+  animation: leader-shimmer 1600ms cubic-bezier(0.22, 1, 0.36, 1) 240ms 1 both;
 }
 
 @keyframes leader-badge-pulse {
@@ -312,10 +312,19 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .reveal-up,
-  .leader-shimmer,
   .leader-badge-pulse {
     animation: none;
     opacity: 1;
+  }
+  /* Skip the shimmer motion but keep the hairline visible at its resting
+   * 1px / 0.55 opacity — the champagne edge is part of the card's identity,
+   * not just animation candy. */
+  .leader-shimmer {
+    animation: none;
+    box-shadow:
+      inset 0 0 0 1px var(--leader-hairline),
+      0 1px 2px rgba(26, 46, 31, 0.04),
+      0 4px 16px rgba(26, 46, 31, 0.08);
   }
   .confetti-piece {
     display: none;
