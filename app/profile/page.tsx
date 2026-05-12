@@ -1,5 +1,4 @@
 import { Suspense, cache } from 'react';
-import { SmartLink } from '@/components/ui/SmartLink';
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
@@ -11,17 +10,32 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { getQuotaState, formatTimeUntil } from '@/lib/invitations/quota';
 import { updateProfile } from './actions';
+import { sendFriendInvite } from '../invite/actions';
 import { ProfileFormBody } from './ProfileFormBody';
+import { InviteFriendForm } from './InviteFriendForm';
 
 type SearchParams = Promise<{
   error?: string | string[];
   profile?: string | string[];
+  invite?: string | string[];
+  invite_error?: string | string[];
+  invite_email?: string | string[];
 }>;
 
 const ERROR_MESSAGES: Record<string, string> = {
   name_required: 'Du må fylle inn navn.',
   hcp_invalid: 'Handicap-index må være et tall mellom -10 og 54.0.',
   unknown: 'Noe gikk galt. Prøv igjen.',
+};
+
+const INVITE_ERROR_MESSAGES: Record<string, string> = {
+  email_required: 'Du må skrive inn en e-postadresse.',
+  invalid_email: 'Ugyldig e-postadresse.',
+  already_user:
+    'Denne personen er allerede på Tørny. Be admin om å legge dem til et spill.',
+  quota: 'Du har brukt opp dagens kvote.',
+  rate_limited: 'Vent litt før du prøver igjen.',
+  unknown: 'Noe gikk galt med invitasjonen. Prøv igjen.',
 };
 
 function first(value: string | string[] | undefined): string | undefined {
@@ -49,6 +63,12 @@ export default async function ProfilePage({
   const errorCode = first(params.error);
   const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
   const profileUpdated = first(params.profile) === 'updated';
+  const inviteSent = first(params.invite) === 'sent';
+  const inviteSentEmail = first(params.invite_email);
+  const inviteErrorCode = first(params.invite_error);
+  const inviteErrorMessage = inviteErrorCode
+    ? INVITE_ERROR_MESSAGES[inviteErrorCode]
+    : undefined;
 
   return (
     <AppShell>
@@ -63,6 +83,20 @@ export default async function ProfilePage({
       {profileUpdated && (
         <div className="mb-4">
           <Banner tone="success">✓ Profilen din er oppdatert.</Banner>
+        </div>
+      )}
+
+      {inviteSent && (
+        <div className="mb-4">
+          <Banner tone="success">
+            ✓ Invitasjon sendt{inviteSentEmail ? ` til ${inviteSentEmail}` : ''}.
+          </Banner>
+        </div>
+      )}
+
+      {inviteErrorMessage && (
+        <div className="mb-4">
+          <Banner tone="error">{inviteErrorMessage}</Banner>
         </div>
       )}
 
@@ -159,25 +193,14 @@ async function InviteAFriendCard() {
   }
 
   return (
-    <SmartLink
-      href="/invite"
-      className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-    >
-      <Card>
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="font-serif text-lg font-medium text-text mb-1">
-              Invitér en venn
-            </h2>
-            <p className="text-sm text-muted">
-              Dra med kompiser inn på Tørny
-            </p>
-          </div>
-          <span aria-hidden="true" className="text-muted text-xl">
-            →
-          </span>
-        </div>
-      </Card>
-    </SmartLink>
+    <Card>
+      <div className="mb-4">
+        <h2 className="font-serif text-lg font-medium text-text mb-1">
+          Invitér en venn
+        </h2>
+        <p className="text-sm text-muted">Dra med kompiser inn på Tørny</p>
+      </div>
+      <InviteFriendForm action={sendFriendInvite} />
+    </Card>
   );
 }

@@ -17,10 +17,10 @@ export async function sendFriendInvite(formData: FormData) {
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
 
   if (!email) {
-    redirect('/invite?error=email_required');
+    redirect('/profile?invite_error=email_required');
   }
   if (!looksLikeEmail(email)) {
-    redirect('/invite?error=invalid_email');
+    redirect('/profile?invite_error=invalid_email');
   }
 
   const supabase = await getServerClient();
@@ -44,14 +44,14 @@ export async function sendFriendInvite(formData: FormData) {
     redirect('/complete-profile');
   }
   if (profileError || !profile) {
-    redirect('/invite?error=unknown');
+    redirect('/profile?invite_error=unknown');
   }
 
   // Defensive quota re-check — the /invite page already gates on this,
   // but server-side enforcement is what actually protects the rule.
   const quota = await getQuotaState(supabase, user.id);
   if (quota.isExhausted) {
-    redirect('/invite?error=quota');
+    redirect('/profile?invite_error=quota');
   }
 
   // Block invites to addresses that already have a Tørny account.
@@ -65,10 +65,10 @@ export async function sendFriendInvite(formData: FormData) {
   );
 
   if (existingError) {
-    redirect('/invite?error=unknown');
+    redirect('/profile?invite_error=unknown');
   }
   if (isRegistered) {
-    redirect('/invite?error=already_user');
+    redirect('/profile?invite_error=already_user');
   }
 
   // Compute callback URL from request headers — same approach as
@@ -95,7 +95,7 @@ export async function sendFriendInvite(formData: FormData) {
     const code = msg.includes('rate') || msg.includes('too many')
       ? 'rate_limited'
       : 'unknown';
-    redirect(`/invite?error=${code}`);
+    redirect(`/profile?invite_error=${code}`);
   }
 
   // Audit log. Token is required NOT NULL UNIQUE but Supabase's own
@@ -113,9 +113,9 @@ export async function sendFriendInvite(formData: FormData) {
   if (insertError) {
     // Mail already went out via signInWithOtp; logging failure isn't
     // fatal but we surface it so the user knows something odd happened.
-    redirect('/invite?error=unknown');
+    redirect('/profile?invite_error=unknown');
   }
 
-  const qs = new URLSearchParams({ status: 'sent', email });
-  redirect(`/invite?${qs.toString()}`);
+  const qs = new URLSearchParams({ invite: 'sent', invite_email: email });
+  redirect(`/profile?${qs.toString()}`);
 }
