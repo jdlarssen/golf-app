@@ -188,6 +188,23 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     return 2;
   }
 
+  // Find the first lag with fewer than 2 players, scanning 1 → 4. Used when
+  // a player is newly checked: they auto-fill the next available slot so
+  // partial-draft rosters round-trip through the DB (server requires
+  // team_number 1..4 per row).
+  function nextAvailableTeam(
+    teamMap: Record<string, TeamNumber>,
+  ): TeamNumber {
+    const counts: Record<TeamNumber, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
+    for (const team of Object.values(teamMap)) {
+      counts[team] += 1;
+    }
+    for (const t of TEAM_NUMBERS) {
+      if (counts[t] < 2) return t;
+    }
+    return 1; // Unreachable when invoked from togglePlayer (caller guards on length < 8).
+  }
+
   function togglePlayer(playerId: string) {
     setSelectedPlayerIds((prev) => {
       if (prev.includes(playerId)) {
@@ -205,6 +222,21 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
         return prev.filter((id) => id !== playerId);
       }
       if (prev.length >= 8) return prev;
+      // Auto-assign new selection to the next available lag slot (lag 1
+      // slot 0 → lag 1 slot 1 → lag 2 slot 0 → …). Required because every
+      // game_players row needs a valid team_number 1..4 — a "checked but
+      // unassigned" player would be filtered out of orderedPayload and
+      // never reach the DB, leaving partial drafts silently empty.
+      // Admin can rearrange via the slot dropdowns once 8 are selected,
+      // or reshuffle with «Trekk lag tilfeldig».
+      setTeamByPlayer((tp) => {
+        const team = nextAvailableTeam(tp);
+        setFlightByPlayer((fp) => ({
+          ...fp,
+          [playerId]: teamDefaultFlight(team),
+        }));
+        return { ...tp, [playerId]: team };
+      });
       return [...prev, playerId];
     });
   }
