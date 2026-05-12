@@ -10,6 +10,14 @@
  * ---------------------------------------------------------------------------*/
 
 :root {
+  /* Font-weight named scale. Centralises the "score-tall = 600, alt annet
+   * serif = 500" rule so component code doesn't sprinkle bare numbers. */
+  --fw-serif-display:  500;
+  --fw-serif-score:    600;
+  --fw-sans-body:      400;
+  --fw-sans-label:     500;
+  --fw-sans-strong:    600;
+
   /* Light mode palette */
   --bg: #f8f6f0;          /* warm linen */
   --surface: #ffffff;
@@ -207,6 +215,26 @@ body {
 /* Tabular numerals helper for numeric columns and big totals. */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
+}
+
+/* Score-numerikk — apply wherever a number is the protagonist of a screen:
+ * hero hull number, scorecard cells, leaderboard totals, hcp index. Locks
+ * font (serif), weight (600 = stamped brass), tabular alignment, and the
+ * `ss01` flat-top 1 alternate so columns align cleanly. */
+.score-num {
+  font-family: var(--font-serif);
+  font-weight: var(--fw-serif-score);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1, 'ss01' 1;
+  letter-spacing: -0.005em;
+}
+
+/* Number inside a sentence ("spilte 7 over par") — body face but tabular
+ * so 7/17/77 still column-align. */
+.inline-num {
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
 }
 
 /* -----------------------------------------------------------------------------
