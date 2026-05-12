@@ -21,6 +21,8 @@
   --primary-hover: #2d5a40;
   --primary-soft: #e8efe8; /* very pale green tint */
   --accent: #c9a961;       /* champagne gold */
+  --accent-deep: #b89446;  /* aksent-tekst på lys bg (kicker, tagline) */
+  --bg-tint: #f0ede5;      /* body color on forest bg (primary/leader cards) */
   --success: #4a7c59;      /* sage */
   --danger: #b8463e;       /* muted brick */
   --warning: #d89b3a;      /* amber */
@@ -70,6 +72,8 @@
     --primary-hover: #85b589;
     --primary-soft: #1f2c24;
     --accent: #d4b870;
+    --accent-deep: #c9a961;
+    --bg-tint: #f0ede5;
     --success: #7daa8a;
     --danger: #d67268;
     --warning: #e5b26f;
@@ -115,6 +119,8 @@
   --primary-hover: #85b589;
   --primary-soft: #1f2c24;
   --accent: #d4b870;
+  --accent-deep: #c9a961;
+  --bg-tint: #f0ede5;
   --success: #7daa8a;
   --danger: #d67268;
   --warning: #e5b26f;
@@ -158,6 +164,8 @@
   --color-primary-hover: var(--primary-hover);
   --color-primary-soft: var(--primary-soft);
   --color-accent: var(--accent);
+  --color-accent-deep: var(--accent-deep);
+  --color-bg-tint: var(--bg-tint);
   --color-success: var(--success);
   --color-danger: var(--danger);
   --color-warning: var(--warning);
