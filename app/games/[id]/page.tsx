@@ -71,7 +71,6 @@ const GAME_SELECT =
 type FlightRosterRow = {
   user_id: string;
   flight_number: number;
-  course_handicap: number | null;
   users: {
     name: string;
     nickname: string | null;
@@ -214,36 +213,16 @@ export default async function GameHomePage({
     }
   }
 
-  // How many holes have a strokes value? Used to decide CTA copy.
-  const { count: strokesCountRaw } = await supabase
-    .from('scores')
-    .select('hole_number', { count: 'exact', head: true })
-    .eq('game_id', id)
-    .eq('user_id', user.id)
-    .not('strokes', 'is', null);
-  const strokesCount = strokesCountRaw ?? 0;
-
-  // Flight-mates needing approval (only relevant when peer approval is on).
-  let pendingApprovalsForMe = 0;
-  if (game.require_peer_approval && game.status === 'active') {
-    const { data: mates } = await supabase
-      .from('game_players')
-      .select('user_id, flight_number, submitted_at, approved_at')
-      .eq('game_id', id)
-      .eq('flight_number', me.flight_number)
-      .returns<FlightMatePlayerRow[]>();
-    pendingApprovalsForMe = (mates ?? []).filter(
-      (m) =>
-        m.user_id !== user.id && m.submitted_at != null && m.approved_at == null,
-    ).length;
-  }
-
   // State #2 — Scorekort venter. Renders the venterom layout (mail envelope
   // hero, course card with tee-off, flight roster, pulsing countdown banner)
   // when the game is still scheduled and the E1 auto-start fallback above
   // hasn't flipped it to active yet. A client-side realtime subscription
   // refreshes the route as soon as admin presses "Start runden nå" (D5) or
   // status flips for any other reason.
+  //
+  // Branch sits above strokesCount / pendingApprovals fetches because those
+  // are only meaningful for active games — no point burning two DB queries
+  // for a scheduled game that will render the venterom and return early.
   if (game.status === 'scheduled') {
     const teeBox = game.tee_boxes;
     const teeOffDate = game.scheduled_tee_off_at
@@ -253,7 +232,7 @@ export default async function GameHomePage({
     const { data: flightRows } = await supabase
       .from('game_players')
       .select(
-        'user_id, flight_number, course_handicap, users!game_players_user_id_fkey(name, nickname, hcp_index)',
+        'user_id, flight_number, users!game_players_user_id_fkey(name, nickname, hcp_index)',
       )
       .eq('game_id', id)
       .eq('flight_number', me.flight_number)
@@ -370,6 +349,30 @@ export default async function GameHomePage({
         </p>
       </AppShell>
     );
+  }
+
+  // How many holes have a strokes value? Used to decide CTA copy.
+  const { count: strokesCountRaw } = await supabase
+    .from('scores')
+    .select('hole_number', { count: 'exact', head: true })
+    .eq('game_id', id)
+    .eq('user_id', user.id)
+    .not('strokes', 'is', null);
+  const strokesCount = strokesCountRaw ?? 0;
+
+  // Flight-mates needing approval (only relevant when peer approval is on).
+  let pendingApprovalsForMe = 0;
+  if (game.require_peer_approval && game.status === 'active') {
+    const { data: mates } = await supabase
+      .from('game_players')
+      .select('user_id, flight_number, submitted_at, approved_at')
+      .eq('game_id', id)
+      .eq('flight_number', me.flight_number)
+      .returns<FlightMatePlayerRow[]>();
+    pendingApprovalsForMe = (mates ?? []).filter(
+      (m) =>
+        m.user_id !== user.id && m.submitted_at != null && m.approved_at == null,
+    ).length;
   }
 
   const state = computeState({

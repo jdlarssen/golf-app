@@ -24,10 +24,23 @@ export function ScheduledWaitingRoom({ gameId, teeOffAt }: Props) {
   const router = useRouter();
   const [now, setNow] = useState(() => Date.now());
 
-  // Tick every 30s to update countdown text.
+  // Tick every 30s to update countdown text. 30s is precise enough for
+  // a ballpark "starter om X min/t" label; the realtime subscription
+  // flips the route to active well before sub-30s precision matters.
+  // Also force a fresh tick whenever the tab returns to foreground —
+  // browsers throttle background intervals, so the user reopens to a
+  // possibly-stale countdown without this.
   useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 30_000);
-    return () => window.clearInterval(id);
+    const refresh = () => setNow(Date.now());
+    const id = window.setInterval(refresh, 30_000);
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, []);
 
   // Realtime: listen for game.status flipping to 'active'.
