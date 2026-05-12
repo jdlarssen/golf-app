@@ -73,29 +73,34 @@
   --skel-tint: #f3eddd;
 }
 
+/* Klubbhus-natt — dark mode. Not cold-grey, not pure black. Warm
+ * deep-forest near-black with a slight green cast (#14201A), like a
+ * clubhouse at night lit by brass sconces. Triggered by prefers-color-
+ * scheme: dark, [data-theme='dark'], or [data-theme='klubbhus-natt']. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #0f1612;
-    --surface: #1a2e1f;
-    --surface-2: #163a2a;
-    --border: #2d3f32;
-    --text: #f0ede5;
-    --text-muted: #a89f92;
-    --primary: #6b9f6f;
-    --primary-hover: #85b589;
+    --bg: #14201a;           /* clubhouse-night forest-black */
+    --surface: #1c2a22;      /* one step lighter for cards */
+    --surface-2: #243429;    /* two steps for elevated surfaces (menus) */
+    --border: #2f3f34;       /* warm hairline, not grey */
+    --text: #ece5d2;         /* warm linen, never pure white */
+    --text-muted: #9a9180;   /* taupe at night */
+    --primary: #7eaa80;      /* sage — softer than daytime forest */
+    --primary-hover: #94bf96;
     --primary-soft: #1f2c24;
-    --accent: #d4b870;
+    --accent: #d4b870;       /* dimmed champagne — keeps the glow */
     --accent-deep: #c9a961;
-    --bg-tint: #f0ede5;
+    --bg-tint: #ece5d2;      /* body color on forest cards in dark mode */
     --success: #7daa8a;
     --danger: #d67268;
     --warning: #e5b26f;
+    --focus-ring: rgba(212, 184, 112, 0.45);
 
-    /* Dark-mode score tones — readable on forest surfaces. */
+    /* Score tones — readable on warm forest surfaces. */
     --score-under-fg: #7daa8a;
     --score-under-bg: rgba(125, 170, 138, 0.18);
-    --score-par-fg:   #a89f92;
-    --score-par-bg:   rgba(168, 159, 146, 0.14);
+    --score-par-fg:   #9a9180;
+    --score-par-bg:   rgba(154, 145, 128, 0.14);
     --score-over1-fg: #e5b26f;
     --score-over1-bg: rgba(229, 178, 111, 0.18);
     --score-over2-fg: #d67268;
@@ -107,46 +112,46 @@
     --leader-hairline:      rgba(201, 169, 97, 0.65);
     --leader-hairline-peak: rgba(201, 169, 97, 1.0);
 
-    /* Dark Sekretariatet — forest-charcoal distinguishable from --bg, brass
-     * hairlines stay champagne at slightly lower opacity, stamp brightens. */
+    /* Dark Sekretariatet — forest-charcoal distinguishable from --bg. */
     --admin-bg:                 #1a2620;
     --admin-salutation-top:     #243828;
     --admin-salutation-bottom:  #1f2f23;
-    --admin-salutation-border:  #2d3f32;
+    --admin-salutation-border:  #2f3f34;
     --brass-line-top:           rgba(201, 169, 97, 0.65);
-    --brass-line-bottom:        rgba(229, 224, 211, 0.30);
+    --brass-line-bottom:        rgba(236, 229, 210, 0.30);
     --stamp-stroke:             rgba(201, 169, 97, 0.55);
     --stamp-fill:               rgba(212, 184, 112, 0.70);
-    --row-divider-warm:         #2d3f32;
+    --row-divider-warm:         #2f3f34;
 
-    /* Dark skeleton — forest-shaded, lifted off --surface (#1a2e1f) so the
-     * shape reads against card backgrounds without crushing into the page bg. */
+    /* Skeleton — forest-shaded, lifted off --surface so shapes read. */
     --skel-base: #243828;
     --skel-tint: #2f4734;
   }
 }
 
-[data-theme='dark'] {
-  --bg: #0f1612;
-  --surface: #1a2e1f;
-  --surface-2: #163a2a;
-  --border: #2d3f32;
-  --text: #f0ede5;
-  --text-muted: #a89f92;
-  --primary: #6b9f6f;
-  --primary-hover: #85b589;
+[data-theme='dark'],
+[data-theme='klubbhus-natt'] {
+  --bg: #14201a;
+  --surface: #1c2a22;
+  --surface-2: #243429;
+  --border: #2f3f34;
+  --text: #ece5d2;
+  --text-muted: #9a9180;
+  --primary: #7eaa80;
+  --primary-hover: #94bf96;
   --primary-soft: #1f2c24;
   --accent: #d4b870;
   --accent-deep: #c9a961;
-  --bg-tint: #f0ede5;
+  --bg-tint: #ece5d2;
   --success: #7daa8a;
   --danger: #d67268;
   --warning: #e5b26f;
+  --focus-ring: rgba(212, 184, 112, 0.45);
 
   --score-under-fg: #7daa8a;
   --score-under-bg: rgba(125, 170, 138, 0.18);
-  --score-par-fg:   #a89f92;
-  --score-par-bg:   rgba(168, 159, 146, 0.14);
+  --score-par-fg:   #9a9180;
+  --score-par-bg:   rgba(154, 145, 128, 0.14);
   --score-over1-fg: #e5b26f;
   --score-over1-bg: rgba(229, 178, 111, 0.18);
   --score-over2-fg: #d67268;
@@ -160,12 +165,12 @@
   --admin-bg:                 #1a2620;
   --admin-salutation-top:     #243828;
   --admin-salutation-bottom:  #1f2f23;
-  --admin-salutation-border:  #2d3f32;
+  --admin-salutation-border:  #2f3f34;
   --brass-line-top:           rgba(201, 169, 97, 0.65);
-  --brass-line-bottom:        rgba(229, 224, 211, 0.30);
+  --brass-line-bottom:        rgba(236, 229, 210, 0.30);
   --stamp-stroke:             rgba(201, 169, 97, 0.55);
   --stamp-fill:               rgba(212, 184, 112, 0.70);
-  --row-divider-warm:         #2d3f32;
+  --row-divider-warm:         #2f3f34;
 
   --skel-base: #243828;
   --skel-tint: #2f4734;
