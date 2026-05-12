@@ -2,110 +2,13 @@
 
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
-
-// TODO: extract this + parseOsloDateTimeLocal + GamePlayerInput type to
-// lib/admin/gamePayload.ts when D5 lands. Duplicated here from
-// app/admin/games/new/actions.ts to keep D4 self-contained.
-
-type GamePlayerInput = {
-  user_id: string;
-  team_number: number;
-  flight_number: number;
-};
-
-type ParsedPayload = {
-  name: string;
-  course_id: string;
-  tee_box_id: string;
-  hcp_allowance_pct: number;
-  require_peer_approval: boolean;
-  players: GamePlayerInput[];
-  errorCode?: string;
-};
-
-// Parse a 'YYYY-MM-DDTHH:mm' string (as emitted by <input type="datetime-local">)
-// as wall-clock time in Europe/Oslo and return the corresponding UTC ISO string.
-// Duplicated from app/admin/games/new/actions.ts — see TODO above.
-function parseOsloDateTimeLocal(s: string): string {
-  const [datePart] = s.split('T');
-  const [y, m, d] = datePart.split('-').map(Number);
-  const probe = new Date(Date.UTC(y, m - 1, d, 12, 0));
-  const fmt = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Europe/Oslo',
-    timeZoneName: 'short',
-  });
-  const tzPart = fmt
-    .formatToParts(probe)
-    .find((p) => p.type === 'timeZoneName')?.value;
-  const offset = tzPart === 'GMT+2' ? '+02:00' : '+01:00';
-  return new Date(`${s}:00${offset}`).toISOString();
-}
-
-// Duplicated from app/admin/games/new/actions.ts — see TODO above.
-function buildGameInsertPayload(formData: FormData): ParsedPayload {
-  const name = String(formData.get('name') ?? '').trim();
-  const course_id = String(formData.get('course_id') ?? '').trim();
-  const tee_box_id = String(formData.get('tee_box_id') ?? '').trim();
-  const hcp_allowance_pct = Number(formData.get('hcp_allowance_pct') ?? 100);
-  const require_peer_approval = formData.get('require_peer_approval') === 'on';
-
-  const base = {
-    name,
-    course_id,
-    tee_box_id,
-    hcp_allowance_pct,
-    require_peer_approval,
-    players: [] as GamePlayerInput[],
-  };
-
-  if (!name) return { ...base, errorCode: 'name_required' };
-  if (!course_id) return { ...base, errorCode: 'course_required' };
-  if (!tee_box_id) return { ...base, errorCode: 'tee_required' };
-  if (
-    !Number.isInteger(hcp_allowance_pct) ||
-    hcp_allowance_pct < 0 ||
-    hcp_allowance_pct > 100
-  ) {
-    return { ...base, errorCode: 'bad_allowance' };
-  }
-
-  const players: GamePlayerInput[] = [];
-  const seen = new Set<string>();
-  for (let i = 0; i < 8; i++) {
-    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
-    const team_number = Number(formData.get(`player_${i}_team`));
-    const flight_number = Number(formData.get(`player_${i}_flight`));
-    if (!user_id) return { ...base, errorCode: 'players_required' };
-    if (seen.has(user_id)) return { ...base, errorCode: 'duplicate_player' };
-    seen.add(user_id);
-    if (!Number.isInteger(team_number) || team_number < 1 || team_number > 4) {
-      return { ...base, errorCode: 'bad_team' };
-    }
-    if (
-      !Number.isInteger(flight_number) ||
-      flight_number < 1 ||
-      flight_number > 4
-    ) {
-      return { ...base, errorCode: 'bad_flight' };
-    }
-    players.push({ user_id, team_number, flight_number });
-  }
-
-  const teamCounts = new Map<number, number>();
-  for (const p of players) {
-    teamCounts.set(p.team_number, (teamCounts.get(p.team_number) ?? 0) + 1);
-  }
-  for (let t = 1; t <= 4; t++) {
-    if (teamCounts.get(t) !== 2) {
-      return { ...base, errorCode: 'team_balance' };
-    }
-  }
-
-  return { ...base, players };
-}
+import {
+  buildGameInsertPayload,
+  parseOsloDateTimeLocal,
+} from '@/lib/games/gamePayload';
 
 export async function updateGameAction(gameId: string, formData: FormData) {
-  const payload = buildGameInsertPayload(formData);
+  const payload = buildGameInsertPayload(formData, 'publish');
 
   if (payload.errorCode) {
     redirect(`/admin/games/${gameId}/edit?error=${payload.errorCode}`);
