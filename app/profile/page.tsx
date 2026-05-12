@@ -6,13 +6,12 @@ import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { BackLink } from '@/components/ui/BackLink';
 import { Card } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { getQuotaState, formatTimeUntil } from '@/lib/invitations/quota';
 import { updateProfile } from './actions';
+import { ProfileFormBody } from './ProfileFormBody';
 
 type SearchParams = Promise<{
   error?: string | string[];
@@ -108,63 +107,16 @@ async function ProfileFormCard({
           <Banner tone="error">{errorMessage}</Banner>
         </div>
       )}
-
-      <form action={updateProfile} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-text mb-1.5">
-            E-post
-          </label>
-          <p className="text-sm text-text">{profile.email}</p>
-          <p className="text-xs text-muted mt-1.5">
-            E-post kan ikke endres her.
-          </p>
-        </div>
-
-        <Input
-          id="name"
-          name="name"
-          type="text"
-          label="Navn"
-          defaultValue={profile.name ?? ''}
-          autoComplete="name"
-          required
-        />
-
-        <Input
-          id="nickname"
-          name="nickname"
-          type="text"
-          label="Kallenavn"
-          hint="Valgfritt — det navnet folk kjenner deg som på banen"
-          defaultValue={profile.nickname ?? ''}
-          autoComplete="nickname"
-        />
-
-        <Input
-          id="hcp_index"
-          name="hcp_index"
-          type="number"
-          label="Handicap-index"
-          hint="Tallet du har i Golfbox akkurat nå"
-          step="0.1"
-          min={-10}
-          max={54.0}
-          defaultValue={profile.hcp_index ?? ''}
-          required
-          inputMode="decimal"
-          inputClassName="score-num"
-        />
-
-        <div className="flex items-center gap-3 pt-2">
-          <Button type="submit">Lagre</Button>
-          <SmartLink
-            href="/"
-            className="text-sm text-muted hover:text-text transition-colors"
-          >
-            Avbryt
-          </SmartLink>
-        </div>
-      </form>
+      <ProfileFormBody
+        email={profile.email}
+        initial={{
+          name: profile.name ?? '',
+          nickname: profile.nickname ?? '',
+          hcpIndex:
+            profile.hcp_index == null ? '' : String(profile.hcp_index),
+        }}
+        action={updateProfile}
+      />
     </Card>
   );
 }
