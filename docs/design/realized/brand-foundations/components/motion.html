@@ -1,0 +1,24 @@
+<!doctype html><html data-theme="light"><head><meta charset="utf-8"><title>Motion principles</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;background:#F8F6F0;font-family:Inter,system-ui,sans-serif;color:#1A2E1F;}
+  .card{padding:20px 26px;display:flex;flex-direction:column;gap:10px;font-size:12.5px;line-height:1.55;}
+  .label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.18em;color:#5C5347;}
+  .row{display:grid;grid-template-columns:160px 1fr;gap:14px;align-items:start;}
+  .v{color:#5C5347;}
+  .ok{color:#4A7C59;font-weight:600;}
+  .no{color:#B8463E;font-weight:600;}
+</style></head><body>
+<div class="card">
+  <div class="label">Allowed</div>
+  <div class="row"><span class="v">Leaderboard stagger</span><span><span class="ok">✓</span> 80ms steg · fade + 8px slide · cubic-bezier(.22,1,.36,1)</span></div>
+  <div class="row"><span class="v">Confetti burst</span><span><span class="ok">✓</span> One-shot · 1.5s · champagne + forest · stored in localStorage</span></div>
+  <div class="row"><span class="v">Hover lift</span><span><span class="ok">✓</span> 1px translateY · 100ms · primary buttons only</span></div>
+  <div class="row"><span class="v">Input focus</span><span><span class="ok">✓</span> Border color + ring · 150ms</span></div>
+  <div class="label" style="margin-top:6px;">Forbidden</div>
+  <div class="row"><span class="v">Page transitions</span><span class="no">✗ never</span></div>
+  <div class="row"><span class="v">Loading spinners</span><span class="no">✗ skeletons or nothing</span></div>
+  <div class="row"><span class="v">Bouncing</span><span class="no">✗ no springs</span></div>
+  <div class="row"><span class="v">Auto-scroll</span><span class="no">✗ user owns scroll</span></div>
+</div>
+</body></html>

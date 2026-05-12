@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56" fill="none">
+  <title>2nd place medallion — silver-taupe</title>
+  <defs>
+    <radialGradient id="silverSheen" cx="35%" cy="30%" r="65%">
+      <stop offset="0" stop-color="#D4CFC2"></stop>
+      <stop offset="0.6" stop-color="#A89F92"></stop>
+      <stop offset="1" stop-color="#6C6358"></stop>
+    </radialGradient>
+  </defs>
+  <circle cx="28" cy="28" r="24" fill="url(#silverSheen)"></circle>
+  <circle cx="28" cy="28" r="24" fill="none" stroke="#5C5347" stroke-width="1"></circle>
+  <text x="28" y="38" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-size="22" font-weight="500" fill="#1A2E1F">2</text>
+</svg>

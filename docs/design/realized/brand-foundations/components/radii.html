@@ -1,0 +1,17 @@
+<!doctype html><html data-theme="light"><head><meta charset="utf-8"><title>Radii</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  html,body{margin:0;background:var(--bg);}
+  .card{padding:24px 28px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px;font-family:var(--font-sans);}
+  .demo{display:flex;flex-direction:column;align-items:center;gap:10px;}
+  .shape{width:120px;height:64px;background:#FFFFFF;border:1px solid var(--border);box-shadow:var(--shadow-card);}
+  .name{font-size:12px;font-weight:500;color:var(--text);}
+  .desc{font-size:11px;color:var(--text-muted);}
+</style></head><body>
+<div class="card">
+  <div class="demo"><div class="shape" style="border-radius:9999px;"></div><div class="name">--radius-pill</div><div class="desc">Buttons, pills, toggles</div></div>
+  <div class="demo"><div class="shape" style="border-radius:16px;"></div><div class="name">--radius-card · 16px</div><div class="desc">Cards, banners, modals</div></div>
+  <div class="demo"><div class="shape" style="border-radius:12px;"></div><div class="name">--radius-input · 12px</div><div class="desc">Inputs, brand mark tile</div></div>
+</div>
+</body></html>

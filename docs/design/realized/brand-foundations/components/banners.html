@@ -1,0 +1,84 @@
+<!doctype html><html data-theme="light"><head><meta charset="utf-8"><title>Banners</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  html,body{margin:0;background:var(--bg);color:#1A2E1F;}
+  .wrap{padding:20px 26px;display:flex;flex-direction:column;gap:11px;font-family:var(--font-sans);}
+  .b{
+    display:flex;align-items:flex-start;gap:11px;
+    padding:12px 14px 12px 12px;
+    border-radius:12px;
+    background:#FFFFFF;
+    border:1px solid var(--border);
+    box-shadow:0 1px 2px rgba(26,46,31,0.04);
+    font-size:13.5px;
+    color:#1A2E1F;
+    line-height:1.45;
+    position:relative;
+  }
+  .b::before{
+    content:'';position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:2px;
+  }
+  .b.success::before{background:#4A7C59;}
+  .b.error::before{background:#B8463E;}
+  .b.info::before{background:#C9A961;}
+  .b .ico{
+    width:18px;height:18px;flex-shrink:0;margin-top:1px;margin-left:6px;
+    display:inline-flex;align-items:center;justify-content:center;
+  }
+  .b b{font-weight:600;color:#1A2E1F;}
+  .b a{color:#1B4332;text-decoration:underline;text-decoration-color:#1B4332;text-underline-offset:2px;font-weight:500;}
+  .b .body{flex:1;}
+  .b .body .head{font-weight:600;color:#1A2E1F;}
+  .b .body .sub{color:#3A352B;font-size:12.5px;margin-top:2px;}
+
+  .b.forest{background:#1A2E1F;border-color:#0F2014;color:#F8F6F0;}
+  .b.forest::before{background:#C9A961;}
+  .b.forest b{color:#FFFFFF;}
+  .b.forest .body .head{color:#F8F6F0;font-weight:600;}
+  .b.forest .body .sub{color:#D4CFC0;}
+</style></head><body>
+<div class="wrap">
+
+  <div class="b success">
+    <span class="ico">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4A7C59" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 4 12 14.01l-3-3"/><circle cx="12" cy="12" r="10"/></svg>
+    </span>
+    <div class="body">
+      <div class="head">Sjekk e-posten din</div>
+      <div class="sub">Vi sendte en innloggingslenke til <b>sindre@example.com</b>. Den utløper om 15 minutter.</div>
+    </div>
+  </div>
+
+  <div class="b error">
+    <span class="ico">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B8463E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+    </span>
+    <div class="body">
+      <div class="head">Denne mailen er ikke registrert</div>
+      <div class="sub">Be administrator om en invitasjon, eller <a href="#">prøv en annen mail</a>.</div>
+    </div>
+  </div>
+
+  <div class="b info">
+    <span class="ico">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8C6A1F" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+    </span>
+    <div class="body">
+      <div class="head">3 hull mangler</div>
+      <div class="sub">Leverer du nå, går disse som <b>ikke spilt</b>. Sjekk hull 14, 15 og 16.</div>
+    </div>
+  </div>
+
+  <div class="b forest">
+    <span class="ico">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C9A961" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v6l3 2"/><circle cx="12" cy="12" r="10"/></svg>
+    </span>
+    <div class="body">
+      <div class="head">Turneringen starter 14:30</div>
+      <div class="sub">Første tee-tid om 38 minutter · 4 lag · 16 spillere</div>
+    </div>
+  </div>
+
+</div>
+</body></html>

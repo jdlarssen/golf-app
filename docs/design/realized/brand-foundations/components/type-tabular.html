@@ -1,0 +1,37 @@
+<!doctype html><html data-theme="light"><head><meta charset="utf-8"><title>Type — Tabular numerals</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  html,body{margin:0;background:var(--bg);}
+  .card{padding:22px 26px;display:grid;grid-template-columns:1fr 1fr;gap:30px;align-items:start;}
+  .col h5{font-family:var(--font-sans);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.18em;color:var(--text-muted);margin:0 0 10px 0;}
+  table{width:100%;font-family:var(--font-serif);font-weight:500;color:var(--text);font-size:18px;border-collapse:collapse;}
+  table td{padding:3px 0;}
+  table .h{width:40px;font-family:var(--font-sans);font-size:11px;font-weight:500;color:var(--text-muted);}
+  .tab{font-variant-numeric:tabular-nums;}
+  .lead{font-family:var(--font-serif);font-weight:500;font-size:40px;color:var(--text);line-height:1;}
+  .lead-row{display:flex;align-items:baseline;gap:16px;padding:4px 0;}
+  .lead-row .team{font-family:var(--font-serif);font-weight:500;font-size:18px;color:var(--text);flex:1;}
+  .lead-row .total{font-family:var(--font-serif);font-weight:500;font-size:28px;color:var(--text);}
+  .note{font-family:var(--font-sans);font-size:11px;color:var(--text-muted);margin-top:8px;}
+</style></head><body>
+<div class="card">
+  <div class="col">
+    <h5>Without tabular-nums</h5>
+    <table>
+      <tr><td class="h">1</td><td>4</td><td class="h">10</td><td>5</td></tr>
+      <tr><td class="h">2</td><td>5</td><td class="h">11</td><td>3</td></tr>
+      <tr><td class="h">3</td><td>3</td><td class="h">12</td><td>6</td></tr>
+    </table>
+  </div>
+  <div class="col">
+    <h5>With <span style="color:var(--accent);">.tabular-nums</span></h5>
+    <table class="tab">
+      <tr><td class="h">1</td><td>4</td><td class="h">10</td><td>5</td></tr>
+      <tr><td class="h">2</td><td>5</td><td class="h">11</td><td>3</td></tr>
+      <tr><td class="h">3</td><td>3</td><td class="h">12</td><td>6</td></tr>
+    </table>
+    <div class="note">All scorecards, totals, hole counters — always tabular.</div>
+  </div>
+</div>
+</body></html>

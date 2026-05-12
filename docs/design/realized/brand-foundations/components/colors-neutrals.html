@@ -1,0 +1,19 @@
+<!doctype html><html data-theme="light"><head><meta charset="utf-8"><title>Colors — Neutrals</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  html,body{margin:0;background:var(--bg);}
+  .card{padding:22px 24px;display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
+  .sw{display:flex;flex-direction:column;gap:6px;}
+  .chip{height:72px;border-radius:14px;border:1px solid var(--border);}
+  .name{font-family:var(--font-sans);font-size:12px;font-weight:500;color:var(--text);}
+  .hex{font-family:var(--font-sans);font-size:10.5px;color:var(--text-muted);font-variant-numeric:tabular-nums;}
+</style></head><body>
+<div class="card">
+  <div class="sw"><div class="chip" style="background:#F8F6F0"></div><div class="name">--bg</div><div class="hex">#F8F6F0 linen</div></div>
+  <div class="sw"><div class="chip" style="background:#FFFFFF"></div><div class="name">--surface</div><div class="hex">#FFFFFF</div></div>
+  <div class="sw"><div class="chip" style="background:#E5E0D3"></div><div class="name">--border</div><div class="hex">#E5E0D3 beige</div></div>
+  <div class="sw"><div class="chip" style="background:#5C5347"></div><div class="name">--text-muted</div><div class="hex">#5C5347 taupe</div></div>
+  <div class="sw"><div class="chip" style="background:#1A2E1F"></div><div class="name">--text</div><div class="hex">#1A2E1F forest</div></div>
+</div>
+</body></html>

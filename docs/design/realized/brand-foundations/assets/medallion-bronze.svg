@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56" fill="none">
+  <title>3rd place medallion — bronze</title>
+  <defs>
+    <radialGradient id="bronzeSheen" cx="35%" cy="30%" r="65%">
+      <stop offset="0" stop-color="#D2A07B"></stop>
+      <stop offset="0.6" stop-color="#A8714B"></stop>
+      <stop offset="1" stop-color="#6F4A2F"></stop>
+    </radialGradient>
+  </defs>
+  <circle cx="28" cy="28" r="24" fill="url(#bronzeSheen)"></circle>
+  <circle cx="28" cy="28" r="24" fill="none" stroke="#6F4A2F" stroke-width="1"></circle>
+  <text x="28" y="38" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-size="22" font-weight="500" fill="#F8F6F0">3</text>
+</svg>

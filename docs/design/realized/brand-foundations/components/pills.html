@@ -1,0 +1,83 @@
+<!doctype html><html data-theme="light"><head><meta charset="utf-8"><title>Status pills</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  html,body{margin:0;background:#F8F6F0;color:#1A2E1F;}
+  .wrap{padding:20px 24px;display:flex;flex-direction:column;gap:8px;font-family:Inter,sans-serif;}
+  /* each pill sits inside its real-world container */
+  .ctx{display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:12px;border:1px solid #E5E0D3;}
+  .ctx.white{background:#FFFFFF;}
+  .ctx.linen{background:#F4EFE2;}
+  .ctx.forest{background:#1A2E1F;border-color:#0F2014;color:#F0EDE5;}
+  .ctx-name{font-size:11px;color:#5C5347;flex:1;}
+  .ctx.forest .ctx-name{color:#C7BFB0;}
+  .where{font-size:9.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#8C8472;padding:6px 4px 2px;}
+
+  .pill2{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:3px 9px 3px 8px;
+    font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.18em;
+    border-radius:9999px;border:1px solid;line-height:1.2;white-space:nowrap;
+  }
+  .pill2 .dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+
+  /* on white card */
+  .pill2.active   { color:#1B4332; border-color:rgba(27,67,50,.30); background:#E8EFE8; }
+  .pill2.active .dot   { background:#1B4332; box-shadow:0 0 0 2px rgba(27,67,50,.12); animation:pulse 2s infinite; }
+  .pill2.draft    { color:#8C6A1F; border-color:rgba(216,155,58,.45); background:#FCF4E2; }
+  .pill2.draft .dot    { background:#D89B3A; }
+  .pill2.finished { color:#5C5347; border-color:#E5E0D3; background:#F4EFE2; }
+  .pill2.finished .dot { background:#A89F92; }
+  .pill2.accent   { color:#7A5F20; border-color:rgba(201,169,97,.55); background:#FAF1D8; }
+  .pill2.accent .dot   { background:#C9A961; }
+  .pill2.danger   { color:#7E2C26; border-color:rgba(184,70,62,.40); background:#F9E5E2; }
+  .pill2.danger .dot   { background:#B8463E; }
+
+  /* on dark forest header */
+  .pill2.on-dark{ background:rgba(248,246,240,0.10); border-color:rgba(248,246,240,0.20); color:#F8F6F0; }
+  .pill2.on-dark .dot{ background:#C9A961; box-shadow:0 0 0 2px rgba(201,169,97,0.20); }
+
+  /* solid winners */
+  .pill2.solid-gold{ color:#3D2C0C; background:#C9A961; border-color:#A88840; padding:3px 11px; }
+  .pill2.solid-gold::before{content:'★';font-size:9px;letter-spacing:0;}
+  .pill2.solid-forest{ color:#F8F6F0; background:#1B4332; border-color:#0F2A1E; padding:3px 11px; }
+
+  /* numeric */
+  .pill2.numeric{ font-family:'Fraunces',serif; letter-spacing:0; text-transform:none; font-size:11px; padding:2px 8px; font-weight:600; font-variant-numeric:tabular-nums; }
+  .pill2.numeric.over{ color:#7A5F20; border-color:rgba(201,169,97,.55); background:#FAF1D8; }
+  .pill2.numeric.under{ color:#2F5E3F; border-color:rgba(74,124,89,.50); background:#E2EDE5; }
+
+  @keyframes pulse{
+    0%,100%{box-shadow:0 0 0 2px rgba(27,67,50,.12);}
+    50%   {box-shadow:0 0 0 4px rgba(27,67,50,.04);}
+  }
+</style></head><body>
+<div class="wrap">
+
+  <div class="where">På hvitt kort (default surface)</div>
+  <div class="ctx white">
+    <span class="pill2 active"><span class="dot"></span>Pågående</span>
+    <span class="pill2 draft"><span class="dot"></span>Utkast</span>
+    <span class="pill2 finished"><span class="dot"></span>Avsluttet</span>
+    <span class="pill2 accent"><span class="dot"></span>Du leder</span>
+    <span class="pill2 danger"><span class="dot"></span>Ikke godkjent</span>
+  </div>
+
+  <div class="where">Solid varianter (kun på leaderboard / vinnere)</div>
+  <div class="ctx white">
+    <span class="pill2 solid-gold">Vinner</span>
+    <span class="pill2 solid-forest">Du</span>
+    <span class="pill2 numeric over">+2</span>
+    <span class="pill2 numeric under">−3</span>
+    <span class="ctx-name">Numeriske pills i Fraunces tabular for score-deltas.</span>
+  </div>
+
+  <div class="where">På forest header (admin / sekretariatet)</div>
+  <div class="ctx forest">
+    <span class="pill2 on-dark"><span class="dot"></span>Live</span>
+    <span class="pill2 solid-gold">Vinner</span>
+    <span class="ctx-name">På forest: bytt til transparent rgba(linen,.10) + champagne prikk.</span>
+  </div>
+
+</div>
+</body></html>

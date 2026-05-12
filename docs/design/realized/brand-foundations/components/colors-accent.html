@@ -1,0 +1,33 @@
+<!doctype html><html data-theme="light"><head><meta charset="utf-8"><title>Colors — Champagne accent</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  html,body{margin:0;background:var(--bg);}
+  .card{padding:22px 24px;display:grid;grid-template-columns:240px 1fr;gap:24px;align-items:center;}
+  .hero{height:170px;border-radius:16px;background:linear-gradient(135deg,#C9A961 0%,#9C7E3F 100%);display:flex;align-items:center;justify-content:center;color:#1A2E1F;font-family:var(--font-serif);font-size:78px;font-weight:500;box-shadow:var(--shadow-leader);}
+  .rules{font-family:var(--font-sans);}
+  .rules h4{font-family:var(--font-serif);font-weight:500;font-size:18px;margin:0 0 6px 0;color:var(--text);}
+  .rules .role{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.18em;color:var(--accent);margin-bottom:4px;}
+  .rules ul{margin:0;padding-left:18px;font-size:13px;color:var(--text-muted);line-height:1.55;}
+  .rules ul li::marker{color:var(--accent);}
+  .hexes{margin-top:8px;display:flex;gap:14px;font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums;}
+  .dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:middle;}
+</style></head><body>
+<div class="card">
+  <div class="hero">★</div>
+  <div class="rules">
+    <div class="role">Champagne · winners only</div>
+    <h4>--accent #C9A961</h4>
+    <ul>
+      <li>1<sup>st</sup>-place leaderboard card border + glow</li>
+      <li>Focus rings on inputs (40% opacity)</li>
+      <li>Admin section labels</li>
+      <li>Never as background for entire screens</li>
+    </ul>
+    <div class="hexes">
+      <span><span class="dot" style="background:#C9A961"></span>#C9A961 light</span>
+      <span><span class="dot" style="background:#D4B870"></span>#D4B870 dark mode</span>
+    </div>
+  </div>
+</div>
+</body></html>

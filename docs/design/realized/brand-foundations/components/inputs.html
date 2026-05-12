@@ -1,0 +1,97 @@
+<!doctype html><html data-theme="light"><head><meta charset="utf-8"><title>Inputs</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  html,body{margin:0;background:var(--bg);color:#1A2E1F;}
+  .card{padding:22px 26px;display:flex;flex-direction:column;gap:16px;font-family:var(--font-sans);}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  .field{display:flex;flex-direction:column;gap:6px;}
+  label{
+    font-family:'Fraunces',Georgia,serif;
+    font-size:15px;
+    font-weight:500;
+    color:#1A2E1F;
+    letter-spacing:-0.005em;
+    line-height:1.2;
+    display:flex;align-items:baseline;gap:6px;
+  }
+  .req{color:#C9A961;font-family:'Inter',sans-serif;font-size:10px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;}
+  input{
+    font-family:var(--font-sans);
+    font-size:15px;
+    font-weight:500;
+    padding:11px 14px;
+    border-radius:12px;
+    border:1px solid var(--border);
+    background:#FFFFFF;
+    color:#1A2E1F;
+    outline:none;
+    transition:border-color 150ms, box-shadow 150ms;
+    line-height:1.2;
+  }
+  input::placeholder{color:#A89F92;font-weight:400;}
+  input:hover{border-color:#CDC3A8;}
+  input:focus{border-color:#C9A961;box-shadow:0 0 0 3px rgba(201,169,97,0.25);}
+  input.num{font-family:'Fraunces',serif;font-weight:600;font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1,'ss01' 1;font-size:17px;}
+  input.err{border-color:#B8463E;background:#FCF6F4;}
+  input.err:focus{box-shadow:0 0 0 3px rgba(184,70,62,0.18);}
+  .hint{font-size:12px;color:#5C5347;line-height:1.45;}
+  .err-msg{font-size:12px;color:#9C3A33;font-weight:500;display:flex;align-items:center;gap:5px;}
+  .pre{
+    display:flex;align-items:stretch;
+    border:1px solid var(--border);border-radius:12px;background:#fff;overflow:hidden;
+  }
+  .pre:focus-within{border-color:#C9A961;box-shadow:0 0 0 3px rgba(201,169,97,0.25);}
+  .pre .prefix{
+    padding:0 12px;display:flex;align-items:center;
+    font-size:13px;color:#1A2E1F;background:#F4EFE2;border-right:1px solid var(--border);
+    font-weight:500;font-family:Inter,sans-serif;
+  }
+  .pre input{border:none;box-shadow:none;border-radius:0;flex:1;padding-left:12px;}
+  .pre input:focus{box-shadow:none;}
+</style></head><body>
+<div class="card">
+
+  <div class="row">
+    <div class="field">
+      <label>E-post<span class="req">påkrevd</span></label>
+      <input type="email" value="sindre@example.com">
+      <span class="hint">Vi sender deg en innloggingslenke</span>
+    </div>
+    <div class="field">
+      <label>Handicap-index</label>
+      <input class="num" type="text" value="12.4">
+      <span class="hint">Tallet du har i Golfbox akkurat nå</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <label>Klubb</label>
+      <div class="pre"><span class="prefix">Klubb</span><input type="text" value="Stiklestad GK"></div>
+    </div>
+    <div class="field">
+      <label>E-post · feilstate</label>
+      <input class="err" type="email" value="ikke en mail">
+      <span class="err-msg">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+        Mailadressen mangler @-tegn.
+      </span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <label>Nickname</label>
+      <input type="text" value="" placeholder="«Slice», «Putter», …">
+      <span class="hint">Kallenavnet flight-en bruker</span>
+    </div>
+    <div class="field">
+      <label>Spill-passord<span class="req">påkrevd</span></label>
+      <input class="num" type="text" value="STIKL2025">
+      <span class="hint">Send dette til medspillerne</span>
+    </div>
+  </div>
+
+</div>
+</body></html>

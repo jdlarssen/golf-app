@@ -1,0 +1,22 @@
+<!doctype html><html data-theme="light"><head><meta charset="utf-8"><title>Spacing tokens</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  html,body{margin:0;background:var(--bg);}
+  .card{padding:20px 26px;display:flex;flex-direction:column;gap:8px;font-family:var(--font-sans);}
+  .row{display:flex;align-items:center;gap:14px;}
+  .bar{height:14px;background:linear-gradient(135deg,#1B4332,#2D5A40);border-radius:4px;}
+  .name{width:70px;font-size:11.5px;color:var(--text);font-weight:500;font-variant-numeric:tabular-nums;}
+  .px{margin-left:auto;font-size:10.5px;color:var(--text-muted);font-variant-numeric:tabular-nums;}
+</style></head><body>
+<div class="card">
+  <div class="row"><span class="name">space-1</span><div class="bar" style="width:4px"></div><span class="px">4px</span></div>
+  <div class="row"><span class="name">space-2</span><div class="bar" style="width:8px"></div><span class="px">8px</span></div>
+  <div class="row"><span class="name">space-3</span><div class="bar" style="width:12px"></div><span class="px">12px · row gap</span></div>
+  <div class="row"><span class="name">space-4</span><div class="bar" style="width:16px"></div><span class="px">16px</span></div>
+  <div class="row"><span class="name">space-5</span><div class="bar" style="width:20px"></div><span class="px">20px · page padding</span></div>
+  <div class="row"><span class="name">space-6</span><div class="bar" style="width:24px"></div><span class="px">24px · card padding</span></div>
+  <div class="row"><span class="name">space-7</span><div class="bar" style="width:28px"></div><span class="px">28px · card padding sm:</span></div>
+  <div class="row"><span class="name">space-8</span><div class="bar" style="width:32px"></div><span class="px">32px · section break</span></div>
+</div>
+</body></html>

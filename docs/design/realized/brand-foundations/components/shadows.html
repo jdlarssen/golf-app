@@ -1,0 +1,20 @@
+<!doctype html><html data-theme="light"><head><meta charset="utf-8"><title>Shadows</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  html,body{margin:0;background:var(--bg);}
+  .card{padding:28px;display:grid;grid-template-columns:repeat(3,1fr);gap:18px;font-family:var(--font-sans);}
+  .demo{display:flex;flex-direction:column;align-items:center;gap:10px;}
+  .tile{width:140px;height:72px;background:#FFFFFF;border:1px solid var(--border);border-radius:14px;}
+  .name{font-size:11.5px;font-weight:500;color:var(--text);}
+  .desc{font-size:10.5px;color:var(--text-muted);text-align:center;line-height:1.4;}
+</style></head><body>
+<div class="card">
+  <div class="demo"><div class="tile" style="box-shadow:0 1px 2px rgba(26,46,31,.04),0 2px 8px rgba(26,46,31,.04);"></div>
+    <div class="name">--shadow-card</div><div class="desc">0 1px 2px / 0 2px 8px<br>forest-tinted, low blur</div></div>
+  <div class="demo"><div class="tile" style="border-color:#C9A961;box-shadow:0 2px 12px rgba(201,169,97,.15);"></div>
+    <div class="name">--shadow-leader</div><div class="desc">0 2px 12px champagne<br>1st place only</div></div>
+  <div class="demo"><div class="tile" style="box-shadow:0 1px 0 rgba(26,46,31,.06);"></div>
+    <div class="name">--shadow-press</div><div class="desc">0 1px 0 forest<br>hairline drop</div></div>
+</div>
+</body></html>

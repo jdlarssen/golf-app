@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56" fill="none">
+  <title>1st place medallion — champagne</title>
+  <defs>
+    <radialGradient id="goldSheen" cx="35%" cy="30%" r="65%">
+      <stop offset="0" stop-color="#E6C988"></stop>
+      <stop offset="0.55" stop-color="#C9A961"></stop>
+      <stop offset="1" stop-color="#9C7E3F"></stop>
+    </radialGradient>
+  </defs>
+  <circle cx="28" cy="28" r="24" fill="url(#goldSheen)"></circle>
+  <circle cx="28" cy="28" r="24" fill="none" stroke="#9C7E3F" stroke-width="1"></circle>
+  <circle cx="28" cy="28" r="18" fill="none" stroke="#9C7E3F" stroke-width="0.75" opacity="0.55"></circle>
+  <text x="28" y="38" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-size="22" font-weight="500" fill="#1A2E1F">1</text>
+</svg>

@@ -1,0 +1,103 @@
+<!doctype html><html data-theme="light"><head><meta charset="utf-8"><title>Cards</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  html,body{margin:0;background:var(--bg);color:#1A2E1F;}
+  .grid{padding:18px 22px;display:grid;grid-template-columns:1fr 1fr;gap:14px;font-family:var(--font-sans);}
+  .c{
+    background:#FFFFFF;
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:16px 18px;
+    box-shadow:0 1px 2px rgba(26,46,31,0.04), 0 2px 8px rgba(26,46,31,0.03);
+    color:#1A2E1F;
+  }
+  .c.leader{
+    background:#FFFFFF;
+    border-color:rgba(201,169,97,0.65);
+    box-shadow:0 2px 12px rgba(201,169,97,0.18), 0 1px 2px rgba(26,46,31,0.04);
+    position:relative;
+    overflow:hidden;
+  }
+  .c.leader::before{
+    content:'';position:absolute;top:0;left:14px;right:14px;height:1px;
+    background:linear-gradient(90deg, transparent, #C9A961, transparent);
+  }
+  .c.leader .kicker.gold{display:inline-flex;align-items:center;gap:6px;color:#8C6A1F;}
+  .c.leader .kicker.gold::before{content:'';width:5px;height:5px;border-radius:50%;background:#C9A961;}
+  .c.me{
+    background:#F1EFE6;             /* warm linen, slightly tinted — not pale-green */
+    border-color:#DDD5C0;
+  }
+  .c.me .pin{
+    display:inline-block;width:6px;height:6px;border-radius:50%;background:#1B4332;margin-right:7px;vertical-align:middle;
+  }
+  .title{font-family:'Fraunces',serif;font-weight:500;font-size:17px;color:#1A2E1F;line-height:1.2;}
+  .meta{font-size:12.5px;color:#5C5347;margin-top:4px;line-height:1.4;}
+  .meta b{color:#1A2E1F;font-weight:500;}
+  .kicker{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.20em;color:#5C5347;margin-bottom:7px;}
+  .kicker.gold{color:#8C7235;}
+  .row{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;}
+  .num{font-family:'Fraunces',serif;font-weight:600;font-size:30px;color:#1A2E1F;font-variant-numeric:tabular-nums;line-height:1;letter-spacing:-0.01em;}
+  .num .par{color:#8C7235;font-size:14px;font-weight:500;margin-left:3px;}
+
+  /* table card */
+  .c.table{padding:0;overflow:hidden;}
+  .c.table .h{padding:14px 18px 8px;}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  table thead th{
+    padding:7px 18px;text-align:left;color:#5C5347;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.16em;
+    background:#F4EFE2;border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+  }
+  table thead th.r{text-align:right;}
+  table tbody td{padding:8px 18px;color:#1A2E1F;border-top:1px solid #F0EBDE;}
+  table tbody td.r{text-align:right;font-family:Fraunces,serif;font-weight:600;font-variant-numeric:tabular-nums;}
+  table tbody tr:first-child td{border-top:none;}
+</style></head><body>
+<div class="grid">
+
+  <!-- Default -->
+  <div class="c">
+    <div class="kicker">Pågående</div>
+    <div class="title">Stiklestad Open</div>
+    <div class="meta">Stiklestad GK · <b>Lag 2</b> · Flight 1 av 4</div>
+  </div>
+
+  <!-- Leader -->
+  <div class="c leader">
+    <div class="kicker gold">1. plass</div>
+    <div class="row">
+      <div>
+        <div class="title">Lag 2 — Birdiekameratene</div>
+        <div class="meta">Sindre, Kari, Ole, Inga</div>
+      </div>
+      <div class="num">−4<span class="par">net</span></div>
+    </div>
+  </div>
+
+  <!-- Me row -->
+  <div class="c me">
+    <div class="kicker"><span class="pin"></span>Det er deg</div>
+    <div class="title">Sindre <span style="color:#5C5347;font-style:italic;font-weight:400;font-size:14px;">«Slice»</span></div>
+    <div class="meta">+1 slag · 12.4 hcp · spiller fra hvit tee</div>
+  </div>
+
+  <!-- Table card -->
+  <div class="c table">
+    <div class="h">
+      <div class="kicker">Scorekort</div>
+      <div class="title">Ut · hull 1–4</div>
+    </div>
+    <table>
+      <thead><tr><th>Hull</th><th class="r">Par</th><th class="r">Slag</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td class="r">4</td><td class="r">4</td></tr>
+        <tr><td>2</td><td class="r">3</td><td class="r">3</td></tr>
+        <tr><td>3</td><td class="r">5</td><td class="r">6</td></tr>
+        <tr><td>4</td><td class="r">4</td><td class="r">4</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+</body></html>

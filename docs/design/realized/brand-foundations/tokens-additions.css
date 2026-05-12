@@ -1,0 +1,126 @@
+/* =============================================================================
+ * Tørny — Brand Foundations · token additions
+ *
+ * MERGE these into existing app/globals.css. They extend the base token surface
+ * with three new concepts:
+ *   1. Score-numerikk weight  (Fraunces 600, not 500)
+ *   2. Klubbhus-natt dark mode (warm, not cold-grey)
+ *   3. Color-ratio documentation (80/15/5 linen·forest·champagne)
+ *
+ * Nothing here REPLACES existing tokens — it adds. Safe to drop in.
+ * ===========================================================================*/
+
+:root {
+
+  /* ── Font weights — explicit named scale ───────────────────────────────── */
+  /*  Use these instead of bare 500/600 in component code so the rule
+   *  "score-tall = 600, alt annet serif = 500" is one place to change.    */
+  --fw-serif-display:  500;   /* headings, names, taglines */
+  --fw-serif-score:    600;   /* numbers: score, par, hcp, indeks, time   */
+  --fw-sans-body:      400;
+  --fw-sans-label:     500;
+  --fw-sans-strong:    600;
+
+  /* ── Color-ratio rule (80 / 15 / 5) — documented as data ───────────────── */
+  /*  Linen     : 80 % — backgrounds, surface fills, cards on screen          */
+  /*  Forest    : 15 % — CTAs, brand-mark, key headings, T-tile               */
+  /*  Champagne :  5 % — winners, eyebrow labels, "par"-accent, hairlines     */
+  /*  If a screen blows past 5 % champagne, it has become a casino, not a    */
+  /*  clubhouse. Audit and pull back.                                         */
+
+}
+
+/* =============================================================================
+ * Score-numerikk — apply wherever a NUMBER is the protagonist of a screen.
+ * Hero hull number, hole-strip, leaderboard total, scorecard cells, hcp index.
+ * ===========================================================================*/
+
+.score-num,
+.fraunces-num {
+  font-family: var(--font-serif);
+  font-weight: var(--fw-serif-score);           /* 600, not 500 */
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1, 'ss01' 1;    /* tabular + flat-top 1 */
+  letter-spacing: -0.005em;                     /* slight tighten at large sizes */
+}
+
+/* Number that appears INSIDE a sentence (e.g. "spilte 7 over par").
+ * Keep the body face but force tabular so 7/17/77 column-align cleanly.   */
+.inline-num {
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* =============================================================================
+ * Klubbhus-natt — dark mode. NOT cold-grey. NOT pure black.
+ *
+ * Replaces the existing [data-theme='dark'] block. The base is a warm,
+ * deep-forest near-black with a slight green cast (#14201A) — feels like
+ * a clubhouse at night, lit by brass sconces.
+ * ===========================================================================*/
+
+[data-theme='dark'].klubbhus-natt,
+[data-theme='klubbhus-natt'] {
+  --bg:             #14201a;   /* clubhouse-night forest-black */
+  --surface:        #1c2a22;   /* one step lighter for cards */
+  --surface-2:      #243429;   /* two steps for elevated surfaces (menus) */
+  --border:         #2f3f34;   /* warm hairline, not grey */
+  --text:           #ece5d2;   /* warm linen, NOT pure white */
+  --text-muted:     #9a9180;   /* taupe at night */
+  --primary:        #7eaa80;   /* sage — softer than daytime forest */
+  --primary-hover:  #94bf96;
+  --primary-soft:   #1f2c24;
+  --accent:         #d4b870;   /* dimmed champagne — keeps the glow */
+  --fg-on-primary:  #14201a;
+  --fg-on-accent:   #14201a;
+  --success:        #7daa8a;
+  --danger:         #d67268;
+  --warning:        #e5b26f;
+  --focus-ring:     rgba(212, 184, 112, 0.45);
+
+  /* Warm-tinted shadows — at night, shadows have a hint of green not grey */
+  --shadow-card:    0 1px 2px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.25);
+  --shadow-leader:  0 2px 14px rgba(212, 184, 112, 0.22);
+  --shadow-press:   0 1px 0 rgba(0,0,0,0.5);
+}
+
+/* =============================================================================
+ * Font loading — drop into <head>. Variable axes are explicit.
+ *
+ * `opsz` 9..144 lets Fraunces optical-size from caption (9px) to display (144px).
+ * Browsers pick the right grade automatically based on font-size.
+ *
+ * `display=swap` keeps first paint instant; swap-in is < 200ms on cached.
+ * `subset=latin-ext` is REQUIRED for ø/å/æ to render correctly.
+ * ===========================================================================*/
+
+/*
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..600&family=Inter:wght@400..600&display=swap&subset=latin-ext"
+  />
+*/
+
+/* For Next.js — use `next/font/google`:
+
+   import { Fraunces, Inter } from 'next/font/google'
+
+   export const fraunces = Fraunces({
+     subsets: ['latin', 'latin-ext'],
+     weight: ['400', '500', '600'],
+     axes: ['opsz'],
+     display: 'swap',
+     variable: '--font-serif',
+     adjustFontFallback: 'Times New Roman',
+   })
+
+   export const inter = Inter({
+     subsets: ['latin', 'latin-ext'],
+     weight: ['400', '500', '600'],
+     display: 'swap',
+     variable: '--font-sans',
+   })
+*/

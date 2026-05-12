@@ -1,0 +1,28 @@
+<!doctype html><html data-theme="light"><head><meta charset="utf-8"><title>Iconography</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  html,body{margin:0;background:#F8F6F0;font-family:Inter,system-ui,sans-serif;}
+  .grid{padding:18px 26px;display:grid;grid-template-columns:repeat(6,1fr);gap:14px 12px;align-items:start;}
+  .ico{display:flex;flex-direction:column;align-items:center;gap:6px;background:#fff;border:1px solid #E5E0D3;border-radius:12px;padding:12px 6px;}
+  .ico svg{stroke:#1A2E1F;width:22px;height:22px;}
+  .name{font-size:10.5px;color:#5C5347;font-weight:500;}
+  .head{grid-column:1 / -1;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.18em;color:#5C5347;}
+</style></head><body>
+<div class="grid">
+  <div class="head">Lucide · stroke 1.5 · currentColor</div>
+  <div class="ico"><i data-lucide="trophy"></i><span class="name">finished</span></div>
+  <div class="ico"><i data-lucide="award"></i><span class="name">winner</span></div>
+  <div class="ico"><i data-lucide="flag"></i><span class="name">hull</span></div>
+  <div class="ico"><i data-lucide="target"></i><span class="name">SI</span></div>
+  <div class="ico"><i data-lucide="users"></i><span class="name">flight</span></div>
+  <div class="ico"><i data-lucide="map-pin"></i><span class="name">bane</span></div>
+  <div class="ico"><i data-lucide="check"></i><span class="name">synced</span></div>
+  <div class="ico"><i data-lucide="cloud-arrow-up" data-lucide-fallback="cloud"></i><span class="name">syncing</span></div>
+  <div class="ico"><i data-lucide="triangle-alert"></i><span class="name">warning</span></div>
+  <div class="ico"><i data-lucide="mail"></i><span class="name">invite</span></div>
+  <div class="ico"><i data-lucide="arrow-right"></i><span class="name">next</span></div>
+  <div class="ico"><i data-lucide="log-out"></i><span class="name">logout</span></div>
+</div>
+<script>lucide.createIcons({attrs:{'stroke-width':1.5}});</script>
+</body></html>

@@ -1,0 +1,22 @@
+<!doctype html><html data-theme="light"><head><meta charset="utf-8"><title>Colors — Semantic</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  html,body{margin:0;background:var(--bg);}
+  .card{padding:20px 24px;display:flex;flex-direction:column;gap:12px;}
+  .row{display:flex;gap:14px;align-items:center;}
+  .chip{width:64px;height:40px;border-radius:10px;flex:none;}
+  .meta{font-family:var(--font-sans);}
+  .name{font-size:13px;font-weight:500;color:var(--text);}
+  .desc{font-size:11.5px;color:var(--text-muted);margin-top:1px;}
+  .hex{font-family:var(--font-sans);font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums;margin-left:auto;}
+</style></head><body>
+<div class="card">
+  <div class="row"><div class="chip" style="background:#4A7C59"></div>
+    <div class="meta"><div class="name">success · sage</div><div class="desc">Synced dot, success banners</div></div><div class="hex">#4A7C59</div></div>
+  <div class="row"><div class="chip" style="background:#D89B3A"></div>
+    <div class="meta"><div class="name">warning · amber</div><div class="desc">Unsynced dot, manglende hull</div></div><div class="hex">#D89B3A</div></div>
+  <div class="row"><div class="chip" style="background:#B8463E"></div>
+    <div class="meta"><div class="name">danger · brick</div><div class="desc">Logg ut, destructive only</div></div><div class="hex">#B8463E</div></div>
+</div>
+</body></html>

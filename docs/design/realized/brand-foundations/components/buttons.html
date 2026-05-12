@@ -1,0 +1,162 @@
+<!doctype html><html data-theme="light"><head><meta charset="utf-8"><title>Buttons</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  html,body{margin:0;background:var(--bg);color:#1A2E1F;}
+  .card{padding:22px 28px;display:grid;grid-template-columns:auto 1fr;gap:12px 22px;align-items:center;font-family:var(--font-sans);}
+
+  .label{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.20em;color:#5C5347;white-space:nowrap;}
+  .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+
+  button{
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    font-weight:500;
+    letter-spacing:0.005em;
+    line-height:1;
+    padding:12px 20px;
+    border-radius:9999px;
+    border:1px solid transparent;
+    cursor:pointer;
+    transition:background-color 120ms, transform 100ms, box-shadow 120ms, color 120ms;
+    min-height:44px;
+    display:inline-flex;align-items:center;gap:8px;
+    color:#1A2E1F;
+  }
+  button:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(201,169,97,.40);}
+
+  /* PRIMARY — forest fill, champagne inner hairline, white text */
+  .primary{
+    background:#1B4332;
+    color:#F8F6F0;
+    border-color:#0F2A1E;
+    box-shadow:
+      inset 0 0 0 1px rgba(201,169,97,0.35),    /* champagne inner ring */
+      0 1px 0 rgba(255,255,255,0.06) inset,     /* subtle top highlight */
+      0 1px 2px rgba(26,46,31,0.18),
+      0 2px 6px rgba(26,46,31,0.08);
+  }
+  .primary:hover{background:#235540;transform:translateY(-1px);box-shadow:inset 0 0 0 1px rgba(201,169,97,.50), 0 2px 4px rgba(26,46,31,0.22), 0 4px 10px rgba(26,46,31,0.10);}
+  .primary:active{transform:translateY(0);box-shadow:inset 0 1px 2px rgba(0,0,0,0.18), inset 0 0 0 1px rgba(201,169,97,.50);}
+
+  /* PRIMARY · LARGE (hero CTA — login button) */
+  .primary.lg{padding:14px 26px;font-size:15px;font-weight:600;min-height:52px;}
+
+  /* SECONDARY — outline, deep forest text, hover fills with linen-darker */
+  .secondary{
+    background:#FFFFFF;
+    color:#1A2E1F;
+    border-color:#DCD4C2;
+    box-shadow:0 1px 0 rgba(26,46,31,0.04);
+  }
+  .secondary:hover{background:#F4EFE2;border-color:#C7BC9F;}
+  .secondary:active{background:#ECE5D2;}
+
+  /* DANGER — muted brick, NOT screaming red */
+  .danger{
+    background:#FFFFFF;
+    color:#9C3A33;
+    border-color:rgba(184,70,62,.40);
+  }
+  .danger:hover{background:#FBF1EF;border-color:#B8463E;}
+  .danger.solid{background:#9C3A33;color:#FCF2F0;border-color:#7E2C26;}
+  .danger.solid:hover{background:#B8463E;}
+
+  /* GHOST — transparent, subtle hover */
+  .ghost{background:transparent;color:#1A2E1F;border-color:#E5E0D3;padding:10px 14px;font-weight:600;}
+  .ghost:hover{background:rgba(26,46,31,0.05);border-color:#C9BFA6;}
+
+  /* TEXT LINK button (low-emphasis) */
+  .link{background:transparent;color:#1B4332;border:none;padding:6px 4px;min-height:0;font-weight:600;text-decoration:underline;text-decoration-color:#1B4332;text-underline-offset:3px;border-radius:6px;}
+  .link:hover{background:rgba(27,67,50,.06);}
+
+  /* ICON-ONLY (round, tactile) */
+  .icon-btn{
+    width:42px;height:42px;padding:0;min-height:42px;
+    background:#F4EFE2;border:1px solid #DCD4C2;color:#1A2E1F;border-radius:50%;
+    display:inline-flex;align-items:center;justify-content:center;
+    box-shadow:inset 0 -1px 0 rgba(26,46,31,0.06);
+  }
+  .icon-btn:hover{background:#ECE5D2;}
+
+  /* DISABLED — readable but clearly inert. Not transparent, slate-on-stone. */
+  .disabled{background:#E5E0D3;color:#A89F92;border-color:transparent;cursor:not-allowed;box-shadow:none;}
+  .disabled:hover{background:#E5E0D3;transform:none;}
+
+  /* LOADING — same shape, leading spinner, text dimmed */
+  .loading{position:relative;color:rgba(248,246,240,0.75);}
+  .loading::before{
+    content:'';width:13px;height:13px;border-radius:50%;
+    border:1.5px solid rgba(201,169,97,0.30);border-top-color:#C9A961;
+    animation:spin .8s linear infinite;
+    margin-right:2px;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* ACCENT/CHAMPAGNE (rare — winner CTAs only) */
+  .accent{
+    background:#C9A961;color:#3D2C0C;border-color:#A88840;
+    box-shadow:inset 0 0 0 1px rgba(248,246,240,0.30), 0 1px 2px rgba(26,46,31,0.12);
+    font-weight:600;
+  }
+  .accent:hover{background:#D4B870;}
+</style></head><body>
+<div class="card">
+
+  <span class="label">Primary · hero CTA</span>
+  <div class="row">
+    <button class="primary lg">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z" opacity=".0"/><path d="M22 6 12 13 2 6"/><path d="M2 6h20v12H2z"/></svg>
+      Send meg innloggingslenke
+    </button>
+  </div>
+
+  <span class="label">Primary</span>
+  <div class="row">
+    <button class="primary">Start runden</button>
+    <button class="primary loading">Lagrer…</button>
+  </div>
+
+  <span class="label">Secondary</span>
+  <div class="row">
+    <button class="secondary">Avbryt</button>
+    <button class="secondary">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h12"/></svg>
+      Filtrér
+    </button>
+  </div>
+
+  <span class="label">Danger</span>
+  <div class="row">
+    <button class="danger">Forlat spillet</button>
+    <button class="danger solid">Slett turnering</button>
+  </div>
+
+  <span class="label">Accent · winner</span>
+  <div class="row">
+    <button class="accent">Lever scorekort</button>
+  </div>
+
+  <span class="label">Ghost · link</span>
+  <div class="row">
+    <button class="ghost">Hjem</button>
+    <button class="link">Glemt passord?</button>
+  </div>
+
+  <span class="label">Icon</span>
+  <div class="row">
+    <button class="icon-btn" aria-label="Tilbake">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <button class="icon-btn" aria-label="Meny">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg>
+    </button>
+  </div>
+
+  <span class="label">Disabled</span>
+  <div class="row">
+    <button class="disabled" disabled>Bekreft alle scorer</button>
+  </div>
+
+</div>
+</body></html>
