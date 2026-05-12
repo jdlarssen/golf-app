@@ -20,13 +20,8 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
   - **Mellomting**: behold per-hull-routes, men flytt data-fetching til en parent layout (`app/games/[id]/layout.tsx`) som lever på tvers av hull-byttene — slik at game/players/course bare hentes én gang.
   - Mål først: legg på `console.time` rundt server-fetchene og se hvor sekundene faktisk går (database, Supabase-runda, Vercel-cold-start, eller client-hydrering). Velg arkitektur etter målingene.
 
-### Submit-flyt — for mange klikk etter hull 18
+### Recovery / admin overrides
 
-- [ ] **Direkte «Lever»-CTA fra scorekortet etter siste hull.** Dagens flyt etter hull 18: «Lever scorekort» (CTA på hull 18) → `/games/[id]/scorecard` → forventer en lever-knapp, men finner bare «Tilbake til hull 18» og «Til spilloversikt». For å faktisk levere må man gå Spilloversikt → «Gjennomgå og lever» → `/submit` → «Lever». Det er to ekstra hopp brukeren ikke forstår hvorfor må til. Ønsket flyt: når alle 18 hull er scoret, vis en primær «Lever scorekort»-knapp direkte på `/games/[id]/scorecard` (med en sekundær «Gå tilbake for å endre»-lenke). Beholder «Gjennomgå og lever» fra Spilloversikt som alternativ for de som vil ta runden om igjen senere. Rapportert av Jørgen 2026-05-12 under demo-test. Krever systematisk debugging-runde — sjekk om dagens scorecard-side allerede har en sub-rute eller om «Lever»-knappen bare må mounted direkte der.
-
-
-- [ ] UI for å «kansellere» en levering (admin reverserer `submitted_at` på en spiller). I dag krever det rå SQL.
-- [ ] UI for å gjenåpne et avsluttet spill (sette status tilbake til `active`). I dag krever det rå SQL.
 - [ ] UI for å slette et spill helt (ikke bare avslutte). I dag krever det rå SQL.
 
 ### Privacy / GDPR
