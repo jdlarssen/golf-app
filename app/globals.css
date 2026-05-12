@@ -217,6 +217,16 @@ body {
   font-feature-settings: 'ss01', 'cv11';
 }
 
+/* Headings avoid orphans (single dangling words on the last line); pullquotes
+ * balance to even line-lengths. Both degrade gracefully on older browsers. */
+h1, h2, h3, h4, h5, h6 {
+  text-wrap: pretty;
+}
+
+.pullquote {
+  text-wrap: balance;
+}
+
 /* Tabular numerals helper for numeric columns and big totals. */
 .tabular-nums {
   font-variant-numeric: tabular-nums;

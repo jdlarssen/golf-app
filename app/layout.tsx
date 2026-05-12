@@ -13,11 +13,13 @@ const inter = Inter({
 
 // Fraunces — display serif for h1/h2, brand mark, and big numbers on the
 // leaderboard. Includes the Norwegian glyphs we need (ø, å, æ, Ø, Å, Æ).
+// `opsz` is the only extra axis we want — SOFT/WONK introduce the very
+// ornament the brand foundations reject ("restraint over ornament").
 const fraunces = Fraunces({
   variable: "--font-fraunces",
   subsets: ["latin", "latin-ext"],
   display: "swap",
-  axes: ["opsz", "SOFT"],
+  axes: ["opsz"],
 });
 
 export const metadata: Metadata = {
