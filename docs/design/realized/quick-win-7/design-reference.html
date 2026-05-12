@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tørny · Iconset</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --primary: #1B4332;
+    --accent: #C9A961;
+    --accent-deep: #B89446;
+    --bg: #F8F6F0;
+    --admin-bg: #F5F1E4;
+    --surface: #FFFFFF;
+    --border: #E5E0D3;
+    --row-divider: #EDE6D2;
+    --text: #1A2E1F;
+    --text-muted: #5C5347;
+    --brass-top: #D3C9A6;
+    --brass-bottom: #E5E0D3;
+    --serif: 'Fraunces', Georgia, serif;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  body { padding: 40px 32px 80px; }
+  .wrap { max-width: 1040px; margin: 0 auto; }
+
+  /* ── Top ─────────────────────────── */
+  .kicker {
+    font: 600 10px/1 var(--sans);
+    letter-spacing: 0.20em;
+    text-transform: uppercase;
+    color: var(--accent-deep);
+  }
+  h1 {
+    font: 500 38px/1.05 var(--serif);
+    letter-spacing: -0.018em;
+    margin: 10px 0 4px;
+    color: var(--text);
+  }
+  .lede {
+    font: 400 14px/1.55 var(--sans);
+    color: var(--text-muted);
+    max-width: 60ch;
+    margin: 0 0 36px;
+  }
+  .lede em {
+    font: italic 500 14px var(--serif);
+    color: var(--text);
+  }
+
+  /* ── Brass ribbon ────────────────── */
+  .ribbon {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 48px 0 22px;
+  }
+  .ribbon .ribbon-line {
+    flex: 1;
+    height: 6px;
+    position: relative;
+  }
+  .ribbon .ribbon-line::before,
+  .ribbon .ribbon-line::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+  }
+  .ribbon .ribbon-line::before { top: 1px; background: var(--brass-top); }
+  .ribbon .ribbon-line::after  { top: 5px; background: var(--brass-bottom); }
+  .ribbon .ribbon-kicker {
+    font: 600 11px/1 var(--sans);
+    letter-spacing: 0.20em;
+    text-transform: uppercase;
+    color: var(--accent-deep);
+    white-space: nowrap;
+  }
+
+  /* ── Icon grid ──────────────────── */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--surface);
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(26,46,31,0.04), 0 2px 8px rgba(26,46,31,0.04);
+  }
+  .card {
+    padding: 28px 16px 22px;
+    border-right: 1px solid var(--row-divider);
+    border-bottom: 1px solid var(--row-divider);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    text-align: center;
+  }
+  .card:nth-child(5n) { border-right: none; }
+  .card:nth-child(n+6) { /* second row */ }
+  .card:nth-last-child(-n+5) { border-bottom: none; }
+
+  .glyph {
+    width: 44px;
+    height: 44px;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .glyph svg { width: 100%; height: 100%; display: block; }
+
+  .name {
+    font: 500 14px/1.15 var(--serif);
+    letter-spacing: -0.005em;
+    color: var(--text);
+  }
+  .use {
+    font: 400 11px/1.4 var(--sans);
+    color: var(--text-muted);
+  }
+
+  /* ── Variant strip ───────────────── */
+  .variants {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 4px;
+  }
+  .variant-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .variant-card .label {
+    font: 600 10px/1 var(--sans);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .variant-card .row {
+    display: flex;
+    align-items: flex-end;
+    gap: 22px;
+  }
+  .variant-card .row > div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .variant-card .row .glyph-sm {
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .variant-card .row .sz {
+    font: 500 10px/1 var(--sans);
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .variant-card.accent .glyph-sm { color: var(--accent-deep); }
+
+  /* ── In-context ─────────────────── */
+  .context-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .ctx {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .ctx-label {
+    font: 600 10px/1 var(--sans);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  /* Buttons inside context */
+  .btn-primary {
+    background: var(--primary);
+    color: #F0EDE5;
+    border: none;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font: 600 13px/1 var(--sans);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+  .btn-primary svg { width: 16px; height: 16px; color: var(--accent); }
+
+  .list-row {
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--row-divider);
+  }
+  .list-row:last-child { border-bottom: none; }
+  .list-row .icon { color: var(--primary); display: flex; align-items: center; }
+  .list-row .icon svg { width: 18px; height: 18px; }
+  .list-row .label2 { font: 500 14px/1.15 var(--serif); }
+  .list-row .meta { font: 500 11px/1 var(--sans); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+  .stamp-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    background: linear-gradient(180deg, #FBF7E8 0%, #F5EFDE 100%);
+    border: 1px solid #E5DDC2;
+    border-radius: 12px;
+  }
+  .stamp-header .icon { color: var(--accent-deep); }
+  .stamp-header .icon svg { width: 18px; height: 18px; }
+  .stamp-header .h {
+    font: 500 15px/1 var(--serif);
+    color: var(--text);
+  }
+  .stamp-header .m {
+    margin-left: auto;
+    font: 500 11px/1 var(--sans);
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pill-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px 6px 8px;
+    background: var(--admin-bg);
+    border: 1px solid var(--border);
+    border-radius: 9999px;
+    font: 500 12px/1 var(--sans);
+    color: var(--text);
+  }
+  .pill svg { width: 14px; height: 14px; color: var(--primary); }
+
+  /* ── Spec table ─────────────────── */
+  .spec {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 6px 18px;
+  }
+  .spec .row {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 18px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--row-divider);
+    align-items: baseline;
+  }
+  .spec .row:last-child { border-bottom: none; }
+  .spec .k {
+    font: 600 11px/1 var(--sans);
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .spec .v {
+    font: 400 13.5px/1.5 var(--sans);
+    color: var(--text);
+  }
+  .spec .v code {
+    font: 500 12.5px/1 'SF Mono', ui-monospace, monospace;
+    background: var(--admin-bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--text);
+  }
+
+  /* ── Footer quote ───────────────── */
+  .footer-quote {
+    text-align: center;
+    padding: 48px 24px 12px;
+    font: italic 500 13px/1.5 var(--serif);
+    color: var(--text-muted);
+  }
+
+  @media (max-width: 760px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+    .card { border-right: 1px solid var(--row-divider) !important; }
+    .card:nth-child(2n) { border-right: none !important; }
+    .variants, .context-grid { grid-template-columns: 1fr; }
+    .spec .row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="kicker">Tørny · Iconset</div>
+    <h1>Ti ikoner.</h1>
+    <p class="lede">Tegnet for Tørny. Konsistent strek på 1.5px, runde hjørner, 24×24 viewBox. Hvert ikon har en <em>outline-variant</em> for navigasjon og lister, og noen utvalgte har en <em>champagne-aksent</em> for vinnermomenter og fremhevinger.</p>
+  </header>
+
+  <!-- Brass ribbon: ikon-grid -->
+  <div class="ribbon">
+    <div class="ribbon-line"></div>
+    <div class="ribbon-kicker">Settet</div>
+    <div class="ribbon-line"></div>
+  </div>
+
+  <section class="grid">
+    <!-- 1. Flagg -->
+    <div class="card">
+      <div class="glyph">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="7" y1="3.5" x2="7" y2="20"/>
+          <line x1="4" y1="20" x2="11" y2="20"/>
+          <path d="M 7 4 L 16.5 6.5 L 7 10 Z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="name">Flagg</div>
+        <div class="use">Hull · Leaderboard</div>
+      </div>
+    </div>
+
+    <!-- 2. Utslag (tee + ball) -->
+    <div class="card">
+      <div class="glyph">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="6.5" r="3"/>
+          <path d="M 9.5 10 Q 12 11.4 14.5 10"/>
+          <path d="M 9.8 10 L 12 18 L 14.2 10"/>
+          <line x1="4" y1="20" x2="20" y2="20"/>
+        </svg>
+      </div>
+      <div>
+        <div class="name">Utslag</div>
+        <div class="use">Start · Tee-time</div>
+      </div>
+    </div>
+
+    <!-- 3. Pokal -->
+    <div class="card">
+      <div class="glyph">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M 8.5 4 L 15.5 4 L 15.5 11 Q 15.5 14.5 12 14.5 Q 8.5 14.5 8.5 11 Z"/>
+          <path d="M 8.5 5.5 Q 5.5 5.5 5.5 8 Q 5.5 10 8.5 10"/>
+          <path d="M 15.5 5.5 Q 18.5 5.5 18.5 8 Q 18.5 10 15.5 10"/>
+          <line x1="12" y1="14.5" x2="12" y2="17.5"/>
+          <line x1="8.5" y1="20" x2="15.5" y2="20"/>
+          <line x1="10" y1="17.5" x2="14" y2="17.5"/>
+        </svg>
+      </div>
+      <div>
+        <div class="name">Pokal</div>
+        <div class="use">Leaderboard · Arkiv</div>
+      </div>
+    </div>
+
+    <!-- 4. Scorekort -->
+    <div class="card">
+      <div class="glyph">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="5.5" y="5" width="13" height="16" rx="1.5"/>
+          <rect x="9.5" y="3" width="5" height="3.5" rx="0.75"/>
+          <line x1="8" y1="11" x2="16" y2="11"/>
+          <line x1="8" y1="14" x2="14" y2="14"/>
+          <line x1="8" y1="17" x2="15" y2="17"/>
+        </svg>
+      </div>
+      <div>
+        <div class="name">Scorekort</div>
+        <div class="use">Mitt kort · Lever</div>
+      </div>
+    </div>
+
+    <!-- 5. Bane -->
+    <div class="card">
+      <div class="glyph">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M 3 16 Q 8 12.5 12.5 14 Q 17 15.5 21 12"/>
+          <line x1="3" y1="20" x2="21" y2="20"/>
+          <line x1="14" y1="14" x2="14" y2="8.5"/>
+          <path d="M 14 8.7 L 18 9.7 L 14 11 Z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="name">Bane</div>
+        <div class="use">Admin · Banevelger</div>
+      </div>
+    </div>
+
+    <!-- 6. Konvolutt -->
+    <div class="card">
+      <div class="glyph">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="6" width="18" height="13" rx="1.75"/>
+          <path d="M 3.5 7.5 L 12 13.5 L 20.5 7.5"/>
+        </svg>
+      </div>
+      <div>
+        <div class="name">Konvolutt</div>
+        <div class="use">Magic link · Invitasjon</div>
+      </div>
+    </div>
+
+    <!-- 7. Laurbær -->
+    <div class="card">
+      <div class="glyph">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M 12 21 C 6 19 4 13 5 8 C 5.5 5.5 7 4 9 3.5"/>
+          <ellipse cx="6.2" cy="14.5" rx="2.2" ry="0.95" transform="rotate(-55 6.2 14.5)"/>
+          <ellipse cx="6.2" cy="10.5" rx="2.2" ry="0.95" transform="rotate(-65 6.2 10.5)"/>
+          <ellipse cx="7.6" cy="6.8" rx="2.0" ry="0.85" transform="rotate(-75 7.6 6.8)"/>
+          <path d="M 12 21 C 18 19 20 13 19 8 C 18.5 5.5 17 4 15 3.5"/>
+          <ellipse cx="17.8" cy="14.5" rx="2.2" ry="0.95" transform="rotate(55 17.8 14.5)"/>
+          <ellipse cx="17.8" cy="10.5" rx="2.2" ry="0.95" transform="rotate(65 17.8 10.5)"/>
+          <ellipse cx="16.4" cy="6.8" rx="2.0" ry="0.85" transform="rotate(75 16.4 6.8)"/>
+        </svg>
+      </div>
+      <div>
+        <div class="name">Laurbær</div>
+        <div class="use">Vinner · Resultat</div>
+      </div>
+    </div>
+
+    <!-- 8. Handicap -->
+    <div class="card">
+      <div class="glyph">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"/>
+          <circle cx="12" cy="12" r="5.5"/>
+          <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+        </svg>
+      </div>
+      <div>
+        <div class="name">Handicap</div>
+        <div class="use">Profil · HCP-indeks</div>
+      </div>
+    </div>
+
+    <!-- 9. Kølle -->
+    <div class="card">
+      <div class="glyph">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="14.5" y="2.8" width="4" height="2.6" rx="0.9"/>
+          <line x1="16.5" y1="5.4" x2="9.4" y2="14.6"/>
+          <path d="M 9.4 14.6 L 4.4 17.4 L 6.2 20.6 L 12.3 17.6 Z"/>
+          <line x1="5.5" y1="19" x2="11.2" y2="16.2"/>
+        </svg>
+      </div>
+      <div>
+        <div class="name">Kølle</div>
+        <div class="use">Format · Klubb</div>
+      </div>
+    </div>
+
+    <!-- 10. Kalender -->
+    <div class="card">
+      <div class="glyph">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="4" y="6" width="16" height="14" rx="1.75"/>
+          <line x1="4" y1="10.5" x2="20" y2="10.5"/>
+          <line x1="9" y1="4" x2="9" y2="8"/>
+          <line x1="15" y1="4" x2="15" y2="8"/>
+          <circle cx="12" cy="15" r="1.5" fill="currentColor" stroke="none"/>
+        </svg>
+      </div>
+      <div>
+        <div class="name">Kalender</div>
+        <div class="use">Dato · Tee-time</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Brass ribbon: varianter -->
+  <div class="ribbon">
+    <div class="ribbon-line"></div>
+    <div class="ribbon-kicker">Skala &amp; aksent</div>
+    <div class="ribbon-line"></div>
+  </div>
+
+  <div class="variants">
+    <div class="variant-card">
+      <div class="label">Outline · forest</div>
+      <div class="row">
+        <div>
+          <div class="glyph-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="7" y1="3.5" x2="7" y2="20"/><line x1="4" y1="20" x2="11" y2="20"/><path d="M 7 4 L 16.5 6.5 L 7 10 Z"/>
+            </svg>
+          </div>
+          <div class="sz">14</div>
+        </div>
+        <div>
+          <div class="glyph-sm">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="7" y1="3.5" x2="7" y2="20"/><line x1="4" y1="20" x2="11" y2="20"/><path d="M 7 4 L 16.5 6.5 L 7 10 Z"/>
+            </svg>
+          </div>
+          <div class="sz">18</div>
+        </div>
+        <div>
+          <div class="glyph-sm">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="7" y1="3.5" x2="7" y2="20"/><line x1="4" y1="20" x2="11" y2="20"/><path d="M 7 4 L 16.5 6.5 L 7 10 Z"/>
+            </svg>
+          </div>
+          <div class="sz">22</div>
+        </div>
+        <div>
+          <div class="glyph-sm">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="7" y1="3.5" x2="7" y2="20"/><line x1="4" y1="20" x2="11" y2="20"/><path d="M 7 4 L 16.5 6.5 L 7 10 Z"/>
+            </svg>
+          </div>
+          <div class="sz">32</div>
+        </div>
+        <div>
+          <div class="glyph-sm">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="7" y1="3.5" x2="7" y2="20"/><line x1="4" y1="20" x2="11" y2="20"/><path d="M 7 4 L 16.5 6.5 L 7 10 Z"/>
+            </svg>
+          </div>
+          <div class="sz">48</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="variant-card accent">
+      <div class="label">Aksent · champagne</div>
+      <div class="row">
+        <div>
+          <div class="glyph-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M 8.5 4 L 15.5 4 L 15.5 11 Q 15.5 14.5 12 14.5 Q 8.5 14.5 8.5 11 Z" fill="currentColor" fill-opacity="0.18"/>
+              <path d="M 8.5 5.5 Q 5.5 5.5 5.5 8 Q 5.5 10 8.5 10"/>
+              <path d="M 15.5 5.5 Q 18.5 5.5 18.5 8 Q 18.5 10 15.5 10"/>
+              <line x1="12" y1="14.5" x2="12" y2="17.5"/>
+              <line x1="8.5" y1="20" x2="15.5" y2="20"/>
+              <line x1="10" y1="17.5" x2="14" y2="17.5"/>
+            </svg>
+          </div>
+          <div class="sz">14</div>
+        </div>
+        <div>
+          <div class="glyph-sm">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M 8.5 4 L 15.5 4 L 15.5 11 Q 15.5 14.5 12 14.5 Q 8.5 14.5 8.5 11 Z" fill="currentColor" fill-opacity="0.18"/>
+              <path d="M 8.5 5.5 Q 5.5 5.5 5.5 8 Q 5.5 10 8.5 10"/>
+              <path d="M 15.5 5.5 Q 18.5 5.5 18.5 8 Q 18.5 10 15.5 10"/>
+              <line x1="12" y1="14.5" x2="12" y2="17.5"/>
+              <line x1="8.5" y1="20" x2="15.5" y2="20"/>
+              <line x1="10" y1="17.5" x2="14" y2="17.5"/>
+            </svg>
+          </div>
+          <div class="sz">18</div>
+        </div>
+        <div>
+          <div class="glyph-sm">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M 8.5 4 L 15.5 4 L 15.5 11 Q 15.5 14.5 12 14.5 Q 8.5 14.5 8.5 11 Z" fill="currentColor" fill-opacity="0.18"/>
+              <path d="M 8.5 5.5 Q 5.5 5.5 5.5 8 Q 5.5 10 8.5 10"/>
+              <path d="M 15.5 5.5 Q 18.5 5.5 18.5 8 Q 18.5 10 15.5 10"/>
+              <line x1="12" y1="14.5" x2="12" y2="17.5"/>
+              <line x1="8.5" y1="20" x2="15.5" y2="20"/>
+              <line x1="10" y1="17.5" x2="14" y2="17.5"/>
+            </svg>
+          </div>
+          <div class="sz">22</div>
+        </div>
+        <div>
+          <div class="glyph-sm">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M 8.5 4 L 15.5 4 L 15.5 11 Q 15.5 14.5 12 14.5 Q 8.5 14.5 8.5 11 Z" fill="currentColor" fill-opacity="0.18"/>
+              <path d="M 8.5 5.5 Q 5.5 5.5 5.5 8 Q 5.5 10 8.5 10"/>
+              <path d="M 15.5 5.5 Q 18.5 5.5 18.5 8 Q 18.5 10 15.5 10"/>
+              <line x1="12" y1="14.5" x2="12" y2="17.5"/>
+              <line x1="8.5" y1="20" x2="15.5" y2="20"/>
+              <line x1="10" y1="17.5" x2="14" y2="17.5"/>
+            </svg>
+          </div>
+          <div class="sz">32</div>
+        </div>
+        <div>
+          <div class="glyph-sm">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M 8.5 4 L 15.5 4 L 15.5 11 Q 15.5 14.5 12 14.5 Q 8.5 14.5 8.5 11 Z" fill="currentColor" fill-opacity="0.18"/>
+              <path d="M 8.5 5.5 Q 5.5 5.5 5.5 8 Q 5.5 10 8.5 10"/>
+              <path d="M 15.5 5.5 Q 18.5 5.5 18.5 8 Q 18.5 10 15.5 10"/>
+              <line x1="12" y1="14.5" x2="12" y2="17.5"/>
+              <line x1="8.5" y1="20" x2="15.5" y2="20"/>
+              <line x1="10" y1="17.5" x2="14" y2="17.5"/>
+            </svg>
+          </div>
+          <div class="sz">48</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Brass ribbon: i kontekst -->
+  <div class="ribbon">
+    <div class="ribbon-line"></div>
+    <div class="ribbon-kicker">I kontekst</div>
+    <div class="ribbon-line"></div>
+  </div>
+
+  <div class="context-grid">
+
+    <!-- Primary button -->
+    <div class="ctx">
+      <div class="ctx-label">Primær knapp</div>
+      <button class="btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="14.5" y="2.8" width="4" height="2.6" rx="0.9"/>
+          <line x1="16.5" y1="5.4" x2="9.4" y2="14.6"/>
+          <path d="M 9.4 14.6 L 4.4 17.4 L 6.2 20.6 L 12.3 17.6 Z"/>
+          <line x1="5.5" y1="19" x2="11.2" y2="16.2"/>
+        </svg>
+        Start runden
+      </button>
+    </div>
+
+    <!-- Header med dato -->
+    <div class="ctx">
+      <div class="ctx-label">Headerbånd</div>
+      <div class="stamp-header">
+        <span class="icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="6" width="16" height="14" rx="1.75"/>
+            <line x1="4" y1="10.5" x2="20" y2="10.5"/>
+            <line x1="9" y1="4" x2="9" y2="8"/>
+            <line x1="15" y1="4" x2="15" y2="8"/>
+            <circle cx="12" cy="15" r="1.5" fill="currentColor" stroke="none"/>
+          </svg>
+        </span>
+        <div class="h">Lørdagsslaget</div>
+        <div class="m">14. juni · kl. 09:30</div>
+      </div>
+    </div>
+
+    <!-- Listerader -->
+    <div class="ctx" style="grid-column: 1 / -1;">
+      <div class="ctx-label">Liste · venstre-ikon</div>
+      <div>
+        <div class="list-row">
+          <span class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="5.5" y="5" width="13" height="16" rx="1.5"/>
+              <rect x="9.5" y="3" width="5" height="3.5" rx="0.75"/>
+              <line x1="8" y1="11" x2="16" y2="11"/>
+              <line x1="8" y1="14" x2="14" y2="14"/>
+              <line x1="8" y1="17" x2="15" y2="17"/>
+            </svg>
+          </span>
+          <div class="label2">Mitt scorekort</div>
+          <div class="meta">14 av 18 hull</div>
+        </div>
+        <div class="list-row">
+          <span class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M 3 16 Q 8 12.5 12.5 14 Q 17 15.5 21 12"/>
+              <line x1="3" y1="20" x2="21" y2="20"/>
+              <line x1="14" y1="14" x2="14" y2="8.5"/>
+              <path d="M 14 8.7 L 18 9.7 L 14 11 Z"/>
+            </svg>
+          </span>
+          <div class="label2">Bogstad GK · Hovedbanen</div>
+          <div class="meta">CR 70.4 · SR 132</div>
+        </div>
+        <div class="list-row">
+          <span class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"/>
+              <circle cx="12" cy="12" r="5.5"/>
+              <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+            </svg>
+          </span>
+          <div class="label2">Handicap-indeks</div>
+          <div class="meta">14.2</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pille-rad -->
+    <div class="ctx" style="grid-column: 1 / -1;">
+      <div class="ctx-label">Status- og kategoripiller</div>
+      <div class="pill-row">
+        <span class="pill">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="6" width="18" height="13" rx="1.75"/>
+            <path d="M 3.5 7.5 L 12 13.5 L 20.5 7.5"/>
+          </svg>
+          12 invitasjoner
+        </span>
+        <span class="pill">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="6.5" r="3"/>
+            <path d="M 9.5 10 Q 12 11.4 14.5 10"/>
+            <path d="M 9.8 10 L 12 18 L 14.2 10"/>
+            <line x1="4" y1="20" x2="20" y2="20"/>
+          </svg>
+          Tee 09:30
+        </span>
+        <span class="pill">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M 8.5 4 L 15.5 4 L 15.5 11 Q 15.5 14.5 12 14.5 Q 8.5 14.5 8.5 11 Z"/>
+            <path d="M 8.5 5.5 Q 5.5 5.5 5.5 8 Q 5.5 10 8.5 10"/>
+            <path d="M 15.5 5.5 Q 18.5 5.5 18.5 8 Q 18.5 10 15.5 10"/>
+            <line x1="12" y1="14.5" x2="12" y2="17.5"/>
+            <line x1="8.5" y1="20" x2="15.5" y2="20"/>
+            <line x1="10" y1="17.5" x2="14" y2="17.5"/>
+          </svg>
+          Stableford
+        </span>
+        <span class="pill">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="14.5" y="2.8" width="4" height="2.6" rx="0.9"/>
+            <line x1="16.5" y1="5.4" x2="9.4" y2="14.6"/>
+            <path d="M 9.4 14.6 L 4.4 17.4 L 6.2 20.6 L 12.3 17.6 Z"/>
+            <line x1="5.5" y1="19" x2="11.2" y2="16.2"/>
+          </svg>
+          Best ball netto
+        </span>
+        <span class="pill">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="7" y1="3.5" x2="7" y2="20"/>
+            <line x1="4" y1="20" x2="11" y2="20"/>
+            <path d="M 7 4 L 16.5 6.5 L 7 10 Z"/>
+          </svg>
+          Hull 7
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Brass ribbon: spec -->
+  <div class="ribbon">
+    <div class="ribbon-line"></div>
+    <div class="ribbon-kicker">Tegne-spec</div>
+    <div class="ribbon-line"></div>
+  </div>
+
+  <div class="spec">
+    <div class="row">
+      <div class="k">ViewBox</div>
+      <div class="v"><code>0 0 24 24</code> — alle ikoner. Aldri kropp utenfor 2px safe-zone.</div>
+    </div>
+    <div class="row">
+      <div class="k">Strek</div>
+      <div class="v">1.5px. <code>stroke-linecap: round</code>, <code>stroke-linejoin: round</code>. Farge: <code>currentColor</code> — arver fra parent.</div>
+    </div>
+    <div class="row">
+      <div class="k">Fyll</div>
+      <div class="v">Outline-variant: <code>fill="none"</code>. Aksent-variant: ett fyllt område med <code>fill-opacity: 0.18</code>, samme <code>currentColor</code>.</div>
+    </div>
+    <div class="row">
+      <div class="k">Standardfarge</div>
+      <div class="v"><code>#1B4332</code> forest. Aksent-variant brukt med <code>#B89446</code> champagne-deep. Aldri rød eller blå.</div>
+    </div>
+    <div class="row">
+      <div class="k">Standardstørrelser</div>
+      <div class="v">14 (i piller), 18 (i listrader), 22 (i headere), 32 (i tomme tilstander), 48 (i splash / hero).</div>
+    </div>
+    <div class="row">
+      <div class="k">Touch-mål</div>
+      <div class="v">Ikoner brukt som touch-mål må ha minst 44×44 trykk-overflate, selv om SVG-en er 18×18.</div>
+    </div>
+  </div>
+
+  <div class="footer-quote">«Tegnet med samme hånd.»</div>
+
+</div>
+</body>
+</html>
