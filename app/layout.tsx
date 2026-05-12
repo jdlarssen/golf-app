@@ -3,6 +3,7 @@ import { Fraunces, Inter } from "next/font/google";
 import "./globals.css";
 import { PwaBoot } from "@/components/PwaBoot";
 import { IosInstallHint } from "@/components/IosInstallHint";
+import { PerfHud } from "@/components/PerfHud";
 
 // Inter — body, UI labels, forms. Variable font for crisp small-size rendering.
 const inter = Inter({
@@ -63,6 +64,7 @@ export default function RootLayout({
         {children}
         <IosInstallHint />
         <PwaBoot />
+        <PerfHud />
       </body>
     </html>
   );
