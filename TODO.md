@@ -49,32 +49,14 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 
 ## 🎨 Visuelt — design polish
 
-### Flatene som mangler design-løft etter Phase 12.5
-
-Hovedflater (login, hjem, hull, leaderboard, admin-detalj) fikk premium-behandling. Disse står igjen:
-
-- [ ] `/games/[id]/scorecard` — Mitt scorekort
-- [ ] `/games/[id]/submit` — Gjennomgå før levering
-- [ ] `/games/[id]/approve` — Peer-godkjenning
-- [ ] `/games/[id]/leaderboard/holes` — Hull-for-hull-drilldown
-- [ ] `/complete-profile` — Ny bruker fyller inn
-- [ ] `/profile` — Eksisterende bruker redigerer
-- [ ] `/admin/courses` (liste, ny, rediger)
-- [ ] `/admin/invitations`
-- [ ] `/admin/games` (liste, ny)
-
-Plan: kjør disse gjennom Claude Design ([claude.ai/design](https://claude.ai/design)) med design system som er etablert.
-
 ### Ikoner og illustrasjoner
 
 - [ ] Bedre app-ikon enn en flat serif T. Forslag: T med subtil tornado-spiral eller golf-flag-på-pin-silhuett bak.
-- [ ] Tomstands-illustrasjoner (f.eks. ingen aktive spill, ingen invitasjoner)
+- [ ] Flere tomstands-illustrasjoner (state #1 «ingen aktive spill» er gjort — ingen invitasjoner og evt. andre tomstander gjenstår)
 - [ ] Subtile bakgrunnsillustrasjoner på leaderboard (klubbhus-vinje, fairway-silhuett)
 
 ### Animasjoner
 
-- [ ] Bedre konfetti-animasjon på leaderboard — i dag er det funksjonelt men ikke premium
-- [ ] Subtle skeleton-loading mens man venter på server-data (i dag er det rene blank states)
 - [ ] Bedre overgang mellom hull (i dag direkte navigasjon)
 
 ### Dark mode
