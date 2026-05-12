@@ -104,10 +104,10 @@ export function CourseForm({
       />
 
       <section>
-        <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
+        <h2 className="text-sm font-medium text-text mb-3">
           Hull 1–18
         </h2>
-        <p className="text-xs text-zinc-500 mb-3">
+        <p className="text-xs text-muted mb-3">
           Stroke-indeks 1–18 må brukes nøyaktig én gang hver.
         </p>
         <div className="space-y-3">
@@ -116,7 +116,7 @@ export function CourseForm({
               key={hole.hole_number}
               className="grid grid-cols-[4rem_1fr_1fr] gap-3 items-end"
             >
-              <div className="text-sm font-medium text-zinc-700 dark:text-zinc-300 pb-3">
+              <div className="text-sm font-medium text-text pb-3">
                 Hull {hole.hole_number}
               </div>
               <Input
@@ -153,24 +153,24 @@ export function CourseForm({
       </section>
 
       <section>
-        <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
+        <h2 className="text-sm font-medium text-text mb-3">
           Tee-bokser ({teeBoxes.length}/{MAX_TEE_BOXES})
         </h2>
         <div className="space-y-4">
           {teeBoxes.map((tee, index) => (
             <div
               key={index}
-              className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 space-y-3"
+              className="border border-border rounded-xl p-4 space-y-3"
             >
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                <span className="text-sm font-medium text-text">
                   Tee-boks {index + 1}
                 </span>
                 {teeBoxes.length > 1 && (
                   <button
                     type="button"
                     onClick={() => removeTee(index)}
-                    className="text-xs font-medium text-red-600 hover:text-red-700"
+                    className="text-xs font-medium text-danger hover:opacity-80 transition-opacity"
                   >
                     Fjern
                   </button>
@@ -256,13 +256,14 @@ export function CourseForm({
           ))}
         </div>
         {teeBoxes.length < MAX_TEE_BOXES && (
-          <button
+          <Button
             type="button"
+            variant="secondary"
             onClick={addTee}
-            className="mt-3 w-full min-h-[44px] text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg px-4 py-2.5 transition-colors"
+            className="mt-3 w-full text-sm"
           >
             + Legg til tee-boks
-          </button>
+          </Button>
         )}
       </section>
 
