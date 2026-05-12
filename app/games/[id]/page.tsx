@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Kicker } from '@/components/ui/Kicker';
+import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { MailEnvelope } from '@/components/icons/MailEnvelope';
 import { firstName } from '@/lib/firstName';
 import { formatTeeOffTime, formatTeeOffDate } from '@/lib/format/teeOff';
@@ -27,15 +28,17 @@ const STATUS_LABELS: Record<GameStatus, string> = {
   finished: 'Avsluttet',
 };
 
-const STATUS_BADGE_CLASSES: Record<GameStatus, string> = {
-  draft:
-    'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700',
-  scheduled:
-    'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-900',
-  active:
-    'bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-300 border border-green-200 dark:border-green-900',
-  finished:
-    'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-900',
+// Map player-facing game lifecycle onto StatusChip's admin tone palette —
+// each tone's hue happens to fit the player meaning too:
+//  · aktiv (sage)      → Pågående
+//  · påmelding (amber) → Planlagt (waiting for tee-off)
+//  · signert (muted)   → Avsluttet (round closed)
+//  · utkast (brick)    → Utkast (admin only — players never see this state)
+const STATUS_TONES: Record<GameStatus, StatusChipTone> = {
+  draft: 'utkast',
+  scheduled: 'påmelding',
+  active: 'aktiv',
+  finished: 'signert',
 };
 
 const STATUS_BANNERS: Record<string, string> = {
@@ -411,11 +414,10 @@ export default async function GameHomePage({
       />
 
       <div className="mb-4">
-        <span
-          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_BADGE_CLASSES[game.status]}`}
-        >
-          {STATUS_LABELS[game.status]}
-        </span>
+        <StatusChip
+          tone={STATUS_TONES[game.status]}
+          label={STATUS_LABELS[game.status]}
+        />
       </div>
 
       {statusBanner && (
@@ -443,7 +445,7 @@ export default async function GameHomePage({
               </span>
               <Link
                 href={`/games/${id}/approve`}
-                className="text-sm font-medium text-blue-700 underline whitespace-nowrap"
+                className="text-sm font-medium text-primary underline underline-offset-2 decoration-primary/30 hover:decoration-primary whitespace-nowrap"
               >
                 Gjennomgå →
               </Link>
@@ -454,14 +456,14 @@ export default async function GameHomePage({
 
       <div className="space-y-4">
         <Card>
-          <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
-            Bane
-          </h2>
-          <p className="text-base text-zinc-900 dark:text-zinc-100">
+          <Kicker tone="muted" className="mb-2">
+            BANE
+          </Kicker>
+          <p className="font-serif text-[19px] font-medium tracking-[-0.01em] text-text">
             {game.courses?.name ?? '(ukjent bane)'}
           </p>
           {game.tee_boxes && (
-            <p className="text-xs text-zinc-500 mt-1">
+            <p className="text-xs text-muted mt-1.5 tabular-nums">
               Tee: {game.tee_boxes.name} · Slope {game.tee_boxes.slope} · CR{' '}
               {Number(game.tee_boxes.course_rating).toFixed(1)} · Par{' '}
               {game.tee_boxes.par_total}
@@ -470,20 +472,20 @@ export default async function GameHomePage({
         </Card>
 
         <Card>
-          <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
-            Din info
-          </h2>
+          <Kicker tone="muted" className="mb-2">
+            DIN INFO
+          </Kicker>
           <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-sm">
-            <dt className="text-zinc-500">Lag</dt>
-            <dd className="text-zinc-900 dark:text-zinc-100 text-right">
-              Lag {me.team_number}
+            <dt className="text-muted">Lag</dt>
+            <dd className="text-text text-right">
+              Lag <span className="score-num">{me.team_number}</span>
             </dd>
-            <dt className="text-zinc-500">Flight</dt>
-            <dd className="text-zinc-900 dark:text-zinc-100 text-right">
-              Flight {me.flight_number}
+            <dt className="text-muted">Flight</dt>
+            <dd className="text-text text-right">
+              Flight <span className="score-num">{me.flight_number}</span>
             </dd>
-            <dt className="text-zinc-500">Course handicap</dt>
-            <dd className="text-zinc-900 dark:text-zinc-100 text-right">
+            <dt className="text-muted">Course handicap</dt>
+            <dd className="score-num text-text text-right">
               {me.course_handicap ?? '—'}
             </dd>
           </dl>
@@ -492,27 +494,25 @@ export default async function GameHomePage({
         {isActive ? (
           <PrimaryCta gameId={id} state={state} strokesCount={strokesCount} />
         ) : game.status === 'finished' ? (
-          <Link href={`/games/${id}/leaderboard`} className="block">
-            <div className="w-full min-h-[44px] bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium transition-colors text-center text-base">
-              🏆 Se leaderboard →
-            </div>
+          <Link
+            href={`/games/${id}/leaderboard`}
+            className={LINK_BTN_PRIMARY}
+          >
+            🏆 Se leaderboard →
           </Link>
         ) : (
-          <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 px-4 py-3 text-sm text-zinc-500 text-center">
+          <div className="rounded-2xl border border-border px-4 py-3 text-sm text-muted text-center">
             Spillet er ikke startet ennå.
           </div>
         )}
 
         {game.status === 'finished' && (
-          <Link
-            href={`/games/${id}/leaderboard/holes`}
-            className="block"
-          >
-            <Card className="min-h-[44px] flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
-              <span className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+          <Link href={`/games/${id}/leaderboard/holes`} className="block">
+            <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
+              <span className="text-base font-medium text-text">
                 Hull for hull
               </span>
-              <span aria-hidden className="text-zinc-400">
+              <span aria-hidden className="text-muted">
                 →
               </span>
             </Card>
@@ -520,11 +520,11 @@ export default async function GameHomePage({
         )}
 
         <Link href={`/games/${id}/scorecard`} className="block">
-          <Card className="min-h-[44px] flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
-            <span className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+          <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
+            <span className="text-base font-medium text-text">
               Mitt scorekort
             </span>
-            <span aria-hidden className="text-zinc-400">
+            <span aria-hidden className="text-muted">
               →
             </span>
           </Card>
@@ -533,7 +533,7 @@ export default async function GameHomePage({
         <div className="pt-2">
           <Link
             href="/"
-            className="block text-center text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+            className="block text-center text-sm text-muted hover:text-text transition-colors"
           >
             Tilbake til hjem
           </Link>
@@ -542,6 +542,12 @@ export default async function GameHomePage({
     </AppShell>
   );
 }
+
+// Primary CTA styled as a Link rather than a <button>. Mirrors the
+// .tk-btn--primary token from the UI kit: forest fill, pill shape, 44px
+// min tap target. Used wherever the CTA navigates rather than submitting.
+const LINK_BTN_PRIMARY =
+  'flex items-center justify-center w-full min-h-[44px] bg-primary hover:bg-primary-hover text-white dark:text-bg px-[18px] py-3 rounded-full font-medium tracking-tight text-center text-base shadow-sm transition-[background-color,transform] hover:-translate-y-px';
 
 function PrimaryCta({
   gameId,
@@ -559,26 +565,22 @@ function PrimaryCta({
 
   if (state === 'not_started') {
     return (
-      <div className="space-y-1.5">
-        <Link href={`/games/${gameId}/holes/1`} className="block">
-          <div className="w-full min-h-[44px] bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-medium transition-colors text-center text-base">
-            Start runden →
-          </div>
-        </Link>
-      </div>
+      <Link href={`/games/${gameId}/holes/1`} className={LINK_BTN_PRIMARY}>
+        Start runden →
+      </Link>
     );
   }
 
   if (state === 'in_progress') {
     return (
       <div className="space-y-1.5">
-        <Link href={`/games/${gameId}/holes/1`} className="block">
-          <div className="w-full min-h-[44px] bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-medium transition-colors text-center text-base">
-            Fortsett runden →
-          </div>
+        <Link href={`/games/${gameId}/holes/1`} className={LINK_BTN_PRIMARY}>
+          Fortsett runden →
         </Link>
         {subtext && (
-          <p className="text-center text-xs text-zinc-500">{subtext}</p>
+          <p className="text-center text-xs text-muted tabular-nums">
+            {subtext}
+          </p>
         )}
       </div>
     );
@@ -587,13 +589,13 @@ function PrimaryCta({
   if (state === 'ready_to_submit') {
     return (
       <div className="space-y-1.5">
-        <Link href={`/games/${gameId}/submit`} className="block">
-          <div className="w-full min-h-[44px] bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-medium transition-colors text-center text-base">
-            Gjennomgå og lever →
-          </div>
+        <Link href={`/games/${gameId}/submit`} className={LINK_BTN_PRIMARY}>
+          Gjennomgå og lever →
         </Link>
         {subtext && (
-          <p className="text-center text-xs text-zinc-500">{subtext}</p>
+          <p className="text-center text-xs text-muted tabular-nums">
+            {subtext}
+          </p>
         )}
       </div>
     );
@@ -601,7 +603,7 @@ function PrimaryCta({
 
   if (state === 'submitted_pending_approval') {
     return (
-      <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300 text-center">
+      <div className="rounded-2xl border border-border px-4 py-3 text-sm text-muted text-center">
         Scorekort levert — venter på godkjenning fra en i flighten din.
       </div>
     );
@@ -609,7 +611,7 @@ function PrimaryCta({
 
   // submitted_approved
   return (
-    <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300 text-center">
+    <div className="rounded-2xl border border-border px-4 py-3 text-sm text-muted text-center">
       Scorekort levert og godkjent. Venter på at admin avslutter spillet.
     </div>
   );
