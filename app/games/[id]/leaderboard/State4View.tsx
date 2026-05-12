@@ -279,7 +279,9 @@ function LeaderCard({
           </div>
         </div>
 
-        <p className="mt-3.5 text-center text-[12px] text-muted">{playersLine}</p>
+        <p className="mt-3.5 text-center font-serif text-[15px] font-medium tracking-[-0.005em] text-text">
+          {playersLine}
+        </p>
 
         <Link
           href={drilldownHref}
@@ -337,15 +339,17 @@ function TeamRow({
           <p className="font-serif text-[17px] font-medium tracking-[-0.005em] text-text">
             Lag {line.teamNumber}
           </p>
-          <p className="mt-0.5 truncate text-[11.5px] text-muted">
-            {firstNames || '(uten spillere)'}
+          <p className="mt-0.5 truncate text-[13px]">
+            <span className="font-serif font-medium text-text">
+              {firstNames || '(uten spillere)'}
+            </span>
             {gap > 0 && (
-              <>
+              <span className="text-muted">
                 {' · '}
                 <span className="tabular-nums">+{gap}</span> bak leder
-              </>
+              </span>
             )}
-            {isTied && <> · delt</>}
+            {isTied && <span className="text-muted"> · delt</span>}
           </p>
         </div>
         <div className="shrink-0 text-right">
