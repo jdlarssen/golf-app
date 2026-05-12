@@ -22,6 +22,13 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 ### Recovery / admin overrides
 
 - [ ] UI for å slette et spill helt (ikke bare avslutte). I dag krever det rå SQL.
+- [ ] **Invitasjons-administrasjon i `/admin/invitations`** — i dag står alle invitasjoner som «VENTER» selv etter at brukeren har akseptert/registrert seg. Rapportert av Jørgen 2026-05-12. Trenger systematisk debug før fix, men scope-en av forbedringer som hører sammen:
+  - Status må faktisk reflektere virkeligheten: når blir den oppdatert (på `signInWithOtp`-respons? på `/complete-profile`-fullført? på første innlogging?), og hvorfor står den fortsatt som «VENTER» når brukerne faktisk har klikket
+  - Vis om brukeren har klikket lenken (auth-event-logg i Supabase kan brukes — eller egen kolonne `invitations.opened_at`)
+  - «Resend invitasjon»-knapp (krever ny `signInWithOtp`-runde med samme `redirect_to` og `user_metadata`)
+  - «Trekk tilbake»-knapp (sletter rad i `invitations`, evt. sletter også `auth.users`-raden hvis brukeren aldri fullførte profil)
+  - Slett bruker fra admin-panel (cascade: `public.users` + `auth.users` + alle deres `game_players`/`scores`)
+  - Manuel override av brukerinnstillinger fra admin (rolle, nickname, display_pref, e-post) — krever ny admin-side `/admin/users/[id]` med form og server-action gated på `is_admin`
 
 ### Privacy / GDPR
 
@@ -76,6 +83,16 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 
 - [ ] **Extract `lib/games/status.ts`** — `GameStatus`-unionen og `STATUS_LABELS`-objektet er duplisert i 13 filer. Refaktoreres samtidig med M1-fargefiks (når design-handoff lander). Bør også gjøres for å forenkle fremtidige status-utvidelser.
 - [ ] **Move RealtimeMount out of game layout** — i dag mounter `app/games/[id]/layout.tsx` `RealtimeMount` for alle game-statuser inkludert scheduled. Subscription er harmless (ingen events arriverer for scheduled siden ingen scores eksisterer + RLS blokkerer), men det er en idle WebSocket-subscription på hver venterom-besøk. Lav prioritet til vi vokser.
+
+### Versjonering / release-disiplin
+
+- [ ] **Bump versjonen fra v0.1.0 til v1.0.0 og innfør semver-disiplin per release.** I dag står `package.json` fast på `0.1.0` selv om vi har shipped 12+ phases og hele turnerings-flyten fungerer end-to-end. Mekanismen er allerede på plass: `next.config.ts` leser `pkg.version` og eksponerer som `NEXT_PUBLIC_APP_VERSION`, footer rendrer den. Kun selve bumpen mangler. Forslag til scheme:
+  - **MAJOR (`vX.0.0`)** — bryter datamodell, fjerner feature, eller omkalfatrer UX på en måte som krever bruker-kommunikasjon. Eksempler som vil rettferdiggjøre `v2.0.0`: ny spillmodus-arkitektur som migrerer eksisterende `games`-rader, klubb-tier med `groups`/`group_members`-RLS-overhaling, bytte fra magic-link til passkeys som primær auth.
+  - **MINOR (`vX.Y.0`)** — ny bruker-synlig feature levert til prod. Eksempler: ny spillformat (stableford, scramble), in-app innboks, biometrisk innlogging, søkbar spillerliste, admin-invitasjons-overhaul (de tre nye TODO-ene over).
+  - **PATCH (`vX.Y.Z`)** — bug-fixes, copy-justeringer, perf-forbedringer, design-polish som ikke endrer hva brukeren kan gjøre. Eksempler: hydration-mismatch i `teeOff.ts`, kontrast-fiks i light-mode, raskere hull-navigasjon, fjernet duplisert `GameStatus`-union.
+  - **Foreslått first cut for v1.0.0**: «Tørny er klar for ekte bruk med en kompisgjeng» — krever (a) `/admin/invitations` viser korrekt status (TODO over), (b) smoke-test med ekte kompis bestått, (c) Site URL + mail-subject cache-trøbbel løst. Når disse tre lander: bump til `1.0.0`, skriv kort changelog-entry, push.
+  - **Hvordan bumpe i praksis**: manuell oppdatering av `package.json` i commiten som shipper feature/fix. Commit-meldingen tagger bumpen: `chore(release): v1.1.0 — stableford support`. Vurder `npm version minor` / `npm version patch` for å gjøre det automatisk + lage git-tag. Senere kan vi automatisere via conventional-commits + semantic-release hvis det blir tungvint.
+  - **Changelog**: når vi begynner å bumpe, opprett `CHANGELOG.md` med Keep-a-Changelog-format. Footer i appen kan da linke til siste release-notes for nysgjerrige brukere.
 
 ### Performance
 
@@ -161,6 +178,8 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 
 (Logg ting her etter hvert som de oppdages under bruk.)
 
+- [ ] **Magic-link åpner ikke i PWA-en når Tørny er lagt til på Hjem-skjerm (iOS).** Bruker trykker lenken i Mail-appen, men Safari åpner i vanlig nettleserfane istedenfor PWA-shell-en — så brukeren havner utenfor «appen». Rapportert av Jørgen 2026-05-12. Kjent PWA-quirk på iOS: lenker fra eksterne apper respekterer ikke `display: standalone` med mindre `redirect_to`-URL-en bruker en custom URL scheme eller Universal Links er konfigurert. Krever systematisk debug — mulige spor: (1) sjekk om iOS 17.4+ sin Web Push / shortcut-API endret oppførsel, (2) prøv `target="_blank"` eller fjern det i mail-templaten, (3) vurder Universal Links-oppsett (Apple App Site Association-fil på domenet), (4) som workaround: be brukeren kopiere lenken og lime inn i PWA-en — dokumenter i onboarding hvis ikke fiksbart.
+- [ ] **Biometrisk innlogging på telefon (Face ID / Touch ID / passkeys).** Magic-link-flyten krever bytte til mail-app → klikk → tilbake til PWA, som er friksjon. Mulige veier: (1) **WebAuthn / passkeys** (`navigator.credentials.create` + `get`) — passkey lagres i iCloud Keychain, fungerer på tvers av enheter, støttet i Safari 16+. Krever ny tabell `public.credentials` (`user_id`, `credential_id`, `public_key`, `counter`), server-actions for register/authenticate, integrasjon med Supabase Auth via custom JWT eller `signInWithIdToken`. Stor jobb. (2) **Lokal session-forlengelse**: vis biometrisk prompt for å låse opp en allerede lagret session i stedet for ny innlogging — enklere, men hjelper bare etter første magic-link-runde. Diskutert 2026-05-12; trenger egen brainstorming.
 - [ ] **«Lagre utkast» krever fortsatt bane (og tee-boks?) til tross for draft-mode.** Native HTML-validering på `<select required>` blokkerer form-submit før «Lagre utkast»-actionen får kjørt. Fix: gjør `required`-attributtet betinget i `GameForm.tsx` — kun aktivt når brukeren prøver «Publiser», ikke når de prøver «Lagre utkast». Trolig via en `state`-styrt `noValidate`-på-formen + per-knapp valideringsoverstyring, eller flytte all valideringen til server-action (som vi allerede har for draft-mode). Rapportert av Jørgen 2026-05-12 under Phase 5-verifisering.
 
 ---
