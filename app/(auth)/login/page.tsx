@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
-import { BrandMark } from '@/components/ui/BrandMark';
+import { BrandHero } from '@/components/ui/BrandHero';
 
 type SearchParams = Promise<{
   error?: string | string[];
@@ -42,10 +42,7 @@ export default async function LoginPage({
     <AppShell>
       <div className="mt-8">
         <Card>
-          <BrandMark className="mb-6 justify-center" />
-          <h1 className="font-serif text-3xl font-medium tracking-tight mb-6 text-center text-text">
-            Logg inn
-          </h1>
+          <BrandHero className="mb-8" />
 
           {showSuccess && (
             <div role="status" className="mb-4">
