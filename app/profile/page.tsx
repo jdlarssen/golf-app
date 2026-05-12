@@ -116,6 +116,7 @@ export default async function ProfilePage({
             defaultValue={profile.hcp_index ?? ''}
             required
             inputMode="decimal"
+            inputClassName="score-num"
           />
 
           <div className="flex items-center gap-3 pt-2">

@@ -96,6 +96,7 @@ export default async function CompleteProfile({
             max={54.0}
             required
             inputMode="decimal"
+            inputClassName="score-num"
           />
 
           <Button type="submit" className="w-full">
