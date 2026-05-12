@@ -306,11 +306,21 @@ export default async function GameHomePage({
           <ul className="mt-2 flex flex-col gap-2">
             {flight.map((p) => (
               <li key={p.userId} className="flex items-center gap-3">
+                {/*
+                  E5 dark-mode pass: inactive avatar uses bg-surface (not
+                  bg-bg). In dark mode bg-bg matches the page bg
+                  (--bg #0f1612), so the avatar would disappear into the
+                  layout with only the border visible — a hole punched in
+                  the page. bg-surface (--surface #1a2e1f in dark) sits as a
+                  slightly lighter forest disc against the page bg. Light
+                  mode is unchanged in feel: bg-surface (#ffffff) on the
+                  --bg linen still reads as a paper-on-paper subtle disc.
+                */}
                 <span
                   className={`shrink-0 w-7 h-7 rounded-full grid place-items-center font-serif text-[12px] font-medium ${
                     p.isCurrentUser
                       ? 'bg-primary text-white dark:text-bg'
-                      : 'bg-bg text-text border border-border'
+                      : 'bg-surface text-text border border-border'
                   }`}
                 >
                   {firstInitial(p.name)}

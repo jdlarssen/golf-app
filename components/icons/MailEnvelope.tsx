@@ -11,6 +11,12 @@ export function MailEnvelope({ size = 64, className }: Props) {
       className={className}
       aria-hidden="true"
     >
+      {/*
+        E5 dark-mode pass: interior fill uses var(--surface) so the envelope
+        body sits on the page bg as a slightly lighter forest disc in dark
+        mode (--surface #1a2e1f on --bg #0f1612) instead of punching a
+        glaring white rectangle through the layout. Light mode stays white.
+      */}
       <rect
         x="8"
         y="16"
@@ -19,7 +25,7 @@ export function MailEnvelope({ size = 64, className }: Props) {
         rx="3"
         stroke="currentColor"
         strokeWidth="1.6"
-        fill="#FFFFFF"
+        fill="var(--surface)"
       />
       <path
         d="M8 19 L32 35 L56 19"
