@@ -250,7 +250,11 @@ body {
 
 .reveal-up {
   opacity: 0;
-  animation: reveal-up 360ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+  /* `both` = backwards (hold opacity:0 during the inline animationDelay) +
+   * forwards (hold opacity:1 after the keyframe ends). Plain `backwards`
+   * leaves elements at the base `opacity: 0` once the animation completes,
+   * which makes them flash in and then vanish. */
+  animation: reveal-up 360ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
 /* Composite shadow shape: inset hairline (animated) + resting drop shadows.
