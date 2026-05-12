@@ -1,0 +1,546 @@
+import Link from 'next/link';
+import { getServerClient } from '@/lib/supabase/server';
+import { AdminShell } from '@/components/ui/AdminShell';
+import { BackLink } from '@/components/ui/BackLink';
+import { ClubStamp } from '@/components/ui/ClubStamp';
+import { PullQuote } from '@/components/ui/PullQuote';
+import { firstName } from '@/lib/firstName';
+
+// "1862" is the ornamental year on the club stamp — no real-world meaning,
+// it's there to make the stamp feel like a real club's seal.
+
+const MONTHS_NB = [
+  'jan',
+  'feb',
+  'mar',
+  'apr',
+  'mai',
+  'jun',
+  'jul',
+  'aug',
+  'sep',
+  'okt',
+  'nov',
+  'des',
+];
+
+function greeting(d: Date): string {
+  const h = d.getHours();
+  if (h < 10) return 'morgen';
+  if (h < 12) return 'formiddag';
+  if (h < 18) return 'ettermiddag';
+  return 'kveld';
+}
+
+function isoWeek(d: Date): number {
+  // ISO-8601 week: Thursday-of-this-week's calendar week = the ISO week.
+  const target = new Date(d.valueOf());
+  const dayNr = (d.getDay() + 6) % 7;
+  target.setDate(target.getDate() - dayNr + 3);
+  const firstThursday = target.valueOf();
+  target.setMonth(0, 1);
+  if (target.getDay() !== 4) {
+    target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+  }
+  return 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
+}
+
+function formatDateNb(d: Date): string {
+  return `${d.getDate()}. ${MONTHS_NB[d.getMonth()]} · uke ${isoWeek(d)}`;
+}
+
+function formatShortDateNb(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return `${d.getDate()}. ${MONTHS_NB[d.getMonth()]}`;
+  } catch {
+    return iso;
+  }
+}
+
+function formatHHMM(iso: string): string {
+  const d = new Date(iso);
+  const hh = d.getHours().toString().padStart(2, '0');
+  const mm = d.getMinutes().toString().padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
+type Activity = {
+  ts: string;
+  who: string;
+  action: string;
+  ref: string;
+};
+
+export default async function AdminSekretariat() {
+  // Snapshot "now" once per request. Server-component, runs once per render,
+  // so this is semantically a server-side now() — silencing the purity rule
+  // matches the pattern in app/games/[id]/page.tsx.
+  // eslint-disable-next-line react-hooks/purity
+  const nowMs = Date.now();
+  const now = new Date(nowMs);
+
+  const supabase = await getServerClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  // AdminLayout already redirects unauth/non-admin; user is guaranteed here.
+
+  const { data: profile } = await supabase
+    .from('users')
+    .select('name')
+    .eq('id', user!.id)
+    .single();
+
+  // Tile meta counts ────────────────────────────────────────────────────
+  // Single-shot counts with `head: true, count: 'exact'` avoid pulling rows.
+  const [
+    activeGamesRes,
+    plannedGamesRes,
+    pendingInvitesRes,
+    coursesRes,
+    lastFinishedRes,
+  ] = await Promise.all([
+    supabase
+      .from('games')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'active'),
+    supabase
+      .from('games')
+      .select('id', { count: 'exact', head: true })
+      .in('status', ['draft', 'scheduled']),
+    supabase
+      .from('invitations')
+      .select('id', { count: 'exact', head: true })
+      .is('accepted_at', null)
+      .gt('expires_at', now.toISOString()),
+    supabase.from('courses').select('id', { count: 'exact', head: true }),
+    supabase
+      .from('games')
+      .select('ended_at')
+      .eq('status', 'finished')
+      .order('ended_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  const activeCount = activeGamesRes.count ?? 0;
+  const plannedCount = plannedGamesRes.count ?? 0;
+  const pendingInvites = pendingInvitesRes.count ?? 0;
+  const courseCount = coursesRes.count ?? 0;
+  const lastFinishedAt = (lastFinishedRes.data as { ended_at: string | null } | null)
+    ?.ended_at;
+
+  // Activity ledger ─────────────────────────────────────────────────────
+  // Stitch from several timestamped sources. Each source is capped tight
+  // so the merge stays bounded even on a busy week.
+  const sinceIso = new Date(nowMs - 14 * 24 * 60 * 60 * 1000).toISOString();
+
+  type SubmissionRow = {
+    submitted_at: string;
+    users: { name: string } | null;
+    games: { name: string } | null;
+  };
+  type ApprovalRow = {
+    approved_at: string;
+    users: { name: string } | null;
+    games: { name: string } | null;
+  };
+  type GameLifecycleRow = {
+    name: string;
+    started_at: string | null;
+    ended_at: string | null;
+  };
+  type CourseRow = { name: string; created_at: string };
+  type InvitationRow = {
+    accepted_at: string;
+    email: string;
+    games: { name: string } | null;
+  };
+
+  const [subsRes, apprsRes, gamesRes, coursesEvRes, invitesRes] =
+    await Promise.all([
+      supabase
+        .from('game_players')
+        .select(
+          'submitted_at, users!game_players_user_id_fkey(name), games(name)',
+        )
+        .not('submitted_at', 'is', null)
+        .gte('submitted_at', sinceIso)
+        .order('submitted_at', { ascending: false })
+        .limit(8)
+        .returns<SubmissionRow[]>(),
+      supabase
+        .from('game_players')
+        .select(
+          'approved_at, users!game_players_user_id_fkey(name), games(name)',
+        )
+        .not('approved_at', 'is', null)
+        .gte('approved_at', sinceIso)
+        .order('approved_at', { ascending: false })
+        .limit(8)
+        .returns<ApprovalRow[]>(),
+      supabase
+        .from('games')
+        .select('name, started_at, ended_at')
+        .or(`started_at.gte.${sinceIso},ended_at.gte.${sinceIso}`)
+        .limit(12)
+        .returns<GameLifecycleRow[]>(),
+      supabase
+        .from('courses')
+        .select('name, created_at')
+        .gte('created_at', sinceIso)
+        .order('created_at', { ascending: false })
+        .limit(4)
+        .returns<CourseRow[]>(),
+      supabase
+        .from('invitations')
+        .select('accepted_at, email, games(name)')
+        .not('accepted_at', 'is', null)
+        .gte('accepted_at', sinceIso)
+        .order('accepted_at', { ascending: false })
+        .limit(8)
+        .returns<InvitationRow[]>(),
+    ]);
+
+  const activity: Activity[] = [];
+  for (const r of subsRes.data ?? []) {
+    activity.push({
+      ts: r.submitted_at,
+      who: shortName(r.users?.name),
+      action: 'leverte scorekort',
+      ref: r.games?.name ?? '(spill)',
+    });
+  }
+  for (const r of apprsRes.data ?? []) {
+    activity.push({
+      ts: r.approved_at,
+      who: shortName(r.users?.name),
+      action: 'fikk scorekort signert',
+      ref: r.games?.name ?? '(spill)',
+    });
+  }
+  for (const g of gamesRes.data ?? []) {
+    if (g.started_at && g.started_at >= sinceIso) {
+      activity.push({
+        ts: g.started_at,
+        who: 'Sekretariatet',
+        action: 'startet runden',
+        ref: g.name,
+      });
+    }
+    if (g.ended_at && g.ended_at >= sinceIso) {
+      activity.push({
+        ts: g.ended_at,
+        who: 'Sekretariatet',
+        action: 'signerte protokollen',
+        ref: g.name,
+      });
+    }
+  }
+  for (const c of coursesEvRes.data ?? []) {
+    activity.push({
+      ts: c.created_at,
+      who: 'Sekretariatet',
+      action: 'registrerte ny bane',
+      ref: c.name,
+    });
+  }
+  for (const inv of invitesRes.data ?? []) {
+    activity.push({
+      ts: inv.accepted_at,
+      who: shortName(inv.email.split('@')[0]),
+      action: 'tok imot invitasjon',
+      ref: inv.games?.name ?? 'klubbinvitasjon',
+    });
+  }
+  activity.sort((a, b) => (a.ts < b.ts ? 1 : -1));
+  const ledger = activity.slice(0, 8);
+
+  // Page data ──────────────────────────────────────────────────────────
+  const firstNameValue = firstName(profile?.name) ?? 'saksbehandler';
+  const dateLine = formatDateNb(now);
+  const timeOfDay = greeting(now);
+
+  type Tile = {
+    label: string;
+    href: string;
+    meta: string;
+    icon: 'trophy' | 'mail' | 'course' | 'stamp';
+    accent?: boolean;
+  };
+  const tiles: Tile[] = [
+    {
+      label: 'Spill',
+      href: '/admin/games',
+      meta: `${activeCount} aktive · ${plannedCount} planlagte`,
+      icon: 'trophy',
+      accent: true,
+    },
+    {
+      label: 'Invitasjoner',
+      href: '/admin/invitations',
+      meta:
+        pendingInvites === 0
+          ? 'Ingen ventende svar'
+          : `${pendingInvites} ventende svar`,
+      icon: 'mail',
+    },
+    {
+      label: 'Baner',
+      href: '/admin/courses',
+      meta:
+        courseCount === 0
+          ? 'Ingen registrerte ennå'
+          : `${courseCount} registrert${courseCount === 1 ? '' : 'e'}`,
+      icon: 'course',
+    },
+    {
+      label: 'Resultatprotokoll',
+      href: '/admin/games?status=finished',
+      meta: lastFinishedAt
+        ? `Sist signert ${formatShortDateNb(lastFinishedAt)}`
+        : 'Ingen signerte runder',
+      icon: 'stamp',
+    },
+  ];
+
+  return (
+    <AdminShell>
+      {/* Header — kicker centered, back link left */}
+      <div className="-mt-3 mb-4 flex items-center justify-between">
+        <BackLink href="/">Tilbake</BackLink>
+        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          Sekretariatet
+        </p>
+        <span className="w-[80px]" aria-hidden />
+      </div>
+
+      {/* Salutation card */}
+      <section
+        className="relative mb-4 overflow-hidden rounded-2xl border px-5 py-[18px]"
+        style={{
+          background:
+            'linear-gradient(180deg, var(--admin-salutation-top) 0%, var(--admin-salutation-bottom) 100%)',
+          borderColor: 'var(--admin-salutation-border)',
+        }}
+      >
+        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          Saksbehandler
+        </p>
+        <h1 className="mt-1 font-serif text-[22px] font-medium leading-snug tracking-[-0.015em] text-text">
+          God {timeOfDay}, {firstNameValue}.
+        </h1>
+        <p className="mt-1.5 font-sans text-xs tabular-nums text-muted">
+          {dateLine}
+        </p>
+        <ClubStamp className="absolute right-[14px] top-[14px]" />
+      </section>
+
+      {/* Section tile grid */}
+      <div className="mb-2 grid grid-cols-2 gap-2.5">
+        {tiles.map((tile, i) => (
+          <Link
+            key={tile.label}
+            href={tile.href}
+            className="reveal-up min-h-[108px] rounded-2xl px-3.5 pt-3.5 pb-3 text-left"
+            style={{
+              animationDelay: `${60 + i * 70}ms`,
+              background: tile.accent ? 'var(--primary)' : 'var(--surface)',
+              color: tile.accent ? 'var(--bg)' : 'var(--text)',
+              border: tile.accent ? 'none' : '1px solid var(--border)',
+              boxShadow: tile.accent
+                ? '0 4px 14px rgba(26, 46, 31, 0.15)'
+                : '0 1px 2px rgba(26, 46, 31, 0.03)',
+            }}
+          >
+            <div
+              className="mb-2.5 flex h-9 w-9 items-center justify-center rounded-[9px]"
+              style={{
+                background: tile.accent
+                  ? 'rgba(201, 169, 97, 0.20)'
+                  : 'var(--admin-bg)',
+              }}
+            >
+              <TileIcon
+                kind={tile.icon}
+                color={tile.accent ? 'var(--accent)' : 'var(--primary)'}
+              />
+            </div>
+            <p className="font-serif text-base font-medium tracking-[-0.005em]">
+              {tile.label}
+            </p>
+            <p
+              className="mt-0.5 font-sans text-[11px] tabular-nums"
+              style={{
+                color: tile.accent
+                  ? 'rgba(240, 237, 229, 0.75)'
+                  : 'var(--text-muted)',
+              }}
+            >
+              {tile.meta}
+            </p>
+          </Link>
+        ))}
+      </div>
+
+      {/* Activity ledger */}
+      <p className="mt-6 mb-1.5 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+        Siste hendelser
+      </p>
+      <div className="overflow-hidden rounded-2xl border border-border bg-surface">
+        {ledger.length === 0 ? (
+          <p className="px-4 py-5 text-center text-sm text-muted">
+            Ingen aktivitet siste 14 dager.
+          </p>
+        ) : (
+          ledger.map((row, i) => (
+            <div
+              key={`${row.ts}-${i}`}
+              className="reveal-up grid grid-cols-[42px_1fr] items-baseline gap-2.5 px-3.5 py-2.5"
+              style={{
+                animationDelay: `${320 + i * 60}ms`,
+                borderTop:
+                  i === 0 ? 'none' : '1px solid var(--row-divider-warm)',
+              }}
+            >
+              <span className="font-serif text-xs font-medium tabular-nums text-muted">
+                {formatHHMM(row.ts)}
+              </span>
+              <div>
+                <p className="text-[13px] text-text">
+                  <b className="font-semibold">{row.who}</b> {row.action}
+                </p>
+                <p className="mt-0.5 font-serif text-[11px] italic text-muted">
+                  {row.ref}
+                </p>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <PullQuote className="mt-6">Orden i protokollen.</PullQuote>
+    </AdminShell>
+  );
+}
+
+/**
+ * Norwegian display name — `Firstname E.` (first name + surname initial)
+ * keeps the ledger compact. `M.Berg` style from the spec doesn't work for us
+ * because we have full names, not surname-prefixed entries.
+ */
+function shortName(full: string | undefined | null): string {
+  if (!full) return '(ukjent)';
+  const parts = full.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  return `${parts[0]} ${parts[parts.length - 1][0]}.`;
+}
+
+function TileIcon({
+  kind,
+  color,
+}: {
+  kind: 'trophy' | 'mail' | 'course' | 'stamp';
+  color: string;
+}) {
+  if (kind === 'mail') {
+    return (
+      <svg width={22} height={22} viewBox="0 0 24 24" fill="none" aria-hidden>
+        <rect
+          x="3"
+          y="6"
+          width="18"
+          height="13"
+          rx="1.5"
+          stroke={color}
+          strokeWidth="1.4"
+        />
+        <path
+          d="M3 7 L12 13 L21 7"
+          stroke={color}
+          strokeWidth="1.4"
+          strokeLinejoin="round"
+          fill="none"
+        />
+      </svg>
+    );
+  }
+  if (kind === 'course') {
+    return (
+      <svg width={22} height={22} viewBox="0 0 24 24" fill="none" aria-hidden>
+        <line
+          x1="6"
+          y1="3"
+          x2="6"
+          y2="21"
+          stroke={color}
+          strokeWidth="1.4"
+          strokeLinecap="round"
+        />
+        <path
+          d="M6 4 L17 6.5 L6 9 Z"
+          fill="var(--accent)"
+          stroke="var(--accent)"
+          strokeWidth="1"
+          strokeLinejoin="round"
+        />
+        <ellipse
+          cx="6"
+          cy="21"
+          rx="4.5"
+          ry="1.2"
+          stroke={color}
+          strokeWidth="1.2"
+          fill="none"
+        />
+      </svg>
+    );
+  }
+  if (kind === 'stamp') {
+    return (
+      <svg width={22} height={22} viewBox="0 0 24 24" fill="none" aria-hidden>
+        <circle cx="12" cy="9" r="6" stroke={color} strokeWidth="1.4" fill="none" />
+        <circle cx="12" cy="9" r="3" stroke={color} strokeWidth="1.2" fill="none" />
+        <path d="M4 19 H20" stroke={color} strokeWidth="1.6" strokeLinecap="round" />
+        <path d="M6 17 H18" stroke={color} strokeWidth="1.2" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  // trophy
+  return (
+    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M7 4 H17 V9 a5 5 0 0 1 -10 0 V4 Z"
+        stroke={color}
+        strokeWidth="1.4"
+        fill="none"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M7 6 H4 a2 2 0 0 0 2 4"
+        stroke={color}
+        strokeWidth="1.2"
+        fill="none"
+      />
+      <path
+        d="M17 6 H20 a2 2 0 0 1 -2 4"
+        stroke={color}
+        strokeWidth="1.2"
+        fill="none"
+      />
+      <path d="M9 14 V17 H15 V14" stroke={color} strokeWidth="1.4" fill="none" />
+      <rect
+        x="7"
+        y="17"
+        width="10"
+        height="2.5"
+        rx="0.5"
+        stroke={color}
+        strokeWidth="1.4"
+        fill="var(--accent)"
+      />
+    </svg>
+  );
+}
