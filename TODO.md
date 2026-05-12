@@ -60,10 +60,6 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 
 - [ ] Dark-mode-tokens er definert i `app/globals.css`, men flatene er ikke verifisert i dark mode og noen ser halvferdige ut. Per 2026-05-11 tvinger `app/layout.tsx` light mode via `data-theme="light"` + `colorScheme: "light"`. Fjern tvangen og audit hver flate når dark mode skal aktiveres på ekte.
 
-### Versjons-info i appen
-
-- [ ] **Vis hvilken versjon brukeren kjører.** Trenger en discreet plassering — kandidater: footer på `/profile`, hjelpe-pop-up fra Sekretariatet, eller liten kicker nederst på Hjem-skjermen. Bør lese fra `package.json` (eller `process.env.NEXT_PUBLIC_APP_VERSION` injisert i build) + evt. git SHA. Rapportert av Jørgen 2026-05-12 — verdt å ha ved feilrapportering så vi vet hvilken build folk kjører.
-
 ---
 
 ## ⚙️ Tekniske forbedringer

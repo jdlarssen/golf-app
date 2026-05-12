@@ -1,7 +1,16 @@
 import type { NextConfig } from "next";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+const pkg = JSON.parse(
+  readFileSync(resolve("./package.json"), "utf-8"),
+) as { version: string };
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  env: {
+    NEXT_PUBLIC_APP_VERSION: pkg.version,
+    NEXT_PUBLIC_APP_SHA: (process.env.VERCEL_GIT_COMMIT_SHA ?? "").slice(0, 7),
+  },
 };
 
 export default nextConfig;
