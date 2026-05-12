@@ -5,6 +5,7 @@ import { AppShell } from '@/components/ui/AppShell';
 import { BackLink } from '@/components/ui/BackLink';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
+import { Kicker } from '@/components/ui/Kicker';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { submitScorecard } from './actions';
 import { SubmitForm } from './SubmitForm';
@@ -177,57 +178,66 @@ export default async function SubmitPage({
 
       <div className="space-y-4">
         <Card>
-          <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+          <p className="font-serif text-[19px] font-medium tracking-[-0.01em] text-text">
             {game.name}
-          </h2>
-          <p className="text-xs text-zinc-500">
+          </p>
+          <p className="text-xs text-muted mt-1.5">
             {game.courses?.name ?? '(ukjent bane)'}
             {game.tee_boxes
               ? ` · Tee: ${game.tee_boxes.name} · Par ${game.tee_boxes.par_total}`
               : ''}
           </p>
-          <p className="text-xs text-zinc-500 mt-1">
-            Lag {me.team_number} · Flight {me.flight_number} · CH{' '}
-            {me.course_handicap ?? '—'}
+          <p className="text-xs text-muted mt-1">
+            Lag <span className="score-num">{me.team_number}</span> · Flight{' '}
+            <span className="score-num">{me.flight_number}</span> · CH{' '}
+            <span className="score-num">{me.course_handicap ?? '—'}</span>
           </p>
         </Card>
 
         <Card className="p-0 overflow-hidden">
-          <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800">
-            <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Ditt kort
-            </h2>
+          <div className="px-4 py-3 border-b border-border">
+            <Kicker tone="muted">DITT KORT</Kicker>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-zinc-500 bg-zinc-50 dark:bg-zinc-800/50">
-                  <th className="px-3 py-2 font-medium">Hull</th>
-                  <th className="px-3 py-2 font-medium text-right">Par</th>
-                  <th className="px-3 py-2 font-medium text-right">SI</th>
-                  <th className="px-3 py-2 font-medium text-right">Slag</th>
-                  <th className="px-3 py-2 font-medium">Ført av</th>
+                <tr className="text-left bg-bg/40">
+                  <th className="px-4 py-2.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+                    Hull
+                  </th>
+                  <th className="px-4 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+                    Par
+                  </th>
+                  <th className="px-4 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+                    SI
+                  </th>
+                  <th className="px-4 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+                    Slag
+                  </th>
+                  <th className="px-4 py-2.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+                    Ført av
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r) => (
                   <tr
                     key={r.hole_number}
-                    className="border-t border-zinc-200 dark:border-zinc-800"
+                    className="border-t border-border"
                   >
-                    <td className="px-3 py-2 text-zinc-900 dark:text-zinc-100 font-medium">
+                    <td className="score-num px-4 py-2.5 text-text">
                       {r.hole_number}
                     </td>
-                    <td className="px-3 py-2 text-right text-zinc-700 dark:text-zinc-300">
+                    <td className="score-num px-4 py-2.5 text-right text-muted">
                       {r.par}
                     </td>
-                    <td className="px-3 py-2 text-right text-zinc-700 dark:text-zinc-300">
+                    <td className="score-num px-4 py-2.5 text-right text-muted">
                       {r.stroke_index}
                     </td>
-                    <td className="px-3 py-2 text-right text-zinc-900 dark:text-zinc-100">
+                    <td className="score-num px-4 py-2.5 text-right text-text">
                       {r.strokes ?? '—'}
                     </td>
-                    <td className="px-3 py-2 text-zinc-500 truncate max-w-[10rem]">
+                    <td className="px-4 py-2.5 text-muted truncate max-w-[10rem]">
                       {r.enteredByName ?? '—'}
                     </td>
                   </tr>
@@ -238,16 +248,13 @@ export default async function SubmitPage({
         </Card>
 
         <Card>
-          <p className="text-sm text-zinc-700 dark:text-zinc-300">
+          <p className="text-sm text-muted">
             Brutto totalt:{' '}
-            <span className="font-medium text-zinc-900 dark:text-zinc-100">
-              {totalBrutto}
-            </span>
-            <span className="text-zinc-500"> · </span>
+            <span className="score-num text-text">{totalBrutto}</span>
+            {' · '}
             Spilte hull:{' '}
-            <span className="font-medium text-zinc-900 dark:text-zinc-100">
-              {playedHoles.length}/18
-            </span>
+            <span className="score-num text-text">{playedHoles.length}</span>
+            <span className="inline-num">/18</span>
           </p>
         </Card>
 
@@ -261,7 +268,7 @@ export default async function SubmitPage({
         <div className="grid grid-cols-2 gap-3">
           <Link
             href={`/games/${id}/holes/1`}
-            className="min-h-[44px] flex items-center justify-center rounded-lg border border-zinc-300 dark:border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+            className="inline-flex items-center justify-center min-h-[44px] rounded-full border border-border px-[18px] py-2.5 text-sm font-medium text-text hover:bg-primary-soft transition-colors"
           >
             ← Rediger
           </Link>

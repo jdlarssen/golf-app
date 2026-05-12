@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Button } from '@/components/ui/Button';
 
 type Props = {
   submitAction: () => void | Promise<void>;
@@ -31,13 +32,9 @@ export function SubmitForm({ submitAction, missingHoles }: Props) {
         setPending(true);
       }}
     >
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-full min-h-[44px] bg-green-600 hover:bg-green-700 disabled:opacity-60 disabled:cursor-wait text-white px-4 py-3 rounded-lg font-medium transition-colors text-center text-base"
-      >
+      <Button type="submit" disabled={pending} className="w-full">
         {pending ? 'Leverer…' : 'Lever ✓'}
-      </button>
+      </Button>
     </form>
   );
 }
