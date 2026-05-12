@@ -88,6 +88,26 @@ Aldri si bare «sett dette i Supabase» — alltid med eksakt sti og kopier-lim-
 - Aldri `--no-verify`, aldri force-push uten god grunn
 - Vercel deployer automatisk på push til `main`
 
+### Versjonering / CHANGELOG
+
+**Regel:** Hver commit som endrer bruker-synlig oppførsel MÅ bumpe `package.json` versjonen og legge til entry i `CHANGELOG.md` — i samme commit som selve endringen. Footer i appen (`AppVersionFooter.tsx`) henter automatisk versjonen via `next.config.ts` → `NEXT_PUBLIC_APP_VERSION`, så bumpen blir synlig i prod ved neste deploy.
+
+**Hvilken type bump:**
+- **PATCH (`vX.Y.Z+1`)** — bug-fix, copy-justering, perf-forbedring, design-polish. Bruker kan gjøre nøyaktig det samme som før, bare bedre.
+- **MINOR (`vX.Y+1.0`)** — ny bruker-synlig feature shipped til prod (ny side, ny knapp, ny spillmodus, ny innstilling).
+- **MAJOR (`vX+1.0.0`)** — bryter datamodell eller fundamental UX, krever bruker-kommunikasjon. Pre-1.0.0 (`0.x.y`) brukes som alpha — vi er ikke stabil ennå, så minor-bumps kan inneholde mindre brytende endringer.
+
+**Skip bump for:** rene docs-commits (`docs(...)`), refaktorering uten oppførselsendring (`refactor(...)`), test-only-commits, og `chore(...)` som ikke påvirker brukeren. CHANGELOG-entry kan også skippes da.
+
+**Hvordan bumpe:**
+- `npm version patch --no-git-tag-version` (eller `minor`/`major`) — oppdaterer `package.json` + `package-lock.json` uten å lage separat tag/commit
+- Eller rediger `package.json` direkte (one-liner)
+- Inkluder bump-en + CHANGELOG-oppdatering i SAMME commit som feature/fix-en
+
+**CHANGELOG-format:** [Keep a Changelog](https://keepachangelog.com/no/). Hver release får `## [X.Y.Z] - YYYY-MM-DD` med underseksjoner `### Added`, `### Changed`, `### Fixed`, `### Removed`. Norske bullet points. Nyeste øverst.
+
+**Veien til v1.0.0:** bumpene fortsetter som `0.x.y` til (a) `/admin/invitations`-status fungerer korrekt, (b) smoke-test med ekte kompis bestått, (c) Supabase Site-URL/mail-subject-cache løst. Når alle tre er på plass: bump til `1.0.0` med en samle-CHANGELOG-entry «Første stabile release».
+
 ### Feilhåndtering / bugs
 
 - **Ingen quick-fixes.** Bruker har eksplisitt sagt: alle bugs krever systematisk debugging FØR fix

@@ -84,15 +84,9 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 - [ ] **Extract `lib/games/status.ts`** — `GameStatus`-unionen og `STATUS_LABELS`-objektet er duplisert i 13 filer. Refaktoreres samtidig med M1-fargefiks (når design-handoff lander). Bør også gjøres for å forenkle fremtidige status-utvidelser.
 - [ ] **Move RealtimeMount out of game layout** — i dag mounter `app/games/[id]/layout.tsx` `RealtimeMount` for alle game-statuser inkludert scheduled. Subscription er harmless (ingen events arriverer for scheduled siden ingen scores eksisterer + RLS blokkerer), men det er en idle WebSocket-subscription på hver venterom-besøk. Lav prioritet til vi vokser.
 
-### Versjonering / release-disiplin
+### Versjonering / release
 
-- [ ] **Bump versjonen fra v0.1.0 til v1.0.0 og innfør semver-disiplin per release.** I dag står `package.json` fast på `0.1.0` selv om vi har shipped 12+ phases og hele turnerings-flyten fungerer end-to-end. Mekanismen er allerede på plass: `next.config.ts` leser `pkg.version` og eksponerer som `NEXT_PUBLIC_APP_VERSION`, footer rendrer den. Kun selve bumpen mangler. Forslag til scheme:
-  - **MAJOR (`vX.0.0`)** — bryter datamodell, fjerner feature, eller omkalfatrer UX på en måte som krever bruker-kommunikasjon. Eksempler som vil rettferdiggjøre `v2.0.0`: ny spillmodus-arkitektur som migrerer eksisterende `games`-rader, klubb-tier med `groups`/`group_members`-RLS-overhaling, bytte fra magic-link til passkeys som primær auth.
-  - **MINOR (`vX.Y.0`)** — ny bruker-synlig feature levert til prod. Eksempler: ny spillformat (stableford, scramble), in-app innboks, biometrisk innlogging, søkbar spillerliste, admin-invitasjons-overhaul (de tre nye TODO-ene over).
-  - **PATCH (`vX.Y.Z`)** — bug-fixes, copy-justeringer, perf-forbedringer, design-polish som ikke endrer hva brukeren kan gjøre. Eksempler: hydration-mismatch i `teeOff.ts`, kontrast-fiks i light-mode, raskere hull-navigasjon, fjernet duplisert `GameStatus`-union.
-  - **Foreslått first cut for v1.0.0**: «Tørny er klar for ekte bruk med en kompisgjeng» — krever (a) `/admin/invitations` viser korrekt status (TODO over), (b) smoke-test med ekte kompis bestått, (c) Site URL + mail-subject cache-trøbbel løst. Når disse tre lander: bump til `1.0.0`, skriv kort changelog-entry, push.
-  - **Hvordan bumpe i praksis**: manuell oppdatering av `package.json` i commiten som shipper feature/fix. Commit-meldingen tagger bumpen: `chore(release): v1.1.0 — stableford support`. Vurder `npm version minor` / `npm version patch` for å gjøre det automatisk + lage git-tag. Senere kan vi automatisere via conventional-commits + semantic-release hvis det blir tungvint.
-  - **Changelog**: når vi begynner å bumpe, opprett `CHANGELOG.md` med Keep-a-Changelog-format. Footer i appen kan da linke til siste release-notes for nysgjerrige brukere.
+- [ ] **Bump til `v1.0.0` når kriteriene er nådd.** Disiplinen er på plass (se `CLAUDE.md` → «Versjonering / CHANGELOG» og `CHANGELOG.md`). Vi står på `0.2.0` per 2026-05-12. Bump til `1.0.0` utløses når: (a) `/admin/invitations` viser korrekt status (egen TODO over), (b) smoke-test med ekte kompis bestått, (c) Supabase Site-URL/mail-subject-cache løst. Da: én MAJOR-bump med samle-CHANGELOG-entry «Første stabile release».
 
 ### Performance
 
