@@ -4,7 +4,16 @@ import { getServerClient } from '@/lib/supabase/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { BackLink } from '@/components/ui/BackLink';
 import { Card } from '@/components/ui/Card';
+import { Kicker } from '@/components/ui/Kicker';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { PullQuote } from '@/components/ui/PullQuote';
+import { HourGlass } from '@/components/icons/HourGlass';
+import { firstName } from '@/lib/firstName';
+import {
+  expectedFirstScoreTime,
+  formatTeeOffTime,
+} from '@/lib/format/teeOff';
+import { isFrontNineOpen } from '@/lib/leaderboard/frontNineGate';
 import {
   computeLeaderboard,
   parseMode,
@@ -16,6 +25,7 @@ import {
   type TeamLine,
 } from '@/lib/leaderboard';
 import { LeaderboardConfetti } from './LeaderboardConfetti';
+import { PreRoundLeaderboardRealtime } from './PreRoundLeaderboard';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ mode?: string | string[] }>;
@@ -28,6 +38,7 @@ type GameRow = {
   status: GameStatus;
   course_id: string;
   tee_box_id: string;
+  scheduled_tee_off_at: string | null;
   courses: { name: string } | null;
   tee_boxes: { name: string } | null;
 };
@@ -72,13 +83,14 @@ export default async function LeaderboardPage({
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, status, course_id, tee_box_id, courses(name), tee_boxes(name)',
+      'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, courses(name), tee_boxes(name)',
     )
     .eq('id', id)
     .single<GameRow>();
   if (gameError || !game) notFound();
 
-  if (game.status !== 'finished') {
+  // Draft games have no leaderboard view — bounce to game home.
+  if (game.status === 'draft') {
     redirect(`/games/${id}`);
   }
 
@@ -146,6 +158,39 @@ export default async function LeaderboardPage({
     strokes: s.strokes,
   }));
 
+  // F1: view branching. State #3 (timeglass) when game hasn't progressed far
+  // enough to show anything meaningful — either still scheduled, or active
+  // but no team has finished front 9 yet. State #3.5 (front 9 visible, back
+  // 9 locked) when at least one team has completed front 9 but game isn't
+  // finished. Full leaderboard once status flips to finished.
+  //
+  // Currently state #3.5 falls through to the full leaderboard render below
+  // as a placeholder; F3 will replace it with the half-view layout.
+  const frontNineOpen = isFrontNineOpen({
+    players: (rawPlayers ?? []).map((p) => ({
+      user_id: p.user_id,
+      team_number: p.team_number,
+    })),
+    scores: (rawScores ?? []).map((s) => ({
+      user_id: s.user_id,
+      hole_number: s.hole_number,
+      strokes: s.strokes,
+    })),
+  });
+
+  type View = 'state3' | 'state3.5' | 'full';
+  const view: View =
+    game.status === 'finished' ? 'full' : !frontNineOpen ? 'state3' : 'state3.5';
+
+  if (view === 'state3') {
+    return renderState3({
+      gameId: id,
+      gameName: game.name,
+      teeOffAt: game.scheduled_tee_off_at,
+      players,
+    });
+  }
+
   // Compute both modes up front; pick which to render.
   const linesNetto = computeLeaderboard({ mode: 'netto', players, holes, scores });
   const linesBrutto = computeLeaderboard({ mode: 'brutto', players, holes, scores });
@@ -164,7 +209,10 @@ export default async function LeaderboardPage({
 
   return (
     <AppShell>
-      <LeaderboardConfetti gameId={id} />
+      {/* Confetti is the "spillet er over" celebratory beat — only fire on
+          the full leaderboard (status=finished), not on the state #3.5
+          placeholder render which is still mid-round. */}
+      {view === 'full' && <LeaderboardConfetti gameId={id} />}
       <PageHeader
         title="Leaderboard"
         subtitle={subtitle}
@@ -348,5 +396,105 @@ export function ModeToggle({
         Brutto
       </Link>
     </div>
+  );
+}
+
+/**
+ * State #3 — "Stille før stormen". Rendered when the game hasn't progressed
+ * far enough for a leaderboard to be meaningful: status=scheduled, or
+ * status=active with no team yet through front 9. The PreRoundLeaderboardRealtime
+ * client component subscribes to scores INSERTs and refreshes the route on
+ * the first score so the server re-evaluates the gate and can flip to #3.5.
+ *
+ * The startliste shows one row per team (sorted by team_number). Tee-off is
+ * the same per row for now — per-flight staggered tee times are a future
+ * feature. When `teeOffAt` is null (legacy game from before D2 migration),
+ * the heading falls back to "Stille før stormen." and the tee column shows
+ * an em-dash.
+ */
+function renderState3(opts: {
+  gameId: string;
+  gameName: string;
+  teeOffAt: string | null;
+  players: LbPlayer[];
+}) {
+  const { gameId, gameName, teeOffAt, players } = opts;
+  const teeOffDate = teeOffAt ? new Date(teeOffAt) : null;
+  const teeOffLabel = teeOffDate ? formatTeeOffTime(teeOffDate) : '—';
+
+  // Group players by team, sorted by team_number ascending.
+  const teamNumbers = Array.from(
+    new Set(players.map((p) => p.teamNumber)),
+  ).sort((a, b) => a - b);
+  const teams = teamNumbers.map((teamNumber) => ({
+    teamNumber,
+    members: players.filter((p) => p.teamNumber === teamNumber),
+  }));
+  const teamCount = teams.length;
+
+  return (
+    <AppShell>
+      <PreRoundLeaderboardRealtime gameId={gameId} />
+
+      <header className="mb-6 flex items-center justify-between gap-4">
+        <BackLink href="/">← Hjem</BackLink>
+        <Kicker tone="accent">{gameName.toUpperCase()}</Kicker>
+        <span className="w-12" aria-hidden />
+      </header>
+
+      {/* Hero */}
+      <section className="flex flex-col items-center text-center px-5 pt-6 pb-2">
+        <HourGlass size={48} className="text-primary" />
+        <Kicker tone="muted" className="mt-14">
+          STILLE FØR STORMEN
+        </Kicker>
+        <h1 className="mt-6 font-serif text-[24px] font-medium tracking-[-0.015em] leading-tight text-text">
+          {teeOffDate
+            ? `Første score forventet kl ${expectedFirstScoreTime(teeOffDate)}.`
+            : 'Stille før stormen.'}
+        </h1>
+        <p className="mt-10 max-w-[280px] font-sans text-[13px] leading-[1.5] text-muted">
+          {teamCount} lag er på vei ut. Tabellen våkner når første kort kommer
+          inn.
+        </p>
+      </section>
+
+      {/* Startliste header */}
+      <section className="px-6 pt-[22px] pb-2 text-center">
+        <Kicker tone="muted">STARTLISTE</Kicker>
+      </section>
+
+      {/* Team list */}
+      <ul className="px-4 pb-4 flex flex-col gap-2">
+        {teams.map((team, idx) => (
+          <li
+            key={team.teamNumber}
+            className="px-3.5 py-3 bg-surface border border-border rounded-xl shadow-sm flex items-center gap-3"
+          >
+            <span className="w-6 shrink-0 text-center font-serif tabular-nums text-[13px] text-muted">
+              {idx + 1}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-serif text-[15px] font-medium tracking-[-0.005em] text-text">
+                Lag {team.teamNumber}
+              </p>
+              <p className="mt-0.5 truncate font-sans text-[11.5px] text-muted">
+                {team.members
+                  .map((m) => firstName(m.name) ?? m.name)
+                  .join(' · ') || '(uten spillere)'}
+              </p>
+            </div>
+            <div className="text-right shrink-0">
+              <Kicker tone="muted">TEE</Kicker>
+              <p className="mt-0.5 font-serif text-[15px] font-medium tracking-[-0.01em] tabular-nums text-text">
+                {teeOffLabel}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <PullQuote className="px-6 pt-1 pb-4">Lykke til.</PullQuote>
+    </AppShell>
   );
 }
