@@ -1,8 +1,8 @@
-import { AppShell } from '@/components/ui/AppShell';
+import { AdminShell } from '@/components/ui/AdminShell';
 import { BackLink } from '@/components/ui/BackLink';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
-import { PageHeader } from '@/components/ui/PageHeader';
+import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { CourseForm } from '../CourseForm';
 import { createCourse } from './actions';
 
@@ -17,9 +17,12 @@ const ERROR_MESSAGES: Record<string, string> = {
   bad_cr: 'Course rating må være et tall mellom 50 og 80.',
   bad_par_total: 'Par total må være et helt tall mellom 60 og 80.',
   tee_required: 'Minst én tee-boks må legges til.',
-  db_course: 'Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.',
-  db_holes: 'Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.',
-  db_tees: 'Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.',
+  db_course:
+    'Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.',
+  db_holes:
+    'Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.',
+  db_tees:
+    'Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.',
 };
 
 function first(value: string | string[] | undefined): string | undefined {
@@ -37,24 +40,37 @@ export default async function NewCoursePage({
   const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
 
   return (
-    <AppShell>
-      <PageHeader
-        title="Ny bane"
-        subtitle="Legg til en ny golfbane med hull og tee-bokser"
-        action={
-          <BackLink href="/admin/courses">Tilbake</BackLink>
-        }
-      />
+    <AdminShell>
+      <div className="-mt-3 mb-2 flex items-center justify-between">
+        <BackLink href="/admin/courses">Tilbake</BackLink>
+        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          Baner · protokoll
+        </p>
+        <span className="w-[80px]" aria-hidden />
+      </div>
+
+      <BrassRibbon kicker="Ny bane" />
+
+      <div className="px-1">
+        <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
+          Ny bane
+        </h1>
+        <p className="font-sans text-[11.5px] text-muted">
+          Hull, par, stroke-indeks og tee-bokser
+        </p>
+      </div>
 
       {errorMessage && (
-        <div className="mb-4">
+        <div className="mt-4">
           <Banner tone="error">{errorMessage}</Banner>
         </div>
       )}
 
-      <Card>
-        <CourseForm action={createCourse} submitLabel="Lagre bane" />
-      </Card>
-    </AppShell>
+      <div className="mt-5">
+        <Card>
+          <CourseForm action={createCourse} submitLabel="Lagre bane" />
+        </Card>
+      </div>
+    </AdminShell>
   );
 }

@@ -1,10 +1,10 @@
 import { notFound } from 'next/navigation';
 import { BackLink } from '@/components/ui/BackLink';
 import { getServerClient } from '@/lib/supabase/server';
-import { AppShell } from '@/components/ui/AppShell';
+import { AdminShell } from '@/components/ui/AdminShell';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
-import { PageHeader } from '@/components/ui/PageHeader';
+import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { CourseForm } from '../../CourseForm';
 import { updateCourse, deleteCourse } from './actions';
 import { DeleteCourseButton } from './DeleteCourseButton';
@@ -23,9 +23,12 @@ const ERROR_MESSAGES: Record<string, string> = {
   tee_required: 'Minst én tee-boks må legges til.',
   tee_in_use:
     'Kan ikke endre tee-bokser fordi minst ett pågående eller fullført spill bruker dem. Slett spillene først, eller la disse tee-boksene stå.',
-  db_course: 'Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.',
-  db_holes: 'Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.',
-  db_tees: 'Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.',
+  db_course:
+    'Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.',
+  db_holes:
+    'Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.',
+  db_tees:
+    'Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.',
   db_load: 'Klarte ikke å lese banen fra databasen. Prøv igjen.',
 };
 
@@ -96,32 +99,45 @@ export default async function EditCoursePage({
   const deleteAction = deleteCourse.bind(null, id);
 
   return (
-    <AppShell>
-      <PageHeader
-        title="Rediger bane"
-        subtitle={course.name}
-        action={
-          <BackLink href="/admin/courses">Tilbake</BackLink>
-        }
-      />
+    <AdminShell>
+      <div className="-mt-3 mb-2 flex items-center justify-between">
+        <BackLink href="/admin/courses">Tilbake</BackLink>
+        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          Baner · protokoll
+        </p>
+        <span className="w-[80px]" aria-hidden />
+      </div>
+
+      <BrassRibbon kicker="Rediger bane" />
+
+      <div className="px-1">
+        <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
+          {course.name}
+        </h1>
+        <p className="font-sans text-[11.5px] text-muted">
+          Endre hull, par, stroke-indeks og tee-bokser
+        </p>
+      </div>
 
       {errorMessage && (
-        <div className="mb-4">
+        <div className="mt-4">
           <Banner tone="error">{errorMessage}</Banner>
         </div>
       )}
 
-      <Card>
-        <CourseForm
-          action={updateAction}
-          submitLabel="Lagre endringer"
-          initialData={{
-            name: course.name,
-            holes: initialHoles,
-            teeBoxes: initialTees,
-          }}
-        />
-      </Card>
+      <div className="mt-5">
+        <Card>
+          <CourseForm
+            action={updateAction}
+            submitLabel="Lagre endringer"
+            initialData={{
+              name: course.name,
+              holes: initialHoles,
+              teeBoxes: initialTees,
+            }}
+          />
+        </Card>
+      </div>
 
       <div className="mt-6">
         <DeleteCourseButton
@@ -129,6 +145,6 @@ export default async function EditCoursePage({
           courseName={course.name}
         />
       </div>
-    </AppShell>
+    </AdminShell>
   );
 }
