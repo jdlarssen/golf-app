@@ -187,30 +187,12 @@ export default async function Home({
               </Link>
             </li>
             {profile?.is_admin && (
-              <li className="flex flex-wrap items-center justify-center text-sm text-muted">
+              <li>
                 <Link
-                  href="/admin/courses"
-                  className="inline-flex items-center min-h-[44px] px-3 hover:text-text transition-colors"
+                  href="/admin"
+                  className="inline-flex items-center min-h-[44px] px-3 text-sm text-muted hover:text-text transition-colors"
                 >
-                  Baner
-                </Link>
-                <span aria-hidden className="text-border">
-                  ·
-                </span>
-                <Link
-                  href="/admin/invitations"
-                  className="inline-flex items-center min-h-[44px] px-3 hover:text-text transition-colors"
-                >
-                  Invitasjoner
-                </Link>
-                <span aria-hidden className="text-border">
-                  ·
-                </span>
-                <Link
-                  href="/admin/games"
-                  className="inline-flex items-center min-h-[44px] px-3 hover:text-text transition-colors"
-                >
-                  Spill
+                  Sekretariatet
                 </Link>
               </li>
             )}
@@ -303,27 +285,11 @@ export default async function Home({
 
           {profile?.is_admin && (
             <Section label="Admin" accent>
-              <Link href="/admin/courses" className="block">
-                <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
-                  <span className="text-base font-medium text-text">Baner</span>
-                  <span aria-hidden className="text-muted">
-                    →
-                  </span>
-                </Card>
-              </Link>
-              <Link href="/admin/invitations" className="block">
+              <Link href="/admin" className="block">
                 <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
                   <span className="text-base font-medium text-text">
-                    Invitasjoner
+                    Sekretariatet
                   </span>
-                  <span aria-hidden className="text-muted">
-                    →
-                  </span>
-                </Card>
-              </Link>
-              <Link href="/admin/games" className="block">
-                <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
-                  <span className="text-base font-medium text-text">Spill</span>
                   <span aria-hidden className="text-muted">
                     →
                   </span>
