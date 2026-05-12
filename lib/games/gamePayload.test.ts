@@ -25,6 +25,15 @@ describe('parseOsloDateTimeLocal', () => {
   it('throws on a malformed string', () => {
     expect(() => parseOsloDateTimeLocal('not a date')).toThrow();
   });
+
+  it('resolves the ambiguous fall-back hour to post-transition CET (+01:00)', () => {
+    // 2026-10-25 02:30 Europe/Oslo is ambiguous (DST ended at 03:00→02:00).
+    // Implementation deliberately falls back to post-transition offset (+01:00):
+    // 02:30 CET = 01:30 UTC.
+    expect(parseOsloDateTimeLocal('2026-10-25T02:30')).toBe(
+      '2026-10-25T01:30:00.000Z',
+    );
+  });
 });
 
 describe('buildGameInsertPayload (draft mode)', () => {

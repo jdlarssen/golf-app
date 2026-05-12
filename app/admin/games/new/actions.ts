@@ -23,7 +23,7 @@ async function createGameInternal(
   formData: FormData,
   mode: 'draft' | 'publish',
 ) {
-  const payload = buildGameInsertPayload(formData, 'publish');
+  const payload = buildGameInsertPayload(formData, mode);
 
   if (payload.errorCode) {
     redirect(`/admin/games/new?error=${payload.errorCode}`);

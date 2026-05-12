@@ -43,6 +43,17 @@ export type GamePlayerInput = {
 
 export type PayloadMode = 'draft' | 'publish';
 
+export type GameValidationErrorCode =
+  | 'name_required'
+  | 'course_required'
+  | 'tee_required'
+  | 'bad_allowance'
+  | 'players_required'
+  | 'duplicate_player'
+  | 'bad_team'
+  | 'bad_flight'
+  | 'team_balance';
+
 export type ParsedPayload = {
   name: string;
   course_id: string | null;
@@ -50,7 +61,7 @@ export type ParsedPayload = {
   hcp_allowance_pct: number;
   require_peer_approval: boolean;
   players: GamePlayerInput[];
-  errorCode?: string;
+  errorCode?: GameValidationErrorCode;
 };
 
 /**
