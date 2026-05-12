@@ -110,7 +110,12 @@ Plan: kjør disse gjennom Claude Design ([claude.ai/design](https://claude.ai/de
 
 ## 🚀 Vekst og skalering
 
-### Spillformater
+### Spillformat-fleksibilitet *(blokkerer klubb-skala)*
+
+- [ ] **Variabelt antall lag og spillere per lag.** I dag er det hardkodet 4 lag × 2 spillere = nøyaktig 8 spillere. Krever ny brainstorming: hvor mange lag støtter vi (2/3/4/fritt?), hvor mange per lag (2/variabelt?), single-player-modus («solo stableford»)? Påvirker DB-CHECKs (game_players.team_number, flight_number), GameForm-validering (teamsComplete, eightSelected), og scoring-laget (best-ball antar 2-spiller-lag). Bør tas som egen milestone med dedikert design-runde. Diskutert 2026-05-12; user kommentar: «Vi skal være 8 spillere når vi skal spille, men det er ikke noe jeg ønsker å ha hardkodet.»
+- [ ] **Søkbar spillerlistor-UI.** Når kompisgjengen vokser fra 8 til 100+ brukere blir den flate avhukingslisten i admin-spilloppretting umulig å navigere. Trenger typeahead-input som tagger valgte spillere (chip-style UI), eller paginerte filtrerte resultater. Knyttet til klubb-skala-arbeidet. Diskutert 2026-05-12.
+
+### Spillformater *(avhenger av spillformat-fleksibilitet over)*
 
 - [ ] **Stableford** — i stedet for laveste sum, samle poeng per hull (par = 2, birdie = 3 osv.)
 - [ ] **Texas scramble** — laget velger beste slag for hver shot, alle spiller derfra
