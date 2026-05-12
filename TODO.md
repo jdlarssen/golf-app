@@ -74,10 +74,8 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 
 ### Refaktorering (etter empty-states + scheduled-status-leveransen)
 
-- [ ] **Extract `lib/games/gamePayload.ts`** — `buildGameInsertPayload` og `parseOsloDateTimeLocal` er duplisert byte-for-byte mellom `app/admin/games/new/actions.ts` og `app/admin/games/[id]/edit/actions.ts`. Eksplisitt TODO-merke ligger allerede i edit/actions.ts. Risiko: fremtidige DST-fikser kan glipp ene kopien. 1-2 timers refaktor, lav risiko. Flagget i Phase G integration review 2026-05-12.
 - [ ] **Extract `lib/games/status.ts`** — `GameStatus`-unionen og `STATUS_LABELS`-objektet er duplisert i 13 filer. Refaktoreres samtidig med M1-fargefiks (når design-handoff lander). Bør også gjøres for å forenkle fremtidige status-utvidelser.
 - [ ] **Move RealtimeMount out of game layout** — i dag mounter `app/games/[id]/layout.tsx` `RealtimeMount` for alle game-statuser inkludert scheduled. Subscription er harmless (ingen events arriverer for scheduled siden ingen scores eksisterer + RLS blokkerer), men det er en idle WebSocket-subscription på hver venterom-besøk. Lav prioritet til vi vokser.
-- [ ] **Discriminated-union refactor av GameForm props** — `createDraftAction`/`createAndPublishAction`/`editMode`/`updateAction` er alle optional i dag, med runtime-assertion som fail-on-render. Burde være discriminated union `{ mode: 'create' } | { mode: 'edit' }`. Foreslått under D4 quality review.
 
 ### Performance
 
