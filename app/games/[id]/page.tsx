@@ -6,6 +6,7 @@ import { BackLink } from '@/components/ui/BackLink';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { startScheduledGame } from '@/lib/games/startScheduledGame';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -47,10 +48,14 @@ type GameRow = {
   status: GameStatus;
   course_id: string;
   tee_box_id: string;
+  scheduled_tee_off_at: string | null;
   require_peer_approval: boolean;
   courses: { name: string } | null;
   tee_boxes: { name: string; slope: number; course_rating: number; par_total: number } | null;
 };
+
+const GAME_SELECT =
+  'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, require_peer_approval, courses(name), tee_boxes(name, slope, course_rating, par_total)';
 
 type MyPlayerRow = {
   user_id: string;
@@ -113,15 +118,15 @@ export default async function GameHomePage({
   // Proxy redirects unauthenticated users, but be defensive.
   if (!user) redirect('/login');
 
-  const { data: game, error: gameError } = await supabase
+  const { data: gameInitial, error: gameError } = await supabase
     .from('games')
-    .select(
-      'id, name, status, course_id, tee_box_id, require_peer_approval, courses(name), tee_boxes(name, slope, course_rating, par_total)',
-    )
+    .select(GAME_SELECT)
     .eq('id', id)
     .single<GameRow>();
 
-  if (gameError || !game) notFound();
+  if (gameError || !gameInitial) notFound();
+
+  let game: GameRow = gameInitial;
 
   // Find the current user's game_players row. If they aren't a participant,
   // 404 — RLS would block this query anyway, but treat both cases the same.
@@ -138,11 +143,32 @@ export default async function GameHomePage({
   if (!me) notFound();
 
   // Draft games are not for players to enter.
-  // TODO(scheduled): scheduled games may want a dedicated "Planlagt"-view
-  // (countdown, tee time, opponents) instead of falling through to the
-  // generic "Spillet er ikke startet ennå" placeholder. Handled in phase E1/E2.
   if (game.status === 'draft') {
     redirect('/');
+  }
+
+  // E1: server-side auto-start fallback. When the admin scheduled a tee-off
+  // time but didn't manually click "Start runden nå", any player loading
+  // this page after tee-off has passed triggers the same freeze-handicaps
+  // + flip-to-active transition the admin button would have done. The
+  // helper is idempotent and optimistic-locked, so concurrent loads (or a
+  // race with the admin button) converge on the same active state.
+  if (
+    game.status === 'scheduled' &&
+    game.scheduled_tee_off_at &&
+    new Date(game.scheduled_tee_off_at).getTime() <= Date.now()
+  ) {
+    await startScheduledGame(supabase, id);
+    // Re-fetch so the rest of this render sees the post-flip state. If the
+    // helper failed (e.g. tee box missing — should never happen post-D2),
+    // we fall through with the original `scheduled` row and let the
+    // existing fallback UI render — better than crashing.
+    const { data: refreshed } = await supabase
+      .from('games')
+      .select(GAME_SELECT)
+      .eq('id', id)
+      .single<GameRow>();
+    if (refreshed) game = refreshed;
   }
 
   // How many holes have a strokes value? Used to decide CTA copy.

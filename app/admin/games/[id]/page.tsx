@@ -12,7 +12,7 @@ import { EndGameButton } from './EndGameButton';
 import { ApprovePlayerButton } from './ApprovePlayerButton';
 import {
   startGame,
-  startScheduledGame,
+  startScheduledGameAction,
   adminApproveScorecard,
   endGame,
 } from './actions';
@@ -193,7 +193,7 @@ export default async function GameDetailPage({
   }
 
   const startAction = startGame.bind(null, id);
-  const startScheduledAction = startScheduledGame.bind(null, id);
+  const startScheduledAction = startScheduledGameAction.bind(null, id);
   const endAction = endGame.bind(null, id);
 
   // Readiness preview for the end-game button (only meaningful when active).
