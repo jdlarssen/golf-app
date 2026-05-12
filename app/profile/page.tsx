@@ -73,13 +73,11 @@ export default async function ProfilePage({
 
         <form action={updateProfile} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+            <label className="block text-sm font-medium text-text mb-1.5">
               E-post
             </label>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              {profile.email}
-            </p>
-            <p className="text-xs text-zinc-500 mt-1.5">
+            <p className="text-sm text-text">{profile.email}</p>
+            <p className="text-xs text-muted mt-1.5">
               E-post kan ikke endres her.
             </p>
           </div>

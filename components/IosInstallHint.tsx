@@ -44,7 +44,7 @@ export function IosInstallHint() {
     <div
       role="dialog"
       aria-label="Installer Tørny"
-      className="fixed inset-x-3 bottom-3 z-50 rounded-xl bg-zinc-900 text-zinc-100 px-4 py-3 shadow-lg text-sm"
+      className="fixed inset-x-3 bottom-3 z-50 rounded-xl bg-primary text-bg-tint px-4 py-3 shadow-lg text-sm"
     >
       <div className="flex items-start gap-3">
         <p className="flex-1 leading-snug">
@@ -58,7 +58,7 @@ export function IosInstallHint() {
           type="button"
           onClick={dismiss}
           aria-label="Lukk"
-          className="text-zinc-400 hover:text-zinc-100 -mt-1 px-1"
+          className="text-bg-tint/70 hover:text-bg-tint -mt-1 px-1 transition-colors"
         >
           ✕
         </button>

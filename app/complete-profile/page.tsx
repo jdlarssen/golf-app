@@ -56,7 +56,7 @@ export default async function CompleteProfile({
       <PageHeader title="Fullfør profilen din" />
 
       <Card>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-5">
+        <p className="text-sm text-muted mb-5">
           Velkommen! Fyll inn detaljene dine for å fullføre registreringen.
         </p>
 
