@@ -58,6 +58,11 @@
   --stamp-stroke:             rgba(184, 148, 70, 0.35);
   --stamp-fill:               rgba(184, 148, 70, 0.55);
   --row-divider-warm:         #ede6d2;   /* between ledger rows; warmer than --border */
+
+  /* Skeleton — warm linen, never neutral grey. Base sits between --border and
+   * --row-divider-warm; tint is the shimmer-peak lifted one step. */
+  --skel-base: #ece5d2;
+  --skel-tint: #f3eddd;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -105,6 +110,11 @@
     --stamp-stroke:             rgba(201, 169, 97, 0.55);
     --stamp-fill:               rgba(212, 184, 112, 0.70);
     --row-divider-warm:         #2d3f32;
+
+    /* Dark skeleton — forest-shaded, lifted off --surface (#1a2e1f) so the
+     * shape reads against card backgrounds without crushing into the page bg. */
+    --skel-base: #243828;
+    --skel-tint: #2f4734;
   }
 }
 
@@ -148,6 +158,9 @@
   --stamp-stroke:             rgba(201, 169, 97, 0.55);
   --stamp-fill:               rgba(212, 184, 112, 0.70);
   --row-divider-warm:         #2d3f32;
+
+  --skel-base: #243828;
+  --skel-tint: #2f4734;
 }
 
 /* Tailwind v4 theme bindings — these expose the design tokens as utility
@@ -409,6 +422,35 @@ body {
     box-shadow:
       inset 0 0 0 1px rgba(201, 169, 97, 0.35),
       0 2px 12px rgba(26, 46, 31, 0.04);
+  }
+
+  /* Skeleton shimmer — warm-linen base with champagne-tinted sweep. Used by
+   * the Skeleton primitive (components/ui/Skeleton.tsx). Per-shape stagger
+   * delays are passed inline via `animationDelay` so the shimmer phase shifts
+   * between elements while the keyframe stays shared. */
+  @keyframes shimmer {
+    0%   { background-position: 100% 0; }
+    100% { background-position: -120% 0; }
+  }
+
+  .sk {
+    background: linear-gradient(
+      100deg,
+      var(--skel-base) 0%,
+      var(--skel-tint) 50%,
+      var(--skel-base) 100%
+    );
+    background-size: 220% 100%;
+    background-position: 100% 0;
+    animation: shimmer 1.8s ease-in-out infinite;
+    border-radius: 6px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sk {
+      animation: none;
+      background: var(--skel-base);
+    }
   }
 
   /* Soft pulse — champagne dot on the Scorekort-venter countdown banner.
