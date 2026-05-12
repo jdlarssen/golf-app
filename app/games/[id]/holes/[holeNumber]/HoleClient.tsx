@@ -41,6 +41,13 @@ export interface HoleClientProps {
   par: number;
   strokeIndex: number;
   myUserId: string;
+  /**
+   * How many of the player's 18 holes already have a score recorded
+   * (server-side snapshot at render). When this is 18, the bottom CTA
+   * becomes 'Lever scorekort' on every hole — you don't need to
+   * navigate back to hole 18 to find the submit action.
+   */
+  myCompletedHoles: number;
   players: ClientPlayer[];
 }
 
@@ -87,23 +94,6 @@ const titleStyle: CSSProperties = {
   margin: '0 auto',
 };
 
-const settingsBtnStyle: CSSProperties = {
-  background: 'rgba(229,224,211,0.5)',
-  border: '1px solid var(--border)',
-  borderRadius: 9999,
-  width: 34,
-  height: 30,
-  fontSize: 16,
-  color: 'var(--text)',
-  cursor: 'pointer',
-  padding: 0,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  letterSpacing: '0.05em',
-  lineHeight: 1,
-};
-
 const listStyle: CSSProperties = {
   padding: 14,
   display: 'flex',
@@ -122,6 +112,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     par,
     strokeIndex,
     myUserId,
+    myCompletedHoles,
     players,
   } = props;
 
@@ -269,20 +260,28 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   const allConfirmed = cards.length > 0 && cards.every((c) => c.confirmed);
   const next = currentHole + 1;
   const isLastHole = currentHole === 18;
+  // Once the player has a score on every hole, the natural next action is
+  // to submit — regardless of which hole they're currently editing. Skip
+  // the 'Neste hull' chain and offer the submit CTA on every screen.
+  const roundComplete = myCompletedHoles >= 18;
 
-  const bottomLabel = !allConfirmed
-    ? 'Bekreft alle scorer'
-    : isLastHole
-      ? 'Lever scorekort'
-      : `Neste hull · ${next}`;
+  const bottomLabel = roundComplete
+    ? 'Lever scorekort'
+    : !allConfirmed
+      ? 'Bekreft alle scorer'
+      : isLastHole
+        ? 'Lever scorekort'
+        : `Neste hull · ${next}`;
 
-  const bottomHref = !allConfirmed
-    ? undefined
-    : isLastHole
-      ? `/games/${gameId}/submit`
-      : `/games/${gameId}/holes/${next}`;
+  const bottomHref = roundComplete
+    ? `/games/${gameId}/submit`
+    : !allConfirmed
+      ? undefined
+      : isLastHole
+        ? `/games/${gameId}/submit`
+        : `/games/${gameId}/holes/${next}`;
 
-  const bottomDisabled = !allConfirmed || disabled;
+  const bottomDisabled = (!roundComplete && !allConfirmed) || disabled;
 
   return (
     <>
@@ -295,7 +294,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
           ‹
         </SmartLink>
         <div style={titleStyle}>{gameName}</div>
-        <span style={settingsBtnStyle} aria-hidden />
+        <span aria-hidden style={{ display: 'inline-block', width: 34 }} />
       </div>
 
       <HoleStrip gameId={gameId} currentHole={currentHole} />

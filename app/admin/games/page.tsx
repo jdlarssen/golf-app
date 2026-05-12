@@ -159,6 +159,10 @@ async function fetchGames(filterFinished: boolean) {
 
   if (filterFinished) {
     q = q.eq('status', 'finished');
+  } else {
+    // Default "Pågående og kommende" view should NOT include signed/finished
+    // runs — those live under ?status=finished.
+    q = q.in('status', ['draft', 'scheduled', 'active']);
   }
 
   const { data, error } = await q.returns<GameRow[]>();

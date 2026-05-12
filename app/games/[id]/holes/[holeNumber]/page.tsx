@@ -128,6 +128,18 @@ export default async function HolePage({ params }: { params: Params }) {
     for (const s of scores ?? []) scoresByUser[s.user_id] = s;
   }
 
+  // Count how many of MY 18 holes have a score recorded. When this hits 18
+  // the bottom CTA flips to 'Lever scorekort' on every hole so the player
+  // can submit from wherever they are instead of having to navigate back to
+  // hole 18 first.
+  const { count: myScoredCount } = await supabase
+    .from('scores')
+    .select('hole_number', { count: 'exact', head: true })
+    .eq('game_id', id)
+    .eq('user_id', userId)
+    .not('strokes', 'is', null);
+  const myCompletedHoles = myScoredCount ?? 0;
+
   const playersForClient: ClientPlayer[] = flight.map((p) => {
     const name = p.users?.name ?? '(ukjent spiller)';
     const rawNickname = p.users?.nickname ?? null;
@@ -162,6 +174,7 @@ export default async function HolePage({ params }: { params: Params }) {
         par={hole.par}
         strokeIndex={hole.stroke_index}
         myUserId={userId}
+        myCompletedHoles={myCompletedHoles}
         players={playersForClient}
       />
     </div>

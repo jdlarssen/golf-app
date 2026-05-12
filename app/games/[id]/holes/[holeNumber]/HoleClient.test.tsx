@@ -70,6 +70,7 @@ function baseProps(
     par: 4,
     strokeIndex: 7,
     myUserId: 'u1',
+    myCompletedHoles: 0,
     players: makePlayers(),
     ...overrides,
   };
@@ -146,7 +147,7 @@ describe('HoleClient — bottom CTA', () => {
     ]);
     render(<HoleClient {...baseProps({ currentHole: 18 })} />);
     const link = screen.getByRole('link', { name: 'Lever scorekort' });
-    expect(link.getAttribute('href')).toBe('/games/g1/scorecard');
+    expect(link.getAttribute('href')).toBe('/games/g1/submit');
   });
 });
 
