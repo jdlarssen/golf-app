@@ -295,17 +295,18 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   const allowanceValid =
     Number.isInteger(allowanceNum) && allowanceNum >= 0 && allowanceNum <= 100;
 
-  const canSubmit =
+  // Publishing requires every section to be valid AND a tee-off time. Drafts
+  // skip these gates entirely (they only need a name). Previously this was
+  // split into a `canSubmit` step, but nothing else referenced that helper
+  // once «Lagre utkast» dropped to name-only — inlined for clarity.
+  const canPublish =
     courseId !== '' &&
     teeBoxId !== '' &&
     eightSelected &&
     teamsComplete &&
     flightsComplete &&
-    allowanceValid;
-
-  // Publishing additionally requires a tee-off time. Drafts skip this gate
-  // (D3 will let drafts optionally carry one through anyway).
-  const canPublish = canSubmit && hasTeeOff;
+    allowanceValid &&
+    hasTeeOff;
 
   // Human-readable list of what's still missing for a publish. Used as helper
   // text under the disabled «Publiser»-button. Order mirrors the form
@@ -335,6 +336,31 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   function shortName(p: PlayerOption): string {
     return p.nickname ? `${p.name} «${p.nickname}»` : p.name;
   }
+
+  // Resolve the draft + publish server actions for the two modes that share a
+  // draft/publish split (create + edit-draft). Returning `null` for
+  // edit-scheduled lets the JSX collapse to one branch without runtime guards.
+  function getDraftAndPublishActions():
+    | {
+        publish: (formData: FormData) => void | Promise<void>;
+        draft: (formData: FormData) => void | Promise<void>;
+      }
+    | null {
+    if (mode.kind === 'create') {
+      return {
+        publish: mode.createAndPublishAction,
+        draft: mode.createDraftAction,
+      };
+    }
+    if (mode.kind === 'edit-draft') {
+      return {
+        publish: mode.publishAction.bind(null, mode.gameId),
+        draft: mode.saveDraftAction.bind(null, mode.gameId),
+      };
+    }
+    return null;
+  }
+  const draftPublishActions = getDraftAndPublishActions();
 
   // For each slot dropdown: show the current occupant + any UNASSIGNED selected players.
   function slotOptions(team: TeamNumber, slotIndex: 0 | 1) {
@@ -666,52 +692,36 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           </Button>
         )}
 
-        {mode.kind === 'create' && (
+        {draftPublishActions && (
+          // Both 'create' and 'edit-draft' share the same publish/draft
+          // contract. The helper above resolves the right pair of server
+          // actions per mode; the JSX below stays mode-agnostic.
           <>
             <Button
               type="submit"
-              formAction={mode.createAndPublishAction}
+              formAction={draftPublishActions.publish}
               className="w-full"
               disabled={!canPublish}
+              aria-describedby={
+                !canPublish && missingForPublish.length > 0
+                  ? 'publish-missing'
+                  : undefined
+              }
             >
               Publiser
             </Button>
             {!canPublish && missingForPublish.length > 0 && (
-              <p className="text-xs text-muted text-center">
+              <p
+                id="publish-missing"
+                className="text-xs text-muted text-center"
+              >
                 Mangler: {missingForPublish.join(', ')}
               </p>
             )}
             <Button
               type="submit"
               variant="secondary"
-              formAction={mode.createDraftAction}
-              className="w-full"
-              disabled={name.trim() === ''}
-            >
-              Lagre utkast
-            </Button>
-          </>
-        )}
-
-        {mode.kind === 'edit-draft' && (
-          <>
-            <Button
-              type="submit"
-              formAction={mode.publishAction.bind(null, mode.gameId)}
-              className="w-full"
-              disabled={!canPublish}
-            >
-              Publiser
-            </Button>
-            {!canPublish && missingForPublish.length > 0 && (
-              <p className="text-xs text-muted text-center">
-                Mangler: {missingForPublish.join(', ')}
-              </p>
-            )}
-            <Button
-              type="submit"
-              variant="secondary"
-              formAction={mode.saveDraftAction.bind(null, mode.gameId)}
+              formAction={draftPublishActions.draft}
               className="w-full"
               disabled={name.trim() === ''}
             >
