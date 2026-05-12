@@ -251,6 +251,13 @@ function LeaderCard({
             </h2>
             <PinFlagSm size={14} />
           </div>
+          {/* Winner signature — italic Fraunces 17px under the team name, like
+           * a handwritten attribution at the bottom of a member-book page.
+           * Sits above the score divider so it reads as part of the win, not
+           * as metadata. */}
+          <p className="mt-2.5 max-w-[260px] text-center font-serif text-[17px] font-medium italic tracking-[-0.005em] text-text">
+            {playersLine}
+          </p>
         </div>
 
         <div
@@ -278,10 +285,6 @@ function LeaderCard({
             </span>
           </div>
         </div>
-
-        <p className="mt-3.5 text-center font-serif text-[15px] font-medium tracking-[-0.005em] text-text">
-          {playersLine}
-        </p>
 
         <Link
           href={drilldownHref}
