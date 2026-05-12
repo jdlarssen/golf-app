@@ -70,7 +70,7 @@ export default async function InvitationsPage({
         title="Invitasjoner"
         subtitle="Inviter spillere til Tørny"
         action={
-          <BackLink href="/">Tilbake</BackLink>
+          <BackLink href="/admin">Tilbake</BackLink>
         }
       />
 

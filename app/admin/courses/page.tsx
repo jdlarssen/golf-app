@@ -83,7 +83,7 @@ export default async function CoursesPage({
         title="Baner"
         subtitle="Administrer golfbaner og tee-bokser"
         action={
-          <BackLink href="/">Tilbake</BackLink>
+          <BackLink href="/admin">Tilbake</BackLink>
         }
       />
 
