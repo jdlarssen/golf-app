@@ -40,10 +40,9 @@ export default async function LoginPage({
 
   return (
     <AppShell>
-      <div className="mt-8">
+      <div className="mt-10">
+        <BrandHero className="mb-10" />
         <Card>
-          <BrandHero className="mb-8" />
-
           {showSuccess && (
             <div role="status" className="mb-4">
               <Banner tone="success">
