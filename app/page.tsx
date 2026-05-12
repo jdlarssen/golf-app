@@ -75,8 +75,7 @@ export default async function Home({
       'game_id, team_number, flight_number, games!inner(id, name, status, ended_at, courses(name))',
     )
     .eq('user_id', user.id)
-    // TODO(scheduled): decide whether scheduled games should appear here (likely yes, in a separate "Planlagt"-section). Handled in phase E1/E2.
-    .in('games.status', ['active', 'draft'])
+    .in('games.status', ['draft', 'scheduled', 'active'])
     .returns<GameRow[]>();
   const activeGames = (rawActive ?? [])
     .filter((row): row is GameRow & { games: NonNullable<GameRow['games']> } =>
@@ -230,7 +229,7 @@ export default async function Home({
       ) : (
         <nav className="space-y-6">
           {activeGames.length > 0 && (
-            <Section label="Aktive spill">
+            <Section label="Mine spill">
               {activeGames.map((g) => (
                 <Link key={g.id} href={`/games/${g.id}`} className="block">
                   <Card className="min-h-[44px] hover:border-primary/30 transition-colors p-5">
