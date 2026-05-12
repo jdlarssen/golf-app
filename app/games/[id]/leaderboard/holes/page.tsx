@@ -75,9 +75,14 @@ export default async function LeaderboardHolesPage({
     .single<GameRow>();
   if (gameError || !game) notFound();
 
-  if (game.status !== 'finished') {
+  // Draft and scheduled games don't have a hull-for-hull view — bounce
+  // back to the game page (state #2 venterom lives there for scheduled).
+  // Active games show the front-9 hull-for-hull with a locked back-9
+  // block; finished games show all 18.
+  if (game.status === 'draft' || game.status === 'scheduled') {
     redirect(`/games/${id}`);
   }
+  const isActive = game.status === 'active';
 
   // Participant OR admin guard.
   const { data: profile } = await supabase
@@ -130,17 +135,27 @@ export default async function LeaderboardHolesPage({
       courseHandicap: p.course_handicap ?? 0,
     }));
 
-  const holes: LbHole[] = (rawHoles ?? []).map((h) => ({
+  const allHoles: LbHole[] = (rawHoles ?? []).map((h) => ({
     holeNumber: h.hole_number,
     par: h.par,
     strokeIndex: h.stroke_index,
   }));
 
-  const scores: LbScore[] = (rawScores ?? []).map((s) => ({
+  const allScores: LbScore[] = (rawScores ?? []).map((s) => ({
     userId: s.user_id,
     holeNumber: s.hole_number,
     strokes: s.strokes,
   }));
+
+  // During an active round we clip the drilldown to front 9 only — back 9
+  // stays hidden behind a locked block until status flips to 'finished'
+  // (matches state #3.5's same hiding policy on the parent leaderboard).
+  const holes = isActive
+    ? allHoles.filter((h) => h.holeNumber >= 1 && h.holeNumber <= 9)
+    : allHoles;
+  const scores = isActive
+    ? allScores.filter((s) => s.holeNumber >= 1 && s.holeNumber <= 9)
+    : allScores;
 
   const lines = computeLeaderboard({ mode, players, holes, scores });
   const orderedLines = [...lines].sort((a, b) => a.rank - b.rank);
@@ -157,6 +172,14 @@ export default async function LeaderboardHolesPage({
         }
       />
 
+      {isActive && (
+        <div className="flex justify-center mb-4">
+          <span className="inline-flex items-center text-[10px] font-semibold uppercase tracking-[0.18em] px-3 py-1 rounded-full bg-accent/10 text-accent border border-accent/30">
+            FRONT 9
+          </span>
+        </div>
+      )}
+
       <ModeToggle gameId={id} mode={mode} basePath="/leaderboard/holes" />
 
       <div className="space-y-4 mt-4">
@@ -164,6 +187,17 @@ export default async function LeaderboardHolesPage({
           <TeamDrilldownCard key={line.teamNumber} line={line} mode={mode} />
         ))}
       </div>
+
+      {isActive && (
+        <div className="mx-4 mt-6 rounded-2xl border border-dashed border-border bg-surface/50 px-5 py-6 text-center">
+          <p className="font-serif text-[16px] font-medium text-text">
+            🤫 Vi sees ved hull 18.
+          </p>
+          <p className="mt-2 font-sans text-xs text-muted">
+            Hull 10–18 vises når alle scorekort er levert og godkjent.
+          </p>
+        </div>
+      )}
     </AppShell>
   );
 }
