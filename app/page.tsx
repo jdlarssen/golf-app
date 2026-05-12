@@ -15,26 +15,13 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { PinFlag } from '@/components/icons/PinFlag';
 import { firstName } from '@/lib/firstName';
+import { formatTeeOffDate, formatTeeOffTime } from '@/lib/format/teeOff';
 
 type SearchParams = Promise<{ profile?: string | string[] }>;
 
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
   return value;
-}
-
-// Norwegian short tee-off label rendered on home cards. Reads as
-// «lør. 24. mai, 09:00». Timezone-locked to Europe/Oslo so the formatting
-// matches what the admin sees in the form.
-function formatOsloDateTime(iso: string): string {
-  return new Intl.DateTimeFormat('nb-NO', {
-    timeZone: 'Europe/Oslo',
-    weekday: 'short',
-    day: 'numeric',
-    month: 'long',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(iso));
 }
 
 // Request-scoped Supabase client + verified user id. The user id is forwarded
@@ -250,11 +237,14 @@ async function HomeBody() {
                           {g.courses.name}
                         </span>
                       )}
-                      {g.scheduled_tee_off_at && (
-                        <span className="block text-xs text-muted mt-1 tabular-nums truncate">
-                          {formatOsloDateTime(g.scheduled_tee_off_at)}
-                        </span>
-                      )}
+                      {g.scheduled_tee_off_at && (() => {
+                        const d = new Date(g.scheduled_tee_off_at);
+                        return (
+                          <span className="block text-xs text-muted mt-1 tabular-nums truncate">
+                            {formatTeeOffDate(d)} kl. {formatTeeOffTime(d)}
+                          </span>
+                        );
+                      })()}
                       <span className="block text-xs text-muted mt-1 truncate">
                         Lag {g.teamNumber} · Flight {g.flightNumber}
                       </span>
