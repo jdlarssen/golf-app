@@ -50,6 +50,7 @@ export async function updateCourse(courseId: string, formData: FormData) {
     slope: number;
     course_rating: number;
     par_total: number;
+    length_meters: number | null;
   }[] = [];
   for (let i = 0; i < 5; i++) {
     const teeName = String(formData.get(`tee_${i}_name`) ?? '').trim();
@@ -66,7 +67,28 @@ export async function updateCourse(courseId: string, formData: FormData) {
     if (!Number.isInteger(parTotal) || parTotal < 60 || parTotal > 80) {
       redirect(`${editPath}?error=bad_par_total`);
     }
-    teeBoxes.push({ name: teeName, slope, course_rating: cr, par_total: parTotal });
+    // length_meters is optional. Empty / non-integer / out of range → NULL.
+    // The DB has a CHECK between 1000 and 12000; we mirror that here so we
+    // never trip it with garbage from the form.
+    const rawLength = String(formData.get(`tee_${i}_length_meters`) ?? '').trim();
+    let lengthMeters: number | null = null;
+    if (rawLength !== '') {
+      const parsed = Number(rawLength);
+      if (
+        Number.isInteger(parsed) &&
+        parsed >= 1000 &&
+        parsed <= 12000
+      ) {
+        lengthMeters = parsed;
+      }
+    }
+    teeBoxes.push({
+      name: teeName,
+      slope,
+      course_rating: cr,
+      par_total: parTotal,
+      length_meters: lengthMeters,
+    });
   }
   if (teeBoxes.length === 0) redirect(`${editPath}?error=tee_required`);
 

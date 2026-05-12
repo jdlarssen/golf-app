@@ -18,6 +18,7 @@ export type TeeBoxData = {
   slope: string;
   course_rating: string;
   par_total: string;
+  length_meters: string;
 };
 
 export type CourseFormInitialData = {
@@ -48,6 +49,7 @@ const DEFAULT_TEE: TeeBoxData = {
   slope: '113',
   course_rating: '70.0',
   par_total: '72',
+  length_meters: '',
 };
 
 const MAX_TEE_BOXES = 5;
@@ -233,6 +235,22 @@ export function CourseForm({
                   updateTee(index, { par_total: e.target.value })
                 }
                 required
+              />
+              <Input
+                id={`tee_${index}_length_meters`}
+                name={`tee_${index}_length_meters`}
+                type="number"
+                inputMode="numeric"
+                min={1000}
+                max={12000}
+                step={1}
+                label="Banelengde (m)"
+                hint="Valgfritt. Total bane-lengde fra denne tee-boksen."
+                placeholder="6124"
+                value={tee.length_meters}
+                onChange={(e) =>
+                  updateTee(index, { length_meters: e.target.value })
+                }
               />
             </div>
           ))}

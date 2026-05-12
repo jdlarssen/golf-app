@@ -66,7 +66,7 @@ export default async function EditCoursePage({
       .order('hole_number', { ascending: true }),
     supabase
       .from('tee_boxes')
-      .select('name, slope, course_rating, par_total')
+      .select('name, slope, course_rating, par_total, length_meters')
       .eq('course_id', id)
       .order('slope', { ascending: true }),
   ]);
@@ -87,6 +87,7 @@ export default async function EditCoursePage({
     slope: String(t.slope),
     course_rating: String(t.course_rating),
     par_total: String(t.par_total),
+    length_meters: t.length_meters == null ? '' : String(t.length_meters),
   }));
 
   // Pre-bind the course id so the form's action handler only deals with the
