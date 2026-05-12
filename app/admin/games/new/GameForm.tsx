@@ -265,10 +265,15 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     setFlightByPlayer((prev) => ({ ...prev, [playerId]: flight }));
   }
 
-  // The serialized payload sent to the server action. Order is stable so the
-  // server's `player_${i}_*` schema is deterministic.
+  // The serialized payload sent to the server action. Always includes every
+  // player who has a team assignment, even if teams aren't fully balanced —
+  // drafts need to round-trip partial rosters. Players selected but not yet
+  // placed in a lag are excluded (their team_number is undefined, so they're
+  // already filtered out of `playersByTeam`). The publish button is
+  // independently gated by `canPublish`, so this can't smuggle an
+  // unbalanced roster into a published game.
+  // Order is stable so the server's `player_${i}_*` schema is deterministic.
   const orderedPayload = useMemo(() => {
-    if (!teamsComplete) return [];
     const rows: { user_id: string; team_number: TeamNumber; flight_number: number }[] = [];
     for (const team of TEAM_NUMBERS) {
       for (const pid of playersByTeam[team]) {
@@ -280,7 +285,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
       }
     }
     return rows;
-  }, [teamsComplete, playersByTeam, flightByPlayer]);
+  }, [playersByTeam, flightByPlayer]);
 
   const flightsComplete =
     teamsComplete &&
