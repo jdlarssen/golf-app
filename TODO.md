@@ -69,7 +69,7 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 - [ ] E2E-test for hele invitasjons-flyten (ny bruker registrerer seg og spiller en runde)
 - [ ] E2E-test for offline-sync (Playwright kan sjokke offline)
 - [ ] Unit-tester for server actions (submitScorecard, approveScorecard, endGame, createGame)
-- [ ] Pre-existing ESLint warnings i `components/IosInstallHint.tsx`, `app/games/[id]/leaderboard/LeaderboardConfetti.tsx`, `lib/scoring/integration.test.ts` — fix dem
+- [ ] **Pre-existing test-failures i `components/hole/HoleStrip.test.tsx` og `components/hole/BottomActionBar.test.tsx`** — 7 failures rundt SmartLink/`useRouter` mock i vitest-oppsettet. Slår ut når testene rendrer SmartLink uten Next router context. Trolig trenger en `vi.mock('next/navigation', ...)` i `vitest.setup.ts` eller per-test wrapper.
 
 ### Refaktorering (etter empty-states + scheduled-status-leveransen)
 

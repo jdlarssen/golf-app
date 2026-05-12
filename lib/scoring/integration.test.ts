@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { calculateCourseHandicap, applyAllowance } from './courseHandicap';
 import { allStrokeAllocations } from './strokeAllocation';
-import { netScore, bestBallForHole, teamTotal, type PlayerHoleScore, type HoleTeamScore } from './bestBall';
+import { bestBallForHole, teamTotal, type PlayerHoleScore, type HoleTeamScore } from './bestBall';
 import { rankTeams } from './tiebreaker';
 
 /**

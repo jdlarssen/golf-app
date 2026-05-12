@@ -1,8 +1,31 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 
 const DISMISS_KEY = 'golf-ios-install-dismissed';
+
+function subscribe() {
+  return () => {};
+}
+
+function readShouldShow(): boolean {
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua) && !('MSStream' in window);
+  const isStandalone =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  let dismissed = false;
+  try {
+    dismissed = window.localStorage.getItem(DISMISS_KEY) === '1';
+  } catch {
+    // Private mode / disabled storage — treat as not dismissed.
+  }
+  return isIOS && !isStandalone && !dismissed;
+}
+
+function readServerShouldShow(): boolean {
+  return false;
+}
 
 /**
  * Shows a small banner on iOS Safari nudging the user to add the app to the
@@ -11,28 +34,17 @@ const DISMISS_KEY = 'golf-ios-install-dismissed';
  * skipped once the app is already running in standalone mode.
  */
 export function IosInstallHint() {
-  const [show, setShow] = useState(false);
+  const shouldShow = useSyncExternalStore(
+    subscribe,
+    readShouldShow,
+    readServerShouldShow,
+  );
+  const [dismissed, setDismissed] = useState(false);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const ua = navigator.userAgent;
-    const isIOS = /iPad|iPhone|iPod/.test(ua) && !('MSStream' in window);
-    const isStandalone =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (navigator as Navigator & { standalone?: boolean }).standalone === true;
-    let dismissed = false;
-    try {
-      dismissed = window.localStorage.getItem(DISMISS_KEY) === '1';
-    } catch {
-      // Private mode / disabled storage — treat as not dismissed.
-    }
-    if (isIOS && !isStandalone && !dismissed) setShow(true);
-  }, []);
-
-  if (!show) return null;
+  if (!shouldShow || dismissed) return null;
 
   function dismiss() {
-    setShow(false);
+    setDismissed(true);
     try {
       window.localStorage.setItem(DISMISS_KEY, '1');
     } catch {
