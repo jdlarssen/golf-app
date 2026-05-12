@@ -70,6 +70,7 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 - [ ] E2E-test for offline-sync (Playwright kan sjokke offline)
 - [ ] Unit-tester for server actions (submitScorecard, approveScorecard, endGame, createGame)
 - [ ] **Pre-existing test-failures i `components/hole/HoleStrip.test.tsx` og `components/hole/BottomActionBar.test.tsx`** — 7 failures rundt SmartLink/`useRouter` mock i vitest-oppsettet. Slår ut når testene rendrer SmartLink uten Next router context. Trolig trenger en `vi.mock('next/navigation', ...)` i `vitest.setup.ts` eller per-test wrapper.
+- [ ] **`lib/format/teeOff.ts` bruker lokal-TZ, ikke Europe/Oslo.** Helperne `formatTeeOffDate` og `formatTeeOffTime` leser via `Date`-getters (`getHours`, `getDate`, ...) som returnerer i Node/runtime sin lokal-TZ. På Vercel server (UTC) gir det feil tid før hydration — så server-rendered HTML viser «07:00» mens browser (Oslo) viser «09:00» under hydration. Trolig hydration mismatch-warning i konsollen. Fix: bytt til `Intl.DateTimeFormat('nb-NO', { timeZone: 'Europe/Oslo', ... })`. Påvirker `/games/[id]`, leaderboard, og hjem-skjerm (alle bruker disse helperne). Oppdaget under Phase 5 av progressive-draft-creation.
 
 ### Refaktorering (etter empty-states + scheduled-status-leveransen)
 
