@@ -1,5 +1,7 @@
 'use client';
 
+import { Button } from '@/components/ui/Button';
+
 type Props = {
   approveAction: () => void | Promise<void>;
   playerName: string;
@@ -19,12 +21,9 @@ export function ApprovePlayerButton({ approveAction, playerName }: Props) {
         }
       }}
     >
-      <button
-        type="submit"
-        className="min-h-[44px] bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg font-medium transition-colors text-sm whitespace-nowrap"
-      >
+      <Button type="submit" className="whitespace-nowrap text-sm">
         Godkjenn på vegne av flight
-      </button>
+      </Button>
     </form>
   );
 }

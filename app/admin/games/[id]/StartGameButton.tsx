@@ -1,5 +1,7 @@
 'use client';
 
+import { Button } from '@/components/ui/Button';
+
 type Props = {
   // The start action arrives pre-bound with the game id; submitting empty
   // FormData is enough to trigger it.
@@ -20,12 +22,9 @@ export function StartGameButton({ startAction, gameName }: Props) {
         }
       }}
     >
-      <button
-        type="submit"
-        className="w-full min-h-[44px] bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors"
-      >
+      <Button type="submit" className="w-full">
         Start spillet
-      </button>
+      </Button>
     </form>
   );
 }

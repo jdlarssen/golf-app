@@ -1,5 +1,7 @@
 'use client';
 
+import { Button } from '@/components/ui/Button';
+
 type Props = {
   // The end action arrives pre-bound with the game id; submitting empty
   // FormData is enough to trigger it.
@@ -19,12 +21,9 @@ export function EndGameButton({ endAction }: Props) {
         }
       }}
     >
-      <button
-        type="submit"
-        className="w-full min-h-[44px] bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors"
-      >
+      <Button type="submit" className="w-full">
         Avslutt spillet
-      </button>
+      </Button>
     </form>
   );
 }
