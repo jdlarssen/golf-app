@@ -1,3 +1,4 @@
+import { Suspense, cache } from 'react';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
@@ -6,6 +7,7 @@ import { BackLink } from '@/components/ui/BackLink';
 import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { MiniRibbon } from '@/components/ui/MiniRibbon';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { StartGameButton } from './StartGameButton';
 import { StartScheduledGameButton } from './StartScheduledGameButton';
@@ -126,6 +128,36 @@ type GamePlayerRow = {
   } | null;
 };
 
+// Request-scoped Supabase client. Each Suspense body that needs it pulls
+// from this cached helper so we don't pay the cookie-auth cost per section.
+const getAdminGameContext = cache(async () => {
+  const supabase = await getServerClient();
+  return { supabase };
+});
+
+// Memoised "Sak {YYYY}-{NNN}" computation. No DB column for the sak number;
+// it's derived from the position of this game within its creation year.
+// Both the title-bar pill and the footer footnote read this, so we cache
+// to avoid two identical count queries per request.
+const getSakNumber = cache(
+  async (
+    createdAt: string,
+  ): Promise<{ year: number; positionInYear: number }> => {
+    const { supabase } = await getAdminGameContext();
+    const created = new Date(createdAt);
+    const year = created.getFullYear();
+    const yearStartIso = `${year}-01-01T00:00:00Z`;
+    const yearEndIso = `${year + 1}-01-01T00:00:00Z`;
+    const { count } = await supabase
+      .from('games')
+      .select('id', { count: 'exact', head: true })
+      .gte('created_at', yearStartIso)
+      .lt('created_at', yearEndIso)
+      .lte('created_at', createdAt);
+    return { year, positionInYear: count ?? 1 };
+  },
+);
+
 export default async function GameDetailPage({
   params,
   searchParams,
@@ -138,7 +170,10 @@ export default async function GameDetailPage({
   const statusBanner = STATUS_BANNERS[first(sp.status) ?? ''] ?? undefined;
   const errorMessage = ERROR_MESSAGES[first(sp.error) ?? ''] ?? undefined;
 
-  const supabase = await getServerClient();
+  const { supabase } = await getAdminGameContext();
+  // Gating: fetch the game row first so we can render the title bar
+  // synchronously. The rest of the page (players, progress, sak-number,
+  // cards, CTAs) streams behind Suspense boundaries below.
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
@@ -151,19 +186,130 @@ export default async function GameDetailPage({
     notFound();
   }
 
+  // Date subtitle: best timestamp available for the lifecycle stage.
+  const subtitleDate =
+    shortNb(game.ended_at) ??
+    shortNb(game.started_at) ??
+    shortNb(game.scheduled_tee_off_at) ??
+    shortNb(game.created_at);
+
+  return (
+    <AdminShell>
+      <div className="-mt-3 mb-2 flex items-center justify-between">
+        <BackLink href="/admin/games">Tilbake</BackLink>
+        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          Spill · protokoll
+        </p>
+        <span className="w-[80px]" aria-hidden />
+      </div>
+
+      <BrassRibbon kicker="Spill · protokoll" />
+
+      {/* Title block */}
+      <div className="px-1">
+        <div className="mb-1.5 flex items-center gap-2">
+          <StatusChip tone={STATUS_TO_TONE[game.status]} />
+          <Suspense fallback={<Skeleton className="h-3 w-20" />}>
+            <SakNumber createdAt={game.created_at} />
+          </Suspense>
+        </div>
+        <h1 className="font-serif text-[26px] font-medium leading-snug tracking-[-0.015em] text-text">
+          {game.name}
+        </h1>
+        <p className="mt-1 font-sans text-xs tabular-nums text-muted">
+          {[
+            game.courses?.name,
+            'Best ball netto',
+            subtitleDate,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </p>
+      </div>
+
+      {(statusBanner || errorMessage) && (
+        <div className="mt-4 space-y-2">
+          {statusBanner && <Banner tone="success">{statusBanner}</Banner>}
+          {errorMessage && <Banner tone="error">{errorMessage}</Banner>}
+        </div>
+      )}
+
+      <Suspense fallback={<PlayersSectionsSkeleton />}>
+        <PlayersSections gameId={id} game={game} />
+      </Suspense>
+
+      <p className="mt-6 text-center font-serif text-[11px] italic leading-relaxed text-muted">
+        <Suspense fallback={<Skeleton className="inline-block h-3 w-32" />}>
+          <CreatedAtFooter createdAt={game.created_at} />
+        </Suspense>
+      </p>
+    </AdminShell>
+  );
+}
+
+// ─── Suspense bodies ─────────────────────────────────────────────────────
+
+async function SakNumber({ createdAt }: { createdAt: string }) {
+  const { year, positionInYear } = await getSakNumber(createdAt);
+  return (
+    <span className="font-sans text-[11px] tabular-nums text-muted">
+      Sak {year}-{String(positionInYear).padStart(3, '0')}
+    </span>
+  );
+}
+
+async function CreatedAtFooter({ createdAt }: { createdAt: string }) {
+  const { year, positionInYear } = await getSakNumber(createdAt);
+  return (
+    <>
+      Opprettet {shortNb(createdAt)} ·{' '}
+      {String(positionInYear).padStart(3, '0')}. sak i {year}.
+    </>
+  );
+}
+
+async function PlayersSections({
+  gameId,
+  game,
+}: {
+  gameId: string;
+  game: GameRow;
+}) {
+  const { supabase } = await getAdminGameContext();
+
   // game_players has two FKs to users (user_id and approved_by_user_id), so
   // we must disambiguate via the named constraint.
-  const { data: rawPlayers, error: playersError } = await supabase
+  const playersPromise = supabase
     .from('game_players')
     .select(
       'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, users!game_players_user_id_fkey(name, nickname, hcp_index)',
     )
-    .eq('game_id', id)
+    .eq('game_id', gameId)
     .returns<GamePlayerRow[]>();
 
-  if (playersError) throw playersError;
+  // Live progress: hole_number and user_id only (NO strokes — avoid spoilers).
+  // Admin sees how far each flight has come without seeing the values. Only
+  // queried for active games — for everything else, skip the round-trip.
+  type ProgressRow = { user_id: string; hole_number: number };
+  const progressPromise =
+    game.status === 'active'
+      ? supabase
+          .from('scores')
+          .select('user_id, hole_number')
+          .eq('game_id', gameId)
+          .not('strokes', 'is', null)
+          .returns<ProgressRow[]>()
+      : Promise.resolve({ data: [] as ProgressRow[], error: null });
 
-  const players = rawPlayers ?? [];
+  const [playersRes, progressRes] = await Promise.all([
+    playersPromise,
+    progressPromise,
+  ]);
+
+  if (playersRes.error) throw playersRes.error;
+  if (progressRes.error) throw progressRes.error;
+
+  const players = playersRes.data ?? [];
 
   // Group by team (1..4). Each team has up to 2 players.
   const byTeam: Record<number, GamePlayerRow[]> = { 1: [], 2: [], 3: [], 4: [] };
@@ -177,21 +323,12 @@ export default async function GameDetailPage({
     if (byFlight[p.flight_number]) byFlight[p.flight_number].push(p);
   }
 
-  // Live progress: hole_number and user_id only (NO strokes — avoid spoilers).
-  // Admin sees how far each flight has come without seeing the values.
-  type ProgressRow = { user_id: string; hole_number: number };
   const progressByFlight: Record<
     number,
     { maxHole: number; filledCells: number; totalCells: number }
   > = {};
   if (game.status === 'active') {
-    const { data: progressRows } = await supabase
-      .from('scores')
-      .select('user_id, hole_number')
-      .eq('game_id', id)
-      .not('strokes', 'is', null)
-      .returns<ProgressRow[]>();
-    const rows = progressRows ?? [];
+    const rows = progressRes.data ?? [];
     for (const f of [1, 2, 3, 4]) {
       const flightPlayers = byFlight[f];
       if (flightPlayers.length === 0) continue;
@@ -216,9 +353,9 @@ export default async function GameDetailPage({
       : p.users.name;
   }
 
-  const startAction = startGame.bind(null, id);
-  const startScheduledAction = startScheduledGameAction.bind(null, id);
-  const endAction = endGame.bind(null, id);
+  const startAction = startGame.bind(null, gameId);
+  const startScheduledAction = startScheduledGameAction.bind(null, gameId);
+  const endAction = endGame.bind(null, gameId);
 
   // Readiness preview for the end-game button (only meaningful when active).
   const notSubmittedCount = players.filter((p) => !p.submitted_at).length;
@@ -231,72 +368,11 @@ export default async function GameDetailPage({
     notSubmittedCount === 0 &&
     pendingApprovalCount === 0;
 
-  // Virtual "Sak {YYYY}-{NNN}": no DB column, derived from the position of
-  // this game within its creation year. Stable as long as games aren't
-  // re-dated. NNN zero-padded to 3 digits.
-  const createdAt = new Date(game.created_at);
-  const year = createdAt.getFullYear();
-  const yearStartIso = `${year}-01-01T00:00:00Z`;
-  const yearEndIso = `${year + 1}-01-01T00:00:00Z`;
-  const { count: positionInYear } = await supabase
-    .from('games')
-    .select('id', { count: 'exact', head: true })
-    .gte('created_at', yearStartIso)
-    .lt('created_at', yearEndIso)
-    .lte('created_at', game.created_at);
-  const sakNumber = `Sak ${year}-${String(positionInYear ?? 1).padStart(3, '0')}`;
-
-  // Date subtitle: best timestamp available for the lifecycle stage.
-  const subtitleDate =
-    shortNb(game.ended_at) ??
-    shortNb(game.started_at) ??
-    shortNb(game.scheduled_tee_off_at) ??
-    shortNb(game.created_at);
-
   const teamCount = [1, 2, 3, 4].filter((t) => byTeam[t].length > 0).length;
   const submittedCount = players.filter((p) => p.submitted_at != null).length;
 
   return (
-    <AdminShell>
-      <div className="-mt-3 mb-2 flex items-center justify-between">
-        <BackLink href="/admin/games">Tilbake</BackLink>
-        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          Spill · protokoll
-        </p>
-        <span className="w-[80px]" aria-hidden />
-      </div>
-
-      <BrassRibbon kicker="Spill · protokoll" />
-
-      {/* Title block */}
-      <div className="px-1">
-        <div className="mb-1.5 flex items-center gap-2">
-          <StatusChip tone={STATUS_TO_TONE[game.status]} />
-          <span className="font-sans text-[11px] tabular-nums text-muted">
-            {sakNumber}
-          </span>
-        </div>
-        <h1 className="font-serif text-[26px] font-medium leading-snug tracking-[-0.015em] text-text">
-          {game.name}
-        </h1>
-        <p className="mt-1 font-sans text-xs tabular-nums text-muted">
-          {[
-            game.courses?.name,
-            'Best ball netto',
-            subtitleDate,
-          ]
-            .filter(Boolean)
-            .join(' · ')}
-        </p>
-      </div>
-
-      {(statusBanner || errorMessage) && (
-        <div className="mt-4 space-y-2">
-          {statusBanner && <Banner tone="success">{statusBanner}</Banner>}
-          {errorMessage && <Banner tone="error">{errorMessage}</Banner>}
-        </div>
-      )}
-
+    <>
       {/* Card 1 — Påmelding */}
       <SectionCard ribbon="Påmelding">
         <Row
@@ -523,7 +599,7 @@ export default async function GameDetailPage({
                   {pending.map((p) => {
                     const approve = adminApproveScorecard.bind(
                       null,
-                      id,
+                      gameId,
                       p.user_id,
                     );
                     return (
@@ -580,7 +656,7 @@ export default async function GameDetailPage({
                 tee-off, spillere, lag og innstillinger inntil runden startes.
               </p>
               <SmartLink
-                href={`/admin/games/${id}/edit`}
+                href={`/admin/games/${gameId}/edit`}
                 className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover"
               >
                 Rediger spillet
@@ -626,7 +702,7 @@ export default async function GameDetailPage({
         <SectionCard ribbon="Resultat">
           <div className="px-3.5 pb-3.5 pt-3">
             <SmartLink
-              href={`/games/${id}/leaderboard`}
+              href={`/games/${gameId}/leaderboard`}
               className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover"
             >
               🏆 Se leaderboard →
@@ -634,12 +710,51 @@ export default async function GameDetailPage({
           </div>
         </SectionCard>
       )}
+    </>
+  );
+}
 
-      <p className="mt-6 text-center font-serif text-[11px] italic leading-relaxed text-muted">
-        Opprettet {shortNb(game.created_at)} ·{' '}
-        {String(positionInYear ?? 1).padStart(3, '0')}. sak i {year}.
-      </p>
-    </AdminShell>
+function PlayersSectionsSkeleton() {
+  return (
+    <>
+      {[0, 1, 2].map((i) => (
+        <section key={i} className="mt-1.5">
+          {/* MiniRibbon-shaped placeholder. MiniRibbon types its children
+              as `string`, so we render the skeleton inline rather than as
+              a ribbon child. */}
+          <div className="flex items-center gap-2.5 px-1 pt-2.5 pb-1.5">
+            <Skeleton className="h-2.5 w-20" delay={i * 90} />
+            <span
+              aria-hidden
+              className="block h-px flex-1"
+              style={{
+                background:
+                  'linear-gradient(90deg, var(--brass-line-top) 0%, transparent 90%)',
+              }}
+            />
+          </div>
+          <div
+            className="overflow-hidden rounded-xl border border-border bg-surface"
+            style={{ boxShadow: '0 1px 2px rgba(26, 46, 31, 0.03)' }}
+          >
+            {[0, 1, 2].map((j) => (
+              <div
+                key={j}
+                className="grid items-baseline gap-3.5 px-3.5 py-2.5"
+                style={{
+                  gridTemplateColumns: '1fr auto',
+                  borderTop:
+                    j === 0 ? 'none' : '1px solid var(--row-divider-warm)',
+                }}
+              >
+                <Skeleton className="h-3 w-24" delay={i * 90 + j * 30} />
+                <Skeleton className="h-3 w-10" delay={i * 90 + j * 30 + 20} />
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
+    </>
   );
 }
 

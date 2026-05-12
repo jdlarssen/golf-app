@@ -1,3 +1,4 @@
+import { Suspense, cache } from 'react';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound, redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
@@ -9,6 +10,7 @@ import { Banner } from '@/components/ui/Banner';
 import { LinkButton } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Kicker } from '@/components/ui/Kicker';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { MailEnvelope } from '@/components/icons/MailEnvelope';
 import { firstName } from '@/lib/firstName';
@@ -138,6 +140,15 @@ function computeState(opts: {
   return 'in_progress';
 }
 
+// Request-scoped Supabase client + verified user id. Sharing the same client
+// across suspended siblings means we don't pay the cookie-auth round-trip
+// per section.
+const getGameContext = cache(async () => {
+  const supabase = await getServerClient();
+  const userId = await getProxyVerifiedUserId();
+  return { supabase, userId };
+});
+
 export default async function GameHomePage({
   params,
   searchParams,
@@ -156,10 +167,9 @@ export default async function GameHomePage({
   // eslint-disable-next-line react-hooks/purity
   const nowMs = Date.now();
 
-  const userId = await getProxyVerifiedUserId();
+  const { supabase, userId } = await getGameContext();
   // Proxy redirects unauthenticated users, but be defensive.
   if (!userId) redirect('/login');
-  const supabase = await getServerClient();
 
   const { data: gameInitial, error: gameError } = await supabase
     .from('games')
@@ -222,39 +232,13 @@ export default async function GameHomePage({
     }
   }
 
-  // State #2 — Scorekort venter. Renders the venterom layout (mail envelope
-  // hero, course card with tee-off, flight roster, pulsing countdown banner)
-  // when the game is still scheduled and the E1 auto-start fallback above
-  // hasn't flipped it to active yet. A client-side realtime subscription
-  // refreshes the route as soon as admin presses "Start runden nå" (D5) or
-  // status flips for any other reason.
-  //
-  // Branch sits above strokesCount / pendingApprovals fetches because those
-  // are only meaningful for active games — no point burning two DB queries
-  // for a scheduled game that will render the venterom and return early.
+  // State #2 — Scorekort venter. Shell renders synchronously; the flight
+  // roster query streams in behind Suspense.
   if (game.status === 'scheduled') {
     const teeBox = game.tee_boxes;
     const teeOffDate = game.scheduled_tee_off_at
       ? new Date(game.scheduled_tee_off_at)
       : null;
-
-    const { data: flightRows } = await supabase
-      .from('game_players')
-      .select(
-        'user_id, flight_number, users!game_players_user_id_fkey(name, nickname, hcp_index)',
-      )
-      .eq('game_id', id)
-      .eq('flight_number', me.flight_number)
-      .order('user_id')
-      .returns<FlightRosterRow[]>();
-
-    const flight = (flightRows ?? []).map((row) => ({
-      userId: row.user_id,
-      isCurrentUser: row.user_id === userId,
-      name: row.users?.name ?? '(ukjent)',
-      hcpIndex:
-        row.users?.hcp_index == null ? null : Number(row.users.hcp_index),
-    }));
 
     return (
       <AppShell>
@@ -312,44 +296,13 @@ export default async function GameHomePage({
           <div className="h-px bg-border my-3.5" />
 
           <Kicker tone="muted">DIN FLIGHT</Kicker>
-          <ul className="mt-2 flex flex-col gap-2">
-            {flight.map((p) => (
-              <li key={p.userId} className="flex items-center gap-3">
-                {/*
-                  E5 dark-mode pass: inactive avatar uses bg-surface (not
-                  bg-bg). In dark mode bg-bg matches the page bg
-                  (--bg #0f1612), so the avatar would disappear into the
-                  layout with only the border visible — a hole punched in
-                  the page. bg-surface (--surface #1a2e1f in dark) sits as a
-                  slightly lighter forest disc against the page bg. Light
-                  mode is unchanged in feel: bg-surface (#ffffff) on the
-                  --bg linen still reads as a paper-on-paper subtle disc.
-                */}
-                <span
-                  className={`shrink-0 w-7 h-7 rounded-full grid place-items-center font-serif text-[12px] font-medium ${
-                    p.isCurrentUser
-                      ? 'bg-primary text-white dark:text-bg'
-                      : 'bg-surface text-text border border-border'
-                  }`}
-                >
-                  {firstInitial(p.name)}
-                </span>
-                <span
-                  className={`flex-1 truncate text-[13.5px] ${p.isCurrentUser ? 'font-semibold' : ''}`}
-                >
-                  {firstName(p.name) ?? p.name}
-                  {p.isCurrentUser && (
-                    <span className="font-sans text-[9.5px] font-semibold uppercase tracking-[0.18em] text-accent ml-2">
-                      DEG
-                    </span>
-                  )}
-                </span>
-                <span className="shrink-0 text-xs text-muted tabular-nums">
-                  HCP {p.hcpIndex != null ? p.hcpIndex.toFixed(1) : '—'}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <Suspense fallback={<FlightRosterSkeleton />}>
+            <FlightRoster
+              gameId={id}
+              flightNumber={me.flight_number}
+              currentUserId={userId}
+            />
+          </Suspense>
         </Card>
 
         {/* Countdown banner */}
@@ -369,37 +322,6 @@ export default async function GameHomePage({
       </AppShell>
     );
   }
-
-  // How many holes have a strokes value? Used to decide CTA copy.
-  const { count: strokesCountRaw } = await supabase
-    .from('scores')
-    .select('hole_number', { count: 'exact', head: true })
-    .eq('game_id', id)
-    .eq('user_id', userId)
-    .not('strokes', 'is', null);
-  const strokesCount = strokesCountRaw ?? 0;
-
-  // Flight-mates needing approval (only relevant when peer approval is on).
-  let pendingApprovalsForMe = 0;
-  if (game.require_peer_approval && game.status === 'active') {
-    const { data: mates } = await supabase
-      .from('game_players')
-      .select('user_id, flight_number, submitted_at, approved_at')
-      .eq('game_id', id)
-      .eq('flight_number', me.flight_number)
-      .returns<FlightMatePlayerRow[]>();
-    pendingApprovalsForMe = (mates ?? []).filter(
-      (m) =>
-        m.user_id !== userId && m.submitted_at != null && m.approved_at == null,
-    ).length;
-  }
-
-  const state = computeState({
-    strokesCount,
-    submittedAt: me.submitted_at,
-    approvedAt: me.approved_at,
-    requirePeerApproval: game.require_peer_approval,
-  });
 
   const isActive = game.status === 'active';
 
@@ -434,24 +356,15 @@ export default async function GameHomePage({
         </div>
       )}
 
-      {pendingApprovalsForMe > 0 && (
-        <div className="mb-4">
-          <Banner tone="info">
-            <div className="flex items-center justify-between gap-3">
-              <span>
-                {pendingApprovalsForMe} spillere i flighten din venter på
-                godkjenning
-              </span>
-              <SmartLink
-                href={`/games/${id}/approve`}
-                className="text-sm font-medium text-primary underline underline-offset-2 decoration-primary/30 hover:decoration-primary whitespace-nowrap"
-              >
-                Gjennomgå →
-              </SmartLink>
-            </div>
-          </Banner>
-        </div>
-      )}
+      <Suspense fallback={null}>
+        <PendingApprovalsBanner
+          gameId={id}
+          flightNumber={me.flight_number}
+          currentUserId={userId}
+          requirePeerApproval={game.require_peer_approval}
+          isActive={isActive}
+        />
+      </Suspense>
 
       <div className="space-y-4">
         <Card>
@@ -491,7 +404,15 @@ export default async function GameHomePage({
         </Card>
 
         {isActive ? (
-          <PrimaryCta gameId={id} state={state} strokesCount={strokesCount} />
+          <Suspense fallback={<PrimaryCtaSkeleton />}>
+            <PrimaryCtaSection
+              gameId={id}
+              currentUserId={userId}
+              submittedAt={me.submitted_at}
+              approvedAt={me.approved_at}
+              requirePeerApproval={game.require_peer_approval}
+            />
+          </Suspense>
         ) : game.status === 'finished' ? (
           <LinkButton href={`/games/${id}/leaderboard`} full>
             🏆 Se leaderboard →
@@ -537,6 +458,184 @@ export default async function GameHomePage({
       </div>
     </AppShell>
   );
+}
+
+// ─── Scheduled-state flight roster ───────────────────────────────────────
+
+async function FlightRoster({
+  gameId,
+  flightNumber,
+  currentUserId,
+}: {
+  gameId: string;
+  flightNumber: number;
+  currentUserId: string;
+}) {
+  const { supabase } = await getGameContext();
+  const { data: flightRows } = await supabase
+    .from('game_players')
+    .select(
+      'user_id, flight_number, users!game_players_user_id_fkey(name, nickname, hcp_index)',
+    )
+    .eq('game_id', gameId)
+    .eq('flight_number', flightNumber)
+    .order('user_id')
+    .returns<FlightRosterRow[]>();
+
+  const flight = (flightRows ?? []).map((row) => ({
+    userId: row.user_id,
+    isCurrentUser: row.user_id === currentUserId,
+    name: row.users?.name ?? '(ukjent)',
+    hcpIndex:
+      row.users?.hcp_index == null ? null : Number(row.users.hcp_index),
+  }));
+
+  return (
+    <ul className="mt-2 flex flex-col gap-2">
+      {flight.map((p) => (
+        <li key={p.userId} className="flex items-center gap-3">
+          {/*
+            E5 dark-mode pass: inactive avatar uses bg-surface (not
+            bg-bg). In dark mode bg-bg matches the page bg
+            (--bg #0f1612), so the avatar would disappear into the
+            layout with only the border visible — a hole punched in
+            the page. bg-surface (--surface #1a2e1f in dark) sits as a
+            slightly lighter forest disc against the page bg. Light
+            mode is unchanged in feel: bg-surface (#ffffff) on the
+            --bg linen still reads as a paper-on-paper subtle disc.
+          */}
+          <span
+            className={`shrink-0 w-7 h-7 rounded-full grid place-items-center font-serif text-[12px] font-medium ${
+              p.isCurrentUser
+                ? 'bg-primary text-white dark:text-bg'
+                : 'bg-surface text-text border border-border'
+            }`}
+          >
+            {firstInitial(p.name)}
+          </span>
+          <span
+            className={`flex-1 truncate text-[13.5px] ${p.isCurrentUser ? 'font-semibold' : ''}`}
+          >
+            {firstName(p.name) ?? p.name}
+            {p.isCurrentUser && (
+              <span className="font-sans text-[9.5px] font-semibold uppercase tracking-[0.18em] text-accent ml-2">
+                DEG
+              </span>
+            )}
+          </span>
+          <span className="shrink-0 text-xs text-muted tabular-nums">
+            HCP {p.hcpIndex != null ? p.hcpIndex.toFixed(1) : '—'}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function FlightRosterSkeleton() {
+  return (
+    <ul className="mt-2 flex flex-col gap-2">
+      {[0, 1, 2, 3].map((i) => (
+        <li key={i} className="flex items-center gap-3">
+          <Skeleton className="shrink-0 h-7 w-7 rounded-full" delay={i * 90} />
+          <Skeleton className="flex-1 h-4" delay={i * 90 + 30} />
+          <Skeleton className="shrink-0 h-3 w-14" delay={i * 90 + 60} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// ─── Pending-approvals info banner (active state) ────────────────────────
+
+async function PendingApprovalsBanner({
+  gameId,
+  flightNumber,
+  currentUserId,
+  requirePeerApproval,
+  isActive,
+}: {
+  gameId: string;
+  flightNumber: number;
+  currentUserId: string;
+  requirePeerApproval: boolean;
+  isActive: boolean;
+}) {
+  if (!requirePeerApproval || !isActive) return null;
+
+  const { supabase } = await getGameContext();
+  const { data: mates } = await supabase
+    .from('game_players')
+    .select('user_id, flight_number, submitted_at, approved_at')
+    .eq('game_id', gameId)
+    .eq('flight_number', flightNumber)
+    .returns<FlightMatePlayerRow[]>();
+  const pendingApprovalsForMe = (mates ?? []).filter(
+    (m) =>
+      m.user_id !== currentUserId &&
+      m.submitted_at != null &&
+      m.approved_at == null,
+  ).length;
+
+  if (pendingApprovalsForMe === 0) return null;
+
+  return (
+    <div className="mb-4">
+      <Banner tone="info">
+        <div className="flex items-center justify-between gap-3">
+          <span>
+            {pendingApprovalsForMe} spillere i flighten din venter på
+            godkjenning
+          </span>
+          <SmartLink
+            href={`/games/${gameId}/approve`}
+            className="text-sm font-medium text-primary underline underline-offset-2 decoration-primary/30 hover:decoration-primary whitespace-nowrap"
+          >
+            Gjennomgå →
+          </SmartLink>
+        </div>
+      </Banner>
+    </div>
+  );
+}
+
+// ─── Primary CTA (active state) ──────────────────────────────────────────
+
+async function PrimaryCtaSection({
+  gameId,
+  currentUserId,
+  submittedAt,
+  approvedAt,
+  requirePeerApproval,
+}: {
+  gameId: string;
+  currentUserId: string;
+  submittedAt: string | null;
+  approvedAt: string | null;
+  requirePeerApproval: boolean;
+}) {
+  const { supabase } = await getGameContext();
+
+  const { count: strokesCountRaw } = await supabase
+    .from('scores')
+    .select('hole_number', { count: 'exact', head: true })
+    .eq('game_id', gameId)
+    .eq('user_id', currentUserId)
+    .not('strokes', 'is', null);
+  const strokesCount = strokesCountRaw ?? 0;
+
+  const state = computeState({
+    strokesCount,
+    submittedAt,
+    approvedAt,
+    requirePeerApproval,
+  });
+
+  return <PrimaryCta gameId={gameId} state={state} strokesCount={strokesCount} />;
+}
+
+function PrimaryCtaSkeleton() {
+  return <Skeleton className="h-12 w-full rounded-full" />;
 }
 
 function PrimaryCta({

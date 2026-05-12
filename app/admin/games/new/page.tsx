@@ -1,3 +1,4 @@
+import { Suspense, cache } from 'react';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
 import { AdminShell } from '@/components/ui/AdminShell';
@@ -5,6 +6,7 @@ import { BackLink } from '@/components/ui/BackLink';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { GameForm, type CourseOption, type PlayerOption } from './GameForm';
 import { createGameDraft, createAndPublishGame } from './actions';
 
@@ -47,17 +49,16 @@ type UserRow = {
   hcp_index: number | string;
 };
 
-export default async function NewGamePage({
-  searchParams,
-}: {
-  searchParams: SearchParams;
-}) {
-  const params = await searchParams;
-  const errorCode = first(params.error);
-  const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
-
+const getNewGameContext = cache(async () => {
   const supabase = await getServerClient();
+  return { supabase };
+});
 
+// Both the optional player-shortage banner and the GameForm need this data;
+// cache so we only round-trip once even though two Suspense boundaries read
+// from it.
+const getFormData = cache(async () => {
+  const { supabase } = await getNewGameContext();
   const [coursesResult, usersResult] = await Promise.all([
     supabase
       .from('courses')
@@ -89,6 +90,18 @@ export default async function NewGamePage({
     hcp_index: Number(u.hcp_index),
   }));
 
+  return { courses, players };
+});
+
+export default async function NewGamePage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const params = await searchParams;
+  const errorCode = first(params.error);
+  const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
+
   return (
     <AdminShell>
       <div className="-mt-3 mb-2 flex items-center justify-between">
@@ -116,31 +129,60 @@ export default async function NewGamePage({
         </div>
       )}
 
-      {players.length < 8 && (
-        <div className="mt-4">
-          <Banner tone="info">
-            Du trenger 8 registrerte spillere. Inviter flere fra{' '}
-            <SmartLink
-              href="/admin/invitations"
-              className="underline hover:no-underline"
-            >
-              Invitasjoner
-            </SmartLink>
-            -siden.
-          </Banner>
-        </div>
-      )}
+      <Suspense fallback={null}>
+        <PlayerShortageBanner />
+      </Suspense>
 
       <div className="mt-5">
         <Card>
-          <GameForm
-            courses={courses}
-            players={players}
-            createDraftAction={createGameDraft}
-            createAndPublishAction={createAndPublishGame}
-          />
+          <Suspense fallback={<GameFormSkeleton />}>
+            <GameFormBody />
+          </Suspense>
         </Card>
       </div>
     </AdminShell>
+  );
+}
+
+async function PlayerShortageBanner() {
+  const { players } = await getFormData();
+  if (players.length >= 8) return null;
+  return (
+    <div className="mt-4">
+      <Banner tone="info">
+        Du trenger 8 registrerte spillere. Inviter flere fra{' '}
+        <SmartLink
+          href="/admin/invitations"
+          className="underline hover:no-underline"
+        >
+          Invitasjoner
+        </SmartLink>
+        -siden.
+      </Banner>
+    </div>
+  );
+}
+
+async function GameFormBody() {
+  const { courses, players } = await getFormData();
+  return (
+    <GameForm
+      courses={courses}
+      players={players}
+      createDraftAction={createGameDraft}
+      createAndPublishAction={createAndPublishGame}
+    />
+  );
+}
+
+function GameFormSkeleton() {
+  return (
+    <div className="space-y-4">
+      <Skeleton className="h-10 w-full rounded-lg" />
+      <Skeleton className="h-10 w-full rounded-lg" delay={60} />
+      <Skeleton className="h-32 w-full rounded-lg" delay={120} />
+      <Skeleton className="h-32 w-full rounded-lg" delay={180} />
+      <Skeleton className="h-12 w-full rounded-full" delay={240} />
+    </div>
   );
 }

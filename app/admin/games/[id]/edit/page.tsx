@@ -1,3 +1,4 @@
+import { Suspense, cache } from 'react';
 import { redirect } from 'next/navigation';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
@@ -7,6 +8,7 @@ import { BackLink } from '@/components/ui/BackLink';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
+import { Skeleton } from '@/components/ui/Skeleton';
 import {
   GameForm,
   type CourseOption,
@@ -94,6 +96,12 @@ function formatForDateTimeLocalInOslo(iso: string | null): string {
   return `${m.year}-${m.month}-${m.day}T${m.hour}:${m.minute}`;
 }
 
+const getEditContext = cache(async () => {
+  const supabase = await getServerClient();
+  const userId = await getProxyVerifiedUserId();
+  return { supabase, userId };
+});
+
 export default async function EditGamePage({
   params,
   searchParams,
@@ -106,38 +114,86 @@ export default async function EditGamePage({
   const errorCode = first(sp.error);
   const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
 
-  const userId = await getProxyVerifiedUserId();
+  const { supabase, userId } = await getEditContext();
   if (!userId) redirect('/login');
-  const supabase = await getServerClient();
 
-  const { data: profile } = await supabase
-    .from('users')
-    .select('is_admin')
-    .eq('id', userId)
-    .single();
-  if (!profile?.is_admin) redirect('/');
+  // Gating: admin check + game row in parallel. Both determine whether the
+  // page should render at all.
+  const [profileRes, gameRes] = await Promise.all([
+    supabase
+      .from('users')
+      .select('is_admin')
+      .eq('id', userId)
+      .single(),
+    supabase
+      .from('games')
+      .select(
+        'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval',
+      )
+      .eq('id', id)
+      .single<GameRow>(),
+  ]);
 
-  // Load the game row first so we can short-circuit if it isn't editable.
-  const { data: game, error: gameError } = await supabase
-    .from('games')
-    .select(
-      'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval',
-    )
-    .eq('id', id)
-    .single<GameRow>();
+  if (!profileRes.data?.is_admin) redirect('/');
 
-  if (gameError || !game) {
+  if (gameRes.error || !gameRes.data) {
     redirect('/admin/games');
   }
+  const game = gameRes.data;
 
   // Edits are only allowed while the game is in 'scheduled'. Once it flips to
   // 'active' or 'finished', state changes (handicaps, scores) make the roster
   // and tee-off effectively immutable.
-  if (game!.status !== 'scheduled') {
+  if (game.status !== 'scheduled') {
     redirect(`/admin/games/${id}?error=not_editable`);
   }
 
-  const [coursesResult, usersResult, playersResult] = await Promise.all([
+  return (
+    <AdminShell>
+      <div className="-mt-3 mb-2 flex items-center justify-between">
+        <BackLink href={`/admin/games/${id}`}>Tilbake</BackLink>
+        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          Spill · protokoll
+        </p>
+        <span className="w-[80px]" aria-hidden />
+      </div>
+
+      <BrassRibbon kicker="Rediger spill" />
+
+      <div className="px-1">
+        <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
+          {game.name}
+        </h1>
+        <p className="font-sans text-[11.5px] text-muted">
+          Endre bane, spillere, lag eller innstillinger
+        </p>
+      </div>
+
+      <div className="mt-4 space-y-2">
+        {errorMessage && <Banner tone="error">{errorMessage}</Banner>}
+        <Banner tone="info">
+          Spillet er i planlagt-fasen. Spillerne ser endringene neste gang
+          de åpner appen.
+        </Banner>
+        <Suspense fallback={null}>
+          <PlayerShortageBanner />
+        </Suspense>
+      </div>
+
+      <div className="mt-5">
+        <Card>
+          <Suspense fallback={<GameFormSkeleton />}>
+            <EditGameFormBody gameId={id} game={game} />
+          </Suspense>
+        </Card>
+      </div>
+    </AdminShell>
+  );
+}
+
+const getOptions = cache(async () => {
+  const { supabase } = await getEditContext();
+  const [coursesResult, usersResult] = await Promise.all([
     supabase
       .from('courses')
       .select('id, name, tee_boxes(id, name)')
@@ -148,16 +204,9 @@ export default async function EditGamePage({
       .select('id, name, nickname, hcp_index')
       .order('name', { ascending: true })
       .returns<UserRow[]>(),
-    supabase
-      .from('game_players')
-      .select('user_id, team_number, flight_number')
-      .eq('game_id', id)
-      .returns<GamePlayerRow[]>(),
   ]);
-
   if (coursesResult.error) throw coursesResult.error;
   if (usersResult.error) throw usersResult.error;
-  if (playersResult.error) throw playersResult.error;
 
   const courses: CourseOption[] = (coursesResult.data ?? []).map((c) => ({
     id: c.id,
@@ -174,15 +223,54 @@ export default async function EditGamePage({
     hcp_index: Number(u.hcp_index),
   }));
 
+  return { courses, playerOptions };
+});
+
+async function PlayerShortageBanner() {
+  const { playerOptions } = await getOptions();
+  if (playerOptions.length >= 8) return null;
+  return (
+    <Banner tone="info">
+      Du trenger 8 registrerte spillere. Inviter flere fra{' '}
+      <SmartLink
+        href="/admin/invitations"
+        className="underline hover:no-underline"
+      >
+        Invitasjoner
+      </SmartLink>
+      -siden.
+    </Banner>
+  );
+}
+
+async function EditGameFormBody({
+  gameId,
+  game,
+}: {
+  gameId: string;
+  game: GameRow;
+}) {
+  const { supabase } = await getEditContext();
+  const [{ courses, playerOptions }, playersResult] = await Promise.all([
+    getOptions(),
+    supabase
+      .from('game_players')
+      .select('user_id, team_number, flight_number')
+      .eq('game_id', gameId)
+      .returns<GamePlayerRow[]>(),
+  ]);
+
+  if (playersResult.error) throw playersResult.error;
+
   const initialValues: InitialValues = {
-    name: game!.name,
-    course_id: game!.course_id,
-    tee_box_id: game!.tee_box_id,
+    name: game.name,
+    course_id: game.course_id,
+    tee_box_id: game.tee_box_id,
     scheduled_tee_off_at: formatForDateTimeLocalInOslo(
-      game!.scheduled_tee_off_at,
+      game.scheduled_tee_off_at,
     ),
-    hcp_allowance_pct: String(game!.hcp_allowance_pct),
-    require_peer_approval: game!.require_peer_approval,
+    hcp_allowance_pct: String(game.hcp_allowance_pct),
+    require_peer_approval: game.require_peer_approval,
     players: (playersResult.data ?? []).map((p) => ({
       user_id: p.user_id,
       team_number: p.team_number,
@@ -190,60 +278,27 @@ export default async function EditGamePage({
     })),
   };
 
-  const updateAction = updateGameAction.bind(null, id);
+  const updateAction = updateGameAction.bind(null, gameId);
 
   return (
-    <AdminShell>
-      <div className="-mt-3 mb-2 flex items-center justify-between">
-        <BackLink href={`/admin/games/${id}`}>Tilbake</BackLink>
-        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          Spill · protokoll
-        </p>
-        <span className="w-[80px]" aria-hidden />
-      </div>
+    <GameForm
+      courses={courses}
+      players={playerOptions}
+      initialValues={initialValues}
+      editMode
+      updateAction={updateAction}
+    />
+  );
+}
 
-      <BrassRibbon kicker="Rediger spill" />
-
-      <div className="px-1">
-        <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-          {game!.name}
-        </h1>
-        <p className="font-sans text-[11.5px] text-muted">
-          Endre bane, spillere, lag eller innstillinger
-        </p>
-      </div>
-
-      <div className="mt-4 space-y-2">
-        {errorMessage && <Banner tone="error">{errorMessage}</Banner>}
-        <Banner tone="info">
-          Spillet er i planlagt-fasen. Spillerne ser endringene neste gang
-          de åpner appen.
-        </Banner>
-        {playerOptions.length < 8 && (
-          <Banner tone="info">
-            Du trenger 8 registrerte spillere. Inviter flere fra{' '}
-            <SmartLink
-              href="/admin/invitations"
-              className="underline hover:no-underline"
-            >
-              Invitasjoner
-            </SmartLink>
-            -siden.
-          </Banner>
-        )}
-      </div>
-
-      <div className="mt-5">
-        <Card>
-          <GameForm
-            courses={courses}
-            players={playerOptions}
-            initialValues={initialValues}
-            editMode
-            updateAction={updateAction}
-          />
-        </Card>
-      </div>
-    </AdminShell>
+function GameFormSkeleton() {
+  return (
+    <div className="space-y-4">
+      <Skeleton className="h-10 w-full rounded-lg" />
+      <Skeleton className="h-10 w-full rounded-lg" delay={60} />
+      <Skeleton className="h-32 w-full rounded-lg" delay={120} />
+      <Skeleton className="h-32 w-full rounded-lg" delay={180} />
+      <Skeleton className="h-12 w-full rounded-full" delay={240} />
+    </div>
   );
 }

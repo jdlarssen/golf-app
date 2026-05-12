@@ -1,3 +1,4 @@
+import { Suspense, cache } from 'react';
 import { notFound } from 'next/navigation';
 import { BackLink } from '@/components/ui/BackLink';
 import { getServerClient } from '@/lib/supabase/server';
@@ -5,6 +6,7 @@ import { AdminShell } from '@/components/ui/AdminShell';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { CourseForm } from '../../CourseForm';
 import { updateCourse, deleteCourse } from './actions';
 import { DeleteCourseButton } from './DeleteCourseButton';
@@ -37,6 +39,11 @@ function first(value: string | string[] | undefined): string | undefined {
   return value;
 }
 
+const getEditCourseContext = cache(async () => {
+  const supabase = await getServerClient();
+  return { supabase };
+});
+
 export default async function EditCoursePage({
   params,
   searchParams,
@@ -50,7 +57,9 @@ export default async function EditCoursePage({
     ? ERROR_MESSAGES[first(errorCode) ?? '']
     : undefined;
 
-  const supabase = await getServerClient();
+  const { supabase } = await getEditCourseContext();
+  // Gating: fetch the course row so the title bar can render synchronously.
+  // The heavier holes/tees fetch streams behind Suspense below.
   const { data: course, error: courseError } = await supabase
     .from('courses')
     .select('id, name')
@@ -61,41 +70,6 @@ export default async function EditCoursePage({
     notFound();
   }
 
-  const [holesResult, teesResult] = await Promise.all([
-    supabase
-      .from('course_holes')
-      .select('hole_number, par, stroke_index')
-      .eq('course_id', id)
-      .order('hole_number', { ascending: true }),
-    supabase
-      .from('tee_boxes')
-      .select('name, slope, course_rating, par_total, length_meters')
-      .eq('course_id', id)
-      .order('slope', { ascending: true }),
-  ]);
-
-  if (holesResult.error) throw holesResult.error;
-  if (teesResult.error) throw teesResult.error;
-
-  // Numeric fields are stringified so the form's controlled inputs preserve
-  // in-progress decimal entry (see CourseForm.tsx for context).
-  const initialHoles = (holesResult.data ?? []).map((h) => ({
-    hole_number: h.hole_number,
-    par: String(h.par),
-    stroke_index: String(h.stroke_index),
-  }));
-
-  const initialTees = (teesResult.data ?? []).map((t) => ({
-    name: t.name,
-    slope: String(t.slope),
-    course_rating: String(t.course_rating),
-    par_total: String(t.par_total),
-    length_meters: t.length_meters == null ? '' : String(t.length_meters),
-  }));
-
-  // Pre-bind the course id so the form's action handler only deals with the
-  // FormData payload — keeps CourseForm reusable across create + edit.
-  const updateAction = updateCourse.bind(null, id);
   const deleteAction = deleteCourse.bind(null, id);
 
   return (
@@ -127,15 +101,9 @@ export default async function EditCoursePage({
 
       <div className="mt-5">
         <Card>
-          <CourseForm
-            action={updateAction}
-            submitLabel="Lagre endringer"
-            initialData={{
-              name: course.name,
-              holes: initialHoles,
-              teeBoxes: initialTees,
-            }}
-          />
+          <Suspense fallback={<CourseFormSkeleton />}>
+            <EditCourseFormBody courseId={id} courseName={course.name} />
+          </Suspense>
         </Card>
       </div>
 
@@ -146,5 +114,73 @@ export default async function EditCoursePage({
         />
       </div>
     </AdminShell>
+  );
+}
+
+async function EditCourseFormBody({
+  courseId,
+  courseName,
+}: {
+  courseId: string;
+  courseName: string;
+}) {
+  const { supabase } = await getEditCourseContext();
+  const [holesResult, teesResult] = await Promise.all([
+    supabase
+      .from('course_holes')
+      .select('hole_number, par, stroke_index')
+      .eq('course_id', courseId)
+      .order('hole_number', { ascending: true }),
+    supabase
+      .from('tee_boxes')
+      .select('name, slope, course_rating, par_total, length_meters')
+      .eq('course_id', courseId)
+      .order('slope', { ascending: true }),
+  ]);
+
+  if (holesResult.error) throw holesResult.error;
+  if (teesResult.error) throw teesResult.error;
+
+  // Numeric fields are stringified so the form's controlled inputs preserve
+  // in-progress decimal entry (see CourseForm.tsx for context).
+  const initialHoles = (holesResult.data ?? []).map((h) => ({
+    hole_number: h.hole_number,
+    par: String(h.par),
+    stroke_index: String(h.stroke_index),
+  }));
+
+  const initialTees = (teesResult.data ?? []).map((t) => ({
+    name: t.name,
+    slope: String(t.slope),
+    course_rating: String(t.course_rating),
+    par_total: String(t.par_total),
+    length_meters: t.length_meters == null ? '' : String(t.length_meters),
+  }));
+
+  // Pre-bind the course id so the form's action handler only deals with the
+  // FormData payload — keeps CourseForm reusable across create + edit.
+  const updateAction = updateCourse.bind(null, courseId);
+
+  return (
+    <CourseForm
+      action={updateAction}
+      submitLabel="Lagre endringer"
+      initialData={{
+        name: courseName,
+        holes: initialHoles,
+        teeBoxes: initialTees,
+      }}
+    />
+  );
+}
+
+function CourseFormSkeleton() {
+  return (
+    <div className="space-y-4">
+      <Skeleton className="h-10 w-full rounded-lg" />
+      <Skeleton className="h-64 w-full rounded-lg" delay={60} />
+      <Skeleton className="h-32 w-full rounded-lg" delay={120} />
+      <Skeleton className="h-12 w-full rounded-full" delay={180} />
+    </div>
   );
 }

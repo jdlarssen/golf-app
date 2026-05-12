@@ -1,3 +1,4 @@
+import { Suspense, cache } from 'react';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound, redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
@@ -7,6 +8,7 @@ import { BackLink } from '@/components/ui/BackLink';
 import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { HourGlass } from '@/components/icons/HourGlass';
 import { firstName } from '@/lib/firstName';
 import {
@@ -62,6 +64,15 @@ type ScoreRow = {
   strokes: number | null;
 };
 
+// Request-scoped Supabase client + verified user id. Shared by every
+// Suspense body in this route so we don't pay a cookie-auth round-trip
+// per section.
+const getLeaderboardContext = cache(async () => {
+  const supabase = await getServerClient();
+  const userId = await getProxyVerifiedUserId();
+  return { supabase, userId };
+});
+
 export default async function LeaderboardPage({
   params,
   searchParams,
@@ -73,31 +84,36 @@ export default async function LeaderboardPage({
   const sp = await searchParams;
   const mode: LeaderboardMode = parseMode(sp.mode);
 
-  const userId = await getProxyVerifiedUserId();
+  const { supabase, userId } = await getLeaderboardContext();
   if (!userId) redirect('/login');
-  const supabase = await getServerClient();
 
-  const { data: game, error: gameError } = await supabase
-    .from('games')
-    .select(
-      'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, courses(name), tee_boxes(name)',
-    )
-    .eq('id', id)
-    .single<GameRow>();
-  if (gameError || !game) notFound();
+  // Gating queries run in parallel: game row + profile (for is_admin) +
+  // optional participant check. Branch-determining; must run before we
+  // can pick which view to render.
+  const [gameRes, profileRes] = await Promise.all([
+    supabase
+      .from('games')
+      .select(
+        'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, courses(name), tee_boxes(name)',
+      )
+      .eq('id', id)
+      .single<GameRow>(),
+    supabase
+      .from('users')
+      .select('is_admin')
+      .eq('id', userId)
+      .single<{ is_admin: boolean }>(),
+  ]);
+
+  if (gameRes.error || !gameRes.data) notFound();
+  const game = gameRes.data;
 
   // Draft games have no leaderboard view — bounce to game home.
   if (game.status === 'draft') {
     redirect(`/games/${id}`);
   }
 
-  // Participant OR admin guard.
-  const { data: profile } = await supabase
-    .from('users')
-    .select('is_admin')
-    .eq('id', userId)
-    .single<{ is_admin: boolean }>();
-  const isAdmin = profile?.is_admin === true;
+  const isAdmin = profileRes.data?.is_admin === true;
 
   if (!isAdmin) {
     const { data: me } = await supabase
@@ -109,31 +125,55 @@ export default async function LeaderboardPage({
     if (!me) notFound();
   }
 
-  const { data: rawPlayers, error: playersError } = await supabase
-    .from('game_players')
-    .select(
-      'user_id, team_number, course_handicap, users!game_players_user_id_fkey(name, nickname)',
-    )
-    .eq('game_id', id)
-    .returns<GamePlayerRow[]>();
-  if (playersError) throw playersError;
+  // Body data fetch (players + holes + scores) is heavy and dictates the
+  // final view branch. Stream it behind Suspense so the user sees the shell
+  // immediately during navigation.
+  return (
+    <Suspense fallback={<LeaderboardBodySkeleton />}>
+      <LeaderboardBody gameId={id} game={game} mode={mode} />
+    </Suspense>
+  );
+}
 
-  const { data: rawHoles, error: holesError } = await supabase
-    .from('course_holes')
-    .select('hole_number, par, stroke_index')
-    .eq('course_id', game.course_id)
-    .order('hole_number', { ascending: true })
-    .returns<CourseHoleRow[]>();
-  if (holesError) throw holesError;
+// ─── Body ────────────────────────────────────────────────────────────────
 
-  const { data: rawScores, error: scoresError } = await supabase
-    .from('scores')
-    .select('user_id, hole_number, strokes')
-    .eq('game_id', id)
-    .returns<ScoreRow[]>();
-  if (scoresError) throw scoresError;
+async function LeaderboardBody({
+  gameId,
+  game,
+  mode,
+}: {
+  gameId: string;
+  game: GameRow;
+  mode: LeaderboardMode;
+}) {
+  const { supabase } = await getLeaderboardContext();
 
-  const players: LbPlayer[] = (rawPlayers ?? [])
+  const [rawPlayersRes, rawHolesRes, rawScoresRes] = await Promise.all([
+    supabase
+      .from('game_players')
+      .select(
+        'user_id, team_number, course_handicap, users!game_players_user_id_fkey(name, nickname)',
+      )
+      .eq('game_id', gameId)
+      .returns<GamePlayerRow[]>(),
+    supabase
+      .from('course_holes')
+      .select('hole_number, par, stroke_index')
+      .eq('course_id', game.course_id)
+      .order('hole_number', { ascending: true })
+      .returns<CourseHoleRow[]>(),
+    supabase
+      .from('scores')
+      .select('user_id, hole_number, strokes')
+      .eq('game_id', gameId)
+      .returns<ScoreRow[]>(),
+  ]);
+
+  if (rawPlayersRes.error) throw rawPlayersRes.error;
+  if (rawHolesRes.error) throw rawHolesRes.error;
+  if (rawScoresRes.error) throw rawScoresRes.error;
+
+  const players: LbPlayer[] = (rawPlayersRes.data ?? [])
     .filter((p) => p.users != null)
     .map((p) => ({
       userId: p.user_id,
@@ -143,13 +183,13 @@ export default async function LeaderboardPage({
       courseHandicap: p.course_handicap ?? 0,
     }));
 
-  const holes: LbHole[] = (rawHoles ?? []).map((h) => ({
+  const holes: LbHole[] = (rawHolesRes.data ?? []).map((h) => ({
     holeNumber: h.hole_number,
     par: h.par,
     strokeIndex: h.stroke_index,
   }));
 
-  const scores: LbScore[] = (rawScores ?? []).map((s) => ({
+  const scores: LbScore[] = (rawScoresRes.data ?? []).map((s) => ({
     userId: s.user_id,
     holeNumber: s.hole_number,
     strokes: s.strokes,
@@ -160,15 +200,12 @@ export default async function LeaderboardPage({
   // but no team has finished front 9 yet. State #3.5 (front 9 visible, back
   // 9 locked) when at least one team has completed front 9 but game isn't
   // finished. Full leaderboard once status flips to finished.
-  //
-  // Currently state #3.5 falls through to the full leaderboard render below
-  // as a placeholder; F3 will replace it with the half-view layout.
   const frontNineOpen = isFrontNineOpen({
-    players: (rawPlayers ?? []).map((p) => ({
+    players: (rawPlayersRes.data ?? []).map((p) => ({
       user_id: p.user_id,
       team_number: p.team_number,
     })),
-    scores: (rawScores ?? []).map((s) => ({
+    scores: (rawScoresRes.data ?? []).map((s) => ({
       user_id: s.user_id,
       hole_number: s.hole_number,
       strokes: s.strokes,
@@ -181,7 +218,7 @@ export default async function LeaderboardPage({
 
   if (view === 'state3') {
     return renderState3({
-      gameId: id,
+      gameId,
       teeOffAt: game.scheduled_tee_off_at,
       players,
     });
@@ -189,7 +226,7 @@ export default async function LeaderboardPage({
 
   if (view === 'state3.5') {
     return renderState35({
-      gameId: id,
+      gameId,
       mode,
       players,
       holes,
@@ -205,12 +242,40 @@ export default async function LeaderboardPage({
   // view so the Replay pill and confetti can share state.
   return (
     <State4View
-      gameId={id}
+      gameId={gameId}
       gameName={game.name}
       teams={orderedLines}
       mode={mode}
       coursePar={coursePar}
     />
+  );
+}
+
+function LeaderboardBodySkeleton() {
+  // Three skeleton cards inside an AppShell — close enough to state3.5
+  // chrome that no obvious shell-jump happens when the body commits.
+  return (
+    <AppShell>
+      <header className="mb-4 flex items-center justify-between gap-4">
+        <Skeleton className="h-4 w-16" />
+        <Skeleton className="h-3 w-24" />
+        <span className="w-12" aria-hidden />
+      </header>
+
+      <div className="flex justify-center mb-5">
+        <Skeleton className="h-6 w-20 rounded-full" />
+      </div>
+
+      <div className="space-y-3 px-4">
+        {[0, 1, 2].map((i) => (
+          <Skeleton
+            key={i}
+            className="h-[88px] rounded-2xl"
+            delay={i * 90}
+          />
+        ))}
+      </div>
+    </AppShell>
   );
 }
 

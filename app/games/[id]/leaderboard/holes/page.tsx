@@ -1,7 +1,9 @@
+import { Suspense, cache } from 'react';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound, redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { Skeleton } from '@/components/ui/Skeleton';
 import {
   computeLeaderboard,
   parseMode,
@@ -47,6 +49,12 @@ type ScoreRow = {
   strokes: number | null;
 };
 
+const getDrilldownContext = cache(async () => {
+  const supabase = await getServerClient();
+  const userId = await getProxyVerifiedUserId();
+  return { supabase, userId };
+});
+
 export default async function LeaderboardHolesPage({
   params,
   searchParams,
@@ -60,28 +68,32 @@ export default async function LeaderboardHolesPage({
   const teamParam = Array.isArray(sp.team) ? sp.team[0] : sp.team;
   const requestedTeam = teamParam ? Number.parseInt(teamParam, 10) : null;
 
-  const userId = await getProxyVerifiedUserId();
+  const { supabase, userId } = await getDrilldownContext();
   if (!userId) redirect('/login');
-  const supabase = await getServerClient();
 
-  const { data: game, error: gameError } = await supabase
-    .from('games')
-    .select('id, name, status, course_id, courses(name)')
-    .eq('id', id)
-    .single<GameRow>();
-  if (gameError || !game) notFound();
+  // Gating: game row + admin check in parallel.
+  const [gameRes, profileRes] = await Promise.all([
+    supabase
+      .from('games')
+      .select('id, name, status, course_id, courses(name)')
+      .eq('id', id)
+      .single<GameRow>(),
+    supabase
+      .from('users')
+      .select('is_admin')
+      .eq('id', userId)
+      .single<{ is_admin: boolean }>(),
+  ]);
+
+  if (gameRes.error || !gameRes.data) notFound();
+  const game = gameRes.data;
 
   if (game.status === 'draft' || game.status === 'scheduled') {
     redirect(`/games/${id}`);
   }
   const isActive = game.status === 'active';
 
-  const { data: profile } = await supabase
-    .from('users')
-    .select('is_admin')
-    .eq('id', userId)
-    .single<{ is_admin: boolean }>();
-  const isAdmin = profile?.is_admin === true;
+  const isAdmin = profileRes.data?.is_admin === true;
   if (!isAdmin) {
     const { data: me } = await supabase
       .from('game_players')
@@ -92,31 +104,60 @@ export default async function LeaderboardHolesPage({
     if (!me) notFound();
   }
 
-  const { data: rawPlayers, error: playersError } = await supabase
-    .from('game_players')
-    .select(
-      'user_id, team_number, course_handicap, users!game_players_user_id_fkey(name, nickname)',
-    )
-    .eq('game_id', id)
-    .returns<GamePlayerRow[]>();
-  if (playersError) throw playersError;
+  return (
+    <Suspense fallback={<DrilldownSkeleton />}>
+      <DrilldownBody
+        gameId={id}
+        courseId={game.course_id}
+        mode={mode}
+        isActive={isActive}
+        requestedTeam={requestedTeam}
+      />
+    </Suspense>
+  );
+}
 
-  const { data: rawHoles, error: holesError } = await supabase
-    .from('course_holes')
-    .select('hole_number, par, stroke_index')
-    .eq('course_id', game.course_id)
-    .order('hole_number', { ascending: true })
-    .returns<CourseHoleRow[]>();
-  if (holesError) throw holesError;
+async function DrilldownBody({
+  gameId,
+  courseId,
+  mode,
+  isActive,
+  requestedTeam,
+}: {
+  gameId: string;
+  courseId: string;
+  mode: LeaderboardMode;
+  isActive: boolean;
+  requestedTeam: number | null;
+}) {
+  const { supabase } = await getDrilldownContext();
 
-  const { data: rawScores, error: scoresError } = await supabase
-    .from('scores')
-    .select('user_id, hole_number, strokes')
-    .eq('game_id', id)
-    .returns<ScoreRow[]>();
-  if (scoresError) throw scoresError;
+  const [rawPlayersRes, rawHolesRes, rawScoresRes] = await Promise.all([
+    supabase
+      .from('game_players')
+      .select(
+        'user_id, team_number, course_handicap, users!game_players_user_id_fkey(name, nickname)',
+      )
+      .eq('game_id', gameId)
+      .returns<GamePlayerRow[]>(),
+    supabase
+      .from('course_holes')
+      .select('hole_number, par, stroke_index')
+      .eq('course_id', courseId)
+      .order('hole_number', { ascending: true })
+      .returns<CourseHoleRow[]>(),
+    supabase
+      .from('scores')
+      .select('user_id, hole_number, strokes')
+      .eq('game_id', gameId)
+      .returns<ScoreRow[]>(),
+  ]);
 
-  const players: LbPlayer[] = (rawPlayers ?? [])
+  if (rawPlayersRes.error) throw rawPlayersRes.error;
+  if (rawHolesRes.error) throw rawHolesRes.error;
+  if (rawScoresRes.error) throw rawScoresRes.error;
+
+  const players: LbPlayer[] = (rawPlayersRes.data ?? [])
     .filter((p) => p.users != null)
     .map((p) => ({
       userId: p.user_id,
@@ -126,13 +167,13 @@ export default async function LeaderboardHolesPage({
       courseHandicap: p.course_handicap ?? 0,
     }));
 
-  const allHoles: LbHole[] = (rawHoles ?? []).map((h) => ({
+  const allHoles: LbHole[] = (rawHolesRes.data ?? []).map((h) => ({
     holeNumber: h.hole_number,
     par: h.par,
     strokeIndex: h.stroke_index,
   }));
 
-  const allScores: LbScore[] = (rawScores ?? []).map((s) => ({
+  const allScores: LbScore[] = (rawScoresRes.data ?? []).map((s) => ({
     userId: s.user_id,
     holeNumber: s.hole_number,
     strokes: s.strokes,
@@ -153,7 +194,7 @@ export default async function LeaderboardHolesPage({
   if (orderedLines.length === 0) {
     // Nothing to drill into — bounce back to the parent leaderboard, which
     // will render its own empty state.
-    redirect(`/games/${id}/leaderboard?mode=${mode}`);
+    redirect(`/games/${gameId}/leaderboard?mode=${mode}`);
   }
 
   // Resolve which team's drilldown to render. Default = the leader (rank 1).
@@ -185,13 +226,60 @@ export default async function LeaderboardHolesPage({
 
   return (
     <DrilldownView
-      gameId={id}
+      gameId={gameId}
       mode={mode}
       isActive={isActive}
       orderedLines={orderedLines}
       selected={selected}
       holeWinners={holeWinners}
     />
+  );
+}
+
+function DrilldownSkeleton() {
+  return (
+    <div className="min-h-screen bg-bg text-text">
+      <div className="mx-auto max-w-md pb-12">
+        <header className="flex items-center justify-between gap-2 px-4 pb-2 pt-3.5">
+          <span className="-ml-2 inline-flex h-8 w-8 items-center justify-center text-lg text-text">
+            ‹
+          </span>
+          <Skeleton className="h-3 w-32" />
+          <span className="w-8" aria-hidden />
+        </header>
+        <div className="flex items-center gap-3.5 px-4 pt-1.5 pb-3.5">
+          <Skeleton className="h-12 w-12 rounded-md" />
+          <div className="min-w-0 flex-1">
+            <Skeleton className="h-5 w-2/5" delay={30} />
+            <Skeleton className="mt-1 h-3 w-3/5" delay={60} />
+          </div>
+          <div className="shrink-0 text-right">
+            <Skeleton className="ml-auto h-6 w-12" delay={90} />
+            <Skeleton className="ml-auto mt-1 h-2.5 w-10" delay={120} />
+          </div>
+        </div>
+        <div className="mx-4 mt-2 overflow-hidden rounded-[14px] border border-border bg-surface">
+          {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <div
+              key={i}
+              className="grid items-center gap-2.5 px-3.5 py-2.5"
+              style={{
+                gridTemplateColumns: '28px 30px 1fr auto 32px 14px',
+                borderTop:
+                  i === 0 ? 'none' : '1px solid var(--border)',
+              }}
+            >
+              <Skeleton className="h-3 w-4" delay={i * 40} />
+              <Skeleton className="h-3 w-6" delay={i * 40 + 20} />
+              <Skeleton className="h-3 w-16" delay={i * 40 + 40} />
+              <Skeleton className="ml-auto h-4 w-6" delay={i * 40 + 60} />
+              <Skeleton className="h-3 w-8" delay={i * 40 + 80} />
+              <span />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
