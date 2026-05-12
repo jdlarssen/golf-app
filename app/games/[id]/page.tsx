@@ -195,10 +195,8 @@ export default async function GameHomePage({
   if (meError) throw meError;
   if (!me) notFound();
 
-  // Draft games are not for players to enter.
-  if (game.status === 'draft') {
-    redirect('/');
-  }
+  // Drafts are visible to invited players as a venterom — see the draft
+  // branch in the default return below for progressive disclosure.
 
   // E1: server-side auto-start fallback. When the admin scheduled a tee-off
   // time but didn't manually click "Start runden nå", any player loading
@@ -324,6 +322,11 @@ export default async function GameHomePage({
   }
 
   const isActive = game.status === 'active';
+  const isDraft = game.status === 'draft';
+  const draftTeeOffDate =
+    isDraft && game.scheduled_tee_off_at
+      ? new Date(game.scheduled_tee_off_at)
+      : null;
 
   return (
     <AppShell>
@@ -338,6 +341,14 @@ export default async function GameHomePage({
           label={STATUS_LABELS[game.status]}
         />
       </div>
+
+      {isDraft && (
+        <div className="mb-4">
+          <Banner tone="info">
+            Utkast — admin planlegger fortsatt. Detaljer kan endre seg.
+          </Banner>
+        </div>
+      )}
 
       {statusBanner && (
         <div className="mb-4">
@@ -365,41 +376,81 @@ export default async function GameHomePage({
       </Suspense>
 
       <div className="space-y-4">
-        <Card>
-          <Kicker tone="muted" className="mb-2">
-            BANE
-          </Kicker>
-          <p className="font-serif text-[19px] font-medium tracking-[-0.01em] text-text">
-            {game.courses?.name ?? '(ukjent bane)'}
-          </p>
-          {game.tee_boxes && (
-            <p className="text-xs text-muted mt-1.5 tabular-nums">
-              Tee: {game.tee_boxes.name} · Slope {game.tee_boxes.slope} · CR{' '}
-              {Number(game.tee_boxes.course_rating).toFixed(1)} · Par{' '}
-              {game.tee_boxes.par_total}
+        {game.courses?.name && (
+          <Card>
+            <Kicker tone="muted" className="mb-2">
+              BANE
+            </Kicker>
+            <p className="font-serif text-[19px] font-medium tracking-[-0.01em] text-text">
+              {game.courses.name}
             </p>
-          )}
-        </Card>
+            {game.tee_boxes && (
+              <p className="text-xs text-muted mt-1.5 tabular-nums">
+                Tee: {game.tee_boxes.name} · Slope {game.tee_boxes.slope} · CR{' '}
+                {Number(game.tee_boxes.course_rating).toFixed(1)} · Par{' '}
+                {game.tee_boxes.par_total}
+              </p>
+            )}
+          </Card>
+        )}
 
-        <Card>
-          <Kicker tone="muted" className="mb-2">
-            DIN INFO
-          </Kicker>
-          <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-sm">
-            <dt className="text-muted">Lag</dt>
-            <dd className="text-text text-right">
-              Lag <span className="score-num">{me.team_number}</span>
-            </dd>
-            <dt className="text-muted">Flight</dt>
-            <dd className="text-text text-right">
-              Flight <span className="score-num">{me.flight_number}</span>
-            </dd>
-            <dt className="text-muted">Course handicap</dt>
-            <dd className="score-num text-text text-right">
-              {me.course_handicap ?? '—'}
-            </dd>
-          </dl>
-        </Card>
+        {isDraft && (
+          <Card>
+            <Kicker tone="muted" className="mb-2">
+              TEE-OFF
+            </Kicker>
+            {draftTeeOffDate ? (
+              <p className="text-sm text-text tabular-nums">
+                Tee-off planlagt:{' '}
+                <span className="font-medium">
+                  {formatTeeOffDate(draftTeeOffDate)} kl.{' '}
+                  {formatTeeOffTime(draftTeeOffDate)}
+                </span>
+              </p>
+            ) : (
+              <p className="text-sm text-muted">
+                Tidspunkt ikke avklart enda.
+              </p>
+            )}
+          </Card>
+        )}
+
+        {isDraft ? (
+          <Card>
+            <Kicker tone="muted" className="mb-2">
+              LAG
+            </Kicker>
+            <Suspense
+              fallback={
+                <p className="text-sm text-muted text-center py-4">
+                  Laster…
+                </p>
+              }
+            >
+              <DraftTeamsOverview gameId={id} currentUserId={userId} />
+            </Suspense>
+          </Card>
+        ) : (
+          <Card>
+            <Kicker tone="muted" className="mb-2">
+              DIN INFO
+            </Kicker>
+            <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-sm">
+              <dt className="text-muted">Lag</dt>
+              <dd className="text-text text-right">
+                Lag <span className="score-num">{me.team_number}</span>
+              </dd>
+              <dt className="text-muted">Flight</dt>
+              <dd className="text-text text-right">
+                Flight <span className="score-num">{me.flight_number}</span>
+              </dd>
+              <dt className="text-muted">Course handicap</dt>
+              <dd className="score-num text-text text-right">
+                {me.course_handicap ?? '—'}
+              </dd>
+            </dl>
+          </Card>
+        )}
 
         {isActive ? (
           <Suspense fallback={<PrimaryCtaSkeleton />}>
@@ -415,7 +466,7 @@ export default async function GameHomePage({
           <LinkButton href={`/games/${id}/leaderboard`} full>
             🏆 Se leaderboard →
           </LinkButton>
-        ) : (
+        ) : isDraft ? null : (
           <div className="rounded-2xl border border-border px-4 py-3 text-sm text-muted text-center">
             Spillet er ikke startet ennå.
           </div>
@@ -434,16 +485,18 @@ export default async function GameHomePage({
           </SmartLink>
         )}
 
-        <SmartLink href={`/games/${id}/scorecard`} className="block">
-          <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
-            <span className="text-base font-medium text-text">
-              Mitt scorekort
-            </span>
-            <span aria-hidden className="text-muted">
-              →
-            </span>
-          </Card>
-        </SmartLink>
+        {!isDraft && (
+          <SmartLink href={`/games/${id}/scorecard`} className="block">
+            <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
+              <span className="text-base font-medium text-text">
+                Mitt scorekort
+              </span>
+              <span aria-hidden className="text-muted">
+                →
+              </span>
+            </Card>
+          </SmartLink>
+        )}
 
         <div className="pt-2">
           <SmartLink
@@ -540,6 +593,97 @@ function FlightRosterSkeleton() {
           <Skeleton className="shrink-0 h-3 w-14" delay={i * 90 + 60} />
         </li>
       ))}
+    </ul>
+  );
+}
+
+// ─── Draft-state teams overview ──────────────────────────────────────────
+
+type DraftRosterRow = {
+  user_id: string;
+  team_number: number;
+  users: {
+    name: string;
+  } | null;
+};
+
+async function DraftTeamsOverview({
+  gameId,
+  currentUserId,
+}: {
+  gameId: string;
+  currentUserId: string;
+}) {
+  const { supabase } = await getGameContext();
+  const { data: rows } = await supabase
+    .from('game_players')
+    .select(
+      'user_id, team_number, users!game_players_user_id_fkey(name)',
+    )
+    .eq('game_id', gameId)
+    .order('team_number')
+    .order('user_id')
+    .returns<DraftRosterRow[]>();
+
+  const players = rows ?? [];
+
+  if (players.length === 0) {
+    return (
+      <p className="text-sm text-muted text-center py-4">Spillere kommer.</p>
+    );
+  }
+
+  const teamsWithPlayers = [1, 2, 3, 4].filter((teamNum) =>
+    players.some((p) => p.team_number === teamNum),
+  );
+
+  return (
+    <ul className="flex flex-col gap-3">
+      {teamsWithPlayers.map((teamNum) => {
+        const teamPlayers = players.filter((p) => p.team_number === teamNum);
+        return (
+          <li key={teamNum}>
+            <p className="text-xs text-muted uppercase tracking-[0.14em] font-semibold mb-1.5">
+              Lag {teamNum}
+            </p>
+            <ul className="flex flex-col gap-1">
+              {teamPlayers.map((p) => {
+                const isCurrent = p.user_id === currentUserId;
+                const displayName =
+                  firstName(p.users?.name ?? '') ??
+                  p.users?.name ??
+                  '(ukjent)';
+                return (
+                  <li
+                    key={p.user_id}
+                    className={`flex items-center gap-2 text-[13.5px] ${
+                      isCurrent ? 'font-semibold' : ''
+                    }`}
+                  >
+                    <span
+                      className={`shrink-0 w-6 h-6 rounded-full grid place-items-center font-serif text-[11px] font-medium ${
+                        isCurrent
+                          ? 'bg-primary text-white dark:text-bg'
+                          : 'bg-surface text-text border border-border'
+                      }`}
+                    >
+                      {firstInitial(p.users?.name ?? '?')}
+                    </span>
+                    <span className="truncate">
+                      {displayName}
+                      {isCurrent && (
+                        <span className="font-sans text-[9.5px] font-semibold uppercase tracking-[0.18em] text-accent ml-2">
+                          DEG
+                        </span>
+                      )}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </li>
+        );
+      })}
     </ul>
   );
 }
