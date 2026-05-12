@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
+import { BackLink } from '@/components/ui/BackLink';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -13,7 +14,10 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { getQuotaState, formatTimeUntil } from '@/lib/invitations/quota';
 import { updateProfile } from './actions';
 
-type SearchParams = Promise<{ error?: string | string[] }>;
+type SearchParams = Promise<{
+  error?: string | string[];
+  profile?: string | string[];
+}>;
 
 const ERROR_MESSAGES: Record<string, string> = {
   name_required: 'Du må fylle inn navn.',
@@ -45,13 +49,23 @@ export default async function ProfilePage({
   const params = await searchParams;
   const errorCode = first(params.error);
   const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
+  const profileUpdated = first(params.profile) === 'updated';
 
   return (
     <AppShell>
+      <div className="-mt-3 mb-4">
+        <BackLink href="/">Tilbake til hjem</BackLink>
+      </div>
       <PageHeader
         title="Min profil"
         subtitle="Oppdater detaljene dine"
       />
+
+      {profileUpdated && (
+        <div className="mb-4">
+          <Banner tone="success">✓ Profilen din er oppdatert.</Banner>
+        </div>
+      )}
 
       <Suspense fallback={<ProfileFormSkeleton />}>
         <ProfileFormCard errorMessage={errorMessage} />

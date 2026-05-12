@@ -43,5 +43,5 @@ export async function updateProfile(formData: FormData) {
     redirect('/profile?error=unknown');
   }
 
-  redirect('/?profile=updated');
+  redirect('/profile?profile=updated');
 }

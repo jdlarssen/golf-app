@@ -65,6 +65,10 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 
 - [ ] **Vis hvilken versjon brukeren kjører.** Trenger en discreet plassering — kandidater: footer på `/profile`, hjelpe-pop-up fra Sekretariatet, eller liten kicker nederst på Hjem-skjermen. Bør lese fra `package.json` (eller `process.env.NEXT_PUBLIC_APP_VERSION` injisert i build) + evt. git SHA. Rapportert av Jørgen 2026-05-12 — verdt å ha ved feilrapportering så vi vet hvilken build folk kjører.
 
+### Profil-skjema polish
+
+- [ ] **Disable «Lagre»-knapp når ingen endringer.** I dag kan brukeren trykke Lagre uten å ha endret noe, og får da en «✓ Profilen din er oppdatert»-banner som er misvisende. Krever client-component-wrapper som tracker form-dirty-state (sammenlign nåværende verdier mot initial). Liten polish, ikke kritisk — backend-update er idempotent. Rapportert av Jørgen 2026-05-12.
+
 ---
 
 ## ⚙️ Tekniske forbedringer
