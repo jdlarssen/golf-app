@@ -108,6 +108,14 @@ Aldri si bare «sett dette i Supabase» — alltid med eksakt sti og kopier-lim-
 
 **Veien til v1.0.0:** bumpene fortsetter som `0.x.y` til (a) `/admin/invitations`-status fungerer korrekt, (b) smoke-test med ekte kompis bestått, (c) Supabase Site-URL/mail-subject-cache løst. Når alle tre er på plass: bump til `1.0.0` med en samle-CHANGELOG-entry «Første stabile release».
 
+**Håndheving via git commit-msg-hook (`.githooks/commit-msg`):** regelen er ikke valgfri — hooken blokkerer alle `feat(...)`/`fix(...)`/`perf(...)`-commits som ikke samtidig stager `package.json` (med endret version-felt) og `CHANGELOG.md`. Hooken er aktivert automatisk på `npm install` (via `postinstall` som setter `core.hooksPath=.githooks`). Hvis hooken blokkerer:
+
+1. Hvis commiten faktisk er bruker-synlig: kjør `npm version patch --no-git-tag-version` (eller `minor`/`major`), legg til CHANGELOG-entry, stage alle tre filer, og commit på nytt med samme melding.
+2. Hvis commiten IKKE er bruker-synlig: bytt prefix til `docs(...)`, `refactor(...)`, `test(...)`, `chore(...)`, `style(...)`, `ci(...)` eller `build(...)`.
+3. Aldri bruk `--no-verify` for å omgå hooken — det bryter disiplinen og gjør at footeren henger etter prod-state.
+
+Skip-typene over (`docs/refactor/test/chore/style/ci/build`) passerer fritt — hooken slår kun ut på bruker-synlige prefikser.
+
 ### Feilhåndtering / bugs
 
 - **Ingen quick-fixes.** Bruker har eksplisitt sagt: alle bugs krever systematisk debugging FØR fix
