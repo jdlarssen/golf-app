@@ -189,7 +189,7 @@ export default async function LeaderboardHolesPage({
       </div>
 
       {isActive && (
-        <div className="mx-4 mt-6 rounded-2xl border border-dashed border-border bg-surface/50 px-5 py-6 text-center">
+        <div className="mx-4 mt-6 rounded-2xl border border-dashed border-border bg-surface px-5 py-6 text-center">
           <p className="font-serif text-[16px] font-medium text-text">
             🤫 Vi sees ved hull 18.
           </p>

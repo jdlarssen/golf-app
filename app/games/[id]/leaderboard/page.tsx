@@ -585,8 +585,11 @@ function renderState35(opts: {
       </div>
 
       {/* Locked back 9 block — back-9 scores stay hidden until the game is
-          finished so the climax doesn't get spoiled mid-round. */}
-      <div className="mx-4 mt-6 rounded-2xl border border-dashed border-border bg-surface/50 px-5 py-6 text-center">
+          finished so the climax doesn't get spoiled mid-round.
+          bg-surface (no opacity) lifts off the page bg in both modes:
+          white on linen in light, forest-on-darker-forest in dark. The
+          /50 we tried first read too subtle in dark mode. */}
+      <div className="mx-4 mt-6 rounded-2xl border border-dashed border-border bg-surface px-5 py-6 text-center">
         <p className="font-serif text-[16px] font-medium text-text">
           🤫 Vi sees ved hull 18.
         </p>
