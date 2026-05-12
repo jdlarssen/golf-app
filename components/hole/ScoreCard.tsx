@@ -274,11 +274,8 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
   };
 
   const numberStyle: CSSProperties = {
-    fontFamily: 'var(--font-serif)',
     fontSize: 38,
-    fontWeight: 600,
     letterSpacing: '-0.02em',
-    fontVariantNumeric: 'tabular-nums',
     textAlign: 'right',
     minWidth: 42,
     lineHeight: 1,
@@ -390,7 +387,11 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
             }}
           />
         )}
-        <span data-testid="score-number" style={numberStyle}>
+        <span
+          data-testid="score-number"
+          className="score-num"
+          style={numberStyle}
+        >
           {displayedNumber}
         </span>
         <span data-testid="delta-pill" style={pillStyle}>

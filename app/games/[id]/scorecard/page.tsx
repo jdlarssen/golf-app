@@ -133,19 +133,19 @@ export default async function ScorecardPage({ params }: { params: Params }) {
                   key={r.hole_number}
                   className="border-t border-zinc-200 dark:border-zinc-800"
                 >
-                  <td className="px-3 py-2 text-zinc-900 dark:text-zinc-100 font-medium">
+                  <td className="score-num px-3 py-2 text-zinc-900 dark:text-zinc-100">
                     {r.hole_number}
                   </td>
-                  <td className="px-3 py-2 text-right text-zinc-700 dark:text-zinc-300">
+                  <td className="score-num px-3 py-2 text-right text-zinc-700 dark:text-zinc-300">
                     {r.par}
                   </td>
-                  <td className="px-3 py-2 text-right text-zinc-700 dark:text-zinc-300">
+                  <td className="score-num px-3 py-2 text-right text-zinc-700 dark:text-zinc-300">
                     {r.stroke_index}
                   </td>
-                  <td className="px-3 py-2 text-right text-zinc-900 dark:text-zinc-100">
+                  <td className="score-num px-3 py-2 text-right text-zinc-900 dark:text-zinc-100">
                     {r.strokes ?? '—'}
                   </td>
-                  <td className="px-3 py-2 text-right text-zinc-700 dark:text-zinc-300">
+                  <td className="score-num px-3 py-2 text-right text-zinc-700 dark:text-zinc-300">
                     {r.extra > 0 ? `+${r.extra}` : r.extra < 0 ? r.extra : '0'}
                   </td>
                 </tr>
@@ -157,8 +157,12 @@ export default async function ScorecardPage({ params }: { params: Params }) {
                   colSpan={5}
                   className="px-3 py-2.5 text-sm text-zinc-700 dark:text-zinc-300"
                 >
-                  Spilte hull: {playedHoles.length}/18 · Brutto totalt:{' '}
-                  <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                  Spilte hull:{' '}
+                  <span className="inline-num">
+                    {playedHoles.length}/18
+                  </span>
+                  {' · '}Brutto totalt:{' '}
+                  <span className="score-num text-zinc-900 dark:text-zinc-100">
                     {totalBrutto}
                   </span>
                 </td>
