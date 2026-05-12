@@ -2,14 +2,19 @@ import { ChampagneMedallion } from './ChampagneMedallion';
 import { PinFlag } from '@/components/icons/PinFlag';
 
 /**
- * Entry-surface hero: medallion + forest T-tile + "Tørny" wordmark +
- * champagne-tinted tagline. Used on /login. Distinct from `<BrandMark />`,
- * which is the small navigational lockup at the top of authenticated pages.
+ * Entry-surface hero: medallion + forest T-tile + "Tørny" wordmark (as the
+ * page `<h1>`) + champagne-tinted tagline. Used on /login. Distinct from
+ * `<BrandMark />`, which is the small navigational lockup at the top of
+ * authenticated pages.
  *
  * The "par" word in the tagline is rendered in `text-accent` to mirror
  * brand-mark.svg in `docs/design/realized/brand-foundations/assets/`. The
  * medallion+PinFlag stack above is the same vocabulary used by the
  * authenticated empty-state hero in `app/page.tsx`.
+ *
+ * Heading ownership: this component renders the page heading. One per page.
+ * If a future callsite needs different semantics, refactor to a polymorphic
+ * `as` prop at that time.
  */
 export function BrandHero({ className = '' }: { className?: string }) {
   return (
@@ -25,9 +30,9 @@ export function BrandHero({ className = '' }: { className?: string }) {
         T
       </div>
 
-      <span className="font-serif text-3xl font-medium tracking-tight text-text leading-none">
+      <h1 className="font-serif text-3xl font-medium tracking-tight text-text leading-none m-0">
         Tørny
-      </span>
+      </h1>
 
       <p className="mt-3 font-sans text-sm leading-relaxed text-muted max-w-[260px]">
         Fyr opp golfturneringen på et{' '}
