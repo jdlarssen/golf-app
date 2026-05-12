@@ -326,7 +326,10 @@ function TeamRow({
             <Medallion place={line.rank} size={36} />
           </span>
         ) : (
-          <span className="score-num w-6 shrink-0 text-center text-[20px] text-muted">
+          /* Match the 36px medallion's visual weight so rows 4+ keep the same
+           * rhythm — a quiet linen disc with a hairline ring stands in where
+           * the metallic gradient sits on the podium rows. */
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-surface font-serif text-[18px] font-medium text-muted">
             {line.rank}
           </span>
         )}
