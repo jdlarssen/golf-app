@@ -158,17 +158,25 @@ export default async function GameHomePage({
     game.scheduled_tee_off_at &&
     new Date(game.scheduled_tee_off_at).getTime() <= Date.now()
   ) {
-    await startScheduledGame(supabase, id);
-    // Re-fetch so the rest of this render sees the post-flip state. If the
-    // helper failed (e.g. tee box missing — should never happen post-D2),
-    // we fall through with the original `scheduled` row and let the
-    // existing fallback UI render — better than crashing.
-    const { data: refreshed } = await supabase
+    const result = await startScheduledGame(supabase, id);
+    if (!result.ok) {
+      // Log to Vercel server logs so a "stuck in scheduled" report has a
+      // trail. Don't crash — fall through to the existing scheduled fallback.
+      console.error(
+        `[auto-start] game ${id} could not flip to active: ${result.reason}`,
+      );
+    }
+    // Re-fetch so the rest of this render sees the post-flip state.
+    const { data: refreshed, error: refreshError } = await supabase
       .from('games')
       .select(GAME_SELECT)
       .eq('id', id)
       .single<GameRow>();
-    if (refreshed) game = refreshed;
+    if (refreshError) {
+      console.error(`[auto-start] game ${id} refetch failed`, refreshError);
+    } else if (refreshed) {
+      game = refreshed;
+    }
   }
 
   // How many holes have a strokes value? Used to decide CTA copy.
