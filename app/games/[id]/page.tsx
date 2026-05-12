@@ -144,6 +144,13 @@ export default async function GameHomePage({
   const sp = await searchParams;
   const statusBanner = STATUS_BANNERS[first(sp.status) ?? ''] ?? undefined;
 
+  // Snapshot "now" once per request for the E1 auto-start guard below.
+  // The react-hooks/purity lint rule flags Date.now() as impure regardless
+  // of context, but this IS a server component that runs once per request —
+  // the snapshot is semantically equivalent to a server-side "now()" call.
+  // eslint-disable-next-line react-hooks/purity
+  const nowMs = Date.now();
+
   const supabase = await getServerClient();
 
   const {
@@ -190,7 +197,7 @@ export default async function GameHomePage({
   if (
     game.status === 'scheduled' &&
     game.scheduled_tee_off_at &&
-    new Date(game.scheduled_tee_off_at).getTime() <= Date.now()
+    new Date(game.scheduled_tee_off_at).getTime() <= nowMs
   ) {
     const result = await startScheduledGame(supabase, id);
     if (!result.ok) {
