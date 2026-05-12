@@ -371,7 +371,7 @@ export function GameForm({
 
       {/* Section 1: Basics */}
       <section className="space-y-4">
-        <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <h2 className="text-sm font-medium text-text">
           1. Spillet
         </h2>
         <Input
@@ -388,7 +388,7 @@ export function GameForm({
         <div>
           <label
             htmlFor="course_id"
-            className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5"
+            className="block text-sm font-medium text-text mb-1.5"
           >
             Bane
           </label>
@@ -401,7 +401,7 @@ export function GameForm({
               setTeeBoxId('');
             }}
             required
-            className="w-full rounded-lg border px-3.5 py-2.5 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-green-600"
+            className="w-full rounded-xl border px-3.5 py-2.5 bg-surface text-text border-border focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
           >
             <option value="">Velg bane…</option>
             {courses.map((c) => (
@@ -415,7 +415,7 @@ export function GameForm({
         <div>
           <label
             htmlFor="tee_box_id"
-            className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5"
+            className="block text-sm font-medium text-text mb-1.5"
           >
             Tee-boks
           </label>
@@ -426,7 +426,7 @@ export function GameForm({
             onChange={(e) => setTeeBoxId(e.target.value)}
             disabled={!selectedCourse}
             required
-            className="w-full rounded-lg border px-3.5 py-2.5 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-green-600 disabled:opacity-50"
+            className="w-full rounded-xl border px-3.5 py-2.5 bg-surface text-text border-border focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150 disabled:opacity-50"
           >
             <option value="">
               {selectedCourse ? 'Velg tee-boks…' : 'Velg bane først'}
@@ -456,17 +456,17 @@ export function GameForm({
       {/* Section 2: Players */}
       <section className="space-y-3">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          <h2 className="text-sm font-medium text-text">
             2. Spillere
           </h2>
           <span
-            className={`text-xs font-medium ${eightSelected ? 'text-green-700 dark:text-green-400' : 'text-zinc-500'}`}
+            className={`text-xs font-medium tabular-nums ${eightSelected ? 'text-primary' : 'text-muted'}`}
           >
             {selectedPlayerIds.length} av 8 spillere valgt
           </span>
         </div>
         {players.length === 0 ? (
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-muted">
             Ingen registrerte spillere ennå.
           </p>
         ) : (
@@ -477,16 +477,16 @@ export function GameForm({
               return (
                 <li key={p.id}>
                   <label
-                    className={`flex items-center gap-3 min-h-[44px] px-3 py-2 rounded-lg border ${checked ? 'border-green-500 bg-green-50 dark:bg-green-950/30' : 'border-zinc-200 dark:border-zinc-800'} ${atCap ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    className={`flex items-center gap-3 min-h-[44px] px-3 py-2 rounded-xl border transition-colors ${checked ? 'border-primary bg-primary-soft' : 'border-border'} ${atCap ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                   >
                     <input
                       type="checkbox"
                       checked={checked}
                       disabled={atCap}
                       onChange={() => togglePlayer(p.id)}
-                      className="h-5 w-5 rounded border-zinc-300 text-green-600 focus:ring-green-600"
+                      className="h-5 w-5 rounded border-border text-primary focus:ring-accent/40"
                     />
-                    <span className="text-sm text-zinc-900 dark:text-zinc-100">
+                    <span className="text-sm text-text">
                       {playerLabel(p)}
                     </span>
                   </label>
@@ -500,36 +500,38 @@ export function GameForm({
       {/* Section 3: Teams */}
       {eightSelected && (
         <section className="space-y-3">
-          <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          <h2 className="text-sm font-medium text-text">
             3. Lag
           </h2>
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-muted">
             4 lag à 2 spillere. Trekk tilfeldig eller velg manuelt.
           </p>
           <div className="flex gap-2">
-            <button
+            <Button
               type="button"
+              variant="secondary"
               onClick={drawRandomTeams}
-              className="flex-1 min-h-[44px] text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg px-4 py-2.5 transition-colors"
+              className="flex-1 text-sm"
             >
               Trekk tilfeldig
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="secondary"
               onClick={clearTeams}
-              className="flex-1 min-h-[44px] text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg px-4 py-2.5 transition-colors"
+              className="flex-1 text-sm"
             >
               Tøm lag
-            </button>
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {TEAM_NUMBERS.map((team) => (
               <div
                 key={team}
-                className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-3 space-y-2"
+                className="border border-border rounded-lg p-3 space-y-2"
               >
-                <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted">
                   Lag {team}
                 </p>
                 {[0, 1].map((slotIndex) => {
@@ -543,7 +545,7 @@ export function GameForm({
                       onChange={(e) =>
                         assignPlayerToSlot(team, slot, e.target.value)
                       }
-                      className="w-full rounded-lg border px-3 py-2 bg-white dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-green-600"
+                      className="w-full rounded-xl border px-3 py-2 bg-surface text-sm text-text border-border focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
                     >
                       <option value="">— Tom plass —</option>
                       {options.map((p) => (
@@ -563,10 +565,10 @@ export function GameForm({
       {/* Section 4: Flights */}
       {teamsComplete && (
         <section className="space-y-3">
-          <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          <h2 className="text-sm font-medium text-text">
             4. Flights
           </h2>
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-muted">
             Standard: lag 1 + 2 = flight 1, lag 3 + 4 = flight 2. Endre per
             spiller om dere spiller i flere flighter.
           </p>
@@ -578,12 +580,12 @@ export function GameForm({
                 return (
                   <div
                     key={pid}
-                    className="flex items-center gap-3 min-h-[44px] px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800"
+                    className="flex items-center gap-3 min-h-[44px] px-3 py-2 rounded-lg border border-border"
                   >
-                    <span className="text-xs text-zinc-500 w-12 shrink-0">
+                    <span className="text-xs text-muted w-12 shrink-0">
                       Lag {team}
                     </span>
-                    <span className="text-sm text-zinc-900 dark:text-zinc-100 flex-1 truncate">
+                    <span className="text-sm text-text flex-1 truncate">
                       {shortName(p)}
                     </span>
                     <select
@@ -591,7 +593,7 @@ export function GameForm({
                       onChange={(e) =>
                         setFlightForPlayer(pid, Number(e.target.value))
                       }
-                      className="rounded-lg border px-2 py-1.5 bg-white dark:bg-zinc-900 text-sm text-zinc-900 dark:text-zinc-100 border-zinc-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-green-600"
+                      className="rounded-xl border px-2 py-1.5 bg-surface text-sm text-text border-border focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
                     >
                       {FLIGHT_NUMBERS.map((f) => (
                         <option key={f} value={f}>
@@ -609,7 +611,7 @@ export function GameForm({
 
       {/* Section 5: Settings */}
       <section className="space-y-4">
-        <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <h2 className="text-sm font-medium text-text">
           5. Innstillinger
         </h2>
         <Input
@@ -633,13 +635,13 @@ export function GameForm({
             name="require_peer_approval"
             checked={requirePeerApproval}
             onChange={(e) => setRequirePeerApproval(e.target.checked)}
-            className="mt-0.5 h-5 w-5 rounded border-zinc-300 text-green-600 focus:ring-green-600"
+            className="mt-0.5 h-5 w-5 rounded border-border text-primary focus:ring-accent/40"
           />
           <span>
-            <span className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            <span className="block text-sm font-medium text-text">
               Krev peer-godkjenning
             </span>
-            <span className="block text-xs text-zinc-500 mt-0.5">
+            <span className="block text-xs text-muted mt-0.5">
               Hvis på, må en annen i flighten godkjenne scorekortet før
               innsending.
             </span>
