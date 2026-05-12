@@ -4,6 +4,12 @@ import { AdminShell } from '@/components/ui/AdminShell';
 import { BackLink } from '@/components/ui/BackLink';
 import { ClubStamp } from '@/components/ui/ClubStamp';
 import { PullQuote } from '@/components/ui/PullQuote';
+import {
+  BaneIcon,
+  FlaggIcon,
+  KonvoluttIcon,
+  PokalIcon,
+} from '@/components/icons';
 import { firstName } from '@/lib/firstName';
 
 // "1862" is the ornamental year on the club stamp — no real-world meaning,
@@ -263,11 +269,12 @@ export default async function AdminSekretariat() {
   const dateLine = formatDateNb(now);
   const timeOfDay = greeting(now);
 
+  type TileIconKind = 'flagg' | 'konvolutt' | 'bane' | 'pokal';
   type Tile = {
     label: string;
     href: string;
     meta: string;
-    icon: 'trophy' | 'mail' | 'course' | 'stamp';
+    icon: TileIconKind;
     accent?: boolean;
   };
   const tiles: Tile[] = [
@@ -275,7 +282,7 @@ export default async function AdminSekretariat() {
       label: 'Spill',
       href: '/admin/games',
       meta: `${activeCount} aktive · ${plannedCount} planlagte`,
-      icon: 'trophy',
+      icon: 'flagg',
       accent: true,
     },
     {
@@ -285,7 +292,7 @@ export default async function AdminSekretariat() {
         pendingInvites === 0
           ? 'Ingen ventende svar'
           : `${pendingInvites} ventende svar`,
-      icon: 'mail',
+      icon: 'konvolutt',
     },
     {
       label: 'Baner',
@@ -294,7 +301,7 @@ export default async function AdminSekretariat() {
         courseCount === 0
           ? 'Ingen registrerte ennå'
           : `${courseCount} registrert${courseCount === 1 ? '' : 'e'}`,
-      icon: 'course',
+      icon: 'bane',
     },
     {
       label: 'Resultatprotokoll',
@@ -302,7 +309,7 @@ export default async function AdminSekretariat() {
       meta: lastFinishedAt
         ? `Sist signert ${formatShortDateNb(lastFinishedAt)}`
         : 'Ingen signerte runder',
-      icon: 'stamp',
+      icon: 'pokal',
     },
   ];
 
@@ -361,12 +368,10 @@ export default async function AdminSekretariat() {
                 background: tile.accent
                   ? 'rgba(201, 169, 97, 0.20)'
                   : 'var(--admin-bg)',
+                color: tile.accent ? 'var(--accent)' : 'var(--primary)',
               }}
             >
-              <TileIcon
-                kind={tile.icon}
-                color={tile.accent ? 'var(--accent)' : 'var(--primary)'}
-              />
+              <TileIcon kind={tile.icon} />
             </div>
             <p className="font-serif text-base font-medium tracking-[-0.005em]">
               {tile.label}
@@ -438,109 +443,12 @@ function shortName(full: string | undefined | null): string {
   return `${parts[0]} ${parts[parts.length - 1][0]}.`;
 }
 
-function TileIcon({
-  kind,
-  color,
-}: {
-  kind: 'trophy' | 'mail' | 'course' | 'stamp';
-  color: string;
-}) {
-  if (kind === 'mail') {
-    return (
-      <svg width={22} height={22} viewBox="0 0 24 24" fill="none" aria-hidden>
-        <rect
-          x="3"
-          y="6"
-          width="18"
-          height="13"
-          rx="1.5"
-          stroke={color}
-          strokeWidth="1.4"
-        />
-        <path
-          d="M3 7 L12 13 L21 7"
-          stroke={color}
-          strokeWidth="1.4"
-          strokeLinejoin="round"
-          fill="none"
-        />
-      </svg>
-    );
-  }
-  if (kind === 'course') {
-    return (
-      <svg width={22} height={22} viewBox="0 0 24 24" fill="none" aria-hidden>
-        <line
-          x1="6"
-          y1="3"
-          x2="6"
-          y2="21"
-          stroke={color}
-          strokeWidth="1.4"
-          strokeLinecap="round"
-        />
-        <path
-          d="M6 4 L17 6.5 L6 9 Z"
-          fill="var(--accent)"
-          stroke="var(--accent)"
-          strokeWidth="1"
-          strokeLinejoin="round"
-        />
-        <ellipse
-          cx="6"
-          cy="21"
-          rx="4.5"
-          ry="1.2"
-          stroke={color}
-          strokeWidth="1.2"
-          fill="none"
-        />
-      </svg>
-    );
-  }
-  if (kind === 'stamp') {
-    return (
-      <svg width={22} height={22} viewBox="0 0 24 24" fill="none" aria-hidden>
-        <circle cx="12" cy="9" r="6" stroke={color} strokeWidth="1.4" fill="none" />
-        <circle cx="12" cy="9" r="3" stroke={color} strokeWidth="1.2" fill="none" />
-        <path d="M4 19 H20" stroke={color} strokeWidth="1.6" strokeLinecap="round" />
-        <path d="M6 17 H18" stroke={color} strokeWidth="1.2" strokeLinecap="round" />
-      </svg>
-    );
-  }
-  // trophy
-  return (
-    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M7 4 H17 V9 a5 5 0 0 1 -10 0 V4 Z"
-        stroke={color}
-        strokeWidth="1.4"
-        fill="none"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M7 6 H4 a2 2 0 0 0 2 4"
-        stroke={color}
-        strokeWidth="1.2"
-        fill="none"
-      />
-      <path
-        d="M17 6 H20 a2 2 0 0 1 -2 4"
-        stroke={color}
-        strokeWidth="1.2"
-        fill="none"
-      />
-      <path d="M9 14 V17 H15 V14" stroke={color} strokeWidth="1.4" fill="none" />
-      <rect
-        x="7"
-        y="17"
-        width="10"
-        height="2.5"
-        rx="0.5"
-        stroke={color}
-        strokeWidth="1.4"
-        fill="var(--accent)"
-      />
-    </svg>
-  );
+function TileIcon({ kind }: { kind: 'flagg' | 'konvolutt' | 'bane' | 'pokal' }) {
+  // Color inherits from parent via currentColor (set on the wrapper <Link>'s
+  // icon container by the tile's accent state — champagne on forest, forest
+  // on linen).
+  if (kind === 'flagg') return <FlaggIcon width={22} height={22} />;
+  if (kind === 'konvolutt') return <KonvoluttIcon width={22} height={22} />;
+  if (kind === 'bane') return <BaneIcon width={22} height={22} />;
+  return <PokalIcon width={22} height={22} />;
 }
