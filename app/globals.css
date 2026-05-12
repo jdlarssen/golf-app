@@ -13,6 +13,7 @@
   /* Light mode palette */
   --bg: #f8f6f0;          /* warm linen */
   --surface: #ffffff;
+  --surface-2: #f0ede5;    /* slightly inset surface (used in tables, summary rows) */
   --border: #e5e0d3;       /* warm beige */
   --text: #1a2e1f;         /* deep forest */
   --text-muted: #5c5347;   /* warm taupe */
@@ -23,12 +24,32 @@
   --success: #4a7c59;      /* sage */
   --danger: #b8463e;       /* muted brick */
   --warning: #d89b3a;      /* amber */
+
+  /* Score-tone — under-par / par / +1 / +2-or-worse. Used by hole rows and
+   * vs-par pills. Foreground is the readable text color; background is a
+   * tinted surface used as the pill fill. */
+  --score-under-fg: #2f5a3c;
+  --score-under-bg: rgba(74, 124, 89, 0.16);
+  --score-par-fg:   #5c5347;
+  --score-par-bg:   rgba(92, 83, 71, 0.10);
+  --score-over1-fg: #7a5410;
+  --score-over1-bg: rgba(216, 155, 58, 0.18);
+  --score-over2-fg: #7a2f2a;
+  --score-over2-bg: rgba(184, 70, 62, 0.16);
+
+  /* Leader card — champagne hairline-on-cream chrome. The shimmer keyframe
+   * below animates inset width between 0 → peak → rest using these tokens. */
+  --leader-fill-top:      #ffffff;
+  --leader-fill-bottom:   #fbf8ee;
+  --leader-hairline:      rgba(201, 169, 97, 0.55);
+  --leader-hairline-peak: rgba(201, 169, 97, 0.95);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     --bg: #0f1612;
     --surface: #1a2e1f;
+    --surface-2: #163a2a;
     --border: #2d3f32;
     --text: #f0ede5;
     --text-muted: #a89f92;
@@ -39,12 +60,29 @@
     --success: #7daa8a;
     --danger: #d67268;
     --warning: #e5b26f;
+
+    /* Dark-mode score tones — readable on forest surfaces. */
+    --score-under-fg: #7daa8a;
+    --score-under-bg: rgba(125, 170, 138, 0.18);
+    --score-par-fg:   #a89f92;
+    --score-par-bg:   rgba(168, 159, 146, 0.14);
+    --score-over1-fg: #e5b26f;
+    --score-over1-bg: rgba(229, 178, 111, 0.18);
+    --score-over2-fg: #d67268;
+    --score-over2-bg: rgba(214, 114, 104, 0.18);
+
+    /* Dark leader card — forest-on-deeper-forest with a brighter hairline. */
+    --leader-fill-top:      #1f4a37;
+    --leader-fill-bottom:   #1a3d2e;
+    --leader-hairline:      rgba(201, 169, 97, 0.65);
+    --leader-hairline-peak: rgba(201, 169, 97, 1.0);
   }
 }
 
 [data-theme='dark'] {
   --bg: #0f1612;
   --surface: #1a2e1f;
+  --surface-2: #163a2a;
   --border: #2d3f32;
   --text: #f0ede5;
   --text-muted: #a89f92;
@@ -55,6 +93,20 @@
   --success: #7daa8a;
   --danger: #d67268;
   --warning: #e5b26f;
+
+  --score-under-fg: #7daa8a;
+  --score-under-bg: rgba(125, 170, 138, 0.18);
+  --score-par-fg:   #a89f92;
+  --score-par-bg:   rgba(168, 159, 146, 0.14);
+  --score-over1-fg: #e5b26f;
+  --score-over1-bg: rgba(229, 178, 111, 0.18);
+  --score-over2-fg: #d67268;
+  --score-over2-bg: rgba(214, 114, 104, 0.18);
+
+  --leader-fill-top:      #1f4a37;
+  --leader-fill-bottom:   #1a3d2e;
+  --leader-hairline:      rgba(201, 169, 97, 0.65);
+  --leader-hairline-peak: rgba(201, 169, 97, 1.0);
 }
 
 /* Tailwind v4 theme bindings — these expose the design tokens as utility
@@ -63,6 +115,7 @@
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
   --color-border: var(--border);
   --color-text: var(--text);
   --color-muted: var(--text-muted);
@@ -73,6 +126,14 @@
   --color-success: var(--success);
   --color-danger: var(--danger);
   --color-warning: var(--warning);
+  --color-score-under-fg: var(--score-under-fg);
+  --color-score-under-bg: var(--score-under-bg);
+  --color-score-par-fg: var(--score-par-fg);
+  --color-score-par-bg: var(--score-par-bg);
+  --color-score-over1-fg: var(--score-over1-fg);
+  --color-score-over1-bg: var(--score-over1-bg);
+  --color-score-over2-fg: var(--score-over2-fg);
+  --color-score-over2-bg: var(--score-over2-bg);
 
   --font-serif: var(--font-fraunces);
   --font-sans: var(--font-inter);
@@ -127,34 +188,135 @@ body {
 }
 
 /* -----------------------------------------------------------------------------
- * Confetti — one-shot, CSS-only. Particles are absolutely-positioned children
- * of a fixed-position container; each particle has a unique animation-delay
- * and a CSS variable controlling its horizontal drift. ~1.5s total.
+ * Leader card reveal — state #4 (status=finished).
+ *
+ * Three coordinated animations fire when the leaderboard mounts:
+ *  - `.leader-shimmer` runs the inset champagne hairline from 0 → 1.5px peak
+ *    → resting 1px. Starts 240ms after mount per spec timing.
+ *  - `.leader-badge-pulse` loops a *very subtle* opacity breath on the
+ *    `Leder · 1. plass` kicker. 3s cycle, infinite.
+ *  - `.reveal-up` is a generic fade-and-slide entry; the leader card uses it
+ *    at 60ms delay, rows 2..N stagger via inline `animationDelay` (140 + i*80
+ *    ms). This is distinct from `.lb-row` above, which still drives state
+ *    #3.5's front-9 view with its own simpler nth-child timing.
  * ---------------------------------------------------------------------------*/
-@keyframes confetti-fall {
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.reveal-up {
+  opacity: 0;
+  animation: reveal-up 360ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+/* Composite shadow shape: inset hairline (animated) + resting drop shadows.
+ * Hairline width is what the keyframe morphs; the outer shadows stay fixed.
+ * `--lh-width` and `--lh-color` are tweened from JS-free CSS keyframes via
+ * the keyframe's own values — we can't tween box-shadow widths nicely with
+ * variables alone, so the keyframe inlines the full box-shadow each step. */
+@keyframes leader-shimmer {
   0% {
-    transform: translate3d(0, -20px, 0) rotate(0deg);
+    box-shadow:
+      inset 0 0 0 0 var(--leader-hairline),
+      0 1px 2px rgba(26, 46, 31, 0.04),
+      0 4px 16px rgba(26, 46, 31, 0.08);
+  }
+  40% {
+    box-shadow:
+      inset 0 0 0 1.5px var(--leader-hairline-peak),
+      0 1px 2px rgba(26, 46, 31, 0.04),
+      0 4px 16px rgba(26, 46, 31, 0.08);
+  }
+  100% {
+    box-shadow:
+      inset 0 0 0 1px var(--leader-hairline),
+      0 1px 2px rgba(26, 46, 31, 0.04),
+      0 4px 16px rgba(26, 46, 31, 0.08);
+  }
+}
+
+.leader-card {
+  background: linear-gradient(
+    180deg,
+    var(--leader-fill-top) 0%,
+    var(--leader-fill-bottom) 100%
+  );
+  /* Resting shadow — what the shimmer animation lands on. Inline-matching
+   * the 100% keyframe so first paint (before animation runs) already looks
+   * settled. */
+  box-shadow:
+    inset 0 0 0 1px var(--leader-hairline),
+    0 1px 2px rgba(26, 46, 31, 0.04),
+    0 4px 16px rgba(26, 46, 31, 0.08);
+}
+
+.leader-shimmer {
+  animation: leader-shimmer 1600ms cubic-bezier(0.22, 1, 0.36, 1) 240ms 1
+    forwards;
+}
+
+@keyframes leader-badge-pulse {
+  0%,
+  100% {
+    opacity: 0.92;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.leader-badge-pulse {
+  animation: leader-badge-pulse 3s ease-in-out infinite;
+}
+
+/* -----------------------------------------------------------------------------
+ * Confetti — one-shot burst anchored to top of leader card.
+ *
+ * Each piece is absolutely positioned at left:50%, top:0 of its container
+ * (which is the leader card's relative wrapper). CSS variables --dx/--dy/--dr
+ * carry the per-piece destination computed in JS via the parametric trajectory
+ * (angle, speed → dx,dy,dr). Keyframe is shared across all 54 pieces; only the
+ * vars + duration + delay differ.
+ * ---------------------------------------------------------------------------*/
+@keyframes confetti-piece {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 0;
+  }
+  8% {
     opacity: 1;
   }
   100% {
-    transform: translate3d(var(--dx, 0), 70vh, 0) rotate(540deg);
+    transform: translate3d(var(--dx, 0), var(--dy, 0), 0)
+      rotate(var(--dr, 360deg));
     opacity: 0;
   }
 }
 
 .confetti-piece {
   position: absolute;
-  top: -12px;
-  width: 8px;
-  height: 14px;
-  border-radius: 2px;
+  top: 0;
+  left: 50%;
+  border-radius: 1px;
   will-change: transform, opacity;
-  animation: confetti-fall var(--dur, 1400ms) cubic-bezier(0.22, 0.61, 0.36, 1)
-    forwards;
-  animation-delay: var(--delay, 0ms);
+  animation: confetti-piece var(--dur, 1200ms) cubic-bezier(0.15, 0.55, 0.35, 1)
+    var(--delay, 0ms) 1 forwards;
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .reveal-up,
+  .leader-shimmer,
+  .leader-badge-pulse {
+    animation: none;
+    opacity: 1;
+  }
   .confetti-piece {
     display: none;
   }
