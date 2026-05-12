@@ -23,6 +23,20 @@ function first(value: string | string[] | undefined): string | undefined {
   return value;
 }
 
+// Norwegian short tee-off label rendered on home cards. Reads as
+// «lør. 24. mai, 09:00». Timezone-locked to Europe/Oslo so the formatting
+// matches what the admin sees in the form.
+function formatOsloDateTime(iso: string): string {
+  return new Intl.DateTimeFormat('nb-NO', {
+    timeZone: 'Europe/Oslo',
+    weekday: 'short',
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(iso));
+}
+
 // Request-scoped Supabase client + verified user id. The user id is forwarded
 // by proxy.ts (which already called auth.getUser to refresh the session) so
 // we don't pay another Supabase Auth round-trip per page render.
@@ -76,6 +90,7 @@ async function HomeBody() {
       name: string;
       status: 'draft' | 'scheduled' | 'active' | 'finished';
       ended_at: string | null;
+      scheduled_tee_off_at: string | null;
       courses: { name: string } | null;
     } | null;
   };
@@ -91,7 +106,7 @@ async function HomeBody() {
     supabase
       .from('game_players')
       .select(
-        'game_id, team_number, flight_number, games!inner(id, name, status, ended_at, courses(name))',
+        'game_id, team_number, flight_number, games!inner(id, name, status, ended_at, scheduled_tee_off_at, courses(name))',
       )
       .eq('user_id', userId!)
       .in('games.status', ['draft', 'scheduled', 'active'])
@@ -99,7 +114,7 @@ async function HomeBody() {
     supabase
       .from('game_players')
       .select(
-        'game_id, team_number, games!inner(id, name, status, ended_at, courses(name))',
+        'game_id, team_number, games!inner(id, name, status, ended_at, scheduled_tee_off_at, courses(name))',
       )
       .eq('user_id', userId!)
       .eq('games.status', 'finished')
@@ -230,13 +245,18 @@ async function HomeBody() {
                       <span className="block font-serif text-lg font-medium tracking-tight text-text truncate">
                         {g.name}
                       </span>
+                      {g.courses?.name && (
+                        <span className="block text-xs text-muted mt-1 truncate">
+                          {g.courses.name}
+                        </span>
+                      )}
+                      {g.scheduled_tee_off_at && (
+                        <span className="block text-xs text-muted mt-1 tabular-nums truncate">
+                          {formatOsloDateTime(g.scheduled_tee_off_at)}
+                        </span>
+                      )}
                       <span className="block text-xs text-muted mt-1 truncate">
-                        {[
-                          g.courses?.name,
-                          `Lag ${g.teamNumber} · Flight ${g.flightNumber}`,
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
+                        Lag {g.teamNumber} · Flight {g.flightNumber}
                       </span>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
@@ -421,7 +441,7 @@ function StatusPill({
     status === 'active'
       ? 'bg-primary-soft text-primary border-primary/20'
       : status === 'scheduled'
-        ? 'bg-accent/10 text-accent border-accent/30'
+        ? 'bg-success/10 text-success border-success/30'
         : status === 'draft'
           ? 'bg-warning/10 text-warning border-warning/30'
           : 'bg-border/40 text-muted border-border';
