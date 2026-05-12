@@ -194,4 +194,75 @@ export async function endGame(gameId: string) {
   redirect(`${detailPath}?status=finished`);
 }
 
+/**
+ * Admin: clear a player's submission so they can edit and re-submit. Wipes
+ * submitted_at, any approval, and any prior rejection_reason — the row goes
+ * back to a clean in-progress state. Players see the game as active again
+ * and can write scores.
+ *
+ * No-op safety: only runs when the row currently has submitted_at set.
+ */
+export async function reopenScorecard(gameId: string, playerUserId: string) {
+  const { supabase } = await requireAdmin();
+  const detailPath = `/admin/games/${gameId}`;
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('status')
+    .eq('id', gameId)
+    .single<{ status: GameStatus }>();
+  if (!game) redirect(`${detailPath}?error=not_found`);
+  if (game!.status !== 'active') {
+    redirect(`${detailPath}?error=not_active`);
+  }
+
+  const { error } = await supabase
+    .from('game_players')
+    .update({
+      submitted_at: null,
+      approved_at: null,
+      approved_by_user_id: null,
+      rejection_reason: null,
+    })
+    .eq('game_id', gameId)
+    .eq('user_id', playerUserId)
+    .not('submitted_at', 'is', null);
+  if (error) redirect(`${detailPath}?error=db_players`);
+
+  revalidatePath(`/admin/games/${gameId}`);
+  revalidatePath(`/games/${gameId}`);
+  redirect(`${detailPath}?status=scorecard_reopened`);
+}
+
+/**
+ * Admin: flip a finished game back to active. Clears ended_at so the
+ * leaderboard hides again and players can edit scores. Useful when the
+ * round was ended prematurely or a result needs correction.
+ */
+export async function reopenGame(gameId: string) {
+  const { supabase } = await requireAdmin();
+  const detailPath = `/admin/games/${gameId}`;
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('status')
+    .eq('id', gameId)
+    .single<{ status: GameStatus }>();
+  if (!game) redirect(`${detailPath}?error=not_found`);
+  if (game!.status !== 'finished') {
+    redirect(`${detailPath}?error=not_finished`);
+  }
+
+  const { error } = await supabase
+    .from('games')
+    .update({ status: 'active', ended_at: null })
+    .eq('id', gameId);
+  if (error) redirect(`${detailPath}?error=db_game`);
+
+  revalidatePath(`/admin/games/${gameId}`);
+  revalidatePath(`/games/${gameId}`);
+  revalidatePath(`/games/${gameId}/leaderboard`);
+  redirect(`${detailPath}?status=game_reopened`);
+}
+
 type GameStatus = 'draft' | 'scheduled' | 'active' | 'finished';

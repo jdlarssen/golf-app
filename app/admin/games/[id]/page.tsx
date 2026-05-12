@@ -13,11 +13,15 @@ import { StartGameButton } from './StartGameButton';
 import { StartScheduledGameButton } from './StartScheduledGameButton';
 import { EndGameButton } from './EndGameButton';
 import { ApprovePlayerButton } from './ApprovePlayerButton';
+import { ReopenScorecardButton } from './ReopenScorecardButton';
+import { ReopenGameButton } from './ReopenGameButton';
 import {
   startGame,
   startScheduledGameAction,
   adminApproveScorecard,
   endGame,
+  reopenScorecard,
+  reopenGame,
 } from './actions';
 
 type Params = Promise<{ id: string }>;
@@ -42,6 +46,8 @@ const STATUS_BANNERS: Record<string, string> = {
   started: '✓ Runden er i gang. Spillerne kan taste slag.',
   admin_approved: '✓ Scorekort godkjent på vegne av flighten.',
   finished: '✓ Spillet er avsluttet. Leaderboard er åpen for alle.',
+  scorecard_reopened: '✓ Scorekortet er åpnet for redigering.',
+  game_reopened: '✓ Spillet er aktivt igjen.',
 };
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -61,6 +67,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   tee_missing: 'Tee-box mangler — kan ikke beregne handicap.',
   db_players: 'Klarte ikke å oppdatere spillerne. Prøv igjen.',
   db_game: 'Klarte ikke å oppdatere spillet. Prøv igjen.',
+  not_finished: 'Spillet er ikke avsluttet — kan ikke gjenåpnes.',
 };
 
 const MONTHS_NB = [
@@ -356,6 +363,7 @@ async function PlayersSections({
   const startAction = startGame.bind(null, gameId);
   const startScheduledAction = startScheduledGameAction.bind(null, gameId);
   const endAction = endGame.bind(null, gameId);
+  const reopenGameAction = reopenGame.bind(null, gameId);
 
   // Readiness preview for the end-game button (only meaningful when active).
   const notSubmittedCount = players.filter((p) => !p.submitted_at).length;
@@ -583,47 +591,59 @@ async function PlayersSections({
         </SectionCard>
       )}
 
-      {game.status === 'active' && game.require_peer_approval && (() => {
-        const pending = players.filter(
-          (p) => p.submitted_at != null && p.approved_at == null,
-        );
+      {game.status === 'active' && (() => {
+        const submitted = players.filter((p) => p.submitted_at != null);
+        if (submitted.length === 0) return null;
         return (
-          <SectionCard ribbon="Innleverte scorekort">
+          <SectionCard ribbon="Leverte scorekort">
             <div className="px-3.5 pb-3.5 pt-3">
-              {pending.length === 0 ? (
-                <p className="text-sm text-muted">
-                  Ingen scorekort venter på godkjenning akkurat nå.
-                </p>
-              ) : (
-                <ul className="-mx-2 divide-y divide-border">
-                  {pending.map((p) => {
-                    const approve = adminApproveScorecard.bind(
-                      null,
-                      gameId,
-                      p.user_id,
-                    );
-                    return (
-                      <li
-                        key={p.user_id}
-                        className="flex items-center justify-between gap-3 px-2 py-3"
-                      >
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium tracking-tight text-text">
-                            {displayName(p)}
-                          </p>
-                          <p className="mt-0.5 text-xs text-muted">
-                            Flight {p.flight_number} · Lag {p.team_number}
-                          </p>
-                        </div>
-                        <ApprovePlayerButton
-                          approveAction={approve}
+              <ul className="-mx-2 divide-y divide-border">
+                {submitted.map((p) => {
+                  const needsApproval =
+                    game.require_peer_approval && !p.approved_at;
+                  const approve = adminApproveScorecard.bind(
+                    null,
+                    gameId,
+                    p.user_id,
+                  );
+                  const reopen = reopenScorecard.bind(
+                    null,
+                    gameId,
+                    p.user_id,
+                  );
+                  return (
+                    <li
+                      key={p.user_id}
+                      className="flex flex-col gap-2.5 px-2 py-3 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium tracking-tight text-text">
+                          {displayName(p)}
+                        </p>
+                        <p className="mt-0.5 text-xs text-muted">
+                          Flight {p.flight_number} · Lag {p.team_number}
+                          {' · '}
+                          {needsApproval
+                            ? '⏳ Venter godkjenning'
+                            : '✓ Godkjent'}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {needsApproval && (
+                          <ApprovePlayerButton
+                            approveAction={approve}
+                            playerName={displayName(p)}
+                          />
+                        )}
+                        <ReopenScorecardButton
+                          reopenAction={reopen}
                           playerName={displayName(p)}
                         />
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
           </SectionCard>
         );
@@ -700,13 +720,14 @@ async function PlayersSections({
 
       {game.status === 'finished' && (
         <SectionCard ribbon="Resultat">
-          <div className="px-3.5 pb-3.5 pt-3">
+          <div className="space-y-3 px-3.5 pb-3.5 pt-3">
             <SmartLink
               href={`/games/${gameId}/leaderboard`}
               className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover"
             >
               🏆 Se leaderboard →
             </SmartLink>
+            <ReopenGameButton reopenAction={reopenGameAction} />
           </div>
         </SectionCard>
       )}
