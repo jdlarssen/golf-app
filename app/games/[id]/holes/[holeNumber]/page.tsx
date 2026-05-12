@@ -71,9 +71,12 @@ export default async function HolePage({ params }: { params: Params }) {
 
   if (gameError || !game) notFound();
 
-  // TODO(scheduled): scheduled games should also bounce here (no scores yet). Handled in phase E1/E2.
   if (game.status === 'draft') {
     redirect('/');
+  }
+  if (game.status === 'scheduled') {
+    // Round hasn't started; state #2 venterom lives on the game home page.
+    redirect(`/games/${id}`);
   }
 
   const { data: me, error: meError } = await supabase
