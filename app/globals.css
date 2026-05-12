@@ -43,6 +43,19 @@
   --leader-fill-bottom:   #fbf8ee;
   --leader-hairline:      rgba(201, 169, 97, 0.55);
   --leader-hairline-peak: rgba(201, 169, 97, 0.95);
+
+  /* Admin "Sekretariatet" chrome — warmer linen, brass hairlines, club-stamp.
+   * Admin surfaces use a perceptibly warmer background than player surfaces so
+   * "stepping into the secretariat" feels like a different room. */
+  --admin-bg:                 #f5f1e4;
+  --admin-salutation-top:     #fbf7e8;
+  --admin-salutation-bottom:  #f5efde;
+  --admin-salutation-border:  #e5ddc2;
+  --brass-line-top:           #d3c9a6;   /* champagne hairline */
+  --brass-line-bottom:        #e5e0d3;   /* warm beige */
+  --stamp-stroke:             rgba(184, 148, 70, 0.35);
+  --stamp-fill:               rgba(184, 148, 70, 0.55);
+  --row-divider-warm:         #ede6d2;   /* between ledger rows; warmer than --border */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -76,6 +89,18 @@
     --leader-fill-bottom:   #1a3d2e;
     --leader-hairline:      rgba(201, 169, 97, 0.65);
     --leader-hairline-peak: rgba(201, 169, 97, 1.0);
+
+    /* Dark Sekretariatet — forest-charcoal distinguishable from --bg, brass
+     * hairlines stay champagne at slightly lower opacity, stamp brightens. */
+    --admin-bg:                 #1a2620;
+    --admin-salutation-top:     #243828;
+    --admin-salutation-bottom:  #1f2f23;
+    --admin-salutation-border:  #2d3f32;
+    --brass-line-top:           rgba(201, 169, 97, 0.65);
+    --brass-line-bottom:        rgba(229, 224, 211, 0.30);
+    --stamp-stroke:             rgba(201, 169, 97, 0.55);
+    --stamp-fill:               rgba(212, 184, 112, 0.70);
+    --row-divider-warm:         #2d3f32;
   }
 }
 
@@ -107,6 +132,16 @@
   --leader-fill-bottom:   #1a3d2e;
   --leader-hairline:      rgba(201, 169, 97, 0.65);
   --leader-hairline-peak: rgba(201, 169, 97, 1.0);
+
+  --admin-bg:                 #1a2620;
+  --admin-salutation-top:     #243828;
+  --admin-salutation-bottom:  #1f2f23;
+  --admin-salutation-border:  #2d3f32;
+  --brass-line-top:           rgba(201, 169, 97, 0.65);
+  --brass-line-bottom:        rgba(229, 224, 211, 0.30);
+  --stamp-stroke:             rgba(201, 169, 97, 0.55);
+  --stamp-fill:               rgba(212, 184, 112, 0.70);
+  --row-divider-warm:         #2d3f32;
 }
 
 /* Tailwind v4 theme bindings — these expose the design tokens as utility
@@ -134,6 +169,8 @@
   --color-score-over1-bg: var(--score-over1-bg);
   --color-score-over2-fg: var(--score-over2-fg);
   --color-score-over2-bg: var(--score-over2-bg);
+  --color-admin-bg: var(--admin-bg);
+  --color-row-divider-warm: var(--row-divider-warm);
 
   --font-serif: var(--font-fraunces);
   --font-sans: var(--font-inter);
