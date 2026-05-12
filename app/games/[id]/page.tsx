@@ -1,6 +1,7 @@
-import Link from 'next/link';
+import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound, redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
+import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { BackLink } from '@/components/ui/BackLink';
 import { Card } from '@/components/ui/Card';
@@ -155,13 +156,10 @@ export default async function GameHomePage({
   // eslint-disable-next-line react-hooks/purity
   const nowMs = Date.now();
 
-  const supabase = await getServerClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = await getProxyVerifiedUserId();
   // Proxy redirects unauthenticated users, but be defensive.
-  if (!user) redirect('/login');
+  if (!userId) redirect('/login');
+  const supabase = await getServerClient();
 
   const { data: gameInitial, error: gameError } = await supabase
     .from('games')
@@ -181,7 +179,7 @@ export default async function GameHomePage({
       'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, rejection_reason',
     )
     .eq('game_id', id)
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .maybeSingle<MyPlayerRow>();
 
   if (meError) throw meError;
@@ -252,7 +250,7 @@ export default async function GameHomePage({
 
     const flight = (flightRows ?? []).map((row) => ({
       userId: row.user_id,
-      isCurrentUser: row.user_id === user.id,
+      isCurrentUser: row.user_id === userId,
       name: row.users?.name ?? '(ukjent)',
       hcpIndex:
         row.users?.hcp_index == null ? null : Number(row.users.hcp_index),
@@ -377,7 +375,7 @@ export default async function GameHomePage({
     .from('scores')
     .select('hole_number', { count: 'exact', head: true })
     .eq('game_id', id)
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .not('strokes', 'is', null);
   const strokesCount = strokesCountRaw ?? 0;
 
@@ -392,7 +390,7 @@ export default async function GameHomePage({
       .returns<FlightMatePlayerRow[]>();
     pendingApprovalsForMe = (mates ?? []).filter(
       (m) =>
-        m.user_id !== user.id && m.submitted_at != null && m.approved_at == null,
+        m.user_id !== userId && m.submitted_at != null && m.approved_at == null,
     ).length;
   }
 
@@ -444,12 +442,12 @@ export default async function GameHomePage({
                 {pendingApprovalsForMe} spillere i flighten din venter på
                 godkjenning
               </span>
-              <Link
+              <SmartLink
                 href={`/games/${id}/approve`}
                 className="text-sm font-medium text-primary underline underline-offset-2 decoration-primary/30 hover:decoration-primary whitespace-nowrap"
               >
                 Gjennomgå →
-              </Link>
+              </SmartLink>
             </div>
           </Banner>
         </div>
@@ -505,7 +503,7 @@ export default async function GameHomePage({
         )}
 
         {game.status === 'finished' && (
-          <Link href={`/games/${id}/leaderboard/holes`} className="block">
+          <SmartLink href={`/games/${id}/leaderboard/holes`} className="block">
             <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
               <span className="text-base font-medium text-text">
                 Hull for hull
@@ -514,10 +512,10 @@ export default async function GameHomePage({
                 →
               </span>
             </Card>
-          </Link>
+          </SmartLink>
         )}
 
-        <Link href={`/games/${id}/scorecard`} className="block">
+        <SmartLink href={`/games/${id}/scorecard`} className="block">
           <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
             <span className="text-base font-medium text-text">
               Mitt scorekort
@@ -526,15 +524,15 @@ export default async function GameHomePage({
               →
             </span>
           </Card>
-        </Link>
+        </SmartLink>
 
         <div className="pt-2">
-          <Link
+          <SmartLink
             href="/"
             className="block text-center text-sm text-muted hover:text-text transition-colors"
           >
             Tilbake til hjem
-          </Link>
+          </SmartLink>
         </div>
       </div>
     </AppShell>

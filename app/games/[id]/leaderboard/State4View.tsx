@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { SmartLink } from '@/components/ui/SmartLink';
 import { useEffect, useState } from 'react';
 import { Laurel, PinFlagSm } from '@/components/icons';
 import { Medallion } from '@/components/ui/Medallion';
@@ -152,13 +152,13 @@ function Header({
 }) {
   return (
     <header className="flex items-center justify-between gap-2 px-4 pb-2 pt-3.5">
-      <Link
+      <SmartLink
         href="/"
         aria-label="Hjem"
         className="-ml-2 inline-flex h-8 w-8 items-center justify-center text-lg text-text"
       >
         ‹
-      </Link>
+      </SmartLink>
       <span className="flex-1 truncate text-center text-[10px] font-semibold uppercase tracking-[0.20em] text-muted">
         {gameName}
       </span>
@@ -188,12 +188,12 @@ function ModeChip({
   const other: LeaderboardMode = mode === 'netto' ? 'brutto' : 'netto';
   return (
     <div className="flex justify-center pb-2">
-      <Link
+      <SmartLink
         href={`/games/${gameId}/leaderboard?mode=${other}`}
         className="inline-flex items-center rounded-full border border-border bg-surface px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted"
       >
         Bytt til {other}
-      </Link>
+      </SmartLink>
     </div>
   );
 }
@@ -286,7 +286,7 @@ function LeaderCard({
           </div>
         </div>
 
-        <Link
+        <SmartLink
           href={drilldownHref}
           aria-label={`Vis hull-for-hull for lag ${line.teamNumber}`}
           className="absolute inset-0 rounded-[18px]"
@@ -321,7 +321,7 @@ function TeamRow({
 
   return (
     <li className="list-none">
-      <Link
+      <SmartLink
         href={drilldownHref}
         className="reveal-up flex items-center gap-3.5 rounded-[14px] border border-border bg-surface px-4 py-3.5 shadow-[0_1px_2px_rgba(26,46,31,0.04),0_2px_6px_rgba(26,46,31,0.03)] active:scale-[0.99]"
         style={{ animationDelay: `${140 + staggerIndex * 80}ms` }}
@@ -366,7 +366,7 @@ function TeamRow({
         <span aria-hidden className="text-muted">
           ›
         </span>
-      </Link>
+      </SmartLink>
     </li>
   );
 }

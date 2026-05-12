@@ -1,6 +1,7 @@
-import Link from 'next/link';
+import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound, redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
+import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { BackLink } from '@/components/ui/BackLink';
 import { Card } from '@/components/ui/Card';
@@ -38,12 +39,9 @@ type ScoreRow = {
 
 export default async function ScorecardPage({ params }: { params: Params }) {
   const { id } = await params;
+  const userId = await getProxyVerifiedUserId();
+  if (!userId) redirect('/login');
   const supabase = await getServerClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
 
   const { data: game, error: gameError } = await supabase
     .from('games')
@@ -64,7 +62,7 @@ export default async function ScorecardPage({ params }: { params: Params }) {
     .from('game_players')
     .select('user_id, course_handicap, submitted_at')
     .eq('game_id', id)
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .maybeSingle<MyPlayerRow>();
   if (meError) throw meError;
   if (!me) notFound();
@@ -81,7 +79,7 @@ export default async function ScorecardPage({ params }: { params: Params }) {
     .from('scores')
     .select('hole_number, strokes')
     .eq('game_id', id)
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .returns<ScoreRow[]>();
   if (scoresError) throw scoresError;
 
@@ -193,12 +191,12 @@ export default async function ScorecardPage({ params }: { params: Params }) {
             </LinkButton>
 
             <div className="pt-2">
-              <Link
+              <SmartLink
                 href={`/games/${id}`}
                 className="block text-center text-sm text-muted hover:text-text transition-colors"
               >
                 Til spilloversikt
-              </Link>
+              </SmartLink>
             </div>
           </>
         )}

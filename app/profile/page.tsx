@@ -1,6 +1,7 @@
-import Link from 'next/link';
+import { SmartLink } from '@/components/ui/SmartLink';
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
+import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -28,19 +29,16 @@ export default async function ProfilePage({
 }: {
   searchParams: SearchParams;
 }) {
-  const supabase = await getServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  const userId = await getProxyVerifiedUserId();
+  if (!userId) {
     redirect('/login');
   }
+  const supabase = await getServerClient();
 
   const { data: profile, error: profileError } = await supabase
     .from('users')
     .select('name, nickname, hcp_index, email')
-    .eq('id', user.id)
+    .eq('id', userId)
     .single();
 
   // No profile row yet → finish registration first.
@@ -51,7 +49,7 @@ export default async function ProfilePage({
     throw profileError;
   }
 
-  const quota = await getQuotaState(supabase, user.id);
+  const quota = await getQuotaState(supabase, userId);
 
   const params = await searchParams;
   const errorCode = first(params.error);
@@ -119,12 +117,12 @@ export default async function ProfilePage({
 
           <div className="flex items-center gap-3 pt-2">
             <Button type="submit">Lagre</Button>
-            <Link
+            <SmartLink
               href="/"
               className="text-sm text-muted hover:text-text transition-colors"
             >
               Avbryt
-            </Link>
+            </SmartLink>
           </div>
         </form>
       </Card>
@@ -143,7 +141,7 @@ export default async function ProfilePage({
             </div>
           </Card>
         ) : (
-          <Link
+          <SmartLink
             href="/invite"
             className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           >
@@ -162,7 +160,7 @@ export default async function ProfilePage({
                 </span>
               </div>
             </Card>
-          </Link>
+          </SmartLink>
         )}
       </div>
     </AppShell>

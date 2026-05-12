@@ -1,6 +1,7 @@
-import Link from 'next/link';
+import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound, redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
+import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { BackLink } from '@/components/ui/BackLink';
 import { Card } from '@/components/ui/Card';
@@ -68,11 +69,9 @@ export default async function SubmitPage({
   const sp = await searchParams;
   const errorMessage = ERROR_MESSAGES[first(sp.error) ?? ''] ?? undefined;
 
+  const userId = await getProxyVerifiedUserId();
+  if (!userId) redirect('/login');
   const supabase = await getServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
 
   const { data: game, error: gameError } = await supabase
     .from('games')
@@ -94,7 +93,7 @@ export default async function SubmitPage({
       'user_id, team_number, flight_number, course_handicap, submitted_at',
     )
     .eq('game_id', id)
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .maybeSingle<MyPlayerRow>();
   if (meError) throw meError;
   if (!me) notFound();
@@ -116,7 +115,7 @@ export default async function SubmitPage({
     .from('scores')
     .select('hole_number, strokes, entered_by')
     .eq('game_id', id)
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .returns<ScoreRow[]>();
   if (scoresError) throw scoresError;
 
@@ -266,12 +265,12 @@ export default async function SubmitPage({
         )}
 
         <div className="grid grid-cols-2 gap-3">
-          <Link
+          <SmartLink
             href={`/games/${id}/holes/1`}
             className="inline-flex items-center justify-center min-h-[44px] rounded-full border border-border px-[18px] py-2.5 text-sm font-medium text-text hover:bg-primary-soft transition-colors"
           >
             ← Rediger
-          </Link>
+          </SmartLink>
           <SubmitForm
             submitAction={submitAction}
             missingHoles={missingHoles}

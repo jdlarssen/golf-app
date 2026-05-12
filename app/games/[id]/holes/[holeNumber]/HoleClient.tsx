@@ -8,7 +8,7 @@ import {
   type CSSProperties,
   type JSX,
 } from 'react';
-import Link from 'next/link';
+import { SmartLink } from '@/components/ui/SmartLink';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { localDb, scoreKey, type LocalScore } from '@/lib/sync/db';
 import { writeScore } from '@/lib/sync/writeScore';
@@ -291,13 +291,13 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   return (
     <>
       <div style={headerRowStyle}>
-        <Link
+        <SmartLink
           href={`/games/${gameId}`}
           aria-label="Tilbake til turneringen"
           style={backLinkStyle}
         >
           ‹
-        </Link>
+        </SmartLink>
         <div style={titleStyle}>{gameName}</div>
         <button
           type="button"

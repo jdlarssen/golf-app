@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { SmartLink } from '@/components/ui/SmartLink';
 import type { CSSProperties, JSX } from 'react';
 
 export interface HoleStripProps {
@@ -82,7 +82,7 @@ export function HoleStrip(props: HoleStripProps): JSX.Element {
                 ? 'completed'
                 : 'future';
           return (
-            <Link
+            <SmartLink
               key={n}
               href={`/games/${gameId}/holes/${n}`}
               style={hitAreaStyle}
@@ -90,7 +90,7 @@ export function HoleStrip(props: HoleStripProps): JSX.Element {
               aria-current={state === 'current' ? 'page' : undefined}
             >
               <span style={cellStyle(state)}>{n}</span>
-            </Link>
+            </SmartLink>
           );
         })}
       </div>

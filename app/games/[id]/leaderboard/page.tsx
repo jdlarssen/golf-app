@@ -1,6 +1,7 @@
-import Link from 'next/link';
+import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound, redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
+import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { BackLink } from '@/components/ui/BackLink';
 import { Card } from '@/components/ui/Card';
@@ -72,12 +73,9 @@ export default async function LeaderboardPage({
   const sp = await searchParams;
   const mode: LeaderboardMode = parseMode(sp.mode);
 
+  const userId = await getProxyVerifiedUserId();
+  if (!userId) redirect('/login');
   const supabase = await getServerClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
 
   const { data: game, error: gameError } = await supabase
     .from('games')
@@ -97,7 +95,7 @@ export default async function LeaderboardPage({
   const { data: profile } = await supabase
     .from('users')
     .select('is_admin')
-    .eq('id', user.id)
+    .eq('id', userId)
     .single<{ is_admin: boolean }>();
   const isAdmin = profile?.is_admin === true;
 
@@ -106,7 +104,7 @@ export default async function LeaderboardPage({
       .from('game_players')
       .select('user_id')
       .eq('game_id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .maybeSingle();
     if (!me) notFound();
   }
@@ -330,7 +328,7 @@ export function ModeToggle({
       aria-label="Modus"
       className="inline-flex rounded-full bg-primary-soft p-1"
     >
-      <Link
+      <SmartLink
         role="tab"
         aria-selected={mode === 'netto'}
         href={`${base}?mode=netto`}
@@ -341,8 +339,8 @@ export function ModeToggle({
         }`}
       >
         Netto
-      </Link>
-      <Link
+      </SmartLink>
+      <SmartLink
         role="tab"
         aria-selected={mode === 'brutto'}
         href={`${base}?mode=brutto`}
@@ -353,7 +351,7 @@ export function ModeToggle({
         }`}
       >
         Brutto
-      </Link>
+      </SmartLink>
     </div>
   );
 }

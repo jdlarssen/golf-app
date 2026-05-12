@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { AdminShell } from '@/components/ui/AdminShell';
@@ -579,12 +579,12 @@ export default async function GameDetailPage({
                 Spillet er i planlagt-fasen. Du kan fortsatt endre bane,
                 tee-off, spillere, lag og innstillinger inntil runden startes.
               </p>
-              <Link
+              <SmartLink
                 href={`/admin/games/${id}/edit`}
                 className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover"
               >
                 Rediger spillet
-              </Link>
+              </SmartLink>
             </div>
           </SectionCard>
         </>
@@ -625,12 +625,12 @@ export default async function GameDetailPage({
       {game.status === 'finished' && (
         <SectionCard ribbon="Resultat">
           <div className="px-3.5 pb-3.5 pt-3">
-            <Link
+            <SmartLink
               href={`/games/${id}/leaderboard`}
               className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover"
             >
               🏆 Se leaderboard →
-            </Link>
+            </SmartLink>
           </div>
         </SectionCard>
       )}

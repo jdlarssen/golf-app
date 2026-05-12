@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { BackLink } from '@/components/ui/BackLink';
@@ -120,12 +120,12 @@ export default async function NewGamePage({
         <div className="mt-4">
           <Banner tone="info">
             Du trenger 8 registrerte spillere. Inviter flere fra{' '}
-            <Link
+            <SmartLink
               href="/admin/invitations"
               className="underline hover:no-underline"
             >
               Invitasjoner
-            </Link>
+            </SmartLink>
             -siden.
           </Banner>
         </div>

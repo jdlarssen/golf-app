@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { BackLink } from '@/components/ui/BackLink';
@@ -96,12 +96,12 @@ export default async function CoursesPage({
         <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
           Sekretariatet
         </p>
-        <Link
+        <SmartLink
           href="/admin/courses/new"
           className="rounded-full border border-border bg-[rgba(229,224,211,0.5)] px-2.5 py-[5px] font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-text"
         >
           + Ny
-        </Link>
+        </SmartLink>
       </div>
 
       <BrassRibbon kicker="Baner · protokoll" />
@@ -161,7 +161,7 @@ export default async function CoursesPage({
             {items.map((course, i) => {
               const teeCount = course.tee_boxes?.[0]?.count ?? 0;
               return (
-                <Link
+                <SmartLink
                   key={course.id}
                   href={`/admin/courses/${course.id}/edit`}
                   className="reveal-up grid items-center gap-2.5 px-3.5 py-3.5"
@@ -186,7 +186,7 @@ export default async function CoursesPage({
                   <span aria-hidden className="text-[14px] text-muted">
                     ›
                   </span>
-                </Link>
+                </SmartLink>
               );
             })}
           </div>

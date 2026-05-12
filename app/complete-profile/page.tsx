@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
+import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -27,20 +28,17 @@ export default async function CompleteProfile({
 }: {
   searchParams: SearchParams;
 }) {
-  const supabase = await getServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  const userId = await getProxyVerifiedUserId();
+  if (!userId) {
     redirect('/login');
   }
+  const supabase = await getServerClient();
 
   // If a public.users row already exists, send them home.
   const { data: existing } = await supabase
     .from('users')
     .select('id')
-    .eq('id', user.id)
+    .eq('id', userId)
     .maybeSingle();
 
   if (existing) {

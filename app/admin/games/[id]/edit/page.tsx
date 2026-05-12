@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
+import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
+import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { BackLink } from '@/components/ui/BackLink';
 import { Card } from '@/components/ui/Card';
@@ -105,18 +106,14 @@ export default async function EditGamePage({
   const errorCode = first(sp.error);
   const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
 
+  const userId = await getProxyVerifiedUserId();
+  if (!userId) redirect('/login');
   const supabase = await getServerClient();
-
-  // Auth gate.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
 
   const { data: profile } = await supabase
     .from('users')
     .select('is_admin')
-    .eq('id', user.id)
+    .eq('id', userId)
     .single();
   if (!profile?.is_admin) redirect('/');
 
@@ -225,12 +222,12 @@ export default async function EditGamePage({
         {playerOptions.length < 8 && (
           <Banner tone="info">
             Du trenger 8 registrerte spillere. Inviter flere fra{' '}
-            <Link
+            <SmartLink
               href="/admin/invitations"
               className="underline hover:no-underline"
             >
               Invitasjoner
-            </Link>
+            </SmartLink>
             -siden.
           </Banner>
         )}

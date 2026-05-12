@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
+import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { HoleClient, type ClientPlayer } from './HoleClient';
 
@@ -57,11 +58,9 @@ export default async function HolePage({ params }: { params: Params }) {
     notFound();
   }
 
+  const userId = await getProxyVerifiedUserId();
+  if (!userId) redirect('/login');
   const supabase = await getServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
 
   const { data: game, error: gameError } = await supabase
     .from('games')
@@ -83,7 +82,7 @@ export default async function HolePage({ params }: { params: Params }) {
     .from('game_players')
     .select('user_id, flight_number, course_handicap, submitted_at')
     .eq('game_id', id)
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .maybeSingle<MyPlayerRow>();
   if (meError) throw meError;
   if (!me) notFound();
@@ -162,7 +161,7 @@ export default async function HolePage({ params }: { params: Params }) {
         currentHole={holeNumber}
         par={hole.par}
         strokeIndex={hole.stroke_index}
-        myUserId={user.id}
+        myUserId={userId}
         players={playersForClient}
       />
     </div>

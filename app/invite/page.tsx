@@ -1,6 +1,7 @@
-import Link from 'next/link';
+import { SmartLink } from '@/components/ui/SmartLink';
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
+import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -26,16 +27,13 @@ export default async function InvitePage({
 }: {
   searchParams: SearchParams;
 }) {
-  const supabase = await getServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  const userId = await getProxyVerifiedUserId();
+  if (!userId) {
     redirect('/login');
   }
+  const supabase = await getServerClient();
 
-  const quota = await getQuotaState(supabase, user.id);
+  const quota = await getQuotaState(supabase, userId);
 
   const params = await searchParams;
   const errorCode = first(params.error);
@@ -106,12 +104,12 @@ export default async function InvitePage({
       </Card>
 
       <div className="mt-4 text-center">
-        <Link
+        <SmartLink
           href="/profile"
           className="text-sm text-muted hover:text-text transition-colors"
         >
           Avbryt
-        </Link>
+        </SmartLink>
       </div>
     </AppShell>
   );

@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import { BackLink } from '@/components/ui/BackLink';
 import { getServerClient } from '@/lib/supabase/server';
+import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
@@ -77,11 +78,9 @@ export default async function ApprovePage({
   const statusBanner = STATUS_BANNERS[first(sp.status) ?? ''] ?? undefined;
   const errorMessage = ERROR_MESSAGES[first(sp.error) ?? ''] ?? undefined;
 
+  const userId = await getProxyVerifiedUserId();
+  if (!userId) redirect('/login');
   const supabase = await getServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
 
   const { data: game, error: gameError } = await supabase
     .from('games')
@@ -98,7 +97,7 @@ export default async function ApprovePage({
     .from('game_players')
     .select('user_id, flight_number')
     .eq('game_id', id)
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .maybeSingle<MyPlayerRow>();
   if (meError) throw meError;
   if (!me) notFound();
@@ -116,7 +115,7 @@ export default async function ApprovePage({
 
   const pending = (mates ?? []).filter(
     (m) =>
-      m.user_id !== user.id &&
+      m.user_id !== userId &&
       m.submitted_at != null &&
       m.approved_at == null,
   );

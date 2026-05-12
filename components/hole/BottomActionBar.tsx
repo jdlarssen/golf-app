@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { SmartLink } from '@/components/ui/SmartLink';
 import type { CSSProperties, JSX } from 'react';
 
 export interface BottomActionBarProps {
@@ -56,9 +56,9 @@ export function BottomActionBar(props: BottomActionBarProps): JSX.Element {
 
   return (
     <div style={containerStyle}>
-      <Link href={href} aria-label={label} style={style}>
+      <SmartLink href={href} aria-label={label} style={style}>
         {label}
-      </Link>
+      </SmartLink>
     </div>
   );
 }

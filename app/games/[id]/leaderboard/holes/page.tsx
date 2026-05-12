@@ -1,6 +1,7 @@
-import Link from 'next/link';
+import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound, redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
+import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import {
   computeLeaderboard,
   parseMode,
@@ -59,12 +60,9 @@ export default async function LeaderboardHolesPage({
   const teamParam = Array.isArray(sp.team) ? sp.team[0] : sp.team;
   const requestedTeam = teamParam ? Number.parseInt(teamParam, 10) : null;
 
+  const userId = await getProxyVerifiedUserId();
+  if (!userId) redirect('/login');
   const supabase = await getServerClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
 
   const { data: game, error: gameError } = await supabase
     .from('games')
@@ -81,7 +79,7 @@ export default async function LeaderboardHolesPage({
   const { data: profile } = await supabase
     .from('users')
     .select('is_admin')
-    .eq('id', user.id)
+    .eq('id', userId)
     .single<{ is_admin: boolean }>();
   const isAdmin = profile?.is_admin === true;
   if (!isAdmin) {
@@ -89,7 +87,7 @@ export default async function LeaderboardHolesPage({
       .from('game_players')
       .select('user_id')
       .eq('game_id', id)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .maybeSingle();
     if (!me) notFound();
   }
@@ -246,13 +244,13 @@ function DrilldownView({
     <div className="min-h-screen bg-bg text-text">
       <div className="mx-auto max-w-md pb-12">
         <header className="flex items-center justify-between gap-2 px-4 pb-2 pt-3.5">
-          <Link
+          <SmartLink
             href={`/games/${gameId}/leaderboard?mode=${mode}`}
             aria-label="Tilbake til leaderboard"
             className="-ml-2 inline-flex h-8 w-8 items-center justify-center text-lg text-text"
           >
             ‹
-          </Link>
+          </SmartLink>
           <span className="flex-1 truncate text-center text-[10px] font-semibold uppercase tracking-[0.20em] text-muted">
             Lag {selected.teamNumber} · {selected.rank}. plass
           </span>
@@ -530,7 +528,7 @@ function TeamNavLink({
   }
   const isPrev = direction === 'prev';
   return (
-    <Link
+    <SmartLink
       href={`/games/${gameId}/leaderboard/holes?team=${target.teamNumber}&mode=${mode}`}
       className={`inline-flex items-center gap-1.5 text-[12px] text-muted hover:text-text ${
         isPrev ? '' : 'ml-auto'
@@ -541,7 +539,7 @@ function TeamNavLink({
         {isPrev ? 'Forrige' : 'Neste'} · {target.rank}. Lag {target.teamNumber}
       </span>
       {!isPrev && <span aria-hidden>›</span>}
-    </Link>
+    </SmartLink>
   );
 }
 

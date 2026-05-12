@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { BackLink } from '@/components/ui/BackLink';
@@ -141,12 +141,12 @@ export default async function GamesPage({
         <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
           Sekretariatet
         </p>
-        <Link
+        <SmartLink
           href="/admin/games/new"
           className="rounded-full border border-border bg-[rgba(229,224,211,0.5)] px-2.5 py-[5px] font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-text"
         >
           + Nytt
-        </Link>
+        </SmartLink>
       </div>
 
       <BrassRibbon kicker="Spill · protokoll" />
@@ -223,7 +223,7 @@ export default async function GamesPage({
                 .filter(Boolean)
                 .join(' · ');
               return (
-                <Link
+                <SmartLink
                   key={g.id}
                   href={`/admin/games/${g.id}`}
                   className="reveal-up grid items-center gap-2.5 px-3.5 py-3.5"
@@ -248,7 +248,7 @@ export default async function GamesPage({
                   <span aria-hidden className="text-[14px] text-muted">
                     ›
                   </span>
-                </Link>
+                </SmartLink>
               );
             })}
           </div>
