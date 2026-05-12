@@ -6,8 +6,10 @@ import { PinFlag } from '@/components/icons/PinFlag';
  * champagne-tinted tagline. Used on /login. Distinct from `<BrandMark />`,
  * which is the small navigational lockup at the top of authenticated pages.
  *
- * The "par" word in the tagline is rendered in `text-accent` to mirror the
- * brand-mark.svg in `docs/design/realized/brand-foundations/assets/`.
+ * The "par" word in the tagline is rendered in `text-accent` to mirror
+ * brand-mark.svg in `docs/design/realized/brand-foundations/assets/`. The
+ * medallion+PinFlag stack above is the same vocabulary used by the
+ * authenticated empty-state hero in `app/page.tsx`.
  */
 export function BrandHero({ className = '' }: { className?: string }) {
   return (
@@ -16,7 +18,10 @@ export function BrandHero({ className = '' }: { className?: string }) {
         <PinFlag size={56} className="text-primary dark:text-text" />
       </ChampagneMedallion>
 
-      <div className="w-14 h-14 rounded-2xl bg-primary text-white grid place-items-center font-serif font-medium text-2xl shadow-sm mb-3">
+      <div
+        aria-hidden="true"
+        className="w-14 h-14 rounded-2xl bg-primary text-white grid place-items-center font-serif font-medium text-2xl shadow-sm mb-3"
+      >
         T
       </div>
 
