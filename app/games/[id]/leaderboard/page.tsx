@@ -185,7 +185,6 @@ export default async function LeaderboardPage({
   if (view === 'state3') {
     return renderState3({
       gameId: id,
-      gameName: game.name,
       teeOffAt: game.scheduled_tee_off_at,
       players,
     });
@@ -414,11 +413,10 @@ export function ModeToggle({
  */
 function renderState3(opts: {
   gameId: string;
-  gameName: string;
   teeOffAt: string | null;
   players: LbPlayer[];
 }) {
-  const { gameId, gameName, teeOffAt, players } = opts;
+  const { gameId, teeOffAt, players } = opts;
   const teeOffDate = teeOffAt ? new Date(teeOffAt) : null;
   const teeOffLabel = teeOffDate ? formatTeeOffTime(teeOffDate) : '—';
 
@@ -438,7 +436,9 @@ function renderState3(opts: {
 
       <header className="mb-6 flex items-center justify-between gap-4">
         <BackLink href="/">← Hjem</BackLink>
-        <Kicker tone="accent">{gameName.toUpperCase()}</Kicker>
+        {/* Per design spec § state 3: kicker is the literal "LEADERBOARD"
+            section label (not the game name like state #2 uses). */}
+        <Kicker tone="accent">LEADERBOARD</Kicker>
         <span className="w-12" aria-hidden />
       </header>
 
