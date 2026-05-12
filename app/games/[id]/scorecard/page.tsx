@@ -4,6 +4,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { BackLink } from '@/components/ui/BackLink';
 import { Card } from '@/components/ui/Card';
+import { LinkButton } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 
@@ -119,50 +120,60 @@ export default async function ScorecardPage({ params }: { params: Params }) {
         <Card className="p-0 overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-zinc-500 bg-zinc-50 dark:bg-zinc-800/50">
-                <th className="px-3 py-2 font-medium">Hull</th>
-                <th className="px-3 py-2 font-medium text-right">Par</th>
-                <th className="px-3 py-2 font-medium text-right">SI</th>
-                <th className="px-3 py-2 font-medium text-right">Slag</th>
-                <th className="px-3 py-2 font-medium text-right">+slag</th>
+              <tr className="text-left bg-bg/40">
+                <th className="px-4 py-2.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+                  Hull
+                </th>
+                <th className="px-4 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+                  Par
+                </th>
+                <th className="px-4 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+                  SI
+                </th>
+                <th className="px-4 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+                  Slag
+                </th>
+                <th className="px-4 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+                  +slag
+                </th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
                 <tr
                   key={r.hole_number}
-                  className="border-t border-zinc-200 dark:border-zinc-800"
+                  className="border-t border-border"
                 >
-                  <td className="score-num px-3 py-2 text-zinc-900 dark:text-zinc-100">
+                  <td className="score-num px-4 py-2.5 text-text">
                     {r.hole_number}
                   </td>
-                  <td className="score-num px-3 py-2 text-right text-zinc-700 dark:text-zinc-300">
+                  <td className="score-num px-4 py-2.5 text-right text-muted">
                     {r.par}
                   </td>
-                  <td className="score-num px-3 py-2 text-right text-zinc-700 dark:text-zinc-300">
+                  <td className="score-num px-4 py-2.5 text-right text-muted">
                     {r.stroke_index}
                   </td>
-                  <td className="score-num px-3 py-2 text-right text-zinc-900 dark:text-zinc-100">
+                  <td className="score-num px-4 py-2.5 text-right text-text">
                     {r.strokes ?? '—'}
                   </td>
-                  <td className="score-num px-3 py-2 text-right text-zinc-700 dark:text-zinc-300">
+                  <td className="score-num px-4 py-2.5 text-right text-muted">
                     {r.extra > 0 ? `+${r.extra}` : r.extra < 0 ? r.extra : '0'}
                   </td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
-              <tr className="border-t-2 border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50">
+              <tr className="border-t-2 border-border bg-primary-soft">
                 <td
                   colSpan={5}
-                  className="px-3 py-2.5 text-sm text-zinc-700 dark:text-zinc-300"
+                  className="px-4 py-3 text-sm text-muted"
                 >
                   Spilte hull:{' '}
                   <span className="inline-num">
                     {playedHoles.length}/18
                   </span>
                   {' · '}Brutto totalt:{' '}
-                  <span className="score-num text-zinc-900 dark:text-zinc-100">
+                  <span className="score-num text-text">
                     {totalBrutto}
                   </span>
                 </td>
@@ -172,23 +183,19 @@ export default async function ScorecardPage({ params }: { params: Params }) {
         </Card>
 
         {me.submitted_at ? (
-          <Link href={`/games/${id}`} className="block">
-            <div className="w-full min-h-[44px] bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-medium transition-colors text-center text-base">
-              Tilbake til spillet →
-            </div>
-          </Link>
+          <LinkButton href={`/games/${id}`} full>
+            Tilbake til spillet →
+          </LinkButton>
         ) : (
           <>
-            <Link href={`/games/${id}/holes/${continueHole}`} className="block">
-              <div className="w-full min-h-[44px] bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-medium transition-colors text-center text-base">
-                Tilbake til hull {continueHole} →
-              </div>
-            </Link>
+            <LinkButton href={`/games/${id}/holes/${continueHole}`} full>
+              Tilbake til hull {continueHole} →
+            </LinkButton>
 
             <div className="pt-2">
               <Link
                 href={`/games/${id}`}
-                className="block text-center text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+                className="block text-center text-sm text-muted hover:text-text transition-colors"
               >
                 Til spilloversikt
               </Link>
