@@ -1,9 +1,9 @@
 import { ImageResponse } from 'next/og';
 
-// Main PWA icon (192x192). Serif "T" on deep forest green to match the brand
-// mark used in the UI. Fraunces is fetched from Google Fonts at build time;
-// if the fetch fails (e.g. offline), we fall back to Satori's default which
-// still renders a tighter serif than the previous sans-bold "T".
+// Main PWA icon (192x192). Serif "T" on deep forest green + a champagne dot
+// just past the T, mirroring the brand-mark-icon-only.svg design asset.
+// Fraunces is fetched from Google Fonts at build time; if the fetch fails
+// (e.g. offline), Satori's default serif still renders the lockup.
 
 export const size = { width: 192, height: 192 };
 export const contentType = 'image/png';
@@ -40,18 +40,35 @@ export default async function Icon() {
           width: '100%',
           height: '100%',
           background: '#1B4332',
-          color: '#F8F6F0',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: 132,
-          fontWeight: 500,
-          fontFamily: font ? 'Fraunces' : 'serif',
-          letterSpacing: '-0.02em',
-          paddingBottom: 8, // optical centering for serif T
+          paddingBottom: 8,
         }}
       >
-        T
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <span
+            style={{
+              color: '#F8F6F0',
+              fontSize: 132,
+              fontWeight: 500,
+              fontFamily: font ? 'Fraunces' : 'serif',
+              letterSpacing: '-0.02em',
+              lineHeight: 1,
+            }}
+          >
+            T
+          </span>
+          <span
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: '50%',
+              background: '#C9A961',
+              marginTop: 32,
+            }}
+          />
+        </div>
       </div>
     ),
     {

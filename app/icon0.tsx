@@ -33,18 +33,35 @@ export default async function Icon() {
           width: '100%',
           height: '100%',
           background: '#1B4332',
-          color: '#F8F6F0',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: 360,
-          fontWeight: 500,
-          fontFamily: font ? 'Fraunces' : 'serif',
-          letterSpacing: '-0.02em',
           paddingBottom: 24,
         }}
       >
-        T
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 28 }}>
+          <span
+            style={{
+              color: '#F8F6F0',
+              fontSize: 360,
+              fontWeight: 500,
+              fontFamily: font ? 'Fraunces' : 'serif',
+              letterSpacing: '-0.02em',
+              lineHeight: 1,
+            }}
+          >
+            T
+          </span>
+          <span
+            style={{
+              width: 76,
+              height: 76,
+              borderRadius: '50%',
+              background: '#C9A961',
+              marginTop: 88,
+            }}
+          />
+        </div>
       </div>
     ),
     {

@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og';
 
-// iOS home-screen icon (180x180). Serif "T" on deep forest green.
+// iOS home-screen icon (180x180). Serif "T" + champagne dot on deep forest.
 
 export const size = { width: 180, height: 180 };
 export const contentType = 'image/png';
@@ -32,18 +32,35 @@ export default async function AppleIcon() {
           width: '100%',
           height: '100%',
           background: '#1B4332',
-          color: '#F8F6F0',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: 124,
-          fontWeight: 500,
-          fontFamily: font ? 'Fraunces' : 'serif',
-          letterSpacing: '-0.02em',
           paddingBottom: 8,
         }}
       >
-        T
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9 }}>
+          <span
+            style={{
+              color: '#F8F6F0',
+              fontSize: 124,
+              fontWeight: 500,
+              fontFamily: font ? 'Fraunces' : 'serif',
+              letterSpacing: '-0.02em',
+              lineHeight: 1,
+            }}
+          >
+            T
+          </span>
+          <span
+            style={{
+              width: 26,
+              height: 26,
+              borderRadius: '50%',
+              background: '#C9A961',
+              marginTop: 30,
+            }}
+          />
+        </div>
       </div>
     ),
     {
