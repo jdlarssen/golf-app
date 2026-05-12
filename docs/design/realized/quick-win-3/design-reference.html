@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<title>Tørny — Empty states prototype</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,400;9..144,0,500;9..144,0,600;9..144,1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html{color-scheme:light;}
+  html,body{margin:0;background:linear-gradient(180deg,#efe9d8,#e0d6bc);min-height:100vh;font-family:'Inter',system-ui,sans-serif;color:#1A2E1F;}
+  body{padding:24px 12px 60px;display:flex;flex-direction:column;align-items:center;gap:18px;}
+  .lede{max-width:520px;text-align:center;color:#5C5347;font-size:13px;line-height:1.5;}
+  .switcher{display:inline-flex;gap:4px;padding:4px;background:rgba(255,255,255,0.6);border:1px solid #E5E0D3;border-radius:9999px;}
+  .switcher button{padding:8px 16px;border:none;border-radius:9999px;background:transparent;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;letter-spacing:0.04em;color:#5C5347;cursor:pointer;transition:all 160ms;}
+  .switcher button.active{background:#1B4332;color:#F0EDE5;}
+  .torny-light{
+    --bg:#F8F6F0; --surface:#FFFFFF; --surface-2:#F0EDE5;
+    --text:#1A2E1F; --text-muted:#5C5347;
+    --border:#E5E0D3; --primary:#1B4332; --accent:#C9A961;
+    --success:#4A7C59; --danger:#B8463E; --warning:#D89B3A;
+    color-scheme:light;
+    font-family:'Inter',system-ui,sans-serif;
+  }
+  .f-serif{font-family:'Fraunces',Georgia,serif;}
+  .kicker{font-family:'Inter',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.20em;text-transform:uppercase;color:#C9A961;}
+  /* gentle ambient pulse on champagne dot */
+  @keyframes softPulse{0%,100%{opacity:0.5;transform:scale(1)}50%{opacity:1;transform:scale(1.12)}}
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+</head>
+<body>
+
+<div style="text-align:center;">
+  <div class="f-serif" style="font-size:30px;font-weight:500;letter-spacing:-0.01em;">Empty states</div>
+  <p class="lede" style="margin-top:6px;">Tre stille øyeblikk i appen. Klubbhus-følelse, ingen spinners. Bytt mellom dem under.</p>
+</div>
+
+<div class="switcher" id="switcher"></div>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState } = React;
+
+// ─────────────────────────────────────────────────────────────
+// Decorative motifs
+// ─────────────────────────────────────────────────────────────
+function PinFlag({size=64, color="#1B4332", accent="#C9A961"}){
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <line x1="22" y1="6" x2="22" y2="56" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+      <path d="M22 8 L44 14 L22 22 Z" fill={accent} stroke={accent} strokeWidth="1.5" strokeLinejoin="round"/>
+      <ellipse cx="22" cy="56" rx="6" ry="1.8" fill={color} opacity="0.18"/>
+    </svg>
+  );
+}
+
+function MailEnvelope({size=56, color="#1B4332", accent="#C9A961"}){
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <rect x="8" y="16" width="48" height="34" rx="3" stroke={color} strokeWidth="1.6" fill="#FFFFFF"/>
+      <path d="M8 19 L32 35 L56 19" stroke={color} strokeWidth="1.6" fill="none" strokeLinejoin="round"/>
+      <circle cx="50" cy="14" r="4" fill={accent}/>
+    </svg>
+  );
+}
+
+function HourGlass({size=52, color="#1B4332", accent="#C9A961"}){
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <path d="M18 10 L46 10 L46 18 L34 32 L46 46 L46 54 L18 54 L18 46 L30 32 L18 18 Z" stroke={color} strokeWidth="1.6" fill="#FFFFFF" strokeLinejoin="round"/>
+      <path d="M22 14 L42 14 L33 24 Z" fill={accent} opacity="0.7"/>
+      <circle cx="32" cy="42" r="1.5" fill={color}/>
+    </svg>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Shared phone chrome
+// ─────────────────────────────────────────────────────────────
+function PhoneChrome({title, sub, right, children, footer}){
+  return (
+    <div className="torny-light" style={{position:"absolute",inset:0,background:"#F8F6F0",overflow:"hidden",display:"flex",flexDirection:"column",color:"#1A2E1F",paddingTop:54,paddingBottom:34}}>
+      <div style={{padding:"14px 18px 8px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <button style={{background:"none",border:"none",fontSize:18,color:"#1A2E1F",cursor:"pointer",padding:6,marginLeft:-6}} aria-label="Tilbake">‹</button>
+        <div className="kicker">{title}</div>
+        <div style={{width:34,height:30,display:"flex",alignItems:"center",justifyContent:"center"}}>{right}</div>
+      </div>
+      {sub ? <div style={{padding:"0 24px 8px",textAlign:"center"}}>{sub}</div> : null}
+      <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column"}}>{children}</div>
+      {footer ? <div style={{padding:"10px 16px 18px",borderTop:"1px solid #E5E0D3",background:"#FFFFFF"}}>{footer}</div> : null}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// 1. Turneringer-tom (hjem, første gang)
+// ─────────────────────────────────────────────────────────────
+function TournamentsEmpty(){
+  return (
+    <PhoneChrome title="Tørny">
+      <div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",padding:"20px 32px 40px",textAlign:"center"}}>
+        {/* Etched panel with pinflag */}
+        <div style={{
+          width:128,height:128,
+          borderRadius:"50%",
+          background:"radial-gradient(circle at 50% 38%, #FFFFFF 0%, #F0EDE5 70%, #E5E0D3 100%)",
+          boxShadow:"inset 0 0 0 1px rgba(201,169,97,0.35), 0 2px 12px rgba(26,46,31,0.04)",
+          display:"flex",alignItems:"center",justifyContent:"center",
+          marginBottom:28,
+        }}>
+          <PinFlag size={72}/>
+        </div>
+
+        <div className="kicker" style={{marginBottom:10}}>Klubbhuset er åpent</div>
+        <h1 className="f-serif" style={{margin:0,fontSize:30,fontWeight:500,letterSpacing:"-0.02em",lineHeight:1.15}}>
+          Velkommen, Sindre.
+        </h1>
+        <p style={{margin:"12px 0 0",maxWidth:280,fontSize:14,lineHeight:1.55,color:"#5C5347"}}>
+          Ingen aktive turneringer enda. Bli med via en invitasjon i innboksen, eller sett opp din egen runde.
+        </p>
+
+        <div style={{marginTop:32,display:"flex",flexDirection:"column",gap:10,width:"100%",maxWidth:280}}>
+          <button style={{padding:"14px 18px",border:"none",borderRadius:12,background:"#1B4332",color:"#F8F6F0",fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:14,letterSpacing:"0.005em",cursor:"pointer"}}>
+            Sjekk innboksen for invitasjon
+          </button>
+          <button style={{padding:"14px 18px",border:"1px solid #E5E0D3",borderRadius:12,background:"#FFFFFF",color:"#1A2E1F",fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:14,cursor:"pointer"}}>
+            Opprett en turnering
+          </button>
+        </div>
+
+        <div style={{marginTop:32,fontSize:11.5,color:"#5C5347",fontStyle:"italic",fontFamily:"'Fraunces',serif"}}>
+          «En god runde begynner med god planlegging.»
+        </div>
+      </div>
+    </PhoneChrome>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// 2. Scorekort-tom (invitert, runden ikke startet)
+// ─────────────────────────────────────────────────────────────
+function ScorecardPending(){
+  return (
+    <PhoneChrome title="Lørdagsslaget">
+      <div style={{padding:"24px 24px 28px",display:"flex",flexDirection:"column",alignItems:"center",textAlign:"center"}}>
+        <MailEnvelope size={56}/>
+        <div className="kicker" style={{marginTop:18,color:"#5C5347"}}>Du er påmeldt</div>
+        <h1 className="f-serif" style={{margin:"6px 0 0",fontSize:26,fontWeight:500,letterSpacing:"-0.015em",lineHeight:1.2}}>
+          Scorekortet åpner ved tee-off.
+        </h1>
+      </div>
+
+      {/* Course card */}
+      <div style={{margin:"0 16px",padding:"18px 18px 16px",background:"#FFFFFF",border:"1px solid #E5E0D3",borderRadius:16,boxShadow:"0 1px 2px rgba(26,46,31,0.04), 0 2px 6px rgba(26,46,31,0.03)"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:12}}>
+          <div>
+            <div className="kicker">Bane</div>
+            <div className="f-serif" style={{fontSize:19,fontWeight:500,letterSpacing:"-0.01em",marginTop:2}}>Asker Golfklubb</div>
+            <div style={{fontSize:12,color:"#5C5347",marginTop:2,fontVariantNumeric:"tabular-nums"}}>18 hull · Par 72 · 6 124 m</div>
+          </div>
+          <div style={{textAlign:"right"}}>
+            <div className="kicker">Tee-off</div>
+            <div className="f-serif" style={{fontSize:22,fontWeight:600,letterSpacing:"-0.02em",marginTop:2,fontVariantNumeric:"tabular-nums"}}>14:24</div>
+            <div style={{fontSize:11,color:"#5C5347",marginTop:1}}>lør. 12. mai</div>
+          </div>
+        </div>
+
+        <div style={{height:1,background:"#E5E0D3",margin:"8px -2px 14px"}}></div>
+
+        <div className="kicker" style={{marginBottom:10,color:"#5C5347"}}>Din flight</div>
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {[
+            {name:"Sindre Haugen", hcp:"14.2", me:true},
+            {name:"Erik Bråten", hcp:"8.1"},
+            {name:"Andreas Vik", hcp:"22.3"},
+            {name:"Kristian Lund", hcp:"18.0"},
+          ].map(p=>(
+            <div key={p.name} style={{display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:28,height:28,borderRadius:"50%",background:p.me?"#1B4332":"#F0EDE5",color:p.me?"#F0EDE5":"#1A2E1F",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Fraunces',serif",fontWeight:500,fontSize:12,border:p.me?"none":"1px solid #E5E0D3"}}>{p.name[0]}</div>
+              <div style={{flex:1,fontSize:13.5,fontWeight:p.me?600:500,color:"#1A2E1F"}}>{p.name}{p.me ? <span style={{marginLeft:6,fontSize:9.5,fontWeight:600,letterSpacing:"0.18em",textTransform:"uppercase",color:"#C9A961"}}>deg</span> : null}</div>
+              <div style={{fontSize:12,color:"#5C5347",fontVariantNumeric:"tabular-nums"}}>HCP {p.hcp}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Countdown */}
+      <div style={{margin:"18px 16px 0",padding:"14px 16px",background:"#1B4332",borderRadius:14,color:"#F0EDE5",display:"flex",alignItems:"center",gap:12}}>
+        <span style={{width:8,height:8,borderRadius:"50%",background:"#C9A961",animation:"softPulse 2.4s ease-in-out infinite",flexShrink:0}}></span>
+        <div style={{flex:1,fontSize:13,lineHeight:1.4}}>
+          <div style={{fontFamily:"'Fraunces',serif",fontSize:15,fontWeight:500,letterSpacing:"-0.005em"}}>Starter om 2 t 14 min</div>
+          <div style={{fontSize:11.5,opacity:0.75,marginTop:1}}>Vi gir deg beskjed når kortet åpner.</div>
+        </div>
+      </div>
+
+      <div style={{padding:"18px 24px 8px",textAlign:"center",fontSize:11.5,color:"#5C5347",fontStyle:"italic",fontFamily:"'Fraunces',serif"}}>
+        Vær på 1. tee 10 minutter før start.
+      </div>
+    </PhoneChrome>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// 3. Leaderboard-pre-spill
+// ─────────────────────────────────────────────────────────────
+function LeaderboardPre(){
+  const teams = [
+    {name:"Lag Eik", players:["Sindre","Erik"], tee:"14:24"},
+    {name:"Lag Furu", players:["Andreas","Kristian"], tee:"14:32"},
+    {name:"Lag Bjørk", players:["Marius","Henrik"], tee:"14:40"},
+    {name:"Lag Or", players:["Tom","Lars"], tee:"14:48"},
+  ];
+  return (
+    <PhoneChrome title="Leaderboard">
+      <div style={{padding:"20px 24px 8px",textAlign:"center"}}>
+        <HourGlass size={48}/>
+        <div className="kicker" style={{marginTop:14,color:"#5C5347"}}>Stille før stormen</div>
+        <h1 className="f-serif" style={{margin:"6px 0 0",fontSize:24,fontWeight:500,letterSpacing:"-0.015em",lineHeight:1.2}}>
+          Første score forventet kl 14:30.
+        </h1>
+        <p style={{margin:"10px 0 0",fontSize:13,lineHeight:1.5,color:"#5C5347",maxWidth:280,marginLeft:"auto",marginRight:"auto"}}>
+          Fire lag er på vei ut. Tabellen våkner når første kort kommer inn.
+        </p>
+      </div>
+
+      <div className="kicker" style={{padding:"22px 24px 8px",color:"#5C5347"}}>Startliste</div>
+      <div style={{padding:"0 16px 16px",display:"flex",flexDirection:"column",gap:8}}>
+        {teams.map((t,i)=>(
+          <div key={t.name} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:"#FFFFFF",border:"1px solid #E5E0D3",borderRadius:12,boxShadow:"0 1px 2px rgba(26,46,31,0.03)"}}>
+            <div style={{width:24,textAlign:"center",fontFamily:"'Fraunces',serif",fontWeight:500,fontSize:14,color:"#5C5347",fontVariantNumeric:"tabular-nums"}}>{i+1}</div>
+            <div style={{flex:1}}>
+              <div className="f-serif" style={{fontSize:15,fontWeight:500,letterSpacing:"-0.005em",color:"#1A2E1F"}}>{t.name}</div>
+              <div style={{fontSize:11.5,color:"#5C5347",marginTop:1}}>{t.players.join(" · ")}</div>
+            </div>
+            <div style={{textAlign:"right"}}>
+              <div style={{fontSize:9.5,fontWeight:600,letterSpacing:"0.18em",textTransform:"uppercase",color:"#5C5347"}}>tee</div>
+              <div style={{fontFamily:"'Fraunces',serif",fontSize:15,fontWeight:500,letterSpacing:"-0.01em",fontVariantNumeric:"tabular-nums",color:"#1A2E1F",marginTop:1}}>{t.tee}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{padding:"4px 24px 18px",textAlign:"center",fontSize:11.5,color:"#5C5347",fontStyle:"italic",fontFamily:"'Fraunces',serif"}}>
+        «Lykke til, mine herrer.»
+      </div>
+    </PhoneChrome>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Switcher
+// ─────────────────────────────────────────────────────────────
+const STATES = [
+  {id:"tournaments", label:"Turneringer-tom", Component: TournamentsEmpty},
+  {id:"scorecard", label:"Scorekort venter", Component: ScorecardPending},
+  {id:"leaderboard", label:"Leaderboard pre-spill", Component: LeaderboardPre},
+];
+
+function App(){
+  const [active, setActive] = useState("tournaments");
+  const Current = STATES.find(s=>s.id===active).Component;
+
+  // Render switcher buttons into the outer DOM
+  React.useEffect(()=>{
+    const el = document.getElementById("switcher");
+    el.innerHTML = "";
+    STATES.forEach(s => {
+      const b = document.createElement("button");
+      b.textContent = s.label;
+      if(s.id === active) b.className = "active";
+      b.onclick = () => setActive(s.id);
+      el.appendChild(b);
+    });
+  },[active]);
+
+  return (
+    <IOSDevice>
+      <Current/>
+    </IOSDevice>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

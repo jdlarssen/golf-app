@@ -1,6 +1,6 @@
 # Plan — Hull-skjerm score-input redesign (quick-win-1)
 
-**Spec source:** `docs/design/incoming/quick-win-1/README.md` + `design-reference.html`
+**Spec source:** `docs/design/realized/quick-win-1/README.md` + `design-reference.html`
 **Goal:** Replace today's `app/games/[id]/holes/[holeNumber]/page.tsx` + `HoleScoreInput.tsx` with the redesigned default-to-par interaction. Keep existing Dexie + sync wiring (`writeScore`, `localDb`, `syncWorker`).
 
 ## Constraints
