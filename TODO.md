@@ -163,7 +163,7 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 
 (Logg ting her etter hvert som de oppdages under bruk.)
 
-- (Ingen kjente per d.d.)
+- [ ] **«Lagre utkast» krever fortsatt bane (og tee-boks?) til tross for draft-mode.** Native HTML-validering på `<select required>` blokkerer form-submit før «Lagre utkast»-actionen får kjørt. Fix: gjør `required`-attributtet betinget i `GameForm.tsx` — kun aktivt når brukeren prøver «Publiser», ikke når de prøver «Lagre utkast». Trolig via en `state`-styrt `noValidate`-på-formen + per-knapp valideringsoverstyring, eller flytte all valideringen til server-action (som vi allerede har for draft-mode). Rapportert av Jørgen 2026-05-12 under Phase 5-verifisering.
 
 ---
 
