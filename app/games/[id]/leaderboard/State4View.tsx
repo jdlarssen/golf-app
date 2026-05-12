@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Laurel, PinFlagSm } from '@/components/icons';
+import { Medallion } from '@/components/ui/Medallion';
 import { firstName } from '@/lib/firstName';
 import {
   playerDisplayName,
@@ -320,9 +321,15 @@ function TeamRow({
         className="reveal-up flex items-center gap-3.5 rounded-[14px] border border-border bg-surface px-4 py-3.5 shadow-[0_1px_2px_rgba(26,46,31,0.04),0_2px_6px_rgba(26,46,31,0.03)] active:scale-[0.99]"
         style={{ animationDelay: `${140 + staggerIndex * 80}ms` }}
       >
-        <span className="score-num w-6 shrink-0 text-center text-[20px] text-muted">
-          {line.rank}
-        </span>
+        {line.rank === 2 || line.rank === 3 ? (
+          <span className="shrink-0">
+            <Medallion place={line.rank} size={36} />
+          </span>
+        ) : (
+          <span className="score-num w-6 shrink-0 text-center text-[20px] text-muted">
+            {line.rank}
+          </span>
+        )}
         <div className="min-w-0 flex-1">
           <p className="font-serif text-[17px] font-medium tracking-[-0.005em] text-text">
             Lag {line.teamNumber}
