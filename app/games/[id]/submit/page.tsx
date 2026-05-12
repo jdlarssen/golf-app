@@ -119,7 +119,7 @@ export default async function SubmitPage({
   const submitAction = submitScorecard.bind(null, id);
 
   return (
-    <AppShell>
+    <AppShell showVersion={false}>
       <div className="-mt-3 mb-4">
         <BackLink href={`/games/${id}`}>Tilbake</BackLink>
       </div>
