@@ -475,18 +475,15 @@ function HoleRow({
             <span
               key={pc.userId}
               className={`inline-flex items-center gap-0.5 font-serif text-[13px] tabular-nums ${
-                isBestNet ? 'font-semibold text-text' : 'font-normal'
+                isBestNet ? 'font-semibold text-text' : 'font-normal text-muted'
               }`}
-              style={isBestNet ? undefined : { color: '#9A8F7C' }}
             >
               {grossText}
               {pc.extraStrokes > 0 && (
                 <sup className="text-[8px] font-semibold text-accent">•</sup>
               )}
               {pi < row.players.length - 1 && (
-                <span className="mx-0.5" style={{ color: '#D9D2C0' }}>
-                  /
-                </span>
+                <span className="mx-0.5 text-muted/40">/</span>
               )}
             </span>
           );

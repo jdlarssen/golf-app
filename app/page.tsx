@@ -4,6 +4,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
+import { LinkButton } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { BrandMark } from '@/components/ui/BrandMark';
 import { ChampagneMedallion } from '@/components/ui/ChampagneMedallion';
@@ -150,16 +151,9 @@ export default async function Home({
           </p>
           {profile?.is_admin && (
             <div className="mt-8 w-full max-w-[280px]">
-              {/* Dark mode: `bg-primary` resolves to lighter sage (#6b9f6f);
-                  white text on sage is ~2.84:1 (below WCAG AA for 14px text).
-                  Swap to dark `text-bg` (#0f1612) for ~6.5:1 — same lift the
-                  CTA gets visually in dark mode, but readable. */}
-              <Link
-                href="/admin/games/new"
-                className="min-h-[44px] inline-flex items-center justify-center rounded-xl bg-primary text-white dark:text-bg font-sans text-sm font-semibold px-[18px] py-[14px] w-full"
-              >
+              <LinkButton href="/admin/games/new" full>
                 Opprett en turnering
-              </Link>
+              </LinkButton>
             </div>
           )}
           <PullQuote className="mt-8">
