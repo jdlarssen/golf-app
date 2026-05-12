@@ -30,13 +30,10 @@ const kickerStyle: CSSProperties = {
 };
 
 const numberStyle: CSSProperties = {
-  fontFamily: 'var(--font-serif)',
   fontSize: 44,
-  fontWeight: 600,
   letterSpacing: '-0.03em',
   lineHeight: 1,
   color: 'var(--text)',
-  fontVariantNumeric: 'tabular-nums',
 };
 
 const rightStyle: CSSProperties = {
@@ -66,7 +63,7 @@ export function HoleHero(props: HoleHeroProps): JSX.Element {
     <div style={containerStyle}>
       <div style={leftStyle}>
         <div style={kickerStyle}>HULL</div>
-        <div style={numberStyle}>{holeNumber}</div>
+        <div className="score-num" style={numberStyle}>{holeNumber}</div>
       </div>
       <div style={rightStyle}>
         <div style={parStyle}>Par {par}</div>
