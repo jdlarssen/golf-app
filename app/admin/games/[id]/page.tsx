@@ -652,9 +652,26 @@ async function PlayersSections({
       {/* Status-specific CTA cards ─────────────────────────────────────── */}
 
       {game.status === 'draft' && (
-        <div className="mt-4">
-          <StartGameButton startAction={startAction} gameName={game.name} />
-        </div>
+        <>
+          <SectionCard ribbon="Fortsett å planlegge">
+            <div className="px-3.5 pb-3.5 pt-3">
+              <p className="mb-3 text-sm text-muted">
+                Spillet er fortsatt et utkast — bare du ser det. Fyll inn
+                det som mangler og publiser når dere er klare.
+              </p>
+              <SmartLink
+                href={`/admin/games/${gameId}/edit`}
+                className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover"
+              >
+                Rediger utkast
+              </SmartLink>
+            </div>
+          </SectionCard>
+
+          <div className="mt-4">
+            <StartGameButton startAction={startAction} gameName={game.name} />
+          </div>
+        </>
       )}
 
       {game.status === 'scheduled' && (
