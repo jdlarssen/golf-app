@@ -82,12 +82,10 @@ export default async function ScorecardPage({ params }: { params: Params }) {
 
   return (
     <AppShell>
-      <PageHeader
-        title="Mitt scorekort"
-        action={
-          <BackLink href={`/games/${id}`}>← {game.name}</BackLink>
-        }
-      />
+      <div className="-mt-3 mb-4">
+        <BackLink href={`/games/${id}`}>{`Tilbake til ${game.name}`}</BackLink>
+      </div>
+      <PageHeader title="Mitt scorekort" />
 
       <div className="space-y-4">
         <Suspense fallback={<ScorecardTableSkeleton />}>

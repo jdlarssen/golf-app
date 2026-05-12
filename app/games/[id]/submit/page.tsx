@@ -120,12 +120,10 @@ export default async function SubmitPage({
 
   return (
     <AppShell>
-      <PageHeader
-        title="Gjennomgå før levering"
-        action={
-          <BackLink href={`/games/${id}`}>← Tilbake</BackLink>
-        }
-      />
+      <div className="-mt-3 mb-4">
+        <BackLink href={`/games/${id}`}>Tilbake</BackLink>
+      </div>
+      <PageHeader title="Gjennomgå før levering" />
 
       {errorMessage && (
         <div className="mb-4">

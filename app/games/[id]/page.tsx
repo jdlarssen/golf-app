@@ -327,12 +327,10 @@ export default async function GameHomePage({
 
   return (
     <AppShell>
-      <PageHeader
-        title={game.name}
-        action={
-          <BackLink href="/">← Hjem</BackLink>
-        }
-      />
+      <div className="-mt-3 mb-4">
+        <BackLink href="/">Tilbake til hjem</BackLink>
+      </div>
+      <PageHeader title={game.name} />
 
       <div className="mb-4">
         <StatusChip

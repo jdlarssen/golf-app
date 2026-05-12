@@ -117,12 +117,10 @@ export default async function ApprovePage({
 
   return (
     <AppShell>
-      <PageHeader
-        title="Godkjenn scorekort"
-        action={
-          <BackLink href={`/games/${id}`}>← {game.name}</BackLink>
-        }
-      />
+      <div className="-mt-3 mb-4">
+        <BackLink href={`/games/${id}`}>{`Tilbake til ${game.name}`}</BackLink>
+      </div>
+      <PageHeader title="Godkjenn scorekort" />
 
       {statusBanner && (
         <div className="mb-4">
