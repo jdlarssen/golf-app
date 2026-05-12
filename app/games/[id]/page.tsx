@@ -5,6 +5,7 @@ import { AppShell } from '@/components/ui/AppShell';
 import { BackLink } from '@/components/ui/BackLink';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
+import { LinkButton } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Kicker } from '@/components/ui/Kicker';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
@@ -494,12 +495,9 @@ export default async function GameHomePage({
         {isActive ? (
           <PrimaryCta gameId={id} state={state} strokesCount={strokesCount} />
         ) : game.status === 'finished' ? (
-          <Link
-            href={`/games/${id}/leaderboard`}
-            className={LINK_BTN_PRIMARY}
-          >
+          <LinkButton href={`/games/${id}/leaderboard`} full>
             🏆 Se leaderboard →
-          </Link>
+          </LinkButton>
         ) : (
           <div className="rounded-2xl border border-border px-4 py-3 text-sm text-muted text-center">
             Spillet er ikke startet ennå.
@@ -543,12 +541,6 @@ export default async function GameHomePage({
   );
 }
 
-// Primary CTA styled as a Link rather than a <button>. Mirrors the
-// .tk-btn--primary token from the UI kit: forest fill, pill shape, 44px
-// min tap target. Used wherever the CTA navigates rather than submitting.
-const LINK_BTN_PRIMARY =
-  'flex items-center justify-center w-full min-h-[44px] bg-primary hover:bg-primary-hover text-white dark:text-bg px-[18px] py-3 rounded-full font-medium tracking-tight text-center text-base shadow-sm transition-[background-color,transform] hover:-translate-y-px';
-
 function PrimaryCta({
   gameId,
   state,
@@ -565,18 +557,18 @@ function PrimaryCta({
 
   if (state === 'not_started') {
     return (
-      <Link href={`/games/${gameId}/holes/1`} className={LINK_BTN_PRIMARY}>
+      <LinkButton href={`/games/${gameId}/holes/1`} full>
         Start runden →
-      </Link>
+      </LinkButton>
     );
   }
 
   if (state === 'in_progress') {
     return (
       <div className="space-y-1.5">
-        <Link href={`/games/${gameId}/holes/1`} className={LINK_BTN_PRIMARY}>
+        <LinkButton href={`/games/${gameId}/holes/1`} full>
           Fortsett runden →
-        </Link>
+        </LinkButton>
         {subtext && (
           <p className="text-center text-xs text-muted tabular-nums">
             {subtext}
@@ -589,9 +581,9 @@ function PrimaryCta({
   if (state === 'ready_to_submit') {
     return (
       <div className="space-y-1.5">
-        <Link href={`/games/${gameId}/submit`} className={LINK_BTN_PRIMARY}>
+        <LinkButton href={`/games/${gameId}/submit`} full>
           Gjennomgå og lever →
-        </Link>
+        </LinkButton>
         {subtext && (
           <p className="text-center text-xs text-muted tabular-nums">
             {subtext}
