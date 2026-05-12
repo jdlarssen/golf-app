@@ -6,7 +6,12 @@ import { BackLink } from '@/components/ui/BackLink';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { Kicker } from '@/components/ui/Kicker';
+import { MailEnvelope } from '@/components/icons/MailEnvelope';
+import { firstName } from '@/lib/firstName';
+import { formatTeeOffTime, formatTeeOffDate } from '@/lib/format/teeOff';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
+import { ScheduledWaitingRoom } from './ScheduledWaitingRoom';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -51,11 +56,41 @@ type GameRow = {
   scheduled_tee_off_at: string | null;
   require_peer_approval: boolean;
   courses: { name: string } | null;
-  tee_boxes: { name: string; slope: number; course_rating: number; par_total: number } | null;
+  tee_boxes: {
+    name: string;
+    slope: number;
+    course_rating: number;
+    par_total: number;
+    length_meters: number | null;
+  } | null;
 };
 
 const GAME_SELECT =
-  'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, require_peer_approval, courses(name), tee_boxes(name, slope, course_rating, par_total)';
+  'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, require_peer_approval, courses(name), tee_boxes(name, slope, course_rating, par_total, length_meters)';
+
+type FlightRosterRow = {
+  user_id: string;
+  flight_number: number;
+  course_handicap: number | null;
+  users: {
+    name: string;
+    nickname: string | null;
+    hcp_index: number | string | null;
+  } | null;
+};
+
+/** Norwegian thousands-separator (non-breaking space). 6124 → "6 124". */
+function formatLengthMeters(n: number): string {
+  return n.toLocaleString('nb-NO');
+}
+
+/** First letter of the first whitespace-separated token. Defensive on empty. */
+function firstInitial(name: string): string {
+  const trimmed = name.trim();
+  if (trimmed === '') return '?';
+  const first = trimmed.split(/\s+/)[0];
+  return first.charAt(0).toUpperCase();
+}
 
 type MyPlayerRow = {
   user_id: string;
@@ -201,6 +236,140 @@ export default async function GameHomePage({
       (m) =>
         m.user_id !== user.id && m.submitted_at != null && m.approved_at == null,
     ).length;
+  }
+
+  // State #2 — Scorekort venter. Renders the venterom layout (mail envelope
+  // hero, course card with tee-off, flight roster, pulsing countdown banner)
+  // when the game is still scheduled and the E1 auto-start fallback above
+  // hasn't flipped it to active yet. A client-side realtime subscription
+  // refreshes the route as soon as admin presses "Start runden nå" (D5) or
+  // status flips for any other reason.
+  if (game.status === 'scheduled') {
+    const teeBox = game.tee_boxes;
+    const teeOffDate = game.scheduled_tee_off_at
+      ? new Date(game.scheduled_tee_off_at)
+      : null;
+
+    const { data: flightRows } = await supabase
+      .from('game_players')
+      .select(
+        'user_id, flight_number, course_handicap, users!game_players_user_id_fkey(name, nickname, hcp_index)',
+      )
+      .eq('game_id', id)
+      .eq('flight_number', me.flight_number)
+      .order('user_id')
+      .returns<FlightRosterRow[]>();
+
+    const flight = (flightRows ?? []).map((row) => ({
+      userId: row.user_id,
+      isCurrentUser: row.user_id === user.id,
+      name: row.users?.name ?? '(ukjent)',
+      hcpIndex:
+        row.users?.hcp_index == null ? null : Number(row.users.hcp_index),
+    }));
+
+    return (
+      <AppShell>
+        <header className="mb-6 flex items-center justify-between gap-4">
+          <BackLink href="/">← Hjem</BackLink>
+          <Kicker tone="accent">{game.name.toUpperCase()}</Kicker>
+          <span className="w-12" aria-hidden />
+        </header>
+
+        {/* Hero */}
+        <section className="flex flex-col items-center text-center px-6 pt-6 pb-7">
+          <MailEnvelope size={56} className="text-primary" />
+          <Kicker tone="muted" className="mt-4">
+            DU ER PÅMELDT
+          </Kicker>
+          <h1 className="mt-1.5 font-serif text-[26px] font-medium tracking-[-0.015em] leading-tight text-text">
+            Scorekortet åpner ved tee-off.
+          </h1>
+        </section>
+
+        {/* Course card */}
+        <Card className="mx-4 p-[18px]">
+          <div className="flex justify-between items-baseline gap-4">
+            <div className="min-w-0">
+              <Kicker tone="muted">BANE</Kicker>
+              <p className="mt-1 font-serif text-[19px] font-medium tracking-[-0.01em] text-text truncate">
+                {game.courses?.name ?? '(ukjent bane)'}
+              </p>
+              {teeBox && (
+                <p className="mt-1 text-xs text-muted">
+                  18 hull · Par {teeBox.par_total}
+                  {teeBox.length_meters
+                    ? ` · ${formatLengthMeters(teeBox.length_meters)} m`
+                    : ''}
+                </p>
+              )}
+            </div>
+            <div className="text-right shrink-0">
+              <Kicker tone="muted">TEE-OFF</Kicker>
+              {teeOffDate ? (
+                <>
+                  <p className="mt-1 font-serif text-[22px] font-semibold tracking-[-0.02em] text-text tabular-nums">
+                    {formatTeeOffTime(teeOffDate)}
+                  </p>
+                  <p className="mt-1 text-[11px] text-muted">
+                    {formatTeeOffDate(teeOffDate)}
+                  </p>
+                </>
+              ) : (
+                <p className="mt-1 text-[11px] text-muted">Ikke satt</p>
+              )}
+            </div>
+          </div>
+
+          <div className="h-px bg-border my-3.5" />
+
+          <Kicker tone="muted">DIN FLIGHT</Kicker>
+          <ul className="mt-2 flex flex-col gap-2">
+            {flight.map((p) => (
+              <li key={p.userId} className="flex items-center gap-3">
+                <span
+                  className={`shrink-0 w-7 h-7 rounded-full grid place-items-center font-serif text-[12px] font-medium ${
+                    p.isCurrentUser
+                      ? 'bg-primary text-white dark:text-bg'
+                      : 'bg-bg text-text border border-border'
+                  }`}
+                >
+                  {firstInitial(p.name)}
+                </span>
+                <span
+                  className={`flex-1 truncate text-[13.5px] ${p.isCurrentUser ? 'font-semibold' : ''}`}
+                >
+                  {firstName(p.name) ?? p.name}
+                  {p.isCurrentUser && (
+                    <span className="font-sans text-[9.5px] font-semibold uppercase tracking-[0.18em] text-accent ml-2">
+                      DEG
+                    </span>
+                  )}
+                </span>
+                <span className="shrink-0 text-xs text-muted tabular-nums">
+                  HCP {p.hcpIndex != null ? p.hcpIndex.toFixed(1) : '—'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+
+        {/* Countdown banner */}
+        {teeOffDate && (
+          <div className="mx-4 mt-4">
+            <ScheduledWaitingRoom
+              gameId={id}
+              teeOffAt={game.scheduled_tee_off_at!}
+            />
+          </div>
+        )}
+
+        {/* Footer caption */}
+        <p className="mt-2 px-6 pt-4 pb-2 text-center font-serif italic text-[11.5px] text-muted">
+          Vær på 1. tee 10 minutter før start.
+        </p>
+      </AppShell>
+    );
   }
 
   const state = computeState({

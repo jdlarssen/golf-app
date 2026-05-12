@@ -190,6 +190,24 @@ body {
       inset 0 0 0 1px rgba(201, 169, 97, 0.35),
       0 2px 12px rgba(26, 46, 31, 0.04);
   }
+
+  /* Soft pulse — champagne dot on the Scorekort-venter countdown banner.
+   * Slow, low-amplitude breathing animation so it reads as "ticking" without
+   * being distracting. */
+  @keyframes soft-pulse {
+    0%, 100% { opacity: 0.5; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.12); }
+  }
+  .animate-soft-pulse {
+    animation: soft-pulse 2.4s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-soft-pulse {
+      animation: none;
+      opacity: 1;
+    }
+  }
 }
 
 @media (prefers-color-scheme: dark) {
