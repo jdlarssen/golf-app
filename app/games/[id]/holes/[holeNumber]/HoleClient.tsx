@@ -13,14 +13,12 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { localDb, scoreKey, type LocalScore } from '@/lib/sync/db';
 import { writeScore } from '@/lib/sync/writeScore';
 import { startSyncListener, drainQueue } from '@/lib/sync/syncWorker';
-import { useInputMode } from '@/lib/hooks/useInputMode';
 import { ScoreCard } from '@/components/hole/ScoreCard';
 import { HoleStrip } from '@/components/hole/HoleStrip';
 import { HoleHero } from '@/components/hole/HoleHero';
 import { OnboardingBanner } from '@/components/hole/OnboardingBanner';
 import { SyncStatusLine } from '@/components/hole/SyncStatusLine';
 import { BottomActionBar } from '@/components/hole/BottomActionBar';
-import { SettingsSheet } from '@/components/hole/SettingsSheet';
 import { SpecificValueSheet } from '@/components/hole/SpecificValueSheet';
 
 export type ClientPlayer = {
@@ -181,9 +179,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     return { ...p, score, confirmed };
   });
 
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [valueSheetFor, setValueSheetFor] = useState<string | null>(null);
-  const [mode, setMode] = useInputMode();
 
   // Onboarding banner: visible only on hole 1, and only if not dismissed.
   // We track "dismissed" rather than "show" so we never assign state inside an
@@ -299,14 +295,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
           ‹
         </SmartLink>
         <div style={titleStyle}>{gameName}</div>
-        <button
-          type="button"
-          onClick={() => setSettingsOpen(true)}
-          aria-label="Innstillinger"
-          style={settingsBtnStyle}
-        >
-          ⋯
-        </button>
+        <span style={settingsBtnStyle} aria-hidden />
       </div>
 
       <HoleStrip gameId={gameId} currentHole={currentHole} />
@@ -329,7 +318,6 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
             score={c.score}
             par={par}
             confirmed={c.confirmed}
-            mode={mode}
             disabled={disabled}
             onSetScore={onSetScore}
             onLongPress={onLongPress}
@@ -344,12 +332,6 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
         disabled={bottomDisabled}
       />
 
-      <SettingsSheet
-        open={settingsOpen}
-        mode={mode}
-        onPick={setMode}
-        onClose={() => setSettingsOpen(false)}
-      />
       <SpecificValueSheet
         open={valueSheetFor !== null}
         par={par}

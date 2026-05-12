@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, type CSSProperties, type PointerEvent, type JSX } from 'react';
+import type { CSSProperties, JSX } from 'react';
 import {
   scoreTone,
   deltaLabel,
@@ -15,7 +15,6 @@ export interface ScoreCardProps {
   score: number | null;
   par: number;
   confirmed: boolean;
-  mode: 'swipe' | 'buttons';
   disabled?: boolean;
   onSetScore: (playerId: string, next: number) => void;
   onLongPress: (playerId: string) => void;
@@ -25,13 +24,6 @@ const MIN_STROKES = 1;
 // Net double bogey for a 54 HCP on slope 155 lands at ~12 gross on par 5;
 // 15 leaves room for honest blow-up entries while still rejecting typos.
 const MAX_STROKES = 15;
-const LONG_PRESS_MS = 500;
-const MOVE_THRESHOLD = 4;
-const SWIPE_THRESHOLD = 16;
-const TAP_THRESHOLD = 8;
-const DRAG_CLAMP = 40;
-const TRANSLATE_MAX = 10;
-const TRANSLATE_RATIO = 0.25;
 
 function clamp(n: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, n));
@@ -69,16 +61,10 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     score,
     par,
     confirmed,
-    mode,
     disabled = false,
     onSetScore,
     onLongPress,
   } = props;
-
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const startY = useRef<number | null>(null);
-  const moved = useRef<boolean>(false);
-  const dragRef = useRef<HTMLDivElement | null>(null);
 
   const tone: ScoreTone = scoreTone(score, par);
   const pill = PILL_COLORS[tone];
@@ -86,107 +72,8 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
   const isGhost = score == null;
   const displayedNumber = isGhost ? par : score;
 
-  function clearLongPress() {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-  }
-
-  function applyTranslate(dy: number) {
-    if (!dragRef.current) return;
-    const clamped = clamp(dy, -DRAG_CLAMP, DRAG_CLAMP);
-    const translated = clamp(
-      clamped * TRANSLATE_RATIO,
-      -TRANSLATE_MAX,
-      TRANSLATE_MAX,
-    );
-    dragRef.current.style.transform = `translateY(${translated}px)`;
-    const arrow = dragRef.current.querySelector(
-      '[data-swipe-arrow]',
-    ) as HTMLElement | null;
-    if (arrow) {
-      if (dy < -TAP_THRESHOLD) {
-        arrow.textContent = '↑';
-        arrow.style.opacity = String(Math.min(1, Math.abs(dy) / 30));
-      } else if (dy > TAP_THRESHOLD) {
-        arrow.textContent = '↓';
-        arrow.style.opacity = String(Math.min(1, Math.abs(dy) / 30));
-      } else {
-        arrow.style.opacity = '0';
-      }
-    }
-  }
-
-  function resetTranslate() {
-    if (!dragRef.current) return;
-    dragRef.current.style.transform = '';
-    const arrow = dragRef.current.querySelector(
-      '[data-swipe-arrow]',
-    ) as HTMLElement | null;
-    if (arrow) arrow.style.opacity = '0';
-  }
-
-  function onPointerDown(e: PointerEvent<HTMLDivElement>) {
-    if (disabled || mode !== 'swipe') return;
-    const target = e.target as HTMLElement;
-    if (target.closest('[data-stepper]')) return;
-    try {
-      (e.currentTarget as Element & {
-        setPointerCapture: (id: number) => void;
-      }).setPointerCapture(e.pointerId);
-    } catch {
-      // jsdom or older browsers may not support it; safe to ignore.
-    }
-    startY.current = e.clientY;
-    moved.current = false;
-    clearLongPress();
-    longPressTimer.current = setTimeout(() => {
-      if (!moved.current) {
-        onLongPress(playerId);
-      }
-    }, LONG_PRESS_MS);
-  }
-
-  function onPointerMove(e: PointerEvent<HTMLDivElement>) {
-    if (disabled || mode !== 'swipe') return;
-    if (startY.current == null) return;
-    const dy = e.clientY - startY.current;
-    if (Math.abs(dy) > MOVE_THRESHOLD) {
-      moved.current = true;
-      clearLongPress();
-    }
-    applyTranslate(dy);
-  }
-
-  function onPointerUp(e: PointerEvent<HTMLDivElement>) {
-    if (disabled || mode !== 'swipe') return;
-    if (startY.current == null) {
-      clearLongPress();
-      resetTranslate();
-      return;
-    }
-    clearLongPress();
-    const dy = e.clientY - startY.current;
-    startY.current = null;
-    resetTranslate();
-
-    if (Math.abs(dy) < TAP_THRESHOLD && !moved.current) {
-      onSetScore(playerId, clamp(par, MIN_STROKES, MAX_STROKES));
-      return;
-    }
-    if (dy <= -SWIPE_THRESHOLD) {
-      onSetScore(playerId, clamp((score ?? par) + 1, MIN_STROKES, MAX_STROKES));
-      return;
-    }
-    if (dy >= SWIPE_THRESHOLD) {
-      onSetScore(playerId, clamp((score ?? par) - 1, MIN_STROKES, MAX_STROKES));
-      return;
-    }
-  }
-
   function onCardClick() {
-    if (disabled || mode !== 'buttons') return;
+    if (disabled) return;
     onSetScore(playerId, clamp(par, MIN_STROKES, MAX_STROKES));
   }
 
@@ -209,8 +96,6 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
   }
 
   const borderColor = confirmed ? 'rgba(201,169,97,0.5)' : '#E5E0D3';
-  const padding = mode === 'swipe' ? '14px 16px' : '12px 12px 12px 16px';
-  const gap = mode === 'swipe' ? '14px' : '10px';
 
   const cardStyle: CSSProperties = {
     background: '#FFFFFF',
@@ -218,20 +103,15 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     borderRadius: 16,
     boxShadow:
       '0 1px 2px rgba(26,46,31,0.04), 0 2px 6px rgba(26,46,31,0.03)',
-    padding,
+    padding: '12px 12px 12px 16px',
     display: 'flex',
     alignItems: 'center',
-    gap,
+    gap: '10px',
     transition: 'border-color 160ms',
     userSelect: 'none',
     WebkitUserSelect: 'none',
     WebkitTouchCallout: 'none',
-    touchAction: mode === 'swipe' ? 'none' : 'auto',
-    cursor: disabled
-      ? 'not-allowed'
-      : mode === 'swipe'
-        ? 'grab'
-        : 'pointer',
+    cursor: disabled ? 'not-allowed' : 'pointer',
     opacity: disabled ? 0.6 : 1,
   };
 
@@ -302,10 +182,7 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
   if (confirmed) {
     helperText = 'Bekreftet';
   } else if (score == null) {
-    helperText =
-      mode === 'swipe'
-        ? 'Tap = par. Sveip for +/−.'
-        : 'Tap kort = par. Bruk − / +.';
+    helperText = 'Tap kort = par. Bruk − / +.';
   } else {
     helperText = 'Justert · tap igjen for å bekrefte';
   }
@@ -339,16 +216,11 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
 
   return (
     <div
-      ref={dragRef}
       role="button"
       aria-label={`Sett score for ${name}`}
       aria-disabled={disabled || undefined}
       style={cardStyle}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
-      onClick={mode === 'buttons' ? onCardClick : undefined}
+      onClick={onCardClick}
     >
       <div style={avatarStyle}>{initial && initial.length > 0 ? initial : '?'}</div>
 
@@ -367,26 +239,8 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
           display: 'flex',
           alignItems: 'center',
           gap: 8,
-          position: 'relative',
         }}
       >
-        {mode === 'swipe' && (
-          <span
-            data-swipe-arrow
-            aria-hidden="true"
-            style={{
-              position: 'absolute',
-              left: -16,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: 'var(--accent)',
-              fontSize: 14,
-              opacity: 0,
-              transition: 'opacity 80ms',
-              pointerEvents: 'none',
-            }}
-          />
-        )}
         <span
           data-testid="score-number"
           className="score-num"
@@ -399,45 +253,43 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
         </span>
       </div>
 
-      {mode === 'buttons' && (
-        <div
-          data-stepper
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 6,
-            marginLeft: 4,
-          }}
+      <div
+        data-stepper
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6,
+          marginLeft: 4,
+        }}
+      >
+        <button
+          type="button"
+          aria-label="+1"
+          onClick={onStepperPlus}
+          disabled={disabled}
+          style={{ ...stepperBtnStyle, fontSize: 16 }}
         >
-          <button
-            type="button"
-            aria-label="+1"
-            onClick={onStepperPlus}
-            disabled={disabled}
-            style={{ ...stepperBtnStyle, fontSize: 16 }}
-          >
-            +
-          </button>
-          <button
-            type="button"
-            aria-label="-1"
-            onClick={onStepperMinus}
-            disabled={disabled}
-            style={{ ...stepperBtnStyle, fontSize: 18 }}
-          >
-            −
-          </button>
-          <button
-            type="button"
-            aria-label="Velg spesifikk score"
-            onClick={onStepperMore}
-            disabled={disabled}
-            style={moreBtnStyle}
-          >
-            ⋯
-          </button>
-        </div>
-      )}
+          +
+        </button>
+        <button
+          type="button"
+          aria-label="-1"
+          onClick={onStepperMinus}
+          disabled={disabled}
+          style={{ ...stepperBtnStyle, fontSize: 18 }}
+        >
+          −
+        </button>
+        <button
+          type="button"
+          aria-label="Velg spesifikk score"
+          onClick={onStepperMore}
+          disabled={disabled}
+          style={moreBtnStyle}
+        >
+          ⋯
+        </button>
+      </div>
     </div>
   );
 }

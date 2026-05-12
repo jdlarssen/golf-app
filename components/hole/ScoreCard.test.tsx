@@ -1,13 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ScoreCard, type ScoreCardProps } from './ScoreCard';
-
-// jsdom doesn't implement setPointerCapture; stub it so pointer flows don't throw.
-beforeEach(() => {
-  Element.prototype.setPointerCapture = vi.fn();
-  Element.prototype.releasePointerCapture = vi.fn();
-  Element.prototype.hasPointerCapture = vi.fn(() => false);
-});
 
 const baseProps: ScoreCardProps = {
   playerId: 'p1',
@@ -17,7 +10,6 @@ const baseProps: ScoreCardProps = {
   score: null,
   par: 4,
   confirmed: false,
-  mode: 'swipe',
   onSetScore: vi.fn(),
   onLongPress: vi.fn(),
 };
@@ -72,13 +64,8 @@ describe('ScoreCard — rendering', () => {
 });
 
 describe('ScoreCard — helper text', () => {
-  it('unset + swipe mode shows swipe helper', () => {
-    setup({ score: null, mode: 'swipe', confirmed: false });
-    expect(screen.getByText('Tap = par. Sveip for +/−.')).toBeInTheDocument();
-  });
-
-  it('unset + buttons mode shows buttons helper', () => {
-    setup({ score: null, mode: 'buttons', confirmed: false });
+  it('unset shows buttons helper', () => {
+    setup({ score: null, confirmed: false });
     expect(screen.getByText('Tap kort = par. Bruk − / +.')).toBeInTheDocument();
   });
 
@@ -120,116 +107,59 @@ describe('ScoreCard — delta pill', () => {
   });
 });
 
-describe('ScoreCard — swipe interaction', () => {
-  it('tap (down then up, no movement) calls onSetScore with par', () => {
-    const { card, onSetScore } = setup({ score: null, par: 4, mode: 'swipe' });
-    fireEvent.pointerDown(card, { clientY: 100, pointerId: 1 });
-    fireEvent.pointerUp(card, { clientY: 100, pointerId: 1 });
-    expect(onSetScore).toHaveBeenCalledWith('p1', 4);
-  });
-
-  it('swipe up (dy=-20) calls onSetScore with par+1', () => {
-    const { card, onSetScore } = setup({ score: null, par: 4, mode: 'swipe' });
-    fireEvent.pointerDown(card, { clientY: 100, pointerId: 1 });
-    fireEvent.pointerMove(card, { clientY: 80, pointerId: 1 });
-    fireEvent.pointerUp(card, { clientY: 80, pointerId: 1 });
-    expect(onSetScore).toHaveBeenCalledWith('p1', 5);
-  });
-
-  it('swipe down (dy=+20) calls onSetScore with par-1', () => {
-    const { card, onSetScore } = setup({ score: null, par: 4, mode: 'swipe' });
-    fireEvent.pointerDown(card, { clientY: 100, pointerId: 1 });
-    fireEvent.pointerMove(card, { clientY: 120, pointerId: 1 });
-    fireEvent.pointerUp(card, { clientY: 120, pointerId: 1 });
-    expect(onSetScore).toHaveBeenCalledWith('p1', 3);
-  });
-
-  it('swipe up clamps at 15 when score is already 15', () => {
-    const { card, onSetScore } = setup({ score: 15, par: 4, mode: 'swipe' });
-    fireEvent.pointerDown(card, { clientY: 100, pointerId: 1 });
-    fireEvent.pointerMove(card, { clientY: 70, pointerId: 1 });
-    fireEvent.pointerUp(card, { clientY: 70, pointerId: 1 });
-    expect(onSetScore).toHaveBeenCalledWith('p1', 15);
-  });
-
-  it('swipe down clamps at 1 when score is already 1', () => {
-    const { card, onSetScore } = setup({ score: 1, par: 4, mode: 'swipe' });
-    fireEvent.pointerDown(card, { clientY: 100, pointerId: 1 });
-    fireEvent.pointerMove(card, { clientY: 130, pointerId: 1 });
-    fireEvent.pointerUp(card, { clientY: 130, pointerId: 1 });
-    expect(onSetScore).toHaveBeenCalledWith('p1', 1);
-  });
-
-  it('movement in dead zone (|dy| between 8 and 16) does not fire', () => {
-    const { card, onSetScore } = setup({ score: null, par: 4, mode: 'swipe' });
-    fireEvent.pointerDown(card, { clientY: 100, pointerId: 1 });
-    fireEvent.pointerMove(card, { clientY: 112, pointerId: 1 });
-    fireEvent.pointerUp(card, { clientY: 112, pointerId: 1 });
-    expect(onSetScore).not.toHaveBeenCalled();
-  });
-});
-
-describe('ScoreCard — long-press', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it('fires onLongPress after 500ms with no movement', () => {
-    const { card, onLongPress } = setup({ mode: 'swipe' });
-    fireEvent.pointerDown(card, { clientY: 100, pointerId: 1 });
-    vi.advanceTimersByTime(500);
-    expect(onLongPress).toHaveBeenCalledWith('p1');
-  });
-
-  it('cancels long-press on movement > 4px', () => {
-    const { card, onLongPress } = setup({ mode: 'swipe' });
-    fireEvent.pointerDown(card, { clientY: 100, pointerId: 1 });
-    fireEvent.pointerMove(card, { clientY: 110, pointerId: 1 });
-    vi.advanceTimersByTime(500);
-    expect(onLongPress).not.toHaveBeenCalled();
-  });
-});
-
-describe('ScoreCard — buttons mode', () => {
+describe('ScoreCard — interaction', () => {
   it('tap on card body calls onSetScore with par', () => {
-    const { card, onSetScore } = setup({
-      score: null,
-      par: 4,
-      mode: 'buttons',
-    });
+    const { card, onSetScore } = setup({ score: null, par: 4 });
     fireEvent.click(card);
     expect(onSetScore).toHaveBeenCalledWith('p1', 4);
   });
 
   it('+ button on unset score calls onSetScore with par+1', () => {
-    const { onSetScore } = setup({ score: null, par: 4, mode: 'buttons' });
+    const { onSetScore } = setup({ score: null, par: 4 });
     fireEvent.click(screen.getByLabelText('+1'));
     expect(onSetScore).toHaveBeenCalledWith('p1', 5);
   });
 
   it('− button on unset score calls onSetScore with par-1', () => {
-    const { onSetScore } = setup({ score: null, par: 4, mode: 'buttons' });
+    const { onSetScore } = setup({ score: null, par: 4 });
     fireEvent.click(screen.getByLabelText('-1'));
     expect(onSetScore).toHaveBeenCalledWith('p1', 3);
   });
 
   it('+ button from existing score calls onSetScore with score+1', () => {
-    const { onSetScore } = setup({ score: 5, par: 4, mode: 'buttons' });
+    const { onSetScore } = setup({ score: 5, par: 4 });
     fireEvent.click(screen.getByLabelText('+1'));
     expect(onSetScore).toHaveBeenCalledWith('p1', 6);
   });
 
+  it('+ button clamps at 15', () => {
+    const { onSetScore } = setup({ score: 15, par: 4 });
+    fireEvent.click(screen.getByLabelText('+1'));
+    expect(onSetScore).toHaveBeenCalledWith('p1', 15);
+  });
+
+  it('− button clamps at 1', () => {
+    const { onSetScore } = setup({ score: 1, par: 4 });
+    fireEvent.click(screen.getByLabelText('-1'));
+    expect(onSetScore).toHaveBeenCalledWith('p1', 1);
+  });
+
   it('⋯ button calls onLongPress and does not also fire card tap', () => {
-    const { onSetScore, onLongPress } = setup({
-      score: null,
-      par: 4,
-      mode: 'buttons',
-    });
+    const { onSetScore, onLongPress } = setup({ score: null, par: 4 });
     fireEvent.click(screen.getByLabelText('Velg spesifikk score'));
     expect(onLongPress).toHaveBeenCalledWith('p1');
+    expect(onSetScore).not.toHaveBeenCalled();
+  });
+});
+
+describe('ScoreCard — disabled', () => {
+  it('tap on card does not call onSetScore when disabled', () => {
+    const { card, onSetScore } = setup({
+      score: null,
+      par: 4,
+      disabled: true,
+    });
+    fireEvent.click(card);
     expect(onSetScore).not.toHaveBeenCalled();
   });
 
@@ -237,7 +167,6 @@ describe('ScoreCard — buttons mode', () => {
     const { onSetScore, onLongPress } = setup({
       score: null,
       par: 4,
-      mode: 'buttons',
       disabled: true,
     });
     fireEvent.click(screen.getByLabelText('+1'));
@@ -247,31 +176,3 @@ describe('ScoreCard — buttons mode', () => {
     expect(onLongPress).not.toHaveBeenCalled();
   });
 });
-
-describe('ScoreCard — disabled', () => {
-  it('swipe tap does not call onSetScore when disabled', () => {
-    const { card, onSetScore } = setup({
-      score: null,
-      par: 4,
-      mode: 'swipe',
-      disabled: true,
-    });
-    fireEvent.pointerDown(card, { clientY: 100, pointerId: 1 });
-    fireEvent.pointerUp(card, { clientY: 100, pointerId: 1 });
-    expect(onSetScore).not.toHaveBeenCalled();
-  });
-
-  it('swipe gesture does not call onSetScore when disabled', () => {
-    const { card, onSetScore } = setup({
-      score: null,
-      par: 4,
-      mode: 'swipe',
-      disabled: true,
-    });
-    fireEvent.pointerDown(card, { clientY: 100, pointerId: 1 });
-    fireEvent.pointerMove(card, { clientY: 80, pointerId: 1 });
-    fireEvent.pointerUp(card, { clientY: 80, pointerId: 1 });
-    expect(onSetScore).not.toHaveBeenCalled();
-  });
-});
-

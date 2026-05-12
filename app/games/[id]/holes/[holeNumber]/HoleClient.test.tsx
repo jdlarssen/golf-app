@@ -30,6 +30,12 @@ vi.mock('@/lib/sync/syncWorker', () => ({
   drainQueue: vi.fn().mockResolvedValue(undefined),
 }));
 
+// SmartLink calls useRouter, which throws outside a Next.js app context. Stub
+// the router so the link renders harmlessly in jsdom.
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ prefetch: vi.fn() }),
+}));
+
 import { useLiveQuery } from 'dexie-react-hooks';
 import { writeScore } from '@/lib/sync/writeScore';
 import { drainQueue } from '@/lib/sync/syncWorker';
@@ -73,10 +79,6 @@ beforeEach(() => {
   localStorage.clear();
   vi.clearAllMocks();
   useLiveQueryMock.mockReturnValue([undefined, undefined, undefined, undefined]);
-  // jsdom doesn't implement setPointerCapture; stub so swipe gestures don't throw.
-  Element.prototype.setPointerCapture = vi.fn();
-  Element.prototype.releasePointerCapture = vi.fn();
-  Element.prototype.hasPointerCapture = vi.fn(() => false);
 });
 
 afterEach(() => {
@@ -167,13 +169,12 @@ describe('HoleClient — onboarding banner', () => {
 });
 
 describe('HoleClient — score writes', () => {
-  it('tapping a ScoreCard in swipe mode fires writeScore and drainQueue', async () => {
+  it('tapping a ScoreCard fires writeScore and drainQueue', async () => {
     render(<HoleClient {...baseProps()} />);
     const cards = screen.getAllByRole('button', { name: /Sett score for/ });
     // The first ScoreCard belongs to u1 (myUserId in our base props).
     await act(async () => {
-      fireEvent.pointerDown(cards[0], { clientY: 100, pointerId: 1 });
-      fireEvent.pointerUp(cards[0], { clientY: 100, pointerId: 1 });
+      fireEvent.click(cards[0]);
     });
     expect(writeScoreMock).toHaveBeenCalledTimes(1);
     expect(writeScoreMock).toHaveBeenCalledWith({
@@ -184,17 +185,5 @@ describe('HoleClient — score writes', () => {
       enteredBy: 'u1',
     });
     expect(drainQueueMock).toHaveBeenCalled();
-  });
-});
-
-describe('HoleClient — settings sheet', () => {
-  it('opens when the header settings button is clicked', () => {
-    render(<HoleClient {...baseProps()} />);
-    expect(screen.queryByTestId('settings-sheet')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Innstillinger' }));
-    expect(screen.getByTestId('settings-sheet')).toBeInTheDocument();
-    expect(
-      screen.getByText('Hvordan vil du legge inn score?'),
-    ).toBeInTheDocument();
   });
 });
