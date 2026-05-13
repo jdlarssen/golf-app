@@ -221,7 +221,7 @@ Helper functions er `SECURITY DEFINER` for å unngå rekursjons-feller.
 
 ## Status per session-handoff
 
-**Phase 0–13: launch-readiness-kriteriene oppfylt 2026-05-13.** Står på `v0.4.1`. MAJOR-bump til `v1.0.0` er på vent — brukeren ønsker å gjøre flere endringer først (skjer i ny chat).
+**Pilot-forberedelse 2026-05-13 (kvelden før første pilot-runde).** Står på `v0.10.2`. MAJOR-bump til `v1.0.0` venter fortsatt — brukeren bumper når han er klar.
 
 ✅ **Fungerer end-to-end:**
 - OTP-kode-innlogging via 6–8 sifret kode i mail (brand-stilet template)
@@ -232,10 +232,22 @@ Helper functions er `SECURITY DEFINER` for å unngå rekursjons-feller.
 - Premium-stil på hovedflater
 - Invitasjons-status flippes korrekt til «Akseptert» når mottaker logger inn (`migration 0012`)
 
-⏸ **Ventende før v1.0.0:**
-- Brukerens egne kommende endringer (håndteres i ny chat)
+🆕 **Pilot-forberedelse landed denne sesjonen (v0.8.5 → v0.10.2):**
+- Lesbarhet i sol: bump av `--text-muted` (#5C5347 → #4A3F30), HoleStrip-vekt 500→600
+- SyncBanner med sticky-top, retry-knapp, friendly Norwegian error-mapping (i stedet for «TypeError: Load failed») — verifisert å virke i prod via flymodus-test
+- ScoreCard `onCardClick` no-op'er når score er satt — forhindrer tilfeldig reset-til-par etter +/− bruk
+- A11y på admin-spillerpicker (aria-label + truncate)
+- Hull-page perf: 7 sekvensielle Supabase-kall → 2 parallel-bølger med me/flight-konsolidering. Målt –73% (1.65s → 440ms snitt)
+- Game-home parallellisering (game + me i Promise.all). Audit bekreftet at leaderboard/submit/scorecard allerede var parallel.
+- Mail-paret rundt godkjennings-flyten: admin får mail når spiller leverer scorekort, spillere får mail når admin avslutter spillet. Ikke end-to-end-testet i prod ennå (utsatt til post-pilot).
+- Server-side perf-instrumentering (`console.time/timeEnd`) i hull-page + game-home, logger til Vercel som `hole.page game=X · roundN` og `game.page game=X · gate`. **Skal fjernes eller gates bak dev-flag post-pilot** — se memory `project_active_perf_instrumentation`.
+
+⏸ **Ventende etter pilot:**
+- End-to-end-test av mail-flow (gameFinished + scorecardSubmitted) — sjekk Resend-dashboard etter pilot
+- Fjern eller gate perf-instrumenteringen
 - Designpass på resterende sider (scorecard, submit, approve, leaderboard/holes, complete-profile, profile, admin/{courses,invitations,games}-listen)
-- End-to-end-test av invitasjons-flyt med en NY invitéet bruker (admin/login-flyten er verifisert i prod; nye invitéer er ikke testet i denne sesjonen)
+- End-to-end-test av invitasjons-flyt med en NY invitéet bruker (eksisterende admin/login-flyten er verifisert)
+- Hvis hull-bytte fortsatt føles tregt: layout-lift (lift game + game_players til layout via React.cache/unstable_cache). Estimert –300ms til. Risiko: moderat refactor.
 
 📋 **Backlog:** se `TODO.md`
 
@@ -252,6 +264,9 @@ Helper functions er `SECURITY DEFINER` for å unngå rekursjons-feller.
 - `lib/sync/` — offline-sync (Dexie + worker + realtime)
 - `supabase/migrations/` — 13 SQL-migrasjoner
 - `lib/mail/inviteNotification.ts` — Resend-mail-helper for invitasjons-notifikasjoner
+- `lib/mail/gameFinishedNotification.ts` — Resend-mail til spillere når admin avslutter spillet («Resultatet er klart»)
+- `lib/mail/scorecardSubmittedNotification.ts` — Resend-mail til admin når spiller leverer scorekort
+- `components/sync/SyncBanner.tsx` — sticky-top banner for kø-stuck/error med retry-knapp + friendly-error-mapping
 
 ## Vanlige neste-steg-oppgaver
 
@@ -261,7 +276,7 @@ Hvis bruker kommer tilbake til et tema, sjekk om dette stemmer:
 2. **«Design oppgradering»** → bruker har planlagt å bruke claude.ai/design med design system. Setup beskrevet i forrige chat.
 3. **«Ny spilltype»** → stableford / matchplay / scramble / solo. Krever ny scoring-modul i `lib/scoring/`, nytt UI-flow. Datamodellen skalerer.
 4. **«Klubb-tier med flere admin/grupper»** → krever `groups` + `group_members`-tabeller, RLS-justering. Betydelig oppgave.
-5. **«Mail kommer ikke fram»** → systematisk debug. Sjekk Supabase Auth Logs (kode-mail) + Resend dashboard (notifikasjons-mail) + Vercel runtime logs. Supabase auth-mail kommer fra Resend SMTP; notifikasjons-mail kommer direkte fra Resend API via `lib/mail/inviteNotification.ts`.
+5. **«Mail kommer ikke fram»** → systematisk debug. Sjekk Supabase Auth Logs (kode-mail) + Resend dashboard (notifikasjons-mail) + Vercel runtime logs. Tre Resend-mail-typer finnes nå: invite, gameFinished, scorecardSubmitted (alle i `lib/mail/`). Alle er best-effort med Promise.allSettled + console.error — sjekk Vercel logs for `[endGame]` / `[submitScorecard]` / `[admin/spillere]` prefiks ved feil.
 6. **«Bytt til v1.0.0»** → launch-readiness-kriteriene er allerede oppfylt (2026-05-13). Brukeren venter på sine egne endringer først. Når klar: MAJOR-bump med samle-CHANGELOG-entry «Første stabile release».
 
 ## Bruker-preferanser fra tidligere sesjon
