@@ -43,13 +43,24 @@ export async function deleteUser(formData: FormData) {
     redirect(`/admin/spillere/${id}?error=still_has_games`);
   }
 
-  // Slett via service-role. auth.users → public.users cascades (FK i 0001).
+  // Slett via service-role. auth.users → public.users cascades (FK i 0001),
+  // så public.users-raden fjernes automatisk.
+  //
+  // NB: Andre FK-er peker inn til public.users(id) uten cascade
+  // (scores.entered_by, invitations.invited_by, courses.created_by,
+  // games.created_by, game_players.approved_by_user_id). I dagens
+  // admin-modell er disse trygt dekket: de peker enten til admin-brukere
+  // (self-protected) eller forutsetter game_players-rad (covered av
+  // has-played-sjekken over). Når arrangør-rolle lander må block-sjekken
+  // utvides til å dekke disse FK-ene eksplisitt — ellers vil sletting
+  // feile med generisk FK-violation som auth_delete_failed-banneret
+  // peker på.
   try {
     const admin = getAdminClient();
     const { error } = await admin.auth.admin.deleteUser(id);
     if (error) throw error;
   } catch (err) {
-    console.error('[admin/spillere] deleteUser failed', err);
+    console.error('[admin/spillere] deleteUser failed', { id, err });
     redirect(`/admin/spillere/${id}?error=auth_delete_failed`);
   }
 

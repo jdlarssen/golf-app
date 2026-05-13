@@ -21,6 +21,9 @@ const ERROR_MESSAGES: Record<string, string> = {
   hcp_out_of_range: 'Handicap må være mellom -10 og 54.',
   update_failed: 'Klarte ikke lagre endringene.',
   not_admin: 'Du har ikke tilgang.',
+  self_delete_forbidden: 'Du kan ikke slette din egen konto.',
+  still_has_games: 'Spilleren har spillhistorikk og kan ikke slettes.',
+  auth_delete_failed: 'Klarte ikke slette kontoen — den har sannsynligvis data knyttet til seg (invitasjoner sendt, baner opprettet eller scores skrevet) som blokkerer sletting. Sjekk Vercel-loggene.',
 };
 
 function first(v: string | string[] | undefined): string | undefined {
