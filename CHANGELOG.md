@@ -1,255 +1,352 @@
 # Changelog
 
-Alle bruker-synlige endringer i Tørny logges her. Format følger [Keep a Changelog](https://keepachangelog.com/no/), versjonering følger [Semantic Versioning](https://semver.org/lang/no/).
+Alle bruker-synlige endringer i Tørny logges her. Versjonering følger [Semantic Versioning](https://semver.org/lang/no/).
 
 Pre-1.0.0 (`0.x.y`) regnes som alpha — vi er fortsatt under uttesting med kompisgjengen. Disiplinen ble innført ved `0.2.0`; alt før det er samlet under «Pre-disiplin».
+
+Hver entry begynner med én **bold setning på vanlig norsk** — hva endringen betyr for deg som bruker — etterfulgt av en sammenfoldbar **Teknisk**-seksjon med utvikler-prosa i [Keep a Changelog](https://keepachangelog.com/no/)-stil. Minor-serier (`0.X.y`) er gruppert under et tema-heading med kort sammendrag; eldre serier er sammenfoldet by default for å holde fila lett å scrolle.
 
 Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «Versjonering / CHANGELOG».
 
 ---
 
-## [0.8.4] - 2026-05-13
+## 0.8.x — Sletting og «trekk tilbake»-flyt
 
-### Fixed
+Dedikert slett-side for spillere, fulgt av tre iterasjoner på «trekk tilbake»-bekreftelsen for å få den robust på iPhone-PWA.
+
+### [0.8.4] - 2026-05-13
+
+**Du kan nå trekke tilbake en invitasjon fra iPhone uten at knappene oppfører seg rart.**
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
 
 - **«Trekk tilbake»-flyten fungerer nå på iPhone-PWA.** Forrige fix (v0.8.3) erstattet `<details>`-popouten med en URL-toggle inline (Bekreft + Avbryt på samme rad), men brukeren rapporterte at Bekreft-knappen ikke var trykkbar på iPhone, og at Avbryt-knappen i stedet utløste tilbaketrekkingen — antagelig på grunn av en kollisjon mellom server-action form-submit og SmartLink-prefetch på samme touch-event. Bytter nå til samme mønster som slett-bruker (`/admin/spillere/[id]/slett`): «Trekk tilbake»-lenken navigerer til en dedikert bekreftelses-side på `/admin/spillere/invitations/[id]/trekk-tilbake/` med stor Bekreft-knapp og separat Avbryt-lenke. Ingen knapper deler tap-target, ingen flyktige toggle-tilstander.
 
+</details>
+
 ---
 
-## [0.8.3] - 2026-05-13
+### [0.8.3] - 2026-05-13
 
-### Fixed
+**Forsøk på å fikse «trekk tilbake»-bekreftelsen for iPhone — viste seg å ikke fungere helt, og ble erstattet av løsningen i 0.8.4.**
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
 
 - **«Trekk tilbake»-bekreftelsen fungerte ikke på iPhone-PWA.** Den brukte `<details>`/`<summary>` for inline-popout, men iOS Safari håndterer tap-events inni open-state-popouten upålitelig (tap kan boble til summary og lukke popouten før Bekreft-knappen registrerer klikket). I tillegg ble popouten klippet av kortets `overflow-hidden`, og kunne overlappe nabo-radens knapper slik at et klikk for «Bekreft» traff «Send på nytt» på raden under. Erstattet med en server-rendret URL-toggle: trykk på «Trekk tilbake» legger til `?confirm=<id>` i URL-en, og den raden rendres i confirm-modus inline med tydelige Bekreft + Avbryt-knapper. Ingen JS, ingen popout-quirks, fungerer likt på alle nettlesere og PWA-shells.
 
+</details>
+
 ---
 
-## [0.8.2] - 2026-05-13
+### [0.8.2] - 2026-05-13
 
-### Fixed
+**Ventende invitéer dukker ikke lenger opp dobbelt i admin-spillerlista, og «trekk tilbake» frigjør e-postadressen som forventet.**
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
 
 - **Spillerliste på `/admin/spillere` viser ikke lenger ventende invitéer dobbelt.** Etter at migrasjon `0014_pending_users` begynte å auto-opprette `public.users`-rader for hver `auth.users`, dukket ventende invitéer (de uten `profile_completed_at`) opp som «registrerte spillere» i tillegg til å være i ventende-invitasjoner-seksjonen. Spillerlista filtrerer nå på `profile_completed_at IS NOT NULL`, og «X registrert»-tellingen matcher.
 - **«Trekk tilbake»-orphan-cleanup tilpasset trigger-baserte `public.users`-rader.** Sjekken var «hvis `public.users`-raden mangler, slett `auth.users`» — men siden trigger nå alltid oppretter raden, ble den sjekken alltid usann. Logikken bruker nå `profile_completed_at IS NULL` som signal på «invitéen fullførte aldri profil», så `auth.users` ryddes som forventet.
 - **Null-safe visning av navn** på spiller-detalj og slett-bekreftelses-sider — invitéer uten utfylt navn vises med e-postadressen i stedet for en tom overskrift.
 
+</details>
+
 ---
 
-## [0.8.1] - 2026-05-13
+### [0.8.1] - 2026-05-13
 
-### Fixed
+**Hvis sletting av en spiller mislykkes, sier appen nå hvorfor — i stedet for å se ut som om ingenting skjedde.**
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
 
 - **Silent banner-feil ved feilet sletting.** Detalj-siden (`/admin/spillere/[id]`) viste ingen tilbakemelding når slett-flyten feilet eller ble blokkert av self-protect — den manglet meldinger for `self_delete_forbidden`, `still_has_games` og `auth_delete_failed` i sin `ERROR_MESSAGES`-tabell. Nå viser banneret en ærlig forklaring i alle tre tilfeller, inkludert hint om mulige FK-grunner («data knyttet til seg — invitasjoner sendt, baner opprettet eller scores skrevet»).
 - **Ærligere kode-kommentar om FK-cascade-grensene** i `deleteUser`-action: dokumenterer at `public.users`-cascaden kun cleaner opp én rad, og at andre FK-er (`scores.entered_by`, `invitations.invited_by` osv.) er trygt dekket i dagens admin-modell men må sjekkes eksplisitt når arrangør-rollen lander.
 
+</details>
+
 ---
 
-## [0.8.0] - 2026-05-13
+### [0.8.0] - 2026-05-13
 
-### Added
+**Du kan slette en spiller fra admin — nyttig hvis du sendte invitasjon til feil e-postadresse.**
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
 
 - **Slett-flyt for spillere på `/admin/spillere/[id]/slett`.** Dedikert bekreftelses-side viser navn, e-post og forklaring. Slett-knappen kaller `auth.admin.deleteUser` via service-role-klienten — `auth.users`-raden slettes, `public.users` cascade-slettes automatisk, og e-posten frigjøres for ny invitasjon.
 - **Block-betingelser** på server-side: kan ikke slette deg selv (self-protect), kan ikke slette en spiller som har en eller flere `game_players`-rader.
 
+</details>
+
 ---
 
-## [0.7.0] - 2026-05-13
+## 0.7.x — Bruker-detalj-redigering
 
-### Added
+Klikk på en spiller i admin for å redigere navn, kallenavn og handicap. Faresone-seksjon på detalj-siden forbereder slett-flyten som lander i 0.8.0.
+
+### [0.7.0] - 2026-05-13
+
+**Klikk på en spiller i admin for å redigere navn, kallenavn og handicap-indeks.**
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
 
 - **Bruker-detalj på `/admin/spillere/[id]`.** Klikkbar rad i spillerlista åpner form for å redigere navn, kallenavn og handicap-indeks. Lagre-knapp gir ærlig success/feil-banner.
 - **Faresone-seksjon** på detalj-siden viser slett-lenken som disabled inntil neste leveranse aktiverer den. Forklarende tekst hvis spilleren har historikk eller hvis det er deg selv.
 
-### Changed
+#### Changed
 
 - **RLS:** Ny policy `users admin update` lar admin oppdatere andre bruker-rader (tidligere kun egen rad). Migrasjonen heter `0015_admin_user_management` (filnavn-kollisjon med `0014_pending_users` ble rensket opp ved merge).
 
+</details>
+
 ---
 
-## [0.6.0] - 2026-05-13
+## 0.6.x — Samlet spilleradministrasjon
 
-### Added
+Erstatter den gamle `/admin/invitations`-flata med `/admin/spillere`, som samler registrerte spillere, ventende invitasjoner og invitasjons-form på ett sted og legger til «Send på nytt» og «Trekk tilbake»-actions.
+
+### [0.6.0] - 2026-05-13
+
+**Ny «Spillere»-side i admin samler registrerte spillere, ventende invitasjoner og invitasjons-form på ett sted, og du kan re-sende eller trekke tilbake invitasjoner derfra.**
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
 
 - **Ny samlet spilleradministrasjon på `/admin/spillere`.** Erstatter gamle `/admin/invitations`. Tre seksjoner i én flate: registrerte spillere (med søk på navn/kallenavn/e-post), ventende invitasjoner, og en sammenfoldet «Inviter ny spiller»-form nederst.
 - **«Send på nytt»-knapp på ventende invitasjoner.** Trigger ny notifikasjons-mail via Resend til samme adresse. Ingen ny DB-rad.
 - **«Trekk tilbake»-knapp på ventende invitasjoner** med inline to-trinn-bekreft. Sletter `invitations`-raden; hvis invitéen hadde bedt om kode men aldri fullført profil (`profile_completed_at IS NULL`), ryddes også `auth.users`-raden via service-role slik at e-posten er ledig igjen.
 
-### Changed
+#### Changed
 
 - **Admin-hjemmeside-tile «Invitasjoner» erstattet av «Spillere»** med kombinert telling («12 registrert · 4 venter»).
 - **Lenker fra «Opprett spill» og «Rediger spill»** når man trenger flere spillere peker nå til `/admin/spillere` i stedet for `/admin/invitations`.
 
-### Removed
+#### Removed
 
 - **Rute `/admin/invitations`** — funksjonaliteten finnes nå på `/admin/spillere`.
 
+</details>
+
 ---
 
-## [0.5.10] - 2026-05-13
+<details>
+<summary><strong>0.5.x — Pending-invitees-integrasjon (11 entries) — klikk for å vise</strong></summary>
 
-### Fixed
+Ventende invitéer kan nå velges til lag og flight før de selv har logget inn. Ti patch-bumps fulgte for å rydde fallouten fra migrasjon 0014, som auto-oppretter `public.users`-rader for hver `auth.users` og som dermed brøt onboarding-gate, picker-filter, draft-validering og start-spill-guard.
+
+### [0.5.10] - 2026-05-13
+
+**«Akseptert»-statusen på en invitasjon stemmer nå med om spilleren faktisk har fullført profilen sin.**
+
+#### Fixed
 - `Akseptert`-pille på `/admin/invitations` reflekterer nå faktisk onboarding (`profile_completed_at IS NOT NULL`), ikke bare at invitasjons-raden ble markert akseptert ved OTP-verify. Stoppet misvisende «Akseptert»-status for brukere som klikket gammel magic-link-mail uten å fullføre profil.
 
----
+### [0.5.9] - 2026-05-13
 
-## [0.5.9] - 2026-05-13
+**Beskytter mot at en bruker blir hengende som «Venter» selv etter at de har lagret profilen sin.**
 
-### Fixed
+#### Fixed
 - Profil-oppdateringen stamper nå `profile_completed_at` som defence-in-depth, så en bruker som havner på `/profile` uten å ha fullført onboarding (deploy-vindu-race i tidligere release) blir ikke sittende fast som «Venter» i picker-en.
 
----
+### [0.5.8] - 2026-05-13
 
-## [0.5.8] - 2026-05-13
+**Du kan ikke starte et planlagt spill hvis noen av deltakerne fortsatt mangler å fullføre profilen.**
 
-### Fixed
+#### Fixed
 - «Start spillet» (draft → aktiv) blokkeres nå hvis ikke alle valgte spillere har fullført profil — samme guard som scheduled-pathen.
 - Invitér-en-venn-actionen sjekker `profile_completed_at` i stedet for "rad finnes ikke" som ble dødt etter migrasjon 0014.
 
----
+### [0.5.7] - 2026-05-13
 
-## [0.5.7] - 2026-05-13
+**Ventende invitéer uten utfylt navn vises med e-postadressen i stedet for tom plass.**
 
-### Fixed
+#### Fixed
 - Rendring av ventende invitéer (uten utfylt navn) faller tilbake til e-postadressen i stedet for å vise tom tekst — gjelder admins spill-detaljside (lag/flight-oversikt) og spillernes venterom-visning av draft-spill.
 
----
+### [0.5.6] - 2026-05-13
 
-## [0.5.6] - 2026-05-13
+**Nye brukere sendes igjen til onboarding-skjermen ved første innlogging.**
 
-### Fixed
+#### Fixed
 - Nye brukere ble ikke sendt til onboarding på `/` og `/profile` etter at trigger-en fra migrasjon 0014 begynte å pre-opprette `public.users`-rader. Gate-en sjekker nå `profile_completed_at` i stedet for "rad finnes ikke".
 
----
+### [0.5.5] - 2026-05-13
 
-## [0.5.5] - 2026-05-13
+**Førstegangs-onboarding fungerer igjen for nye brukere — var midlertidig brutt etter en bakgrunnsendring.**
 
-### Fixed
+#### Fixed
 - `complete-profile` oppdaterer nå den auto-opprettede `public.users`-raden i stedet for å forsøke å sette inn på nytt. Uten denne ville migrasjon 0014 brutt all ny brukerregistrering.
 
----
+### [0.5.4] - 2026-05-13
 
-## [0.5.4] - 2026-05-13
+**Feilmeldingen for ventende spillere på opprett-spill-siden viser nå e-postadressene i stedet for «{LIST}».**
 
-### Fixed
+#### Fixed
 - Feilmelding for ventende spillere viste `{LIST}`-plassholderen bokstavelig på opprett-spill-siden. Bruker nå samme `buildErrorMessage`-helper som rediger-spill og spill-detalj.
 
----
+### [0.5.3] - 2026-05-13
 
-## [0.5.3] - 2026-05-13
+**Ekstra sikkerhets-sjekk: et publisert spill kan ikke startes med ventende spillere selv om databasen blir manuelt redigert.**
 
-### Fixed
+#### Fixed
 - Start spill blokkeres også (defence-in-depth) hvis et publisert spill noensinne skulle få ventende spillere via direkte DB-redigering.
 
----
+### [0.5.2] - 2026-05-13
 
-## [0.5.2] - 2026-05-13
+**Du kan ikke endre et eksisterende spill til publisert hvis det fortsatt har ventende invitéer.**
 
-### Fixed
+#### Fixed
 - Publisering/oppdatering fra rediger-spill blokkeres med tydelig e-postliste hvis ventende invitasjoner står på rosteret.
 
----
+### [0.5.1] - 2026-05-13
 
-## [0.5.1] - 2026-05-13
+**Du kan ikke publisere et nytt spill hvis noen av deltakerne ikke har fullført profilen sin.**
 
-### Fixed
+#### Fixed
 - Publisering av nytt spill blokkeres nå hvis ikke alle valgte spillere har fullført profil.
 
----
+### [0.5.0] - 2026-05-13
 
-## [0.5.0] - 2026-05-13
+**Du kan nå velge ventende invitéer til lag og flight før de selv har logget inn.**
 
-### Added
+#### Added
 - Inviterte spillere som ikke har logget inn ennå dukker opp i game-picker-en med en gul `Venter`-pille. Admin kan velge dem til lag og flight og lagre utkast.
 
+</details>
+
 ---
 
-## [0.4.3] - 2026-05-13
+<details>
+<summary><strong>0.4.x — OTP-kode-innlogging (4 entries) — klikk for å vise</strong></summary>
 
-### Added
+Bytte fra magic-link til 6–8-sifret kode i mail, som fjernet to iOS-PWA-blokkerings-bugs samtidig. Inkluderer ærligere admin-invitasjons-banner ved Resend-feil og forberedelse for pending-invitees-sporing i 0.5.x.
+
+### [0.4.3] - 2026-05-13
+
+**Tørny vet nå hvilke spillere som har fullført profilen — forberedelse for å vise ventende invitéer riktig i spill-pickeren.**
+
+#### Added
 
 - Inviterte spillere som ikke har fullført registrering blir nå sporet via `profile_completed_at`. Forberedelse for å vise dem i game-picker-en.
 
----
+### [0.4.2] - 2026-05-13
 
-## [0.4.2] - 2026-05-13
+**Hvis «Du er invitert»-mailen ikke kommer fram, sier admin-banneret det ærlig i stedet for å lyve «Invitasjon sendt».**
 
-### Fixed
+#### Fixed
 
 - **Admin-invitasjons-banneret lyver ikke lenger om mail-utsending.** Tidligere viste `/admin/invitations` alltid «✓ Invitasjon sendt»-banner etter at raden var lagret, selv om Resend-utsendingen faktisk feilet — feilen ble bare stille logget i Vercel-runtime-loggene. Hvis Resend kaster nå, vises et ærlig feil-banner: «Invitasjonen ble lagret, men «Du er invitert»-mail kom ikke ut. Sjekk Vercel-loggene for detaljer.» Raden i `invitations`-tabellen bevares fortsatt (admin kan re-sende manuelt når mail-konfigen er fikset).
 
----
+### [0.4.1] - 2026-05-13
 
-## [0.4.1] - 2026-05-13
+**Innloggings-kode-feltet godtar nå 8-sifrede koder, som er Supabase' faktiske standard.**
 
-### Fixed
+#### Fixed
 
 - **Kode-input godtar nå 6–8 sifre, ikke bare 6.** Supabase' default OTP-lengde er 8 sifre (endret i mai 2024) — vi hardkodet 6 sifre i kode-feltet, så brukere som fikk en 8-sifret kode kunne kun skrive inn de første 6 og fikk feilmelding. Pattern og maxLength er nå fleksible, hjelpe-tekst sier «kode» i stedet for «6-sifret kode».
 
----
+### [0.4.0] - 2026-05-13
 
-## [0.4.0] - 2026-05-13
+**Du logger inn med en 6–8-sifret kode du taster inn, i stedet for å klikke en lenke i mailen. Inviterte spillere får først en notifikasjons-mail og må be om innloggings-kode selv etterpå.**
 
-### Changed
+#### Changed
 
 - **Innlogging går nå via 6-sifret kode i mail i stedet for å klikke lenke.** Du skriver inn e-post som før, men i stedet for å klikke en lenke i mailen mottar du en kode (f.eks. `482 619`) som du taster inn på samme side. Fjerner to pre-existing problemer som blokkerte PWA-innlogging på iPhone: (a) magic-link åpnet seg i Safari i stedet for PWA-en og brøt PKCE-handoff-en, (b) mail-scannere konsumerte engangs-token-en før brukeren faktisk klikket. Begge problemene forsvinner når det ikke finnes noen URL å konsumere — bare en kode som leses med øynene og tastes inn.
 - **Invitasjons-mailen er ny.** Når admin inviterer en kompis sender Tørny nå en kort notifikasjons-mail («Du er invitert. Gå til tornygolf.no og logg inn med din e-post.») via Resend. Selve innloggings-koden får invitéen først når de kommer til /login og taster e-posten sin der. To mailer per invitasjon (notifikasjon + kode), men én og samme innloggings-flyt for alle.
 
-### Removed
+#### Removed
 
 - **Magic-link-URL-flyten.** `/auth/callback`-route-en redirecter alle gamle klikk til `/login?error=link_expired` i en 30-dagers overgangsperiode. Etter 2026-06-13 fjernes route-en helt (tracked in TODO.md).
 
+</details>
+
 ---
 
-## [0.3.3] - 2026-05-13
+<details>
+<summary><strong>0.3.x — Logo og pre-OTP-fixes (4 entries) — klikk for å vise</strong></summary>
 
-### Fixed
+Tørny fikk sin egen visuelle identitet (wordmark med champagne-prikk på login og app-ikoner), pluss tre fixes som ryddet opp før OTP-omleggingen: invitasjoner som sto som «VENTER» etter aksept, tee-off-tider som lå 1–2 timer feil, og «lagre utkast» som låste seg på native HTML5-validering.
+
+### [0.3.3] - 2026-05-13
+
+**Invitasjoner flippes nå korrekt til «Akseptert» når mottakeren logger inn første gang — før dette sto alle som «Venter» uansett.**
+
+#### Fixed
 
 - **Invitasjoner sto som «VENTER» selv etter aksept.** Hele tabellen `public.invitations` hadde `accepted_at = NULL` på alle 8 rader — ingen kode skrev til kolonnen noensinne. Auth-callback (`app/auth/callback/route.ts`) markerer nå alle ventende invitasjoner for innlogget brukers e-post som akseptert etter vellykket `exchangeCodeForSession`. Best-effort: feil i side-effekten blokkerer aldri innloggingen. Ny RLS-policy (`migration 0012`) lar bruker UPDATEe sin egen invitasjon — kun `accepted_at`-flippen er tillatt, alle andre kolonner må forbli identiske. Backfill kjørt mot 4 stranded rader som hadde `auth.users.confirmed_at` satt.
 
----
+### [0.3.2] - 2026-05-13
 
-## [0.3.2] - 2026-05-13
+**Tee-off-tider viser nå riktig tid på alle skjermer — var av med 1–2 timer i et kort vindu rett etter sideinnlasting.**
 
-### Fixed
+#### Fixed
 
 - **Tee-off-tider rendret 1–2 timer feil under hydration.** `lib/format/teeOff.ts` brukte lokal-TZ `Date.getHours/getMinutes/getDate/getMonth` — på Vercel-serveren (UTC) ga det feil tid i HTML-en før hydration på iPhone (Europe/Oslo) tok over. Rammet hjem-skjermen, runde-siden og leaderboarden. Bytter til `Intl.DateTimeFormat` med eksplisitt `timeZone: 'Europe/Oslo'`, så server og klient nå renderer identiske strenger uavhengig av host-TZ. DST håndteres riktig (UTC → Oslo sommer +02, vinter +01). 11 nye tester verifiserer oppførselen under flere host-TZ-er.
 
----
+### [0.3.1] - 2026-05-13
 
-## [0.3.1] - 2026-05-13
+**Du kan lagre et halvferdig spill-utkast uten at bane- og handicap-feltene må fylles ut først.**
 
-### Fixed
+#### Fixed
 
 - **«Lagre utkast» låste seg på native HTML5-validering.** Knappen blokkerte sending så snart et `<select required>`-felt (bane/tee/handicap-allowance) var tomt, selv om hele poenget med utkast er å lagre delvis utfylt skjema. Lagt til `formNoValidate` på utkast-knappen — publiser-knappen validerer fortsatt normalt, og server-siden tar fortsatt vare på `name` som eneste obligatoriske felt for utkast.
 
----
+### [0.3.0] - 2026-05-13
 
-## [0.3.0] - 2026-05-13
+**Tørny har fått sin egen logo — wordmark med champagne-prikk på login-skjermen og som app-ikon.**
 
-### Changed
+#### Changed
 
 - **Visuell identitet — Tørny-logoen.** Login-skjermen viser nå hovedlogoen (wordmark «Tørny» + champagne-prikk + tagline *«Fyr opp golfturneringen på et par minutter»*) over innloggings-kortet, sentrert på linen-bakgrunnen. Den ekstra T-flisen og den dekorative medallion-en er fjernet — de duplikerte logoen og bråket mot brand-mark.svg-spec-en.
 - **BrandMark-låsen i øverste venstre hjørne** (hjem, profil, admin) er strippet til kun wordmark «Tørny» med en liten champagne-prikk. Den mørke T-flisen og «TURNERING»-undertittelen er fjernet.
 - **Tagline-formuleringen** *«Fyr opp golfturneringen på et par minutter»* (med wordplay-«par») er nå canonical i `CLAUDE.md`. Tidligere kortform uten «et par» er erstattet.
 
-### Added
+#### Added
 
 - **App-ikoner (192×192, 512×512, 180×180)** og `brand-mark-icon-only.svg` har fått en champagne-prikk til høyre for T-en, slik at hjemskjerm-ikonet på iOS/Android og favicon-en bærer samme brand-aksent som logoen i appen.
 
-### Removed
+#### Removed
 
 - «Logg inn»-overskriften på `/login`. Hero-en + «Send meg lenke»-knappen + hjelpeteksten gir nok kontekst.
+
+</details>
 
 ---
 
 ## [0.2.0] - 2026-05-12
 
-### Added
+**Innfører versjonerings-disiplin: hver bruker-synlig endring skal bumpe versjonen og legge til CHANGELOG-entry i samme commit.**
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
 
 - Versjonerings-disiplin: hver commit som endrer bruker-synlig oppførsel bumper `package.json` og legger til entry i denne fila. Reglene står i `CLAUDE.md`.
 
-### Notes
+#### Notes
 
 - Versjonen som vises i app-footeren (`AppVersionFooter.tsx`) er allerede koblet til `package.json` via `next.config.ts` — fra og med dette bumpet vil footeren reflektere reell release-versjon istedenfor en konstant `v0.1.0`.
+
+</details>
 
 ---
 

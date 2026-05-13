@@ -104,7 +104,15 @@ Aldri si bare «sett dette i Supabase» — alltid med eksakt sti og kopier-lim-
 - Eller rediger `package.json` direkte (one-liner)
 - Inkluder bump-en + CHANGELOG-oppdatering i SAMME commit som feature/fix-en
 
-**CHANGELOG-format:** [Keep a Changelog](https://keepachangelog.com/no/). Hver release får `## [X.Y.Z] - YYYY-MM-DD` med underseksjoner `### Added`, `### Changed`, `### Fixed`, `### Removed`. Norske bullet points. Nyeste øverst.
+**CHANGELOG-format:** Tre-lags struktur i `CHANGELOG.md`, designet for å være lesbar for både utvikler og produkteier (Jørgen er stakeholder, ikke utvikler):
+
+1. **Per-minor-serie tema-heading** (`## 0.X.y — [navn på temaet]`) med 1–2 setningers sammendrag av hva som ble gjort i den serien. Tre nyeste minor-seriene står åpne; eldre minor-serier wrappes i et `<details>`-element (med `<summary><strong>0.X.y — [tema] (N entries) — klikk for å vise</strong></summary>`) slik at fila kan scrolles raskt.
+2. **Per-versjon entry** (`### [X.Y.Z] - YYYY-MM-DD`) ledes med én **bold stakeholder-tagline** på vanlig norsk — hva endringen betyr for brukeren, ikke hva som ble endret i koden.
+3. **Teknisk historikk** i et `<details><summary>Teknisk</summary>...</details>`-element under tagline-en, med [Keep a Changelog](https://keepachangelog.com/no/)-underseksjoner (`#### Added`, `#### Changed`, `#### Fixed`, `#### Removed`) og prosa-bullet points. (For entries som ligger inne i en allerede-collapset minor-serie kan du droppe den indre `<details>`-en — den ytre tar seg av kollapsen.)
+
+Nyeste øverst, norsk på alt brukerrettet. Når du legger til en ny entry: skriv tagline-en *først*. Hvis du sliter med å forklare hva som endret seg på Jørgen-språk («Du kan nå …», «Forhindrer at …», «Hvis X skjer, sier appen nå …»), er det et tegn på at endringen kanskje ikke fortjener egen entry — sjekk skip-listen.
+
+Når en minor-serie passerer tre-nyeste-grensen (nytt minor lander), pakk den eldste åpne serien inn i `<details>`.
 
 **Veien til v1.0.0:** bumpene fortsetter som `0.x.y` til (a) `/admin/invitations`-status fungerer korrekt, (b) smoke-test med ekte kompis bestått, (c) Supabase Site-URL/mail-subject-cache løst. Når alle tre er på plass: bump til `1.0.0` med en samle-CHANGELOG-entry «Første stabile release».
 
