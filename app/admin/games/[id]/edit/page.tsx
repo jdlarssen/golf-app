@@ -22,7 +22,10 @@ import {
 } from './actions';
 
 type Params = Promise<{ id: string }>;
-type SearchParams = Promise<{ error?: string | string[] }>;
+type SearchParams = Promise<{
+  error?: string | string[];
+  emails?: string | string[];
+}>;
 
 const ERROR_MESSAGES: Record<string, string> = {
   name_required: 'Spillet må ha et navn.',
@@ -39,11 +42,26 @@ const ERROR_MESSAGES: Record<string, string> = {
   db_players: 'Klarte ikke å oppdatere spillerne. Prøv igjen.',
   not_editable:
     'Spillet kan ikke redigeres lenger — det er allerede startet eller avsluttet.',
+  pending_players:
+    'Disse spillerne har ikke fullført registreringen ennå. De må logge inn og fylle inn navn + HCP før spillet kan publiseres.',
 };
 
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
   return value;
+}
+
+function buildErrorMessage(
+  errorCode: string | undefined,
+  emails: string | undefined,
+): string | undefined {
+  if (!errorCode) return undefined;
+  const base = ERROR_MESSAGES[errorCode];
+  if (!base) return undefined;
+  if (errorCode === 'pending_players' && emails) {
+    return `${base.replace(' De må', `: ${emails}. De må`)}`;
+  }
+  return base;
 }
 
 type CourseRow = {
@@ -119,8 +137,7 @@ export default async function EditGamePage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  const errorCode = first(sp.error);
-  const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
+  const errorMessage = buildErrorMessage(first(sp.error), first(sp.emails));
 
   const { supabase, userId } = await getEditContext();
   if (!userId) redirect('/login');

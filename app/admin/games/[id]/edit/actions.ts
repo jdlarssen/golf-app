@@ -6,6 +6,7 @@ import {
   buildGameInsertPayload,
   parseOsloDateTimeLocal,
 } from '@/lib/games/gamePayload';
+import { findPendingPlayers } from '@/lib/games/pendingPlayers';
 
 type UpdateMode = 'save_draft' | 'publish' | 'update_scheduled';
 
@@ -69,6 +70,23 @@ async function updateGameInternal(
     .eq('id', user.id)
     .single();
   if (!profile?.is_admin) redirect('/');
+
+  if (mode === 'publish' || mode === 'update_scheduled') {
+    const { data: rosterUsers, error: rosterErr } = await supabase
+      .from('users')
+      .select('id, email, profile_completed_at')
+      .in('id', payload.players.map((p) => p.user_id));
+
+    if (rosterErr || !rosterUsers) {
+      redirect(`/admin/games/${gameId}/edit?error=db_players`);
+    }
+
+    const pending = findPendingPlayers(rosterUsers);
+    if (pending.length > 0) {
+      const emails = encodeURIComponent(pending.map((p) => p.email).join(', '));
+      redirect(`/admin/games/${gameId}/edit?error=pending_players&emails=${emails}`);
+    }
+  }
 
   // Optimistic lock: only update if the row's current status matches the
   // mode's allowed starting state. Prevents accidental status transitions

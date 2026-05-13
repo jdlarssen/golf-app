@@ -8,6 +8,13 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## [0.5.2] - 2026-05-13
+
+### Fixed
+- Publisering/oppdatering fra rediger-spill blokkeres med tydelig e-postliste hvis ventende invitasjoner står på rosteret.
+
+---
+
 ## [0.5.1] - 2026-05-13
 
 ### Fixed
