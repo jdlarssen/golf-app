@@ -72,7 +72,7 @@ export default async function LoginPage({
                 Send meg kode
               </Button>
               <p className="text-xs text-muted mt-6 text-center">
-                Vi sender deg en 6-sifret kode på mail.
+                Vi sender deg en kode på mail.
               </p>
             </form>
           ) : (
@@ -80,7 +80,7 @@ export default async function LoginPage({
               <input type="hidden" name="email" value={email} />
               <input type="hidden" name="next" value={next} />
               <p className="text-sm text-muted">
-                Skriv inn 6-sifret kode vi sendte til{' '}
+                Skriv inn koden vi sendte til{' '}
                 <strong className="text-foreground">{email}</strong>.
               </p>
               <Input
@@ -89,8 +89,8 @@ export default async function LoginPage({
                 type="text"
                 inputMode="numeric"
                 autoComplete="one-time-code"
-                pattern="[0-9]{6}"
-                maxLength={6}
+                pattern="[0-9]{6,8}"
+                maxLength={8}
                 label="Kode"
                 required
               />
