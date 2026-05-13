@@ -87,7 +87,7 @@ async function HomeBody() {
   const [profileRes, rawActiveRes, rawFinishedRes] = await Promise.all([
     supabase
       .from('users')
-      .select('name, is_admin')
+      .select('name, is_admin, profile_completed_at')
       .eq('id', userId!)
       .single(),
     supabase
@@ -111,13 +111,13 @@ async function HomeBody() {
 
   const { data: profile, error: profileError } = profileRes;
 
-  // PGRST116 = "Cannot coerce the result to a single JSON object" → no row
-  // for this auth user yet. Send them to the profile-completion flow.
-  if (profileError && profileError.code === 'PGRST116') {
-    redirect('/complete-profile');
-  }
+  // Old logic was: "no row" means not yet onboarded — but the auth.users trigger
+  // now pre-creates a placeholder row, so check the completion timestamp instead.
   if (profileError) {
     throw profileError;
+  }
+  if (!profile?.profile_completed_at) {
+    redirect('/complete-profile');
   }
 
   const activeGames = (rawActiveRes.data ?? [])

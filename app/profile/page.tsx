@@ -122,16 +122,17 @@ async function ProfileFormCard({
 
   const { data: profile, error: profileError } = await supabase
     .from('users')
-    .select('name, nickname, hcp_index, email')
+    .select('name, nickname, hcp_index, email, profile_completed_at')
     .eq('id', userId!)
     .single();
 
-  // No profile row yet → finish registration first.
-  if (profileError && profileError.code === 'PGRST116') {
-    redirect('/complete-profile');
-  }
+  // Old logic was: "no row" means not yet onboarded — but the auth.users trigger
+  // now pre-creates a placeholder row, so check the completion timestamp instead.
   if (profileError) {
     throw profileError;
+  }
+  if (!profile?.profile_completed_at) {
+    redirect('/complete-profile');
   }
 
   return (
