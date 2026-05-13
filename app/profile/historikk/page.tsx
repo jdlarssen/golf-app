@@ -4,7 +4,6 @@ import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
-import { PageHeader } from '@/components/ui/PageHeader';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { formatTeeOffDate } from '@/lib/format/teeOff';
 
@@ -107,9 +106,13 @@ export default async function HistorikkPage() {
 
   return (
     <AppShell>
-      <TopBar backHref="/profile" backLabel="Tilbake til profil" />
+      <TopBar
+        backHref="/profile"
+        backLabel="Tilbake til profil"
+        kicker="Historikk"
+      />
 
-      <PageHeader title="Min historikk" subtitle={subtitle} />
+      <p className="mb-4 text-sm text-muted">{subtitle}</p>
 
       {finishedCount === 0 ? (
         <Card>

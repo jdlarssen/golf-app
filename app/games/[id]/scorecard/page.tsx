@@ -7,7 +7,6 @@ import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { LinkButton } from '@/components/ui/Button';
-import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import type { GameStatus } from '@/lib/games/status';
@@ -81,8 +80,11 @@ export default async function ScorecardPage({ params }: { params: Params }) {
 
   return (
     <AppShell showVersion={false}>
-      <TopBar backHref={`/games/${id}`} backLabel={`Tilbake til ${game.name}`} />
-      <PageHeader title="Mitt scorekort" />
+      <TopBar
+        backHref={`/games/${id}`}
+        backLabel={`Tilbake til ${game.name}`}
+        kicker="Scorekort"
+      />
 
       <div className="space-y-4">
         <Suspense fallback={<ScorecardTableSkeleton />}>

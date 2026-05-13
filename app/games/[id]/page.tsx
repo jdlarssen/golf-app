@@ -340,7 +340,7 @@ export default async function GameHomePage({
 
   return (
     <AppShell>
-      <TopBar backHref="/" backLabel="Tilbake til hjem" />
+      <TopBar backHref="/" backLabel="Tilbake til hjem" kicker="Turnering" />
       <PageHeader title={game.name} />
 
       <div className="mb-4">

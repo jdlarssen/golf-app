@@ -6,7 +6,6 @@ import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
-import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { approveScorecard, rejectScorecard } from './actions';
 import { ReviewActions } from './ReviewActions';
@@ -119,8 +118,11 @@ export default async function ApprovePage({
 
   return (
     <AppShell showVersion={false}>
-      <TopBar backHref={`/games/${id}`} backLabel={`Tilbake til ${game.name}`} />
-      <PageHeader title="Godkjenn scorekort" />
+      <TopBar
+        backHref={`/games/${id}`}
+        backLabel={`Tilbake til ${game.name}`}
+        kicker="Godkjenning"
+      />
 
       {statusBanner && (
         <div className="mb-4">

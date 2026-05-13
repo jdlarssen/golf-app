@@ -6,7 +6,6 @@ import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
-import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { getQuotaState, formatTimeUntil } from '@/lib/invitations/quota';
 import { updateProfile } from './actions';
@@ -74,11 +73,7 @@ export default async function ProfilePage({
 
   return (
     <AppShell>
-      <TopBar backHref="/" backLabel="Tilbake til hjem" />
-      <PageHeader
-        title="Min profil"
-        subtitle="Oppdater detaljene dine"
-      />
+      <TopBar backHref="/" backLabel="Tilbake til hjem" kicker="Profil" />
 
       {profileUpdated && (
         <div className="mb-4">

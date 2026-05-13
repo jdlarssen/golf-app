@@ -1,6 +1,5 @@
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
-import { PageHeader } from '@/components/ui/PageHeader';
 
 export const metadata = {
   title: 'Personvern – Tørny',
@@ -9,12 +8,7 @@ export const metadata = {
 export default function PrivacyPage() {
   return (
     <AppShell>
-      <TopBar backHref="/" backLabel="Tilbake til hjem" />
-
-      <PageHeader
-        title="Personvern"
-        subtitle="Slik bruker og lagrer Tørny dataene dine"
-      />
+      <TopBar backHref="/" backLabel="Tilbake til hjem" kicker="Personvern" />
 
       <div className="space-y-8 text-sm leading-relaxed text-text">
 

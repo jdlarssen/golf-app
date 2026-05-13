@@ -8,7 +8,6 @@ import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { Kicker } from '@/components/ui/Kicker';
-import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { submitScorecard } from './actions';
 import { SubmitForm } from './SubmitForm';
@@ -119,8 +118,7 @@ export default async function SubmitPage({
 
   return (
     <AppShell showVersion={false}>
-      <TopBar backHref={`/games/${id}`} />
-      <PageHeader title="Gjennomgå før levering" />
+      <TopBar backHref={`/games/${id}`} kicker="Lever scorekort" />
 
       {errorMessage && (
         <div className="mb-4">

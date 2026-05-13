@@ -57,16 +57,11 @@ export default async function SlettKontoPage({
 
   return (
     <AppShell>
-      <TopBar backHref="/profile" backLabel="Tilbake til profil" />
-
-      <div className="px-1 mb-6">
-        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
-          Faresone
-        </p>
-        <h1 className="font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-          Slett konto
-        </h1>
-      </div>
+      <TopBar
+        backHref="/profile"
+        backLabel="Tilbake til profil"
+        kicker="Slett konto"
+      />
 
       {errorMessage && (
         <div className="mb-4">
