@@ -30,12 +30,20 @@ export async function updateProfile(formData: FormData) {
     redirect('/login');
   }
 
+  // Defence-in-depth: if a user somehow reaches /profile without
+  // profile_completed_at set (e.g. the Karl-case from 2026-05-13's deploy
+  // window where /profile was hit before the new onboarding gate was live),
+  // stamp it here so they don't get stuck as "Venter" in the player picker.
+  // For already-onboarded users this just bumps the timestamp to the latest
+  // edit, which is fine — the field's role is "has the user ever completed
+  // onboarding," not "when did they first onboard."
   const { error } = await supabase
     .from('users')
     .update({
       name,
       nickname,
       hcp_index: hcpParsed,
+      profile_completed_at: new Date().toISOString(),
     })
     .eq('id', user.id);
 

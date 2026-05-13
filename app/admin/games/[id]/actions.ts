@@ -8,6 +8,7 @@ import {
   applyAllowance,
 } from '@/lib/scoring/courseHandicap';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
+import { findPendingPlayers } from '@/lib/games/pendingPlayers';
 
 async function requireAdmin() {
   const supabase = await getServerClient();
@@ -42,6 +43,13 @@ export async function startScheduledGameAction(gameId: string) {
 
   const result = await startScheduledGame(supabase, gameId);
   if (!result.ok) {
+    if (result.reason === 'pending_players' && result.pendingEmails) {
+      const qs = new URLSearchParams({
+        error: 'pending_players',
+        emails: result.pendingEmails.join(', '),
+      });
+      redirect(`${detailPath}?${qs.toString()}`);
+    }
     redirect(`${detailPath}?error=${result.reason}`);
   }
 
@@ -77,6 +85,26 @@ export async function startGame(gameId: string) {
     .eq('game_id', gameId)
     .returns<{ user_id: string; users: { hcp_index: number | string } | null }[]>();
   if (gpError || !gamePlayers) redirect(`${detailPath}?error=db_players`);
+
+  // Defence-in-depth: refuse to flip a draft to active if any roster player
+  // is still pending profile completion. Mirrors the gate in
+  // `startScheduledGame` so both start-paths behave identically.
+  const rosterIds = gamePlayers!.map((row) => row.user_id);
+  const { data: rosterUsers, error: rosterUsersError } = await supabase
+    .from('users')
+    .select('id, email, profile_completed_at')
+    .in('id', rosterIds);
+  if (rosterUsersError || !rosterUsers) {
+    redirect(`${detailPath}?error=db_players`);
+  }
+  const pending = findPendingPlayers(rosterUsers!);
+  if (pending.length > 0) {
+    const qs = new URLSearchParams({
+      error: 'pending_players',
+      emails: pending.map((p) => p.email).join(', '),
+    });
+    redirect(`${detailPath}?${qs.toString()}`);
+  }
 
   // Freeze a course handicap per player using the configured allowance.
   for (const row of gamePlayers!) {

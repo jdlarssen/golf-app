@@ -212,9 +212,12 @@ async function ReviewBody({
       .from('users')
       .select('id, name, nickname')
       .in('id', enteredByIds)
-      .returns<{ id: string; name: string; nickname: string | null }[]>();
+      .returns<{ id: string; name: string | null; nickname: string | null }[]>();
+    // Active-game invariant: publish-gate guarantees no pending players in roster,
+    // so name is non-null in practice. Coalesce defensively.
     for (const u of nameRows ?? []) {
-      namesById.set(u.id, u.nickname ? `${u.name} «${u.nickname}»` : u.name);
+      const name = u.name ?? '(ukjent spiller)';
+      namesById.set(u.id, u.nickname ? `${name} «${u.nickname}»` : name);
     }
   }
 

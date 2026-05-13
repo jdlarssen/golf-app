@@ -3,6 +3,7 @@ import {
   calculateCourseHandicap,
   applyAllowance,
 } from '@/lib/scoring/courseHandicap';
+import { findPendingPlayers } from './pendingPlayers';
 
 type GameStatus = 'draft' | 'scheduled' | 'active' | 'finished';
 
@@ -15,8 +16,10 @@ export type StartScheduledGameResult =
         | 'not_scheduled'
         | 'tee_missing'
         | 'no_players'
+        | 'pending_players'
         | 'db_players'
         | 'db_game';
+      pendingEmails?: string[];
     };
 
 /**
@@ -80,6 +83,26 @@ export async function startScheduledGame(
   if (rosterError) return { ok: false, reason: 'db_players' };
   if (!roster || roster.length === 0) {
     return { ok: false, reason: 'no_players' };
+  }
+
+  // Defence-in-depth: refuse to start if any roster player is still pending
+  // profile completion. Task 6's publish-gate blocks this normally, but this
+  // catches direct DB edits or future code paths that bypass that gate.
+  const rosterIds = roster.map((r) => r.user_id);
+  const { data: rosterUsers, error: rosterUsersError } = await supabase
+    .from('users')
+    .select('id, email, profile_completed_at')
+    .in('id', rosterIds);
+  if (rosterUsersError || !rosterUsers) {
+    return { ok: false, reason: 'db_players' };
+  }
+  const pending = findPendingPlayers(rosterUsers);
+  if (pending.length > 0) {
+    return {
+      ok: false,
+      reason: 'pending_players',
+      pendingEmails: pending.map((p) => p.email),
+    };
   }
 
   // 3. Compute course_handicap per player, then write it back. Supabase

@@ -34,17 +34,19 @@ export async function sendFriendInvite(formData: FormData) {
 
   // Look up inviter profile. If the inviter hasn't completed their own
   // profile, send them there first — same defensive pattern as /profile.
+  // Migration 0014 ensures the row always exists for authenticated users,
+  // so we gate on `profile_completed_at` rather than "row missing".
   const { data: profile, error: profileError } = await supabase
     .from('users')
-    .select('name')
+    .select('name, profile_completed_at')
     .eq('id', user.id)
-    .single();
+    .single<{ name: string | null; profile_completed_at: string | null }>();
 
-  if (profileError && profileError.code === 'PGRST116') {
-    redirect('/complete-profile');
-  }
   if (profileError || !profile) {
     redirect('/profile?invite_error=unknown');
+  }
+  if (!profile.profile_completed_at) {
+    redirect('/complete-profile');
   }
 
   // Defensive quota re-check — the /invite page already gates on this,

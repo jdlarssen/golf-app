@@ -8,7 +8,7 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## [0.7.1] - 2026-05-13
+## [0.8.1] - 2026-05-13
 
 ### Fixed
 
@@ -17,7 +17,7 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## [0.7.0] - 2026-05-13
+## [0.8.0] - 2026-05-13
 
 ### Added
 
@@ -26,7 +26,7 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## [0.6.0] - 2026-05-13
+## [0.7.0] - 2026-05-13
 
 ### Added
 
@@ -35,17 +35,17 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ### Changed
 
-- **RLS:** Ny policy `users admin update` lar admin oppdatere andre bruker-rader (tidligere kun egen rad).
+- **RLS:** Ny policy `users admin update` lar admin oppdatere andre bruker-rader (tidligere kun egen rad). Migrasjonen heter `0015_admin_user_management` (filnavn-kollisjon med `0014_pending_users` ble rensket opp ved merge).
 
 ---
 
-## [0.5.0] - 2026-05-13
+## [0.6.0] - 2026-05-13
 
 ### Added
 
 - **Ny samlet spilleradministrasjon på `/admin/spillere`.** Erstatter gamle `/admin/invitations`. Tre seksjoner i én flate: registrerte spillere (med søk på navn/kallenavn/e-post), ventende invitasjoner, og en sammenfoldet «Inviter ny spiller»-form nederst.
 - **«Send på nytt»-knapp på ventende invitasjoner.** Trigger ny notifikasjons-mail via Resend til samme adresse. Ingen ny DB-rad.
-- **«Trekk tilbake»-knapp på ventende invitasjoner** med inline to-trinn-bekreft. Sletter `invitations`-raden; hvis invitéen hadde bedt om kode men aldri fullført profil (foreldreløs `auth.users`-rad), ryddes også den slik at e-posten er ledig igjen.
+- **«Trekk tilbake»-knapp på ventende invitasjoner** med inline to-trinn-bekreft. Sletter `invitations`-raden; hvis invitéen hadde bedt om kode men aldri fullført profil (`profile_completed_at IS NULL`), ryddes også `auth.users`-raden via service-role slik at e-posten er ledig igjen.
 
 ### Changed
 
@@ -55,6 +55,92 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 ### Removed
 
 - **Rute `/admin/invitations`** — funksjonaliteten finnes nå på `/admin/spillere`.
+
+---
+
+## [0.5.10] - 2026-05-13
+
+### Fixed
+- `Akseptert`-pille på `/admin/invitations` reflekterer nå faktisk onboarding (`profile_completed_at IS NOT NULL`), ikke bare at invitasjons-raden ble markert akseptert ved OTP-verify. Stoppet misvisende «Akseptert»-status for brukere som klikket gammel magic-link-mail uten å fullføre profil.
+
+---
+
+## [0.5.9] - 2026-05-13
+
+### Fixed
+- Profil-oppdateringen stamper nå `profile_completed_at` som defence-in-depth, så en bruker som havner på `/profile` uten å ha fullført onboarding (deploy-vindu-race i tidligere release) blir ikke sittende fast som «Venter» i picker-en.
+
+---
+
+## [0.5.8] - 2026-05-13
+
+### Fixed
+- «Start spillet» (draft → aktiv) blokkeres nå hvis ikke alle valgte spillere har fullført profil — samme guard som scheduled-pathen.
+- Invitér-en-venn-actionen sjekker `profile_completed_at` i stedet for "rad finnes ikke" som ble dødt etter migrasjon 0014.
+
+---
+
+## [0.5.7] - 2026-05-13
+
+### Fixed
+- Rendring av ventende invitéer (uten utfylt navn) faller tilbake til e-postadressen i stedet for å vise tom tekst — gjelder admins spill-detaljside (lag/flight-oversikt) og spillernes venterom-visning av draft-spill.
+
+---
+
+## [0.5.6] - 2026-05-13
+
+### Fixed
+- Nye brukere ble ikke sendt til onboarding på `/` og `/profile` etter at trigger-en fra migrasjon 0014 begynte å pre-opprette `public.users`-rader. Gate-en sjekker nå `profile_completed_at` i stedet for "rad finnes ikke".
+
+---
+
+## [0.5.5] - 2026-05-13
+
+### Fixed
+- `complete-profile` oppdaterer nå den auto-opprettede `public.users`-raden i stedet for å forsøke å sette inn på nytt. Uten denne ville migrasjon 0014 brutt all ny brukerregistrering.
+
+---
+
+## [0.5.4] - 2026-05-13
+
+### Fixed
+- Feilmelding for ventende spillere viste `{LIST}`-plassholderen bokstavelig på opprett-spill-siden. Bruker nå samme `buildErrorMessage`-helper som rediger-spill og spill-detalj.
+
+---
+
+## [0.5.3] - 2026-05-13
+
+### Fixed
+- Start spill blokkeres også (defence-in-depth) hvis et publisert spill noensinne skulle få ventende spillere via direkte DB-redigering.
+
+---
+
+## [0.5.2] - 2026-05-13
+
+### Fixed
+- Publisering/oppdatering fra rediger-spill blokkeres med tydelig e-postliste hvis ventende invitasjoner står på rosteret.
+
+---
+
+## [0.5.1] - 2026-05-13
+
+### Fixed
+- Publisering av nytt spill blokkeres nå hvis ikke alle valgte spillere har fullført profil.
+
+---
+
+## [0.5.0] - 2026-05-13
+
+### Added
+- Inviterte spillere som ikke har logget inn ennå dukker opp i game-picker-en med en gul `Venter`-pille. Admin kan velge dem til lag og flight og lagre utkast.
+
+---
+
+## [0.4.3] - 2026-05-13
+
+### Added
+
+- Inviterte spillere som ikke har fullført registrering blir nå sporet via `profile_completed_at`. Forberedelse for å vise dem i game-picker-en.
 
 ---
 

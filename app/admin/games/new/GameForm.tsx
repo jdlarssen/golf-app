@@ -12,9 +12,11 @@ export type CourseOption = {
 
 export type PlayerOption = {
   id: string;
-  name: string;
+  name: string | null;       // null while invitee hasn't completed profile
   nickname: string | null;
   hcp_index: number;
+  email: string;
+  pending: boolean;          // derived from profile_completed_at IS NULL
 };
 
 const TEAM_NUMBERS = [1, 2, 3, 4] as const;
@@ -365,13 +367,19 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   if (!allowanceValid) missingForPublish.push('gyldig HCP-allowance');
 
   function playerLabel(p: PlayerOption): string {
+    if (p.pending) {
+      return p.email;
+    }
+    const displayName = p.name ?? p.email; // defensive — non-pending should always have name
     const hcp = p.hcp_index.toFixed(1);
-    if (p.nickname) return `${p.name} «${p.nickname}» — HCP ${hcp}`;
-    return `${p.name} — HCP ${hcp}`;
+    if (p.nickname) return `${displayName} «${p.nickname}» — HCP ${hcp}`;
+    return `${displayName} — HCP ${hcp}`;
   }
 
   function shortName(p: PlayerOption): string {
-    return p.nickname ? `${p.name} «${p.nickname}»` : p.name;
+    if (p.pending) return p.email;
+    const displayName = p.name ?? p.email;
+    return p.nickname ? `${displayName} «${p.nickname}»` : displayName;
   }
 
   // Resolve the draft + publish server actions for the two modes that share a
@@ -549,9 +557,21 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
                       onChange={() => togglePlayer(p.id)}
                       className="h-5 w-5 rounded border-border text-primary focus:ring-accent/40"
                     />
-                    <span className="text-sm text-text">
+                    <span className="flex-1 text-sm text-text">
                       {playerLabel(p)}
                     </span>
+                    {p.pending && (
+                      <span
+                        className="shrink-0 rounded-full px-[7px] py-[3px] font-sans text-[9.5px] font-semibold uppercase"
+                        style={{
+                          letterSpacing: '0.16em',
+                          background: 'rgba(216, 155, 58, 0.18)',
+                          color: '#7a5410',
+                        }}
+                      >
+                        Venter
+                      </span>
+                    )}
                   </label>
                 </li>
               );

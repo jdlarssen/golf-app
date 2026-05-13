@@ -10,7 +10,10 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { GameForm, type CourseOption, type PlayerOption } from './GameForm';
 import { createGameDraft, createAndPublishGame } from './actions';
 
-type SearchParams = Promise<{ error?: string | string[] }>;
+type SearchParams = Promise<{
+  error?: string | string[];
+  emails?: string | string[];
+}>;
 
 const ERROR_MESSAGES: Record<string, string> = {
   name_required: 'Spillet må ha et navn.',
@@ -28,12 +31,27 @@ const ERROR_MESSAGES: Record<string, string> = {
   db_tee: 'Klarte ikke å lese tee-boksen fra databasen. Prøv igjen.',
   db_players:
     'Klarte ikke å lagre spillerne på spillet. Prøv igjen, eller sjekk Supabase-loggene.',
+  pending_players:
+    'Disse spillerne har ikke fullført registreringen ennå{LIST}. De må logge inn og fylle inn navn + HCP før spillet kan publiseres.',
   tee_off_required: 'Tee-off-tidspunkt er påkrevd ved publisering.',
 };
 
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
   return value;
+}
+
+function buildErrorMessage(
+  errorCode: string | undefined,
+  emails: string | undefined,
+): string | undefined {
+  if (!errorCode) return undefined;
+  const base = ERROR_MESSAGES[errorCode];
+  if (!base) return undefined;
+  if (errorCode === 'pending_players') {
+    return base.replace('{LIST}', emails ? `: ${emails}` : '');
+  }
+  return base;
 }
 
 type CourseRow = {
@@ -44,9 +62,11 @@ type CourseRow = {
 
 type UserRow = {
   id: string;
-  name: string;
+  name: string | null;
   nickname: string | null;
   hcp_index: number | string;
+  email: string;
+  profile_completed_at: string | null;
 };
 
 const getNewGameContext = cache(async () => {
@@ -67,8 +87,9 @@ const getFormData = cache(async () => {
       .returns<CourseRow[]>(),
     supabase
       .from('users')
-      .select('id, name, nickname, hcp_index')
-      .order('name', { ascending: true })
+      .select('id, name, nickname, hcp_index, email, profile_completed_at')
+      .order('profile_completed_at', { ascending: true, nullsFirst: false })
+      .order('name', { ascending: true, nullsFirst: true })
       .returns<UserRow[]>(),
   ]);
 
@@ -88,6 +109,8 @@ const getFormData = cache(async () => {
     name: u.name,
     nickname: u.nickname ?? null,
     hcp_index: Number(u.hcp_index),
+    email: u.email,
+    pending: u.profile_completed_at === null,
   }));
 
   return { courses, players };
@@ -98,9 +121,8 @@ export default async function NewGamePage({
 }: {
   searchParams: SearchParams;
 }) {
-  const params = await searchParams;
-  const errorCode = first(params.error);
-  const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
+  const sp = await searchParams;
+  const errorMessage = buildErrorMessage(first(sp.error), first(sp.emails));
 
   return (
     <AdminShell>

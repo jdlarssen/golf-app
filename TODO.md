@@ -61,6 +61,10 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 
 - [ ] Bedre overgang mellom hull (i dag direkte navigasjon)
 
+### Tilgjengelighet (a11y)
+
+- [ ] **A11y-pass på `Venter`-pille + `min-w-0 truncate` på picker-raden.** I `app/admin/games/new/GameForm.tsx` (section 2, spiller-picker): pillen er rent visuell — skjermleser hører bare «Mia mia@example.com checkbox» med en flytende «Venter»-tekst etterpå, uten semantisk kobling til raden. Legg til `aria-label` på `<label>` eller `sr-only`-prefiks. Samtidig: label `<span>` mangler `min-w-0 truncate`, så en patologisk lang e-postadresse vil dytte pillen ut av synsfeltet på smale viewports (iPhone SE 320px). De fem kjente invitéene har korte e-poster, så det er teoretisk — men det er en én-linjes fiks.
+
 ### Dark mode
 
 - [ ] Dark-mode-tokens er definert i `app/globals.css`, men flatene er ikke verifisert i dark mode og noen ser halvferdige ut. Per 2026-05-11 tvinger `app/layout.tsx` light mode via `data-theme="light"` + `colorScheme: "light"`. Fjern tvangen og audit hver flate når dark mode skal aktiveres på ekte.
@@ -79,6 +83,10 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 
 - [ ] **Extract `lib/games/status.ts`** — `GameStatus`-unionen og `STATUS_LABELS`-objektet er duplisert i 13 filer. Refaktoreres samtidig med M1-fargefiks (når design-handoff lander). Bør også gjøres for å forenkle fremtidige status-utvidelser.
 - [ ] **Move RealtimeMount out of game layout** — i dag mounter `app/games/[id]/layout.tsx` `RealtimeMount` for alle game-statuser inkludert scheduled. Subscription er harmless (ingen events arriverer for scheduled siden ingen scores eksisterer + RLS blokkerer), men det er en idle WebSocket-subscription på hver venterom-besøk. Lav prioritet til vi vokser.
+- [ ] Extract shared `pending_players` ERROR_MESSAGES + `buildErrorMessage` helper into a single module (currently duplicated across `app/admin/games/new/page.tsx`, `app/admin/games/[id]/edit/page.tsx`, and `app/admin/games/[id]/page.tsx`). After this lands, the «kan publiseres» vs. «kan startes» copy variation should be documented in the shared module's JSDoc so a future refactor doesn't unify it.
+- [ ] **Consolidate the two `Venter`-piller onto `components/ui/StatusChip.tsx` `tone="påmelding"`.** `/admin/invitations` (line ~201) and `app/admin/games/new/GameForm.tsx` (pending-pille i picker) bruker begge inline `style={...}` med identiske farger som allerede finnes i `StatusChip`'s `påmelding`-tone. Erstatt med `<StatusChip tone="påmelding" label="Venter" className="shrink-0" />`. Ren DRY-vinning, null visuell endring.
+- [ ] **Harden 0014-trigger mot NULL `auth.users.email`.** `handle_new_auth_user()` gjør `insert into public.users (email) values (new.email)` — `auth.users.email` er nullable for fremtidige phone-only / social-login-flows. Tørny bruker bare e-post-OTP i dag, men hvis vi noen gang legger til Sign in with Apple/Google, vil triggeren throwe og blokkere signups. Fix: pakk insert i `if new.email is not null then ...`. Lav prioritet til vi vurderer non-email-auth.
+- [ ] **Split `db_players` → `db_roster` for read-failure paths.** Brukes i dag både for «klarte ikke å lese spillerlisten» (Tasks 5–7 publish/start-guards) og «klarte ikke å lagre game_players» (insert-paths). Bruker ser samme melding for to vidt forskjellige feilkilder. Innfør `db_roster: 'Klarte ikke å lese spillerlisten fra databasen.'` på lese-paths.
 
 ### Opprydning
 

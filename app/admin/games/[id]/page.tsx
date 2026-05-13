@@ -28,6 +28,7 @@ type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
   status?: string | string[];
   error?: string | string[];
+  emails?: string | string[];
 }>;
 
 type GameStatus = 'draft' | 'scheduled' | 'active' | 'finished';
@@ -68,6 +69,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   db_players: 'Klarte ikke å oppdatere spillerne. Prøv igjen.',
   db_game: 'Klarte ikke å oppdatere spillet. Prøv igjen.',
   not_finished: 'Spillet er ikke avsluttet — kan ikke gjenåpnes.',
+  pending_players:
+    'Disse spillerne har ikke fullført registreringen ennå{LIST}. De må logge inn og fylle inn navn + HCP før spillet kan startes.',
 };
 
 const MONTHS_NB = [
@@ -88,6 +91,19 @@ const MONTHS_NB = [
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
   return value;
+}
+
+function buildErrorMessage(
+  errorCode: string | undefined,
+  emails: string | undefined,
+): string | undefined {
+  if (!errorCode) return undefined;
+  const base = ERROR_MESSAGES[errorCode];
+  if (!base) return undefined;
+  if (errorCode === 'pending_players') {
+    return base.replace('{LIST}', emails ? `: ${emails}` : '');
+  }
+  return base;
 }
 
 function shortNb(iso: string | null | undefined): string | null {
@@ -129,9 +145,13 @@ type GamePlayerRow = {
   submitted_at: string | null;
   approved_at: string | null;
   users: {
-    name: string;
+    // name is null until the invitee completes their profile — see
+    // migration 0014. Pre-created placeholder rows can still appear on a
+    // draft roster, so consumers must fall back to email below.
+    name: string | null;
     nickname: string | null;
     hcp_index: number | string;
+    email: string;
   } | null;
 };
 
@@ -175,7 +195,7 @@ export default async function GameDetailPage({
   const { id } = await params;
   const sp = await searchParams;
   const statusBanner = STATUS_BANNERS[first(sp.status) ?? ''] ?? undefined;
-  const errorMessage = ERROR_MESSAGES[first(sp.error) ?? ''] ?? undefined;
+  const errorMessage = buildErrorMessage(first(sp.error), first(sp.emails));
 
   const { supabase } = await getAdminGameContext();
   // Gating: fetch the game row first so we can render the title bar
@@ -289,7 +309,7 @@ async function PlayersSections({
   const playersPromise = supabase
     .from('game_players')
     .select(
-      'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, users!game_players_user_id_fkey(name, nickname, hcp_index)',
+      'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, users!game_players_user_id_fkey(name, nickname, hcp_index, email)',
     )
     .eq('game_id', gameId)
     .returns<GamePlayerRow[]>();
@@ -355,9 +375,9 @@ async function PlayersSections({
 
   function displayName(p: GamePlayerRow): string {
     if (!p.users) return '(ukjent spiller)';
-    return p.users.nickname
-      ? `${p.users.name} «${p.users.nickname}»`
-      : p.users.name;
+    // Pending invitee — show email until they complete their profile.
+    const name = p.users.name ?? p.users.email;
+    return p.users.nickname ? `${name} «${p.users.nickname}»` : name;
   }
 
   const startAction = startGame.bind(null, gameId);

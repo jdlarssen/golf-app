@@ -49,7 +49,10 @@ type GamePlayerRow = {
   user_id: string;
   team_number: number;
   course_handicap: number | null;
-  users: { name: string; nickname: string | null } | null;
+  // Leaderboard is only rendered for non-draft games, and Task 7's publish-gate
+  // prevents a game from leaving 'draft' with pending players on the roster —
+  // so `name` is always set in practice. Typed nullable to match the DB column.
+  users: { name: string | null; nickname: string | null } | null;
 };
 
 type CourseHoleRow = {
@@ -177,7 +180,10 @@ async function LeaderboardBody({
     .filter((p) => p.users != null)
     .map((p) => ({
       userId: p.user_id,
-      name: p.users!.name,
+      // Defensive fallback: pending invitees can't reach an active/finished
+      // leaderboard per Task 7's publish-gate, but the DB column is nullable
+      // so we coalesce to keep TS honest.
+      name: p.users!.name ?? '(ukjent)',
       nickname: p.users!.nickname,
       teamNumber: p.team_number,
       courseHandicap: p.course_handicap ?? 0,

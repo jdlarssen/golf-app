@@ -53,7 +53,10 @@ type FlightPlayerRow = {
   flight_number: number;
   submitted_at: string | null;
   approved_at: string | null;
-  users: { name: string; nickname: string | null } | null;
+  // Approve page only renders when game.status === 'active'; pending invitees
+  // can't reach an active game per Task 7's publish-gate. Typed nullable to
+  // match the DB column.
+  users: { name: string | null; nickname: string | null } | null;
 };
 
 type HoleRow = {
@@ -215,9 +218,10 @@ async function PendingApprovals({
 
   function displayName(p: FlightPlayerRow): string {
     if (!p.users) return '(ukjent spiller)';
-    return p.users.nickname
-      ? `${p.users.name} «${p.users.nickname}»`
-      : p.users.name;
+    // Should be non-null here per the invariant above, but coalesce so TS
+    // (and any future flow that loosens the invariant) stays honest.
+    const name = p.users.name ?? '(ukjent spiller)';
+    return p.users.nickname ? `${name} «${p.users.nickname}»` : name;
   }
 
   if (pending.length === 0) {

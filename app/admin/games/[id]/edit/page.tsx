@@ -22,7 +22,10 @@ import {
 } from './actions';
 
 type Params = Promise<{ id: string }>;
-type SearchParams = Promise<{ error?: string | string[] }>;
+type SearchParams = Promise<{
+  error?: string | string[];
+  emails?: string | string[];
+}>;
 
 const ERROR_MESSAGES: Record<string, string> = {
   name_required: 'Spillet må ha et navn.',
@@ -39,11 +42,26 @@ const ERROR_MESSAGES: Record<string, string> = {
   db_players: 'Klarte ikke å oppdatere spillerne. Prøv igjen.',
   not_editable:
     'Spillet kan ikke redigeres lenger — det er allerede startet eller avsluttet.',
+  pending_players:
+    'Disse spillerne har ikke fullført registreringen ennå{LIST}. De må logge inn og fylle inn navn + HCP før spillet kan publiseres.',
 };
 
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
   return value;
+}
+
+function buildErrorMessage(
+  errorCode: string | undefined,
+  emails: string | undefined,
+): string | undefined {
+  if (!errorCode) return undefined;
+  const base = ERROR_MESSAGES[errorCode];
+  if (!base) return undefined;
+  if (errorCode === 'pending_players') {
+    return base.replace('{LIST}', emails ? `: ${emails}` : '');
+  }
+  return base;
 }
 
 type CourseRow = {
@@ -54,9 +72,11 @@ type CourseRow = {
 
 type UserRow = {
   id: string;
-  name: string;
+  name: string | null;
   nickname: string | null;
   hcp_index: number | string;
+  email: string;
+  profile_completed_at: string | null;
 };
 
 type GameRow = {
@@ -117,8 +137,7 @@ export default async function EditGamePage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  const errorCode = first(sp.error);
-  const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
+  const errorMessage = buildErrorMessage(first(sp.error), first(sp.emails));
 
   const { supabase, userId } = await getEditContext();
   if (!userId) redirect('/login');
@@ -208,8 +227,9 @@ const getOptions = cache(async () => {
       .returns<CourseRow[]>(),
     supabase
       .from('users')
-      .select('id, name, nickname, hcp_index')
-      .order('name', { ascending: true })
+      .select('id, name, nickname, hcp_index, email, profile_completed_at')
+      .order('profile_completed_at', { ascending: true, nullsFirst: false })
+      .order('name', { ascending: true, nullsFirst: true })
       .returns<UserRow[]>(),
   ]);
   if (coursesResult.error) throw coursesResult.error;
@@ -228,6 +248,8 @@ const getOptions = cache(async () => {
     name: u.name,
     nickname: u.nickname ?? null,
     hcp_index: Number(u.hcp_index),
+    email: u.email,
+    pending: u.profile_completed_at === null,
   }));
 
   return { courses, playerOptions };
