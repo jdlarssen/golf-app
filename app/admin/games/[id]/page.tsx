@@ -245,6 +245,30 @@ export default async function GameDetailPage({
           <CreatedAtFooter createdAt={game.created_at} />
         </Suspense>
       </p>
+
+      {/* Faresone — permanent delete */}
+      <section className="mt-6">
+        <p className="mb-1.5 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          Faresone
+        </p>
+        <div
+          className="rounded-xl border bg-surface px-4 py-3.5"
+          style={{
+            borderColor: 'rgba(180, 60, 60, 0.18)',
+            boxShadow: '0 1px 2px rgba(26, 46, 31, 0.03)',
+          }}
+        >
+          <div className="text-center">
+            <SmartLink
+              href={`/admin/games/${id}/slett`}
+              className="font-sans text-[13px] font-medium"
+              style={{ color: '#a04040' }}
+            >
+              Slett spillet helt
+            </SmartLink>
+          </div>
+        </div>
+      </section>
     </AdminShell>
   );
 }

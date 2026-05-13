@@ -22,6 +22,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 const STATUS_MESSAGES: Record<string, (name: string) => string> = {
   created: (name) => `✓ Spillet «${name}» ble lagret som utkast.`,
   started: (name) => `✓ Spillet «${name}» er startet.`,
+  deleted: (name) => `✓ Spillet «${name}» er slettet.`,
 };
 
 function first(value: string | string[] | undefined): string | undefined {
