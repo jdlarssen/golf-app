@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
-import { BackLink } from '@/components/ui/BackLink';
+import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SmartLink } from '@/components/ui/SmartLink';
@@ -107,9 +107,7 @@ export default async function HistorikkPage() {
 
   return (
     <AppShell>
-      <div className="-mt-3 mb-4">
-        <BackLink href="/profile">Tilbake til profil</BackLink>
-      </div>
+      <TopBar backHref="/profile" backLabel="Tilbake til profil" />
 
       <PageHeader title="Min historikk" subtitle={subtitle} />
 

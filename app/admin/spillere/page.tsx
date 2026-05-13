@@ -1,7 +1,7 @@
 import { Suspense, cache } from 'react';
 import { getServerClient } from '@/lib/supabase/server';
 import { AdminShell } from '@/components/ui/AdminShell';
-import { BackLink } from '@/components/ui/BackLink';
+import { TopBar } from '@/components/ui/TopBar';
 import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { MiniRibbon } from '@/components/ui/MiniRibbon';
@@ -85,13 +85,7 @@ export default async function SpillerePage({
 
   return (
     <AdminShell>
-      <div className="-mt-3 mb-2 flex items-center justify-between">
-        <BackLink href="/admin">Tilbake</BackLink>
-        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          Sekretariatet
-        </p>
-        <span className="w-[80px]" aria-hidden />
-      </div>
+      <TopBar backHref="/admin" kicker="Sekretariatet" />
 
       <BrassRibbon kicker="Spillere · klubblisten" />
 

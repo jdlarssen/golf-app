@@ -4,7 +4,7 @@ import { notFound, redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
-import { BackLink } from '@/components/ui/BackLink';
+import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { LinkButton } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -81,9 +81,7 @@ export default async function ScorecardPage({ params }: { params: Params }) {
 
   return (
     <AppShell showVersion={false}>
-      <div className="-mt-3 mb-4">
-        <BackLink href={`/games/${id}`}>{`Tilbake til ${game.name}`}</BackLink>
-      </div>
+      <TopBar backHref={`/games/${id}`} backLabel={`Tilbake til ${game.name}`} />
       <PageHeader title="Mitt scorekort" />
 
       <div className="space-y-4">

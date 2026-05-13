@@ -1,6 +1,6 @@
 import { Suspense, cache } from 'react';
 import { notFound } from 'next/navigation';
-import { BackLink } from '@/components/ui/BackLink';
+import { TopBar } from '@/components/ui/TopBar';
 import { getServerClient } from '@/lib/supabase/server';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { Card } from '@/components/ui/Card';
@@ -74,13 +74,7 @@ export default async function EditCoursePage({
 
   return (
     <AdminShell>
-      <div className="-mt-3 mb-2 flex items-center justify-between">
-        <BackLink href="/admin/courses">Tilbake</BackLink>
-        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          Baner · protokoll
-        </p>
-        <span className="w-[80px]" aria-hidden />
-      </div>
+      <TopBar backHref="/admin/courses" kicker="Baner · protokoll" />
 
       <BrassRibbon kicker="Rediger bane" />
 

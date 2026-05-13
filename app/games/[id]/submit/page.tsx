@@ -4,7 +4,7 @@ import { notFound, redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
-import { BackLink } from '@/components/ui/BackLink';
+import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { Kicker } from '@/components/ui/Kicker';
@@ -119,9 +119,7 @@ export default async function SubmitPage({
 
   return (
     <AppShell showVersion={false}>
-      <div className="-mt-3 mb-4">
-        <BackLink href={`/games/${id}`}>Tilbake</BackLink>
-      </div>
+      <TopBar backHref={`/games/${id}`} />
       <PageHeader title="Gjennomgå før levering" />
 
       {errorMessage && (

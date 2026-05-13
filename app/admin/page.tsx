@@ -2,7 +2,7 @@ import { Suspense, cache } from 'react';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
 import { AdminShell } from '@/components/ui/AdminShell';
-import { BackLink } from '@/components/ui/BackLink';
+import { TopBar } from '@/components/ui/TopBar';
 import { ClubStamp } from '@/components/ui/ClubStamp';
 import { PullQuote } from '@/components/ui/PullQuote';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -96,13 +96,7 @@ export default function AdminSekretariat() {
 
   return (
     <AdminShell>
-      <div className="-mt-3 mb-4 flex items-center justify-between">
-        <BackLink href="/">Tilbake</BackLink>
-        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          Sekretariatet
-        </p>
-        <span className="w-[80px]" aria-hidden />
-      </div>
+      <TopBar backHref="/" kicker="Sekretariatet" />
 
       <Suspense fallback={<GreetingSkeleton dateLine={dateLine} />}>
         <GreetingCard dateLine={dateLine} timeOfDay={timeOfDay} />

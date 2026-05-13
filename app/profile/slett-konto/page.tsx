@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
-import { BackLink } from '@/components/ui/BackLink';
+import { TopBar } from '@/components/ui/TopBar';
 import { Banner } from '@/components/ui/Banner';
 import { Button } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
@@ -57,9 +57,7 @@ export default async function SlettKontoPage({
 
   return (
     <AppShell>
-      <div className="-mt-3 mb-4">
-        <BackLink href="/profile">Tilbake til profil</BackLink>
-      </div>
+      <TopBar backHref="/profile" backLabel="Tilbake til profil" />
 
       <div className="px-1 mb-6">
         <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">

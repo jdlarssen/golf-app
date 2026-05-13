@@ -1,6 +1,6 @@
 import { Suspense, cache } from 'react';
 import { notFound, redirect } from 'next/navigation';
-import { BackLink } from '@/components/ui/BackLink';
+import { TopBar } from '@/components/ui/TopBar';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
@@ -119,9 +119,7 @@ export default async function ApprovePage({
 
   return (
     <AppShell showVersion={false}>
-      <div className="-mt-3 mb-4">
-        <BackLink href={`/games/${id}`}>{`Tilbake til ${game.name}`}</BackLink>
-      </div>
+      <TopBar backHref={`/games/${id}`} backLabel={`Tilbake til ${game.name}`} />
       <PageHeader title="Godkjenn scorekort" />
 
       {statusBanner && (

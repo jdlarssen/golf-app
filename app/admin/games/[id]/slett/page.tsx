@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { AdminShell } from '@/components/ui/AdminShell';
-import { BackLink } from '@/components/ui/BackLink';
+import { TopBar } from '@/components/ui/TopBar';
 import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { Button } from '@/components/ui/Button';
@@ -113,13 +113,7 @@ export default async function DeleteGamePage({
 
   return (
     <AdminShell>
-      <div className="-mt-3 mb-2 flex items-center justify-between">
-        <BackLink href={`/admin/games/${id}`}>Tilbake</BackLink>
-        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          Sekretariatet
-        </p>
-        <span className="w-[80px]" aria-hidden />
-      </div>
+      <TopBar backHref={`/admin/games/${id}`} kicker="Sekretariatet" />
 
       <BrassRibbon kicker="Bekreft sletting" />
 

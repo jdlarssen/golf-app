@@ -1,5 +1,5 @@
 import { AppShell } from '@/components/ui/AppShell';
-import { BackLink } from '@/components/ui/BackLink';
+import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
 
 export const metadata = {
@@ -9,9 +9,7 @@ export const metadata = {
 export default function PrivacyPage() {
   return (
     <AppShell>
-      <div className="-mt-3 mb-4">
-        <BackLink href="/">Tilbake til hjem</BackLink>
-      </div>
+      <TopBar backHref="/" backLabel="Tilbake til hjem" />
 
       <PageHeader
         title="Personvern"

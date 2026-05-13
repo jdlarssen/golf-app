@@ -4,7 +4,7 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AdminShell } from '@/components/ui/AdminShell';
-import { BackLink } from '@/components/ui/BackLink';
+import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
@@ -154,13 +154,7 @@ export default async function EditGamePage({
 
   return (
     <AdminShell>
-      <div className="-mt-3 mb-2 flex items-center justify-between">
-        <BackLink href={`/admin/games/${id}`}>Tilbake</BackLink>
-        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          Spill · protokoll
-        </p>
-        <span className="w-[80px]" aria-hidden />
-      </div>
+      <TopBar backHref={`/admin/games/${id}`} kicker="Spill · protokoll" />
 
       <BrassRibbon kicker="Rediger spill" />
 

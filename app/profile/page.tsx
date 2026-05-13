@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
-import { BackLink } from '@/components/ui/BackLink';
+import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -74,9 +74,7 @@ export default async function ProfilePage({
 
   return (
     <AppShell>
-      <div className="-mt-3 mb-4">
-        <BackLink href="/">Tilbake til hjem</BackLink>
-      </div>
+      <TopBar backHref="/" backLabel="Tilbake til hjem" />
       <PageHeader
         title="Min profil"
         subtitle="Oppdater detaljene dine"

@@ -1,5 +1,5 @@
 import { AdminShell } from '@/components/ui/AdminShell';
-import { BackLink } from '@/components/ui/BackLink';
+import { TopBar } from '@/components/ui/TopBar';
 import { Skeleton } from '@/components/ui/Skeleton';
 
 // Shown while AdminLayout's auth gate runs (~100–200 ms). The page itself
@@ -10,13 +10,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 export default function AdminLoading() {
   return (
     <AdminShell>
-      <div className="-mt-3 mb-4 flex items-center justify-between">
-        <BackLink href="/">Tilbake</BackLink>
-        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          Sekretariatet
-        </p>
-        <span className="w-[80px]" aria-hidden />
-      </div>
+      <TopBar backHref="/" kicker="Sekretariatet" />
 
       <Skeleton className="mb-4 h-[88px] rounded-2xl" />
 
