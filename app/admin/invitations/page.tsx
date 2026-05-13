@@ -62,6 +62,12 @@ type InvitationRow = {
   accepted_at: string | null;
 };
 
+// Augmented shape after we cross-reference public.users. `onboarded` is the
+// truth-bearing flag for the admin pill — `invitations.accepted_at` only tells
+// us the invite mail was opened (or the old magic-link callback fired), not
+// that the user actually completed their profile and became a real player.
+type InvitationDisplayRow = InvitationRow & { onboarded: boolean };
+
 const getInvitations = cache(async () => {
   const supabase = await getServerClient();
   const { data, error } = await supabase
@@ -74,7 +80,35 @@ const getInvitations = cache(async () => {
   // Surface query errors loudly; admins want to know if their audit log is
   // broken rather than silently rendering an empty list.
   if (error) throw error;
-  return data ?? [];
+  const invitations = data ?? [];
+
+  // Look up profile-completion state for every invited email so the pill
+  // reflects "has the user actually onboarded" rather than "did Supabase
+  // ever mark the invitation accepted." Both kristian and martin show as
+  // "akseptert" from a stale magic-link callback even though they never
+  // finished onboarding — that's the bug this join fixes.
+  const emails = invitations.map((inv) => inv.email.toLowerCase());
+  if (emails.length === 0) return [] as InvitationDisplayRow[];
+
+  const { data: users, error: usersError } = await supabase
+    .from('users')
+    .select('email, profile_completed_at')
+    .in('email', emails)
+    .returns<{ email: string; profile_completed_at: string | null }[]>();
+  if (usersError) throw usersError;
+
+  const onboardedByEmail = new Map<string, boolean>();
+  for (const u of users ?? []) {
+    onboardedByEmail.set(
+      u.email.toLowerCase(),
+      u.profile_completed_at !== null,
+    );
+  }
+
+  return invitations.map<InvitationDisplayRow>((inv) => ({
+    ...inv,
+    onboarded: onboardedByEmail.get(inv.email.toLowerCase()) ?? false,
+  }));
 });
 
 export default async function InvitationsPage({
@@ -157,11 +191,11 @@ export default async function InvitationsPage({
 
 async function InvitationCountLine() {
   const items = await getInvitations();
-  const acceptedCount = items.filter((i) => i.accepted_at != null).length;
-  const pendingCount = items.length - acceptedCount;
+  const onboardedCount = items.filter((i) => i.onboarded).length;
+  const pendingCount = items.length - onboardedCount;
   return (
     <p className="font-sans text-[11.5px] tabular-nums text-muted">
-      {items.length} sendte · {acceptedCount} akseptert · {pendingCount} venter
+      {items.length} sendte · {onboardedCount} akseptert · {pendingCount} venter
     </p>
   );
 }
@@ -181,7 +215,6 @@ async function InvitationsList() {
       style={{ boxShadow: '0 1px 2px rgba(26, 46, 31, 0.03)' }}
     >
       {items.map((inv, i) => {
-        const accepted = inv.accepted_at != null;
         return (
           <div
             key={inv.id}
@@ -204,13 +237,13 @@ async function InvitationsList() {
               className="shrink-0 rounded-full px-[7px] py-[3px] font-sans text-[9.5px] font-semibold uppercase"
               style={{
                 letterSpacing: '0.16em',
-                background: accepted
+                background: inv.onboarded
                   ? 'rgba(74, 124, 89, 0.16)'
                   : 'rgba(216, 155, 58, 0.18)',
-                color: accepted ? '#2f5a3c' : '#7a5410',
+                color: inv.onboarded ? '#2f5a3c' : '#7a5410',
               }}
             >
-              {accepted ? 'Akseptert' : 'Venter'}
+              {inv.onboarded ? 'Akseptert' : 'Venter'}
             </span>
           </div>
         );
