@@ -27,7 +27,11 @@ export async function deleteGame(formData: FormData) {
 
   const { supabase } = await requireAdmin();
 
-  // Re-check block condition server-side before deleting.
+  // Fetch the game name for the success-banner redirect. No status block —
+  // admin must be able to delete games in any state (including 'active') so
+  // they can recover from a test game or an abandoned round where players
+  // never submitted scorecards (which makes the normal endGame path
+  // unreachable).
   const { data: game } = await supabase
     .from('games')
     .select('id, name, status')
@@ -35,11 +39,6 @@ export async function deleteGame(formData: FormData) {
     .maybeSingle<{ id: string; name: string; status: GameStatus }>();
 
   if (!game) redirect('/admin/games?error=not_found');
-
-  if (game.status === 'active') {
-    // Block: active games must be ended first.
-    redirect(`/admin/games/${gameId}/slett?error=still_active`);
-  }
 
   // Delete the game row. FK ON DELETE CASCADE handles:
   //   - game_players (on delete cascade, 0001)

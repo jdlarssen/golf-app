@@ -13,8 +13,17 @@ type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;
 
 const ERROR_MESSAGES: Record<string, string> = {
-  still_active: 'Spillet er aktivt — avslutt det først.',
   delete_failed: 'Slettingen feilet. Prøv igjen, eller sjekk Vercel-loggene.',
+};
+
+const STATUS_WARNINGS: Record<GameStatus, string | null> = {
+  draft: null, // utkast — ingen er informert ennå, ingen warning nødvendig
+  scheduled:
+    'Spillet er planlagt og spillerne er invitert. De får ingen melding om at det er kansellert — du må evt. si fra selv.',
+  active:
+    'Spillet pågår nå. Sletting fjerner alle slag som er registrert så langt — spillerne mister sin runde uten varsel.',
+  finished:
+    'Spillet er avsluttet. Leaderboard og resultater forsvinner permanent. Spillere som har bokmerket lenken vil få 404.',
 };
 
 const MONTHS_NB = [
@@ -96,7 +105,11 @@ export default async function DeleteGamePage({
     shortNb(game.scheduled_tee_off_at) ??
     shortNb(game.created_at);
 
-  const isActive = game.status === 'active';
+  const warning = STATUS_WARNINGS[game.status];
+  const buttonLabel =
+    game.status === 'active'
+      ? 'Slett pågående spill for alltid'
+      : 'Slett spillet for alltid';
 
   return (
     <AdminShell>
@@ -119,86 +132,70 @@ export default async function DeleteGamePage({
         </p>
       </div>
 
-      {isActive && (
+      {warning && (
         <div className="mt-4">
-          <Banner tone="warning">
-            Spillet er aktivt — avslutt det først før du sletter det.{' '}
-            <SmartLink
-              href={`/admin/games/${id}`}
-              className="underline underline-offset-2"
-            >
-              Tilbake til spillet
-            </SmartLink>
+          <Banner tone={game.status === 'active' ? 'error' : 'warning'}>
+            {warning}
           </Banner>
         </div>
       )}
 
-      {!isActive && errorMessage && (
+      {errorMessage && (
         <div className="mt-4">
           <Banner tone="error">{errorMessage}</Banner>
         </div>
       )}
 
-      {!isActive && (
-        <>
-          <div className="mt-5 rounded-xl border bg-surface px-4 py-3.5" style={{ borderColor: 'rgba(180, 60, 60, 0.18)' }}>
-            <p className="mb-2 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-              Slettes permanent
-            </p>
-            <ul className="space-y-1 font-sans text-[13px] text-text">
-              <li>Spillet «{game.name}»</li>
-              {playerCount > 0 && (
-                <li>
-                  {playerCount} {playerCount === 1 ? 'spiller' : 'spillere'} i spillet
-                </li>
-              )}
-              {scoreCount > 0 && (
-                <li>
-                  {scoreCount} {scoreCount === 1 ? 'slaggerad' : 'slaggerader'}
-                </li>
-              )}
-              {invitationCount > 0 && (
-                <li>
-                  {invitationCount} {invitationCount === 1 ? 'invitasjon' : 'invitasjoner'} knyttet til spillet
-                </li>
-              )}
-            </ul>
-            <p className="mt-3 font-sans text-[12px] leading-relaxed text-muted">
-              Handlingen kan ikke angres.
-            </p>
-          </div>
+      <div
+        className="mt-5 rounded-xl border bg-surface px-4 py-3.5"
+        style={{ borderColor: 'rgba(180, 60, 60, 0.18)' }}
+      >
+        <p className="mb-2 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+          Slettes permanent
+        </p>
+        <ul className="space-y-1 font-sans text-[13px] text-text">
+          <li>Spillet «{game.name}»</li>
+          {playerCount > 0 && (
+            <li>
+              {playerCount} {playerCount === 1 ? 'spiller' : 'spillere'} i spillet
+            </li>
+          )}
+          {scoreCount > 0 && (
+            <li>
+              {scoreCount} {scoreCount === 1 ? 'slaggerad' : 'slaggerader'}
+            </li>
+          )}
+          {invitationCount > 0 && (
+            <li>
+              {invitationCount}{' '}
+              {invitationCount === 1 ? 'invitasjon' : 'invitasjoner'} knyttet til
+              spillet
+            </li>
+          )}
+        </ul>
+        <p className="mt-3 font-sans text-[12px] leading-relaxed text-muted">
+          Handlingen kan ikke angres.
+        </p>
+      </div>
 
-          <div className="mt-6 flex flex-col gap-2.5">
-            <form action={deleteGame}>
-              <input type="hidden" name="gameId" value={game.id} />
-              <Button
-                type="submit"
-                className="w-full"
-                style={{ background: '#a04040', borderColor: '#a04040' }}
-              >
-                Slett spillet for alltid
-              </Button>
-            </form>
-            <SmartLink
-              href={`/admin/games/${id}`}
-              className="rounded-full border border-border bg-surface px-3 py-3 text-center font-sans text-[13px] font-medium text-text"
-            >
-              Avbryt
-            </SmartLink>
-          </div>
-        </>
-      )}
-
-      {isActive && (
-        <div className="mt-4">
-          <SmartLink
-            href={`/admin/games/${id}`}
-            className="block rounded-full border border-border bg-surface px-3 py-3 text-center font-sans text-[13px] font-medium text-text"
+      <div className="mt-6 flex flex-col gap-2.5">
+        <form action={deleteGame}>
+          <input type="hidden" name="gameId" value={game.id} />
+          <Button
+            type="submit"
+            className="w-full"
+            style={{ background: '#a04040', borderColor: '#a04040' }}
           >
-            Tilbake til spillet
-          </SmartLink>
-        </div>
-      )}
+            {buttonLabel}
+          </Button>
+        </form>
+        <SmartLink
+          href={`/admin/games/${id}`}
+          className="rounded-full border border-border bg-surface px-3 py-3 text-center font-sans text-[13px] font-medium text-text"
+        >
+          Avbryt
+        </SmartLink>
+      </div>
     </AdminShell>
   );
 }
