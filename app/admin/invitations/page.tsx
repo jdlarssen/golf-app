@@ -21,6 +21,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   rate_limited: 'Vent litt før du sender en ny invitasjon.',
   log_failed:
     'Invitasjonen ble sendt, men loggføring feilet. Sjekk databasen.',
+  mail_failed:
+    'Invitasjonen ble lagret, men «Du er invitert»-mail kom ikke ut. Sjekk Vercel-loggene for detaljer.',
   unknown: 'Noe gikk galt. Prøv igjen.',
 };
 

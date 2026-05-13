@@ -51,12 +51,17 @@ export async function sendInvitation(formData: FormData) {
 
   // Send the "you've been invited" notification. The OTP code itself is
   // sent later by Supabase when the invitee reaches /login and asks for
-  // one. Best-effort: a mail failure doesn't roll back the invitation —
-  // admin can resend manually.
+  // one. The invitations row is already persisted, so a mail failure
+  // doesn't roll it back — but we surface the failure honestly to the
+  // admin instead of pretending it worked. Resend errors are typically
+  // config issues (unverified domain, sandbox `from`-address) that need
+  // operator action.
   try {
     await sendInviteNotification({ to: email, invitedByName });
   } catch (err) {
     console.error('[admin/invitations] notification mail failed', err);
+    const failQs = new URLSearchParams({ error: 'mail_failed', email });
+    redirect(`/admin/invitations?${failQs.toString()}`);
   }
 
   const qs = new URLSearchParams({ status: 'sent', email });
