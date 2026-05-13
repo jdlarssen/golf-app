@@ -27,6 +27,23 @@ export async function proxy(request: NextRequest) {
   // request (~80 ms) — adds up across the layout + page + Suspense bodies.
   setRequestHeader('x-torny-user-id', user.id);
 
+  // Best-effort last_seen_at update — one round-trip, debounced via the
+  // WHERE clause so Postgres no-ops when last_seen_at is fresher than 30 min.
+  // Fire-and-forget so it never blocks the response.
+  void (async () => {
+    try {
+      await supabase
+        .from('users')
+        .update({ last_seen_at: new Date().toISOString() })
+        .eq('id', user.id)
+        .or(
+          `last_seen_at.is.null,last_seen_at.lt.${new Date(Date.now() - 30 * 60 * 1000).toISOString()}`,
+        );
+    } catch {
+      // Intentionally swallowed — never block the request.
+    }
+  })();
+
   return response();
 }
 

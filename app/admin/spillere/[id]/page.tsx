@@ -23,17 +23,43 @@ const ERROR_MESSAGES: Record<string, string> = {
   not_admin: 'Du har ikke tilgang.',
   self_delete_forbidden: 'Du kan ikke slette din egen konto.',
   still_has_games: 'Spilleren har spillhistorikk og kan ikke slettes.',
-  auth_delete_failed: 'Klarte ikke slette kontoen — den har sannsynligvis data knyttet til seg (invitasjoner sendt, baner opprettet eller scores skrevet) som blokkerer sletting. Sjekk Vercel-loggene.',
+  auth_delete_failed:
+    'Klarte ikke slette kontoen — den har sannsynligvis data knyttet til seg (invitasjoner sendt, baner opprettet eller scores skrevet) som blokkerer sletting. Sjekk Vercel-loggene.',
+  email_invalid: 'Ugyldig e-postadresse.',
+  email_in_use: 'E-postadressen er allerede registrert.',
+  email_update_failed: 'Klarte ikke oppdatere e-postadressen. Prøv igjen.',
+  email_change_blocked_active_game:
+    'Kan ikke endre e-post mens spilleren er i et aktivt spill.',
 };
 
 function first(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
 }
 
-const MONTHS_NB = ['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','des'];
+const MONTHS_NB = [
+  'jan', 'feb', 'mar', 'apr', 'mai', 'jun',
+  'jul', 'aug', 'sep', 'okt', 'nov', 'des',
+];
 function shortNb(iso: string): string {
   const d = new Date(iso);
   return `${d.getDate()}. ${MONTHS_NB[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/** Relative time in Norwegian, e.g. "3 minutter siden", "2 dager siden" */
+function relativeNb(iso: string | null | undefined): string {
+  if (!iso) return 'Aldri';
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 2) return 'Akkurat nå';
+  if (mins < 60) return `${mins} minutter siden`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} ${hours === 1 ? 'time' : 'timer'} siden`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days} ${days === 1 ? 'dag' : 'dager'} siden`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months} ${months === 1 ? 'måned' : 'måneder'} siden`;
+  const years = Math.floor(months / 12);
+  return `${years} ${years === 1 ? 'år' : 'år'} siden`;
 }
 
 export default async function PlayerDetailPage({
@@ -54,13 +80,13 @@ export default async function PlayerDetailPage({
 
   const { data: target, error } = await supabase
     .from('users')
-    .select('id, name, nickname, email, hcp_index, is_admin, created_at')
+    .select('id, name, nickname, email, hcp_index, is_admin, created_at, last_seen_at')
     .eq('id', id)
     .maybeSingle();
   if (error) throw error;
   if (!target) notFound();
 
-  // Tell game_players-rader for blokk-betingelse på slett-lenke
+  // Count game_players rows (used for block-condition and activity stats).
   const { count: gamePlayerCount } = await supabase
     .from('game_players')
     .select('game_id', { count: 'exact', head: true })
@@ -77,7 +103,9 @@ export default async function PlayerDetailPage({
   if (isSelf) deleteBlockReason = 'Du kan ikke slette din egen konto.';
   else if (hasPlayed) {
     const firstName = target.name?.trim().split(/\s+/)[0] || 'Spilleren';
-    deleteBlockReason = `${firstName} har spilt ${gamePlayerCount} ${gamePlayerCount === 1 ? 'runde' : 'runder'}. Slett spillene først hvis du vil fjerne kontoen.`;
+    deleteBlockReason = `${firstName} har spilt ${gamePlayerCount} ${
+      gamePlayerCount === 1 ? 'runde' : 'runder'
+    }. Slett spillene først hvis du vil fjerne kontoen.`;
   }
 
   return (
@@ -116,6 +144,33 @@ export default async function PlayerDetailPage({
         </div>
       )}
 
+      {/* Activity section */}
+      <section className="mt-5">
+        <p className="mb-1.5 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          Aktivitet
+        </p>
+        <div
+          className="rounded-xl border border-border bg-surface px-4 py-3.5"
+          style={{ boxShadow: '0 1px 2px rgba(26, 46, 31, 0.03)' }}
+        >
+          <dl className="space-y-1.5">
+            <div className="flex items-baseline justify-between">
+              <dt className="font-sans text-[13px] text-muted">Sist innlogget</dt>
+              <dd className="font-sans text-[13px] tabular-nums text-text">
+                {relativeNb(target.last_seen_at)}
+              </dd>
+            </div>
+            <div className="flex items-baseline justify-between">
+              <dt className="font-sans text-[13px] text-muted">Antall spill</dt>
+              <dd className="font-sans text-[13px] tabular-nums text-text">
+                {gamePlayerCount ?? 0}
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      {/* Edit form */}
       <section className="mt-5">
         <div
           className="rounded-xl border border-border bg-surface p-4"
@@ -136,6 +191,14 @@ export default async function PlayerDetailPage({
               label="Kallenavn"
               defaultValue={target.nickname ?? ''}
               placeholder="Valgfritt"
+            />
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              label="E-post"
+              defaultValue={target.email}
+              required
             />
             <Input
               id="hcp_index"
