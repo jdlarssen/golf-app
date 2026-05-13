@@ -348,12 +348,12 @@ async function ActivityLedger() {
 
   type SubmissionRow = {
     submitted_at: string;
-    users: { name: string } | null;
+    users: { name: string | null } | null;
     games: { name: string } | null;
   };
   type ApprovalRow = {
     approved_at: string;
-    users: { name: string } | null;
+    users: { name: string | null } | null;
     games: { name: string } | null;
   };
   type GameLifecycleRow = {

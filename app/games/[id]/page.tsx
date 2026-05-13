@@ -79,7 +79,12 @@ type FlightRosterRow = {
   user_id: string;
   flight_number: number;
   users: {
-    name: string;
+    // `name` is null for pending invitees per migration 0014. The flight
+    // roster only renders for active games, and the publish-gate (Task 7)
+    // prevents a game from leaving 'draft' with pending players on the
+    // roster — so in practice this is always set here. Kept nullable to
+    // match the DB column and stay safe against future flows.
+    name: string | null;
     nickname: string | null;
     hcp_index: number | string | null;
   } | null;
@@ -604,7 +609,11 @@ type DraftRosterRow = {
   user_id: string;
   team_number: number;
   users: {
-    name: string;
+    // name is null until the invitee completes their profile — see
+    // migration 0014. Draft games can carry pending placeholders, so
+    // fall back to email when rendering.
+    name: string | null;
+    email: string;
   } | null;
 };
 
@@ -619,7 +628,7 @@ async function DraftTeamsOverview({
   const { data: rows } = await supabase
     .from('game_players')
     .select(
-      'user_id, team_number, users!game_players_user_id_fkey(name)',
+      'user_id, team_number, users!game_players_user_id_fkey(name, email)',
     )
     .eq('game_id', gameId)
     .order('team_number')
@@ -650,9 +659,12 @@ async function DraftTeamsOverview({
             <ul className="flex flex-col gap-1">
               {teamPlayers.map((p) => {
                 const isCurrent = p.user_id === currentUserId;
+                // Pending invitees (no profile yet) have null name — show
+                // their email instead so the team layout reads usefully.
+                const fullName = p.users?.name ?? p.users?.email ?? null;
                 const displayName =
-                  firstName(p.users?.name ?? '') ??
-                  p.users?.name ??
+                  (fullName && firstName(fullName)) ??
+                  fullName ??
                   '(ukjent)';
                 return (
                   <li
@@ -668,7 +680,7 @@ async function DraftTeamsOverview({
                           : 'bg-surface text-text border border-border'
                       }`}
                     >
-                      {firstInitial(p.users?.name ?? '?')}
+                      {firstInitial(fullName ?? '?')}
                     </span>
                     <span className="truncate">
                       {displayName}

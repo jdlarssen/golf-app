@@ -35,7 +35,10 @@ type FlightPlayerRow = {
   flight_number: number;
   course_handicap: number | null;
   submitted_at: string | null;
-  users: { name: string; nickname: string | null } | null;
+  // Hole entry only renders when status is 'active' or 'finished'; pending
+  // invitees can't reach those states per Task 7's publish-gate. Typed
+  // nullable to match the DB column.
+  users: { name: string | null; nickname: string | null } | null;
 };
 
 type ScoreRow = {

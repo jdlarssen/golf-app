@@ -34,7 +34,10 @@ type GamePlayerRow = {
   user_id: string;
   team_number: number;
   course_handicap: number | null;
-  users: { name: string; nickname: string | null } | null;
+  // Per-hole leaderboard only renders for non-draft/scheduled games, and
+  // Task 7's publish-gate prevents pending players from reaching that state.
+  // Typed nullable to match the DB column.
+  users: { name: string | null; nickname: string | null } | null;
 };
 
 type CourseHoleRow = {
@@ -161,7 +164,8 @@ async function DrilldownBody({
     .filter((p) => p.users != null)
     .map((p) => ({
       userId: p.user_id,
-      name: p.users!.name,
+      // Defensive: see comment on LbPlayer in the leaderboard page.
+      name: p.users!.name ?? '(ukjent)',
       nickname: p.users!.nickname,
       teamNumber: p.team_number,
       courseHandicap: p.course_handicap ?? 0,

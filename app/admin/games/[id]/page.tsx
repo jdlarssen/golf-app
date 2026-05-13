@@ -145,9 +145,13 @@ type GamePlayerRow = {
   submitted_at: string | null;
   approved_at: string | null;
   users: {
-    name: string;
+    // name is null until the invitee completes their profile — see
+    // migration 0014. Pre-created placeholder rows can still appear on a
+    // draft roster, so consumers must fall back to email below.
+    name: string | null;
     nickname: string | null;
     hcp_index: number | string;
+    email: string;
   } | null;
 };
 
@@ -305,7 +309,7 @@ async function PlayersSections({
   const playersPromise = supabase
     .from('game_players')
     .select(
-      'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, users!game_players_user_id_fkey(name, nickname, hcp_index)',
+      'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, users!game_players_user_id_fkey(name, nickname, hcp_index, email)',
     )
     .eq('game_id', gameId)
     .returns<GamePlayerRow[]>();
@@ -371,9 +375,9 @@ async function PlayersSections({
 
   function displayName(p: GamePlayerRow): string {
     if (!p.users) return '(ukjent spiller)';
-    return p.users.nickname
-      ? `${p.users.name} «${p.users.nickname}»`
-      : p.users.name;
+    // Pending invitee — show email until they complete their profile.
+    const name = p.users.name ?? p.users.email;
+    return p.users.nickname ? `${name} «${p.users.nickname}»` : name;
   }
 
   const startAction = startGame.bind(null, gameId);
