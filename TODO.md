@@ -84,6 +84,10 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 - [ ] **Extract `lib/games/status.ts`** — `GameStatus`-unionen og `STATUS_LABELS`-objektet er duplisert i 13 filer. Refaktoreres samtidig med M1-fargefiks (når design-handoff lander). Bør også gjøres for å forenkle fremtidige status-utvidelser.
 - [ ] **Move RealtimeMount out of game layout** — i dag mounter `app/games/[id]/layout.tsx` `RealtimeMount` for alle game-statuser inkludert scheduled. Subscription er harmless (ingen events arriverer for scheduled siden ingen scores eksisterer + RLS blokkerer), men det er en idle WebSocket-subscription på hver venterom-besøk. Lav prioritet til vi vokser.
 
+### Opprydning
+
+- [ ] **Slett `app/auth/callback/route.ts`** etter 2026-06-13. Magic-link-URL-flyten ble retired 2026-05-13 til fordel for OTP-kode-innlogging; route-en redirecter alle gamle mail-klikk til `/login?error=link_expired` i en 30-dagers overgangsperiode. Etter datoen er det trygt å slette filen.
+
 ### Versjonering / release
 
 - [ ] **Bump til `v1.0.0` når kriteriene er nådd.** Disiplinen er på plass (se `CLAUDE.md` → «Versjonering / CHANGELOG» og `CHANGELOG.md`). Vi står på `0.2.0` per 2026-05-12. Bump til `1.0.0` utløses når: (a) `/admin/invitations` viser korrekt status (egen TODO over), (b) smoke-test med ekte kompis bestått, (c) Supabase Site-URL/mail-subject-cache løst. Da: én MAJOR-bump med samle-CHANGELOG-entry «Første stabile release».

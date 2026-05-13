@@ -1,9 +1,9 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { headers } from 'next/headers';
 import { randomUUID } from 'node:crypto';
 import { getServerClient } from '@/lib/supabase/server';
+import { sendInviteNotification } from '@/lib/mail/inviteNotification';
 
 export async function sendInvitation(formData: FormData) {
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
@@ -24,7 +24,7 @@ export async function sendInvitation(formData: FormData) {
   // Defensive: re-check admin status here, in addition to the layout guard.
   const { data: profile, error: profileError } = await supabase
     .from('users')
-    .select('is_admin')
+    .select('is_admin, name')
     .eq('id', user.id)
     .single();
 
@@ -32,34 +32,11 @@ export async function sendInvitation(formData: FormData) {
     redirect('/');
   }
 
-  // Build the absolute URL for the magic-link callback. Derived from request
-  // headers the same way as the login flow, so this works in preview and prod.
-  const headerList = await headers();
-  const host =
-    headerList.get('x-forwarded-host') ?? headerList.get('host') ?? '';
-  const protocol = headerList.get('x-forwarded-proto') ?? 'https';
-  const callback = new URL('/auth/callback', `${protocol}://${host}`);
+  const invitedByName = profile.name?.trim() || 'Admin';
 
-  const { error: otpError } = await supabase.auth.signInWithOtp({
-    email,
-    options: {
-      // Admins explicitly invite new users — create the auth user if missing.
-      shouldCreateUser: true,
-      emailRedirectTo: callback.toString(),
-    },
-  });
-
-  if (otpError) {
-    const msg = otpError.message?.toLowerCase() ?? '';
-    let code: 'rate_limited' | 'unknown' = 'unknown';
-    if (msg.includes('rate') || msg.includes('too many')) {
-      code = 'rate_limited';
-    }
-    redirect(`/admin/invitations?error=${code}`);
-  }
-
-  // Audit log. Supabase's own magic-link token is the actual mechanism; we
-  // generate a uuid here just to satisfy the unique-not-null token column.
+  // Audit log. Token is required NOT NULL UNIQUE; we generate a uuid here
+  // just to satisfy the column. The actual OTP code is sent by Supabase
+  // when the invitee reaches /login and asks for one.
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
   const { error: insertError } = await supabase.from('invitations').insert({
     email,
@@ -70,6 +47,16 @@ export async function sendInvitation(formData: FormData) {
 
   if (insertError) {
     redirect('/admin/invitations?error=log_failed');
+  }
+
+  // Send the "you've been invited" notification. The OTP code itself is
+  // sent later by Supabase when the invitee reaches /login and asks for
+  // one. Best-effort: a mail failure doesn't roll back the invitation —
+  // admin can resend manually.
+  try {
+    await sendInviteNotification({ to: email, invitedByName });
+  } catch (err) {
+    console.error('[admin/invitations] notification mail failed', err);
   }
 
   const qs = new URLSearchParams({ status: 'sent', email });

@@ -1,13 +1,17 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { headers } from 'next/headers';
 import { getServerClient } from '@/lib/supabase/server';
 
-export async function sendMagicLink(formData: FormData) {
+// Step 1 of two-step OTP login. Verifies the email is either registered
+// (existing user) or has an open invitation, then asks Supabase to send a
+// 6-digit code. Existing users are detected implicitly: shouldCreateUser
+// is gated on whether the email has an open invitation row, and Supabase
+// reports an error for unknown emails when shouldCreateUser=false — we
+// map that to user_not_found.
+export async function sendCode(formData: FormData) {
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
   const nextRaw = String(formData.get('next') ?? '').trim();
-  // Only allow same-origin relative paths as `next` to prevent open redirects.
   const next =
     nextRaw.startsWith('/') && !nextRaw.startsWith('//') ? nextRaw : '';
 
@@ -15,41 +19,91 @@ export async function sendMagicLink(formData: FormData) {
     redirect('/login?error=unknown');
   }
 
-  // Compute the absolute URL to our callback, including the 'next' param.
-  const headerList = await headers();
-  const host =
-    headerList.get('x-forwarded-host') ?? headerList.get('host') ?? '';
-  const protocol = headerList.get('x-forwarded-proto') ?? 'https';
-  const callback = new URL('/auth/callback', `${protocol}://${host}`);
-  if (next) callback.searchParams.set('next', next);
-
   const supabase = await getServerClient();
+
+  const { data: isInvited } = await supabase.rpc('email_is_invited', {
+    check_email: email,
+  });
+  const shouldCreateUser = Boolean(isInvited);
+
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: {
-      // Existing users only; admins invite new ones via a separate flow.
-      shouldCreateUser: false,
-      emailRedirectTo: callback.toString(),
-    },
+    options: { shouldCreateUser },
   });
 
   if (error) {
-    // Map a few common Supabase error messages to stable codes.
     const msg = error.message?.toLowerCase() ?? '';
     let code: 'rate_limited' | 'user_not_found' | 'unknown' = 'unknown';
-    if (msg.includes('rate') || msg.includes('too many')) {
+    if (
+      msg.includes('rate') ||
+      msg.includes('too many') ||
+      msg.includes('security purposes')
+    ) {
       code = 'rate_limited';
     } else if (
       msg.includes('not found') ||
       msg.includes('signups not allowed') ||
-      msg.includes('signups are disabled')
+      msg.includes('signups are disabled') ||
+      msg.includes('otp_disabled') ||
+      msg.includes('disabled')
     ) {
       code = 'user_not_found';
     }
     redirect(`/login?error=${code}`);
   }
 
-  const qs = new URLSearchParams({ status: 'sent', email });
+  const qs = new URLSearchParams({ step: 'verify', email });
   if (next) qs.set('next', next);
   redirect(`/login?${qs.toString()}`);
+}
+
+// Step 2: verify the 6-digit code, set the session cookie, mark any
+// pending invitation rows for this email as accepted (replaces the
+// side-effect that lived in /auth/callback), and redirect to next
+// destination.
+export async function verifyCode(formData: FormData) {
+  const email = String(formData.get('email') ?? '').trim().toLowerCase();
+  const token = String(formData.get('token') ?? '').trim();
+  const nextRaw = String(formData.get('next') ?? '').trim();
+  const next =
+    nextRaw.startsWith('/') && !nextRaw.startsWith('//') ? nextRaw : '/';
+
+  if (!email || !token) {
+    const qs = new URLSearchParams({
+      step: 'verify',
+      email,
+      error: 'code_invalid',
+    });
+    redirect(`/login?${qs.toString()}`);
+  }
+
+  const supabase = await getServerClient();
+  const { error } = await supabase.auth.verifyOtp({
+    email,
+    token,
+    type: 'email',
+  });
+
+  if (error) {
+    const msg = error.message?.toLowerCase() ?? '';
+    const code = msg.includes('expired') ? 'code_expired' : 'code_invalid';
+    const qs = new URLSearchParams({ step: 'verify', email, error: code });
+    redirect(`/login?${qs.toString()}`);
+  }
+
+  // Mark any pending invitation rows for this email as accepted. Best-effort:
+  // never block login on failure. Allowed by RLS policy 0012 ("invitations
+  // self mark accepted") since auth.jwt() ->> 'email' is populated post-
+  // verifyOtp.
+  try {
+    await supabase
+      .from('invitations')
+      .update({ accepted_at: new Date().toISOString() })
+      .ilike('email', email)
+      .is('accepted_at', null);
+  } catch (err) {
+    console.warn('[login/verifyCode] invitation-accept side-effect threw', err);
+  }
+
+  redirect(next);
 }

@@ -1,6 +1,6 @@
 {
   "name": "torny",
-  "version": "0.3.3",
+  "version": "0.4.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -19,7 +19,8 @@
     "dexie-react-hooks": "^4.4.0",
     "next": "16.2.6",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "resend": "^6.12.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",

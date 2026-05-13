@@ -1,10 +1,10 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { headers } from 'next/headers';
 import { randomUUID } from 'node:crypto';
 import { getServerClient } from '@/lib/supabase/server';
 import { getQuotaState } from '@/lib/invitations/quota';
+import { sendInviteNotification } from '@/lib/mail/inviteNotification';
 
 // Lightweight format check. We rely on browser `type="email"` + the
 // fact that Supabase will reject malformed addresses too. Just guard
@@ -55,10 +55,9 @@ export async function sendFriendInvite(formData: FormData) {
   }
 
   // Block invites to addresses that already have a Tørny account.
-  // Prevents user_metadata.inviter_name pollution and confusing
-  // "X has invited you" mails to existing users. The SECURITY DEFINER
-  // RPC bypasses RLS so we get a truthful answer regardless of whether
-  // the inviter shares a game with the invitee.
+  // Prevents confusing "X has invited you" mails to existing users. The
+  // SECURITY DEFINER RPC bypasses RLS so we get a truthful answer
+  // regardless of whether the inviter shares a game with the invitee.
   const { data: isRegistered, error: existingError } = await supabase.rpc(
     'email_is_registered',
     { p_email: email },
@@ -71,36 +70,11 @@ export async function sendFriendInvite(formData: FormData) {
     redirect('/profile?invite_error=already_user');
   }
 
-  // Compute callback URL from request headers — same approach as
-  // /login and /admin/invitations so we don't hardcode the host.
-  const headerList = await headers();
-  const host =
-    headerList.get('x-forwarded-host') ?? headerList.get('host') ?? '';
-  const protocol = headerList.get('x-forwarded-proto') ?? 'https';
-  const callback = new URL('/auth/callback', `${protocol}://${host}`);
-
   const inviterName = profile.name?.trim() || 'En venn';
 
-  const { error: otpError } = await supabase.auth.signInWithOtp({
-    email,
-    options: {
-      shouldCreateUser: true,
-      emailRedirectTo: callback.toString(),
-      data: { inviter_name: inviterName },
-    },
-  });
-
-  if (otpError) {
-    const msg = otpError.message?.toLowerCase() ?? '';
-    const code = msg.includes('rate') || msg.includes('too many')
-      ? 'rate_limited'
-      : 'unknown';
-    redirect(`/profile?invite_error=${code}`);
-  }
-
-  // Audit log. Token is required NOT NULL UNIQUE but Supabase's own
-  // magic-link token is the real mechanism; this UUID exists only to
-  // satisfy the column.
+  // Audit log. Token is required NOT NULL UNIQUE; we generate a uuid here
+  // just to satisfy the column. The actual OTP code is sent by Supabase
+  // when the invitee reaches /login and asks for one.
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
   const { error: insertError } = await supabase.from('invitations').insert({
     email,
@@ -111,9 +85,16 @@ export async function sendFriendInvite(formData: FormData) {
   });
 
   if (insertError) {
-    // Mail already went out via signInWithOtp; logging failure isn't
-    // fatal but we surface it so the user knows something odd happened.
     redirect('/profile?invite_error=unknown');
+  }
+
+  // Send the "you've been invited" notification. The OTP code itself is
+  // sent later by Supabase when the invitee reaches /login. Best-effort:
+  // a mail failure doesn't roll back the invitation.
+  try {
+    await sendInviteNotification({ to: email, invitedByName: inviterName });
+  } catch (err) {
+    console.error('[invite] notification mail failed', err);
   }
 
   const qs = new URLSearchParams({ invite: 'sent', invite_email: email });
