@@ -8,6 +8,13 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## [0.5.3] - 2026-05-13
+
+### Fixed
+- Start spill blokkeres også (defence-in-depth) hvis et publisert spill noensinne skulle få ventende spillere via direkte DB-redigering.
+
+---
+
 ## [0.5.2] - 2026-05-13
 
 ### Fixed

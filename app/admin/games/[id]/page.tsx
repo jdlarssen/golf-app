@@ -28,6 +28,7 @@ type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
   status?: string | string[];
   error?: string | string[];
+  emails?: string | string[];
 }>;
 
 type GameStatus = 'draft' | 'scheduled' | 'active' | 'finished';
@@ -68,6 +69,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   db_players: 'Klarte ikke å oppdatere spillerne. Prøv igjen.',
   db_game: 'Klarte ikke å oppdatere spillet. Prøv igjen.',
   not_finished: 'Spillet er ikke avsluttet — kan ikke gjenåpnes.',
+  pending_players:
+    'Disse spillerne har ikke fullført registreringen ennå{LIST}. De må logge inn og fylle inn navn + HCP før spillet kan startes.',
 };
 
 const MONTHS_NB = [
@@ -88,6 +91,19 @@ const MONTHS_NB = [
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
   return value;
+}
+
+function buildErrorMessage(
+  errorCode: string | undefined,
+  emails: string | undefined,
+): string | undefined {
+  if (!errorCode) return undefined;
+  const base = ERROR_MESSAGES[errorCode];
+  if (!base) return undefined;
+  if (errorCode === 'pending_players') {
+    return base.replace('{LIST}', emails ? `: ${emails}` : '');
+  }
+  return base;
 }
 
 function shortNb(iso: string | null | undefined): string | null {
@@ -175,7 +191,7 @@ export default async function GameDetailPage({
   const { id } = await params;
   const sp = await searchParams;
   const statusBanner = STATUS_BANNERS[first(sp.status) ?? ''] ?? undefined;
-  const errorMessage = ERROR_MESSAGES[first(sp.error) ?? ''] ?? undefined;
+  const errorMessage = buildErrorMessage(first(sp.error), first(sp.emails));
 
   const { supabase } = await getAdminGameContext();
   // Gating: fetch the game row first so we can render the title bar

@@ -42,6 +42,13 @@ export async function startScheduledGameAction(gameId: string) {
 
   const result = await startScheduledGame(supabase, gameId);
   if (!result.ok) {
+    if (result.reason === 'pending_players' && result.pendingEmails) {
+      const qs = new URLSearchParams({
+        error: 'pending_players',
+        emails: result.pendingEmails.join(', '),
+      });
+      redirect(`${detailPath}?${qs.toString()}`);
+    }
     redirect(`${detailPath}?error=${result.reason}`);
   }
 
