@@ -6,6 +6,7 @@ import {
   buildGameInsertPayload,
   parseOsloDateTimeLocal,
 } from '@/lib/games/gamePayload';
+import { findPendingPlayers } from '@/lib/games/pendingPlayers';
 // Course handicap is no longer frozen at create-time: the new flow has the
 // admin press "Start runden nå" (D5) to flip 'scheduled' → 'active' and
 // freeze handicaps then. Until D5 lands, scheduled rows persist with
@@ -65,6 +66,22 @@ async function createGameInternal(
     .eq('id', user.id)
     .single();
   if (!profile?.is_admin) redirect('/');
+
+  if (mode === 'publish') {
+    const { data: rosterUsers, error: rosterErr } = await supabase
+      .from('users')
+      .select('id, email, profile_completed_at')
+      .in('id', payload.players.map((p) => p.user_id));
+
+    if (rosterErr || !rosterUsers) {
+      redirect('/admin/games/new?error=db_players');
+    }
+
+    const pending = findPendingPlayers(rosterUsers);
+    if (pending.length > 0) {
+      redirect('/admin/games/new?error=pending_players');
+    }
+  }
 
   const { data: game, error: gameError } = await supabase
     .from('games')

@@ -8,6 +8,13 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## [0.5.1] - 2026-05-13
+
+### Fixed
+- Publisering av nytt spill blokkeres nå hvis ikke alle valgte spillere har fullført profil.
+
+---
+
 ## [0.5.0] - 2026-05-13
 
 ### Added
