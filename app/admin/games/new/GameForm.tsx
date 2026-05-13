@@ -555,13 +555,15 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
                       checked={checked}
                       disabled={atCap}
                       onChange={() => togglePlayer(p.id)}
+                      aria-label={`${playerLabel(p)}${p.pending ? ' — venter på å fullføre profil' : ''}`}
                       className="h-5 w-5 rounded border-border text-primary focus:ring-accent/40"
                     />
-                    <span className="flex-1 text-sm text-text">
+                    <span className="flex-1 min-w-0 truncate text-sm text-text">
                       {playerLabel(p)}
                     </span>
                     {p.pending && (
                       <span
+                        aria-hidden="true"
                         className="shrink-0 rounded-full px-[7px] py-[3px] font-sans text-[9.5px] font-semibold uppercase"
                         style={{
                           letterSpacing: '0.16em',
