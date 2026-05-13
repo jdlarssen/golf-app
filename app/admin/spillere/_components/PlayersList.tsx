@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/Input';
 
 type User = {
   id: string;
-  name: string;
+  name: string | null;
   nickname: string | null;
   email: string;
   hcp_index: number;
@@ -14,9 +14,13 @@ type User = {
 
 export async function PlayersList({ searchQuery }: { searchQuery: string }) {
   const supabase = await getServerClient();
+  // Only show fully-onboarded players. Pending invitees have NULL name and
+  // profile_completed_at and would otherwise duplicate the entry shown in
+  // the pending-invitations list. Picker handles the in-between state.
   const { data, error } = await supabase
     .from('users')
     .select('id, name, nickname, email, hcp_index, is_admin, created_at')
+    .not('profile_completed_at', 'is', null)
     .order('created_at', { ascending: false })
     .returns<User[]>();
 
@@ -27,7 +31,7 @@ export async function PlayersList({ searchQuery }: { searchQuery: string }) {
   const filtered = q
     ? users.filter(
         (u) =>
-          u.name.toLowerCase().includes(q) ||
+          (u.name?.toLowerCase() ?? '').includes(q) ||
           (u.nickname?.toLowerCase() ?? '').includes(q) ||
           u.email.toLowerCase().includes(q),
       )
@@ -71,7 +75,7 @@ export async function PlayersList({ searchQuery }: { searchQuery: string }) {
             >
               <div className="min-w-0">
                 <p className="truncate font-serif text-[15px] font-medium tracking-[-0.005em] text-text">
-                  {u.name}
+                  {u.name ?? u.email}
                   {u.nickname && (
                     <span className="ml-1.5 font-sans text-[11.5px] text-muted">
                       ({u.nickname})

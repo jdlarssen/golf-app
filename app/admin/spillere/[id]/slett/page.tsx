@@ -40,7 +40,8 @@ export default async function DeletePlayerPage({
     redirect(`/admin/spillere/${id}?error=still_has_games`);
   }
 
-  const firstName = target.name.trim().split(/\s+/)[0] || 'Spilleren';
+  const displayName = target.name?.trim() || target.email;
+  const firstName = target.name?.trim().split(/\s+/)[0] || 'Spilleren';
 
   return (
     <AdminShell>
@@ -56,7 +57,7 @@ export default async function DeletePlayerPage({
 
       <div className="px-1">
         <h1 className="mb-3 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-          Slett {target.name}?
+          Slett {displayName}?
         </h1>
         <p className="font-sans text-[14px] leading-relaxed text-text">
           Kontoen og e-postadressen ({target.email}) frigjøres. {firstName} har

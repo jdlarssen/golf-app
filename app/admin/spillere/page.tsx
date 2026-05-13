@@ -47,8 +47,14 @@ function first(value: string | string[] | undefined): string | undefined {
 
 const getCounts = cache(async () => {
   const supabase = await getServerClient();
+  // userCount counts fully-onboarded players only (profile_completed_at NOT NULL)
+  // to match what PlayersList shows; otherwise pending-invitee trigger rows
+  // would inflate the count.
   const [usersRes, pendingRes] = await Promise.all([
-    supabase.from('users').select('id', { count: 'exact', head: true }),
+    supabase
+      .from('users')
+      .select('id', { count: 'exact', head: true })
+      .not('profile_completed_at', 'is', null),
     supabase
       .from('invitations')
       .select('id', { count: 'exact', head: true })

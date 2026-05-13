@@ -26,13 +26,15 @@ export async function deleteUser(formData: FormData) {
     redirect(`/admin/spillere/${id}?error=self_delete_forbidden`);
   }
 
-  // Hent target for å få navn til banner-tekst
+  // Fetch target for banner copy. name can be NULL for pending invitees
+  // (auto-created by 0014_pending_users trigger), so fall back to email.
   const { data: target } = await supabase
     .from('users')
-    .select('id, name')
+    .select('id, name, email')
     .eq('id', id)
     .maybeSingle();
   if (!target) redirect('/admin/spillere?error=unknown');
+  const targetName = target.name?.trim() || target.email;
 
   // Block hvis spilleren har spilt
   const { count: gpCount } = await supabase
@@ -64,6 +66,6 @@ export async function deleteUser(formData: FormData) {
     redirect(`/admin/spillere/${id}?error=auth_delete_failed`);
   }
 
-  const qs = new URLSearchParams({ status: 'deleted', name: target.name });
+  const qs = new URLSearchParams({ status: 'deleted', name: targetName });
   redirect(`/admin/spillere?${qs.toString()}`);
 }

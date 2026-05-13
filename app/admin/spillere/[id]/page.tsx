@@ -70,10 +70,13 @@ export default async function PlayerDetailPage({
   const hasPlayed = (gamePlayerCount ?? 0) > 0;
   const canDelete = !isSelf && !hasPlayed;
 
+  // Pending invitees have NULL name until they finish profile.
+  const displayName = target.name?.trim() || target.email;
+
   let deleteBlockReason: string | null = null;
   if (isSelf) deleteBlockReason = 'Du kan ikke slette din egen konto.';
   else if (hasPlayed) {
-    const firstName = target.name.trim().split(/\s+/)[0] || 'Spilleren';
+    const firstName = target.name?.trim().split(/\s+/)[0] || 'Spilleren';
     deleteBlockReason = `${firstName} har spilt ${gamePlayerCount} ${gamePlayerCount === 1 ? 'runde' : 'runder'}. Slett spillene først hvis du vil fjerne kontoen.`;
   }
 
@@ -91,7 +94,7 @@ export default async function PlayerDetailPage({
 
       <div className="px-1">
         <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-          {target.name}
+          {displayName}
         </h1>
         {target.nickname && (
           <p className="font-serif text-[14px] italic text-muted">
@@ -124,7 +127,7 @@ export default async function PlayerDetailPage({
               id="name"
               name="name"
               label="Navn"
-              defaultValue={target.name}
+              defaultValue={target.name ?? ''}
               required
             />
             <Input

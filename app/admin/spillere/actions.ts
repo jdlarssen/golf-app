@@ -116,8 +116,11 @@ export async function withdrawInvitation(formData: FormData) {
   }
 
   // If the invitee had requested a code (auth.users row exists) but never
-  // completed their profile (no matching public.users row), clean up the
-  // orphan auth.users row via service-role so the email becomes free again.
+  // completed their profile (public.users.profile_completed_at IS NULL —
+  // the row itself is now auto-created via trigger in migration 0014, so
+  // its absence is no longer the right signal), clean up the auth.users
+  // row via service-role so the email becomes free again. Cascade from
+  // auth.users → public.users handles the placeholder row.
   try {
     const admin = getAdminClient();
     const { data: authList } = await admin.auth.admin.listUsers();
@@ -127,10 +130,12 @@ export async function withdrawInvitation(formData: FormData) {
     if (orphan) {
       const { data: publicRow } = await admin
         .from('users')
-        .select('id')
+        .select('profile_completed_at')
         .eq('id', orphan.id)
         .maybeSingle();
-      if (!publicRow) {
+      const profileIncomplete =
+        !publicRow || publicRow.profile_completed_at == null;
+      if (profileIncomplete) {
         await admin.auth.admin.deleteUser(orphan.id);
       }
     }
