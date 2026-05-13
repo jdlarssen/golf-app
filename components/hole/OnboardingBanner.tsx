@@ -73,8 +73,7 @@ export function OnboardingBanner(
       </div>
       <div>
         <b style={prefixStyle}>Prøv dette:</b>{' '}
-        Klikk det øverste kortet for å sette par. Klikk-og-dra opp eller ned
-        for +1/−1.
+        Trykk det øverste kortet for å sette par. Bruk + og − for å justere.
       </div>
       <div style={closeHitStyle}>
         <button

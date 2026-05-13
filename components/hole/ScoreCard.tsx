@@ -74,6 +74,13 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
 
   function onCardClick() {
     if (disabled) return;
+    // First-entry shortcut: tapping the card with no score yet establishes
+    // par as the baseline. Once a score exists (set via this shortcut or via
+    // the +/− buttons or the ⋯ menu), tap-to-par would silently wipe the
+    // player's input — accidental drags or thumb-rests would reset honest
+    // adjustments. Use +/− or ⋯ to change a set score; the card body becomes
+    // a no-op surface.
+    if (score != null) return;
     onSetScore(playerId, clamp(par, MIN_STROKES, MAX_STROKES));
   }
 

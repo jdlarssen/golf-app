@@ -114,6 +114,12 @@ describe('ScoreCard — interaction', () => {
     expect(onSetScore).toHaveBeenCalledWith('p1', 4);
   });
 
+  it('tap on card body is a no-op when a score is already set', () => {
+    const { card, onSetScore } = setup({ score: 6, par: 4 });
+    fireEvent.click(card);
+    expect(onSetScore).not.toHaveBeenCalled();
+  });
+
   it('+ button on unset score calls onSetScore with par+1', () => {
     const { onSetScore } = setup({ score: null, par: 4 });
     fireEvent.click(screen.getByLabelText('+1'));
