@@ -109,15 +109,14 @@ export default function PrivacyPage() {
           </h2>
           <p className="text-text-muted">
             For spørsmål om personvern eller for å utøve rettighetene dine,
-            kontakt administrator via{' '}
+            send e-post til{' '}
             <a
-              href="https://tornygolf.no/admin/spillere"
+              href="mailto:personvern@tornygolf.no"
               className="font-medium text-primary underline underline-offset-2"
             >
-              tornygolf.no/admin/spillere
-            </a>{' '}
-            eller ta direkte kontakt med{' '}
-            <span className="font-medium text-text">Jørgen Larssen</span>.
+              personvern@tornygolf.no
+            </a>
+            .
           </p>
         </section>
 
