@@ -1,5 +1,8 @@
 'use server';
 
+const HCP_MIN = -10;
+const HCP_MAX = 54;
+
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 
@@ -27,8 +30,8 @@ export async function updateUser(formData: FormData) {
   if (!id) redirect('/admin/spillere?error=unknown');
   if (!name) redirect(`/admin/spillere/${id}?error=name_required`);
 
-  const hcp = parseFloat(hcpRaw);
-  if (Number.isNaN(hcp) || hcp < 0 || hcp > 54) {
+  const hcp = Number.parseFloat(hcpRaw.replace(',', '.'));
+  if (!Number.isFinite(hcp) || hcp < HCP_MIN || hcp > HCP_MAX) {
     redirect(`/admin/spillere/${id}?error=hcp_out_of_range`);
   }
 

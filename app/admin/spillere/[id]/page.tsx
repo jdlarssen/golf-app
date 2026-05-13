@@ -17,7 +17,7 @@ type SearchParams = Promise<{
 
 const ERROR_MESSAGES: Record<string, string> = {
   name_required: 'Navn må fylles ut.',
-  hcp_out_of_range: 'Handicap må være mellom 0 og 54.',
+  hcp_out_of_range: 'Handicap må være mellom -10 og 54.',
   update_failed: 'Klarte ikke lagre endringene.',
   not_admin: 'Du har ikke tilgang.',
 };
@@ -69,7 +69,8 @@ export default async function PlayerDetailPage({
   let deleteBlockReason: string | null = null;
   if (isSelf) deleteBlockReason = 'Du kan ikke slette din egen konto.';
   else if (hasPlayed) {
-    deleteBlockReason = `${target.name.split(' ')[0]} har spilt ${gamePlayerCount} ${gamePlayerCount === 1 ? 'runde' : 'runder'}. Slett spillene først hvis du vil fjerne kontoen.`;
+    const firstName = target.name.trim().split(/\s+/)[0] || 'Spilleren';
+    deleteBlockReason = `${firstName} har spilt ${gamePlayerCount} ${gamePlayerCount === 1 ? 'runde' : 'runder'}. Slett spillene først hvis du vil fjerne kontoen.`;
   }
 
   return (
@@ -134,7 +135,7 @@ export default async function PlayerDetailPage({
               name="hcp_index"
               type="number"
               step="0.1"
-              min="0"
+              min="-10"
               max="54"
               label="Handicap-indeks"
               defaultValue={target.hcp_index.toString()}
