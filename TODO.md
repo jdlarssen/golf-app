@@ -10,8 +10,7 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 
 ### Hull-skjerm (oppfølging av quick-win-1)
 
-- [ ] **Netto/brutto-toggle på score-pillen.** I dag viser pillen brutto-delta mot par (Erik på par 3 med +1 slag og 4 brutto viser "+1"). Bør være konfigurerbart om man viser brutto-delta (`+1`) eller netto-delta (`E` for Eriks tilfelle siden 4 − 1 slag = par). Innstillingen skal ligge i samme settings-sheet som klikk-og-dra/buttons-toggle. Persisterer som `localStorage["torny-score-display"] = "gross" | "net"`. **Default: brutto** (bekreftet av Jørgen 2026-05-11 — netto er tilgjengelig for de som vil ha det, men brutto er det spilleren faktisk slo og er mindre forvirrende for nykommere).
-- [ ] **Readability-audit i light mode**: nå som vi tvinger lys palett, gå gjennom alle flater og verifiser kontrast/lesbarhet. Konkret eksempel å starte med: hull-stripe-numrene for framtidige hull bruker `--text-muted` (#5C5347 på linen #F8F6F0) — passerer WCAG AA på tall men kan oppleves bleke. Sjekk også tournament-name-tekst i header som er muted-uppercase-tight, og evt. andre flater som tidligere lente seg på dark-mode-kontraster.
+- [ ] **Vis brutto OG netto på scorekortet, med E/−1/+1-delta mot par.** Golfere bryr seg om hvor mye de er over/under par, ikke bare det rå resultatet. To ting trengs: (1) delta mot par (`E`, `−1`, `+1`, `+2`…) må være synlig — bare rå resultat-tall er ikke nok; (2) både brutto og netto må eksponeres — enten via toggle mellom de to visningene, eller dual-display der begge vises samtidig. Implementasjon åpen (egen brainstorming når det er aktuelt). Persisterer evt. som `localStorage["torny-score-display"]` hvis toggle-løsning.
 - [ ] **Per-bruker valg: vis navn eller nickname under runden.** Hver spiller velger selv i `/profile` om de vil vises med fullt navn eller nickname i flight/leaderboard/scorekort. I dag bruker hull-skjermen `nickname ?? name` hardkodet. Krever ny kolonne på `public.users` (`display_pref text not null default 'name' check (display_pref in ('name','nickname'))`), UI-toggle i `/profile`, og oppdatering av alle visninger som rendrer spillernavn (minst: hull-skjerm, scorekort, leaderboard, admin-spillerlister). **Nickname-alternativet skal være disablet/skjult i UI hvis brukeren ikke har satt nickname** — ingen skal kunne velge nickname-visning og deretter framstå som "(ingen)" eller fallback-flicker. Helper-tekst når disablet: «Legg til kallenavn for å bruke det som visningsnavn». Default-pref blir derfor `'name'` (sikker tilbakefall for alle).
 - [ ] **Hull-navigasjon (perf) — neste steg etter v0.9.3 parallellisering.** Måling + parallellisering shipped 2026-05-13 (v0.9.2 instrumentering + v0.9.3 refactor) — fra 1.65s snitt til 440ms (–73%). Runde 1 (`games`, `allGamePlayers`, `scoreCount`) er nå flaskehalsen, varierer 150–700ms pga Supabase tail-latency. Gjenstående muligheter:
   - **Layout-lift**: flytt `game` + `game_players` til `app/games/[id]/layout.tsx` slik at hull-page-en kun trenger `hole` + `scores` per hull-bytte. Krever React.cache- eller unstable_cache-mønster med revalidering ved score-writes. Estimert –300ms til (snitt ~150ms). Moderat refactor-risiko.
@@ -33,12 +32,6 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 - [ ] Eksporter alle mine data (GDPR Article 20). Lett: bygg en server-action som returnerer JSON med alt brukeren har i `users`, `game_players`, `scores`, `invitations`.
 - [ ] Persontvern-side på `/legal/privacy` med kort tekst om datalagring (Supabase EU-region, hvilke data vi har)
 
-### Bedre feilmeldinger
-
-- [ ] Sync-feil må surface bedre — i dag stille pause i kø, ingen brukerfeedback
-- [ ] Manuel «Retry sync»-knapp hvis køen henger
-- [ ] Banner som viser «X slag mangler synk» når køen er ikke-tom i mer enn 30 sekunder
-
 ### Varslinger
 
 - [ ] (Senere) push-varsler via Web Push API — krever VAPID-nøkler og service worker oppgradering
@@ -50,17 +43,12 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 
 ### Ikoner og illustrasjoner
 
-- [ ] Bedre app-ikon enn en flat serif T. Forslag: T med subtil tornado-spiral eller golf-flag-på-pin-silhuett bak.
 - [ ] Flere tomstands-illustrasjoner (state #1 «ingen aktive spill» er gjort — ingen invitasjoner og evt. andre tomstander gjenstår)
 - [ ] Subtile bakgrunnsillustrasjoner på leaderboard (klubbhus-vinje, fairway-silhuett)
 
 ### Animasjoner
 
 - [ ] Bedre overgang mellom hull (i dag direkte navigasjon)
-
-### Tilgjengelighet (a11y)
-
-- [ ] **A11y-pass på `Venter`-pille + `min-w-0 truncate` på picker-raden.** I `app/admin/games/new/GameForm.tsx` (section 2, spiller-picker): pillen er rent visuell — skjermleser hører bare «Mia mia@example.com checkbox» med en flytende «Venter»-tekst etterpå, uten semantisk kobling til raden. Legg til `aria-label` på `<label>` eller `sr-only`-prefiks. Samtidig: label `<span>` mangler `min-w-0 truncate`, så en patologisk lang e-postadresse vil dytte pillen ut av synsfeltet på smale viewports (iPhone SE 320px). De fem kjente invitéene har korte e-poster, så det er teoretisk — men det er en én-linjes fiks.
 
 ### Dark mode
 
@@ -91,7 +79,7 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 
 ### Versjonering / release
 
-- [ ] **Bump til `v1.0.0` — kriteriene er oppfylt 2026-05-13.** Vi står på `0.4.1`. Alle tre opprinnelige krav er nådd: (a) `/admin/invitations` viser korrekt status (v0.3.3), (b) admin-smoke-test bestått på iOS PWA via OTP-kode (v0.4.0–0.4.1), (c) Supabase-cache-problem løst ved å bytte bort fra magic-link-URL helt. Brukeren venter med selve bumpet for å gjøre flere endringer først. Når klar: én MAJOR-bump med samle-CHANGELOG-entry «Første stabile release».
+- [ ] **Bump til `v1.0.0` — kriteriene er oppfylt 2026-05-13.** Vi står på `v0.10.2`. Alle tre opprinnelige krav er nådd: (a) invitasjons-status flippes korrekt til «Akseptert» når mottaker logger inn (v0.3.3, nå på `/admin/spillere` etter v0.6.0), (b) admin-smoke-test bestått på iOS PWA via OTP-kode (v0.4.0–0.4.1), (c) Supabase-cache-problem løst ved å bytte bort fra magic-link-URL helt. Brukeren venter med selve bumpet for å gjøre flere endringer først. Når klar: én MAJOR-bump med samle-CHANGELOG-entry «Første stabile release».
 
 ### Performance
 
@@ -119,7 +107,7 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
   - Scoring-abstraksjon: `lib/scoring/` får et mode-router-lag i front av bestBall.ts; nye moduler per format
   - UI-restruktur: GameForm splittes i seksjoner som rendres dynamisk per modus; auto-tilordnings-hack-en i `togglePlayer` (`nextAvailableTeam`) rives ut når dette lander
   - Bør tas som egen milestone med dedikert brainstorming og plan. Påvirker også «In-app innboks»-flyten (varseltype per modus). Jørgens kommentar 2026-05-12: «Vi skal være 8 spillere når vi skal spille, men det er ikke noe jeg ønsker å ha hardkodet.»
-- [ ] **Søkbar spillerlistor-UI.** Når kompisgjengen vokser fra 8 til 100+ brukere blir den flate avhukingslisten i admin-spilloppretting umulig å navigere. Trenger typeahead-input som tagger valgte spillere (chip-style UI), eller paginerte filtrerte resultater. Knyttet til klubb-skala-arbeidet. Diskutert 2026-05-12.
+- [ ] **Forbedret spiller-picker i `/admin/games/new` og `/admin/games/[id]/edit`.** Når kompisgjengen vokser fra 8 til 100+ brukere blir den flate avhukingslisten i spill-opprettingen umulig å navigere. Trenger typeahead-input som tagger valgte spillere (chip-style UI), eller paginerte filtrerte resultater. (Admin-spillerlisten på `/admin/spillere` har allerede søk fra v0.6.0 — denne TODO-en gjelder kun pickeren i spill-opprett/-rediger-flyten.) Knyttet til klubb-skala-arbeidet. Diskutert 2026-05-12.
 
 ### Spillformater *(avhenger av spillformat-fleksibilitet over)*
 
