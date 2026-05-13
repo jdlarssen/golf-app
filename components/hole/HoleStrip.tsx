@@ -64,7 +64,7 @@ function cellStyle(state: 'current' | 'completed' | 'future'): CSSProperties {
     ...base,
     background: 'transparent',
     color: 'var(--text-muted)',
-    fontWeight: 500,
+    fontWeight: 600,
     border: 'none',
   };
 }

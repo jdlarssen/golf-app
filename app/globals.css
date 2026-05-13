@@ -24,7 +24,8 @@
   --surface-2: #f0ede5;    /* slightly inset surface (used in tables, summary rows) */
   --border: #e5e0d3;       /* warm beige */
   --text: #1a2e1f;         /* deep forest */
-  --text-muted: #5c5347;   /* warm taupe */
+  --text-muted: #4a3f30;   /* warm taupe — darkened from #5c5347 for
+                              outdoor-light readability on linen bg */
   --primary: #1b4332;      /* deep forest green */
   --primary-hover: #2d5a40;
   --primary-soft: #e8efe8; /* very pale green tint */
