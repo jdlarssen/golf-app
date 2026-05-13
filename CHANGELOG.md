@@ -8,6 +8,13 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## [0.5.9] - 2026-05-13
+
+### Fixed
+- Profil-oppdateringen stamper nå `profile_completed_at` som defence-in-depth, så en bruker som havner på `/profile` uten å ha fullført onboarding (deploy-vindu-race i tidligere release) blir ikke sittende fast som «Venter» i picker-en.
+
+---
+
 ## [0.5.8] - 2026-05-13
 
 ### Fixed
