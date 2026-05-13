@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { StatusChip } from '@/components/ui/StatusChip';
 
 export type CourseOption = {
   id: string;
@@ -562,17 +563,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
                       {playerLabel(p)}
                     </span>
                     {p.pending && (
-                      <span
-                        aria-hidden="true"
-                        className="shrink-0 rounded-full px-[7px] py-[3px] font-sans text-[9.5px] font-semibold uppercase"
-                        style={{
-                          letterSpacing: '0.16em',
-                          background: 'rgba(216, 155, 58, 0.18)',
-                          color: '#7a5410',
-                        }}
-                      >
-                        Venter
-                      </span>
+                      <StatusChip tone="påmelding" label="Venter" className="shrink-0" />
                     )}
                   </label>
                 </li>
