@@ -132,7 +132,6 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 
 ## 📊 Data og analyse
 
-- [ ] Egen «historikk»-side per bruker: alle dine runder, average score over tid, beste runde
 - [ ] Klubbstatistikker: vinneliste over tid, mest aktive spillere
 - [ ] Eksporter resultater til Excel/PDF for å henge opp i klubbhuset
 

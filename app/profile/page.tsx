@@ -112,6 +112,10 @@ export default async function ProfilePage({
       </div>
 
       <div className="mt-6">
+        <HistorikkCard />
+      </div>
+
+      <div className="mt-6">
         <GdprSection />
       </div>
     </AppShell>
@@ -208,6 +212,34 @@ async function InviteAFriendCard() {
       </div>
       <InviteFriendForm action={sendFriendInvite} />
     </Card>
+  );
+}
+
+function HistorikkCard() {
+  return (
+    <div className="space-y-3">
+      <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted px-1">
+        Historikk
+      </p>
+      <Card>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-serif text-base font-medium text-text">
+              Min historikk
+            </h2>
+            <p className="text-sm text-muted mt-0.5">
+              Se dine fullførte runder og resultater
+            </p>
+          </div>
+          <SmartLink
+            href="/profile/historikk"
+            className="shrink-0 ml-4 rounded-full border border-border bg-surface px-4 py-2 font-sans text-[13px] font-medium text-text hover:bg-bg transition-colors"
+          >
+            Se runder
+          </SmartLink>
+        </div>
+      </Card>
+    </div>
   );
 }
 
