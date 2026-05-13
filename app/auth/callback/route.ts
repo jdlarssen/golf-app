@@ -16,6 +16,30 @@ export async function GET(request: NextRequest) {
     const supabase = await getServerClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      // Best-effort: mark any pending invitation rows for this user's email
+      // as accepted. Allowed by the "invitations self mark accepted" RLS
+      // policy (migration 0012). Multiple pending rows can exist for one
+      // email — admin UI counts rows, so mark them all. Failure here must
+      // never block the redirect; logging in matters more than this stat.
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const email = userData?.user?.email;
+        if (email) {
+          const { error: updateError } = await supabase
+            .from('invitations')
+            .update({ accepted_at: new Date().toISOString() })
+            .ilike('email', email)
+            .is('accepted_at', null);
+          if (updateError) {
+            console.warn(
+              '[auth/callback] failed to mark invitation accepted',
+              updateError,
+            );
+          }
+        }
+      } catch (err) {
+        console.warn('[auth/callback] invitation-accept side-effect threw', err);
+      }
       return NextResponse.redirect(new URL(next, request.url));
     }
   }
