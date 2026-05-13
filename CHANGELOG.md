@@ -8,6 +8,13 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## [0.5.4] - 2026-05-13
+
+### Fixed
+- Feilmelding for ventende spillere viste `{LIST}`-plassholderen bokstavelig på opprett-spill-siden. Bruker nå samme `buildErrorMessage`-helper som rediger-spill og spill-detalj.
+
+---
+
 ## [0.5.3] - 2026-05-13
 
 ### Fixed

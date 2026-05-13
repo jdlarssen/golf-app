@@ -83,6 +83,7 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 
 - [ ] **Extract `lib/games/status.ts`** — `GameStatus`-unionen og `STATUS_LABELS`-objektet er duplisert i 13 filer. Refaktoreres samtidig med M1-fargefiks (når design-handoff lander). Bør også gjøres for å forenkle fremtidige status-utvidelser.
 - [ ] **Move RealtimeMount out of game layout** — i dag mounter `app/games/[id]/layout.tsx` `RealtimeMount` for alle game-statuser inkludert scheduled. Subscription er harmless (ingen events arriverer for scheduled siden ingen scores eksisterer + RLS blokkerer), men det er en idle WebSocket-subscription på hver venterom-besøk. Lav prioritet til vi vokser.
+- [ ] Extract shared `pending_players` ERROR_MESSAGES + `buildErrorMessage` helper into a single module (currently duplicated across `app/admin/games/new/page.tsx`, `app/admin/games/[id]/edit/page.tsx`, and `app/admin/games/[id]/page.tsx`). After this lands, the «kan publiseres» vs. «kan startes» copy variation should be documented in the shared module's JSDoc so a future refactor doesn't unify it.
 
 ### Opprydning
 

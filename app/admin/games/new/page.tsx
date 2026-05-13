@@ -10,7 +10,10 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { GameForm, type CourseOption, type PlayerOption } from './GameForm';
 import { createGameDraft, createAndPublishGame } from './actions';
 
-type SearchParams = Promise<{ error?: string | string[] }>;
+type SearchParams = Promise<{
+  error?: string | string[];
+  emails?: string | string[];
+}>;
 
 const ERROR_MESSAGES: Record<string, string> = {
   name_required: 'Spillet må ha et navn.',
@@ -36,6 +39,19 @@ const ERROR_MESSAGES: Record<string, string> = {
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
   return value;
+}
+
+function buildErrorMessage(
+  errorCode: string | undefined,
+  emails: string | undefined,
+): string | undefined {
+  if (!errorCode) return undefined;
+  const base = ERROR_MESSAGES[errorCode];
+  if (!base) return undefined;
+  if (errorCode === 'pending_players') {
+    return base.replace('{LIST}', emails ? `: ${emails}` : '');
+  }
+  return base;
 }
 
 type CourseRow = {
@@ -105,9 +121,8 @@ export default async function NewGamePage({
 }: {
   searchParams: SearchParams;
 }) {
-  const params = await searchParams;
-  const errorCode = first(params.error);
-  const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
+  const sp = await searchParams;
+  const errorMessage = buildErrorMessage(first(sp.error), first(sp.emails));
 
   return (
     <AdminShell>
