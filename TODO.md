@@ -22,10 +22,9 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 ### Recovery / admin overrides
 
 - [ ] UI for å slette et spill helt (ikke bare avslutte). I dag krever det rå SQL.
-- [ ] **Invitasjons-administrasjon i `/admin/invitations`** — i dag står alle invitasjoner som «VENTER» selv etter at brukeren har akseptert/registrert seg. Rapportert av Jørgen 2026-05-12. Trenger systematisk debug før fix, men scope-en av forbedringer som hører sammen:
-  - Status må faktisk reflektere virkeligheten: når blir den oppdatert (på `signInWithOtp`-respons? på `/complete-profile`-fullført? på første innlogging?), og hvorfor står den fortsatt som «VENTER» når brukerne faktisk har klikket
-  - Vis om brukeren har klikket lenken (auth-event-logg i Supabase kan brukes — eller egen kolonne `invitations.opened_at`)
-  - «Resend invitasjon»-knapp (krever ny `signInWithOtp`-runde med samme `redirect_to` og `user_metadata`)
+- [ ] **Invitasjons-administrasjon i `/admin/invitations`** — status-flippet er løst (v0.3.3 + OTP-kode-flyt i v0.4.0 markerer `accepted_at` ved `verifyOtp`). Resterende forbedringer som hører sammen:
+  - Vis om brukeren har bedt om kode (auth-event-logg i Supabase kan brukes — eller egen kolonne `invitations.opened_at`)
+  - «Send ny invitasjon»-knapp (sender ny notifikasjons-mail via Resend; krever ikke ny Supabase-runde)
   - «Trekk tilbake»-knapp (sletter rad i `invitations`, evt. sletter også `auth.users`-raden hvis brukeren aldri fullførte profil)
   - Slett bruker fra admin-panel (cascade: `public.users` + `auth.users` + alle deres `game_players`/`scores`)
   - Manuel override av brukerinnstillinger fra admin (rolle, nickname, display_pref, e-post) — krever ny admin-side `/admin/users/[id]` med form og server-action gated på `is_admin`
@@ -77,8 +76,6 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 - [ ] E2E-test for offline-sync (Playwright kan sjokke offline)
 - [ ] Unit-tester for server actions (submitScorecard, approveScorecard, endGame, createGame)
 - [ ] **Pre-existing test-failures i `components/hole/HoleStrip.test.tsx` og `components/hole/BottomActionBar.test.tsx`** — 7 failures rundt SmartLink/`useRouter` mock i vitest-oppsettet. Slår ut når testene rendrer SmartLink uten Next router context. Trolig trenger en `vi.mock('next/navigation', ...)` i `vitest.setup.ts` eller per-test wrapper.
-- [ ] **`lib/format/teeOff.ts` bruker lokal-TZ, ikke Europe/Oslo.** Helperne `formatTeeOffDate` og `formatTeeOffTime` leser via `Date`-getters (`getHours`, `getDate`, ...) som returnerer i Node/runtime sin lokal-TZ. På Vercel server (UTC) gir det feil tid før hydration — så server-rendered HTML viser «07:00» mens browser (Oslo) viser «09:00» under hydration. Trolig hydration mismatch-warning i konsollen. Fix: bytt til `Intl.DateTimeFormat('nb-NO', { timeZone: 'Europe/Oslo', ... })`. Påvirker `/games/[id]`, leaderboard, og hjem-skjerm (alle bruker disse helperne). Oppdaget under Phase 5 av progressive-draft-creation.
-
 ### Refaktorering (etter empty-states + scheduled-status-leveransen)
 
 - [ ] **Extract `lib/games/status.ts`** — `GameStatus`-unionen og `STATUS_LABELS`-objektet er duplisert i 13 filer. Refaktoreres samtidig med M1-fargefiks (når design-handoff lander). Bør også gjøres for å forenkle fremtidige status-utvidelser.
@@ -90,7 +87,7 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 
 ### Versjonering / release
 
-- [ ] **Bump til `v1.0.0` når kriteriene er nådd.** Disiplinen er på plass (se `CLAUDE.md` → «Versjonering / CHANGELOG» og `CHANGELOG.md`). Vi står på `0.2.0` per 2026-05-12. Bump til `1.0.0` utløses når: (a) `/admin/invitations` viser korrekt status (egen TODO over), (b) smoke-test med ekte kompis bestått, (c) Supabase Site-URL/mail-subject-cache løst. Da: én MAJOR-bump med samle-CHANGELOG-entry «Første stabile release».
+- [ ] **Bump til `v1.0.0` — kriteriene er oppfylt 2026-05-13.** Vi står på `0.4.1`. Alle tre opprinnelige krav er nådd: (a) `/admin/invitations` viser korrekt status (v0.3.3), (b) admin-smoke-test bestått på iOS PWA via OTP-kode (v0.4.0–0.4.1), (c) Supabase-cache-problem løst ved å bytte bort fra magic-link-URL helt. Brukeren venter med selve bumpet for å gjøre flere endringer først. Når klar: én MAJOR-bump med samle-CHANGELOG-entry «Første stabile release».
 
 ### Performance
 
@@ -176,9 +173,7 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 
 (Logg ting her etter hvert som de oppdages under bruk.)
 
-- [ ] **Magic-link åpner ikke i PWA-en når Tørny er lagt til på Hjem-skjerm (iOS).** Bruker trykker lenken i Mail-appen, men Safari åpner i vanlig nettleserfane istedenfor PWA-shell-en — så brukeren havner utenfor «appen». Rapportert av Jørgen 2026-05-12. Kjent PWA-quirk på iOS: lenker fra eksterne apper respekterer ikke `display: standalone` med mindre `redirect_to`-URL-en bruker en custom URL scheme eller Universal Links er konfigurert. Krever systematisk debug — mulige spor: (1) sjekk om iOS 17.4+ sin Web Push / shortcut-API endret oppførsel, (2) prøv `target="_blank"` eller fjern det i mail-templaten, (3) vurder Universal Links-oppsett (Apple App Site Association-fil på domenet), (4) som workaround: be brukeren kopiere lenken og lime inn i PWA-en — dokumenter i onboarding hvis ikke fiksbart.
-- [ ] **Biometrisk innlogging på telefon (Face ID / Touch ID / passkeys).** Magic-link-flyten krever bytte til mail-app → klikk → tilbake til PWA, som er friksjon. Mulige veier: (1) **WebAuthn / passkeys** (`navigator.credentials.create` + `get`) — passkey lagres i iCloud Keychain, fungerer på tvers av enheter, støttet i Safari 16+. Krever ny tabell `public.credentials` (`user_id`, `credential_id`, `public_key`, `counter`), server-actions for register/authenticate, integrasjon med Supabase Auth via custom JWT eller `signInWithIdToken`. Stor jobb. (2) **Lokal session-forlengelse**: vis biometrisk prompt for å låse opp en allerede lagret session i stedet for ny innlogging — enklere, men hjelper bare etter første magic-link-runde. Diskutert 2026-05-12; trenger egen brainstorming.
-- [ ] **«Lagre utkast» krever fortsatt bane (og tee-boks?) til tross for draft-mode.** Native HTML-validering på `<select required>` blokkerer form-submit før «Lagre utkast»-actionen får kjørt. Fix: gjør `required`-attributtet betinget i `GameForm.tsx` — kun aktivt når brukeren prøver «Publiser», ikke når de prøver «Lagre utkast». Trolig via en `state`-styrt `noValidate`-på-formen + per-knapp valideringsoverstyring, eller flytte all valideringen til server-action (som vi allerede har for draft-mode). Rapportert av Jørgen 2026-05-12 under Phase 5-verifisering.
+- [ ] **Biometrisk innlogging på telefon (Face ID / Touch ID / passkeys).** OTP-kode-flyten krever fortsatt bytte til mail-app → kopier kode → tilbake til PWA. Lavere friksjon enn magic-link, men ikke null. Mulige veier: (1) **WebAuthn / passkeys** (`navigator.credentials.create` + `get`) — passkey lagres i iCloud Keychain, fungerer på tvers av enheter, støttet i Safari 16+. Krever ny tabell `public.credentials` (`user_id`, `credential_id`, `public_key`, `counter`), server-actions for register/authenticate, integrasjon med Supabase Auth via custom JWT eller `signInWithIdToken`. Stor jobb. (2) **Lokal session-forlengelse**: vis biometrisk prompt for å låse opp en allerede lagret session i stedet for ny innlogging — enklere, men hjelper bare etter første OTP-runde. Diskutert 2026-05-12; trenger egen brainstorming.
 
 ---
 

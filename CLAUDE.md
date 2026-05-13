@@ -175,7 +175,17 @@ Ren TypeScript i `lib/scoring/`:
 
 ### Auth-flyt
 
-Magic link only (ingen passord). `signInWithOtp` brukes både for innlogging og admin-invitasjoner. Auth state via cookies (`@supabase/ssr`). Proxy (`proxy.ts`) refresher session.
+**OTP-kode** (6–8 sifre i mail, ingen URL-er). Bytte fra magic-link skjedde 2026-05-13 fordi magic-link-URL-en brøt iOS PWA-innlogging på to måter samtidig: (a) PKCE-handoff feilet når Mail.app åpnet lenken i Safari istedenfor PWA-shellen (cookie-jar-mismatch), (b) mail-scannere konsumerte one-time-token-en før brukeren rakk å klikke. Begge forsvinner når det ikke finnes URL å klikke.
+
+Login-flyten er to-stegs på samme `/login`-side (styrt av `?step=` search-param):
+1. `sendCode`-action: gateer `shouldCreateUser` på `email_is_invited` RPC, kaller `signInWithOtp` → Supabase sender kode-mail
+2. `verifyCode`-action: `verifyOtp({type: 'email'})` → setter session-cookie, markerer `invitations.accepted_at` (via RLS-policy 0012), redirecter til `next` eller `/`
+
+Invitasjoner: admin/invite-flyten inserter rad i `public.invitations` og sender en separat **notifikasjons-mail via Resend** (`lib/mail/inviteNotification.ts`). Selve kode-mail-en sendes først når invitéen kommer til `/login` og ber om kode — to mailer per invitasjon (notifikasjon + kode), én UX-flyt for alle.
+
+Auth state via cookies (`@supabase/ssr`). Proxy (`proxy.ts`) refresher session.
+
+Gammel `/auth/callback`-route er strippet til en redirect mot `/login?error=link_expired` for stale magic-link-mailer i flight — slettes 2026-06-13.
 
 ⚠️ Realtime krever eksplisitt `supabase.realtime.setAuth()` med JWT — auto-propagering virker ikke for WebSocket-kanalen (kjent quirk).
 
@@ -196,20 +206,21 @@ Helper functions er `SECURITY DEFINER` for å unngå rekursjons-feller.
 
 ## Status per session-handoff
 
-**Phase 0–12 + 12.5: ferdig.** Phase 13 (launch readiness) er i progress.
+**Phase 0–13: launch-readiness-kriteriene oppfylt 2026-05-13.** Står på `v0.4.1`. MAJOR-bump til `v1.0.0` er på vent — brukeren ønsker å gjøre flere endringer først (skjer i ny chat).
 
 ✅ **Fungerer end-to-end:**
-- Magic link login med branded mail (forest-and-champagne stil)
+- OTP-kode-innlogging via 6–8 sifret kode i mail (brand-stilet template)
+- iOS PWA-innlogging fungerer — det som tidligere brøtt PKCE-handoff er borte
 - Egen domene tornygolf.no live
 - Hele turnerings-flyten (opprett → spill → lever → leaderboard)
 - Offline-sync, realtime, PWA, peer-godkjenning, admin-overstyring
 - Premium-stil på hovedflater
+- Invitasjons-status flippes korrekt til «Akseptert» når mottaker logger inn (`migration 0012`)
 
-⏸ **Ventende:**
-- **Smoke-test med ekte kompis** (ikke gjort ennå)
-- **Supabase mail-template subject:** står som «Logg inn på Tørny» i UI men sendes som «Your Magic Link» — sannsynligvis Supabase Auth cache (15+ min). Body fungerer korrekt.
-- **Site URL i Supabase:** oppdatert til tornygolf.no i UI men `redirect_to` i magic-link bruker fortsatt vercel.app-URL — samme cache-problem
+⏸ **Ventende før v1.0.0:**
+- Brukerens egne kommende endringer (håndteres i ny chat)
 - Designpass på resterende sider (scorecard, submit, approve, leaderboard/holes, complete-profile, profile, admin/{courses,invitations,games}-listen)
+- End-to-end-test av invitasjons-flyt med en NY invitéet bruker (admin/login-flyten er verifisert i prod; nye invitéer er ikke testet i denne sesjonen)
 
 📋 **Backlog:** se `TODO.md`
 
@@ -224,17 +235,19 @@ Helper functions er `SECURITY DEFINER` for å unngå rekursjons-feller.
 - `components/ui/` — design system (Card, Button, Input, Banner, PageHeader, AppShell, BrandMark)
 - `lib/scoring/` — scoring-bibliotek (ikke rør uten ny test)
 - `lib/sync/` — offline-sync (Dexie + worker + realtime)
-- `supabase/migrations/` — 7 SQL-migrasjoner
+- `supabase/migrations/` — 13 SQL-migrasjoner
+- `lib/mail/inviteNotification.ts` — Resend-mail-helper for invitasjons-notifikasjoner
 
 ## Vanlige neste-steg-oppgaver
 
 Hvis bruker kommer tilbake til et tema, sjekk om dette stemmer:
 
-1. **«La oss teste med en kompis»** → guide gjennom invitasjon i Admin → Invitasjoner, hjelpe med eventuelle leveringsproblemer
+1. **«La oss teste med en kompis»** → guide gjennom invitasjon i Admin → Invitasjoner. Invitéen får først en notifikasjons-mail («Du er invitert»), så ber de selv om kode på /login og får 8-sifret kode på mail. Sjekk at `accepted_at` flippes når de logger inn første gang.
 2. **«Design oppgradering»** → bruker har planlagt å bruke claude.ai/design med design system. Setup beskrevet i forrige chat.
 3. **«Ny spilltype»** → stableford / matchplay / scramble / solo. Krever ny scoring-modul i `lib/scoring/`, nytt UI-flow. Datamodellen skalerer.
 4. **«Klubb-tier med flere admin/grupper»** → krever `groups` + `group_members`-tabeller, RLS-justering. Betydelig oppgave.
-5. **«Mail kommer ikke fram»** → systematisk debug. Sjekk Supabase Auth Logs + Resend Logs. Resend sandbox ble løst ved domene-verifisering.
+5. **«Mail kommer ikke fram»** → systematisk debug. Sjekk Supabase Auth Logs (kode-mail) + Resend dashboard (notifikasjons-mail) + Vercel runtime logs. Supabase auth-mail kommer fra Resend SMTP; notifikasjons-mail kommer direkte fra Resend API via `lib/mail/inviteNotification.ts`.
+6. **«Bytt til v1.0.0»** → launch-readiness-kriteriene er allerede oppfylt (2026-05-13). Brukeren venter på sine egne endringer først. Når klar: MAJOR-bump med samle-CHANGELOG-entry «Første stabile release».
 
 ## Bruker-preferanser fra tidligere sesjon
 
