@@ -759,6 +759,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
               type="submit"
               variant="secondary"
               formAction={draftPublishActions.draft}
+              formNoValidate
               className="w-full"
               disabled={name.trim() === ''}
             >
