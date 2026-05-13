@@ -43,7 +43,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   not_editable:
     'Spillet kan ikke redigeres lenger — det er allerede startet eller avsluttet.',
   pending_players:
-    'Disse spillerne har ikke fullført registreringen ennå. De må logge inn og fylle inn navn + HCP før spillet kan publiseres.',
+    'Disse spillerne har ikke fullført registreringen ennå{LIST}. De må logge inn og fylle inn navn + HCP før spillet kan publiseres.',
 };
 
 function first(value: string | string[] | undefined): string | undefined {
@@ -58,8 +58,8 @@ function buildErrorMessage(
   if (!errorCode) return undefined;
   const base = ERROR_MESSAGES[errorCode];
   if (!base) return undefined;
-  if (errorCode === 'pending_players' && emails) {
-    return `${base.replace(' De må', `: ${emails}. De må`)}`;
+  if (errorCode === 'pending_players') {
+    return base.replace('{LIST}', emails ? `: ${emails}` : '');
   }
   return base;
 }

@@ -29,7 +29,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   db_players:
     'Klarte ikke å lagre spillerne på spillet. Prøv igjen, eller sjekk Supabase-loggene.',
   pending_players:
-    'Disse spillerne har ikke fullført registreringen ennå. De må logge inn og fylle inn navn + HCP før spillet kan publiseres.',
+    'Disse spillerne har ikke fullført registreringen ennå{LIST}. De må logge inn og fylle inn navn + HCP før spillet kan publiseres.',
   tee_off_required: 'Tee-off-tidspunkt er påkrevd ved publisering.',
 };
 

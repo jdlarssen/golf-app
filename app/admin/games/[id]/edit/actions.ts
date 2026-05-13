@@ -83,8 +83,11 @@ async function updateGameInternal(
 
     const pending = findPendingPlayers(rosterUsers);
     if (pending.length > 0) {
-      const emails = encodeURIComponent(pending.map((p) => p.email).join(', '));
-      redirect(`/admin/games/${gameId}/edit?error=pending_players&emails=${emails}`);
+      const qs = new URLSearchParams({
+        error: 'pending_players',
+        emails: pending.map((p) => p.email).join(', '),
+      });
+      redirect(`/admin/games/${gameId}/edit?${qs.toString()}`);
     }
   }
 
