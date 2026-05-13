@@ -367,16 +367,17 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   if (!allowanceValid) missingForPublish.push('gyldig HCP-allowance');
 
   function playerLabel(p: PlayerOption): string {
+    if (p.pending) {
+      return p.email;
+    }
+    const displayName = p.name ?? p.email; // defensive — non-pending should always have name
     const hcp = p.hcp_index.toFixed(1);
-    // Pending invitees have null name until they complete their profile —
-    // fall back to email so the picker stays usable. Task 4 will replace
-    // this with a proper pending-pill renderer.
-    const displayName = p.name ?? p.email;
     if (p.nickname) return `${displayName} «${p.nickname}» — HCP ${hcp}`;
     return `${displayName} — HCP ${hcp}`;
   }
 
   function shortName(p: PlayerOption): string {
+    if (p.pending) return p.email;
     const displayName = p.name ?? p.email;
     return p.nickname ? `${displayName} «${p.nickname}»` : displayName;
   }
@@ -556,9 +557,21 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
                       onChange={() => togglePlayer(p.id)}
                       className="h-5 w-5 rounded border-border text-primary focus:ring-accent/40"
                     />
-                    <span className="text-sm text-text">
+                    <span className="flex-1 text-sm text-text">
                       {playerLabel(p)}
                     </span>
+                    {p.pending && (
+                      <span
+                        className="shrink-0 rounded-full px-[7px] py-[3px] font-sans text-[9.5px] font-semibold uppercase"
+                        style={{
+                          letterSpacing: '0.16em',
+                          background: 'rgba(216, 155, 58, 0.18)',
+                          color: '#7a5410',
+                        }}
+                      >
+                        Venter
+                      </span>
+                    )}
                   </label>
                 </li>
               );

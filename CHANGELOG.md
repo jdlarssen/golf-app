@@ -8,6 +8,13 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## [0.5.0] - 2026-05-13
+
+### Added
+- Inviterte spillere som ikke har logget inn ennå dukker opp i game-picker-en med en gul `Venter`-pille. Admin kan velge dem til lag og flight og lagre utkast.
+
+---
+
 ## [0.4.2] - 2026-05-13
 
 ### Added
