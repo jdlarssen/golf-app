@@ -176,29 +176,40 @@ export default async function GameHomePage({
   // Proxy redirects unauthenticated users, but be defensive.
   if (!userId) redirect('/login');
 
-  const { data: gameInitial, error: gameError } = await supabase
-    .from('games')
-    .select(GAME_SELECT)
-    .eq('id', id)
-    .single<GameRow>();
+  // Pilot perf instrumentation — same pattern as the hole page. Logs the
+  // single Promise.all wave so we can verify parallelisation landed in prod.
+  // The page's Suspense bodies run their own fetches asynchronously and
+  // aren't captured here — this measures only the synchronous gate.
+  const gateLabel = `game.page game=${id} · gate`;
+  console.time(gateLabel);
 
-  if (gameError || !gameInitial) notFound();
+  // Game + my player row are independent — fire in parallel. Saves one
+  // Supabase round-trip on every game-home load (which is hit on app open
+  // for every active game, on returning from leaderboard/submit, and on
+  // every "Hjem"-tap from the hole pages).
+  const [gameInitialRes, meRes] = await Promise.all([
+    supabase
+      .from('games')
+      .select(GAME_SELECT)
+      .eq('id', id)
+      .single<GameRow>(),
+    supabase
+      .from('game_players')
+      .select(
+        'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, rejection_reason',
+      )
+      .eq('game_id', id)
+      .eq('user_id', userId)
+      .maybeSingle<MyPlayerRow>(),
+  ]);
+  console.timeEnd(gateLabel);
 
-  let game: GameRow = gameInitial;
-
-  // Find the current user's game_players row. If they aren't a participant,
-  // 404 — RLS would block this query anyway, but treat both cases the same.
-  const { data: me, error: meError } = await supabase
-    .from('game_players')
-    .select(
-      'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, rejection_reason',
-    )
-    .eq('game_id', id)
-    .eq('user_id', userId)
-    .maybeSingle<MyPlayerRow>();
-
-  if (meError) throw meError;
+  if (gameInitialRes.error || !gameInitialRes.data) notFound();
+  if (meRes.error) throw meRes.error;
+  const me = meRes.data;
   if (!me) notFound();
+
+  let game: GameRow = gameInitialRes.data;
 
   // Drafts are visible to invited players as a venterom — see the draft
   // branch in the default return below for progressive disclosure.
