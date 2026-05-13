@@ -10,6 +10,30 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 0.10.x — Resultat-mail og closing-the-loop
+
+Når admin avslutter spillet, får alle spillere automatisk en «Resultatet er klart»-mail med direktelenke til leaderboard. Du slipper å sende meldinger i kompis-chatten.
+
+### [0.10.0] - 2026-05-13
+
+**Når du avslutter et spill får alle spillerne automatisk en mail med «Resultatet er klart» og lenke til leaderboard — du trenger ikke lenger sende beskjeden manuelt.**
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+
+- **`lib/mail/gameFinishedNotification.ts`** — ny Resend-mail-helper med brand-stilet HTML + plaintext-fallback. Subject: `Resultatet er klart — <gameName>`. Body: «Hei <fornavn>!» + kort hook + grønn CTA-button til `https://tornygolf.no/games/<id>/leaderboard`. Bruker samme palette + struktur som `inviteNotification.ts`.
+- **`endGame`-action** ([app/admin/games/[id]/actions.ts](app/admin/games/[id]/actions.ts)) sender nå mail til alle spillere etter status-flippen til `finished`. Henter spillerne sammen med de eksisterende `submitted_at` / `approved_at`-validerings-queriene (én query, ikke to), filtrer på `users.email` ikke-tom, og fyrer `Promise.allSettled` over alle send-kall. Feil logges til Vercel via `console.error` og blokkerer aldri actionen — leaderboard er nådd in-app uavhengig av om mailen kom fram.
+
+#### Changed
+
+- **Initial game-fetch i `endGame`** inkluderer nå `name`-feltet (trengs som subject + body i mailen). Marginal data-overhead, sparer en re-fetch.
+
+</details>
+
+---
+
 ## 0.9.x — Sync-feedback under runden
 
 Hvis et slag ikke kommer fram til serveren, sier appen ifra. Ny sticky banner viser hvor mange slag som mangler synk, surface'r faktiske feilmeldinger fra Supabase, og lar deg manuelt prøve igjen — i stedet for at sync-køen stille henger i bakgrunnen. Pilot-polish underveis: scorekort wiper ikke lenger settet score hvis du tilfeldigvis trykker på det igjen.
@@ -212,16 +236,14 @@ Dedikert slett-side for spillere, fulgt av tre iterasjoner på «trekk tilbake»
 
 ---
 
-## 0.7.x — Bruker-detalj-redigering
+<details>
+<summary><strong>0.7.x — Bruker-detalj-redigering (1 entry) — klikk for å vise</strong></summary>
 
 Klikk på en spiller i admin for å redigere navn, kallenavn og handicap. Faresone-seksjon på detalj-siden forbereder slett-flyten som lander i 0.8.0.
 
 ### [0.7.0] - 2026-05-13
 
 **Klikk på en spiller i admin for å redigere navn, kallenavn og handicap-indeks.**
-
-<details>
-<summary>Teknisk</summary>
 
 #### Added
 

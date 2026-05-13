@@ -9,6 +9,8 @@ import {
 } from '@/lib/scoring/courseHandicap';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
 import { findPendingPlayers } from '@/lib/games/pendingPlayers';
+import { sendGameFinishedNotification } from '@/lib/mail/gameFinishedNotification';
+import { firstName } from '@/lib/firstName';
 
 async function requireAdmin() {
   const supabase = await getServerClient();
@@ -183,20 +185,35 @@ export async function endGame(gameId: string) {
   // Verify game is active
   const { data: game } = await supabase
     .from('games')
-    .select('id, status, require_peer_approval')
+    .select('id, name, status, require_peer_approval')
     .eq('id', gameId)
-    .single<{ id: string; status: GameStatus; require_peer_approval: boolean }>();
+    .single<{
+      id: string;
+      name: string;
+      status: GameStatus;
+      require_peer_approval: boolean;
+    }>();
   if (!game || game.status !== 'active') {
     redirect(`${detailPath}?error=not_active`);
   }
 
   // Verify every player has submitted; if require_peer_approval, every
-  // submission must also be approved.
+  // submission must also be approved. Also collect email + name here so we
+  // can fire "Resultatet er klart"-mail to each player after the status
+  // flip without a second query.
   const { data: players } = await supabase
     .from('game_players')
-    .select('submitted_at, approved_at')
+    .select(
+      'submitted_at, approved_at, users!game_players_user_id_fkey(email, name)',
+    )
     .eq('game_id', gameId)
-    .returns<{ submitted_at: string | null; approved_at: string | null }[]>();
+    .returns<
+      {
+        submitted_at: string | null;
+        approved_at: string | null;
+        users: { email: string | null; name: string | null } | null;
+      }[]
+    >();
 
   if (!players || players.length === 0) {
     redirect(`${detailPath}?error=no_players`);
@@ -216,6 +233,33 @@ export async function endGame(gameId: string) {
     .eq('id', gameId);
 
   if (error) redirect(`${detailPath}?error=db_finish`);
+
+  // Best-effort: send "Resultatet er klart"-mail to every player. Failures
+  // are logged but never abort the action — the leaderboard is reachable
+  // in-app even without the mail, and admin can re-trigger if needed (no
+  // resend-flow exists yet, but the DB is the source of truth either way).
+  const recipients = (players ?? [])
+    .map((p) => p.users)
+    .filter((u): u is { email: string; name: string | null } => {
+      return u != null && typeof u.email === 'string' && u.email.length > 0;
+    });
+  if (recipients.length > 0) {
+    const results = await Promise.allSettled(
+      recipients.map((u) =>
+        sendGameFinishedNotification({
+          to: u.email,
+          playerFirstName: firstName(u.name),
+          gameName: game!.name,
+          gameId,
+        }),
+      ),
+    );
+    for (const r of results) {
+      if (r.status === 'rejected') {
+        console.error('[endGame] game-finished mail failed', r.reason);
+      }
+    }
+  }
 
   revalidatePath(`/admin/games/${gameId}`);
   revalidatePath(`/games/${gameId}`);
