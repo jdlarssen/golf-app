@@ -23,6 +23,10 @@ import {
   reopenScorecard,
   reopenGame,
 } from './actions';
+import {
+  ERROR_MESSAGES_EXISTING_GAME,
+  buildErrorMessage as buildGameErrorMessage,
+} from '@/lib/admin/gameErrorMessages';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -51,28 +55,6 @@ const STATUS_BANNERS: Record<string, string> = {
   game_reopened: '✓ Spillet er aktivt igjen.',
 };
 
-const ERROR_MESSAGES: Record<string, string> = {
-  not_found: 'Spillet ble ikke funnet.',
-  not_draft: 'Bare utkast kan startes.',
-  not_scheduled: 'Spillet kan ikke startes (det er ikke planlagt).',
-  not_active: 'Spillet er ikke aktivt — kan ikke avsluttes.',
-  not_editable:
-    'Spillet kan ikke redigeres lenger — det er allerede startet eller avsluttet.',
-  no_players: 'Ingen spillere på dette spillet.',
-  not_all_submitted:
-    'Alle spillere må ha levert scorekort før spillet kan avsluttes.',
-  not_all_approved:
-    'Alle scorekort må være godkjent før spillet kan avsluttes.',
-  db_finish: 'Klarte ikke å avslutte spillet. Prøv igjen.',
-  db_tee: 'Klarte ikke å lese tee-boksen fra databasen. Prøv igjen.',
-  tee_missing: 'Tee-box mangler — kan ikke beregne handicap.',
-  db_players: 'Klarte ikke å oppdatere spillerne. Prøv igjen.',
-  db_game: 'Klarte ikke å oppdatere spillet. Prøv igjen.',
-  not_finished: 'Spillet er ikke avsluttet — kan ikke gjenåpnes.',
-  pending_players:
-    'Disse spillerne har ikke fullført registreringen ennå{LIST}. De må logge inn og fylle inn navn + HCP før spillet kan startes.',
-};
-
 const MONTHS_NB = [
   'jan',
   'feb',
@@ -97,13 +79,7 @@ function buildErrorMessage(
   errorCode: string | undefined,
   emails: string | undefined,
 ): string | undefined {
-  if (!errorCode) return undefined;
-  const base = ERROR_MESSAGES[errorCode];
-  if (!base) return undefined;
-  if (errorCode === 'pending_players') {
-    return base.replace('{LIST}', emails ? `: ${emails}` : '');
-  }
-  return base;
+  return buildGameErrorMessage(ERROR_MESSAGES_EXISTING_GAME, errorCode, emails);
 }
 
 function shortNb(iso: string | null | undefined): string | null {

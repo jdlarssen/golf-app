@@ -86,7 +86,7 @@ export async function startGame(gameId: string) {
     .select('user_id, users(hcp_index)')
     .eq('game_id', gameId)
     .returns<{ user_id: string; users: { hcp_index: number | string } | null }[]>();
-  if (gpError || !gamePlayers) redirect(`${detailPath}?error=db_players`);
+  if (gpError || !gamePlayers) redirect(`${detailPath}?error=db_roster`);
 
   // Defence-in-depth: refuse to flip a draft to active if any roster player
   // is still pending profile completion. Mirrors the gate in
@@ -97,7 +97,7 @@ export async function startGame(gameId: string) {
     .select('id, email, profile_completed_at')
     .in('id', rosterIds);
   if (rosterUsersError || !rosterUsers) {
-    redirect(`${detailPath}?error=db_players`);
+    redirect(`${detailPath}?error=db_roster`);
   }
   const pending = findPendingPlayers(rosterUsers!);
   if (pending.length > 0) {

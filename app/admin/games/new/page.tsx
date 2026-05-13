@@ -9,32 +9,15 @@ import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { GameForm, type CourseOption, type PlayerOption } from './GameForm';
 import { createGameDraft, createAndPublishGame } from './actions';
+import {
+  ERROR_MESSAGES_NEW_GAME,
+  buildErrorMessage as buildGameErrorMessage,
+} from '@/lib/admin/gameErrorMessages';
 
 type SearchParams = Promise<{
   error?: string | string[];
   emails?: string | string[];
 }>;
-
-const ERROR_MESSAGES: Record<string, string> = {
-  name_required: 'Spillet må ha et navn.',
-  course_required: 'Velg en bane.',
-  tee_required: 'Velg en tee-boks.',
-  bad_allowance: 'HCP-allowance må være et helt tall mellom 0 og 100.',
-  players_required: 'Du må velge nøyaktig 8 spillere.',
-  duplicate_player: 'Samme spiller kan ikke velges flere ganger.',
-  bad_team: 'Hver spiller må tilhøre et lag (1–4).',
-  bad_flight: 'Hver spiller må tilhøre en flight (1–4).',
-  team_balance: 'Hvert lag må ha nøyaktig 2 spillere.',
-  db_game:
-    'Klarte ikke å lagre spillet. Prøv igjen, eller sjekk Supabase-loggene.',
-  db_users: 'Klarte ikke å lese spillere fra databasen. Prøv igjen.',
-  db_tee: 'Klarte ikke å lese tee-boksen fra databasen. Prøv igjen.',
-  db_players:
-    'Klarte ikke å lagre spillerne på spillet. Prøv igjen, eller sjekk Supabase-loggene.',
-  pending_players:
-    'Disse spillerne har ikke fullført registreringen ennå{LIST}. De må logge inn og fylle inn navn + HCP før spillet kan publiseres.',
-  tee_off_required: 'Tee-off-tidspunkt er påkrevd ved publisering.',
-};
 
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
@@ -45,13 +28,7 @@ function buildErrorMessage(
   errorCode: string | undefined,
   emails: string | undefined,
 ): string | undefined {
-  if (!errorCode) return undefined;
-  const base = ERROR_MESSAGES[errorCode];
-  if (!base) return undefined;
-  if (errorCode === 'pending_players') {
-    return base.replace('{LIST}', emails ? `: ${emails}` : '');
-  }
-  return base;
+  return buildGameErrorMessage(ERROR_MESSAGES_NEW_GAME, errorCode, emails);
 }
 
 type CourseRow = {

@@ -74,7 +74,7 @@ async function createGameInternal(
       .in('id', payload.players.map((p) => p.user_id));
 
     if (rosterErr || !rosterUsers) {
-      redirect('/admin/games/new?error=db_players');
+      redirect('/admin/games/new?error=db_roster');
     }
 
     const pending = findPendingPlayers(rosterUsers);
