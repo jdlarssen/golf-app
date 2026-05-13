@@ -240,10 +240,10 @@ async function PlayerShortageBanner() {
     <Banner tone="info">
       Du trenger 8 registrerte spillere. Inviter flere fra{' '}
       <SmartLink
-        href="/admin/invitations"
+        href="/admin/spillere"
         className="underline hover:no-underline"
       >
-        Invitasjoner
+        Spillere
       </SmartLink>
       -siden.
     </Banner>

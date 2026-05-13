@@ -205,6 +205,7 @@ async function TilesGrid() {
     activeGamesRes,
     plannedGamesRes,
     pendingInvitesRes,
+    usersRes,
     coursesRes,
     lastFinishedRes,
   ] = await Promise.all([
@@ -221,6 +222,7 @@ async function TilesGrid() {
       .select('id', { count: 'exact', head: true })
       .is('accepted_at', null)
       .gt('expires_at', now.toISOString()),
+    supabase.from('users').select('id', { count: 'exact', head: true }),
     supabase.from('courses').select('id', { count: 'exact', head: true }),
     supabase
       .from('games')
@@ -234,6 +236,7 @@ async function TilesGrid() {
   const activeCount = activeGamesRes.count ?? 0;
   const plannedCount = plannedGamesRes.count ?? 0;
   const pendingInvites = pendingInvitesRes.count ?? 0;
+  const userCount = usersRes.count ?? 0;
   const courseCount = coursesRes.count ?? 0;
   const lastFinishedAt = (lastFinishedRes.data as { ended_at: string | null } | null)
     ?.ended_at;
@@ -247,12 +250,12 @@ async function TilesGrid() {
       accent: true,
     },
     {
-      label: 'Invitasjoner',
-      href: '/admin/invitations',
+      label: 'Spillere',
+      href: '/admin/spillere',
       meta:
-        pendingInvites === 0
-          ? 'Ingen ventende svar'
-          : `${pendingInvites} ventende svar`,
+        userCount === 0
+          ? 'Ingen registrerte ennå'
+          : `${userCount} registrert${pendingInvites > 0 ? ` · ${pendingInvites} venter` : ''}`,
       icon: 'konvolutt',
     },
     {
