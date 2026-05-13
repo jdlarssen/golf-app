@@ -13,6 +13,7 @@ import { InviteForm } from './_components/InviteForm';
 type SearchParams = Promise<{
   status?: string | string[];
   email?: string | string[];
+  name?: string | string[];
   error?: string | string[];
   q?: string | string[];
 }>;
@@ -25,14 +26,18 @@ const ERROR_MESSAGES: Record<string, string> = {
   mail_failed: 'Mailen kom ikke ut. Sjekk Vercel-loggene for detaljer.',
   resend_failed: 'Klarte ikke sende invitasjonen på nytt. Prøv igjen.',
   withdraw_failed: 'Klarte ikke trekke tilbake invitasjonen. Prøv igjen.',
+  self_delete_forbidden: 'Du kan ikke slette din egen konto.',
+  still_has_games: 'Spilleren har spillhistorikk og kan ikke slettes.',
+  auth_delete_failed: 'Klarte ikke slette kontoen. Prøv igjen.',
   unknown: 'Noe gikk galt. Prøv igjen.',
 };
 
-const SUCCESS_MESSAGES: Record<string, (email: string) => string> = {
-  sent: (email: string) => `✓ Invitasjon sendt til ${email}.`,
-  resent: (email: string) => `✓ Invitasjon sendt på nytt til ${email}.`,
-  withdrawn: (email: string) =>
+const SUCCESS_MESSAGES: Record<string, (arg: string) => string> = {
+  sent: (email) => `✓ Invitasjon sendt til ${email}.`,
+  resent: (email) => `✓ Invitasjon sendt på nytt til ${email}.`,
+  withdrawn: (email) =>
     `Invitasjonen til ${email} er trukket tilbake. E-posten er ledig igjen.`,
+  deleted: (name) => `${name} er slettet.`,
 };
 
 function first(value: string | string[] | undefined): string | undefined {
@@ -63,10 +68,13 @@ export default async function SpillerePage({
   const params = await searchParams;
   const status = first(params.status);
   const email = first(params.email) ?? '';
+  const name = first(params.name) ?? '';
   const errorCode = first(params.error);
   const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
   const successBuilder = status ? SUCCESS_MESSAGES[status] : undefined;
-  const successMessage = successBuilder ? successBuilder(email) : undefined;
+  const successMessage = successBuilder
+    ? successBuilder(email || name)
+    : undefined;
   const searchQuery = first(params.q) ?? '';
 
   return (

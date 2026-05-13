@@ -6,6 +6,7 @@ import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { SmartLink } from '@/components/ui/SmartLink';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { updateUser } from './actions';
 
@@ -161,13 +162,13 @@ export default async function PlayerDetailPage({
         >
           {canDelete ? (
             <div className="text-center">
-              {/* Fase 3 aktiverer denne lenken. Inntil da: disabled-state. */}
-              <span
-                className="font-sans text-[13px] font-medium text-muted"
-                aria-disabled="true"
+              <SmartLink
+                href={`/admin/spillere/${target.id}/slett`}
+                className="font-sans text-[13px] font-medium"
+                style={{ color: '#a04040' }}
               >
-                Slett spilleren (aktiveres i neste runde)
-              </span>
+                Slett spilleren
+              </SmartLink>
             </div>
           ) : (
             <p className="text-center font-sans text-[12.5px] text-muted">
