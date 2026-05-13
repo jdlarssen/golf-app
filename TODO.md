@@ -22,12 +22,11 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 ### Recovery / admin overrides
 
 - [ ] UI for å slette et spill helt (ikke bare avslutte). I dag krever det rå SQL.
-- [ ] **Invitasjons-administrasjon i `/admin/invitations`** — status-flippet er løst (v0.3.3 + OTP-kode-flyt i v0.4.0 markerer `accepted_at` ved `verifyOtp`). Resterende forbedringer som hører sammen:
-  - Vis om brukeren har bedt om kode (auth-event-logg i Supabase kan brukes — eller egen kolonne `invitations.opened_at`)
-  - «Send ny invitasjon»-knapp (sender ny notifikasjons-mail via Resend; krever ikke ny Supabase-runde)
-  - «Trekk tilbake»-knapp (sletter rad i `invitations`, evt. sletter også `auth.users`-raden hvis brukeren aldri fullførte profil)
-  - Slett bruker fra admin-panel (cascade: `public.users` + `auth.users` + alle deres `game_players`/`scores`)
-  - Manuel override av brukerinnstillinger fra admin (rolle, nickname, display_pref, e-post) — krever ny admin-side `/admin/users/[id]` med form og server-action gated på `is_admin`
+- [ ] **Endre e-post på registrert spiller fra admin** — krever service-role-pattern for `auth.admin.updateUserById` + samtidig oppdatering av `public.users.email`. Levert i v0.5.0–v0.7.1 dekker re-send / trekk tilbake / rediger navn-kallenavn-hcp / slett, men e-post-endring er fortsatt SQL-bare.
+- [ ] **«Vis om brukeren har bedt om kode»** — auth-event-logg i Supabase eller egen kolonne `invitations.opened_at`. Nice-to-have for admin-feedback når en invitasjon henger.
+- [ ] **Aktivitets-statistikk per spiller på `/admin/spillere/[id]`** — sist innlogget, antall spill, sist hcp. Nice-to-have for sosial-feel; krever auth-event-logg eller en `last_seen_at`-kolonne.
+- [ ] **Arrangør-rolle** («turneringsadministrator»: kan opprette spill og baner, men ikke endre brukere; ser kun egne spill). Krever ny brainstorming-runde + RLS-revisjon på `games`, `game_players`, `courses`, `course_holes`, `tee_boxes`, `invitations`. Diskutert 2026-05-13; utsatt fra admin-spillere-leveransen for å holde scope.
+- [ ] **Vis «Slettet spiller»-fallback i historiske leaderboards** — pågående backlog hvis vi senere bestemmer oss for soft-delete istedenfor blokk-if-game_players. I dag har vi block-pattern, så ikke aktuelt nå, men noter scenarioet.
 
 ### Privacy / GDPR
 
