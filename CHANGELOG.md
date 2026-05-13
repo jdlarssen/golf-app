@@ -14,6 +14,28 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leverer, spillere får mail når admin avslutter. Ingen polling av appen for å vite om det er noe nytt å gjøre.
 
+### [0.10.2] - 2026-05-13
+
+**SyncBanner viser nå norsk, lesbar forklaring («Mistet nett-tilkoblingen», «Innloggingen er utløpt») i stedet for tekniske Safari-feilmeldinger som «TypeError: Load failed».**
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+
+- **`SyncBanner` — friendly error-mapping.** Raw `lastError` fra Supabase RPC mappes nå til norsk forklaring spilleren kan forstå og handle på:
+  - `Load failed` / `Failed to fetch` / `NetworkError` → «Mistet nett-tilkoblingen»
+  - `JWT` / `expired` / `session` / `401` / `unauthorized` → «Innloggingen er utløpt — logg inn på nytt»
+  - `permission` / `forbidden` / `row-level` / `403` → «Tillatelse manglet»
+  - `rate limit` / `429` / `too many` → «For mange forespørsler — vent litt»
+  - Catch-all: «Lagring mislyktes»
+- **Banneret går fra to-linjet (heading + raw-error subtext) til én-linjet** («Mistet nett-tilkoblingen. N slag venter.»). Renere på smale skjermer, ingen jargon.
+- **Raw error bevares som `title`-attribute** på banner-elementet — admin kan long-press/hover for å se den eksakte underliggende meldingen til feilsøking, men spilleren ser ikke jargon-en før de eksplisitt graver i den.
+
+</details>
+
+---
+
 ### [0.10.1] - 2026-05-13
 
 **Du får nå en mail hver gang en spiller leverer scorekortet sitt — du slipper å åpne appen for å sjekke om det er noe å godkjenne.**
