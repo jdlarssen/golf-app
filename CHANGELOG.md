@@ -8,6 +8,14 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## [0.5.8] - 2026-05-13
+
+### Fixed
+- «Start spillet» (draft → aktiv) blokkeres nå hvis ikke alle valgte spillere har fullført profil — samme guard som scheduled-pathen.
+- Invitér-en-venn-actionen sjekker `profile_completed_at` i stedet for "rad finnes ikke" som ble dødt etter migrasjon 0014.
+
+---
+
 ## [0.5.7] - 2026-05-13
 
 ### Fixed
