@@ -1,3 +1,4 @@
+import 'server-only';
 import { createClient } from '@supabase/supabase-js';
 
 // Service-role Supabase client. MUST NEVER be imported from client components

@@ -87,7 +87,7 @@ function PendingRow({
           <input type="hidden" name="id" value={inv.id} />
           <button
             type="submit"
-            className="rounded-full border border-border bg-surface px-3 py-1.5 font-sans text-[12px] font-medium text-text transition hover:bg-row-hover"
+            className="inline-flex min-h-[44px] items-center rounded-full border border-border bg-surface px-4 py-2 font-sans text-[13px] font-medium text-text transition hover:bg-row-hover"
           >
             Send på nytt
           </button>
@@ -102,7 +102,7 @@ function WithdrawButton({ invitationId }: { invitationId: string }) {
   return (
     <details className="relative">
       <summary
-        className="cursor-pointer list-none rounded-full border px-3 py-1.5 font-sans text-[12px] font-medium transition"
+        className="inline-flex min-h-[44px] cursor-pointer list-none items-center rounded-full border px-4 py-2 font-sans text-[13px] font-medium transition"
         style={{
           borderColor: 'rgba(180, 60, 60, 0.3)',
           color: '#a04040',
@@ -110,12 +110,12 @@ function WithdrawButton({ invitationId }: { invitationId: string }) {
       >
         Trekk tilbake
       </summary>
-      <div className="absolute right-0 z-10 mt-1 flex gap-1.5 rounded-lg border border-border bg-surface px-2 py-1.5 shadow-md">
+      <div className="absolute right-0 z-10 mt-1 flex gap-1.5 rounded-lg border border-border bg-surface px-2 py-2 shadow-md">
         <form action={withdrawInvitation}>
           <input type="hidden" name="id" value={invitationId} />
           <button
             type="submit"
-            className="rounded-full px-3 py-1.5 font-sans text-[12px] font-semibold text-white"
+            className="inline-flex min-h-[44px] items-center rounded-full px-4 py-2 font-sans text-[13px] font-semibold text-white"
             style={{ background: '#a04040' }}
           >
             Bekreft

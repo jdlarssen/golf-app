@@ -29,6 +29,20 @@ export async function sendInvitation(formData: FormData) {
   const { supabase, profile } = await requireAdmin();
   const invitedByName = profile.name?.trim() || 'Admin';
 
+  // Guard against duplicate pending invitations — invitations.email has no
+  // UNIQUE constraint, so without this check admin can accidentally create
+  // two pending rows for the same address.
+  const { data: existing } = await supabase
+    .from('invitations')
+    .select('id')
+    .eq('email', email)
+    .is('accepted_at', null)
+    .maybeSingle();
+  if (existing) {
+    const qs = new URLSearchParams({ error: 'already_invited', email });
+    redirect(`/admin/spillere?${qs.toString()}`);
+  }
+
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
   const { error: insertError } = await supabase.from('invitations').insert({
     email,

@@ -19,12 +19,12 @@ type SearchParams = Promise<{
 
 const ERROR_MESSAGES: Record<string, string> = {
   email_required: 'Du må fylle inn en e-postadresse.',
-  rate_limited: 'Vent litt før du sender en ny invitasjon.',
+  already_invited:
+    'Det finnes allerede en ventende invitasjon til denne adressen. Bruk "Send på nytt" istedenfor.',
   log_failed: 'Invitasjonen ble sendt, men loggføring feilet.',
   mail_failed: 'Mailen kom ikke ut. Sjekk Vercel-loggene for detaljer.',
   resend_failed: 'Klarte ikke sende invitasjonen på nytt. Prøv igjen.',
   withdraw_failed: 'Klarte ikke trekke tilbake invitasjonen. Prøv igjen.',
-  not_admin: 'Du har ikke tilgang til denne handlingen.',
   unknown: 'Noe gikk galt. Prøv igjen.',
 };
 
