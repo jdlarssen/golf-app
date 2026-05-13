@@ -14,6 +14,7 @@ import { sendFriendInvite } from '../invite/actions';
 import { ProfileFormBody } from './ProfileFormBody';
 import { InviteFriendForm } from './InviteFriendForm';
 import { SmartLink } from '@/components/ui/SmartLink';
+import { InstallButton } from '@/components/pwa/InstallButton';
 
 type SearchParams = Promise<{
   error?: string | string[];
@@ -113,6 +114,10 @@ export default async function ProfilePage({
 
       <div className="mt-6">
         <HistorikkCard />
+      </div>
+
+      <div className="mt-6">
+        <InstallButton />
       </div>
 
       <div className="mt-6">

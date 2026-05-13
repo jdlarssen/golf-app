@@ -14,6 +14,7 @@ import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { PinFlag } from '@/components/icons/PinFlag';
+import { InstallBanner } from '@/components/pwa/InstallBanner';
 import { firstName } from '@/lib/firstName';
 import { formatTeeOffDate, formatTeeOffTime } from '@/lib/format/teeOff';
 import { STATUS_LABELS } from '@/lib/games/status';
@@ -50,6 +51,8 @@ export default async function Home({
   return (
     <AppShell>
       <BrandMark className="mb-6" />
+
+      <InstallBanner />
 
       {profileUpdated && (
         <div className="mb-4">

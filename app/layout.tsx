@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter } from "next/font/google";
 import "./globals.css";
 import { PwaBoot } from "@/components/PwaBoot";
-import { IosInstallHint } from "@/components/IosInstallHint";
+import { InstallPromptCapture } from "@/components/pwa/InstallPromptCapture";
 import { PerfHud } from "@/components/PerfHud";
 
 // Inter — body, UI labels, forms. Variable font for crisp small-size rendering.
@@ -62,7 +62,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col font-sans">
         {children}
-        <IosInstallHint />
+        <InstallPromptCapture />
         <PwaBoot />
         <PerfHud />
       </body>
