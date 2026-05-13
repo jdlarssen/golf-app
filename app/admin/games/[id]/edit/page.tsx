@@ -54,9 +54,11 @@ type CourseRow = {
 
 type UserRow = {
   id: string;
-  name: string;
+  name: string | null;
   nickname: string | null;
   hcp_index: number | string;
+  email: string;
+  profile_completed_at: string | null;
 };
 
 type GameRow = {
@@ -208,8 +210,9 @@ const getOptions = cache(async () => {
       .returns<CourseRow[]>(),
     supabase
       .from('users')
-      .select('id, name, nickname, hcp_index')
-      .order('name', { ascending: true })
+      .select('id, name, nickname, hcp_index, email, profile_completed_at')
+      .order('profile_completed_at', { ascending: true, nullsFirst: false })
+      .order('name', { ascending: true, nullsFirst: true })
       .returns<UserRow[]>(),
   ]);
   if (coursesResult.error) throw coursesResult.error;
@@ -228,6 +231,8 @@ const getOptions = cache(async () => {
     name: u.name,
     nickname: u.nickname ?? null,
     hcp_index: Number(u.hcp_index),
+    email: u.email,
+    pending: u.profile_completed_at === null,
   }));
 
   return { courses, playerOptions };

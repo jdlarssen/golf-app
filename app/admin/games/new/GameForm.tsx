@@ -12,9 +12,11 @@ export type CourseOption = {
 
 export type PlayerOption = {
   id: string;
-  name: string;
+  name: string | null;       // null while invitee hasn't completed profile
   nickname: string | null;
   hcp_index: number;
+  email: string;
+  pending: boolean;          // derived from profile_completed_at IS NULL
 };
 
 const TEAM_NUMBERS = [1, 2, 3, 4] as const;
@@ -366,12 +368,17 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
 
   function playerLabel(p: PlayerOption): string {
     const hcp = p.hcp_index.toFixed(1);
-    if (p.nickname) return `${p.name} «${p.nickname}» — HCP ${hcp}`;
-    return `${p.name} — HCP ${hcp}`;
+    // Pending invitees have null name until they complete their profile —
+    // fall back to email so the picker stays usable. Task 4 will replace
+    // this with a proper pending-pill renderer.
+    const displayName = p.name ?? p.email;
+    if (p.nickname) return `${displayName} «${p.nickname}» — HCP ${hcp}`;
+    return `${displayName} — HCP ${hcp}`;
   }
 
   function shortName(p: PlayerOption): string {
-    return p.nickname ? `${p.name} «${p.nickname}»` : p.name;
+    const displayName = p.name ?? p.email;
+    return p.nickname ? `${displayName} «${p.nickname}»` : displayName;
   }
 
   // Resolve the draft + publish server actions for the two modes that share a
