@@ -12,13 +12,12 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { submitScorecard } from './actions';
 import { SubmitForm } from './SubmitForm';
+import type { GameStatus } from '@/lib/games/status';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
   error?: string | string[];
 }>;
-
-type GameStatus = 'draft' | 'scheduled' | 'active' | 'finished';
 
 const ERROR_MESSAGES: Record<string, string> = {
   db: 'Klarte ikke å lagre leveringen. Prøv igjen.',

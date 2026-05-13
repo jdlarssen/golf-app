@@ -9,6 +9,7 @@ import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { MiniRibbon } from '@/components/ui/MiniRibbon';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
+import type { GameStatus } from '@/lib/games/status';
 import { StartGameButton } from './StartGameButton';
 import { StartScheduledGameButton } from './StartScheduledGameButton';
 import { EndGameButton } from './EndGameButton';
@@ -34,8 +35,6 @@ type SearchParams = Promise<{
   error?: string | string[];
   emails?: string | string[];
 }>;
-
-type GameStatus = 'draft' | 'scheduled' | 'active' | 'finished';
 
 const STATUS_TO_TONE: Record<GameStatus, StatusChipTone> = {
   draft: 'utkast',

@@ -11,6 +11,7 @@ import { startScheduledGame } from '@/lib/games/startScheduledGame';
 import { findPendingPlayers } from '@/lib/games/pendingPlayers';
 import { sendGameFinishedNotification } from '@/lib/mail/gameFinishedNotification';
 import { firstName } from '@/lib/firstName';
+import type { GameStatus } from '@/lib/games/status';
 
 async function requireAdmin() {
   const supabase = await getServerClient();
@@ -337,4 +338,3 @@ export async function reopenGame(gameId: string) {
   redirect(`${detailPath}?status=game_reopened`);
 }
 
-type GameStatus = 'draft' | 'scheduled' | 'active' | 'finished';

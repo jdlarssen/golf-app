@@ -10,14 +10,13 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { approveScorecard, rejectScorecard } from './actions';
 import { ReviewActions } from './ReviewActions';
+import type { GameStatus } from '@/lib/games/status';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
   status?: string | string[];
   error?: string | string[];
 }>;
-
-type GameStatus = 'draft' | 'scheduled' | 'active' | 'finished';
 
 const STATUS_BANNERS: Record<string, string> = {
   approved: '✓ Scorekort godkjent.',

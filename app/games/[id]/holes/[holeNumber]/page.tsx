@@ -3,10 +3,9 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { HoleClient, type ClientPlayer } from './HoleClient';
+import type { GameStatus } from '@/lib/games/status';
 
 type Params = Promise<{ id: string; holeNumber: string }>;
-
-type GameStatus = 'draft' | 'scheduled' | 'active' | 'finished';
 
 type GameRow = {
   id: string;

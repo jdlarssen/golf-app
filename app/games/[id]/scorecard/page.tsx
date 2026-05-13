@@ -10,10 +10,9 @@ import { LinkButton } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
+import type { GameStatus } from '@/lib/games/status';
 
 type Params = Promise<{ id: string }>;
-
-type GameStatus = 'draft' | 'scheduled' | 'active' | 'finished';
 
 type GameRow = {
   id: string;

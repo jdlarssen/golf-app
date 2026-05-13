@@ -4,8 +4,7 @@ import {
   applyAllowance,
 } from '@/lib/scoring/courseHandicap';
 import { findPendingPlayers } from './pendingPlayers';
-
-type GameStatus = 'draft' | 'scheduled' | 'active' | 'finished';
+import type { GameStatus } from './status';
 
 export type StartScheduledGameResult =
   | { ok: true }

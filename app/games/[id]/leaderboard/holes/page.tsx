@@ -13,14 +13,13 @@ import {
   type LeaderboardMode,
   type TeamLine,
 } from '@/lib/leaderboard';
+import type { GameStatus } from '@/lib/games/status';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
   mode?: string | string[];
   team?: string | string[];
 }>;
-
-type GameStatus = 'draft' | 'scheduled' | 'active' | 'finished';
 
 type GameRow = {
   id: string;

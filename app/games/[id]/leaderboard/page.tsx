@@ -28,11 +28,10 @@ import {
 } from '@/lib/leaderboard';
 import { PreRoundLeaderboardRealtime } from './PreRoundLeaderboard';
 import { State4View } from './State4View';
+import type { GameStatus } from '@/lib/games/status';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ mode?: string | string[] }>;
-
-type GameStatus = 'draft' | 'scheduled' | 'active' | 'finished';
 
 type GameRow = {
   id: string;

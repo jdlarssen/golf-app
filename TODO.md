@@ -64,7 +64,6 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 - [ ] Unit-tester for server actions (submitScorecard, approveScorecard, endGame, createGame)
 ### Refaktorering (etter empty-states + scheduled-status-leveransen)
 
-- [ ] **Extract `lib/games/status.ts`** — `GameStatus`-unionen og `STATUS_LABELS`-objektet er duplisert i 13 filer. Refaktoreres samtidig med M1-fargefiks (når design-handoff lander). Bør også gjøres for å forenkle fremtidige status-utvidelser.
 - [ ] **Move RealtimeMount out of game layout** — i dag mounter `app/games/[id]/layout.tsx` `RealtimeMount` for alle game-statuser inkludert scheduled. Subscription er harmless (ingen events arriverer for scheduled siden ingen scores eksisterer + RLS blokkerer), men det er en idle WebSocket-subscription på hver venterom-besøk. Lav prioritet til vi vokser.
 
 ### Opprydning

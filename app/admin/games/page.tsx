@@ -7,6 +7,7 @@ import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
+import type { GameStatus } from '@/lib/games/status';
 
 type SearchParams = Promise<{
   status?: string | string[];
@@ -52,8 +53,6 @@ function shortNb(iso: string | null): string | null {
     return null;
   }
 }
-
-type GameStatus = 'draft' | 'scheduled' | 'active' | 'finished';
 
 const STATUS_TO_TONE: Record<GameStatus, StatusChipTone> = {
   draft: 'utkast',

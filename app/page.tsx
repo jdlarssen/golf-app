@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { PinFlag } from '@/components/icons/PinFlag';
 import { firstName } from '@/lib/firstName';
 import { formatTeeOffDate, formatTeeOffTime } from '@/lib/format/teeOff';
+import { STATUS_LABELS } from '@/lib/games/status';
 
 type SearchParams = Promise<{ profile?: string | string[] }>;
 
@@ -139,13 +140,6 @@ async function HomeBody() {
       teamNumber: row.team_number,
       flightNumber: row.flight_number,
     }));
-
-  const STATUS_LABELS = {
-    draft: 'Utkast',
-    scheduled: 'Planlagt',
-    active: 'Pågående',
-    finished: 'Avsluttet',
-  } as const;
 
   const isEmptyState =
     activeGames.length === 0 && finishedGames.length === 0;

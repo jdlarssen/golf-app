@@ -12,6 +12,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Kicker } from '@/components/ui/Kicker';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
+import { type GameStatus, STATUS_LABELS } from '@/lib/games/status';
 import { MailEnvelope } from '@/components/icons/MailEnvelope';
 import { firstName } from '@/lib/firstName';
 import { formatTeeOffTime, formatTeeOffDate } from '@/lib/format/teeOff';
@@ -22,15 +23,6 @@ type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
   status?: string | string[];
 }>;
-
-type GameStatus = 'draft' | 'scheduled' | 'active' | 'finished';
-
-const STATUS_LABELS: Record<GameStatus, string> = {
-  draft: 'Utkast',
-  scheduled: 'Planlagt',
-  active: 'Pågående',
-  finished: 'Avsluttet',
-};
 
 // Map player-facing game lifecycle onto StatusChip's admin tone palette —
 // each tone's hue happens to fit the player meaning too:
