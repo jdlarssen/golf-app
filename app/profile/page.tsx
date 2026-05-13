@@ -116,6 +116,17 @@ export default async function ProfilePage({
       <div className="mt-6">
         <GdprSection />
       </div>
+
+      <p className="mt-4 px-1 text-xs leading-relaxed text-muted">
+        Les hvordan vi behandler og lagrer dataene dine i{' '}
+        <SmartLink
+          href="/legal/privacy"
+          className="text-text underline underline-offset-2"
+        >
+          personvernerklæringen
+        </SmartLink>
+        .
+      </p>
     </AppShell>
   );
 }
