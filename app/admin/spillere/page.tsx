@@ -16,7 +16,6 @@ type SearchParams = Promise<{
   name?: string | string[];
   error?: string | string[];
   q?: string | string[];
-  confirm?: string | string[];
 }>;
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -83,7 +82,6 @@ export default async function SpillerePage({
     ? successBuilder(email || name)
     : undefined;
   const searchQuery = first(params.q) ?? '';
-  const confirmId = first(params.confirm);
 
   return (
     <AdminShell>
@@ -123,7 +121,7 @@ export default async function SpillerePage({
       <section className="mt-5">
         <MiniRibbon>Ventende invitasjoner</MiniRibbon>
         <Suspense fallback={<ListSkeleton rows={2} />}>
-          <PendingInvitations confirmId={confirmId} searchQuery={searchQuery} />
+          <PendingInvitations />
         </Suspense>
       </section>
 
