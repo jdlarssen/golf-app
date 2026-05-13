@@ -113,7 +113,7 @@ pending flag included; the UI renders pending rows distinctly.
 ## Files expected to change
 
 Migration:
-- `supabase/migrations/0012_pending_users.sql` — new
+- `supabase/migrations/0014_pending_users.sql` — new
 
 Server logic:
 - `app/admin/games/[id]/edit/page.tsx` — picker query includes pending flag
