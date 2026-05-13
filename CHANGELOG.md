@@ -12,7 +12,27 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ## 0.10.x — Resultat-mail og closing-the-loop
 
-Når admin avslutter spillet, får alle spillere automatisk en «Resultatet er klart»-mail med direktelenke til leaderboard. Du slipper å sende meldinger i kompis-chatten.
+Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leverer, spillere får mail når admin avslutter. Ingen polling av appen for å vite om det er noe nytt å gjøre.
+
+### [0.10.1] - 2026-05-13
+
+**Du får nå en mail hver gang en spiller leverer scorekortet sitt — du slipper å åpne appen for å sjekke om det er noe å godkjenne.**
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+
+- **`lib/mail/scorecardSubmittedNotification.ts`** — Resend-mail-helper med samme brand-stil som de andre mail-malene. Subject: `Scorekort levert: <playerName> — <gameName>`. CTA-button til `https://tornygolf.no/admin/games/<id>`.
+- **`submitScorecard`-action** ([app/games/[id]/submit/actions.ts](app/games/[id]/submit/actions.ts)) fyrer mail til alle admin-brukere etter at submit-update lykkes. Henter submitter's navn + admin-emails i parallell (Promise.all) etter DB-update, filtrer ut submitter selv (slik at en player-admin ikke mailer seg selv), og sender via Promise.allSettled. Feil logges, blokkerer aldri.
+
+#### Changed
+
+- **Initial game-fetch i `submitScorecard`** inkluderer nå `name`-feltet (trengs som mail-subject).
+
+</details>
+
+---
 
 ### [0.10.0] - 2026-05-13
 
