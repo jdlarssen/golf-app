@@ -79,7 +79,6 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 - [ ] Rate-limiting på admin-invitasjons-endpoint (per IP, per admin)
 - [ ] Audit-log for admin-handlinger (hvem avsluttet hvilket spill, hvem godkjente hvilken score)
 - [ ] CAPTCHA på invitasjons-skjemaet hvis vi noensinne får spam-problem
-- [ ] **Tighten `invitations select by token using (true)` policy** (`supabase/migrations/0002_rls_policies.sql`). I dag kan enhver innlogget bruker SELECTe alle rader i `public.invitations` — app-laget filtrerer på token, men det er ikke RLS-enforced. Vurder å bytte til `using (token = current_setting('request.jwt.claim.invite_token', true))` eller en SECURITY DEFINER RPC som tar token som arg.
 
 ---
 
