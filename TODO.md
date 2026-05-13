@@ -86,7 +86,6 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 - [ ] Audit-log for admin-handlinger (hvem avsluttet hvilket spill, hvem godkjente hvilken score)
 - [ ] CAPTCHA på invitasjons-skjemaet hvis vi noensinne får spam-problem
 - [ ] **Tighten `invitations select by token using (true)` policy** (`supabase/migrations/0002_rls_policies.sql`). I dag kan enhver innlogget bruker SELECTe alle rader i `public.invitations` — app-laget filtrerer på token, men det er ikke RLS-enforced. Vurder å bytte til `using (token = current_setting('request.jwt.claim.invite_token', true))` eller en SECURITY DEFINER RPC som tar token som arg.
-- [ ] **Friend-invite metadata-pollution for `auth.users`-only kontoer.** `email_is_registered` RPC sjekker `public.users`, ikke `auth.users`. Hvis noen har startet magic-link-flow men aldri fullført `/complete-profile`, finnes de bare i `auth.users` — venneinvitasjon vil ikke blokkere, og `signInWithOtp` overskriver deres `user_metadata.inviter_name`. Lav prioritet; løsning krever ny SECURITY DEFINER RPC mot `auth.users`.
 
 ---
 

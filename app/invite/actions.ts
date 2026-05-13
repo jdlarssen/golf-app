@@ -56,19 +56,25 @@ export async function sendFriendInvite(formData: FormData) {
     redirect('/profile?invite_error=quota');
   }
 
-  // Block invites to addresses that already have a Tørny account.
-  // Prevents confusing "X has invited you" mails to existing users. The
-  // SECURITY DEFINER RPC bypasses RLS so we get a truthful answer
-  // regardless of whether the inviter shares a game with the invitee.
-  const { data: isRegistered, error: existingError } = await supabase.rpc(
-    'email_is_registered',
-    { p_email: email },
-  );
+  // Block invites to addresses that already exist anywhere in Tørny.
+  // We check two sources in parallel:
+  //   1. public.users (email_is_registered) — accounts that completed
+  //      /complete-profile and have a row in the public schema.
+  //   2. auth.users (email_is_in_auth_users) — accounts that exist in
+  //      Supabase Auth but never finished /complete-profile (e.g. leftover
+  //      from the legacy magic-link flow). Without this second check those
+  //      partial accounts would slip through and receive a confusing invite
+  //      mail, and their user_metadata.inviter_name would be overwritten
+  //      by the subsequent signInWithOtp call.
+  const [registeredResult, inAuthResult] = await Promise.all([
+    supabase.rpc('email_is_registered', { p_email: email }),
+    supabase.rpc('email_is_in_auth_users', { email_to_check: email }),
+  ]);
 
-  if (existingError) {
+  if (registeredResult.error || inAuthResult.error) {
     redirect('/profile?invite_error=unknown');
   }
-  if (isRegistered) {
+  if (registeredResult.data || inAuthResult.data) {
     redirect('/profile?invite_error=already_user');
   }
 
