@@ -52,7 +52,7 @@ const DEFAULT_TEE: TeeBoxData = {
   length_meters: '',
 };
 
-const MAX_TEE_BOXES = 5;
+const MAX_TEE_BOXES = 7;
 
 export function CourseForm({
   action,

@@ -112,7 +112,6 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 ### Tee-bokser
 
 - [ ] Kjønn-tag på tee-bokser (`herretee`, `dametee`, `juniortee`) så herrer og damer kan spille fra ulike tees i samme spill med korrekt course handicap
-- [ ] Flere enn 5 tee-bokser per bane (utvid `MAX_TEE_BOXES`)
 
 ### Klubb / multi-admin
 
