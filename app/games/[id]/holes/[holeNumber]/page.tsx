@@ -16,20 +16,13 @@ type GameRow = {
   tee_box_id: string;
 };
 
-type MyPlayerRow = {
-  user_id: string;
-  flight_number: number;
-  course_handicap: number | null;
-  submitted_at: string | null;
-};
-
 type HoleRow = {
   hole_number: number;
   par: number;
   stroke_index: number;
 };
 
-type FlightPlayerRow = {
+type GamePlayerRow = {
   user_id: string;
   team_number: number;
   flight_number: number;
@@ -76,14 +69,38 @@ export default async function HolePage({ params }: { params: Params }) {
   if (!userId) redirect('/login');
   const supabase = await getServerClient();
 
-  console.time(t('game'));
-  const { data: game, error: gameError } = await supabase
-    .from('games')
-    .select('id, name, status, course_id, tee_box_id')
-    .eq('id', id)
-    .single<GameRow>();
-  console.timeEnd(t('game'));
+  // Round 1 — three independent fetches in parallel.
+  //
+  // game: needs only the route id; checks status + reveals course_id.
+  // allPlayers: fetch ALL game_players for this game (typically 8 rows) in
+  //   one round-trip so we can find `me` in memory and also derive my flight
+  //   without a second query. Collapses the prior `me` + `flight` chain into
+  //   a single call.
+  // scoreCount: needs only id + userId; independent of every other fetch.
+  console.time(t('round1'));
+  const [gameRes, allPlayersRes, scoreCountRes] = await Promise.all([
+    supabase
+      .from('games')
+      .select('id, name, status, course_id, tee_box_id')
+      .eq('id', id)
+      .single<GameRow>(),
+    supabase
+      .from('game_players')
+      .select(
+        'user_id, team_number, flight_number, course_handicap, submitted_at, users!game_players_user_id_fkey(name, nickname)',
+      )
+      .eq('game_id', id)
+      .returns<GamePlayerRow[]>(),
+    supabase
+      .from('scores')
+      .select('hole_number', { count: 'exact', head: true })
+      .eq('game_id', id)
+      .eq('user_id', userId)
+      .not('strokes', 'is', null),
+  ]);
+  console.timeEnd(t('round1'));
 
+  const { data: game, error: gameError } = gameRes;
   if (gameError || !game) notFound();
 
   if (game.status === 'draft') {
@@ -94,15 +111,9 @@ export default async function HolePage({ params }: { params: Params }) {
     redirect(`/games/${id}`);
   }
 
-  console.time(t('me'));
-  const { data: me, error: meError } = await supabase
-    .from('game_players')
-    .select('user_id, flight_number, course_handicap, submitted_at')
-    .eq('game_id', id)
-    .eq('user_id', userId)
-    .maybeSingle<MyPlayerRow>();
-  console.timeEnd(t('me'));
-  if (meError) throw meError;
+  if (allPlayersRes.error) throw allPlayersRes.error;
+  const allPlayers = allPlayersRes.data ?? [];
+  const me = allPlayers.find((p) => p.user_id === userId);
   if (!me) notFound();
 
   // Once the player has submitted their scorecard, the hole pages are
@@ -111,60 +122,40 @@ export default async function HolePage({ params }: { params: Params }) {
     redirect(`/games/${id}`);
   }
 
-  console.time(t('hole'));
-  const { data: hole, error: holeError } = await supabase
-    .from('course_holes')
-    .select('hole_number, par, stroke_index')
-    .eq('course_id', game.course_id)
-    .eq('hole_number', holeNumber)
-    .single<HoleRow>();
-  console.timeEnd(t('hole'));
-  if (holeError || !hole) notFound();
-
-  console.time(t('flight'));
-  // All players in MY flight (includes me).
-  const { data: flightPlayers, error: flightError } = await supabase
-    .from('game_players')
-    .select(
-      'user_id, team_number, flight_number, course_handicap, submitted_at, users!game_players_user_id_fkey(name, nickname)',
-    )
-    .eq('game_id', id)
-    .eq('flight_number', me.flight_number)
-    .returns<FlightPlayerRow[]>();
-  console.timeEnd(t('flight'));
-  if (flightError) throw flightError;
-
-  const flight = flightPlayers ?? [];
+  const flight = allPlayers.filter(
+    (p) => p.flight_number === me.flight_number,
+  );
   const playerIds = flight.map((p) => p.user_id);
 
-  const scoresByUser: Record<string, ScoreRow> = {};
-  if (playerIds.length > 0) {
-    console.time(t('scores'));
-    const { data: scores, error: scoresError } = await supabase
+  // Round 2 — hole row + flight scores, both independent of each other.
+  // hole needs game.course_id (resolved post-round-1). scores needs
+  // playerIds (also post-round-1). They can run in parallel.
+  console.time(t('round2'));
+  const [holeRes, scoresRes] = await Promise.all([
+    supabase
+      .from('course_holes')
+      .select('hole_number, par, stroke_index')
+      .eq('course_id', game.course_id)
+      .eq('hole_number', holeNumber)
+      .single<HoleRow>(),
+    supabase
       .from('scores')
       .select('user_id, strokes, client_updated_at, updated_at')
       .eq('game_id', id)
       .eq('hole_number', holeNumber)
       .in('user_id', playerIds)
-      .returns<ScoreRow[]>();
-    console.timeEnd(t('scores'));
-    if (scoresError) throw scoresError;
-    for (const s of scores ?? []) scoresByUser[s.user_id] = s;
-  }
+      .returns<ScoreRow[]>(),
+  ]);
+  console.timeEnd(t('round2'));
 
-  console.time(t('scoreCount'));
-  // Count how many of MY 18 holes have a score recorded. When this hits 18
-  // the bottom CTA flips to 'Lever scorekort' on every hole so the player
-  // can submit from wherever they are instead of having to navigate back to
-  // hole 18 first.
-  const { count: myScoredCount } = await supabase
-    .from('scores')
-    .select('hole_number', { count: 'exact', head: true })
-    .eq('game_id', id)
-    .eq('user_id', userId)
-    .not('strokes', 'is', null);
-  console.timeEnd(t('scoreCount'));
-  const myCompletedHoles = myScoredCount ?? 0;
+  const { data: hole, error: holeError } = holeRes;
+  if (holeError || !hole) notFound();
+  if (scoresRes.error) throw scoresRes.error;
+
+  const scoresByUser: Record<string, ScoreRow> = {};
+  for (const s of scoresRes.data ?? []) scoresByUser[s.user_id] = s;
+
+  const myCompletedHoles = scoreCountRes.count ?? 0;
   console.timeEnd(tLabel);
 
   const playersForClient: ClientPlayer[] = flight.map((p) => {
