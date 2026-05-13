@@ -6,6 +6,7 @@ type PendingInvitation = {
   id: string;
   email: string;
   created_at: string;
+  opened_at: string | null;
 };
 
 const MONTHS_NB = [
@@ -28,11 +29,26 @@ function shortNb(iso: string): string {
   return `${d.getDate()}. ${MONTHS_NB[d.getMonth()]}`;
 }
 
+/** Human-readable "X siden" relative time for recent timestamps. */
+function timeAgo(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diffMs / 60_000);
+  if (mins < 1) return 'akkurat nå';
+  if (mins < 60) return `${mins} min siden`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} t siden`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'i går';
+  if (days < 7) return `${days} dager siden`;
+  // Fall back to short date for older stamps
+  return shortNb(iso);
+}
+
 export async function PendingInvitations() {
   const supabase = await getServerClient();
   const { data, error } = await supabase
     .from('invitations')
-    .select('id, email, created_at')
+    .select('id, email, created_at, opened_at')
     .is('accepted_at', null)
     .order('created_at', { ascending: false })
     .returns<PendingInvitation[]>();
@@ -81,6 +97,15 @@ function PendingRow({
         </p>
         <p className="mt-0.5 font-sans text-[11.5px] tabular-nums text-muted">
           Sendt {shortNb(inv.created_at)}
+        </p>
+        <p className="mt-0.5 font-sans text-[11px] text-muted">
+          {inv.opened_at ? (
+            <span className="text-[#3a7d44]">
+              Har bedt om kode {timeAgo(inv.opened_at)}
+            </span>
+          ) : (
+            <span>Mail sendt, men ikke åpnet ennå</span>
+          )}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-1.5">

@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
 
 // Step 1 of two-step OTP login. Verifies the email is either registered
 // (existing user) or has an open invitation, then asks Supabase to send a
@@ -50,6 +51,24 @@ export async function sendCode(formData: FormData) {
       code = 'user_not_found';
     }
     redirect(`/login?error=${code}`);
+  }
+
+  // Best-effort: stamp opened_at on the matching pending invitation row so
+  // admins can see "has requested a code" vs "mail never acted on".
+  // Uses the service-role client because the user has no session yet at this
+  // point — RLS cannot grant write access to a pre-auth visitor.
+  // We only set it once (is null guard), so repeated OTP requests don't
+  // overwrite the first-open timestamp.
+  try {
+    const adminClient = getAdminClient();
+    await adminClient
+      .from('invitations')
+      .update({ opened_at: new Date().toISOString() })
+      .ilike('email', email)
+      .is('accepted_at', null)
+      .is('opened_at', null);
+  } catch (err) {
+    console.error('[login/sendCode] opened_at stamp failed', err);
   }
 
   const qs = new URLSearchParams({ step: 'verify', email });

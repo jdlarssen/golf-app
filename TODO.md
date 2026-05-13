@@ -21,7 +21,6 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 
 - [ ] UI for å slette et spill helt (ikke bare avslutte). I dag krever det rå SQL.
 - [ ] **Endre e-post på registrert spiller fra admin** — krever service-role-pattern for `auth.admin.updateUserById` + samtidig oppdatering av `public.users.email`. Levert i v0.5.0–v0.7.1 dekker re-send / trekk tilbake / rediger navn-kallenavn-hcp / slett, men e-post-endring er fortsatt SQL-bare.
-- [ ] **«Vis om brukeren har bedt om kode»** — auth-event-logg i Supabase eller egen kolonne `invitations.opened_at`. Nice-to-have for admin-feedback når en invitasjon henger.
 - [ ] **Aktivitets-statistikk per spiller på `/admin/spillere/[id]`** — sist innlogget, antall spill, sist hcp. Nice-to-have for sosial-feel; krever auth-event-logg eller en `last_seen_at`-kolonne.
 - [ ] **Arrangør-rolle** («turneringsadministrator»: kan opprette spill og baner, men ikke endre brukere; ser kun egne spill). Krever ny brainstorming-runde + RLS-revisjon på `games`, `game_players`, `courses`, `course_holes`, `tee_boxes`, `invitations`. Diskutert 2026-05-13; utsatt fra admin-spillere-leveransen for å holde scope.
 - [ ] **Vis «Slettet spiller»-fallback i historiske leaderboards** — pågående backlog hvis vi senere bestemmer oss for soft-delete istedenfor blokk-if-game_players. I dag har vi block-pattern, så ikke aktuelt nå, men noter scenarioet.
