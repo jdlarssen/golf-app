@@ -28,8 +28,6 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 
 ### Privacy / GDPR
 
-- [ ] «Slett konto»-knapp i profil-siden (sletter både `public.users` og `auth.users` for innlogget bruker)
-- [ ] Eksporter alle mine data (GDPR Article 20). Lett: bygg en server-action som returnerer JSON med alt brukeren har i `users`, `game_players`, `scores`, `invitations`.
 
 ### Varslinger
 

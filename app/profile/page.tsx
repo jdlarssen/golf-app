@@ -13,6 +13,7 @@ import { updateProfile } from './actions';
 import { sendFriendInvite } from '../invite/actions';
 import { ProfileFormBody } from './ProfileFormBody';
 import { InviteFriendForm } from './InviteFriendForm';
+import { SmartLink } from '@/components/ui/SmartLink';
 
 type SearchParams = Promise<{
   error?: string | string[];
@@ -109,6 +110,10 @@ export default async function ProfilePage({
           <InviteAFriendCard />
         </Suspense>
       </div>
+
+      <div className="mt-6">
+        <GdprSection />
+      </div>
     </AppShell>
   );
 }
@@ -203,5 +208,54 @@ async function InviteAFriendCard() {
       </div>
       <InviteFriendForm action={sendFriendInvite} />
     </Card>
+  );
+}
+
+function GdprSection() {
+  return (
+    <div className="space-y-3">
+      <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted px-1">
+        Mine data
+      </p>
+
+      <Card>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-serif text-base font-medium text-text">
+              Eksporter mine data
+            </h2>
+            <p className="text-sm text-muted mt-0.5">
+              Last ned alt Tørny har lagret om deg
+            </p>
+          </div>
+          <a
+            href="/profile/export"
+            download
+            className="shrink-0 ml-4 rounded-full border border-border bg-surface px-4 py-2 font-sans text-[13px] font-medium text-text hover:bg-bg transition-colors"
+          >
+            Last ned
+          </a>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-serif text-base font-medium text-[#a04040]">
+              Slett konto
+            </h2>
+            <p className="text-sm text-muted mt-0.5">
+              Fjern kontoen din permanent
+            </p>
+          </div>
+          <SmartLink
+            href="/profile/slett-konto"
+            className="shrink-0 ml-4 rounded-full border border-[#a04040]/40 px-4 py-2 font-sans text-[13px] font-medium text-[#a04040] hover:bg-[#fff0f0] dark:hover:bg-[#2a1515] transition-colors"
+          >
+            Slett konto
+          </SmartLink>
+        </div>
+      </Card>
+    </div>
   );
 }
