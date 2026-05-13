@@ -8,6 +8,14 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## [0.4.2] - 2026-05-13
+
+### Added
+
+- Inviterte spillere som ikke har fullført registrering blir nå sporet via `profile_completed_at`. Forberedelse for å vise dem i game-picker-en.
+
+---
+
 ## [0.4.1] - 2026-05-13
 
 ### Fixed
