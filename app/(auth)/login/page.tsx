@@ -1,10 +1,9 @@
-import { sendCode, verifyCode } from './actions';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
 import { BrandHero } from '@/components/ui/BrandHero';
+import { SendCodeForm } from './_components/SendCodeForm';
+import { VerifyCodeForm } from './_components/VerifyCodeForm';
 
 type SearchParams = Promise<{
   step?: string | string[];
@@ -57,53 +56,13 @@ export default async function LoginPage({
           )}
 
           {step === 'email' ? (
-            <form action={sendCode} className="space-y-4">
-              <input type="hidden" name="next" value={next} />
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                label="E-post"
-                autoComplete="email"
-                defaultValue={email}
-                required
-              />
-              <Button type="submit" className="w-full mt-2">
-                Send meg kode
-              </Button>
-              <p className="text-xs text-muted mt-6 text-center">
-                Vi sender deg en kode på mail.
-              </p>
-            </form>
+            <SendCodeForm defaultEmail={email} next={next} />
           ) : (
-            <form action={verifyCode} className="space-y-4">
-              <input type="hidden" name="email" value={email} />
-              <input type="hidden" name="next" value={next} />
-              <p className="text-sm text-muted">
-                Skriv inn koden vi sendte til{' '}
-                <strong className="text-foreground">{email}</strong>.
-              </p>
-              <Input
-                id="token"
-                name="token"
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                pattern="[0-9]{6,8}"
-                maxLength={8}
-                label="Kode"
-                required
-              />
-              <Button type="submit" className="w-full mt-2">
-                Logg inn
-              </Button>
-              <p className="text-xs text-muted mt-6 text-center">
-                Fikk du ikke koden?{' '}
-                <a href={resendHref} className="underline">
-                  Send ny kode
-                </a>
-              </p>
-            </form>
+            <VerifyCodeForm
+              email={email}
+              next={next}
+              resendHref={resendHref}
+            />
           )}
         </Card>
       </div>
