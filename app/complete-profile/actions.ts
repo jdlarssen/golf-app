@@ -31,20 +31,21 @@ export async function completeProfile(formData: FormData) {
     redirect('/login');
   }
 
-  const { error } = await supabase.from('users').insert({
-    id: user.id,
-    email: user.email!,
-    name,
-    nickname,
-    hcp_index: hcpParsed,
-    is_admin: false,
-  });
+  // The trigger on auth.users pre-creates a placeholder public.users row
+  // (name=NULL, profile_completed_at=NULL). We update that row here and
+  // stamp profile_completed_at to mark onboarding done.
+  const { error } = await supabase
+    .from('users')
+    .update({
+      name,
+      nickname,
+      hcp_index: hcpParsed,
+      profile_completed_at: new Date().toISOString(),
+    })
+    .eq('id', user.id);
 
   if (error) {
-    // 23505 = unique_violation (duplicate row). Anything else surfaces as
-    // a generic error so the user can try again.
-    const code = error.code === '23505' ? 'already_exists' : 'unknown';
-    redirect(`/complete-profile?error=${code}`);
+    redirect('/complete-profile?error=unknown');
   }
 
   redirect('/');

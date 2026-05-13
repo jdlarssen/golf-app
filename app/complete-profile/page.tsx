@@ -14,7 +14,6 @@ type SearchParams = Promise<{ error?: string | string[] }>;
 const ERROR_MESSAGES: Record<string, string> = {
   name_required: 'Du må fylle inn navn.',
   hcp_invalid: 'Handicap-index må være et tall mellom -10 og 54.0.',
-  already_exists: 'Profilen er allerede registrert.',
   unknown: 'Noe gikk galt. Prøv igjen.',
 };
 
@@ -34,14 +33,16 @@ export default async function CompleteProfile({
   }
   const supabase = await getServerClient();
 
-  // If a public.users row already exists, send them home.
+  // If the user has already completed their profile, send them home.
+  // The trigger pre-creates a placeholder row with profile_completed_at = NULL,
+  // so the row existing is not enough on its own.
   const { data: existing } = await supabase
     .from('users')
-    .select('id')
+    .select('profile_completed_at')
     .eq('id', userId)
     .maybeSingle();
 
-  if (existing) {
+  if (existing?.profile_completed_at) {
     redirect('/');
   }
 
