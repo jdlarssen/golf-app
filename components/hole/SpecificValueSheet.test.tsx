@@ -9,64 +9,68 @@ describe('SpecificValueSheet', () => {
         open={false}
         par={4}
         onPick={() => {}}
+        onClear={() => {}}
         onClose={() => {}}
       />,
     );
     expect(container.firstChild).toBeNull();
   });
 
-  it('renders 8 buttons for par=4 with values 2..9', () => {
+  it('renders 4 buttons for par=4: par-2, par-1, par, X', () => {
     render(
       <SpecificValueSheet
         open={true}
         par={4}
         onPick={() => {}}
+        onClear={() => {}}
         onClose={() => {}}
       />,
     );
     const buttons = screen
       .getByTestId('specific-value-sheet')
       .querySelectorAll('button');
-    expect(buttons.length).toBe(8);
+    expect(buttons.length).toBe(4);
     const texts = Array.from(buttons).map((b) => b.textContent);
-    expect(texts).toEqual(['2', '3', '4', '5', '6', '7', '8', '9']);
+    expect(texts).toEqual(['2', '3', '4', 'X']);
   });
 
-  it('renders 8 buttons for par=3 (values 1..8 — 1 is hole-in-one, valid)', () => {
+  it('renders 4 buttons for par=3: 1, 2, 3, X (1 is hole-in-one)', () => {
     render(
       <SpecificValueSheet
         open={true}
         par={3}
         onPick={() => {}}
+        onClear={() => {}}
         onClose={() => {}}
       />,
     );
     const buttons = screen
       .getByTestId('specific-value-sheet')
       .querySelectorAll('button');
-    expect(buttons.length).toBe(8);
+    expect(buttons.length).toBe(4);
     const texts = Array.from(buttons).map((b) => b.textContent);
-    expect(texts).toEqual(['1', '2', '3', '4', '5', '6', '7', '8']);
+    expect(texts).toEqual(['1', '2', '3', 'X']);
   });
 
-  it('filters out values < 1 (par=2 → 7 buttons starting at 1)', () => {
+  it('filters out values < 1 (par=2 → 3 buttons: 1, 2, X)', () => {
     render(
       <SpecificValueSheet
         open={true}
         par={2}
         onPick={() => {}}
+        onClear={() => {}}
         onClose={() => {}}
       />,
     );
     const buttons = screen
       .getByTestId('specific-value-sheet')
       .querySelectorAll('button');
-    expect(buttons.length).toBe(7);
+    expect(buttons.length).toBe(3);
     const texts = Array.from(buttons).map((b) => b.textContent);
-    expect(texts).toEqual(['1', '2', '3', '4', '5', '6', '7']);
+    expect(texts).toEqual(['1', '2', 'X']);
   });
 
-  it('clicking a button calls onPick(value) then onClose', () => {
+  it('clicking a number button calls onPick(value) then onClose', () => {
     const onPick = vi.fn();
     const onClose = vi.fn();
     render(
@@ -74,12 +78,32 @@ describe('SpecificValueSheet', () => {
         open={true}
         par={4}
         onPick={onPick}
+        onClear={() => {}}
         onClose={onClose}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Sett score til 6' }));
-    expect(onPick).toHaveBeenCalledWith(6);
+    fireEvent.click(screen.getByRole('button', { name: 'Sett score til 3' }));
+    expect(onPick).toHaveBeenCalledWith(3);
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('clicking X calls onClear then onClose', () => {
+    const onClear = vi.fn();
+    const onClose = vi.fn();
+    const onPick = vi.fn();
+    render(
+      <SpecificValueSheet
+        open={true}
+        par={4}
+        onPick={onPick}
+        onClear={onClear}
+        onClose={onClose}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Fjern score' }));
+    expect(onClear).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onPick).not.toHaveBeenCalled();
   });
 
   it('backdrop click calls onClose', () => {
@@ -89,6 +113,7 @@ describe('SpecificValueSheet', () => {
         open={true}
         par={4}
         onPick={() => {}}
+        onClear={() => {}}
         onClose={onClose}
       />,
     );
@@ -103,6 +128,7 @@ describe('SpecificValueSheet', () => {
         open={true}
         par={4}
         onPick={() => {}}
+        onClear={() => {}}
         onClose={onClose}
       />,
     );
@@ -110,12 +136,13 @@ describe('SpecificValueSheet', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('each value button has aria-label "Sett score til N"', () => {
+  it('each number button has aria-label "Sett score til N"', () => {
     render(
       <SpecificValueSheet
         open={true}
         par={4}
         onPick={() => {}}
+        onClear={() => {}}
         onClose={() => {}}
       />,
     );

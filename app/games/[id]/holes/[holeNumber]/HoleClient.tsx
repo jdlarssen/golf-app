@@ -257,6 +257,21 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     setValueSheetFor(null);
   }
 
+  async function onClearScore() {
+    if (valueSheetFor == null) return;
+    if (disabled) return;
+    await writeScore({
+      gameId,
+      userId: valueSheetFor,
+      holeNumber: currentHole,
+      strokes: null,
+      enteredBy: myUserId,
+    });
+    pulseSync();
+    void drainQueue();
+    setValueSheetFor(null);
+  }
+
   const allConfirmed = cards.length > 0 && cards.every((c) => c.confirmed);
   const next = currentHole + 1;
   const isLastHole = currentHole === 18;
@@ -335,6 +350,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
         open={valueSheetFor !== null}
         par={par}
         onPick={onPickValue}
+        onClear={onClearScore}
         onClose={() => setValueSheetFor(null)}
       />
     </>

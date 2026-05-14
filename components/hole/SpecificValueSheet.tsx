@@ -7,6 +7,7 @@ export interface SpecificValueSheetProps {
   open: boolean;
   par: number;
   onPick: (value: number) => void;
+  onClear: () => void;
   onClose: () => void;
 }
 
@@ -74,7 +75,7 @@ const captionStyle: CSSProperties = {
 export function SpecificValueSheet(
   props: SpecificValueSheetProps,
 ): JSX.Element | null {
-  const { open, par, onPick, onClose } = props;
+  const { open, par, onPick, onClear, onClose } = props;
 
   useEffect(() => {
     if (!open) return;
@@ -93,11 +94,9 @@ export function SpecificValueSheet(
     e.stopPropagation();
   }
 
-  const values: number[] = [];
-  for (let delta = -2; delta <= 5; delta++) {
-    const v = par + delta;
-    if (v >= 1) values.push(v);
-  }
+  // Quick-pick: only under-par + par. The +/− stepper handles bogey-and-worse
+  // efficiently, and the X-button clears a score that was set by mistake.
+  const values: number[] = [par - 2, par - 1, par].filter((v) => v >= 1);
 
   return (
     <div
@@ -130,8 +129,19 @@ export function SpecificValueSheet(
               {v}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => {
+              onClear();
+              onClose();
+            }}
+            style={buttonStyle}
+            aria-label="Fjern score"
+          >
+            X
+          </button>
         </div>
-        <div style={captionStyle}>Tap for å sette.</div>
+        <div style={captionStyle}>Tap for å sette. X fjerner.</div>
       </div>
     </div>
   );

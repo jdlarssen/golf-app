@@ -29,6 +29,14 @@ describe('ScoreShape', () => {
     expect(svg?.querySelectorAll('circle').length).toBe(2);
   });
 
+  it('renders three SVG rings for triple-circle (albatross)', () => {
+    const { container } = render(
+      <ScoreShape shape="triple-circle" tone="under">2</ScoreShape>,
+    );
+    const svg = container.querySelector('svg');
+    expect(svg?.querySelectorAll('circle').length).toBe(3);
+  });
+
   it('renders one SVG rect for square (bogey)', () => {
     const { container } = render(
       <ScoreShape shape="square" tone="over1">5</ScoreShape>,
@@ -37,12 +45,28 @@ describe('ScoreShape', () => {
     expect(svg?.querySelectorAll('rect').length).toBe(1);
   });
 
-  it('renders two SVG rects for double-square (double bogey+)', () => {
+  it('renders two SVG rects for double-square (double bogey)', () => {
     const { container } = render(
       <ScoreShape shape="double-square" tone="over2">6</ScoreShape>,
     );
     const svg = container.querySelector('svg');
     expect(svg?.querySelectorAll('rect').length).toBe(2);
+  });
+
+  it('renders three SVG rects for triple-square (triple bogey)', () => {
+    const { container } = render(
+      <ScoreShape shape="triple-square" tone="over2">7</ScoreShape>,
+    );
+    const svg = container.querySelector('svg');
+    expect(svg?.querySelectorAll('rect').length).toBe(3);
+  });
+
+  it('renders four SVG rects for quadruple-square (quad bogey+)', () => {
+    const { container } = render(
+      <ScoreShape shape="quadruple-square" tone="over2">8</ScoreShape>,
+    );
+    const svg = container.querySelector('svg');
+    expect(svg?.querySelectorAll('rect').length).toBe(4);
   });
 
   it('respects size prop (sm vs lg differ in pixel width)', () => {
@@ -57,5 +81,19 @@ describe('ScoreShape', () => {
     const lgSvg = container.querySelector('svg');
     const lgSize = lgSvg?.getAttribute('width');
     expect(Number(lgSize)).toBeGreaterThan(Number(smSize));
+  });
+
+  it('centers the number using lineHeight equal to shape height', () => {
+    const { container } = render(
+      <ScoreShape shape="circle" tone="under" size="lg">3</ScoreShape>,
+    );
+    // The number span is the last span — sibling of the SVG.
+    const spans = container.querySelectorAll('span > span');
+    const numberSpan = Array.from(spans).find(
+      (el) => el.textContent === '3',
+    ) as HTMLElement | undefined;
+    expect(numberSpan).toBeDefined();
+    expect(numberSpan?.style.lineHeight).toBe('52px');
+    expect(numberSpan?.style.textAlign).toBe('center');
   });
 });

@@ -58,9 +58,7 @@ export function ScoreShape(props: ScoreShapeProps): JSX.Element {
 
   const wrapStyle: CSSProperties = {
     position: 'relative',
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+    display: 'inline-block',
     width: px,
     height: px,
   };
@@ -71,14 +69,37 @@ export function ScoreShape(props: ScoreShapeProps): JSX.Element {
     pointerEvents: 'none',
   };
 
+  // Use lineHeight matching the shape height to vertically center digits.
+  // The previous flex-based centering left the Fraunces glyph slightly low
+  // because the digit's ascender space pushed the visual centroid above the
+  // bounding-box center. Setting lineHeight = px lets the digit baseline fall
+  // naturally at the box center.
   const numberStyle: CSSProperties = {
     position: 'relative',
     zIndex: 1,
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+    display: 'block',
+    width: px,
+    height: px,
+    lineHeight: `${px}px`,
+    textAlign: 'center',
     fontVariantNumeric: 'tabular-nums',
   };
+
+  // Concentric circle radii — level 0 is outermost, gap shrinks each ring.
+  const circleLevels =
+    shape === 'circle' ? 1 : shape === 'double-circle' ? 2 : shape === 'triple-circle' ? 3 : 0;
+
+  // Nested square offsets — level 0 is outermost, gap grows each step in.
+  const squareLevels =
+    shape === 'square'
+      ? 1
+      : shape === 'double-square'
+        ? 2
+        : shape === 'triple-square'
+          ? 3
+          : shape === 'quadruple-square'
+            ? 4
+            : 0;
 
   return (
     <span style={wrapStyle}>
@@ -89,72 +110,30 @@ export function ScoreShape(props: ScoreShapeProps): JSX.Element {
         style={svgStyle}
         aria-hidden
       >
-        {shape === 'circle' && (
+        {Array.from({ length: circleLevels }).map((_, i) => (
           <circle
+            key={`c-${i}`}
             cx={half}
             cy={half}
-            r={inner}
+            r={inner - i * gap}
             fill="none"
             stroke={color}
             strokeWidth={stroke}
           />
-        )}
-        {shape === 'double-circle' && (
-          <>
-            <circle
-              cx={half}
-              cy={half}
-              r={inner}
-              fill="none"
-              stroke={color}
-              strokeWidth={stroke}
-            />
-            <circle
-              cx={half}
-              cy={half}
-              r={inner - gap}
-              fill="none"
-              stroke={color}
-              strokeWidth={stroke}
-            />
-          </>
-        )}
-        {shape === 'square' && (
+        ))}
+        {Array.from({ length: squareLevels }).map((_, i) => (
           <rect
-            x={innerSquareOffset}
-            y={innerSquareOffset}
-            width={px - stroke}
-            height={px - stroke}
-            rx={4}
+            key={`r-${i}`}
+            x={innerSquareOffset + i * gap}
+            y={innerSquareOffset + i * gap}
+            width={px - stroke - 2 * i * gap}
+            height={px - stroke - 2 * i * gap}
+            rx={Math.max(2, 4 - i)}
             fill="none"
             stroke={color}
             strokeWidth={stroke}
           />
-        )}
-        {shape === 'double-square' && (
-          <>
-            <rect
-              x={innerSquareOffset}
-              y={innerSquareOffset}
-              width={px - stroke}
-              height={px - stroke}
-              rx={4}
-              fill="none"
-              stroke={color}
-              strokeWidth={stroke}
-            />
-            <rect
-              x={innerSquareOffset + gap}
-              y={innerSquareOffset + gap}
-              width={px - stroke - 2 * gap}
-              height={px - stroke - 2 * gap}
-              rx={3}
-              fill="none"
-              stroke={color}
-              strokeWidth={stroke}
-            />
-          </>
-        )}
+        ))}
       </svg>
       <span style={numberStyle}>{children}</span>
     </span>

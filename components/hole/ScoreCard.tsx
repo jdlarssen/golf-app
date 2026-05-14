@@ -2,7 +2,7 @@
 
 import type { CSSProperties, JSX } from 'react';
 import { scoreTone, type ScoreTone } from '@/lib/scoring/scoreTone';
-import { scoreShape } from '@/lib/scoring/scoreShape';
+import { scoreShape, type ScoreShape as ScoreShapeKind } from '@/lib/scoring/scoreShape';
 import { ScoreShape } from '@/components/scoring/ScoreShape';
 
 export interface ScoreCardProps {
@@ -25,6 +25,14 @@ const MAX_STROKES = 15;
 
 function clamp(n: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, n));
+}
+
+function scoreNumberFontSize(shape: ScoreShapeKind, displayedNumber: number): number {
+  const twoDigit = displayedNumber >= 10;
+  if (shape === 'quadruple-square') return twoDigit ? 14 : 18;
+  if (shape === 'triple-circle' || shape === 'triple-square') return twoDigit ? 18 : 22;
+  if (shape === 'double-circle' || shape === 'double-square') return twoDigit ? 22 : 28;
+  return twoDigit ? 26 : 36;
 }
 
 function scoreNumberColor(tone: ScoreTone): string {
@@ -148,14 +156,14 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     marginTop: 2,
   };
 
-  // Shrink the number when it's two-digit so it never clips the inner stroke
-  // of the double-square (a 10+ on a par-3 is the realistic worst case).
-  const numberFontSize = displayedNumber >= 10 ? 30 : 38;
+  // Scale font-size based on shape complexity + digit count so the number
+  // never clips the innermost ring/box. Nested shapes (triple/quad) eat into
+  // the inner area; two-digit numbers need extra headroom on top of that.
+  const numberFontSize = scoreNumberFontSize(shape, displayedNumber);
 
   const numberStyle: CSSProperties = {
     fontSize: numberFontSize,
     letterSpacing: '-0.02em',
-    lineHeight: 1,
     color: isGhost ? '#9A8F7C' : numberColor,
     opacity: isGhost ? 0.55 : 1,
   };
