@@ -56,4 +56,40 @@ describe('isSafeToAutoPush', () => {
   it('accepts a copy-typo fix in a tsx file', () => {
     expect(isSafeToAutoPush({ files: ['app/games/page.tsx'], linesChanged: 1 }).ok).toBe(true);
   });
+
+  it('rejects sub-paths within a banned directory', () => {
+    expect(
+      isSafeToAutoPush({ files: ['lib/scoring/nested/foo.ts'], linesChanged: 1 }).ok,
+    ).toBe(false);
+  });
+
+  it('accepts files adjacent to but not inside a banned directory', () => {
+    // `lib/scoring-utils.ts` is NOT inside `lib/scoring/` (no trailing slash match)
+    expect(
+      isSafeToAutoPush({ files: ['lib/scoring-utils.ts'], linesChanged: 1 }).ok,
+    ).toBe(true);
+  });
+
+  it('rejects diffs touching app/api/auth/', () => {
+    expect(
+      isSafeToAutoPush({ files: ['app/api/auth/route.ts'], linesChanged: 1 }).ok,
+    ).toBe(false);
+  });
+
+  it('rejects diffs touching app/login/', () => {
+    expect(
+      isSafeToAutoPush({ files: ['app/login/page.tsx'], linesChanged: 1 }).ok,
+    ).toBe(false);
+  });
+
+  it('rejects exact match on middleware.ts', () => {
+    expect(isSafeToAutoPush({ files: ['middleware.ts'], linesChanged: 1 }).ok).toBe(false);
+  });
+
+  it('does NOT block neighboring files when banned entry is a bare filename', () => {
+    // 'proxy.ts' is in the banlist; 'proxy.test.ts' should NOT be blocked
+    expect(
+      isSafeToAutoPush({ files: ['proxy.test.ts'], linesChanged: 1 }).ok,
+    ).toBe(true);
+  });
 });

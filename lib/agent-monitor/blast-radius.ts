@@ -33,7 +33,8 @@ export function isSafeToAutoPush(input: BlastRadiusInput): BlastRadiusResult {
   }
   for (const file of input.files) {
     for (const banned of NEVER_AUTO_PUSH_PATHS) {
-      if (file === banned || file.startsWith(banned)) {
+      const matches = banned.endsWith('/') ? file.startsWith(banned) : file === banned;
+      if (matches) {
         return { ok: false, reason: `touches ${banned} (always PR)` };
       }
     }
