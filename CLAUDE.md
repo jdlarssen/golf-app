@@ -221,33 +221,61 @@ Helper functions er `SECURITY DEFINER` for å unngå rekursjons-feller.
 
 ## Status per session-handoff
 
-**Pilot-forberedelse 2026-05-13 (kvelden før første pilot-runde).** Står på `v0.10.2`. MAJOR-bump til `v1.0.0` venter fortsatt — brukeren bumper når han er klar.
+**Post-pilot polish-sesjon 2026-05-14.** Står på `v0.10.22`. MAJOR-bump til `v1.0.0` venter fortsatt — brukeren bumper når han er klar.
 
 ✅ **Fungerer end-to-end:**
-- OTP-kode-innlogging via 6–8 sifret kode i mail (brand-stilet template)
-- iOS PWA-innlogging fungerer — det som tidligere brøtt PKCE-handoff er borte
+- OTP-kode-innlogging med pending state, auto-submit på 8 sifre, og guard mot iOS auto-fill double-submit
+- iOS PWA-innlogging fungerer
 - Egen domene tornygolf.no live
 - Hele turnerings-flyten (opprett → spill → lever → leaderboard)
 - Offline-sync, realtime, PWA, peer-godkjenning, admin-overstyring
-- Premium-stil på hovedflater
-- Invitasjons-status flippes korrekt til «Akseptert» når mottaker logger inn (`migration 0012`)
+- Premium-stil + sticky TopBar med kicker-label på 19 sider
+- Plattform-aware PWA-install: native dialog (Android) eller iOS-instruksjons-modal — banner på `/` + knapp i `/profile`
+- GDPR-self-service: `/profile/export` (JSON), `/profile/slett-konto` (blokkert ved aktive spill), `/legal/privacy` (offentlig, history-back)
+- Admin: slett spill (uansett status med status-bevisst advarsel), edit-email på spiller, sist-innlogget/antall-spill-stats, `invitations.opened_at`-indikator («Har bedt om kode»/«Mail ikke åpnet»)
 
-🆕 **Pilot-forberedelse landed denne sesjonen (v0.8.5 → v0.10.2):**
-- Lesbarhet i sol: bump av `--text-muted` (#5C5347 → #4A3F30), HoleStrip-vekt 500→600
-- SyncBanner med sticky-top, retry-knapp, friendly Norwegian error-mapping (i stedet for «TypeError: Load failed») — verifisert å virke i prod via flymodus-test
-- ScoreCard `onCardClick` no-op'er når score er satt — forhindrer tilfeldig reset-til-par etter +/− bruk
-- A11y på admin-spillerpicker (aria-label + truncate)
-- Hull-page perf: 7 sekvensielle Supabase-kall → 2 parallel-bølger med me/flight-konsolidering. Målt –73% (1.65s → 440ms snitt)
-- Game-home parallellisering (game + me i Promise.all). Audit bekreftet at leaderboard/submit/scorecard allerede var parallel.
-- Mail-paret rundt godkjennings-flyten: admin får mail når spiller leverer scorekort, spillere får mail når admin avslutter spillet. Ikke end-to-end-testet i prod ennå (utsatt til post-pilot).
-- Server-side perf-instrumentering (`console.time/timeEnd`) i hull-page + game-home, logger til Vercel som `hole.page game=X · roundN` og `game.page game=X · gate`. **Skal fjernes eller gates bak dev-flag post-pilot** — se memory `project_active_perf_instrumentation`.
+🆕 **Landed denne sesjonen (v0.10.2 → v0.10.22):**
 
-⏸ **Ventende etter pilot:**
-- End-to-end-test av mail-flow (gameFinished + scorecardSubmitted) — sjekk Resend-dashboard etter pilot
-- Fjern eller gate perf-instrumenteringen
-- Designpass på resterende sider (scorecard, submit, approve, leaderboard/holes, complete-profile, profile, admin/{courses,invitations,games}-listen)
-- End-to-end-test av invitasjons-flyt med en NY invitéet bruker (eksisterende admin/login-flyten er verifisert)
-- Hvis hull-bytte fortsatt føles tregt: layout-lift (lift game + game_players til layout via React.cache/unstable_cache). Estimert –300ms til. Risiko: moderat refactor.
+**Innloggings-UX (v0.10.16):** pending state, auto-submit på 8 sifre, ref-guard mot dobbel-submit, autoFocus på kode-input.
+
+**Admin-flyt:**
+- Slett spill helt (`v0.10.10` ny rute → `v0.10.15` fjernet active-blokk med status-bevisst rød advarsel)
+- Edit-email + activity-stats på `/admin/spillere/[id]` (`v0.10.11`, migrasjon `0019_users_last_seen_at` + proxy.ts-hook med 30-min WHERE-debounce)
+- `invitations.opened_at`-tracking (`v0.10.9`, migrasjon `0018`)
+
+**GDPR/personvern:**
+- `/legal/privacy` ny side + Personvern-lenke i AppVersionFooter (`v0.10.4` → `v0.10.22` history-back, proxy-exempt, footer-lenke)
+- `/profile/export`-route med JSON-download (`v0.10.8`) — privacy-bug funnet og fikset (returnerte tidligere alle scores fra brukerens spill, ikke kun egne)
+- `/profile/slett-konto` med dedikert konfirmasjons-side (`v0.10.8`)
+- `/profile/historikk` med fullførte runder + brutto sum + snitt (`v0.10.12`)
+
+**Security/hardening (alle SQL-migrasjoner applied via Supabase MCP):**
+- `0016` — hardenet `handle_new_auth_user`-trigger mot NULL email (chore)
+- `0017` — `email_is_in_auth_users`-RPC for friend-invite mot halv-registrerte kontoer (`v0.10.6`)
+- `0018` — `invitations.opened_at`
+- `0019` — `users.last_seen_at` + index
+- `0020` — strammet `invitations select by token`-RLS til kun `select own incoming` (`v0.10.13`)
+
+**UI-konsekvens (`v0.10.17` → `v0.10.22`):**
+- `components/ui/TopBar.tsx` — sticky top-bar med BackLink + valgfri kicker. Migrert til 19 sider; admin-/-listing-sider og leaderboard skipped pga custom layouts. Kicker-label lagt til på alle player-sider med dedupe av duplikate page-titler.
+- `components/ui/HistoryBackLink.tsx` — `router.back()` ved same-origin referrer, fallback til href ellers. Brukt på `/legal/privacy`.
+
+**PWA-install (`v0.10.14`):** `lib/pwa/`-detection + `components/pwa/`-komponenter (banner, button, modal). Erstatter gamle `IosInstallHint`.
+
+**Refactor:**
+- `lib/games/status.ts` — `GameStatus`-union + `STATUS_LABELS` konsolidert fra 11 filer
+- `lib/admin/gameErrorMessages.ts` — extracted helper + `db_players` → `db_roster`-split (`v0.10.3`)
+- StatusChip-konsolidering: Venter-pille bruker `tone="påmelding"`
+- Vitest mock for `next/navigation` i `vitest.setup.ts` — 180/180 tester grønne
+
+**Småfikser:** `MAX_TEE_BOXES` 5 → 7 (`v0.10.7`), mailto-fix på personvern-kontakt (`v0.10.5`), SyncBanner friendly-error mapping (`v0.10.2`).
+
+⏸ **Ventende:**
+- Fjern eller gate perf-instrumenteringen i hule-page + game-home — pilot er ferdig (memory `project_active_perf_instrumentation`)
+- End-to-end-test av mail-flow (gameFinished + scorecardSubmitted) — sjekk Resend-dashboard
+- Designpass på resterende sider (scorecard, submit, approve, leaderboard/holes, complete-profile, admin/courses + admin/games-listen)
+- Hull-page layout-lift (`game` + `game_players` til `app/games/[id]/layout.tsx` via React.cache/unstable_cache) — estimert –300ms til
+- TopBar med action-slot for `/admin/courses` og `/admin/games`-listen (har `+ Ny`-knapp, ikke kompatibel med dagens TopBar)
 
 📋 **Backlog:** se `TODO.md`
 
@@ -259,14 +287,22 @@ Helper functions er `SECURITY DEFINER` for å unngå rekursjons-feller.
 - `docs/plans/2026-05-10-golf-best-ball-app-design.md` — opprinnelig design
 - `docs/plans/2026-05-10-golf-best-ball-app-implementation.md` — implementeringsplan (13 faser)
 - `app/globals.css` — palett og typografi-tokens
-- `components/ui/` — design system (Card, Button, Input, Banner, PageHeader, AppShell, BrandMark)
+- `components/ui/` — design system (Card, Button, Input, Banner, PageHeader, AppShell, BrandMark, TopBar, HistoryBackLink, StatusChip)
+- `components/ui/TopBar.tsx` — sticky top-bar (chevron + valgfri kicker), brukt på 19 sider. `back="history"` for `/legal/privacy` som kan nås fra hvor som helst
+- `components/pwa/` — install-flyten: `InstallBanner` (på `/`), `InstallButton` (på `/profile`), `InstallInstructionsModal` (iOS-trinn-for-trinn), `InstallPromptCapture` (mountet i layout for å fange `beforeinstallprompt`)
+- `lib/pwa/install-state.ts` + `lib/pwa/detect.ts` + `hooks/useInstallPrompt.ts` — plattform-detection og state-singleton for PWA-install
 - `lib/scoring/` — scoring-bibliotek (ikke rør uten ny test)
 - `lib/sync/` — offline-sync (Dexie + worker + realtime)
-- `supabase/migrations/` — 13 SQL-migrasjoner
+- `lib/games/status.ts` — `GameStatus`-union + `STATUS_LABELS` (single source of truth)
+- `lib/admin/gameErrorMessages.ts` — shared error-message-maps for admin/games-flyten (kopi-variasjon mellom new-game og existing-game er dokumentert i JSDoc)
+- `supabase/migrations/` — 20 SQL-migrasjoner
 - `lib/mail/inviteNotification.ts` — Resend-mail-helper for invitasjons-notifikasjoner
 - `lib/mail/gameFinishedNotification.ts` — Resend-mail til spillere når admin avslutter spillet («Resultatet er klart»)
 - `lib/mail/scorecardSubmittedNotification.ts` — Resend-mail til admin når spiller leverer scorekort
 - `components/sync/SyncBanner.tsx` — sticky-top banner for kø-stuck/error med retry-knapp + friendly-error-mapping
+- `app/profile/historikk/page.tsx` + `app/profile/slett-konto/` + `app/profile/export/route.ts` — GDPR-self-service-flyten
+- `app/admin/games/[id]/slett/` + `app/admin/spillere/[id]/slett/` + `app/profile/slett-konto/` — destruktive flyter med dedikerte konfirmasjons-sider
+- `app/legal/privacy/page.tsx` — offentlig personvern-side (lenket fra AppVersionFooter), bypass auth-gate via `proxy.ts`-matcher
 
 ## Vanlige neste-steg-oppgaver
 
