@@ -123,10 +123,10 @@ async function ScorecardTable({
   revealState: RevealState;
 }) {
   // Reveal matrix:
-  //   live-always       → show +slag, no Netto column
-  //   reveal-active     → hide +slag entirely (and no Netto)
-  //   reveal-finished   → show +slag AND add Netto column with totals
-  const showHandicap = state !== 'reveal-active';
+  //   live-always       → no per-row handicap info, total slag-fått in footer, no Netto column
+  //   reveal-active     → no handicap info at all (footer hides slag-fått)
+  //   reveal-finished   → handicap info back in footer + add Netto column with totals
+  const showHandicapTotal = state !== 'reveal-active';
   const showNetto = state === 'reveal-finished';
   const { supabase } = await getScorecardContext();
 
@@ -162,6 +162,9 @@ async function ScorecardTable({
     (sum, r) => sum + (r.strokes ?? 0),
     0,
   );
+  // Sum of handicap-allocated extra strokes across played holes — surfaced
+  // in the footer instead of a per-row +slag column.
+  const totalExtraSlag = playedHoles.reduce((sum, r) => sum + r.extra, 0);
   // Netto total over played holes; only relevant when showNetto is true, but
   // computed unconditionally so the JSX stays branch-light.
   const totalNetto = playedHoles.reduce(
@@ -181,25 +184,20 @@ async function ScorecardTable({
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left bg-bg/40">
-              <th className="px-4 py-2.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+              <th className="px-3 py-2.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
                 #
               </th>
-              <th className="px-4 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+              <th className="px-3 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
                 Par
               </th>
-              <th className="px-4 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+              <th className="px-3 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
                 SI
               </th>
-              <th className="px-4 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+              <th className="px-3 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
                 Slag
               </th>
-              {showHandicap && (
-                <th className="px-4 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
-                  +slag
-                </th>
-              )}
               {showNetto && (
-                <th className="px-4 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+                <th className="px-3 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
                   Netto
                 </th>
               )}
@@ -211,16 +209,16 @@ async function ScorecardTable({
                 key={r.hole_number}
                 className="border-t border-border"
               >
-                <td className="score-num px-4 py-2.5 text-text">
+                <td className="score-num px-3 py-2.5 text-text">
                   {r.hole_number}
                 </td>
-                <td className="score-num px-4 py-2.5 text-right text-muted">
+                <td className="score-num px-3 py-2.5 text-right text-muted">
                   {r.par}
                 </td>
-                <td className="score-num px-4 py-2.5 text-right text-muted">
+                <td className="score-num px-3 py-2.5 text-right text-muted">
                   {r.stroke_index}
                 </td>
-                <td className="score-num px-4 py-2.5 text-right text-text">
+                <td className="score-num px-3 py-2.5 text-right text-text">
                   <ScoreShape
                     shape={scoreShape(r.strokes, r.par)}
                     tone={scoreTone(r.strokes, r.par)}
@@ -229,17 +227,8 @@ async function ScorecardTable({
                     {r.strokes ?? '—'}
                   </ScoreShape>
                 </td>
-                {showHandicap && (
-                  <td className="score-num px-4 py-2.5 text-right text-muted">
-                    {r.extra > 0
-                      ? `+${r.extra}`
-                      : r.extra < 0
-                        ? r.extra
-                        : '0'}
-                  </td>
-                )}
                 {showNetto && (
-                  <td className="score-num px-4 py-2.5 text-right text-text">
+                  <td className="score-num px-3 py-2.5 text-right text-text">
                     {r.strokes !== null ? (
                       <ScoreShape
                         shape={scoreShape(r.strokes - r.extra, r.par)}
@@ -259,26 +248,36 @@ async function ScorecardTable({
           <tfoot>
             <tr className="border-t-2 border-border bg-primary-soft">
               <td
-                // Base 4 cols (#, Par, SI, Slag) + optional +slag + optional Netto.
-                colSpan={4 + (showHandicap ? 1 : 0) + (showNetto ? 1 : 0)}
-                className="px-4 py-3 text-sm text-muted"
+                // Base 4 cols (#, Par, SI, Slag) + optional Netto.
+                colSpan={4 + (showNetto ? 1 : 0)}
+                className="px-3 py-3 text-sm text-muted"
               >
-                Spilte hull:{' '}
-                <span className="inline-num">
-                  {playedHoles.length}/18
-                </span>
-                {' · '}Brutto totalt:{' '}
-                <span className="score-num text-text">
-                  {totalBrutto}
-                </span>
-                {showNetto && (
-                  <>
-                    {' · '}Netto totalt:{' '}
-                    <span className="score-num text-text">
-                      {totalNetto}
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <span>
+                    Spilte hull:{' '}
+                    <span className="inline-num">
+                      {playedHoles.length}/18
                     </span>
-                  </>
-                )}
+                  </span>
+                  <span>
+                    Brutto:{' '}
+                    <span className="score-num text-text">{totalBrutto}</span>
+                  </span>
+                  {showHandicapTotal && (
+                    <span>
+                      Slag fått:{' '}
+                      <span className="score-num text-text">
+                        {totalExtraSlag}
+                      </span>
+                    </span>
+                  )}
+                  {showNetto && (
+                    <span>
+                      Netto:{' '}
+                      <span className="score-num text-text">{totalNetto}</span>
+                    </span>
+                  )}
+                </div>
               </td>
             </tr>
           </tfoot>
