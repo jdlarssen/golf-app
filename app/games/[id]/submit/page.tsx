@@ -11,6 +11,9 @@ import { Kicker } from '@/components/ui/Kicker';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { submitScorecard } from './actions';
 import { SubmitForm } from './SubmitForm';
+import { ScoreShape } from '@/components/scoring/ScoreShape';
+import { scoreShape } from '@/lib/scoring/scoreShape';
+import { scoreTone } from '@/lib/scoring/scoreTone';
 import type { GameStatus } from '@/lib/games/status';
 
 type Params = Promise<{ id: string }>;
@@ -241,7 +244,7 @@ async function ReviewBody({
             <thead>
               <tr className="text-left bg-bg/40">
                 <th className="px-4 py-2.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
-                  Hull
+                  #
                 </th>
                 <th className="px-4 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
                   Par
@@ -273,7 +276,13 @@ async function ReviewBody({
                     {r.stroke_index}
                   </td>
                   <td className="score-num px-4 py-2.5 text-right text-text">
-                    {r.strokes ?? '—'}
+                    <ScoreShape
+                      shape={scoreShape(r.strokes, r.par)}
+                      tone={scoreTone(r.strokes, r.par)}
+                      size="sm"
+                    >
+                      {r.strokes ?? '—'}
+                    </ScoreShape>
                   </td>
                   <td className="px-4 py-2.5 text-muted truncate max-w-[10rem]">
                     {r.enteredByName ?? '—'}

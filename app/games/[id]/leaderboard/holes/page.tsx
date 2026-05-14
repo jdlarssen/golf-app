@@ -4,6 +4,9 @@ import { notFound, redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { ScoreShape } from '@/components/scoring/ScoreShape';
+import { scoreShape } from '@/lib/scoring/scoreShape';
+import { scoreTone } from '@/lib/scoring/scoreTone';
 import {
   computeLeaderboard,
   parseMode,
@@ -567,7 +570,13 @@ function HoleRow({
                 isBestNet ? 'font-semibold text-text' : 'font-normal text-muted'
               }`}
             >
-              {grossText}
+              <ScoreShape
+                shape={scoreShape(pc.gross, row.par)}
+                tone={scoreTone(pc.gross, row.par)}
+                size="sm"
+              >
+                {grossText}
+              </ScoreShape>
               {pc.extraStrokes > 0 && (
                 <sup className="text-[8px] font-semibold text-accent">•</sup>
               )}

@@ -9,6 +9,9 @@ import { Banner } from '@/components/ui/Banner';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { approveScorecard, rejectScorecard } from './actions';
 import { ReviewActions } from './ReviewActions';
+import { ScoreShape } from '@/components/scoring/ScoreShape';
+import { scoreShape } from '@/lib/scoring/scoreShape';
+import { scoreTone } from '@/lib/scoring/scoreTone';
 import type { GameStatus } from '@/lib/games/status';
 
 type Params = Promise<{ id: string }>;
@@ -270,7 +273,7 @@ async function PendingApprovals({
                   <thead>
                     <tr className="text-left">
                       <th className="px-2 py-1.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
-                        Hull
+                        #
                       </th>
                       <th className="px-2 py-1.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
                         Par
@@ -301,7 +304,13 @@ async function PendingApprovals({
                             {h.stroke_index}
                           </td>
                           <td className="score-num px-2 py-1.5 text-right text-text">
-                            {s ?? '—'}
+                            <ScoreShape
+                              shape={scoreShape(s, h.par)}
+                              tone={scoreTone(s, h.par)}
+                              size="sm"
+                            >
+                              {s ?? '—'}
+                            </ScoreShape>
                           </td>
                         </tr>
                       );

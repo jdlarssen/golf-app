@@ -9,6 +9,9 @@ import { Card } from '@/components/ui/Card';
 import { LinkButton } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
+import { ScoreShape } from '@/components/scoring/ScoreShape';
+import { scoreShape } from '@/lib/scoring/scoreShape';
+import { scoreTone } from '@/lib/scoring/scoreTone';
 import type { GameStatus } from '@/lib/games/status';
 
 type Params = Promise<{ id: string }>;
@@ -162,7 +165,7 @@ async function ScorecardTable({
           <thead>
             <tr className="text-left bg-bg/40">
               <th className="px-4 py-2.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
-                Hull
+                #
               </th>
               <th className="px-4 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
                 Par
@@ -194,7 +197,13 @@ async function ScorecardTable({
                   {r.stroke_index}
                 </td>
                 <td className="score-num px-4 py-2.5 text-right text-text">
-                  {r.strokes ?? '—'}
+                  <ScoreShape
+                    shape={scoreShape(r.strokes, r.par)}
+                    tone={scoreTone(r.strokes, r.par)}
+                    size="sm"
+                  >
+                    {r.strokes ?? '—'}
+                  </ScoreShape>
                 </td>
                 <td className="score-num px-4 py-2.5 text-right text-muted">
                   {r.extra > 0 ? `+${r.extra}` : r.extra < 0 ? r.extra : '0'}
