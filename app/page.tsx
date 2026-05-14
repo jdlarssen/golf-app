@@ -216,7 +216,7 @@ async function HomeBody() {
 
   return (
     <>
-      <PageHeader title={`Hei, ${profile?.name ?? 'spiller'} 👋`} />
+      <PageHeader title={`Hei, ${profile?.name ?? 'spiller'}.`} />
 
       <nav className="space-y-6">
         {activeGames.length > 0 && (

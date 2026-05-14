@@ -31,18 +31,17 @@ export function TopBar({
   back?: 'link' | 'history';
 }) {
   return (
-    <div className="sticky top-0 z-30 -mx-5 px-5 bg-bg/90 backdrop-blur-sm -mt-8 pt-5 pb-2 mb-4 flex items-center justify-between">
+    <div className="sticky top-0 z-30 -mx-5 px-5 bg-bg/90 backdrop-blur-sm -mt-8 pt-5 pb-2 mb-4 relative flex items-center">
       {back === 'history' ? (
         <HistoryBackLink fallbackHref={backHref} ariaLabel={backLabel} />
       ) : (
         <BackLink href={backHref}>{backLabel}</BackLink>
       )}
       {kicker && (
-        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+        <p className="pointer-events-none absolute left-1/2 -translate-x-1/2 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
           {kicker}
         </p>
       )}
-      <span className="w-[80px]" aria-hidden />
     </div>
   );
 }
