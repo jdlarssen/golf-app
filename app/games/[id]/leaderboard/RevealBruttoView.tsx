@@ -68,19 +68,40 @@ export function RevealBruttoView({
   );
 }
 
+/** E / +N / −N relative to par played. Empty when no holes have been played. */
+function deltaText(total: number, parPlayed: number): string {
+  if (parPlayed === 0) return '';
+  const diff = total - parPlayed;
+  if (diff === 0) return 'E';
+  return diff > 0 ? `+${diff}` : String(diff);
+}
+
 function RevealTeamRow({ line }: { line: TeamLine }) {
-  // Per-player brutto sum across played holes (gross strokes).
+  // Per-player brutto sum + par-played across played holes.
   const perPlayerBrutto = new Map<string, number>();
+  const perPlayerParPlayed = new Map<string, number>();
+  // Team par-played: holes where at least one team-member has a score.
+  let teamParPlayed = 0;
+
   for (const h of line.holes) {
+    let teamHasScore = false;
     for (const pc of h.players) {
       if (pc.gross != null) {
+        teamHasScore = true;
         perPlayerBrutto.set(
           pc.userId,
           (perPlayerBrutto.get(pc.userId) ?? 0) + pc.gross,
         );
+        perPlayerParPlayed.set(
+          pc.userId,
+          (perPlayerParPlayed.get(pc.userId) ?? 0) + h.par,
+        );
       }
     }
+    if (teamHasScore) teamParPlayed += h.par;
   }
+
+  const teamDelta = deltaText(line.total, teamParPlayed);
 
   return (
     <li className="list-none">
@@ -96,14 +117,20 @@ function RevealTeamRow({ line }: { line: TeamLine }) {
                   ? p.nickname
                   : firstName(p.name) ?? p.name;
                 const sum = perPlayerBrutto.get(p.userId);
+                const parPlayed = perPlayerParPlayed.get(p.userId) ?? 0;
+                const delta =
+                  sum != null ? deltaText(sum, parPlayed) : '';
                 return (
                   <li
                     key={p.userId}
                     className="flex items-baseline justify-between gap-3 font-sans text-[12.5px] text-muted"
                   >
                     <span className="truncate">{display}</span>
-                    <span className="tabular-nums text-[12px] text-muted">
-                      {sum != null ? sum : '—'}
+                    <span className="flex items-baseline gap-2 tabular-nums text-[12px] text-muted">
+                      <span>{sum != null ? sum : '—'}</span>
+                      {delta && (
+                        <span className="w-7 text-right">{delta}</span>
+                      )}
                     </span>
                   </li>
                 );
@@ -115,6 +142,11 @@ function RevealTeamRow({ line }: { line: TeamLine }) {
               {line.total}
             </p>
             <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
+              {teamDelta && (
+                <span className="tabular-nums mr-1.5 normal-case">
+                  {teamDelta}
+                </span>
+              )}
               Brutto
             </p>
           </div>
