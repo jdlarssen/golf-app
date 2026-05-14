@@ -7,6 +7,7 @@ import {
   parseOsloDateTimeLocal,
 } from '@/lib/games/gamePayload';
 import { findPendingPlayers } from '@/lib/games/pendingPlayers';
+import { parseSideTournamentFromFormData } from '@/lib/games/sideTournamentPayload';
 // Course handicap is no longer frozen at create-time: the new flow has the
 // admin press "Start runden nå" (D5) to flip 'scheduled' → 'active' and
 // freeze handicaps then. Until D5 lands, scheduled rows persist with
@@ -56,26 +57,15 @@ async function createGameInternal(
 
   // Side-tournament config. Master toggle gates the LD/CTP counts; when off,
   // both counts persist as 0 (matches the DB CHECK in 0024_side_tournament).
-  const sideEnabledRaw = formData.get('side_tournament_enabled');
-  const sideEnabled = sideEnabledRaw === 'true';
-
-  const sideLdCountRaw = formData.get('side_ld_count');
-  const sideCtpCountRaw = formData.get('side_ctp_count');
-
-  let sideLdCount = 0;
-  let sideCtpCount = 0;
-  if (sideEnabled) {
-    const parsedLd = Number(sideLdCountRaw);
-    const parsedCtp = Number(sideCtpCountRaw);
-    if (!Number.isInteger(parsedLd) || parsedLd < 0 || parsedLd > 2) {
-      redirect('/admin/games/new?error=bad_side_ld_count');
-    }
-    if (!Number.isInteger(parsedCtp) || parsedCtp < 0 || parsedCtp > 2) {
-      redirect('/admin/games/new?error=bad_side_ctp_count');
-    }
-    sideLdCount = parsedLd;
-    sideCtpCount = parsedCtp;
+  const sideResult = parseSideTournamentFromFormData(formData);
+  if (!sideResult.ok) {
+    redirect(`/admin/games/new?error=${sideResult.errorCode}`);
   }
+  const {
+    enabled: sideEnabled,
+    ldCount: sideLdCount,
+    ctpCount: sideCtpCount,
+  } = sideResult.payload;
 
   const supabase = await getServerClient();
   const {

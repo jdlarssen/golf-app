@@ -7,6 +7,7 @@ import {
   parseOsloDateTimeLocal,
 } from '@/lib/games/gamePayload';
 import { findPendingPlayers } from '@/lib/games/pendingPlayers';
+import { parseSideTournamentFromFormData } from '@/lib/games/sideTournamentPayload';
 
 type UpdateMode = 'save_draft' | 'publish' | 'update_scheduled';
 
@@ -59,25 +60,16 @@ async function updateGameInternal(
   }
 
   // Side-tournament config (parsed up front; persisted below only if the row
-  // is still in an editable state). Mirrors actions.ts in /new/.
-  const sideEnabledRaw = formData.get('side_tournament_enabled');
-  const sideEnabled = sideEnabledRaw === 'true';
-  const sideLdCountRaw = formData.get('side_ld_count');
-  const sideCtpCountRaw = formData.get('side_ctp_count');
-  let sideLdCount = 0;
-  let sideCtpCount = 0;
-  if (sideEnabled) {
-    const parsedLd = Number(sideLdCountRaw);
-    const parsedCtp = Number(sideCtpCountRaw);
-    if (!Number.isInteger(parsedLd) || parsedLd < 0 || parsedLd > 2) {
-      redirect(`/admin/games/${gameId}/edit?error=bad_side_ld_count`);
-    }
-    if (!Number.isInteger(parsedCtp) || parsedCtp < 0 || parsedCtp > 2) {
-      redirect(`/admin/games/${gameId}/edit?error=bad_side_ctp_count`);
-    }
-    sideLdCount = parsedLd;
-    sideCtpCount = parsedCtp;
+  // is still in an editable state).
+  const sideResult = parseSideTournamentFromFormData(formData);
+  if (!sideResult.ok) {
+    redirect(`/admin/games/${gameId}/edit?error=${sideResult.errorCode}`);
   }
+  const {
+    enabled: sideEnabled,
+    ldCount: sideLdCount,
+    ctpCount: sideCtpCount,
+  } = sideResult.payload;
 
   const supabase = await getServerClient();
   const {
