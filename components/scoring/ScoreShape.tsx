@@ -77,6 +77,7 @@ export function ScoreShape(props: ScoreShapeProps): JSX.Element {
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
+    fontVariantNumeric: 'tabular-nums',
   };
 
   return (
