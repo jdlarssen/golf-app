@@ -26,6 +26,24 @@ Use `export run_id=<value>`, `export started_at_iso=<value>`, and
 `export pr_number=<value>` so later snippets can reference them without
 re-fetching.
 
+## Variable substitution for SQL queries
+
+When you pass SQL to `mcp__36be25a6-2d72-41c3-a675-2352133ed510__execute_sql`, you MUST substitute shell variables in the query string before sending. The MCP tool does NOT do shell expansion.
+
+Example — wrong:
+```
+query: "update agent_findings set resolved_at = now() where action_ref = '$pr_number'"
+```
+This would search for the literal string `$pr_number`.
+
+Example — right:
+```
+query: `update agent_findings set resolved_at = now() where action_ref = '${pr_number}'`
+```
+Build the query string in your code/shell with the variable value already interpolated.
+
+For integers (like `${pr_number}`), validate they're numeric before interpolation. For UUIDs (`${run_id}`), validate they match `[0-9a-f-]+`. For ISO timestamps, they come from Postgres so are trusted.
+
 ## Step 1: Kill-switch
 
 FIRST: read the env var `MONITORING_ENABLED`. If it is `"false"`, EXIT
@@ -119,33 +137,62 @@ misconfiguration.
 
 ### 4c: Merge
 
-Squash-merge to `main` and delete the branch. `--auto` makes the merge wait
-for required status checks if branch protection is configured; if no
-protection is set, it merges immediately:
+Squash-merge to `main` and delete the branch. We use a synchronous merge
+(no `--auto`) so we know the outcome immediately and can re-check approval
+state right after.
+
+Wrap the merge in error handling — if the merge fails, do NOT resolve the
+finding (let it retry next tick):
 
 ```bash
-gh pr merge $pr_number --squash --delete-branch --auto
+if gh pr merge $pr_number --squash --delete-branch; then
+  MERGED_OK=true
+else
+  echo "Merge failed for PR #$pr_number" >&2
+  MERGED_OK=false
+  POST_MERGE_NOTE="$POST_MERGE_NOTE merge feilet for #$pr_number"
+fi
 ```
 
-Then resolve the `agent_findings` row that opened this PR. The hourly agent
-stores the PR number as a string in `action_ref` when it sets
-`action_taken='pr_opened'` (per `monitor-hourly.md` Step 3b.8), so we match
-on both:
+After the merge call, immediately re-fetch the PR and verify approval is
+still in place. If approval was withdrawn between the check (4b) and the
+merge command, branch protection may have allowed the merge anyway (depends
+on Vercel/GitHub setup). If you detect this state, append a note for Step 6:
+
+```bash
+APPROVAL_STATE=$(gh pr view $pr_number --json reviews --jq '[.reviews[] | select(.author.login == "jdlarssen") | .state] | last')
+if [ "$APPROVAL_STATE" != "APPROVED" ]; then
+  echo "WARN: PR #$pr_number merged but approval was withdrawn between check and merge ($APPROVAL_STATE)" >&2
+  POST_MERGE_NOTE="$POST_MERGE_NOTE WARN: #$pr_number merged uten gyldig approval"
+fi
+```
+
+Include `$POST_MERGE_NOTE` in Step 6's `notes` column.
+
+Then, ONLY if `$MERGED_OK == true`, resolve the `agent_findings` row that
+opened this PR. The hourly agent stores the PR number as a string in
+`action_ref` when it sets `action_taken='pr_opened'` (per `monitor-hourly.md`
+Step 3b.8), so we match on both:
 
 ```sql
 update agent_findings
 set resolved_at = now()
-where action_ref = '$pr_number'
+where action_ref = '${pr_number}'
   and action_taken = 'pr_opened'
   and resolved_at is null;
 ```
 
-Use `mcp__36be25a6-2d72-41c3-a675-2352133ed510__execute_sql`. Don't introduce
-a new `action_taken` value — the enum from migration 0023 is fixed at
+Use `mcp__36be25a6-2d72-41c3-a675-2352133ed510__execute_sql`. Remember to
+substitute `${pr_number}` into the query string before sending (per the
+"Variable substitution for SQL queries" section). Don't introduce a new
+`action_taken` value — the enum from migration 0023 is fixed at
 `'auto_pushed', 'pr_opened', 'reported', 'skipped_duplicate'`, and merging is
 just the resolution of an already-recorded `pr_opened` finding.
 
-Track this PR in a local merge tally for Step 6's notes:
+If `$MERGED_OK == false`, skip the SQL update entirely — the finding stays
+unresolved so the next tick can retry.
+
+Track this PR in a local merge tally for Step 6's notes (only on success):
 `merged_prs+=($pr_number)`.
 
 ### 4d: No action
@@ -175,8 +222,8 @@ as a do-not-retry:
 update agent_findings
 set resolved_at = now(),
     notes = coalesce(notes || E'\n', '') ||
-            'user closed PR without merging — do not retry'
-where action_ref = '$pr_number'
+            'bruker lukket PR uten merge — ikke prøv igjen'
+where action_ref = '${pr_number}'
   and action_taken = 'pr_opened'
   and resolved_at is null;
 ```
@@ -206,31 +253,34 @@ Compute `did_work = (count(merged_prs) + count(closed_prs)) > 0`.
 DELETE the row inserted in Step 2 so quiet runs leave no clutter:
 
 ```sql
-delete from agent_runs where id = '$run_id';
+delete from agent_runs where id = '${run_id}';
 ```
 
 Exit.
 
 ### 6b: If `did_work == true`
 
-UPDATE the row with duration and a short Norwegian summary:
+UPDATE the row with duration and a short Norwegian summary. Counts all
+findings the watcher acted on this tick (merges + closed-without-merge
+sweeps) so the morning report's "total findings" sum stays consistent with
+what the watcher actually resolved:
 
 ```sql
 update agent_runs
-set duration_ms = extract(epoch from (now() - '$started_at_iso'::timestamptz)) * 1000,
-    findings_count = $merged_count,
-    notes = '$notes'
-where id = '$run_id';
+set duration_ms = extract(epoch from (now() - '${started_at_iso}'::timestamptz)) * 1000,
+    findings_count = ${merged_count} + ${closed_count},
+    notes = '${notes}'
+where id = '${run_id}';
 ```
 
 Where:
-- `$merged_count` is `count(merged_prs)` — we count merges as the
-  unit of "findings resolved this run". Closed-without-merge cases also
-  resolve findings, but they don't represent net new automation output —
-  they're user-driven and tracked in notes only.
-- `$notes` is a short summary, e.g.
+- `${merged_count}` is `count(merged_prs)`.
+- `${closed_count}` is `count(closed_prs)` from the Step 5 sweep.
+- `${notes}` is a short summary, e.g.
   `"merged 2 PRs (#42, #57); 1 closed without merge (#39) — do-not-retry recorded"`
   or `"merged 1 PR (#42)"` or `"1 closed without merge (#39) — do-not-retry recorded"`.
+  Append `$POST_MERGE_NOTE` from Step 4c if it is non-empty (race-check
+  warnings or merge-failure notes).
 
 ## Step 7: Cleanup
 

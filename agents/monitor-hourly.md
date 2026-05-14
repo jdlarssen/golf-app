@@ -35,6 +35,24 @@ environment. Use `export fingerprint=<value>`, `export run_id=<value>`, and
 `export started_at_iso=<value>` after computing them in earlier steps, so later
 snippets can reference them without re-fetching.
 
+## Variable substitution for SQL queries
+
+When you pass SQL to `mcp__36be25a6-2d72-41c3-a675-2352133ed510__execute_sql`, you MUST substitute shell variables in the query string before sending. The MCP tool does NOT do shell expansion.
+
+Example — wrong:
+```
+query: "insert into agent_findings (fingerprint, summary) values ('$fingerprint', '$summary')"
+```
+This would insert the literal strings `$fingerprint` and `$summary`.
+
+Example — right:
+```
+query: `insert into agent_findings (fingerprint, summary) values ('${fingerprint}', '${summary}')`
+```
+Build the query string in your code/shell with the variable value already interpolated.
+
+For integers, validate they're numeric before interpolation. For UUIDs (`${run_id}`), validate they match `[0-9a-f-]+`. For the `${fingerprint}` value, validate it matches `[0-9a-f]{16}` (16-char hex) — it comes from sha256[:16] in `lib/agent-monitor/fingerprint.ts`. For free-text fields like `${summary}` and `${notes}`, escape single quotes (`'` → `''`) before interpolating to prevent breaking the query. For ISO timestamps, they come from Postgres so are trusted.
+
 ## Step 0: Initialize run row
 
 Insert a row into `agent_runs` BEFORE doing any other work, so all findings can
@@ -406,14 +424,14 @@ tracked wall-clock — keeps everything on the database's clock:
 
 ```sql
 update agent_runs
-set duration_ms = extract(epoch from (now() - '$started_at_iso'::timestamptz)) * 1000,
-    findings_count = $count,
-    notes = '$notes'
-where id = '$run_id';
+set duration_ms = extract(epoch from (now() - '${started_at_iso}'::timestamptz)) * 1000,
+    findings_count = ${count},
+    notes = '${notes}'
+where id = '${run_id}';
 ```
 
-Where `$count` is the number of new findings (excluding skipped duplicates) and
-`$notes` is a short summary like `"1 auto-pushed, 1 PR-opened, 0
+Where `${count}` is the number of new findings (excluding skipped duplicates) and
+`${notes}` is a short summary like `"1 auto-pushed, 1 PR-opened, 0
 needs-judgment"`.
 
 For empty runs the notes should be `"heartbeat — no findings"` and
