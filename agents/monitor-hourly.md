@@ -27,20 +27,32 @@ Project IDs:
   first project under the configured team. Cache the id in this prompt after
   deployment.
 
+## Shell-variable conventions
+
+All shell snippets below assume `$fingerprint` (16-char hex), `$run_id` (UUID),
+and `$started_at_iso` (ISO timestamp string) have been exported into the shell
+environment. Use `export fingerprint=<value>`, `export run_id=<value>`, and
+`export started_at_iso=<value>` after computing them in earlier steps, so later
+snippets can reference them without re-fetching.
+
 ## Step 0: Initialize run row
 
 Insert a row into `agent_runs` BEFORE doing any other work, so all findings can
-attach to a valid run_id:
+attach to a valid run_id. The `agent_runs` schema is `(id, ran_at, agent_kind,
+duration_ms, findings_count, notes)` — there is no `started_at`/`ended_at`,
+just `ran_at` (default `now()`) which we capture to compute duration in Step 5:
 
 ```sql
-insert into agent_runs (agent_kind, started_at)
-values ('hourly', now())
-returning id;
+insert into agent_runs (agent_kind)
+values ('hourly')
+returning id, ran_at;
 ```
 
-Use `mcp__36be25a6-2d72-41c3-a675-2352133ed510__execute_sql`. Capture the
-returned UUID as `$run_id`. Reference `$run_id` throughout the rest of the run.
-Step 5 will UPDATE this same row (not INSERT a new one).
+Use `mcp__36be25a6-2d72-41c3-a675-2352133ed510__execute_sql`. Capture both
+returned values: `id` as `$run_id`, `ran_at` as `$started_at_iso` (the ISO
+timestamp string of when the row was created). Reference both throughout the
+rest of the run. Step 5 will UPDATE this same row (not INSERT a new one) and
+use `$started_at_iso` to compute `duration_ms`.
 
 ## Step 1: Gather (parallel MCP calls)
 
@@ -80,7 +92,8 @@ Run these four in parallel:
 If all five sources return empty → write a heartbeat to `agent_runs` and EXIT.
 Always write the heartbeat on empty runs (not just at 00:xx UTC — simpler,
 avoids timezone bugs). Concretely: in Step 5 you'll UPDATE the row inserted in
-Step 0 with `notes: "heartbeat — no findings"`, then skip Steps 2–4 and 6.
+Step 0 with `notes: "heartbeat — no findings"`, then skip Steps 2–4; Step 6
+cleanup is moot (no clone was created on an empty run).
 
 ## Step 2: Triage
 
@@ -127,13 +140,21 @@ $run_id`) so we have an id to attach `action_ref` to.
 
 ### Step 3a: safe_fix path
 
-1. **Clone repo over HTTPS with token**:
+1. **Clone repo over HTTPS with token, then scrub the URL**:
 
    ```bash
-   git clone https://${GH_TOKEN}@github.com/jdlarssen/golf-app.git \
-     /tmp/golf-app-$run_id
+   git clone https://${GH_TOKEN}@github.com/jdlarssen/golf-app.git /tmp/golf-app-$run_id
    cd /tmp/golf-app-$run_id
+   git remote set-url origin https://github.com/jdlarssen/golf-app.git
+   # Restore auth via credential header for the duration of this run only
+   git config http.https://github.com/.extraheader "AUTHORIZATION: bearer ${GH_TOKEN}"
    ```
+
+   The `set-url` + `extraheader` dance keeps the PAT out of `.git/config`'s
+   remote URL (where it would be a token-leakage hazard if the directory were
+   inspected) while still authenticating push/fetch for this run only. The
+   header lives in-memory under this clone's config and is wiped along with
+   the working tree in Step 6.
 
    Do NOT create a branch. safe_fix commits go directly to `main`.
 
@@ -187,26 +208,43 @@ $run_id`) so we have an id to attach `action_ref` to.
    `"Forhindrer at invitasjons-mailer feiler ved Resend-rate-limit"`, ikke
    `"Retry på Resend 429"`).
 
-6. **Blast-radius gate (mandatory)**. After staging the change, call:
-
-   ```bash
-   npx tsx -e "
-   import { isSafeToAutoPush } from './lib/agent-monitor/blast-radius';
-   const result = isSafeToAutoPush({ diffPath: '.' });
-   console.log(JSON.stringify(result));
-   process.exit(result.ok ? 0 : 1);
-   "
-   ```
-
-   If `ok: false` → abandon: `rm -rf /tmp/golf-app-$run_id`, re-classify as
-   `pr_worthy`, jump to Step 3b. This is a hard gate, not advisory.
-
-7. **Commit** with `fix(...)` prefix (user-facing, hook requires version bump +
-   CHANGELOG, which steps 4–5 already did). Move the fingerprint suffix to the
-   body, not the subject:
+6. **Blast-radius gate (mandatory)**. Stage the change with `git add -A` FIRST,
+   then compute the gate inputs from `git diff --cached` and call
+   `isSafeToAutoPush` (signature `{ files: string[], linesChanged: number }`
+   per `lib/agent-monitor/blast-radius.ts:14-21`). The gate must run AFTER
+   staging but BEFORE the commit:
 
    ```bash
    git add -A
+
+   # Compute diff inputs from the staged change
+   FILES_JSON=$(git diff --cached --name-only | jq -R . | jq -s -c .)
+   LINES=$(git diff --cached --shortstat | awk '{added=$4; removed=$6; if (added=="") added=0; if (removed=="") removed=0; print added+removed}')
+
+   # Call the gate
+   GATE=$(npx tsx -e "
+   import { isSafeToAutoPush } from './lib/agent-monitor/blast-radius';
+   const result = isSafeToAutoPush({ files: $FILES_JSON, linesChanged: $LINES });
+   console.log(JSON.stringify(result));
+   ")
+   echo "Blast-radius gate result: $GATE"
+   echo "$GATE" | jq -e '.ok' >/dev/null || {
+     REASON=$(echo "$GATE" | jq -r '.reason')
+     echo "Gate rejected: $REASON"
+     # abandon safe_fix, reclassify to pr_worthy
+     exit 1
+   }
+   ```
+
+   If the gate rejects (`ok: false`) → abandon: `rm -rf /tmp/golf-app-$run_id`,
+   re-classify as `pr_worthy`, jump to Step 3b. This is a hard gate, not
+   advisory.
+
+7. **Commit** with `fix(...)` prefix (user-facing, hook requires version bump +
+   CHANGELOG, which steps 4–5 already did). The change is already staged from
+   step 6. Move the fingerprint suffix to the body, not the subject:
+
+   ```bash
    git commit -m "$(cat <<'EOF'
    fix(agent-monitor): [short description of what the user-facing change is]
 
@@ -243,12 +281,20 @@ $run_id`) so we have an id to attach `action_ref` to.
 
 ### Step 3b: pr_worthy path
 
-1. **Clone over HTTPS with token** (same as 3a step 1):
+If `/tmp/golf-app-$run_id` already exists (e.g. from a prior abandoned
+safe_fix in this run), the abandon step already removed it. If not — or if
+3b is reached directly without a prior 3a — prefix the clone with
+`rm -rf /tmp/golf-app-$run_id` defensively to avoid a path collision.
+
+1. **Clone over HTTPS with token, then scrub the URL** (same auth pattern as
+   3a step 1):
 
    ```bash
-   git clone https://${GH_TOKEN}@github.com/jdlarssen/golf-app.git \
-     /tmp/golf-app-$run_id
+   rm -rf /tmp/golf-app-$run_id
+   git clone https://${GH_TOKEN}@github.com/jdlarssen/golf-app.git /tmp/golf-app-$run_id
    cd /tmp/golf-app-$run_id
+   git remote set-url origin https://github.com/jdlarssen/golf-app.git
+   git config http.https://github.com/.extraheader "AUTHORIZATION: bearer ${GH_TOKEN}"
    git checkout -b agent/pr-${fingerprint:0:8}
    ```
 
@@ -269,10 +315,12 @@ $run_id`) so we have an id to attach `action_ref` to.
 
    Append CHANGELOG entry using the template in 3a step 5.
 
-5. **Commit** with `fix(...)` prefix:
+5. **Commit** with `fix(...)` prefix. Use `git add -A` then `git commit -m`
+   (not `commit -am`) so new untracked files are staged too:
 
    ```bash
-   git commit -am "$(cat <<'EOF'
+   git add -A
+   git commit -m "$(cat <<'EOF'
    fix(...): [short description]
 
    Detected at [timestamp]. Source: [vercel|supabase|resend].
@@ -352,17 +400,21 @@ side-effects. Subsequent pr_worthy items still proceed normally via Step 3b.
 
 ## Step 5: Update agent_runs
 
-UPDATE the row inserted in Step 0:
+UPDATE the row inserted in Step 0. Compute `duration_ms` server-side from
+`$started_at_iso` (captured in Step 0) rather than relying on a separately
+tracked wall-clock — keeps everything on the database's clock:
 
 ```sql
 update agent_runs
-set
-  ended_at = now(),
-  duration_ms = <total run time in ms>,
-  findings_count = <count of new findings, excluding skipped duplicates>,
-  notes = '<short summary, e.g. "1 auto-pushed, 1 PR-opened, 0 needs-judgment">'
+set duration_ms = extract(epoch from (now() - '$started_at_iso'::timestamptz)) * 1000,
+    findings_count = $count,
+    notes = '$notes'
 where id = '$run_id';
 ```
+
+Where `$count` is the number of new findings (excluding skipped duplicates) and
+`$notes` is a short summary like `"1 auto-pushed, 1 PR-opened, 0
+needs-judgment"`.
 
 For empty runs the notes should be `"heartbeat — no findings"` and
 `findings_count = 0`.
