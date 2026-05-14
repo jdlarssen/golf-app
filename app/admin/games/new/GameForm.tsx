@@ -41,6 +41,14 @@ export type InitialValues = {
    * variant that might allow reading the form while locked.
    */
   lock_score_visibility?: boolean;
+  /** Whether the side-tournament module is enabled for this game. Default false. */
+  side_tournament_enabled?: boolean;
+  /** Antall LD-vinnere (0/1/2). Krever side_tournament_enabled=true. */
+  side_ld_count?: number;
+  /** Antall CTP-vinnere (0/1/2). Krever side_tournament_enabled=true. */
+  side_ctp_count?: number;
+  /** Lås feltene (når status er active/finished). */
+  lock_side_tournament?: boolean;
   players?: Array<{
     user_id: string;
     // Widened to `number` at the prop boundary; deriveAssignmentsFromInitial
@@ -167,6 +175,21 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     initialValues?.score_visibility === 'reveal' ? 'reveal' : 'live';
   const lockScoreVisibility = initialValues?.lock_score_visibility ?? false;
 
+  const initialSideEnabled = initialValues?.side_tournament_enabled ?? false;
+  const initialLdCount = ([0, 1, 2] as const).includes(
+    (initialValues?.side_ld_count ?? 0) as 0 | 1 | 2,
+  )
+    ? (initialValues?.side_ld_count ?? 0)
+    : 0;
+  const initialCtpCount = ([0, 1, 2] as const).includes(
+    (initialValues?.side_ctp_count ?? 0) as 0 | 1 | 2,
+  )
+    ? (initialValues?.side_ctp_count ?? 0)
+    : 0;
+  const lockSideTournament = initialValues?.lock_side_tournament ?? false;
+
+  const [sideEnabled, setSideEnabled] = useState<boolean>(initialSideEnabled);
+
   // Drafts can be saved without a tee-off; publishing cannot. `canPublish`
   // below combines this with the rest of the validity gates.
   const hasTeeOff = scheduledTeeOffAt !== '';
@@ -195,6 +218,18 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     eightSelected &&
     TEAM_NUMBERS.every((t) => playersByTeam[t].length === 2) &&
     selectedPlayerIds.every((pid) => teamByPlayer[pid] !== undefined);
+
+  // Side-tournament gate: needs at least 2 distinct teams assigned. Derived
+  // from `teamByPlayer` so it stays reactive when admin draws/clears teams.
+  const distinctTeams = useMemo(() => {
+    const set = new Set<number>();
+    for (const team of Object.values(teamByPlayer)) {
+      if (team != null) set.add(team as number);
+    }
+    return set.size;
+  }, [teamByPlayer]);
+
+  const sideTournamentEligible = distinctTeams >= 2;
 
   // Default flights: lag 1 + lag 2 = flight 1, lag 3 + lag 4 = flight 2.
   // Recomputed any time teams change so admin sees a sensible baseline; the
@@ -593,6 +628,95 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
               </span>
             )}
           </p>
+        </fieldset>
+
+        {/* Section 1c: Side tournament */}
+        <fieldset>
+          <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+            Sideturnering
+          </legend>
+          <div className="mt-2 space-y-3">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                name="side_tournament_enabled"
+                value="true"
+                checked={sideEnabled && sideTournamentEligible}
+                onChange={(e) => setSideEnabled(e.target.checked)}
+                disabled={lockSideTournament || !sideTournamentEligible}
+                className="mt-1"
+              />
+              <div>
+                <div className="font-serif text-base text-text">
+                  Legg til sideturnering
+                </div>
+                <div className="text-xs text-muted">
+                  Parallell lag-konkurranse med poeng. Vises etter at spillet er avsluttet.
+                </div>
+              </div>
+            </label>
+
+            {!sideTournamentEligible && (
+              <p className="text-xs text-muted">
+                Krever minst 2 lag for å aktiveres.
+              </p>
+            )}
+
+            {sideEnabled && sideTournamentEligible && (
+              <div className="space-y-4 rounded-md border border-line bg-surface-2 p-3">
+                <p className="text-xs text-muted">
+                  Poengfordeling: best netto 18 = 10p, front 9 + back 9 = 5p hver,
+                  hole-win = 2p per hull (kun alene-vinner), longest drive + closest to pin = 2p per vinner.
+                </p>
+
+                <fieldset>
+                  <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+                    Antall longest-drive-vinnere
+                  </legend>
+                  <div className="mt-2 flex gap-2">
+                    {[0, 1, 2].map((n) => (
+                      <label key={n} className="flex items-center gap-1 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="side_ld_count"
+                          value={n}
+                          defaultChecked={initialLdCount === n}
+                          disabled={lockSideTournament}
+                        />
+                        <span className="font-serif text-base text-text tabular-nums">{n}</span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+
+                <fieldset>
+                  <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+                    Antall closest-to-pin-vinnere
+                  </legend>
+                  <div className="mt-2 flex gap-2">
+                    {[0, 1, 2].map((n) => (
+                      <label key={n} className="flex items-center gap-1 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="side_ctp_count"
+                          value={n}
+                          defaultChecked={initialCtpCount === n}
+                          disabled={lockSideTournament}
+                        />
+                        <span className="font-serif text-base text-text tabular-nums">{n}</span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+
+                {lockSideTournament && (
+                  <p className="text-xs text-muted">
+                    <strong>Kan ikke endres etter spill-start.</strong>
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         </fieldset>
       </section>
 

@@ -70,6 +70,9 @@ type GameRow = {
   hcp_allowance_pct: number;
   require_peer_approval: boolean;
   score_visibility: 'live' | 'reveal';
+  side_tournament_enabled: boolean;
+  side_ld_count: number;
+  side_ctp_count: number;
 };
 
 type GamePlayerRow = {
@@ -133,7 +136,7 @@ export default async function EditGamePage({
     supabase
       .from('games')
       .select(
-        'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval, score_visibility',
+        'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count',
       )
       .eq('id', id)
       .single<GameRow>(),
@@ -282,6 +285,13 @@ async function EditGameFormBody({
     // through anyway so the form's lock-state UI stays a function of props,
     // not of where the form happens to be rendered.
     lock_score_visibility: false,
+    side_tournament_enabled: game.side_tournament_enabled,
+    side_ld_count: game.side_ld_count,
+    side_ctp_count: game.side_ctp_count,
+    // Same shape as lock_score_visibility — the status guard above means
+    // active/finished games never reach this branch. Future-proofed for a
+    // hypothetical read-only view of locked games.
+    lock_side_tournament: false,
     players: (playersResult.data ?? []).map((p) => ({
       user_id: p.user_id,
       team_number: p.team_number,

@@ -58,6 +58,27 @@ async function updateGameInternal(
     redirect(`/admin/games/${gameId}/edit?error=tee_off_required`);
   }
 
+  // Side-tournament config (parsed up front; persisted below only if the row
+  // is still in an editable state). Mirrors actions.ts in /new/.
+  const sideEnabledRaw = formData.get('side_tournament_enabled');
+  const sideEnabled = sideEnabledRaw === 'true';
+  const sideLdCountRaw = formData.get('side_ld_count');
+  const sideCtpCountRaw = formData.get('side_ctp_count');
+  let sideLdCount = 0;
+  let sideCtpCount = 0;
+  if (sideEnabled) {
+    const parsedLd = Number(sideLdCountRaw);
+    const parsedCtp = Number(sideCtpCountRaw);
+    if (!Number.isInteger(parsedLd) || parsedLd < 0 || parsedLd > 2) {
+      redirect(`/admin/games/${gameId}/edit?error=bad_side_ld_count`);
+    }
+    if (!Number.isInteger(parsedCtp) || parsedCtp < 0 || parsedCtp > 2) {
+      redirect(`/admin/games/${gameId}/edit?error=bad_side_ctp_count`);
+    }
+    sideLdCount = parsedLd;
+    sideCtpCount = parsedCtp;
+  }
+
   const supabase = await getServerClient();
   const {
     data: { user },
@@ -112,6 +133,12 @@ async function updateGameInternal(
       // the entire update is rejected by the optimistic-lock, so the field
       // can't be silently overwritten post-start.
       score_visibility: payload.score_visibility,
+      // Side-tournament fields use the same gating: the .eq('status',
+      // allowedFromStatus) filter below blocks writes once the game has
+      // started, matching the lock-mønster used for score_visibility.
+      side_tournament_enabled: sideEnabled,
+      side_ld_count: sideLdCount,
+      side_ctp_count: sideCtpCount,
       status: nextStatus,
       // started_at is intentionally not touched — only D5's "Start runden nå"
       // flow transitions out of 'scheduled'.

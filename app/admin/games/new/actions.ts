@@ -54,6 +54,29 @@ async function createGameInternal(
     redirect('/admin/games/new?error=tee_off_required');
   }
 
+  // Side-tournament config. Master toggle gates the LD/CTP counts; when off,
+  // both counts persist as 0 (matches the DB CHECK in 0024_side_tournament).
+  const sideEnabledRaw = formData.get('side_tournament_enabled');
+  const sideEnabled = sideEnabledRaw === 'true';
+
+  const sideLdCountRaw = formData.get('side_ld_count');
+  const sideCtpCountRaw = formData.get('side_ctp_count');
+
+  let sideLdCount = 0;
+  let sideCtpCount = 0;
+  if (sideEnabled) {
+    const parsedLd = Number(sideLdCountRaw);
+    const parsedCtp = Number(sideCtpCountRaw);
+    if (!Number.isInteger(parsedLd) || parsedLd < 0 || parsedLd > 2) {
+      redirect('/admin/games/new?error=bad_side_ld_count');
+    }
+    if (!Number.isInteger(parsedCtp) || parsedCtp < 0 || parsedCtp > 2) {
+      redirect('/admin/games/new?error=bad_side_ctp_count');
+    }
+    sideLdCount = parsedLd;
+    sideCtpCount = parsedCtp;
+  }
+
   const supabase = await getServerClient();
   const {
     data: { user },
@@ -92,6 +115,9 @@ async function createGameInternal(
       hcp_allowance_pct: payload.hcp_allowance_pct,
       require_peer_approval: payload.require_peer_approval,
       score_visibility: payload.score_visibility,
+      side_tournament_enabled: sideEnabled,
+      side_ld_count: sideLdCount,
+      side_ctp_count: sideCtpCount,
       // Publishing puts the game in 'scheduled' state — visible to players,
       // but not yet active. The admin separately presses "Start runden nå"
       // (D5) to flip status to 'active' and freeze handicaps.
