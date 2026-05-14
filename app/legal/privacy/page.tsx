@@ -8,7 +8,12 @@ export const metadata = {
 export default function PrivacyPage() {
   return (
     <AppShell>
-      <TopBar backHref="/" backLabel="Tilbake til hjem" kicker="Personvern" />
+      <TopBar
+        backHref="/"
+        backLabel="Tilbake"
+        kicker="Personvern"
+        back="history"
+      />
 
       <div className="space-y-8 text-sm leading-relaxed text-text">
 
