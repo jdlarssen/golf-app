@@ -91,6 +91,7 @@ async function createGameInternal(
       tee_box_id: payload.tee_box_id,
       hcp_allowance_pct: payload.hcp_allowance_pct,
       require_peer_approval: payload.require_peer_approval,
+      score_visibility: payload.score_visibility,
       // Publishing puts the game in 'scheduled' state — visible to players,
       // but not yet active. The admin separately presses "Start runden nå"
       // (D5) to flip status to 'active' and freeze handicaps.

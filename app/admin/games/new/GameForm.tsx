@@ -31,6 +31,16 @@ export type InitialValues = {
   scheduled_tee_off_at?: string;
   hcp_allowance_pct?: string;
   require_peer_approval?: boolean;
+  /** 'live' (default) shows netto immediately; 'reveal' hides it until the game finishes. */
+  score_visibility?: 'live' | 'reveal';
+  /**
+   * When true, the score_visibility radios are disabled (status === 'active' |
+   * 'finished'). The edit page already redirects away from those states, so in
+   * practice this is always false today — but threading the flag through
+   * matches the task spec and future-proofs against a status-based edit page
+   * variant that might allow reading the form while locked.
+   */
+  lock_score_visibility?: boolean;
   players?: Array<{
     user_id: string;
     // Widened to `number` at the prop boundary; deriveAssignmentsFromInitial
@@ -153,6 +163,9 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   const [requirePeerApproval, setRequirePeerApproval] = useState(
     initialValues?.require_peer_approval ?? false,
   );
+  const initialScoreVisibility: 'live' | 'reveal' =
+    initialValues?.score_visibility === 'reveal' ? 'reveal' : 'live';
+  const lockScoreVisibility = initialValues?.lock_score_visibility ?? false;
 
   // Drafts can be saved without a tee-off; publishing cannot. `canPublish`
   // below combines this with the rest of the validity gates.
@@ -523,6 +536,64 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           onChange={(e) => setScheduledTeeOffAt(e.target.value)}
           hint="Påkrevd ved publisering. Valgfritt for utkast."
         />
+
+        {/* Score visibility — radios, not a checkbox, so the two modes read
+            as exclusive choices. defaultChecked (uncontrolled) is fine here
+            because the field's value is read straight from FormData on
+            submit; no other UI state needs to react to it. */}
+        <fieldset>
+          <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+            Synlighet under runden
+          </legend>
+          <div className="mt-2 space-y-3">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="radio"
+                name="score_visibility"
+                value="live"
+                defaultChecked={initialScoreVisibility !== 'reveal'}
+                disabled={lockScoreVisibility}
+                className="mt-1"
+              />
+              <div>
+                <div className="font-serif text-base text-text">
+                  Vis alt under runden
+                </div>
+                <div className="text-xs text-muted">
+                  Netto-tall synlige fra hull 1 (standard)
+                </div>
+              </div>
+            </label>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="radio"
+                name="score_visibility"
+                value="reveal"
+                defaultChecked={initialScoreVisibility === 'reveal'}
+                disabled={lockScoreVisibility}
+                className="mt-1"
+              />
+              <div>
+                <div className="font-serif text-base text-text">
+                  Avslør på slutten
+                </div>
+                <div className="text-xs text-muted">
+                  Brutto under runden, netto avsløres når spillet avsluttes
+                </div>
+              </div>
+            </label>
+          </div>
+          <p className="mt-2 text-xs text-muted">
+            Reveal-modus skjuler handicap-slag og netto-rangering under runden.
+            Lag med høyere handicap kan slå brutto-lederen — det blir et virkelig
+            spennings-moment når du trykker avslutt.
+            {lockScoreVisibility && (
+              <span className="block mt-1">
+                <strong>Kan ikke endres etter spill-start.</strong>
+              </span>
+            )}
+          </p>
+        </fieldset>
       </section>
 
       {/* Section 2: Players */}

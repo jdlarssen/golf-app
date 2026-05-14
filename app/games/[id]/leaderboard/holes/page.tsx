@@ -16,6 +16,7 @@ import {
   type LeaderboardMode,
   type TeamLine,
 } from '@/lib/leaderboard';
+import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import type { GameStatus } from '@/lib/games/status';
 
 type Params = Promise<{ id: string }>;
@@ -29,6 +30,7 @@ type GameRow = {
   name: string;
   status: GameStatus;
   course_id: string;
+  score_visibility: 'live' | 'reveal';
   courses: { name: string } | null;
 };
 
@@ -69,7 +71,7 @@ export default async function LeaderboardHolesPage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  const mode: LeaderboardMode = parseMode(sp.mode);
+  const requestedMode: LeaderboardMode = parseMode(sp.mode);
   const teamParam = Array.isArray(sp.team) ? sp.team[0] : sp.team;
   const requestedTeam = teamParam ? Number.parseInt(teamParam, 10) : null;
 
@@ -80,7 +82,7 @@ export default async function LeaderboardHolesPage({
   const [gameRes, profileRes] = await Promise.all([
     supabase
       .from('games')
-      .select('id, name, status, course_id, courses(name)')
+      .select('id, name, status, course_id, score_visibility, courses(name)')
       .eq('id', id)
       .single<GameRow>(),
     supabase
@@ -97,6 +99,14 @@ export default async function LeaderboardHolesPage({
     redirect(`/games/${id}`);
   }
   const isActive = game.status === 'active';
+
+  // Reveal-modus override: in reveal-active state, force brutto. Netto-mode
+  // would expose the very ordering the admin has chosen to hide until the
+  // game finishes. Stale `?mode=netto` query params from bookmarks or
+  // before-the-toggle-flip links also fall through to brutto.
+  const state = revealState(game.score_visibility, game.status);
+  const forceBrutto = shouldHideNetto(state);
+  const mode: LeaderboardMode = forceBrutto ? 'brutto' : requestedMode;
 
   const isAdmin = profileRes.data?.is_admin === true;
   if (!isAdmin) {

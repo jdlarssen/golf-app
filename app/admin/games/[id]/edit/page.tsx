@@ -69,6 +69,7 @@ type GameRow = {
   scheduled_tee_off_at: string | null;
   hcp_allowance_pct: number;
   require_peer_approval: boolean;
+  score_visibility: 'live' | 'reveal';
 };
 
 type GamePlayerRow = {
@@ -132,7 +133,7 @@ export default async function EditGamePage({
     supabase
       .from('games')
       .select(
-        'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval',
+        'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval, score_visibility',
       )
       .eq('id', id)
       .single<GameRow>(),
@@ -275,6 +276,12 @@ async function EditGameFormBody({
     ),
     hcp_allowance_pct: String(game.hcp_allowance_pct),
     require_peer_approval: game.require_peer_approval,
+    score_visibility: game.score_visibility,
+    // Edit page redirects away from active/finished games (see status guard
+    // above), so lock_score_visibility is always false here. Threaded
+    // through anyway so the form's lock-state UI stays a function of props,
+    // not of where the form happens to be rendered.
+    lock_score_visibility: false,
     players: (playersResult.data ?? []).map((p) => ({
       user_id: p.user_id,
       team_number: p.team_number,

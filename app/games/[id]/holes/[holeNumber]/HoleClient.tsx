@@ -48,6 +48,12 @@ export interface HoleClientProps {
    * navigate back to hole 18 to find the submit action.
    */
   myCompletedHoles: number;
+  /**
+   * Reveal-modus flag forwarded from the server: true only when
+   * `score_visibility='reveal'` AND status is still pre-finished. Forwarded
+   * to each ScoreCard so the +N SLAG badge stays hidden until admin avslutter.
+   */
+  hideNetto?: boolean;
   players: ClientPlayer[];
 }
 
@@ -113,6 +119,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     strokeIndex,
     myUserId,
     myCompletedHoles,
+    hideNetto = false,
     players,
   } = props;
 
@@ -333,6 +340,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
             par={par}
             confirmed={c.confirmed}
             disabled={disabled}
+            hideNetto={hideNetto}
             onSetScore={onSetScore}
             onLongPress={onLongPress}
           />

@@ -106,6 +106,12 @@ async function updateGameInternal(
       scheduled_tee_off_at: scheduledTeeOffAt,
       hcp_allowance_pct: payload.hcp_allowance_pct,
       require_peer_approval: payload.require_peer_approval,
+      // score_visibility is implicitly gated by the .eq('status', allowedFromStatus)
+      // filter below — it only writes when the row is still draft/scheduled.
+      // If status flipped to active/finished between form-render and submit,
+      // the entire update is rejected by the optimistic-lock, so the field
+      // can't be silently overwritten post-start.
+      score_visibility: payload.score_visibility,
       status: nextStatus,
       // started_at is intentionally not touched — only D5's "Start runden nå"
       // flow transitions out of 'scheduled'.

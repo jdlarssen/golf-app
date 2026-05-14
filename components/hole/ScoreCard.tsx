@@ -14,6 +14,13 @@ export interface ScoreCardProps {
   par: number;
   confirmed: boolean;
   disabled?: boolean;
+  /**
+   * When true, hides the `+N SLAG` badge even if `extraStrokes > 0`. Used
+   * by reveal-modus games (status `active`, `score_visibility = 'reveal'`)
+   * so handicap-slag count stays secret until admin presses avslutt.
+   * Default false — non-reveal games render the badge as before.
+   */
+  hideNetto?: boolean;
   onSetScore: (playerId: string, next: number) => void;
   onLongPress: (playerId: string) => void;
 }
@@ -58,6 +65,7 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     par,
     confirmed,
     disabled = false,
+    hideNetto = false,
     onSetScore,
     onLongPress,
   } = props;
@@ -217,7 +225,7 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'baseline' }}>
           <span style={nameStyle}>{name}</span>
-          {extraStrokes > 0 && (
+          {!hideNetto && extraStrokes > 0 && (
             <span style={badgeStyle}>+{extraStrokes} SLAG</span>
           )}
         </div>

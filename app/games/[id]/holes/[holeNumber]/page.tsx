@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
+import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { HoleClient, type ClientPlayer } from './HoleClient';
 import type { GameStatus } from '@/lib/games/status';
 
@@ -13,6 +14,7 @@ type GameRow = {
   status: GameStatus;
   course_id: string;
   tee_box_id: string;
+  score_visibility: 'live' | 'reveal';
 };
 
 type HoleRow = {
@@ -80,7 +82,7 @@ export default async function HolePage({ params }: { params: Params }) {
   const [gameRes, allPlayersRes, scoreCountRes] = await Promise.all([
     supabase
       .from('games')
-      .select('id, name, status, course_id, tee_box_id')
+      .select('id, name, status, course_id, tee_box_id, score_visibility')
       .eq('id', id)
       .single<GameRow>(),
     supabase
@@ -155,6 +157,15 @@ export default async function HolePage({ params }: { params: Params }) {
   for (const s of scoresRes.data ?? []) scoresByUser[s.user_id] = s;
 
   const myCompletedHoles = scoreCountRes.count ?? 0;
+
+  // Reveal-modus: under an active reveal-game, hide the per-card +N SLAG
+  // badge so handicap-slag count stays secret. shouldHideNetto returns true
+  // only for the 'reveal-active' state — live games and finished reveal games
+  // render the badge normally.
+  const hideNetto = shouldHideNetto(
+    revealState(game.score_visibility, game.status),
+  );
+
   console.timeEnd(tLabel);
 
   const playersForClient: ClientPlayer[] = flight.map((p) => {
@@ -192,6 +203,7 @@ export default async function HolePage({ params }: { params: Params }) {
         strokeIndex={hole.stroke_index}
         myUserId={userId}
         myCompletedHoles={myCompletedHoles}
+        hideNetto={hideNetto}
         players={playersForClient}
       />
     </div>

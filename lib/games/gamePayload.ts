@@ -60,6 +60,8 @@ export type ParsedPayload = {
   tee_box_id: string | null;
   hcp_allowance_pct: number;
   require_peer_approval: boolean;
+  /** 'live' = netto visible from hole 1. 'reveal' = netto hidden until status='finished'. */
+  score_visibility: 'live' | 'reveal';
   players: GamePlayerInput[];
   errorCode?: GameValidationErrorCode;
 };
@@ -97,6 +99,12 @@ export function buildGameInsertPayload(
     : 100;
   const require_peer_approval =
     formData.get('require_peer_approval') === 'on';
+  // Reveal-modus toggle. Invalid / missing values silently fall back to 'live'
+  // (the safe default) so neither stale form state nor DevTools tampering can
+  // produce a CHECK-constraint failure on the DB column.
+  const rawVisibility = String(formData.get('score_visibility') ?? '').trim();
+  const score_visibility: 'live' | 'reveal' =
+    rawVisibility === 'reveal' ? 'reveal' : 'live';
 
   const base: ParsedPayload = {
     name,
@@ -104,6 +112,7 @@ export function buildGameInsertPayload(
     tee_box_id: rawTee || null,
     hcp_allowance_pct,
     require_peer_approval,
+    score_visibility,
     players: [],
   };
 

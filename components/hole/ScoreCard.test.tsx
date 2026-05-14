@@ -45,6 +45,16 @@ describe('ScoreCard — rendering', () => {
     expect(screen.queryByText(/SLAG/)).not.toBeInTheDocument();
   });
 
+  it('omits +N SLAG badge when hideNetto is true even with extraStrokes > 0', () => {
+    setup({ extraStrokes: 2, hideNetto: true });
+    expect(screen.queryByText(/SLAG/)).not.toBeInTheDocument();
+  });
+
+  it('renders +N SLAG badge when hideNetto is false and extraStrokes > 0', () => {
+    setup({ extraStrokes: 2, hideNetto: false });
+    expect(screen.getByText('+2 SLAG')).toBeInTheDocument();
+  });
+
   it('renders ? when initial is null', () => {
     setup({ initial: null });
     expect(screen.getByText('?')).toBeInTheDocument();

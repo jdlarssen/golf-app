@@ -12,6 +12,7 @@ import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { ScoreShape } from '@/components/scoring/ScoreShape';
 import { scoreShape } from '@/lib/scoring/scoreShape';
 import { scoreTone } from '@/lib/scoring/scoreTone';
+import { revealState, type RevealState } from '@/lib/games/visibility';
 import type { GameStatus } from '@/lib/games/status';
 
 type Params = Promise<{ id: string }>;
@@ -21,6 +22,7 @@ type GameRow = {
   name: string;
   status: GameStatus;
   course_id: string;
+  score_visibility: 'live' | 'reveal';
 };
 
 type MyPlayerRow = {
@@ -55,7 +57,7 @@ export default async function ScorecardPage({ params }: { params: Params }) {
   const [gameRes, meRes] = await Promise.all([
     supabase
       .from('games')
-      .select('id, name, status, course_id')
+      .select('id, name, status, course_id, score_visibility')
       .eq('id', id)
       .single<GameRow>(),
     supabase
@@ -97,6 +99,7 @@ export default async function ScorecardPage({ params }: { params: Params }) {
             currentUserId={userId}
             courseHandicap={me.course_handicap ?? 0}
             submittedAt={me.submitted_at}
+            revealState={revealState(game.score_visibility, game.status)}
           />
         </Suspense>
       </div>
@@ -110,13 +113,21 @@ async function ScorecardTable({
   currentUserId,
   courseHandicap,
   submittedAt,
+  revealState: state,
 }: {
   gameId: string;
   courseId: string;
   currentUserId: string;
   courseHandicap: number;
   submittedAt: string | null;
+  revealState: RevealState;
 }) {
+  // Reveal matrix:
+  //   live-always       → show +slag, no Netto column
+  //   reveal-active     → hide +slag entirely (and no Netto)
+  //   reveal-finished   → show +slag AND add Netto column with totals
+  const showHandicap = state !== 'reveal-active';
+  const showNetto = state === 'reveal-finished';
   const { supabase } = await getScorecardContext();
 
   const [holesRes, scoresRes] = await Promise.all([
@@ -151,6 +162,12 @@ async function ScorecardTable({
     (sum, r) => sum + (r.strokes ?? 0),
     0,
   );
+  // Netto total over played holes; only relevant when showNetto is true, but
+  // computed unconditionally so the JSX stays branch-light.
+  const totalNetto = playedHoles.reduce(
+    (sum, r) => sum + ((r.strokes ?? 0) - r.extra),
+    0,
+  );
 
   // Last hole with a score, or 1 if none.
   const lastWithScore = playedHoles.length
@@ -176,9 +193,16 @@ async function ScorecardTable({
               <th className="px-4 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
                 Slag
               </th>
-              <th className="px-4 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
-                +slag
-              </th>
+              {showHandicap && (
+                <th className="px-4 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+                  +slag
+                </th>
+              )}
+              {showNetto && (
+                <th className="px-4 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+                  Netto
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -205,16 +229,38 @@ async function ScorecardTable({
                     {r.strokes ?? '—'}
                   </ScoreShape>
                 </td>
-                <td className="score-num px-4 py-2.5 text-right text-muted">
-                  {r.extra > 0 ? `+${r.extra}` : r.extra < 0 ? r.extra : '0'}
-                </td>
+                {showHandicap && (
+                  <td className="score-num px-4 py-2.5 text-right text-muted">
+                    {r.extra > 0
+                      ? `+${r.extra}`
+                      : r.extra < 0
+                        ? r.extra
+                        : '0'}
+                  </td>
+                )}
+                {showNetto && (
+                  <td className="score-num px-4 py-2.5 text-right text-text">
+                    {r.strokes !== null ? (
+                      <ScoreShape
+                        shape={scoreShape(r.strokes - r.extra, r.par)}
+                        tone={scoreTone(r.strokes - r.extra, r.par)}
+                        size="sm"
+                      >
+                        {r.strokes - r.extra}
+                      </ScoreShape>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-border bg-primary-soft">
               <td
-                colSpan={5}
+                // Base 4 cols (#, Par, SI, Slag) + optional +slag + optional Netto.
+                colSpan={4 + (showHandicap ? 1 : 0) + (showNetto ? 1 : 0)}
                 className="px-4 py-3 text-sm text-muted"
               >
                 Spilte hull:{' '}
@@ -225,6 +271,14 @@ async function ScorecardTable({
                 <span className="score-num text-text">
                   {totalBrutto}
                 </span>
+                {showNetto && (
+                  <>
+                    {' · '}Netto totalt:{' '}
+                    <span className="score-num text-text">
+                      {totalNetto}
+                    </span>
+                  </>
+                )}
               </td>
             </tr>
           </tfoot>
