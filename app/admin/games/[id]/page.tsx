@@ -103,6 +103,9 @@ type GameRow = {
   ended_at: string | null;
   scheduled_tee_off_at: string | null;
   created_at: string;
+  side_tournament_enabled: boolean;
+  side_ld_count: number;
+  side_ctp_count: number;
   courses: { name: string } | null;
   tee_boxes: {
     name: string;
@@ -179,7 +182,7 @@ export default async function GameDetailPage({
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, status, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, started_at, ended_at, scheduled_tee_off_at, created_at, courses(name), tee_boxes(name, slope, course_rating, par_total)',
+      'id, name, status, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, courses(name), tee_boxes(name, slope, course_rating, par_total)',
     )
     .eq('id', id)
     .single<GameRow>();
@@ -727,7 +730,16 @@ async function PlayersSections({
                   Spillet kan avsluttes — leaderboard blir åpen for alle
                   deltakere.
                 </p>
-                <EndGameButton endAction={endAction} />
+                <EndGameButton
+                  endAction={endAction}
+                  gameId={game.id}
+                  disabled={!everyPlayerReady}
+                  sideTournament={{
+                    enabled: game.side_tournament_enabled,
+                    ldCount: game.side_ld_count,
+                    ctpCount: game.side_ctp_count,
+                  }}
+                />
               </div>
             ) : (
               <div className="rounded-xl border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning">
