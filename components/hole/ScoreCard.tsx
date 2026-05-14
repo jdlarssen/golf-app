@@ -1,11 +1,9 @@
 'use client';
 
 import type { CSSProperties, JSX } from 'react';
-import {
-  scoreTone,
-  deltaLabel,
-  type ScoreTone,
-} from '@/lib/scoring/scoreTone';
+import { scoreTone, type ScoreTone } from '@/lib/scoring/scoreTone';
+import { scoreShape } from '@/lib/scoring/scoreShape';
+import { ScoreShape } from '@/components/scoring/ScoreShape';
 
 export interface ScoreCardProps {
   playerId: string;
@@ -28,16 +26,6 @@ const MAX_STROKES = 15;
 function clamp(n: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, n));
 }
-
-type ToneColors = { bg: string; fg: string };
-
-const PILL_COLORS: Record<ScoreTone, ToneColors> = {
-  unset: { bg: 'rgba(92,83,71,0.10)', fg: '#5C5347' },
-  under: { bg: 'rgba(74,124,89,0.16)', fg: '#2F5A3C' },
-  par: { bg: 'rgba(92,83,71,0.10)', fg: '#5C5347' },
-  over1: { bg: 'rgba(216,155,58,0.18)', fg: '#7A5410' },
-  over2: { bg: 'rgba(184,70,62,0.16)', fg: '#7A2F2A' },
-};
 
 function scoreNumberColor(tone: ScoreTone): string {
   switch (tone) {
@@ -67,7 +55,7 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
   } = props;
 
   const tone: ScoreTone = scoreTone(score, par);
-  const pill = PILL_COLORS[tone];
+  const shape = scoreShape(score, par);
   const numberColor = scoreNumberColor(tone);
   const isGhost = score == null;
   const displayedNumber = isGhost ? par : score;
@@ -170,21 +158,6 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     opacity: isGhost ? 0.55 : 1,
   };
 
-  const pillStyle: CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 11,
-    fontWeight: 600,
-    letterSpacing: '0.06em',
-    fontVariantNumeric: 'tabular-nums',
-    padding: '3px 7px',
-    borderRadius: 9999,
-    minWidth: 28,
-    background: pill.bg,
-    color: pill.fg,
-  };
-
   let helperText: string;
   if (confirmed) {
     helperText = 'Bekreftet';
@@ -242,22 +215,18 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
       </div>
 
       <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-        }}
+        data-testid="score-shape"
+        style={{ display: 'flex', alignItems: 'center' }}
       >
-        <span
-          data-testid="score-number"
-          className="score-num"
-          style={numberStyle}
-        >
-          {displayedNumber}
-        </span>
-        <span data-testid="delta-pill" style={pillStyle}>
-          {deltaLabel(score, par)}
-        </span>
+        <ScoreShape shape={shape} tone={tone} size="lg">
+          <span
+            data-testid="score-number"
+            className="score-num"
+            style={numberStyle}
+          >
+            {displayedNumber}
+          </span>
+        </ScoreShape>
       </div>
 
       <div

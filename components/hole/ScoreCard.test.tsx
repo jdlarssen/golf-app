@@ -90,20 +90,46 @@ describe('ScoreCard — helper text', () => {
   });
 });
 
-describe('ScoreCard — delta pill', () => {
-  it('renders E when score equals par', () => {
-    setup({ score: 4, par: 4 });
-    expect(screen.getByTestId('delta-pill').textContent).toBe('E');
+describe('ScoreCard — score shape', () => {
+  it('does not render delta-pill anymore', () => {
+    const { queryByTestId } = setup({ score: 6, par: 4 });
+    expect(queryByTestId('delta-pill')).not.toBeInTheDocument();
   });
 
-  it('renders +2 when score is par+2', () => {
-    setup({ score: 6, par: 4 });
-    expect(screen.getByTestId('delta-pill').textContent).toBe('+2');
+  it('renders SVG circle around stortall for birdie (1 under par)', () => {
+    const { container } = setup({ score: 3, par: 4 });
+    const svg = container.querySelector('[data-testid="score-shape"] svg');
+    expect(svg?.querySelectorAll('circle').length).toBe(1);
   });
 
-  it('renders em-dash when unset', () => {
-    setup({ score: null });
-    expect(screen.getByTestId('delta-pill').textContent).toBe('—');
+  it('renders SVG double-circle around stortall for eagle (2+ under par)', () => {
+    const { container } = setup({ score: 2, par: 4 });
+    const svg = container.querySelector('[data-testid="score-shape"] svg');
+    expect(svg?.querySelectorAll('circle').length).toBe(2);
+  });
+
+  it('renders SVG rect around stortall for bogey (1 over par)', () => {
+    const { container } = setup({ score: 5, par: 4 });
+    const svg = container.querySelector('[data-testid="score-shape"] svg');
+    expect(svg?.querySelectorAll('rect').length).toBe(1);
+  });
+
+  it('renders SVG double-rect around stortall for double-bogey or worse (2+ over)', () => {
+    const { container } = setup({ score: 6, par: 4 });
+    const svg = container.querySelector('[data-testid="score-shape"] svg');
+    expect(svg?.querySelectorAll('rect').length).toBe(2);
+  });
+
+  it('renders no SVG decoration for par score', () => {
+    const { container } = setup({ score: 4, par: 4 });
+    const svg = container.querySelector('[data-testid="score-shape"] svg');
+    expect(svg).toBeNull();
+  });
+
+  it('renders no SVG decoration for unset (null) score', () => {
+    const { container } = setup({ score: null, par: 4 });
+    const svg = container.querySelector('[data-testid="score-shape"] svg');
+    expect(svg).toBeNull();
   });
 });
 

@@ -14,6 +14,27 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leverer, spillere får mail når admin avslutter. Ingen polling av appen for å vite om det er noe nytt å gjøre. Pilot-polish underveis: ærligere feilmeldinger i admin når noe går galt med å lese spillerlisten, og første pass på personvern-siden.
 
+### [0.10.23] - 2026-05-14
+
+**Score-tallene på hull-skjermen får scorekort-former rundt seg — sirkel for birdies, firkant for bogeys, dobbel for eagle og double bogey.**
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `lib/games/visibility.ts` — `revealState` og `shouldHideNetto` helpers (foundation for kommende reveal-mode)
+- `lib/scoring/scoreShape.ts` — mapper score til shape-kategori
+- `lib/names/formatRevealName.ts` — full-format navn for grand-reveal moment
+- `components/scoring/ScoreShape.tsx` — SVG-pakker rundt score-tall (sirkel/firkant/dobbel)
+- Migrasjon 0021 — `games.score_visibility` enum-kolonne med CHECK-constraint
+
+#### Changed
+- `components/hole/ScoreCard.tsx` — delta-pillen ved siden av stortallet er fjernet og erstattet av en SVG-form rundt selve tallet (sirkel for birdie, firkant for bogey, dobbel for eagle/double-bogey)
+
+</details>
+
+---
+
 ### [0.10.22] - 2026-05-14
 
 **Tilbake-knappen på personvern-siden returnerer deg nå til siden du kom fra, ikke alltid til hjem-siden.**
