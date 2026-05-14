@@ -148,11 +148,13 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     marginTop: 2,
   };
 
+  // Shrink the number when it's two-digit so it never clips the inner stroke
+  // of the double-square (a 10+ on a par-3 is the realistic worst case).
+  const numberFontSize = displayedNumber >= 10 ? 30 : 38;
+
   const numberStyle: CSSProperties = {
-    fontSize: 38,
+    fontSize: numberFontSize,
     letterSpacing: '-0.02em',
-    textAlign: 'right',
-    minWidth: 42,
     lineHeight: 1,
     color: isGhost ? '#9A8F7C' : numberColor,
     opacity: isGhost ? 0.55 : 1,
