@@ -4,6 +4,7 @@ import { notFound, redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
+import { TopBar } from '@/components/ui/TopBar';
 import { BackLink } from '@/components/ui/BackLink';
 import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
@@ -357,23 +358,25 @@ async function LeaderboardBody({
   // — both paths render the same celebratory layout with formatRevealName
   // applied to player surfaces.
   void returnQuery; // reserved for future drilldown forwarding (no-op today)
-  const mainContent = (
-    <State4View
-      gameId={gameId}
-      gameName={game.name}
-      teams={orderedLines}
-      mode={mode}
-      coursePar={coursePar}
-      backHref={backHref}
-    />
-  );
 
   // Sideturnering: kun synlig når status=finished AND side_tournament_enabled.
   // Vi er allerede inne i finished-grenen her ('full' eller 'reveal-finished'),
   // så det eneste ekstra-sjekket er enable-flagget.
   const showSideTournament = game.side_tournament_enabled;
+
   if (!showSideTournament) {
-    return mainContent;
+    // Solo-view: State4View renders its own Shell + Header (back-arrow lives
+    // inside the view itself).
+    return (
+      <State4View
+        gameId={gameId}
+        gameName={game.name}
+        teams={orderedLines}
+        mode={mode}
+        coursePar={coursePar}
+        backHref={backHref}
+      />
+    );
   }
 
   // Hent LD/CTP-vinnere. RLS slipper kun spillere gjennom når status=finished,
@@ -453,23 +456,41 @@ async function LeaderboardBody({
 
   const sideResult = calculateSideTournament(sideInput);
 
+  // Tab-view: the outer AppShell + TopBar own the back-arrow and kicker so the
+  // page chrome is consistent across both tabs. State4View renders chromeless
+  // (no inner Shell/Header) — its in-page replay control surfaces inline. The
+  // SideTournamentView was always chromeless; it sits inside the same shell
+  // alongside the main view.
   return (
-    <LeaderboardTabs
-      mainContent={mainContent}
-      sideContent={
-        <SideTournamentView
-          teams={sideTeams}
-          result={sideResult}
-          ldCount={ldCount}
-          ctpCount={ctpCount}
-          sideWinners={sideWinnerRows.map((w) => ({
-            category: w.category,
-            position: w.position,
-            winnerUserId: w.winner_user_id,
-          }))}
-        />
-      }
-    />
+    <AppShell>
+      <TopBar backHref={backHref} kicker={game.name} />
+      <LeaderboardTabs
+        mainContent={
+          <State4View
+            gameId={gameId}
+            gameName={game.name}
+            teams={orderedLines}
+            mode={mode}
+            coursePar={coursePar}
+            backHref={backHref}
+            chromeless
+          />
+        }
+        sideContent={
+          <SideTournamentView
+            teams={sideTeams}
+            result={sideResult}
+            ldCount={ldCount}
+            ctpCount={ctpCount}
+            sideWinners={sideWinnerRows.map((w) => ({
+              category: w.category,
+              position: w.position,
+              winnerUserId: w.winner_user_id,
+            }))}
+          />
+        }
+      />
+    </AppShell>
   );
 }
 

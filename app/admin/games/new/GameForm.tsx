@@ -663,7 +663,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             )}
 
             {sideEnabled && sideTournamentEligible && (
-              <div className="space-y-4 rounded-md border border-line bg-surface-2 p-3">
+              <div className="space-y-4 rounded-md border border-border bg-surface-2 p-3">
                 <p className="text-xs text-muted">
                   Poengfordeling: best netto 18 = 10p, front 9 + back 9 = 5p hver,
                   hole-win = 2p per hull (kun alene-vinner), longest drive + closest to pin = 2p per vinner.

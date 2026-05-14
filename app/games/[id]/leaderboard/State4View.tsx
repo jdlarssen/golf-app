@@ -24,6 +24,14 @@ type Props = {
   coursePar: number;
   /** Where the back-arrow should point. Defaults to home ("/"). */
   backHref?: string;
+  /**
+   * When true, omits the outer `<Shell>` wrapper and `<Header>` (back-arrow +
+   * kicker). The caller is responsible for providing surrounding page chrome.
+   * Used when this view renders inside `LeaderboardTabs` — the tab parent owns
+   * the shared `AppShell + TopBar`. The confetti replay control moves inline
+   * above the leader card in this mode.
+   */
+  chromeless?: boolean;
 };
 
 /**
@@ -47,6 +55,7 @@ export function State4View({
   mode,
   coursePar,
   backHref = '/',
+  chromeless = false,
 }: Props) {
   const [replayKey, setReplayKey] = useState(0);
 
@@ -76,8 +85,10 @@ export function State4View({
 
   if (teams.length === 0) {
     return (
-      <Shell>
-        <Header gameName={gameName} onReplay={null} backHref={backHref} />
+      <Shell chromeless={chromeless}>
+        {!chromeless && (
+          <Header gameName={gameName} onReplay={null} backHref={backHref} />
+        )}
         <p className="mt-12 text-center text-sm text-muted">Ingen lag å vise.</p>
       </Shell>
     );
@@ -92,8 +103,26 @@ export function State4View({
   ];
 
   return (
-    <Shell>
-      <Header gameName={gameName} onReplay={onReplay} backHref={backHref} />
+    <Shell chromeless={chromeless}>
+      {!chromeless && (
+        <Header gameName={gameName} onReplay={onReplay} backHref={backHref} />
+      )}
+
+      {chromeless && (
+        // Tab-mode replay control — sits where the Header's pill would be,
+        // but inline above the title since the outer TopBar owns the back
+        // chrome.
+        <div className="flex justify-end px-4 pt-2">
+          <button
+            type="button"
+            onClick={onReplay}
+            aria-label="Spill av konfetti på nytt"
+            className="inline-flex items-center rounded-full border border-border bg-[rgba(229,224,211,0.5)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted hover:bg-[rgba(229,224,211,0.7)] dark:bg-[rgba(45,63,50,0.6)] dark:hover:bg-[rgba(45,63,50,0.8)]"
+          >
+            Spill av
+          </button>
+        </div>
+      )}
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
@@ -137,7 +166,16 @@ export function State4View({
   );
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({
+  children,
+  chromeless = false,
+}: {
+  children: React.ReactNode;
+  chromeless?: boolean;
+}) {
+  // In chromeless mode the outer page (e.g. AppShell) already provides the
+  // viewport-fill, max-width, and bottom padding — just render children flat.
+  if (chromeless) return <>{children}</>;
   return (
     <div className="min-h-screen bg-bg text-text">
       <div className="mx-auto max-w-md pb-12">{children}</div>

@@ -40,6 +40,12 @@ export interface SideCategoryAward {
   teamId: TeamId;
   points: number;
   detail?: string;
+  /**
+   * Populated when `category === 'hole_win'`. The 1-indexed hole number
+   * the team won outright. Consumers should prefer this over parsing the
+   * free-text `detail` field.
+   */
+  holeNumber?: number;
 }
 
 export interface SideTournamentResult {
@@ -149,6 +155,7 @@ export function calculateSideTournament(
         teamId: winners[0]!,
         points: 2,
         detail: `Hull ${hole + 1}`,
+        holeNumber: hole + 1,
       });
     }
   }

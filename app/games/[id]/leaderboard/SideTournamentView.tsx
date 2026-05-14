@@ -38,9 +38,7 @@ export function SideTournamentView({
   ctpCount,
   sideWinners,
 }: Props) {
-  const sorted = [...result.teamStandings].sort(
-    (a, b) => b.totalPoints - a.totalPoints,
-  );
+  const sorted = rankByPoints(result.teamStandings);
   const teamById = new Map(teams.map((t) => [t.teamId, t]));
 
   const userDisplayName = (userId: string): string => {
@@ -55,7 +53,7 @@ export function SideTournamentView({
     <div className="space-y-6 px-4">
       <table className="w-full">
         <thead>
-          <tr className="border-b border-line">
+          <tr className="border-b border-border">
             <th className="py-2 text-left font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
               Lag
             </th>
@@ -65,11 +63,18 @@ export function SideTournamentView({
           </tr>
         </thead>
         <tbody>
-          {sorted.map((s, i) => {
-            const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+          {sorted.map((s) => {
+            const medal =
+              s.rank === 1
+                ? '🥇'
+                : s.rank === 2
+                  ? '🥈'
+                  : s.rank === 3
+                    ? '🥉'
+                    : '';
             const label = teamById.get(s.teamId)?.label ?? `Lag ${s.teamId}`;
             return (
-              <tr key={s.teamId} className="border-b border-line/50">
+              <tr key={s.teamId} className="border-b border-border/50">
                 <td className="py-2 font-serif text-base text-text">
                   <span className="mr-1">{medal}</span>
                   {label}
@@ -83,7 +88,7 @@ export function SideTournamentView({
         </tbody>
       </table>
 
-      <details className="rounded-md border border-line bg-surface-2 p-3">
+      <details className="rounded-md border border-border bg-surface-2 p-3">
         <summary className="cursor-pointer font-serif text-base text-text">
           Vis hvordan poengene ble fordelt
         </summary>
@@ -132,6 +137,27 @@ export function SideTournamentView({
 }
 
 // --- internal helpers ---
+
+/**
+ * Dense-rank teams by `totalPoints` descending. Ties share a rank — e.g.
+ * two teams tied at top both receive rank 1 (and both get the gold medal),
+ * the next team is rank 2. This avoids the index-based bug where a tie at
+ * the top would silently demote one team to silver.
+ */
+function rankByPoints<T extends { totalPoints: number }>(
+  items: T[],
+): Array<T & { rank: number }> {
+  const sorted = [...items].sort((a, b) => b.totalPoints - a.totalPoints);
+  let lastTotal: number | null = null;
+  let rank = 0;
+  return sorted.map((t) => {
+    if (t.totalPoints !== lastTotal) {
+      rank += 1;
+      lastTotal = t.totalPoints;
+    }
+    return { ...t, rank };
+  });
+}
 
 function collectCategoryWinners(
   sorted: SideTournamentResult['teamStandings'],
@@ -190,18 +216,16 @@ function HoleWinGrid({
   sorted: SideTournamentResult['teamStandings'];
   teamById: Map<number, SideTournamentTeam>;
 }) {
-  // Bygg per-hull-vinner-map fra awards med detail "Hull N". Null = ingen
-  // alene-vinner (alle uavgjort eller manglende score).
+  // Bygg per-hull-vinner-map fra hole-win-awards. Null = ingen alene-vinner
+  // (alle uavgjort eller manglende score). Vi leser `holeNumber` direkte fra
+  // award-objektet — ingen regex-parsing av `detail`.
   const perHole: Map<number, number | null> = new Map();
   for (let h = 1; h <= 18; h++) perHole.set(h, null);
 
   for (const s of sorted) {
     for (const a of s.awards) {
-      if (a.category === 'hole_win' && a.detail) {
-        const match = a.detail.match(/Hull (\d+)/);
-        if (match) {
-          perHole.set(Number(match[1]), s.teamId);
-        }
+      if (a.category === 'hole_win' && a.holeNumber != null) {
+        perHole.set(a.holeNumber, s.teamId);
       }
     }
   }
@@ -221,7 +245,7 @@ function HoleWinGrid({
           return (
             <div
               key={h}
-              className="rounded border border-line bg-surface px-1 py-1 text-center tabular-nums"
+              className="rounded border border-border bg-surface px-1 py-1 text-center tabular-nums"
             >
               <div className="text-[9px] text-muted">{h}</div>
               <div className={winnerTeam == null ? 'text-muted' : 'text-text'}>

@@ -24,13 +24,13 @@ export function LeaderboardTabs({ mainContent, sideContent }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex border-b border-line" role="tablist" aria-label="Leaderboard-fane">
+      <div className="flex border-b border-border" role="tablist" aria-label="Leaderboard-fane">
         <button
           type="button"
           role="tab"
           aria-selected={active === 'main'}
           onClick={() => setActive('main')}
-          className={`flex-1 py-2 font-serif text-base transition-colors ${
+          className={`flex-1 py-3 min-h-[44px] font-serif text-base transition-colors ${
             active === 'main'
               ? 'border-b-2 border-primary text-text'
               : 'text-muted hover:text-text'
@@ -43,7 +43,7 @@ export function LeaderboardTabs({ mainContent, sideContent }: Props) {
           role="tab"
           aria-selected={active === 'side'}
           onClick={() => setActive('side')}
-          className={`flex-1 py-2 font-serif text-base transition-colors ${
+          className={`flex-1 py-3 min-h-[44px] font-serif text-base transition-colors ${
             active === 'side'
               ? 'border-b-2 border-primary text-text'
               : 'text-muted hover:text-text'
