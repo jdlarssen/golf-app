@@ -18,9 +18,9 @@ const SIZE_PX: Record<ScoreShapeSize, number> = {
 };
 
 const STROKE_BY_SIZE: Record<ScoreShapeSize, number> = {
-  sm: 1.25,
-  md: 1.5,
-  lg: 2,
+  sm: 1.0,
+  md: 1.25,
+  lg: 1.5,
 };
 
 // Stroke colors mirror the existing scoreTone palette used elsewhere.
@@ -61,7 +61,7 @@ export function ScoreShape(props: ScoreShapeProps): JSX.Element {
   const half = px / 2;
   const inner = half - stroke;
   const innerSquareOffset = stroke / 2;
-  const gap = Math.max(3, stroke + 1);
+  const gap = Math.max(2, stroke + 0.5);
 
   const wrapStyle: CSSProperties = {
     position: 'relative',

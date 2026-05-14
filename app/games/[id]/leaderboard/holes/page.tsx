@@ -398,7 +398,7 @@ function DrilldownView({
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-3.5 px-5 pb-2 text-[10.5px] text-muted">
+        <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 px-5 pb-2 text-[10.5px] text-muted">
           <span className="inline-flex items-center gap-1.5">
             <span
               aria-hidden
@@ -406,11 +406,15 @@ function DrilldownView({
             />
             vinner av hullet
           </span>
-          <span className="inline-flex items-center gap-1">
-            <sup className="text-[8px] font-semibold text-accent">•</sup>+slag
+          <span className="inline-flex items-center gap-1.5">
+            <span
+              aria-hidden
+              className="inline-block h-[10px] w-[10px] rounded-sm bg-accent/12"
+            />
+            brukt netto
           </span>
           <span className="ml-auto font-serif text-[11px] italic">
-            fet = brukt netto
+            brutto / +slag · netto
           </span>
         </div>
 
@@ -577,30 +581,50 @@ function HoleRow({
       <span className="text-[10px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
         P{row.par}
       </span>
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className="flex flex-wrap items-stretch gap-2">
         {row.players.map((pc, pi) => {
           const isBestNet =
             pc.net !== null && row.teamNet !== null && pc.net === row.teamNet;
           const grossText = pc.gross == null ? '–' : String(pc.gross);
+          const nettoText = pc.net == null ? '–' : String(pc.net);
           return (
             <span
               key={pc.userId}
-              className={`inline-flex items-center gap-0.5 font-serif text-[13px] tabular-nums ${
-                isBestNet ? 'font-semibold text-text' : 'font-normal text-muted'
-              }`}
+              className="inline-flex items-stretch gap-2"
             >
-              <ScoreShape
-                shape={scoreShape(pc.gross, row.par)}
-                tone={scoreTone(pc.gross, row.par)}
-                size="sm"
+              <span
+                className={`inline-flex flex-col items-center gap-0.5 rounded-md px-1 py-0.5 font-serif tabular-nums transition-colors ${
+                  isBestNet
+                    ? 'bg-accent/12 font-bold text-text'
+                    : 'font-normal text-muted'
+                }`}
+                aria-label={
+                  isBestNet
+                    ? `Brukt netto: brutto ${grossText}, +${pc.extraStrokes} slag, netto ${nettoText}`
+                    : `Brutto ${grossText}, +${pc.extraStrokes} slag, netto ${nettoText}`
+                }
               >
-                {grossText}
-              </ScoreShape>
-              {pc.extraStrokes > 0 && (
-                <sup className="text-[8px] font-semibold text-accent">•</sup>
-              )}
+                <ScoreShape
+                  shape={scoreShape(pc.gross, row.par)}
+                  tone={scoreTone(pc.gross, row.par)}
+                  size="sm"
+                >
+                  {grossText}
+                </ScoreShape>
+                <span className="flex items-baseline gap-1 text-[10px] leading-none">
+                  <span className="text-accent">
+                    {pc.extraStrokes > 0 ? `+${pc.extraStrokes}` : '·'}
+                  </span>
+                  <span className="text-[11px] font-medium">{nettoText}</span>
+                </span>
+              </span>
               {pi < row.players.length - 1 && (
-                <span className="mx-0.5 text-muted/40">/</span>
+                <span
+                  className="self-center text-muted/30"
+                  aria-hidden="true"
+                >
+                  /
+                </span>
               )}
             </span>
           );
