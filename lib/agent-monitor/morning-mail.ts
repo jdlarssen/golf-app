@@ -5,7 +5,7 @@
 // (forest green + champagne + linen) — same template as lib/mail/inviteNotification.ts.
 
 export type FindingRow = {
-  time: string;       // "HH:MM"
+  time: string;       // "HH:MM" in Europe/Oslo
   summary: string;    // short Norwegian description
   ref: string;        // commit SHA or PR number
   refType: 'commit' | 'pr';
@@ -51,7 +51,7 @@ function renderSection(title: string, emoji: string, rows: FindingRow[]): string
   const items = rows
     .map(
       (r) =>
-        `<li style="margin:0 0 8px;line-height:1.5;"><strong>${escapeHtml(r.time)}</strong> — ${escapeHtml(r.summary)} (<a href="${refUrl(r)}" style="color:#1B4332;">${refLabel(r)}</a>)</li>`,
+        `<li style="margin:0 0 8px;line-height:1.5;"><strong>${escapeHtml(r.time)}</strong> — ${escapeHtml(r.summary)} (<a href="${escapeHtml(refUrl(r))}" style="color:#1B4332;">${escapeHtml(refLabel(r))}</a>)</li>`,
     )
     .join('');
   return `<h3 style="font-family:Georgia,'Times New Roman',serif;font-size:18px;margin:24px 0 12px;color:#1A1813;">${emoji} ${escapeHtml(title)}</h3><ul style="margin:0;padding-left:20px;font-size:15px;">${items}</ul>`;

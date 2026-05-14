@@ -58,6 +58,15 @@ describe('renderMorningMail', () => {
     expect(mail?.html).toContain('&lt;script&gt;');
   });
 
+  it('escapes HTML in commit refs', () => {
+    const mail = renderMorningMail({
+      ...baseInput,
+      fixed: [{ time: '02:14', summary: 'X', ref: '"><img src=x onerror=alert(1)>', refType: 'commit' }],
+    });
+    expect(mail?.html).not.toContain('<img src=x onerror=alert(1)>');
+    expect(mail?.html).toContain('&quot;&gt;&lt;img');
+  });
+
   it('includes the impact footer', () => {
     const mail = renderMorningMail({
       ...baseInput,
