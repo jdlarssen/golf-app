@@ -8,14 +8,21 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 
 ## 🛠️ Funksjonelt — bør fikses før klubb-skala
 
-### Hull-skjerm (oppfølging av quick-win-1)
+### Hull-skjerm + scorekort-flater
 
-- [ ] **Vis brutto OG netto på scorekortet, med E/−1/+1-delta mot par.** Golfere bryr seg om hvor mye de er over/under par, ikke bare det rå resultatet. To ting trengs: (1) delta mot par (`E`, `−1`, `+1`, `+2`…) må være synlig — bare rå resultat-tall er ikke nok; (2) både brutto og netto må eksponeres — enten via toggle mellom de to visningene, eller dual-display der begge vises samtidig. Implementasjon åpen (egen brainstorming når det er aktuelt). Persisterer evt. som `localStorage["torny-score-display"]` hvis toggle-løsning.
-- [ ] **Per-bruker valg: vis navn eller nickname under runden.** Hver spiller velger selv i `/profile` om de vil vises med fullt navn eller nickname i flight/leaderboard/scorekort. I dag bruker hull-skjermen `nickname ?? name` hardkodet. Krever ny kolonne på `public.users` (`display_pref text not null default 'name' check (display_pref in ('name','nickname'))`), UI-toggle i `/profile`, og oppdatering av alle visninger som rendrer spillernavn (minst: hull-skjerm, scorekort, leaderboard, admin-spillerlister). **Nickname-alternativet skal være disablet/skjult i UI hvis brukeren ikke har satt nickname** — ingen skal kunne velge nickname-visning og deretter framstå som "(ingen)" eller fallback-flicker. Helper-tekst når disablet: «Legg til kallenavn for å bruke det som visningsnavn». Default-pref blir derfor `'name'` (sikker tilbakefall for alle).
+- ✅ ~~**Vis brutto OG netto på scorekortet, med E/−1/+1-delta mot par.**~~ Løst i v1.0 via reveal-mode + scorekort-former: stortallet er pakket i form (sirkel/firkant/dobbel/trippel/kvadruppel), per-spiller vs-par-pille på hull-leaderboard, scorekort-oversikt har Netto-kolonne i reveal-finished. Live-mode-utvidelser (E-lite-stack, netto-kolonne i live, brutto/netto-toggle på leaderboard) ble bevisst deferred.
+- ✅ ~~**Per-bruker valg: vis navn eller nickname under runden.**~~ Strøket og erstattet av `formatRevealName(name, nickname)`-mekanikken: under runden brukes `nickname ?? name` (dagens oppførsel), på finished-flater vises `Karl "Knølkis" Jensen`. Ingen `display_pref`-toggle, ingen migrasjon. Den sosiale leken med kallenavn er en del av Tørny-kulturen.
+- [ ] **Multi-player scorekort-oversikt (`/games/[id]/scorecard`)** — i dag viser flaten kun din egen scorekort (single-player tabell). Bruker har foreslått en utvidelse til å vise lag-medlemmer (typisk 2 spillere i best-ball) side om side, med initialer (J, H, ...) øverst i hver kolonne — som på et fysisk papir-scorekort. Sett opp for diskusjon 2026-05-14, deferred fra v1.0-leveransen. Krever brainstorming: scope (lag vs. flight), plass-budsjett på iPhone, om eksisterende «Mitt scorekort»-tittel skal byttes til «Lagets scorekort» eller om vi har to flater.
 - [ ] **Hull-navigasjon (perf) — neste steg etter v0.9.3 parallellisering.** Måling + parallellisering shipped 2026-05-13 (v0.9.2 instrumentering + v0.9.3 refactor) — fra 1.65s snitt til 440ms (–73%). Runde 1 (`games`, `allGamePlayers`, `scoreCount`) er nå flaskehalsen, varierer 150–700ms pga Supabase tail-latency. Gjenstående muligheter:
   - **Layout-lift**: flytt `game` + `game_players` til `app/games/[id]/layout.tsx` slik at hull-page-en kun trenger `hole` + `scores` per hull-bytte. Krever React.cache- eller unstable_cache-mønster med revalidering ved score-writes. Estimert –300ms til (snitt ~150ms). Moderat refactor-risiko.
   - **Single-page-architecture**: refaktorere så hele runden eies av én klient-shell som lastes én gang per game og bytter hull via client-state. Server gjør én stor fetch for hele runden, client håndterer hull-bytte i `useState`. Stor refaktor, stor gevinst.
   - **Pilot-instrumentering** (`console.time/timeEnd` i [app/games/[id]/holes/[holeNumber]/page.tsx](app/games/[id]/holes/[holeNumber]/page.tsx) og [app/games/[id]/page.tsx](app/games/[id]/page.tsx)) skal fjernes eller gates bak dev-flag når pilot-data er hentet. Se memory `project_active_perf_instrumentation`.
+
+### Live-mode utvidelser (deferred fra v1.0)
+
+- [ ] **E-lite-stack med netto under brutto på hull-skjerm i live-mode.** I reveal-mode er netto skjult; i live-mode kan vi velge å vise begge på hver ScoreCard. Foreslått layout: «Netto X (+/−Y)» som hjelpetekst når extraStrokes > 0. Diskutert 2026-05-14, deferred til senere.
+- [ ] **Netto-kolonne på scorekort-oversikt i live-mode.** I reveal-finished får scorekortet en Netto-kolonne; live-mode står utenfor. Lite arbeid, men har scope-tap på smaler iPhones (kolonnen tar plass).
+- [ ] **Brutto/netto-toggle på leaderboard i live-mode.** I reveal-mode er leaderboardet brutto-totaler (active) eller netto best-ball (finished); i live-mode er det alltid netto. En toggle for å vise brutto også kan være nyttig — men krever client-state og ny UI. Lett å legge til på et senere tidspunkt.
 
 ### Recovery / admin overrides
 
@@ -66,7 +73,7 @@ Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
 
 ### Versjonering / release
 
-- [ ] **Bump til `v1.0.0` — kriteriene er oppfylt 2026-05-13.** Vi står på `v0.10.2`. Alle tre opprinnelige krav er nådd: (a) invitasjons-status flippes korrekt til «Akseptert» når mottaker logger inn (v0.3.3, nå på `/admin/spillere` etter v0.6.0), (b) admin-smoke-test bestått på iOS PWA via OTP-kode (v0.4.0–0.4.1), (c) Supabase-cache-problem løst ved å bytte bort fra magic-link-URL helt. Brukeren venter med selve bumpet for å gjøre flere endringer først. Når klar: én MAJOR-bump med samle-CHANGELOG-entry «Første stabile release».
+- ✅ ~~**Bump til `v1.0.0` — kriteriene er oppfylt 2026-05-13.**~~ Shipped 2026-05-14 sammen med reveal-mode + scorekort-former + navne-reveal. Står nå på `v1.0.9` etter 9 post-launch-patches basert på prod-testing.
 
 ### Performance
 

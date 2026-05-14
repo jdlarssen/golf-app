@@ -221,61 +221,40 @@ Helper functions er `SECURITY DEFINER` for å unngå rekursjons-feller.
 
 ## Status per session-handoff
 
-**Post-pilot polish-sesjon 2026-05-14.** Står på `v0.10.22`. MAJOR-bump til `v1.0.0` venter fortsatt — brukeren bumper når han er klar.
+**v1.0-launch-sesjon 2026-05-14.** Står på `v1.0.9` — første stabile release shipped, med 9 patches på post-launch polish basert på prod-testing.
 
-✅ **Fungerer end-to-end:**
-- OTP-kode-innlogging med pending state, auto-submit på 8 sifre, og guard mot iOS auto-fill double-submit
-- iOS PWA-innlogging fungerer
-- Egen domene tornygolf.no live
-- Hele turnerings-flyten (opprett → spill → lever → leaderboard)
-- Offline-sync, realtime, PWA, peer-godkjenning, admin-overstyring
-- Premium-stil + sticky TopBar med kicker-label på 19 sider
-- Plattform-aware PWA-install: native dialog (Android) eller iOS-instruksjons-modal — banner på `/` + knapp i `/profile`
-- GDPR-self-service: `/profile/export` (JSON), `/profile/slett-konto` (blokkert ved aktive spill), `/legal/privacy` (offentlig, history-back)
-- Admin: slett spill (uansett status med status-bevisst advarsel), edit-email på spiller, sist-innlogget/antall-spill-stats, `invitations.opened_at`-indikator («Har bedt om kode»/«Mail ikke åpnet»)
+✅ **Nytt i v1.0-leveransen:**
+- **Reveal-mode** — admin velger ved spill-opprett om netto-tall skjules under runden og avsløres når spillet avsluttes. Default `live` = dagens oppførsel.
+- **Scorekort-former** — sirkel/dobbel/trippel for under-par, firkant/dobbel/trippel/kvadruppel for over-par. Brukt på 5 skjermer (hull-skjerm, scorekort-oversikt, lever, approve, hull-leaderboard).
+- **Navne-reveal** — under runden `nickname ?? name`, på finished-flater `Karl "Knølkis" Jensen` via `formatRevealName(name, nickname)`.
+- **Live brutto leaderboard** — `RevealBruttoView` for reveal-aktiv: lag-totaler basert på brutto best-ball, per-spiller-brutto-sums, vs-par-delta per rad, ingen handicap-info.
+- **Hull-skjerm leaderboard-ikon** (PokalIcon) med `?return=hole&n=N` for return-to-hole-nav.
+- **Auto-reveal via realtime** — `PreRoundLeaderboardRealtime` lytter på `games` UPDATEs i tillegg til `scores` INSERTs, så leaderboardet veksler automatisk fra brutto-view til netto-reveal når admin avslutter.
+- **Hull-for-hull-oversikt redesign** — vertikalt stack per spiller med initial (J, H, ...) foran scoren, brutto-shape + netto + vs-par-pille. Kontributørens initial er **fet** = «brukt netto». Lagets best-ball + vs-par-pille til høyre. Totalt-baren har vs-par inline med totalsum.
+- **Scorekort-oversikt** har droppet per-rad `+slag`-kolonnen (passer nå på normal iPhone). Total «Slag fått: N» surfaces i fotnoten.
+- **«Leaderboard»-link på spill-hjem** for aktive spill — lukker discoverability-gapet etter scorekort-levering når hull-skjermen redirecter bort.
 
-🆕 **Landed denne sesjonen (v0.10.2 → v0.10.22):**
+**Migrasjoner shipped denne sesjonen:**
+- `0021_score_visibility` — `games.score_visibility text not null default 'live' check (in ('live', 'reveal'))`, låses mens status `active`/`finished`
+- `0022_realtime_games` — `alter publication supabase_realtime add table public.games` for at klienter kan lytte på `status='finished'`-event
 
-**Innloggings-UX (v0.10.16):** pending state, auto-submit på 8 sifre, ref-guard mot dobbel-submit, autoFocus på kode-input.
+**Nye filer:**
+- `lib/games/visibility.ts` — `revealState(visibility, status)` + `shouldHideNetto(state)`
+- `lib/scoring/scoreShape.ts` — mapper score til shape-kategori (cap på trippel under, kvadruppel over)
+- `lib/names/formatRevealName.ts` — `Karl "Knølkis" Jensen`-format
+- `components/scoring/ScoreShape.tsx` — SVG-pakker rundt score-tall, `size: 'sm' | 'md' | 'lg'`, strek 1.0–1.5px, `lineHeight: px`-sentrering, `tabular-nums`
+- `app/games/[id]/leaderboard/RevealBruttoView.tsx` — eget view for `reveal-active`-state med tease-tekst
 
-**Admin-flyt:**
-- Slett spill helt (`v0.10.10` ny rute → `v0.10.15` fjernet active-blokk med status-bevisst rød advarsel)
-- Edit-email + activity-stats på `/admin/spillere/[id]` (`v0.10.11`, migrasjon `0019_users_last_seen_at` + proxy.ts-hook med 30-min WHERE-debounce)
-- `invitations.opened_at`-tracking (`v0.10.9`, migrasjon `0018`)
+**Designdoc + plan i `docs/plans/`:** `2026-05-14-v1-launch-design.md` (godkjent), `2026-05-14-v1-launch-implementation.md` (25-task TDD-plan, alle 25 sjekket inn).
 
-**GDPR/personvern:**
-- `/legal/privacy` ny side + Personvern-lenke i AppVersionFooter (`v0.10.4` → `v0.10.22` history-back, proxy-exempt, footer-lenke)
-- `/profile/export`-route med JSON-download (`v0.10.8`) — privacy-bug funnet og fikset (returnerte tidligere alle scores fra brukerens spill, ikke kun egne)
-- `/profile/slett-konto` med dedikert konfirmasjons-side (`v0.10.8`)
-- `/profile/historikk` med fullførte runder + brutto sum + snitt (`v0.10.12`)
-
-**Security/hardening (alle SQL-migrasjoner applied via Supabase MCP):**
-- `0016` — hardenet `handle_new_auth_user`-trigger mot NULL email (chore)
-- `0017` — `email_is_in_auth_users`-RPC for friend-invite mot halv-registrerte kontoer (`v0.10.6`)
-- `0018` — `invitations.opened_at`
-- `0019` — `users.last_seen_at` + index
-- `0020` — strammet `invitations select by token`-RLS til kun `select own incoming` (`v0.10.13`)
-
-**UI-konsekvens (`v0.10.17` → `v0.10.22`):**
-- `components/ui/TopBar.tsx` — sticky top-bar med BackLink + valgfri kicker. Migrert til 19 sider; admin-/-listing-sider og leaderboard skipped pga custom layouts. Kicker-label lagt til på alle player-sider med dedupe av duplikate page-titler.
-- `components/ui/HistoryBackLink.tsx` — `router.back()` ved same-origin referrer, fallback til href ellers. Brukt på `/legal/privacy`.
-
-**PWA-install (`v0.10.14`):** `lib/pwa/`-detection + `components/pwa/`-komponenter (banner, button, modal). Erstatter gamle `IosInstallHint`.
-
-**Refactor:**
-- `lib/games/status.ts` — `GameStatus`-union + `STATUS_LABELS` konsolidert fra 11 filer
-- `lib/admin/gameErrorMessages.ts` — extracted helper + `db_players` → `db_roster`-split (`v0.10.3`)
-- StatusChip-konsolidering: Venter-pille bruker `tone="påmelding"`
-- Vitest mock for `next/navigation` i `vitest.setup.ts` — 180/180 tester grønne
-
-**Småfikser:** `MAX_TEE_BOXES` 5 → 7 (`v0.10.7`), mailto-fix på personvern-kontakt (`v0.10.5`), SyncBanner friendly-error mapping (`v0.10.2`).
-
-⏸ **Ventende:**
-- Fjern eller gate perf-instrumenteringen i hule-page + game-home — pilot er ferdig (memory `project_active_perf_instrumentation`)
-- End-to-end-test av mail-flow (gameFinished + scorecardSubmitted) — sjekk Resend-dashboard
-- Designpass på resterende sider (scorecard, submit, approve, leaderboard/holes, complete-profile, admin/courses + admin/games-listen)
-- Hull-page layout-lift (`game` + `game_players` til `app/games/[id]/layout.tsx` via React.cache/unstable_cache) — estimert –300ms til
-- TopBar med action-slot for `/admin/courses` og `/admin/games`-listen (har `+ Ny`-knapp, ikke kompatibel med dagens TopBar)
+⏸ **Ventende (post-v1.0):**
+- **Multi-player scorekort-oversikt** — vise lag-medlemmer side om side med initialer øverst i hver kolonne (vs. dagens single-player-flate). Krever brainstorming — se TODO.md.
+- **3 pre-eksisterende lint-warnings** (`historikk/page.tsx:53` prefer-const, `InstallBanner.tsx:18` setState-in-effect, `SyncBanner.tsx:78` impure-call-in-render) — alle fra commits før v1.0-arbeidet, ikke blokkerende men bør fikses
+- **Perf-instrumentering** (`console.time/timeEnd`) i hull-page + game-home — pilot er ferdig (memory `project_active_perf_instrumentation`)
+- **End-to-end-test av mail-flow** (gameFinished + scorecardSubmitted) — sjekk Resend-dashboard
+- **Designpass** på resterende sider (complete-profile, admin/courses + admin/games-listen)
+- **Hull-page layout-lift** (`game` + `game_players` til layout.tsx via React.cache) — estimert –300ms
+- **TopBar med action-slot** for `/admin/courses` og `/admin/games`-listen
 
 📋 **Backlog:** se `TODO.md`
 
