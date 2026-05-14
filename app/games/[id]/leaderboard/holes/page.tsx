@@ -321,8 +321,6 @@ function DrilldownView({
 }) {
   const frontRows = selected.holes.filter((h) => h.holeNumber <= 9);
   const backRows = selected.holes.filter((h) => h.holeNumber >= 10);
-  const frontWinners = holeWinners.slice(0, frontRows.length);
-  const backWinners = holeWinners.slice(frontRows.length);
 
   const frontPar = frontRows.reduce((sum, h) => sum + h.par, 0);
   const backPar = backRows.reduce((sum, h) => sum + h.par, 0);
@@ -400,18 +398,11 @@ function DrilldownView({
         {/* Legend */}
         <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 px-5 pb-2 text-[10.5px] text-muted">
           <span className="inline-flex items-center gap-1.5">
-            <span
-              aria-hidden
-              className="inline-block h-[7px] w-[7px] rounded-full bg-accent"
-            />
-            vinner av hullet
-          </span>
-          <span className="inline-flex items-center gap-1.5">
             <strong className="font-serif font-bold text-text">B</strong>
             <span>= brukt netto</span>
           </span>
           <span className="ml-auto font-serif text-[11px] italic">
-            initial · brutto · netto · vs par
+            initial · brutto · netto → lag · vs par
           </span>
         </div>
 
@@ -421,9 +412,7 @@ function DrilldownView({
         </div>
         <HoleTable
           rows={frontRows}
-          winners={frontWinners}
-          selectedTeamNumber={selected.teamNumber}
-          teamPlayers={selected.players}
+teamPlayers={selected.players}
           summaryLabel="UT"
           summaryPar={frontPar}
           summaryNet={frontNet}
@@ -446,9 +435,7 @@ function DrilldownView({
             </div>
             <HoleTable
               rows={backRows}
-              winners={backWinners}
-              selectedTeamNumber={selected.teamNumber}
-              teamPlayers={selected.players}
+teamPlayers={selected.players}
               summaryLabel="INN"
               summaryPar={backPar}
               summaryNet={backNet}
@@ -505,16 +492,12 @@ function DrilldownView({
 
 function HoleTable({
   rows,
-  winners,
-  selectedTeamNumber,
   teamPlayers,
   summaryLabel,
   summaryPar,
   summaryNet,
 }: {
   rows: TeamLine['holes'];
-  winners: Array<number | null>;
-  selectedTeamNumber: number;
   teamPlayers: LbPlayer[];
   summaryLabel: 'UT' | 'INN';
   summaryPar: number;
@@ -528,7 +511,6 @@ function HoleTable({
           key={row.holeNumber}
           row={row}
           teamPlayers={teamPlayers}
-          isWinner={winners[ii] === selectedTeamNumber}
           staggerIndex={ii}
         />
       ))}
@@ -550,7 +532,7 @@ function HoleTable({
           {summaryNet}
         </span>
         <span
-          className="rounded-full px-2 py-0.5 text-center text-[10px] font-semibold tabular-nums"
+          className="ml-2 w-[40px] shrink-0 rounded-full px-2 py-0.5 text-center text-[10px] font-semibold tabular-nums"
           style={{
             background: `var(${summaryTone.bg})`,
             color: `var(${summaryTone.fg})`,
@@ -558,7 +540,6 @@ function HoleTable({
         >
           {formatVsPar(summaryNet - summaryPar)}
         </span>
-        <span className="w-[14px]" aria-hidden />
       </div>
     </div>
   );
@@ -567,12 +548,10 @@ function HoleTable({
 function HoleRow({
   row,
   teamPlayers,
-  isWinner,
   staggerIndex,
 }: {
   row: TeamLine['holes'][number];
   teamPlayers: LbPlayer[];
-  isWinner: boolean;
   staggerIndex: number;
 }) {
   // Map userId → display initial (first letter of nickname, else of name).
@@ -582,6 +561,9 @@ function HoleRow({
     const first = Array.from(display)[0];
     initialFor.set(p.userId, first ? first.toUpperCase() : '?');
   }
+
+  const teamVsPar = row.teamNet == null ? null : row.teamNet - row.par;
+  const teamTone = vsParTone(teamVsPar ?? 0);
 
   return (
     <div
@@ -598,7 +580,7 @@ function HoleRow({
         </span>
       </div>
 
-      {/* Per-player rows stacked vertically. */}
+      {/* Per-player rows stacked vertically — initial · brutto · netto, no pill. */}
       <div className="flex flex-1 flex-col justify-center gap-1.5">
         {row.players.map((pc) => {
           const isBestNet =
@@ -606,8 +588,6 @@ function HoleRow({
           const grossText = pc.gross == null ? '–' : String(pc.gross);
           const nettoText = pc.net == null ? '–' : String(pc.net);
           const initial = initialFor.get(pc.userId) ?? '?';
-          const nettoVsPar = pc.net == null ? null : pc.net - row.par;
-          const nettoTone = vsParTone(nettoVsPar ?? 0);
 
           return (
             <div
@@ -634,39 +614,35 @@ function HoleRow({
                 {grossText}
               </ScoreShape>
               <span
-                className={`ml-auto min-w-[18px] text-right text-[14px] ${
+                className={`min-w-[18px] text-right text-[14px] ${
                   isBestNet ? 'font-semibold text-text' : 'font-normal text-muted'
                 }`}
               >
                 {nettoText}
-              </span>
-              <span
-                className="w-[32px] rounded-full py-0.5 text-center text-[10px] font-semibold tabular-nums"
-                style={
-                  nettoVsPar !== null
-                    ? {
-                        background: `var(${nettoTone.bg})`,
-                        color: `var(${nettoTone.fg})`,
-                      }
-                    : { color: 'var(--text-muted)' }
-                }
-              >
-                {nettoVsPar === null ? '—' : formatVsPar(nettoVsPar)}
               </span>
             </div>
           );
         })}
       </div>
 
-      {/* Winner-of-hull dot (whole row-block). */}
-      <div className="flex w-[14px] shrink-0 items-center justify-center">
-        {isWinner && (
-          <span
-            aria-label="Vinner av hullet"
-            className="block h-2 w-2 rounded-full bg-accent"
-            style={{ boxShadow: '0 0 0 2px rgba(201,169,97,0.18)' }}
-          />
-        )}
+      {/* Lagets score på hullet — spans both player rows on the far right. */}
+      <div className="flex shrink-0 items-center justify-end gap-2">
+        <span className="font-serif text-[18px] font-semibold leading-none tracking-[-0.015em] tabular-nums text-text">
+          {row.teamNet ?? '–'}
+        </span>
+        <span
+          className="w-[40px] rounded-full py-0.5 text-center text-[10px] font-semibold tabular-nums"
+          style={
+            teamVsPar !== null
+              ? {
+                  background: `var(${teamTone.bg})`,
+                  color: `var(${teamTone.fg})`,
+                }
+              : { color: 'var(--text-muted)' }
+          }
+        >
+          {teamVsPar === null ? '—' : formatVsPar(teamVsPar)}
+        </span>
       </div>
     </div>
   );
