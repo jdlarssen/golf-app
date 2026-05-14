@@ -407,14 +407,11 @@ function DrilldownView({
             vinner av hullet
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span
-              aria-hidden
-              className="inline-block h-[10px] w-[10px] rounded-sm bg-accent/12"
-            />
-            brukt netto
+            <strong className="font-serif font-bold text-text">B</strong>
+            <span>= brukt netto</span>
           </span>
           <span className="ml-auto font-serif text-[11px] italic">
-            brutto / +slag · netto
+            initial · brutto · netto · vs par
           </span>
         </div>
 
@@ -426,6 +423,7 @@ function DrilldownView({
           rows={frontRows}
           winners={frontWinners}
           selectedTeamNumber={selected.teamNumber}
+          teamPlayers={selected.players}
           summaryLabel="UT"
           summaryPar={frontPar}
           summaryNet={frontNet}
@@ -450,6 +448,7 @@ function DrilldownView({
               rows={backRows}
               winners={backWinners}
               selectedTeamNumber={selected.teamNumber}
+              teamPlayers={selected.players}
               summaryLabel="INN"
               summaryPar={backPar}
               summaryNet={backNet}
@@ -500,13 +499,15 @@ function DrilldownView({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Hole table — 6-column grid: hole · par · player-grosses · team-net · pill · win-dot
+// Hole table — one card per hole. Hull-info on the left, per-player rows
+// (initial · brutto-shape · netto · netto-vs-par) stacked on the right.
 // ─────────────────────────────────────────────────────────────────────────────
 
 function HoleTable({
   rows,
   winners,
   selectedTeamNumber,
+  teamPlayers,
   summaryLabel,
   summaryPar,
   summaryNet,
@@ -514,42 +515,50 @@ function HoleTable({
   rows: TeamLine['holes'];
   winners: Array<number | null>;
   selectedTeamNumber: number;
+  teamPlayers: LbPlayer[];
   summaryLabel: 'UT' | 'INN';
   summaryPar: number;
   summaryNet: number;
 }) {
+  const summaryTone = vsParTone(summaryNet - summaryPar);
   return (
     <div className="mx-4 mt-1.5 overflow-hidden rounded-[14px] border border-border bg-surface shadow-[0_1px_2px_rgba(26,46,31,0.03)]">
       {rows.map((row, ii) => (
         <HoleRow
           key={row.holeNumber}
           row={row}
+          teamPlayers={teamPlayers}
           isWinner={winners[ii] === selectedTeamNumber}
           staggerIndex={ii}
         />
       ))}
-      {/* Summary row */}
+      {/* Summary row — same flex shape as HoleRow but with totals on the right. */}
       <div
-        className="grid items-center gap-2.5 bg-surface-2 px-3.5 py-2.5"
-        style={{
-          gridTemplateColumns: '28px 30px 1fr auto 32px 14px',
-          borderTop: '1.5px solid var(--border)',
-        }}
+        className="flex items-center gap-2 bg-surface-2 px-3 py-2.5"
+        style={{ borderTop: '1.5px solid var(--border)' }}
       >
-        <span className="text-center font-serif text-[13px] font-semibold tracking-[0.04em] text-muted">
-          {summaryLabel}
-        </span>
-        <span className="text-[10px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
-          P{summaryPar}
-        </span>
-        <span />
+        <div className="flex w-[40px] shrink-0 flex-col items-center justify-center">
+          <span className="font-serif text-[13px] font-semibold tracking-[0.04em] text-muted">
+            {summaryLabel}
+          </span>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
+            P{summaryPar}
+          </span>
+        </div>
+        <div className="flex-1" />
         <span className="text-right font-serif text-[18px] font-semibold leading-none tracking-[-0.015em] tabular-nums text-text">
           {summaryNet}
         </span>
-        <span className="text-center text-[10px] font-semibold tabular-nums text-muted">
+        <span
+          className="rounded-full px-2 py-0.5 text-center text-[10px] font-semibold tabular-nums"
+          style={{
+            background: `var(${summaryTone.bg})`,
+            color: `var(${summaryTone.fg})`,
+          }}
+        >
           {formatVsPar(summaryNet - summaryPar)}
         </span>
-        <span />
+        <span className="w-[14px]" aria-hidden />
       </div>
     </div>
   );
@@ -557,100 +566,108 @@ function HoleTable({
 
 function HoleRow({
   row,
+  teamPlayers,
   isWinner,
   staggerIndex,
 }: {
   row: TeamLine['holes'][number];
+  teamPlayers: LbPlayer[];
   isWinner: boolean;
   staggerIndex: number;
 }) {
-  const vs = row.teamNet == null ? 0 : row.teamNet - row.par;
-  const tone = vsParTone(vs);
+  // Map userId → display initial (first letter of nickname, else of name).
+  const initialFor = new Map<string, string>();
+  for (const p of teamPlayers) {
+    const display = p.nickname?.trim() || p.name;
+    const first = Array.from(display)[0];
+    initialFor.set(p.userId, first ? first.toUpperCase() : '?');
+  }
 
   return (
     <div
-      className="reveal-up relative grid items-center gap-2.5 border-t border-border bg-surface px-3.5 py-2.5 first:border-t-0"
-      style={{
-        gridTemplateColumns: '28px 30px 1fr auto 32px 14px',
-        animationDelay: `${40 + staggerIndex * 22}ms`,
-      }}
+      className="reveal-up flex items-stretch gap-2 border-t border-border bg-surface px-3 py-2 first:border-t-0"
+      style={{ animationDelay: `${40 + staggerIndex * 22}ms` }}
     >
-      <span className="text-center font-serif text-[15px] font-medium tabular-nums text-text">
-        {row.holeNumber}
-      </span>
-      <span className="text-[10px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
-        P{row.par}
-      </span>
-      <div className="flex flex-wrap items-stretch gap-2">
-        {row.players.map((pc, pi) => {
+      {/* Hull # + Par on the left, spanning both player rows. */}
+      <div className="flex w-[40px] shrink-0 flex-col items-center justify-center">
+        <span className="font-serif text-[15px] font-medium leading-none tabular-nums text-text">
+          {row.holeNumber}
+        </span>
+        <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
+          P{row.par}
+        </span>
+      </div>
+
+      {/* Per-player rows stacked vertically. */}
+      <div className="flex flex-1 flex-col justify-center gap-1.5">
+        {row.players.map((pc) => {
           const isBestNet =
             pc.net !== null && row.teamNet !== null && pc.net === row.teamNet;
           const grossText = pc.gross == null ? '–' : String(pc.gross);
           const nettoText = pc.net == null ? '–' : String(pc.net);
+          const initial = initialFor.get(pc.userId) ?? '?';
+          const nettoVsPar = pc.net == null ? null : pc.net - row.par;
+          const nettoTone = vsParTone(nettoVsPar ?? 0);
+
           return (
-            <span
+            <div
               key={pc.userId}
-              className="inline-flex items-stretch gap-2"
+              className="flex items-center gap-2 font-serif tabular-nums"
+              aria-label={
+                isBestNet
+                  ? `Brukt netto for laget: ${initial}, brutto ${grossText}, +${pc.extraStrokes} slag, netto ${nettoText}`
+                  : `${initial}, brutto ${grossText}, +${pc.extraStrokes} slag, netto ${nettoText}`
+              }
             >
               <span
-                className={`inline-flex flex-col items-center gap-0.5 rounded-md px-1 py-0.5 font-serif tabular-nums transition-colors ${
-                  isBestNet
-                    ? 'bg-accent/12 font-bold text-text'
-                    : 'font-normal text-muted'
+                className={`w-4 text-center text-[13px] ${
+                  isBestNet ? 'font-bold text-text' : 'font-normal text-muted'
                 }`}
-                aria-label={
-                  isBestNet
-                    ? `Brukt netto: brutto ${grossText}, +${pc.extraStrokes} slag, netto ${nettoText}`
-                    : `Brutto ${grossText}, +${pc.extraStrokes} slag, netto ${nettoText}`
+              >
+                {initial}
+              </span>
+              <ScoreShape
+                shape={scoreShape(pc.gross, row.par)}
+                tone={scoreTone(pc.gross, row.par)}
+                size="sm"
+              >
+                {grossText}
+              </ScoreShape>
+              <span
+                className={`ml-auto min-w-[18px] text-right text-[14px] ${
+                  isBestNet ? 'font-semibold text-text' : 'font-normal text-muted'
+                }`}
+              >
+                {nettoText}
+              </span>
+              <span
+                className="w-[32px] rounded-full py-0.5 text-center text-[10px] font-semibold tabular-nums"
+                style={
+                  nettoVsPar !== null
+                    ? {
+                        background: `var(${nettoTone.bg})`,
+                        color: `var(${nettoTone.fg})`,
+                      }
+                    : { color: 'var(--text-muted)' }
                 }
               >
-                <ScoreShape
-                  shape={scoreShape(pc.gross, row.par)}
-                  tone={scoreTone(pc.gross, row.par)}
-                  size="sm"
-                >
-                  {grossText}
-                </ScoreShape>
-                <span className="flex items-baseline gap-1 text-[10px] leading-none">
-                  <span className="text-accent">
-                    {pc.extraStrokes > 0 ? `+${pc.extraStrokes}` : '·'}
-                  </span>
-                  <span className="text-[11px] font-medium">{nettoText}</span>
-                </span>
+                {nettoVsPar === null ? '—' : formatVsPar(nettoVsPar)}
               </span>
-              {pi < row.players.length - 1 && (
-                <span
-                  className="self-center text-muted/30"
-                  aria-hidden="true"
-                >
-                  /
-                </span>
-              )}
-            </span>
+            </div>
           );
         })}
       </div>
-      <span
-        className="min-w-[24px] text-right font-serif text-[18px] font-semibold leading-none tracking-[-0.015em] tabular-nums"
-        style={{ color: `var(${tone.fg})` }}
-      >
-        {row.teamNet ?? '–'}
-      </span>
-      <span
-        className="rounded-full px-0 py-0.5 text-center text-[10px] font-semibold tabular-nums"
-        style={{ background: `var(${tone.bg})`, color: `var(${tone.fg})` }}
-      >
-        {row.teamNet == null ? '—' : formatVsPar(vs)}
-      </span>
-      <span className="flex items-center justify-center">
-        {isWinner ? (
+
+      {/* Winner-of-hull dot (whole row-block). */}
+      <div className="flex w-[14px] shrink-0 items-center justify-center">
+        {isWinner && (
           <span
             aria-label="Vinner av hullet"
             className="block h-2 w-2 rounded-full bg-accent"
             style={{ boxShadow: '0 0 0 2px rgba(201,169,97,0.18)' }}
           />
-        ) : null}
-      </span>
+        )}
+      </div>
     </div>
   );
 }
