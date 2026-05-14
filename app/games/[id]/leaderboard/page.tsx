@@ -42,6 +42,7 @@ import {
 } from '@/lib/scoring/sideTournament';
 import type { GameStatus } from '@/lib/games/status';
 import { revealState, type ScoreVisibility } from '@/lib/games/visibility';
+import { formatRevealName } from '@/lib/names/formatRevealName';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -414,7 +415,7 @@ async function LeaderboardBody({
     label: `Lag ${line.teamNumber}`,
     members: line.players.map((p) => ({
       userId: p.userId,
-      displayName: p.name,
+      displayName: formatRevealName(p.name ?? '', p.nickname),
     })),
   }));
 
