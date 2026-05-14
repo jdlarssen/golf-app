@@ -506,6 +506,19 @@ export default async function GameHomePage({
           </SmartLink>
         )}
 
+        {isActive && (
+          <SmartLink href={`/games/${id}/leaderboard`} className="block">
+            <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
+              <span className="text-base font-medium text-text">
+                Leaderboard
+              </span>
+              <span aria-hidden className="text-muted">
+                →
+              </span>
+            </Card>
+          </SmartLink>
+        )}
+
         <div className="pt-2">
           <SmartLink
             href="/"
