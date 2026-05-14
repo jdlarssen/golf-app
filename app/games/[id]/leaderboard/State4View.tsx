@@ -4,9 +4,8 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { useEffect, useState } from 'react';
 import { Laurel, PinFlagSm } from '@/components/icons';
 import { Medallion } from '@/components/ui/Medallion';
-import { firstName } from '@/lib/firstName';
+import { formatRevealName } from '@/lib/names/formatRevealName';
 import {
-  playerDisplayName,
   type LeaderboardMode,
   type TeamLine,
 } from '@/lib/leaderboard';
@@ -23,6 +22,8 @@ type Props = {
   mode: LeaderboardMode;
   /** Sum of par across all played holes (typically 72). Used for "Mot par". */
   coursePar: number;
+  /** Where the back-arrow should point. Defaults to home ("/"). */
+  backHref?: string;
 };
 
 /**
@@ -45,6 +46,7 @@ export function State4View({
   teams,
   mode,
   coursePar,
+  backHref = '/',
 }: Props) {
   const [replayKey, setReplayKey] = useState(0);
 
@@ -75,7 +77,7 @@ export function State4View({
   if (teams.length === 0) {
     return (
       <Shell>
-        <Header gameName={gameName} onReplay={null} />
+        <Header gameName={gameName} onReplay={null} backHref={backHref} />
         <p className="mt-12 text-center text-sm text-muted">Ingen lag å vise.</p>
       </Shell>
     );
@@ -91,7 +93,7 @@ export function State4View({
 
   return (
     <Shell>
-      <Header gameName={gameName} onReplay={onReplay} />
+      <Header gameName={gameName} onReplay={onReplay} backHref={backHref} />
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
@@ -146,15 +148,17 @@ function Shell({ children }: { children: React.ReactNode }) {
 function Header({
   gameName,
   onReplay,
+  backHref,
 }: {
   gameName: string;
   onReplay: (() => void) | null;
+  backHref: string;
 }) {
   return (
     <header className="flex items-center justify-between gap-2 px-4 pb-2 pt-3.5">
       <SmartLink
-        href="/"
-        aria-label="Hjem"
+        href={backHref}
+        aria-label="Tilbake"
         className="-ml-2 inline-flex h-8 w-8 items-center justify-center text-lg text-text"
       >
         ‹
@@ -210,7 +214,9 @@ function LeaderCard({
   coursePar: number;
 }) {
   const vsPar = line.total - coursePar;
-  const playersLine = line.players.map((p) => playerDisplayName(p)).join(' · ');
+  const playersLine = line.players
+    .map((p) => formatRevealName(p.name, p.nickname))
+    .join(' · ');
   const drilldownHref = `/games/${gameId}/leaderboard/holes?team=${line.teamNumber}&mode=${mode}`;
 
   return (
@@ -313,8 +319,11 @@ function TeamRow({
 }) {
   const gap = line.total - leaderTotal;
   const vsPar = line.total - coursePar;
+  // Player rendering uses formatRevealName so the leaderboard reveal also
+  // surfaces nicknames in their dramatic "First «Nick» Last" form — both
+  // for live-mode finished games and reveal-mode finished games.
   const firstNames = line.players
-    .map((p) => firstName(p.name) ?? p.name)
+    .map((p) => formatRevealName(p.name, p.nickname))
     .join(' · ');
   const isTied = line.tiedWith.length > 0;
   const drilldownHref = `/games/${gameId}/leaderboard/holes?team=${line.teamNumber}&mode=${mode}`;

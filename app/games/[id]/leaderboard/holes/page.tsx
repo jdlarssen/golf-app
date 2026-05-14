@@ -17,6 +17,7 @@ import {
   type TeamLine,
 } from '@/lib/leaderboard';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
+import { formatRevealName } from '@/lib/names/formatRevealName';
 import type { GameStatus } from '@/lib/games/status';
 
 type Params = Promise<{ id: string }>;
@@ -332,9 +333,17 @@ function DrilldownView({
   const holesWon = holeWinners.filter((w) => w === selected.teamNumber).length;
 
   const isLeader = selected.rank === 1;
-  const playerMeta = selected.players
-    .map((p) => `${firstNameOf(p.name)} (HCP ${p.courseHandicap})`)
-    .join(' · ');
+  // Finished games surface the dramatic reveal-name; mid-round we keep the
+  // compact first-name + HCP label so the drilldown stays readable on
+  // narrow tiles.
+  const isFinished = !isActive;
+  const playerMeta = isFinished
+    ? selected.players
+        .map((p) => formatRevealName(p.name, p.nickname))
+        .join(' · ')
+    : selected.players
+        .map((p) => `${firstNameOf(p.name)} (HCP ${p.courseHandicap})`)
+        .join(' · ');
 
   // Find sibling teams for prev/next within the ordered list — lets the user
   // tab through teams without going back to the leaderboard. Index by rank

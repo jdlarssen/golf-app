@@ -28,10 +28,16 @@ import {
 } from '@/lib/leaderboard';
 import { PreRoundLeaderboardRealtime } from './PreRoundLeaderboard';
 import { State4View } from './State4View';
+import { RevealBruttoView } from './RevealBruttoView';
 import type { GameStatus } from '@/lib/games/status';
+import { revealState, type ScoreVisibility } from '@/lib/games/visibility';
 
 type Params = Promise<{ id: string }>;
-type SearchParams = Promise<{ mode?: string | string[] }>;
+type SearchParams = Promise<{
+  mode?: string | string[];
+  return?: string | string[];
+  n?: string | string[];
+}>;
 
 type GameRow = {
   id: string;
@@ -40,6 +46,7 @@ type GameRow = {
   course_id: string;
   tee_box_id: string;
   scheduled_tee_off_at: string | null;
+  score_visibility: ScoreVisibility;
   courses: { name: string } | null;
   tee_boxes: { name: string } | null;
 };
@@ -86,6 +93,31 @@ export default async function LeaderboardPage({
   const sp = await searchParams;
   const mode: LeaderboardMode = parseMode(sp.mode);
 
+  // Return-to-hole support: ?return=hole&n=N points the back-arrow at a
+  // specific hole on the round screen (used by the leaderboard icon in
+  // the hole-skjerm header). Validate strictly — out-of-range or
+  // non-integer falls back to the game-home back target.
+  const returnParam = Array.isArray(sp.return) ? sp.return[0] : sp.return;
+  const nParam = Array.isArray(sp.n) ? sp.n[0] : sp.n;
+  const nNum = nParam != null ? Number(nParam) : null;
+  const backHref =
+    returnParam === 'hole' &&
+    nNum !== null &&
+    Number.isInteger(nNum) &&
+    nNum >= 1 &&
+    nNum <= 18
+      ? `/games/${id}/holes/${nNum}`
+      : `/games/${id}`;
+  // For the holes-drilldown — preserve the same return-to-hole context.
+  const returnQuery =
+    returnParam === 'hole' &&
+    nNum !== null &&
+    Number.isInteger(nNum) &&
+    nNum >= 1 &&
+    nNum <= 18
+      ? `&return=hole&n=${nNum}`
+      : '';
+
   const { supabase, userId } = await getLeaderboardContext();
   if (!userId) redirect('/login');
 
@@ -96,7 +128,7 @@ export default async function LeaderboardPage({
     supabase
       .from('games')
       .select(
-        'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, courses(name), tee_boxes(name)',
+        'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, score_visibility, courses(name), tee_boxes(name)',
       )
       .eq('id', id)
       .single<GameRow>(),
@@ -132,7 +164,13 @@ export default async function LeaderboardPage({
   // immediately during navigation.
   return (
     <Suspense fallback={<LeaderboardBodySkeleton />}>
-      <LeaderboardBody gameId={id} game={game} mode={mode} />
+      <LeaderboardBody
+        gameId={id}
+        game={game}
+        mode={mode}
+        backHref={backHref}
+        returnQuery={returnQuery}
+      />
     </Suspense>
   );
 }
@@ -143,10 +181,14 @@ async function LeaderboardBody({
   gameId,
   game,
   mode,
+  backHref,
+  returnQuery,
 }: {
   gameId: string;
   game: GameRow;
   mode: LeaderboardMode;
+  backHref: string;
+  returnQuery: string;
 }) {
   const { supabase } = await getLeaderboardContext();
 
@@ -217,15 +259,39 @@ async function LeaderboardBody({
     })),
   });
 
-  type View = 'state3' | 'state3.5' | 'full';
-  const view: View =
-    game.status === 'finished' ? 'full' : !frontNineOpen ? 'state3' : 'state3.5';
+  type View =
+    | 'state3'
+    | 'state3.5'
+    | 'full'
+    | 'reveal-active'
+    | 'reveal-finished';
+
+  // Reveal-modus changes the leaderboard storytelling: while the game is
+  // still active, no netto rankings (the climax stays hidden until admin
+  // avslutter). Once finished, both modes converge on the State4View — but
+  // reveal-finished surfaces players via formatRevealName for the dramatic
+  // nickname reveal.
+  const state = revealState(game.score_visibility, game.status);
+  let view: View;
+  if (state === 'live-always') {
+    view =
+      game.status === 'finished'
+        ? 'full'
+        : !frontNineOpen
+          ? 'state3'
+          : 'state3.5';
+  } else if (state === 'reveal-active') {
+    view = 'reveal-active';
+  } else {
+    view = 'reveal-finished';
+  }
 
   if (view === 'state3') {
     return renderState3({
       gameId,
       teeOffAt: game.scheduled_tee_off_at,
       players,
+      backHref,
     });
   }
 
@@ -236,7 +302,30 @@ async function LeaderboardBody({
       players,
       holes,
       scores,
+      backHref,
     });
+  }
+
+  if (view === 'reveal-active') {
+    // Brutto best-ball, no medals, no champagne — the netto ranking stays
+    // hidden until admin avslutter (which flips us into 'reveal-finished').
+    const bruttoLines = computeLeaderboard({
+      mode: 'brutto',
+      players,
+      holes,
+      scores,
+    });
+    const orderedBrutto = [...bruttoLines].sort((a, b) => a.rank - b.rank);
+    const holesPlayed = new Set(scores.map((s) => s.holeNumber)).size;
+    return (
+      <RevealBruttoView
+        gameId={gameId}
+        gameName={game.name}
+        teams={orderedBrutto}
+        holesPlayed={holesPlayed}
+        backHref={backHref}
+      />
+    );
   }
 
   const lines = computeLeaderboard({ mode, players, holes, scores });
@@ -244,7 +333,11 @@ async function LeaderboardBody({
   const coursePar = holes.reduce((sum, h) => sum + h.par, 0);
 
   // State #4 — full reveal. Designed in quick-win-5; lives in its own client
-  // view so the Replay pill and confetti can share state.
+  // view so the Replay pill and confetti can share state. Used for both
+  // live-mode-finished ('full') and reveal-mode-finished ('reveal-finished')
+  // — both paths render the same celebratory layout with formatRevealName
+  // applied to player surfaces.
+  void returnQuery; // reserved for future drilldown forwarding (no-op today)
   return (
     <State4View
       gameId={gameId}
@@ -252,6 +345,7 @@ async function LeaderboardBody({
       teams={orderedLines}
       mode={mode}
       coursePar={coursePar}
+      backHref={backHref}
     />
   );
 }
@@ -443,8 +537,9 @@ function renderState3(opts: {
   gameId: string;
   teeOffAt: string | null;
   players: LbPlayer[];
+  backHref: string;
 }) {
-  const { gameId, teeOffAt, players } = opts;
+  const { gameId, teeOffAt, players, backHref } = opts;
   const teeOffDate = teeOffAt ? new Date(teeOffAt) : null;
   const teeOffLabel = teeOffDate ? formatTeeOffTime(teeOffDate) : '—';
 
@@ -463,7 +558,7 @@ function renderState3(opts: {
       <PreRoundLeaderboardRealtime gameId={gameId} />
 
       <header className="mb-6 flex items-center justify-between gap-4">
-        <BackLink href="/">← Hjem</BackLink>
+        <BackLink href={backHref}>Tilbake</BackLink>
         {/* Per design spec § state 3: kicker is the literal "LEADERBOARD"
             section label (not the game name like state #2 uses). */}
         <Kicker tone="accent">LEADERBOARD</Kicker>
@@ -543,8 +638,9 @@ function renderState35(opts: {
   players: LbPlayer[];
   holes: LbHole[];
   scores: LbScore[];
+  backHref: string;
 }) {
-  const { gameId, mode, players, holes, scores } = opts;
+  const { gameId, mode, players, holes, scores, backHref } = opts;
 
   const frontNineHoles = holes.filter(
     (h) => h.holeNumber >= 1 && h.holeNumber <= 9,
@@ -571,7 +667,7 @@ function renderState35(opts: {
       <PreRoundLeaderboardRealtime gameId={gameId} />
 
       <header className="mb-4 flex items-center justify-between gap-4">
-        <BackLink href="/">← Hjem</BackLink>
+        <BackLink href={backHref}>Tilbake</BackLink>
         <Kicker tone="accent">LEADERBOARD</Kicker>
         <span className="w-12" aria-hidden />
       </header>

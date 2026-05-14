@@ -20,6 +20,7 @@ import { OnboardingBanner } from '@/components/hole/OnboardingBanner';
 import { SyncStatusLine } from '@/components/hole/SyncStatusLine';
 import { BottomActionBar } from '@/components/hole/BottomActionBar';
 import { SpecificValueSheet } from '@/components/hole/SpecificValueSheet';
+import { PokalIcon } from '@/components/icons';
 
 export type ClientPlayer = {
   userId: string;
@@ -80,6 +81,18 @@ const backLinkStyle: CSSProperties = {
   fontSize: 18,
   lineHeight: 1,
   color: 'var(--text)',
+  textDecoration: 'none',
+  background: 'transparent',
+};
+
+const leaderboardIconLinkStyle: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 34,
+  height: 34,
+  marginRight: -6,
+  color: 'var(--text-muted)',
   textDecoration: 'none',
   background: 'transparent',
 };
@@ -316,7 +329,13 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
           ‹
         </SmartLink>
         <div style={titleStyle}>{gameName}</div>
-        <span aria-hidden style={{ display: 'inline-block', width: 34 }} />
+        <SmartLink
+          href={`/games/${gameId}/leaderboard?return=hole&n=${currentHole}`}
+          aria-label="Vis leaderboard"
+          style={leaderboardIconLinkStyle}
+        >
+          <PokalIcon size={20} />
+        </SmartLink>
       </div>
 
       <HoleStrip gameId={gameId} currentHole={currentHole} />
