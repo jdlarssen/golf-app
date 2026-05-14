@@ -130,3 +130,37 @@ Hvis appen er helt nede eller dere kan ikke logge inn av en eller annen grunn:
 - [ ] Admin har trykket «Avslutt spillet»
 - [ ] Leaderboard avslørt
 - [ ] Vinner anerkjent 🍻
+
+---
+
+## Rulle tilbake en agent-commit
+
+Hvis overvåkings-agenten har auto-pushet noe som viser seg å være galt:
+
+1. Finn commiten i CHANGELOG eller via `git log --grep "agent-monitor"`.
+2. `git revert <sha>` lokalt på main.
+3. `git push origin main` → Vercel deployer reverten.
+4. Hvis flere agent-commits i samme tidsrom skal rulles tilbake, gjør én revert per commit (ikke `git revert -m`).
+
+## Pause agenten
+
+For å pause hele agent-stallen (overvåking + feedback-inbox):
+
+1. Vercel → Project Settings → Environment Variables → `MONITORING_ENABLED` → set til `false`.
+2. Lagre. Neste agent-run vil exiter umiddelbart.
+
+For å gjenoppta: set tilbake til `true`. Ingen redeploy nødvendig.
+
+## Lukke en problematisk fingerprint
+
+Hvis agenten fortsetter å rapportere det samme problemet og du har bestemt deg for å ignorere det:
+
+1. Finn fingerprint-en fra morgen-mailen eller `agent_findings`-tabellen.
+2. I Supabase SQL Editor:
+   ```sql
+   update public.agent_findings
+   set resolved_at = now(), notes = 'manually closed by admin'
+   where fingerprint = '<fingerprint-from-mail>';
+   ```
+
+Den hourly monitor-agentens dedup-spørring vil hoppe over fingerprint-en så lenge `resolved_at` er satt.
