@@ -7,14 +7,22 @@ import { getBrowserClient } from '@/lib/supabase/client';
 type Props = { gameId: string };
 
 /**
- * Subscribes to scores INSERTs for this game so state #3 (timeglass) auto-
- * refreshes the route when the first score lands. The server then re-evaluates
- * `isFrontNineOpen` and may flip to state #3.5 (or stay on state #3 if no team
- * has fully completed front 9 yet).
+ * Subscribes to two realtime channels for this game and triggers a route
+ * refresh on each event:
+ *
+ * 1. `scores` INSERT — drives the state #3 → #3.5 transition when the front 9
+ *    fills, and keeps the live brutto leaderboard fresh while play continues.
+ * 2. `games` UPDATE — flips the view from `reveal-active` (or `state3.5` /
+ *    `full` in live-mode) to `reveal-finished` / `full` the moment an admin
+ *    presses "Avslutt spillet". Without this, the player must manually
+ *    refresh to see the reveal flourish.
  *
  * Same setAuth() quirk as ScheduledWaitingRoom — the realtime socket needs the
  * JWT explicitly before subscribing, otherwise RLS treats it as anon and
  * silently drops every postgres_changes event.
+ *
+ * Name kept for historical reasons (this used to be pre-round only) — it
+ * now covers the full leaderboard lifecycle.
  */
 export function PreRoundLeaderboardRealtime({ gameId }: Props) {
   const router = useRouter();
@@ -39,6 +47,16 @@ export function PreRoundLeaderboardRealtime({ gameId }: Props) {
             schema: 'public',
             table: 'scores',
             filter: `game_id=eq.${gameId}`,
+          },
+          () => router.refresh(),
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'games',
+            filter: `id=eq.${gameId}`,
           },
           () => router.refresh(),
         )
