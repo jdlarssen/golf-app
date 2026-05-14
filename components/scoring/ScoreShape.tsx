@@ -34,13 +34,20 @@ const STROKE_COLOR: Record<ScoreTone, string> = {
 
 export function ScoreShape(props: ScoreShapeProps): JSX.Element {
   const { shape, tone, size = 'lg', children } = props;
+  const px = SIZE_PX[size];
+
   if (shape === 'none') {
+    // Reserve the same width/height as shaped variants so par numbers align
+    // in the same column as birdies/bogeys when rendered side by side.
     return (
       <span
         style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          display: 'inline-block',
+          width: px,
+          height: px,
+          lineHeight: `${px}px`,
+          textAlign: 'center',
+          fontVariantNumeric: 'tabular-nums',
         }}
       >
         {children}
@@ -48,7 +55,7 @@ export function ScoreShape(props: ScoreShapeProps): JSX.Element {
     );
   }
 
-  const px = SIZE_PX[size];
+
   const stroke = STROKE_BY_SIZE[size];
   const color = STROKE_COLOR[tone];
   const half = px / 2;
