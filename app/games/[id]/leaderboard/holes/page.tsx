@@ -402,7 +402,7 @@ function DrilldownView({
             <span>= brukt netto</span>
           </span>
           <span className="ml-auto font-serif text-[11px] italic">
-            initial · brutto · netto → lag · vs par
+            initial · brutto · netto · vs par   →   lag
           </span>
         </div>
 
@@ -442,7 +442,7 @@ teamPlayers={selected.players}
             />
 
             {/* Total bar */}
-            <div className="mx-4 mt-5 mb-2 flex items-center justify-between rounded-[14px] bg-primary px-5 py-3.5 text-bg-tint">
+            <div className="mx-4 mt-5 mb-5 flex items-center justify-between rounded-[14px] bg-primary px-5 py-3.5 text-bg-tint">
               <div>
                 <span className="block text-[10px] font-semibold uppercase tracking-[0.20em] text-accent">
                   Totalt
@@ -451,13 +451,15 @@ teamPlayers={selected.players}
                   {holesWon} hull vunnet
                 </span>
               </div>
-              <span className="font-serif text-[32px] font-semibold leading-none tracking-[-0.02em] tabular-nums">
-                {selected.total}
-              </span>
+              <div className="flex items-baseline gap-3">
+                <span className="font-serif text-[32px] font-semibold leading-none tracking-[-0.02em] tabular-nums">
+                  {selected.total}
+                </span>
+                <span className="font-sans text-[14px] font-semibold tabular-nums text-accent">
+                  {formatVsPar(totalVsPar)}
+                </span>
+              </div>
             </div>
-            <p className="px-6 pt-1 pb-5 text-center text-[11px] text-muted tabular-nums">
-              Mot par: {formatVsPar(totalVsPar)}
-            </p>
           </>
         )}
 
@@ -580,7 +582,7 @@ function HoleRow({
         </span>
       </div>
 
-      {/* Per-player rows stacked vertically — initial · brutto · netto, no pill. */}
+      {/* Per-player rows stacked vertically — initial · brutto · netto · vs-par. */}
       <div className="flex flex-1 flex-col justify-center gap-1.5">
         {row.players.map((pc) => {
           const isBestNet =
@@ -588,6 +590,8 @@ function HoleRow({
           const grossText = pc.gross == null ? '–' : String(pc.gross);
           const nettoText = pc.net == null ? '–' : String(pc.net);
           const initial = initialFor.get(pc.userId) ?? '?';
+          const nettoVsPar = pc.net == null ? null : pc.net - row.par;
+          const nettoTone = vsParTone(nettoVsPar ?? 0);
 
           return (
             <div
@@ -619,6 +623,19 @@ function HoleRow({
                 }`}
               >
                 {nettoText}
+              </span>
+              <span
+                className="w-[32px] rounded-full py-0.5 text-center text-[10px] font-semibold tabular-nums"
+                style={
+                  nettoVsPar !== null
+                    ? {
+                        background: `var(${nettoTone.bg})`,
+                        color: `var(${nettoTone.fg})`,
+                      }
+                    : { color: 'var(--text-muted)' }
+                }
+              >
+                {nettoVsPar === null ? '—' : formatVsPar(nettoVsPar)}
               </span>
             </div>
           );
