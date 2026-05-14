@@ -10,6 +10,31 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.1.y — Sideturnering
+
+Første feature shipped etter v1.0.0. Lag kan nå konkurrere parallelt med best-ball-netto via en valgfri sideturnering med seks poeng-kategorier.
+
+### [1.1.0] - 2026-05-14
+
+**Du kan nå legge til en sideturnering i admin-formen. Lag samler poeng fra 6 kategorier — best netto 18, front 9, back 9, hole-wins, longest drive og closest to pin. Resultatet vises i en egen fane på leaderboarden etter at spillet er avsluttet.**
+
+<details><summary>Teknisk</summary>
+
+#### Added
+- Migrasjon `0024_side_tournament` — `games.side_tournament_enabled`, `games.side_ld_count`, `games.side_ctp_count` (alle med safe defaults) + ny tabell `game_side_winners` med RLS (select kun ved `status=finished`, mutations admin-only).
+- `lib/scoring/sideTournament.ts` — `calculateSideTournament`-pure-funksjon med 13 unit-tester. Tie i netto-kategoriene gir alle full pott; hole-win krever alene-vinner. 10p best netto 18, 5p F9 + B9, 2p per hole-win, 2p per LD/CTP-vinner.
+- Admin-form-seksjon i `GameForm` med master-toggle + radio-grupper for LD/CTP-antall (0/1/2). Gates på ≥2 lag.
+- Ny route `app/admin/games/[id]/avslutt/` med dropdown-wizard for LD/CTP-vinnere. `EndGameButton` redirecter dit conditional på sideturnerings-config.
+- Leaderboard-tabs (`LeaderboardTabs`) + `SideTournamentView` med poeng-tabell (medaljer for topp 3) + kollapsibel detalj-seksjon (hole-win-grid 3×6, LD/CTP-vinnere).
+
+#### Changed
+- `app/admin/games/[id]/page.tsx` henter nå sideturnerings-config og passerer det til `EndGameButton`.
+- `app/games/[id]/leaderboard/page.tsx` henter `game_side_winners` når `status=finished AND side_tournament_enabled`, og bygger `SideTournamentInput` fra eksisterende score-data (gjenbruker `computeLeaderboard` for å unngå dobbel best-ball-beregning).
+
+</details>
+
+---
+
 ## 1.0.x — Første stabile release
 
 Tørny er nå klar for ekte bruk. Tre features kobles til v1.0: reveal-modus for kompis-gjenger som vil ha drama under runden, scorekort-former som premium visuell touch, og navne-reveal når spillet er ferdig.
@@ -737,6 +762,9 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ---
 
+<details>
+<summary><strong>0.9.x — Sync-feedback under runden (5 entries) — klikk for å vise</strong></summary>
+
 ## 0.9.x — Sync-feedback under runden
 
 Hvis et slag ikke kommer fram til serveren, sier appen ifra. Ny sticky banner viser hvor mange slag som mangler synk, surface'r faktiske feilmeldinger fra Supabase, og lar deg manuelt prøve igjen — i stedet for at sync-køen stille henger i bakgrunnen. Pilot-polish underveis: scorekort wiper ikke lenger settet score hvis du tilfeldigvis trykker på det igjen.
@@ -838,7 +866,12 @@ Hvis et slag ikke kommer fram til serveren, sier appen ifra. Ny sticky banner vi
 
 </details>
 
+</details>
+
 ---
+
+<details>
+<summary><strong>0.8.x — Sletting og «trekk tilbake»-flyt (27 entries) — klikk for å vise</strong></summary>
 
 ## 0.8.x — Sletting og «trekk tilbake»-flyt
 
@@ -1168,6 +1201,8 @@ Tørny fikk sin egen visuelle identitet (wordmark med champagne-prikk på login 
 #### Removed
 
 - «Logg inn»-overskriften på `/login`. Hero-en + «Send meg lenke»-knappen + hjelpeteksten gir nok kontekst.
+
+</details>
 
 </details>
 

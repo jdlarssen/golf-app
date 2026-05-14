@@ -29,6 +29,16 @@ import {
 import { PreRoundLeaderboardRealtime } from './PreRoundLeaderboard';
 import { State4View } from './State4View';
 import { RevealBruttoView } from './RevealBruttoView';
+import { LeaderboardTabs } from './LeaderboardTabs';
+import {
+  SideTournamentView,
+  type SideTournamentTeam,
+} from './SideTournamentView';
+import {
+  calculateSideTournament,
+  type SideTournamentInput,
+  type SideWinner,
+} from '@/lib/scoring/sideTournament';
 import type { GameStatus } from '@/lib/games/status';
 import { revealState, type ScoreVisibility } from '@/lib/games/visibility';
 
@@ -47,8 +57,17 @@ type GameRow = {
   tee_box_id: string;
   scheduled_tee_off_at: string | null;
   score_visibility: ScoreVisibility;
+  side_tournament_enabled: boolean;
+  side_ld_count: number;
+  side_ctp_count: number;
   courses: { name: string } | null;
   tee_boxes: { name: string } | null;
+};
+
+type SideWinnerRow = {
+  category: 'longest_drive' | 'closest_to_pin';
+  position: number;
+  winner_user_id: string | null;
 };
 
 type GamePlayerRow = {
@@ -128,7 +147,7 @@ export default async function LeaderboardPage({
     supabase
       .from('games')
       .select(
-        'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, score_visibility, courses(name), tee_boxes(name)',
+        'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, courses(name), tee_boxes(name)',
       )
       .eq('id', id)
       .single<GameRow>(),
@@ -338,7 +357,7 @@ async function LeaderboardBody({
   // — both paths render the same celebratory layout with formatRevealName
   // applied to player surfaces.
   void returnQuery; // reserved for future drilldown forwarding (no-op today)
-  return (
+  const mainContent = (
     <State4View
       gameId={gameId}
       gameName={game.name}
@@ -346,6 +365,110 @@ async function LeaderboardBody({
       mode={mode}
       coursePar={coursePar}
       backHref={backHref}
+    />
+  );
+
+  // Sideturnering: kun synlig når status=finished AND side_tournament_enabled.
+  // Vi er allerede inne i finished-grenen her ('full' eller 'reveal-finished'),
+  // så det eneste ekstra-sjekket er enable-flagget.
+  const showSideTournament = game.side_tournament_enabled;
+  if (!showSideTournament) {
+    return mainContent;
+  }
+
+  // Hent LD/CTP-vinnere. RLS slipper kun spillere gjennom når status=finished,
+  // som vi allerede har bekreftet via view-branching ovenfor.
+  const sideWinnersRes = await supabase
+    .from('game_side_winners')
+    .select('category, position, winner_user_id')
+    .eq('game_id', gameId)
+    .order('category')
+    .order('position')
+    .returns<SideWinnerRow[]>();
+
+  if (sideWinnersRes.error) throw sideWinnersRes.error;
+  const sideWinnerRows: SideWinnerRow[] = sideWinnersRes.data ?? [];
+
+  // Bygg SideTournamentInput. Vi gjenbruker `orderedLines` (allerede beregnet
+  // i netto-mode via computeLeaderboard ovenfor) — hver TeamLine.holes[i].teamNet
+  // er nøyaktig den best-ball-netto-en sideTournament-scoring trenger.
+  //
+  // Viktig: `mode` kan være 'brutto' (om brukeren har bytta til brutto i hovedfanen
+  // før hen åpnet leaderboarden), men sideturneringen skal alltid skåres på netto.
+  // Vi beregner derfor et eget netto-pass spesifikt for sidescoringen.
+  const nettoLines =
+    mode === 'netto'
+      ? orderedLines
+      : computeLeaderboard({ mode: 'netto', players, holes, scores });
+
+  // Sortér teams etter teamNumber for stabilt UI (matcher Lag-labels).
+  const sortedNettoLines = [...nettoLines].sort(
+    (a, b) => a.teamNumber - b.teamNumber,
+  );
+
+  const sideTeams: SideTournamentTeam[] = sortedNettoLines.map((line) => ({
+    teamId: line.teamNumber,
+    label: `Lag ${line.teamNumber}`,
+    members: line.players.map((p) => ({
+      userId: p.userId,
+      displayName: p.name,
+    })),
+  }));
+
+  const sideWinnersForInput: SideWinner[] = sideWinnerRows
+    .filter(
+      (w): w is SideWinnerRow & { position: 1 | 2 } =>
+        w.position === 1 || w.position === 2,
+    )
+    .map((w) => ({
+      category: w.category,
+      position: w.position,
+      winnerUserId: w.winner_user_id,
+    }));
+
+  const ldCount = game.side_ld_count as 0 | 1 | 2;
+  const ctpCount = game.side_ctp_count as 0 | 1 | 2;
+
+  const sideInput: SideTournamentInput = {
+    config: {
+      enabled: true,
+      ldCount,
+      ctpCount,
+    },
+    teams: sortedNettoLines.map((line) => ({
+      teamId: line.teamNumber,
+      userIds: line.players.map((p) => p.userId),
+    })),
+    nettoBestBallPerHole: sortedNettoLines.map((line) => {
+      // computeLeaderboard returns holes sorted 1..18 already.
+      const perHoleNetto: Array<number | null> = [];
+      for (let h = 1; h <= 18; h++) {
+        const row = line.holes.find((rh) => rh.holeNumber === h);
+        perHoleNetto.push(row?.teamNet ?? null);
+      }
+      return { teamId: line.teamNumber, perHoleNetto };
+    }),
+    sideWinners: sideWinnersForInput,
+  };
+
+  const sideResult = calculateSideTournament(sideInput);
+
+  return (
+    <LeaderboardTabs
+      mainContent={mainContent}
+      sideContent={
+        <SideTournamentView
+          teams={sideTeams}
+          result={sideResult}
+          ldCount={ldCount}
+          ctpCount={ctpCount}
+          sideWinners={sideWinnerRows.map((w) => ({
+            category: w.category,
+            position: w.position,
+            winnerUserId: w.winner_user_id,
+          }))}
+        />
+      }
     />
   );
 }
