@@ -9,7 +9,6 @@ const baseProps: ScoreCardProps = {
   extraStrokes: 0,
   score: null,
   par: 4,
-  confirmed: false,
   onSetScore: vi.fn(),
   onLongPress: vi.fn(),
 };
@@ -75,27 +74,27 @@ describe('ScoreCard — rendering', () => {
 
 describe('ScoreCard — helper text', () => {
   it('unset shows buttons helper', () => {
-    setup({ score: null, confirmed: false });
+    setup({ score: null });
     expect(screen.getByText('Tap kort = par. Bruk − / +.')).toBeInTheDocument();
   });
 
   it('viser «Netto X» når score er satt med positive ekstra slag', () => {
-    setup({ score: 5, extraStrokes: 2, confirmed: true });
+    setup({ score: 5, extraStrokes: 2 });
     expect(screen.getByText('Netto 3')).toBeInTheDocument();
   });
 
   it('viser «Netto X» når score er satt uten ekstra slag (X = score)', () => {
-    setup({ score: 5, extraStrokes: 0, confirmed: true });
+    setup({ score: 5, extraStrokes: 0 });
     expect(screen.getByText('Netto 5')).toBeInTheDocument();
   });
 
   it('viser «Netto X» med høyere X for plus-golfere (negative ekstra slag)', () => {
-    setup({ score: 5, extraStrokes: -1, confirmed: true });
+    setup({ score: 5, extraStrokes: -1 });
     expect(screen.getByText('Netto 6')).toBeInTheDocument();
   });
 
   it('skjuler netto-tekst når hideNetto er true (reveal-active)', () => {
-    setup({ score: 5, extraStrokes: 2, hideNetto: true, confirmed: true });
+    setup({ score: 5, extraStrokes: 2, hideNetto: true });
     expect(screen.queryByText(/Netto/)).not.toBeInTheDocument();
     expect(screen.queryByText('Bekreftet')).not.toBeInTheDocument();
   });
@@ -106,11 +105,11 @@ describe('ScoreCard — helper text', () => {
     expect(screen.queryByText(/Netto/)).not.toBeInTheDocument();
   });
 
-  it('confirmed border color differs from unconfirmed', () => {
-    const { card: unconfirmed, unmount } = setup({ confirmed: false });
+  it('confirmed border color (score satt) differs from unconfirmed (score null)', () => {
+    const { card: unconfirmed, unmount } = setup({ score: null });
     const unconfirmedBorder = unconfirmed.style.borderColor;
     unmount();
-    const { card: confirmed } = setup({ confirmed: true });
+    const { card: confirmed } = setup({ score: 4 });
     expect(confirmed.style.borderColor).not.toBe(unconfirmedBorder);
   });
 });

@@ -12,7 +12,6 @@ export interface ScoreCardProps {
   extraStrokes: number;
   score: number | null;
   par: number;
-  confirmed: boolean;
   disabled?: boolean;
   /**
    * When true, hides all netto/handicap information on the card: both the
@@ -64,12 +63,13 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     extraStrokes,
     score,
     par,
-    confirmed,
     disabled = false,
     hideNetto = false,
     onSetScore,
     onLongPress,
   } = props;
+
+  const confirmed = score != null;
 
   const tone: ScoreTone = scoreTone(score, par);
   const shape = scoreShape(score, par);

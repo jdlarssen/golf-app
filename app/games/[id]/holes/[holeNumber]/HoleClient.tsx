@@ -186,8 +186,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   const cards = players.map((p, i) => {
     const row = localRows?.[i];
     const score = row?.strokes ?? null;
-    const confirmed = score != null;
-    return { ...p, score, confirmed };
+    return { ...p, score };
   });
 
   const [valueSheetFor, setValueSheetFor] = useState<string | null>(null);
@@ -292,7 +291,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     setValueSheetFor(null);
   }
 
-  const allConfirmed = cards.length > 0 && cards.every((c) => c.confirmed);
+  const allConfirmed = cards.length > 0 && cards.every((c) => c.score != null);
   const next = currentHole + 1;
   const isLastHole = currentHole === 18;
   // Once the player has a score on every hole, the natural next action is
@@ -357,7 +356,6 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
             extraStrokes={c.extraStrokes}
             score={c.score}
             par={par}
-            confirmed={c.confirmed}
             disabled={disabled}
             hideNetto={hideNetto}
             onSetScore={onSetScore}
