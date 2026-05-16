@@ -4,6 +4,11 @@ import { useMemo, useState } from 'react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { StatusChip } from '@/components/ui/StatusChip';
+import { SideCategoriesPicker } from '@/components/admin/SideCategoriesPicker';
+import {
+  CLASSIC_DISABLED_CATEGORIES,
+  type SideCategoryId,
+} from '@/lib/scoring/sideTournamentConfig';
 
 export type CourseOption = {
   id: string;
@@ -47,6 +52,13 @@ export type InitialValues = {
   side_ld_count?: number;
   /** Antall CTP-vinnere (0/1/2). Krever side_tournament_enabled=true. */
   side_ctp_count?: number;
+  /**
+   * v1.2.0 — kategorier som er slått av for dette spillet. Tomt array = Full
+   * pakke (alle på). For NYE spill defaultes denne til `CLASSIC_DISABLED_CATEGORIES`
+   * av GameForm hvis ikke satt — dvs. spill-opprett-flyten starter på Klassisk
+   * (matcher v1.1.x-oppførsel for spill opprettet før v1.2.0).
+   */
+  side_disabled_categories?: readonly SideCategoryId[];
   /** Lås feltene (når status er active/finished). */
   lock_side_tournament?: boolean;
   players?: Array<{
@@ -187,6 +199,10 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     ? (initialValues?.side_ctp_count ?? 0)
     : 0;
   const lockSideTournament = initialValues?.lock_side_tournament ?? false;
+  // v1.2.0: nye spill defaultes til Klassisk. Edit-flyten passer eksplisitt
+  // inn det som ligger lagret i DB (kan være tomt array = Full pakke).
+  const initialDisabledCategories: readonly SideCategoryId[] =
+    initialValues?.side_disabled_categories ?? CLASSIC_DISABLED_CATEGORIES;
 
   const [sideEnabled, setSideEnabled] = useState<boolean>(initialSideEnabled);
 
@@ -668,6 +684,14 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
                   Poengfordeling: best netto 18 = 10p, front 9 + back 9 = 5p hver,
                   hole-win = 2p per hull (kun alene-vinner), longest drive + closest to pin = 2p per vinner.
                 </p>
+
+                {/* v1.2.0: kategori-velger. Lever sin egne hidden inputs for
+                    `side_disabled_categories`; LD/CTP-tellerne under er
+                    separate fordi de styrer antall-slots, ikke ja/nei. */}
+                <SideCategoriesPicker
+                  defaultDisabledCategories={initialDisabledCategories}
+                  locked={lockSideTournament}
+                />
 
                 <fieldset>
                   <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">

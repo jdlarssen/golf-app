@@ -65,6 +65,7 @@ async function createGameInternal(
     enabled: sideEnabled,
     ldCount: sideLdCount,
     ctpCount: sideCtpCount,
+    disabledCategories: sideDisabledCategories,
   } = sideResult.payload;
 
   const supabase = await getServerClient();
@@ -108,6 +109,9 @@ async function createGameInternal(
       side_tournament_enabled: sideEnabled,
       side_ld_count: sideLdCount,
       side_ctp_count: sideCtpCount,
+      // v1.2.0: parser garanterer tomt array hvis `enabled === false`, så denne
+      // raden trygt persisteres uavhengig av master-toggle-staten.
+      side_disabled_categories: sideDisabledCategories,
       // Publishing puts the game in 'scheduled' state — visible to players,
       // but not yet active. The admin separately presses "Start runden nå"
       // (D5) to flip status to 'active' and freeze handicaps.
