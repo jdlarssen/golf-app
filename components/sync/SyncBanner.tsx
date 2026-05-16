@@ -63,19 +63,17 @@ export function SyncBanner() {
     () => localDb.syncQueue.toArray(),
     [],
   );
-  // Tick once per second so the "is older than 30s" check re-evaluates
+  // Tick `now` once per second so the "is older than 30s" check re-evaluates
   // without depending on Dexie writes (queue can sit unchanged for minutes).
-  const [, setTick] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
   const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
 
   if (!queue || queue.length === 0) return null;
-
-  const now = Date.now();
   const oldestCreatedAt = queue.reduce((acc, i) => {
     const t = new Date(i.createdAt).getTime();
     return t < acc ? t : acc;
