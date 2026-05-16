@@ -40,9 +40,12 @@ import {
   type SideTournamentInput,
   type SideWinner,
 } from '@/lib/scoring/sideTournament';
-import type { GameStatus } from '@/lib/games/status';
-import { revealState, type ScoreVisibility } from '@/lib/games/visibility';
+import { revealState } from '@/lib/games/visibility';
 import { formatRevealName } from '@/lib/names/formatRevealName';
+import {
+  getGameWithPlayers,
+  type GameForHole,
+} from '@/lib/games/getGameWithPlayers';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -51,35 +54,10 @@ type SearchParams = Promise<{
   n?: string | string[];
 }>;
 
-type GameRow = {
-  id: string;
-  name: string;
-  status: GameStatus;
-  course_id: string;
-  tee_box_id: string;
-  scheduled_tee_off_at: string | null;
-  score_visibility: ScoreVisibility;
-  side_tournament_enabled: boolean;
-  side_ld_count: number;
-  side_ctp_count: number;
-  courses: { name: string } | null;
-  tee_boxes: { name: string } | null;
-};
-
 type SideWinnerRow = {
   category: 'longest_drive' | 'closest_to_pin';
   position: number;
   winner_user_id: string | null;
-};
-
-type GamePlayerRow = {
-  user_id: string;
-  team_number: number;
-  course_handicap: number | null;
-  // Leaderboard is only rendered for non-draft games, and Task 7's publish-gate
-  // prevents a game from leaving 'draft' with pending players on the roster —
-  // so `name` is always set in practice. Typed nullable to match the DB column.
-  users: { name: string | null; nickname: string | null } | null;
 };
 
 type CourseHoleRow = {
@@ -142,17 +120,10 @@ export default async function LeaderboardPage({
   const { supabase, userId } = await getLeaderboardContext();
   if (!userId) redirect('/login');
 
-  // Gating queries run in parallel: game row + profile (for is_admin) +
-  // optional participant check. Branch-determining; must run before we
-  // can pick which view to render.
-  const [gameRes, profileRes] = await Promise.all([
-    supabase
-      .from('games')
-      .select(
-        'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, courses(name), tee_boxes(name)',
-      )
-      .eq('id', id)
-      .single<GameRow>(),
+  // Game + players come from the tag-cached helper. Profile lookup
+  // (is_admin) stays direct since it isn't game-scoped.
+  const [gwp, profileRes] = await Promise.all([
+    getGameWithPlayers(id),
     supabase
       .from('users')
       .select('is_admin')
@@ -160,8 +131,8 @@ export default async function LeaderboardPage({
       .single<{ is_admin: boolean }>(),
   ]);
 
-  if (gameRes.error || !gameRes.data) notFound();
-  const game = gameRes.data;
+  if (!gwp) notFound();
+  const game = gwp.game;
 
   // Draft games have no leaderboard view — bounce to game home.
   if (game.status === 'draft') {
@@ -169,15 +140,9 @@ export default async function LeaderboardPage({
   }
 
   const isAdmin = profileRes.data?.is_admin === true;
-
-  if (!isAdmin) {
-    const { data: me } = await supabase
-      .from('game_players')
-      .select('user_id')
-      .eq('game_id', id)
-      .eq('user_id', userId)
-      .maybeSingle();
-    if (!me) notFound();
+  // Non-admin players must be a participant. Reads from cached players list.
+  if (!isAdmin && !gwp.players.some((p) => p.user_id === userId)) {
+    notFound();
   }
 
   // Body data fetch (players + holes + scores) is heavy and dictates the
@@ -206,21 +171,17 @@ async function LeaderboardBody({
   returnQuery,
 }: {
   gameId: string;
-  game: GameRow;
+  game: GameForHole;
   mode: LeaderboardMode;
   backHref: string;
   returnQuery: string;
 }) {
   const { supabase } = await getLeaderboardContext();
 
-  const [rawPlayersRes, rawHolesRes, rawScoresRes] = await Promise.all([
-    supabase
-      .from('game_players')
-      .select(
-        'user_id, team_number, course_handicap, users!game_players_user_id_fkey(name, nickname)',
-      )
-      .eq('game_id', gameId)
-      .returns<GamePlayerRow[]>(),
+  // Players come from the tag-cached helper (cache hit since the outer
+  // page already warmed it). Holes + scores stay direct fetches.
+  const [gwp, rawHolesRes, rawScoresRes] = await Promise.all([
+    getGameWithPlayers(gameId),
     supabase
       .from('course_holes')
       .select('hole_number, par, stroke_index')
@@ -234,11 +195,11 @@ async function LeaderboardBody({
       .returns<ScoreRow[]>(),
   ]);
 
-  if (rawPlayersRes.error) throw rawPlayersRes.error;
+  if (!gwp) notFound();
   if (rawHolesRes.error) throw rawHolesRes.error;
   if (rawScoresRes.error) throw rawScoresRes.error;
 
-  const players: LbPlayer[] = (rawPlayersRes.data ?? [])
+  const players: LbPlayer[] = gwp.players
     .filter((p) => p.users != null)
     .map((p) => ({
       userId: p.user_id,
@@ -269,7 +230,7 @@ async function LeaderboardBody({
   // 9 locked) when at least one team has completed front 9 but game isn't
   // finished. Full leaderboard once status flips to finished.
   const frontNineOpen = isFrontNineOpen({
-    players: (rawPlayersRes.data ?? []).map((p) => ({
+    players: gwp.players.map((p) => ({
       user_id: p.user_id,
       team_number: p.team_number,
     })),
