@@ -70,6 +70,9 @@ export type GameForHole = {
   score_visibility: ScoreVisibility;
   require_peer_approval: boolean;
   scheduled_tee_off_at: string | null;
+  side_tournament_enabled: boolean;
+  side_ld_count: number;
+  side_ctp_count: number;
 };
 
 export type PlayerForHole = {
@@ -99,7 +102,7 @@ async function fetchGameWithPlayers(
     supabase
       .from('games')
       .select(
-        'id, name, status, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at',
+        'id, name, status, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, side_tournament_enabled, side_ld_count, side_ctp_count',
       )
       .eq('id', id)
       .single<GameForHole>(),
