@@ -2153,4 +2153,163 @@ describe('calculateSideTournament', () => {
       expect(awards.some((a) => a.category === 'longest_bogey_free_streak')).toBe(false);
     });
   });
+
+  describe('lowest_single_hole_brutto', () => {
+    const par4Course = (): number[] => new Array(18).fill(4);
+
+    const player = (
+      userId: string,
+      perHoleGross: Array<number | null>,
+    ): SideTournamentInput['playerScoresPerHole'][number] => ({
+      userId,
+      perHoleGross,
+      perHoleNetto: perHoleGross,
+    });
+
+    it('awards 2p to team of single player with the lowest single-hole brutto', () => {
+      // user-c has the absolute lowest: 2 on hole 5 (idx 4)
+      const userAGross = new Array(18).fill(4);
+      userAGross[0] = 3; // best=3
+      const userBGross = new Array(18).fill(4); // best=4
+      const userCGross = new Array(18).fill(4);
+      userCGross[4] = 2; // best=2
+      const userDGross = new Array(18).fill(4); // best=4
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userAGross),
+          player('user-b', userBGross),
+          player('user-c', userCGross),
+          player('user-d', userDGross),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+
+      // user-c on team 2 wins
+      const award = t2.awards.find((a) => a.category === 'lowest_single_hole_brutto');
+      expect(award?.points).toBe(2);
+      expect(award?.score).toBe(2);
+      expect(award?.holeNumber).toBe(5); // 1-indexed
+      expect(t1.awards.find((a) => a.category === 'lowest_single_hole_brutto')).toBeUndefined();
+    });
+
+    it('awards 2p to each tied team on a tie', () => {
+      // user-a (team 1) and user-c (team 2) both have 2 as lowest
+      const userAGross = new Array(18).fill(4);
+      userAGross[0] = 2;
+      const userBGross = new Array(18).fill(5);
+      const userCGross = new Array(18).fill(4);
+      userCGross[10] = 2;
+      const userDGross = new Array(18).fill(5);
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userAGross),
+          player('user-b', userBGross),
+          player('user-c', userCGross),
+          player('user-d', userDGross),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+
+      expect(t1.awards.find((a) => a.category === 'lowest_single_hole_brutto')?.points).toBe(2);
+      expect(t2.awards.find((a) => a.category === 'lowest_single_hole_brutto')?.points).toBe(2);
+    });
+
+    it('dedups same-team ties (one award per team)', () => {
+      // user-a and user-b both on team 1 have 2 as lowest
+      const userAGross = new Array(18).fill(4);
+      userAGross[0] = 2;
+      const userBGross = new Array(18).fill(4);
+      userBGross[5] = 2;
+      const userCGross = new Array(18).fill(5);
+      const userDGross = new Array(18).fill(5);
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userAGross),
+          player('user-b', userBGross),
+          player('user-c', userCGross),
+          player('user-d', userDGross),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+
+      // Team 1 wins but with only one award (deduped)
+      const t1Awards = t1.awards.filter((a) => a.category === 'lowest_single_hole_brutto');
+      expect(t1Awards).toHaveLength(1);
+      expect(t1Awards[0]?.points).toBe(2);
+      expect(t2.awards.find((a) => a.category === 'lowest_single_hole_brutto')).toBeUndefined();
+    });
+
+    it('all players have similar lows → still awards to one (or ties)', () => {
+      // All four players have a 3 somewhere → 4-way tie, both teams get full pot
+      const userAGross = new Array(18).fill(4);
+      userAGross[0] = 3;
+      const userBGross = new Array(18).fill(4);
+      userBGross[1] = 3;
+      const userCGross = new Array(18).fill(4);
+      userCGross[2] = 3;
+      const userDGross = new Array(18).fill(4);
+      userDGross[3] = 3;
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userAGross),
+          player('user-b', userBGross),
+          player('user-c', userCGross),
+          player('user-d', userDGross),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+
+      // Both teams get one award (deduped per team)
+      expect(t1.awards.filter((a) => a.category === 'lowest_single_hole_brutto')).toHaveLength(1);
+      expect(t2.awards.filter((a) => a.category === 'lowest_single_hole_brutto')).toHaveLength(1);
+    });
+
+    it('honors disabledCategories: ["lowest_single_hole_brutto"]', () => {
+      const userAGross = new Array(18).fill(4);
+      userAGross[0] = 2;
+      const userBGross = new Array(18).fill(5);
+      const userCGross = new Array(18).fill(5);
+      const userDGross = new Array(18).fill(5);
+
+      const input = baseInput({
+        config: {
+          enabled: true,
+          ldCount: 0,
+          ctpCount: 0,
+          disabledCategories: ['lowest_single_hole_brutto'],
+        },
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userAGross),
+          player('user-b', userBGross),
+          player('user-c', userCGross),
+          player('user-d', userDGross),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+      expect(awards.some((a) => a.category === 'lowest_single_hole_brutto')).toBe(false);
+    });
+  });
 });

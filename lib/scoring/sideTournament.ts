@@ -30,7 +30,8 @@ export type SideCategory =
   | 'king_par3_individual'
   | 'king_par5_team'
   | 'king_par5_individual'
-  | 'longest_bogey_free_streak';
+  | 'longest_bogey_free_streak'
+  | 'lowest_single_hole_brutto';
 
 export interface SideTournamentConfig {
   enabled: boolean;
@@ -82,6 +83,12 @@ export interface SideCategoryAward {
   streakEndHole?: number;
   /** Length in holes of the bogey-free streak. */
   streakLength?: number;
+  /**
+   * Populated when `category === 'lowest_single_hole_brutto'`. The raw
+   * brutto score on the winning hole (e.g. 2 for an eagle on a par-4).
+   * Combined with `holeNumber` to render e.g. `"Per, 2 på hull 14"`.
+   */
+  score?: number;
 }
 
 export interface SideTournamentResult {
@@ -831,6 +838,48 @@ export function calculateSideTournament(
               streakEndHole: w.streak.endHole,
             });
           }
+        }
+      }
+    }
+  }
+
+  // 16. Lavest enkelthull brutto — individ-only, 2p
+  // For each player, find their LOWEST single-hole brutto across all 18
+  // holes. Player(s) with the absolute lowest value win. Ties → full pot
+  // per team, deduped to one award per team. No team-aggregate (single-
+  // hole = single-player by definition).
+  if (!isDisabled('lowest_single_hole_brutto', input.config)) {
+    const playerLows = input.playerScoresPerHole
+      .map((p) => {
+        let bestVal: number | null = null;
+        let bestHole = 0; // 0-indexed
+        for (let h = 0; h < p.perHoleGross.length; h++) {
+          const g = p.perHoleGross[h];
+          if (g == null) continue;
+          if (bestVal == null || g < bestVal) {
+            bestVal = g;
+            bestHole = h;
+          }
+        }
+        return bestVal == null ? null : { userId: p.userId, score: bestVal, holeIdx: bestHole };
+      })
+      .filter((p): p is { userId: UserId; score: number; holeIdx: number } => p !== null);
+
+    if (playerLows.length > 0) {
+      const min = Math.min(...playerLows.map((p) => p.score));
+      const winners = playerLows.filter((p) => p.score === min);
+      const seenTeams = new Set<TeamId>();
+      for (const w of winners) {
+        const teamId = teamIdForUser(input.teams, w.userId);
+        if (teamId != null && !seenTeams.has(teamId)) {
+          seenTeams.add(teamId);
+          award(teamId, {
+            category: 'lowest_single_hole_brutto',
+            teamId,
+            points: SIDE_TOURNAMENT_POINTS.lowestSingleHoleBrutto,
+            score: w.score,
+            holeNumber: w.holeIdx + 1, // 1-indexed
+          });
         }
       }
     }
