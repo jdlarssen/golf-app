@@ -577,6 +577,51 @@ export function calculateSideTournament(
     }
   }
 
+  // 12. Best brutto B9 — team-aggregate (2p) + individual (1p)
+  // Same shape as best_brutto_18 but scoped to holes 10-18 (indices 9..17).
+  if (!isDisabled('best_brutto_b9_team', input.config)) {
+    const eligibleTeams = input.teams.filter((t) => t.userIds.length >= 2);
+    if (eligibleTeams.length >= 2) {
+      const teamTotals = eligibleTeams.map((t) => ({
+        teamId: t.teamId,
+        total: bestBallGrossPerHole(t, input.playerScoresPerHole, 9, 18),
+      }));
+      for (const teamId of findMinTeams(teamTotals)) {
+        award(teamId, {
+          category: 'best_brutto_b9_team',
+          teamId,
+          points: SIDE_TOURNAMENT_POINTS.bestBruttoB9Team,
+        });
+      }
+    }
+  }
+
+  if (!isDisabled('best_brutto_b9_individual', input.config)) {
+    const playerSums = input.playerScoresPerHole.map((p) => ({
+      userId: p.userId,
+      total: playerGrossSum(p.userId, input.playerScoresPerHole, 9, 18),
+    }));
+    const valid = playerSums.filter(
+      (p): p is { userId: UserId; total: number } => p.total !== null,
+    );
+    if (valid.length > 0) {
+      const min = Math.min(...valid.map((p) => p.total));
+      const winners = valid.filter((p) => p.total === min).map((p) => p.userId);
+      const seenTeams = new Set<TeamId>();
+      for (const userId of winners) {
+        const teamId = teamIdForUser(input.teams, userId);
+        if (teamId != null && !seenTeams.has(teamId)) {
+          seenTeams.add(teamId);
+          award(teamId, {
+            category: 'best_brutto_b9_individual',
+            teamId,
+            points: SIDE_TOURNAMENT_POINTS.bestBruttoB9Individual,
+          });
+        }
+      }
+    }
+  }
+
   return {
     teamStandings: input.teams.map((t) => ({
       teamId: t.teamId,

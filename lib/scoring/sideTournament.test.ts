@@ -1328,4 +1328,197 @@ describe('calculateSideTournament', () => {
       expect(awards.some((a) => a.category === 'best_brutto_f9_team')).toBe(true);
     });
   });
+
+  describe('best_brutto_b9', () => {
+    const par4Course = (): number[] => new Array(18).fill(4);
+
+    const player = (
+      userId: string,
+      perHoleGross: Array<number | null>,
+    ): SideTournamentInput['playerScoresPerHole'][number] => ({
+      userId,
+      perHoleGross,
+      perHoleNetto: perHoleGross,
+    });
+
+    it('awards team-aggregate to single team with lowest B9 best-ball brutto sum', () => {
+      // B9 only: holes 10-18 (indices 9..17)
+      // Team 1 B9 best-ball: min(7,8)=7 each → sum 63
+      // Team 2 B9 best-ball: min(4,4)=4 each → sum 36
+      const userAGross = [...new Array(9).fill(4), ...new Array(9).fill(7)];
+      const userBGross = [...new Array(9).fill(5), ...new Array(9).fill(8)];
+      const userCGross = [...new Array(9).fill(5), ...new Array(9).fill(4)];
+      const userDGross = [...new Array(9).fill(5), ...new Array(9).fill(4)];
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userAGross),
+          player('user-b', userBGross),
+          player('user-c', userCGross),
+          player('user-d', userDGross),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+
+      expect(t2.awards.find((a) => a.category === 'best_brutto_b9_team')?.points).toBe(2);
+      expect(t1.awards.find((a) => a.category === 'best_brutto_b9_team')).toBeUndefined();
+    });
+
+    it('awards team-aggregate to both teams on B9 tie', () => {
+      // Both teams: B9 best-ball brutto sum = 36
+      const userAGross = [...new Array(9).fill(4), ...new Array(9).fill(4)];
+      const userBGross = [...new Array(9).fill(5), ...new Array(9).fill(5)];
+      const userCGross = [...new Array(9).fill(5), ...new Array(9).fill(4)];
+      const userDGross = [...new Array(9).fill(5), ...new Array(9).fill(5)];
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userAGross),
+          player('user-b', userBGross),
+          player('user-c', userCGross),
+          player('user-d', userDGross),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+
+      expect(t1.awards.find((a) => a.category === 'best_brutto_b9_team')?.points).toBe(2);
+      expect(t2.awards.find((a) => a.category === 'best_brutto_b9_team')?.points).toBe(2);
+    });
+
+    it('awards individual-best B9 to single player', () => {
+      // user-d lowest B9 = 32 (4×4 + 5×4 = 16+20 → adjusted below)
+      const userAGross = [...new Array(9).fill(5), ...new Array(9).fill(5)]; // B9: 45
+      const userBGross = [...new Array(9).fill(5), ...new Array(9).fill(5)]; // B9: 45
+      const userCGross = [...new Array(9).fill(5), ...new Array(9).fill(5)]; // B9: 45
+      const userDGross = [...new Array(9).fill(5), 3, 3, 3, 3, 4, 4, 4, 4, 4]; // B9: 32
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userAGross),
+          player('user-b', userBGross),
+          player('user-c', userCGross),
+          player('user-d', userDGross),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+
+      // user-d on team 2
+      expect(t2.awards.find((a) => a.category === 'best_brutto_b9_individual')?.points).toBe(1);
+      expect(t1.awards.find((a) => a.category === 'best_brutto_b9_individual')).toBeUndefined();
+    });
+
+    it('awards individual-best B9 to each tied player team on a tie', () => {
+      // user-b (team 1) and user-d (team 2) both B9 = 32
+      const userAGross = [...new Array(9).fill(5), ...new Array(9).fill(5)];
+      const userBGross = [...new Array(9).fill(5), 3, 3, 3, 3, 4, 4, 4, 4, 4];
+      const userCGross = [...new Array(9).fill(5), ...new Array(9).fill(5)];
+      const userDGross = [...new Array(9).fill(5), 3, 3, 3, 3, 4, 4, 4, 4, 4];
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userAGross),
+          player('user-b', userBGross),
+          player('user-c', userCGross),
+          player('user-d', userDGross),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+
+      expect(t1.awards.find((a) => a.category === 'best_brutto_b9_individual')?.points).toBe(1);
+      expect(t2.awards.find((a) => a.category === 'best_brutto_b9_individual')?.points).toBe(1);
+    });
+
+    it('skips team-aggregate when both teams have only 1 player (1v1)', () => {
+      const userAGross = [...new Array(9).fill(5), ...new Array(9).fill(4)];
+      const userBGross = [...new Array(9).fill(5), ...new Array(9).fill(5)];
+
+      const input: SideTournamentInput = {
+        config: { enabled: true, ldCount: 0, ctpCount: 0, disabledCategories: [] },
+        teams: [
+          { teamId: 1, userIds: ['user-a'] },
+          { teamId: 2, userIds: ['user-b'] },
+        ],
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userAGross),
+          player('user-b', userBGross),
+        ],
+        nettoBestBallPerHole: [
+          { teamId: 1, perHoleNetto: userAGross },
+          { teamId: 2, perHoleNetto: userBGross },
+        ],
+        sideWinners: [],
+      };
+
+      const result = calculateSideTournament(input);
+      const allAwards = result.teamStandings.flatMap((s) => s.awards);
+
+      expect(allAwards.some((a) => a.category === 'best_brutto_b9_team')).toBe(false);
+      expect(allAwards.some((a) => a.category === 'best_brutto_b9_individual')).toBe(true);
+    });
+
+    it('honors disabledCategories: ["best_brutto_b9_team"]', () => {
+      const userAGross = [...new Array(9).fill(5), ...new Array(9).fill(4)];
+      const userBGross = [...new Array(9).fill(5), ...new Array(9).fill(5)];
+      const userCGross = [...new Array(9).fill(5), ...new Array(9).fill(5)];
+      const userDGross = [...new Array(9).fill(5), ...new Array(9).fill(5)];
+
+      const input = baseInput({
+        config: { enabled: true, ldCount: 0, ctpCount: 0, disabledCategories: ['best_brutto_b9_team'] },
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userAGross),
+          player('user-b', userBGross),
+          player('user-c', userCGross),
+          player('user-d', userDGross),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+
+      expect(awards.some((a) => a.category === 'best_brutto_b9_team')).toBe(false);
+      expect(awards.some((a) => a.category === 'best_brutto_b9_individual')).toBe(true);
+    });
+
+    it('honors disabledCategories: ["best_brutto_b9_individual"]', () => {
+      const userAGross = [...new Array(9).fill(5), ...new Array(9).fill(4)];
+      const userBGross = [...new Array(9).fill(5), ...new Array(9).fill(5)];
+      const userCGross = [...new Array(9).fill(5), ...new Array(9).fill(5)];
+      const userDGross = [...new Array(9).fill(5), ...new Array(9).fill(5)];
+
+      const input = baseInput({
+        config: { enabled: true, ldCount: 0, ctpCount: 0, disabledCategories: ['best_brutto_b9_individual'] },
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userAGross),
+          player('user-b', userBGross),
+          player('user-c', userCGross),
+          player('user-d', userDGross),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+
+      expect(awards.some((a) => a.category === 'best_brutto_b9_individual')).toBe(false);
+      expect(awards.some((a) => a.category === 'best_brutto_b9_team')).toBe(true);
+    });
+  });
 });
