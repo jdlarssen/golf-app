@@ -21,6 +21,7 @@ import { firstName } from '@/lib/firstName';
 import { nameInitials } from '@/lib/names/initials';
 import { formatTeeOffTime, formatTeeOffDate } from '@/lib/format/teeOff';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
+import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import { ScheduledWaitingRoom } from './ScheduledWaitingRoom';
 
 type Params = Promise<{ id: string }>;
@@ -91,16 +92,6 @@ function formatLengthMeters(n: number): string {
   return n.toLocaleString('nb-NO');
 }
 
-type MyPlayerRow = {
-  user_id: string;
-  team_number: number;
-  flight_number: number;
-  course_handicap: number | null;
-  submitted_at: string | null;
-  approved_at: string | null;
-  rejection_reason: string | null;
-};
-
 type FlightMatePlayerRow = {
   user_id: string;
   flight_number: number;
@@ -164,32 +155,33 @@ export default async function GameHomePage({
   // Proxy redirects unauthenticated users, but be defensive.
   if (!userId) redirect('/login');
 
-  // Game + my player row are independent — fire in parallel. Saves one
-  // Supabase round-trip on every game-home load (which is hit on app open
-  // for every active game, on returning from leaderboard/submit, and on
-  // every "Hjem"-tap from the hole pages).
-  const [gameInitialRes, meRes] = await Promise.all([
+  // Initial gating data — game + game_players come from the tag-cached
+  // helper (per-hole-bytte cache hit; see lib/games/getGameWithPlayers.ts).
+  // The `courses(...)` / `tee_boxes(...)` joins are NOT cached (would
+  // require cross-game fan-out on course-edits), so they ride a slim
+  // direct fetch in parallel. Authorization stays at the call-site via
+  // `me = players.find(...)` notFound() below.
+  const [gwp, joinsRes] = await Promise.all([
+    getGameWithPlayers(id),
     supabase
       .from('games')
-      .select(GAME_SELECT)
-      .eq('id', id)
-      .single<GameRow>(),
-    supabase
-      .from('game_players')
       .select(
-        'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, rejection_reason',
+        'courses(name), tee_boxes(name, slope, course_rating, par_total, length_meters)',
       )
-      .eq('game_id', id)
-      .eq('user_id', userId)
-      .maybeSingle<MyPlayerRow>(),
+      .eq('id', id)
+      .single<Pick<GameRow, 'courses' | 'tee_boxes'>>(),
   ]);
 
-  if (gameInitialRes.error || !gameInitialRes.data) notFound();
-  if (meRes.error) throw meRes.error;
-  const me = meRes.data;
+  if (!gwp) notFound();
+  if (joinsRes.error || !joinsRes.data) notFound();
+  const me = gwp.players.find((p) => p.user_id === userId);
   if (!me) notFound();
 
-  let game: GameRow = gameInitialRes.data;
+  let game: GameRow = {
+    ...gwp.game,
+    courses: joinsRes.data.courses,
+    tee_boxes: joinsRes.data.tee_boxes,
+  };
 
   // Drafts are visible to invited players as a venterom — see the draft
   // branch in the default return below for progressive disclosure.
