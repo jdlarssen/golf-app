@@ -513,6 +513,7 @@ async function LeaderboardBody({
               winnerUserId: w.winner_user_id,
             }))}
             coursePars={coursePars}
+            disabledCategories={game.side_disabled_categories ?? []}
           />
         }
       />

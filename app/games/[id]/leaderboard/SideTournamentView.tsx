@@ -2,7 +2,10 @@ import type {
   SideCategoryAward,
   SideTournamentResult,
 } from '@/lib/scoring/sideTournament';
-import { SIDE_TOURNAMENT_POINTS } from '@/lib/scoring/sideTournamentConfig';
+import {
+  SIDE_TOURNAMENT_POINTS,
+  type SideCategoryId,
+} from '@/lib/scoring/sideTournamentConfig';
 import { formatHolesList } from '@/lib/leaderboard/formatHolesList';
 
 export type SideTournamentTeam = {
@@ -34,6 +37,13 @@ type Props = {
    * ("hele laget +6 på hull 12" — N regnes som worst-gross − par).
    */
   coursePars: number[];
+  /**
+   * Per-spill kategori-overstyringer fra `games.side_disabled_categories`.
+   * Tomt array = Full pakke (alle aktive). Brukes til å filtrere
+   * «Slik gis poengene»-panelet så det kun viser kategorier som faktisk
+   * regnes denne runden.
+   */
+  disabledCategories: SideCategoryId[];
 };
 
 /** Group-id-er som driver under-overskriftene i hver lag-expand. Rekkefølgen
@@ -130,12 +140,18 @@ export function SideTournamentView({
   ctpCount,
   sideWinners,
   coursePars,
+  disabledCategories,
 }: Props) {
   const sorted = rankByPoints(result.teamStandings);
   const teamById = new Map(teams.map((t) => [t.teamId, t]));
 
   return (
     <div className="space-y-3 px-4">
+      <ScoringRulesPanel
+        disabledCategories={disabledCategories}
+        ldCount={ldCount}
+        ctpCount={ctpCount}
+      />
       {sorted.map((standing) => {
         const team = teamById.get(standing.teamId);
         const label = team?.label ?? `Lag ${standing.teamId}`;
@@ -881,6 +897,313 @@ function firstNameOf(
     if (m) return m.firstName;
   }
   return null;
+}
+
+// ─── Slik gis poengene-panel ─────────────────────────────────────────────
+
+/**
+ * Panel-spesifikk gruppe-id (snowman puttes under «Achievements» her, mens
+ * team-expand-visningen holder den i en egen «Penalty»-gruppe med rød tone).
+ * Holdes lokalt — ikke samme rolle som GROUP_ORDER/GROUP_LABELS over.
+ */
+type PanelGroupId =
+  | 'hovedkonkurranser'
+  | 'skill'
+  | 'moderate'
+  | 'hull'
+  | 'achievements';
+
+/**
+ * En rad i forklar-panelet. `ids` peker på 1–2 SideCategoryIds — for koblede
+ * dual-versjon-kategorier (f.eks. `most_birdies_team` + `most_birdies_individual`)
+ * styres begge av samme rad, og pointsLabel justerer seg hvis én av dem er
+ * skrudd av i `disabledCategories`. Matcher koblings-mønsteret i
+ * SideCategoriesPicker.
+ *
+ * `rule` er en valgfri kort forklaring som rendres som muted-tekst inline med
+ * pointsLabel — kun for kategorier som ikke er åpenbare fra navnet alene.
+ */
+type PanelRow = {
+  key: string;
+  label: string;
+  ids: readonly SideCategoryId[];
+  /**
+   * Points-strenger per id i samme rekkefølge som `ids`. For solo-rader er
+   * det én entry. For dual-versjon-rader er det to («4p lag» + «2p individ»).
+   * Joines med « / » når begge er aktive; vises alene når kun én er aktiv.
+   */
+  pointsPerId: readonly string[];
+  /** Valgfri trailing-tekst etter pointsLabel — f.eks. «(admin-valgt)». */
+  trailer?: string;
+  /** Valgfri regel-tekst rendret som muted-paragraf under label-raden. */
+  rule?: string;
+};
+
+type PanelGroup = {
+  id: PanelGroupId;
+  title: string;
+  /** Valgfri tagline ved siden av tittelen — f.eks. for Achievements. */
+  hint?: string;
+  rows: readonly PanelRow[];
+};
+
+/**
+ * Strukturen som driver «Slik gis poengene»-panelet. Holdes inline i denne
+ * fila siden den kun brukes her, og slipper en bredere refactor av
+ * scoring-konfig-modulen. SideCategoriesPicker har en parallel struktur for
+ * admin-flyten — endrer du strenger her, sjekk om picker-en også bør oppdateres.
+ */
+const PANEL_GROUPS: readonly PanelGroup[] = [
+  {
+    id: 'hovedkonkurranser',
+    title: 'Hovedkonkurranser',
+    rows: [
+      {
+        key: 'best_netto_18',
+        label: 'Best netto totalt 18',
+        ids: ['best_netto_18'],
+        pointsPerId: ['10p'],
+      },
+      {
+        key: 'best_netto_f9',
+        label: 'Best netto front 9',
+        ids: ['best_netto_f9'],
+        pointsPerId: ['5p'],
+      },
+      {
+        key: 'best_netto_b9',
+        label: 'Best netto back 9',
+        ids: ['best_netto_b9'],
+        pointsPerId: ['5p'],
+      },
+    ],
+  },
+  {
+    id: 'skill',
+    title: 'Skill og rarity',
+    rows: [
+      {
+        key: 'best_brutto_18',
+        label: 'Best brutto totalt 18',
+        ids: ['best_brutto_18_team', 'best_brutto_18_individual'],
+        pointsPerId: ['4p lag', '2p individ'],
+      },
+      {
+        key: 'king_par3',
+        label: 'Konge på par-3',
+        ids: ['king_par3_team', 'king_par3_individual'],
+        pointsPerId: ['4p lag', '2p individ'],
+        rule: 'best sum på alle par-3-hull',
+      },
+      {
+        key: 'king_par5',
+        label: 'Konge på par-5',
+        ids: ['king_par5_team', 'king_par5_individual'],
+        pointsPerId: ['4p lag', '2p individ'],
+        rule: 'best sum på alle par-5-hull',
+      },
+      {
+        key: 'most_eagles',
+        label: 'Flest eagles+',
+        ids: ['most_eagles_team', 'most_eagles_individual'],
+        pointsPerId: ['4p lag', '2p individ'],
+      },
+      {
+        key: 'longest_bogey_free_streak',
+        label: 'Lengste bogey-fri-streak',
+        ids: ['longest_bogey_free_streak'],
+        pointsPerId: ['4p'],
+        rule: 'lengste sammenhengende netto ≤ par',
+      },
+    ],
+  },
+  {
+    id: 'moderate',
+    title: 'Moderate',
+    rows: [
+      {
+        key: 'best_brutto_f9',
+        label: 'Best brutto front 9',
+        ids: ['best_brutto_f9_team', 'best_brutto_f9_individual'],
+        pointsPerId: ['2p lag', '1p individ'],
+      },
+      {
+        key: 'best_brutto_b9',
+        label: 'Best brutto back 9',
+        ids: ['best_brutto_b9_team', 'best_brutto_b9_individual'],
+        pointsPerId: ['2p lag', '1p individ'],
+      },
+      {
+        key: 'most_birdies',
+        label: 'Flest birdier',
+        ids: ['most_birdies_team', 'most_birdies_individual'],
+        pointsPerId: ['2p lag', '1p individ'],
+      },
+      {
+        key: 'most_pars',
+        label: 'Flest pars+',
+        ids: ['most_pars_team', 'most_pars_individual'],
+        pointsPerId: ['2p lag', '1p individ'],
+      },
+      {
+        key: 'lowest_single_hole_brutto',
+        label: 'Lavest enkelthull brutto',
+        ids: ['lowest_single_hole_brutto'],
+        pointsPerId: ['2p'],
+      },
+    ],
+  },
+  {
+    id: 'hull',
+    title: 'Hull-konkurranser',
+    rows: [
+      {
+        key: 'hole_win',
+        label: 'Hole-win',
+        ids: ['hole_win'],
+        pointsPerId: ['2p per hull'],
+        rule: 'kun alene-vinner',
+      },
+      {
+        key: 'longest_drive',
+        label: 'Longest drive',
+        ids: ['longest_drive'],
+        pointsPerId: ['2p per vinner'],
+        trailer: '(admin-valgt)',
+      },
+      {
+        key: 'closest_to_pin',
+        label: 'Closest to pin',
+        ids: ['closest_to_pin'],
+        pointsPerId: ['2p per vinner'],
+        trailer: '(admin-valgt)',
+      },
+    ],
+  },
+  {
+    id: 'achievements',
+    title: 'Achievements',
+    hint: 'kan stables, kan trigge flere ganger samme runde',
+    rows: [
+      {
+        key: 'turkey',
+        label: 'Turkey',
+        ids: ['turkey'],
+        pointsPerId: ['4p per spiller + 4p × N lag-koord-bonus'],
+        rule: '3 netto-birdier på rad. Lag-koord trigger om hele laget klarer det på samme 3 hull.',
+      },
+      {
+        key: 'solid',
+        label: 'Solid',
+        ids: ['solid'],
+        pointsPerId: ['2p per spiller + 2p × N lag-koord-bonus'],
+        rule: '5 netto-pars+ på rad. Lag-koord trigger om hele laget klarer det på samme 5 hull.',
+      },
+      {
+        key: 'snowman',
+        label: 'Snowman',
+        ids: ['snowman'],
+        pointsPerId: ['−2p per hull'],
+        trailer: '(penalty)',
+        rule: 'hele lagets brutto ≥ par+5 på samme hull',
+      },
+    ],
+  },
+] as const;
+
+/**
+ * «Slik gis poengene»-panel — collapsed by default, ekspanderes av brukeren
+ * for å forstå hvordan kategoriene gir poeng. Rendrer kun de aktive (ikke-
+ * disabled) kategoriene så panelet alltid speiler regelsettet for denne runden.
+ *
+ * For koblede dual-versjon-rader (f.eks. «Flest birdier») hides hele raden om
+ * begge versjonene er av; om kun én er av, vises bare den gjenværende
+ * versjonens points-fragment.
+ *
+ * LD/CTP-slots styres av tellerne på spillet, ikke av `disabledCategories`,
+ * så de filtreres på `ldCount`/`ctpCount` i stedet for disabled-set.
+ */
+function ScoringRulesPanel({
+  disabledCategories,
+  ldCount,
+  ctpCount,
+}: {
+  disabledCategories: readonly SideCategoryId[];
+  ldCount: number;
+  ctpCount: number;
+}) {
+  const disabledSet = new Set<SideCategoryId>(disabledCategories);
+
+  // Resolve hvilke grupper og rader som faktisk skal vises.
+  const visibleGroups = PANEL_GROUPS.map((group) => {
+    const visibleRows = group.rows.flatMap((row) => {
+      // Hull-konkurranser har egen filter-logikk for LD/CTP-slots.
+      if (row.key === 'longest_drive' && ldCount === 0) return [];
+      if (row.key === 'closest_to_pin' && ctpCount === 0) return [];
+
+      // Filtrer points-fragmenter mot disabled-set. Hver id i `ids` korresponderer
+      // til samme indeks i `pointsPerId`. Filtrerer ut id-er som er disabled.
+      const activeFragments = row.ids
+        .map((id, idx) => ({ id, points: row.pointsPerId[idx] }))
+        .filter((entry) => !disabledSet.has(entry.id));
+
+      if (activeFragments.length === 0) return [];
+      const joined = activeFragments.map((e) => e.points).join(' / ');
+      return [{ row, pointsLabel: joined }];
+    });
+    return { group, visibleRows };
+  }).filter((g) => g.visibleRows.length > 0);
+
+  if (visibleGroups.length === 0) return null;
+
+  return (
+    <details className="group rounded-md border border-border bg-surface-2">
+      <summary className="flex min-h-[44px] cursor-pointer items-center gap-2 px-3 py-2 font-sans text-sm text-text [&::-webkit-details-marker]:hidden">
+        <span aria-hidden className="text-muted">
+          ⓘ
+        </span>
+        <span className="flex-1">Slik gis poengene</span>
+        <span
+          aria-hidden
+          className="text-muted transition-transform group-open:rotate-180"
+        >
+          ▾
+        </span>
+      </summary>
+      <div className="space-y-3 border-t border-border px-3 py-3">
+        {visibleGroups.map(({ group, visibleRows }) => (
+          <section key={group.id}>
+            <h3 className="mb-1 font-sans text-xs uppercase tracking-wide font-semibold text-muted">
+              {group.title}
+              {group.hint && (
+                <span className="ml-2 normal-case tracking-normal font-normal text-muted/80">
+                  ({group.hint})
+                </span>
+              )}
+            </h3>
+            <ul className="space-y-1.5 font-sans text-sm text-text">
+              {visibleRows.map(({ row, pointsLabel }) => (
+                <li key={row.key} className="leading-snug">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span>{row.label}</span>
+                    <span className="shrink-0 text-xs tabular-nums text-muted">
+                      {pointsLabel}
+                      {row.trailer ? ` ${row.trailer}` : ''}
+                    </span>
+                  </div>
+                  {row.rule && (
+                    <p className="mt-0.5 text-xs text-muted leading-tight">
+                      {row.rule}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
+    </details>
+  );
 }
 
 // Re-export for any future helper modules that want to import the group map.
