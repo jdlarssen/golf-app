@@ -90,16 +90,51 @@ Aldri si bare «sett dette i Supabase» — alltid med eksakt sti og kopier-lim-
 
 ### GitHub Issues — arbeidsflyt (mandatory)
 
-Alt backlog-arbeid spores i [GitHub Issues](https://github.com/jdlarssen/golf-app/issues), ikke i markdown-filer. Når du jobber på en issue:
+Alt backlog-arbeid spores i [GitHub Issues](https://github.com/jdlarssen/golf-app/issues), ikke i markdown-filer.
 
-1. **Commits:** Inkluder `Refs #N` i commit-body for alle commits som bidrar mot issue-en. Bruk `Closes #N` i body på siste commit som faktisk lukker den — GitHub auto-lukker issue-en når den landerer på `main`. Dette gjelder også subagenter som committer: prompten må inkludere issue-nummeret og instruks om å bruke `Refs`/`Closes` i body.
-2. **Closing-kommentar (ALLTID):** Når en issue lukkes (auto eller manuelt), MÅ hovedchatten poste en kommentar på issue-en med `gh issue comment N --body ...`. Kommentaren har to seksjoner:
-   - **`## Teknisk`** — hvilke filer/komponenter endret, hvilken approach, evt. avvik fra issue-design, commit-SHA-er.
-   - **`## For Jørgen`** — hva brukeren ser i appen nå, på vanlig norsk, action-orientert. Samme tone som CHANGELOG-taglines («Du kan nå …», «Når X skjer, sier appen nå …»).
-3. **Ingen start-kommentar, ingen self-assign, ingen `in-progress`-label.** Solo dev → minimer ceremoni.
-4. **Avvik fra issue-design** skal eksplisitt nevnes under «Teknisk» — ikke skjul kutt eller endringer.
-5. **Nye funn underveis** som ikke hører hjemme i nåværende issue: opprett ny issue via `gh issue create` (med riktig `type:` + `area:` + scope-labels), spør bruker om det skal gjøres nå eller bare nevnes. Aldri smyge urelaterte fixes inn i nåværende commit.
-6. **Reviewer-funn (mandatory):** når code-quality-reviewer, spec-reviewer eller annen subagent rapporterer findings som IKKE landeres i samme commit, MÅ hovedchatten opprette dem som GitHub Issues via `gh issue create` før push til main. Verbal rapport alene er ikke nok — funn forsvinner ut av kontekstvinduet etter neste sesjon. Adresserte funn (f.eks. JSDoc-stramming i siste commit) nevnes i closing-kommentaren under «Teknisk» i stedet. Ikke filer rene stil-meninger som issues — kun substantielle refactor/test/docs/edge-case-funn.
+#### Branch + PR-flyt (default post-v1.0)
+
+Etter `v1.0.0` (2026-05-13) går alt arbeid via PR — **ikke direkte push til `main`**. Vercel deployer PR-branchen til preview-URL, gir et sjekkpunkt før prod-merge.
+
+1. **Branch:** worktree-branchen er normalt ditt arbeidssted. Hvis du starter en ny fra `main`, gi den et beskrivende navn (f.eks. `issue-19-netto-helper-tekst`).
+2. **Commits underveis:** atomiske commits på branchen, alle med `Refs #N` i body. Subagent-prompter må inkludere issue-nummer + Refs-instruks. `Closes #N` i siste commit-body er greit, men det er PR-body-en som er den autoritative auto-close-trigger-en.
+3. **Push + PR-create:**
+   ```bash
+   git push origin <branch>
+   gh pr create --base main \
+     --title "<conventional-commit-style tittel>" \
+     --body "Closes #N
+
+   <tagline fra CHANGELOG-entry>"
+   ```
+4. **Vercel preview-deploy:** Vercel deployer PR-branchen automatisk til en preview-URL. Spot-sjekk i Safari hvis endringen er visuelt synlig.
+5. **Merge:** `gh pr merge --rebase --delete-branch` — rebase holder linear `main`-historie og bevarer atomic-commit-disiplinen. **Squash brukes ikke** (mister granulær audit-trail per commit).
+6. **Auto-close:** `Closes #N` i PR-body lukker issue-en ved merge. Bekreft med `gh issue view N --json state` hvis usikker.
+
+#### Closing-kommentar (ALLTID)
+
+Når en issue lukkes, MÅ hovedchatten poste en kommentar med `gh issue comment N --body ...`. Kommentaren har to seksjoner:
+
+- **`## Teknisk`** — hvilke filer/komponenter endret, hvilken approach, evt. avvik fra issue-design, PR-link + commit-SHA-er.
+- **`## Funksjonell`** — hva brukeren ser i appen nå, på vanlig norsk, action-orientert. Samme tone som CHANGELOG-taglines («Du kan nå …», «Når X skjer, sier appen nå …»).
+
+Gjelder også når subagenter har gjort selve implementasjonen — hovedchatten skriver closing-kommentaren, ikke subagenten.
+
+#### Avvik fra issue-design
+
+Skal eksplisitt nevnes under «Teknisk» i closing-kommentaren — ikke skjul kutt, scope-endringer eller utsatte deler.
+
+#### Nye funn underveis
+
+Funn som ikke hører hjemme i nåværende issue: opprett ny issue via `gh issue create` (med riktig `type:` + `area:` + scope-labels), spør bruker om det skal gjøres nå eller bare nevnes. Aldri smyge urelaterte fixes inn i nåværende PR.
+
+#### Reviewer-funn (mandatory)
+
+Når code-quality-reviewer, spec-reviewer eller annen subagent rapporterer findings som IKKE landerer i samme PR, MÅ hovedchatten opprette dem som GitHub Issues via `gh issue create` **før PR-merge**. Verbal rapport alene er ikke nok — funn forsvinner ut av kontekstvinduet etter neste sesjon. Adresserte funn (f.eks. JSDoc-stramming i siste commit) nevnes i closing-kommentaren under «Teknisk» i stedet. Ikke filer rene stil-meninger som issues — kun substantielle refactor/test/docs/edge-case-funn.
+
+#### Ingen ceremoni utenom selve PR-en
+
+Ingen start-kommentar, ingen self-assign, ingen `in-progress`-label, ingen `gh issue develop`-call (PR-en gir auto-link til issue-en). Solo dev → minimer ceremoni.
 
 ### Versjonering / CHANGELOG
 
