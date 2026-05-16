@@ -1,7 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import { sendScorecardSubmittedNotification } from '@/lib/mail/scorecardSubmittedNotification';
 import { firstName } from '@/lib/firstName';
@@ -90,6 +90,7 @@ export async function submitScorecard(gameId: string) {
     }
   }
 
+  revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/games/${gameId}`);
   redirect(`/games/${gameId}?status=submitted`);
 }

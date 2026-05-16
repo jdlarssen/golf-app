@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import type { GameStatus } from '@/lib/games/status';
 
@@ -51,6 +52,7 @@ export async function deleteGame(formData: FormData) {
     redirect(`/admin/games/${gameId}/slett?error=delete_failed`);
   }
 
+  revalidateTag(`game-${gameId}`, 'max');
   const qs = new URLSearchParams({ status: 'deleted', name: game.name });
   redirect(`/admin/games?${qs.toString()}`);
 }

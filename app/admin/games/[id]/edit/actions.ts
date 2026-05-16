@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import {
   buildGameInsertPayload,
@@ -178,6 +179,7 @@ async function updateGameInternal(
     }
   }
 
+  revalidateTag(`game-${gameId}`, 'max');
   redirect(
     `/admin/games/${gameId}?status=${
       mode === 'publish' ? 'scheduled' : 'updated'

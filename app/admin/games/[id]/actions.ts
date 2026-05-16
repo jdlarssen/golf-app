@@ -1,7 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import {
   calculateCourseHandicap,
@@ -56,6 +56,7 @@ export async function startScheduledGameAction(gameId: string) {
     redirect(`${detailPath}?error=${result.reason}`);
   }
 
+  revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/admin/games/${gameId}`);
   revalidatePath(`/games/${gameId}`);
   redirect(`${detailPath}?status=started`);
@@ -133,6 +134,7 @@ export async function startGame(gameId: string) {
     .eq('id', gameId);
   if (statusError) redirect(`${detailPath}?error=db_game`);
 
+  revalidateTag(`game-${gameId}`, 'max');
   redirect(`${detailPath}?status=started`);
 }
 
@@ -171,6 +173,7 @@ export async function adminApproveScorecard(
     .is('approved_at', null);
   if (error) redirect(`${detailPath}?error=db_players`);
 
+  revalidateTag(`game-${gameId}`, 'max');
   redirect(`${detailPath}?status=admin_approved`);
 }
 
@@ -262,6 +265,7 @@ export async function endGame(gameId: string) {
     }
   }
 
+  revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/admin/games/${gameId}`);
   revalidatePath(`/games/${gameId}`);
   redirect(`${detailPath}?status=finished`);
@@ -302,6 +306,7 @@ export async function reopenScorecard(gameId: string, playerUserId: string) {
     .not('submitted_at', 'is', null);
   if (error) redirect(`${detailPath}?error=db_players`);
 
+  revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/admin/games/${gameId}`);
   revalidatePath(`/games/${gameId}`);
   redirect(`${detailPath}?status=scorecard_reopened`);
@@ -332,6 +337,7 @@ export async function reopenGame(gameId: string) {
     .eq('id', gameId);
   if (error) redirect(`${detailPath}?error=db_game`);
 
+  revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/admin/games/${gameId}`);
   revalidatePath(`/games/${gameId}`);
   revalidatePath(`/games/${gameId}/leaderboard`);

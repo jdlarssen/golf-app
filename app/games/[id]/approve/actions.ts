@@ -1,7 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 
 type AuthorizationResult = {
@@ -100,6 +100,7 @@ export async function approveScorecard(gameId: string, playerUserId: string) {
     redirect(`/games/${gameId}/approve?error=db`);
   }
 
+  revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/games/${gameId}`);
   revalidatePath(`/games/${gameId}/approve`);
   redirect(`/games/${gameId}/approve?status=approved`);
@@ -136,6 +137,7 @@ export async function rejectScorecard(gameId: string, formData: FormData) {
     redirect(`/games/${gameId}/approve?error=db`);
   }
 
+  revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/games/${gameId}`);
   revalidatePath(`/games/${gameId}/approve`);
   redirect(`/games/${gameId}/approve?status=rejected`);

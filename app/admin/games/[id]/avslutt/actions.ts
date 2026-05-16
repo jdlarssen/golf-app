@@ -1,7 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import { sendGameFinishedNotification } from '@/lib/mail/gameFinishedNotification';
 import { firstName } from '@/lib/firstName';
@@ -177,6 +177,7 @@ export async function endGameWithSideWinners(
     }
   }
 
+  revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/admin/games/${gameId}`);
   revalidatePath(`/games/${gameId}`);
   redirect(`${detailPath}?status=finished`);
