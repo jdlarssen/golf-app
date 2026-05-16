@@ -2,6 +2,8 @@
 // Pure TypeScript side tournament scoring.
 // No external dependencies, deterministic, fully unit-tested.
 
+import type { SideCategoryId } from './sideTournamentConfig';
+
 export type TeamId = number;
 export type UserId = string;
 
@@ -17,6 +19,7 @@ export interface SideTournamentConfig {
   enabled: boolean;
   ldCount: 0 | 1 | 2;
   ctpCount: 0 | 1 | 2;
+  disabledCategories: readonly SideCategoryId[];
 }
 
 export interface SideWinner {
@@ -28,6 +31,12 @@ export interface SideWinner {
 export interface SideTournamentInput {
   config: SideTournamentConfig;
   teams: Array<{ teamId: TeamId; userIds: UserId[] }>;
+  coursePars: number[];
+  playerScoresPerHole: Array<{
+    userId: UserId;
+    perHoleGross: Array<number | null>;
+    perHoleNetto: Array<number | null>;
+  }>;
   nettoBestBallPerHole: Array<{
     teamId: TeamId;
     perHoleNetto: Array<number | null>;

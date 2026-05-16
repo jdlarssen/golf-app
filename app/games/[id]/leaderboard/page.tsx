@@ -405,11 +405,14 @@ async function LeaderboardBody({
       enabled: true,
       ldCount,
       ctpCount,
+      disabledCategories: [],
     },
     teams: sortedNettoLines.map((line) => ({
       teamId: line.teamNumber,
       userIds: line.players.map((p) => p.userId),
     })),
+    coursePars: new Array(18).fill(4),
+    playerScoresPerHole: [],
     nettoBestBallPerHole: sortedNettoLines.map((line) => {
       // computeLeaderboard returns holes sorted 1..18 already.
       const perHoleNetto: Array<number | null> = [];

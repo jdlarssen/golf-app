@@ -13,11 +13,13 @@ function holes(values: Array<number | null>): Array<number | null> {
 // Standard 2-lags-input som test-cases utvider
 function baseInput(overrides: Partial<SideTournamentInput> = {}): SideTournamentInput {
   return {
-    config: { enabled: true, ldCount: 0, ctpCount: 0 },
+    config: { enabled: true, ldCount: 0, ctpCount: 0, disabledCategories: [] },
     teams: [
       { teamId: 1, userIds: ['user-a', 'user-b'] },
       { teamId: 2, userIds: ['user-c', 'user-d'] },
     ],
+    coursePars: new Array(18).fill(4),
+    playerScoresPerHole: [],
     nettoBestBallPerHole: [
       { teamId: 1, perHoleNetto: holes(new Array(18).fill(4)) },
       { teamId: 2, perHoleNetto: holes(new Array(18).fill(5)) },
@@ -123,7 +125,7 @@ describe('calculateSideTournament', () => {
 
   it('LD: 1 slot, winner set → 2p to winner team', () => {
     const input = baseInput({
-      config: { enabled: true, ldCount: 1, ctpCount: 0 },
+      config: { enabled: true, ldCount: 1, ctpCount: 0, disabledCategories: [] },
       sideWinners: [
         { category: 'longest_drive', position: 1, winnerUserId: 'user-a' },
       ],
@@ -135,7 +137,7 @@ describe('calculateSideTournament', () => {
 
   it('LD: 2 slots, same player both → 4p to that team', () => {
     const input = baseInput({
-      config: { enabled: true, ldCount: 2, ctpCount: 0 },
+      config: { enabled: true, ldCount: 2, ctpCount: 0, disabledCategories: [] },
       sideWinners: [
         { category: 'longest_drive', position: 1, winnerUserId: 'user-a' },
         { category: 'longest_drive', position: 2, winnerUserId: 'user-a' },
@@ -149,7 +151,7 @@ describe('calculateSideTournament', () => {
 
   it('LD: slot with null winner → 0p, no award', () => {
     const input = baseInput({
-      config: { enabled: true, ldCount: 1, ctpCount: 0 },
+      config: { enabled: true, ldCount: 1, ctpCount: 0, disabledCategories: [] },
       sideWinners: [
         { category: 'longest_drive', position: 1, winnerUserId: null },
       ],
@@ -164,7 +166,7 @@ describe('calculateSideTournament', () => {
 
   it('CTP mirrors LD logic', () => {
     const input = baseInput({
-      config: { enabled: true, ldCount: 0, ctpCount: 1 },
+      config: { enabled: true, ldCount: 0, ctpCount: 1, disabledCategories: [] },
       sideWinners: [
         { category: 'closest_to_pin', position: 1, winnerUserId: 'user-c' }, // user-c is on team 2
       ],
@@ -183,7 +185,7 @@ describe('calculateSideTournament', () => {
     const t1 = [...Array(9).fill(3), ...Array(9).fill(5)];
     const t2 = [...Array(9).fill(5), ...Array(9).fill(3)];
     const input = baseInput({
-      config: { enabled: true, ldCount: 2, ctpCount: 2 },
+      config: { enabled: true, ldCount: 2, ctpCount: 2, disabledCategories: [] },
       nettoBestBallPerHole: [
         { teamId: 1, perHoleNetto: holes(t1) },
         { teamId: 2, perHoleNetto: holes(t2) },
@@ -206,7 +208,7 @@ describe('calculateSideTournament', () => {
   });
 
   it('config.enabled = false → all teams 0 points, no awards', () => {
-    const input = baseInput({ config: { enabled: false, ldCount: 0, ctpCount: 0 } });
+    const input = baseInput({ config: { enabled: false, ldCount: 0, ctpCount: 0, disabledCategories: [] } });
     const result = calculateSideTournament(input);
     for (const team of result.teamStandings) {
       expect(team.totalPoints).toBe(0);
@@ -216,8 +218,10 @@ describe('calculateSideTournament', () => {
 
   it('handles 4-team game without crashing', () => {
     const input: SideTournamentInput = {
-      config: { enabled: true, ldCount: 0, ctpCount: 0 },
+      config: { enabled: true, ldCount: 0, ctpCount: 0, disabledCategories: [] },
       teams: [1, 2, 3, 4].map((id) => ({ teamId: id, userIds: [`u${id}`] })),
+      coursePars: new Array(18).fill(4),
+      playerScoresPerHole: [],
       nettoBestBallPerHole: [1, 2, 3, 4].map((id) => ({
         teamId: id,
         perHoleNetto: holes(new Array(18).fill(3 + id)), // team 1 best (4/hole), team 4 worst (7/hole)
@@ -229,5 +233,23 @@ describe('calculateSideTournament', () => {
     const team1 = result.teamStandings.find((t) => t.teamId === 1)!;
     expect(team1.awards.find((a) => a.category === 'best_netto_18')?.points).toBe(10);
     expect(team1.awards.filter((a) => a.category === 'hole_win').reduce((s, a) => s + a.points, 0)).toBe(36);
+  });
+
+  describe('extended input shape (v1.2.0)', () => {
+    it('accepts coursePars, playerScoresPerHole, and disabledCategories without throwing', () => {
+      const input: SideTournamentInput = {
+        config: { enabled: true, ldCount: 0, ctpCount: 0, disabledCategories: [] },
+        teams: [{ teamId: 1, userIds: ['u1'] }],
+        coursePars: Array(18).fill(4),
+        playerScoresPerHole: [{
+          userId: 'u1',
+          perHoleGross: Array(18).fill(4),
+          perHoleNetto: Array(18).fill(4),
+        }],
+        nettoBestBallPerHole: [{ teamId: 1, perHoleNetto: Array(18).fill(4) }],
+        sideWinners: [],
+      };
+      expect(() => calculateSideTournament(input)).not.toThrow();
+    });
   });
 });
