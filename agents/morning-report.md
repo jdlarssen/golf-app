@@ -127,8 +127,8 @@ where ran_at > now() - interval '24 hours'
 ```
 
 Capture as `$total_errors`. We don't track distinct affected users yet, so
-`totalUsersAffected` is hardcoded to `0` — leave a follow-up note in
-`TODO.md` if that surfaces a need later.
+`totalUsersAffected` is hardcoded to `0` — open a GitHub issue
+(<https://github.com/jdlarssen/golf-app/issues>) if that surfaces a need later.
 
 ## Step 5: Render mail
 

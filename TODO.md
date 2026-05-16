@@ -1,166 +1,31 @@
-# Tørny — TODO
+# Tørny — backlog er flyttet til GitHub Issues
 
-Ting vi har identifisert men ikke prioritert for første lansering. Sortert etter type.
+Backlogen ligger nå i **[GitHub Issues](https://github.com/jdlarssen/golf-app/issues)** (migrert 2026-05-16).
 
-Når en post tas, flytt den til en commit-melding og fjern den fra denne listen.
+## Hvor finner du hva
 
----
+- **Alle åpne oppgaver:** https://github.com/jdlarssen/golf-app/issues
+- **Filtrér på område:** `area:scorecard`, `area:leaderboard`, `area:auth`, `area:admin`, `area:scoring`, `area:ui`, `area:pwa`, `area:offline-sync`, `area:mail`, `area:courses`, `area:tee-boxes`
+- **Filtrér på type:** `bug`, `enhancement`, `performance`, `security`, `refactor`, `tests`, `design`, `i18n`, `documentation`
+- **Filtrér på scope:** `epic`, `needs-brainstorming`, `blocks-club-scale`, `deferred-from-v1`, `post-pilot`
+- **Pilot-feedback:** `feedback` (eksisterende — fra pilot eller admin)
 
-## 🛠️ Funksjonelt — bør fikses før klubb-skala
+## Praktiske filtre
 
-### Hull-skjerm + scorekort-flater
+- **Blokkere klubb-skala:** [`label:blocks-club-scale`](https://github.com/jdlarssen/golf-app/issues?q=is%3Aissue+is%3Aopen+label%3Ablocks-club-scale)
+- **Trenger brainstorming først:** [`label:needs-brainstorming`](https://github.com/jdlarssen/golf-app/issues?q=is%3Aissue+is%3Aopen+label%3Aneeds-brainstorming)
+- **Store features (epics):** [`label:epic`](https://github.com/jdlarssen/golf-app/issues?q=is%3Aissue+is%3Aopen+label%3Aepic)
+- **Deferred fra v1.0:** [`label:deferred-from-v1`](https://github.com/jdlarssen/golf-app/issues?q=is%3Aissue+is%3Aopen+label%3Adeferred-from-v1)
 
-- ✅ ~~**Vis brutto OG netto på scorekortet, med E/−1/+1-delta mot par.**~~ Løst i v1.0 via reveal-mode + scorekort-former: stortallet er pakket i form (sirkel/firkant/dobbel/trippel/kvadruppel), per-spiller vs-par-pille på hull-leaderboard, scorekort-oversikt har Netto-kolonne i reveal-finished. Live-mode-utvidelser (E-lite-stack, netto-kolonne i live, brutto/netto-toggle på leaderboard) ble bevisst deferred.
-- ✅ ~~**Per-bruker valg: vis navn eller nickname under runden.**~~ Strøket og erstattet av `formatRevealName(name, nickname)`-mekanikken: under runden brukes `nickname ?? name` (dagens oppførsel), på finished-flater vises `Karl "Knølkis" Jensen`. Ingen `display_pref`-toggle, ingen migrasjon. Den sosiale leken med kallenavn er en del av Tørny-kulturen.
-- [ ] **Multi-player scorekort-oversikt (`/games/[id]/scorecard`)** — i dag viser flaten kun din egen scorekort (single-player tabell). Bruker har foreslått en utvidelse til å vise lag-medlemmer (typisk 2 spillere i best-ball) side om side, med initialer (J, H, ...) øverst i hver kolonne — som på et fysisk papir-scorekort. Sett opp for diskusjon 2026-05-14, deferred fra v1.0-leveransen. Krever brainstorming: scope (lag vs. flight), plass-budsjett på iPhone, om eksisterende «Mitt scorekort»-tittel skal byttes til «Lagets scorekort» eller om vi har to flater.
-- [ ] **Hull-navigasjon (perf) — neste steg etter v0.9.3 parallellisering.** Måling + parallellisering shipped 2026-05-13 (v0.9.2 instrumentering + v0.9.3 refactor) — fra 1.65s snitt til 440ms (–73%). Runde 1 (`games`, `allGamePlayers`, `scoreCount`) er nå flaskehalsen, varierer 150–700ms pga Supabase tail-latency. Gjenstående muligheter:
-  - **Layout-lift**: flytt `game` + `game_players` til `app/games/[id]/layout.tsx` slik at hull-page-en kun trenger `hole` + `scores` per hull-bytte. Krever React.cache- eller unstable_cache-mønster med revalidering ved score-writes. Estimert –300ms til (snitt ~150ms). Moderat refactor-risiko.
-  - **Single-page-architecture**: refaktorere så hele runden eies av én klient-shell som lastes én gang per game og bytter hull via client-state. Server gjør én stor fetch for hele runden, client håndterer hull-bytte i `useState`. Stor refaktor, stor gevinst.
-  - **Pilot-instrumentering** (`console.time/timeEnd` i [app/games/[id]/holes/[holeNumber]/page.tsx](app/games/[id]/holes/[holeNumber]/page.tsx) og [app/games/[id]/page.tsx](app/games/[id]/page.tsx)) skal fjernes eller gates bak dev-flag når pilot-data er hentet. Se memory `project_active_perf_instrumentation`.
+## Hvordan legge til ny oppgave
 
-### Live-mode utvidelser (deferred fra v1.0)
+Bruk `gh issue create` eller GitHub-UI:
 
-- [ ] **E-lite-stack med netto under brutto på hull-skjerm i live-mode.** I reveal-mode er netto skjult; i live-mode kan vi velge å vise begge på hver ScoreCard. Foreslått layout: «Netto X (+/−Y)» som hjelpetekst når extraStrokes > 0. Diskutert 2026-05-14, deferred til senere.
-- [ ] **Netto-kolonne på scorekort-oversikt i live-mode.** I reveal-finished får scorekortet en Netto-kolonne; live-mode står utenfor. Lite arbeid, men har scope-tap på smaler iPhones (kolonnen tar plass).
-- [ ] **Brutto/netto-toggle på leaderboard i live-mode.** I reveal-mode er leaderboardet brutto-totaler (active) eller netto best-ball (finished); i live-mode er det alltid netto. En toggle for å vise brutto også kan være nyttig — men krever client-state og ny UI. Lett å legge til på et senere tidspunkt.
+```bash
+gh issue create --repo jdlarssen/golf-app \
+  --title "Kort tittel" \
+  --body "Beskrivelse — hva, hvorfor, hvor i koden" \
+  --label "enhancement,area:scorecard"
+```
 
-### Recovery / admin overrides
-
-- [ ] **Arrangør-rolle** («turneringsadministrator»: kan opprette spill og baner, men ikke endre brukere; ser kun egne spill). Krever ny brainstorming-runde + RLS-revisjon på `games`, `game_players`, `courses`, `course_holes`, `tee_boxes`, `invitations`. Diskutert 2026-05-13; utsatt fra admin-spillere-leveransen for å holde scope.
-- [ ] **Vis «Slettet spiller»-fallback i historiske leaderboards** — pågående backlog hvis vi senere bestemmer oss for soft-delete istedenfor blokk-if-game_players. I dag har vi block-pattern, så ikke aktuelt nå, men noter scenarioet.
-
-### Privacy / GDPR
-
-
-### Varslinger
-
-- [ ] (Senere) push-varsler via Web Push API — krever VAPID-nøkler og service worker oppgradering
-- [ ] **In-app innboks / varslings-senter** *(større feature — egen milestone)* — sentralisert flate der innloggede brukere ser invitasjoner til nye spill, godkjennings-forespørsler fra flight-medlemmer, runde-starter-snart-meldinger, scorekort-godkjent, og leaderboard-finished. Krever ny tabell (`notifications` med `user_id`, `type`, `payload jsonb`, `read_at`, `created_at`), realtime-push av nye varsler, UI-flate (header-ikon med badge + dropdown/side), read/unread-state, evt. push-notifikasjoner via Web Push. Avhenger av Phase E.5 (e-post-på-game-add) for den enkleste varseltypen — varselsystemet bør gjøre mer enn det e-post allerede gjør. Diskutert 2026-05-11; må gjennom egen brainstorming-runde for å designe varselstypene og prioriteringen.
-
----
-
-## 🎨 Visuelt — design polish
-
-### Ikoner og illustrasjoner
-
-- [ ] Flere tomstands-illustrasjoner (state #1 «ingen aktive spill» er gjort — ingen invitasjoner og evt. andre tomstander gjenstår)
-- [ ] Subtile bakgrunnsillustrasjoner på leaderboard (klubbhus-vinje, fairway-silhuett)
-
-### Animasjoner
-
-- [ ] Bedre overgang mellom hull (i dag direkte navigasjon)
-
-### Dark mode
-
-- [ ] Dark-mode-tokens er definert i `app/globals.css`, men flatene er ikke verifisert i dark mode og noen ser halvferdige ut. Per 2026-05-11 tvinger `app/layout.tsx` light mode via `data-theme="light"` + `colorScheme: "light"`. Fjern tvangen og audit hver flate når dark mode skal aktiveres på ekte.
-
----
-
-## ⚙️ Tekniske forbedringer
-
-### Test-dekning
-
-- [ ] E2E-test for hele invitasjons-flyten (ny bruker registrerer seg og spiller en runde)
-- [ ] E2E-test for offline-sync (Playwright kan sjokke offline)
-- [ ] Unit-tester for server actions (submitScorecard, approveScorecard, endGame, createGame)
-### Refaktorering (etter empty-states + scheduled-status-leveransen)
-
-- [ ] **Move RealtimeMount out of game layout** — i dag mounter `app/games/[id]/layout.tsx` `RealtimeMount` for alle game-statuser inkludert scheduled. Subscription er harmless (ingen events arriverer for scheduled siden ingen scores eksisterer + RLS blokkerer), men det er en idle WebSocket-subscription på hver venterom-besøk. Lav prioritet til vi vokser.
-
-### Opprydning
-
-- [ ] **Slett `app/auth/callback/route.ts`** etter 2026-06-13. Magic-link-URL-flyten ble retired 2026-05-13 til fordel for OTP-kode-innlogging; route-en redirecter alle gamle mail-klikk til `/login?error=link_expired` i en 30-dagers overgangsperiode. Etter datoen er det trygt å slette filen.
-
-### Versjonering / release
-
-- ✅ ~~**Bump til `v1.0.0` — kriteriene er oppfylt 2026-05-13.**~~ Shipped 2026-05-14 sammen med reveal-mode + scorekort-former + navne-reveal. Står nå på `v1.0.9` etter 9 post-launch-patches basert på prod-testing.
-
-### Performance
-
-- [ ] Bundle-størrelse — fjern Dexie hvis det er overkill (vi kan vurdere idb direkte)
-- [ ] Image optimization for fremtidige illustrasjoner
-- [ ] Realtime-subscription teardown ved app-bytte (i dag potensiell minne-lekkasje hvis bruker spammer fram og tilbake)
-
-### Sikkerhet
-
-- [ ] Rate-limiting på admin-invitasjons-endpoint (per IP, per admin)
-- [ ] Audit-log for admin-handlinger (hvem avsluttet hvilket spill, hvem godkjente hvilken score)
-- [ ] CAPTCHA på invitasjons-skjemaet hvis vi noensinne får spam-problem
-
----
-
-## 🚀 Vekst og skalering
-
-### Spillformat-fleksibilitet *(blokkerer klubb-skala)*
-
-- [ ] **Players-first + valgbar spillmodus + variabel lagstruktur.** I dag er det hardkodet 4 lag × 2 spillere = nøyaktig 8 spillere, og spillformat låses til best-ball-netto ved create. Den riktige mentale modellen Jørgen vil ha (diskutert 2026-05-12): admin legger til spillere FØRST som rene checkboxer (ingen auto-tilordning til lag), velger deretter spillmodus, og DA presenteres lag/flight-strukturen som modusen krever — best-ball trenger 4×2, solo stableford ingen lag, scramble fritt antall per lag osv. Krever:
-  - DB-migrasjon: `game_players.team_number` og `flight_number` blir nullable, ny kolonne `games.game_mode text` med enum-CHECK eller egen tabell
-  - Validation: gamePayload.ts publish-mode må gate per game_mode istedenfor hardkodet 8-balanced
-  - Scoring-abstraksjon: `lib/scoring/` får et mode-router-lag i front av bestBall.ts; nye moduler per format
-  - UI-restruktur: GameForm splittes i seksjoner som rendres dynamisk per modus; auto-tilordnings-hack-en i `togglePlayer` (`nextAvailableTeam`) rives ut når dette lander
-  - Bør tas som egen milestone med dedikert brainstorming og plan. Påvirker også «In-app innboks»-flyten (varseltype per modus). Jørgens kommentar 2026-05-12: «Vi skal være 8 spillere når vi skal spille, men det er ikke noe jeg ønsker å ha hardkodet.»
-- [ ] **Forbedret spiller-picker i `/admin/games/new` og `/admin/games/[id]/edit`.** Når kompisgjengen vokser fra 8 til 100+ brukere blir den flate avhukingslisten i spill-opprettingen umulig å navigere. Trenger typeahead-input som tagger valgte spillere (chip-style UI), eller paginerte filtrerte resultater. (Admin-spillerlisten på `/admin/spillere` har allerede søk fra v0.6.0 — denne TODO-en gjelder kun pickeren i spill-opprett/-rediger-flyten.) Knyttet til klubb-skala-arbeidet. Diskutert 2026-05-12.
-
-### Spillformater *(avhenger av spillformat-fleksibilitet over)*
-
-- [ ] **Stableford** — i stedet for laveste sum, samle poeng per hull (par = 2, birdie = 3 osv.)
-- [ ] **Texas scramble** — laget velger beste slag for hver shot, alle spiller derfra
-- [ ] **Matchplay** — hull-for-hull seier mellom to lag/spillere
-- [ ] **Solo-turnering** — ikke lag, hver spiller for seg
-- [ ] **Ryder Cup-stil** — match mellom to grupper med flere kamper
-
-### Tee-bokser
-
-- [ ] Kjønn-tag på tee-bokser (`herretee`, `dametee`, `juniortee`) så herrer og damer kan spille fra ulike tees i samme spill med korrekt course handicap
-
-### Klubb / multi-admin
-
-- [ ] `groups`-tabell og `group_members` for å støtte flere uavhengige golfklubber/kompisgjenger
-- [ ] Admin per gruppe (ikke globalt)
-- [ ] Booking-integrasjon — koble til klubbens tee-time-system?
-
-### App Store / Play Store
-
-- [ ] React Native-versjon hvis PWA ikke er nok (gjenbruker Supabase-laget, men UI må skrives på nytt)
-- [ ] App Store-godkjenning og brand-asset-pakke
-
-### Resend-skalering
-
-- [ ] Hvis vi krysser 100 mail/dag — oppgrader Resend til Pro (~20 USD/mnd)
-- [ ] Custom domain ved Resend må kanskje vurderes på nytt for store volum
-
-### Andre baner
-
-- [ ] Massiv-import av norske golfbaner via NGF sin database (om de har et API)
-- [ ] Crowdsourcet bane-data (brukere kan foreslå banes som admin godkjenner)
-
----
-
-## 📊 Data og analyse
-
-- [ ] Klubbstatistikker: vinneliste over tid, mest aktive spillere
-- [ ] Eksporter resultater til Excel/PDF for å henge opp i klubbhuset
-
----
-
-## 🌐 Internasjonalisering
-
-- [ ] Engelsk versjon av all UI-tekst (klar for ekspansjon)
-- [ ] Andre språk hvis vi noen gang treffer Sverige/Danmark/Finland
-- [ ] Datoer og tallformat per locale
-
----
-
-## 🐛 Kjente bugs / quirks
-
-(Logg ting her etter hvert som de oppdages under bruk.)
-
-- [ ] **Biometrisk innlogging på telefon (Face ID / Touch ID / passkeys).** OTP-kode-flyten krever fortsatt bytte til mail-app → kopier kode → tilbake til PWA. Lavere friksjon enn magic-link, men ikke null. Mulige veier: (1) **WebAuthn / passkeys** (`navigator.credentials.create` + `get`) — passkey lagres i iCloud Keychain, fungerer på tvers av enheter, støttet i Safari 16+. Krever ny tabell `public.credentials` (`user_id`, `credential_id`, `public_key`, `counter`), server-actions for register/authenticate, integrasjon med Supabase Auth via custom JWT eller `signInWithIdToken`. Stor jobb. (2) **Lokal session-forlengelse**: vis biometrisk prompt for å låse opp en allerede lagret session i stedet for ny innlogging — enklere, men hjelper bare etter første OTP-runde. Diskutert 2026-05-12; trenger egen brainstorming.
-
----
-
-## ✏️ Hvordan bruke denne lista
-
-- Når du skal ta tak i en ting: kopier teksten til en commit-melding eller PR-tittel, fjern fra denne lista
-- Når ny ting oppdages: legg til nederst i riktig seksjon
-- Når en seksjon blir for lang: vurder å splitte ut til egen markdown-fil under `docs/`
+Velg minst én **type**-label (`enhancement`/`bug`/`performance`/…) og minst én **area**-label hvis det er klart hvilket område som berøres.

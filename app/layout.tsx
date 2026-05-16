@@ -39,7 +39,7 @@ export const metadata: Metadata = {
 
 // Next.js 16 requires themeColor / colorScheme / viewport in a separate
 // `viewport` export — they are deprecated under `metadata`.
-// Dark mode is deferred — see TODO.md. Force light across the app for now
+// Dark mode is deferred — see #29. Force light across the app for now
 // so OS dark mode doesn't show half-finished tokens.
 export const viewport: Viewport = {
   themeColor: "#1b4332",

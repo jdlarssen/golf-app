@@ -248,19 +248,19 @@ Helper functions er `SECURITY DEFINER` for å unngå rekursjons-feller.
 **Designdoc + plan i `docs/plans/`:** `2026-05-14-v1-launch-design.md` (godkjent), `2026-05-14-v1-launch-implementation.md` (25-task TDD-plan, alle 25 sjekket inn).
 
 ⏸ **Ventende (post-v1.0):**
-- **Multi-player scorekort-oversikt** — vise lag-medlemmer side om side med initialer øverst i hver kolonne (vs. dagens single-player-flate). Krever brainstorming — se TODO.md.
+- **Multi-player scorekort-oversikt** — vise lag-medlemmer side om side med initialer øverst i hver kolonne (vs. dagens single-player-flate). Krever brainstorming — se [#17](https://github.com/jdlarssen/golf-app/issues/17).
 - **3 pre-eksisterende lint-warnings** (`historikk/page.tsx:53` prefer-const, `InstallBanner.tsx:18` setState-in-effect, `SyncBanner.tsx:78` impure-call-in-render) — alle fra commits før v1.0-arbeidet, ikke blokkerende men bør fikses
 - **Perf-instrumentering** (`console.time/timeEnd`) i hull-page + game-home — pilot er ferdig (memory `project_active_perf_instrumentation`)
 - **End-to-end-test av mail-flow** (gameFinished + scorecardSubmitted) — sjekk Resend-dashboard
 - **Designpass** på resterende sider (complete-profile, admin/courses + admin/games-listen)
-- **Hull-page layout-lift** (`game` + `game_players` til layout.tsx via React.cache) — estimert –300ms
+- **Hull-page layout-lift** (`game` + `game_players` til layout.tsx via React.cache) — estimert –300ms ([#18](https://github.com/jdlarssen/golf-app/issues/18))
 - **TopBar med action-slot** for `/admin/courses` og `/admin/games`-listen
 
-📋 **Backlog:** se `TODO.md`
+📋 **Backlog:** [GitHub Issues](https://github.com/jdlarssen/golf-app/issues). `TODO.md` er en stub som peker dit — alle nye oppgaver opprettes som issues, ikke i markdown.
 
 ## Nøkkelfiler å kjenne til
 
-- `TODO.md` — backlog (sortert etter kategori)
+- [GitHub Issues](https://github.com/jdlarssen/golf-app/issues) — backlog (tagget etter type + område + scope). `TODO.md` er stub som peker dit.
 - `docs/launch-checklist.md` — admin-sjekkliste for lanseringsdagen
 - `docs/email-templates.md` — alle 5 mail-maler å lime inn i Supabase Auth
 - `docs/plans/2026-05-10-golf-best-ball-app-design.md` — opprinnelig design

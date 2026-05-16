@@ -49,7 +49,7 @@ export default async function HolePage({ params }: { params: Params }) {
   // Pilot perf instrumentation — surfaces server-side fetch latency in Vercel
   // logs so we can see which round-trip dominates hole-page time (auth check,
   // any of 6 Supabase fetches, or RSC serialisation). Remove or gate behind a
-  // dev flag once the data informs the architecture choice in TODO.md.
+  // dev flag once the data informs the architecture choice in #18.
   const tLabel = `hole.page game=${id} hole=${holeStr}`;
   console.time(tLabel);
   const t = (step: string) => `${tLabel} · ${step}`;
