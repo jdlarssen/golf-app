@@ -68,6 +68,8 @@ export type GameForHole = {
   course_id: string;
   tee_box_id: string;
   score_visibility: ScoreVisibility;
+  require_peer_approval: boolean;
+  scheduled_tee_off_at: string | null;
 };
 
 export type PlayerForHole = {
@@ -76,6 +78,8 @@ export type PlayerForHole = {
   flight_number: number;
   course_handicap: number | null;
   submitted_at: string | null;
+  approved_at: string | null;
+  rejection_reason: string | null;
   // Hole entry only renders when status is 'active' or 'finished'; pending
   // invitees can't reach those states per Task 7's publish-gate. Typed
   // nullable to match the DB column.
@@ -94,13 +98,15 @@ async function fetchGameWithPlayers(
   const [gameRes, playersRes] = await Promise.all([
     supabase
       .from('games')
-      .select('id, name, status, course_id, tee_box_id, score_visibility')
+      .select(
+        'id, name, status, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at',
+      )
       .eq('id', id)
       .single<GameForHole>(),
     supabase
       .from('game_players')
       .select(
-        'user_id, team_number, flight_number, course_handicap, submitted_at, users!game_players_user_id_fkey(name, nickname)',
+        'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, rejection_reason, users!game_players_user_id_fkey(name, nickname)',
       )
       .eq('game_id', id)
       .returns<PlayerForHole[]>(),
