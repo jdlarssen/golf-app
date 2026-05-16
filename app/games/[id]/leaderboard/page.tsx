@@ -512,6 +512,7 @@ async function LeaderboardBody({
               position: w.position,
               winnerUserId: w.winner_user_id,
             }))}
+            coursePars={coursePars}
           />
         }
       />

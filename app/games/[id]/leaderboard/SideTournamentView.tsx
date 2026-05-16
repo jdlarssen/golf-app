@@ -1,4 +1,8 @@
-import type { SideTournamentResult } from '@/lib/scoring/sideTournament';
+import type {
+  SideCategoryAward,
+  SideTournamentResult,
+} from '@/lib/scoring/sideTournament';
+import { SIDE_TOURNAMENT_POINTS } from '@/lib/scoring/sideTournamentConfig';
 import { formatHolesList } from '@/lib/leaderboard/formatHolesList';
 
 export type SideTournamentTeam = {
@@ -24,6 +28,12 @@ type Props = {
     position: number;
     winnerUserId: string | null;
   }>;
+  /**
+   * 18-element par-array indexed by hole-1 (coursePars[0] er par for hull 1).
+   * Brukes til å beregne over-par-delta for Snowman-radene
+   * ("hele laget +6 på hull 12" — N regnes som worst-gross − par).
+   */
+  coursePars: number[];
 };
 
 /** Group-id-er som driver under-overskriftene i hver lag-expand. Rekkefølgen
@@ -119,6 +129,7 @@ export function SideTournamentView({
   ldCount,
   ctpCount,
   sideWinners,
+  coursePars,
 }: Props) {
   const sorted = rankByPoints(result.teamStandings);
   const teamById = new Map(teams.map((t) => [t.teamId, t]));
@@ -174,6 +185,7 @@ export function SideTournamentView({
                 ctpCount={ctpCount}
                 sideWinners={sideWinners}
                 teamById={teamById}
+                coursePars={coursePars}
               />
             </div>
           </details>
@@ -212,6 +224,13 @@ type RankedStanding = SideTournamentResult['teamStandings'][number] & {
 
 type AwardRow = { key: string; render: React.ReactNode };
 
+/** Formaterer en bogey-fri / turkey / solid-streak til "hull X–Y" eller
+ * "hull X" hvis startHole === endHole. Brukes inline i achievement-radene. */
+function formatStreakRange(startHole: number, endHole: number): string {
+  if (startHole === endHole) return `hull ${startHole}`;
+  return `hull ${startHole}–${endHole}`;
+}
+
 /**
  * Renders one team's awards grouped into seks under-seksjoner. Tomme grupper
  * hoppes stille over (ingen under-overskrift, ingen padding).
@@ -229,6 +248,7 @@ function TeamAwards({
   ctpCount,
   sideWinners,
   teamById,
+  coursePars,
 }: {
   teamId: number;
   standings: RankedStanding[];
@@ -236,6 +256,7 @@ function TeamAwards({
   ctpCount: number;
   sideWinners: Props['sideWinners'];
   teamById: Map<number, SideTournamentTeam>;
+  coursePars: number[];
 }) {
   const myStanding = standings.find((s) => s.teamId === teamId);
   if (!myStanding) return null;
@@ -245,7 +266,12 @@ function TeamAwards({
   // points} så vi kan sortere innen-gruppe.
   const rowsByGroup: Record<
     GroupId,
-    Array<{ key: string; render: React.ReactNode; points: number; category: string }>
+    Array<{
+      key: string;
+      render: React.ReactNode;
+      points: number;
+      category: string;
+    }>
   > = {
     hovedkonkurranser: [],
     skill: [],
@@ -287,6 +313,20 @@ function TeamAwards({
     rowsByGroup[group].push({ key, render, points, category });
   };
 
+  /** Henter den FØRSTE award med gitt kategori (de fleste finnes maks én
+   * gang per lag; aggregerte kategorier som hole_win / turkey / solid /
+   * snowman håndteres separat). */
+  const findAward = (
+    category: SideCategoryAward['category'],
+  ): SideCategoryAward | undefined =>
+    awards.find((a) => a.category === category);
+
+  /** Hjelper for individ-rader: returnerer fornavnet til winnerUserId, eller
+   * "?" hvis vi ikke finner spilleren (skal ikke skje i praksis). */
+  const winnerName = (award: SideCategoryAward | undefined): string =>
+    firstNameOf(award?.winnerUserId ?? null, teamById) ?? '?';
+
+  // ─── Hovedkonkurranser ──────────────────────────────────────────────────
   // 1. Best netto 18
   if (awards.some((a) => a.category === 'best_netto_18')) {
     push('hovedkonkurranser', 'best_netto_18', 10, 'best_netto_18', (
@@ -314,6 +354,250 @@ function TeamAwards({
       </>
     ));
   }
+
+  // ─── Skill og rarity ────────────────────────────────────────────────────
+  // 10. Best brutto 18
+  if (awards.some((a) => a.category === 'best_brutto_18_team')) {
+    const pts = SIDE_TOURNAMENT_POINTS.bestBrutto18Team;
+    push('skill', 'best_brutto_18_team', pts, 'best_brutto_18_team', (
+      <>
+        Best brutto totalt 18 (lag): <Pts n={pts} />
+        {tieSuffix(tieMates('best_brutto_18_team'))}
+      </>
+    ));
+  }
+  if (awards.some((a) => a.category === 'best_brutto_18_individual')) {
+    const pts = SIDE_TOURNAMENT_POINTS.bestBrutto18Individual;
+    const name = winnerName(findAward('best_brutto_18_individual'));
+    push(
+      'skill',
+      'best_brutto_18_individual',
+      pts,
+      'best_brutto_18_individual',
+      (
+        <>
+          Best brutto totalt 18 ({name}): <Pts n={pts} />
+        </>
+      ),
+    );
+  }
+  // 13. Konge på par-3
+  if (awards.some((a) => a.category === 'king_par3_team')) {
+    const pts = SIDE_TOURNAMENT_POINTS.kingPar3Team;
+    push('skill', 'king_par3_team', pts, 'king_par3_team', (
+      <>
+        Konge på par-3 (lag): <Pts n={pts} />
+        {tieSuffix(tieMates('king_par3_team'))}
+      </>
+    ));
+  }
+  if (awards.some((a) => a.category === 'king_par3_individual')) {
+    const pts = SIDE_TOURNAMENT_POINTS.kingPar3Individual;
+    const name = winnerName(findAward('king_par3_individual'));
+    push('skill', 'king_par3_individual', pts, 'king_par3_individual', (
+      <>
+        Konge på par-3 ({name}): <Pts n={pts} />
+      </>
+    ));
+  }
+  // 14. Konge på par-5
+  if (awards.some((a) => a.category === 'king_par5_team')) {
+    const pts = SIDE_TOURNAMENT_POINTS.kingPar5Team;
+    push('skill', 'king_par5_team', pts, 'king_par5_team', (
+      <>
+        Konge på par-5 (lag): <Pts n={pts} />
+        {tieSuffix(tieMates('king_par5_team'))}
+      </>
+    ));
+  }
+  if (awards.some((a) => a.category === 'king_par5_individual')) {
+    const pts = SIDE_TOURNAMENT_POINTS.kingPar5Individual;
+    const name = winnerName(findAward('king_par5_individual'));
+    push('skill', 'king_par5_individual', pts, 'king_par5_individual', (
+      <>
+        Konge på par-5 ({name}): <Pts n={pts} />
+      </>
+    ));
+  }
+  // 8. Most eagles+
+  if (awards.some((a) => a.category === 'most_eagles_team')) {
+    const pts = SIDE_TOURNAMENT_POINTS.mostEaglesTeam;
+    push('skill', 'most_eagles_team', pts, 'most_eagles_team', (
+      <>
+        Flest eagles+ (lag): <Pts n={pts} />
+        {tieSuffix(tieMates('most_eagles_team'))}
+      </>
+    ));
+  }
+  if (awards.some((a) => a.category === 'most_eagles_individual')) {
+    const pts = SIDE_TOURNAMENT_POINTS.mostEaglesIndividual;
+    const name = winnerName(findAward('most_eagles_individual'));
+    push(
+      'skill',
+      'most_eagles_individual',
+      pts,
+      'most_eagles_individual',
+      (
+        <>
+          Flest eagles+ ({name}): <Pts n={pts} />
+        </>
+      ),
+    );
+  }
+  // 15. Lengste bogey-fri streak
+  {
+    const bf = findAward('longest_bogey_free_streak');
+    if (bf) {
+      const pts = SIDE_TOURNAMENT_POINTS.longestBogeyFreeStreak;
+      const name = winnerName(bf);
+      const len = bf.streakLength ?? 0;
+      const range =
+        bf.streakStartHole != null && bf.streakEndHole != null
+          ? formatStreakRange(bf.streakStartHole, bf.streakEndHole)
+          : null;
+      const detail = range ? `${name}, ${len} hull ${range}` : name;
+      push(
+        'skill',
+        'longest_bogey_free_streak',
+        pts,
+        'longest_bogey_free_streak',
+        (
+          <>
+            Lengste bogey-fri ({detail}): <Pts n={pts} />
+          </>
+        ),
+      );
+    }
+  }
+
+  // ─── Moderate ───────────────────────────────────────────────────────────
+  // 11. Best brutto F9
+  if (awards.some((a) => a.category === 'best_brutto_f9_team')) {
+    const pts = SIDE_TOURNAMENT_POINTS.bestBruttoF9Team;
+    push('moderate', 'best_brutto_f9_team', pts, 'best_brutto_f9_team', (
+      <>
+        Best brutto front 9 (lag): <Pts n={pts} />
+        {tieSuffix(tieMates('best_brutto_f9_team'))}
+      </>
+    ));
+  }
+  if (awards.some((a) => a.category === 'best_brutto_f9_individual')) {
+    const pts = SIDE_TOURNAMENT_POINTS.bestBruttoF9Individual;
+    const name = winnerName(findAward('best_brutto_f9_individual'));
+    push(
+      'moderate',
+      'best_brutto_f9_individual',
+      pts,
+      'best_brutto_f9_individual',
+      (
+        <>
+          Best brutto front 9 ({name}): <Pts n={pts} />
+        </>
+      ),
+    );
+  }
+  // 12. Best brutto B9
+  if (awards.some((a) => a.category === 'best_brutto_b9_team')) {
+    const pts = SIDE_TOURNAMENT_POINTS.bestBruttoB9Team;
+    push('moderate', 'best_brutto_b9_team', pts, 'best_brutto_b9_team', (
+      <>
+        Best brutto back 9 (lag): <Pts n={pts} />
+        {tieSuffix(tieMates('best_brutto_b9_team'))}
+      </>
+    ));
+  }
+  if (awards.some((a) => a.category === 'best_brutto_b9_individual')) {
+    const pts = SIDE_TOURNAMENT_POINTS.bestBruttoB9Individual;
+    const name = winnerName(findAward('best_brutto_b9_individual'));
+    push(
+      'moderate',
+      'best_brutto_b9_individual',
+      pts,
+      'best_brutto_b9_individual',
+      (
+        <>
+          Best brutto back 9 ({name}): <Pts n={pts} />
+        </>
+      ),
+    );
+  }
+  // 7. Most birdies
+  if (awards.some((a) => a.category === 'most_birdies_team')) {
+    const pts = SIDE_TOURNAMENT_POINTS.mostBirdiesTeam;
+    push('moderate', 'most_birdies_team', pts, 'most_birdies_team', (
+      <>
+        Flest birdier (lag): <Pts n={pts} />
+        {tieSuffix(tieMates('most_birdies_team'))}
+      </>
+    ));
+  }
+  if (awards.some((a) => a.category === 'most_birdies_individual')) {
+    const pts = SIDE_TOURNAMENT_POINTS.mostBirdiesIndividual;
+    const name = winnerName(findAward('most_birdies_individual'));
+    push(
+      'moderate',
+      'most_birdies_individual',
+      pts,
+      'most_birdies_individual',
+      (
+        <>
+          Flest birdier ({name}): <Pts n={pts} />
+        </>
+      ),
+    );
+  }
+  // 9. Most pars+
+  if (awards.some((a) => a.category === 'most_pars_team')) {
+    const pts = SIDE_TOURNAMENT_POINTS.mostParsTeam;
+    push('moderate', 'most_pars_team', pts, 'most_pars_team', (
+      <>
+        Flest pars+ (lag): <Pts n={pts} />
+        {tieSuffix(tieMates('most_pars_team'))}
+      </>
+    ));
+  }
+  if (awards.some((a) => a.category === 'most_pars_individual')) {
+    const pts = SIDE_TOURNAMENT_POINTS.mostParsIndividual;
+    const name = winnerName(findAward('most_pars_individual'));
+    push(
+      'moderate',
+      'most_pars_individual',
+      pts,
+      'most_pars_individual',
+      (
+        <>
+          Flest pars+ ({name}): <Pts n={pts} />
+        </>
+      ),
+    );
+  }
+  // 16. Lavest enkelthull
+  {
+    const low = findAward('lowest_single_hole_brutto');
+    if (low) {
+      const pts = SIDE_TOURNAMENT_POINTS.lowestSingleHoleBrutto;
+      const name = winnerName(low);
+      const score = low.score;
+      const hole = low.holeNumber;
+      const detail =
+        score != null && hole != null
+          ? `${name}, ${score} på hull ${hole}`
+          : name;
+      push(
+        'moderate',
+        'lowest_single_hole_brutto',
+        pts,
+        'lowest_single_hole_brutto',
+        (
+          <>
+            Lavest enkelthull ({detail}): <Pts n={pts} />
+          </>
+        ),
+      );
+    }
+  }
+
+  // ─── Hull-konkurranser ──────────────────────────────────────────────────
   // 4. Hole-wins (aggregated)
   const holeWinAwards = awards.filter((a) => a.category === 'hole_win');
   if (holeWinAwards.length > 0) {
@@ -339,10 +623,10 @@ function TeamAwards({
         ? findTeamForUser(w.winnerUserId, teamById)
         : null;
       if (winnerTeamId !== teamId) continue;
-      const winnerName = firstNameOf(w.winnerUserId, teamById) ?? '?';
+      const ldName = firstNameOf(w.winnerUserId, teamById) ?? '?';
       push('hull', 'longest_drive', 2, `ld_${pos}`, (
         <>
-          Longest drive #{pos} ({winnerName}): <Pts n={2} />
+          Longest drive #{pos} ({ldName}): <Pts n={2} />
         </>
       ));
     }
@@ -358,13 +642,94 @@ function TeamAwards({
         ? findTeamForUser(w.winnerUserId, teamById)
         : null;
       if (winnerTeamId !== teamId) continue;
-      const winnerName = firstNameOf(w.winnerUserId, teamById) ?? '?';
+      const ctpName = firstNameOf(w.winnerUserId, teamById) ?? '?';
       push('hull', 'closest_to_pin', 2, `ctp_${pos}`, (
         <>
-          Closest to pin #{pos} ({winnerName}): <Pts n={2} />
+          Closest to pin #{pos} ({ctpName}): <Pts n={2} />
         </>
       ));
     }
+  }
+
+  // ─── Achievements (positive) ────────────────────────────────────────────
+  // 17. Turkey — per-spiller (stackable) + lag-koord-bonus (egen rad)
+  const turkeyAwards = awards.filter((a) => a.category === 'turkey');
+  for (const t of turkeyAwards) {
+    const pts = t.points;
+    const start = t.streakStartHole;
+    const end = t.streakEndHole;
+    const range =
+      start != null && end != null ? formatStreakRange(start, end) : null;
+    if (t.coordBonus) {
+      // Lag-koord-bonus: 4p × N (alle teamets medlemmer hadde birdie samme 3-hull)
+      const key = `turkey_coord_${start ?? '?'}_${end ?? '?'}`;
+      push('achievements', 'turkey', pts, key, (
+        <>
+          Turkey lag-koord{range ? ` (${range})` : ''}: <Pts n={pts} />
+        </>
+      ));
+    } else {
+      const name = firstNameOf(t.winnerUserId ?? null, teamById) ?? '?';
+      const detail = range ? `${name}, ${range}` : name;
+      const key = `turkey_${t.winnerUserId ?? '?'}_${start ?? '?'}_${end ?? '?'}`;
+      push('achievements', 'turkey', pts, key, (
+        <>
+          Turkey ({detail}): <Pts n={pts} />
+        </>
+      ));
+    }
+  }
+  // 18. Solid — per-spiller (stackable) + lag-koord-bonus (egen rad)
+  const solidAwards = awards.filter((a) => a.category === 'solid');
+  for (const s of solidAwards) {
+    const pts = s.points;
+    const start = s.streakStartHole;
+    const end = s.streakEndHole;
+    const range =
+      start != null && end != null ? formatStreakRange(start, end) : null;
+    if (s.coordBonus) {
+      const key = `solid_coord_${start ?? '?'}_${end ?? '?'}`;
+      push('achievements', 'solid', pts, key, (
+        <>
+          Solid lag-koord{range ? ` (${range})` : ''}: <Pts n={pts} />
+        </>
+      ));
+    } else {
+      const name = firstNameOf(s.winnerUserId ?? null, teamById) ?? '?';
+      const detail = range ? `${name}, ${range}` : name;
+      const key = `solid_${s.winnerUserId ?? '?'}_${start ?? '?'}_${end ?? '?'}`;
+      push('achievements', 'solid', pts, key, (
+        <>
+          Solid ({detail}): <Pts n={pts} />
+        </>
+      ));
+    }
+  }
+
+  // ─── Penalty ────────────────────────────────────────────────────────────
+  // 19. Snowman — én rad per hull der hele laget hadde brutto ≥ par+5.
+  // `score`-feltet på award er over-par-delta (worstGross − par), så vi
+  // bruker den direkte og fall-backer til coursePars[h-1] hvis feltet av en
+  // eller annen grunn mangler.
+  const snowmanAwards = awards.filter((a) => a.category === 'snowman');
+  for (const sw of snowmanAwards) {
+    const pts = sw.points; // -2
+    const hole = sw.holeNumber;
+    const overDelta = sw.score;
+    let detail = '?';
+    if (hole != null && overDelta != null) {
+      detail = `hele laget +${overDelta} på hull ${hole}`;
+    } else if (hole != null) {
+      // Fallback: ingen lagret score — bruk par fra coursePars hvis tilgjengelig.
+      const par = coursePars[hole - 1];
+      detail = par != null ? `hele laget på hull ${hole}` : `hull ${hole}`;
+    }
+    const key = `snowman_${hole ?? '?'}`;
+    push('penalty', 'snowman', pts, key, (
+      <>
+        Snowman ({detail}): <Pts n={pts} />
+      </>
+    ));
   }
 
   // Telle totalt antall rader; om ingen → tom-melding.
@@ -390,9 +755,7 @@ function TeamAwards({
       {GROUP_ORDER.map((group) => {
         const rows = rowsByGroup[group];
         if (rows.length === 0) return null;
-        return (
-          <GroupSection key={group} group={group} rows={rows} />
-        );
+        return <GroupSection key={group} group={group} rows={rows} />;
       })}
     </div>
   );
@@ -444,3 +807,7 @@ function firstNameOf(
   }
   return null;
 }
+
+// Re-export for any future helper modules that want to import the group map.
+export { CATEGORY_GROUPS, GROUP_ORDER, GROUP_LABELS };
+export type { GroupId };
