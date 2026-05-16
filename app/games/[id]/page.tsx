@@ -1,6 +1,8 @@
 import { Suspense, cache } from 'react';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound, redirect } from 'next/navigation';
+import { after } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
@@ -210,6 +212,17 @@ export default async function GameHomePage({
       console.error(
         `[auto-start] game ${id} could not flip to active: ${result.reason}`,
       );
+    } else {
+      // Invalidate the getGameWithPlayers cache for this game so the hull-page
+      // (which reads from that tag) doesn't keep serving the pre-flip
+      // `status='scheduled'` snapshot. Scheduled via `after()` because
+      // `revalidateTag` throws when called during render — `after()` defers
+      // the call until the response has been sent. `{ expire: 0 }` forces
+      // the next read to wait for fresh data instead of stale-while-revalidate
+      // bouncing the player back through the `status='scheduled'` redirect.
+      after(() => {
+        revalidateTag(`game-${id}`, { expire: 0 });
+      });
     }
     // Re-fetch so the rest of this render sees the post-flip state.
     const { data: refreshed, error: refreshError } = await supabase
