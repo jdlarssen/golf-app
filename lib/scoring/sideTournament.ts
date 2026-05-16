@@ -19,7 +19,13 @@ export type SideCategory =
   | 'most_eagles_team'
   | 'most_eagles_individual'
   | 'most_pars_team'
-  | 'most_pars_individual';
+  | 'most_pars_individual'
+  | 'best_brutto_18_team'
+  | 'best_brutto_18_individual'
+  | 'best_brutto_f9_team'
+  | 'best_brutto_f9_individual'
+  | 'best_brutto_b9_team'
+  | 'best_brutto_b9_individual';
 
 export interface SideTournamentConfig {
   enabled: boolean;
@@ -142,6 +148,52 @@ function countMatchesForTeam(
     (sum, userId) => sum + countMatchesForPlayer(userId, playerScoresPerHole, coursePars, predicate),
     0,
   );
+}
+
+/**
+ * Best ball brutto per hole, summed across a hole range.
+ * On each hole, takes the LOWEST brutto among team members. If every team
+ * member has `null` on a hole (no valid scores), the team's range total is
+ * `null` — that team is then excluded from the brutto category, but other
+ * teams can still compete.
+ */
+function bestBallGrossPerHole(
+  team: { teamId: TeamId; userIds: UserId[] },
+  playerScores: SideTournamentInput['playerScoresPerHole'],
+  start: number,
+  end: number,
+): number | null {
+  let sum = 0;
+  for (let h = start; h < end; h++) {
+    const grossOnHole = team.userIds
+      .map((uid) => playerScores.find((p) => p.userId === uid)?.perHoleGross[h])
+      .filter((g): g is number => typeof g === 'number');
+    if (grossOnHole.length === 0) return null;
+    sum += Math.min(...grossOnHole);
+  }
+  return sum;
+}
+
+/**
+ * Lowest brutto sum for one player across a hole range.
+ * Returns `null` if any hole in the range is missing — incomplete rounds
+ * don't qualify for the individual-best brutto categories.
+ */
+function playerGrossSum(
+  userId: UserId,
+  playerScores: SideTournamentInput['playerScoresPerHole'],
+  start: number,
+  end: number,
+): number | null {
+  const player = playerScores.find((p) => p.userId === userId);
+  if (!player) return null;
+  let sum = 0;
+  for (let h = start; h < end; h++) {
+    const g = player.perHoleGross[h];
+    if (g == null) return null;
+    sum += g;
+  }
+  return sum;
 }
 
 function teamIdForUser(
@@ -428,6 +480,53 @@ export function calculateSideTournament(
               points: SIDE_TOURNAMENT_POINTS.mostParsIndividual,
             });
           }
+        }
+      }
+    }
+  }
+
+  // 10. Best brutto 18 — team-aggregate (best-ball brutto, 4p) + individual (2p)
+  // LOW-wins category: lowest sum wins. Team-aggregate uses best-ball brutto
+  // (lowest brutto per hole among teammates, summed). Individual uses one
+  // player's brutto sum across all 18 holes.
+  if (!isDisabled('best_brutto_18_team', input.config)) {
+    const eligibleTeams = input.teams.filter((t) => t.userIds.length >= 2);
+    if (eligibleTeams.length >= 2) {
+      const teamTotals = eligibleTeams.map((t) => ({
+        teamId: t.teamId,
+        total: bestBallGrossPerHole(t, input.playerScoresPerHole, 0, 18),
+      }));
+      for (const teamId of findMinTeams(teamTotals)) {
+        award(teamId, {
+          category: 'best_brutto_18_team',
+          teamId,
+          points: SIDE_TOURNAMENT_POINTS.bestBrutto18Team,
+        });
+      }
+    }
+  }
+
+  if (!isDisabled('best_brutto_18_individual', input.config)) {
+    const playerSums = input.playerScoresPerHole.map((p) => ({
+      userId: p.userId,
+      total: playerGrossSum(p.userId, input.playerScoresPerHole, 0, 18),
+    }));
+    const valid = playerSums.filter(
+      (p): p is { userId: UserId; total: number } => p.total !== null,
+    );
+    if (valid.length > 0) {
+      const min = Math.min(...valid.map((p) => p.total));
+      const winners = valid.filter((p) => p.total === min).map((p) => p.userId);
+      const seenTeams = new Set<TeamId>();
+      for (const userId of winners) {
+        const teamId = teamIdForUser(input.teams, userId);
+        if (teamId != null && !seenTeams.has(teamId)) {
+          seenTeams.add(teamId);
+          award(teamId, {
+            category: 'best_brutto_18_individual',
+            teamId,
+            points: SIDE_TOURNAMENT_POINTS.bestBrutto18Individual,
+          });
         }
       }
     }

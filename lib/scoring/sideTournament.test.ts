@@ -939,4 +939,200 @@ describe('calculateSideTournament', () => {
       expect(awards.some((a) => a.category === 'most_pars_team')).toBe(true);
     });
   });
+
+  describe('best_brutto_18', () => {
+    // Helper: build an 18-hole array filled with par 4
+    const par4Course = (): number[] => new Array(18).fill(4);
+
+    // Helper: per-player score with explicit gross + matching netto (irrelevant here)
+    const player = (
+      userId: string,
+      perHoleGross: Array<number | null>,
+    ): SideTournamentInput['playerScoresPerHole'][number] => ({
+      userId,
+      perHoleGross,
+      perHoleNetto: perHoleGross, // netto ignored by brutto categories
+    });
+
+    it('awards team-aggregate (best ball brutto) to single team with lowest sum', () => {
+      // Team 1 (user-a + user-b): best-ball brutto per hole = min(a,b)
+      // user-a: [4,4,4,...] (sum 72), user-b: [5,5,5,...] (sum 90) → team best-ball = 4 every hole → sum 72
+      // Team 2 (user-c + user-d):
+      // user-c: [5,5,5,...] (sum 90), user-d: [5,5,5,...] (sum 90) → team best-ball = 5 every hole → sum 90
+      const userAGross = new Array(18).fill(4);
+      const userBGross = new Array(18).fill(5);
+      const userCGross = new Array(18).fill(5);
+      const userDGross = new Array(18).fill(5);
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userAGross),
+          player('user-b', userBGross),
+          player('user-c', userCGross),
+          player('user-d', userDGross),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+
+      expect(t1.awards.find((a) => a.category === 'best_brutto_18_team')?.points).toBe(4);
+      expect(t2.awards.find((a) => a.category === 'best_brutto_18_team')).toBeUndefined();
+    });
+
+    it('awards team-aggregate to both teams on a tie (full pot)', () => {
+      // Both teams: best-ball brutto sum = 72
+      const userAGross = new Array(18).fill(4);
+      const userBGross = new Array(18).fill(5);
+      const userCGross = new Array(18).fill(4);
+      const userDGross = new Array(18).fill(5);
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userAGross),
+          player('user-b', userBGross),
+          player('user-c', userCGross),
+          player('user-d', userDGross),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+
+      expect(t1.awards.find((a) => a.category === 'best_brutto_18_team')?.points).toBe(4);
+      expect(t2.awards.find((a) => a.category === 'best_brutto_18_team')?.points).toBe(4);
+    });
+
+    it('awards individual-best to single player with lowest brutto sum', () => {
+      // user-c has the lowest brutto sum (70 = 4×16 + 3×2)
+      const userAGross = new Array(18).fill(4); // sum 72
+      const userBGross = new Array(18).fill(5); // sum 90
+      const userCGross = [3, 3, ...new Array(16).fill(4)]; // sum 70
+      const userDGross = new Array(18).fill(5); // sum 90
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userAGross),
+          player('user-b', userBGross),
+          player('user-c', userCGross),
+          player('user-d', userDGross),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+
+      // user-c on team 2
+      expect(t2.awards.find((a) => a.category === 'best_brutto_18_individual')?.points).toBe(2);
+      expect(t1.awards.find((a) => a.category === 'best_brutto_18_individual')).toBeUndefined();
+    });
+
+    it('awards individual-best to each tied player team on a tie', () => {
+      // user-a (team 1) and user-c (team 2) both have sum 70
+      const userAGross = [3, 3, ...new Array(16).fill(4)]; // sum 70
+      const userBGross = new Array(18).fill(5); // sum 90
+      const userCGross = [3, 3, ...new Array(16).fill(4)]; // sum 70
+      const userDGross = new Array(18).fill(5); // sum 90
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userAGross),
+          player('user-b', userBGross),
+          player('user-c', userCGross),
+          player('user-d', userDGross),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+
+      expect(t1.awards.find((a) => a.category === 'best_brutto_18_individual')?.points).toBe(2);
+      expect(t2.awards.find((a) => a.category === 'best_brutto_18_individual')?.points).toBe(2);
+    });
+
+    it('skips team-aggregate when both teams have only 1 player (1v1)', () => {
+      const userAGross = new Array(18).fill(4);
+      const userBGross = new Array(18).fill(5);
+
+      const input: SideTournamentInput = {
+        config: { enabled: true, ldCount: 0, ctpCount: 0, disabledCategories: [] },
+        teams: [
+          { teamId: 1, userIds: ['user-a'] },
+          { teamId: 2, userIds: ['user-b'] },
+        ],
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userAGross),
+          player('user-b', userBGross),
+        ],
+        nettoBestBallPerHole: [
+          { teamId: 1, perHoleNetto: userAGross },
+          { teamId: 2, perHoleNetto: userBGross },
+        ],
+        sideWinners: [],
+      };
+
+      const result = calculateSideTournament(input);
+      const allAwards = result.teamStandings.flatMap((s) => s.awards);
+
+      expect(allAwards.some((a) => a.category === 'best_brutto_18_team')).toBe(false);
+      expect(allAwards.some((a) => a.category === 'best_brutto_18_individual')).toBe(true);
+    });
+
+    it('honors disabledCategories: ["best_brutto_18_team"]', () => {
+      const userAGross = new Array(18).fill(4);
+      const userBGross = new Array(18).fill(5);
+      const userCGross = new Array(18).fill(5);
+      const userDGross = new Array(18).fill(5);
+
+      const input = baseInput({
+        config: { enabled: true, ldCount: 0, ctpCount: 0, disabledCategories: ['best_brutto_18_team'] },
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userAGross),
+          player('user-b', userBGross),
+          player('user-c', userCGross),
+          player('user-d', userDGross),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+
+      expect(awards.some((a) => a.category === 'best_brutto_18_team')).toBe(false);
+      expect(awards.some((a) => a.category === 'best_brutto_18_individual')).toBe(true);
+    });
+
+    it('honors disabledCategories: ["best_brutto_18_individual"]', () => {
+      const userAGross = new Array(18).fill(4);
+      const userBGross = new Array(18).fill(5);
+      const userCGross = new Array(18).fill(5);
+      const userDGross = new Array(18).fill(5);
+
+      const input = baseInput({
+        config: { enabled: true, ldCount: 0, ctpCount: 0, disabledCategories: ['best_brutto_18_individual'] },
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userAGross),
+          player('user-b', userBGross),
+          player('user-c', userCGross),
+          player('user-d', userDGross),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+
+      expect(awards.some((a) => a.category === 'best_brutto_18_individual')).toBe(false);
+      expect(awards.some((a) => a.category === 'best_brutto_18_team')).toBe(true);
+    });
+  });
 });
