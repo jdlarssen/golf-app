@@ -29,7 +29,8 @@ export type SideCategory =
   | 'king_par3_team'
   | 'king_par3_individual'
   | 'king_par5_team'
-  | 'king_par5_individual';
+  | 'king_par5_individual'
+  | 'longest_bogey_free_streak';
 
 export interface SideTournamentConfig {
   enabled: boolean;
@@ -71,6 +72,16 @@ export interface SideCategoryAward {
    * free-text `detail` field.
    */
   holeNumber?: number;
+  /**
+   * Populated when `category === 'longest_bogey_free_streak'`. The 1-indexed
+   * starting hole of the streak. Leaderboard UI prepends the winner's name
+   * to render e.g. `"Per, 7 hull (3–9)"`.
+   */
+  streakStartHole?: number;
+  /** 1-indexed end hole of the bogey-free streak. */
+  streakEndHole?: number;
+  /** Length in holes of the bogey-free streak. */
+  streakLength?: number;
 }
 
 export interface SideTournamentResult {
@@ -226,6 +237,45 @@ function teamIdForUser(
     if (t.userIds.includes(userId)) return t.teamId;
   }
   return null;
+}
+
+/**
+ * Walks `perHole` linearly and returns the longest run of consecutive holes
+ * (1-indexed start/end) where `predicate` returns true. Returns `null` when
+ * no hole matches. Used by longest_bogey_free_streak to find the bogey-free
+ * stretch per player.
+ *
+ * A `null` value in the array breaks the streak (treated as not matching),
+ * matching the brutto/netto helpers' "incomplete = doesn't qualify" rule.
+ */
+function longestStreak(
+  perHole: Array<number | null>,
+  predicate: (val: number, holeIdx: number) => boolean,
+): { length: number; startHole: number; endHole: number } | null {
+  let bestLen = 0;
+  let bestStart = 0;
+  let curLen = 0;
+  let curStart = 0;
+  for (let h = 0; h < perHole.length; h++) {
+    const v = perHole[h];
+    const matches = v != null && predicate(v, h);
+    if (matches) {
+      if (curLen === 0) curStart = h;
+      curLen++;
+      if (curLen > bestLen) {
+        bestLen = curLen;
+        bestStart = curStart;
+      }
+    } else {
+      curLen = 0;
+    }
+  }
+  if (bestLen === 0) return null;
+  return {
+    length: bestLen,
+    startHole: bestStart + 1, // 1-indexed
+    endHole: bestStart + bestLen, // 1-indexed inclusive
+  };
 }
 
 /**
@@ -739,6 +789,48 @@ export function calculateSideTournament(
             teamId,
             points: SIDE_TOURNAMENT_POINTS.kingPar5Individual,
           });
+        }
+      }
+    }
+  }
+
+  // 15. Longest bogey-free streak — individ-only, 4p
+  // Longest run of consecutive holes where netto <= par (par or better).
+  // No team-aggregate (streak can't be meaningfully summed across players).
+  // Awards each tied team once (dedup), full pot per team. Empty streak
+  // (no player has any par-or-better hole) → no award.
+  if (!isDisabled('longest_bogey_free_streak', input.config)) {
+    const playerStreaks = input.playerScoresPerHole
+      .map((p) => {
+        const streak = longestStreak(
+          p.perHoleNetto,
+          (netto, h) => {
+            const par = input.coursePars[h];
+            return par != null && netto <= par;
+          },
+        );
+        return streak ? { userId: p.userId, streak } : null;
+      })
+      .filter((p): p is { userId: UserId; streak: NonNullable<ReturnType<typeof longestStreak>> } => p !== null);
+
+    if (playerStreaks.length > 0) {
+      const max = Math.max(...playerStreaks.map((p) => p.streak.length));
+      if (max > 0) {
+        const winners = playerStreaks.filter((p) => p.streak.length === max);
+        const seenTeams = new Set<TeamId>();
+        for (const w of winners) {
+          const teamId = teamIdForUser(input.teams, w.userId);
+          if (teamId != null && !seenTeams.has(teamId)) {
+            seenTeams.add(teamId);
+            award(teamId, {
+              category: 'longest_bogey_free_streak',
+              teamId,
+              points: SIDE_TOURNAMENT_POINTS.longestBogeyFreeStreak,
+              streakLength: w.streak.length,
+              streakStartHole: w.streak.startHole,
+              streakEndHole: w.streak.endHole,
+            });
+          }
         }
       }
     }

@@ -1978,4 +1978,179 @@ describe('calculateSideTournament', () => {
       expect(awardsIndividual.some((a) => a.category === 'king_par5_team')).toBe(true);
     });
   });
+
+  describe('longest_bogey_free_streak', () => {
+    const par4Course = (): number[] => new Array(18).fill(4);
+
+    const player = (
+      userId: string,
+      perHoleNetto: Array<number | null>,
+    ): SideTournamentInput['playerScoresPerHole'][number] => ({
+      userId,
+      perHoleGross: perHoleNetto,
+      perHoleNetto,
+    });
+
+    it('awards 4p to single team with longest bogey-free streak', () => {
+      // user-a: 7-hole streak (holes 3-9, indices 2-8)
+      // user-b: 3-hole streak
+      // user-c: 4-hole streak
+      // user-d: 2-hole streak
+      const userANetto = [5, 5, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5]; // 7 in a row at idx 2-8
+      const userBNetto = [4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]; // 3 in a row
+      const userCNetto = [5, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]; // 4 in a row
+      const userDNetto = [4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]; // 2 in a row
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+
+      // user-a on team 1 wins (7 hull)
+      const award = t1.awards.find((a) => a.category === 'longest_bogey_free_streak');
+      expect(award?.points).toBe(4);
+      expect(award?.streakLength).toBe(7);
+      expect(award?.streakStartHole).toBe(3); // 1-indexed
+      expect(award?.streakEndHole).toBe(9); // 1-indexed
+      expect(t2.awards.find((a) => a.category === 'longest_bogey_free_streak')).toBeUndefined();
+    });
+
+    it('awards 4p to each tied team on a streak tie', () => {
+      // user-a (team 1) and user-c (team 2) both have 5-hole streaks
+      const userANetto = [4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userBNetto = [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userCNetto = [4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userDNetto = [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+
+      expect(t1.awards.find((a) => a.category === 'longest_bogey_free_streak')?.points).toBe(4);
+      expect(t2.awards.find((a) => a.category === 'longest_bogey_free_streak')?.points).toBe(4);
+    });
+
+    it('dedups same-team ties (one award per team)', () => {
+      // user-a + user-b both on team 1 have 4-hole streaks (tied)
+      // user-c best on team 2 has 3-hole streak
+      const userANetto = [4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userBNetto = [4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userCNetto = [4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userDNetto = [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+
+      // Team 1 wins but with only ONE award (deduped), not two
+      const t1Awards = t1.awards.filter((a) => a.category === 'longest_bogey_free_streak');
+      expect(t1Awards).toHaveLength(1);
+      expect(t1Awards[0]?.points).toBe(4);
+      expect(t2.awards.find((a) => a.category === 'longest_bogey_free_streak')).toBeUndefined();
+    });
+
+    it('awards nothing when no player has any par-or-better hole', () => {
+      // Everyone bogeys every hole (5 on par 4)
+      const userANetto = new Array(18).fill(5);
+      const userBNetto = new Array(18).fill(5);
+      const userCNetto = new Array(18).fill(5);
+      const userDNetto = new Array(18).fill(5);
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+      expect(awards.some((a) => a.category === 'longest_bogey_free_streak')).toBe(false);
+    });
+
+    it('counts partial streak correctly (4 in a row counts as 4, not 0)', () => {
+      // user-a streak ends on a bogey at hole 5 → 4-hole streak
+      const userANetto = [4, 4, 4, 4, 5, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userBNetto = new Array(18).fill(5);
+      const userCNetto = new Array(18).fill(5);
+      const userDNetto = new Array(18).fill(5);
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const award = t1.awards.find((a) => a.category === 'longest_bogey_free_streak');
+      expect(award?.points).toBe(4);
+      expect(award?.streakLength).toBe(4);
+      expect(award?.streakStartHole).toBe(1);
+      expect(award?.streakEndHole).toBe(4);
+    });
+
+    it('honors disabledCategories: ["longest_bogey_free_streak"]', () => {
+      const userANetto = [4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userBNetto = new Array(18).fill(5);
+      const userCNetto = new Array(18).fill(5);
+      const userDNetto = new Array(18).fill(5);
+
+      const input = baseInput({
+        config: {
+          enabled: true,
+          ldCount: 0,
+          ctpCount: 0,
+          disabledCategories: ['longest_bogey_free_streak'],
+        },
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+      expect(awards.some((a) => a.category === 'longest_bogey_free_streak')).toBe(false);
+    });
+  });
 });
