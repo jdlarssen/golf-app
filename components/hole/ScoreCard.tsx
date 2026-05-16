@@ -178,12 +178,12 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
   };
 
   let helperText: string;
-  if (confirmed) {
-    helperText = 'Bekreftet';
-  } else if (score == null) {
+  if (score == null) {
     helperText = 'Tap kort = par. Bruk − / +.';
+  } else if (hideNetto) {
+    helperText = '';
   } else {
-    helperText = 'Justert · tap igjen for å bekrefte';
+    helperText = `Netto ${score - extraStrokes}`;
   }
 
   const stepperBtnStyle: CSSProperties = {
