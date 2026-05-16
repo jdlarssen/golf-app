@@ -1747,4 +1747,235 @@ describe('calculateSideTournament', () => {
       expect(awardsIndividual.some((a) => a.category === 'king_par3_team')).toBe(true);
     });
   });
+
+  describe('king_par5', () => {
+    // Course with par-5 on holes 4, 9, 13, 18 (1-indexed) → indices 3, 8, 12, 17
+    const mixedParCourse = (): number[] => {
+      const pars = new Array(18).fill(4);
+      pars[3] = 5;
+      pars[8] = 5;
+      pars[12] = 5;
+      pars[17] = 5;
+      return pars;
+    };
+
+    const player = (
+      userId: string,
+      perHoleGross: Array<number | null>,
+    ): SideTournamentInput['playerScoresPerHole'][number] => ({
+      userId,
+      perHoleGross,
+      perHoleNetto: perHoleGross,
+    });
+
+    it('awards team-aggregate to single team with lowest par-5 sum', () => {
+      // Team 1: a=5 on par-5, b=6 → best-ball par-5 = 5, sum=20
+      // Team 2: c=6, d=6 → best-ball par-5 = 6, sum=24
+      const userAGross = new Array(18).fill(4);
+      userAGross[3] = 5; userAGross[8] = 5; userAGross[12] = 5; userAGross[17] = 5;
+      const userBGross = new Array(18).fill(4);
+      userBGross[3] = 6; userBGross[8] = 6; userBGross[12] = 6; userBGross[17] = 6;
+      const userCGross = new Array(18).fill(4);
+      userCGross[3] = 6; userCGross[8] = 6; userCGross[12] = 6; userCGross[17] = 6;
+      const userDGross = new Array(18).fill(4);
+      userDGross[3] = 6; userDGross[8] = 6; userDGross[12] = 6; userDGross[17] = 6;
+
+      const input = baseInput({
+        coursePars: mixedParCourse(),
+        playerScoresPerHole: [
+          player('user-a', userAGross),
+          player('user-b', userBGross),
+          player('user-c', userCGross),
+          player('user-d', userDGross),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+
+      expect(t1.awards.find((a) => a.category === 'king_par5_team')?.points).toBe(4);
+      expect(t2.awards.find((a) => a.category === 'king_par5_team')).toBeUndefined();
+    });
+
+    it('awards team-aggregate to both teams on tie (full pot)', () => {
+      // Both teams: par-5 sum = 20
+      const userAGross = new Array(18).fill(4);
+      userAGross[3] = 5; userAGross[8] = 5; userAGross[12] = 5; userAGross[17] = 5;
+      const userBGross = new Array(18).fill(4);
+      userBGross[3] = 6; userBGross[8] = 6; userBGross[12] = 6; userBGross[17] = 6;
+      const userCGross = new Array(18).fill(4);
+      userCGross[3] = 5; userCGross[8] = 5; userCGross[12] = 5; userCGross[17] = 5;
+      const userDGross = new Array(18).fill(4);
+      userDGross[3] = 6; userDGross[8] = 6; userDGross[12] = 6; userDGross[17] = 6;
+
+      const input = baseInput({
+        coursePars: mixedParCourse(),
+        playerScoresPerHole: [
+          player('user-a', userAGross),
+          player('user-b', userBGross),
+          player('user-c', userCGross),
+          player('user-d', userDGross),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+
+      expect(t1.awards.find((a) => a.category === 'king_par5_team')?.points).toBe(4);
+      expect(t2.awards.find((a) => a.category === 'king_par5_team')?.points).toBe(4);
+    });
+
+    it('awards individual-best to single player with lowest par-5 sum', () => {
+      // user-c has lowest par-5 brutto sum (4+4+4+4 = 16)
+      const userAGross = new Array(18).fill(4);
+      userAGross[3] = 5; userAGross[8] = 5; userAGross[12] = 5; userAGross[17] = 5; // par-5 sum 20
+      const userBGross = new Array(18).fill(4);
+      userBGross[3] = 6; userBGross[8] = 6; userBGross[12] = 6; userBGross[17] = 6; // par-5 sum 24
+      const userCGross = new Array(18).fill(4);
+      userCGross[3] = 4; userCGross[8] = 4; userCGross[12] = 4; userCGross[17] = 4; // par-5 sum 16
+      const userDGross = new Array(18).fill(4);
+      userDGross[3] = 6; userDGross[8] = 6; userDGross[12] = 6; userDGross[17] = 6; // par-5 sum 24
+
+      const input = baseInput({
+        coursePars: mixedParCourse(),
+        playerScoresPerHole: [
+          player('user-a', userAGross),
+          player('user-b', userBGross),
+          player('user-c', userCGross),
+          player('user-d', userDGross),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+
+      // user-c on team 2
+      expect(t2.awards.find((a) => a.category === 'king_par5_individual')?.points).toBe(2);
+      expect(t1.awards.find((a) => a.category === 'king_par5_individual')).toBeUndefined();
+    });
+
+    it('awards individual-best to each tied player team on a tie', () => {
+      // user-a (team 1) and user-c (team 2) both par-5 sum = 16
+      const userAGross = new Array(18).fill(4);
+      userAGross[3] = 4; userAGross[8] = 4; userAGross[12] = 4; userAGross[17] = 4;
+      const userBGross = new Array(18).fill(5);
+      const userCGross = new Array(18).fill(4);
+      userCGross[3] = 4; userCGross[8] = 4; userCGross[12] = 4; userCGross[17] = 4;
+      const userDGross = new Array(18).fill(5);
+
+      const input = baseInput({
+        coursePars: mixedParCourse(),
+        playerScoresPerHole: [
+          player('user-a', userAGross),
+          player('user-b', userBGross),
+          player('user-c', userCGross),
+          player('user-d', userDGross),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+
+      expect(t1.awards.find((a) => a.category === 'king_par5_individual')?.points).toBe(2);
+      expect(t2.awards.find((a) => a.category === 'king_par5_individual')?.points).toBe(2);
+    });
+
+    it('skips team-aggregate when both teams have only 1 player (1v1)', () => {
+      const userAGross = new Array(18).fill(4);
+      userAGross[3] = 5; userAGross[8] = 5; userAGross[12] = 5; userAGross[17] = 5;
+      const userBGross = new Array(18).fill(4);
+      userBGross[3] = 6; userBGross[8] = 6; userBGross[12] = 6; userBGross[17] = 6;
+
+      const input: SideTournamentInput = {
+        config: { enabled: true, ldCount: 0, ctpCount: 0, disabledCategories: [] },
+        teams: [
+          { teamId: 1, userIds: ['user-a'] },
+          { teamId: 2, userIds: ['user-b'] },
+        ],
+        coursePars: mixedParCourse(),
+        playerScoresPerHole: [
+          player('user-a', userAGross),
+          player('user-b', userBGross),
+        ],
+        nettoBestBallPerHole: [
+          { teamId: 1, perHoleNetto: userAGross },
+          { teamId: 2, perHoleNetto: userBGross },
+        ],
+        sideWinners: [],
+      };
+
+      const result = calculateSideTournament(input);
+      const allAwards = result.teamStandings.flatMap((s) => s.awards);
+
+      expect(allAwards.some((a) => a.category === 'king_par5_team')).toBe(false);
+      expect(allAwards.some((a) => a.category === 'king_par5_individual')).toBe(true);
+    });
+
+    it('awards nothing when course has no par-5 holes', () => {
+      const userAGross = new Array(18).fill(3);
+      const userBGross = new Array(18).fill(5);
+      const userCGross = new Array(18).fill(5);
+      const userDGross = new Array(18).fill(5);
+
+      const input = baseInput({
+        coursePars: new Array(18).fill(4), // no par-5 holes
+        playerScoresPerHole: [
+          player('user-a', userAGross),
+          player('user-b', userBGross),
+          player('user-c', userCGross),
+          player('user-d', userDGross),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+
+      expect(awards.some((a) => a.category === 'king_par5_team')).toBe(false);
+      expect(awards.some((a) => a.category === 'king_par5_individual')).toBe(false);
+    });
+
+    it('honors disabledCategories: ["king_par5_team"] and ["king_par5_individual"]', () => {
+      const userAGross = new Array(18).fill(4);
+      userAGross[3] = 5; userAGross[8] = 5; userAGross[12] = 5; userAGross[17] = 5;
+      const userBGross = new Array(18).fill(5);
+      const userCGross = new Array(18).fill(5);
+      const userDGross = new Array(18).fill(5);
+
+      const inputTeam = baseInput({
+        config: { enabled: true, ldCount: 0, ctpCount: 0, disabledCategories: ['king_par5_team'] },
+        coursePars: mixedParCourse(),
+        playerScoresPerHole: [
+          player('user-a', userAGross),
+          player('user-b', userBGross),
+          player('user-c', userCGross),
+          player('user-d', userDGross),
+        ],
+      });
+
+      const resultTeam = calculateSideTournament(inputTeam);
+      const awardsTeam = resultTeam.teamStandings.flatMap((s) => s.awards);
+      expect(awardsTeam.some((a) => a.category === 'king_par5_team')).toBe(false);
+      expect(awardsTeam.some((a) => a.category === 'king_par5_individual')).toBe(true);
+
+      const inputIndividual = baseInput({
+        config: { enabled: true, ldCount: 0, ctpCount: 0, disabledCategories: ['king_par5_individual'] },
+        coursePars: mixedParCourse(),
+        playerScoresPerHole: [
+          player('user-a', userAGross),
+          player('user-b', userBGross),
+          player('user-c', userCGross),
+          player('user-d', userDGross),
+        ],
+      });
+
+      const resultIndividual = calculateSideTournament(inputIndividual);
+      const awardsIndividual = resultIndividual.teamStandings.flatMap((s) => s.awards);
+      expect(awardsIndividual.some((a) => a.category === 'king_par5_individual')).toBe(false);
+      expect(awardsIndividual.some((a) => a.category === 'king_par5_team')).toBe(true);
+    });
+  });
 });

@@ -27,7 +27,9 @@ export type SideCategory =
   | 'best_brutto_b9_team'
   | 'best_brutto_b9_individual'
   | 'king_par3_team'
-  | 'king_par3_individual';
+  | 'king_par3_individual'
+  | 'king_par5_team'
+  | 'king_par5_individual';
 
 export interface SideTournamentConfig {
   enabled: boolean;
@@ -687,6 +689,55 @@ export function calculateSideTournament(
             category: 'king_par3_individual',
             teamId,
             points: SIDE_TOURNAMENT_POINTS.kingPar3Individual,
+          });
+        }
+      }
+    }
+  }
+
+  // 14. Konge på par-5 — team-aggregate (best-ball brutto on par-5 holes, 4p)
+  //     + individual (lowest single-player brutto sum on par-5 holes, 2p)
+  // Same shape as king_par3, just filtered to par-5 holes instead.
+  const isPar5 = (h: number): boolean => input.coursePars[h] === 5;
+  const hasPar5Holes = input.coursePars.some((p) => p === 5);
+
+  if (!isDisabled('king_par5_team', input.config) && hasPar5Holes) {
+    const eligibleTeams = input.teams.filter((t) => t.userIds.length >= 2);
+    if (eligibleTeams.length >= 2) {
+      const teamTotals = eligibleTeams.map((t) => ({
+        teamId: t.teamId,
+        total: bestBallGrossPerHole(t, input.playerScoresPerHole, 0, 18, isPar5),
+      }));
+      for (const teamId of findMinTeams(teamTotals)) {
+        award(teamId, {
+          category: 'king_par5_team',
+          teamId,
+          points: SIDE_TOURNAMENT_POINTS.kingPar5Team,
+        });
+      }
+    }
+  }
+
+  if (!isDisabled('king_par5_individual', input.config) && hasPar5Holes) {
+    const playerSums = input.playerScoresPerHole.map((p) => ({
+      userId: p.userId,
+      total: playerGrossSum(p.userId, input.playerScoresPerHole, 0, 18, isPar5),
+    }));
+    const valid = playerSums.filter(
+      (p): p is { userId: UserId; total: number } => p.total !== null,
+    );
+    if (valid.length > 0) {
+      const min = Math.min(...valid.map((p) => p.total));
+      const winners = valid.filter((p) => p.total === min).map((p) => p.userId);
+      const seenTeams = new Set<TeamId>();
+      for (const userId of winners) {
+        const teamId = teamIdForUser(input.teams, userId);
+        if (teamId != null && !seenTeams.has(teamId)) {
+          seenTeams.add(teamId);
+          award(teamId, {
+            category: 'king_par5_individual',
+            teamId,
+            points: SIDE_TOURNAMENT_POINTS.kingPar5Individual,
           });
         }
       }
