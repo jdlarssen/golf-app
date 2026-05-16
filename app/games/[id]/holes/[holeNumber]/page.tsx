@@ -46,22 +46,12 @@ type ScoreRow = {
 export default async function HolePage({ params }: { params: Params }) {
   const { id, holeNumber: holeStr } = await params;
 
-  // Pilot perf instrumentation — surfaces server-side fetch latency in Vercel
-  // logs so we can see which round-trip dominates hole-page time (auth check,
-  // any of 6 Supabase fetches, or RSC serialisation). Remove or gate behind a
-  // dev flag once the data informs the architecture choice in #18.
-  const tLabel = `hole.page game=${id} hole=${holeStr}`;
-  console.time(tLabel);
-  const t = (step: string) => `${tLabel} · ${step}`;
-
   const holeNumber = Number(holeStr);
   if (!Number.isInteger(holeNumber) || holeNumber < 1 || holeNumber > 18) {
     notFound();
   }
 
-  console.time(t('auth'));
   const userId = await getProxyVerifiedUserId();
-  console.timeEnd(t('auth'));
   if (!userId) redirect('/login');
   const supabase = await getServerClient();
 
@@ -73,7 +63,6 @@ export default async function HolePage({ params }: { params: Params }) {
   //   without a second query. Collapses the prior `me` + `flight` chain into
   //   a single call.
   // scoreCount: needs only id + userId; independent of every other fetch.
-  console.time(t('round1'));
   const [gameRes, allPlayersRes, scoreCountRes] = await Promise.all([
     supabase
       .from('games')
@@ -94,7 +83,6 @@ export default async function HolePage({ params }: { params: Params }) {
       .eq('user_id', userId)
       .not('strokes', 'is', null),
   ]);
-  console.timeEnd(t('round1'));
 
   const { data: game, error: gameError } = gameRes;
   if (gameError || !game) notFound();
@@ -126,7 +114,6 @@ export default async function HolePage({ params }: { params: Params }) {
   // Round 2 — hole row + flight scores, both independent of each other.
   // hole needs game.course_id (resolved post-round-1). scores needs
   // playerIds (also post-round-1). They can run in parallel.
-  console.time(t('round2'));
   const [holeRes, scoresRes] = await Promise.all([
     supabase
       .from('course_holes')
@@ -142,7 +129,6 @@ export default async function HolePage({ params }: { params: Params }) {
       .in('user_id', playerIds)
       .returns<ScoreRow[]>(),
   ]);
-  console.timeEnd(t('round2'));
 
   const { data: hole, error: holeError } = holeRes;
   if (holeError || !hole) notFound();
@@ -160,8 +146,6 @@ export default async function HolePage({ params }: { params: Params }) {
   const hideNetto = shouldHideNetto(
     revealState(game.score_visibility, game.status),
   );
-
-  console.timeEnd(tLabel);
 
   const playersForClient: ClientPlayer[] = flight.map((p) => {
     const name = p.users?.name ?? '(ukjent spiller)';

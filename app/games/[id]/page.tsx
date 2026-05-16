@@ -162,13 +162,6 @@ export default async function GameHomePage({
   // Proxy redirects unauthenticated users, but be defensive.
   if (!userId) redirect('/login');
 
-  // Pilot perf instrumentation — same pattern as the hole page. Logs the
-  // single Promise.all wave so we can verify parallelisation landed in prod.
-  // The page's Suspense bodies run their own fetches asynchronously and
-  // aren't captured here — this measures only the synchronous gate.
-  const gateLabel = `game.page game=${id} · gate`;
-  console.time(gateLabel);
-
   // Game + my player row are independent — fire in parallel. Saves one
   // Supabase round-trip on every game-home load (which is hit on app open
   // for every active game, on returning from leaderboard/submit, and on
@@ -188,7 +181,6 @@ export default async function GameHomePage({
       .eq('user_id', userId)
       .maybeSingle<MyPlayerRow>(),
   ]);
-  console.timeEnd(gateLabel);
 
   if (gameInitialRes.error || !gameInitialRes.data) notFound();
   if (meRes.error) throw meRes.error;
