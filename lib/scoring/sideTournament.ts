@@ -1084,6 +1084,39 @@ export function calculateSideTournament(
     }
   }
 
+  // 19. Snowman — per hull, -2p når HELE laget har brutto ≥ par+5. Stackable
+  // across the round (multiple bad holes → multiple snowmen). Rule applies to
+  // 1-player teams too — solo players get a snowman when their one brutto
+  // score is ≥ par+5. `score` records the worst over-par delta on the hole
+  // (e.g. +6) so the leaderboard can render "hele laget +6 på hull 12".
+  if (!isDisabled('snowman', input.config)) {
+    for (const team of input.teams) {
+      const memberScores = team.userIds
+        .map((uid) => input.playerScoresPerHole.find((p) => p.userId === uid))
+        .filter((p): p is SideTournamentInput['playerScoresPerHole'][number] => p != null);
+      if (memberScores.length !== team.userIds.length) continue; // missing data → skip
+      if (memberScores.length === 0) continue;
+      for (let h = 0; h < 18; h++) {
+        const par = input.coursePars[h];
+        if (par == null) continue;
+        const grossOnHole = memberScores.map((p) => p.perHoleGross[h]);
+        // Need all members to have a recorded brutto AND each must be ≥ par+5
+        if (grossOnHole.some((g) => g == null)) continue;
+        const validGross = grossOnHole as number[];
+        const allSnowman = validGross.every((g) => g >= par + 5);
+        if (!allSnowman) continue;
+        const worstOver = Math.max(...validGross) - par;
+        award(team.teamId, {
+          category: 'snowman',
+          teamId: team.teamId,
+          points: SIDE_TOURNAMENT_POINTS.snowman,
+          holeNumber: h + 1, // 1-indexed
+          score: worstOver,
+        });
+      }
+    }
+  }
+
   return {
     teamStandings: input.teams.map((t) => ({
       teamId: t.teamId,

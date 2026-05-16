@@ -3083,4 +3083,190 @@ describe('calculateSideTournament', () => {
       expect(awards.some((a) => a.category === 'solid')).toBe(false);
     });
   });
+
+  describe('snowman', () => {
+    const par4Course = (): number[] => new Array(18).fill(4);
+
+    // Snowman uses brutto, not netto — pass distinct arrays
+    const playerGN = (
+      userId: string,
+      perHoleGross: Array<number | null>,
+      perHoleNetto?: Array<number | null>,
+    ): SideTournamentInput['playerScoresPerHole'][number] => ({
+      userId,
+      perHoleGross,
+      perHoleNetto: perHoleNetto ?? perHoleGross,
+    });
+
+    it('2v2 both gross ≥ par+5 on hole 5 → -2p snowman', () => {
+      // par 4, both team-1 players score 9 (par+5) on hole 5 (idx 4)
+      const userAGross = new Array(18).fill(4);
+      userAGross[4] = 9; // par+5
+      const userBGross = new Array(18).fill(4);
+      userBGross[4] = 10; // par+6
+      const userCGross = new Array(18).fill(4);
+      const userDGross = new Array(18).fill(4);
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          playerGN('user-a', userAGross),
+          playerGN('user-b', userBGross),
+          playerGN('user-c', userCGross),
+          playerGN('user-d', userDGross),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+
+      const t1Snowmen = t1.awards.filter((a) => a.category === 'snowman');
+      expect(t1Snowmen).toHaveLength(1);
+      expect(t1Snowmen[0]?.points).toBe(-2);
+      expect(t1Snowmen[0]?.holeNumber).toBe(5);
+      expect(t1Snowmen[0]?.score).toBe(6); // worst over-par = +6 (user-b's 10 on par-4)
+      expect(t2.awards.some((a) => a.category === 'snowman')).toBe(false);
+    });
+
+    it('1 player gross +5, 1 player gross +4 → 0 snowman (not all team)', () => {
+      const userAGross = new Array(18).fill(4);
+      userAGross[4] = 9; // par+5
+      const userBGross = new Array(18).fill(4);
+      userBGross[4] = 8; // par+4 — does NOT qualify
+      const userCGross = new Array(18).fill(4);
+      const userDGross = new Array(18).fill(4);
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          playerGN('user-a', userAGross),
+          playerGN('user-b', userBGross),
+          playerGN('user-c', userCGross),
+          playerGN('user-d', userDGross),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+      expect(awards.some((a) => a.category === 'snowman')).toBe(false);
+    });
+
+    it('multiple snowman holes (5 and 7) → -4p total', () => {
+      // Both team-1 players ≥ par+5 on holes 5 AND 7
+      const userAGross = new Array(18).fill(4);
+      userAGross[4] = 9;
+      userAGross[6] = 9;
+      const userBGross = new Array(18).fill(4);
+      userBGross[4] = 9;
+      userBGross[6] = 10;
+      const userCGross = new Array(18).fill(4);
+      const userDGross = new Array(18).fill(4);
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          playerGN('user-a', userAGross),
+          playerGN('user-b', userBGross),
+          playerGN('user-c', userCGross),
+          playerGN('user-d', userDGross),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+
+      const snowmen = t1.awards.filter((a) => a.category === 'snowman');
+      expect(snowmen).toHaveLength(2);
+      expect(snowmen.reduce((sum, a) => sum + a.points, 0)).toBe(-4);
+      expect(snowmen[0]?.holeNumber).toBe(5);
+      expect(snowmen[1]?.holeNumber).toBe(7);
+    });
+
+    it('1-player team gets snowman when the one player gross ≥ par+5', () => {
+      const userAGross = new Array(18).fill(4);
+      userAGross[11] = 9; // par+5 on hole 12
+
+      const input = baseInput({
+        teams: [{ teamId: 1, userIds: ['user-a'] }],
+        coursePars: par4Course(),
+        nettoBestBallPerHole: [
+          { teamId: 1, perHoleNetto: holes(new Array(18).fill(4)) },
+        ],
+        playerScoresPerHole: [playerGN('user-a', userAGross)],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+
+      const snowmen = t1.awards.filter((a) => a.category === 'snowman');
+      expect(snowmen).toHaveLength(1);
+      expect(snowmen[0]?.points).toBe(-2);
+      expect(snowmen[0]?.holeNumber).toBe(12);
+      expect(snowmen[0]?.score).toBe(5);
+    });
+
+    it('4-player team, all 4 gross ≥ par+5 on same hole → -2p (no scaling)', () => {
+      // Snowman is per-hole penalty regardless of team size
+      const userAGross = new Array(18).fill(4);
+      userAGross[2] = 9;
+      const userBGross = new Array(18).fill(4);
+      userBGross[2] = 10;
+      const userCGross = new Array(18).fill(4);
+      userCGross[2] = 11;
+      const userDGross = new Array(18).fill(4);
+      userDGross[2] = 9;
+
+      const input = baseInput({
+        teams: [{ teamId: 1, userIds: ['user-a', 'user-b', 'user-c', 'user-d'] }],
+        coursePars: par4Course(),
+        nettoBestBallPerHole: [
+          { teamId: 1, perHoleNetto: holes(new Array(18).fill(4)) },
+        ],
+        playerScoresPerHole: [
+          playerGN('user-a', userAGross),
+          playerGN('user-b', userBGross),
+          playerGN('user-c', userCGross),
+          playerGN('user-d', userDGross),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+
+      const snowmen = t1.awards.filter((a) => a.category === 'snowman');
+      expect(snowmen).toHaveLength(1);
+      expect(snowmen[0]?.points).toBe(-2);
+      expect(snowmen[0]?.score).toBe(7); // worst over-par = user-c's 11 on par-4
+    });
+
+    it('honors disabledCategories: ["snowman"]', () => {
+      const userAGross = new Array(18).fill(4);
+      userAGross[4] = 9;
+      const userBGross = new Array(18).fill(4);
+      userBGross[4] = 10;
+      const userCGross = new Array(18).fill(4);
+      const userDGross = new Array(18).fill(4);
+
+      const input = baseInput({
+        config: {
+          enabled: true,
+          ldCount: 0,
+          ctpCount: 0,
+          disabledCategories: ['snowman'],
+        },
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          playerGN('user-a', userAGross),
+          playerGN('user-b', userBGross),
+          playerGN('user-c', userCGross),
+          playerGN('user-d', userDGross),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+      expect(awards.some((a) => a.category === 'snowman')).toBe(false);
+    });
+  });
 });
