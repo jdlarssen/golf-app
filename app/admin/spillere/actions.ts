@@ -5,6 +5,10 @@ import { randomUUID } from 'node:crypto';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { sendInviteNotification } from '@/lib/mail/inviteNotification';
+import {
+  consumeAdminInviteRateLimit,
+  getClientIp,
+} from '@/lib/admin/rateLimit';
 
 async function requireAdmin() {
   const supabase = await getServerClient();
@@ -28,6 +32,17 @@ export async function sendInvitation(formData: FormData) {
 
   const { supabase, profile } = await requireAdmin();
   const invitedByName = profile.name?.trim() || 'Admin';
+
+  const ip = await getClientIp();
+  const allowed = await consumeAdminInviteRateLimit({
+    supabase,
+    adminId: profile.id,
+    ip,
+  });
+  if (!allowed) {
+    const qs = new URLSearchParams({ error: 'rate_limited', email });
+    redirect(`/admin/spillere?${qs.toString()}`);
+  }
 
   // Guard against duplicate pending invitations — invitations.email has no
   // UNIQUE constraint, so without this check admin can accidentally create
@@ -70,6 +85,16 @@ export async function resendInvitation(formData: FormData) {
 
   const { supabase, profile } = await requireAdmin();
   const invitedByName = profile.name?.trim() || 'Admin';
+
+  const ip = await getClientIp();
+  const allowed = await consumeAdminInviteRateLimit({
+    supabase,
+    adminId: profile.id,
+    ip,
+  });
+  if (!allowed) {
+    redirect('/admin/spillere?error=rate_limited');
+  }
 
   const { data: inv, error } = await supabase
     .from('invitations')

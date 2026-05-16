@@ -25,6 +25,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   log_failed: 'Invitasjonen ble sendt, men loggføring feilet.',
   mail_failed: 'Mailen kom ikke ut. Sjekk Vercel-loggene for detaljer.',
   resend_failed: 'Klarte ikke sende invitasjonen på nytt. Prøv igjen.',
+  rate_limited:
+    'For mange invitasjoner på kort tid. Vent et minutt og prøv igjen.',
   withdraw_failed: 'Klarte ikke trekke tilbake invitasjonen. Prøv igjen.',
   self_delete_forbidden: 'Du kan ikke slette din egen konto.',
   still_has_games: 'Spilleren har spillhistorikk og kan ikke slettes.',
