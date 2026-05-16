@@ -4,36 +4,15 @@ import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { nameInitials } from '@/lib/names/initials';
+import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import { HoleClient, type ClientPlayer } from './HoleClient';
-import type { GameStatus } from '@/lib/games/status';
 
 type Params = Promise<{ id: string; holeNumber: string }>;
-
-type GameRow = {
-  id: string;
-  name: string;
-  status: GameStatus;
-  course_id: string;
-  tee_box_id: string;
-  score_visibility: 'live' | 'reveal';
-};
 
 type HoleRow = {
   hole_number: number;
   par: number;
   stroke_index: number;
-};
-
-type GamePlayerRow = {
-  user_id: string;
-  team_number: number;
-  flight_number: number;
-  course_handicap: number | null;
-  submitted_at: string | null;
-  // Hole entry only renders when status is 'active' or 'finished'; pending
-  // invitees can't reach those states per Task 7's publish-gate. Typed
-  // nullable to match the DB column.
-  users: { name: string | null; nickname: string | null } | null;
 };
 
 type ScoreRow = {
@@ -53,39 +32,16 @@ export default async function HolePage({ params }: { params: Params }) {
 
   const userId = await getProxyVerifiedUserId();
   if (!userId) redirect('/login');
-  const supabase = await getServerClient();
 
-  // Round 1 — three independent fetches in parallel.
-  //
-  // game: needs only the route id; checks status + reveals course_id.
-  // allPlayers: fetch ALL game_players for this game (typically 8 rows) in
-  //   one round-trip so we can find `me` in memory and also derive my flight
-  //   without a second query. Collapses the prior `me` + `flight` chain into
-  //   a single call.
-  // scoreCount: needs only id + userId; independent of every other fetch.
-  const [gameRes, allPlayersRes, scoreCountRes] = await Promise.all([
-    supabase
-      .from('games')
-      .select('id, name, status, course_id, tee_box_id, score_visibility')
-      .eq('id', id)
-      .single<GameRow>(),
-    supabase
-      .from('game_players')
-      .select(
-        'user_id, team_number, flight_number, course_handicap, submitted_at, users!game_players_user_id_fkey(name, nickname)',
-      )
-      .eq('game_id', id)
-      .returns<GamePlayerRow[]>(),
-    supabase
-      .from('scores')
-      .select('hole_number', { count: 'exact', head: true })
-      .eq('game_id', id)
-      .eq('user_id', userId)
-      .not('strokes', 'is', null),
-  ]);
-
-  const { data: game, error: gameError } = gameRes;
-  if (gameError || !game) notFound();
+  // games + game_players come from the tag-cached helper (see
+  // lib/games/getGameWithPlayers.ts). These rows don't change during a
+  // hull-bytte, so reading them from the cache saves a Supabase round-trip
+  // per hole-navigation. Authorization stays here at the call-site:
+  // `me = allPlayers.find(...)` notFound() below covers the auth check that
+  // RLS used to provide for the per-request server client.
+  const result = await getGameWithPlayers(id);
+  if (!result) notFound();
+  const { game, players: allPlayers } = result;
 
   if (game.status === 'draft') {
     redirect('/');
@@ -95,8 +51,6 @@ export default async function HolePage({ params }: { params: Params }) {
     redirect(`/games/${id}`);
   }
 
-  if (allPlayersRes.error) throw allPlayersRes.error;
-  const allPlayers = allPlayersRes.data ?? [];
   const me = allPlayers.find((p) => p.user_id === userId);
   if (!me) notFound();
 
@@ -111,10 +65,13 @@ export default async function HolePage({ params }: { params: Params }) {
   );
   const playerIds = flight.map((p) => p.user_id);
 
-  // Round 2 — hole row + flight scores, both independent of each other.
-  // hole needs game.course_id (resolved post-round-1). scores needs
-  // playerIds (also post-round-1). They can run in parallel.
-  const [holeRes, scoresRes] = await Promise.all([
+  // Round 2 — hole row, flight scores and the user's completed-hole count.
+  // All three are independent and can run in parallel:
+  //   hole       needs game.course_id (resolved from the cached read above)
+  //   scores     needs playerIds (also resolved above)
+  //   scoreCount needs only id + userId, available from the start
+  const supabase = await getServerClient();
+  const [holeRes, scoresRes, scoreCountRes] = await Promise.all([
     supabase
       .from('course_holes')
       .select('hole_number, par, stroke_index')
@@ -128,6 +85,12 @@ export default async function HolePage({ params }: { params: Params }) {
       .eq('hole_number', holeNumber)
       .in('user_id', playerIds)
       .returns<ScoreRow[]>(),
+    supabase
+      .from('scores')
+      .select('hole_number', { count: 'exact', head: true })
+      .eq('game_id', id)
+      .eq('user_id', userId)
+      .not('strokes', 'is', null),
   ]);
 
   const { data: hole, error: holeError } = holeRes;
