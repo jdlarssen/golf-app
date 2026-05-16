@@ -11,6 +11,7 @@ import { startScheduledGame } from '@/lib/games/startScheduledGame';
 import { findPendingPlayers } from '@/lib/games/pendingPlayers';
 import { sendGameFinishedNotification } from '@/lib/mail/gameFinishedNotification';
 import { firstName } from '@/lib/firstName';
+import { logAdminEvent } from '@/lib/admin/auditLog';
 import type { GameStatus } from '@/lib/games/status';
 
 async function requireAdmin() {
@@ -22,12 +23,12 @@ async function requireAdmin() {
 
   const { data: profile } = await supabase
     .from('users')
-    .select('is_admin')
+    .select('is_admin, name')
     .eq('id', user.id)
-    .single();
+    .single<{ is_admin: boolean; name: string | null }>();
   if (!profile?.is_admin) redirect('/');
 
-  return { supabase, user };
+  return { supabase, user, actorName: profile.name?.trim() || 'Admin' };
 }
 
 /**
@@ -147,7 +148,7 @@ export async function adminApproveScorecard(
   gameId: string,
   playerUserId: string,
 ) {
-  const { supabase, user } = await requireAdmin();
+  const { supabase, user, actorName } = await requireAdmin();
   const detailPath = `/admin/games/${gameId}`;
 
   const { data: game } = await supabase
@@ -173,6 +174,15 @@ export async function adminApproveScorecard(
     .is('approved_at', null);
   if (error) redirect(`${detailPath}?error=db_players`);
 
+  await logAdminEvent({
+    actorId: user.id,
+    actorName,
+    eventType: 'scorecard.approved',
+    targetType: 'scorecard',
+    targetId: gameId,
+    payload: { gameId, playerUserId },
+  });
+
   revalidateTag(`game-${gameId}`, 'max');
   redirect(`${detailPath}?status=admin_approved`);
 }
@@ -183,7 +193,7 @@ export async function adminApproveScorecard(
  * `finished` and stamps `ended_at`, which opens the leaderboard for everyone.
  */
 export async function endGame(gameId: string) {
-  const { supabase } = await requireAdmin();
+  const { supabase, user, actorName } = await requireAdmin();
   const detailPath = `/admin/games/${gameId}`;
 
   // Verify game is active
@@ -238,6 +248,15 @@ export async function endGame(gameId: string) {
 
   if (error) redirect(`${detailPath}?error=db_finish`);
 
+  await logAdminEvent({
+    actorId: user.id,
+    actorName,
+    eventType: 'game.finished',
+    targetType: 'game',
+    targetId: gameId,
+    payload: { gameName: game!.name },
+  });
+
   // Best-effort: send "Resultatet er klart"-mail to every player. Failures
   // are logged but never abort the action — the leaderboard is reachable
   // in-app even without the mail, and admin can re-trigger if needed (no
@@ -280,7 +299,7 @@ export async function endGame(gameId: string) {
  * No-op safety: only runs when the row currently has submitted_at set.
  */
 export async function reopenScorecard(gameId: string, playerUserId: string) {
-  const { supabase } = await requireAdmin();
+  const { supabase, user, actorName } = await requireAdmin();
   const detailPath = `/admin/games/${gameId}`;
 
   const { data: game } = await supabase
@@ -306,6 +325,15 @@ export async function reopenScorecard(gameId: string, playerUserId: string) {
     .not('submitted_at', 'is', null);
   if (error) redirect(`${detailPath}?error=db_players`);
 
+  await logAdminEvent({
+    actorId: user.id,
+    actorName,
+    eventType: 'scorecard.reopened',
+    targetType: 'scorecard',
+    targetId: gameId,
+    payload: { gameId, playerUserId },
+  });
+
   revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/admin/games/${gameId}`);
   revalidatePath(`/games/${gameId}`);
@@ -318,14 +346,14 @@ export async function reopenScorecard(gameId: string, playerUserId: string) {
  * round was ended prematurely or a result needs correction.
  */
 export async function reopenGame(gameId: string) {
-  const { supabase } = await requireAdmin();
+  const { supabase, user, actorName } = await requireAdmin();
   const detailPath = `/admin/games/${gameId}`;
 
   const { data: game } = await supabase
     .from('games')
-    .select('status')
+    .select('id, name, status')
     .eq('id', gameId)
-    .single<{ status: GameStatus }>();
+    .single<{ id: string; name: string; status: GameStatus }>();
   if (!game) redirect(`${detailPath}?error=not_found`);
   if (game!.status !== 'finished') {
     redirect(`${detailPath}?error=not_finished`);
@@ -336,6 +364,15 @@ export async function reopenGame(gameId: string) {
     .update({ status: 'active', ended_at: null })
     .eq('id', gameId);
   if (error) redirect(`${detailPath}?error=db_game`);
+
+  await logAdminEvent({
+    actorId: user.id,
+    actorName,
+    eventType: 'game.reopened',
+    targetType: 'game',
+    targetId: gameId,
+    payload: { gameName: game!.name },
+  });
 
   revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/admin/games/${gameId}`);

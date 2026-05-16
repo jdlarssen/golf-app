@@ -5,6 +5,7 @@ import { revalidatePath, revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import { sendGameFinishedNotification } from '@/lib/mail/gameFinishedNotification';
 import { firstName } from '@/lib/firstName';
+import { logAdminEvent } from '@/lib/admin/auditLog';
 import type { GameStatus } from '@/lib/games/status';
 
 async function requireAdmin() {
@@ -16,12 +17,12 @@ async function requireAdmin() {
 
   const { data: profile } = await supabase
     .from('users')
-    .select('is_admin')
+    .select('is_admin, name')
     .eq('id', user.id)
-    .single();
+    .single<{ is_admin: boolean; name: string | null }>();
   if (!profile?.is_admin) redirect('/');
 
-  return { supabase, user };
+  return { supabase, user, actorName: profile.name?.trim() || 'Admin' };
 }
 
 /**
@@ -39,7 +40,7 @@ export async function endGameWithSideWinners(
   gameId: string,
   formData: FormData,
 ) {
-  const { supabase } = await requireAdmin();
+  const { supabase, user, actorName } = await requireAdmin();
   const detailPath = `/admin/games/${gameId}`;
   const wizardPath = `${detailPath}/avslutt`;
 
@@ -148,6 +149,19 @@ export async function endGameWithSideWinners(
     .update({ status: 'finished', ended_at: new Date().toISOString() })
     .eq('id', gameId);
   if (statusErr) redirect(`${detailPath}?error=db_finish`);
+
+  await logAdminEvent({
+    actorId: user.id,
+    actorName,
+    eventType: 'game.finished',
+    targetType: 'game',
+    targetId: gameId,
+    payload: {
+      gameName: game!.name,
+      sideTournament: true,
+      sideWinners: winners,
+    },
+  });
 
   // Best-effort: send "Resultatet er klart"-mail to every player. Failures
   // are logged but never abort — leaderboard is reachable in-app regardless.
