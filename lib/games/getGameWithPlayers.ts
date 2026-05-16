@@ -1,6 +1,7 @@
 import 'server-only';
 import { unstable_cache } from 'next/cache';
 import { getAdminClient } from '@/lib/supabase/admin';
+import type { SideCategoryId } from '@/lib/scoring/sideTournamentConfig';
 import type { GameStatus } from './status';
 import type { ScoreVisibility } from './visibility';
 
@@ -73,6 +74,10 @@ export type GameForHole = {
   side_tournament_enabled: boolean;
   side_ld_count: number;
   side_ctp_count: number;
+  // v1.2.0 — per-spill kategori-overstyringer. Tomt array = Full pakke
+  // (alle aktive). DB-CHECK i 0026 garanterer at hver entry er en gyldig
+  // SideCategoryId, så vi caster trygt på input-side.
+  side_disabled_categories: SideCategoryId[] | null;
 };
 
 export type PlayerForHole = {
@@ -102,7 +107,7 @@ async function fetchGameWithPlayers(
     supabase
       .from('games')
       .select(
-        'id, name, status, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, side_tournament_enabled, side_ld_count, side_ctp_count',
+        'id, name, status, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories',
       )
       .eq('id', id)
       .single<GameForHole>(),

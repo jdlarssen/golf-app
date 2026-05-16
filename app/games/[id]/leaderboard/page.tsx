@@ -40,6 +40,7 @@ import {
   type SideTournamentInput,
   type SideWinner,
 } from '@/lib/scoring/sideTournament';
+import type { SideCategoryId } from '@/lib/scoring/sideTournamentConfig';
 import { revealState } from '@/lib/games/visibility';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import {
@@ -400,19 +401,72 @@ async function LeaderboardBody({
   const ldCount = game.side_ld_count as 0 | 1 | 2;
   const ctpCount = game.side_ctp_count as 0 | 1 | 2;
 
+  // coursePars: 18-element par-array indexed by hole-1 (i.e. coursePars[0] is
+  // hole 1's par). The course_holes query above is already ordered by
+  // hole_number ascending, but we still resolve by hole-number rather than
+  // array position so a sparse course (missing rows) leaves `undefined` slots
+  // for sideTournament.ts to skip — never silently shifts pars onto the wrong
+  // hole.
+  const parByHole = new Map<number, number>();
+  for (const h of holes) {
+    parByHole.set(h.holeNumber, h.par);
+  }
+  const coursePars: number[] = [];
+  for (let h = 1; h <= 18; h++) {
+    const par = parByHole.get(h);
+    // Fall back to 4 only when the row genuinely doesn't exist — keeps
+    // the array dense for the `coursePars[h] != null` checks downstream.
+    coursePars.push(par ?? 4);
+  }
+
+  // playerScoresPerHole: per-player 18-element brutto + netto arrays. Source
+  // of truth is `sortedNettoLines` — `computeLeaderboard` already ran in netto
+  // mode there, so `pc.net` is the canonical strokes-adjusted netto and
+  // `pc.gross` is the recorded brutto. Missing holes stay `null` (never `0`).
+  type PlayerHoleAccum = {
+    userId: string;
+    perHoleGross: Array<number | null>;
+    perHoleNetto: Array<number | null>;
+  };
+  const playerAccum = new Map<string, PlayerHoleAccum>();
+  for (const line of sortedNettoLines) {
+    for (const p of line.players) {
+      if (!playerAccum.has(p.userId)) {
+        playerAccum.set(p.userId, {
+          userId: p.userId,
+          perHoleGross: new Array<number | null>(18).fill(null),
+          perHoleNetto: new Array<number | null>(18).fill(null),
+        });
+      }
+    }
+    for (const hole of line.holes) {
+      // Defensive: ignore any hole-rows outside 1..18 (shouldn't happen with
+      // valid course data, but guards the array index).
+      const idx = hole.holeNumber - 1;
+      if (idx < 0 || idx >= 18) continue;
+      for (const pc of hole.players) {
+        const accum = playerAccum.get(pc.userId);
+        if (!accum) continue;
+        accum.perHoleGross[idx] = pc.gross;
+        accum.perHoleNetto[idx] = pc.net;
+      }
+    }
+  }
+  const playerScoresPerHole = Array.from(playerAccum.values());
+
   const sideInput: SideTournamentInput = {
     config: {
       enabled: true,
       ldCount,
       ctpCount,
-      disabledCategories: [],
+      disabledCategories: game.side_disabled_categories ?? [],
     },
     teams: sortedNettoLines.map((line) => ({
       teamId: line.teamNumber,
       userIds: line.players.map((p) => p.userId),
     })),
-    coursePars: new Array(18).fill(4),
-    playerScoresPerHole: [],
+    coursePars,
+    playerScoresPerHole,
     nettoBestBallPerHole: sortedNettoLines.map((line) => {
       // computeLeaderboard returns holes sorted 1..18 already.
       const perHoleNetto: Array<number | null> = [];
