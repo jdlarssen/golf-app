@@ -1,36 +1,46 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { useInstallPrompt } from '@/hooks/useInstallPrompt';
 import { InstallInstructionsModal } from './InstallInstructionsModal';
 
 const DISMISS_KEY = 'torny-install-banner-dismissed';
+const DISMISS_EVENT = 'torny-install-banner-change';
+
+const subscribe = (cb: () => void) => {
+  window.addEventListener(DISMISS_EVENT, cb);
+  return () => window.removeEventListener(DISMISS_EVENT, cb);
+};
+const getSnapshot = () => {
+  try {
+    return localStorage.getItem(DISMISS_KEY) === '1';
+  } catch {
+    return false;
+  }
+};
+// SSR + first hydration render return `true` so the banner doesn't flash
+// before localStorage is read. After hydration React switches to getSnapshot.
+const getServerSnapshot = () => true;
 
 export function InstallBanner() {
   const { status, install } = useInstallPrompt();
-  // Default to dismissed=true so SSR + first client render produces nothing —
-  // avoids a hydration flash. Re-read localStorage in useEffect.
-  const [dismissed, setDismissed] = useState(true);
+  const dismissed = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot,
+  );
   const [modalOpen, setModalOpen] = useState(false);
-
-  useEffect(() => {
-    try {
-      setDismissed(localStorage.getItem(DISMISS_KEY) === '1');
-    } catch {
-      setDismissed(false);
-    }
-  }, []);
 
   if (status === 'loading' || status === 'standalone') return null;
   if (dismissed) return null;
 
   function dismiss() {
-    setDismissed(true);
     try {
       localStorage.setItem(DISMISS_KEY, '1');
     } catch {
-      // Storage unavailable (private mode) — fall back to in-memory dismiss only.
+      // Storage unavailable (private mode) — banner re-appears next load.
     }
+    window.dispatchEvent(new Event(DISMISS_EVENT));
   }
 
   async function onInstall() {
