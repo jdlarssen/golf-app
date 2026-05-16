@@ -227,15 +227,39 @@ function ModeChip({
   gameId: string;
   mode: LeaderboardMode;
 }) {
-  const other: LeaderboardMode = mode === 'netto' ? 'brutto' : 'netto';
+  // Tab-style toggle (both modes visible at once, current is highlighted) —
+  // matches the state #3.5 ModeToggle pattern, so the brutto/netto affordance
+  // reads the same whether the round is mid-flight or fully revealed.
+  // Sized down vs. state #3.5 (28px vs 36px min-height, 10px uppercase vs
+  // 14px tracking-tight) so it sits unobtrusively under the celebratory
+  // subtitle without competing with the leader-card hero.
+  const baseHref = `/games/${gameId}/leaderboard`;
   return (
     <div className="flex justify-center pb-2">
-      <SmartLink
-        href={`/games/${gameId}/leaderboard?mode=${other}`}
-        className="inline-flex items-center rounded-full border border-border bg-surface px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted"
+      <div
+        role="tablist"
+        aria-label="Modus"
+        className="inline-flex rounded-full border border-border bg-surface p-0.5"
       >
-        Bytt til {other}
-      </SmartLink>
+        {(['netto', 'brutto'] as const).map((m) => {
+          const active = mode === m;
+          return (
+            <SmartLink
+              key={m}
+              role="tab"
+              aria-selected={active}
+              href={`${baseHref}?mode=${m}`}
+              className={`min-h-[28px] inline-flex items-center rounded-full px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] transition-colors ${
+                active
+                  ? 'bg-primary-soft text-text'
+                  : 'text-muted hover:text-text'
+              }`}
+            >
+              {m === 'netto' ? 'Netto' : 'Brutto'}
+            </SmartLink>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -310,7 +334,7 @@ function LeaderCard({
         >
           <div className="text-left">
             <span className="block text-[10px] font-semibold uppercase tracking-[0.20em] text-muted">
-              Total netto
+              Total {mode}
             </span>
             <span className="score-num mt-0.5 block text-[34px] leading-none tracking-[-0.02em] text-text">
               {line.total}
