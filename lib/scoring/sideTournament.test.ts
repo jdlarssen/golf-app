@@ -3269,4 +3269,149 @@ describe('calculateSideTournament', () => {
       expect(awards.some((a) => a.category === 'snowman')).toBe(false);
     });
   });
+
+  describe('team-size integration', () => {
+    // Course: par 72 with mixed par-3/4/5 holes — exercises king_par3 / king_par5.
+    // par-3 indices: 2, 7, 11, 15.  par-5 indices: 1, 5, 12, 17.
+    const mixedCourse: number[] = [4, 5, 3, 4, 4, 5, 4, 3, 4, 4, 4, 3, 5, 4, 4, 3, 4, 5];
+
+    const playerGN = (
+      userId: string,
+      perHoleGross: Array<number | null>,
+      perHoleNetto?: Array<number | null>,
+    ): SideTournamentInput['playerScoresPerHole'][number] => ({
+      userId,
+      perHoleGross,
+      perHoleNetto: perHoleNetto ?? perHoleGross,
+    });
+
+    it('integration: 1v1v1 game (N=1 per team) — team-aggregate gates skip, individual + achievements still fire', () => {
+      // Three solo teams. Realistic scores chosen to fire as many categories
+      // as possible while exercising N=1 gates.
+      //
+      // user-a (team 1) — strong: birdies on h1, h2, h3 (turkey), h12, h13.
+      //                  Snowman on h7 (gross 9 = par+5 on par-4).
+      //                  Eleven-hole bogey-free streak (h8-h18).
+      // user-b (team 2) — medium: no birdies, two 5-hole par-or-better solid
+      //                  streaks (h5-h9 and h10-h14).
+      // user-c (team 3) — weakest: bogeys everywhere, no awards.
+      const userA = [3, 4, 2, 4, 4, 5, 9, 3, 4, 4, 4, 2, 4, 4, 4, 3, 4, 5];
+      const userB = [4, 6, 4, 5, 4, 5, 4, 3, 4, 4, 4, 3, 5, 4, 5, 3, 4, 6];
+      const userC = [5, 6, 4, 5, 5, 6, 5, 4, 5, 5, 5, 4, 6, 5, 5, 4, 5, 6];
+
+      const input: SideTournamentInput = {
+        config: { enabled: true, ldCount: 1, ctpCount: 1, disabledCategories: [] },
+        teams: [
+          { teamId: 1, userIds: ['user-a'] },
+          { teamId: 2, userIds: ['user-b'] },
+          { teamId: 3, userIds: ['user-c'] },
+        ],
+        coursePars: mixedCourse,
+        playerScoresPerHole: [
+          playerGN('user-a', userA),
+          playerGN('user-b', userB),
+          playerGN('user-c', userC),
+        ],
+        nettoBestBallPerHole: [
+          { teamId: 1, perHoleNetto: userA },
+          { teamId: 2, perHoleNetto: userB },
+          { teamId: 3, perHoleNetto: userC },
+        ],
+        sideWinners: [
+          { category: 'longest_drive', position: 1, winnerUserId: 'user-c' },
+          { category: 'closest_to_pin', position: 1, winnerUserId: 'user-b' },
+        ],
+      };
+
+      const result = calculateSideTournament(input);
+      const allAwards = result.teamStandings.flatMap((s) => s.awards);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+      const t3 = result.teamStandings.find((t) => t.teamId === 3)!;
+
+      // --- Team-aggregate categories that gate on N>=2: ZERO awards across all teams ---
+      expect(allAwards.find((a) => a.category === 'most_birdies_team')).toBeUndefined();
+      expect(allAwards.find((a) => a.category === 'most_eagles_team')).toBeUndefined();
+      expect(allAwards.find((a) => a.category === 'most_pars_team')).toBeUndefined();
+      expect(allAwards.find((a) => a.category === 'best_brutto_18_team')).toBeUndefined();
+      expect(allAwards.find((a) => a.category === 'best_brutto_f9_team')).toBeUndefined();
+      expect(allAwards.find((a) => a.category === 'best_brutto_b9_team')).toBeUndefined();
+      expect(allAwards.find((a) => a.category === 'king_par3_team')).toBeUndefined();
+      expect(allAwards.find((a) => a.category === 'king_par5_team')).toBeUndefined();
+
+      // --- Individual-best categories STILL fire (user-a wins all) ---
+      expect(t1.awards.find((a) => a.category === 'most_birdies_individual')?.points).toBe(1);
+      expect(t1.awards.find((a) => a.category === 'most_pars_individual')?.points).toBe(1);
+      expect(t1.awards.find((a) => a.category === 'best_brutto_18_individual')?.points).toBe(2);
+      expect(t1.awards.find((a) => a.category === 'best_brutto_f9_individual')?.points).toBe(1);
+      expect(t1.awards.find((a) => a.category === 'best_brutto_b9_individual')?.points).toBe(1);
+      expect(t1.awards.find((a) => a.category === 'king_par3_individual')?.points).toBe(2);
+      expect(t1.awards.find((a) => a.category === 'king_par5_individual')?.points).toBe(2);
+
+      // most_eagles_individual: nobody scores netto<=par-2 anywhere → no award fires
+      expect(allAwards.find((a) => a.category === 'most_eagles_individual')).toBeUndefined();
+
+      // --- Turkey/Solid per-player TIER fires ---
+      // user-a: birdies h1-h3 → exactly one turkey, 4p
+      const t1Turkeys = t1.awards.filter((a) => a.category === 'turkey');
+      expect(t1Turkeys).toHaveLength(1);
+      expect(t1Turkeys[0]?.points).toBe(4);
+      expect(t1Turkeys[0]?.winnerUserId).toBe('user-a');
+      expect(t1Turkeys[0]?.coordBonus).toBeUndefined();
+
+      // user-a: solid streaks across the bogey-free h8-h18 stretch (3 non-
+      // overlapping 5-windows: h1-h5, h8-h12, h13-h17). user-b: solid streaks
+      // from his two-long-streak h5-h14. Both teams get per-player solids,
+      // none flagged as coordBonus.
+      const t1Solids = t1.awards.filter((a) => a.category === 'solid');
+      const t2Solids = t2.awards.filter((a) => a.category === 'solid');
+      expect(t1Solids.length).toBeGreaterThan(0);
+      expect(t2Solids.length).toBeGreaterThan(0);
+      expect(t1Solids.every((a) => a.coordBonus === undefined)).toBe(true);
+      expect(t2Solids.every((a) => a.coordBonus === undefined)).toBe(true);
+      expect(t1Solids[0]?.winnerUserId).toBe('user-a');
+      expect(t2Solids[0]?.winnerUserId).toBe('user-b');
+
+      // --- Turkey/Solid lag-koord-bonus is NEVER awarded for N=1 teams ---
+      expect(allAwards.find((a) => a.category === 'turkey' && a.coordBonus === true)).toBeUndefined();
+      expect(allAwards.find((a) => a.category === 'solid' && a.coordBonus === true)).toBeUndefined();
+
+      // --- Snowman CAN fire for a solo team (user-a's +5 on h7) ---
+      const t1Snowmen = t1.awards.filter((a) => a.category === 'snowman');
+      expect(t1Snowmen).toHaveLength(1);
+      expect(t1Snowmen[0]?.points).toBe(-2);
+      expect(t1Snowmen[0]?.holeNumber).toBe(7);
+      expect(t1Snowmen[0]?.score).toBe(5); // gross 9 on par-4 = +5
+
+      // --- The six original base categories all work normally ---
+      // best_netto_18: user-a wins outright (sum 72 vs 77 vs 90)
+      expect(t1.awards.find((a) => a.category === 'best_netto_18')?.points).toBe(10);
+      expect(t2.awards.find((a) => a.category === 'best_netto_18')).toBeUndefined();
+      expect(t3.awards.find((a) => a.category === 'best_netto_18')).toBeUndefined();
+
+      // best_netto_front9 / back9: user-a wins both (38 vs 39 vs 45 and 34 vs 38 vs 45)
+      expect(t1.awards.find((a) => a.category === 'best_netto_front9')?.points).toBe(5);
+      expect(t1.awards.find((a) => a.category === 'best_netto_back9')?.points).toBe(5);
+
+      // hole_win: at least some alone-wins fire (team 1 wins many alone)
+      const t1HoleWins = t1.awards.filter((a) => a.category === 'hole_win');
+      expect(t1HoleWins.length).toBeGreaterThan(0);
+      // team 2 wins h7 alone (user-a snowmans there)
+      const t2HoleWins = t2.awards.filter((a) => a.category === 'hole_win');
+      expect(t2HoleWins.find((a) => a.holeNumber === 7)).toBeDefined();
+
+      // LD goes to user-c (team 3), CTP to user-b (team 2)
+      expect(t3.awards.find((a) => a.category === 'longest_drive')?.points).toBe(2);
+      expect(t2.awards.find((a) => a.category === 'closest_to_pin')?.points).toBe(2);
+
+      // Achievement attribution: longest_bogey_free_streak goes to user-a
+      // (11-hole run h8-h18 beats user-b's 10-hole run h5-h14)
+      const bogeyFree = t1.awards.find((a) => a.category === 'longest_bogey_free_streak');
+      expect(bogeyFree?.streakLength).toBe(11);
+      expect(bogeyFree?.points).toBe(4);
+
+      // lowest_single_hole_brutto: user-a's 2 (par-3 holes) beats everyone
+      expect(t1.awards.find((a) => a.category === 'lowest_single_hole_brutto')?.points).toBe(2);
+    });
+  });
 });
