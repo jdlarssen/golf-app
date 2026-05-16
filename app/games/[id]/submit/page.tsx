@@ -14,7 +14,7 @@ import { SubmitForm } from './SubmitForm';
 import { ScoreShape } from '@/components/scoring/ScoreShape';
 import { scoreShape } from '@/lib/scoring/scoreShape';
 import { scoreTone } from '@/lib/scoring/scoreTone';
-import type { GameStatus } from '@/lib/games/status';
+import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -31,22 +31,9 @@ function first(value: string | string[] | undefined): string | undefined {
   return value;
 }
 
-type GameRow = {
-  id: string;
-  name: string;
-  status: GameStatus;
-  course_id: string;
-  tee_box_id: string;
+type CourseTeeRow = {
   courses: { name: string } | null;
   tee_boxes: { name: string; par_total: number } | null;
-};
-
-type MyPlayerRow = {
-  user_id: string;
-  team_number: number;
-  flight_number: number;
-  course_handicap: number | null;
-  submitted_at: string | null;
 };
 
 type HoleRow = {
@@ -81,41 +68,37 @@ export default async function SubmitPage({
   const { supabase, userId } = await getSubmitContext();
   if (!userId) redirect('/login');
 
-  // Gating: game + my player row in parallel.
-  const [gameRes, meRes] = await Promise.all([
+  // games + game_players from the tag-cached helper, course/tee_box joins
+  // direct (kept out of the cache since invalidating on course edits would
+  // require fan-out across every game using that course). Run them in
+  // parallel — the joins are independent of the game row.
+  const [result, courseTeeRes] = await Promise.all([
+    getGameWithPlayers(id),
     supabase
       .from('games')
-      .select(
-        'id, name, status, course_id, tee_box_id, courses(name), tee_boxes(name, par_total)',
-      )
+      .select('courses(name), tee_boxes(name, par_total)')
       .eq('id', id)
-      .single<GameRow>(),
-    supabase
-      .from('game_players')
-      .select(
-        'user_id, team_number, flight_number, course_handicap, submitted_at',
-      )
-      .eq('game_id', id)
-      .eq('user_id', userId)
-      .maybeSingle<MyPlayerRow>(),
+      .single<CourseTeeRow>(),
   ]);
 
-  if (gameRes.error || !gameRes.data) notFound();
-  const game = gameRes.data;
+  if (!result) notFound();
+  const { game, players } = result;
 
   // Only active games can be submitted to. Anything else: bounce home.
   if (game.status !== 'active') {
     redirect(`/games/${id}`);
   }
 
-  if (meRes.error) throw meRes.error;
-  const me = meRes.data;
+  const me = players.find((p) => p.user_id === userId);
   if (!me) notFound();
 
   // Already submitted: nothing more to do here.
   if (me.submitted_at) {
     redirect(`/games/${id}`);
   }
+
+  if (courseTeeRes.error || !courseTeeRes.data) notFound();
+  const courseTee = courseTeeRes.data;
 
   const submitAction = submitScorecard.bind(null, id);
 
@@ -135,9 +118,9 @@ export default async function SubmitPage({
             {game.name}
           </p>
           <p className="text-xs text-muted mt-1.5">
-            {game.courses?.name ?? '(ukjent bane)'}
-            {game.tee_boxes
-              ? ` · Tee: ${game.tee_boxes.name} · Par ${game.tee_boxes.par_total}`
+            {courseTee.courses?.name ?? '(ukjent bane)'}
+            {courseTee.tee_boxes
+              ? ` · Tee: ${courseTee.tee_boxes.name} · Par ${courseTee.tee_boxes.par_total}`
               : ''}
           </p>
           <p className="text-xs text-muted mt-1">
