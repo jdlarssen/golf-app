@@ -14,14 +14,35 @@
 
 ---
 
-## Atomic commits (planlagt struktur)
+## Forutsetning: rebase worktree onto main
 
-Hver `feat`-commit bumper version per CLAUDE.md-disiplin og staget CHANGELOG. Sluttilstand: v1.1.10 → v1.1.13 (eller v1.2.0 hvis vi vil markere mixed-gender som minor-feature, vurderes på slutten).
+Worktreen `claude/serene-gauss-21c1c7` ble cuttet før v1.2.0 landet. Før vi starter må vi rebase:
 
-1. `build(db): tee_box_gender enum + game_players.tee_box_id` — schema only, ingen bump
-2. `feat(admin/courses): kjønn-tag på tee-bokser + diff-basert edit-flyt` — bump
-3. `feat(admin/games): dame-tee + M/D-toggle + course handicap pr. spiller` — bump
-4. `feat(games): vis tee på scorekort + begge tees på game-detalj` — bump
+```bash
+git fetch origin main
+git rebase origin/main
+```
+
+Forventet konflikt: ingen (vi har kun lagt til to docs/plans/-filer som ikke finnes på main).
+
+Etter rebase:
+- `package.json` version = `1.2.0`
+- `CHANGELOG.md` har `## 1.2.y — Utvidet sideturnerings-poeng` + 1.2.0-entry øverst
+- Migrasjoner går til `0027_admin_audit_log.sql` (med den dupliserte 0026-en på main — pre-existing, ikke vårt problem). Vi legger til som `0028_tee_box_gender.sql`.
+
+## Commit-strategi
+
+Følger v1.2.0-mønsteret som ble brukt da side-tournament ble shippet: mange `chore(...)`-commits underveis (passerer hooken fritt), én `feat(...)`-ship-commit på slutten med version-bump + CHANGELOG-entry.
+
+Mixed-gender support er en ny bruker-synlig spillmodus → **minor bump v1.2.0 → v1.3.0**.
+
+1. **Task 1** → `build(db): tee_box_gender enum + game_players.tee_box_id` — schema + types, ingen bump
+2. **Task 2-3** → `chore(admin/courses): kjønn-tag pr. tee-rad + diff-basert edit-flyt` — ingen bump
+3. **Task 4** → `chore(admin/games): dame-tee + M/D-toggle + course handicap pr. spiller` — ingen bump
+4. **Task 5** → `chore(games): vis spillerens tee på scorekort + begge tees på admin-detalj` — ingen bump
+5. **Task 6** → `feat(tee-boxes): ship v1.3.0 mixed-gender spill med pr.-spiller-tee` — **bump v1.2.0 → v1.3.0**, CHANGELOG-entry (administrativ ship-commit, ingen ny kode — alle kode-endringer ligger i Task 1-5)
+
+CHANGELOG-endring i ship-commit: ny `## 1.3.y — Mixed-gender tee-bokser` minor-series-heading øverst, og `## 1.0.x — Første stabile release` wrappes i `<details>` (per CLAUDE.md «tre nyeste minor-seriene står åpne»-regelen — etter v1.3.0 blir 1.0.x den eldste åpne og må kollapses).
 
 ---
 
@@ -181,7 +202,7 @@ Kjør `npm run dev`, gå til `/admin/courses/new`, opprett en bane med to tees (
 
 **Step 6: Commit (sammen med Task 3 — se under)**
 
-Ikke commit ennå — slå sammen med diff-basert edit-flyt for én sammenhengende `feat`-commit.
+Ikke commit ennå — slå sammen med diff-basert edit-flyt for én sammenhengende `chore`-commit.
 
 ---
 
@@ -328,52 +349,14 @@ Søk i `app/admin/courses/[id]/edit/page.tsx` etter eksisterende error-mapping (
 1. På samme bane: fjern tee-en som er referert.
 2. Forventet: redirect tilbake til edit med `error=tee_in_use`.
 
-**Step 7: Bump version + CHANGELOG**
-
-Kjør:
-```bash
-npm version patch --no-git-tag-version
-```
-
-Forventet: `package.json` går fra 1.1.10 → 1.1.11.
-
-Rediger `CHANGELOG.md`, legg til ny entry på toppen under «### [1.1.11] - 2026-05-16»:
-
-```markdown
-### [1.1.11] - 2026-05-16
-
-**Du kan nå tagge tee-bokser med kjønn (herre/dame/junior) i bane-admin, og redigere baner selv om det er ferdigspilte spill på dem.**
-
-<details>
-<summary>Teknisk</summary>
-
-#### Added
-- `tee_box_gender` enum (`mens`/`ladies`/`juniors`) i Postgres
-- `tee_boxes.gender` (NOT NULL, default `'mens'`) — backfill av eksisterende rader via default
-- «For hvem»-segmented control pr. tee-rad i bane-formen (`CourseForm.tsx`)
-
-#### Changed
-- Bane-edit (`courses/[id]/edit/actions.ts`) bruker nå diff-basert tee-update i stedet for delete-all + reinsert-all. Editering av slope/CR/navn/gender er tillatt uansett om tees er referert av spill — bare sletting blokkeres hvis tee-en er i bruk.
-
-#### Migrations
-- `0028_tee_box_gender.sql`
-
-</details>
-```
-
-**Step 8: Commit**
+**Step 7: Commit (chore — ingen bump)**
 
 ```bash
 git add app/admin/courses/CourseForm.tsx \
         app/admin/courses/new/actions.ts \
         app/admin/courses/[id]/edit/page.tsx \
-        app/admin/courses/[id]/edit/actions.ts \
-        package.json package-lock.json CHANGELOG.md
-git commit -m "feat(admin/courses): kjønn-tag på tee-bokser + diff-basert edit-flyt
-
-Lar admin tagge hver tee-rad med 'For hvem' (herrer/damer/junior) og
-redigere baner som har ferdigspilte spill. Sletting av tees er fortsatt
-blokkert hvis de er referert av spill.
+        app/admin/courses/[id]/edit/actions.ts
+git commit -m "chore(admin/courses): kjønn-tag pr. tee-rad + diff-basert edit-flyt
 
 Refs #48"
 ```
@@ -713,45 +696,13 @@ npm test
 
 Expected: 0 type-errors, alle tester grønne.
 
-**Step 12: Bump version + CHANGELOG**
-
-```bash
-npm version patch --no-git-tag-version
-```
-
-→ 1.1.12.
-
-CHANGELOG:
-
-```markdown
-### [1.1.12] - 2026-05-16
-
-**Du kan nå arrangere spill der herrer og damer spiller fra ulike tees i samme runde — alle får riktig course handicap.**
-
-<details>
-<summary>Teknisk</summary>
-
-#### Added
-- `game_players.tee_box_id` (nullable) som overstyrer spillets default-tee per spiller
-- «Tee for damer»-dropdown i `GameForm` (valgfri; tom = ingen separat dame-tee)
-- M/D-toggle pr. spiller i game-formen — synlig kun når dame-tee er valgt
-- `lib/games/teeResolution.ts` med `resolvePlayerTeeId(gender, ladiesTeeId)` helper + 3 unit-tester
-
-#### Changed
-- Course handicap freezes ved publish bruker nå spillerens egen tee (`tee_box_id ?? game.tee_box_id`)
-- Edit-flyten rekonstruerer M/D-state fra `game_players.tee_box_id` — appen husker forrige valg
-
-</details>
-```
-
-**Step 13: Commit**
+**Step 12: Commit (chore — ingen bump)**
 
 ```bash
 git add app/admin/games/ \
         lib/games/teeResolution.ts \
-        lib/games/__tests__/teeResolution.test.ts \
-        package.json package-lock.json CHANGELOG.md
-git commit -m "feat(admin/games): dame-tee + M/D-toggle + course handicap pr. spiller
+        lib/games/__tests__/teeResolution.test.ts
+git commit -m "chore(admin/games): dame-tee + M/D-toggle + course handicap pr. spiller
 
 Refs #48"
 ```
@@ -903,49 +854,147 @@ Pass `ladiesTee` til JSX-rendering.
 3. Logg inn som en D-merket spiller, naviger til `/games/{id}/scorecard` — verifiser «Du spiller fra»-banner med riktig tee + slope/CR
 4. Logg inn som en M-merket spiller — verifiser at banner viser herre-teen
 
-**Step 5: Bump version + CHANGELOG**
-
-```bash
-npm version patch --no-git-tag-version
-```
-
-→ 1.1.13.
-
-CHANGELOG:
-
-```markdown
-### [1.1.13] - 2026-05-16
-
-**Spillere ser nå hvilken tee de spiller fra på scorekortet, og admin ser begge tees på spill-detalj-siden når et spill har separat dame-tee.**
-
-<details>
-<summary>Teknisk</summary>
-
-#### Added
-- «Du spiller fra»-banner øverst i `/games/[id]/scorecard` med tee-navn, kjønn-merkelapp og slope/CR
-- Begge tees vises på `/admin/games/[id]` når dame-tee er konfigurert
-
-#### Changed
-- `getGameWithPlayers` joiner nå `tee_boxes` pr. game_player og på selve spillet, så scorekortet kan rendre riktig info uten ekstra round-trip
-
-</details>
-```
-
-**Step 6: Commit**
+**Step 5: Commit (chore — ingen bump)**
 
 ```bash
 git add lib/games/getGameWithPlayers.ts \
         app/games/[id]/scorecard/page.tsx \
-        app/admin/games/[id]/page.tsx \
-        package.json package-lock.json CHANGELOG.md
-git commit -m "feat(games): vis spillerens tee på scorekort + begge tees på admin-detalj
+        app/admin/games/[id]/page.tsx
+git commit -m "chore(games): vis spillerens tee på scorekort + begge tees på admin-detalj
 
 Refs #48"
 ```
 
 ---
 
-### Task 6: Verifiseringsfase — full ende-til-ende-test i prod
+### Task 6: Ship-commit — bump v1.3.0 + CHANGELOG
+
+Alle kode-endringer ligger nå i Task 2-5 som `chore`-commits. Denne tasken samler version-bump + CHANGELOG-entry + ny minor-series-heading + wrapping av eldste åpne serie. Ingen kode-endring.
+
+**Files:**
+- Modify: `package.json` (1.2.0 → 1.3.0)
+- Modify: `package-lock.json` (matches)
+- Modify: `CHANGELOG.md`
+
+**Step 1: Bump version til 1.3.0**
+
+```bash
+npm version minor --no-git-tag-version
+```
+
+Forventet: `package.json` går fra 1.2.0 → 1.3.0.
+
+**Step 2: Legg til ny minor-serie-heading + 1.3.0-entry i CHANGELOG**
+
+Øverst i `CHANGELOG.md`, FØR `## 1.2.y — Utvidet sideturnerings-poeng`, legg til:
+
+```markdown
+## 1.3.y — Mixed-gender tee-bokser
+
+Herrer og damer kan nå spille fra ulike tees i samme runde med korrekt course handicap. Tee-bokser tagges med kjønn (herre/dame/junior) i bane-admin, og spill-formen har en valgfri dame-tee + M/D-toggle pr. spiller.
+
+### [1.3.0] - 2026-05-16
+
+**Du kan nå arrangere spill der herrer og damer spiller fra ulike tees i samme runde — alle får riktig course handicap. Tee-bokser tagges med kjønn i bane-admin, og du kan redigere baner selv om det er ferdigspilte spill på dem.**
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- Migrasjon `0028_tee_box_gender.sql` — `tee_box_gender` enum (`mens`/`ladies`/`juniors`) + `tee_boxes.gender` (NOT NULL, default `'mens'`) + `game_players.tee_box_id` (nullable override)
+- «For hvem»-segmented control pr. tee-rad i bane-formen (`CourseForm.tsx`) — herrer/damer/junior
+- «Tee for damer»-dropdown i `GameForm` (valgfri; tom = ingen separat dame-tee)
+- M/D-toggle pr. spiller i game-formen — synlig kun når dame-tee er valgt
+- `lib/games/teeResolution.ts` med `resolvePlayerTeeId(gender, ladiesTeeId)` + 3 unit-tester
+- «Du spiller fra»-banner øverst på `/games/[id]/scorecard` med tee-navn, kjønn-merkelapp og slope/CR
+- Begge tees vises på `/admin/games/[id]` når dame-tee er konfigurert
+
+#### Changed
+- Bane-edit (`courses/[id]/edit/actions.ts`) bruker nå diff-basert tee-update i stedet for delete-all + reinsert-all. Editering tillatt uansett om tees er referert av spill — bare sletting blokkeres hvis tee-en er i bruk.
+- Course handicap freezes ved publish bruker spillerens egen tee (`game_players.tee_box_id ?? games.tee_box_id`).
+- Edit-flyten rekonstruerer M/D-state fra `game_players.tee_box_id` — appen husker forrige valg.
+- `getGameWithPlayers` joiner `tee_boxes` pr. game_player og på selve spillet for scorekort-rendering.
+
+#### Notes
+- Oppfølger-issue [#92](https://github.com/jdlarssen/golf-app/issues/92) — `users.gender` + `users.level` for auto-default av M/D-toggle og potensiell egen-tee-overstyring (senior-herre på dame-tee).
+
+</details>
+```
+
+**Step 3: Wrap 1.0.x-serien i `<details>`**
+
+Per CLAUDE.md «tre nyeste minor-seriene står åpne» — etter v1.3.0 blir åpne 1.3.y, 1.2.y, 1.1.y. `## 1.0.x — Første stabile release` skal pakkes inn.
+
+Finn linjen `## 1.0.x — Første stabile release` i CHANGELOG.md. Den ser sannsynligvis slik ut:
+
+```markdown
+## 1.0.x — Første stabile release
+
+[sammendrag av 1.0-serien]
+
+### [1.0.0] - 2026-05-14
+
+[content...]
+```
+
+Wrap hele blokken (fra `## 1.0.x` og til og med siste entry i 1.0.x — typisk frem til neste `## ` heading) i:
+
+```markdown
+<details>
+<summary><strong>1.0.x — Første stabile release (N entries) — klikk for å vise</strong></summary>
+
+[original content uten ekstra wrapping]
+
+</details>
+```
+
+Tell N-entries (`### [1.0.X]`-linjer) først så summary-teksten stemmer.
+
+**Step 4: Verifiser CHANGELOG-struktur**
+
+```bash
+grep "^## " CHANGELOG.md | head -10
+```
+
+Forventet output:
+```
+## 1.3.y — Mixed-gender tee-bokser
+## 1.2.y — Utvidet sideturnerings-poeng
+## 1.1.y — Sideturnering
+## 0.10.x — Resultat-mail og closing-the-loop
+## 0.9.x — Sync-feedback under runden
+...
+```
+
+(`1.0.x` skal IKKE være i listen — den er nå wrappet i `<details>`.)
+
+**Step 5: Type-sjekk + full test-suite (sanity check)**
+
+```bash
+npx tsc --noEmit
+npm test
+```
+
+Expected: 0 errors, alle tester grønne.
+
+**Step 6: Commit (feat — version bump-hook fires her)**
+
+```bash
+git add package.json package-lock.json CHANGELOG.md
+git commit -m "feat(tee-boxes): ship v1.3.0 mixed-gender spill med pr.-spiller-tee
+
+Closes #48
+
+Tagger tee-bokser med kjønn (herre/dame/junior) og lar herrer/damer
+spille fra ulike tees i samme runde med korrekt course handicap.
+Bane-edit funker nå også på baner med ferdigspilte spill."
+```
+
+Hooken sjekker at både `package.json` og `CHANGELOG.md` er staget — det er begge.
+
+---
+
+### Task 7: Verifiseringsfase — full ende-til-ende-test i prod
 
 **Step 1: Push branchen + opprett PR**
 
@@ -985,7 +1034,7 @@ gh pr merge --rebase --delete-branch
 
 **Step 5: Verifiser i prod**
 
-Vent på Vercel prod-deploy (~1 min). Åpne `tornygolf.no/admin/courses/{id}/edit` og bekreft at gender-felt rendres. Bekreft footer-versjon på `tornygolf.no` viser v1.1.13.
+Vent på Vercel prod-deploy (~1 min). Åpne `tornygolf.no/admin/courses/{id}/edit` og bekreft at gender-felt rendres. Bekreft footer-versjon på `tornygolf.no` viser v1.3.0.
 
 **Step 6: Lukk issue med kommentar**
 
@@ -1019,7 +1068,7 @@ Du kan også nå redigere baner selv om det er ferdigspilte spill på dem — de
 
 ---
 
-## Reviewer-handoff (etter Task 5, før Task 6)
+## Reviewer-handoff (etter Task 6, før Task 7)
 
 Per CLAUDE.md → bruk subagent-driven-development med:
 
@@ -1042,5 +1091,5 @@ Funn som ikke fixes i samme PR → opprett GitHub Issues før merge.
 - [ ] Admin/games/[id] viser begge tees når dame-tee er konfigurert
 - [ ] Unit-test for `resolvePlayerTeeId` grønn
 - [ ] Type-sjekk + full test-suite grønn
-- [ ] PR merget + prod-deploy bekreftet på v1.1.13
+- [ ] PR merget + prod-deploy bekreftet på v1.3.0
 - [ ] Issue lukket med Teknisk + Funksjonell-kommentar
