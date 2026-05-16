@@ -15,7 +15,9 @@ export type SideCategory =
   | 'longest_drive'
   | 'closest_to_pin'
   | 'most_birdies_team'
-  | 'most_birdies_individual';
+  | 'most_birdies_individual'
+  | 'most_eagles_team'
+  | 'most_eagles_individual';
 
 export interface SideTournamentConfig {
   enabled: boolean;
@@ -324,6 +326,55 @@ export function calculateSideTournament(
               category: 'most_birdies_individual',
               teamId,
               points: SIDE_TOURNAMENT_POINTS.mostBirdiesIndividual,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // 8. Most eagles+ — team-aggregate (4p) + individual-best (2p)
+  // Eagle+ = netto <= par - 2 (per player per hole). Netto-based per design.
+  const isEaglePlus = (netto: number, par: number): boolean => netto <= par - 2;
+
+  if (!isDisabled('most_eagles_team', input.config)) {
+    const eligibleTeams = input.teams.filter((t) => t.userIds.length >= 2);
+    if (eligibleTeams.length >= 2) {
+      const teamTotals: Array<{ teamId: TeamId; total: number | null }> = eligibleTeams.map((t) => ({
+        teamId: t.teamId,
+        total: countMatchesForTeam(t, input.playerScoresPerHole, input.coursePars, isEaglePlus),
+      }));
+      const max = Math.max(...teamTotals.map((t) => (t.total ?? 0)));
+      if (max > 0) {
+        for (const teamId of findMaxTeams(teamTotals)) {
+          award(teamId, {
+            category: 'most_eagles_team',
+            teamId,
+            points: SIDE_TOURNAMENT_POINTS.mostEaglesTeam,
+          });
+        }
+      }
+    }
+  }
+
+  if (!isDisabled('most_eagles_individual', input.config)) {
+    const playerCounts = input.playerScoresPerHole.map((p) => ({
+      userId: p.userId,
+      count: countMatchesForPlayer(p.userId, input.playerScoresPerHole, input.coursePars, isEaglePlus),
+    }));
+    if (playerCounts.length > 0) {
+      const max = Math.max(...playerCounts.map((p) => p.count));
+      if (max > 0) {
+        const winners = playerCounts.filter((p) => p.count === max).map((p) => p.userId);
+        const seenTeams = new Set<TeamId>();
+        for (const userId of winners) {
+          const teamId = teamIdForUser(input.teams, userId);
+          if (teamId != null && !seenTeams.has(teamId)) {
+            seenTeams.add(teamId);
+            award(teamId, {
+              category: 'most_eagles_individual',
+              teamId,
+              points: SIDE_TOURNAMENT_POINTS.mostEaglesIndividual,
             });
           }
         }
