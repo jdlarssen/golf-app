@@ -12,7 +12,10 @@ import { ReviewActions } from './ReviewActions';
 import { ScoreShape } from '@/components/scoring/ScoreShape';
 import { scoreShape } from '@/lib/scoring/scoreShape';
 import { scoreTone } from '@/lib/scoring/scoreTone';
-import type { GameStatus } from '@/lib/games/status';
+import {
+  getGameWithPlayers,
+  type PlayerForHole,
+} from '@/lib/games/getGameWithPlayers';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -35,30 +38,6 @@ function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
   return value;
 }
-
-type GameRow = {
-  id: string;
-  name: string;
-  status: GameStatus;
-  course_id: string;
-  require_peer_approval: boolean;
-};
-
-type MyPlayerRow = {
-  user_id: string;
-  flight_number: number;
-};
-
-type FlightPlayerRow = {
-  user_id: string;
-  flight_number: number;
-  submitted_at: string | null;
-  approved_at: string | null;
-  // Approve page only renders when game.status === 'active'; pending invitees
-  // can't reach an active game per Task 7's publish-gate. Typed nullable to
-  // match the DB column.
-  users: { name: string | null; nickname: string | null } | null;
-};
 
 type HoleRow = {
   hole_number: number;
@@ -90,33 +69,20 @@ export default async function ApprovePage({
   const statusBanner = STATUS_BANNERS[first(sp.status) ?? ''] ?? undefined;
   const errorMessage = ERROR_MESSAGES[first(sp.error) ?? ''] ?? undefined;
 
-  const { supabase, userId } = await getApproveContext();
+  const { userId } = await getApproveContext();
   if (!userId) redirect('/login');
 
-  // Gating: game + my player row in parallel.
-  const [gameRes, meRes] = await Promise.all([
-    supabase
-      .from('games')
-      .select('id, name, status, course_id, require_peer_approval')
-      .eq('id', id)
-      .single<GameRow>(),
-    supabase
-      .from('game_players')
-      .select('user_id, flight_number')
-      .eq('game_id', id)
-      .eq('user_id', userId)
-      .maybeSingle<MyPlayerRow>(),
-  ]);
-
-  if (gameRes.error || !gameRes.data) notFound();
-  const game = gameRes.data;
+  // games + game_players from the tag-cached helper. See
+  // lib/games/getGameWithPlayers.ts for cache + authz rationale.
+  const result = await getGameWithPlayers(id);
+  if (!result) notFound();
+  const { game, players } = result;
 
   if (game.status !== 'active') {
     redirect(`/games/${id}`);
   }
 
-  if (meRes.error) throw meRes.error;
-  const me = meRes.data;
+  const me = players.find((p) => p.user_id === userId);
   if (!me) notFound();
 
   return (
@@ -165,17 +131,11 @@ async function PendingApprovals({
 }) {
   const { supabase } = await getApproveContext();
 
-  // Flight-mates other than me whose card is awaiting approval, plus the
-  // course holes (constant) in parallel.
-  const [matesRes, holesRes] = await Promise.all([
-    supabase
-      .from('game_players')
-      .select(
-        'user_id, flight_number, submitted_at, approved_at, users!game_players_user_id_fkey(name, nickname)',
-      )
-      .eq('game_id', gameId)
-      .eq('flight_number', flightNumber)
-      .returns<FlightPlayerRow[]>(),
+  // Flight-mates come from the tag-cached helper (already warm from the
+  // outer page render — typically a ~1ms cache hit). Course holes (static)
+  // stay a direct fetch.
+  const [gwp, holesRes] = await Promise.all([
+    getGameWithPlayers(gameId),
     supabase
       .from('course_holes')
       .select('hole_number, par, stroke_index')
@@ -184,11 +144,12 @@ async function PendingApprovals({
       .returns<HoleRow[]>(),
   ]);
 
-  if (matesRes.error) throw matesRes.error;
+  if (!gwp) notFound();
   if (holesRes.error) throw holesRes.error;
 
-  const pending = (matesRes.data ?? []).filter(
+  const pending = gwp.players.filter(
     (m) =>
+      m.flight_number === flightNumber &&
       m.user_id !== currentUserId &&
       m.submitted_at != null &&
       m.approved_at == null,
@@ -218,7 +179,7 @@ async function PendingApprovals({
     inner.set(s.hole_number, s.strokes);
   }
 
-  function displayName(p: FlightPlayerRow): string {
+  function displayName(p: PlayerForHole): string {
     if (!p.users) return '(ukjent spiller)';
     // Should be non-null here per the invariant above, but coalesce so TS
     // (and any future flow that loosens the invariant) stays honest.
