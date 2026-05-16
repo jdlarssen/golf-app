@@ -3413,5 +3413,131 @@ describe('calculateSideTournament', () => {
       // lowest_single_hole_brutto: user-a's 2 (par-3 holes) beats everyone
       expect(t1.awards.find((a) => a.category === 'lowest_single_hole_brutto')?.points).toBe(2);
     });
+
+    it('integration: 4v4 game (N=4 per team) — team-aggregates sum across 4 players, koord-bonuses scale with team size', () => {
+      // Flat par-4 course keeps brutto arithmetic transparent.
+      const par4: number[] = new Array(18).fill(4);
+
+      // Team 1 (u1..u4) — engineered to fire ALL the team-size-aware paths:
+      //  - h1-h3: all 4 birdie    → turkey coord-bonus fires (4p × 4 = 16p)
+      //  - h4-h6: only 3 birdie   → no turkey coord (u4 holds out, pars instead)
+      //  - h7-h11: all 4 par      → 5-window for solid coord-bonus
+      //  - h12: all 4 gross 9     → snowman fires (every member ≥par+5)
+      //  - h13: only 3 are +5     → snowman does NOT fire (u4 only +4 with gross 8)
+      //  - h14-h18: all 4 par     → another 5-window for solid coord-bonus
+      const u1: number[] = [3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 9, 9, 4, 4, 4, 4, 4];
+      const u2: number[] = [3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 9, 9, 4, 4, 4, 4, 4];
+      const u3: number[] = [3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 9, 9, 4, 4, 4, 4, 4];
+      const u4: number[] = [3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 9, 8, 4, 4, 4, 4, 4];
+
+      // Team 2 (u5..u8) — uniform bogeys (score 5 on par-4 every hole). Lose
+      // every team-aggregate category cleanly so team 1 awards are unambiguous.
+      const flatBogey: number[] = new Array(18).fill(5);
+
+      const input: SideTournamentInput = {
+        config: { enabled: true, ldCount: 0, ctpCount: 0, disabledCategories: [] },
+        teams: [
+          { teamId: 1, userIds: ['u1', 'u2', 'u3', 'u4'] },
+          { teamId: 2, userIds: ['u5', 'u6', 'u7', 'u8'] },
+        ],
+        coursePars: par4,
+        playerScoresPerHole: [
+          playerGN('u1', u1),
+          playerGN('u2', u2),
+          playerGN('u3', u3),
+          playerGN('u4', u4),
+          playerGN('u5', flatBogey),
+          playerGN('u6', flatBogey),
+          playerGN('u7', flatBogey),
+          playerGN('u8', flatBogey),
+        ],
+        // Best-ball netto already computed by caller (here using brutto). Team
+        // 1's best-ball-netto must reflect lowest score per hole among the 4.
+        nettoBestBallPerHole: [
+          { teamId: 1, perHoleNetto: [3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 9, 8, 4, 4, 4, 4, 4] },
+          { teamId: 2, perHoleNetto: flatBogey },
+        ],
+        sideWinners: [],
+      };
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+
+      // --- Team-aggregate over 4 players correctly counts/sums across all 4 ---
+      // most_birdies_team: team 1 has 6+6+6+3 = 21 birdies, team 2 has 0.
+      expect(t1.awards.find((a) => a.category === 'most_birdies_team')?.points).toBe(2);
+      expect(t2.awards.find((a) => a.category === 'most_birdies_team')).toBeUndefined();
+
+      // most_pars_team: team 1 has every member par-or-better on 16 holes
+      // (everything except h12 and h13). Team 2 has 0 pars-or-better. Team 1 wins.
+      expect(t1.awards.find((a) => a.category === 'most_pars_team')?.points).toBe(2);
+      expect(t2.awards.find((a) => a.category === 'most_pars_team')).toBeUndefined();
+
+      // most_eagles_team: nobody scores netto<=par-2 on a par-4 course. No award.
+      expect(t1.awards.find((a) => a.category === 'most_eagles_team')).toBeUndefined();
+      expect(t2.awards.find((a) => a.category === 'most_eagles_team')).toBeUndefined();
+
+      // --- Best brutto best-ball correctly picks the LOWEST among 4 brutto values per hole ---
+      // Team 1 best-ball brutto sum (min-of-4 per hole): 3×6 + 4×5 + 9 + 8 + 4×5
+      //   = 18 + 20 + 9 + 8 + 20 = 75 (decisively < team 2's 5×18 = 90).
+      expect(t1.awards.find((a) => a.category === 'best_brutto_18_team')?.points).toBe(4);
+      expect(t2.awards.find((a) => a.category === 'best_brutto_18_team')).toBeUndefined();
+
+      // F9 best-ball: team 1 = 3×6 + 4×3 = 30 < team 2 = 45.
+      expect(t1.awards.find((a) => a.category === 'best_brutto_f9_team')?.points).toBe(2);
+      // B9 best-ball: team 1 = 4 + 4 + 9 + 8 + 4×5 = 45 < team 2 = 45 → tie.
+      // Both teams get awarded on a tie (per existing tie semantics).
+      expect(t1.awards.find((a) => a.category === 'best_brutto_b9_team')?.points).toBe(2);
+      expect(t2.awards.find((a) => a.category === 'best_brutto_b9_team')?.points).toBe(2);
+
+      // --- Snowman requires ALL 4 players to be +5 over par on same hole (NOT just 3 of 4) ---
+      const t1Snowmen = t1.awards.filter((a) => a.category === 'snowman');
+      expect(t1Snowmen).toHaveLength(1);
+      expect(t1Snowmen[0]?.holeNumber).toBe(12);
+      expect(t1Snowmen[0]?.score).toBe(5); // gross 9 on par-4 = +5
+      expect(t1Snowmen[0]?.points).toBe(-2);
+      // h13: u4 only +4 → 3 of 4 doesn't trigger snowman
+      expect(t1Snowmen.some((a) => a.holeNumber === 13)).toBe(false);
+
+      // --- Turkey lag-koord-bonus = 4p × 4 = 16p when all 4 birdie same 3 holes ---
+      const t1TurkeyCoords = t1.awards.filter(
+        (a) => a.category === 'turkey' && a.coordBonus === true,
+      );
+      expect(t1TurkeyCoords).toHaveLength(1); // only h1-h3 qualifies
+      expect(t1TurkeyCoords[0]?.points).toBe(16); // 4p × 4 members
+      expect(t1TurkeyCoords[0]?.streakStartHole).toBe(1);
+      expect(t1TurkeyCoords[0]?.streakEndHole).toBe(3);
+
+      // --- Turkey lag-koord-bonus = 0 when only 3 of 4 birdie same holes ---
+      // h4-h6 had only u1/u2/u3 birdie. No coord-bonus on that window.
+      expect(t1TurkeyCoords.some((a) => a.streakStartHole === 4)).toBe(false);
+      // u1/u2/u3 still each get a per-player turkey for h4-h6 → 3 extras (4p each)
+      const t1TurkeysPerPlayer = t1.awards.filter(
+        (a) => a.category === 'turkey' && a.coordBonus !== true,
+      );
+      // h1-h3 across 4 players (4) + h4-h6 across u1/u2/u3 (3) = 7 personal turkeys
+      expect(t1TurkeysPerPlayer).toHaveLength(7);
+      // Each personal turkey carries a winnerUserId; verify all 7 have one set
+      expect(t1TurkeysPerPlayer.every((a) => typeof a.winnerUserId === 'string')).toBe(true);
+
+      // --- Solid koord-bonus = 2p × 4 = 8p when all 4 par-or-better on same 5 holes ---
+      // Coord par-or-better flag: TTTTTTTTTTT FF TTTTT (h1-h11 then h12/h13 break,
+      // then h14-h18). Non-overlapping 5-windows: h1-h5, h6-h10, h14-h18 → 3 bonuses.
+      const t1SolidCoords = t1.awards.filter(
+        (a) => a.category === 'solid' && a.coordBonus === true,
+      );
+      expect(t1SolidCoords).toHaveLength(3);
+      // Every coord-bonus pays 2p × 4 = 8p
+      expect(t1SolidCoords.every((a) => a.points === 8)).toBe(true);
+      // Verify the streak windows we expect
+      expect(t1SolidCoords.map((a) => a.streakStartHole)).toEqual([1, 6, 14]);
+      expect(t1SolidCoords.map((a) => a.streakEndHole)).toEqual([5, 10, 18]);
+
+      // --- Team 2 (4 players, all bogey) has none of the achievement awards ---
+      expect(t2.awards.filter((a) => a.category === 'turkey')).toHaveLength(0);
+      expect(t2.awards.filter((a) => a.category === 'solid')).toHaveLength(0);
+      expect(t2.awards.filter((a) => a.category === 'snowman')).toHaveLength(0);
+    });
   });
 });
