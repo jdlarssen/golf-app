@@ -1019,6 +1019,39 @@ export function calculateSideTournament(
     }
   }
 
+  // 18. Solid — per spiller, 2p per non-overlapping 5-hole netto-par-or-better
+  // streak (netto <= par). Same shape as Turkey, just 5-in-a-row at 2p each.
+  // Stackable, and a `solid` award includes `winnerUserId` for attribution.
+  //
+  // Lag-koord-bonus: teams with ≥2 members get an additional 2p × N when every
+  // member has netto ≤ par on the same 5-hole window. Marked with
+  // `coordBonus: true`.
+  if (!isDisabled('solid', input.config)) {
+    for (const p of input.playerScoresPerHole) {
+      const teamId = teamIdForUser(input.teams, p.userId);
+      if (teamId == null) continue;
+      const streaks = findNonOverlappingStreaks(
+        p.perHoleNetto,
+        5,
+        (netto, h) => {
+          const par = input.coursePars[h];
+          return par != null && netto <= par;
+        },
+      );
+      for (const s of streaks) {
+        award(teamId, {
+          category: 'solid',
+          teamId,
+          points: SIDE_TOURNAMENT_POINTS.solidPerPlayer,
+          winnerUserId: p.userId,
+          streakLength: 5,
+          streakStartHole: s.startHole,
+          streakEndHole: s.endHole,
+        });
+      }
+    }
+  }
+
   return {
     teamStandings: input.teams.map((t) => ({
       teamId: t.teamId,
