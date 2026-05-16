@@ -12,7 +12,11 @@ import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { ScoreShape } from '@/components/scoring/ScoreShape';
 import { scoreShape } from '@/lib/scoring/scoreShape';
 import { scoreTone } from '@/lib/scoring/scoreTone';
-import { revealState, type RevealState } from '@/lib/games/visibility';
+import {
+  revealState,
+  shouldHideNetto,
+  type RevealState,
+} from '@/lib/games/visibility';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 
 type Params = Promise<{ id: string }>;
@@ -96,11 +100,13 @@ async function ScorecardTable({
   revealState: RevealState;
 }) {
   // Reveal matrix:
-  //   live-always       → no per-row handicap info, total slag-fått in footer, no Netto column
-  //   reveal-active     → no handicap info at all (footer hides slag-fått)
-  //   reveal-finished   → handicap info back in footer + add Netto column with totals
+  //   live-always       → Netto column + slag-fått total in footer
+  //   reveal-active     → no handicap info at all (no Netto column, slag-fått hidden)
+  //   reveal-finished   → Netto column + slag-fått total in footer
+  // The Netto column only hides in reveal-active so the climax stays secret;
+  // every other state surfaces it (shouldHideNetto encodes exactly that).
   const showHandicapTotal = state !== 'reveal-active';
-  const showNetto = state === 'reveal-finished';
+  const showNetto = !shouldHideNetto(state);
   const { supabase } = await getScorecardContext();
 
   const [holesRes, scoresRes] = await Promise.all([
@@ -138,8 +144,9 @@ async function ScorecardTable({
   // Sum of handicap-allocated extra strokes across played holes — surfaced
   // in the footer instead of a per-row +slag column.
   const totalExtraSlag = playedHoles.reduce((sum, r) => sum + r.extra, 0);
-  // Netto total over played holes; only relevant when showNetto is true, but
-  // computed unconditionally so the JSX stays branch-light.
+  // Netto total over played holes — surfaced in the footer whenever the Netto
+  // column is shown (live-always + reveal-finished). Computed unconditionally
+  // so the JSX stays branch-light.
   const totalNetto = playedHoles.reduce(
     (sum, r) => sum + ((r.strokes ?? 0) - r.extra),
     0,
