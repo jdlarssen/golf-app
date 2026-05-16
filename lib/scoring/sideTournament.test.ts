@@ -744,4 +744,199 @@ describe('calculateSideTournament', () => {
       expect(awards.some((a) => a.category === 'most_eagles_team')).toBe(true);
     });
   });
+
+  describe('most_pars', () => {
+    // Helper: build an 18-hole array filled with par 4
+    const par4Course = (): number[] => new Array(18).fill(4);
+
+    // Helper: per-player score with same gross/netto and explicit netto array
+    const player = (
+      userId: string,
+      perHoleNetto: Array<number | null>,
+    ): SideTournamentInput['playerScoresPerHole'][number] => ({
+      userId,
+      perHoleGross: perHoleNetto,
+      perHoleNetto,
+    });
+
+    it('awards team-aggregate to single team with most pars+', () => {
+      // Par or better = netto <= par (so on par-4: netto ≤ 4)
+      // Team 1: 6 pars+ total (a=4, b=2)
+      // Team 2: 3 pars+ total (c=2, d=1)
+      const userANetto = [4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userBNetto = [4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userCNetto = [4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userDNetto = [4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+
+      expect(t1.awards.find((a) => a.category === 'most_pars_team')?.points).toBe(2);
+      expect(t2.awards.find((a) => a.category === 'most_pars_team')).toBeUndefined();
+    });
+
+    it('awards team-aggregate to both teams on a tie (full pot, no split)', () => {
+      // Both teams: 4 pars+ total
+      const userANetto = [4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userBNetto = [4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userCNetto = [4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userDNetto = [4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+
+      expect(t1.awards.find((a) => a.category === 'most_pars_team')?.points).toBe(2);
+      expect(t2.awards.find((a) => a.category === 'most_pars_team')?.points).toBe(2);
+    });
+
+    it('awards individual to single player with most pars+', () => {
+      // user-b has 5 pars+, all others have at most 3
+      const userANetto = [4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userBNetto = [4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userCNetto = [4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userDNetto = [4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+
+      // user-b on team 1 → team 1 gets the award
+      expect(t1.awards.find((a) => a.category === 'most_pars_individual')?.points).toBe(1);
+      expect(t2.awards.find((a) => a.category === 'most_pars_individual')).toBeUndefined();
+    });
+
+    it('awards individual to each tied player team on a tie', () => {
+      // user-a and user-c both have 4 pars+, others have less
+      const userANetto = [4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userBNetto = [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userCNetto = [4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userDNetto = [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+
+      expect(t1.awards.find((a) => a.category === 'most_pars_individual')?.points).toBe(1);
+      expect(t2.awards.find((a) => a.category === 'most_pars_individual')?.points).toBe(1);
+    });
+
+    it('skips team-aggregate when both teams have only 1 player (1v1)', () => {
+      const userANetto = [4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userBNetto = [4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+
+      const input: SideTournamentInput = {
+        config: { enabled: true, ldCount: 0, ctpCount: 0, disabledCategories: [] },
+        teams: [
+          { teamId: 1, userIds: ['user-a'] },
+          { teamId: 2, userIds: ['user-b'] },
+        ],
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+        ],
+        nettoBestBallPerHole: [
+          { teamId: 1, perHoleNetto: userANetto },
+          { teamId: 2, perHoleNetto: userBNetto },
+        ],
+        sideWinners: [],
+      };
+
+      const result = calculateSideTournament(input);
+      const allAwards = result.teamStandings.flatMap((s) => s.awards);
+
+      expect(allAwards.some((a) => a.category === 'most_pars_team')).toBe(false);
+      expect(allAwards.some((a) => a.category === 'most_pars_individual')).toBe(true);
+    });
+
+    it('honors disabledCategories: ["most_pars_team"]', () => {
+      const userANetto = [4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userBNetto = [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userCNetto = [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userDNetto = [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+
+      const input = baseInput({
+        config: { enabled: true, ldCount: 0, ctpCount: 0, disabledCategories: ['most_pars_team'] },
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+
+      expect(awards.some((a) => a.category === 'most_pars_team')).toBe(false);
+      expect(awards.some((a) => a.category === 'most_pars_individual')).toBe(true);
+    });
+
+    it('honors disabledCategories: ["most_pars_individual"]', () => {
+      const userANetto = [4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userBNetto = [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userCNetto = [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userDNetto = [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+
+      const input = baseInput({
+        config: { enabled: true, ldCount: 0, ctpCount: 0, disabledCategories: ['most_pars_individual'] },
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+
+      expect(awards.some((a) => a.category === 'most_pars_individual')).toBe(false);
+      expect(awards.some((a) => a.category === 'most_pars_team')).toBe(true);
+    });
+  });
 });
