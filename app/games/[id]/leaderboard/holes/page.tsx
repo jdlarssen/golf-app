@@ -18,6 +18,7 @@ import {
 } from '@/lib/leaderboard';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { formatRevealName } from '@/lib/names/formatRevealName';
+import { nameInitials } from '@/lib/names/initials';
 import type { GameStatus } from '@/lib/games/status';
 
 type Params = Promise<{ id: string }>;
@@ -556,12 +557,10 @@ function HoleRow({
   teamPlayers: LbPlayer[];
   staggerIndex: number;
 }) {
-  // Map userId → display initial (first letter of nickname, else of name).
+  // Map userId → first + last name initial (e.g. "Karl Hansen" → "KH").
   const initialFor = new Map<string, string>();
   for (const p of teamPlayers) {
-    const display = p.nickname?.trim() || p.name;
-    const first = Array.from(display)[0];
-    initialFor.set(p.userId, first ? first.toUpperCase() : '?');
+    initialFor.set(p.userId, nameInitials(p.name));
   }
 
   const teamVsPar = row.teamNet == null ? null : row.teamNet - row.par;
@@ -604,7 +603,7 @@ function HoleRow({
               }
             >
               <span
-                className={`w-4 text-center text-[13px] ${
+                className={`w-6 text-center text-[12px] ${
                   isBestNet ? 'font-bold text-text' : 'font-normal text-muted'
                 }`}
               >

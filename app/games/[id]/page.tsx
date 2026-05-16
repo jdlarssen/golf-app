@@ -16,6 +16,7 @@ import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { type GameStatus, STATUS_LABELS } from '@/lib/games/status';
 import { MailEnvelope } from '@/components/icons/MailEnvelope';
 import { firstName } from '@/lib/firstName';
+import { nameInitials } from '@/lib/names/initials';
 import { formatTeeOffTime, formatTeeOffDate } from '@/lib/format/teeOff';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
 import { ScheduledWaitingRoom } from './ScheduledWaitingRoom';
@@ -86,14 +87,6 @@ type FlightRosterRow = {
 /** Norwegian thousands-separator (non-breaking space). 6124 → "6 124". */
 function formatLengthMeters(n: number): string {
   return n.toLocaleString('nb-NO');
-}
-
-/** First letter of the first whitespace-separated token. Defensive on empty. */
-function firstInitial(name: string): string {
-  const trimmed = name.trim();
-  if (trimmed === '') return '?';
-  const first = trimmed.split(/\s+/)[0];
-  return first.charAt(0).toUpperCase();
 }
 
 type MyPlayerRow = {
@@ -583,7 +576,7 @@ async function FlightRoster({
                 : 'bg-surface text-text border border-border'
             }`}
           >
-            {firstInitial(p.name)}
+            {nameInitials(p.name)}
           </span>
           <span
             className={`flex-1 truncate text-[13.5px] ${p.isCurrentUser ? 'font-semibold' : ''}`}
@@ -695,7 +688,7 @@ async function DraftTeamsOverview({
                           : 'bg-surface text-text border border-border'
                       }`}
                     >
-                      {firstInitial(fullName ?? '?')}
+                      {nameInitials(fullName)}
                     </span>
                     <span className="truncate">
                       {displayName}

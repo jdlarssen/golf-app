@@ -126,6 +126,7 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     opacity: disabled ? 0.6 : 1,
   };
 
+  const initialChars = initial && initial.length > 0 ? initial : '?';
   const avatarStyle: CSSProperties = {
     width: 36,
     height: 36,
@@ -136,7 +137,7 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     alignItems: 'center',
     justifyContent: 'center',
     fontFamily: 'var(--font-serif)',
-    fontSize: 15,
+    fontSize: initialChars.length > 1 ? 13 : 15,
     fontWeight: 500,
     letterSpacing: '-0.02em',
     flexShrink: 0,
@@ -220,7 +221,7 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
       style={cardStyle}
       onClick={onCardClick}
     >
-      <div style={avatarStyle}>{initial && initial.length > 0 ? initial : '?'}</div>
+      <div style={avatarStyle}>{initialChars}</div>
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'baseline' }}>

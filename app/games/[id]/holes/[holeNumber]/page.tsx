@@ -3,6 +3,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
+import { nameInitials } from '@/lib/names/initials';
 import { HoleClient, type ClientPlayer } from './HoleClient';
 import type { GameStatus } from '@/lib/games/status';
 
@@ -41,12 +42,6 @@ type ScoreRow = {
   client_updated_at: string | null;
   updated_at: string | null;
 };
-
-function firstInitial(displayName: string): string {
-  // Unicode-safe: handles Norwegian Å/Æ/Ø and surrogate pairs.
-  const first = Array.from(displayName)[0];
-  return first ? first.toUpperCase() : '?';
-}
 
 export default async function HolePage({ params }: { params: Params }) {
   const { id, holeNumber: holeStr } = await params;
@@ -173,14 +168,13 @@ export default async function HolePage({ params }: { params: Params }) {
     const rawNickname = p.users?.nickname ?? null;
     const nickname =
       rawNickname && rawNickname.trim().length > 0 ? rawNickname : null;
-    const display = nickname ?? name;
     const ch = p.course_handicap ?? 0;
     const scoreRow = scoresByUser[p.user_id];
     return {
       userId: p.user_id,
       name,
       nickname,
-      initial: firstInitial(display),
+      initial: nameInitials(name),
       extraStrokes: strokesForHole(ch, hole.stroke_index),
       initialStrokes: scoreRow?.strokes ?? null,
       initialClientUpdatedAt: scoreRow?.client_updated_at ?? null,
