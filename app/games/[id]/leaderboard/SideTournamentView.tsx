@@ -26,6 +26,77 @@ type Props = {
   }>;
 };
 
+/** Group-id-er som driver under-overskriftene i hver lag-expand. Rekkefølgen
+ * her er den visuelle rekkefølgen. Tomme grupper hoppes stille over. */
+type GroupId =
+  | 'hovedkonkurranser'
+  | 'skill'
+  | 'moderate'
+  | 'hull'
+  | 'achievements'
+  | 'penalty';
+
+/** Fast visnings-rekkefølge for under-overskrifter. */
+const GROUP_ORDER: readonly GroupId[] = [
+  'hovedkonkurranser',
+  'skill',
+  'moderate',
+  'hull',
+  'achievements',
+  'penalty',
+];
+
+/** Norske etiketter for under-overskrifter (uppercase via Tailwind). */
+const GROUP_LABELS: Record<GroupId, string> = {
+  hovedkonkurranser: 'Hovedkonkurranser',
+  skill: 'Skill og rarity',
+  moderate: 'Moderate',
+  hull: 'Hull-konkurranser',
+  achievements: 'Achievements',
+  penalty: 'Penalty',
+};
+
+/**
+ * Hvilken gruppe en gitt SideCategory tilhører. Brukes til å fordele awards
+ * over de seks under-overskriftene i lag-expand. Penalty-gruppen er kun for
+ * snowman (negativ-poeng) og rendres med varselsfarge i Task 8.3.
+ */
+const CATEGORY_GROUPS: Record<string, GroupId> = {
+  // Hovedkonkurranser — 10p / 5p / 5p
+  best_netto_18: 'hovedkonkurranser',
+  best_netto_front9: 'hovedkonkurranser',
+  best_netto_back9: 'hovedkonkurranser',
+  // Skill og rarity — 4p lag / 2p individ
+  best_brutto_18_team: 'skill',
+  best_brutto_18_individual: 'skill',
+  king_par3_team: 'skill',
+  king_par3_individual: 'skill',
+  king_par5_team: 'skill',
+  king_par5_individual: 'skill',
+  most_eagles_team: 'skill',
+  most_eagles_individual: 'skill',
+  longest_bogey_free_streak: 'skill',
+  // Moderate — 2p lag / 1p individ
+  best_brutto_f9_team: 'moderate',
+  best_brutto_f9_individual: 'moderate',
+  best_brutto_b9_team: 'moderate',
+  best_brutto_b9_individual: 'moderate',
+  most_birdies_team: 'moderate',
+  most_birdies_individual: 'moderate',
+  most_pars_team: 'moderate',
+  most_pars_individual: 'moderate',
+  lowest_single_hole_brutto: 'moderate',
+  // Hull-konkurranser — 2p each
+  hole_win: 'hull',
+  longest_drive: 'hull',
+  closest_to_pin: 'hull',
+  // Achievements (positive)
+  turkey: 'achievements',
+  solid: 'achievements',
+  // Penalty (negative — egen visuell tone)
+  snowman: 'penalty',
+};
+
 /**
  * Sideturnering — presentational view for the "Sideturnering" tab on the
  * leaderboard. Visible only when game.status === 'finished' AND
@@ -36,7 +107,9 @@ type Props = {
  *
  * Each row's summary shows: medal + "Lag N" + members (first names, joined
  * with " · ") + total points. Click to expand and see that team's awards
- * grouped by category.
+ * grouped into seks under-seksjoner: Hovedkonkurranser, Skill og rarity,
+ * Moderate, Hull-konkurranser, Achievements, Penalty. Tomme grupper hoppes
+ * stille over så lag uten f.eks. achievements får en kort liste.
  *
  * No realtime, no client state — `result` is precomputed by the server page.
  */
@@ -137,16 +210,17 @@ type RankedStanding = SideTournamentResult['teamStandings'][number] & {
   rank: number;
 };
 
+type AwardRow = { key: string; render: React.ReactNode };
+
 /**
- * Renders one team's awards grouped by category.
+ * Renders one team's awards grouped into seks under-seksjoner. Tomme grupper
+ * hoppes stille over (ingen under-overskrift, ingen padding).
  *
- * Each category produces zero or one row depending on whether the team has
- * an award in that category. Hole-wins are aggregated into a single row with
- * a count, total points, and a formatted hole-range. LD/CTP slots are listed
- * per-position with the winner's first name in parens.
+ * Innen hver gruppe: rader sorteres etter poeng descending. Ved like poeng
+ * vinner lag-versjon over individ-versjon (lexicographic `_team` < `_individual`).
  *
- * Tie info on netto categories: if more than one team has the same
- * best_netto_* award, append "(uavgjort med Lag X)" to the row.
+ * Tie info på netto/brutto-lag-kategorier: hvis flere lag deler samme award,
+ * legges "(uavgjort med Lag X)" til på radene.
  */
 function TeamAwards({
   teamId,
@@ -167,7 +241,19 @@ function TeamAwards({
   if (!myStanding) return null;
 
   const awards = myStanding.awards;
-  const rows: Array<{ key: string; render: React.ReactNode }> = [];
+  // Tabeller, gruppert per GroupId. Hver verdi er en liste av {category, render,
+  // points} så vi kan sortere innen-gruppe.
+  const rowsByGroup: Record<
+    GroupId,
+    Array<{ key: string; render: React.ReactNode; points: number; category: string }>
+  > = {
+    hovedkonkurranser: [],
+    skill: [],
+    moderate: [],
+    hull: [],
+    achievements: [],
+    penalty: [],
+  };
 
   // Helper: which OTHER teams share an award in this category?
   const tieMates = (category: string): number[] => {
@@ -191,41 +277,42 @@ function TeamAwards({
     return ` (uavgjort med ${labels.slice(0, -1).join(', ')} og ${labels[labels.length - 1]})`;
   };
 
+  const push = (
+    group: GroupId,
+    category: string,
+    points: number,
+    key: string,
+    render: React.ReactNode,
+  ) => {
+    rowsByGroup[group].push({ key, render, points, category });
+  };
+
   // 1. Best netto 18
   if (awards.some((a) => a.category === 'best_netto_18')) {
-    rows.push({
-      key: 'best_netto_18',
-      render: (
-        <>
-          Best netto 18 hull: <Pts n={10} />
-          {tieSuffix(tieMates('best_netto_18'))}
-        </>
-      ),
-    });
+    push('hovedkonkurranser', 'best_netto_18', 10, 'best_netto_18', (
+      <>
+        Best netto 18 hull: <Pts n={10} />
+        {tieSuffix(tieMates('best_netto_18'))}
+      </>
+    ));
   }
   // 2. Best netto front 9
   if (awards.some((a) => a.category === 'best_netto_front9')) {
-    rows.push({
-      key: 'best_netto_front9',
-      render: (
-        <>
-          Best netto front 9: <Pts n={5} />
-          {tieSuffix(tieMates('best_netto_front9'))}
-        </>
-      ),
-    });
+    push('hovedkonkurranser', 'best_netto_front9', 5, 'best_netto_front9', (
+      <>
+        Best netto front 9: <Pts n={5} />
+        {tieSuffix(tieMates('best_netto_front9'))}
+      </>
+    ));
   }
   // 3. Best netto back 9
   if (awards.some((a) => a.category === 'best_netto_back9')) {
-    rows.push({
-      key: 'best_netto_back9',
-      render: (
-        <>
-          Best netto back 9: <Pts n={5} />
-          {tieSuffix(tieMates('best_netto_back9'))}
-        </>
-      ),
-    });
+    push('hovedkonkurranser', 'best_netto_back9', 5, 'best_netto_back9', (
+      <>
+        Best netto back 9: <Pts n={5} />
+        {tieSuffix(tieMates('best_netto_back9'))}
+      </>
+    ));
   }
   // 4. Hole-wins (aggregated)
   const holeWinAwards = awards.filter((a) => a.category === 'hole_win');
@@ -234,15 +321,12 @@ function TeamAwards({
       .map((a) => a.holeNumber)
       .filter((h): h is number => typeof h === 'number');
     const totalPts = holeWinAwards.reduce((sum, a) => sum + a.points, 0);
-    rows.push({
-      key: 'hole_win',
-      render: (
-        <>
-          Hole-wins: <Pts n={totalPts} /> på {holes.length} hull (
-          {formatHolesList(holes)})
-        </>
-      ),
-    });
+    push('hull', 'hole_win', totalPts, 'hole_win', (
+      <>
+        Hole-wins: <Pts n={totalPts} /> på {holes.length} hull (
+        {formatHolesList(holes)})
+      </>
+    ));
   }
   // 5. Longest drive — per slot
   if (ldCount > 0) {
@@ -256,14 +340,11 @@ function TeamAwards({
         : null;
       if (winnerTeamId !== teamId) continue;
       const winnerName = firstNameOf(w.winnerUserId, teamById) ?? '?';
-      rows.push({
-        key: `ld_${pos}`,
-        render: (
-          <>
-            Longest drive #{pos} ({winnerName}): <Pts n={2} />
-          </>
-        ),
-      });
+      push('hull', 'longest_drive', 2, `ld_${pos}`, (
+        <>
+          Longest drive #{pos} ({winnerName}): <Pts n={2} />
+        </>
+      ));
     }
   }
   // 6. Closest to pin — per slot
@@ -278,27 +359,63 @@ function TeamAwards({
         : null;
       if (winnerTeamId !== teamId) continue;
       const winnerName = firstNameOf(w.winnerUserId, teamById) ?? '?';
-      rows.push({
-        key: `ctp_${pos}`,
-        render: (
-          <>
-            Closest to pin #{pos} ({winnerName}): <Pts n={2} />
-          </>
-        ),
-      });
+      push('hull', 'closest_to_pin', 2, `ctp_${pos}`, (
+        <>
+          Closest to pin #{pos} ({winnerName}): <Pts n={2} />
+        </>
+      ));
     }
   }
 
-  if (rows.length === 0) {
+  // Telle totalt antall rader; om ingen → tom-melding.
+  const totalRows = Object.values(rowsByGroup).reduce(
+    (sum, rs) => sum + rs.length,
+    0,
+  );
+  if (totalRows === 0) {
     return <div className="text-muted">Ingen poeng denne runden.</div>;
   }
 
+  // Sortér innen hver gruppe: høyest poeng først, så lag-versjon før individ-
+  // versjon (lexicographic på category-ID gjør jobben — `_team` < `_individual`).
+  for (const group of GROUP_ORDER) {
+    rowsByGroup[group].sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      return a.category.localeCompare(b.category);
+    });
+  }
+
   return (
-    <ul className="space-y-1 font-serif text-base text-text">
-      {rows.map((r) => (
-        <li key={r.key}>{r.render}</li>
-      ))}
-    </ul>
+    <div className="space-y-3">
+      {GROUP_ORDER.map((group) => {
+        const rows = rowsByGroup[group];
+        if (rows.length === 0) return null;
+        return (
+          <GroupSection key={group} group={group} rows={rows} />
+        );
+      })}
+    </div>
+  );
+}
+
+function GroupSection({
+  group,
+  rows,
+}: {
+  group: GroupId;
+  rows: AwardRow[];
+}) {
+  return (
+    <section>
+      <h3 className="mb-1 text-xs uppercase tracking-wide font-semibold text-muted">
+        {GROUP_LABELS[group]}
+      </h3>
+      <ul className="space-y-1 font-serif text-base text-text">
+        {rows.map((r) => (
+          <li key={r.key}>{r.render}</li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
