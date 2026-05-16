@@ -50,7 +50,7 @@ export default async function HistorikkPage() {
   const gameIds = rows.map((r) => r.game_id);
 
   // Round-trip 2: fetch all user scores for those games in one IN query.
-  let scoresByGame: Map<string, ScoreRow[]> = new Map();
+  const scoresByGame: Map<string, ScoreRow[]> = new Map();
   if (gameIds.length > 0) {
     const { data: scores, error: scoresError } = await supabase
       .from('scores')
