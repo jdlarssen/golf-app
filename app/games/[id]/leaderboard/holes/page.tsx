@@ -19,32 +19,13 @@ import {
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { nameInitials } from '@/lib/names/initials';
-import type { GameStatus } from '@/lib/games/status';
+import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
   mode?: string | string[];
   team?: string | string[];
 }>;
-
-type GameRow = {
-  id: string;
-  name: string;
-  status: GameStatus;
-  course_id: string;
-  score_visibility: 'live' | 'reveal';
-  courses: { name: string } | null;
-};
-
-type GamePlayerRow = {
-  user_id: string;
-  team_number: number;
-  course_handicap: number | null;
-  // Per-hole leaderboard only renders for non-draft/scheduled games, and
-  // Task 7's publish-gate prevents pending players from reaching that state.
-  // Typed nullable to match the DB column.
-  users: { name: string | null; nickname: string | null } | null;
-};
 
 type CourseHoleRow = {
   hole_number: number;
@@ -80,13 +61,10 @@ export default async function LeaderboardHolesPage({
   const { supabase, userId } = await getDrilldownContext();
   if (!userId) redirect('/login');
 
-  // Gating: game row + admin check in parallel.
-  const [gameRes, profileRes] = await Promise.all([
-    supabase
-      .from('games')
-      .select('id, name, status, course_id, score_visibility, courses(name)')
-      .eq('id', id)
-      .single<GameRow>(),
+  // Game + players come from the tag-cached helper. Admin check stays
+  // direct since it isn't game-scoped.
+  const [gwp, profileRes] = await Promise.all([
+    getGameWithPlayers(id),
     supabase
       .from('users')
       .select('is_admin')
@@ -94,8 +72,8 @@ export default async function LeaderboardHolesPage({
       .single<{ is_admin: boolean }>(),
   ]);
 
-  if (gameRes.error || !gameRes.data) notFound();
-  const game = gameRes.data;
+  if (!gwp) notFound();
+  const game = gwp.game;
 
   if (game.status === 'draft' || game.status === 'scheduled') {
     redirect(`/games/${id}`);
@@ -111,14 +89,9 @@ export default async function LeaderboardHolesPage({
   const mode: LeaderboardMode = forceBrutto ? 'brutto' : requestedMode;
 
   const isAdmin = profileRes.data?.is_admin === true;
-  if (!isAdmin) {
-    const { data: me } = await supabase
-      .from('game_players')
-      .select('user_id')
-      .eq('game_id', id)
-      .eq('user_id', userId)
-      .maybeSingle();
-    if (!me) notFound();
+  // Non-admin players must be a participant. Reads from cached players list.
+  if (!isAdmin && !gwp.players.some((p) => p.user_id === userId)) {
+    notFound();
   }
 
   return (
@@ -149,14 +122,10 @@ async function DrilldownBody({
 }) {
   const { supabase } = await getDrilldownContext();
 
-  const [rawPlayersRes, rawHolesRes, rawScoresRes] = await Promise.all([
-    supabase
-      .from('game_players')
-      .select(
-        'user_id, team_number, course_handicap, users!game_players_user_id_fkey(name, nickname)',
-      )
-      .eq('game_id', gameId)
-      .returns<GamePlayerRow[]>(),
+  // Players come from the tag-cached helper (cache hit — outer page already
+  // warmed it). Holes + scores stay direct fetches.
+  const [gwp, rawHolesRes, rawScoresRes] = await Promise.all([
+    getGameWithPlayers(gameId),
     supabase
       .from('course_holes')
       .select('hole_number, par, stroke_index')
@@ -170,11 +139,11 @@ async function DrilldownBody({
       .returns<ScoreRow[]>(),
   ]);
 
-  if (rawPlayersRes.error) throw rawPlayersRes.error;
+  if (!gwp) notFound();
   if (rawHolesRes.error) throw rawHolesRes.error;
   if (rawScoresRes.error) throw rawScoresRes.error;
 
-  const players: LbPlayer[] = (rawPlayersRes.data ?? [])
+  const players: LbPlayer[] = gwp.players
     .filter((p) => p.users != null)
     .map((p) => ({
       userId: p.user_id,
