@@ -2912,4 +2912,175 @@ describe('calculateSideTournament', () => {
       expect(awards.some((a) => a.category === 'solid')).toBe(false);
     });
   });
+
+  describe('solid (lag-koord-bonus)', () => {
+    const par4Course = (): number[] => new Array(18).fill(4);
+
+    const player = (
+      userId: string,
+      perHoleNetto: Array<number | null>,
+    ): SideTournamentInput['playerScoresPerHole'][number] => ({
+      userId,
+      perHoleGross: perHoleNetto,
+      perHoleNetto,
+    });
+
+    it('2v2 both par-or-better 1-5 → 4p koord-bonus (2p × 2)', () => {
+      const userANetto = [4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userBNetto = [4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userCNetto = new Array(18).fill(5);
+      const userDNetto = new Array(18).fill(5);
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+
+      const coord = t1.awards.filter((a) => a.category === 'solid' && a.coordBonus === true);
+      expect(coord).toHaveLength(1);
+      expect(coord[0]?.points).toBe(4);
+      expect(coord[0]?.streakStartHole).toBe(1);
+      expect(coord[0]?.streakEndHole).toBe(5);
+    });
+
+    it('4v4 all 4 par-or-better 1-5 → 8p koord-bonus (2p × 4)', () => {
+      const userANetto = [4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userBNetto = [4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userCNetto = [4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userDNetto = [4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+
+      const input = baseInput({
+        teams: [{ teamId: 1, userIds: ['user-a', 'user-b', 'user-c', 'user-d'] }],
+        coursePars: par4Course(),
+        nettoBestBallPerHole: [
+          { teamId: 1, perHoleNetto: holes(new Array(18).fill(4)) },
+        ],
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+
+      const coord = t1.awards.filter((a) => a.category === 'solid' && a.coordBonus === true);
+      expect(coord).toHaveLength(1);
+      expect(coord[0]?.points).toBe(8); // 2p × 4
+    });
+
+    it('3 of 4 par-or-better → 0 koord-bonus', () => {
+      const userANetto = [4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userBNetto = [4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userCNetto = [4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      // user-d has bogey on hole 3 → breaks the joint streak
+      const userDNetto = [4, 4, 5, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+
+      const input = baseInput({
+        teams: [{ teamId: 1, userIds: ['user-a', 'user-b', 'user-c', 'user-d'] }],
+        coursePars: par4Course(),
+        nettoBestBallPerHole: [
+          { teamId: 1, perHoleNetto: holes(new Array(18).fill(4)) },
+        ],
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+
+      const coord = t1.awards.filter((a) => a.category === 'solid' && a.coordBonus === true);
+      expect(coord).toHaveLength(0);
+    });
+
+    it('1-player team → 0 koord-bonus', () => {
+      const userANetto = [4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+
+      const input = baseInput({
+        teams: [{ teamId: 1, userIds: ['user-a'] }],
+        coursePars: par4Course(),
+        nettoBestBallPerHole: [
+          { teamId: 1, perHoleNetto: holes(new Array(18).fill(4)) },
+        ],
+        playerScoresPerHole: [player('user-a', userANetto)],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+
+      const perPlayer = t1.awards.filter((a) => a.category === 'solid' && !a.coordBonus);
+      const coord = t1.awards.filter((a) => a.category === 'solid' && a.coordBonus === true);
+      expect(perPlayer).toHaveLength(1);
+      expect(coord).toHaveLength(0);
+    });
+
+    it('2v2 both par-or-better 1-5 AND 6-10 → 2 koord-bonuses = 8p', () => {
+      const userANetto = [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userBNetto = [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userCNetto = new Array(18).fill(5);
+      const userDNetto = new Array(18).fill(5);
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+
+      const coord = t1.awards.filter((a) => a.category === 'solid' && a.coordBonus === true);
+      expect(coord).toHaveLength(2);
+      expect(coord.reduce((sum, a) => sum + a.points, 0)).toBe(8);
+      expect(coord[0]?.streakStartHole).toBe(1);
+      expect(coord[0]?.streakEndHole).toBe(5);
+      expect(coord[1]?.streakStartHole).toBe(6);
+      expect(coord[1]?.streakEndHole).toBe(10);
+    });
+
+    it('honors disabledCategories: ["solid"] for koord-bonus too', () => {
+      const userANetto = [4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userBNetto = [4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userCNetto = new Array(18).fill(5);
+      const userDNetto = new Array(18).fill(5);
+
+      const input = baseInput({
+        config: {
+          enabled: true,
+          ldCount: 0,
+          ctpCount: 0,
+          disabledCategories: ['solid'],
+        },
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+      expect(awards.some((a) => a.category === 'solid')).toBe(false);
+    });
+  });
 });

@@ -1050,6 +1050,38 @@ export function calculateSideTournament(
         });
       }
     }
+
+    // Lag-koord-bonus (5-streak where every team member has netto ≤ par)
+    for (const team of input.teams) {
+      const n = team.userIds.length;
+      if (n < 2) continue;
+      const memberScores = team.userIds
+        .map((uid) => input.playerScoresPerHole.find((p) => p.userId === uid))
+        .filter((p): p is SideTournamentInput['playerScoresPerHole'][number] => p != null);
+      if (memberScores.length !== n) continue;
+      const allParPlusFlag: Array<number | null> = new Array(18).fill(null);
+      for (let h = 0; h < 18; h++) {
+        const par = input.coursePars[h];
+        if (par == null) continue;
+        const allParPlus = memberScores.every((p) => {
+          const netto = p.perHoleNetto[h];
+          return netto != null && netto <= par;
+        });
+        if (allParPlus) allParPlusFlag[h] = 1;
+      }
+      const coordStreaks = findNonOverlappingStreaks(allParPlusFlag, 5, () => true);
+      for (const s of coordStreaks) {
+        award(team.teamId, {
+          category: 'solid',
+          teamId: team.teamId,
+          points: SIDE_TOURNAMENT_POINTS.solidCoordPerMember * n,
+          coordBonus: true,
+          streakLength: 5,
+          streakStartHole: s.startHole,
+          streakEndHole: s.endHole,
+        });
+      }
+    }
   }
 
   return {
