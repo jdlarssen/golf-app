@@ -162,8 +162,6 @@ Nyeste øverst, norsk på alt brukerrettet. Når du legger til en ny entry: skri
 
 Når en minor-serie passerer tre-nyeste-grensen (nytt minor lander), pakk den eldste åpne serien inn i `<details>`.
 
-**Veien til v1.0.0:** bumpene fortsetter som `0.x.y` til (a) `/admin/invitations`-status fungerer korrekt, (b) smoke-test med ekte kompis bestått, (c) Supabase Site-URL/mail-subject-cache løst. Når alle tre er på plass: bump til `1.0.0` med en samle-CHANGELOG-entry «Første stabile release».
-
 **Håndheving via git commit-msg-hook (`.githooks/commit-msg`):** regelen er ikke valgfri — hooken blokkerer alle `feat(...)`/`fix(...)`/`perf(...)`-commits som ikke samtidig stager `package.json` (med endret version-felt) og `CHANGELOG.md`. Hooken er aktivert automatisk på `npm install` (via `postinstall` som setter `core.hooksPath=.githooks`). Hvis hooken blokkerer:
 
 1. Hvis commiten faktisk er bruker-synlig: kjør `npm version patch --no-git-tag-version` (eller `minor`/`major`), legg til CHANGELOG-entry, stage alle tre filer, og commit på nytt med samme melding.
@@ -269,37 +267,18 @@ Helper functions er `SECURITY DEFINER` for å unngå rekursjons-feller.
 
 ## Status per session-handoff
 
-**v1.0-launch-sesjon 2026-05-14.** Står på `v1.0.9` — første stabile release shipped, med 9 patches på post-launch polish basert på prod-testing.
+Står på `v1.1.5` per 2026-05-16. `v1.0.0` shipped 2026-05-14 («Første stabile release»), `v1.1.0` shipped samme dag med sideturnering-feature. Post-launch er en serie polish-patches + en cache-arc.
 
-✅ **Nytt i v1.0-leveransen:**
-- **Reveal-mode** — admin velger ved spill-opprett om netto-tall skjules under runden og avsløres når spillet avsluttes. Default `live` = dagens oppførsel.
-- **Scorekort-former** — sirkel/dobbel/trippel for under-par, firkant/dobbel/trippel/kvadruppel for over-par. Brukt på 5 skjermer (hull-skjerm, scorekort-oversikt, lever, approve, hull-leaderboard).
-- **Navne-reveal** — under runden `nickname ?? name`, på finished-flater `Karl "Knølkis" Jensen` via `formatRevealName(name, nickname)`.
-- **Live brutto leaderboard** — `RevealBruttoView` for reveal-aktiv: lag-totaler basert på brutto best-ball, per-spiller-brutto-sums, vs-par-delta per rad, ingen handicap-info.
-- **Hull-skjerm leaderboard-ikon** (PokalIcon) med `?return=hole&n=N` for return-to-hole-nav.
-- **Auto-reveal via realtime** — `PreRoundLeaderboardRealtime` lytter på `games` UPDATEs i tillegg til `scores` INSERTs, så leaderboardet veksler automatisk fra brutto-view til netto-reveal når admin avslutter.
-- **Hull-for-hull-oversikt redesign** — vertikalt stack per spiller med initial (J, H, ...) foran scoren, brutto-shape + netto + vs-par-pille. Kontributørens initial er **fet** = «brukt netto». Lagets best-ball + vs-par-pille til høyre. Totalt-baren har vs-par inline med totalsum.
-- **Scorekort-oversikt** har droppet per-rad `+slag`-kolonnen (passer nå på normal iPhone). Total «Slag fått: N» surfaces i fotnoten.
-- **«Leaderboard»-link på spill-hjem** for aktive spill — lukker discoverability-gapet etter scorekort-levering når hull-skjermen redirecter bort.
+**Tag-cached data-layer (shipped 2026-05-16):**
+- `lib/games/getGameWithPlayers.ts` — `unstable_cache`-wrappet helper med tag `game-${id}` og admin-client for RLS-bypass (cookies fungerer ikke inne i cache-callbacks). Authz beholdes på call-site via `me = players.find(...)` notFound().
+- Alle 6 game-konsumenter leser fra cachen: hull-page, scorecard, submit, approve, game-home, leaderboard, leaderboard/holes.
+- 12+ mutasjons-server-actions kaller `revalidateTag(\`game-${id}\`, 'max')` (Next.js 16 to-arg-form; single-arg er deprecated). Auto-start-fallback i game-home server-component bruker `after(() => revalidateTag(..., { expire: 0 }))` siden `revalidateTag` kaster under render-fase.
+- `courses(...)` / `tee_boxes(...)` joins er IKKE cachet — caching ville krevd cross-game fan-out på course-edits. Konsumenter som trenger join-data (submit, game-home) fetcher det som slim direkte-call parallelt med cached helper.
 
-**Migrasjoner shipped denne sesjonen:**
-- `0021_score_visibility` — `games.score_visibility text not null default 'live' check (in ('live', 'reveal'))`, låses mens status `active`/`finished`
-- `0022_realtime_games` — `alter publication supabase_realtime add table public.games` for at klienter kan lytte på `status='finished'`-event
-
-**Nye filer:**
-- `lib/games/visibility.ts` — `revealState(visibility, status)` + `shouldHideNetto(state)`
-- `lib/scoring/scoreShape.ts` — mapper score til shape-kategori (cap på trippel under, kvadruppel over)
-- `lib/names/formatRevealName.ts` — `Karl "Knølkis" Jensen`-format
-- `components/scoring/ScoreShape.tsx` — SVG-pakker rundt score-tall, `size: 'sm' | 'md' | 'lg'`, strek 1.0–1.5px, `lineHeight: px`-sentrering, `tabular-nums`
-- `app/games/[id]/leaderboard/RevealBruttoView.tsx` — eget view for `reveal-active`-state med tease-tekst
-
-**Designdoc + plan i `docs/plans/`:** `2026-05-14-v1-launch-design.md` (godkjent), `2026-05-14-v1-launch-implementation.md` (25-task TDD-plan, alle 25 sjekket inn).
-
-⏸ **Ventende (post-v1.0):**
+⏸ **Ventende:**
 - **Multi-player scorekort-oversikt** — vise lag-medlemmer side om side med initialer øverst i hver kolonne (vs. dagens single-player-flate). Krever brainstorming — se [#17](https://github.com/jdlarssen/golf-app/issues/17).
 - **End-to-end-test av mail-flow** (gameFinished + scorecardSubmitted) — sjekk Resend-dashboard
 - **Designpass** på resterende sider (complete-profile, admin/courses + admin/games-listen)
-- **Hull-page layout-lift** (`game` + `game_players` til layout.tsx via React.cache) — estimert –300ms ([#18](https://github.com/jdlarssen/golf-app/issues/18))
 - **TopBar med action-slot** for `/admin/courses` og `/admin/games`-listen
 
 📋 **Backlog:** [GitHub Issues](https://github.com/jdlarssen/golf-app/issues). `TODO.md` er en stub som peker dit — alle nye oppgaver opprettes som issues, ikke i markdown.
@@ -338,7 +317,6 @@ Hvis bruker kommer tilbake til et tema, sjekk om dette stemmer:
 3. **«Ny spilltype»** → stableford / matchplay / scramble / solo. Krever ny scoring-modul i `lib/scoring/`, nytt UI-flow. Datamodellen skalerer.
 4. **«Klubb-tier med flere admin/grupper»** → krever `groups` + `group_members`-tabeller, RLS-justering. Betydelig oppgave.
 5. **«Mail kommer ikke fram»** → systematisk debug. Sjekk Supabase Auth Logs (kode-mail) + Resend dashboard (notifikasjons-mail) + Vercel runtime logs. Tre Resend-mail-typer finnes nå: invite, gameFinished, scorecardSubmitted (alle i `lib/mail/`). Alle er best-effort med Promise.allSettled + console.error — sjekk Vercel logs for `[endGame]` / `[submitScorecard]` / `[admin/spillere]` prefiks ved feil.
-6. **«Bytt til v1.0.0»** → launch-readiness-kriteriene er allerede oppfylt (2026-05-13). Brukeren venter på sine egne endringer først. Når klar: MAJOR-bump med samle-CHANGELOG-entry «Første stabile release».
 
 ## Bruker-preferanser fra tidligere sesjon
 
