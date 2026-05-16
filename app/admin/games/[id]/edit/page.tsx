@@ -24,6 +24,10 @@ import {
   ERROR_MESSAGES_NEW_GAME,
   buildErrorMessage as buildGameErrorMessage,
 } from '@/lib/admin/gameErrorMessages';
+import {
+  ALL_CATEGORY_IDS,
+  type SideCategoryId,
+} from '@/lib/scoring/sideTournamentConfig';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -73,6 +77,8 @@ type GameRow = {
   side_tournament_enabled: boolean;
   side_ld_count: number;
   side_ctp_count: number;
+  // v1.2.0 — `text[]` på DB-siden. Vi narrow til SideCategoryId[] etter load.
+  side_disabled_categories: string[];
 };
 
 type GamePlayerRow = {
@@ -136,7 +142,7 @@ export default async function EditGamePage({
     supabase
       .from('games')
       .select(
-        'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count',
+        'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories',
       )
       .eq('id', id)
       .single<GameRow>(),
@@ -268,6 +274,15 @@ async function EditGameFormBody({
 
   if (playersResult.error) throw playersResult.error;
 
+  // Narrow `text[]` fra DB til SideCategoryId[]. CHECK-constraint i migrasjon
+  // 0026 garanterer at alle verdier er gyldige; defensiv filter her fanger en
+  // hypotetisk drift hvis nye kategorier landerer i koden uten å være lagt til
+  // i DB-constraintet.
+  const validIds = new Set<string>(ALL_CATEGORY_IDS);
+  const loadedDisabledCategories: SideCategoryId[] = (
+    game.side_disabled_categories ?? []
+  ).filter((id): id is SideCategoryId => validIds.has(id));
+
   const initialValues: InitialValues = {
     name: game.name,
     // course_id / tee_box_id may be null on a draft. The form treats undefined
@@ -288,6 +303,11 @@ async function EditGameFormBody({
     side_tournament_enabled: game.side_tournament_enabled,
     side_ld_count: game.side_ld_count,
     side_ctp_count: game.side_ctp_count,
+    // v1.2.0 — pre-populer kategori-velgeren med det som ligger lagret. For
+    // spill opprettet før migrasjon 0026 vil dette være et tomt array (DB
+    // default), som tilsvarer Full pakke; vi respekterer det heller enn å
+    // overstyre til Klassisk, fordi det er en bevisst lagret state.
+    side_disabled_categories: loadedDisabledCategories,
     // Same shape as lock_score_visibility — the status guard above means
     // active/finished games never reach this branch. Future-proofed for a
     // hypothetical read-only view of locked games.

@@ -70,6 +70,7 @@ async function updateGameInternal(
     enabled: sideEnabled,
     ldCount: sideLdCount,
     ctpCount: sideCtpCount,
+    disabledCategories: sideDisabledCategories,
   } = sideResult.payload;
 
   const supabase = await getServerClient();
@@ -132,6 +133,10 @@ async function updateGameInternal(
       side_tournament_enabled: sideEnabled,
       side_ld_count: sideLdCount,
       side_ctp_count: sideCtpCount,
+      // v1.2.0 — side_disabled_categories følger samme lock-mønster: write
+      // bare når status fortsatt er draft/scheduled (optimistic-lock under).
+      // Parseren garanterer tomt array når sideEnabled er false.
+      side_disabled_categories: sideDisabledCategories,
       status: nextStatus,
       // started_at is intentionally not touched — only D5's "Start runden nå"
       // flow transitions out of 'scheduled'.
