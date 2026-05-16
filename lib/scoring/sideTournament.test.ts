@@ -2492,4 +2492,207 @@ describe('calculateSideTournament', () => {
       expect(awards.some((a) => a.category === 'turkey')).toBe(false);
     });
   });
+
+  describe('turkey (lag-koord-bonus)', () => {
+    const par4Course = (): number[] => new Array(18).fill(4);
+
+    const player = (
+      userId: string,
+      perHoleNetto: Array<number | null>,
+    ): SideTournamentInput['playerScoresPerHole'][number] => ({
+      userId,
+      perHoleGross: perHoleNetto,
+      perHoleNetto,
+    });
+
+    it('2v2 both birdie 1-2-3 → 8p koord-bonus (4p × 2)', () => {
+      // Both user-a and user-b on team 1 birdie holes 1-2-3
+      const userANetto = [3, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userBNetto = [3, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userCNetto = new Array(18).fill(5);
+      const userDNetto = new Array(18).fill(5);
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+
+      const coordAwards = t1.awards.filter((a) => a.category === 'turkey' && a.coordBonus === true);
+      expect(coordAwards).toHaveLength(1);
+      expect(coordAwards[0]?.points).toBe(8);
+      expect(coordAwards[0]?.streakStartHole).toBe(1);
+      expect(coordAwards[0]?.streakEndHole).toBe(3);
+    });
+
+    it('4v4 all 4 birdie 1-2-3 → 16p koord-bonus (4p × 4)', () => {
+      const userANetto = [3, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userBNetto = [3, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userCNetto = [3, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userDNetto = [3, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+
+      // One 4-player team
+      const input = baseInput({
+        teams: [{ teamId: 1, userIds: ['user-a', 'user-b', 'user-c', 'user-d'] }],
+        coursePars: par4Course(),
+        nettoBestBallPerHole: [
+          { teamId: 1, perHoleNetto: holes(new Array(18).fill(4)) },
+        ],
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+
+      const coordAwards = t1.awards.filter((a) => a.category === 'turkey' && a.coordBonus === true);
+      expect(coordAwards).toHaveLength(1);
+      expect(coordAwards[0]?.points).toBe(16); // 4p × 4
+    });
+
+    it('3 of 4 birdie 1-2-3 → 0 koord-bonus', () => {
+      // user-d is the holdout
+      const userANetto = [3, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userBNetto = [3, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userCNetto = [3, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userDNetto = new Array(18).fill(5);
+
+      const input = baseInput({
+        teams: [{ teamId: 1, userIds: ['user-a', 'user-b', 'user-c', 'user-d'] }],
+        coursePars: par4Course(),
+        nettoBestBallPerHole: [
+          { teamId: 1, perHoleNetto: holes(new Array(18).fill(4)) },
+        ],
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+
+      const coordAwards = t1.awards.filter((a) => a.category === 'turkey' && a.coordBonus === true);
+      expect(coordAwards).toHaveLength(0);
+    });
+
+    it('1-player team → 0 koord-bonus (per-player still awarded)', () => {
+      // Single-player team with 3 birdies in a row — gets per-player turkey
+      // but NO koord-bonus (rule requires N >= 2)
+      const userANetto = [3, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+
+      const input = baseInput({
+        teams: [{ teamId: 1, userIds: ['user-a'] }],
+        coursePars: par4Course(),
+        nettoBestBallPerHole: [
+          { teamId: 1, perHoleNetto: holes(new Array(18).fill(4)) },
+        ],
+        playerScoresPerHole: [player('user-a', userANetto)],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+
+      const perPlayer = t1.awards.filter((a) => a.category === 'turkey' && !a.coordBonus);
+      const coord = t1.awards.filter((a) => a.category === 'turkey' && a.coordBonus === true);
+      expect(perPlayer).toHaveLength(1);
+      expect(coord).toHaveLength(0);
+    });
+
+    it('2v2 both birdie 1-2-3 AND 4-5-6 → 2 koord-bonuses = 16p', () => {
+      // Both players on team 1 birdie holes 1-6 in a row
+      const userANetto = [3, 3, 3, 3, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userBNetto = [3, 3, 3, 3, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userCNetto = new Array(18).fill(5);
+      const userDNetto = new Array(18).fill(5);
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+
+      const coordAwards = t1.awards.filter((a) => a.category === 'turkey' && a.coordBonus === true);
+      expect(coordAwards).toHaveLength(2);
+      expect(coordAwards.reduce((sum, a) => sum + a.points, 0)).toBe(16); // 2 × 8p
+      // First bonus: holes 1-2-3
+      expect(coordAwards[0]?.streakStartHole).toBe(1);
+      expect(coordAwards[0]?.streakEndHole).toBe(3);
+      // Second bonus: holes 4-5-6
+      expect(coordAwards[1]?.streakStartHole).toBe(4);
+      expect(coordAwards[1]?.streakEndHole).toBe(6);
+    });
+
+    it('honors disabledCategories: ["turkey"] for koord-bonus too', () => {
+      const userANetto = [3, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userBNetto = [3, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userCNetto = new Array(18).fill(5);
+      const userDNetto = new Array(18).fill(5);
+
+      const input = baseInput({
+        config: {
+          enabled: true,
+          ldCount: 0,
+          ctpCount: 0,
+          disabledCategories: ['turkey'],
+        },
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+      expect(awards.some((a) => a.category === 'turkey')).toBe(false);
+    });
+
+    it('combined: 2v2 both birdie 1-2-3 → per-player + koord = 16p', () => {
+      // Validates the full Task 4.1 + 4.2 stack: 4p (a) + 4p (b) + 8p (coord)
+      const userANetto = [3, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userBNetto = [3, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userCNetto = new Array(18).fill(5);
+      const userDNetto = new Array(18).fill(5);
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+
+      const allTurkeys = t1.awards.filter((a) => a.category === 'turkey');
+      const totalTurkeyPoints = allTurkeys.reduce((sum, a) => sum + a.points, 0);
+      expect(totalTurkeyPoints).toBe(16);
+    });
+  });
 });

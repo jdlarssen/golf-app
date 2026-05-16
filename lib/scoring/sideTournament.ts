@@ -953,6 +953,13 @@ export function calculateSideTournament(
   // Stackable: a single player can earn multiple turkeys per round (e.g. 6 in
   // a row → 2 turkeys). Each streak awards 4p to the streak-owner's team and
   // records `winnerUserId` so the leaderboard can attribute it.
+  //
+  // Lag-koord-bonus (separate award, same `turkey` category): teams with ≥2
+  // members get an additional 4p × N when EVERY team member has a netto-birdie
+  // on the same 3-hole window. Computed by collapsing per-player birdie flags
+  // into a per-team "all members birdied" boolean array, then reusing
+  // findNonOverlappingStreaks. Marked with `coordBonus: true` so the
+  // leaderboard renders it on a separate row from per-player turkeys.
   if (!isDisabled('turkey', input.config)) {
     for (const p of input.playerScoresPerHole) {
       const teamId = teamIdForUser(input.teams, p.userId);
@@ -971,6 +978,39 @@ export function calculateSideTournament(
           teamId,
           points: SIDE_TOURNAMENT_POINTS.turkeyPerPlayer,
           winnerUserId: p.userId,
+          streakLength: 3,
+          streakStartHole: s.startHole,
+          streakEndHole: s.endHole,
+        });
+      }
+    }
+
+    // Lag-koord-bonus
+    for (const team of input.teams) {
+      const n = team.userIds.length;
+      if (n < 2) continue;
+      const memberScores = team.userIds
+        .map((uid) => input.playerScoresPerHole.find((p) => p.userId === uid))
+        .filter((p): p is SideTournamentInput['playerScoresPerHole'][number] => p != null);
+      if (memberScores.length !== n) continue; // missing scores → skip
+      // 1 if every member has netto < par on this hole, else null (breaks streak)
+      const allBirdiedFlag: Array<number | null> = new Array(18).fill(null);
+      for (let h = 0; h < 18; h++) {
+        const par = input.coursePars[h];
+        if (par == null) continue;
+        const allBirdie = memberScores.every((p) => {
+          const netto = p.perHoleNetto[h];
+          return netto != null && netto < par;
+        });
+        if (allBirdie) allBirdiedFlag[h] = 1;
+      }
+      const coordStreaks = findNonOverlappingStreaks(allBirdiedFlag, 3, () => true);
+      for (const s of coordStreaks) {
+        award(team.teamId, {
+          category: 'turkey',
+          teamId: team.teamId,
+          points: SIDE_TOURNAMENT_POINTS.turkeyCoordPerMember * n,
+          coordBonus: true,
           streakLength: 3,
           streakStartHole: s.startHole,
           streakEndHole: s.endHole,
