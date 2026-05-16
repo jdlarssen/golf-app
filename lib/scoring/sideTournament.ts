@@ -31,7 +31,10 @@ export type SideCategory =
   | 'king_par5_team'
   | 'king_par5_individual'
   | 'longest_bogey_free_streak'
-  | 'lowest_single_hole_brutto';
+  | 'lowest_single_hole_brutto'
+  | 'turkey'
+  | 'solid'
+  | 'snowman';
 
 export interface SideTournamentConfig {
   enabled: boolean;
@@ -87,8 +90,25 @@ export interface SideCategoryAward {
    * Populated when `category === 'lowest_single_hole_brutto'`. The raw
    * brutto score on the winning hole (e.g. 2 for an eagle on a par-4).
    * Combined with `holeNumber` to render e.g. `"Per, 2 på hull 14"`.
+   *
+   * Also populated for `category === 'snowman'` with the worst over-par
+   * gross score on the hole — leaderboard renders e.g. `"+6 på hull 12"`.
    */
   score?: number;
+  /**
+   * Populated for achievement-style awards where a specific player owns
+   * the streak (`category === 'turkey'` or `category === 'solid'`). The
+   * leaderboard UI uses this to attribute the streak to a player by name.
+   * Absent for team-coordinated bonus awards (see `coordBonus`).
+   */
+  winnerUserId?: UserId;
+  /**
+   * `true` for the lag-koord-bonus variant of stackable achievements
+   * (`category === 'turkey'` or `category === 'solid'`) — awarded when
+   * EVERY team member has a qualifying streak across the same hole window.
+   * The leaderboard renders these on a separate row from per-player streaks.
+   */
+  coordBonus?: boolean;
 }
 
 export interface SideTournamentResult {
@@ -295,6 +315,50 @@ function isDisabled(
   config: SideTournamentConfig,
 ): boolean {
   return config.disabledCategories.includes(category);
+}
+
+/**
+ * Greedy left-to-right scan that returns every maximal-length, non-overlapping
+ * window of exactly `windowSize` consecutive holes where `predicate` matches
+ * on all holes in the window. After emitting a match at index `i`, the scan
+ * jumps to `i + windowSize` — so 6 in a row at windowSize=3 yields TWO streaks
+ * (holes 1-3 and 4-6), and 5 in a row yields ONE (holes 1-3, then 4-5 is too
+ * short).
+ *
+ * A `null` value in the array breaks any in-progress run (same rule as
+ * `longestStreak`). Returns 1-indexed `startHole` / `endHole` for parity with
+ * how award fields are populated elsewhere.
+ *
+ * Used by Turkey (3-streak of netto-birdies) and Solid (5-streak of netto-
+ * par-or-better) — both achievements are stackable across the round.
+ */
+function findNonOverlappingStreaks(
+  perHole: Array<number | null>,
+  windowSize: number,
+  predicate: (val: number, holeIdx: number) => boolean,
+): Array<{ startHole: number; endHole: number }> {
+  const streaks: Array<{ startHole: number; endHole: number }> = [];
+  let runStart = -1;
+  let h = 0;
+  while (h < perHole.length) {
+    const v = perHole[h];
+    const matches = v != null && predicate(v, h);
+    if (matches) {
+      if (runStart === -1) runStart = h;
+      if (h - runStart + 1 >= windowSize) {
+        streaks.push({ startHole: runStart + 1, endHole: runStart + windowSize });
+        // Jump past the emitted window — next streak must start at `runStart + windowSize`.
+        h = runStart + windowSize;
+        runStart = -1;
+        continue;
+      }
+      h++;
+    } else {
+      runStart = -1;
+      h++;
+    }
+  }
+  return streaks;
 }
 
 // --- public API ---
@@ -881,6 +945,36 @@ export function calculateSideTournament(
             holeNumber: w.holeIdx + 1, // 1-indexed
           });
         }
+      }
+    }
+  }
+
+  // 17. Turkey — per spiller, 4p per non-overlapping 3-hole netto-birdie streak.
+  // Stackable: a single player can earn multiple turkeys per round (e.g. 6 in
+  // a row → 2 turkeys). Each streak awards 4p to the streak-owner's team and
+  // records `winnerUserId` so the leaderboard can attribute it.
+  if (!isDisabled('turkey', input.config)) {
+    for (const p of input.playerScoresPerHole) {
+      const teamId = teamIdForUser(input.teams, p.userId);
+      if (teamId == null) continue;
+      const streaks = findNonOverlappingStreaks(
+        p.perHoleNetto,
+        3,
+        (netto, h) => {
+          const par = input.coursePars[h];
+          return par != null && netto < par;
+        },
+      );
+      for (const s of streaks) {
+        award(teamId, {
+          category: 'turkey',
+          teamId,
+          points: SIDE_TOURNAMENT_POINTS.turkeyPerPlayer,
+          winnerUserId: p.userId,
+          streakLength: 3,
+          streakStartHole: s.startHole,
+          streakEndHole: s.endHole,
+        });
       }
     }
   }

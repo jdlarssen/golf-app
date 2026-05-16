@@ -2312,4 +2312,184 @@ describe('calculateSideTournament', () => {
       expect(awards.some((a) => a.category === 'lowest_single_hole_brutto')).toBe(false);
     });
   });
+
+  describe('turkey (per spiller)', () => {
+    const par4Course = (): number[] => new Array(18).fill(4);
+
+    const player = (
+      userId: string,
+      perHoleNetto: Array<number | null>,
+    ): SideTournamentInput['playerScoresPerHole'][number] => ({
+      userId,
+      perHoleGross: perHoleNetto,
+      perHoleNetto,
+    });
+
+    // Quiet baseInput where no other achievement/award lights up — par-4 course,
+    // teams with neutral netto best-ball totals, no LD/CTP slots.
+    const neutralInput = (
+      players: SideTournamentInput['playerScoresPerHole'],
+      overrides: Partial<SideTournamentInput> = {},
+    ): SideTournamentInput => baseInput({
+      coursePars: par4Course(),
+      playerScoresPerHole: players,
+      ...overrides,
+    });
+
+    it('single player with 3 birdies in a row → 1 turkey, 4p', () => {
+      // user-a: 3 in a row on holes 1-2-3, then bogeys
+      const userANetto = [3, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userBNetto = new Array(18).fill(5);
+      const userCNetto = new Array(18).fill(5);
+      const userDNetto = new Array(18).fill(5);
+
+      const result = calculateSideTournament(neutralInput([
+        player('user-a', userANetto),
+        player('user-b', userBNetto),
+        player('user-c', userCNetto),
+        player('user-d', userDNetto),
+      ]));
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+
+      const turkeys = t1.awards.filter((a) => a.category === 'turkey');
+      expect(turkeys).toHaveLength(1);
+      expect(turkeys[0]?.points).toBe(4);
+      expect(turkeys[0]?.winnerUserId).toBe('user-a');
+      expect(turkeys[0]?.streakLength).toBe(3);
+      expect(turkeys[0]?.streakStartHole).toBe(1);
+      expect(turkeys[0]?.streakEndHole).toBe(3);
+    });
+
+    it('6 birdies in a row → 2 turkeys, 8p total', () => {
+      const userANetto = [3, 3, 3, 3, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userBNetto = new Array(18).fill(5);
+      const userCNetto = new Array(18).fill(5);
+      const userDNetto = new Array(18).fill(5);
+
+      const result = calculateSideTournament(neutralInput([
+        player('user-a', userANetto),
+        player('user-b', userBNetto),
+        player('user-c', userCNetto),
+        player('user-d', userDNetto),
+      ]));
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+
+      const turkeys = t1.awards.filter((a) => a.category === 'turkey');
+      expect(turkeys).toHaveLength(2);
+      expect(turkeys.reduce((sum, a) => sum + a.points, 0)).toBe(8);
+      // First turkey: holes 1-2-3
+      expect(turkeys[0]?.streakStartHole).toBe(1);
+      expect(turkeys[0]?.streakEndHole).toBe(3);
+      // Second turkey: holes 4-5-6
+      expect(turkeys[1]?.streakStartHole).toBe(4);
+      expect(turkeys[1]?.streakEndHole).toBe(6);
+    });
+
+    it('5 birdies in a row → 1 turkey (holes 1-3), holes 4-5 too short', () => {
+      const userANetto = [3, 3, 3, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userBNetto = new Array(18).fill(5);
+      const userCNetto = new Array(18).fill(5);
+      const userDNetto = new Array(18).fill(5);
+
+      const result = calculateSideTournament(neutralInput([
+        player('user-a', userANetto),
+        player('user-b', userBNetto),
+        player('user-c', userCNetto),
+        player('user-d', userDNetto),
+      ]));
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+
+      const turkeys = t1.awards.filter((a) => a.category === 'turkey');
+      expect(turkeys).toHaveLength(1);
+      expect(turkeys[0]?.points).toBe(4);
+      expect(turkeys[0]?.streakStartHole).toBe(1);
+      expect(turkeys[0]?.streakEndHole).toBe(3);
+    });
+
+    it('spread birdies (holes 1, 5, 10) → 0 turkeys', () => {
+      const userANetto = new Array(18).fill(5);
+      userANetto[0] = 3;
+      userANetto[4] = 3;
+      userANetto[9] = 3;
+      const userBNetto = new Array(18).fill(5);
+      const userCNetto = new Array(18).fill(5);
+      const userDNetto = new Array(18).fill(5);
+
+      const result = calculateSideTournament(neutralInput([
+        player('user-a', userANetto),
+        player('user-b', userBNetto),
+        player('user-c', userCNetto),
+        player('user-d', userDNetto),
+      ]));
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+      expect(awards.some((a) => a.category === 'turkey')).toBe(false);
+    });
+
+    it('4 birdies in a row → 1 turkey', () => {
+      const userANetto = [3, 3, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userBNetto = new Array(18).fill(5);
+      const userCNetto = new Array(18).fill(5);
+      const userDNetto = new Array(18).fill(5);
+
+      const result = calculateSideTournament(neutralInput([
+        player('user-a', userANetto),
+        player('user-b', userBNetto),
+        player('user-c', userCNetto),
+        player('user-d', userDNetto),
+      ]));
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+
+      const turkeys = t1.awards.filter((a) => a.category === 'turkey');
+      expect(turkeys).toHaveLength(1);
+      expect(turkeys[0]?.streakStartHole).toBe(1);
+      expect(turkeys[0]?.streakEndHole).toBe(3);
+    });
+
+    it('single-player team (N=1) still gets per-player turkey (4p)', () => {
+      // Override teams to a single 1-player team
+      const userANetto = [3, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const result = calculateSideTournament(neutralInput(
+        [player('user-a', userANetto)],
+        {
+          teams: [{ teamId: 1, userIds: ['user-a'] }],
+          nettoBestBallPerHole: [
+            { teamId: 1, perHoleNetto: holes(new Array(18).fill(4)) },
+          ],
+        },
+      ));
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+
+      const turkeys = t1.awards.filter((a) => a.category === 'turkey');
+      expect(turkeys).toHaveLength(1);
+      expect(turkeys[0]?.points).toBe(4);
+      expect(turkeys[0]?.winnerUserId).toBe('user-a');
+    });
+
+    it('honors disabledCategories: ["turkey"]', () => {
+      const userANetto = [3, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+      const userBNetto = new Array(18).fill(5);
+      const userCNetto = new Array(18).fill(5);
+      const userDNetto = new Array(18).fill(5);
+
+      const input = baseInput({
+        config: {
+          enabled: true,
+          ldCount: 0,
+          ctpCount: 0,
+          disabledCategories: ['turkey'],
+        },
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+      expect(awards.some((a) => a.category === 'turkey')).toBe(false);
+    });
+  });
 });
