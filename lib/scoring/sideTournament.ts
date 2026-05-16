@@ -2,7 +2,7 @@
 // Pure TypeScript side tournament scoring.
 // No external dependencies, deterministic, fully unit-tested.
 
-import type { SideCategoryId } from './sideTournamentConfig';
+import { SIDE_TOURNAMENT_POINTS, type SideCategoryId } from './sideTournamentConfig';
 
 export type TeamId = number;
 export type UserId = string;
@@ -13,7 +13,9 @@ export type SideCategory =
   | 'best_netto_back9'
   | 'hole_win'
   | 'longest_drive'
-  | 'closest_to_pin';
+  | 'closest_to_pin'
+  | 'most_birdies_team'
+  | 'most_birdies_individual';
 
 export interface SideTournamentConfig {
   enabled: boolean;
@@ -84,6 +86,58 @@ function findMinTeams(
   if (valid.length === 0) return [];
   const min = Math.min(...valid.map((t) => t.total));
   return valid.filter((t) => t.total === min).map((t) => t.teamId);
+}
+
+/**
+ * Mirror of `findMinTeams` — returns the teamIds with the highest `total`.
+ * Used by count-based categories (most birdies/eagles/pars).
+ * Teams with `null` total are excluded. Ties return all tied teamIds.
+ */
+function findMaxTeams(
+  totals: Array<{ teamId: TeamId; total: number | null }>
+): TeamId[] {
+  const valid = totals.filter((t): t is { teamId: TeamId; total: number } => t.total !== null);
+  if (valid.length === 0) return [];
+  const max = Math.max(...valid.map((t) => t.total));
+  return valid.filter((t) => t.total === max).map((t) => t.teamId);
+}
+
+/**
+ * Counts holes where `predicate(netto, par)` is true for a single player.
+ * Used by count-based categories (birdies/eagles/pars) and only considers
+ * netto values, matching how the app already evaluates scores per hole.
+ */
+function countMatchesForPlayer(
+  userId: UserId,
+  playerScoresPerHole: SideTournamentInput['playerScoresPerHole'],
+  coursePars: number[],
+  predicate: (netto: number, par: number) => boolean,
+): number {
+  const player = playerScoresPerHole.find((p) => p.userId === userId);
+  if (!player) return 0;
+  let count = 0;
+  for (let h = 0; h < 18; h++) {
+    const netto = player.perHoleNetto[h];
+    const par = coursePars[h];
+    if (netto != null && par != null && predicate(netto, par)) count++;
+  }
+  return count;
+}
+
+/**
+ * Sum of `countMatchesForPlayer` across every member of a team. Used to
+ * compute the team-aggregate count for birdies/eagles/pars.
+ */
+function countMatchesForTeam(
+  team: { teamId: TeamId; userIds: UserId[] },
+  playerScoresPerHole: SideTournamentInput['playerScoresPerHole'],
+  coursePars: number[],
+  predicate: (netto: number, par: number) => boolean,
+): number {
+  return team.userIds.reduce(
+    (sum, userId) => sum + countMatchesForPlayer(userId, playerScoresPerHole, coursePars, predicate),
+    0,
+  );
 }
 
 function teamIdForUser(
@@ -218,6 +272,60 @@ export function calculateSideTournament(
             points: 2,
             detail: `Slot ${w.position}`,
           });
+        }
+      }
+    }
+  }
+
+  // 7. Most birdies — team-aggregate (2p) + individual-best (1p)
+  // Birdie = netto < par (per player per hole). Netto-based per design.
+  const isBirdie = (netto: number, par: number): boolean => netto < par;
+
+  // Team-aggregate: skip teams with N=1 (collapses to individual). Still
+  // requires at least two eligible teams to actually compete, and at least
+  // one match — awarding everyone for zero birdies would be silly.
+  if (!isDisabled('most_birdies_team', input.config)) {
+    const eligibleTeams = input.teams.filter((t) => t.userIds.length >= 2);
+    if (eligibleTeams.length >= 2) {
+      const teamTotals: Array<{ teamId: TeamId; total: number | null }> = eligibleTeams.map((t) => ({
+        teamId: t.teamId,
+        total: countMatchesForTeam(t, input.playerScoresPerHole, input.coursePars, isBirdie),
+      }));
+      const max = Math.max(...teamTotals.map((t) => (t.total ?? 0)));
+      if (max > 0) {
+        for (const teamId of findMaxTeams(teamTotals)) {
+          award(teamId, {
+            category: 'most_birdies_team',
+            teamId,
+            points: SIDE_TOURNAMENT_POINTS.mostBirdiesTeam,
+          });
+        }
+      }
+    }
+  }
+
+  // Individual-best: highest per-player count → award their team. Same
+  // zero-guard as team-aggregate.
+  if (!isDisabled('most_birdies_individual', input.config)) {
+    const playerCounts = input.playerScoresPerHole.map((p) => ({
+      userId: p.userId,
+      count: countMatchesForPlayer(p.userId, input.playerScoresPerHole, input.coursePars, isBirdie),
+    }));
+    if (playerCounts.length > 0) {
+      const max = Math.max(...playerCounts.map((p) => p.count));
+      if (max > 0) {
+        const winners = playerCounts.filter((p) => p.count === max).map((p) => p.userId);
+        const seenTeams = new Set<TeamId>();
+        for (const userId of winners) {
+          const teamId = teamIdForUser(input.teams, userId);
+          if (teamId != null && !seenTeams.has(teamId)) {
+            seenTeams.add(teamId);
+            award(teamId, {
+              category: 'most_birdies_individual',
+              teamId,
+              points: SIDE_TOURNAMENT_POINTS.mostBirdiesIndividual,
+            });
+          }
         }
       }
     }
