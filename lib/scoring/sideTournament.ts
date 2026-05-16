@@ -25,7 +25,9 @@ export type SideCategory =
   | 'best_brutto_f9_team'
   | 'best_brutto_f9_individual'
   | 'best_brutto_b9_team'
-  | 'best_brutto_b9_individual';
+  | 'best_brutto_b9_individual'
+  | 'king_par3_team'
+  | 'king_par3_individual';
 
 export interface SideTournamentConfig {
   enabled: boolean;
@@ -156,21 +158,30 @@ function countMatchesForTeam(
  * member has `null` on a hole (no valid scores), the team's range total is
  * `null` — that team is then excluded from the brutto category, but other
  * teams can still compete.
+ *
+ * Optional `holeFilter` skips holes where the predicate returns false (used
+ * by king_par3 / king_par5 to restrict to specific par values). When every
+ * hole in [start, end) is filtered out, returns `null`.
  */
 function bestBallGrossPerHole(
   team: { teamId: TeamId; userIds: UserId[] },
   playerScores: SideTournamentInput['playerScoresPerHole'],
   start: number,
   end: number,
+  holeFilter?: (holeIdx: number) => boolean,
 ): number | null {
   let sum = 0;
+  let countedHoles = 0;
   for (let h = start; h < end; h++) {
+    if (holeFilter && !holeFilter(h)) continue;
     const grossOnHole = team.userIds
       .map((uid) => playerScores.find((p) => p.userId === uid)?.perHoleGross[h])
       .filter((g): g is number => typeof g === 'number');
     if (grossOnHole.length === 0) return null;
     sum += Math.min(...grossOnHole);
+    countedHoles++;
   }
+  if (countedHoles === 0) return null;
   return sum;
 }
 
@@ -178,21 +189,30 @@ function bestBallGrossPerHole(
  * Lowest brutto sum for one player across a hole range.
  * Returns `null` if any hole in the range is missing — incomplete rounds
  * don't qualify for the individual-best brutto categories.
+ *
+ * Optional `holeFilter` skips holes where the predicate returns false (used
+ * by king_par3 / king_par5). When every hole in [start, end) is filtered
+ * out, returns `null`.
  */
 function playerGrossSum(
   userId: UserId,
   playerScores: SideTournamentInput['playerScoresPerHole'],
   start: number,
   end: number,
+  holeFilter?: (holeIdx: number) => boolean,
 ): number | null {
   const player = playerScores.find((p) => p.userId === userId);
   if (!player) return null;
   let sum = 0;
+  let countedHoles = 0;
   for (let h = start; h < end; h++) {
+    if (holeFilter && !holeFilter(h)) continue;
     const g = player.perHoleGross[h];
     if (g == null) return null;
     sum += g;
+    countedHoles++;
   }
+  if (countedHoles === 0) return null;
   return sum;
 }
 
@@ -616,6 +636,57 @@ export function calculateSideTournament(
             category: 'best_brutto_b9_individual',
             teamId,
             points: SIDE_TOURNAMENT_POINTS.bestBruttoB9Individual,
+          });
+        }
+      }
+    }
+  }
+
+  // 13. Konge på par-3 — team-aggregate (best-ball brutto on par-3 holes, 4p)
+  //     + individual (lowest single-player brutto sum on par-3 holes, 2p)
+  // LOW-wins. If course has no par-3 holes, both helpers would return null —
+  // gate up-front so we don't even try (cleaner than letting findMinTeams
+  // award an empty winner set).
+  const isPar3 = (h: number): boolean => input.coursePars[h] === 3;
+  const hasPar3Holes = input.coursePars.some((p) => p === 3);
+
+  if (!isDisabled('king_par3_team', input.config) && hasPar3Holes) {
+    const eligibleTeams = input.teams.filter((t) => t.userIds.length >= 2);
+    if (eligibleTeams.length >= 2) {
+      const teamTotals = eligibleTeams.map((t) => ({
+        teamId: t.teamId,
+        total: bestBallGrossPerHole(t, input.playerScoresPerHole, 0, 18, isPar3),
+      }));
+      for (const teamId of findMinTeams(teamTotals)) {
+        award(teamId, {
+          category: 'king_par3_team',
+          teamId,
+          points: SIDE_TOURNAMENT_POINTS.kingPar3Team,
+        });
+      }
+    }
+  }
+
+  if (!isDisabled('king_par3_individual', input.config) && hasPar3Holes) {
+    const playerSums = input.playerScoresPerHole.map((p) => ({
+      userId: p.userId,
+      total: playerGrossSum(p.userId, input.playerScoresPerHole, 0, 18, isPar3),
+    }));
+    const valid = playerSums.filter(
+      (p): p is { userId: UserId; total: number } => p.total !== null,
+    );
+    if (valid.length > 0) {
+      const min = Math.min(...valid.map((p) => p.total));
+      const winners = valid.filter((p) => p.total === min).map((p) => p.userId);
+      const seenTeams = new Set<TeamId>();
+      for (const userId of winners) {
+        const teamId = teamIdForUser(input.teams, userId);
+        if (teamId != null && !seenTeams.has(teamId)) {
+          seenTeams.add(teamId);
+          award(teamId, {
+            category: 'king_par3_individual',
+            teamId,
+            points: SIDE_TOURNAMENT_POINTS.kingPar3Individual,
           });
         }
       }
