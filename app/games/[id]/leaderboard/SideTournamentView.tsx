@@ -710,7 +710,8 @@ function TeamAwards({
   // 19. Snowman — én rad per hull der hele laget hadde brutto ≥ par+5.
   // `score`-feltet på award er over-par-delta (worstGross − par), så vi
   // bruker den direkte og fall-backer til coursePars[h-1] hvis feltet av en
-  // eller annen grunn mangler.
+  // eller annen grunn mangler. Poeng-pillen rendres med danger-fargen
+  // (muted brick #b8463e) så Snowman står ut visuelt uten å skrike.
   const snowmanAwards = awards.filter((a) => a.category === 'snowman');
   for (const sw of snowmanAwards) {
     const pts = sw.points; // -2
@@ -727,7 +728,8 @@ function TeamAwards({
     const key = `snowman_${hole ?? '?'}`;
     push('penalty', 'snowman', pts, key, (
       <>
-        Snowman ({detail}): <Pts n={pts} />
+        Snowman ({detail}):{' '}
+        <span className="tabular-nums text-danger">{pts}p</span>
       </>
     ));
   }
@@ -768,11 +770,16 @@ function GroupSection({
   group: GroupId;
   rows: AwardRow[];
 }) {
+  // Penalty-gruppen får varselstone (text-danger = muted brick #b8463e) på
+  // under-overskriften så Snowman står ut visuelt uten å skrike rødt — mer
+  // som et "hei, dette skjedde"-notat enn en alarm.
+  const headerClass =
+    group === 'penalty'
+      ? 'mb-1 text-xs uppercase tracking-wide font-semibold text-danger'
+      : 'mb-1 text-xs uppercase tracking-wide font-semibold text-muted';
   return (
     <section>
-      <h3 className="mb-1 text-xs uppercase tracking-wide font-semibold text-muted">
-        {GROUP_LABELS[group]}
-      </h3>
+      <h3 className={headerClass}>{GROUP_LABELS[group]}</h3>
       <ul className="space-y-1 font-serif text-base text-text">
         {rows.map((r) => (
           <li key={r.key}>{r.render}</li>
