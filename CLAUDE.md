@@ -298,7 +298,6 @@ Helper functions er `SECURITY DEFINER` for å unngå rekursjons-feller.
 ⏸ **Ventende (post-v1.0):**
 - **Multi-player scorekort-oversikt** — vise lag-medlemmer side om side med initialer øverst i hver kolonne (vs. dagens single-player-flate). Krever brainstorming — se [#17](https://github.com/jdlarssen/golf-app/issues/17).
 - **3 pre-eksisterende lint-warnings** (`historikk/page.tsx:53` prefer-const, `InstallBanner.tsx:18` setState-in-effect, `SyncBanner.tsx:78` impure-call-in-render) — alle fra commits før v1.0-arbeidet, ikke blokkerende men bør fikses
-- **Perf-instrumentering** (`console.time/timeEnd`) i hull-page + game-home — pilot er ferdig (memory `project_active_perf_instrumentation`)
 - **End-to-end-test av mail-flow** (gameFinished + scorecardSubmitted) — sjekk Resend-dashboard
 - **Designpass** på resterende sider (complete-profile, admin/courses + admin/games-listen)
 - **Hull-page layout-lift** (`game` + `game_players` til layout.tsx via React.cache) — estimert –300ms ([#18](https://github.com/jdlarssen/golf-app/issues/18))
