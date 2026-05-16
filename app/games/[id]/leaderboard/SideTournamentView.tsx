@@ -232,6 +232,43 @@ function formatStreakRange(startHole: number, endHole: number): string {
 }
 
 /**
+ * Korte regel-strenger som rendres under Turkey/Solid/Snowman-radene. Holder
+ * brukeren orientert om hva som trigget achievementet uten å åpne forklar-
+ * panelet på toppen. Strenger er identiske med rader i CATEGORY_INFO sin
+ * `rule`-felt så det er én kanonisk kopi-kilde å holde i sync.
+ */
+const ACHIEVEMENT_RULES = {
+  turkey_player: '3 netto-birdier på rad',
+  turkey_coord: 'hele laget netto-birdie på samme 3 hull',
+  solid_player: '5 netto-pars+ på rad',
+  solid_coord: 'hele laget netto ≤ par på samme 5 hull',
+  snowman: 'hele lagets brutto ≥ par+5 på samme hull',
+} as const;
+
+/**
+ * Hovedrad + regel-subtitle, brukt for Turkey/Solid/Snowman. Subtitle er
+ * `text-xs text-muted leading-tight` så den ligger tett under hovedraden uten
+ * å bli en egen visuell entitet. `block` på hovedraden gir oss en kontrollert
+ * margin uten å bryte ut av <li>-en.
+ */
+function AchievementRow({
+  main,
+  rule,
+}: {
+  main: React.ReactNode;
+  rule: string;
+}) {
+  return (
+    <>
+      <span className="block">{main}</span>
+      <span className="mt-0.5 block text-xs text-muted leading-tight">
+        {rule}
+      </span>
+    </>
+  );
+}
+
+/**
  * Renders one team's awards grouped into seks under-seksjoner. Tomme grupper
  * hoppes stille over (ingen under-overskrift, ingen padding).
  *
@@ -652,7 +689,10 @@ function TeamAwards({
   }
 
   // ─── Achievements (positive) ────────────────────────────────────────────
-  // 17. Turkey — per-spiller (stackable) + lag-koord-bonus (egen rad)
+  // 17. Turkey — per-spiller (stackable) + lag-koord-bonus (egen rad).
+  // Subtitle-regelen rendres under hovedraden så brukeren slipper å gjette
+  // hva «Turkey» betyr. Per-spiller-versjon: «3 netto-birdier på rad»;
+  // lag-koord-versjon: «hele laget netto-birdie på samme 3 hull».
   const turkeyAwards = awards.filter((a) => a.category === 'turkey');
   for (const t of turkeyAwards) {
     const pts = t.points;
@@ -664,22 +704,33 @@ function TeamAwards({
       // Lag-koord-bonus: 4p × N (alle teamets medlemmer hadde birdie samme 3-hull)
       const key = `turkey_coord_${start ?? '?'}_${end ?? '?'}`;
       push('achievements', 'turkey', pts, key, (
-        <>
-          Turkey lag-koord{range ? ` (${range})` : ''}: <Pts n={pts} />
-        </>
+        <AchievementRow
+          rule={ACHIEVEMENT_RULES.turkey_coord}
+          main={
+            <>
+              Turkey lag-koord{range ? ` (${range})` : ''}: <Pts n={pts} />
+            </>
+          }
+        />
       ));
     } else {
       const name = firstNameOf(t.winnerUserId ?? null, teamById) ?? '?';
       const detail = range ? `${name}, ${range}` : name;
       const key = `turkey_${t.winnerUserId ?? '?'}_${start ?? '?'}_${end ?? '?'}`;
       push('achievements', 'turkey', pts, key, (
-        <>
-          Turkey ({detail}): <Pts n={pts} />
-        </>
+        <AchievementRow
+          rule={ACHIEVEMENT_RULES.turkey_player}
+          main={
+            <>
+              Turkey ({detail}): <Pts n={pts} />
+            </>
+          }
+        />
       ));
     }
   }
-  // 18. Solid — per-spiller (stackable) + lag-koord-bonus (egen rad)
+  // 18. Solid — per-spiller (stackable) + lag-koord-bonus (egen rad). Samme
+  // subtitle-mønster som Turkey, ulike strenger.
   const solidAwards = awards.filter((a) => a.category === 'solid');
   for (const s of solidAwards) {
     const pts = s.points;
@@ -690,18 +741,28 @@ function TeamAwards({
     if (s.coordBonus) {
       const key = `solid_coord_${start ?? '?'}_${end ?? '?'}`;
       push('achievements', 'solid', pts, key, (
-        <>
-          Solid lag-koord{range ? ` (${range})` : ''}: <Pts n={pts} />
-        </>
+        <AchievementRow
+          rule={ACHIEVEMENT_RULES.solid_coord}
+          main={
+            <>
+              Solid lag-koord{range ? ` (${range})` : ''}: <Pts n={pts} />
+            </>
+          }
+        />
       ));
     } else {
       const name = firstNameOf(s.winnerUserId ?? null, teamById) ?? '?';
       const detail = range ? `${name}, ${range}` : name;
       const key = `solid_${s.winnerUserId ?? '?'}_${start ?? '?'}_${end ?? '?'}`;
       push('achievements', 'solid', pts, key, (
-        <>
-          Solid ({detail}): <Pts n={pts} />
-        </>
+        <AchievementRow
+          rule={ACHIEVEMENT_RULES.solid_player}
+          main={
+            <>
+              Solid ({detail}): <Pts n={pts} />
+            </>
+          }
+        />
       ));
     }
   }
@@ -711,7 +772,9 @@ function TeamAwards({
   // `score`-feltet på award er over-par-delta (worstGross − par), så vi
   // bruker den direkte og fall-backer til coursePars[h-1] hvis feltet av en
   // eller annen grunn mangler. Poeng-pillen rendres med danger-fargen
-  // (muted brick #b8463e) så Snowman står ut visuelt uten å skrike.
+  // (muted brick #b8463e) så Snowman står ut visuelt uten å skrike. Subtitle
+  // forklarer triggeren — samme tone som Turkey/Solid, fargen på poeng-pillen
+  // bærer den negative valensen alene.
   const snowmanAwards = awards.filter((a) => a.category === 'snowman');
   for (const sw of snowmanAwards) {
     const pts = sw.points; // -2
@@ -727,10 +790,15 @@ function TeamAwards({
     }
     const key = `snowman_${hole ?? '?'}`;
     push('penalty', 'snowman', pts, key, (
-      <>
-        Snowman ({detail}):{' '}
-        <span className="tabular-nums text-danger">{pts}p</span>
-      </>
+      <AchievementRow
+        rule={ACHIEVEMENT_RULES.snowman}
+        main={
+          <>
+            Snowman ({detail}):{' '}
+            <span className="tabular-nums text-danger">{pts}p</span>
+          </>
+        }
+      />
     ));
   }
 
