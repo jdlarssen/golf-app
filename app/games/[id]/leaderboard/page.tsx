@@ -416,6 +416,12 @@ async function LeaderboardBody({
     members: line.players.map((p) => ({
       userId: p.userId,
       displayName: formatRevealName(p.name ?? '', p.nickname),
+      // First name only for compact display in the side-tournament tab.
+      // Falls back to nickname-decorated displayName if no parseable name.
+      firstName:
+        firstName(p.name) ??
+        formatRevealName(p.name ?? '', p.nickname) ??
+        '?',
     })),
   }));
 

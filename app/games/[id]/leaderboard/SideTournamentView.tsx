@@ -1,10 +1,17 @@
 import type { SideTournamentResult } from '@/lib/scoring/sideTournament';
+import { formatHolesList } from '@/lib/leaderboard/formatHolesList';
 
 export type SideTournamentTeam = {
   teamId: number;
   /** Display label, e.g. "Lag 1" */
   label: string;
-  members: Array<{ userId: string; displayName: string }>;
+  members: Array<{
+    userId: string;
+    /** Full reveal-name (e.g. 'Karl "Knølkis" Jensen') — kept for future surfaces. */
+    displayName: string;
+    /** First-name-only form used in the compact tab UI. */
+    firstName: string;
+  }>;
 };
 
 type Props = {
@@ -20,16 +27,18 @@ type Props = {
 };
 
 /**
- * Sideturnering — presentational view rendered inside the "Sideturnering"
- * tab when the game is finished AND `side_tournament_enabled`.
+ * Sideturnering — presentational view for the "Sideturnering" tab on the
+ * leaderboard. Visible only when game.status === 'finished' AND
+ * side_tournament_enabled.
  *
- * Renders:
- *   1. A points table sorted by total descending (medals for top 3)
- *   2. A collapsible `<details>` block with the per-category breakdown:
- *      best-netto winners, hole-win-grid (3×6), LD/CTP slot winners
+ * Layout: a vertical list of `<details>` elements, one per team, sorted by
+ * total side-tournament points descending (dense ranking, ties share rank).
  *
- * No realtime, no client state — `result` is already computed by the server
- * page from `calculateSideTournament`.
+ * Each row's summary shows: medal + "Lag N" + members (first names, joined
+ * with " · ") + total points. Click to expand and see that team's awards
+ * grouped by category.
+ *
+ * No realtime, no client state — `result` is precomputed by the server page.
  */
 export function SideTournamentView({
   teams,
@@ -41,97 +50,62 @@ export function SideTournamentView({
   const sorted = rankByPoints(result.teamStandings);
   const teamById = new Map(teams.map((t) => [t.teamId, t]));
 
-  const userDisplayName = (userId: string): string => {
-    for (const team of teams) {
-      const m = team.members.find((m) => m.userId === userId);
-      if (m) return `${m.displayName} (${team.label})`;
-    }
-    return 'Ukjent spiller';
-  };
-
   return (
-    <div className="space-y-6 px-4">
-      <table className="w-full">
-        <thead>
-          <tr className="border-b border-border">
-            <th className="py-2 text-left font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-              Lag
-            </th>
-            <th className="py-2 text-right font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-              Poeng
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((s) => {
-            const medal =
-              s.rank === 1
-                ? '🥇'
-                : s.rank === 2
-                  ? '🥈'
-                  : s.rank === 3
-                    ? '🥉'
-                    : '';
-            const label = teamById.get(s.teamId)?.label ?? `Lag ${s.teamId}`;
-            return (
-              <tr key={s.teamId} className="border-b border-border/50">
-                <td className="py-2 font-serif text-base text-text">
-                  <span className="mr-1">{medal}</span>
+    <div className="space-y-3 px-4">
+      {sorted.map((standing) => {
+        const team = teamById.get(standing.teamId);
+        const label = team?.label ?? `Lag ${standing.teamId}`;
+        const memberNames =
+          team?.members.map((m) => m.firstName).join(' · ') ?? '';
+        const medal =
+          standing.rank === 1
+            ? '🥇'
+            : standing.rank === 2
+              ? '🥈'
+              : standing.rank === 3
+                ? '🥉'
+                : '';
+
+        return (
+          <details
+            key={standing.teamId}
+            className="group rounded-md border border-border bg-surface-2"
+          >
+            <summary className="flex min-h-[44px] cursor-pointer items-center gap-3 px-3 py-2 [&::-webkit-details-marker]:hidden">
+              <div className="min-w-0 flex-1">
+                <div className="font-serif text-base text-text">
+                  <span className="mr-2 text-lg">{medal || '·'}</span>
                   {label}
-                </td>
-                <td className="py-2 text-right font-serif text-base text-text tabular-nums">
-                  {s.totalPoints}p
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-
-      <details className="rounded-md border border-border bg-surface-2 p-3">
-        <summary className="cursor-pointer font-serif text-base text-text">
-          Vis hvordan poengene ble fordelt
-        </summary>
-        <div className="mt-3 space-y-4 text-sm">
-          <CategoryRow
-            label="Best netto 18 hull"
-            winners={collectCategoryWinners(sorted, 'best_netto_18', teamById)}
-            points={10}
-          />
-          <CategoryRow
-            label="Best netto front 9"
-            winners={collectCategoryWinners(sorted, 'best_netto_front9', teamById)}
-            points={5}
-          />
-          <CategoryRow
-            label="Best netto back 9"
-            winners={collectCategoryWinners(sorted, 'best_netto_back9', teamById)}
-            points={5}
-          />
-
-          <HoleWinGrid sorted={sorted} teamById={teamById} />
-
-          {ldCount > 0 && (
-            <SlotsSection
-              heading="Longest drive"
-              count={ldCount}
-              category="longest_drive"
-              sideWinners={sideWinners}
-              userDisplayName={userDisplayName}
-            />
-          )}
-
-          {ctpCount > 0 && (
-            <SlotsSection
-              heading="Closest to pin"
-              count={ctpCount}
-              category="closest_to_pin"
-              sideWinners={sideWinners}
-              userDisplayName={userDisplayName}
-            />
-          )}
-        </div>
-      </details>
+                </div>
+                {memberNames && (
+                  <div className="mt-0.5 truncate font-sans text-xs text-muted">
+                    {memberNames}
+                  </div>
+                )}
+              </div>
+              <span className="font-serif text-base text-text tabular-nums">
+                {standing.totalPoints}p
+              </span>
+              <span
+                aria-hidden
+                className="text-muted transition-transform group-open:rotate-180"
+              >
+                ▾
+              </span>
+            </summary>
+            <div className="border-t border-border px-3 py-3 text-sm">
+              <TeamAwards
+                teamId={standing.teamId}
+                standings={sorted}
+                ldCount={ldCount}
+                ctpCount={ctpCount}
+                sideWinners={sideWinners}
+                teamById={teamById}
+              />
+            </div>
+          </details>
+        );
+      })}
     </div>
   );
 }
@@ -139,10 +113,10 @@ export function SideTournamentView({
 // --- internal helpers ---
 
 /**
- * Dense-rank teams by `totalPoints` descending. Ties share a rank — e.g.
- * two teams tied at top both receive rank 1 (and both get the gold medal),
- * the next team is rank 2. This avoids the index-based bug where a tie at
- * the top would silently demote one team to silver.
+ * Dense-rank teams by `totalPoints` descending. Ties share a rank — two teams
+ * tied at top both receive rank 1 (and both get the gold medal); next team
+ * gets rank 2. Avoids the index-based bug where a tie at top silently demotes
+ * one team to silver.
  */
 function rankByPoints<T extends { totalPoints: number }>(
   items: T[],
@@ -159,148 +133,197 @@ function rankByPoints<T extends { totalPoints: number }>(
   });
 }
 
-function collectCategoryWinners(
-  sorted: SideTournamentResult['teamStandings'],
-  category:
-    | 'best_netto_18'
-    | 'best_netto_front9'
-    | 'best_netto_back9',
-  teamById: Map<number, SideTournamentTeam>,
-): string[] {
-  const labels: string[] = [];
-  for (const s of sorted) {
-    for (const a of s.awards) {
-      if (a.category === category) {
-        labels.push(teamById.get(s.teamId)?.label ?? `Lag ${s.teamId}`);
-      }
-    }
-  }
-  return labels;
-}
+type RankedStanding = SideTournamentResult['teamStandings'][number] & {
+  rank: number;
+};
 
-function CategoryRow({
-  label,
-  winners,
-  points,
-}: {
-  label: string;
-  winners: string[];
-  points: number;
-}) {
-  return (
-    <div>
-      <div className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-        {label}
-      </div>
-      <div className="mt-1 font-serif text-base text-text">
-        {winners.length === 0 ? (
-          <span className="text-muted">Ingen score registrert</span>
-        ) : (
-          <>
-            {winners.join(', ')}{' '}
-            <span className="tabular-nums">→ {points}p</span>
-            {winners.length > 1 && (
-              <span className="text-muted"> (hver — uavgjort)</span>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function HoleWinGrid({
-  sorted,
+/**
+ * Renders one team's awards grouped by category.
+ *
+ * Each category produces zero or one row depending on whether the team has
+ * an award in that category. Hole-wins are aggregated into a single row with
+ * a count, total points, and a formatted hole-range. LD/CTP slots are listed
+ * per-position with the winner's first name in parens.
+ *
+ * Tie info on netto categories: if more than one team has the same
+ * best_netto_* award, append "(uavgjort med Lag X)" to the row.
+ */
+function TeamAwards({
+  teamId,
+  standings,
+  ldCount,
+  ctpCount,
+  sideWinners,
   teamById,
 }: {
-  sorted: SideTournamentResult['teamStandings'];
+  teamId: number;
+  standings: RankedStanding[];
+  ldCount: number;
+  ctpCount: number;
+  sideWinners: Props['sideWinners'];
   teamById: Map<number, SideTournamentTeam>;
 }) {
-  // Bygg per-hull-vinner-map fra hole-win-awards. Null = ingen alene-vinner
-  // (alle uavgjort eller manglende score). Vi leser `holeNumber` direkte fra
-  // award-objektet — ingen regex-parsing av `detail`.
-  const perHole: Map<number, number | null> = new Map();
-  for (let h = 1; h <= 18; h++) perHole.set(h, null);
+  const myStanding = standings.find((s) => s.teamId === teamId);
+  if (!myStanding) return null;
 
-  for (const s of sorted) {
-    for (const a of s.awards) {
-      if (a.category === 'hole_win' && a.holeNumber != null) {
-        perHole.set(a.holeNumber, s.teamId);
-      }
+  const awards = myStanding.awards;
+  const rows: Array<{ key: string; render: React.ReactNode }> = [];
+
+  // Helper: which OTHER teams share an award in this category?
+  const tieMates = (category: string): number[] => {
+    return standings
+      .filter(
+        (s) =>
+          s.teamId !== teamId &&
+          s.awards.some((a) => a.category === category),
+      )
+      .map((s) => s.teamId);
+  };
+
+  const tieSuffix = (others: number[]): string => {
+    if (others.length === 0) return '';
+    const labels = others.map(
+      (id) => teamById.get(id)?.label ?? `Lag ${id}`,
+    );
+    if (labels.length === 1) return ` (uavgjort med ${labels[0]})`;
+    if (labels.length === 2)
+      return ` (uavgjort med ${labels[0]} og ${labels[1]})`;
+    return ` (uavgjort med ${labels.slice(0, -1).join(', ')} og ${labels[labels.length - 1]})`;
+  };
+
+  // 1. Best netto 18
+  if (awards.some((a) => a.category === 'best_netto_18')) {
+    rows.push({
+      key: 'best_netto_18',
+      render: (
+        <>
+          Best netto 18 hull: <Pts n={10} />
+          {tieSuffix(tieMates('best_netto_18'))}
+        </>
+      ),
+    });
+  }
+  // 2. Best netto front 9
+  if (awards.some((a) => a.category === 'best_netto_front9')) {
+    rows.push({
+      key: 'best_netto_front9',
+      render: (
+        <>
+          Best netto front 9: <Pts n={5} />
+          {tieSuffix(tieMates('best_netto_front9'))}
+        </>
+      ),
+    });
+  }
+  // 3. Best netto back 9
+  if (awards.some((a) => a.category === 'best_netto_back9')) {
+    rows.push({
+      key: 'best_netto_back9',
+      render: (
+        <>
+          Best netto back 9: <Pts n={5} />
+          {tieSuffix(tieMates('best_netto_back9'))}
+        </>
+      ),
+    });
+  }
+  // 4. Hole-wins (aggregated)
+  const holeWinAwards = awards.filter((a) => a.category === 'hole_win');
+  if (holeWinAwards.length > 0) {
+    const holes = holeWinAwards
+      .map((a) => a.holeNumber)
+      .filter((h): h is number => typeof h === 'number');
+    const totalPts = holeWinAwards.reduce((sum, a) => sum + a.points, 0);
+    rows.push({
+      key: 'hole_win',
+      render: (
+        <>
+          Hole-wins: <Pts n={totalPts} /> på {holes.length} hull (
+          {formatHolesList(holes)})
+        </>
+      ),
+    });
+  }
+  // 5. Longest drive — per slot
+  if (ldCount > 0) {
+    for (let pos = 1; pos <= ldCount; pos++) {
+      const w = sideWinners.find(
+        (sw) => sw.category === 'longest_drive' && sw.position === pos,
+      );
+      if (!w) continue;
+      const winnerTeamId = w.winnerUserId
+        ? findTeamForUser(w.winnerUserId, teamById)
+        : null;
+      if (winnerTeamId !== teamId) continue;
+      const winnerName = firstNameOf(w.winnerUserId, teamById) ?? '?';
+      rows.push({
+        key: `ld_${pos}`,
+        render: (
+          <>
+            Longest drive #{pos} ({winnerName}): <Pts n={2} />
+          </>
+        ),
+      });
+    }
+  }
+  // 6. Closest to pin — per slot
+  if (ctpCount > 0) {
+    for (let pos = 1; pos <= ctpCount; pos++) {
+      const w = sideWinners.find(
+        (sw) => sw.category === 'closest_to_pin' && sw.position === pos,
+      );
+      if (!w) continue;
+      const winnerTeamId = w.winnerUserId
+        ? findTeamForUser(w.winnerUserId, teamById)
+        : null;
+      if (winnerTeamId !== teamId) continue;
+      const winnerName = firstNameOf(w.winnerUserId, teamById) ?? '?';
+      rows.push({
+        key: `ctp_${pos}`,
+        render: (
+          <>
+            Closest to pin #{pos} ({winnerName}): <Pts n={2} />
+          </>
+        ),
+      });
     }
   }
 
+  if (rows.length === 0) {
+    return <div className="text-muted">Ingen poeng denne runden.</div>;
+  }
+
   return (
-    <div>
-      <div className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
-        Hole-wins (2p per hull)
-      </div>
-      <div className="grid grid-cols-6 gap-1 text-xs font-serif">
-        {Array.from({ length: 18 }, (_, i) => i + 1).map((h) => {
-          const winnerTeam = perHole.get(h) ?? null;
-          const teamLabel = winnerTeam == null
-            ? '—'
-            : (teamById.get(winnerTeam)?.label.replace(/^Lag /, 'L') ??
-                `L${winnerTeam}`);
-          return (
-            <div
-              key={h}
-              className="rounded border border-border bg-surface px-1 py-1 text-center tabular-nums"
-            >
-              <div className="text-[9px] text-muted">{h}</div>
-              <div className={winnerTeam == null ? 'text-muted' : 'text-text'}>
-                {teamLabel}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
+    <ul className="space-y-1 font-serif text-base text-text">
+      {rows.map((r) => (
+        <li key={r.key}>{r.render}</li>
+      ))}
+    </ul>
   );
 }
 
-function SlotsSection({
-  heading,
-  count,
-  category,
-  sideWinners,
-  userDisplayName,
-}: {
-  heading: string;
-  count: number;
-  category: 'longest_drive' | 'closest_to_pin';
-  sideWinners: Array<{
-    category: 'longest_drive' | 'closest_to_pin';
-    position: number;
-    winnerUserId: string | null;
-  }>;
-  userDisplayName: (userId: string) => string;
-}) {
-  return (
-    <div>
-      <div className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-1">
-        {heading} (2p per slot)
-      </div>
-      <div className="space-y-1">
-        {Array.from({ length: count }, (_, i) => i + 1).map((pos) => {
-          const w = sideWinners.find(
-            (sw) => sw.category === category && sw.position === pos,
-          );
-          return (
-            <div key={`${category}-${pos}`} className="font-serif text-base text-text">
-              <span className="text-muted">#{pos}: </span>
-              {w?.winnerUserId ? (
-                <>
-                  {userDisplayName(w.winnerUserId)}{' '}
-                  <span className="tabular-nums">→ 2p</span>
-                </>
-              ) : (
-                <span className="text-muted">Ingen kvalifiserte</span>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+function Pts({ n }: { n: number }) {
+  return <span className="tabular-nums">{n}p</span>;
+}
+
+function findTeamForUser(
+  userId: string,
+  teamById: Map<number, SideTournamentTeam>,
+): number | null {
+  for (const [tid, team] of teamById) {
+    if (team.members.some((m) => m.userId === userId)) return tid;
+  }
+  return null;
+}
+
+function firstNameOf(
+  userId: string | null,
+  teamById: Map<number, SideTournamentTeam>,
+): string | null {
+  if (!userId) return null;
+  for (const team of teamById.values()) {
+    const m = team.members.find((mm) => mm.userId === userId);
+    if (m) return m.firstName;
+  }
+  return null;
 }
