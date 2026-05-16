@@ -96,6 +96,18 @@ function teamIdForUser(
   return null;
 }
 
+/**
+ * Returns true when the caller has disabled the given category via
+ * `config.disabledCategories`. Internal — only used by `calculateSideTournament`
+ * to gate per-category award blocks.
+ */
+function isDisabled(
+  category: SideCategoryId,
+  config: SideTournamentConfig,
+): boolean {
+  return config.disabledCategories.includes(category);
+}
+
 // --- public API ---
 
 export function calculateSideTournament(
@@ -125,76 +137,88 @@ export function calculateSideTournament(
   };
 
   // 1. Best netto 18 — 10p, tie = all winners get 10
-  const totals18 = input.nettoBestBallPerHole.map((t) => ({
-    teamId: t.teamId,
-    total: sumHoles(t.perHoleNetto, 0, 18),
-  }));
-  for (const teamId of findMinTeams(totals18)) {
-    award(teamId, { category: 'best_netto_18', teamId, points: 10 });
-  }
-
-  // 2. Best netto F9 — 5p
-  const totalsF9 = input.nettoBestBallPerHole.map((t) => ({
-    teamId: t.teamId,
-    total: sumHoles(t.perHoleNetto, 0, 9),
-  }));
-  for (const teamId of findMinTeams(totalsF9)) {
-    award(teamId, { category: 'best_netto_front9', teamId, points: 5 });
-  }
-
-  // 3. Best netto B9 — 5p
-  const totalsB9 = input.nettoBestBallPerHole.map((t) => ({
-    teamId: t.teamId,
-    total: sumHoles(t.perHoleNetto, 9, 18),
-  }));
-  for (const teamId of findMinTeams(totalsB9)) {
-    award(teamId, { category: 'best_netto_back9', teamId, points: 5 });
-  }
-
-  // 4. Hole-win — 2p per hole, only alone-winner
-  for (let hole = 0; hole < 18; hole++) {
-    const holeTotals = input.nettoBestBallPerHole.map((t) => ({
+  if (!isDisabled('best_netto_18', input.config)) {
+    const totals18 = input.nettoBestBallPerHole.map((t) => ({
       teamId: t.teamId,
-      total: t.perHoleNetto[hole] != null ? (t.perHoleNetto[hole] as number) : null,
+      total: sumHoles(t.perHoleNetto, 0, 18),
     }));
-    const winners = findMinTeams(holeTotals);
-    if (winners.length === 1) {
-      award(winners[0]!, {
-        category: 'hole_win',
-        teamId: winners[0]!,
-        points: 2,
-        detail: `Hull ${hole + 1}`,
-        holeNumber: hole + 1,
-      });
+    for (const teamId of findMinTeams(totals18)) {
+      award(teamId, { category: 'best_netto_18', teamId, points: 10 });
     }
   }
 
-  // 5. LD — 2p per slot (gated by ldCount)
-  for (const w of input.sideWinners) {
-    if (w.category === 'longest_drive' && w.position <= input.config.ldCount && w.winnerUserId) {
-      const teamId = teamIdForUser(input.teams, w.winnerUserId);
-      if (teamId != null) {
-        award(teamId, {
-          category: 'longest_drive',
-          teamId,
+  // 2. Best netto F9 — 5p
+  if (!isDisabled('best_netto_f9', input.config)) {
+    const totalsF9 = input.nettoBestBallPerHole.map((t) => ({
+      teamId: t.teamId,
+      total: sumHoles(t.perHoleNetto, 0, 9),
+    }));
+    for (const teamId of findMinTeams(totalsF9)) {
+      award(teamId, { category: 'best_netto_front9', teamId, points: 5 });
+    }
+  }
+
+  // 3. Best netto B9 — 5p
+  if (!isDisabled('best_netto_b9', input.config)) {
+    const totalsB9 = input.nettoBestBallPerHole.map((t) => ({
+      teamId: t.teamId,
+      total: sumHoles(t.perHoleNetto, 9, 18),
+    }));
+    for (const teamId of findMinTeams(totalsB9)) {
+      award(teamId, { category: 'best_netto_back9', teamId, points: 5 });
+    }
+  }
+
+  // 4. Hole-win — 2p per hole, only alone-winner
+  if (!isDisabled('hole_win', input.config)) {
+    for (let hole = 0; hole < 18; hole++) {
+      const holeTotals = input.nettoBestBallPerHole.map((t) => ({
+        teamId: t.teamId,
+        total: t.perHoleNetto[hole] != null ? (t.perHoleNetto[hole] as number) : null,
+      }));
+      const winners = findMinTeams(holeTotals);
+      if (winners.length === 1) {
+        award(winners[0]!, {
+          category: 'hole_win',
+          teamId: winners[0]!,
           points: 2,
-          detail: `Slot ${w.position}`,
+          detail: `Hull ${hole + 1}`,
+          holeNumber: hole + 1,
         });
       }
     }
   }
 
+  // 5. LD — 2p per slot (gated by ldCount)
+  if (!isDisabled('longest_drive', input.config)) {
+    for (const w of input.sideWinners) {
+      if (w.category === 'longest_drive' && w.position <= input.config.ldCount && w.winnerUserId) {
+        const teamId = teamIdForUser(input.teams, w.winnerUserId);
+        if (teamId != null) {
+          award(teamId, {
+            category: 'longest_drive',
+            teamId,
+            points: 2,
+            detail: `Slot ${w.position}`,
+          });
+        }
+      }
+    }
+  }
+
   // 6. CTP — 2p per slot (gated by ctpCount)
-  for (const w of input.sideWinners) {
-    if (w.category === 'closest_to_pin' && w.position <= input.config.ctpCount && w.winnerUserId) {
-      const teamId = teamIdForUser(input.teams, w.winnerUserId);
-      if (teamId != null) {
-        award(teamId, {
-          category: 'closest_to_pin',
-          teamId,
-          points: 2,
-          detail: `Slot ${w.position}`,
-        });
+  if (!isDisabled('closest_to_pin', input.config)) {
+    for (const w of input.sideWinners) {
+      if (w.category === 'closest_to_pin' && w.position <= input.config.ctpCount && w.winnerUserId) {
+        const teamId = teamIdForUser(input.teams, w.winnerUserId);
+        if (teamId != null) {
+          award(teamId, {
+            category: 'closest_to_pin',
+            teamId,
+            points: 2,
+            detail: `Slot ${w.position}`,
+          });
+        }
       }
     }
   }

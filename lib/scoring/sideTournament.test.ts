@@ -252,4 +252,104 @@ describe('calculateSideTournament', () => {
       expect(() => calculateSideTournament(input)).not.toThrow();
     });
   });
+
+  describe('disabled categories', () => {
+    it('skips best_netto_18 when in disabledCategories', () => {
+      // Default baseInput has team 1 winning 18-hole netto outright
+      const input = baseInput();
+      input.config = { ...input.config, disabledCategories: ['best_netto_18'] };
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+
+      expect(awards.some((a) => a.category === 'best_netto_18')).toBe(false);
+      // Spot-check: other categories still fire (team 1 still wins F9/B9/hole-wins)
+      expect(awards.some((a) => a.category === 'best_netto_front9')).toBe(true);
+      expect(awards.some((a) => a.category === 'hole_win')).toBe(true);
+    });
+
+    it('skips best_netto_front9 when best_netto_f9 in disabledCategories', () => {
+      // Team 1 wins F9 outright in baseInput
+      const input = baseInput();
+      input.config = { ...input.config, disabledCategories: ['best_netto_f9'] };
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+
+      expect(awards.some((a) => a.category === 'best_netto_front9')).toBe(false);
+      // Spot-check: 18-hole netto and B9 still fire
+      expect(awards.some((a) => a.category === 'best_netto_18')).toBe(true);
+      expect(awards.some((a) => a.category === 'best_netto_back9')).toBe(true);
+    });
+
+    it('skips best_netto_back9 when best_netto_b9 in disabledCategories', () => {
+      const input = baseInput();
+      input.config = { ...input.config, disabledCategories: ['best_netto_b9'] };
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+
+      expect(awards.some((a) => a.category === 'best_netto_back9')).toBe(false);
+      // Spot-check: 18-hole netto and F9 still fire
+      expect(awards.some((a) => a.category === 'best_netto_18')).toBe(true);
+      expect(awards.some((a) => a.category === 'best_netto_front9')).toBe(true);
+    });
+
+    it('skips hole_win when in disabledCategories', () => {
+      // baseInput: team 1 wins all 18 holes alone → would normally award 18 hole-wins
+      const input = baseInput();
+      input.config = { ...input.config, disabledCategories: ['hole_win'] };
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+
+      expect(awards.some((a) => a.category === 'hole_win')).toBe(false);
+      // Spot-check: best_netto_18 still fires (team 1 still wins outright)
+      expect(awards.some((a) => a.category === 'best_netto_18')).toBe(true);
+    });
+
+    it('skips longest_drive when in disabledCategories', () => {
+      const input = baseInput({
+        config: { enabled: true, ldCount: 1, ctpCount: 1, disabledCategories: ['longest_drive'] },
+        sideWinners: [
+          { category: 'longest_drive', position: 1, winnerUserId: 'user-a' },
+          { category: 'closest_to_pin', position: 1, winnerUserId: 'user-c' },
+        ],
+      });
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+
+      expect(awards.some((a) => a.category === 'longest_drive')).toBe(false);
+      // Spot-check: CTP still fires
+      expect(awards.some((a) => a.category === 'closest_to_pin')).toBe(true);
+    });
+
+    it('skips closest_to_pin when in disabledCategories', () => {
+      const input = baseInput({
+        config: { enabled: true, ldCount: 1, ctpCount: 1, disabledCategories: ['closest_to_pin'] },
+        sideWinners: [
+          { category: 'longest_drive', position: 1, winnerUserId: 'user-a' },
+          { category: 'closest_to_pin', position: 1, winnerUserId: 'user-c' },
+        ],
+      });
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+
+      expect(awards.some((a) => a.category === 'closest_to_pin')).toBe(false);
+      // Spot-check: LD still fires
+      expect(awards.some((a) => a.category === 'longest_drive')).toBe(true);
+    });
+
+    it('skips multiple categories when several are disabled', () => {
+      const input = baseInput();
+      input.config = {
+        ...input.config,
+        disabledCategories: ['hole_win', 'best_netto_18'],
+      };
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+
+      expect(awards.some((a) => a.category === 'hole_win')).toBe(false);
+      expect(awards.some((a) => a.category === 'best_netto_18')).toBe(false);
+      // Spot-check: F9 and B9 still fire
+      expect(awards.some((a) => a.category === 'best_netto_front9')).toBe(true);
+      expect(awards.some((a) => a.category === 'best_netto_back9')).toBe(true);
+    });
+  });
 });
