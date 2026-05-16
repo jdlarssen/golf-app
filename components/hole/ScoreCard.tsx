@@ -15,10 +15,11 @@ export interface ScoreCardProps {
   confirmed: boolean;
   disabled?: boolean;
   /**
-   * When true, hides the `+N SLAG` badge even if `extraStrokes > 0`. Used
-   * by reveal-modus games (status `active`, `score_visibility = 'reveal'`)
-   * so handicap-slag count stays secret until admin presses avslutt.
-   * Default false — non-reveal games render the badge as before.
+   * When true, hides all netto/handicap information on the card: both the
+   * `+N SLAG` badge and the «Netto X» helper-text under the name. Used by
+   * reveal-modus games (status `active`, `score_visibility = 'reveal'`) so
+   * handicap-slag count stays secret until admin presses avslutt.
+   * Default false — non-reveal games render both as normal.
    */
   hideNetto?: boolean;
   onSetScore: (playerId: string, next: number) => void;
