@@ -88,6 +88,18 @@ Aldri si bare «sett dette i Supabase» — alltid med eksakt sti og kopier-lim-
 - Aldri `--no-verify`, aldri force-push uten god grunn
 - Vercel deployer automatisk på push til `main`
 
+### GitHub Issues — arbeidsflyt (mandatory)
+
+Alt backlog-arbeid spores i [GitHub Issues](https://github.com/jdlarssen/golf-app/issues), ikke i markdown-filer. Når du jobber på en issue:
+
+1. **Commits:** Inkluder `Refs #N` i commit-body for alle commits som bidrar mot issue-en. Bruk `Closes #N` i body på siste commit som faktisk lukker den — GitHub auto-lukker issue-en når den landerer på `main`. Dette gjelder også subagenter som committer: prompten må inkludere issue-nummeret og instruks om å bruke `Refs`/`Closes` i body.
+2. **Closing-kommentar (ALLTID):** Når en issue lukkes (auto eller manuelt), MÅ hovedchatten poste en kommentar på issue-en med `gh issue comment N --body ...`. Kommentaren har to seksjoner:
+   - **`## Teknisk`** — hvilke filer/komponenter endret, hvilken approach, evt. avvik fra issue-design, commit-SHA-er.
+   - **`## For Jørgen`** — hva brukeren ser i appen nå, på vanlig norsk, action-orientert. Samme tone som CHANGELOG-taglines («Du kan nå …», «Når X skjer, sier appen nå …»).
+3. **Ingen start-kommentar, ingen self-assign, ingen `in-progress`-label.** Solo dev → minimer ceremoni.
+4. **Avvik fra issue-design** skal eksplisitt nevnes under «Teknisk» — ikke skjul kutt eller endringer.
+5. **Nye funn underveis** som ikke hører hjemme i nåværende issue: opprett ny issue via `gh issue create` (med riktig `type:` + `area:` + scope-labels), spør bruker om det skal gjøres nå eller bare nevnes. Aldri smyge urelaterte fixes inn i nåværende commit.
+
 ### Versjonering / CHANGELOG
 
 **Regel:** Hver commit som endrer bruker-synlig oppførsel MÅ bumpe `package.json` versjonen og legge til entry i `CHANGELOG.md` — i samme commit som selve endringen. Footer i appen (`AppVersionFooter.tsx`) henter automatisk versjonen via `next.config.ts` → `NEXT_PUBLIC_APP_VERSION`, så bumpen blir synlig i prod ved neste deploy.
