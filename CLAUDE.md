@@ -99,6 +99,7 @@ Alt backlog-arbeid spores i [GitHub Issues](https://github.com/jdlarssen/golf-ap
 3. **Ingen start-kommentar, ingen self-assign, ingen `in-progress`-label.** Solo dev → minimer ceremoni.
 4. **Avvik fra issue-design** skal eksplisitt nevnes under «Teknisk» — ikke skjul kutt eller endringer.
 5. **Nye funn underveis** som ikke hører hjemme i nåværende issue: opprett ny issue via `gh issue create` (med riktig `type:` + `area:` + scope-labels), spør bruker om det skal gjøres nå eller bare nevnes. Aldri smyge urelaterte fixes inn i nåværende commit.
+6. **Reviewer-funn (mandatory):** når code-quality-reviewer, spec-reviewer eller annen subagent rapporterer findings som IKKE landeres i samme commit, MÅ hovedchatten opprette dem som GitHub Issues via `gh issue create` før push til main. Verbal rapport alene er ikke nok — funn forsvinner ut av kontekstvinduet etter neste sesjon. Adresserte funn (f.eks. JSDoc-stramming i siste commit) nevnes i closing-kommentaren under «Teknisk» i stedet. Ikke filer rene stil-meninger som issues — kun substantielle refactor/test/docs/edge-case-funn.
 
 ### Versjonering / CHANGELOG
 
