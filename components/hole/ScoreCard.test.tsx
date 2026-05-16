@@ -104,6 +104,13 @@ describe('ScoreCard — helper text', () => {
     expect(screen.queryByText('Bekreftet')).not.toBeInTheDocument();
   });
 
+  it('beholder helper-div i DOM når hideNetto skjuler netto-tekst (reveal-active layout-pin)', () => {
+    setup({ score: 5, extraStrokes: 2, hideNetto: true });
+    const helper = screen.getByTestId('helper-text');
+    expect(helper).toBeInTheDocument();
+    expect(helper.textContent).toBe('');
+  });
+
   it('viser instruksjon-tekst når score er null uavhengig av extraStrokes', () => {
     setup({ score: null, extraStrokes: 3 });
     expect(screen.getByText('Tap kort = par. Bruk − / +.')).toBeInTheDocument();

@@ -231,7 +231,9 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
             <span style={badgeStyle}>+{extraStrokes} SLAG</span>
           )}
         </div>
-        <div style={helperStyle}>{helperText}</div>
+        <div data-testid="helper-text" style={helperStyle}>
+          {helperText}
+        </div>
       </div>
 
       <div
