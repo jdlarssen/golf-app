@@ -1,5 +1,7 @@
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
+import { ChampagneMedallion } from '@/components/ui/ChampagneMedallion';
+import { MailEnvelope } from '@/components/icons';
 import { resendInvitation } from '../actions';
 
 type PendingInvitation = {
@@ -58,8 +60,16 @@ export async function PendingInvitations() {
 
   if (items.length === 0) {
     return (
-      <div className="rounded-xl border border-border bg-surface px-5 py-6 text-center text-sm text-muted">
-        Ingen ventende invitasjoner.
+      <div className="rounded-xl border border-border bg-surface px-5 py-10 flex flex-col items-center text-center">
+        <ChampagneMedallion size={64} className="mb-4">
+          <MailEnvelope size={32} className="text-primary dark:text-text" />
+        </ChampagneMedallion>
+        <p className="font-serif text-[15px] font-medium tracking-[-0.005em] text-text">
+          Ingen ventende invitasjoner.
+        </p>
+        <p className="mt-1 max-w-[260px] font-sans text-[12.5px] leading-relaxed text-muted">
+          Inviter en spiller ovenfor — så dukker vente-køen opp her.
+        </p>
       </div>
     );
   }

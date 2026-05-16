@@ -5,6 +5,8 @@ import { AdminShell } from '@/components/ui/AdminShell';
 import { BackLink } from '@/components/ui/BackLink';
 import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
+import { ChampagneMedallion } from '@/components/ui/ChampagneMedallion';
+import { PinFlag, Laurel } from '@/components/icons';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import type { GameStatus } from '@/lib/games/status';
@@ -207,10 +209,24 @@ async function GamesLedger({ filterFinished }: { filterFinished: boolean }) {
 
   if (games.length === 0) {
     return (
-      <div className="mt-6 rounded-2xl border border-border bg-surface px-5 py-8 text-center text-sm text-muted">
-        {filterFinished
-          ? 'Ingen signerte runder ennå.'
-          : 'Ingen spill ennå. Trykk «+ Nytt» for å opprette det første.'}
+      <div className="mt-6 rounded-2xl border border-border bg-surface px-5 py-12 flex flex-col items-center text-center">
+        <ChampagneMedallion size={72} className="mb-5">
+          {filterFinished ? (
+            <Laurel height={40} className="text-primary dark:text-text" />
+          ) : (
+            <PinFlag size={36} className="text-primary dark:text-text" />
+          )}
+        </ChampagneMedallion>
+        <p className="font-serif text-[16px] font-medium tracking-[-0.005em] text-text">
+          {filterFinished
+            ? 'Ingen signerte runder ennå.'
+            : 'Ingen spill ennå.'}
+        </p>
+        <p className="mt-1.5 max-w-[280px] font-sans text-[12.5px] leading-relaxed text-muted">
+          {filterFinished
+            ? 'Resultatene fra avsluttede spill samles her etterhvert som turneringene fullføres.'
+            : 'Trykk «+ Nytt» for å opprette den første turneringen.'}
+        </p>
       </div>
     );
   }
