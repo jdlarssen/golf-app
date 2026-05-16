@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getBrowserClient } from '@/lib/supabase/client';
+import { subscribeRealtimeChannel } from '@/lib/sync/realtimeChannel';
 
 type Props = { gameId: string };
 
@@ -17,29 +17,14 @@ type Props = { gameId: string };
  *    presses "Avslutt spillet". Without this, the player must manually
  *    refresh to see the reveal flourish.
  *
- * Same setAuth() quirk as ScheduledWaitingRoom — the realtime socket needs the
- * JWT explicitly before subscribing, otherwise RLS treats it as anon and
- * silently drops every postgres_changes event.
- *
  * Name kept for historical reasons (this used to be pre-round only) — it
  * now covers the full leaderboard lifecycle.
  */
 export function PreRoundLeaderboardRealtime({ gameId }: Props) {
   const router = useRouter();
   useEffect(() => {
-    const supabase = getBrowserClient();
-    let cancelled = false;
-    let unsubscribe: (() => void) | null = null;
-
-    (async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session?.access_token) supabase.realtime.setAuth(session.access_token);
-      if (cancelled) return;
-
-      const channel = supabase
-        .channel(`leaderboard-prerun:${gameId}`)
+    return subscribeRealtimeChannel(`leaderboard-prerun:${gameId}`, (channel) =>
+      channel
         .on(
           'postgres_changes',
           {
@@ -59,18 +44,8 @@ export function PreRoundLeaderboardRealtime({ gameId }: Props) {
             filter: `id=eq.${gameId}`,
           },
           () => router.refresh(),
-        )
-        .subscribe();
-
-      unsubscribe = () => {
-        void supabase.removeChannel(channel);
-      };
-    })();
-
-    return () => {
-      cancelled = true;
-      unsubscribe?.();
-    };
+        ),
+    );
   }, [gameId, router]);
 
   return null;

@@ -1,5 +1,5 @@
 import { localDb, scoreKey } from './db';
-import { getBrowserClient } from '@/lib/supabase/client';
+import { subscribeRealtimeChannel } from './realtimeChannel';
 
 type ScoreRowFromDb = {
   game_id: string;
@@ -34,55 +34,25 @@ async function mergeIncoming(row: ScoreRowFromDb): Promise<void> {
 }
 
 /**
- * Subscribe to score changes for one game. The Supabase realtime socket runs
- * a separate connection from HTTP; with @supabase/ssr the cookie session
- * authenticates HTTP but the realtime client needs setAuth() with the JWT
- * before subscribing, otherwise RLS treats the subscriber as anon and
- * silently drops every postgres_changes event.
+ * Subscribe to score changes for one game. Channel setup, auth handoff, and
+ * leak-resistant teardown are handled by `subscribeRealtimeChannel`.
  */
 export function subscribeGameScores(gameId: string): () => void {
-  const supabase = getBrowserClient();
-  let unsubscribed = false;
-  let channelRef: ReturnType<typeof supabase.channel> | null = null;
-
-  (async () => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (session?.access_token) {
-      supabase.realtime.setAuth(session.access_token);
-    }
-
-    if (unsubscribed) return;
-
-    const channel = supabase
-      .channel(`scores:${gameId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'scores',
-          filter: `game_id=eq.${gameId}`,
-        },
-        (payload) => {
-          const row = (payload.new ?? payload.old) as Partial<ScoreRowFromDb>;
-          if (!row || !row.game_id || !row.user_id || row.hole_number == null) return;
-          void mergeIncoming(row as ScoreRowFromDb);
-        },
-      )
-      .subscribe();
-
-    channelRef = channel;
-    if (unsubscribed) {
-      void supabase.removeChannel(channel);
-    }
-  })();
-
-  return () => {
-    unsubscribed = true;
-    if (channelRef) {
-      void supabase.removeChannel(channelRef);
-    }
-  };
+  return subscribeRealtimeChannel(`scores:${gameId}`, (channel) =>
+    channel.on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'scores',
+        filter: `game_id=eq.${gameId}`,
+      },
+      (payload) => {
+        const row = (payload.new ?? payload.old) as Partial<ScoreRowFromDb>;
+        if (!row || !row.game_id || !row.user_id || row.hole_number == null)
+          return;
+        void mergeIncoming(row as ScoreRowFromDb);
+      },
+    ),
+  );
 }

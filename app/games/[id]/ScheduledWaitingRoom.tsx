@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatCountdown } from '@/lib/format/countdown';
-import { getBrowserClient } from '@/lib/supabase/client';
+import { subscribeRealtimeChannel } from '@/lib/sync/realtimeChannel';
 
 type Props = { gameId: string; teeOffAt: string };
 
@@ -12,13 +12,6 @@ type Props = { gameId: string; teeOffAt: string };
  * (Scorekort venter). Updates the countdown label every 30s and refreshes the
  * route as soon as `games.status` flips to `active` so the player sees the
  * normal home view without manually reloading.
- *
- * Realtime quirk: the Supabase realtime socket runs a separate connection
- * from HTTP; with @supabase/ssr the cookie session authenticates HTTP but
- * the realtime client needs setAuth() with the JWT before subscribing,
- * otherwise RLS treats the subscriber as anon and silently drops every
- * postgres_changes event. See lib/sync/realtime.ts:43-54 for the same
- * pattern used in score sync.
  */
 export function ScheduledWaitingRoom({ gameId, teeOffAt }: Props) {
   const router = useRouter();
@@ -45,47 +38,23 @@ export function ScheduledWaitingRoom({ gameId, teeOffAt }: Props) {
 
   // Realtime: listen for game.status flipping to 'active'.
   useEffect(() => {
-    const supabase = getBrowserClient();
-    let cancelled = false;
-    let unsubscribe: (() => void) | null = null;
-
-    (async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session?.access_token) {
-        supabase.realtime.setAuth(session.access_token);
-      }
-      if (cancelled) return;
-
-      const channel = supabase
-        .channel(`game-status:${gameId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'games',
-            filter: `id=eq.${gameId}`,
-          },
-          (payload) => {
-            const next = payload.new as { status?: string };
-            if (next?.status === 'active') {
-              router.refresh();
-            }
-          },
-        )
-        .subscribe();
-
-      unsubscribe = () => {
-        void supabase.removeChannel(channel);
-      };
-    })();
-
-    return () => {
-      cancelled = true;
-      unsubscribe?.();
-    };
+    return subscribeRealtimeChannel(`game-status:${gameId}`, (channel) =>
+      channel.on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'games',
+          filter: `id=eq.${gameId}`,
+        },
+        (payload) => {
+          const next = payload.new as { status?: string };
+          if (next?.status === 'active') {
+            router.refresh();
+          }
+        },
+      ),
+    );
   }, [gameId, router]);
 
   const msUntil = new Date(teeOffAt).getTime() - now;
