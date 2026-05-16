@@ -13,23 +13,9 @@ import { ScoreShape } from '@/components/scoring/ScoreShape';
 import { scoreShape } from '@/lib/scoring/scoreShape';
 import { scoreTone } from '@/lib/scoring/scoreTone';
 import { revealState, type RevealState } from '@/lib/games/visibility';
-import type { GameStatus } from '@/lib/games/status';
+import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 
 type Params = Promise<{ id: string }>;
-
-type GameRow = {
-  id: string;
-  name: string;
-  status: GameStatus;
-  course_id: string;
-  score_visibility: 'live' | 'reveal';
-};
-
-type MyPlayerRow = {
-  user_id: string;
-  course_handicap: number | null;
-  submitted_at: string | null;
-};
 
 type HoleRow = {
   hole_number: number;
@@ -50,26 +36,14 @@ const getScorecardContext = cache(async () => {
 
 export default async function ScorecardPage({ params }: { params: Params }) {
   const { id } = await params;
-  const { supabase, userId } = await getScorecardContext();
+  const { userId } = await getScorecardContext();
   if (!userId) redirect('/login');
 
-  // Gating: game + my player row in parallel.
-  const [gameRes, meRes] = await Promise.all([
-    supabase
-      .from('games')
-      .select('id, name, status, course_id, score_visibility')
-      .eq('id', id)
-      .single<GameRow>(),
-    supabase
-      .from('game_players')
-      .select('user_id, course_handicap, submitted_at')
-      .eq('game_id', id)
-      .eq('user_id', userId)
-      .maybeSingle<MyPlayerRow>(),
-  ]);
-
-  if (gameRes.error || !gameRes.data) notFound();
-  const game = gameRes.data;
+  // games + game_players from the tag-cached helper. See
+  // lib/games/getGameWithPlayers.ts for cache + authz rationale.
+  const result = await getGameWithPlayers(id);
+  if (!result) notFound();
+  const { game, players } = result;
 
   if (game.status === 'draft') {
     redirect('/');
@@ -79,8 +53,7 @@ export default async function ScorecardPage({ params }: { params: Params }) {
     redirect(`/games/${id}`);
   }
 
-  if (meRes.error) throw meRes.error;
-  const me = meRes.data;
+  const me = players.find((p) => p.user_id === userId);
   if (!me) notFound();
 
   return (
