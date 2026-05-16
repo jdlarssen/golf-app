@@ -93,6 +93,11 @@ describe('ScoreCard — helper text', () => {
     expect(screen.getByText('Netto 6')).toBeInTheDocument();
   });
 
+  it('viser «Netto X» med X = par når score = par og extraStrokes = 0', () => {
+    setup({ score: 4, par: 4, extraStrokes: 0 });
+    expect(screen.getByText('Netto 4')).toBeInTheDocument();
+  });
+
   it('skjuler netto-tekst når hideNetto er true (reveal-active)', () => {
     setup({ score: 5, extraStrokes: 2, hideNetto: true });
     expect(screen.queryByText(/Netto/)).not.toBeInTheDocument();
