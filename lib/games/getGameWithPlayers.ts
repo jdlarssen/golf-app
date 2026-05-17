@@ -78,6 +78,16 @@ export type GameForHole = {
   // (alle aktive). DB-CHECK i 0026 garanterer at hver entry er en gyldig
   // SideCategoryId, så vi caster trygt på input-side.
   side_disabled_categories: SideCategoryId[] | null;
+  // Default tee for the game (mixed-gender support: ladies can override
+  // per-player via game_players.tee_box_id). Not nullable — games always
+  // have a default tee assigned at publish time.
+  tee_box: {
+    name: string;
+    slope: number;
+    course_rating: number;
+    par_total: number;
+    gender: 'mens' | 'ladies' | 'juniors';
+  };
 };
 
 export type PlayerForHole = {
@@ -92,6 +102,16 @@ export type PlayerForHole = {
   // invitees can't reach those states per Task 7's publish-gate. Typed
   // nullable to match the DB column.
   users: { name: string | null; nickname: string | null } | null;
+  // Per-player tee override (mixed-gender support). When null, the player
+  // uses the game's default tee.
+  tee_box_id: string | null;
+  tee_box: {
+    name: string;
+    slope: number;
+    course_rating: number;
+    par_total: number;
+    gender: 'mens' | 'ladies' | 'juniors';
+  } | null;
 };
 
 export type GameWithPlayers = {
@@ -107,14 +127,14 @@ async function fetchGameWithPlayers(
     supabase
       .from('games')
       .select(
-        'id, name, status, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories',
+        'id, name, status, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, tee_box:tee_boxes!games_tee_box_id_fkey(name, slope, course_rating, par_total, gender)',
       )
       .eq('id', id)
       .single<GameForHole>(),
     supabase
       .from('game_players')
       .select(
-        'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, rejection_reason, users!game_players_user_id_fkey(name, nickname)',
+        'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, rejection_reason, tee_box_id, users!game_players_user_id_fkey(name, nickname), tee_box:tee_boxes!game_players_tee_box_id_fkey(name, slope, course_rating, par_total, gender)',
       )
       .eq('game_id', id)
       .returns<PlayerForHole[]>(),

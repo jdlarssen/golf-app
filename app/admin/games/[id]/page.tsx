@@ -81,6 +81,10 @@ function buildErrorMessage(
   return buildGameErrorMessage(ERROR_MESSAGES_EXISTING_GAME, errorCode, emails);
 }
 
+function genderLabelShort(g: 'mens' | 'ladies' | 'juniors'): string {
+  return g === 'mens' ? 'herre' : g === 'ladies' ? 'dame' : 'junior';
+}
+
 function shortNb(iso: string | null | undefined): string | null {
   if (!iso) return null;
   try {
@@ -112,7 +116,16 @@ type GameRow = {
     slope: number;
     course_rating: number;
     par_total: number;
+    gender: 'mens' | 'ladies' | 'juniors';
   } | null;
+};
+
+type LadiesTeeRow = {
+  name: string;
+  slope: number;
+  course_rating: number;
+  par_total: number;
+  gender: 'mens' | 'ladies' | 'juniors';
 };
 
 type GamePlayerRow = {
@@ -182,7 +195,7 @@ export default async function GameDetailPage({
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, status, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, courses(name), tee_boxes(name, slope, course_rating, par_total)',
+      'id, name, status, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, courses(name), tee_boxes(name, slope, course_rating, par_total, gender)',
     )
     .eq('id', id)
     .single<GameRow>();
@@ -324,13 +337,29 @@ async function PlayersSections({
           .returns<ProgressRow[]>()
       : Promise.resolve({ data: [] as ProgressRow[], error: null });
 
-  const [playersRes, progressRes] = await Promise.all([
+  // Mixed-gender support: detect any per-player tee override and load its
+  // details so the Banen card can show BOTH herre + dame tees.
+  const overrideTeesPromise = supabase
+    .from('game_players')
+    .select(
+      'tee_boxes!game_players_tee_box_id_fkey(name, slope, course_rating, par_total, gender)',
+    )
+    .eq('game_id', gameId)
+    .not('tee_box_id', 'is', null)
+    .limit(1)
+    .returns<{ tee_boxes: LadiesTeeRow | null }[]>();
+
+  const [playersRes, progressRes, overrideTeesRes] = await Promise.all([
     playersPromise,
     progressPromise,
+    overrideTeesPromise,
   ]);
 
   if (playersRes.error) throw playersRes.error;
   if (progressRes.error) throw progressRes.error;
+  if (overrideTeesRes.error) throw overrideTeesRes.error;
+
+  const ladiesTee = overrideTeesRes.data?.[0]?.tee_boxes ?? null;
 
   const players = playersRes.data ?? [];
 
@@ -450,11 +479,26 @@ async function PlayersSections({
         />
         {game.tee_boxes && (
           <>
-            <Row label="Tee" value={game.tee_boxes.name} />
+            <Row
+              label={ladiesTee ? 'Tee for herrer' : 'Tee'}
+              value={`${game.tee_boxes.name} (${genderLabelShort(game.tee_boxes.gender)})`}
+            />
             <Row label="Par" value={`${game.tee_boxes.par_total}`} />
             <Row
               label="CR / SR"
               value={`${Number(game.tee_boxes.course_rating).toFixed(1)} / ${game.tee_boxes.slope}`}
+            />
+          </>
+        )}
+        {ladiesTee && (
+          <>
+            <Row
+              label="Tee for damer"
+              value={`${ladiesTee.name} (dame)`}
+            />
+            <Row
+              label="CR / SR (dame)"
+              value={`${Number(ladiesTee.course_rating).toFixed(1)} / ${ladiesTee.slope}`}
             />
           </>
         )}
