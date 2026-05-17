@@ -46,11 +46,13 @@ export async function updateCourse(courseId: string, formData: FormData) {
   if (siSet.size !== 18) redirect(`${editPath}?error=si_duplicate`);
 
   const teeBoxes: {
+    id: string | null;
     name: string;
     slope: number;
     course_rating: number;
     par_total: number;
     length_meters: number | null;
+    gender: 'mens' | 'ladies' | 'juniors';
   }[] = [];
   for (let i = 0; i < 5; i++) {
     const teeName = String(formData.get(`tee_${i}_name`) ?? '').trim();
@@ -82,46 +84,58 @@ export async function updateCourse(courseId: string, formData: FormData) {
         lengthMeters = parsed;
       }
     }
+    const genderRaw = String(formData.get(`tee_${i}_gender`) ?? 'mens');
+    const gender: 'mens' | 'ladies' | 'juniors' =
+      genderRaw === 'ladies' || genderRaw === 'juniors' ? genderRaw : 'mens';
+    const teeId = String(formData.get(`tee_${i}_id`) ?? '') || null;
     teeBoxes.push({
+      id: teeId,
       name: teeName,
       slope,
       course_rating: cr,
       par_total: parTotal,
       length_meters: lengthMeters,
+      gender,
     });
   }
   if (teeBoxes.length === 0) redirect(`${editPath}?error=tee_required`);
 
-  // Guard: if any existing tee_boxes for this course are referenced by games,
-  // we can't safely replace them. Manual check rather than relying on the FK
-  // (the schema does not currently cascade games -> tee_boxes).
+  const formTees = teeBoxes;
+
   const { data: existingTees, error: existingTeesError } = await supabase
     .from('tee_boxes')
     .select('id')
     .eq('course_id', courseId);
   if (existingTeesError) redirect(`${editPath}?error=db_load`);
 
-  const existingTeeIds = (existingTees ?? []).map((t) => t.id);
-  if (existingTeeIds.length > 0) {
-    const { data: gameUsage, error: gameUsageError } = await supabase
-      .from('games')
-      .select('id')
-      .in('tee_box_id', existingTeeIds)
-      .limit(1);
-    if (gameUsageError) redirect(`${editPath}?error=db_load`);
-    if (gameUsage && gameUsage.length > 0) {
+  const existingIds = new Set((existingTees ?? []).map((t) => t.id));
+  const formIds = new Set(formTees.filter((t) => t.id).map((t) => t.id!));
+  const toDelete = [...existingIds].filter((id) => !formIds.has(id));
+
+  // Sletting blokkeres hvis tee er referert av games eller game_players (per-player tee override).
+  if (toDelete.length > 0) {
+    const [{ data: gameRefs }, { data: gamePlayerRefs }] = await Promise.all([
+      supabase.from('games').select('id').in('tee_box_id', toDelete).limit(1),
+      supabase
+        .from('game_players')
+        .select('game_id')
+        .in('tee_box_id', toDelete)
+        .limit(1),
+    ]);
+    if ((gameRefs?.length ?? 0) > 0 || (gamePlayerRefs?.length ?? 0) > 0) {
       redirect(`${editPath}?error=tee_in_use`);
     }
   }
 
-  // Replace-and-reinsert pattern. Simpler than diffing rows and good enough
-  // until an admin actually needs to preserve tee-box ids across edits.
+  // Course-navn-update (samme som før)
   const { error: courseUpdateError } = await supabase
     .from('courses')
     .update({ name })
     .eq('id', courseId);
   if (courseUpdateError) redirect(`${editPath}?error=db_course`);
 
+  // Hole-replacement fortsetter som delete + insert (ingen FK fra games til
+  // course_holes — scores bruker hole_number-int, ikke FK).
   const { error: deleteHolesError } = await supabase
     .from('course_holes')
     .delete()
@@ -134,17 +148,36 @@ export async function updateCourse(courseId: string, formData: FormData) {
     .insert(holesToInsert);
   if (insertHolesError) redirect(`${editPath}?error=db_holes`);
 
-  const { error: deleteTeesError } = await supabase
-    .from('tee_boxes')
-    .delete()
-    .eq('course_id', courseId);
-  if (deleteTeesError) redirect(`${editPath}?error=db_tees`);
+  // Tees: UPDATE eksisterende, INSERT nye, DELETE fjernede.
+  for (const tee of formTees) {
+    const row = {
+      course_id: courseId,
+      name: tee.name,
+      slope: tee.slope,
+      course_rating: tee.course_rating,
+      par_total: tee.par_total,
+      length_meters: tee.length_meters,
+      gender: tee.gender,
+    };
+    if (tee.id) {
+      const { error } = await supabase
+        .from('tee_boxes')
+        .update(row)
+        .eq('id', tee.id);
+      if (error) redirect(`${editPath}?error=db_tees`);
+    } else {
+      const { error } = await supabase.from('tee_boxes').insert(row);
+      if (error) redirect(`${editPath}?error=db_tees`);
+    }
+  }
 
-  const teesToInsert = teeBoxes.map((t) => ({ ...t, course_id: courseId }));
-  const { error: insertTeesError } = await supabase
-    .from('tee_boxes')
-    .insert(teesToInsert);
-  if (insertTeesError) redirect(`${editPath}?error=db_tees`);
+  if (toDelete.length > 0) {
+    const { error } = await supabase
+      .from('tee_boxes')
+      .delete()
+      .in('id', toDelete);
+    if (error) redirect(`${editPath}?error=db_tees`);
+  }
 
   redirect(`/admin/courses?status=updated&name=${encodeURIComponent(name)}`);
 }

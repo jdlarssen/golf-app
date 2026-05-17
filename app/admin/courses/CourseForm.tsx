@@ -14,11 +14,13 @@ export type HoleData = {
 };
 
 export type TeeBoxData = {
+  id?: string;
   name: string;
   slope: string;
   course_rating: string;
   par_total: string;
   length_meters: string;
+  gender: 'mens' | 'ladies' | 'juniors';
 };
 
 export type CourseFormInitialData = {
@@ -50,6 +52,7 @@ const DEFAULT_TEE: TeeBoxData = {
   course_rating: '70.0',
   par_total: '72',
   length_meters: '',
+  gender: 'mens',
 };
 
 const MAX_TEE_BOXES = 7;
@@ -176,6 +179,37 @@ export function CourseForm({
                   </button>
                 )}
               </div>
+              {tee.id && (
+                <input type="hidden" name={`tee_${index}_id`} value={tee.id} />
+              )}
+
+              <fieldset>
+                <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+                  For hvem
+                </legend>
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  {(['mens', 'ladies', 'juniors'] as const).map((g) => (
+                    <label
+                      key={g}
+                      className={`flex items-center justify-center rounded-xl border px-3 py-2 text-sm cursor-pointer transition-colors ${
+                        tee.gender === g
+                          ? 'border-accent bg-accent/10 text-text font-medium'
+                          : 'border-border bg-surface text-muted hover:text-text'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name={`tee_${index}_gender`}
+                        value={g}
+                        checked={tee.gender === g}
+                        onChange={() => updateTee(index, { gender: g })}
+                        className="sr-only"
+                      />
+                      {g === 'mens' ? 'Herrer' : g === 'ladies' ? 'Damer' : 'Junior'}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
               <Input
                 id={`tee_${index}_name`}
                 name={`tee_${index}_name`}

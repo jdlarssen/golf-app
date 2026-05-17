@@ -23,8 +23,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   bad_cr: 'Course rating må være et tall mellom 50 og 80.',
   bad_par_total: 'Par total må være et helt tall mellom 60 og 80.',
   tee_required: 'Minst én tee-boks må legges til.',
-  tee_in_use:
-    'Kan ikke endre tee-bokser fordi minst ett pågående eller fullført spill bruker dem. Slett spillene først, eller la disse tee-boksene stå.',
+  tee_in_use: 'Kan ikke fjerne tee — den brukes i ett eller flere spill.',
   db_course:
     'Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.',
   db_holes:
@@ -127,7 +126,7 @@ async function EditCourseFormBody({
       .order('hole_number', { ascending: true }),
     supabase
       .from('tee_boxes')
-      .select('name, slope, course_rating, par_total, length_meters')
+      .select('id, name, slope, course_rating, par_total, length_meters, gender')
       .eq('course_id', courseId)
       .order('slope', { ascending: true }),
   ]);
@@ -144,11 +143,13 @@ async function EditCourseFormBody({
   }));
 
   const initialTees = (teesResult.data ?? []).map((t) => ({
+    id: t.id,
     name: t.name,
     slope: String(t.slope),
     course_rating: String(t.course_rating),
     par_total: String(t.par_total),
     length_meters: t.length_meters == null ? '' : String(t.length_meters),
+    gender: t.gender,
   }));
 
   // Pre-bind the course id so the form's action handler only deals with the

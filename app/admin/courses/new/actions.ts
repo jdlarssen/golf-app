@@ -53,6 +53,7 @@ export async function createCourse(formData: FormData) {
     course_rating: number;
     par_total: number;
     length_meters: number | null;
+    gender: 'mens' | 'ladies' | 'juniors';
   }[] = [];
   for (let i = 0; i < 5; i++) {
     const teeName = String(formData.get(`tee_${i}_name`) ?? '').trim();
@@ -84,12 +85,16 @@ export async function createCourse(formData: FormData) {
         lengthMeters = parsed;
       }
     }
+    const genderRaw = String(formData.get(`tee_${i}_gender`) ?? 'mens');
+    const gender: 'mens' | 'ladies' | 'juniors' =
+      genderRaw === 'ladies' || genderRaw === 'juniors' ? genderRaw : 'mens';
     teeBoxes.push({
       name: teeName,
       slope,
       course_rating: cr,
       par_total: parTotal,
       length_meters: lengthMeters,
+      gender,
     });
   }
   if (teeBoxes.length === 0) {
