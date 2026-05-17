@@ -218,7 +218,7 @@ export type Database = {
           rejection_reason: string | null
           submitted_at: string | null
           team_number: number
-          tee_box_id: string | null
+          tee_gender: Database["public"]["Enums"]["player_tee_gender"]
           user_id: string
         }
         Insert: {
@@ -230,7 +230,7 @@ export type Database = {
           rejection_reason?: string | null
           submitted_at?: string | null
           team_number: number
-          tee_box_id?: string | null
+          tee_gender?: Database["public"]["Enums"]["player_tee_gender"]
           user_id: string
         }
         Update: {
@@ -242,7 +242,7 @@ export type Database = {
           rejection_reason?: string | null
           submitted_at?: string | null
           team_number?: number
-          tee_box_id?: string | null
+          tee_gender?: Database["public"]["Enums"]["player_tee_gender"]
           user_id?: string
         }
         Relationships: [
@@ -258,13 +258,6 @@ export type Database = {
             columns: ["game_id"]
             isOneToOne: false
             referencedRelation: "games"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "game_players_tee_box_id_fkey"
-            columns: ["tee_box_id"]
-            isOneToOne: false
-            referencedRelation: "tee_boxes"
             referencedColumns: ["id"]
           },
           {
@@ -506,33 +499,48 @@ export type Database = {
       tee_boxes: {
         Row: {
           course_id: string
-          course_rating: number
-          gender: Database["public"]["Enums"]["tee_box_gender"]
+          course_rating_juniors: number | null
+          course_rating_ladies: number | null
+          course_rating_mens: number | null
           id: string
           length_meters: number | null
           name: string
-          par_total: number
-          slope: number
+          par_total_juniors: number | null
+          par_total_ladies: number | null
+          par_total_mens: number | null
+          slope_juniors: number | null
+          slope_ladies: number | null
+          slope_mens: number | null
         }
         Insert: {
           course_id: string
-          course_rating: number
-          gender?: Database["public"]["Enums"]["tee_box_gender"]
+          course_rating_juniors?: number | null
+          course_rating_ladies?: number | null
+          course_rating_mens?: number | null
           id?: string
           length_meters?: number | null
           name: string
-          par_total: number
-          slope: number
+          par_total_juniors?: number | null
+          par_total_ladies?: number | null
+          par_total_mens?: number | null
+          slope_juniors?: number | null
+          slope_ladies?: number | null
+          slope_mens?: number | null
         }
         Update: {
           course_id?: string
-          course_rating?: number
-          gender?: Database["public"]["Enums"]["tee_box_gender"]
+          course_rating_juniors?: number | null
+          course_rating_ladies?: number | null
+          course_rating_mens?: number | null
           id?: string
           length_meters?: number | null
           name?: string
-          par_total?: number
-          slope?: number
+          par_total_juniors?: number | null
+          par_total_ladies?: number | null
+          par_total_mens?: number | null
+          slope_juniors?: number | null
+          slope_ladies?: number | null
+          slope_mens?: number | null
         }
         Relationships: [
           {
@@ -624,7 +632,7 @@ export type Database = {
     }
     Enums: {
       game_status: "draft" | "scheduled" | "active" | "finished"
-      tee_box_gender: "mens" | "ladies" | "juniors"
+      player_tee_gender: "mens" | "ladies" | "juniors"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -753,7 +761,7 @@ export const Constants = {
   public: {
     Enums: {
       game_status: ["draft", "scheduled", "active", "finished"],
-      tee_box_gender: ["mens", "ladies", "juniors"],
+      player_tee_gender: ["mens", "ladies", "juniors"],
     },
   },
 } as const
