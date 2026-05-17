@@ -10,6 +10,45 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.4.y — Multi-rating tee-bokser
+
+Hver fysisk tee legges nå inn én gang med valgfrie ratings pr. gender (Herrer / Damer / Junior). Lettere dataentry, og du kan fylle ut manglende ratings senere uten å re-opprette tees.
+
+### [1.4.0] - 2026-05-17
+
+**Tee-bokser kan nå ha rating for flere kjønn på samme rad — så du legger inn «Gul» én gang med slope/CR for Herrer og Damer, ikke to ganger. Spill-formen er forenklet til én tee-dropdown med M/D/J-toggle pr. spiller. Du kan også fylle ut manglende ratings på eksisterende tees i etterkant.**
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- Migrasjon `0029_tee_box_multi_rating.sql` — `tee_boxes` får ni nye nullable rating-kolonner (`slope_${gender}`, `course_rating_${gender}`, `par_total_${gender}` for mens/ladies/juniors) + CHECK at minst én komplett gender-sett må være satt. `game_players` får `tee_gender` enum (`mens`/`ladies`/`juniors`), default `mens`.
+- `lib/games/teeRating.ts` — pure helper `getRatingForGender(tee, gender)` som returnerer `{slope, courseRating, par}` eller `null`. 4 unit-tester.
+- `tee_missing_rating`-feilmelding for tilfeller der spillerens tee_gender mangler rating på den valgte teen ved publish.
+- M/D/J-toggle pr. spiller i `GameForm` (alltid synlig, default M).
+- Tre rating-undersjons-kort pr. tee i `CourseForm` (Herrer / Damer / Junior, hver med slope/CR/par).
+- Visning av alle tilgjengelige ratings på `/admin/games/[id]`.
+
+#### Changed
+- `tee_boxes` migrerer eksisterende data: én-rad-pr-(tee × gender) → én-rad-pr-tee med riktig gender-kolonneset utfylt. Ingen merging av variant-rader (admin rydder manuelt om ønsket).
+- `game_players` migrerer: `tee_box_id` (per-tee override fra v1.3.0) → `tee_gender` flag basert på den teens gender.
+- Course handicap freezes ved publish bruker nå `getRatingForGender(game.tee_box, player.tee_gender)`. Begge start-paths (`startGame` + `startScheduledGame`).
+- `GameForm` har én tee-dropdown (ikke to). Tee-options viser hvilke gender-ratings som er tilgjengelige som badge: `Gul (herre · dame)`.
+- `getGameWithPlayers` cache henter nå multi-rating-felter på teen og `tee_gender` pr. spiller.
+- «Du spiller fra»-banner på scorekortet bruker `me.tee_gender` for å derive riktig rating fra teens multi-rating-felter.
+
+#### Removed
+- `tee_boxes.slope`, `tee_boxes.course_rating`, `tee_boxes.par_total`, `tee_boxes.gender` kolonner — erstattet av per-gender kolonneset.
+- `tee_box_gender` enum — ikke lenger brukt.
+- `game_players.tee_box_id` — erstattet av `tee_gender`.
+- `lib/games/teeResolution.ts` + tester — helper overflødig i den nye modellen.
+- «For hvem»-segmented control i `CourseForm` — multi-rating-modellen gjør den unødvendig.
+- «Tee for damer»-dropdown i `GameForm` — én tee-dropdown nå.
+
+</details>
+
+---
+
 ## 1.3.y — Mixed-gender tee-bokser
 
 Herrer og damer kan nå spille fra ulike tees i samme runde med korrekt course handicap. Tee-bokser tagges med kjønn (herre/dame/junior) i bane-admin, og spill-formen får en valgfri dame-tee + M/D-toggle pr. spiller.
@@ -79,6 +118,9 @@ Sideturneringen får 12 nye kategorier og 3 stackbare achievements (Turkey/Solid
 </details>
 
 ---
+
+<details>
+<summary><strong>1.1.y — Sideturnering (11 entries) — klikk for å vise</strong></summary>
 
 ## 1.1.y — Sideturnering
 
@@ -250,6 +292,8 @@ Første feature shipped etter v1.0.0. Lag kan nå konkurrere parallelt med best-
 #### Changed
 - `app/admin/games/[id]/page.tsx` henter nå sideturnerings-config og passerer det til `EndGameButton`.
 - `app/games/[id]/leaderboard/page.tsx` henter `game_side_winners` når `status=finished AND side_tournament_enabled`, og bygger `SideTournamentInput` fra eksisterende score-data (gjenbruker `computeLeaderboard` for å unngå dobbel best-ball-beregning).
+
+</details>
 
 </details>
 
