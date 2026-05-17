@@ -50,7 +50,19 @@ function buildErrorMessage(
 type CourseRow = {
   id: string;
   name: string;
-  tee_boxes: { id: string; name: string; gender: 'mens' | 'ladies' | 'juniors' }[];
+  tee_boxes: {
+    id: string;
+    name: string;
+    slope_mens: number | null;
+    course_rating_mens: number | null;
+    par_total_mens: number | null;
+    slope_ladies: number | null;
+    course_rating_ladies: number | null;
+    par_total_ladies: number | null;
+    slope_juniors: number | null;
+    course_rating_juniors: number | null;
+    par_total_juniors: number | null;
+  }[];
 };
 
 type UserRow = {
@@ -85,7 +97,7 @@ type GamePlayerRow = {
   user_id: string;
   team_number: number;
   flight_number: number;
-  tee_box_id: string | null;
+  tee_gender: 'mens' | 'ladies' | 'juniors';
 };
 
 // `datetime-local` inputs want 'YYYY-MM-DDTHH:mm' in browser-local time, but
@@ -206,7 +218,9 @@ const getOptions = cache(async () => {
   const [coursesResult, usersResult] = await Promise.all([
     supabase
       .from('courses')
-      .select('id, name, tee_boxes(id, name, gender)')
+      .select(
+        'id, name, tee_boxes(id, name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+      )
       .order('name', { ascending: true })
       .returns<CourseRow[]>(),
     supabase
@@ -223,7 +237,22 @@ const getOptions = cache(async () => {
     id: c.id,
     name: c.name,
     tee_boxes: (c.tee_boxes ?? [])
-      .map((t) => ({ id: t.id, name: t.name, gender: t.gender }))
+      .map((t) => ({
+        id: t.id,
+        name: t.name,
+        has_mens:
+          t.slope_mens !== null &&
+          t.course_rating_mens !== null &&
+          t.par_total_mens !== null,
+        has_ladies:
+          t.slope_ladies !== null &&
+          t.course_rating_ladies !== null &&
+          t.par_total_ladies !== null,
+        has_juniors:
+          t.slope_juniors !== null &&
+          t.course_rating_juniors !== null &&
+          t.par_total_juniors !== null,
+      }))
       .sort((a, b) => a.name.localeCompare(b.name, 'no')),
   }));
 
@@ -268,7 +297,7 @@ async function EditGameFormBody({
     getOptions(),
     supabase
       .from('game_players')
-      .select('user_id, team_number, flight_number, tee_box_id')
+      .select('user_id, team_number, flight_number, tee_gender')
       .eq('game_id', gameId)
       .returns<GamePlayerRow[]>(),
   ]);
@@ -285,16 +314,10 @@ async function EditGameFormBody({
   ).filter((id): id is SideCategoryId => validIds.has(id));
 
   const playerRows = playersResult.data ?? [];
-  // The ladies-tee is whichever non-null `tee_box_id` on the roster differs
-  // from the game's default tee. Today's payload writes the same id to every
-  // D-player so any matching row is authoritative.
-  const ladiesTeeId =
-    playerRows.find((p) => p.tee_box_id && p.tee_box_id !== game.tee_box_id)
-      ?.tee_box_id ?? null;
-  const playerGenders: Record<string, 'M' | 'D'> = {};
+  const playerGenders: Record<string, 'M' | 'D' | 'J'> = {};
   for (const p of playerRows) {
     playerGenders[p.user_id] =
-      ladiesTeeId !== null && p.tee_box_id === ladiesTeeId ? 'D' : 'M';
+      p.tee_gender === 'ladies' ? 'D' : p.tee_gender === 'juniors' ? 'J' : 'M';
   }
 
   const initialValues: InitialValues = {
@@ -326,7 +349,6 @@ async function EditGameFormBody({
     // active/finished games never reach this branch. Future-proofed for a
     // hypothetical read-only view of locked games.
     lock_side_tournament: false,
-    tee_box_id_ladies: ladiesTeeId ?? undefined,
     player_genders: playerGenders,
     players: playerRows.map((p) => ({
       user_id: p.user_id,

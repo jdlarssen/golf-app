@@ -13,11 +13,25 @@ import {
 export type CourseOption = {
   id: string;
   name: string;
-  tee_boxes: { id: string; name: string; gender: 'mens' | 'ladies' | 'juniors' }[];
+  tee_boxes: {
+    id: string;
+    name: string;
+    has_mens: boolean;
+    has_ladies: boolean;
+    has_juniors: boolean;
+  }[];
 };
 
-function genderLabel(g: 'mens' | 'ladies' | 'juniors'): string {
-  return g === 'mens' ? 'herre' : g === 'ladies' ? 'dame' : 'junior';
+function formatRatingBadge(tee: {
+  has_mens: boolean;
+  has_ladies: boolean;
+  has_juniors: boolean;
+}): string {
+  const parts: string[] = [];
+  if (tee.has_mens) parts.push('herre');
+  if (tee.has_ladies) parts.push('dame');
+  if (tee.has_juniors) parts.push('junior');
+  return parts.join(' · ');
 }
 
 export type PlayerOption = {
@@ -65,10 +79,8 @@ export type InitialValues = {
   side_disabled_categories?: readonly SideCategoryId[];
   /** Lås feltene (når status er active/finished). */
   lock_side_tournament?: boolean;
-  /** Optional ladies-tee for mixed-gender games. Empty/undefined = no D-tee. */
-  tee_box_id_ladies?: string;
   /** Per-player tee selection. Missing key defaults to 'M' in the form state. */
-  player_genders?: Record<string, 'M' | 'D'>;
+  player_genders?: Record<string, 'M' | 'D' | 'J'>;
   players?: Array<{
     user_id: string;
     // Widened to `number` at the prop boundary; deriveAssignmentsFromInitial
@@ -165,10 +177,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   const [teeBoxId, setTeeBoxId] = useState<string>(
     initialValues?.tee_box_id ?? '',
   );
-  const [teeBoxIdLadies, setTeeBoxIdLadies] = useState<string>(
-    initialValues?.tee_box_id_ladies ?? '',
-  );
-  const [playerGenders, setPlayerGenders] = useState<Record<string, 'M' | 'D'>>(
+  const [playerGenders, setPlayerGenders] = useState<Record<string, 'M' | 'D' | 'J'>>(
     initialValues?.player_genders ?? {},
   );
   // Required for "Lagre og publiser"; drives the button's disabled state via
@@ -549,7 +558,6 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             onChange={(e) => {
               setCourseId(e.target.value);
               setTeeBoxId('');
-              setTeeBoxIdLadies('');
               setPlayerGenders({});
             }}
             required
@@ -566,48 +574,26 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
 
         <div>
           <label htmlFor="tee_box_id" className="block text-sm font-medium text-text mb-1.5">
-            Tee for herrer
+            Tee
           </label>
           <select
             id="tee_box_id"
             name="tee_box_id"
             value={teeBoxId}
-            onChange={(e) => setTeeBoxId(e.target.value)}
+            onChange={(e) => {
+              setTeeBoxId(e.target.value);
+              setPlayerGenders({});
+            }}
             disabled={!selectedCourse}
             required
             className="w-full rounded-xl border px-3.5 py-2.5 bg-surface text-text border-border focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150 disabled:opacity-50"
           >
             <option value="">{selectedCourse ? 'Velg tee-boks…' : 'Velg bane først'}</option>
-            {availableTees
-              .filter((t) => t.gender !== 'ladies')
-              .map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name} ({genderLabel(t.gender)})
-                </option>
-              ))}
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor="tee_box_id_ladies" className="block text-sm font-medium text-text mb-1.5">
-            Tee for damer <span className="text-muted text-xs font-normal">(valgfri)</span>
-          </label>
-          <select
-            id="tee_box_id_ladies"
-            name="tee_box_id_ladies"
-            value={teeBoxIdLadies}
-            onChange={(e) => setTeeBoxIdLadies(e.target.value)}
-            disabled={!selectedCourse}
-            className="w-full rounded-xl border px-3.5 py-2.5 bg-surface text-text border-border focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150 disabled:opacity-50"
-          >
-            <option value="">— ingen separat dame-tee —</option>
-            {availableTees
-              .filter((t) => t.gender === 'ladies')
-              .map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name} (dame)
-                </option>
-              ))}
+            {availableTees.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name} ({formatRatingBadge(t)})
+              </option>
+            ))}
           </select>
         </div>
 
@@ -919,33 +905,33 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
                     <span className="text-sm text-text flex-1 truncate">
                       {shortName(p)}
                     </span>
-                    {teeBoxIdLadies && (
-                      <div className="flex gap-1" role="group" aria-label="Tee for spiller">
-                        {(['M', 'D'] as const).map((g) => (
-                          <button
-                            key={g}
-                            type="button"
-                            onClick={() =>
-                              setPlayerGenders((prev) => ({ ...prev, [pid]: g }))
-                            }
-                            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                              (playerGenders[pid] ?? 'M') === g
-                                ? g === 'M'
-                                  ? 'bg-primary text-white'
-                                  : 'bg-accent text-text'
-                                : 'bg-surface border border-border text-muted hover:text-text'
-                            }`}
-                          >
-                            {g}
-                          </button>
-                        ))}
-                        <input
-                          type="hidden"
-                          name={`player_${pid}_gender`}
-                          value={playerGenders[pid] ?? 'M'}
-                        />
-                      </div>
-                    )}
+                    <div className="flex gap-1" role="group" aria-label="Tee for spiller">
+                      {(['M', 'D', 'J'] as const).map((g) => (
+                        <button
+                          key={g}
+                          type="button"
+                          onClick={() =>
+                            setPlayerGenders((prev) => ({ ...prev, [pid]: g }))
+                          }
+                          className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                            (playerGenders[pid] ?? 'M') === g
+                              ? g === 'M'
+                                ? 'bg-primary text-white'
+                                : g === 'D'
+                                  ? 'bg-accent text-text'
+                                  : 'bg-muted text-text'
+                              : 'bg-surface border border-border text-muted hover:text-text'
+                          }`}
+                        >
+                          {g}
+                        </button>
+                      ))}
+                      <input
+                        type="hidden"
+                        name={`player_${pid}_gender`}
+                        value={playerGenders[pid] ?? 'M'}
+                      />
+                    </div>
                     <select
                       value={flight}
                       onChange={(e) =>

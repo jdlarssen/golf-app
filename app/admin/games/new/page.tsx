@@ -34,7 +34,19 @@ function buildErrorMessage(
 type CourseRow = {
   id: string;
   name: string;
-  tee_boxes: { id: string; name: string; gender: 'mens' | 'ladies' | 'juniors' }[];
+  tee_boxes: {
+    id: string;
+    name: string;
+    slope_mens: number | null;
+    course_rating_mens: number | null;
+    par_total_mens: number | null;
+    slope_ladies: number | null;
+    course_rating_ladies: number | null;
+    par_total_ladies: number | null;
+    slope_juniors: number | null;
+    course_rating_juniors: number | null;
+    par_total_juniors: number | null;
+  }[];
 };
 
 type UserRow = {
@@ -59,7 +71,9 @@ const getFormData = cache(async () => {
   const [coursesResult, usersResult] = await Promise.all([
     supabase
       .from('courses')
-      .select('id, name, tee_boxes(id, name, gender)')
+      .select(
+        'id, name, tee_boxes(id, name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+      )
       .order('name', { ascending: true })
       .returns<CourseRow[]>(),
     supabase
@@ -77,7 +91,22 @@ const getFormData = cache(async () => {
     id: c.id,
     name: c.name,
     tee_boxes: (c.tee_boxes ?? [])
-      .map((t) => ({ id: t.id, name: t.name, gender: t.gender }))
+      .map((t) => ({
+        id: t.id,
+        name: t.name,
+        has_mens:
+          t.slope_mens !== null &&
+          t.course_rating_mens !== null &&
+          t.par_total_mens !== null,
+        has_ladies:
+          t.slope_ladies !== null &&
+          t.course_rating_ladies !== null &&
+          t.par_total_ladies !== null,
+        has_juniors:
+          t.slope_juniors !== null &&
+          t.course_rating_juniors !== null &&
+          t.par_total_juniors !== null,
+      }))
       .sort((a, b) => a.name.localeCompare(b.name, 'no')),
   }));
 
