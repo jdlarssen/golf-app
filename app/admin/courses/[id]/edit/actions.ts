@@ -100,8 +100,6 @@ export async function updateCourse(courseId: string, formData: FormData) {
   }
   if (teeBoxes.length === 0) redirect(`${editPath}?error=tee_required`);
 
-  const formTees = teeBoxes;
-
   const { data: existingTees, error: existingTeesError } = await supabase
     .from('tee_boxes')
     .select('id')
@@ -109,11 +107,13 @@ export async function updateCourse(courseId: string, formData: FormData) {
   if (existingTeesError) redirect(`${editPath}?error=db_load`);
 
   const existingIds = new Set((existingTees ?? []).map((t) => t.id));
-  const formIds = new Set(formTees.filter((t) => t.id).map((t) => t.id!));
+  const formIds = new Set(teeBoxes.filter((t) => t.id).map((t) => t.id!));
   const toDelete = [...existingIds].filter((id) => !formIds.has(id));
 
-  // Sletting blokkeres hvis tee er referert av games eller game_players (per-player tee override).
   if (toDelete.length > 0) {
+    // Block deletion if a tee is still referenced by games or by per-player
+    // game_players.tee_box_id overrides — the FK would refuse the delete anyway,
+    // but catching it here gives a friendly error instead of a 500.
     const [{ data: gameRefs }, { data: gamePlayerRefs }] = await Promise.all([
       supabase.from('games').select('id').in('tee_box_id', toDelete).limit(1),
       supabase
@@ -127,15 +127,14 @@ export async function updateCourse(courseId: string, formData: FormData) {
     }
   }
 
-  // Course-navn-update (samme som før)
   const { error: courseUpdateError } = await supabase
     .from('courses')
     .update({ name })
     .eq('id', courseId);
   if (courseUpdateError) redirect(`${editPath}?error=db_course`);
 
-  // Hole-replacement fortsetter som delete + insert (ingen FK fra games til
-  // course_holes — scores bruker hole_number-int, ikke FK).
+  // course_holes stays delete-and-reinsert: no FK from games/scores into
+  // course_holes (scores use hole_number int), so safe to replace wholesale.
   const { error: deleteHolesError } = await supabase
     .from('course_holes')
     .delete()
@@ -148,8 +147,7 @@ export async function updateCourse(courseId: string, formData: FormData) {
     .insert(holesToInsert);
   if (insertHolesError) redirect(`${editPath}?error=db_holes`);
 
-  // Tees: UPDATE eksisterende, INSERT nye, DELETE fjernede.
-  for (const tee of formTees) {
+  for (const tee of teeBoxes) {
     const row = {
       course_id: courseId,
       name: tee.name,
