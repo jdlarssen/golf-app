@@ -22,6 +22,7 @@ import { nameInitials } from '@/lib/names/initials';
 import { formatTeeOffTime, formatTeeOffDate } from '@/lib/format/teeOff';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
+import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
 import { ScheduledWaitingRoom } from './ScheduledWaitingRoom';
 
 type Params = Promise<{ id: string }>;
@@ -60,17 +61,13 @@ type GameRow = {
   scheduled_tee_off_at: string | null;
   require_peer_approval: boolean;
   courses: { name: string } | null;
-  tee_boxes: {
-    name: string;
-    slope: number;
-    course_rating: number;
-    par_total: number;
-    length_meters: number | null;
-  } | null;
+  tee_boxes:
+    | (TeeBoxRatings & { name: string; length_meters: number | null })
+    | null;
 };
 
 const GAME_SELECT =
-  'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, require_peer_approval, courses(name), tee_boxes(name, slope, course_rating, par_total, length_meters)';
+  'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, require_peer_approval, courses(name), tee_boxes(name, length_meters, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)';
 
 type FlightRosterRow = {
   user_id: string;
@@ -166,7 +163,7 @@ export default async function GameHomePage({
     supabase
       .from('games')
       .select(
-        'courses(name), tee_boxes(name, slope, course_rating, par_total, length_meters)',
+        'courses(name), tee_boxes(name, length_meters, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
       )
       .eq('id', id)
       .single<Pick<GameRow, 'courses' | 'tee_boxes'>>(),
@@ -229,6 +226,12 @@ export default async function GameHomePage({
     }
   }
 
+  // Resolve this player's rating-set from the game's tee. Drives Par/Slope/CR
+  // surfacing in both the scheduled-state hero and the active-state info-card.
+  const playerRating = game.tee_boxes
+    ? getRatingForGender(game.tee_boxes, me.tee_gender)
+    : null;
+
   // State #2 — Scorekort venter. Shell renders synchronously; the flight
   // roster query streams in behind Suspense.
   if (game.status === 'scheduled') {
@@ -266,7 +269,8 @@ export default async function GameHomePage({
               </p>
               {teeBox && (
                 <p className="mt-1 text-xs text-muted">
-                  18 hull · Par {teeBox.par_total}
+                  18 hull
+                  {playerRating ? ` · Par ${playerRating.par}` : ''}
                   {teeBox.length_meters
                     ? ` · ${formatLengthMeters(teeBox.length_meters)} m`
                     : ''}
@@ -384,9 +388,10 @@ export default async function GameHomePage({
             </p>
             {game.tee_boxes && (
               <p className="text-xs text-muted mt-1.5 tabular-nums">
-                Tee: {game.tee_boxes.name} · Slope {game.tee_boxes.slope} · CR{' '}
-                {Number(game.tee_boxes.course_rating).toFixed(1)} · Par{' '}
-                {game.tee_boxes.par_total}
+                Tee: {game.tee_boxes.name}
+                {playerRating
+                  ? ` · Slope ${playerRating.slope} · CR ${playerRating.courseRating.toFixed(1)} · Par ${playerRating.par}`
+                  : ''}
               </p>
             )}
           </Card>

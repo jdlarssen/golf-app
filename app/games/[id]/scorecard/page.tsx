@@ -18,6 +18,7 @@ import {
   type RevealState,
 } from '@/lib/games/visibility';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
+import { getRatingForGender } from '@/lib/games/teeRating';
 
 type Params = Promise<{ id: string }>;
 
@@ -64,8 +65,10 @@ export default async function ScorecardPage({ params }: { params: Params }) {
   const me = players.find((p) => p.user_id === userId);
   if (!me) notFound();
 
-  // Per-player override falls back to the game's default tee.
-  const playerTee = me.tee_box ?? game.tee_box;
+  // Derive this player's rating-set from the game's tee using their
+  // tee_gender flag. startGame guards against missing rating-sets at
+  // publish time, so null only appears if data was edited externally.
+  const rating = getRatingForGender(game.tee_box, me.tee_gender);
 
   return (
     <AppShell showVersion={false}>
@@ -79,15 +82,16 @@ export default async function ScorecardPage({ params }: { params: Params }) {
         <Card className="px-4 py-3">
           <div className="text-xs text-muted">Du spiller fra</div>
           <div className="font-serif text-base text-text">
-            {playerTee.name}
+            {game.tee_box.name}
             <span className="ml-1.5 text-muted text-sm">
-              ({genderLabelShort(playerTee.gender)})
+              ({genderLabelShort(me.tee_gender)})
             </span>
           </div>
-          <div className="text-xs text-muted tabular-nums">
-            Slope {playerTee.slope} / CR{' '}
-            {Number(playerTee.course_rating).toFixed(1)}
-          </div>
+          {rating && (
+            <div className="text-xs text-muted tabular-nums">
+              Slope {rating.slope} / CR {rating.courseRating.toFixed(1)}
+            </div>
+          )}
         </Card>
 
         <Suspense fallback={<ScorecardTableSkeleton />}>

@@ -9,6 +9,11 @@ import {
 } from '@/lib/scoring/courseHandicap';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
 import { findPendingPlayers } from '@/lib/games/pendingPlayers';
+import {
+  getRatingForGender,
+  type TeeBoxRatings,
+  type TeeGender,
+} from '@/lib/games/teeRating';
 import { sendGameFinishedNotification } from '@/lib/mail/gameFinishedNotification';
 import { firstName } from '@/lib/firstName';
 import { logAdminEvent } from '@/lib/admin/auditLog';
@@ -79,30 +84,27 @@ export async function startGame(gameId: string) {
 
   const { data: gamePlayers, error: gpError } = await supabase
     .from('game_players')
-    .select('user_id, tee_box_id, users(hcp_index)')
+    .select('user_id, tee_gender, users(hcp_index)')
     .eq('game_id', gameId)
     .returns<
       {
         user_id: string;
-        tee_box_id: string | null;
+        tee_gender: TeeGender;
         users: { hcp_index: number | string } | null;
       }[]
     >();
   if (gpError || !gamePlayers) redirect(`${detailPath}?error=db_roster`);
 
-  const teeIds = new Set<string>([game!.tee_box_id]);
-  for (const row of gamePlayers!) {
-    if (row.tee_box_id) teeIds.add(row.tee_box_id);
-  }
-  const { data: tees, error: teesError } = await supabase
+  // The game has one tee with up to three rating-sets. Each player picks
+  // which set applies via their tee_gender flag.
+  const { data: tee, error: teeError } = await supabase
     .from('tee_boxes')
-    .select('id, slope, course_rating, par_total')
-    .in('id', [...teeIds])
-    .returns<
-      { id: string; slope: number; course_rating: number | string; par_total: number }[]
-    >();
-  if (teesError || !tees) redirect(`${detailPath}?error=db_tee`);
-  const teeById = new Map(tees!.map((t) => [t.id, t]));
+    .select(
+      'slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors',
+    )
+    .eq('id', game!.tee_box_id)
+    .single<TeeBoxRatings>();
+  if (teeError || !tee) redirect(`${detailPath}?error=db_tee`);
 
   // Defence-in-depth: refuse to flip a draft to active if any roster player
   // is still pending profile completion. Mirrors the gate in
@@ -124,17 +126,17 @@ export async function startGame(gameId: string) {
     redirect(`${detailPath}?${qs.toString()}`);
   }
 
-  // Freeze a course handicap per player using each player's resolved tee
-  // (per-row override falls back to the game default).
+  // Freeze a course handicap per player using their gender-specific
+  // rating-set on the game's tee.
   for (const row of gamePlayers!) {
     if (!row.users) continue;
-    const playerTee = teeById.get(row.tee_box_id ?? game!.tee_box_id);
-    if (!playerTee) redirect(`${detailPath}?error=db_tee`);
+    const rating = getRatingForGender(tee!, row.tee_gender);
+    if (!rating) redirect(`${detailPath}?error=tee_missing_rating`);
     const raw = calculateCourseHandicap({
       hcpIndex: Number(row.users.hcp_index),
-      slope: playerTee!.slope,
-      courseRating: Number(playerTee!.course_rating),
-      par: playerTee!.par_total,
+      slope: rating!.slope,
+      courseRating: rating!.courseRating,
+      par: rating!.par,
     });
     const allowed = applyAllowance(raw, game!.hcp_allowance_pct);
     const { error: updateError } = await supabase

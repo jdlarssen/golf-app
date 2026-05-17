@@ -15,6 +15,7 @@ import { ScoreShape } from '@/components/scoring/ScoreShape';
 import { scoreShape } from '@/lib/scoring/scoreShape';
 import { scoreTone } from '@/lib/scoring/scoreTone';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
+import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -33,7 +34,7 @@ function first(value: string | string[] | undefined): string | undefined {
 
 type CourseTeeRow = {
   courses: { name: string } | null;
-  tee_boxes: { name: string; par_total: number } | null;
+  tee_boxes: (TeeBoxRatings & { name: string }) | null;
 };
 
 type HoleRow = {
@@ -76,7 +77,9 @@ export default async function SubmitPage({
     getGameWithPlayers(id),
     supabase
       .from('games')
-      .select('courses(name), tee_boxes(name, par_total)')
+      .select(
+        'courses(name), tee_boxes(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+      )
       .eq('id', id)
       .single<CourseTeeRow>(),
   ]);
@@ -99,6 +102,9 @@ export default async function SubmitPage({
 
   if (courseTeeRes.error || !courseTeeRes.data) notFound();
   const courseTee = courseTeeRes.data;
+  const playerRating = courseTee.tee_boxes
+    ? getRatingForGender(courseTee.tee_boxes, me.tee_gender)
+    : null;
 
   const submitAction = submitScorecard.bind(null, id);
 
@@ -120,7 +126,7 @@ export default async function SubmitPage({
           <p className="text-xs text-muted mt-1.5">
             {courseTee.courses?.name ?? '(ukjent bane)'}
             {courseTee.tee_boxes
-              ? ` · Tee: ${courseTee.tee_boxes.name} · Par ${courseTee.tee_boxes.par_total}`
+              ? ` · Tee: ${courseTee.tee_boxes.name}${playerRating ? ` · Par ${playerRating.par}` : ''}`
               : ''}
           </p>
           <p className="text-xs text-muted mt-1">

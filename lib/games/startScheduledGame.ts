@@ -5,6 +5,11 @@ import {
 } from '@/lib/scoring/courseHandicap';
 import { findPendingPlayers } from './pendingPlayers';
 import type { GameStatus } from './status';
+import {
+  getRatingForGender,
+  type TeeBoxRatings,
+  type TeeGender,
+} from './teeRating';
 
 export type StartScheduledGameResult =
   | { ok: true }
@@ -14,6 +19,7 @@ export type StartScheduledGameResult =
         | 'not_found'
         | 'not_scheduled'
         | 'tee_missing'
+        | 'tee_missing_rating'
         | 'no_players'
         | 'pending_players'
         | 'db_players'
@@ -44,10 +50,12 @@ export async function startScheduledGame(
   gameId: string,
 ): Promise<StartScheduledGameResult> {
   // 1. Verify status is still 'scheduled' and load tee-box + allowance.
+  //    The game's tee carries up to three independent rating-sets
+  //    (mens/ladies/juniors); each player picks one via tee_gender.
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, status, hcp_allowance_pct, tee_box_id, tee_boxes(id, slope, course_rating, par_total)',
+      'id, status, hcp_allowance_pct, tee_box_id, tee_boxes(slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
     )
     .eq('id', gameId)
     .single<{
@@ -55,9 +63,7 @@ export async function startScheduledGame(
       status: GameStatus;
       hcp_allowance_pct: number;
       tee_box_id: string | null;
-      tee_boxes:
-        | { id: string; slope: number; course_rating: number; par_total: number }
-        | null;
+      tee_boxes: TeeBoxRatings | null;
     }>();
   if (gameError || !game) return { ok: false, reason: 'not_found' };
   if (game.status !== 'scheduled') {
@@ -69,65 +75,26 @@ export async function startScheduledGame(
     }
     return { ok: false, reason: 'not_scheduled' };
   }
-  const defaultTee = game.tee_boxes;
-  if (!defaultTee || !game.tee_box_id) return { ok: false, reason: 'tee_missing' };
+  const tee = game.tee_boxes;
+  if (!tee || !game.tee_box_id) return { ok: false, reason: 'tee_missing' };
 
-  // 2. Load all players + their hcp_index + per-player tee override.
+  // 2. Load all players + their hcp_index + tee_gender.
   const { data: roster, error: rosterError } = await supabase
     .from('game_players')
     .select(
-      'user_id, tee_box_id, users!game_players_user_id_fkey(hcp_index)',
+      'user_id, tee_gender, users!game_players_user_id_fkey(hcp_index)',
     )
     .eq('game_id', gameId)
     .returns<
       {
         user_id: string;
-        tee_box_id: string | null;
+        tee_gender: TeeGender;
         users: { hcp_index: number | string } | null;
       }[]
     >();
   if (rosterError) return { ok: false, reason: 'db_players' };
   if (!roster || roster.length === 0) {
     return { ok: false, reason: 'no_players' };
-  }
-
-  // Load any per-player tee overrides that differ from the game default. The
-  // default tee is already in `defaultTee`; only fetch extras to keep the
-  // round-trip small.
-  const overrideTeeIds = Array.from(
-    new Set(
-      roster
-        .map((r) => r.tee_box_id)
-        .filter((id): id is string => id !== null && id !== game.tee_box_id),
-    ),
-  );
-  const teeById = new Map<
-    string,
-    { id: string; slope: number; course_rating: number; par_total: number }
-  >();
-  teeById.set(defaultTee.id, defaultTee);
-  if (overrideTeeIds.length > 0) {
-    const { data: extraTees, error: extraTeesError } = await supabase
-      .from('tee_boxes')
-      .select('id, slope, course_rating, par_total')
-      .in('id', overrideTeeIds)
-      .returns<
-        {
-          id: string;
-          slope: number;
-          course_rating: number | string;
-          par_total: number;
-        }[]
-      >();
-    if (extraTeesError || !extraTees) return { ok: false, reason: 'tee_missing' };
-    for (const t of extraTees) {
-      teeById.set(t.id, {
-        id: t.id,
-        slope: t.slope,
-        course_rating: Number(t.course_rating),
-        par_total: t.par_total,
-      });
-    }
   }
 
   // Defence-in-depth: refuse to start if any roster player is still pending
@@ -150,18 +117,18 @@ export async function startScheduledGame(
     };
   }
 
-  // 3. Compute course_handicap per player using each player's resolved tee.
-  //    Supabase returns numerics as strings in some configs, hence the
-  //    Number() coercions on hcp_index and course_rating.
+  // 3. Compute course_handicap per player using their gender-specific
+  //    rating-set on the game's tee. Supabase returns numerics as strings
+  //    in some configs, hence the Number() coercion on hcp_index.
   for (const row of roster) {
     if (!row.users) continue; // defensive — FK constraint should prevent this
-    const playerTee = teeById.get(row.tee_box_id ?? game.tee_box_id);
-    if (!playerTee) return { ok: false, reason: 'tee_missing' };
+    const rating = getRatingForGender(tee, row.tee_gender);
+    if (!rating) return { ok: false, reason: 'tee_missing_rating' };
     const raw = calculateCourseHandicap({
       hcpIndex: Number(row.users.hcp_index),
-      slope: playerTee.slope,
-      courseRating: Number(playerTee.course_rating),
-      par: playerTee.par_total,
+      slope: rating.slope,
+      courseRating: rating.courseRating,
+      par: rating.par,
     });
     const allowed = applyAllowance(raw, game.hcp_allowance_pct);
     const { error: updateError } = await supabase
