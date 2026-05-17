@@ -3,6 +3,50 @@
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 
+type GenderRating = {
+  slope: number | null;
+  course_rating: number | null;
+  par_total: number | null;
+};
+
+function parseGenderRating(
+  formData: FormData,
+  teeIndex: number,
+  gender: 'mens' | 'ladies' | 'juniors',
+): GenderRating {
+  const slopeStr = String(formData.get(`tee_${teeIndex}_slope_${gender}`) ?? '').trim();
+  const crStr = String(formData.get(`tee_${teeIndex}_cr_${gender}`) ?? '').trim();
+  const parStr = String(formData.get(`tee_${teeIndex}_par_${gender}`) ?? '').trim();
+
+  const slope = slopeStr === '' ? null : Number(slopeStr);
+  const cr = crStr === '' ? null : Number(crStr);
+  const par = parStr === '' ? null : Number(parStr);
+
+  return {
+    slope: slope !== null && Number.isInteger(slope) && slope >= 55 && slope <= 155 ? slope : null,
+    course_rating: cr !== null && Number.isFinite(cr) && cr >= 50 && cr <= 80 ? cr : null,
+    par_total: par !== null && Number.isInteger(par) && par >= 60 && par <= 80 ? par : null,
+  };
+}
+
+function isCompleteRating(r: GenderRating): boolean {
+  return r.slope !== null && r.course_rating !== null && r.par_total !== null;
+}
+
+// Distinguishes "left blank" from "partially filled" — we only complain about
+// the latter, since admin can legitimately leave any gender empty.
+function isPartiallyFilled(
+  formData: FormData,
+  teeIndex: number,
+  gender: 'mens' | 'ladies' | 'juniors',
+): boolean {
+  const slopeStr = String(formData.get(`tee_${teeIndex}_slope_${gender}`) ?? '').trim();
+  const crStr = String(formData.get(`tee_${teeIndex}_cr_${gender}`) ?? '').trim();
+  const parStr = String(formData.get(`tee_${teeIndex}_par_${gender}`) ?? '').trim();
+  const filled = [slopeStr, crStr, parStr].filter((s) => s !== '').length;
+  return filled > 0 && filled < 3;
+}
+
 async function requireAdmin() {
   const supabase = await getServerClient();
   const {
@@ -48,27 +92,21 @@ export async function updateCourse(courseId: string, formData: FormData) {
   const teeBoxes: {
     id: string | null;
     name: string;
-    slope: number;
-    course_rating: number;
-    par_total: number;
     length_meters: number | null;
-    gender: 'mens' | 'ladies' | 'juniors';
+    slope_mens: number | null;
+    course_rating_mens: number | null;
+    par_total_mens: number | null;
+    slope_ladies: number | null;
+    course_rating_ladies: number | null;
+    par_total_ladies: number | null;
+    slope_juniors: number | null;
+    course_rating_juniors: number | null;
+    par_total_juniors: number | null;
   }[] = [];
   for (let i = 0; i < 5; i++) {
     const teeName = String(formData.get(`tee_${i}_name`) ?? '').trim();
     if (!teeName) continue;
-    const slope = Number(formData.get(`tee_${i}_slope`));
-    const cr = Number(formData.get(`tee_${i}_cr`));
-    const parTotal = Number(formData.get(`tee_${i}_par_total`));
-    if (!Number.isInteger(slope) || slope < 55 || slope > 155) {
-      redirect(`${editPath}?error=bad_slope`);
-    }
-    if (!Number.isFinite(cr) || cr < 50 || cr > 80) {
-      redirect(`${editPath}?error=bad_cr`);
-    }
-    if (!Number.isInteger(parTotal) || parTotal < 60 || parTotal > 80) {
-      redirect(`${editPath}?error=bad_par_total`);
-    }
+
     // length_meters is optional. Empty / non-integer / out of range → NULL.
     // The DB has a CHECK between 1000 and 12000; we mirror that here so we
     // never trip it with garbage from the form.
@@ -84,18 +122,40 @@ export async function updateCourse(courseId: string, formData: FormData) {
         lengthMeters = parsed;
       }
     }
-    const genderRaw = String(formData.get(`tee_${i}_gender`) ?? 'mens');
-    const gender: 'mens' | 'ladies' | 'juniors' =
-      genderRaw === 'ladies' || genderRaw === 'juniors' ? genderRaw : 'mens';
+
+    // Per-gender rating: each set must be all-filled or all-empty.
+    for (const g of ['mens', 'ladies', 'juniors'] as const) {
+      if (isPartiallyFilled(formData, i, g)) {
+        redirect(`${editPath}?error=tee_partial_rating`);
+      }
+    }
+
+    const mensRating = parseGenderRating(formData, i, 'mens');
+    const ladiesRating = parseGenderRating(formData, i, 'ladies');
+    const juniorsRating = parseGenderRating(formData, i, 'juniors');
+
+    if (
+      !isCompleteRating(mensRating) &&
+      !isCompleteRating(ladiesRating) &&
+      !isCompleteRating(juniorsRating)
+    ) {
+      redirect(`${editPath}?error=tee_no_rating`);
+    }
+
     const teeId = String(formData.get(`tee_${i}_id`) ?? '') || null;
     teeBoxes.push({
       id: teeId,
       name: teeName,
-      slope,
-      course_rating: cr,
-      par_total: parTotal,
       length_meters: lengthMeters,
-      gender,
+      slope_mens: mensRating.slope,
+      course_rating_mens: mensRating.course_rating,
+      par_total_mens: mensRating.par_total,
+      slope_ladies: ladiesRating.slope,
+      course_rating_ladies: ladiesRating.course_rating,
+      par_total_ladies: ladiesRating.par_total,
+      slope_juniors: juniorsRating.slope,
+      course_rating_juniors: juniorsRating.course_rating,
+      par_total_juniors: juniorsRating.par_total,
     });
   }
   if (teeBoxes.length === 0) redirect(`${editPath}?error=tee_required`);
@@ -111,18 +171,16 @@ export async function updateCourse(courseId: string, formData: FormData) {
   const toDelete = [...existingIds].filter((id) => !formIds.has(id));
 
   if (toDelete.length > 0) {
-    // Block deletion if a tee is still referenced by games or by per-player
-    // game_players.tee_box_id overrides — the FK would refuse the delete anyway,
-    // but catching it here gives a friendly error instead of a 500.
-    const [{ data: gameRefs }, { data: gamePlayerRefs }] = await Promise.all([
-      supabase.from('games').select('id').in('tee_box_id', toDelete).limit(1),
-      supabase
-        .from('game_players')
-        .select('game_id')
-        .in('tee_box_id', toDelete)
-        .limit(1),
-    ]);
-    if ((gameRefs?.length ?? 0) > 0 || (gamePlayerRefs?.length ?? 0) > 0) {
+    // Block deletion if a tee is still referenced by games — the FK would
+    // refuse the delete anyway, but catching it here gives a friendly error
+    // instead of a 500. Per-player overrides moved off tee_box_id in 0029,
+    // so only games.tee_box_id remains.
+    const { data: gameRefs } = await supabase
+      .from('games')
+      .select('id')
+      .in('tee_box_id', toDelete)
+      .limit(1);
+    if ((gameRefs?.length ?? 0) > 0) {
       redirect(`${editPath}?error=tee_in_use`);
     }
   }
@@ -151,11 +209,16 @@ export async function updateCourse(courseId: string, formData: FormData) {
     const row = {
       course_id: courseId,
       name: tee.name,
-      slope: tee.slope,
-      course_rating: tee.course_rating,
-      par_total: tee.par_total,
       length_meters: tee.length_meters,
-      gender: tee.gender,
+      slope_mens: tee.slope_mens,
+      course_rating_mens: tee.course_rating_mens,
+      par_total_mens: tee.par_total_mens,
+      slope_ladies: tee.slope_ladies,
+      course_rating_ladies: tee.course_rating_ladies,
+      par_total_ladies: tee.par_total_ladies,
+      slope_juniors: tee.slope_juniors,
+      course_rating_juniors: tee.course_rating_juniors,
+      par_total_juniors: tee.par_total_juniors,
     };
     if (tee.id) {
       const { error } = await supabase

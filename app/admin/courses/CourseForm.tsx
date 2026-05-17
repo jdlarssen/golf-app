@@ -16,11 +16,16 @@ export type HoleData = {
 export type TeeBoxData = {
   id?: string;
   name: string;
-  slope: string;
-  course_rating: string;
-  par_total: string;
   length_meters: string;
-  gender: 'mens' | 'ladies' | 'juniors';
+  slope_mens: string;
+  course_rating_mens: string;
+  par_total_mens: string;
+  slope_ladies: string;
+  course_rating_ladies: string;
+  par_total_ladies: string;
+  slope_juniors: string;
+  course_rating_juniors: string;
+  par_total_juniors: string;
 };
 
 export type CourseFormInitialData = {
@@ -48,11 +53,16 @@ const DEFAULT_HOLES: HoleData[] = Array.from({ length: 18 }, (_, i) => ({
 
 const DEFAULT_TEE: TeeBoxData = {
   name: '',
-  slope: '113',
-  course_rating: '70.0',
-  par_total: '72',
   length_meters: '',
-  gender: 'mens',
+  slope_mens: '113',
+  course_rating_mens: '70.0',
+  par_total_mens: '72',
+  slope_ladies: '',
+  course_rating_ladies: '',
+  par_total_ladies: '',
+  slope_juniors: '',
+  course_rating_juniors: '',
+  par_total_juniors: '',
 };
 
 const MAX_TEE_BOXES = 7;
@@ -163,8 +173,12 @@ export function CourseForm({
           {teeBoxes.map((tee, index) => (
             <div
               key={index}
-              className="border border-border rounded-xl p-4 space-y-3"
+              className="border border-border rounded-xl p-4 space-y-4"
             >
+              {tee.id && (
+                <input type="hidden" name={`tee_${index}_id`} value={tee.id} />
+              )}
+
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-text">
                   Tee-boks {index + 1}
@@ -179,37 +193,7 @@ export function CourseForm({
                   </button>
                 )}
               </div>
-              {tee.id && (
-                <input type="hidden" name={`tee_${index}_id`} value={tee.id} />
-              )}
 
-              <fieldset>
-                <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-                  For hvem
-                </legend>
-                <div className="mt-2 grid grid-cols-3 gap-2">
-                  {(['mens', 'ladies', 'juniors'] as const).map((g) => (
-                    <label
-                      key={g}
-                      className={`flex items-center justify-center rounded-xl border px-3 py-2 text-sm cursor-pointer transition-colors ${
-                        tee.gender === g
-                          ? 'border-accent bg-accent/10 text-text font-medium'
-                          : 'border-border bg-surface text-muted hover:text-text'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name={`tee_${index}_gender`}
-                        value={g}
-                        checked={tee.gender === g}
-                        onChange={() => updateTee(index, { gender: g })}
-                        className="sr-only"
-                      />
-                      {g === 'mens' ? 'Herrer' : g === 'ladies' ? 'Damer' : 'Junior'}
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
               <Input
                 id={`tee_${index}_name`}
                 name={`tee_${index}_name`}
@@ -220,56 +204,7 @@ export function CourseForm({
                 onChange={(e) => updateTee(index, { name: e.target.value })}
                 required
               />
-              <div className="grid grid-cols-2 gap-3">
-                <Input
-                  id={`tee_${index}_slope`}
-                  name={`tee_${index}_slope`}
-                  type="number"
-                  inputMode="numeric"
-                  min={55}
-                  max={155}
-                  step={1}
-                  label="Slope"
-                  placeholder="113"
-                  value={tee.slope}
-                  onChange={(e) =>
-                    updateTee(index, { slope: e.target.value })
-                  }
-                  required
-                />
-                <Input
-                  id={`tee_${index}_cr`}
-                  name={`tee_${index}_cr`}
-                  type="number"
-                  inputMode="decimal"
-                  min={50}
-                  max={80}
-                  step={0.1}
-                  label="Course rating"
-                  placeholder="70.0"
-                  value={tee.course_rating}
-                  onChange={(e) =>
-                    updateTee(index, { course_rating: e.target.value })
-                  }
-                  required
-                />
-              </div>
-              <Input
-                id={`tee_${index}_par_total`}
-                name={`tee_${index}_par_total`}
-                type="number"
-                inputMode="numeric"
-                min={60}
-                max={80}
-                step={1}
-                label="Par total"
-                placeholder="72"
-                value={tee.par_total}
-                onChange={(e) =>
-                  updateTee(index, { par_total: e.target.value })
-                }
-                required
-              />
+
               <Input
                 id={`tee_${index}_length_meters`}
                 name={`tee_${index}_length_meters`}
@@ -286,6 +221,73 @@ export function CourseForm({
                   updateTee(index, { length_meters: e.target.value })
                 }
               />
+
+              <div className="space-y-3">
+                <p className="text-xs text-muted">
+                  Fyll inn rating for hver gender som spiller fra denne teen. Minst én må være komplett.
+                </p>
+
+                {(['mens', 'ladies', 'juniors'] as const).map((g) => {
+                  const label = g === 'mens' ? 'Herrer' : g === 'ladies' ? 'Damer' : 'Junior';
+                  return (
+                    <fieldset
+                      key={g}
+                      className="border border-border/60 rounded-lg p-3 space-y-3"
+                    >
+                      <legend className="px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+                        {label}
+                      </legend>
+                      <div className="grid grid-cols-3 gap-2">
+                        <Input
+                          id={`tee_${index}_slope_${g}`}
+                          name={`tee_${index}_slope_${g}`}
+                          type="number"
+                          inputMode="numeric"
+                          min={55}
+                          max={155}
+                          step={1}
+                          label="Slope"
+                          placeholder={g === 'mens' ? '113' : ''}
+                          value={tee[`slope_${g}` as const]}
+                          onChange={(e) =>
+                            updateTee(index, { [`slope_${g}`]: e.target.value } as Partial<TeeBoxData>)
+                          }
+                        />
+                        <Input
+                          id={`tee_${index}_cr_${g}`}
+                          name={`tee_${index}_cr_${g}`}
+                          type="number"
+                          inputMode="decimal"
+                          min={50}
+                          max={80}
+                          step={0.1}
+                          label="CR"
+                          placeholder={g === 'mens' ? '70.0' : ''}
+                          value={tee[`course_rating_${g}` as const]}
+                          onChange={(e) =>
+                            updateTee(index, { [`course_rating_${g}`]: e.target.value } as Partial<TeeBoxData>)
+                          }
+                        />
+                        <Input
+                          id={`tee_${index}_par_${g}`}
+                          name={`tee_${index}_par_${g}`}
+                          type="number"
+                          inputMode="numeric"
+                          min={60}
+                          max={80}
+                          step={1}
+                          label="Par"
+                          placeholder={g === 'mens' ? '72' : ''}
+                          value={tee[`par_total_${g}` as const]}
+                          onChange={(e) =>
+                            updateTee(index, { [`par_total_${g}`]: e.target.value } as Partial<TeeBoxData>)
+                          }
+                        />
+                      </div>
+                    </fieldset>
+                  );
+                })}
+              </div>
             </div>
           ))}
         </div>

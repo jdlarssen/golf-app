@@ -19,10 +19,11 @@ const ERROR_MESSAGES: Record<string, string> = {
   bad_par: 'Par må være et helt tall mellom 3 og 6 på hvert hull.',
   bad_si: 'Stroke-indeks må være et helt tall mellom 1 og 18 på hvert hull.',
   si_duplicate: 'Stroke-indeks 1–18 må brukes nøyaktig én gang hver.',
-  bad_slope: 'Slope må være et helt tall mellom 55 og 155.',
-  bad_cr: 'Course rating må være et tall mellom 50 og 80.',
-  bad_par_total: 'Par total må være et helt tall mellom 60 og 80.',
   tee_required: 'Minst én tee-boks må legges til.',
+  tee_partial_rating:
+    'Tee må ha enten alle eller ingen av slope/CR/par for hver gender — ikke noe imellom.',
+  tee_no_rating:
+    'Hver tee må ha minst én komplett gender-rating (Herrer / Damer / Junior).',
   tee_in_use: 'Kan ikke fjerne tee — den brukes i ett eller flere spill.',
   db_course:
     'Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.',
@@ -126,9 +127,11 @@ async function EditCourseFormBody({
       .order('hole_number', { ascending: true }),
     supabase
       .from('tee_boxes')
-      .select('id, name, slope, course_rating, par_total, length_meters, gender')
+      .select(
+        'id, name, length_meters, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors',
+      )
       .eq('course_id', courseId)
-      .order('slope', { ascending: true }),
+      .order('name', { ascending: true }),
   ]);
 
   if (holesResult.error) throw holesResult.error;
@@ -145,11 +148,21 @@ async function EditCourseFormBody({
   const initialTees = (teesResult.data ?? []).map((t) => ({
     id: t.id,
     name: t.name,
-    slope: String(t.slope),
-    course_rating: String(t.course_rating),
-    par_total: String(t.par_total),
     length_meters: t.length_meters == null ? '' : String(t.length_meters),
-    gender: t.gender,
+    slope_mens: t.slope_mens == null ? '' : String(t.slope_mens),
+    course_rating_mens:
+      t.course_rating_mens == null ? '' : String(t.course_rating_mens),
+    par_total_mens: t.par_total_mens == null ? '' : String(t.par_total_mens),
+    slope_ladies: t.slope_ladies == null ? '' : String(t.slope_ladies),
+    course_rating_ladies:
+      t.course_rating_ladies == null ? '' : String(t.course_rating_ladies),
+    par_total_ladies:
+      t.par_total_ladies == null ? '' : String(t.par_total_ladies),
+    slope_juniors: t.slope_juniors == null ? '' : String(t.slope_juniors),
+    course_rating_juniors:
+      t.course_rating_juniors == null ? '' : String(t.course_rating_juniors),
+    par_total_juniors:
+      t.par_total_juniors == null ? '' : String(t.par_total_juniors),
   }));
 
   // Pre-bind the course id so the form's action handler only deals with the

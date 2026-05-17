@@ -13,10 +13,11 @@ const ERROR_MESSAGES: Record<string, string> = {
   bad_par: 'Par må være et helt tall mellom 3 og 6 på hvert hull.',
   bad_si: 'Stroke-indeks må være et helt tall mellom 1 og 18 på hvert hull.',
   si_duplicate: 'Stroke-indeks 1–18 må brukes nøyaktig én gang hver.',
-  bad_slope: 'Slope må være et helt tall mellom 55 og 155.',
-  bad_cr: 'Course rating må være et tall mellom 50 og 80.',
-  bad_par_total: 'Par total må være et helt tall mellom 60 og 80.',
   tee_required: 'Minst én tee-boks må legges til.',
+  tee_partial_rating:
+    'Tee må ha enten alle eller ingen av slope/CR/par for hver gender — ikke noe imellom.',
+  tee_no_rating:
+    'Hver tee må ha minst én komplett gender-rating (Herrer / Damer / Junior).',
   db_course:
     'Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.',
   db_holes:
