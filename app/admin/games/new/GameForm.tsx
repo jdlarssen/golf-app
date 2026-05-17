@@ -13,8 +13,12 @@ import {
 export type CourseOption = {
   id: string;
   name: string;
-  tee_boxes: { id: string; name: string }[];
+  tee_boxes: { id: string; name: string; gender: 'mens' | 'ladies' | 'juniors' }[];
 };
+
+function genderLabel(g: 'mens' | 'ladies' | 'juniors'): string {
+  return g === 'mens' ? 'herre' : g === 'ladies' ? 'dame' : 'junior';
+}
 
 export type PlayerOption = {
   id: string;
@@ -61,6 +65,10 @@ export type InitialValues = {
   side_disabled_categories?: readonly SideCategoryId[];
   /** Lås feltene (når status er active/finished). */
   lock_side_tournament?: boolean;
+  /** Optional ladies-tee for mixed-gender games. Empty/undefined = no D-tee. */
+  tee_box_id_ladies?: string;
+  /** Per-player tee selection. Missing key defaults to 'M' in the form state. */
+  player_genders?: Record<string, 'M' | 'D'>;
   players?: Array<{
     user_id: string;
     // Widened to `number` at the prop boundary; deriveAssignmentsFromInitial
@@ -156,6 +164,12 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   );
   const [teeBoxId, setTeeBoxId] = useState<string>(
     initialValues?.tee_box_id ?? '',
+  );
+  const [teeBoxIdLadies, setTeeBoxIdLadies] = useState<string>(
+    initialValues?.tee_box_id_ladies ?? '',
+  );
+  const [playerGenders, setPlayerGenders] = useState<Record<string, 'M' | 'D'>>(
+    initialValues?.player_genders ?? {},
   );
   // Required for "Lagre og publiser"; drives the button's disabled state via
   // `canPublish` below. Drafts may omit it. Empty string === "not set".
@@ -535,6 +549,8 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             onChange={(e) => {
               setCourseId(e.target.value);
               setTeeBoxId('');
+              setTeeBoxIdLadies('');
+              setPlayerGenders({});
             }}
             required
             className="w-full rounded-xl border px-3.5 py-2.5 bg-surface text-text border-border focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
@@ -549,11 +565,8 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
         </div>
 
         <div>
-          <label
-            htmlFor="tee_box_id"
-            className="block text-sm font-medium text-text mb-1.5"
-          >
-            Tee-boks
+          <label htmlFor="tee_box_id" className="block text-sm font-medium text-text mb-1.5">
+            Tee for herrer
           </label>
           <select
             id="tee_box_id"
@@ -564,14 +577,37 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             required
             className="w-full rounded-xl border px-3.5 py-2.5 bg-surface text-text border-border focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150 disabled:opacity-50"
           >
-            <option value="">
-              {selectedCourse ? 'Velg tee-boks…' : 'Velg bane først'}
-            </option>
-            {availableTees.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
+            <option value="">{selectedCourse ? 'Velg tee-boks…' : 'Velg bane først'}</option>
+            {availableTees
+              .filter((t) => t.gender !== 'ladies')
+              .map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name} ({genderLabel(t.gender)})
+                </option>
+              ))}
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="tee_box_id_ladies" className="block text-sm font-medium text-text mb-1.5">
+            Tee for damer <span className="text-muted text-xs font-normal">(valgfri)</span>
+          </label>
+          <select
+            id="tee_box_id_ladies"
+            name="tee_box_id_ladies"
+            value={teeBoxIdLadies}
+            onChange={(e) => setTeeBoxIdLadies(e.target.value)}
+            disabled={!selectedCourse}
+            className="w-full rounded-xl border px-3.5 py-2.5 bg-surface text-text border-border focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150 disabled:opacity-50"
+          >
+            <option value="">— ingen separat dame-tee —</option>
+            {availableTees
+              .filter((t) => t.gender === 'ladies')
+              .map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name} (dame)
+                </option>
+              ))}
           </select>
         </div>
 
@@ -883,6 +919,33 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
                     <span className="text-sm text-text flex-1 truncate">
                       {shortName(p)}
                     </span>
+                    {teeBoxIdLadies && (
+                      <div className="flex gap-1" role="group" aria-label="Tee for spiller">
+                        {(['M', 'D'] as const).map((g) => (
+                          <button
+                            key={g}
+                            type="button"
+                            onClick={() =>
+                              setPlayerGenders((prev) => ({ ...prev, [pid]: g }))
+                            }
+                            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                              (playerGenders[pid] ?? 'M') === g
+                                ? g === 'M'
+                                  ? 'bg-primary text-white'
+                                  : 'bg-accent text-text'
+                                : 'bg-surface border border-border text-muted hover:text-text'
+                            }`}
+                          >
+                            {g}
+                          </button>
+                        ))}
+                        <input
+                          type="hidden"
+                          name={`player_${pid}_gender`}
+                          value={playerGenders[pid] ?? 'M'}
+                        />
+                      </div>
+                    )}
                     <select
                       value={flight}
                       onChange={(e) =>

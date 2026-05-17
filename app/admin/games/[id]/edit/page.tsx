@@ -50,7 +50,7 @@ function buildErrorMessage(
 type CourseRow = {
   id: string;
   name: string;
-  tee_boxes: { id: string; name: string }[];
+  tee_boxes: { id: string; name: string; gender: 'mens' | 'ladies' | 'juniors' }[];
 };
 
 type UserRow = {
@@ -85,6 +85,7 @@ type GamePlayerRow = {
   user_id: string;
   team_number: number;
   flight_number: number;
+  tee_box_id: string | null;
 };
 
 // `datetime-local` inputs want 'YYYY-MM-DDTHH:mm' in browser-local time, but
@@ -205,7 +206,7 @@ const getOptions = cache(async () => {
   const [coursesResult, usersResult] = await Promise.all([
     supabase
       .from('courses')
-      .select('id, name, tee_boxes(id, name)')
+      .select('id, name, tee_boxes(id, name, gender)')
       .order('name', { ascending: true })
       .returns<CourseRow[]>(),
     supabase
@@ -222,7 +223,7 @@ const getOptions = cache(async () => {
     id: c.id,
     name: c.name,
     tee_boxes: (c.tee_boxes ?? [])
-      .map((t) => ({ id: t.id, name: t.name }))
+      .map((t) => ({ id: t.id, name: t.name, gender: t.gender }))
       .sort((a, b) => a.name.localeCompare(b.name, 'no')),
   }));
 
@@ -267,7 +268,7 @@ async function EditGameFormBody({
     getOptions(),
     supabase
       .from('game_players')
-      .select('user_id, team_number, flight_number')
+      .select('user_id, team_number, flight_number, tee_box_id')
       .eq('game_id', gameId)
       .returns<GamePlayerRow[]>(),
   ]);
@@ -282,6 +283,19 @@ async function EditGameFormBody({
   const loadedDisabledCategories: SideCategoryId[] = (
     game.side_disabled_categories ?? []
   ).filter((id): id is SideCategoryId => validIds.has(id));
+
+  const playerRows = playersResult.data ?? [];
+  // The ladies-tee is whichever non-null `tee_box_id` on the roster differs
+  // from the game's default tee. Today's payload writes the same id to every
+  // D-player so any matching row is authoritative.
+  const ladiesTeeId =
+    playerRows.find((p) => p.tee_box_id && p.tee_box_id !== game.tee_box_id)
+      ?.tee_box_id ?? null;
+  const playerGenders: Record<string, 'M' | 'D'> = {};
+  for (const p of playerRows) {
+    playerGenders[p.user_id] =
+      ladiesTeeId !== null && p.tee_box_id === ladiesTeeId ? 'D' : 'M';
+  }
 
   const initialValues: InitialValues = {
     name: game.name,
@@ -312,7 +326,9 @@ async function EditGameFormBody({
     // active/finished games never reach this branch. Future-proofed for a
     // hypothetical read-only view of locked games.
     lock_side_tournament: false,
-    players: (playersResult.data ?? []).map((p) => ({
+    tee_box_id_ladies: ladiesTeeId ?? undefined,
+    player_genders: playerGenders,
+    players: playerRows.map((p) => ({
       user_id: p.user_id,
       team_number: p.team_number,
       flight_number: p.flight_number,

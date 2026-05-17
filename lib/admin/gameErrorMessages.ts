@@ -45,6 +45,8 @@ export const ERROR_MESSAGES_NEW_GAME: Record<string, string> = {
   team_balance: 'Hvert lag må ha nøyaktig 2 spillere.',
   bad_side_ld_count: 'Antall longest-drive-vinnere må være 0, 1 eller 2.',
   bad_side_ctp_count: 'Antall closest-to-pin-vinnere må være 0, 1 eller 2.',
+  bad_ladies_tee:
+    'Dame-tee må tilhøre samme bane og være merket som dame-tee.',
   /**
    * The new-game page originally said «ved publisering» while the edit page
    * said just «er påkrevd». The shared copy uses the broader form so it reads

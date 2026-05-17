@@ -77,19 +77,32 @@ export async function startGame(gameId: string) {
   if (gameError || !game) redirect(`${detailPath}?error=not_found`);
   if (game!.status !== 'draft') redirect(`${detailPath}?error=not_draft`);
 
-  const { data: tee, error: teeError } = await supabase
-    .from('tee_boxes')
-    .select('slope, course_rating, par_total')
-    .eq('id', game!.tee_box_id)
-    .single();
-  if (teeError || !tee) redirect(`${detailPath}?error=db_tee`);
-
   const { data: gamePlayers, error: gpError } = await supabase
     .from('game_players')
-    .select('user_id, users(hcp_index)')
+    .select('user_id, tee_box_id, users(hcp_index)')
     .eq('game_id', gameId)
-    .returns<{ user_id: string; users: { hcp_index: number | string } | null }[]>();
+    .returns<
+      {
+        user_id: string;
+        tee_box_id: string | null;
+        users: { hcp_index: number | string } | null;
+      }[]
+    >();
   if (gpError || !gamePlayers) redirect(`${detailPath}?error=db_roster`);
+
+  const teeIds = new Set<string>([game!.tee_box_id]);
+  for (const row of gamePlayers!) {
+    if (row.tee_box_id) teeIds.add(row.tee_box_id);
+  }
+  const { data: tees, error: teesError } = await supabase
+    .from('tee_boxes')
+    .select('id, slope, course_rating, par_total')
+    .in('id', [...teeIds])
+    .returns<
+      { id: string; slope: number; course_rating: number | string; par_total: number }[]
+    >();
+  if (teesError || !tees) redirect(`${detailPath}?error=db_tee`);
+  const teeById = new Map(tees!.map((t) => [t.id, t]));
 
   // Defence-in-depth: refuse to flip a draft to active if any roster player
   // is still pending profile completion. Mirrors the gate in
@@ -111,14 +124,17 @@ export async function startGame(gameId: string) {
     redirect(`${detailPath}?${qs.toString()}`);
   }
 
-  // Freeze a course handicap per player using the configured allowance.
+  // Freeze a course handicap per player using each player's resolved tee
+  // (per-row override falls back to the game default).
   for (const row of gamePlayers!) {
     if (!row.users) continue;
+    const playerTee = teeById.get(row.tee_box_id ?? game!.tee_box_id);
+    if (!playerTee) redirect(`${detailPath}?error=db_tee`);
     const raw = calculateCourseHandicap({
       hcpIndex: Number(row.users.hcp_index),
-      slope: tee!.slope,
-      courseRating: Number(tee!.course_rating),
-      par: tee!.par_total,
+      slope: playerTee!.slope,
+      courseRating: Number(playerTee!.course_rating),
+      par: playerTee!.par_total,
     });
     const allowed = applyAllowance(raw, game!.hcp_allowance_pct);
     const { error: updateError } = await supabase

@@ -34,7 +34,7 @@ function buildErrorMessage(
 type CourseRow = {
   id: string;
   name: string;
-  tee_boxes: { id: string; name: string }[];
+  tee_boxes: { id: string; name: string; gender: 'mens' | 'ladies' | 'juniors' }[];
 };
 
 type UserRow = {
@@ -59,7 +59,7 @@ const getFormData = cache(async () => {
   const [coursesResult, usersResult] = await Promise.all([
     supabase
       .from('courses')
-      .select('id, name, tee_boxes(id, name)')
+      .select('id, name, tee_boxes(id, name, gender)')
       .order('name', { ascending: true })
       .returns<CourseRow[]>(),
     supabase
@@ -77,7 +77,7 @@ const getFormData = cache(async () => {
     id: c.id,
     name: c.name,
     tee_boxes: (c.tee_boxes ?? [])
-      .map((t) => ({ id: t.id, name: t.name }))
+      .map((t) => ({ id: t.id, name: t.name, gender: t.gender }))
       .sort((a, b) => a.name.localeCompare(b.name, 'no')),
   }));
 

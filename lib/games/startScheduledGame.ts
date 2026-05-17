@@ -47,15 +47,16 @@ export async function startScheduledGame(
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, status, hcp_allowance_pct, tee_boxes(slope, course_rating, par_total)',
+      'id, status, hcp_allowance_pct, tee_box_id, tee_boxes(id, slope, course_rating, par_total)',
     )
     .eq('id', gameId)
     .single<{
       id: string;
       status: GameStatus;
       hcp_allowance_pct: number;
+      tee_box_id: string | null;
       tee_boxes:
-        | { slope: number; course_rating: number; par_total: number }
+        | { id: string; slope: number; course_rating: number; par_total: number }
         | null;
     }>();
   if (gameError || !game) return { ok: false, reason: 'not_found' };
@@ -68,20 +69,65 @@ export async function startScheduledGame(
     }
     return { ok: false, reason: 'not_scheduled' };
   }
-  const tee = game.tee_boxes;
-  if (!tee) return { ok: false, reason: 'tee_missing' };
+  const defaultTee = game.tee_boxes;
+  if (!defaultTee || !game.tee_box_id) return { ok: false, reason: 'tee_missing' };
 
-  // 2. Load all players + their hcp_index.
+  // 2. Load all players + their hcp_index + per-player tee override.
   const { data: roster, error: rosterError } = await supabase
     .from('game_players')
-    .select('user_id, users!game_players_user_id_fkey(hcp_index)')
+    .select(
+      'user_id, tee_box_id, users!game_players_user_id_fkey(hcp_index)',
+    )
     .eq('game_id', gameId)
     .returns<
-      { user_id: string; users: { hcp_index: number | string } | null }[]
+      {
+        user_id: string;
+        tee_box_id: string | null;
+        users: { hcp_index: number | string } | null;
+      }[]
     >();
   if (rosterError) return { ok: false, reason: 'db_players' };
   if (!roster || roster.length === 0) {
     return { ok: false, reason: 'no_players' };
+  }
+
+  // Load any per-player tee overrides that differ from the game default. The
+  // default tee is already in `defaultTee`; only fetch extras to keep the
+  // round-trip small.
+  const overrideTeeIds = Array.from(
+    new Set(
+      roster
+        .map((r) => r.tee_box_id)
+        .filter((id): id is string => id !== null && id !== game.tee_box_id),
+    ),
+  );
+  const teeById = new Map<
+    string,
+    { id: string; slope: number; course_rating: number; par_total: number }
+  >();
+  teeById.set(defaultTee.id, defaultTee);
+  if (overrideTeeIds.length > 0) {
+    const { data: extraTees, error: extraTeesError } = await supabase
+      .from('tee_boxes')
+      .select('id, slope, course_rating, par_total')
+      .in('id', overrideTeeIds)
+      .returns<
+        {
+          id: string;
+          slope: number;
+          course_rating: number | string;
+          par_total: number;
+        }[]
+      >();
+    if (extraTeesError || !extraTees) return { ok: false, reason: 'tee_missing' };
+    for (const t of extraTees) {
+      teeById.set(t.id, {
+        id: t.id,
+        slope: t.slope,
+        course_rating: Number(t.course_rating),
+        par_total: t.par_total,
+      });
+    }
   }
 
   // Defence-in-depth: refuse to start if any roster player is still pending
@@ -104,16 +150,18 @@ export async function startScheduledGame(
     };
   }
 
-  // 3. Compute course_handicap per player, then write it back. Supabase
-  //    returns numerics as strings in some configs, hence the Number()
-  //    coercions on hcp_index and course_rating.
+  // 3. Compute course_handicap per player using each player's resolved tee.
+  //    Supabase returns numerics as strings in some configs, hence the
+  //    Number() coercions on hcp_index and course_rating.
   for (const row of roster) {
     if (!row.users) continue; // defensive — FK constraint should prevent this
+    const playerTee = teeById.get(row.tee_box_id ?? game.tee_box_id);
+    if (!playerTee) return { ok: false, reason: 'tee_missing' };
     const raw = calculateCourseHandicap({
       hcpIndex: Number(row.users.hcp_index),
-      slope: tee.slope,
-      courseRating: Number(tee.course_rating),
-      par: tee.par_total,
+      slope: playerTee.slope,
+      courseRating: Number(playerTee.course_rating),
+      par: playerTee.par_total,
     });
     const allowed = applyAllowance(raw, game.hcp_allowance_pct);
     const { error: updateError } = await supabase

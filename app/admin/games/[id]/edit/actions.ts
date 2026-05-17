@@ -9,6 +9,7 @@ import {
 } from '@/lib/games/gamePayload';
 import { findPendingPlayers } from '@/lib/games/pendingPlayers';
 import { parseSideTournamentFromFormData } from '@/lib/games/sideTournamentPayload';
+import { resolvePlayerTeeId } from '@/lib/games/teeResolution';
 
 type UpdateMode = 'save_draft' | 'publish' | 'update_scheduled';
 
@@ -73,6 +74,9 @@ async function updateGameInternal(
     disabledCategories: sideDisabledCategories,
   } = sideResult.payload;
 
+  const teeBoxIdLadies =
+    String(formData.get('tee_box_id_ladies') ?? '').trim() || null;
+
   const supabase = await getServerClient();
   const {
     data: { user },
@@ -85,6 +89,22 @@ async function updateGameInternal(
     .eq('id', user.id)
     .single();
   if (!profile?.is_admin) redirect('/');
+
+  if (teeBoxIdLadies && payload.course_id) {
+    const { data: ladiesTee, error: ladiesTeeErr } = await supabase
+      .from('tee_boxes')
+      .select('id, course_id, gender')
+      .eq('id', teeBoxIdLadies)
+      .single<{ id: string; course_id: string; gender: 'mens' | 'ladies' | 'juniors' }>();
+    if (
+      ladiesTeeErr ||
+      !ladiesTee ||
+      ladiesTee.course_id !== payload.course_id ||
+      ladiesTee.gender !== 'ladies'
+    ) {
+      redirect(`/admin/games/${gameId}/edit?error=bad_ladies_tee`);
+    }
+  }
 
   if (mode === 'publish' || mode === 'update_scheduled') {
     const { data: rosterUsers, error: rosterErr } = await supabase
@@ -167,15 +187,20 @@ async function updateGameInternal(
   }
 
   if (payload.players.length > 0) {
-    const rows = payload.players.map((p) => ({
-      game_id: gameId,
-      user_id: p.user_id,
-      team_number: p.team_number,
-      flight_number: p.flight_number,
-      // Same rule as the publish path: handicaps are frozen at D5
-      // (Start runden nå), not at edit-time.
-      course_handicap: null,
-    }));
+    const rows = payload.players.map((p) => {
+      const playerGender: 'M' | 'D' =
+        String(formData.get(`player_${p.user_id}_gender`) ?? '') === 'D' ? 'D' : 'M';
+      return {
+        game_id: gameId,
+        user_id: p.user_id,
+        team_number: p.team_number,
+        flight_number: p.flight_number,
+        tee_box_id: resolvePlayerTeeId(playerGender, teeBoxIdLadies),
+        // Same rule as the publish path: handicaps are frozen at D5
+        // (Start runden nå), not at edit-time.
+        course_handicap: null,
+      };
+    });
     const { error: insertError } = await supabase
       .from('game_players')
       .insert(rows);
