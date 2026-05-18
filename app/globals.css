@@ -538,6 +538,25 @@ h1, h2, h3, h4, h5, h6 {
       opacity: 1;
     }
   }
+
+  /* Hole-page transition — fade-and-tiny-slide on hull-bytte.
+   * Mounted on hole-page wrapper with `key={holeNumber}` so React re-mounts
+   * the element when navigating between holes, restarting the animation.
+   * 180ms keeps rapid hull-switching snappy. */
+  @keyframes hole-fade-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .animate-hole-enter {
+    animation: hole-fade-in 180ms ease-out both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-hole-enter {
+      animation: none;
+      opacity: 1;
+    }
+  }
 }
 
 @media (prefers-color-scheme: dark) {

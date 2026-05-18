@@ -132,7 +132,8 @@ export default async function HolePage({ params }: { params: Params }) {
 
   return (
     <div
-      className="min-h-screen bg-bg flex flex-col"
+      key={holeNumber}
+      className="min-h-screen bg-bg flex flex-col animate-hole-enter"
       style={{ paddingTop: 54, paddingBottom: 34 }}
     >
       <HoleClient
