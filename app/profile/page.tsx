@@ -248,6 +248,24 @@ function HistorikkCard() {
           </SmartLink>
         </div>
       </Card>
+      <Card>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-serif text-base font-medium text-text">
+              Klubbstatistikker
+            </h2>
+            <p className="text-sm text-muted mt-0.5">
+              Vinnerliste og mest aktive — på tvers av alle spill
+            </p>
+          </div>
+          <SmartLink
+            href="/profile/statistikk"
+            className="shrink-0 ml-4 rounded-full border border-border bg-surface px-4 py-2 font-sans text-[13px] font-medium text-text hover:bg-bg transition-colors"
+          >
+            Se topp 10
+          </SmartLink>
+        </div>
+      </Card>
     </div>
   );
 }
