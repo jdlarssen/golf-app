@@ -1,0 +1,142 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import {
+  buildSupabaseMock,
+  makeRedirectMock,
+  RedirectError,
+} from '@/tests/serverActionMocks';
+
+/**
+ * Unit tests for `submitScorecard`.
+ *
+ * Mocking approach (shared across all four server-action test files):
+ * - `redirect` from `next/navigation` throws `RedirectError` so callers
+ *   never run code past a redirect. Tests catch and inspect the URL.
+ * - `next/cache` revalidate helpers are no-op spies.
+ * - `getServerClient` returns a chainable fake whose query results come
+ *   from a per-test FIFO queue.
+ */
+
+const redirectMock = makeRedirectMock();
+vi.mock('next/navigation', () => ({
+  redirect: (url: string) => redirectMock(url),
+}));
+
+const revalidatePathMock = vi.fn();
+const revalidateTagMock = vi.fn();
+vi.mock('next/cache', () => ({
+  revalidatePath: (...args: unknown[]) => revalidatePathMock(...args),
+  revalidateTag: (...args: unknown[]) => revalidateTagMock(...args),
+}));
+
+const sendScorecardSubmittedNotificationMock =
+  vi.fn<(...args: unknown[]) => Promise<unknown>>(async () => ({ ok: true }));
+vi.mock('@/lib/mail/scorecardSubmittedNotification', () => ({
+  sendScorecardSubmittedNotification: (...args: unknown[]) =>
+    sendScorecardSubmittedNotificationMock(...args),
+}));
+
+let supabaseMock: ReturnType<typeof buildSupabaseMock>;
+vi.mock('@/lib/supabase/server', () => ({
+  getServerClient: async () => supabaseMock,
+}));
+
+function lastRedirect(): string | undefined {
+  return redirectMock.mock.calls.at(-1)?.[0];
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+describe('submitScorecard', () => {
+  it('redirects to /login when no user is authenticated (auth gate)', async () => {
+    supabaseMock = buildSupabaseMock([]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: null },
+    });
+
+    const { submitScorecard } = await import('./actions');
+
+    await expect(submitScorecard('game-1')).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+    expect(redirectMock).toHaveBeenCalledWith('/login');
+  });
+
+  it('redirects with ?error=not_active when game status is not active (validation)', async () => {
+    supabaseMock = buildSupabaseMock([
+      // Game lookup: status is 'finished' (not 'active').
+      { data: { name: 'Test', status: 'finished' }, error: null },
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'user-1' } },
+    });
+
+    const { submitScorecard } = await import('./actions');
+
+    await expect(submitScorecard('game-1')).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+    expect(lastRedirect()).toBe('/games/game-1/submit?error=not_active');
+  });
+
+  it('happy path: marks submitted_at, notifies admins (filters self), redirects with ?status=submitted', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { name: 'Vinter-cup', status: 'active' }, error: null },
+      { data: null, error: null }, // UPDATE game_players
+      { data: { name: 'Ola Nordmann' }, error: null }, // submitter name
+      {
+        // admins list
+        data: [
+          { id: 'admin-1', email: 'jorgen@tornygolf.no', name: 'Jørgen' },
+          { id: 'user-1', email: 'ola@example.com', name: 'Ola Nordmann' },
+        ],
+        error: null,
+      },
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'user-1' } },
+    });
+
+    const { submitScorecard } = await import('./actions');
+
+    await expect(submitScorecard('game-1')).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+    expect(revalidatePathMock).toHaveBeenCalledWith('/games/game-1');
+
+    // Submitter (user-1) is filtered out — only Jørgen receives mail.
+    expect(sendScorecardSubmittedNotificationMock).toHaveBeenCalledTimes(1);
+    expect(sendScorecardSubmittedNotificationMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'jorgen@tornygolf.no',
+        playerName: 'Ola Nordmann',
+        gameName: 'Vinter-cup',
+        gameId: 'game-1',
+      }),
+    );
+
+    expect(lastRedirect()).toBe('/games/game-1?status=submitted');
+  });
+
+  it('edge case: redirects with ?error=db when the update returns an error', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { name: 'Test', status: 'active' }, error: null },
+      { data: null, error: { message: 'permission denied' } }, // UPDATE fails
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'user-1' } },
+    });
+
+    const { submitScorecard } = await import('./actions');
+
+    await expect(submitScorecard('game-1')).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+    expect(lastRedirect()).toBe('/games/game-1/submit?error=db');
+    // Mail must NOT fire on a DB error — pre-redirect short-circuit.
+    expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
+  });
+});
