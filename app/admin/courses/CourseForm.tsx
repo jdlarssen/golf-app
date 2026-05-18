@@ -65,7 +65,7 @@ const DEFAULT_TEE: TeeBoxData = {
   par_total_juniors: '',
 };
 
-const MAX_TEE_BOXES = 7;
+export const MAX_TEE_BOXES = 7;
 
 export function CourseForm({
   action,

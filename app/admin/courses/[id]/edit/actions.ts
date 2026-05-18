@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
+import { MAX_TEE_BOXES } from '@/app/admin/courses/CourseForm';
 
 type GenderRating = {
   slope: number | null;
@@ -103,7 +104,7 @@ export async function updateCourse(courseId: string, formData: FormData) {
     course_rating_juniors: number | null;
     par_total_juniors: number | null;
   }[] = [];
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < MAX_TEE_BOXES; i++) {
     const teeName = String(formData.get(`tee_${i}_name`) ?? '').trim();
     if (!teeName) continue;
 

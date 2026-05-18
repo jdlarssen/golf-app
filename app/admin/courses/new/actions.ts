@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
+import { MAX_TEE_BOXES } from '@/app/admin/courses/CourseForm';
 
 type GenderRating = {
   slope: number | null;
@@ -89,8 +90,8 @@ export async function createCourse(formData: FormData) {
     redirect('/admin/courses/new?error=si_duplicate');
   }
 
-  // Parse tee boxes. Rows with an empty name are skipped — the form sends
-  // five slots but only the populated ones count.
+  // Parse tee boxes. Rows with an empty name are skipped — the form sends up
+  // to MAX_TEE_BOXES slots but only the populated ones count.
   const teeBoxes: {
     name: string;
     length_meters: number | null;
@@ -104,7 +105,7 @@ export async function createCourse(formData: FormData) {
     course_rating_juniors: number | null;
     par_total_juniors: number | null;
   }[] = [];
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < MAX_TEE_BOXES; i++) {
     const teeName = String(formData.get(`tee_${i}_name`) ?? '').trim();
     if (!teeName) continue;
 
