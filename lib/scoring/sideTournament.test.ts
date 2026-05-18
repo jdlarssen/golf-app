@@ -3540,4 +3540,125 @@ describe('calculateSideTournament', () => {
       expect(t2.awards.filter((a) => a.category === 'snowman')).toHaveLength(0);
     });
   });
+
+  describe('edge cases', () => {
+    // Helper: build an 18-hole array filled with par 4
+    const par4Course = (): number[] => new Array(18).fill(4);
+
+    // Helper: per-player score with same gross/netto and explicit netto array
+    const player = (
+      userId: string,
+      perHoleNetto: Array<number | null>,
+    ): SideTournamentInput['playerScoresPerHole'][number] => ({
+      userId,
+      perHoleGross: perHoleNetto,
+      perHoleNetto,
+    });
+
+    it('individual-best: same-team tie produces ONE team award (Set dedup)', () => {
+      // Both user-a AND user-b are on team 1 and BOTH have 4 birdies (tied
+      // for max). The implementation uses a `Set<TeamId>` to dedup so team 1
+      // appears once in the winners list, not twice.
+      // Team 2 (c, d) has only 1 birdie each → no contention.
+      const userANetto = [3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4];
+      const userBNetto = [3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4];
+      const userCNetto = [3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4];
+      const userDNetto = [3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4];
+
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+
+      // Team 1 must appear EXACTLY ONCE in the individual-best winners list,
+      // even though two of its players tied for the lead.
+      const t1IndAwards = t1.awards.filter(
+        (a) => a.category === 'most_birdies_individual',
+      );
+      expect(t1IndAwards).toHaveLength(1);
+      expect(t1IndAwards[0]?.points).toBe(1);
+
+      // Team 2 must not appear (its players have fewer birdies than the tied pair).
+      expect(
+        t2.awards.some((a) => a.category === 'most_birdies_individual'),
+      ).toBe(false);
+    });
+
+    it('mixed-size game: team-aggregate skips N=1 team, individual-best runs across all', () => {
+      // Three teams of mixed sizes:
+      //   Team A (1 player): user-solo with 5 birdies — solo player
+      //   Team B (2 players): user-b1 (2 birdies) + user-b2 (2 birdies) → team total 4
+      //   Team C (2 players): user-c1 (3 birdies) + user-c2 (3 birdies) → team total 6
+      // Expectations:
+      //   - most_birdies_team: only B and C compete (A is skipped by the
+      //     N<2 gate). C wins with 6 > 4.
+      //   - most_birdies_individual: user-solo wins outright with 5 birdies,
+      //     awarding team A — proving individual-best ignores team size.
+      const userSoloNetto = [3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4];
+      const userB1Netto = [3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4];
+      const userB2Netto = [3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4];
+      const userC1Netto = [3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4];
+      const userC2Netto = [3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4];
+
+      const input: SideTournamentInput = {
+        config: { enabled: true, ldCount: 0, ctpCount: 0, disabledCategories: [] },
+        teams: [
+          { teamId: 1, userIds: ['user-solo'] },
+          { teamId: 2, userIds: ['user-b1', 'user-b2'] },
+          { teamId: 3, userIds: ['user-c1', 'user-c2'] },
+        ],
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-solo', userSoloNetto),
+          player('user-b1', userB1Netto),
+          player('user-b2', userB2Netto),
+          player('user-c1', userC1Netto),
+          player('user-c2', userC2Netto),
+        ],
+        nettoBestBallPerHole: [
+          { teamId: 1, perHoleNetto: userSoloNetto },
+          { teamId: 2, perHoleNetto: holes(new Array(18).fill(4)) },
+          { teamId: 3, perHoleNetto: holes(new Array(18).fill(4)) },
+        ],
+        sideWinners: [],
+      };
+
+      const result = calculateSideTournament(input);
+      const tA = result.teamStandings.find((t) => t.teamId === 1)!;
+      const tB = result.teamStandings.find((t) => t.teamId === 2)!;
+      const tC = result.teamStandings.find((t) => t.teamId === 3)!;
+
+      // Team-aggregate: Team A (N=1) skipped; Team C wins outright (6 > 4)
+      expect(
+        tA.awards.some((a) => a.category === 'most_birdies_team'),
+      ).toBe(false);
+      expect(
+        tB.awards.some((a) => a.category === 'most_birdies_team'),
+      ).toBe(false);
+      expect(
+        tC.awards.find((a) => a.category === 'most_birdies_team')?.points,
+      ).toBe(2);
+
+      // Individual-best: user-solo wins (5 birdies) → team A gets the award,
+      // proving the N<2 gate does NOT apply to individual categories.
+      expect(
+        tA.awards.find((a) => a.category === 'most_birdies_individual')?.points,
+      ).toBe(1);
+      expect(
+        tB.awards.some((a) => a.category === 'most_birdies_individual'),
+      ).toBe(false);
+      expect(
+        tC.awards.some((a) => a.category === 'most_birdies_individual'),
+      ).toBe(false);
+    });
+  });
 });
