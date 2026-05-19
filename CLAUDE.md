@@ -246,8 +246,6 @@ Invitasjoner: admin/invite-flyten inserter rad i `public.invitations` og sender 
 
 Auth state via cookies (`@supabase/ssr`). Proxy (`proxy.ts`) refresher session.
 
-Gammel `/auth/callback`-route er strippet til en redirect mot `/login?error=link_expired` for stale magic-link-mailer i flight — slettes 2026-06-13.
-
 ⚠️ Realtime krever eksplisitt `supabase.realtime.setAuth()` med JWT — auto-propagering virker ikke for WebSocket-kanalen (kjent quirk).
 
 ### Offline-sync
