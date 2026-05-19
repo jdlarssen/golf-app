@@ -185,6 +185,10 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   const [scheduledTeeOffAt, setScheduledTeeOffAt] = useState<string>(
     initialValues?.scheduled_tee_off_at ?? '',
   );
+  // Substring-filter for the spiller-listen. Empty string = vis alle.
+  // Klargjør for klubbskala (100+ spillere) der den flate listen blir
+  // upraktisk å scrolle gjennom.
+  const [playerSearch, setPlayerSearch] = useState<string>('');
   // initialValues is read once at mount — D4's edit page passes a stable
   // snapshot from the DB. If the parent ever needs to push live updates,
   // reset via key prop instead.
@@ -237,6 +241,22 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     () => courses.find((c) => c.id === courseId) ?? null,
     [courses, courseId],
   );
+
+  // Filtrert spiller-liste — case-insensitive substring-match på
+  // navn/nickname/email. Vi ekskluderer ALLEREDE-valgte fra listen siden
+  // de står som chips ovenfor. Tom query = alle ikke-valgte. `useMemo`
+  // unngår onødvendige recomputes på re-render av andre felter (tee, hcp,
+  // sideturnering osv.) — viktig når listen kan vokse til 100+.
+  const filteredPlayers = useMemo(() => {
+    const query = playerSearch.trim().toLowerCase();
+    const selectedSet = new Set(selectedPlayerIds);
+    return players.filter((p) => {
+      if (selectedSet.has(p.id)) return false;
+      if (query === '') return true;
+      const haystacks = [p.name ?? '', p.nickname ?? '', p.email];
+      return haystacks.some((h) => h.toLowerCase().includes(query));
+    });
+  }, [players, playerSearch, selectedPlayerIds]);
 
   const availableTees = selectedCourse?.tee_boxes ?? [];
 
@@ -783,34 +803,96 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             Ingen registrerte spillere ennå.
           </p>
         ) : (
-          <ul className="space-y-2">
-            {players.map((p) => {
-              const checked = selectedPlayerIds.includes(p.id);
-              const atCap = !checked && selectedPlayerIds.length >= 8;
-              return (
-                <li key={p.id}>
-                  <label
-                    className={`flex items-center gap-3 min-h-[44px] px-3 py-2 rounded-xl border transition-colors ${checked ? 'border-primary bg-primary-soft' : 'border-border'} ${atCap ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      disabled={atCap}
-                      onChange={() => togglePlayer(p.id)}
-                      aria-label={`${playerLabel(p)}${p.pending ? ' — venter på å fullføre profil' : ''}`}
-                      className="h-5 w-5 rounded border-border text-primary focus:ring-accent/40"
-                    />
-                    <span className="flex-1 min-w-0 truncate text-sm text-text">
-                      {playerLabel(p)}
-                    </span>
-                    {p.pending && (
-                      <StatusChip tone="påmelding" label="Venter" className="shrink-0" />
-                    )}
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
+          <>
+            {/* Chips for valgte spillere — alltid synlig ABOVE søkefeltet
+                slik at admin ikke mister oversikten når søk filtrerer
+                listen under. Tab-rekkefølge: chips først (ÆØÅ-disiplin:
+                avvelg via trykk), så søkefeltet, så filtrert liste. */}
+            {selectedPlayerIds.length > 0 && (
+              <ul
+                aria-label="Valgte spillere"
+                className="flex flex-wrap gap-2"
+              >
+                {selectedPlayerIds.map((pid) => {
+                  const p = players.find((x) => x.id === pid);
+                  if (!p) return null;
+                  return (
+                    <li key={pid}>
+                      <button
+                        type="button"
+                        onClick={() => togglePlayer(pid)}
+                        aria-label={`Fjern ${shortName(p)} fra spill`}
+                        className="inline-flex items-center gap-1.5 min-h-[44px] px-3 py-1.5 rounded-full border border-primary bg-primary-soft text-sm text-text hover:bg-primary/15 transition-colors"
+                      >
+                        <span className="max-w-[14ch] truncate">
+                          {shortName(p)}
+                        </span>
+                        <span aria-hidden="true" className="text-base leading-none text-muted">
+                          ×
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+
+            {/* Søkefelt — substring-match (case-insensitive) på
+                navn/nickname/email. Inputen er en standard <input>; ingen
+                downshift/cmdk eller andre deps. min-h sikrer ≥44px
+                tap-target på mobil. */}
+            <div>
+              <label htmlFor="player_search" className="sr-only">
+                Søk i spillere
+              </label>
+              <input
+                id="player_search"
+                type="search"
+                value={playerSearch}
+                onChange={(e) => setPlayerSearch(e.target.value)}
+                placeholder="Søk i spillere…"
+                aria-label="Søk i spillere"
+                autoComplete="off"
+                className="w-full min-h-[44px] rounded-xl border px-3.5 py-2.5 bg-surface text-text border-border focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
+              />
+            </div>
+
+            {filteredPlayers.length === 0 ? (
+              <p className="text-sm text-muted px-1">
+                {playerSearch.trim() === ''
+                  ? 'Alle spillere er valgt.'
+                  : 'Ingen treff på søket.'}
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {filteredPlayers.map((p) => {
+                  const atCap = selectedPlayerIds.length >= 8;
+                  return (
+                    <li key={p.id}>
+                      <label
+                        className={`flex items-center gap-3 min-h-[44px] px-3 py-2 rounded-xl border transition-colors border-border ${atCap ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={false}
+                          disabled={atCap}
+                          onChange={() => togglePlayer(p.id)}
+                          aria-label={`${playerLabel(p)}${p.pending ? ' — venter på å fullføre profil' : ''}`}
+                          className="h-5 w-5 rounded border-border text-primary focus:ring-accent/40"
+                        />
+                        <span className="flex-1 min-w-0 truncate text-sm text-text">
+                          {playerLabel(p)}
+                        </span>
+                        {p.pending && (
+                          <StatusChip tone="påmelding" label="Venter" className="shrink-0" />
+                        )}
+                      </label>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </>
         )}
       </section>
 

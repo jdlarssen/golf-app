@@ -10,6 +10,26 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.7.y — Spiller-picker for klubbskala
+
+Spill-opprett-formen har nå et søkefelt over spiller-listen. Klar for 100+ spillere når kompisgjengen vokser til klubb-størrelse.
+
+### [1.7.0] - 2026-05-19
+
+**Spiller-listen på spill-opprett (og edit) har nå et søkefelt. Skriv inn navn for å filtrere; valgte spillere vises som chips øverst så du ikke mister oversikten i lange lister. Klargjør for klubbskala når kompisgjengen vokser.**
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- Søke-input + chip-row i `GameForm` (`app/admin/games/new/GameForm.tsx`, brukt av både `/admin/games/new` og `/admin/games/[id]/edit`). Substring-match case-insensitive på `name` / `nickname` / `email`. `useMemo` på filtrerte spillere; ingen server-roundtrip og ingen nye deps.
+- Valgte spillere vises som klikkbare chips øverst i seksjon 2 (trykk for å fjerne). Filtrerte listen ekskluderer allerede-valgte siden de står som chips — holder listen kort i klubbskala.
+- ARIA-label på søkefelt + chip-knapper. Tab-rekkefølge: chips → søk → filtrert liste. Tap-targets ≥44px.
+
+</details>
+
+---
+
 ## 1.6.y — Eksport
 
 Du kan nå laste ned resultatet fra ferdigspilte spill som CSV — praktisk for utskrift og deling utenfor appen.
@@ -89,6 +109,9 @@ Vinnerliste og «mest aktive»-listen fyller seg automatisk fra ferdigspilte spi
 
 ---
 
+<details>
+<summary><strong>1.4.y — Multi-rating tee-bokser (3 entries) — klikk for å vise</strong></summary>
+
 ## 1.4.y — Multi-rating tee-bokser
 
 Hver fysisk tee legges nå inn én gang med valgfrie ratings pr. gender (Herrer / Damer / Junior). Lettere dataentry, og du kan fylle ut manglende ratings senere uten å re-opprette tees.
@@ -151,6 +174,8 @@ Hver fysisk tee legges nå inn én gang med valgfrie ratings pr. gender (Herrer 
 - `lib/games/teeResolution.ts` + tester — helper overflødig i den nye modellen.
 - «For hvem»-segmented control i `CourseForm` — multi-rating-modellen gjør den unødvendig.
 - «Tee for damer»-dropdown i `GameForm` — én tee-dropdown nå.
+
+</details>
 
 </details>
 
