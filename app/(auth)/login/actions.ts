@@ -16,6 +16,20 @@ export async function sendCode(formData: FormData) {
   const next =
     nextRaw.startsWith('/') && !nextRaw.startsWith('//') ? nextRaw : '';
 
+  // Honeypot — the `website` field is hidden via CSS/tabindex/aria so real
+  // users never see it. Form-filling bots typically populate every input that
+  // looks plausibly relevant, including hidden ones. If we see a value, we
+  // pretend success (redirect to the verify step) without calling Supabase,
+  // so the bot can't distinguish a hit from a miss. Logged to Vercel for
+  // traffic awareness only — no DB write.
+  const honeypot = String(formData.get('website') ?? '').trim();
+  if (honeypot) {
+    console.warn('[honeypot] silent reject', { route: 'login' });
+    const qs = new URLSearchParams({ step: 'verify', email });
+    if (next) qs.set('next', next);
+    redirect(`/login?${qs.toString()}`);
+  }
+
   if (!email) {
     redirect('/login?error=unknown');
   }

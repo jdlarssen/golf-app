@@ -22,6 +22,25 @@ export function SendCodeForm({
   return (
     <form action={sendCode} className="space-y-4">
       <input type="hidden" name="next" value={next} />
+      {/*
+        Honeypot: hidden from real users (display:none + aria-hidden +
+        tabIndex=-1), not autofillable (autoComplete=off). Server-side
+        silent-rejects when this field comes back populated — see actions.ts.
+        Field name `website` chosen because bots tend to fill anything
+        relevant-looking; we use the same field name on the admin invite
+        form for consistency.
+      */}
+      <div aria-hidden="true" style={{ display: 'none' }}>
+        <label htmlFor="website">Website</label>
+        <input
+          id="website"
+          name="website"
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          defaultValue=""
+        />
+      </div>
       <FormBody defaultEmail={defaultEmail} />
     </form>
   );

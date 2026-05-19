@@ -28,6 +28,19 @@ async function requireAdmin() {
 
 export async function sendInvitation(formData: FormData) {
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
+
+  // Honeypot — the `website` field is hidden in the form so a real admin
+  // never types into it. A bot that POSTs to this server-action (somehow
+  // bypassing the auth-gate, e.g. via a leaked session) will likely fill
+  // every input. We pretend the invitation was sent without writing to
+  // `invitations` or calling Resend. Logged to Vercel for awareness.
+  const honeypot = String(formData.get('website') ?? '').trim();
+  if (honeypot) {
+    console.warn('[honeypot] silent reject', { route: 'invite' });
+    const qs = new URLSearchParams({ status: 'sent', email });
+    redirect(`/admin/spillere?${qs.toString()}`);
+  }
+
   if (!email) redirect('/admin/spillere?error=email_required');
 
   const { supabase, profile } = await requireAdmin();
