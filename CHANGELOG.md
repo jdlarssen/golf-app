@@ -10,6 +10,28 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.8.y — Mørk modus
+
+Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark Appearance, blir Tørny mørk når du åpner appen — uten at noe annet endrer seg.
+
+### [1.8.0] - 2026-05-19
+
+**Tørny støtter nå mørk modus. Har du iPhonen på Dark Appearance (Innstillinger → Skjerm og lysstyrke → Mørk), bytter Tørny automatisk til en mørk klubbhus-natt-palett. Står den på lys eller automatisk, fortsetter appen å se ut som før. Ingen knapp å trykke — appen følger telefonen.**
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+- `app/layout.tsx` — fjernet `data-theme="light"` på `<html>` og endret `colorScheme: "light"` → `"light dark"` i `viewport`-eksport. `globals.css` har siden v1.7.0 både `[data-theme='dark']`-blokk og `@media (prefers-color-scheme: dark)`; med tvangen borte slår sistnevnte inn automatisk basert på OS-preferanse.
+- `@custom-variant dark` (lagt til i v1.7.0) gjør at eventuell fremtidig manuell theme-toggle også vil fungere via `data-theme='dark'`-attribute.
+
+#### Notes
+- Migrering av hardkodede farger til semantiske tokens ble gjort i v1.7.0 (refactor-PR #111, 22 filer / ~95 LOC). Visual-verifikasjon i dark mode skjedde via preview-deploy av denne PR-en.
+
+</details>
+
+---
+
 ## 1.7.y — Spiller-picker for klubbskala
 
 Spill-opprett-formen har nå et søkefelt over spiller-listen. Klar for 100+ spillere når kompisgjengen vokser til klubb-størrelse.
@@ -49,7 +71,8 @@ Du kan nå laste ned resultatet fra ferdigspilte spill som CSV — praktisk for 
 
 ---
 
-## 1.5.y — Klubbstatistikker
+<details>
+<summary><strong>1.5.y — Klubbstatistikker (3 entries) — klikk for å vise</strong></summary>
 
 Vinnerliste og «mest aktive»-listen fyller seg automatisk fra ferdigspilte spill. Underlag for både kompisgjengen og kommende klubbskala.
 
@@ -104,6 +127,8 @@ Vinnerliste og «mest aktive»-listen fyller seg automatisk fra ferdigspilte spi
 
 #### Notes
 - Bulk-fetch i fire round-trips (games, game_players, course_holes, scores) + in-memory aggregering. Skalerer fint for nåværende volum (<1000 finished games); kan flyttes til en SQL-view ved klubbskala.
+
+</details>
 
 </details>
 

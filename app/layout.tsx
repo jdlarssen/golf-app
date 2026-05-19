@@ -39,11 +39,9 @@ export const metadata: Metadata = {
 
 // Next.js 16 requires themeColor / colorScheme / viewport in a separate
 // `viewport` export — they are deprecated under `metadata`.
-// Dark mode is deferred — see #29. Force light across the app for now
-// so OS dark mode doesn't show half-finished tokens.
 export const viewport: Viewport = {
   themeColor: "#1b4332",
-  colorScheme: "light",
+  colorScheme: "light dark",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -57,7 +55,6 @@ export default function RootLayout({
   return (
     <html
       lang="nb-NO"
-      data-theme="light"
       className={`${inter.variable} ${fraunces.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">
