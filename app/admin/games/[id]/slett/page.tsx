@@ -7,6 +7,7 @@ import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { Button } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
 import type { GameStatus } from '@/lib/games/status';
+import { formatShortDateNbWithYear } from '@/lib/format/date';
 import { deleteGame } from './actions';
 
 type Params = Promise<{ id: string }>;
@@ -26,19 +27,9 @@ const STATUS_WARNINGS: Record<GameStatus, string | null> = {
     'Spillet er avsluttet. Leaderboard og resultater forsvinner permanent. Spillere som har bokmerket lenken vil få 404.',
 };
 
-const MONTHS_NB = [
-  'jan', 'feb', 'mar', 'apr', 'mai', 'jun',
-  'jul', 'aug', 'sep', 'okt', 'nov', 'des',
-];
-
 function shortNb(iso: string | null | undefined): string | null {
   if (!iso) return null;
-  try {
-    const d = new Date(iso);
-    return `${d.getDate()}. ${MONTHS_NB[d.getMonth()]} ${d.getFullYear()}`;
-  } catch {
-    return null;
-  }
+  return formatShortDateNbWithYear(iso);
 }
 
 function first(v: string | string[] | undefined): string | undefined {

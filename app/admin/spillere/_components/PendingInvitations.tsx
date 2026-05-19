@@ -2,6 +2,7 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
 import { ChampagneMedallion } from '@/components/ui/ChampagneMedallion';
 import { MailEnvelope } from '@/components/icons';
+import { formatShortDateNb } from '@/lib/format/date';
 import { resendInvitation } from '../actions';
 
 type PendingInvitation = {
@@ -10,26 +11,6 @@ type PendingInvitation = {
   created_at: string;
   opened_at: string | null;
 };
-
-const MONTHS_NB = [
-  'jan',
-  'feb',
-  'mar',
-  'apr',
-  'mai',
-  'jun',
-  'jul',
-  'aug',
-  'sep',
-  'okt',
-  'nov',
-  'des',
-];
-
-function shortNb(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getDate()}. ${MONTHS_NB[d.getMonth()]}`;
-}
 
 /** Human-readable "X siden" relative time for recent timestamps. */
 function timeAgo(iso: string): string {
@@ -43,7 +24,7 @@ function timeAgo(iso: string): string {
   if (days === 1) return 'i går';
   if (days < 7) return `${days} dager siden`;
   // Fall back to short date for older stamps
-  return shortNb(iso);
+  return formatShortDateNb(iso);
 }
 
 export async function PendingInvitations() {
@@ -106,7 +87,7 @@ function PendingRow({
           {inv.email}
         </p>
         <p className="mt-0.5 font-sans text-[11.5px] tabular-nums text-muted">
-          Sendt {shortNb(inv.created_at)}
+          Sendt {formatShortDateNb(inv.created_at)}
         </p>
         <p className="mt-0.5 font-sans text-[11px] text-muted">
           {inv.opened_at ? (

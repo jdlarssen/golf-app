@@ -6,6 +6,7 @@ import { BackLink } from '@/components/ui/BackLink';
 import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { formatShortDateNbWithYear } from '@/lib/format/date';
 
 type SearchParams = Promise<{
   status?: string | string[];
@@ -27,33 +28,9 @@ const STATUS_MESSAGES: Record<string, (name: string) => string> = {
   deleted: () => `✓ Banen ble slettet.`,
 };
 
-const MONTHS_NB = [
-  'jan',
-  'feb',
-  'mar',
-  'apr',
-  'mai',
-  'jun',
-  'jul',
-  'aug',
-  'sep',
-  'okt',
-  'nov',
-  'des',
-];
-
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
   return value;
-}
-
-function shortNb(iso: string): string {
-  try {
-    const d = new Date(iso);
-    return `${d.getDate()}. ${MONTHS_NB[d.getMonth()]} ${d.getFullYear()}`;
-  } catch {
-    return iso;
-  }
 }
 
 type CourseRow = {
@@ -206,7 +183,7 @@ async function CoursesLedger() {
                   {course.name}
                 </p>
                 <p className="mt-0.5 truncate font-sans text-[11.5px] tabular-nums text-muted">
-                  Lagt til {shortNb(course.created_at)}
+                  Lagt til {formatShortDateNbWithYear(course.created_at)}
                 </p>
               </div>
               <p className="text-right font-serif text-[15px] font-medium tabular-nums tracking-[-0.005em] text-text">

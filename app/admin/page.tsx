@@ -14,6 +14,7 @@ import {
 } from '@/components/icons';
 import { firstName } from '@/lib/firstName';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { formatShortDateNb } from '@/lib/format/date';
 
 // Request-scoped Supabase client + verified user id. The id is forwarded by
 // proxy.ts (which already verified the session) so the three Suspense bodies
@@ -23,21 +24,6 @@ const getAdminContext = cache(async () => {
   const userId = await getProxyVerifiedUserId();
   return { supabase, userId };
 });
-
-const MONTHS_NB = [
-  'jan',
-  'feb',
-  'mar',
-  'apr',
-  'mai',
-  'jun',
-  'jul',
-  'aug',
-  'sep',
-  'okt',
-  'nov',
-  'des',
-];
 
 function greeting(d: Date): string {
   const h = d.getHours();
@@ -60,16 +46,7 @@ function isoWeek(d: Date): number {
 }
 
 function formatDateNb(d: Date): string {
-  return `${d.getDate()}. ${MONTHS_NB[d.getMonth()]} · uke ${isoWeek(d)}`;
-}
-
-function formatShortDateNb(iso: string): string {
-  try {
-    const d = new Date(iso);
-    return `${d.getDate()}. ${MONTHS_NB[d.getMonth()]}`;
-  } catch {
-    return iso;
-  }
+  return `${formatShortDateNb(d)} · uke ${isoWeek(d)}`;
 }
 
 function formatHHMM(iso: string): string {

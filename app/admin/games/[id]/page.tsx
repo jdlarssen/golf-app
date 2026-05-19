@@ -32,6 +32,7 @@ import {
   getRatingForGender,
   type TeeBoxRatings,
 } from '@/lib/games/teeRating';
+import { formatShortDateNb } from '@/lib/format/date';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -58,21 +59,6 @@ const STATUS_BANNERS: Record<string, string> = {
   game_reopened: '✓ Spillet er aktivt igjen.',
 };
 
-const MONTHS_NB = [
-  'jan',
-  'feb',
-  'mar',
-  'apr',
-  'mai',
-  'jun',
-  'jul',
-  'aug',
-  'sep',
-  'okt',
-  'nov',
-  'des',
-];
-
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
   return value;
@@ -87,12 +73,7 @@ function buildErrorMessage(
 
 function shortNb(iso: string | null | undefined): string | null {
   if (!iso) return null;
-  try {
-    const d = new Date(iso);
-    return `${d.getDate()}. ${MONTHS_NB[d.getMonth()]}`;
-  } catch {
-    return null;
-  }
+  return formatShortDateNb(iso);
 }
 
 type GameRow = {
@@ -430,7 +411,7 @@ async function PlayersSections({
           <Row
             label="Tee-off"
             value={
-              new Intl.DateTimeFormat('no-NO', {
+              new Intl.DateTimeFormat('nb-NO', {
                 day: '2-digit',
                 month: 'short',
                 hour: '2-digit',

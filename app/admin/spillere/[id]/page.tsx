@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { formatShortDateNbWithYear } from '@/lib/format/date';
 import { updateUser } from './actions';
 
 type Params = Promise<{ id: string }>;
@@ -34,15 +35,6 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 function first(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
-}
-
-const MONTHS_NB = [
-  'jan', 'feb', 'mar', 'apr', 'mai', 'jun',
-  'jul', 'aug', 'sep', 'okt', 'nov', 'des',
-];
-function shortNb(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getDate()}. ${MONTHS_NB[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 /** Relative time in Norwegian, e.g. "3 minutter siden", "2 dager siden" */
@@ -124,7 +116,7 @@ export default async function PlayerDetailPage({
           </p>
         )}
         <p className="mt-1 font-sans text-[11.5px] tabular-nums text-muted">
-          {target.email} · Registrert {shortNb(target.created_at)}
+          {target.email} · Registrert {formatShortDateNbWithYear(target.created_at)}
           {target.is_admin && ' · Super-admin'}
         </p>
       </div>

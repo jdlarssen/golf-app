@@ -10,6 +10,7 @@ import { PinFlag, Laurel } from '@/components/icons';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import type { GameStatus } from '@/lib/games/status';
+import { formatShortDateNb } from '@/lib/format/date';
 
 type SearchParams = Promise<{
   status?: string | string[];
@@ -32,29 +33,9 @@ function first(value: string | string[] | undefined): string | undefined {
   return value;
 }
 
-const MONTHS_NB = [
-  'jan',
-  'feb',
-  'mar',
-  'apr',
-  'mai',
-  'jun',
-  'jul',
-  'aug',
-  'sep',
-  'okt',
-  'nov',
-  'des',
-];
-
 function shortNb(iso: string | null): string | null {
   if (!iso) return null;
-  try {
-    const d = new Date(iso);
-    return `${d.getDate()}. ${MONTHS_NB[d.getMonth()]}`;
-  } catch {
-    return null;
-  }
+  return formatShortDateNb(iso);
 }
 
 const STATUS_TO_TONE: Record<GameStatus, StatusChipTone> = {
