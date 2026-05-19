@@ -300,7 +300,7 @@ function GdprSection() {
       <Card>
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="font-serif text-base font-medium text-[#a04040]">
+            <h2 className="font-serif text-base font-medium text-danger-deep">
               Slett konto
             </h2>
             <p className="text-sm text-muted mt-0.5">
@@ -309,7 +309,7 @@ function GdprSection() {
           </div>
           <SmartLink
             href="/profile/slett-konto"
-            className="shrink-0 ml-4 rounded-full border border-[#a04040]/40 px-4 py-2 font-sans text-[13px] font-medium text-[#a04040] hover:bg-[#fff0f0] dark:hover:bg-[#2a1515] transition-colors"
+            className="shrink-0 ml-4 rounded-full border border-danger-deep/40 px-4 py-2 font-sans text-[13px] font-medium text-danger-deep hover:bg-danger-deep/10 dark:hover:bg-danger-deep/20 transition-colors"
           >
             Slett konto
           </SmartLink>

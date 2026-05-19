@@ -25,11 +25,11 @@ const STROKE_BY_SIZE: Record<ScoreShapeSize, number> = {
 
 // Stroke colors mirror the existing scoreTone palette used elsewhere.
 const STROKE_COLOR: Record<ScoreTone, string> = {
-  unset: '#9A8F7C',
-  under: '#2F5A3C',
-  par: '#5C5347',
-  over1: '#7A5410',
-  over2: '#7A2F2A',
+  unset: 'var(--score-unset-fg)',
+  under: 'var(--score-under-fg)',
+  par: 'var(--score-par-fg)',
+  over1: 'var(--score-over1-fg)',
+  over2: 'var(--score-over2-fg)',
 };
 
 export function ScoreShape(props: ScoreShapeProps): JSX.Element {

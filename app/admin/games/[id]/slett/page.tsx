@@ -169,7 +169,7 @@ export default async function DeleteGamePage({
           <Button
             type="submit"
             className="w-full"
-            style={{ background: '#a04040', borderColor: '#a04040' }}
+            style={{ background: 'var(--danger-deep)', borderColor: 'var(--danger-deep)' }}
           >
             {buttonLabel}
           </Button>

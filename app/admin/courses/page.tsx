@@ -77,7 +77,7 @@ export default async function CoursesPage({
         </p>
         <SmartLink
           href="/admin/courses/new"
-          className="rounded-full border border-border bg-[rgba(229,224,211,0.5)] px-2.5 py-[5px] font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-text"
+          className="rounded-full border border-border bg-surface-2/50 px-2.5 py-[5px] font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-text"
         >
           + Ny
         </SmartLink>

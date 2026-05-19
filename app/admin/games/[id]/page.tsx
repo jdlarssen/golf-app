@@ -239,7 +239,7 @@ export default async function GameDetailPage({
             <SmartLink
               href={`/admin/games/${id}/slett`}
               className="font-sans text-[13px] font-medium"
-              style={{ color: '#a04040' }}
+              style={{ color: 'var(--danger-deep)' }}
             >
               Slett spillet helt
             </SmartLink>
@@ -665,7 +665,7 @@ async function PlayersSections({
               </p>
               <SmartLink
                 href={`/admin/games/${gameId}/edit`}
-                className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover"
+                className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover dark:text-bg"
               >
                 Rediger utkast
               </SmartLink>
@@ -698,7 +698,7 @@ async function PlayersSections({
               </p>
               <SmartLink
                 href={`/admin/games/${gameId}/edit`}
-                className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover"
+                className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover dark:text-bg"
               >
                 Rediger spillet
               </SmartLink>
@@ -753,7 +753,7 @@ async function PlayersSections({
           <div className="space-y-3 px-3.5 pb-3.5 pt-3">
             <SmartLink
               href={`/games/${gameId}/leaderboard`}
-              className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover"
+              className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover dark:text-bg"
             >
               🏆 Se leaderboard →
             </SmartLink>
@@ -869,7 +869,7 @@ function Row({
       <p
         className="text-right font-serif text-[15px] font-medium tabular-nums tracking-[-0.005em]"
         style={{
-          color: tone === 'full' ? '#2f5a3c' : 'var(--text)',
+          color: tone === 'full' ? 'var(--score-under-fg)' : 'var(--text)',
         }}
       >
         {value}

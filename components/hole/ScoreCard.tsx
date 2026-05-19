@@ -45,9 +45,9 @@ function scoreNumberFontSize(shape: ScoreShapeKind, displayedNumber: number): nu
 function scoreNumberColor(tone: ScoreTone): string {
   switch (tone) {
     case 'under':
-      return '#2F5A3C';
+      return 'var(--score-under-fg)';
     case 'over2':
-      return '#7A2F2A';
+      return 'var(--score-over2-fg)';
     case 'par':
     case 'over1':
     default:
@@ -107,10 +107,10 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     onLongPress(playerId);
   }
 
-  const borderColor = confirmed ? 'rgba(201,169,97,0.5)' : '#E5E0D3';
+  const borderColor = confirmed ? 'rgba(201,169,97,0.5)' : 'var(--border)';
 
   const cardStyle: CSSProperties = {
-    background: '#FFFFFF',
+    background: 'var(--surface)',
     border: `1px solid ${borderColor}`,
     borderRadius: 16,
     boxShadow:
@@ -133,7 +133,7 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     height: 36,
     borderRadius: '50%',
     background: 'var(--primary)',
-    color: '#F0EDE5',
+    color: 'var(--bg-tint)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -174,7 +174,7 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
   const numberStyle: CSSProperties = {
     fontSize: numberFontSize,
     letterSpacing: '-0.02em',
-    color: isGhost ? '#9A8F7C' : numberColor,
+    color: isGhost ? 'var(--score-unset-fg)' : numberColor,
     opacity: isGhost ? 0.55 : 1,
   };
 

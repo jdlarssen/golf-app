@@ -7,14 +7,14 @@ describe('SyncStatusLine', () => {
     render(<SyncStatusLine syncing={true} savedAt="" />);
     expect(screen.getByText('Sender…')).toBeInTheDocument();
     const dot = screen.getByTestId('sync-dot');
-    expect(dot.style.background).toBe('rgb(216, 155, 58)');
+    expect(dot.style.background).toBe('var(--warning)');
   });
 
   it('syncing=false with savedAt="14:32" renders Lagret · 14:32 and green dot', () => {
     render(<SyncStatusLine syncing={false} savedAt="14:32" />);
     expect(screen.getByText('Lagret · 14:32')).toBeInTheDocument();
     const dot = screen.getByTestId('sync-dot');
-    expect(dot.style.background).toBe('rgb(74, 124, 89)');
+    expect(dot.style.background).toBe('var(--success)');
   });
 
   it('syncing=false with empty savedAt renders Lagret nylig fallback', () => {

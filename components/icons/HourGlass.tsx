@@ -24,7 +24,7 @@ export function HourGlass({ size = 64, className }: Props) {
         fill="var(--surface)"
         strokeLinejoin="round"
       />
-      <path d="M22 14 L42 14 L33 24 Z" fill="#C9A961" opacity="0.7" />
+      <path d="M22 14 L42 14 L33 24 Z" fill="var(--accent)" opacity="0.7" />
       <circle cx="32" cy="42" r="1.5" fill="currentColor" />
     </svg>
   );

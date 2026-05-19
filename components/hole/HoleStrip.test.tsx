@@ -27,14 +27,14 @@ describe('HoleStrip', () => {
     const currentLink = links[6];
     const chip = currentLink.querySelector('span') as HTMLElement;
     expect(chip.style.background).toContain('var(--primary)');
-    expect(chip.style.color).toBe('rgb(240, 237, 229)');
+    expect(chip.style.color).toBe('var(--bg-tint)');
   });
 
-  it('completed cells (N < currentHole) use #EFE9DA background', () => {
+  it('completed cells (N < currentHole) use --hole-completed-bg', () => {
     const { container } = render(<HoleStrip gameId="g1" currentHole={5} />);
     const links = container.querySelectorAll('a');
     const completedChip = links[0].querySelector('span') as HTMLElement;
-    expect(completedChip.style.background).toBe('rgb(239, 233, 218)');
+    expect(completedChip.style.background).toBe('var(--hole-completed-bg)');
     expect(completedChip.style.border).toContain('var(--border)');
   });
 

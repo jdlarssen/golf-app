@@ -998,7 +998,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
                           className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
                             (playerGenders[pid] ?? 'M') === g
                               ? g === 'M'
-                                ? 'bg-primary text-white'
+                                ? 'bg-primary text-white dark:text-bg'
                                 : g === 'D'
                                   ? 'bg-accent text-text'
                                   : 'bg-muted text-text'

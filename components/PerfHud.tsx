@@ -107,7 +107,7 @@ export function PerfHud() {
   const benchmark = last.dataMs ?? last.paintMs ?? 0;
   const tone = benchmark < 400 ? 'good' : benchmark < 1200 ? 'warn' : 'bad';
   const bg = tone === 'good' ? '#1B4332' : tone === 'warn' ? '#C9A961' : '#8C1E1E';
-  const fg = tone === 'warn' ? '#1B4332' : '#F8F6F0';
+  const fg = tone === 'warn' ? '#1B4332' : 'var(--bg-tint)';
 
   const paintLabel = last.paintMs == null ? '—' : `${last.paintMs}`;
   const dataLabel = last.dataMs == null ? '—' : `${last.dataMs}`;

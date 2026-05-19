@@ -27,7 +27,7 @@ export function SyncStatusLine(props: SyncStatusLineProps): JSX.Element {
   const { syncing, savedAt } = props;
   const dotStyle: CSSProperties = {
     ...dotBaseStyle,
-    background: syncing ? '#D89B3A' : '#4A7C59',
+    background: syncing ? 'var(--warning)' : 'var(--success)',
   };
   let text: string;
   if (syncing) {

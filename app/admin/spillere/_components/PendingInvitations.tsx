@@ -91,7 +91,7 @@ function PendingRow({
         </p>
         <p className="mt-0.5 font-sans text-[11px] text-muted">
           {inv.opened_at ? (
-            <span className="text-[#3a7d44]">
+            <span style={{ color: 'var(--success)' }}>
               Har bedt om kode {timeAgo(inv.opened_at)}
             </span>
           ) : (
@@ -114,7 +114,7 @@ function PendingRow({
           className="inline-flex min-h-[44px] items-center rounded-full border px-4 py-2 font-sans text-[13px] font-medium transition"
           style={{
             borderColor: 'rgba(180, 60, 60, 0.3)',
-            color: '#a04040',
+            color: 'var(--danger-deep)',
           }}
         >
           Trekk tilbake

@@ -52,7 +52,7 @@ export default async function WithdrawInvitationPage({
           <Button
             type="submit"
             className="w-full"
-            style={{ background: '#a04040', borderColor: '#a04040' }}
+            style={{ background: 'var(--danger-deep)', borderColor: 'var(--danger-deep)' }}
           >
             Bekreft tilbaketrekking
           </Button>

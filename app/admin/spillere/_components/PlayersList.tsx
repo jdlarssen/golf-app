@@ -93,7 +93,7 @@ export async function PlayersList({ searchQuery }: { searchQuery: string }) {
                 {u.is_admin && (
                   <p
                     className="mt-0.5 font-sans text-[9.5px] font-semibold uppercase"
-                    style={{ letterSpacing: '0.16em', color: '#7a5410' }}
+                    style={{ letterSpacing: '0.16em', color: 'var(--score-over1-fg)' }}
                   >
                     Admin
                   </p>

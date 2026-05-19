@@ -34,7 +34,7 @@ export function MailEnvelope({ size = 64, className }: Props) {
         fill="none"
         strokeLinejoin="round"
       />
-      <circle cx="50" cy="14" r="4" fill="#C9A961" />
+      <circle cx="50" cy="14" r="4" fill="var(--accent)" />
     </svg>
   );
 }

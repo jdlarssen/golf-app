@@ -22,7 +22,7 @@ const GRADIENTS: Record<
     id: 'bronzeSheen',
     stops: ['#D2A07B', '#A8714B', '#6F4A2F'],
     stroke: '#6F4A2F',
-    fg: '#F8F6F0',
+    fg: 'var(--bg-tint)',
   },
 };
 

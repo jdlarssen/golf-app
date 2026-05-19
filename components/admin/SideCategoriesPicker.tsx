@@ -392,7 +392,7 @@ function PresetChip({
       aria-pressed={active}
       className={`flex min-h-[44px] flex-col items-start rounded-full border px-4 py-1.5 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
         active
-          ? 'border-primary bg-primary text-white shadow-sm'
+          ? 'border-primary bg-primary text-white shadow-sm dark:text-bg'
           : 'border-border bg-surface text-text hover:bg-primary-soft'
       }`}
     >
@@ -400,7 +400,7 @@ function PresetChip({
         {label}
       </span>
       <span
-        className={`text-[10px] leading-tight ${active ? 'text-white/85' : 'text-muted'}`}
+        className={`text-[10px] leading-tight ${active ? 'text-white/85 dark:text-bg/85' : 'text-muted'}`}
       >
         {description}
       </span>

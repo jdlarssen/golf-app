@@ -21,11 +21,11 @@ export function PinFlagSm({ size = 14, className }: Props) {
         y1="1"
         x2="5"
         y2="15"
-        stroke="#C9A961"
+        stroke="var(--accent)"
         strokeWidth="1.2"
         strokeLinecap="round"
       />
-      <path d="M5 2 L13 4 L5 6 Z" fill="#C9A961" />
+      <path d="M5 2 L13 4 L5 6 Z" fill="var(--accent)" />
     </svg>
   );
 }

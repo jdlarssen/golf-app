@@ -8,8 +8,8 @@ describe('BottomActionBar', () => {
     const btn = screen.getByRole('button', { name: 'Bekreft alle scorer' });
     expect(btn.tagName).toBe('BUTTON');
     expect((btn as HTMLButtonElement).disabled).toBe(true);
-    expect((btn as HTMLButtonElement).style.background).toBe('rgb(217, 210, 192)');
-    expect((btn as HTMLButtonElement).style.color).toBe('rgb(154, 143, 124)');
+    expect((btn as HTMLButtonElement).style.background).toBe('var(--disabled-bg)');
+    expect((btn as HTMLButtonElement).style.color).toBe('var(--disabled-fg)');
   });
 
   it('enabled + href renders an anchor with the href', () => {

@@ -46,7 +46,7 @@ function cellStyle(state: 'current' | 'completed' | 'future'): CSSProperties {
     return {
       ...base,
       background: 'var(--primary)',
-      color: '#F0EDE5',
+      color: 'var(--bg-tint)',
       fontWeight: 600,
       border: 'none',
     };
@@ -54,7 +54,7 @@ function cellStyle(state: 'current' | 'completed' | 'future'): CSSProperties {
   if (state === 'completed') {
     return {
       ...base,
-      background: '#EFE9DA',
+      background: 'var(--hole-completed-bg)',
       color: 'var(--text)',
       fontWeight: 500,
       border: '1px solid var(--border)',

@@ -22,8 +22,8 @@ export function PinFlag({ size = 64, className }: Props) {
       />
       <path
         d="M22 8 L44 14 L22 22 Z"
-        fill="#C9A961"
-        stroke="#C9A961"
+        fill="var(--accent)"
+        stroke="var(--accent)"
         strokeWidth="1.5"
         strokeLinejoin="round"
       />

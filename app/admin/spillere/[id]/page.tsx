@@ -220,7 +220,7 @@ export default async function PlayerDetailPage({
               <SmartLink
                 href={`/admin/spillere/${target.id}/slett`}
                 className="font-sans text-[13px] font-medium"
-                style={{ color: '#a04040' }}
+                style={{ color: 'var(--danger-deep)' }}
               >
                 Slett spilleren
               </SmartLink>

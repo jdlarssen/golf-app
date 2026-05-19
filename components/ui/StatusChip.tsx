@@ -4,10 +4,26 @@ const TONE_STYLES: Record<
   StatusChipTone,
   { bg: string; fg: string; label: string }
 > = {
-  aktiv: { bg: 'rgba(74, 124, 89, 0.16)', fg: '#2f5a3c', label: 'Aktiv' },
-  påmelding: { bg: 'rgba(216, 155, 58, 0.18)', fg: '#7a5410', label: 'Påmelding' },
-  signert: { bg: 'rgba(92, 83, 71, 0.10)', fg: 'var(--text-muted)', label: 'Signert' },
-  utkast: { bg: 'rgba(184, 70, 62, 0.12)', fg: '#7a3935', label: 'Utkast' },
+  aktiv: {
+    bg: 'var(--score-under-bg)',
+    fg: 'var(--score-under-fg)',
+    label: 'Aktiv',
+  },
+  påmelding: {
+    bg: 'var(--score-over1-bg)',
+    fg: 'var(--score-over1-fg)',
+    label: 'Påmelding',
+  },
+  signert: {
+    bg: 'var(--score-par-bg)',
+    fg: 'var(--text-muted)',
+    label: 'Signert',
+  },
+  utkast: {
+    bg: 'var(--score-over2-bg)',
+    fg: 'var(--score-over2-fg)',
+    label: 'Utkast',
+  },
 };
 
 /**

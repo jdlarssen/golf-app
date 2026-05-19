@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/* Tailwind v4 — make the `dark:` variant respond to manual theme toggle.
+ * Default in v4 is OS-only (`prefers-color-scheme: dark`). With this custom
+ * variant, `dark:*` utilities also fire under `[data-theme='dark']` or
+ * `[data-theme='klubbhus-natt']` anywhere up the ancestor chain. The selector
+ * uses `:where()` so it stays at specificity 0 and doesn't outweigh the base
+ * utility. */
+@custom-variant dark (&:where([data-theme='dark'] *), [data-theme='klubbhus-natt'] &);
+
 /* -----------------------------------------------------------------------------
  * Tørny design system — "Forest & Champagne"
  *
@@ -72,6 +80,26 @@
    * --row-divider-warm; tint is the shimmer-peak lifted one step. */
   --skel-base: #ece5d2;
   --skel-tint: #f3eddd;
+
+  /* Disabled-state — neutral linen-tinted bg/fg for "ikke tilgjengelig"
+   * buttons. Pair as bg + fg; the gap between them is intentionally small so
+   * disabled controls read as flat. */
+  --disabled-bg: #d9d2c0;
+  --disabled-fg: #9a8f7c;
+
+  /* Ghost score number — the par-baseline digit shown before a score is set.
+   * Same taupe as --disabled-fg but exposed as its own token so future score-
+   * tone tweaks don't drag the disabled-button color along. */
+  --score-unset-fg: #9a8f7c;
+
+  /* Completed-celle background on hull-strip. One step warmer than --border
+   * to read as "passed" without blending into the strip's neutral surface. */
+  --hole-completed-bg: #efe9da;
+
+  /* Destructive CTAer — slett-spill, slett-konto, trekk-tilbake-invitasjon.
+   * Deeper than --danger so it reads as a "no going back"-button against
+   * the linen page, not just a warning-pill. */
+  --danger-deep: #a04040;
 }
 
 /* Klubbhus-natt — dark mode. Not cold-grey, not pure black. Warm
@@ -127,6 +155,24 @@
     /* Skeleton — forest-shaded, lifted off --surface so shapes read. */
     --skel-base: #243828;
     --skel-tint: #2f4734;
+
+    /* Disabled-state — sits one step above --surface so the disabled fill
+     * is still distinguishable from the page bg, but darker than --primary
+     * so "off" reads correctly. */
+    --disabled-bg: #2a3a30;
+    --disabled-fg: #5c6358;
+
+    /* Ghost score number — matches --text-muted in dark mode (warm taupe)
+     * so unset digits fade out without going to neutral grey. */
+    --score-unset-fg: #9a9180;
+
+    /* Completed-celle background on hull-strip — reuse --surface-2 dark
+     * value so completed cells lift one step above the strip bg. */
+    --hole-completed-bg: #243429;
+
+    /* Destructive CTAer — lighter brick so it reads as "alarm" against the
+     * dark forest bg, not as a black smudge. */
+    --danger-deep: #c46868;
   }
 }
 
@@ -175,6 +221,12 @@
 
   --skel-base: #243828;
   --skel-tint: #2f4734;
+
+  --disabled-bg: #2a3a30;
+  --disabled-fg: #5c6358;
+  --score-unset-fg: #9a9180;
+  --hole-completed-bg: #243429;
+  --danger-deep: #c46868;
 }
 
 /* Tailwind v4 theme bindings — these expose the design tokens as utility
@@ -206,6 +258,11 @@
   --color-score-over2-bg: var(--score-over2-bg);
   --color-admin-bg: var(--admin-bg);
   --color-row-divider-warm: var(--row-divider-warm);
+  --color-disabled-bg: var(--disabled-bg);
+  --color-disabled-fg: var(--disabled-fg);
+  --color-score-unset-fg: var(--score-unset-fg);
+  --color-hole-completed-bg: var(--hole-completed-bg);
+  --color-danger-deep: var(--danger-deep);
 
   --font-serif: var(--font-fraunces);
   --font-sans: var(--font-inter);

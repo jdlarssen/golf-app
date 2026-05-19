@@ -120,7 +120,7 @@ export default async function SlettKontoPage({
             </ul>
           </div>
 
-          <div className="rounded-2xl border border-[#a04040]/30 bg-[#fff5f5] dark:bg-[#2a1515] px-4 py-4 space-y-3">
+          <div className="rounded-2xl border border-danger-deep/30 bg-danger-deep/10 dark:bg-danger-deep/20 px-4 py-4 space-y-3">
             <p className="font-sans text-sm text-text leading-relaxed">
               Du er i ferd med å slette{' '}
               <strong>{displayName}</strong> permanent.{' '}
@@ -133,7 +133,7 @@ export default async function SlettKontoPage({
               <Button
                 type="submit"
                 className="w-full"
-                style={{ background: '#a04040', borderColor: '#a04040' }}
+                style={{ background: 'var(--danger-deep)', borderColor: 'var(--danger-deep)' }}
               >
                 Slett kontoen min for alltid
               </Button>

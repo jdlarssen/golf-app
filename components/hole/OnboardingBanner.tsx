@@ -11,7 +11,7 @@ const bannerStyle: CSSProperties = {
   margin: '14px 14px 0',
   padding: '10px 14px',
   background: 'var(--primary)',
-  color: '#F0EDE5',
+  color: 'var(--bg-tint)',
   borderRadius: 12,
   display: 'flex',
   alignItems: 'center',
