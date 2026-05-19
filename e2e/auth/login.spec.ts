@@ -1,35 +1,53 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Magic link login', () => {
-  test('shows the magic link form', async ({ page }) => {
+/**
+ * Smoke-test av login-skjemaet (issue #107).
+ *
+ * Magic-link-flyten ble retired 2026-05-13 til fordel for OTP-kode (se
+ * CLAUDE.md "Auth-flyt"). Denne speccen er nå redusert til en smoke:
+ * den bekrefter at /login rendres med dagens to-stegs OTP-form
+ * (e-post-input + "Send meg kode"-knapp), at gamle magic-link-rester
+ * faktisk er borte, og at uautentiserte besøkende bouncer til /login.
+ *
+ * Den faktiske OTP-verifiseringsflyten (signInWithOtp → verifyOtp →
+ * session-cookie → invitation.accepted_at) dekkes av
+ * `e2e/auth/invitation-flow.spec.ts` (issue #30), så vi duplikerer ikke
+ * den her — den krever service-role-env og er stor og treg. Denne
+ * speccen skal kunne kjøre uten Supabase-tilgang.
+ */
+test.describe('Login form smoke (OTP step 1)', () => {
+  test('rendres med e-post-input og "Send meg kode"-knapp', async ({ page }) => {
     await page.goto('/login');
+
     await expect(page.getByRole('heading', { name: 'Logg inn' })).toBeVisible();
     await expect(page.getByLabel('E-post')).toBeVisible();
     await expect(
-      page.getByRole('button', { name: 'Send meg lenke' }),
+      page.getByRole('button', { name: 'Send meg kode' }),
     ).toBeVisible();
-    // Password field is gone
+
+    // Magic-link-knappen skal være borte.
+    await expect(
+      page.getByRole('button', { name: 'Send meg lenke' }),
+    ).toHaveCount(0);
+
+    // Ingen passord-felt — auth er passord-løs.
     await expect(page.locator('input[type="password"]')).toHaveCount(0);
   });
 
-  test('shows success or user-not-found after submitting an email', async ({
+  test('e-post-feltet er påkrevet (HTML5-validering blokkerer tom submit)', async ({
     page,
   }) => {
     await page.goto('/login');
-    await page.getByLabel('E-post').fill('nonexistent@example.com');
-    await page.getByRole('button', { name: 'Send meg lenke' }).click();
-    // Supabase's behaviour with shouldCreateUser=false for an unknown email
-    // depends on project config: it may silently succeed (don't leak whether
-    // an email is registered) OR return an error. Either outcome proves the
-    // form submitted correctly.
-    await expect(
-      page.locator(
-        'text=/Sjekk e-posten din|Denne mailen er ikke registrert/',
-      ),
-    ).toBeVisible({ timeout: 10_000 });
+
+    const emailInput = page.getByLabel('E-post');
+    // `required`-attributtet sørger for at nettleseren stopper submit
+    // før vi treffer server-action-en — så vi kan asserte det direkte
+    // uten å være avhengig av Supabase-respons.
+    await expect(emailInput).toHaveAttribute('required', '');
+    await expect(emailInput).toHaveAttribute('type', 'email');
   });
 
-  test('redirects unauthenticated visitor to /login', async ({ page }) => {
+  test('redirecter uautentisert besøkende til /login', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveURL(/\/login/);
   });
