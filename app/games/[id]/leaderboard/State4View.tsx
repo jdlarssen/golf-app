@@ -159,10 +159,37 @@ export function State4View({
         ))}
       </ul>
 
-      <p className="px-6 pt-1 pb-5 text-center font-serif text-[11px] italic text-muted">
+      <p className="px-6 pt-1 pb-3 text-center font-serif text-[11px] italic text-muted">
         Tap et lag for hull-for-hull
       </p>
+
+      <ExportLink gameId={gameId} />
     </Shell>
+  );
+}
+
+/**
+ * Last-ned-CSV-knapp for ferdigspilte spill. Standard `<a>` med `download`-
+ * attribut — nettleseren laster ned filen direkte fra server-routen i stedet
+ * for å navigere bort. ASCII-safe filnavn (`torny-{id}-{YYYY-MM-DD}.csv`)
+ * matcher det server-routen returnerer i `Content-Disposition`.
+ *
+ * Sekundærknapp-stil (border + transparent fyll) i samme språk som
+ * `Button variant="secondary"`, men ikke `LinkButton` siden vi trenger
+ * en rå `<a>` med `download` for at nettleseren skal trigge nedlasting.
+ */
+function ExportLink({ gameId }: { gameId: string }) {
+  const today = new Date().toISOString().slice(0, 10);
+  return (
+    <div className="flex justify-center px-6 pb-5">
+      <a
+        href={`/games/${gameId}/leaderboard/export`}
+        download={`torny-${gameId}-${today}.csv`}
+        className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-border bg-transparent px-[18px] py-2.5 text-sm font-medium tracking-tight text-text transition-[background-color,transform,opacity] duration-100 hover:bg-primary-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+      >
+        Last ned resultat (CSV)
+      </a>
+    </div>
   );
 }
 
