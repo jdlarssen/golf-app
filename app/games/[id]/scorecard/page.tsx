@@ -290,11 +290,17 @@ async function ScorecardTable({
       </Card>
 
       {submittedAt ? (
-        <LinkButton href={`/games/${gameId}`} full>
+        // Scorekortet er levert — denne siden er en read-only oppsummering.
+        // «Tilbake til spillet» er ren navigasjon, ikke en primary CTA, så
+        // den får outline-stilen (secondary) for å unngå å skrike etter
+        // oppmerksomhet på en skjerm uten klar hovedhandling.
+        <LinkButton href={`/games/${gameId}`} full variant="secondary">
           Tilbake til spillet →
         </LinkButton>
       ) : (
         <>
+          {/* Mid-round: «Tilbake til hull N» ER skjermens primary action —
+              fortsetter pågående runde. Beholder primary-fyllet. */}
           <LinkButton href={`/games/${gameId}/holes/${continueHole}`} full>
             Tilbake til hull {continueHole} →
           </LinkButton>

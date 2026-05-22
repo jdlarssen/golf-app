@@ -14,6 +14,22 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark Appearance, blir Tørny mørk når du åpner appen — uten at noe annet endrer seg.
 
+### [1.8.2] - 2026-05-23
+
+**Knappene rundt scorekortet og leaderboarden roer seg ned — primary-knapper kun for hovedhandlinger, sekundære actions går outline-stil.**
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+- `app/games/[id]/scorecard/page.tsx` — «Tilbake til spillet →»-knappen som vises etter levert scorekort byttet fra `variant="primary"` til `variant="secondary"`. Read-only-oppsummering uten klar hovedhandling skal ikke pushe en CTA med primary-fyll. Mid-round-grenen (knapp «Tilbake til hull N →») beholder primary-stilen siden den faktisk fortsetter pågående runde — den ER skjermens hovedhandling.
+- `app/games/[id]/leaderboard/holes/page.tsx` — «Totalt — X hull vunnet — N»-summary-baren under team-drilldown byttet fra `bg-primary text-bg-tint` (heavy forest-fyll) til `border border-border bg-surface text-text`. Bar-en er en read-only oppsummering, ikke en CTA — en stille surface med subtil topp-border og accent-kicker bærer hierarkiet uten å trenge høy-kontrast fyll. `text-accent` på «hull vunnet» dempet til `text-muted` siden accent ikke trenger å bære vekten på en rolig flate.
+
+#### Notes
+- Per design-prinsipp: én klar primary action per skjerm. Game-home (finished) beholder «🏆 Se leaderboard →» som primary — det ER post-runde-hovedhandlingen. Summary-tekst og navigasjonsknapper som ikke har én tydelig hovedrolle får outline/quiet-stilen.
+
+</details>
+
 ### [1.8.1] - 2026-05-23
 
 **Du kan nå spille av jubelscenene igjen — replay-ikonet over leaderboarden trigger fyrverkeriet på nytt.**

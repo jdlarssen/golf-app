@@ -411,13 +411,16 @@ teamPlayers={selected.players}
               summaryNet={backNet}
             />
 
-            {/* Total bar */}
-            <div className="mx-4 mt-5 mb-5 flex items-center justify-between rounded-[14px] bg-primary px-5 py-3.5 text-bg-tint">
+            {/* Total bar — read-only summary, ikke en CTA. Toner ned fra
+                tidligere bg-primary-fyll (skrek til leseren) til en stille
+                surface med subtil topp-border. Tall + accent-kicker bærer
+                hierarkiet uten å trenge høy-kontrast fyll. */}
+            <div className="mx-4 mt-5 mb-5 flex items-center justify-between rounded-[14px] border border-border bg-surface px-5 py-3.5 text-text">
               <div>
                 <span className="block text-[10px] font-semibold uppercase tracking-[0.20em] text-accent">
                   Totalt
                 </span>
-                <span className="mt-0.5 block text-[11.5px] opacity-75 tabular-nums">
+                <span className="mt-0.5 block text-[11.5px] tabular-nums text-muted">
                   {holesWon} hull vunnet
                 </span>
               </div>
@@ -425,7 +428,7 @@ teamPlayers={selected.players}
                 <span className="font-serif text-[32px] font-semibold leading-none tracking-[-0.02em] tabular-nums">
                   {selected.total}
                 </span>
-                <span className="font-sans text-[14px] font-semibold tabular-nums text-accent">
+                <span className="font-sans text-[14px] font-semibold tabular-nums text-muted">
                   {formatVsPar(totalVsPar)}
                 </span>
               </div>
