@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
-import { PageHeader } from '@/components/ui/PageHeader';
+import { Kicker } from '@/components/ui/Kicker';
 import { completeProfile } from './actions';
 
 type SearchParams = Promise<{ error?: string | string[] }>;
@@ -52,20 +52,26 @@ export default async function CompleteProfile({
 
   return (
     <AppShell>
-      <PageHeader title="Fullfør profilen din" />
+      <header className="mb-8">
+        <Kicker tone="accent" className="mb-2">
+          Velkommen til Tørny
+        </Kicker>
+        <h1 className="font-serif text-3xl font-medium tracking-tight text-text leading-tight">
+          Fullfør profilen din
+        </h1>
+        <p className="font-sans text-sm leading-relaxed text-muted mt-2">
+          Fortell oss litt om deg, så er du klar til å spille.
+        </p>
+      </header>
 
       <Card>
-        <p className="text-sm text-muted mb-5">
-          Velkommen! Fyll inn detaljene dine for å fullføre registreringen.
-        </p>
-
         {errorMessage && (
           <div className="mb-4">
             <Banner tone="error">{errorMessage}</Banner>
           </div>
         )}
 
-        <form action={completeProfile} className="space-y-4">
+        <form action={completeProfile} className="space-y-5">
           <Input
             id="name"
             name="name"
@@ -98,8 +104,8 @@ export default async function CompleteProfile({
             inputClassName="score-num"
           />
 
-          <Button type="submit" className="w-full">
-            Fullfør profilen
+          <Button type="submit" className="w-full mt-2">
+            Sett i gang
           </Button>
         </form>
       </Card>

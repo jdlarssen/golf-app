@@ -14,6 +14,23 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark Appearance, blir Tørny mørk når du åpner appen — uten at noe annet endrer seg.
 
+### [1.8.10] - 2026-05-23
+
+> Profil-utfylling etter første innlogging er pusset opp — passer nå inn i Tørny-stilen sammen med resten av appen, med en varmere velkomst og roligere typografi-rytme.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+- `app/complete-profile/page.tsx` — onboarding-overskriften byttet fra generisk `<PageHeader title>` til en flat header med champagne-tonet `Kicker` («Velkommen til Tørny»), Fraunces-serif `h1`, og Inter-body undertittel («Fortell oss litt om deg, så er du klar til å spille.»). Erstatter den gamle «Velkommen! Fyll inn detaljene dine …»-prosaen inni cardet. Submit-knapp-label endret fra «Fullfør profilen» (repeterte tittelen) til «Sett i gang» — action-orientert Tørny-stemme. Form-spacing pustet ut fra `space-y-4` til `space-y-5`. Closes [#128](https://github.com/jdlarssen/golf-app/issues/128).
+
+#### Notes
+- Ingen funksjonsendringer: feltene (navn, kallenavn, hcp_index), validering (server-action), redirect-flyten (`/` ved completed, `/login` ved no-session) og error-message-mapping er uendret.
+- Bruker etablerte UI-primitives + semantic tokens (`var(--text)`, `var(--muted)`, `var(--accent)`) — dark mode arver gratis fra resten av appen.
+- TopBar bevisst utelatt: `/complete-profile` er obligatorisk onboarding-flyt etter første OTP-innlogging, så det er ingen tilbakeknapp å vise.
+
+</details>
+
 ### [1.8.9] - 2026-05-23
 
 > Admin-listene over baner og spill bruker nå samme top-bar som resten av appen — konsistent navigasjon på tvers av Tørny.
