@@ -14,6 +14,27 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark Appearance, blir Tørny mørk når du åpner appen — uten at noe annet endrer seg.
 
+### [1.8.11] - 2026-05-23
+
+> Leaderboarden etter en ferdigspilt runde har nå en subtil fairway-vinje med flaggstang i bakgrunnen — atmosfære uten å konkurrere med leader-cardet.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `components/illustrations/LeaderboardBackdrop.tsx` — ny inline-SVG-komponent som tegner tre horisont-linjer og en enslig flaggstang med vimpel + ball. Bruker `currentColor` med wrapperens `text-accent` (champagne), opacity 0.07 i lys modus og 0.10 i dark via ny CSS-variabel `--leaderboard-backdrop-opacity`. `preserveAspectRatio="xMidYEnd meet"` forankrer scenen i bunnen av container-en så toppen aldri konkurrerer med leader-cardet. Closes [#27](https://github.com/jdlarssen/golf-app/issues/27).
+- `components/illustrations/LeaderboardBackdrop.test.tsx` — smoke-test for ARIA-hidden, posisjon, tint og className-merge.
+
+#### Changed
+- `app/games/[id]/leaderboard/State4View.tsx` — `Shell` wrapper-en pakker nå innholdet i en `relative isolate`-container med `LeaderboardBackdrop` som første barn og selve innholdet i en `relative` søsken. Gjelder både chromeless (tab-modus) og standalone-modus.
+- `app/globals.css` — ny token `--leaderboard-backdrop-opacity` (0.07 lys / 0.10 dark) styres fra både `prefers-color-scheme: dark`-blokk og `[data-theme='dark']`-blokk.
+
+#### Notes
+- SVG ble valgt fremfor raster (`next/image`) fordi vektor skalerer perfekt på alle viewports, `currentColor` gir gratis dark-mode-toning, og inline SVG matcher resten av kodebasen (`components/icons/`). Closes [#36](https://github.com/jdlarssen/golf-app/issues/36) — `next/image`-pipeline er ikke nødvendig for de subtile dekorative bakgrunnene Tørny trenger.
+- Backdrop respekterer eksisterende `prefers-reduced-motion`-håndtering uten endring — illustrasjonen er statisk, ingen animasjon å suppressere.
+
+</details>
+
 ### [1.8.10] - 2026-05-23
 
 > Profil-utfylling etter første innlogging er pusset opp — passer nå inn i Tørny-stilen sammen med resten av appen, med en varmere velkomst og roligere typografi-rytme.
