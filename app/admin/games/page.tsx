@@ -93,12 +93,25 @@ export default async function GamesPage({
         <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
           Sekretariatet
         </p>
-        <SmartLink
-          href="/admin/games/new"
-          className="rounded-full border border-border bg-surface-2/50 px-2.5 py-[5px] font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-text"
-        >
-          + Nytt
-        </SmartLink>
+        {filterFinished ? (
+          // Resultatprotokoll er et arkiv — å starte et nytt spill herfra er en
+          // uvanlig flyt. Vi beholder et usynlig spacer-element (samme content +
+          // padding) så «Sekretariatet»-labelen blir liggende sentrert mellom
+          // venstre BackLink og høyre kant.
+          <span
+            aria-hidden
+            className="invisible rounded-full border border-border px-2.5 py-[5px] font-sans text-[10px] font-semibold uppercase tracking-[0.12em]"
+          >
+            + Nytt
+          </span>
+        ) : (
+          <SmartLink
+            href="/admin/games/new"
+            className="rounded-full border border-border bg-surface-2/50 px-2.5 py-[5px] font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-text"
+          >
+            + Nytt
+          </SmartLink>
+        )}
       </div>
 
       <BrassRibbon kicker="Spill · protokoll" />

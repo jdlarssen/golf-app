@@ -14,6 +14,22 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark Appearance, blir Tørny mørk når du åpner appen — uten at noe annet endrer seg.
 
+### [1.8.7] - 2026-05-23
+
+**To rare UX-flater i admin/games er ryddet: «+ Nytt»-knappen er borte i Resultatprotokoll-arkivet, og sideturnering-toggle kan nå aktiveres uavhengig av lag-status under spill-opprett. Du slipper å scrolle opp-ned for å aktivere sideturnering etter å ha satt opp lag.**
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+- `app/admin/games/page.tsx` — «+ Nytt»-chipsen skjules (via `invisible`-Tailwind-class) i Resultatprotokoll-visningen (`?status=finished`). Beholder layout-slot-en med samme padding så «Sekretariatet»-labelen forblir sentrert mellom BackLink og høyre kant. Closes [#113](https://github.com/jdlarssen/golf-app/issues/113).
+- `app/admin/games/new/GameForm.tsx` — fjernet `sideTournamentEligible`-gaten (`distinctTeams >= 2`) og dens bruk på sideturnering-checkboxen. Toggle er nå alltid enable-able så lenge `lockSideTournament` ikke er satt (sistnevnte gjelder spill som allerede er publisert). Help-text «Krever minst 2 lag for å aktiveres» fjernet. LD/CTP-config viser så fort sideturnering er checked. Gaten var redundant siden `lib/games/gamePayload.ts:162-172` allerede krever eksakt 4 lag × 2 spillere ved publish — et publisert Tørny-spill har alltid 4 lag, så «≥2 lag»-sjekken kunne aldri feile. Closes [#115](https://github.com/jdlarssen/golf-app/issues/115).
+
+#### Notes
+- Forward-compatible med [#41](https://github.com/jdlarssen/golf-app/issues/41) (variable lagstruktur som epic) — endringene introduserer ingen nye antakelser om lagsantall, kun fjerner en redundant UI-gate. Når #41 lander og hardkoding 4×2 byttes ut med per-modus-validering, vil sideturnering-toggle-en allerede oppføre seg riktig uten gate.
+
+</details>
+
 ### [1.8.6] - 2026-05-23
 
 **Tilbake-pilen fra leaderboarden tar deg nå tilbake til Min historikk når du kom fra den listen. Bruker en eksplisitt URL-param i stedet for nettleser-history (som ikke var pålitelig i PWA-modus).**

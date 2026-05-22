@@ -278,18 +278,6 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     TEAM_NUMBERS.every((t) => playersByTeam[t].length === 2) &&
     selectedPlayerIds.every((pid) => teamByPlayer[pid] !== undefined);
 
-  // Side-tournament gate: needs at least 2 distinct teams assigned. Derived
-  // from `teamByPlayer` so it stays reactive when admin draws/clears teams.
-  const distinctTeams = useMemo(() => {
-    const set = new Set<number>();
-    for (const team of Object.values(teamByPlayer)) {
-      if (team != null) set.add(team as number);
-    }
-    return set.size;
-  }, [teamByPlayer]);
-
-  const sideTournamentEligible = distinctTeams >= 2;
-
   // Default flights: lag 1 + lag 2 = flight 1, lag 3 + lag 4 = flight 2.
   // Recomputed any time teams change so admin sees a sensible baseline; the
   // admin can still override per player.
@@ -699,9 +687,9 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
                 type="checkbox"
                 name="side_tournament_enabled"
                 value="true"
-                checked={sideEnabled && sideTournamentEligible}
+                checked={sideEnabled}
                 onChange={(e) => setSideEnabled(e.target.checked)}
-                disabled={lockSideTournament || !sideTournamentEligible}
+                disabled={lockSideTournament}
                 className="mt-1"
               />
               <div>
@@ -714,13 +702,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
               </div>
             </label>
 
-            {!sideTournamentEligible && (
-              <p className="text-xs text-muted">
-                Krever minst 2 lag for å aktiveres.
-              </p>
-            )}
-
-            {sideEnabled && sideTournamentEligible && (
+            {sideEnabled && (
               <div className="space-y-4 rounded-md border border-border bg-surface-2 p-3">
                 <p className="text-xs text-muted">
                   Poengfordeling: best netto 18 = 10p, front 9 + back 9 = 5p hver,
