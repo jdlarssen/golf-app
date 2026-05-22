@@ -243,6 +243,12 @@ function Header({
  *
  * Lives next to back-link in non-chromeless headers, and standalone top-
  * right above the title in chromeless (tabs) mode.
+ *
+ * The `confetti-replay-button` class hooks into `globals.css` so the button
+ * is hidden (visibility:hidden — preserves the 44px layout slot) when the OS
+ * has `prefers-reduced-motion: reduce` enabled. Without that, tapping the
+ * button would be a dead-tap since `.confetti-piece { display: none }` already
+ * suppresses the actual confetti for that preference.
  */
 function ReplayButton({ onClick }: { onClick: () => void }) {
   return (
@@ -251,7 +257,7 @@ function ReplayButton({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       aria-label="Spill av jubelscenene igjen"
       title="Spill av jubelscenene igjen"
-      className="group inline-flex h-11 w-11 items-center justify-center rounded-full text-muted transition-colors hover:bg-primary-soft hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 active:scale-95"
+      className="confetti-replay-button group inline-flex h-11 w-11 items-center justify-center rounded-full text-muted transition-colors hover:bg-primary-soft hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 active:scale-95"
     >
       <ReplayIcon size={20} />
     </button>

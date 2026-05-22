@@ -14,6 +14,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark Appearance, blir Tørny mørk når du åpner appen — uten at noe annet endrer seg.
 
+### [1.8.5] - 2026-05-23
+
+**Replay-knappen for jubelscenene skjules nå hvis du har «Reduser bevegelse» på i iPhone-innstillinger — så du ikke får en knapp som ikke gjør noe. Konfetti-animasjonen var allerede skjult for brukere med den innstillingen; nå er trigger-knappen det også.**
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `app/games/[id]/leaderboard/State4View.tsx` — `ReplayButton` får ny class `confetti-replay-button`. `app/globals.css` (`@media (prefers-reduced-motion: reduce)`-blokken) skjuler knappen med `visibility: hidden` (bevarer 44×44 layout-slot for å holde header-chromet balansert). Dead-tap-UX-en oppstod fordi `.confetti-piece { display: none }` skjuler selve animasjonen for brukere med reduce-motion, men replay-knappen kom uendret gjennom — tap ga ingen visuell respons.
+
+</details>
+
 ### [1.8.4] - 2026-05-23
 
 **Tilbake-pilen fra en ferdigspilt leaderboard går tilbake til spillets hjemside igjen — fikser en loop som kunne oppstå mellom lag-drilldown og hovedturneringen i PWA-modus. Konsekvens: tilbake fra leaderboard lander ikke i Min historikk lenger (re-åpner det som et eget arbeid).**

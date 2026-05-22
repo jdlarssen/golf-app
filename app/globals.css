@@ -529,6 +529,12 @@ h1, h2, h3, h4, h5, h6 {
   .confetti-piece {
     display: none;
   }
+  /* Hide the replay-button too — tapping it would be a dead action since the
+   * confetti animation is suppressed above. `visibility: hidden` keeps the
+   * 44px layout slot so the header chrome stays balanced. */
+  .confetti-replay-button {
+    visibility: hidden;
+  }
 }
 
 /* -----------------------------------------------------------------------------
