@@ -4,7 +4,7 @@ Alle bruker-synlige endringer i Tørny logges her. Versjonering følger [Semanti
 
 Pre-1.0.0 (`0.x.y`) regnes som alpha — vi er fortsatt under uttesting med kompisgjengen. Disiplinen ble innført ved `0.2.0`; alt før det er samlet under «Pre-disiplin».
 
-Hver entry begynner med én **bold setning på vanlig norsk** — hva endringen betyr for deg som bruker — etterfulgt av en sammenfoldbar **Teknisk**-seksjon med utvikler-prosa i [Keep a Changelog](https://keepachangelog.com/no/)-stil. Minor-serier (`0.X.y`) er gruppert under et tema-heading med kort sammendrag; eldre serier er sammenfoldet by default for å holde fila lett å scrolle.
+Hver entry begynner med en kort stakeholder-tagline på vanlig norsk satt som blockquote (`> …`) — hva endringen betyr for deg som bruker — etterfulgt av en sammenfoldbar **Teknisk**-seksjon med utvikler-prosa i [Keep a Changelog](https://keepachangelog.com/no/)-stil. Minor-serier (`0.X.y`) er gruppert under et tema-heading med kort sammendrag; eldre serier er sammenfoldet by default for å holde fila lett å scrolle.
 
 Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «Versjonering / CHANGELOG».
 
@@ -16,7 +16,7 @@ Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark App
 
 ### [1.8.7] - 2026-05-23
 
-**To rare UX-flater i admin/games er ryddet: «+ Nytt»-knappen er borte i Resultatprotokoll-arkivet, og sideturnering-toggle kan nå aktiveres uavhengig av lag-status under spill-opprett. Du slipper å scrolle opp-ned for å aktivere sideturnering etter å ha satt opp lag.**
+> To rare UX-flater i admin/games er ryddet: «+ Nytt»-knappen er borte i Resultatprotokoll-arkivet, og sideturnering-toggle kan nå aktiveres uavhengig av lag-status under spill-opprett. Du slipper å scrolle opp-ned for å aktivere sideturnering etter å ha satt opp lag.
 
 <details>
 <summary>Teknisk</summary>
@@ -32,7 +32,7 @@ Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark App
 
 ### [1.8.6] - 2026-05-23
 
-**Tilbake-pilen fra leaderboarden tar deg nå tilbake til Min historikk når du kom fra den listen. Bruker en eksplisitt URL-param i stedet for nettleser-history (som ikke var pålitelig i PWA-modus).**
+> Tilbake-pilen fra leaderboarden tar deg nå tilbake til Min historikk når du kom fra den listen. Bruker en eksplisitt URL-param i stedet for nettleser-history (som ikke var pålitelig i PWA-modus).
 
 <details>
 <summary>Teknisk</summary>
@@ -50,7 +50,7 @@ Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark App
 
 ### [1.8.5] - 2026-05-23
 
-**Replay-knappen for jubelscenene skjules nå hvis du har «Reduser bevegelse» på i iPhone-innstillinger — så du ikke får en knapp som ikke gjør noe. Konfetti-animasjonen var allerede skjult for brukere med den innstillingen; nå er trigger-knappen det også.**
+> Replay-knappen for jubelscenene skjules nå hvis du har «Reduser bevegelse» på i iPhone-innstillinger — så du ikke får en knapp som ikke gjør noe. Konfetti-animasjonen var allerede skjult for brukere med den innstillingen; nå er trigger-knappen det også.
 
 <details>
 <summary>Teknisk</summary>
@@ -62,7 +62,7 @@ Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark App
 
 ### [1.8.4] - 2026-05-23
 
-**Tilbake-pilen fra en ferdigspilt leaderboard går tilbake til spillets hjemside igjen — fikser en loop som kunne oppstå mellom lag-drilldown og hovedturneringen i PWA-modus. Konsekvens: tilbake fra leaderboard lander ikke i Min historikk lenger (re-åpner det som et eget arbeid).**
+> Tilbake-pilen fra en ferdigspilt leaderboard går tilbake til spillets hjemside igjen — fikser en loop som kunne oppstå mellom lag-drilldown og hovedturneringen i PWA-modus. Konsekvens: tilbake fra leaderboard lander ikke i Min historikk lenger (re-åpner det som et eget arbeid).
 
 <details>
 <summary>Teknisk</summary>
@@ -75,7 +75,7 @@ Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark App
 
 ### [1.8.2] - 2026-05-23
 
-**Knappene rundt scorekortet og leaderboarden roer seg ned — primary-knapper kun for hovedhandlinger, sekundære actions går outline-stil.**
+> Knappene rundt scorekortet og leaderboarden roer seg ned — primary-knapper kun for hovedhandlinger, sekundære actions går outline-stil.
 
 <details>
 <summary>Teknisk</summary>
@@ -91,7 +91,7 @@ Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark App
 
 ### [1.8.1] - 2026-05-23
 
-**Du kan nå spille av jubelscenene igjen — replay-ikonet over leaderboarden trigger fyrverkeriet på nytt.**
+> Du kan nå spille av jubelscenene igjen — replay-ikonet over leaderboarden trigger fyrverkeriet på nytt.
 
 <details>
 <summary>Teknisk</summary>
@@ -107,7 +107,7 @@ Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark App
 
 ### [1.8.0] - 2026-05-19
 
-**Tørny støtter nå mørk modus. Har du iPhonen på Dark Appearance (Innstillinger → Skjerm og lysstyrke → Mørk), bytter Tørny automatisk til en mørk klubbhus-natt-palett. Står den på lys eller automatisk, fortsetter appen å se ut som før. Ingen knapp å trykke — appen følger telefonen.**
+> Tørny støtter nå mørk modus. Har du iPhonen på Dark Appearance (Innstillinger → Skjerm og lysstyrke → Mørk), bytter Tørny automatisk til en mørk klubbhus-natt-palett. Står den på lys eller automatisk, fortsetter appen å se ut som før. Ingen knapp å trykke — appen følger telefonen.
 
 <details>
 <summary>Teknisk</summary>
@@ -132,7 +132,7 @@ Spill-opprett-formen har nå et søkefelt over spiller-listen. Klar for 100+ spi
 
 ### [1.7.0] - 2026-05-19
 
-**Spiller-listen på spill-opprett (og edit) har nå et søkefelt. Skriv inn navn for å filtrere; valgte spillere vises som chips øverst så du ikke mister oversikten i lange lister. Klargjør for klubbskala når kompisgjengen vokser.**
+> Spiller-listen på spill-opprett (og edit) har nå et søkefelt. Skriv inn navn for å filtrere; valgte spillere vises som chips øverst så du ikke mister oversikten i lange lister. Klargjør for klubbskala når kompisgjengen vokser.
 
 <details>
 <summary>Teknisk</summary>
@@ -152,7 +152,7 @@ Du kan nå laste ned resultatet fra ferdigspilte spill som CSV — praktisk for 
 
 ### [1.6.0] - 2026-05-19
 
-**Etter et spill er avsluttet kan du nå laste ned resultatet som CSV-fil — åpnes rett i Numbers, Excel og Google Sheets. Praktisk hvis du vil henge resultatet opp i klubbhuset eller dele med folk uten Tørny-konto.**
+> Etter et spill er avsluttet kan du nå laste ned resultatet som CSV-fil — åpnes rett i Numbers, Excel og Google Sheets. Praktisk hvis du vil henge resultatet opp i klubbhuset eller dele med folk uten Tørny-konto.
 
 <details>
 <summary>Teknisk</summary>
@@ -172,7 +172,7 @@ Vinnerliste og «mest aktive»-listen fyller seg automatisk fra ferdigspilte spi
 
 ### [1.5.2] - 2026-05-19
 
-**Datoer vises nå konsistent på norsk i hele appen. Tee-off-tidspunktet i admin-detalj-visningen brukte en feilstavet locale-kode («no-NO» — en tag som ikke finnes i den internasjonale standarden) — det er nå rettet til «nb-NO». Ingen synlig endring for deg som bruker, men appen står seg bedre på tvers av nettlesere og fremtidige Node-oppgraderinger.**
+> Datoer vises nå konsistent på norsk i hele appen. Tee-off-tidspunktet i admin-detalj-visningen brukte en feilstavet locale-kode («no-NO» — en tag som ikke finnes i den internasjonale standarden) — det er nå rettet til «nb-NO». Ingen synlig endring for deg som bruker, men appen står seg bedre på tvers av nettlesere og fremtidige Node-oppgraderinger.
 
 <details>
 <summary>Teknisk</summary>
@@ -194,7 +194,7 @@ Vinnerliste og «mest aktive»-listen fyller seg automatisk fra ferdigspilte spi
 
 ### [1.5.1] - 2026-05-19
 
-**Innlogging- og invitasjons-formene har nå en usynlig honeypot mot bot-trafikk. Du som ekte bruker merker ingenting; bot-er som spammer skjemaet får et stilltiende «ok» uten at appen faktisk sender mail eller oppretter invitasjoner.**
+> Innlogging- og invitasjons-formene har nå en usynlig honeypot mot bot-trafikk. Du som ekte bruker merker ingenting; bot-er som spammer skjemaet får et stilltiende «ok» uten at appen faktisk sender mail eller oppretter invitasjoner.
 
 <details>
 <summary>Teknisk</summary>
@@ -209,7 +209,7 @@ Vinnerliste og «mest aktive»-listen fyller seg automatisk fra ferdigspilte spi
 
 ### [1.5.0] - 2026-05-18
 
-**Ny side: Klubbstatistikker. Se hvem som har vunnet flest spill og hvem som har vært med på flest spill — toppen markert med champagne-gull. Lenken ligger på profil-siden din.**
+> Ny side: Klubbstatistikker. Se hvem som har vunnet flest spill og hvem som har vært med på flest spill — toppen markert med champagne-gull. Lenken ligger på profil-siden din.
 
 <details>
 <summary>Teknisk</summary>
@@ -237,7 +237,7 @@ Hver fysisk tee legges nå inn én gang med valgfrie ratings pr. gender (Herrer 
 
 ### [1.4.2] - 2026-05-18
 
-**Når du går videre til neste hull eller bakover, fader innholdet kort inn istedenfor å bare poppe på plass. Liten polish, men gjør hull-byttet mykere.**
+> Når du går videre til neste hull eller bakover, fader innholdet kort inn istedenfor å bare poppe på plass. Liten polish, men gjør hull-byttet mykere.
 
 <details>
 <summary>Teknisk</summary>
@@ -251,7 +251,7 @@ Hver fysisk tee legges nå inn én gang med valgfrie ratings pr. gender (Herrer 
 
 ### [1.4.1] - 2026-05-18
 
-**Bane-redigering lagrer nå alle tee-bokser du har lagt inn. Tidligere mistet du tee 6 og 7 hvis du fylte ut mer enn fem rader.**
+> Bane-redigering lagrer nå alle tee-bokser du har lagt inn. Tidligere mistet du tee 6 og 7 hvis du fylte ut mer enn fem rader.
 
 <details>
 <summary>Teknisk</summary>
@@ -265,7 +265,7 @@ Hver fysisk tee legges nå inn én gang med valgfrie ratings pr. gender (Herrer 
 
 ### [1.4.0] - 2026-05-17
 
-**Tee-bokser kan nå ha rating for flere kjønn på samme rad — så du legger inn «Gul» én gang med slope/CR for Herrer og Damer, ikke to ganger. Spill-formen er forenklet til én tee-dropdown med M/D/J-toggle pr. spiller. Du kan også fylle ut manglende ratings på eksisterende tees i etterkant.**
+> Tee-bokser kan nå ha rating for flere kjønn på samme rad — så du legger inn «Gul» én gang med slope/CR for Herrer og Damer, ikke to ganger. Spill-formen er forenklet til én tee-dropdown med M/D/J-toggle pr. spiller. Du kan også fylle ut manglende ratings på eksisterende tees i etterkant.
 
 <details>
 <summary>Teknisk</summary>
@@ -309,7 +309,7 @@ Herrer og damer kan nå spille fra ulike tees i samme runde med korrekt course h
 
 ### [1.3.0] - 2026-05-17
 
-**Du kan nå arrangere spill der herrer og damer spiller fra ulike tees i samme runde — alle får riktig course handicap. Tee-bokser tagges med kjønn i bane-admin, og du kan redigere baner selv om det er ferdigspilte spill på dem.**
+> Du kan nå arrangere spill der herrer og damer spiller fra ulike tees i samme runde — alle får riktig course handicap. Tee-bokser tagges med kjønn i bane-admin, og du kan redigere baner selv om det er ferdigspilte spill på dem.
 
 #### Added
 - Migrasjon `0028_tee_box_gender.sql` — `tee_box_gender` enum (`mens`/`ladies`/`juniors`) + `tee_boxes.gender` (NOT NULL, default `'mens'`) + `game_players.tee_box_id` (nullable per-player override)
@@ -344,7 +344,7 @@ Sideturneringen får 12 nye kategorier og 3 stackbare achievements (Turkey/Solid
 
 ### [1.2.0] - 2026-05-16
 
-**Sideturneringen får 12 nye kategorier å spille om — fra «flest birdier» og «konge på par-3» til stackbare achievements som Turkey (3 birdier på rad) og Snowman (lagets felles katastrofe på ett hull). Du velger selv ved spill-opprett hvilke som er aktive.**
+> Sideturneringen får 12 nye kategorier å spille om — fra «flest birdier» og «konge på par-3» til stackbare achievements som Turkey (3 birdier på rad) og Snowman (lagets felles katastrofe på ett hull). Du velger selv ved spill-opprett hvilke som er aktive.
 
 <details><summary>Teknisk</summary>
 
@@ -384,7 +384,7 @@ Første feature shipped etter v1.0.0. Lag kan nå konkurrere parallelt med best-
 
 ### [1.1.10] - 2026-05-16
 
-**To admin-flater som tidligere bare hadde en kjedelig "Ingen X ennå"-tekst — invitasjons-køen og spill-lista — får nå en medaljong + ikon + et lite hint om hva som skjer videre, så de føler seg som invitasjoner heller enn glemte tomstader.**
+> To admin-flater som tidligere bare hadde en kjedelig "Ingen X ennå"-tekst — invitasjons-køen og spill-lista — får nå en medaljong + ikon + et lite hint om hva som skjer videre, så de føler seg som invitasjoner heller enn glemte tomstader.
 
 <details>
 <summary>Teknisk</summary>
@@ -397,7 +397,7 @@ Første feature shipped etter v1.0.0. Lag kan nå konkurrere parallelt med best-
 
 ### [1.1.9] - 2026-05-16
 
-**Sensitive admin-handlinger (avslutte spill, godkjenne scorekort, gjenåpne spill/scorekort) skrives nå til en intern audit-log med hvem-gjorde-hva og når, så vi har et data-spor å se etter hvis noe ble endret feil.**
+> Sensitive admin-handlinger (avslutte spill, godkjenne scorekort, gjenåpne spill/scorekort) skrives nå til en intern audit-log med hvem-gjorde-hva og når, så vi har et data-spor å se etter hvis noe ble endret feil.
 
 <details>
 <summary>Teknisk</summary>
@@ -414,7 +414,7 @@ Første feature shipped etter v1.0.0. Lag kan nå konkurrere parallelt med best-
 
 ### [1.1.8] - 2026-05-16
 
-**Admin-invitasjons-flyten har nå rate-limiting (20 per admin, 30 per IP per minutt), så et bug eller kompromittert konto ikke kan sende ut bursts av invitasjoner og brenne mail-budsjettet.**
+> Admin-invitasjons-flyten har nå rate-limiting (20 per admin, 30 per IP per minutt), så et bug eller kompromittert konto ikke kan sende ut bursts av invitasjoner og brenne mail-budsjettet.
 
 <details>
 <summary>Teknisk</summary>
@@ -431,7 +431,7 @@ Første feature shipped etter v1.0.0. Lag kan nå konkurrere parallelt med best-
 
 ### [1.1.7] - 2026-05-16
 
-**Du kan nå bytte mellom netto og brutto på det avsluttede leaderboardet — toggle-en er tydeligere (begge modus synes samtidig, gjeldende er framhevet), og "Total"-tallet på lederkortet oppdaterer seg når du bytter.**
+> Du kan nå bytte mellom netto og brutto på det avsluttede leaderboardet — toggle-en er tydeligere (begge modus synes samtidig, gjeldende er framhevet), og "Total"-tallet på lederkortet oppdaterer seg når du bytter.
 
 <details>
 <summary>Teknisk</summary>
@@ -446,7 +446,7 @@ Første feature shipped etter v1.0.0. Lag kan nå konkurrere parallelt med best-
 
 ### [1.1.6] - 2026-05-16
 
-**Du ser nå netto-tallet ditt per hull på scorekort-oversikten — også mens runden pågår, ikke bare etter at spillet er avsluttet.**
+> Du ser nå netto-tallet ditt per hull på scorekort-oversikten — også mens runden pågår, ikke bare etter at spillet er avsluttet.
 
 <details>
 <summary>Teknisk</summary>
@@ -458,7 +458,7 @@ Første feature shipped etter v1.0.0. Lag kan nå konkurrere parallelt med best-
 
 ### [1.1.5] - 2026-05-16
 
-**Når tee-off-tiden passerer og runden starter automatisk, kommer du nå rett inn på hull-skjermen — uten å bli sendt tilbake til startskjermen først.**
+> Når tee-off-tiden passerer og runden starter automatisk, kommer du nå rett inn på hull-skjermen — uten å bli sendt tilbake til startskjermen først.
 
 <details>
 <summary>Teknisk</summary>
@@ -470,7 +470,7 @@ Første feature shipped etter v1.0.0. Lag kan nå konkurrere parallelt med best-
 
 ### [1.1.4] - 2026-05-16
 
-**Du ser nå netto-tallet ditt diskret under navnet på hvert hull, så du slipper å regne i hodet — også som plus-golfer.**
+> Du ser nå netto-tallet ditt diskret under navnet på hvert hull, så du slipper å regne i hodet — også som plus-golfer.
 
 <details>
 <summary>Teknisk</summary>
@@ -487,7 +487,7 @@ Første feature shipped etter v1.0.0. Lag kan nå konkurrere parallelt med best-
 
 ### [1.1.3] - 2026-05-16
 
-**Sideturneringen viser nå hvem som er på hvert lag, og du kan klikke på et lag for å se hvilke kategorier som ga poengene deres.**
+> Sideturneringen viser nå hvem som er på hvert lag, og du kan klikke på et lag for å se hvilke kategorier som ga poengene deres.
 
 <details><summary>Teknisk</summary>
 
@@ -506,7 +506,7 @@ Første feature shipped etter v1.0.0. Lag kan nå konkurrere parallelt med best-
 
 ### [1.1.2] - 2026-05-16
 
-**Initialene på scorekortet og hull-leaderboardet bruker nå første bokstav i fornavn og etternavn (f.eks. «Karl Hansen» → «KH»), i stedet for første bokstav i kallenavnet. Spillere med kun fornavn får fortsatt én bokstav.**
+> Initialene på scorekortet og hull-leaderboardet bruker nå første bokstav i fornavn og etternavn (f.eks. «Karl Hansen» → «KH»), i stedet for første bokstav i kallenavnet. Spillere med kun fornavn får fortsatt én bokstav.
 
 <details>
 <summary>Teknisk</summary>
@@ -522,7 +522,7 @@ Første feature shipped etter v1.0.0. Lag kan nå konkurrere parallelt med best-
 
 ### [1.1.1] - 2026-05-16
 
-**I reveal-modus ser nå alle deltakere live brutto-leaderboardet på tvers av flights — ikke bare sin egen flight. Netto-rangeringen forblir skjult til admin avslutter spillet, akkurat som før.**
+> I reveal-modus ser nå alle deltakere live brutto-leaderboardet på tvers av flights — ikke bare sin egen flight. Netto-rangeringen forblir skjult til admin avslutter spillet, akkurat som før.
 
 <details>
 <summary>Teknisk</summary>
@@ -534,7 +534,7 @@ Første feature shipped etter v1.0.0. Lag kan nå konkurrere parallelt med best-
 
 ### [1.1.0] - 2026-05-14
 
-**Du kan nå legge til en sideturnering i admin-formen. Lag samler poeng fra 6 kategorier — best netto 18, front 9, back 9, hole-wins, longest drive og closest to pin. Resultatet vises i en egen fane på leaderboarden etter at spillet er avsluttet.**
+> Du kan nå legge til en sideturnering i admin-formen. Lag samler poeng fra 6 kategorier — best netto 18, front 9, back 9, hole-wins, longest drive og closest to pin. Resultatet vises i en egen fane på leaderboarden etter at spillet er avsluttet.
 
 <details><summary>Teknisk</summary>
 
@@ -564,7 +564,7 @@ Tørny er nå klar for ekte bruk. Tre features kobles til v1.0: reveal-modus for
 
 ### [1.0.10] - 2026-05-14
 
-**Hjemmesiden hilser deg nå proft uten håndvink-emoji, og kicker-overskriften i toppbar-en (SEKRETARIATET, PROFIL, …) står ekte sentrert i stedet for å lene mot venstre.**
+> Hjemmesiden hilser deg nå proft uten håndvink-emoji, og kicker-overskriften i toppbar-en (SEKRETARIATET, PROFIL, …) står ekte sentrert i stedet for å lene mot venstre.
 
 <details>
 <summary>Teknisk</summary>
@@ -577,7 +577,7 @@ Tørny er nå klar for ekte bruk. Tre features kobles til v1.0: reveal-modus for
 
 ### [1.0.9] - 2026-05-14
 
-**Hull-for-hull-oversikten viser nå per-spiller vs-par-pille rett ved siden av netto-scoren. TOTALT-kortet har fått mot-par-en flyttet inn ved siden av totalsummen (56 −16) i stedet for som egen linje under.**
+> Hull-for-hull-oversikten viser nå per-spiller vs-par-pille rett ved siden av netto-scoren. TOTALT-kortet har fått mot-par-en flyttet inn ved siden av totalsummen (56 −16) i stedet for som egen linje under.
 
 <details>
 <summary>Teknisk</summary>
@@ -593,7 +593,7 @@ Tørny er nå klar for ekte bruk. Tre features kobles til v1.0: reveal-modus for
 
 ### [1.0.8] - 2026-05-14
 
-**Hull-for-hull-oversikten er ryddet opp: vinner-av-hullet-prikken er borte (skapte mer støy enn verdi), netto-tall står nå tett ved brutto for hver spiller, og helt til høyre står lagets score for hullet med en E/+1/−1-pille — slik at du kan følge progresjonen nedover og se nøyaktig på hvilket hull dere gikk fra E til −1.**
+> Hull-for-hull-oversikten er ryddet opp: vinner-av-hullet-prikken er borte (skapte mer støy enn verdi), netto-tall står nå tett ved brutto for hver spiller, og helt til høyre står lagets score for hullet med en E/+1/−1-pille — slik at du kan følge progresjonen nedover og se nøyaktig på hvilket hull dere gikk fra E til −1.
 
 <details>
 <summary>Teknisk</summary>
@@ -606,7 +606,7 @@ Tørny er nå klar for ekte bruk. Tre features kobles til v1.0: reveal-modus for
 
 ### [1.0.7] - 2026-05-14
 
-**Hull-for-hull-oversikten har fått en helt ny layout: hver spiller har sin egen rad med initial (J, H, …) foran scoren — som på et fysisk scorekort. Bokstaven til den som «vant» netto-en for laget er uthevet. Sparer plass, ingen horisontal scroll selv på smaler iPhone.**
+> Hull-for-hull-oversikten har fått en helt ny layout: hver spiller har sin egen rad med initial (J, H, …) foran scoren — som på et fysisk scorekort. Bokstaven til den som «vant» netto-en for laget er uthevet. Sparer plass, ingen horisontal scroll selv på smaler iPhone.
 
 <details>
 <summary>Teknisk</summary>
@@ -619,7 +619,7 @@ Tørny er nå klar for ekte bruk. Tre features kobles til v1.0: reveal-modus for
 
 ### [1.0.6] - 2026-05-14
 
-**Scorekortet passer nå på normal iPhone — +slag-kolonnen er flyttet til fotnoten som «Slag fått: N» totalt. Du kjenner din egen handicap-fordeling per hull, og kortet trenger ikke gjenta den på hver linje.**
+> Scorekortet passer nå på normal iPhone — +slag-kolonnen er flyttet til fotnoten som «Slag fått: N» totalt. Du kjenner din egen handicap-fordeling per hull, og kortet trenger ikke gjenta den på hver linje.
 
 <details>
 <summary>Teknisk</summary>
@@ -631,7 +631,7 @@ Tørny er nå klar for ekte bruk. Tre features kobles til v1.0: reveal-modus for
 
 ### [1.0.5] - 2026-05-14
 
-**Hull-for-hull-leaderboardet er overhalt: hver spiller-celle viser nå både brutto-tall (med form rundt), antall ekstra-slag og netto-tall i ett tydelig stack. «Brukt netto» har fått fargefylt bakgrunn så det er lett å se hvem som vant hullet. Form-strekene er tynnere så trippel- og kvadruppel-former tar mindre plass.**
+> Hull-for-hull-leaderboardet er overhalt: hver spiller-celle viser nå både brutto-tall (med form rundt), antall ekstra-slag og netto-tall i ett tydelig stack. «Brukt netto» har fått fargefylt bakgrunn så det er lett å se hvem som vant hullet. Form-strekene er tynnere så trippel- og kvadruppel-former tar mindre plass.
 
 <details>
 <summary>Teknisk</summary>
@@ -644,7 +644,7 @@ Tørny er nå klar for ekte bruk. Tre features kobles til v1.0: reveal-modus for
 
 ### [1.0.4] - 2026-05-14
 
-**Leaderboardet oppdaterer seg automatisk når admin trykker «Avslutt spillet» — du slipper å refreshe selv for å se reveal-en.**
+> Leaderboardet oppdaterer seg automatisk når admin trykker «Avslutt spillet» — du slipper å refreshe selv for å se reveal-en.
 
 <details>
 <summary>Teknisk</summary>
@@ -657,7 +657,7 @@ Tørny er nå klar for ekte bruk. Tre features kobles til v1.0: reveal-modus for
 
 ### [1.0.3] - 2026-05-14
 
-**Spill-hjem-siden har nå en «Leaderboard»-knapp så du kan se brutto-stillingen mens du venter på at admin avslutter spillet — ikke bare via hull-skjermen.**
+> Spill-hjem-siden har nå en «Leaderboard»-knapp så du kan se brutto-stillingen mens du venter på at admin avslutter spillet — ikke bare via hull-skjermen.
 
 <details>
 <summary>Teknisk</summary>
@@ -669,7 +669,7 @@ Tørny er nå klar for ekte bruk. Tre features kobles til v1.0: reveal-modus for
 
 ### [1.0.2] - 2026-05-14
 
-**Live brutto-leaderboardet viser nå hvor langt under/over par hvert lag og hver spiller er — du ser `+3` ved siden av brutto-totalen istedenfor bare det rå tallet.**
+> Live brutto-leaderboardet viser nå hvor langt under/over par hvert lag og hver spiller er — du ser `+3` ved siden av brutto-totalen istedenfor bare det rå tallet.
 
 <details>
 <summary>Teknisk</summary>
@@ -681,7 +681,7 @@ Tørny er nå klar for ekte bruk. Tre features kobles til v1.0: reveal-modus for
 
 ### [1.0.1] - 2026-05-14
 
-**Par-scorene står nå på samme kolonne som birdies og bogeys på hull-skjermen — de skjøvet seg litt til venstre fordi de manglet form rundt seg.**
+> Par-scorene står nå på samme kolonne som birdies og bogeys på hull-skjermen — de skjøvet seg litt til venstre fordi de manglet form rundt seg.
 
 <details>
 <summary>Teknisk</summary>
@@ -693,7 +693,7 @@ Tørny er nå klar for ekte bruk. Tre features kobles til v1.0: reveal-modus for
 
 ### [1.0.0] - 2026-05-14
 
-**Første stabile release. Tørny går fra alpha til 1.0 med tre nye features som markerer at appen er klar for ekte bruk: reveal-modus skjuler netto-tall under runden og avslører på slutten (perfekt for kompis-gjenger der laget med høyere handicap kan slå brutto-lederen — det blir et virkelig spennings-moment når du trykker avslutt), scorekort-former gir birdies en sirkel og bogeys en firkant slik som ekte papir-scorekort, og når et spill er ferdig vises navnene som «Karl "Knølkis" Jensen» med kallenavnet midt i fullt navn.**
+> Første stabile release. Tørny går fra alpha til 1.0 med tre nye features som markerer at appen er klar for ekte bruk: reveal-modus skjuler netto-tall under runden og avslører på slutten (perfekt for kompis-gjenger der laget med høyere handicap kan slå brutto-lederen — det blir et virkelig spennings-moment når du trykker avslutt), scorekort-former gir birdies en sirkel og bogeys en firkant slik som ekte papir-scorekort, og når et spill er ferdig vises navnene som «Karl "Knølkis" Jensen» med kallenavnet midt i fullt navn.
 
 <details>
 <summary>Teknisk</summary>
@@ -738,7 +738,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.27] - 2026-05-14
 
-**Live brutto-leaderboard for reveal-spill — du ser hvordan lagene ligger an på brutto, men vinneren er fortsatt skjult. Nytt: når et spill er ferdig vises navnene som «Karl "Knølkis" Jensen» — kallenavnet midt i fullt navn som en del av reveal-en. Og du kan nå hoppe direkte til leaderboardet fra hull-skjermen via en liten knapp i toppen.**
+> Live brutto-leaderboard for reveal-spill — du ser hvordan lagene ligger an på brutto, men vinneren er fortsatt skjult. Nytt: når et spill er ferdig vises navnene som «Karl "Knølkis" Jensen» — kallenavnet midt i fullt navn som en del av reveal-en. Og du kan nå hoppe direkte til leaderboardet fra hull-skjermen via en liten knapp i toppen.
 
 <details>
 <summary>Teknisk</summary>
@@ -758,7 +758,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.26] - 2026-05-14
 
-**Reveal-modus er nå klar: admin kan velge om netto-tallene skjules under runden og avsløres på slutten. Funker overalt — hull-skjerm, scorekort, leaderboard, godkjenning.**
+> Reveal-modus er nå klar: admin kan velge om netto-tallene skjules under runden og avsløres på slutten. Funker overalt — hull-skjerm, scorekort, leaderboard, godkjenning.
 
 <details>
 <summary>Teknisk</summary>
@@ -779,7 +779,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.25] - 2026-05-14
 
-**Scorekort-formene følger nå med over alt der tallene står — scorekort-oversikt, lever-skjerm, godkjenning og hull-leaderboard. Samtidig krymper «HULL»-kolonnen til kun «#» for å frigjøre plass på smale skjermer.**
+> Scorekort-formene følger nå med over alt der tallene står — scorekort-oversikt, lever-skjerm, godkjenning og hull-leaderboard. Samtidig krymper «HULL»-kolonnen til kun «#» for å frigjøre plass på smale skjermer.
 
 <details>
 <summary>Teknisk</summary>
@@ -799,7 +799,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.24] - 2026-05-14
 
-**Tre justeringer på hull-skjermen etter første pilot-test: trippel-sirkel for albatross, dobbeltfirkant utvides til kvadruppel-firkant for blow-up-hull, og spesifikk-score-arket forenkles til kun eagle/birdie/par + X for å fjerne en score helt.**
+> Tre justeringer på hull-skjermen etter første pilot-test: trippel-sirkel for albatross, dobbeltfirkant utvides til kvadruppel-firkant for blow-up-hull, og spesifikk-score-arket forenkles til kun eagle/birdie/par + X for å fjerne en score helt.
 
 <details>
 <summary>Teknisk</summary>
@@ -819,7 +819,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.23] - 2026-05-14
 
-**Score-tallene på hull-skjermen får scorekort-former rundt seg — sirkel for birdies, firkant for bogeys, dobbel for eagle og double bogey.**
+> Score-tallene på hull-skjermen får scorekort-former rundt seg — sirkel for birdies, firkant for bogeys, dobbel for eagle og double bogey.
 
 <details>
 <summary>Teknisk</summary>
@@ -840,7 +840,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.22] - 2026-05-14
 
-**Tilbake-knappen på personvern-siden returnerer deg nå til siden du kom fra, ikke alltid til hjem-siden.**
+> Tilbake-knappen på personvern-siden returnerer deg nå til siden du kom fra, ikke alltid til hjem-siden.
 
 <details>
 <summary>Teknisk</summary>
@@ -860,7 +860,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.21] - 2026-05-14
 
-**Personvern-siden er nå faktisk lesbar uten å logge inn — tidligere ble du sendt til /login fordi auth-gaten ikke gjorde unntak.**
+> Personvern-siden er nå faktisk lesbar uten å logge inn — tidligere ble du sendt til /login fordi auth-gaten ikke gjorde unntak.
 
 <details>
 <summary>Teknisk</summary>
@@ -875,7 +875,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.20] - 2026-05-14
 
-**«Personvern» er nå klikkbar fra bunnen av hver side ved siden av versjons-stempelet — også på login-siden, så invitéer kan lese den før de logger inn.**
+> «Personvern» er nå klikkbar fra bunnen av hver side ved siden av versjons-stempelet — også på login-siden, så invitéer kan lese den før de logger inn.
 
 <details>
 <summary>Teknisk</summary>
@@ -890,7 +890,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.19] - 2026-05-14
 
-**Personvern-siden er nå nådbar fra profilen — liten muted-tekst med lenke rett under «Mine data»-seksjonen.**
+> Personvern-siden er nå nådbar fra profilen — liten muted-tekst med lenke rett under «Mine data»-seksjonen.
 
 <details>
 <summary>Teknisk</summary>
@@ -905,7 +905,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.18] - 2026-05-14
 
-**Hver side har nå en tydelig overskrift i den sticky top-baren — som «Sekretariatet» gjør på admin-sidene. Tidligere var det bare en chevron der med en tom plass i midten.**
+> Hver side har nå en tydelig overskrift i den sticky top-baren — som «Sekretariatet» gjør på admin-sidene. Tidligere var det bare en chevron der med en tom plass i midten.
 
 <details>
 <summary>Teknisk</summary>
@@ -934,7 +934,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.17] - 2026-05-14
 
-**Tilbake-knappen klistrer seg nå til toppen av skjermen på alle lange admin- og profil-sider — du slipper å scrolle helt opp for å komme tilbake.**
+> Tilbake-knappen klistrer seg nå til toppen av skjermen på alle lange admin- og profil-sider — du slipper å scrolle helt opp for å komme tilbake.
 
 <details>
 <summary>Teknisk</summary>
@@ -959,7 +959,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.16] - 2026-05-14
 
-**Innloggings-flyten føles nå raskere og mindre forvirrende: «Send kode»-knappen viser «Sender kode …» mens den jobber, og koden logger deg inn automatisk så snart den er fylt inn — du trenger ikke trykke «Logg inn» selv.**
+> Innloggings-flyten føles nå raskere og mindre forvirrende: «Send kode»-knappen viser «Sender kode …» mens den jobber, og koden logger deg inn automatisk så snart den er fylt inn — du trenger ikke trykke «Logg inn» selv.
 
 <details>
 <summary>Teknisk</summary>
@@ -982,7 +982,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.15] - 2026-05-14
 
-**Du kan nå slette et spill helt uavhengig av status — også aktive spill der ikke alle har levert scorekort, og avsluttede spill. Slettesiden viser sterkere advarsel for aktive spill men blokkerer ikke handlingen.**
+> Du kan nå slette et spill helt uavhengig av status — også aktive spill der ikke alle har levert scorekort, og avsluttede spill. Slettesiden viser sterkere advarsel for aktive spill men blokkerer ikke handlingen.
 
 <details>
 <summary>Teknisk</summary>
@@ -1000,7 +1000,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.14] - 2026-05-14
 
-**Ny «Installer Tørny som app»-knapp på hjem-siden og i profilen. Du trenger ikke lenger lete etter «Legg til på hjem-skjerm» i Safari-menyen — Tørny tilbyr installasjonen selv.**
+> Ny «Installer Tørny som app»-knapp på hjem-siden og i profilen. Du trenger ikke lenger lete etter «Legg til på hjem-skjerm» i Safari-menyen — Tørny tilbyr installasjonen selv.
 
 <details>
 <summary>Teknisk</summary>
@@ -1031,7 +1031,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.13] - 2026-05-14
 
-**Defensiv sikkerhetsstramming: innloggede brukere kan ikke lenger SELECTe vilkårlige invitasjons-rader fra `public.invitations` — kun sine egne.**
+> Defensiv sikkerhetsstramming: innloggede brukere kan ikke lenger SELECTe vilkårlige invitasjons-rader fra `public.invitations` — kun sine egne.
 
 <details>
 <summary>Teknisk</summary>
@@ -1048,7 +1048,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.12] - 2026-05-14
 
-**Ny «Min historikk»-side på profilen lar deg se alle dine fullførte runder med dato, brutto sum og snitt per hull.**
+> Ny «Min historikk»-side på profilen lar deg se alle dine fullførte runder med dato, brutto sum og snitt per hull.
 
 <details>
 <summary>Teknisk</summary>
@@ -1070,7 +1070,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.11] - 2026-05-14
 
-**Admin kan nå endre e-postadressen til en registrert spiller, og se sist innlogget + antall spill på spiller-detaljen.**
+> Admin kan nå endre e-postadressen til en registrert spiller, og se sist innlogget + antall spill på spiller-detaljen.
 
 <details>
 <summary>Teknisk</summary>
@@ -1091,7 +1091,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.10] - 2026-05-14
 
-**Du kan nå slette et spill helt fra admin — nyttig hvis du opprettet noe ved et uhell eller vil rydde opp etter en test.**
+> Du kan nå slette et spill helt fra admin — nyttig hvis du opprettet noe ved et uhell eller vil rydde opp etter en test.
 
 <details>
 <summary>Teknisk</summary>
@@ -1108,7 +1108,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.9] - 2026-05-14
 
-**Admin ser nå om en ventende invitasjon faktisk har bedt om innloggings-kode, så du vet om mailen ble lest eller bare ligger der.**
+> Admin ser nå om en ventende invitasjon faktisk har bedt om innloggings-kode, så du vet om mailen ble lest eller bare ligger der.
 
 <details>
 <summary>Teknisk</summary>
@@ -1125,7 +1125,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.8] - 2026-05-14
 
-**To nye GDPR-kontroller på profil-siden: du kan laste ned alt Tørny vet om deg som en JSON-fil, og du kan slette kontoen din selv (med mindre du er med i et pågående spill).**
+> To nye GDPR-kontroller på profil-siden: du kan laste ned alt Tørny vet om deg som en JSON-fil, og du kan slette kontoen din selv (med mindre du er med i et pågående spill).
 
 <details>
 <summary>Teknisk</summary>
@@ -1146,7 +1146,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.7] - 2026-05-14
 
-**Du kan nå legge til opptil 7 tee-bokser per bane i admin (var 5).**
+> Du kan nå legge til opptil 7 tee-bokser per bane i admin (var 5).
 
 <details>
 <summary>Teknisk</summary>
@@ -1161,7 +1161,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.6] - 2026-05-14
 
-**Vennsinvitasjoner blokkeres nå korrekt hvis mottakeren allerede har startet en innlogging hos Tørny, ikke bare hvis de har fullført profilen.**
+> Vennsinvitasjoner blokkeres nå korrekt hvis mottakeren allerede har startet en innlogging hos Tørny, ikke bare hvis de har fullført profilen.
 
 <details>
 <summary>Teknisk</summary>
@@ -1180,7 +1180,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.5] - 2026-05-14
 
-**Kontakt-lenken på personvern-siden går nå til en faktisk e-postadresse (`personvern@tornygolf.no`) i stedet for en admin-bare side spilleren ikke kunne nå.**
+> Kontakt-lenken på personvern-siden går nå til en faktisk e-postadresse (`personvern@tornygolf.no`) i stedet for en admin-bare side spilleren ikke kunne nå.
 
 <details>
 <summary>Teknisk</summary>
@@ -1195,7 +1195,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.4] - 2026-05-14
 
-**Ny personvern-side på `/legal/privacy` forklarer hvilke data Tørny lagrer om deg, hvor de lagres, og hvilke rettigheter du har.**
+> Ny personvern-side på `/legal/privacy` forklarer hvilke data Tørny lagrer om deg, hvor de lagres, og hvilke rettigheter du har.
 
 <details>
 <summary>Teknisk</summary>
@@ -1211,7 +1211,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.3] - 2026-05-14
 
-**Hvis admin-handlinger feiler på å lese spillerlisten fra databasen, sier banneret nå «Klarte ikke å lese» i stedet for misvisende «Klarte ikke å lagre».**
+> Hvis admin-handlinger feiler på å lese spillerlisten fra databasen, sier banneret nå «Klarte ikke å lese» i stedet for misvisende «Klarte ikke å lagre».
 
 <details>
 <summary>Teknisk</summary>
@@ -1230,7 +1230,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.2] - 2026-05-13
 
-**SyncBanner viser nå norsk, lesbar forklaring («Mistet nett-tilkoblingen», «Innloggingen er utløpt») i stedet for tekniske Safari-feilmeldinger som «TypeError: Load failed».**
+> SyncBanner viser nå norsk, lesbar forklaring («Mistet nett-tilkoblingen», «Innloggingen er utløpt») i stedet for tekniske Safari-feilmeldinger som «TypeError: Load failed».
 
 <details>
 <summary>Teknisk</summary>
@@ -1252,7 +1252,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.1] - 2026-05-13
 
-**Du får nå en mail hver gang en spiller leverer scorekortet sitt — du slipper å åpne appen for å sjekke om det er noe å godkjenne.**
+> Du får nå en mail hver gang en spiller leverer scorekortet sitt — du slipper å åpne appen for å sjekke om det er noe å godkjenne.
 
 <details>
 <summary>Teknisk</summary>
@@ -1272,7 +1272,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.0] - 2026-05-13
 
-**Når du avslutter et spill får alle spillerne automatisk en mail med «Resultatet er klart» og lenke til leaderboard — du trenger ikke lenger sende beskjeden manuelt.**
+> Når du avslutter et spill får alle spillerne automatisk en mail med «Resultatet er klart» og lenke til leaderboard — du trenger ikke lenger sende beskjeden manuelt.
 
 <details>
 <summary>Teknisk</summary>
@@ -1301,7 +1301,7 @@ Hvis et slag ikke kommer fram til serveren, sier appen ifra. Ny sticky banner vi
 
 ### [0.9.4] - 2026-05-13
 
-**Game-hjem-sidens to gate-queries kjører nå parallelt, og audit av leaderboard/submit/scorecard bekrefter at de allerede gjorde det.**
+> Game-hjem-sidens to gate-queries kjører nå parallelt, og audit av leaderboard/submit/scorecard bekrefter at de allerede gjorde det.
 
 <details>
 <summary>Teknisk</summary>
@@ -1323,7 +1323,7 @@ Hvis et slag ikke kommer fram til serveren, sier appen ifra. Ny sticky banner vi
 
 ### [0.9.3] - 2026-05-13
 
-**Hull-bytte er ~60% raskere — server-rundene som tidligere kjørte sekvensielt går nå parallelt, og to av dem er slått sammen til én.**
+> Hull-bytte er ~60% raskere — server-rundene som tidligere kjørte sekvensielt går nå parallelt, og to av dem er slått sammen til én.
 
 <details>
 <summary>Teknisk</summary>
@@ -1343,7 +1343,7 @@ Hvis et slag ikke kommer fram til serveren, sier appen ifra. Ny sticky banner vi
 
 ### [0.9.2] - 2026-05-13
 
-**Skjermlesere identifiserer nå ventende invitéer korrekt i opprett-spill-flyten, og lange e-postadresser dytter ikke lenger «Venter»-pillen ut av synsfeltet.**
+> Skjermlesere identifiserer nå ventende invitéer korrekt i opprett-spill-flyten, og lange e-postadresser dytter ikke lenger «Venter»-pillen ut av synsfeltet.
 
 <details>
 <summary>Teknisk</summary>
@@ -1363,7 +1363,7 @@ Hvis et slag ikke kommer fram til serveren, sier appen ifra. Ny sticky banner vi
 
 ### [0.9.1] - 2026-05-13
 
-**Et score du har justert med + eller − blir ikke lenger nullstilt til par hvis du tilfeldigvis trykker på kortet igjen — og onboarding-banneret beskriver knappene som faktisk finnes.**
+> Et score du har justert med + eller − blir ikke lenger nullstilt til par hvis du tilfeldigvis trykker på kortet igjen — og onboarding-banneret beskriver knappene som faktisk finnes.
 
 <details>
 <summary>Teknisk</summary>
@@ -1379,7 +1379,7 @@ Hvis et slag ikke kommer fram til serveren, sier appen ifra. Ny sticky banner vi
 
 ### [0.9.0] - 2026-05-13
 
-**Hvis et slag ikke kommer fram til serveren, sier appen ifra — og du kan trykke «Prøv igjen» i stedet for å lure på om scoren ble lagret.**
+> Hvis et slag ikke kommer fram til serveren, sier appen ifra — og du kan trykke «Prøv igjen» i stedet for å lure på om scoren ble lagret.
 
 <details>
 <summary>Teknisk</summary>
@@ -1409,7 +1409,7 @@ Dedikert slett-side for spillere, fulgt av tre iterasjoner på «trekk tilbake»
 
 ### [0.8.5] - 2026-05-13
 
-**Hull-nummer og sekundær-tekst er nå tydeligere å lese på telefon utendørs — viktig før pilot-runden.**
+> Hull-nummer og sekundær-tekst er nå tydeligere å lese på telefon utendørs — viktig før pilot-runden.
 
 <details>
 <summary>Teknisk</summary>
@@ -1425,7 +1425,7 @@ Dedikert slett-side for spillere, fulgt av tre iterasjoner på «trekk tilbake»
 
 ### [0.8.4] - 2026-05-13
 
-**Du kan nå trekke tilbake en invitasjon fra iPhone uten at knappene oppfører seg rart.**
+> Du kan nå trekke tilbake en invitasjon fra iPhone uten at knappene oppfører seg rart.
 
 <details>
 <summary>Teknisk</summary>
@@ -1440,7 +1440,7 @@ Dedikert slett-side for spillere, fulgt av tre iterasjoner på «trekk tilbake»
 
 ### [0.8.3] - 2026-05-13
 
-**Forsøk på å fikse «trekk tilbake»-bekreftelsen for iPhone — viste seg å ikke fungere helt, og ble erstattet av løsningen i 0.8.4.**
+> Forsøk på å fikse «trekk tilbake»-bekreftelsen for iPhone — viste seg å ikke fungere helt, og ble erstattet av løsningen i 0.8.4.
 
 <details>
 <summary>Teknisk</summary>
@@ -1455,7 +1455,7 @@ Dedikert slett-side for spillere, fulgt av tre iterasjoner på «trekk tilbake»
 
 ### [0.8.2] - 2026-05-13
 
-**Ventende invitéer dukker ikke lenger opp dobbelt i admin-spillerlista, og «trekk tilbake» frigjør e-postadressen som forventet.**
+> Ventende invitéer dukker ikke lenger opp dobbelt i admin-spillerlista, og «trekk tilbake» frigjør e-postadressen som forventet.
 
 <details>
 <summary>Teknisk</summary>
@@ -1472,7 +1472,7 @@ Dedikert slett-side for spillere, fulgt av tre iterasjoner på «trekk tilbake»
 
 ### [0.8.1] - 2026-05-13
 
-**Hvis sletting av en spiller mislykkes, sier appen nå hvorfor — i stedet for å se ut som om ingenting skjedde.**
+> Hvis sletting av en spiller mislykkes, sier appen nå hvorfor — i stedet for å se ut som om ingenting skjedde.
 
 <details>
 <summary>Teknisk</summary>
@@ -1488,7 +1488,7 @@ Dedikert slett-side for spillere, fulgt av tre iterasjoner på «trekk tilbake»
 
 ### [0.8.0] - 2026-05-13
 
-**Du kan slette en spiller fra admin — nyttig hvis du sendte invitasjon til feil e-postadresse.**
+> Du kan slette en spiller fra admin — nyttig hvis du sendte invitasjon til feil e-postadresse.
 
 <details>
 <summary>Teknisk</summary>
@@ -1509,7 +1509,7 @@ Klikk på en spiller i admin for å redigere navn, kallenavn og handicap. Fareso
 
 ### [0.7.0] - 2026-05-13
 
-**Klikk på en spiller i admin for å redigere navn, kallenavn og handicap-indeks.**
+> Klikk på en spiller i admin for å redigere navn, kallenavn og handicap-indeks.
 
 #### Added
 
@@ -1531,7 +1531,7 @@ Erstatter den gamle `/admin/invitations`-flata med `/admin/spillere`, som samler
 
 ### [0.6.0] - 2026-05-13
 
-**Ny «Spillere»-side i admin samler registrerte spillere, ventende invitasjoner og invitasjons-form på ett sted, og du kan re-sende eller trekke tilbake invitasjoner derfra.**
+> Ny «Spillere»-side i admin samler registrerte spillere, ventende invitasjoner og invitasjons-form på ett sted, og du kan re-sende eller trekke tilbake invitasjoner derfra.
 
 #### Added
 
@@ -1559,21 +1559,21 @@ Ventende invitéer kan nå velges til lag og flight før de selv har logget inn.
 
 ### [0.5.10] - 2026-05-13
 
-**«Akseptert»-statusen på en invitasjon stemmer nå med om spilleren faktisk har fullført profilen sin.**
+> «Akseptert»-statusen på en invitasjon stemmer nå med om spilleren faktisk har fullført profilen sin.
 
 #### Fixed
 - `Akseptert`-pille på `/admin/invitations` reflekterer nå faktisk onboarding (`profile_completed_at IS NOT NULL`), ikke bare at invitasjons-raden ble markert akseptert ved OTP-verify. Stoppet misvisende «Akseptert»-status for brukere som klikket gammel magic-link-mail uten å fullføre profil.
 
 ### [0.5.9] - 2026-05-13
 
-**Beskytter mot at en bruker blir hengende som «Venter» selv etter at de har lagret profilen sin.**
+> Beskytter mot at en bruker blir hengende som «Venter» selv etter at de har lagret profilen sin.
 
 #### Fixed
 - Profil-oppdateringen stamper nå `profile_completed_at` som defence-in-depth, så en bruker som havner på `/profile` uten å ha fullført onboarding (deploy-vindu-race i tidligere release) blir ikke sittende fast som «Venter» i picker-en.
 
 ### [0.5.8] - 2026-05-13
 
-**Du kan ikke starte et planlagt spill hvis noen av deltakerne fortsatt mangler å fullføre profilen.**
+> Du kan ikke starte et planlagt spill hvis noen av deltakerne fortsatt mangler å fullføre profilen.
 
 #### Fixed
 - «Start spillet» (draft → aktiv) blokkeres nå hvis ikke alle valgte spillere har fullført profil — samme guard som scheduled-pathen.
@@ -1581,56 +1581,56 @@ Ventende invitéer kan nå velges til lag og flight før de selv har logget inn.
 
 ### [0.5.7] - 2026-05-13
 
-**Ventende invitéer uten utfylt navn vises med e-postadressen i stedet for tom plass.**
+> Ventende invitéer uten utfylt navn vises med e-postadressen i stedet for tom plass.
 
 #### Fixed
 - Rendring av ventende invitéer (uten utfylt navn) faller tilbake til e-postadressen i stedet for å vise tom tekst — gjelder admins spill-detaljside (lag/flight-oversikt) og spillernes venterom-visning av draft-spill.
 
 ### [0.5.6] - 2026-05-13
 
-**Nye brukere sendes igjen til onboarding-skjermen ved første innlogging.**
+> Nye brukere sendes igjen til onboarding-skjermen ved første innlogging.
 
 #### Fixed
 - Nye brukere ble ikke sendt til onboarding på `/` og `/profile` etter at trigger-en fra migrasjon 0014 begynte å pre-opprette `public.users`-rader. Gate-en sjekker nå `profile_completed_at` i stedet for "rad finnes ikke".
 
 ### [0.5.5] - 2026-05-13
 
-**Førstegangs-onboarding fungerer igjen for nye brukere — var midlertidig brutt etter en bakgrunnsendring.**
+> Førstegangs-onboarding fungerer igjen for nye brukere — var midlertidig brutt etter en bakgrunnsendring.
 
 #### Fixed
 - `complete-profile` oppdaterer nå den auto-opprettede `public.users`-raden i stedet for å forsøke å sette inn på nytt. Uten denne ville migrasjon 0014 brutt all ny brukerregistrering.
 
 ### [0.5.4] - 2026-05-13
 
-**Feilmeldingen for ventende spillere på opprett-spill-siden viser nå e-postadressene i stedet for «{LIST}».**
+> Feilmeldingen for ventende spillere på opprett-spill-siden viser nå e-postadressene i stedet for «{LIST}».
 
 #### Fixed
 - Feilmelding for ventende spillere viste `{LIST}`-plassholderen bokstavelig på opprett-spill-siden. Bruker nå samme `buildErrorMessage`-helper som rediger-spill og spill-detalj.
 
 ### [0.5.3] - 2026-05-13
 
-**Ekstra sikkerhets-sjekk: et publisert spill kan ikke startes med ventende spillere selv om databasen blir manuelt redigert.**
+> Ekstra sikkerhets-sjekk: et publisert spill kan ikke startes med ventende spillere selv om databasen blir manuelt redigert.
 
 #### Fixed
 - Start spill blokkeres også (defence-in-depth) hvis et publisert spill noensinne skulle få ventende spillere via direkte DB-redigering.
 
 ### [0.5.2] - 2026-05-13
 
-**Du kan ikke endre et eksisterende spill til publisert hvis det fortsatt har ventende invitéer.**
+> Du kan ikke endre et eksisterende spill til publisert hvis det fortsatt har ventende invitéer.
 
 #### Fixed
 - Publisering/oppdatering fra rediger-spill blokkeres med tydelig e-postliste hvis ventende invitasjoner står på rosteret.
 
 ### [0.5.1] - 2026-05-13
 
-**Du kan ikke publisere et nytt spill hvis noen av deltakerne ikke har fullført profilen sin.**
+> Du kan ikke publisere et nytt spill hvis noen av deltakerne ikke har fullført profilen sin.
 
 #### Fixed
 - Publisering av nytt spill blokkeres nå hvis ikke alle valgte spillere har fullført profil.
 
 ### [0.5.0] - 2026-05-13
 
-**Du kan nå velge ventende invitéer til lag og flight før de selv har logget inn.**
+> Du kan nå velge ventende invitéer til lag og flight før de selv har logget inn.
 
 #### Added
 - Inviterte spillere som ikke har logget inn ennå dukker opp i game-picker-en med en gul `Venter`-pille. Admin kan velge dem til lag og flight og lagre utkast.
@@ -1646,7 +1646,7 @@ Bytte fra magic-link til 6–8-sifret kode i mail, som fjernet to iOS-PWA-blokke
 
 ### [0.4.3] - 2026-05-13
 
-**Tørny vet nå hvilke spillere som har fullført profilen — forberedelse for å vise ventende invitéer riktig i spill-pickeren.**
+> Tørny vet nå hvilke spillere som har fullført profilen — forberedelse for å vise ventende invitéer riktig i spill-pickeren.
 
 #### Added
 
@@ -1654,7 +1654,7 @@ Bytte fra magic-link til 6–8-sifret kode i mail, som fjernet to iOS-PWA-blokke
 
 ### [0.4.2] - 2026-05-13
 
-**Hvis «Du er invitert»-mailen ikke kommer fram, sier admin-banneret det ærlig i stedet for å lyve «Invitasjon sendt».**
+> Hvis «Du er invitert»-mailen ikke kommer fram, sier admin-banneret det ærlig i stedet for å lyve «Invitasjon sendt».
 
 #### Fixed
 
@@ -1662,7 +1662,7 @@ Bytte fra magic-link til 6–8-sifret kode i mail, som fjernet to iOS-PWA-blokke
 
 ### [0.4.1] - 2026-05-13
 
-**Innloggings-kode-feltet godtar nå 8-sifrede koder, som er Supabase' faktiske standard.**
+> Innloggings-kode-feltet godtar nå 8-sifrede koder, som er Supabase' faktiske standard.
 
 #### Fixed
 
@@ -1670,7 +1670,7 @@ Bytte fra magic-link til 6–8-sifret kode i mail, som fjernet to iOS-PWA-blokke
 
 ### [0.4.0] - 2026-05-13
 
-**Du logger inn med en 6–8-sifret kode du taster inn, i stedet for å klikke en lenke i mailen. Inviterte spillere får først en notifikasjons-mail og må be om innloggings-kode selv etterpå.**
+> Du logger inn med en 6–8-sifret kode du taster inn, i stedet for å klikke en lenke i mailen. Inviterte spillere får først en notifikasjons-mail og må be om innloggings-kode selv etterpå.
 
 #### Changed
 
@@ -1692,7 +1692,7 @@ Tørny fikk sin egen visuelle identitet (wordmark med champagne-prikk på login 
 
 ### [0.3.3] - 2026-05-13
 
-**Invitasjoner flippes nå korrekt til «Akseptert» når mottakeren logger inn første gang — før dette sto alle som «Venter» uansett.**
+> Invitasjoner flippes nå korrekt til «Akseptert» når mottakeren logger inn første gang — før dette sto alle som «Venter» uansett.
 
 #### Fixed
 
@@ -1700,7 +1700,7 @@ Tørny fikk sin egen visuelle identitet (wordmark med champagne-prikk på login 
 
 ### [0.3.2] - 2026-05-13
 
-**Tee-off-tider viser nå riktig tid på alle skjermer — var av med 1–2 timer i et kort vindu rett etter sideinnlasting.**
+> Tee-off-tider viser nå riktig tid på alle skjermer — var av med 1–2 timer i et kort vindu rett etter sideinnlasting.
 
 #### Fixed
 
@@ -1708,7 +1708,7 @@ Tørny fikk sin egen visuelle identitet (wordmark med champagne-prikk på login 
 
 ### [0.3.1] - 2026-05-13
 
-**Du kan lagre et halvferdig spill-utkast uten at bane- og handicap-feltene må fylles ut først.**
+> Du kan lagre et halvferdig spill-utkast uten at bane- og handicap-feltene må fylles ut først.
 
 #### Fixed
 
@@ -1716,7 +1716,7 @@ Tørny fikk sin egen visuelle identitet (wordmark med champagne-prikk på login 
 
 ### [0.3.0] - 2026-05-13
 
-**Tørny har fått sin egen logo — wordmark med champagne-prikk på login-skjermen og som app-ikon.**
+> Tørny har fått sin egen logo — wordmark med champagne-prikk på login-skjermen og som app-ikon.
 
 #### Changed
 
@@ -1740,7 +1740,7 @@ Tørny fikk sin egen visuelle identitet (wordmark med champagne-prikk på login 
 
 ## [0.2.0] - 2026-05-12
 
-**Innfører versjonerings-disiplin: hver bruker-synlig endring skal bumpe versjonen og legge til CHANGELOG-entry i samme commit.**
+> Innfører versjonerings-disiplin: hver bruker-synlig endring skal bumpe versjonen og legge til CHANGELOG-entry i samme commit.
 
 <details>
 <summary>Teknisk</summary>
