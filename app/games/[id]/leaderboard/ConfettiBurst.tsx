@@ -24,12 +24,7 @@ type Piece = {
   h: number;
 };
 
-function generatePieces(seed: number): Piece[] {
-  // `seed` is unused as RNG input — it's just here as a dependency hint
-  // for `useMemo` so each replay re-generates fresh pieces. We use Math.random
-  // directly: a true seeded PRNG would give deterministic confetti, which is
-  // visually duller than a fresh roll each time.
-  void seed;
+function generatePieces(): Piece[] {
   return Array.from({ length: PIECE_COUNT }, () => {
     // Parametric trajectory per spec § confetti.
     //   angle spans roughly −75° to +75° from vertical.
@@ -55,23 +50,27 @@ function generatePieces(seed: number): Piece[] {
 /**
  * One-shot champagne burst anchored to the top of the leader card.
  *
- * Re-renders (with a fresh roll of pieces) every time `trigger` changes — the
- * outer `<div key={trigger}>` forces React to unmount/remount, so the CSS
- * animations restart cleanly. `trigger === 0` means "do not fire" (initial
- * idle state before the parent's mount-effect decides whether to auto-fire).
+ * The burst runs *once per mount*. To replay, the caller must remount the
+ * component — pass `key={someChangingNumber}` on `<ConfettiBurst />` itself,
+ * and React will unmount the old instance and mount a fresh one, restarting
+ * the CSS animations from the 0% keyframe.
+ *
+ * This is simpler (and more reliably re-fires) than the previous design,
+ * which managed an inner `key={trigger}` *inside* the returned tree and
+ * occasionally failed to restart animations in production reconciliations.
  *
  * The container is `position: absolute; height: 0; overflow: visible` so
  * pieces fall *outward* from the top of the leader card without affecting
- * its layout. Place inside a `position: relative` wrapper around the card.
+ * layout. Place inside a `position: relative` wrapper around the card.
  */
-export function ConfettiBurst({ trigger }: { trigger: number }) {
-  const pieces = useMemo(() => generatePieces(trigger), [trigger]);
-
-  if (trigger === 0) return null;
+export function ConfettiBurst() {
+  // Fresh roll of pieces every mount. `useMemo` with no deps caches across
+  // renders within the same mount — that's fine here since the component
+  // is mounted once per replay and unmounted before the next.
+  const pieces = useMemo(() => generatePieces(), []);
 
   return (
     <div
-      key={trigger}
       aria-hidden
       style={{
         position: 'absolute',

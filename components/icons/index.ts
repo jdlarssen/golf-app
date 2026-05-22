@@ -17,4 +17,5 @@ export {
   HandicapIcon,
   KolleIcon,
   KalenderIcon,
+  ReplayIcon,
 } from './Icons';

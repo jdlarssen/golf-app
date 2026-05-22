@@ -14,6 +14,22 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark Appearance, blir Tørny mørk når du åpner appen — uten at noe annet endrer seg.
 
+### [1.8.1] - 2026-05-23
+
+**Du kan nå spille av jubelscenene igjen — replay-ikonet over leaderboarden trigger fyrverkeriet på nytt.**
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `app/games/[id]/leaderboard/ConfettiBurst.tsx` — replay-knappen («Spill av») trigget ikke ny burst i prod. Komponenten hadde tidligere et internt `key={trigger}`-mønster der React noen ganger ikke remountet animasjonen rent. Forenklet til en ren mount-engang-komponent; State4View kontrollerer remount via `<ConfettiBurst key={replayKey} />` på utsiden. Garanterer at CSS-animasjonene restarter fra 0%-keyframen hver gang knappen trykkes.
+
+#### Changed
+- `app/games/[id]/leaderboard/State4View.tsx` — tekst-pillen «Spill av» erstattet med ikon-knapp (`ReplayIcon`, counterclockwise pil). 44×44px tap-target (iOS HIG), diskret topp-høyre plassering over leaderboarden. `text-muted` resting tint shifts til `text-accent` på hover/focus så gesten føles belønnet. Plasseringen er identisk i begge moduser (chromeless tabs-mode + standalone solo-mode) — knappen sitter til høyre i header eller inline over tittel.
+- `components/icons/Icons.tsx` + `index.ts` — ny `ReplayIcon` (24×24 line-icon, currentColor, 1.5 stroke) i Tørny-iconsettet. Counter-clockwise arc fra 9 til 5 med pil-spiss som peker inn i 9 o'clock.
+
+</details>
+
 ### [1.8.0] - 2026-05-19
 
 **Tørny støtter nå mørk modus. Har du iPhonen på Dark Appearance (Innstillinger → Skjerm og lysstyrke → Mørk), bytter Tørny automatisk til en mørk klubbhus-natt-palett. Står den på lys eller automatisk, fortsetter appen å se ut som før. Ingen knapp å trykke — appen følger telefonen.**

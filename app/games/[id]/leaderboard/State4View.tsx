@@ -2,7 +2,7 @@
 
 import { SmartLink } from '@/components/ui/SmartLink';
 import { useEffect, useState } from 'react';
-import { Laurel, PinFlagSm } from '@/components/icons';
+import { Laurel, PinFlagSm, ReplayIcon } from '@/components/icons';
 import { Medallion } from '@/components/ui/Medallion';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import {
@@ -41,12 +41,13 @@ type Props = {
  *   1. Champagne-tiered hierarchy — leader gets a hero card, others get
  *      slimmer rows.
  *   2. One-shot confetti burst from the top of the leader card, controllable
- *      via the header's `Spill av`-pill.
+ *      via the header's replay icon-button.
  *   3. Staggered fade-up entry for each team card.
  *
- * The whole view is a client component because the replay pill and confetti
- * share state — bumping `replayKey` re-mounts the burst. Data is fetched by
- * the server page and passed in as plain props.
+ * The whole view is a client component because the replay button and confetti
+ * share state — bumping `replayKey` re-mounts the burst (`<ConfettiBurst
+ * key={replayKey}>`), which restarts the CSS animations cleanly. Data is
+ * fetched by the server page and passed in as plain props.
  */
 export function State4View({
   gameId,
@@ -112,15 +113,8 @@ export function State4View({
         // Tab-mode replay control — sits where the Header's pill would be,
         // but inline above the title since the outer TopBar owns the back
         // chrome.
-        <div className="flex justify-end px-4 pt-2">
-          <button
-            type="button"
-            onClick={onReplay}
-            aria-label="Spill av konfetti på nytt"
-            className="inline-flex items-center rounded-full border border-border bg-[rgba(229,224,211,0.5)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted hover:bg-[rgba(229,224,211,0.7)] dark:bg-[rgba(45,63,50,0.6)] dark:hover:bg-[rgba(45,63,50,0.8)]"
-          >
-            Spill av
-          </button>
+        <div className="flex justify-end px-4 pt-1">
+          <ReplayButton onClick={onReplay} />
         </div>
       )}
 
@@ -136,7 +130,7 @@ export function State4View({
       <ModeChip gameId={gameId} mode={mode} />
 
       <div className="relative px-3.5 pt-3">
-        <ConfettiBurst trigger={replayKey} />
+        {replayKey > 0 && <ConfettiBurst key={replayKey} />}
         <LeaderCard
           gameId={gameId}
           mode={mode}
@@ -224,7 +218,7 @@ function Header({
       <SmartLink
         href={backHref}
         aria-label="Tilbake"
-        className="-ml-2 inline-flex h-8 w-8 items-center justify-center text-lg text-text"
+        className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
       >
         ‹
       </SmartLink>
@@ -232,18 +226,35 @@ function Header({
         {gameName}
       </span>
       {onReplay ? (
-        <button
-          type="button"
-          onClick={onReplay}
-          aria-label="Spill av konfetti på nytt"
-          className="inline-flex items-center rounded-full border border-border bg-[rgba(229,224,211,0.5)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted hover:bg-[rgba(229,224,211,0.7)] dark:bg-[rgba(45,63,50,0.6)] dark:hover:bg-[rgba(45,63,50,0.8)]"
-        >
-          Spill av
-        </button>
+        <ReplayButton onClick={onReplay} />
       ) : (
-        <span className="w-8" aria-hidden />
+        <span className="w-11" aria-hidden />
       )}
     </header>
+  );
+}
+
+/**
+ * Icon-only replay control for the confetti burst. ≥44px tap-target per
+ * iOS HIG; the visible icon sits in a 24px optical centre with hairline
+ * border and surface-soft fill so it reads as a discreet glyph rather than
+ * a CTA. `text-muted` resting tint shifts to `text-accent` on hover/focus
+ * so the gesture feels rewarded.
+ *
+ * Lives next to back-link in non-chromeless headers, and standalone top-
+ * right above the title in chromeless (tabs) mode.
+ */
+function ReplayButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Spill av jubelscenene igjen"
+      title="Spill av jubelscenene igjen"
+      className="group inline-flex h-11 w-11 items-center justify-center rounded-full text-muted transition-colors hover:bg-primary-soft hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 active:scale-95"
+    >
+      <ReplayIcon size={20} />
+    </button>
   );
 }
 

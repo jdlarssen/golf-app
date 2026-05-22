@@ -113,3 +113,14 @@ export const KalenderIcon = ({ size, ...rest }: IconProps) => (
     <circle cx="12" cy="15" r="1.5" fill="currentColor" stroke="none" />
   </svg>
 );
+
+// Counter-clockwise replay arrow — used to retrigger one-shot animations
+// (e.g. confetti burst on the finished leaderboard). Arc spans roughly
+// from 9 o'clock to 5 o'clock, with the arrow-head pointing into the arc
+// at the 9 o'clock entry so the gesture reads as "rewind / play again".
+export const ReplayIcon = ({ size, ...rest }: IconProps) => (
+  <svg {...base(size)} {...rest}>
+    <path d="M 4 12 A 8 8 0 1 0 6.3 6.3" />
+    <polyline points="3,3 4,12 13,11" />
+  </svg>
+);
