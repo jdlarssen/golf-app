@@ -257,8 +257,8 @@ async function TilesGrid() {
           className="reveal-up min-h-[108px] rounded-2xl px-3.5 pt-3.5 pb-3 text-left"
           style={{
             animationDelay: `${60 + i * 70}ms`,
-            background: tile.accent ? 'var(--primary)' : 'var(--surface)',
-            color: tile.accent ? 'var(--bg)' : 'var(--text)',
+            background: tile.accent ? 'var(--surface-strong)' : 'var(--surface)',
+            color: tile.accent ? 'var(--bg-tint)' : 'var(--text)',
             border: tile.accent ? 'none' : '1px solid var(--border)',
             boxShadow: tile.accent
               ? '0 4px 14px rgba(26, 46, 31, 0.15)'

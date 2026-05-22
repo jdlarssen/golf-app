@@ -132,7 +132,7 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     width: 36,
     height: 36,
     borderRadius: '50%',
-    background: 'var(--primary)',
+    background: 'var(--surface-strong)',
     color: 'var(--bg-tint)',
     display: 'flex',
     alignItems: 'center',

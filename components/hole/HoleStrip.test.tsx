@@ -21,12 +21,12 @@ describe('HoleStrip', () => {
     });
   });
 
-  it('current hole cell uses primary background', () => {
+  it('current hole cell uses strong-surface background', () => {
     const { container } = render(<HoleStrip gameId="g1" currentHole={7} />);
     const links = container.querySelectorAll('a');
     const currentLink = links[6];
     const chip = currentLink.querySelector('span') as HTMLElement;
-    expect(chip.style.background).toContain('var(--primary)');
+    expect(chip.style.background).toContain('var(--surface-strong)');
     expect(chip.style.color).toBe('var(--bg-tint)');
   });
 

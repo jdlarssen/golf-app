@@ -100,6 +100,12 @@
    * Deeper than --danger so it reads as a "no going back"-button against
    * the linen page, not just a warning-pill. */
   --danger-deep: #a04040;
+
+  /* Emphasized surface — always deep forest, even in dark mode. Used for
+   * brand-emphasis cards/headers where the foreground is bg-tint/accent
+   * (linen / gold). Cannot use --primary directly because dark --primary
+   * is sage, which would invert the contrast and break light foregrounds. */
+  --surface-strong: #1b4332;
 }
 
 /* Klubbhus-natt — dark mode. Not cold-grey, not pure black. Warm
@@ -173,6 +179,11 @@
     /* Destructive CTAer — lighter brick so it reads as "alarm" against the
      * dark forest bg, not as a black smudge. */
     --danger-deep: #c46868;
+
+    /* Emphasized surface — slightly lifted deep forest. Distinguishable
+     * from --bg (#14201a) and --surface (#1c2a22), but still dark enough
+     * that bg-tint/accent foregrounds stay legible. */
+    --surface-strong: #1f3b2c;
   }
 }
 
@@ -227,6 +238,7 @@
   --score-unset-fg: #9a9180;
   --hole-completed-bg: #243429;
   --danger-deep: #c46868;
+  --surface-strong: #1f3b2c;
 }
 
 /* Tailwind v4 theme bindings — these expose the design tokens as utility
@@ -262,6 +274,7 @@
   --color-disabled-fg: var(--disabled-fg);
   --color-score-unset-fg: var(--score-unset-fg);
   --color-hole-completed-bg: var(--hole-completed-bg);
+  --color-surface-strong: var(--surface-strong);
   --color-danger-deep: var(--danger-deep);
 
   --font-serif: var(--font-fraunces);

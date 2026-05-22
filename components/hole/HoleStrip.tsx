@@ -45,7 +45,7 @@ function cellStyle(state: 'current' | 'completed' | 'future'): CSSProperties {
   if (state === 'current') {
     return {
       ...base,
-      background: 'var(--primary)',
+      background: 'var(--surface-strong)',
       color: 'var(--bg-tint)',
       fontWeight: 600,
       border: 'none',

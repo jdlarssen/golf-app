@@ -21,12 +21,15 @@ Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark App
 <details>
 <summary>Teknisk</summary>
 
+#### Added
+- `--surface-strong` token (deep forest i begge moduser, `#1b4332` light / `#1f3b2c` dark) for surfaces som trenger linen/gold-foreground. Dekker Spill-tile i Sekretariatet, kolonnetitler i `/admin/courses` og `/admin/games`, samt avatar-/hull-strip-current/onboarding-banner i hull-flaten — alle 8 sites migrert fra `var(--primary)`-bg (som ble lys sage i dark og gjorde foreground uleslig).
+
 #### Changed
 - `app/layout.tsx` — fjernet `data-theme="light"` på `<html>` og endret `colorScheme: "light"` → `"light dark"` i `viewport`-eksport. `globals.css` har siden v1.7.0 både `[data-theme='dark']`-blokk og `@media (prefers-color-scheme: dark)`; med tvangen borte slår sistnevnte inn automatisk basert på OS-preferanse.
 - `@custom-variant dark` (lagt til i v1.7.0) gjør at eventuell fremtidig manuell theme-toggle også vil fungere via `data-theme='dark'`-attribute.
 
 #### Notes
-- Migrering av hardkodede farger til semantiske tokens ble gjort i v1.7.0 (refactor-PR #111, 22 filer / ~95 LOC). Visual-verifikasjon i dark mode skjedde via preview-deploy av denne PR-en.
+- Migrering av hardkodede farger til semantiske tokens ble gjort i v1.7.0 (refactor-PR #111, 22 filer / ~95 LOC). Visual-verifikasjon i dark mode skjedde via preview-deploy av denne PR-en — der oppdaget vi at `var(--primary)`-bg-surfaces ble uleselige i dark (sage primary + lys foreground), derav `--surface-strong`-tokenet.
 
 </details>
 

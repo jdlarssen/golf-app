@@ -138,8 +138,8 @@ async function CoursesLedger() {
         className="mt-4 grid items-center gap-2.5 rounded-t-[12px] px-3.5 py-2"
         style={{
           gridTemplateColumns: '1fr 64px 14px',
-          background: 'var(--primary)',
-          color: 'var(--bg)',
+          background: 'var(--surface-strong)',
+          color: 'var(--bg-tint)',
         }}
       >
         <span
@@ -207,8 +207,8 @@ function CoursesLedgerSkeleton() {
         className="mt-4 grid items-center gap-2.5 rounded-t-[12px] px-3.5 py-2"
         style={{
           gridTemplateColumns: '1fr 64px 14px',
-          background: 'var(--primary)',
-          color: 'var(--bg)',
+          background: 'var(--surface-strong)',
+          color: 'var(--bg-tint)',
         }}
       >
         <span

@@ -219,8 +219,8 @@ async function GamesLedger({ filterFinished }: { filterFinished: boolean }) {
         className="mt-4 grid items-center gap-2.5 rounded-t-[12px] px-3.5 py-2"
         style={{
           gridTemplateColumns: '1fr 84px 14px',
-          background: 'var(--primary)',
-          color: 'var(--bg)',
+          background: 'var(--surface-strong)',
+          color: 'var(--bg-tint)',
         }}
       >
         <span className="font-sans text-[9.5px] font-semibold uppercase text-accent" style={{ letterSpacing: '0.18em' }}>
@@ -302,8 +302,8 @@ function GamesLedgerSkeleton() {
         className="mt-4 grid items-center gap-2.5 rounded-t-[12px] px-3.5 py-2"
         style={{
           gridTemplateColumns: '1fr 84px 14px',
-          background: 'var(--primary)',
-          color: 'var(--bg)',
+          background: 'var(--surface-strong)',
+          color: 'var(--bg-tint)',
         }}
       >
         <span className="font-sans text-[9.5px] font-semibold uppercase text-accent" style={{ letterSpacing: '0.18em' }}>
