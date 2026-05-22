@@ -265,7 +265,7 @@ Helper functions er `SECURITY DEFINER` for å unngå rekursjons-feller.
 
 ## Status per session-handoff
 
-Står på `v1.1.5` per 2026-05-16. `v1.0.0` shipped 2026-05-14 («Første stabile release»), `v1.1.0` shipped samme dag med sideturnering-feature. Post-launch er en serie polish-patches + en cache-arc.
+Står på `v1.8.7` per 2026-05-23. `v1.0.0` shipped 2026-05-14 («Første stabile release»), `v1.1.0` shipped samme dag med sideturnering-feature. Siden da: polish-arc med dark mode (1.8.0 — OS-preferanse + semantiske tokens), CSV-eksport (1.6.0), klubbstatistikker (1.5.0), spiller-picker for klubbskala (1.7.0), pluss en serie back-nav/UX-fikser (1.8.4–1.8.7).
 
 **Tag-cached data-layer (shipped 2026-05-16):**
 - `lib/games/getGameWithPlayers.ts` — `unstable_cache`-wrappet helper med tag `game-${id}` og admin-client for RLS-bypass (cookies fungerer ikke inne i cache-callbacks). Authz beholdes på call-site via `me = players.find(...)` notFound().
@@ -275,9 +275,6 @@ Står på `v1.1.5` per 2026-05-16. `v1.0.0` shipped 2026-05-14 («Første stabil
 
 ⏸ **Ventende:**
 - **Multi-player scorekort-oversikt** — vise lag-medlemmer side om side med initialer øverst i hver kolonne (vs. dagens single-player-flate). Krever brainstorming — se [#17](https://github.com/jdlarssen/golf-app/issues/17).
-- **End-to-end-test av mail-flow** (gameFinished + scorecardSubmitted) — sjekk Resend-dashboard
-- **Designpass** på resterende sider (complete-profile, admin/courses + admin/games-listen)
-- **TopBar med action-slot** for `/admin/courses` og `/admin/games`-listen
 
 📋 **Backlog:** [GitHub Issues](https://github.com/jdlarssen/golf-app/issues). `TODO.md` er en stub som peker dit — alle nye oppgaver opprettes som issues, ikke i markdown.
 
