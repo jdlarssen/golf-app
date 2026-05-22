@@ -14,18 +14,16 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark Appearance, blir Tørny mørk når du åpner appen — uten at noe annet endrer seg.
 
-### [1.8.3] - 2026-05-23
+### [1.8.4] - 2026-05-23
 
-**Tilbake-pilen fra en ferdigspilt rundes leaderboard tar deg nå tilbake dit du kom fra — om det var historikk-listen, profil-siden eller et spill. Tidligere endte du alltid opp på spillets hjemside uansett hvor du startet.**
+**Tilbake-pilen fra en ferdigspilt leaderboard går tilbake til spillets hjemside igjen — fikser en loop som kunne oppstå mellom lag-drilldown og hovedturneringen i PWA-modus. Konsekvens: tilbake fra leaderboard lander ikke i Min historikk lenger (re-åpner det som et eget arbeid).**
 
 <details>
 <summary>Teknisk</summary>
 
 #### Fixed
-- `app/games/[id]/leaderboard/State4View.tsx` — chevron i `Header` byttet fra `<SmartLink href={backHref}>` til `<HistoryBackLink fallbackHref={backHref} />`. State4View brukes for begge `full`-grener (live-finished + reveal-finished, ingen sideturnering) som er det eneste tilfellet som kan nås fra `/profile/historikk`.
-- `app/games/[id]/leaderboard/page.tsx` — `<TopBar>` på sideturnering-grenen (`full` med side-tournament aktivert) får `back="history"`. `renderState3` og `renderState35` bytter fra `<BackLink>` til `<HistoryBackLink>` for konsistens på alle leaderboard-flater.
-- `app/games/[id]/leaderboard/RevealBruttoView.tsx` — `<TopBar>` får `back="history"` så reveal-active-flaten oppfører seg likt.
-- Resultat: chevron-en bruker `router.back()` når same-origin-referrer finnes, faller tilbake til `backHref` (typisk `/games/${id}`) ved direkte/delte URL-er. Samme mønster som `/legal/privacy` har brukt siden v1.5.1.
+- Revertert v1.8.3 (`fix(leaderboard): tilbake-nav respekterer historikk`, commit `00bd142`). Endringen byttet leaderboard-chevronen fra `SmartLink` til `HistoryBackLink`. Rotårsak til loopen: i iOS PWA standalone-modus settes `document.referrer` til appens start_url for hele session-en. Det er same-origin med `window.location.origin`, så `HistoryBackLink` traff alltid `router.back()`-grenen istedenfor `router.push(fallbackHref)`. Etter en drilldown→leaderboard-push tok `router.back()` deg tilbake til drilldown — der den hardkodede SmartLink-pushen igjen tok deg til leaderboard. Resultat: ping-pong mellom de to flatene. Drilldown-chevronen ble ikke endret i v1.8.3, så asymmetrien (push på drilldown, back på leaderboard) var grunnstammen i loopen.
+- Issue [#117](https://github.com/jdlarssen/golf-app/issues/117) re-åpnes. Den riktige løsningen er sannsynligvis en eksplisitt `?from=`-query-param fra `/profile/historikk` (og lignende entry-points) istedenfor en referrer-heuristikk som ikke kan stole på SPA-navigasjon.
 
 </details>
 
