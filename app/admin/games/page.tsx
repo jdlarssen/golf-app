@@ -2,13 +2,13 @@ import { Suspense, cache } from 'react';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
 import { AdminShell } from '@/components/ui/AdminShell';
-import { BackLink } from '@/components/ui/BackLink';
 import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { ChampagneMedallion } from '@/components/ui/ChampagneMedallion';
 import { PinFlag, Laurel } from '@/components/icons';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
+import { TopBar } from '@/components/ui/TopBar';
 import type { GameStatus } from '@/lib/games/status';
 import { formatShortDateNb } from '@/lib/format/date';
 
@@ -88,31 +88,24 @@ export default async function GamesPage({
 
   return (
     <AdminShell>
-      <div className="-mt-3 mb-2 flex items-center justify-between">
-        <BackLink href="/admin">Tilbake</BackLink>
-        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          Sekretariatet
-        </p>
-        {filterFinished ? (
-          // Resultatprotokoll er et arkiv — å starte et nytt spill herfra er en
-          // uvanlig flyt. Vi beholder et usynlig spacer-element (samme content +
-          // padding) så «Sekretariatet»-labelen blir liggende sentrert mellom
-          // venstre BackLink og høyre kant.
-          <span
-            aria-hidden
-            className="invisible rounded-full border border-border px-2.5 py-[5px] font-sans text-[10px] font-semibold uppercase tracking-[0.12em]"
-          >
-            + Nytt
-          </span>
-        ) : (
-          <SmartLink
-            href="/admin/games/new"
-            className="rounded-full border border-border bg-surface-2/50 px-2.5 py-[5px] font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-text"
-          >
-            + Nytt
-          </SmartLink>
-        )}
-      </div>
+      <TopBar
+        backHref="/admin"
+        kicker="Sekretariatet"
+        action={
+          filterFinished ? null : (
+            // Resultatprotokoll er et arkiv — å starte et nytt spill herfra
+            // er en uvanlig flyt. `action={null}` rendrer en usynlig spacer
+            // i TopBar, så kicker-en holder samme effektive sentrering som
+            // på «Pågående og kommende»-visningen.
+            <SmartLink
+              href="/admin/games/new"
+              className="rounded-full border border-border bg-surface-2/50 px-2.5 py-[5px] font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-text"
+            >
+              + Nytt
+            </SmartLink>
+          )
+        }
+      />
 
       <BrassRibbon kicker="Spill · protokoll" />
 

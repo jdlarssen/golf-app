@@ -2,10 +2,10 @@ import { Suspense, cache } from 'react';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
 import { AdminShell } from '@/components/ui/AdminShell';
-import { BackLink } from '@/components/ui/BackLink';
 import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { TopBar } from '@/components/ui/TopBar';
 import { formatShortDateNbWithYear } from '@/lib/format/date';
 
 type SearchParams = Promise<{
@@ -70,18 +70,18 @@ export default async function CoursesPage({
 
   return (
     <AdminShell>
-      <div className="-mt-3 mb-2 flex items-center justify-between">
-        <BackLink href="/admin">Tilbake</BackLink>
-        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          Sekretariatet
-        </p>
-        <SmartLink
-          href="/admin/courses/new"
-          className="rounded-full border border-border bg-surface-2/50 px-2.5 py-[5px] font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-text"
-        >
-          + Ny
-        </SmartLink>
-      </div>
+      <TopBar
+        backHref="/admin"
+        kicker="Sekretariatet"
+        action={
+          <SmartLink
+            href="/admin/courses/new"
+            className="rounded-full border border-border bg-surface-2/50 px-2.5 py-[5px] font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-text"
+          >
+            + Ny
+          </SmartLink>
+        }
+      />
 
       <BrassRibbon kicker="Baner · protokoll" />
 

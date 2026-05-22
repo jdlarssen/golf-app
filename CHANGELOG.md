@@ -14,6 +14,20 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark Appearance, blir Tørny mørk når du åpner appen — uten at noe annet endrer seg.
 
+### [1.8.9] - 2026-05-23
+
+> Admin-listene over baner og spill bruker nå samme top-bar som resten av appen — konsistent navigasjon på tvers av Tørny.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+- `components/ui/TopBar.tsx` — utvidet med `action?: ReactNode`-prop som slotter en node (typisk en `<SmartLink>`-chip) inn på høyre side via `ml-auto`. Kicker forblir absolute-sentrert via `left-1/2 -translate-x-1/2`. Pass `action={null}` for å rendere en usynlig spacer-chip med samme dimensjoner — bevarer effektiv sentrering på filtrerte listevisninger som ellers ville mistet høyre-elementet.
+- `app/admin/games/page.tsx` — migrert ad-hoc `flex justify-between`-div til `<TopBar action={...} />`. `filterFinished`-grenen sender `action={null}` (i stedet for v1.8.7s `invisible`-chip), så Resultatprotokoll-oppførselen fra [#113](https://github.com/jdlarssen/golf-app/issues/113) er bevart: «+ Nytt»-knappen skjult, «Sekretariatet»-kicker fortsatt sentrert.
+- `app/admin/courses/page.tsx` — migrert ad-hoc top-bar til `<TopBar action={<SmartLink>+ Ny</SmartLink>} />`. Closes [#127](https://github.com/jdlarssen/golf-app/issues/127).
+
+</details>
+
 ### [1.8.7] - 2026-05-23
 
 > To rare UX-flater i admin/games er ryddet: «+ Nytt»-knappen er borte i Resultatprotokoll-arkivet, og sideturnering-toggle kan nå aktiveres uavhengig av lag-status under spill-opprett. Du slipper å scrolle opp-ned for å aktivere sideturnering etter å ha satt opp lag.
