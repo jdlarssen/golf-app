@@ -5,7 +5,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
-import { BackLink } from '@/components/ui/BackLink';
+import { HistoryBackLink } from '@/components/ui/HistoryBackLink';
 import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
@@ -488,7 +488,7 @@ async function LeaderboardBody({
   // alongside the main view.
   return (
     <AppShell>
-      <TopBar backHref={backHref} kicker={game.name} />
+      <TopBar backHref={backHref} kicker={game.name} back="history" />
       <LeaderboardTabs
         mainContent={
           <State4View
@@ -729,7 +729,7 @@ function renderState3(opts: {
       <PreRoundLeaderboardRealtime gameId={gameId} />
 
       <header className="mb-6 flex items-center justify-between gap-4">
-        <BackLink href={backHref}>Tilbake</BackLink>
+        <HistoryBackLink fallbackHref={backHref} ariaLabel="Tilbake" />
         {/* Per design spec § state 3: kicker is the literal "LEADERBOARD"
             section label (not the game name like state #2 uses). */}
         <Kicker tone="accent">LEADERBOARD</Kicker>
@@ -838,7 +838,7 @@ function renderState35(opts: {
       <PreRoundLeaderboardRealtime gameId={gameId} />
 
       <header className="mb-4 flex items-center justify-between gap-4">
-        <BackLink href={backHref}>Tilbake</BackLink>
+        <HistoryBackLink fallbackHref={backHref} ariaLabel="Tilbake" />
         <Kicker tone="accent">LEADERBOARD</Kicker>
         <span className="w-12" aria-hidden />
       </header>

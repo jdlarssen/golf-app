@@ -1,6 +1,7 @@
 'use client';
 
 import { SmartLink } from '@/components/ui/SmartLink';
+import { HistoryBackLink } from '@/components/ui/HistoryBackLink';
 import { useEffect, useState } from 'react';
 import { Laurel, PinFlagSm, ReplayIcon } from '@/components/icons';
 import { Medallion } from '@/components/ui/Medallion';
@@ -215,13 +216,7 @@ function Header({
 }) {
   return (
     <header className="flex items-center justify-between gap-2 px-4 pb-2 pt-3.5">
-      <SmartLink
-        href={backHref}
-        aria-label="Tilbake"
-        className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
-      >
-        ‹
-      </SmartLink>
+      <HistoryBackLink fallbackHref={backHref} ariaLabel="Tilbake" />
       <span className="flex-1 truncate text-center text-[10px] font-semibold uppercase tracking-[0.20em] text-muted">
         {gameName}
       </span>

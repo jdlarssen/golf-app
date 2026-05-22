@@ -14,6 +14,21 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark Appearance, blir Tørny mørk når du åpner appen — uten at noe annet endrer seg.
 
+### [1.8.3] - 2026-05-23
+
+**Tilbake-pilen fra en ferdigspilt rundes leaderboard tar deg nå tilbake dit du kom fra — om det var historikk-listen, profil-siden eller et spill. Tidligere endte du alltid opp på spillets hjemside uansett hvor du startet.**
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `app/games/[id]/leaderboard/State4View.tsx` — chevron i `Header` byttet fra `<SmartLink href={backHref}>` til `<HistoryBackLink fallbackHref={backHref} />`. State4View brukes for begge `full`-grener (live-finished + reveal-finished, ingen sideturnering) som er det eneste tilfellet som kan nås fra `/profile/historikk`.
+- `app/games/[id]/leaderboard/page.tsx` — `<TopBar>` på sideturnering-grenen (`full` med side-tournament aktivert) får `back="history"`. `renderState3` og `renderState35` bytter fra `<BackLink>` til `<HistoryBackLink>` for konsistens på alle leaderboard-flater.
+- `app/games/[id]/leaderboard/RevealBruttoView.tsx` — `<TopBar>` får `back="history"` så reveal-active-flaten oppfører seg likt.
+- Resultat: chevron-en bruker `router.back()` når same-origin-referrer finnes, faller tilbake til `backHref` (typisk `/games/${id}`) ved direkte/delte URL-er. Samme mønster som `/legal/privacy` har brukt siden v1.5.1.
+
+</details>
+
 ### [1.8.2] - 2026-05-23
 
 **Knappene rundt scorekortet og leaderboarden roer seg ned — primary-knapper kun for hovedhandlinger, sekundære actions går outline-stil.**

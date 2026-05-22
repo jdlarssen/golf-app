@@ -36,7 +36,12 @@ export function RevealBruttoView({
     <AppShell>
       <PreRoundLeaderboardRealtime gameId={gameId} />
 
-      <TopBar backHref={backHref} backLabel="Tilbake" kicker={gameName} />
+      <TopBar
+        backHref={backHref}
+        backLabel="Tilbake"
+        kicker={gameName}
+        back="history"
+      />
 
       <section className="px-6 pt-2 pb-3 text-center">
         <Kicker tone="accent">LIVE LEADERBOARD</Kicker>
