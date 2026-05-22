@@ -4,7 +4,7 @@ Alle bruker-synlige endringer i Tørny logges her. Versjonering følger [Semanti
 
 Pre-1.0.0 (`0.x.y`) regnes som alpha — vi er fortsatt under uttesting med kompisgjengen. Disiplinen ble innført ved `0.2.0`; alt før det er samlet under «Pre-disiplin».
 
-Hver entry begynner med en kort stakeholder-tagline på vanlig norsk satt som blockquote (`> …`) — hva endringen betyr for deg som bruker — etterfulgt av en sammenfoldbar **Teknisk**-seksjon med utvikler-prosa i [Keep a Changelog](https://keepachangelog.com/no/)-stil. Minor-serier (`0.X.y`) er gruppert under et tema-heading med kort sammendrag; eldre serier er sammenfoldet by default for å holde fila lett å scrolle.
+Hver entry begynner med en kort stakeholder-tagline på vanlig norsk satt som blockquote (`> …`) — hva endringen betyr for deg som bruker — etterfulgt av en sammenfoldbar **Teknisk**-seksjon med utvikler-prosa i [Keep a Changelog](https://keepachangelog.com/no/)-stil. Minor-serier (`0.X.y`) er gruppert under et tema-heading med kort sammendrag; kun den ferskeste serien står åpen — alle eldre er sammenfoldet by default for å holde fila lett å scrolle.
 
 Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «Versjonering / CHANGELOG».
 
@@ -126,7 +126,8 @@ Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark App
 
 ---
 
-## 1.7.y — Spiller-picker for klubbskala
+<details>
+<summary><strong>1.7.y — Spiller-picker for klubbskala (1 entry) — klikk for å vise</strong></summary>
 
 Spill-opprett-formen har nå et søkefelt over spiller-listen. Klar for 100+ spillere når kompisgjengen vokser til klubb-størrelse.
 
@@ -144,9 +145,12 @@ Spill-opprett-formen har nå et søkefelt over spiller-listen. Klar for 100+ spi
 
 </details>
 
+</details>
+
 ---
 
-## 1.6.y — Eksport
+<details>
+<summary><strong>1.6.y — Eksport (1 entry) — klikk for å vise</strong></summary>
 
 Du kan nå laste ned resultatet fra ferdigspilte spill som CSV — praktisk for utskrift og deling utenfor appen.
 
@@ -160,6 +164,8 @@ Du kan nå laste ned resultatet fra ferdigspilte spill som CSV — praktisk for 
 #### Added
 - `app/games/[id]/leaderboard/export/route.ts` — server-route som returnerer `text/csv; charset=utf-8`. UTF-8 BOM + semikolon-separert (norsk Excel-locale) + CRLF line endings. Innholdet er en spill-metadata-blokk (navn, eksport-dato, course par) etterfulgt av leaderboard-tabellen med kolonner for plass, lag, spillere, brutto, netto, mot par og hull spilt. Auth-gated samme mønster som leaderboard-siden (cookie-basert server-client, admin eller deltaker i spillet). Begrenset til `status='finished'` — andre statuser gir 404.
 - «Last ned resultat (CSV)»-knapp på finished-leaderboarden (`State4View.tsx`), under team-listen. Filnavn er ASCII-safe (`torny-{game-id}-{YYYY-MM-DD}.csv`) for å unngå browser-quirks med æøå i `Content-Disposition`.
+
+</details>
 
 </details>
 

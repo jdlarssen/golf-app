@@ -154,13 +154,13 @@ Ingen start-kommentar, ingen self-assign, ingen `in-progress`-label, ingen `gh i
 
 **CHANGELOG-format:** Tre-lags struktur i `CHANGELOG.md`, designet for å være lesbar for både utvikler og produkteier (Jørgen er stakeholder, ikke utvikler):
 
-1. **Per-minor-serie tema-heading** (`## 0.X.y — [navn på temaet]`) med 1–2 setningers sammendrag av hva som ble gjort i den serien. Tre nyeste minor-seriene står åpne; eldre minor-serier wrappes i et `<details>`-element (med `<summary><strong>0.X.y — [tema] (N entries) — klikk for å vise</strong></summary>`) slik at fila kan scrolles raskt.
+1. **Per-minor-serie tema-heading** (`## 0.X.y — [navn på temaet]`) med 1–2 setningers sammendrag av hva som ble gjort i den serien. Kun den nyeste minor-serien står åpen; alle eldre minor-serier wrappes i et `<details>`-element (med `<summary><strong>0.X.y — [tema] (N entries) — klikk for å vise</strong></summary>`) slik at fila kan scrolles raskt.
 2. **Per-versjon entry** (`### [X.Y.Z] - YYYY-MM-DD`) ledes med en stakeholder-tagline på vanlig norsk, satt som blockquote (`> …` — ikke bold, fordi lange bold-avsnitt er tunge å lese). Tagline-en forklarer hva endringen betyr for brukeren, ikke hva som ble endret i koden.
 3. **Teknisk historikk** i et `<details><summary>Teknisk</summary>...</details>`-element under tagline-en, med [Keep a Changelog](https://keepachangelog.com/no/)-underseksjoner (`#### Added`, `#### Changed`, `#### Fixed`, `#### Removed`) og prosa-bullet points. (For entries som ligger inne i en allerede-collapset minor-serie kan du droppe den indre `<details>`-en — den ytre tar seg av kollapsen.)
 
 Nyeste øverst, norsk på alt brukerrettet. Når du legger til en ny entry: skriv tagline-en *først*. Hvis du sliter med å forklare hva som endret seg på Jørgen-språk («Du kan nå …», «Forhindrer at …», «Hvis X skjer, sier appen nå …»), er det et tegn på at endringen kanskje ikke fortjener egen entry — sjekk skip-listen.
 
-Når en minor-serie passerer tre-nyeste-grensen (nytt minor lander), pakk den eldste åpne serien inn i `<details>`.
+Når en ny minor-serie åpnes (f.eks. `1.8.0` → `1.9.0`), pakk den forrige (nå nest-nyeste) serien inn i `<details>` med samme `<summary><strong>…</strong></summary>`-mønster som de eldre. Bare den helt ferskeste minor-serien skal stå åpen.
 
 **Håndheving via git commit-msg-hook (`.githooks/commit-msg`):** regelen er ikke valgfri — hooken blokkerer alle `feat(...)`/`fix(...)`/`perf(...)`-commits som ikke samtidig stager `package.json` (med endret version-felt) og `CHANGELOG.md`. Hooken er aktivert automatisk på `npm install` (via `postinstall` som setter `core.hooksPath=.githooks`). Hvis hooken blokkerer:
 
