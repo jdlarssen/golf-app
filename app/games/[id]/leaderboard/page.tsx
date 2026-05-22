@@ -53,7 +53,40 @@ type SearchParams = Promise<{
   mode?: string | string[];
   return?: string | string[];
   n?: string | string[];
+  from?: string | string[];
 }>;
+
+/**
+ * Validates the `?from=` query-param that entry-points use to override the
+ * default back-target on the leaderboard page (issue #117). Only accepts
+ * relative paths under a known Tørny route prefix — anything else is treated
+ * as untrusted input and rejected so we don't open up a redirect-style hole.
+ *
+ * Returns the validated path or `null` when the param is missing or invalid;
+ * callers fall back to the existing back-target heuristic in that case.
+ */
+function validateFromParam(
+  raw: string | string[] | undefined,
+): string | null {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (!value || typeof value !== 'string') return null;
+  if (value.length > 200) return null;
+  if (!value.startsWith('/')) return null;
+  // Reject protocol-relative URLs ("//evil.com") — they bypass the
+  // startsWith('/') check but resolve to a different origin.
+  if (value.startsWith('//')) return null;
+  // Reject anything that smells like an absolute URL.
+  if (value.includes('://')) return null;
+  // Allowlist of known Tørny route prefixes. Root ('/') is allowed as a
+  // literal match so a home-page entry-point can use ?from=/.
+  const allowedPrefixes = ['/profile/', '/admin/', '/games/', '/'];
+  if (
+    !allowedPrefixes.some((p) => (p === '/' ? value === '/' : value.startsWith(p)))
+  ) {
+    return null;
+  }
+  return value;
+}
 
 type SideWinnerRow = {
   category: 'longest_drive' | 'closest_to_pin';
@@ -100,14 +133,22 @@ export default async function LeaderboardPage({
   const returnParam = Array.isArray(sp.return) ? sp.return[0] : sp.return;
   const nParam = Array.isArray(sp.n) ? sp.n[0] : sp.n;
   const nNum = nParam != null ? Number(nParam) : null;
+  // Explicit back-destination via ?from=. Entry-points that want the
+  // chevron to land somewhere other than the game-home pass it here.
+  // Issue #117: replaces a referrer-heuristic that was unreliable in
+  // iOS PWA standalone (cf. v1.8.3/v1.8.4 history). `from` wins over
+  // the `?return=hole`-fallback when both are present, since callers
+  // that pass `from` know exactly where they want to go.
+  const fromOverride = validateFromParam(sp.from);
   const backHref =
-    returnParam === 'hole' &&
+    fromOverride ??
+    (returnParam === 'hole' &&
     nNum !== null &&
     Number.isInteger(nNum) &&
     nNum >= 1 &&
     nNum <= 18
       ? `/games/${id}/holes/${nNum}`
-      : `/games/${id}`;
+      : `/games/${id}`);
   // For the holes-drilldown — preserve the same return-to-hole context.
   const returnQuery =
     returnParam === 'hole' &&

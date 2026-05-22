@@ -180,10 +180,14 @@ function GameHistoryCard({ game }: { game: GameWithStats }) {
         </div>
       </div>
 
-      {/* Footer link to leaderboard */}
+      {/* Footer link to leaderboard. The ?from=-param signals to the
+          leaderboard page that "Tilbake" should land back in Min historikk
+          rather than the game-home (the default backHref for /games/[id]/leaderboard).
+          See issue #117 — using an explicit query-param instead of document.referrer
+          because the latter is unreliable in iOS PWA standalone mode (cf. v1.8.3/v1.8.4). */}
       <div className="border-t border-border">
         <SmartLink
-          href={`/games/${game.id}/leaderboard`}
+          href={`/games/${game.id}/leaderboard?from=/profile/historikk`}
           className="flex items-center justify-between px-5 py-3 font-sans text-[13px] font-medium text-muted hover:text-text hover:bg-bg/50 transition-colors"
         >
           <span>Se resultatliste</span>

@@ -14,6 +14,24 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark Appearance, blir Tørny mørk når du åpner appen — uten at noe annet endrer seg.
 
+### [1.8.6] - 2026-05-23
+
+**Tilbake-pilen fra leaderboarden tar deg nå tilbake til Min historikk når du kom fra den listen. Bruker en eksplisitt URL-param i stedet for nettleser-history (som ikke var pålitelig i PWA-modus).**
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `app/profile/historikk/page.tsx` — «Se resultatliste»-lenken peker nå på `/games/${id}/leaderboard?from=/profile/historikk` istedenfor bare `/games/${id}/leaderboard`. Eksplisitt signal til leaderboard-pagen om hvor «Tilbake» skal lande.
+- `app/games/[id]/leaderboard/page.tsx` — `SearchParams`-typen utvidet med `from?: string | string[]`. Ny `validateFromParam`-helper validerer at verdien er en relativ sti under en kjent Tørny-prefiks (`/profile/`, `/admin/`, `/games/`, eller root `/`) og rejecterer absolutte URL-er, protokoll-relative URL-er (`//evil.com`), og strenger lengre enn 200 tegn — så `?from=` ikke kan brukes som open-redirect-vektor. Validert verdi vinner over `?return=hole`-fallback.
+- Issue [#117](https://github.com/jdlarssen/golf-app/issues/117) lukkes med dette. Tilnærmingen erstatter `document.referrer`-heuristikken som v1.8.3 introduserte og v1.8.4 reverterte (heuristikken brøt i iOS PWA standalone — `document.referrer` settes til appens start_url for hele session-en, så `router.back()`-grenen ble alltid valgt og skapte en ping-pong-loop mellom drilldown og hovedleaderboard).
+
+#### Notes
+- Drilldown (`/games/[id]/leaderboard/holes`) propagerer ikke `from` videre — den beholder dagens hardkodede SmartLink → `/games/${id}/leaderboard`. Brukerens navigation-kjede er: historikk → leaderboard (med `from`) → drilldown → leaderboard (med `from` bevart i URL) → historikk. Drilldown-→-back-pilen tar deg tilbake til leaderboarden hvor `from` fortsatt er i URL-en.
+- Kun `/profile/historikk` har `?from=` i denne PR-en. Andre entry-points (`/`, `/admin/games`, etc.) beholder dagens oppførsel — kan utvides separat hvis ønskelig.
+
+</details>
+
 ### [1.8.5] - 2026-05-23
 
 **Replay-knappen for jubelscenene skjules nå hvis du har «Reduser bevegelse» på i iPhone-innstillinger — så du ikke får en knapp som ikke gjør noe. Konfetti-animasjonen var allerede skjult for brukere med den innstillingen; nå er trigger-knappen det også.**
