@@ -32,6 +32,10 @@ import { State4View } from './State4View';
 import { RevealBruttoView } from './RevealBruttoView';
 import { LeaderboardTabs } from './LeaderboardTabs';
 import {
+  SoloStablefordView,
+  type SoloStablefordPlayerInfo,
+} from './SoloStablefordView';
+import {
   SideTournamentView,
   type SideTournamentTeam,
 } from './SideTournamentView';
@@ -47,6 +51,10 @@ import {
   getGameWithPlayers,
   type GameForHole,
 } from '@/lib/games/getGameWithPlayers';
+// Mode-router for stableford-stats. Aliaset til `computeModeResult` for å
+// unngå navnekollisjon med best-ball-spesifikke `computeLeaderboard` fra
+// `lib/leaderboard.ts`.
+import { computeLeaderboard as computeModeResult } from '@/lib/scoring';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -240,6 +248,22 @@ async function LeaderboardBody({
   if (!gwp) notFound();
   if (rawHolesRes.error) throw rawHolesRes.error;
   if (rawScoresRes.error) throw rawScoresRes.error;
+
+  // Stableford-grenen: solo-modus har null team_number, så best-ball-LbPlayer-
+  // shapen (krever teamNumber: number) passer ikke. Rens stableford-data inn
+  // i mode-router-format og rendre SoloStablefordView med én gang — vi har
+  // ingen state #3/#3.5/reveal-active for stableford ennå (fase 6 håndterer
+  // reveal-flow). Midt-runde og post-finished bruker samme visning.
+  if (game.game_mode === 'stableford') {
+    return renderStableford({
+      gameId,
+      game,
+      gwp,
+      rawHolesRows: rawHolesRes.data ?? [],
+      rawScoresRows: rawScoresRes.data ?? [],
+      backHref,
+    });
+  }
 
   const players: LbPlayer[] = gwp.players
     .filter((p) => p.users != null)
@@ -745,6 +769,85 @@ export function ModeToggle({
  * the heading falls back to "Stille før stormen." and the tee column shows
  * an em-dash.
  */
+
+/**
+ * Stableford-grenen — bygger ScoringContext fra rå-rad-ene, kjører
+ * mode-router-en (`computeModeResult`) og rendrer SoloStablefordView med en
+ * map fra userId til navn+kallenavn. Brukes for hele stableford-livssyklusen
+ * (active + finished) i fase 5 — reveal-flow er fase 6.
+ *
+ * For best-ball reuser vi state #3/#3.5-grenene fordi de avhenger av flight-
+ * og lag-strukturen. Solo-stableford trenger ingen «venterom»-stat ennå
+ * (alle ser hverandre umiddelbart via 0031-RLS), så vi viser leaderboarden
+ * helt fra første score lander.
+ */
+function renderStableford(opts: {
+  gameId: string;
+  game: GameForHole;
+  gwp: { players: { user_id: string; users: { name: string | null; nickname: string | null } | null; course_handicap: number | null }[] };
+  rawHolesRows: { hole_number: number; par: number; stroke_index: number }[];
+  rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
+  backHref: string;
+}) {
+  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
+
+  // Mode-router-context: bygger ScoringContext fra game + players + holes +
+  // scores. Caster mode_config via type-narrow på stableford-grenen — vi vet
+  // game.game_mode er 'stableford' i denne grenen.
+  const ctx = {
+    game: {
+      id: gameId,
+      game_mode: 'stableford' as const,
+      mode_config: game.mode_config,
+    },
+    players: gwp.players
+      .filter((p) => p.users != null)
+      .map((p) => ({
+        userId: p.user_id,
+        teamNumber: null,
+        flightNumber: null,
+        courseHandicap: p.course_handicap ?? 0,
+      })),
+    holes: rawHolesRows.map((h) => ({
+      number: h.hole_number,
+      par: h.par,
+      strokeIndex: h.stroke_index,
+    })),
+    scores: rawScoresRows.map((s) => ({
+      userId: s.user_id,
+      holeNumber: s.hole_number,
+      gross: s.strokes,
+    })),
+  };
+
+  const result = computeModeResult(ctx);
+  // Type-guard mot mode-router-output. Hvis routeren returnerer feil shape
+  // (skal ikke kunne skje siden ctx.game.game_mode = 'stableford' tvinger
+  // kind), faller vi tilbake til en tom liste — sikrere enn å kaste.
+  if (result.kind !== 'stableford') {
+    notFound();
+  }
+
+  const playersById = new Map<string, SoloStablefordPlayerInfo>();
+  for (const p of gwp.players) {
+    if (p.users == null) continue;
+    playersById.set(p.user_id, {
+      name: p.users.name ?? '(ukjent)',
+      nickname: p.users.nickname,
+    });
+  }
+
+  return (
+    <SoloStablefordView
+      gameId={gameId}
+      gameName={game.name}
+      result={result}
+      playersById={playersById}
+      backHref={backHref}
+    />
+  );
+}
+
 function renderState3(opts: {
   gameId: string;
   teeOffAt: string | null;

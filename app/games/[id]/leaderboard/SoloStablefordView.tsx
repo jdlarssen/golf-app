@@ -184,11 +184,11 @@ function PlayerRow({
       : '';
 
   return (
-    <li className="list-none">
-      <Card
-        className={`flex items-center gap-3.5 px-4 py-3.5 reveal-up ${cardClass}`}
-        style={{ animationDelay: `${60 + staggerIndex * 80}ms` }}
-      >
+    <li
+      className="list-none reveal-up"
+      style={{ animationDelay: `${60 + staggerIndex * 80}ms` }}
+    >
+      <Card className={`flex items-center gap-3.5 px-4 py-3.5 ${cardClass}`}>
         {isPodium ? (
           <span className="shrink-0">
             <Medallion place={rank as 1 | 2 | 3} size={36} />
