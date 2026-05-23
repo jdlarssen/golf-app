@@ -169,10 +169,16 @@ export default async function NewGamePage({
 async function PlayerShortageBanner() {
   const { players } = await getFormData();
   if (players.length >= 8) return null;
+  // /new vet ikke hvilken modus admin lander på (velges i form-en under),
+  // så copy-en nevner begge moduser. /edit har eget banner som dropper
+  // visning helt for stableford siden modus er låst der.
+  const isSingular = players.length === 1;
   return (
     <div className="mt-4">
       <Banner tone="info">
-        Du trenger 8 registrerte spillere. Inviter flere fra{' '}
+        Du har {players.length === 0 ? 'ingen' : `bare ${players.length}`}{' '}
+        registrert{isSingular ? '' : 'e'} spiller{isSingular ? '' : 'e'}.
+        Best ball trenger 8 — stableford holder med 1. Inviter flere fra{' '}
         <SmartLink
           href="/admin/spillere"
           className="underline hover:no-underline"

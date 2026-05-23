@@ -203,7 +203,7 @@ export default async function EditGamePage({
             : 'Spillet er i planlagt-fasen. Spillerne ser endringene neste gang de åpner appen.'}
         </Banner>
         <Suspense fallback={null}>
-          <PlayerShortageBanner />
+          <PlayerShortageBanner gameMode={game.game_mode} />
         </Suspense>
       </div>
 
@@ -273,12 +273,16 @@ const getOptions = cache(async () => {
   return { courses, playerOptions };
 });
 
-async function PlayerShortageBanner() {
+async function PlayerShortageBanner({ gameMode }: { gameMode: GameMode }) {
+  // Stableford trenger bare 1 spiller — banner-en (som nudge om total
+  // klubb-størrelse) er ikke relevant her, og «Du trenger 8 spillere»-copy-en
+  // ville vært direkte misvisende for et solo-format.
+  if (gameMode === 'stableford') return null;
   const { playerOptions } = await getOptions();
   if (playerOptions.length >= 8) return null;
   return (
     <Banner tone="info">
-      Du trenger 8 registrerte spillere. Inviter flere fra{' '}
+      Du trenger 8 registrerte spillere for best ball. Inviter flere fra{' '}
       <SmartLink
         href="/admin/spillere"
         className="underline hover:no-underline"

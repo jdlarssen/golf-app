@@ -14,6 +14,19 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Stableford-turneringer er nå spillbare end-to-end. Scorecard viser per-hull-poeng ved siden av netto-scoren, leaderboard rangerer spillerne på total stableford-poeng, og når runden avsluttes feires topp 3 med et eget podium — vinnerne får i tillegg en mail som forteller dem hvor de endte.
 
+### [1.10.5] - 2026-05-23
+
+> «Du trenger 8 spillere»-banneret i admin-flyten er ikke lenger misvisende for stableford. Når du redigerer et stableford-spill skjules det helt, og når du oppretter et nytt spill nevner det at best ball trenger 8 mens stableford holder med 1.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `app/admin/games/[id]/edit/page.tsx` — `PlayerShortageBanner` tar nå `gameMode`-prop og returnerer `null` for `'stableford'` (banner-en er en nudge om total klubb-størrelse i best-ball-kontekst, ikke per-spill-validering). For `best_ball_netto` med < 8 registrerte: copy presisert til «8 registrerte spillere for best ball».
+- `app/admin/games/new/page.tsx` — banner-en kan ikke vite hvilken modus admin lander på (mode-velgeren ligger i form-en under), så copy-en er omskrevet til mode-nøytral: «Du har bare X registrerte spillere. Best ball trenger 8 — stableford holder med 1. Inviter flere fra Spillere-siden.» Singular/plural-bøying av «registrert{e}» og «spiller{e}» basert på `players.length`.
+
+</details>
+
 ### [1.10.4] - 2026-05-23
 
 > Bane-listen i admin viser nå datoen i samme korte format som resten av appen — «14. mai» i stedet for «14. mai 2026».
