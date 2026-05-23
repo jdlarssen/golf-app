@@ -213,11 +213,11 @@ export type Database = {
           approved_at: string | null
           approved_by_user_id: string | null
           course_handicap: number | null
-          flight_number: number
+          flight_number: number | null
           game_id: string
           rejection_reason: string | null
           submitted_at: string | null
-          team_number: number
+          team_number: number | null
           tee_gender: Database["public"]["Enums"]["player_tee_gender"]
           user_id: string
         }
@@ -225,11 +225,11 @@ export type Database = {
           approved_at?: string | null
           approved_by_user_id?: string | null
           course_handicap?: number | null
-          flight_number: number
+          flight_number?: number | null
           game_id: string
           rejection_reason?: string | null
           submitted_at?: string | null
-          team_number: number
+          team_number?: number | null
           tee_gender?: Database["public"]["Enums"]["player_tee_gender"]
           user_id: string
         }
@@ -237,11 +237,11 @@ export type Database = {
           approved_at?: string | null
           approved_by_user_id?: string | null
           course_handicap?: number | null
-          flight_number?: number
+          flight_number?: number | null
           game_id?: string
           rejection_reason?: string | null
           submitted_at?: string | null
-          team_number?: number
+          team_number?: number | null
           tee_gender?: Database["public"]["Enums"]["player_tee_gender"]
           user_id?: string
         }
@@ -314,8 +314,10 @@ export type Database = {
           created_at: string
           created_by: string | null
           ended_at: string | null
+          game_mode: string
           hcp_allowance_pct: number
           id: string
+          mode_config: Json
           name: string
           require_peer_approval: boolean
           scheduled_tee_off_at: string | null
@@ -333,8 +335,10 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           ended_at?: string | null
+          game_mode: string
           hcp_allowance_pct?: number
           id?: string
+          mode_config?: Json
           name: string
           require_peer_approval?: boolean
           scheduled_tee_off_at?: string | null
@@ -352,8 +356,10 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           ended_at?: string | null
+          game_mode?: string
           hcp_allowance_pct?: number
           id?: string
+          mode_config?: Json
           name?: string
           require_peer_approval?: boolean
           scheduled_tee_off_at?: string | null
@@ -606,6 +612,10 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_in_game: { Args: { p_game_id: string }; Returns: boolean }
       same_flight: {
+        Args: { p_game_id: string; p_other_user: string }
+        Returns: boolean
+      }
+      same_flight_or_solo: {
         Args: { p_game_id: string; p_other_user: string }
         Returns: boolean
       }
