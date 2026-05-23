@@ -14,6 +14,27 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Stableford-turneringer kan nå spilles som par (4BBB / fyrball). Velg Stableford som modus og Par som lagstørrelse, så kan du melde på 2/4/6/8 spillere fordelt på 1–4 lag à 2 — laget får poengene fra det høyeste stableford-resultatet på hvert hull.
 
+### [1.11.1] - 2026-05-24
+
+> Når par-stableford-spillet er i gang ser spillerne nå et lag-leaderboard med begge partnernes poeng. Avsluttet spill viser podium for topp 3 lag — 1.-plassen feires med konfetti.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `app/games/[id]/leaderboard/TeamStablefordView.tsx` (+ test) — ny live-leaderboard for par-stableford. Speilet `SoloStablefordView` strukturelt: flat liste sortert på lag-poeng (høyest øverst), 1.-plass får champagne-tinted Card + `Medallion`, 2–3 får sølv/bronse-`Medallion`, 4+ får ren rank-disc. Hver rad viser «Lag N» + begge partnernes fornavn (via `firstName()` + `formatRevealName`-fallback for kallenavn-only-spillere) + total stableford-poeng (`tabular-nums`). Tied lag deler rank med «Delt N. plass med Lag X»-melding. 11 nye tester dekker rendring, rekkefølge, partnernavn, medallion vs rank-disc, tied-with, tomt result, manglende playerInfo og tomme lag.
+- `app/games/[id]/leaderboard/TeamStablefordPodium.tsx` (+ test) — ny finished-reveal-view for par-stableford. Speilet `SoloStablefordPodium`: 3-trinns podium med 1.-plass i midten (champagne `Medallion` 48px, `border-accent` + champagne-shadow), 2.-plass venstre (silver `Medallion` 36px), 3.-plass høyre (bronse `Medallion` + `border-warning/40`). Hver podium-trinn viser «Lag N» + begge partnernes fornavn + lag-total. 1.-plass får `ConfettiBurst` som auto-fyrer på første mount per browser-sesjon (sessionStorage-key `torny-par-stableford-podium-confetti-seen-${gameId}` — distinkt fra solo-key for å unngå krysstinta state). Resten av lagene (rank 4+) ligger i collapsed `<details>` under podiet. Skalerer ned ved <3 lag (1 lag → kun midten; 2 lag → midten + venstre). 16 nye tester dekker podium-trinn, partnernavn, konfetti-key-isolasjon (både separat fra solo og at samme team-key skipper re-burst), champagne-accent, rest-listen, skalerings-grenene og fallback-tilstander.
+
+#### Changed
+- `app/games/[id]/leaderboard/page.tsx` — `renderStableford`-routeren håndterer nå begge variantene av `StablefordResult`. Tidligere `notFound()`-fallback for `variant === 'team'` (Phase 1-midlertidig kode) er erstattet med en variant-router som velger `TeamStablefordView`/`TeamStablefordPodium` for team-spill og `SoloStablefordView`/`SoloStablefordPodium` for solo. State4-flippen (finished vs live) er identisk på begge: finished → podium med konfetti, alt annet → flat live-leaderboard.
+- `renderStableford`-opts-typen utvidet med `team_number: number` på player-radene, og ScoringContext-en sender `teamNumber` til scoring-motoren når `mode_config.team_size === 2` (gjenbrukes for lag-gruppering i `computeTeam()`). Solo-spill får fortsatt `teamNumber: null` siden scoring-laget ignorerer feltet på solo-grenen.
+
+#### Notes
+- Spillerinfo (`playersById` med `{ name, nickname }` per userId) gjenbrukes fra solo-flyten — ingen ekstra DB-roundtrips. `getGameWithPlayers` cachen leverer alt teamdata + user-meta i ett kall.
+- Mode-aware mail-utvidelse (gameFinishedNotification med par-stableford-copy) kommer i Phase 4 — utvidelsen her er rent UI på leaderboard-flaten.
+
+</details>
+
 ### [1.11.0] - 2026-05-24
 
 > Du kan nå opprette par-stableford-turneringer (fyrball / 4BBB). Velg Stableford som modus, så Par som lagstørrelse — admin tilordner 2/4/6/8 spillere til lag à 2.

@@ -36,6 +36,8 @@ import {
   type SoloStablefordPlayerInfo,
 } from './SoloStablefordView';
 import { SoloStablefordPodium } from './SoloStablefordPodium';
+import { TeamStablefordView } from './TeamStablefordView';
+import { TeamStablefordPodium } from './TeamStablefordPodium';
 import {
   SideTournamentView,
   type SideTournamentTeam,
@@ -792,7 +794,14 @@ export function ModeToggle({
 function renderStableford(opts: {
   gameId: string;
   game: GameForHole;
-  gwp: { players: { user_id: string; users: { name: string | null; nickname: string | null } | null; course_handicap: number | null }[] };
+  gwp: {
+    players: {
+      user_id: string;
+      team_number: number;
+      users: { name: string | null; nickname: string | null } | null;
+      course_handicap: number | null;
+    }[];
+  };
   rawHolesRows: { hole_number: number; par: number; stroke_index: number }[];
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
@@ -802,6 +811,16 @@ function renderStableford(opts: {
   // Mode-router-context: bygger ScoringContext fra game + players + holes +
   // scores. Caster mode_config via type-narrow på stableford-grenen — vi vet
   // game.game_mode er 'stableford' i denne grenen.
+  //
+  // teamNumber: for solo-stableford er DB-kolonnen alltid 0 (validation i
+  // gamePayload.ts setter den), men scoring-laget ignorerer den i solo-grenen.
+  // For par-stableford (team_size=2) er den 1..N og brukes til lag-gruppering.
+  // Vi sender den rå verdien gjennom uansett — scoring-router-en narrower på
+  // team_size og bruker bare det den trenger.
+  const isTeamVariant =
+    game.mode_config.kind === 'stableford' &&
+    game.mode_config.team_size === 2;
+
   const ctx = {
     game: {
       id: gameId,
@@ -812,7 +831,7 @@ function renderStableford(opts: {
       .filter((p) => p.users != null)
       .map((p) => ({
         userId: p.user_id,
-        teamNumber: null,
+        teamNumber: isTeamVariant ? p.team_number : null,
         flightNumber: null,
         courseHandicap: p.course_handicap ?? 0,
       })),
@@ -831,15 +850,8 @@ function renderStableford(opts: {
   const result = computeModeResult(ctx);
   // Type-guard mot mode-router-output. Hvis routeren returnerer feil shape
   // (skal ikke kunne skje siden ctx.game.game_mode = 'stableford' tvinger
-  // kind), faller vi tilbake til en tom liste — sikrere enn å kaste.
+  // kind), faller vi tilbake til notFound() — sikrere enn å rendre tom UI.
   if (result.kind !== 'stableford') {
-    notFound();
-  }
-  // Solo-vs-team-variant narrow. Phase 1 wirer kun solo-pathen — par-stableford
-  // (variant === 'team') gjengis i en egen TeamStablefordView som introduseres
-  // i Phase 3. Inntil da: vis solo-view'en hvis vi får et team-resultat (vil
-  // ikke skje før Phase 2 wires team_size=2 inn i GameForm).
-  if (result.variant !== 'solo') {
     notFound();
   }
 
@@ -850,6 +862,32 @@ function renderStableford(opts: {
       name: p.users.name ?? '(ukjent)',
       nickname: p.users.nickname,
     });
+  }
+
+  // Variant-router: par-stableford (team) → team-view/podium, solo → solo-
+  // view/podium. State4-flippen (finished vs live) er identisk på begge:
+  // finished → champagne-podium med konfetti, alt annet → flat live-leaderboard.
+  if (result.variant === 'team') {
+    if (game.status === 'finished') {
+      return (
+        <TeamStablefordPodium
+          gameId={gameId}
+          gameName={game.name}
+          result={result}
+          playersById={playersById}
+          backHref={backHref}
+        />
+      );
+    }
+    return (
+      <TeamStablefordView
+        gameId={gameId}
+        gameName={game.name}
+        result={result}
+        playersById={playersById}
+        backHref={backHref}
+      />
+    );
   }
 
   // Finished → reveal-podium (fase 6). Active/scheduled → flat live-view.
