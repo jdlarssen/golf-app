@@ -283,3 +283,299 @@ describe('GameForm — mode/lagstørrelse-velgere (fase 4)', () => {
     expect(screen.getByRole('radio', { name: /par/i })).toBeDisabled();
   });
 });
+
+describe('GameForm — par-stableford (epic #43 fase 2)', () => {
+  /**
+   * Helper: setter mode=stableford, deretter teamSize=2 i den rekkefølgen.
+   * `handleModeChange` resetter teamSize til default-for-mode (stableford →
+   * solo=1), så vi MÅ klikke Par-tile etter mode-byttet for å lande på
+   * par-stableford.
+   */
+  function selectParStableford() {
+    fireEvent.click(screen.getByRole('radio', { name: /stableford/i }));
+    fireEvent.click(screen.getByRole('radio', { name: /par/i }));
+  }
+
+  it('hidden input stableford_team_size = 2 når mode=stableford + par', () => {
+    const { container } = render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+      />,
+    );
+
+    // Default: best_ball_netto → ingen stableford_team_size-input.
+    expect(
+      container.querySelector(
+        'input[type="hidden"][name="stableford_team_size"]',
+      ),
+    ).toBeNull();
+
+    // Bytt til stableford (solo) → stableford_team_size=1.
+    fireEvent.click(screen.getByRole('radio', { name: /stableford/i }));
+    expect(
+      (container.querySelector(
+        'input[type="hidden"][name="stableford_team_size"]',
+      ) as HTMLInputElement).value,
+    ).toBe('1');
+
+    // Klikk Par → stableford_team_size=2.
+    fireEvent.click(screen.getByRole('radio', { name: /par/i }));
+    expect(
+      (container.querySelector(
+        'input[type="hidden"][name="stableford_team_size"]',
+      ) as HTMLInputElement).value,
+    ).toBe('2');
+    // team_size hidden input speiler også 2.
+    expect(
+      (container.querySelector(
+        'input[type="hidden"][name="team_size"]',
+      ) as HTMLInputElement).value,
+    ).toBe('2');
+  });
+
+  it('par-stableford: lag-grid vises når ≥2 spillere er valgt', () => {
+    render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+      />,
+    );
+
+    selectParStableford();
+
+    // Med 0 spillere skal lag-headingen ikke vises ennå.
+    expect(
+      screen.queryByRole('heading', { name: /^4\. lag$/i }),
+    ).not.toBeInTheDocument();
+
+    // Velg 2 spillere → lag-grid skal vises.
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 2/i }));
+
+    expect(
+      screen.getByRole('heading', { name: /^4\. lag$/i }),
+    ).toBeInTheDocument();
+    // Helper-tekst om par-à-2 + tomme lag skal være synlig.
+    expect(screen.getByText(/inntil 4 lag à 2 spillere/i)).toBeInTheDocument();
+  });
+
+  it('par-stableford: «Trekk tilfeldig»-knapp er ikke synlig (kun manuell tildeling i fase 2)', () => {
+    render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+      />,
+    );
+
+    selectParStableford();
+    // Fyll inn 8 spillere så grid + (eventuelt) knapper kan rendres.
+    for (const player of EIGHT_PLAYERS) {
+      fireEvent.click(
+        screen.getByRole('checkbox', { name: new RegExp(player.name!, 'i') }),
+      );
+    }
+
+    expect(
+      screen.queryByRole('button', { name: /trekk tilfeldig/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('par-stableford: 4 spillere på 2 lag à 2 → canPublish true når øvrige felt er satt', () => {
+    const { container } = render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS.slice(0, 4)}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+        initialValues={{
+          name: 'Par Cup',
+          course_id: 'course-1',
+          tee_box_id: 'tee-1',
+          scheduled_tee_off_at: '2026-06-01T10:00',
+          hcp_allowance_pct: '100',
+        }}
+      />,
+    );
+
+    selectParStableford();
+
+    // Velg alle 4 spillere.
+    for (let i = 0; i < 4; i++) {
+      fireEvent.click(
+        screen.getByRole('checkbox', { name: new RegExp(`spiller ${i + 1}`, 'i') }),
+      );
+    }
+
+    // Lag-grid skal nå være synlig. Selects er ikke labellet, så vi finner
+    // dem direkte. Lag 1 og 2 er først 2 (lag 3/4 = neste 2).
+    const teamSelects = Array.from(
+      container.querySelectorAll<HTMLSelectElement>(
+        'section select',
+      ),
+    ).filter((sel) =>
+      Array.from(sel.options).some((o) => /tom plass/i.test(o.text)),
+    );
+    // Forventer 4 lag × 2 slots = 8 dropdowns.
+    expect(teamSelects.length).toBe(8);
+
+    // Tildel spiller 1 og 2 til lag 1 (slot 0 og 1), spiller 3 og 4 til lag 2.
+    fireEvent.change(teamSelects[0], { target: { value: 'u0' } });
+    fireEvent.change(teamSelects[1], { target: { value: 'u1' } });
+    fireEvent.change(teamSelects[2], { target: { value: 'u2' } });
+    fireEvent.change(teamSelects[3], { target: { value: 'u3' } });
+
+    // Publiser-knappen skal være enabled.
+    const publishBtn = screen.getByRole('button', { name: /^publiser$/i });
+    expect(publishBtn).not.toBeDisabled();
+  });
+
+  it('par-stableford: 3 spillere (odd count) → canPublish false', () => {
+    render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS.slice(0, 4)}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+        initialValues={{
+          name: 'Par Cup',
+          course_id: 'course-1',
+          tee_box_id: 'tee-1',
+          scheduled_tee_off_at: '2026-06-01T10:00',
+          hcp_allowance_pct: '100',
+        }}
+      />,
+    );
+
+    selectParStableford();
+
+    // Velg 3 spillere — odd count, kan ikke fordeles 2-2.
+    for (let i = 0; i < 3; i++) {
+      fireEvent.click(
+        screen.getByRole('checkbox', { name: new RegExp(`spiller ${i + 1}`, 'i') }),
+      );
+    }
+
+    const publishBtn = screen.getByRole('button', { name: /^publiser$/i });
+    expect(publishBtn).toBeDisabled();
+
+    // Mangel-listen skal nevne «partall» som hindringen.
+    const helperText = document.getElementById('publish-missing');
+    expect(helperText?.textContent).toMatch(/partall/i);
+  });
+
+  it('par-stableford: 4 spillere på samme lag (3 ekstra slots tomme) → canPublish false', () => {
+    const { container } = render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS.slice(0, 4)}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+        initialValues={{
+          name: 'Par Cup',
+          course_id: 'course-1',
+          tee_box_id: 'tee-1',
+          scheduled_tee_off_at: '2026-06-01T10:00',
+          hcp_allowance_pct: '100',
+        }}
+      />,
+    );
+
+    selectParStableford();
+    for (let i = 0; i < 4; i++) {
+      fireEvent.click(
+        screen.getByRole('checkbox', { name: new RegExp(`spiller ${i + 1}`, 'i') }),
+      );
+    }
+
+    // Forsøk å sette alle 4 spillere på lag 1 — assignPlayerToSlot bytter
+    // dem mellom slots og over til andre lag, så vi simulerer 4-på-lag-1
+    // ved å sette slot 0 og 1 på lag 1, og 0 og 1 på lag 2 til samme
+    // spillere ... men assignPlayerToSlot flytter en spiller mellom lag.
+    // I praksis er det ikke trivielt å lande i en «4 spillere på lag 1»-
+    // state via UI-en — slot-occupant-cap-en gjør ulikevekt mer naturlig.
+    //
+    // Vi tester i stedet ulikevektsscenarioet: 2 spillere på lag 1 + 1
+    // spiller på lag 2 + 1 ufordelt → ujevn fordeling skal blokkere publish.
+    const teamSelects = Array.from(
+      container.querySelectorAll<HTMLSelectElement>(
+        'section select',
+      ),
+    ).filter((sel) =>
+      Array.from(sel.options).some((o) => /tom plass/i.test(o.text)),
+    );
+    fireEvent.change(teamSelects[0], { target: { value: 'u0' } });
+    fireEvent.change(teamSelects[1], { target: { value: 'u1' } });
+    fireEvent.change(teamSelects[2], { target: { value: 'u2' } });
+    // u3 er valgt men ikke tildelt — ujevn fordeling.
+
+    const publishBtn = screen.getByRole('button', { name: /^publiser$/i });
+    expect(publishBtn).toBeDisabled();
+    // Mangel-listen skal nevne lag-fordeling.
+    const helperText = document.getElementById('publish-missing');
+    expect(helperText?.textContent).toMatch(/lag-fordeling/i);
+  });
+
+  it('par-stableford: flight-seksjonen (lag-1+2 = flight-1) vises ikke', () => {
+    const { container } = render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+      />,
+    );
+
+    selectParStableford();
+
+    for (let i = 0; i < 4; i++) {
+      fireEvent.click(
+        screen.getByRole('checkbox', { name: new RegExp(`spiller ${i + 1}`, 'i') }),
+      );
+    }
+    const teamSelects = Array.from(
+      container.querySelectorAll<HTMLSelectElement>(
+        'section select',
+      ),
+    ).filter((sel) =>
+      Array.from(sel.options).some((o) => /tom plass/i.test(o.text)),
+    );
+    fireEvent.change(teamSelects[0], { target: { value: 'u0' } });
+    fireEvent.change(teamSelects[1], { target: { value: 'u1' } });
+    fireEvent.change(teamSelects[2], { target: { value: 'u2' } });
+    fireEvent.change(teamSelects[3], { target: { value: 'u3' } });
+
+    // Ingen flight-heading skal være tilstede (par-stableford auto-mapper
+    // flight = team).
+    expect(
+      screen.queryByRole('heading', { name: /^5\. flights$/i }),
+    ).not.toBeInTheDocument();
+  });
+});

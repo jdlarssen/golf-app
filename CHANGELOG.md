@@ -10,6 +10,43 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.11.y — Par-stableford
+
+Stableford-turneringer kan nå spilles som par (4BBB / fyrball). Velg Stableford som modus og Par som lagstørrelse, så kan du melde på 2/4/6/8 spillere fordelt på 1–4 lag à 2 — laget får poengene fra det høyeste stableford-resultatet på hvert hull.
+
+### [1.11.0] - 2026-05-24
+
+> Du kan nå opprette par-stableford-turneringer (fyrball / 4BBB). Velg Stableford som modus, så Par som lagstørrelse — admin tilordner 2/4/6/8 spillere til lag à 2.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `app/admin/games/new/GameForm.test.tsx` — 7 nye tester for par-stableford-flyten: hidden input `stableford_team_size`, lag-grid-synlighet, «Trekk tilfeldig»-knapp er skjult for par-stableford, publish-validitet for 4 spillere på 2 lag, blokkering ved odd count, blokkering ved ujevn lag-fordeling, og at flight-seksjonen ikke rendres.
+
+#### Changed
+- `app/admin/games/new/TeamSizeSelector.tsx` — `ENABLED_COMBOS.stableford` utvidet fra `{1}` til `{1, 2}` så Par-tile er aktiv for stableford. 4-mann er fortsatt grayed-out.
+- `app/admin/games/new/GameForm.tsx` — tre nye narrowing-flags (`isSolo`, `isBestBall`, `isParStableford`) styrer mode-spesifikke grener av validering, lag-grid-synlighet, og copy. Par-stableford-spesifikke endringer:
+  - Lag-grid renderes så snart admin har valgt ≥2 spillere (i motsetning til best-balls 8-krav). Helper-tekst: «Inntil 4 lag à 2 spillere. Hvert lag må ha enten 0 eller 2 spillere. Tomme lag publiseres ikke.»
+  - Publish-validering krever ≥2 spillere, partall antall, alle tilordnet et lag, og hvert ikke-tomt lag à 2.
+  - `missingForPublish` melder «partall antall spillere» eller «lag-fordeling (par à 2)» med mode-presis copy.
+  - «Trekk tilfeldig»-knappen er kun synlig for best-ball (par-stableford har variabelt antall spillere — admin tilordner manuelt i fase 2). «Tøm lag» vises hvis det er noe å tømme.
+  - Flight-seksjonen skipper helt; payloaden setter `flight_number = team_number` automatisk via `orderedPayload`.
+  - Per-spiller-tee-seksjonen (M/D/J) gjenbrukes fra solo-flyten siden flight-seksjonen ikke rendres.
+  - Hidden input `stableford_team_size` (verdi `'1'` eller `'2'`) sendes når mode = stableford slik at `validateStableford`-routeren i `lib/games/gamePayload.ts` velger riktig validator-gren.
+- `app/admin/games/new/TeamSizeSelector.test.tsx` — eksisterende «Solo aktiv, Par disabled»-test oppdatert til «Solo + Par aktiv, 4-mann disabled». To nye tester: caller `onChange(2)` ved Par-klikk, og 4-mann-klikk ignoreres.
+
+#### Notes
+- Scoring-motor + payload-validator landet i Phase 1 (PR #151) — denne fasen aktiverer kun UI-flyten. Lag-leaderboard + team-podium kommer i Phase 3; mail-tekster + admin/games-detalj-polish kommer i Phase 4 av epic #43.
+- Drag-tilfeldig-knappen for par-stableford ble bevisst utelatt fra Phase 2 for å holde scope strammere — kan generaliseres til 2/4/6/8 spillere i en senere fase hvis det blir vondt UX.
+
+</details>
+
+---
+
+<details>
+<summary><strong>1.10.y — Stableford spillerflyt (6 entries) — klikk for å vise</strong></summary>
+
 ## 1.10.y — Stableford spillerflyt
 
 Stableford-turneringer er nå spillbare end-to-end. Scorecard viser per-hull-poeng ved siden av netto-scoren, leaderboard rangerer spillerne på total stableford-poeng, og når runden avsluttes feires topp 3 med et eget podium — vinnerne får i tillegg en mail som forteller dem hvor de endte.
@@ -118,6 +155,8 @@ Stableford-turneringer er nå spillbare end-to-end. Scorecard viser per-hull-poe
 #### Notes
 - Reveal-flow for stableford (podium + collapsed rest + completion-mail) er holdt til fase 6 av epic #41. Midt-runde og post-finished bruker samme SoloStablefordView i v1.10.0.
 - Side-tournaments (LD/CTP) for stableford verifiseres i fase 7 — sannsynligvis bare copy-justering siden eksisterende UI bruker flat spiller-velger uten lag-kontekst.
+
+</details>
 
 </details>
 

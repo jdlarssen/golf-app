@@ -296,6 +296,17 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   // som persisteres med team_number = null.
   const requiresTeams = teamSize >= 2;
 
+  // Modus-narrowing-flag som styrer ulike grener i form-validering.
+  // - isSolo: spillere er en flat liste (stableford team_size=1)
+  // - isBestBall: dagens 4-lag-à-2 (best_ball_netto, team_size=2). Krever
+  //   eksakt 8 spillere fordelt 2-2-2-2 på 4 lag.
+  // - isParStableford: 4BBB-stableford. Tillater 1-4 lag á 2 spillere
+  //   (2/4/6/8 spillere totalt), partial fyll mot 4-lag-grid-en. Lag uten
+  //   spillere bare ignoreres ved publish.
+  const isSolo = teamSize === 1;
+  const isBestBall = gameMode === 'best_ball_netto' && teamSize === 2;
+  const isParStableford = gameMode === 'stableford' && teamSize === 2;
+
   // Drafts can be saved without a tee-off; publishing cannot. `canPublish`
   // below combines this with the rest of the validity gates.
   const hasTeeOff = scheduledTeeOffAt !== '';
@@ -441,6 +452,12 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   //   team-tilordning, ordnet stabilt etter lag for deterministisk
   //   `player_${i}_*`-skjema. Drafts round-tripper partial rosters; publish-
   //   knappen er separat gated av `canPublish`.
+  //   - best-ball: flight kan endres per spiller (FLIGHT-seksjonen viser
+  //     dropdown), falles tilbake til teamDefaultFlight ved manglende verdi
+  //   - par-stableford: flight = team_number automatisk (par-stableford
+  //     bruker ikke separate flighter; gamePayload-validatoren godtar både
+  //     varianter, men vi setter flight = team eksplisitt for å matche
+  //     mønstret i Phase 1-testene)
   // - solo-modi (teamSize === 1): inkluderer ALLE selectedPlayerIds, ingen
   //   lag/flight-felter. Hidden-input-skjemaet bærer player_${i}_id alene —
   //   gamePayload.ts validatoren leser opp til 8 slots og ignorerer manglende
@@ -460,15 +477,18 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     }[] = [];
     for (const team of TEAM_NUMBERS) {
       for (const pid of playersByTeam[team]) {
+        const flight = isParStableford
+          ? team
+          : (flightByPlayer[pid] ?? teamDefaultFlight(team));
         rows.push({
           user_id: pid,
           team_number: team,
-          flight_number: flightByPlayer[pid] ?? teamDefaultFlight(team),
+          flight_number: flight,
         });
       }
     }
     return rows;
-  }, [requiresTeams, selectedPlayerIds, playersByTeam, flightByPlayer]);
+  }, [requiresTeams, selectedPlayerIds, playersByTeam, flightByPlayer, isParStableford]);
 
   const flightsComplete =
     teamsComplete &&
@@ -483,14 +503,41 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   const allowanceValid =
     Number.isInteger(allowanceNum) && allowanceNum >= 0 && allowanceNum <= 100;
 
-  // Modus-spesifikk publish-validitet. Best-ball-netto krever 8 spillere
-  // fordelt 2-2-2-2 på 4 lag (dagens regel uendret). Stableford solo krever
-  // minst 1 spiller; ingen lag-/flight-stier å fylle. Reglene speiler
+  // Par-stableford-validitet: minst 1 lag (2 spillere), partall antall
+  // spillere, alle valgte spillere har team_number satt, og hvert ikke-tomt
+  // lag har EKSAKT 2 spillere. Speiler `validateStablefordTeam` i
+  // `lib/games/gamePayload.ts`. Flight-fordeling deles ikke ut separat —
+  // flight settes automatisk til team_number (gjenbruker `teamDefaultFlight`
+  // er overflødig her siden par-stableford uansett mapper flight = team
+  // ved payload-bygging).
+  const parStablefordTeamsBalanced = TEAM_NUMBERS.every(
+    (t) => playersByTeam[t].length === 0 || playersByTeam[t].length === 2,
+  );
+  const parStablefordHasAtLeastOneTeam = TEAM_NUMBERS.some(
+    (t) => playersByTeam[t].length === 2,
+  );
+  const parStablefordPlayersValid =
+    selectedPlayerIds.length >= 2 &&
+    selectedPlayerIds.length % 2 === 0 &&
+    selectedPlayerIds.every((pid) => teamByPlayer[pid] !== undefined) &&
+    parStablefordTeamsBalanced &&
+    parStablefordHasAtLeastOneTeam;
+
+  // Modus-spesifikk publish-validitet. Reglene speiler
   // `lib/games/gamePayload.ts` slik at klient og server forteller samme
-  // historie til admin når noe mangler.
-  const playersValidForMode = requiresTeams
-    ? eightSelected && teamsComplete && flightsComplete
-    : selectedPlayerIds.length >= 1;
+  // historie til admin når noe mangler:
+  // - solo (stableford team_size=1): minst 1 spiller, ingen lag/flight
+  // - best-ball-netto: eksakt 8 spillere fordelt 2-2-2-2 på 4 lag +
+  //   flight-fordeling per spiller
+  // - par-stableford (team_size=2): 2/4/6/8 spillere, hvert ikke-tomt lag
+  //   à 2, ingen separat flight-validering (flight = team automatisk)
+  const playersValidForMode = isSolo
+    ? selectedPlayerIds.length >= 1
+    : isBestBall
+      ? eightSelected && teamsComplete && flightsComplete
+      : isParStableford
+        ? parStablefordPlayersValid
+        : false;
 
   // Publishing requires every section to be valid AND a tee-off time. Drafts
   // skip these gates entirely (they only need a name).
@@ -503,13 +550,14 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
 
   // Human-readable list of what's still missing for a publish. Mode-aware:
   // best-ball-stien teller opp til 8 spillere + lag-/flight-fordeling,
-  // stableford-stien melder bare manglende spiller(e). Rekkefølgen speiler
+  // par-stableford-stien forventer partall-spillere balansert på lag á 2,
+  // og solo-stien melder bare manglende spiller(e). Rekkefølgen speiler
   // form-seksjonene så meldingen scanner top-to-bottom.
   const missingForPublish: string[] = [];
   if (courseId === '') missingForPublish.push('bane');
   if (teeBoxId === '') missingForPublish.push('tee-boks');
   if (!hasTeeOff) missingForPublish.push('tee-off-tid');
-  if (requiresTeams) {
+  if (isBestBall) {
     if (selectedPlayerIds.length < 8) {
       const remaining = 8 - selectedPlayerIds.length;
       missingForPublish.push(
@@ -520,7 +568,19 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     } else if (!flightsComplete) {
       missingForPublish.push('flight-fordeling');
     }
+  } else if (isParStableford) {
+    if (selectedPlayerIds.length < 2) {
+      missingForPublish.push('minst 2 spillere');
+    } else if (selectedPlayerIds.length % 2 !== 0) {
+      missingForPublish.push('partall antall spillere');
+    } else if (!parStablefordPlayersValid) {
+      // Spillere er valgt og partall, men ikke alle er tilordnet et lag
+      // eller noen lag har 1 spiller. Én melding dekker begge tilfellene
+      // for å holde mangel-listen kort.
+      missingForPublish.push('lag-fordeling (par à 2)');
+    }
   } else if (selectedPlayerIds.length < 1) {
+    // isSolo
     missingForPublish.push('minst én spiller');
   }
   if (!allowanceValid) missingForPublish.push('gyldig HCP-allowance');
@@ -583,9 +643,21 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
       {/* Modus + lagstørrelse — hidden inputs slik at server-action mottar
           eksakt det admin valgte i tile-en. `team_size` er teknisk redundant
           (modus + ENABLED_COMBOS gir det back-end), men sender den med
-          eksplisitt så form-laget er selv-dokumenterende. */}
+          eksplisitt så form-laget er selv-dokumenterende.
+
+          `stableford_team_size` er det stableford-validatoren faktisk leser
+          for å skille solo (1) fra par-stableford (2). Sendes kun når
+          modus = stableford så vi ikke smyger irrelevant felt inn i andre
+          modus-payloads. */}
       <input type="hidden" name="game_mode" value={gameMode} />
       <input type="hidden" name="team_size" value={teamSize} />
+      {gameMode === 'stableford' && (
+        <input
+          type="hidden"
+          name="stableford_team_size"
+          value={teamSize}
+        />
+      )}
 
       {/* Hidden inputs that carry the structured assignment payload. The server
           action only ever sees the FormData; keeping the names server-known
@@ -847,10 +919,12 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           <h2 className="text-sm font-medium text-text">
             2. Spillere
           </h2>
-          {/* Counter er mode-aware: best-ball viser «X av 8», solo viser
-              kun antall valgte (ingen øvre tak). Holder dagens kjent
-              «X av 8»-mønster mens vi forbereder mer fleksible modi. */}
-          {requiresTeams ? (
+          {/* Counter er mode-aware:
+              - best-ball: «X av 8 spillere valgt» (fast 8-krav)
+              - par-stableford: «X spillere valgt» med subtilt hint om
+                partall-krav for å hjelpe admin før publish-feilen treffer
+              - solo: «X spillere valgt», ingen øvre tak */}
+          {isBestBall ? (
             <span
               className={`text-xs font-medium tabular-nums ${eightSelected ? 'text-primary' : 'text-muted'}`}
             >
@@ -862,6 +936,10 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             >
               {selectedPlayerIds.length}{' '}
               {selectedPlayerIds.length === 1 ? 'spiller' : 'spillere'} valgt
+              {isParStableford && selectedPlayerIds.length >= 2 &&
+                selectedPlayerIds.length % 2 !== 0 && (
+                <span className="ml-1 text-muted/80">(par à 2)</span>
+              )}
             </span>
           )}
         </div>
@@ -933,10 +1011,10 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             ) : (
               <ul className="space-y-2">
                 {filteredPlayers.map((p) => {
-                  // Cap-en på 8 gjelder kun for moduser med fast roster
-                  // (best-ball-netto i v1). Solo-stableford har ingen
-                  // øvre grense på antall spillere — admin kan invitere
-                  // hele klubben.
+                  // Cap-en på 8 gjelder team-modi (begge: best-ball-netto
+                  // krever eksakt 8, par-stableford-grid har 4 lag à 2 =
+                  // 8 slots). Solo-stableford har ingen øvre grense på
+                  // antall spillere — admin kan invitere hele klubben.
                   const atCap = requiresTeams && selectedPlayerIds.length >= 8;
                   return (
                     <li key={p.id}>
@@ -995,33 +1073,65 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
       </section>
 
       {/* Section 4: Teams — kun for team-modi (teamSize ≥ 2). Solo-stableford
-          hopper over hele seksjonen siden det ikke finnes lag å fordele. */}
-      {requiresTeams && eightSelected && (
+          hopper over hele seksjonen siden det ikke finnes lag å fordele.
+          Synlighet:
+          - Best-ball: vises når alle 8 spillere er valgt (eksakt 8-krav).
+          - Par-stableford: vises så snart admin har valgt minst 2 spillere,
+            siden lag-fordelingen skjer parallelt med spiller-valg (admin
+            kan ha 2/4/6/8 spillere på 1-4 lag, ingen 8-krav). */}
+      {requiresTeams &&
+        ((isBestBall && eightSelected) ||
+          (isParStableford && selectedPlayerIds.length >= 2)) && (
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-text">
             4. Lag
           </h2>
-          <p className="text-xs text-muted">
-            4 lag à 2 spillere. Trekk tilfeldig eller velg manuelt.
-          </p>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={drawRandomTeams}
-              className="flex-1 text-sm"
-            >
-              Trekk tilfeldig
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={clearTeams}
-              className="flex-1 text-sm"
-            >
-              Tøm lag
-            </Button>
-          </div>
+          {isParStableford ? (
+            <p className="text-xs text-muted">
+              Inntil 4 lag à 2 spillere. Hvert lag må ha enten 0 eller 2
+              spillere. Tomme lag publiseres ikke.
+            </p>
+          ) : (
+            <p className="text-xs text-muted">
+              4 lag à 2 spillere. Trekk tilfeldig eller velg manuelt.
+            </p>
+          )}
+          {/* «Trekk tilfeldig»/«Tøm lag» er kun nyttig når antallet er fast
+              (best-ball: 8 spillere → 4 lag à 2). Par-stableford har
+              variabelt antall, så admin tilordner manuelt i fase 2 —
+              kan generaliseres i en senere fase hvis det blir vondt UX. */}
+          {isBestBall && (
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={drawRandomTeams}
+                className="flex-1 text-sm"
+              >
+                Trekk tilfeldig
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={clearTeams}
+                className="flex-1 text-sm"
+              >
+                Tøm lag
+              </Button>
+            </div>
+          )}
+          {isParStableford && selectedPlayerIds.some((pid) => teamByPlayer[pid] !== undefined) && (
+            <div className="flex">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={clearTeams}
+                className="flex-1 text-sm"
+              >
+                Tøm lag
+              </Button>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {TEAM_NUMBERS.map((team) => (
@@ -1060,8 +1170,12 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
         </section>
       )}
 
-      {/* Section 5: Flights — krever team-modus + fullført lag-fordeling. */}
-      {requiresTeams && teamsComplete && (
+      {/* Section 5: Flights — kun for best-ball (eksakt 8 spillere → 4 lag
+          fordelt på 1-4 flighter). Par-stableford skipper denne seksjonen
+          siden flight-tilordning auto-mapper til team_number i payloaden
+          (par-stableford bruker ikke separate flighter). Solo har ingen
+          lag/flight-konsept i det hele tatt. */}
+      {isBestBall && teamsComplete && (
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-text">
             5. Flights
@@ -1134,14 +1248,15 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
         </section>
       )}
 
-      {/* Per-spiller-tee for solo-modus — flights-seksjonen rendrer ikke
-          for stableford, så vi trenger en egen lett-vektsvariant slik at
-          admin kan sette tee per spiller. Vises kun når det faktisk er
-          spillere å konfigurere. */}
-      {!requiresTeams && selectedPlayerIds.length > 0 && (
+      {/* Per-spiller-tee for solo- og par-stableford-modus — flights-seksjonen
+          rendrer ikke for stableford, så vi trenger en egen lett-vektsvariant
+          slik at admin kan sette tee per spiller. Vises kun når det faktisk
+          er spillere å konfigurere. Best-ball håndterer tee inne i flights-
+          seksjonen ovenfor. */}
+      {(isSolo || isParStableford) && selectedPlayerIds.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-text">
-            4. Tee per spiller
+            {isParStableford ? '5. Tee per spiller' : '4. Tee per spiller'}
           </h2>
           <p className="text-xs text-muted">
             Velg tee per spiller. M = herre, D = dame, J = junior.
