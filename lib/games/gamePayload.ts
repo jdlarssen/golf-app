@@ -230,18 +230,53 @@ function validateBestBallNetto(
 }
 
 /**
- * Stableford-validator (solo, første ny modus i epic #41).
- *  - publish krever minst 1 spiller (vs best-balls 8)
- *  - alle spillere får team_number / flight_number = null, uavhengig av
- *    om form-en har stale verdier fra et tidligere best-ball-utkast
- *  - duplikat-sjekk uendret
+ * Stableford-validator (solo + par/4BBB-varianter, epic #41 + #43).
  *
- * Mode_config-output: `{kind, team_size: 1, points_table: 'standard'}`.
+ * Switcher på form-feltet `stableford_team_size`:
+ *  - 1 (eller mangler/ugyldig) → solo (eksisterende oppførsel)
+ *  - 2 → par-stableford (4BBB) — krever team_number + flight_number per
+ *    spiller og EKSAKT 2 spillere per lag ved publish
+ *
+ * Bakoverkompatibilitet: hvis `stableford_team_size` mangler eller har
+ * en ukjent verdi defaulter vi til 1 (solo). Det bevarer den eksisterende
+ * UI-flyten fra epic #41 inntil TeamSizeSelector wires inn par-valget
+ * i Phase 2 av epic #43.
+ *
  * Player-slot-loopen leser opp til 8 slots fordi det er øvre grense fra
- * GameForm — stableford kan utvides forbi dette i en senere fase uten
- * skjema-endring.
+ * dagens GameForm — kan utvides for stor-turneringer i en senere fase
+ * uten skjema-endring.
  */
 function validateStableford(
+  formData: FormData,
+  mode: PayloadMode,
+): ModeValidationResult {
+  const teamSize = parseStablefordTeamSize(formData);
+  if (teamSize === 2) {
+    return validateStablefordTeam(formData, mode);
+  }
+  return validateStablefordSolo(formData, mode);
+}
+
+/**
+ * Leser `stableford_team_size` fra form-data. Defaulter til 1 (solo) hvis
+ * feltet mangler eller har en ugyldig verdi. Bevarer bakoverkompatibilitet
+ * med eksisterende solo-flyt fra epic #41.
+ */
+function parseStablefordTeamSize(formData: FormData): 1 | 2 {
+  const raw = String(formData.get('stableford_team_size') ?? '').trim();
+  if (raw === '2') return 2;
+  return 1;
+}
+
+/**
+ * Solo-stableford-validator (team_size=1). Spillere får team_number /
+ * flight_number = null, uavhengig av om form-en har stale verdier fra
+ * et tidligere best-ball-utkast. DB-CHECK i 0030 krever team/flight
+ * konsistent null-or-not-null, så vi MÅ nullstille begge.
+ *
+ * Mode_config-output: `{kind, team_size: 1, points_table: 'standard'}`.
+ */
+function validateStablefordSolo(
   formData: FormData,
   mode: PayloadMode,
 ): ModeValidationResult {
@@ -254,9 +289,6 @@ function validateStableford(
       return { ok: false, errorCode: 'duplicate_player' };
     }
     seen.add(user_id);
-    // Stableford er solo: ignorer eventuelle lag/flight-verdier fra form-en
-    // helt og persistér som null. DB-CHECK i 0030 krever team/flight
-    // konsistent null-or-not-null, så vi MÅ nullstille begge.
     players.push({ user_id, team_number: null, flight_number: null });
   }
 
@@ -268,6 +300,79 @@ function validateStableford(
     ok: true,
     players,
     mode_config: { kind: 'stableford', team_size: 1, points_table: 'standard' },
+  };
+}
+
+/**
+ * Par-stableford-validator (team_size=2 / 4BBB).
+ *
+ * Regler:
+ *  - hver spiller må ha team_number og flight_number satt (positive heltall)
+ *  - flight_number = team_number for par-stableford (par-stableford bruker
+ *    ikke flights uavhengig av lag — vi mapper dem 1:1 for å oppfylle
+ *    DB-CHECK `game_players_team_flight_consistency` som krever begge satt
+ *    eller null sammen)
+ *  - publish krever EKSAKT 2 spillere per lag, minst 1 lag (ingen øvre
+ *    grense — admin kan kjøre stort antall lag for klubb-turnering)
+ *  - duplikat-sjekk uendret
+ *  - draft tolererer partial state (ufullstendige lag, færre enn 2 per lag)
+ *
+ * Mode_config-output: `{kind, team_size: 2, points_table: 'standard'}`.
+ *
+ * Player-slot-loopen leser opp til 8 slots fra dagens GameForm — par-
+ * stableford kan utvides forbi dette i en senere fase uten skjema-endring
+ * (samme begrensning som solo).
+ */
+function validateStablefordTeam(
+  formData: FormData,
+  mode: PayloadMode,
+): ModeValidationResult {
+  const players: GamePlayerInput[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < 8; i++) {
+    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
+    if (!user_id) continue;
+    if (seen.has(user_id)) {
+      return { ok: false, errorCode: 'duplicate_player' };
+    }
+    seen.add(user_id);
+    const team_number = Number(formData.get(`player_${i}_team`));
+    const flight_number = Number(formData.get(`player_${i}_flight`));
+    // Par-stableford krever positive heltall (ingen øvre grense i v1 —
+    // klubb-turneringer kan ha mange lag). Negative tall, NaN og null
+    // avvises som bad_team / bad_flight.
+    if (!Number.isInteger(team_number) || team_number < 1) {
+      return { ok: false, errorCode: 'bad_team' };
+    }
+    if (!Number.isInteger(flight_number) || flight_number < 1) {
+      return { ok: false, errorCode: 'bad_flight' };
+    }
+    players.push({ user_id, team_number, flight_number });
+  }
+
+  if (mode === 'publish') {
+    if (players.length === 0) {
+      // Helt tom spillerliste → ingen lag i det hele tatt. Behandles som
+      // "modus uten spillere" snarere enn "lag i ubalanse".
+      return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    const teamCounts = new Map<number, number>();
+    for (const p of players) {
+      if (p.team_number === null) continue;
+      teamCounts.set(p.team_number, (teamCounts.get(p.team_number) ?? 0) + 1);
+    }
+    // Hvert lag må ha EKSAKT 2 spillere — det er kjernen i 4BBB.
+    for (const [, count] of teamCounts) {
+      if (count !== 2) {
+        return { ok: false, errorCode: 'team_balance' };
+      }
+    }
+  }
+
+  return {
+    ok: true,
+    players,
+    mode_config: { kind: 'stableford', team_size: 2, points_table: 'standard' },
   };
 }
 
