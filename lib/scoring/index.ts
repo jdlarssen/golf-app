@@ -44,5 +44,10 @@ export type {
   BestBallHoleRow,
   BestBallPlayerCell,
   StablefordResult,
+  StablefordSoloResult,
+  StablefordTeamResult,
   StablefordPlayerLine,
+  StablefordPlayerCell,
+  StablefordTeamHoleRow,
+  StablefordTeamLine,
 } from './modes/types';

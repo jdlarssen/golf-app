@@ -10,6 +10,7 @@ import type {
   ScoringContext,
   ScoringHole,
   StablefordResult,
+  StablefordSoloResult,
   StablefordPlayerLine,
 } from './types';
 
@@ -78,6 +79,16 @@ function computePlayerHolePoints(
 }
 
 /**
+ * Padder per-hull-array til 18 elementer (med 0) slik at rankTeams sin
+ * back-9/back-6/back-3/hole-18 indeksering alltid har posisjoner — også
+ * for 9-hulls-baner eller partial rounds.
+ */
+function padTo18(perHole: number[]): number[] {
+  if (perHole.length >= 18) return perHole.slice(0, 18);
+  return [...perHole, ...Array(18 - perHole.length).fill(0)];
+}
+
+/**
  * Beregner stableford-leaderboard fra en ScoringContext. Bruker
  * 5-tier tie-break-cascaden fra `tiebreaker.rankTeams` med invertert
  * sammenligning: punkt-arrays negeres slik at "lavest vinner"-rangeringen
@@ -90,8 +101,16 @@ function computePlayerHolePoints(
  *
  * Returnerer spillere sortert med høyest rank først. Tied spillere
  * deler rank og blir oppført i hverandres `tiedWith`.
+ *
+ * Returnerer `{ kind: 'stableford', variant: 'solo', ... }` — solo-varianten
+ * av den nye discriminated union. Team-varianten (par-stableford / 4BBB)
+ * legges til som egen sti i neste commit.
  */
 export function compute(ctx: ScoringContext): StablefordResult {
+  return computeSolo(ctx);
+}
+
+function computeSolo(ctx: ScoringContext): StablefordSoloResult {
   const holesSorted = [...ctx.holes].sort((a, b) => a.number - b.number);
   const grossByKey = new Map<string, number | null>();
   for (const s of ctx.scores) {
@@ -99,15 +118,6 @@ export function compute(ctx: ScoringContext): StablefordResult {
   }
 
   const playerPoints = ctx.players.map((p) => computePlayerHolePoints(p, holesSorted, grossByKey));
-
-  // For å gjenbruke rankTeams (som er "lavest vinner"), negér alle
-  // per-hull-poengene. Padder til 18 hull med 0 (= negert 0) hvis
-  // banen har færre hull, slik at back-9/6/3/hole-18 fortsatt har
-  // posisjoner i array-indekseringen.
-  const padTo18 = (perHole: number[]): number[] => {
-    if (perHole.length >= 18) return perHole.slice(0, 18);
-    return [...perHole, ...Array(18 - perHole.length).fill(0)];
-  };
 
   // index-basert id slik at vi kan mappe tilbake til userId etterpå
   const teamsForRanking = playerPoints.map((p, i) => ({
@@ -131,5 +141,5 @@ export function compute(ctx: ScoringContext): StablefordResult {
     };
   });
 
-  return { kind: 'stableford', players };
+  return { kind: 'stableford', variant: 'solo', players };
 }

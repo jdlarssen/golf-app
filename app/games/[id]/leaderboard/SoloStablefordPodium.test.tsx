@@ -7,7 +7,7 @@ import {
 import type {
   SoloStablefordPlayerInfo,
 } from './SoloStablefordView';
-import type { StablefordResult } from '@/lib/scoring/modes/types';
+import type { StablefordSoloResult } from '@/lib/scoring/modes/types';
 
 // SmartLink kaller useRouter — stub navigasjons-konteksten for jsdom.
 vi.mock('next/navigation', () => ({
@@ -21,9 +21,10 @@ function makeResult(
     rank: number;
     holesPlayed: number;
   }>,
-): StablefordResult {
+): StablefordSoloResult {
   return {
     kind: 'stableford',
+    variant: 'solo',
     players: players.map((p) => ({ ...p, tiedWith: [] })),
   };
 }

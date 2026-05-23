@@ -835,6 +835,13 @@ function renderStableford(opts: {
   if (result.kind !== 'stableford') {
     notFound();
   }
+  // Solo-vs-team-variant narrow. Phase 1 wirer kun solo-pathen — par-stableford
+  // (variant === 'team') gjengis i en egen TeamStablefordView som introduseres
+  // i Phase 3. Inntil da: vis solo-view'en hvis vi får et team-resultat (vil
+  // ikke skje før Phase 2 wires team_size=2 inn i GameForm).
+  if (result.variant !== 'solo') {
+    notFound();
+  }
 
   const playersById = new Map<string, SoloStablefordPlayerInfo>();
   for (const p of gwp.players) {

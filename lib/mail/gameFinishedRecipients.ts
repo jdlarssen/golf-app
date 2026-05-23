@@ -134,9 +134,11 @@ export async function buildGameFinishedRecipients(
     })),
   });
 
-  if (result.kind !== 'stableford') {
-    // Skal aldri skje siden vi tvinger game_mode=stableford i ctx, men
-    // beskytter mot en mode-router-bug ved å falle tilbake til best-ball-copy.
+  if (result.kind !== 'stableford' || result.variant !== 'solo') {
+    // Skal aldri skje siden vi tvinger game_mode=stableford og team_size=1
+    // her, men beskytter mot en mode-router-bug ved å falle tilbake til
+    // best-ball-copy. Team-varianten håndteres i en senere fase (mail-copy
+    // for par-stableford kommer i Phase 4 av epic #43).
     return playerRows
       .map((row) => ({
         email: row.users?.email ?? null,

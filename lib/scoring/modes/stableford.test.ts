@@ -56,7 +56,7 @@ describe('computeStablefordPoints', () => {
   });
 });
 
-describe('compute (full stableford leaderboard)', () => {
+describe('compute (full stableford leaderboard, solo)', () => {
   it('summerer per-hull-poeng per spiller og returnerer discriminated shape', () => {
     const ctx = makeCtx({
       players: [
@@ -73,6 +73,8 @@ describe('compute (full stableford leaderboard)', () => {
     });
     const result = compute(ctx);
     expect(result.kind).toBe('stableford');
+    expect(result.variant).toBe('solo');
+    if (result.variant !== 'solo') throw new Error('expected solo');
     expect(result.players).toEqual([
       { userId: 'u1', totalPoints: 5, rank: 1, holesPlayed: 2, tiedWith: [] },
       { userId: 'u2', totalPoints: 3, rank: 2, holesPlayed: 2, tiedWith: [] },
@@ -91,6 +93,7 @@ describe('compute (full stableford leaderboard)', () => {
       })),
     });
     const result = compute(ctx);
+    if (result.variant !== 'solo') throw new Error('expected solo');
     expect(result.players[0].totalPoints).toBe(36);
     expect(result.players[0].holesPlayed).toBe(18);
   });
@@ -106,6 +109,7 @@ describe('compute (full stableford leaderboard)', () => {
       ],
     });
     const result = compute(ctx);
+    if (result.variant !== 'solo') throw new Error('expected solo');
     expect(result.players[0].totalPoints).toBe(5);
     expect(result.players[0].holesPlayed).toBe(2);
   });
@@ -121,6 +125,7 @@ describe('compute (full stableford leaderboard)', () => {
       })),
     });
     const result = compute(ctx);
+    if (result.variant !== 'solo') throw new Error('expected solo');
     expect(result.players[0].totalPoints).toBe(18);
     expect(result.players[0].holesPlayed).toBe(9);
   });
@@ -140,6 +145,7 @@ describe('compute (full stableford leaderboard)', () => {
       ],
     });
     const result = compute(ctx);
+    if (result.variant !== 'solo') throw new Error('expected solo');
     expect(result.players.map((p) => p.userId)).toEqual(['high', 'mid', 'low']);
     expect(result.players.map((p) => p.rank)).toEqual([1, 2, 3]);
   });
@@ -187,6 +193,7 @@ describe('compute tie-break (5-tier cascade på poeng)', () => {
       u2: [...Array(9).fill(3), ...Array(9).fill(4)],
     });
     const result = compute(ctx);
+    if (result.variant !== 'solo') throw new Error('expected solo');
     expect(result.players[0].userId).toBe('u1');
     expect(result.players[0].totalPoints).toBe(45);
     expect(result.players[0].rank).toBe(1);
@@ -240,6 +247,7 @@ describe('compute tie-break (5-tier cascade på poeng)', () => {
       u2: [...Array(9).fill(4), 4, 3, 3, 3, 4, 4, 4, 4, 4],
     });
     const result = compute(ctx);
+    if (result.variant !== 'solo') throw new Error('expected solo');
     // Total: u1 = 9*2 + 3+3+3+2+2+2+2+2+2 = 18 + 21 = 39
     //        u2 = 9*2 + 2+3+3+3+2+2+2+2+2 = 18 + 21 = 39
     expect(result.players[0].totalPoints).toBe(39);
@@ -257,6 +265,7 @@ describe('compute tie-break (5-tier cascade på poeng)', () => {
       u2: Array(18).fill(4),
     });
     const result = compute(ctx);
+    if (result.variant !== 'solo') throw new Error('expected solo');
     expect(result.players[0].totalPoints).toBe(36);
     expect(result.players[1].totalPoints).toBe(36);
     expect(result.players[0].rank).toBe(result.players[1].rank);
@@ -271,6 +280,7 @@ describe('compute tie-break (5-tier cascade på poeng)', () => {
       u3: Array(18).fill(6), // double-bogey → 0 poeng × 18 = 0
     });
     const result = compute(ctx);
+    if (result.variant !== 'solo') throw new Error('expected solo');
     // u1 + u2 deler rank 1, u3 får rank 3 (ikke 2)
     const u1 = result.players.find((p) => p.userId === 'u1')!;
     const u2 = result.players.find((p) => p.userId === 'u2')!;

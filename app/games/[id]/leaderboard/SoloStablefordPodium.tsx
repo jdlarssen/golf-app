@@ -9,7 +9,7 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { Medallion } from '@/components/ui/Medallion';
 import { LeaderboardBackdrop } from '@/components/illustrations/LeaderboardBackdrop';
 import { formatRevealName } from '@/lib/names/formatRevealName';
-import type { StablefordResult } from '@/lib/scoring/modes/types';
+import type { StablefordSoloResult } from '@/lib/scoring/modes/types';
 import { ConfettiBurst } from './ConfettiBurst';
 import type { SoloStablefordPlayerInfo } from './SoloStablefordView';
 
@@ -20,8 +20,11 @@ export interface SoloStablefordPodiumProps {
   gameId: string;
   /** Turneringsnavn — vises som kicker i header. */
   gameName: string;
-  /** Resultat fra `lib/scoring/modes/stableford.compute()`. */
-  result: StablefordResult;
+  /**
+   * Resultat fra `lib/scoring/modes/stableford.compute()` for solo-varianten.
+   * Caller må narrowe på `variant === 'solo'` før propen sendes inn.
+   */
+  result: StablefordSoloResult;
   /** Spillerinfo per userId for å rendre navn + kallenavn. */
   playersById: Map<string, SoloStablefordPlayerInfo>;
   /** Hvor pilen tilbake skal peke. Defaults til spillets hjem. */

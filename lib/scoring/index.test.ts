@@ -47,10 +47,12 @@ describe('computeLeaderboard — mode-router', () => {
 
     const result = computeLeaderboard(ctx);
     expect(result.kind).toBe('stableford');
-    if (result.kind === 'stableford') {
+    if (result.kind === 'stableford' && result.variant === 'solo') {
       expect(result.players).toEqual([
         { userId: 'u1', totalPoints: 2, rank: 1, holesPlayed: 1, tiedWith: [] },
       ]);
+    } else {
+      throw new Error('expected stableford solo result');
     }
   });
 });
