@@ -188,3 +188,99 @@ describe('HoleClient — score writes', () => {
     expect(drainQueueMock).toHaveBeenCalled();
   });
 });
+
+describe('HoleClient — stableford-modus', () => {
+  it('viser «Dine poeng»-subtittel når gameMode=stableford', () => {
+    render(
+      <HoleClient
+        {...baseProps({
+          gameMode: 'stableford',
+          myStablefordTotal: 12,
+          myStablefordForCurrentHole: 0,
+        })}
+      />,
+    );
+    const subtitle = screen.getByTestId('stableford-total-subtitle');
+    expect(subtitle).toBeInTheDocument();
+    expect(subtitle.textContent).toContain('Dine poeng');
+    expect(subtitle.textContent).toContain('12');
+  });
+
+  it('skjuler «Dine poeng»-subtittel for best-ball', () => {
+    render(<HoleClient {...baseProps({ gameMode: 'best_ball_netto' })} />);
+    expect(
+      screen.queryByTestId('stableford-total-subtitle'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('viser «Lever ditt scorekort» på siste hull for stableford', () => {
+    useLiveQueryMock.mockReturnValue([
+      { strokes: 4 },
+      { strokes: 5 },
+      { strokes: 3 },
+      { strokes: 4 },
+    ]);
+    render(
+      <HoleClient
+        {...baseProps({ currentHole: 18, gameMode: 'stableford' })}
+      />,
+    );
+    const link = screen.getByRole('link', { name: 'Lever ditt scorekort' });
+    expect(link.getAttribute('href')).toBe('/games/g1/submit');
+  });
+
+  it('viser «Lever scorekort» (uten «ditt») for best-ball', () => {
+    useLiveQueryMock.mockReturnValue([
+      { strokes: 4 },
+      { strokes: 5 },
+      { strokes: 3 },
+      { strokes: 4 },
+    ]);
+    render(
+      <HoleClient
+        {...baseProps({ currentHole: 18, gameMode: 'best_ball_netto' })}
+      />,
+    );
+    const link = screen.getByRole('link', { name: 'Lever scorekort' });
+    expect(link.getAttribute('href')).toBe('/games/g1/submit');
+  });
+
+  it('passer stableford-poeng for current hull til ScoreCard når gameMode=stableford', () => {
+    useLiveQueryMock.mockReturnValue([
+      { strokes: 4 }, // u1 par på par 4 = 2 poeng
+      undefined,
+      undefined,
+      undefined,
+    ]);
+    render(
+      <HoleClient
+        {...baseProps({
+          gameMode: 'stableford',
+          par: 4,
+          myStablefordTotal: 0,
+          myStablefordForCurrentHole: 0,
+        })}
+      />,
+    );
+    // Helper-text på første kort skal vise «Netto 4 · 2 poeng»
+    const helpers = screen.getAllByTestId('helper-text');
+    expect(helpers[0].textContent).toBe('Netto 4 · 2 poeng');
+  });
+
+  it('passer ikke stableford-poeng til ScoreCard for best-ball-modus', () => {
+    useLiveQueryMock.mockReturnValue([
+      { strokes: 4 },
+      undefined,
+      undefined,
+      undefined,
+    ]);
+    render(
+      <HoleClient
+        {...baseProps({ gameMode: 'best_ball_netto', par: 4 })}
+      />,
+    );
+    const helpers = screen.getAllByTestId('helper-text');
+    // Best-ball-modus: kun «Netto 4», ingen «poeng»-suffix
+    expect(helpers[0].textContent).toBe('Netto 4');
+  });
+});

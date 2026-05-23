@@ -21,6 +21,13 @@ export interface ScoreCardProps {
    * Default false — non-reveal games render both as normal.
    */
   hideNetto?: boolean;
+  /**
+   * Stableford-poengene for current hull, for current spillerkort. Null
+   * betyr at vi enten ikke spiller stableford eller at hullet ikke er
+   * tastet ennå. Når satt: vises som «· N poeng» i helper-tekst-en etter
+   * netto-verdien. Skjules sammen med netto-info når hideNetto er true.
+   */
+  stablefordPoints?: number | null;
   onSetScore: (playerId: string, next: number) => void;
   onLongPress: (playerId: string) => void;
 }
@@ -65,6 +72,7 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
     par,
     disabled = false,
     hideNetto = false,
+    stablefordPoints = null,
     onSetScore,
     onLongPress,
   } = props;
@@ -184,7 +192,14 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
   } else if (hideNetto) {
     helperText = '';
   } else {
-    helperText = `Netto ${score - extraStrokes}`;
+    const nettoLabel = `Netto ${score - extraStrokes}`;
+    // For stableford-modus appendes per-hull-poengene rett etter netto-en
+    // for å vise sammenhengen netto → poeng på samme linje (sparer plass
+    // og holder per-hull-info atomisk).
+    helperText =
+      stablefordPoints !== null
+        ? `${nettoLabel} · ${stablefordPoints} poeng`
+        : nettoLabel;
   }
 
   const stepperBtnStyle: CSSProperties = {

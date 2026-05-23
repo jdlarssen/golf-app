@@ -2,6 +2,7 @@ import 'server-only';
 import { unstable_cache } from 'next/cache';
 import { getAdminClient } from '@/lib/supabase/admin';
 import type { SideCategoryId } from '@/lib/scoring/sideTournamentConfig';
+import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import type { GameStatus } from './status';
 import type { TeeBoxRatings, TeeGender } from './teeRating';
 import type { ScoreVisibility } from './visibility';
@@ -79,6 +80,19 @@ export type GameForHole = {
   // (alle aktive). DB-CHECK i 0026 garanterer at hver entry er en gyldig
   // SideCategoryId, så vi caster trygt på input-side.
   side_disabled_categories: SideCategoryId[] | null;
+  /**
+   * Spillmodus-discriminator fra `games.game_mode`. DB-CHECK garanterer at
+   * verdien er én av kjente moduser, men vi caster trygt på input-side fordi
+   * Supabase-typene returnerer `string` (CHECK-constraints projiseres ikke).
+   * Konsumenter switcher på dette via `lib/scoring/index.ts` mode-router.
+   */
+  game_mode: GameMode;
+  /**
+   * Modus-spesifikk konfig fra `games.mode_config` (JSONB). Innholdets shape
+   * dikteres av `game_mode` — se `GameModeConfig`-union for varianter. Lest
+   * av scoring/leaderboard-konsumenter; ikke modifisert etter publisering.
+   */
+  mode_config: GameModeConfig;
   // The game's single tee carries up to three independent rating-sets
   // (mens/ladies/juniors). Each player picks which set applies via their
   // tee_gender flag. Not nullable — games always have a tee assigned at
@@ -115,7 +129,7 @@ async function fetchGameWithPlayers(
     supabase
       .from('games')
       .select(
-        'id, name, status, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, tee_box:tee_boxes!games_tee_box_id_fkey(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+        'id, name, status, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, tee_box:tee_boxes!games_tee_box_id_fkey(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
       )
       .eq('id', id)
       .single<GameForHole>(),

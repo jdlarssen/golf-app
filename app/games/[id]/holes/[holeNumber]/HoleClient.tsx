@@ -21,6 +21,8 @@ import { SyncStatusLine } from '@/components/hole/SyncStatusLine';
 import { BottomActionBar } from '@/components/hole/BottomActionBar';
 import { SpecificValueSheet } from '@/components/hole/SpecificValueSheet';
 import { PokalIcon } from '@/components/icons';
+import { computeStablefordPoints } from '@/lib/scoring/modes/stableford';
+import type { GameMode } from '@/lib/scoring/modes/types';
 
 export type ClientPlayer = {
   userId: string;
@@ -38,6 +40,14 @@ export interface HoleClientProps {
   gameId: string;
   gameName: string;
   gameStatus: 'draft' | 'scheduled' | 'active' | 'finished';
+  /**
+   * Spillets modus. Stableford bytter ut «Lever lagets scorekort» med
+   * «Lever ditt scorekort», viser «Dine poeng»-subtittel i headeren, og
+   * surfacer stableford-poeng per hull på score-kortet. Default-prop
+   * `best_ball_netto` holder eldre callsites bakoverkompatible inntil
+   * de oppdateres.
+   */
+  gameMode?: GameMode;
   currentHole: number;
   par: number;
   strokeIndex: number;
@@ -49,6 +59,21 @@ export interface HoleClientProps {
    * navigate back to hole 18 to find the submit action.
    */
   myCompletedHoles: number;
+  /**
+   * Stableford-totalen til brukeren server-side ved render (summen av
+   * stableford-poeng over alle ferdig-tastede hull). Null for best-ball.
+   * Brukes til «Dine poeng: N»-subtittelen i headeren — oppdateres ved
+   * neste server-render (etter hull-bytte). Live optimistic-update for
+   * current hull skjer client-side via computeStablefordPoints.
+   */
+  myStablefordTotal?: number | null;
+  /**
+   * Stableford-poengene som teller for *current* hull spesifikt, ved
+   * server-side render. Null hvis hullet ikke er tastet ennå eller hvis
+   * spillet ikke er stableford. Brukes til å initialisere subtitle-en før
+   * useLiveQuery rekker å hydrere.
+   */
+  myStablefordForCurrentHole?: number | null;
   /**
    * Reveal-modus flag forwarded from the server: true only when
    * `score_visibility='reveal'` AND status is still pre-finished. Forwarded
@@ -127,14 +152,19 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     gameId,
     gameName,
     gameStatus,
+    gameMode = 'best_ball_netto',
     currentHole,
     par,
     strokeIndex,
     myUserId,
     myCompletedHoles,
+    myStablefordTotal = null,
+    myStablefordForCurrentHole = null,
     hideNetto = false,
     players,
   } = props;
+
+  const isStableford = gameMode === 'stableford';
 
   // Sync listener — start once on mount.
   useEffect(() => {
@@ -188,6 +218,26 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     const score = row?.strokes ?? null;
     return { ...p, score };
   });
+
+  // For stableford: regn ut «Dine poeng» live ved å justere server-totalen
+  // med delta-en for current hull (server-snapshot vs live-Dexie-rad). Dette
+  // gir umiddelbar feedback når brukeren taster et nytt slag — uten å vente
+  // på neste server-render. For best-ball er hele blokken null.
+  const myLiveCard = cards.find((c) => c.userId === myUserId);
+  const myLiveScoreForCurrent = myLiveCard?.score ?? null;
+  const myExtraStrokesForCurrent = myLiveCard?.extraStrokes ?? 0;
+  const myLivePointsForCurrent =
+    isStableford && myLiveScoreForCurrent != null
+      ? computeStablefordPoints({
+          par,
+          netStrokes: myLiveScoreForCurrent - myExtraStrokesForCurrent,
+        })
+      : null;
+  const myDisplayedStablefordTotal = isStableford
+    ? (myStablefordTotal ?? 0) -
+      (myStablefordForCurrentHole ?? 0) +
+      (myLivePointsForCurrent ?? 0)
+    : null;
 
   const [valueSheetFor, setValueSheetFor] = useState<string | null>(null);
 
@@ -299,12 +349,16 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   // the 'Neste hull' chain and offer the submit CTA on every screen.
   const roundComplete = myCompletedHoles >= 18;
 
+  // Stableford = solo-modus, så det er kun «ditt» scorekort, ikke et lag-kort.
+  // Best-ball-kopien («Lever scorekort») holder vi som default for å unngå
+  // unødvendig copy-endring der.
+  const submitLabel = isStableford ? 'Lever ditt scorekort' : 'Lever scorekort';
   const bottomLabel = roundComplete
-    ? 'Lever scorekort'
+    ? submitLabel
     : !allConfirmed
       ? 'Bekreft alle scorer'
       : isLastHole
-        ? 'Lever scorekort'
+        ? submitLabel
         : `Neste hull · ${next}`;
 
   const bottomHref = roundComplete
@@ -337,6 +391,46 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
         </SmartLink>
       </div>
 
+      {/* Stableford-subtittel: «Dine poeng: N». Erstatter den implisitte
+          «Lagets totalsum»-narrativen for solo-modus. Plassert som en stille
+          chip-stil under headeren, før hull-stripa — informativ uten å rope.
+          Bruker tabular-nums for at totalen ikke vippes hver gang tallet
+          oppdaterer. */}
+      {isStableford && myDisplayedStablefordTotal !== null && (
+        <div
+          data-testid="stableford-total-subtitle"
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            padding: '0 18px 6px',
+          }}
+        >
+          <span
+            style={{
+              fontFamily: 'var(--font-sans)',
+              fontSize: 10.5,
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: '0.18em',
+              color: 'var(--text-muted)',
+            }}
+          >
+            Dine poeng:{' '}
+            <span
+              className="score-num"
+              style={{
+                color: 'var(--accent)',
+                fontFamily: 'var(--font-serif)',
+                fontSize: 13,
+                marginLeft: 2,
+              }}
+            >
+              {myDisplayedStablefordTotal}
+            </span>
+          </span>
+        </div>
+      )}
+
       <HoleStrip gameId={gameId} currentHole={currentHole} />
       <HoleHero
         holeNumber={currentHole}
@@ -347,21 +441,35 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
       <OnboardingBanner visible={showHint} onDismiss={dismissHint} />
 
       <div style={listStyle}>
-        {cards.map((c) => (
-          <ScoreCard
-            key={c.userId}
-            playerId={c.userId}
-            name={c.nickname ?? c.name}
-            initial={c.initial}
-            extraStrokes={c.extraStrokes}
-            score={c.score}
-            par={par}
-            disabled={disabled}
-            hideNetto={hideNetto}
-            onSetScore={onSetScore}
-            onLongPress={onLongPress}
-          />
-        ))}
+        {cards.map((c) => {
+          // Per-kort stableford-poeng for current hull. Vi regner client-side
+          // av samme grunn som vi viser de live (= umiddelbar feedback uten
+          // å vente på neste server-render). Bruker spillerens egne
+          // extraStrokes som allerede er bakt inn i ClientPlayer.
+          const stablefordPoints =
+            isStableford && c.score != null
+              ? computeStablefordPoints({
+                  par,
+                  netStrokes: c.score - c.extraStrokes,
+                })
+              : null;
+          return (
+            <ScoreCard
+              key={c.userId}
+              playerId={c.userId}
+              name={c.nickname ?? c.name}
+              initial={c.initial}
+              extraStrokes={c.extraStrokes}
+              score={c.score}
+              par={par}
+              disabled={disabled}
+              hideNetto={hideNetto}
+              stablefordPoints={stablefordPoints}
+              onSetScore={onSetScore}
+              onLongPress={onLongPress}
+            />
+          );
+        })}
         <SyncStatusLine syncing={syncing} savedAt={savedAt} />
       </div>
 

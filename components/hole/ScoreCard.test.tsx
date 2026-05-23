@@ -111,6 +111,33 @@ describe('ScoreCard — helper text', () => {
     expect(helper.textContent).toBe('');
   });
 
+  it('viser «Netto X · N poeng» når stablefordPoints er satt', () => {
+    setup({ score: 4, par: 4, extraStrokes: 0, stablefordPoints: 2 });
+    expect(screen.getByText('Netto 4 · 2 poeng')).toBeInTheDocument();
+  });
+
+  it('viser kun «Netto X» når stablefordPoints er null (best-ball)', () => {
+    setup({ score: 4, par: 4, extraStrokes: 0, stablefordPoints: null });
+    expect(screen.getByText('Netto 4')).toBeInTheDocument();
+    expect(screen.queryByText(/poeng/)).not.toBeInTheDocument();
+  });
+
+  it('viser «Netto X · 0 poeng» for stableford med double-bogey', () => {
+    setup({ score: 6, par: 4, extraStrokes: 0, stablefordPoints: 0 });
+    expect(screen.getByText('Netto 6 · 0 poeng')).toBeInTheDocument();
+  });
+
+  it('skjuler stableford-poeng når hideNetto er true (reveal-modus)', () => {
+    setup({
+      score: 4,
+      par: 4,
+      extraStrokes: 0,
+      stablefordPoints: 2,
+      hideNetto: true,
+    });
+    expect(screen.queryByText(/poeng/)).not.toBeInTheDocument();
+  });
+
   it('viser instruksjon-tekst når score er null uavhengig av extraStrokes', () => {
     setup({ score: null, extraStrokes: 3 });
     expect(screen.getByText('Tap kort = par. Bruk − / +.')).toBeInTheDocument();
