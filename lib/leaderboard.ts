@@ -1,5 +1,5 @@
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
-import { bestBallForHole } from '@/lib/scoring/bestBall';
+import { bestBallForHole } from '@/lib/scoring/modes/bestBallNetto';
 import { rankTeams, type RankedTeam } from '@/lib/scoring/tiebreaker';
 
 export type LeaderboardMode = 'netto' | 'brutto';
