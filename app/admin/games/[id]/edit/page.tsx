@@ -28,6 +28,7 @@ import {
   ALL_CATEGORY_IDS,
   type SideCategoryId,
 } from '@/lib/scoring/sideTournamentConfig';
+import type { GameMode } from '@/lib/scoring/modes/types';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -91,12 +92,16 @@ type GameRow = {
   side_ctp_count: number;
   // v1.2.0 — `text[]` på DB-siden. Vi narrow til SideCategoryId[] etter load.
   side_disabled_categories: string[];
+  // Epic #41 — modus + JSONB-config. Mode-lock-guarden i edit-actions
+  // krever at form-en sender disse uendret tilbake for publiserte spill.
+  game_mode: GameMode;
 };
 
 type GamePlayerRow = {
   user_id: string;
-  team_number: number;
-  flight_number: number;
+  // Nullable siden 0030 — solo-modus (stableford) bruker null på begge.
+  team_number: number | null;
+  flight_number: number | null;
   tee_gender: 'mens' | 'ladies' | 'juniors';
 };
 
@@ -155,7 +160,7 @@ export default async function EditGamePage({
     supabase
       .from('games')
       .select(
-        'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories',
+        'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode',
       )
       .eq('id', id)
       .single<GameRow>(),
@@ -355,6 +360,13 @@ async function EditGameFormBody({
       team_number: p.team_number,
       flight_number: p.flight_number,
     })),
+    // Epic #41 — pre-fyller modus + lås for ikke-draft spill. Backend
+    // mode-lock-guard avviser bytte etter publisering, så UI-en speiler
+    // dette ved å vise modus-tile-ene som disabled. Lagstørrelse-en
+    // utledes av GameForm fra modus (Stableford → 1, Best ball → 2);
+    // ingen DB-roundtrip for team_size før vi får flere kombinasjoner.
+    game_mode: game.game_mode,
+    lock_game_mode: game.status !== 'draft',
   };
 
   if (game.status === 'draft') {

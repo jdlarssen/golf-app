@@ -9,6 +9,9 @@ import {
   CLASSIC_DISABLED_CATEGORIES,
   type SideCategoryId,
 } from '@/lib/scoring/sideTournamentConfig';
+import { ModeSelector } from './ModeSelector';
+import { TeamSizeSelector, type TeamSize } from './TeamSizeSelector';
+import type { GameMode } from '@/lib/scoring/modes/types';
 
 export type CourseOption = {
   id: string;
@@ -83,11 +86,31 @@ export type InitialValues = {
   player_genders?: Record<string, 'M' | 'D' | 'J'>;
   players?: Array<{
     user_id: string;
-    // Widened to `number` at the prop boundary; deriveAssignmentsFromInitial
-    // validates/narrows to TeamNumber when populating internal state.
-    team_number: number;
-    flight_number: number;
+    // Widened to `number | null` ved prop-grensen siden 0030 gjorde
+    // team/flight nullable for solo-modus (stableford). deriveAssignmentsFromInitial
+    // validerer/narrower bare når feltet er satt (1..4) — null-rader hopper
+    // over team/flight-state og lar lag-tilordnings-grid stå tom.
+    team_number: number | null;
+    flight_number: number | null;
   }>;
+  /**
+   * Valgt spillmodus. Innført med epic #41 fase 4. Defaulter til
+   * `'best_ball_netto'` så eksisterende edit-flyt for pre-multi-mode-spill
+   * fungerer uten endring.
+   */
+  game_mode?: GameMode;
+  /**
+   * Lagstørrelse. Defaulter til 2 (matcher dagens best-ball-flyt) hvis
+   * mode = best_ball_netto, eller 1 hvis mode = stableford. Initialiserings-
+   * logikken i GameForm-state-en sikrer at verdien alltid matcher modus.
+   */
+  team_size?: TeamSize;
+  /**
+   * Lås modus + lagstørrelse (når status er scheduled/active/finished).
+   * Backend mode-lock-guard har siste ord, men UI-en skal vise låste
+   * felter for å unngå at admin trigger en validation error utilsiktet.
+   */
+  lock_game_mode?: boolean;
 };
 
 /**
@@ -128,9 +151,10 @@ function isTeamNumber(n: number): n is TeamNumber {
 
 // Derive team/flight maps from the optional initialValues.players array so the
 // edit page (D4) can pre-fill these without re-implementing the math. Rows
-// with an out-of-range team_number are dropped (treated as unassigned),
-// which keeps the prop boundary forgiving without smuggling bad data into
-// internal state.
+// med ute-av-rekkevidde-team_number eller null (solo-modus) hopper over
+// state-tilordning — spilleren blir lagt til selectedPlayerIds, men lag-grid
+// står tom for den raden. Holder prop-grensen forgivende uten å smugle bad
+// data inn i internal state.
 function deriveAssignmentsFromInitial(initial: InitialValues | undefined) {
   if (!initial?.players) {
     return {
@@ -144,12 +168,24 @@ function deriveAssignmentsFromInitial(initial: InitialValues | undefined) {
   const flightByPlayer: Record<string, number> = {};
   for (const row of initial.players) {
     selectedPlayerIds.push(row.user_id);
-    if (isTeamNumber(row.team_number)) {
+    if (row.team_number !== null && isTeamNumber(row.team_number)) {
       teamByPlayer[row.user_id] = row.team_number;
     }
-    flightByPlayer[row.user_id] = row.flight_number;
+    if (row.flight_number !== null) {
+      flightByPlayer[row.user_id] = row.flight_number;
+    }
   }
   return { selectedPlayerIds, teamByPlayer, flightByPlayer };
+}
+
+/**
+ * Velger default-lagstørrelse for en gitt modus. Speilar de aktive
+ * kombinasjonene i `TeamSizeSelector.ENABLED_COMBOS` — Stableford → 1,
+ * Best ball netto → 2. Holdt synk separat fordi GameForm trenger en
+ * ren funksjon for state-initialisering uten å eksponere selector-internt.
+ */
+function defaultTeamSizeForMode(mode: GameMode): TeamSize {
+  return mode === 'stableford' ? 1 : 2;
 }
 
 // Fisher–Yates shuffle backed by crypto.getRandomValues for fair, unbiased
@@ -232,6 +268,33 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     initialValues?.side_disabled_categories ?? CLASSIC_DISABLED_CATEGORIES;
 
   const [sideEnabled, setSideEnabled] = useState<boolean>(initialSideEnabled);
+
+  // Modus + lagstørrelse — wired av epic #41 fase 4. Default-modus er
+  // `'best_ball_netto'` for å speile pre-multi-mode-flyten; auto-fix av
+  // lagstørrelse skjer i `handleModeChange` slik at ulovlige kombinasjoner
+  // ikke kan oppstå.
+  const initialMode: GameMode = initialValues?.game_mode ?? 'best_ball_netto';
+  const [gameMode, setGameMode] = useState<GameMode>(initialMode);
+  const [teamSize, setTeamSize] = useState<TeamSize>(
+    initialValues?.team_size ?? defaultTeamSizeForMode(initialMode),
+  );
+  // Lås når et publisert spill redigeres — backend mode-lock-guard har
+  // siste ord, men UI-en speiler det for å unngå utilsiktet validation-error.
+  const lockGameMode = initialValues?.lock_game_mode ?? false;
+
+  function handleModeChange(next: GameMode) {
+    setGameMode(next);
+    // Auto-velg eneste aktive lagstørrelse per modus så form-state alltid
+    // matcher en gyldig kombinasjon. Når flere kombinasjoner aktiveres
+    // (par-stableford, 4-mann-stableford), erstattes dette med en mer
+    // fleksibel default-policy — for v1 holder vi det enkelt.
+    setTeamSize(defaultTeamSizeForMode(next));
+  }
+
+  // Lag-grid vises kun for moduser som faktisk har lag (teamSize ≥ 2).
+  // Solo (1) hopper over hele lag/flight-stien — spillere er en flat liste
+  // som persisteres med team_number = null.
+  const requiresTeams = teamSize >= 2;
 
   // Drafts can be saved without a tee-off; publishing cannot. `canPublish`
   // below combines this with the rest of the validity gates.
@@ -373,16 +436,28 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     setFlightByPlayer((prev) => ({ ...prev, [playerId]: flight }));
   }
 
-  // The serialized payload sent to the server action. Always includes every
-  // player who has a team assignment, even if teams aren't fully balanced —
-  // drafts need to round-trip partial rosters. Players selected but not yet
-  // placed in a lag are excluded (their team_number is undefined, so they're
-  // already filtered out of `playersByTeam`). The publish button is
-  // independently gated by `canPublish`, so this can't smuggle an
-  // unbalanced roster into a published game.
-  // Order is stable so the server's `player_${i}_*` schema is deterministic.
+  // The serialized payload sent to the server action. Holder seg mode-aware:
+  // - team-spillmodi (teamSize ≥ 2): inkluderer kun spillere som har en
+  //   team-tilordning, ordnet stabilt etter lag for deterministisk
+  //   `player_${i}_*`-skjema. Drafts round-tripper partial rosters; publish-
+  //   knappen er separat gated av `canPublish`.
+  // - solo-modi (teamSize === 1): inkluderer ALLE selectedPlayerIds, ingen
+  //   lag/flight-felter. Hidden-input-skjemaet bærer player_${i}_id alene —
+  //   gamePayload.ts validatoren leser opp til 8 slots og ignorerer manglende
+  //   team/flight-felt for stableford.
   const orderedPayload = useMemo(() => {
-    const rows: { user_id: string; team_number: TeamNumber; flight_number: number }[] = [];
+    if (!requiresTeams) {
+      return selectedPlayerIds.map((pid) => ({
+        user_id: pid,
+        team_number: null as number | null,
+        flight_number: null as number | null,
+      }));
+    }
+    const rows: {
+      user_id: string;
+      team_number: number | null;
+      flight_number: number | null;
+    }[] = [];
     for (const team of TEAM_NUMBERS) {
       for (const pid of playersByTeam[team]) {
         rows.push({
@@ -393,7 +468,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
       }
     }
     return rows;
-  }, [playersByTeam, flightByPlayer]);
+  }, [requiresTeams, selectedPlayerIds, playersByTeam, flightByPlayer]);
 
   const flightsComplete =
     teamsComplete &&
@@ -408,35 +483,45 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   const allowanceValid =
     Number.isInteger(allowanceNum) && allowanceNum >= 0 && allowanceNum <= 100;
 
+  // Modus-spesifikk publish-validitet. Best-ball-netto krever 8 spillere
+  // fordelt 2-2-2-2 på 4 lag (dagens regel uendret). Stableford solo krever
+  // minst 1 spiller; ingen lag-/flight-stier å fylle. Reglene speiler
+  // `lib/games/gamePayload.ts` slik at klient og server forteller samme
+  // historie til admin når noe mangler.
+  const playersValidForMode = requiresTeams
+    ? eightSelected && teamsComplete && flightsComplete
+    : selectedPlayerIds.length >= 1;
+
   // Publishing requires every section to be valid AND a tee-off time. Drafts
-  // skip these gates entirely (they only need a name). Previously this was
-  // split into a `canSubmit` step, but nothing else referenced that helper
-  // once «Lagre utkast» dropped to name-only — inlined for clarity.
+  // skip these gates entirely (they only need a name).
   const canPublish =
     courseId !== '' &&
     teeBoxId !== '' &&
-    eightSelected &&
-    teamsComplete &&
-    flightsComplete &&
+    playersValidForMode &&
     allowanceValid &&
     hasTeeOff;
 
-  // Human-readable list of what's still missing for a publish. Used as helper
-  // text under the disabled «Publiser»-button. Order mirrors the form
-  // sections so the message scans top-to-bottom.
+  // Human-readable list of what's still missing for a publish. Mode-aware:
+  // best-ball-stien teller opp til 8 spillere + lag-/flight-fordeling,
+  // stableford-stien melder bare manglende spiller(e). Rekkefølgen speiler
+  // form-seksjonene så meldingen scanner top-to-bottom.
   const missingForPublish: string[] = [];
   if (courseId === '') missingForPublish.push('bane');
   if (teeBoxId === '') missingForPublish.push('tee-boks');
   if (!hasTeeOff) missingForPublish.push('tee-off-tid');
-  if (selectedPlayerIds.length < 8) {
-    const remaining = 8 - selectedPlayerIds.length;
-    missingForPublish.push(
-      `${remaining} ${remaining === 1 ? 'spiller' : 'spillere'}`,
-    );
-  } else if (!teamsComplete) {
-    missingForPublish.push('lag-fordeling');
-  } else if (!flightsComplete) {
-    missingForPublish.push('flight-fordeling');
+  if (requiresTeams) {
+    if (selectedPlayerIds.length < 8) {
+      const remaining = 8 - selectedPlayerIds.length;
+      missingForPublish.push(
+        `${remaining} ${remaining === 1 ? 'spiller' : 'spillere'}`,
+      );
+    } else if (!teamsComplete) {
+      missingForPublish.push('lag-fordeling');
+    } else if (!flightsComplete) {
+      missingForPublish.push('flight-fordeling');
+    }
+  } else if (selectedPlayerIds.length < 1) {
+    missingForPublish.push('minst én spiller');
   }
   if (!allowanceValid) missingForPublish.push('gyldig HCP-allowance');
 
@@ -495,21 +580,31 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
 
   return (
     <form className="space-y-6">
+      {/* Modus + lagstørrelse — hidden inputs slik at server-action mottar
+          eksakt det admin valgte i tile-en. `team_size` er teknisk redundant
+          (modus + ENABLED_COMBOS gir det back-end), men sender den med
+          eksplisitt så form-laget er selv-dokumenterende. */}
+      <input type="hidden" name="game_mode" value={gameMode} />
+      <input type="hidden" name="team_size" value={teamSize} />
+
       {/* Hidden inputs that carry the structured assignment payload. The server
           action only ever sees the FormData; keeping the names server-known
-          means we don't need an alternate JSON wire format. */}
+          means we don't need an alternate JSON wire format. For solo-modus
+          (stableford) sender vi tomme team/flight-strenger — gamePayload-
+          validatoren oppdager `game_mode === 'stableford'` og persisterer
+          team_number/flight_number som null uansett. */}
       {orderedPayload.map((row, i) => (
         <div key={row.user_id} className="hidden">
           <input type="hidden" name={`player_${i}_id`} value={row.user_id} />
           <input
             type="hidden"
             name={`player_${i}_team`}
-            value={row.team_number}
+            value={row.team_number ?? ''}
           />
           <input
             type="hidden"
             name={`player_${i}_flight`}
-            value={row.flight_number}
+            value={row.flight_number ?? ''}
           />
         </div>
       ))}
@@ -752,11 +847,23 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           <h2 className="text-sm font-medium text-text">
             2. Spillere
           </h2>
-          <span
-            className={`text-xs font-medium tabular-nums ${eightSelected ? 'text-primary' : 'text-muted'}`}
-          >
-            {selectedPlayerIds.length} av 8 spillere valgt
-          </span>
+          {/* Counter er mode-aware: best-ball viser «X av 8», solo viser
+              kun antall valgte (ingen øvre tak). Holder dagens kjent
+              «X av 8»-mønster mens vi forbereder mer fleksible modi. */}
+          {requiresTeams ? (
+            <span
+              className={`text-xs font-medium tabular-nums ${eightSelected ? 'text-primary' : 'text-muted'}`}
+            >
+              {selectedPlayerIds.length} av 8 spillere valgt
+            </span>
+          ) : (
+            <span
+              className={`text-xs font-medium tabular-nums ${selectedPlayerIds.length > 0 ? 'text-primary' : 'text-muted'}`}
+            >
+              {selectedPlayerIds.length}{' '}
+              {selectedPlayerIds.length === 1 ? 'spiller' : 'spillere'} valgt
+            </span>
+          )}
         </div>
         {players.length === 0 ? (
           <p className="text-sm text-muted">
@@ -826,7 +933,11 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             ) : (
               <ul className="space-y-2">
                 {filteredPlayers.map((p) => {
-                  const atCap = selectedPlayerIds.length >= 8;
+                  // Cap-en på 8 gjelder kun for moduser med fast roster
+                  // (best-ball-netto i v1). Solo-stableford har ingen
+                  // øvre grense på antall spillere — admin kan invitere
+                  // hele klubben.
+                  const atCap = requiresTeams && selectedPlayerIds.length >= 8;
                   return (
                     <li key={p.id}>
                       <label
@@ -856,11 +967,39 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
         )}
       </section>
 
-      {/* Section 3: Teams */}
-      {eightSelected && (
+      {/* Section 2.5: Modus + lagstørrelse — fyrer mellom spiller-listen og
+          lag-tilordnings-grid-en så admin må eksplisitt velge hvordan
+          spillet skal scoreres FØR det blir aktuelt å fordele lag.
+          Lock-flagget gjelder edit-flyten for publiserte spill (backend
+          mode-lock-guard har siste ord). */}
+      <section className="space-y-4">
+        <h2 className="text-sm font-medium text-text">
+          3. Format
+        </h2>
+        <ModeSelector
+          value={gameMode}
+          onChange={handleModeChange}
+          disabled={lockGameMode}
+        />
+        <TeamSizeSelector
+          mode={gameMode}
+          value={teamSize}
+          onChange={setTeamSize}
+          disabled={lockGameMode}
+        />
+        {lockGameMode && (
+          <p className="text-xs text-muted">
+            <strong>Kan ikke endres etter spill-start.</strong>
+          </p>
+        )}
+      </section>
+
+      {/* Section 4: Teams — kun for team-modi (teamSize ≥ 2). Solo-stableford
+          hopper over hele seksjonen siden det ikke finnes lag å fordele. */}
+      {requiresTeams && eightSelected && (
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-text">
-            3. Lag
+            4. Lag
           </h2>
           <p className="text-xs text-muted">
             4 lag à 2 spillere. Trekk tilfeldig eller velg manuelt.
@@ -921,11 +1060,11 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
         </section>
       )}
 
-      {/* Section 4: Flights */}
-      {teamsComplete && (
+      {/* Section 5: Flights — krever team-modus + fullført lag-fordeling. */}
+      {requiresTeams && teamsComplete && (
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-text">
-            4. Flights
+            5. Flights
           </h2>
           <p className="text-xs text-muted">
             Standard: lag 1 + 2 = flight 1, lag 3 + 4 = flight 2. Endre per
@@ -995,10 +1134,68 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
         </section>
       )}
 
-      {/* Section 5: Settings */}
+      {/* Per-spiller-tee for solo-modus — flights-seksjonen rendrer ikke
+          for stableford, så vi trenger en egen lett-vektsvariant slik at
+          admin kan sette tee per spiller. Vises kun når det faktisk er
+          spillere å konfigurere. */}
+      {!requiresTeams && selectedPlayerIds.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-medium text-text">
+            4. Tee per spiller
+          </h2>
+          <p className="text-xs text-muted">
+            Velg tee per spiller. M = herre, D = dame, J = junior.
+          </p>
+          <div className="space-y-2">
+            {selectedPlayerIds.map((pid) => {
+              const p = players.find((x) => x.id === pid);
+              if (!p) return null;
+              return (
+                <div
+                  key={pid}
+                  className="flex items-center gap-3 min-h-[44px] px-3 py-2 rounded-lg border border-border"
+                >
+                  <span className="text-sm text-text flex-1 truncate">
+                    {shortName(p)}
+                  </span>
+                  <div className="flex gap-1" role="group" aria-label="Tee for spiller">
+                    {(['M', 'D', 'J'] as const).map((g) => (
+                      <button
+                        key={g}
+                        type="button"
+                        onClick={() =>
+                          setPlayerGenders((prev) => ({ ...prev, [pid]: g }))
+                        }
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                          (playerGenders[pid] ?? 'M') === g
+                            ? g === 'M'
+                              ? 'bg-primary text-white dark:text-bg'
+                              : g === 'D'
+                                ? 'bg-accent text-text'
+                                : 'bg-muted text-text'
+                            : 'bg-surface border border-border text-muted hover:text-text'
+                        }`}
+                      >
+                        {g}
+                      </button>
+                    ))}
+                    <input
+                      type="hidden"
+                      name={`player_${pid}_gender`}
+                      value={playerGenders[pid] ?? 'M'}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* Section 6: Settings */}
       <section className="space-y-4">
         <h2 className="text-sm font-medium text-text">
-          5. Innstillinger
+          6. Innstillinger
         </h2>
         <Input
           id="hcp_allowance_pct"
