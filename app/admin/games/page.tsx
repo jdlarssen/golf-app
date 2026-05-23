@@ -6,10 +6,12 @@ import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { ChampagneMedallion } from '@/components/ui/ChampagneMedallion';
 import { PinFlag, Laurel } from '@/components/icons';
+import { ModeChip } from '@/components/ui/ModeChip';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { TopBar } from '@/components/ui/TopBar';
 import type { GameStatus } from '@/lib/games/status';
+import type { GameMode } from '@/lib/scoring/modes/types';
 import { formatShortDateNb } from '@/lib/format/date';
 
 type SearchParams = Promise<{
@@ -49,6 +51,11 @@ type GameRow = {
   id: string;
   name: string;
   status: GameStatus;
+  // Epic #41 — modus per spill. Vises som chip ved siden av spillnavnet
+  // slik at admin har et raskt overblikk over hvilket format hvert spill
+  // kjører. Backfilled til 'best_ball_netto' for pre-multi-mode-spill
+  // (migrasjon 0030).
+  game_mode: GameMode;
   created_at: string;
   started_at: string | null;
   ended_at: string | null;
@@ -141,7 +148,7 @@ async function fetchGames(filterFinished: boolean) {
   let q = supabase
     .from('games')
     .select(
-      'id, name, status, created_at, started_at, ended_at, scheduled_tee_off_at, courses(name)',
+      'id, name, status, game_mode, created_at, started_at, ended_at, scheduled_tee_off_at, courses(name)',
     )
     .order('created_at', { ascending: false })
     .limit(40);
@@ -293,6 +300,13 @@ async function GamesLedger({ filterFinished }: { filterFinished: boolean }) {
                 <p className="mt-0.5 truncate font-sans text-[11.5px] tabular-nums text-muted">
                   {meta}
                 </p>
+                {/* Modus-chip i egen rad UNDER meta — bevisst lavmælt
+                    plassering så listen scanner som «navn, hva, hvem».
+                    Inline-flex sikrer at chip-en ikke streches over hele
+                    raden hvis spillnavnet er langt. */}
+                <div className="mt-1 inline-flex">
+                  <ModeChip mode={g.game_mode} />
+                </div>
               </div>
               <div className="text-right">
                 <StatusChip tone={STATUS_TO_TONE[g.status]} />

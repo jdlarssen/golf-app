@@ -7,9 +7,11 @@ import { TopBar } from '@/components/ui/TopBar';
 import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { MiniRibbon } from '@/components/ui/MiniRibbon';
+import { ModeChip } from '@/components/ui/ModeChip';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import type { GameStatus } from '@/lib/games/status';
+import { MODE_LABELS, type GameMode } from '@/lib/scoring/modes/types';
 import { StartGameButton } from './StartGameButton';
 import { StartScheduledGameButton } from './StartScheduledGameButton';
 import { EndGameButton } from './EndGameButton';
@@ -80,6 +82,9 @@ type GameRow = {
   id: string;
   name: string;
   status: GameStatus;
+  // Epic #41 — modus per spill. Bestemmer både hvilken Spillform-tekst som
+  // vises i Format-kortet og hvilken ModeChip-variant subtittelen får.
+  game_mode: GameMode;
   hcp_allowance_pct: number;
   require_peer_approval: boolean;
   course_id: string;
@@ -162,7 +167,7 @@ export default async function GameDetailPage({
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, status, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, courses(name), tee_boxes(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+      'id, name, status, game_mode, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, courses(name), tee_boxes(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
     )
     .eq('id', id)
     .single<GameRow>();
@@ -188,6 +193,7 @@ export default async function GameDetailPage({
       <div className="px-1">
         <div className="mb-1.5 flex items-center gap-2">
           <StatusChip tone={STATUS_TO_TONE[game.status]} />
+          <ModeChip mode={game.game_mode} />
           <Suspense fallback={<Skeleton className="h-3 w-20" />}>
             <SakNumber createdAt={game.created_at} />
           </Suspense>
@@ -196,13 +202,7 @@ export default async function GameDetailPage({
           {game.name}
         </h1>
         <p className="mt-1 font-sans text-xs tabular-nums text-muted">
-          {[
-            game.courses?.name,
-            'Best ball netto',
-            subtitleDate,
-          ]
-            .filter(Boolean)
-            .join(' · ')}
+          {[game.courses?.name, subtitleDate].filter(Boolean).join(' · ')}
         </p>
       </div>
 
@@ -398,7 +398,7 @@ async function PlayersSections({
 
       {/* Card 2 — Format */}
       <SectionCard ribbon="Format">
-        <Row label="Spillform" value="Best ball netto" />
+        <Row label="Spillform" value={MODE_LABELS[game.game_mode]} />
         <Row
           label="Handicap-justering"
           value={`${game.hcp_allowance_pct} %`}
