@@ -12,7 +12,31 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ## 1.10.y — Stableford spillerflyt
 
-Stableford-turneringer er nå spillbare end-to-end. Scorecard viser per-hull-poeng ved siden av netto-scoren, og leaderboard rangerer spillerne på total stableford-poeng i stedet for lag-summer.
+Stableford-turneringer er nå spillbare end-to-end. Scorecard viser per-hull-poeng ved siden av netto-scoren, leaderboard rangerer spillerne på total stableford-poeng, og når runden avsluttes feires topp 3 med et eget podium — vinnerne får i tillegg en mail som forteller dem hvor de endte.
+
+### [1.10.1] - 2026-05-23
+
+> Når en stableford-turnering avsluttes ser spillerne nå et topp 3 podium med 1.-plassen feiret med konfetti. Hele rangeringen ligger ett klikk unna under podiet. Vinnerne får tilpasset «Resultatet er klart»-mail med sin egen plassering og poeng.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `app/games/[id]/leaderboard/SoloStablefordPodium.tsx` (+ test) — ny reveal-view for `game.status === 'finished'` på stableford-spill. 3-trinns podium med 1.-plass i midten på høyeste trinn (champagne `Medallion` + champagne-tinted Card), 2.-plass venstre (sølv-Medallion + dempet ring), 3.-plass høyre (bronse-Medallion + `border-warning/40`). 1.-plassen får `ConfettiBurst` (gjenbrukt fra `State4View`) som auto-fyrer på første mount per browser-sesjon (sessionStorage-key `torny-stableford-podium-confetti-seen-${gameId}`). Layout skalerer ned ved <3 spillere (1 spiller → kun midten; 2 spillere → midten + venstre).
+- `lib/mail/gameFinishedRecipients.ts` (+ test) — ny helper som bygger mottakerlisten for «Resultatet er klart»-mail-blasten. For stableford fetcher den scores + course_holes + course_handicap, kjører `computeLeaderboard` mode-router, og legger per-spiller rank/totalPoints/totalPlayers på hver mottaker. For best-ball returnerer den kun email+name (default nøytral mail-copy).
+- `lib/mail/gameFinishedNotification.test.ts` — snapshot-style tester for HTML+text-body i begge moduser, inkl. celebration-tilegg per plassering (1. → «Gratulerer med seieren!», 2/3 → «Solid plassering!», 4+ → nøytral).
+
+#### Changed
+- `lib/mail/gameFinishedNotification.ts` — ny `mode`-prop med discriminated union (`{kind:'best_ball_netto'}` eller `{kind:'stableford', rank, totalPoints, totalPlayers}`). Stableford-grenen rendrer en personlig hovedlinje («Du endte på X. plass av N med Y poeng»); udefinert eller best-ball-grenen beholder dagens copy uendret.
+- `app/admin/games/[id]/actions.ts` (endGame) + `app/admin/games/[id]/avslutt/actions.ts` (endGameWithSideWinners) — leser nå `game_mode` + `mode_config` + `course_id` fra games-raden og delegerer mottaker-bygging til `buildGameFinishedRecipients`. Mail-loopen passer `mode`-payload videre til mail-helperen.
+- `app/games/[id]/leaderboard/page.tsx` — `renderStableford`-grenen velger view per `game.status`: `finished` → `SoloStablefordPodium`, alt annet → `SoloStablefordView` (uendret). Best-ball-grenen er upåvirket.
+- `tests/serverActionMocks.ts` — `buildSupabaseMock` får `order` + `limit` som chainable pass-through-er, slik at helpers med sortert SELECT kan testes uten å endre kjøre-tid-koden.
+
+#### Notes
+- Side-tournaments for stableford verifiseres i fase 7 (sannsynligvis bare copy-justering). Modus-chip i admin-listen + edge-case-håndtering kommer også i fase 7.
+- Confetti respekterer eksisterende `prefers-reduced-motion`-handling via `.confetti-piece { display: none }` i `globals.css` — ingen ekstra reduksjons-logikk trengs.
+
+</details>
 
 ### [1.10.0] - 2026-05-23
 
