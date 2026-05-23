@@ -14,6 +14,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Stableford-turneringer er nå spillbare end-to-end. Scorecard viser per-hull-poeng ved siden av netto-scoren, leaderboard rangerer spillerne på total stableford-poeng, og når runden avsluttes feires topp 3 med et eget podium — vinnerne får i tillegg en mail som forteller dem hvor de endte.
 
+### [1.10.3] - 2026-05-23
+
+> Når du åpner et stableford-spill i admin, ser du ikke lenger en tom «Lag»-seksjon eller Lag/Flight-kolonner i spillerlisten. De vises bare for spill som faktisk har lag.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `app/admin/games/[id]/page.tsx` — `<SectionCard ribbon="Lag">` skjules for `game_mode === 'stableford'` (alle `team_number`/`flight_number` er null for solo). Spillere-tabellen dropper Lag- og Flight-kolonnene under samme betingelse.
+
+</details>
+
 ### [1.10.2] - 2026-05-23
 
 > Admin-listen viser nå modus per spill, og resten av admin-flyten er forfinet for å støtte stableford-spill side om side med best-ball. Side-tournaments fungerer uendret for begge moduser.

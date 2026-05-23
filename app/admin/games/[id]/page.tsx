@@ -314,6 +314,8 @@ async function PlayersSections({
 
   const players = playersRes.data ?? [];
 
+  const isSolo = game.game_mode === 'stableford';
+
   // Group by team (1..4). Each team has up to 2 players.
   const byTeam: Record<number, GamePlayerRow[]> = { 1: [], 2: [], 3: [], 4: [] };
   for (const p of players) {
@@ -492,31 +494,33 @@ async function PlayersSections({
         </SectionCard>
       )}
 
-      <SectionCard ribbon="Lag">
-        <div className="grid grid-cols-1 gap-2.5 px-3.5 pb-3.5 pt-3 sm:grid-cols-2">
-          {[1, 2, 3, 4].map((team) => (
-            <div
-              key={team}
-              className="rounded-xl border border-border px-3 py-2.5"
-            >
-              <p className="mb-1.5 font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-                Lag {team}
-              </p>
-              {byTeam[team].length === 0 ? (
-                <p className="text-sm text-muted">(tom)</p>
-              ) : (
-                <ul className="space-y-0.5">
-                  {byTeam[team].map((p) => (
-                    <li key={p.user_id} className="text-sm text-text">
-                      {displayName(p)}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ))}
-        </div>
-      </SectionCard>
+      {!isSolo && (
+        <SectionCard ribbon="Lag">
+          <div className="grid grid-cols-1 gap-2.5 px-3.5 pb-3.5 pt-3 sm:grid-cols-2">
+            {[1, 2, 3, 4].map((team) => (
+              <div
+                key={team}
+                className="rounded-xl border border-border px-3 py-2.5"
+              >
+                <p className="mb-1.5 font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+                  Lag {team}
+                </p>
+                {byTeam[team].length === 0 ? (
+                  <p className="text-sm text-muted">(tom)</p>
+                ) : (
+                  <ul className="space-y-0.5">
+                    {byTeam[team].map((p) => (
+                      <li key={p.user_id} className="text-sm text-text">
+                        {displayName(p)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
 
       {[1, 2, 3, 4].some((f) => byFlight[f].length > 0) && (
         <SectionCard ribbon="Flights">
@@ -547,8 +551,12 @@ async function PlayersSections({
               <thead>
                 <tr className="text-left text-[10px] font-semibold uppercase tracking-widest text-muted">
                   <th className="px-2 py-1.5 font-semibold">Navn</th>
-                  <th className="px-2 py-1.5 font-semibold">Lag</th>
-                  <th className="px-2 py-1.5 font-semibold">Flight</th>
+                  {!isSolo && (
+                    <>
+                      <th className="px-2 py-1.5 font-semibold">Lag</th>
+                      <th className="px-2 py-1.5 font-semibold">Flight</th>
+                    </>
+                  )}
                   <th className="px-2 py-1.5 text-right font-semibold">CH</th>
                   {game.status !== 'draft' && (
                     <th className="px-2 py-1.5 font-semibold">Status</th>
@@ -576,8 +584,12 @@ async function PlayersSections({
                       style={{ borderColor: 'var(--row-divider-warm)' }}
                     >
                       <td className="px-2 py-2 text-text">{displayName(p)}</td>
-                      <td className="px-2 py-2 text-text">{p.team_number}</td>
-                      <td className="px-2 py-2 text-text">{p.flight_number}</td>
+                      {!isSolo && (
+                        <>
+                          <td className="px-2 py-2 text-text">{p.team_number}</td>
+                          <td className="px-2 py-2 text-text">{p.flight_number}</td>
+                        </>
+                      )}
                       <td className="px-2 py-2 text-right text-text">
                         {p.course_handicap ?? '—'}
                       </td>
