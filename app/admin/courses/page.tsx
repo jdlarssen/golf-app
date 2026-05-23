@@ -4,6 +4,8 @@ import { getServerClient } from '@/lib/supabase/server';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
+import { ChampagneMedallion } from '@/components/ui/ChampagneMedallion';
+import { BaneIcon } from '@/components/icons';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { TopBar } from '@/components/ui/TopBar';
 import { formatShortDateNbWithYear } from '@/lib/format/date';
@@ -83,7 +85,7 @@ export default async function CoursesPage({
         }
       />
 
-      <BrassRibbon kicker="Baner · protokoll" />
+      <BrassRibbon kicker="Baner · katalog" />
 
       <div className="px-1">
         <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
@@ -106,7 +108,7 @@ export default async function CoursesPage({
       </Suspense>
 
       <p className="mt-6 text-center font-serif text-[11px] italic leading-relaxed text-muted">
-        Tap en bane for å redigere protokollen.
+        Tap en bane for å redigere katalogen.
       </p>
     </AdminShell>
   );
@@ -126,8 +128,16 @@ async function CoursesLedger() {
 
   if (items.length === 0) {
     return (
-      <div className="mt-6 rounded-2xl border border-border bg-surface px-5 py-8 text-center text-sm text-muted">
-        Ingen baner ennå. Trykk «+ Ny» for å legge til den første.
+      <div className="mt-6 rounded-2xl border border-border bg-surface px-5 py-12 flex flex-col items-center text-center">
+        <ChampagneMedallion size={72} className="mb-5">
+          <BaneIcon width={36} height={36} className="text-primary dark:text-text" />
+        </ChampagneMedallion>
+        <p className="font-serif text-[16px] font-medium tracking-[-0.005em] text-text">
+          Ingen baner ennå.
+        </p>
+        <p className="mt-1.5 max-w-[280px] font-sans text-[12.5px] leading-relaxed text-muted">
+          Trykk «+ Ny» for å legge til den første banen i katalogen.
+        </p>
       </div>
     );
   }
@@ -166,6 +176,10 @@ async function CoursesLedger() {
       >
         {items.map((course, i) => {
           const teeCount = course.tee_boxes?.[0]?.count ?? 0;
+          // Cap stagger at row 8 so long catalogs don't drag the final reveal
+          // out past ~half a second — matches the leaderboard `.lb-row`
+          // pattern in globals.css.
+          const staggerStep = Math.min(i, 8);
           return (
             <SmartLink
               key={course.id}
@@ -173,7 +187,7 @@ async function CoursesLedger() {
               className="reveal-up grid items-center gap-2.5 px-3.5 py-3.5"
               style={{
                 gridTemplateColumns: '1fr 64px 14px',
-                animationDelay: `${60 + i * 60}ms`,
+                animationDelay: `${60 + staggerStep * 60}ms`,
                 borderTop:
                   i === 0 ? 'none' : '1px solid var(--row-divider-warm)',
               }}

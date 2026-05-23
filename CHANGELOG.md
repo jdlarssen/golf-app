@@ -14,6 +14,20 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark Appearance, blir Tørny mørk når du åpner appen — uten at noe annet endrer seg.
 
+### [1.8.12] - 2026-05-23
+
+> Admin-listene over baner og spill har fått en designpass — Sekretariatet-paletten er gjennomført, og oversikten leser nå like premium som resten av appen.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+- `app/admin/courses/page.tsx` — empty-state-flaten løftet til samme champagne-medallion-treatment som `admin/games`-listen (bruker `<ChampagneMedallion>` + `<BaneIcon>` + serif-tittel + body-tekst, i stedet for en flat surface-boks med én tekstlinje). BrassRibbon-kicker byttet fra «Baner · protokoll» til «Baner · katalog» — semantisk mer korrekt for en bane-liste (det er ikke en saksprotokoll). Footer-hint endret tilsvarende til «Tap en bane for å redigere katalogen.»
+- `app/admin/games/page.tsx` — subtitle-kopi tightened: «X spill · sortert kronologisk» → «X spill · sortert nyeste først» (parallell med `admin/courses` og lettere å lese). Empty-state-kopi endret fra «turneringen» → «runden» / «rundene» (Tørny støtter også hverdagsrunder, ikke bare turneringer — i tråd med headingen «Sett opp ny runde» på `/admin/games/new`).
+- `app/admin/games/page.tsx` + `app/admin/courses/page.tsx` — `reveal-up`-animasjons-stagger capped på rad 8 (`Math.min(i, 8)`) så lange listene (opp til 40 rader) ikke drar siste rad ut over ~½ sekund. Matcher `.lb-row`-mønsteret i `globals.css`. Closes [#129](https://github.com/jdlarssen/golf-app/issues/129).
+
+</details>
+
 ### [1.8.11] - 2026-05-23
 
 > Leaderboarden etter en ferdigspilt runde har nå en subtil fairway-vinje med flaggstang i bakgrunnen — atmosfære uten å konkurrere med leader-cardet.

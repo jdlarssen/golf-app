@@ -161,9 +161,12 @@ async function fetchGames(filterFinished: boolean) {
 
 async function Subtitle({ filterFinished }: { filterFinished: boolean }) {
   const games = await fetchGames(filterFinished);
+  const n = games.length;
+  // «spill» (no/bokmål) er identisk i ubestemt entall og flertall, så vi
+  // bøyer ikke der. «runde» → «runder» og «signert» → «signerte» i flertall.
   const subtitle = filterFinished
-    ? `${games.length} signerte runder`
-    : `${games.length} spill · sortert kronologisk`;
+    ? `${n} signert${n === 1 ? '' : 'e'} runde${n === 1 ? '' : 'r'}`
+    : `${n} spill · sortert nyeste først`;
   return (
     <p className="font-sans text-[11.5px] tabular-nums text-muted">
       {subtitle}
@@ -211,8 +214,8 @@ async function GamesLedger({ filterFinished }: { filterFinished: boolean }) {
         </p>
         <p className="mt-1.5 max-w-[280px] font-sans text-[12.5px] leading-relaxed text-muted">
           {filterFinished
-            ? 'Resultatene fra avsluttede spill samles her etterhvert som turneringene fullføres.'
-            : 'Trykk «+ Nytt» for å opprette den første turneringen.'}
+            ? 'Resultatene fra avsluttede spill samles her etterhvert som rundene fullføres.'
+            : 'Trykk «+ Nytt» for å sette opp den første runden.'}
         </p>
       </div>
     );
@@ -267,6 +270,10 @@ async function GamesLedger({ filterFinished }: { filterFinished: boolean }) {
           ]
             .filter(Boolean)
             .join(' · ');
+          // Cap stagger at row 8 so long ledgers (up to 40 rows) don't drag
+          // the final reveal out past ~half a second — matches the leaderboard
+          // `.lb-row` pattern in globals.css.
+          const staggerStep = Math.min(i, 8);
           return (
             <SmartLink
               key={g.id}
@@ -274,7 +281,7 @@ async function GamesLedger({ filterFinished }: { filterFinished: boolean }) {
               className="reveal-up grid items-center gap-2.5 px-3.5 py-3.5"
               style={{
                 gridTemplateColumns: '1fr 84px 14px',
-                animationDelay: `${60 + i * 60}ms`,
+                animationDelay: `${60 + staggerStep * 60}ms`,
                 borderTop:
                   i === 0 ? 'none' : '1px solid var(--row-divider-warm)',
               }}
