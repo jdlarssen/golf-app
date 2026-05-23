@@ -108,9 +108,15 @@ export default async function SubmitPage({
 
   const submitAction = submitScorecard.bind(null, id);
 
+  // Solo-modus (stableford) har null team/flight, og kopien skifter fra
+  // lag-rettet til personlig: «Lever ditt scorekort» i topp-baren og en
+  // CH-only-info-linje i stedet for «Lag X · Flight Y».
+  const isStableford = game.game_mode === 'stableford';
+  const kicker = isStableford ? 'Lever ditt scorekort' : 'Lever scorekort';
+
   return (
     <AppShell showVersion={false}>
-      <TopBar backHref={`/games/${id}`} kicker="Lever scorekort" />
+      <TopBar backHref={`/games/${id}`} kicker={kicker} />
 
       {errorMessage && (
         <div className="mb-4">
@@ -129,11 +135,18 @@ export default async function SubmitPage({
               ? ` · Tee: ${courseTee.tee_boxes.name}${playerRating ? ` · Par ${playerRating.par}` : ''}`
               : ''}
           </p>
-          <p className="text-xs text-muted mt-1">
-            Lag <span className="score-num">{me.team_number}</span> · Flight{' '}
-            <span className="score-num">{me.flight_number}</span> · CH{' '}
-            <span className="score-num">{me.course_handicap ?? '—'}</span>
-          </p>
+          {isStableford ? (
+            <p className="text-xs text-muted mt-1">
+              Individuell stableford · CH{' '}
+              <span className="score-num">{me.course_handicap ?? '—'}</span>
+            </p>
+          ) : (
+            <p className="text-xs text-muted mt-1">
+              Lag <span className="score-num">{me.team_number}</span> · Flight{' '}
+              <span className="score-num">{me.flight_number}</span> · CH{' '}
+              <span className="score-num">{me.course_handicap ?? '—'}</span>
+            </p>
+          )}
         </Card>
 
         <Suspense fallback={<ReviewBodySkeleton />}>
