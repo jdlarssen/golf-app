@@ -23,19 +23,24 @@ type Props = {
 };
 
 /**
- * Mapping fra modus til hvilke lagstørrelser som er aktive i v1.
+ * Mapping fra modus til hvilke lagstørrelser som er aktive.
  * Andre kombinasjoner vises grayed-out med «kommer snart» — eksplisitt
- * design-beslutning per epic #41-planen:
+ * design-beslutning per epic #41 + #43-planen:
  *
- *  - Modus = Stableford → kun Solo aktiv (par/4-mann kommer)
+ *  - Modus = Stableford → Solo + Par aktiv (4-mann kommer)
  *  - Modus = Best ball netto → kun Par aktiv (solo/4-mann kommer)
+ *
+ * Par-stableford (4BBB) ble aktivert i epic #43 fase 2 — scoring-motoren
+ * og payload-validatoren landet i fase 1 (PR #151), og lag-fordelings-
+ * UI-en utvides i fase 2 til å støtte 1-4 lag à 2 spillere (2/4/6/8
+ * spillere totalt, ingen 8-krav som best-ball-netto).
  *
  * Ved fremtidige moduser (matchplay #45, scramble #44, etc.) utvider vi
  * denne mappen — ingen DB-migrasjon eller payload-endring nødvendig før
  * en konkret kombinasjon er implementert.
  */
 const ENABLED_COMBOS: Record<GameMode, ReadonlySet<TeamSize>> = {
-  stableford: new Set<TeamSize>([1]),
+  stableford: new Set<TeamSize>([1, 2]),
   best_ball_netto: new Set<TeamSize>([2]),
 };
 

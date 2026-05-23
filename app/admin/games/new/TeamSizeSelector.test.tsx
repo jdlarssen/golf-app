@@ -14,7 +14,9 @@ describe('TeamSizeSelector', () => {
     expect(screen.getByRole('radio', { name: /4-mann/i })).toBeInTheDocument();
   });
 
-  it('Stableford: Solo aktiv, Par + 4-mann disabled med "kommer snart"', () => {
+  it('Stableford: Solo + Par aktiv, 4-mann disabled med "kommer snart"', () => {
+    // Par ble aktivert i epic #43 fase 2 (par-stableford / 4BBB). 4-mann
+    // er fortsatt grayed-out per roadmap.
     render(<TeamSizeSelector mode="stableford" value={1} onChange={() => {}} />);
 
     const solo = screen.getByRole('radio', { name: /solo/i });
@@ -22,11 +24,31 @@ describe('TeamSizeSelector', () => {
     const fourMann = screen.getByRole('radio', { name: /4-mann/i });
 
     expect(solo).not.toBeDisabled();
-    expect(par).toBeDisabled();
+    expect(par).not.toBeDisabled();
     expect(fourMann).toBeDisabled();
 
-    // "Kommer snart" på begge inaktive tiles.
-    expect(screen.getAllByText(/kommer snart/i)).toHaveLength(2);
+    // "Kommer snart" kun på 4-mann nå.
+    expect(screen.getAllByText(/kommer snart/i)).toHaveLength(1);
+  });
+
+  it('Stableford + Par aktiveres: caller onChange(2) når Par-tile klikkes', () => {
+    const onChange = vi.fn();
+    render(
+      <TeamSizeSelector mode="stableford" value={1} onChange={onChange} />,
+    );
+
+    fireEvent.click(screen.getByRole('radio', { name: /par/i }));
+    expect(onChange).toHaveBeenCalledWith(2);
+  });
+
+  it('Stableford: 4-mann er fortsatt disabled og ignorerer klikk', () => {
+    const onChange = vi.fn();
+    render(
+      <TeamSizeSelector mode="stableford" value={1} onChange={onChange} />,
+    );
+
+    fireEvent.click(screen.getByRole('radio', { name: /4-mann/i }));
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it('Best ball netto: Par aktiv, Solo + 4-mann disabled', () => {
@@ -53,13 +75,13 @@ describe('TeamSizeSelector', () => {
     expect(onChange).toHaveBeenCalledWith(1);
   });
 
-  it('ignorerer klikk på disabled tile', () => {
+  it('ignorerer klikk på disabled tile (best-ball-modus: solo + 4-mann)', () => {
     const onChange = vi.fn();
     render(
-      <TeamSizeSelector mode="stableford" value={1} onChange={onChange} />,
+      <TeamSizeSelector mode="best_ball_netto" value={2} onChange={onChange} />,
     );
 
-    fireEvent.click(screen.getByRole('radio', { name: /par/i }));
+    fireEvent.click(screen.getByRole('radio', { name: /solo/i }));
     fireEvent.click(screen.getByRole('radio', { name: /4-mann/i }));
     expect(onChange).not.toHaveBeenCalled();
   });
