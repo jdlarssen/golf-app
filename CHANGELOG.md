@@ -14,6 +14,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Stableford-turneringer er nå spillbare end-to-end. Scorecard viser per-hull-poeng ved siden av netto-scoren, leaderboard rangerer spillerne på total stableford-poeng, og når runden avsluttes feires topp 3 med et eget podium — vinnerne får i tillegg en mail som forteller dem hvor de endte.
 
+### [1.10.4] - 2026-05-23
+
+> Bane-listen i admin viser nå datoen i samme korte format som resten av appen — «14. mai» i stedet for «14. mai 2026».
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+- `app/admin/courses/page.tsx` — bytter `formatShortDateNbWithYear` → `formatShortDateNb` for «Lagt til {dato}»-linjen i bane-listen. Året er sjelden informativ for inneværende sesong; konsistent med player-flater (f.eks. `app/profile/historikk/page.tsx`). `formatShortDateNbWithYear` beholdes for kontekster der året er meningsfullt (slett-confirmation, spiller-profil).
+
+</details>
+
 ### [1.10.3] - 2026-05-23
 
 > Når du åpner et stableford-spill i admin, ser du ikke lenger en tom «Lag»-seksjon eller Lag/Flight-kolonner i spillerlisten. De vises bare for spill som faktisk har lag.

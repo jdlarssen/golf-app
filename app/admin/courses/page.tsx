@@ -8,7 +8,7 @@ import { ChampagneMedallion } from '@/components/ui/ChampagneMedallion';
 import { BaneIcon } from '@/components/icons';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { TopBar } from '@/components/ui/TopBar';
-import { formatShortDateNbWithYear } from '@/lib/format/date';
+import { formatShortDateNb } from '@/lib/format/date';
 
 type SearchParams = Promise<{
   status?: string | string[];
@@ -197,7 +197,7 @@ async function CoursesLedger() {
                   {course.name}
                 </p>
                 <p className="mt-0.5 truncate font-sans text-[11.5px] tabular-nums text-muted">
-                  Lagt til {formatShortDateNbWithYear(course.created_at)}
+                  Lagt til {formatShortDateNb(course.created_at)}
                 </p>
               </div>
               <p className="text-right font-serif text-[15px] font-medium tabular-nums tracking-[-0.005em] text-text">
