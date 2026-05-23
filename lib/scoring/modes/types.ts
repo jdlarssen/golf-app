@@ -5,6 +5,17 @@
 export type GameMode = 'best_ball_netto' | 'stableford';
 
 /**
+ * Norske visnings-labels for hver spillmodus. Brukes av ModeChip i admin-
+ * surfaces og av detail-pages som viser «Spillform: …». Holdt som single
+ * source of truth slik at vi ikke driver ulike norske oversettelser per
+ * call-site. Speilet `STATUS_LABELS` i `lib/games/status.ts`.
+ */
+export const MODE_LABELS: Record<GameMode, string> = {
+  best_ball_netto: 'Best ball',
+  stableford: 'Stableford',
+};
+
+/**
  * Mode-spesifikk config som lagres i `games.mode_config` (JSONB).
  * Diskrimineres på `kind` slik at konsumenter narrower trygt.
  */
