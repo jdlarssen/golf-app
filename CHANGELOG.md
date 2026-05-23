@@ -14,6 +14,27 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Stableford-turneringer er nå spillbare end-to-end. Scorecard viser per-hull-poeng ved siden av netto-scoren, leaderboard rangerer spillerne på total stableford-poeng, og når runden avsluttes feires topp 3 med et eget podium — vinnerne får i tillegg en mail som forteller dem hvor de endte.
 
+### [1.10.2] - 2026-05-23
+
+> Admin-listen viser nå modus per spill, og resten av admin-flyten er forfinet for å støtte stableford-spill side om side med best-ball. Side-tournaments fungerer uendret for begge moduser.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `components/ui/ModeChip.tsx` (+ test) — subtil chip for spillmodus per spill-rad i admin-flater. Bevisst lavmælt sammenlignet med `StatusChip` (border + transparent bg, ikke uppercase) siden modus er permanent metadata, ikke en lifecycle-state som krever oppmerksomhet.
+- `MODE_LABELS` i `lib/scoring/modes/types.ts` — single source of truth for norske visnings-labels per modus («Best ball» / «Stableford»). Brukes både av `ModeChip` og av admin/games/[id]-detalj-siden («Spillform»-raden i Format-cardet).
+- Norske copy-strenger for fire mode-relaterte error-koder (`mode_required`, `unsupported_mode_size_combo`, `min_players_for_mode`, `mode_locked_after_publish`) i `ERROR_MESSAGES_NEW_GAME`. Manglet før, så admin fikk en tom Banner når payload-validatoren trigget dem.
+
+#### Changed
+- `app/admin/games/page.tsx` — ledger-raden viser ny `ModeChip` under meta-linjen så admin har et raskt overblikk over hvilket format hvert spill er konfigurert for. `game_mode` plukkes med i SELECT-listen.
+- `app/admin/games/[id]/page.tsx` — header-en har ny `ModeChip` ved siden av `StatusChip`, og «Best ball netto»-strengen fra subtittelen er fjernet (den hardkodet en eneste modus). Format-cardets «Spillform»-rad bruker `MODE_LABELS[game.game_mode]` slik at stableford-spill viser «Stableford» i stedet for «Best ball netto».
+
+#### Notes
+- Side-tournament-flyten (`avslutt/page.tsx` + `SideWinnersForm.tsx`) er allerede flat-spiller-basert og fungerer for solo uendret — ingen kode-endring nødvendig. `endGameWithSideWinners` håndterer alle moduser via mode-aware mail-bygging fra fase 6.
+
+</details>
+
 ### [1.10.1] - 2026-05-23
 
 > Når en stableford-turnering avsluttes ser spillerne nå et topp 3 podium med 1.-plassen feiret med konfetti. Hele rangeringen ligger ett klikk unna under podiet. Vinnerne får tilpasset «Resultatet er klart»-mail med sin egen plassering og poeng.
