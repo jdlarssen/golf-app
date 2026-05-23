@@ -35,6 +35,7 @@ import {
   SoloStablefordView,
   type SoloStablefordPlayerInfo,
 } from './SoloStablefordView';
+import { SoloStablefordPodium } from './SoloStablefordPodium';
 import {
   SideTournamentView,
   type SideTournamentTeam,
@@ -772,9 +773,16 @@ export function ModeToggle({
 
 /**
  * Stableford-grenen — bygger ScoringContext fra rå-rad-ene, kjører
- * mode-router-en (`computeModeResult`) og rendrer SoloStablefordView med en
- * map fra userId til navn+kallenavn. Brukes for hele stableford-livssyklusen
- * (active + finished) i fase 5 — reveal-flow er fase 6.
+ * mode-router-en (`computeModeResult`) og velger view per `game.status`:
+ *
+ *   - `finished` → SoloStablefordPodium (reveal, fase 6): topp 3 podium
+ *     med konfetti på 1.-plass og resten av rangeringen collapsed under.
+ *   - alt annet (active/scheduled) → SoloStablefordView: flat liste sortert
+ *     på poeng, samme view brukes både midt-runde og post-finished i fase 5.
+ *
+ * Reveal-modus (`game.score_visibility = 'reveal'`) er ikke implementert for
+ * stableford ennå — vi behandler det som vanlig live-flow ved aktivt spill.
+ * Når spillet flippes til finished får alle se podiet uansett visibility-flagg.
  *
  * For best-ball reuser vi state #3/#3.5-grenene fordi de avhenger av flight-
  * og lag-strukturen. Solo-stableford trenger ingen «venterom»-stat ennå
@@ -835,6 +843,19 @@ function renderStableford(opts: {
       name: p.users.name ?? '(ukjent)',
       nickname: p.users.nickname,
     });
+  }
+
+  // Finished → reveal-podium (fase 6). Active/scheduled → flat live-view.
+  if (game.status === 'finished') {
+    return (
+      <SoloStablefordPodium
+        gameId={gameId}
+        gameName={game.name}
+        result={result}
+        playersById={playersById}
+        backHref={backHref}
+      />
+    );
   }
 
   return (
