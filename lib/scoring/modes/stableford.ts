@@ -5,6 +5,7 @@
 // legges på som egne `points_table`-varianter senere.
 
 import { strokesForHole } from '../strokeAllocation';
+import { rankTeams } from '../tiebreaker';
 import type {
   ScoringContext,
   ScoringHole,
@@ -77,10 +78,18 @@ function computePlayerHolePoints(
 }
 
 /**
- * Beregner stableford-leaderboard fra en ScoringContext. Returnerer
- * spillere sortert med høyest poeng først, med rank assignet naivt
- * (rank = posisjon + 1). Tie-break-cascade legges på i egen task —
- * inntil videre er rad-rekkefølge ved likhet uspesifisert.
+ * Beregner stableford-leaderboard fra en ScoringContext. Bruker
+ * 5-tier tie-break-cascaden fra `tiebreaker.rankTeams` med invertert
+ * sammenligning: punkt-arrays negeres slik at "lavest vinner"-rangeringen
+ * blir "høyest stableford-poeng vinner". Cascade-rekkefølge:
+ *   1) total poeng (høyest)
+ *   2) back-9 poeng (høyest)
+ *   3) back-6 poeng
+ *   4) back-3 poeng
+ *   5) hole-18 poeng
+ *
+ * Returnerer spillere sortert med høyest rank først. Tied spillere
+ * deler rank og blir oppført i hverandres `tiedWith`.
  */
 export function compute(ctx: ScoringContext): StablefordResult {
   const holesSorted = [...ctx.holes].sort((a, b) => a.number - b.number);
@@ -91,14 +100,36 @@ export function compute(ctx: ScoringContext): StablefordResult {
 
   const playerPoints = ctx.players.map((p) => computePlayerHolePoints(p, holesSorted, grossByKey));
 
-  const sorted = [...playerPoints].sort((a, b) => b.totalPoints - a.totalPoints);
-  const players: StablefordPlayerLine[] = sorted.map((p, i) => ({
-    userId: p.userId,
-    totalPoints: p.totalPoints,
-    holesPlayed: p.holesPlayed,
-    rank: i + 1,
-    tiedWith: [],
+  // For å gjenbruke rankTeams (som er "lavest vinner"), negér alle
+  // per-hull-poengene. Padder til 18 hull med 0 (= negert 0) hvis
+  // banen har færre hull, slik at back-9/6/3/hole-18 fortsatt har
+  // posisjoner i array-indekseringen.
+  const padTo18 = (perHole: number[]): number[] => {
+    if (perHole.length >= 18) return perHole.slice(0, 18);
+    return [...perHole, ...Array(18 - perHole.length).fill(0)];
+  };
+
+  // index-basert id slik at vi kan mappe tilbake til userId etterpå
+  const teamsForRanking = playerPoints.map((p, i) => ({
+    id: i,
+    holes: padTo18(p.perHole).map((pts) => -pts),
   }));
+
+  const ranked = rankTeams(teamsForRanking);
+  // ranked er nå sortert "lavest negert total først" = "høyest poeng først".
+  // Map tilbake til userIds og bygg StablefordPlayerLine.
+
+  const players: StablefordPlayerLine[] = ranked.map((r) => {
+    const source = playerPoints[r.id];
+    const tiedWithUserIds = r.tiedWith.map((idx) => playerPoints[idx].userId);
+    return {
+      userId: source.userId,
+      totalPoints: source.totalPoints,
+      holesPlayed: source.holesPlayed,
+      rank: r.rank,
+      tiedWith: tiedWithUserIds,
+    };
+  });
 
   return { kind: 'stableford', players };
 }
