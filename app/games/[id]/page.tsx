@@ -60,6 +60,12 @@ type GameRow = {
   tee_box_id: string;
   scheduled_tee_off_at: string | null;
   require_peer_approval: boolean;
+  /**
+   * Game-mode discriminator — leses fra cache-rad eller re-fetch ved auto-
+   * start. Bestemmer hvilken view-variant av spill-hjem som rendres (solo
+   * stableford dropper team-strip, best-ball viser Lag/Flight/CH).
+   */
+  game_mode: 'best_ball_netto' | 'stableford';
   courses: { name: string } | null;
   tee_boxes:
     | (TeeBoxRatings & { name: string; length_meters: number | null })
@@ -67,7 +73,7 @@ type GameRow = {
 };
 
 const GAME_SELECT =
-  'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, require_peer_approval, courses(name), tee_boxes(name, length_meters, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)';
+  'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, require_peer_approval, game_mode, courses(name), tee_boxes(name, length_meters, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)';
 
 type FlightRosterRow = {
   user_id: string;
@@ -296,14 +302,27 @@ export default async function GameHomePage({
 
           <div className="h-px bg-border my-3.5" />
 
-          <Kicker tone="muted">DIN FLIGHT</Kicker>
-          <Suspense fallback={<FlightRosterSkeleton />}>
-            <FlightRoster
-              gameId={id}
-              flightNumber={me.flight_number}
-              currentUserId={userId}
-            />
-          </Suspense>
+          {game.game_mode === 'stableford' ? (
+            // Solo-modus har ingen flight-gruppering — vis hele deltaker-
+            // listen i stedet for FlightRoster.
+            <>
+              <Kicker tone="muted">DELTAKERE</Kicker>
+              <Suspense fallback={<FlightRosterSkeleton />}>
+                <SoloRoster gameId={id} currentUserId={userId} />
+              </Suspense>
+            </>
+          ) : (
+            <>
+              <Kicker tone="muted">DIN FLIGHT</Kicker>
+              <Suspense fallback={<FlightRosterSkeleton />}>
+                <FlightRoster
+                  gameId={id}
+                  flightNumber={me.flight_number}
+                  currentUserId={userId}
+                />
+              </Suspense>
+            </>
+          )}
         </Card>
 
         {/* Countdown banner */}
@@ -438,20 +457,38 @@ export default async function GameHomePage({
             <Kicker tone="muted" className="mb-2">
               DIN INFO
             </Kicker>
-            <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-sm">
-              <dt className="text-muted">Lag</dt>
-              <dd className="text-text text-right">
-                Lag <span className="score-num">{me.team_number}</span>
-              </dd>
-              <dt className="text-muted">Flight</dt>
-              <dd className="text-text text-right">
-                Flight <span className="score-num">{me.flight_number}</span>
-              </dd>
-              <dt className="text-muted">Course handicap</dt>
-              <dd className="score-num text-text text-right">
-                {me.course_handicap ?? '—'}
-              </dd>
-            </dl>
+            {game.game_mode === 'stableford' ? (
+              // Solo-modus har ingen lag- eller flight-tilordning, så den
+              // klassiske dl-listen leser tomt («Lag —, Flight —»). Vi
+              // erstatter med en kort modus-undertittel + CH-only-rad slik
+              // at brukeren skjønner formatet med ett blikk.
+              <>
+                <p className="text-sm text-text font-serif">
+                  Individuell stableford-turnering
+                </p>
+                <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-sm mt-2">
+                  <dt className="text-muted">Course handicap</dt>
+                  <dd className="score-num text-text text-right">
+                    {me.course_handicap ?? '—'}
+                  </dd>
+                </dl>
+              </>
+            ) : (
+              <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-sm">
+                <dt className="text-muted">Lag</dt>
+                <dd className="text-text text-right">
+                  Lag <span className="score-num">{me.team_number}</span>
+                </dd>
+                <dt className="text-muted">Flight</dt>
+                <dd className="text-text text-right">
+                  Flight <span className="score-num">{me.flight_number}</span>
+                </dd>
+                <dt className="text-muted">Course handicap</dt>
+                <dd className="score-num text-text text-right">
+                  {me.course_handicap ?? '—'}
+                </dd>
+              </dl>
+            )}
           </Card>
         )}
 
@@ -571,6 +608,77 @@ async function FlightRoster({
             mode is unchanged in feel: bg-surface (#ffffff) on the
             --bg linen still reads as a paper-on-paper subtle disc.
           */}
+          <span
+            className={`shrink-0 w-7 h-7 rounded-full grid place-items-center font-serif text-[12px] font-medium ${
+              p.isCurrentUser
+                ? 'bg-primary text-white dark:text-bg'
+                : 'bg-surface text-text border border-border'
+            }`}
+          >
+            {nameInitials(p.name)}
+          </span>
+          <span
+            className={`flex-1 truncate text-[13.5px] ${p.isCurrentUser ? 'font-semibold' : ''}`}
+          >
+            {firstName(p.name) ?? p.name}
+            {p.isCurrentUser && (
+              <span className="font-sans text-[9.5px] font-semibold uppercase tracking-[0.18em] text-accent ml-2">
+                DEG
+              </span>
+            )}
+          </span>
+          <span className="shrink-0 text-xs text-muted tabular-nums">
+            HCP {p.hcpIndex != null ? p.hcpIndex.toFixed(1) : '—'}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * Solo-modus-variant av FlightRoster: lister hele game_players-tabellen,
+ * ikke filtrert på flight_number (som er null for stableford solo). Samme
+ * visuelle behandling som FlightRoster — gjenbruk for konsistens.
+ */
+async function SoloRoster({
+  gameId,
+  currentUserId,
+}: {
+  gameId: string;
+  currentUserId: string;
+}) {
+  const { supabase } = await getGameContext();
+  const { data: rows } = await supabase
+    .from('game_players')
+    .select(
+      'user_id, users!game_players_user_id_fkey(name, nickname, hcp_index)',
+    )
+    .eq('game_id', gameId)
+    .order('user_id')
+    .returns<
+      {
+        user_id: string;
+        users: {
+          name: string | null;
+          nickname: string | null;
+          hcp_index: number | string | null;
+        } | null;
+      }[]
+    >();
+
+  const players = (rows ?? []).map((row) => ({
+    userId: row.user_id,
+    isCurrentUser: row.user_id === currentUserId,
+    name: row.users?.name ?? '(ukjent)',
+    hcpIndex:
+      row.users?.hcp_index == null ? null : Number(row.users.hcp_index),
+  }));
+
+  return (
+    <ul className="mt-2 flex flex-col gap-2">
+      {players.map((p) => (
+        <li key={p.userId} className="flex items-center gap-3">
           <span
             className={`shrink-0 w-7 h-7 rounded-full grid place-items-center font-serif text-[12px] font-medium ${
               p.isCurrentUser
