@@ -37,8 +37,18 @@ export function parseOsloDateTimeLocal(s: string): string {
 
 export type GamePlayerInput = {
   user_id: string;
-  team_number: number;
-  flight_number: number;
+  /**
+   * Nullable since 0030_game_modes: solo-modus (stableford) lar lag-tilordning
+   * stå tom. Best-ball-modus krever fortsatt 1..4 og håndheves av
+   * best-ball-validatoren før payloaden persisteres.
+   */
+  team_number: number | null;
+  /**
+   * Nullable av samme grunn som team_number. CHECK-constraint
+   * `game_players_team_flight_consistency` garanterer at de er satt eller
+   * null sammen, så validatorene må alltid sette/null begge sammen.
+   */
+  flight_number: number | null;
 };
 
 export type PayloadMode = 'draft' | 'publish';
@@ -52,7 +62,19 @@ export type GameValidationErrorCode =
   | 'duplicate_player'
   | 'bad_team'
   | 'bad_flight'
-  | 'team_balance';
+  | 'team_balance'
+  // Mode-relaterte koder (innført med multi-mode-arkitektur, epic #41):
+  // - mode_required: form mangler eller har ugyldig `game_mode`-verdi.
+  // - unsupported_mode_size_combo: mode + team_size matcher ikke en aktiv
+  //   kombinasjon (f.eks. par-stableford som ikke er implementert ennå).
+  // - min_players_for_mode: publish krever flere spillere enn payloaden har
+  //   for den valgte modusen (stableford: min 1, best-ball: eksakt 8).
+  // - mode_locked_after_publish: edit-flow forsøker å endre game_mode etter
+  //   at spillet har forlatt 'draft'-state (scheduled/active/finished).
+  | 'mode_required'
+  | 'unsupported_mode_size_combo'
+  | 'min_players_for_mode'
+  | 'mode_locked_after_publish';
 
 export type ParsedPayload = {
   name: string;
@@ -162,6 +184,10 @@ export function buildGameInsertPayload(
   if (mode === 'publish') {
     const teamCounts = new Map<number, number>();
     for (const p of players) {
+      // team_number er garantert satt her — push-stedet over validerer
+      // 1..4-range før innsetting. Cast er trygt og forsvinner når
+      // funksjonen splittes til mode-aware validators (task 3.2).
+      if (p.team_number === null) continue;
       teamCounts.set(p.team_number, (teamCounts.get(p.team_number) ?? 0) + 1);
     }
     for (let t = 1; t <= 4; t++) {
