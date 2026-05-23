@@ -62,6 +62,17 @@ export const ERROR_MESSAGES_NEW_GAME: Record<string, string> = {
     'Klarte ikke å lagre spillerne på spillet. Prøv igjen, eller sjekk Supabase-loggene.',
   not_editable:
     'Spillet kan ikke redigeres lenger — det er allerede startet eller avsluttet.',
+  // Epic #41 — mode-spesifikke feilkoder. Uten disse rendres en tom Banner
+  // når admin trigger en av error-kodene fra payload-validatoren eller
+  // edit-action-mode-lock-guarden.
+  mode_required:
+    'Du må velge en spillmodus før du kan publisere spillet.',
+  unsupported_mode_size_combo:
+    'Den valgte lagstørrelsen er ikke støttet for denne spillmodusen ennå.',
+  min_players_for_mode:
+    'Du må velge minst én spiller for å publisere spillet.',
+  mode_locked_after_publish:
+    'Spillmodus kan ikke endres etter at spillet er publisert. Slett spillet og opprett et nytt hvis du vil bytte modus.',
   /**
    * NOTE: «kan publiseres» — used on both new-game and edit-game flows because
    * both lead to a publish/schedule transition. Compare `ERROR_MESSAGES_EXISTING_GAME`
