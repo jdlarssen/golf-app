@@ -5,10 +5,13 @@ import { AdminShell } from '@/components/ui/AdminShell';
 import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { ChampagneMedallion } from '@/components/ui/ChampagneMedallion';
+import { LedgerHeader } from '@/components/admin/LedgerHeader';
 import { BaneIcon } from '@/components/icons';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { TopBar } from '@/components/ui/TopBar';
 import { formatShortDateNb } from '@/lib/format/date';
+
+const COURSES_LEDGER_GRID = '1fr 64px 14px';
 
 type SearchParams = Promise<{
   status?: string | string[];
@@ -144,28 +147,11 @@ async function CoursesLedger() {
 
   return (
     <>
-      <div
-        className="mt-4 grid items-center gap-2.5 rounded-t-[12px] px-3.5 py-2"
-        style={{
-          gridTemplateColumns: '1fr 64px 14px',
-          background: 'var(--surface-strong)',
-          color: 'var(--bg-tint)',
-        }}
-      >
-        <span
-          className="font-sans text-[9.5px] font-semibold uppercase text-accent"
-          style={{ letterSpacing: '0.18em' }}
-        >
-          Bane
-        </span>
-        <span
-          className="text-right font-sans text-[9.5px] font-semibold uppercase text-accent"
-          style={{ letterSpacing: '0.18em' }}
-        >
-          Tees
-        </span>
-        <span />
-      </div>
+      <LedgerHeader
+        leftLabel="Bane"
+        rightLabel="Tees"
+        gridTemplateColumns={COURSES_LEDGER_GRID}
+      />
 
       <div
         className="overflow-hidden rounded-b-2xl border bg-surface"
@@ -186,7 +172,7 @@ async function CoursesLedger() {
               href={`/admin/courses/${course.id}/edit`}
               className="reveal-up grid items-center gap-2.5 px-3.5 py-3.5"
               style={{
-                gridTemplateColumns: '1fr 64px 14px',
+                gridTemplateColumns: COURSES_LEDGER_GRID,
                 animationDelay: `${60 + staggerStep * 60}ms`,
                 borderTop:
                   i === 0 ? 'none' : '1px solid var(--row-divider-warm)',
@@ -217,28 +203,11 @@ async function CoursesLedger() {
 function CoursesLedgerSkeleton() {
   return (
     <>
-      <div
-        className="mt-4 grid items-center gap-2.5 rounded-t-[12px] px-3.5 py-2"
-        style={{
-          gridTemplateColumns: '1fr 64px 14px',
-          background: 'var(--surface-strong)',
-          color: 'var(--bg-tint)',
-        }}
-      >
-        <span
-          className="font-sans text-[9.5px] font-semibold uppercase text-accent"
-          style={{ letterSpacing: '0.18em' }}
-        >
-          Bane
-        </span>
-        <span
-          className="text-right font-sans text-[9.5px] font-semibold uppercase text-accent"
-          style={{ letterSpacing: '0.18em' }}
-        >
-          Tees
-        </span>
-        <span />
-      </div>
+      <LedgerHeader
+        leftLabel="Bane"
+        rightLabel="Tees"
+        gridTemplateColumns={COURSES_LEDGER_GRID}
+      />
       <div
         className="overflow-hidden rounded-b-2xl border bg-surface"
         style={{ borderColor: 'var(--border)', borderTop: 'none' }}
@@ -248,7 +217,7 @@ function CoursesLedgerSkeleton() {
             key={i}
             className="grid items-center gap-2.5 px-3.5 py-3.5"
             style={{
-              gridTemplateColumns: '1fr 64px 14px',
+              gridTemplateColumns: COURSES_LEDGER_GRID,
               borderTop:
                 i === 0 ? 'none' : '1px solid var(--row-divider-warm)',
             }}

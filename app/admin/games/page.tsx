@@ -5,6 +5,7 @@ import { AdminShell } from '@/components/ui/AdminShell';
 import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { ChampagneMedallion } from '@/components/ui/ChampagneMedallion';
+import { LedgerHeader } from '@/components/admin/LedgerHeader';
 import { PinFlag, Laurel } from '@/components/icons';
 import { ModeChip } from '@/components/ui/ModeChip';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -13,6 +14,8 @@ import { TopBar } from '@/components/ui/TopBar';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { formatShortDateNb } from '@/lib/format/date';
+
+const GAMES_LEDGER_GRID = '1fr 84px 14px';
 
 type SearchParams = Promise<{
   status?: string | string[];
@@ -230,26 +233,11 @@ async function GamesLedger({ filterFinished }: { filterFinished: boolean }) {
 
   return (
     <>
-      {/* Ledger header — forest strip with champagne kickers */}
-      <div
-        className="mt-4 grid items-center gap-2.5 rounded-t-[12px] px-3.5 py-2"
-        style={{
-          gridTemplateColumns: '1fr 84px 14px',
-          background: 'var(--surface-strong)',
-          color: 'var(--bg-tint)',
-        }}
-      >
-        <span className="font-sans text-[9.5px] font-semibold uppercase text-accent" style={{ letterSpacing: '0.18em' }}>
-          Spill
-        </span>
-        <span
-          className="text-right font-sans text-[9.5px] font-semibold uppercase text-accent"
-          style={{ letterSpacing: '0.18em' }}
-        >
-          Status
-        </span>
-        <span />
-      </div>
+      <LedgerHeader
+        leftLabel="Spill"
+        rightLabel="Status"
+        gridTemplateColumns={GAMES_LEDGER_GRID}
+      />
 
       {/* Ledger body */}
       <div
@@ -287,7 +275,7 @@ async function GamesLedger({ filterFinished }: { filterFinished: boolean }) {
               href={`/admin/games/${g.id}`}
               className="reveal-up grid items-center gap-2.5 px-3.5 py-3.5"
               style={{
-                gridTemplateColumns: '1fr 84px 14px',
+                gridTemplateColumns: GAMES_LEDGER_GRID,
                 animationDelay: `${60 + staggerStep * 60}ms`,
                 borderTop:
                   i === 0 ? 'none' : '1px solid var(--row-divider-warm)',
@@ -325,25 +313,11 @@ async function GamesLedger({ filterFinished }: { filterFinished: boolean }) {
 function GamesLedgerSkeleton() {
   return (
     <>
-      <div
-        className="mt-4 grid items-center gap-2.5 rounded-t-[12px] px-3.5 py-2"
-        style={{
-          gridTemplateColumns: '1fr 84px 14px',
-          background: 'var(--surface-strong)',
-          color: 'var(--bg-tint)',
-        }}
-      >
-        <span className="font-sans text-[9.5px] font-semibold uppercase text-accent" style={{ letterSpacing: '0.18em' }}>
-          Spill
-        </span>
-        <span
-          className="text-right font-sans text-[9.5px] font-semibold uppercase text-accent"
-          style={{ letterSpacing: '0.18em' }}
-        >
-          Status
-        </span>
-        <span />
-      </div>
+      <LedgerHeader
+        leftLabel="Spill"
+        rightLabel="Status"
+        gridTemplateColumns={GAMES_LEDGER_GRID}
+      />
       <div
         className="overflow-hidden rounded-b-2xl border bg-surface"
         style={{ borderColor: 'var(--border)', borderTop: 'none' }}
@@ -353,7 +327,7 @@ function GamesLedgerSkeleton() {
             key={i}
             className="grid items-center gap-2.5 px-3.5 py-3.5"
             style={{
-              gridTemplateColumns: '1fr 84px 14px',
+              gridTemplateColumns: GAMES_LEDGER_GRID,
               borderTop:
                 i === 0 ? 'none' : '1px solid var(--row-divider-warm)',
             }}
