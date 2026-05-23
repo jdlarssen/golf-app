@@ -10,6 +10,37 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.9.y — Valgbar spillmodus
+
+Tørny er ikke lenger låst til 4 lag à 2 spillere best-ball. Admin-flyten viser nå tydelige modus-tiles for Stableford og Best ball netto, og lagstørrelser som ennå ikke er aktivert vises som «kommer snart» så roadmapen er synlig der den hører hjemme.
+
+### [1.9.0] - 2026-05-23
+
+> Når du oppretter et nytt spill ser du nå et tydelig valg mellom Stableford og Best ball netto. Spillerne plukkes først som en flat liste, og lag-grid-en dukker opp først hvis spillformatet krever lag. Lagstørrelser som ennå ikke er tilgjengelige vises som «kommer snart» så du ser hvor det bærer.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `app/admin/games/new/ModeSelector.tsx` (+ test) — to tiles for spillmodus med inline-SVG-ikoner (stilisert poeng-tavle for Stableford, 2×2-flagg-grid for Best ball netto). ARIA: `<fieldset>` + `role="radiogroup"` + tabbable `role="radio"`-button-er. Aktiv tile får forest border + inset-ring (primary-soft).
+- `app/admin/games/new/TeamSizeSelector.tsx` (+ test) — tre tiles (Solo / Par / 4-mann). `ENABLED_COMBOS`-mapping styrer hvilke som er aktive per modus (Stableford → 1, Best ball netto → 2); inaktive vises grayed-out (`opacity-50`) med liten «kommer snart»-tekst over accent-deep. Disabled tiles ignorerer klikk og rapporterer `aria-disabled`.
+- `app/admin/games/new/GameForm.test.tsx` (ny) — baseline-component-tests (5 stk) + nye fase-4-tests (5 stk): default mode/size, auto-bytte ved mode-change, hidden inputs i FormData, lock_game_mode-state for edit.
+
+#### Changed
+- `app/admin/games/new/GameForm.tsx` — players-first-flow: spiller-toggle setter bare `selectedPlayerIds` (ingen `nextAvailableTeam`-auto-fill lengre). Lag-grid + flights-seksjon rendres kun når `team_size >= 2`. Solo-modus får dedikert «Tee per spiller»-seksjon siden flights-seksjonen ikke gjelder. Counter «X av 8 spillere» bytter til «X spillere valgt» for solo (ingen øvre tak). Hidden inputs sender `game_mode` + `team_size` med i FormData; team/flight-feltene sender tom streng for solo.
+- `app/admin/games/[id]/edit/page.tsx` — leser `game_mode` fra DB og pre-fyller form-en. `lock_game_mode` settes for ikke-draft spill så ModeSelector + TeamSizeSelector blir disabled (matcher backend mode-lock-guarden fra 0030).
+
+#### Notes
+- Aktive kombinasjoner i v1.9.0: Stableford + Solo (kommer ende-til-ende i v1.10.0) og Best ball netto + Par (dagens, men nå eksplisitt valgt). Par-stableford og 4-mann-stableford forberedes som disabled tiles — ingen DB-migrasjon nødvendig når en kombinasjon aktiveres, bare en mapping-utvidelse i `TeamSizeSelector.ENABLED_COMBOS`.
+- Påfølgende fase 5/7 av epic #41 wires spillerflyten (scorecard + leaderboard) for stableford.
+
+</details>
+
+---
+
+<details>
+<summary><strong>1.8.y — Mørk modus (12 entries) — klikk for å vise</strong></summary>
+
 ## 1.8.y — Mørk modus
 
 Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark Appearance, blir Tørny mørk når du åpner appen — uten at noe annet endrer seg.
@@ -187,6 +218,8 @@ Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark App
 
 #### Notes
 - Migrering av hardkodede farger til semantiske tokens ble gjort i v1.7.0 (refactor-PR #111, 22 filer / ~95 LOC). Visual-verifikasjon i dark mode skjedde via preview-deploy av denne PR-en — der oppdaget vi at `var(--primary)`-bg-surfaces ble uleselige i dark (sage primary + lys foreground), derav `--surface-strong`-tokenet.
+
+</details>
 
 </details>
 
