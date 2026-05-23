@@ -11,11 +11,12 @@ import {
  * Action query sequence:
  *   1. auth.getUser
  *   2. users.select(is_admin, name).eq.single  (admin gate)
- *   3. games.select(id, name, status, require_peer_approval).eq.single
+ *   3. games.select(id, name, status, require_peer_approval, course_id, game_mode, mode_config).eq.single
  *   4. game_players.select(submitted_at, approved_at, users(...)).eq.returns
  *   5. games.update(status='finished', ended_at=...).eq  (resolves)
  *   6. logAdminEvent (mocked)
- *   7. sendGameFinishedNotification (mocked, allSettled)
+ *   7. buildGameFinishedRecipients (mocked) — bygger mottakerliste m/ mode-info
+ *   8. sendGameFinishedNotification (mocked, allSettled) — én per mottaker
  */
 
 const redirectMock = makeRedirectMock();
@@ -35,6 +36,21 @@ const sendGameFinishedNotificationMock =
 vi.mock('@/lib/mail/gameFinishedNotification', () => ({
   sendGameFinishedNotification: (...args: unknown[]) =>
     sendGameFinishedNotificationMock(...args),
+}));
+
+// Mottaker-listen bygges av en dedikert helper som internt kjører mode-router
+// for stableford. Stubber den her så vi kan kontrollere shape uten å mocke
+// hele scoring-stack-en. Default-fixturen returnerer 2 mottakere uten mode-
+// info (best-ball-default). Per-test override via `mockResolvedValueOnce`.
+const buildGameFinishedRecipientsMock = vi.fn<
+  (...args: unknown[]) => Promise<unknown[]>
+>(async () => [
+  { email: 'a@example.com', name: 'Ada Lovelace' },
+  { email: 'b@example.com', name: 'Bjørn' },
+]);
+vi.mock('@/lib/mail/gameFinishedRecipients', () => ({
+  buildGameFinishedRecipients: (...args: unknown[]) =>
+    buildGameFinishedRecipientsMock(...args),
 }));
 
 const logAdminEventMock =
@@ -92,6 +108,9 @@ describe('endGame', () => {
           name: 'Vinter-cup',
           status: 'active',
           require_peer_approval: false,
+          course_id: 'course-1',
+          game_mode: 'best_ball_netto',
+          mode_config: { kind: 'best_ball_netto', team_size: 2, teams_count: 4 },
         },
         error: null,
       }, // games
@@ -134,6 +153,9 @@ describe('endGame', () => {
           name: 'Vinter-cup',
           status: 'active',
           require_peer_approval: false,
+          course_id: 'course-1',
+          game_mode: 'best_ball_netto',
+          mode_config: { kind: 'best_ball_netto', team_size: 2, teams_count: 4 },
         },
         error: null,
       }, // games
@@ -154,6 +176,8 @@ describe('endGame', () => {
       },
       { data: null, error: null }, // games.update(status='finished')
     ]);
+    // Mottakerne kommer fra buildGameFinishedRecipients (mocket) — default-
+    // fixturen returnerer 2 best-ball-mottakere uten mode-info.
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { user: { id: 'admin-1' } },
     });
@@ -187,6 +211,9 @@ describe('endGame', () => {
           name: 'Vinter-cup',
           status: 'active',
           require_peer_approval: true, // strict
+          course_id: 'course-1',
+          game_mode: 'best_ball_netto',
+          mode_config: { kind: 'best_ball_netto', team_size: 2, teams_count: 4 },
         },
         error: null,
       }, // games

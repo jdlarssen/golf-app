@@ -22,6 +22,28 @@ function getClient(): Resend {
   return new Resend(key);
 }
 
+/**
+ * Mode-spesifikk personalisering av mail-body.
+ *
+ *   - `kind: 'stableford'` legger inn en personlig plassering + poeng-linje
+ *     («Du endte på 3. plass med 32 poeng») så hver spiller får et eget
+ *     resultat-spoiler i innboksen.
+ *   - `kind: 'best_ball_netto'` (eller udefinert) bruker dagens nøytrale
+ *     copy («Runden er ferdig — leaderboard er åpen») fordi lag-vinneren
+ *     ikke nødvendigvis er én spesifikk spiller å adressere.
+ */
+export type GameFinishedNotificationMode =
+  | { kind: 'best_ball_netto' }
+  | {
+      kind: 'stableford';
+      /** Spillerens slutt-plassering (1, 2, 3, ...). */
+      rank: number;
+      /** Spillerens totale stableford-poeng. */
+      totalPoints: number;
+      /** Totalt antall spillere i turneringen — gir kontekst til plasseringen. */
+      totalPlayers: number;
+    };
+
 export type GameFinishedNotificationParams = {
   to: string;
   /** First name of the recipient, for "Hei <name>!" salutation. Pass null if unknown. */
@@ -30,15 +52,32 @@ export type GameFinishedNotificationParams = {
   gameName: string;
   /** Game id — used to build the leaderboard URL. */
   gameId: string;
+  /**
+   * Spillmodus-spesifikk personalisering. Når udefinert behandles mailen som
+   * best-ball-netto (dagens copy). Stableford-grenen krever rank/poeng per
+   * mottaker — kallsteder må derfor regne ut leaderboard først.
+   */
+  mode?: GameFinishedNotificationMode;
 };
 
 export async function sendGameFinishedNotification(
   params: GameFinishedNotificationParams,
 ): Promise<void> {
-  const { to, playerFirstName, gameName, gameId } = params;
+  const { to, playerFirstName, gameName, gameId, mode } = params;
   const subject = `Resultatet er klart — ${gameName}`;
   const leaderboardUrl = `https://tornygolf.no/games/${gameId}/leaderboard`;
   const salutation = playerFirstName ? `Hei ${playerFirstName}!` : 'Hei!';
+
+  // Mode-spesifikk hovedlinje. Stableford får en personlig plassering-spoiler;
+  // best-ball (eller udefinert) får dagens nøytrale ferdig-melding.
+  const bodyLine =
+    mode?.kind === 'stableford'
+      ? formatStablefordBodyLine(mode, gameName)
+      : `Runden i <strong>${escapeHtml(gameName)}</strong> er ferdig — alle scorekort er levert og godkjent, og leaderboard er åpen.`;
+  const bodyLineText =
+    mode?.kind === 'stableford'
+      ? formatStablefordBodyLineText(mode, gameName)
+      : `Runden i ${gameName} er ferdig — alle scorekort er levert og godkjent, og leaderboard er åpen.`;
 
   const html = `<!DOCTYPE html><html lang="nb">
 <head>
@@ -65,7 +104,7 @@ export async function sendGameFinishedNotification(
               ${escapeHtml(salutation)}
             </p>
             <p style="font-size:16px;line-height:1.5;margin:0 0 24px;">
-              Runden i <strong>${escapeHtml(gameName)}</strong> er ferdig — alle scorekort er levert og godkjent, og leaderboard er åpen.
+              ${bodyLine}
             </p>
             <div style="margin:32px 0;">
               <a href="${leaderboardUrl}" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
@@ -86,7 +125,7 @@ export async function sendGameFinishedNotification(
   const text =
     `Resultatet er klart — ${gameName}\n\n` +
     `${salutation}\n\n` +
-    `Runden i ${gameName} er ferdig — alle scorekort er levert og godkjent, og leaderboard er åpen.\n\n` +
+    `${bodyLineText}\n\n` +
     `Se leaderboard: ${leaderboardUrl}\n\n` +
     `Tørny — fyr opp golfturneringen på et par minutter.\n`;
 
@@ -104,6 +143,62 @@ export async function sendGameFinishedNotification(
       `Resend send failed: ${result.error.message ?? JSON.stringify(result.error)}`,
     );
   }
+}
+
+/**
+ * Bygger stableford-hovedlinjen (HTML-versjon). Skiller mellom topp-3 og
+ * resten med en liten ekstra gratulasjon, ellers nøytral tone.
+ *
+ * Bruker ordinal-norsk plassering («1. plass», «2. plass»...) for å speile
+ * resten av app-en (podium, leaderboard).
+ */
+function formatStablefordBodyLine(
+  mode: Extract<GameFinishedNotificationMode, { kind: 'stableford' }>,
+  gameName: string,
+): string {
+  const { rank, totalPoints, totalPlayers } = mode;
+  const placeText = `${rank}. plass`;
+  const pointsText = pluralizePoints(totalPoints);
+  const ofTotal = totalPlayers > 0 ? ` av ${totalPlayers}` : '';
+  const celebration =
+    rank === 1
+      ? ' Gratulerer med seieren!'
+      : rank === 2 || rank === 3
+        ? ' Solid plassering!'
+        : '';
+
+  return (
+    `Runden i <strong>${escapeHtml(gameName)}</strong> er ferdig. ` +
+    `Du endte på <strong>${escapeHtml(placeText)}${escapeHtml(ofTotal)}</strong> med ` +
+    `<strong>${totalPoints} ${escapeHtml(pointsText)}</strong>.${escapeHtml(celebration)}`
+  );
+}
+
+function formatStablefordBodyLineText(
+  mode: Extract<GameFinishedNotificationMode, { kind: 'stableford' }>,
+  gameName: string,
+): string {
+  const { rank, totalPoints, totalPlayers } = mode;
+  const placeText = `${rank}. plass`;
+  const pointsText = pluralizePoints(totalPoints);
+  const ofTotal = totalPlayers > 0 ? ` av ${totalPlayers}` : '';
+  const celebration =
+    rank === 1
+      ? ' Gratulerer med seieren!'
+      : rank === 2 || rank === 3
+        ? ' Solid plassering!'
+        : '';
+
+  return (
+    `Runden i ${gameName} er ferdig. ` +
+    `Du endte på ${placeText}${ofTotal} med ${totalPoints} ${pointsText}.${celebration}`
+  );
+}
+
+function pluralizePoints(n: number): string {
+  // Norsk: 1 poeng / N poeng (samme ord uansett tall, men explicit branch
+  // gjør intensjon tydelig hvis vi senere skal skille på "1 stableford-poeng").
+  return n === 1 ? 'poeng' : 'poeng';
 }
 
 function escapeHtml(s: string): string {

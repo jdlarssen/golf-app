@@ -75,8 +75,10 @@ export function buildSupabaseMock(queue: QueryResult[]) {
     let resolved: QueryResult | null = null;
     const proxy: Record<string, unknown> = {};
 
-    // Chainable + lazily-resolvable filters.
-    for (const m of ['select', 'eq', 'is', 'not', 'in']) {
+    // Chainable + lazily-resolvable filters. `order` + `limit` brukes av
+    // helpers som henter sortert/begrenset data — de er rene pass-through-er
+    // i mock-en (vi sjekker ikke sortering i unit-tests, kun resultatet).
+    for (const m of ['select', 'eq', 'is', 'not', 'in', 'order', 'limit']) {
       proxy[m] = (...args: unknown[]) => {
         rec(m, args);
         return proxy;

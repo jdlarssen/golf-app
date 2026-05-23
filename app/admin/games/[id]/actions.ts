@@ -15,9 +15,11 @@ import {
   type TeeGender,
 } from '@/lib/games/teeRating';
 import { sendGameFinishedNotification } from '@/lib/mail/gameFinishedNotification';
+import { buildGameFinishedRecipients } from '@/lib/mail/gameFinishedRecipients';
 import { firstName } from '@/lib/firstName';
 import { logAdminEvent } from '@/lib/admin/auditLog';
 import type { GameStatus } from '@/lib/games/status';
+import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 
 async function requireAdmin() {
   const supabase = await getServerClient();
@@ -214,16 +216,22 @@ export async function endGame(gameId: string) {
   const { supabase, user, actorName } = await requireAdmin();
   const detailPath = `/admin/games/${gameId}`;
 
-  // Verify game is active
+  // Verify game is active. Inkluderer game_mode + mode_config + course_id
+  // slik at vi kan bygge mode-aware completion-mail uten å re-fetche game.
   const { data: game } = await supabase
     .from('games')
-    .select('id, name, status, require_peer_approval')
+    .select(
+      'id, name, status, require_peer_approval, course_id, game_mode, mode_config',
+    )
     .eq('id', gameId)
     .single<{
       id: string;
       name: string;
       status: GameStatus;
       require_peer_approval: boolean;
+      course_id: string;
+      game_mode: GameMode;
+      mode_config: GameModeConfig;
     }>();
   if (!game || game.status !== 'active') {
     redirect(`${detailPath}?error=not_active`);
@@ -279,19 +287,24 @@ export async function endGame(gameId: string) {
   // are logged but never abort the action — the leaderboard is reachable
   // in-app even without the mail, and admin can re-trigger if needed (no
   // resend-flow exists yet, but the DB is the source of truth either way).
-  const recipients = (players ?? [])
-    .map((p) => p.users)
-    .filter((u): u is { email: string; name: string | null } => {
-      return u != null && typeof u.email === 'string' && u.email.length > 0;
-    });
+  //
+  // Mode-aware payload: for stableford regner helperen ut leaderboard og
+  // legger per-spiller rank/poeng på hver mottaker; for best-ball returnerer
+  // den kun email/name (mailen bruker da default nøytral copy).
+  const recipients = await buildGameFinishedRecipients(supabase, gameId, {
+    course_id: game!.course_id,
+    game_mode: game!.game_mode,
+    mode_config: game!.mode_config,
+  });
   if (recipients.length > 0) {
     const results = await Promise.allSettled(
-      recipients.map((u) =>
+      recipients.map((r) =>
         sendGameFinishedNotification({
-          to: u.email,
-          playerFirstName: firstName(u.name),
+          to: r.email,
+          playerFirstName: firstName(r.name),
           gameName: game!.name,
           gameId,
+          mode: r.mode,
         }),
       ),
     );

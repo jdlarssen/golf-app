@@ -4,9 +4,11 @@ import { redirect } from 'next/navigation';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import { sendGameFinishedNotification } from '@/lib/mail/gameFinishedNotification';
+import { buildGameFinishedRecipients } from '@/lib/mail/gameFinishedRecipients';
 import { firstName } from '@/lib/firstName';
 import { logAdminEvent } from '@/lib/admin/auditLog';
 import type { GameStatus } from '@/lib/games/status';
+import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 
 async function requireAdmin() {
   const supabase = await getServerClient();
@@ -44,10 +46,13 @@ export async function endGameWithSideWinners(
   const detailPath = `/admin/games/${gameId}`;
   const wizardPath = `${detailPath}/avslutt`;
 
+  // Inkluderer course_id + game_mode + mode_config slik at den mode-aware
+  // completion-mail-blasten (via buildGameFinishedRecipients) ikke trenger
+  // en re-fetch av game-raden.
   const { data: game } = await supabase
     .from('games')
     .select(
-      'id, name, status, require_peer_approval, side_tournament_enabled, side_ld_count, side_ctp_count',
+      'id, name, status, require_peer_approval, side_tournament_enabled, side_ld_count, side_ctp_count, course_id, game_mode, mode_config',
     )
     .eq('id', gameId)
     .single<{
@@ -58,6 +63,9 @@ export async function endGameWithSideWinners(
       side_tournament_enabled: boolean;
       side_ld_count: number;
       side_ctp_count: number;
+      course_id: string;
+      game_mode: GameMode;
+      mode_config: GameModeConfig;
     }>();
 
   if (!game || game.status !== 'active') {
@@ -165,19 +173,23 @@ export async function endGameWithSideWinners(
 
   // Best-effort: send "Resultatet er klart"-mail to every player. Failures
   // are logged but never abort — leaderboard is reachable in-app regardless.
-  const recipients = (players ?? [])
-    .map((p) => p.users)
-    .filter((u): u is { email: string; name: string | null } => {
-      return u != null && typeof u.email === 'string' && u.email.length > 0;
-    });
+  //
+  // Mode-aware payload: helperen returnerer per-spiller rank+poeng for
+  // stableford og kun email/name for best-ball (default nøytral copy).
+  const recipients = await buildGameFinishedRecipients(supabase, gameId, {
+    course_id: game!.course_id,
+    game_mode: game!.game_mode,
+    mode_config: game!.mode_config,
+  });
   if (recipients.length > 0) {
     const results = await Promise.allSettled(
-      recipients.map((u) =>
+      recipients.map((r) =>
         sendGameFinishedNotification({
-          to: u.email,
-          playerFirstName: firstName(u.name),
+          to: r.email,
+          playerFirstName: firstName(r.name),
           gameName: game!.name,
           gameId,
+          mode: r.mode,
         }),
       ),
     );
