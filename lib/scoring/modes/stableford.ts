@@ -11,7 +11,11 @@ import type {
   ScoringHole,
   StablefordResult,
   StablefordSoloResult,
+  StablefordTeamResult,
   StablefordPlayerLine,
+  StablefordPlayerCell,
+  StablefordTeamHoleRow,
+  StablefordTeamLine,
 } from './types';
 
 export interface StablefordPointsInput {
@@ -89,24 +93,32 @@ function padTo18(perHole: number[]): number[] {
 }
 
 /**
- * Beregner stableford-leaderboard fra en ScoringContext. Bruker
- * 5-tier tie-break-cascaden fra `tiebreaker.rankTeams` med invertert
- * sammenligning: punkt-arrays negeres slik at "lavest vinner"-rangeringen
- * blir "høyest stableford-poeng vinner". Cascade-rekkefølge:
+ * Beregner stableford-leaderboard fra en ScoringContext. Switcher på
+ * `mode_config.team_size`:
+ *   - 1 → solo (én rad per spiller)
+ *   - 2 → team / par-stableford / 4BBB (én rad per lag, lag-hull-poeng
+ *         = MAX av partnernes individuelle poeng)
+ *
+ * Begge variantene bruker 5-tier tie-break-cascaden fra
+ * `tiebreaker.rankTeams` med invertert sammenligning: punkt-arrays negeres
+ * slik at "lavest vinner"-rangeringen blir "høyest stableford-poeng vinner".
+ * Cascade-rekkefølge:
  *   1) total poeng (høyest)
  *   2) back-9 poeng (høyest)
  *   3) back-6 poeng
  *   4) back-3 poeng
  *   5) hole-18 poeng
- *
- * Returnerer spillere sortert med høyest rank først. Tied spillere
- * deler rank og blir oppført i hverandres `tiedWith`.
- *
- * Returnerer `{ kind: 'stableford', variant: 'solo', ... }` — solo-varianten
- * av den nye discriminated union. Team-varianten (par-stableford / 4BBB)
- * legges til som egen sti i neste commit.
  */
 export function compute(ctx: ScoringContext): StablefordResult {
+  // Defaulter til solo for å bevare tidligere oppførsel hvis mode_config
+  // mangler team_size (skal ikke skje etter 0030-backfill, men solo er den
+  // tryggere defaulten her siden den ikke krever team-assignment).
+  const teamSize =
+    ctx.game.mode_config.kind === 'stableford'
+      ? ctx.game.mode_config.team_size
+      : 1;
+
+  if (teamSize === 2) return computeTeam(ctx);
   return computeSolo(ctx);
 }
 
@@ -142,4 +154,117 @@ function computeSolo(ctx: ScoringContext): StablefordSoloResult {
   });
 
   return { kind: 'stableford', variant: 'solo', players };
+}
+
+/**
+ * Team-stien — 4BBB / par-stableford. Hver spiller spiller egen ball og fører
+ * eget stableford-kort. For hvert hull tar laget MAX av partnernes individuelle
+ * stableford-poeng (ikke sum), og lag-totalen er summen av hull-poengene.
+ *
+ * Forutsetning: alle spillere har `teamNumber !== null`. Spillere uten
+ * teamNumber blir hoppet over (par-stableford krever lag-tilordning,
+ * håndhevet i validation-laget i `lib/games/gamePayload.ts`).
+ *
+ * Lag-poeng-arrays brukes i rankTeams med negert sammenligning slik at
+ * "høyest vinner". Tie-break-cascaden er identisk med solo og best-ball
+ * (5-tier på lag-poeng-arrays).
+ */
+function computeTeam(ctx: ScoringContext): StablefordTeamResult {
+  const holesSorted = [...ctx.holes].sort((a, b) => a.number - b.number);
+  const grossByKey = new Map<string, number | null>();
+  for (const s of ctx.scores) {
+    grossByKey.set(`${s.userId}#${s.holeNumber}`, s.gross);
+  }
+
+  // Grupper spillere på teamNumber (filtrer ut null — validering håndhever
+  // dette i payload-laget, men vi forsvarer scoring-laget mot dårlige rader).
+  const teamPlayers = new Map<number, typeof ctx.players>();
+  for (const p of ctx.players) {
+    if (p.teamNumber === null) continue;
+    const arr = teamPlayers.get(p.teamNumber) ?? [];
+    arr.push(p);
+    teamPlayers.set(p.teamNumber, arr);
+  }
+
+  const teamNumbers = [...teamPlayers.keys()].sort((a, b) => a - b);
+
+  const baseLines = teamNumbers.map((teamNumber): Omit<StablefordTeamLine, 'rank' | 'tiedWith'> => {
+    const members = teamPlayers.get(teamNumber) ?? [];
+
+    const holes: StablefordTeamHoleRow[] = holesSorted.map((hole) => {
+      const players: StablefordPlayerCell[] = members.map((p) => {
+        const grossVal = grossByKey.get(`${p.userId}#${hole.number}`) ?? null;
+        const extra = strokesForHole(p.courseHandicap, hole.strokeIndex);
+        const netStrokes = grossVal === null ? null : grossVal - extra;
+        const points = computeStablefordPoints({
+          par: hole.par,
+          netStrokes,
+        });
+        return {
+          userId: p.userId,
+          gross: grossVal,
+          netStrokes,
+          points,
+          isContributor: false,
+        };
+      });
+
+      // Lag-hull-poeng = MAX av partnernes individuelle poeng. Ved tomt lag
+      // (ingen members) defaulter teamPoints til 0 — defensivt mot edge-case.
+      const teamPoints =
+        players.length === 0 ? 0 : Math.max(...players.map((pc) => pc.points));
+
+      // contributorIds = spillere som hadde MAX-poeng. Hvis teamPoints er 0
+      // (alle har 0 poeng, double-bogey-or-worse) er det ingen reell "best
+      // ball" på hullet — vi markerer ingen contributor i den situasjonen
+      // slik at view-laget kan skille en aktiv 0-er fra en passiv 0-er.
+      const hasRealContribution = teamPoints > 0;
+      const contributorIds = hasRealContribution
+        ? players.filter((pc) => pc.points === teamPoints).map((pc) => pc.userId)
+        : [];
+
+      for (const pc of players) {
+        pc.isContributor = hasRealContribution && pc.points === teamPoints;
+      }
+
+      return {
+        holeNumber: hole.number,
+        par: hole.par,
+        strokeIndex: hole.strokeIndex,
+        teamPoints,
+        contributorIds,
+        players,
+      };
+    });
+
+    const totalPoints = holes.reduce((sum, h) => sum + h.teamPoints, 0);
+
+    return {
+      teamNumber,
+      playerIds: members.map((m) => m.userId),
+      holes,
+      totalPoints,
+    };
+  });
+
+  // Bygg 18-lange poeng-arrays for ranking. Negér slik at rankTeams sin
+  // "lavest vinner"-cascade fungerer som "høyest vinner" på lag-poeng.
+  const ranked = rankTeams(
+    baseLines.map((l) => ({
+      id: l.teamNumber,
+      holes: padTo18(l.holes.map((h) => h.teamPoints)).map((pts) => -pts),
+    })),
+  );
+  const rankById = new Map(ranked.map((r) => [r.id, r]));
+
+  const teams: StablefordTeamLine[] = baseLines.map((l) => {
+    const r = rankById.get(l.teamNumber);
+    return {
+      ...l,
+      rank: r?.rank ?? 0,
+      tiedWith: r?.tiedWith ?? [],
+    };
+  });
+
+  return { kind: 'stableford', variant: 'team', teams };
 }
