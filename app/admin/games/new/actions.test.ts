@@ -206,4 +206,66 @@ describe('createAndPublishGame', () => {
     ).rejects.toBeInstanceOf(RedirectError);
     expect(lastRedirect()).toBe('/admin/games/new-game-2?status=scheduled');
   });
+
+  it('happy path (stableford publish): inserts solo game with mode_config={team_size:1}', async () => {
+    // Stableford solo: 2 spillere uten lag-tildeling, payload-builderen
+    // returnerer game_mode='stableford' + mode_config={team_size:1,
+    // points_table:'standard'}. Roster-gate kjører som vanlig.
+    const completedRoster = [
+      { id: 'u1', email: 'u1@example.com', profile_completed_at: '2026-01-01T00:00:00Z' },
+      { id: 'u2', email: 'u2@example.com', profile_completed_at: '2026-01-01T00:00:00Z' },
+    ];
+
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // users.is_admin
+      { data: completedRoster, error: null }, // users.in roster
+      { data: { id: 'new-game-stbl' }, error: null }, // games.insert.select.single
+      { data: null, error: null }, // game_players.insert
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { createAndPublishGame } = await import('./actions');
+
+    await expect(
+      createAndPublishGame(
+        fd({
+          name: 'Solo Cup',
+          course_id: 'course-1',
+          tee_box_id: 'tee-1',
+          hcp_allowance_pct: '100',
+          scheduled_tee_off_at: '2026-06-15T09:00',
+          side_tournament_enabled: 'false',
+          game_mode: 'stableford',
+          player_0_id: 'u1',
+          player_1_id: 'u2',
+        }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/admin/games/new-game-stbl?status=scheduled');
+
+    // Verifiser at games.insert ble kalt med riktig game_mode + mode_config.
+    const insertCall = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'insert',
+    );
+    expect(insertCall).toBeDefined();
+    const insertRow = (insertCall!.args[0] as { game_mode: string; mode_config: unknown });
+    expect(insertRow.game_mode).toBe('stableford');
+    expect(insertRow.mode_config).toEqual({
+      kind: 'stableford',
+      team_size: 1,
+      points_table: 'standard',
+    });
+
+    // Game_players-raden skal ha null team/flight for stableford.
+    const playersInsertCall = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'game_players' && c.method === 'insert',
+    );
+    expect(playersInsertCall).toBeDefined();
+    const rows = playersInsertCall!.args[0] as Array<{ team_number: number | null; flight_number: number | null }>;
+    expect(rows.every((r) => r.team_number === null)).toBe(true);
+    expect(rows.every((r) => r.flight_number === null)).toBe(true);
+  });
 });

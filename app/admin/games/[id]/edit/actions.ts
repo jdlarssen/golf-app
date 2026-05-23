@@ -110,6 +110,28 @@ async function updateGameInternal(
     }
   }
 
+  // Mode-lock: spillmodusen kan ikke endres etter at spillet har forlatt
+  // 'draft'. Vi leser eksisterende rad og sammenligner game_mode før vi
+  // går i gang med oppdateringen — en publisert/scheduled rad har allerede
+  // game_players-tildelinger som matcher modusen, og admin-brukeren skal
+  // se en eksplisitt feilmelding (ikke det generelle not_editable-flowet).
+  const { data: existing, error: existingError } = await supabase
+    .from('games')
+    .select('status, game_mode')
+    .eq('id', gameId)
+    .single();
+  if (existingError || !existing) {
+    redirect(`/admin/games/${gameId}?error=not_editable`);
+  }
+  if (
+    existing.status !== 'draft' &&
+    existing.game_mode !== payload.game_mode
+  ) {
+    redirect(
+      `/admin/games/${gameId}/edit?error=mode_locked_after_publish`,
+    );
+  }
+
   // Optimistic lock: only update if the row's current status matches the
   // mode's allowed starting state. Prevents accidental status transitions
   // when admin has another tab open (e.g. draft was already published).
@@ -125,6 +147,13 @@ async function updateGameInternal(
       scheduled_tee_off_at: scheduledTeeOffAt,
       hcp_allowance_pct: payload.hcp_allowance_pct,
       require_peer_approval: payload.require_peer_approval,
+      // game_mode + mode_config skrives med samme optimistic-lock-mønster
+      // (status-eq under) som de andre feltene. Mode-lock-guarden over har
+      // allerede avvist mode-bytte for ikke-draft spill, så denne raden
+      // skriver kun samme verdi når status er scheduled — best-ball-rader
+      // beholder sin config og draft-rader kan fritt veksle mode.
+      game_mode: payload.game_mode,
+      mode_config: payload.mode_config,
       // score_visibility is implicitly gated by the .eq('status', allowedFromStatus)
       // filter below — it only writes when the row is still draft/scheduled.
       // If status flipped to active/finished between form-render and submit,
