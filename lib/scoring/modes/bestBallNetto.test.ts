@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { netScore, bestBallForHole, teamTotal } from './bestBall';
+import { netScore, bestBallForHole, teamTotal } from './bestBallNetto';
 
 describe('netScore', () => {
   it('subtracts strokes from gross', () => {
