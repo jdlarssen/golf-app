@@ -1,5 +1,17 @@
 // Shared helpers for parsing and validating the admin "create game" / "edit
 // game" form payload. Used by both the new-game and edit-game server actions.
+//
+// Arkitektur (epic #41):
+//   buildGameInsertPayload delegerer per modus. Felles base-parsing skjer
+//   først (navn, course, tee, allowance, visibility), så slår
+//   modeValidators[mode] inn med modus-spesifikk player-validering og
+//   bygger mode_config-objektet som persisterer til games.mode_config.
+//
+// Bakoverkompatibilitet: form-feltet `game_mode` defaultes til
+// 'best_ball_netto' hvis det mangler — UI-velgeren introduseres først i
+// fase 4. Eksisterende admin-flyt produserer derfor samme payload som før.
+
+import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 
 /**
  * Parse a 'YYYY-MM-DDTHH:mm' string (as emitted by <input type="datetime-local">)
@@ -85,29 +97,33 @@ export type ParsedPayload = {
   /** 'live' = netto visible from hole 1. 'reveal' = netto hidden until status='finished'. */
   score_visibility: 'live' | 'reveal';
   players: GamePlayerInput[];
+  /**
+   * Discriminator for spillmodus. Speilar `games.game_mode`-kolonnen
+   * (innført i 0030_game_modes). Brukes av actions for å persisterte
+   * raden riktig og av mode-router-en i lib/scoring/index.ts.
+   */
+  game_mode: GameMode;
+  /**
+   * Modus-spesifikk konfig som persisterer til `games.mode_config` (JSONB).
+   * Diskrimineres på `kind` slik at konsumenter kan narrowe trygt på modusen.
+   */
+  mode_config: GameModeConfig;
   errorCode?: GameValidationErrorCode;
 };
 
+/** Felles base-felter parset fra FormData, før modus-spesifikk validering. */
+type ParsedBase = Omit<ParsedPayload, 'players' | 'game_mode' | 'mode_config' | 'errorCode'>;
+
 /**
- * Parse a "create/edit game" admin form payload.
- *
- * Mode determines how strictly the payload is validated:
- * - 'publish' enforces the full ruleset (course, tee-box, 8 balanced players,
- *   allowance in [0, 100]). Used when the game is being created/edited as a
- *   ready-to-play 'scheduled' row.
- * - 'draft' tolerates partial data: empty course/tee-box become `null`, the
- *   player list may have any size (including zero), and no team-balance check
- *   runs. Duplicate players are still rejected, and per-player team/flight
- *   numbers are still range-checked when present, so a draft can never carry
- *   incoherent rows forward.
- *
- * Returns the parsed payload with `errorCode` set on the first failure;
- * callers should redirect with that code as a query param.
+ * Resultat fra en modus-spesifikk validator. Suksess gir den ferdige
+ * spillerlisten + mode_config; feil returnerer kun en feilkode.
  */
-export function buildGameInsertPayload(
-  formData: FormData,
-  mode: PayloadMode,
-): ParsedPayload {
+type ModeValidationResult =
+  | { ok: true; players: GamePlayerInput[]; mode_config: GameModeConfig }
+  | { ok: false; errorCode: GameValidationErrorCode };
+
+/** Parser felles felter som er identiske mellom alle moduser. */
+function parseBase(formData: FormData): ParsedBase {
   const name = String(formData.get('name') ?? '').trim();
   const rawCourse = String(formData.get('course_id') ?? '').trim();
   const rawTee = String(formData.get('tee_box_id') ?? '').trim();
@@ -128,55 +144,67 @@ export function buildGameInsertPayload(
   const score_visibility: 'live' | 'reveal' =
     rawVisibility === 'reveal' ? 'reveal' : 'live';
 
-  const base: ParsedPayload = {
+  return {
     name,
     course_id: rawCourse || null,
     tee_box_id: rawTee || null,
     hcp_allowance_pct,
     require_peer_approval,
     score_visibility,
-    players: [],
   };
+}
 
-  if (!name) return { ...base, errorCode: 'name_required' };
+/**
+ * Leser `game_mode` fra form-data. Defaulter til `best_ball_netto` hvis
+ * feltet mangler — bevarer bakoverkompatibilitet inntil ModeSelector
+ * (fase 4) wires inn en eksplisitt verdi. Ukjente verdier returnerer
+ * null så top-level kan svare med `mode_required`.
+ */
+function parseGameMode(formData: FormData): GameMode | null {
+  const raw = String(formData.get('game_mode') ?? '').trim();
+  if (raw === '') return 'best_ball_netto';
+  if (raw === 'best_ball_netto' || raw === 'stableford') return raw;
+  return null;
+}
 
-  if (mode === 'publish') {
-    if (!base.course_id) return { ...base, errorCode: 'course_required' };
-    if (!base.tee_box_id) return { ...base, errorCode: 'tee_required' };
-    if (
-      !Number.isInteger(hcp_allowance_pct) ||
-      hcp_allowance_pct < 0 ||
-      hcp_allowance_pct > 100
-    ) {
-      return { ...base, errorCode: 'bad_allowance' };
-    }
-  }
-
+/**
+ * Best-ball-netto-validator. Beholder dagens regler 1:1:
+ *  - publish krever eksakt 8 spillere fordelt 2-2-2-2 på 4 lag
+ *  - draft tillater partial state (0..8 spillere), men team/flight rangen
+ *    blir likevel validert per ikke-tom rad
+ *  - duplikat-sjekk gjelder begge moduser
+ *
+ * Mode_config-output speiler 0030-backfill: `{kind, team_size: 2, teams_count: 4}`.
+ */
+function validateBestBallNetto(
+  formData: FormData,
+  mode: PayloadMode,
+): ModeValidationResult {
   const players: GamePlayerInput[] = [];
   const seen = new Set<string>();
   for (let i = 0; i < 8; i++) {
     const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
     if (!user_id) {
       if (mode === 'publish') {
-        return { ...base, errorCode: 'players_required' };
+        return { ok: false, errorCode: 'players_required' };
       }
       continue; // draft: skip empty slot
     }
     if (seen.has(user_id)) {
-      return { ...base, errorCode: 'duplicate_player' };
+      return { ok: false, errorCode: 'duplicate_player' };
     }
     seen.add(user_id);
     const team_number = Number(formData.get(`player_${i}_team`));
     const flight_number = Number(formData.get(`player_${i}_flight`));
     if (!Number.isInteger(team_number) || team_number < 1 || team_number > 4) {
-      return { ...base, errorCode: 'bad_team' };
+      return { ok: false, errorCode: 'bad_team' };
     }
     if (
       !Number.isInteger(flight_number) ||
       flight_number < 1 ||
       flight_number > 4
     ) {
-      return { ...base, errorCode: 'bad_flight' };
+      return { ok: false, errorCode: 'bad_flight' };
     }
     players.push({ user_id, team_number, flight_number });
   }
@@ -184,18 +212,136 @@ export function buildGameInsertPayload(
   if (mode === 'publish') {
     const teamCounts = new Map<number, number>();
     for (const p of players) {
-      // team_number er garantert satt her — push-stedet over validerer
-      // 1..4-range før innsetting. Cast er trygt og forsvinner når
-      // funksjonen splittes til mode-aware validators (task 3.2).
       if (p.team_number === null) continue;
       teamCounts.set(p.team_number, (teamCounts.get(p.team_number) ?? 0) + 1);
     }
     for (let t = 1; t <= 4; t++) {
       if (teamCounts.get(t) !== 2) {
-        return { ...base, errorCode: 'team_balance' };
+        return { ok: false, errorCode: 'team_balance' };
       }
     }
   }
 
-  return { ...base, players };
+  return {
+    ok: true,
+    players,
+    mode_config: { kind: 'best_ball_netto', team_size: 2, teams_count: 4 },
+  };
+}
+
+/**
+ * Stableford-validator (solo, første ny modus i epic #41).
+ *  - publish krever minst 1 spiller (vs best-balls 8)
+ *  - alle spillere får team_number / flight_number = null, uavhengig av
+ *    om form-en har stale verdier fra et tidligere best-ball-utkast
+ *  - duplikat-sjekk uendret
+ *
+ * Mode_config-output: `{kind, team_size: 1, points_table: 'standard'}`.
+ * Player-slot-loopen leser opp til 8 slots fordi det er øvre grense fra
+ * GameForm — stableford kan utvides forbi dette i en senere fase uten
+ * skjema-endring.
+ */
+function validateStableford(
+  formData: FormData,
+  mode: PayloadMode,
+): ModeValidationResult {
+  const players: GamePlayerInput[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < 8; i++) {
+    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
+    if (!user_id) continue;
+    if (seen.has(user_id)) {
+      return { ok: false, errorCode: 'duplicate_player' };
+    }
+    seen.add(user_id);
+    // Stableford er solo: ignorer eventuelle lag/flight-verdier fra form-en
+    // helt og persistér som null. DB-CHECK i 0030 krever team/flight
+    // konsistent null-or-not-null, så vi MÅ nullstille begge.
+    players.push({ user_id, team_number: null, flight_number: null });
+  }
+
+  if (mode === 'publish' && players.length < 1) {
+    return { ok: false, errorCode: 'min_players_for_mode' };
+  }
+
+  return {
+    ok: true,
+    players,
+    mode_config: { kind: 'stableford', team_size: 1, points_table: 'standard' },
+  };
+}
+
+const modeValidators: Record<
+  GameMode,
+  (formData: FormData, mode: PayloadMode) => ModeValidationResult
+> = {
+  best_ball_netto: validateBestBallNetto,
+  stableford: validateStableford,
+};
+
+/**
+ * Parse a "create/edit game" admin form payload.
+ *
+ * Mode determines how strictly the payload is validated:
+ * - 'publish' enforces the full ruleset (course, tee-box, valid mode-specific
+ *   player count, allowance in [0, 100]). Used when the game is being
+ *   created/edited as a ready-to-play 'scheduled' row.
+ * - 'draft' tolerates partial data: empty course/tee-box become `null`, the
+ *   player list may have any size (including zero), and no mode-specific
+ *   completeness check runs. Duplicate players are still rejected.
+ *
+ * Modus-spesifikke regler delegeres til `modeValidators[game_mode]`:
+ *  - best_ball_netto: 8 spillere fordelt 2-2-2-2 på 4 lag (publish)
+ *  - stableford: ≥1 solo spiller, team/flight null (publish)
+ *
+ * Returns the parsed payload with `errorCode` set on the first failure;
+ * callers should redirect with that code as a query param.
+ */
+export function buildGameInsertPayload(
+  formData: FormData,
+  mode: PayloadMode,
+): ParsedPayload {
+  const base = parseBase(formData);
+
+  // Sentinel-payload som returneres ved feil. game_mode/mode_config settes
+  // til best-ball-default så typen blir komplett selv ved tidlig retur;
+  // errorCode-feltet skal være kallernes eneste signal.
+  const errorPayload = (
+    errorCode: GameValidationErrorCode,
+  ): ParsedPayload => ({
+    ...base,
+    players: [],
+    game_mode: 'best_ball_netto',
+    mode_config: { kind: 'best_ball_netto', team_size: 2, teams_count: 4 },
+    errorCode,
+  });
+
+  if (!base.name) return errorPayload('name_required');
+
+  if (mode === 'publish') {
+    if (!base.course_id) return errorPayload('course_required');
+    if (!base.tee_box_id) return errorPayload('tee_required');
+    if (
+      !Number.isInteger(base.hcp_allowance_pct) ||
+      base.hcp_allowance_pct < 0 ||
+      base.hcp_allowance_pct > 100
+    ) {
+      return errorPayload('bad_allowance');
+    }
+  }
+
+  const gameMode = parseGameMode(formData);
+  if (gameMode === null) return errorPayload('mode_required');
+
+  const modeResult = modeValidators[gameMode](formData, mode);
+  if (!modeResult.ok) {
+    return errorPayload(modeResult.errorCode);
+  }
+
+  return {
+    ...base,
+    players: modeResult.players,
+    game_mode: gameMode,
+    mode_config: modeResult.mode_config,
+  };
 }

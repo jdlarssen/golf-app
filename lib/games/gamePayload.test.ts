@@ -119,3 +119,123 @@ describe('buildGameInsertPayload (publish mode)', () => {
     expect(result.players).toHaveLength(8);
   });
 });
+
+describe('buildGameInsertPayload — mode discriminator (epic #41)', () => {
+  it('defaults to best_ball_netto when game_mode is missing (back-compat)', () => {
+    // Form-feltet game_mode innføres først i fase 4 (GameForm UI). Inntil
+    // velgeren er ute må payload-builderen falle tilbake til best-ball så
+    // dagens admin-flyt ikke brekker.
+    const entries: Record<string, string> = {
+      name: 'Test', course_id: 'c1', tee_box_id: 't1',
+    };
+    for (let i = 0; i < 8; i++) {
+      entries[`player_${i}_id`] = `u${i}`;
+      entries[`player_${i}_team`] = String(Math.floor(i / 2) + 1);
+      entries[`player_${i}_flight`] = String(Math.floor(i / 2) < 2 ? 1 : 2);
+    }
+    const result = buildGameInsertPayload(fd(entries), 'publish');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.game_mode).toBe('best_ball_netto');
+    expect(result.mode_config).toEqual({
+      kind: 'best_ball_netto',
+      team_size: 2,
+      teams_count: 4,
+    });
+  });
+
+  it('rejects unknown game_mode with mode_required', () => {
+    const result = buildGameInsertPayload(
+      fd({ name: 'Test', game_mode: 'matchplay' }),
+      'draft',
+    );
+    expect(result.errorCode).toBe('mode_required');
+  });
+});
+
+describe('buildGameInsertPayload — stableford solo', () => {
+  function stablefordFd(
+    extras: Record<string, string> = {},
+    playerIds: string[] = ['u1', 'u2'],
+  ): FormData {
+    const base: Record<string, string> = {
+      name: 'Solo Cup',
+      course_id: 'c1',
+      tee_box_id: 't1',
+      game_mode: 'stableford',
+    };
+    playerIds.forEach((id, i) => {
+      base[`player_${i}_id`] = id;
+    });
+    return fd({ ...base, ...extras });
+  }
+
+  it('publishes stableford with 2 players, all team/flight null, mode_config solo', () => {
+    const result = buildGameInsertPayload(stablefordFd(), 'publish');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.game_mode).toBe('stableford');
+    expect(result.mode_config).toEqual({
+      kind: 'stableford',
+      team_size: 1,
+      points_table: 'standard',
+    });
+    expect(result.players).toEqual([
+      { user_id: 'u1', team_number: null, flight_number: null },
+      { user_id: 'u2', team_number: null, flight_number: null },
+    ]);
+  });
+
+  it('publishes stableford with a single solo player (min 1)', () => {
+    // Stableford-modusen er solo — én spiller er nok så lenge admin har
+    // valgt modusen eksplisitt. Best-ball-regelen om eksakt 8 gjelder ikke.
+    const result = buildGameInsertPayload(
+      stablefordFd({}, ['u1']),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(1);
+  });
+
+  it('rejects stableford publish with 0 players (min_players_for_mode)', () => {
+    // Tomt array er kun OK i draft-modus; publish trenger minst én spiller.
+    const result = buildGameInsertPayload(
+      stablefordFd({}, []),
+      'publish',
+    );
+    expect(result.errorCode).toBe('min_players_for_mode');
+  });
+
+  it('ignores stale team/flight inputs for stableford players', () => {
+    // Hvis admin har byttet modus i UI-en uten å nullstille de tidligere
+    // lag-tildelingene, skal builderen normalisere bort verdiene istedenfor
+    // å feile — DB-CHECK krever team og flight null sammen for solo.
+    const result = buildGameInsertPayload(
+      stablefordFd({
+        player_0_team: '1',
+        player_0_flight: '1',
+        player_1_team: '2',
+        player_1_flight: '1',
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players.every((p) => p.team_number === null)).toBe(true);
+    expect(result.players.every((p) => p.flight_number === null)).toBe(true);
+  });
+
+  it('still rejects duplicate players in stableford publish', () => {
+    const result = buildGameInsertPayload(
+      stablefordFd({}, ['u1', 'u1']),
+      'publish',
+    );
+    expect(result.errorCode).toBe('duplicate_player');
+  });
+
+  it('draft-mode stableford tolerates 0 players', () => {
+    const result = buildGameInsertPayload(
+      stablefordFd({}, []),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toEqual([]);
+  });
+});
