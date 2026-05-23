@@ -10,6 +10,40 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.10.y — Stableford spillerflyt
+
+Stableford-turneringer er nå spillbare end-to-end. Scorecard viser per-hull-poeng ved siden av netto-scoren, og leaderboard rangerer spillerne på total stableford-poeng i stedet for lag-summer.
+
+### [1.10.0] - 2026-05-23
+
+> Stableford-turneringer er nå spillbare end-to-end. Spillerne taster slag som vanlig, men ser stableford-poeng per hull og en flat leaderboard sortert på totalt poeng.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `app/games/[id]/leaderboard/SoloStablefordView.tsx` (+ test) — ny leaderboard-view for solo-stableford. Flat liste sortert på `totalPoints` (høyest øverst), top-3 får Medallion (gull/sølv/bronse), 4+ får ren rank-disc. Hver rad: spillernavn (via `formatRevealName`), poeng-total i `score-num`, og «N hull spilt»-undertekst. Reuser `LeaderboardBackdrop` (samme fairway-vinje som best-ball state #4) og samme Card-padding/typografi-tokens.
+- `app/games/[id]/leaderboard/page.tsx` — `renderStableford`-grenen short-circuiter LeaderboardBody før state #3/#3.5/reveal-active-routingen. Bygger `ScoringContext` fra game + players + holes + scores, kjører `computeLeaderboard` mode-router, og rendrer SoloStablefordView med en `Map<userId, {name, nickname}>`.
+
+#### Changed
+- `app/games/[id]/holes/[holeNumber]/page.tsx` — for stableford fetcher server-en i tillegg alle hull-pars/SI + alle av brukerens scorer slik at vi kan summere stableford-poeng server-side (både `myStablefordTotal` og `myStablefordForCurrentHole`). Best-ball-modus dropper de to ekstra queryene. Flight-filteret kollapses til `[me]` når `flight_number` er null (solo).
+- `app/games/[id]/holes/[holeNumber]/HoleClient.tsx` — ny `gameMode`-prop styrer to ting: (1) en «Dine poeng: N»-subtittel under headeren (live-oppdatert via server-snapshot + Dexie-delta for current hull), (2) bottom-bar-CTA bytter fra «Lever scorekort» til «Lever ditt scorekort» for solo.
+- `components/hole/ScoreCard.tsx` — ny valgfri `stablefordPoints`-prop. Når satt, vises «· N poeng» rett etter «Netto X» på samme helper-tekst-linje. Skjules sammen med netto-info når `hideNetto` er true (reveal-active). Alle eksisterende callsites er upåvirket (prop er null som default).
+- `app/games/[id]/submit/page.tsx` — TopBar-kicker bytter fra «Lever scorekort» til «Lever ditt scorekort» for solo, og info-Card-en viser «Individuell stableford · CH N» i stedet for «Lag X · Flight Y · CH N» (lag/flight er null for solo).
+- `app/games/[id]/page.tsx` — Solo-modus dropper «Lag X · Flight Y»-rad-en og viser i stedet en «Individuell stableford-turnering»-subtittel + CH-only-rad. I scheduled-state-en bytter «DIN FLIGHT»-roster med en ny «DELTAKERE»-roster (`SoloRoster`) som lister alle game-medlemmer.
+- `lib/games/getGameWithPlayers.ts` — `GameForHole` utvides med `game_mode` + `mode_config` slik at konsumenter slipper å re-fetche. SELECT-listen oppdatert tilsvarende.
+
+#### Notes
+- Reveal-flow for stableford (podium + collapsed rest + completion-mail) er holdt til fase 6 av epic #41. Midt-runde og post-finished bruker samme SoloStablefordView i v1.10.0.
+- Side-tournaments (LD/CTP) for stableford verifiseres i fase 7 — sannsynligvis bare copy-justering siden eksisterende UI bruker flat spiller-velger uten lag-kontekst.
+
+</details>
+
+---
+
+<details>
+<summary><strong>1.9.y — Valgbar spillmodus (1 entry) — klikk for å vise</strong></summary>
+
 ## 1.9.y — Valgbar spillmodus
 
 Tørny er ikke lenger låst til 4 lag à 2 spillere best-ball. Admin-flyten viser nå tydelige modus-tiles for Stableford og Best ball netto, og lagstørrelser som ennå ikke er aktivert vises som «kommer snart» så roadmapen er synlig der den hører hjemme.
@@ -17,9 +51,6 @@ Tørny er ikke lenger låst til 4 lag à 2 spillere best-ball. Admin-flyten vise
 ### [1.9.0] - 2026-05-23
 
 > Når du oppretter et nytt spill ser du nå et tydelig valg mellom Stableford og Best ball netto. Spillerne plukkes først som en flat liste, og lag-grid-en dukker opp først hvis spillformatet krever lag. Lagstørrelser som ennå ikke er tilgjengelige vises som «kommer snart» så du ser hvor det bærer.
-
-<details>
-<summary>Teknisk</summary>
 
 #### Added
 - `app/admin/games/new/ModeSelector.tsx` (+ test) — to tiles for spillmodus med inline-SVG-ikoner (stilisert poeng-tavle for Stableford, 2×2-flagg-grid for Best ball netto). ARIA: `<fieldset>` + `role="radiogroup"` + tabbable `role="radio"`-button-er. Aktiv tile får forest border + inset-ring (primary-soft).
