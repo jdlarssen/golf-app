@@ -12,7 +12,28 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ## 1.14.y — Stableford-runde-polish
 
-Polish etter første reelle stableford-runde med kompisene. Du kan nå føre slag for hele flighten i solo stableford, fortsette runden fra første tomme hull, og se sideturneringen på stableford-leaderbordet etter avsluttet spill. Hele appens norske copy er også strammet for AI-tells og engelske kalker.
+Polish etter første reelle stableford-runde med kompisene. Du kan nå føre slag for hele flighten i solo stableford, fortsette runden fra første tomme hull, og se sideturneringen på stableford-leaderbordet etter avsluttet spill. Hele appens norske copy er også strammet for AI-tells og engelske kalker — først via humanizer (1.14.3), så et no-nb-pass mot code-switched English som var igjen (1.14.4).
+
+### [1.14.4] - 2026-05-24
+
+> Engelske ord embedded i norske setninger er ryddet: «gender» → «kjønn» i bane-administrasjon, sideturnerings-gruppene heter nå «Bragder», «Minuspoeng» og «Ferdighet og sjeldenhet» (var «Achievements», «Penalty» og «Skill og rarity»), «Custom»-preset heter «Egendefinert», og 12 «Best ...»-labels på leaderbordet er endret til «Beste ...».
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+- `no-nb:no-nb`-skillet kjørt over hele appen for å fange code-switched English (engelske ord embedded i norske setninger). Dette er en kategori humanizer ikke pågriper like systematisk siden mønstrene ofte ikke ser ut som AI-tells på overflaten.
+- **Bane-administrasjon** (`app/admin/courses/CourseForm.tsx`, `app/admin/courses/new/page.tsx`, `app/admin/courses/[id]/edit/page.tsx`, `lib/admin/gameErrorMessages.ts`) — 7 forekomster av «gender» → «kjønn». Inkluderer «per gender», «gender-rating» → «rating-sett per kjønn», «spillers gender» og «tee-gender».
+- **Sideturnering** (`app/games/[id]/leaderboard/SideTournamentView.tsx`, `components/admin/SideCategoriesPicker.tsx`) — gruppe-titler oversatt: «Skill og rarity» → «Ferdighet og sjeldenhet», «Moderate» → «Moderat», «Achievements» → «Bragder», «Penalty» → «Minuspoeng». «Custom»-preset-chip → «Egendefinert». «preset» → «forhåndsvalg», «togglerne» → «bryterne», «Hole-wins» → «Hull-seire», «bogey-fri-streak» → «bogey-fri rekke», «kan trigge»/«trigger» → «kan utløses»/«utløses», «(penalty)» trailer → «(minuspoeng)».
+- **«Best» som mid-sentence-adjektiv** (6 labels per fil × 2 filer = 12 forekomster) → «Beste» i `'Best netto totalt 18'`, `'Best netto front/back 9'`, `'Best brutto totalt 18'`, `'Best brutto front/back 9'`. Norsk bestemt form for superlative adjektiver mid-sentence.
+
+#### Notes
+- Audit dispatched som single Opus-subagent etter at brukeren oppdaget «Fyll inn rating for hver gender»-strengen som humanizer-passet hadde glemt. Audit-en fant ~22 distinkte code-switched English forekomster fordelt på 6 filer.
+- Bevisst beholdt: golf-termer (`best ball`, `stableford`, `matchplay`, `tee`, `leaderboard`, `Slope`, `CR`, `Course Rating`, `Hole-win` singular), achievement-navn (Turkey, Solid, Snowman), kode-identifikatorer + kommentarer + JSDoc (per CLAUDE.md-konvensjon).
+- 116 tester på tvers av endrede områder grønne — ingen snapshot-/string-assertion brutt.
+- CLAUDE.md «Språk-kvalitet i bruker-rettet copy»-seksjonen utvidet med «Code-switching i bruker-rettet kopi»-paragraf som dokumenterer mønsteret eksplisitt, slik at framtidige no-nb-pass kan lete spesifikt etter dette.
+
+</details>
 
 ### [1.14.3] - 2026-05-24
 

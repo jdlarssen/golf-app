@@ -46,7 +46,7 @@ export const ERROR_MESSAGES_NEW_GAME: Record<string, string> = {
   bad_side_ld_count: 'Antall longest-drive-vinnere må være 0, 1 eller 2.',
   bad_side_ctp_count: 'Antall closest-to-pin-vinnere må være 0, 1 eller 2.',
   tee_missing_rating:
-    'Den valgte teen mangler rating for en spillers gender (M/D/J). Sjekk bane-administrasjon eller endre spillerens tee-gender.',
+    'Den valgte teen mangler rating for en spillers kjønn (M/D/J). Sjekk bane-administrasjon eller endre spillerens tee-kjønn.',
   /**
    * The new-game page originally said «ved publisering» while the edit page
    * said just «er påkrevd». The shared copy uses the broader form so it reads
@@ -108,7 +108,7 @@ export const ERROR_MESSAGES_EXISTING_GAME: Record<string, string> = {
   db_tee: 'Klarte ikke å lese tee-boksen fra databasen. Prøv igjen.',
   tee_missing: 'Tee-box mangler. Kan ikke beregne handicap.',
   tee_missing_rating:
-    'Den valgte teen mangler rating for en spillers gender (M/D/J). Sjekk bane-administrasjon eller endre spillerens tee-gender.',
+    'Den valgte teen mangler rating for en spillers kjønn (M/D/J). Sjekk bane-administrasjon eller endre spillerens tee-kjønn.',
   db_roster: 'Klarte ikke å lese spillerlisten fra databasen.',
   db_players: 'Klarte ikke å oppdatere spillerne. Prøv igjen.',
   db_game: 'Klarte ikke å oppdatere spillet. Prøv igjen.',

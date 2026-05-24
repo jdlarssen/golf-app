@@ -64,31 +64,31 @@ const GROUPS: readonly Group[] = [
     rows: [
       {
         key: 'best_netto_18',
-        label: 'Best netto totalt 18',
+        label: 'Beste nettototalt 18',
         ids: ['best_netto_18'],
         pointsLabel: '10p',
       },
       {
         key: 'best_netto_f9',
-        label: 'Best netto front 9',
+        label: 'Beste nettofront 9',
         ids: ['best_netto_f9'],
         pointsLabel: '5p',
       },
       {
         key: 'best_netto_b9',
-        label: 'Best netto back 9',
+        label: 'Beste nettoback 9',
         ids: ['best_netto_b9'],
         pointsLabel: '5p',
       },
     ],
   },
   {
-    title: 'Skill og rarity',
+    title: 'Ferdighet og sjeldenhet',
     hint: 'Belønner ferdighet og sjeldne prestasjoner.',
     rows: [
       {
         key: 'best_brutto_18',
-        label: 'Best brutto totalt 18',
+        label: 'Beste bruttototalt 18',
         ids: ['best_brutto_18_team', 'best_brutto_18_individual'],
         pointsLabel: '4p lag / 2p indiv',
       },
@@ -119,18 +119,18 @@ const GROUPS: readonly Group[] = [
     ],
   },
   {
-    title: 'Moderate',
+    title: 'Moderat',
     hint: 'Volum og litt-mindre-sjeldne ferdigheter.',
     rows: [
       {
         key: 'best_brutto_f9',
-        label: 'Best brutto front 9',
+        label: 'Beste bruttofront 9',
         ids: ['best_brutto_f9_team', 'best_brutto_f9_individual'],
         pointsLabel: '2p lag / 1p indiv',
       },
       {
         key: 'best_brutto_b9',
-        label: 'Best brutto back 9',
+        label: 'Beste bruttoback 9',
         ids: ['best_brutto_b9_team', 'best_brutto_b9_individual'],
         pointsLabel: '2p lag / 1p indiv',
       },
@@ -156,19 +156,19 @@ const GROUPS: readonly Group[] = [
   },
   {
     title: 'Hull-konkurranser',
-    hint: 'Hole-wins per hull; LD og CTP styres med tellerne over.',
+    hint: 'Hull-seire per hull; LD og CTP styres med tellerne over.',
     rows: [
       {
         key: 'hole_win',
-        label: 'Hole-wins (alene-vinner)',
+        label: 'Hull-seire (alene-vinner)',
         ids: ['hole_win'],
         pointsLabel: '2p × inntil 18',
       },
     ],
   },
   {
-    title: 'Achievements',
-    hint: 'Stackbare bonuser — kan trigge flere ganger samme runde.',
+    title: 'Bragder',
+    hint: 'Stackbare bonuser — kan utløses flere ganger samme runde.',
     rows: [
       {
         key: 'turkey',
@@ -299,7 +299,7 @@ export function SideCategoriesPicker({
             onClick={applyFullPakke}
           />
           <PresetChip
-            label="Custom"
+            label="Egendefinert"
             description="Plukk og miks selv"
             active={activePreset === 'custom'}
             disabled={locked}
@@ -307,8 +307,8 @@ export function SideCategoriesPicker({
           />
         </div>
         <p className="text-xs text-muted">
-          Velg hvilke kategorier som gjelder for runden. Bytt preset for å
-          komme raskt i gang — togglerne under følger med.
+          Velg hvilke kategorier som gjelder for runden. Bytt forhåndsvalg for
+          å komme raskt i gang — bryterne under følger med.
         </p>
       </div>
 

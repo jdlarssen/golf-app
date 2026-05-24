@@ -69,11 +69,11 @@ const GROUP_ORDER: readonly GroupId[] = [
 /** Norske etiketter for under-overskrifter (uppercase via Tailwind). */
 const GROUP_LABELS: Record<GroupId, string> = {
   hovedkonkurranser: 'Hovedkonkurranser',
-  skill: 'Skill og rarity',
-  moderate: 'Moderate',
+  skill: 'Ferdighet og sjeldenhet',
+  moderate: 'Moderat',
   hull: 'Hull-konkurranser',
-  achievements: 'Achievements',
-  penalty: 'Penalty',
+  achievements: 'Bragder',
+  penalty: 'Minuspoeng',
 };
 
 /**
@@ -960,19 +960,19 @@ const PANEL_GROUPS: readonly PanelGroup[] = [
     rows: [
       {
         key: 'best_netto_18',
-        label: 'Best netto totalt 18',
+        label: 'Beste nettototalt 18',
         ids: ['best_netto_18'],
         pointsPerId: ['10p'],
       },
       {
         key: 'best_netto_f9',
-        label: 'Best netto front 9',
+        label: 'Beste nettofront 9',
         ids: ['best_netto_f9'],
         pointsPerId: ['5p'],
       },
       {
         key: 'best_netto_b9',
-        label: 'Best netto back 9',
+        label: 'Beste nettoback 9',
         ids: ['best_netto_b9'],
         pointsPerId: ['5p'],
       },
@@ -984,7 +984,7 @@ const PANEL_GROUPS: readonly PanelGroup[] = [
     rows: [
       {
         key: 'best_brutto_18',
-        label: 'Best brutto totalt 18',
+        label: 'Beste bruttototalt 18',
         ids: ['best_brutto_18_team', 'best_brutto_18_individual'],
         pointsPerId: ['4p lag', '2p individ'],
       },
@@ -1010,7 +1010,7 @@ const PANEL_GROUPS: readonly PanelGroup[] = [
       },
       {
         key: 'longest_bogey_free_streak',
-        label: 'Lengste bogey-fri-streak',
+        label: 'Lengste bogey-fri rekke',
         ids: ['longest_bogey_free_streak'],
         pointsPerId: ['4p'],
         rule: 'lengste sammenhengende netto ≤ par',
@@ -1023,13 +1023,13 @@ const PANEL_GROUPS: readonly PanelGroup[] = [
     rows: [
       {
         key: 'best_brutto_f9',
-        label: 'Best brutto front 9',
+        label: 'Beste bruttofront 9',
         ids: ['best_brutto_f9_team', 'best_brutto_f9_individual'],
         pointsPerId: ['2p lag', '1p individ'],
       },
       {
         key: 'best_brutto_b9',
-        label: 'Best brutto back 9',
+        label: 'Beste bruttoback 9',
         ids: ['best_brutto_b9_team', 'best_brutto_b9_individual'],
         pointsPerId: ['2p lag', '1p individ'],
       },
@@ -1083,28 +1083,28 @@ const PANEL_GROUPS: readonly PanelGroup[] = [
   {
     id: 'achievements',
     title: 'Achievements',
-    hint: 'kan stables, kan trigge flere ganger samme runde',
+    hint: 'kan stables, kan utløses flere ganger samme runde',
     rows: [
       {
         key: 'turkey',
         label: 'Turkey',
         ids: ['turkey'],
         pointsPerId: ['4p per spiller + 4p × N lag-koord-bonus'],
-        rule: '3 netto-birdier på rad. Lag-koord trigger om hele laget klarer det på samme 3 hull.',
+        rule: '3 netto-birdier på rad. Lag-koord utløses om hele laget klarer det på samme 3 hull.',
       },
       {
         key: 'solid',
         label: 'Solid',
         ids: ['solid'],
         pointsPerId: ['2p per spiller + 2p × N lag-koord-bonus'],
-        rule: '5 netto-pars+ på rad. Lag-koord trigger om hele laget klarer det på samme 5 hull.',
+        rule: '5 netto-pars+ på rad. Lag-koord utløses om hele laget klarer det på samme 5 hull.',
       },
       {
         key: 'snowman',
         label: 'Snowman',
         ids: ['snowman'],
         pointsPerId: ['−2p per hull'],
-        trailer: '(penalty)',
+        trailer: '(minuspoeng)',
         rule: 'hele lagets brutto ≥ par+5 på samme hull',
       },
     ],

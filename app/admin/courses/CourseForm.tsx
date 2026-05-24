@@ -224,7 +224,7 @@ export function CourseForm({
 
               <div className="space-y-3">
                 <p className="text-xs text-muted">
-                  Fyll inn rating for hver gender som spiller fra denne teen. Minst én må være komplett.
+                  Fyll inn rating for hvert kjønn som spiller fra denne teen. Minst ett komplett sett kreves.
                 </p>
 
                 {(['mens', 'ladies', 'juniors'] as const).map((g) => {
