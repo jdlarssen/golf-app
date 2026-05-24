@@ -14,6 +14,30 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Tørny får en innboks. Bjelle øverst-til-høyre på alle sider viser en champagne-prikk når det venter et nytt varsel, og en dedikert /innboks-flate samler hele historikken. Selve varslene kobles inn etappevis (issue [#25](https://github.com/jdlarssen/golf-app/issues/25)) — invitasjoner, peer-godkjenninger, scorekort-events og spill-avsluttet.
 
+### [1.15.1] - 2026-05-24
+
+> Innboksen lever nå. Du får varsel når noen leverer scorekort, godkjenner ditt eget kort, eller avslutter et spill du er med i. Mailen sendes fortsatt parallelt; neste lansering kutter mailen til de som allerede er aktive i appen.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `app/games/[id]/submit/actions.ts` — `submitScorecard` varsler nå (a) flight-medlemmer som må peer-godkjenne (`peer_approval_request`-kind) gated på `require_peer_approval` og non-null `flight_number`, og (b) admin-er om at scorekort er levert (`scorecard_submitted`-kind). Begge loopene fyres via Promise.allSettled — feiler stille i notify() og logges som console.error. Mail til admin sendes uavhengig (Phase 3 = sikkerhetsnett); Phase 4 vil gate på shouldAlsoSendMail. select-en på games-raden utvidet med `require_peer_approval`; en ny game_players-query henter flight-medlemmer i samme Promise.all som de eksisterende admin- og submitter-queries.
+- `app/games/[id]/approve/actions.ts` — `approveScorecard` varsler nå submitter (`scorecard_approved`-kind) med game.name + approver.name. Wrappet i try/catch slik at en notify-feil aldri blokkerer parent-action.
+- `app/admin/games/[id]/actions.ts` — `adminApproveScorecard` speiler peer-approve-flyten med `scorecard_approved`-notify til submitter (approver-navn settes til actorName fra requireAdmin()). `endGame` varsler alle deltakere (`game_finished`-kind) parallelt med eksisterende mail-blast. players-select utvidet med `user_id`.
+- `app/admin/games/[id]/avslutt/actions.ts` — `endGameWithSideWinners` speiler `endGame`-loopen for sideturnerings-flyten; samme players-select-utvidelse + game_finished-notify-loop.
+- `app/games/[id]/page.tsx` — mark-as-read for både `invite`- og `scorecard_approved`-kinder etter auth-check (spill-hjem er deeplink-target for begge). Best-effort.
+- `app/games/[id]/approve/page.tsx` — mark-as-read for `peer_approval_request` ved entry.
+- `app/admin/games/[id]/page.tsx` — mark-as-read for `scorecard_submitted` ved entry; gated på userId (helperen forventer non-null).
+- `app/games/[id]/leaderboard/page.tsx` — mark-as-read for `game_finished` etter auth-check.
+
+#### Notes
+- Phase 3 av 4 i issue [#25](https://github.com/jdlarssen/golf-app/issues/25). Phase 4 vil gate mail-sending på `shouldAlsoSendMail` fra notify() slik at aktive brukere ikke får mail i tillegg til in-app-varsel.
+- `invite`-event (game-scoped invitation) ble *ikke* wired i denne fasen siden det ikke finnes en game-scoped invite-flyt i koden i dag. `app/invite/actions.ts` håndterer friend-invite (ingen game_id), og `app/admin/spillere/actions.ts` håndterer admin-invite (heller ingen game_id). Når en game-scoped invite-flyt lander vil notify-callen tilføyes der; mark-as-read-hooken på spill-hjem er allerede på plass.
+- Test-suite holder på 837 grønne — eksisterende submit/approve/end-game-tester dekker happy-path uten å mocke notify() (notify-feil svelges via Promise.allSettled / try-catch og endrer ikke parent-action-redirect).
+
+</details>
+
 ### [1.15.0] - 2026-05-24
 
 > Innboksen finnes nå som flate i appen — bjelle øverst-til-høyre og en /innboks-side. Selve varslene tikker inn fra og med neste fase; per i dag rendrer innboksen seg som tom for alle.
