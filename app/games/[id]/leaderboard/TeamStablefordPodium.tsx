@@ -34,6 +34,12 @@ export interface TeamStablefordPodiumProps {
   playersById: Map<string, SoloStablefordPlayerInfo>;
   /** Hvor pilen tilbake skal peke. Defaults til spillets hjem. */
   backHref?: string;
+  /**
+   * Når true, hoppes Shell + Header (back-pil + kicker) over slik at podiet
+   * kan rendres inni `LeaderboardTabs`. Outer-callern eier `AppShell + TopBar`
+   * og er ansvarlig for chrome. Speiler `State4View`-mønsteret.
+   */
+  chromeless?: boolean;
 }
 
 /**
@@ -59,6 +65,7 @@ export function TeamStablefordPodium({
   result,
   playersById,
   backHref = '/',
+  chromeless = false,
 }: TeamStablefordPodiumProps): JSX.Element {
   const [replayKey, setReplayKey] = useState(0);
 
@@ -79,8 +86,8 @@ export function TeamStablefordPodium({
 
   if (result.teams.length === 0) {
     return (
-      <Shell>
-        <Header gameName={gameName} backHref={backHref} />
+      <Shell chromeless={chromeless}>
+        {!chromeless && <Header gameName={gameName} backHref={backHref} />}
         <p className="mt-12 text-center text-sm text-muted">
           Ingen lag å vise.
         </p>
@@ -96,8 +103,8 @@ export function TeamStablefordPodium({
   const rest = result.teams.slice(3);
 
   return (
-    <Shell>
-      <Header gameName={gameName} backHref={backHref} />
+    <Shell chromeless={chromeless}>
+      {!chromeless && <Header gameName={gameName} backHref={backHref} />}
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <Kicker tone="accent">PODIUM</Kicker>
@@ -210,7 +217,24 @@ export function TeamStablefordPodium({
   );
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({
+  children,
+  chromeless = false,
+}: {
+  children: React.ReactNode;
+  chromeless?: boolean;
+}) {
+  // I chromeless-modus owner outer-callern AppShell + TopBar — vi rendrer kun
+  // backdrop + relative-container slik at podiet sitter sammen med tabs uten
+  // dobbel pad/scroll. Speiler State4View.Shell-mønsteret.
+  if (chromeless) {
+    return (
+      <div className="relative isolate">
+        <LeaderboardBackdrop />
+        <div className="relative">{children}</div>
+      </div>
+    );
+  }
   return (
     <AppShell>
       <div className="relative isolate pb-12">

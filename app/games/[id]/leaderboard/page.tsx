@@ -57,6 +57,7 @@ import {
   type SideWinner,
 } from '@/lib/scoring/sideTournament';
 import type { SideCategoryId } from '@/lib/scoring/sideTournamentConfig';
+import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { revealState } from '@/lib/games/visibility';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import {
@@ -832,7 +833,7 @@ export function ModeToggle({
  * (alle ser hverandre umiddelbart via 0031-RLS), så vi viser leaderboarden
  * helt fra første score lander.
  */
-function renderStableford(opts: {
+async function renderStableford(opts: {
   gameId: string;
   game: GameForHole;
   gwp: {
@@ -905,20 +906,38 @@ function renderStableford(opts: {
     });
   }
 
+  // Sideturnering vises kun etter at admin har avsluttet spillet, og kun hvis
+  // admin valgte å legge til en sideturnering ved opprettelse (issue #165).
+  // Live/scheduled status faller alltid tilbake til den enkle podium/view-en
+  // — sideturneringen er designet som et post-game-reveal-element parallelt
+  // til hovedpodiet.
+  const showSideTournament =
+    game.status === 'finished' && game.side_tournament_enabled;
+
   // Variant-router: par-stableford (team) → team-view/podium, solo → solo-
   // view/podium. State4-flippen (finished vs live) er identisk på begge:
   // finished → champagne-podium med konfetti, alt annet → flat live-leaderboard.
   if (result.variant === 'team') {
     if (game.status === 'finished') {
-      return (
+      const podium = (chromeless: boolean) => (
         <TeamStablefordPodium
           gameId={gameId}
           gameName={game.name}
           result={result}
           playersById={playersById}
           backHref={backHref}
+          chromeless={chromeless}
         />
       );
+      if (!showSideTournament) return podium(false);
+      return renderStablefordWithSideTournament({
+        gameId,
+        game,
+        gwp,
+        rawHolesRows,
+        backHref,
+        mainContent: podium(true),
+      });
     }
     return (
       <TeamStablefordView
@@ -933,15 +952,25 @@ function renderStableford(opts: {
 
   // Finished → reveal-podium (fase 6). Active/scheduled → flat live-view.
   if (game.status === 'finished') {
-    return (
+    const podium = (chromeless: boolean) => (
       <SoloStablefordPodium
         gameId={gameId}
         gameName={game.name}
         result={result}
         playersById={playersById}
         backHref={backHref}
+        chromeless={chromeless}
       />
     );
+    if (!showSideTournament) return podium(false);
+    return renderStablefordWithSideTournament({
+      gameId,
+      game,
+      gwp,
+      rawHolesRows,
+      backHref,
+      mainContent: podium(true),
+    });
   }
 
   return (
@@ -952,6 +981,242 @@ function renderStableford(opts: {
       playersById={playersById}
       backHref={backHref}
     />
+  );
+}
+
+/**
+ * Sideturnering for stableford-spill (issue #165). Henter LD/CTP-vinnere fra
+ * DB, bygger SideTournamentInput og pakker hoved-podiet + SideTournamentView
+ * inn i en LeaderboardTabs-veksler.
+ *
+ * Team-modell: par-stableford bruker eksisterende team_number-gruppering; solo
+ * mapper hver spiller til en «team of 1» med løpende teamId (1, 2, 3, …) slik
+ * at lag-aggregerte sidekategorier (most_birdies_team, etc.) faller bort som
+ * forventet (filter `userIds.length >= 2` i sideTournament.ts), mens individ-
+ * kategorier + LD/CTP fungerer normalt.
+ *
+ * Netto- og brutto-arrays beregnes per spiller fra rå-scores + course handicap
+ * + stroke-index. For team-varianten bygger vi «best ball netto per hull» som
+ * MIN av lagets netto per hull — samme logikk som best-ball-grenen lenger oppe
+ * i fila, bare uten å gå veien om computeLeaderboard.
+ */
+async function renderStablefordWithSideTournament(opts: {
+  gameId: string;
+  game: GameForHole;
+  gwp: {
+    players: {
+      user_id: string;
+      team_number: number;
+      users: { name: string | null; nickname: string | null } | null;
+      course_handicap: number | null;
+    }[];
+  };
+  rawHolesRows: { hole_number: number; par: number; stroke_index: number }[];
+  backHref: string;
+  mainContent: React.ReactNode;
+}) {
+  const { gameId, game, gwp, rawHolesRows, backHref, mainContent } = opts;
+
+  const { supabase } = await getLeaderboardContext();
+
+  const sideWinnersRes = await supabase
+    .from('game_side_winners')
+    .select('category, position, winner_user_id')
+    .eq('game_id', gameId)
+    .order('category')
+    .order('position')
+    .returns<SideWinnerRow[]>();
+  if (sideWinnersRes.error) throw sideWinnersRes.error;
+  const sideWinnerRows: SideWinnerRow[] = sideWinnersRes.data ?? [];
+
+  // coursePars: 18-element par-array indexed by hole-1 (coursePars[0] = par
+  // for hull 1). Bruker hull-nummer-oppslag for å unngå å forskyve pars ved
+  // sparse course-data — fallback til 4 kun for hull som genuint mangler.
+  const parByHole = new Map<number, number>();
+  const siByHole = new Map<number, number>();
+  for (const h of rawHolesRows) {
+    parByHole.set(h.hole_number, h.par);
+    siByHole.set(h.hole_number, h.stroke_index);
+  }
+  const coursePars: number[] = [];
+  for (let h = 1; h <= 18; h++) {
+    coursePars.push(parByHole.get(h) ?? 4);
+  }
+
+  // Per-spiller perHoleGross + perHoleNetto. Henter rå-scores fra DB siden
+  // sideturneringen krever brutto OG netto per hull — stableford-result-en
+  // bærer kun stableford-poeng. Filtrerer ut spillere uten users (defensiv;
+  // RLS slipper kun gjennom registrerte spillere på et finished-spill).
+  const eligiblePlayers = gwp.players.filter((p) => p.users != null);
+
+  // Hent rå-scores for sideturneringen separat fra LeaderboardBody (vi er
+  // allerede inne i samme request-scope, men trenger en egen query siden
+  // vi ikke har scores som parameter). Lite ekstra-cost — én query, samme
+  // tabell som best-ball-grenen leser fra.
+  const scoresRes = await supabase
+    .from('scores')
+    .select('user_id, hole_number, strokes')
+    .eq('game_id', gameId)
+    .returns<ScoreRow[]>();
+  if (scoresRes.error) throw scoresRes.error;
+  const scoresByPlayer = new Map<string, Map<number, number>>();
+  for (const s of scoresRes.data ?? []) {
+    if (s.strokes == null) continue;
+    let inner = scoresByPlayer.get(s.user_id);
+    if (!inner) {
+      inner = new Map();
+      scoresByPlayer.set(s.user_id, inner);
+    }
+    inner.set(s.hole_number, s.strokes);
+  }
+
+  type PerHole = {
+    userId: string;
+    perHoleGross: Array<number | null>;
+    perHoleNetto: Array<number | null>;
+  };
+  const perHolePerPlayer: PerHole[] = eligiblePlayers.map((p) => {
+    const ch = p.course_handicap ?? 0;
+    const gross: Array<number | null> = new Array(18).fill(null);
+    const netto: Array<number | null> = new Array(18).fill(null);
+    const playerScores = scoresByPlayer.get(p.user_id);
+    if (playerScores) {
+      for (let h = 1; h <= 18; h++) {
+        const grossVal = playerScores.get(h);
+        if (grossVal == null) continue;
+        const si = siByHole.get(h) ?? 18;
+        const extra = strokesForHole(ch, si);
+        gross[h - 1] = grossVal;
+        netto[h - 1] = grossVal - extra;
+      }
+    }
+    return { userId: p.user_id, perHoleGross: gross, perHoleNetto: netto };
+  });
+
+  // Lag-grupperinger: par-stableford bruker eksisterende team_number; solo
+  // mapper hver spiller til en team of 1 med løpende teamId. Solo-mapping
+  // gjør at SideTournamentView kan rendre én rad per spiller med spillernavn
+  // som label, og at lag-aggregerte kategorier faller bort som forventet.
+  const isTeamVariant =
+    game.mode_config.kind === 'stableford' &&
+    game.mode_config.team_size === 2;
+
+  type TeamGroup = {
+    teamId: number;
+    label: string;
+    userIds: string[];
+  };
+  const teamGroups: TeamGroup[] = [];
+  if (isTeamVariant) {
+    const byTeam = new Map<number, string[]>();
+    for (const p of eligiblePlayers) {
+      const t = p.team_number;
+      if (t == null || t === 0) continue;
+      const arr = byTeam.get(t) ?? [];
+      arr.push(p.user_id);
+      byTeam.set(t, arr);
+    }
+    const teamNumbers = [...byTeam.keys()].sort((a, b) => a - b);
+    for (const t of teamNumbers) {
+      teamGroups.push({
+        teamId: t,
+        label: `Lag ${t}`,
+        userIds: byTeam.get(t) ?? [],
+      });
+    }
+  } else {
+    eligiblePlayers.forEach((p, idx) => {
+      const name = p.users?.name ?? '(ukjent)';
+      teamGroups.push({
+        teamId: idx + 1,
+        label: firstName(name) ?? name,
+        userIds: [p.user_id],
+      });
+    });
+  }
+
+  // Best ball netto per hull per lag. For solo (team of 1) er det bare
+  // spillerens egen netto; for par-stableford er det MIN av lagets to
+  // spillere per hull (null hvis alle mangler scoren).
+  const nettoBestBallPerHole = teamGroups.map((tg) => {
+    const perHoleNetto: Array<number | null> = new Array(18).fill(null);
+    for (let h = 0; h < 18; h++) {
+      const nettos = tg.userIds
+        .map((uid) => perHolePerPlayer.find((p) => p.userId === uid)?.perHoleNetto[h])
+        .filter((v): v is number => typeof v === 'number');
+      if (nettos.length > 0) perHoleNetto[h] = Math.min(...nettos);
+    }
+    return { teamId: tg.teamId, perHoleNetto };
+  });
+
+  const sideWinnersForInput: SideWinner[] = sideWinnerRows
+    .filter(
+      (w): w is SideWinnerRow & { position: 1 | 2 } =>
+        w.position === 1 || w.position === 2,
+    )
+    .map((w) => ({
+      category: w.category,
+      position: w.position,
+      winnerUserId: w.winner_user_id,
+    }));
+
+  const ldCount = game.side_ld_count as 0 | 1 | 2;
+  const ctpCount = game.side_ctp_count as 0 | 1 | 2;
+
+  const sideInput: SideTournamentInput = {
+    config: {
+      enabled: true,
+      ldCount,
+      ctpCount,
+      disabledCategories: game.side_disabled_categories ?? [],
+    },
+    teams: teamGroups.map((tg) => ({ teamId: tg.teamId, userIds: tg.userIds })),
+    coursePars,
+    playerScoresPerHole: perHolePerPlayer,
+    nettoBestBallPerHole,
+    sideWinners: sideWinnersForInput,
+  };
+
+  const sideResult = calculateSideTournament(sideInput);
+
+  const sideTeams: SideTournamentTeam[] = teamGroups.map((tg) => ({
+    teamId: tg.teamId,
+    label: tg.label,
+    members: tg.userIds.map((uid) => {
+      const p = eligiblePlayers.find((q) => q.user_id === uid);
+      const name = p?.users?.name ?? '(ukjent)';
+      const nickname = p?.users?.nickname ?? null;
+      return {
+        userId: uid,
+        displayName: formatRevealName(name, nickname),
+        firstName:
+          firstName(name) ?? formatRevealName(name, nickname) ?? '?',
+      };
+    }),
+  }));
+
+  return (
+    <AppShell>
+      <TopBar backHref={backHref} kicker={game.name} />
+      <LeaderboardTabs
+        mainContent={mainContent}
+        sideContent={
+          <SideTournamentView
+            teams={sideTeams}
+            result={sideResult}
+            ldCount={ldCount}
+            ctpCount={ctpCount}
+            sideWinners={sideWinnerRows.map((w) => ({
+              category: w.category,
+              position: w.position,
+              winnerUserId: w.winner_user_id,
+            }))}
+            coursePars={coursePars}
+            disabledCategories={game.side_disabled_categories ?? []}
+          />
+        }
+      />
+    </AppShell>
   );
 }
 

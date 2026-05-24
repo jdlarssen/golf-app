@@ -14,6 +14,22 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Polish etter første reelle stableford-runde med kompisene. Du kan nå føre slag for hele flighten i solo stableford, fortsette runden fra første tomme hull, og se sideturneringen på stableford-leaderbordet etter avsluttet spill.
 
+### [1.14.2] - 2026-05-24
+
+> Når et stableford-spill med sideturnering avsluttes, vises sideturneringen som en egen fane på leaderbordet — akkurat som for best ball. Tidligere var sideturneringen helt usynlig på stableford selv om du hadde valgt å legge den til.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `app/games/[id]/leaderboard/page.tsx` — ny `renderStablefordWithSideTournament`-helper henter LD/CTP-vinnere fra `game_side_winners`, bygger `SideTournamentInput` per spiller/lag (perHoleGross + perHoleNetto med `strokesForHole`-justering), og pakker hoved-podiet + `SideTournamentView` inn i `LeaderboardTabs`. Solo-stableford mapper hver spiller til en «team of 1» med løpende teamId — lag-aggregerte sidekategorier (most_birdies_team etc.) faller bort som forventet via `userIds.length >= 2`-filteret i sideTournament.ts, mens individ-kategorier + LD/CTP + Snowman fungerer normalt. Par-stableford bruker eksisterende team_number-gruppering; nettoBestBallPerHole = MIN av lagets to spilleres netto per hull, samme logikk som best-ball-grenen lenger oppe.
+- `renderStableford` ble async for å støtte sideturnerings-fetchen — kalt fra `LeaderboardBody` som allerede er async, så ingen call-site-endringer.
+
+#### Changed
+- `app/games/[id]/leaderboard/SoloStablefordPodium.tsx` + `TeamStablefordPodium.tsx` — ny `chromeless?: boolean`-prop (default false) som hopper over `Shell` (AppShell-wrapper) og `Header` (back-pil + kicker) når satt. Brukes når podiet rendres inni `LeaderboardTabs` — outer-callern eier AppShell + TopBar. Speilar `State4View.chromeless`-pattern. Eksisterende standalone-bruk (uten sideturnering) er upåvirket.
+
+</details>
+
 ### [1.14.1] - 2026-05-24
 
 > «Fortsett runden»-knappen på spill-hjem sender deg nå direkte til første tomme hull i stedet for alltid hull 1. Etter å ha tastet hull 1-9 og lagt fra deg telefonen, åpner appen rett på hull 10 når du tar opp igjen.
