@@ -1119,4 +1119,226 @@ describe('buildGameFinishedRecipients', () => {
       teamPartnerName: null,
     });
   });
+
+  // ────────────────────────────────────────────────────────────────
+  // Texas scramble (issue #44) — én ball per lag, n medlemmer (2 eller 4).
+  // Hver spiller på et lag får samme teamRank/teamTotalNet, men sin egen
+  // partner-liste (alle lag-medlemmer minus seg selv).
+  // ────────────────────────────────────────────────────────────────
+
+  const TEXAS_2_CONFIG: GameModeConfig = {
+    kind: 'texas_scramble',
+    team_size: 2,
+    teams_count: 2,
+    team_handicap_pct: 25,
+  };
+
+  it('texas 2-mannslag: alle får team-payload med partner-liste', async () => {
+    // 2 lag × 2 spillere, 1 hull par 4, team_handicap_pct=0 (gross):
+    //   Lag 1 (u1=kaptein lex-min, u2): kapteinens gross 4 → netto 4
+    //   Lag 2 (u3=kaptein, u4): kapteinens gross 5 → netto 5
+    //   → Lag 1 vinner (rank 1, 4 slag), Lag 2 (rank 2, 5 slag)
+    const supabase = buildSupabaseMock([
+      {
+        data: [
+          {
+            user_id: 'u1',
+            team_number: 1,
+            course_handicap: 0,
+            users: { email: 'ada@example.com', name: 'Ada Olsen' },
+          },
+          {
+            user_id: 'u2',
+            team_number: 1,
+            course_handicap: 0,
+            users: { email: 'bjorn@example.com', name: 'Bjørn Hansen' },
+          },
+          {
+            user_id: 'u3',
+            team_number: 2,
+            course_handicap: 0,
+            users: { email: 'cecilie@example.com', name: 'Cecilie Berg' },
+          },
+          {
+            user_id: 'u4',
+            team_number: 2,
+            course_handicap: 0,
+            users: { email: 'david@example.com', name: 'David Knutsen' },
+          },
+        ],
+        error: null,
+      },
+      {
+        data: [
+          // Kapteinen er lex-min (u1, u3). Score lagres på kaptein.
+          { user_id: 'u1', hole_number: 1, strokes: 4 },
+          { user_id: 'u3', hole_number: 1, strokes: 5 },
+        ],
+        error: null,
+      },
+      {
+        data: [{ hole_number: 1, par: 4, stroke_index: 1 }],
+        error: null,
+      },
+    ]);
+
+    const recipients = await buildGameFinishedRecipients(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      supabase as any,
+      'game-1',
+      {
+        course_id: 'c1',
+        game_mode: 'texas_scramble',
+        mode_config: { ...TEXAS_2_CONFIG, team_handicap_pct: 0 },
+      },
+    );
+
+    expect(recipients).toHaveLength(4);
+
+    const ada = recipients.find((r) => r.email === 'ada@example.com');
+    const bjorn = recipients.find((r) => r.email === 'bjorn@example.com');
+    const cecilie = recipients.find((r) => r.email === 'cecilie@example.com');
+
+    expect(ada?.mode).toEqual({
+      kind: 'texas_scramble',
+      teamRank: 1,
+      teamTotalNet: 4,
+      teamTotalGross: 4,
+      teamPartnerNames: ['Bjørn'],
+      totalTeams: 2,
+    });
+    expect(bjorn?.mode).toEqual({
+      kind: 'texas_scramble',
+      teamRank: 1,
+      teamTotalNet: 4,
+      teamTotalGross: 4,
+      teamPartnerNames: ['Ada'],
+      totalTeams: 2,
+    });
+    expect(cecilie?.mode).toMatchObject({
+      teamRank: 2,
+      teamTotalNet: 5,
+      teamPartnerNames: ['David'],
+    });
+  });
+
+  it('texas 4-mannslag: hver spiller får 3 partnernavn', async () => {
+    const supabase = buildSupabaseMock([
+      {
+        data: [
+          {
+            user_id: 'u1',
+            team_number: 1,
+            course_handicap: 0,
+            users: { email: 'ada@example.com', name: 'Ada Olsen' },
+          },
+          {
+            user_id: 'u2',
+            team_number: 1,
+            course_handicap: 0,
+            users: { email: 'bjorn@example.com', name: 'Bjørn Hansen' },
+          },
+          {
+            user_id: 'u3',
+            team_number: 1,
+            course_handicap: 0,
+            users: { email: 'cecilie@example.com', name: 'Cecilie Berg' },
+          },
+          {
+            user_id: 'u4',
+            team_number: 1,
+            course_handicap: 0,
+            users: { email: 'david@example.com', name: 'David Knutsen' },
+          },
+        ],
+        error: null,
+      },
+      {
+        data: [{ user_id: 'u1', hole_number: 1, strokes: 4 }],
+        error: null,
+      },
+      {
+        data: [{ hole_number: 1, par: 4, stroke_index: 1 }],
+        error: null,
+      },
+    ]);
+
+    const recipients = await buildGameFinishedRecipients(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      supabase as any,
+      'game-1',
+      {
+        course_id: 'c1',
+        game_mode: 'texas_scramble',
+        mode_config: {
+          kind: 'texas_scramble',
+          team_size: 4,
+          teams_count: 1,
+          team_handicap_pct: 10,
+        },
+      },
+    );
+
+    expect(recipients).toHaveLength(4);
+
+    const ada = recipients.find((r) => r.email === 'ada@example.com');
+    expect(ada?.mode).toMatchObject({
+      kind: 'texas_scramble',
+      teamRank: 1,
+      teamPartnerNames: ['Bjørn', 'Cecilie', 'David'],
+    });
+    const david = recipients.find((r) => r.email === 'david@example.com');
+    expect(david?.mode).toMatchObject({
+      teamPartnerNames: ['Ada', 'Bjørn', 'Cecilie'],
+    });
+  });
+
+  it('texas: spiller uten email droppes; resten beholder mode-payload', async () => {
+    const supabase = buildSupabaseMock([
+      {
+        data: [
+          {
+            user_id: 'u1',
+            team_number: 1,
+            course_handicap: 0,
+            users: { email: 'ada@example.com', name: 'Ada Olsen' },
+          },
+          {
+            user_id: 'u2',
+            team_number: 1,
+            course_handicap: 0,
+            users: { email: null, name: 'Bjørn Hansen' },
+          },
+        ],
+        error: null,
+      },
+      {
+        data: [{ user_id: 'u1', hole_number: 1, strokes: 4 }],
+        error: null,
+      },
+      {
+        data: [{ hole_number: 1, par: 4, stroke_index: 1 }],
+        error: null,
+      },
+    ]);
+
+    const recipients = await buildGameFinishedRecipients(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      supabase as any,
+      'game-1',
+      {
+        course_id: 'c1',
+        game_mode: 'texas_scramble',
+        mode_config: { ...TEXAS_2_CONFIG, team_handicap_pct: 0 },
+      },
+    );
+
+    expect(recipients).toHaveLength(1);
+    const ada = recipients[0];
+    expect(ada.email).toBe('ada@example.com');
+    expect(ada.mode).toMatchObject({
+      kind: 'texas_scramble',
+      teamPartnerNames: ['Bjørn'],
+    });
+  });
 });

@@ -577,6 +577,141 @@ describe('sendGameFinishedNotification', () => {
     expect(payload.html).not.toContain('Hei null');
   });
 
+  // Texas scramble (issue #44). Lag-fokus, n medlemmer (2 eller 4), netto+brutto-slag.
+  it('texas: 1.-plass adresserer LAGET med 2-mannslag-partner + «Gratulerer»', async () => {
+    const { sendGameFinishedNotification } = await import(
+      './gameFinishedNotification'
+    );
+    await sendGameFinishedNotification({
+      to: 'vinner@example.com',
+      playerFirstName: 'Anne',
+      gameName: 'Firma-cup',
+      gameId: 'game-tx-1',
+      mode: {
+        kind: 'texas_scramble',
+        teamRank: 1,
+        teamTotalNet: 68,
+        teamTotalGross: 78,
+        teamPartnerNames: ['Bjørn'],
+        totalTeams: 4,
+      },
+    });
+    const payload = sendMock.mock.calls[0]![0];
+    expect(payload.subject).toBe('Resultatet er klart — Firma-cup');
+    expect(payload.html).toContain('Laget endte på');
+    expect(payload.html).toContain('1. plass');
+    expect(payload.html).toContain('av 4 lag');
+    expect(payload.html).toContain('68 slag netto');
+    expect(payload.html).toContain('(78 brutto)');
+    expect(payload.html).toContain('Gratulerer med seieren');
+    expect(payload.html).toContain('Du spilte med <strong>Bjørn</strong>');
+    expect(payload.text).toContain('1. plass av 4 lag');
+    expect(payload.text).toContain('68 slag netto (78 brutto)');
+    expect(payload.text).toContain('Du spilte med Bjørn');
+    // Solo-frasen «Du endte på» skal IKKE komme med — team-grenen er lag-fokus.
+    expect(payload.html).not.toContain('Du endte på');
+  });
+
+  it('texas: 4-mannslag listet med «og» mellom siste to navn', async () => {
+    const { sendGameFinishedNotification } = await import(
+      './gameFinishedNotification'
+    );
+    await sendGameFinishedNotification({
+      to: 'spiller@example.com',
+      playerFirstName: 'Anne',
+      gameName: 'Firma-cup',
+      gameId: 'game-tx-2',
+      mode: {
+        kind: 'texas_scramble',
+        teamRank: 2,
+        teamTotalNet: 72,
+        teamTotalGross: 82,
+        teamPartnerNames: ['Bjørn', 'Carla', 'Dagfinn'],
+        totalTeams: 4,
+      },
+    });
+    const payload = sendMock.mock.calls[0]![0];
+    expect(payload.html).toContain('2. plass');
+    expect(payload.html).toContain('Solid plassering');
+    expect(payload.html).toContain(
+      'Du spilte med <strong>Bjørn, Carla og Dagfinn</strong>',
+    );
+    expect(payload.text).toContain('Du spilte med Bjørn, Carla og Dagfinn');
+  });
+
+  it('texas: 4.-plass får INGEN celebration, kun nøytralt resultat', async () => {
+    const { sendGameFinishedNotification } = await import(
+      './gameFinishedNotification'
+    );
+    await sendGameFinishedNotification({
+      to: 'spiller@example.com',
+      playerFirstName: 'Carla',
+      gameName: 'Firma-cup',
+      gameId: 'game-tx-3',
+      mode: {
+        kind: 'texas_scramble',
+        teamRank: 4,
+        teamTotalNet: 92,
+        teamTotalGross: 98,
+        teamPartnerNames: ['Bjørn'],
+        totalTeams: 4,
+      },
+    });
+    const payload = sendMock.mock.calls[0]![0];
+    expect(payload.html).toContain('4. plass');
+    expect(payload.html).not.toContain('Gratulerer');
+    expect(payload.html).not.toContain('Solid plassering');
+    expect(payload.html).toContain('Du spilte med <strong>Bjørn</strong>');
+  });
+
+  it('texas: dropper partner-setningen når partnernavn-listen er tom', async () => {
+    const { sendGameFinishedNotification } = await import(
+      './gameFinishedNotification'
+    );
+    await sendGameFinishedNotification({
+      to: 'spiller@example.com',
+      playerFirstName: 'Eli',
+      gameName: 'Firma-cup',
+      gameId: 'game-tx-4',
+      mode: {
+        kind: 'texas_scramble',
+        teamRank: 3,
+        teamTotalNet: 80,
+        teamTotalGross: 88,
+        teamPartnerNames: [],
+        totalTeams: 4,
+      },
+    });
+    const payload = sendMock.mock.calls[0]![0];
+    expect(payload.html).toContain('3. plass');
+    expect(payload.html).toContain('Solid plassering');
+    expect(payload.html).not.toContain('Du spilte med');
+    expect(payload.text).not.toContain('Du spilte med');
+  });
+
+  it('texas: bruker «Hei!» når playerFirstName er null', async () => {
+    const { sendGameFinishedNotification } = await import(
+      './gameFinishedNotification'
+    );
+    await sendGameFinishedNotification({
+      to: 'spiller@example.com',
+      playerFirstName: null,
+      gameName: 'Firma-cup',
+      gameId: 'game-tx-5',
+      mode: {
+        kind: 'texas_scramble',
+        teamRank: 2,
+        teamTotalNet: 75,
+        teamTotalGross: 82,
+        teamPartnerNames: ['Bjørn'],
+        totalTeams: 3,
+      },
+    });
+    const payload = sendMock.mock.calls[0]![0];
+    expect(payload.html).toContain('Hei!');
+    expect(payload.html).not.toContain('Hei null');
+  });
+
   it('kaster når Resend returnerer feil', async () => {
     sendMock.mockResolvedValueOnce({
       data: null,

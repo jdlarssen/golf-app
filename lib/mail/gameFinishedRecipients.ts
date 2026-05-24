@@ -109,6 +109,14 @@ export async function buildGameFinishedRecipients(
     return buildSoloStrokeplayRecipients(supabase, gameId, game, playerRows);
   }
 
+  // Texas scramble (issue #44): bygg per-spiller payload med teamRank +
+  // teamTotalNet + teamTotalGross + teamPartnerNames + totalTeams. Hver spiller
+  // får samme team-stats men sin egen partnerliste (medlemmer minus seg selv).
+  // Defensive fallback til best-ball-copy ved uventet result-shape.
+  if (game.game_mode === 'texas_scramble') {
+    return buildTexasScrambleRecipients(supabase, gameId, game, playerRows);
+  }
+
   // Best-ball-netto: ingen per-spiller-mode, returner kun userId+email+name.
   if (game.game_mode !== 'stableford') {
     return playerRows
@@ -542,6 +550,152 @@ async function buildSoloStrokeplayRecipients(
           totalPlayers,
         }
       : undefined;
+    recipients.push({
+      userId: row.user_id,
+      email,
+      name: row.users?.name ?? null,
+      mode,
+    });
+  }
+  return recipients;
+}
+
+/**
+ * Bygger mottakerlisten for Texas scramble (issue #44). Hver spiller på et
+ * lag får samme teamRank + teamTotalNet + teamTotalGross, men sin egen
+ * partner-liste (alle lag-medlemmer minus seg selv). Speilet par-stableford-
+ * pattern, men med slag-totaler i stedet for poeng og N partnernavn i stedet
+ * for én.
+ *
+ * Defensive fallbacks:
+ *  - hvis mode-router returnerer noe annet enn `texas_scramble`, faller vi
+ *    tilbake til nøytral best-ball-default copy.
+ *  - spillere uten email droppes.
+ *  - spillere uten lag-tilhørighet (defensiv — validator håndhever team_size
+ *    2|4 ved publish) får ingen mode-payload.
+ */
+async function buildTexasScrambleRecipients(
+  supabase: SupabaseClient,
+  gameId: string,
+  game: { course_id: string; game_mode: GameMode; mode_config: GameModeConfig },
+  playerRows: {
+    user_id: string;
+    team_number: number | null;
+    course_handicap: number | null;
+    users: { email: string | null; name: string | null } | null;
+  }[],
+): Promise<FinishedMailRecipient[]> {
+  const [scoresRes, holesRes] = await Promise.all([
+    supabase
+      .from('scores')
+      .select('user_id, hole_number, strokes')
+      .eq('game_id', gameId)
+      .returns<
+        { user_id: string; hole_number: number; strokes: number | null }[]
+      >(),
+    supabase
+      .from('course_holes')
+      .select('hole_number, par, stroke_index')
+      .eq('course_id', game.course_id)
+      .order('hole_number', { ascending: true })
+      .returns<{ hole_number: number; par: number; stroke_index: number }[]>(),
+  ]);
+  if (scoresRes.error || holesRes.error) {
+    console.error(
+      '[buildTexasScrambleRecipients] failed to fetch scores/holes',
+      scoresRes.error ?? holesRes.error,
+    );
+    return [];
+  }
+
+  const result = computeLeaderboard({
+    game: {
+      id: gameId,
+      game_mode: 'texas_scramble',
+      mode_config: game.mode_config,
+    },
+    players: playerRows.map((row) => ({
+      userId: row.user_id,
+      teamNumber: row.team_number,
+      flightNumber: null,
+      courseHandicap: row.course_handicap ?? 0,
+    })),
+    holes: (holesRes.data ?? []).map((h) => ({
+      number: h.hole_number,
+      par: h.par,
+      strokeIndex: h.stroke_index,
+    })),
+    scores: (scoresRes.data ?? []).map((s) => ({
+      userId: s.user_id,
+      holeNumber: s.hole_number,
+      gross: s.strokes,
+    })),
+  });
+
+  // Defensive fallback: mode-router gav noe uventet. Fall til best-ball-copy.
+  if (result.kind !== 'texas_scramble') {
+    return playerRows
+      .map((row) => ({
+        userId: row.user_id,
+        email: row.users?.email ?? null,
+        name: row.users?.name ?? null,
+      }))
+      .filter((r): r is FinishedMailRecipient => {
+        return typeof r.email === 'string' && r.email.length > 0;
+      });
+  }
+
+  const totalTeams = result.teams.length;
+
+  // Map userId → team-line. Hver spiller på et lag mapper til samme line.
+  type TeamContext = {
+    teamRank: number;
+    teamTotalNet: number;
+    teamTotalGross: number;
+    memberUserIds: string[];
+  };
+  const teamCtxByUserId = new Map<string, TeamContext>();
+  for (const team of result.teams) {
+    const memberUserIds = team.members.map((m) => m.userId);
+    const ctx: TeamContext = {
+      teamRank: team.rank,
+      teamTotalNet: team.totalNet,
+      teamTotalGross: team.totalGross,
+      memberUserIds,
+    };
+    for (const uid of memberUserIds) {
+      teamCtxByUserId.set(uid, ctx);
+    }
+  }
+
+  // Navn-map for partner-lookup.
+  const nameByUserId = new Map<string, string | null>();
+  for (const row of playerRows) {
+    nameByUserId.set(row.user_id, row.users?.name ?? null);
+  }
+
+  const recipients: FinishedMailRecipient[] = [];
+  for (const row of playerRows) {
+    const email = row.users?.email ?? null;
+    if (!email) continue;
+    const ctx = teamCtxByUserId.get(row.user_id);
+    let mode: GameFinishedNotificationMode | undefined;
+    if (ctx) {
+      // Partnerliste = alle på laget unntatt meg selv. Filtrer ut tomme
+      // navn slik at vi ikke produserer «Du spilte med » med dingleende komma.
+      const partnerNames = ctx.memberUserIds
+        .filter((id) => id !== row.user_id)
+        .map((id) => firstName(nameByUserId.get(id) ?? null))
+        .filter((name): name is string => typeof name === 'string' && name.length > 0);
+      mode = {
+        kind: 'texas_scramble',
+        teamRank: ctx.teamRank,
+        teamTotalNet: ctx.teamTotalNet,
+        teamTotalGross: ctx.teamTotalGross,
+        teamPartnerNames: partnerNames,
+        totalTeams,
+      };
+    }
     recipients.push({
       userId: row.user_id,
       email,

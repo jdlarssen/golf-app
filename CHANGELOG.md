@@ -14,6 +14,25 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Ny spillmodus for laget som vil spille sosialt — én ball per lag, alle slår fra beste slag. Skalerer fra 2-mannslag (par-format) til 4-mannslag (klassisk firma-cup). Lag-handicap regnes etter NGF-aggregatet (25 % av summert HCP for 2-mannslag, 10 % for 4-mannslag), justerbart per spill. Issue [#44](https://github.com/jdlarssen/golf-app/issues/44).
 
+### [1.16.3] - 2026-05-25
+
+> Når Texas scramble-spillet avsluttes får hver spiller mail med lagets plassering og lagets netto-total. Mailen navngir lagkameratene dine («Du spilte med Bjørn, Carla og Dagfinn») slik at du ser hvem du gikk runden med uten å åpne leaderboardet.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `lib/mail/gameFinishedNotification.ts` — `GameFinishedNotificationMode` har ny `kind: 'texas_scramble'`-gren med `teamRank`, `teamTotalNet`, `teamTotalGross`, `teamPartnerNames: string[]` og `totalTeams`. Body-builder rendrer «Laget endte på X. plass av N lag med Y slag netto (Z brutto). Du spilte med Bjørn og Carla. Solid plassering!» — celebration-cascade speilet par-stableford (1. → Gratulerer, 2./3. → Solid, 4+ → nøytral). Ny `formatPartnerList`-helper bygger norsk komma-separert oppstilling med «og» før siste navn («Bjørn, Carla og Dagfinn»). 5 nye snapshot-tester dekker 2-mannslag, 4-mannslag, 4.-plass uten celebration, tom partner-liste (defensiv), og null playerFirstName.
+- `lib/mail/gameFinishedRecipients.ts` — ny `buildTexasScrambleRecipients` bygger per-spiller mottakerliste. Hver spiller på et lag får samme `teamRank`, `teamTotalNet`, `teamTotalGross`, men sin egen `teamPartnerNames` (alle lag-medlemmer minus seg selv). Filtrer ut tomme/null-navn defensivt. 3 nye tester: 2-mannslag, 4-mannslag, og defensiv håndtering av spiller uten email.
+
+#### Notes
+- Texas scramble v1 er nå produksjons-klart. Hele 1.16.y-serien dekker: admin-UI (1.16.0), hull-page med ett kort per lag (1.16.1), leaderboard + podium (1.16.2), og mail (1.16.3).
+- Drive-distribusjons-regelen ikke håndhevet (honor-system per spec).
+- 3-mannslag ikke i v1 (15 % NGF-default kommer som egen issue hvis brukerne ber om det).
+- Test-suite vokst fra 903 → 911 (8 nye mail-tester: 5 i sendGameFinishedNotification, 3 i buildGameFinishedRecipients).
+
+</details>
+
 ### [1.16.2] - 2026-05-25
 
 > Når Texas-spillet er i gang ser alle lagene sin sanntids-plassering rangert på laveste lag-netto. Når spillet avsluttes feires vinner-laget på podiet med konfetti, og resten av rangeringen ligger sammenfoldet under.

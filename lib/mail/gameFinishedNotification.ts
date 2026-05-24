@@ -112,6 +112,24 @@ export type GameFinishedNotificationMode =
       totalGrossStrokes: number;
       /** Totalt antall spillere i turneringen — gir kontekst til plasseringen. */
       totalPlayers: number;
+    }
+  | {
+      kind: 'texas_scramble';
+      /** Lagets slutt-plassering (1, 2, 3, ...). */
+      teamRank: number;
+      /** Lagets totale netto-slag (sum av spilte hull). */
+      teamTotalNet: number;
+      /** Lagets totale gross-slag (sum av spilte hull). Vises som side-note. */
+      teamTotalGross: number;
+      /**
+       * Fornavnene til de andre lag-medlemmene (alle utenom mottakeren).
+       * Tom array hvis mottakeren var alene på laget (defensiv —
+       * validator håndhever team_size 2|4 ved publish). Brukes til
+       * «Du spilte med X, Y, Z»-linjen.
+       */
+      teamPartnerNames: string[];
+      /** Totalt antall lag i turneringen — gir kontekst til plasseringen. */
+      totalTeams: number;
     };
 
 export type GameFinishedNotificationParams = {
@@ -160,6 +178,9 @@ export async function sendGameFinishedNotification(
   } else if (mode?.kind === 'solo_strokeplay_netto') {
     bodyLine = formatSoloStrokeplayBodyLine(mode, gameName);
     bodyLineText = formatSoloStrokeplayBodyLineText(mode, gameName);
+  } else if (mode?.kind === 'texas_scramble') {
+    bodyLine = formatTexasScrambleBodyLine(mode, gameName);
+    bodyLineText = formatTexasScrambleBodyLineText(mode, gameName);
   } else {
     bodyLine = `Runden i <strong>${escapeHtml(gameName)}</strong> er ferdig, alle scorekort er levert og godkjent, og leaderboardet er åpent.`;
     bodyLineText = `Runden i ${gameName} er ferdig, alle scorekort er levert og godkjent, og leaderboardet er åpent.`;
@@ -481,6 +502,85 @@ function formatSoloStrokeplayBodyLineText(
     `Du endte på ${placeText}${ofTotal} med ${totalNetStrokes} slag netto ` +
     `(${totalGrossStrokes} brutto).${celebration}`
   );
+}
+
+/**
+ * Bygger Texas-scramble-hovedlinjen (HTML-versjon). Speilar par-stableford-
+ * grenen strukturelt — adresserer LAGET med plassering og total-tall, ikke
+ * den enkelte spilleren — men byttet poeng-spoiler for netto/brutto-slag
+ * (samme mønster som solo-strokeplay).
+ *
+ * Andre setning navngir lag-medlemmene (utenom mottakeren) slik at
+ * mottakeren raskt ser hvem hen spilte med. Fungerer både for 2-mannslag
+ * («Du spilte med Bjørn») og 4-mannslag («Du spilte med Bjørn, Carla,
+ * Dagfinn»). Hvis ingen partnernavn er tilgjengelige dropper vi
+ * partner-setningen helt.
+ *
+ * Eksempel-output:
+ *   «Runden i Firma-cup er ferdig. Laget endte på 2. plass av 4 lag med
+ *    72 slag netto (78 brutto). Du spilte med Bjørn, Carla, Dagfinn.
+ *    Solid plassering!»
+ */
+function formatTexasScrambleBodyLine(
+  mode: Extract<GameFinishedNotificationMode, { kind: 'texas_scramble' }>,
+  gameName: string,
+): string {
+  const { teamRank, teamTotalNet, teamTotalGross, teamPartnerNames, totalTeams } =
+    mode;
+  const placeText = `${teamRank}. plass`;
+  const ofTotal = totalTeams > 0 ? ` av ${totalTeams} lag` : '';
+  const celebration = celebrationFor(teamRank);
+
+  const partnerSentence =
+    teamPartnerNames.length > 0
+      ? ` Du spilte med <strong>${escapeHtml(formatPartnerList(teamPartnerNames))}</strong>.`
+      : '';
+
+  return (
+    `Runden i <strong>${escapeHtml(gameName)}</strong> er ferdig. ` +
+    `Laget endte på <strong>${escapeHtml(placeText)}${escapeHtml(ofTotal)}</strong> med ` +
+    `<strong>${teamTotalNet} slag netto</strong> ` +
+    `(${teamTotalGross} brutto).${escapeHtml(celebration)}` +
+    partnerSentence
+  );
+}
+
+function formatTexasScrambleBodyLineText(
+  mode: Extract<GameFinishedNotificationMode, { kind: 'texas_scramble' }>,
+  gameName: string,
+): string {
+  const { teamRank, teamTotalNet, teamTotalGross, teamPartnerNames, totalTeams } =
+    mode;
+  const placeText = `${teamRank}. plass`;
+  const ofTotal = totalTeams > 0 ? ` av ${totalTeams} lag` : '';
+  const celebration = celebrationFor(teamRank);
+
+  const partnerSentence =
+    teamPartnerNames.length > 0
+      ? ` Du spilte med ${formatPartnerList(teamPartnerNames)}.`
+      : '';
+
+  return (
+    `Runden i ${gameName} er ferdig. ` +
+    `Laget endte på ${placeText}${ofTotal} med ${teamTotalNet} slag netto ` +
+    `(${teamTotalGross} brutto).${celebration}` +
+    partnerSentence
+  );
+}
+
+/**
+ * Norsk komma-separert oppstilling med «og» før siste element. Tom array
+ * returnerer tom streng; én elements-array returnerer bare det navnet.
+ *   ['Bjørn']                        → 'Bjørn'
+ *   ['Bjørn', 'Carla']               → 'Bjørn og Carla'
+ *   ['Bjørn', 'Carla', 'Dagfinn']    → 'Bjørn, Carla og Dagfinn'
+ */
+function formatPartnerList(names: string[]): string {
+  if (names.length === 0) return '';
+  if (names.length === 1) return names[0];
+  const last = names[names.length - 1];
+  const rest = names.slice(0, -1).join(', ');
+  return `${rest} og ${last}`;
 }
 
 function escapeHtml(s: string): string {
