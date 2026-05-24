@@ -1,0 +1,114 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { getBrowserClient } from '@/lib/supabase/client';
+import { subscribeRealtimeChannel } from '@/lib/sync/realtimeChannel';
+
+/**
+ * Holder en lokal teller for uleste varsler for current user.
+ *
+ * Initial verdi hentes via `count: 'exact', head: true`-Supabase-query (RLS
+ * begrenser til egne rader, så kallet er trivielt billig). Tellerne deretter
+ * mutéres lokalt fra realtime-events på `notifications`-tabellen — INSERT
+ * av ulest rad inkrementerer, UPDATE som flipper `read_at` justerer i begge
+ * retninger. Vi unngår dermed å re-fetche hver gang badgen skal oppdateres.
+ *
+ * Edge-cases håndtert:
+ *  - `userId === null` (ikke innlogget) → returnerer count=0, loading=false
+ *    uten å starte noen subscription.
+ *  - INSERT av allerede-lest rad (sjelden, men kan skje hvis backfill inserter
+ *    historiske rader med read_at satt) → inkrementerer ikke.
+ *  - UPDATE der read_at endrer seg fra null → ikke-null dekrementerer; motsatt
+ *    inkrementerer (defensiv mot framtidig «marker som ulest»-flyt).
+ *  - Math.max(0, ...) på dekrement så count aldri går negativ hvis en
+ *    UPDATE-event ankommer før initial fetch har fullført.
+ *  - Cleanup av realtime-kanalen ved unmount eller userId-bytte.
+ *
+ * Realtime krever eksplisitt `setAuth(jwt)` — `subscribeRealtimeChannel`
+ * gjør det automatisk fra session, så hooken trenger ikke å bekymre seg.
+ */
+export function useUnreadNotificationsCount(userId: string | null): {
+  count: number;
+  loading: boolean;
+} {
+  const [count, setCount] = useState(0);
+  const [loading, setLoading] = useState<boolean>(userId != null);
+
+  useEffect(() => {
+    if (!userId) {
+      // Reset hvis vi går fra logged-in → logged-out i samme hook-instans.
+      setCount(0);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    const supabase = getBrowserClient();
+    let mounted = true;
+
+    // Initial fetch — RLS gir oss kun egne rader, så vi trenger ingen
+    // ytterligere user_id-filter strengt tatt, men setter den eksplisitt
+    // for å bruke partial-indexen `notifications_user_unread_created`.
+    void supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .is('read_at', null)
+      .then(({ count: initial }: { count: number | null }) => {
+        if (!mounted) return;
+        setCount(initial ?? 0);
+        setLoading(false);
+      });
+
+    // Realtime sub for INSERT + UPDATE. DELETE-events ignoreres bevisst —
+    // varsler slettes kun via cascade når en user slettes, og brukeren ser
+    // uansett ikke sin egen bjelle etter sletting.
+    const cleanup = subscribeRealtimeChannel(
+      `notifications:${userId}`,
+      (channel) =>
+        channel
+          .on(
+            'postgres_changes' as never,
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'notifications',
+              filter: `user_id=eq.${userId}`,
+            } as never,
+            ((payload: { new: { read_at: string | null } }) => {
+              if (payload.new.read_at == null) {
+                setCount((c) => c + 1);
+              }
+            }) as never,
+          )
+          .on(
+            'postgres_changes' as never,
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'notifications',
+              filter: `user_id=eq.${userId}`,
+            } as never,
+            ((payload: {
+              old: { read_at: string | null };
+              new: { read_at: string | null };
+            }) => {
+              const wasUnread = payload.old.read_at == null;
+              const isUnread = payload.new.read_at == null;
+              if (wasUnread && !isUnread) {
+                setCount((c) => Math.max(0, c - 1));
+              } else if (!wasUnread && isUnread) {
+                setCount((c) => c + 1);
+              }
+            }) as never,
+          ),
+    );
+
+    return () => {
+      mounted = false;
+      cleanup();
+    };
+  }, [userId]);
+
+  return { count, loading };
+}
