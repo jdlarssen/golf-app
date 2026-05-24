@@ -724,7 +724,7 @@ function TeamAwards({
           rule={ACHIEVEMENT_RULES.turkey_coord}
           main={
             <>
-              Turkey lag-koord{range ? ` (${range})` : ''}: <Pts n={pts} />
+              Turkey lag-bonus{range ? ` (${range})` : ''}: <Pts n={pts} />
             </>
           }
         />
@@ -761,7 +761,7 @@ function TeamAwards({
           rule={ACHIEVEMENT_RULES.solid_coord}
           main={
             <>
-              Solid lag-koord{range ? ` (${range})` : ''}: <Pts n={pts} />
+              Solid lag-bonus{range ? ` (${range})` : ''}: <Pts n={pts} />
             </>
           }
         />
@@ -980,7 +980,7 @@ const PANEL_GROUPS: readonly PanelGroup[] = [
   },
   {
     id: 'skill',
-    title: 'Skill og rarity',
+    title: 'Ferdighet og sjeldenhet',
     rows: [
       {
         key: 'best_brutto_18',
@@ -1019,7 +1019,7 @@ const PANEL_GROUPS: readonly PanelGroup[] = [
   },
   {
     id: 'moderate',
-    title: 'Moderate',
+    title: 'Moderat',
     rows: [
       {
         key: 'best_brutto_f9',
@@ -1082,22 +1082,22 @@ const PANEL_GROUPS: readonly PanelGroup[] = [
   },
   {
     id: 'achievements',
-    title: 'Achievements',
+    title: 'Bragder',
     hint: 'kan stables, kan utløses flere ganger samme runde',
     rows: [
       {
         key: 'turkey',
         label: 'Turkey',
         ids: ['turkey'],
-        pointsPerId: ['4p per spiller + 4p × N lag-koord-bonus'],
-        rule: '3 netto-birdier på rad. Lag-koord utløses om hele laget klarer det på samme 3 hull.',
+        pointsPerId: ['4p per spiller + 4p × N lag-bonus'],
+        rule: '3 netto-birdier på rad. Lag-bonus utløses om hele laget klarer det på samme 3 hull.',
       },
       {
         key: 'solid',
         label: 'Solid',
         ids: ['solid'],
-        pointsPerId: ['2p per spiller + 2p × N lag-koord-bonus'],
-        rule: '5 netto-pars+ på rad. Lag-koord utløses om hele laget klarer det på samme 5 hull.',
+        pointsPerId: ['2p per spiller + 2p × N lag-bonus'],
+        rule: '5 netto-pars+ på rad. Lag-bonus utløses om hele laget klarer det på samme 5 hull.',
       },
       {
         key: 'snowman',

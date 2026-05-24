@@ -12,7 +12,26 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ## 1.14.y — Stableford-runde-polish
 
-Polish etter første reelle stableford-runde med kompisene. Du kan nå føre slag for hele flighten i solo stableford, fortsette runden fra første tomme hull, og se sideturneringen på stableford-leaderbordet etter avsluttet spill. Hele appens norske copy er også strammet for AI-tells og engelske kalker — først via humanizer (1.14.3), så et no-nb-pass mot code-switched English som var igjen (1.14.4).
+Polish etter første reelle stableford-runde med kompisene. Du kan nå føre slag for hele flighten i solo stableford, fortsette runden fra første tomme hull, og se sideturneringen på stableford-leaderbordet etter avsluttet spill. Hele appens norske copy er også strammet for AI-tells og engelske kalker — først via humanizer (1.14.3), så et no-nb-pass mot code-switched English som var igjen (1.14.4), og til slutt en oppfølger som fanget «Stackbare» + «Lag-koord»-forkortelsen (1.14.5).
+
+### [1.14.5] - 2026-05-24
+
+> To anglisismer i sideturnerings-flyten ryddet: «Stackbare bonuser» heter nå «Bonuser som stables», og den Tørny-interne forkortelsen «Lag-koord» heter «Lag-bonus» på alle bruker-rettede flater. Tre gruppe-titler i «Slik gis poengene»-panelet som var glemt i forrige pass («Skill og rarity», «Moderate», «Achievements») følger nå samme oversettelse som admin-pickeren.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+- `components/admin/SideCategoriesPicker.tsx` — «Stackbare bonuser — kan utløses flere ganger samme runde.» → «Bonuser som stables — kan utløses flere ganger samme runde.» Pointslabel for Turkey/Solid: «4p / spiller + lag-koord» / «2p / spiller + lag-koord» → «… + lag-bonus».
+- `app/games/[id]/leaderboard/SideTournamentView.tsx` — alle 8 bruker-rettede forekomster av «Lag-koord»/«lag-koord» byttet til «Lag-bonus»/«lag-bonus»: chip-labels for Turkey/Solid lag-koord, rule-tekster («Lag-koord utløses om hele laget …»), og pointsPerId-strenger («4p × N lag-koord-bonus» → «4p × N lag-bonus»).
+- `app/games/[id]/leaderboard/SideTournamentView.tsx` — tre PANEL_GROUPS-titler som ble glemt i 1.14.4-passet: «Skill og rarity» → «Ferdighet og sjeldenhet», «Moderate» → «Moderat», «Achievements» → «Bragder». GROUP_LABELS-en (rendret for fane-overskriftene) ble fikset i 1.14.4, men PANEL_GROUPS (rendret i «Slik gis poengene»-panelet) hadde duplikatene som humanizer-/no-nb-passet ikke fanget.
+
+#### Notes
+- Bevisst beholdt: kode-kommentarer og test-describe-blocks bruker fortsatt «lag-koord» som domain-jargon (per CLAUDE.md `### Språk` — kode/kommentarer/tester er engelsk-mixed, ikke bruker-synlig).
+- 107 tester på tvers av endrede områder grønne — ingen UI-snapshot-assertions brutt.
+- Lærdom: en grundigere no-nb-audit bør lete i parallelle data-strukturer i samme fil (GROUP_LABELS + PANEL_GROUPS hadde nesten-duplikater hvor bare den ene ble fikset). Lagt til som hint i CLAUDE.md «Språk-kvalitet»-seksjonen.
+
+</details>
 
 ### [1.14.4] - 2026-05-24
 

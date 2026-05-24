@@ -168,19 +168,19 @@ const GROUPS: readonly Group[] = [
   },
   {
     title: 'Bragder',
-    hint: 'Stackbare bonuser — kan utløses flere ganger samme runde.',
+    hint: 'Bonuser som stables — kan utløses flere ganger samme runde.',
     rows: [
       {
         key: 'turkey',
         label: 'Turkey (3 birdier på rad)',
         ids: ['turkey'],
-        pointsLabel: '4p / spiller + lag-koord',
+        pointsLabel: '4p / spiller + lag-bonus',
       },
       {
         key: 'solid',
         label: 'Solid (5 par eller bedre på rad)',
         ids: ['solid'],
-        pointsLabel: '2p / spiller + lag-koord',
+        pointsLabel: '2p / spiller + lag-bonus',
       },
       {
         key: 'snowman',
