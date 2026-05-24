@@ -105,7 +105,7 @@ Etter `v1.0.0` (2026-05-13) går alt arbeid via PR — **ikke direkte push til `
      --title "<conventional-commit-style tittel>" \
      --body "Closes #N
 
-   <tagline fra CHANGELOG-entry>"
+   <tagline fra CHANGELOG-oppføring>"
    ```
 4. **Vercel preview-deploy:** Vercel deployer PR-branchen automatisk til en preview-URL. Spot-sjekk i Safari hvis endringen er visuelt synlig.
 5. **Merge:** `gh pr merge --rebase --delete-branch` — rebase holder linear `main`-historie og bevarer atomic-commit-disiplinen. **Squash brukes ikke** (mister granulær audit-trail per commit).
@@ -138,14 +138,14 @@ Ingen start-kommentar, ingen self-assign, ingen `in-progress`-label, ingen `gh i
 
 ### Versjonering / CHANGELOG
 
-**Regel:** Hver commit som endrer bruker-synlig oppførsel MÅ bumpe `package.json` versjonen og legge til entry i `CHANGELOG.md` — i samme commit som selve endringen. Footer i appen (`AppVersionFooter.tsx`) henter automatisk versjonen via `next.config.ts` → `NEXT_PUBLIC_APP_VERSION`, så bumpen blir synlig i prod ved neste deploy.
+**Regel:** Hver commit som endrer bruker-synlig oppførsel MÅ bumpe `package.json` versjonen og legge til oppføring i `CHANGELOG.md` — i samme commit som selve endringen. Footer i appen (`AppVersionFooter.tsx`) henter automatisk versjonen via `next.config.ts` → `NEXT_PUBLIC_APP_VERSION`, så bumpen blir synlig i prod ved neste deploy.
 
 **Hvilken type bump:**
 - **PATCH (`vX.Y.Z+1`)** — bug-fix, copy-justering, perf-forbedring, design-polish. Bruker kan gjøre nøyaktig det samme som før, bare bedre.
 - **MINOR (`vX.Y+1.0`)** — ny bruker-synlig feature shipped til prod (ny side, ny knapp, ny spillmodus, ny innstilling).
 - **MAJOR (`vX+1.0.0`)** — bryter datamodell eller fundamental UX, krever bruker-kommunikasjon. Pre-1.0.0 (`0.x.y`) brukes som alpha — vi er ikke stabil ennå, så minor-bumps kan inneholde mindre brytende endringer.
 
-**Skip bump for:** rene docs-commits (`docs(...)`), refaktorering uten oppførselsendring (`refactor(...)`), test-only-commits, og `chore(...)` som ikke påvirker brukeren. CHANGELOG-entry kan også skippes da.
+**Skip bump for:** rene docs-commits (`docs(...)`), refaktorering uten oppførselsendring (`refactor(...)`), test-only-commits, og `chore(...)` som ikke påvirker brukeren. CHANGELOG-oppføring kan også skippes da.
 
 **Hvordan bumpe:**
 - `npm version patch --no-git-tag-version` (eller `minor`/`major`) — oppdaterer `package.json` + `package-lock.json` uten å lage separat tag/commit
@@ -154,17 +154,19 @@ Ingen start-kommentar, ingen self-assign, ingen `in-progress`-label, ingen `gh i
 
 **CHANGELOG-format:** Tre-lags struktur i `CHANGELOG.md`, designet for å være lesbar for både utvikler og produkteier (Jørgen er stakeholder, ikke utvikler):
 
-1. **Per-minor-serie tema-heading** (`## 0.X.y — [navn på temaet]`) med 1–2 setningers sammendrag av hva som ble gjort i den serien. Kun den nyeste minor-serien står åpen; alle eldre minor-serier wrappes i et `<details>`-element (med `<summary><strong>0.X.y — [tema] (N entries) — klikk for å vise</strong></summary>`) slik at fila kan scrolles raskt.
-2. **Per-versjon entry** (`### [X.Y.Z] - YYYY-MM-DD`) ledes med en stakeholder-tagline på vanlig norsk, satt som blockquote (`> …` — ikke bold, fordi lange bold-avsnitt er tunge å lese). Tagline-en forklarer hva endringen betyr for brukeren, ikke hva som ble endret i koden.
-3. **Teknisk historikk** i et `<details><summary>Teknisk</summary>...</details>`-element under tagline-en, med [Keep a Changelog](https://keepachangelog.com/no/)-underseksjoner (`#### Added`, `#### Changed`, `#### Fixed`, `#### Removed`) og prosa-bullet points. (For entries som ligger inne i en allerede-collapset minor-serie kan du droppe den indre `<details>`-en — den ytre tar seg av kollapsen.)
+1. **Per-minor-serie tema-heading** (`## 0.X.y — [navn på temaet]`) med 1–2 setningers sammendrag av hva som ble gjort i den serien. Kun den nyeste minor-serien står åpen; alle eldre minor-serier wrappes i et `<details>`-element (med `<summary><strong>0.X.y — [tema] (N oppføringer) — klikk for å vise</strong></summary>`) slik at fila kan scrolles raskt.
+2. **Per-versjon oppføring** (`### [X.Y.Z] - YYYY-MM-DD`) ledes med en stakeholder-tagline på vanlig norsk, satt som blockquote (`> …` — ikke bold, fordi lange bold-avsnitt er tunge å lese). Tagline-en forklarer hva endringen betyr for brukeren, ikke hva som ble endret i koden.
+3. **Teknisk historikk** i et `<details><summary>Teknisk</summary>...</details>`-element under tagline-en, med [Keep a Changelog](https://keepachangelog.com/no/)-underseksjoner (`#### Added`, `#### Changed`, `#### Fixed`, `#### Removed`) og prosa-bullet points. (For oppføringer som ligger inne i en allerede-collapset minor-serie kan du droppe den indre `<details>`-en — den ytre tar seg av kollapsen.)
 
-Nyeste øverst, norsk på alt brukerrettet. Når du legger til en ny entry: skriv tagline-en *først*. Hvis du sliter med å forklare hva som endret seg på Jørgen-språk («Du kan nå …», «Forhindrer at …», «Hvis X skjer, sier appen nå …»), er det et tegn på at endringen kanskje ikke fortjener egen entry — sjekk skip-listen.
+Nyeste øverst, norsk på alt brukerrettet. Når du legger til en ny oppføring: skriv tagline-en *først*. Hvis du sliter med å forklare hva som endret seg på Jørgen-språk («Du kan nå …», «Forhindrer at …», «Hvis X skjer, sier appen nå …»), er det et tegn på at endringen kanskje ikke fortjener egen oppføring — sjekk skip-listen.
+
+**Språk-kvalitet på brukerrettede deler:** Når du skriver en ny tagline (`> …`-blockquote) eller serie-summary, kjør `humanizer:humanizer`-skillet (fra `floka-marketplace`) på teksten først — særlig norsk-seksjonen om anglisismer (`entry/features/release/by default`), særskriving, em-dash-kjeder, og «X-spillet»-redundans (`slagspill-spillet` → `slagspillet`, `matchplay-spillet` → `matchen`). Tekniske `<details>`-seksjoner er utvikler-prosa og trenger ikke samme stramming. Bakgrunn: [PR #170](https://github.com/jdlarssen/golf-app/pull/170) (2026-05-24) ryddet 39 historiske AI-tells; målet er å holde nye oppføringer på samme nivå.
 
 Når en ny minor-serie åpnes (f.eks. `1.8.0` → `1.9.0`), pakk den forrige (nå nest-nyeste) serien inn i `<details>` med samme `<summary><strong>…</strong></summary>`-mønster som de eldre. Bare den helt ferskeste minor-serien skal stå åpen.
 
 **Håndheving via git commit-msg-hook (`.githooks/commit-msg`):** regelen er ikke valgfri — hooken blokkerer alle `feat(...)`/`fix(...)`/`perf(...)`-commits som ikke samtidig stager `package.json` (med endret version-felt) og `CHANGELOG.md`. Hooken er aktivert automatisk på `npm install` (via `postinstall` som setter `core.hooksPath=.githooks`). Hvis hooken blokkerer:
 
-1. Hvis commiten faktisk er bruker-synlig: kjør `npm version patch --no-git-tag-version` (eller `minor`/`major`), legg til CHANGELOG-entry, stage alle tre filer, og commit på nytt med samme melding.
+1. Hvis commiten faktisk er bruker-synlig: kjør `npm version patch --no-git-tag-version` (eller `minor`/`major`), legg til CHANGELOG-oppføring, stage alle tre filer, og commit på nytt med samme melding.
 2. Hvis commiten IKKE er bruker-synlig: bytt prefix til `docs(...)`, `refactor(...)`, `test(...)`, `chore(...)`, `style(...)`, `ci(...)` eller `build(...)`.
 3. Aldri bruk `--no-verify` for å omgå hooken — det bryter disiplinen og gjør at footeren henger etter prod-state.
 
