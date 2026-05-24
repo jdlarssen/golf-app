@@ -14,20 +14,6 @@ export type MarkReadOpts = {
 };
 
 /**
- * Pure helper for filter-konstruksjon. Eksportert for testing — den faktiske
- * Supabase-query-en bygges i markNotificationsRead som ikke unit-testes
- * (krever live DB / mocking-tunge integrasjons-tester).
- */
-export function buildMarkReadQuery(opts: MarkReadOpts) {
-  return {
-    userId: opts.userId,
-    notificationId: opts.notificationId ?? null,
-    kind: opts.kind ?? null,
-    entityId: opts.entityId ?? null,
-  };
-}
-
-/**
  * Markerer matching uleste varsler som lest for `userId`. Best-effort:
  * feiler stille på error, blokkerer aldri parent-page-render.
  *
