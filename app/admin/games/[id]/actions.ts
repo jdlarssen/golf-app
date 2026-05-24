@@ -20,6 +20,7 @@ import { firstName } from '@/lib/firstName';
 import { logAdminEvent } from '@/lib/admin/auditLog';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
+import { notify } from '@/lib/notifications/notify';
 
 async function requireAdmin() {
   const supabase = await getServerClient();
@@ -202,6 +203,32 @@ export async function adminApproveScorecard(
     targetId: gameId,
     payload: { gameId, playerUserId },
   });
+
+  // Best-effort in-app varsel til submitter — admin-godkjenning teller på
+  // samme måte som peer-godkjenning fra spillerens perspektiv. Vi henter
+  // game.name og bruker actorName fra requireAdmin() (allerede strippet).
+  try {
+    const { data: gameRow } = await supabase
+      .from('games')
+      .select('name')
+      .eq('id', gameId)
+      .single<{ name: string }>();
+    const gameName = gameRow?.name ?? '(ukjent spill)';
+    await notify({
+      userId: playerUserId,
+      kind: 'scorecard_approved',
+      payload: {
+        game_id: gameId,
+        game_name: gameName,
+        approver_name: actorName,
+      },
+    });
+  } catch (err) {
+    console.error(
+      '[adminApproveScorecard] scorecard_approved notify failed',
+      err,
+    );
+  }
 
   revalidateTag(`game-${gameId}`, 'max');
   redirect(`${detailPath}?status=admin_approved`);

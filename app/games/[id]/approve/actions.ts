@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
+import { notify } from '@/lib/notifications/notify';
 
 type AuthorizationResult = {
   ok: boolean;
@@ -98,6 +99,39 @@ export async function approveScorecard(gameId: string, playerUserId: string) {
 
   if (error) {
     redirect(`/games/${gameId}/approve?error=db`);
+  }
+
+  // Best-effort in-app varsel til submitter om at scorekortet er godkjent.
+  // Vi henter game.name + approver.name parallelt og catch-er feil — notify()
+  // skal aldri blokkere parent-action (per Phase 1-implementasjonen feiler den
+  // stille på DB-error, men nettverks-feil under fetch kan kaste).
+  try {
+    const [gameRes, approverRes] = await Promise.all([
+      supabase
+        .from('games')
+        .select('name')
+        .eq('id', gameId)
+        .single<{ name: string }>(),
+      supabase
+        .from('users')
+        .select('name')
+        .eq('id', user.id)
+        .maybeSingle<{ name: string | null }>(),
+    ]);
+    const gameName = gameRes.data?.name ?? '(ukjent spill)';
+    const approverName =
+      approverRes.data?.name?.trim() || '(ukjent godkjenner)';
+    await notify({
+      userId: playerUserId,
+      kind: 'scorecard_approved',
+      payload: {
+        game_id: gameId,
+        game_name: gameName,
+        approver_name: approverName,
+      },
+    });
+  } catch (err) {
+    console.error('[approveScorecard] scorecard_approved notify failed', err);
   }
 
   revalidateTag(`game-${gameId}`, 'max');
