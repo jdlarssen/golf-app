@@ -1,38 +1,69 @@
-# Tørny — golf-turneringsapp
+# Tørny
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+> Fyr opp golfturneringen på et par minutter.
 
-## Getting Started
+Mobil-først PWA for å arrangere golfturneringer. Skalerer fra fire kompiser på lørdagsrunden til klubb-skala med 150 deltakere. Du oppretter spillet, inviterer gjengen og taster slag mens dere går runden. Resten tar appen seg av: regning, leaderboard, sideturneringer og varsling.
 
-First, run the development server:
+Prod: [tornygolf.no](https://tornygolf.no) (også `tørny.no`).
+
+## Hva du får
+
+- Best ball netto med riktig WHS-handicap per hull
+- Sideturneringer for longest drive og closest to pin. Vinnerne plukkes når spillet avsluttes
+- Leaderboard som oppdateres live mens flighten din taster
+- Offline-først scoring. Taster du i en dødsone på banen, syncer det når mobilen får signal igjen
+- Innboks med varsler om invitasjoner, peer-godkjenninger, leverte scorekort og spill som er avsluttet. Mail kommer kun når du ikke allerede er i appen
+- Installerbar på hjem-skjermen. Åpner som en vanlig app, uten nettleserlinjer på toppen
+- GDPR-self-service. Eksporter eller slett dataene dine fra profilsiden uten å maile noen
+
+## Stack
+
+| | |
+|---|---|
+| Rammeverk | Next.js 16 (App Router) + React 19 + TypeScript |
+| Stil | Tailwind v4, forest-and-champagne-palett |
+| Database og auth | Supabase (Postgres + Auth + Realtime, EU-region) |
+| Offline-sync | Dexie (IndexedDB) med last-write-wins-RPC |
+| Mail | Resend via verifisert `tornygolf.no` |
+| Test | Vitest + Testing Library + Playwright |
+| Drift | Vercel, auto-deploy på push til `main` |
+
+Auth bruker OTP-kode på mail. Magic-link gikk i søpla fordi iOS PWA-handoff og mail-scannere brøt flyten på hver sin måte samtidig.
+
+## Kjøre lokalt
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Åpne [http://localhost:3000](http://localhost:3000). Krever `.env.local` med Supabase- og Resend-nøkler (ligger ikke i repoet, spør Jørgen).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm test          # vitest (840+ unit + integration)
+npm run e2e       # playwright
+npm run lint
+npm run build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Hvordan det henger sammen
 
-## Learn More
+Scoring-logikken ([`lib/scoring/`](lib/scoring/)) er ren TypeScript uten Supabase-avhengighet. Den har egne tester og egen TDD-disiplin. Rør den ikke uten å skrive ny test først. Det er her WHS-formelen, slag-allokeringen, best-ball-aggregeringen og 5-tiers-tiebreakeren bor.
 
-To learn more about Next.js, take a look at the following resources:
+Offline-sync ([`lib/sync/`](lib/sync/)) skriver til Dexie først og tømmer køen mot Supabase når mobilen får signal igjen. Last-write-wins via `client_updated_at`. Dexie-databasen heter `'golf-app'` av historiske grunner. Ikke endre navnet. Det invaliderer lokale data hos alle eksisterende brukere.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+RLS håndheves strengt i Postgres. Du ser dine egne scores, samme-flight-scores under aktivt spill, og alle scores etter at admin har avsluttet spillet. Realtime krever eksplisitt `supabase.realtime.setAuth()`. Auto-propagering virker ikke for WebSocket-kanalen. Det er en kjent rar oppførsel.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Migrasjoner ligger i [`supabase/migrations/`](supabase/migrations/) (20+ filer, kronologisk).
 
-## Deploy on Vercel
+## Hvor du finner resten
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- [CLAUDE.md](CLAUDE.md) er hovedoppslagsverket. Arbeidsmodell, konvensjoner, brand-stemme, nøkkelfiler.
+- [AGENTS.md](AGENTS.md) er kort, men viktig. Next.js 16 har brytende endringer mot det du tror du vet.
+- [CHANGELOG.md](CHANGELOG.md) er versjonshistorikken, med taglines på vanlig norsk og teknisk prosa kollapset under.
+- [GitHub Issues](https://github.com/jdlarssen/golf-app/issues) er hele arbeidskøen. Tagget etter type, område og scope.
+- [`docs/`](docs/) har lanseringssjekkliste, mail-maler og opprinnelig design.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Versjonering
+
+Semver. Hver bruker-synlig endring bumper `package.json` og legger til CHANGELOG-oppføring i samme commit. Disiplinen er ikke valgfri. `.githooks/commit-msg` blokkerer alle `feat`/`fix`/`perf`-commits som ikke stager begge filene. Footer-versjonen i prod hentes fra `package.json` ved build, så bumpen blir synlig så snart Vercel har deployet.
