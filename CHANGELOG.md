@@ -14,6 +14,25 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Klassisk slagspill (solo strokeplay netto) er nå tilgjengelig. Velg Slagspill som modus, meld på spillerne, og lavest netto-total over runden vinner. Hver spiller fører sitt eget kort — perfekt for klubbmesterskap og kompis-runder uten lag-fokus.
 
+### [1.13.1] - 2026-05-24
+
+> Når slagspill-spillet er i gang ser spillerne et leaderboard rangert på laveste netto-total. Avsluttet spill viser podium for topp 3 — 1.-plassen feires med konfetti.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `app/games/[id]/leaderboard/SoloStrokeplayView.tsx` (+ test) — live/post-finished leaderboard for solo strokeplay netto. Flat liste sortert på `totalNetStrokes` (lavest øverst, klassisk slagspill-format), speilar `SoloStablefordView` 1:1 med disse forskjellene: hoved-tallet er «slag» (ikke «poeng»), sekundær-linje viser brutto-total ved siden av hull-spilt («N brutto · N hull spilt»), sub-tittel «Slagspill · Sortert på laveste netto». Topp 3 får Medallion (gull/sølv/bronse), 4+ får rank-disc. Champagne-tinted Card kun for vinneren. 12 tester dekker rad-rendring, sortering, brutto-display, «slag»-label (ikke «poeng»), Medallion-vs-rank-disc, tabular-nums på netto-tallet, formatRevealName, tom liste, ukjent spiller-fallback, sub-tittel-tekst og tied-spillere.
+- `app/games/[id]/leaderboard/SoloStrokeplayPodium.tsx` (+ test) — finished-state-view ved `game.status === 'finished'`. Speilar `SoloStablefordPodium` med samme 3-trinns podium-layout (1. midten, 2. venstre, 3. høyre), champagne accent for vinneren, sølv/bronse for 2-3, og rest-listen i collapsed `<details>`-element for rank 4+ med både netto og brutto-totaler. Distinkt sessionStorage-key `torny-solo-strokeplay-podium-confetti-seen-${gameId}` — verifisert via dedikert test at den ikke kolliderer med stableford-key-en. 19 tester dekker podium-trinn-rendring, slag-label (ikke poeng), hull-chip, konfetti-burst, konfetti-key-isolasjon, suppression når sessionStorage allerede har sett-flagg, champagne accent, collapsed details-rest med netto + brutto, ≤3-spillere-skip, 2- og 1-spiller-edge-cases, tom liste, formatRevealName-bruk, ukjent-fallback, sub-tittel og lavest-først-rangering.
+
+#### Changed
+- `app/games/[id]/leaderboard/page.tsx` — ny `renderSoloStrokeplay`-helper og branch i `LeaderboardBody`. Følger samme mønster som `renderStableford` og `renderMatchplay`: bygger `ScoringContext` fra DB-radene, kjører `computeModeResult`, narrower på `kind === 'solo_strokeplay_netto'` og velger view per `game.status` (finished → podium, ellers live-view). `teamNumber` sendes som null siden solo-strokeplay-validatoren håndhever solo-modus. State #3/#3.5-«venterom» bevisst skipped (samme RLS-pattern som stableford og matchplay — alle spillere ser hverandre umiddelbart).
+
+#### Notes
+- Scoring-motor + validator landet i Phase 1 (PR #159), admin-UI-flyten i Phase 2 (PR #160). Denne fasen lukker leaderboard-gapet slik at slagspill-spill rendres riktig fra start til finished-podium. Mail-template + admin/games-detalj-polish kommer i Phase 4 av epic #46.
+
+</details>
+
 ### [1.13.0] - 2026-05-24
 
 > Du kan nå opprette slagspill-turneringer — klassisk golf-format der hver spiller fører eget kort og laveste netto-total vinner. Velg Slagspill som modus og meld på spillerne.

@@ -39,6 +39,11 @@ import { SoloStablefordPodium } from './SoloStablefordPodium';
 import { TeamStablefordView } from './TeamStablefordView';
 import { TeamStablefordPodium } from './TeamStablefordPodium';
 import {
+  SoloStrokeplayView,
+  type SoloStrokeplayPlayerInfo,
+} from './SoloStrokeplayView';
+import { SoloStrokeplayPodium } from './SoloStrokeplayPodium';
+import {
   MatchplayMatchView,
   type MatchplayPlayerInfo,
 } from './MatchplayMatchView';
@@ -279,6 +284,22 @@ async function LeaderboardBody({
   // umiddelbart (RLS slipper begge sider gjennom under aktivt spill).
   if (game.game_mode === 'singles_matchplay') {
     return renderMatchplay({
+      gameId,
+      game,
+      gwp,
+      rawHolesRows: rawHolesRes.data ?? [],
+      rawScoresRows: rawScoresRes.data ?? [],
+      backHref,
+    });
+  }
+
+  // Solo strokeplay netto (epic #46 Phase 3): klassisk slagspill — flat liste
+  // sortert på laveste netto-total. Live-view og finished-podium speiler solo-
+  // stableford-pattern (en view, en podium, status-router velger). Ingen
+  // state #3/#3.5-«venterom» — solo-spillere ser hverandre umiddelbart, samme
+  // RLS-policy som stableford og matchplay.
+  if (game.game_mode === 'solo_strokeplay_netto') {
+    return renderSoloStrokeplay({
       gameId,
       game,
       gwp,
@@ -1017,6 +1038,110 @@ function renderMatchplay(opts: {
       result={result}
       playerInfo={playerInfo}
       gameStatus={game.status}
+      backHref={backHref}
+    />
+  );
+}
+
+/**
+ * Solo strokeplay netto-grenen — bygger ScoringContext fra rå-rad-ene, kjører
+ * mode-router-en (`computeModeResult`) og velger view per `game.status`:
+ *
+ *   - `finished` → SoloStrokeplayPodium: topp 3 podium med konfetti på 1.-plass
+ *     og resten av rangeringen collapsed under.
+ *   - alt annet (active/scheduled) → SoloStrokeplayView: flat liste sortert
+ *     på laveste netto-total, samme view brukes både midt-runde og post-finished.
+ *
+ * Speilet `renderStableford`-pattern for konsistens. Solo strokeplay har
+ * `team_size = 1` i `mode_config` (validatoren håndhever), så `teamNumber`
+ * sendes som null for å matche scoring-laget sin solo-narrowing.
+ *
+ * State #3/#3.5-«venterom» er bevisst skipped — slagspill-spillere ser
+ * hverandre umiddelbart (samme RLS-policy som stableford og matchplay).
+ */
+function renderSoloStrokeplay(opts: {
+  gameId: string;
+  game: GameForHole;
+  gwp: {
+    players: {
+      user_id: string;
+      team_number: number;
+      users: { name: string | null; nickname: string | null } | null;
+      course_handicap: number | null;
+    }[];
+  };
+  rawHolesRows: { hole_number: number; par: number; stroke_index: number }[];
+  rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
+  backHref: string;
+}) {
+  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
+
+  const ctx = {
+    game: {
+      id: gameId,
+      game_mode: 'solo_strokeplay_netto' as const,
+      mode_config: game.mode_config,
+    },
+    players: gwp.players
+      .filter((p) => p.users != null)
+      .map((p) => ({
+        userId: p.user_id,
+        // Solo strokeplay: validator setter team_number = null på persist (eller
+        // gamePayload normaliserer det), men DB-kolonnen er ikke nullable så
+        // den lander som 0. Vi sender null oppover for å matche scoring-lagets
+        // solo-narrowing (det laget bryr seg ikke om verdien for denne modusen,
+        // men null er den semantisk korrekte verdien for solo).
+        teamNumber: null,
+        flightNumber: null,
+        courseHandicap: p.course_handicap ?? 0,
+      })),
+    holes: rawHolesRows.map((h) => ({
+      number: h.hole_number,
+      par: h.par,
+      strokeIndex: h.stroke_index,
+    })),
+    scores: rawScoresRows.map((s) => ({
+      userId: s.user_id,
+      holeNumber: s.hole_number,
+      gross: s.strokes,
+    })),
+  };
+
+  const result = computeModeResult(ctx);
+  // Type-guard mot mode-router-output. Hvis routeren returnerer feil shape
+  // faller vi tilbake til notFound() — sikrere enn å rendre tom UI.
+  if (result.kind !== 'solo_strokeplay_netto') {
+    notFound();
+  }
+
+  const playersById = new Map<string, SoloStrokeplayPlayerInfo>();
+  for (const p of gwp.players) {
+    if (p.users == null) continue;
+    playersById.set(p.user_id, {
+      name: p.users.name ?? '(ukjent)',
+      nickname: p.users.nickname,
+    });
+  }
+
+  // Finished → champagne-podium med konfetti. Active/scheduled → flat live-view.
+  if (game.status === 'finished') {
+    return (
+      <SoloStrokeplayPodium
+        gameId={gameId}
+        gameName={game.name}
+        result={result}
+        playersById={playersById}
+        backHref={backHref}
+      />
+    );
+  }
+
+  return (
+    <SoloStrokeplayView
+      gameId={gameId}
+      gameName={game.name}
+      result={result}
+      playersById={playersById}
       backHref={backHref}
     />
   );
