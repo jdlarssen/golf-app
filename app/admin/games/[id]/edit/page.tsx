@@ -28,7 +28,7 @@ import {
   ALL_CATEGORY_IDS,
   type SideCategoryId,
 } from '@/lib/scoring/sideTournamentConfig';
-import type { GameMode } from '@/lib/scoring/modes/types';
+import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -95,6 +95,10 @@ type GameRow = {
   // Epic #41 — modus + JSONB-config. Mode-lock-guarden i edit-actions
   // krever at form-en sender disse uendret tilbake for publiserte spill.
   game_mode: GameMode;
+  // mode_config JSONB — leses for Texas-spesifikke felt (team_size,
+  // team_handicap_pct) som ikke har dedikerte kolonner. Andre modi-konfig
+  // utledes av GameForm fra game_mode + team_size.
+  mode_config: GameModeConfig;
 };
 
 type GamePlayerRow = {
@@ -160,7 +164,7 @@ export default async function EditGamePage({
     supabase
       .from('games')
       .select(
-        'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode',
+        'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config',
       )
       .eq('id', id)
       .single<GameRow>(),
@@ -372,9 +376,21 @@ async function EditGameFormBody({
     // mode-lock-guard avviser bytte etter publisering, så UI-en speiler
     // dette ved å vise modus-tile-ene som disabled. Lagstørrelse-en
     // utledes av GameForm fra modus (Stableford → 1, Best ball → 2);
-    // ingen DB-roundtrip for team_size før vi får flere kombinasjoner.
+    // for Texas leser vi den fra mode_config siden den er valgbar (2 eller 4).
     game_mode: game.game_mode,
     lock_game_mode: game.status !== 'draft',
+    // Texas-spesifikke felt: leses fra mode_config (JSONB). Andre modi har
+    // ingen ekstra konfig å pre-fylle utover game_mode + (avledet) team_size.
+    team_size:
+      game.mode_config.kind === 'texas_scramble'
+        ? game.mode_config.team_size
+        : game.mode_config.kind === 'stableford'
+          ? game.mode_config.team_size
+          : undefined,
+    texas_team_handicap_pct:
+      game.mode_config.kind === 'texas_scramble'
+        ? String(game.mode_config.team_handicap_pct)
+        : undefined,
   };
 
   if (game.status === 'draft') {

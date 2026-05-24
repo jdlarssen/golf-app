@@ -142,6 +142,33 @@ const MatchplayIcon = (
   </svg>
 );
 
+// Texas scramble-ikon: ett senterstilt flagg med tre små golfballer
+// gruppert under — signaliserer at hele laget samles om én ball, som er
+// den definerende mekanikken for Texas (lag-medlemmene velger beste slag
+// og slår alle derfra). Holder samme stroke-vekt og rounded caps som de
+// andre tile-ikonene for visuell konsistens.
+const TexasScrambleIcon = (
+  <svg
+    width={28}
+    height={28}
+    viewBox="0 0 28 28"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.5}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    {/* Senterstilt flaggpinne. */}
+    <line x1="14" y1="3" x2="14" y2="18" />
+    <path d="M 14 4 L 21 5.5 L 14 7 Z" fill="currentColor" stroke="none" />
+    {/* Tre små golfballer pa rad under flagget — lag-medlemmene som spiller felles ball. */}
+    <circle cx="8" cy="22" r="2" />
+    <circle cx="14" cy="22" r="2" />
+    <circle cx="20" cy="22" r="2" />
+  </svg>
+);
+
 // Strokeplay-ikon: enkelt scorekort med en blyant-stripe ned siden. Signaliserer
 // klassisk slagspill der hver spiller fører eget kort og lavest total vinner.
 // Holder samme stroke-vekt og rounded caps som de andre tile-ikonene for
@@ -197,21 +224,24 @@ const TILES: TileDef[] = [
     description: 'Individuelt scorekort. Lavest netto-total vinner.',
     icon: StrokeplayIcon,
   },
+  {
+    mode: 'texas_scramble',
+    title: 'Texas scramble',
+    description: 'Laget spiller én ball. Velg beste slag hvert hull. Lavest lag-total vinner.',
+    icon: TexasScrambleIcon,
+  },
 ];
 
 /**
- * Modus-velger — fire tiles som lar admin plukke spillmodus før lagstørrelse.
+ * Modus-velger — fem tiles som lar admin plukke spillmodus før lagstørrelse.
  * Hierarkiet er bevisst: modus er det semantisk distinkte hovedvalget
  * («hva avgjør vinneren?»), lagstørrelse er en sekundær parameter som
  * snevres inn etter modus.
  *
- * Grid: 2-kolonner på mobile-først (`grid-cols-2`) gir 2×2-stacking på iPhone
- * der hver tile får ~halve skjermbredden og leses komfortabelt — bedre enn
- * vertikal 1-kolonne (mye scrolling for 4 tiles) eller 4-kolonne (for trangt
- * for iPhone-bredde). Bytter til 4-kolonner fra `sm`-breakpoint og oppover
- * der det er nok plass til symmetrisk én-rads-presentasjon. Vurderingen
- * speiler par-stableford-fase 2-justeringen som økte fra 2 til 3 tiles —
- * her tar vi neste steg og fyrer 2×2 på mobil.
+ * Grid: 2-kolonner på mobile-først (`grid-cols-2`) gir 2+2+1-stacking på
+ * iPhone — komfortabel halv-bredde per tile. På sm-breakpoint (≥640px)
+ * 3-kolonner = 3+2-rytme. På lg (≥1024px) 5-i-rad symmetrisk. Bevisst
+ * unngår 4-kolonne på sm (5 tiles ville gitt 4+1-asymmetri).
  *
  * ARIA: bruker `role="radiogroup"` + `role="radio"` med tabbable button-er.
  * Vi bruker ikke `<input type="radio">` fordi tile-presentasjonen krever
@@ -224,7 +254,7 @@ export function ModeSelector({ value, onChange, disabled = false }: Props) {
       <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
         Velg spillmodus
       </legend>
-      <div role="radiogroup" className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div role="radiogroup" className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {TILES.map((tile) => {
           const selected = value === tile.mode;
           return (

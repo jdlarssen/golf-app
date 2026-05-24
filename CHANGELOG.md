@@ -10,6 +10,42 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.16.y — Texas scramble
+
+Ny spillmodus for laget som vil spille sosialt — én ball per lag, alle slår fra beste slag. Skalerer fra 2-mannslag (par-format) til 4-mannslag (klassisk firma-cup). Lag-handicap regnes etter NGF-aggregatet (25 % av summert HCP for 2-mannslag, 10 % for 4-mannslag), justerbart per spill. Issue [#44](https://github.com/jdlarssen/golf-app/issues/44).
+
+### [1.16.0] - 2026-05-25
+
+> Du kan nå opprette Texas scramble-spill — velg Texas scramble som modus, velg 2- eller 4-mannslag, og fordel spillerne. Lag-handicap settes automatisk etter NGF-tabellen (25 % for 2-mannslag, 10 % for 4-mannslag) og kan justeres som i best ball. Hullsiden og leaderboardet for Texas kommer i neste lansering.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `supabase/migrations/0033_texas_scramble.sql` — widener `games_mode_check` til 5 verdier: `'best_ball_netto'`, `'stableford'`, `'singles_matchplay'`, `'solo_strokeplay_netto'`, `'texas_scramble'`. Fikser latent bug for matchplay og solo strokeplay som var shipped i TS-koden men aldri persisterbart i prod (0 rader for begge — ingen hadde prøvd ennå). Atomic widen som sletter den gamle CHECK-en og legger til en ny med samme navn.
+- `lib/scoring/modes/texasScramble.ts` — ny scoring-motor som grupperer spillere på `team_number`, velger lag-kaptein (lex-min `userId`) som scores-rad-eier, regner `teamHandicap = round(sum-CH × team_handicap_pct / 100)` etter NGF-konvensjon, allokerer per hull via eksisterende `strokesForHole`, og rangerer lag på lavest `totalNet` med 5-tier tie-break-cascade. 22 unit-tester dekker shape, kaptein-utvelging, lag-HCP-utregning, per-hull netto, totaler/missing, ranking, tie-break, og edge cases (tomt lag, 9-hulls bane, alle null).
+- `lib/scoring/modes/types.ts` — `GameMode` utvidet med `'texas_scramble'`. `MODE_LABELS[texas_scramble] = 'Texas scramble'`. Ny `GameModeConfig`-variant `{ kind: 'texas_scramble', team_size: 2 | 4, teams_count: number, team_handicap_pct: number }`. Nye result-typer `TexasScramblePlayerCell`, `TexasScrambleHoleRow`, `TexasScrambleTeamLine`, `TexasScrambleResult`. `ModeResult`-unionen utvidet.
+- `lib/scoring/index.ts` — mode-router-switch ruter `'texas_scramble'` til ny engine.
+- `lib/games/gamePayload.ts` — ny `validateTexasScramble` validerer at hvert lag har eksakt `team_size` spillere (2 eller 4 — 3-mannslag utsatt til v1.1 → `unsupported_mode_size_combo`), at `team_handicap_pct` er 0..100 (utenfor → `bad_allowance`), og at `flight_number = team_number` per spiller (DB-CHECK `game_players_team_flight_consistency`). 16 nye validator-tester.
+- `app/admin/games/new/ModeSelector.tsx` — ny `TexasScrambleIcon` (senterstilt flagg med tre golfballer på rad under, signaliserer ett lag rundt én ball) og en femte tile «Texas scramble». Grid-layout justert fra `grid-cols-2 sm:grid-cols-4` til `grid-cols-2 sm:grid-cols-3 lg:grid-cols-5` slik at 5 tiles wrapper pent på alle breakpoints.
+- `app/admin/games/new/TeamSizeSelector.tsx` — `ENABLED_COMBOS[texas_scramble] = new Set([2, 4])`. 4-mannslag aktiveres her som første modus som bruker `team_size: 4`.
+- `app/admin/games/new/GameForm.tsx` — ny `isTexas`-narrowing, `defaultTexasHandicapPct`-helper (25 for 2-mannslag, 10 for 4-mannslag), `handleTeamSizeChange`-wrapper som re-defaulter handicap-prosenten ved lagstørrelse-endring under Texas-modus. Lag-grid utvidet med variabel slot-count per lag (2 eller 4). Lag-handicap-felt erstatter HCP-allowance-feltet i Settings-seksjonen for Texas (allowance-kolonnen settes til 100 som no-op via hidden input siden DB-kolonnen er NOT NULL). 8-spiller-limit fra payload-laget begrenser Texas til 4 lag á 2 eller 2 lag á 4 spillere; lag 3 og 4 skjules visuelt når team_size=4.
+- `app/admin/games/[id]/edit/page.tsx` — SELECT utvidet med `mode_config` slik at edit-flyten kan pre-fylle `team_size` og `texas_team_handicap_pct` fra persistert state.
+- `app/games/[id]/page.tsx` — lokal `game_mode`-union utvidet med `'texas_scramble'`.
+
+#### Notes
+- Tre tilstøtende komponenter mangler fortsatt Texas-grenen og kommer i etterfølgende lanseringer i 1.16.y-serien: (a) hull-page rendrer per-spiller-rader uavhengig av modus i dag, Texas trenger ett kort per lag (alle medlemmer ser samme stepper); (b) leaderboard-route har ingen `renderTexasScramble`-branch enda — Texas-spill faller derfor gjennom til best-ball-grenen som kaster på shape-mismatch; (c) `gameFinishedNotification`-mail mangler Texas-grenen så avsluttede Texas-spill får default best-ball-mail. Inntil hele 1.16-serien er ute, ikke publiser Texas-spill i prod.
+- Drive-distribusjons-regelen (autentisk Texas: hver spiller må bidra med minst N drives per runde) håndheves ikke i v1 — honor-system. Egen issue hvis brukerne ber om tracking.
+- 3-mannslag bevisst utsatt (15 % NGF-default). Egen issue hvis brukerne ber om det.
+- WHS-tiered handicap-formel (35/15 for 2-mannslag, 25/20/15/10 for 4-mannslag) som alternativ til NGF-aggregatet kommer eventuelt som `mode_config.handicap_formula: 'whs_tiered' | 'ngf_aggregate'` i v2 hvis brukerne ber om det.
+
+</details>
+
+---
+
+<details>
+<summary><strong>1.15.y — In-app innboks (5 oppføringer) — klikk for å vise</strong></summary>
+
 ## 1.15.y — In-app innboks
 
 Tørny får en innboks. Bjelle øverst-til-høyre på alle sider viser en champagne-prikk når det venter et nytt varsel, og en dedikert /innboks-flate samler hele historikken. Varslene wires inn etappevis (issue [#25](https://github.com/jdlarssen/golf-app/issues/25)): invitasjoner, peer-godkjenninger, scorekort-events og spill-avsluttet. Siste fase kuttet mail-spammen til aktive brukere — du får ikke lenger mail om noe som allerede er på skjermen din.
@@ -111,6 +147,8 @@ Tørny får en innboks. Bjelle øverst-til-høyre på alle sider viser en champa
 - Phase 2 av 4 i issue [#25](https://github.com/jdlarssen/golf-app/issues/25). Phase 1 leverte datalag (1.14.3). Phase 3 wires inn de 5 events i eksisterende server-actions; Phase 4 aktiverer off-app mail-gating.
 - Per d.d. er innboksen tom for alle siden ingen server-action ennå kaller `notify()`. Bjella forblir uten prikk inntil Phase 3.
 - Test-suite vokst fra 786 → 837 (+51 nye Phase 2-tester).
+
+</details>
 
 </details>
 

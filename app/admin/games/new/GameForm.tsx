@@ -111,6 +111,12 @@ export type InitialValues = {
    * felter for å unngå at admin trigger en validation error utilsiktet.
    */
   lock_game_mode?: boolean;
+  /**
+   * Texas scramble: lag-handicap-prosent (NGF-aggregat). Strengt 0..100,
+   * persisterer som heltall til mode_config. Default settes av GameForm
+   * når lagstørrelse endres (25 for 2-mannslag, 10 for 4-mannslag).
+   */
+  texas_team_handicap_pct?: string;
 };
 
 /**
@@ -191,7 +197,21 @@ function defaultTeamSizeForMode(mode: GameMode): TeamSize {
   if (mode === 'stableford') return 1;
   if (mode === 'singles_matchplay') return 1;
   if (mode === 'solo_strokeplay_netto') return 1;
+  // Texas scramble: default 4-mannslag (typisk firma-cup-størrelse).
+  // 2-mannslag valgbart via TeamSizeSelector.
+  if (mode === 'texas_scramble') return 4;
   return 2;
+}
+
+/**
+ * NGF-default for Texas-scramble-lag-handicap, prosent av summert spille-HCP.
+ * Settes som default i GameForm når admin endrer lagstørrelse — admin kan
+ * deretter justere fritt i 0..100-range.
+ */
+function defaultTexasHandicapPct(teamSize: TeamSize): number {
+  if (teamSize === 2) return 25;
+  if (teamSize === 4) return 10;
+  return 25;
 }
 
 // Fisher–Yates shuffle backed by crypto.getRandomValues for fair, unbiased
@@ -249,6 +269,18 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   const [hcpAllowance, setHcpAllowance] = useState<string>(
     initialValues?.hcp_allowance_pct ?? '100',
   );
+  // Texas scramble: lag-handicap-prosent. Initialiseres fra initialValues
+  // hvis edit-flyt, ellers default per teamSize (settes ved første render og
+  // ved mode/teamSize-endring via en effect).
+  const [texasHandicapPct, setTexasHandicapPct] = useState<string>(
+    initialValues?.texas_team_handicap_pct ??
+      String(
+        defaultTexasHandicapPct(
+          initialValues?.team_size ??
+            defaultTeamSizeForMode(initialValues?.game_mode ?? 'best_ball_netto'),
+        ),
+      ),
+  );
   const [requirePeerApproval, setRequirePeerApproval] = useState(
     initialValues?.require_peer_approval ?? false,
   );
@@ -294,7 +326,26 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     // matcher en gyldig kombinasjon. Når flere kombinasjoner aktiveres
     // (par-stableford, 4-mann-stableford), erstattes dette med en mer
     // fleksibel default-policy — for v1 holder vi det enkelt.
-    setTeamSize(defaultTeamSizeForMode(next));
+    const nextSize = defaultTeamSizeForMode(next);
+    setTeamSize(nextSize);
+    // Texas scramble: default lag-handicap-prosent per NGF-konvensjon
+    // (25 % for 2-mannslag, 10 % for 4-mannslag). Admin kan deretter justere.
+    if (next === 'texas_scramble') {
+      setTexasHandicapPct(String(defaultTexasHandicapPct(nextSize)));
+    }
+  }
+
+  /**
+   * Wrapper rundt setTeamSize som også oppdaterer Texas-default-handicap-
+   * prosenten når lagstørrelsen endres mens modus er Texas. Dette gir admin
+   * en sensible default på 25 → 10 (eller omvendt) når de bytter mellom
+   * 2- og 4-mannslag uten å miste muligheten til å overstyre manuelt etterpå.
+   */
+  function handleTeamSizeChange(next: TeamSize) {
+    setTeamSize(next);
+    if (gameMode === 'texas_scramble') {
+      setTexasHandicapPct(String(defaultTexasHandicapPct(next)));
+    }
   }
 
   // Lag-grid vises kun for moduser som faktisk har lag (teamSize ≥ 2).
@@ -322,6 +373,14 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   const isBestBall = gameMode === 'best_ball_netto' && teamSize === 2;
   const isParStableford = gameMode === 'stableford' && teamSize === 2;
   const isMatchplay = gameMode === 'singles_matchplay';
+  // - isTexas: texas_scramble. Lagene spiller én ball — én score per lag per
+  //   hull lagres på lag-kapteinens userId (scoring-laget velger kaptein
+  //   lex-min). team_size = 2 eller 4 (3-mannslag utsatt til v1.1). Lag-grid-en
+  //   speiler par-stableford-mønsteret (fri lag-count, hvert lag må ha
+  //   eksakt team_size spillere), men slot-antallet per lag justeres etter
+  //   team_size. Lag-handicap = NGF-aggregat (default 25 % for 2-mannslag,
+  //   10 % for 4-mannslag — admin kan justere).
+  const isTexas = gameMode === 'texas_scramble';
 
   // Drafts can be saved without a tee-off; publishing cannot. `canPublish`
   // below combines this with the rest of the validity gates.
@@ -426,9 +485,15 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     setFlightByPlayer({});
   }
 
+  /**
+   * Tilordner en spiller til et lag-slot. `slotIndex` er den positionelle
+   * indexen i `playersByTeam[team]` — best-ball og par-stableford bruker
+   * 0 eller 1 (2 plasser per lag), Texas scramble bruker 0..teamSize-1
+   * (2 eller 4 plasser per lag).
+   */
   function assignPlayerToSlot(
     team: TeamNumber,
-    slotIndex: 0 | 1,
+    slotIndex: number,
     playerId: string,
   ) {
     setTeamByPlayer((prev) => {
@@ -572,9 +637,10 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     }[] = [];
     for (const team of TEAM_NUMBERS) {
       for (const pid of playersByTeam[team]) {
-        const flight = isParStableford
-          ? team
-          : (flightByPlayer[pid] ?? teamDefaultFlight(team));
+        const flight =
+          isParStableford || isTexas
+            ? team
+            : (flightByPlayer[pid] ?? teamDefaultFlight(team));
         rows.push({
           user_id: pid,
           team_number: team,
@@ -583,7 +649,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
       }
     }
     return rows;
-  }, [isMatchplay, requiresTeams, selectedPlayerIds, playersByTeam, teamByPlayer, flightByPlayer, isParStableford]);
+  }, [isMatchplay, requiresTeams, selectedPlayerIds, playersByTeam, teamByPlayer, flightByPlayer, isParStableford, isTexas]);
 
   const flightsComplete =
     teamsComplete &&
@@ -618,6 +684,32 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     parStablefordTeamsBalanced &&
     parStablefordHasAtLeastOneTeam;
 
+  // Texas-validitet: hvert ikke-tomt lag må ha eksakt teamSize spillere
+  // (2 eller 4), alle valgte spillere må ha team_number satt, og minst ett
+  // lag må være fullt. Speiler `validateTexasScramble` i `lib/games/gamePayload.ts`.
+  const texasTeamsBalanced = TEAM_NUMBERS.every(
+    (t) =>
+      playersByTeam[t].length === 0 ||
+      playersByTeam[t].length === teamSize,
+  );
+  const texasHasAtLeastOneTeam = TEAM_NUMBERS.some(
+    (t) => playersByTeam[t].length === teamSize,
+  );
+  // Texas tillater team_size=2 eller 4. Med 8-slot-limit i payload-laget
+  // betyr det maks 4 lag á 2 (= 8) eller 2 lag á 4 (= 8) spillere.
+  const texasHandicapPctNum = Number(texasHandicapPct);
+  const texasHandicapPctValid =
+    Number.isInteger(texasHandicapPctNum) &&
+    texasHandicapPctNum >= 0 &&
+    texasHandicapPctNum <= 100;
+  const texasPlayersValid =
+    selectedPlayerIds.length >= teamSize &&
+    selectedPlayerIds.length % teamSize === 0 &&
+    selectedPlayerIds.every((pid) => teamByPlayer[pid] !== undefined) &&
+    texasTeamsBalanced &&
+    texasHasAtLeastOneTeam &&
+    texasHandicapPctValid;
+
   // Matchplay-validitet: nøyaktig 2 spillere, én på side 1 og én på side 2.
   // Speiler `validateSinglesMatchplay` i `lib/games/gamePayload.ts` —
   // for-mange-feilen meldes separat fra for-få i missingForPublish-stien
@@ -651,15 +743,22 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
         ? eightSelected && teamsComplete && flightsComplete
         : isParStableford
           ? parStablefordPlayersValid
-          : false;
+          : isTexas
+            ? texasPlayersValid
+            : false;
 
   // Publishing requires every section to be valid AND a tee-off time. Drafts
   // skip these gates entirely (they only need a name).
+  //
+  // For Texas scramble erstattes `allowanceValid` av `texasHandicapPctValid`
+  // (allerede speilet i `texasPlayersValid` -> `playersValidForMode`) siden
+  // hcp_allowance_pct ikke gjelder for Texas — lag-handicap-prosenten lever
+  // i `mode_config.team_handicap_pct` istedenfor games.hcp_allowance_pct.
   const canPublish =
     courseId !== '' &&
     teeBoxId !== '' &&
     playersValidForMode &&
-    allowanceValid &&
+    (isTexas || allowanceValid) &&
     hasTeeOff;
 
   // Human-readable list of what's still missing for a publish. Mode-aware:
@@ -712,11 +811,37 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
       // for å holde mangel-listen kort.
       missingForPublish.push('lag-fordeling (par à 2)');
     }
+  } else if (isTexas) {
+    // Texas: lagstørrelse 2 eller 4. Trenger minst teamSize spillere
+    // fordelt på minst ett fullt lag. Mangler-meldingene speiler
+    // `validateTexasScramble`-feilene fra payload-laget.
+    if (selectedPlayerIds.length < teamSize) {
+      missingForPublish.push(`minst ${teamSize} spillere`);
+    } else if (selectedPlayerIds.length % teamSize !== 0) {
+      missingForPublish.push(
+        teamSize === 2
+          ? 'partall antall spillere (lag á 2)'
+          : 'antall spillere delelig på 4 (lag á 4)',
+      );
+    } else if (!texasPlayersValid) {
+      missingForPublish.push(
+        teamSize === 2
+          ? 'lag-fordeling (lag á 2)'
+          : 'lag-fordeling (lag á 4)',
+      );
+    }
+    if (!texasHandicapPctValid) {
+      missingForPublish.push('lag-handicap-prosent (0-100)');
+    }
   } else if (selectedPlayerIds.length < 1) {
     // isSolo
     missingForPublish.push('minst én spiller');
   }
-  if (!allowanceValid) missingForPublish.push('gyldig HCP-allowance');
+  // hcp_allowance_pct gjelder ikke for Texas — det er erstattet av
+  // texas_team_handicap_pct i mode_config. Hopper over allowance-sjekken
+  // for Texas slik at admin ikke får mismatch mellom UI-skjult-felt og
+  // publish-feilmelding.
+  if (!isTexas && !allowanceValid) missingForPublish.push('gyldig HCP-allowance');
 
   function playerLabel(p: PlayerOption): string {
     if (p.pending) {
@@ -760,7 +885,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   const draftPublishActions = getDraftAndPublishActions();
 
   // For each slot dropdown: show the current occupant + any UNASSIGNED selected players.
-  function slotOptions(team: TeamNumber, slotIndex: 0 | 1) {
+  function slotOptions(team: TeamNumber, slotIndex: number) {
     const current = playersByTeam[team][slotIndex];
     const unassigned = selectedPlayerIds.filter(
       (pid) => teamByPlayer[pid] === undefined,
@@ -790,6 +915,20 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           name="stableford_team_size"
           value={teamSize}
         />
+      )}
+      {isTexas && (
+        <>
+          <input
+            type="hidden"
+            name="texas_team_size"
+            value={teamSize}
+          />
+          <input
+            type="hidden"
+            name="texas_team_handicap_pct"
+            value={texasHandicapPct}
+          />
+        </>
       )}
 
       {/* Hidden inputs that carry the structured assignment payload. The server
@@ -1081,6 +1220,13 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
                 selectedPlayerIds.length % 2 !== 0 && (
                 <span className="ml-1 text-muted/80">(par à 2)</span>
               )}
+              {isTexas &&
+                selectedPlayerIds.length >= teamSize &&
+                selectedPlayerIds.length % teamSize !== 0 && (
+                <span className="ml-1 text-muted/80">
+                  (lag à {teamSize})
+                </span>
+              )}
             </span>
           )}
         </div>
@@ -1211,7 +1357,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           <TeamSizeSelector
             mode={gameMode}
             value={teamSize}
-            onChange={setTeamSize}
+            onChange={handleTeamSizeChange}
             disabled={lockGameMode}
           />
         )}
@@ -1295,7 +1441,8 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             kan ha 2/4/6/8 spillere på 1-4 lag, ingen 8-krav). */}
       {requiresTeams &&
         ((isBestBall && eightSelected) ||
-          (isParStableford && selectedPlayerIds.length >= 2)) && (
+          (isParStableford && selectedPlayerIds.length >= 2) ||
+          (isTexas && selectedPlayerIds.length >= teamSize)) && (
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-text">
             4. Lag
@@ -1305,15 +1452,21 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
               Inntil 4 lag à 2 spillere. Hvert lag må ha enten 0 eller 2
               spillere. Tomme lag publiseres ikke.
             </p>
+          ) : isTexas ? (
+            <p className="text-xs text-muted">
+              {teamSize === 2
+                ? 'Inntil 4 lag à 2 spillere. Hvert lag må ha enten 0 eller 2 spillere. Tomme lag publiseres ikke.'
+                : 'Inntil 2 lag à 4 spillere. Hvert lag må ha enten 0 eller 4 spillere. Tomme lag publiseres ikke.'}
+            </p>
           ) : (
             <p className="text-xs text-muted">
               4 lag à 2 spillere. Trekk tilfeldig eller velg manuelt.
             </p>
           )}
           {/* «Trekk tilfeldig»/«Tøm lag» er kun nyttig når antallet er fast
-              (best-ball: 8 spillere → 4 lag à 2). Par-stableford har
-              variabelt antall, så admin tilordner manuelt i fase 2 —
-              kan generaliseres i en senere fase hvis det blir vondt UX. */}
+              (best-ball: 8 spillere → 4 lag à 2). Par-stableford og Texas
+              har variabelt antall, så admin tilordner manuelt — kan
+              generaliseres i en senere fase hvis det blir vondt UX. */}
           {isBestBall && (
             <div className="flex gap-2">
               <Button
@@ -1334,7 +1487,8 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
               </Button>
             </div>
           )}
-          {isParStableford && selectedPlayerIds.some((pid) => teamByPlayer[pid] !== undefined) && (
+          {(isParStableford || isTexas) &&
+            selectedPlayerIds.some((pid) => teamByPlayer[pid] !== undefined) && (
             <div className="flex">
               <Button
                 type="button"
@@ -1348,38 +1502,46 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {TEAM_NUMBERS.map((team) => (
-              <div
-                key={team}
-                className="border border-border rounded-lg p-3 space-y-2"
-              >
-                <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                  Lag {team}
-                </p>
-                {[0, 1].map((slotIndex) => {
-                  const slot = slotIndex as 0 | 1;
-                  const occupant = playersByTeam[team][slot];
-                  const options = slotOptions(team, slot);
-                  return (
-                    <select
-                      key={slot}
-                      value={occupant ?? ''}
-                      onChange={(e) =>
-                        assignPlayerToSlot(team, slot, e.target.value)
-                      }
-                      className="w-full rounded-xl border px-3 py-2 bg-surface text-sm text-text border-border focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
-                    >
-                      <option value="">— Tom plass —</option>
-                      {options.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {shortName(p)}
-                        </option>
-                      ))}
-                    </select>
-                  );
-                })}
-              </div>
-            ))}
+            {TEAM_NUMBERS.map((team) => {
+              // For Texas med team_size=4 har 8-spiller-limit i payload-laget
+              // konsekvensen at maks 2 lag kan fylles (2×4=8). Skjul lag 3 og 4
+              // for å unngå at admin tilordner spillere til et lag som ikke
+              // kan publiseres. Best-ball og par-stableford fortsetter å vise
+              // alle 4 lag uavhengig av lagstørrelse.
+              if (isTexas && teamSize === 4 && team > 2) return null;
+              const slotCount = isTexas ? teamSize : 2;
+              return (
+                <div
+                  key={team}
+                  className="border border-border rounded-lg p-3 space-y-2"
+                >
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                    Lag {team}
+                  </p>
+                  {Array.from({ length: slotCount }, (_, slotIndex) => {
+                    const occupant = playersByTeam[team][slotIndex];
+                    const options = slotOptions(team, slotIndex);
+                    return (
+                      <select
+                        key={slotIndex}
+                        value={occupant ?? ''}
+                        onChange={(e) =>
+                          assignPlayerToSlot(team, slotIndex, e.target.value)
+                        }
+                        className="w-full rounded-xl border px-3 py-2 bg-surface text-sm text-text border-border focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
+                      >
+                        <option value="">— Tom plass —</option>
+                        {options.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {shortName(p)}
+                          </option>
+                        ))}
+                      </select>
+                    );
+                  })}
+                </div>
+              );
+            })}
           </div>
         </section>
       )}
@@ -1462,17 +1624,19 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
         </section>
       )}
 
-      {/* Per-spiller-tee for solo-, par-stableford- og matchplay-modus —
+      {/* Per-spiller-tee for solo-, par-stableford-, matchplay- og Texas-modus —
           flights-seksjonen rendrer ikke for disse, så vi trenger en egen
           lett-vekts-variant slik at admin kan sette tee per spiller.
           Matchplay krever individuell tee for korrekt slope/CR → course
-          handicap → matchplay-stroke-allokering. Vises kun når det faktisk
-          er spillere å konfigurere. Best-ball håndterer tee inne i
-          flights-seksjonen ovenfor. */}
-      {(isSolo || isParStableford || isMatchplay) && selectedPlayerIds.length > 0 && (
+          handicap → matchplay-stroke-allokering. Texas trenger det også for
+          å regne riktig CH per medlem før NGF-aggregat-formelen kombinerer
+          dem til lag-HCP. Vises kun når det faktisk er spillere å konfigurere.
+          Best-ball håndterer tee inne i flights-seksjonen ovenfor. */}
+      {(isSolo || isParStableford || isMatchplay || isTexas) &&
+        selectedPlayerIds.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-text">
-            {isParStableford || isMatchplay
+            {isParStableford || isMatchplay || isTexas
               ? '5. Tee per spiller'
               : '4. Tee per spiller'}
           </h2>
@@ -1530,20 +1694,48 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
         <h2 className="text-sm font-medium text-text">
           6. Innstillinger
         </h2>
-        <Input
-          id="hcp_allowance_pct"
-          name="hcp_allowance_pct"
-          type="number"
-          inputMode="numeric"
-          min={0}
-          max={100}
-          step={1}
-          label="HCP-allowance %"
-          value={hcpAllowance}
-          onChange={(e) => setHcpAllowance(e.target.value)}
-          hint="100 = fullt course handicap (standard). 85 = WHS fourball-tillegg."
-          required
-        />
+        {isTexas ? (
+          <Input
+            id="texas_team_handicap_pct_input"
+            name="texas_team_handicap_pct_input"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={100}
+            step={1}
+            label="Lag-handicap %"
+            value={texasHandicapPct}
+            onChange={(e) => setTexasHandicapPct(e.target.value)}
+            hint={
+              teamSize === 2
+                ? 'NGF-standard: 25 % av summen av spillernes spille-HCP for 2-mannslag.'
+                : 'NGF-standard: 10 % av summen av spillernes spille-HCP for 4-mannslag.'
+            }
+            required
+          />
+        ) : (
+          <Input
+            id="hcp_allowance_pct"
+            name="hcp_allowance_pct"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={100}
+            step={1}
+            label="HCP-allowance %"
+            value={hcpAllowance}
+            onChange={(e) => setHcpAllowance(e.target.value)}
+            hint="100 = fullt course handicap (standard). 85 = WHS fourball-tillegg."
+            required
+          />
+        )}
+        {/* Texas trenger fortsatt en hcp_allowance_pct-verdi i payloaden siden
+            DB-kolonnen er NOT NULL. Vi sender 100 (no-op) som hidden input
+            slik at server-action ikke får null-verdi. Lag-HCP-prosenten
+            persisterer i mode_config istedenfor. */}
+        {isTexas && (
+          <input type="hidden" name="hcp_allowance_pct" value="100" />
+        )}
 
         <label className="flex items-start gap-3 cursor-pointer">
           <input
