@@ -11,7 +11,11 @@ import { ModeChip } from '@/components/ui/ModeChip';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import type { GameStatus } from '@/lib/games/status';
-import { MODE_LABELS, type GameMode } from '@/lib/scoring/modes/types';
+import {
+  MODE_LABELS,
+  type GameMode,
+  type GameModeConfig,
+} from '@/lib/scoring/modes/types';
 import { StartGameButton } from './StartGameButton';
 import { StartScheduledGameButton } from './StartScheduledGameButton';
 import { EndGameButton } from './EndGameButton';
@@ -85,6 +89,10 @@ type GameRow = {
   // Epic #41 — modus per spill. Bestemmer både hvilken Spillform-tekst som
   // vises i Format-kortet og hvilken ModeChip-variant subtittelen får.
   game_mode: GameMode;
+  // Epic #43 — diskriminator for stableford-varianter (solo vs par/4BBB).
+  // Lar Spillform-cardet skille «Stableford» fra «Par-stableford» og lar
+  // lag/flight-flatene tilpasse seg for par-stableford (flight = team mekanisk).
+  mode_config: GameModeConfig;
   hcp_allowance_pct: number;
   require_peer_approval: boolean;
   course_id: string;
@@ -167,7 +175,7 @@ export default async function GameDetailPage({
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, status, game_mode, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, courses(name), tee_boxes(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+      'id, name, status, game_mode, mode_config, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, courses(name), tee_boxes(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
     )
     .eq('id', id)
     .single<GameRow>();
@@ -314,7 +322,24 @@ async function PlayersSections({
 
   const players = playersRes.data ?? [];
 
-  const isSolo = game.game_mode === 'stableford';
+  // Mode-narrowing: skiller solo (en spiller = en deltager, ingen lag/flight)
+  // fra par-stableford (lag à 2, flight = team mekanisk) og best-ball-netto.
+  //  - isSolo: solo-stableford (kun stableford med team_size=1). Skjuler
+  //    Lag-seksjon + Lag/Flight-kolonner i spillerlista — alle har null/0.
+  //  - isParStableford: par-stableford (4BBB). Viser Lag-seksjon kun for de
+  //    lag som faktisk har spillere, og dropper Flight-kolonnen i tabellen
+  //    siden den alltid speiler team_number 1:1.
+  //  - isBestBall: 4 lag à 2 spillere; flight kan avvike fra team. Full
+  //    Lag-grid (4 hardkodet) + Lag+Flight-kolonner.
+  const isSolo =
+    game.game_mode === 'stableford' && game.mode_config.team_size === 1;
+  const isParStableford =
+    game.game_mode === 'stableford' && game.mode_config.team_size === 2;
+  const isBestBall = game.game_mode === 'best_ball_netto';
+
+  // Spillform-label for Format-cardet — speiler leaderboard-flatene som
+  // skiller solo vs par-stableford eksplisitt.
+  const modeLabel = isParStableford ? 'Par-stableford' : MODE_LABELS[game.game_mode];
 
   // Group by team (1..4). Each team has up to 2 players.
   const byTeam: Record<number, GamePlayerRow[]> = { 1: [], 2: [], 3: [], 4: [] };
@@ -395,12 +420,12 @@ async function PlayersSections({
               : undefined
           }
         />
-        <Row label="Antall lag" value={`${teamCount} / 4`} />
+        {!isSolo && <Row label="Antall lag" value={`${teamCount} / 4`} />}
       </SectionCard>
 
       {/* Card 2 — Format */}
       <SectionCard ribbon="Format">
-        <Row label="Spillform" value={MODE_LABELS[game.game_mode]} />
+        <Row label="Spillform" value={modeLabel} />
         <Row
           label="Handicap-justering"
           value={`${game.hcp_allowance_pct} %`}
@@ -497,32 +522,41 @@ async function PlayersSections({
       {!isSolo && (
         <SectionCard ribbon="Lag">
           <div className="grid grid-cols-1 gap-2.5 px-3.5 pb-3.5 pt-3 sm:grid-cols-2">
-            {[1, 2, 3, 4].map((team) => (
-              <div
-                key={team}
-                className="rounded-xl border border-border px-3 py-2.5"
-              >
-                <p className="mb-1.5 font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-                  Lag {team}
-                </p>
-                {byTeam[team].length === 0 ? (
-                  <p className="text-sm text-muted">(tom)</p>
-                ) : (
-                  <ul className="space-y-0.5">
-                    {byTeam[team].map((p) => (
-                      <li key={p.user_id} className="text-sm text-text">
-                        {displayName(p)}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            ))}
+            {/* Par-stableford skalerer 1-4 lag — vis kun lag med spillere, ellers
+                blir gridet dominert av «(tom)»-placeholdere. Best-ball er fast
+                4 lag à 2 og bør beholde tomme-slots så admin ser om lag mangler. */}
+            {[1, 2, 3, 4]
+              .filter((team) => !isParStableford || byTeam[team].length > 0)
+              .map((team) => (
+                <div
+                  key={team}
+                  className="rounded-xl border border-border px-3 py-2.5"
+                >
+                  <p className="mb-1.5 font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+                    Lag {team}
+                  </p>
+                  {byTeam[team].length === 0 ? (
+                    <p className="text-sm text-muted">(tom)</p>
+                  ) : (
+                    <ul className="space-y-0.5">
+                      {byTeam[team].map((p) => (
+                        <li key={p.user_id} className="text-sm text-text">
+                          {displayName(p)}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
           </div>
         </SectionCard>
       )}
 
-      {[1, 2, 3, 4].some((f) => byFlight[f].length > 0) && (
+      {/* Par-stableford har flight = team mekanisk — Flights-seksjonen ville
+          duplisert Lag-seksjonen rett over. Skip for solo (ingen flights) og
+          for par-stableford. */}
+      {!isSolo && !isParStableford &&
+        [1, 2, 3, 4].some((f) => byFlight[f].length > 0) && (
         <SectionCard ribbon="Flights">
           <ul className="space-y-2 px-3.5 pb-3.5 pt-3">
             {[1, 2, 3, 4]
@@ -551,11 +585,15 @@ async function PlayersSections({
               <thead>
                 <tr className="text-left text-[10px] font-semibold uppercase tracking-widest text-muted">
                   <th className="px-2 py-1.5 font-semibold">Navn</th>
+                  {/* Par-stableford har flight = team mekanisk (gjort i payload-laget
+                      siden Phase 2). Vis kun Lag-kolonnen — Flight-kolonnen ville
+                      gjentatt samme tall. Best-ball kan ha avvik (8 spillere på 4 lag
+                      kan settes til 1-2 flights) så begge kolonnene er fortsatt informative. */}
                   {!isSolo && (
-                    <>
-                      <th className="px-2 py-1.5 font-semibold">Lag</th>
-                      <th className="px-2 py-1.5 font-semibold">Flight</th>
-                    </>
+                    <th className="px-2 py-1.5 font-semibold">Lag</th>
+                  )}
+                  {isBestBall && (
+                    <th className="px-2 py-1.5 font-semibold">Flight</th>
                   )}
                   <th className="px-2 py-1.5 text-right font-semibold">CH</th>
                   {game.status !== 'draft' && (
@@ -585,10 +623,10 @@ async function PlayersSections({
                     >
                       <td className="px-2 py-2 text-text">{displayName(p)}</td>
                       {!isSolo && (
-                        <>
-                          <td className="px-2 py-2 text-text">{p.team_number}</td>
-                          <td className="px-2 py-2 text-text">{p.flight_number}</td>
-                        </>
+                        <td className="px-2 py-2 text-text">{p.team_number}</td>
+                      )}
+                      {isBestBall && (
+                        <td className="px-2 py-2 text-text">{p.flight_number}</td>
                       )}
                       <td className="px-2 py-2 text-right text-text">
                         {p.course_handicap ?? '—'}
@@ -637,8 +675,15 @@ async function PlayersSections({
                           {displayName(p)}
                         </p>
                         <p className="mt-0.5 text-xs text-muted">
-                          Flight {p.flight_number} · Lag {p.team_number}
-                          {' · '}
+                          {/* Par-stableford har Flight = Lag mekanisk, så vi viser
+                              kun Lag for å unngå redundans. Solo har null på begge
+                              og bør droppe begge. Best-ball kan ha avvik mellom
+                              Flight og Lag — vis begge der. */}
+                          {isSolo
+                            ? null
+                            : isParStableford
+                              ? `Lag ${p.team_number} · `
+                              : `Flight ${p.flight_number} · Lag ${p.team_number} · `}
                           {needsApproval
                             ? '⏳ Venter godkjenning'
                             : '✓ Godkjent'}
