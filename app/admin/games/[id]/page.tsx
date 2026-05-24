@@ -323,23 +323,38 @@ async function PlayersSections({
   const players = playersRes.data ?? [];
 
   // Mode-narrowing: skiller solo (en spiller = en deltager, ingen lag/flight)
-  // fra par-stableford (lag à 2, flight = team mekanisk) og best-ball-netto.
+  // fra par-stableford (lag à 2, flight = team mekanisk), best-ball-netto, og
+  // singles matchplay (1v1, side i stedet for lag).
   //  - isSolo: solo-stableford (kun stableford med team_size=1). Skjuler
   //    Lag-seksjon + Lag/Flight-kolonner i spillerlista — alle har null/0.
   //  - isParStableford: par-stableford (4BBB). Viser Lag-seksjon kun for de
   //    lag som faktisk har spillere, og dropper Flight-kolonnen i tabellen
   //    siden den alltid speiler team_number 1:1.
+  //  - isMatchplay: singles matchplay (1v1). Bruker «Side» i stedet for «Lag»
+  //    i alle labels — 2 sider à 1 spiller. Flight = side mekanisk, så
+  //    Flight-kolonnen skjules.
   //  - isBestBall: 4 lag à 2 spillere; flight kan avvike fra team. Full
   //    Lag-grid (4 hardkodet) + Lag+Flight-kolonner.
   const isSolo =
     game.game_mode === 'stableford' && game.mode_config.team_size === 1;
   const isParStableford =
     game.game_mode === 'stableford' && game.mode_config.team_size === 2;
+  const isMatchplay = game.game_mode === 'singles_matchplay';
   const isBestBall = game.game_mode === 'best_ball_netto';
 
   // Spillform-label for Format-cardet — speiler leaderboard-flatene som
-  // skiller solo vs par-stableford eksplisitt.
+  // skiller solo vs par-stableford eksplisitt. Matchplay leser ren mode-label.
   const modeLabel = isParStableford ? 'Par-stableford' : MODE_LABELS[game.game_mode];
+
+  // Lag-terminologi: matchplay bruker «Side» i stedet for «Lag» (golf-standard
+  // for 1v1-format). Holdt som lokale strings slik at vi ikke trenger å fyre
+  // ternary på hver call-site i markup.
+  const teamLabel = isMatchplay ? 'Side' : 'Lag';
+  const teamsTotalLabel = isMatchplay ? 'Antall sider' : 'Antall lag';
+  // Maks-antall lag/sider for «X / Y»-disply i Påmelding-cardet. Best-ball er
+  // alltid 4, par-stableford skalerer 1-4 men UX-en viser fortsatt mot 4 for
+  // konsistens, matchplay er alltid 2.
+  const teamsMax = isMatchplay ? 2 : 4;
 
   // Group by team (1..4). Each team has up to 2 players.
   const byTeam: Record<number, GamePlayerRow[]> = { 1: [], 2: [], 3: [], 4: [] };
@@ -420,7 +435,9 @@ async function PlayersSections({
               : undefined
           }
         />
-        {!isSolo && <Row label="Antall lag" value={`${teamCount} / 4`} />}
+        {!isSolo && (
+          <Row label={teamsTotalLabel} value={`${teamCount} / ${teamsMax}`} />
+        )}
       </SectionCard>
 
       {/* Card 2 — Format */}
@@ -481,7 +498,9 @@ async function PlayersSections({
         <SectionCard ribbon="Fremgang">
           <div className="px-3.5 pt-3 pb-3.5">
             <p className="mb-3 text-xs text-muted">
-              Hvor langt hver flight har kommet — uten å avsløre tall.
+              {isMatchplay
+                ? 'Hvor langt hver side har kommet — uten å avsløre tall.'
+                : 'Hvor langt hver flight har kommet — uten å avsløre tall.'}
             </p>
             <ul className="space-y-3.5">
               {[1, 2, 3, 4]
@@ -491,11 +510,16 @@ async function PlayersSections({
                   const pct = p
                     ? Math.round((p.filledCells / p.totalCells) * 100)
                     : 0;
+                  // Matchplay: flight = side mekanisk, så vi viser «Side N» her
+                  // i stedet for «Flight N» for å matche resten av detail-pagen.
+                  const groupLabel = isMatchplay
+                    ? `Side ${f}`
+                    : `Flight ${f}`;
                   return (
                     <li key={f}>
                       <div className="mb-1 flex items-center justify-between text-sm">
                         <span className="font-medium tracking-tight text-text">
-                          Flight {f}
+                          {groupLabel}
                         </span>
                         <span className="text-xs tabular-nums text-muted">
                           {p && p.maxHole > 0
@@ -520,20 +544,26 @@ async function PlayersSections({
       )}
 
       {!isSolo && (
-        <SectionCard ribbon="Lag">
+        <SectionCard ribbon={isMatchplay ? 'Sider' : 'Lag'}>
           <div className="grid grid-cols-1 gap-2.5 px-3.5 pb-3.5 pt-3 sm:grid-cols-2">
             {/* Par-stableford skalerer 1-4 lag — vis kun lag med spillere, ellers
                 blir gridet dominert av «(tom)»-placeholdere. Best-ball er fast
-                4 lag à 2 og bør beholde tomme-slots så admin ser om lag mangler. */}
+                4 lag à 2 og bør beholde tomme-slots så admin ser om lag mangler.
+                Matchplay er fast 2 sider à 1 spiller — vis kun Side 1 og Side 2,
+                aldri 3/4 (validatoren håndhever 1+1). */}
             {[1, 2, 3, 4]
-              .filter((team) => !isParStableford || byTeam[team].length > 0)
+              .filter((team) => {
+                if (isMatchplay) return team <= 2;
+                if (isParStableford) return byTeam[team].length > 0;
+                return true;
+              })
               .map((team) => (
                 <div
                   key={team}
                   className="rounded-xl border border-border px-3 py-2.5"
                 >
                   <p className="mb-1.5 font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-                    Lag {team}
+                    {teamLabel} {team}
                   </p>
                   {byTeam[team].length === 0 ? (
                     <p className="text-sm text-muted">(tom)</p>
@@ -553,9 +583,10 @@ async function PlayersSections({
       )}
 
       {/* Par-stableford har flight = team mekanisk — Flights-seksjonen ville
-          duplisert Lag-seksjonen rett over. Skip for solo (ingen flights) og
-          for par-stableford. */}
-      {!isSolo && !isParStableford &&
+          duplisert Lag-seksjonen rett over. Matchplay har samme mekanikk
+          (flight = side via payload-laget). Skip for solo (ingen flights),
+          par-stableford og matchplay. */}
+      {!isSolo && !isParStableford && !isMatchplay &&
         [1, 2, 3, 4].some((f) => byFlight[f].length > 0) && (
         <SectionCard ribbon="Flights">
           <ul className="space-y-2 px-3.5 pb-3.5 pt-3">
@@ -585,12 +616,13 @@ async function PlayersSections({
               <thead>
                 <tr className="text-left text-[10px] font-semibold uppercase tracking-widest text-muted">
                   <th className="px-2 py-1.5 font-semibold">Navn</th>
-                  {/* Par-stableford har flight = team mekanisk (gjort i payload-laget
-                      siden Phase 2). Vis kun Lag-kolonnen — Flight-kolonnen ville
+                  {/* Par-stableford og matchplay har flight = team mekanisk (gjort i
+                      payload-laget). Vis kun Lag/Side-kolonnen — Flight-kolonnen ville
                       gjentatt samme tall. Best-ball kan ha avvik (8 spillere på 4 lag
-                      kan settes til 1-2 flights) så begge kolonnene er fortsatt informative. */}
+                      kan settes til 1-2 flights) så begge kolonnene er fortsatt informative.
+                      Matchplay bruker «Side»-label i stedet for «Lag». */}
                   {!isSolo && (
-                    <th className="px-2 py-1.5 font-semibold">Lag</th>
+                    <th className="px-2 py-1.5 font-semibold">{teamLabel}</th>
                   )}
                   {isBestBall && (
                     <th className="px-2 py-1.5 font-semibold">Flight</th>
@@ -675,15 +707,18 @@ async function PlayersSections({
                           {displayName(p)}
                         </p>
                         <p className="mt-0.5 text-xs text-muted">
-                          {/* Par-stableford har Flight = Lag mekanisk, så vi viser
-                              kun Lag for å unngå redundans. Solo har null på begge
-                              og bør droppe begge. Best-ball kan ha avvik mellom
-                              Flight og Lag — vis begge der. */}
+                          {/* Par-stableford og matchplay har Flight = Lag/Side mekanisk,
+                              så vi viser kun Lag/Side for å unngå redundans. Solo har
+                              null på begge og bør droppe begge. Best-ball kan ha avvik
+                              mellom Flight og Lag — vis begge der. Matchplay bruker
+                              «Side»-label. */}
                           {isSolo
                             ? null
-                            : isParStableford
-                              ? `Lag ${p.team_number} · `
-                              : `Flight ${p.flight_number} · Lag ${p.team_number} · `}
+                            : isMatchplay
+                              ? `Side ${p.team_number} · `
+                              : isParStableford
+                                ? `Lag ${p.team_number} · `
+                                : `Flight ${p.flight_number} · Lag ${p.team_number} · `}
                           {needsApproval
                             ? '⏳ Venter godkjenning'
                             : '✓ Godkjent'}

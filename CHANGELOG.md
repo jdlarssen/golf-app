@@ -14,6 +14,32 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Matchplay-turneringer mellom to spillere er nå tilgjengelig. Velg Matchplay som modus og tilordne én spiller til Side 1 og én til Side 2 — vinneren av hvert hull (laveste netto) får et hull-poeng, og matchen avgjøres som «X up» (etter 18 hull) eller «X&Y» (mat-em før hull 18) etter golfreglene.
 
+### [1.12.2] - 2026-05-24
+
+> Når matchplay-spillet avsluttes får begge spillere mail med matchresultatet («Du vant 3&2 over Per» / «Du tapte 1up mot Per» / «AS — uavgjort»). Admin-flaten viser Sider i stedet for Lag for matchplay-spill.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `lib/mail/gameFinishedNotification.ts` — `GameFinishedNotificationMode` har ny `kind: 'singles_matchplay'`-gren med `matchResult` (`'won' | 'lost' | 'tied'`), `formattedResult` (golf-format: «3&2» / «1up» / «AS»), `opponentName` (motspillerens fornavn, `null` faller tilbake til «motstanderen») og `selfSide` (1 eller 2). Body-builder rendrer tre grener:
+  - **won**: «Du vant {formatted} over {opponent}. Gratulerer med seieren!»
+  - **lost**: «Du tapte {formatted} mot {opponent}. Godt spilt — kanskje revansje neste runde?»
+  - **tied**: «Matchen mot {opponent} endte uavgjort (AS). En jevn match — kanskje neste gang.»
+  - 5 nye tester dekker won / lost / tied / null-opponent-fallback / null-firstName-fallback. HTML escaper opponent-navn (XSS-defense), formatted-strengen rendres direkte siden den genereres internt fra tall.
+- `lib/mail/gameFinishedRecipients.ts` — ny `buildMatchplayRecipients`-helper bygger per-spiller mottakerliste fra `SinglesMatchplayResult`. Hver spiller får motspillerens fornavn via `sideByUserId`-lookup (scoring-laget tuple-garantien gir oss 1+1) og matchResult mappet fra `result.result.winner` ('side1'/'side2'/'tied') sett FRA mottakerens `selfSide`. Defensive fallbacks: hvis matchen ikke er avgjort (`result.result === null` — sjelden gitt endGame-validering) eller hvis mode-router returnerer noe annet enn `singles_matchplay`, faller helperen tilbake til nøytral best-ball-default. 6 nye tester dekker side 1 vinner / side 2 mat-em (3&2) / AS / spiller uten mail / motspiller uten navn / live (ikke avgjort) → fallback.
+
+#### Changed
+- `app/admin/games/[id]/page.tsx` — ny `isMatchplay`-narrowing-flag (`game.game_mode === 'singles_matchplay'`) + tre tilpasninger:
+  - **Lag-terminologi**: «Antall lag X / 4» blir «Antall sider X / 2», Lag-seksjonen tittel «Lag» blir «Sider» (kun viser Side 1 og Side 2, aldri 3/4), spillerlistens «Lag»-kolonne blir «Side», og «Leverte scorekort»-listen viser «Side N» i stedet for «Flight N · Lag N» for matchplay.
+  - **Flights-seksjonen skjules**: flight = side mekanisk (validatoren håndhever `flight_number = team_number` for matchplay), så Flights-listen ville duplisert Sider-listen rett over — speilet par-stableford-pattern fra 1.11.2.
+  - **Fremgang-kortet**: bytter «Hvor langt hver flight har kommet» til «Hvor langt hver side har kommet», og labelen «Flight N» til «Side N» for konsistens med resten av detail-pagen.
+
+#### Notes
+- Phase 4 markerer epic #45 (singles matchplay v1) som ferdig. Tidligere faser leverte scoring + validation (Phase 1), GameForm-UI med side-tilordning (Phase 2), og MatchplayMatchView-leaderboarden (Phase 3). Mailen og admin-polish-en var de siste manglende stykkene før formatet er produksjons-klart.
+
+</details>
+
 ### [1.12.1] - 2026-05-24
 
 > Når matchplay-spillet er i gang ser begge spillerne sin sanntids match-status — «X up etter Y hull» — og når matchen er over feires vinneren med resultat i golf-standard format («3&2», «1up», «AS»).

@@ -281,6 +281,143 @@ describe('sendGameFinishedNotification', () => {
     expect(payload.text).not.toContain('satt sammen');
   });
 
+  // ─────────────────────────────────────────────────────────────────────
+  // Singles matchplay (epic #45). Tre grener (won/lost/tied) + null-fallback
+  // for opponent-navn.
+  // ─────────────────────────────────────────────────────────────────────
+
+  it('matchplay: won-resultatet rendrer «Du vant {formatted} over {opponent}» + gratulasjon', async () => {
+    const { sendGameFinishedNotification } = await import(
+      './gameFinishedNotification'
+    );
+    await sendGameFinishedNotification({
+      to: 'vinner@example.com',
+      playerFirstName: 'Alice',
+      gameName: 'Matchplay-cup',
+      gameId: 'game-4',
+      mode: {
+        kind: 'singles_matchplay',
+        matchResult: 'won',
+        formattedResult: '3&2',
+        opponentName: 'Per',
+        selfSide: 1,
+      },
+    });
+    const payload = sendMock.mock.calls[0]![0];
+    expect(payload.subject).toBe('Resultatet er klart — Matchplay-cup');
+    expect(payload.html).toContain('Du vant');
+    expect(payload.html).toContain('<strong>3&amp;2</strong>');
+    expect(payload.html).toContain('<strong>Per</strong>');
+    expect(payload.html).toContain('Gratulerer med seieren');
+    expect(payload.text).toContain('Du vant 3&2 over Per');
+    expect(payload.text).toContain('Gratulerer med seieren');
+    // Stableford-fraser skal ikke lekke inn
+    expect(payload.html).not.toContain('plass');
+    expect(payload.html).not.toContain('poeng');
+  });
+
+  it('matchplay: lost-resultatet rendrer «Du tapte {formatted} mot {opponent}» + revansje-linje', async () => {
+    const { sendGameFinishedNotification } = await import(
+      './gameFinishedNotification'
+    );
+    await sendGameFinishedNotification({
+      to: 'taper@example.com',
+      playerFirstName: 'Bjørn',
+      gameName: 'Matchplay-cup',
+      gameId: 'game-4',
+      mode: {
+        kind: 'singles_matchplay',
+        matchResult: 'lost',
+        formattedResult: '1up',
+        opponentName: 'Per',
+        selfSide: 2,
+      },
+    });
+    const payload = sendMock.mock.calls[0]![0];
+    expect(payload.html).toContain('Du tapte');
+    expect(payload.html).toContain('<strong>1up</strong>');
+    expect(payload.html).toContain('mot <strong>Per</strong>');
+    expect(payload.html).toContain('revansje');
+    expect(payload.html).not.toContain('Gratulerer');
+    expect(payload.text).toContain('Du tapte 1up mot Per');
+    expect(payload.text).toContain('revansje');
+  });
+
+  it('matchplay: tied-resultatet rendrer «Matchen mot {opponent} endte uavgjort (AS)»', async () => {
+    const { sendGameFinishedNotification } = await import(
+      './gameFinishedNotification'
+    );
+    await sendGameFinishedNotification({
+      to: 'spiller@example.com',
+      playerFirstName: 'Cecilie',
+      gameName: 'Matchplay-cup',
+      gameId: 'game-4',
+      mode: {
+        kind: 'singles_matchplay',
+        matchResult: 'tied',
+        formattedResult: 'AS',
+        opponentName: 'David',
+        selfSide: 1,
+      },
+    });
+    const payload = sendMock.mock.calls[0]![0];
+    expect(payload.html).toContain('Matchen mot');
+    expect(payload.html).toContain('<strong>David</strong>');
+    expect(payload.html).toContain('uavgjort');
+    expect(payload.html).toContain('<strong>AS</strong>');
+    expect(payload.html).toContain('jevn match');
+    expect(payload.html).not.toContain('Gratulerer');
+    expect(payload.html).not.toContain('revansje');
+    expect(payload.text).toContain('Matchen mot David endte uavgjort');
+    expect(payload.text).toContain('AS');
+  });
+
+  it('matchplay: faller tilbake til «motstanderen» når opponentName er null', async () => {
+    const { sendGameFinishedNotification } = await import(
+      './gameFinishedNotification'
+    );
+    await sendGameFinishedNotification({
+      to: 'spiller@example.com',
+      playerFirstName: 'Eva',
+      gameName: 'Matchplay-cup',
+      gameId: 'game-4',
+      mode: {
+        kind: 'singles_matchplay',
+        matchResult: 'won',
+        formattedResult: '2up',
+        opponentName: null,
+        selfSide: 1,
+      },
+    });
+    const payload = sendMock.mock.calls[0]![0];
+    expect(payload.html).toContain('Du vant');
+    expect(payload.html).toContain('<strong>motstanderen</strong>');
+    expect(payload.html).not.toContain('null');
+    expect(payload.text).toContain('Du vant 2up over motstanderen');
+  });
+
+  it('matchplay: bruker «Hei!» når playerFirstName er null', async () => {
+    const { sendGameFinishedNotification } = await import(
+      './gameFinishedNotification'
+    );
+    await sendGameFinishedNotification({
+      to: 'spiller@example.com',
+      playerFirstName: null,
+      gameName: 'Matchplay-cup',
+      gameId: 'game-4',
+      mode: {
+        kind: 'singles_matchplay',
+        matchResult: 'tied',
+        formattedResult: 'AS',
+        opponentName: 'Per',
+        selfSide: 1,
+      },
+    });
+    const payload = sendMock.mock.calls[0]![0];
+    expect(payload.html).toContain('Hei!');
+    expect(payload.html).not.toContain('Hei null');
+  });
+
   it('kaster når Resend returnerer feil', async () => {
     sendMock.mockResolvedValueOnce({
       data: null,

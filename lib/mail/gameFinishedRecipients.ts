@@ -77,6 +77,24 @@ export async function buildGameFinishedRecipients(
     return [];
   }
 
+  // Singles matchplay (epic #45): bygg per-spiller payload med motspillerens
+  // navn + match-resultat sett FRA mottakerens perspektiv. Speilet pattern
+  // som team-stableford-grenen, men forenklet siden det alltid er to spillere
+  // med team_number 1 og 2 (validatoren håndhever 1+1).
+  //
+  // Vi kjører `computeLeaderboard` (mode-router) for å få
+  // `SinglesMatchplayResult.result` — den inneholder `winner` ('side1' |
+  // 'side2' | 'tied') og `formatted`-strengen ('3&2' / '1up' / 'AS'). Hver
+  // spillers `team_number` mapper til sideNumber (1 eller 2), så vi vet
+  // hvem som vant fra spillerens synspunkt.
+  //
+  // Hvis matchen ikke er avgjort (`result.result === null` — meget sjelden,
+  // gitt at endGame validerer alle scorekort er levert), faller vi tilbake
+  // til best-ball-default for å unngå halvferdig copy.
+  if (game.game_mode === 'singles_matchplay') {
+    return buildMatchplayRecipients(supabase, gameId, game, playerRows);
+  }
+
   // Best-ball-netto: ingen per-spiller-mode, returner kun email+name.
   if (game.game_mode !== 'stableford') {
     return playerRows
@@ -238,6 +256,165 @@ export async function buildGameFinishedRecipients(
       email,
       name: row.users?.name ?? null,
       mode,
+    });
+  }
+  return recipients;
+}
+
+/**
+ * Bygger mottakerlisten for singles matchplay (epic #45). Hver av de to
+ * spillerne får sin egen mode-payload med motspillerens fornavn + match-
+ * resultat (won / lost / tied) sett FRA mottakerens side.
+ *
+ * Forutsetter (validert av payload-laget ved publish):
+ *  - nøyaktig 2 spillere
+ *  - team_number er 1 eller 2 (én på hver side)
+ *
+ * Defensive fallbacks:
+ *  - hvis matchen ikke er avgjort (`result.result === null` — meget sjelden
+ *    siden endGame validerer at alle scorekort er levert), faller vi tilbake
+ *    til nøytral best-ball-default copy (uten mode-payload).
+ *  - hvis result-formen er uventet (mode-router gav noe annet enn
+ *    'singles_matchplay'), samme fallback.
+ *  - hvis motspillerens navn mangler eller fornavn ikke kan parses, settes
+ *    `opponentName: null` — mail-laget bytter til «motstanderen»-fallback.
+ */
+async function buildMatchplayRecipients(
+  supabase: SupabaseClient,
+  gameId: string,
+  game: { course_id: string; game_mode: GameMode; mode_config: GameModeConfig },
+  playerRows: {
+    user_id: string;
+    team_number: number | null;
+    course_handicap: number | null;
+    users: { email: string | null; name: string | null } | null;
+  }[],
+): Promise<FinishedMailRecipient[]> {
+  const [scoresRes, holesRes] = await Promise.all([
+    supabase
+      .from('scores')
+      .select('user_id, hole_number, strokes')
+      .eq('game_id', gameId)
+      .returns<
+        { user_id: string; hole_number: number; strokes: number | null }[]
+      >(),
+    supabase
+      .from('course_holes')
+      .select('hole_number, par, stroke_index')
+      .eq('course_id', game.course_id)
+      .order('hole_number', { ascending: true })
+      .returns<{ hole_number: number; par: number; stroke_index: number }[]>(),
+  ]);
+  if (scoresRes.error || holesRes.error) {
+    console.error(
+      '[buildMatchplayRecipients] failed to fetch scores/holes',
+      scoresRes.error ?? holesRes.error,
+    );
+    return [];
+  }
+
+  const result = computeLeaderboard({
+    game: {
+      id: gameId,
+      game_mode: 'singles_matchplay',
+      mode_config: game.mode_config,
+    },
+    players: playerRows.map((row) => ({
+      userId: row.user_id,
+      teamNumber: row.team_number,
+      flightNumber: null,
+      courseHandicap: row.course_handicap ?? 0,
+    })),
+    holes: (holesRes.data ?? []).map((h) => ({
+      number: h.hole_number,
+      par: h.par,
+      strokeIndex: h.stroke_index,
+    })),
+    scores: (scoresRes.data ?? []).map((s) => ({
+      userId: s.user_id,
+      holeNumber: s.hole_number,
+      gross: s.strokes,
+    })),
+  });
+
+  // Defensive fallback: mode-router returnerte noe annet enn matchplay, eller
+  // matchen er ikke avgjort. Send nøytral default copy uten mode-payload.
+  if (result.kind !== 'singles_matchplay' || result.result === null) {
+    return playerRows
+      .map((row) => ({
+        email: row.users?.email ?? null,
+        name: row.users?.name ?? null,
+      }))
+      .filter((r): r is FinishedMailRecipient => {
+        return typeof r.email === 'string' && r.email.length > 0;
+      });
+  }
+
+  const matchResult = result.result;
+  const formatted = matchResult.formatted;
+
+  // Bygg user→side-map fra scoring-laget. Sidene er alltid sortert side 1
+  // først, side 2 sist (tuple-garanti i `SinglesMatchplayResult.sides`).
+  const sideByUserId = new Map<string, 1 | 2>();
+  for (const side of result.sides) {
+    if (side.userId) sideByUserId.set(side.userId, side.sideNumber);
+  }
+
+  // Navn-map for motspiller-lookup.
+  const nameByUserId = new Map<string, string | null>();
+  for (const row of playerRows) {
+    nameByUserId.set(row.user_id, row.users?.name ?? null);
+  }
+
+  const recipients: FinishedMailRecipient[] = [];
+  for (const row of playerRows) {
+    const email = row.users?.email ?? null;
+    if (!email) continue;
+
+    const selfSide = sideByUserId.get(row.user_id);
+    // Defensive: hvis spilleren ikke er på en kjent side (validatoren burde
+    // ha håndhevet 1+1, men data-laget kan i teorien ha rar state), dropp
+    // mode-payload — send nøytral copy.
+    if (selfSide !== 1 && selfSide !== 2) {
+      recipients.push({
+        email,
+        name: row.users?.name ?? null,
+      });
+      continue;
+    }
+
+    // Finn motspilleren. Det er alltid nøyaktig én — den andre siden.
+    const opponentRow = playerRows.find(
+      (other) =>
+        other.user_id !== row.user_id &&
+        sideByUserId.get(other.user_id) !== selfSide,
+    );
+    const opponentName = opponentRow
+      ? firstName(nameByUserId.get(opponentRow.user_id) ?? null) ?? null
+      : null;
+
+    let matchResultForSelf: 'won' | 'lost' | 'tied';
+    if (matchResult.winner === 'tied') {
+      matchResultForSelf = 'tied';
+    } else if (
+      (matchResult.winner === 'side1' && selfSide === 1) ||
+      (matchResult.winner === 'side2' && selfSide === 2)
+    ) {
+      matchResultForSelf = 'won';
+    } else {
+      matchResultForSelf = 'lost';
+    }
+
+    recipients.push({
+      email,
+      name: row.users?.name ?? null,
+      mode: {
+        kind: 'singles_matchplay',
+        matchResult: matchResultForSelf,
+        formattedResult: formatted,
+        opponentName,
+        selfSide,
+      },
     });
   }
   return recipients;

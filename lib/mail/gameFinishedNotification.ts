@@ -31,6 +31,9 @@ function getClient(): Resend {
  *   - `kind: 'stableford'` + `variant: 'team'` (par-stableford / 4BBB) bruker
  *     lag-plassering + lag-poeng + partnernavn slik at begge på laget får
  *     samme spoiler-tone selv om de hadde ulik individuell prestasjon.
+ *   - `kind: 'singles_matchplay'` (1v1 net matchplay) viser matchresultatet
+ *     per spiller — «Du vant 3&2 over Per», «Du tapte 1up mot Per», eller
+ *     «Matchen mot Per endte uavgjort (AS)». Begge spillerne får speilet copy.
  *   - `kind: 'best_ball_netto'` (eller udefinert) bruker dagens nøytrale
  *     copy («Runden er ferdig — leaderboard er åpen») fordi lag-vinneren
  *     ikke nødvendigvis er én spesifikk spiller å adressere.
@@ -62,6 +65,34 @@ export type GameFinishedNotificationMode =
       teamPartnerName: string | null;
       /** Totalt antall lag i turneringen — gir kontekst til plasseringen. */
       totalTeams: number;
+    }
+  | {
+      kind: 'singles_matchplay';
+      /**
+       * Hvordan matchen endte SETT FRA mottakeren:
+       *   - `'won'`  — mottakeren vant matchen
+       *   - `'lost'` — mottakeren tapte matchen
+       *   - `'tied'` — matchen endte uavgjort (AS — all square etter 18 hull)
+       */
+      matchResult: 'won' | 'lost' | 'tied';
+      /**
+       * Golf-formatert resultat-streng: «3&2» (mat-em før 18), «1up» (etter
+       * 18 hull med margin), eller «AS» (uavgjort etter 18). Speiler
+       * `MatchplayMatchResult.formatted` fra `lib/scoring/modes/types.ts`.
+       */
+      formattedResult: string;
+      /**
+       * Motspillerens fornavn (eller hele navnet hvis fornavnet ikke kan
+       * parses). `null` hvis motspillerens navn mangler — da bruker mailen
+       * et nøytralt «motstanderen»-fallback i stedet for å fyre med «null».
+       */
+      opponentName: string | null;
+      /**
+       * Hvilken side mottakeren spilte på (1 eller 2). Lagres for symmetri
+       * med scoring-laget, men brukes ikke direkte i mail-copy-en —
+       * matchResult er nok for å rendre riktig linje.
+       */
+      selfSide: 1 | 2;
     };
 
 export type GameFinishedNotificationParams = {
@@ -89,20 +120,27 @@ export async function sendGameFinishedNotification(
   const salutation = playerFirstName ? `Hei ${playerFirstName}!` : 'Hei!';
 
   // Mode-spesifikk hovedlinje. Stableford får en personlig plassering-spoiler
-  // (solo: individuell rank, team: lag-rank); best-ball (eller udefinert) får
-  // dagens nøytrale ferdig-melding.
-  const bodyLine =
-    mode?.kind === 'stableford'
-      ? mode.variant === 'team'
+  // (solo: individuell rank, team: lag-rank); matchplay får match-resultat
+  // med motstander-navn («Du vant 3&2 over Per»); best-ball (eller udefinert)
+  // får dagens nøytrale ferdig-melding.
+  let bodyLine: string;
+  let bodyLineText: string;
+  if (mode?.kind === 'stableford') {
+    bodyLine =
+      mode.variant === 'team'
         ? formatStablefordTeamBodyLine(mode, gameName)
-        : formatStablefordSoloBodyLine(mode, gameName)
-      : `Runden i <strong>${escapeHtml(gameName)}</strong> er ferdig — alle scorekort er levert og godkjent, og leaderboard er åpen.`;
-  const bodyLineText =
-    mode?.kind === 'stableford'
-      ? mode.variant === 'team'
+        : formatStablefordSoloBodyLine(mode, gameName);
+    bodyLineText =
+      mode.variant === 'team'
         ? formatStablefordTeamBodyLineText(mode, gameName)
-        : formatStablefordSoloBodyLineText(mode, gameName)
-      : `Runden i ${gameName} er ferdig — alle scorekort er levert og godkjent, og leaderboard er åpen.`;
+        : formatStablefordSoloBodyLineText(mode, gameName);
+  } else if (mode?.kind === 'singles_matchplay') {
+    bodyLine = formatMatchplayBodyLine(mode, gameName);
+    bodyLineText = formatMatchplayBodyLineText(mode, gameName);
+  } else {
+    bodyLine = `Runden i <strong>${escapeHtml(gameName)}</strong> er ferdig — alle scorekort er levert og godkjent, og leaderboard er åpen.`;
+    bodyLineText = `Runden i ${gameName} er ferdig — alle scorekort er levert og godkjent, og leaderboard er åpen.`;
+  }
 
   const html = `<!DOCTYPE html><html lang="nb">
 <head>
@@ -284,6 +322,84 @@ function formatStablefordTeamBodyLineText(
     `Runden i ${gameName} er ferdig. ` +
     `Laget endte på ${placeText}${ofTotal} med ${teamTotalPoints} ${pointsText}.${celebration}` +
     partnerSentence
+  );
+}
+
+/**
+ * Bygger matchplay-hovedlinjen (HTML-versjon). Tre grener basert på
+ * `matchResult`:
+ *
+ *   - `'won'`  — «Du vant {formatted} over {opponent}. Gratulerer med seieren!»
+ *   - `'lost'` — «Du tapte {formatted} mot {opponent}. Godt spilt — kanskje revansje?»
+ *   - `'tied'` — «Matchen mot {opponent} endte uavgjort (AS). En jevn match.»
+ *
+ * Hvis motstander-navnet er `null` faller vi tilbake til «motstanderen» for å
+ * unngå «Du vant 3&2 over null»-fallout — defensiv beskyttelse mot
+ * pre-completion-profile-spillere som ikke har fylt inn navn ennå.
+ *
+ * Resultatstrengen («3&2», «1up», «AS») rendres som-er fra
+ * `formattedResult` og pakkes i `<strong>` for visuell vekt. Den er
+ * ikke escapt fordi den genereres internt fra tall (golf-format), aldri
+ * brukerinput.
+ */
+function formatMatchplayBodyLine(
+  mode: Extract<GameFinishedNotificationMode, { kind: 'singles_matchplay' }>,
+  gameName: string,
+): string {
+  const { matchResult, formattedResult, opponentName } = mode;
+  const opponent = opponentName ?? 'motstanderen';
+  const opponentEsc = escapeHtml(opponent);
+  const formattedEsc = escapeHtml(formattedResult);
+  const gameEsc = escapeHtml(gameName);
+
+  if (matchResult === 'won') {
+    return (
+      `Runden i <strong>${gameEsc}</strong> er ferdig. ` +
+      `Du vant <strong>${formattedEsc}</strong> over <strong>${opponentEsc}</strong>. ` +
+      `Gratulerer med seieren!`
+    );
+  }
+  if (matchResult === 'lost') {
+    return (
+      `Runden i <strong>${gameEsc}</strong> er ferdig. ` +
+      `Du tapte <strong>${formattedEsc}</strong> mot <strong>${opponentEsc}</strong>. ` +
+      `Godt spilt — kanskje revansje neste runde?`
+    );
+  }
+  // tied
+  return (
+    `Runden i <strong>${gameEsc}</strong> er ferdig. ` +
+    `Matchen mot <strong>${opponentEsc}</strong> endte uavgjort (<strong>AS</strong>). ` +
+    `En jevn match — kanskje neste gang.`
+  );
+}
+
+function formatMatchplayBodyLineText(
+  mode: Extract<GameFinishedNotificationMode, { kind: 'singles_matchplay' }>,
+  gameName: string,
+): string {
+  const { matchResult, formattedResult, opponentName } = mode;
+  const opponent = opponentName ?? 'motstanderen';
+
+  if (matchResult === 'won') {
+    return (
+      `Runden i ${gameName} er ferdig. ` +
+      `Du vant ${formattedResult} over ${opponent}. ` +
+      `Gratulerer med seieren!`
+    );
+  }
+  if (matchResult === 'lost') {
+    return (
+      `Runden i ${gameName} er ferdig. ` +
+      `Du tapte ${formattedResult} mot ${opponent}. ` +
+      `Godt spilt — kanskje revansje neste runde?`
+    );
+  }
+  // tied
+  return (
+    `Runden i ${gameName} er ferdig. ` +
+    `Matchen mot ${opponent} endte uavgjort (AS). ` +
+    `En jevn match — kanskje neste gang.`
   );
 }
 
