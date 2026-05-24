@@ -514,6 +514,19 @@ function validateSoloStrokeplayNetto(
   };
 }
 
+/**
+ * Texas scramble-validator-stub (issue #44). Returnerer alltid
+ * `unsupported_mode_size_combo` inntil reell validator landes i Chunk 4 av
+ * implementasjonen. Stub-en finnes kun for å holde typecheck-en grønn (Record-
+ * shape over GameMode må være eksahustiv) — modus eksponeres ikke i UI ennå.
+ */
+function validateTexasScramble(
+  _formData: FormData,
+  _mode: PayloadMode,
+): ModeValidationResult {
+  return { ok: false, errorCode: 'unsupported_mode_size_combo' };
+}
+
 const modeValidators: Record<
   GameMode,
   (formData: FormData, mode: PayloadMode) => ModeValidationResult
@@ -522,6 +535,7 @@ const modeValidators: Record<
   stableford: validateStableford,
   singles_matchplay: validateSinglesMatchplay,
   solo_strokeplay_netto: validateSoloStrokeplayNetto,
+  texas_scramble: validateTexasScramble,
 };
 
 /**

@@ -43,15 +43,19 @@ type Props = {
  * Scoring-motoren og payload-validatoren landet i fase 1; ModeSelector
  * wires inn modusen i fase 2 — inntil da har modusen ingen UI-eksponering.
  *
- * Ved fremtidige moduser (scramble #44, etc.) utvider vi denne mappen —
- * ingen DB-migrasjon eller payload-endring nødvendig før en konkret
- * kombinasjon er implementert.
+ * Texas scramble (issue #44) tillater team_size 2 eller 4 (3-mannslag utsatt
+ * til v1.1). NGF-konvensjon: 25 % team-handicap for 2-mannslag, 10 % for
+ * 4-mannslag — settes som default i GameForm når lagstørrelse endres.
+ *
+ * Ved fremtidige moduser utvider vi denne mappen — ingen DB-migrasjon eller
+ * payload-endring nødvendig før en konkret kombinasjon er implementert.
  */
 const ENABLED_COMBOS: Record<GameMode, ReadonlySet<TeamSize>> = {
   stableford: new Set<TeamSize>([1, 2]),
   best_ball_netto: new Set<TeamSize>([2]),
   singles_matchplay: new Set<TeamSize>([1]),
   solo_strokeplay_netto: new Set<TeamSize>([1]),
+  texas_scramble: new Set<TeamSize>([2, 4]),
 };
 
 type TileDef = {

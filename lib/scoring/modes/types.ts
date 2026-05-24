@@ -6,7 +6,8 @@ export type GameMode =
   | 'best_ball_netto'
   | 'stableford'
   | 'singles_matchplay'
-  | 'solo_strokeplay_netto';
+  | 'solo_strokeplay_netto'
+  | 'texas_scramble';
 
 /**
  * Norske visnings-labels for hver spillmodus. Brukes av ModeChip i admin-
@@ -19,6 +20,7 @@ export const MODE_LABELS: Record<GameMode, string> = {
   stableford: 'Stableford',
   singles_matchplay: 'Matchplay',
   solo_strokeplay_netto: 'Slagspill',
+  texas_scramble: 'Texas scramble',
 };
 
 /**
@@ -37,13 +39,29 @@ export const MODE_LABELS: Record<GameMode, string> = {
  * Solo strokeplay netto (epic #46):
  *  - `team_size: 1` = solo, hver spiller er sin egen «row»
  *  - Klassisk slagspill: lavest sum av netto-slag (gross − HCP-strokes) vinner
+ *
+ * Texas scramble (issue #44):
+ *  - `team_size: 2 | 4` = antall spillere per lag (3-mannslag ikke i v1)
+ *  - `teams_count` = antall lag i spillet (fri, 1+)
+ *  - `team_handicap_pct` = prosent av summert lag-HCP som blir effektivt
+ *    lag-handicap (NGF-konvensjon: 25 for 2-mannslag, 10 for 4-mannslag).
+ *    0-100 — admin kan justere som i best ball. 0 = gross, 100 = full sum.
+ *  - Texas lagrer ÉN score per lag per hull (ikke per spiller). I scoring-
+ *    laget representeres dette ved at lag-kapteinen (først-i-rekkefølge per
+ *    lag) eier scores-radene; andre lag-medlemmer har null på sine egne rader.
  */
 export type GameModeConfig =
   | { kind: 'best_ball_netto'; team_size: 2; teams_count: 4 }
   | { kind: 'stableford'; team_size: 1; points_table: 'standard' }
   | { kind: 'stableford'; team_size: 2; points_table: 'standard' }
   | { kind: 'singles_matchplay'; team_size: 1; teams_count: 2 }
-  | { kind: 'solo_strokeplay_netto'; team_size: 1 };
+  | { kind: 'solo_strokeplay_netto'; team_size: 1 }
+  | {
+      kind: 'texas_scramble';
+      team_size: 2 | 4;
+      teams_count: number;
+      team_handicap_pct: number;
+    };
 
 /**
  * Minimal hole-shape som scoring-laget trenger. Holder oss løse fra
@@ -364,6 +382,80 @@ export interface SoloStrokeplayResult {
   players: SoloStrokeplayPlayerLine[];
 }
 
+// -----------------------------------------------------------------------------
+// Texas scramble (issue #44).
+//
+// Lagene velger beste slag etter hver runde og slår derfra — én ball per lag,
+// én score per lag per hull. Lag-handicap = round(combinedCourseHandicap ×
+// team_handicap_pct / 100) (NGF-konvensjon: default 25 % for 2-mannslag,
+// 10 % for 4-mannslag). Allokeres per hull via vanlig SI-allokering, så
+// hardeste hull får extra strokes først.
+//
+// Lagring: én utvalgt «kaptein» (lexicographically minste userId) per lag
+// eier scores-radene. Andre lag-medlemmer kan taste; tap fra hvem som helst
+// skriver til kaptein-raden (entered_by = den som tastet). Resultatet er ett
+// shared scorekort per lag, lagret uten ny tabell.
+//
+// Ranking: lavest totalNet vinner, med 5-tier tie-break-cascade fra
+// `rankTeams` på per-hull team_net-arrays. Samme padding-strategi som
+// bestBallNetto for missing-hull (0-padding i ranking-array).
+// -----------------------------------------------------------------------------
+
+/**
+ * Per-medlem-detalj på et Texas-lag. `isCaptain` flagger lexicographically
+ * minste userId — den som faktisk eier scores-radene i DB. UI bruker dette
+ * primært for debugging/admin-innsikt; spillere ser bare lag-kortet, ikke
+ * hvem som er kaptein.
+ */
+export interface TexasScramblePlayerCell {
+  userId: string;
+  /**
+   * Brukerens individuelle CH. Inngår i `combinedCourseHandicap`-summen
+   * og vises i UI som dokumentasjon på hvordan lag-HCP ble beregnet.
+   */
+  courseHandicap: number;
+  isCaptain: boolean;
+}
+
+export interface TexasScrambleHoleRow {
+  holeNumber: number;
+  par: number;
+  strokeIndex: number;
+  /** Lag-gross = scoren slått som ett lag på dette hullet. */
+  teamGross: number | null;
+  /** Lag-extra-strokes på dette hullet (fra lag-HCP-allokering via SI). */
+  teamExtraStrokes: number;
+  /** Lag-netto = teamGross − teamExtraStrokes. Null hvis teamGross null. */
+  teamNet: number | null;
+}
+
+/**
+ * Lag-rad i Texas-scramble-resultatet. `totalNet`/`totalGross` summerer kun
+ * spilte hull (teamGross !== null); `missingHoles` lister hullene som mangler.
+ * Konsumenter som sammenligner lag-totaler MÅ sjekke at `missingHoles` er
+ * tomt for begge lag, ellers er sammenligningen meningsløs.
+ */
+export interface TexasScrambleTeamLine {
+  teamNumber: number;
+  /** Alle medlemmer (inkl. kaptein), sortert deterministisk for stabil UI-rendering. */
+  members: TexasScramblePlayerCell[];
+  /** Sum av medlemmers courseHandicap (før prosent-reduksjon). */
+  combinedCourseHandicap: number;
+  /** Effektiv lag-HCP = round(combinedCH × team_handicap_pct / 100). */
+  teamHandicap: number;
+  holes: TexasScrambleHoleRow[];
+  totalNet: number;
+  totalGross: number;
+  missingHoles: number[];
+  rank: number;
+  tiedWith: number[];
+}
+
+export interface TexasScrambleResult {
+  kind: 'texas_scramble';
+  teams: TexasScrambleTeamLine[];
+}
+
 /**
  * Discriminated union — konsumenter narrower på `kind`:
  *   const r = computeLeaderboard(ctx);
@@ -377,9 +469,13 @@ export interface SoloStrokeplayResult {
  *
  * For solo_strokeplay_netto narrower man på `kind` og leser `players`
  * direkte — solo er den eneste varianten i v1.
+ *
+ * For texas_scramble narrower man på `kind` og leser `teams` direkte —
+ * kun team-variant i v1 (3-mannslag utsatt).
  */
 export type ModeResult =
   | BestBallNettoResult
   | StablefordResult
   | SinglesMatchplayResult
-  | SoloStrokeplayResult;
+  | SoloStrokeplayResult
+  | TexasScrambleResult;
