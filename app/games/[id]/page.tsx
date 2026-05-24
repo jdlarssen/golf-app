@@ -23,6 +23,7 @@ import { formatTeeOffTime, formatTeeOffDate } from '@/lib/format/teeOff';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
+import { markNotificationsRead } from '@/lib/notifications/markRead';
 import { ScheduledWaitingRoom } from './ScheduledWaitingRoom';
 
 type Params = Promise<{ id: string }>;
@@ -189,6 +190,22 @@ export default async function GameHomePage({
   if (joinsRes.error || !joinsRes.data) notFound();
   const me = gwp.players.find((p) => p.user_id === userId);
   if (!me) notFound();
+
+  // Mark related inbox notifications as read on visit. Best-effort: helperen
+  // svelger feil internt, så vi blokkerer aldri sida på dette. Vi markerer
+  // både `invite`- og `scorecard_approved`-varsler for dette spillet siden
+  // begge kindene deeplinker hit. (Phase 3 — wires Task 3.1 + 3.4.)
+  //
+  // NB: helperen kaller `revalidateTag` inne i en server-component-render.
+  // Det er bevisst — vi godtar advarsel her for å unngå ekstra round-trip;
+  // taggen-invalidering er best-effort signal til bjella/innboksen om at
+  // ulest-tellet kan ha endret seg.
+  await markNotificationsRead({ userId, kind: 'invite', entityId: id });
+  await markNotificationsRead({
+    userId,
+    kind: 'scorecard_approved',
+    entityId: id,
+  });
 
   let game: GameRow = {
     ...gwp.game,
