@@ -67,6 +67,10 @@ export default async function HolePage({ params }: { params: Params }) {
   // (issue #163). Vi behandler derfor hele spillerlisten som én flight og lar
   // hvem som helst taste slag for alle. Best-ball- og matchplay-modus beholder
   // per-flight-filtreringen som før.
+  //
+  // Texas scramble: flight_number = team_number per validator, så flight-
+  // filtreringen returnerer kun spillere på samme lag som «me». Disse
+  // collapses senere til EN ClientPlayer (lag-kaptein-keyed) i playersForClient.
   const flight =
     me.flight_number == null
       ? allPlayers
@@ -74,6 +78,7 @@ export default async function HolePage({ params }: { params: Params }) {
   const playerIds = flight.map((p) => p.user_id);
 
   const isStableford = game.game_mode === 'stableford';
+  const isTexas = game.game_mode === 'texas_scramble';
 
   // Round 2 — hole row, flight scores and the user's completed-hole count.
   // All three are independent and can run in parallel:
@@ -169,25 +174,76 @@ export default async function HolePage({ params }: { params: Params }) {
     revealState(game.score_visibility, game.status),
   );
 
-  const playersForClient: ClientPlayer[] = flight.map((p) => {
-    const name = p.users?.name ?? '(ukjent spiller)';
-    const rawNickname = p.users?.nickname ?? null;
-    const nickname =
-      rawNickname && rawNickname.trim().length > 0 ? rawNickname : null;
-    const ch = p.course_handicap ?? 0;
-    const scoreRow = scoresByUser[p.user_id];
-    return {
-      userId: p.user_id,
-      name,
-      nickname,
-      initial: nameInitials(name),
-      extraStrokes: strokesForHole(ch, hole.stroke_index),
-      initialStrokes: scoreRow?.strokes ?? null,
-      initialClientUpdatedAt: scoreRow?.client_updated_at ?? null,
-      initialServerUpdatedAt: scoreRow?.updated_at ?? null,
-      submitted: p.submitted_at != null,
-    };
-  });
+  // For Texas scramble collapses vi flight-medlemmer til ett kort per lag.
+  // Lag-kapteinen (lex-min userId) eier scores-radene; alle medlemmer kan
+  // taste, alle tap skriver til kapteinens userId. Kortets `name` viser
+  // «Lag N · Navn1, Navn2» og `initial`-avataren viser lag-nummeret slik at
+  // det visuelt skiller seg fra per-spiller-kort i andre moduser.
+  //
+  // Lag-handicap beregnes etter NGF-konvensjon:
+  //   teamHCP = round(combinedCourseHandicap × team_handicap_pct / 100)
+  // og fordeles per hull via vanlig SI-allokering (strokesForHole).
+  let playersForClient: ClientPlayer[];
+
+  if (isTexas) {
+    const captain = flight.reduce(
+      (min, p) => (p.user_id < min.user_id ? p : min),
+      flight[0],
+    );
+    const combinedCH = flight.reduce(
+      (sum, p) => sum + (p.course_handicap ?? 0),
+      0,
+    );
+    const handicapPct =
+      game.mode_config.kind === 'texas_scramble'
+        ? game.mode_config.team_handicap_pct
+        : 0;
+    const teamHandicap = Math.round((combinedCH * handicapPct) / 100);
+    const captainScoreRow = scoresByUser[captain.user_id];
+    const memberNames = flight
+      .map((p) => p.users?.name ?? '')
+      .map((n) => n.split(/\s+/)[0])
+      .filter((n) => n.length > 0)
+      .join(', ');
+    // Lag-tilstand er «innlevert» hvis NOEN på laget har submitted_at — alle
+    // medlemmer ser samme lag-kort og samme submit-status. Strammere flow
+    // (kun én submit per lag) er en separat design-oppgave, ikke nødvendig
+    // for v1-rendering.
+    const anyTeamMemberSubmitted = flight.some((p) => p.submitted_at != null);
+    playersForClient = [
+      {
+        userId: captain.user_id,
+        name: `Lag ${me.team_number} · ${memberNames}`,
+        nickname: null,
+        initial: String(me.team_number),
+        extraStrokes: strokesForHole(teamHandicap, hole.stroke_index),
+        initialStrokes: captainScoreRow?.strokes ?? null,
+        initialClientUpdatedAt: captainScoreRow?.client_updated_at ?? null,
+        initialServerUpdatedAt: captainScoreRow?.updated_at ?? null,
+        submitted: anyTeamMemberSubmitted,
+      },
+    ];
+  } else {
+    playersForClient = flight.map((p) => {
+      const name = p.users?.name ?? '(ukjent spiller)';
+      const rawNickname = p.users?.nickname ?? null;
+      const nickname =
+        rawNickname && rawNickname.trim().length > 0 ? rawNickname : null;
+      const ch = p.course_handicap ?? 0;
+      const scoreRow = scoresByUser[p.user_id];
+      return {
+        userId: p.user_id,
+        name,
+        nickname,
+        initial: nameInitials(name),
+        extraStrokes: strokesForHole(ch, hole.stroke_index),
+        initialStrokes: scoreRow?.strokes ?? null,
+        initialClientUpdatedAt: scoreRow?.client_updated_at ?? null,
+        initialServerUpdatedAt: scoreRow?.updated_at ?? null,
+        submitted: p.submitted_at != null,
+      };
+    });
+  }
 
   return (
     <div

@@ -165,6 +165,11 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   } = props;
 
   const isStableford = gameMode === 'stableford';
+  // Texas scramble: ett kort per lag (server bygger players-array med
+  // ÉN entry der userId = lag-kapteinens userId). Lookup-er som matcher
+  // mot myUserId må derfor falle tilbake til lag-kortet for non-captain-
+  // medlemmer. Submit-state speiler hele lagets state.
+  const isTexas = gameMode === 'texas_scramble';
 
   // Sync listener — start once on mount.
   useEffect(() => {
@@ -296,7 +301,10 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   // Defensive disable — server already redirects on submitted, but keep a
   // safety net for non-active states reached via stale client state.
   const gameInactive = gameStatus !== 'active';
-  const me = players.find((p) => p.userId === myUserId);
+  // For Texas: players har én entry per lag (lag-kapteinen), så lookup
+  // via myUserId feiler for non-captain-medlemmer. Fall tilbake til
+  // lag-kortet — submit-state er lag-nivå for Texas.
+  const me = isTexas ? players[0] : players.find((p) => p.userId === myUserId);
   const submitted = me?.submitted ?? false;
   const disabled = gameInactive || submitted;
 
@@ -350,9 +358,14 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   const roundComplete = myCompletedHoles >= 18;
 
   // Stableford = solo-modus, så det er kun «ditt» scorekort, ikke et lag-kort.
-  // Best-ball-kopien («Lever scorekort») holder vi som default for å unngå
-  // unødvendig copy-endring der.
-  const submitLabel = isStableford ? 'Lever ditt scorekort' : 'Lever scorekort';
+  // Texas = ett delt lag-scorekort — «lagets». Best-ball-kopien
+  // («Lever scorekort») holder vi som default for å unngå unødvendig
+  // copy-endring der.
+  const submitLabel = isStableford
+    ? 'Lever ditt scorekort'
+    : isTexas
+      ? 'Lever lagets scorekort'
+      : 'Lever scorekort';
   const bottomLabel = roundComplete
     ? submitLabel
     : !allConfirmed

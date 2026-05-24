@@ -14,6 +14,25 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Ny spillmodus for laget som vil spille sosialt — én ball per lag, alle slår fra beste slag. Skalerer fra 2-mannslag (par-format) til 4-mannslag (klassisk firma-cup). Lag-handicap regnes etter NGF-aggregatet (25 % av summert HCP for 2-mannslag, 10 % for 4-mannslag), justerbart per spill. Issue [#44](https://github.com/jdlarssen/golf-app/issues/44).
 
+### [1.16.1] - 2026-05-25
+
+> Hullsiden for Texas scramble viser nå ett scorekort per lag i stedet for ett per spiller. Alle på laget ser samme stepper, og hvem som helst kan taste — tappet havner på lagets felles rad. Avataren på kortet viser lag-nummeret, og under står medlemmenes fornavn. «Lever lagets scorekort»-knappen erstatter «Lever scorekort» for Texas-spill.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `app/games/[id]/holes/[holeNumber]/page.tsx` — ny `isTexas`-narrowing. For Texas-spill collapses flight-medlemmer til ÉN `ClientPlayer` per lag i stedet for én per spiller. Kapteinen (`lex-min userId` blant lag-medlemmer) eier scores-radene; `playersForClient`-entry-en setter `userId = captainUserId`, `name = "Lag N · Navn1, Navn2"`, `initial = String(team_number)` (avatar-tall), `extraStrokes = strokesForHole(teamHandicap, hole.stroke_index)` der `teamHandicap = round(combined-CH × team_handicap_pct / 100)`. Submit-state propagerer som «innlevert hvis NOEN på laget har submitted_at» — alle medlemmer ser samme låst-tilstand når én leverer.
+- `app/games/[id]/holes/[holeNumber]/HoleClient.tsx` — ny `isTexas`-narrowing. `me`-lookup faller tilbake til `players[0]` for Texas (siden non-captain-medlemmer ikke matcher captain-userId-en på sitt eget myUserId). Submit-knapp-tekst: «Lever lagets scorekort» for Texas (mellom «Lever ditt scorekort» for stableford solo og «Lever scorekort» for best-ball).
+
+#### Notes
+- Scores skrives med `entered_by = myUserId` (uendret), `user_id = captainUserId` for Texas — audit-trail bevares per tap, men `scores`-radens identitet er lag-kapteinen.
+- Real-time-subscription er per-game (ikke per-user), så alle lag-medlemmer ser samme oppdatering når kapteinens rad endres. Ingen ekstra subscription-arbeid nødvendig.
+- RLS: insert-policy `scores insert by flight` tillater write til `user_id = captainUserId` fra non-captain-medlem siden de er i samme flight (flight_number = team_number for Texas). Verifisert mot 0002_rls_policies.sql.
+- Submit-flow i seg selv er ikke endret — hver spiller har fortsatt sin egen `submitted_at`. En strammere «kun én submit per lag»-policy er en separat design-oppgave, ikke nødvendig for v1.
+
+</details>
+
 ### [1.16.0] - 2026-05-25
 
 > Du kan nå opprette Texas scramble-spill — velg Texas scramble som modus, velg 2- eller 4-mannslag, og fordel spillerne. Lag-handicap settes automatisk etter NGF-tabellen (25 % for 2-mannslag, 10 % for 4-mannslag) og kan justeres som i best ball. Hullsiden og leaderboardet for Texas kommer i neste lansering.
