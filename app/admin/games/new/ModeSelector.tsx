@@ -142,6 +142,35 @@ const MatchplayIcon = (
   </svg>
 );
 
+// Strokeplay-ikon: enkelt scorekort med en blyant-stripe ned siden. Signaliserer
+// klassisk slagspill der hver spiller fører eget kort og lavest total vinner.
+// Holder samme stroke-vekt og rounded caps som de andre tile-ikonene for
+// visuell konsistens. Bevisst minimal — kortet alene leser tydeligst på 28px,
+// og blyanten gir kontekst uten å konkurrere med andre tile-symboler.
+const StrokeplayIcon = (
+  <svg
+    width={28}
+    height={28}
+    viewBox="0 0 28 28"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.5}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    {/* Scorekort-konvolutt (rounded rect). */}
+    <rect x="5.5" y="4.5" width="14" height="19" rx="1.5" />
+    {/* Tre score-linjer på kortet (representerer hull-rader). */}
+    <line x1="8.5" y1="9.5" x2="16.5" y2="9.5" />
+    <line x1="8.5" y1="13" x2="16.5" y2="13" />
+    <line x1="8.5" y1="16.5" x2="16.5" y2="16.5" />
+    {/* Blyant til høyre — diagonal stripe + spiss-trekant. */}
+    <line x1="22" y1="7" x2="22" y2="19" />
+    <path d="M 21 19 L 22 21.5 L 23 19 Z" fill="currentColor" stroke="none" />
+  </svg>
+);
+
 const TILES: TileDef[] = [
   {
     mode: 'stableford',
@@ -162,20 +191,27 @@ const TILES: TileDef[] = [
     description: '1v1 hull-for-hull. Vinneren avgjøres som «X up» eller «X&Y».',
     icon: MatchplayIcon,
   },
+  {
+    mode: 'solo_strokeplay_netto',
+    title: 'Slagspill',
+    description: 'Individuelt scorekort. Lavest netto-total vinner.',
+    icon: StrokeplayIcon,
+  },
 ];
 
 /**
- * Modus-velger — tre tiles som lar admin plukke spillmodus før lagstørrelse.
+ * Modus-velger — fire tiles som lar admin plukke spillmodus før lagstørrelse.
  * Hierarkiet er bevisst: modus er det semantisk distinkte hovedvalget
  * («hva avgjør vinneren?»), lagstørrelse er en sekundær parameter som
  * snevres inn etter modus.
  *
- * Grid: stacker vertikalt på mobile-først (`grid-cols-1`) så hver tile får
- * full bredde og deres beskrivelses-tekst leses komfortabelt; bytter til
- * 3-kolonner fra `sm`-breakpoint og oppover der det er nok plass til
- * symmetrisk side-om-side-presentasjon. Alternativet (`grid-cols-3` på
- * iPhone) ble forkastet fordi tile-paddingen ble for trang og
- * beskrivelses-teksten brøyt om til 4-5 linjer i hver tile.
+ * Grid: 2-kolonner på mobile-først (`grid-cols-2`) gir 2×2-stacking på iPhone
+ * der hver tile får ~halve skjermbredden og leses komfortabelt — bedre enn
+ * vertikal 1-kolonne (mye scrolling for 4 tiles) eller 4-kolonne (for trangt
+ * for iPhone-bredde). Bytter til 4-kolonner fra `sm`-breakpoint og oppover
+ * der det er nok plass til symmetrisk én-rads-presentasjon. Vurderingen
+ * speiler par-stableford-fase 2-justeringen som økte fra 2 til 3 tiles —
+ * her tar vi neste steg og fyrer 2×2 på mobil.
  *
  * ARIA: bruker `role="radiogroup"` + `role="radio"` med tabbable button-er.
  * Vi bruker ikke `<input type="radio">` fordi tile-presentasjonen krever
@@ -188,7 +224,7 @@ export function ModeSelector({ value, onChange, disabled = false }: Props) {
       <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
         Velg spillmodus
       </legend>
-      <div role="radiogroup" className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div role="radiogroup" className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {TILES.map((tile) => {
           const selected = value === tile.mode;
           return (

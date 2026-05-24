@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { ModeSelector } from './ModeSelector';
 
 describe('ModeSelector', () => {
-  it('rendrer tre tiles: Stableford, Best ball netto og Matchplay, gruppert i et radiogroup', () => {
+  it('rendrer fire tiles: Stableford, Best ball netto, Matchplay og Slagspill, gruppert i et radiogroup', () => {
     render(<ModeSelector value="best_ball_netto" onChange={() => {}} />);
 
     expect(
@@ -12,6 +12,7 @@ describe('ModeSelector', () => {
     expect(screen.getByRole('radio', { name: /stableford/i })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /best ball/i })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /matchplay/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /slagspill/i })).toBeInTheDocument();
   });
 
   it('viser beskrivelses-tekst for hver modus', () => {
@@ -26,6 +27,9 @@ describe('ModeSelector', () => {
     expect(
       screen.getByText(/1v1 hull-for-hull/i),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText(/individuelt scorekort/i),
+    ).toBeInTheDocument();
   });
 
   it('markerer valgt tile som checked via aria-checked', () => {
@@ -34,9 +38,11 @@ describe('ModeSelector', () => {
     const stbl = screen.getByRole('radio', { name: /stableford/i });
     const bbn = screen.getByRole('radio', { name: /best ball/i });
     const mp = screen.getByRole('radio', { name: /matchplay/i });
+    const sl = screen.getByRole('radio', { name: /slagspill/i });
     expect(stbl.getAttribute('aria-checked')).toBe('false');
     expect(bbn.getAttribute('aria-checked')).toBe('true');
     expect(mp.getAttribute('aria-checked')).toBe('false');
+    expect(sl.getAttribute('aria-checked')).toBe('false');
   });
 
   it('caller onChange med ny modus ved tile-klikk', () => {
@@ -51,6 +57,9 @@ describe('ModeSelector', () => {
 
     fireEvent.click(screen.getByRole('radio', { name: /matchplay/i }));
     expect(onChange).toHaveBeenLastCalledWith('singles_matchplay');
+
+    fireEvent.click(screen.getByRole('radio', { name: /slagspill/i }));
+    expect(onChange).toHaveBeenLastCalledWith('solo_strokeplay_netto');
   });
 
   it('matchplay-tile får aria-checked=true når value=singles_matchplay', () => {
@@ -58,6 +67,13 @@ describe('ModeSelector', () => {
 
     const mp = screen.getByRole('radio', { name: /matchplay/i });
     expect(mp.getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('slagspill-tile får aria-checked=true når value=solo_strokeplay_netto', () => {
+    render(<ModeSelector value="solo_strokeplay_netto" onChange={() => {}} />);
+
+    const sl = screen.getByRole('radio', { name: /slagspill/i });
+    expect(sl.getAttribute('aria-checked')).toBe('true');
   });
 
   it('ignorerer klikk når disabled=true', () => {
@@ -68,6 +84,7 @@ describe('ModeSelector', () => {
 
     fireEvent.click(screen.getByRole('radio', { name: /stableford/i }));
     fireEvent.click(screen.getByRole('radio', { name: /matchplay/i }));
+    fireEvent.click(screen.getByRole('radio', { name: /slagspill/i }));
     expect(onChange).not.toHaveBeenCalled();
   });
 });
