@@ -325,8 +325,9 @@ async function PlayersSections({
   // Mode-narrowing: skiller solo (en spiller = en deltager, ingen lag/flight)
   // fra par-stableford (lag à 2, flight = team mekanisk), best-ball-netto, og
   // singles matchplay (1v1, side i stedet for lag).
-  //  - isSolo: solo-stableford (kun stableford med team_size=1). Skjuler
-  //    Lag-seksjon + Lag/Flight-kolonner i spillerlista — alle har null/0.
+  //  - isSolo: solo-modus uten lag-konstruksjon. Dekker både solo-stableford
+  //    (team_size=1) og solo strokeplay netto. Skjuler Lag-seksjon +
+  //    Lag/Flight-kolonner i spillerlista — alle har null/0 på team_number.
   //  - isParStableford: par-stableford (4BBB). Viser Lag-seksjon kun for de
   //    lag som faktisk har spillere, og dropper Flight-kolonnen i tabellen
   //    siden den alltid speiler team_number 1:1.
@@ -336,14 +337,17 @@ async function PlayersSections({
   //  - isBestBall: 4 lag à 2 spillere; flight kan avvike fra team. Full
   //    Lag-grid (4 hardkodet) + Lag+Flight-kolonner.
   const isSolo =
-    game.game_mode === 'stableford' && game.mode_config.team_size === 1;
+    (game.game_mode === 'stableford' && game.mode_config.team_size === 1) ||
+    game.game_mode === 'solo_strokeplay_netto';
   const isParStableford =
     game.game_mode === 'stableford' && game.mode_config.team_size === 2;
   const isMatchplay = game.game_mode === 'singles_matchplay';
   const isBestBall = game.game_mode === 'best_ball_netto';
 
   // Spillform-label for Format-cardet — speiler leaderboard-flatene som
-  // skiller solo vs par-stableford eksplisitt. Matchplay leser ren mode-label.
+  // skiller solo vs par-stableford eksplisitt. Matchplay og solo strokeplay
+  // netto leser ren mode-label fra MODE_LABELS (henholdsvis «Matchplay» og
+  // «Slagspill»).
   const modeLabel = isParStableford ? 'Par-stableford' : MODE_LABELS[game.game_mode];
 
   // Lag-terminologi: matchplay bruker «Side» i stedet for «Lag» (golf-standard

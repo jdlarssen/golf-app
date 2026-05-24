@@ -418,6 +418,165 @@ describe('sendGameFinishedNotification', () => {
     expect(payload.html).not.toContain('Hei null');
   });
 
+  // ─────────────────────────────────────────────────────────────────────
+  // Solo strokeplay netto (epic #46). Klassisk slagspill — personlig
+  // plassering + netto-total + brutto-side-note. Samme celebration-cascade
+  // som solo-stableford (1. → seier, 2-3 → solid, 4+ → nøytral).
+  // ─────────────────────────────────────────────────────────────────────
+
+  it('solo strokeplay netto: 1.-plass får «Gratulerer med seieren!» + netto + brutto', async () => {
+    const { sendGameFinishedNotification } = await import(
+      './gameFinishedNotification'
+    );
+    await sendGameFinishedNotification({
+      to: 'vinner@example.com',
+      playerFirstName: 'Alice',
+      gameName: 'Klubbmesterskap',
+      gameId: 'game-5',
+      mode: {
+        kind: 'solo_strokeplay_netto',
+        rank: 1,
+        totalNetStrokes: 68,
+        totalGrossStrokes: 74,
+        totalPlayers: 12,
+      },
+    });
+    const payload = sendMock.mock.calls[0]![0];
+    expect(payload.subject).toBe('Resultatet er klart — Klubbmesterskap');
+    expect(payload.html).toContain('1. plass');
+    expect(payload.html).toContain('av 12');
+    expect(payload.html).toContain('68 slag netto');
+    expect(payload.html).toContain('(74 brutto)');
+    expect(payload.html).toContain('Gratulerer med seieren');
+    expect(payload.text).toContain('1. plass av 12');
+    expect(payload.text).toContain('68 slag netto');
+    expect(payload.text).toContain('(74 brutto)');
+    expect(payload.text).toContain('Gratulerer med seieren');
+    // Stableford-fraser skal ikke lekke inn
+    expect(payload.html).not.toContain('poeng');
+  });
+
+  it('solo strokeplay netto: 2.-plass får «Solid plassering!»-tilegg', async () => {
+    const { sendGameFinishedNotification } = await import(
+      './gameFinishedNotification'
+    );
+    await sendGameFinishedNotification({
+      to: 'spiller@example.com',
+      playerFirstName: 'Bjørn',
+      gameName: 'Klubbmesterskap',
+      gameId: 'game-5',
+      mode: {
+        kind: 'solo_strokeplay_netto',
+        rank: 2,
+        totalNetStrokes: 72,
+        totalGrossStrokes: 78,
+        totalPlayers: 12,
+      },
+    });
+    const payload = sendMock.mock.calls[0]![0];
+    expect(payload.html).toContain('2. plass');
+    expect(payload.html).toContain('72 slag netto');
+    expect(payload.html).toContain('(78 brutto)');
+    expect(payload.html).toContain('Solid plassering');
+    expect(payload.html).not.toContain('Gratulerer med seieren');
+  });
+
+  it('solo strokeplay netto: 3.-plass får også «Solid plassering!»-tilegg', async () => {
+    const { sendGameFinishedNotification } = await import(
+      './gameFinishedNotification'
+    );
+    await sendGameFinishedNotification({
+      to: 'spiller@example.com',
+      playerFirstName: 'Cecilie',
+      gameName: 'Klubbmesterskap',
+      gameId: 'game-5',
+      mode: {
+        kind: 'solo_strokeplay_netto',
+        rank: 3,
+        totalNetStrokes: 75,
+        totalGrossStrokes: 80,
+        totalPlayers: 12,
+      },
+    });
+    const payload = sendMock.mock.calls[0]![0];
+    expect(payload.html).toContain('3. plass');
+    expect(payload.html).toContain('Solid plassering');
+    expect(payload.html).not.toContain('Gratulerer med seieren');
+  });
+
+  it('solo strokeplay netto: 4.-plass får INGEN celebration-tilegg (kun nøytralt resultat)', async () => {
+    const { sendGameFinishedNotification } = await import(
+      './gameFinishedNotification'
+    );
+    await sendGameFinishedNotification({
+      to: 'spiller@example.com',
+      playerFirstName: 'Eva',
+      gameName: 'Klubbmesterskap',
+      gameId: 'game-5',
+      mode: {
+        kind: 'solo_strokeplay_netto',
+        rank: 4,
+        totalNetStrokes: 80,
+        totalGrossStrokes: 86,
+        totalPlayers: 12,
+      },
+    });
+    const payload = sendMock.mock.calls[0]![0];
+    expect(payload.html).toContain('4. plass');
+    expect(payload.html).toContain('80 slag netto');
+    expect(payload.html).toContain('(86 brutto)');
+    expect(payload.html).not.toContain('Gratulerer');
+    expect(payload.html).not.toContain('Solid plassering');
+    expect(payload.text).toContain('4. plass');
+  });
+
+  it('solo strokeplay netto: plain-text inkluderer alle felter (rank, totalPlayers, netto, brutto)', async () => {
+    const { sendGameFinishedNotification } = await import(
+      './gameFinishedNotification'
+    );
+    await sendGameFinishedNotification({
+      to: 'spiller@example.com',
+      playerFirstName: 'Fred',
+      gameName: 'Vinter-cup',
+      gameId: 'game-5',
+      mode: {
+        kind: 'solo_strokeplay_netto',
+        rank: 5,
+        totalNetStrokes: 82,
+        totalGrossStrokes: 88,
+        totalPlayers: 10,
+      },
+    });
+    const payload = sendMock.mock.calls[0]![0];
+    expect(payload.text).toContain('Runden i Vinter-cup er ferdig');
+    expect(payload.text).toContain('5. plass av 10');
+    expect(payload.text).toContain('82 slag netto');
+    expect(payload.text).toContain('(88 brutto)');
+    expect(payload.text).toContain('Se leaderboard:');
+  });
+
+  it('solo strokeplay netto: bruker «Hei!» når playerFirstName er null', async () => {
+    const { sendGameFinishedNotification } = await import(
+      './gameFinishedNotification'
+    );
+    await sendGameFinishedNotification({
+      to: 'spiller@example.com',
+      playerFirstName: null,
+      gameName: 'Klubbmesterskap',
+      gameId: 'game-5',
+      mode: {
+        kind: 'solo_strokeplay_netto',
+        rank: 2,
+        totalNetStrokes: 70,
+        totalGrossStrokes: 76,
+        totalPlayers: 8,
+      },
+    });
+    const payload = sendMock.mock.calls[0]![0];
+    expect(payload.html).toContain('Hei!');
+    expect(payload.html).not.toContain('Hei null');
+  });
+
   it('kaster når Resend returnerer feil', async () => {
     sendMock.mockResolvedValueOnce({
       data: null,

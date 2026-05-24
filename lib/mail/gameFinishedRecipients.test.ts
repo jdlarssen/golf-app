@@ -869,6 +869,195 @@ describe('buildGameFinishedRecipients', () => {
     }
   });
 
+  // ────────────────────────────────────────────────────────────────
+  // Solo strokeplay netto (epic #46) — klassisk slagspill. Hver
+  // spiller får per-spiller payload med rank + totalNetStrokes +
+  // totalGrossStrokes + totalPlayers. Speilet solo-stableford-pattern.
+  // ────────────────────────────────────────────────────────────────
+
+  const SOLO_STROKEPLAY_CONFIG: GameModeConfig = {
+    kind: 'solo_strokeplay_netto',
+    team_size: 1,
+  };
+
+  it('solo strokeplay netto: regner ut rank + slag per spiller og legger på mode-info', async () => {
+    // 2 spillere, 2 hull par 4, CH=0:
+    //   u1 gross 4, 3 → totalNet 7, totalGross 7
+    //   u2 gross 5, 4 → totalNet 9, totalGross 9
+    // → u1 rank 1, u2 rank 2 (lavest vinner).
+    const supabase = buildSupabaseMock([
+      {
+        data: [
+          {
+            user_id: 'u1',
+            team_number: null,
+            course_handicap: 0,
+            users: { email: 'a@example.com', name: 'Ada' },
+          },
+          {
+            user_id: 'u2',
+            team_number: null,
+            course_handicap: 0,
+            users: { email: 'b@example.com', name: 'Bjørn' },
+          },
+        ],
+        error: null,
+      },
+      {
+        data: [
+          { user_id: 'u1', hole_number: 1, strokes: 4 },
+          { user_id: 'u1', hole_number: 2, strokes: 3 },
+          { user_id: 'u2', hole_number: 1, strokes: 5 },
+          { user_id: 'u2', hole_number: 2, strokes: 4 },
+        ],
+        error: null,
+      },
+      {
+        data: [
+          { hole_number: 1, par: 4, stroke_index: 1 },
+          { hole_number: 2, par: 4, stroke_index: 2 },
+        ],
+        error: null,
+      },
+    ]);
+
+    const recipients = await buildGameFinishedRecipients(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      supabase as any,
+      'game-sp1',
+      {
+        course_id: 'c1',
+        game_mode: 'solo_strokeplay_netto',
+        mode_config: SOLO_STROKEPLAY_CONFIG,
+      },
+    );
+
+    expect(recipients).toHaveLength(2);
+    const ada = recipients.find((r) => r.email === 'a@example.com');
+    const bjorn = recipients.find((r) => r.email === 'b@example.com');
+    expect(ada?.mode).toEqual({
+      kind: 'solo_strokeplay_netto',
+      rank: 1,
+      totalNetStrokes: 7,
+      totalGrossStrokes: 7,
+      totalPlayers: 2,
+    });
+    expect(bjorn?.mode).toEqual({
+      kind: 'solo_strokeplay_netto',
+      rank: 2,
+      totalNetStrokes: 9,
+      totalGrossStrokes: 9,
+      totalPlayers: 2,
+    });
+  });
+
+  it('solo strokeplay netto: dropper spillere uten email (mode-info gjelder kun rendret resultat)', async () => {
+    const supabase = buildSupabaseMock([
+      {
+        data: [
+          {
+            user_id: 'u1',
+            team_number: null,
+            course_handicap: 0,
+            users: { email: 'a@example.com', name: 'Ada' },
+          },
+          {
+            user_id: 'u2',
+            team_number: null,
+            course_handicap: 0,
+            users: { email: null, name: 'Bjørn uten email' }, // dropp
+          },
+          {
+            user_id: 'u3',
+            team_number: null,
+            course_handicap: 0,
+            users: null, // dropp
+          },
+        ],
+        error: null,
+      },
+      {
+        data: [
+          { user_id: 'u1', hole_number: 1, strokes: 4 },
+          { user_id: 'u2', hole_number: 1, strokes: 5 },
+          { user_id: 'u3', hole_number: 1, strokes: 5 },
+        ],
+        error: null,
+      },
+      {
+        data: [{ hole_number: 1, par: 4, stroke_index: 1 }],
+        error: null,
+      },
+    ]);
+
+    const recipients = await buildGameFinishedRecipients(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      supabase as any,
+      'game-sp2',
+      {
+        course_id: 'c1',
+        game_mode: 'solo_strokeplay_netto',
+        mode_config: SOLO_STROKEPLAY_CONFIG,
+      },
+    );
+
+    expect(recipients).toHaveLength(1);
+    expect(recipients[0]!.email).toBe('a@example.com');
+    // totalPlayers reflekterer FULL turnering (3), ikke kun de med mail.
+    expect(recipients[0]!.mode).toMatchObject({
+      kind: 'solo_strokeplay_netto',
+      rank: 1,
+      totalPlayers: 3,
+    });
+  });
+
+  it('solo strokeplay netto: brutto-totalen reflekterer faktiske slag (ikke netto)', async () => {
+    // Spiller med CH=18 og 1 hull par 4 stroke_index=1:
+    //   strokesForHole(18, 1) = 1 ekstra → netto = gross − 1
+    //   gross 5 → netto 4
+    const supabase = buildSupabaseMock([
+      {
+        data: [
+          {
+            user_id: 'u1',
+            team_number: null,
+            course_handicap: 18,
+            users: { email: 'a@example.com', name: 'Ada' },
+          },
+        ],
+        error: null,
+      },
+      {
+        data: [{ user_id: 'u1', hole_number: 1, strokes: 5 }],
+        error: null,
+      },
+      {
+        data: [{ hole_number: 1, par: 4, stroke_index: 1 }],
+        error: null,
+      },
+    ]);
+
+    const recipients = await buildGameFinishedRecipients(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      supabase as any,
+      'game-sp3',
+      {
+        course_id: 'c1',
+        game_mode: 'solo_strokeplay_netto',
+        mode_config: SOLO_STROKEPLAY_CONFIG,
+      },
+    );
+
+    expect(recipients).toHaveLength(1);
+    expect(recipients[0]!.mode).toEqual({
+      kind: 'solo_strokeplay_netto',
+      rank: 1,
+      totalNetStrokes: 4,
+      totalGrossStrokes: 5,
+      totalPlayers: 1,
+    });
+  });
+
   it('team-stableford: faller tilbake til partnernavn=null hvis partner mangler navn', async () => {
     // Edge-case: en spiller på laget har null `name` (pre-completion-profile).
     // Da returnerer firstName(null) = null, og mailen skal droppe partner-

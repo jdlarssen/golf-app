@@ -95,6 +95,15 @@ export async function buildGameFinishedRecipients(
     return buildMatchplayRecipients(supabase, gameId, game, playerRows);
   }
 
+  // Solo strokeplay netto (epic #46): bygg per-spiller payload med rank +
+  // totalNetStrokes + totalGrossStrokes + totalPlayers. Speilet solo-stableford-
+  // grenen strukturelt — én rad per spiller direkte fra
+  // `SoloStrokeplayResult.players`. Hvis mode-router returnerer noe uventet,
+  // faller vi tilbake til nøytral best-ball-default copy.
+  if (game.game_mode === 'solo_strokeplay_netto') {
+    return buildSoloStrokeplayRecipients(supabase, gameId, game, playerRows);
+  }
+
   // Best-ball-netto: ingen per-spiller-mode, returner kun email+name.
   if (game.game_mode !== 'stableford') {
     return playerRows
@@ -415,6 +424,115 @@ async function buildMatchplayRecipients(
         opponentName,
         selfSide,
       },
+    });
+  }
+  return recipients;
+}
+
+/**
+ * Bygger mottakerlisten for solo strokeplay netto (epic #46). Hver spiller får
+ * en personlig mode-payload med plassering + totalNetStrokes + totalGrossStrokes
+ * + totalPlayers — speilet solo-stableford-pattern, men med slag i stedet for
+ * poeng.
+ *
+ * Defensive fallbacks:
+ *  - hvis mode-router returnerer noe annet enn `solo_strokeplay_netto`, faller
+ *    vi tilbake til nøytral best-ball-default copy (uten mode-payload).
+ *  - spillere uten email droppes (samme regel som de andre grenene).
+ *  - spillere uten resultat-rad (defensiv — alle game_players burde havne i
+ *    leaderboardet) får ingen mode-payload, ender opp med nøytral copy.
+ */
+async function buildSoloStrokeplayRecipients(
+  supabase: SupabaseClient,
+  gameId: string,
+  game: { course_id: string; game_mode: GameMode; mode_config: GameModeConfig },
+  playerRows: {
+    user_id: string;
+    team_number: number | null;
+    course_handicap: number | null;
+    users: { email: string | null; name: string | null } | null;
+  }[],
+): Promise<FinishedMailRecipient[]> {
+  const [scoresRes, holesRes] = await Promise.all([
+    supabase
+      .from('scores')
+      .select('user_id, hole_number, strokes')
+      .eq('game_id', gameId)
+      .returns<
+        { user_id: string; hole_number: number; strokes: number | null }[]
+      >(),
+    supabase
+      .from('course_holes')
+      .select('hole_number, par, stroke_index')
+      .eq('course_id', game.course_id)
+      .order('hole_number', { ascending: true })
+      .returns<{ hole_number: number; par: number; stroke_index: number }[]>(),
+  ]);
+  if (scoresRes.error || holesRes.error) {
+    console.error(
+      '[buildSoloStrokeplayRecipients] failed to fetch scores/holes',
+      scoresRes.error ?? holesRes.error,
+    );
+    return [];
+  }
+
+  const result = computeLeaderboard({
+    game: {
+      id: gameId,
+      game_mode: 'solo_strokeplay_netto',
+      mode_config: game.mode_config,
+    },
+    players: playerRows.map((row) => ({
+      userId: row.user_id,
+      teamNumber: row.team_number,
+      flightNumber: null,
+      courseHandicap: row.course_handicap ?? 0,
+    })),
+    holes: (holesRes.data ?? []).map((h) => ({
+      number: h.hole_number,
+      par: h.par,
+      strokeIndex: h.stroke_index,
+    })),
+    scores: (scoresRes.data ?? []).map((s) => ({
+      userId: s.user_id,
+      holeNumber: s.hole_number,
+      gross: s.strokes,
+    })),
+  });
+
+  // Defensive fallback: mode-router gav noe uventet. Fall til best-ball-copy.
+  if (result.kind !== 'solo_strokeplay_netto') {
+    return playerRows
+      .map((row) => ({
+        email: row.users?.email ?? null,
+        name: row.users?.name ?? null,
+      }))
+      .filter((r): r is FinishedMailRecipient => {
+        return typeof r.email === 'string' && r.email.length > 0;
+      });
+  }
+
+  const totalPlayers = result.players.length;
+  const lineByUserId = new Map(result.players.map((p) => [p.userId, p]));
+
+  const recipients: FinishedMailRecipient[] = [];
+  for (const row of playerRows) {
+    const email = row.users?.email ?? null;
+    if (!email) continue;
+    const line = lineByUserId.get(row.user_id);
+    const mode: GameFinishedNotificationMode | undefined = line
+      ? {
+          kind: 'solo_strokeplay_netto',
+          rank: line.rank,
+          totalNetStrokes: line.totalNetStrokes,
+          totalGrossStrokes: line.totalGrossStrokes,
+          totalPlayers,
+        }
+      : undefined;
+    recipients.push({
+      email,
+      name: row.users?.name ?? null,
+      mode,
     });
   }
   return recipients;

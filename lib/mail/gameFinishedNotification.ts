@@ -34,6 +34,10 @@ function getClient(): Resend {
  *   - `kind: 'singles_matchplay'` (1v1 net matchplay) viser matchresultatet
  *     per spiller — «Du vant 3&2 over Per», «Du tapte 1up mot Per», eller
  *     «Matchen mot Per endte uavgjort (AS)». Begge spillerne får speilet copy.
+ *   - `kind: 'solo_strokeplay_netto'` (klassisk slagspill) viser personlig
+ *     plassering + netto-total + brutto-total («Du endte på 2. plass av 8 med
+ *     72 slag netto (78 brutto)»). 1. får gratulasjon, 2-3 får «Solid
+ *     plassering», 4+ får nøytral tone — samme cascade som stableford-grenen.
  *   - `kind: 'best_ball_netto'` (eller udefinert) bruker dagens nøytrale
  *     copy («Runden er ferdig — leaderboard er åpen») fordi lag-vinneren
  *     ikke nødvendigvis er én spesifikk spiller å adressere.
@@ -93,6 +97,21 @@ export type GameFinishedNotificationMode =
        * matchResult er nok for å rendre riktig linje.
        */
       selfSide: 1 | 2;
+    }
+  | {
+      kind: 'solo_strokeplay_netto';
+      /** Spillerens slutt-plassering (1, 2, 3, ...). */
+      rank: number;
+      /** Spillerens totale netto-slag for runden (sum av spilte hull). */
+      totalNetStrokes: number;
+      /**
+       * Spillerens totale gross-slag for runden (sum av spilte hull). Vises
+       * som side-note ved siden av netto-totalen («72 slag netto (78 brutto)»)
+       * slik at mottakeren ser begge tall uten å åpne leaderboardet.
+       */
+      totalGrossStrokes: number;
+      /** Totalt antall spillere i turneringen — gir kontekst til plasseringen. */
+      totalPlayers: number;
     };
 
 export type GameFinishedNotificationParams = {
@@ -121,8 +140,9 @@ export async function sendGameFinishedNotification(
 
   // Mode-spesifikk hovedlinje. Stableford får en personlig plassering-spoiler
   // (solo: individuell rank, team: lag-rank); matchplay får match-resultat
-  // med motstander-navn («Du vant 3&2 over Per»); best-ball (eller udefinert)
-  // får dagens nøytrale ferdig-melding.
+  // med motstander-navn («Du vant 3&2 over Per»); solo strokeplay netto får
+  // personlig plassering + netto-total med brutto som side-note; best-ball
+  // (eller udefinert) får dagens nøytrale ferdig-melding.
   let bodyLine: string;
   let bodyLineText: string;
   if (mode?.kind === 'stableford') {
@@ -137,6 +157,9 @@ export async function sendGameFinishedNotification(
   } else if (mode?.kind === 'singles_matchplay') {
     bodyLine = formatMatchplayBodyLine(mode, gameName);
     bodyLineText = formatMatchplayBodyLineText(mode, gameName);
+  } else if (mode?.kind === 'solo_strokeplay_netto') {
+    bodyLine = formatSoloStrokeplayBodyLine(mode, gameName);
+    bodyLineText = formatSoloStrokeplayBodyLineText(mode, gameName);
   } else {
     bodyLine = `Runden i <strong>${escapeHtml(gameName)}</strong> er ferdig — alle scorekort er levert og godkjent, og leaderboard er åpen.`;
     bodyLineText = `Runden i ${gameName} er ferdig — alle scorekort er levert og godkjent, og leaderboard er åpen.`;
@@ -407,6 +430,57 @@ function pluralizePoints(n: number): string {
   // Norsk: 1 poeng / N poeng (samme ord uansett tall, men explicit branch
   // gjør intensjon tydelig hvis vi senere skal skille på "1 stableford-poeng").
   return n === 1 ? 'poeng' : 'poeng';
+}
+
+/**
+ * Bygger solo strokeplay netto-hovedlinjen (HTML-versjon). Speilar
+ * solo-stableford-grenen strukturelt — personlig plassering med totalt-tall
+ * og samme celebration-cascade (1. → seier, 2/3 → solid, 4+ → nøytral) —
+ * men byttet poeng-spoiler for netto/brutto-slag. Brutto-totalen vises som
+ * en parentes-side-note slik at mottakeren får både netto (rankings-tallet)
+ * og brutto (faktiske slag) uten å åpne leaderboardet.
+ *
+ * Eksempel-output:
+ *   «Runden i Vinter-cup er ferdig. Du endte på 2. plass av 8 med 72 slag
+ *    netto (78 brutto). Solid plassering!»
+ */
+function formatSoloStrokeplayBodyLine(
+  mode: Extract<
+    GameFinishedNotificationMode,
+    { kind: 'solo_strokeplay_netto' }
+  >,
+  gameName: string,
+): string {
+  const { rank, totalNetStrokes, totalGrossStrokes, totalPlayers } = mode;
+  const placeText = `${rank}. plass`;
+  const ofTotal = totalPlayers > 0 ? ` av ${totalPlayers}` : '';
+  const celebration = celebrationFor(rank);
+
+  return (
+    `Runden i <strong>${escapeHtml(gameName)}</strong> er ferdig. ` +
+    `Du endte på <strong>${escapeHtml(placeText)}${escapeHtml(ofTotal)}</strong> med ` +
+    `<strong>${totalNetStrokes} slag netto</strong> ` +
+    `(${totalGrossStrokes} brutto).${escapeHtml(celebration)}`
+  );
+}
+
+function formatSoloStrokeplayBodyLineText(
+  mode: Extract<
+    GameFinishedNotificationMode,
+    { kind: 'solo_strokeplay_netto' }
+  >,
+  gameName: string,
+): string {
+  const { rank, totalNetStrokes, totalGrossStrokes, totalPlayers } = mode;
+  const placeText = `${rank}. plass`;
+  const ofTotal = totalPlayers > 0 ? ` av ${totalPlayers}` : '';
+  const celebration = celebrationFor(rank);
+
+  return (
+    `Runden i ${gameName} er ferdig. ` +
+    `Du endte på ${placeText}${ofTotal} med ${totalNetStrokes} slag netto ` +
+    `(${totalGrossStrokes} brutto).${celebration}`
+  );
 }
 
 function escapeHtml(s: string): string {

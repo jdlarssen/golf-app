@@ -14,6 +14,25 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Klassisk slagspill (solo strokeplay netto) er nå tilgjengelig. Velg Slagspill som modus, meld på spillerne, og lavest netto-total over runden vinner. Hver spiller fører sitt eget kort — perfekt for klubbmesterskap og kompis-runder uten lag-fokus.
 
+### [1.13.2] - 2026-05-24
+
+> Når slagspill-spillet avsluttes får spillerne mail med sin plassering og totalt antall netto-slag. Admin-flaten viser «Slagspill» konsistent for solo-strokeplay-spill.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `lib/mail/gameFinishedNotification.ts` — `GameFinishedNotificationMode` har ny `kind: 'solo_strokeplay_netto'`-gren med `rank`, `totalNetStrokes`, `totalGrossStrokes` og `totalPlayers`. Body-builder rendrer personlig plassering med netto-total og brutto som side-note: «Du endte på 2. plass av 8 med 72 slag netto (78 brutto)». Celebration-cascade speilar solo-stableford-grenen (1. → «Gratulerer med seieren!», 2-3 → «Solid plassering!», 4+ → nøytral). 6 nye tester dekker 1.-plass + netto/brutto, 2.-plass + solid, 3.-plass + solid, 4.-plass nøytral, plain-text-felter, og fallback når `playerFirstName` er null.
+- `lib/mail/gameFinishedRecipients.ts` — ny `buildSoloStrokeplayRecipients`-helper bygger per-spiller mottakerliste fra `SoloStrokeplayResult`. Speilet solo-stableford-pattern strukturelt: kjører `computeLeaderboard` mode-router, narrower på `kind === 'solo_strokeplay_netto'`, og mapper hver spiller til mode-payload med rank + slag-totaler. Defensive fallbacks: hvis mode-router returnerer noe annet enn `solo_strokeplay_netto`, faller helperen tilbake til nøytral best-ball-default. Spillere uten email droppes (samme regel som de andre grenene). 3 nye tester dekker rank + slag-utregning, drop av spillere uten email (totalPlayers reflekterer FULL turnering), og brutto/netto-diff når HCP gir ekstra slag.
+
+#### Changed
+- `app/admin/games/[id]/page.tsx` — `isSolo`-narrowing utvidet til å dekke `solo_strokeplay_netto` i tillegg til solo-stableford (`team_size === 1`). Konsekvenser: admin-detalj-siden skjuler Lag-seksjon + Lag/Flight-kolonner for slagspill-spill (én spiller = én deltager), og Format-cardet viser «Slagspill» fra `MODE_LABELS` konsistent. `modeLabel`-JSDoc oppdatert til å reflektere at matchplay og slagspill begge leser ren mode-label.
+
+#### Notes
+- Phase 4 markerer epic #46 (solo strokeplay netto) som ferdig. Tidligere faser leverte scoring + validation (Phase 1), GameForm-UI med slagspill-modus (Phase 2), og leaderboard-view + podium (Phase 3). Mailen og admin-polish-en var de siste manglende stykkene før formatet er produksjons-klart.
+
+</details>
+
 ### [1.13.1] - 2026-05-24
 
 > Når slagspill-spillet er i gang ser spillerne et leaderboard rangert på laveste netto-total. Avsluttet spill viser podium for topp 3 — 1.-plassen feires med konfetti.
