@@ -6,9 +6,10 @@
 // union `ModeResult` som konsumentene narrower på `kind`.
 //
 // Dagens innslag:
-//   - best_ball_netto    → modes/bestBallNetto.ts
-//   - stableford         → modes/stableford.ts (solo + par/4BBB)
-//   - singles_matchplay  → modes/singlesMatchplay.ts (epic #45)
+//   - best_ball_netto        → modes/bestBallNetto.ts
+//   - stableford             → modes/stableford.ts (solo + par/4BBB)
+//   - singles_matchplay      → modes/singlesMatchplay.ts (epic #45)
+//   - solo_strokeplay_netto  → modes/soloStrokeplayNetto.ts (epic #46)
 //
 // Re-eksporterer felles helpers (computeCourseHandicap, allocateStrokes,
 // resolveTiebreak) slik at andre konsumenter kan importere via
@@ -17,6 +18,7 @@
 import * as bestBallNetto from './modes/bestBallNetto';
 import * as stableford from './modes/stableford';
 import * as singlesMatchplay from './modes/singlesMatchplay';
+import * as soloStrokeplayNetto from './modes/soloStrokeplayNetto';
 import type { ScoringContext, ModeResult } from './modes/types';
 
 export function computeLeaderboard(ctx: ScoringContext): ModeResult {
@@ -27,6 +29,8 @@ export function computeLeaderboard(ctx: ScoringContext): ModeResult {
       return stableford.compute(ctx);
     case 'singles_matchplay':
       return singlesMatchplay.compute(ctx);
+    case 'solo_strokeplay_netto':
+      return soloStrokeplayNetto.compute(ctx);
   }
 }
 
@@ -60,4 +64,6 @@ export type {
   MatchplayHoleRow,
   MatchplayHoleResult,
   MatchplayMatchResult,
+  SoloStrokeplayResult,
+  SoloStrokeplayPlayerLine,
 } from './modes/types';

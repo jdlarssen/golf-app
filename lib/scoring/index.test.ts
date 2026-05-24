@@ -85,4 +85,36 @@ describe('computeLeaderboard — mode-router', () => {
       throw new Error('expected singles_matchplay result');
     }
   });
+
+  it('delegerer solo_strokeplay_netto til soloStrokeplayNetto.compute', () => {
+    const ctx: ScoringContext = {
+      game: {
+        id: 'g',
+        game_mode: 'solo_strokeplay_netto',
+        mode_config: { kind: 'solo_strokeplay_netto', team_size: 1 },
+      },
+      players: [
+        { userId: 'u1', teamNumber: null, flightNumber: null, courseHandicap: 0 },
+        { userId: 'u2', teamNumber: null, flightNumber: null, courseHandicap: 0 },
+      ],
+      holes: [{ number: 1, par: 4, strokeIndex: 1 }],
+      scores: [
+        { userId: 'u1', holeNumber: 1, gross: 4 },
+        { userId: 'u2', holeNumber: 1, gross: 5 },
+      ],
+    };
+
+    const result = computeLeaderboard(ctx);
+    expect(result.kind).toBe('solo_strokeplay_netto');
+    if (result.kind === 'solo_strokeplay_netto') {
+      expect(result.players[0].userId).toBe('u1');
+      expect(result.players[0].totalNetStrokes).toBe(4);
+      expect(result.players[0].rank).toBe(1);
+      expect(result.players[1].userId).toBe('u2');
+      expect(result.players[1].totalNetStrokes).toBe(5);
+      expect(result.players[1].rank).toBe(2);
+    } else {
+      throw new Error('expected solo_strokeplay_netto result');
+    }
+  });
 });
