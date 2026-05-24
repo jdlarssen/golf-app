@@ -14,6 +14,24 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Ny spillmodus for laget som vil spille sosialt — én ball per lag, alle slår fra beste slag. Skalerer fra 2-mannslag (par-format) til 4-mannslag (klassisk firma-cup). Lag-handicap regnes etter NGF-aggregatet (25 % av summert HCP for 2-mannslag, 10 % for 4-mannslag), justerbart per spill. Issue [#44](https://github.com/jdlarssen/golf-app/issues/44).
 
+### [1.16.2] - 2026-05-25
+
+> Når Texas-spillet er i gang ser alle lagene sin sanntids-plassering rangert på laveste lag-netto. Når spillet avsluttes feires vinner-laget på podiet med konfetti, og resten av rangeringen ligger sammenfoldet under.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `app/games/[id]/leaderboard/TexasScrambleView.tsx` — ny live/active leaderboard-view for Texas. Speilet SoloStrokeplayView visuelt: fairway-backdrop, Fraunces-for-tall typografi, champagne-tint på vinneren. Forskjellene fra SoloStrokeplay-mønsteret: én rad per lag (ikke per spiller), lag-navn «Lag N» med medlemsnavn på sekundærlinjen, sub-tittel «Texas scramble · Sortert på laveste lag-netto», missing-hull-chip vises hvis laget ikke har spilt alle 18 hull.
+- `app/games/[id]/leaderboard/TexasScramblePodium.tsx` — ny finished-state podium for Texas. Topp 3 lag på podiet (1.-plass i midten, 2. venstre, 3. høyre), konfetti-burst på 1.-plass én gang per browser-sesjon (distinkt sessionStorage-key `torny-texas-scramble-podium-confetti-seen-${gameId}`), `prefers-reduced-motion` håndtert via globals.css-default på .reveal-up og .confetti-piece-klassene. Resten av rangeringen i collapsed `<details>` under podiet.
+- `app/games/[id]/leaderboard/page.tsx` — ny `renderTexasScramble`-helper og branch i mode-routeren. Bygger ScoringContext fra DB-radene, kjører `computeModeResult`, narrower på `kind === 'texas_scramble'`, og velger view per `game.status` (finished → TexasScramblePodium, ellers TexasScrambleView).
+
+#### Notes
+- State #3/#3.5-«venterom» bevisst skipped — alle lag-medlemmer ser hverandre umiddelbart (samme RLS-policy som stableford/matchplay/solo-strokeplay).
+- `missingHoles`-chip vises kun når laget faktisk mangler hull. Sammenligninger mellom lag med ulike missing-counts er matematisk meningsløse; chip-en signaliserer dette til admin.
+
+</details>
+
 ### [1.16.1] - 2026-05-25
 
 > Hullsiden for Texas scramble viser nå ett scorekort per lag i stedet for ett per spiller. Alle på laget ser samme stepper, og hvem som helst kan taste — tappet havner på lagets felles rad. Avataren på kortet viser lag-nummeret, og under står medlemmenes fornavn. «Lever lagets scorekort»-knappen erstatter «Lever scorekort» for Texas-spill.

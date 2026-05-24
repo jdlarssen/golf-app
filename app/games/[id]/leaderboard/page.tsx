@@ -45,6 +45,11 @@ import {
 } from './SoloStrokeplayView';
 import { SoloStrokeplayPodium } from './SoloStrokeplayPodium';
 import {
+  TexasScrambleView,
+  type TexasScramblePlayerInfo,
+} from './TexasScrambleView';
+import { TexasScramblePodium } from './TexasScramblePodium';
+import {
   MatchplayMatchView,
   type MatchplayPlayerInfo,
 } from './MatchplayMatchView';
@@ -316,6 +321,21 @@ async function LeaderboardBody({
   // RLS-policy som stableford og matchplay.
   if (game.game_mode === 'solo_strokeplay_netto') {
     return renderSoloStrokeplay({
+      gameId,
+      game,
+      gwp,
+      rawHolesRows: rawHolesRes.data ?? [],
+      rawScoresRows: rawScoresRes.data ?? [],
+      backHref,
+    });
+  }
+
+  // Texas scramble (issue #44): lag-aggregert leaderboard, lavest totalNet
+  // vinner. Live-view og finished-podium speiler solo-strokeplay-pattern.
+  // State #3/#3.5-«venterom» skipped på samme måte som stableford/matchplay/
+  // solo-strokeplay (alle spillere ser hverandre via RLS umiddelbart).
+  if (game.game_mode === 'texas_scramble') {
+    return renderTexasScramble({
       gameId,
       game,
       gwp,
@@ -1419,6 +1439,108 @@ function renderSoloStrokeplay(opts: {
 
   return (
     <SoloStrokeplayView
+      gameId={gameId}
+      gameName={game.name}
+      result={result}
+      playersById={playersById}
+      backHref={backHref}
+    />
+  );
+}
+
+/**
+ * Texas scramble-grenen (issue #44) — bygger ScoringContext fra rå-rad-ene,
+ * kjører mode-router-en (`computeModeResult`) og velger view per `game.status`:
+ *
+ *   - `finished` → TexasScramblePodium: topp 3 lag på podiet med konfetti
+ *     på 1.-plass og resten av rangeringen collapsed under.
+ *   - alt annet (active/scheduled) → TexasScrambleView: flat liste sortert
+ *     på laveste lag-netto.
+ *
+ * Speilet `renderSoloStrokeplay`-pattern for konsistens. Texas har
+ * `team_size: 2 | 4` i mode_config og `team_number` per spiller — vi
+ * videresender team_number til scoring-laget, og scoring-laget grupperer
+ * og velger kaptein lex-min.
+ *
+ * State #3/#3.5-«venterom» bevisst skipped — alle lag-medlemmer ser hverandre
+ * umiddelbart (samme RLS-policy som stableford/matchplay/solo-strokeplay).
+ */
+function renderTexasScramble(opts: {
+  gameId: string;
+  game: GameForHole;
+  gwp: {
+    players: {
+      user_id: string;
+      team_number: number;
+      users: { name: string | null; nickname: string | null } | null;
+      course_handicap: number | null;
+    }[];
+  };
+  rawHolesRows: { hole_number: number; par: number; stroke_index: number }[];
+  rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
+  backHref: string;
+}) {
+  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
+
+  const ctx = {
+    game: {
+      id: gameId,
+      game_mode: 'texas_scramble' as const,
+      mode_config: game.mode_config,
+    },
+    players: gwp.players
+      .filter((p) => p.users != null)
+      .map((p) => ({
+        userId: p.user_id,
+        // Texas-validatoren håndhever team_number ≥ 1. Defensive fallback til
+        // 0 (som scoring-laget filtrerer bort) hvis kolonnen mot formodning er
+        // null — bedre å hoppe over enn å kaste her.
+        teamNumber: p.team_number ?? 0,
+        flightNumber: null,
+        courseHandicap: p.course_handicap ?? 0,
+      })),
+    holes: rawHolesRows.map((h) => ({
+      number: h.hole_number,
+      par: h.par,
+      strokeIndex: h.stroke_index,
+    })),
+    scores: rawScoresRows.map((s) => ({
+      userId: s.user_id,
+      holeNumber: s.hole_number,
+      gross: s.strokes,
+    })),
+  };
+
+  const result = computeModeResult(ctx);
+  // Type-guard mot mode-router-output. Hvis routeren returnerer feil shape
+  // faller vi tilbake til notFound() — sikrere enn å rendre tom UI.
+  if (result.kind !== 'texas_scramble') {
+    notFound();
+  }
+
+  const playersById = new Map<string, TexasScramblePlayerInfo>();
+  for (const p of gwp.players) {
+    if (p.users == null) continue;
+    playersById.set(p.user_id, {
+      name: p.users.name ?? '(ukjent)',
+      nickname: p.users.nickname,
+    });
+  }
+
+  if (game.status === 'finished') {
+    return (
+      <TexasScramblePodium
+        gameId={gameId}
+        gameName={game.name}
+        result={result}
+        playersById={playersById}
+        backHref={backHref}
+      />
+    );
+  }
+
+  return (
+    <TexasScrambleView
       gameId={gameId}
       gameName={game.name}
       result={result}
