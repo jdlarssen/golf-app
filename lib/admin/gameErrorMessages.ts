@@ -71,6 +71,11 @@ export const ERROR_MESSAGES_NEW_GAME: Record<string, string> = {
     'Den valgte lagstørrelsen er ikke støttet for denne spillmodusen ennå.',
   min_players_for_mode:
     'Du må velge minst én spiller for å publisere spillet.',
+  // Epic #45 — matchplay krever EKSAKT 2 spillere. Egen kode (ikke gjenbruk
+  // av `team_balance`) for å gi en tydeligere norsk feilmelding når admin
+  // har valgt for mange spillere i singles matchplay-flyten.
+  too_many_players_for_mode:
+    'Singles matchplay krever nøyaktig 2 spillere — fjern de overflødige før du publiserer.',
   mode_locked_after_publish:
     'Spillmodus kan ikke endres etter at spillet er publisert. Slett spillet og opprett et nytt hvis du vil bytte modus.',
   /**

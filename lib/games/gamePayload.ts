@@ -86,7 +86,12 @@ export type GameValidationErrorCode =
   | 'mode_required'
   | 'unsupported_mode_size_combo'
   | 'min_players_for_mode'
-  | 'mode_locked_after_publish';
+  | 'mode_locked_after_publish'
+  // Matchplay-spesifikke koder (epic #45):
+  // - too_many_players_for_mode: publish for singles_matchplay må ha EKSAKT
+  //   2 spillere (én per side). Brukes for å skille "for mange" fra "for få"
+  //   (min_players_for_mode) — gir tydeligere norsk feilmelding i admin-UI.
+  | 'too_many_players_for_mode';
 
 export type ParsedPayload = {
   name: string;
@@ -163,7 +168,12 @@ function parseBase(formData: FormData): ParsedBase {
 function parseGameMode(formData: FormData): GameMode | null {
   const raw = String(formData.get('game_mode') ?? '').trim();
   if (raw === '') return 'best_ball_netto';
-  if (raw === 'best_ball_netto' || raw === 'stableford') return raw;
+  if (
+    raw === 'best_ball_netto' ||
+    raw === 'stableford' ||
+    raw === 'singles_matchplay'
+  )
+    return raw;
   return null;
 }
 
@@ -376,12 +386,91 @@ function validateStablefordTeam(
   };
 }
 
+/**
+ * Singles matchplay-validator (epic #45 — 1v1 net matchplay).
+ *
+ * Regler:
+ *  - hver spiller MÅ ha team_number = 1 eller 2 (sideNumber for matchplay)
+ *  - publish krever EKSAKT 2 spillere, én på side 1 og én på side 2
+ *  - flight_number = team_number (samme pattern som par-stableford for å
+ *    oppfylle DB-CHECK `game_players_team_flight_consistency` som krever
+ *    begge satt eller null sammen)
+ *  - duplikat-sjekk uendret
+ *  - draft tolererer partial state (0..2 spillere, side-tilordning trenger
+ *    ikke være balansert)
+ *
+ * Feilkoder ved publish:
+ *  - 0 spillere → `min_players_for_mode`
+ *  - 1 spiller → `min_players_for_mode`
+ *  - >2 spillere → `too_many_players_for_mode`
+ *  - 2 spillere men ikke én på hver side → `team_balance`
+ *
+ * Mode_config-output: `{kind, team_size: 1, teams_count: 2}`.
+ */
+function validateSinglesMatchplay(
+  formData: FormData,
+  mode: PayloadMode,
+): ModeValidationResult {
+  const players: GamePlayerInput[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < 8; i++) {
+    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
+    if (!user_id) continue;
+    if (seen.has(user_id)) {
+      return { ok: false, errorCode: 'duplicate_player' };
+    }
+    seen.add(user_id);
+    const team_number = Number(formData.get(`player_${i}_team`));
+    // Matchplay-sider er strengt 1 eller 2. Andre verdier (NaN, 3+, negative)
+    // avvises som bad_team — i draft blir feilen synlig først ved publish,
+    // men inkonsistente rader bør ikke slippe gjennom uansett modus siden
+    // DB-CHECK `game_players_team_flight_consistency` krever begge satt
+    // eller null sammen.
+    if (
+      !Number.isInteger(team_number) ||
+      team_number < 1 ||
+      team_number > 2
+    ) {
+      return { ok: false, errorCode: 'bad_team' };
+    }
+    // Speiler par-stableford-mønsteret: flight_number = team_number for å
+    // oppfylle CHECK-constrainten (begge satt sammen).
+    const flight_number = team_number;
+    players.push({ user_id, team_number, flight_number });
+  }
+
+  if (mode === 'publish') {
+    if (players.length < 2) {
+      return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    if (players.length > 2) {
+      return { ok: false, errorCode: 'too_many_players_for_mode' };
+    }
+    // Nøyaktig 2 spillere — sjekk at de er fordelt 1+1 på sidene.
+    const sideCounts = new Map<number, number>();
+    for (const p of players) {
+      if (p.team_number === null) continue;
+      sideCounts.set(p.team_number, (sideCounts.get(p.team_number) ?? 0) + 1);
+    }
+    if (sideCounts.get(1) !== 1 || sideCounts.get(2) !== 1) {
+      return { ok: false, errorCode: 'team_balance' };
+    }
+  }
+
+  return {
+    ok: true,
+    players,
+    mode_config: { kind: 'singles_matchplay', team_size: 1, teams_count: 2 },
+  };
+}
+
 const modeValidators: Record<
   GameMode,
   (formData: FormData, mode: PayloadMode) => ModeValidationResult
 > = {
   best_ball_netto: validateBestBallNetto,
   stableford: validateStableford,
+  singles_matchplay: validateSinglesMatchplay,
 };
 
 /**

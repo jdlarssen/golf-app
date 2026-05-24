@@ -416,3 +416,191 @@ describe('buildGameInsertPayload — par-stableford (team_size=2 / 4BBB)', () =>
     });
   });
 });
+
+describe('buildGameInsertPayload — singles_matchplay (epic #45)', () => {
+  /**
+   * Helper for matchplay-payloads. Bygger en form med game_mode=singles_matchplay
+   * og spillere fordelt på sider — én entry per spiller med team_number=side.
+   */
+  function matchplayFd(opts: {
+    sides?: Array<{ userId: string; side: number }>;
+    extras?: Record<string, string>;
+  }): FormData {
+    const { sides = [], extras = {} } = opts;
+    const base: Record<string, string> = {
+      name: 'Match Cup',
+      course_id: 'c1',
+      tee_box_id: 't1',
+      game_mode: 'singles_matchplay',
+    };
+    sides.forEach((p, i) => {
+      base[`player_${i}_id`] = p.userId;
+      base[`player_${i}_team`] = String(p.side);
+      base[`player_${i}_flight`] = String(p.side);
+    });
+    return fd({ ...base, ...extras });
+  }
+
+  it('publish med 2 spillere på side 1 og 2 → ok, mode_config matchplay', () => {
+    const result = buildGameInsertPayload(
+      matchplayFd({
+        sides: [
+          { userId: 'a', side: 1 },
+          { userId: 'b', side: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.game_mode).toBe('singles_matchplay');
+    expect(result.mode_config).toEqual({
+      kind: 'singles_matchplay',
+      team_size: 1,
+      teams_count: 2,
+    });
+    expect(result.players).toEqual([
+      { user_id: 'a', team_number: 1, flight_number: 1 },
+      { user_id: 'b', team_number: 2, flight_number: 2 },
+    ]);
+  });
+
+  it('publish med begge spillere på side 1 → team_balance', () => {
+    const result = buildGameInsertPayload(
+      matchplayFd({
+        sides: [
+          { userId: 'a', side: 1 },
+          { userId: 'b', side: 1 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('team_balance');
+  });
+
+  it('publish med 1 spiller → min_players_for_mode', () => {
+    const result = buildGameInsertPayload(
+      matchplayFd({ sides: [{ userId: 'a', side: 1 }] }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('min_players_for_mode');
+  });
+
+  it('publish med 0 spillere → min_players_for_mode', () => {
+    const result = buildGameInsertPayload(
+      matchplayFd({ sides: [] }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('min_players_for_mode');
+  });
+
+  it('publish med 3 spillere → too_many_players_for_mode', () => {
+    const result = buildGameInsertPayload(
+      matchplayFd({
+        sides: [
+          { userId: 'a', side: 1 },
+          { userId: 'b', side: 2 },
+          { userId: 'c', side: 1 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('too_many_players_for_mode');
+  });
+
+  it('publish med duplikat spiller → duplicate_player', () => {
+    const result = buildGameInsertPayload(
+      matchplayFd({
+        sides: [
+          { userId: 'dup', side: 1 },
+          { userId: 'dup', side: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('duplicate_player');
+  });
+
+  it('publish med ugyldig side (3) → bad_team', () => {
+    const result = buildGameInsertPayload(
+      matchplayFd({
+        sides: [
+          { userId: 'a', side: 1 },
+          { userId: 'b', side: 3 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('bad_team');
+  });
+
+  it('publish med tom team-verdi → bad_team', () => {
+    const result = buildGameInsertPayload(
+      matchplayFd({
+        sides: [
+          { userId: 'a', side: 1 },
+          { userId: 'b', side: 2 },
+        ],
+        extras: { player_1_team: '' },
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('bad_team');
+  });
+
+  it('draft tolererer 1 spiller (ufullstendig matchplay-oppsett)', () => {
+    const result = buildGameInsertPayload(
+      matchplayFd({ sides: [{ userId: 'a', side: 1 }] }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(1);
+    expect(result.mode_config).toEqual({
+      kind: 'singles_matchplay',
+      team_size: 1,
+      teams_count: 2,
+    });
+  });
+
+  it('draft tolererer 0 spillere', () => {
+    const result = buildGameInsertPayload(
+      matchplayFd({ sides: [] }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toEqual([]);
+  });
+
+  it('draft tolererer begge spillere på samme side (publish ville feilet)', () => {
+    // Draft skal IKKE feile på side-balansen — admin kan være halvveis i
+    // å sette opp matchen. Publish vil fortsatt blokkere.
+    const result = buildGameInsertPayload(
+      matchplayFd({
+        sides: [
+          { userId: 'a', side: 1 },
+          { userId: 'b', side: 1 },
+        ],
+      }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(2);
+  });
+
+  it('flight_number = team_number for matchplay-spillere (DB-CHECK)', () => {
+    // game_players_team_flight_consistency krever begge satt eller null
+    // sammen. Matchplay-validatoren speiler par-stableford-mønsteret og
+    // setter flight = team.
+    const result = buildGameInsertPayload(
+      matchplayFd({
+        sides: [
+          { userId: 'a', side: 1 },
+          { userId: 'b', side: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players[0].flight_number).toBe(1);
+    expect(result.players[1].flight_number).toBe(2);
+  });
+});
