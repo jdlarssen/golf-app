@@ -5,6 +5,7 @@ import { revalidatePath, revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import { sendScorecardSubmittedNotification } from '@/lib/mail/scorecardSubmittedNotification';
 import { firstName } from '@/lib/firstName';
+import { notify } from '@/lib/notifications/notify';
 
 /**
  * Mark the current user's scorecard as submitted.
@@ -27,11 +28,16 @@ export async function submitScorecard(gameId: string) {
   // Refuse to submit if the game isn't active. Draft games shouldn't have
   // scores yet and finished games are read-only. `name` is fetched here so
   // we can use it as the mail subject + body without a re-fetch.
+  // `require_peer_approval` brukes nedenfor til å gate peer-varsel-loopen.
   const { data: game } = await supabase
     .from('games')
-    .select('name, status')
+    .select('name, status, require_peer_approval')
     .eq('id', gameId)
-    .single<{ name: string; status: 'draft' | 'scheduled' | 'active' | 'finished' }>();
+    .single<{
+      name: string;
+      status: 'draft' | 'scheduled' | 'active' | 'finished';
+      require_peer_approval: boolean;
+    }>();
 
   if (!game || game.status !== 'active') {
     redirect(`/games/${gameId}/submit?error=not_active`);
@@ -52,12 +58,16 @@ export async function submitScorecard(gameId: string) {
     redirect(`/games/${gameId}/submit?error=db`);
   }
 
-  // Best-effort admin notification. Two queries fire in parallel:
-  //   1) the submitter's own name (for the mail body)
-  //   2) every admin's email + name (recipients)
+  // Best-effort admin notification + peer in-app varsel. Tre queries fyres
+  // i parallell:
+  //   1) the submitter's own name (for mail body + notify-payload)
+  //   2) every admin's email + name (mail recipients + notify-targets)
+  //   3) flight-medlemmer som må peer-godkjenne (notify-targets — peers
+  //      varsles ikke via mail, kun in-app i denne fasen). Inkluderer
+  //      submitter selv; vi filtrerer ut nedenfor.
   // The submitter is filtered out of recipients so a player-admin who
   // submits their own scorecard doesn't mail themselves a notification.
-  const [playerRes, adminsRes] = await Promise.all([
+  const [playerRes, adminsRes, flightRes] = await Promise.all([
     supabase.from('users').select('name').eq('id', user.id).maybeSingle<{
       name: string | null;
     }>(),
@@ -67,10 +77,52 @@ export async function submitScorecard(gameId: string) {
       .eq('is_admin', true)
       .not('email', 'is', null)
       .returns<{ id: string; email: string; name: string | null }[]>(),
+    supabase
+      .from('game_players')
+      .select('user_id, flight_number')
+      .eq('game_id', gameId)
+      .returns<{ user_id: string; flight_number: number | null }[]>(),
   ]);
 
   const playerName = playerRes.data?.name?.trim() || '(ukjent spiller)';
   const admins = (adminsRes.data ?? []).filter((a) => a.id !== user.id);
+
+  // Peer-varsler hvis peer-godkjenning er på. Vi finner submitterens flight
+  // og loope over de andre i samme flight. Solo-modus (flight_number = null)
+  // bypasser hele blokken siden ingen peer-godkjenning kan finne sted.
+  if (game!.require_peer_approval) {
+    const me = (flightRes.data ?? []).find((p) => p.user_id === user.id);
+    const peers =
+      me?.flight_number != null
+        ? (flightRes.data ?? []).filter(
+            (p) =>
+              p.user_id !== user.id && p.flight_number === me.flight_number,
+          )
+        : [];
+    if (peers.length > 0) {
+      const peerResults = await Promise.allSettled(
+        peers.map((peer) =>
+          notify({
+            userId: peer.user_id,
+            kind: 'peer_approval_request',
+            payload: {
+              game_id: gameId,
+              game_name: game!.name,
+              submitter_name: playerName,
+            },
+          }),
+        ),
+      );
+      for (const r of peerResults) {
+        if (r.status === 'rejected') {
+          console.error(
+            '[submitScorecard] peer_approval_request notify failed',
+            r.reason,
+          );
+        }
+      }
+    }
+  }
   if (admins.length > 0) {
     const results = await Promise.allSettled(
       admins.map((a) =>

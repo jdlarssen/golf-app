@@ -16,6 +16,7 @@ import {
   getGameWithPlayers,
   type PlayerForHole,
 } from '@/lib/games/getGameWithPlayers';
+import { markNotificationsRead } from '@/lib/notifications/markRead';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -84,6 +85,16 @@ export default async function ApprovePage({
 
   const me = players.find((p) => p.user_id === userId);
   if (!me) notFound();
+
+  // Mark `peer_approval_request`-varsler for dette spillet som lest. Når
+  // brukeren først åpner /approve, regnes alle ventende godkjennings-
+  // varsler for spillet som «sett», uavhengig av om hen rekker å klikke
+  // gjennom alle radene. Best-effort — feiler stille i helperen.
+  await markNotificationsRead({
+    userId,
+    kind: 'peer_approval_request',
+    entityId: id,
+  });
 
   return (
     <AppShell showVersion={false}>
