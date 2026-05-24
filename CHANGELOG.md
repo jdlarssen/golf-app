@@ -14,6 +14,33 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Matchplay-turneringer mellom to spillere er nå tilgjengelig. Velg Matchplay som modus og tilordne én spiller til Side 1 og én til Side 2 — vinneren av hvert hull (laveste netto) får et hull-poeng, og matchen avgjøres som «X up» (etter 18 hull) eller «X&Y» (mat-em før hull 18) etter golfreglene.
 
+### [1.12.1] - 2026-05-24
+
+> Når matchplay-spillet er i gang ser begge spillerne sin sanntids match-status — «X up etter Y hull» — og når matchen er over feires vinneren med resultat i golf-standard format («3&2», «1up», «AS»).
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `app/games/[id]/leaderboard/MatchplayMatchView.tsx` (+ test) — ny match-view for singles matchplay. Erstatter leaderboard-grenene når `game_mode === 'singles_matchplay'`. Kombinerer live-state og finished-state i én komponent siden matchen er den samme historien som gradvis avgjøres — banner-formen bytter automatisk basert på `result.result`. Fire vertikalt-stablete seksjoner:
+  - **Status-banner** øverst: «{Vinner} vant {formatted}»-card med Medallion + champagne-accent ved avgjort match (mat-em eller spilt 18 hull med vinner), «Matchen endte AS»-card uten konfetti ved tied-resultat etter 18 hull, «{Leder} leder {N} up»-card ved live-state midt i runden, «Alt likt etter N hull»-card ved tied-state midt i runden, og «Matchen er ikke startet ennå»-card ved 0 hull spilt.
+  - **Sider-header**: to rader (S1 + S2) med spiller-navn (via `formatRevealName`) og course-handicap. Lederside får hårfin champagne-accent (`border-accent/60 bg-accent/[0.05]`).
+  - **Per-hull-grid**: tabell med en rad per `MatchplayHoleRow` (skalerer til 9-hulls-baner ved kortere hulls-array). Kolonner: Hull, Par, Side 1 (gross + Nnet hvis extra), Side 2 (gross + Nnet), Vinner (S1/S2/=/—). Vinner-side får `font-semibold text-score-under-fg` på gross-cellen for visuell bekreftelse.
+  - **Match-meta**: kompakt rad med Spilt / Igjen / Status — alle `tabular-nums` for konsistent skanning.
+  - Konfetti fyrer en gang per browser-sesjon når matchen er avgjort med en vinner (`result.result.winner !== 'tied'`). SessionStorage-key `torny-matchplay-result-confetti-seen-${gameId}` er distinkt fra stableford-podiene (verifisert via dedikert test). AS-resultat får ingen konfetti.
+  - Defensiv fallback: hvis `result.holes.length === 0` (scoring-laget returnerer empty-shell når sidene mangler) viser view-en en «Matchen kan ikke vises»-card i stedet for tom UI.
+  - 22 nye tester dekker live/finished/AS-grener, konfetti-key-isolasjon, side-header med HCP + manglende info, per-hull-grid (uplayed/tied/won/extra strokes/9-hulls-bane), match-meta-tall og defensiv empty-shell-fallback.
+
+#### Changed
+- `app/games/[id]/leaderboard/page.tsx` — ny `renderMatchplay`-helper og branch i `LeaderboardBody`. Følger samme mønster som `renderStableford`: bygger `ScoringContext` fra DB-radene, kjører `computeModeResult`, narrower på `kind === 'singles_matchplay'` og rendrer `MatchplayMatchView` direkte. State #3/#3.5-«venterom» er bevisst skipped: matchplay-spillere ser hverandre umiddelbart (samme RLS-policy som stableford). `team_number` videresendes fra DB siden matchplay-validatoren håndhever 1+1-tilordning på påmelding.
+
+#### Notes
+- View-en kombinerer live + podium i én komponent i stedet for å speile stableford-mønstret (View + Podium). Matchplay har ingen rangering å vise — det er én match som har én løpende status, og finished-feiringen er en banner-bytte snarere enn en separat layout-omveltning.
+- Per-spiller-scorecardet (når spiller taster slag) er IKKE endret i denne fasen — hver spiller fører fortsatt sitt eget kort. Match-status på scorecardet kan legges til senere som forbedring.
+- Phase 4 av epic #45 dekker matchplay-mail-template (gameFinishedNotification med matchplay-copy) og admin/games-detalj-polish.
+
+</details>
+
 ### [1.12.0] - 2026-05-24
 
 > Du kan nå opprette matchplay-turneringer mellom to spillere — velg Matchplay som modus, tilordne én spiller til Side 1 og én til Side 2. Vinneren av hvert hull får poeng; matchen avgjøres som «X up» eller «X&Y» etter golfreglene.

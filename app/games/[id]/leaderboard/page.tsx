@@ -39,6 +39,10 @@ import { SoloStablefordPodium } from './SoloStablefordPodium';
 import { TeamStablefordView } from './TeamStablefordView';
 import { TeamStablefordPodium } from './TeamStablefordPodium';
 import {
+  MatchplayMatchView,
+  type MatchplayPlayerInfo,
+} from './MatchplayMatchView';
+import {
   SideTournamentView,
   type SideTournamentTeam,
 } from './SideTournamentView';
@@ -259,6 +263,22 @@ async function LeaderboardBody({
   // reveal-flow). Midt-runde og post-finished bruker samme visning.
   if (game.game_mode === 'stableford') {
     return renderStableford({
+      gameId,
+      game,
+      gwp,
+      rawHolesRows: rawHolesRes.data ?? [],
+      rawScoresRows: rawScoresRes.data ?? [],
+      backHref,
+    });
+  }
+
+  // Matchplay-grenen (epic #45 Phase 3): 1v1 hull-for-hull. MatchplayMatchView
+  // dekker både live-state og finished-state (mat-em eller AS) — komponenten
+  // velger banner-form basert på `result.result` uavhengig av game.status.
+  // State #3/#3.5-«venterom» er bevisst skipped: matchplay-spillere ser hverandre
+  // umiddelbart (RLS slipper begge sider gjennom under aktivt spill).
+  if (game.game_mode === 'singles_matchplay') {
+    return renderMatchplay({
       gameId,
       game,
       gwp,
@@ -909,6 +929,94 @@ function renderStableford(opts: {
       gameName={game.name}
       result={result}
       playersById={playersById}
+      backHref={backHref}
+    />
+  );
+}
+
+/**
+ * Matchplay-grenen — bygger ScoringContext fra rå-rad-ene, kjører mode-router-
+ * en (`computeModeResult`) og rendrer `MatchplayMatchView` med både live- og
+ * finished-state håndtert av komponenten selv (basert på `result.result`).
+ *
+ * teamNumber sendes med fra DB siden matchplay-validatoren håndhever at hver
+ * spiller tilordnes side 1 eller 2 via `game_players.team_number`. Scoring-
+ * laget plukker `teamNumber === 1` vs `teamNumber === 2` for å bygge sidene.
+ *
+ * Spillerinfo-objektet (`playerInfo`) er strukturert som et plain JS-objekt
+ * (Record) i stedet for en Map — matchplay-view-en aksesserer på userId
+ * direkte og to spillere er liten skala nok at det er trivielt å bygge.
+ */
+function renderMatchplay(opts: {
+  gameId: string;
+  game: GameForHole;
+  gwp: {
+    players: {
+      user_id: string;
+      team_number: number;
+      users: { name: string | null; nickname: string | null } | null;
+      course_handicap: number | null;
+    }[];
+  };
+  rawHolesRows: { hole_number: number; par: number; stroke_index: number }[];
+  rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
+  backHref: string;
+}) {
+  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
+
+  const ctx = {
+    game: {
+      id: gameId,
+      game_mode: 'singles_matchplay' as const,
+      mode_config: game.mode_config,
+    },
+    players: gwp.players
+      .filter((p) => p.users != null)
+      .map((p) => ({
+        userId: p.user_id,
+        // Matchplay-validatoren håndhever team_number ∈ {1, 2} — vi videresender
+        // som-er. Defensive fallback til 0 (som scoring-laget ignorerer som
+        // ugyldig side) hvis kolonnen mot formodning er null.
+        teamNumber: p.team_number ?? 0,
+        flightNumber: null,
+        courseHandicap: p.course_handicap ?? 0,
+      })),
+    holes: rawHolesRows.map((h) => ({
+      number: h.hole_number,
+      par: h.par,
+      strokeIndex: h.stroke_index,
+    })),
+    scores: rawScoresRows.map((s) => ({
+      userId: s.user_id,
+      holeNumber: s.hole_number,
+      gross: s.strokes,
+    })),
+  };
+
+  const result = computeModeResult(ctx);
+  // Type-guard mot mode-router-output. Hvis routeren returnerer feil shape
+  // faller vi tilbake til notFound() — sikrere enn å rendre tom UI.
+  if (result.kind !== 'singles_matchplay') {
+    notFound();
+  }
+
+  const playerInfo: Record<string, MatchplayPlayerInfo> = {};
+  for (const p of gwp.players) {
+    if (p.users == null) continue;
+    playerInfo[p.user_id] = {
+      name: p.users.name ?? '(ukjent)',
+      nickname: p.users.nickname,
+      courseHandicap: p.course_handicap ?? 0,
+    };
+  }
+
+  return (
+    <MatchplayMatchView
+      gameId={gameId}
+      gameName={game.name}
+      result={result}
+      playerInfo={playerInfo}
+      gameStatus={game.status}
       backHref={backHref}
     />
   );
