@@ -173,3 +173,50 @@ describe('subscribeRealtimeChannel', () => {
     expect(mockSupabase.channels).toHaveLength(0);
   });
 });
+
+describe('onPostgresChange', () => {
+  it('forwards opts + handler til channel.on med «postgres_changes»-event-navnet', async () => {
+    const { onPostgresChange } = await import('./realtimeChannel');
+    const channel = mockSupabase.channel('test');
+    const handler = vi.fn();
+
+    onPostgresChange<{ read_at: string | null }>(
+      channel as never,
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: 'user_id=eq.abc',
+      },
+      handler,
+    );
+
+    expect(channel.onSpy).toHaveBeenCalledTimes(1);
+    const [eventName, opts, fwdHandler] = channel.onSpy.mock.calls[0];
+    expect(eventName).toBe('postgres_changes');
+    expect(opts).toEqual({
+      event: 'INSERT',
+      schema: 'public',
+      table: 'notifications',
+      filter: 'user_id=eq.abc',
+    });
+    // Handler videreformidles uendret (caller's typing trer i kraft når
+    // Supabase invoker den med payload).
+    expect(fwdHandler).toBe(handler);
+  });
+
+  it('returnerer samme channel-instans (for chaining)', async () => {
+    const { onPostgresChange } = await import('./realtimeChannel');
+    const channel = mockSupabase.channel('test');
+
+    const result = onPostgresChange(
+      channel as never,
+      { event: 'UPDATE', schema: 'public', table: 'games' },
+      () => {},
+    );
+
+    // Channel returneres uendret — wrapper er en pass-through, ikke en
+    // proxy. Lar caller .on()-chain flere subscriptions på samme kanal.
+    expect(result).toBe(channel);
+  });
+});

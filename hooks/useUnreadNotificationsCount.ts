@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { getBrowserClient } from '@/lib/supabase/client';
-import { subscribeRealtimeChannel } from '@/lib/sync/realtimeChannel';
+import {
+  onPostgresChange,
+  subscribeRealtimeChannel,
+} from '@/lib/sync/realtimeChannel';
+
+type NotificationRowShape = { read_at: string | null };
 
 /**
  * Holder en lokal teller for uleste varsler for current user.
@@ -76,43 +81,40 @@ export function useUnreadNotificationsCount(userId: string | null): {
     // uansett ikke sin egen bjelle etter sletting.
     const cleanup = subscribeRealtimeChannel(
       `notifications:${userId}`,
-      (channel) =>
-        channel
-          .on(
-            'postgres_changes' as never,
-            {
-              event: 'INSERT',
-              schema: 'public',
-              table: 'notifications',
-              filter: `user_id=eq.${userId}`,
-            } as never,
-            ((payload: { new: { read_at: string | null } }) => {
-              if (payload.new.read_at == null) {
-                setCount((c) => c + 1);
-              }
-            }) as never,
-          )
-          .on(
-            'postgres_changes' as never,
-            {
-              event: 'UPDATE',
-              schema: 'public',
-              table: 'notifications',
-              filter: `user_id=eq.${userId}`,
-            } as never,
-            ((payload: {
-              old: { read_at: string | null };
-              new: { read_at: string | null };
-            }) => {
-              const wasUnread = payload.old.read_at == null;
-              const isUnread = payload.new.read_at == null;
-              if (wasUnread && !isUnread) {
-                setCount((c) => Math.max(0, c - 1));
-              } else if (!wasUnread && isUnread) {
-                setCount((c) => c + 1);
-              }
-            }) as never,
-          ),
+      (channel) => {
+        const withInsert = onPostgresChange<NotificationRowShape>(
+          channel,
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${userId}`,
+          },
+          (payload) => {
+            if (payload.new.read_at == null) {
+              setCount((c) => c + 1);
+            }
+          },
+        );
+        return onPostgresChange<NotificationRowShape>(
+          withInsert,
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${userId}`,
+          },
+          (payload) => {
+            const wasUnread = payload.old.read_at == null;
+            const isUnread = payload.new.read_at == null;
+            if (wasUnread && !isUnread) {
+              setCount((c) => Math.max(0, c - 1));
+            } else if (!wasUnread && isUnread) {
+              setCount((c) => c + 1);
+            }
+          },
+        );
+      },
     );
 
     return () => {

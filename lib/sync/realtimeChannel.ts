@@ -22,6 +22,30 @@ let nextSubscriptionId = 0;
  * contract; the underlying `removeChannel` is fire-and-forget (its Promise
  * resolves once the server acks the leave or the timeout elapses).
  */
+/**
+ * Typed wrapper rundt `channel.on('postgres_changes', ...)`.
+ *
+ * Isolerer Supabase-JS sin svake typing for `postgres_changes`-events ett
+ * sted (3 × `as never` per call-site) slik at hook-ene over kan kalle inn
+ * uten å lekke any-typer. `TRow` er row-shape-en for både `payload.new` og
+ * `payload.old`. For INSERT-events er `old` tomt objekt; for DELETE er
+ * `new` tomt — caller velger hvilke som er løftet ut basert på event-typen.
+ */
+export type PostgresChangeEvent = 'INSERT' | 'UPDATE' | 'DELETE';
+
+export function onPostgresChange<TRow>(
+  channel: RealtimeChannel,
+  opts: {
+    event: PostgresChangeEvent;
+    schema: string;
+    table: string;
+    filter?: string;
+  },
+  handler: (payload: { new: TRow; old: TRow }) => void,
+): RealtimeChannel {
+  return channel.on('postgres_changes' as never, opts as never, handler as never);
+}
+
 export function subscribeRealtimeChannel(
   topic: string,
   configure: (channel: RealtimeChannel) => RealtimeChannel,
