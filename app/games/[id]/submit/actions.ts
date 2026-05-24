@@ -124,6 +124,31 @@ export async function submitScorecard(gameId: string) {
     }
   }
   if (admins.length > 0) {
+    // In-app varsel til admin-ene parallelt med mailen. Phase 3 sender mail
+    // uavhengig (sikkerhetsnett under utrulling); Phase 4 vil gate på
+    // shouldAlsoSendMail fra notify() for å kutte mail til aktive brukere.
+    const adminNotifyResults = await Promise.allSettled(
+      admins.map((a) =>
+        notify({
+          userId: a.id,
+          kind: 'scorecard_submitted',
+          payload: {
+            game_id: gameId,
+            game_name: game!.name,
+            player_name: playerName,
+          },
+        }),
+      ),
+    );
+    for (const r of adminNotifyResults) {
+      if (r.status === 'rejected') {
+        console.error(
+          '[submitScorecard] scorecard_submitted notify failed',
+          r.reason,
+        );
+      }
+    }
+
     const results = await Promise.allSettled(
       admins.map((a) =>
         sendScorecardSubmittedNotification({

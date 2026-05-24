@@ -40,6 +40,7 @@ import {
   type TeeBoxRatings,
 } from '@/lib/games/teeRating';
 import { formatShortDateNb } from '@/lib/format/date';
+import { markNotificationsRead } from '@/lib/notifications/markRead';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -193,6 +194,17 @@ export default async function GameDetailPage({
     shortNb(game.created_at);
 
   const userId = await getProxyVerifiedUserId();
+
+  // Mark `scorecard_submitted`-varsler for dette spillet som lest når admin
+  // åpner protokoll-sida. Best-effort, kan kalles uten userId siden helperen
+  // håndterer null som no-op via filter-byggingen.
+  if (userId) {
+    await markNotificationsRead({
+      userId,
+      kind: 'scorecard_submitted',
+      entityId: id,
+    });
+  }
 
   return (
     <AdminShell>
