@@ -181,11 +181,16 @@ function deriveAssignmentsFromInitial(initial: InitialValues | undefined) {
 /**
  * Velger default-lagstørrelse for en gitt modus. Speilar de aktive
  * kombinasjonene i `TeamSizeSelector.ENABLED_COMBOS` — Stableford → 1,
- * Best ball netto → 2. Holdt synk separat fordi GameForm trenger en
- * ren funksjon for state-initialisering uten å eksponere selector-internt.
+ * Best ball netto → 2, Singles matchplay → 1 (én spiller per side, men
+ * TeamSizeSelector er skjult for matchplay siden det ikke finnes noen
+ * reell lagstørrelse å velge mellom). Holdt synk separat fordi GameForm
+ * trenger en ren funksjon for state-initialisering uten å eksponere
+ * selector-internt.
  */
 function defaultTeamSizeForMode(mode: GameMode): TeamSize {
-  return mode === 'stableford' ? 1 : 2;
+  if (mode === 'stableford') return 1;
+  if (mode === 'singles_matchplay') return 1;
+  return 2;
 }
 
 // Fisher–Yates shuffle backed by crypto.getRandomValues for fair, unbiased
@@ -303,9 +308,14 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   // - isParStableford: 4BBB-stableford. Tillater 1-4 lag á 2 spillere
   //   (2/4/6/8 spillere totalt), partial fyll mot 4-lag-grid-en. Lag uten
   //   spillere bare ignoreres ved publish.
-  const isSolo = teamSize === 1;
+  // - isMatchplay: singles_matchplay. Nøyaktig 2 spillere, én på hver side
+  //   (team_number 1 og 2). Eget side-tilordnings-UI som erstatter både
+  //   lag-grid og flight-seksjonen. TeamSizeSelector skjules siden valget
+  //   er meningsløst (kun 1v1 er gyldig).
+  const isSolo = teamSize === 1 && gameMode === 'stableford';
   const isBestBall = gameMode === 'best_ball_netto' && teamSize === 2;
   const isParStableford = gameMode === 'stableford' && teamSize === 2;
+  const isMatchplay = gameMode === 'singles_matchplay';
 
   // Drafts can be saved without a tee-off; publishing cannot. `canPublish`
   // below combines this with the rest of the validity gates.
@@ -447,6 +457,55 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     setFlightByPlayer((prev) => ({ ...prev, [playerId]: flight }));
   }
 
+  /**
+   * Matchplay: tilordne en spiller til side 1 eller 2 (lagrer i `teamByPlayer`
+   * siden payloaden bruker team_number-feltet for side-tilordning). Hvis
+   * spilleren allerede står på den ANDRE siden flyttes hen automatisk. Hvis
+   * den nye siden allerede har en spiller, bytter de plass (idiomatic swap)
+   * — gir en mer forgivende UX enn å nekte byttet.
+   *
+   * playerId === '' = «Tom plass»-valg fra dropdown; fjerner kun gjeldende
+   * okkupant uten å sette en ny.
+   */
+  function assignPlayerToSide(side: 1 | 2, playerId: string) {
+    setTeamByPlayer((prev) => {
+      const next: Record<string, TeamNumber> = { ...prev };
+      // Frigjør den siden vi tilordner til (hvis okkupert).
+      const currentOnThisSide = selectedPlayerIds.find(
+        (pid) => prev[pid] === side,
+      );
+      if (playerId === '') {
+        // «Tom plass» — kun fjern okkupanten.
+        if (currentOnThisSide) delete next[currentOnThisSide];
+        return next;
+      }
+      // Spilleren kommer kanskje fra den andre siden — sjekk om de skal byttes.
+      const otherSide: 1 | 2 = side === 1 ? 2 : 1;
+      const prevSideOfChosen = prev[playerId];
+      if (prevSideOfChosen === otherSide && currentOnThisSide) {
+        // Swap: spilleren på den andre siden flytter hit, og den vi
+        // erstattet flytter dit. Bevarer at begge står på hver sin side
+        // uten at admin må klikke seg gjennom et mellomsteg.
+        next[currentOnThisSide] = otherSide;
+        next[playerId] = side;
+      } else {
+        if (currentOnThisSide && currentOnThisSide !== playerId) {
+          delete next[currentOnThisSide];
+        }
+        next[playerId] = side;
+      }
+      return next;
+    });
+    // Flight = team_number for matchplay (samme mønster som par-stableford).
+    setFlightByPlayer((prev) => {
+      const next = { ...prev };
+      if (playerId !== '') {
+        next[playerId] = side;
+      }
+      return next;
+    });
+  }
+
   // The serialized payload sent to the server action. Holder seg mode-aware:
   // - team-spillmodi (teamSize ≥ 2): inkluderer kun spillere som har en
   //   team-tilordning, ordnet stabilt etter lag for deterministisk
@@ -458,11 +517,39 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   //     bruker ikke separate flighter; gamePayload-validatoren godtar både
   //     varianter, men vi setter flight = team eksplisitt for å matche
   //     mønstret i Phase 1-testene)
-  // - solo-modi (teamSize === 1): inkluderer ALLE selectedPlayerIds, ingen
-  //   lag/flight-felter. Hidden-input-skjemaet bærer player_${i}_id alene —
-  //   gamePayload.ts validatoren leser opp til 8 slots og ignorerer manglende
-  //   team/flight-felt for stableford.
+  // - matchplay (singles_matchplay): kun spillere som er tilordnet en side
+  //   (team_number 1 eller 2), ordnet side-1-først så side-2 for
+  //   deterministisk skjema. flight_number = team_number (samme mønster
+  //   som par-stableford — matchplay-validatoren i `gamePayload.ts`
+  //   krever begge satt sammen pga DB-CHECK `game_players_team_flight_consistency`).
+  // - solo-modi (teamSize === 1, stableford): inkluderer ALLE
+  //   selectedPlayerIds, ingen lag/flight-felter. Hidden-input-skjemaet
+  //   bærer player_${i}_id alene — gamePayload.ts validatoren leser opp
+  //   til 8 slots og ignorerer manglende team/flight-felt for stableford.
   const orderedPayload = useMemo(() => {
+    if (isMatchplay) {
+      const rows: {
+        user_id: string;
+        team_number: number | null;
+        flight_number: number | null;
+      }[] = [];
+      // Iterer side 1 først, så side 2 — gir deterministisk
+      // player_0/player_1-rekkefølge uavhengig av selectedPlayerIds-order.
+      // Spillere uten side-tilordning droppes (draft tolererer det;
+      // publish-validering melder mangel via missingForPublish).
+      for (const side of [1, 2] as const) {
+        for (const pid of selectedPlayerIds) {
+          if (teamByPlayer[pid] === side) {
+            rows.push({
+              user_id: pid,
+              team_number: side,
+              flight_number: side,
+            });
+          }
+        }
+      }
+      return rows;
+    }
     if (!requiresTeams) {
       return selectedPlayerIds.map((pid) => ({
         user_id: pid,
@@ -488,7 +575,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
       }
     }
     return rows;
-  }, [requiresTeams, selectedPlayerIds, playersByTeam, flightByPlayer, isParStableford]);
+  }, [isMatchplay, requiresTeams, selectedPlayerIds, playersByTeam, teamByPlayer, flightByPlayer, isParStableford]);
 
   const flightsComplete =
     teamsComplete &&
@@ -523,6 +610,21 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     parStablefordTeamsBalanced &&
     parStablefordHasAtLeastOneTeam;
 
+  // Matchplay-validitet: nøyaktig 2 spillere, én på side 1 og én på side 2.
+  // Speiler `validateSinglesMatchplay` i `lib/games/gamePayload.ts` —
+  // for-mange-feilen meldes separat fra for-få i missingForPublish-stien
+  // slik at admin får tydeligere copy.
+  const matchplaySide1Count = selectedPlayerIds.filter(
+    (pid) => teamByPlayer[pid] === 1,
+  ).length;
+  const matchplaySide2Count = selectedPlayerIds.filter(
+    (pid) => teamByPlayer[pid] === 2,
+  ).length;
+  const matchplayPlayersValid =
+    selectedPlayerIds.length === 2 &&
+    matchplaySide1Count === 1 &&
+    matchplaySide2Count === 1;
+
   // Modus-spesifikk publish-validitet. Reglene speiler
   // `lib/games/gamePayload.ts` slik at klient og server forteller samme
   // historie til admin når noe mangler:
@@ -531,13 +633,16 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   //   flight-fordeling per spiller
   // - par-stableford (team_size=2): 2/4/6/8 spillere, hvert ikke-tomt lag
   //   à 2, ingen separat flight-validering (flight = team automatisk)
-  const playersValidForMode = isSolo
-    ? selectedPlayerIds.length >= 1
-    : isBestBall
-      ? eightSelected && teamsComplete && flightsComplete
-      : isParStableford
-        ? parStablefordPlayersValid
-        : false;
+  // - matchplay (singles_matchplay): nøyaktig 2 spillere, én på hver side
+  const playersValidForMode = isMatchplay
+    ? matchplayPlayersValid
+    : isSolo
+      ? selectedPlayerIds.length >= 1
+      : isBestBall
+        ? eightSelected && teamsComplete && flightsComplete
+        : isParStableford
+          ? parStablefordPlayersValid
+          : false;
 
   // Publishing requires every section to be valid AND a tee-off time. Drafts
   // skip these gates entirely (they only need a name).
@@ -551,13 +656,32 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   // Human-readable list of what's still missing for a publish. Mode-aware:
   // best-ball-stien teller opp til 8 spillere + lag-/flight-fordeling,
   // par-stableford-stien forventer partall-spillere balansert på lag á 2,
+  // matchplay-stien krever nøyaktig 2 spillere fordelt 1+1 på sidene,
   // og solo-stien melder bare manglende spiller(e). Rekkefølgen speiler
   // form-seksjonene så meldingen scanner top-to-bottom.
   const missingForPublish: string[] = [];
   if (courseId === '') missingForPublish.push('bane');
   if (teeBoxId === '') missingForPublish.push('tee-boks');
   if (!hasTeeOff) missingForPublish.push('tee-off-tid');
-  if (isBestBall) {
+  if (isMatchplay) {
+    if (selectedPlayerIds.length === 0) {
+      missingForPublish.push('2 spillere');
+    } else if (selectedPlayerIds.length === 1) {
+      missingForPublish.push('1 spiller til');
+    } else if (selectedPlayerIds.length > 2) {
+      // Eksplisitt copy som speiler `too_many_players_for_mode`-feilkoden
+      // fra server-action. Matchplay er strengt 1v1 — admin må fjerne
+      // overflødige før publish.
+      missingForPublish.push(
+        'for mange spillere — matchplay krever nøyaktig 2',
+      );
+    } else if (!matchplayPlayersValid) {
+      // 2 spillere valgt, men ikke fordelt 1+1 på sidene. Den eneste
+      // gjenstående muligheten er at begge står på samme side eller
+      // mangler side-tilordning.
+      missingForPublish.push('én spiller på hver side');
+    }
+  } else if (isBestBall) {
     if (selectedPlayerIds.length < 8) {
       const remaining = 8 - selectedPlayerIds.length;
       missingForPublish.push(
@@ -923,12 +1047,20 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
               - best-ball: «X av 8 spillere valgt» (fast 8-krav)
               - par-stableford: «X spillere valgt» med subtilt hint om
                 partall-krav for å hjelpe admin før publish-feilen treffer
+              - matchplay: «X av 2 spillere valgt» (fast 2-krav) — grønn
+                farge når akkurat 2 er valgt, ellers muted
               - solo: «X spillere valgt», ingen øvre tak */}
           {isBestBall ? (
             <span
               className={`text-xs font-medium tabular-nums ${eightSelected ? 'text-primary' : 'text-muted'}`}
             >
               {selectedPlayerIds.length} av 8 spillere valgt
+            </span>
+          ) : isMatchplay ? (
+            <span
+              className={`text-xs font-medium tabular-nums ${selectedPlayerIds.length === 2 ? 'text-primary' : 'text-muted'}`}
+            >
+              {selectedPlayerIds.length} av 2 spillere valgt
             </span>
           ) : (
             <span
@@ -1011,11 +1143,13 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             ) : (
               <ul className="space-y-2">
                 {filteredPlayers.map((p) => {
-                  // Cap-en på 8 gjelder team-modi (begge: best-ball-netto
-                  // krever eksakt 8, par-stableford-grid har 4 lag à 2 =
-                  // 8 slots). Solo-stableford har ingen øvre grense på
-                  // antall spillere — admin kan invitere hele klubben.
-                  const atCap = requiresTeams && selectedPlayerIds.length >= 8;
+                  // Cap-en avhenger av modus:
+                  //  - matchplay: 2 spillere (1v1, strengt)
+                  //  - team-modi (best-ball/par-stableford): 8 (4 lag à 2)
+                  //  - solo-stableford: ingen øvre grense
+                  const atCap = isMatchplay
+                    ? selectedPlayerIds.length >= 2
+                    : requiresTeams && selectedPlayerIds.length >= 8;
                   return (
                     <li key={p.id}>
                       <label
@@ -1049,7 +1183,12 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           lag-tilordnings-grid-en så admin må eksplisitt velge hvordan
           spillet skal scoreres FØR det blir aktuelt å fordele lag.
           Lock-flagget gjelder edit-flyten for publiserte spill (backend
-          mode-lock-guard har siste ord). */}
+          mode-lock-guard har siste ord).
+
+          TeamSizeSelector skjules for matchplay siden det kun finnes én
+          gyldig lagstørrelse (1 spiller per side) — å vise Solo/Par/4-mann
+          ville gitt misvisende valg. team_size = 1 sendes uansett via det
+          skjulte hidden-input ved bunnen av form. */}
       <section className="space-y-4">
         <h2 className="text-sm font-medium text-text">
           3. Format
@@ -1059,12 +1198,14 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           onChange={handleModeChange}
           disabled={lockGameMode}
         />
-        <TeamSizeSelector
-          mode={gameMode}
-          value={teamSize}
-          onChange={setTeamSize}
-          disabled={lockGameMode}
-        />
+        {!isMatchplay && (
+          <TeamSizeSelector
+            mode={gameMode}
+            value={teamSize}
+            onChange={setTeamSize}
+            disabled={lockGameMode}
+          />
+        )}
         {lockGameMode && (
           <p className="text-xs text-muted">
             <strong>Kan ikke endres etter spill-start.</strong>
@@ -1072,8 +1213,72 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
         )}
       </section>
 
+      {/* Section 4 — Matchplay: side-tilordning. Vises så snart admin har
+          valgt minst én spiller (slik at admin kan tilordne side mens
+          spiller-listen fylles ut). Med 0 spillere vises seksjonen ikke
+          siden det ikke er noen å plassere ennå. Lag/flight-grid-en for
+          team-modi sitter rett under og rendres aldri for matchplay. */}
+      {isMatchplay && selectedPlayerIds.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-medium text-text">
+            4. Sider
+          </h2>
+          <p className="text-xs text-muted">
+            Matchplay er 1v1. Tilordne én spiller til Side 1 og én til Side 2.
+            Spillere uten side er ikke med i matchen.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {([1, 2] as const).map((side) => {
+              const occupant = selectedPlayerIds.find(
+                (pid) => teamByPlayer[pid] === side,
+              );
+              // Dropdownen viser nåværende okkupant + alle ufordelte
+              // spillere + spilleren på den ANDRE siden (så admin kan
+              // bytte uten å først nullstille). assignPlayerToSide gjør
+              // bytte/swap basert på hvor spilleren stod fra før.
+              const options = selectedPlayerIds
+                .filter((pid) => pid === occupant || teamByPlayer[pid] !== side)
+                .map((pid) => players.find((p) => p.id === pid))
+                .filter((p): p is PlayerOption => p !== undefined);
+              return (
+                <div
+                  key={side}
+                  className="border border-border rounded-lg p-3 space-y-2"
+                >
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                    Side {side}
+                  </p>
+                  <label
+                    htmlFor={`matchplay_side_${side}`}
+                    className="sr-only"
+                  >
+                    Velg spiller for Side {side}
+                  </label>
+                  <select
+                    id={`matchplay_side_${side}`}
+                    value={occupant ?? ''}
+                    onChange={(e) =>
+                      assignPlayerToSide(side, e.target.value)
+                    }
+                    className="w-full rounded-xl border px-3 py-2 bg-surface text-sm text-text border-border focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
+                  >
+                    <option value="">— Tom plass —</option>
+                    {options.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {shortName(p)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* Section 4: Teams — kun for team-modi (teamSize ≥ 2). Solo-stableford
-          hopper over hele seksjonen siden det ikke finnes lag å fordele.
+          og matchplay hopper over hele seksjonen siden det ikke finnes lag
+          å fordele (matchplay har sin egen side-tilordnings-seksjon over).
           Synlighet:
           - Best-ball: vises når alle 8 spillere er valgt (eksakt 8-krav).
           - Par-stableford: vises så snart admin har valgt minst 2 spillere,
@@ -1248,15 +1453,19 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
         </section>
       )}
 
-      {/* Per-spiller-tee for solo- og par-stableford-modus — flights-seksjonen
-          rendrer ikke for stableford, så vi trenger en egen lett-vektsvariant
-          slik at admin kan sette tee per spiller. Vises kun når det faktisk
-          er spillere å konfigurere. Best-ball håndterer tee inne i flights-
-          seksjonen ovenfor. */}
-      {(isSolo || isParStableford) && selectedPlayerIds.length > 0 && (
+      {/* Per-spiller-tee for solo-, par-stableford- og matchplay-modus —
+          flights-seksjonen rendrer ikke for disse, så vi trenger en egen
+          lett-vekts-variant slik at admin kan sette tee per spiller.
+          Matchplay krever individuell tee for korrekt slope/CR → course
+          handicap → matchplay-stroke-allokering. Vises kun når det faktisk
+          er spillere å konfigurere. Best-ball håndterer tee inne i
+          flights-seksjonen ovenfor. */}
+      {(isSolo || isParStableford || isMatchplay) && selectedPlayerIds.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-text">
-            {isParStableford ? '5. Tee per spiller' : '4. Tee per spiller'}
+            {isParStableford || isMatchplay
+              ? '5. Tee per spiller'
+              : '4. Tee per spiller'}
           </h2>
           <p className="text-xs text-muted">
             Velg tee per spiller. M = herre, D = dame, J = junior.

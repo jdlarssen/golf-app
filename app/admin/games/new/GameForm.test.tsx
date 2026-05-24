@@ -579,3 +579,432 @@ describe('GameForm — par-stableford (epic #43 fase 2)', () => {
     ).not.toBeInTheDocument();
   });
 });
+
+describe('GameForm — matchplay singles (epic #45 fase 2)', () => {
+  /**
+   * Helper: bytter til matchplay-modus via tile-klikk. Defensiv: ingen
+   * teamSize-tile å klikke etterpå siden TeamSizeSelector skjules for
+   * matchplay.
+   */
+  function selectMatchplay() {
+    fireEvent.click(screen.getByRole('radio', { name: /matchplay/i }));
+  }
+
+  it('matchplay: TeamSizeSelector skjules helt', () => {
+    render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+      />,
+    );
+
+    // Default mode = best_ball_netto → TeamSizeSelector synlig.
+    expect(
+      screen.getByRole('group', { name: /velg lagstørrelse/i }),
+    ).toBeInTheDocument();
+
+    selectMatchplay();
+
+    // Etter matchplay-valg skal TeamSizeSelector-fieldset være borte.
+    expect(
+      screen.queryByRole('group', { name: /velg lagstørrelse/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('matchplay: hidden inputs sender game_mode=singles_matchplay og team_size=1', () => {
+    const { container } = render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+      />,
+    );
+
+    selectMatchplay();
+
+    expect(
+      (container.querySelector(
+        'input[type="hidden"][name="game_mode"]',
+      ) as HTMLInputElement).value,
+    ).toBe('singles_matchplay');
+    expect(
+      (container.querySelector(
+        'input[type="hidden"][name="team_size"]',
+      ) as HTMLInputElement).value,
+    ).toBe('1');
+    // stableford_team_size må IKKE være med i payloaden for matchplay
+    // (den hører bare til stableford-modus).
+    expect(
+      container.querySelector(
+        'input[type="hidden"][name="stableford_team_size"]',
+      ),
+    ).toBeNull();
+  });
+
+  it('matchplay: side-tilordnings-UI vises når ≥1 spiller er valgt', () => {
+    render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+      />,
+    );
+
+    selectMatchplay();
+
+    // Med 0 spillere skal Sider-headingen ikke vises ennå.
+    expect(
+      screen.queryByRole('heading', { name: /^4\. sider$/i }),
+    ).not.toBeInTheDocument();
+
+    // Velg én spiller → Sider-heading skal vises.
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+    expect(
+      screen.getByRole('heading', { name: /^4\. sider$/i }),
+    ).toBeInTheDocument();
+    // Helper-tekst om 1v1 + tomme sider.
+    expect(screen.getByText(/matchplay er 1v1/i)).toBeInTheDocument();
+  });
+
+  it('matchplay: lag-grid (4. Lag) og flight-seksjon vises ALDRI', () => {
+    render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+      />,
+    );
+
+    selectMatchplay();
+
+    // Velg flere spillere (selv om matchplay capper på 2 — vi prøver
+    // 3-klikk-flowen som via cap-en vil bli ignorert for de overskytende).
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 2/i }));
+
+    // 4. Lag-heading (par-stableford/best-ball) skal ikke vises.
+    expect(
+      screen.queryByRole('heading', { name: /^4\. lag$/i }),
+    ).not.toBeInTheDocument();
+    // 5. Flights-heading skal heller ikke vises.
+    expect(
+      screen.queryByRole('heading', { name: /^5\. flights$/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('matchplay: «Trekk tilfeldig»-knappen skjules', () => {
+    render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+      />,
+    );
+
+    selectMatchplay();
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 2/i }));
+
+    expect(
+      screen.queryByRole('button', { name: /trekk tilfeldig/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('matchplay: spiller-velgeren capper på 2 (3. spiller blir disabled)', () => {
+    render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+      />,
+    );
+
+    selectMatchplay();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 2/i }));
+
+    // Tredje spiller skal være disabled (cap-på-2-mekanikken).
+    const spiller3 = screen.getByRole('checkbox', { name: /spiller 3/i });
+    expect(spiller3).toBeDisabled();
+  });
+
+  it('matchplay: counter viser «X av 2 spillere valgt»', () => {
+    render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+      />,
+    );
+
+    selectMatchplay();
+    // Med 0 valgte: «0 av 2 spillere valgt».
+    expect(screen.getByText(/0 av 2 spillere valgt/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+    expect(screen.getByText(/1 av 2 spillere valgt/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 2/i }));
+    expect(screen.getByText(/2 av 2 spillere valgt/i)).toBeInTheDocument();
+  });
+
+  it('matchplay: 2 spillere fordelt på Side 1 og Side 2 → canPublish=true', () => {
+    const { container } = render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS.slice(0, 2)}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+        initialValues={{
+          name: 'Match Cup',
+          course_id: 'course-1',
+          tee_box_id: 'tee-1',
+          scheduled_tee_off_at: '2026-06-01T10:00',
+          hcp_allowance_pct: '100',
+        }}
+      />,
+    );
+
+    selectMatchplay();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 2/i }));
+
+    // To side-selects skal være tilgjengelige.
+    const side1 = container.querySelector(
+      '#matchplay_side_1',
+    ) as HTMLSelectElement | null;
+    const side2 = container.querySelector(
+      '#matchplay_side_2',
+    ) as HTMLSelectElement | null;
+    expect(side1).not.toBeNull();
+    expect(side2).not.toBeNull();
+
+    fireEvent.change(side1!, { target: { value: 'u0' } });
+    fireEvent.change(side2!, { target: { value: 'u1' } });
+
+    const publishBtn = screen.getByRole('button', { name: /^publiser$/i });
+    expect(publishBtn).not.toBeDisabled();
+  });
+
+  it('matchplay: 1 spiller → canPublish=false + missingForPublish nevner «1 spiller til»', () => {
+    render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS.slice(0, 2)}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+        initialValues={{
+          name: 'Match Cup',
+          course_id: 'course-1',
+          tee_box_id: 'tee-1',
+          scheduled_tee_off_at: '2026-06-01T10:00',
+          hcp_allowance_pct: '100',
+        }}
+      />,
+    );
+
+    selectMatchplay();
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+
+    const publishBtn = screen.getByRole('button', { name: /^publiser$/i });
+    expect(publishBtn).toBeDisabled();
+
+    const helperText = document.getElementById('publish-missing');
+    expect(helperText?.textContent).toMatch(/1 spiller til/i);
+  });
+
+  it('matchplay: 2 spillere begge på Side 1 → canPublish=false + missingForPublish nevner «hver side»', () => {
+    const { container } = render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS.slice(0, 2)}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+        initialValues={{
+          name: 'Match Cup',
+          course_id: 'course-1',
+          tee_box_id: 'tee-1',
+          scheduled_tee_off_at: '2026-06-01T10:00',
+          hcp_allowance_pct: '100',
+        }}
+      />,
+    );
+
+    selectMatchplay();
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 2/i }));
+
+    // Sett begge på Side 1 — assignPlayerToSide vil fjerne den første
+    // når den andre velges siden hver side bare kan ha én okkupant.
+    // Vi simulerer dette via dropdown-bytte: først u0 på side 1, så
+    // bytter vi til u1 på side 1 → u0 mister side-tilordning.
+    const side1 = container.querySelector(
+      '#matchplay_side_1',
+    ) as HTMLSelectElement;
+    fireEvent.change(side1, { target: { value: 'u0' } });
+    fireEvent.change(side1, { target: { value: 'u1' } });
+
+    // Nå: u1 på side 1, u0 ufordelt, side 2 tom. Begge spillerne mangler
+    // én-spiller-per-side-tilstand.
+    const publishBtn = screen.getByRole('button', { name: /^publiser$/i });
+    expect(publishBtn).toBeDisabled();
+
+    const helperText = document.getElementById('publish-missing');
+    // Med 2 spillere men ikke 1+1 på sidene melder vi "én spiller på hver side".
+    expect(helperText?.textContent).toMatch(/én spiller på hver side/i);
+  });
+
+  it('matchplay: bytte til side via dropdown swapper okkupanter (idiomatic UX)', () => {
+    const { container } = render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS.slice(0, 2)}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+      />,
+    );
+
+    selectMatchplay();
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 2/i }));
+
+    const side1 = container.querySelector(
+      '#matchplay_side_1',
+    ) as HTMLSelectElement;
+    const side2 = container.querySelector(
+      '#matchplay_side_2',
+    ) as HTMLSelectElement;
+
+    // Initial: u0 til side 1, u1 til side 2.
+    fireEvent.change(side1, { target: { value: 'u0' } });
+    fireEvent.change(side2, { target: { value: 'u1' } });
+    expect(side1.value).toBe('u0');
+    expect(side2.value).toBe('u1');
+
+    // Velg u1 på side 1 → swap: u0 flytter til side 2, u1 til side 1.
+    fireEvent.change(side1, { target: { value: 'u1' } });
+    expect(side1.value).toBe('u1');
+    expect(side2.value).toBe('u0');
+  });
+
+  it('matchplay: hidden inputs har player_0_team=1 og player_1_team=2 etter side-tilordning', () => {
+    const { container } = render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS.slice(0, 2)}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+      />,
+    );
+
+    selectMatchplay();
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 2/i }));
+
+    const side1 = container.querySelector(
+      '#matchplay_side_1',
+    ) as HTMLSelectElement;
+    const side2 = container.querySelector(
+      '#matchplay_side_2',
+    ) as HTMLSelectElement;
+    fireEvent.change(side1, { target: { value: 'u0' } });
+    fireEvent.change(side2, { target: { value: 'u1' } });
+
+    // Payloaden skal ha player_0 (side 1) + player_1 (side 2) i den
+    // rekkefølgen — orderedPayload itererer side 1 → side 2.
+    const player0Id = container.querySelector(
+      'input[type="hidden"][name="player_0_id"]',
+    ) as HTMLInputElement | null;
+    const player0Team = container.querySelector(
+      'input[type="hidden"][name="player_0_team"]',
+    ) as HTMLInputElement | null;
+    const player0Flight = container.querySelector(
+      'input[type="hidden"][name="player_0_flight"]',
+    ) as HTMLInputElement | null;
+    const player1Id = container.querySelector(
+      'input[type="hidden"][name="player_1_id"]',
+    ) as HTMLInputElement | null;
+    const player1Team = container.querySelector(
+      'input[type="hidden"][name="player_1_team"]',
+    ) as HTMLInputElement | null;
+    const player1Flight = container.querySelector(
+      'input[type="hidden"][name="player_1_flight"]',
+    ) as HTMLInputElement | null;
+
+    expect(player0Id?.value).toBe('u0');
+    expect(player0Team?.value).toBe('1');
+    expect(player0Flight?.value).toBe('1');
+    expect(player1Id?.value).toBe('u1');
+    expect(player1Team?.value).toBe('2');
+    expect(player1Flight?.value).toBe('2');
+  });
+
+  it('matchplay: per-spiller-tee-seksjonen vises slik at admin kan sette M/D/J', () => {
+    render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS.slice(0, 2)}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+      />,
+    );
+
+    selectMatchplay();
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 2/i }));
+
+    // Per-spiller-tee-seksjons-heading med matchplay-nummerering (5).
+    expect(
+      screen.getByRole('heading', { name: /^5\. tee per spiller$/i }),
+    ).toBeInTheDocument();
+  });
+});

@@ -10,6 +10,43 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.12.y — Matchplay
+
+Matchplay-turneringer mellom to spillere er nå tilgjengelig. Velg Matchplay som modus og tilordne én spiller til Side 1 og én til Side 2 — vinneren av hvert hull (laveste netto) får et hull-poeng, og matchen avgjøres som «X up» (etter 18 hull) eller «X&Y» (mat-em før hull 18) etter golfreglene.
+
+### [1.12.0] - 2026-05-24
+
+> Du kan nå opprette matchplay-turneringer mellom to spillere — velg Matchplay som modus, tilordne én spiller til Side 1 og én til Side 2. Vinneren av hvert hull får poeng; matchen avgjøres som «X up» eller «X&Y» etter golfreglene.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `app/admin/games/new/ModeSelector.tsx` — ny `MatchplayIcon` (to flagg-stenger speilet mot hverandre med et «vs»-prikk i midten, samme stroke-stil som `BestBallIcon`/`StablefordIcon`) og en tredje tile «Matchplay» med beskrivelses-teksten «1v1 hull-for-hull. Vinneren avgjøres som «X up» eller «X&Y».». Grid-layout byttet fra `grid-cols-2` til `grid-cols-1 sm:grid-cols-3` slik at iPhone får vertikal stack (komfortabel scanning) og tablet/desktop får 3-kolonners symmetri. `ModeSelector.test.tsx` utvidet med assertion for matchplay-tile-rendering, beskrivelses-tekst, aria-checked-toggle og click → `onChange('singles_matchplay')`.
+- `app/admin/games/new/GameForm.tsx` — ny `isMatchplay`-narrowing-flag + matchplay-spesifikke grener:
+  - **Side-tilordnings-UI**: ny seksjon «4. Sider» som vises når ≥1 spiller er valgt og mode=matchplay. To dropdowns (Side 1 + Side 2) som tilordner spilleren til `teamByPlayer[pid] = 1 | 2`. Lag-grid (best-ball/par-stableford) og flight-seksjon rendres ALDRI for matchplay.
+  - **`assignPlayerToSide`-handler** med swap-semantikk: hvis admin velger en spiller som allerede står på den andre siden, swappes okkupantene automatisk (én klikk fremfor to). `flightByPlayer[pid]` settes til `side` (samme som team_number, speiler par-stableford-mønstret for å oppfylle DB-CHECK `game_players_team_flight_consistency`).
+  - **`orderedPayload` for matchplay**: itererer side 1 først, så side 2 — gir deterministisk `player_0` (side 1) + `player_1` (side 2)-rekkefølge i FormData. Hver rad bærer `team_number = side` og `flight_number = side`.
+  - **`matchplayPlayersValid`-validitet**: krever nøyaktig 2 spillere, én på side 1 og én på side 2.
+  - **`missingForPublish` for matchplay**: «2 spillere» (0 valgt), «1 spiller til» (1 valgt), «for mange spillere — matchplay krever nøyaktig 2» (≥3 valgt), «én spiller på hver side» (2 valgt men ikke 1+1).
+  - **Spiller-cap på 2**: `atCap = isMatchplay ? selectedPlayerIds.length >= 2 : requiresTeams && >= 8` disabler 3.-spiller-checkboxen.
+  - **Counter-copy**: «X av 2 spillere valgt» (primary når 2 er valgt, ellers muted).
+  - **`TeamSizeSelector` skjules** (`{!isMatchplay && <TeamSizeSelector …/>}`): valget «Solo/Par/4-mann» har ingen mening for matchplay siden det kun er 1v1.
+  - **Per-spiller-tee-seksjon** (M/D/J): vises også for matchplay (matchplay krever individuell HCP-allokering). Section-nummer 5 deles med par-stableford.
+  - `defaultTeamSizeForMode` returnerer 1 også for `singles_matchplay` så form-state alltid har gyldig `team_size`.
+- `app/admin/games/new/GameForm.test.tsx` — 12 nye tester for matchplay-flyten: TeamSizeSelector skjules, hidden inputs (`game_mode`/`team_size`/ingen `stableford_team_size`), side-tilordnings-UI vises ved ≥1 spiller, lag-grid + flight-seksjon vises aldri, «Trekk tilfeldig» skjules, spiller-cap på 2, counter «X av 2», canPublish=true ved gyldig 1+1, canPublish=false ved 1 spiller (med korrekt missingForPublish), canPublish=false ved 2 spillere på samme side, swap-semantikk i dropdown-bytte, hidden inputs (`player_0_team=1`/`player_1_team=2`/flight=team), per-spiller-tee-seksjons-heading.
+
+#### Notes
+- Scoring-motor + payload-validator landet i Phase 1 (PR #155) — denne fasen aktiverer kun UI-flyten. Matchplay-view (hull-for-hull-tabell med «AS»/«X up»/«X&Y»-status) kommer i Phase 3; matchplay-mail-templates + admin/games-detalj-polish kommer i Phase 4 av epic #45.
+- TeamSizeSelector beholder `ENABLED_COMBOS.singles_matchplay = Set([1])` defensivt selv om komponenten ikke rendres for matchplay — TypeScript-en `Record<GameMode, …>` krever alle keys, og fjerning av entryen ville tvunget oss til `Partial<Record<>>`. Defensiv kode er trygt.
+
+</details>
+
+---
+
+<details>
+<summary><strong>1.11.y — Par-stableford (3 entries) — klikk for å vise</strong></summary>
+
 ## 1.11.y — Par-stableford
 
 Stableford-turneringer kan nå spilles som par (4BBB / fyrball). Velg Stableford som modus og Par som lagstørrelse, så kan du melde på 2/4/6/8 spillere fordelt på 1–4 lag à 2 — laget får poengene fra det høyeste stableford-resultatet på hvert hull.
@@ -86,6 +123,8 @@ Stableford-turneringer kan nå spilles som par (4BBB / fyrball). Velg Stableford
 #### Notes
 - Scoring-motor + payload-validator landet i Phase 1 (PR #151) — denne fasen aktiverer kun UI-flyten. Lag-leaderboard + team-podium kommer i Phase 3; mail-tekster + admin/games-detalj-polish kommer i Phase 4 av epic #43.
 - Drag-tilfeldig-knappen for par-stableford ble bevisst utelatt fra Phase 2 for å holde scope strammere — kan generaliseres til 2/4/6/8 spillere i en senere fase hvis det blir vondt UX.
+
+</details>
 
 </details>
 
