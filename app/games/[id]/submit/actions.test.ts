@@ -132,6 +132,67 @@ describe('submitScorecard', () => {
     expect(lastRedirect()).toBe('/games/game-1?status=submitted');
   });
 
+  it('off-app gating: filtrerer admin-mail når shouldAlsoSendMail=false', async () => {
+    // Phase 4-kontrakt: aktive admin-er (last_seen_at < 5 min) får KUN in-app
+    // varsel, ingen mail. Simulert ved at notify-mock returnerer false for
+    // Jørgen — verifiserer at mail-loopen filtrerer ham bort.
+    notifyMock.mockResolvedValueOnce({ shouldAlsoSendMail: false });
+
+    supabaseMock = buildSupabaseMock([
+      { data: { name: 'Vinter-cup', status: 'active' }, error: null },
+      { data: null, error: null }, // UPDATE game_players
+      { data: { name: 'Ola Nordmann' }, error: null },
+      {
+        data: [
+          { id: 'admin-1', email: 'jorgen@tornygolf.no', name: 'Jørgen' },
+          { id: 'user-1', email: 'ola@example.com', name: 'Ola Nordmann' },
+        ],
+        error: null,
+      },
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'user-1' } },
+    });
+
+    const { submitScorecard } = await import('./actions');
+
+    await expect(submitScorecard('game-1')).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    // Notify ble kalt (in-app fyres alltid), men mail ble IKKE sendt fordi
+    // Jørgen er aktiv. Submitteren (user-1) er fortsatt filtrert ut uansett.
+    expect(notifyMock).toHaveBeenCalledTimes(1);
+    expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
+  });
+
+  it('off-app gating: notify-feil → ingen mail (fail-closed)', async () => {
+    // Hvis notify-rejection skjer (DB/network-error), defaultes sendMail til
+    // false — vi vil aldri ha en situasjon der mail sendes uten in-app-rad.
+    notifyMock.mockRejectedValueOnce(new Error('insert failed'));
+
+    supabaseMock = buildSupabaseMock([
+      { data: { name: 'Vinter-cup', status: 'active' }, error: null },
+      { data: null, error: null },
+      { data: { name: 'Ola Nordmann' }, error: null },
+      {
+        data: [{ id: 'admin-1', email: 'jorgen@tornygolf.no', name: 'Jørgen' }],
+        error: null,
+      },
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'user-1' } },
+    });
+
+    const { submitScorecard } = await import('./actions');
+
+    await expect(submitScorecard('game-1')).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
+  });
+
   it('edge case: redirects with ?error=db when the update returns an error', async () => {
     supabaseMock = buildSupabaseMock([
       { data: { name: 'Test', status: 'active' }, error: null },

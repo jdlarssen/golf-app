@@ -216,6 +216,63 @@ describe('endGame', () => {
     expect(lastRedirect()).toBe('/admin/games/game-1?status=finished');
   });
 
+  it('off-app gating: filtrerer game_finished-mail per spiller basert på shouldAlsoSendMail', async () => {
+    // Phase 4-kontrakt: hver spiller får mail KUN hvis last_seen_at > 5 min
+    // siden (= off-app). Simulert ved at user-a er aktiv (false) og user-b er
+    // off-app (true) — kun Bjørn skal få mail.
+    notifyMock
+      .mockResolvedValueOnce({ shouldAlsoSendMail: false }) // user-a aktiv
+      .mockResolvedValueOnce({ shouldAlsoSendMail: true }); // user-b off-app
+
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null },
+      {
+        data: {
+          id: 'game-1',
+          name: 'Vinter-cup',
+          status: 'active',
+          require_peer_approval: false,
+          course_id: 'course-1',
+          game_mode: 'best_ball_netto',
+          mode_config: { kind: 'best_ball_netto', team_size: 2, teams_count: 4 },
+        },
+        error: null,
+      },
+      {
+        data: [
+          {
+            user_id: 'user-a',
+            submitted_at: '2026-05-18T10:00:00Z',
+            approved_at: null,
+            users: { email: 'a@example.com', name: 'Ada Lovelace' },
+          },
+          {
+            user_id: 'user-b',
+            submitted_at: '2026-05-18T10:05:00Z',
+            approved_at: null,
+            users: { email: 'b@example.com', name: 'Bjørn' },
+          },
+        ],
+        error: null,
+      },
+      { data: null, error: null },
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { endGame } = await import('./actions');
+
+    await expect(endGame('game-1')).rejects.toBeInstanceOf(RedirectError);
+
+    // Begge spillerne får in-app via notify, men kun Bjørn (off-app) får mail.
+    expect(notifyMock).toHaveBeenCalledTimes(2);
+    expect(sendGameFinishedNotificationMock).toHaveBeenCalledTimes(1);
+    expect(sendGameFinishedNotificationMock).toHaveBeenCalledWith(
+      expect.objectContaining({ to: 'b@example.com' }),
+    );
+  });
+
   it('edge case (peer-approval enforcement): redirects with ?error=not_all_approved when an unapproved submission exists', async () => {
     // When require_peer_approval is true, every player must have approved_at
     // set in addition to submitted_at. This branch is the action's strictest

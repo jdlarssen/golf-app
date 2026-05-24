@@ -28,10 +28,11 @@ Tørny får en innboks. Bjelle øverst-til-høyre på alle sider viser en champa
 - `lib/mail/gameFinishedRecipients.ts` — `FinishedMailRecipient`-interface utvidet med `userId: string` slik at action-laget kan matche notify-utfall mot mail-mottakerlisten. Alle grenene (best-ball, stableford solo/team, singles matchplay, solo strokeplay) oppdaterer recipient-objektene tilsvarende.
 
 #### Notes
-- Phase 4 av 4 i issue [#25](https://github.com/jdlarssen/golf-app/issues/25) — innboks-epic-en er nå komplett. PR-er: #X (Phase 1 — datalag), #Y (Phase 2 — bjelle + /innboks), #Z (Phase 3 — event-wiring), #W (Phase 4 — mail-gating).
+- Phase 4 av 4 i issue [#25](https://github.com/jdlarssen/golf-app/issues/25) — innboks-epic-en er nå komplett. PR-er: [#173](https://github.com/jdlarssen/golf-app/pull/173) (Phase 1 — datalag), [#180](https://github.com/jdlarssen/golf-app/pull/180) (Phase 2 — bjelle + /innboks), [#185](https://github.com/jdlarssen/golf-app/pull/185) (Phase 3 — event-wiring), denne PR-en (Phase 4 — mail-gating).
 - `invite`-event er IKKE wired i mail-gatingen — Phase 3 wired heller ikke selve invite-notify-call-en siden `invitations.game_id` er null i dagens kode (sporet i [#182](https://github.com/jdlarssen/golf-app/issues/182)). Når game-scoped invitations lander vil mail-gatingen følge samme pattern.
 - `last_seen_at`-oppdateringen var allerede wired i `proxy.ts` (best-effort fire-and-forget med Postgres-side WHERE-clause-debounce på 30 min). Bekreftet i Task 4.1, ingen ny kode lagt til. Det betyr at gating-threshold-en (5 min off-app) er strammere enn proxy-debounce-en (30 min) — en aktiv bruker kan i teorien få mail hvis deres siste last_seen_at-skriving er 5–30 min gammel. Akseptabel konservativ default — backup-mail er bedre enn manglende varsel.
-- Mail-templatene endret seg ikke; alle 39 mail-snapshot-tester er fortsatt grønne. Action-testene (`app/games/[id]/submit/actions.test.ts`, `app/admin/games/[id]/actions.test.ts`) fikk notify-mock + `userId`-felter i fixturene for å gjenopprette deterministisk mail-fyring i happy-path. Test-suite på 837 grønne.
+- Mail-templatene endret seg ikke; alle 39 mail-snapshot-tester er fortsatt grønne. Action-testene (`app/games/[id]/submit/actions.test.ts`, `app/admin/games/[id]/actions.test.ts`) fikk notify-mock + `userId`-felter i fixturene for å gjenopprette deterministisk mail-fyring i happy-path. Tre nye gating-tester ble lagt til (off-app filter + notify-feil fail-closed) for å assertere kontrakten direkte. Test-suite på 840 grønne.
+- 5-min vs 30-min terskel-mismatchen sporet i oppfølgings-issue for å vurdere alignment senere.
 
 </details>
 
