@@ -4,7 +4,7 @@ Alle bruker-synlige endringer i Tørny logges her. Versjonering følger [Semanti
 
 Pre-1.0.0 (`0.x.y`) regnes som alpha — vi er fortsatt under uttesting med kompisgjengen. Disiplinen ble innført ved `0.2.0`; alt før det er samlet under «Pre-disiplin».
 
-Hver entry begynner med en kort stakeholder-tagline på vanlig norsk satt som blockquote (`> …`) — hva endringen betyr for deg som bruker — etterfulgt av en sammenfoldbar **Teknisk**-seksjon med utvikler-prosa i [Keep a Changelog](https://keepachangelog.com/no/)-stil. Minor-serier (`0.X.y`) er gruppert under et tema-heading med kort sammendrag; kun den ferskeste serien står åpen — alle eldre er sammenfoldet by default for å holde fila lett å scrolle.
+Hver oppføring begynner med en kort stakeholder-tagline på vanlig norsk satt som blockquote (`> …`) — hva endringen betyr for deg som bruker — etterfulgt av en sammenfoldbar **Teknisk**-seksjon med utvikler-prosa i [Keep a Changelog](https://keepachangelog.com/no/)-stil. Minor-serier (`0.X.y`) er gruppert under et tema-heading med kort sammendrag; kun den ferskeste serien står åpen, alle eldre er sammenfoldet som standard for å holde fila lett å scrolle.
 
 Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «Versjonering / CHANGELOG».
 
@@ -68,7 +68,7 @@ Klassisk slagspill (solo strokeplay netto) er nå tilgjengelig. Velg Slagspill s
 
 ### [1.13.2] - 2026-05-24
 
-> Når slagspill-spillet avsluttes får spillerne mail med sin plassering og totalt antall netto-slag. Admin-flaten viser «Slagspill» konsistent for solo-strokeplay-spill.
+> Når slagspillet avsluttes får spillerne mail med sin plassering og totalt antall netto-slag. Admin-flaten viser «Slagspill» konsistent for solo-strokeplay-spill.
 
 <details>
 <summary>Teknisk</summary>
@@ -87,7 +87,7 @@ Klassisk slagspill (solo strokeplay netto) er nå tilgjengelig. Velg Slagspill s
 
 ### [1.13.1] - 2026-05-24
 
-> Når slagspill-spillet er i gang ser spillerne et leaderboard rangert på laveste netto-total. Avsluttet spill viser podium for topp 3 — 1.-plassen feires med konfetti.
+> Når slagspillet er i gang ser spillerne et leaderboard rangert på laveste netto-total. Avsluttet spill viser podium for topp 3 — 1.-plassen feires med konfetti.
 
 <details>
 <summary>Teknisk</summary>
@@ -133,7 +133,7 @@ Klassisk slagspill (solo strokeplay netto) er nå tilgjengelig. Velg Slagspill s
 ---
 
 <details>
-<summary><strong>1.12.y — Matchplay (3 entries) — klikk for å vise</strong></summary>
+<summary><strong>1.12.y — Matchplay (3 oppføringer) — klikk for å vise</strong></summary>
 
 ## 1.12.y — Matchplay
 
@@ -141,7 +141,7 @@ Matchplay-turneringer mellom to spillere er nå tilgjengelig. Velg Matchplay som
 
 ### [1.12.2] - 2026-05-24
 
-> Når matchplay-spillet avsluttes får begge spillere mail med matchresultatet («Du vant 3&2 over Per» / «Du tapte 1up mot Per» / «AS — uavgjort»). Admin-flaten viser Sider i stedet for Lag for matchplay-spill.
+> Når matchen avsluttes får begge spillere mail med matchresultatet («Du vant 3&2 over Per» / «Du tapte 1up mot Per» / «AS — uavgjort»). Admin-flaten viser Sider i stedet for Lag for matchplay-spill.
 
 <details>
 <summary>Teknisk</summary>
@@ -167,7 +167,7 @@ Matchplay-turneringer mellom to spillere er nå tilgjengelig. Velg Matchplay som
 
 ### [1.12.1] - 2026-05-24
 
-> Når matchplay-spillet er i gang ser begge spillerne sin sanntids match-status — «X up etter Y hull» — og når matchen er over feires vinneren med resultat i golf-standard format («3&2», «1up», «AS»).
+> Når matchen er i gang ser begge spillerne sin sanntids match-status («X up etter Y hull»), og når matchen er over feires vinneren med resultat i golf-standard format («3&2», «1up», «AS»).
 
 <details>
 <summary>Teknisk</summary>
@@ -225,7 +225,7 @@ Matchplay-turneringer mellom to spillere er nå tilgjengelig. Velg Matchplay som
 ---
 
 <details>
-<summary><strong>1.11.y — Par-stableford (3 entries) — klikk for å vise</strong></summary>
+<summary><strong>1.11.y — Par-stableford (3 oppføringer) — klikk for å vise</strong></summary>
 
 ## 1.11.y — Par-stableford
 
@@ -233,7 +233,7 @@ Stableford-turneringer kan nå spilles som par (4BBB / fyrball). Velg Stableford
 
 ### [1.11.2] - 2026-05-24
 
-> Når par-stableford-spillet avsluttes får spillerne mail om lagets plassering og poeng, ikke en generisk best-ball-mail. Admin-flaten viser lag-grupperingen korrekt for par-spill — kun de lag som faktisk har spillere vises, og redundante Flight-kolonner er skjult.
+> Når par-stableford-runden avsluttes får spillerne mail om lagets plassering og poeng, ikke en generisk best-ball-mail. Admin-flaten viser lag-grupperingen korrekt for par-spill — kun de lag som faktisk har spillere vises, og redundante Flight-kolonner er skjult.
 
 <details>
 <summary>Teknisk</summary>
@@ -259,7 +259,7 @@ Stableford-turneringer kan nå spilles som par (4BBB / fyrball). Velg Stableford
 
 ### [1.11.1] - 2026-05-24
 
-> Når par-stableford-spillet er i gang ser spillerne nå et lag-leaderboard med begge partnernes poeng. Avsluttet spill viser podium for topp 3 lag — 1.-plassen feires med konfetti.
+> Når par-stableford-runden er i gang ser spillerne nå et lag-leaderboard med begge partnernes poeng. Avsluttet spill viser podium for topp 3 lag — 1.-plassen feires med konfetti.
 
 <details>
 <summary>Teknisk</summary>
@@ -311,7 +311,7 @@ Stableford-turneringer kan nå spilles som par (4BBB / fyrball). Velg Stableford
 ---
 
 <details>
-<summary><strong>1.10.y — Stableford spillerflyt (6 entries) — klikk for å vise</strong></summary>
+<summary><strong>1.10.y — Stableford spillerflyt (6 oppføringer) — klikk for å vise</strong></summary>
 
 ## 1.10.y — Stableford spillerflyt
 
@@ -429,7 +429,7 @@ Stableford-turneringer er nå spillbare end-to-end. Scorecard viser per-hull-poe
 ---
 
 <details>
-<summary><strong>1.9.y — Valgbar spillmodus (1 entry) — klikk for å vise</strong></summary>
+<summary><strong>1.9.y — Valgbar spillmodus (1 oppføring) — klikk for å vise</strong></summary>
 
 ## 1.9.y — Valgbar spillmodus
 
@@ -457,7 +457,7 @@ Tørny er ikke lenger låst til 4 lag à 2 spillere best-ball. Admin-flyten vise
 ---
 
 <details>
-<summary><strong>1.8.y — Mørk modus (12 entries) — klikk for å vise</strong></summary>
+<summary><strong>1.8.y — Mørk modus (12 oppføringer) — klikk for å vise</strong></summary>
 
 ## 1.8.y — Mørk modus
 
@@ -644,7 +644,7 @@ Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark App
 ---
 
 <details>
-<summary><strong>1.7.y — Spiller-picker for klubbskala (1 entry) — klikk for å vise</strong></summary>
+<summary><strong>1.7.y — Spiller-picker for klubbskala (1 oppføring) — klikk for å vise</strong></summary>
 
 Spill-opprett-formen har nå et søkefelt over spiller-listen. Klar for 100+ spillere når kompisgjengen vokser til klubb-størrelse.
 
@@ -667,7 +667,7 @@ Spill-opprett-formen har nå et søkefelt over spiller-listen. Klar for 100+ spi
 ---
 
 <details>
-<summary><strong>1.6.y — Eksport (1 entry) — klikk for å vise</strong></summary>
+<summary><strong>1.6.y — Eksport (1 oppføring) — klikk for å vise</strong></summary>
 
 Du kan nå laste ned resultatet fra ferdigspilte spill som CSV — praktisk for utskrift og deling utenfor appen.
 
@@ -689,13 +689,13 @@ Du kan nå laste ned resultatet fra ferdigspilte spill som CSV — praktisk for 
 ---
 
 <details>
-<summary><strong>1.5.y — Klubbstatistikker (3 entries) — klikk for å vise</strong></summary>
+<summary><strong>1.5.y — Klubbstatistikker (3 oppføringer) — klikk for å vise</strong></summary>
 
 Vinnerliste og «mest aktive»-listen fyller seg automatisk fra ferdigspilte spill. Underlag for både kompisgjengen og kommende klubbskala.
 
 ### [1.5.2] - 2026-05-19
 
-> Datoer vises nå konsistent på norsk i hele appen. Tee-off-tidspunktet i admin-detalj-visningen brukte en feilstavet locale-kode («no-NO» — en tag som ikke finnes i den internasjonale standarden) — det er nå rettet til «nb-NO». Ingen synlig endring for deg som bruker, men appen står seg bedre på tvers av nettlesere og fremtidige Node-oppgraderinger.
+> Datoer vises nå konsistent på norsk i hele appen. Tee-off-tidspunktet i admin-detalj-visningen brukte en feilstavet locale-kode «no-NO» (en tag som ikke finnes i den internasjonale standarden), og det er nå rettet til «nb-NO». Ingen synlig endring for deg som bruker, men appen står seg bedre på tvers av nettlesere og fremtidige Node-oppgraderinger.
 
 <details>
 <summary>Teknisk</summary>
@@ -752,7 +752,7 @@ Vinnerliste og «mest aktive»-listen fyller seg automatisk fra ferdigspilte spi
 ---
 
 <details>
-<summary><strong>1.4.y — Multi-rating tee-bokser (3 entries) — klikk for å vise</strong></summary>
+<summary><strong>1.4.y — Multi-rating tee-bokser (3 oppføringer) — klikk for å vise</strong></summary>
 
 ## 1.4.y — Multi-rating tee-bokser
 
@@ -824,7 +824,7 @@ Hver fysisk tee legges nå inn én gang med valgfrie ratings pr. gender (Herrer 
 ---
 
 <details>
-<summary><strong>1.3.y — Mixed-gender tee-bokser (1 entry) — klikk for å vise</strong></summary>
+<summary><strong>1.3.y — Mixed-gender tee-bokser (1 oppføring) — klikk for å vise</strong></summary>
 
 ## 1.3.y — Mixed-gender tee-bokser
 
@@ -859,7 +859,7 @@ Herrer og damer kan nå spille fra ulike tees i samme runde med korrekt course h
 ---
 
 <details>
-<summary><strong>1.2.y — Utvidet sideturnerings-poeng (1 entry) — klikk for å vise</strong></summary>
+<summary><strong>1.2.y — Utvidet sideturnerings-poeng (1 oppføring) — klikk for å vise</strong></summary>
 
 ## 1.2.y — Utvidet sideturnerings-poeng
 
@@ -899,15 +899,15 @@ Sideturneringen får 12 nye kategorier og 3 stackbare achievements (Turkey/Solid
 ---
 
 <details>
-<summary><strong>1.1.y — Sideturnering (11 entries) — klikk for å vise</strong></summary>
+<summary><strong>1.1.y — Sideturnering (11 oppføringer) — klikk for å vise</strong></summary>
 
 ## 1.1.y — Sideturnering
 
-Første feature shipped etter v1.0.0. Lag kan nå konkurrere parallelt med best-ball-netto via en valgfri sideturnering med seks poeng-kategorier.
+Første nye funksjon shipped etter v1.0.0. Lag kan nå konkurrere parallelt med best-ball-netto via en valgfri sideturnering med seks poeng-kategorier.
 
 ### [1.1.10] - 2026-05-16
 
-> To admin-flater som tidligere bare hadde en kjedelig "Ingen X ennå"-tekst — invitasjons-køen og spill-lista — får nå en medaljong + ikon + et lite hint om hva som skjer videre, så de føler seg som invitasjoner heller enn glemte tomstader.
+> To admin-flater som tidligere bare hadde en kjedelig «Ingen X ennå»-tekst (invitasjons-køen og spill-lista) får nå en medaljong + ikon + et lite hint om hva som skjer videre, så de føler seg som invitasjoner heller enn glemte tomstader.
 
 <details>
 <summary>Teknisk</summary>
@@ -1079,11 +1079,11 @@ Første feature shipped etter v1.0.0. Lag kan nå konkurrere parallelt med best-
 ---
 
 <details>
-<summary><strong>1.0.x — Første stabile release (11 entries) — klikk for å vise</strong></summary>
+<summary><strong>1.0.x — Første stabile lansering (11 oppføringer) — klikk for å vise</strong></summary>
 
-## 1.0.x — Første stabile release
+## 1.0.x — Første stabile lansering
 
-Tørny er nå klar for ekte bruk. Tre features kobles til v1.0: reveal-modus for kompis-gjenger som vil ha drama under runden, scorekort-former som premium visuell touch, og navne-reveal når spillet er ferdig.
+Tørny er nå stabil. Tre funksjoner kobles til v1.0: reveal-modus for kompis-gjenger som vil ha drama under runden, scorekort-former som premium visuell touch, og navne-reveal når spillet er ferdig.
 
 ### [1.0.10] - 2026-05-14
 
@@ -1216,12 +1216,12 @@ Tørny er nå klar for ekte bruk. Tre features kobles til v1.0: reveal-modus for
 
 ### [1.0.0] - 2026-05-14
 
-> Første stabile release. Tørny går fra alpha til 1.0 med tre nye features som markerer at appen er klar for ekte bruk: reveal-modus skjuler netto-tall under runden og avslører på slutten (perfekt for kompis-gjenger der laget med høyere handicap kan slå brutto-lederen — det blir et virkelig spennings-moment når du trykker avslutt), scorekort-former gir birdies en sirkel og bogeys en firkant slik som ekte papir-scorekort, og når et spill er ferdig vises navnene som «Karl "Knølkis" Jensen» med kallenavnet midt i fullt navn.
+> Første stabile lansering. Tørny går fra alpha til 1.0 med tre nye funksjoner: reveal-modus skjuler netto-tall under runden og avslører på slutten (perfekt for kompis-gjenger der laget med høyere handicap kan slå brutto-lederen — virkelig spennings-moment når du trykker avslutt), scorekort-former gir birdies en sirkel og bogeys en firkant slik som på papir-scorekort, og når et spill er ferdig vises navnene som «Karl "Knølkis" Jensen» med kallenavnet midt i fullt navn.
 
 <details>
 <summary>Teknisk</summary>
 
-Sammenslått leveranse av v0.10.23–v0.10.27 + ingen ytterligere endringer i denne commiten. Se de individuelle entries under for hva hver bumps brakte.
+Sammenslått leveranse av v0.10.23–v0.10.27 + ingen ytterligere endringer i denne commiten. Se de individuelle oppføringene under for hva hver bump brakte.
 
 Hovedgrep:
 
@@ -1253,7 +1253,7 @@ Hovedgrep:
 ---
 
 <details>
-<summary><strong>0.10.x — Resultat-mail og closing-the-loop (28 entries) — klikk for å vise</strong></summary>
+<summary><strong>0.10.x — Resultat-mail og closing-the-loop (28 oppføringer) — klikk for å vise</strong></summary>
 
 ## 0.10.x — Resultat-mail og closing-the-loop
 
@@ -1261,7 +1261,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ### [0.10.27] - 2026-05-14
 
-> Live brutto-leaderboard for reveal-spill — du ser hvordan lagene ligger an på brutto, men vinneren er fortsatt skjult. Nytt: når et spill er ferdig vises navnene som «Karl "Knølkis" Jensen» — kallenavnet midt i fullt navn som en del av reveal-en. Og du kan nå hoppe direkte til leaderboardet fra hull-skjermen via en liten knapp i toppen.
+> Live brutto-leaderboard for reveal-spill: du ser hvordan lagene ligger an på brutto, men vinneren er fortsatt skjult. Nytt: når et spill er ferdig vises navnene som «Karl "Knølkis" Jensen», med kallenavnet midt i fullt navn som en del av reveal-en. Og du kan nå hoppe direkte til leaderboardet fra hull-skjermen via en liten knapp i toppen.
 
 <details>
 <summary>Teknisk</summary>
@@ -1816,7 +1816,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 ---
 
 <details>
-<summary><strong>0.9.x — Sync-feedback under runden (5 entries) — klikk for å vise</strong></summary>
+<summary><strong>0.9.x — Sync-feedback under runden (5 oppføringer) — klikk for å vise</strong></summary>
 
 ## 0.9.x — Sync-feedback under runden
 
@@ -1924,7 +1924,7 @@ Hvis et slag ikke kommer fram til serveren, sier appen ifra. Ny sticky banner vi
 ---
 
 <details>
-<summary><strong>0.8.x — Sletting og «trekk tilbake»-flyt (27 entries) — klikk for å vise</strong></summary>
+<summary><strong>0.8.x — Sletting og «trekk tilbake»-flyt (27 oppføringer) — klikk for å vise</strong></summary>
 
 ## 0.8.x — Sletting og «trekk tilbake»-flyt
 
@@ -2026,7 +2026,7 @@ Dedikert slett-side for spillere, fulgt av tre iterasjoner på «trekk tilbake»
 ---
 
 <details>
-<summary><strong>0.7.x — Bruker-detalj-redigering (1 entry) — klikk for å vise</strong></summary>
+<summary><strong>0.7.x — Bruker-detalj-redigering (1 oppføring) — klikk for å vise</strong></summary>
 
 Klikk på en spiller i admin for å redigere navn, kallenavn og handicap. Faresone-seksjon på detalj-siden forbereder slett-flyten som lander i 0.8.0.
 
@@ -2048,7 +2048,7 @@ Klikk på en spiller i admin for å redigere navn, kallenavn og handicap. Fareso
 ---
 
 <details>
-<summary><strong>0.6.x — Samlet spilleradministrasjon (1 entry) — klikk for å vise</strong></summary>
+<summary><strong>0.6.x — Samlet spilleradministrasjon (1 oppføring) — klikk for å vise</strong></summary>
 
 Erstatter den gamle `/admin/invitations`-flata med `/admin/spillere`, som samler registrerte spillere, ventende invitasjoner og invitasjons-form på ett sted og legger til «Send på nytt» og «Trekk tilbake»-actions.
 
@@ -2076,7 +2076,7 @@ Erstatter den gamle `/admin/invitations`-flata med `/admin/spillere`, som samler
 ---
 
 <details>
-<summary><strong>0.5.x — Pending-invitees-integrasjon (11 entries) — klikk for å vise</strong></summary>
+<summary><strong>0.5.x — Pending-invitees-integrasjon (11 oppføringer) — klikk for å vise</strong></summary>
 
 Ventende invitéer kan nå velges til lag og flight før de selv har logget inn. Ti patch-bumps fulgte for å rydde fallouten fra migrasjon 0014, som auto-oppretter `public.users`-rader for hver `auth.users` og som dermed brøt onboarding-gate, picker-filter, draft-validering og start-spill-guard.
 
@@ -2163,7 +2163,7 @@ Ventende invitéer kan nå velges til lag og flight før de selv har logget inn.
 ---
 
 <details>
-<summary><strong>0.4.x — OTP-kode-innlogging (4 entries) — klikk for å vise</strong></summary>
+<summary><strong>0.4.x — OTP-kode-innlogging (4 oppføringer) — klikk for å vise</strong></summary>
 
 Bytte fra magic-link til 6–8-sifret kode i mail, som fjernet to iOS-PWA-blokkerings-bugs samtidig. Inkluderer ærligere admin-invitasjons-banner ved Resend-feil og forberedelse for pending-invitees-sporing i 0.5.x.
 
@@ -2209,7 +2209,7 @@ Bytte fra magic-link til 6–8-sifret kode i mail, som fjernet to iOS-PWA-blokke
 ---
 
 <details>
-<summary><strong>0.3.x — Logo og pre-OTP-fixes (4 entries) — klikk for å vise</strong></summary>
+<summary><strong>0.3.x — Logo og pre-OTP-fixes (4 oppføringer) — klikk for å vise</strong></summary>
 
 Tørny fikk sin egen visuelle identitet (wordmark med champagne-prikk på login og app-ikoner), pluss tre fixes som ryddet opp før OTP-omleggingen: invitasjoner som sto som «VENTER» etter aksept, tee-off-tider som lå 1–2 timer feil, og «lagre utkast» som låste seg på native HTML5-validering.
 
@@ -2263,14 +2263,14 @@ Tørny fikk sin egen visuelle identitet (wordmark med champagne-prikk på login 
 
 ## [0.2.0] - 2026-05-12
 
-> Innfører versjonerings-disiplin: hver bruker-synlig endring skal bumpe versjonen og legge til CHANGELOG-entry i samme commit.
+> Innfører versjonerings-disiplin: hver bruker-synlig endring skal bumpe versjonen og legge til CHANGELOG-oppføring i samme commit.
 
 <details>
 <summary>Teknisk</summary>
 
 #### Added
 
-- Versjonerings-disiplin: hver commit som endrer bruker-synlig oppførsel bumper `package.json` og legger til entry i denne fila. Reglene står i `CLAUDE.md`.
+- Versjonerings-disiplin: hver commit som endrer bruker-synlig oppførsel bumper `package.json` og legger til oppføring i denne fila. Reglene står i `CLAUDE.md`.
 
 #### Notes
 
@@ -2282,7 +2282,7 @@ Tørny fikk sin egen visuelle identitet (wordmark med champagne-prikk på login 
 
 ## Pre-disiplin (`0.1.0`)
 
-Versjonen `0.1.0` dekker all utvikling fra Phase 0 til og med Phase 12.5. Ingen detaljerte release-notes ble ført i denne perioden. Et grovt sammendrag:
+Versjonen `0.1.0` dekker all utvikling fra Phase 0 til og med Phase 12.5. Ingen detaljerte lanseringsnotater ble ført i denne perioden. Et grovt sammendrag:
 
 - **Phase 0–4**: prosjektoppsett, datamodell, Supabase + RLS, scoring-bibliotek (`lib/scoring/`) med 40 unit-tester
 - **Phase 5–8**: auth-flyt (magic link), invitasjons-system, admin-flate for baner og spill, hull-skjerm med score-input
