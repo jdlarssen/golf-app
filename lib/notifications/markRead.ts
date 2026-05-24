@@ -5,6 +5,8 @@ import type { NotificationKind } from './types';
 
 export type MarkReadOpts = {
   userId: string;
+  /** Hvis satt, kun varselet med denne id-en markeres (brukes fra /innboks-tap). */
+  notificationId?: string;
   /** Hvis satt, kun varsler med denne kind markeres. */
   kind?: NotificationKind;
   /** Hvis satt, kun varsler hvor payload.game_id matcher. */
@@ -19,6 +21,7 @@ export type MarkReadOpts = {
 export function buildMarkReadQuery(opts: MarkReadOpts) {
   return {
     userId: opts.userId,
+    notificationId: opts.notificationId ?? null,
     kind: opts.kind ?? null,
     entityId: opts.entityId ?? null,
   };
@@ -46,6 +49,7 @@ export async function markNotificationsRead(opts: MarkReadOpts): Promise<void> {
     .eq('user_id', opts.userId)
     .is('read_at', null);
 
+  if (opts.notificationId) q = q.eq('id', opts.notificationId);
   if (opts.kind) q = q.eq('kind', opts.kind);
   if (opts.entityId) q = q.eq('payload->>game_id', opts.entityId);
 
