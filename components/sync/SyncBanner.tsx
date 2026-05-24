@@ -21,7 +21,7 @@ const RETRY_MIN_FEEDBACK_MS = 500;
  *   - RLS denied: includes "permission" / "forbidden" / "row-level"
  */
 function friendlySyncError(rawError: string | null): string {
-  if (!rawError) return 'Lagring mislyktes';
+  if (!rawError) return 'Klarte ikke å lagre';
   const lower = rawError.toLowerCase();
   if (
     lower.includes('load failed') ||
@@ -29,7 +29,7 @@ function friendlySyncError(rawError: string | null): string {
     lower.includes('networkerror') ||
     lower.includes('network request failed')
   ) {
-    return 'Mistet nett-tilkoblingen';
+    return 'Mistet nettforbindelsen';
   }
   if (
     lower.includes('jwt') ||
@@ -46,16 +46,16 @@ function friendlySyncError(rawError: string | null): string {
     lower.includes('row-level') ||
     lower.includes('403')
   ) {
-    return 'Tillatelse manglet';
+    return 'Du mangler tilgang';
   }
   if (
     lower.includes('rate limit') ||
     lower.includes('429') ||
     lower.includes('too many')
   ) {
-    return 'For mange forespørsler — vent litt';
+    return 'For mange forespørsler, vent litt';
   }
-  return 'Lagring mislyktes';
+  return 'Klarte ikke å lagre';
 }
 
 export function SyncBanner() {

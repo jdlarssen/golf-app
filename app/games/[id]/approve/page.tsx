@@ -191,7 +191,7 @@ async function PendingApprovals({
     return (
       <Card>
         <p className="text-sm text-muted">
-          Ingen scorekort venter på godkjenning i flighten din akkurat nå.
+          Ingen scorekort venter på godkjenning i flighten din.
         </p>
       </Card>
     );

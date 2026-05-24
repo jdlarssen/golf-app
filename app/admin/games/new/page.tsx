@@ -178,7 +178,7 @@ async function PlayerShortageBanner() {
       <Banner tone="info">
         Du har {players.length === 0 ? 'ingen' : `bare ${players.length}`}{' '}
         registrert{isSingular ? '' : 'e'} spiller{isSingular ? '' : 'e'}.
-        Best ball trenger 8 — stableford holder med 1. Inviter flere fra{' '}
+        Best ball trenger 8, stableford holder med 1. Inviter flere fra{' '}
         <SmartLink
           href="/admin/spillere"
           className="underline hover:no-underline"

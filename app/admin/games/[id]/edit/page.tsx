@@ -199,7 +199,7 @@ export default async function EditGamePage({
         {errorMessage && <Banner tone="error">{errorMessage}</Banner>}
         <Banner tone="info">
           {game.status === 'draft'
-            ? 'Spillet er fortsatt et utkast — bare du ser det. Fyll inn det som mangler og publiser når dere er klare.'
+            ? 'Spillet er fortsatt et utkast, så bare du ser det. Fyll inn det som mangler og publiser når dere er klare.'
             : 'Spillet er i planlagt-fasen. Spillerne ser endringene neste gang de åpner appen.'}
         </Banner>
         <Suspense fallback={null}>

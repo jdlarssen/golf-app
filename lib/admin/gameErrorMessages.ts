@@ -61,7 +61,7 @@ export const ERROR_MESSAGES_NEW_GAME: Record<string, string> = {
   db_players:
     'Klarte ikke å lagre spillerne på spillet. Prøv igjen, eller sjekk Supabase-loggene.',
   not_editable:
-    'Spillet kan ikke redigeres lenger — det er allerede startet eller avsluttet.',
+    'Spillet kan ikke redigeres lenger fordi det allerede er startet eller avsluttet.',
   // Epic #41 — mode-spesifikke feilkoder. Uten disse rendres en tom Banner
   // når admin trigger en av error-kodene fra payload-validatoren eller
   // edit-action-mode-lock-guarden.
@@ -75,7 +75,7 @@ export const ERROR_MESSAGES_NEW_GAME: Record<string, string> = {
   // av `team_balance`) for å gi en tydeligere norsk feilmelding når admin
   // har valgt for mange spillere i singles matchplay-flyten.
   too_many_players_for_mode:
-    'Singles matchplay krever nøyaktig 2 spillere — fjern de overflødige før du publiserer.',
+    'Singles matchplay krever nøyaktig 2 spillere. Fjern de overflødige før du publiserer.',
   mode_locked_after_publish:
     'Spillmodus kan ikke endres etter at spillet er publisert. Slett spillet og opprett et nytt hvis du vil bytte modus.',
   /**
@@ -96,9 +96,9 @@ export const ERROR_MESSAGES_EXISTING_GAME: Record<string, string> = {
   not_found: 'Spillet ble ikke funnet.',
   not_draft: 'Bare utkast kan startes.',
   not_scheduled: 'Spillet kan ikke startes (det er ikke planlagt).',
-  not_active: 'Spillet er ikke aktivt — kan ikke avsluttes.',
+  not_active: 'Spillet er ikke aktivt og kan ikke avsluttes.',
   not_editable:
-    'Spillet kan ikke redigeres lenger — det er allerede startet eller avsluttet.',
+    'Spillet kan ikke redigeres lenger fordi det allerede er startet eller avsluttet.',
   no_players: 'Ingen spillere på dette spillet.',
   not_all_submitted:
     'Alle spillere må ha levert scorekort før spillet kan avsluttes.',
@@ -106,13 +106,13 @@ export const ERROR_MESSAGES_EXISTING_GAME: Record<string, string> = {
     'Alle scorekort må være godkjent før spillet kan avsluttes.',
   db_finish: 'Klarte ikke å avslutte spillet. Prøv igjen.',
   db_tee: 'Klarte ikke å lese tee-boksen fra databasen. Prøv igjen.',
-  tee_missing: 'Tee-box mangler — kan ikke beregne handicap.',
+  tee_missing: 'Tee-box mangler. Kan ikke beregne handicap.',
   tee_missing_rating:
     'Den valgte teen mangler rating for en spillers gender (M/D/J). Sjekk bane-administrasjon eller endre spillerens tee-gender.',
   db_roster: 'Klarte ikke å lese spillerlisten fra databasen.',
   db_players: 'Klarte ikke å oppdatere spillerne. Prøv igjen.',
   db_game: 'Klarte ikke å oppdatere spillet. Prøv igjen.',
-  not_finished: 'Spillet er ikke avsluttet — kan ikke gjenåpnes.',
+  not_finished: 'Spillet er ikke avsluttet og kan ikke gjenåpnes.',
   /**
    * NOTE: «kan startes» — used on the game detail page where the admin starts
    * an already-scheduled game. Compare `ERROR_MESSAGES_NEW_GAME` which uses

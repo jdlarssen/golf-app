@@ -944,8 +944,8 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           </div>
           <p className="mt-2 text-xs text-muted">
             Reveal-modus skjuler handicap-slag og netto-rangering under runden.
-            Lag med høyere handicap kan slå brutto-lederen — det blir et virkelig
-            spennings-moment når du trykker avslutt.
+            Lag med høyere handicap kan slå brutto-lederen, så avsløringen blir
+            et spenningsmoment når du trykker avslutt.
             {lockScoreVisibility && (
               <span className="block mt-1">
                 <strong>Kan ikke endres etter spill-start.</strong>

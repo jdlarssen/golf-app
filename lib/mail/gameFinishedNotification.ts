@@ -161,8 +161,8 @@ export async function sendGameFinishedNotification(
     bodyLine = formatSoloStrokeplayBodyLine(mode, gameName);
     bodyLineText = formatSoloStrokeplayBodyLineText(mode, gameName);
   } else {
-    bodyLine = `Runden i <strong>${escapeHtml(gameName)}</strong> er ferdig — alle scorekort er levert og godkjent, og leaderboard er åpen.`;
-    bodyLineText = `Runden i ${gameName} er ferdig — alle scorekort er levert og godkjent, og leaderboard er åpen.`;
+    bodyLine = `Runden i <strong>${escapeHtml(gameName)}</strong> er ferdig, alle scorekort er levert og godkjent, og leaderboardet er åpent.`;
+    bodyLineText = `Runden i ${gameName} er ferdig, alle scorekort er levert og godkjent, og leaderboardet er åpent.`;
   }
 
   const html = `<!DOCTYPE html><html lang="nb">
@@ -386,14 +386,14 @@ function formatMatchplayBodyLine(
     return (
       `Runden i <strong>${gameEsc}</strong> er ferdig. ` +
       `Du tapte <strong>${formattedEsc}</strong> mot <strong>${opponentEsc}</strong>. ` +
-      `Godt spilt — kanskje revansje neste runde?`
+      `Godt spilt. Kanskje revansje neste runde?`
     );
   }
   // tied
   return (
     `Runden i <strong>${gameEsc}</strong> er ferdig. ` +
     `Matchen mot <strong>${opponentEsc}</strong> endte uavgjort (<strong>AS</strong>). ` +
-    `En jevn match — kanskje neste gang.`
+    `En jevn match. Kanskje neste gang.`
   );
 }
 
@@ -415,14 +415,14 @@ function formatMatchplayBodyLineText(
     return (
       `Runden i ${gameName} er ferdig. ` +
       `Du tapte ${formattedResult} mot ${opponent}. ` +
-      `Godt spilt — kanskje revansje neste runde?`
+      `Godt spilt. Kanskje revansje neste runde?`
     );
   }
   // tied
   return (
     `Runden i ${gameName} er ferdig. ` +
     `Matchen mot ${opponent} endte uavgjort (AS). ` +
-    `En jevn match — kanskje neste gang.`
+    `En jevn match. Kanskje neste gang.`
   );
 }
 

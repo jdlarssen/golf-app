@@ -13,7 +13,7 @@ type SearchParams = Promise<{ error?: string | string[] }>;
 
 const ERROR_MESSAGES: Record<string, string> = {
   name_required: 'Du må fylle inn navn.',
-  hcp_invalid: 'Handicap-index må være et tall mellom -10 og 54.0.',
+  hcp_invalid: 'Handicap-index må være et tall mellom -10 og 54,0.',
   unknown: 'Noe gikk galt. Prøv igjen.',
 };
 
@@ -86,7 +86,7 @@ export default async function CompleteProfile({
             name="nickname"
             type="text"
             label="Kallenavn"
-            hint="Valgfritt — det navnet folk kjenner deg som på banen"
+            hint="Valgfritt — navnet du går under på banen"
             autoComplete="nickname"
           />
 

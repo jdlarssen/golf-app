@@ -85,7 +85,7 @@ Alle malene under bruker samme Tørny-stil (forest-and-champagne) for visuell ko
           <tr>
             <td style="background-color: #F8F6F0; padding: 16px 32px; border-top: 1px solid #E5E0D3;">
               <p style="font-size: 12px; color: #5C5347; margin: 0; line-height: 1.5;">
-                Mottok du denne uten å ha bedt om det? Bare ignorer mailen — ingen får logget inn uten denne lenken.
+                Mottok du denne uten å ha bedt om det? Bare ignorer mailen. Ingen får logget inn uten denne lenken.
               </p>
             </td>
           </tr>
@@ -140,7 +140,7 @@ Brukes hvis vi senere bytter fra `signInWithOtp` til `auth.admin.inviteUserByEma
             <td style="padding: 24px 32px 8px 32px;">
               <h1 style="font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: 500; color: #1A2E1F; margin: 0 0 12px 0; line-height: 1.3;">Du er invitert</h1>
               <p style="font-size: 15px; color: #1A2E1F; margin: 0 0 16px 0; line-height: 1.5;">
-                Du er invitert til å bli med på en runde golf i Tørny — appen for å arrangere golf-turneringer for kompisgjenger og klubber.
+                Du er invitert til å bli med på en runde golf i Tørny, appen for å arrangere golf-turneringer for kompisgjenger og klubber.
               </p>
               <p style="font-size: 15px; color: #1A2E1F; margin: 0 0 24px 0; line-height: 1.5;">
                 Klikk knappen under for å akseptere invitasjonen og fullføre profilen din. Lenken er gyldig i 24 timer.
@@ -166,7 +166,7 @@ Brukes hvis vi senere bytter fra `signInWithOtp` til `auth.admin.inviteUserByEma
           <tr>
             <td style="background-color: #F8F6F0; padding: 16px 32px; border-top: 1px solid #E5E0D3;">
               <p style="font-size: 12px; color: #5C5347; margin: 0; line-height: 1.5;">
-                Kjenner du ikke avsender? Bare ignorer mailen — ingen får tilgang uten at du selv aksepterer.
+                Kjenner du ikke avsender? Bare ignorer mailen. Ingen får tilgang uten at du selv aksepterer.
               </p>
             </td>
           </tr>
@@ -221,7 +221,7 @@ Trigges når en bruker bytter e-postadresse — sendes til den NYE adressen for 
             <td style="padding: 24px 32px 8px 32px;">
               <h1 style="font-family: Georgia, 'Times New Roman', serif; font-size: 24px; font-weight: 500; color: #1A2E1F; margin: 0 0 12px 0; line-height: 1.3;">Bekreft ny e-postadresse</h1>
               <p style="font-size: 15px; color: #1A2E1F; margin: 0 0 16px 0; line-height: 1.5;">
-                Vi mottok forespørsel om å endre e-postadressen din i Tørny til <strong>{{ .NewEmail }}</strong>.
+                Du har bedt om å endre e-postadressen din i Tørny til <strong>{{ .NewEmail }}</strong>.
               </p>
               <p style="font-size: 15px; color: #1A2E1F; margin: 0 0 24px 0; line-height: 1.5;">
                 Klikk knappen under for å bekrefte endringen. Lenken er gyldig i 1 time.
@@ -247,7 +247,7 @@ Trigges når en bruker bytter e-postadresse — sendes til den NYE adressen for 
           <tr>
             <td style="background-color: #F8F6F0; padding: 16px 32px; border-top: 1px solid #E5E0D3;">
               <p style="font-size: 12px; color: #5C5347; margin: 0; line-height: 1.5;">
-                Var det ikke deg som forespurte dette? Ignorer mailen — adressen din blir ikke endret med mindre du klikker lenken.
+                Var det ikke deg som forespurte dette? Ignorer mailen. Adressen din blir ikke endret med mindre du klikker lenken.
               </p>
             </td>
           </tr>
@@ -403,7 +403,7 @@ Sendes når `signInWithOtp({ shouldCreateUser: true })` kalles for en e-postadre
           <tr>
             <td style="background-color: #F8F6F0; padding: 16px 32px; border-top: 1px solid #E5E0D3;">
               <p style="font-size: 12px; color: #5C5347; margin: 0; line-height: 1.5;">
-                Var det ikke deg som bestilte dette? Ignorer mailen — passordet ditt blir ikke endret.
+                Var det ikke deg som bestilte dette? Ignorer mailen. Passordet ditt blir ikke endret.
               </p>
             </td>
           </tr>

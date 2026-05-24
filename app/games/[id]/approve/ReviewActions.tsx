@@ -49,7 +49,7 @@ export function ReviewActions({
             if (!reason) {
               if (
                 !window.confirm(
-                  `Avvise ${playerName} uten å gi en grunn? Du kan også skrive en kort begrunnelse først.`,
+                  `Avvise ${playerName} uten begrunnelse? Skriv gjerne en kort grunn først.`,
                 )
               ) {
                 event.preventDefault();

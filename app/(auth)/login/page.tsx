@@ -18,7 +18,7 @@ const ERROR_MESSAGES: Record<string, string> = {
     'Denne mailen er ikke registrert. Be admin om en invitasjon.',
   code_invalid: 'Feil kode. Sjekk mailen og prøv igjen.',
   code_expired: 'Koden er gått ut. Be om ny kode.',
-  link_expired: 'Lenken er gått ut. Be om ny kode på login.',
+  link_expired: 'Lenken er gått ut. Be om ny kode.',
   unknown: 'Noe gikk galt. Prøv igjen.',
 };
 

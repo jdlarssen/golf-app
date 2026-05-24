@@ -31,7 +31,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   self_delete_forbidden: 'Du kan ikke slette din egen konto.',
   still_has_games: 'Spilleren har spillhistorikk og kan ikke slettes.',
   auth_delete_failed: 'Klarte ikke slette kontoen. Prøv igjen.',
-  unknown: 'Noe gikk galt. Prøv igjen.',
+  unknown: 'Klarte ikke å fullføre handlingen. Prøv igjen.',
 };
 
 const SUCCESS_MESSAGES: Record<string, (arg: string) => string> = {

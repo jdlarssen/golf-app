@@ -20,11 +20,11 @@ const ERROR_MESSAGES: Record<string, string> = {
 const STATUS_WARNINGS: Record<GameStatus, string | null> = {
   draft: null, // utkast — ingen er informert ennå, ingen warning nødvendig
   scheduled:
-    'Spillet er planlagt og spillerne er invitert. De får ingen melding om at det er kansellert — du må evt. si fra selv.',
+    'Spillet er planlagt og spillerne er invitert. De får ingen melding om at det er kansellert. Du må evt. si fra selv.',
   active:
-    'Spillet pågår nå. Sletting fjerner alle slag som er registrert så langt — spillerne mister sin runde uten varsel.',
+    'Spillet pågår nå. Sletting fjerner alle slag som er registrert så langt, og spillerne mister runden sin uten varsel.',
   finished:
-    'Spillet er avsluttet. Leaderboard og resultater forsvinner permanent. Spillere som har bokmerket lenken vil få 404.',
+    'Spillet er avsluttet. Leaderboard og resultater forsvinner permanent. Spillere som har bokmerket lenken får 404.',
 };
 
 function shortNb(iso: string | null | undefined): string | null {

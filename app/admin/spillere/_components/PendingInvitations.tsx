@@ -49,7 +49,7 @@ export async function PendingInvitations() {
           Ingen ventende invitasjoner.
         </p>
         <p className="mt-1 max-w-[260px] font-sans text-[12.5px] leading-relaxed text-muted">
-          Inviter en spiller ovenfor — så dukker vente-køen opp her.
+          Inviter en spiller nedenfor, så dukker de opp her i ventelisten.
         </p>
       </div>
     );

@@ -100,8 +100,8 @@ function IosOtherSteps() {
     <div className="space-y-3 text-sm text-text leading-relaxed">
       <p>
         På iPhone er det bare{' '}
-        <strong className="font-medium">Safari</strong> som kan installere
-        Tørny på hjem-skjermen — andre nettlesere på iOS støtter ikke dette.
+        <strong className="font-medium">Safari</strong> som kan legge Tørny
+        på hjem-skjermen. Andre nettlesere på iOS støtter det ikke.
       </p>
       <p>
         Åpne <strong className="font-medium">tornygolf.no</strong> i Safari og
@@ -115,7 +115,7 @@ function UnsupportedSteps() {
   return (
     <div className="space-y-3 text-sm text-text leading-relaxed">
       <p>
-        Nettleseren din støtter ikke å installere Tørny automatisk.
+        Nettleseren din kan ikke legge Tørny på hjem-skjermen automatisk.
       </p>
       <p>
         Prøv å åpne tornygolf.no i Chrome, Edge eller Safari på telefonen.

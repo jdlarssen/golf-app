@@ -25,7 +25,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   self_delete_forbidden: 'Du kan ikke slette din egen konto.',
   still_has_games: 'Spilleren har spillhistorikk og kan ikke slettes.',
   auth_delete_failed:
-    'Klarte ikke slette kontoen — den har sannsynligvis data knyttet til seg (invitasjoner sendt, baner opprettet eller scores skrevet) som blokkerer sletting. Sjekk Vercel-loggene.',
+    'Klarte ikke slette kontoen. Den har sannsynligvis data knyttet til seg (invitasjoner sendt, baner opprettet eller scores skrevet) som blokkerer sletting. Sjekk Vercel-loggene.',
   email_invalid: 'Ugyldig e-postadresse.',
   email_in_use: 'E-postadressen er allerede registrert.',
   email_update_failed: 'Klarte ikke oppdatere e-postadressen. Prøv igjen.',

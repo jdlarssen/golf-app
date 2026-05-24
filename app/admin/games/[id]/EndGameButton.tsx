@@ -56,7 +56,7 @@ export function EndGameButton({
       action={endAction}
       onSubmit={(event) => {
         const ok = window.confirm(
-          'Er du sikker? Alle vil se leaderboard etterpå.',
+          'Avslutte spillet? Alle deltakere ser leaderboard etterpå.',
         );
         if (!ok) {
           event.preventDefault();

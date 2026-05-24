@@ -155,7 +155,7 @@ export function State4View({
       </ul>
 
       <p className="px-6 pt-1 pb-3 text-center font-serif text-[11px] italic text-muted">
-        Tap et lag for hull-for-hull
+        Trykk på et lag for hull-for-hull
       </p>
 
       <ExportLink gameId={gameId} />

@@ -188,7 +188,7 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
 
   let helperText: string;
   if (score == null) {
-    helperText = 'Tap kort = par. Bruk − / +.';
+    helperText = 'Trykk kort = par. Bruk − / +.';
   } else if (hideNetto) {
     helperText = '';
   } else {

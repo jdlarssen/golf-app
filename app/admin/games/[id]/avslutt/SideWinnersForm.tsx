@@ -29,7 +29,7 @@ export function SideWinnersForm({
     <form action={action} className="space-y-6">
       {error && (
         <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900">
-          Mangler valg. Vennligst fyll inn alle vinner-feltene.
+          Du må velge vinner i alle feltene før du kan avslutte.
         </div>
       )}
 

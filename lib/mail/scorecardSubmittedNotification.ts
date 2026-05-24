@@ -39,7 +39,7 @@ export async function sendScorecardSubmittedNotification(
   params: ScorecardSubmittedNotificationParams,
 ): Promise<void> {
   const { to, adminFirstName, playerName, gameName, gameId } = params;
-  const subject = `Scorekort levert: ${playerName} — ${gameName}`;
+  const subject = `Scorekort levert: ${playerName} i ${gameName}`;
   const adminUrl = `https://tornygolf.no/admin/games/${gameId}`;
   const salutation = adminFirstName ? `Hei ${adminFirstName}!` : 'Hei!';
 
@@ -87,7 +87,7 @@ export async function sendScorecardSubmittedNotification(
 </html>`;
 
   const text =
-    `Scorekort levert: ${playerName} — ${gameName}\n\n` +
+    `Scorekort levert: ${playerName} i ${gameName}\n\n` +
     `${salutation}\n\n` +
     `${playerName} har levert scorekortet sitt i ${gameName}. Du kan godkjenne det i admin-flaten.\n\n` +
     `Åpne admin: ${adminUrl}\n\n` +

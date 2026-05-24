@@ -44,7 +44,7 @@ export function RevealBruttoView({
           Brutto · etter {holesPlayed} {holesPlayed === 1 ? 'hull' : 'hull'}
         </h1>
         <p className="mt-2 font-sans text-[12px] text-muted">
-          Best-ball brutto. Rangering avsløres når runden er ferdig.
+          Best-ball brutto. Rangeringen kommer når runden er ferdig.
         </p>
       </section>
 

@@ -141,7 +141,7 @@ export function SpecificValueSheet(
             X
           </button>
         </div>
-        <div style={captionStyle}>Tap for å sette. X fjerner.</div>
+        <div style={captionStyle}>Trykk for å sette. X fjerner.</div>
       </div>
     </div>
   );

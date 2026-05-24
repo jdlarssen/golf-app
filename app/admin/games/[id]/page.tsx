@@ -756,7 +756,7 @@ async function PlayersSections({
           <SectionCard ribbon="Fortsett å planlegge">
             <div className="px-3.5 pb-3.5 pt-3">
               <p className="mb-3 text-sm text-muted">
-                Spillet er fortsatt et utkast — bare du ser det. Fyll inn
+                Spillet er fortsatt et utkast, så bare du ser det. Fyll inn
                 det som mangler og publiser når dere er klare.
               </p>
               <SmartLink

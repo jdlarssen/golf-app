@@ -12,7 +12,28 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ## 1.14.y — Stableford-runde-polish
 
-Polish etter første reelle stableford-runde med kompisene. Du kan nå føre slag for hele flighten i solo stableford, fortsette runden fra første tomme hull, og se sideturneringen på stableford-leaderbordet etter avsluttet spill.
+Polish etter første reelle stableford-runde med kompisene. Du kan nå føre slag for hele flighten i solo stableford, fortsette runden fra første tomme hull, og se sideturneringen på stableford-leaderbordet etter avsluttet spill. Hele appens norske copy er også strammet for AI-tells og engelske kalker.
+
+### [1.14.3] - 2026-05-24
+
+> Hele Tørnys norske copy er polert: feilmeldinger, banner-tekster, mail-malene og knappe-tekster er strammet for AI-tells og engelske kalker. Du merker det som mer naturlig norsk på alle flatene.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+- 27 filer på tvers av mail-templates, auth-flyt, UI-primitives, spille-flyt og admin-flyt fikk en gjennomgang med `humanizer:humanizer`-skillet (fra `floka-marketplace`). Mønstrene fulgte etablert vokabular fra [PR #170](https://github.com/jdlarssen/golf-app/pull/170): anglisismer, em-dash-kjeder, «X-spillet»-redundans, særskriving, curly quotes og significance-puffery.
+- **Mail** (`lib/mail/gameFinishedNotification.ts`, `lib/mail/scorecardSubmittedNotification.ts`, `docs/email-templates.md`) — em-dash-kjeder splittet, passiv-opener byttet ut («Vi mottok forespørsel om å endre…» → «Du har bedt om å endre…»), idiomatisk definitt-form («leaderboard er åpen» → «leaderboardet er åpent»).
+- **Auth-flyt** (`app/(auth)/login/page.tsx`, `app/complete-profile/page.tsx`) — anglism «på login» fjernet, US-decimal i feilmelding (`54.0` → `54,0`), passiv-formulering («det navnet folk kjenner deg som» → «navnet du går under»).
+- **UI-primitives** (`components/sync/SyncBanner.tsx`, `components/pwa/InstallInstructionsModal.tsx`) — feilmelding-tone («Tillatelse manglet» → «Du mangler tilgang», «Lagring mislyktes» → «Klarte ikke å lagre»), «nett-tilkoblingen» → «nettforbindelsen», em-dash-kjede i iOS-instruksjoner splittet.
+- **Spille-flyt** (`components/hole/*.tsx`, `app/games/[id]/approve/*.tsx`, `app/games/[id]/leaderboard/*.tsx`) — «Tap» → «Trykk» (4 steder, anglism), AI-hedge i confirm-dialog, filler «akkurat nå» fjernet, synonym-overlap droppet i RevealBruttoView.
+- **Admin-flyt** (12 filer i `app/admin/` + `lib/admin/gameErrorMessages.ts`) — em-dash-tells (~10 steder), «Vennligst»-overforbruk strammet, tailing-fragmenter omsporet, generisk «Noe gikk galt» → konkret «Klarte ikke å fullføre handlingen», «spennings-moment»-særskriving → «spenningsmoment».
+
+#### Notes
+- 5 parallelle humanizer-subagenter dispatched, hver mot disjoint overflate (mail / auth / UI-primitives / spille / admin). Alle 39 mail-tester grønne — verifisert at ingen subject-/body-snapshots ble brutt.
+- Bevisst bevart: mail-subject «Resultatet er klart — ${gameName}» (5 snapshot-tester asserter eksakt streng), brand-tagline «Tørny — fyr opp golfturneringen» (kanonisk), «Sekretariat»-stemmen i admin-flatene, og engelske side-tournament-kategori-navn (Turkey/Solid/Snowman — bevisste achievement-navn).
+
+</details>
 
 ### [1.14.3] - 2026-05-24
 
