@@ -61,12 +61,15 @@ export default async function HolePage({ params }: { params: Params }) {
     redirect(`/games/${id}`);
   }
 
-  // For solo-modus (stableford) er flight_number null på alle game_players,
-  // og brukeren skal bare se sitt eget kort — ingen flight-medlemmer å scrollе
-  // gjennom. For best-ball-modus rendrer vi hele flight-en som før.
+  // For solo-modus (stableford, solo strokeplay netto) er flight_number null
+  // på alle game_players. Spillere går likevel typisk i en felles fysisk
+  // flight på 1-4 personer, og en av dem fungerer som «marker» for resten
+  // (issue #163). Vi behandler derfor hele spillerlisten som én flight og lar
+  // hvem som helst taste slag for alle. Best-ball- og matchplay-modus beholder
+  // per-flight-filtreringen som før.
   const flight =
     me.flight_number == null
-      ? [me]
+      ? allPlayers
       : allPlayers.filter((p) => p.flight_number === me.flight_number);
   const playerIds = flight.map((p) => p.user_id);
 
