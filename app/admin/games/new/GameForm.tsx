@@ -183,13 +183,14 @@ function deriveAssignmentsFromInitial(initial: InitialValues | undefined) {
  * kombinasjonene i `TeamSizeSelector.ENABLED_COMBOS` — Stableford → 1,
  * Best ball netto → 2, Singles matchplay → 1 (én spiller per side, men
  * TeamSizeSelector er skjult for matchplay siden det ikke finnes noen
- * reell lagstørrelse å velge mellom). Holdt synk separat fordi GameForm
- * trenger en ren funksjon for state-initialisering uten å eksponere
- * selector-internt.
+ * reell lagstørrelse å velge mellom), Solo strokeplay netto → 1 (én
+ * spiller = én rad). Holdt synk separat fordi GameForm trenger en ren
+ * funksjon for state-initialisering uten å eksponere selector-internt.
  */
 function defaultTeamSizeForMode(mode: GameMode): TeamSize {
   if (mode === 'stableford') return 1;
   if (mode === 'singles_matchplay') return 1;
+  if (mode === 'solo_strokeplay_netto') return 1;
   return 2;
 }
 
@@ -302,7 +303,10 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   const requiresTeams = teamSize >= 2;
 
   // Modus-narrowing-flag som styrer ulike grener i form-validering.
-  // - isSolo: spillere er en flat liste (stableford team_size=1)
+  // - isSolo: spillere er en flat liste — gjelder både solo-stableford
+  //   (team_size=1) og solo strokeplay netto (eneste variant, team_size=1).
+  //   Begge har samme UI-shape: flat spiller-liste uten lag/flight-grid,
+  //   per-spiller-tee-seksjon for HCP-allokering, validering = ≥1 spiller.
   // - isBestBall: dagens 4-lag-à-2 (best_ball_netto, team_size=2). Krever
   //   eksakt 8 spillere fordelt 2-2-2-2 på 4 lag.
   // - isParStableford: 4BBB-stableford. Tillater 1-4 lag á 2 spillere
@@ -312,7 +316,9 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   //   (team_number 1 og 2). Eget side-tilordnings-UI som erstatter både
   //   lag-grid og flight-seksjonen. TeamSizeSelector skjules siden valget
   //   er meningsløst (kun 1v1 er gyldig).
-  const isSolo = teamSize === 1 && gameMode === 'stableford';
+  const isSolo =
+    teamSize === 1 &&
+    (gameMode === 'stableford' || gameMode === 'solo_strokeplay_netto');
   const isBestBall = gameMode === 'best_ball_netto' && teamSize === 2;
   const isParStableford = gameMode === 'stableford' && teamSize === 2;
   const isMatchplay = gameMode === 'singles_matchplay';
@@ -522,10 +528,12 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   //   deterministisk skjema. flight_number = team_number (samme mønster
   //   som par-stableford — matchplay-validatoren i `gamePayload.ts`
   //   krever begge satt sammen pga DB-CHECK `game_players_team_flight_consistency`).
-  // - solo-modi (teamSize === 1, stableford): inkluderer ALLE
-  //   selectedPlayerIds, ingen lag/flight-felter. Hidden-input-skjemaet
-  //   bærer player_${i}_id alene — gamePayload.ts validatoren leser opp
-  //   til 8 slots og ignorerer manglende team/flight-felt for stableford.
+  // - solo-modi (teamSize === 1, stableford ELLER solo_strokeplay_netto):
+  //   inkluderer ALLE selectedPlayerIds, ingen lag/flight-felter. Hidden-
+  //   input-skjemaet bærer player_${i}_id alene — gamePayload.ts
+  //   validatoren (`validateStableford` / `validateSoloStrokeplayNetto`)
+  //   leser opp til 8 slots og ignorerer manglende team/flight-felt for
+  //   begge solo-modusene.
   const orderedPayload = useMemo(() => {
     if (isMatchplay) {
       const rows: {
@@ -628,7 +636,8 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
   // Modus-spesifikk publish-validitet. Reglene speiler
   // `lib/games/gamePayload.ts` slik at klient og server forteller samme
   // historie til admin når noe mangler:
-  // - solo (stableford team_size=1): minst 1 spiller, ingen lag/flight
+  // - solo (stableford team_size=1 ELLER solo_strokeplay_netto): minst 1
+  //   spiller, ingen lag/flight
   // - best-ball-netto: eksakt 8 spillere fordelt 2-2-2-2 på 4 lag +
   //   flight-fordeling per spiller
   // - par-stableford (team_size=2): 2/4/6/8 spillere, hvert ikke-tomt lag
@@ -786,9 +795,9 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
       {/* Hidden inputs that carry the structured assignment payload. The server
           action only ever sees the FormData; keeping the names server-known
           means we don't need an alternate JSON wire format. For solo-modus
-          (stableford) sender vi tomme team/flight-strenger — gamePayload-
-          validatoren oppdager `game_mode === 'stableford'` og persisterer
-          team_number/flight_number som null uansett. */}
+          (stableford eller solo_strokeplay_netto) sender vi tomme team/
+          flight-strenger — gamePayload-validatoren oppdager modusen og
+          persisterer team_number/flight_number som null uansett. */}
       {orderedPayload.map((row, i) => (
         <div key={row.user_id} className="hidden">
           <input type="hidden" name={`player_${i}_id`} value={row.user_id} />

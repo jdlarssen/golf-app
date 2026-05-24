@@ -10,6 +10,39 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.13.y — Slagspill
+
+Klassisk slagspill (solo strokeplay netto) er nå tilgjengelig. Velg Slagspill som modus, meld på spillerne, og lavest netto-total over runden vinner. Hver spiller fører sitt eget kort — perfekt for klubbmesterskap og kompis-runder uten lag-fokus.
+
+### [1.13.0] - 2026-05-24
+
+> Du kan nå opprette slagspill-turneringer — klassisk golf-format der hver spiller fører eget kort og laveste netto-total vinner. Velg Slagspill som modus og meld på spillerne.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `app/admin/games/new/ModeSelector.tsx` — fjerde tile «Slagspill» for solo strokeplay netto. Ny `StrokeplayIcon` (scorekort med tre score-linjer + blyant til høyre, samme stroke-stil som de andre tile-ikonene) signaliserer at hver spiller fører eget kort. Grid-layout byttet fra `grid-cols-1 sm:grid-cols-3` til `grid-cols-2 sm:grid-cols-4` slik at iPhone får 2×2-stacking (hver tile ~halve skjermbredden, komfortabel scanning) og tablet/desktop får 4-i-rad-symmetri. Beskrivelses-tekst: «Individuelt scorekort. Lavest netto-total vinner.» `ModeSelector.test.tsx` utvidet med assertion for slagspill-tile-rendering, beskrivelses-tekst, aria-checked-toggle og click → `onChange('solo_strokeplay_netto')`.
+- `app/admin/games/new/GameForm.tsx` — solo strokeplay netto-grenen gjenbruker hele solo-stableford-UI-flyten via utvidet `isSolo`-narrowing-flag (`teamSize === 1 && (gameMode === 'stableford' || gameMode === 'solo_strokeplay_netto')`). Konsekvenser:
+  - **Flat spiller-liste**: ingen lag-grid og ingen flight-seksjon — alle valgte spillere persisteres med `team_number = null` og `flight_number = null` (gamePayload-validatoren `validateSoloStrokeplayNetto` nullstiller defensivt uansett form-input).
+  - **TeamSizeSelector synlig**: Solo aktiv, Par + 4-mann grayed-out som «kommer snart» (par/4-mann strokeplay er fremtidige varianter — par = fyrball strokeplay; 4-mann = bestest av 4 totaler). I motsetning til matchplay som skjuler hele TeamSizeSelector siden 1v1 er den eneste meningsfulle kombinasjonen.
+  - **Per-spiller-tee-seksjon**: vises (slagspill krever individuell HCP-allokering for korrekt slope/CR per spiller). Section-nummer 4 (delt med solo-stableford siden ingen 4. Lag-seksjon ligger foran).
+  - **Validering**: ≥1 spiller for publish, ingen øvre cap (i motsetning til matchplay som capper på 2). `missingForPublish` gjenbruker eksisterende «minst én spiller»-copy fra solo-stableford-grenen.
+  - **Hidden inputs**: `game_mode = 'solo_strokeplay_netto'`, `team_size = 1`, ingen `stableford_team_size` (det hører kun til stableford-modus). Player-radene bærer tomme `team`/`flight`-strenger som validatoren tolker som null.
+  - `defaultTeamSizeForMode` returnerer 1 også for `solo_strokeplay_netto` så form-state alltid har gyldig `team_size`.
+- `app/admin/games/new/GameForm.test.tsx` — 7 nye tester for slagspill-flyten: TeamSizeSelector synlig med Solo aktiv + Par/4-mann disabled, hidden inputs (`game_mode='solo_strokeplay_netto'`/`team_size=1`/ingen `stableford_team_size`), flat spiller-liste (ingen 4. Lag- eller 5. Flights-heading), canPublish=true ved 1 spiller + øvrige felt satt, canPublish=false ved 0 spillere (med korrekt missingForPublish-copy «minst én spiller»), per-spiller-tee-seksjons-heading «4. Tee per spiller», ingen øvre spiller-cap (alle 8 spillere kan velges), og hidden-input-payload med tomme team/flight-strenger.
+
+#### Notes
+- Scoring-motor + payload-validator landet i Phase 1 (PR #159) — denne fasen aktiverer kun admin-UI-flyten. Solo-strokeplay-leaderboard-view kommer i Phase 3 (klassisk slagspill-tabell med plassering/totaler/topp-celebrasjon); mail-template + admin/games-detalj-polish kommer i Phase 4 av epic #46.
+- TeamSizeSelector beholder `ENABLED_COMBOS.solo_strokeplay_netto = Set([1])` defensivt — `Record<GameMode, …>` krever alle keys, og Par/4-mann markeres som «kommer snart» istedenfor å fjernes helt (skaper en eksplisitt roadmap-signal for fremtidige varianter).
+
+</details>
+
+---
+
+<details>
+<summary><strong>1.12.y — Matchplay (3 entries) — klikk for å vise</strong></summary>
+
 ## 1.12.y — Matchplay
 
 Matchplay-turneringer mellom to spillere er nå tilgjengelig. Velg Matchplay som modus og tilordne én spiller til Side 1 og én til Side 2 — vinneren av hvert hull (laveste netto) får et hull-poeng, og matchen avgjøres som «X up» (etter 18 hull) eller «X&Y» (mat-em før hull 18) etter golfreglene.
@@ -92,6 +125,8 @@ Matchplay-turneringer mellom to spillere er nå tilgjengelig. Velg Matchplay som
 #### Notes
 - Scoring-motor + payload-validator landet i Phase 1 (PR #155) — denne fasen aktiverer kun UI-flyten. Matchplay-view (hull-for-hull-tabell med «AS»/«X up»/«X&Y»-status) kommer i Phase 3; matchplay-mail-templates + admin/games-detalj-polish kommer i Phase 4 av epic #45.
 - TeamSizeSelector beholder `ENABLED_COMBOS.singles_matchplay = Set([1])` defensivt selv om komponenten ikke rendres for matchplay — TypeScript-en `Record<GameMode, …>` krever alle keys, og fjerning av entryen ville tvunget oss til `Partial<Record<>>`. Defensiv kode er trygt.
+
+</details>
 
 </details>
 

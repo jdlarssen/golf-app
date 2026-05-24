@@ -1008,3 +1008,246 @@ describe('GameForm — matchplay singles (epic #45 fase 2)', () => {
     ).toBeInTheDocument();
   });
 });
+
+describe('GameForm — solo strokeplay netto (epic #46 fase 2)', () => {
+  /**
+   * Helper: bytter til solo strokeplay netto via tile-klikk. Speilar
+   * `selectMatchplay`-mønstret men trenger ingen ekstra teamSize-tile-klikk
+   * siden defaultTeamSizeForMode('solo_strokeplay_netto') = 1 og Solo er
+   * den eneste aktive lagstørrelsen for modusen.
+   */
+  function selectSoloStrokeplay() {
+    fireEvent.click(screen.getByRole('radio', { name: /slagspill/i }));
+  }
+
+  it('slagspill: TeamSizeSelector er synlig med Solo som aktivt valg (Par/4-mann grayed-out)', () => {
+    render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+      />,
+    );
+
+    selectSoloStrokeplay();
+
+    // TeamSizeSelector skal være synlig (i motsetning til matchplay som
+    // skjuler den helt) — Solo er aktiv, Par/4-mann står som «kommer snart».
+    expect(
+      screen.getByRole('group', { name: /velg lagstørrelse/i }),
+    ).toBeInTheDocument();
+    const solo = screen.getByRole('radio', { name: /solo/i });
+    expect(solo.getAttribute('aria-checked')).toBe('true');
+    const par = screen.getByRole('radio', { name: /par/i });
+    expect(par).toBeDisabled();
+    const fourMann = screen.getByRole('radio', { name: /4-mann/i });
+    expect(fourMann).toBeDisabled();
+  });
+
+  it('slagspill: hidden inputs sender game_mode=solo_strokeplay_netto og team_size=1, ingen stableford_team_size', () => {
+    const { container } = render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+      />,
+    );
+
+    selectSoloStrokeplay();
+
+    expect(
+      (container.querySelector(
+        'input[type="hidden"][name="game_mode"]',
+      ) as HTMLInputElement).value,
+    ).toBe('solo_strokeplay_netto');
+    expect(
+      (container.querySelector(
+        'input[type="hidden"][name="team_size"]',
+      ) as HTMLInputElement).value,
+    ).toBe('1');
+    // stableford_team_size må IKKE være med — det hører kun til stableford-modus.
+    expect(
+      container.querySelector(
+        'input[type="hidden"][name="stableford_team_size"]',
+      ),
+    ).toBeNull();
+  });
+
+  it('slagspill: flat spiller-liste — lag-grid (4. Lag) og flight-seksjon vises ALDRI', () => {
+    render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+      />,
+    );
+
+    selectSoloStrokeplay();
+
+    // Velg flere spillere — ingen lag-/flight-seksjon skal dukke opp uansett.
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 2/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 3/i }));
+
+    expect(
+      screen.queryByRole('heading', { name: /^4\. lag$/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: /^5\. flights$/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('slagspill: 1 spiller → canPublish=true når øvrige felter er satt', () => {
+    render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS.slice(0, 2)}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+        initialValues={{
+          name: 'Klubbmesterskap',
+          course_id: 'course-1',
+          tee_box_id: 'tee-1',
+          scheduled_tee_off_at: '2026-06-01T10:00',
+          hcp_allowance_pct: '100',
+        }}
+      />,
+    );
+
+    selectSoloStrokeplay();
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+
+    const publishBtn = screen.getByRole('button', { name: /^publiser$/i });
+    expect(publishBtn).not.toBeDisabled();
+  });
+
+  it('slagspill: 0 spillere → canPublish=false + missingForPublish nevner «minst én spiller»', () => {
+    render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+        initialValues={{
+          name: 'Klubbmesterskap',
+          course_id: 'course-1',
+          tee_box_id: 'tee-1',
+          scheduled_tee_off_at: '2026-06-01T10:00',
+          hcp_allowance_pct: '100',
+        }}
+      />,
+    );
+
+    selectSoloStrokeplay();
+
+    const publishBtn = screen.getByRole('button', { name: /^publiser$/i });
+    expect(publishBtn).toBeDisabled();
+
+    const helperText = document.getElementById('publish-missing');
+    expect(helperText?.textContent).toMatch(/minst én spiller/i);
+  });
+
+  it('slagspill: per-spiller-tee-seksjonen vises (4. Tee per spiller) for HCP-allokering', () => {
+    render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS.slice(0, 2)}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+      />,
+    );
+
+    selectSoloStrokeplay();
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 2/i }));
+
+    // Solo-modus bruker nummerering 4 (ingen 4. Lag-seksjon foran).
+    expect(
+      screen.getByRole('heading', { name: /^4\. tee per spiller$/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('slagspill: ingen øvre spiller-cap — alle 8 spillere kan velges (i motsetning til matchplay som capper på 2)', () => {
+    render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+      />,
+    );
+
+    selectSoloStrokeplay();
+    for (const player of EIGHT_PLAYERS) {
+      const checkbox = screen.getByRole('checkbox', {
+        name: new RegExp(player.name!, 'i'),
+      });
+      // Ingen checkbox skal være disabled (solo-modus har ingen cap).
+      expect(checkbox).not.toBeDisabled();
+      fireEvent.click(checkbox);
+    }
+
+    // Counter skal vise «8 spillere valgt».
+    expect(screen.getByText(/8 spillere valgt/i)).toBeInTheDocument();
+  });
+
+  it('slagspill: hidden inputs har player_${i}_id satt + player_${i}_team/flight tomme strenger', () => {
+    const { container } = render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS.slice(0, 2)}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+      />,
+    );
+
+    selectSoloStrokeplay();
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 2/i }));
+
+    const player0Id = container.querySelector(
+      'input[type="hidden"][name="player_0_id"]',
+    ) as HTMLInputElement | null;
+    const player0Team = container.querySelector(
+      'input[type="hidden"][name="player_0_team"]',
+    ) as HTMLInputElement | null;
+    const player0Flight = container.querySelector(
+      'input[type="hidden"][name="player_0_flight"]',
+    ) as HTMLInputElement | null;
+    const player1Id = container.querySelector(
+      'input[type="hidden"][name="player_1_id"]',
+    ) as HTMLInputElement | null;
+
+    expect(player0Id?.value).toBe('u0');
+    expect(player0Team?.value).toBe('');
+    expect(player0Flight?.value).toBe('');
+    expect(player1Id?.value).toBe('u1');
+  });
+});
