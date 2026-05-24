@@ -10,6 +10,44 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.15.y — In-app innboks
+
+Tørny får en innboks. Bjelle øverst-til-høyre på alle sider viser en champagne-prikk når det venter et nytt varsel, og en dedikert /innboks-flate samler hele historikken. Selve varslene kobles inn etappevis (issue [#25](https://github.com/jdlarssen/golf-app/issues/25)) — invitasjoner, peer-godkjenninger, scorekort-events og spill-avsluttet.
+
+### [1.15.0] - 2026-05-24
+
+> Innboksen finnes nå som flate i appen — bjelle øverst-til-høyre og en /innboks-side. Selve varslene tikker inn fra og med neste fase; per i dag rendrer innboksen seg som tom for alle.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `hooks/useUnreadNotificationsCount.ts` — client-hook med initial `count: 'exact', head: true`-query mot `notifications`-tabellen + Supabase realtime-sub på `postgres_changes` (INSERT + UPDATE) som lokalt mutérer telleren (INSERT-ulest +1, UPDATE som flipper read_at justerer i begge retninger, Math.max-floor mot negativ teller). Cleanup ved unmount eller userId-bytte. Gjenbruker `subscribeRealtimeChannel`-helperen for setAuth-jwt-håndtering og leak-resistant kanal-suffiksing. 8 tester dekker null-userId-no-op, initial-fetch, INSERT-inkrement (kun ulest), UPDATE-mark-lest-dekrement, UPDATE-mark-ulest-inkrement, floor-på-0, og realtime-cleanup.
+- `components/notifications/NotificationBell.tsx` — SmartLink til /innboks med lokalt-tegnet 22px bell-svg (line-icon stil) + 8px champagne-prikk (var(--accent), border-2 av --bg) absolutt-posisjonert øverst-til-høyre når `count > 0`. Ingen tellertall — kun signal-dott per design (mindre visuell støy). aria-label varierer med count. Returnerer null når userId mangler. Tap-target min-h-11 min-w-11 (44px). 7 tester dekker rendring, prikk-toggle, aria-label-format, null-userId, og tap-target.
+- `components/notifications/NotificationCard.tsx` — per-kort UI for innboks-listen med emoji-bobble per kind (📨 invite, ✋ peer_approval_request, 📋 scorecard_submitted, ✅ scorecard_approved, 🏆 game_finished), tittel + 1-linjes detalj fra payload (handlings-orientert norsk), champagne-stripe + font-medium for uleste, opacity-80 + font-normal for leste, relativ tidsstempel via `Intl.RelativeTimeFormat('nb-NO', { numeric: 'auto' })`, button med min-h-11 tap-target og caller-styrt onTap. 12 tester dekker payload→title/detail per kind, emoji-mapping, relativ-tid, unread-stripe-toggle, font-medium-toggle, tap-handler og tap-target.
+- `lib/notifications/groupByDay.ts` — `groupNotificationsByDay`-helper bucketer notifications per kalender-dag i lokal tid med «I dag»/«I går»/dato-label. `formatDayLabel` håndterer fire nivåer (i dag, i går, dato uten år, dato med år). 8 tester dekker tom input, single-dag-bucket, multi-dag-bucketing, rekkefølge-bevaring, og forrige-år-fallback.
+- `app/innboks/page.tsx` + `app/innboks/InboxClient.tsx` + `app/innboks/actions.ts` — /innboks-rute. Server-component fetcher inntil 100 nyeste notifications-rader for current user (eksplisitt user_id-filter for å bruke partial-indexen). Client håndterer optimistic-mark-read ved tap, server-action via useTransition + router.push til deeplink (invite/scorecard_approved → /games/[id], peer_approval_request → /approve, scorecard_submitted → /admin/games/[id], game_finished → /leaderboard). «Marker alle som lest»-knapp synlig kun ved minst ett ulest. Tom-tilstand bruker `<MailEnvelope>` + PullQuote. 10 nye InboxClient-tester.
+- `components/ui/TopBar.test.tsx` — 5 tester for ny `userId?: string | null`-prop og action+bell-co-existence.
+
+#### Changed
+- `components/ui/TopBar.tsx` — ny valgfri `userId?: string | null`-prop. Når satt rendres `<NotificationBell userId={userId}>` lengst til høyre (med `ml-1` etter eventuell action-chip, ellers `ml-auto`). Legal/privacy + admin/loading skipper bjella (offentlig hhv. skeleton-tilstand).
+- Wired userId-prop på 21 page-flater: alle admin-flater + alle profile-flater + games/[id]/{,submit,approve,scorecard,leaderboard}. Per-page-mønsteret er bevisst eksplisitt — `getProxyVerifiedUserId()` er en ren x-torny-user-id-header-lookup uten DB-roundtrip, så cost-en er minimal.
+- `app/page.tsx` — bjella mountes ved siden av BrandMark i en flex-rad siden home ikke har TopBar (BrandMark er en wordmark, ikke en lenke).
+- `app/games/[id]/leaderboard/RevealBruttoView.tsx` — ny required `userId: string | null`-prop forwardet fra leaderboard-page (komponenten har egen TopBar).
+- `lib/notifications/markRead.ts` — utvidet med valgfri `notificationId?: string`-parameter for per-tap-marking fra innboks. Eksisterende kind+entityId-filtre uendret. `buildMarkReadQuery`-tester utvidet til 4 cases.
+
+#### Notes
+- Phase 2 av 4 i issue [#25](https://github.com/jdlarssen/golf-app/issues/25). Phase 1 leverte datalag (1.14.3). Phase 3 wires inn de 5 events i eksisterende server-actions; Phase 4 aktiverer off-app mail-gating.
+- Per d.d. er innboksen tom for alle siden ingen server-action ennå kaller `notify()`. Bjella forblir uten prikk inntil Phase 3.
+- Test-suite vokst fra 786 → 837 (+51 nye Phase 2-tester).
+
+</details>
+
+---
+
+<details>
+<summary><strong>1.14.y — Stableford-runde-polish (4 entries) — klikk for å vise</strong></summary>
+
 ## 1.14.y — Stableford-runde-polish
 
 Polish etter første reelle stableford-runde med kompisene. Du kan nå føre slag for hele flighten i solo stableford, fortsette runden fra første tomme hull, og se sideturneringen på stableford-leaderbordet etter avsluttet spill. Hele appens norske copy er også strammet for AI-tells og engelske kalker — først via humanizer (1.14.3), så et no-nb-pass mot code-switched English som var igjen (1.14.4), og til slutt en oppfølger som fanget «Stackbare» + «Lag-koord»-forkortelsen (1.14.5).
@@ -79,9 +117,6 @@ Polish etter første reelle stableford-runde med kompisene. Du kan nå føre sla
 
 > Datalaget for in-app innboks er på plass. Ingen synlige endringer i appen ennå — fase 1 av 4 mot in-app varslings-senter (#25).
 
-<details>
-<summary>Teknisk</summary>
-
 #### Added
 - `supabase/migrations/0032_notifications.sql` — `public.notifications`-tabell (polymorf med kind-discriminator + JSONB payload), RLS-policies (select/update kun egne), 2 indekser (uleste-partial + full-historikk), realtime-publikasjon. Applied mot prod via Supabase MCP.
 - `lib/notifications/types.ts` — `NotificationKind`-union for de 5 v1 events (`invite`, `peer_approval_request`, `scorecard_submitted`, `scorecard_approved`, `game_finished`) + Zod-skjema per kind. `parseNotificationPayload()` validerer payload mot kind før insert. Bruker `z.guid()` (permissiv UUID-shape) framfor strict RFC 9562 `z.string().uuid()` siden test-sentinels og nil-UUID skal kunne valideres.
@@ -94,14 +129,9 @@ Polish etter første reelle stableford-runde med kompisene. Du kan nå føre sla
 - Phase 1 av 4 i issue #25-epic. Phase 2 leverer bjelle + /innboks UI; Phase 3 wires inn de 5 events; Phase 4 aktiverer off-app mail-gating.
 - Foundation-commits er prefikset `chore(notifications)` siden de ikke endrer bruker-synlig oppførsel — kun datalag og helpers ikke ennå kalt fra noen actions.
 
-</details>
-
 ### [1.14.2] - 2026-05-24
 
 > Når et stableford-spill med sideturnering avsluttes, vises sideturneringen som en egen fane på leaderbordet — akkurat som for best ball. Tidligere var sideturneringen helt usynlig på stableford selv om du hadde valgt å legge den til.
-
-<details>
-<summary>Teknisk</summary>
 
 #### Added
 - `app/games/[id]/leaderboard/page.tsx` — ny `renderStablefordWithSideTournament`-helper henter LD/CTP-vinnere fra `game_side_winners`, bygger `SideTournamentInput` per spiller/lag (perHoleGross + perHoleNetto med `strokesForHole`-justering), og pakker hoved-podiet + `SideTournamentView` inn i `LeaderboardTabs`. Solo-stableford mapper hver spiller til en «team of 1» med løpende teamId — lag-aggregerte sidekategorier (most_birdies_team etc.) faller bort som forventet via `userIds.length >= 2`-filteret i sideTournament.ts, mens individ-kategorier + LD/CTP + Snowman fungerer normalt. Par-stableford bruker eksisterende team_number-gruppering; nettoBestBallPerHole = MIN av lagets to spilleres netto per hull, samme logikk som best-ball-grenen lenger oppe.
@@ -110,26 +140,16 @@ Polish etter første reelle stableford-runde med kompisene. Du kan nå føre sla
 #### Changed
 - `app/games/[id]/leaderboard/SoloStablefordPodium.tsx` + `TeamStablefordPodium.tsx` — ny `chromeless?: boolean`-prop (default false) som hopper over `Shell` (AppShell-wrapper) og `Header` (back-pil + kicker) når satt. Brukes når podiet rendres inni `LeaderboardTabs` — outer-callern eier AppShell + TopBar. Speilar `State4View.chromeless`-pattern. Eksisterende standalone-bruk (uten sideturnering) er upåvirket.
 
-</details>
-
 ### [1.14.1] - 2026-05-24
 
 > «Fortsett runden»-knappen på spill-hjem sender deg nå direkte til første tomme hull i stedet for alltid hull 1. Etter å ha tastet hull 1-9 og lagt fra deg telefonen, åpner appen rett på hull 10 når du tar opp igjen.
 
-<details>
-<summary>Teknisk</summary>
-
 #### Changed
 - `app/games/[id]/page.tsx` — `PrimaryCtaSection` fetcher nå listen av hull med score (i stedet for kun count via `head: true`) og sekvensielt-scanner 1→18 etter første hull uten score. Resultatet sendes som `nextHole`-prop til `PrimaryCta` og brukes i både «Start runden» og «Fortsett runden»-linkene (tidligere hardkodet `/holes/1`). For full-runde-state (`ready_to_submit`) er verdien ubrukt — CTA-en routes til `/submit` der i stedet, så fallback til 1 ved 0 tastede hull dekker både not_started og in_progress.
-
-</details>
 
 ### [1.14.0] - 2026-05-24
 
 > I solo stableford kan nå én spiller fungere som «marker» og taste slag for alle i flighten — akkurat som i best ball. Tidligere kunne hver spiller kun se og taste sitt eget scorekort.
-
-<details>
-<summary>Teknisk</summary>
 
 #### Changed
 - `app/games/[id]/holes/[holeNumber]/page.tsx` — flight-filtreringen i hull-siden behandler nå hele spillerlisten som én flight når `me.flight_number == null` (solo-modus: stableford og solo strokeplay netto), i stedet for å filtrere ned til kun `[me]`. Konsekvens: en av spillerne kan markere for alle de andre i samme spill — typisk bruksmønster når 1-4 kompiser går runden sammen og én av dem fører kortet. Best-ball- og matchplay-modus beholder per-flight-filtreringen som før (flight_number er satt i de modusene).
