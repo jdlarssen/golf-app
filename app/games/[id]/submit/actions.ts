@@ -130,9 +130,11 @@ export async function submitScorecard(gameId: string) {
     }
   }
   if (admins.length > 0) {
-    // In-app varsel til admin-ene parallelt med mailen. Phase 3 sender mail
-    // uavhengig (sikkerhetsnett under utrulling); Phase 4 vil gate på
-    // shouldAlsoSendMail fra notify() for å kutte mail til aktive brukere.
+    // In-app varsel til admin-ene + mail-gating på shouldAlsoSendMail.
+    // Aktive admin-er (last_seen_at < 5 min) får kun in-app; off-app-admin-er
+    // får mail som backup. Hvis notify feiler for en admin, defaultes
+    // sendMail til false (samme rasjonale som inni notify() ved insert-error
+    // — vil ikke maile uten in-app-varsel).
     const adminNotifyResults = await Promise.allSettled(
       admins.map((a) =>
         notify({
@@ -143,11 +145,14 @@ export async function submitScorecard(gameId: string) {
             game_name: game!.name,
             player_name: playerName,
           },
-        }),
+        }).then((r) => ({ userId: a.id, sendMail: r.shouldAlsoSendMail })),
       ),
     );
+    const sendMailByAdminId = new Map<string, boolean>();
     for (const r of adminNotifyResults) {
-      if (r.status === 'rejected') {
+      if (r.status === 'fulfilled') {
+        sendMailByAdminId.set(r.value.userId, r.value.sendMail);
+      } else {
         console.error(
           '[submitScorecard] scorecard_submitted notify failed',
           r.reason,
@@ -155,20 +160,25 @@ export async function submitScorecard(gameId: string) {
       }
     }
 
-    const results = await Promise.allSettled(
-      admins.map((a) =>
-        sendScorecardSubmittedNotification({
-          to: a.email,
-          adminFirstName: firstName(a.name),
-          playerName,
-          gameName: game!.name,
-          gameId,
-        }),
-      ),
+    const mailRecipients = admins.filter(
+      (a) => sendMailByAdminId.get(a.id) === true,
     );
-    for (const r of results) {
-      if (r.status === 'rejected') {
-        console.error('[submitScorecard] admin notification mail failed', r.reason);
+    if (mailRecipients.length > 0) {
+      const results = await Promise.allSettled(
+        mailRecipients.map((a) =>
+          sendScorecardSubmittedNotification({
+            to: a.email,
+            adminFirstName: firstName(a.name),
+            playerName,
+            gameName: game!.name,
+            gameId,
+          }),
+        ),
+      );
+      for (const r of results) {
+        if (r.status === 'rejected') {
+          console.error('[submitScorecard] admin notification mail failed', r.reason);
+        }
       }
     }
   }
