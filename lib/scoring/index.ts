@@ -5,9 +5,10 @@
 // modul-per-mode i `lib/scoring/modes/`. Returnerer en discriminated
 // union `ModeResult` som konsumentene narrower på `kind`.
 //
-// Dagens innslag (per fase 2):
-//   - best_ball_netto → modes/bestBallNetto.ts (eksisterende logikk)
-//   - stableford      → modes/stableford.ts (ny i denne fasen)
+// Dagens innslag:
+//   - best_ball_netto    → modes/bestBallNetto.ts
+//   - stableford         → modes/stableford.ts (solo + par/4BBB)
+//   - singles_matchplay  → modes/singlesMatchplay.ts (epic #45)
 //
 // Re-eksporterer felles helpers (computeCourseHandicap, allocateStrokes,
 // resolveTiebreak) slik at andre konsumenter kan importere via
@@ -15,6 +16,7 @@
 
 import * as bestBallNetto from './modes/bestBallNetto';
 import * as stableford from './modes/stableford';
+import * as singlesMatchplay from './modes/singlesMatchplay';
 import type { ScoringContext, ModeResult } from './modes/types';
 
 export function computeLeaderboard(ctx: ScoringContext): ModeResult {
@@ -23,6 +25,8 @@ export function computeLeaderboard(ctx: ScoringContext): ModeResult {
       return bestBallNetto.compute(ctx);
     case 'stableford':
       return stableford.compute(ctx);
+    case 'singles_matchplay':
+      return singlesMatchplay.compute(ctx);
   }
 }
 
@@ -31,6 +35,7 @@ export { calculateCourseHandicap, applyAllowance } from './courseHandicap';
 export { strokesForHole, allStrokeAllocations } from './strokeAllocation';
 export { rankTeams } from './tiebreaker';
 export { computeStablefordPoints } from './modes/stableford';
+export { computeMatchResult } from './modes/singlesMatchplay';
 export type {
   GameMode,
   GameModeConfig,
@@ -50,4 +55,9 @@ export type {
   StablefordPlayerCell,
   StablefordTeamHoleRow,
   StablefordTeamLine,
+  SinglesMatchplayResult,
+  MatchplaySide,
+  MatchplayHoleRow,
+  MatchplayHoleResult,
+  MatchplayMatchResult,
 } from './modes/types';

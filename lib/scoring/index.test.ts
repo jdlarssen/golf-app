@@ -55,4 +55,34 @@ describe('computeLeaderboard — mode-router', () => {
       throw new Error('expected stableford solo result');
     }
   });
+
+  it('delegerer singles_matchplay til singlesMatchplay.compute', () => {
+    const ctx: ScoringContext = {
+      game: {
+        id: 'g',
+        game_mode: 'singles_matchplay',
+        mode_config: { kind: 'singles_matchplay', team_size: 1, teams_count: 2 },
+      },
+      players: [
+        { userId: 'a', teamNumber: 1, flightNumber: 1, courseHandicap: 0 },
+        { userId: 'b', teamNumber: 2, flightNumber: 2, courseHandicap: 0 },
+      ],
+      holes: [{ number: 1, par: 4, strokeIndex: 1 }],
+      scores: [
+        { userId: 'a', holeNumber: 1, gross: 4 },
+        { userId: 'b', holeNumber: 1, gross: 5 },
+      ],
+    };
+
+    const result = computeLeaderboard(ctx);
+    expect(result.kind).toBe('singles_matchplay');
+    if (result.kind === 'singles_matchplay') {
+      expect(result.sides[0].userId).toBe('a');
+      expect(result.sides[1].userId).toBe('b');
+      expect(result.holesUp).toBe(1);
+      expect(result.holes[0].result).toBe('side1_wins');
+    } else {
+      throw new Error('expected singles_matchplay result');
+    }
+  });
 });
