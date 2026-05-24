@@ -4,6 +4,7 @@ import type {
   NotificationKind,
   NotificationPayload,
 } from '@/lib/notifications/types';
+import { formatRelativeNb } from '@/lib/format/relativeTimeNb';
 
 /**
  * Generisk shape for en notifications-rad fra DB. Vi unngår direkte
@@ -148,33 +149,3 @@ function buildCardContent(
   }
 }
 
-const SECOND_MS = 1000;
-const MINUTE_MS = 60 * SECOND_MS;
-const HOUR_MS = 60 * MINUTE_MS;
-const DAY_MS = 24 * HOUR_MS;
-const WEEK_MS = 7 * DAY_MS;
-const MONTH_MS = 30 * DAY_MS;
-
-/**
- * Norsk relativ-tid-formattering via `Intl.RelativeTimeFormat('nb-NO')`.
- * Eksempler: «for 1 minutt siden», «for 3 timer siden», «i går», «for 2 uker
- * siden». Bruker `numeric: 'auto'` så «i går»/«i morgen» får natural-language-
- * varianten i stedet for «for 1 dag siden».
- *
- * Fallback til norsk dato-format om Intl mangler nb-NO (skal ikke skje i
- * moderne browsere; vurderes som defensive-only).
- */
-function formatRelativeNb(iso: string): string {
-  // Math.max(0, ...) håndterer clock-skew der server-timestamp havner litt i
-  // fremtiden i forhold til klient-klokken — uten ville vi fått «om 3 sekunder»
-  // og lignende rart copy. Floor til 0 så vi alltid sier «nå» eller «for X siden».
-  const diff = Math.max(0, Date.now() - new Date(iso).getTime());
-  const rtf = new Intl.RelativeTimeFormat('nb-NO', { numeric: 'auto' });
-
-  if (diff < MINUTE_MS) return rtf.format(-Math.round(diff / SECOND_MS), 'second');
-  if (diff < HOUR_MS) return rtf.format(-Math.round(diff / MINUTE_MS), 'minute');
-  if (diff < DAY_MS) return rtf.format(-Math.round(diff / HOUR_MS), 'hour');
-  if (diff < WEEK_MS) return rtf.format(-Math.round(diff / DAY_MS), 'day');
-  if (diff < MONTH_MS) return rtf.format(-Math.round(diff / WEEK_MS), 'week');
-  return rtf.format(-Math.round(diff / MONTH_MS), 'month');
-}
