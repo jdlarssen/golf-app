@@ -899,13 +899,27 @@ async function PrimaryCtaSection({
 }) {
   const { supabase } = await getGameContext();
 
-  const { count: strokesCountRaw } = await supabase
+  const { data: filledRows } = await supabase
     .from('scores')
-    .select('hole_number', { count: 'exact', head: true })
+    .select('hole_number')
     .eq('game_id', gameId)
     .eq('user_id', currentUserId)
     .not('strokes', 'is', null);
-  const strokesCount = strokesCountRaw ?? 0;
+  const filledHoles = (filledRows ?? []).map((r) => r.hole_number);
+  const strokesCount = filledHoles.length;
+
+  // Issue #164: «Fortsett runden»-knappen skal peke på første tomme hull,
+  // ikke hardkodet hull 1. Sekvensiell scan 1→18 returnerer det første hullet
+  // uten score; ved full runde havner vi i ready_to_submit-state og denne
+  // verdien brukes ikke (CTA-en routes til /submit i stedet).
+  const filledSet = new Set(filledHoles);
+  let nextHole = 1;
+  for (let h = 1; h <= 18; h++) {
+    if (!filledSet.has(h)) {
+      nextHole = h;
+      break;
+    }
+  }
 
   const state = computeState({
     strokesCount,
@@ -914,7 +928,14 @@ async function PrimaryCtaSection({
     requirePeerApproval,
   });
 
-  return <PrimaryCta gameId={gameId} state={state} strokesCount={strokesCount} />;
+  return (
+    <PrimaryCta
+      gameId={gameId}
+      state={state}
+      strokesCount={strokesCount}
+      nextHole={nextHole}
+    />
+  );
 }
 
 function PrimaryCtaSkeleton() {
@@ -925,10 +946,12 @@ function PrimaryCta({
   gameId,
   state,
   strokesCount,
+  nextHole,
 }: {
   gameId: string;
   state: UiState;
   strokesCount: number;
+  nextHole: number;
 }) {
   const subtext =
     state === 'in_progress' || state === 'ready_to_submit'
@@ -937,7 +960,7 @@ function PrimaryCta({
 
   if (state === 'not_started') {
     return (
-      <LinkButton href={`/games/${gameId}/holes/1`} full>
+      <LinkButton href={`/games/${gameId}/holes/${nextHole}`} full>
         Start runden →
       </LinkButton>
     );
@@ -946,7 +969,7 @@ function PrimaryCta({
   if (state === 'in_progress') {
     return (
       <div className="space-y-1.5">
-        <LinkButton href={`/games/${gameId}/holes/1`} full>
+        <LinkButton href={`/games/${gameId}/holes/${nextHole}`} full>
           Fortsett runden →
         </LinkButton>
         {subtext && (
