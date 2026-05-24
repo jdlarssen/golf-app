@@ -201,6 +201,8 @@ Markdown-filer (`CHANGELOG.md`, `docs/email-templates.md`) skannes ikke av hooke
 
 Hooken er aktivert automatisk via `core.hooksPath=.githooks` (samme aktivering som commit-msg-hooken via `postinstall`). Tester (`*.test.ts`/`*.test.tsx`), kommentarer og console.log skannes ikke.
 
+**Engelsk → norsk-konvertering:** Hvis du har engelsk source-content som skal bli norsk (f.eks. dokumentasjon fra en library, kopier fra en utenlandsk app, eller framtidig engelsk-versjon per [issue #60](https://github.com/jdlarssen/golf-app/issues/60)), bruk `no-nb:no-nb`-skillet (fra `floka-marketplace`) til å oversette idiomatisk i stedet for å skrive direkte fra topp. no-nb pairer med humanizer — oversetter intent (ikke ord-for-ord) og påfører norske konvensjoner (`3,14`, «guillemets», `du`-form aldri `De`, lowercase måneder/språk). For ren norsk komposisjon (det normale tilfellet i Tørny i dag) er no-nb ikke nødvendig — komponer direkte og kjør humanizer. Verifisert 2026-05-24 via audit: dagens app har null engelsk content som skal være norsk, så no-nb-policyen er framtids-rettet.
+
 For CHANGELOG-spesifikk guidance, se `### Versjonering / CHANGELOG` over.
 
 ### Feilhåndtering / bugs
