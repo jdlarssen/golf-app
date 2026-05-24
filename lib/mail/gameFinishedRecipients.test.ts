@@ -56,8 +56,16 @@ describe('buildGameFinishedRecipients', () => {
     );
 
     expect(recipients).toHaveLength(2);
-    expect(recipients[0]).toEqual({ email: 'a@example.com', name: 'Ada' });
-    expect(recipients[1]).toEqual({ email: 'b@example.com', name: 'Bjørn' });
+    expect(recipients[0]).toEqual({
+      userId: 'u1',
+      email: 'a@example.com',
+      name: 'Ada',
+    });
+    expect(recipients[1]).toEqual({
+      userId: 'u2',
+      email: 'b@example.com',
+      name: 'Bjørn',
+    });
     expect(recipients.every((r) => r.mode === undefined)).toBe(true);
   });
 

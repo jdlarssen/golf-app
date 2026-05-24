@@ -42,11 +42,14 @@ vi.mock('@/lib/mail/gameFinishedNotification', () => ({
 // for stableford. Stubber den her så vi kan kontrollere shape uten å mocke
 // hele scoring-stack-en. Default-fixturen returnerer 2 mottakere uten mode-
 // info (best-ball-default). Per-test override via `mockResolvedValueOnce`.
+//
+// `userId` er kritisk fra og med Phase 4 — actionen filtrerer recipients på
+// `sendMailByUserId.get(r.userId)` for å gate mail mot in-app-aktive brukere.
 const buildGameFinishedRecipientsMock = vi.fn<
   (...args: unknown[]) => Promise<unknown[]>
 >(async () => [
-  { email: 'a@example.com', name: 'Ada Lovelace' },
-  { email: 'b@example.com', name: 'Bjørn' },
+  { userId: 'user-a', email: 'a@example.com', name: 'Ada Lovelace' },
+  { userId: 'user-b', email: 'b@example.com', name: 'Bjørn' },
 ]);
 vi.mock('@/lib/mail/gameFinishedRecipients', () => ({
   buildGameFinishedRecipients: (...args: unknown[]) =>
@@ -57,6 +60,17 @@ const logAdminEventMock =
   vi.fn<(...args: unknown[]) => Promise<void>>(async () => undefined);
 vi.mock('@/lib/admin/auditLog', () => ({
   logAdminEvent: (...args: unknown[]) => logAdminEventMock(...args),
+}));
+
+// Phase 4 mail-gating: notify() returnerer shouldAlsoSendMail som styrer om
+// game-finished-mailen sendes til denne spilleren. Default = true så happy-
+// path-testen får sin historiske 2-mail-til-Ada-og-Bjørn-oppførsel. Per-test
+// override via mockResolvedValueOnce dekker off-app vs aktive scenarier.
+const notifyMock = vi.fn<
+  (...args: unknown[]) => Promise<{ shouldAlsoSendMail: boolean }>
+>(async () => ({ shouldAlsoSendMail: true }));
+vi.mock('@/lib/notifications/notify', () => ({
+  notify: (...args: unknown[]) => notifyMock(...args),
 }));
 
 let supabaseMock: ReturnType<typeof buildSupabaseMock>;
@@ -162,11 +176,13 @@ describe('endGame', () => {
       {
         data: [
           {
+            user_id: 'user-a',
             submitted_at: '2026-05-18T10:00:00Z',
             approved_at: null,
             users: { email: 'a@example.com', name: 'Ada Lovelace' },
           },
           {
+            user_id: 'user-b',
             submitted_at: '2026-05-18T10:05:00Z',
             approved_at: null,
             users: { email: 'b@example.com', name: 'Bjørn' },
@@ -177,7 +193,8 @@ describe('endGame', () => {
       { data: null, error: null }, // games.update(status='finished')
     ]);
     // Mottakerne kommer fra buildGameFinishedRecipients (mocket) — default-
-    // fixturen returnerer 2 best-ball-mottakere uten mode-info.
+    // fixturen returnerer 2 best-ball-mottakere med userId-felt slik at Phase
+    // 4 mail-gating-filteret finner matchende notify-resultat.
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { user: { id: 'admin-1' } },
     });

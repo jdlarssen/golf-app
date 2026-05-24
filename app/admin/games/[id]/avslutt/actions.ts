@@ -176,8 +176,9 @@ export async function endGameWithSideWinners(
   });
 
   // Best-effort in-app `game_finished`-varsel til hver deltaker. Loopen fyres
-  // parallelt med mail-blasten lenger ned. Phase 3 sender mail uavhengig
-  // (sikkerhetsnett); Phase 4 vil gate på shouldAlsoSendMail.
+  // parallelt med mail-blasten lenger ned. Phase 4-gating: aktive spillere
+  // (last_seen_at < 5 min) får kun in-app; off-app-spillere får mail som
+  // backup. Notify-feil → ikke send mail (samme rasjonale som inni notify()).
   const notifyResults = await Promise.allSettled(
     players!.map((p) =>
       notify({
@@ -187,11 +188,14 @@ export async function endGameWithSideWinners(
           game_id: gameId,
           game_name: game!.name,
         },
-      }),
+      }).then((r) => ({ userId: p.user_id, sendMail: r.shouldAlsoSendMail })),
     ),
   );
+  const sendMailByUserId = new Map<string, boolean>();
   for (const r of notifyResults) {
-    if (r.status === 'rejected') {
+    if (r.status === 'fulfilled') {
+      sendMailByUserId.set(r.value.userId, r.value.sendMail);
+    } else {
       console.error(
         '[endGameWithSideWinners] game_finished notify failed',
         r.reason,
@@ -199,19 +203,23 @@ export async function endGameWithSideWinners(
     }
   }
 
-  // Best-effort: send "Resultatet er klart"-mail to every player. Failures
-  // are logged but never abort — leaderboard is reachable in-app regardless.
+  // Best-effort: send "Resultatet er klart"-mail kun til off-app-spillere.
+  // Failures er loggført men aborter aldri — leaderboardet er tilgjengelig
+  // in-app uansett.
   //
   // Mode-aware payload: helperen returnerer per-spiller rank+poeng for
-  // stableford og kun email/name for best-ball (default nøytral copy).
+  // stableford og kun userId/email/name for best-ball (default nøytral copy).
   const recipients = await buildGameFinishedRecipients(supabase, gameId, {
     course_id: game!.course_id,
     game_mode: game!.game_mode,
     mode_config: game!.mode_config,
   });
-  if (recipients.length > 0) {
+  const mailRecipients = recipients.filter(
+    (r) => sendMailByUserId.get(r.userId) === true,
+  );
+  if (mailRecipients.length > 0) {
     const results = await Promise.allSettled(
-      recipients.map((r) =>
+      mailRecipients.map((r) =>
         sendGameFinishedNotification({
           to: r.email,
           playerFirstName: firstName(r.name),

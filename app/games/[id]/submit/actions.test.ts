@@ -35,6 +35,17 @@ vi.mock('@/lib/mail/scorecardSubmittedNotification', () => ({
     sendScorecardSubmittedNotificationMock(...args),
 }));
 
+// Phase 4 mail-gating: notify() returnerer shouldAlsoSendMail som styrer om
+// admin-mailen sendes. Default = true så happy-path-testen får sin historiske
+// 1-mail-til-Jørgen-oppførsel. Per-test override via mockResolvedValueOnce
+// dekker off-app vs aktive scenarier hvis vi vil teste gating eksplisitt.
+const notifyMock = vi.fn<
+  (...args: unknown[]) => Promise<{ shouldAlsoSendMail: boolean }>
+>(async () => ({ shouldAlsoSendMail: true }));
+vi.mock('@/lib/notifications/notify', () => ({
+  notify: (...args: unknown[]) => notifyMock(...args),
+}));
+
 let supabaseMock: ReturnType<typeof buildSupabaseMock>;
 vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,

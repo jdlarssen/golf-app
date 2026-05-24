@@ -313,8 +313,9 @@ export async function endGame(gameId: string) {
   });
 
   // Best-effort in-app `game_finished`-varsel til hver deltaker. Loopen fyres
-  // parallelt med mail-blasten lenger ned. Phase 3 sender mail uavhengig
-  // (sikkerhetsnett); Phase 4 vil gate på shouldAlsoSendMail.
+  // parallelt med mail-blasten lenger ned. Phase 4-gating: aktive spillere
+  // (last_seen_at < 5 min) får kun in-app; off-app-spillere får mail som
+  // backup. Notify-feil → ikke send mail (samme rasjonale som inni notify()).
   const notifyResults = await Promise.allSettled(
     players!.map((p) =>
       notify({
@@ -324,31 +325,37 @@ export async function endGame(gameId: string) {
           game_id: gameId,
           game_name: game!.name,
         },
-      }),
+      }).then((r) => ({ userId: p.user_id, sendMail: r.shouldAlsoSendMail })),
     ),
   );
+  const sendMailByUserId = new Map<string, boolean>();
   for (const r of notifyResults) {
-    if (r.status === 'rejected') {
+    if (r.status === 'fulfilled') {
+      sendMailByUserId.set(r.value.userId, r.value.sendMail);
+    } else {
       console.error('[endGame] game_finished notify failed', r.reason);
     }
   }
 
-  // Best-effort: send "Resultatet er klart"-mail to every player. Failures
-  // are logged but never abort the action — the leaderboard is reachable
-  // in-app even without the mail, and admin can re-trigger if needed (no
-  // resend-flow exists yet, but the DB is the source of truth either way).
+  // Best-effort: send "Resultatet er klart"-mail kun til off-app-spillere.
+  // Failures er loggført men aborter aldri actionen — leaderboardet er
+  // tilgjengelig in-app uansett, og admin kan re-trigge ved behov (ingen
+  // resend-flyt finnes ennå, men DB er source of truth).
   //
   // Mode-aware payload: for stableford regner helperen ut leaderboard og
   // legger per-spiller rank/poeng på hver mottaker; for best-ball returnerer
-  // den kun email/name (mailen bruker da default nøytral copy).
+  // den kun userId/email/name (mailen bruker da default nøytral copy).
   const recipients = await buildGameFinishedRecipients(supabase, gameId, {
     course_id: game!.course_id,
     game_mode: game!.game_mode,
     mode_config: game!.mode_config,
   });
-  if (recipients.length > 0) {
+  const mailRecipients = recipients.filter(
+    (r) => sendMailByUserId.get(r.userId) === true,
+  );
+  if (mailRecipients.length > 0) {
     const results = await Promise.allSettled(
-      recipients.map((r) =>
+      mailRecipients.map((r) =>
         sendGameFinishedNotification({
           to: r.email,
           playerFirstName: firstName(r.name),

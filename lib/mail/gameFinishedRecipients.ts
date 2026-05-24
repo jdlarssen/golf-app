@@ -15,6 +15,11 @@ import { firstName } from '@/lib/firstName';
 import type { GameFinishedNotificationMode } from './gameFinishedNotification';
 
 export interface FinishedMailRecipient {
+  /**
+   * Spillerens auth-user-id. Brukes av caller for å filtrere mottakerlisten
+   * mot in-app-notify-utfallet (Phase 4 mail-gating på `shouldAlsoSendMail`).
+   */
+  userId: string;
   email: string;
   /** Navn fra users-raden — caller mapper til firstName ved behov. */
   name: string | null;
@@ -104,10 +109,11 @@ export async function buildGameFinishedRecipients(
     return buildSoloStrokeplayRecipients(supabase, gameId, game, playerRows);
   }
 
-  // Best-ball-netto: ingen per-spiller-mode, returner kun email+name.
+  // Best-ball-netto: ingen per-spiller-mode, returner kun userId+email+name.
   if (game.game_mode !== 'stableford') {
     return playerRows
       .map((row) => ({
+        userId: row.user_id,
         email: row.users?.email ?? null,
         name: row.users?.name ?? null,
       }))
@@ -172,6 +178,7 @@ export async function buildGameFinishedRecipients(
     // Defensive: mode-router gav noe uventet. Fall til best-ball-copy.
     return playerRows
       .map((row) => ({
+        userId: row.user_id,
         email: row.users?.email ?? null,
         name: row.users?.name ?? null,
       }))
@@ -201,6 +208,7 @@ export async function buildGameFinishedRecipients(
           }
         : undefined;
       recipients.push({
+        userId: row.user_id,
         email,
         name: row.users?.name ?? null,
         mode,
@@ -262,6 +270,7 @@ export async function buildGameFinishedRecipients(
       };
     }
     recipients.push({
+      userId: row.user_id,
       email,
       name: row.users?.name ?? null,
       mode,
@@ -351,6 +360,7 @@ async function buildMatchplayRecipients(
   if (result.kind !== 'singles_matchplay' || result.result === null) {
     return playerRows
       .map((row) => ({
+        userId: row.user_id,
         email: row.users?.email ?? null,
         name: row.users?.name ?? null,
       }))
@@ -386,6 +396,7 @@ async function buildMatchplayRecipients(
     // mode-payload — send nøytral copy.
     if (selfSide !== 1 && selfSide !== 2) {
       recipients.push({
+        userId: row.user_id,
         email,
         name: row.users?.name ?? null,
       });
@@ -415,6 +426,7 @@ async function buildMatchplayRecipients(
     }
 
     recipients.push({
+      userId: row.user_id,
       email,
       name: row.users?.name ?? null,
       mode: {
@@ -504,6 +516,7 @@ async function buildSoloStrokeplayRecipients(
   if (result.kind !== 'solo_strokeplay_netto') {
     return playerRows
       .map((row) => ({
+        userId: row.user_id,
         email: row.users?.email ?? null,
         name: row.users?.name ?? null,
       }))
@@ -530,6 +543,7 @@ async function buildSoloStrokeplayRecipients(
         }
       : undefined;
     recipients.push({
+      userId: row.user_id,
       email,
       name: row.users?.name ?? null,
       mode,
