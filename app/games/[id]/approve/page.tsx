@@ -91,6 +91,7 @@ export default async function ApprovePage({
         backHref={`/games/${id}`}
         backLabel={`Tilbake til ${game.name}`}
         kicker="Godkjenning"
+        userId={userId}
       />
 
       {statusBanner && (

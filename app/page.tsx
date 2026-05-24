@@ -15,6 +15,7 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { PinFlag } from '@/components/icons/PinFlag';
 import { InstallBanner } from '@/components/pwa/InstallBanner';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { firstName } from '@/lib/firstName';
 import { formatTeeOffDate, formatTeeOffTime } from '@/lib/format/teeOff';
 import { STATUS_LABELS } from '@/lib/games/status';
@@ -50,7 +51,14 @@ export default async function Home({
 
   return (
     <AppShell>
-      <BrandMark className="mb-6" />
+      {/* Header-rad: brand venstre, bjelle høyre. BrandMark er ikke en lenke
+          så vi pakker den i en flex-rad sammen med NotificationBell-en så
+          den lander på samme høyde som varselsbjella på indre sider med
+          TopBar. */}
+      <div className="mb-6 flex items-start justify-between">
+        <BrandMark />
+        <NotificationBell userId={userId} />
+      </div>
 
       <InstallBanner />
 

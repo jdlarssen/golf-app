@@ -68,7 +68,7 @@ export default async function StatistikkPage() {
   const games = gamesRaw ?? [];
 
   if (games.length === 0) {
-    return <EmptyStateView />;
+    return <EmptyStateView userId={userId} />;
   }
 
   const gameIds = games.map((g) => g.id);
@@ -182,6 +182,7 @@ export default async function StatistikkPage() {
         backHref="/profile"
         backLabel="Tilbake til profil"
         kicker="Statistikk"
+        userId={userId}
       />
 
       <h1 className="font-serif text-2xl font-medium text-text mb-1">
@@ -214,13 +215,14 @@ export default async function StatistikkPage() {
   );
 }
 
-function EmptyStateView() {
+function EmptyStateView({ userId }: { userId: string }) {
   return (
     <AppShell>
       <TopBar
         backHref="/profile"
         backLabel="Tilbake til profil"
         kicker="Statistikk"
+        userId={userId}
       />
 
       <h1 className="font-serif text-2xl font-medium text-text mb-1">

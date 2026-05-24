@@ -363,7 +363,12 @@ export default async function GameHomePage({
 
   return (
     <AppShell>
-      <TopBar backHref="/" backLabel="Tilbake til hjem" kicker="Turnering" />
+      <TopBar
+        backHref="/"
+        backLabel="Tilbake til hjem"
+        kicker="Turnering"
+        userId={userId}
+      />
       <PageHeader title={game.name} />
 
       <div className="mb-4">

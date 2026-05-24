@@ -182,7 +182,11 @@ export default async function EditGamePage({
 
   return (
     <AdminShell>
-      <TopBar backHref={`/admin/games/${id}`} kicker="Spill · protokoll" />
+      <TopBar
+        backHref={`/admin/games/${id}`}
+        kicker="Spill · protokoll"
+        userId={userId}
+      />
 
       <BrassRibbon kicker="Rediger spill" />
 

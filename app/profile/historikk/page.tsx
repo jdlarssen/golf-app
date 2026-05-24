@@ -110,6 +110,7 @@ export default async function HistorikkPage() {
         backHref="/profile"
         backLabel="Tilbake til profil"
         kicker="Historikk"
+        userId={userId}
       />
 
       <p className="mb-4 text-sm text-muted">{subtitle}</p>

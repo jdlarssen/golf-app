@@ -10,6 +10,7 @@ import { BaneIcon } from '@/components/icons';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { TopBar } from '@/components/ui/TopBar';
 import { formatShortDateNb } from '@/lib/format/date';
+import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 
 const COURSES_LEDGER_GRID = '1fr 64px 14px';
 
@@ -72,6 +73,7 @@ export default async function CoursesPage({
 
   const statusFn = status ? STATUS_MESSAGES[status] : undefined;
   const statusMessage = statusFn ? statusFn(name) : undefined;
+  const userId = await getProxyVerifiedUserId();
 
   return (
     <AdminShell>
@@ -86,6 +88,7 @@ export default async function CoursesPage({
             + Ny
           </SmartLink>
         }
+        userId={userId}
       />
 
       <BrassRibbon kicker="Baner · katalog" />

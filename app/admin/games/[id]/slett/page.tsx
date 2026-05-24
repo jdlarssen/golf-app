@@ -9,6 +9,7 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import type { GameStatus } from '@/lib/games/status';
 import { formatShortDateNbWithYear } from '@/lib/format/date';
 import { deleteGame } from './actions';
+import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;
@@ -102,9 +103,15 @@ export default async function DeleteGamePage({
       ? 'Slett pågående spill for alltid'
       : 'Slett spillet for alltid';
 
+  const userId = await getProxyVerifiedUserId();
+
   return (
     <AdminShell>
-      <TopBar backHref={`/admin/games/${id}`} kicker="Sekretariatet" />
+      <TopBar
+        backHref={`/admin/games/${id}`}
+        kicker="Sekretariatet"
+        userId={userId}
+      />
 
       <BrassRibbon kicker="Bekreft sletting" />
 

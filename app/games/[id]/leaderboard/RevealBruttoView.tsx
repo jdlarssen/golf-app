@@ -17,6 +17,12 @@ type Props = {
   holesPlayed: number;
   /** Back-link href — typically points back to the originating hole. */
   backHref: string;
+  /**
+   * Verified user id (forwardet fra leaderboard-pagen). Brukes til å
+   * mounte NotificationBell i TopBar. Kan være null i teori (proxy
+   * redirecter ikke-innloggede), men vi forwarder for konsistens.
+   */
+  userId: string | null;
 };
 
 /**
@@ -31,12 +37,18 @@ export function RevealBruttoView({
   teams,
   holesPlayed,
   backHref,
+  userId,
 }: Props) {
   return (
     <AppShell>
       <PreRoundLeaderboardRealtime gameId={gameId} />
 
-      <TopBar backHref={backHref} backLabel="Tilbake" kicker={gameName} />
+      <TopBar
+        backHref={backHref}
+        backLabel="Tilbake"
+        kicker={gameName}
+        userId={userId}
+      />
 
       <section className="px-6 pt-2 pb-3 text-center">
         <Kicker tone="accent">LIVE LEADERBOARD</Kicker>

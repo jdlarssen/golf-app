@@ -5,6 +5,7 @@ import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { CourseForm } from '../CourseForm';
 import { createCourse } from './actions';
+import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 
 type SearchParams = Promise<{ error?: string | string[] }>;
 
@@ -39,10 +40,15 @@ export default async function NewCoursePage({
   const params = await searchParams;
   const errorCode = first(params.error);
   const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
+  const userId = await getProxyVerifiedUserId();
 
   return (
     <AdminShell>
-      <TopBar backHref="/admin/courses" kicker="Baner · protokoll" />
+      <TopBar
+        backHref="/admin/courses"
+        kicker="Baner · protokoll"
+        userId={userId}
+      />
 
       <BrassRibbon kicker="Ny bane" />
 

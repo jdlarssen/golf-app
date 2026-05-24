@@ -14,6 +14,7 @@ import { TopBar } from '@/components/ui/TopBar';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { formatShortDateNb } from '@/lib/format/date';
+import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 
 const GAMES_LEDGER_GRID = '1fr 84px 14px';
 
@@ -95,6 +96,7 @@ export default async function GamesPage({
   const statusMessage = statusFn ? statusFn(name) : undefined;
   const filterFinished = !isBannerStatus && statusFilter === 'finished';
   const heading = filterFinished ? 'Resultatprotokoll' : 'Pågående og kommende';
+  const userId = await getProxyVerifiedUserId();
 
   return (
     <AdminShell>
@@ -115,6 +117,7 @@ export default async function GamesPage({
             </SmartLink>
           )
         }
+        userId={userId}
       />
 
       <BrassRibbon kicker="Spill · protokoll" />

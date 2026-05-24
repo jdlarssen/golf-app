@@ -116,7 +116,7 @@ export default async function SubmitPage({
 
   return (
     <AppShell showVersion={false}>
-      <TopBar backHref={`/games/${id}`} kicker={kicker} />
+      <TopBar backHref={`/games/${id}`} kicker={kicker} userId={userId} />
 
       {errorMessage && (
         <div className="mb-4">

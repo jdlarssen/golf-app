@@ -9,6 +9,12 @@ vi.mock('./PreRoundLeaderboard', () => ({
   PreRoundLeaderboardRealtime: () => null,
 }));
 
+// NotificationBell-en henter count via en hook som åpner en Supabase-klient —
+// uten env-vars i tests faller den. Stub hooken så bjella rendrer trivielt.
+vi.mock('@/hooks/useUnreadNotificationsCount', () => ({
+  useUnreadNotificationsCount: () => ({ count: 0, loading: false }),
+}));
+
 function makeTeam(opts: {
   teamNumber: number;
   rank: number;
@@ -78,6 +84,7 @@ describe('RevealBruttoView', () => {
         teams={[]}
         holesPlayed={0}
         backHref="/games/g1"
+        userId="test-user-1"
       />,
     );
 
@@ -112,6 +119,7 @@ describe('RevealBruttoView', () => {
         teams={[team]}
         holesPlayed={2}
         backHref="/games/g1/holes/2"
+        userId="test-user-1"
       />,
     );
 
@@ -134,6 +142,7 @@ describe('RevealBruttoView', () => {
         teams={[]}
         holesPlayed={3}
         backHref="/games/g1"
+        userId="test-user-1"
       />,
     );
     expect(screen.getByText('Ingen lag å vise.')).toBeInTheDocument();

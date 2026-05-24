@@ -52,7 +52,7 @@ export default async function AvsluttPage({
   const { id: gameId } = await params;
   const { error } = await searchParams;
 
-  const { supabase } = await requireAdmin();
+  const { supabase, user } = await requireAdmin();
 
   const { data: game } = await supabase
     .from('games')
@@ -105,7 +105,11 @@ export default async function AvsluttPage({
 
   return (
     <AdminShell>
-      <TopBar backHref={`/admin/games/${gameId}`} kicker="Avslutt spillet" />
+      <TopBar
+        backHref={`/admin/games/${gameId}`}
+        kicker="Avslutt spillet"
+        userId={user.id}
+      />
       <PageHeader
         title="Avslutt spill"
         subtitle={`Velg sideturnerings-vinnere for «${game.name}». Spillet låses når du bekrefter.`}

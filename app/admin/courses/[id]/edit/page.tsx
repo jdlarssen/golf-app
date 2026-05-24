@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { CourseForm } from '../../CourseForm';
 import { updateCourse, deleteCourse } from './actions';
 import { DeleteCourseButton } from './DeleteCourseButton';
+import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;
@@ -71,10 +72,15 @@ export default async function EditCoursePage({
   }
 
   const deleteAction = deleteCourse.bind(null, id);
+  const userId = await getProxyVerifiedUserId();
 
   return (
     <AdminShell>
-      <TopBar backHref="/admin/courses" kicker="Baner · protokoll" />
+      <TopBar
+        backHref="/admin/courses"
+        kicker="Baner · protokoll"
+        userId={userId}
+      />
 
       <BrassRibbon kicker="Rediger bane" />
 

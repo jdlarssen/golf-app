@@ -73,7 +73,12 @@ export default async function ProfilePage({
 
   return (
     <AppShell>
-      <TopBar backHref="/" backLabel="Tilbake til hjem" kicker="Profil" />
+      <TopBar
+        backHref="/"
+        backLabel="Tilbake til hjem"
+        kicker="Profil"
+        userId={userId}
+      />
 
       {profileUpdated && (
         <div className="mb-4">

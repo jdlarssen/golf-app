@@ -18,6 +18,7 @@ import {
 } from '@/lib/scoring/modes/types';
 import { StartGameButton } from './StartGameButton';
 import { StartScheduledGameButton } from './StartScheduledGameButton';
+import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { EndGameButton } from './EndGameButton';
 import { ApprovePlayerButton } from './ApprovePlayerButton';
 import { ReopenScorecardButton } from './ReopenScorecardButton';
@@ -191,9 +192,15 @@ export default async function GameDetailPage({
     shortNb(game.scheduled_tee_off_at) ??
     shortNb(game.created_at);
 
+  const userId = await getProxyVerifiedUserId();
+
   return (
     <AdminShell>
-      <TopBar backHref="/admin/games" kicker="Spill · protokoll" />
+      <TopBar
+        backHref="/admin/games"
+        kicker="Spill · protokoll"
+        userId={userId}
+      />
 
       <BrassRibbon kicker="Spill · protokoll" />
 

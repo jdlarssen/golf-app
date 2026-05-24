@@ -61,6 +61,7 @@ export default async function SlettKontoPage({
         backHref="/profile"
         backLabel="Tilbake til profil"
         kicker="Slett konto"
+        userId={userId}
       />
 
       {errorMessage && (

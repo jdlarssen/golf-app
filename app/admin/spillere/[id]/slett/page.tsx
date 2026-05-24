@@ -45,7 +45,11 @@ export default async function DeletePlayerPage({
 
   return (
     <AdminShell>
-      <TopBar backHref={`/admin/spillere/${id}`} kicker="Sekretariatet" />
+      <TopBar
+        backHref={`/admin/spillere/${id}`}
+        kicker="Sekretariatet"
+        userId={adminUserId}
+      />
 
       <BrassRibbon kicker="Bekreft sletting" />
 

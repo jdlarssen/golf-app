@@ -63,17 +63,20 @@ type Activity = {
   ref: string;
 };
 
-// Page — synchronous shell. Each data-bearing section sits behind a Suspense
-// boundary so the shell paints immediately and each section streams in as
-// its query wave resolves.
-export default function AdminSekretariat() {
+// Page — shell. Each data-bearing section sits behind a Suspense boundary
+// so the shell paints immediately and each section streams in as its query
+// wave resolves. Top-level er async kun for å hente userId til
+// NotificationBell-mountingen i TopBar — proxy.ts forwarder den allerede via
+// x-torny-user-id-header, så det er en ren header-lookup uten DB-roundtrip.
+export default async function AdminSekretariat() {
   const now = new Date();
   const dateLine = formatDateNb(now);
   const timeOfDay = greeting(now);
+  const userId = await getProxyVerifiedUserId();
 
   return (
     <AdminShell>
-      <TopBar backHref="/" kicker="Sekretariatet" />
+      <TopBar backHref="/" kicker="Sekretariatet" userId={userId} />
 
       <Suspense fallback={<GreetingSkeleton dateLine={dateLine} />}>
         <GreetingCard dateLine={dateLine} timeOfDay={timeOfDay} />

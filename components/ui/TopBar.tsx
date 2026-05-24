@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { BackLink } from './BackLink';
 import { HistoryBackLink } from './HistoryBackLink';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 /**
  * Sticky viewport-top navigation bar used on every page that has a back link.
@@ -28,6 +29,14 @@ import { HistoryBackLink } from './HistoryBackLink';
  * an invisible spacer (so the layout matches sibling pages that DO have
  * an action — useful on filtered list views like the «Resultatprotokoll»
  * where a create-button would be out of place).
+ *
+ * `userId` (når satt) trigger rendring av en `NotificationBell` lengst til
+ * høyre i baren. Bjella er en client component som lytter på Supabase
+ * realtime og viser en champagne-prikk når brukeren har uleste varsler.
+ * Pages som ikke wirer userId (offentlig /legal/privacy) får ingen bjelle —
+ * det gir ingen mening uten innlogget bruker. Layout: [back] [..kicker..]
+ * [action ml-auto] [bell] — action sitter til venstre for bjella, så
+ * begge er synlige samtidig på admin-flater som har «+ Nytt»-chip.
  */
 export function TopBar({
   backHref,
@@ -35,13 +44,16 @@ export function TopBar({
   kicker,
   back = 'link',
   action,
+  userId,
 }: {
   backHref: string;
   backLabel?: string;
   kicker?: string;
   back?: 'link' | 'history';
   action?: ReactNode;
+  userId?: string | null;
 }) {
+  const hasBell = userId != null;
   return (
     <div className="sticky top-0 z-30 -mx-5 px-5 bg-bg/90 backdrop-blur-sm -mt-8 pt-5 pb-2 mb-4 relative flex items-center">
       {back === 'history' ? (
@@ -55,7 +67,14 @@ export function TopBar({
         </p>
       )}
       {action !== undefined && (
-        <div className="ml-auto">{action ?? <ActionSpacer />}</div>
+        <div className={hasBell ? 'ml-auto' : 'ml-auto'}>
+          {action ?? <ActionSpacer />}
+        </div>
+      )}
+      {hasBell && (
+        <div className={action === undefined ? 'ml-auto' : 'ml-1'}>
+          <NotificationBell userId={userId ?? null} />
+        </div>
       )}
     </div>
   );

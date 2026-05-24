@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { PlayersList } from './_components/PlayersList';
 import { PendingInvitations } from './_components/PendingInvitations';
 import { InviteForm } from './_components/InviteForm';
+import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 
 type SearchParams = Promise<{
   status?: string | string[];
@@ -84,10 +85,11 @@ export default async function SpillerePage({
     ? successBuilder(email || name)
     : undefined;
   const searchQuery = first(params.q) ?? '';
+  const userId = await getProxyVerifiedUserId();
 
   return (
     <AdminShell>
-      <TopBar backHref="/admin" kicker="Sekretariatet" />
+      <TopBar backHref="/admin" kicker="Sekretariatet" userId={userId} />
 
       <BrassRibbon kicker="Spillere · klubblisten" />
 

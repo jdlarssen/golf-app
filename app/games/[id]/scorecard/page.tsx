@@ -76,6 +76,7 @@ export default async function ScorecardPage({ params }: { params: Params }) {
         backHref={`/games/${id}`}
         backLabel={`Tilbake til ${game.name}`}
         kicker="Scorekort"
+        userId={userId}
       />
 
       <div className="space-y-4">

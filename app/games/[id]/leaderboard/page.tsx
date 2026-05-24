@@ -239,7 +239,7 @@ async function LeaderboardBody({
   backHref: string;
   returnQuery: string;
 }) {
-  const { supabase } = await getLeaderboardContext();
+  const { supabase, userId } = await getLeaderboardContext();
 
   // Players come from the tag-cached helper (cache hit since the outer
   // page already warmed it). Holes + scores stay direct fetches.
@@ -417,6 +417,7 @@ async function LeaderboardBody({
         teams={orderedBrutto}
         holesPlayed={holesPlayed}
         backHref={backHref}
+        userId={userId}
       />
     );
   }
@@ -598,7 +599,7 @@ async function LeaderboardBody({
   // alongside the main view.
   return (
     <AppShell>
-      <TopBar backHref={backHref} kicker={game.name} />
+      <TopBar backHref={backHref} kicker={game.name} userId={userId} />
       <LeaderboardTabs
         mainContent={
           <State4View
@@ -1017,7 +1018,7 @@ async function renderStablefordWithSideTournament(opts: {
 }) {
   const { gameId, game, gwp, rawHolesRows, backHref, mainContent } = opts;
 
-  const { supabase } = await getLeaderboardContext();
+  const { supabase, userId } = await getLeaderboardContext();
 
   const sideWinnersRes = await supabase
     .from('game_side_winners')
@@ -1197,7 +1198,7 @@ async function renderStablefordWithSideTournament(opts: {
 
   return (
     <AppShell>
-      <TopBar backHref={backHref} kicker={game.name} />
+      <TopBar backHref={backHref} kicker={game.name} userId={userId} />
       <LeaderboardTabs
         mainContent={mainContent}
         sideContent={

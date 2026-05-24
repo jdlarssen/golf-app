@@ -13,6 +13,7 @@ import {
   ERROR_MESSAGES_NEW_GAME,
   buildErrorMessage as buildGameErrorMessage,
 } from '@/lib/admin/gameErrorMessages';
+import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 
 type SearchParams = Promise<{
   error?: string | string[];
@@ -129,10 +130,15 @@ export default async function NewGamePage({
 }) {
   const sp = await searchParams;
   const errorMessage = buildErrorMessage(first(sp.error), first(sp.emails));
+  const userId = await getProxyVerifiedUserId();
 
   return (
     <AdminShell>
-      <TopBar backHref="/admin/games" kicker="Spill · protokoll" />
+      <TopBar
+        backHref="/admin/games"
+        kicker="Spill · protokoll"
+        userId={userId}
+      />
 
       <BrassRibbon kicker="Nytt spill" />
 
