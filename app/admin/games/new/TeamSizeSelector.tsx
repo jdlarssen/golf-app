@@ -39,6 +39,10 @@ type Props = {
  * nøyaktig 2 sider). Scoring-motoren og payload-validatoren landet i
  * fase 1; ModeSelector og GameForm wires inn matchplay i fase 2.
  *
+ * Solo strokeplay netto (epic #46) krever team_size=1 (én spiller = én rad).
+ * Scoring-motoren og payload-validatoren landet i fase 1; ModeSelector
+ * wires inn modusen i fase 2 — inntil da har modusen ingen UI-eksponering.
+ *
  * Ved fremtidige moduser (scramble #44, etc.) utvider vi denne mappen —
  * ingen DB-migrasjon eller payload-endring nødvendig før en konkret
  * kombinasjon er implementert.
@@ -47,6 +51,7 @@ const ENABLED_COMBOS: Record<GameMode, ReadonlySet<TeamSize>> = {
   stableford: new Set<TeamSize>([1, 2]),
   best_ball_netto: new Set<TeamSize>([2]),
   singles_matchplay: new Set<TeamSize>([1]),
+  solo_strokeplay_netto: new Set<TeamSize>([1]),
 };
 
 type TileDef = {

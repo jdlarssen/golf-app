@@ -2,7 +2,11 @@
 // (lib/scoring/modes/*). Discriminated union på `kind` matcher
 // games.game_mode-discriminator i DB.
 
-export type GameMode = 'best_ball_netto' | 'stableford' | 'singles_matchplay';
+export type GameMode =
+  | 'best_ball_netto'
+  | 'stableford'
+  | 'singles_matchplay'
+  | 'solo_strokeplay_netto';
 
 /**
  * Norske visnings-labels for hver spillmodus. Brukes av ModeChip i admin-
@@ -14,6 +18,7 @@ export const MODE_LABELS: Record<GameMode, string> = {
   best_ball_netto: 'Best ball',
   stableford: 'Stableford',
   singles_matchplay: 'Matchplay',
+  solo_strokeplay_netto: 'Slagspill',
 };
 
 /**
@@ -28,12 +33,17 @@ export const MODE_LABELS: Record<GameMode, string> = {
  * Singles matchplay (epic #45):
  *  - `team_size: 1` = én spiller per side (ingen aggregering)
  *  - `teams_count: 2` = nøyaktig to sider, alltid 1v1
+ *
+ * Solo strokeplay netto (epic #46):
+ *  - `team_size: 1` = solo, hver spiller er sin egen «row»
+ *  - Klassisk slagspill: lavest sum av netto-slag (gross − HCP-strokes) vinner
  */
 export type GameModeConfig =
   | { kind: 'best_ball_netto'; team_size: 2; teams_count: 4 }
   | { kind: 'stableford'; team_size: 1; points_table: 'standard' }
   | { kind: 'stableford'; team_size: 2; points_table: 'standard' }
-  | { kind: 'singles_matchplay'; team_size: 1; teams_count: 2 };
+  | { kind: 'singles_matchplay'; team_size: 1; teams_count: 2 }
+  | { kind: 'solo_strokeplay_netto'; team_size: 1 };
 
 /**
  * Minimal hole-shape som scoring-laget trenger. Holder oss løse fra
@@ -304,6 +314,56 @@ export interface SinglesMatchplayResult {
   result: MatchplayMatchResult | null;
 }
 
+// -----------------------------------------------------------------------------
+// Solo strokeplay netto (epic #46).
+//
+// Klassisk slagspill: hver spiller fører eget scorekort, total = sum av netto-
+// slag (gross − extra strokes fra HCP-fordelingen). Lavest total vinner. Hull
+// uten gross («ikke spilt», pick-up) bidrar IKKE til totalen — vi teller dem
+// som ikke spilte, ikke som «0 slag».
+//
+// Ranking bruker 5-tier tie-break-cascade på per-hull netto-arrays (samme
+// `rankTeams`-helper som best-ball, ingen invertering siden lavest skal vinne
+// per default). For å unngå at en spiller som har spilt færre hull får et
+// urettmessig fortrinn i tie-break-cascaden, padder vi unplayed-hull med et
+// stort tall (999) — pragmatisk forenkling for v1, se JSDoc i engine-modulen.
+// -----------------------------------------------------------------------------
+
+/**
+ * Per-spiller-rad i solo strokeplay netto-resultatet.
+ *
+ * `totalNetStrokes` og `totalGrossStrokes` summerer kun spilte hull (gross
+ * !== null). En spiller som ikke har slått ennå har `totalNetStrokes: 0` og
+ * `holesPlayed: 0` — UI-laget viser typisk em-dash i den situasjonen
+ * istedenfor «0» for å gjøre forskjellen på «spilte 0 hull» og «spilte 18
+ * hull og fikk 0 over par» tydelig.
+ */
+export interface SoloStrokeplayPlayerLine {
+  userId: string;
+  /** Sum av netto-slag for spilte hull. */
+  totalNetStrokes: number;
+  /** Sum av gross-slag for spilte hull (vises på leaderboard ved siden av netto). */
+  totalGrossStrokes: number;
+  /** Antall hull spilt (gross !== null). */
+  holesPlayed: number;
+  rank: number;
+  /**
+   * Tied-with: andre spilleres userIds som har EKSAKT samme tie-break-cascade
+   * (totalNet + back9 + back6 + back3 + hole18-netto). Tom for unike rader.
+   */
+  tiedWith: string[];
+}
+
+/**
+ * Solo strokeplay netto-resultat — én rad per spiller. Returnert når
+ * `game_mode === 'solo_strokeplay_netto'`. Ingen variant-discriminator;
+ * solo er den eneste varianten i v1.
+ */
+export interface SoloStrokeplayResult {
+  kind: 'solo_strokeplay_netto';
+  players: SoloStrokeplayPlayerLine[];
+}
+
 /**
  * Discriminated union — konsumenter narrower på `kind`:
  *   const r = computeLeaderboard(ctx);
@@ -314,8 +374,12 @@ export interface SinglesMatchplayResult {
  *
  * For singles_matchplay narrower man på `kind` og leser `sides`/`holes`/
  * `holesUp`/`result` direkte — ingen videre variant-discriminator.
+ *
+ * For solo_strokeplay_netto narrower man på `kind` og leser `players`
+ * direkte — solo er den eneste varianten i v1.
  */
 export type ModeResult =
   | BestBallNettoResult
   | StablefordResult
-  | SinglesMatchplayResult;
+  | SinglesMatchplayResult
+  | SoloStrokeplayResult;

@@ -67,10 +67,15 @@ type GameRow = {
    *
    * Speilet `GameMode` fra `lib/scoring/modes/types.ts` — utvides når nye
    * moduser landes (matchplay i epic #45 fase 1; UI-grenen for matchplay
-   * kommer i fase 2). Holdt som lokal alias for å unngå dyptkoblet import
+   * kommer i fase 2; solo strokeplay netto i epic #46 fase 1 — UI-grenen
+   * kommer i fase 2-3). Holdt som lokal alias for å unngå dyptkoblet import
    * i en server-component som allerede leser status-unionen lokalt.
    */
-  game_mode: 'best_ball_netto' | 'stableford' | 'singles_matchplay';
+  game_mode:
+    | 'best_ball_netto'
+    | 'stableford'
+    | 'singles_matchplay'
+    | 'solo_strokeplay_netto';
   courses: { name: string } | null;
   tee_boxes:
     | (TeeBoxRatings & { name: string; length_meters: number | null })
