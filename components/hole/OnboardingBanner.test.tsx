@@ -14,7 +14,7 @@ describe('OnboardingBanner', () => {
     render(<OnboardingBanner visible={true} onDismiss={() => {}} />);
     expect(screen.getByText('Prøv dette:')).toBeInTheDocument();
     expect(
-      screen.getByText(/Trykk det øverste kortet for å sette par/),
+      screen.getByText(/Trykk på det øverste kortet for å sette par/),
     ).toBeInTheDocument();
   });
 

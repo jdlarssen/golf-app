@@ -75,7 +75,7 @@ describe('ScoreCard — rendering', () => {
 describe('ScoreCard — helper text', () => {
   it('unset shows buttons helper', () => {
     setup({ score: null });
-    expect(screen.getByText('Tap kort = par. Bruk − / +.')).toBeInTheDocument();
+    expect(screen.getByText('Trykk kort = par. Bruk − / +.')).toBeInTheDocument();
   });
 
   it('viser «Netto X» når score er satt med positive ekstra slag', () => {
@@ -140,7 +140,7 @@ describe('ScoreCard — helper text', () => {
 
   it('viser instruksjon-tekst når score er null uavhengig av extraStrokes', () => {
     setup({ score: null, extraStrokes: 3 });
-    expect(screen.getByText('Tap kort = par. Bruk − / +.')).toBeInTheDocument();
+    expect(screen.getByText('Trykk kort = par. Bruk − / +.')).toBeInTheDocument();
     expect(screen.queryByText(/Netto/)).not.toBeInTheDocument();
   });
 
