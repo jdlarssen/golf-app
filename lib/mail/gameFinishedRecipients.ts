@@ -11,6 +11,7 @@ import type {
   GameMode,
   GameModeConfig,
 } from '@/lib/scoring/modes/types';
+import { firstName } from '@/lib/firstName';
 import type { GameFinishedNotificationMode } from './gameFinishedNotification';
 
 export interface FinishedMailRecipient {
@@ -48,17 +49,20 @@ export async function buildGameFinishedRecipients(
     mode_config: GameModeConfig;
   },
 ): Promise<FinishedMailRecipient[]> {
-  // Felles fetch: hent game_players med email + course_handicap. Gjelder
-  // begge moduser, så vi gjør den én gang.
+  // Felles fetch: hent game_players med email + course_handicap + team_number.
+  // Gjelder begge moduser, så vi gjør den én gang. `team_number` brukes kun
+  // av team-stableford-grenen (for partner-name-lookup), men har null cost å
+  // ta med — kolonnen står på alle game_players-rader (NOT NULL siden 0030).
   const { data: playerRows, error: playerErr } = await supabase
     .from('game_players')
     .select(
-      'user_id, course_handicap, users!game_players_user_id_fkey(email, name)',
+      'user_id, team_number, course_handicap, users!game_players_user_id_fkey(email, name)',
     )
     .eq('game_id', gameId)
     .returns<
       {
         user_id: string;
+        team_number: number | null;
         course_handicap: number | null;
         users: { email: string | null; name: string | null } | null;
       }[]
@@ -118,7 +122,10 @@ export async function buildGameFinishedRecipients(
     },
     players: playerRows.map((row) => ({
       userId: row.user_id,
-      teamNumber: null,
+      // Team-grenen i stableford-scoring grupperer på teamNumber, så vi MÅ
+      // sende det videre for par-stableford. Solo-grenen ignorerer feltet,
+      // så ingen skade i å sende det også der.
+      teamNumber: row.team_number,
       flightNumber: null,
       courseHandicap: row.course_handicap ?? 0,
     })),
@@ -134,11 +141,8 @@ export async function buildGameFinishedRecipients(
     })),
   });
 
-  if (result.kind !== 'stableford' || result.variant !== 'solo') {
-    // Skal aldri skje siden vi tvinger game_mode=stableford og team_size=1
-    // her, men beskytter mot en mode-router-bug ved å falle tilbake til
-    // best-ball-copy. Team-varianten håndteres i en senere fase (mail-copy
-    // for par-stableford kommer i Phase 4 av epic #43).
+  if (result.kind !== 'stableford') {
+    // Defensive: mode-router gav noe uventet. Fall til best-ball-copy.
     return playerRows
       .map((row) => ({
         email: row.users?.email ?? null,
@@ -149,22 +153,87 @@ export async function buildGameFinishedRecipients(
       });
   }
 
-  const totalPlayers = result.players.length;
-  const lineByUserId = new Map(result.players.map((p) => [p.userId, p]));
+  // Solo-stableford: én rad per spiller, rank/poeng per-spiller direkte
+  // fra result.players.
+  if (result.variant === 'solo') {
+    const totalPlayers = result.players.length;
+    const lineByUserId = new Map(result.players.map((p) => [p.userId, p]));
+
+    const recipients: FinishedMailRecipient[] = [];
+    for (const row of playerRows) {
+      const email = row.users?.email ?? null;
+      if (!email) continue;
+      const line = lineByUserId.get(row.user_id);
+      const mode: GameFinishedNotificationMode | undefined = line
+        ? {
+            kind: 'stableford',
+            variant: 'solo',
+            rank: line.rank,
+            totalPoints: line.totalPoints,
+            totalPlayers,
+          }
+        : undefined;
+      recipients.push({
+        email,
+        name: row.users?.name ?? null,
+        mode,
+      });
+    }
+    return recipients;
+  }
+
+  // Team-stableford (par-stableford / 4BBB): én rad per LAG, hver spiller
+  // på laget får samme teamRank + teamTotalPoints, men sin egen partner.
+  const totalTeams = result.teams.length;
+  // Map userId → team-line + alle lagmedlemmer (for partner-name-lookup).
+  type TeamContext = {
+    teamRank: number;
+    teamTotalPoints: number;
+    memberUserIds: string[];
+  };
+  const teamCtxByUserId = new Map<string, TeamContext>();
+  for (const team of result.teams) {
+    const ctx: TeamContext = {
+      teamRank: team.rank,
+      teamTotalPoints: team.totalPoints,
+      memberUserIds: team.playerIds,
+    };
+    for (const uid of team.playerIds) {
+      teamCtxByUserId.set(uid, ctx);
+    }
+  }
+
+  // Bygg navn-map fra playerRows slik at vi kan slå opp partnerens fornavn
+  // uten ekstra DB-roundtrip.
+  const nameByUserId = new Map<string, string | null>();
+  for (const row of playerRows) {
+    nameByUserId.set(row.user_id, row.users?.name ?? null);
+  }
 
   const recipients: FinishedMailRecipient[] = [];
   for (const row of playerRows) {
     const email = row.users?.email ?? null;
     if (!email) continue;
-    const line = lineByUserId.get(row.user_id);
-    const mode: GameFinishedNotificationMode | undefined = line
-      ? {
-          kind: 'stableford',
-          rank: line.rank,
-          totalPoints: line.totalPoints,
-          totalPlayers,
-        }
-      : undefined;
+    const ctx = teamCtxByUserId.get(row.user_id);
+    let mode: GameFinishedNotificationMode | undefined;
+    if (ctx) {
+      // Partner = alle på laget unntatt meg selv. Par-stableford har 2 per
+      // lag, så det blir én entry her — men loop-en håndterer trygt edge-
+      // cases (1 eller flere "partnere"). Tar første ikke-tomme fornavn.
+      const partnerIds = ctx.memberUserIds.filter((id) => id !== row.user_id);
+      const partnerName =
+        partnerIds.length > 0
+          ? firstName(nameByUserId.get(partnerIds[0]) ?? null) ?? null
+          : null;
+      mode = {
+        kind: 'stableford',
+        variant: 'team',
+        teamRank: ctx.teamRank,
+        teamTotalPoints: ctx.teamTotalPoints,
+        teamPartnerName: partnerName,
+        totalTeams,
+      };
+    }
     recipients.push({
       email,
       name: row.users?.name ?? null,

@@ -25,9 +25,12 @@ function getClient(): Resend {
 /**
  * Mode-spesifikk personalisering av mail-body.
  *
- *   - `kind: 'stableford'` legger inn en personlig plassering + poeng-linje
- *     («Du endte på 3. plass med 32 poeng») så hver spiller får et eget
- *     resultat-spoiler i innboksen.
+ *   - `kind: 'stableford'` + `variant: 'solo'` legger inn en personlig
+ *     plassering + poeng-linje («Du endte på 3. plass med 32 poeng») så hver
+ *     spiller får et eget resultat-spoiler i innboksen.
+ *   - `kind: 'stableford'` + `variant: 'team'` (par-stableford / 4BBB) bruker
+ *     lag-plassering + lag-poeng + partnernavn slik at begge på laget får
+ *     samme spoiler-tone selv om de hadde ulik individuell prestasjon.
  *   - `kind: 'best_ball_netto'` (eller udefinert) bruker dagens nøytrale
  *     copy («Runden er ferdig — leaderboard er åpen») fordi lag-vinneren
  *     ikke nødvendigvis er én spesifikk spiller å adressere.
@@ -36,12 +39,29 @@ export type GameFinishedNotificationMode =
   | { kind: 'best_ball_netto' }
   | {
       kind: 'stableford';
+      variant: 'solo';
       /** Spillerens slutt-plassering (1, 2, 3, ...). */
       rank: number;
       /** Spillerens totale stableford-poeng. */
       totalPoints: number;
       /** Totalt antall spillere i turneringen — gir kontekst til plasseringen. */
       totalPlayers: number;
+    }
+  | {
+      kind: 'stableford';
+      variant: 'team';
+      /** Lagets slutt-plassering (1, 2, 3, ...). */
+      teamRank: number;
+      /** Lagets totale stableford-poeng (sum av MAX-poeng per hull). */
+      teamTotalPoints: number;
+      /**
+       * Partnerens fornavn (eller hele navnet hvis fornavnet ikke kan parses).
+       * `null` hvis spilleren står alene på laget (defensiv — par-stableford
+       * tvinger 2 per lag i payload-validatoren, men vi forsvarer mail-laget).
+       */
+      teamPartnerName: string | null;
+      /** Totalt antall lag i turneringen — gir kontekst til plasseringen. */
+      totalTeams: number;
     };
 
 export type GameFinishedNotificationParams = {
@@ -68,15 +88,20 @@ export async function sendGameFinishedNotification(
   const leaderboardUrl = `https://tornygolf.no/games/${gameId}/leaderboard`;
   const salutation = playerFirstName ? `Hei ${playerFirstName}!` : 'Hei!';
 
-  // Mode-spesifikk hovedlinje. Stableford får en personlig plassering-spoiler;
-  // best-ball (eller udefinert) får dagens nøytrale ferdig-melding.
+  // Mode-spesifikk hovedlinje. Stableford får en personlig plassering-spoiler
+  // (solo: individuell rank, team: lag-rank); best-ball (eller udefinert) får
+  // dagens nøytrale ferdig-melding.
   const bodyLine =
     mode?.kind === 'stableford'
-      ? formatStablefordBodyLine(mode, gameName)
+      ? mode.variant === 'team'
+        ? formatStablefordTeamBodyLine(mode, gameName)
+        : formatStablefordSoloBodyLine(mode, gameName)
       : `Runden i <strong>${escapeHtml(gameName)}</strong> er ferdig — alle scorekort er levert og godkjent, og leaderboard er åpen.`;
   const bodyLineText =
     mode?.kind === 'stableford'
-      ? formatStablefordBodyLineText(mode, gameName)
+      ? mode.variant === 'team'
+        ? formatStablefordTeamBodyLineText(mode, gameName)
+        : formatStablefordSoloBodyLineText(mode, gameName)
       : `Runden i ${gameName} er ferdig — alle scorekort er levert og godkjent, og leaderboard er åpen.`;
 
   const html = `<!DOCTYPE html><html lang="nb">
@@ -146,26 +171,35 @@ export async function sendGameFinishedNotification(
 }
 
 /**
- * Bygger stableford-hovedlinjen (HTML-versjon). Skiller mellom topp-3 og
+ * Felles celebration-tilegg for stableford-grenene (solo + team). 1.-plass
+ * får «Gratulerer med seieren!», 2./3.-plass får «Solid plassering!», resten
+ * får ingen ekstra-fyll — tonen forblir nøytral.
+ */
+function celebrationFor(rank: number): string {
+  if (rank === 1) return ' Gratulerer med seieren!';
+  if (rank === 2 || rank === 3) return ' Solid plassering!';
+  return '';
+}
+
+/**
+ * Bygger solo-stableford-hovedlinjen (HTML-versjon). Skiller mellom topp-3 og
  * resten med en liten ekstra gratulasjon, ellers nøytral tone.
  *
  * Bruker ordinal-norsk plassering («1. plass», «2. plass»...) for å speile
  * resten av app-en (podium, leaderboard).
  */
-function formatStablefordBodyLine(
-  mode: Extract<GameFinishedNotificationMode, { kind: 'stableford' }>,
+function formatStablefordSoloBodyLine(
+  mode: Extract<
+    GameFinishedNotificationMode,
+    { kind: 'stableford'; variant: 'solo' }
+  >,
   gameName: string,
 ): string {
   const { rank, totalPoints, totalPlayers } = mode;
   const placeText = `${rank}. plass`;
   const pointsText = pluralizePoints(totalPoints);
   const ofTotal = totalPlayers > 0 ? ` av ${totalPlayers}` : '';
-  const celebration =
-    rank === 1
-      ? ' Gratulerer med seieren!'
-      : rank === 2 || rank === 3
-        ? ' Solid plassering!'
-        : '';
+  const celebration = celebrationFor(rank);
 
   return (
     `Runden i <strong>${escapeHtml(gameName)}</strong> er ferdig. ` +
@@ -174,24 +208,82 @@ function formatStablefordBodyLine(
   );
 }
 
-function formatStablefordBodyLineText(
-  mode: Extract<GameFinishedNotificationMode, { kind: 'stableford' }>,
+function formatStablefordSoloBodyLineText(
+  mode: Extract<
+    GameFinishedNotificationMode,
+    { kind: 'stableford'; variant: 'solo' }
+  >,
   gameName: string,
 ): string {
   const { rank, totalPoints, totalPlayers } = mode;
   const placeText = `${rank}. plass`;
   const pointsText = pluralizePoints(totalPoints);
   const ofTotal = totalPlayers > 0 ? ` av ${totalPlayers}` : '';
-  const celebration =
-    rank === 1
-      ? ' Gratulerer med seieren!'
-      : rank === 2 || rank === 3
-        ? ' Solid plassering!'
-        : '';
+  const celebration = celebrationFor(rank);
 
   return (
     `Runden i ${gameName} er ferdig. ` +
     `Du endte på ${placeText}${ofTotal} med ${totalPoints} ${pointsText}.${celebration}`
+  );
+}
+
+/**
+ * Bygger par-stableford-hovedlinjen (HTML-versjon). Speilar solo-grenen
+ * strukturelt, men adresserer LAGET i stedet for spilleren («Laget endte på
+ * 2. plass av 4 lag med 56 poeng»). En andre setning navngir partneren
+ * («Du og Bjørn satt sammen på lag.») slik at mottakeren raskt ser hvem hen
+ * deltok med — kan være forskjellig fra spill til spill.
+ *
+ * Hvis partnernavnet mangler (defensiv mot data-rad uten team-mate)
+ * dropper vi partner-linjen helt — heller en kortere mail enn en stygg
+ * «Du og null satt sammen»-fallback.
+ */
+function formatStablefordTeamBodyLine(
+  mode: Extract<
+    GameFinishedNotificationMode,
+    { kind: 'stableford'; variant: 'team' }
+  >,
+  gameName: string,
+): string {
+  const { teamRank, teamTotalPoints, teamPartnerName, totalTeams } = mode;
+  const placeText = `${teamRank}. plass`;
+  const pointsText = pluralizePoints(teamTotalPoints);
+  const ofTotal = totalTeams > 0 ? ` av ${totalTeams} lag` : '';
+  const celebration = celebrationFor(teamRank);
+
+  const partnerSentence = teamPartnerName
+    ? ` Du og <strong>${escapeHtml(teamPartnerName)}</strong> satt sammen på lag.`
+    : '';
+
+  return (
+    `Runden i <strong>${escapeHtml(gameName)}</strong> er ferdig. ` +
+    `Laget endte på <strong>${escapeHtml(placeText)}${escapeHtml(ofTotal)}</strong> med ` +
+    `<strong>${teamTotalPoints} ${escapeHtml(pointsText)}</strong>.${escapeHtml(celebration)}` +
+    partnerSentence
+  );
+}
+
+function formatStablefordTeamBodyLineText(
+  mode: Extract<
+    GameFinishedNotificationMode,
+    { kind: 'stableford'; variant: 'team' }
+  >,
+  gameName: string,
+): string {
+  const { teamRank, teamTotalPoints, teamPartnerName, totalTeams } = mode;
+  const placeText = `${teamRank}. plass`;
+  const pointsText = pluralizePoints(teamTotalPoints);
+  const ofTotal = totalTeams > 0 ? ` av ${totalTeams} lag` : '';
+  const celebration = celebrationFor(teamRank);
+
+  const partnerSentence = teamPartnerName
+    ? ` Du og ${teamPartnerName} satt sammen på lag.`
+    : '';
+
+  return (
+    `Runden i ${gameName} er ferdig. ` +
+    `Laget endte på ${placeText}${ofTotal} med ${teamTotalPoints} ${pointsText}.${celebration}` +
+    partnerSentence
   );
 }
 

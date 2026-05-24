@@ -14,6 +14,32 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Stableford-turneringer kan nå spilles som par (4BBB / fyrball). Velg Stableford som modus og Par som lagstørrelse, så kan du melde på 2/4/6/8 spillere fordelt på 1–4 lag à 2 — laget får poengene fra det høyeste stableford-resultatet på hvert hull.
 
+### [1.11.2] - 2026-05-24
+
+> Når par-stableford-spillet avsluttes får spillerne mail om lagets plassering og poeng, ikke en generisk best-ball-mail. Admin-flaten viser lag-grupperingen korrekt for par-spill — kun de lag som faktisk har spillere vises, og redundante Flight-kolonner er skjult.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `lib/mail/gameFinishedNotification.ts` — `GameFinishedNotificationMode` har ny `kind: 'stableford', variant: 'team'`-gren med `teamRank`, `teamTotalPoints`, `teamPartnerName` (fornavn eller hele navnet hvis fornavn ikke kan parses, `null` for defensiv-fallback) og `totalTeams`. Solo-grenen er nå eksplisitt merket `variant: 'solo'` for symmetri. Body-builder rendrer team-grenen som «Laget endte på X. plass av N lag med Y poeng» + en partner-setning «Du og {partner} satt sammen på lag.» (droppet helt hvis partnernavn er `null`). Celebration-tilegget (1.-plass: «Gratulerer med seieren!», 2./3.: «Solid plassering!») er løftet ut til en `celebrationFor()`-helper som begge grenene deler. 4 nye snapshot-style tester dekker 1.-plass, 2.-plass (med partnernavn), 4.-plass (uten celebration) og null-partner-fallback.
+- `lib/mail/gameFinishedRecipients.ts` — team-stableford-grenen bygger per-spiller mottakerliste der hver mottaker får sin egen `teamPartnerName` slik at Ada ser «Du og Bjørn satt sammen» og Bjørn ser «Du og Ada satt sammen». Selectsen utvidet med `team_number` (NOT NULL siden 0030, gratis å ta med for begge moduser), og scoring-context-en sender `teamNumber` videre slik at `computeTeam()` faktisk grupperer riktig. 4 nye tester: 4 spillere på 2 lag (begge får rett partnernavn), 8 spillere på 4 lag (totalTeams reflekterer lag, ikke spillere), spillere uten mail droppes men team-totalene består, partner uten navn → `teamPartnerName: null`.
+
+#### Changed
+- `app/admin/games/[id]/page.tsx` — fetcher nå `mode_config` slik at vi kan skille `isParStableford` fra solo-stableford og fra best-ball. Tre tilpasninger basert på narrow-ingen:
+  - Spillform-raden i Format-cardet viser «Par-stableford» (i stedet for «Stableford») når `mode_config.team_size === 2`.
+  - Lag-grid viser kun lag som faktisk har spillere for par-stableford (1-4 lag), i stedet for hardkodede 4 lag med «(tom)»-placeholdere. Best-ball beholder fast 4-grid siden formatet alltid er 4 lag à 2.
+  - Spillere-tabellen dropper Flight-kolonnen for par-stableford (flight = team mekanisk siden Phase 2 — kolonnen ville duplisert Lag-tallet). Best-ball viser begge kolonnene som før. Solo dropper begge.
+  - Flights-seksjonen skjules for par-stableford (samme grunn — duplikat av Lag-seksjonen).
+  - «Leverte scorekort»-listen viser kun «Lag N» for par-stableford, og dropper hele lag/flight-linjen for solo.
+  - «Antall lag X / 4»-raden i Påmelding-cardet skjules for solo (alltid 0).
+
+#### Notes
+- Mode-aware-mail er backwards-compatible: existing solo-spill og best-ball-spill får samme mail-copy som før (solo-snapshot-testene er kun strammet til å sende `variant: 'solo'` eksplisitt). Defensive narrowing — hvis mode-router returnerer noe uventet faller helperen til best-ball-grenen.
+- Phase 4 lukker epic #43. Par-stableford er nå end-to-end shipped: scoring + validation (Phase 1, #151), admin GameForm (Phase 2, #152), live-leaderboard + podium (Phase 3, #153) og mail + admin-detalj-polish (denne fasen).
+
+</details>
+
 ### [1.11.1] - 2026-05-24
 
 > Når par-stableford-spillet er i gang ser spillerne nå et lag-leaderboard med begge partnernes poeng. Avsluttet spill viser podium for topp 3 lag — 1.-plassen feires med konfetti.
