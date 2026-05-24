@@ -14,6 +14,22 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Ny spillmodus for laget som vil spille sosialt — én ball per lag, alle slår fra beste slag. Skalerer fra 2-mannslag (par-format) til 4-mannslag (klassisk firma-cup). Lag-handicap regnes etter NGF-aggregatet (25 % av summert HCP for 2-mannslag, 10 % for 4-mannslag), justerbart per spill. Issue [#44](https://github.com/jdlarssen/golf-app/issues/44).
 
+### [1.16.4] - 2026-05-25
+
+> Admin-flaten for Texas scramble-spill viser kun lag som faktisk har spillere, og dropper Flights-seksjonen siden flight automatisk speiler lag-tilordningen. Reduserer visuelt støy på Texas-detalj-sider.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+- `app/admin/games/[id]/page.tsx` — ny `isTexas`-narrowing (`game.game_mode === 'texas_scramble'`). Påvirker to seksjoner: (a) Lag-grid-en (linje 580-585) filtrerer nå Texas-spill etter samme regel som par-stableford — kun lag med spillere vises, ingen tomme «(tom)»-placeholders; (b) Flights-seksjonen (linje 615) skipper for Texas siden flight = team mekanisk (validatoren håndhever `flight_number = team_number`). Speilet par-stableford-pattern: vi vil ikke duplisere Lag-seksjonen som Flights.
+
+#### Notes
+- Player-facing game-home (`app/games/[id]/page.tsx`) trenger ingen Texas-spesifikk endring: «Din info»-cardet viser «Lag X / Flight Y»-paret som leser fint for Texas, og FlightRoster fungerer fordi Texas-spillere har `flight_number` satt (= team_number) i motsetning til solo-modi.
+- Mode-label «Texas scramble» fra `MODE_LABELS` brukes automatisk i admin-detail-pagens Format-card.
+
+</details>
+
 ### [1.16.3] - 2026-05-25
 
 > Når Texas scramble-spillet avsluttes får hver spiller mail med lagets plassering og lagets netto-total. Mailen navngir lagkameratene dine («Du spilte med Bjørn, Carla og Dagfinn») slik at du ser hvem du gikk runden med uten å åpne leaderboardet.

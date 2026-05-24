@@ -365,6 +365,11 @@ async function PlayersSections({
     game.game_mode === 'stableford' && game.mode_config.team_size === 2;
   const isMatchplay = game.game_mode === 'singles_matchplay';
   const isBestBall = game.game_mode === 'best_ball_netto';
+  // Texas scramble: lag-modus med variabel lagstørrelse (2 eller 4) og
+  // variabelt antall lag. Speilar par-stableford visuelt — vi viser kun
+  // lag som har spillere, og flight-seksjonen droppes siden flight = team
+  // mekanisk (validatoren håndhever det).
+  const isTexas = game.game_mode === 'texas_scramble';
 
   // Spillform-label for Format-cardet — speiler leaderboard-flatene som
   // skiller solo vs par-stableford eksplisitt. Matchplay og solo strokeplay
@@ -576,11 +581,12 @@ async function PlayersSections({
                 blir gridet dominert av «(tom)»-placeholdere. Best-ball er fast
                 4 lag à 2 og bør beholde tomme-slots så admin ser om lag mangler.
                 Matchplay er fast 2 sider à 1 spiller — vis kun Side 1 og Side 2,
-                aldri 3/4 (validatoren håndhever 1+1). */}
+                aldri 3/4 (validatoren håndhever 1+1). Texas scramble skalerer
+                1-4 lag (avhengig av lagstørrelse) — speilar par-stableford. */}
             {[1, 2, 3, 4]
               .filter((team) => {
                 if (isMatchplay) return team <= 2;
-                if (isParStableford) return byTeam[team].length > 0;
+                if (isParStableford || isTexas) return byTeam[team].length > 0;
                 return true;
               })
               .map((team) => (
@@ -610,9 +616,10 @@ async function PlayersSections({
 
       {/* Par-stableford har flight = team mekanisk — Flights-seksjonen ville
           duplisert Lag-seksjonen rett over. Matchplay har samme mekanikk
-          (flight = side via payload-laget). Skip for solo (ingen flights),
-          par-stableford og matchplay. */}
-      {!isSolo && !isParStableford && !isMatchplay &&
+          (flight = side via payload-laget). Texas scramble har samme regel
+          (validatoren setter flight = team). Skip for solo (ingen flights),
+          par-stableford, matchplay og Texas. */}
+      {!isSolo && !isParStableford && !isMatchplay && !isTexas &&
         [1, 2, 3, 4].some((f) => byFlight[f].length > 0) && (
         <SectionCard ribbon="Flights">
           <ul className="space-y-2 px-3.5 pb-3.5 pt-3">
