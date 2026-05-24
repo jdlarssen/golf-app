@@ -171,7 +171,8 @@ function parseGameMode(formData: FormData): GameMode | null {
   if (
     raw === 'best_ball_netto' ||
     raw === 'stableford' ||
-    raw === 'singles_matchplay'
+    raw === 'singles_matchplay' ||
+    raw === 'solo_strokeplay_netto'
   )
     return raw;
   return null;
@@ -464,6 +465,55 @@ function validateSinglesMatchplay(
   };
 }
 
+/**
+ * Solo strokeplay netto-validator (epic #46 — klassisk slagspill).
+ *
+ * Speiler solo-stableford-mønsteret tett: hver spiller er sin egen «row»,
+ * ingen lag-tilordning, ingen flight-tilordning. Forskjellen er kun mode_config
+ * og selve scoring-modusen i `lib/scoring/`.
+ *
+ * Regler:
+ *  - publish krever ≥1 spiller (samme som solo-stableford — én spiller er nok
+ *    så lenge admin har valgt modusen eksplisitt)
+ *  - draft tolererer 0 spillere
+ *  - duplikat-sjekk uendret
+ *  - team_number / flight_number nullstilles alltid, uavhengig av stale
+ *    form-inputs (DB-CHECK `game_players_team_flight_consistency` krever
+ *    begge satt eller null sammen for solo)
+ *
+ * Mode_config-output: `{kind, team_size: 1}`.
+ *
+ * Player-slot-loopen leser opp til 8 slots fra dagens GameForm — kan utvides
+ * forbi dette i en senere fase uten skjema-endring (samme begrensning som
+ * solo-stableford).
+ */
+function validateSoloStrokeplayNetto(
+  formData: FormData,
+  mode: PayloadMode,
+): ModeValidationResult {
+  const players: GamePlayerInput[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < 8; i++) {
+    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
+    if (!user_id) continue;
+    if (seen.has(user_id)) {
+      return { ok: false, errorCode: 'duplicate_player' };
+    }
+    seen.add(user_id);
+    players.push({ user_id, team_number: null, flight_number: null });
+  }
+
+  if (mode === 'publish' && players.length < 1) {
+    return { ok: false, errorCode: 'min_players_for_mode' };
+  }
+
+  return {
+    ok: true,
+    players,
+    mode_config: { kind: 'solo_strokeplay_netto', team_size: 1 },
+  };
+}
+
 const modeValidators: Record<
   GameMode,
   (formData: FormData, mode: PayloadMode) => ModeValidationResult
@@ -471,6 +521,7 @@ const modeValidators: Record<
   best_ball_netto: validateBestBallNetto,
   stableford: validateStableford,
   singles_matchplay: validateSinglesMatchplay,
+  solo_strokeplay_netto: validateSoloStrokeplayNetto,
 };
 
 /**

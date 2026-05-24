@@ -604,3 +604,82 @@ describe('buildGameInsertPayload — singles_matchplay (epic #45)', () => {
     expect(result.players[1].flight_number).toBe(2);
   });
 });
+
+describe('buildGameInsertPayload — solo_strokeplay_netto (epic #46)', () => {
+  /**
+   * Helper for solo strokeplay netto-payloads. Speiler stablefordFd-mønsteret:
+   * solo-modus, ingen lag/flight-tilordning, kun spillere som flate slots.
+   */
+  function strokeplayFd(
+    extras: Record<string, string> = {},
+    playerIds: string[] = ['u1', 'u2'],
+  ): FormData {
+    const base: Record<string, string> = {
+      name: 'Slagspill Cup',
+      course_id: 'c1',
+      tee_box_id: 't1',
+      game_mode: 'solo_strokeplay_netto',
+    };
+    playerIds.forEach((id, i) => {
+      base[`player_${i}_id`] = id;
+    });
+    return fd({ ...base, ...extras });
+  }
+
+  it('publish med 2 spillere → ok, mode_config korrekt, alle team/flight null', () => {
+    const result = buildGameInsertPayload(strokeplayFd(), 'publish');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.game_mode).toBe('solo_strokeplay_netto');
+    expect(result.mode_config).toEqual({
+      kind: 'solo_strokeplay_netto',
+      team_size: 1,
+    });
+    expect(result.players).toEqual([
+      { user_id: 'u1', team_number: null, flight_number: null },
+      { user_id: 'u2', team_number: null, flight_number: null },
+    ]);
+  });
+
+  it('publish med 1 spiller → ok (én spiller er nok så lenge admin valgte modusen)', () => {
+    const result = buildGameInsertPayload(strokeplayFd({}, ['u1']), 'publish');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(1);
+  });
+
+  it('publish med 0 spillere → min_players_for_mode', () => {
+    const result = buildGameInsertPayload(strokeplayFd({}, []), 'publish');
+    expect(result.errorCode).toBe('min_players_for_mode');
+  });
+
+  it('draft tolererer 0 spillere', () => {
+    const result = buildGameInsertPayload(strokeplayFd({}, []), 'draft');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toEqual([]);
+  });
+
+  it('rejecter duplikat spiller', () => {
+    const result = buildGameInsertPayload(
+      strokeplayFd({}, ['u1', 'u1']),
+      'publish',
+    );
+    expect(result.errorCode).toBe('duplicate_player');
+  });
+
+  it('ignorerer stale team/flight inputs (normaliserer til null)', () => {
+    // Hvis admin har byttet modus i UI-en uten å nullstille tidligere
+    // lag-tildelinger, skal builderen normalisere bort verdiene — DB-CHECK
+    // krever team og flight null sammen for solo.
+    const result = buildGameInsertPayload(
+      strokeplayFd({
+        player_0_team: '1',
+        player_0_flight: '1',
+        player_1_team: '2',
+        player_1_flight: '1',
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players.every((p) => p.team_number === null)).toBe(true);
+    expect(result.players.every((p) => p.flight_number === null)).toBe(true);
+  });
+});
