@@ -21,6 +21,7 @@ import { logAdminEvent } from '@/lib/admin/auditLog';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { notify } from '@/lib/notifications/notify';
+import { notifyPlayersGameFinished } from '@/lib/notifications/events';
 
 async function requireAdmin() {
   const supabase = await getServerClient();
@@ -316,26 +317,11 @@ export async function endGame(gameId: string) {
   // parallelt med mail-blasten lenger ned. Phase 4-gating: aktive spillere
   // (last_seen_at < 5 min) får kun in-app; off-app-spillere får mail som
   // backup. Notify-feil → ikke send mail (samme rasjonale som inni notify()).
-  const notifyResults = await Promise.allSettled(
-    players!.map((p) =>
-      notify({
-        userId: p.user_id,
-        kind: 'game_finished',
-        payload: {
-          game_id: gameId,
-          game_name: game!.name,
-        },
-      }).then((r) => ({ userId: p.user_id, sendMail: r.shouldAlsoSendMail })),
-    ),
+  const sendMailByUserId = await notifyPlayersGameFinished(
+    players!,
+    { id: gameId, name: game!.name },
+    'endGame',
   );
-  const sendMailByUserId = new Map<string, boolean>();
-  for (const r of notifyResults) {
-    if (r.status === 'fulfilled') {
-      sendMailByUserId.set(r.value.userId, r.value.sendMail);
-    } else {
-      console.error('[endGame] game_finished notify failed', r.reason);
-    }
-  }
 
   // Best-effort: send "Resultatet er klart"-mail kun til off-app-spillere.
   // Failures er loggført men aborter aldri actionen — leaderboardet er
