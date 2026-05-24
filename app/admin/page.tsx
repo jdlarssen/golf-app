@@ -66,13 +66,13 @@ type Activity = {
 // Page — shell. Each data-bearing section sits behind a Suspense boundary
 // so the shell paints immediately and each section streams in as its query
 // wave resolves. Top-level er async kun for å hente userId til
-// NotificationBell-mountingen i TopBar — proxy.ts forwarder den allerede via
-// x-torny-user-id-header, så det er en ren header-lookup uten DB-roundtrip.
+// NotificationBell-mountingen i TopBar — vi går via getAdminContext() så
+// header-lookup-en cachet og deles med Suspense-bodies under.
 export default async function AdminSekretariat() {
   const now = new Date();
   const dateLine = formatDateNb(now);
   const timeOfDay = greeting(now);
-  const userId = await getProxyVerifiedUserId();
+  const { userId } = await getAdminContext();
 
   return (
     <AdminShell>
