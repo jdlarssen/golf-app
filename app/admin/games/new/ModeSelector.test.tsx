@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { ModeSelector } from './ModeSelector';
 
 describe('ModeSelector', () => {
-  it('rendrer to tiles: Stableford og Best ball netto, gruppert i et radiogroup', () => {
+  it('rendrer tre tiles: Stableford, Best ball netto og Matchplay, gruppert i et radiogroup', () => {
     render(<ModeSelector value="best_ball_netto" onChange={() => {}} />);
 
     expect(
@@ -11,6 +11,7 @@ describe('ModeSelector', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /stableford/i })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /best ball/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /matchplay/i })).toBeInTheDocument();
   });
 
   it('viser beskrivelses-tekst for hver modus', () => {
@@ -22,6 +23,9 @@ describe('ModeSelector', () => {
     expect(
       screen.getByText(/sum av beste netto-resultat/i),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText(/1v1 hull-for-hull/i),
+    ).toBeInTheDocument();
   });
 
   it('markerer valgt tile som checked via aria-checked', () => {
@@ -29,8 +33,10 @@ describe('ModeSelector', () => {
 
     const stbl = screen.getByRole('radio', { name: /stableford/i });
     const bbn = screen.getByRole('radio', { name: /best ball/i });
+    const mp = screen.getByRole('radio', { name: /matchplay/i });
     expect(stbl.getAttribute('aria-checked')).toBe('false');
     expect(bbn.getAttribute('aria-checked')).toBe('true');
+    expect(mp.getAttribute('aria-checked')).toBe('false');
   });
 
   it('caller onChange med ny modus ved tile-klikk', () => {
@@ -42,6 +48,16 @@ describe('ModeSelector', () => {
 
     fireEvent.click(screen.getByRole('radio', { name: /best ball/i }));
     expect(onChange).toHaveBeenLastCalledWith('best_ball_netto');
+
+    fireEvent.click(screen.getByRole('radio', { name: /matchplay/i }));
+    expect(onChange).toHaveBeenLastCalledWith('singles_matchplay');
+  });
+
+  it('matchplay-tile får aria-checked=true når value=singles_matchplay', () => {
+    render(<ModeSelector value="singles_matchplay" onChange={() => {}} />);
+
+    const mp = screen.getByRole('radio', { name: /matchplay/i });
+    expect(mp.getAttribute('aria-checked')).toBe('true');
   });
 
   it('ignorerer klikk når disabled=true', () => {
@@ -51,6 +67,7 @@ describe('ModeSelector', () => {
     );
 
     fireEvent.click(screen.getByRole('radio', { name: /stableford/i }));
+    fireEvent.click(screen.getByRole('radio', { name: /matchplay/i }));
     expect(onChange).not.toHaveBeenCalled();
   });
 });

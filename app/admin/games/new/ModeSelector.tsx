@@ -114,6 +114,34 @@ const BestBallIcon = (
   </svg>
 );
 
+// Matchplay-ikon: to flagg-stenger speilet mot hverandre med et lite «vs»-
+// punkt i midten. Signaliserer 1v1-duell uten å låne fra typiske «sverd»-
+// metaforer (skulle ikke nødvendigvis være krig — det er to spillere som
+// møter hverandre). Holder samme stroke-vekt og rounded caps som de andre
+// tile-ikonene for visuell konsistens.
+const MatchplayIcon = (
+  <svg
+    width={28}
+    height={28}
+    viewBox="0 0 28 28"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.5}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    {/* Venstre flagg-stenger (side 1) — peker mot høyre. */}
+    <line x1="6" y1="5" x2="6" y2="23" />
+    <path d="M 6 6 L 11 7.5 L 6 9 Z" fill="currentColor" stroke="none" />
+    {/* Høyre flagg-stenger (side 2) — peker mot venstre, speilet. */}
+    <line x1="22" y1="5" x2="22" y2="23" />
+    <path d="M 22 6 L 17 7.5 L 22 9 Z" fill="currentColor" stroke="none" />
+    {/* «vs»-prikk i midten av baselinen. */}
+    <circle cx="14" cy="17" r="1.5" fill="currentColor" stroke="none" />
+  </svg>
+);
+
 const TILES: TileDef[] = [
   {
     mode: 'stableford',
@@ -128,13 +156,26 @@ const TILES: TileDef[] = [
     description: 'Sum av beste netto-resultat per hull per lag. Laveste vinner.',
     icon: BestBallIcon,
   },
+  {
+    mode: 'singles_matchplay',
+    title: 'Matchplay',
+    description: '1v1 hull-for-hull. Vinneren avgjøres som «X up» eller «X&Y».',
+    icon: MatchplayIcon,
+  },
 ];
 
 /**
- * Modus-velger — to tiles som lar admin plukke spillmodus før lagstørrelse.
+ * Modus-velger — tre tiles som lar admin plukke spillmodus før lagstørrelse.
  * Hierarkiet er bevisst: modus er det semantisk distinkte hovedvalget
  * («hva avgjør vinneren?»), lagstørrelse er en sekundær parameter som
  * snevres inn etter modus.
+ *
+ * Grid: stacker vertikalt på mobile-først (`grid-cols-1`) så hver tile får
+ * full bredde og deres beskrivelses-tekst leses komfortabelt; bytter til
+ * 3-kolonner fra `sm`-breakpoint og oppover der det er nok plass til
+ * symmetrisk side-om-side-presentasjon. Alternativet (`grid-cols-3` på
+ * iPhone) ble forkastet fordi tile-paddingen ble for trang og
+ * beskrivelses-teksten brøyt om til 4-5 linjer i hver tile.
  *
  * ARIA: bruker `role="radiogroup"` + `role="radio"` med tabbable button-er.
  * Vi bruker ikke `<input type="radio">` fordi tile-presentasjonen krever
@@ -147,7 +188,7 @@ export function ModeSelector({ value, onChange, disabled = false }: Props) {
       <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
         Velg spillmodus
       </legend>
-      <div role="radiogroup" className="mt-2 grid grid-cols-2 gap-3">
+      <div role="radiogroup" className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
         {TILES.map((tile) => {
           const selected = value === tile.mode;
           return (
