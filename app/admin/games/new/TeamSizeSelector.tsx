@@ -35,13 +35,18 @@ type Props = {
  * UI-en utvides i fase 2 til å støtte 1-4 lag à 2 spillere (2/4/6/8
  * spillere totalt, ingen 8-krav som best-ball-netto).
  *
- * Ved fremtidige moduser (matchplay #45, scramble #44, etc.) utvider vi
- * denne mappen — ingen DB-migrasjon eller payload-endring nødvendig før
- * en konkret kombinasjon er implementert.
+ * Singles matchplay (epic #45) krever team_size=1 (én spiller per side,
+ * nøyaktig 2 sider). Scoring-motoren og payload-validatoren landet i
+ * fase 1; ModeSelector og GameForm wires inn matchplay i fase 2.
+ *
+ * Ved fremtidige moduser (scramble #44, etc.) utvider vi denne mappen —
+ * ingen DB-migrasjon eller payload-endring nødvendig før en konkret
+ * kombinasjon er implementert.
  */
 const ENABLED_COMBOS: Record<GameMode, ReadonlySet<TeamSize>> = {
   stableford: new Set<TeamSize>([1, 2]),
   best_ball_netto: new Set<TeamSize>([2]),
+  singles_matchplay: new Set<TeamSize>([1]),
 };
 
 type TileDef = {

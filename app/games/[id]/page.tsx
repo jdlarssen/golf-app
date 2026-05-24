@@ -64,8 +64,13 @@ type GameRow = {
    * Game-mode discriminator — leses fra cache-rad eller re-fetch ved auto-
    * start. Bestemmer hvilken view-variant av spill-hjem som rendres (solo
    * stableford dropper team-strip, best-ball viser Lag/Flight/CH).
+   *
+   * Speilet `GameMode` fra `lib/scoring/modes/types.ts` — utvides når nye
+   * moduser landes (matchplay i epic #45 fase 1; UI-grenen for matchplay
+   * kommer i fase 2). Holdt som lokal alias for å unngå dyptkoblet import
+   * i en server-component som allerede leser status-unionen lokalt.
    */
-  game_mode: 'best_ball_netto' | 'stableford';
+  game_mode: 'best_ball_netto' | 'stableford' | 'singles_matchplay';
   courses: { name: string } | null;
   tee_boxes:
     | (TeeBoxRatings & { name: string; length_meters: number | null })

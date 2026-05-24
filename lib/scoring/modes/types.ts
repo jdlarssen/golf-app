@@ -2,7 +2,7 @@
 // (lib/scoring/modes/*). Discriminated union på `kind` matcher
 // games.game_mode-discriminator i DB.
 
-export type GameMode = 'best_ball_netto' | 'stableford';
+export type GameMode = 'best_ball_netto' | 'stableford' | 'singles_matchplay';
 
 /**
  * Norske visnings-labels for hver spillmodus. Brukes av ModeChip i admin-
@@ -13,6 +13,7 @@ export type GameMode = 'best_ball_netto' | 'stableford';
 export const MODE_LABELS: Record<GameMode, string> = {
   best_ball_netto: 'Best ball',
   stableford: 'Stableford',
+  singles_matchplay: 'Matchplay',
 };
 
 /**
@@ -23,11 +24,16 @@ export const MODE_LABELS: Record<GameMode, string> = {
  *  - `team_size: 1` = solo (en spiller = en deltager, ranking på spiller-poeng)
  *  - `team_size: 2` = par-stableford / 4BBB (to spillere per lag, lag-hull-poeng
  *    = MAX av partnernes individuelle poeng, ranking på lag-poeng)
+ *
+ * Singles matchplay (epic #45):
+ *  - `team_size: 1` = én spiller per side (ingen aggregering)
+ *  - `teams_count: 2` = nøyaktig to sider, alltid 1v1
  */
 export type GameModeConfig =
   | { kind: 'best_ball_netto'; team_size: 2; teams_count: 4 }
   | { kind: 'stableford'; team_size: 1; points_table: 'standard' }
-  | { kind: 'stableford'; team_size: 2; points_table: 'standard' };
+  | { kind: 'stableford'; team_size: 2; points_table: 'standard' }
+  | { kind: 'singles_matchplay'; team_size: 1; teams_count: 2 };
 
 /**
  * Minimal hole-shape som scoring-laget trenger. Holder oss løse fra
@@ -191,6 +197,113 @@ export interface StablefordTeamResult {
  */
 export type StablefordResult = StablefordSoloResult | StablefordTeamResult;
 
+// -----------------------------------------------------------------------------
+// Singles matchplay (epic #45).
+//
+// Matchplay er fundamentalt ulikt poeng-baserte modi: ingen totaler, men
+// hull-for-hull W/L/T. Per hull sammenlignes side 1 sin netto-score mot side
+// 2 sin netto-score; laveste netto vinner hullet, lik netto = tied. Match-
+// status = (antall hull side 1 vant) − (antall hull side 2 vant). Matchen er
+// mat-em (avgjort før 18 hull) når |holesUp| > holesRemaining.
+// -----------------------------------------------------------------------------
+
+export type MatchplayHoleResult = 'side1_wins' | 'side2_wins' | 'tied' | 'unplayed';
+
+/**
+ * Per-hull-rad i en singles matchplay-match. Inneholder begge siders gross,
+ * extra strokes og netto, samt hvem som vant hullet. `unplayed` brukes når
+ * minst én side mangler gross — matchplay krever begge sider for å avgjøre
+ * et hull, og uplayed-hull bidrar ikke til match-status.
+ */
+export interface MatchplayHoleRow {
+  holeNumber: number;
+  par: number;
+  strokeIndex: number;
+  /** Per-side gross. null = ikke spilt. */
+  side1Gross: number | null;
+  side2Gross: number | null;
+  /** Per-side netto (gross − extra). null = ikke spilt. */
+  side1Net: number | null;
+  side2Net: number | null;
+  /** Extra strokes per side på dette hullet. */
+  side1Extra: number;
+  side2Extra: number;
+  /** Hvem vant hullet. 'unplayed' når én eller begge sider mangler gross. */
+  result: MatchplayHoleResult;
+}
+
+/**
+ * Én av de to sidene i en matchplay-match. `sideNumber` 1 eller 2 matcher
+ * `game_players.team_number` for matchplay-spillere (validatoren i
+ * gamePayload.ts håndhever denne tilordningen).
+ */
+export interface MatchplaySide {
+  /** 1 eller 2 — matcher game_players.team_number for matchplay-spillere. */
+  sideNumber: 1 | 2;
+  userId: string;
+  courseHandicap: number;
+}
+
+/**
+ * Resultat-meta for en avgjort match. Returneres som `null` på
+ * `SinglesMatchplayResult.result` mens matchen fortsatt er live.
+ */
+export interface MatchplayMatchResult {
+  /** Hvilken side vant. 'tied' = AS etter 18 hull. */
+  winner: 'side1' | 'side2' | 'tied';
+  /**
+   * Holes-up i absoluttverdi ved avgjørelse. 0 for tied.
+   */
+  marginUp: number;
+  /**
+   * Hull-nummer der matchen ble mat-em (1..18). 18 for spilt ferdig
+   * (X up eller AS).
+   */
+  decidedAtHole: number;
+  /** Holes remaining ved avgjørelse. 0 hvis spilt ferdig. */
+  remainingAtDecision: number;
+  /**
+   * Formatert resultat-streng (golf-standard):
+   *  - `'AS'` når tied etter 18
+   *  - `'{marginUp}up'` når avgjort etter 18 hull
+   *  - `'{marginUp}&{remainingAtDecision}'` når mat-em før 18
+   */
+  formatted: string;
+}
+
+/**
+ * Resultat fra `singlesMatchplay.compute()`. Inneholder per-hull-rader,
+ * løpende match-status (`holesUp`/`holesPlayed`/`holesRemaining`) og et
+ * `result`-objekt som er `null` mens matchen er live og fylles inn når
+ * matchen er avgjort (mat-em eller spilt 18 hull).
+ */
+export interface SinglesMatchplayResult {
+  kind: 'singles_matchplay';
+  /** Tuple: alltid to sider, sortert side 1 så side 2. */
+  sides: [MatchplaySide, MatchplaySide];
+  holes: MatchplayHoleRow[];
+  /**
+   * Antall hull side 1 vant minus antall hull side 2 vant. Bruker spilte hull,
+   * ikke uplayed. Positiv = side 1 up, negativ = side 2 up, 0 = AS.
+   */
+  holesUp: number;
+  /** Antall hull der begge sider har gross (= avgjorte hull, inklusiv tied). */
+  holesPlayed: number;
+  /**
+   * Antall hull igjen som kan bidra til match-utfallet. Beregnes som
+   * `18 − holesPlayed` slik at "kan matchen fortsatt avgjøres"-spørsmålet
+   * baserer seg på FAKTISK spilte hull (begge sider har gross), ikke
+   * påbegynte hull.
+   */
+  holesRemaining: number;
+  /**
+   * `null` = matchen er ikke avgjort ennå (live, eller AS midt i runden).
+   * Et `MatchplayMatchResult`-objekt = matchen er enten mat-em
+   * (`decidedAtHole < 18`) eller ferdig spilt 18 hull.
+   */
+  result: MatchplayMatchResult | null;
+}
+
 /**
  * Discriminated union — konsumenter narrower på `kind`:
  *   const r = computeLeaderboard(ctx);
@@ -198,5 +311,11 @@ export type StablefordResult = StablefordSoloResult | StablefordTeamResult;
  *
  * For stableford må man eventuelt narrowe videre på `r.variant` siden
  * solo og team-varianten har ulik shape (players vs teams).
+ *
+ * For singles_matchplay narrower man på `kind` og leser `sides`/`holes`/
+ * `holesUp`/`result` direkte — ingen videre variant-discriminator.
  */
-export type ModeResult = BestBallNettoResult | StablefordResult;
+export type ModeResult =
+  | BestBallNettoResult
+  | StablefordResult
+  | SinglesMatchplayResult;
