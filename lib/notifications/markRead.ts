@@ -55,5 +55,6 @@ export async function markNotificationsRead(opts: MarkReadOpts): Promise<void> {
     return;
   }
 
-  revalidateTag(`notifications-${opts.userId}`);
+  // Next.js 16 krever to-arg-form for revalidateTag.
+  revalidateTag(`notifications-${opts.userId}`, 'max');
 }

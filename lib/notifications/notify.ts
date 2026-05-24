@@ -63,8 +63,9 @@ export async function notify<K extends NotificationKind>(opts: {
     return { shouldAlsoSendMail: false };
   }
 
-  // Invalider innboks-cache for brukeren.
-  revalidateTag(`notifications-${userId}`);
+  // Invalider innboks-cache for brukeren. Next.js 16 krever to-arg-form;
+  // 'max' = aggressiv invalidering på tvers av alle pågående requests.
+  revalidateTag(`notifications-${userId}`, 'max');
 
   return {
     shouldAlsoSendMail: shouldSendMailFallback(userRes.data?.last_seen_at ?? null),

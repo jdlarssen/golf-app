@@ -14,6 +14,27 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Polish etter første reelle stableford-runde med kompisene. Du kan nå føre slag for hele flighten i solo stableford, fortsette runden fra første tomme hull, og se sideturneringen på stableford-leaderbordet etter avsluttet spill.
 
+### [1.14.3] - 2026-05-24
+
+> Datalaget for in-app innboks er på plass. Ingen synlige endringer i appen ennå — fase 1 av 4 mot in-app varslings-senter (#25).
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `supabase/migrations/0032_notifications.sql` — `public.notifications`-tabell (polymorf med kind-discriminator + JSONB payload), RLS-policies (select/update kun egne), 2 indekser (uleste-partial + full-historikk), realtime-publikasjon. Applied mot prod via Supabase MCP.
+- `lib/notifications/types.ts` — `NotificationKind`-union for de 5 v1 events (`invite`, `peer_approval_request`, `scorecard_submitted`, `scorecard_approved`, `game_finished`) + Zod-skjema per kind. `parseNotificationPayload()` validerer payload mot kind før insert. Bruker `z.guid()` (permissiv UUID-shape) framfor strict RFC 9562 `z.string().uuid()` siden test-sentinels og nil-UUID skal kunne valideres.
+- `lib/notifications/notify.ts` — `notify()`-helper inserter notification-rad via admin-client (bypass RLS) + returnerer `shouldAlsoSendMail`-flagg basert på `users.last_seen_at` (off-app hvis null/ugyldig/> 5 min siden). Insert + last_seen_at-lookup kjøres i parallell. Feiler stille på DB-error (returnerer `shouldAlsoSendMail: false` for å unngå mail-uten-in-app). `shouldSendMailFallback()` er pure-helper eksportert for testing og direkte bruk.
+- `lib/notifications/markRead.ts` — `markNotificationsRead({userId, kind?, entityId?})` UPDATEr matching uleste rader til `read_at = now()`. Bruker `getServerClient()` (cookies) — RLS-policy `notifications_update_own` gir authz «gratis». Kompositoriske filtre: bare userId (marker alle), userId+kind (alle av kind), userId+kind+entityId (game-scoped). Brukes både fra /innboks-knapper og fra server-side helpers på målsider.
+- `zod ^4.4.3` lagt til som ny dep for payload-validering.
+- 10 nye unit-tester (3 types, 4 notify, 3 markRead).
+
+#### Notes
+- Phase 1 av 4 i issue #25-epic. Phase 2 leverer bjelle + /innboks UI; Phase 3 wires inn de 5 events; Phase 4 aktiverer off-app mail-gating.
+- Foundation-commits er prefikset `chore(notifications)` siden de ikke endrer bruker-synlig oppførsel — kun datalag og helpers ikke ennå kalt fra noen actions.
+
+</details>
+
 ### [1.14.2] - 2026-05-24
 
 > Når et stableford-spill med sideturnering avsluttes, vises sideturneringen som en egen fane på leaderbordet — akkurat som for best ball. Tidligere var sideturneringen helt usynlig på stableford selv om du hadde valgt å legge den til.
