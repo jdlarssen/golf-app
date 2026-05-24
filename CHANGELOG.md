@@ -152,12 +152,14 @@ Polish etter første reelle stableford-runde med kompisene. Du kan nå føre sla
 
 ### [1.14.3] - 2026-05-24
 
-> Hele Tørnys norske copy er polert: feilmeldinger, banner-tekster, mail-malene og knappe-tekster er strammet for AI-tells og engelske kalker. Du merker det som mer naturlig norsk på alle flatene.
+> Hele Tørnys norske copy er polert: feilmeldinger, banner-tekster, mail-malene og knappe-tekster er strammet for AI-tells og engelske kalker. Du merker det som mer naturlig norsk på alle flatene. Under panseret er også datalaget for in-app innboks lagt inn — usynlig for deg ennå (fase 1 av 4 mot varslings-senter, [#25](https://github.com/jdlarssen/golf-app/issues/25)).
 
 <details>
 <summary>Teknisk</summary>
 
-#### Changed
+To uavhengige arbeidsstrømmer landet samme dag og delte versjonsnummer. Begge er samlet her for å holde semver-historikken ren (én versjon, én dato, én oppføring).
+
+#### Changed — humanizer-pass på brukerrettet norsk
 - 27 filer på tvers av mail-templates, auth-flyt, UI-primitives, spille-flyt og admin-flyt fikk en gjennomgang med `humanizer:humanizer`-skillet (fra `floka-marketplace`). Mønstrene fulgte etablert vokabular fra [PR #170](https://github.com/jdlarssen/golf-app/pull/170): anglisismer, em-dash-kjeder, «X-spillet»-redundans, særskriving, curly quotes og significance-puffery.
 - **Mail** (`lib/mail/gameFinishedNotification.ts`, `lib/mail/scorecardSubmittedNotification.ts`, `docs/email-templates.md`) — em-dash-kjeder splittet, passiv-opener byttet ut («Vi mottok forespørsel om å endre…» → «Du har bedt om å endre…»), idiomatisk definitt-form («leaderboard er åpen» → «leaderboardet er åpent»).
 - **Auth-flyt** (`app/(auth)/login/page.tsx`, `app/complete-profile/page.tsx`) — anglism «på login» fjernet, US-decimal i feilmelding (`54.0` → `54,0`), passiv-formulering («det navnet folk kjenner deg som» → «navnet du går under»).
@@ -165,17 +167,7 @@ Polish etter første reelle stableford-runde med kompisene. Du kan nå føre sla
 - **Spille-flyt** (`components/hole/*.tsx`, `app/games/[id]/approve/*.tsx`, `app/games/[id]/leaderboard/*.tsx`) — «Tap» → «Trykk» (4 steder, anglism), AI-hedge i confirm-dialog, filler «akkurat nå» fjernet, synonym-overlap droppet i RevealBruttoView.
 - **Admin-flyt** (12 filer i `app/admin/` + `lib/admin/gameErrorMessages.ts`) — em-dash-tells (~10 steder), «Vennligst»-overforbruk strammet, tailing-fragmenter omsporet, generisk «Noe gikk galt» → konkret «Klarte ikke å fullføre handlingen», «spennings-moment»-særskriving → «spenningsmoment».
 
-#### Notes
-- 5 parallelle humanizer-subagenter dispatched, hver mot disjoint overflate (mail / auth / UI-primitives / spille / admin). Alle 39 mail-tester grønne — verifisert at ingen subject-/body-snapshots ble brutt.
-- Bevisst bevart: mail-subject «Resultatet er klart — ${gameName}» (5 snapshot-tester asserter eksakt streng), brand-tagline «Tørny — fyr opp golfturneringen» (kanonisk), «Sekretariat»-stemmen i admin-flatene, og engelske side-tournament-kategori-navn (Turkey/Solid/Snowman — bevisste achievement-navn).
-
-</details>
-
-### [1.14.3] - 2026-05-24
-
-> Datalaget for in-app innboks er på plass. Ingen synlige endringer i appen ennå — fase 1 av 4 mot in-app varslings-senter (#25).
-
-#### Added
+#### Added — notifications-datalag (#25 Phase 1)
 - `supabase/migrations/0032_notifications.sql` — `public.notifications`-tabell (polymorf med kind-discriminator + JSONB payload), RLS-policies (select/update kun egne), 2 indekser (uleste-partial + full-historikk), realtime-publikasjon. Applied mot prod via Supabase MCP.
 - `lib/notifications/types.ts` — `NotificationKind`-union for de 5 v1 events (`invite`, `peer_approval_request`, `scorecard_submitted`, `scorecard_approved`, `game_finished`) + Zod-skjema per kind. `parseNotificationPayload()` validerer payload mot kind før insert. Bruker `z.guid()` (permissiv UUID-shape) framfor strict RFC 9562 `z.string().uuid()` siden test-sentinels og nil-UUID skal kunne valideres.
 - `lib/notifications/notify.ts` — `notify()`-helper inserter notification-rad via admin-client (bypass RLS) + returnerer `shouldAlsoSendMail`-flagg basert på `users.last_seen_at` (off-app hvis null/ugyldig/> 5 min siden). Insert + last_seen_at-lookup kjøres i parallell. Feiler stille på DB-error (returnerer `shouldAlsoSendMail: false` for å unngå mail-uten-in-app). `shouldSendMailFallback()` er pure-helper eksportert for testing og direkte bruk.
@@ -184,8 +176,12 @@ Polish etter første reelle stableford-runde med kompisene. Du kan nå føre sla
 - 10 nye unit-tester (3 types, 4 notify, 3 markRead).
 
 #### Notes
-- Phase 1 av 4 i issue #25-epic. Phase 2 leverer bjelle + /innboks UI; Phase 3 wires inn de 5 events; Phase 4 aktiverer off-app mail-gating.
-- Foundation-commits er prefikset `chore(notifications)` siden de ikke endrer bruker-synlig oppførsel — kun datalag og helpers ikke ennå kalt fra noen actions.
+- Begge arbeidsstrømmer landet 2026-05-24 og fikk hver sin bump til 1.14.3 — humanizer-passet bumpet uavhengig av notifications-foundation som var commited noen timer tidligere. Konsolidert til én oppføring 2026-05-24 ([#181](https://github.com/jdlarssen/golf-app/issues/181)) for stakeholder-lesbarhet; git-historikken bevarer fortsatt begge commits separat (`9eb9aeb` notifications-foundation + `e488f8a` humanizer-pass).
+- 5 parallelle humanizer-subagenter dispatched, hver mot disjoint overflate (mail / auth / UI-primitives / spille / admin). Alle 39 mail-tester grønne — verifisert at ingen subject-/body-snapshots ble brutt.
+- Bevisst bevart: mail-subject «Resultatet er klart — ${gameName}» (5 snapshot-tester asserter eksakt streng), brand-tagline «Tørny — fyr opp golfturneringen» (kanonisk), «Sekretariat»-stemmen i admin-flatene, og engelske side-tournament-kategori-navn (Turkey/Solid/Snowman — bevisste achievement-navn).
+- Foundation-commits for notifications er prefikset `chore(notifications)` siden de ikke endrer bruker-synlig oppførsel — kun datalag og helpers ikke ennå kalt fra noen actions. Phase 2 leverer bjelle + /innboks UI; Phase 3 wires inn de 5 events; Phase 4 aktiverer off-app mail-gating.
+
+</details>
 
 ### [1.14.2] - 2026-05-24
 
