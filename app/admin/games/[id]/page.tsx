@@ -1,6 +1,7 @@
 import { Suspense, cache } from 'react';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound } from 'next/navigation';
+import { after } from 'next/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
@@ -196,14 +197,16 @@ export default async function GameDetailPage({
   const userId = await getProxyVerifiedUserId();
 
   // Mark `scorecard_submitted`-varsler for dette spillet som lest når admin
-  // åpner protokoll-sida. Best-effort, kan kalles uten userId siden helperen
-  // håndterer null som no-op via filter-byggingen.
+  // åpner protokoll-sida. Wrap i `after()` så DB-mutasjon + revalidateTag
+  // deferes til etter render (Next.js 16 sperrer revalidateTag i render-fase).
   if (userId) {
-    await markNotificationsRead({
-      userId,
-      kind: 'scorecard_submitted',
-      entityId: id,
-    });
+    after(() =>
+      markNotificationsRead({
+        userId,
+        kind: 'scorecard_submitted',
+        entityId: id,
+      }),
+    );
   }
 
   return (

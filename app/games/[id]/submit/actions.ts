@@ -67,6 +67,16 @@ export async function submitScorecard(gameId: string) {
   //      submitter selv; vi filtrerer ut nedenfor.
   // The submitter is filtered out of recipients so a player-admin who
   // submits their own scorecard doesn't mail themselves a notification.
+  // Flight-query gates på require_peer_approval — for solo-modus eller spill
+  // uten peer-godkjenning sparer vi en DB-runde per submit (klubb-skala-perf).
+  const flightQuery = game!.require_peer_approval
+    ? supabase
+        .from('game_players')
+        .select('user_id, flight_number')
+        .eq('game_id', gameId)
+        .returns<{ user_id: string; flight_number: number | null }[]>()
+    : Promise.resolve({ data: null });
+
   const [playerRes, adminsRes, flightRes] = await Promise.all([
     supabase.from('users').select('name').eq('id', user.id).maybeSingle<{
       name: string | null;
@@ -77,11 +87,7 @@ export async function submitScorecard(gameId: string) {
       .eq('is_admin', true)
       .not('email', 'is', null)
       .returns<{ id: string; email: string; name: string | null }[]>(),
-    supabase
-      .from('game_players')
-      .select('user_id, flight_number')
-      .eq('game_id', gameId)
-      .returns<{ user_id: string; flight_number: number | null }[]>(),
+    flightQuery,
   ]);
 
   const playerName = playerRes.data?.name?.trim() || '(ukjent spiller)';

@@ -196,15 +196,19 @@ export default async function GameHomePage({
   // både `invite`- og `scorecard_approved`-varsler for dette spillet siden
   // begge kindene deeplinker hit. (Phase 3 — wires Task 3.1 + 3.4.)
   //
-  // NB: helperen kaller `revalidateTag` inne i en server-component-render.
-  // Det er bevisst — vi godtar advarsel her for å unngå ekstra round-trip;
-  // taggen-invalidering er best-effort signal til bjella/innboksen om at
-  // ulest-tellet kan ha endret seg.
-  await markNotificationsRead({ userId, kind: 'invite', entityId: id });
-  await markNotificationsRead({
-    userId,
-    kind: 'scorecard_approved',
-    entityId: id,
+  // Wrap i `after()` så DB-mutasjon + revalidateTag deferes til etter render.
+  // Direkte-call inni render-fasen ville kastet på `revalidateTag` (Next.js 16
+  // sperrer det). Samme mønster som auto-start-fallbacken lenger ned i fila.
+  // Best-effort: feil i markRead skal aldri blokkere sida.
+  after(async () => {
+    await Promise.allSettled([
+      markNotificationsRead({ userId, kind: 'invite', entityId: id }),
+      markNotificationsRead({
+        userId,
+        kind: 'scorecard_approved',
+        entityId: id,
+      }),
+    ]);
   });
 
   let game: GameRow = {

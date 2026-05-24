@@ -1,5 +1,6 @@
 import { Suspense, cache } from 'react';
 import { notFound, redirect } from 'next/navigation';
+import { after } from 'next/server';
 import { TopBar } from '@/components/ui/TopBar';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
@@ -89,12 +90,15 @@ export default async function ApprovePage({
   // Mark `peer_approval_request`-varsler for dette spillet som lest. Når
   // brukeren først åpner /approve, regnes alle ventende godkjennings-
   // varsler for spillet som «sett», uavhengig av om hen rekker å klikke
-  // gjennom alle radene. Best-effort — feiler stille i helperen.
-  await markNotificationsRead({
-    userId,
-    kind: 'peer_approval_request',
-    entityId: id,
-  });
+  // gjennom alle radene. Wrap i `after()` så DB-mutasjon + revalidateTag
+  // deferes til etter render (Next.js 16 sperrer revalidateTag i render-fase).
+  after(() =>
+    markNotificationsRead({
+      userId,
+      kind: 'peer_approval_request',
+      entityId: id,
+    }),
+  );
 
   return (
     <AppShell showVersion={false}>

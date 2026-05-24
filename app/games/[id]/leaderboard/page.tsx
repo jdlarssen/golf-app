@@ -1,6 +1,7 @@
 import { Suspense, cache } from 'react';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound, redirect } from 'next/navigation';
+import { after } from 'next/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
@@ -210,14 +211,17 @@ export default async function LeaderboardPage({
   }
 
   // Mark `game_finished`-varsler for dette spillet som lest når brukeren
-  // åpner leaderboardet. Best-effort — helperen svelger feil internt. Vi
-  // mark også selv om spillet ennå er aktivt; harmless siden ingen
-  // game_finished-rader vil eksistere for det spillet før admin avslutter.
-  await markNotificationsRead({
-    userId,
-    kind: 'game_finished',
-    entityId: id,
-  });
+  // åpner leaderboardet. Wrap i `after()` så DB-mutasjon + revalidateTag
+  // deferes til etter render (Next.js 16 sperrer revalidateTag i render-fase).
+  // Harmless å kalle selv på aktivt spill — ingen game_finished-rader eksisterer
+  // før admin avslutter.
+  after(() =>
+    markNotificationsRead({
+      userId,
+      kind: 'game_finished',
+      entityId: id,
+    }),
+  );
 
   // Body data fetch (players + holes + scores) is heavy and dictates the
   // final view branch. Stream it behind Suspense so the user sees the shell
