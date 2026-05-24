@@ -94,7 +94,9 @@ describe('submitScorecard', () => {
   it('happy path: marks submitted_at, notifies admins (filters self), redirects with ?status=submitted', async () => {
     supabaseMock = buildSupabaseMock([
       { data: { name: 'Vinter-cup', status: 'active' }, error: null },
-      { data: null, error: null }, // UPDATE game_players
+      // UPDATE returns the matched row via .select('user_id') — non-empty
+      // means this was a fresh submit, so notify + mail must fire.
+      { data: [{ user_id: 'user-1' }], error: null },
       { data: { name: 'Ola Nordmann' }, error: null }, // submitter name
       {
         // admins list
@@ -140,7 +142,7 @@ describe('submitScorecard', () => {
 
     supabaseMock = buildSupabaseMock([
       { data: { name: 'Vinter-cup', status: 'active' }, error: null },
-      { data: null, error: null }, // UPDATE game_players
+      { data: [{ user_id: 'user-1' }], error: null }, // UPDATE game_players (fresh)
       { data: { name: 'Ola Nordmann' }, error: null },
       {
         data: [
@@ -173,7 +175,7 @@ describe('submitScorecard', () => {
 
     supabaseMock = buildSupabaseMock([
       { data: { name: 'Vinter-cup', status: 'active' }, error: null },
-      { data: null, error: null },
+      { data: [{ user_id: 'user-1' }], error: null }, // UPDATE (fresh)
       { data: { name: 'Ola Nordmann' }, error: null },
       {
         data: [{ id: 'admin-1', email: 'jorgen@tornygolf.no', name: 'Jørgen' }],
@@ -210,5 +212,31 @@ describe('submitScorecard', () => {
     expect(lastRedirect()).toBe('/games/game-1/submit?error=db');
     // Mail must NOT fire on a DB error — pre-redirect short-circuit.
     expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
+  });
+
+  it('re-submit: 0 rader oppdatert → ingen notify, ingen mail, men redirect OK', async () => {
+    // Phase 4-regresjon: tidligere fyrte vi notify + mail på nytt hver gang
+    // submitScorecard ble kalt fordi `.is('submitted_at', null)` returnerer
+    // `error == null` selv ved 0 rader endret. Nå sjekker vi
+    // `updated.length === 0` og bypasser side-effects på re-submit (double-
+    // click eller race med peer-godkjenning).
+    supabaseMock = buildSupabaseMock([
+      { data: { name: 'Vinter-cup', status: 'active' }, error: null },
+      { data: [], error: null }, // UPDATE matched 0 rows — already submitted
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'user-1' } },
+    });
+
+    const { submitScorecard } = await import('./actions');
+
+    await expect(submitScorecard('game-1')).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    expect(notifyMock).not.toHaveBeenCalled();
+    expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+    expect(lastRedirect()).toBe('/games/game-1?status=submitted');
   });
 });

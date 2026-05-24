@@ -11,8 +11,12 @@ import { notify } from '@/lib/notifications/notify';
  * Mark the current user's scorecard as submitted.
  *
  * Idempotent: the `.is('submitted_at', null)` guard means a second call
- * after the first has succeeded is a no-op (it simply matches zero rows).
- * Also refuses to mark when the game is no longer active.
+ * after the first has succeeded matches zero rows. We re-fetch the matched
+ * rows via `.select()` and skip the notify/mail side-effects when none —
+ * Supabase returns `error == null` even with 0 rows updated, so without the
+ * row-count check a double-click or race-condition re-submit would fire
+ * peer + admin notifications and admin mails on every call. Also refuses
+ * to mark when the game is no longer active.
  *
  * Side-effect: best-effort "Scorekort levert"-mail to every admin (except
  * the submitter themselves) so the godkjennings-flyten can start without
@@ -43,7 +47,7 @@ export async function submitScorecard(gameId: string) {
     redirect(`/games/${gameId}/submit?error=not_active`);
   }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('game_players')
     .update({
       submitted_at: new Date().toISOString(),
@@ -52,10 +56,19 @@ export async function submitScorecard(gameId: string) {
     })
     .eq('game_id', gameId)
     .eq('user_id', user.id)
-    .is('submitted_at', null);
+    .is('submitted_at', null)
+    .select('user_id');
 
   if (error) {
     redirect(`/games/${gameId}/submit?error=db`);
+  }
+
+  // Zero rows = already submitted (re-click or race). Skip notify + mail
+  // but keep the revalidate + redirect so UX matches a fresh submit.
+  if ((updated?.length ?? 0) === 0) {
+    revalidateTag(`game-${gameId}`, 'max');
+    revalidatePath(`/games/${gameId}`);
+    redirect(`/games/${gameId}?status=submitted`);
   }
 
   // Best-effort admin notification + peer in-app varsel. Tre queries fyres

@@ -14,6 +14,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Tørny får en innboks. Bjelle øverst-til-høyre på alle sider viser en champagne-prikk når det venter et nytt varsel, og en dedikert /innboks-flate samler hele historikken. Varslene wires inn etappevis (issue [#25](https://github.com/jdlarssen/golf-app/issues/25)): invitasjoner, peer-godkjenninger, scorekort-events og spill-avsluttet. Siste fase kuttet mail-spammen til aktive brukere — du får ikke lenger mail om noe som allerede er på skjermen din.
 
+### [1.15.3] - 2026-05-24
+
+> Et raskt dobbelt-trykk på «Lever scorekort» sender ikke lenger flere varsler eller mail. Ble du sittende uten å vite om første trykk gikk gjennom, og trykte igjen, får admin én melding — ikke to.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `app/games/[id]/submit/actions.ts` — re-submit av et allerede levert scorekort dupliserte tidligere peer-varsler, admin-varsler og admin-mail fordi `.is('submitted_at', null)`-guarden returnerer `error == null` selv ved 0 rader endret. Switch til `.update(...).select('user_id')` + early-return på tom rad-liste; revalidate + redirect kjører fortsatt så UX-en matcher en fersk submit. Arvet legacy-bug fra mail-flyten; Phase 3 av [#25](https://github.com/jdlarssen/golf-app/issues/25) forsterket konsekvensen ved å duplisere in-app-varsler i tillegg. Ny `app/games/[id]/submit/actions.test.ts`-test asserterer at en re-submit ikke fyrer notify eller mail.
+
+</details>
+
 ### [1.15.2] - 2026-05-24
 
 > Du får færre mail når du er aktiv. Hvis du har vært i Tørny de siste fem minuttene når noen leverer scorekort eller avslutter et spill du er med i, dukker varselet kun opp i innboksen din. Mailen kommer som før hvis det er en stund siden du var her.
