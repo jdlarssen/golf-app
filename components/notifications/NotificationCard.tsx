@@ -165,8 +165,10 @@ const MONTH_MS = 30 * DAY_MS;
  * moderne browsere; vurderes som defensive-only).
  */
 function formatRelativeNb(iso: string): string {
-  // eslint-disable-next-line react-hooks/purity
-  const diff = Date.now() - new Date(iso).getTime();
+  // Math.max(0, ...) håndterer clock-skew der server-timestamp havner litt i
+  // fremtiden i forhold til klient-klokken — uten ville vi fått «om 3 sekunder»
+  // og lignende rart copy. Floor til 0 så vi alltid sier «nå» eller «for X siden».
+  const diff = Math.max(0, Date.now() - new Date(iso).getTime());
   const rtf = new Intl.RelativeTimeFormat('nb-NO', { numeric: 'auto' });
 
   if (diff < MINUTE_MS) return rtf.format(-Math.round(diff / SECOND_MS), 'second');

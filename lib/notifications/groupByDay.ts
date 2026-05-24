@@ -13,7 +13,6 @@ import { formatShortDateNb, formatShortDateNbWithYear } from '@/lib/format/date'
  * presisjon — vi viser når noe skjedde, ikke en eksakt grense-deteksjon.
  */
 export function formatDayLabel(d: Date): string {
-  // eslint-disable-next-line react-hooks/purity
   const now = new Date();
   if (isSameYmd(d, now)) return 'I dag';
 

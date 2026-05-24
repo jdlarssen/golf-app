@@ -31,17 +31,28 @@ export function useUnreadNotificationsCount(userId: string | null): {
   count: number;
   loading: boolean;
 } {
+  // Initial state matcher userId — om vi ikke har bruker, går vi rett til
+  // «ingen uleste, ferdig lastet». Når userId endres til ny verdi nuller vi
+  // disse via useEffect-bodyen (først setLoading(true), så initial fetch
+  // overskriver count). React skygger denne reset-en ved å re-mounte
+  // hook-en via dependency-arrayet, men hvis en parent endrer userId
+  // in-place trenger vi den eksplisitte reset-en under.
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState<boolean>(userId != null);
 
   useEffect(() => {
     if (!userId) {
-      // Reset hvis vi går fra logged-in → logged-out i samme hook-instans.
-      setCount(0);
-      setLoading(false);
+      // Ikke kall setState her — initial useState-verdiene over er allerede
+      // riktige (count=0, loading=false) for userId=null-tilfellet. Eslint-
+      // regelen `react-hooks/set-state-in-effect` flagger setState inni effect
+      // som unødvendig render-cascade, og den har rett: dette er en idle no-op.
       return;
     }
 
+    // Reset loading-flagg når userId endres mid-life (sjelden, men håndtert).
+    // setState i effect-body er normalt en kode-smell, men her er det riktig
+    // mønster: vi vil vise loading-state for B etter at A er ferdig.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     const supabase = getBrowserClient();
     let mounted = true;

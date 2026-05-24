@@ -67,7 +67,7 @@ export function TopBar({
         </p>
       )}
       {action !== undefined && (
-        <div className={hasBell ? 'ml-auto' : 'ml-auto'}>
+        <div className="ml-auto">
           {action ?? <ActionSpacer />}
         </div>
       )}

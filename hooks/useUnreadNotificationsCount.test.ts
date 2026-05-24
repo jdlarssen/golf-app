@@ -26,6 +26,9 @@ vi.mock('@/lib/supabase/client', () => ({
       setAuth: setAuthSpy,
       getChannels: () => [],
     },
+    // Mock-funksjoner trenger riktige type-signaturer for å matche
+    // @supabase/supabase-js, men de fleste parametre brukes ikke i mock-body-en.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     channel: (_topic: string) => {
       const ch = {
         on(
@@ -47,6 +50,7 @@ vi.mock('@/lib/supabase/client', () => ({
       removeChannelSpy(...args);
       return Promise.resolve('ok' as const);
     },
+    /* eslint-disable @typescript-eslint/no-unused-vars */
     from: (_table: string) => ({
       select: (
         _cols: string,
@@ -58,6 +62,7 @@ vi.mock('@/lib/supabase/client', () => ({
         }),
       }),
     }),
+    /* eslint-enable @typescript-eslint/no-unused-vars */
   }),
 }));
 
