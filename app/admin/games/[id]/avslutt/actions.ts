@@ -9,6 +9,7 @@ import { firstName } from '@/lib/firstName';
 import { logAdminEvent } from '@/lib/admin/auditLog';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
+import { notify } from '@/lib/notifications/notify';
 
 async function requireAdmin() {
   const supabase = await getServerClient();
@@ -106,15 +107,18 @@ export async function endGameWithSideWinners(
     });
   }
 
-  // Verify all players submitted (mirrors endGame validation).
+  // Verify all players submitted (mirrors endGame validation). Inkluderer
+  // user_id slik at game_finished-notify-loopen nedenfor kan target hver
+  // deltaker uten ekstra DB-runde.
   const { data: players } = await supabase
     .from('game_players')
     .select(
-      'submitted_at, approved_at, users!game_players_user_id_fkey(email, name)',
+      'user_id, submitted_at, approved_at, users!game_players_user_id_fkey(email, name)',
     )
     .eq('game_id', gameId)
     .returns<
       {
+        user_id: string;
         submitted_at: string | null;
         approved_at: string | null;
         users: { email: string | null; name: string | null } | null;
@@ -170,6 +174,30 @@ export async function endGameWithSideWinners(
       sideWinners: winners,
     },
   });
+
+  // Best-effort in-app `game_finished`-varsel til hver deltaker. Loopen fyres
+  // parallelt med mail-blasten lenger ned. Phase 3 sender mail uavhengig
+  // (sikkerhetsnett); Phase 4 vil gate på shouldAlsoSendMail.
+  const notifyResults = await Promise.allSettled(
+    players!.map((p) =>
+      notify({
+        userId: p.user_id,
+        kind: 'game_finished',
+        payload: {
+          game_id: gameId,
+          game_name: game!.name,
+        },
+      }),
+    ),
+  );
+  for (const r of notifyResults) {
+    if (r.status === 'rejected') {
+      console.error(
+        '[endGameWithSideWinners] game_finished notify failed',
+        r.reason,
+      );
+    }
+  }
 
   // Best-effort: send "Resultatet er klart"-mail to every player. Failures
   // are logged but never abort — leaderboard is reachable in-app regardless.

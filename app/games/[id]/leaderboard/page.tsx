@@ -64,6 +64,7 @@ import {
   getGameWithPlayers,
   type GameForHole,
 } from '@/lib/games/getGameWithPlayers';
+import { markNotificationsRead } from '@/lib/notifications/markRead';
 // Mode-router for stableford-stats. Aliaset til `computeModeResult` for å
 // unngå navnekollisjon med best-ball-spesifikke `computeLeaderboard` fra
 // `lib/leaderboard.ts`.
@@ -207,6 +208,16 @@ export default async function LeaderboardPage({
   if (!isAdmin && !gwp.players.some((p) => p.user_id === userId)) {
     notFound();
   }
+
+  // Mark `game_finished`-varsler for dette spillet som lest når brukeren
+  // åpner leaderboardet. Best-effort — helperen svelger feil internt. Vi
+  // mark også selv om spillet ennå er aktivt; harmless siden ingen
+  // game_finished-rader vil eksistere for det spillet før admin avslutter.
+  await markNotificationsRead({
+    userId,
+    kind: 'game_finished',
+    entityId: id,
+  });
 
   // Body data fetch (players + holes + scores) is heavy and dictates the
   // final view branch. Stream it behind Suspense so the user sees the shell
