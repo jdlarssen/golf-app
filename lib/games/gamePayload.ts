@@ -172,7 +172,8 @@ function parseGameMode(formData: FormData): GameMode | null {
     raw === 'best_ball_netto' ||
     raw === 'stableford' ||
     raw === 'singles_matchplay' ||
-    raw === 'solo_strokeplay_netto'
+    raw === 'solo_strokeplay_netto' ||
+    raw === 'texas_scramble'
   )
     return raw;
   return null;
@@ -515,16 +516,121 @@ function validateSoloStrokeplayNetto(
 }
 
 /**
- * Texas scramble-validator-stub (issue #44). Returnerer alltid
- * `unsupported_mode_size_combo` inntil reell validator landes i Chunk 4 av
- * implementasjonen. Stub-en finnes kun for å holde typecheck-en grønn (Record-
- * shape over GameMode må være eksahustiv) — modus eksponeres ikke i UI ennå.
+ * Texas scramble-validator (issue #44).
+ *
+ * Lagene spiller én ball — én score per lag per hull lagres på lag-kapteinens
+ * userId (scoring-laget velger kaptein lex-min). Validatoren håndhever lag-
+ * struktur og lag-handicap-prosent ved publish.
+ *
+ * Form-felter:
+ *  - `texas_team_size`: 2 eller 4 (3-mannslag ikke i v1 → unsupported_mode_size_combo)
+ *  - `texas_team_handicap_pct`: 0..100 heltall (NGF-default 25 for 2-mannslag,
+ *    10 for 4-mannslag, settes av GameForm når lagstørrelse endres). Utenfor
+ *    range → bad_allowance (gjenbruker eksisterende kode siden semantikken
+ *    er identisk: prosenttall mellom 0 og 100).
+ *  - `player_${i}_team`: positivt heltall, ingen øvre grense (par-stableford-
+ *    mønsteret — admin kan kjøre stort antall lag for klubb-turnering).
+ *
+ * Regler ved publish:
+ *  - Minst 1 spiller (ellers min_players_for_mode).
+ *  - Hvert lag må ha EKSAKT `team_size` spillere (team_balance ved feil).
+ *  - Hvert team_number må være ≥1 (bad_team).
+ *  - flight_number = team_number per spiller — oppfyller DB-CHECK
+ *    `game_players_team_flight_consistency` (begge satt sammen).
+ *
+ * Draft tolererer partial state (ufullstendige lag, færre enn team_size per
+ * lag, 0 spillere). Ugyldig team_size eller team_handicap_pct avvises også
+ * i draft siden de er konfig-felt som må være korrekte før noe annet gir
+ * mening.
+ *
+ * Mode_config-output: `{kind, team_size, teams_count, team_handicap_pct}`.
  */
 function validateTexasScramble(
-  _formData: FormData,
-  _mode: PayloadMode,
+  formData: FormData,
+  mode: PayloadMode,
 ): ModeValidationResult {
-  return { ok: false, errorCode: 'unsupported_mode_size_combo' };
+  const teamSize = parseTexasTeamSize(formData);
+  if (teamSize === null) {
+    return { ok: false, errorCode: 'unsupported_mode_size_combo' };
+  }
+
+  const handicapPct = parseTexasHandicapPct(formData);
+  if (handicapPct === null) {
+    return { ok: false, errorCode: 'bad_allowance' };
+  }
+
+  const players: GamePlayerInput[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < 8; i++) {
+    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
+    if (!user_id) continue;
+    if (seen.has(user_id)) {
+      return { ok: false, errorCode: 'duplicate_player' };
+    }
+    seen.add(user_id);
+    const team_number = Number(formData.get(`player_${i}_team`));
+    if (!Number.isInteger(team_number) || team_number < 1) {
+      return { ok: false, errorCode: 'bad_team' };
+    }
+    // Texas-spillere speiler par-stableford og matchplay: flight = team for
+    // å oppfylle DB-CHECK game_players_team_flight_consistency (begge satt).
+    players.push({ user_id, team_number, flight_number: team_number });
+  }
+
+  if (mode === 'publish') {
+    if (players.length === 0) {
+      return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    const teamCounts = new Map<number, number>();
+    for (const p of players) {
+      if (p.team_number === null) continue;
+      teamCounts.set(p.team_number, (teamCounts.get(p.team_number) ?? 0) + 1);
+    }
+    for (const [, count] of teamCounts) {
+      if (count !== teamSize) {
+        return { ok: false, errorCode: 'team_balance' };
+      }
+    }
+  }
+
+  const teams_count = new Set(players.map((p) => p.team_number)).size;
+
+  return {
+    ok: true,
+    players,
+    mode_config: {
+      kind: 'texas_scramble',
+      team_size: teamSize,
+      teams_count,
+      team_handicap_pct: handicapPct,
+    },
+  };
+}
+
+/**
+ * Leser `texas_team_size` fra form-data. Returnerer 2, 4 eller null. Null =
+ * ikke-eksisterende felt, ugyldig verdi, eller 3 (3-mannslag utsatt til v1.1).
+ */
+function parseTexasTeamSize(formData: FormData): 2 | 4 | null {
+  const raw = String(formData.get('texas_team_size') ?? '').trim();
+  if (raw === '2') return 2;
+  if (raw === '4') return 4;
+  return null;
+}
+
+/**
+ * Leser `texas_team_handicap_pct` fra form-data. Returnerer et heltall i
+ * range 0..100 eller null hvis verdien er utenfor range / ikke parseable.
+ *
+ * Tom string defaulter ikke — admin må eksplisitt sette prosenten via
+ * GameForm når Texas-modus er valgt (default settes på lagstørrelse-endring).
+ */
+function parseTexasHandicapPct(formData: FormData): number | null {
+  const raw = formData.get('texas_team_handicap_pct');
+  if (raw === null || raw === '') return null;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0 || n > 100) return null;
+  return n;
 }
 
 const modeValidators: Record<

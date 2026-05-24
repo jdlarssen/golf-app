@@ -683,3 +683,311 @@ describe('buildGameInsertPayload — solo_strokeplay_netto (epic #46)', () => {
     expect(result.players.every((p) => p.flight_number === null)).toBe(true);
   });
 });
+
+describe('buildGameInsertPayload — texas_scramble (issue #44)', () => {
+  /**
+   * Helper for Texas-scramble-payloads. Bygger en form med game_mode=texas_scramble,
+   * angitt lagstørrelse og handicap-prosent, og en flat liste av spillere med
+   * team_number. flight settes til samme verdi som team i validatoren — vi
+   * trenger ikke sende player_${i}_flight i form-en.
+   */
+  function texasFd(opts: {
+    teamSize?: '2' | '4';
+    handicapPct?: string;
+    players?: Array<{ userId: string; team: number }>;
+    extras?: Record<string, string>;
+  }): FormData {
+    const {
+      teamSize = '4',
+      handicapPct = '10',
+      players = [],
+      extras = {},
+    } = opts;
+    const base: Record<string, string> = {
+      name: 'Firma Cup',
+      course_id: 'c1',
+      tee_box_id: 't1',
+      game_mode: 'texas_scramble',
+      texas_team_size: teamSize,
+      texas_team_handicap_pct: handicapPct,
+    };
+    players.forEach((p, i) => {
+      base[`player_${i}_id`] = p.userId;
+      base[`player_${i}_team`] = String(p.team);
+    });
+    return fd({ ...base, ...extras });
+  }
+
+  it('publish med 2 lag á 2 spillere (team_size=2) → ok', () => {
+    const result = buildGameInsertPayload(
+      texasFd({
+        teamSize: '2',
+        handicapPct: '25',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 2 },
+          { userId: 'd', team: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.game_mode).toBe('texas_scramble');
+    expect(result.mode_config).toEqual({
+      kind: 'texas_scramble',
+      team_size: 2,
+      teams_count: 2,
+      team_handicap_pct: 25,
+    });
+    expect(result.players).toEqual([
+      { user_id: 'a', team_number: 1, flight_number: 1 },
+      { user_id: 'b', team_number: 1, flight_number: 1 },
+      { user_id: 'c', team_number: 2, flight_number: 2 },
+      { user_id: 'd', team_number: 2, flight_number: 2 },
+    ]);
+  });
+
+  it('publish med 2 lag á 4 spillere (team_size=4) → ok', () => {
+    const result = buildGameInsertPayload(
+      texasFd({
+        teamSize: '4',
+        handicapPct: '10',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 1 },
+          { userId: 'd', team: 1 },
+          { userId: 'e', team: 2 },
+          { userId: 'f', team: 2 },
+          { userId: 'g', team: 2 },
+          { userId: 'h', team: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.mode_config).toEqual({
+      kind: 'texas_scramble',
+      team_size: 4,
+      teams_count: 2,
+      team_handicap_pct: 10,
+    });
+    expect(result.players).toHaveLength(8);
+  });
+
+  it('publish med ubalansert lag (3 av 4) → team_balance', () => {
+    const result = buildGameInsertPayload(
+      texasFd({
+        teamSize: '4',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 1 },
+          { userId: 'd', team: 2 },
+          { userId: 'e', team: 2 },
+          { userId: 'f', team: 2 },
+          { userId: 'g', team: 2 },
+          { userId: 'h', team: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('team_balance');
+  });
+
+  it('publish med team_size=3 → unsupported_mode_size_combo', () => {
+    const result = buildGameInsertPayload(
+      texasFd({
+        teamSize: '3' as unknown as '2',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 1 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('unsupported_mode_size_combo');
+  });
+
+  it('publish uten texas_team_size → unsupported_mode_size_combo', () => {
+    const result = buildGameInsertPayload(
+      texasFd({
+        teamSize: '' as unknown as '2',
+        players: [{ userId: 'a', team: 1 }],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('unsupported_mode_size_combo');
+  });
+
+  it('publish med handicap_pct utenfor 0-100 → bad_allowance', () => {
+    const result = buildGameInsertPayload(
+      texasFd({
+        teamSize: '2',
+        handicapPct: '150',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('bad_allowance');
+  });
+
+  it('publish med handicap_pct=0 (gross-modus) → ok', () => {
+    const result = buildGameInsertPayload(
+      texasFd({
+        teamSize: '2',
+        handicapPct: '0',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'texas_scramble') {
+      expect(result.mode_config.team_handicap_pct).toBe(0);
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('publish med handicap_pct=100 (full sum) → ok', () => {
+    const result = buildGameInsertPayload(
+      texasFd({
+        teamSize: '2',
+        handicapPct: '100',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'texas_scramble') {
+      expect(result.mode_config.team_handicap_pct).toBe(100);
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('publish med ingen spillere → min_players_for_mode', () => {
+    const result = buildGameInsertPayload(
+      texasFd({ teamSize: '2', players: [] }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('min_players_for_mode');
+  });
+
+  it('publish med duplikat spiller → duplicate_player', () => {
+    const result = buildGameInsertPayload(
+      texasFd({
+        teamSize: '2',
+        players: [
+          { userId: 'dup', team: 1 },
+          { userId: 'dup', team: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('duplicate_player');
+  });
+
+  it('publish med ugyldig team (0 eller negativ) → bad_team', () => {
+    const result = buildGameInsertPayload(
+      texasFd({
+        teamSize: '2',
+        players: [
+          { userId: 'a', team: 0 },
+          { userId: 'b', team: 1 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('bad_team');
+  });
+
+  it('flight_number = team_number for Texas-spillere (DB-CHECK consistency)', () => {
+    const result = buildGameInsertPayload(
+      texasFd({
+        teamSize: '2',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 7 },
+          { userId: 'd', team: 7 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players[0]).toMatchObject({ team_number: 1, flight_number: 1 });
+    expect(result.players[2]).toMatchObject({ team_number: 7, flight_number: 7 });
+  });
+
+  it('draft tolererer ufullstendige lag', () => {
+    const result = buildGameInsertPayload(
+      texasFd({
+        teamSize: '4',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+        ],
+      }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(2);
+  });
+
+  it('draft tolererer 0 spillere', () => {
+    const result = buildGameInsertPayload(
+      texasFd({ teamSize: '2', players: [] }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toEqual([]);
+  });
+
+  it('draft krever fortsatt gyldig team_size og handicap_pct', () => {
+    // Texas-spesifikke konfig-felt må være korrekte selv i draft —
+    // de er forutsetninger for at noe annet skal gi mening.
+    const result = buildGameInsertPayload(
+      texasFd({
+        teamSize: '3' as unknown as '2',
+        players: [],
+      }),
+      'draft',
+    );
+    expect(result.errorCode).toBe('unsupported_mode_size_combo');
+  });
+
+  it('teams_count beregnes som unike team_numbers i payload', () => {
+    const result = buildGameInsertPayload(
+      texasFd({
+        teamSize: '2',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 5 },
+          { userId: 'd', team: 5 },
+          { userId: 'e', team: 12 },
+          { userId: 'f', team: 12 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'texas_scramble') {
+      expect(result.mode_config.teams_count).toBe(3);
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+});
