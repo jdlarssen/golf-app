@@ -6,15 +6,10 @@ import {
   type NotificationKind,
   type NotificationPayload,
 } from './types';
+import { OFF_APP_THRESHOLD_MS } from './thresholds';
 
-/**
- * Terskel for når brukeren regnes som «off-app» og dermed skal få mail
- * som backup på in-app varselet. 5 min er konservativt — dekker normal
- * idle/swap-mellom-apper-bruk uten å gi unødvendig mail-spam.
- *
- * Refleksjonen er beskrevet nærmere i design-doc-en til issue #25.
- */
-export const OFF_APP_THRESHOLD_MS = 5 * 60 * 1000;
+// Re-export så eksisterende imports fra notify.ts ikke brekker.
+export { OFF_APP_THRESHOLD_MS };
 
 /**
  * Insert varsel + returner om mail bør sendes som backup. Caller er

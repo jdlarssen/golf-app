@@ -3,6 +3,7 @@
 // We use the new convention. The function MUST be named `proxy`.
 import { NextRequest, NextResponse } from 'next/server';
 import { createMiddlewareClient } from '@/lib/supabase/middleware';
+import { OFF_APP_THRESHOLD_MS } from '@/lib/notifications/thresholds';
 
 export async function proxy(request: NextRequest) {
   const { supabase, response, setRequestHeader } = createMiddlewareClient(request);
@@ -28,8 +29,12 @@ export async function proxy(request: NextRequest) {
   setRequestHeader('x-torny-user-id', user.id);
 
   // Best-effort last_seen_at update — one round-trip, debounced via the
-  // WHERE clause so Postgres no-ops when last_seen_at is fresher than 30 min.
-  // Fire-and-forget so it never blocks the response.
+  // WHERE clause så Postgres no-ops når last_seen_at er ferskere enn
+  // OFF_APP_THRESHOLD_MS. Holder skriv-frekvensen lav (én UPDATE per
+  // bruker per terskel-vindu) samtidig som mail-gating-en i notify.ts
+  // bruker SAMME terskel — uten match kan en aktiv bruker få mail fordi
+  // siste last_seen_at-skriving er eldre enn off-app-vinduet.
+  // Fire-and-forget så det aldri blokkerer responsen.
   void (async () => {
     try {
       await supabase
@@ -37,7 +42,7 @@ export async function proxy(request: NextRequest) {
         .update({ last_seen_at: new Date().toISOString() })
         .eq('id', user.id)
         .or(
-          `last_seen_at.is.null,last_seen_at.lt.${new Date(Date.now() - 30 * 60 * 1000).toISOString()}`,
+          `last_seen_at.is.null,last_seen_at.lt.${new Date(Date.now() - OFF_APP_THRESHOLD_MS).toISOString()}`,
         );
     } catch {
       // Intentionally swallowed — never block the request.

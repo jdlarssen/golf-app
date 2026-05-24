@@ -14,6 +14,19 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Tørny får en innboks. Bjelle øverst-til-høyre på alle sider viser en champagne-prikk når det venter et nytt varsel, og en dedikert /innboks-flate samler hele historikken. Varslene wires inn etappevis (issue [#25](https://github.com/jdlarssen/golf-app/issues/25)): invitasjoner, peer-godkjenninger, scorekort-events og spill-avsluttet. Siste fase kuttet mail-spammen til aktive brukere — du får ikke lenger mail om noe som allerede er på skjermen din.
 
+### [1.15.4] - 2026-05-24
+
+> Mail-spam-reduksjonen som kom i 1.15.2 fungerer nå strammere. Tidligere kunne en aktiv bruker likevel få mail hvis siste «jeg er her»-pingen var mellom 5 og 30 minutter gammel; nå matcher pinge-frekvensen og mail-vinduet samme 5-minutters-terskel.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `proxy.ts` last_seen_at-WHERE-debouncen senket fra 30 min til 5 min for å matche `OFF_APP_THRESHOLD_MS` i [\`lib/notifications/notify.ts\`](https://github.com/jdlarssen/golf-app/blob/main/lib/notifications/notify.ts). Tidligere mismatch (notify.ts gated på 5 min, proxy debouncet 30 min) kunne gi mail til en aktiv bruker hvis siste pinge var 5–30 min gammel — en konservativ default fra Phase 4 av [#25](https://github.com/jdlarssen/golf-app/issues/25), men ikke maksimal spam-reduksjon. Konstanten ekstrahert til ny `lib/notifications/thresholds.ts` (uten `server-only`) slik at både notify.ts og proxy.ts importerer fra samme sted; cross-reference-kommentaren forhindrer ny mismatch.
+- DB-cost: ~12 UPDATEs per bruker per time mot 2 før, men trivielt selv ved klubb-skala (100+ aktive brukere = ~1200 writes/time ≈ 0,3/s).
+
+</details>
+
 ### [1.15.3] - 2026-05-24
 
 > Et raskt dobbelt-trykk på «Lever scorekort» sender ikke lenger flere varsler eller mail. Ble du sittende uten å vite om første trykk gikk gjennom, og trykte igjen, får admin én melding — ikke to.
