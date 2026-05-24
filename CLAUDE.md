@@ -172,6 +172,37 @@ Når en ny minor-serie åpnes (f.eks. `1.8.0` → `1.9.0`), pakk den forrige (n�
 
 Skip-typene over (`docs/refactor/test/chore/style/ci/build`) passerer fritt — hooken slår kun ut på bruker-synlige prefikser.
 
+### Språk-kvalitet i bruker-rettet copy
+
+Når du legger til eller endrer norske strenger som vises til brukeren — i `.tsx`/`.ts`-filer, mail-templates (`lib/mail/`), feilmeldinger, banner-tekster, knappe-tekster, helper-tekster — kjør `humanizer:humanizer`-skillet (fra `floka-marketplace`) på det du har skrevet før commit. Pre-commit-hooken `.githooks/pre-commit` advarer (men blokkerer ikke) ved kjente AI-tells i nye linjer i `.tsx`/`.ts`-filer.
+
+Markdown-filer (`CHANGELOG.md`, `docs/email-templates.md`) skannes ikke av hooken — prosjekt-dokumentasjon inneholder legitimt eksempler på mønstrene. CHANGELOG-taglines håndteres via policyen i `### Versjonering / CHANGELOG` over, og mail-malene via det manuelle humanizer-passet.
+
+**Hva hooken fanger mekanisk:**
+- «X-spillet»-redundans (`slagspill-spillet` → `slagspillet`, `matchplay-spillet` → `matchen`, `par-stableford-spillet` → `par-stableford-runden`)
+- «Vennligst»-overforbruk
+- «Tap»-anglism (`Tap kort` → `Trykk kort`)
+- Em-dash-kjeder (`X — Y — Z` → splitt med punktum/komma/parens)
+
+**Hovedmønstre etablert (fra [PR #170](https://github.com/jdlarssen/golf-app/pull/170) og [PR #174](https://github.com/jdlarssen/golf-app/pull/174)) — utover hookens automatikk:**
+- **Anglisismer:** `feature` → `funksjon`, `release` → `lansering`, `entry` → `oppføring`, `by default` → `som standard`, «på login» → drop
+- **Significance-puffery:** drop frase som «markerer at», «representerer en pivotal», «spennings-moment» → noe konkret
+- **Curly quotes** → guillemets («…»)
+- **US-decimal i feilmeldinger** → norsk komma (`54.0` → `54,0`)
+- **Passiv → aktiv du-form:** «Vi mottok forespørsel» → «Du har bedt om»
+- **Generisk feilmelding → konkret:** «Noe gikk galt» → «Klarte ikke å fullføre handlingen»
+- **Idiomatisk definitt-form:** «leaderboard er åpen» → «leaderboardet er åpent»
+
+**Bevisst bevart (false-positives å ignorere ved hook-advarsel):**
+- Brand-tagline `Tørny — fyr opp golfturneringen` (kanonisk per `### Brand`)
+- Mail-subject «Resultatet er klart — ${gameName}» (5 snapshot-tester låser eksakt streng)
+- «Sekretariat»-stemmen i admin-flater
+- Engelske achievement-navn (Turkey/Solid/Snowman — bevisste sportstermer)
+
+Hooken er aktivert automatisk via `core.hooksPath=.githooks` (samme aktivering som commit-msg-hooken via `postinstall`). Tester (`*.test.ts`/`*.test.tsx`), kommentarer og console.log skannes ikke.
+
+For CHANGELOG-spesifikk guidance, se `### Versjonering / CHANGELOG` over.
+
 ### Feilhåndtering / bugs
 
 - **Ingen quick-fixes.** Bruker har eksplisitt sagt: alle bugs krever systematisk debugging FØR fix

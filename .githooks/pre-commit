@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Advarer mot kjente AI-tells i nye bruker-rettede strenger.
+# Følger «Språk-kvalitet i bruker-rettet copy»-policyen i CLAUDE.md
+# (etter PR #170 + PR #174).
+#
+# Non-blocking: hooken kjører bare warn-pass; alltid exit 0.
+# Patterns har lav false-positive-risiko, men du kan ignorere advarsler
+# om de gjelder bevisst beholdt copy (brand-tagline, snapshot-låste mail-
+# subjects, sekretariat-stemmen i admin, achievement-navn).
+
+set -e
+
+# Plukk ut staget .tsx/.ts-filer (komponent-kode), ekskluder tester.
+# Markdown-filer (CHANGELOG, email-templates, etc.) skannes IKKE — de håndteres
+# via den manuelle humanizer-policyen i CLAUDE.md fordi prosjekt-dokumentasjon
+# legitimt inneholder eksempler på mønstrene hooken ser etter.
+files=$(git diff --cached --name-only --diff-filter=AM 2>/dev/null \
+  | grep -E '\.(tsx|ts)$' \
+  | grep -vE '\.test\.|/__tests__/|/test/' \
+  || true)
+[ -z "$files" ] && exit 0
+
+warn_count=0
+
+report() {
+  local file="$1" desc="$2" matches="$3"
+  printf '⚠️  humanizer-advarsel: %s — %s\n' "$file" "$desc" >&2
+  printf '%s\n' "$matches" | sed 's/^/      /' >&2
+  warn_count=$((warn_count + 1))
+}
+
+for f in $files; do
+  # Hent kun NYE linjer (eks. +++ header)
+  added=$(git diff --cached -U0 -- "$f" 2>/dev/null | grep '^+' | grep -v '^+++' || true)
+  [ -z "$added" ] && continue
+
+  # X-spillet-redundans (slagspill-spillet/matchplay-spillet/par-stableford-spillet)
+  m=$(printf '%s' "$added" | grep -nE 'slagspill-spillet|matchplay-spillet|par-stableford-spillet' || true)
+  [ -n "$m" ] && report "$f" "«X-spillet»-redundans (bruk «slagspillet/matchen/par-stableford-runden»)" "$m"
+
+  # «Vennligst»-overforbruk
+  m=$(printf '%s' "$added" | grep -nE '\bVennligst\b' || true)
+  [ -n "$m" ] && report "$f" "«Vennligst»-overforbruk (drop eller bruk bare imperativ)" "$m"
+
+  # «Tap»-anglism i instruksjons-kontekst
+  m=$(printf '%s' "$added" | grep -nE '\b[Tt]ap (kort|for|et|på|et lag|på et)' || true)
+  [ -n "$m" ] && report "$f" "«Tap»-anglism (bruk «Trykk» på norsk)" "$m"
+
+  # Em-dash-kjede (to em-dasher i samme nye linje, ≤80 tegn mellom)
+  m=$(printf '%s' "$added" | grep -nE '—[^—]{1,80}—' || true)
+  [ -n "$m" ] && report "$f" "em-dash-kjede (splitt med punktum/komma/parens)" "$m"
+done
+
+if [ "$warn_count" -gt 0 ]; then
+  printf '\n%d humanizer-advarsel(er). Commit fortsetter — bekreft mentalt eller kjør `humanizer:humanizer`-skillet om du er usikker.\n' "$warn_count" >&2
+fi
+
+exit 0
