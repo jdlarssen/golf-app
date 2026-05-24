@@ -12,7 +12,28 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ## 1.15.y — In-app innboks
 
-Tørny får en innboks. Bjelle øverst-til-høyre på alle sider viser en champagne-prikk når det venter et nytt varsel, og en dedikert /innboks-flate samler hele historikken. Selve varslene kobles inn etappevis (issue [#25](https://github.com/jdlarssen/golf-app/issues/25)) — invitasjoner, peer-godkjenninger, scorekort-events og spill-avsluttet.
+Tørny får en innboks. Bjelle øverst-til-høyre på alle sider viser en champagne-prikk når det venter et nytt varsel, og en dedikert /innboks-flate samler hele historikken. Varslene wires inn etappevis (issue [#25](https://github.com/jdlarssen/golf-app/issues/25)): invitasjoner, peer-godkjenninger, scorekort-events og spill-avsluttet. Siste fase kuttet mail-spammen til aktive brukere — du får ikke lenger mail om noe som allerede er på skjermen din.
+
+### [1.15.2] - 2026-05-24
+
+> Du får færre mail når du er aktiv. Hvis du har vært i Tørny de siste fem minuttene når noen leverer scorekort eller avslutter et spill du er med i, dukker varselet kun opp i innboksen din. Mailen kommer som før hvis det er en stund siden du var her.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+- `app/games/[id]/submit/actions.ts` — `submitScorecard` filtrerer nå admin-mottakerlisten på `shouldAlsoSendMail` fra notify() før mail-blasten fyres. Aktive admin-er (last_seen_at < 5 min — terskel definert i `lib/notifications/notify.ts:OFF_APP_THRESHOLD_MS`) får kun in-app-varselet; off-app-admin-er får mail som backup. Notify-feil → ikke send mail (samme rasjonale som inni notify() ved insert-error: vi vil ikke maile uten in-app).
+- `app/admin/games/[id]/actions.ts` — `endGame` speiler samme pattern for spillerne. Per-spiller `sendMailByUserId`-map bygges fra notify-resultatene; `mailRecipients = recipients.filter(...)` filtrerer før «Resultatet er klart»-blasten.
+- `app/admin/games/[id]/avslutt/actions.ts` — `endGameWithSideWinners` speiler endGame-gatingen for sideturnerings-flyten.
+- `lib/mail/gameFinishedRecipients.ts` — `FinishedMailRecipient`-interface utvidet med `userId: string` slik at action-laget kan matche notify-utfall mot mail-mottakerlisten. Alle grenene (best-ball, stableford solo/team, singles matchplay, solo strokeplay) oppdaterer recipient-objektene tilsvarende.
+
+#### Notes
+- Phase 4 av 4 i issue [#25](https://github.com/jdlarssen/golf-app/issues/25) — innboks-epic-en er nå komplett. PR-er: #X (Phase 1 — datalag), #Y (Phase 2 — bjelle + /innboks), #Z (Phase 3 — event-wiring), #W (Phase 4 — mail-gating).
+- `invite`-event er IKKE wired i mail-gatingen — Phase 3 wired heller ikke selve invite-notify-call-en siden `invitations.game_id` er null i dagens kode (sporet i [#182](https://github.com/jdlarssen/golf-app/issues/182)). Når game-scoped invitations lander vil mail-gatingen følge samme pattern.
+- `last_seen_at`-oppdateringen var allerede wired i `proxy.ts` (best-effort fire-and-forget med Postgres-side WHERE-clause-debounce på 30 min). Bekreftet i Task 4.1, ingen ny kode lagt til. Det betyr at gating-threshold-en (5 min off-app) er strammere enn proxy-debounce-en (30 min) — en aktiv bruker kan i teorien få mail hvis deres siste last_seen_at-skriving er 5–30 min gammel. Akseptabel konservativ default — backup-mail er bedre enn manglende varsel.
+- Mail-templatene endret seg ikke; alle 39 mail-snapshot-tester er fortsatt grønne. Action-testene (`app/games/[id]/submit/actions.test.ts`, `app/admin/games/[id]/actions.test.ts`) fikk notify-mock + `userId`-felter i fixturene for å gjenopprette deterministisk mail-fyring i happy-path. Test-suite på 837 grønne.
+
+</details>
 
 ### [1.15.1] - 2026-05-24
 
