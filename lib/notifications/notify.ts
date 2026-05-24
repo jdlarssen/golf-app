@@ -60,6 +60,9 @@ export async function notify<K extends NotificationKind>(opts: {
     console.error('[notifications] insert failed', insertRes.error);
     // Returner false så caller IKKE sender mail heller — vi vil ikke ha
     // en situasjon der mail går ut men in-app er tom (verre UX enn ingen).
+    // Dette fanger også cascade-race: hvis bruker slettes (ON DELETE CASCADE
+    // på user_id-FK) mens notify er in-flight, gir insert en FK-error og
+    // vi havner her — riktig oppførsel, vi vil ikke maile en slettet bruker.
     return { shouldAlsoSendMail: false };
   }
 
