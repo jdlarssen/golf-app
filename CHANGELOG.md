@@ -10,6 +10,46 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.22.y — Hurtig-oppsett for nye spill
+
+Opprett-spill-flyten er omarbeidet til fire korte steg i stedet for én lang side med seks seksjoner. Format → bane → spillere → klar. «Tilpass alle detaljer» henter fram dagens fullform for power-users som vil styre alt. Issue [#203](https://github.com/jdlarssen/golf-app/issues/203).
+
+### [1.22.0] - 2026-05-25
+
+> Som admin setter du nå opp et spill i fire korte steg, ikke seks seksjoner på én lang side. Velg format, så bane og tidspunkt, så spillere — og til slutt sjekker du sammendraget før du publiserer. Trenger du flere detaljer (sideturnering, peer-godkjenning, HCP-allowance), finner du dem bak «Tilpass alle detaljer» på siste steg.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `app/admin/games/new/GameWizard.tsx` — 4-stegs orkestrator (Format → Bane → Spillere → Klar) med URL-state via `?step=` og `?view=`. Stepper-header («Steg N av 4 · tittel») med tynn progress-bar som respekterer `prefers-reduced-motion`. Per-steg-validering på Neste-knappen.
+- `app/admin/games/new/useGameFormState.ts` — felles state-hook som GameForm og GameWizard begge konsumerer. All state, derived flags, memos, validitets-flags og handlers ligger her — én kilde til scoring-/validerings-reglene.
+- `app/admin/games/new/sections/` — fem ekstraherte presentasjons-komponenter:
+  - `BasicsSection.tsx` (spillnavn + bane + tee + tee-off + valgfri synlighet/sideturnering)
+  - `PlayersSection.tsx` (søk + chips + filtrert liste + mode-aware counter)
+  - `TeamsAssignmentSection.tsx` (matchplay-sider / lag-grid / flights / per-spiller-tee)
+  - `AdvancedSettingsSection.tsx` (HCP-allowance, peer-godkjenning, valgfri visibility)
+  - `ReadyStep.tsx` (wizard-only steg 4: summary-kort + advanced disclosure + publish/draft + escape-hatch)
+- `lib/games/autoGameName.ts` — `suggestGameName({ courseName, scheduledTeeOffAt })` bygger forslag som «Stiklestad 25. mai» fra bane + tee-off. Wizard pre-fyller spillnavnet på steg 4 før admin redigerer (gated på `nameTouched`-flag).
+- `lib/games/autoGameName.test.ts` (8 tester) + `app/admin/games/new/GameWizard.test.tsx` (9 tester) — dekker happy-paths for solo og best-ball, escape-hatch + tilbake bevarer state, auto-name + manuell override, og FormData-skjema speiler GameForm-payloaden.
+
+#### Changed
+- `app/admin/games/new/GameForm.tsx` (1819 → 347 linjer) — refaktorert til presentasjons-komponent som stacker de fire seksjonene + form-skeleton. Konsumerer `useGameFormState`. Brukes fortsatt 1:1 av edit-flyten (`/admin/games/[id]/edit`) og av wizard-en når admin klikker «Tilpass alle detaljer».
+- `app/admin/games/new/page.tsx` og `app/opprett-spill/page.tsx` — rendrer nå `<GameWizard>` i stedet for `<GameForm>`. Samme props, samme server-actions, samme FormData-skjema. Edit-flyten (`/admin/games/[id]/edit/page.tsx`) er uberørt — bruker fortsatt `<GameForm>`.
+
+#### Notes
+- **Server-actions er uberørte.** `createGameDraft`, `createAndPublishGame`, og edit-equivalentene mottar identisk FormData (`game_mode`, `team_size`, `player_${i}_*`, `hcp_allowance_pct`, `side_*`, etc.) som før. Ingen databasemigrasjon, ingen API-endring.
+- **Hopp til full-form og tilbake bevarer wizard-state.** «Tilpass alle detaljer» bytter `view = 'full'` og passer wizard-state som `initialValues` til GameForm. «← Tilbake til hurtig-oppsett» flipper tilbake til siste steg.
+- **Uncontrolled-felter** (score_visibility-radios, side_ld_count/ctp_count, SideCategoriesPicker) håndteres som default-fallback ved skip av advanced disclosure — sentral disiplin matcher GameForm-oppførselen før refactor.
+- Test-suite vokst fra 1022 → 1031 (+9 wizard-tester). Eksisterende GameForm-/actions-tester passerer uendret.
+
+</details>
+
+---
+
+<details>
+<summary><strong>1.21.y — Sideturnering — 14 nye bonus-kategorier (1 oppføring) — klikk for å vise</strong></summary>
+
 ## 1.21.y — Sideturnering — 14 nye bonus-kategorier
 
 Sideturneringen vokser fra 27 til 41 kategorier. Nye bragder dekker albatross, hole-in-one, konge-på-par-4, rein 9-tur, ren runde uten double-bogey, comeback-priser, og to nye lag-bonuser. To humor-kategorier (verste enkelthull og flest double-bogeys) gir mild straff. Som standard er alle nye skrudd på i Full pakke-presetet. Issue [#169](https://github.com/jdlarssen/golf-app/issues/169).
@@ -43,6 +83,8 @@ Sideturneringen vokser fra 27 til 41 kategorier. Nye bragder dekker albatross, h
 - Eagles+ (netto ≤ par−2) forblir inklusiv — en albatross teller både under `most_eagles_*` og som egen `most_albatrosses_*`-kategori. Bevisst valg: back-compat med ferdigspilte spill, ingen data-migrasjon. Flagget i picker-hjelpetekst.
 - Eksisterende ferdigspilte spill med `side_disabled_categories = '{}'` (Full pakke) får automatisk de 18 nye kategoriene aktivert ved neste leaderboard-fetch. Spillere kan se «nye utmerkelser» dukke opp på historiske runder hvor noen har gjort en albatross eller hole-in-one — feel-good, ikke regression.
 - Test-suite vokst fra 958 → 986 (+28 nye tester).
+
+</details>
 
 </details>
 
