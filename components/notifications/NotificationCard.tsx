@@ -26,6 +26,7 @@ const EMOJI: Record<NotificationKind, string> = {
   scorecard_submitted: '📋',
   scorecard_approved: '✅',
   game_finished: '🏆',
+  product_update: '✨',
 };
 
 /**
@@ -144,6 +145,13 @@ function buildCardContent(
       return {
         title: 'Resultatet er klart',
         detail: p.game_name,
+      };
+    }
+    case 'product_update': {
+      const p = payload as NotificationPayload<'product_update'>;
+      return {
+        title: p.title,
+        detail: p.body,
       };
     }
   }

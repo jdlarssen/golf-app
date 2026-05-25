@@ -129,6 +129,10 @@ export function InboxClient({
  * mail-deeplink-klikk separat (Phase 3).
  */
 function buildDeeplink(notification: NotificationRow): string {
+  if (notification.kind === 'product_update') {
+    const p = notification.payload as NotificationPayload<'product_update'>;
+    return p.link ?? '/innboks';
+  }
   const gameId = (notification.payload as NotificationPayload<'invite'>).game_id;
   switch (notification.kind) {
     case 'invite':
