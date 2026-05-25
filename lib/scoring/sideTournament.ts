@@ -1151,6 +1151,245 @@ export function calculateSideTournament(
     }
   }
 
+  // 20. Most albatrosses — team-aggregate (4p) + individual-best (2p)
+  // Albatross = netto <= par - 3. Mirror of most_eagles, stricter threshold.
+  // Note: eagles+ category (netto <= par - 2) is inclusive, so an albatross
+  // counts there too — documented in picker text.
+  const isAlbatross = (netto: number, par: number): boolean => netto <= par - 3;
+
+  if (!isDisabled('most_albatrosses_team', input.config)) {
+    const eligibleTeams = input.teams.filter((t) => t.userIds.length >= 2);
+    if (eligibleTeams.length >= 2) {
+      const teamTotals: Array<{ teamId: TeamId; total: number | null }> = eligibleTeams.map((t) => ({
+        teamId: t.teamId,
+        total: countMatchesForTeam(t, input.playerScoresPerHole, input.coursePars, isAlbatross),
+      }));
+      const max = Math.max(...teamTotals.map((t) => (t.total ?? 0)));
+      if (max > 0) {
+        for (const teamId of findMaxTeams(teamTotals)) {
+          award(teamId, {
+            category: 'most_albatrosses_team',
+            teamId,
+            points: SIDE_TOURNAMENT_POINTS.mostAlbatrossesTeam,
+          });
+        }
+      }
+    }
+  }
+
+  if (!isDisabled('most_albatrosses_individual', input.config)) {
+    const playerCounts = input.playerScoresPerHole.map((p) => ({
+      userId: p.userId,
+      count: countMatchesForPlayer(p.userId, input.playerScoresPerHole, input.coursePars, isAlbatross),
+    }));
+    if (playerCounts.length > 0) {
+      const max = Math.max(...playerCounts.map((p) => p.count));
+      if (max > 0) {
+        const winners = playerCounts.filter((p) => p.count === max).map((p) => p.userId);
+        const seenTeams = new Set<TeamId>();
+        for (const userId of winners) {
+          const teamId = teamIdForUser(input.teams, userId);
+          if (teamId != null && !seenTeams.has(teamId)) {
+            seenTeams.add(teamId);
+            award(teamId, {
+              category: 'most_albatrosses_individual',
+              teamId,
+              points: SIDE_TOURNAMENT_POINTS.mostAlbatrossesIndividual,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // 21. Most hole-in-ones — team-aggregate (4p) + individual-best (2p)
+  // Predikat: gross === 1 (independent of par; only par-3 is realistic but no
+  // explicit gate). Gross-based — `countMatchesForPlayer/Team` are netto-only
+  // helpers, so we inline the loop here rather than parametrising them. Keeps
+  // those helpers tight and avoids leaking a `field`-parameter into many
+  // call-sites that only care about netto.
+  const countHoleInOnesForPlayer = (userId: UserId): number => {
+    const player = input.playerScoresPerHole.find((p) => p.userId === userId);
+    if (!player) return 0;
+    let count = 0;
+    for (let h = 0; h < 18; h++) {
+      const gross = player.perHoleGross[h];
+      if (gross === 1) count++;
+    }
+    return count;
+  };
+
+  if (!isDisabled('most_hole_in_ones_team', input.config)) {
+    const eligibleTeams = input.teams.filter((t) => t.userIds.length >= 2);
+    if (eligibleTeams.length >= 2) {
+      const teamTotals: Array<{ teamId: TeamId; total: number | null }> = eligibleTeams.map((t) => ({
+        teamId: t.teamId,
+        total: t.userIds.reduce((sum, uid) => sum + countHoleInOnesForPlayer(uid), 0),
+      }));
+      const max = Math.max(...teamTotals.map((t) => (t.total ?? 0)));
+      if (max > 0) {
+        for (const teamId of findMaxTeams(teamTotals)) {
+          award(teamId, {
+            category: 'most_hole_in_ones_team',
+            teamId,
+            points: SIDE_TOURNAMENT_POINTS.mostHoleInOnesTeam,
+          });
+        }
+      }
+    }
+  }
+
+  if (!isDisabled('most_hole_in_ones_individual', input.config)) {
+    const playerCounts = input.playerScoresPerHole.map((p) => ({
+      userId: p.userId,
+      count: countHoleInOnesForPlayer(p.userId),
+    }));
+    if (playerCounts.length > 0) {
+      const max = Math.max(...playerCounts.map((p) => p.count));
+      if (max > 0) {
+        const winners = playerCounts.filter((p) => p.count === max).map((p) => p.userId);
+        const seenTeams = new Set<TeamId>();
+        for (const userId of winners) {
+          const teamId = teamIdForUser(input.teams, userId);
+          if (teamId != null && !seenTeams.has(teamId)) {
+            seenTeams.add(teamId);
+            award(teamId, {
+              category: 'most_hole_in_ones_individual',
+              teamId,
+              points: SIDE_TOURNAMENT_POINTS.mostHoleInOnesIndividual,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // 22. Konge på par-4 — team-aggregate (best-ball brutto on par-4 holes, 4p)
+  //     + individual (lowest single-player brutto sum on par-4 holes, 2p)
+  // 1:1 copy of king_par3/king_par5, with predicate `coursePars[h] === 4`.
+  const isPar4 = (h: number): boolean => input.coursePars[h] === 4;
+  const hasPar4Holes = input.coursePars.some((p) => p === 4);
+
+  if (!isDisabled('king_par4_team', input.config) && hasPar4Holes) {
+    const eligibleTeams = input.teams.filter((t) => t.userIds.length >= 2);
+    if (eligibleTeams.length >= 2) {
+      const teamTotals = eligibleTeams.map((t) => ({
+        teamId: t.teamId,
+        total: bestBallGrossPerHole(t, input.playerScoresPerHole, 0, 18, isPar4),
+      }));
+      for (const teamId of findMinTeams(teamTotals)) {
+        award(teamId, {
+          category: 'king_par4_team',
+          teamId,
+          points: SIDE_TOURNAMENT_POINTS.kingPar4Team,
+        });
+      }
+    }
+  }
+
+  if (!isDisabled('king_par4_individual', input.config) && hasPar4Holes) {
+    const playerSums = input.playerScoresPerHole.map((p) => ({
+      userId: p.userId,
+      total: playerGrossSum(p.userId, input.playerScoresPerHole, 0, 18, isPar4),
+    }));
+    const valid = playerSums.filter(
+      (p): p is { userId: UserId; total: number } => p.total !== null,
+    );
+    if (valid.length > 0) {
+      const min = Math.min(...valid.map((p) => p.total));
+      const winners = valid.filter((p) => p.total === min).map((p) => p.userId);
+      const seenTeams = new Set<TeamId>();
+      for (const userId of winners) {
+        const teamId = teamIdForUser(input.teams, userId);
+        if (teamId != null && !seenTeams.has(teamId)) {
+          seenTeams.add(teamId);
+          award(teamId, {
+            category: 'king_par4_individual',
+            teamId,
+            points: SIDE_TOURNAMENT_POINTS.kingPar4Individual,
+          });
+        }
+      }
+    }
+  }
+
+  // 23/24. Rein halvdel — clean_front_9 / clean_back_9 (4p hver, individ)
+  // For each player: every hole in the half has netto ≤ par (no bogey+).
+  // Requires complete netto-data across the half. Players who qualify earn 4p
+  // — multiple qualifying players → all get 4p, deduped per team.
+  const awardCleanHalf = (
+    category: 'clean_front_9' | 'clean_back_9',
+    start: number,
+    end: number,
+    points: number,
+  ): void => {
+    const qualifiers: UserId[] = [];
+    for (const p of input.playerScoresPerHole) {
+      let allParOrBetter = true;
+      for (let h = start; h < end; h++) {
+        const netto = p.perHoleNetto[h];
+        const par = input.coursePars[h];
+        if (netto == null || par == null) { allParOrBetter = false; break; }
+        if (netto > par) { allParOrBetter = false; break; }
+      }
+      if (allParOrBetter) qualifiers.push(p.userId);
+    }
+    if (qualifiers.length === 0) return;
+    const seenTeams = new Set<TeamId>();
+    for (const userId of qualifiers) {
+      const teamId = teamIdForUser(input.teams, userId);
+      if (teamId != null && !seenTeams.has(teamId)) {
+        seenTeams.add(teamId);
+        award(teamId, {
+          category,
+          teamId,
+          points,
+          winnerUserId: userId,
+        });
+      }
+    }
+  };
+
+  if (!isDisabled('clean_front_9', input.config)) {
+    awardCleanHalf('clean_front_9', 0, 9, SIDE_TOURNAMENT_POINTS.cleanFront9);
+  }
+  if (!isDisabled('clean_back_9', input.config)) {
+    awardCleanHalf('clean_back_9', 9, 18, SIDE_TOURNAMENT_POINTS.cleanBack9);
+  }
+
+  // 25. Ren runde — no_double_plus_round (4p individ)
+  // Every hole on the round has netto ≤ par+1 (bogey OK, double-or-worse not).
+  // Requires complete 18-hole netto-data. Tie → all qualifying players earn,
+  // deduped per team.
+  if (!isDisabled('no_double_plus_round', input.config)) {
+    const qualifiers: UserId[] = [];
+    for (const p of input.playerScoresPerHole) {
+      let clean = true;
+      for (let h = 0; h < 18; h++) {
+        const netto = p.perHoleNetto[h];
+        const par = input.coursePars[h];
+        if (netto == null || par == null) { clean = false; break; }
+        if (netto > par + 1) { clean = false; break; }
+      }
+      if (clean) qualifiers.push(p.userId);
+    }
+    if (qualifiers.length > 0) {
+      const seenTeams = new Set<TeamId>();
+      for (const userId of qualifiers) {
+        const teamId = teamIdForUser(input.teams, userId);
+        if (teamId != null && !seenTeams.has(teamId)) {
+          seenTeams.add(teamId);
+          award(teamId, {
+            category: 'no_double_plus_round',
+            teamId,
+            points: SIDE_TOURNAMENT_POINTS.noDoublePlusRound,
+            winnerUserId: userId,
+          });
+        }
+      }
+    }
+  }
+
   return {
     teamStandings: input.teams.map((t) => ({
       teamId: t.teamId,
