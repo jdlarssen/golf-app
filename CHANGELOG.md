@@ -10,7 +10,43 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.27.y — Arkiv-UI og delbare filter-lenker
+
+Fase 3 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Soft-arkiverte tees kan gjenåpnes fra edit-flaten, bane-listens filter-state ligger i URL-en, og legacy-rader uten `updated_by` er backfilt fra `created_by`.
+
+### [1.27.0] - 2026-05-25
+
+> Du kan nå gjenåpne en arkivert tee fra bane-redigeringen — den dukker opp igjen i skjemaet og kan velges for nye spill. Bane-listens søk, sortering og chip-filter lagres nå i URL-en, så en filtrert visning er bokmerke-bar og kan deles via lenke. Eldre baner uten «Sist endret av»-navn har fått det fylt ut bakover-i-tid.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- [app/admin/courses/[id]/edit/actions.ts](app/admin/courses/[id]/edit/actions.ts) `restoreTee` server-action — clearer `tee_boxes.archived_at`, bumper `courses.updated_at` + `updated_by` (restore er en bane-endring), og redirecter til `?status=restored`. Defensive guards: tee må eksistere, høre til riktig bane, og være arkivert. Sju unit-tester dekker happy path + alle tre reject-stier + non-admin + unauth + db-error.
+- [app/admin/courses/[id]/edit/ArchivedTeesSection.tsx](app/admin/courses/[id]/edit/ArchivedTeesSection.tsx) — ny server-component med `<details>`-wrapper som lister soft-arkiverte tees med Gjenåpne-knapp per rad. Navne-kollisjons-chip når en arkivert tee har samme navn som en aktiv (visuelt advarsels-flagg; ingen DB-blokk).
+- [app/admin/courses/[id]/edit/page.tsx](app/admin/courses/[id]/edit/page.tsx) — fetcher arkiverte + aktive tees parallelt (`Promise.all`), derivér `has_active_name_conflict`, render `ArchivedTeesSection` mellom CourseForm og DeleteCourseButton. Banner-handler for `?status=restored` + nye error-koder `tee_not_found` / `tee_not_archived`.
+- Migration `0038_courses_backfill_updated_by.sql` — `update public.courses set updated_by = created_by where updated_by is null and created_by is not null`. Idempotent; backfilt 1 rad i prod ved kjøring.
+- Regresjons-test i `actions.test.ts` som driver `updateCourse` med full FormData-payload — fanger v1.26.1-fellen mekanisk (hvis `MAX_TEE_BOXES` flyttes tilbake bak `'use client'`-grensen, asserterer den at insert-loop-en iterere).
+
+#### Changed
+- [app/admin/courses/CoursesLedgerClient.tsx](app/admin/courses/CoursesLedgerClient.tsx) — bytter `useState`-backing-store for `useSearchParams` + `router.replace` (med `startTransition` og `{ scroll: false }`). URL-format: `?q=stik&sort=updated_at&ladies=1&juniors=1&active=1`. Defaults skrives ikke. Ny eksportert `readStateFromParams`-helper for pure-test-dekking.
+- `CoursesLedgerClient.test.tsx` — eksisterende 17 interaksjons-tester refaktorert til å mocke `next/navigation` med en `useSyncExternalStore`-backet store, så `fireEvent`-drevne URL-skriv faktisk gjør komponenten re-render. Pluss 8 nye tester for URL-init + URL-write + default-omission.
+
+#### Notes
+- Restore lever som dedikert server-action (ikke bundlet med CourseForm-save) for å holde begge flytene enkle. Form-save er en stor batch-mutation; restore-intent håndteres separat og redirecter til en frisk reload av edit-flaten.
+- DB har ingen unique-constraint på `(course_id, name)` i tee_boxes — restore til navne-konflikt med en aktiv tee tillates uten å blokkere. Navne-kollisjons-chip-en flagger det visuelt så admin kan endre navnet etter behov.
+- URL-replace, ikke push — filter-tweaks er ikke historikk-aktivitet. Browser-back tar admin ut av siden, ikke gjennom filter-historikk. Bevisst tradeoff for enklere mental modell.
+- 0038-backfill er trygg for live spill (rører kun `courses.updated_by`-kolonnen). Rader med `created_by IS NULL` forblir uendret (ingen kilde-data).
+- Per-kjønn-overstyring av hull-par fortsetter som egen Fase når det blir reelt smerte-punkt. Krever endring i alle 4 mode-implementasjoner som leser `hole.par` direkte.
+
+</details>
+
+---
+
 ## 1.26.y — Vedlikeholds-trygghet og filter på bane-admin
+
+<details>
+<summary><strong>1.26.y — Vedlikeholds-trygghet og filter på bane-admin (2 oppføringer) — klikk for å vise</strong></summary>
 
 Fase 2 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Audit-felter på baner, soft-archive av tees i bruk, og sort + filter på bane-listen.
 
@@ -57,6 +93,8 @@ Fase 2 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Audit-f
 - `game_players.course_handicap` er frosset ved game-start ([0001](supabase/migrations/0001_initial_schema.sql)), så historiske handicap-er påvirkes ikke selv om en tee-rad senere får oppdatert slope/CR. Tee-edit-fleksibilitet er trygt.
 - Soft-archive er en-veis i Fase 2; un-arkivér-UI er Fase 3 av #223. Hvis admin gjør en feil må de rekonstruere tee-en eller SQL-resette `archived_at` manuelt.
 - Per-kjønn-overstyring av hull-par ble vurdert for Fase 2 men flyttet til egen Fase basert på scoring-code-impact-funn (krever endring i 4 mode-implementasjoner).
+
+</details>
 
 </details>
 

@@ -10,6 +10,10 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { CourseForm } from '../../CourseForm';
 import { updateCourse, deleteCourse } from './actions';
 import { DeleteCourseButton } from './DeleteCourseButton';
+import {
+  ArchivedTeesSection,
+  type ArchivedTeeRow,
+} from './ArchivedTeesSection';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { formatShortDateNb } from '@/lib/format/date';
 
@@ -20,7 +24,10 @@ import { formatShortDateNb } from '@/lib/format/date';
 const SAME_TX_BUFFER_MS = 60_000;
 
 type Params = Promise<{ id: string }>;
-type SearchParams = Promise<{ error?: string | string[] }>;
+type SearchParams = Promise<{
+  error?: string | string[];
+  status?: string | string[];
+}>;
 
 const ERROR_MESSAGES: Record<string, string> = {
   name_required: 'Banen må ha et navn.',
@@ -32,6 +39,10 @@ const ERROR_MESSAGES: Record<string, string> = {
     'Hver tee må ha både slope og CR (eller ingen av dem) per kjønn. Du kan ikke lagre halve sett.',
   tee_no_rating:
     'Hver tee må ha minst ett komplett rating-sett per kjønn (Herrer / Damer / Junior).',
+  tee_not_found:
+    'Tee-en finnes ikke lenger. Last siden på nytt for å se oppdatert liste.',
+  tee_not_archived:
+    'Denne tee-en er ikke arkivert, så det er ingenting å gjenåpne.',
   db_course:
     'Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.',
   db_holes:
@@ -39,6 +50,11 @@ const ERROR_MESSAGES: Record<string, string> = {
   db_tees:
     'Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.',
   db_load: 'Klarte ikke å lese banen fra databasen. Prøv igjen.',
+};
+
+const STATUS_MESSAGES: Record<string, string> = {
+  restored:
+    'Tee gjenåpnet. Den vises i listen igjen og kan velges for nye spill.',
 };
 
 function first(value: string | string[] | undefined): string | undefined {
@@ -94,9 +110,12 @@ export default async function EditCoursePage({
   searchParams: SearchParams;
 }) {
   const { id } = await params;
-  const { error: errorCode } = await searchParams;
+  const { error: errorCode, status: statusCode } = await searchParams;
   const errorMessage = errorCode
     ? ERROR_MESSAGES[first(errorCode) ?? '']
+    : undefined;
+  const statusMessage = statusCode
+    ? STATUS_MESSAGES[first(statusCode) ?? '']
     : undefined;
 
   const { supabase } = await getEditCourseContext();
@@ -120,6 +139,8 @@ export default async function EditCoursePage({
   }
 
   const kicker = buildAuditKicker(course);
+
+  const archivedTees = await getArchivedTees(supabase, id);
 
   const deleteAction = deleteCourse.bind(null, id);
   const userId = await getProxyVerifiedUserId();
@@ -147,6 +168,12 @@ export default async function EditCoursePage({
         </div>
       )}
 
+      {statusMessage && (
+        <div className="mt-4">
+          <Banner tone="success">{statusMessage}</Banner>
+        </div>
+      )}
+
       <div className="mt-5">
         <Card>
           <Suspense fallback={<CourseFormSkeleton />}>
@@ -154,6 +181,15 @@ export default async function EditCoursePage({
           </Suspense>
         </Card>
       </div>
+
+      {archivedTees.length > 0 && (
+        <div className="mt-6">
+          <ArchivedTeesSection
+            courseId={id}
+            archivedTees={archivedTees}
+          />
+        </div>
+      )}
 
       <div className="mt-6">
         <DeleteCourseButton
@@ -163,6 +199,41 @@ export default async function EditCoursePage({
       </div>
     </AdminShell>
   );
+}
+
+async function getArchivedTees(
+  supabase: Awaited<ReturnType<typeof getServerClient>>,
+  courseId: string,
+): Promise<ArchivedTeeRow[]> {
+  // Fetch both archived + active in parallel: archived tees go in the
+  // panel, active tees are needed only to flag name conflicts that would
+  // surface on restore.
+  const [archivedResult, activeResult] = await Promise.all([
+    supabase
+      .from('tee_boxes')
+      .select('id, name, archived_at, length_meters')
+      .eq('course_id', courseId)
+      .not('archived_at', 'is', null)
+      .order('archived_at', { ascending: false }),
+    supabase
+      .from('tee_boxes')
+      .select('name')
+      .eq('course_id', courseId)
+      .is('archived_at', null),
+  ]);
+  if (archivedResult.error || activeResult.error) return [];
+
+  const activeNames = new Set(
+    (activeResult.data ?? []).map((t) => t.name.toLowerCase()),
+  );
+
+  return (archivedResult.data ?? []).map((t) => ({
+    id: t.id,
+    name: t.name,
+    archived_at: t.archived_at as string,
+    length_meters: t.length_meters,
+    has_active_name_conflict: activeNames.has(t.name.toLowerCase()),
+  }));
 }
 
 async function EditCourseFormBody({
