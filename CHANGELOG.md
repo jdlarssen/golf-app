@@ -14,6 +14,23 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Fase 2 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Audit-felter på baner, soft-archive av tees i bruk, og sort + filter på bane-listen.
 
+### [1.26.1] - 2026-05-25
+
+> Lagring av bane-endringer fungerer igjen. En regresjon fra v1.25.0 stoppet save-knappen på `/admin/courses/[id]/edit` og `/admin/courses/new` med feilmeldingen «Minst én tee-boks må legges til» — selv når du faktisk hadde tees i skjemaet.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `MAX_TEE_BOXES`-konstanten flyttet fra [CourseForm.tsx](app/admin/courses/CourseForm.tsx) (en `'use client'`-modul) til en ny server-trygg fil [constants.ts](app/admin/courses/constants.ts). Next.js 16 wrapper eksporter fra `'use client'`-moduler som placeholder-funksjoner når de brukes serverside; `for (let i = 0; i < MAX_TEE_BOXES; ...)` ble til `0 < function` som evaluerer til `false`, så tee-parsing-loopen iterere aldri. Konsekvens: ALLE Save-forsøk på admin/courses/new + admin/courses/[id]/edit returnerte `tee_required`-feil.
+- `CourseForm.tsx` re-eksporterer fortsatt `MAX_TEE_BOXES` for client-konsumenter; importerer nå fra `./constants`. Server-actions i `new/actions.ts` og `[id]/edit/actions.ts` importerer direkte fra `./constants`.
+
+#### Notes
+- Regresjonen kom inn i Fase 1 (v1.25.0) da CourseForm ble rewrite'et som `'use client'`-modul med konstanten eksportert derfra. Forge-evaluator + 1126/1126 vitest-tester fanget ikke buggen siden den manifesterer kun ved faktisk form-submission i Next.js-runtime — ikke i isolerte client-component-tester. Type-systemet ser fortsatt importen som `number` (TypeScript er ikke klar over `'use client'`-wrappingen).
+- Lærdom for senere faser av #223: smoke-test ALLE write-paths (Save + form-submission), ikke bare read-paths (page-load).
+
+</details>
+
 ### [1.26.0] - 2026-05-25
 
 > Når du endrer en bane, husker Tørny nå hvem som endret hva og når. Du kan fjerne en tee selv om den brukes i et historisk spill — spillet beholder tee-en, men den forsvinner fra bane-admin. Bane-listen har fått sortering (Sist endret, Flest aktive spill) og chip-filter (Har dame-tee, Har junior-tee, Aktive spill).

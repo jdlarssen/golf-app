@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
-import { MAX_TEE_BOXES } from '@/app/admin/courses/CourseForm';
+import { MAX_TEE_BOXES } from '@/app/admin/courses/constants';
 
 type GenderRating = {
   slope: number | null;

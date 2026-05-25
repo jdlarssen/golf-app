@@ -3,6 +3,9 @@
 import { useMemo, useState } from 'react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { MAX_TEE_BOXES } from './constants';
+
+export { MAX_TEE_BOXES };
 
 // Numeric fields are stored as strings so React's controlled inputs preserve
 // in-progress decimal entry like "72." before the user types the next digit.
@@ -59,7 +62,9 @@ const DEFAULT_TEE: TeeBoxData = {
   course_rating_juniors: '',
 };
 
-export const MAX_TEE_BOXES = 7;
+// MAX_TEE_BOXES re-eksporteres øverst fra ./constants. Server-actions må
+// importere det fra ./constants direkte (ikke fra denne 'use client'-modulen
+// — Next.js 16 wrapper client-exports som throw-funksjoner på serveren).
 
 // Par-valg per hull er begrenset til 3/4/5 — tre tap-knapper i stedet for
 // number-input fjerner 18 tastatur-popups på telefon. Par 6 finnes på
