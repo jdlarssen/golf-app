@@ -10,6 +10,51 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.23.y — Lanseringer-kanal: in-app drypp + månedsbrev
+
+Tørny får sin egen kanal for å fortelle deg om nye funksjoner. Når noe er ute, dukker det opp et lite drypp på hjem-siden og en oppføring i innboksen. En gang i måneden får du en oppsummering på mail. Du kan melde deg av mailen fra profilen din eller via lenken nederst i mailen. Issue [#202](https://github.com/jdlarssen/golf-app/issues/202).
+
+### [1.23.0] - 2026-05-25
+
+> Når noe nytt kommer i Tørny, får du nå et lite varsel på hjem-siden og en oppføring i innboksen. Én gang i måneden får du også en oppsummering på mail. Du er påmeldt fra start; meld deg av månedsbrevet i profilen din om du heller vil ha fred.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- Migrasjon `0035_product_updates.sql` — to nye tabeller (`product_updates` med admin-curated lanseringer, `product_update_digests` med audit + idempotens-row per måned) + `users.product_updates_unsubscribed_at` opt-out-kolonne + utvider `notifications.kind`-CHECK med `'product_update'`. RLS: alle innloggede leser `product_updates` (banner + innboks-flate), digests kun via service-role.
+- `lib/notifications/types.ts` — ny `product_update`-kind med zod-schema (`source_id` uuid, `title`, `body`, valgfri `link` som må starte med `/`, valgfri `cta_label`). 5 nye tester for happy path, full payload, ekstern-link-avvisning, manglende title, tom title.
+- `lib/productUpdates/unsubscribeToken.ts` — HMAC-SHA256 sign/verify-helpers for mail-unsub-tokens (1 års TTL, constant-time `timingSafeEqual`-sammenligning, `expMs` som ms-timestamp så `split('.')` ikke brytes av ISO `.000Z`). 9 tester for round-trip, tampered sig, tampered userId, exp, tom/garbage-tokens, manglende secret, determinisme.
+- `lib/productUpdates/publish.ts` — `publishProductUpdate(input)` inserter rad og fan-outer in-app-notifikasjon til alle brukere via `Promise.allSettled`. Best-effort per mottaker.
+- `lib/productUpdates/digest.ts` — `sendDigestForPeriod(opts)` + `previousMonthPeriod(nowMs)` pure helper. Beregner forrige kalendermåned i Europe/Oslo, idempotens-sjekk via `product_update_digests` UNIQUE, fan-out via `Promise.allSettled`, inserter audit-row. Returnerer discriminated union (`sent` / `already_sent` / `no_updates`). 5 tester for periode-grenser inkl. årsskifte og skuddår.
+- `lib/mail/productUpdateDigest.ts` — Resend-mail-helper med subject `Nytt i Tørny — [måned]`, inline HTML + plain-text, RFC 8058 `List-Unsubscribe`-header + `List-Unsubscribe-Post: List-Unsubscribe=One-Click`. 9 tester inkl. inline-snapshot av plain-text-body.
+- `lib/format/date.ts` — `formatMonthLongNb('mai 2026')` for periode-etiketter.
+- `app/admin/lanseringer/{page,actions,actions.test}.ts(x)` — admin-flate gated av `requireAdmin()`. Skjema for publisering (title/body/link/cta), månedsbrev-card med «Send månedsbrev nå»-knapp (disabled når allerede sendt for forrige periode), liste over siste 20 lanseringer. 10 action-tester for non-admin-redirect, validering (title/body/link/cta), happy-path, og alle tre digest-utfall.
+- `app/api/cron/product-update-digest/route.ts` + `vercel.json` — daglig cron 08:00 UTC med intern 1.-i-måneden-gate (Vercel Hobby-friendly). Bearer-token auth via `CRON_SECRET`.
+- `app/api/unsubscribe/product-update/route.ts` — GET (browser, render branded HTML) + POST (RFC 8058 one-click fra mail-klient). Begge verifiserer HMAC-token, oppdaterer `users.product_updates_unsubscribed_at`.
+- `components/products/ProductUpdateBanner.tsx` (server) + `ProductUpdateBannerClient.tsx` (client) — banner på `/` med champagne-stripe, sparkle-emoji, title + body, valgfri CTA-knapp, og 44px-tap-target lukke-knapp. Optimistisk dismiss + `markOneAsRead`-call via `useTransition`. 5 tester.
+- `app/profile/ProfileFormBody.{tsx,test.tsx}` — ny «Mail-innstillinger»-seksjon med checkbox for månedsbrev-opt-in. Dirty-tracking inkluderer toggle. 4 tester.
+
+#### Changed
+- `app/page.tsx` — mounter `<ProductUpdateBanner userId={...} />` like under `<InstallBanner>` i en `<Suspense fallback={null}>`-grense.
+- `components/notifications/NotificationCard.tsx` — `EMOJI`-map utvidet med `product_update: '✨'`, `buildCardContent` mapper `payload.title → title`, `payload.body → detail`.
+- `app/innboks/InboxClient.tsx` — `buildDeeplink` returnerer `payload.link ?? '/innboks'` for `product_update`-kind.
+- `app/profile/{page,actions}.ts` — leser `product_updates_unsubscribed_at`, sender `productUpdatesOptIn` til `ProfileFormBody`. `updateProfile` skriver `null` (påmeldt) eller `now()` (avmeldt) basert på checkbox.
+
+#### Notes
+- Cron-pattern: «daglig 08:00 UTC + intern dato-gate» istedenfor `0 8 1 * *` siden Vercel Hobby kapper cron til 1/dag. Gir også atomær deploy-safety — en deploy 1. i måneden kan ikke endre cron-fyringen midt i kjøringen.
+- Link-feltet i `product_updates` valideres til intern-only (`startsWith('/')`) som defense mot phishing-misbruk via mail-kanalen. Trade-off: kan ikke peke til Discord/eksterne ressurser. Akseptabelt for MVP.
+- RFC 8058 ikke strengt påkrevd for Tørnys volum (< 5000 mail/dag mot Gmail/Yahoo), men implementert riktig fra start — gratis kvalitets-signal for inbox-placement.
+- `.env.example` dokumenterer to nye secrets: `CRON_SECRET` (Vercel Bearer-token) og `PRODUCT_UPDATE_UNSUB_SECRET` (HMAC-nøkkel for unsub-tokens). Begge må settes i Vercel Dashboard før cron + unsub fungerer i prod.
+- Test-suite vokst fra 1031 → 1062 (+31 nye tester).
+
+</details>
+
+---
+
+<details>
+<summary><strong>1.22.y — Hurtig-oppsett for nye spill (1 oppføring) — klikk for å vise</strong></summary>
+
 ## 1.22.y — Hurtig-oppsett for nye spill
 
 Opprett-spill-flyten er omarbeidet til fire korte steg i stedet for én lang side med seks seksjoner. Format → bane → spillere → klar. «Tilpass alle detaljer» henter fram dagens fullform for power-users som vil styre alt. Issue [#203](https://github.com/jdlarssen/golf-app/issues/203).
@@ -42,6 +87,8 @@ Opprett-spill-flyten er omarbeidet til fire korte steg i stedet for én lang sid
 - **Hopp til full-form og tilbake bevarer wizard-state.** «Tilpass alle detaljer» bytter `view = 'full'` og passer wizard-state som `initialValues` til GameForm. «← Tilbake til hurtig-oppsett» flipper tilbake til siste steg.
 - **Uncontrolled-felter** (score_visibility-radios, side_ld_count/ctp_count, SideCategoriesPicker) håndteres som default-fallback ved skip av advanced disclosure — sentral disiplin matcher GameForm-oppførselen før refactor.
 - Test-suite vokst fra 1022 → 1031 (+9 wizard-tester). Eksisterende GameForm-/actions-tester passerer uendret.
+
+</details>
 
 </details>
 
