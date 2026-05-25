@@ -4312,4 +4312,216 @@ describe('calculateSideTournament', () => {
       expect(awards[1]?.streakEndHole).toBe(6);
     });
   });
+
+  describe('team_all_birdied_bonus (v1.19.0)', () => {
+    const par4Course = (): number[] => new Array(18).fill(4);
+
+    const player = (
+      userId: string,
+      perHoleNetto: Array<number | null>,
+    ): SideTournamentInput['playerScoresPerHole'][number] => ({
+      userId,
+      perHoleGross: perHoleNetto,
+      perHoleNetto,
+    });
+
+    it('all team-1 members have ≥1 birdie → 4p × 2 = 8p coord-bonus', () => {
+      const userANetto = new Array(18).fill(4);
+      userANetto[0] = 3; // birdie
+      const userBNetto = new Array(18).fill(4);
+      userBNetto[5] = 3; // birdie
+      const userCNetto = new Array(18).fill(4);
+      const userDNetto = new Array(18).fill(4);
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+      const award = t1.awards.find((a) => a.category === 'team_all_birdied_bonus');
+      expect(award?.points).toBe(8);
+      expect(award?.coordBonus).toBe(true);
+      expect(t2.awards.some((a) => a.category === 'team_all_birdied_bonus')).toBe(false);
+    });
+
+    it('one team member missing a birdie → no bonus', () => {
+      const userANetto = new Array(18).fill(4);
+      userANetto[0] = 3;
+      const userBNetto = new Array(18).fill(4); // no birdie
+      const userCNetto = new Array(18).fill(4);
+      const userDNetto = new Array(18).fill(4);
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+      expect(awards.some((a) => a.category === 'team_all_birdied_bonus')).toBe(false);
+    });
+  });
+
+  describe('team_no_bogey_hole_coord (v1.19.0)', () => {
+    const par4Course = (): number[] => new Array(18).fill(4);
+
+    const player = (
+      userId: string,
+      perHoleNetto: Array<number | null>,
+    ): SideTournamentInput['playerScoresPerHole'][number] => ({
+      userId,
+      perHoleGross: perHoleNetto,
+      perHoleNetto,
+    });
+
+    it('2 holes where both team-1 members netto ≤ par → 2 awards', () => {
+      // Team 1: user-a netto par on hole 1 + 5, user-b netto par on hole 1 + 5
+      // Other holes: at least one member is bogey
+      const userANetto = new Array(18).fill(5);
+      userANetto[0] = 4; userANetto[4] = 4; // par
+      const userBNetto = new Array(18).fill(5);
+      userBNetto[0] = 4; userBNetto[4] = 4;
+      // team 2 — all bogey
+      const userCNetto = new Array(18).fill(5);
+      const userDNetto = new Array(18).fill(5);
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const awards = t1.awards.filter((a) => a.category === 'team_no_bogey_hole_coord');
+      expect(awards).toHaveLength(2);
+      expect(awards.reduce((s, a) => s + a.points, 0)).toBe(8); // 2p × 2 members × 2 holes
+      expect(awards[0]?.coordBonus).toBe(true);
+      expect(awards[0]?.holeNumber).toBe(1);
+      expect(awards[1]?.holeNumber).toBe(5);
+    });
+
+    it('one player bogey on the hole → no coord award', () => {
+      const userANetto = new Array(18).fill(5);
+      userANetto[0] = 4; // par
+      const userBNetto = new Array(18).fill(5); // bogey on hole 1
+      const userCNetto = new Array(18).fill(5);
+      const userDNetto = new Array(18).fill(5);
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+      expect(awards.some((a) => a.category === 'team_no_bogey_hole_coord')).toBe(false);
+    });
+  });
+
+  describe('worst_single_hole_brutto (v1.19.0)', () => {
+    const par4Course = (): number[] => new Array(18).fill(4);
+
+    const playerGN = (
+      userId: string,
+      perHoleGross: Array<number | null>,
+      perHoleNetto?: Array<number | null>,
+    ): SideTournamentInput['playerScoresPerHole'][number] => ({
+      userId,
+      perHoleGross,
+      perHoleNetto: perHoleNetto ?? perHoleGross,
+    });
+
+    it('player with highest brutto on any single hole earns -1p', () => {
+      const userAGross = new Array(18).fill(4);
+      userAGross[7] = 10; // worst on the round
+      const userBGross = new Array(18).fill(4);
+      userBGross[3] = 6;
+      const userCGross = new Array(18).fill(4);
+      const userDGross = new Array(18).fill(4);
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          playerGN('user-a', userAGross),
+          playerGN('user-b', userBGross),
+          playerGN('user-c', userCGross),
+          playerGN('user-d', userDGross),
+        ],
+      });
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const award = t1.awards.find((a) => a.category === 'worst_single_hole_brutto');
+      expect(award?.points).toBe(-1);
+      expect(award?.holeNumber).toBe(8);
+      expect(award?.score).toBe(10);
+    });
+  });
+
+  describe('most_double_bogeys_individual (v1.19.0)', () => {
+    const par4Course = (): number[] => new Array(18).fill(4);
+
+    const player = (
+      userId: string,
+      perHoleNetto: Array<number | null>,
+    ): SideTournamentInput['playerScoresPerHole'][number] => ({
+      userId,
+      perHoleGross: perHoleNetto,
+      perHoleNetto,
+    });
+
+    it('player with most double-bogeys (netto ≥ par+2) earns -1p', () => {
+      // user-a has 4 doubles (netto 6 on par 4), others 0-1
+      const userANetto = new Array(18).fill(4);
+      userANetto[0] = 6; userANetto[1] = 6; userANetto[2] = 6; userANetto[3] = 6;
+      const userBNetto = new Array(18).fill(4);
+      const userCNetto = new Array(18).fill(4);
+      userCNetto[0] = 6; // 1 double
+      const userDNetto = new Array(18).fill(4);
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      expect(t1.awards.find((a) => a.category === 'most_double_bogeys_individual')?.points).toBe(-1);
+    });
+
+    it('no doubles in the round → no award', () => {
+      const userANetto = new Array(18).fill(4);
+      const userBNetto = new Array(18).fill(4);
+      const userCNetto = new Array(18).fill(4);
+      const userDNetto = new Array(18).fill(4);
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+      expect(awards.some((a) => a.category === 'most_double_bogeys_individual')).toBe(false);
+    });
+  });
 });

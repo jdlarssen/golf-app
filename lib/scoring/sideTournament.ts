@@ -1559,6 +1559,142 @@ export function calculateSideTournament(
     }
   }
 
+  // 31. Alle birdied bonus — `team_all_birdied_bonus` (4p × N)
+  // For each team with ≥2 members: did EVERY member earn at least one
+  // netto-birdie in the round? If yes, award 4p × N per round (not per hole).
+  if (!isDisabled('team_all_birdied_bonus', input.config)) {
+    for (const team of input.teams) {
+      const n = team.userIds.length;
+      if (n < 2) continue;
+      const memberScores = team.userIds
+        .map((uid) => input.playerScoresPerHole.find((p) => p.userId === uid))
+        .filter((p): p is SideTournamentInput['playerScoresPerHole'][number] => p != null);
+      if (memberScores.length !== n) continue;
+      const allHaveBirdie = memberScores.every((p) => {
+        for (let h = 0; h < 18; h++) {
+          const par = input.coursePars[h];
+          const netto = p.perHoleNetto[h];
+          if (par == null || netto == null) continue;
+          if (netto < par) return true;
+        }
+        return false;
+      });
+      if (allHaveBirdie) {
+        award(team.teamId, {
+          category: 'team_all_birdied_bonus',
+          teamId: team.teamId,
+          points: SIDE_TOURNAMENT_POINTS.teamAllBirdiedPerMember * n,
+          coordBonus: true,
+        });
+      }
+    }
+  }
+
+  // 32. Lag-par-hull coord — `team_no_bogey_hole_coord` (2p × N, stackable per hull)
+  // For each team with ≥2 members, for each hole: do ALL members have netto ≤
+  // par on the same hole? If yes, award 2p × N per such hole. Marks the
+  // award with `coordBonus: true` and `holeNumber`.
+  if (!isDisabled('team_no_bogey_hole_coord', input.config)) {
+    for (const team of input.teams) {
+      const n = team.userIds.length;
+      if (n < 2) continue;
+      const memberScores = team.userIds
+        .map((uid) => input.playerScoresPerHole.find((p) => p.userId === uid))
+        .filter((p): p is SideTournamentInput['playerScoresPerHole'][number] => p != null);
+      if (memberScores.length !== n) continue;
+      for (let h = 0; h < 18; h++) {
+        const par = input.coursePars[h];
+        if (par == null) continue;
+        const allParOrBetter = memberScores.every((p) => {
+          const netto = p.perHoleNetto[h];
+          return netto != null && netto <= par;
+        });
+        if (allParOrBetter) {
+          award(team.teamId, {
+            category: 'team_no_bogey_hole_coord',
+            teamId: team.teamId,
+            points: SIDE_TOURNAMENT_POINTS.teamNoBogeyHoleCoordPerMember * n,
+            coordBonus: true,
+            holeNumber: h + 1,
+            streakLength: 1,
+          });
+        }
+      }
+    }
+  }
+
+  // 33. Verste enkelthull — `worst_single_hole_brutto` (-1p individ)
+  // Mirror of `lowest_single_hole_brutto` but MAX. For each player, find
+  // their HIGHEST single-hole brutto. Player(s) with the absolute max get
+  // -1p, deduped per team.
+  if (!isDisabled('worst_single_hole_brutto', input.config)) {
+    const playerHighs = input.playerScoresPerHole
+      .map((p) => {
+        let worstVal: number | null = null;
+        let worstHole = 0;
+        for (let h = 0; h < p.perHoleGross.length; h++) {
+          const g = p.perHoleGross[h];
+          if (g == null) continue;
+          if (worstVal == null || g > worstVal) {
+            worstVal = g;
+            worstHole = h;
+          }
+        }
+        return worstVal == null ? null : { userId: p.userId, score: worstVal, holeIdx: worstHole };
+      })
+      .filter((p): p is { userId: UserId; score: number; holeIdx: number } => p !== null);
+    if (playerHighs.length > 0) {
+      const max = Math.max(...playerHighs.map((p) => p.score));
+      const winners = playerHighs.filter((p) => p.score === max);
+      const seenTeams = new Set<TeamId>();
+      for (const w of winners) {
+        const teamId = teamIdForUser(input.teams, w.userId);
+        if (teamId != null && !seenTeams.has(teamId)) {
+          seenTeams.add(teamId);
+          award(teamId, {
+            category: 'worst_single_hole_brutto',
+            teamId,
+            points: SIDE_TOURNAMENT_POINTS.worstSingleHoleBrutto,
+            score: w.score,
+            holeNumber: w.holeIdx + 1,
+            winnerUserId: w.userId,
+          });
+        }
+      }
+    }
+  }
+
+  // 34. Flest double-bogeys — `most_double_bogeys_individual` (-1p individ)
+  // For each player, count holes where netto ≥ par+2 (double or worse).
+  // Player(s) with the max get -1p, deduped per team. Empty-guard requires
+  // max > 0 — awarding everyone for "0 doubles" would be silly.
+  const isDoublePlus = (netto: number, par: number): boolean => netto >= par + 2;
+  if (!isDisabled('most_double_bogeys_individual', input.config)) {
+    const playerCounts = input.playerScoresPerHole.map((p) => ({
+      userId: p.userId,
+      count: countMatchesForPlayer(p.userId, input.playerScoresPerHole, input.coursePars, isDoublePlus),
+    }));
+    if (playerCounts.length > 0) {
+      const max = Math.max(...playerCounts.map((p) => p.count));
+      if (max > 0) {
+        const winners = playerCounts.filter((p) => p.count === max).map((p) => p.userId);
+        const seenTeams = new Set<TeamId>();
+        for (const userId of winners) {
+          const teamId = teamIdForUser(input.teams, userId);
+          if (teamId != null && !seenTeams.has(teamId)) {
+            seenTeams.add(teamId);
+            award(teamId, {
+              category: 'most_double_bogeys_individual',
+              teamId,
+              points: SIDE_TOURNAMENT_POINTS.mostDoubleBogeysIndividual,
+              winnerUserId: userId,
+            });
+          }
+        }
+      }
+    }
+  }
+
   return {
     teamStandings: input.teams.map((t) => ({
       teamId: t.teamId,
