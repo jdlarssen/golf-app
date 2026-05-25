@@ -35,7 +35,7 @@ export function HandicapChip({
   return (
     <SmartLink
       href={`/profile?next=${encodeURIComponent(nextPath)}`}
-      aria-label={`Handicap ${hcpDisplay}. Tap for å oppdatere.`}
+      aria-label={`Handicap ${hcpDisplay}. Trykk for å oppdatere.`}
       className={`inline-flex items-center gap-2 rounded-full border min-h-[44px] px-3.5 transition-colors hover:bg-primary-soft ${containerClasses}`}
     >
       <span className="font-sans text-[10px] uppercase tracking-[0.16em] text-muted">

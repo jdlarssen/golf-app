@@ -10,6 +10,36 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.20.y — Handicap-chip på hjem-siden
+
+Handicapen din vises nå alltid øverst på hjem-siden så du ser hvor du står. Får en aksent-farge når den ikke har vært bekreftet på fire uker, så du oppdager passivt at den er gammel. Issue [#209](https://github.com/jdlarssen/golf-app/issues/209) — komplementerer [#168](https://github.com/jdlarssen/golf-app/issues/168) sitt prompt-kort i venterommet.
+
+### [1.20.0] - 2026-05-25
+
+> Handicapen din vises nå øverst på hjem-siden, alltid synlig. Trykk for å oppdatere. Hvis den ikke har vært bekreftet på fire uker, får den en aksent-farge — så du oppdager selv at den er gammel uten at appen må mase.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `components/handicap/HandicapChip.tsx` + 7 tester — server-component pill med «HCP»-label + tall (norsk komma via `toLocaleString('nb-NO', ...)`). Klikkbar `SmartLink` til `/profile?next={encodedNextPath}` med ≥44px tap-target. Stale-tilstand (≥ 4 uker per gjenbrukt `isHandicapStale`) bytter til `border-accent + text-accent`-styling; fresh er nøytral. Tester dekker label/tall-rendering, desimal-formatering inkl. default `54.0`, href-encoding, begge styling-tilstander, og aria-label.
+
+#### Changed
+- `app/page.tsx` — profile-query utvidet med `hcp_index, handicap_updated_at` (ingen ny round-trip). Chip rendres i `PageHeader.action`-slot i non-empty state, og midtstilt mellom welcome-paragrafen og CTA-knappen i empty state. Defensiv: rendres bare når begge feltene er satt.
+
+#### Notes
+- «HCP» som label er bevisst engelsk forkortelse — etablert kortform i norsk golf-miljø, ikke flagget som anglisisme.
+- Tap-flyten gjenbruker `safeNextPath`-mekanikken fra [#168](https://github.com/jdlarssen/golf-app/issues/168) — ingen nye redirect-kodebaner.
+- Chip vises kun på `/`. På `/games/[id]` står #168 sitt prompt-kort allerede klart.
+- Test-suite vokst fra 979 → 986 (+7 nye chip-tester).
+
+</details>
+
+---
+
+<details>
+<summary><strong>1.19.y — Handicap-sjekk før runden (1 oppføring) — klikk for å vise</strong></summary>
+
 ## 1.19.y — Handicap-sjekk før runden
 
 Spilleren får et inline-kort i venterommet før hvert spill hvis handicapen ikke har vært bekreftet på fire uker. Forhindrer at runden beregnes mot en utdatert verdi fordi noen glemte å oppdatere etter sist. Issue [#168](https://github.com/jdlarssen/golf-app/issues/168).
@@ -40,6 +70,8 @@ Spilleren får et inline-kort i venterommet før hvert spill hvis handicapen ikk
 - Kortet er ikke-blokkerende — spilleren kan ignorere det og bare scrolle videre.
 - «Ja, stemmer» gir ingen toast-bekreftelse. Kortet forsvinner, det er bekreftelse nok.
 - Test-suite vokst fra 947 → 979 (+32 nye tester: 10 staleness + 11 safeNext + utvidelser).
+
+</details>
 
 </details>
 

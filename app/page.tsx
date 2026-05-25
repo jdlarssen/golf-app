@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { PinFlag } from '@/components/icons/PinFlag';
 import { InstallBanner } from '@/components/pwa/InstallBanner';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { HandicapChip } from '@/components/handicap/HandicapChip';
 import { firstName } from '@/lib/firstName';
 import { formatTeeOffDate, formatTeeOffTime } from '@/lib/format/teeOff';
 import { STATUS_LABELS } from '@/lib/games/status';
@@ -100,7 +101,9 @@ async function HomeBody() {
   const [profileRes, rawActiveRes, rawFinishedRes] = await Promise.all([
     supabase
       .from('users')
-      .select('name, email, is_admin, profile_completed_at')
+      .select(
+        'name, email, is_admin, profile_completed_at, hcp_index, handicap_updated_at',
+      )
       .eq('id', userId!)
       .single(),
     supabase
@@ -156,6 +159,16 @@ async function HomeBody() {
   const isEmptyState =
     activeGames.length === 0 && finishedGames.length === 0;
   const firstNameValue = firstName(profile?.name) ?? 'spiller';
+  // Always-visible handicap reflection (#209). Only render when we have
+  // both fields — defensive against a degraded fetch.
+  const handicapChip =
+    profile?.hcp_index != null && profile?.handicap_updated_at ? (
+      <HandicapChip
+        hcpIndex={Number(profile.hcp_index)}
+        handicapUpdatedAt={profile.handicap_updated_at}
+        nextPath="/"
+      />
+    ) : null;
   // Trusted creators (#198 small-bet MVP) får samme «Opprett spill»-inngang
   // som admin, men ledes til /opprett-spill istedenfor /admin/games/new så
   // de slipper Sekretariat-shellen.
@@ -180,6 +193,7 @@ async function HomeBody() {
               ? 'Ingen turneringer enda. Sett opp første runde og kom i gang.'
               : 'Du er klar. Admin setter opp neste runde.'}
           </p>
+          {handicapChip && <div className="mt-5">{handicapChip}</div>}
           {canCreateGame && (
             <div className="mt-8 w-full max-w-[280px]">
               <LinkButton
@@ -233,7 +247,10 @@ async function HomeBody() {
 
   return (
     <>
-      <PageHeader title={`Hei, ${profile?.name ?? 'spiller'}.`} />
+      <PageHeader
+        title={`Hei, ${profile?.name ?? 'spiller'}.`}
+        action={handicapChip}
+      />
 
       <nav className="space-y-6">
         {activeGames.length > 0 && (
