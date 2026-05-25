@@ -34,7 +34,26 @@ export type SideCategory =
   | 'lowest_single_hole_brutto'
   | 'turkey'
   | 'solid'
-  | 'snowman';
+  | 'snowman'
+  // v1.19.0 new categories (issue #169)
+  | 'most_albatrosses_team'
+  | 'most_albatrosses_individual'
+  | 'most_hole_in_ones_team'
+  | 'most_hole_in_ones_individual'
+  | 'king_par4_team'
+  | 'king_par4_individual'
+  | 'clean_front_9'
+  | 'clean_back_9'
+  | 'no_double_plus_round'
+  | 'hardest_hole_winner'
+  | 'comeback_kid'
+  | 'all_par_groups_birdie'
+  | 'even_par_round'
+  | 'back_to_back_birdies'
+  | 'team_all_birdied_bonus'
+  | 'team_no_bogey_hole_coord'
+  | 'worst_single_hole_brutto'
+  | 'most_double_bogeys_individual';
 
 export interface SideTournamentConfig {
   enabled: boolean;
@@ -53,6 +72,13 @@ export interface SideTournamentInput {
   config: SideTournamentConfig;
   teams: Array<{ teamId: TeamId; userIds: UserId[] }>;
   coursePars: number[];
+  /**
+   * Stroke indices per hole (1..18, one per hole). Used by
+   * `hardest_hole_winner` to find the hole with SI=1 (banens hardeste).
+   * Must be an 18-element array. Built parallel to `coursePars` at the
+   * leaderboard call-site.
+   */
+  courseStrokeIndices: number[];
   playerScoresPerHole: Array<{
     userId: UserId;
     perHoleGross: Array<number | null>;
@@ -107,8 +133,16 @@ export interface SideCategoryAward {
    * (`category === 'turkey'` or `category === 'solid'`) — awarded when
    * EVERY team member has a qualifying streak across the same hole window.
    * The leaderboard renders these on a separate row from per-player streaks.
+   *
+   * Also set for `team_all_birdied_bonus` and `team_no_bogey_hole_coord`,
+   * which are pure coord-bonuses (no per-player variant).
    */
   coordBonus?: boolean;
+  /**
+   * Populated when `category === 'comeback_kid'`. The B9-minus-F9 net delta
+   * (negative = improvement). Leaderboard renders e.g. `"forbedret seg med 4 slag"`.
+   */
+  delta?: number;
 }
 
 export interface SideTournamentResult {

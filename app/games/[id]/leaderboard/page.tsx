@@ -554,15 +554,22 @@ async function LeaderboardBody({
   // for sideTournament.ts to skip — never silently shifts pars onto the wrong
   // hole.
   const parByHole = new Map<number, number>();
+  const siByHole = new Map<number, number>();
   for (const h of holes) {
     parByHole.set(h.holeNumber, h.par);
+    siByHole.set(h.holeNumber, h.strokeIndex);
   }
   const coursePars: number[] = [];
+  const courseStrokeIndices: number[] = [];
   for (let h = 1; h <= 18; h++) {
     const par = parByHole.get(h);
     // Fall back to 4 only when the row genuinely doesn't exist — keeps
     // the array dense for the `coursePars[h] != null` checks downstream.
     coursePars.push(par ?? 4);
+    // Same fallback discipline for stroke-index; hardest_hole_winner gates
+    // on the resolved SI=1 hole, so a missing row falling back to its own
+    // position is fine.
+    courseStrokeIndices.push(siByHole.get(h) ?? h);
   }
 
   // playerScoresPerHole: per-player 18-element brutto + netto arrays. Source
@@ -612,6 +619,7 @@ async function LeaderboardBody({
       userIds: line.players.map((p) => p.userId),
     })),
     coursePars,
+    courseStrokeIndices,
     playerScoresPerHole,
     nettoBestBallPerHole: sortedNettoLines.map((line) => {
       // computeLeaderboard returns holes sorted 1..18 already.
@@ -1075,8 +1083,12 @@ async function renderStablefordWithSideTournament(opts: {
     siByHole.set(h.hole_number, h.stroke_index);
   }
   const coursePars: number[] = [];
+  const courseStrokeIndices: number[] = [];
   for (let h = 1; h <= 18; h++) {
     coursePars.push(parByHole.get(h) ?? 4);
+    // SI-fallback: bruk hull-nummer hvis raden mangler — hardest_hole_winner
+    // gater på løst SI=1, så en sparse-course-fallback er trygg.
+    courseStrokeIndices.push(siByHole.get(h) ?? h);
   }
 
   // Per-spiller perHoleGross + perHoleNetto. Henter rå-scores fra DB siden
@@ -1208,6 +1220,7 @@ async function renderStablefordWithSideTournament(opts: {
     },
     teams: teamGroups.map((tg) => ({ teamId: tg.teamId, userIds: tg.userIds })),
     coursePars,
+    courseStrokeIndices,
     playerScoresPerHole: perHolePerPlayer,
     nettoBestBallPerHole,
     sideWinners: sideWinnersForInput,

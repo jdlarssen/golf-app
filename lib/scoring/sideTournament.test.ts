@@ -10,6 +10,12 @@ function holes(values: Array<number | null>): Array<number | null> {
   return values;
 }
 
+// Default stroke indices (1..18 in order). Tests for `hardest_hole_winner`
+// override this to position SI=1 on a specific hole.
+function defaultStrokeIndices(): number[] {
+  return Array.from({ length: 18 }, (_, i) => i + 1);
+}
+
 // Standard 2-lags-input som test-cases utvider
 function baseInput(overrides: Partial<SideTournamentInput> = {}): SideTournamentInput {
   return {
@@ -19,6 +25,7 @@ function baseInput(overrides: Partial<SideTournamentInput> = {}): SideTournament
       { teamId: 2, userIds: ['user-c', 'user-d'] },
     ],
     coursePars: new Array(18).fill(4),
+    courseStrokeIndices: defaultStrokeIndices(),
     playerScoresPerHole: [],
     nettoBestBallPerHole: [
       { teamId: 1, perHoleNetto: holes(new Array(18).fill(4)) },
@@ -221,6 +228,7 @@ describe('calculateSideTournament', () => {
       config: { enabled: true, ldCount: 0, ctpCount: 0, disabledCategories: [] },
       teams: [1, 2, 3, 4].map((id) => ({ teamId: id, userIds: [`u${id}`] })),
       coursePars: new Array(18).fill(4),
+      courseStrokeIndices: Array.from({ length: 18 }, (_, i) => i + 1),
       playerScoresPerHole: [],
       nettoBestBallPerHole: [1, 2, 3, 4].map((id) => ({
         teamId: id,
@@ -241,6 +249,7 @@ describe('calculateSideTournament', () => {
         config: { enabled: true, ldCount: 0, ctpCount: 0, disabledCategories: [] },
         teams: [{ teamId: 1, userIds: ['u1'] }],
         coursePars: Array(18).fill(4),
+        courseStrokeIndices: Array.from({ length: 18 }, (_, i) => i + 1),
         playerScoresPerHole: [{
           userId: 'u1',
           perHoleGross: Array(18).fill(4),
@@ -480,6 +489,7 @@ describe('calculateSideTournament', () => {
           { teamId: 2, userIds: ['user-b'] },
         ],
         coursePars: par4Course(),
+        courseStrokeIndices: Array.from({ length: 18 }, (_, i) => i + 1),
         playerScoresPerHole: [
           player('user-a', userANetto),
           player('user-b', userBNetto),
@@ -678,6 +688,7 @@ describe('calculateSideTournament', () => {
           { teamId: 2, userIds: ['user-b'] },
         ],
         coursePars: par4Course(),
+        courseStrokeIndices: Array.from({ length: 18 }, (_, i) => i + 1),
         playerScoresPerHole: [
           player('user-a', userANetto),
           player('user-b', userBNetto),
@@ -873,6 +884,7 @@ describe('calculateSideTournament', () => {
           { teamId: 2, userIds: ['user-b'] },
         ],
         coursePars: par4Course(),
+        courseStrokeIndices: Array.from({ length: 18 }, (_, i) => i + 1),
         playerScoresPerHole: [
           player('user-a', userANetto),
           player('user-b', userBNetto),
@@ -1069,6 +1081,7 @@ describe('calculateSideTournament', () => {
           { teamId: 2, userIds: ['user-b'] },
         ],
         coursePars: par4Course(),
+        courseStrokeIndices: Array.from({ length: 18 }, (_, i) => i + 1),
         playerScoresPerHole: [
           player('user-a', userAGross),
           player('user-b', userBGross),
@@ -1262,6 +1275,7 @@ describe('calculateSideTournament', () => {
           { teamId: 2, userIds: ['user-b'] },
         ],
         coursePars: par4Course(),
+        courseStrokeIndices: Array.from({ length: 18 }, (_, i) => i + 1),
         playerScoresPerHole: [
           player('user-a', userAGross),
           player('user-b', userBGross),
@@ -1455,6 +1469,7 @@ describe('calculateSideTournament', () => {
           { teamId: 2, userIds: ['user-b'] },
         ],
         coursePars: par4Course(),
+        courseStrokeIndices: Array.from({ length: 18 }, (_, i) => i + 1),
         playerScoresPerHole: [
           player('user-a', userAGross),
           player('user-b', userBGross),
@@ -1665,6 +1680,7 @@ describe('calculateSideTournament', () => {
           { teamId: 2, userIds: ['user-b'] },
         ],
         coursePars: mixedParCourse(),
+        courseStrokeIndices: Array.from({ length: 18 }, (_, i) => i + 1),
         playerScoresPerHole: [
           player('user-a', userAGross),
           player('user-b', userBGross),
@@ -1897,6 +1913,7 @@ describe('calculateSideTournament', () => {
           { teamId: 2, userIds: ['user-b'] },
         ],
         coursePars: mixedParCourse(),
+        courseStrokeIndices: Array.from({ length: 18 }, (_, i) => i + 1),
         playerScoresPerHole: [
           player('user-a', userAGross),
           player('user-b', userBGross),
@@ -3307,6 +3324,7 @@ describe('calculateSideTournament', () => {
           { teamId: 3, userIds: ['user-c'] },
         ],
         coursePars: mixedCourse,
+        courseStrokeIndices: Array.from({ length: 18 }, (_, i) => i + 1),
         playerScoresPerHole: [
           playerGN('user-a', userA),
           playerGN('user-b', userB),
@@ -3441,6 +3459,7 @@ describe('calculateSideTournament', () => {
           { teamId: 2, userIds: ['u5', 'u6', 'u7', 'u8'] },
         ],
         coursePars: par4,
+        courseStrokeIndices: Array.from({ length: 18 }, (_, i) => i + 1),
         playerScoresPerHole: [
           playerGN('u1', u1),
           playerGN('u2', u2),
@@ -3617,6 +3636,7 @@ describe('calculateSideTournament', () => {
           { teamId: 3, userIds: ['user-c1', 'user-c2'] },
         ],
         coursePars: par4Course(),
+        courseStrokeIndices: Array.from({ length: 18 }, (_, i) => i + 1),
         playerScoresPerHole: [
           player('user-solo', userSoloNetto),
           player('user-b1', userB1Netto),
