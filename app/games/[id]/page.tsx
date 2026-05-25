@@ -28,6 +28,8 @@ import {
 import { scorecardTitle } from '@/lib/games/scorecardTitle';
 import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
+import { isHandicapStale } from '@/lib/handicap/staleness';
+import { HandicapConfirmCard } from '@/components/handicap/HandicapConfirmCard';
 import { ScheduledWaitingRoom } from './ScheduledWaitingRoom';
 
 type Params = Promise<{ id: string }>;
@@ -288,6 +290,19 @@ export default async function GameHomePage({
       ? new Date(game.scheduled_tee_off_at)
       : null;
 
+    // Slim fetch (not cached) for the player's master handicap + last-
+    // confirmed timestamp. Lives outside getGameWithPlayers because
+    // cross-game cache fan-out on profile edits would be expensive — same
+    // trade-off as for the courses(...)/tee_boxes(...) joins above.
+    const { data: meUser } = await supabase
+      .from('users')
+      .select('hcp_index, handicap_updated_at')
+      .eq('id', userId)
+      .single<{ hcp_index: number; handicap_updated_at: string }>();
+    const showHandicapCard = meUser
+      ? isHandicapStale(meUser.handicap_updated_at)
+      : false;
+
     return (
       <AppShell>
         <header className="mb-6 flex items-center justify-between gap-4">
@@ -295,6 +310,14 @@ export default async function GameHomePage({
           <Kicker tone="accent">{game.name.toUpperCase()}</Kicker>
           <span className="w-12" aria-hidden />
         </header>
+
+        {showHandicapCard && meUser && (
+          <HandicapConfirmCard
+            gameId={id}
+            hcpIndex={Number(meUser.hcp_index)}
+            handicapUpdatedAt={meUser.handicap_updated_at}
+          />
+        )}
 
         {/* Hero */}
         <section className="flex flex-col items-center text-center px-6 pt-6 pb-7">

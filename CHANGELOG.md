@@ -10,6 +10,44 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.19.y — Handicap-sjekk før runden
+
+Spilleren får et inline-kort i venterommet før hvert spill hvis handicapen ikke har vært bekreftet på fire uker. Forhindrer at runden beregnes mot en utdatert verdi fordi noen glemte å oppdatere etter sist. Issue [#168](https://github.com/jdlarssen/golf-app/issues/168).
+
+### [1.19.0] - 2026-05-25
+
+> Hvis handicapen din er eldre enn fire uker, spør appen nå før spillet starter om den fortsatt er riktig. Da slipper du å oppdage etter runden at slag-allokeringen ble feil.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `supabase/migrations/0034_users_handicap_updated_at.sql` — ny `users.handicap_updated_at timestamptz not null default now()`-kolonne. Backfill til `now()` for eksisterende brukere — alle starter «ferske» og får fire-uker grace før første prompt.
+- `lib/handicap/staleness.ts` + 10 tester — `HANDICAP_STALENESS_WEEKS = 4` konstant + `isHandicapStale(updatedAt, now?)`-helper. Aksepterer både `Date` og ISO-streng. Boundary er stale ved nøyaktig fire uker; null/undefined er stale.
+- `components/handicap/HandicapConfirmCard.tsx` — inline `Card` med tittel «Sjekk handicapen din», brødtekst med relativ tid (`formatRelativeNb`), og to knapper: «Ja, stemmer» (server-action) og «Oppdater» (lenker til `/profile?next=/games/[id]`).
+- `app/games/[id]/actions.ts` med `confirmHandicap(gameId)`-server-action. Bumper `users.handicap_updated_at = now()` for innlogget bruker og `revalidatePath('/games/[id]')` så kortet forsvinner på neste render.
+- `app/profile/safeNext.ts` + 11 tester — `safeNextPath()` validerer at `?next=`-target er en relativ same-origin-sti (avviser protocol-relative URL-er, absolutte URL-er, fragment-only og non-string). Open-redirect-vern.
+
+#### Changed
+- `app/profile/actions.ts` — `updateProfile` leser `next` fra FormData, validerer via `safeNextPath`, og redirecter dit ved suksess. Fallback til `/profile?profile=updated` når `next` mangler. Error-redirects preserver `next` så form-en overlever validation-feil.
+- `app/profile/ProfileFormBody.tsx` — ny `next?`-prop renderer skjult input når den er gyldig. «Avbryt»-lenken respekterer `next` istedenfor hardkodet `/`.
+- `app/profile/page.tsx` — leser `searchParams.next`, sender gjennom `safeNextPath` før form-en får den.
+- `app/profile/actions.ts`, `app/complete-profile/actions.ts`, `app/admin/spillere/[id]/actions.ts` — alle tre UPDATE-ene stamper `handicap_updated_at = now()`. Unconditional: hvem som enn lagrer form-en endorser hcp-verdien. Admin-edit teller også — slipper å mase spilleren rett etter at Jørgen fikset det.
+- `app/games/[id]/page.tsx` — scheduled-grenen henter `users.hcp_index + handicap_updated_at` for innlogget spiller via slim direct-call (ikke cachet — cross-game fan-out ved profil-edit ville krevd dyr invalidering). Rendrer `<HandicapConfirmCard />` mellom header og Hero hvis stale.
+
+#### Notes
+- Kortet vises kun for `status === 'scheduled'`. Active/finished-spill er forbi freeze-vinduet — ingen «for sent»-melding (det ville bare blitt mas).
+- Kortet er ikke-blokkerende — spilleren kan ignorere det og bare scrolle videre.
+- «Ja, stemmer» gir ingen toast-bekreftelse. Kortet forsvinner, det er bekreftelse nok.
+- Test-suite vokst fra 947 → 979 (+32 nye tester: 10 staleness + 11 safeNext + utvidelser).
+
+</details>
+
+---
+
+<details>
+<summary><strong>1.18.y — Lag-scorekort (1 oppføring) — klikk for å vise</strong></summary>
+
 ## 1.18.y — Lag-scorekort
 
 Scorekort-flaten viser nå begge spillerne side om side i alle lag-baserte spillformer (best-ball, par-stableford, matchplay og Texas scramble). Tidligere fikk du bare ditt eget scorekort — selv i 2-mannslag der partner og du deler resultat. Issue [#17](https://github.com/jdlarssen/golf-app/issues/17).
@@ -39,6 +77,8 @@ Scorekort-flaten viser nå begge spillerne side om side i alle lag-baserte spill
 - Reveal-modus («skjul netto til spillet er ferdig»): Layout B faller tilbake til Layout A under aktivt spill med visibility=reveal. Beholder reveal-prinsippet om å skjule andres data inntil game.status=finished.
 - Solo-modi (stableford team_size=1, solo strokeplay) er uendret — fortsatt single-player Layout A med «Mitt scorekort»-tittel.
 - Test-suite vokst fra 924 → 947 (+23 nye tester: 7 scorecardTitle + 5 teamCaptain + 11 scorecardLayout).
+
+</details>
 
 </details>
 
