@@ -10,7 +10,46 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.24.y — Kjønn og spillerklasse i profilen
+
+Tørny husker nå om du spiller fra herretee, dametee eller juniortee, og foreslår riktig tee når noen oppretter et spill du skal være med på. Issue [#92](https://github.com/jdlarssen/golf-app/issues/92).
+
+### [1.24.0] - 2026-05-25
+
+> Du kan nå sette kjønn og spillerklasse i profilen din. Når noen oppretter et spill du skal være med på, foreslår Tørny riktig tee for deg, så damer og juniorer slipper å havne på herretee ved et uhell.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- Migrasjon `0036_users_gender_level.sql` — to nye enum-typer (`user_gender` med `'mens'|'ladies'`, `player_level` med `'junior'|'normal'|'senior'`) + `users.gender` nullable + `users.level` NOT NULL DEFAULT `'normal'`. Adskilt fra `tee_box_gender`-enumen (#48) som beskriver *tee-en*, ikke *spilleren*. Ingen backfill — eksisterende brukere har `gender = NULL` og driver soft-prompt på `/profile`.
+- `lib/games/playerGenderDefault.ts` — pure helper som mapper `(gender, level)` til `'M'|'D'|'J'`-toggle-default i game-wizard. Regel: `level === 'junior'` overstyrer kjønn; senior påvirker ikke toggle i dag. 8 unit-tester dekker alle kombinasjoner.
+- `app/complete-profile/{page,actions}.tsx` — to nye påkrevde radio-grupper i onboarding (kjønn: ingen pre-valg; spillerklasse: pre-valgt «Voksen»). Server-action validerer mot enum-allowlist.
+- `app/profile/page.tsx` — `GenderSoftPrompt`-server-component rendres som Card øverst på `/profile` når `users.gender IS NULL`. «Sett kjønn»-knapp scroller til `#kjonn`-anchor på edit-fieldsetet. Kortet forsvinner straks gender er satt (re-render etter `updateProfile`).
+- `app/profile/ProfileFormBody.tsx` — kjønn + spillerklasse-felt med dirty-tracking (Lagre-knappen aktiveres ved endring i radio-grupper).
+- `app/admin/spillere/[id]/{page,actions}.tsx` — speiler `/profile`-mønsteret. Admin kan sette/endre for inviterte spillere før de logger på første gang. Ingen soft-prompt i admin-flate.
+
+#### Changed
+- `lib/games/newGameFormData.ts` — utvider users-select med `gender, level`; `UserRow` + `PlayerOption` propagerer feltene videre.
+- `app/admin/games/[id]/edit/page.tsx` — samme utvidelse for edit-flyten.
+- `app/admin/games/new/GameForm.tsx` — `PlayerOption`-type får `gender: 'mens'|'ladies'|null` + `level: 'junior'|'normal'|'senior'`.
+- `app/admin/games/new/useGameFormState.ts` — `playerGenders`-initial deriveres fra `playerGenderDefault(p.gender, p.level)` per spiller når `initialValues?.player_genders` ikke er satt (edit-flyt beholder per-spill overrides).
+- `app/profile/actions.ts` + `app/admin/spillere/[id]/actions.ts` — `updateProfile` og `updateUser` aksepterer + validerer gender + level før upsert.
+- `lib/database.types.ts` — regenerert med nye enums + felt.
+
+#### Notes
+- Test-suite: +8 nye tester for `playerGenderDefault`. Eksisterende `ProfileFormBody.test.tsx` + `GameForm.test.tsx` + `GameWizard.test.tsx` oppdatert med default-fixtures (gender=null, level=normal eller mens/normal).
+- Solo-flyten påvirkes uten ekstra endringer — GameForm bruker `player_${pid}_gender` FormData-key uavhengig av modus.
+- `gender` er nullable bevisst — eksisterende brukere uten verdi forblir null til soft-prompt-en spørres. Auto-default i wizard faller tilbake til 'M' for null-gender (med mindre level=junior).
+
+</details>
+
+---
+
 ## 1.23.y — Lanseringer-kanal: in-app drypp + månedsbrev
+
+<details>
+<summary><strong>1.23.y — Lanseringer-kanal: in-app drypp + månedsbrev (1 oppføring) — klikk for å vise</strong></summary>
 
 Tørny får sin egen kanal for å fortelle deg om nye funksjoner. Når noe er ute, dukker det opp et lite drypp på hjem-siden og en oppføring i innboksen. En gang i måneden får du en oppsummering på mail. Du kan melde deg av mailen fra profilen din eller via lenken nederst i mailen. Issue [#202](https://github.com/jdlarssen/golf-app/issues/202).
 
@@ -47,6 +86,8 @@ Tørny får sin egen kanal for å fortelle deg om nye funksjoner. Når noe er ut
 - RFC 8058 ikke strengt påkrevd for Tørnys volum (< 5000 mail/dag mot Gmail/Yahoo), men implementert riktig fra start — gratis kvalitets-signal for inbox-placement.
 - `.env.example` dokumenterer to nye secrets: `CRON_SECRET` (Vercel Bearer-token) og `PRODUCT_UPDATE_UNSUB_SECRET` (HMAC-nøkkel for unsub-tokens). Begge må settes i Vercel Dashboard før cron + unsub fungerer i prod.
 - Test-suite vokst fra 1031 → 1062 (+31 nye tester).
+
+</details>
 
 </details>
 
