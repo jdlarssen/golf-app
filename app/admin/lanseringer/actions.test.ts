@@ -1,0 +1,191 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import {
+  buildSupabaseMock,
+  makeRedirectMock,
+  RedirectError,
+} from '@/tests/serverActionMocks';
+
+const redirectMock = makeRedirectMock();
+vi.mock('next/navigation', () => ({
+  redirect: (url: string) => redirectMock(url),
+}));
+
+vi.mock('next/cache', () => ({
+  revalidatePath: vi.fn(),
+}));
+
+let supabaseMock: ReturnType<typeof buildSupabaseMock>;
+vi.mock('@/lib/supabase/server', () => ({
+  getServerClient: async () => supabaseMock,
+}));
+
+vi.mock('@/lib/auth/userId', () => ({
+  getProxyVerifiedUserId: async () => 'admin-1',
+}));
+
+const publishMock = vi.fn();
+vi.mock('@/lib/productUpdates/publish', () => ({
+  publishProductUpdate: (input: unknown) => publishMock(input),
+}));
+
+const sendDigestMock = vi.fn();
+vi.mock('@/lib/productUpdates/digest', () => ({
+  sendDigestForPeriod: (opts: unknown) => sendDigestMock(opts),
+}));
+
+function fd(entries: Record<string, string>): FormData {
+  const data = new FormData();
+  for (const [k, v] of Object.entries(entries)) data.set(k, v);
+  return data;
+}
+
+function lastRedirect(): string | undefined {
+  return redirectMock.mock.calls.at(-1)?.[0];
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  // Default: admin-only access
+  supabaseMock = buildSupabaseMock([
+    { data: { is_admin: true }, error: null },
+  ]);
+});
+
+describe('publishProductUpdateAction', () => {
+  it('redirecter til / når bruker ikke er admin', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false }, error: null },
+    ]);
+    const { publishProductUpdateAction } = await import('./actions');
+
+    await expect(
+      publishProductUpdateAction(fd({ title: 'X', body: 'Y' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/');
+  });
+
+  it('redirecter med ?error=title_required når tittel mangler', async () => {
+    const { publishProductUpdateAction } = await import('./actions');
+
+    await expect(
+      publishProductUpdateAction(fd({ title: '   ', body: 'Y' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toContain('error=title_required');
+  });
+
+  it('redirecter med ?error=body_required når brødtekst mangler', async () => {
+    const { publishProductUpdateAction } = await import('./actions');
+
+    await expect(
+      publishProductUpdateAction(fd({ title: 'X', body: '' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toContain('error=body_required');
+  });
+
+  it('redirecter med ?error=link_must_be_internal når lenke ikke starter med /', async () => {
+    const { publishProductUpdateAction } = await import('./actions');
+
+    await expect(
+      publishProductUpdateAction(
+        fd({ title: 'X', body: 'Y', link: 'https://evil.example.com' }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toContain('error=link_must_be_internal');
+  });
+
+  it('redirecter med ?error=cta_without_link når cta uten link', async () => {
+    const { publishProductUpdateAction } = await import('./actions');
+
+    await expect(
+      publishProductUpdateAction(
+        fd({ title: 'X', body: 'Y', cta_label: 'Prøv det' }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toContain('error=cta_without_link');
+  });
+
+  it('happy path: kaller publishProductUpdate og redirecter med ?published=1', async () => {
+    publishMock.mockResolvedValueOnce({
+      id: 'pu-1',
+      recipientCount: 5,
+      failedCount: 0,
+    });
+    const { publishProductUpdateAction } = await import('./actions');
+
+    await expect(
+      publishProductUpdateAction(
+        fd({
+          title: 'Texas scramble er ute!',
+          body: 'Ny modus tilgjengelig.',
+          link: '/admin/games/new',
+          cta_label: 'Prøv det',
+        }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(publishMock).toHaveBeenCalledWith({
+      title: 'Texas scramble er ute!',
+      body: 'Ny modus tilgjengelig.',
+      link: '/admin/games/new',
+      cta_label: 'Prøv det',
+      createdByUserId: 'admin-1',
+    });
+    expect(lastRedirect()).toBe('/admin/lanseringer?published=1&recipients=5');
+  });
+});
+
+describe('sendDigestNowAction', () => {
+  it('redirecter til / når bruker ikke er admin', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false }, error: null },
+    ]);
+    const { sendDigestNowAction } = await import('./actions');
+
+    await expect(sendDigestNowAction()).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/');
+  });
+
+  it('redirecter med ?digest=already_sent når perioden allerede er sendt', async () => {
+    sendDigestMock.mockResolvedValueOnce({
+      kind: 'already_sent',
+      periodStart: '2026-04-01',
+      periodEnd: '2026-04-30',
+      periodLabel: 'april 2026',
+    });
+    const { sendDigestNowAction } = await import('./actions');
+
+    await expect(sendDigestNowAction()).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/lanseringer?digest=already_sent');
+  });
+
+  it('redirecter med ?digest=no_updates når ingen oppdateringer i periode', async () => {
+    sendDigestMock.mockResolvedValueOnce({
+      kind: 'no_updates',
+      periodStart: '2026-04-01',
+      periodEnd: '2026-04-30',
+      periodLabel: 'april 2026',
+    });
+    const { sendDigestNowAction } = await import('./actions');
+
+    await expect(sendDigestNowAction()).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/lanseringer?digest=no_updates');
+  });
+
+  it('happy path: sendt → redirecter med recipients + updates-counters', async () => {
+    sendDigestMock.mockResolvedValueOnce({
+      kind: 'sent',
+      periodStart: '2026-04-01',
+      periodEnd: '2026-04-30',
+      periodLabel: 'april 2026',
+      recipientCount: 12,
+      updateCount: 3,
+    });
+    const { sendDigestNowAction } = await import('./actions');
+
+    await expect(sendDigestNowAction()).rejects.toBeInstanceOf(RedirectError);
+    expect(sendDigestMock).toHaveBeenCalledWith({ sentByUserId: 'admin-1' });
+    expect(lastRedirect()).toBe(
+      '/admin/lanseringer?digest=sent&recipients=12&updates=3',
+    );
+  });
+});
