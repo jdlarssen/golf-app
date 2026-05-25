@@ -84,7 +84,7 @@ const GROUPS: readonly Group[] = [
   },
   {
     title: 'Ferdighet og sjeldenhet',
-    hint: 'Belønner ferdighet og sjeldne prestasjoner.',
+    hint: 'Belønner ferdighet og sjeldne prestasjoner. Flest eagles teller også albatrosser (eagles+).',
     rows: [
       {
         key: 'best_brutto_18',
@@ -99,6 +99,12 @@ const GROUPS: readonly Group[] = [
         pointsLabel: '4p lag / 2p indiv',
       },
       {
+        key: 'king_par4',
+        label: 'Konge på par-4',
+        ids: ['king_par4_team', 'king_par4_individual'],
+        pointsLabel: '4p lag / 2p indiv',
+      },
+      {
         key: 'king_par5',
         label: 'Konge på par-5',
         ids: ['king_par5_team', 'king_par5_individual'],
@@ -109,6 +115,36 @@ const GROUPS: readonly Group[] = [
         label: 'Flest eagles',
         ids: ['most_eagles_team', 'most_eagles_individual'],
         pointsLabel: '4p lag / 2p indiv',
+      },
+      {
+        key: 'most_albatrosses',
+        label: 'Flest albatrosser',
+        ids: ['most_albatrosses_team', 'most_albatrosses_individual'],
+        pointsLabel: '4p lag / 2p indiv',
+      },
+      {
+        key: 'most_hole_in_ones',
+        label: 'Flest hole-in-one',
+        ids: ['most_hole_in_ones_team', 'most_hole_in_ones_individual'],
+        pointsLabel: '4p lag / 2p indiv',
+      },
+      {
+        key: 'clean_front_9',
+        label: 'Rein front-9',
+        ids: ['clean_front_9'],
+        pointsLabel: '4p',
+      },
+      {
+        key: 'clean_back_9',
+        label: 'Rein back-9',
+        ids: ['clean_back_9'],
+        pointsLabel: '4p',
+      },
+      {
+        key: 'no_double_plus_round',
+        label: 'Ren runde — ingen double-bogey',
+        ids: ['no_double_plus_round'],
+        pointsLabel: '4p',
       },
       {
         key: 'longest_bogey_free_streak',
@@ -152,6 +188,36 @@ const GROUPS: readonly Group[] = [
         ids: ['lowest_single_hole_brutto'],
         pointsLabel: '2p',
       },
+      {
+        key: 'hardest_hole_winner',
+        label: 'Best på hardeste hull',
+        ids: ['hardest_hole_winner'],
+        pointsLabel: '2p',
+      },
+      {
+        key: 'comeback_kid',
+        label: 'Comeback kid (back-9-forbedring)',
+        ids: ['comeback_kid'],
+        pointsLabel: '2p',
+      },
+      {
+        key: 'all_par_groups_birdie',
+        label: 'Allsidig birdie-spiller (par-3, 4 og 5)',
+        ids: ['all_par_groups_birdie'],
+        pointsLabel: '2p',
+      },
+      {
+        key: 'even_par_round',
+        label: 'Even-par-runden',
+        ids: ['even_par_round'],
+        pointsLabel: '2p',
+      },
+      {
+        key: 'back_to_back_birdies',
+        label: 'To birdier på rad',
+        ids: ['back_to_back_birdies'],
+        pointsLabel: '2p × hver streak',
+      },
     ],
   },
   {
@@ -183,10 +249,40 @@ const GROUPS: readonly Group[] = [
         pointsLabel: '2p / spiller + lag-bonus',
       },
       {
+        key: 'team_all_birdied_bonus',
+        label: 'Alle birdied (lag-bonus)',
+        ids: ['team_all_birdied_bonus'],
+        pointsLabel: '4p × medlem',
+      },
+      {
+        key: 'team_no_bogey_hole_coord',
+        label: 'Lag-par-hull (lag-bonus)',
+        ids: ['team_no_bogey_hole_coord'],
+        pointsLabel: '2p × medlem × hull',
+      },
+    ],
+  },
+  {
+    title: 'Minuspoeng',
+    hint: 'Humor og uflaks — gir trekk fra totalen.',
+    rows: [
+      {
         key: 'snowman',
         label: 'Snowman (lagets felles sprell på ett hull)',
         ids: ['snowman'],
         pointsLabel: '−2p',
+      },
+      {
+        key: 'worst_single_hole_brutto',
+        label: 'Verste enkelthull',
+        ids: ['worst_single_hole_brutto'],
+        pointsLabel: '−1p',
+      },
+      {
+        key: 'most_double_bogeys_individual',
+        label: 'Flest double-bogeys',
+        ids: ['most_double_bogeys_individual'],
+        pointsLabel: '−1p',
       },
     ],
   },
