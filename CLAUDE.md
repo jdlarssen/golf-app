@@ -111,6 +111,29 @@ Etter `v1.0.0` (2026-05-13) går alt arbeid via PR — **ikke direkte push til `
 5. **Merge:** `gh pr merge --rebase --delete-branch` — rebase holder linear `main`-historie og bevarer atomic-commit-disiplinen. **Squash brukes ikke** (mister granulær audit-trail per commit).
 6. **Auto-close:** `Closes #N` i PR-body lukker issue-en ved merge. Bekreft med `gh issue view N --json state` hvis usikker.
 
+#### Kontrakt-kommentar (når /forge:contract lager en)
+
+Når `/forge:contract` produserer en kontrakt i `.forge/contracts/<N>-<slug>.md`, MÅ hovedchatten poste den til korresponderende issue via `gh issue comment N --body-file <path>` i samme runde som kontrakten skrives. Format:
+
+```markdown
+## 📋 Forge-kontrakt tilgjengelig
+
+Det finnes en eksisterende forge-kontrakt for dette issuet på branchen `<branch-navn>`.
+
+<details>
+<summary><strong>Kontrakt: <kontrakt-tittel> — klikk for å vise</strong></summary>
+
+<full markdown-innhold fra .forge/contracts/<N>-<slug>.md>
+
+</details>
+```
+
+Hvorfor: kontrakter lever i branch-spesifikke `.forge/contracts/`-mapper og er usynlige for noen som ser på issue-en i nettleseren. Posting på issue-en gjør at scope og beslutninger er tilgjengelig der konteksten finnes, og at fremtidige sesjoner ikke gjør duplikat-arbeid.
+
+Bruk `<details>`-wrapper så issue-siden ikke drukner i veggen av tekst. Bygg comment-body i en temp-fil og post med `--body-file` (kontrakter er 15–30KB, for store til shell-escaping).
+
+Hvis kontrakten revideres senere i samme sesjon: post oppdatert versjon som ny kommentar — ikke editer den gamle. Audit-trail er viktigere enn ren issue-historikk.
+
 #### Closing-kommentar (ALLTID)
 
 Når en issue lukkes, MÅ hovedchatten poste en kommentar med `gh issue comment N --body ...`. Kommentaren har to seksjoner:
