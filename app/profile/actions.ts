@@ -37,13 +37,19 @@ export async function updateProfile(formData: FormData) {
   // For already-onboarded users this just bumps the timestamp to the latest
   // edit, which is fine — the field's role is "has the user ever completed
   // onboarding," not "when did they first onboard."
+  // Bump handicap_updated_at on every save — even when hcp_index didn't
+  // change, the player has been through the form and endorsed the value.
+  // Drives the stale-handicap prompt in the scheduled-game waiting room
+  // (see lib/handicap/staleness.ts).
+  const now = new Date().toISOString();
   const { error } = await supabase
     .from('users')
     .update({
       name,
       nickname,
       hcp_index: hcpParsed,
-      profile_completed_at: new Date().toISOString(),
+      handicap_updated_at: now,
+      profile_completed_at: now,
     })
     .eq('id', user.id);
 

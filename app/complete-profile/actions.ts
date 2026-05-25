@@ -34,13 +34,15 @@ export async function completeProfile(formData: FormData) {
   // The trigger on auth.users pre-creates a placeholder public.users row
   // (name=NULL, profile_completed_at=NULL). We update that row here and
   // stamp profile_completed_at to mark onboarding done.
+  const now = new Date().toISOString();
   const { error } = await supabase
     .from('users')
     .update({
       name,
       nickname,
       hcp_index: hcpParsed,
-      profile_completed_at: new Date().toISOString(),
+      handicap_updated_at: now,
+      profile_completed_at: now,
     })
     .eq('id', user.id);
 

@@ -99,10 +99,15 @@ export async function updateUser(formData: FormData) {
   }
 
   // Update public.users (email included only when it changed).
+  // Bump handicap_updated_at unconditionally — admin saving the form is
+  // an endorsement of the current hcp_index, even if the value didn't
+  // change. Spares the player a stale-handicap prompt right after admin
+  // just fixed it for them.
   const updatePayload: Record<string, unknown> = {
     name,
     nickname: nickname || null,
     hcp_index: hcp,
+    handicap_updated_at: new Date().toISOString(),
   };
   if (emailChanged) {
     updatePayload.email = emailRaw;
