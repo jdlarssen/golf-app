@@ -36,7 +36,7 @@ Mulighet for å la utvalgte spillere opprette egne turneringer uten å gjøre de
 - Ingen DB-migrasjoner, ingen nye tabeller, ingen RLS-policy-endringer. INSERT mot `games` skjer fortsatt via request-scoped client — RLS lar `authenticated`-brukere insertere så lenge `created_by = auth.uid()`, så admin-bypass var ikke nødvendig.
 - Aksepterte rough edges: success-redirect peker fortsatt på `/admin/games/[id]?status=…` (admin-layouten bouncer trusted-bruker derfra til `/`, der spillet vises i «Mine spill»-lista). Valideringsfeil under create bouncer trusted via `/admin/games/new?error=…` → `/`. Polish kun hvis adopsjon > 30 % i 30-dagers observasjons-vinduet.
 - Observasjons-SQL etter 30 dager: `select created_by, count(*), min(created_at), max(created_at) from games where created_by in (select id from users where email = any('{fornes.even@yahoo.no, …}'::text[])) group by created_by;`
-- Test-suite: 921 → 924 (3 nye actions-tester) + 10 nye `isTrustedCreator`-unit-tester = 934 totalt grønne.
+- Test-suite: 13 nye tester (10 `isTrustedCreator`-unit + 3 trusted-creator actions-tester), 924 totalt grønne.
 
 </details>
 
