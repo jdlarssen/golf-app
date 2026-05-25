@@ -3,6 +3,7 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound } from 'next/navigation';
 import { after } from 'next/server';
 import { getServerClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Banner } from '@/components/ui/Banner';
@@ -172,6 +173,11 @@ export default async function GameDetailPage({
   const errorMessage = buildErrorMessage(first(sp.error), first(sp.emails));
 
   const { supabase } = await getAdminGameContext();
+  // Self-gate for Fase 4 chunk 2 layout-loosening (#223). Runs before the
+  // game-row fetch so trusted-non-admin (and unauthenticated) callers never
+  // see the row even if RLS would have allowed the select.
+  await requireAdmin(supabase);
+
   // Gating: fetch the game row first so we can render the title bar
   // synchronously. The rest of the page (players, progress, sak-number,
   // cards, CTAs) streams behind Suspense boundaries below.

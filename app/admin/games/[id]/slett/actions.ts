@@ -3,30 +3,17 @@
 import { redirect } from 'next/navigation';
 import { revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/admin/auth';
 import type { GameStatus } from '@/lib/games/status';
-
-async function requireAdmin() {
-  const supabase = await getServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await supabase
-    .from('users')
-    .select('is_admin')
-    .eq('id', user.id)
-    .single();
-  if (!profile?.is_admin) redirect('/');
-
-  return { supabase };
-}
 
 export async function deleteGame(formData: FormData) {
   const gameId = String(formData.get('gameId') ?? '');
   if (!gameId) redirect('/admin/games?error=not_found');
 
-  const { supabase } = await requireAdmin();
+  const supabase = await getServerClient();
+  // Self-gate for Fase 4 chunk 2 layout-loosening (#223). Replaces the
+  // previously-inlined auth.getUser + users.is_admin check.
+  await requireAdmin(supabase);
 
   // Fetch the game name for the success-banner redirect. No status block —
   // admin must be able to delete games in any state (including 'active') so

@@ -3,26 +3,19 @@
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { requireAdmin } from '@/lib/admin/auth';
 
 export async function deleteUser(formData: FormData) {
   const id = String(formData.get('id') ?? '');
   if (!id) redirect('/admin/spillere?error=unknown');
 
   const supabase = await getServerClient();
-  const {
-    data: { user: actor },
-  } = await supabase.auth.getUser();
-  if (!actor) redirect('/login');
-
-  const { data: actorProfile } = await supabase
-    .from('users')
-    .select('is_admin')
-    .eq('id', actor.id)
-    .single();
-  if (!actorProfile?.is_admin) redirect('/');
+  // Self-gate for Fase 4 chunk 2 layout-loosening (#223). Replaces the
+  // previously-inlined auth.getUser() + users.is_admin check.
+  const actor = await requireAdmin(supabase);
 
   // Self-protect
-  if (id === actor.id) {
+  if (id === actor.userId) {
     redirect(`/admin/spillere/${id}?error=self_delete_forbidden`);
   }
 

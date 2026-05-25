@@ -1,6 +1,7 @@
 import { Suspense, cache } from 'react';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
@@ -77,6 +78,12 @@ export default async function GamesPage({
 }: {
   searchParams: SearchParams;
 }) {
+  // Self-gate for Fase 4 chunk 2 layout-loosening (#223). The Suspense
+  // bodies below pull the request-scoped Supabase from `getAdminGamesContext`,
+  // so we await the gate here at the page boundary.
+  const { supabase } = await getAdminGamesContext();
+  await requireAdmin(supabase);
+
   const params = await searchParams;
   const statusFilter = first(params.status);
   const name = first(params.name) ?? '';

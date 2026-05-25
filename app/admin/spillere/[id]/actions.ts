@@ -10,21 +10,7 @@ type Level = (typeof LEVELS)[number];
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
-
-async function requireAdmin() {
-  const supabase = await getServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-  const { data: profile, error } = await supabase
-    .from('users')
-    .select('is_admin')
-    .eq('id', user.id)
-    .single();
-  if (error || !profile?.is_admin) redirect('/');
-  return supabase;
-}
+import { requireAdmin } from '@/lib/admin/auth';
 
 export async function updateUser(formData: FormData) {
   const id = String(formData.get('id') ?? '');
@@ -57,7 +43,10 @@ export async function updateUser(formData: FormData) {
   }
   const level = levelRaw as Level;
 
-  const supabase = await requireAdmin();
+  const supabase = await getServerClient();
+  // Self-gate for Fase 4 chunk 2 layout-loosening (#223). Replaces the
+  // previously-inlined `users.is_admin` check.
+  await requireAdmin(supabase);
 
   // Fetch current email to detect whether it has changed.
   const { data: current } = await supabase

@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Banner } from '@/components/ui/Banner';
@@ -61,6 +62,8 @@ export default async function DeleteGamePage({
   const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
 
   const supabase = await getServerClient();
+  // Self-gate for Fase 4 chunk 2 layout-loosening (#223).
+  await requireAdmin(supabase);
 
   const { data: game } = await supabase
     .from('games')

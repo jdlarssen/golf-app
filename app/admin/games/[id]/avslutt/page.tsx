@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -10,23 +11,6 @@ import { endGameWithSideWinners } from './actions';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ error?: string }>;
-
-async function requireAdmin() {
-  const supabase = await getServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await supabase
-    .from('users')
-    .select('is_admin')
-    .eq('id', user.id)
-    .single();
-  if (!profile?.is_admin) redirect('/');
-
-  return { supabase, user };
-}
 
 /**
  * Admin wizard for selecting LD/CTP winners before flipping a side-tournament
@@ -52,7 +36,11 @@ export default async function AvsluttPage({
   const { id: gameId } = await params;
   const { error } = await searchParams;
 
-  const { supabase, user } = await requireAdmin();
+  const supabase = await getServerClient();
+  // Self-gate for Fase 4 chunk 2 layout-loosening (#223). Replaces the
+  // page-local inline `requireAdmin()` wrapper that previously did the
+  // auth.getUser + users.is_admin round-trip inline.
+  const user = await requireAdmin(supabase);
 
   const { data: game } = await supabase
     .from('games')
@@ -108,7 +96,7 @@ export default async function AvsluttPage({
       <TopBar
         backHref={`/admin/games/${gameId}`}
         kicker="Avslutt spillet"
-        userId={user.id}
+        userId={user.userId}
       />
       <PageHeader
         title="Avslutt spill"

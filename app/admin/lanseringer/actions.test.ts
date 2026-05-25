@@ -19,9 +19,18 @@ vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
 }));
 
-vi.mock('@/lib/auth/userId', () => ({
-  getProxyVerifiedUserId: async () => 'admin-1',
-}));
+/**
+ * Wire `auth.getUser()` to the in-test supabase mock with a stable admin
+ * uuid (`admin-1`). The action's role-helper reads `userId` from this call
+ * — keeping the value matches the existing assertions
+ * (`createdByUserId: 'admin-1'`, `sentByUserId: 'admin-1'`).
+ */
+function setAdminUser(id = 'admin-1') {
+  supabaseMock.auth.getUser = vi.fn(async () => ({
+    data: { user: { id, email: 'admin@example.com' } },
+    error: null,
+  }));
+}
 
 const publishMock = vi.fn();
 vi.mock('@/lib/productUpdates/publish', () => ({
@@ -45,17 +54,21 @@ function lastRedirect(): string | undefined {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // Default: admin-only access
+  // Default: admin-only access. Role-helper reads `is_admin` + `email` +
+  // `name` from the users-row; only `is_admin` actually gates here, the
+  // rest are harmless extras the helper ignores at the callsite.
   supabaseMock = buildSupabaseMock([
-    { data: { is_admin: true }, error: null },
+    { data: { is_admin: true, email: null, name: 'Admin' }, error: null },
   ]);
+  setAdminUser();
 });
 
 describe('publishProductUpdateAction', () => {
   it('redirecter til / når bruker ikke er admin', async () => {
     supabaseMock = buildSupabaseMock([
-      { data: { is_admin: false }, error: null },
+      { data: { is_admin: false, email: null, name: null }, error: null },
     ]);
+    setAdminUser();
     const { publishProductUpdateAction } = await import('./actions');
 
     await expect(
@@ -137,8 +150,9 @@ describe('publishProductUpdateAction', () => {
 describe('sendDigestNowAction', () => {
   it('redirecter til / når bruker ikke er admin', async () => {
     supabaseMock = buildSupabaseMock([
-      { data: { is_admin: false }, error: null },
+      { data: { is_admin: false, email: null, name: null }, error: null },
     ]);
+    setAdminUser();
     const { sendDigestNowAction } = await import('./actions');
 
     await expect(sendDigestNowAction()).rejects.toBeInstanceOf(RedirectError);

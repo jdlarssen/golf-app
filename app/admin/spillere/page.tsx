@@ -1,5 +1,6 @@
 import { Suspense, cache } from 'react';
 import { getServerClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Banner } from '@/components/ui/Banner';
@@ -74,6 +75,13 @@ export default async function SpillerePage({
 }: {
   searchParams: SearchParams;
 }) {
+  // Self-gate: prepares for Fase 4 chunk 2 lifting the layout-level admin
+  // restriction. Trusted creators (Baner-tile users) redirect to /admin;
+  // ikke-trusted-ikke-admin to /. Currently redundant with the layout-gate
+  // but the layout-gate goes away in chunk 2.
+  const supabase = await getServerClient();
+  await requireAdmin(supabase);
+
   const params = await searchParams;
   const status = first(params.status);
   const email = first(params.email) ?? '';

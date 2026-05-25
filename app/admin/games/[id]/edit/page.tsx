@@ -2,6 +2,7 @@ import { Suspense, cache } from 'react';
 import { redirect } from 'next/navigation';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/admin/auth';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
@@ -155,29 +156,23 @@ export default async function EditGamePage({
   const { supabase, userId } = await getEditContext();
   if (!userId) redirect('/login');
 
-  // Gating: admin check + game row in parallel. Both determine whether the
-  // page should render at all.
-  const [profileRes, gameRes] = await Promise.all([
-    supabase
-      .from('users')
-      .select('is_admin')
-      .eq('id', userId)
-      .single(),
-    supabase
-      .from('games')
-      .select(
-        'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config',
-      )
-      .eq('id', id)
-      .single<GameRow>(),
-  ]);
+  // Self-gate for Fase 4 chunk 2 layout-loosening (#223). Replaces the
+  // inline is_admin Promise.all-entry; the game row fetches below now
+  // runs sequentially after the gate so trusted-non-admin callers don't
+  // even trigger the games-select.
+  await requireAdmin(supabase);
 
-  if (!profileRes.data?.is_admin) redirect('/');
+  const { data: game, error: gameError } = await supabase
+    .from('games')
+    .select(
+      'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config',
+    )
+    .eq('id', id)
+    .single<GameRow>();
 
-  if (gameRes.error || !gameRes.data) {
+  if (gameError || !game) {
     redirect('/admin/games');
   }
-  const game = gameRes.data;
 
   // Edits are allowed while the game is still in 'draft' or 'scheduled'.
   // Once it flips to 'active' or 'finished', state changes (handicaps, scores)

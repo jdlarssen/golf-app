@@ -4,26 +4,31 @@ import { redirect } from 'next/navigation';
 import { randomUUID } from 'node:crypto';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { requireAdmin } from '@/lib/admin/auth';
 import { sendInviteNotification } from '@/lib/mail/inviteNotification';
 import {
   consumeAdminInviteRateLimit,
   getClientIp,
 } from '@/lib/admin/rateLimit';
 
-async function requireAdmin() {
+/**
+ * Self-gate + load `{ supabase, profile }` for the spillere-actions. Wraps
+ * the shared `requireAdmin` helper so each action below can keep its
+ * existing destructure-pattern (`{ supabase, profile }`) while routing
+ * through the Fase-4-shared gate (#223 chunk 2 will lift the layout-gate).
+ *
+ * `profile.id` here matches `role.userId` and is used as the FK target for
+ * invitations.invited_by and the rate-limit bucket key. `profile.name` is
+ * inlined into the invite-notification mail so the recipient sees who from
+ * Tørny actually invited them.
+ */
+async function loadAdminContext() {
   const supabase = await getServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-
-  const { data: profile, error } = await supabase
-    .from('users')
-    .select('is_admin, name, id')
-    .eq('id', user.id)
-    .single();
-  if (error || !profile?.is_admin) redirect('/');
-  return { supabase, profile };
+  const role = await requireAdmin(supabase);
+  return {
+    supabase,
+    profile: { id: role.userId, name: role.name },
+  };
 }
 
 export async function sendInvitation(formData: FormData) {
@@ -43,7 +48,7 @@ export async function sendInvitation(formData: FormData) {
 
   if (!email) redirect('/admin/spillere?error=email_required');
 
-  const { supabase, profile } = await requireAdmin();
+  const { supabase, profile } = await loadAdminContext();
   const invitedByName = profile.name?.trim() || 'Admin';
 
   const ip = await getClientIp();
@@ -96,7 +101,7 @@ export async function resendInvitation(formData: FormData) {
   const id = String(formData.get('id') ?? '');
   if (!id) redirect('/admin/spillere?error=unknown');
 
-  const { supabase, profile } = await requireAdmin();
+  const { supabase, profile } = await loadAdminContext();
   const invitedByName = profile.name?.trim() || 'Admin';
 
   const ip = await getClientIp();
@@ -133,7 +138,7 @@ export async function withdrawInvitation(formData: FormData) {
   const id = String(formData.get('id') ?? '');
   if (!id) redirect('/admin/spillere?error=unknown');
 
-  const { supabase } = await requireAdmin();
+  const { supabase } = await loadAdminContext();
 
   const { data: inv, error: fetchError } = await supabase
     .from('invitations')

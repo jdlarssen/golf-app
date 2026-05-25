@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/admin/auth';
 import {
   calculateCourseHandicap,
   applyAllowance,
@@ -23,21 +24,21 @@ import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { notify } from '@/lib/notifications/notify';
 import { notifyPlayersGameFinished } from '@/lib/notifications/events';
 
-async function requireAdmin() {
+/**
+ * Self-gate + load action context for the game-detail actions. Wraps the
+ * shared `requireAdmin` helper so each action below can keep destructuring
+ * `{ supabase, user, actorName }` like it did with the previously-inlined
+ * `requireAdmin()` function. Prepares for Fase 4 chunk 2 (#223) lifting
+ * the admin-layout-gate.
+ */
+async function loadAdminContext() {
   const supabase = await getServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await supabase
-    .from('users')
-    .select('is_admin, name')
-    .eq('id', user.id)
-    .single<{ is_admin: boolean; name: string | null }>();
-  if (!profile?.is_admin) redirect('/');
-
-  return { supabase, user, actorName: profile.name?.trim() || 'Admin' };
+  const role = await requireAdmin(supabase);
+  return {
+    supabase,
+    user: { id: role.userId },
+    actorName: role.name?.trim() || 'Admin',
+  };
 }
 
 /**
@@ -51,7 +52,7 @@ async function requireAdmin() {
  * flipping to 'active' so they reflect each player's hcp_index at tee-off.
  */
 export async function startScheduledGameAction(gameId: string) {
-  const { supabase } = await requireAdmin();
+  const { supabase } = await loadAdminContext();
   const detailPath = `/admin/games/${gameId}`;
 
   const result = await startScheduledGame(supabase, gameId);
@@ -73,7 +74,7 @@ export async function startScheduledGameAction(gameId: string) {
 }
 
 export async function startGame(gameId: string) {
-  const { supabase } = await requireAdmin();
+  const { supabase } = await loadAdminContext();
   const detailPath = `/admin/games/${gameId}`;
 
   // Load the game (status + allowance + tee id) so we can compute frozen
@@ -170,7 +171,7 @@ export async function adminApproveScorecard(
   gameId: string,
   playerUserId: string,
 ) {
-  const { supabase, user, actorName } = await requireAdmin();
+  const { supabase, user, actorName } = await loadAdminContext();
   const detailPath = `/admin/games/${gameId}`;
 
   const { data: game } = await supabase
@@ -241,7 +242,7 @@ export async function adminApproveScorecard(
  * `finished` and stamps `ended_at`, which opens the leaderboard for everyone.
  */
 export async function endGame(gameId: string) {
-  const { supabase, user, actorName } = await requireAdmin();
+  const { supabase, user, actorName } = await loadAdminContext();
   const detailPath = `/admin/games/${gameId}`;
 
   // Verify game is active. Inkluderer game_mode + mode_config + course_id
@@ -373,7 +374,7 @@ export async function endGame(gameId: string) {
  * No-op safety: only runs when the row currently has submitted_at set.
  */
 export async function reopenScorecard(gameId: string, playerUserId: string) {
-  const { supabase, user, actorName } = await requireAdmin();
+  const { supabase, user, actorName } = await loadAdminContext();
   const detailPath = `/admin/games/${gameId}`;
 
   const { data: game } = await supabase
@@ -420,7 +421,7 @@ export async function reopenScorecard(gameId: string, playerUserId: string) {
  * round was ended prematurely or a result needs correction.
  */
 export async function reopenGame(gameId: string) {
-  const { supabase, user, actorName } = await requireAdmin();
+  const { supabase, user, actorName } = await loadAdminContext();
   const detailPath = `/admin/games/${gameId}`;
 
   const { data: game } = await supabase

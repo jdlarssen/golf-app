@@ -3,31 +3,27 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
-import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { requireAdmin } from '@/lib/admin/auth';
 import { publishProductUpdate } from '@/lib/productUpdates/publish';
 import { sendDigestForPeriod } from '@/lib/productUpdates/digest';
 
-async function requireAdmin() {
-  const userId = await getProxyVerifiedUserId();
-  if (!userId) redirect('/login');
-
+/**
+ * Self-gate + return `{ userId }` for the lanseringer-actions. Wraps the
+ * shared `requireAdmin` helper so each action keeps its existing
+ * destructure-shape. Prepares for Fase 4 chunk 2 (#223) lifting the
+ * admin-layout-gate.
+ */
+async function loadAdminContext() {
   const supabase = await getServerClient();
-  const { data: profile } = await supabase
-    .from('users')
-    .select('is_admin')
-    .eq('id', userId)
-    .single();
-
-  if (!profile?.is_admin) redirect('/');
-
-  return { userId };
+  const role = await requireAdmin(supabase);
+  return { userId: role.userId };
 }
 
 const ERROR_REDIRECT = (code: string) =>
   redirect(`/admin/lanseringer?error=${encodeURIComponent(code)}`);
 
 export async function publishProductUpdateAction(formData: FormData) {
-  const { userId } = await requireAdmin();
+  const { userId } = await loadAdminContext();
 
   const title = String(formData.get('title') ?? '').trim();
   const body = String(formData.get('body') ?? '').trim();
@@ -68,7 +64,7 @@ export async function publishProductUpdateAction(formData: FormData) {
 }
 
 export async function sendDigestNowAction() {
-  const { userId } = await requireAdmin();
+  const { userId } = await loadAdminContext();
 
   try {
     const result = await sendDigestForPeriod({ sentByUserId: userId });

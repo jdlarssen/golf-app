@@ -1,8 +1,7 @@
 import { Suspense, cache } from 'react';
-import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
-import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { requireAdmin } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
@@ -37,20 +36,13 @@ function first(value: string | string[] | undefined): string | undefined {
   return value;
 }
 
+// Cached so the page-body and any other Suspense bodies share one auth
+// round-trip per request. Routes through the shared `requireAdmin` helper
+// (Fase 4 #223 chunk 2 lifts the layout-gate).
 const requireAdminContext = cache(async () => {
-  const userId = await getProxyVerifiedUserId();
-  if (!userId) redirect('/login');
-
   const supabase = await getServerClient();
-  const { data: profile } = await supabase
-    .from('users')
-    .select('is_admin')
-    .eq('id', userId)
-    .single();
-
-  if (!profile?.is_admin) redirect('/');
-
-  return { userId, supabase };
+  const role = await requireAdmin(supabase);
+  return { userId: role.userId, supabase };
 });
 
 export default async function LanseringerPage({

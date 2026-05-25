@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/admin/auth';
 import {
   buildGameInsertPayload,
   parseOsloDateTimeLocal,
@@ -78,17 +79,9 @@ async function updateGameInternal(
   } = sideResult.payload;
 
   const supabase = await getServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await supabase
-    .from('users')
-    .select('is_admin')
-    .eq('id', user.id)
-    .single();
-  if (!profile?.is_admin) redirect('/');
+  // Self-gate for Fase 4 chunk 2 layout-loosening (#223). Replaces the
+  // previously-inlined auth.getUser + users.is_admin check.
+  await requireAdmin(supabase);
 
   if (mode === 'publish' || mode === 'update_scheduled') {
     const { data: rosterUsers, error: rosterErr } = await supabase

@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
@@ -17,6 +18,8 @@ export default async function WithdrawInvitationPage({
 }) {
   const { id } = await params;
   const supabase = await getServerClient();
+  // Self-gate for Fase 4 chunk 2 layout-loosening (#223).
+  await requireAdmin(supabase);
 
   const { data: inv } = await supabase
     .from('invitations')

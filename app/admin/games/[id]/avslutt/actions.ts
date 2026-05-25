@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/admin/auth';
 import { sendGameFinishedNotification } from '@/lib/mail/gameFinishedNotification';
 import { buildGameFinishedRecipients } from '@/lib/mail/gameFinishedRecipients';
 import { firstName } from '@/lib/firstName';
@@ -11,21 +12,20 @@ import type { GameStatus } from '@/lib/games/status';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { notifyPlayersGameFinished } from '@/lib/notifications/events';
 
-async function requireAdmin() {
+/**
+ * Self-gate + load action context for `endGameWithSideWinners`. Wraps the
+ * shared `requireAdmin` helper so the action can keep destructuring
+ * `{ supabase, user, actorName }` like before. Prepares for Fase 4 chunk 2
+ * (#223) lifting the admin-layout-gate.
+ */
+async function loadAdminContext() {
   const supabase = await getServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await supabase
-    .from('users')
-    .select('is_admin, name')
-    .eq('id', user.id)
-    .single<{ is_admin: boolean; name: string | null }>();
-  if (!profile?.is_admin) redirect('/');
-
-  return { supabase, user, actorName: profile.name?.trim() || 'Admin' };
+  const role = await requireAdmin(supabase);
+  return {
+    supabase,
+    user: { id: role.userId },
+    actorName: role.name?.trim() || 'Admin',
+  };
 }
 
 /**
@@ -43,7 +43,7 @@ export async function endGameWithSideWinners(
   gameId: string,
   formData: FormData,
 ) {
-  const { supabase, user, actorName } = await requireAdmin();
+  const { supabase, user, actorName } = await loadAdminContext();
   const detailPath = `/admin/games/${gameId}`;
   const wizardPath = `${detailPath}/avslutt`;
 
