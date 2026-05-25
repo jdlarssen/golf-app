@@ -111,6 +111,113 @@ export function computeMatchResult(
 }
 
 /**
+ * Per-hull-utfall i matchplay. Single source of truth for win/loss/tied-
+ * klassifisering — brukt av både `compute()` (full leaderboard-pipeline)
+ * og `computeMatchplayRunningStatus()` (scorekort-flate) slik at de to
+ * ikke kan drifte fra hverandre når matchplay-reglene utvides
+ * (concessions, four-ball, foursomes — issue #205).
+ *
+ *  - `'unplayed'` når én eller begge sider mangler netto
+ *  - `'tied'` når begge har netto og er like
+ *  - `'side1_wins'` / `'side2_wins'` for lavest netto
+ */
+export function classifyMatchplayHole(
+  side1Net: number | null,
+  side2Net: number | null,
+): MatchplayHoleResult {
+  if (side1Net === null || side2Net === null) return 'unplayed';
+  if (side1Net < side2Net) return 'side1_wins';
+  if (side2Net < side1Net) return 'side2_wins';
+  return 'tied';
+}
+
+/**
+ * Minimal input-shape for `computeMatchplayRunningStatus()`. Speiler kun de
+ * feltene helperen trenger (number + strokeIndex). Konsumenter med rikere
+ * hull-rader (course_holes) eller layout-input (LayoutBHoleInput med
+ * snake_case) mapper ned ved kall.
+ */
+export interface MatchplayRunningHole {
+  number: number;
+  strokeIndex: number;
+}
+
+export interface MatchplayRunningSide {
+  userId: string;
+  courseHandicap: number;
+}
+
+/**
+ * Løpende match-status: hull side1 har foran, hull spilt (= begge har gross),
+ * og hull igjen (= 18 − holesPlayed). Identisk semantikk som tilsvarende
+ * felter på `SinglesMatchplayResult`.
+ */
+export interface MatchplayRunningStatus {
+  /** side1Wins − side2Wins. Positiv = side1 up, negativ = side2 up, 0 = AS. */
+  holesUp: number;
+  /** Antall hull der begge sider har gross (inklusiv tied). */
+  holesPlayed: number;
+  /** `max(0, 18 − holesPlayed)`. */
+  holesRemaining: number;
+}
+
+/**
+ * Beregner løpende matchplay-status uten å bygge full `ScoringContext` eller
+ * `MatchplayHoleRow[]`. Tenkt for UI-flater som kun trenger «X up etter N
+ * hull» (scorekort), ikke per-hull-detalj eller mat-em-formatering.
+ *
+ * Konsumenter:
+ *  - `lib/games/scorecardLayout.ts:computeLayoutBTotals` (Layout B-footer)
+ *  - `lib/scoring/modes/singlesMatchplay.ts:compute()` bruker IKKE denne
+ *    direkte (den iterer for å bygge per-hull-rader) men deler
+ *    `classifyMatchplayHole()` for å garantere samme regel-fortolkning.
+ *
+ * Format-strenger («1up», «AS», «3&2» i leaderboard vs «Du er X up etter N
+ * hull» i scorekort) er konsumentens ansvar — denne helperen returnerer kun
+ * numeriske totaler.
+ */
+export function computeMatchplayRunningStatus(
+  holes: readonly MatchplayRunningHole[],
+  side1: MatchplayRunningSide,
+  side2: MatchplayRunningSide,
+  scoresByUserHole: ReadonlyMap<string, number | null>,
+): MatchplayRunningStatus {
+  let side1Wins = 0;
+  let side2Wins = 0;
+  let holesPlayed = 0;
+
+  for (const hole of holes) {
+    const side1Gross = scoresByUserHole.get(`${side1.userId}#${hole.number}`) ?? null;
+    const side2Gross = scoresByUserHole.get(`${side2.userId}#${hole.number}`) ?? null;
+    const side1Net =
+      side1Gross === null
+        ? null
+        : side1Gross - strokesForHole(side1.courseHandicap, hole.strokeIndex);
+    const side2Net =
+      side2Gross === null
+        ? null
+        : side2Gross - strokesForHole(side2.courseHandicap, hole.strokeIndex);
+
+    const r = classifyMatchplayHole(side1Net, side2Net);
+    if (r === 'side1_wins') {
+      side1Wins += 1;
+      holesPlayed += 1;
+    } else if (r === 'side2_wins') {
+      side2Wins += 1;
+      holesPlayed += 1;
+    } else if (r === 'tied') {
+      holesPlayed += 1;
+    }
+  }
+
+  return {
+    holesUp: side1Wins - side2Wins,
+    holesPlayed,
+    holesRemaining: Math.max(0, 18 - holesPlayed),
+  };
+}
+
+/**
  * Beregner singles matchplay-resultatet fra en ScoringContext.
  *
  * Forutsetninger:
@@ -166,20 +273,17 @@ export function compute(ctx: ScoringContext): SinglesMatchplayResult {
     const side2Net = side2Gross === null ? null : side2Gross - side2Extra;
 
     // Matchplay krever begge sider for å avgjøre hullet. Hvis én side mangler
-    // gross er hullet 'unplayed' og bidrar IKKE til match-status.
-    let result: MatchplayHoleResult;
-    if (side1Net === null || side2Net === null) {
-      result = 'unplayed';
-    } else if (side1Net < side2Net) {
-      result = 'side1_wins';
+    // gross er hullet 'unplayed' og bidrar IKKE til match-status. Klassifiserer
+    // via shared `classifyMatchplayHole` (issue #205) for å holde regel-
+    // fortolkningen i synk med scorekort-flaten.
+    const result = classifyMatchplayHole(side1Net, side2Net);
+    if (result === 'side1_wins') {
       side1Wins += 1;
       holesPlayed += 1;
-    } else if (side2Net < side1Net) {
-      result = 'side2_wins';
+    } else if (result === 'side2_wins') {
       side2Wins += 1;
       holesPlayed += 1;
-    } else {
-      result = 'tied';
+    } else if (result === 'tied') {
       holesPlayed += 1;
     }
 
