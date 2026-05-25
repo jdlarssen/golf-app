@@ -24,6 +24,7 @@ import { getRatingForGender } from '@/lib/games/teeRating';
 import { scorecardTitle } from '@/lib/games/scorecardTitle';
 import {
   resolveScorecardLayout,
+  computeLayoutBTotals,
   type ScorecardColumnPlayer,
   type ScorecardLayout,
 } from '@/lib/games/scorecardLayout';
@@ -471,58 +472,14 @@ function LayoutBTable({
     };
   });
 
-  // Per-spiller totals
-  const playerTotals = columns.map((_, idx) => {
-    const cells = rows.map((r) => r.perPlayer[idx]).filter((c) => c.strokes != null);
-    return {
-      holesPlayed: cells.length,
-      brutto: cells.reduce((sum, c) => sum + (c.strokes ?? 0), 0),
-      netto: cells.reduce(
-        (sum, c) => sum + ((c.strokes ?? 0) - c.extra),
-        0,
-      ),
-      points: cells.reduce((sum, c) => sum + (c.stablefordPoints ?? 0), 0),
-    };
+  const totals = computeLayoutBTotals(holes, scoresByUserHole, columns, {
+    isStableford,
+    isMatchplay,
   });
+  const { perPlayer: playerTotals, teamTotalNetto, teamTotalPoints, playedTeamHoles, matchStatus } =
+    totals;
 
-  // Team totals
-  const playedTeamHoles = rows.filter((r) =>
-    isMatchplay
-      ? r.matchplayResult !== 'unplayed'
-      : isStableford
-        ? r.perPlayer.some((p) => p.strokes != null)
-        : r.bestNetto !== null,
-  );
-  const teamTotalNetto = playedTeamHoles.reduce(
-    (sum, r) => sum + (r.bestNetto ?? 0),
-    0,
-  );
-  const teamTotalPoints = rows.reduce((sum, r) => sum + r.teamPoints, 0);
-
-  let matchStatus: string | null = null;
-  if (isMatchplay) {
-    let meWins = 0;
-    let oppWins = 0;
-    let played = 0;
-    for (const r of rows) {
-      if (r.matchplayResult === 'unplayed') continue;
-      played += 1;
-      if (r.matchplayResult === 'won') meWins += 1;
-      else if (r.matchplayResult === 'lost') oppWins += 1;
-    }
-    const up = meWins - oppWins;
-    if (played === 0) {
-      matchStatus = 'Ingen hull spilt ennå';
-    } else if (up === 0) {
-      matchStatus = `AS (${played} hull spilt)`;
-    } else if (up > 0) {
-      matchStatus = `Du er ${up} up etter ${played} hull`;
-    } else {
-      matchStatus = `Du er ${-up} down etter ${played} hull`;
-    }
-  }
-
-  const secondaryLabel = isStableford ? 'P' : isMatchplay ? 'N' : 'N';
+  const secondaryLabel = isStableford ? 'P' : 'N';
 
   return (
     <Card className="p-0 overflow-hidden">
@@ -624,7 +581,7 @@ function LayoutBTable({
                       {isStableford ? teamTotalPoints : teamTotalNetto}
                     </span>
                     <span className="text-muted ml-2">
-                      ({playedTeamHoles.length}/18 hull)
+                      ({playedTeamHoles}/18 hull)
                     </span>
                   </div>
                 )}

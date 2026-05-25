@@ -1,4 +1,6 @@
 import { pickTeamCaptain } from './teamCaptain';
+import { strokesForHole } from '@/lib/scoring/strokeAllocation';
+import { computeStablefordPoints } from '@/lib/scoring/modes/stableford';
 import type { GameForHole, PlayerForHole } from './getGameWithPlayers';
 
 /**
@@ -160,5 +162,163 @@ export function resolveScorecardLayout(
     primaryHandicap: me.course_handicap ?? 0,
     isStableford: isStablefordTeam,
     isMatchplay,
+  };
+}
+
+// ─── Footer-totals for Layout B ─────────────────────────────────────────
+
+export interface LayoutBHoleInput {
+  hole_number: number;
+  par: number;
+  stroke_index: number;
+}
+
+export interface LayoutBPlayerTotal {
+  userId: string;
+  holesPlayed: number;
+  brutto: number;
+  netto: number;
+  points: number;
+}
+
+export type LayoutBMatchplayHoleResult = 'won' | 'lost' | 'tied' | 'unplayed';
+
+export interface LayoutBTotals {
+  perPlayer: LayoutBPlayerTotal[];
+  /** Sum av per-hull lag-best-netto. Brukes til best-ball-footer. */
+  teamTotalNetto: number;
+  /** Sum av per-hull MAX-stableford-poeng. Brukes til par-stableford-footer. */
+  teamTotalPoints: number;
+  /** Antall hull der minst én spiller har skåret (for footer-tellingen). */
+  playedTeamHoles: number;
+  /** Match-status fra me's perspektiv. Null for ikke-matchplay. */
+  matchStatus: string | null;
+}
+
+/**
+ * Ren totals-utregning for Layout B-footeret. Tester (alle 4 team-modi)
+ * verifiserer at per-spiller- og lag-tall stemmer mot fixture-data.
+ *
+ *  - Best-ball: lag-best = MIN(netto) per hull, lag-total = sum av lag-best.
+ *  - Par-stableford: lag-poeng = MAX(stableford-poeng) per hull, lag-total
+ *    = sum av lag-poeng.
+ *  - Matchplay: ingen lag-total — i stedet match-status «X up etter N hull».
+ *
+ * `scoresByUserHole` har nøkkel `${userId}#${holeNumber}` → strokes | null.
+ * `columns[0]` antas å være me (matchplay holes-up regnes fra me's perspektiv).
+ */
+export function computeLayoutBTotals(
+  holes: readonly LayoutBHoleInput[],
+  scoresByUserHole: ReadonlyMap<string, number | null>,
+  columns: readonly ScorecardColumnPlayer[],
+  opts: { isStableford: boolean; isMatchplay: boolean },
+): LayoutBTotals {
+  const { isStableford, isMatchplay } = opts;
+
+  const perPlayer: LayoutBPlayerTotal[] = columns.map((c) => ({
+    userId: c.userId,
+    holesPlayed: 0,
+    brutto: 0,
+    netto: 0,
+    points: 0,
+  }));
+
+  let teamTotalNetto = 0;
+  let teamTotalPoints = 0;
+  let playedTeamHoles = 0;
+  let meWins = 0;
+  let oppWins = 0;
+  let mpPlayed = 0;
+
+  for (const hole of holes) {
+    const nettos: number[] = [];
+    const pointsPerPlayer: (number | null)[] = [];
+    let hasAnyScore = false;
+
+    columns.forEach((c, idx) => {
+      const strokes =
+        scoresByUserHole.get(`${c.userId}#${hole.hole_number}`) ?? null;
+      if (strokes === null) {
+        pointsPerPlayer.push(null);
+        return;
+      }
+      hasAnyScore = true;
+      const extra = strokesForHole(c.courseHandicap, hole.stroke_index);
+      const netto = strokes - extra;
+      perPlayer[idx].holesPlayed += 1;
+      perPlayer[idx].brutto += strokes;
+      perPlayer[idx].netto += netto;
+      nettos.push(netto);
+      if (isStableford) {
+        const pts = computeStablefordPoints({ par: hole.par, netStrokes: netto });
+        perPlayer[idx].points += pts;
+        pointsPerPlayer.push(pts);
+      } else {
+        pointsPerPlayer.push(null);
+      }
+    });
+
+    if (isStableford) {
+      const teamPoints = pointsPerPlayer.reduce<number>(
+        (max, p) => Math.max(max, p ?? 0),
+        0,
+      );
+      teamTotalPoints += teamPoints;
+      if (hasAnyScore) playedTeamHoles += 1;
+    } else if (isMatchplay && columns.length === 2) {
+      // Matchplay: hullet teller kun hvis begge sider har skåret.
+      const meStrokes = scoresByUserHole.get(
+        `${columns[0].userId}#${hole.hole_number}`,
+      );
+      const oppStrokes = scoresByUserHole.get(
+        `${columns[1].userId}#${hole.hole_number}`,
+      );
+      if (
+        meStrokes != null &&
+        oppStrokes != null
+      ) {
+        const meExtra = strokesForHole(
+          columns[0].courseHandicap,
+          hole.stroke_index,
+        );
+        const oppExtra = strokesForHole(
+          columns[1].courseHandicap,
+          hole.stroke_index,
+        );
+        const meNet = meStrokes - meExtra;
+        const oppNet = oppStrokes - oppExtra;
+        mpPlayed += 1;
+        if (meNet < oppNet) meWins += 1;
+        else if (meNet > oppNet) oppWins += 1;
+      }
+    } else {
+      // Best-ball: lag-best = MIN(netto)
+      if (nettos.length > 0) {
+        teamTotalNetto += Math.min(...nettos);
+        playedTeamHoles += 1;
+      }
+    }
+  }
+
+  let matchStatus: string | null = null;
+  if (isMatchplay) {
+    const up = meWins - oppWins;
+    if (mpPlayed === 0) {
+      matchStatus = 'Ingen hull spilt ennå';
+    } else if (up === 0) {
+      matchStatus = `AS (${mpPlayed} hull spilt)`;
+    } else if (up > 0) {
+      matchStatus = `Du er ${up} up etter ${mpPlayed} hull`;
+    } else {
+      matchStatus = `Du er ${-up} down etter ${mpPlayed} hull`;
+    }
+  }
+
+  return {
+    perPlayer,
+    teamTotalNetto,
+    teamTotalPoints,
+    playedTeamHoles,
+    matchStatus,
   };
 }

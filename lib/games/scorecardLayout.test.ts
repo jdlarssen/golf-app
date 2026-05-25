@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { resolveScorecardLayout } from './scorecardLayout';
+import {
+  resolveScorecardLayout,
+  computeLayoutBTotals,
+  type LayoutBHoleInput,
+  type ScorecardColumnPlayer,
+} from './scorecardLayout';
 import type { GameForHole, PlayerForHole } from './getGameWithPlayers';
 
 const baseGame: Omit<GameForHole, 'game_mode' | 'mode_config'> = {
@@ -291,6 +296,201 @@ describe('resolveScorecardLayout', () => {
       expect(layout.variant).toBe('b');
       expect(layout.columns[0].userId).toBe('me');
       expect(layout.columns[0].isCurrentUser).toBe(true);
+    });
+  });
+});
+
+// ─── computeLayoutBTotals ─────────────────────────────────────────────
+
+function par4Hole(n: number, si: number): LayoutBHoleInput {
+  return { hole_number: n, par: 4, stroke_index: si };
+}
+
+function col(userId: string, ch: number): ScorecardColumnPlayer {
+  return {
+    userId,
+    initial: userId.slice(0, 1).toUpperCase(),
+    displayName: userId,
+    courseHandicap: ch,
+    isCurrentUser: userId === 'me',
+  };
+}
+
+describe('computeLayoutBTotals', () => {
+  describe('best-ball (2-mannslag)', () => {
+    it('per-spiller + lag-best per hull, lag-total = sum av MIN(netto)', () => {
+      const holes = [par4Hole(1, 1), par4Hole(2, 18)];
+      // CH 10 → hull 1 (SI 1) får +1, hull 2 (SI 18) får +0
+      // CH 6  → hull 1 (SI 1) får +1, hull 2 (SI 18) får +0
+      const me = col('me', 10);
+      const partner = col('p', 6);
+      const scores = new Map<string, number | null>([
+        // hole 1: me 5/4, partner 4/3 → bestNetto = 3
+        ['me#1', 5],
+        ['p#1', 4],
+        // hole 2: me 4/4, partner 5/5 → bestNetto = 4
+        ['me#2', 4],
+        ['p#2', 5],
+      ]);
+      const t = computeLayoutBTotals(holes, scores, [me, partner], {
+        isStableford: false,
+        isMatchplay: false,
+      });
+      expect(t.perPlayer[0]).toEqual({
+        userId: 'me',
+        holesPlayed: 2,
+        brutto: 9,
+        netto: 8, // 4 + 4
+        points: 0,
+      });
+      expect(t.perPlayer[1]).toEqual({
+        userId: 'p',
+        holesPlayed: 2,
+        brutto: 9,
+        netto: 8, // 3 + 5
+        points: 0,
+      });
+      expect(t.teamTotalNetto).toBe(7); // min(4,3)=3 + min(4,5)=4
+      expect(t.playedTeamHoles).toBe(2);
+      expect(t.matchStatus).toBeNull();
+    });
+
+    it('hull der ingen har skåret teller ikke', () => {
+      const holes = [par4Hole(1, 1), par4Hole(2, 2)];
+      const me = col('me', 0);
+      const partner = col('p', 0);
+      const scores = new Map<string, number | null>([
+        ['me#1', 4],
+        ['p#1', 5],
+        // hull 2 har ingen scorer
+      ]);
+      const t = computeLayoutBTotals(holes, scores, [me, partner], {
+        isStableford: false,
+        isMatchplay: false,
+      });
+      expect(t.playedTeamHoles).toBe(1);
+      expect(t.teamTotalNetto).toBe(4);
+    });
+  });
+
+  describe('par-stableford (team_size=2)', () => {
+    it('lag-poeng = MAX(stableford-poeng) per hull', () => {
+      const holes = [par4Hole(1, 18)]; // SI 18 → ingen får extra strokes
+      const me = col('me', 0);
+      const partner = col('p', 0);
+      const scores = new Map<string, number | null>([
+        // me: par-4 i 4 = par = 2 poeng
+        ['me#1', 4],
+        // partner: par-4 i 3 = birdie = 3 poeng
+        ['p#1', 3],
+      ]);
+      const t = computeLayoutBTotals(holes, scores, [me, partner], {
+        isStableford: true,
+        isMatchplay: false,
+      });
+      expect(t.perPlayer[0].points).toBe(2);
+      expect(t.perPlayer[1].points).toBe(3);
+      expect(t.teamTotalPoints).toBe(3); // MAX(2, 3)
+    });
+
+    it('netto-felt fylles uavhengig av stableford-modus', () => {
+      const holes = [par4Hole(1, 18)];
+      const me = col('me', 0);
+      const partner = col('p', 0);
+      const scores = new Map<string, number | null>([
+        ['me#1', 5],
+        ['p#1', 4],
+      ]);
+      const t = computeLayoutBTotals(holes, scores, [me, partner], {
+        isStableford: true,
+        isMatchplay: false,
+      });
+      expect(t.perPlayer[0].netto).toBe(5);
+      expect(t.perPlayer[1].netto).toBe(4);
+    });
+  });
+
+  describe('matchplay (1v1)', () => {
+    it('beregner holes-up + format «X up etter N hull»', () => {
+      const holes = [par4Hole(1, 18), par4Hole(2, 18), par4Hole(3, 18)];
+      const me = col('me', 0);
+      const opp = col('opp', 0);
+      const scores = new Map<string, number | null>([
+        ['me#1', 4],
+        ['opp#1', 5], // me vinner
+        ['me#2', 5],
+        ['opp#2', 4], // opp vinner
+        ['me#3', 4],
+        ['opp#3', 5], // me vinner
+      ]);
+      const t = computeLayoutBTotals(holes, scores, [me, opp], {
+        isStableford: false,
+        isMatchplay: true,
+      });
+      expect(t.matchStatus).toBe('Du er 1 up etter 3 hull');
+    });
+
+    it('AS når likt antall vundne hull', () => {
+      const holes = [par4Hole(1, 18), par4Hole(2, 18)];
+      const me = col('me', 0);
+      const opp = col('opp', 0);
+      const scores = new Map<string, number | null>([
+        ['me#1', 4],
+        ['opp#1', 5], // me vinner
+        ['me#2', 5],
+        ['opp#2', 4], // opp vinner
+      ]);
+      const t = computeLayoutBTotals(holes, scores, [me, opp], {
+        isStableford: false,
+        isMatchplay: true,
+      });
+      expect(t.matchStatus).toBe('AS (2 hull spilt)');
+    });
+
+    it('«Du er X down» når motstander leder', () => {
+      const holes = [par4Hole(1, 18), par4Hole(2, 18)];
+      const me = col('me', 0);
+      const opp = col('opp', 0);
+      const scores = new Map<string, number | null>([
+        ['me#1', 5],
+        ['opp#1', 4], // opp vinner
+        ['me#2', 5],
+        ['opp#2', 4], // opp vinner
+      ]);
+      const t = computeLayoutBTotals(holes, scores, [me, opp], {
+        isStableford: false,
+        isMatchplay: true,
+      });
+      expect(t.matchStatus).toBe('Du er 2 down etter 2 hull');
+    });
+
+    it('uplayed hull (én side mangler) teller ikke', () => {
+      const holes = [par4Hole(1, 18), par4Hole(2, 18)];
+      const me = col('me', 0);
+      const opp = col('opp', 0);
+      const scores = new Map<string, number | null>([
+        ['me#1', 4],
+        ['opp#1', 5], // me vinner
+        ['me#2', 4],
+        // opp har ikke skåret hull 2 → unplayed
+      ]);
+      const t = computeLayoutBTotals(holes, scores, [me, opp], {
+        isStableford: false,
+        isMatchplay: true,
+      });
+      expect(t.matchStatus).toBe('Du er 1 up etter 1 hull');
+    });
+
+    it('«Ingen hull spilt» når begge sider mangler scorer', () => {
+      const holes = [par4Hole(1, 18)];
+      const me = col('me', 0);
+      const opp = col('opp', 0);
+      const scores = new Map<string, number | null>();
+      const t = computeLayoutBTotals(holes, scores, [me, opp], {
+        isStableford: false,
+        isMatchplay: true,
+      });
+      expect(t.matchStatus).toBe('Ingen hull spilt ennå');
     });
   });
 });
