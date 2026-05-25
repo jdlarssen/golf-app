@@ -214,6 +214,55 @@ describe('restoreTee', () => {
     expect(supabaseMock.from).not.toHaveBeenCalled();
   });
 
+  it('regression: updateCourse iterates the tee-parsing loop (v1.26.1 fix)', async () => {
+    // v1.26.1 bug: MAX_TEE_BOXES was exported from a 'use client' module and
+    // became a throw-function on the server, so the parsing loop never
+    // iterated and every save returned error=tee_required. This test runs
+    // the full FormData parse path; if MAX_TEE_BOXES regresses back into the
+    // client boundary, the loop never sees tee_0_name and the assertion
+    // fails. See feedback_use_client_exports_to_server memory.
+    supabaseMock = buildSupabaseMock([
+      // requireAdmin: users.is_admin lookup
+      { data: { is_admin: true }, error: null },
+      // SELECT existing tees (toDelete computation)
+      { data: [], error: null },
+      // UPDATE courses (audit bump)
+      { error: null },
+      // DELETE course_holes
+      { error: null },
+      // INSERT course_holes
+      { error: null },
+      // INSERT tee_boxes (single new tee)
+      { error: null },
+    ]);
+    setupAdminAuth();
+
+    const formData = new FormData();
+    formData.set('name', 'Sjø-bane Trondheim');
+    for (let i = 1; i <= 18; i++) {
+      formData.set(`hole_${i}_par`, '4');
+      formData.set(`hole_${i}_si`, String(i));
+    }
+    // Single mens-rated tee at index 0; index 1+ left blank (continue-branch).
+    formData.set('tee_0_name', 'Gul');
+    formData.set('tee_0_length_meters', '5670');
+    formData.set('tee_0_slope_mens', '113');
+    formData.set('tee_0_cr_mens', '70.0');
+
+    const { updateCourse } = await import('./actions');
+    await expect(updateCourse(courseId, formData)).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    expect(lastRedirect()).toMatch(/\/admin\/courses\?status=updated/);
+
+    // Critical: the tee_boxes.insert was reached, proving the loop iterated.
+    const insertCalls = supabaseMock.__fromCalls.filter(
+      (c) => c.method === 'insert' && c.table === 'tee_boxes',
+    );
+    expect(insertCalls).toHaveLength(1);
+  });
+
   it('redirects with error=db_tees when archived_at update fails', async () => {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true }, error: null },
