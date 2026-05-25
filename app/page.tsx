@@ -19,6 +19,7 @@ import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { firstName } from '@/lib/firstName';
 import { formatTeeOffDate, formatTeeOffTime } from '@/lib/format/teeOff';
 import { STATUS_LABELS } from '@/lib/games/status';
+import { isTrustedCreator } from '@/lib/admin/trustedCreators';
 
 type SearchParams = Promise<{ profile?: string | string[] }>;
 
@@ -99,7 +100,7 @@ async function HomeBody() {
   const [profileRes, rawActiveRes, rawFinishedRes] = await Promise.all([
     supabase
       .from('users')
-      .select('name, is_admin, profile_completed_at')
+      .select('name, email, is_admin, profile_completed_at')
       .eq('id', userId!)
       .single(),
     supabase
@@ -155,6 +156,11 @@ async function HomeBody() {
   const isEmptyState =
     activeGames.length === 0 && finishedGames.length === 0;
   const firstNameValue = firstName(profile?.name) ?? 'spiller';
+  // Trusted creators (#198 small-bet MVP) får samme «Opprett spill»-inngang
+  // som admin, men ledes til /opprett-spill istedenfor /admin/games/new så
+  // de slipper Sekretariat-shellen.
+  const canCreateGame =
+    profile?.is_admin === true || isTrustedCreator(profile?.email);
 
   if (isEmptyState) {
     return (
@@ -170,13 +176,16 @@ async function HomeBody() {
             Velkommen, {firstNameValue}.
           </h1>
           <p className="mt-3 font-sans text-sm leading-relaxed text-muted max-w-[280px]">
-            {profile?.is_admin
+            {canCreateGame
               ? 'Ingen turneringer enda. Sett opp første runde og kom i gang.'
               : 'Du er klar. Admin setter opp neste runde.'}
           </p>
-          {profile?.is_admin && (
+          {canCreateGame && (
             <div className="mt-8 w-full max-w-[280px]">
-              <LinkButton href="/admin/games/new" full>
+              <LinkButton
+                href={profile?.is_admin ? '/admin/games/new' : '/opprett-spill'}
+                full
+              >
                 Opprett en turnering
               </LinkButton>
             </div>
@@ -319,6 +328,24 @@ async function HomeBody() {
               <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
                 <span className="text-base font-medium text-text">
                   Sekretariatet
+                </span>
+                <span aria-hidden className="text-muted">
+                  →
+                </span>
+              </Card>
+            </SmartLink>
+          </Section>
+        )}
+
+        {/* Trusted creators (#198): inngang til /opprett-spill uten å
+            eksponere resten av Sekretariatet. Admins har egen vei via
+            Sekretariat-seksjonen over. */}
+        {canCreateGame && !profile?.is_admin && (
+          <Section label="Opprett spill" accent>
+            <SmartLink href="/opprett-spill" className="block">
+              <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
+                <span className="text-base font-medium text-text">
+                  Sett opp ny runde
                 </span>
                 <span aria-hidden className="text-muted">
                   →

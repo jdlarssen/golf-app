@@ -126,6 +126,82 @@ describe('createGameDraft', () => {
   });
 });
 
+describe('createGameDraft — trusted creator gate (#198)', () => {
+  it('trusted non-admin: is_admin=false + email on allowlist → inserts draft', async () => {
+    supabaseMock = buildSupabaseMock([
+      // users select returns { is_admin: false, email: 'fornes.even@yahoo.no' }
+      // — the helper computes isTrusted from email, allowing the action through
+      { data: { is_admin: false, email: 'fornes.even@yahoo.no' }, error: null },
+      { data: { id: 'new-game-trusted-1' }, error: null }, // games.insert
+      { data: null, error: null }, // game_players.insert
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'trusted-1', email: 'fornes.even@yahoo.no' } },
+    });
+
+    const { createGameDraft } = await import('./actions');
+
+    await expect(
+      createGameDraft(
+        fd({ name: 'Trusted-cup', side_tournament_enabled: 'false' }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe(
+      '/admin/games/new-game-trusted-1?status=draft_created',
+    );
+
+    // Verify created_by captures the trusted user's id, not an admin's
+    const insertCall = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'insert',
+    );
+    expect(insertCall).toBeDefined();
+    const insertRow = insertCall!.args[0] as { created_by: string };
+    expect(insertRow.created_by).toBe('trusted-1');
+  });
+
+  it('non-admin not on allowlist: is_admin=false + unknown email → redirects to /', async () => {
+    supabaseMock = buildSupabaseMock([
+      // is_admin=false AND email not on allowlist → helper redirects to /
+      { data: { is_admin: false, email: 'random@example.com' }, error: null },
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'random-1', email: 'random@example.com' } },
+    });
+
+    const { createGameDraft } = await import('./actions');
+
+    await expect(
+      createGameDraft(
+        fd({ name: 'Sneak-cup', side_tournament_enabled: 'false' }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/');
+  });
+
+  it('admin still allowed: is_admin=true → inserts (admin path unchanged)', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, email: 'admin@tornygolf.no' }, error: null },
+      { data: { id: 'new-game-admin-1' }, error: null },
+      { data: null, error: null },
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1', email: 'admin@tornygolf.no' } },
+    });
+
+    const { createGameDraft } = await import('./actions');
+
+    await expect(
+      createGameDraft(
+        fd({ name: 'Admin-cup', side_tournament_enabled: 'false' }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe(
+      '/admin/games/new-game-admin-1?status=draft_created',
+    );
+  });
+});
+
 describe('createAndPublishGame', () => {
   it('validation: redirects with ?error=course_required when course is missing on publish', async () => {
     // Publish-mode requires course_id. The validation happens in

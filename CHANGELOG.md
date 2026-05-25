@@ -10,7 +10,40 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.16.y — Texas scramble
+## 1.17.y — Allowlist for trusted creators
+
+Mulighet for å la utvalgte spillere opprette egne turneringer uten å gjøre dem til admin. Liten variant av [#22](https://github.com/jdlarssen/golf-app/issues/22) — vi tester først om noen faktisk vil bruke det, før vi bygger full rolle-modell. Issue [#198](https://github.com/jdlarssen/golf-app/issues/198).
+
+### [1.17.0] - 2026-05-25
+
+> Som admin kan du gi utvalgte spillere lov til å opprette egne turneringer. Det legger til en «Opprett spill»-inngang på forsiden hos dem som er på lista.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `lib/admin/trustedCreators.ts` — kode-basert allowlist (`TRUSTED_CREATOR_EMAILS`) + `isTrustedCreator(email)`-helper. Case-insensitiv, null-trygg, trimmer whitespace. Seeded med `fornes.even@yahoo.no`. Toggle nye brukere ved å pushe ny commit til lista — bevisst valg for small-bet-MVP-en (ingen DB, ingen ny rolle, ingen RLS-touch).
+- `lib/admin/auth.ts` — `requireAdmin()` og `requireAdminOrTrustedCreator()` deler én `loadRole`-helper som slår opp `users.is_admin + email` i én query. Begge redirecter til `/login` ved manglende session og til `/` ved manglende tilgang. `loadRole` returnerer `{ userId, email, isAdmin, isTrusted }` — call-sites bruker `isAdmin` for å route success-redirects og audit-id-er.
+- `app/opprett-spill/page.tsx` — ny rute utenfor `/admin/*` som gjenbruker `GameForm` fra admin-flyten, men kjører i `AppShell` (ikke `AdminShell`) slik at trusted ikke-admin ikke ser Sekretariat-shellen. Gated av `requireAdminOrTrustedCreator`.
+- `lib/games/newGameFormData.ts` — `getNewGameFormData()`-cache-helper (courses + roster). Ekstrahert fra `app/admin/games/new/page.tsx` slik at `/opprett-spill` deler samme fetch + React-cache. Ingen oppførselsendring i admin-flyten.
+- Tre nye actions-tester i `app/admin/games/new/actions.test.ts` — trusted-non-admin tillates og setter `games.created_by` til deres userId; ikke-trusted ikke-admin redirecter til `/`; admin-flyten uendret.
+
+#### Changed
+- `app/admin/games/new/actions.ts` — inline `is_admin`-sjekk byttet ut med `requireAdminOrTrustedCreator()`. `created_by` settes nå fra helper-returverdi (`userId`) i stedet for inline `user.id`. Admin-happy-path er uendret semantisk; trusted-allowlisten åpner samme code-path uten DB-endringer.
+- `app/page.tsx` — selecter nå `email`-feltet i tillegg til `name, is_admin, profile_completed_at`. Tomt-tilstand-CTA og non-empty-tilstand-seksjon vises for `is_admin || isTrustedCreator(email)`. Admins lenkes fortsatt til `/admin/games/new` (uendret Sekretariat-flyt); trusted-non-admin lenkes til `/opprett-spill`.
+
+#### Notes
+- Ingen DB-migrasjoner, ingen nye tabeller, ingen RLS-policy-endringer. INSERT mot `games` skjer fortsatt via request-scoped client — RLS lar `authenticated`-brukere insertere så lenge `created_by = auth.uid()`, så admin-bypass var ikke nødvendig.
+- Aksepterte rough edges: success-redirect peker fortsatt på `/admin/games/[id]?status=…` (admin-layouten bouncer trusted-bruker derfra til `/`, der spillet vises i «Mine spill»-lista). Valideringsfeil under create bouncer trusted via `/admin/games/new?error=…` → `/`. Polish kun hvis adopsjon > 30 % i 30-dagers observasjons-vinduet.
+- Observasjons-SQL etter 30 dager: `select created_by, count(*), min(created_at), max(created_at) from games where created_by in (select id from users where email = any('{fornes.even@yahoo.no, …}'::text[])) group by created_by;`
+- Test-suite: 921 → 924 (3 nye actions-tester) + 10 nye `isTrustedCreator`-unit-tester = 934 totalt grønne.
+
+</details>
+
+---
+
+<details>
+<summary><strong>1.16.y — Texas scramble (5 oppføringer) — klikk for å vise</strong></summary>
 
 Ny spillmodus for laget som vil spille sosialt — én ball per lag, alle slår fra beste slag. Skalerer fra 2-mannslag (par-format) til 4-mannslag (klassisk firma-cup). Lag-handicap regnes etter NGF-aggregatet (25 % av summert HCP for 2-mannslag, 10 % for 4-mannslag), justerbart per spill. Issue [#44](https://github.com/jdlarssen/golf-app/issues/44).
 
@@ -110,6 +143,8 @@ Ny spillmodus for laget som vil spille sosialt — én ball per lag, alle slår 
 - Drive-distribusjons-regelen (autentisk Texas: hver spiller må bidra med minst N drives per runde) håndheves ikke i v1 — honor-system. Egen issue hvis brukerne ber om tracking.
 - 3-mannslag bevisst utsatt (15 % NGF-default). Egen issue hvis brukerne ber om det.
 - WHS-tiered handicap-formel (35/15 for 2-mannslag, 25/20/15/10 for 4-mannslag) som alternativ til NGF-aggregatet kommer eventuelt som `mode_config.handicap_formula: 'whs_tiered' | 'ngf_aggregate'` i v2 hvis brukerne ber om det.
+
+</details>
 
 </details>
 
