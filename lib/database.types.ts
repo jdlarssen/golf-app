@@ -562,6 +562,7 @@ export type Database = {
         Row: {
           created_at: string
           email: string
+          handicap_updated_at: string
           hcp_index: number
           id: string
           is_admin: boolean
@@ -573,6 +574,7 @@ export type Database = {
         Insert: {
           created_at?: string
           email: string
+          handicap_updated_at?: string
           hcp_index?: number
           id: string
           is_admin?: boolean
@@ -584,6 +586,7 @@ export type Database = {
         Update: {
           created_at?: string
           email?: string
+          handicap_updated_at?: string
           hcp_index?: number
           id?: string
           is_admin?: boolean
