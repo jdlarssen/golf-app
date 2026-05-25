@@ -10,6 +10,8 @@ type InitialValues = {
   name: string;
   nickname: string;
   hcpIndex: string;
+  /** True når brukeren IKKE er meldt av månedsbrevet (product-updates). */
+  productUpdatesOptIn: boolean;
 };
 
 type Props = {
@@ -50,12 +52,14 @@ export function ProfileFormBody({ email, initial, action, next }: Props) {
       name: String(fd.get('name') ?? '').trim(),
       nickname: String(fd.get('nickname') ?? '').trim(),
       hcpIndex: String(fd.get('hcp_index') ?? '').trim(),
+      productUpdatesOptIn: fd.get('product_updates_opt_in') === 'on',
     };
     const base = initialRef.current;
     setDirty(
       cur.name !== base.name.trim() ||
         cur.nickname !== base.nickname.trim() ||
-        cur.hcpIndex !== base.hcpIndex.trim(),
+        cur.hcpIndex !== base.hcpIndex.trim() ||
+        cur.productUpdatesOptIn !== base.productUpdatesOptIn,
     );
   }
 
@@ -110,6 +114,26 @@ export function ProfileFormBody({ email, initial, action, next }: Props) {
         inputMode="decimal"
         inputClassName="score-num"
       />
+
+      <div className="pt-2">
+        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
+          Mail-innstillinger
+        </p>
+        <label className="flex items-start gap-3 cursor-pointer min-h-11">
+          <input
+            type="checkbox"
+            name="product_updates_opt_in"
+            defaultChecked={initial.productUpdatesOptIn}
+            className="mt-0.5 h-5 w-5 shrink-0 rounded border-border text-primary focus:ring-2 focus:ring-primary/30"
+          />
+          <span className="font-sans text-sm leading-snug text-text">
+            Få månedsbrev fra Tørny med oppsummering av nye funksjoner.
+            <span className="block text-xs text-muted mt-0.5">
+              Maks én mail per måned. Du kan melde deg av når som helst.
+            </span>
+          </span>
+        </label>
+      </div>
 
       <div className="flex items-center gap-3 pt-2">
         <SaveButton dirty={dirty} />

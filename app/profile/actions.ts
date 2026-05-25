@@ -29,6 +29,10 @@ export async function updateProfile(formData: FormData) {
     redirect(`${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=hcp_invalid`);
   }
 
+  // Product-updates opt-in toggle (issue #202). Checkbox-feltet er bare med
+  // i FormData når det er checked, så fravær = opt-out.
+  const productUpdatesOptIn = formData.get('product_updates_opt_in') === 'on';
+
   const supabase = await getServerClient();
   const {
     data: { user },
@@ -58,6 +62,8 @@ export async function updateProfile(formData: FormData) {
       hcp_index: hcpParsed,
       handicap_updated_at: now,
       profile_completed_at: now,
+      // null = opted in (default), timestamp = opted out at that moment.
+      product_updates_unsubscribed_at: productUpdatesOptIn ? null : now,
     })
     .eq('id', user.id);
 

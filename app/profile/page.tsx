@@ -150,7 +150,9 @@ async function ProfileFormCard({
 
   const { data: profile, error: profileError } = await supabase
     .from('users')
-    .select('name, nickname, hcp_index, email, profile_completed_at')
+    .select(
+      'name, nickname, hcp_index, email, profile_completed_at, product_updates_unsubscribed_at',
+    )
     .eq('id', userId!)
     .single();
 
@@ -177,6 +179,7 @@ async function ProfileFormCard({
           nickname: profile.nickname ?? '',
           hcpIndex:
             profile.hcp_index == null ? '' : String(profile.hcp_index),
+          productUpdatesOptIn: profile.product_updates_unsubscribed_at == null,
         }}
         action={updateProfile}
         next={next}
