@@ -43,6 +43,34 @@ export const SIDE_TOURNAMENT_POINTS = {
   solidPerPlayer: 2,
   solidCoordPerMember: 2,
   snowman: -2,
+
+  // v1.19.0 nye kategorier (issue #169) — 19 nye IDs fordelt på 4 tier.
+  // Tier 2 — skill+rarity (4p lag / 2p individ for team+individ-par;
+  // 4p individ for ren-runde/rein-halvdel-terskler).
+  mostAlbatrossesTeam: 4,
+  mostAlbatrossesIndividual: 2,
+  mostHoleInOnesTeam: 4,
+  mostHoleInOnesIndividual: 2,
+  kingPar4Team: 4,
+  kingPar4Individual: 2,
+  cleanFront9: 4,
+  cleanBack9: 4,
+  noDoublePlusRound: 4,
+
+  // Tier 3 — moderate (2p individ)
+  hardestHoleWinner: 2,
+  comebackKid: 2,
+  allParGroupsBirdie: 2,
+  evenParRound: 2,
+  backToBackBirdies: 2,
+
+  // Coord-bonus (lag-koord-stil, stackable; multipliseres med antall medlemmer)
+  teamAllBirdiedPerMember: 4,
+  teamNoBogeyHoleCoordPerMember: 2,
+
+  // Humor / penalty (-1p individ — mildere enn snowman -2p som er lag-blowup)
+  worstSingleHoleBrutto: -1,
+  mostDoubleBogeysIndividual: -1,
 } as const;
 
 export type SideCategoryId =
@@ -72,9 +100,28 @@ export type SideCategoryId =
   | 'closest_to_pin'
   | 'turkey'
   | 'solid'
-  | 'snowman';
+  | 'snowman'
+  // v1.19.0 nye kategorier (issue #169)
+  | 'most_albatrosses_team'
+  | 'most_albatrosses_individual'
+  | 'most_hole_in_ones_team'
+  | 'most_hole_in_ones_individual'
+  | 'king_par4_team'
+  | 'king_par4_individual'
+  | 'clean_front_9'
+  | 'clean_back_9'
+  | 'no_double_plus_round'
+  | 'hardest_hole_winner'
+  | 'comeback_kid'
+  | 'all_par_groups_birdie'
+  | 'even_par_round'
+  | 'back_to_back_birdies'
+  | 'team_all_birdied_bonus'
+  | 'team_no_bogey_hole_coord'
+  | 'worst_single_hole_brutto'
+  | 'most_double_bogeys_individual';
 
-/** Alle gyldige kategori-ID-er. Holdes i sync med DB-constraint i 0026. */
+/** Alle gyldige kategori-ID-er. Holdes i sync med DB-constraint i 0026 + 0027. */
 export const ALL_CATEGORY_IDS: readonly SideCategoryId[] = [
   'best_netto_18',
   'best_netto_f9',
@@ -103,6 +150,25 @@ export const ALL_CATEGORY_IDS: readonly SideCategoryId[] = [
   'turkey',
   'solid',
   'snowman',
+  // v1.19.0 nye kategorier (issue #169)
+  'most_albatrosses_team',
+  'most_albatrosses_individual',
+  'most_hole_in_ones_team',
+  'most_hole_in_ones_individual',
+  'king_par4_team',
+  'king_par4_individual',
+  'clean_front_9',
+  'clean_back_9',
+  'no_double_plus_round',
+  'hardest_hole_winner',
+  'comeback_kid',
+  'all_par_groups_birdie',
+  'even_par_round',
+  'back_to_back_birdies',
+  'team_all_birdied_bonus',
+  'team_no_bogey_hole_coord',
+  'worst_single_hole_brutto',
+  'most_double_bogeys_individual',
 ] as const;
 
 /**
