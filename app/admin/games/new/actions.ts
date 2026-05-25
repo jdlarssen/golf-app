@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
+import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
 import {
   buildGameInsertPayload,
   parseOsloDateTimeLocal,
@@ -73,17 +74,9 @@ async function createGameInternal(
   } = sideResult.payload;
 
   const supabase = await getServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await supabase
-    .from('users')
-    .select('is_admin')
-    .eq('id', user.id)
-    .single();
-  if (!profile?.is_admin) redirect('/');
+  // Allow trusted-non-admin creators alongside admins per #198 small-bet MVP.
+  // Returns userId, isAdmin, isTrusted — we use userId for created_by below.
+  const { userId } = await requireAdminOrTrustedCreator(supabase);
 
   if (mode === 'publish') {
     const { data: rosterUsers, error: rosterErr } = await supabase
@@ -126,7 +119,7 @@ async function createGameInternal(
       // (D5) to flip status to 'active' and freeze handicaps.
       status: mode === 'publish' ? 'scheduled' : 'draft',
       scheduled_tee_off_at: scheduledTeeOffAt,
-      created_by: user.id,
+      created_by: userId,
       started_at: null,
     })
     .select('id')
