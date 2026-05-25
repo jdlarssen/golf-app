@@ -22,7 +22,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   si_duplicate: 'Stroke-indeks 1–18 må brukes nøyaktig én gang hver.',
   tee_required: 'Minst én tee-boks må legges til.',
   tee_partial_rating:
-    'Hver tee må ha både slope og CR — eller ingen av dem — per kjønn. Du kan ikke lagre halve sett.',
+    'Hver tee må ha både slope og CR (eller ingen av dem) per kjønn. Du kan ikke lagre halve sett.',
   tee_no_rating:
     'Hver tee må ha minst ett komplett rating-sett per kjønn (Herrer / Damer / Junior).',
   tee_in_use: 'Kan ikke fjerne tee — den brukes i ett eller flere spill.',
