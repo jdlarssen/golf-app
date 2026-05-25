@@ -1,16 +1,17 @@
 import { z } from 'zod';
 
 /**
- * De fem in-app notification-kindene som støttes i v1. Polymorf
- * `notifications`-tabell (migrasjon 0032) bruker dette som CHECK-discriminator,
- * og payload-shape per kind valideres her i TypeScript-laget før insert.
+ * In-app notification-kindene som støttes. Polymorf `notifications`-tabell
+ * (migrasjon 0032, utvidet 0035) bruker dette som CHECK-discriminator, og
+ * payload-shape per kind valideres her i TypeScript-laget før insert.
  */
 export type NotificationKind =
   | 'invite'
   | 'peer_approval_request'
   | 'scorecard_submitted'
   | 'scorecard_approved'
-  | 'game_finished';
+  | 'game_finished'
+  | 'product_update';
 
 // `z.guid()` aksepterer enhver UUID-shaped string (8-4-4-4-12 hex), inkludert
 // nil-UUID og ikke-versjonerte kanoniske test-sentinels som "11111111-...".
@@ -49,12 +50,25 @@ const gameFinishedSchema = z.object({
   game_name: z.string().min(1),
 });
 
+// Product-update payload (issue #202). Source-id refererer til
+// product_updates-raden så banner + innboks kan deeplinke til samme
+// authoritative content. Link er valgfri intern rute (startsWith '/'),
+// håndhevet her som defense-in-depth mot phishing-misbruk via banner/mail.
+const productUpdateSchema = z.object({
+  source_id: uuid,
+  title: z.string().min(1),
+  body: z.string().min(1),
+  link: z.string().startsWith('/').optional(),
+  cta_label: z.string().min(1).optional(),
+});
+
 const schemas = {
   invite: inviteSchema,
   peer_approval_request: peerApprovalRequestSchema,
   scorecard_submitted: scorecardSubmittedSchema,
   scorecard_approved: scorecardApprovedSchema,
   game_finished: gameFinishedSchema,
+  product_update: productUpdateSchema,
 } as const;
 
 export type NotificationPayload<K extends NotificationKind = NotificationKind> =
