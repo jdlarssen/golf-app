@@ -93,9 +93,10 @@ describe('parseSideTournamentFromFormData — disabledCategories', () => {
     if (result.ok) {
       expect(result.payload.disabledCategories).toEqual([...ALL_CATEGORY_IDS]);
       // Sanity check: confirm the public ID list is the size we expect after
-      // v1.2.0 expansion. If this number drifts, the test that asserts "all 21
-      // new category IDs can be parsed" no longer holds — bump intentionally.
-      expect(ALL_CATEGORY_IDS.length).toBe(27);
+      // v1.19.0 expansion (27 + 18 new bonus-categories from issue #169 = 45).
+      // If this number drifts, the test that asserts "all new category IDs can
+      // be parsed" no longer holds — bump intentionally.
+      expect(ALL_CATEGORY_IDS.length).toBe(45);
     }
   });
 

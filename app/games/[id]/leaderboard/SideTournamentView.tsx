@@ -113,8 +113,28 @@ const CATEGORY_GROUPS: Record<string, GroupId> = {
   // Achievements (positive)
   turkey: 'achievements',
   solid: 'achievements',
+  team_all_birdied_bonus: 'achievements',
+  team_no_bogey_hole_coord: 'achievements',
   // Penalty (negative — egen visuell tone)
   snowman: 'penalty',
+  worst_single_hole_brutto: 'penalty',
+  most_double_bogeys_individual: 'penalty',
+  // v1.19.0 nye kategorier — skill (4p lag / 2p individ eller 4p individ-terskel)
+  most_albatrosses_team: 'skill',
+  most_albatrosses_individual: 'skill',
+  most_hole_in_ones_team: 'skill',
+  most_hole_in_ones_individual: 'skill',
+  king_par4_team: 'skill',
+  king_par4_individual: 'skill',
+  clean_front_9: 'skill',
+  clean_back_9: 'skill',
+  no_double_plus_round: 'skill',
+  // v1.19.0 — moderate (2p individ)
+  hardest_hole_winner: 'moderate',
+  comeback_kid: 'moderate',
+  all_par_groups_birdie: 'moderate',
+  even_par_round: 'moderate',
+  back_to_back_birdies: 'moderate',
 };
 
 /**
@@ -497,6 +517,116 @@ function TeamAwards({
       ),
     );
   }
+  // v1.19.0 — Konge på par-4
+  if (awards.some((a) => a.category === 'king_par4_team')) {
+    const pts = SIDE_TOURNAMENT_POINTS.kingPar4Team;
+    push('skill', 'king_par4_team', pts, 'king_par4_team', (
+      <>
+        Konge på par-4 (lag): <Pts n={pts} />
+        {tieSuffix(tieMates('king_par4_team'))}
+      </>
+    ));
+  }
+  if (awards.some((a) => a.category === 'king_par4_individual')) {
+    const pts = SIDE_TOURNAMENT_POINTS.kingPar4Individual;
+    const name = winnerName(findAward('king_par4_individual'));
+    push('skill', 'king_par4_individual', pts, 'king_par4_individual', (
+      <>
+        Konge på par-4 ({name}): <Pts n={pts} />
+      </>
+    ));
+  }
+  // v1.19.0 — Flest albatrosser (lag + individ)
+  if (awards.some((a) => a.category === 'most_albatrosses_team')) {
+    const pts = SIDE_TOURNAMENT_POINTS.mostAlbatrossesTeam;
+    push('skill', 'most_albatrosses_team', pts, 'most_albatrosses_team', (
+      <>
+        Flest albatrosser (lag): <Pts n={pts} />
+        {tieSuffix(tieMates('most_albatrosses_team'))}
+      </>
+    ));
+  }
+  if (awards.some((a) => a.category === 'most_albatrosses_individual')) {
+    const pts = SIDE_TOURNAMENT_POINTS.mostAlbatrossesIndividual;
+    const name = winnerName(findAward('most_albatrosses_individual'));
+    push(
+      'skill',
+      'most_albatrosses_individual',
+      pts,
+      'most_albatrosses_individual',
+      (
+        <>
+          Flest albatrosser ({name}): <Pts n={pts} />
+        </>
+      ),
+    );
+  }
+  // v1.19.0 — Flest hole-in-one (lag + individ)
+  if (awards.some((a) => a.category === 'most_hole_in_ones_team')) {
+    const pts = SIDE_TOURNAMENT_POINTS.mostHoleInOnesTeam;
+    push('skill', 'most_hole_in_ones_team', pts, 'most_hole_in_ones_team', (
+      <>
+        Flest hole-in-one (lag): <Pts n={pts} />
+        {tieSuffix(tieMates('most_hole_in_ones_team'))}
+      </>
+    ));
+  }
+  if (awards.some((a) => a.category === 'most_hole_in_ones_individual')) {
+    const pts = SIDE_TOURNAMENT_POINTS.mostHoleInOnesIndividual;
+    const name = winnerName(findAward('most_hole_in_ones_individual'));
+    push(
+      'skill',
+      'most_hole_in_ones_individual',
+      pts,
+      'most_hole_in_ones_individual',
+      (
+        <>
+          Flest hole-in-one ({name}): <Pts n={pts} />
+        </>
+      ),
+    );
+  }
+  // v1.19.0 — Rein front-9 / back-9 / ren runde (terskel-priser, kan ha
+  // flere vinnere — vi rendrer alle qualifying-spillerne på laget på samme rad,
+  // kommaseparert. Per-lag-deduping i scoring-laget sikrer maks én award per
+  // kategori per lag, så vi henter winnerUserId fra første award.)
+  {
+    const cf = findAward('clean_front_9');
+    if (cf) {
+      const pts = SIDE_TOURNAMENT_POINTS.cleanFront9;
+      const name = winnerName(cf);
+      push('skill', 'clean_front_9', pts, 'clean_front_9', (
+        <>
+          Rein front-9 ({name}): <Pts n={pts} />
+        </>
+      ));
+    }
+  }
+  {
+    const cb = findAward('clean_back_9');
+    if (cb) {
+      const pts = SIDE_TOURNAMENT_POINTS.cleanBack9;
+      const name = winnerName(cb);
+      push('skill', 'clean_back_9', pts, 'clean_back_9', (
+        <>
+          Rein back-9 ({name}): <Pts n={pts} />
+        </>
+      ));
+    }
+  }
+  {
+    const nd = findAward('no_double_plus_round');
+    if (nd) {
+      const pts = SIDE_TOURNAMENT_POINTS.noDoublePlusRound;
+      const name = winnerName(nd);
+      push('skill', 'no_double_plus_round', pts, 'no_double_plus_round', (
+        <>
+          Ren runde — ingen double ({name}): <Pts n={pts} />
+        </>
+      ));
+    }
+  }
+
   // 15. Lengste bogey-fri streak
   {
     const bf = findAward('longest_bogey_free_streak');
@@ -650,6 +780,110 @@ function TeamAwards({
     }
   }
 
+  // v1.19.0 — Hardest-hole winner (2p individ)
+  {
+    const hh = findAward('hardest_hole_winner');
+    if (hh) {
+      const pts = SIDE_TOURNAMENT_POINTS.hardestHoleWinner;
+      const name = winnerName(hh);
+      const score = hh.score;
+      const hole = hh.holeNumber;
+      const detail =
+        score != null && hole != null
+          ? `${name}, ${score} brutto på hull ${hole}`
+          : name;
+      push('moderate', 'hardest_hole_winner', pts, 'hardest_hole_winner', (
+        <>
+          Hardeste hull ({detail}): <Pts n={pts} />
+        </>
+      ));
+    }
+  }
+  // v1.19.0 — Comeback kid (2p individ — back-9 forbedring vs. front-9)
+  {
+    const ck = findAward('comeback_kid');
+    if (ck) {
+      const pts = SIDE_TOURNAMENT_POINTS.comebackKid;
+      const name = winnerName(ck);
+      const delta = ck.delta;
+      const detail =
+        delta != null ? `${name}, snudd ${Math.abs(delta)} slag` : name;
+      push('moderate', 'comeback_kid', pts, 'comeback_kid', (
+        <>
+          Comeback kid ({detail}): <Pts n={pts} />
+        </>
+      ));
+    }
+  }
+  // v1.19.0 — Allsidig birdie-spiller (par-3, 4 og 5)
+  {
+    const apg = findAward('all_par_groups_birdie');
+    if (apg) {
+      const pts = SIDE_TOURNAMENT_POINTS.allParGroupsBirdie;
+      const name = winnerName(apg);
+      push(
+        'moderate',
+        'all_par_groups_birdie',
+        pts,
+        'all_par_groups_birdie',
+        (
+          <>
+            Allsidig birdie ({name}): <Pts n={pts} />
+          </>
+        ),
+      );
+    }
+  }
+  // v1.19.0 — Even-par-runden
+  {
+    const epr = findAward('even_par_round');
+    if (epr) {
+      const pts = SIDE_TOURNAMENT_POINTS.evenParRound;
+      const name = winnerName(epr);
+      push('moderate', 'even_par_round', pts, 'even_par_round', (
+        <>
+          Even-par-runden ({name}): <Pts n={pts} />
+        </>
+      ));
+    }
+  }
+  // v1.19.0 — Back-to-back birdies (stackable — én rad per spiller, samle alle
+  // streaks med spillerens navn. Ulike spillere på samme lag får hver sin rad.)
+  {
+    const b2bAwards = awards.filter(
+      (a) => a.category === 'back_to_back_birdies',
+    );
+    if (b2bAwards.length > 0) {
+      // Gruppér per winnerUserId → bygg én rad per spiller med kommaseparerte ranges.
+      const byUser = new Map<
+        string,
+        { totalPoints: number; ranges: string[] }
+      >();
+      for (const a of b2bAwards) {
+        const uid = a.winnerUserId ?? '?';
+        const existing = byUser.get(uid) ?? { totalPoints: 0, ranges: [] };
+        existing.totalPoints += a.points;
+        if (a.streakStartHole != null && a.streakEndHole != null) {
+          existing.ranges.push(
+            formatStreakRange(a.streakStartHole, a.streakEndHole),
+          );
+        }
+        byUser.set(uid, existing);
+      }
+      for (const [uid, { totalPoints, ranges }] of byUser) {
+        const name = firstNameOf(uid === '?' ? null : uid, teamById) ?? '?';
+        const detail =
+          ranges.length > 0 ? `${name}, ${ranges.join(', ')}` : name;
+        const key = `back_to_back_birdies_${uid}`;
+        push('moderate', 'back_to_back_birdies', totalPoints, key, (
+          <>
+            To birdier på rad ({detail}): <Pts n={totalPoints} />
+          </>
+        ));
+      }
+    }
+  }
+
   // ─── Hull-konkurranser ──────────────────────────────────────────────────
   // 4. Hole-wins (aggregated)
   const holeWinAwards = awards.filter((a) => a.category === 'hole_win');
@@ -783,6 +1017,55 @@ function TeamAwards({
     }
   }
 
+  // v1.19.0 — Alle birdied (lag-bonus). Awardes maks én gang per lag per runde,
+  // og scoring-laget setter `coordBonus: true` uten `winnerUserId`.
+  {
+    const tabAwards = awards.filter(
+      (a) => a.category === 'team_all_birdied_bonus',
+    );
+    for (const a of tabAwards) {
+      const pts = a.points;
+      const key = `team_all_birdied_bonus_${a.teamId}`;
+      push('achievements', 'team_all_birdied_bonus', pts, key, (
+        <AchievementRow
+          rule="hele laget har minst én netto-birdie i runden"
+          main={
+            <>
+              Alle birdied (lag-bonus): <Pts n={pts} />
+            </>
+          }
+        />
+      ));
+    }
+  }
+  // v1.19.0 — Lag-par-hull coord (stackable per hull). Hver award har eget
+  // `holeNumber` — én rad per hull.
+  {
+    const nbAwards = awards.filter(
+      (a) => a.category === 'team_no_bogey_hole_coord',
+    );
+    if (nbAwards.length > 0) {
+      // Vi rendrer hver award som egen rad så hull-nummer er synlig per row.
+      for (const a of nbAwards) {
+        const pts = a.points;
+        const hole = a.holeNumber;
+        const detail = hole != null ? `hull ${hole}` : '';
+        const key = `team_no_bogey_hole_coord_${hole ?? '?'}`;
+        push('achievements', 'team_no_bogey_hole_coord', pts, key, (
+          <AchievementRow
+            rule="hele laget har netto ≤ par på samme hull"
+            main={
+              <>
+                Lag-par-hull{detail ? ` (${detail})` : ''}:{' '}
+                <Pts n={pts} />
+              </>
+            }
+          />
+        ));
+      }
+    }
+  }
+
   // ─── Penalty ────────────────────────────────────────────────────────────
   // 19. Snowman — én rad per hull der hele laget hadde brutto ≥ par+5.
   // `score`-feltet på award er over-par-delta (worstGross − par), så vi
@@ -816,6 +1099,54 @@ function TeamAwards({
         }
       />
     ));
+  }
+  // v1.19.0 — Verste enkelthull (−1p individ). Speil av lowest_single_hole_brutto
+  // men MAX. Bruker danger-tone på poeng-pillen (samme som snowman) for å
+  // signalere negativ valens uten å skrike.
+  {
+    const worst = findAward('worst_single_hole_brutto');
+    if (worst) {
+      const pts = SIDE_TOURNAMENT_POINTS.worstSingleHoleBrutto;
+      const name = winnerName(worst);
+      const score = worst.score;
+      const hole = worst.holeNumber;
+      const detail =
+        score != null && hole != null
+          ? `${name}, ${score} på hull ${hole}`
+          : name;
+      push(
+        'penalty',
+        'worst_single_hole_brutto',
+        pts,
+        'worst_single_hole_brutto',
+        (
+          <>
+            Verste enkelthull ({detail}):{' '}
+            <span className="tabular-nums text-danger">{pts}p</span>
+          </>
+        ),
+      );
+    }
+  }
+  // v1.19.0 — Flest double-bogeys (−1p individ)
+  {
+    const md = findAward('most_double_bogeys_individual');
+    if (md) {
+      const pts = SIDE_TOURNAMENT_POINTS.mostDoubleBogeysIndividual;
+      const name = winnerName(md);
+      push(
+        'penalty',
+        'most_double_bogeys_individual',
+        pts,
+        'most_double_bogeys_individual',
+        (
+          <>
+            Flest double-bogeys ({name}):{' '}
+            <span className="tabular-nums text-danger">{pts}p</span>
+          </>
+        ),
+      );
+    }
   }
 
   // Telle totalt antall rader; om ingen → tom-melding.
@@ -902,16 +1233,19 @@ function firstNameOf(
 // ─── Slik gis poengene-panel ─────────────────────────────────────────────
 
 /**
- * Panel-spesifikk gruppe-id (snowman puttes under «Achievements» her, mens
- * team-expand-visningen holder den i en egen «Penalty»-gruppe med rød tone).
- * Holdes lokalt — ikke samme rolle som GROUP_ORDER/GROUP_LABELS over.
+ * Panel-spesifikk gruppe-id. Speiler GROUP_ORDER/GROUP_LABELS over, men holdes
+ * lokalt fordi panel-rad-strukturen (dual-versjon ids + pointsPerId) er
+ * panel-spesifikk. v1.19.0 la til `penalty`-gruppen så humor-kategoriene
+ * (worst_single_hole_brutto, most_double_bogeys_individual) og snowman kan
+ * vises sammen i forklar-panelet — samme måte som team-expand-visningen.
  */
 type PanelGroupId =
   | 'hovedkonkurranser'
   | 'skill'
   | 'moderate'
   | 'hull'
-  | 'achievements';
+  | 'achievements'
+  | 'penalty';
 
 /**
  * En rad i forklar-panelet. `ids` peker på 1–2 SideCategoryIds — for koblede
@@ -996,6 +1330,13 @@ const PANEL_GROUPS: readonly PanelGroup[] = [
         rule: 'best sum på alle par-3-hull',
       },
       {
+        key: 'king_par4',
+        label: 'Konge på par-4',
+        ids: ['king_par4_team', 'king_par4_individual'],
+        pointsPerId: ['4p lag', '2p individ'],
+        rule: 'best sum på alle par-4-hull',
+      },
+      {
         key: 'king_par5',
         label: 'Konge på par-5',
         ids: ['king_par5_team', 'king_par5_individual'],
@@ -1007,6 +1348,41 @@ const PANEL_GROUPS: readonly PanelGroup[] = [
         label: 'Flest eagles+',
         ids: ['most_eagles_team', 'most_eagles_individual'],
         pointsPerId: ['4p lag', '2p individ'],
+      },
+      {
+        key: 'most_albatrosses',
+        label: 'Flest albatrosser',
+        ids: ['most_albatrosses_team', 'most_albatrosses_individual'],
+        pointsPerId: ['4p lag', '2p individ'],
+        rule: 'netto ≤ par − 3. Teller også med i Flest eagles+.',
+      },
+      {
+        key: 'most_hole_in_ones',
+        label: 'Flest hole-in-one',
+        ids: ['most_hole_in_ones_team', 'most_hole_in_ones_individual'],
+        pointsPerId: ['4p lag', '2p individ'],
+        rule: 'brutto = 1 på ett hull',
+      },
+      {
+        key: 'clean_front_9',
+        label: 'Rein front-9',
+        ids: ['clean_front_9'],
+        pointsPerId: ['4p'],
+        rule: 'netto ≤ par på alle 9 hull (ingen bogey+)',
+      },
+      {
+        key: 'clean_back_9',
+        label: 'Rein back-9',
+        ids: ['clean_back_9'],
+        pointsPerId: ['4p'],
+        rule: 'netto ≤ par på alle 9 hull (ingen bogey+)',
+      },
+      {
+        key: 'no_double_plus_round',
+        label: 'Ren runde — ingen double',
+        ids: ['no_double_plus_round'],
+        pointsPerId: ['4p'],
+        rule: 'netto ≤ par+1 på alle 18 hull (bogey OK, double ikke)',
       },
       {
         key: 'longest_bogey_free_streak',
@@ -1050,6 +1426,41 @@ const PANEL_GROUPS: readonly PanelGroup[] = [
         label: 'Lavest enkelthull brutto',
         ids: ['lowest_single_hole_brutto'],
         pointsPerId: ['2p'],
+      },
+      {
+        key: 'hardest_hole_winner',
+        label: 'Best på hardeste hull',
+        ids: ['hardest_hole_winner'],
+        pointsPerId: ['2p'],
+        rule: 'lavest brutto på banens SI=1-hull',
+      },
+      {
+        key: 'comeback_kid',
+        label: 'Comeback kid',
+        ids: ['comeback_kid'],
+        pointsPerId: ['2p'],
+        rule: 'største netto-forbedring fra front-9 til back-9',
+      },
+      {
+        key: 'all_par_groups_birdie',
+        label: 'Allsidig birdie',
+        ids: ['all_par_groups_birdie'],
+        pointsPerId: ['2p'],
+        rule: 'minst én netto-birdie på et par-3, et par-4 og et par-5',
+      },
+      {
+        key: 'even_par_round',
+        label: 'Even-par-runden',
+        ids: ['even_par_round'],
+        pointsPerId: ['2p'],
+        rule: 'netto-total = sum av banens par',
+      },
+      {
+        key: 'back_to_back_birdies',
+        label: 'To birdier på rad',
+        ids: ['back_to_back_birdies'],
+        pointsPerId: ['2p per streak'],
+        rule: 'kan stables — hver non-overlapping 2-streak teller',
       },
     ],
   },
@@ -1100,12 +1511,45 @@ const PANEL_GROUPS: readonly PanelGroup[] = [
         rule: '5 netto-pars+ på rad. Lag-bonus utløses om hele laget klarer det på samme 5 hull.',
       },
       {
+        key: 'team_all_birdied_bonus',
+        label: 'Alle birdied (lag-bonus)',
+        ids: ['team_all_birdied_bonus'],
+        pointsPerId: ['4p × medlem'],
+        rule: 'hele laget har minst én netto-birdie i runden',
+      },
+      {
+        key: 'team_no_bogey_hole_coord',
+        label: 'Lag-par-hull (lag-bonus)',
+        ids: ['team_no_bogey_hole_coord'],
+        pointsPerId: ['2p × medlem per hull'],
+        rule: 'hele laget netto ≤ par på samme hull. Kan stables på flere hull.',
+      },
+    ],
+  },
+  {
+    id: 'penalty',
+    title: 'Minuspoeng',
+    rows: [
+      {
         key: 'snowman',
         label: 'Snowman',
         ids: ['snowman'],
         pointsPerId: ['−2p per hull'],
-        trailer: '(minuspoeng)',
         rule: 'hele lagets brutto ≥ par+5 på samme hull',
+      },
+      {
+        key: 'worst_single_hole_brutto',
+        label: 'Verste enkelthull',
+        ids: ['worst_single_hole_brutto'],
+        pointsPerId: ['−1p'],
+        rule: 'høyeste brutto på ett hull i hele runden',
+      },
+      {
+        key: 'most_double_bogeys_individual',
+        label: 'Flest double-bogeys',
+        ids: ['most_double_bogeys_individual'],
+        pointsPerId: ['−1p'],
+        rule: 'spilleren med flest hull der netto ≥ par+2',
       },
     ],
   },
