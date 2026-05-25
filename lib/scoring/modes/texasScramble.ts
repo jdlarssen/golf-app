@@ -15,6 +15,7 @@
 // bestBallNetto (0-padding for missing hull i ranking-arrayet; UI viser
 // missingHoles separat slik at sammenligninger kan flagges som partial).
 
+import { pickTeamCaptain } from '@/lib/games/teamCaptain';
 import { strokesForHole } from '../strokeAllocation';
 import { rankTeams } from '../tiebreaker';
 import type {
@@ -27,27 +28,13 @@ import type {
 } from './types';
 
 /**
- * Velger lag-kaptein deterministisk: lexicographically minste userId.
- *
- * Brukt for to ting:
- *  - I scoring: kapteinens userId er nøkkelen som scores-radene leses fra.
- *  - I UI (via `isCaptain`-flagget): vises ikke for spillere; kun for
- *    admin-innsikt / debugging.
- *
- * Stabil på tvers av sessions: gitt samme medlems-set returnerer alltid
- * samme kaptein, uavhengig av rekkefølge i input-arrayen.
+ * Velger lag-kaptein for Texas-scoring. Wrapper rundt felles helper
+ * `pickTeamCaptain` (i `lib/games/teamCaptain.ts`) som også brukes av
+ * scorekort-flaten for å resolve captain når non-captain-medlemmer åpner
+ * scorekortet.
  */
 function pickCaptain(members: ScoringPlayer[]): string {
-  if (members.length === 0) {
-    throw new Error('pickCaptain: empty team');
-  }
-  let captain = members[0].userId;
-  for (let i = 1; i < members.length; i++) {
-    if (members[i].userId < captain) {
-      captain = members[i].userId;
-    }
-  }
-  return captain;
+  return pickTeamCaptain(members.map((m) => m.userId));
 }
 
 /**
