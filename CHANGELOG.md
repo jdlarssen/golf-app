@@ -14,6 +14,21 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Tørny husker nå om du spiller fra herretee, dametee eller juniortee, og foreslår riktig tee når noen oppretter et spill du skal være med på. Issue [#92](https://github.com/jdlarssen/golf-app/issues/92).
 
+### [1.24.1] - 2026-05-25
+
+> Når du bytter bane mens du setter opp et spill, beholdes nå dame- og junior-merkene på spillerne du har valgt. Tidligere måtte du klikke dem inn igjen.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `app/admin/games/new/useGameFormState.ts` — `setCourseId` re-deriver `playerGenders` fra `playerGenderDefault(p.gender, p.level)` istedenfor å sette til `{}`. Regresjon fra v1.24.0: bane-bytte etter mount kollapset alle M/D/J-toggles til `'M'`, så admin måtte klikke seg gjennom dame- og junior-spillere på nytt. `tee_box_id` nullstilles fortsatt (tee-id er bane-spesifikk). Ny eksportert helper `deriveDefaultGenders(players)` deles mellom mount-initializer og bane-bytte. Issue [#222](https://github.com/jdlarssen/golf-app/issues/222).
+
+#### Notes
+- +6 nye vitest-cases i `app/admin/games/new/useGameFormState.test.ts` dekker bane-bytte-regresjonen, `initialValues.player_genders`-precedence ved mount, at bane-deselect (tomt `course_id`) også re-deriver, og at `tee_box_id` fortsatt nullstilles ved bane-bytte.
+
+</details>
+
 ### [1.24.0] - 2026-05-25
 
 > Du kan nå sette kjønn og spillerklasse i profilen din. Når noen oppretter et spill du skal være med på, foreslår Tørny riktig tee for deg, så damer og juniorer slipper å havne på herretee ved et uhell.

@@ -80,6 +80,19 @@ export function defaultTexasHandicapPct(teamSize: TeamSize): number {
   return 25;
 }
 
+// Re-derive gender-toggle defaults fra spillerens profil. Brukes ved mount og
+// ved bane-bytte i `setCourseId`, slik at admin ikke mister D/J-merkene når
+// banen endres etter at wizard har derived defaults én gang.
+export function deriveDefaultGenders(
+  players: PlayerOption[],
+): Record<string, 'M' | 'D' | 'J'> {
+  const out: Record<string, 'M' | 'D' | 'J'> = {};
+  for (const p of players) {
+    out[p.id] = playerGenderDefault(p.gender, p.level);
+  }
+  return out;
+}
+
 // Fisher–Yates shuffle backed by crypto.getRandomValues for fair, unbiased
 // team draws. Math.random would technically work but is not guaranteed
 // cryptographically random; using the WebCrypto API removes any doubt.
@@ -123,14 +136,7 @@ export function useGameFormState({
     initialValues?.tee_box_id ?? '',
   );
   const [playerGenders, setPlayerGenders] = useState<Record<string, 'M' | 'D' | 'J'>>(
-    () => {
-      if (initialValues?.player_genders) return initialValues.player_genders;
-      const derived: Record<string, 'M' | 'D' | 'J'> = {};
-      for (const p of players) {
-        derived[p.id] = playerGenderDefault(p.gender, p.level);
-      }
-      return derived;
-    },
+    () => initialValues?.player_genders ?? deriveDefaultGenders(players),
   );
   // Required for "Lagre og publiser"; drives the button's disabled state via
   // `canPublish` below. Drafts may omit it. Empty string === "not set".
@@ -210,13 +216,13 @@ export function useGameFormState({
   // siste ord, men UI-en speiler det for å unngå utilsiktet validation-error.
   const lockGameMode = initialValues?.lock_game_mode ?? false;
 
-  // Bane-bytte: nullstill tee-boks og per-spiller-tee-state slik at admin
-  // ikke ender opp med en tee fra en annen bane. Wraps setCourseIdRaw med
-  // samme bivirkning som onChange-handleren i den gamle GameForm gjorde.
+  // Bane-bytte: nullstill tee-boks (tee-id er bane-spesifikk) og re-derive
+  // M/D/J-defaultene fra profilen. `playerGenders` er ikke tee-spesifikt —
+  // re-derive holder D/J-merkene istedenfor å kollapse alle til 'M'.
   function setCourseId(next: string) {
     setCourseIdRaw(next);
     setTeeBoxId('');
-    setPlayerGenders({});
+    setPlayerGenders(deriveDefaultGenders(players));
   }
 
   function handleModeChange(next: GameMode) {
