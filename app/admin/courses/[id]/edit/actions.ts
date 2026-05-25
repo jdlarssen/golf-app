@@ -265,6 +265,45 @@ export async function updateCourse(courseId: string, formData: FormData) {
   redirect(`/admin/courses?status=updated&name=${encodeURIComponent(name)}`);
 }
 
+export async function restoreTee(
+  courseId: string,
+  teeId: string,
+  _formData?: FormData,
+) {
+  const { supabase, user } = await requireAdmin();
+  const editPath = `/admin/courses/${courseId}/edit`;
+
+  // Verify tee belongs to the right course — defends against forged POSTs
+  // from outside the edit page.
+  const { data: tee, error: loadError } = await supabase
+    .from('tee_boxes')
+    .select('id, course_id, archived_at')
+    .eq('id', teeId)
+    .maybeSingle();
+  if (loadError || !tee) redirect(`${editPath}?error=tee_not_found`);
+  if (tee.course_id !== courseId) redirect(`${editPath}?error=tee_not_found`);
+  if (tee.archived_at === null) redirect(`${editPath}?error=tee_not_archived`);
+
+  const { error: restoreError } = await supabase
+    .from('tee_boxes')
+    .update({ archived_at: null })
+    .eq('id', teeId);
+  if (restoreError) redirect(`${editPath}?error=db_tees`);
+
+  // Restore is a course change → bump audit fields on courses, same pattern
+  // as updateCourse.
+  const { error: courseUpdateError } = await supabase
+    .from('courses')
+    .update({
+      updated_at: new Date().toISOString(),
+      updated_by: user.id,
+    })
+    .eq('id', courseId);
+  if (courseUpdateError) redirect(`${editPath}?error=db_course`);
+
+  redirect(`${editPath}?status=restored`);
+}
+
 export async function deleteCourse(courseId: string) {
   const { supabase } = await requireAdmin();
 
