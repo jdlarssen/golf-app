@@ -2,6 +2,7 @@ import { Suspense, cache } from 'react';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound, redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
@@ -12,6 +13,7 @@ import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { ScoreShape } from '@/components/scoring/ScoreShape';
 import { scoreShape } from '@/lib/scoring/scoreShape';
 import { scoreTone } from '@/lib/scoring/scoreTone';
+import { computeStablefordPoints } from '@/lib/scoring/modes/stableford';
 import {
   revealState,
   shouldHideNetto,
@@ -19,6 +21,14 @@ import {
 } from '@/lib/games/visibility';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import { getRatingForGender } from '@/lib/games/teeRating';
+import { scorecardTitle } from '@/lib/games/scorecardTitle';
+import {
+  resolveScorecardLayout,
+  type ScorecardColumnPlayer,
+  type ScorecardLayout,
+} from '@/lib/games/scorecardLayout';
+import { nameInitials } from '@/lib/names/initials';
+import { firstName } from '@/lib/firstName';
 
 type Params = Promise<{ id: string }>;
 
@@ -33,6 +43,7 @@ type HoleRow = {
 };
 
 type ScoreRow = {
+  user_id: string;
   hole_number: number;
   strokes: number | null;
 };
@@ -42,6 +53,21 @@ const getScorecardContext = cache(async () => {
   const userId = await getProxyVerifiedUserId();
   return { supabase, userId };
 });
+
+// Column-formatter — bridge fra rå game_players-rad til kolonne-data.
+// Holdes her i view-laget fordi det er kun her vi vet hvilken
+// name-resolution-strategi som passer presentasjons-laget.
+const columnFormatter = {
+  initials(p: { users: { name: string | null; nickname: string | null } | null }) {
+    return nameInitials(p.users?.nickname ?? p.users?.name ?? null);
+  },
+  displayName(
+    p: { users: { name: string | null; nickname: string | null } | null },
+    fallback: string,
+  ) {
+    return firstName(p.users?.nickname ?? p.users?.name) ?? fallback;
+  },
+};
 
 export default async function ScorecardPage({ params }: { params: Params }) {
   const { id } = await params;
@@ -58,24 +84,30 @@ export default async function ScorecardPage({ params }: { params: Params }) {
     redirect('/');
   }
   if (game.status === 'scheduled') {
-    // Round hasn't started; state #2 venterom lives on the game home page.
     redirect(`/games/${id}`);
   }
 
   const me = players.find((p) => p.user_id === userId);
   if (!me) notFound();
 
-  // Derive this player's rating-set from the game's tee using their
-  // tee_gender flag. startGame guards against missing rating-sets at
-  // publish time, so null only appears if data was edited externally.
   const rating = getRatingForGender(game.tee_box, me.tee_gender);
+  const state = revealState(game.score_visibility, game.status);
+  const revealActive = state === 'reveal-active';
+  const layout = resolveScorecardLayout(
+    game,
+    players,
+    me,
+    revealActive,
+    columnFormatter,
+  );
+  const title = scorecardTitle(game.game_mode, game.mode_config);
 
   return (
     <AppShell showVersion={false}>
       <TopBar
         backHref={`/games/${id}`}
         backLabel={`Tilbake til ${game.name}`}
-        kicker="Scorekort"
+        kicker={title.title}
         userId={userId}
       />
 
@@ -99,10 +131,9 @@ export default async function ScorecardPage({ params }: { params: Params }) {
           <ScorecardTable
             gameId={id}
             courseId={game.course_id}
-            currentUserId={userId}
-            courseHandicap={me.course_handicap ?? 0}
+            layout={layout}
             submittedAt={me.submitted_at}
-            revealState={revealState(game.score_visibility, game.status)}
+            revealState={state}
           />
         </Suspense>
       </div>
@@ -113,27 +144,26 @@ export default async function ScorecardPage({ params }: { params: Params }) {
 async function ScorecardTable({
   gameId,
   courseId,
-  currentUserId,
-  courseHandicap,
+  layout,
   submittedAt,
   revealState: state,
 }: {
   gameId: string;
   courseId: string;
-  currentUserId: string;
-  courseHandicap: number;
+  layout: ScorecardLayout;
   submittedAt: string | null;
   revealState: RevealState;
 }) {
-  // Reveal matrix:
-  //   live-always       → Netto column + slag-fått total in footer
-  //   reveal-active     → no handicap info at all (no Netto column, slag-fått hidden)
-  //   reveal-finished   → Netto column + slag-fått total in footer
-  // The Netto column only hides in reveal-active so the climax stays secret;
-  // every other state surfaces it (shouldHideNetto encodes exactly that).
   const showHandicapTotal = state !== 'reveal-active';
   const showNetto = !shouldHideNetto(state);
+
+  // Course holes via cookie-client (RLS-fine, public read). Scores via
+  // admin client when multiple user_ids are involved — RLS may block
+  // partners' scores under uvanlig flight-konfig. Authz beholdes call-site
+  // via resolveLayout som kun returnerer userIds for me + lag-medlemmer
+  // (eller motstander i matchplay) basert på game_players-radene.
   const { supabase } = await getScorecardContext();
+  const adminSupabase = getAdminClient();
 
   const [holesRes, scoresRes] = await Promise.all([
     supabase
@@ -142,168 +172,60 @@ async function ScorecardTable({
       .eq('course_id', courseId)
       .order('hole_number', { ascending: true })
       .returns<HoleRow[]>(),
-    supabase
+    adminSupabase
       .from('scores')
-      .select('hole_number, strokes')
+      .select('user_id, hole_number, strokes')
       .eq('game_id', gameId)
-      .eq('user_id', currentUserId)
+      .in('user_id', layout.scoreUserIds)
       .returns<ScoreRow[]>(),
   ]);
 
   if (holesRes.error) throw holesRes.error;
   if (scoresRes.error) throw scoresRes.error;
 
-  const scoreByHole = new Map<number, number | null>();
-  for (const s of scoresRes.data ?? []) scoreByHole.set(s.hole_number, s.strokes);
+  const scoresByUserHole = new Map<string, number | null>();
+  for (const s of scoresRes.data ?? []) {
+    scoresByUserHole.set(`${s.user_id}#${s.hole_number}`, s.strokes);
+  }
 
-  const rows = (holesRes.data ?? []).map((h) => {
-    const strokes = scoreByHole.get(h.hole_number) ?? null;
-    const extra = strokesForHole(courseHandicap, h.stroke_index);
-    return { ...h, strokes, extra };
-  });
+  const holes = holesRes.data ?? [];
 
-  const playedHoles = rows.filter((r) => r.strokes != null);
-  const totalBrutto = playedHoles.reduce(
-    (sum, r) => sum + (r.strokes ?? 0),
-    0,
-  );
-  // Sum of handicap-allocated extra strokes across played holes — surfaced
-  // in the footer instead of a per-row +slag column.
-  const totalExtraSlag = playedHoles.reduce((sum, r) => sum + r.extra, 0);
-  // Netto total over played holes — surfaced in the footer whenever the Netto
-  // column is shown (live-always + reveal-finished). Computed unconditionally
-  // so the JSX stays branch-light.
-  const totalNetto = playedHoles.reduce(
-    (sum, r) => sum + ((r.strokes ?? 0) - r.extra),
-    0,
-  );
-
-  // Last hole with a score, or 1 if none.
-  const lastWithScore = playedHoles.length
-    ? Math.max(...playedHoles.map((r) => r.hole_number))
-    : 1;
-  const continueHole = Math.min(18, lastWithScore);
+  const continueHref = `/games/${gameId}/holes/${nextHole(
+    holes,
+    scoresByUserHole,
+    layout.primaryUserId,
+  )}`;
 
   return (
     <>
-      <Card className="p-0 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left bg-bg/40">
-              <th className="px-3 py-2.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
-                #
-              </th>
-              <th className="px-3 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
-                Par
-              </th>
-              <th className="px-3 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
-                SI
-              </th>
-              <th className="px-3 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
-                Slag
-              </th>
-              {showNetto && (
-                <th className="px-3 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
-                  Netto
-                </th>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr
-                key={r.hole_number}
-                className="border-t border-border"
-              >
-                <td className="score-num px-3 py-2.5 text-text">
-                  {r.hole_number}
-                </td>
-                <td className="score-num px-3 py-2.5 text-right text-muted">
-                  {r.par}
-                </td>
-                <td className="score-num px-3 py-2.5 text-right text-muted">
-                  {r.stroke_index}
-                </td>
-                <td className="score-num px-3 py-2.5 text-right text-text">
-                  <ScoreShape
-                    shape={scoreShape(r.strokes, r.par)}
-                    tone={scoreTone(r.strokes, r.par)}
-                    size="sm"
-                  >
-                    {r.strokes ?? '—'}
-                  </ScoreShape>
-                </td>
-                {showNetto && (
-                  <td className="score-num px-3 py-2.5 text-right text-text">
-                    {r.strokes !== null ? (
-                      <ScoreShape
-                        shape={scoreShape(r.strokes - r.extra, r.par)}
-                        tone={scoreTone(r.strokes - r.extra, r.par)}
-                        size="sm"
-                      >
-                        {r.strokes - r.extra}
-                      </ScoreShape>
-                    ) : (
-                      '—'
-                    )}
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr className="border-t-2 border-border bg-primary-soft">
-              <td
-                // Base 4 cols (#, Par, SI, Slag) + optional Netto.
-                colSpan={4 + (showNetto ? 1 : 0)}
-                className="px-3 py-3 text-sm text-muted"
-              >
-                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <span>
-                    Spilte hull:{' '}
-                    <span className="inline-num">
-                      {playedHoles.length}/18
-                    </span>
-                  </span>
-                  <span>
-                    Brutto:{' '}
-                    <span className="score-num text-text">{totalBrutto}</span>
-                  </span>
-                  {showHandicapTotal && (
-                    <span>
-                      Slag fått:{' '}
-                      <span className="score-num text-text">
-                        {totalExtraSlag}
-                      </span>
-                    </span>
-                  )}
-                  {showNetto && (
-                    <span>
-                      Netto:{' '}
-                      <span className="score-num text-text">{totalNetto}</span>
-                    </span>
-                  )}
-                </div>
-              </td>
-            </tr>
-          </tfoot>
-        </table>
-      </Card>
+      {layout.variant === 'a' ? (
+        <LayoutATable
+          holes={holes}
+          scoresByUserHole={scoresByUserHole}
+          primaryUserId={layout.primaryUserId}
+          primaryHandicap={layout.primaryHandicap}
+          showNetto={showNetto}
+          showHandicapTotal={showHandicapTotal}
+        />
+      ) : (
+        <LayoutBTable
+          holes={holes}
+          scoresByUserHole={scoresByUserHole}
+          columns={layout.columns}
+          isStableford={layout.isStableford}
+          isMatchplay={layout.isMatchplay}
+          showNetto={showNetto}
+        />
+      )}
 
       {submittedAt ? (
-        // Scorekortet er levert — denne siden er en read-only oppsummering.
-        // «Tilbake til spillet» er ren navigasjon, ikke en primary CTA, så
-        // den får outline-stilen (secondary) for å unngå å skrike etter
-        // oppmerksomhet på en skjerm uten klar hovedhandling.
         <LinkButton href={`/games/${gameId}`} full variant="secondary">
           Tilbake til spillet →
         </LinkButton>
       ) : (
         <>
-          {/* Mid-round: «Tilbake til hull N» ER skjermens primary action —
-              fortsetter pågående runde. Beholder primary-fyllet. */}
-          <LinkButton href={`/games/${gameId}/holes/${continueHole}`} full>
-            Tilbake til hull {continueHole} →
+          <LinkButton href={continueHref} full>
+            Tilbake til hull {extractHoleFromHref(continueHref)} →
           </LinkButton>
 
           <div className="pt-2">
@@ -317,6 +239,404 @@ async function ScorecardTable({
         </>
       )}
     </>
+  );
+}
+
+function nextHole(
+  holes: HoleRow[],
+  scoresByUserHole: Map<string, number | null>,
+  userId: string,
+): number {
+  const playedHoles = holes
+    .filter((h) => scoresByUserHole.get(`${userId}#${h.hole_number}`) != null)
+    .map((h) => h.hole_number);
+  const lastWithScore = playedHoles.length ? Math.max(...playedHoles) : 1;
+  return Math.min(18, lastWithScore);
+}
+
+function extractHoleFromHref(href: string): number {
+  const match = href.match(/\/holes\/(\d+)/);
+  return match ? Number(match[1]) : 1;
+}
+
+// ─── Layout A ─────────────────────────────────────────────────────────
+
+function LayoutATable({
+  holes,
+  scoresByUserHole,
+  primaryUserId,
+  primaryHandicap,
+  showNetto,
+  showHandicapTotal,
+}: {
+  holes: HoleRow[];
+  scoresByUserHole: Map<string, number | null>;
+  primaryUserId: string;
+  primaryHandicap: number;
+  showNetto: boolean;
+  showHandicapTotal: boolean;
+}) {
+  const rows = holes.map((h) => {
+    const strokes = scoresByUserHole.get(`${primaryUserId}#${h.hole_number}`) ?? null;
+    const extra = strokesForHole(primaryHandicap, h.stroke_index);
+    return { ...h, strokes, extra };
+  });
+
+  const playedHoles = rows.filter((r) => r.strokes != null);
+  const totalBrutto = playedHoles.reduce(
+    (sum, r) => sum + (r.strokes ?? 0),
+    0,
+  );
+  const totalExtraSlag = playedHoles.reduce((sum, r) => sum + r.extra, 0);
+  const totalNetto = playedHoles.reduce(
+    (sum, r) => sum + ((r.strokes ?? 0) - r.extra),
+    0,
+  );
+
+  return (
+    <Card className="p-0 overflow-hidden">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-left bg-bg/40">
+            <th className="px-3 py-2.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+              #
+            </th>
+            <th className="px-3 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+              Par
+            </th>
+            <th className="px-3 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+              SI
+            </th>
+            <th className="px-3 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+              Slag
+            </th>
+            {showNetto && (
+              <th className="px-3 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+                Netto
+              </th>
+            )}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.hole_number} className="border-t border-border">
+              <td className="score-num px-3 py-2.5 text-text">
+                {r.hole_number}
+              </td>
+              <td className="score-num px-3 py-2.5 text-right text-muted">
+                {r.par}
+              </td>
+              <td className="score-num px-3 py-2.5 text-right text-muted">
+                {r.stroke_index}
+              </td>
+              <td className="score-num px-3 py-2.5 text-right text-text">
+                <ScoreShape
+                  shape={scoreShape(r.strokes, r.par)}
+                  tone={scoreTone(r.strokes, r.par)}
+                  size="sm"
+                >
+                  {r.strokes ?? '—'}
+                </ScoreShape>
+              </td>
+              {showNetto && (
+                <td className="score-num px-3 py-2.5 text-right text-text">
+                  {r.strokes !== null ? (
+                    <ScoreShape
+                      shape={scoreShape(r.strokes - r.extra, r.par)}
+                      tone={scoreTone(r.strokes - r.extra, r.par)}
+                      size="sm"
+                    >
+                      {r.strokes - r.extra}
+                    </ScoreShape>
+                  ) : (
+                    '—'
+                  )}
+                </td>
+              )}
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr className="border-t-2 border-border bg-primary-soft">
+            <td
+              colSpan={4 + (showNetto ? 1 : 0)}
+              className="px-3 py-3 text-sm text-muted"
+            >
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span>
+                  Spilte hull:{' '}
+                  <span className="inline-num">
+                    {playedHoles.length}/18
+                  </span>
+                </span>
+                <span>
+                  Brutto:{' '}
+                  <span className="score-num text-text">{totalBrutto}</span>
+                </span>
+                {showHandicapTotal && (
+                  <span>
+                    Slag fått:{' '}
+                    <span className="score-num text-text">
+                      {totalExtraSlag}
+                    </span>
+                  </span>
+                )}
+                {showNetto && (
+                  <span>
+                    Netto:{' '}
+                    <span className="score-num text-text">{totalNetto}</span>
+                  </span>
+                )}
+              </div>
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </Card>
+  );
+}
+
+// ─── Layout B ─────────────────────────────────────────────────────────
+
+interface LayoutBPlayerHole {
+  strokes: number | null;
+  extra: number;
+  netto: number | null;
+  stablefordPoints: number | null;
+}
+
+interface LayoutBHoleRow extends HoleRow {
+  perPlayer: LayoutBPlayerHole[];
+  /** Team-best netto (laveste netto blant spillerne — for best-ball-footer). */
+  bestNetto: number | null;
+  /** Team-poeng (MAX av spillernes stableford-poeng — for par-stableford-footer). */
+  teamPoints: number;
+  /** Matchplay hull-resultat fra me's perspektiv. */
+  matchplayResult: 'won' | 'lost' | 'tied' | 'unplayed';
+}
+
+function LayoutBTable({
+  holes,
+  scoresByUserHole,
+  columns,
+  isStableford,
+  isMatchplay,
+  showNetto,
+}: {
+  holes: HoleRow[];
+  scoresByUserHole: Map<string, number | null>;
+  columns: ScorecardColumnPlayer[];
+  isStableford: boolean;
+  isMatchplay: boolean;
+  showNetto: boolean;
+}) {
+  const rows: LayoutBHoleRow[] = holes.map((h) => {
+    const perPlayer: LayoutBPlayerHole[] = columns.map((c) => {
+      const strokes =
+        scoresByUserHole.get(`${c.userId}#${h.hole_number}`) ?? null;
+      const extra = strokesForHole(c.courseHandicap, h.stroke_index);
+      const netto = strokes !== null ? strokes - extra : null;
+      const stablefordPoints =
+        isStableford && netto !== null
+          ? computeStablefordPoints({ par: h.par, netStrokes: netto })
+          : null;
+      return { strokes, extra, netto, stablefordPoints };
+    });
+
+    const playedNettos = perPlayer
+      .map((p) => p.netto)
+      .filter((n): n is number => n !== null);
+    const bestNetto = playedNettos.length ? Math.min(...playedNettos) : null;
+    const teamPoints = perPlayer.reduce(
+      (max, p) => Math.max(max, p.stablefordPoints ?? 0),
+      0,
+    );
+
+    let matchplayResult: LayoutBHoleRow['matchplayResult'] = 'unplayed';
+    if (isMatchplay && perPlayer.length === 2) {
+      const meNet = perPlayer[0].netto;
+      const oppNet = perPlayer[1].netto;
+      if (meNet !== null && oppNet !== null) {
+        matchplayResult =
+          meNet < oppNet ? 'won' : meNet > oppNet ? 'lost' : 'tied';
+      }
+    }
+
+    return {
+      ...h,
+      perPlayer,
+      bestNetto,
+      teamPoints,
+      matchplayResult,
+    };
+  });
+
+  // Per-spiller totals
+  const playerTotals = columns.map((_, idx) => {
+    const cells = rows.map((r) => r.perPlayer[idx]).filter((c) => c.strokes != null);
+    return {
+      holesPlayed: cells.length,
+      brutto: cells.reduce((sum, c) => sum + (c.strokes ?? 0), 0),
+      netto: cells.reduce(
+        (sum, c) => sum + ((c.strokes ?? 0) - c.extra),
+        0,
+      ),
+      points: cells.reduce((sum, c) => sum + (c.stablefordPoints ?? 0), 0),
+    };
+  });
+
+  // Team totals
+  const playedTeamHoles = rows.filter((r) =>
+    isMatchplay
+      ? r.matchplayResult !== 'unplayed'
+      : isStableford
+        ? r.perPlayer.some((p) => p.strokes != null)
+        : r.bestNetto !== null,
+  );
+  const teamTotalNetto = playedTeamHoles.reduce(
+    (sum, r) => sum + (r.bestNetto ?? 0),
+    0,
+  );
+  const teamTotalPoints = rows.reduce((sum, r) => sum + r.teamPoints, 0);
+
+  let matchStatus: string | null = null;
+  if (isMatchplay) {
+    let meWins = 0;
+    let oppWins = 0;
+    let played = 0;
+    for (const r of rows) {
+      if (r.matchplayResult === 'unplayed') continue;
+      played += 1;
+      if (r.matchplayResult === 'won') meWins += 1;
+      else if (r.matchplayResult === 'lost') oppWins += 1;
+    }
+    const up = meWins - oppWins;
+    if (played === 0) {
+      matchStatus = 'Ingen hull spilt ennå';
+    } else if (up === 0) {
+      matchStatus = `AS (${played} hull spilt)`;
+    } else if (up > 0) {
+      matchStatus = `Du er ${up} up etter ${played} hull`;
+    } else {
+      matchStatus = `Du er ${-up} down etter ${played} hull`;
+    }
+  }
+
+  const secondaryLabel = isStableford ? 'P' : isMatchplay ? 'N' : 'N';
+
+  return (
+    <Card className="p-0 overflow-hidden">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-left bg-bg/40">
+            <th className="px-2.5 py-2.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+              #
+            </th>
+            <th className="px-2 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
+              Par
+            </th>
+            {columns.map((c) => (
+              <th
+                key={c.userId}
+                className="px-2 py-2.5 text-right text-[11px] font-medium uppercase tracking-[0.10em] text-muted"
+              >
+                <span className="inline-flex items-baseline gap-1 justify-end">
+                  <span className="font-serif text-[13px] text-text">
+                    {c.initial}
+                  </span>
+                </span>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.hole_number} className="border-t border-border">
+              <td className="score-num px-2.5 py-2 text-text">
+                {r.hole_number}
+              </td>
+              <td className="score-num px-2 py-2 text-right text-muted">
+                {r.par}
+              </td>
+              {r.perPlayer.map((cell, idx) => (
+                <td
+                  key={columns[idx].userId}
+                  className="px-2 py-2 text-right"
+                >
+                  {cell.strokes !== null ? (
+                    <div className="inline-flex flex-col items-end leading-tight">
+                      <ScoreShape
+                        shape={scoreShape(cell.strokes, r.par)}
+                        tone={scoreTone(cell.strokes, r.par)}
+                        size="sm"
+                      >
+                        {cell.strokes}
+                      </ScoreShape>
+                      {showNetto && (
+                        <span className="score-num text-[10.5px] text-muted mt-0.5">
+                          {isStableford
+                            ? (cell.stablefordPoints ?? 0)
+                            : (cell.netto ?? '—')}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-muted">—</span>
+                  )}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr className="border-t-2 border-border bg-primary-soft">
+            <td
+              colSpan={2 + columns.length}
+              className="px-3 py-3 text-xs text-muted"
+            >
+              <div className="flex flex-col gap-1.5">
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  {columns.map((c, idx) => {
+                    const t = playerTotals[idx];
+                    return (
+                      <span key={c.userId}>
+                        {c.isCurrentUser ? 'Du' : c.displayName}:{' '}
+                        <span className="score-num text-text">{t.brutto}</span>
+                        {showNetto && (
+                          <>
+                            {' / '}
+                            <span className="score-num text-text">
+                              {isStableford ? t.points : t.netto}
+                              <span className="text-muted ml-0.5 text-[10.5px]">
+                                {secondaryLabel}
+                              </span>
+                            </span>
+                          </>
+                        )}
+                      </span>
+                    );
+                  })}
+                </div>
+                {showNetto && !isMatchplay && (
+                  <div className="text-text">
+                    {isStableford ? 'Lagets poeng' : 'Lag-best (netto)'}:{' '}
+                    <span className="score-num">
+                      {isStableford ? teamTotalPoints : teamTotalNetto}
+                    </span>
+                    <span className="text-muted ml-2">
+                      ({playedTeamHoles.length}/18 hull)
+                    </span>
+                  </div>
+                )}
+                {isMatchplay && matchStatus && (
+                  <div className="text-text font-medium">{matchStatus}</div>
+                )}
+              </div>
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </Card>
   );
 }
 

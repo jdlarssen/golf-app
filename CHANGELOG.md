@@ -10,6 +10,43 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.18.y — Lag-scorekort
+
+Scorekort-flaten viser nå begge spillerne side om side i alle lag-baserte spillformer (best-ball, par-stableford, matchplay og Texas scramble). Tidligere fikk du bare ditt eget scorekort — selv i 2-mannslag der partner og du deler resultat. Issue [#17](https://github.com/jdlarssen/golf-app/issues/17).
+
+### [1.18.0] - 2026-05-25
+
+> Når du spiller best-ball, par-stableford, matchplay eller Texas scramble, viser scorekortet nå deg og partner (eller motstander i matchplay) ved siden av hverandre per hull — som på papir. Lenken på spilloversikten heter «Lagets scorekort» eller «Match-scorekort» istedenfor «Mitt scorekort» når det er aktuelt. Texas-spillere som ikke er lag-kaptein får endelig se lagets faktiske score (før viste flaten blanke felt).
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `lib/games/scorecardTitle.ts` + test (7 caser) — single source of truth for tittel + CTA-label per modus. Matchplay → «Match-scorekort», lag-baserte (best-ball, par-stableford team_size=2, texas) → «Lagets scorekort», solo → «Mitt scorekort».
+- `lib/games/teamCaptain.ts` + test (5 caser) — `pickTeamCaptain(userIds)` ekstrahert fra `lib/scoring/modes/texasScramble.ts` til delt helper. Texas-scoring (kaptein eier scores-radene i DB) og scorekort-flaten (non-captain må slå opp captain for å hente lagets score) bruker samme lex-min-algoritme. Texas-modulen beholder en wrapper rundt helperen.
+- `lib/games/scorecardLayout.ts` + test (11 caser) — `resolveScorecardLayout(game, players, me, revealActive, fmt)` returnerer enten Layout A (single-player tabell) eller Layout B (side-om-side). Texas → Layout A med captain-userId + lag-handicap (sum(member.CH) × team_handicap_pct / 100). Reveal-active → Layout A uansett modus (beholder reveal-prinsippet). Best-ball/par-stableford → Layout B med same-team-partner. Matchplay → Layout B med motstander (annet team_number). Defensiv fallback til Layout A hvis team-modus mangler partner.
+- Tester for Texas non-captain-flow (issue #17 bonus-fix) — verifiserer at `scoreUserIds` returnerer captain-userId, ikke me-userId.
+
+#### Changed
+- `app/games/[id]/scorecard/page.tsx` — full rewrite. Server-komponenten bruker `resolveScorecardLayout` til å bestemme Layout A vs B, og rendrer riktig tabell. Layout B-tabellen har kolonner `# | Par | Spiller1 | Spiller2` der hver spiller-celle viser slag (stor) + sekundærtall (netto eller stableford-poeng) under. SI-kolonne droppet i Layout B for plass på iPhone-bredde. Footer i Layout B viser per-spiller-totaler + lag-total (eller match-status for matchplay: «Du er 2 up etter 8 hull»).
+- `app/games/[id]/scorecard/page.tsx` (data-fetch) — bruker admin-client for scores-query siden RLS kan blokkere partners scorer under uvanlig flight-konfigurasjon. Authz beholdes call-site via `me ∈ players` og at `scoreUserIds` kun inneholder lag-medlemmer / motstander basert på `game_players`-radene.
+- `app/games/[id]/page.tsx` — CTA-label på «Mitt scorekort»-Card-en på spilloversikten bruker `scorecardTitle().cardLabel` slik at den speiler tittelen på scorekort-flaten. `GameRow`-typen utvidet med `mode_config` (re-bruker shape fra `GameForHole`).
+
+#### Fixed
+- Texas scramble non-captain ser nå lagets faktiske score på `/scorecard`. Før viste flaten blanke felt fordi `scores`-radene eies av lag-kapteinen (lex-min userId), og scorekort-flaten queryet på `me.user_id`. Nå queryes captain-userId via `pickTeamCaptain(teamMembers)`.
+
+#### Notes
+- Reveal-modus («skjul netto til spillet er ferdig»): Layout B faller tilbake til Layout A under aktivt spill med visibility=reveal. Beholder reveal-prinsippet om å skjule andres data inntil game.status=finished.
+- Solo-modi (stableford team_size=1, solo strokeplay) er uendret — fortsatt single-player Layout A med «Mitt scorekort»-tittel.
+- Test-suite vokst fra 924 → 947 (+23 nye tester: 7 scorecardTitle + 5 teamCaptain + 11 scorecardLayout).
+
+</details>
+
+---
+
+<details>
+<summary><strong>1.17.y — Allowlist for trusted creators (1 oppføring) — klikk for å vise</strong></summary>
+
 ## 1.17.y — Allowlist for trusted creators
 
 Mulighet for å la utvalgte spillere opprette egne turneringer uten å gjøre dem til admin. Liten variant av [#22](https://github.com/jdlarssen/golf-app/issues/22) — vi tester først om noen faktisk vil bruke det, før vi bygger full rolle-modell. Issue [#198](https://github.com/jdlarssen/golf-app/issues/198).
@@ -40,10 +77,14 @@ Mulighet for å la utvalgte spillere opprette egne turneringer uten å gjøre de
 
 </details>
 
+</details>
+
 ---
 
 <details>
 <summary><strong>1.16.y — Texas scramble (5 oppføringer) — klikk for å vise</strong></summary>
+
+## 1.16.y — Texas scramble
 
 Ny spillmodus for laget som vil spille sosialt — én ball per lag, alle slår fra beste slag. Skalerer fra 2-mannslag (par-format) til 4-mannslag (klassisk firma-cup). Lag-handicap regnes etter NGF-aggregatet (25 % av summert HCP for 2-mannslag, 10 % for 4-mannslag), justerbart per spill. Issue [#44](https://github.com/jdlarssen/golf-app/issues/44).
 

@@ -21,7 +21,11 @@ import { firstName } from '@/lib/firstName';
 import { nameInitials } from '@/lib/names/initials';
 import { formatTeeOffTime, formatTeeOffDate } from '@/lib/format/teeOff';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
-import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
+import {
+  getGameWithPlayers,
+  type GameForHole,
+} from '@/lib/games/getGameWithPlayers';
+import { scorecardTitle } from '@/lib/games/scorecardTitle';
 import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
 import { ScheduledWaitingRoom } from './ScheduledWaitingRoom';
@@ -76,6 +80,14 @@ type GameRow = {
     | 'singles_matchplay'
     | 'solo_strokeplay_netto'
     | 'texas_scramble';
+  /**
+   * Mode-spesifikk config fra `games.mode_config` (JSONB). Type-en speilet
+   * fra `GameForHole` slik at scorecardTitle() kan resolve riktig tittel/
+   * label per modus (best-ball + 4BBB + texas → «Lagets scorekort»,
+   * matchplay → «Match-scorekort», solo → «Mitt scorekort»). Settes fra
+   * `gwp.game` via spread.
+   */
+  mode_config: GameForHole['mode_config'];
   courses: { name: string } | null;
   tee_boxes:
     | (TeeBoxRatings & { name: string; length_meters: number | null })
@@ -564,7 +576,7 @@ export default async function GameHomePage({
           <SmartLink href={`/games/${id}/scorecard`} className="block">
             <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
               <span className="text-base font-medium text-text">
-                Mitt scorekort
+                {scorecardTitle(game.game_mode, game.mode_config).cardLabel}
               </span>
               <span aria-hidden className="text-muted">
                 →
