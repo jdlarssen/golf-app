@@ -9,6 +9,7 @@ import { Banner } from '@/components/ui/Banner';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { getQuotaState, formatTimeUntil } from '@/lib/invitations/quota';
 import { updateProfile } from './actions';
+import { safeNextPath } from './safeNext';
 import { sendFriendInvite } from '../invite/actions';
 import { ProfileFormBody } from './ProfileFormBody';
 import { InviteFriendForm } from './InviteFriendForm';
@@ -21,6 +22,7 @@ type SearchParams = Promise<{
   invite?: string | string[];
   invite_error?: string | string[];
   invite_email?: string | string[];
+  next?: string | string[];
 }>;
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -64,6 +66,7 @@ export default async function ProfilePage({
   const errorCode = first(params.error);
   const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
   const profileUpdated = first(params.profile) === 'updated';
+  const nextSafe = safeNextPath(first(params.next));
   const inviteSent = first(params.invite) === 'sent';
   const inviteSentEmail = first(params.invite_email);
   const inviteErrorCode = first(params.invite_error);
@@ -101,7 +104,7 @@ export default async function ProfilePage({
       )}
 
       <Suspense fallback={<ProfileFormSkeleton />}>
-        <ProfileFormCard errorMessage={errorMessage} />
+        <ProfileFormCard errorMessage={errorMessage} next={nextSafe} />
       </Suspense>
 
       <div className="mt-6">
@@ -138,8 +141,10 @@ export default async function ProfilePage({
 
 async function ProfileFormCard({
   errorMessage,
+  next,
 }: {
   errorMessage: string | undefined;
+  next: string | null;
 }) {
   const { supabase, userId } = await getProfileContext();
 
@@ -174,6 +179,7 @@ async function ProfileFormCard({
             profile.hcp_index == null ? '' : String(profile.hcp_index),
         }}
         action={updateProfile}
+        next={next}
       />
     </Card>
   );

@@ -16,6 +16,12 @@ type Props = {
   email: string;
   initial: InitialValues;
   action: (formData: FormData) => void;
+  /**
+   * Optional same-origin path the action should redirect to on success.
+   * Already validated by `safeNextPath` upstream — rendered as a hidden
+   * input so the action picks it up from FormData.
+   */
+  next?: string | null;
 };
 
 /**
@@ -34,7 +40,7 @@ function SaveButton({ dirty }: { dirty: boolean }) {
   );
 }
 
-export function ProfileFormBody({ email, initial, action }: Props) {
+export function ProfileFormBody({ email, initial, action, next }: Props) {
   const [dirty, setDirty] = useState(false);
   const initialRef = useRef(initial);
 
@@ -59,6 +65,7 @@ export function ProfileFormBody({ email, initial, action }: Props) {
 
   return (
     <form action={action} onChange={handleChange} className="space-y-4">
+      {next ? <input type="hidden" name="next" value={next} /> : null}
       <div>
         <label className="block text-sm font-medium text-text mb-1.5">
           E-post
@@ -107,7 +114,7 @@ export function ProfileFormBody({ email, initial, action }: Props) {
       <div className="flex items-center gap-3 pt-2">
         <SaveButton dirty={dirty} />
         <SmartLink
-          href="/"
+          href={next ?? '/'}
           className="text-sm text-muted hover:text-text transition-colors"
         >
           Avbryt

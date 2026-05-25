@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
+import { safeNextPath } from './safeNext';
 
 const HCP_MIN = -10;
 const HCP_MAX = 54.0;
@@ -11,14 +12,21 @@ export async function updateProfile(formData: FormData) {
   const nicknameRaw = String(formData.get('nickname') ?? '').trim();
   const nickname = nicknameRaw === '' ? null : nicknameRaw;
   const hcpRaw = String(formData.get('hcp_index') ?? '').trim();
+  // Optional ?next=-redirect target. Validation in safeNextPath rejects
+  // anything that isn't a same-origin path (open-redirect vern).
+  const nextRaw = formData.get('next');
+  const nextSafe = safeNextPath(typeof nextRaw === 'string' ? nextRaw : null);
+  const errorBackTo = nextSafe
+    ? `/profile?next=${encodeURIComponent(nextSafe)}`
+    : '/profile';
 
   if (!name) {
-    redirect('/profile?error=name_required');
+    redirect(`${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=name_required`);
   }
 
   const hcpParsed = Number.parseFloat(hcpRaw.replace(',', '.'));
   if (!Number.isFinite(hcpParsed) || hcpParsed < HCP_MIN || hcpParsed > HCP_MAX) {
-    redirect('/profile?error=hcp_invalid');
+    redirect(`${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=hcp_invalid`);
   }
 
   const supabase = await getServerClient();
@@ -54,8 +62,8 @@ export async function updateProfile(formData: FormData) {
     .eq('id', user.id);
 
   if (error) {
-    redirect('/profile?error=unknown');
+    redirect(`${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=unknown`);
   }
 
-  redirect('/profile?profile=updated');
+  redirect(nextSafe ?? '/profile?profile=updated');
 }
