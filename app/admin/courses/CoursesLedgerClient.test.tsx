@@ -1,11 +1,61 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { useSyncExternalStore } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import {
   CoursesLedgerClient,
   applySortAndFilter,
   rowKicker,
+  readStateFromParams,
   type CoursesLedgerItem,
 } from './CoursesLedgerClient';
+
+// Stateful mock for next/navigation: useSearchParams subscribes to a small
+// in-memory store; useRouter().replace mutates the store and triggers a
+// re-render in every consumer. Lets the existing interaction-tests keep
+// driving the UI via fireEvent without rewriting them per-test.
+const paramsStore = (() => {
+  let current = new URLSearchParams();
+  const listeners = new Set<() => void>();
+  return {
+    get: () => current,
+    set: (next: URLSearchParams) => {
+      current = next;
+      for (const l of listeners) l();
+    },
+    subscribe: (fn: () => void) => {
+      listeners.add(fn);
+      return () => {
+        listeners.delete(fn);
+      };
+    },
+    reset: () => {
+      current = new URLSearchParams();
+      for (const l of listeners) l();
+    },
+  };
+})();
+
+const replaceMock = vi.fn((href: string) => {
+  const qs = href.startsWith('?') ? href.slice(1) : href;
+  paramsStore.set(new URLSearchParams(qs));
+});
+
+vi.mock('next/navigation', () => {
+  return {
+    useRouter: () => ({ replace: replaceMock, push: vi.fn() }),
+    useSearchParams: () =>
+      useSyncExternalStore(
+        paramsStore.subscribe,
+        () => paramsStore.get(),
+        () => paramsStore.get(),
+      ),
+  };
+});
+
+beforeEach(() => {
+  paramsStore.reset();
+  replaceMock.mockClear();
+});
 
 function makeItem(overrides: Partial<CoursesLedgerItem> = {}): CoursesLedgerItem {
   return {
@@ -227,5 +277,106 @@ describe('CoursesLedgerClient — sort + filter UI', () => {
     expect(screen.getAllByText(/^Endret/i).length).toBeGreaterThan(0);
     // Trondheim har samme created/updated_at → «Lagt til».
     expect(screen.getAllByText(/^Lagt til/i).length).toBeGreaterThan(0);
+  });
+});
+
+describe('readStateFromParams', () => {
+  it('returns defaults for an empty URLSearchParams', () => {
+    expect(readStateFromParams(new URLSearchParams())).toEqual({
+      query: '',
+      sortBy: 'created_at',
+      filters: {
+        hasLadiesTee: false,
+        hasJuniorsTee: false,
+        activeGames: false,
+      },
+    });
+  });
+
+  it('parses each param correctly', () => {
+    const result = readStateFromParams(
+      new URLSearchParams('q=stik&sort=updated_at&ladies=1&active=1'),
+    );
+    expect(result).toEqual({
+      query: 'stik',
+      sortBy: 'updated_at',
+      filters: {
+        hasLadiesTee: true,
+        hasJuniorsTee: false,
+        activeGames: true,
+      },
+    });
+  });
+
+  it('falls back to created_at for an unknown sort value', () => {
+    const result = readStateFromParams(
+      new URLSearchParams('sort=garbage_value'),
+    );
+    expect(result.sortBy).toBe('created_at');
+  });
+});
+
+describe('CoursesLedgerClient — URL state persistence (Fase 3)', () => {
+  it('initialises sort + chips + search from URL params on first render', () => {
+    paramsStore.set(
+      new URLSearchParams('q=stiklestad&sort=updated_at&ladies=1'),
+    );
+    render(<CoursesLedgerClient items={ITEMS} />);
+
+    const input = screen.getByLabelText('Søk etter banenavn') as HTMLInputElement;
+    expect(input.value).toBe('stiklestad');
+
+    const select = screen.getByLabelText('Sortér') as HTMLSelectElement;
+    expect(select.value).toBe('updated_at');
+
+    const ladiesChip = screen.getByRole('button', { name: 'Har dame-tee' });
+    expect(ladiesChip.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('writes search query into URL via router.replace', () => {
+    render(<CoursesLedgerClient items={ITEMS} />);
+    const input = screen.getByLabelText('Søk etter banenavn');
+    fireEvent.change(input, { target: { value: 'Trondheim' } });
+
+    expect(replaceMock).toHaveBeenCalled();
+    const lastHref = replaceMock.mock.calls.at(-1)![0] as string;
+    expect(lastHref).toContain('q=Trondheim');
+  });
+
+  it('removes the q-param when the search box is cleared', () => {
+    paramsStore.set(new URLSearchParams('q=stik'));
+    render(<CoursesLedgerClient items={ITEMS} />);
+    const input = screen.getByLabelText('Søk etter banenavn');
+
+    fireEvent.change(input, { target: { value: '' } });
+    const lastHref = replaceMock.mock.calls.at(-1)![0] as string;
+    expect(lastHref).not.toContain('q=');
+  });
+
+  it('writes non-default sort into URL and omits default sort', () => {
+    render(<CoursesLedgerClient items={ITEMS} />);
+    const select = screen.getByLabelText('Sortér') as HTMLSelectElement;
+
+    fireEvent.change(select, { target: { value: 'active_game_count' } });
+    let lastHref = replaceMock.mock.calls.at(-1)![0] as string;
+    expect(lastHref).toContain('sort=active_game_count');
+
+    // Bytter tilbake til default → sort-param fjernes.
+    fireEvent.change(select, { target: { value: 'created_at' } });
+    lastHref = replaceMock.mock.calls.at(-1)![0] as string;
+    expect(lastHref).not.toContain('sort=');
+  });
+
+  it('toggles chip params (ladies=1 → empty) into the URL', () => {
+    render(<CoursesLedgerClient items={ITEMS} />);
+    const chip = screen.getByRole('button', { name: 'Har dame-tee' });
+
+    fireEvent.click(chip);
+    let lastHref = replaceMock.mock.calls.at(-1)![0] as string;
+    expect(lastHref).toContain('ladies=1');
+
+    fireEvent.click(chip);
+    lastHref = replaceMock.mock.calls.at(-1)![0] as string;
+    expect(lastHref).not.toContain('ladies=');
   });
 });

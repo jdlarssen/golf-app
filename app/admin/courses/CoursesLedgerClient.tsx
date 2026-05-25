@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useTransition } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { LedgerHeader } from '@/components/admin/LedgerHeader';
 import { formatShortDateNb } from '@/lib/format/date';
@@ -37,6 +38,35 @@ const SORT_LABELS: Record<SortBy, string> = {
   updated_at: 'Sist endret',
   active_game_count: 'Flest aktive spill',
 };
+
+const SORT_VALUES = new Set<SortBy>([
+  'created_at',
+  'updated_at',
+  'active_game_count',
+]);
+
+// Pure helper — leser sort/filter/søk fra URL-params, fallback til defaults.
+// Eksportert for testing uavhengig av Next.js navigation-hooks.
+export function readStateFromParams(params: URLSearchParams): {
+  query: string;
+  sortBy: SortBy;
+  filters: Filters;
+} {
+  const rawSort = params.get('sort');
+  const sortBy: SortBy =
+    rawSort && SORT_VALUES.has(rawSort as SortBy)
+      ? (rawSort as SortBy)
+      : 'created_at';
+  return {
+    query: params.get('q') ?? '',
+    sortBy,
+    filters: {
+      hasLadiesTee: params.get('ladies') === '1',
+      hasJuniorsTee: params.get('juniors') === '1',
+      activeGames: params.get('active') === '1',
+    },
+  };
+}
 
 // Avledet kicker-tekst per rad: «Endret DATO» når updated_at har gått fremover
 // mer enn buffer-en etter created_at, ellers «Lagt til DATO». Eksportert for
@@ -96,13 +126,13 @@ export function CoursesLedgerClient({
 }: {
   items: CoursesLedgerItem[];
 }) {
-  const [query, setQuery] = useState('');
-  const [sortBy, setSortBy] = useState<SortBy>('created_at');
-  const [filters, setFilters] = useState<Filters>({
-    hasLadiesTee: false,
-    hasJuniorsTee: false,
-    activeGames: false,
-  });
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [, startTransition] = useTransition();
+
+  const { query, sortBy, filters } = readStateFromParams(
+    new URLSearchParams(searchParams.toString()),
+  );
 
   const visible = useMemo(
     () => applySortAndFilter(items, query, filters, sortBy),
@@ -113,8 +143,41 @@ export function CoursesLedgerClient({
     filters.hasLadiesTee || filters.hasJuniorsTee || filters.activeGames;
   const trimmedQuery = query.trim();
 
+  // URL-state writer: oppdaterer kun de keys som er i `patch`. Verdier som er
+  // `null` eller tom streng fjernes (holder URL kort — defaults skrives ikke).
+  // `router.replace` istedenfor push så filter-endringer ikke spammer browser-
+  // historikken. `startTransition` gjør tastetrykk lavprioritet.
+  function updateParams(patch: Record<string, string | null>) {
+    const next = new URLSearchParams(searchParams.toString());
+    for (const [key, value] of Object.entries(patch)) {
+      if (value === null || value === '') {
+        next.delete(key);
+      } else {
+        next.set(key, value);
+      }
+    }
+    const qs = next.toString();
+    const href = qs ? `?${qs}` : '?';
+    startTransition(() => {
+      router.replace(href, { scroll: false });
+    });
+  }
+
+  function setQuery(value: string) {
+    updateParams({ q: value || null });
+  }
+
+  function setSortBy(value: SortBy) {
+    updateParams({ sort: value === 'created_at' ? null : value });
+  }
+
   function toggleFilter(key: keyof Filters) {
-    setFilters((prev) => ({ ...prev, [key]: !prev[key] }));
+    const paramKey: Record<keyof Filters, string> = {
+      hasLadiesTee: 'ladies',
+      hasJuniorsTee: 'juniors',
+      activeGames: 'active',
+    };
+    updateParams({ [paramKey[key]]: filters[key] ? null : '1' });
   }
 
   return (
