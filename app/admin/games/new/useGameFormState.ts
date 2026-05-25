@@ -8,6 +8,7 @@ import {
 import type { GameMode } from '@/lib/scoring/modes/types';
 import type { TeamSize } from './TeamSizeSelector';
 import type { CourseOption, InitialValues, PlayerOption } from './GameForm';
+import { playerGenderDefault } from '@/lib/games/playerGenderDefault';
 
 // Lag-numre er en bevisst smal union — andre tall (5, 6, …) er ikke meningsfulle
 // i Tørny per d.d. og blir narrower'ed via `isTeamNumber`-guarden under.
@@ -122,7 +123,14 @@ export function useGameFormState({
     initialValues?.tee_box_id ?? '',
   );
   const [playerGenders, setPlayerGenders] = useState<Record<string, 'M' | 'D' | 'J'>>(
-    initialValues?.player_genders ?? {},
+    () => {
+      if (initialValues?.player_genders) return initialValues.player_genders;
+      const derived: Record<string, 'M' | 'D' | 'J'> = {};
+      for (const p of players) {
+        derived[p.id] = playerGenderDefault(p.gender, p.level);
+      }
+      return derived;
+    },
   );
   // Required for "Lagre og publiser"; drives the button's disabled state via
   // `canPublish` below. Drafts may omit it. Empty string === "not set".
