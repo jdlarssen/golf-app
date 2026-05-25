@@ -29,6 +29,21 @@ const MONTH_NAMES_NB = [
   'des',
 ] as const;
 
+const MONTH_NAMES_NB_LONG = [
+  'januar',
+  'februar',
+  'mars',
+  'april',
+  'mai',
+  'juni',
+  'juli',
+  'august',
+  'september',
+  'oktober',
+  'november',
+  'desember',
+] as const;
+
 /**
  * "14. mai" — dag + forkortet måned, uten år.
  *
@@ -49,4 +64,15 @@ export function formatShortDateNb(iso: string | Date): string {
 export function formatShortDateNbWithYear(iso: string | Date): string {
   const d = iso instanceof Date ? iso : new Date(iso);
   return `${d.getDate()}. ${MONTH_NAMES_NB[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/**
+ * "mai 2026" — fullt månedsnavn lowercase + år, norsk konvensjon.
+ *
+ * Brukes for periode-etiketter i produkt-oppdaterings-digest (issue #202)
+ * og andre flater der vi viser en hel måned som tidsperiode.
+ */
+export function formatMonthLongNb(iso: string | Date): string {
+  const d = iso instanceof Date ? iso : new Date(iso);
+  return `${MONTH_NAMES_NB_LONG[d.getMonth()]} ${d.getFullYear()}`;
 }
