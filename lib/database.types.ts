@@ -447,6 +447,117 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          payload: Json
+          read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          payload?: Json
+          read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          payload?: Json
+          read_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_update_digests: {
+        Row: {
+          id: string
+          period_end: string
+          period_start: string
+          recipient_count: number
+          sent_at: string
+          sent_by: string | null
+          update_ids: string[]
+        }
+        Insert: {
+          id?: string
+          period_end: string
+          period_start: string
+          recipient_count: number
+          sent_at?: string
+          sent_by?: string | null
+          update_ids: string[]
+        }
+        Update: {
+          id?: string
+          period_end?: string
+          period_start?: string
+          recipient_count?: number
+          sent_at?: string
+          sent_by?: string | null
+          update_ids?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_update_digests_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_updates: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string
+          cta_label: string | null
+          id: string
+          link: string | null
+          title: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by: string
+          cta_label?: string | null
+          id?: string
+          link?: string | null
+          title: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string
+          cta_label?: string | null
+          id?: string
+          link?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_updates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scores: {
         Row: {
           client_updated_at: string
@@ -562,37 +673,46 @@ export type Database = {
         Row: {
           created_at: string
           email: string
+          gender: Database["public"]["Enums"]["user_gender"] | null
           handicap_updated_at: string
           hcp_index: number
           id: string
           is_admin: boolean
           last_seen_at: string | null
+          level: Database["public"]["Enums"]["player_level"]
           name: string | null
           nickname: string | null
+          product_updates_unsubscribed_at: string | null
           profile_completed_at: string | null
         }
         Insert: {
           created_at?: string
           email: string
+          gender?: Database["public"]["Enums"]["user_gender"] | null
           handicap_updated_at?: string
           hcp_index?: number
           id: string
           is_admin?: boolean
           last_seen_at?: string | null
+          level?: Database["public"]["Enums"]["player_level"]
           name?: string | null
           nickname?: string | null
+          product_updates_unsubscribed_at?: string | null
           profile_completed_at?: string | null
         }
         Update: {
           created_at?: string
           email?: string
+          gender?: Database["public"]["Enums"]["user_gender"] | null
           handicap_updated_at?: string
           hcp_index?: number
           id?: string
           is_admin?: boolean
           last_seen_at?: string | null
+          level?: Database["public"]["Enums"]["player_level"]
           name?: string | null
           nickname?: string | null
+          product_updates_unsubscribed_at?: string | null
           profile_completed_at?: string | null
         }
         Relationships: []
@@ -645,7 +765,9 @@ export type Database = {
     }
     Enums: {
       game_status: "draft" | "scheduled" | "active" | "finished"
+      player_level: "junior" | "normal" | "senior"
       player_tee_gender: "mens" | "ladies" | "juniors"
+      user_gender: "mens" | "ladies"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -774,7 +896,9 @@ export const Constants = {
   public: {
     Enums: {
       game_status: ["draft", "scheduled", "active", "finished"],
+      player_level: ["junior", "normal", "senior"],
       player_tee_gender: ["mens", "ladies", "juniors"],
+      user_gender: ["mens", "ladies"],
     },
   },
 } as const
