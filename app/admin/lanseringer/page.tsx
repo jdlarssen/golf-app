@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { MiniRibbon } from '@/components/ui/MiniRibbon';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { formatShortDateNbWithYear, formatMonthLongNb } from '@/lib/format/date';
+import { formatShortDateNbWithYear } from '@/lib/format/date';
 import { previousMonthPeriod } from '@/lib/productUpdates/digest';
 import { publishProductUpdateAction, sendDigestNowAction } from './actions';
 
