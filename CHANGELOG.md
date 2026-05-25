@@ -10,6 +10,47 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.21.y — Sideturnering — 14 nye bonus-kategorier
+
+Sideturneringen vokser fra 27 til 41 kategorier. Nye bragder dekker albatross, hole-in-one, konge-på-par-4, rein 9-tur, ren runde uten double-bogey, comeback-priser, og to nye lag-bonuser. To humor-kategorier (verste enkelthull og flest double-bogeys) gir mild straff. Som standard er alle nye skrudd på i Full pakke-presetet. Issue [#169](https://github.com/jdlarssen/golf-app/issues/169).
+
+### [1.21.0] - 2026-05-25
+
+> Sideturneringen har fått 14 nye bragder du kan jakte på — albatross, hole-in-one, konge på par-4, rein 9-tur og ren runde for ferdighet, comeback kid og to-birdier-på-rad for de hete rundene, «alle birdied» og «lag-par-hull» for laget, pluss litt humor med verste enkelthull og flest double-bogeys. I admin-panelet slår du av enkeltkategorier per spill. Full pakke har alle på fra start.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- 18 nye kategori-IDs i `lib/scoring/sideTournamentConfig.ts` (`SideCategoryId`-union + `ALL_CATEGORY_IDS` + `SIDE_TOURNAMENT_POINTS`-map). Fordelt på 4 tier:
+  - **Skill (4p/2p eller 4p individ):** `most_albatrosses_team/_individual` (netto ≤ par−3), `most_hole_in_ones_team/_individual` (gross = 1), `king_par4_team/_individual` (lavest brutto på par-4 hull), `clean_front_9` + `clean_back_9` (alle 9 hull netto ≤ par), `no_double_plus_round` (alle 18 hull netto ≤ par+1).
+  - **Moderate (2p individ):** `hardest_hole_winner` (best brutto på SI=1-hullet), `comeback_kid` (mest negativ delta fra F9-net til B9-net), `all_par_groups_birdie` (birdie på par-3, 4 og 5 hver), `even_par_round` (sum(netto) = sum(coursePars)), `back_to_back_birdies` (2-streak, stackable).
+  - **Coord-bonus (lag-koord, stackable):** `team_all_birdied_bonus` (4p × N når alle medlemmer har minst én birdie), `team_no_bogey_hole_coord` (2p × N stackable per hull der hele laget har netto ≤ par).
+  - **Humor (-1p individ):** `worst_single_hole_brutto` (høyest enkelthull-brutto), `most_double_bogeys_individual` (flest netto ≥ par+2).
+- Migrasjon `0027_side_tournament_bonus_categories.sql` — utvider `games_side_disabled_categories_valid` constrainten med de 18 nye IDs (atomær drop+re-add).
+- `SideTournamentInput.courseStrokeIndices: number[]` — nytt 18-element-felt for stroke-index per hull. Brukes kun av `hardest_hole_winner`. Bygges i `app/games/[id]/leaderboard/page.tsx` parallelt med `coursePars`.
+- `SideCategoryAward.delta?: number` — nytt felt brukt av `comeback_kid` for å rendre «snudd X slag på back-9».
+- 28 nye tester i `lib/scoring/sideTournament.test.ts` — dekker happy paths, ties, empty-guards, par-type-mangler og disqualifications for hver av de 14 kategoriene.
+- 14 nye picker-entries i `components/admin/SideCategoriesPicker.tsx`. Ny gruppe «Minuspoeng» som samler snowman (-2p) + de to nye humor-kategoriene (-1p hver).
+- 14 nye render-blokker i `app/games/[id]/leaderboard/SideTournamentView.tsx` med matchende `CATEGORY_GROUPS`/`PANEL_GROUPS`-oppføringer.
+
+#### Changed
+- `calculateSideTournament` i `lib/scoring/sideTournament.ts` — 14 nye if-blokker etter snowman (kategori #19). `SideCategory`-union utvidet. `countMatchesForPlayer`/`Team` brukt på netto for albatross; inline gross-loop for hole-in-one siden helperne er netto-bare per design.
+- Snowman flyttet fra «Bragder»-gruppen til ny «Minuspoeng»-gruppe i picker og fra `achievement`-panel-seksjon til `penalty`-panel-seksjon i view, slik at alle negativ-poeng-kategorier står samlet.
+- `lib/games/sideTournamentPayload.test.ts` — sanity-assertion oppdatert fra 27 til 45 ID-er (27 eksisterende + 18 nye).
+
+#### Notes
+- Eagles+ (netto ≤ par−2) forblir inklusiv — en albatross teller både under `most_eagles_*` og som egen `most_albatrosses_*`-kategori. Bevisst valg: back-compat med ferdigspilte spill, ingen data-migrasjon. Flagget i picker-hjelpetekst.
+- Eksisterende ferdigspilte spill med `side_disabled_categories = '{}'` (Full pakke) får automatisk de 18 nye kategoriene aktivert ved neste leaderboard-fetch. Spillere kan se «nye utmerkelser» dukke opp på historiske runder hvor noen har gjort en albatross eller hole-in-one — feel-good, ikke regression.
+- Test-suite vokst fra 958 → 986 (+28 nye tester).
+
+</details>
+
+---
+
+<details>
+<summary><strong>1.20.y — Handicap-chip på hjem-siden (1 oppføring) — klikk for å vise</strong></summary>
+
 ## 1.20.y — Handicap-chip på hjem-siden
 
 Handicapen din vises nå alltid øverst på hjem-siden så du ser hvor du står. Får en aksent-farge når den ikke har vært bekreftet på fire uker, så du oppdager passivt at den er gammel. Issue [#209](https://github.com/jdlarssen/golf-app/issues/209) — komplementerer [#168](https://github.com/jdlarssen/golf-app/issues/168) sitt prompt-kort i venterommet.
@@ -32,6 +73,8 @@ Handicapen din vises nå alltid øverst på hjem-siden så du ser hvor du står.
 - Tap-flyten gjenbruker `safeNextPath`-mekanikken fra [#168](https://github.com/jdlarssen/golf-app/issues/168) — ingen nye redirect-kodebaner.
 - Chip vises kun på `/`. På `/games/[id]` står #168 sitt prompt-kort allerede klart.
 - Test-suite vokst fra 979 → 986 (+7 nye chip-tester).
+
+</details>
 
 </details>
 

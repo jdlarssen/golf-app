@@ -1,5 +1,5 @@
 -- 0027_side_tournament_bonus_categories.sql
--- v1.19.0 — utvider sideturnerings-katalogen med 19 nye kategori-IDs
+-- v1.19.0 — utvider sideturnerings-katalogen med 18 nye kategori-IDs
 -- (issue #169). 14 nye «bonus»-kategorier fordelt på fire tier:
 --   • Skill   (4p/2p eller 4p individ): albatross, hole-in-one, konge-på-par-4,
 --     rein-halvdel (F9/B9), ren-runde-uten-double
@@ -34,7 +34,7 @@ alter table public.games add constraint games_side_disabled_categories_valid che
     'hole_win',
     'longest_drive', 'closest_to_pin',
     'turkey', 'solid', 'snowman',
-    -- v1.19.0 nye kategorier (issue #169) — 19 IDs
+    -- v1.19.0 nye kategorier (issue #169) — 18 IDs
     -- Tier 2 — skill+rarity
     'most_albatrosses_team', 'most_albatrosses_individual',
     'most_hole_in_ones_team', 'most_hole_in_ones_individual',

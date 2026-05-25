@@ -44,7 +44,7 @@ export const SIDE_TOURNAMENT_POINTS = {
   solidCoordPerMember: 2,
   snowman: -2,
 
-  // v1.19.0 nye kategorier (issue #169) — 19 nye IDs fordelt på 4 tier.
+  // v1.19.0 nye kategorier (issue #169) — 18 nye IDs fordelt på 4 tier.
   // Tier 2 — skill+rarity (4p lag / 2p individ for team+individ-par;
   // 4p individ for ren-runde/rein-halvdel-terskler).
   mostAlbatrossesTeam: 4,

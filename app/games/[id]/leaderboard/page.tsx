@@ -62,7 +62,6 @@ import {
   type SideTournamentInput,
   type SideWinner,
 } from '@/lib/scoring/sideTournament';
-import type { SideCategoryId } from '@/lib/scoring/sideTournamentConfig';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { revealState } from '@/lib/games/visibility';
 import { formatRevealName } from '@/lib/names/formatRevealName';
