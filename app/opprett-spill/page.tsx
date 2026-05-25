@@ -5,7 +5,7 @@ import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { GameForm } from '@/app/admin/games/new/GameForm';
+import { GameWizard } from '@/app/admin/games/new/GameWizard';
 import {
   createGameDraft,
   createAndPublishGame,
@@ -116,7 +116,7 @@ async function PlayerShortageBanner() {
 async function GameFormBody() {
   const { courses, players } = await getNewGameFormData();
   return (
-    <GameForm
+    <GameWizard
       courses={courses}
       players={players}
       mode={{

@@ -21,11 +21,18 @@ type Props = {
    * lever de inne i BasicsSection.
    */
   includeVisibility?: boolean;
+  /**
+   * Skjul «6. Innstillinger»-headingen. Wizard-en monter denne seksjonen inne
+   * i ReadyStep sin avanserte disclosure som allerede har sin egen label, så
+   * dobbel-merking unngås ved å droppe headingen.
+   */
+  hideHeading?: boolean;
 };
 
 export function AdvancedSettingsSection({
   state,
   includeVisibility = false,
+  hideHeading = false,
 }: Props) {
   const {
     isTexas,
@@ -49,7 +56,9 @@ export function AdvancedSettingsSection({
 
   return (
     <section className="space-y-4">
-      <h2 className="text-sm font-medium text-text">6. Innstillinger</h2>
+      {!hideHeading && (
+        <h2 className="text-sm font-medium text-text">6. Innstillinger</h2>
+      )}
       {isTexas ? (
         <Input
           id="texas_team_handicap_pct_input"

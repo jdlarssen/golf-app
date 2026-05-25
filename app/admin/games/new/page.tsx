@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { GameForm } from './GameForm';
+import { GameWizard } from './GameWizard';
 import { createGameDraft, createAndPublishGame } from './actions';
 import {
   ERROR_MESSAGES_NEW_GAME,
@@ -109,7 +109,7 @@ async function PlayerShortageBanner() {
 async function GameFormBody() {
   const { courses, players } = await getNewGameFormData();
   return (
-    <GameForm
+    <GameWizard
       courses={courses}
       players={players}
       mode={{
