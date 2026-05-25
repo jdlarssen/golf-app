@@ -73,6 +73,8 @@ type UserRow = {
   hcp_index: number | string;
   email: string;
   profile_completed_at: string | null;
+  gender: 'mens' | 'ladies' | null;
+  level: 'junior' | 'normal' | 'senior';
 };
 
 type GameRow = {
@@ -238,7 +240,7 @@ const getOptions = cache(async () => {
       .returns<CourseRow[]>(),
     supabase
       .from('users')
-      .select('id, name, nickname, hcp_index, email, profile_completed_at')
+      .select('id, name, nickname, hcp_index, email, profile_completed_at, gender, level')
       .order('profile_completed_at', { ascending: true, nullsFirst: false })
       .order('name', { ascending: true, nullsFirst: true })
       .returns<UserRow[]>(),
@@ -276,6 +278,8 @@ const getOptions = cache(async () => {
     hcp_index: Number(u.hcp_index),
     email: u.email,
     pending: u.profile_completed_at === null,
+    gender: u.gender,
+    level: u.level,
   }));
 
   return { courses, playerOptions };

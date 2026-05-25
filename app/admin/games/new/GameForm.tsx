@@ -30,6 +30,8 @@ export type PlayerOption = {
   hcp_index: number;
   email: string;
   pending: boolean;          // derived from profile_completed_at IS NULL
+  gender: 'mens' | 'ladies' | null;  // null = not answered yet → soft-prompt on /profile
+  level: 'junior' | 'normal' | 'senior';
 };
 
 export type InitialValues = {

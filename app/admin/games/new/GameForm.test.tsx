@@ -24,6 +24,8 @@ function makePlayer(id: string, name: string, hcp: number = 18): PlayerOption {
     hcp_index: hcp,
     email: `${id}@example.com`,
     pending: false,
+    gender: null,
+    level: 'normal',
   };
 }
 
