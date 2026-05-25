@@ -13,6 +13,8 @@ const baseInitial = {
   nickname: 'Per',
   hcpIndex: '12.4',
   productUpdatesOptIn: true,
+  gender: 'mens' as const,
+  level: 'normal' as const,
 };
 
 describe('ProfileFormBody — Mail-innstillinger toggle', () => {

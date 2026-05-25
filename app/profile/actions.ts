@@ -6,12 +6,18 @@ import { safeNextPath } from './safeNext';
 
 const HCP_MIN = -10;
 const HCP_MAX = 54.0;
+const GENDERS = ['mens', 'ladies'] as const;
+const LEVELS = ['junior', 'normal', 'senior'] as const;
+type Gender = (typeof GENDERS)[number];
+type Level = (typeof LEVELS)[number];
 
 export async function updateProfile(formData: FormData) {
   const name = String(formData.get('name') ?? '').trim();
   const nicknameRaw = String(formData.get('nickname') ?? '').trim();
   const nickname = nicknameRaw === '' ? null : nicknameRaw;
   const hcpRaw = String(formData.get('hcp_index') ?? '').trim();
+  const genderRaw = String(formData.get('gender') ?? '').trim();
+  const levelRaw = String(formData.get('level') ?? 'normal').trim();
   // Optional ?next=-redirect target. Validation in safeNextPath rejects
   // anything that isn't a same-origin path (open-redirect vern).
   const nextRaw = formData.get('next');
@@ -28,6 +34,16 @@ export async function updateProfile(formData: FormData) {
   if (!Number.isFinite(hcpParsed) || hcpParsed < HCP_MIN || hcpParsed > HCP_MAX) {
     redirect(`${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=hcp_invalid`);
   }
+
+  if (!GENDERS.includes(genderRaw as Gender)) {
+    redirect(`${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=gender_required`);
+  }
+  const gender = genderRaw as Gender;
+
+  if (!LEVELS.includes(levelRaw as Level)) {
+    redirect(`${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=level_invalid`);
+  }
+  const level = levelRaw as Level;
 
   // Product-updates opt-in toggle (issue #202). Checkbox-feltet er bare med
   // i FormData når det er checked, så fravær = opt-out.
@@ -64,6 +80,8 @@ export async function updateProfile(formData: FormData) {
       profile_completed_at: now,
       // null = opted in (default), timestamp = opted out at that moment.
       product_updates_unsubscribed_at: productUpdatesOptIn ? null : now,
+      gender,
+      level,
     })
     .eq('id', user.id);
 

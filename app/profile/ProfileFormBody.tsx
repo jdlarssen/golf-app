@@ -12,6 +12,8 @@ type InitialValues = {
   hcpIndex: string;
   /** True når brukeren IKKE er meldt av månedsbrevet (product-updates). */
   productUpdatesOptIn: boolean;
+  gender: 'mens' | 'ladies' | null;
+  level: 'junior' | 'normal' | 'senior';
 };
 
 type Props = {
@@ -53,13 +55,17 @@ export function ProfileFormBody({ email, initial, action, next }: Props) {
       nickname: String(fd.get('nickname') ?? '').trim(),
       hcpIndex: String(fd.get('hcp_index') ?? '').trim(),
       productUpdatesOptIn: fd.get('product_updates_opt_in') === 'on',
+      gender: (fd.get('gender') as string | null) ?? null,
+      level: (fd.get('level') as string | null) ?? null,
     };
     const base = initialRef.current;
     setDirty(
       cur.name !== base.name.trim() ||
         cur.nickname !== base.nickname.trim() ||
         cur.hcpIndex !== base.hcpIndex.trim() ||
-        cur.productUpdatesOptIn !== base.productUpdatesOptIn,
+        cur.productUpdatesOptIn !== base.productUpdatesOptIn ||
+        cur.gender !== base.gender ||
+        cur.level !== base.level,
     );
   }
 
@@ -114,6 +120,75 @@ export function ProfileFormBody({ email, initial, action, next }: Props) {
         inputMode="decimal"
         inputClassName="score-num"
       />
+
+      <fieldset id="kjonn">
+        <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          Kjønn
+        </legend>
+        <div className="mt-2 flex gap-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="gender"
+              value="mens"
+              defaultChecked={initial.gender === 'mens'}
+              required
+            />
+            <span className="font-serif text-base text-text">Herre</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="gender"
+              value="ladies"
+              defaultChecked={initial.gender === 'ladies'}
+              required
+            />
+            <span className="font-serif text-base text-text">Dame</span>
+          </label>
+        </div>
+        <p className="mt-1 text-xs text-muted">
+          Brukes til å foreslå riktig tee og beregne course handicap riktig.
+        </p>
+      </fieldset>
+
+      <fieldset>
+        <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          Spillerklasse
+        </legend>
+        <div className="mt-2 flex gap-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="level"
+              value="junior"
+              defaultChecked={initial.level === 'junior'}
+            />
+            <span className="font-serif text-base text-text">Junior</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="level"
+              value="normal"
+              defaultChecked={initial.level === 'normal'}
+            />
+            <span className="font-serif text-base text-text">Voksen</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="level"
+              value="senior"
+              defaultChecked={initial.level === 'senior'}
+            />
+            <span className="font-serif text-base text-text">Senior</span>
+          </label>
+        </div>
+        <p className="mt-1 text-xs text-muted">
+          Junior gir juniortee når banen har en. Senior er en informasjons-tag for nå.
+        </p>
+      </fieldset>
 
       <div className="pt-2">
         <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">

@@ -27,7 +27,9 @@ type SearchParams = Promise<{
 
 const ERROR_MESSAGES: Record<string, string> = {
   name_required: 'Du må fylle inn navn.',
-  hcp_invalid: 'Handicap-index må være et tall mellom -10 og 54.0.',
+  hcp_invalid: 'Handicap-index må være et tall mellom -10 og 54,0.',
+  gender_required: 'Velg kjønn.',
+  level_invalid: 'Ugyldig spillerklasse.',
   unknown: 'Noe gikk galt. Prøv igjen.',
 };
 
@@ -103,6 +105,10 @@ export default async function ProfilePage({
         </div>
       )}
 
+      <Suspense fallback={null}>
+        <GenderSoftPrompt />
+      </Suspense>
+
       <Suspense fallback={<ProfileFormSkeleton />}>
         <ProfileFormCard errorMessage={errorMessage} next={nextSafe} />
       </Suspense>
@@ -151,7 +157,7 @@ async function ProfileFormCard({
   const { data: profile, error: profileError } = await supabase
     .from('users')
     .select(
-      'name, nickname, hcp_index, email, profile_completed_at, product_updates_unsubscribed_at',
+      'name, nickname, hcp_index, email, profile_completed_at, product_updates_unsubscribed_at, gender, level',
     )
     .eq('id', userId!)
     .single();
@@ -180,11 +186,44 @@ async function ProfileFormCard({
           hcpIndex:
             profile.hcp_index == null ? '' : String(profile.hcp_index),
           productUpdatesOptIn: profile.product_updates_unsubscribed_at == null,
+          gender: profile.gender,
+          level: profile.level,
         }}
         action={updateProfile}
         next={next}
       />
     </Card>
+  );
+}
+
+async function GenderSoftPrompt() {
+  const { supabase, userId } = await getProfileContext();
+  if (!userId) return null;
+  const { data: profile } = await supabase
+    .from('users')
+    .select('gender')
+    .eq('id', userId)
+    .single();
+  if (!profile || profile.gender !== null) return null;
+
+  return (
+    <div className="mb-4">
+      <Card>
+        <h2 className="font-serif text-base font-medium text-text mb-1">
+          Velg kjønn for tee-anbefaling
+        </h2>
+        <p className="text-sm text-muted mb-3">
+          Tørny vet ikke hvilken tee du normalt spiller fra. Sett det her, så
+          går det raskere når noen oppretter et spill du skal være med på.
+        </p>
+        <SmartLink
+          href="#kjonn"
+          className="inline-flex items-center rounded-full bg-primary px-4 py-2 font-sans text-[13px] font-medium text-bg hover:bg-primary/90 transition-colors"
+        >
+          Sett kjønn
+        </SmartLink>
+      </Card>
+    </div>
   );
 }
 
