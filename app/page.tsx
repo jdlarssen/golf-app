@@ -15,6 +15,7 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { PinFlag } from '@/components/icons/PinFlag';
 import { InstallBanner } from '@/components/pwa/InstallBanner';
+import { ProductUpdateBanner } from '@/components/products/ProductUpdateBanner';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { HandicapChip } from '@/components/handicap/HandicapChip';
 import { firstName } from '@/lib/firstName';
@@ -63,6 +64,10 @@ export default async function Home({
       </div>
 
       <InstallBanner />
+
+      <Suspense fallback={null}>
+        <ProductUpdateBanner userId={userId} />
+      </Suspense>
 
       {profileUpdated && (
         <div className="mb-4">
