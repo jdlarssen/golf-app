@@ -14,6 +14,23 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Fase 3 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Soft-arkiverte tees kan gjenåpnes fra edit-flaten, bane-listens filter-state ligger i URL-en, og legacy-rader uten `updated_by` er backfilt fra `created_by`.
 
+### [1.27.1] - 2026-05-25
+
+> Når du gjenåpner en arkivert tee og klikker «Lagre endringer» rett etterpå, blir tee-en nå værende aktiv. Tidligere kunne et stille mellomledd i Next.js-cachen gjøre at edit-skjemaet fortsatt så tee-en som arkivert, så lagringen re-arkiverte den.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- [app/admin/courses/[id]/edit/actions.ts](app/admin/courses/[id]/edit/actions.ts) `restoreTee` kaller nå `revalidatePath` på edit-pathen, `/admin/courses` og `/admin/games/new` før redirect. Uten dette returnerte Supabase JS-en sitt fetch-cache-hit (samme URL + params) den stale `archived_at IS NULL`-listen fra før restore. CourseForm rendret derfor med 2 av 3 tees, og en påfølgende Lagre sendte FormData uten den restaurerte tee-en — `updateCourse` regnet den som «fjernet» og soft-arkiverte den på nytt.
+- Ny regresjons-assert i `actions.test.ts` happy-path: verifiserer at `revalidatePath` kalles for alle tre paths som leser archived_at-tilstanden.
+
+#### Notes
+- Funnet under manuell røyk-test på preview ([PR #228](https://github.com/jdlarssen/golf-app/pull/228)) av Fase 3. Reproduksjon: arkivér en tee → Gjenåpne → klikk Lagre uten andre endringer → tee re-arkiveres. Forge-evaluatoren fanget det ikke (testet hver server-action isolert, ikke restore-så-Lagre-flyten).
+- Lærdom: server-actions som muterer data lest av samme route MÅ kalle `revalidatePath`. Supabase JS bruker `fetch` internt, og Next.js auto-cacher fetch-responser på URL+params-nøkkel.
+
+</details>
+
 ### [1.27.0] - 2026-05-25
 
 > Du kan nå gjenåpne en arkivert tee fra bane-redigeringen — den dukker opp igjen i skjemaet og kan velges for nye spill. Bane-listens søk, sortering og chip-filter lagres nå i URL-en, så en filtrert visning er bokmerke-bar og kan deles via lenke. Eldre baner uten «Sist endret av»-navn har fått det fylt ut bakover-i-tid.

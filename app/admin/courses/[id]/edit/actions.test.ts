@@ -16,6 +16,11 @@ vi.mock('next/navigation', () => ({
   redirect: (url: string) => redirectMock(url),
 }));
 
+const revalidatePathMock = vi.fn();
+vi.mock('next/cache', () => ({
+  revalidatePath: (path: string) => revalidatePathMock(path),
+}));
+
 let supabaseMock: ReturnType<typeof buildSupabaseMock>;
 vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
@@ -70,6 +75,16 @@ describe('restoreTee', () => {
     expect(lastRedirect()).toBe(
       `/admin/courses/${courseId}/edit?status=restored`,
     );
+
+    // Regression: revalidatePath must fire for the edit-page so the next
+    // render's CourseForm fetch returns the now-active tee. Without this,
+    // a subsequent Lagre would send stale formData missing the restored
+    // tee and updateCourse would re-archive it.
+    expect(revalidatePathMock).toHaveBeenCalledWith(
+      `/admin/courses/${courseId}/edit`,
+    );
+    expect(revalidatePathMock).toHaveBeenCalledWith('/admin/courses');
+    expect(revalidatePathMock).toHaveBeenCalledWith('/admin/games/new');
 
     const updateCalls = supabaseMock.__fromCalls.filter(
       (c) => c.method === 'update',

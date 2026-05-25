@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import { MAX_TEE_BOXES } from '@/app/admin/courses/constants';
 
@@ -300,6 +301,16 @@ export async function restoreTee(
     })
     .eq('id', courseId);
   if (courseUpdateError) redirect(`${editPath}?error=db_course`);
+
+  // Invalidate route caches so CourseForm's tee-list fetch refetches fresh:
+  // without this, the next render of the edit page may serve the cached
+  // archived_at-IS-NULL response from before restore, which excluded this
+  // tee — causing a subsequent Lagre to send a formData missing it, which
+  // updateCourse then re-archives. Also invalidate the list-page since
+  // tee_count + audit-kicker change for this course.
+  revalidatePath(`/admin/courses/${courseId}/edit`);
+  revalidatePath('/admin/courses');
+  revalidatePath('/admin/games/new');
 
   redirect(`${editPath}?status=restored`);
 }
