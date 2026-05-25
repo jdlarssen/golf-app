@@ -14,6 +14,23 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Fase 3 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Soft-arkiverte tees kan gjenåpnes fra edit-flaten, bane-listens filter-state ligger i URL-en, og legacy-rader uten `updated_by` er backfilt fra `created_by`.
 
+### [1.27.2] - 2026-05-25
+
+> Andre forsøk på samme fix. Når du gjenåpner en arkivert tee og klikker «Lagre endringer» rett etterpå, holder tee-en seg nå aktiv. Forrige fix (1.27.1) løste serverside-cachen, men ikke selve skjemaet — som tegnet med innholdet fra før gjenåpningen og dermed sendte det videre på neste lagring.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- [app/admin/courses/[id]/edit/page.tsx](app/admin/courses/[id]/edit/page.tsx) gir nå `<CourseForm key={teeSetKey}>` der `teeSetKey` er sortert join av aktive tee-IDer. Når en archive eller restore endrer tee-settet, unmounter React den gamle form-instansen og monterer en frisk. Uten dette beholdt `useState(initialTees)` sitt opprinnelige 2-tee-state etter restore-redirect — selv om server-komponenten re-rendret med 3 tees som ny `initialData`, leste `useState` bare initial-verdien på første mount.
+
+#### Notes
+- Roten var en klassisk Next.js client-component-felle: server-side data fra props endrer seg, men client-state initialisert fra props gjør det ikke (useState-initializer kjører kun én gang). Manifestasjonen så ut som en cache-bug (1.27.1-feildiagnose), men `revalidatePath` rørte ikke client-state.
+- Forge-evaluator + vitest fanget ikke dette fordi testene mocket props og verifiserte rendering — ikke hvordan client-state overlever en server-side re-render.
+- Lærdom: for client-components der server-data endres dynamisk (via server-action redirect tilbake til samme route), gi en `key` som signaliserer datasett-endring. CourseForm har samme felle for hull-data, men hull endres ikke via separate server-actions, så det manifesterer ikke der.
+
+</details>
+
 ### [1.27.1] - 2026-05-25
 
 > Når du gjenåpner en arkivert tee og klikker «Lagre endringer» rett etterpå, blir tee-en nå værende aktiv. Tidligere kunne et stille mellomledd i Next.js-cachen gjøre at edit-skjemaet fortsatt så tee-en som arkivert, så lagringen re-arkiverte den.

@@ -290,8 +290,20 @@ async function EditCourseFormBody({
   // FormData payload — keeps CourseForm reusable across create + edit.
   const updateAction = updateCourse.bind(null, courseId);
 
+  // Key on the active tee-id set so React unmounts + remounts CourseForm
+  // when the set changes (archive or restore). Without this, the client
+  // component's useState(initialTees) stays seeded with the old list even
+  // after a server re-render — and a subsequent Lagre would send the stale
+  // form state, causing updateCourse to treat the just-restored tee as
+  // "removed" and re-archive it. See PR #228 fix.
+  const teeSetKey = initialTees
+    .map((t) => t.id)
+    .sort()
+    .join('|');
+
   return (
     <CourseForm
+      key={teeSetKey}
       action={updateAction}
       submitLabel="Lagre endringer"
       initialData={{
