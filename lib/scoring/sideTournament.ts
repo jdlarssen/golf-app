@@ -1390,6 +1390,175 @@ export function calculateSideTournament(
     }
   }
 
+  // 26. Hardest-hole winner — 2p individ
+  // Locate the hole with SI=1 (banens hardeste), then award lowest brutto on
+  // that hole. Tie → all winners get 2p, deduped per team. Skip if no SI=1
+  // hole (shouldn't happen — `course_holes` has UNIQUE constraint per SI) or
+  // if no player has a recorded brutto on that hole.
+  if (!isDisabled('hardest_hole_winner', input.config)) {
+    const hardestHoleIdx = input.courseStrokeIndices.findIndex((si) => si === 1);
+    if (hardestHoleIdx >= 0) {
+      const playerGross = input.playerScoresPerHole
+        .map((p) => {
+          const g = p.perHoleGross[hardestHoleIdx];
+          return g == null ? null : { userId: p.userId, score: g };
+        })
+        .filter((p): p is { userId: UserId; score: number } => p !== null);
+      if (playerGross.length > 0) {
+        const min = Math.min(...playerGross.map((p) => p.score));
+        const winners = playerGross.filter((p) => p.score === min);
+        const seenTeams = new Set<TeamId>();
+        for (const w of winners) {
+          const teamId = teamIdForUser(input.teams, w.userId);
+          if (teamId != null && !seenTeams.has(teamId)) {
+            seenTeams.add(teamId);
+            award(teamId, {
+              category: 'hardest_hole_winner',
+              teamId,
+              points: SIDE_TOURNAMENT_POINTS.hardestHoleWinner,
+              score: w.score,
+              holeNumber: hardestHoleIdx + 1,
+              winnerUserId: w.userId,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // 27. Comeback kid — 2p individ
+  // For each player with complete 18-hole netto: delta = sum(B9) - sum(F9).
+  // Most negative delta wins (biggest improvement). Requires delta < 0 — if
+  // nobody had a better B9 than F9, no award. Stores delta on the award for
+  // leaderboard rendering.
+  if (!isDisabled('comeback_kid', input.config)) {
+    const playerDeltas: Array<{ userId: UserId; delta: number }> = [];
+    for (const p of input.playerScoresPerHole) {
+      const f9 = sumHoles(p.perHoleNetto, 0, 9);
+      const b9 = sumHoles(p.perHoleNetto, 9, 18);
+      if (f9 == null || b9 == null) continue;
+      playerDeltas.push({ userId: p.userId, delta: b9 - f9 });
+    }
+    if (playerDeltas.length > 0) {
+      const min = Math.min(...playerDeltas.map((p) => p.delta));
+      if (min < 0) {
+        const winners = playerDeltas.filter((p) => p.delta === min);
+        const seenTeams = new Set<TeamId>();
+        for (const w of winners) {
+          const teamId = teamIdForUser(input.teams, w.userId);
+          if (teamId != null && !seenTeams.has(teamId)) {
+            seenTeams.add(teamId);
+            award(teamId, {
+              category: 'comeback_kid',
+              teamId,
+              points: SIDE_TOURNAMENT_POINTS.comebackKid,
+              winnerUserId: w.userId,
+              delta: w.delta,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // 28. All-rounder birdie — `all_par_groups_birdie` (2p individ)
+  // For each player: at least one birdie (netto < par) on a par-3 AND a par-4
+  // AND a par-5. Gates up-front on the course having all three par-types.
+  if (!isDisabled('all_par_groups_birdie', input.config)) {
+    const hasP3 = input.coursePars.some((p) => p === 3);
+    const hasP4 = input.coursePars.some((p) => p === 4);
+    const hasP5 = input.coursePars.some((p) => p === 5);
+    if (hasP3 && hasP4 && hasP5) {
+      const qualifiers: UserId[] = [];
+      for (const p of input.playerScoresPerHole) {
+        let b3 = false, b4 = false, b5 = false;
+        for (let h = 0; h < 18; h++) {
+          const par = input.coursePars[h];
+          const netto = p.perHoleNetto[h];
+          if (par == null || netto == null) continue;
+          if (netto < par) {
+            if (par === 3) b3 = true;
+            else if (par === 4) b4 = true;
+            else if (par === 5) b5 = true;
+          }
+        }
+        if (b3 && b4 && b5) qualifiers.push(p.userId);
+      }
+      if (qualifiers.length > 0) {
+        const seenTeams = new Set<TeamId>();
+        for (const userId of qualifiers) {
+          const teamId = teamIdForUser(input.teams, userId);
+          if (teamId != null && !seenTeams.has(teamId)) {
+            seenTeams.add(teamId);
+            award(teamId, {
+              category: 'all_par_groups_birdie',
+              teamId,
+              points: SIDE_TOURNAMENT_POINTS.allParGroupsBirdie,
+              winnerUserId: userId,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // 29. Even-par-runden — 2p individ
+  // Player's full-18 netto total equals sum(coursePars). Requires all 18
+  // holes played. Tie → all get 2p, deduped per team.
+  if (!isDisabled('even_par_round', input.config)) {
+    const parTotal = input.coursePars.reduce((s, p) => s + (p ?? 0), 0);
+    const qualifiers: UserId[] = [];
+    for (const p of input.playerScoresPerHole) {
+      const netTotal = sumHoles(p.perHoleNetto, 0, 18);
+      if (netTotal != null && netTotal === parTotal) qualifiers.push(p.userId);
+    }
+    if (qualifiers.length > 0) {
+      const seenTeams = new Set<TeamId>();
+      for (const userId of qualifiers) {
+        const teamId = teamIdForUser(input.teams, userId);
+        if (teamId != null && !seenTeams.has(teamId)) {
+          seenTeams.add(teamId);
+          award(teamId, {
+            category: 'even_par_round',
+            teamId,
+            points: SIDE_TOURNAMENT_POINTS.evenParRound,
+            winnerUserId: userId,
+          });
+        }
+      }
+    }
+  }
+
+  // 30. Back-to-back birdies — 2p stackable, individ
+  // For each player: every non-overlapping 2-hole window where netto < par on
+  // both. Awards 2p per streak to the player's team. No coord-bonus (too
+  // frequent to be worth a separate pot at the 2-streak level).
+  if (!isDisabled('back_to_back_birdies', input.config)) {
+    for (const p of input.playerScoresPerHole) {
+      const teamId = teamIdForUser(input.teams, p.userId);
+      if (teamId == null) continue;
+      const streaks = findNonOverlappingStreaks(
+        p.perHoleNetto,
+        2,
+        (netto, h) => {
+          const par = input.coursePars[h];
+          return par != null && netto < par;
+        },
+      );
+      for (const s of streaks) {
+        award(teamId, {
+          category: 'back_to_back_birdies',
+          teamId,
+          points: SIDE_TOURNAMENT_POINTS.backToBackBirdies,
+          winnerUserId: p.userId,
+          streakLength: 2,
+          streakStartHole: s.startHole,
+          streakEndHole: s.endHole,
+        });
+      }
+    }
+  }
+
   return {
     teamStandings: input.teams.map((t) => ({
       teamId: t.teamId,

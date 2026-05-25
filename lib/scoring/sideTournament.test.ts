@@ -4027,4 +4027,289 @@ describe('calculateSideTournament', () => {
       expect(awards.some((a) => a.category === 'no_double_plus_round')).toBe(false);
     });
   });
+
+  describe('hardest_hole_winner (v1.19.0)', () => {
+    const par4Course = (): number[] => new Array(18).fill(4);
+
+    const playerGN = (
+      userId: string,
+      perHoleGross: Array<number | null>,
+      perHoleNetto?: Array<number | null>,
+    ): SideTournamentInput['playerScoresPerHole'][number] => ({
+      userId,
+      perHoleGross,
+      perHoleNetto: perHoleNetto ?? perHoleGross,
+    });
+
+    it('lowest brutto on SI=1 hole earns 2p', () => {
+      // SI=1 on hole 5 (idx 4). user-a has lowest gross there (3).
+      const si = Array.from({ length: 18 }, (_, i) => i + 1);
+      // Move SI=1 to hole index 4
+      si[0] = 5; si[4] = 1;
+      const userAGross = new Array(18).fill(5);
+      userAGross[4] = 3; // lowest on SI=1
+      const userBGross = new Array(18).fill(5);
+      userBGross[4] = 4;
+      const userCGross = new Array(18).fill(5);
+      userCGross[4] = 5;
+      const userDGross = new Array(18).fill(5);
+      userDGross[4] = 5;
+      const input = baseInput({
+        coursePars: par4Course(),
+        courseStrokeIndices: si,
+        playerScoresPerHole: [
+          playerGN('user-a', userAGross),
+          playerGN('user-b', userBGross),
+          playerGN('user-c', userCGross),
+          playerGN('user-d', userDGross),
+        ],
+      });
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const award = t1.awards.find((a) => a.category === 'hardest_hole_winner');
+      expect(award?.points).toBe(2);
+      expect(award?.holeNumber).toBe(5);
+      expect(award?.score).toBe(3);
+    });
+
+    it('tie on hardest hole → both teams get 2p deduped', () => {
+      const si = Array.from({ length: 18 }, (_, i) => i + 1);
+      si[0] = 2; si[7] = 1; // SI=1 on hole 8
+      const userAGross = new Array(18).fill(5);
+      userAGross[7] = 3;
+      const userBGross = new Array(18).fill(5);
+      const userCGross = new Array(18).fill(5);
+      userCGross[7] = 3; // tied with user-a
+      const userDGross = new Array(18).fill(5);
+      const input = baseInput({
+        coursePars: par4Course(),
+        courseStrokeIndices: si,
+        playerScoresPerHole: [
+          playerGN('user-a', userAGross),
+          playerGN('user-b', userBGross),
+          playerGN('user-c', userCGross),
+          playerGN('user-d', userDGross),
+        ],
+      });
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
+      expect(t1.awards.find((a) => a.category === 'hardest_hole_winner')?.points).toBe(2);
+      expect(t2.awards.find((a) => a.category === 'hardest_hole_winner')?.points).toBe(2);
+    });
+  });
+
+  describe('comeback_kid (v1.19.0)', () => {
+    const par4Course = (): number[] => new Array(18).fill(4);
+
+    const player = (
+      userId: string,
+      perHoleNetto: Array<number | null>,
+    ): SideTournamentInput['playerScoresPerHole'][number] => ({
+      userId,
+      perHoleGross: perHoleNetto,
+      perHoleNetto,
+    });
+
+    it('player with biggest B9-F9 improvement earns 2p', () => {
+      // user-a: F9 sum = 9×5=45, B9 = 9×3=27 → delta -18 (best)
+      // others: flat 4
+      const userANetto = [5, 5, 5, 5, 5, 5, 5, 5, 5, 3, 3, 3, 3, 3, 3, 3, 3, 3];
+      const userBNetto = new Array(18).fill(4);
+      const userCNetto = new Array(18).fill(4);
+      const userDNetto = new Array(18).fill(4);
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const award = t1.awards.find((a) => a.category === 'comeback_kid');
+      expect(award?.points).toBe(2);
+      expect(award?.delta).toBe(-18);
+      expect(award?.winnerUserId).toBe('user-a');
+    });
+
+    it('no player improves on B9 → no award', () => {
+      const userANetto = new Array(18).fill(4); // delta 0
+      const userBNetto = new Array(18).fill(4);
+      const userCNetto = new Array(18).fill(4);
+      const userDNetto = new Array(18).fill(4);
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+      expect(awards.some((a) => a.category === 'comeback_kid')).toBe(false);
+    });
+  });
+
+  describe('all_par_groups_birdie (v1.19.0)', () => {
+    // par-3 indices: 2, 6
+    // par-5 indices: 5, 17
+    // rest par-4
+    const mixedParCourse = (): number[] => {
+      const pars = new Array(18).fill(4);
+      pars[2] = 3; pars[6] = 3;
+      pars[5] = 5; pars[17] = 5;
+      return pars;
+    };
+
+    const player = (
+      userId: string,
+      perHoleNetto: Array<number | null>,
+    ): SideTournamentInput['playerScoresPerHole'][number] => ({
+      userId,
+      perHoleGross: perHoleNetto,
+      perHoleNetto,
+    });
+
+    it('player with birdie on par-3, par-4, AND par-5 earns 2p', () => {
+      const userANetto = new Array(18).fill(4);
+      userANetto[2] = 2; // par-3 birdie (par 3)
+      userANetto[0] = 3; // par-4 birdie (par 4)
+      userANetto[5] = 4; // par-5 birdie (par 5)
+      const userBNetto = new Array(18).fill(4);
+      const userCNetto = new Array(18).fill(4);
+      const userDNetto = new Array(18).fill(4);
+      const input = baseInput({
+        coursePars: mixedParCourse(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      expect(t1.awards.find((a) => a.category === 'all_par_groups_birdie')?.points).toBe(2);
+    });
+
+    it('missing par-5 birdie disqualifies → no award', () => {
+      // Fill above-par to start (5 = par on par-5, 5 = bogey on par-4,
+      // 5 = double on par-3); then dial in a par-3 and par-4 birdie ONLY.
+      const userANetto = new Array(18).fill(5);
+      userANetto[2] = 2; // par-3 birdie
+      userANetto[0] = 3; // par-4 birdie
+      // par-5 holes (5, 17) stay at 5 — par on par-5, NOT a birdie
+      const userBNetto = new Array(18).fill(5);
+      const userCNetto = new Array(18).fill(5);
+      const userDNetto = new Array(18).fill(5);
+      const input = baseInput({
+        coursePars: mixedParCourse(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+      expect(awards.some((a) => a.category === 'all_par_groups_birdie')).toBe(false);
+    });
+  });
+
+  describe('even_par_round (v1.19.0)', () => {
+    const par4Course = (): number[] => new Array(18).fill(4);
+
+    const player = (
+      userId: string,
+      perHoleNetto: Array<number | null>,
+    ): SideTournamentInput['playerScoresPerHole'][number] => ({
+      userId,
+      perHoleGross: perHoleNetto,
+      perHoleNetto,
+    });
+
+    it('player with netto-sum equal to par-sum earns 2p', () => {
+      // par-sum = 72. user-a: 17×4=68 + one 4 → 72 (all par)
+      const userANetto = new Array(18).fill(4);
+      const userBNetto = new Array(18).fill(5); // over par
+      const userCNetto = new Array(18).fill(5);
+      const userDNetto = new Array(18).fill(5);
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      expect(t1.awards.find((a) => a.category === 'even_par_round')?.points).toBe(2);
+    });
+
+    it('every player over or under par → no award', () => {
+      const userANetto = new Array(18).fill(5); // 90, par-sum 72
+      const userBNetto = new Array(18).fill(5);
+      const userCNetto = new Array(18).fill(3); // 54
+      const userDNetto = new Array(18).fill(5);
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+      const result = calculateSideTournament(input);
+      const awards = result.teamStandings.flatMap((s) => s.awards);
+      expect(awards.some((a) => a.category === 'even_par_round')).toBe(false);
+    });
+  });
+
+  describe('back_to_back_birdies (v1.19.0)', () => {
+    const par4Course = (): number[] => new Array(18).fill(4);
+
+    const player = (
+      userId: string,
+      perHoleNetto: Array<number | null>,
+    ): SideTournamentInput['playerScoresPerHole'][number] => ({
+      userId,
+      perHoleGross: perHoleNetto,
+      perHoleNetto,
+    });
+
+    it('player with 2 separate 2-streaks earns 2p × 2 = 4p stacked', () => {
+      // birdie on holes 1-2, par, par, birdie on holes 5-6
+      const userANetto = [3, 3, 4, 4, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4];
+      const userBNetto = new Array(18).fill(4);
+      const userCNetto = new Array(18).fill(4);
+      const userDNetto = new Array(18).fill(4);
+      const input = baseInput({
+        coursePars: par4Course(),
+        playerScoresPerHole: [
+          player('user-a', userANetto),
+          player('user-b', userBNetto),
+          player('user-c', userCNetto),
+          player('user-d', userDNetto),
+        ],
+      });
+      const result = calculateSideTournament(input);
+      const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
+      const awards = t1.awards.filter((a) => a.category === 'back_to_back_birdies');
+      expect(awards).toHaveLength(2);
+      expect(awards.reduce((s, a) => s + a.points, 0)).toBe(4);
+      expect(awards[0]?.streakStartHole).toBe(1);
+      expect(awards[0]?.streakEndHole).toBe(2);
+      expect(awards[1]?.streakStartHole).toBe(5);
+      expect(awards[1]?.streakEndHole).toBe(6);
+    });
+  });
 });
