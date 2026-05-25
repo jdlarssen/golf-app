@@ -10,7 +10,44 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.25.y — Mobile-first bane-admin
+
+Å opprette og redigere baner skal gå like raskt på telefon som på PC. Fase 1 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223) fjerner de største tastatur-popups-friksjonene i `/admin/courses`.
+
+### [1.25.0] - 2026-05-25
+
+> Å opprette en bane på telefon er nå tre trykk per hull i stedet for 18 tastatur-popups. Par-total regnes ut fra hullene, dame- og junior-rating dukker opp først når du legger dem til, og bane-listen har fått søk.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- Tap-radio-knapper `[3] [4] [5]` for par per hull i [CourseForm.tsx](app/admin/courses/CourseForm.tsx). 18 tastatur-popups erstattes med tre-knapps-grupper som eksponeres som `role="radio"`/`aria-checked` for screen-reader-konsistens. SI beholder number-input siden 1–18 er for mange knapper og brukeren må kunne taste fritt.
+- Progressive disclosure for dame- og junior-rating per tee. Tee-blokken viser kun herre-rating som standard; `+ Legg til dame-rating`/`+ Legg til junior-rating` utvider blokken. `Fjern dame-rating`/`Fjern junior-rating`-lenke kollapser + nullstiller verdiene. Edit-flyten starter expand'et hvis tee har lagrede tall i DB.
+- `Dupliser`-knapp per tee. Kopierer alle numre (slope, CR, lengde) for alle kjønn, men tømmer navn og dropper `id` så det blir en ny rad ved lagring. Skjules ved `MAX_TEE_BOXES = 7`.
+- Søk på `/admin/courses` — ny client-component [CoursesLedgerClient.tsx](app/admin/courses/CoursesLedgerClient.tsx) som tar fetched courses som prop og rendrer søk-input + filtrert ledger. Substring case-insensitive på banenavn. Empty-state «Ingen baner matcher «X»» ved 0 treff.
+- Eksportert helper `sumHolePars(holes)` i `CourseForm.tsx` for både UI (read-only par-total per kjønn) og indirekte tests.
+- Tester: 16 nye vitest-cases i `CourseForm.test.tsx` (tap-button-state, auto-par-total, progressive disclosure, dupliser), 4 i `CoursesLedgerClient.test.tsx` (søk-filter, empty-state, trim).
+
+#### Changed
+- `app/admin/courses/CourseForm.tsx` — `TeeBoxData`-typen dropper `par_total_<gender>`-feltene fra form-input. `par_total` deriveres automatisk fra hullene og vises som read-only sum per kjønn-rating.
+- `app/admin/courses/new/actions.ts` + `app/admin/courses/[id]/edit/actions.ts` — `parseGenderRating` returnerer `{slope, course_rating}` (ikke lenger `par_total`). `par_total_<gender>` settes til `sum(holes.par)` server-side hvis kjønnet har komplett slope + CR; ellers `null`. `isPartiallyFilled` sjekker 2 felt nå (1 fylt = partial).
+- `app/admin/courses/[id]/edit/page.tsx` — `tee_boxes`-select dropper `par_total_*`-kolonnene siden form ikke trenger dem.
+- Feilmelding `tee_partial_rating` oppdatert: «Hver tee må ha både slope og CR — eller ingen av dem — per kjønn.»
+
+#### Notes
+- Eksisterende baner med ulik `par_total_<g>` per kjønn skrives over med `sum(holes.par)` ved neste lagring. Migrasjons-safe: vi antar identisk hull-par for alle kjønn (sann for ~99% av norske baner). Per-kjønn-overstyring er Fase 2-utvidelse hvis det blir aktuelt.
+- DB-kolonnen `par_total_<gender>` beholdes — andre kode-stier (`lib/games/teeRating.ts`, scorecard-rendering, game-edit) leser fortsatt fra den. Bare form-input forsvinner.
+- Out of scope for Fase 1: SI smart-preset, lengde-warning, audit-felter, archive-flow, eksplisitt tee-sletting-impact-warning. Senere faser i [#223](https://github.com/jdlarssen/golf-app/issues/223).
+
+</details>
+
+---
+
 ## 1.24.y — Kjønn og spillerklasse i profilen
+
+<details>
+<summary><strong>1.24.y — Kjønn og spillerklasse i profilen (2 oppføringer) — klikk for å vise</strong></summary>
 
 Tørny husker nå om du spiller fra herretee, dametee eller juniortee, og foreslår riktig tee når noen oppretter et spill du skal være med på. Issue [#92](https://github.com/jdlarssen/golf-app/issues/92).
 
@@ -56,6 +93,8 @@ Tørny husker nå om du spiller fra herretee, dametee eller juniortee, og foresl
 - Test-suite: +8 nye tester for `playerGenderDefault`. Eksisterende `ProfileFormBody.test.tsx` + `GameForm.test.tsx` + `GameWizard.test.tsx` oppdatert med default-fixtures (gender=null, level=normal eller mens/normal).
 - Solo-flyten påvirkes uten ekstra endringer — GameForm bruker `player_${pid}_gender` FormData-key uavhengig av modus.
 - `gender` er nullable bevisst — eksisterende brukere uten verdi forblir null til soft-prompt-en spørres. Auto-default i wizard faller tilbake til 'M' for null-gender (med mindre level=junior).
+
+</details>
 
 </details>
 

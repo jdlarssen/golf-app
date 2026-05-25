@@ -7,7 +7,6 @@ import { MAX_TEE_BOXES } from '@/app/admin/courses/CourseForm';
 type GenderRating = {
   slope: number | null;
   course_rating: number | null;
-  par_total: number | null;
 };
 
 function parseGenderRating(
@@ -17,21 +16,18 @@ function parseGenderRating(
 ): GenderRating {
   const slopeStr = String(formData.get(`tee_${teeIndex}_slope_${gender}`) ?? '').trim();
   const crStr = String(formData.get(`tee_${teeIndex}_cr_${gender}`) ?? '').trim();
-  const parStr = String(formData.get(`tee_${teeIndex}_par_${gender}`) ?? '').trim();
 
   const slope = slopeStr === '' ? null : Number(slopeStr);
   const cr = crStr === '' ? null : Number(crStr);
-  const par = parStr === '' ? null : Number(parStr);
 
   return {
     slope: slope !== null && Number.isInteger(slope) && slope >= 55 && slope <= 155 ? slope : null,
     course_rating: cr !== null && Number.isFinite(cr) && cr >= 50 && cr <= 80 ? cr : null,
-    par_total: par !== null && Number.isInteger(par) && par >= 60 && par <= 80 ? par : null,
   };
 }
 
 function isCompleteRating(r: GenderRating): boolean {
-  return r.slope !== null && r.course_rating !== null && r.par_total !== null;
+  return r.slope !== null && r.course_rating !== null;
 }
 
 // Distinguishes "left blank" from "partially filled" — we only complain about
@@ -43,9 +39,8 @@ function isPartiallyFilled(
 ): boolean {
   const slopeStr = String(formData.get(`tee_${teeIndex}_slope_${gender}`) ?? '').trim();
   const crStr = String(formData.get(`tee_${teeIndex}_cr_${gender}`) ?? '').trim();
-  const parStr = String(formData.get(`tee_${teeIndex}_par_${gender}`) ?? '').trim();
-  const filled = [slopeStr, crStr, parStr].filter((s) => s !== '').length;
-  return filled > 0 && filled < 3;
+  const filled = [slopeStr, crStr].filter((s) => s !== '').length;
+  return filled === 1;
 }
 
 async function requireAdmin() {
@@ -89,6 +84,11 @@ export async function updateCourse(courseId: string, formData: FormData) {
 
   const siSet = new Set(holes.map((h) => h.stroke_index));
   if (siSet.size !== 18) redirect(`${editPath}?error=si_duplicate`);
+
+  // par_total per kjønn deriveres fra hullene; antagelse: identisk hull-par
+  // for alle kjønn (sann for ~99% av norske baner). Per-kjønn-overstyring er
+  // Fase 2-utvidelse hvis det blir aktuelt.
+  const parSum = holes.reduce((s, h) => s + h.par, 0);
 
   const teeBoxes: {
     id: string | null;
@@ -150,13 +150,13 @@ export async function updateCourse(courseId: string, formData: FormData) {
       length_meters: lengthMeters,
       slope_mens: mensRating.slope,
       course_rating_mens: mensRating.course_rating,
-      par_total_mens: mensRating.par_total,
+      par_total_mens: isCompleteRating(mensRating) ? parSum : null,
       slope_ladies: ladiesRating.slope,
       course_rating_ladies: ladiesRating.course_rating,
-      par_total_ladies: ladiesRating.par_total,
+      par_total_ladies: isCompleteRating(ladiesRating) ? parSum : null,
       slope_juniors: juniorsRating.slope,
       course_rating_juniors: juniorsRating.course_rating,
-      par_total_juniors: juniorsRating.par_total,
+      par_total_juniors: isCompleteRating(juniorsRating) ? parSum : null,
     });
   }
   if (teeBoxes.length === 0) redirect(`${editPath}?error=tee_required`);

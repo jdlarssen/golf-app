@@ -9,8 +9,8 @@ import { LedgerHeader } from '@/components/admin/LedgerHeader';
 import { BaneIcon } from '@/components/icons';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { TopBar } from '@/components/ui/TopBar';
-import { formatShortDateNb } from '@/lib/format/date';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { CoursesLedgerClient } from './CoursesLedgerClient';
 
 const COURSES_LEDGER_GRID = '1fr 64px 14px';
 
@@ -149,57 +149,14 @@ async function CoursesLedger() {
   }
 
   return (
-    <>
-      <LedgerHeader
-        leftLabel="Bane"
-        rightLabel="Tees"
-        gridTemplateColumns={COURSES_LEDGER_GRID}
-      />
-
-      <div
-        className="overflow-hidden rounded-b-2xl border bg-surface"
-        style={{
-          borderColor: 'var(--border)',
-          borderTop: 'none',
-        }}
-      >
-        {items.map((course, i) => {
-          const teeCount = course.tee_boxes?.[0]?.count ?? 0;
-          // Cap stagger at row 8 so long catalogs don't drag the final reveal
-          // out past ~half a second — matches the leaderboard `.lb-row`
-          // pattern in globals.css.
-          const staggerStep = Math.min(i, 8);
-          return (
-            <SmartLink
-              key={course.id}
-              href={`/admin/courses/${course.id}/edit`}
-              className="reveal-up grid items-center gap-2.5 px-3.5 py-3.5"
-              style={{
-                gridTemplateColumns: COURSES_LEDGER_GRID,
-                animationDelay: `${60 + staggerStep * 60}ms`,
-                borderTop:
-                  i === 0 ? 'none' : '1px solid var(--row-divider-warm)',
-              }}
-            >
-              <div className="min-w-0">
-                <p className="truncate font-serif text-base font-medium tracking-[-0.005em] text-text">
-                  {course.name}
-                </p>
-                <p className="mt-0.5 truncate font-sans text-[11.5px] tabular-nums text-muted">
-                  Lagt til {formatShortDateNb(course.created_at)}
-                </p>
-              </div>
-              <p className="text-right font-serif text-[15px] font-medium tabular-nums tracking-[-0.005em] text-text">
-                {teeCount}
-              </p>
-              <span aria-hidden className="text-[14px] text-muted">
-                ›
-              </span>
-            </SmartLink>
-          );
-        })}
-      </div>
-    </>
+    <CoursesLedgerClient
+      items={items.map((c) => ({
+        id: c.id,
+        name: c.name,
+        created_at: c.created_at,
+        tee_count: c.tee_boxes?.[0]?.count ?? 0,
+      }))}
+    />
   );
 }
 

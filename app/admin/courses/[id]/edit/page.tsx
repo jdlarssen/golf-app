@@ -22,7 +22,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   si_duplicate: 'Stroke-indeks 1–18 må brukes nøyaktig én gang hver.',
   tee_required: 'Minst én tee-boks må legges til.',
   tee_partial_rating:
-    'Hver tee må ha enten alle eller ingen av slope/CR/par per kjønn. Du kan ikke lagre halve sett.',
+    'Hver tee må ha både slope og CR — eller ingen av dem — per kjønn. Du kan ikke lagre halve sett.',
   tee_no_rating:
     'Hver tee må ha minst ett komplett rating-sett per kjønn (Herrer / Damer / Junior).',
   tee_in_use: 'Kan ikke fjerne tee — den brukes i ett eller flere spill.',
@@ -134,7 +134,7 @@ async function EditCourseFormBody({
     supabase
       .from('tee_boxes')
       .select(
-        'id, name, length_meters, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors',
+        'id, name, length_meters, slope_mens, course_rating_mens, slope_ladies, course_rating_ladies, slope_juniors, course_rating_juniors',
       )
       .eq('course_id', courseId)
       .order('name', { ascending: true }),
@@ -158,17 +158,12 @@ async function EditCourseFormBody({
     slope_mens: t.slope_mens == null ? '' : String(t.slope_mens),
     course_rating_mens:
       t.course_rating_mens == null ? '' : String(t.course_rating_mens),
-    par_total_mens: t.par_total_mens == null ? '' : String(t.par_total_mens),
     slope_ladies: t.slope_ladies == null ? '' : String(t.slope_ladies),
     course_rating_ladies:
       t.course_rating_ladies == null ? '' : String(t.course_rating_ladies),
-    par_total_ladies:
-      t.par_total_ladies == null ? '' : String(t.par_total_ladies),
     slope_juniors: t.slope_juniors == null ? '' : String(t.slope_juniors),
     course_rating_juniors:
       t.course_rating_juniors == null ? '' : String(t.course_rating_juniors),
-    par_total_juniors:
-      t.par_total_juniors == null ? '' : String(t.par_total_juniors),
   }));
 
   // Pre-bind the course id so the form's action handler only deals with the
