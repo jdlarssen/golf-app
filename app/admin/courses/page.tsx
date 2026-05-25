@@ -10,6 +10,7 @@ import { BaneIcon } from '@/components/icons';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { TopBar } from '@/components/ui/TopBar';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
 import { CoursesLedgerClient } from './CoursesLedgerClient';
 
 const COURSES_LEDGER_GRID = '1fr 64px 14px';
@@ -24,6 +25,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   not_found: 'Banen ble ikke funnet.',
   in_use:
     'Kan ikke slette banen fordi minst ett spill bruker den. Slett spillene først.',
+  not_owned: 'Du kan kun slette baner du selv har laget.',
   delete_failed:
     'Klarte ikke å slette banen. Prøv igjen, eller sjekk Supabase-loggene.',
 };
@@ -102,6 +104,10 @@ export default async function CoursesPage({
 }: {
   searchParams: SearchParams;
 }) {
+  // Page-level gate: admin OR trusted creator (Fase 4).
+  const supabase = await getServerClient();
+  await requireAdminOrTrustedCreator(supabase);
+
   const params = await searchParams;
   const status = first(params.status);
   const name = first(params.name) ?? '';

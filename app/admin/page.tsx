@@ -15,6 +15,8 @@ import {
 import { firstName } from '@/lib/firstName';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { formatShortDateNb } from '@/lib/format/date';
+import { displayName, type DisplayNameUser } from '@/lib/format/displayName';
+import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
 
 // Request-scoped Supabase client + verified user id. The id is forwarded by
 // proxy.ts (which already verified the session) so the three Suspense bodies
@@ -23,6 +25,13 @@ const getAdminContext = cache(async () => {
   const supabase = await getServerClient();
   const userId = await getProxyVerifiedUserId();
   return { supabase, userId };
+});
+
+// Role context (admin / trusted) cached for the whole request. TilesGrid
+// reads it to filter tiles per rolle; trusted-non-admin sees only «Baner».
+const getRole = cache(async () => {
+  const { supabase } = await getAdminContext();
+  return requireAdminOrTrustedCreator(supabase);
 });
 
 function greeting(d: Date): string {
@@ -173,6 +182,7 @@ type Tile = {
 
 async function TilesGrid() {
   const { supabase } = await getAdminContext();
+  const role = await getRole();
   const now = new Date();
 
   const [
@@ -215,41 +225,48 @@ async function TilesGrid() {
   const lastFinishedAt = (lastFinishedRes.data as { ended_at: string | null } | null)
     ?.ended_at;
 
-  const tiles: Tile[] = [
-    {
-      label: 'Spill',
-      href: '/admin/games',
-      meta: `${activeCount} aktive · ${plannedCount} planlagte`,
-      icon: 'flagg',
-      accent: true,
-    },
-    {
-      label: 'Spillere',
-      href: '/admin/spillere',
-      meta:
-        userCount === 0
-          ? 'Ingen registrerte ennå'
-          : `${userCount} registrert${pendingInvites > 0 ? ` · ${pendingInvites} venter` : ''}`,
-      icon: 'konvolutt',
-    },
-    {
-      label: 'Baner',
-      href: '/admin/courses',
-      meta:
-        courseCount === 0
-          ? 'Ingen registrerte ennå'
-          : `${courseCount} registrert${courseCount === 1 ? '' : 'e'}`,
-      icon: 'bane',
-    },
-    {
-      label: 'Resultatprotokoll',
-      href: '/admin/games?status=finished',
-      meta: lastFinishedAt
-        ? `Sist signert ${formatShortDateNb(lastFinishedAt)}`
-        : 'Ingen signerte runder',
-      icon: 'pokal',
-    },
-  ];
+  // Trusted-non-admin: kun Baner-tile (resten av Sekretariatet er admin-only,
+  // self-gatet på sub-route-nivå — å vise tiles til ruter de blir redirected
+  // bort fra er forvirrende). Admin: alle fire tiles, uendret.
+  const banerTile: Tile = {
+    label: 'Baner',
+    href: '/admin/courses',
+    meta:
+      courseCount === 0
+        ? 'Ingen registrerte ennå'
+        : `${courseCount} registrert${courseCount === 1 ? '' : 'e'}`,
+    icon: 'bane',
+  };
+
+  const tiles: Tile[] = role.isAdmin
+    ? [
+        {
+          label: 'Spill',
+          href: '/admin/games',
+          meta: `${activeCount} aktive · ${plannedCount} planlagte`,
+          icon: 'flagg',
+          accent: true,
+        },
+        {
+          label: 'Spillere',
+          href: '/admin/spillere',
+          meta:
+            userCount === 0
+              ? 'Ingen registrerte ennå'
+              : `${userCount} registrert${pendingInvites > 0 ? ` · ${pendingInvites} venter` : ''}`,
+          icon: 'konvolutt',
+        },
+        banerTile,
+        {
+          label: 'Resultatprotokoll',
+          href: '/admin/games?status=finished',
+          meta: lastFinishedAt
+            ? `Sist signert ${formatShortDateNb(lastFinishedAt)}`
+            : 'Ingen signerte runder',
+          icon: 'pokal',
+        },
+      ]
+    : [banerTile];
 
   return (
     <div className="mb-2 grid grid-cols-2 gap-2.5">
@@ -338,7 +355,11 @@ async function ActivityLedger() {
     started_at: string | null;
     ended_at: string | null;
   };
-  type CourseRow = { name: string; created_at: string };
+  type CourseRow = {
+    name: string;
+    created_at: string;
+    created_by_user: DisplayNameUser;
+  };
   type InvitationRow = {
     accepted_at: string;
     email: string;
@@ -375,7 +396,9 @@ async function ActivityLedger() {
         .returns<GameLifecycleRow[]>(),
       supabase
         .from('courses')
-        .select('name, created_at')
+        .select(
+          'name, created_at, created_by_user:users!courses_created_by_fkey(name, nickname)',
+        )
         .gte('created_at', sinceIso)
         .order('created_at', { ascending: false })
         .limit(4)
@@ -428,7 +451,7 @@ async function ActivityLedger() {
   for (const c of coursesEvRes.data ?? []) {
     activity.push({
       ts: c.created_at,
-      who: 'Sekretariatet',
+      who: displayName(c.created_by_user) ?? 'Sekretariatet',
       action: 'registrerte ny bane',
       ref: c.name,
     });

@@ -26,21 +26,45 @@ vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
 }));
 
+// Service-role-bypass client used by trusted-non-admin writes. Tests that
+// exercise trusted paths replace `adminClientMock` with a separate
+// buildSupabaseMock instance so we can inspect the bypass-writes
+// independently from the request-scoped reads.
+let adminClientMock: ReturnType<typeof buildSupabaseMock> | null = null;
+vi.mock('@/lib/supabase/admin', () => ({
+  getAdminClient: () => {
+    if (!adminClientMock) {
+      throw new Error('adminClientMock not configured for this test');
+    }
+    return adminClientMock;
+  },
+}));
+
 function lastRedirect(): string | undefined {
   return redirectMock.mock.calls.at(-1)?.[0];
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  adminClientMock = null;
 });
 
 const courseId = '11111111-1111-1111-1111-111111111111';
 const teeId = '22222222-2222-2222-2222-222222222222';
 const adminUserId = '33333333-3333-3333-3333-333333333333';
+const trustedUserId = '44444444-4444-4444-4444-444444444444';
+const trustedEmail = 'fornes.even@yahoo.no';
 
 function setupAdminAuth() {
   supabaseMock.auth.getUser = vi.fn(async () => ({
-    data: { user: { id: adminUserId } },
+    data: { user: { id: adminUserId, email: 'admin@example.com' } },
+    error: null,
+  }));
+}
+
+function setupTrustedAuth() {
+  supabaseMock.auth.getUser = vi.fn(async () => ({
+    data: { user: { id: trustedUserId, email: trustedEmail } },
     error: null,
   }));
 }
@@ -309,5 +333,223 @@ describe('restoreTee', () => {
       (c) => c.table === 'courses',
     );
     expect(courseCalls).toHaveLength(0);
+  });
+});
+
+describe('deleteCourse — admin path', () => {
+  it('admin deletes course not in use: redirects with status=deleted', async () => {
+    supabaseMock = buildSupabaseMock([
+      // loadRole: users.is_admin lookup
+      { data: { is_admin: true, email: 'admin@example.com', name: 'Jørgen' }, error: null },
+      // games.select — no usage
+      { data: [], error: null },
+      // courses.delete (admin uses request-scoped supabase as writeClient)
+      { error: null },
+    ]);
+    setupAdminAuth();
+
+    const { deleteCourse } = await import('./actions');
+
+    await expect(deleteCourse(courseId)).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/admin/courses?status=deleted');
+
+    // Admin never touches getAdminClient (writeClient = request-scoped).
+    expect(adminClientMock).toBeNull();
+
+    const deleteCalls = supabaseMock.__fromCalls.filter(
+      (c) => c.method === 'delete' && c.table === 'courses',
+    );
+    expect(deleteCalls).toHaveLength(1);
+  });
+
+  it('admin blocked by in_use guard: redirects, no delete', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, email: 'admin@example.com', name: 'Jørgen' }, error: null },
+      // games.select — usage found
+      { data: [{ id: 'game-1' }], error: null },
+    ]);
+    setupAdminAuth();
+
+    const { deleteCourse } = await import('./actions');
+
+    await expect(deleteCourse(courseId)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/courses?error=in_use');
+
+    const deleteCalls = supabaseMock.__fromCalls.filter(
+      (c) => c.method === 'delete',
+    );
+    expect(deleteCalls).toHaveLength(0);
+  });
+});
+
+describe('deleteCourse — trusted-non-admin path (Fase 4 ownership-check)', () => {
+  it('trusted deletes OWN course (not in use): redirects with status=deleted, write goes via admin-client', async () => {
+    supabaseMock = buildSupabaseMock([
+      // loadRole: users.is_admin lookup — trusted, NOT admin
+      { data: { is_admin: false, email: trustedEmail, name: 'Even' }, error: null },
+      // games.select — no usage
+      { data: [], error: null },
+      // courses.select created_by — owned by trusted user
+      { data: { created_by: trustedUserId }, error: null },
+    ]);
+    setupTrustedAuth();
+    // Separate write-mock for the service-role bypass-client.
+    adminClientMock = buildSupabaseMock([
+      // courses.delete via admin-client
+      { error: null },
+    ]);
+
+    const { deleteCourse } = await import('./actions');
+
+    await expect(deleteCourse(courseId)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/courses?status=deleted');
+
+    // The DELETE call landed on the service-role client, NOT the request-
+    // scoped one (which would trip the is_admin()-RLS-policy).
+    const requestScopedDeletes = supabaseMock.__fromCalls.filter(
+      (c) => c.method === 'delete',
+    );
+    expect(requestScopedDeletes).toHaveLength(0);
+    const adminDeletes = adminClientMock.__fromCalls.filter(
+      (c) => c.method === 'delete' && c.table === 'courses',
+    );
+    expect(adminDeletes).toHaveLength(1);
+  });
+
+  it('trusted tries to delete OTHER user\'s course: redirects with error=not_owned, no delete', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false, email: trustedEmail, name: 'Even' }, error: null },
+      // games.select — no usage (so we get past in_use guard)
+      { data: [], error: null },
+      // courses.select created_by — owned by ANOTHER user (admin, here)
+      { data: { created_by: adminUserId }, error: null },
+    ]);
+    setupTrustedAuth();
+    // Admin-client should NEVER be consumed in this rejection path. We still
+    // configure it so that an unexpected access shows up as a queue mismatch
+    // rather than a misleading «not configured» error.
+    adminClientMock = buildSupabaseMock([]);
+
+    const { deleteCourse } = await import('./actions');
+
+    await expect(deleteCourse(courseId)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/courses?error=not_owned');
+
+    // No write should have fired on either client.
+    const requestScopedDeletes = supabaseMock.__fromCalls.filter(
+      (c) => c.method === 'delete',
+    );
+    const adminDeletes = adminClientMock.__fromCalls.filter(
+      (c) => c.method === 'delete',
+    );
+    expect(requestScopedDeletes).toHaveLength(0);
+    expect(adminDeletes).toHaveLength(0);
+  });
+
+  it('trusted tries to delete a course IN USE: in_use error fires BEFORE ownership-check', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false, email: trustedEmail, name: 'Even' }, error: null },
+      // games.select — usage found → in_use redirect fires immediately
+      { data: [{ id: 'game-1' }], error: null },
+    ]);
+    setupTrustedAuth();
+    adminClientMock = buildSupabaseMock([]);
+
+    const { deleteCourse } = await import('./actions');
+
+    await expect(deleteCourse(courseId)).rejects.toBeInstanceOf(RedirectError);
+    // Critical: trusted-non-owner of an in-use course sees the informative
+    // «in_use» message, not the confusing «not_owned».
+    expect(lastRedirect()).toBe('/admin/courses?error=in_use');
+
+    // courses.select created_by should NEVER have been queried — the
+    // in_use guard short-circuits before ownership-check.
+    const ownershipSelects = supabaseMock.__fromCalls.filter(
+      (c) => c.table === 'courses' && c.method === 'select',
+    );
+    expect(ownershipSelects).toHaveLength(0);
+  });
+
+  it('trusted DELETE against missing-course row: treated as not_owned (defense-in-depth)', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false, email: trustedEmail, name: 'Even' }, error: null },
+      // games.select — no usage
+      { data: [], error: null },
+      // courses.select created_by — row not found
+      { data: null, error: null },
+    ]);
+    setupTrustedAuth();
+    adminClientMock = buildSupabaseMock([]);
+
+    const { deleteCourse } = await import('./actions');
+
+    await expect(deleteCourse(courseId)).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/courses?error=not_owned');
+  });
+});
+
+describe('updateCourse — trusted-non-admin path (Fase 4)', () => {
+  it('trusted edit goes through admin-client for writes, audit-bump uses trusted user id', async () => {
+    supabaseMock = buildSupabaseMock([
+      // loadRole
+      { data: { is_admin: false, email: trustedEmail, name: 'Even' }, error: null },
+      // SELECT existing tees (toDelete computation) — request-scoped read is OK
+      { data: [], error: null },
+    ]);
+    setupTrustedAuth();
+    // All writes route to the service-role client.
+    adminClientMock = buildSupabaseMock([
+      // courses.update (audit bump)
+      { error: null },
+      // course_holes.delete
+      { error: null },
+      // course_holes.insert
+      { error: null },
+      // tee_boxes.insert (single new tee)
+      { error: null },
+    ]);
+
+    const formData = new FormData();
+    formData.set('name', 'Sjø-bane Trondheim');
+    for (let i = 1; i <= 18; i++) {
+      formData.set(`hole_${i}_par`, '4');
+      formData.set(`hole_${i}_si`, String(i));
+    }
+    formData.set('tee_0_name', 'Gul');
+    formData.set('tee_0_length_meters', '5670');
+    formData.set('tee_0_slope_mens', '113');
+    formData.set('tee_0_cr_mens', '70.0');
+
+    const { updateCourse } = await import('./actions');
+    await expect(updateCourse(courseId, formData)).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    expect(lastRedirect()).toMatch(/\/admin\/courses\?status=updated/);
+
+    // No mutations on the request-scoped client (would trip the
+    // is_admin()-RLS-policy in prod).
+    const reqWrites = supabaseMock.__fromCalls.filter(
+      (c) =>
+        c.method === 'update' ||
+        c.method === 'insert' ||
+        c.method === 'delete',
+    );
+    expect(reqWrites).toHaveLength(0);
+
+    // Audit-bump on courses carries the trusted user's id.
+    const courseUpdates = adminClientMock.__fromCalls.filter(
+      (c) => c.method === 'update' && c.table === 'courses',
+    );
+    expect(courseUpdates).toHaveLength(1);
+    const courseUpdate = courseUpdates[0].args[0] as { updated_by: string };
+    expect(courseUpdate.updated_by).toBe(trustedUserId);
+
+    // The new tee was inserted via admin-client.
+    const teeInserts = adminClientMock.__fromCalls.filter(
+      (c) => c.method === 'insert' && c.table === 'tee_boxes',
+    );
+    expect(teeInserts).toHaveLength(1);
   });
 });

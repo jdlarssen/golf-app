@@ -6,6 +6,8 @@ import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { CourseForm } from '../CourseForm';
 import { createCourse } from './actions';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { getServerClient } from '@/lib/supabase/server';
+import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
 
 type SearchParams = Promise<{ error?: string | string[] }>;
 
@@ -37,6 +39,10 @@ export default async function NewCoursePage({
 }: {
   searchParams: SearchParams;
 }) {
+  // Page-level gate: admin OR trusted creator (Fase 4).
+  const supabase = await getServerClient();
+  await requireAdminOrTrustedCreator(supabase);
+
   const params = await searchParams;
   const errorCode = first(params.error);
   const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;

@@ -3,6 +3,8 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
+import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
 import { MAX_TEE_BOXES } from '@/app/admin/courses/constants';
 
 type GenderRating = {
@@ -44,25 +46,9 @@ function isPartiallyFilled(
   return filled === 1;
 }
 
-async function requireAdmin() {
-  const supabase = await getServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-
-  const { data: profile } = await supabase
-    .from('users')
-    .select('is_admin')
-    .eq('id', user.id)
-    .single();
-  if (!profile?.is_admin) redirect('/');
-
-  return { supabase, user };
-}
-
 export async function updateCourse(courseId: string, formData: FormData) {
-  const { supabase, user } = await requireAdmin();
+  const supabase = await getServerClient();
+  const role = await requireAdminOrTrustedCreator(supabase);
 
   const editPath = `/admin/courses/${courseId}/edit`;
 
@@ -197,26 +183,32 @@ export async function updateCourse(courseId: string, formData: FormData) {
     toHardDelete = toDelete.filter((id) => !inUseIds.has(id));
   }
 
-  const { error: courseUpdateError } = await supabase
+  // Writes go through admin-client when caller is trusted-non-admin to
+  // bypass RLS policies that require is_admin(). Single writeClient binding
+  // per action so a mixed write-sequence can't accidentally split between
+  // request-scoped + service-role.
+  const writeClient = role.isAdmin ? supabase : getAdminClient();
+
+  const { error: courseUpdateError } = await writeClient
     .from('courses')
     .update({
       name,
       updated_at: new Date().toISOString(),
-      updated_by: user.id,
+      updated_by: role.userId,
     })
     .eq('id', courseId);
   if (courseUpdateError) redirect(`${editPath}?error=db_course`);
 
   // course_holes stays delete-and-reinsert: no FK from games/scores into
   // course_holes (scores use hole_number int), so safe to replace wholesale.
-  const { error: deleteHolesError } = await supabase
+  const { error: deleteHolesError } = await writeClient
     .from('course_holes')
     .delete()
     .eq('course_id', courseId);
   if (deleteHolesError) redirect(`${editPath}?error=db_holes`);
 
   const holesToInsert = holes.map((h) => ({ ...h, course_id: courseId }));
-  const { error: insertHolesError } = await supabase
+  const { error: insertHolesError } = await writeClient
     .from('course_holes')
     .insert(holesToInsert);
   if (insertHolesError) redirect(`${editPath}?error=db_holes`);
@@ -237,26 +229,26 @@ export async function updateCourse(courseId: string, formData: FormData) {
       par_total_juniors: tee.par_total_juniors,
     };
     if (tee.id) {
-      const { error } = await supabase
+      const { error } = await writeClient
         .from('tee_boxes')
         .update(row)
         .eq('id', tee.id);
       if (error) redirect(`${editPath}?error=db_tees`);
     } else {
-      const { error } = await supabase.from('tee_boxes').insert(row);
+      const { error } = await writeClient.from('tee_boxes').insert(row);
       if (error) redirect(`${editPath}?error=db_tees`);
     }
   }
 
   if (toHardDelete.length > 0) {
-    const { error } = await supabase
+    const { error } = await writeClient
       .from('tee_boxes')
       .delete()
       .in('id', toHardDelete);
     if (error) redirect(`${editPath}?error=db_tees`);
   }
   if (toArchive.length > 0) {
-    const { error } = await supabase
+    const { error } = await writeClient
       .from('tee_boxes')
       .update({ archived_at: new Date().toISOString() })
       .in('id', toArchive);
@@ -271,7 +263,8 @@ export async function restoreTee(
   teeId: string,
   _formData?: FormData,
 ) {
-  const { supabase, user } = await requireAdmin();
+  const supabase = await getServerClient();
+  const role = await requireAdminOrTrustedCreator(supabase);
   const editPath = `/admin/courses/${courseId}/edit`;
 
   // Verify tee belongs to the right course — defends against forged POSTs
@@ -285,7 +278,11 @@ export async function restoreTee(
   if (tee.course_id !== courseId) redirect(`${editPath}?error=tee_not_found`);
   if (tee.archived_at === null) redirect(`${editPath}?error=tee_not_archived`);
 
-  const { error: restoreError } = await supabase
+  // Writes bypass RLS via admin-client for trusted-non-admin (same pattern
+  // as updateCourse).
+  const writeClient = role.isAdmin ? supabase : getAdminClient();
+
+  const { error: restoreError } = await writeClient
     .from('tee_boxes')
     .update({ archived_at: null })
     .eq('id', teeId);
@@ -293,11 +290,11 @@ export async function restoreTee(
 
   // Restore is a course change → bump audit fields on courses, same pattern
   // as updateCourse.
-  const { error: courseUpdateError } = await supabase
+  const { error: courseUpdateError } = await writeClient
     .from('courses')
     .update({
       updated_at: new Date().toISOString(),
-      updated_by: user.id,
+      updated_by: role.userId,
     })
     .eq('id', courseId);
   if (courseUpdateError) redirect(`${editPath}?error=db_course`);
@@ -316,10 +313,13 @@ export async function restoreTee(
 }
 
 export async function deleteCourse(courseId: string) {
-  const { supabase } = await requireAdmin();
+  const supabase = await getServerClient();
+  const role = await requireAdminOrTrustedCreator(supabase);
 
   // Guard: refuse to delete if any games reference this course. Avoids
   // surprising FK-violation errors and preserves history.
+  // Runs BEFORE ownership-check so trusted-non-owner of an in-use course
+  // sees the informative «in_use» message rather than «not_owned».
   const { data: gameUsage, error: gameUsageError } = await supabase
     .from('games')
     .select('id')
@@ -332,8 +332,27 @@ export async function deleteCourse(courseId: string) {
     redirect('/admin/courses?error=in_use');
   }
 
+  // Ownership-check for trusted-non-admin: they can only delete courses
+  // they created themselves. Admin is unaffected (can delete anything).
+  // Missing-course (NULL) is treated as not_owned — defense-in-depth
+  // against forged DELETE-POSTs.
+  if (!role.isAdmin) {
+    const { data: course } = await supabase
+      .from('courses')
+      .select('created_by')
+      .eq('id', courseId)
+      .maybeSingle();
+    if (!course || course.created_by !== role.userId) {
+      redirect('/admin/courses?error=not_owned');
+    }
+  }
+
+  // Trust verified → switch to admin-client for the actual delete so the
+  // is_admin()-RLS-policy doesn't block trusted-non-admin.
+  const writeClient = role.isAdmin ? supabase : getAdminClient();
+
   // course_holes and tee_boxes cascade via FK on the courses table.
-  const { error: deleteError } = await supabase
+  const { error: deleteError } = await writeClient
     .from('courses')
     .delete()
     .eq('id', courseId);

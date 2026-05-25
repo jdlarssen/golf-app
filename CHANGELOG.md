@@ -10,7 +10,38 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.28.y — Bane-tilgang for kompis-gjengen
+
+Fase 4 (og siste fase) av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Trusted creators får tilgang til Sekretariatet med en filtrert tile-grid, og kan opprette + oppdatere baner gjennom samme courses-katalogen som admin bruker.
+
+### [1.28.0] - 2026-05-25
+
+> Trusted creators kan nå legge til og oppdatere baner selv, ikke bare opprette spill. Når en kompis i allowlist-en logger inn ser de Sekretariatet med en Baner-tile, og kan vedlikeholde katalogen som om de var admin — men kun baner de selv har laget kan slettes.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- Ny `requireAdmin(supabase)`-helper i [lib/admin/auth.ts](lib/admin/auth.ts) ved siden av `requireAdminOrTrustedCreator`. Redirecter trusted-non-admin til `/admin` og ikke-trusted ikke-admin til `/`. Brukt til å self-gate alle admin-only ruter under `/admin/spillere`, `/admin/games` (unntatt `/new`), og `/admin/lanseringer` (innført i forrige refactor-commit).
+- Ownership-check på `deleteCourse`: trusted creators kan kun slette baner de selv har laget (`courses.created_by === user.id`); admin uberørt. Ny error-melding `not_owned` på `/admin/courses` med teksten «Du kan kun slette baner du selv har laget.»
+- [lib/format/displayName.ts](lib/format/displayName.ts) — felles helper trukket ut fra edit-page sin lokale variant. Brukes nå også av activity-ledger på `/admin`.
+
+#### Changed
+- [app/admin/layout.tsx](app/admin/layout.tsx) gater nå på admin-eller-trusted. Tile-grid på [app/admin/page.tsx](app/admin/page.tsx) filtreres per rolle: trusted ser kun Baner-tile, admin ser alle fire.
+- Bane-write-actions (`createCourse`, `updateCourse`, `deleteCourse`, `restoreTee`) bytter til `getAdminClient()` for skrivinger når caller er trusted-non-admin. Bypasser RLS-policiene som krever `is_admin()`. Samme small-bet-mønster som #198 etablerte for spill-opprettelse.
+- Activity-ledger på `/admin` viser faktisk creator-navn for bane-events (var: hardkodet «Sekretariatet»). Fanger en latent display-feil som trusted creators ville eksponert dag 1.
+
+#### Fixed
+- Inline `requireAdmin`-helper i [app/admin/courses/[id]/edit/actions.ts](app/admin/courses/%5Bid%5D/edit/actions.ts) er fjernet til fordel for delt helper i `lib/admin/auth.ts` — én sannhetskilde for rolle-gating på courses-flyten.
+
+</details>
+
+---
+
 ## 1.27.y — Arkiv-UI og delbare filter-lenker
+
+<details>
+<summary><strong>1.27.y — Arkiv-UI og delbare filter-lenker (3 oppføringer) — klikk for å vise</strong></summary>
 
 Fase 3 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Soft-arkiverte tees kan gjenåpnes fra edit-flaten, bane-listens filter-state ligger i URL-en, og legacy-rader uten `updated_by` er backfilt fra `created_by`.
 
@@ -72,6 +103,8 @@ Fase 3 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Soft-ar
 - URL-replace, ikke push — filter-tweaks er ikke historikk-aktivitet. Browser-back tar admin ut av siden, ikke gjennom filter-historikk. Bevisst tradeoff for enklere mental modell.
 - 0038-backfill er trygg for live spill (rører kun `courses.updated_by`-kolonnen). Rader med `created_by IS NULL` forblir uendret (ingen kilde-data).
 - Per-kjønn-overstyring av hull-par fortsetter som egen Fase når det blir reelt smerte-punkt. Krever endring i alle 4 mode-implementasjoner som leser `hole.par` direkte.
+
+</details>
 
 </details>
 

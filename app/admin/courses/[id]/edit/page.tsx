@@ -16,6 +16,8 @@ import {
 } from './ArchivedTeesSection';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { formatShortDateNb } from '@/lib/format/date';
+import { displayName, type DisplayNameUser } from '@/lib/format/displayName';
+import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
 
 // Buffer mellom created_at og updated_at som regnes som «samme transaksjon»
 // — eksisterende rader fra før 0037-migrasjonen fikk updated_at = now() ved
@@ -62,26 +64,11 @@ function first(value: string | string[] | undefined): string | undefined {
   return value;
 }
 
-// PostgREST returnerer embed via FK som array (selv ved many-to-one) inntil
-// FK-en er deklarert one-to-one i schema-en. Vi godtar både array- og
-// objekt-form for å være robuste mot framtidige type-endringer.
-type AuditUserRow =
-  | { name: string | null; nickname: string | null }
-  | { name: string | null; nickname: string | null }[]
-  | null;
-
-function displayName(user: AuditUserRow): string | null {
-  if (!user) return null;
-  const row = Array.isArray(user) ? user[0] : user;
-  if (!row) return null;
-  return row.nickname ?? row.name ?? null;
-}
-
 function buildAuditKicker(course: {
   created_at: string;
   updated_at: string;
-  created_by_user: AuditUserRow;
-  updated_by_user: AuditUserRow;
+  created_by_user: DisplayNameUser;
+  updated_by_user: DisplayNameUser;
 }): string {
   const created = new Date(course.created_at).getTime();
   const updated = new Date(course.updated_at).getTime();
@@ -119,6 +106,8 @@ export default async function EditCoursePage({
     : undefined;
 
   const { supabase } = await getEditCourseContext();
+  // Page-level gate: trusted creators are allowed alongside admin (Fase 4).
+  await requireAdminOrTrustedCreator(supabase);
   // Gating: fetch the course row so the title bar can render synchronously.
   // Inkluderer audit-felter + embed på `users` via begge FK-er for visning
   // av «Lagt til av X» / «Sist endret av Y» kicker.

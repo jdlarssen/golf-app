@@ -1,32 +1,18 @@
 import { ReactNode } from 'react';
-import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
-import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
 
-// Server-side admin guard. We explicitly check is_admin on the user's own
-// public.users row, rather than relying on RLS — a non-admin would still see
-// their own row, so RLS alone wouldn't redirect them away. We want a hard
-// 'not allowed' for non-admins.
+// Layout-level gate (Fase 4): admin OR trusted creator. Admin-only sub-routes
+// self-gate via requireAdmin(supabase) in their pages + actions (chunk 1).
+// Trusted creators get to /admin (filtered tile-grid) + the /admin/courses
+// subtree only.
 //
-// User id is read from the request header set by proxy.ts (which already
-// verified the session) — skipping a duplicate auth.getUser() round-trip
-// before the layout can render. ~80 ms saved on every admin navigation.
+// We can no longer use the proxy-header shortcut + a single is_admin column
+// read, because role-resolution now also needs the email to consult
+// TRUSTED_CREATOR_EMAILS. requireAdminOrTrustedCreator() does the full lookup
+// against auth.getUser() + public.users.
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  const userId = await getProxyVerifiedUserId();
-  if (!userId) {
-    redirect('/login');
-  }
-
   const supabase = await getServerClient();
-  const { data: profile, error } = await supabase
-    .from('users')
-    .select('is_admin')
-    .eq('id', userId)
-    .single();
-
-  if (error || !profile || !profile.is_admin) {
-    redirect('/');
-  }
-
+  await requireAdminOrTrustedCreator(supabase);
   return <>{children}</>;
 }

@@ -2,6 +2,8 @@
 
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
+import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
 import { MAX_TEE_BOXES } from '@/app/admin/courses/constants';
 
 type GenderRating = {
@@ -45,18 +47,9 @@ function isPartiallyFilled(
 
 export async function createCourse(formData: FormData) {
   const supabase = await getServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-
-  // Defense in depth: re-check admin even though the layout guards the route.
-  const { data: profile } = await supabase
-    .from('users')
-    .select('is_admin')
-    .eq('id', user.id)
-    .single();
-  if (!profile?.is_admin) redirect('/');
+  // Defense in depth: re-gate at action-level too (the layout already gates,
+  // but server-actions can be invoked directly via fetch).
+  const role = await requireAdminOrTrustedCreator(supabase);
 
   const name = String(formData.get('name') ?? '').trim();
   if (!name) {
@@ -162,9 +155,14 @@ export async function createCourse(formData: FormData) {
     redirect('/admin/courses/new?error=tee_required');
   }
 
-  const { data: course, error: courseError } = await supabase
+  // Writes go through admin-client when caller is trusted-non-admin to
+  // bypass RLS policies that require is_admin(). Trust is already verified
+  // by requireAdminOrTrustedCreator above. Same #198 mulighet A pattern.
+  const writeClient = role.isAdmin ? supabase : getAdminClient();
+
+  const { data: course, error: courseError } = await writeClient
     .from('courses')
-    .insert({ name, created_by: user.id })
+    .insert({ name, created_by: role.userId })
     .select('id')
     .single();
 
@@ -173,7 +171,7 @@ export async function createCourse(formData: FormData) {
   }
 
   const holesToInsert = holes.map((h) => ({ ...h, course_id: course.id }));
-  const { error: holesError } = await supabase
+  const { error: holesError } = await writeClient
     .from('course_holes')
     .insert(holesToInsert);
   if (holesError) {
@@ -181,7 +179,7 @@ export async function createCourse(formData: FormData) {
   }
 
   const teesToInsert = teeBoxes.map((t) => ({ ...t, course_id: course.id }));
-  const { error: teeError } = await supabase
+  const { error: teeError } = await writeClient
     .from('tee_boxes')
     .insert(teesToInsert);
   if (teeError) {
