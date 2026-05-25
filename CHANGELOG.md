@@ -33,7 +33,7 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 - `app/admin/courses/CourseForm.tsx` — `TeeBoxData`-typen dropper `par_total_<gender>`-feltene fra form-input. `par_total` deriveres automatisk fra hullene og vises som read-only sum per kjønn-rating.
 - `app/admin/courses/new/actions.ts` + `app/admin/courses/[id]/edit/actions.ts` — `parseGenderRating` returnerer `{slope, course_rating}` (ikke lenger `par_total`). `par_total_<gender>` settes til `sum(holes.par)` server-side hvis kjønnet har komplett slope + CR; ellers `null`. `isPartiallyFilled` sjekker 2 felt nå (1 fylt = partial).
 - `app/admin/courses/[id]/edit/page.tsx` — `tee_boxes`-select dropper `par_total_*`-kolonnene siden form ikke trenger dem.
-- Feilmelding `tee_partial_rating` oppdatert: «Hver tee må ha både slope og CR — eller ingen av dem — per kjønn.»
+- Feilmelding `tee_partial_rating` oppdatert: «Hver tee må ha både slope og CR (eller ingen av dem) per kjønn.»
 
 #### Notes
 - Eksisterende baner med ulik `par_total_<g>` per kjønn skrives over med `sum(holes.par)` ved neste lagring. Migrasjons-safe: vi antar identisk hull-par for alle kjønn (sann for ~99% av norske baner). Per-kjønn-overstyring er Fase 2-utvidelse hvis det blir aktuelt.
