@@ -20,6 +20,8 @@ type SearchParams = Promise<{
 const ERROR_MESSAGES: Record<string, string> = {
   name_required: 'Navn må fylles ut.',
   hcp_out_of_range: 'Handicap må være mellom -10 og 54.',
+  gender_required: 'Velg kjønn.',
+  level_invalid: 'Ugyldig spillerklasse.',
   update_failed: 'Klarte ikke lagre endringene.',
   not_admin: 'Du har ikke tilgang.',
   self_delete_forbidden: 'Du kan ikke slette din egen konto.',
@@ -72,7 +74,7 @@ export default async function PlayerDetailPage({
 
   const { data: target, error } = await supabase
     .from('users')
-    .select('id, name, nickname, email, hcp_index, is_admin, created_at, last_seen_at')
+    .select('id, name, nickname, email, hcp_index, is_admin, created_at, last_seen_at, gender, level')
     .eq('id', id)
     .maybeSingle();
   if (error) throw error;
@@ -201,6 +203,73 @@ export default async function PlayerDetailPage({
               defaultValue={target.hcp_index.toString()}
               required
             />
+            <fieldset>
+              <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+                Kjønn
+              </legend>
+              <div className="mt-2 flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="gender"
+                    value="mens"
+                    defaultChecked={target.gender === 'mens'}
+                    required
+                  />
+                  <span className="font-serif text-base text-text">Herre</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="gender"
+                    value="ladies"
+                    defaultChecked={target.gender === 'ladies'}
+                    required
+                  />
+                  <span className="font-serif text-base text-text">Dame</span>
+                </label>
+              </div>
+              <p className="mt-1 text-xs text-muted">
+                Brukes til å foreslå riktig tee i game-wizard.
+              </p>
+            </fieldset>
+            <fieldset>
+              <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+                Spillerklasse
+              </legend>
+              <div className="mt-2 flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="level"
+                    value="junior"
+                    defaultChecked={target.level === 'junior'}
+                  />
+                  <span className="font-serif text-base text-text">Junior</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="level"
+                    value="normal"
+                    defaultChecked={target.level === 'normal'}
+                  />
+                  <span className="font-serif text-base text-text">Voksen</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="level"
+                    value="senior"
+                    defaultChecked={target.level === 'senior'}
+                  />
+                  <span className="font-serif text-base text-text">Senior</span>
+                </label>
+              </div>
+              <p className="mt-1 text-xs text-muted">
+                Junior gir juniortee når banen har en. Senior er en informasjons-tag for nå.
+              </p>
+            </fieldset>
             <Button type="submit" className="w-full">
               Lagre endringer
             </Button>

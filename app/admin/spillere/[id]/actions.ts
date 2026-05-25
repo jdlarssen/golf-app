@@ -2,6 +2,10 @@
 
 const HCP_MIN = -10;
 const HCP_MAX = 54;
+const GENDERS = ['mens', 'ladies'] as const;
+const LEVELS = ['junior', 'normal', 'senior'] as const;
+type Gender = (typeof GENDERS)[number];
+type Level = (typeof LEVELS)[number];
 
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
@@ -28,6 +32,8 @@ export async function updateUser(formData: FormData) {
   const nickname = String(formData.get('nickname') ?? '').trim();
   const hcpRaw = String(formData.get('hcp_index') ?? '').trim();
   const emailRaw = String(formData.get('email') ?? '').trim().toLowerCase();
+  const genderRaw = String(formData.get('gender') ?? '').trim();
+  const levelRaw = String(formData.get('level') ?? 'normal').trim();
 
   if (!id) redirect('/admin/spillere?error=unknown');
   if (!name) redirect(`/admin/spillere/${id}?error=name_required`);
@@ -40,6 +46,16 @@ export async function updateUser(formData: FormData) {
   if (!emailRaw || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailRaw)) {
     redirect(`/admin/spillere/${id}?error=email_invalid`);
   }
+
+  if (!GENDERS.includes(genderRaw as Gender)) {
+    redirect(`/admin/spillere/${id}?error=gender_required`);
+  }
+  const gender = genderRaw as Gender;
+
+  if (!LEVELS.includes(levelRaw as Level)) {
+    redirect(`/admin/spillere/${id}?error=level_invalid`);
+  }
+  const level = levelRaw as Level;
 
   const supabase = await requireAdmin();
 
@@ -108,6 +124,8 @@ export async function updateUser(formData: FormData) {
     nickname: nickname || null,
     hcp_index: hcp,
     handicap_updated_at: new Date().toISOString(),
+    gender,
+    level,
   };
   if (emailChanged) {
     updatePayload.email = emailRaw;
