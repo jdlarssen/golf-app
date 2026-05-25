@@ -185,23 +185,36 @@ export type Database = {
           created_by: string | null
           id: string
           name: string
+          updated_at: string
+          updated_by: string | null
         }
         Insert: {
           created_at?: string
           created_by?: string | null
           id?: string
           name: string
+          updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           created_at?: string
           created_by?: string | null
           id?: string
           name?: string
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "courses_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courses_updated_by_fkey"
+            columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -615,6 +628,7 @@ export type Database = {
       }
       tee_boxes: {
         Row: {
+          archived_at: string | null
           course_id: string
           course_rating_juniors: number | null
           course_rating_ladies: number | null
@@ -630,6 +644,7 @@ export type Database = {
           slope_mens: number | null
         }
         Insert: {
+          archived_at?: string | null
           course_id: string
           course_rating_juniors?: number | null
           course_rating_ladies?: number | null
@@ -645,6 +660,7 @@ export type Database = {
           slope_mens?: number | null
         }
         Update: {
+          archived_at?: string | null
           course_id?: string
           course_rating_juniors?: number | null
           course_rating_ladies?: number | null

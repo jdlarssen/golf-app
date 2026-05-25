@@ -7,30 +7,115 @@ import { formatShortDateNb } from '@/lib/format/date';
 
 const COURSES_LEDGER_GRID = '1fr 64px 14px';
 
+// Buffer mellom created_at og updated_at som regnes som «samme transaksjon»
+// — eksisterende rader fra før 0037-migrasjonen fikk updated_at = now() ved
+// migrasjons-tidspunktet, så vi vil ikke vise «Endret» feilaktig før admin
+// faktisk har gjort en endring.
+const SAME_TX_BUFFER_MS = 60_000;
+
 export type CoursesLedgerItem = {
   id: string;
   name: string;
   created_at: string;
+  updated_at: string;
   tee_count: number;
+  has_ladies_tee: boolean;
+  has_juniors_tee: boolean;
+  active_game_count: number;
 };
 
-// Klient-side substring-søk på banenavn. Datasettet ligger under 100 baner
-// selv ved klubb-skala (jf. epic #49), så server-roundtrip per tastetrykk er
-// unødvendig friksjon. Søk-input lever sammen med ledger-en i samme klient-
-// komponent slik at filtreringen ikke bryter rad-animasjonen (`reveal-up`-
-// stagger).
+export type SortBy = 'created_at' | 'updated_at' | 'active_game_count';
+
+export type Filters = {
+  hasLadiesTee: boolean;
+  hasJuniorsTee: boolean;
+  activeGames: boolean;
+};
+
+const SORT_LABELS: Record<SortBy, string> = {
+  created_at: 'Nyeste først',
+  updated_at: 'Sist endret',
+  active_game_count: 'Flest aktive spill',
+};
+
+// Avledet kicker-tekst per rad: «Endret DATO» når updated_at har gått fremover
+// mer enn buffer-en etter created_at, ellers «Lagt til DATO». Eksportert for
+// test-bruk.
+export function rowKicker(item: CoursesLedgerItem): string {
+  const created = new Date(item.created_at).getTime();
+  const updated = new Date(item.updated_at).getTime();
+  const wasUpdated = updated - created > SAME_TX_BUFFER_MS;
+  return wasUpdated
+    ? `Endret ${formatShortDateNb(item.updated_at)}`
+    : `Lagt til ${formatShortDateNb(item.created_at)}`;
+}
+
+// Pure sort+filter — eksportert for testing uavhengig av React.
+export function applySortAndFilter(
+  items: CoursesLedgerItem[],
+  query: string,
+  filters: Filters,
+  sortBy: SortBy,
+): CoursesLedgerItem[] {
+  const trimmed = query.trim().toLowerCase();
+  let result = items;
+
+  if (trimmed !== '') {
+    result = result.filter((c) => c.name.toLowerCase().includes(trimmed));
+  }
+  if (filters.hasLadiesTee) {
+    result = result.filter((c) => c.has_ladies_tee);
+  }
+  if (filters.hasJuniorsTee) {
+    result = result.filter((c) => c.has_juniors_tee);
+  }
+  if (filters.activeGames) {
+    result = result.filter((c) => c.active_game_count > 0);
+  }
+
+  // Sortering muteres ikke på inn-arrayet.
+  const sorted = [...result];
+  if (sortBy === 'created_at') {
+    sorted.sort((a, b) => b.created_at.localeCompare(a.created_at));
+  } else if (sortBy === 'updated_at') {
+    sorted.sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+  } else {
+    // active_game_count desc, ties brytes med name asc for stabil rekkefølge.
+    sorted.sort((a, b) => {
+      if (b.active_game_count !== a.active_game_count) {
+        return b.active_game_count - a.active_game_count;
+      }
+      return a.name.localeCompare(b.name, 'nb');
+    });
+  }
+  return sorted;
+}
+
 export function CoursesLedgerClient({
   items,
 }: {
   items: CoursesLedgerItem[];
 }) {
   const [query, setQuery] = useState('');
-  const trimmed = query.trim().toLowerCase();
+  const [sortBy, setSortBy] = useState<SortBy>('created_at');
+  const [filters, setFilters] = useState<Filters>({
+    hasLadiesTee: false,
+    hasJuniorsTee: false,
+    activeGames: false,
+  });
 
-  const filtered = useMemo(() => {
-    if (trimmed === '') return items;
-    return items.filter((c) => c.name.toLowerCase().includes(trimmed));
-  }, [items, trimmed]);
+  const visible = useMemo(
+    () => applySortAndFilter(items, query, filters, sortBy),
+    [items, query, filters, sortBy],
+  );
+
+  const hasActiveFilter =
+    filters.hasLadiesTee || filters.hasJuniorsTee || filters.activeGames;
+  const trimmedQuery = query.trim();
+
+  function toggleFilter(key: keyof Filters) {
+    setFilters((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
 
   return (
     <>
@@ -49,9 +134,52 @@ export function CoursesLedgerClient({
         />
       </div>
 
-      {filtered.length === 0 ? (
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <label
+          htmlFor="courses-sort"
+          className="font-sans text-[11px] font-medium uppercase tracking-[0.12em] text-muted"
+        >
+          Sortér
+        </label>
+        <select
+          id="courses-sort"
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as SortBy)}
+          className="rounded-lg border border-border bg-surface px-3 py-1.5 font-sans text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/40"
+        >
+          {(Object.keys(SORT_LABELS) as SortBy[]).map((key) => (
+            <option key={key} value={key}>
+              {SORT_LABELS[key]}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="mt-2 flex flex-wrap gap-2">
+        <FilterChip
+          label="Har dame-tee"
+          active={filters.hasLadiesTee}
+          onClick={() => toggleFilter('hasLadiesTee')}
+        />
+        <FilterChip
+          label="Har junior-tee"
+          active={filters.hasJuniorsTee}
+          onClick={() => toggleFilter('hasJuniorsTee')}
+        />
+        <FilterChip
+          label="Aktive spill"
+          active={filters.activeGames}
+          onClick={() => toggleFilter('activeGames')}
+        />
+      </div>
+
+      {visible.length === 0 ? (
         <p className="mt-6 rounded-2xl border border-border bg-surface px-5 py-8 text-center font-sans text-[13px] text-muted">
-          Ingen baner matcher «{query.trim()}».
+          {trimmedQuery !== '' && hasActiveFilter
+            ? `Ingen baner matcher «${trimmedQuery}» og filteret.`
+            : trimmedQuery !== ''
+              ? `Ingen baner matcher «${trimmedQuery}».`
+              : `Ingen baner matcher filteret.`}
         </p>
       ) : (
         <div className="mt-5">
@@ -68,10 +196,7 @@ export function CoursesLedgerClient({
               borderTop: 'none',
             }}
           >
-            {filtered.map((course, i) => {
-              // Cap stagger at row 8 så lange katalog-lister ikke drar siste
-              // rad ut til ~halv-sekund — samme mønster som `.lb-row` i
-              // leaderboard-en.
+            {visible.map((course, i) => {
               const staggerStep = Math.min(i, 8);
               return (
                 <SmartLink
@@ -90,7 +215,7 @@ export function CoursesLedgerClient({
                       {course.name}
                     </p>
                     <p className="mt-0.5 truncate font-sans text-[11.5px] tabular-nums text-muted">
-                      Lagt til {formatShortDateNb(course.created_at)}
+                      {rowKicker(course)}
                     </p>
                   </div>
                   <p className="text-right font-serif text-[15px] font-medium tabular-nums tracking-[-0.005em] text-text">
@@ -106,5 +231,30 @@ export function CoursesLedgerClient({
         </div>
       )}
     </>
+  );
+}
+
+function FilterChip({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`rounded-full border px-3 py-1.5 font-sans text-[12px] font-medium transition-colors ${
+        active
+          ? 'border-primary bg-primary text-bg'
+          : 'border-border bg-surface text-muted hover:text-text hover:border-text/40'
+      }`}
+    >
+      {label}
+    </button>
   );
 }

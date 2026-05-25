@@ -18,6 +18,7 @@ type CourseRow = {
     slope_juniors: number | null;
     course_rating_juniors: number | null;
     par_total_juniors: number | null;
+    archived_at: string | null;
   }[];
 };
 
@@ -44,7 +45,7 @@ export const getNewGameFormData = cache(async () => {
     supabase
       .from('courses')
       .select(
-        'id, name, tee_boxes(id, name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+        'id, name, tee_boxes(id, name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors, archived_at)',
       )
       .order('name', { ascending: true })
       .returns<CourseRow[]>(),
@@ -63,6 +64,7 @@ export const getNewGameFormData = cache(async () => {
     id: c.id,
     name: c.name,
     tee_boxes: (c.tee_boxes ?? [])
+      .filter((t) => t.archived_at === null)
       .map((t) => ({
         id: t.id,
         name: t.name,

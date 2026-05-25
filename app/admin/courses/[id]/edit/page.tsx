@@ -11,6 +11,13 @@ import { CourseForm } from '../../CourseForm';
 import { updateCourse, deleteCourse } from './actions';
 import { DeleteCourseButton } from './DeleteCourseButton';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { formatShortDateNb } from '@/lib/format/date';
+
+// Buffer mellom created_at og updated_at som regnes som «samme transaksjon»
+// — eksisterende rader fra før 0037-migrasjonen fikk updated_at = now() ved
+// migrasjons-tidspunktet, så vi vil unngå å vise «Sist endret» feilaktig på
+// dem inntil de faktisk endres første gang.
+const SAME_TX_BUFFER_MS = 60_000;
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;
@@ -25,7 +32,6 @@ const ERROR_MESSAGES: Record<string, string> = {
     'Hver tee må ha både slope og CR (eller ingen av dem) per kjønn. Du kan ikke lagre halve sett.',
   tee_no_rating:
     'Hver tee må ha minst ett komplett rating-sett per kjønn (Herrer / Damer / Junior).',
-  tee_in_use: 'Kan ikke fjerne tee — den brukes i ett eller flere spill.',
   db_course:
     'Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.',
   db_holes:
@@ -38,6 +44,41 @@ const ERROR_MESSAGES: Record<string, string> = {
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
   return value;
+}
+
+// PostgREST returnerer embed via FK som array (selv ved many-to-one) inntil
+// FK-en er deklarert one-to-one i schema-en. Vi godtar både array- og
+// objekt-form for å være robuste mot framtidige type-endringer.
+type AuditUserRow =
+  | { name: string | null; nickname: string | null }
+  | { name: string | null; nickname: string | null }[]
+  | null;
+
+function displayName(user: AuditUserRow): string | null {
+  if (!user) return null;
+  const row = Array.isArray(user) ? user[0] : user;
+  if (!row) return null;
+  return row.nickname ?? row.name ?? null;
+}
+
+function buildAuditKicker(course: {
+  created_at: string;
+  updated_at: string;
+  created_by_user: AuditUserRow;
+  updated_by_user: AuditUserRow;
+}): string {
+  const created = new Date(course.created_at).getTime();
+  const updated = new Date(course.updated_at).getTime();
+  const wasUpdated = updated - created > SAME_TX_BUFFER_MS;
+
+  if (wasUpdated) {
+    const who = displayName(course.updated_by_user);
+    const when = formatShortDateNb(course.updated_at);
+    return who ? `Sist endret ${when} av ${who}` : `Sist endret ${when}`;
+  }
+  const who = displayName(course.created_by_user);
+  const when = formatShortDateNb(course.created_at);
+  return who ? `Lagt til ${when} av ${who}` : `Lagt til ${when}`;
 }
 
 const getEditCourseContext = cache(async () => {
@@ -60,16 +101,25 @@ export default async function EditCoursePage({
 
   const { supabase } = await getEditCourseContext();
   // Gating: fetch the course row so the title bar can render synchronously.
-  // The heavier holes/tees fetch streams behind Suspense below.
+  // Inkluderer audit-felter + embed på `users` via begge FK-er for visning
+  // av «Lagt til av X» / «Sist endret av Y» kicker.
   const { data: course, error: courseError } = await supabase
     .from('courses')
-    .select('id, name')
+    .select(
+      `
+      id, name, created_at, updated_at,
+      created_by_user:users!courses_created_by_fkey(name, nickname),
+      updated_by_user:users!courses_updated_by_fkey(name, nickname)
+    `,
+    )
     .eq('id', id)
     .single();
 
   if (courseError || !course) {
     notFound();
   }
+
+  const kicker = buildAuditKicker(course);
 
   const deleteAction = deleteCourse.bind(null, id);
   const userId = await getProxyVerifiedUserId();
@@ -88,9 +138,7 @@ export default async function EditCoursePage({
         <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
           {course.name}
         </h1>
-        <p className="font-sans text-[11.5px] text-muted">
-          Endre hull, par, stroke-indeks og tee-bokser
-        </p>
+        <p className="font-sans text-[11.5px] text-muted">{kicker}</p>
       </div>
 
       {errorMessage && (
@@ -137,6 +185,7 @@ async function EditCourseFormBody({
         'id, name, length_meters, slope_mens, course_rating_mens, slope_ladies, course_rating_ladies, slope_juniors, course_rating_juniors',
       )
       .eq('course_id', courseId)
+      .is('archived_at', null)
       .order('name', { ascending: true }),
   ]);
 

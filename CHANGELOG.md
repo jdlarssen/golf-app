@@ -10,7 +10,45 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.26.y — Vedlikeholds-trygghet og filter på bane-admin
+
+Fase 2 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Audit-felter på baner, soft-archive av tees i bruk, og sort + filter på bane-listen.
+
+### [1.26.0] - 2026-05-25
+
+> Når du endrer en bane, husker Tørny nå hvem som endret hva og når. Du kan fjerne en tee selv om den brukes i et historisk spill — spillet beholder tee-en, men den forsvinner fra bane-admin. Bane-listen har fått sortering (Sist endret, Flest aktive spill) og chip-filter (Har dame-tee, Har junior-tee, Aktive spill).
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- Migration `0037_courses_audit_and_tee_archive.sql` — `courses.updated_at` (NOT NULL DEFAULT now()) + `courses.updated_by` (FK til users, nullable) + `tee_boxes.archived_at` (timestamptz, nullable).
+- [app/admin/courses/[id]/edit/actions.ts](app/admin/courses/[id]/edit/actions.ts) `updateCourse` setter `updated_at = now()` + `updated_by = user.id` ved hver lagring. Soft-archive-logikk delt mellom hard-delete (tees uten spill-referanser) og `archived_at`-set (tees i bruk).
+- [app/admin/courses/CoursesLedgerClient.tsx](app/admin/courses/CoursesLedgerClient.tsx) utvidet: sort-dropdown (Nyeste først / Sist endret / Flest aktive spill) + chip-toggles for Har dame-tee, Har junior-tee, Aktive spill. AND-kombinert med søk. Eksporterte pure helpers `applySortAndFilter` + `rowKicker` for testing.
+- [app/admin/courses/[id]/edit/page.tsx](app/admin/courses/[id]/edit/page.tsx) kicker viser «Lagt til DATO av NAVN» eller «Sist endret DATO av NAVN» basert på 60-sek-buffer mellom `created_at` og `updated_at`. Navn faller tilbake til ingenting hvis updated_by er NULL eller bruker er slettet.
+- Tester: 13 nye vitest-cases i `CoursesLedgerClient.test.tsx` (sort + filter UI, pure-helper-coverage, rowKicker, regresjon-tester for søk).
+
+#### Changed
+- [app/admin/courses/page.tsx](app/admin/courses/page.tsx) `getCourses` utvidet til å embedde `tee_boxes(archived_at, slope/CR per kjønn)` + `games(status)` for å derivere `tee_count`, `has_ladies_tee`, `has_juniors_tee`, `active_game_count` per bane. Ny eksportert `deriveCourseItem`-helper.
+- [app/admin/courses/[id]/edit/page.tsx](app/admin/courses/[id]/edit/page.tsx) — tee_boxes-select filtrer `archived_at IS NULL` så arkiverte tees skjules fra CourseForm; courses-select inkluderer audit-felter + user-embed via begge FK-er.
+- [lib/games/newGameFormData.ts](lib/games/newGameFormData.ts) — embed-resultat filtreres på `archived_at === null` så new-game-picker-en bare viser aktive tees.
+- [lib/database.types.ts](lib/database.types.ts) — regenerert med nye kolonner.
+- Feilmelding `tee_in_use` fjernet fra error-map siden den ikke lenger trigges (alle tee-removals lykkes nå via hard-delete eller soft-archive).
+
+#### Notes
+- DB-kolonnen `par_total_<g>` og tee_box_id-FK fra `games` er uendret. Historiske spill leser fortsatt sin (kanskje arkiverte) tee via `games.tee_box_id`-join — `getGameWithPlayers`, scorecard-rendering og leaderboards trenger ingen filter.
+- `game_players.course_handicap` er frosset ved game-start ([0001](supabase/migrations/0001_initial_schema.sql)), så historiske handicap-er påvirkes ikke selv om en tee-rad senere får oppdatert slope/CR. Tee-edit-fleksibilitet er trygt.
+- Soft-archive er en-veis i Fase 2; un-arkivér-UI er Fase 3 av #223. Hvis admin gjør en feil må de rekonstruere tee-en eller SQL-resette `archived_at` manuelt.
+- Per-kjønn-overstyring av hull-par ble vurdert for Fase 2 men flyttet til egen Fase basert på scoring-code-impact-funn (krever endring i 4 mode-implementasjoner).
+
+</details>
+
+---
+
 ## 1.25.y — Mobile-first bane-admin
+
+<details>
+<summary><strong>1.25.y — Mobile-first bane-admin (1 oppføring) — klikk for å vise</strong></summary>
 
 Å opprette og redigere baner skal gå like raskt på telefon som på PC. Fase 1 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223) fjerner de største tastatur-popups-friksjonene i `/admin/courses`.
 
@@ -39,6 +77,8 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 - Eksisterende baner med ulik `par_total_<g>` per kjønn skrives over med `sum(holes.par)` ved neste lagring. Migrasjons-safe: vi antar identisk hull-par for alle kjønn (sann for ~99% av norske baner). Per-kjønn-overstyring er Fase 2-utvidelse hvis det blir aktuelt.
 - DB-kolonnen `par_total_<gender>` beholdes — andre kode-stier (`lib/games/teeRating.ts`, scorecard-rendering, game-edit) leser fortsatt fra den. Bare form-input forsvinner.
 - Out of scope for Fase 1: SI smart-preset, lengde-warning, audit-felter, archive-flow, eksplisitt tee-sletting-impact-warning. Senere faser i [#223](https://github.com/jdlarssen/golf-app/issues/223).
+
+</details>
 
 </details>
 

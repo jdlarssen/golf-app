@@ -61,7 +61,7 @@ async function requireAdmin() {
 }
 
 export async function updateCourse(courseId: string, formData: FormData) {
-  const { supabase } = await requireAdmin();
+  const { supabase, user } = await requireAdmin();
 
   const editPath = `/admin/courses/${courseId}/edit`;
 
@@ -161,34 +161,48 @@ export async function updateCourse(courseId: string, formData: FormData) {
   }
   if (teeBoxes.length === 0) redirect(`${editPath}?error=tee_required`);
 
+  // Eksisterende ikke-arkiverte tees. Arkiverte hopes over slik at
+  // toDelete-utregningen ikke prøver å «slette» dem på nytt på hver lagring
+  // (de er allerede ute av formen).
   const { data: existingTees, error: existingTeesError } = await supabase
     .from('tee_boxes')
     .select('id')
-    .eq('course_id', courseId);
+    .eq('course_id', courseId)
+    .is('archived_at', null);
   if (existingTeesError) redirect(`${editPath}?error=db_load`);
 
   const existingIds = new Set((existingTees ?? []).map((t) => t.id));
   const formIds = new Set(teeBoxes.filter((t) => t.id).map((t) => t.id!));
   const toDelete = [...existingIds].filter((id) => !formIds.has(id));
 
+  // For tees admin har fjernet fra formen: del i to grupper. Tees uten
+  // spill-referanser hard-deletes; tees i bruk i et eller flere spill
+  // soft-archives via `archived_at`. Beholder FK-integritet for historiske
+  // spill samtidig som admin alltid får fjernet tee-en fra aktiv visning.
+  let toHardDelete: string[] = [];
+  let toArchive: string[] = [];
   if (toDelete.length > 0) {
-    // Block deletion if a tee is still referenced by games — the FK would
-    // refuse the delete anyway, but catching it here gives a friendly error
-    // instead of a 500. Per-player overrides moved off tee_box_id in 0029,
-    // so only games.tee_box_id remains.
-    const { data: gameRefs } = await supabase
+    const { data: gameRefs, error: gameRefsError } = await supabase
       .from('games')
-      .select('id')
-      .in('tee_box_id', toDelete)
-      .limit(1);
-    if ((gameRefs?.length ?? 0) > 0) {
-      redirect(`${editPath}?error=tee_in_use`);
-    }
+      .select('tee_box_id')
+      .in('tee_box_id', toDelete);
+    if (gameRefsError) redirect(`${editPath}?error=db_load`);
+    const inUseIds = new Set(
+      (gameRefs ?? [])
+        .map((r) => r.tee_box_id)
+        .filter((id): id is string => id !== null),
+    );
+    toArchive = toDelete.filter((id) => inUseIds.has(id));
+    toHardDelete = toDelete.filter((id) => !inUseIds.has(id));
   }
 
   const { error: courseUpdateError } = await supabase
     .from('courses')
-    .update({ name })
+    .update({
+      name,
+      updated_at: new Date().toISOString(),
+      updated_by: user.id,
+    })
     .eq('id', courseId);
   if (courseUpdateError) redirect(`${editPath}?error=db_course`);
 
@@ -233,11 +247,18 @@ export async function updateCourse(courseId: string, formData: FormData) {
     }
   }
 
-  if (toDelete.length > 0) {
+  if (toHardDelete.length > 0) {
     const { error } = await supabase
       .from('tee_boxes')
       .delete()
-      .in('id', toDelete);
+      .in('id', toHardDelete);
+    if (error) redirect(`${editPath}?error=db_tees`);
+  }
+  if (toArchive.length > 0) {
+    const { error } = await supabase
+      .from('tee_boxes')
+      .update({ archived_at: new Date().toISOString() })
+      .in('id', toArchive);
     if (error) redirect(`${editPath}?error=db_tees`);
   }
 

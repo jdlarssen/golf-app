@@ -43,22 +43,59 @@ type CourseRow = {
   id: string;
   name: string;
   created_at: string;
-  tee_boxes: { count: number }[];
+  updated_at: string;
+  tee_boxes: {
+    slope_ladies: number | null;
+    course_rating_ladies: number | null;
+    slope_juniors: number | null;
+    course_rating_juniors: number | null;
+    archived_at: string | null;
+  }[];
+  games: { status: 'draft' | 'scheduled' | 'active' | 'finished' }[];
 };
 
+// Embed-fetch av tee-rad-er og spill-statuser for å derivere filter-data
+// (tee-tall, has_ladies_tee, has_juniors_tee, active_game_count) i én
+// round-trip. Datasettet er lite — under ~50 baner med ~5 tees + ~50 spill
+// hver selv ved klubb-skala — så embed er rimeligere enn separate queries.
 const getCourses = cache(async () => {
   const supabase = await getServerClient();
-  // PostgREST embedded count: `tee_boxes(count)` returns
-  // `tee_boxes: [{ count: N }]` per row without fetching the rows themselves.
   const { data, error } = await supabase
     .from('courses')
-    .select('id, name, created_at, tee_boxes(count)')
+    .select(
+      `
+      id, name, created_at, updated_at,
+      tee_boxes(slope_ladies, course_rating_ladies, slope_juniors, course_rating_juniors, archived_at),
+      games(status)
+    `,
+    )
     .order('created_at', { ascending: false })
     .returns<CourseRow[]>();
 
   if (error) throw error;
   return data ?? [];
 });
+
+// Avledningsfunksjoner — eksportert for testing.
+export function deriveCourseItem(c: CourseRow) {
+  const activeTees = c.tee_boxes.filter((t) => t.archived_at === null);
+  return {
+    id: c.id,
+    name: c.name,
+    created_at: c.created_at,
+    updated_at: c.updated_at,
+    tee_count: activeTees.length,
+    has_ladies_tee: activeTees.some(
+      (t) => t.slope_ladies !== null && t.course_rating_ladies !== null,
+    ),
+    has_juniors_tee: activeTees.some(
+      (t) => t.slope_juniors !== null && t.course_rating_juniors !== null,
+    ),
+    active_game_count: c.games.filter(
+      (g) => g.status === 'active' || g.status === 'scheduled',
+    ).length,
+  };
+}
 
 export default async function CoursesPage({
   searchParams,
@@ -148,16 +185,7 @@ async function CoursesLedger() {
     );
   }
 
-  return (
-    <CoursesLedgerClient
-      items={items.map((c) => ({
-        id: c.id,
-        name: c.name,
-        created_at: c.created_at,
-        tee_count: c.tee_boxes?.[0]?.count ?? 0,
-      }))}
-    />
-  );
+  return <CoursesLedgerClient items={items.map(deriveCourseItem)} />;
 }
 
 function CoursesLedgerSkeleton() {
