@@ -5,6 +5,13 @@ import {
   type LayoutBHoleInput,
   type ScorecardColumnPlayer,
 } from './scorecardLayout';
+import * as singlesMatchplay from '@/lib/scoring/modes/singlesMatchplay';
+import type {
+  ScoringContext,
+  ScoringHole,
+  ScoringPlayer,
+  ScoringHoleScore,
+} from '@/lib/scoring/modes/types';
 import type { GameForHole, PlayerForHole } from './getGameWithPlayers';
 
 const baseGame: Omit<GameForHole, 'game_mode' | 'mode_config'> = {
@@ -491,6 +498,140 @@ describe('computeLayoutBTotals', () => {
         isMatchplay: true,
       });
       expect(t.matchStatus).toBe('Ingen hull spilt ennå');
+    });
+  });
+
+  // ─── Roundtrip-test: scorekort vs singlesMatchplay.compute ──────────────
+  //
+  // Issue #205: scorekortet hadde tidligere sin egen inline matchplay-
+  // tally-logikk. Etter refactoren bruker den `computeMatchplayRunningStatus`
+  // som compute() også speiler via shared `classifyMatchplayHole`. Denne
+  // testen garanterer at de to call-sites returnerer SAMME holesUp +
+  // holesPlayed for et set fixture-runder med blandede utfall (me-win,
+  // opp-win, tied, unplayed). Hvis matchplay-domenet utvides og en av
+  // call-sites driver fra den andre, fanger denne testen det.
+  describe('roundtrip: scorekort vs singlesMatchplay.compute (issue #205)', () => {
+    it('returnerer samme holesUp + holesPlayed for fixture-runde med blandede utfall', () => {
+      // Fixture: 5 hull med ulike utfall.
+      //  - hull 1 (SI 1):  me 5/4, opp 6/5 → me vinner (begge får +1 stroke)
+      //  - hull 2 (SI 18): me 4/4, opp 4/4 → tied (ingen får ekstra på SI 18)
+      //  - hull 3 (SI 5):  me 6/5, opp 5/4 → opp vinner
+      //  - hull 4 (SI 9):  me 4/3, opp null → unplayed (ikke spilt av opp)
+      //  - hull 5 (SI 2):  me 5/4, opp 4/3 → opp vinner
+      // Forventet: holesUp = 1 - 2 = -1, holesPlayed = 4 (hull 4 er unplayed).
+      const layoutHoles: LayoutBHoleInput[] = [
+        { hole_number: 1, par: 4, stroke_index: 1 },
+        { hole_number: 2, par: 4, stroke_index: 18 },
+        { hole_number: 3, par: 4, stroke_index: 5 },
+        { hole_number: 4, par: 4, stroke_index: 9 },
+        { hole_number: 5, par: 4, stroke_index: 2 },
+      ];
+      const meCol = col('me', 10);
+      const oppCol = col('opp', 10);
+      const scores = new Map<string, number | null>([
+        ['me#1', 5],
+        ['opp#1', 6],
+        ['me#2', 4],
+        ['opp#2', 4],
+        ['me#3', 6],
+        ['opp#3', 5],
+        ['me#4', 4],
+        // opp#4 unplayed
+        ['me#5', 5],
+        ['opp#5', 4],
+      ]);
+
+      const scorecardResult = computeLayoutBTotals(layoutHoles, scores, [meCol, oppCol], {
+        isStableford: false,
+        isMatchplay: true,
+      });
+
+      // Bygg ekvivalent ScoringContext og kjør compute().
+      const scoringHoles: ScoringHole[] = layoutHoles.map((h) => ({
+        number: h.hole_number,
+        par: h.par,
+        strokeIndex: h.stroke_index,
+      }));
+      const scoringPlayers: ScoringPlayer[] = [
+        { userId: 'me', teamNumber: 1, flightNumber: 1, courseHandicap: 10 },
+        { userId: 'opp', teamNumber: 2, flightNumber: 1, courseHandicap: 10 },
+      ];
+      const scoringScores: ScoringHoleScore[] = [];
+      for (const [key, gross] of scores) {
+        const [userId, holeStr] = key.split('#');
+        scoringScores.push({ userId, holeNumber: Number(holeStr), gross });
+      }
+      const ctx: ScoringContext = {
+        game: {
+          id: 'g1',
+          game_mode: 'singles_matchplay',
+          mode_config: { kind: 'singles_matchplay', team_size: 1, teams_count: 2 },
+        },
+        players: scoringPlayers,
+        holes: scoringHoles,
+        scores: scoringScores,
+      };
+      const computeResult = singlesMatchplay.compute(ctx);
+
+      // Forventet utfall: opp leder med 1 etter 4 spilte hull.
+      expect(computeResult.holesPlayed).toBe(4);
+      expect(computeResult.holesUp).toBe(-1); // side1 (me) − side2 (opp) = 1 − 2 = −1
+      // Scorekort-stringen reflekterer samme tall (sett fra me's side):
+      expect(scorecardResult.matchStatus).toBe('Du er 1 down etter 4 hull');
+    });
+
+    it('returnerer samme tall når matchen står AS midt i runden', () => {
+      // 3 hull, hver side vinner ett, ett tied → holesPlayed=3, holesUp=0.
+      const layoutHoles: LayoutBHoleInput[] = [
+        { hole_number: 1, par: 4, stroke_index: 18 },
+        { hole_number: 2, par: 4, stroke_index: 18 },
+        { hole_number: 3, par: 4, stroke_index: 18 },
+      ];
+      const meCol = col('me', 0);
+      const oppCol = col('opp', 0);
+      const scores = new Map<string, number | null>([
+        ['me#1', 4],
+        ['opp#1', 5], // me vinner
+        ['me#2', 5],
+        ['opp#2', 4], // opp vinner
+        ['me#3', 4],
+        ['opp#3', 4], // tied
+      ]);
+
+      const scorecardResult = computeLayoutBTotals(layoutHoles, scores, [meCol, oppCol], {
+        isStableford: false,
+        isMatchplay: true,
+      });
+
+      const ctx: ScoringContext = {
+        game: {
+          id: 'g1',
+          game_mode: 'singles_matchplay',
+          mode_config: { kind: 'singles_matchplay', team_size: 1, teams_count: 2 },
+        },
+        players: [
+          { userId: 'me', teamNumber: 1, flightNumber: 1, courseHandicap: 0 },
+          { userId: 'opp', teamNumber: 2, flightNumber: 1, courseHandicap: 0 },
+        ],
+        holes: layoutHoles.map((h) => ({
+          number: h.hole_number,
+          par: h.par,
+          strokeIndex: h.stroke_index,
+        })),
+        scores: [
+          { userId: 'me', holeNumber: 1, gross: 4 },
+          { userId: 'opp', holeNumber: 1, gross: 5 },
+          { userId: 'me', holeNumber: 2, gross: 5 },
+          { userId: 'opp', holeNumber: 2, gross: 4 },
+          { userId: 'me', holeNumber: 3, gross: 4 },
+          { userId: 'opp', holeNumber: 3, gross: 4 },
+        ],
+      };
+      const computeResult = singlesMatchplay.compute(ctx);
+
+      expect(computeResult.holesPlayed).toBe(3);
+      expect(computeResult.holesUp).toBe(0);
+      expect(scorecardResult.matchStatus).toBe('AS (3 hull spilt)');
     });
   });
 });

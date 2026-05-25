@@ -1,6 +1,7 @@
 import { pickTeamCaptain } from './teamCaptain';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { computeStablefordPoints } from '@/lib/scoring/modes/stableford';
+import { computeMatchplayRunningStatus } from '@/lib/scoring/modes/singlesMatchplay';
 import type { GameForHole, PlayerForHole } from './getGameWithPlayers';
 
 /**
@@ -226,9 +227,6 @@ export function computeLayoutBTotals(
   let teamTotalNetto = 0;
   let teamTotalPoints = 0;
   let playedTeamHoles = 0;
-  let meWins = 0;
-  let oppWins = 0;
-  let mpPlayed = 0;
 
   for (const hole of holes) {
     const nettos: number[] = [];
@@ -265,34 +263,9 @@ export function computeLayoutBTotals(
       );
       teamTotalPoints += teamPoints;
       if (hasAnyScore) playedTeamHoles += 1;
-    } else if (isMatchplay && columns.length === 2) {
-      // Matchplay: hullet teller kun hvis begge sider har skåret.
-      const meStrokes = scoresByUserHole.get(
-        `${columns[0].userId}#${hole.hole_number}`,
-      );
-      const oppStrokes = scoresByUserHole.get(
-        `${columns[1].userId}#${hole.hole_number}`,
-      );
-      if (
-        meStrokes != null &&
-        oppStrokes != null
-      ) {
-        const meExtra = strokesForHole(
-          columns[0].courseHandicap,
-          hole.stroke_index,
-        );
-        const oppExtra = strokesForHole(
-          columns[1].courseHandicap,
-          hole.stroke_index,
-        );
-        const meNet = meStrokes - meExtra;
-        const oppNet = oppStrokes - oppExtra;
-        mpPlayed += 1;
-        if (meNet < oppNet) meWins += 1;
-        else if (meNet > oppNet) oppWins += 1;
-      }
-    } else {
-      // Best-ball: lag-best = MIN(netto)
+    } else if (!isMatchplay) {
+      // Best-ball: lag-best = MIN(netto). Matchplay-grenen bruker shared
+      // helper utenfor løkken (issue #205).
       if (nettos.length > 0) {
         teamTotalNetto += Math.min(...nettos);
         playedTeamHoles += 1;
@@ -300,17 +273,27 @@ export function computeLayoutBTotals(
     }
   }
 
+  // Matchplay: deleger running-status til shared helper i singlesMatchplay
+  // (issue #205) slik at scorekort og leaderboard ikke kan drifte fra
+  // hverandre på win/loss/tied-klassifisering. Status-stringen er fortsatt
+  // scorekortets ansvar — leaderboard bruker «1up»/«AS»/«3&2», vi bruker
+  // «Du er X up etter N hull».
   let matchStatus: string | null = null;
-  if (isMatchplay) {
-    const up = meWins - oppWins;
-    if (mpPlayed === 0) {
+  if (isMatchplay && columns.length === 2) {
+    const status = computeMatchplayRunningStatus(
+      holes.map((h) => ({ number: h.hole_number, strokeIndex: h.stroke_index })),
+      { userId: columns[0].userId, courseHandicap: columns[0].courseHandicap },
+      { userId: columns[1].userId, courseHandicap: columns[1].courseHandicap },
+      scoresByUserHole,
+    );
+    if (status.holesPlayed === 0) {
       matchStatus = 'Ingen hull spilt ennå';
-    } else if (up === 0) {
-      matchStatus = `AS (${mpPlayed} hull spilt)`;
-    } else if (up > 0) {
-      matchStatus = `Du er ${up} up etter ${mpPlayed} hull`;
+    } else if (status.holesUp === 0) {
+      matchStatus = `AS (${status.holesPlayed} hull spilt)`;
+    } else if (status.holesUp > 0) {
+      matchStatus = `Du er ${status.holesUp} up etter ${status.holesPlayed} hull`;
     } else {
-      matchStatus = `Du er ${-up} down etter ${mpPlayed} hull`;
+      matchStatus = `Du er ${-status.holesUp} down etter ${status.holesPlayed} hull`;
     }
   }
 
