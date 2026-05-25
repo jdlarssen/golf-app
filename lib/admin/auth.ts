@@ -35,14 +35,6 @@ async function loadRole(supabase: ServerSupabase): Promise<AdminRoleContext> {
   };
 }
 
-export async function requireAdmin(
-  supabase: ServerSupabase,
-): Promise<AdminRoleContext> {
-  const ctx = await loadRole(supabase);
-  if (!ctx.isAdmin) redirect('/');
-  return ctx;
-}
-
 export async function requireAdminOrTrustedCreator(
   supabase: ServerSupabase,
 ): Promise<AdminRoleContext> {
