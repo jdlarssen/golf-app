@@ -64,7 +64,7 @@ export default async function HolePage({ params }: { params: Params }) {
     redirect(`/games/${id}`);
   }
 
-  // For solo-modus (stableford, solo strokeplay netto) er flight_number null
+  // For solo-modus (stableford, solo strokeplay) er flight_number null
   // på alle game_players. Spillere går likevel typisk i en felles fysisk
   // flight på 1-4 personer, og en av dem fungerer som «marker» for resten
   // (issue #163). Vi behandler derfor hele spillerlisten som én flight og lar

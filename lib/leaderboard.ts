@@ -1,5 +1,5 @@
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
-import { bestBallForHole } from '@/lib/scoring/modes/bestBallNetto';
+import { bestBallForHole } from '@/lib/scoring/modes/bestBall';
 import { parFor } from '@/lib/scoring/modes/parResolver';
 import type { ScoringGender, ScoringHole } from '@/lib/scoring/modes/types';
 import { rankTeams, type RankedTeam } from '@/lib/scoring/tiebreaker';

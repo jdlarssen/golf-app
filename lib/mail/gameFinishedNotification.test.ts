@@ -62,10 +62,10 @@ const baseParams = {
 
 describe('sendGameFinishedNotification', () => {
   // ─────────────────────────────────────────────────────────────────────
-  // Best ball netto (default + eksplisitt)
+  // Best ball (default + eksplisitt)
   // ─────────────────────────────────────────────────────────────────────
 
-  it('best_ball_netto (default): nøytral «leaderboard er åpen»-copy', async () => {
+  it('best_ball (default): nøytral «leaderboard er åpen»-copy', async () => {
     const payload = await send(baseParams);
     expect(payload.subject).toMatchInlineSnapshot(`"Resultatet er klart — Vinter-cup"`);
     expect(payload.text).toMatchInlineSnapshot(`
@@ -83,10 +83,10 @@ describe('sendGameFinishedNotification', () => {
     expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Runden i <strong>Vinter-cup</strong> er ferdig, alle scorekort er levert og godkjent, og leaderboardet er åpent."`);
   });
 
-  it('best_ball_netto (eksplisitt mode): samme nøytrale copy som default', async () => {
+  it('best_ball (eksplisitt mode): samme nøytrale copy som default', async () => {
     const payload = await send({
       ...baseParams,
-      mode: { kind: 'best_ball_netto' },
+      mode: { kind: 'best_ball' },
     });
     expect(payload.text).toMatchInlineSnapshot(`
       "Resultatet er klart — Vinter-cup
@@ -470,17 +470,17 @@ describe('sendGameFinishedNotification', () => {
   });
 
   // ─────────────────────────────────────────────────────────────────────
-  // Solo strokeplay netto — personlig rank + netto/brutto
+  // Solo strokeplay — personlig rank + netto/brutto
   // ─────────────────────────────────────────────────────────────────────
 
-  it('solo strokeplay netto: 1.-plass — «Gratulerer» + netto + brutto', async () => {
+  it('solo strokeplay: 1.-plass — «Gratulerer» + netto + brutto', async () => {
     const payload = await send({
       to: 'vinner@example.com',
       playerFirstName: 'Alice',
       gameName: 'Klubbmesterskap',
       gameId: 'game-5',
       mode: {
-        kind: 'solo_strokeplay_netto',
+        kind: 'solo_strokeplay',
         rank: 1,
         totalNetStrokes: 68,
         totalGrossStrokes: 74,
@@ -503,14 +503,14 @@ describe('sendGameFinishedNotification', () => {
     expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Runden i <strong>Klubbmesterskap</strong> er ferdig. Du endte på <strong>1. plass av 12</strong> med <strong>68 slag netto</strong> (74 brutto). Gratulerer med seieren!"`);
   });
 
-  it('solo strokeplay netto: 2.-plass — «Solid plassering»', async () => {
+  it('solo strokeplay: 2.-plass — «Solid plassering»', async () => {
     const payload = await send({
       to: 'spiller@example.com',
       playerFirstName: 'Bjørn',
       gameName: 'Klubbmesterskap',
       gameId: 'game-5',
       mode: {
-        kind: 'solo_strokeplay_netto',
+        kind: 'solo_strokeplay',
         rank: 2,
         totalNetStrokes: 72,
         totalGrossStrokes: 78,
@@ -532,14 +532,14 @@ describe('sendGameFinishedNotification', () => {
     expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"Runden i <strong>Klubbmesterskap</strong> er ferdig. Du endte på <strong>2. plass av 12</strong> med <strong>72 slag netto</strong> (78 brutto). Solid plassering!"`);
   });
 
-  it('solo strokeplay netto: 4.-plass — nøytral tone', async () => {
+  it('solo strokeplay: 4.-plass — nøytral tone', async () => {
     const payload = await send({
       to: 'spiller@example.com',
       playerFirstName: 'Eva',
       gameName: 'Klubbmesterskap',
       gameId: 'game-5',
       mode: {
-        kind: 'solo_strokeplay_netto',
+        kind: 'solo_strokeplay',
         rank: 4,
         totalNetStrokes: 80,
         totalGrossStrokes: 86,
@@ -691,7 +691,7 @@ describe('sendGameFinishedNotification', () => {
   // oppdateres bevisst (kjør `vitest -u` og review).
   // ─────────────────────────────────────────────────────────────────────
 
-  it('HTML chrome: full template for best_ball_netto-default', async () => {
+  it('HTML chrome: full template for best_ball-default', async () => {
     const payload = await send(baseParams);
     expect(payload.html).toMatchInlineSnapshot(`
       "<!DOCTYPE html><html lang="nb">

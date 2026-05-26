@@ -146,7 +146,7 @@ describe('GameForm — baseline (pre-fase-4)', () => {
 });
 
 describe('GameForm — mode/lagstørrelse-velgere (fase 4)', () => {
-  it('default mode = best_ball_netto: best-ball-tile er checked, par-tile er valgt', () => {
+  it('default mode = best_ball: best-ball-tile er checked, par-tile er valgt', () => {
     render(
       <GameForm
         courses={COURSES}
@@ -246,7 +246,7 @@ describe('GameForm — mode/lagstørrelse-velgere (fase 4)', () => {
     const sizeInput = container.querySelector(
       'input[type="hidden"][name="team_size"]',
     ) as HTMLInputElement | null;
-    expect(modeInput?.value).toBe('best_ball_netto');
+    expect(modeInput?.value).toBe('best_ball');
     expect(sizeInput?.value).toBe('2');
 
     fireEvent.click(screen.getByRole('radio', { name: /stableford/i }));
@@ -273,7 +273,7 @@ describe('GameForm — mode/lagstørrelse-velgere (fase 4)', () => {
           createAndPublishAction: NO_OP,
         }}
         initialValues={{
-          game_mode: 'best_ball_netto',
+          game_mode: 'best_ball',
           lock_game_mode: true,
         }}
       />,
@@ -311,7 +311,7 @@ describe('GameForm — par-stableford (epic #43 fase 2)', () => {
       />,
     );
 
-    // Default: best_ball_netto → ingen stableford_team_size-input.
+    // Default: best_ball → ingen stableford_team_size-input.
     expect(
       container.querySelector(
         'input[type="hidden"][name="stableford_team_size"]',
@@ -605,7 +605,7 @@ describe('GameForm — matchplay singles (epic #45 fase 2)', () => {
       />,
     );
 
-    // Default mode = best_ball_netto → TeamSizeSelector synlig.
+    // Default mode = best_ball → TeamSizeSelector synlig.
     expect(
       screen.getByRole('group', { name: /velg lagstørrelse/i }),
     ).toBeInTheDocument();
@@ -1011,11 +1011,11 @@ describe('GameForm — matchplay singles (epic #45 fase 2)', () => {
   });
 });
 
-describe('GameForm — solo strokeplay netto (epic #46 fase 2)', () => {
+describe('GameForm — solo strokeplay (epic #46 fase 2)', () => {
   /**
-   * Helper: bytter til solo strokeplay netto via tile-klikk. Speilar
+   * Helper: bytter til solo strokeplay via tile-klikk. Speilar
    * `selectMatchplay`-mønstret men trenger ingen ekstra teamSize-tile-klikk
-   * siden defaultTeamSizeForMode('solo_strokeplay_netto') = 1 og Solo er
+   * siden defaultTeamSizeForMode('solo_strokeplay') = 1 og Solo er
    * den eneste aktive lagstørrelsen for modusen.
    */
   function selectSoloStrokeplay() {
@@ -1050,7 +1050,7 @@ describe('GameForm — solo strokeplay netto (epic #46 fase 2)', () => {
     expect(fourMann).toBeDisabled();
   });
 
-  it('slagspill: hidden inputs sender game_mode=solo_strokeplay_netto og team_size=1, ingen stableford_team_size', () => {
+  it('slagspill: hidden inputs sender game_mode=solo_strokeplay og team_size=1, ingen stableford_team_size', () => {
     const { container } = render(
       <GameForm
         courses={COURSES}
@@ -1069,7 +1069,7 @@ describe('GameForm — solo strokeplay netto (epic #46 fase 2)', () => {
       (container.querySelector(
         'input[type="hidden"][name="game_mode"]',
       ) as HTMLInputElement).value,
-    ).toBe('solo_strokeplay_netto');
+    ).toBe('solo_strokeplay');
     expect(
       (container.querySelector(
         'input[type="hidden"][name="team_size"]',

@@ -260,7 +260,7 @@ describe('HoleClient — stableford-modus', () => {
   });
 
   it('skjuler «Dine poeng»-subtittel for best-ball', () => {
-    render(<HoleClient {...baseProps({ gameMode: 'best_ball_netto' })} />);
+    render(<HoleClient {...baseProps({ gameMode: 'best_ball' })} />);
     expect(
       screen.queryByTestId('stableford-total-subtitle'),
     ).not.toBeInTheDocument();
@@ -291,7 +291,7 @@ describe('HoleClient — stableford-modus', () => {
     ]);
     render(
       <HoleClient
-        {...baseProps({ currentHole: 18, gameMode: 'best_ball_netto' })}
+        {...baseProps({ currentHole: 18, gameMode: 'best_ball' })}
       />,
     );
     const link = screen.getByRole('link', { name: 'Lever scorekort' });
@@ -329,7 +329,7 @@ describe('HoleClient — stableford-modus', () => {
     ]);
     render(
       <HoleClient
-        {...baseProps({ gameMode: 'best_ball_netto', par: 4 })}
+        {...baseProps({ gameMode: 'best_ball', par: 4 })}
       />,
     );
     const helpers = screen.getAllByTestId('helper-text');

@@ -30,7 +30,7 @@ export const REGISTRATION_TYPES: readonly RegistrationType[] = [
  * singles-matchplay kjører kun individuell scoring og kan ikke ta lag-
  * påmeldinger uten å bryte scoring-modellen.
  *
- * Source of truth her — kontrakt #199 listet best_ball_netto + texas_scramble
+ * Source of truth her — kontrakt #199 listet best_ball + texas_scramble
  * eksplisitt; stableford er per definisjon solo siden par-stableford
  * persisteres med samme `kind` men forskjellig team_size, og lag-påmelding
  * må vite team-strukturen ved registreringstidspunkt (4BBB-par-stableford
@@ -38,7 +38,7 @@ export const REGISTRATION_TYPES: readonly RegistrationType[] = [
  * Vi holder den smal i v1 og åpner for stableford senere hvis nødvendig.
  */
 export function gameModeSupportsTeams(mode: GameMode): boolean {
-  return mode === 'best_ball_netto' || mode === 'texas_scramble';
+  return mode === 'best_ball' || mode === 'texas_scramble';
 }
 
 export function isRegistrationMode(v: unknown): v is RegistrationMode {

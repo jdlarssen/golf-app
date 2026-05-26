@@ -8,7 +8,7 @@
 //   bygger mode_config-objektet som persisterer til games.mode_config.
 //
 // Bakoverkompatibilitet: form-feltet `game_mode` defaultes til
-// 'best_ball_netto' hvis det mangler — UI-velgeren introduseres først i
+// 'best_ball' hvis det mangler — UI-velgeren introduseres først i
 // fase 4. Eksisterende admin-flyt produserer derfor samme payload som før.
 
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
@@ -106,7 +106,7 @@ export type GameValidationErrorCode =
   //   both).
   // - team_registration_unsupported_mode: registration_type team/both valgt
   //   sammen med en game_mode som ikke har lag-konsept (stableford,
-  //   singles_matchplay, solo_strokeplay_netto). UI burde forhindre dette,
+  //   singles_matchplay, solo_strokeplay). UI burde forhindre dette,
   //   men server-side gate beskytter mot DevTools-tampering.
   | 'bad_registration_mode'
   | 'bad_registration_type'
@@ -220,19 +220,19 @@ function parseRegistrationType(formData: FormData): RegistrationType | null {
 }
 
 /**
- * Leser `game_mode` fra form-data. Defaulter til `best_ball_netto` hvis
+ * Leser `game_mode` fra form-data. Defaulter til `best_ball` hvis
  * feltet mangler — bevarer bakoverkompatibilitet inntil ModeSelector
  * (fase 4) wires inn en eksplisitt verdi. Ukjente verdier returnerer
  * null så top-level kan svare med `mode_required`.
  */
 function parseGameMode(formData: FormData): GameMode | null {
   const raw = String(formData.get('game_mode') ?? '').trim();
-  if (raw === '') return 'best_ball_netto';
+  if (raw === '') return 'best_ball';
   if (
-    raw === 'best_ball_netto' ||
+    raw === 'best_ball' ||
     raw === 'stableford' ||
     raw === 'singles_matchplay' ||
-    raw === 'solo_strokeplay_netto' ||
+    raw === 'solo_strokeplay' ||
     raw === 'texas_scramble' ||
     raw === 'fourball_matchplay'
   )
@@ -249,7 +249,7 @@ function parseGameMode(formData: FormData): GameMode | null {
  *
  * Mode_config-output speiler 0030-backfill: `{kind, team_size: 2, teams_count: 4}`.
  */
-function validateBestBallNetto(
+function validateBestBall(
   formData: FormData,
   mode: PayloadMode,
 ): ModeValidationResult {
@@ -298,7 +298,7 @@ function validateBestBallNetto(
   return {
     ok: true,
     players,
-    mode_config: { kind: 'best_ball_netto', team_size: 2, teams_count: 4 },
+    mode_config: { kind: 'best_ball', team_size: 2, teams_count: 4 },
   };
 }
 
@@ -528,7 +528,7 @@ function validateSinglesMatchplay(
 }
 
 /**
- * Solo strokeplay netto-validator (epic #46 — klassisk slagspill).
+ * Solo strokeplay-validator (epic #46 — klassisk slagspill).
  *
  * Speiler solo-stableford-mønsteret tett: hver spiller er sin egen «row»,
  * ingen lag-tilordning, ingen flight-tilordning. Forskjellen er kun mode_config
@@ -549,7 +549,7 @@ function validateSinglesMatchplay(
  * forbi dette i en senere fase uten skjema-endring (samme begrensning som
  * solo-stableford).
  */
-function validateSoloStrokeplayNetto(
+function validateSoloStrokeplay(
   formData: FormData,
   mode: PayloadMode,
 ): ModeValidationResult {
@@ -572,7 +572,7 @@ function validateSoloStrokeplayNetto(
   return {
     ok: true,
     players,
-    mode_config: { kind: 'solo_strokeplay_netto', team_size: 1 },
+    mode_config: { kind: 'solo_strokeplay', team_size: 1 },
   };
 }
 
@@ -809,10 +809,10 @@ const modeValidators: Record<
   GameMode,
   (formData: FormData, mode: PayloadMode) => ModeValidationResult
 > = {
-  best_ball_netto: validateBestBallNetto,
+  best_ball: validateBestBall,
   stableford: validateStableford,
   singles_matchplay: validateSinglesMatchplay,
-  solo_strokeplay_netto: validateSoloStrokeplayNetto,
+  solo_strokeplay: validateSoloStrokeplay,
   texas_scramble: validateTexasScramble,
   fourball_matchplay: validateFourballMatchplay,
 };
@@ -829,7 +829,7 @@ const modeValidators: Record<
  *   completeness check runs. Duplicate players are still rejected.
  *
  * Modus-spesifikke regler delegeres til `modeValidators[game_mode]`:
- *  - best_ball_netto: 8 spillere fordelt 2-2-2-2 på 4 lag (publish)
+ *  - best_ball: 8 spillere fordelt 2-2-2-2 på 4 lag (publish)
  *  - stableford: ≥1 solo spiller, team/flight null (publish)
  *
  * Returns the parsed payload with `errorCode` set on the first failure;
@@ -849,8 +849,8 @@ export function buildGameInsertPayload(
   ): ParsedPayload => ({
     ...base,
     players: [],
-    game_mode: 'best_ball_netto',
-    mode_config: { kind: 'best_ball_netto', team_size: 2, teams_count: 4 },
+    game_mode: 'best_ball',
+    mode_config: { kind: 'best_ball', team_size: 2, teams_count: 4 },
     registration_mode: 'invite_only',
     registration_type: 'solo',
     errorCode,

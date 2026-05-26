@@ -45,7 +45,7 @@ export interface HoleClientProps {
    * Spillets modus. Stableford bytter ut «Lever lagets scorekort» med
    * «Lever ditt scorekort», viser «Dine poeng»-subtittel i headeren, og
    * surfacer stableford-poeng per hull på score-kortet. Default-prop
-   * `best_ball_netto` holder eldre callsites bakoverkompatible inntil
+   * `best_ball` holder eldre callsites bakoverkompatible inntil
    * de oppdateres.
    */
   gameMode?: GameMode;
@@ -164,7 +164,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     gameId,
     gameName,
     gameStatus,
-    gameMode = 'best_ball_netto',
+    gameMode = 'best_ball',
     currentHole,
     par,
     parByGender,

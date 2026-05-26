@@ -3,12 +3,12 @@ import { computeLeaderboard } from './index';
 import type { ScoringContext } from './modes/types';
 
 describe('computeLeaderboard — mode-router', () => {
-  it('delegerer best_ball_netto til bestBallNetto.compute', () => {
+  it('delegerer best_ball til bestBall.compute', () => {
     const ctx: ScoringContext = {
       game: {
         id: 'g',
-        game_mode: 'best_ball_netto',
-        mode_config: { kind: 'best_ball_netto', team_size: 2, teams_count: 4 },
+        game_mode: 'best_ball',
+        mode_config: { kind: 'best_ball', team_size: 2, teams_count: 4 },
       },
       players: [
         { userId: 'p1', teamNumber: 1, flightNumber: 1, courseHandicap: 0 },
@@ -25,8 +25,8 @@ describe('computeLeaderboard — mode-router', () => {
     };
 
     const result = computeLeaderboard(ctx);
-    expect(result.kind).toBe('best_ball_netto');
-    if (result.kind === 'best_ball_netto') {
+    expect(result.kind).toBe('best_ball');
+    if (result.kind === 'best_ball') {
       expect(result.teams.length).toBe(2);
     }
   });
@@ -86,12 +86,12 @@ describe('computeLeaderboard — mode-router', () => {
     }
   });
 
-  it('delegerer solo_strokeplay_netto til soloStrokeplayNetto.compute', () => {
+  it('delegerer solo_strokeplay til soloStrokeplay.compute', () => {
     const ctx: ScoringContext = {
       game: {
         id: 'g',
-        game_mode: 'solo_strokeplay_netto',
-        mode_config: { kind: 'solo_strokeplay_netto', team_size: 1 },
+        game_mode: 'solo_strokeplay',
+        mode_config: { kind: 'solo_strokeplay', team_size: 1 },
       },
       players: [
         { userId: 'u1', teamNumber: null, flightNumber: null, courseHandicap: 0 },
@@ -105,8 +105,8 @@ describe('computeLeaderboard — mode-router', () => {
     };
 
     const result = computeLeaderboard(ctx);
-    expect(result.kind).toBe('solo_strokeplay_netto');
-    if (result.kind === 'solo_strokeplay_netto') {
+    expect(result.kind).toBe('solo_strokeplay');
+    if (result.kind === 'solo_strokeplay') {
       expect(result.players[0].userId).toBe('u1');
       expect(result.players[0].totalNetStrokes).toBe(4);
       expect(result.players[0].rank).toBe(1);
@@ -114,7 +114,7 @@ describe('computeLeaderboard — mode-router', () => {
       expect(result.players[1].totalNetStrokes).toBe(5);
       expect(result.players[1].rank).toBe(2);
     } else {
-      throw new Error('expected solo_strokeplay_netto result');
+      throw new Error('expected solo_strokeplay result');
     }
   });
 });

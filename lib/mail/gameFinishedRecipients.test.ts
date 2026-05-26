@@ -10,7 +10,7 @@ beforeEach(() => {
 });
 
 const BEST_BALL_CONFIG: GameModeConfig = {
-  kind: 'best_ball_netto',
+  kind: 'best_ball',
   team_size: 2,
   teams_count: 4,
 };
@@ -22,7 +22,7 @@ const STABLEFORD_CONFIG: GameModeConfig = {
 };
 
 describe('buildGameFinishedRecipients', () => {
-  it('best_ball_netto: returnerer email/name uten mode-info', async () => {
+  it('best_ball: returnerer email/name uten mode-info', async () => {
     const supabase = buildSupabaseMock([
       {
         // game_players-fetchen (eneste queryen for best-ball)
@@ -50,7 +50,7 @@ describe('buildGameFinishedRecipients', () => {
       'game-1',
       {
         course_id: 'c1',
-        game_mode: 'best_ball_netto',
+        game_mode: 'best_ball',
         mode_config: BEST_BALL_CONFIG,
       },
     );
@@ -69,7 +69,7 @@ describe('buildGameFinishedRecipients', () => {
     expect(recipients.every((r) => r.mode === undefined)).toBe(true);
   });
 
-  it('best_ball_netto: dropper spillere uten email', async () => {
+  it('best_ball: dropper spillere uten email', async () => {
     const supabase = buildSupabaseMock([
       {
         data: [
@@ -102,7 +102,7 @@ describe('buildGameFinishedRecipients', () => {
       'game-1',
       {
         course_id: 'c1',
-        game_mode: 'best_ball_netto',
+        game_mode: 'best_ball',
         mode_config: BEST_BALL_CONFIG,
       },
     );
@@ -890,17 +890,17 @@ describe('buildGameFinishedRecipients', () => {
   });
 
   // ────────────────────────────────────────────────────────────────
-  // Solo strokeplay netto (epic #46) — klassisk slagspill. Hver
+  // Solo strokeplay (epic #46) — klassisk slagspill. Hver
   // spiller får per-spiller payload med rank + totalNetStrokes +
   // totalGrossStrokes + totalPlayers. Speilet solo-stableford-pattern.
   // ────────────────────────────────────────────────────────────────
 
   const SOLO_STROKEPLAY_CONFIG: GameModeConfig = {
-    kind: 'solo_strokeplay_netto',
+    kind: 'solo_strokeplay',
     team_size: 1,
   };
 
-  it('solo strokeplay netto: regner ut rank + slag per spiller og legger på mode-info', async () => {
+  it('solo strokeplay: regner ut rank + slag per spiller og legger på mode-info', async () => {
     // 2 spillere, 2 hull par 4, CH=0:
     //   u1 gross 4, 3 → totalNet 7, totalGross 7
     //   u2 gross 5, 4 → totalNet 9, totalGross 9
@@ -947,7 +947,7 @@ describe('buildGameFinishedRecipients', () => {
       'game-sp1',
       {
         course_id: 'c1',
-        game_mode: 'solo_strokeplay_netto',
+        game_mode: 'solo_strokeplay',
         mode_config: SOLO_STROKEPLAY_CONFIG,
       },
     );
@@ -956,14 +956,14 @@ describe('buildGameFinishedRecipients', () => {
     const ada = recipients.find((r) => r.email === 'a@example.com');
     const bjorn = recipients.find((r) => r.email === 'b@example.com');
     expect(ada?.mode).toEqual({
-      kind: 'solo_strokeplay_netto',
+      kind: 'solo_strokeplay',
       rank: 1,
       totalNetStrokes: 7,
       totalGrossStrokes: 7,
       totalPlayers: 2,
     });
     expect(bjorn?.mode).toEqual({
-      kind: 'solo_strokeplay_netto',
+      kind: 'solo_strokeplay',
       rank: 2,
       totalNetStrokes: 9,
       totalGrossStrokes: 9,
@@ -971,7 +971,7 @@ describe('buildGameFinishedRecipients', () => {
     });
   });
 
-  it('solo strokeplay netto: dropper spillere uten email (mode-info gjelder kun rendret resultat)', async () => {
+  it('solo strokeplay: dropper spillere uten email (mode-info gjelder kun rendret resultat)', async () => {
     const supabase = buildSupabaseMock([
       {
         data: [
@@ -1016,7 +1016,7 @@ describe('buildGameFinishedRecipients', () => {
       'game-sp2',
       {
         course_id: 'c1',
-        game_mode: 'solo_strokeplay_netto',
+        game_mode: 'solo_strokeplay',
         mode_config: SOLO_STROKEPLAY_CONFIG,
       },
     );
@@ -1025,13 +1025,13 @@ describe('buildGameFinishedRecipients', () => {
     expect(recipients[0]!.email).toBe('a@example.com');
     // totalPlayers reflekterer FULL turnering (3), ikke kun de med mail.
     expect(recipients[0]!.mode).toMatchObject({
-      kind: 'solo_strokeplay_netto',
+      kind: 'solo_strokeplay',
       rank: 1,
       totalPlayers: 3,
     });
   });
 
-  it('solo strokeplay netto: brutto-totalen reflekterer faktiske slag (ikke netto)', async () => {
+  it('solo strokeplay: brutto-totalen reflekterer faktiske slag (ikke netto)', async () => {
     // Spiller med CH=18 og 1 hull par 4 stroke_index=1:
     //   strokesForHole(18, 1) = 1 ekstra → netto = gross − 1
     //   gross 5 → netto 4
@@ -1063,14 +1063,14 @@ describe('buildGameFinishedRecipients', () => {
       'game-sp3',
       {
         course_id: 'c1',
-        game_mode: 'solo_strokeplay_netto',
+        game_mode: 'solo_strokeplay',
         mode_config: SOLO_STROKEPLAY_CONFIG,
       },
     );
 
     expect(recipients).toHaveLength(1);
     expect(recipients[0]!.mode).toEqual({
-      kind: 'solo_strokeplay_netto',
+      kind: 'solo_strokeplay',
       rank: 1,
       totalNetStrokes: 4,
       totalGrossStrokes: 5,

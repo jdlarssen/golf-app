@@ -86,13 +86,13 @@ export type InitialValues = {
   }>;
   /**
    * Valgt spillmodus. Innført med epic #41 fase 4. Defaulter til
-   * `'best_ball_netto'` så eksisterende edit-flyt for pre-multi-mode-spill
+   * `'best_ball'` så eksisterende edit-flyt for pre-multi-mode-spill
    * fungerer uten endring.
    */
   game_mode?: GameMode;
   /**
    * Lagstørrelse. Defaulter til 2 (matcher dagens best-ball-flyt) hvis
-   * mode = best_ball_netto, eller 1 hvis mode = stableford. Initialiserings-
+   * mode = best_ball, eller 1 hvis mode = stableford. Initialiserings-
    * logikken i GameForm-state-en sikrer at verdien alltid matcher modus.
    */
   team_size?: TeamSize;
@@ -284,7 +284,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
       {/* Hidden inputs that carry the structured assignment payload. The server
           action only ever sees the FormData; keeping the names server-known
           means we don't need an alternate JSON wire format. For solo-modus
-          (stableford eller solo_strokeplay_netto) sender vi tomme team/
+          (stableford eller solo_strokeplay) sender vi tomme team/
           flight-strenger — gamePayload-validatoren oppdager modusen og
           persisterer team_number/flight_number som null uansett. */}
       {orderedPayload.map((row, i) => (

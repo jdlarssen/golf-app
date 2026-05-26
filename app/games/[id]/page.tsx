@@ -77,10 +77,10 @@ type GameRow = {
    * server-component som allerede leser status-unionen lokalt.
    */
   game_mode:
-    | 'best_ball_netto'
+    | 'best_ball'
     | 'stableford'
     | 'singles_matchplay'
-    | 'solo_strokeplay_netto'
+    | 'solo_strokeplay'
     | 'texas_scramble'
     | 'fourball_matchplay';
   /**

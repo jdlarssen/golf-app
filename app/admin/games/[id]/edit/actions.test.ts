@@ -66,7 +66,7 @@ function fullBestBallFormData(
     hcp_allowance_pct: '100',
     scheduled_tee_off_at: '2026-06-15T09:00',
     side_tournament_enabled: 'false',
-    game_mode: 'best_ball_netto',
+    game_mode: 'best_ball',
   };
   for (let i = 0; i < 8; i++) {
     base[`player_${i}_id`] = `u${i}`;
@@ -97,7 +97,7 @@ describe('updateScheduledAction — mode-lock', () => {
       { data: completedRoster, error: null }, // users.in(roster) — pending gate
       // games.select(status, game_mode).single — mode-lock-fetch
       {
-        data: { status: 'scheduled', game_mode: 'best_ball_netto' },
+        data: { status: 'scheduled', game_mode: 'best_ball' },
         error: null,
       },
     ]);
@@ -149,7 +149,7 @@ describe('updateScheduledAction — mode-lock', () => {
       { data: { is_admin: true }, error: null }, // users.is_admin
       { data: completedRoster, error: null }, // users.in(roster)
       {
-        data: { status: 'scheduled', game_mode: 'best_ball_netto' },
+        data: { status: 'scheduled', game_mode: 'best_ball' },
         error: null,
       }, // games.select
       { data: { id: 'game-1' }, error: null }, // games.update
@@ -187,7 +187,7 @@ describe('backfill invite-notify (#182) — edit-flyten', () => {
       { data: { is_admin: true }, error: null },
       { data: completedRoster, error: null },
       {
-        data: { status: 'scheduled', game_mode: 'best_ball_netto' },
+        data: { status: 'scheduled', game_mode: 'best_ball' },
         error: null,
       },
       { data: { id: 'game-diff' }, error: null }, // games.update
@@ -231,7 +231,7 @@ describe('backfill invite-notify (#182) — edit-flyten', () => {
       { data: { is_admin: true }, error: null },
       { data: completedRoster, error: null },
       {
-        data: { status: 'scheduled', game_mode: 'best_ball_netto' },
+        data: { status: 'scheduled', game_mode: 'best_ball' },
         error: null,
       },
       { data: { id: 'game-same' }, error: null },
@@ -266,7 +266,7 @@ describe('backfill invite-notify (#182) — edit-flyten', () => {
       { data: { is_admin: true }, error: null },
       { data: completedRoster, error: null },
       {
-        data: { status: 'scheduled', game_mode: 'best_ball_netto' },
+        data: { status: 'scheduled', game_mode: 'best_ball' },
         error: null,
       },
       { data: { id: 'game-self' }, error: null },
@@ -304,7 +304,7 @@ describe('saveDraftAction — mode-lock', () => {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true }, error: null }, // users.is_admin
       // Ingen roster-gate i save_draft-modusen
-      { data: { status: 'draft', game_mode: 'best_ball_netto' }, error: null }, // games.select
+      { data: { status: 'draft', game_mode: 'best_ball' }, error: null }, // games.select
       { data: { id: 'draft-1' }, error: null }, // games.update
       { data: [], error: null }, // game_players.select (priorRoster snapshot)
       { data: null, error: null }, // game_players.delete

@@ -9,7 +9,7 @@
  *  - best-ball-netto → lag-grid (4 lag à 2) + «Trekk tilfeldig»/«Tøm» + flights
  *  - par-stableford → lag-grid (1-4 lag à 2) + per-spiller-tee
  *  - texas-scramble → lag-grid (2 eller 4 spillere per lag) + per-spiller-tee
- *  - solo (stableford / solo strokeplay netto) → kun per-spiller-tee
+ *  - solo (stableford / solo strokeplay) → kun per-spiller-tee
  *
  * Nummerering speiler GameForm-stacked-layouten («4. Lag», «5. Flights»,
  * «5. Tee per spiller»). Wizard-en kan be om å droppe det nummeriske

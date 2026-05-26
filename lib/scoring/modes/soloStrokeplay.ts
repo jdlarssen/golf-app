@@ -1,4 +1,4 @@
-// Solo strokeplay netto (epic #46): klassisk slagspill med HCP-fordeling.
+// Solo strokeplay (epic #46): klassisk slagspill med HCP-fordeling.
 //
 // Hver spiller fører eget scorekort. Per hull: netto = gross − extra strokes
 // (fra HCP-fordelingen i `strokeAllocation`). Total = sum av netto-slag for
@@ -102,7 +102,7 @@ function padTo18(perHoleNet: number[]): number[] {
 }
 
 /**
- * Beregner solo strokeplay netto-leaderboard fra en ScoringContext. Bruker
+ * Beregner solo strokeplay-leaderboard fra en ScoringContext. Bruker
  * `strokesForHole` for HCP-allokering og `rankTeams` for 5-tier tie-break-
  * cascaden (lavest vinner). Returnerer én rad per spiller, sortert lavest
  * total-netto først.
@@ -144,5 +144,5 @@ export function compute(ctx: ScoringContext): SoloStrokeplayResult {
     };
   });
 
-  return { kind: 'solo_strokeplay_netto', players };
+  return { kind: 'solo_strokeplay', players };
 }

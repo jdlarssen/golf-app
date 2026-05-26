@@ -11,7 +11,7 @@ import {
  * Key invariants:
  *  - Authz via requireAdminOrTrustedCreator (admin OR trusted-creator allowed).
  *  - Status gate: only draft/scheduled allow add/invite.
- *  - Capacity gate: best_ball_netto refuses at 8 players.
+ *  - Capacity gate: best_ball refuses at 8 players.
  *  - Idempotency: duplicate (game_id, user_id) swallow-es; duplicate pending
  *    invitation for samme spill swallow-es.
  *  - notify fires after game_players insert; never blocks the action.
@@ -78,7 +78,7 @@ describe('addExistingPlayerToGame', () => {
       { data: { is_admin: true, email: 'admin@tornygolf.no', name: 'Jørgen' }, error: null },
       // loadGameForInvite: games.select.eq.single
       {
-        data: { id: GAME_ID, name: 'Vinter-cup', status: 'draft', game_mode: 'best_ball_netto' },
+        data: { id: GAME_ID, name: 'Vinter-cup', status: 'draft', game_mode: 'best_ball' },
         error: null,
       },
       // capacity-check: game_players.select.eq (count=3)
@@ -108,7 +108,7 @@ describe('addExistingPlayerToGame', () => {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true, email: 'admin@tornygolf.no', name: 'Jørgen' }, error: null },
       {
-        data: { id: GAME_ID, name: 'Vinter-cup', status: 'active', game_mode: 'best_ball_netto' },
+        data: { id: GAME_ID, name: 'Vinter-cup', status: 'active', game_mode: 'best_ball' },
         error: null,
       },
     ]);
@@ -127,7 +127,7 @@ describe('addExistingPlayerToGame', () => {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true, email: 'admin@tornygolf.no', name: 'Jørgen' }, error: null },
       {
-        data: { id: GAME_ID, name: 'Vinter-cup', status: 'scheduled', game_mode: 'best_ball_netto' },
+        data: { id: GAME_ID, name: 'Vinter-cup', status: 'scheduled', game_mode: 'best_ball' },
         error: null,
       },
       // capacity: 8 already
@@ -148,7 +148,7 @@ describe('addExistingPlayerToGame', () => {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true, email: 'admin@tornygolf.no', name: 'Jørgen' }, error: null },
       {
-        data: { id: GAME_ID, name: 'Vinter-cup', status: 'draft', game_mode: 'best_ball_netto' },
+        data: { id: GAME_ID, name: 'Vinter-cup', status: 'draft', game_mode: 'best_ball' },
         error: null,
       },
       { data: [], error: null, count: 3 } as never,
@@ -171,7 +171,7 @@ describe('addExistingPlayerToGame', () => {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true, email: 'admin@tornygolf.no', name: 'Jørgen' }, error: null },
       {
-        data: { id: GAME_ID, name: 'Vinter-cup', status: 'draft', game_mode: 'best_ball_netto' },
+        data: { id: GAME_ID, name: 'Vinter-cup', status: 'draft', game_mode: 'best_ball' },
         error: null,
       },
       { data: [], error: null, count: 2 } as never,
@@ -227,7 +227,7 @@ describe('inviteEmailToGame', () => {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true, email: 'admin@tornygolf.no', name: 'Jørgen' }, error: null },
       {
-        data: { id: GAME_ID, name: 'Vinter-cup', status: 'scheduled', game_mode: 'best_ball_netto' },
+        data: { id: GAME_ID, name: 'Vinter-cup', status: 'scheduled', game_mode: 'best_ball' },
         error: null,
       },
       { data: [], error: null, count: 4 } as never,

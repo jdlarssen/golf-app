@@ -123,8 +123,8 @@ describe('endGame', () => {
           status: 'active',
           require_peer_approval: false,
           course_id: 'course-1',
-          game_mode: 'best_ball_netto',
-          mode_config: { kind: 'best_ball_netto', team_size: 2, teams_count: 4 },
+          game_mode: 'best_ball',
+          mode_config: { kind: 'best_ball', team_size: 2, teams_count: 4 },
         },
         error: null,
       }, // games
@@ -168,8 +168,8 @@ describe('endGame', () => {
           status: 'active',
           require_peer_approval: false,
           course_id: 'course-1',
-          game_mode: 'best_ball_netto',
-          mode_config: { kind: 'best_ball_netto', team_size: 2, teams_count: 4 },
+          game_mode: 'best_ball',
+          mode_config: { kind: 'best_ball', team_size: 2, teams_count: 4 },
         },
         error: null,
       }, // games
@@ -233,8 +233,8 @@ describe('endGame', () => {
           status: 'active',
           require_peer_approval: false,
           course_id: 'course-1',
-          game_mode: 'best_ball_netto',
-          mode_config: { kind: 'best_ball_netto', team_size: 2, teams_count: 4 },
+          game_mode: 'best_ball',
+          mode_config: { kind: 'best_ball', team_size: 2, teams_count: 4 },
         },
         error: null,
       },
@@ -286,8 +286,8 @@ describe('endGame', () => {
           status: 'active',
           require_peer_approval: true, // strict
           course_id: 'course-1',
-          game_mode: 'best_ball_netto',
-          mode_config: { kind: 'best_ball_netto', team_size: 2, teams_count: 4 },
+          game_mode: 'best_ball',
+          mode_config: { kind: 'best_ball', team_size: 2, teams_count: 4 },
         },
         error: null,
       }, // games

@@ -4,7 +4,7 @@ export interface PlayerHoleScore {
   extraStrokes: number;
 }
 
-export interface BestBallResult {
+export interface BestBallHole {
   teamNet: number | null;
   contributors: string[];
 }
@@ -14,7 +14,7 @@ export function netScore(input: { gross: number | null; extraStrokes: number }):
   return input.gross - input.extraStrokes;
 }
 
-export function bestBallForHole(players: PlayerHoleScore[]): BestBallResult {
+export function bestBallForHole(players: PlayerHoleScore[]): BestBallHole {
   const nets = players
     .map((p) => ({ userId: p.userId, net: netScore({ gross: p.gross, extraStrokes: p.extraStrokes }) }))
     .filter((p): p is { userId: string; net: number } => p.net !== null);
@@ -72,7 +72,7 @@ import { rankTeams } from '../tiebreaker';
 import { parFor } from './parResolver';
 import type {
   ScoringContext,
-  BestBallNettoResult,
+  BestBallResult,
   BestBallTeamLine,
   BestBallHoleRow,
   BestBallPlayerCell,
@@ -87,7 +87,7 @@ import type {
  * teamNumber blir hoppet over (best-ball-modus krever lag-tilordning,
  * håndhevet i validation-laget — se fase 3).
  */
-export function compute(ctx: ScoringContext): BestBallNettoResult {
+export function compute(ctx: ScoringContext): BestBallResult {
   const holesSorted = [...ctx.holes].sort((a, b) => a.number - b.number);
   const grossKey = (userId: string, holeNumber: number) => `${userId}#${holeNumber}`;
   const grossByKey = new Map<string, number | null>();
@@ -188,5 +188,5 @@ export function compute(ctx: ScoringContext): BestBallNettoResult {
     };
   });
 
-  return { kind: 'best_ball_netto', teams };
+  return { kind: 'best_ball', teams };
 }

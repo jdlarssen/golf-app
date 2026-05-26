@@ -28,7 +28,7 @@ type Props = {
  * design-beslutning per epic #41 + #43-planen:
  *
  *  - Modus = Stableford → Solo + Par aktiv (4-mann kommer)
- *  - Modus = Best ball netto → kun Par aktiv (solo/4-mann kommer)
+ *  - Modus = Best ball → kun Par aktiv (solo/4-mann kommer)
  *
  * Par-stableford (4BBB) ble aktivert i epic #43 fase 2 — scoring-motoren
  * og payload-validatoren landet i fase 1 (PR #151), og lag-fordelings-
@@ -39,7 +39,7 @@ type Props = {
  * nøyaktig 2 sider). Scoring-motoren og payload-validatoren landet i
  * fase 1; ModeSelector og GameForm wires inn matchplay i fase 2.
  *
- * Solo strokeplay netto (epic #46) krever team_size=1 (én spiller = én rad).
+ * Solo strokeplay (epic #46) krever team_size=1 (én spiller = én rad).
  * Scoring-motoren og payload-validatoren landet i fase 1; ModeSelector
  * wires inn modusen i fase 2 — inntil da har modusen ingen UI-eksponering.
  *
@@ -52,9 +52,9 @@ type Props = {
  */
 const ENABLED_COMBOS: Record<GameMode, ReadonlySet<TeamSize>> = {
   stableford: new Set<TeamSize>([1, 2]),
-  best_ball_netto: new Set<TeamSize>([2]),
+  best_ball: new Set<TeamSize>([2]),
   singles_matchplay: new Set<TeamSize>([1]),
-  solo_strokeplay_netto: new Set<TeamSize>([1]),
+  solo_strokeplay: new Set<TeamSize>([1]),
   texas_scramble: new Set<TeamSize>([2, 4]),
   fourball_matchplay: new Set<TeamSize>([2]),
 };

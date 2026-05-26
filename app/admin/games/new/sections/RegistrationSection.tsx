@@ -8,7 +8,7 @@
  *   2. Type påmelding: hva man melder på (solo / team / both)
  *
  * Type-radioene disables når valgt game_mode ikke har lag-konsept — i praksis
- * når modus er stableford / singles_matchplay / solo_strokeplay_netto. State-
+ * når modus er stableford / singles_matchplay / solo_strokeplay. State-
  * hooken (`useGameFormState`) force-reseter dessuten registrationType til
  * 'solo' når admin bytter til en slik modus, så payloaden alltid er
  * konsistent uten å avhenge av at admin klikker en gyldig kombinasjon manuelt.
@@ -164,7 +164,7 @@ export function RegistrationSection({ state, hideHeading = false }: Props) {
         </div>
         {!registrationModeSupportsTeams && (
           <p className="mt-2 text-xs text-muted">
-            Lag-påmelding er kun tilgjengelig for best ball netto og Texas
+            Lag-påmelding er kun tilgjengelig for best ball og Texas
             scramble. Bytt spillmodus først hvis du vil ta imot lag.
           </p>
         )}

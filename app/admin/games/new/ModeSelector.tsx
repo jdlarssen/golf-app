@@ -207,8 +207,8 @@ const TILES: TileDef[] = [
     icon: StablefordIcon,
   },
   {
-    mode: 'best_ball_netto',
-    title: 'Best ball netto',
+    mode: 'best_ball',
+    title: 'Best ball',
     description: 'Sum av beste netto-resultat per hull per lag. Laveste vinner.',
     icon: BestBallIcon,
   },
@@ -219,7 +219,7 @@ const TILES: TileDef[] = [
     icon: MatchplayIcon,
   },
   {
-    mode: 'solo_strokeplay_netto',
+    mode: 'solo_strokeplay',
     title: 'Slagspill',
     description: 'Individuelt scorekort. Lavest netto-total vinner.',
     icon: StrokeplayIcon,

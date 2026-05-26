@@ -8,8 +8,8 @@ describe('ModeChip', () => {
     expect(screen.getByText('Stableford')).toBeInTheDocument();
   });
 
-  it('rendrer «Best ball» for best_ball_netto-modus', () => {
-    render(<ModeChip mode="best_ball_netto" />);
+  it('rendrer «Best ball» for best_ball-modus', () => {
+    render(<ModeChip mode="best_ball" />);
     expect(screen.getByText('Best ball')).toBeInTheDocument();
   });
 

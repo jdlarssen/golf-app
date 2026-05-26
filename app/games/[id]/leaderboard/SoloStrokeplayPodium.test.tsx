@@ -24,7 +24,7 @@ function makeResult(
   }>,
 ): SoloStrokeplayResult {
   return {
-    kind: 'solo_strokeplay_netto',
+    kind: 'solo_strokeplay',
     players: players.map((p) => ({ ...p, tiedWith: [] })),
   };
 }

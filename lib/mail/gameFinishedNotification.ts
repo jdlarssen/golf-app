@@ -34,16 +34,16 @@ function getClient(): Resend {
  *   - `kind: 'singles_matchplay'` (1v1 net matchplay) viser matchresultatet
  *     per spiller — «Du vant 3&2 over Per», «Du tapte 1up mot Per», eller
  *     «Matchen mot Per endte uavgjort (AS)». Begge spillerne får speilet copy.
- *   - `kind: 'solo_strokeplay_netto'` (klassisk slagspill) viser personlig
+ *   - `kind: 'solo_strokeplay'` (klassisk slagspill) viser personlig
  *     plassering + netto-total + brutto-total («Du endte på 2. plass av 8 med
  *     72 slag netto (78 brutto)»). 1. får gratulasjon, 2-3 får «Solid
  *     plassering», 4+ får nøytral tone — samme cascade som stableford-grenen.
- *   - `kind: 'best_ball_netto'` (eller udefinert) bruker dagens nøytrale
+ *   - `kind: 'best_ball'` (eller udefinert) bruker dagens nøytrale
  *     copy («Runden er ferdig — leaderboard er åpen») fordi lag-vinneren
  *     ikke nødvendigvis er én spesifikk spiller å adressere.
  */
 export type GameFinishedNotificationMode =
-  | { kind: 'best_ball_netto' }
+  | { kind: 'best_ball' }
   | {
       kind: 'stableford';
       variant: 'solo';
@@ -99,7 +99,7 @@ export type GameFinishedNotificationMode =
       selfSide: 1 | 2;
     }
   | {
-      kind: 'solo_strokeplay_netto';
+      kind: 'solo_strokeplay';
       /** Spillerens slutt-plassering (1, 2, 3, ...). */
       rank: number;
       /** Spillerens totale netto-slag for runden (sum av spilte hull). */
@@ -158,7 +158,7 @@ export async function sendGameFinishedNotification(
 
   // Mode-spesifikk hovedlinje. Stableford får en personlig plassering-spoiler
   // (solo: individuell rank, team: lag-rank); matchplay får match-resultat
-  // med motstander-navn («Du vant 3&2 over Per»); solo strokeplay netto får
+  // med motstander-navn («Du vant 3&2 over Per»); solo strokeplay får
   // personlig plassering + netto-total med brutto som side-note; best-ball
   // (eller udefinert) får dagens nøytrale ferdig-melding.
   let bodyLine: string;
@@ -175,7 +175,7 @@ export async function sendGameFinishedNotification(
   } else if (mode?.kind === 'singles_matchplay') {
     bodyLine = formatMatchplayBodyLine(mode, gameName);
     bodyLineText = formatMatchplayBodyLineText(mode, gameName);
-  } else if (mode?.kind === 'solo_strokeplay_netto') {
+  } else if (mode?.kind === 'solo_strokeplay') {
     bodyLine = formatSoloStrokeplayBodyLine(mode, gameName);
     bodyLineText = formatSoloStrokeplayBodyLineText(mode, gameName);
   } else if (mode?.kind === 'texas_scramble') {
@@ -454,7 +454,7 @@ function pluralizePoints(n: number): string {
 }
 
 /**
- * Bygger solo strokeplay netto-hovedlinjen (HTML-versjon). Speilar
+ * Bygger solo strokeplay-hovedlinjen (HTML-versjon). Speilar
  * solo-stableford-grenen strukturelt — personlig plassering med totalt-tall
  * og samme celebration-cascade (1. → seier, 2/3 → solid, 4+ → nøytral) —
  * men byttet poeng-spoiler for netto/brutto-slag. Brutto-totalen vises som
@@ -468,7 +468,7 @@ function pluralizePoints(n: number): string {
 function formatSoloStrokeplayBodyLine(
   mode: Extract<
     GameFinishedNotificationMode,
-    { kind: 'solo_strokeplay_netto' }
+    { kind: 'solo_strokeplay' }
   >,
   gameName: string,
 ): string {
@@ -488,7 +488,7 @@ function formatSoloStrokeplayBodyLine(
 function formatSoloStrokeplayBodyLineText(
   mode: Extract<
     GameFinishedNotificationMode,
-    { kind: 'solo_strokeplay_netto' }
+    { kind: 'solo_strokeplay' }
   >,
   gameName: string,
 ): string {

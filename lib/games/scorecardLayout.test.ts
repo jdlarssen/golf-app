@@ -72,8 +72,8 @@ describe('resolveScorecardLayout', () => {
     it('solo strokeplay → Layout A med me', () => {
       const game: GameForHole = {
         ...baseGame,
-        game_mode: 'solo_strokeplay_netto',
-        mode_config: { kind: 'solo_strokeplay_netto', team_size: 1 },
+        game_mode: 'solo_strokeplay',
+        mode_config: { kind: 'solo_strokeplay', team_size: 1 },
       };
       const me = player('me', 1, { team_number: 0, flight_number: 0 });
       const layout = resolveScorecardLayout(game, [me], me, false, fmt);
@@ -171,8 +171,8 @@ describe('resolveScorecardLayout', () => {
       const game: GameForHole = {
         ...baseGame,
         score_visibility: 'reveal',
-        game_mode: 'best_ball_netto',
-        mode_config: { kind: 'best_ball_netto', team_size: 2, teams_count: 4 },
+        game_mode: 'best_ball',
+        mode_config: { kind: 'best_ball', team_size: 2, teams_count: 4 },
       };
       const me = player('me', 1);
       const partner = player('p', 1);
@@ -192,8 +192,8 @@ describe('resolveScorecardLayout', () => {
     it('best-ball → Layout B med me + partner (samme team)', () => {
       const game: GameForHole = {
         ...baseGame,
-        game_mode: 'best_ball_netto',
-        mode_config: { kind: 'best_ball_netto', team_size: 2, teams_count: 4 },
+        game_mode: 'best_ball',
+        mode_config: { kind: 'best_ball', team_size: 2, teams_count: 4 },
       };
       const me = player('me', 1, {
         users: { name: 'Jens Hansen', nickname: null },
@@ -304,8 +304,8 @@ describe('resolveScorecardLayout', () => {
     it('best-ball uten partner i samme team → defensiv Layout A fallback', () => {
       const game: GameForHole = {
         ...baseGame,
-        game_mode: 'best_ball_netto',
-        mode_config: { kind: 'best_ball_netto', team_size: 2, teams_count: 4 },
+        game_mode: 'best_ball',
+        mode_config: { kind: 'best_ball', team_size: 2, teams_count: 4 },
       };
       const me = player('me', 1);
       const otherTeam = player('o', 2);
@@ -325,8 +325,8 @@ describe('resolveScorecardLayout', () => {
     it('me-kolonnen er alltid leftmost (isCurrentUser=true)', () => {
       const game: GameForHole = {
         ...baseGame,
-        game_mode: 'best_ball_netto',
-        mode_config: { kind: 'best_ball_netto', team_size: 2, teams_count: 4 },
+        game_mode: 'best_ball',
+        mode_config: { kind: 'best_ball', team_size: 2, teams_count: 4 },
       };
       // Partner kommer først i array
       const partner = player('p', 1);

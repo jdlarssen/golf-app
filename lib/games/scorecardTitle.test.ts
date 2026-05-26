@@ -5,11 +5,11 @@ import type { GameModeConfig } from '@/lib/scoring/modes/types';
 describe('scorecardTitle', () => {
   it('returnerer «Lagets scorekort» for best-ball', () => {
     const cfg: GameModeConfig = {
-      kind: 'best_ball_netto',
+      kind: 'best_ball',
       team_size: 2,
       teams_count: 4,
     };
-    expect(scorecardTitle('best_ball_netto', cfg)).toEqual({
+    expect(scorecardTitle('best_ball', cfg)).toEqual({
       title: 'Lagets scorekort',
       cardLabel: 'Lagets scorekort',
     });
@@ -51,12 +51,12 @@ describe('scorecardTitle', () => {
     });
   });
 
-  it('returnerer «Mitt scorekort» for solo strokeplay netto', () => {
+  it('returnerer «Mitt scorekort» for solo strokeplay', () => {
     const cfg: GameModeConfig = {
-      kind: 'solo_strokeplay_netto',
+      kind: 'solo_strokeplay',
       team_size: 1,
     };
-    expect(scorecardTitle('solo_strokeplay_netto', cfg)).toEqual({
+    expect(scorecardTitle('solo_strokeplay', cfg)).toEqual({
       title: 'Mitt scorekort',
       cardLabel: 'Mitt scorekort',
     });

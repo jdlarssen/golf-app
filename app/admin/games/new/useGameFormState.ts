@@ -58,16 +58,16 @@ export function deriveAssignmentsFromInitial(initial: InitialValues | undefined)
 /**
  * Velger default-lagstørrelse for en gitt modus. Speilar de aktive
  * kombinasjonene i `TeamSizeSelector.ENABLED_COMBOS` — Stableford → 1,
- * Best ball netto → 2, Singles matchplay → 1 (én spiller per side, men
+ * Best ball → 2, Singles matchplay → 1 (én spiller per side, men
  * TeamSizeSelector er skjult for matchplay siden det ikke finnes noen
- * reell lagstørrelse å velge mellom), Solo strokeplay netto → 1 (én
+ * reell lagstørrelse å velge mellom), Solo strokeplay → 1 (én
  * spiller = én rad). Holdt synk separat fordi GameForm trenger en ren
  * funksjon for state-initialisering uten å eksponere selector-internt.
  */
 export function defaultTeamSizeForMode(mode: GameMode): TeamSize {
   if (mode === 'stableford') return 1;
   if (mode === 'singles_matchplay') return 1;
-  if (mode === 'solo_strokeplay_netto') return 1;
+  if (mode === 'solo_strokeplay') return 1;
   // Texas scramble: default 4-mannslag (typisk firma-cup-størrelse).
   // 2-mannslag valgbart via TeamSizeSelector.
   if (mode === 'texas_scramble') return 4;
@@ -178,7 +178,7 @@ export function useGameFormState({
       String(
         defaultTexasHandicapPct(
           initialValues?.team_size ??
-            defaultTeamSizeForMode(initialValues?.game_mode ?? 'best_ball_netto'),
+            defaultTeamSizeForMode(initialValues?.game_mode ?? 'best_ball'),
         ),
       ),
   );
@@ -216,10 +216,10 @@ export function useGameFormState({
   const [sideEnabled, setSideEnabled] = useState<boolean>(initialSideEnabled);
 
   // Modus + lagstørrelse — wired av epic #41 fase 4. Default-modus er
-  // `'best_ball_netto'` for å speile pre-multi-mode-flyten; auto-fix av
+  // `'best_ball'` for å speile pre-multi-mode-flyten; auto-fix av
   // lagstørrelse skjer i `handleModeChange` slik at ulovlige kombinasjoner
   // ikke kan oppstå.
-  const initialMode: GameMode = initialValues?.game_mode ?? 'best_ball_netto';
+  const initialMode: GameMode = initialValues?.game_mode ?? 'best_ball';
   const [gameMode, setGameMode] = useState<GameMode>(initialMode);
   const [teamSize, setTeamSize] = useState<TeamSize>(
     initialValues?.team_size ?? defaultTeamSizeForMode(initialMode),
@@ -298,10 +298,10 @@ export function useGameFormState({
 
   // Modus-narrowing-flag som styrer ulike grener i form-validering.
   // - isSolo: spillere er en flat liste — gjelder både solo-stableford
-  //   (team_size=1) og solo strokeplay netto (eneste variant, team_size=1).
+  //   (team_size=1) og solo strokeplay (eneste variant, team_size=1).
   //   Begge har samme UI-shape: flat spiller-liste uten lag/flight-grid,
   //   per-spiller-tee-seksjon for HCP-allokering, validering = ≥1 spiller.
-  // - isBestBall: dagens 4-lag-à-2 (best_ball_netto, team_size=2). Krever
+  // - isBestBall: dagens 4-lag-à-2 (best_ball, team_size=2). Krever
   //   eksakt 8 spillere fordelt 2-2-2-2 på 4 lag.
   // - isParStableford: 4BBB-stableford. Tillater 1-4 lag á 2 spillere
   //   (2/4/6/8 spillere totalt), partial fyll mot 4-lag-grid-en. Lag uten
@@ -312,8 +312,8 @@ export function useGameFormState({
   //   er meningsløst (kun 1v1 er gyldig).
   const isSolo =
     teamSize === 1 &&
-    (gameMode === 'stableford' || gameMode === 'solo_strokeplay_netto');
-  const isBestBall = gameMode === 'best_ball_netto' && teamSize === 2;
+    (gameMode === 'stableford' || gameMode === 'solo_strokeplay');
+  const isBestBall = gameMode === 'best_ball' && teamSize === 2;
   const isParStableford = gameMode === 'stableford' && teamSize === 2;
   const isMatchplay = gameMode === 'singles_matchplay';
   // - isTexas: texas_scramble. Lagene spiller én ball — én score per lag per
@@ -536,10 +536,10 @@ export function useGameFormState({
   //   deterministisk skjema. flight_number = team_number (samme mønster
   //   som par-stableford — matchplay-validatoren i `gamePayload.ts`
   //   krever begge satt sammen pga DB-CHECK `game_players_team_flight_consistency`).
-  // - solo-modi (teamSize === 1, stableford ELLER solo_strokeplay_netto):
+  // - solo-modi (teamSize === 1, stableford ELLER solo_strokeplay):
   //   inkluderer ALLE selectedPlayerIds, ingen lag/flight-felter. Hidden-
   //   input-skjemaet bærer player_${i}_id alene — gamePayload.ts
-  //   validatoren (`validateStableford` / `validateSoloStrokeplayNetto`)
+  //   validatoren (`validateStableford` / `validateSoloStrokeplay`)
   //   leser opp til 8 slots og ignorerer manglende team/flight-felt for
   //   begge solo-modusene.
   const orderedPayload = useMemo(() => {
@@ -671,7 +671,7 @@ export function useGameFormState({
   // Modus-spesifikk publish-validitet. Reglene speiler
   // `lib/games/gamePayload.ts` slik at klient og server forteller samme
   // historie til admin når noe mangler:
-  // - solo (stableford team_size=1 ELLER solo_strokeplay_netto): minst 1
+  // - solo (stableford team_size=1 ELLER solo_strokeplay): minst 1
   //   spiller, ingen lag/flight
   // - best-ball-netto: eksakt 8 spillere fordelt 2-2-2-2 på 4 lag +
   //   flight-fordeling per spiller

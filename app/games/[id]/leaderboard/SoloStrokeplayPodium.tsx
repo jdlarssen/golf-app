@@ -24,8 +24,8 @@ export interface SoloStrokeplayPodiumProps {
   /** Turneringsnavn — vises som kicker i header. */
   gameName: string;
   /**
-   * Resultat fra `lib/scoring/modes/soloStrokeplayNetto.compute()`.
-   * Caller må narrowe på `kind === 'solo_strokeplay_netto'` før propen sendes inn.
+   * Resultat fra `lib/scoring/modes/soloStrokeplay.compute()`.
+   * Caller må narrowe på `kind === 'solo_strokeplay'` før propen sendes inn.
    */
   result: SoloStrokeplayResult;
   /** Spillerinfo per userId for å rendre navn + kallenavn. */
@@ -35,7 +35,7 @@ export interface SoloStrokeplayPodiumProps {
 }
 
 /**
- * Finished-state view for solo strokeplay netto — feirings-view ved
+ * Finished-state view for solo strokeplay — feirings-view ved
  * `game.status === 'finished'`. Speilar `SoloStablefordPodium` 1:1 med
  * disse forskjellene:
  *   - Rangering er allerede lavest-først i `result.players`-arrayet

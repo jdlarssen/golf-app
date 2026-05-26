@@ -6,10 +6,10 @@
 // union `ModeResult` som konsumentene narrower på `kind`.
 //
 // Dagens innslag:
-//   - best_ball_netto        → modes/bestBallNetto.ts
+//   - best_ball        → modes/bestBall.ts
 //   - stableford             → modes/stableford.ts (solo + par/4BBB)
 //   - singles_matchplay      → modes/singlesMatchplay.ts (epic #45)
-//   - solo_strokeplay_netto  → modes/soloStrokeplayNetto.ts (epic #46)
+//   - solo_strokeplay  → modes/soloStrokeplay.ts (epic #46)
 //   - texas_scramble         → modes/texasScramble.ts (issue #44)
 //   - fourball_matchplay     → modes/fourballMatchplay.ts (issue #217, fase 2 av #47)
 //
@@ -17,24 +17,24 @@
 // resolveTiebreak) slik at andre konsumenter kan importere via
 // `@/lib/scoring` uten å vite om modul-strukturen under.
 
-import * as bestBallNetto from './modes/bestBallNetto';
+import * as bestBall from './modes/bestBall';
 import * as stableford from './modes/stableford';
 import * as singlesMatchplay from './modes/singlesMatchplay';
-import * as soloStrokeplayNetto from './modes/soloStrokeplayNetto';
+import * as soloStrokeplay from './modes/soloStrokeplay';
 import * as texasScramble from './modes/texasScramble';
 import * as fourballMatchplay from './modes/fourballMatchplay';
 import type { ScoringContext, ModeResult } from './modes/types';
 
 export function computeLeaderboard(ctx: ScoringContext): ModeResult {
   switch (ctx.game.game_mode) {
-    case 'best_ball_netto':
-      return bestBallNetto.compute(ctx);
+    case 'best_ball':
+      return bestBall.compute(ctx);
     case 'stableford':
       return stableford.compute(ctx);
     case 'singles_matchplay':
       return singlesMatchplay.compute(ctx);
-    case 'solo_strokeplay_netto':
-      return soloStrokeplayNetto.compute(ctx);
+    case 'solo_strokeplay':
+      return soloStrokeplay.compute(ctx);
     case 'texas_scramble':
       return texasScramble.compute(ctx);
     case 'fourball_matchplay':
@@ -56,7 +56,7 @@ export type {
   ScoringPlayer,
   ScoringHoleScore,
   ModeResult,
-  BestBallNettoResult,
+  BestBallResult,
   BestBallTeamLine,
   BestBallHoleRow,
   BestBallPlayerCell,

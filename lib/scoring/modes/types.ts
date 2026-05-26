@@ -3,10 +3,10 @@
 // games.game_mode-discriminator i DB.
 
 export type GameMode =
-  | 'best_ball_netto'
+  | 'best_ball'
   | 'stableford'
   | 'singles_matchplay'
-  | 'solo_strokeplay_netto'
+  | 'solo_strokeplay'
   | 'texas_scramble'
   | 'fourball_matchplay';
 
@@ -17,10 +17,10 @@ export type GameMode =
  * call-site. Speilet `STATUS_LABELS` i `lib/games/status.ts`.
  */
 export const MODE_LABELS: Record<GameMode, string> = {
-  best_ball_netto: 'Best ball',
+  best_ball: 'Best ball',
   stableford: 'Stableford',
   singles_matchplay: 'Matchplay',
-  solo_strokeplay_netto: 'Slagspill',
+  solo_strokeplay: 'Slagspill',
   texas_scramble: 'Texas scramble',
   fourball_matchplay: 'Fourball',
 };
@@ -38,7 +38,7 @@ export const MODE_LABELS: Record<GameMode, string> = {
  *  - `team_size: 1` = én spiller per side (ingen aggregering)
  *  - `teams_count: 2` = nøyaktig to sider, alltid 1v1
  *
- * Solo strokeplay netto (epic #46):
+ * Solo strokeplay (epic #46):
  *  - `team_size: 1` = solo, hver spiller er sin egen «row»
  *  - Klassisk slagspill: lavest sum av netto-slag (gross − HCP-strokes) vinner
  *
@@ -53,11 +53,11 @@ export const MODE_LABELS: Record<GameMode, string> = {
  *    lag) eier scores-radene; andre lag-medlemmer har null på sine egne rader.
  */
 export type GameModeConfig =
-  | { kind: 'best_ball_netto'; team_size: 2; teams_count: 4 }
+  | { kind: 'best_ball'; team_size: 2; teams_count: 4 }
   | { kind: 'stableford'; team_size: 1; points_table: 'standard' }
   | { kind: 'stableford'; team_size: 2; points_table: 'standard' }
   | { kind: 'singles_matchplay'; team_size: 1; teams_count: 2 }
-  | { kind: 'solo_strokeplay_netto'; team_size: 1 }
+  | { kind: 'solo_strokeplay'; team_size: 1 }
   | {
       kind: 'texas_scramble';
       team_size: 2 | 4;
@@ -184,8 +184,8 @@ export interface BestBallTeamLine {
   tiedWith: number[];
 }
 
-export interface BestBallNettoResult {
-  kind: 'best_ball_netto';
+export interface BestBallResult {
+  kind: 'best_ball';
   teams: BestBallTeamLine[];
 }
 
@@ -401,7 +401,7 @@ export interface SinglesMatchplayResult {
 }
 
 // -----------------------------------------------------------------------------
-// Solo strokeplay netto (epic #46).
+// Solo strokeplay (epic #46).
 //
 // Klassisk slagspill: hver spiller fører eget scorekort, total = sum av netto-
 // slag (gross − extra strokes fra HCP-fordelingen). Lavest total vinner. Hull
@@ -416,7 +416,7 @@ export interface SinglesMatchplayResult {
 // -----------------------------------------------------------------------------
 
 /**
- * Per-spiller-rad i solo strokeplay netto-resultatet.
+ * Per-spiller-rad i solo strokeplay-resultatet.
  *
  * `totalNetStrokes` og `totalGrossStrokes` summerer kun spilte hull (gross
  * !== null). En spiller som ikke har slått ennå har `totalNetStrokes: 0` og
@@ -441,12 +441,12 @@ export interface SoloStrokeplayPlayerLine {
 }
 
 /**
- * Solo strokeplay netto-resultat — én rad per spiller. Returnert når
- * `game_mode === 'solo_strokeplay_netto'`. Ingen variant-discriminator;
+ * Solo strokeplay-resultat — én rad per spiller. Returnert når
+ * `game_mode === 'solo_strokeplay'`. Ingen variant-discriminator;
  * solo er den eneste varianten i v1.
  */
 export interface SoloStrokeplayResult {
-  kind: 'solo_strokeplay_netto';
+  kind: 'solo_strokeplay';
   players: SoloStrokeplayPlayerLine[];
 }
 
@@ -466,7 +466,7 @@ export interface SoloStrokeplayResult {
 //
 // Ranking: lavest totalNet vinner, med 5-tier tie-break-cascade fra
 // `rankTeams` på per-hull team_net-arrays. Samme padding-strategi som
-// bestBallNetto for missing-hull (0-padding i ranking-array).
+// bestBall for missing-hull (0-padding i ranking-array).
 // -----------------------------------------------------------------------------
 
 /**
@@ -672,14 +672,14 @@ export interface FourballMatchplayResult {
  * For singles_matchplay narrower man på `kind` og leser `sides`/`holes`/
  * `holesUp`/`result` direkte — ingen videre variant-discriminator.
  *
- * For solo_strokeplay_netto narrower man på `kind` og leser `players`
+ * For solo_strokeplay narrower man på `kind` og leser `players`
  * direkte — solo er den eneste varianten i v1.
  *
  * For texas_scramble narrower man på `kind` og leser `teams` direkte —
  * kun team-variant i v1 (3-mannslag utsatt).
  */
 export type ModeResult =
-  | BestBallNettoResult
+  | BestBallResult
   | StablefordResult
   | SinglesMatchplayResult
   | SoloStrokeplayResult

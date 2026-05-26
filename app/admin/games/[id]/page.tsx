@@ -369,7 +369,7 @@ async function PlayersSections({
   // fra par-stableford (lag à 2, flight = team mekanisk), best-ball-netto, og
   // singles matchplay (1v1, side i stedet for lag).
   //  - isSolo: solo-modus uten lag-konstruksjon. Dekker både solo-stableford
-  //    (team_size=1) og solo strokeplay netto. Skjuler Lag-seksjon +
+  //    (team_size=1) og solo strokeplay. Skjuler Lag-seksjon +
   //    Lag/Flight-kolonner i spillerlista — alle har null/0 på team_number.
   //  - isParStableford: par-stableford (4BBB). Viser Lag-seksjon kun for de
   //    lag som faktisk har spillere, og dropper Flight-kolonnen i tabellen
@@ -381,11 +381,11 @@ async function PlayersSections({
   //    Lag-grid (4 hardkodet) + Lag+Flight-kolonner.
   const isSolo =
     (game.game_mode === 'stableford' && game.mode_config.team_size === 1) ||
-    game.game_mode === 'solo_strokeplay_netto';
+    game.game_mode === 'solo_strokeplay';
   const isParStableford =
     game.game_mode === 'stableford' && game.mode_config.team_size === 2;
   const isMatchplay = game.game_mode === 'singles_matchplay';
-  const isBestBall = game.game_mode === 'best_ball_netto';
+  const isBestBall = game.game_mode === 'best_ball';
   // Texas scramble: lag-modus med variabel lagstørrelse (2 eller 4) og
   // variabelt antall lag. Speilar par-stableford visuelt — vi viser kun
   // lag som har spillere, og flight-seksjonen droppes siden flight = team

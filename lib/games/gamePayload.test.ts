@@ -148,12 +148,12 @@ describe('buildGameInsertPayload — registration_mode / registration_type (#199
     expect(result.registration_type).toBe('solo');
   });
 
-  it('aksepterer open + team for best_ball_netto', () => {
+  it('aksepterer open + team for best_ball', () => {
     const result = buildGameInsertPayload(
       regFd({
         registration_mode: 'open',
         registration_type: 'team',
-        game_mode: 'best_ball_netto',
+        game_mode: 'best_ball',
       }),
       'draft',
     );
@@ -215,11 +215,11 @@ describe('buildGameInsertPayload — registration_mode / registration_type (#199
     expect(result.errorCode).toBe('team_registration_unsupported_mode');
   });
 
-  it('rejecter team-påmelding på solo_strokeplay_netto', () => {
+  it('rejecter team-påmelding på solo_strokeplay', () => {
     const result = buildGameInsertPayload(
       regFd({
         registration_type: 'team',
-        game_mode: 'solo_strokeplay_netto',
+        game_mode: 'solo_strokeplay',
       }),
       'draft',
     );
@@ -238,7 +238,7 @@ describe('buildGameInsertPayload — registration_mode / registration_type (#199
     expect(result.registration_type).toBe('solo');
   });
 
-  it('open-modus publish tolererer tom spiller-liste (best_ball_netto)', () => {
+  it('open-modus publish tolererer tom spiller-liste (best_ball)', () => {
     // For open / manual_approval er spillerne tenkt å melde seg på via
     // lenken etterpå. Mode-validatoren kjører i 'draft'-effective mode
     // slik at eksakt-8-regelen ikke gjelder ved publish.
@@ -246,7 +246,7 @@ describe('buildGameInsertPayload — registration_mode / registration_type (#199
       regFd({
         registration_mode: 'open',
         registration_type: 'solo',
-        game_mode: 'best_ball_netto',
+        game_mode: 'best_ball',
         course_id: 'c1',
         tee_box_id: 't1',
       }),
@@ -272,11 +272,11 @@ describe('buildGameInsertPayload — registration_mode / registration_type (#199
 
   it('invite_only-modus publish krever fortsatt full spiller-liste', () => {
     // Bakoverkompatibilitet: dagens flyt skal være helt uendret. Publish
-    // av best_ball_netto uten spillere → fortsatt players_required.
+    // av best_ball uten spillere → fortsatt players_required.
     const result = buildGameInsertPayload(
       regFd({
         registration_mode: 'invite_only',
-        game_mode: 'best_ball_netto',
+        game_mode: 'best_ball',
         course_id: 'c1',
         tee_box_id: 't1',
       }),
@@ -302,7 +302,7 @@ describe('buildGameInsertPayload — registration_mode / registration_type (#199
 });
 
 describe('buildGameInsertPayload — mode discriminator (epic #41)', () => {
-  it('defaults to best_ball_netto when game_mode is missing (back-compat)', () => {
+  it('defaults to best_ball when game_mode is missing (back-compat)', () => {
     // Form-feltet game_mode innføres først i fase 4 (GameForm UI). Inntil
     // velgeren er ute må payload-builderen falle tilbake til best-ball så
     // dagens admin-flyt ikke brekker.
@@ -316,9 +316,9 @@ describe('buildGameInsertPayload — mode discriminator (epic #41)', () => {
     }
     const result = buildGameInsertPayload(fd(entries), 'publish');
     expect(result.errorCode).toBeUndefined();
-    expect(result.game_mode).toBe('best_ball_netto');
+    expect(result.game_mode).toBe('best_ball');
     expect(result.mode_config).toEqual({
-      kind: 'best_ball_netto',
+      kind: 'best_ball',
       team_size: 2,
       teams_count: 4,
     });
@@ -786,9 +786,9 @@ describe('buildGameInsertPayload — singles_matchplay (epic #45)', () => {
   });
 });
 
-describe('buildGameInsertPayload — solo_strokeplay_netto (epic #46)', () => {
+describe('buildGameInsertPayload — solo_strokeplay (epic #46)', () => {
   /**
-   * Helper for solo strokeplay netto-payloads. Speiler stablefordFd-mønsteret:
+   * Helper for solo strokeplay-payloads. Speiler stablefordFd-mønsteret:
    * solo-modus, ingen lag/flight-tilordning, kun spillere som flate slots.
    */
   function strokeplayFd(
@@ -799,7 +799,7 @@ describe('buildGameInsertPayload — solo_strokeplay_netto (epic #46)', () => {
       name: 'Slagspill Cup',
       course_id: 'c1',
       tee_box_id: 't1',
-      game_mode: 'solo_strokeplay_netto',
+      game_mode: 'solo_strokeplay',
     };
     playerIds.forEach((id, i) => {
       base[`player_${i}_id`] = id;
@@ -810,9 +810,9 @@ describe('buildGameInsertPayload — solo_strokeplay_netto (epic #46)', () => {
   it('publish med 2 spillere → ok, mode_config korrekt, alle team/flight null', () => {
     const result = buildGameInsertPayload(strokeplayFd(), 'publish');
     expect(result.errorCode).toBeUndefined();
-    expect(result.game_mode).toBe('solo_strokeplay_netto');
+    expect(result.game_mode).toBe('solo_strokeplay');
     expect(result.mode_config).toEqual({
-      kind: 'solo_strokeplay_netto',
+      kind: 'solo_strokeplay',
       team_size: 1,
     });
     expect(result.players).toEqual([

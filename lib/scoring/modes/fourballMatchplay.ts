@@ -16,7 +16,7 @@
 
 import { applyAllowance } from '../courseHandicap';
 import { strokesForHole } from '../strokeAllocation';
-import { bestBallForHole } from './bestBallNetto';
+import { bestBallForHole } from './bestBall';
 import { parFor } from './parResolver';
 import {
   classifyMatchplayHole,
@@ -140,7 +140,7 @@ export function compute(ctx: ScoringContext): FourballMatchplayResult {
   let holesPlayed = 0;
 
   const holes: FourballHoleRow[] = holesSorted.map((hole) => {
-    // Bygg per-spiller-celler for hver side via samme mønster som bestBallNetto:
+    // Bygg per-spiller-celler for hver side via samme mønster som bestBall:
     // gross → extra (via SI + effektiv HCP) → net.
     const buildCells = (partners: ScoringPlayer[]): FourballPlayerCell[] =>
       partners.map((p) => {
@@ -194,7 +194,7 @@ export function compute(ctx: ScoringContext): FourballMatchplayResult {
     }
 
     // Per-side par: bruker første partner som side-representant (samme mønster
-    // som bestBallNetto for lag-rad). Når begge partnere har samme teeGender
+    // som bestBall for lag-rad). Når begge partnere har samme teeGender
     // (det normale) er resultatet identisk uansett. #240.
     const side1Par = parFor(hole, side1Players[0].teeGender);
     const side2Par = parFor(hole, side2Players[0].teeGender);

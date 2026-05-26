@@ -28,7 +28,7 @@ export function scorecardTitle(
   }
 
   const isTeamMode =
-    gameMode === 'best_ball_netto' ||
+    gameMode === 'best_ball' ||
     gameMode === 'texas_scramble' ||
     (gameMode === 'stableford' && modeConfig.kind === 'stableford' && modeConfig.team_size === 2);
 

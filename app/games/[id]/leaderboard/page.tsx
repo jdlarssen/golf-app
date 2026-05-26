@@ -336,12 +336,12 @@ async function LeaderboardBody({
     });
   }
 
-  // Solo strokeplay netto (epic #46 Phase 3): klassisk slagspill — flat liste
+  // Solo strokeplay (epic #46 Phase 3): klassisk slagspill — flat liste
   // sortert på laveste netto-total. Live-view og finished-podium speiler solo-
   // stableford-pattern (en view, en podium, status-router velger). Ingen
   // state #3/#3.5-«venterom» — solo-spillere ser hverandre umiddelbart, samme
   // RLS-policy som stableford og matchplay.
-  if (game.game_mode === 'solo_strokeplay_netto') {
+  if (game.game_mode === 'solo_strokeplay') {
     return renderSoloStrokeplay({
       gameId,
       game,
@@ -1081,7 +1081,7 @@ async function renderStableford(opts: {
  * kategorier + LD/CTP fungerer normalt.
  *
  * Netto- og brutto-arrays beregnes per spiller fra rå-scores + course handicap
- * + stroke-index. For team-varianten bygger vi «best ball netto per hull» som
+ * + stroke-index. For team-varianten bygger vi «best ball per hull» som
  * MIN av lagets netto per hull — samme logikk som best-ball-grenen lenger oppe
  * i fila, bare uten å gå veien om computeLeaderboard.
  */
@@ -1225,7 +1225,7 @@ async function renderStablefordWithSideTournament(opts: {
     });
   }
 
-  // Best ball netto per hull per lag. For solo (team of 1) er det bare
+  // Best ball per hull per lag. For solo (team of 1) er det bare
   // spillerens egen netto; for par-stableford er det MIN av lagets to
   // spillere per hull (null hvis alle mangler scoren).
   const nettoBestBallPerHole = teamGroups.map((tg) => {
@@ -1531,7 +1531,7 @@ async function renderFourballMatchplay(opts: {
 }
 
 /**
- * Solo strokeplay netto-grenen — bygger ScoringContext fra rå-rad-ene, kjører
+ * Solo strokeplay-grenen — bygger ScoringContext fra rå-rad-ene, kjører
  * mode-router-en (`computeModeResult`) og velger view per `game.status`:
  *
  *   - `finished` → SoloStrokeplayPodium: topp 3 podium med konfetti på 1.-plass
@@ -1567,7 +1567,7 @@ function renderSoloStrokeplay(opts: {
   const ctx = {
     game: {
       id: gameId,
-      game_mode: 'solo_strokeplay_netto' as const,
+      game_mode: 'solo_strokeplay' as const,
       mode_config: game.mode_config,
     },
     players: gwp.players
@@ -1582,7 +1582,7 @@ function renderSoloStrokeplay(opts: {
         teamNumber: null,
         flightNumber: null,
         courseHandicap: p.course_handicap ?? 0,
-        // #240 — solo strokeplay netto bruker netto strokes (gross − extra)
+        // #240 — solo strokeplay bruker netto strokes (gross − extra)
         // til ranking, ikke par. Men sender teeGender uansett for shape-
         // konsistens og fremtidig par-rendering i UI-laget.
         teeGender: p.tee_gender,
@@ -1609,7 +1609,7 @@ function renderSoloStrokeplay(opts: {
   const result = computeModeResult(ctx);
   // Type-guard mot mode-router-output. Hvis routeren returnerer feil shape
   // faller vi tilbake til notFound() — sikrere enn å rendre tom UI.
-  if (result.kind !== 'solo_strokeplay_netto') {
+  if (result.kind !== 'solo_strokeplay') {
     notFound();
   }
 

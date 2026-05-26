@@ -160,7 +160,7 @@ describe('GameWizard — best-ball inline team/flight på steg 3', () => {
   it('viser lag-grid + flights inline når 8 spillere er valgt', () => {
     renderWizard();
 
-    // Steg 1: default = best_ball_netto → bare gå videre.
+    // Steg 1: default = best_ball → bare gå videre.
     clickNext();
 
     // Steg 2: velg bane + tee + tee-off.
@@ -340,9 +340,9 @@ describe('GameWizard — Påmelding-felter (#199)', () => {
     expect(screen.getByRole('radio', { name: /^individuelt$/i })).toBeChecked();
   });
 
-  it('lar "lag" velges når modus er best_ball_netto', () => {
+  it('lar "lag" velges når modus er best_ball', () => {
     renderWizard();
-    // best_ball_netto er default
+    // best_ball er default
     const teamRadio = screen.getByRole('radio', { name: /^lag$/i });
     expect(teamRadio).not.toBeDisabled();
     fireEvent.click(teamRadio);
@@ -351,7 +351,7 @@ describe('GameWizard — Påmelding-felter (#199)', () => {
 
   it('force-reseter registration_type til solo når admin bytter til en mode uten lag', () => {
     renderWizard();
-    // Velg lag i best_ball_netto
+    // Velg lag i best_ball
     fireEvent.click(screen.getByRole('radio', { name: /^lag$/i }));
     expect(screen.getByRole('radio', { name: /^lag$/i })).toBeChecked();
     // Bytt til stableford → må reset til solo
@@ -437,10 +437,10 @@ describe('GameWizard — FormData-skjema speiler GameForm (K10)', () => {
     expect(fd.get('name')).toBe('Stiklestad GK 1. juni');
   });
 
-  it('best-ball: FormData inkluderer 8 player_${i}_*-rader + game_mode=best_ball_netto', () => {
+  it('best-ball: FormData inkluderer 8 player_${i}_*-rader + game_mode=best_ball', () => {
     const { container } = renderWizard();
 
-    // Default best_ball_netto — klikk gjennom uten å bytte modus.
+    // Default best_ball — klikk gjennom uten å bytte modus.
     clickNext();
     fireEvent.change(screen.getByLabelText(/^bane$/i), {
       target: { value: 'course-1' },
@@ -462,7 +462,7 @@ describe('GameWizard — FormData-skjema speiler GameForm (K10)', () => {
 
     const form = container.querySelector('form');
     const fd = new FormData(form!);
-    expect(fd.get('game_mode')).toBe('best_ball_netto');
+    expect(fd.get('game_mode')).toBe('best_ball');
     expect(fd.get('team_size')).toBe('2');
     // 8 spiller-rader, alle med ikke-tom team + flight.
     for (let i = 0; i < 8; i++) {

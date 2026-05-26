@@ -51,9 +51,9 @@ describe('TeamSizeSelector', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it('Best ball netto: Par aktiv, Solo + 4-mann disabled', () => {
+  it('Best ball: Par aktiv, Solo + 4-mann disabled', () => {
     render(
-      <TeamSizeSelector mode="best_ball_netto" value={2} onChange={() => {}} />,
+      <TeamSizeSelector mode="best_ball" value={2} onChange={() => {}} />,
     );
 
     const solo = screen.getByRole('radio', { name: /solo/i });
@@ -78,7 +78,7 @@ describe('TeamSizeSelector', () => {
   it('ignorerer klikk på disabled tile (best-ball-modus: solo + 4-mann)', () => {
     const onChange = vi.fn();
     render(
-      <TeamSizeSelector mode="best_ball_netto" value={2} onChange={onChange} />,
+      <TeamSizeSelector mode="best_ball" value={2} onChange={onChange} />,
     );
 
     fireEvent.click(screen.getByRole('radio', { name: /solo/i }));
@@ -88,7 +88,7 @@ describe('TeamSizeSelector', () => {
 
   it('markerer valgt tile med aria-checked=true', () => {
     render(
-      <TeamSizeSelector mode="best_ball_netto" value={2} onChange={() => {}} />,
+      <TeamSizeSelector mode="best_ball" value={2} onChange={() => {}} />,
     );
 
     const par = screen.getByRole('radio', { name: /par/i });
@@ -101,7 +101,7 @@ describe('TeamSizeSelector', () => {
     const onChange = vi.fn();
     render(
       <TeamSizeSelector
-        mode="best_ball_netto"
+        mode="best_ball"
         value={2}
         onChange={onChange}
         disabled

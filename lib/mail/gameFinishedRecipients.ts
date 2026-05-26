@@ -102,12 +102,12 @@ export async function buildGameFinishedRecipients(
     return buildMatchplayRecipients(supabase, gameId, game, playerRows);
   }
 
-  // Solo strokeplay netto (epic #46): bygg per-spiller payload med rank +
+  // Solo strokeplay (epic #46): bygg per-spiller payload med rank +
   // totalNetStrokes + totalGrossStrokes + totalPlayers. Speilet solo-stableford-
   // grenen strukturelt — én rad per spiller direkte fra
   // `SoloStrokeplayResult.players`. Hvis mode-router returnerer noe uventet,
   // faller vi tilbake til nøytral best-ball-default copy.
-  if (game.game_mode === 'solo_strokeplay_netto') {
+  if (game.game_mode === 'solo_strokeplay') {
     return buildSoloStrokeplayRecipients(supabase, gameId, game, playerRows);
   }
 
@@ -473,13 +473,13 @@ async function buildMatchplayRecipients(
 }
 
 /**
- * Bygger mottakerlisten for solo strokeplay netto (epic #46). Hver spiller får
+ * Bygger mottakerlisten for solo strokeplay (epic #46). Hver spiller får
  * en personlig mode-payload med plassering + totalNetStrokes + totalGrossStrokes
  * + totalPlayers — speilet solo-stableford-pattern, men med slag i stedet for
  * poeng.
  *
  * Defensive fallbacks:
- *  - hvis mode-router returnerer noe annet enn `solo_strokeplay_netto`, faller
+ *  - hvis mode-router returnerer noe annet enn `solo_strokeplay`, faller
  *    vi tilbake til nøytral best-ball-default copy (uten mode-payload).
  *  - spillere uten email droppes (samme regel som de andre grenene).
  *  - spillere uten resultat-rad (defensiv — alle game_players burde havne i
@@ -523,7 +523,7 @@ async function buildSoloStrokeplayRecipients(
   const result = computeLeaderboard({
     game: {
       id: gameId,
-      game_mode: 'solo_strokeplay_netto',
+      game_mode: 'solo_strokeplay',
       mode_config: game.mode_config,
     },
     players: playerRows.map((row) => ({
@@ -555,7 +555,7 @@ async function buildSoloStrokeplayRecipients(
   });
 
   // Defensive fallback: mode-router gav noe uventet. Fall til best-ball-copy.
-  if (result.kind !== 'solo_strokeplay_netto') {
+  if (result.kind !== 'solo_strokeplay') {
     return playerRows
       .map((row) => ({
         userId: row.user_id,
@@ -577,7 +577,7 @@ async function buildSoloStrokeplayRecipients(
     const line = lineByUserId.get(row.user_id);
     const mode: GameFinishedNotificationMode | undefined = line
       ? {
-          kind: 'solo_strokeplay_netto',
+          kind: 'solo_strokeplay',
           rank: line.rank,
           totalNetStrokes: line.totalNetStrokes,
           totalGrossStrokes: line.totalGrossStrokes,

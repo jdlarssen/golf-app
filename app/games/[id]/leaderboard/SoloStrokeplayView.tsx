@@ -26,8 +26,8 @@ export interface SoloStrokeplayViewProps {
   /** Turneringsnavn — vises som kicker i header. */
   gameName: string;
   /**
-   * Resultat fra `lib/scoring/modes/soloStrokeplayNetto.compute()`.
-   * Caller må narrowe på `kind === 'solo_strokeplay_netto'` før propen sendes inn.
+   * Resultat fra `lib/scoring/modes/soloStrokeplay.compute()`.
+   * Caller må narrowe på `kind === 'solo_strokeplay'` før propen sendes inn.
    */
   result: SoloStrokeplayResult;
   /** Spillerinfo per userId for å rendre navn + kallenavn. */
@@ -42,7 +42,7 @@ export interface SoloStrokeplayViewProps {
 }
 
 /**
- * Live/post-finished leaderboard for solo strokeplay netto — flat liste sortert
+ * Live/post-finished leaderboard for solo strokeplay — flat liste sortert
  * på `totalNetStrokes` (lavest øverst, klassisk slagspill-format). Speilar
  * `SoloStablefordView` visuelt: samme fairway-backdrop, samme Fraunces-for-tall
  * typografi-token, samme champagne-tinted Card-padding for vinneren.

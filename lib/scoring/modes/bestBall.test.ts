@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { netScore, bestBallForHole, teamTotal, compute } from './bestBallNetto';
+import { netScore, bestBallForHole, teamTotal, compute } from './bestBall';
 import type { ScoringContext } from './types';
 
 describe('netScore', () => {
@@ -89,8 +89,8 @@ describe('compute — per-gender par (#240)', () => {
     const ctx: ScoringContext = {
       game: {
         id: 'g1',
-        game_mode: 'best_ball_netto',
-        mode_config: { kind: 'best_ball_netto', team_size: 2, teams_count: 4 },
+        game_mode: 'best_ball',
+        mode_config: { kind: 'best_ball', team_size: 2, teams_count: 4 },
       },
       players: [
         { userId: 'u1', teamNumber: 1, flightNumber: 1, courseHandicap: 0, teeGender: 'mens' },
@@ -103,7 +103,7 @@ describe('compute — per-gender par (#240)', () => {
       ],
     };
     const result = compute(ctx);
-    if (result.kind !== 'best_ball_netto') throw new Error('expected best_ball_netto');
+    if (result.kind !== 'best_ball') throw new Error('expected best_ball');
     const team1 = result.teams[0];
     const cell1 = team1.holes[0].players.find((p) => p.userId === 'u1');
     const cell2 = team1.holes[0].players.find((p) => p.userId === 'u2');
@@ -117,15 +117,15 @@ describe('compute — per-gender par (#240)', () => {
     const ctx: ScoringContext = {
       game: {
         id: 'g1',
-        game_mode: 'best_ball_netto',
-        mode_config: { kind: 'best_ball_netto', team_size: 2, teams_count: 4 },
+        game_mode: 'best_ball',
+        mode_config: { kind: 'best_ball', team_size: 2, teams_count: 4 },
       },
       players: [{ userId: 'u1', teamNumber: 1, flightNumber: 1, courseHandicap: 0 }],
       holes: [{ number: 1, par: 4, strokeIndex: 1 }],
       scores: [{ userId: 'u1', holeNumber: 1, gross: 4 }],
     };
     const result = compute(ctx);
-    if (result.kind !== 'best_ball_netto') throw new Error('expected best_ball_netto');
+    if (result.kind !== 'best_ball') throw new Error('expected best_ball');
     expect(result.teams[0].holes[0].players[0].par).toBe(4);
   });
 
@@ -134,8 +134,8 @@ describe('compute — per-gender par (#240)', () => {
     const ctx: ScoringContext = {
       game: {
         id: 'g1',
-        game_mode: 'best_ball_netto',
-        mode_config: { kind: 'best_ball_netto', team_size: 2, teams_count: 4 },
+        game_mode: 'best_ball',
+        mode_config: { kind: 'best_ball', team_size: 2, teams_count: 4 },
       },
       players: [
         { userId: 'u1', teamNumber: 1, flightNumber: 1, courseHandicap: 0, teeGender: 'ladies' },
@@ -148,7 +148,7 @@ describe('compute — per-gender par (#240)', () => {
       ],
     };
     const result = compute(ctx);
-    if (result.kind !== 'best_ball_netto') throw new Error('expected best_ball_netto');
+    if (result.kind !== 'best_ball') throw new Error('expected best_ball');
     expect(result.teams[0].holes[0].par).toBe(5);
   });
 });

@@ -47,7 +47,7 @@ export async function addExistingPlayerToGame(
     redirect(`${detailPath}?error=game_locked`);
   }
 
-  if (game.game_mode === 'best_ball_netto') {
+  if (game.game_mode === 'best_ball') {
     const { count } = await supabase
       .from('game_players')
       .select('user_id', { count: 'exact', head: true })
@@ -124,7 +124,7 @@ export async function inviteEmailToGame(
     redirect(`${detailPath}?error=game_locked`);
   }
 
-  if (game.game_mode === 'best_ball_netto') {
+  if (game.game_mode === 'best_ball') {
     const { count } = await supabase
       .from('game_players')
       .select('user_id', { count: 'exact', head: true })

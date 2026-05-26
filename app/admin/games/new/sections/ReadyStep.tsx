@@ -41,13 +41,13 @@ type Props = {
 
 // Lokal label-map som matcher spec-en sin summary-copy. `MODE_LABELS` i
 // `lib/scoring/modes/types.ts` bruker «Best ball» (kort), men summary-kortet
-// stiller «Best ball netto» eksplisitt så Jørgen ikke lurer på om det er
+// stiller «Best ball» eksplisitt så Jørgen ikke lurer på om det er
 // brutto-varianten.
 const MODE_SUMMARY_LABELS: Record<GameMode, string> = {
-  best_ball_netto: 'Best ball netto',
+  best_ball: 'Best ball',
   stableford: 'Stableford',
   singles_matchplay: 'Singles matchplay',
-  solo_strokeplay_netto: 'Solo slagspill netto',
+  solo_strokeplay: 'Solo slagspill netto',
   texas_scramble: 'Texas scramble',
   fourball_matchplay: 'Four-ball matchplay',
 };

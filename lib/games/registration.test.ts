@@ -6,8 +6,8 @@ import {
 } from './registration';
 
 describe('gameModeSupportsTeams', () => {
-  it('returns true for best_ball_netto', () => {
-    expect(gameModeSupportsTeams('best_ball_netto')).toBe(true);
+  it('returns true for best_ball', () => {
+    expect(gameModeSupportsTeams('best_ball')).toBe(true);
   });
 
   it('returns true for texas_scramble', () => {
@@ -22,8 +22,8 @@ describe('gameModeSupportsTeams', () => {
     expect(gameModeSupportsTeams('singles_matchplay')).toBe(false);
   });
 
-  it('returns false for solo_strokeplay_netto', () => {
-    expect(gameModeSupportsTeams('solo_strokeplay_netto')).toBe(false);
+  it('returns false for solo_strokeplay', () => {
+    expect(gameModeSupportsTeams('solo_strokeplay')).toBe(false);
   });
 });
 

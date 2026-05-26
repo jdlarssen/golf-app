@@ -58,7 +58,7 @@ type GameRow = {
   status: GameStatus;
   // Epic #41 — modus per spill. Vises som chip ved siden av spillnavnet
   // slik at admin har et raskt overblikk over hvilket format hvert spill
-  // kjører. Backfilled til 'best_ball_netto' for pre-multi-mode-spill
+  // kjører. Backfilled til 'best_ball' for pre-multi-mode-spill
   // (migrasjon 0030).
   game_mode: GameMode;
   created_at: string;

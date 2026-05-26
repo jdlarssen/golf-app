@@ -12,7 +12,7 @@
 //
 // Ranking: lavest totalNet vinner, med 5-tier tie-break-cascade fra
 // `rankTeams` på per-hull team_net-arrays. Samme padding-strategi som
-// bestBallNetto (0-padding for missing hull i ranking-arrayet; UI viser
+// bestBall (0-padding for missing hull i ranking-arrayet; UI viser
 // missingHoles separat slik at sammenligninger kan flagges som partial).
 
 import { pickTeamCaptain } from '@/lib/games/teamCaptain';
@@ -142,7 +142,7 @@ export function compute(ctx: ScoringContext): TexasScrambleResult {
   );
 
   // Bygg 18-lange teamNet-arrays for ranking. Missing-hull padder med 0 —
-  // samme behandling som bestBallNetto. UI bruker missingHoles separat for
+  // samme behandling som bestBall. UI bruker missingHoles separat for
   // å flagge sammenligninger som partial.
   const ranked = rankTeams(
     baseLines.map((l) => {

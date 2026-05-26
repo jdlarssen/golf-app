@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { compute } from './soloStrokeplayNetto';
+import { compute } from './soloStrokeplay';
 import type {
   ScoringContext,
   ScoringHole,
@@ -23,15 +23,15 @@ function makeCtx(opts: {
   return {
     game: {
       id: 'g1',
-      game_mode: 'solo_strokeplay_netto',
-      mode_config: { kind: 'solo_strokeplay_netto', team_size: 1 },
+      game_mode: 'solo_strokeplay',
+      mode_config: { kind: 'solo_strokeplay', team_size: 1 },
     },
     ...opts,
   };
 }
 
-describe('soloStrokeplayNetto.compute — basic ranking', () => {
-  it('returnerer discriminated shape med kind=solo_strokeplay_netto', () => {
+describe('soloStrokeplay.compute — basic ranking', () => {
+  it('returnerer discriminated shape med kind=solo_strokeplay', () => {
     const ctx = makeCtx({
       players: [
         { userId: 'u1', teamNumber: null, flightNumber: null, courseHandicap: 0 },
@@ -40,7 +40,7 @@ describe('soloStrokeplayNetto.compute — basic ranking', () => {
       scores: [{ userId: 'u1', holeNumber: 1, gross: 4 }],
     });
     const result = compute(ctx);
-    expect(result.kind).toBe('solo_strokeplay_netto');
+    expect(result.kind).toBe('solo_strokeplay');
   });
 
   it('summerer netto-slag per spiller, lavest vinner', () => {
@@ -169,8 +169,8 @@ describe('soloStrokeplayNetto.compute — basic ranking', () => {
   });
 });
 
-describe('soloStrokeplayNetto.compute — tie-break cascade', () => {
-  // For solo strokeplay netto skal LAVEST vinne, så cascaden er IKKE invertert
+describe('soloStrokeplay.compute — tie-break cascade', () => {
+  // For solo strokeplay skal LAVEST vinne, så cascaden er IKKE invertert
   // (motsatt av stableford). rankTeams er "lavest vinner" by default.
   // Cascade-rekkefølge:
   //   1) total netto-slag (lavest vinner)
@@ -311,7 +311,7 @@ describe('soloStrokeplayNetto.compute — tie-break cascade', () => {
   });
 });
 
-describe('soloStrokeplayNetto.compute — partial rounds (padding-strategi)', () => {
+describe('soloStrokeplay.compute — partial rounds (padding-strategi)', () => {
   // Padding-strategien: unplayed-hull padder med UNPLAYED_PADDING (999) i
   // ranking-arrayet, slik at en spiller som har spilt færre hull IKKE får et
   // urettmessig fortrinn i tie-break-cascaden. Spilleren med 18 hull rangerer
@@ -418,7 +418,7 @@ describe('soloStrokeplayNetto.compute — partial rounds (padding-strategi)', ()
   });
 });
 
-describe('soloStrokeplayNetto.compute — extra strokes (HCP-allokering)', () => {
+describe('soloStrokeplay.compute — extra strokes (HCP-allokering)', () => {
   it('strokeIndex 1 får ekstra slag først for CH 1', () => {
     // CH 1 → 1 ekstra slag, bare på hull med strokeIndex 1.
     // Hull 1 har SI 1 → ekstra 1 slag. Gross 5 → netto 4 → bidrag 4.

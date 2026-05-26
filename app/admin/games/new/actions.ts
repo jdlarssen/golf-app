@@ -126,7 +126,7 @@ async function createGameInternal(
       require_peer_approval: payload.require_peer_approval,
       score_visibility: payload.score_visibility,
       // game_mode + mode_config persisterer modus-valget fra form-en. Payload-
-      // builderen defaultes til best_ball_netto før fase 4-UI lander, så
+      // builderen defaultes til best_ball før fase 4-UI lander, så
       // dagens admin-flyt produserer samme rad som før migrering 0030.
       game_mode: payload.game_mode,
       mode_config: payload.mode_config,

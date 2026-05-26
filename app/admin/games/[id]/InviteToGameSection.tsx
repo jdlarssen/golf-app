@@ -59,7 +59,7 @@ export async function InviteToGameSection({
     return null;
   }
 
-  const isBestBall = gameMode === 'best_ball_netto';
+  const isBestBall = gameMode === 'best_ball';
   const isFull = isBestBall && currentPlayerIds.length >= BEST_BALL_MAX_PLAYERS;
 
   return (

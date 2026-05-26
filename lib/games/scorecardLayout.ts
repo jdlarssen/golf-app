@@ -134,7 +134,7 @@ export function resolveScorecardLayout(
 
   const isStablefordTeam =
     mode === 'stableford' && cfg.kind === 'stableford' && cfg.team_size === 2;
-  const isBestBall = mode === 'best_ball_netto';
+  const isBestBall = mode === 'best_ball';
   const isMatchplaySingles = mode === 'singles_matchplay';
   const isFourball = mode === 'fourball_matchplay';
   const isMatchplay = isMatchplaySingles || isFourball;
