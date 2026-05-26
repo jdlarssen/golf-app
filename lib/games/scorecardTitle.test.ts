@@ -75,6 +75,19 @@ describe('scorecardTitle', () => {
     });
   });
 
+  it('returnerer «Match-scorekort» for fourball matchplay', () => {
+    const cfg: GameModeConfig = {
+      kind: 'fourball_matchplay',
+      team_size: 2,
+      teams_count: 2,
+      allowance_pct: 85,
+    };
+    expect(scorecardTitle('fourball_matchplay', cfg)).toEqual({
+      title: 'Match-scorekort',
+      cardLabel: 'Match-scorekort',
+    });
+  });
+
   it('returnerer «Lagets scorekort» for texas scramble (4-mannslag)', () => {
     const cfg: GameModeConfig = {
       kind: 'texas_scramble',

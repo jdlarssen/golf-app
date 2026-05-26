@@ -240,6 +240,44 @@ describe('resolveScorecardLayout', () => {
       expect(layout.isMatchplay).toBe(false);
     });
 
+    it('fourball matchplay → Layout B med 4 kolonner (me + partner + 2 motstandere)', () => {
+      const game: GameForHole = {
+        ...baseGame,
+        game_mode: 'fourball_matchplay',
+        mode_config: {
+          kind: 'fourball_matchplay',
+          team_size: 2,
+          teams_count: 2,
+          allowance_pct: 85,
+        },
+      };
+      const me = player('me', 1);
+      const partner = player('partner', 1);
+      const opp1 = player('opp1', 2);
+      const opp2 = player('opp2', 2);
+      const layout = resolveScorecardLayout(
+        game,
+        [me, partner, opp1, opp2],
+        me,
+        false,
+        fmt,
+      );
+      expect(layout.variant).toBe('b');
+      expect(layout.columns).toHaveLength(4);
+      // me først, partner ved siden av, så motstandere
+      expect(layout.columns[0].userId).toBe('me');
+      expect(layout.columns[0].isCurrentUser).toBe(true);
+      expect(layout.columns[0].teamNumber).toBe(1);
+      expect(layout.columns[1].userId).toBe('partner');
+      expect(layout.columns[1].teamNumber).toBe(1);
+      expect(layout.columns[2].teamNumber).toBe(2);
+      expect(layout.columns[3].teamNumber).toBe(2);
+      expect(layout.isFourball).toBe(true);
+      expect(layout.isMatchplay).toBe(true);
+      expect(layout.isStableford).toBe(false);
+      expect(layout.meTeamNumber).toBe(1);
+    });
+
     it('matchplay → Layout B med motstander (annet team_number)', () => {
       const game: GameForHole = {
         ...baseGame,
@@ -313,13 +351,18 @@ function par4Hole(n: number, si: number): LayoutBHoleInput {
   return { hole_number: n, par: 4, stroke_index: si };
 }
 
-function col(userId: string, ch: number): ScorecardColumnPlayer {
+function col(
+  userId: string,
+  ch: number,
+  teamNumber: number | null = null,
+): ScorecardColumnPlayer {
   return {
     userId,
     initial: userId.slice(0, 1).toUpperCase(),
     displayName: userId,
     courseHandicap: ch,
     isCurrentUser: userId === 'me',
+    teamNumber,
   };
 }
 
@@ -498,6 +541,115 @@ describe('computeLayoutBTotals', () => {
         isMatchplay: true,
       });
       expect(t.matchStatus).toBe('Ingen hull spilt ennå');
+    });
+  });
+
+  describe('fourball matchplay (2v2)', () => {
+    it('lag-best per side avgjør hull-vinner og match-status (me-lag leder)', () => {
+      const holes = [par4Hole(1, 18), par4Hole(2, 18), par4Hole(3, 18)];
+      // SI 18 → ingen får extra strokes; matchen er på brutto.
+      const me = col('me', 0, 1);
+      const partner = col('partner', 0, 1);
+      const opp1 = col('opp1', 0, 2);
+      const opp2 = col('opp2', 0, 2);
+      const scores = new Map<string, number | null>([
+        // Hull 1: me 5, partner 4 → me-side-best = 4
+        //        opp1 5, opp2 5 → opp-side-best = 5 → me-side vinner
+        ['me#1', 5],
+        ['partner#1', 4],
+        ['opp1#1', 5],
+        ['opp2#1', 5],
+        // Hull 2: me 5, partner 6 → me-side-best = 5
+        //        opp1 4, opp2 6 → opp-side-best = 4 → opp-side vinner
+        ['me#2', 5],
+        ['partner#2', 6],
+        ['opp1#2', 4],
+        ['opp2#2', 6],
+        // Hull 3: me 4, partner 5 → me-side-best = 4
+        //        opp1 5, opp2 4 → opp-side-best = 4 → tied
+        ['me#3', 4],
+        ['partner#3', 5],
+        ['opp1#3', 5],
+        ['opp2#3', 4],
+      ]);
+      const t = computeLayoutBTotals(
+        holes,
+        scores,
+        [me, partner, opp1, opp2],
+        { isStableford: false, isMatchplay: true, isFourball: true, meTeamNumber: 1 },
+      );
+      // me-side vant 1, opp-side vant 1, 1 tied → holesUp = 0, 3 hull spilt.
+      expect(t.matchStatus).toBe('AS (3 hull spilt)');
+    });
+
+    it('viser «Laget ditt er X up» når me-lag leder', () => {
+      const holes = [par4Hole(1, 18), par4Hole(2, 18)];
+      const me = col('me', 0, 1);
+      const partner = col('partner', 0, 1);
+      const opp1 = col('opp1', 0, 2);
+      const opp2 = col('opp2', 0, 2);
+      const scores = new Map<string, number | null>([
+        ['me#1', 4],
+        ['partner#1', 5],
+        ['opp1#1', 5],
+        ['opp2#1', 6],
+        ['me#2', 4],
+        ['partner#2', 5],
+        ['opp1#2', 5],
+        ['opp2#2', 6],
+      ]);
+      const t = computeLayoutBTotals(
+        holes,
+        scores,
+        [me, partner, opp1, opp2],
+        { isStableford: false, isMatchplay: true, isFourball: true, meTeamNumber: 1 },
+      );
+      expect(t.matchStatus).toBe('Laget ditt er 2 up etter 2 hull');
+    });
+
+    it('viser «Laget ditt er X down» når motstanderne leder', () => {
+      const holes = [par4Hole(1, 18)];
+      const me = col('me', 0, 1);
+      const partner = col('partner', 0, 1);
+      const opp1 = col('opp1', 0, 2);
+      const opp2 = col('opp2', 0, 2);
+      const scores = new Map<string, number | null>([
+        ['me#1', 5],
+        ['partner#1', 5],
+        ['opp1#1', 4],
+        ['opp2#1', 5],
+      ]);
+      const t = computeLayoutBTotals(
+        holes,
+        scores,
+        [me, partner, opp1, opp2],
+        { isStableford: false, isMatchplay: true, isFourball: true, meTeamNumber: 1 },
+      );
+      expect(t.matchStatus).toBe('Laget ditt er 1 down etter 1 hull');
+    });
+
+    it('hull med kun én partner-score teller fortsatt for sin side (best-ball-konvensjon)', () => {
+      const holes = [par4Hole(1, 18)];
+      const me = col('me', 0, 1);
+      const partner = col('partner', 0, 1);
+      const opp1 = col('opp1', 0, 2);
+      const opp2 = col('opp2', 0, 2);
+      // Bare me har score på lag 1 (partner mangler), begge motstandere har.
+      // Best-ball: én partner med gross holder for at siden teller.
+      const scores = new Map<string, number | null>([
+        ['me#1', 4],
+        // partner#1 unplayed
+        ['opp1#1', 5],
+        ['opp2#1', 5],
+      ]);
+      const t = computeLayoutBTotals(
+        holes,
+        scores,
+        [me, partner, opp1, opp2],
+        { isStableford: false, isMatchplay: true, isFourball: true, meTeamNumber: 1 },
+      );
+      // me-side-best = 4 (me alene), opp-side-best = 5 → me-side vinner.
+      expect(t.matchStatus).toBe('Laget ditt er 1 up etter 1 hull');
     });
   });
 

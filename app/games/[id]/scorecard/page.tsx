@@ -228,6 +228,8 @@ async function ScorecardTable({
           columns={layout.columns}
           isStableford={layout.isStableford}
           isMatchplay={layout.isMatchplay}
+          isFourball={layout.isFourball}
+          meTeamNumber={layout.meTeamNumber}
           showNetto={showNetto}
           myTeeGender={myTeeGender}
         />
@@ -455,6 +457,8 @@ function LayoutBTable({
   columns,
   isStableford,
   isMatchplay,
+  isFourball,
+  meTeamNumber,
   showNetto,
   myTeeGender,
 }: {
@@ -463,6 +467,8 @@ function LayoutBTable({
   columns: ScorecardColumnPlayer[];
   isStableford: boolean;
   isMatchplay: boolean;
+  isFourball: boolean;
+  meTeamNumber: number | null;
   showNetto: boolean;
   myTeeGender: ScoringGender;
 }) {
@@ -504,7 +510,23 @@ function LayoutBTable({
     );
 
     let matchplayResult: LayoutBHoleRow['matchplayResult'] = 'unplayed';
-    if (isMatchplay && perPlayer.length === 2) {
+    if (isFourball && perPlayer.length === 4 && meTeamNumber != null) {
+      // Fourball-matchplay: 2v2. Lag-best netto per side, så sammenligning.
+      const meSideNets: number[] = [];
+      const oppSideNets: number[] = [];
+      columns.forEach((c, idx) => {
+        const n = perPlayer[idx].netto;
+        if (n === null) return;
+        if (c.teamNumber === meTeamNumber) meSideNets.push(n);
+        else oppSideNets.push(n);
+      });
+      const meBest = meSideNets.length ? Math.min(...meSideNets) : null;
+      const oppBest = oppSideNets.length ? Math.min(...oppSideNets) : null;
+      if (meBest !== null && oppBest !== null) {
+        matchplayResult =
+          meBest < oppBest ? 'won' : meBest > oppBest ? 'lost' : 'tied';
+      }
+    } else if (isMatchplay && perPlayer.length === 2) {
       const meNet = perPlayer[0].netto;
       const oppNet = perPlayer[1].netto;
       if (meNet !== null && oppNet !== null) {
@@ -532,7 +554,7 @@ function LayoutBTable({
     })),
     scoresByUserHole,
     columns,
-    { isStableford, isMatchplay },
+    { isStableford, isMatchplay, isFourball, meTeamNumber },
   );
   const { perPlayer: playerTotals, teamTotalNetto, teamTotalPoints, playedTeamHoles, matchStatus } =
     totals;

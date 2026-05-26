@@ -14,7 +14,7 @@ export interface ScorecardTitle {
  * ulike norske oversettelser.
  *
  * Regler:
- *  - Matchplay (1v1) → «Match-scorekort»
+ *  - Matchplay (singles 1v1 og fourball 2v2) → «Match-scorekort»
  *  - Lag-baserte modi (best-ball, par-stableford team_size=2, texas scramble)
  *    → «Lagets scorekort»
  *  - Solo-modi (stableford team_size=1, solo strokeplay) → «Mitt scorekort»
@@ -23,7 +23,7 @@ export function scorecardTitle(
   gameMode: GameMode,
   modeConfig: GameModeConfig,
 ): ScorecardTitle {
-  if (gameMode === 'singles_matchplay') {
+  if (gameMode === 'singles_matchplay' || gameMode === 'fourball_matchplay') {
     return { title: 'Match-scorekort', cardLabel: 'Match-scorekort' };
   }
 

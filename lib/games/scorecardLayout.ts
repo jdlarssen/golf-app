@@ -1,7 +1,10 @@
 import { pickTeamCaptain } from './teamCaptain';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { computeStablefordPoints } from '@/lib/scoring/modes/stableford';
-import { computeMatchplayRunningStatus } from '@/lib/scoring/modes/singlesMatchplay';
+import {
+  classifyMatchplayHole,
+  computeMatchplayRunningStatus,
+} from '@/lib/scoring/modes/singlesMatchplay';
 import type { GameForHole, PlayerForHole } from './getGameWithPlayers';
 
 /**
@@ -16,6 +19,14 @@ export interface ScorecardColumnPlayer {
   displayName: string;
   courseHandicap: number;
   isCurrentUser: boolean;
+  /**
+   * Spillerens `game_players.team_number`. Brukes av Layout B for å gruppere
+   * kolonner i 2+2 (fourball) — me's side til venstre, motstander til høyre.
+   * Bevart som `number | null` for å være kompatibel med solo-modi der team
+   * ikke er meningsfull (null) — selv om Layout B i praksis alltid har et
+   * team_number siden modi som krever sider validerer kolonnen ved publish.
+   */
+  teamNumber: number | null;
 }
 
 /**
@@ -46,6 +57,22 @@ export interface ScorecardLayout {
   isStableford: boolean;
   /** True for matchplay (footer viser match-status istedenfor lag-total). */
   isMatchplay: boolean;
+  /**
+   * True for fourball matchplay (2v2). Layout B med 4 kolonner: me + partner
+   * (samme `team_number`) + 2 motstandere. Footer viser match-status basert
+   * på lag-best-netto per side, ikke individuell netto som singles_matchplay.
+   *
+   * Når true er `isMatchplay` også true — fourball er en variant av matchplay.
+   * Konsumenter velger fourball-spesifikk total-utregning via dette flagget
+   * uten å bryte singles-matchplay-grenen.
+   */
+  isFourball: boolean;
+  /**
+   * For Layout B (fourball + singles matchplay + best-ball + par-stableford):
+   * me sitt `team_number`. Fourball-grenen bruker dette for å skille side 1
+   * (me's lag) fra side 2 (motstander-laget) i match-status-beregningen.
+   */
+  meTeamNumber: number | null;
 }
 
 interface ColumnFormatter {
@@ -100,13 +127,17 @@ export function resolveScorecardLayout(
       primaryHandicap: teamHandicap,
       isStableford: false,
       isMatchplay: false,
+      isFourball: false,
+      meTeamNumber: me.team_number ?? null,
     };
   }
 
   const isStablefordTeam =
     mode === 'stableford' && cfg.kind === 'stableford' && cfg.team_size === 2;
   const isBestBall = mode === 'best_ball_netto';
-  const isMatchplay = mode === 'singles_matchplay';
+  const isMatchplaySingles = mode === 'singles_matchplay';
+  const isFourball = mode === 'fourball_matchplay';
+  const isMatchplay = isMatchplaySingles || isFourball;
   const isTeamMode = isBestBall || isStablefordTeam || isMatchplay;
 
   if (!isTeamMode || revealActive) {
@@ -118,15 +149,34 @@ export function resolveScorecardLayout(
       primaryHandicap: me.course_handicap ?? 0,
       isStableford: false,
       isMatchplay: false,
+      isFourball: false,
+      meTeamNumber: me.team_number ?? null,
     };
   }
 
-  const partners = isMatchplay
-    ? players.filter((p) => p.team_number !== me.team_number)
-    : players.filter(
-        (p) =>
-          p.team_number === me.team_number && p.user_id !== me.user_id,
-      );
+  // Partner-utvalg per modus:
+  //  - Best-ball / par-stableford: alle på samme team_number unntatt me selv
+  //  - Singles matchplay: motstander (annet team_number) — 1 spiller
+  //  - Fourball matchplay (2v2): partner (samme team_number) + motstanderne
+  //    (annet team_number) — totalt 3 spillere ved siden av me. Kolonne-
+  //    rekkefølge: me → partner → motstander 1 → motstander 2 slik at lag
+  //    1 og lag 2 visuelt grupperes i 2+2-layout.
+  let partners: PlayerForHole[];
+  if (isFourball) {
+    const myPartner = players.filter(
+      (p) => p.team_number === me.team_number && p.user_id !== me.user_id,
+    );
+    const opponents = players
+      .filter((p) => p.team_number !== me.team_number)
+      .sort((a, b) => a.user_id.localeCompare(b.user_id));
+    partners = [...myPartner, ...opponents];
+  } else if (isMatchplaySingles) {
+    partners = players.filter((p) => p.team_number !== me.team_number);
+  } else {
+    partners = players.filter(
+      (p) => p.team_number === me.team_number && p.user_id !== me.user_id,
+    );
+  }
 
   if (partners.length === 0) {
     return {
@@ -137,6 +187,8 @@ export function resolveScorecardLayout(
       primaryHandicap: me.course_handicap ?? 0,
       isStableford: false,
       isMatchplay: false,
+      isFourball: false,
+      meTeamNumber: me.team_number ?? null,
     };
   }
 
@@ -146,14 +198,25 @@ export function resolveScorecardLayout(
     displayName: fmt.displayName(me, 'Du'),
     courseHandicap: me.course_handicap ?? 0,
     isCurrentUser: true,
+    teamNumber: me.team_number ?? null,
   };
-  const partnerColumns: ScorecardColumnPlayer[] = partners.map((p) => ({
-    userId: p.user_id,
-    initial: fmt.initials(p),
-    displayName: fmt.displayName(p, isMatchplay ? 'Motstander' : 'Partner'),
-    courseHandicap: p.course_handicap ?? 0,
-    isCurrentUser: false,
-  }));
+  const partnerColumns: ScorecardColumnPlayer[] = partners.map((p) => {
+    const fallback = isFourball
+      ? p.team_number === me.team_number
+        ? 'Partner'
+        : 'Motstander'
+      : isMatchplaySingles
+        ? 'Motstander'
+        : 'Partner';
+    return {
+      userId: p.user_id,
+      initial: fmt.initials(p),
+      displayName: fmt.displayName(p, fallback),
+      courseHandicap: p.course_handicap ?? 0,
+      isCurrentUser: false,
+      teamNumber: p.team_number ?? null,
+    };
+  });
 
   return {
     variant: 'b',
@@ -163,6 +226,8 @@ export function resolveScorecardLayout(
     primaryHandicap: me.course_handicap ?? 0,
     isStableford: isStablefordTeam,
     isMatchplay,
+    isFourball,
+    meTeamNumber: me.team_number ?? null,
   };
 }
 
@@ -203,7 +268,12 @@ export interface LayoutBTotals {
  *  - Best-ball: lag-best = MIN(netto) per hull, lag-total = sum av lag-best.
  *  - Par-stableford: lag-poeng = MAX(stableford-poeng) per hull, lag-total
  *    = sum av lag-poeng.
- *  - Matchplay: ingen lag-total — i stedet match-status «X up etter N hull».
+ *  - Singles matchplay (1v1): ingen lag-total — i stedet match-status
+ *    «X up etter N hull» basert på individuell netto.
+ *  - Fourball matchplay (2v2): match-status basert på lag-best-netto per side
+ *    (MIN av partnernes netto), sett fra me's perspektiv. `meTeamNumber` +
+ *    `fourballAssignments` per kolonne nødvendig for å dele de 4 spillerne
+ *    i to sider.
  *
  * `scoresByUserHole` har nøkkel `${userId}#${holeNumber}` → strokes | null.
  * `columns[0]` antas å være me (matchplay holes-up regnes fra me's perspektiv).
@@ -212,9 +282,16 @@ export function computeLayoutBTotals(
   holes: readonly LayoutBHoleInput[],
   scoresByUserHole: ReadonlyMap<string, number | null>,
   columns: readonly ScorecardColumnPlayer[],
-  opts: { isStableford: boolean; isMatchplay: boolean },
+  opts: {
+    isStableford: boolean;
+    isMatchplay: boolean;
+    isFourball?: boolean;
+    /** For fourball: me's team_number. Bestemmer hvilken side som er «vi». */
+    meTeamNumber?: number | null;
+  },
 ): LayoutBTotals {
   const { isStableford, isMatchplay } = opts;
+  const isFourball = opts.isFourball === true;
 
   const perPlayer: LayoutBPlayerTotal[] = columns.map((c) => ({
     userId: c.userId,
@@ -279,7 +356,61 @@ export function computeLayoutBTotals(
   // scorekortets ansvar — leaderboard bruker «1up»/«AS»/«3&2», vi bruker
   // «Du er X up etter N hull».
   let matchStatus: string | null = null;
-  if (isMatchplay && columns.length === 2) {
+  if (
+    isFourball &&
+    columns.length === 4 &&
+    opts.meTeamNumber != null
+  ) {
+    // Fourball-matchplay: 2v2. Side 1 (me's side) = kolonner med
+    // `teamNumber === meTeamNumber`; side 2 = de andre to. Per-hull side-best
+    // = MIN av side-spillernes individuelle netto. Match-status sammenligner
+    // side1Best vs side2Best via samme `classifyMatchplayHole` som leaderboard
+    // og scoring-laget — ingen drift mellom flatene.
+    const meTeamNumber = opts.meTeamNumber;
+    const meSideCols = columns.filter((c) => c.teamNumber === meTeamNumber);
+    const oppSideCols = columns.filter((c) => c.teamNumber !== meTeamNumber);
+
+    let meWins = 0;
+    let oppWins = 0;
+    let fourballHolesPlayed = 0;
+
+    for (const hole of holes) {
+      const netForSide = (sideCols: readonly ScorecardColumnPlayer[]): number | null => {
+        const nettos: number[] = [];
+        for (const c of sideCols) {
+          const gross =
+            scoresByUserHole.get(`${c.userId}#${hole.hole_number}`) ?? null;
+          if (gross === null) continue;
+          const extra = strokesForHole(c.courseHandicap, hole.stroke_index);
+          nettos.push(gross - extra);
+        }
+        return nettos.length > 0 ? Math.min(...nettos) : null;
+      };
+      const meBest = netForSide(meSideCols);
+      const oppBest = netForSide(oppSideCols);
+      const r = classifyMatchplayHole(meBest, oppBest);
+      if (r === 'side1_wins') {
+        meWins += 1;
+        fourballHolesPlayed += 1;
+      } else if (r === 'side2_wins') {
+        oppWins += 1;
+        fourballHolesPlayed += 1;
+      } else if (r === 'tied') {
+        fourballHolesPlayed += 1;
+      }
+    }
+
+    const holesUp = meWins - oppWins;
+    if (fourballHolesPlayed === 0) {
+      matchStatus = 'Ingen hull spilt ennå';
+    } else if (holesUp === 0) {
+      matchStatus = `AS (${fourballHolesPlayed} hull spilt)`;
+    } else if (holesUp > 0) {
+      matchStatus = `Laget ditt er ${holesUp} up etter ${fourballHolesPlayed} hull`;
+    } else {
+      matchStatus = `Laget ditt er ${-holesUp} down etter ${fourballHolesPlayed} hull`;
+    }
+  } else if (isMatchplay && columns.length === 2) {
     const status = computeMatchplayRunningStatus(
       holes.map((h) => ({ number: h.hole_number, strokeIndex: h.stroke_index })),
       { userId: columns[0].userId, courseHandicap: columns[0].courseHandicap },
