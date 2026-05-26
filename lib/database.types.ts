@@ -792,6 +792,7 @@ export type Database = {
           created_at: string
           created_by: string
           finished_at: string | null
+          fourball_allowance_pct: number
           id: string
           name: string
           points_to_win: number
@@ -805,6 +806,7 @@ export type Database = {
           created_at?: string
           created_by: string
           finished_at?: string | null
+          fourball_allowance_pct?: number
           id?: string
           name: string
           points_to_win: number
@@ -818,6 +820,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           finished_at?: string | null
+          fourball_allowance_pct?: number
           id?: string
           name?: string
           points_to_win?: number
