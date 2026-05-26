@@ -239,7 +239,7 @@ export function GameWizard({ courses, players, mode, initialValues }: Props) {
       })),
       game_mode: state.gameMode,
       team_size: state.teamSize,
-      texas_team_handicap_pct: state.texasHandicapPct,
+      texas_team_handicap_pct: String(state.texasHandicapPct),
       fourball_allowance_pct: state.fourballAllowancePct,
       tournament_id: initialValues?.tournament_id,
       tournament_match_label: initialValues?.tournament_match_label,
@@ -333,6 +333,30 @@ export function GameWizard({ courses, players, mode, initialValues }: Props) {
                 bruttoHelperText={bruttoHelperFor(state.gameMode)}
                 value={state.hcpAllowance}
                 onChange={state.setHcpAllowance}
+                hideHiddenInput
+              />
+            )}
+            {/* Texas scramble (#266): toggle på lag-handicap (mode_config.
+                team_handicap_pct). Default per team-size; key={teamSize} for
+                remount så toggle-state re-initialiseres ved team-size-bytte.
+                Sentral hidden input texas_team_handicap_pct + hidden
+                hcp_allowance_pct=100 rendres i `FormDataInputs`. */}
+            {state.isTexas && (
+              <AllowanceField
+                key={state.teamSize}
+                fieldName="texas_team_handicap_pct"
+                defaultPct={state.texasHandicapPct}
+                legend="Lag-handicap"
+                description="Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = laveste lag-gross per hull vinner."
+                nettoHelperText={
+                  state.teamSize === 2
+                    ? 'NGF-standard: 25 % av summen av spillernes spille-HCP for 2-mannslag.'
+                    : 'NGF-standard: 10 % av summen av spillernes spille-HCP for 4-mannslag.'
+                }
+                bruttoHelperText="Ingen lag-handicap — laveste gross-score per hull per lag vinner. Scratch-format."
+                inputLabel="Lag-handicap (%)"
+                value={state.texasHandicapPct}
+                onChange={state.setTexasHandicapPct}
                 hideHiddenInput
               />
             )}
@@ -466,7 +490,7 @@ function FormDataInputs({
           <input
             type="hidden"
             name="texas_team_handicap_pct"
-            value={texasHandicapPct}
+            value={String(texasHandicapPct)}
           />
         </>
       )}

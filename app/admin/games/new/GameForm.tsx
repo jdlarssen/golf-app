@@ -179,6 +179,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     isTexas,
     isMatchplay,
     texasHandicapPct,
+    setTexasHandicapPct,
     hcpAllowance,
     setHcpAllowance,
     fourballAllowancePct,
@@ -370,6 +371,34 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             value={hcpAllowance}
             onChange={setHcpAllowance}
           />
+        )}
+        {/* Texas scramble (#266): toggle skriver til mode_config.team_handicap_pct
+            (via hidden input `texas_team_handicap_pct`). Default per team-size:
+            25 % for 2-mann, 10 % for 4-mann (NGF-konvensjon). `key={teamSize}`
+            forser remount når admin bytter team-size — sikrer at toggle-state
+            re-initialiseres til ny default. Tex trenger fortsatt hidden
+            hcp_allowance_pct=100 for DB NOT NULL (mode_config holder den
+            reelle prosenten). */}
+        {isTexas && (
+          <>
+            <AllowanceField
+              key={teamSize}
+              fieldName="texas_team_handicap_pct"
+              defaultPct={texasHandicapPct}
+              legend="Lag-handicap"
+              description="Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = laveste lag-gross per hull vinner."
+              nettoHelperText={
+                teamSize === 2
+                  ? 'NGF-standard: 25 % av summen av spillernes spille-HCP for 2-mannslag.'
+                  : 'NGF-standard: 10 % av summen av spillernes spille-HCP for 4-mannslag.'
+              }
+              bruttoHelperText="Ingen lag-handicap — laveste gross-score per hull per lag vinner. Scratch-format."
+              inputLabel="Lag-handicap (%)"
+              value={texasHandicapPct}
+              onChange={setTexasHandicapPct}
+            />
+            <input type="hidden" name="hcp_allowance_pct" value="100" />
+          </>
         )}
         {lockGameMode && (
           <p className="text-xs text-muted">

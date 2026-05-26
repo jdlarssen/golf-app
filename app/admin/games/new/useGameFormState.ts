@@ -178,16 +178,20 @@ export function useGameFormState({
       : 100,
   );
   // Texas scramble: lag-handicap-prosent. Initialiseres fra initialValues
-  // hvis edit-flyt, ellers default per teamSize (settes ved første render og
-  // ved mode/teamSize-endring via en effect).
-  const [texasHandicapPct, setTexasHandicapPct] = useState<string>(
-    initialValues?.texas_team_handicap_pct ??
-      String(
-        defaultTexasHandicapPct(
+  // hvis edit-flyt, ellers default per teamSize. 0 = brutto (laveste lag-
+  // gross per hull), 1..100 = netto med den prosenten (NGF-standard 25 for
+  // 2-mann, 10 for 4-mann). Eies av AllowanceField i Section 3 (Format)
+  // via controlled-modus; `key={teamSize}` på AllowanceField sørger for
+  // remount når team-size endres så toggle-state re-initialiseres til
+  // ny default.
+  const [texasHandicapPct, setTexasHandicapPct] = useState<number>(
+    initialValues?.texas_team_handicap_pct !== undefined &&
+      initialValues.texas_team_handicap_pct !== ''
+      ? Number(initialValues.texas_team_handicap_pct)
+      : defaultTexasHandicapPct(
           initialValues?.team_size ??
             defaultTeamSizeForMode(initialValues?.game_mode ?? 'best_ball'),
         ),
-      ),
   );
   // Fourball matchplay (#217): allowance-prosent (0 = brutto, 1..100 = netto).
   // Pre-fylles fra cup-radens fourball_allowance_pct via initialValues; ellers
@@ -275,7 +279,7 @@ export function useGameFormState({
     // Texas scramble: default lag-handicap-prosent per NGF-konvensjon
     // (25 % for 2-mannslag, 10 % for 4-mannslag). Admin kan deretter justere.
     if (next === 'texas_scramble') {
-      setTexasHandicapPct(String(defaultTexasHandicapPct(nextSize)));
+      setTexasHandicapPct(defaultTexasHandicapPct(nextSize));
     }
     // #199: hvis ny modus ikke har lag-konsept, force-reset registration_type
     // til 'solo' — ellers ville payload-validatoren feilet med
@@ -294,7 +298,7 @@ export function useGameFormState({
   function handleTeamSizeChange(next: TeamSize) {
     setTeamSize(next);
     if (gameMode === 'texas_scramble') {
-      setTexasHandicapPct(String(defaultTexasHandicapPct(next)));
+      setTexasHandicapPct(defaultTexasHandicapPct(next));
     }
   }
 
@@ -646,11 +650,10 @@ export function useGameFormState({
   );
   // Texas tillater team_size=2 eller 4. Med 8-slot-limit i payload-laget
   // betyr det maks 4 lag á 2 (= 8) eller 2 lag á 4 (= 8) spillere.
-  const texasHandicapPctNum = Number(texasHandicapPct);
   const texasHandicapPctValid =
-    Number.isInteger(texasHandicapPctNum) &&
-    texasHandicapPctNum >= 0 &&
-    texasHandicapPctNum <= 100;
+    Number.isInteger(texasHandicapPct) &&
+    texasHandicapPct >= 0 &&
+    texasHandicapPct <= 100;
   const texasPlayersValid =
     selectedPlayerIds.length >= teamSize &&
     selectedPlayerIds.length % teamSize === 0 &&
