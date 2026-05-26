@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { createTournamentDraft } from '@/lib/cup/actions';
+import { FourballAllowanceField } from './FourballAllowanceField';
 
 type SearchParams = Promise<{ error?: string | string[] }>;
 
@@ -18,6 +19,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   team_2: 'Navn på lag 2 må være mellom 1 og 40 tegn.',
   team_dup: 'Lagene må ha forskjellige navn.',
   points: 'Point-målet må være et positivt tall (typisk 4,5 for 8 matches).',
+  allowance: 'Allowance må være mellom 0 og 100.',
   insert_failed: 'Klarte ikke å opprette cupen. Prøv igjen, eller sjekk Vercel-loggene.',
 };
 
@@ -93,6 +95,8 @@ export default async function NewCupPage({
           defaultValue="4,5"
           hint="Vanlig regel: halvparten av tilgjengelige point + 0,5. Med 8 matches blir det 4,5."
         />
+
+        <FourballAllowanceField />
 
         <div className="pt-2">
           <Button type="submit" className="w-full">

@@ -23,6 +23,22 @@ function parsePointsToWin(raw: string): number | null {
   return Math.round(n * 10) / 10;
 }
 
+/**
+ * Parser fourball_allowance_pct fra cup-create/edit-form (#217).
+ *
+ * Range 0..100 (heltall). 0 = brutto, 1..100 = netto med den prosenten. Tom
+ * string defaulter til 85 (WHS-default) — UI-toggle skal alltid sende eksplisitt
+ * verdi (0 ved brutto-modus, eller pct fra netto-input), så tom string betyr
+ * at form ble submittet med stale state og default er det trygge valget.
+ */
+function parseFourballAllowancePct(raw: string): number | null {
+  const cleaned = raw.trim();
+  if (cleaned === '') return 85;
+  const n = Number(cleaned);
+  if (!Number.isInteger(n) || n < 0 || n > 100) return null;
+  return n;
+}
+
 async function loadTournamentParticipantEmails(
   supabase: Awaited<ReturnType<typeof getServerClient>>,
   tournamentId: string,
@@ -65,6 +81,7 @@ export async function createTournamentDraft(formData: FormData) {
   const team1 = String(formData.get('team_1_name') ?? '').trim();
   const team2 = String(formData.get('team_2_name') ?? '').trim();
   const pointsRaw = String(formData.get('points_to_win') ?? '');
+  const allowanceRaw = String(formData.get('fourball_allowance_pct') ?? '');
 
   if (!NAME_RE.test(name)) redirect('/admin/cup/new?error=name');
   if (!TEAM_NAME_RE.test(team1)) redirect('/admin/cup/new?error=team_1');
@@ -73,6 +90,8 @@ export async function createTournamentDraft(formData: FormData) {
     redirect('/admin/cup/new?error=team_dup');
   const points = parsePointsToWin(pointsRaw);
   if (points === null) redirect('/admin/cup/new?error=points');
+  const fourballAllowance = parseFourballAllowancePct(allowanceRaw);
+  if (fourballAllowance === null) redirect('/admin/cup/new?error=allowance');
 
   const supabase = await getServerClient();
   const admin = await requireAdmin(supabase);
@@ -84,6 +103,7 @@ export async function createTournamentDraft(formData: FormData) {
       team_1_name: team1,
       team_2_name: team2,
       points_to_win: points as number,
+      fourball_allowance_pct: fourballAllowance as number,
       created_by: admin.userId,
     })
     .select('id')
@@ -105,6 +125,7 @@ export async function updateTournament(formData: FormData) {
   const team1 = String(formData.get('team_1_name') ?? '').trim();
   const team2 = String(formData.get('team_2_name') ?? '').trim();
   const pointsRaw = String(formData.get('points_to_win') ?? '');
+  const allowanceRaw = String(formData.get('fourball_allowance_pct') ?? '');
 
   if (!NAME_RE.test(name)) redirect(`/admin/cup/${id}?error=name`);
   if (!TEAM_NAME_RE.test(team1)) redirect(`/admin/cup/${id}?error=team_1`);
@@ -113,6 +134,8 @@ export async function updateTournament(formData: FormData) {
     redirect(`/admin/cup/${id}?error=team_dup`);
   const points = parsePointsToWin(pointsRaw);
   if (points === null) redirect(`/admin/cup/${id}?error=points`);
+  const fourballAllowance = parseFourballAllowancePct(allowanceRaw);
+  if (fourballAllowance === null) redirect(`/admin/cup/${id}?error=allowance`);
 
   const supabase = await getServerClient();
   await requireAdmin(supabase);
@@ -124,6 +147,7 @@ export async function updateTournament(formData: FormData) {
       team_1_name: team1,
       team_2_name: team2,
       points_to_win: points as number,
+      fourball_allowance_pct: fourballAllowance as number,
     })
     .eq('id', id);
 
