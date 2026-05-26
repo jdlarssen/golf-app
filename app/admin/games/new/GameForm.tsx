@@ -15,6 +15,7 @@ import { PlayersSection } from './sections/PlayersSection';
 import { TeamsAssignmentSection } from './sections/TeamsAssignmentSection';
 import { AdvancedSettingsSection } from './sections/AdvancedSettingsSection';
 import { RegistrationSection } from './sections/RegistrationSection';
+import { FourballAllowanceField } from '@/components/cup/FourballAllowanceField';
 
 export type CourseOption = {
   id: string;
@@ -115,6 +116,13 @@ export type InitialValues = {
   tournament_id?: string;
   tournament_match_label?: string;
   /**
+   * Fourball matchplay (#217): allowance-prosent (0..100) som pre-fylles inn
+   * i netto/brutto-toggle-en i wizarden. Settes når admin lander via cup-link
+   * med `?game_mode=fourball_matchplay`, slik at match-en arver cup-radens
+   * `tournaments.fourball_allowance_pct`. Brukes IKKE for andre modi.
+   */
+  fourball_allowance_pct?: number;
+  /**
    * Self-påmelding (#199). Defaultes til 'invite_only' + 'solo' for å
    * bevare dagens flyt. Edit-flyten leverer eksisterende valg fra DB.
    */
@@ -170,6 +178,8 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     isTexas,
     isMatchplay,
     texasHandicapPct,
+    fourballAllowancePct,
+    setFourballAllowancePct,
     handleModeChange,
     handleTeamSizeChange,
     lockGameMode,
@@ -263,6 +273,13 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           />
         </>
       )}
+      {gameMode === 'fourball_matchplay' && (
+        <input
+          type="hidden"
+          name="fourball_allowance_pct"
+          value={String(fourballAllowancePct)}
+        />
+      )}
 
       {/* Hidden inputs that carry the structured assignment payload. The server
           action only ever sees the FormData; keeping the names server-known
@@ -317,6 +334,13 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             value={teamSize}
             onChange={handleTeamSizeChange}
             disabled={lockGameMode}
+          />
+        )}
+        {gameMode === 'fourball_matchplay' && (
+          <FourballAllowanceField
+            value={fourballAllowancePct}
+            onChange={setFourballAllowancePct}
+            hideHiddenInput
           />
         )}
         {lockGameMode && (

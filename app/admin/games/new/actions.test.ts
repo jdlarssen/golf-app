@@ -291,6 +291,114 @@ describe('createAndPublishGame', () => {
     expect(lastRedirect()).toBe('/admin/games/new-game-2?status=scheduled');
   });
 
+  it('happy path (fourball publish): persists mode_config with allowance_pct from form', async () => {
+    // Fourball matchplay (#217): 4 spillere fordelt 2-2 på side 1/2. Wizard
+    // pre-fyller `fourball_allowance_pct` fra cup-radens
+    // `tournaments.fourball_allowance_pct`. Validator-en (`validateFourballMatchplay`)
+    // leser feltet og persisterer det inn i `mode_config.allowance_pct`.
+    const completedRoster = Array.from({ length: 4 }, (_, i) => ({
+      id: `u${i}`,
+      email: `u${i}@example.com`,
+      profile_completed_at: '2026-01-01T00:00:00Z',
+    }));
+
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null }, // users.is_admin
+      { data: completedRoster, error: null }, // users.in roster
+      { data: { id: 'new-game-4ball' }, error: null }, // games.insert.select.single
+      { data: null, error: null }, // game_players.insert
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { createAndPublishGame } = await import('./actions');
+
+    await expect(
+      createAndPublishGame(
+        fd({
+          name: 'Fourball 1',
+          course_id: 'course-1',
+          tee_box_id: 'tee-1',
+          hcp_allowance_pct: '100',
+          scheduled_tee_off_at: '2026-06-15T09:00',
+          side_tournament_enabled: 'false',
+          game_mode: 'fourball_matchplay',
+          fourball_allowance_pct: '85',
+          player_0_id: 'u0',
+          player_0_team: '1',
+          player_0_flight: '1',
+          player_1_id: 'u1',
+          player_1_team: '1',
+          player_1_flight: '1',
+          player_2_id: 'u2',
+          player_2_team: '2',
+          player_2_flight: '2',
+          player_3_id: 'u3',
+          player_3_team: '2',
+          player_3_flight: '2',
+        }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/admin/games/new-game-4ball?status=scheduled');
+
+    const insertCall = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'insert',
+    );
+    expect(insertCall).toBeDefined();
+    const insertRow = insertCall!.args[0] as { game_mode: string; mode_config: unknown };
+    expect(insertRow.game_mode).toBe('fourball_matchplay');
+    expect(insertRow.mode_config).toEqual({
+      kind: 'fourball_matchplay',
+      team_size: 2,
+      teams_count: 2,
+      allowance_pct: 85,
+    });
+  });
+
+  it('fourball publish uten allowance: redirects med ?error=bad_allowance', async () => {
+    // Validator-en (`validateFourballMatchplay`) krever eksplisitt
+    // `fourball_allowance_pct` ved publish. Tom/manglende verdi → bad_allowance.
+    // Wizarden pre-fyller alltid feltet, så denne stien rammer kun
+    // DevTools-tampering eller scenarier der hidden input-en faller bort.
+    supabaseMock = buildSupabaseMock([]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { createAndPublishGame } = await import('./actions');
+
+    await expect(
+      createAndPublishGame(
+        fd({
+          name: 'Fourball uten allowance',
+          course_id: 'course-1',
+          tee_box_id: 'tee-1',
+          hcp_allowance_pct: '100',
+          scheduled_tee_off_at: '2026-06-15T09:00',
+          side_tournament_enabled: 'false',
+          game_mode: 'fourball_matchplay',
+          // Bevisst dropper fourball_allowance_pct
+          player_0_id: 'u0',
+          player_0_team: '1',
+          player_0_flight: '1',
+          player_1_id: 'u1',
+          player_1_team: '1',
+          player_1_flight: '1',
+          player_2_id: 'u2',
+          player_2_team: '2',
+          player_2_flight: '2',
+          player_3_id: 'u3',
+          player_3_team: '2',
+          player_3_flight: '2',
+        }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/admin/games/new?error=bad_allowance');
+  });
+
   it('happy path (stableford publish): inserts solo game with mode_config={team_size:1}', async () => {
     // Stableford solo: 2 spillere uten lag-tildeling, payload-builderen
     // returnerer game_mode='stableford' + mode_config={team_size:1,

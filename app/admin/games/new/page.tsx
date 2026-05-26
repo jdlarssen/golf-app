@@ -20,7 +20,22 @@ type SearchParams = Promise<{
   error?: string | string[];
   emails?: string | string[];
   tournament_id?: string | string[];
+  game_mode?: string | string[];
 }>;
+
+/**
+ * Modi som er gyldige for cup-link-pre-fyll. Cup-detalj-siden har én knapp
+ * per støttet modus — andre verdier (best-ball, stableford, …) hopper over
+ * pre-fyllen og lar admin starte fra default i wizarden.
+ */
+type CupGameMode = 'singles_matchplay' | 'fourball_matchplay';
+
+function parseCupGameMode(raw: string | undefined): CupGameMode {
+  if (raw === 'fourball_matchplay') return 'fourball_matchplay';
+  // Default + singles_matchplay → singles. Bevarer dagens oppførsel (cup-link
+  // uten game_mode-parameter trådte tidligere alltid på singles-løypa).
+  return 'singles_matchplay';
+}
 
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
@@ -44,10 +59,13 @@ export default async function NewGamePage({
   const userId = await getProxyVerifiedUserId();
 
   // Cup-link (#47): hvis admin lander via /admin/cup/[id], pre-fyller vi
-  // game_mode + match-label og låser modus-velgeren.
+  // game_mode + match-label og låser modus-velgeren. `game_mode`-param-en
+  // (singles_matchplay | fourball_matchplay) styrer hvilken modus admin lander
+  // på — cup-detalj-siden har én knapp per støttet modus.
   const tournamentIdParam = first(sp.tournament_id);
+  const requestedCupMode = parseCupGameMode(first(sp.game_mode));
   const cupContext = tournamentIdParam
-    ? await loadCupContext(tournamentIdParam)
+    ? await loadCupContext(tournamentIdParam, requestedCupMode)
     : null;
 
   return (
@@ -78,8 +96,10 @@ export default async function NewGamePage({
       {cupContext && (
         <div className="mt-4">
           <Banner tone="info">
-            Match-en kobles til cupen <strong>{cupContext.name}</strong>.
-            Spillmodus er låst til matchplay (1 vs 1).
+            Match-en kobles til cupen <strong>{cupContext.name}</strong>.{' '}
+            {cupContext.gameMode === 'fourball_matchplay'
+              ? 'Spillmodus er låst til four-ball matchplay (2 vs 2).'
+              : 'Spillmodus er låst til matchplay (1 vs 1).'}
           </Banner>
         </div>
       )}
@@ -103,25 +123,53 @@ type CupContext = {
   id: string;
   name: string;
   nextMatchLabel: string;
+  gameMode: CupGameMode;
+  /**
+   * Cup-radens default fourball-allowance (0 = brutto, 1..100 = netto-prosent).
+   * Pre-fylles inn i wizard sin netto/brutto-toggle for fourball-matches så
+   * admin starter med cup-en sin innstilling. Settes også for singles-matches
+   * for å holde typen ren — wizard-en bruker bare verdien når game_mode er
+   * fourball.
+   */
+  fourballAllowancePct: number;
 };
 
-async function loadCupContext(tournamentId: string): Promise<CupContext | null> {
+async function loadCupContext(
+  tournamentId: string,
+  requestedMode: CupGameMode,
+): Promise<CupContext | null> {
   const supabase = await getServerClient();
   const { data: cup } = await supabase
     .from('tournaments')
-    .select('id, name, status')
+    .select('id, name, status, fourball_allowance_pct')
     .eq('id', tournamentId)
-    .maybeSingle<{ id: string; name: string; status: string }>();
+    .maybeSingle<{
+      id: string;
+      name: string;
+      status: string;
+      fourball_allowance_pct: number | null;
+    }>();
   if (!cup) return null;
   if (cup.status === 'finished') return null;
+  // Match-label-numerering teller eksisterende matches AV SAMME modus så
+  // admin får «Fourball 1» / «Fourball 2» / «Singles 1» / «Singles 2»
+  // uavhengig av rekkefølge i cupen.
   const { count } = await supabase
     .from('games')
     .select('id', { head: true, count: 'exact' })
-    .eq('tournament_id', cup.id);
+    .eq('tournament_id', cup.id)
+    .eq('game_mode', requestedMode);
+  const labelPrefix =
+    requestedMode === 'fourball_matchplay' ? 'Fourball' : 'Singles';
+  // Default 85 (WHS) hvis cup-raden ikke har verdien satt (eldre cups før
+  // 0045-migrasjonen, eller cups opprettet før chunk 5 lå ute).
+  const fourballAllowancePct = cup.fourball_allowance_pct ?? 85;
   return {
     id: cup.id,
     name: cup.name,
-    nextMatchLabel: `Singles ${(count ?? 0) + 1}`,
+    nextMatchLabel: `${labelPrefix} ${(count ?? 0) + 1}`,
+    gameMode: requestedMode,
+    fourballAllowancePct,
   };
 }
 
@@ -162,19 +210,38 @@ async function GameFormBody({ cupContext }: { cupContext: CupContext | null }) {
         createAndPublishAction: createAndPublishGame,
       }}
       initialValues={
-        cupContext
-          ? {
-              game_mode: 'singles_matchplay',
-              team_size: 1,
-              lock_game_mode: true,
-              tournament_id: cupContext.id,
-              tournament_match_label: cupContext.nextMatchLabel,
-              name: cupContext.nextMatchLabel,
-            }
-          : undefined
+        cupContext ? buildCupInitialValues(cupContext) : undefined
       }
     />
   );
+}
+
+/**
+ * Bygger `initialValues` per cup-game-mode. Singles og fourball deler tournament-
+ * link-feltene; fourball legger til `fourball_allowance_pct` pre-fyll fra
+ * cup-raden så admin starter med cup-en sin innstilling for nye fourball-
+ * matches.
+ */
+function buildCupInitialValues(cup: CupContext) {
+  const base = {
+    lock_game_mode: true as const,
+    tournament_id: cup.id,
+    tournament_match_label: cup.nextMatchLabel,
+    name: cup.nextMatchLabel,
+  };
+  if (cup.gameMode === 'fourball_matchplay') {
+    return {
+      ...base,
+      game_mode: 'fourball_matchplay' as const,
+      team_size: 2 as const,
+      fourball_allowance_pct: cup.fourballAllowancePct,
+    };
+  }
+  return {
+    ...base,
+    game_mode: 'singles_matchplay' as const,
+    team_size: 1 as const,
+  };
 }
 
 function GameFormSkeleton() {

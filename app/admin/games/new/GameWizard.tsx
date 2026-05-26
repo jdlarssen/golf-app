@@ -31,6 +31,7 @@ import { PlayersSection } from './sections/PlayersSection';
 import { TeamsAssignmentSection } from './sections/TeamsAssignmentSection';
 import { ReadyStep } from './sections/ReadyStep';
 import { RegistrationSection } from './sections/RegistrationSection';
+import { FourballAllowanceField } from '@/components/cup/FourballAllowanceField';
 import {
   GameForm,
   type CourseOption,
@@ -238,6 +239,7 @@ export function GameWizard({ courses, players, mode, initialValues }: Props) {
       game_mode: state.gameMode,
       team_size: state.teamSize,
       texas_team_handicap_pct: state.texasHandicapPct,
+      fourball_allowance_pct: state.fourballAllowancePct,
       tournament_id: initialValues?.tournament_id,
       tournament_match_label: initialValues?.tournament_match_label,
       registration_mode: state.registrationMode,
@@ -291,6 +293,21 @@ export function GameWizard({ courses, players, mode, initialValues }: Props) {
               <p className="text-xs text-muted">
                 <strong>Kan ikke endres etter spill-start.</strong>
               </p>
+            )}
+            {/* Fourball matchplay (#217): netto/brutto-toggle med pre-fyll fra
+                cup-radens fourball_allowance_pct hvis admin lander via cup-link.
+                Controlled-modus — verdien lever i `useGameFormState` så den
+                persisterer når admin navigerer mellom wizard-steg. Selve
+                hidden input-en rendres sentralt i `FormDataInputs` slik at
+                payload-en når server-action uansett hvilket steg admin
+                publiserer fra. Andre modi skjuler toggle-en helt — andre
+                modi-validatorer leser ikke feltet. */}
+            {state.gameMode === 'fourball_matchplay' && (
+              <FourballAllowanceField
+                value={state.fourballAllowancePct}
+                onChange={state.setFourballAllowancePct}
+                hideHiddenInput
+              />
             )}
           </div>
           <RegistrationSection state={state} hideHeading />
@@ -382,6 +399,7 @@ function FormDataInputs({
     teamSize,
     isTexas,
     texasHandicapPct,
+    fourballAllowancePct,
     orderedPayload,
     courseId,
     teeBoxId,
@@ -424,6 +442,13 @@ function FormDataInputs({
             value={texasHandicapPct}
           />
         </>
+      )}
+      {gameMode === 'fourball_matchplay' && (
+        <input
+          type="hidden"
+          name="fourball_allowance_pct"
+          value={String(fourballAllowancePct)}
+        />
       )}
 
       <input type="hidden" name="course_id" value={courseId} />

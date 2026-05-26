@@ -182,6 +182,13 @@ export function useGameFormState({
         ),
       ),
   );
+  // Fourball matchplay (#217): allowance-prosent (0 = brutto, 1..100 = netto).
+  // Pre-fylles fra cup-radens fourball_allowance_pct via initialValues; ellers
+  // default 85 (WHS-standard). Validator-en (`validateFourballMatchplay`) leser
+  // dette ved publish og avviser verdier utenfor 0..100.
+  const [fourballAllowancePct, setFourballAllowancePct] = useState<number>(
+    initialValues?.fourball_allowance_pct ?? 85,
+  );
   const [requirePeerApproval, setRequirePeerApproval] = useState(
     initialValues?.require_peer_approval ?? false,
   );
@@ -810,6 +817,8 @@ export function useGameFormState({
     setHcpAllowance,
     texasHandicapPct,
     setTexasHandicapPct,
+    fourballAllowancePct,
+    setFourballAllowancePct,
     requirePeerApproval,
     setRequirePeerApproval,
     sideEnabled,

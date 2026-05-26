@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { createTournamentDraft } from '@/lib/cup/actions';
-import { FourballAllowanceField } from './FourballAllowanceField';
+import { FourballAllowanceField } from '@/components/cup/FourballAllowanceField';
 
 type SearchParams = Promise<{ error?: string | string[] }>;
 
