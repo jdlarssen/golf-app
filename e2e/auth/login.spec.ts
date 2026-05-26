@@ -51,4 +51,21 @@ test.describe('Login form smoke (OTP step 1)', () => {
     await page.goto('/');
     await expect(page).toHaveURL(/\/login/);
   });
+
+  // Selv-registreringsflagget (issue #166) er default av, så hjelpe-teksten
+  // som inviterer nye besøkende til å lage konto skal IKKE være synlig på
+  // standard /login. Toggle-på-staten verifiseres på komponent-nivå i
+  // _components/SendCodeForm.test.tsx — Next.js inliner NEXT_PUBLIC_*-envs
+  // ved build, så vi kan ikke flippe flagget per-Playwright-test uten å
+  // bygge serveren på nytt.
+  test('viser ikke selv-registreringshjelp når flagget er av (default)', async ({
+    page,
+  }) => {
+    await page.goto('/login');
+    await expect(
+      page.getByText(
+        'Skriv inn e-posten din. Er du ny her, lager vi en konto til deg.',
+      ),
+    ).toHaveCount(0);
+  });
 });

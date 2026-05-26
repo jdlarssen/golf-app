@@ -15,9 +15,18 @@ import { sendCode } from '../actions';
 export function SendCodeForm({
   defaultEmail,
   next,
+  allowSelfRegistration = false,
 }: {
   defaultEmail: string;
   next: string;
+  /**
+   * Server-resolved value of NEXT_PUBLIC_ALLOW_SELF_REGISTRATION. Controls
+   * whether the helper sub-text invites new visitors to create an account.
+   * Passed in (not read from `process.env` here) so the form stays
+   * pure-client and doesn't depend on Next.js inlining behaviour for the
+   * `NEXT_PUBLIC_*` envs at build time.
+   */
+  allowSelfRegistration?: boolean;
 }) {
   return (
     <form action={sendCode} className="space-y-4">
@@ -41,12 +50,21 @@ export function SendCodeForm({
           defaultValue=""
         />
       </div>
-      <FormBody defaultEmail={defaultEmail} />
+      <FormBody
+        defaultEmail={defaultEmail}
+        allowSelfRegistration={allowSelfRegistration}
+      />
     </form>
   );
 }
 
-function FormBody({ defaultEmail }: { defaultEmail: string }) {
+function FormBody({
+  defaultEmail,
+  allowSelfRegistration,
+}: {
+  defaultEmail: string;
+  allowSelfRegistration: boolean;
+}) {
   const { pending, data } = useFormStatus();
 
   if (pending) {
@@ -74,6 +92,11 @@ function FormBody({ defaultEmail }: { defaultEmail: string }) {
         defaultValue={defaultEmail}
         required
       />
+      {allowSelfRegistration && (
+        <p className="text-sm text-muted -mt-1">
+          Skriv inn e-posten din. Er du ny her, lager vi en konto til deg.
+        </p>
+      )}
       <Button type="submit" className="w-full mt-2">
         Send meg kode
       </Button>

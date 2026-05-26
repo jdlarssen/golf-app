@@ -3,6 +3,8 @@
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { consumeLoginRateLimit } from '@/lib/auth/loginRateLimit';
+import { getClientIp } from '@/lib/admin/rateLimit';
 
 // Step 1 of two-step OTP login. Verifies the email is either registered
 // (existing user) or has an open invitation, then asks Supabase to send a
@@ -34,12 +36,31 @@ export async function sendCode(formData: FormData) {
     redirect('/login?error=unknown');
   }
 
+  // Defense-in-depth on top of Supabase's built-in OTP throttle: a per-email
+  // and per-IP bucket on `admin_action_rate_limit`. Sits after the honeypot
+  // (cheaper short-circuit first) but before signInWithOtp so we don't pay
+  // Supabase quota on a known-abusive sender. Both bucket trips map to the
+  // same `rate_limited` error code so the response doesn't leak which limit
+  // hit.
+  const ip = await getClientIp();
+  const rl = await consumeLoginRateLimit({ email, ip });
+  if (!rl.ok) {
+    redirect('/login?error=rate_limited');
+  }
+
   const supabase = await getServerClient();
 
+  // Self-registration is gated by an env flag so we can ramp it carefully
+  // in prod (kill-switch on abuse). When the flag is off, behaviour is
+  // identical to pre-#166: only emails with an open invitation row get
+  // `shouldCreateUser=true`. When on, any email reaches Supabase OTP and
+  // a new auth.users row is created on first verifyOtp.
+  const allowSelfReg =
+    process.env.NEXT_PUBLIC_ALLOW_SELF_REGISTRATION === 'true';
   const { data: isInvited } = await supabase.rpc('email_is_invited', {
     check_email: email,
   });
-  const shouldCreateUser = Boolean(isInvited);
+  const shouldCreateUser = Boolean(isInvited) || allowSelfReg;
 
   const { error } = await supabase.auth.signInWithOtp({
     email,

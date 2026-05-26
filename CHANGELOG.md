@@ -10,16 +10,46 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.29.y — Selv-registrering for nye spillere
+
+Lar nye besøkende få OTP-kode på `/login` uten admin-mellomledd, bak en kill-switch og to lag rate-limit. Forberedelse til å åpne tornygolf.no for spillere utenfor kompisgjengen ([#166](https://github.com/jdlarssen/golf-app/issues/166)).
+
+### [1.29.0] - 2026-05-26
+
+> Nye besøkende kan nå skrive inn e-posten sin på innloggings-siden og få kode — uten at en admin må invitere dem først. Funksjonen er av i starten og slås på i Vercel manuelt etter at vi har testet den på preview. Et stille rate-vern på baksiden stopper noen som prøver å spamme inn forsøk.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- [lib/auth/loginRateLimit.ts](lib/auth/loginRateLimit.ts) — `consumeLoginRateLimit({ email, ip })` gjenbruker `consume_admin_rate_limit`-RPC med nye bucket-prefikser (`login:email:<email>`, `login:ip:<ip>`). Default: 3 sendCode per e-post per 15 min, 10 per IP per 15 min. Service-role-call for å unngå GRANT-justering på en pre-auth RPC. Fail-open på DB-feil så en transient outage ikke låser alle ute. Sju unit-tester dekker happy-path, begge bucket-deny-stier, lowercase-normalisering, custom-limits, RPC-error- og throw-fail-open.
+- Ny env-var `NEXT_PUBLIC_ALLOW_SELF_REGISTRATION` (default `false`). Når `true`: ikke-inviterte e-poster får `shouldCreateUser=true` mot Supabase Auth OTP og en konto blir laget ved første `verifyOtp`. Kill-switch: sett tilbake til `false` i Vercel og redeploy.
+- Conditional hjelpe-tekst under e-post-feltet på `/login` («Skriv inn e-posten din. Er du ny her, lager vi en konto til deg.») kun synlig når flagget er på. Server-resolved env-verdi sendes som prop til client-komponenten så Next.js sin `NEXT_PUBLIC_*`-inlining ikke bites mot client-side condition.
+- Tre nye Vitest-suiter på `/login` server-action: flag-on/off-routing, rate-limit-deny på e-post- og IP-bukket (samme `rate_limited`-redirect, ingen leak av hvilken bucket som tripp), honeypot-kortcircuit verifiserer at rate-limit-RPC ikke kalles. Ny component-test for `SendCodeForm` som dekker hjelpe-tekst-toggle. Playwright-smoke utvidet til å asserere default-off-state.
+
+#### Changed
+- Empty-state-kopi på `/` for ikke-creator endret fra «Du er klar. Admin setter opp neste runde.» til «Du er klar. Be en arrangør om å invitere deg til neste runde.» Mykere tone for self-registrerte som ikke har en admin i tankene.
+- [app/(auth)/login/actions.ts](app/(auth)/login/actions.ts) `sendCode` får nytt rate-limit-trinn mellom honeypot og `signInWithOtp`. Bytte-rekkefølge: honeypot (cheap) → rate-limit (DB-call) → Supabase OTP (kvote-tellende). Begge bucket-trips redirecter til samme `?error=rate_limited` som Supabase sin egen throttle — bruker ser ingen forskjell.
+
+#### Notes
+- Trusted-creator-allowlisten utvides IKKE. Self-registrerte uten admin/trusted-status får ingen mulighet til å opprette spill selv før [#22](https://github.com/jdlarssen/golf-app/issues/22) (RLS-revisjon) lander. Det er bevisst — onboarding-kanalen åpnes først, RLS-åpning er sin egen jobb.
+- Ingen DB-migrasjon. Gjenbruker eksisterende `admin_action_rate_limit`-tabell og `consume_admin_rate_limit`-RPC fra `0026_admin_action_rate_limit.sql`. Bucket-strengen er generisk.
+- Cloudflare Turnstile / CAPTCHA er bevisst utelatt (overkill for current scale). Egen kontrakt hvis abuse-vinduer viser at rate-limit alene ikke holder.
+
+</details>
+
+---
+
 ## 1.28.y — Bane-tilgang for kompis-gjengen
 
-Fase 4 (og siste fase) av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Trusted creators får tilgang til Sekretariatet med en filtrert tile-grid, og kan opprette + oppdatere baner gjennom samme courses-katalogen som admin bruker.
+<details>
+<summary><strong>1.28.y — Bane-tilgang for kompis-gjengen (2 oppføringer) — klikk for å vise</strong></summary>
+
+Fase 4 (og siste fase) av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Trusted creators får tilgang til Sekretariatet med en filtrert tile-grid, og kan opprette + oppdatere baner gjennom samme courses-katalogen som admin bruker. Patch lagt på toppen som åpner Lanseringer-flaten direkte fra Sekretariatet.
 
 ### [1.28.1] - 2026-05-26
 
 > Du finner nå Lanseringer rett fra Sekretariatet. En ny flis ved siden av Resultatprotokoll tar deg inn på publiserings-flaten, og viser dato for siste lansering rett under tittelen.
-
-<details>
-<summary>Teknisk</summary>
 
 #### Added
 - Ny `SparkleIcon` i [components/icons/Icons.tsx](components/icons/Icons.tsx) — SVG-pendant til ✨-emojien som banneret og innboks-kortet allerede bruker, slik at de tre lanserings-flatene har samme visuelle uttrykk.
@@ -28,14 +58,9 @@ Fase 4 (og siste fase) av epic [#223](https://github.com/jdlarssen/golf-app/issu
 #### Changed
 - `TileIconKind`-unionen utvidet med `'sparkle'`, og `TilesSkeleton` renderer nå 5 placeholders for å unngå skeleton-til-innhold-flicker.
 
-</details>
-
 ### [1.28.0] - 2026-05-25
 
 > Trusted creators kan nå legge til og oppdatere baner selv, ikke bare opprette spill. Når en kompis i allowlist-en logger inn ser de Sekretariatet med en Baner-tile, og kan vedlikeholde katalogen som om de var admin — men kun baner de selv har laget kan slettes.
-
-<details>
-<summary>Teknisk</summary>
 
 #### Added
 - Ny `requireAdmin(supabase)`-helper i [lib/admin/auth.ts](lib/admin/auth.ts) ved siden av `requireAdminOrTrustedCreator`. Redirecter trusted-non-admin til `/admin` og ikke-trusted ikke-admin til `/`. Brukt til å self-gate alle admin-only ruter under `/admin/spillere`, `/admin/games` (unntatt `/new`), og `/admin/lanseringer` (innført i forrige refactor-commit).

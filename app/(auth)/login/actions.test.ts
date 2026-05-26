@@ -36,14 +36,30 @@ vi.mock('@/lib/supabase/server', () => ({
   }),
 }));
 
-// Admin client should never be touched on a honeypot hit.
+// Admin client should never be touched on a honeypot hit. The same admin
+// client is also passed to `loginRateLimit` via getAdminClient, but those
+// tests live in lib/auth/loginRateLimit.test.ts so we don't double-cover here.
 const adminUpdateMock = vi.fn();
 vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => ({
     from: () => ({
       update: adminUpdateMock,
     }),
+    rpc: () => Promise.resolve({ data: true, error: null }),
   }),
+}));
+
+// loginRateLimit is mocked so tests can deterministically allow/deny without
+// the admin RPC machinery. Default to ok; override per-test where needed.
+const consumeLoginRateLimitMock = vi.fn();
+vi.mock('@/lib/auth/loginRateLimit', () => ({
+  consumeLoginRateLimit: (
+    opts: Parameters<typeof consumeLoginRateLimitMock>[0],
+  ) => consumeLoginRateLimitMock(opts),
+}));
+
+vi.mock('@/lib/admin/rateLimit', () => ({
+  getClientIp: async () => '1.2.3.4',
 }));
 
 function lastRedirect(): string | undefined {
@@ -58,7 +74,10 @@ function fd(entries: Record<string, string>): FormData {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.unstubAllEnvs();
   supabaseMock = buildSupabaseMock([]);
+  // Default: rate-limit allows; tests that exercise the deny path override.
+  consumeLoginRateLimitMock.mockResolvedValue({ ok: true });
 });
 
 describe('sendCode — honeypot', () => {
@@ -108,5 +127,118 @@ describe('sendCode — honeypot', () => {
     expect(lastRedirect()).toBe(
       '/login?step=verify&email=real%40example.com',
     );
+  });
+
+  it('skips the rate-limit RPC when honeypot fires (cheap short-circuit)', async () => {
+    const { sendCode } = await import('./actions');
+
+    await expect(
+      sendCode(
+        fd({
+          email: 'bot@example.com',
+          website: 'https://spam.example.com',
+        }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(consumeLoginRateLimitMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('sendCode — self-registration flag', () => {
+  it('passes shouldCreateUser=false for a non-invited email when the flag is off', async () => {
+    vi.stubEnv('NEXT_PUBLIC_ALLOW_SELF_REGISTRATION', 'false');
+    rpcMock.mockResolvedValue({ data: false, error: null });
+    signInWithOtpMock.mockResolvedValue({ error: null });
+
+    const { sendCode } = await import('./actions');
+
+    await expect(
+      sendCode(fd({ email: 'newcomer@example.com' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(signInWithOtpMock).toHaveBeenCalledWith({
+      email: 'newcomer@example.com',
+      options: { shouldCreateUser: false },
+    });
+  });
+
+  it('passes shouldCreateUser=true for a non-invited email when the flag is on', async () => {
+    vi.stubEnv('NEXT_PUBLIC_ALLOW_SELF_REGISTRATION', 'true');
+    rpcMock.mockResolvedValue({ data: false, error: null });
+    signInWithOtpMock.mockResolvedValue({ error: null });
+
+    const { sendCode } = await import('./actions');
+
+    await expect(
+      sendCode(fd({ email: 'newcomer@example.com' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(signInWithOtpMock).toHaveBeenCalledWith({
+      email: 'newcomer@example.com',
+      options: { shouldCreateUser: true },
+    });
+  });
+
+  it('keeps shouldCreateUser=true for an invited email regardless of flag', async () => {
+    vi.stubEnv('NEXT_PUBLIC_ALLOW_SELF_REGISTRATION', 'false');
+    rpcMock.mockResolvedValue({ data: true, error: null });
+    signInWithOtpMock.mockResolvedValue({ error: null });
+
+    const { sendCode } = await import('./actions');
+
+    await expect(
+      sendCode(fd({ email: 'invited@example.com' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(signInWithOtpMock).toHaveBeenCalledWith({
+      email: 'invited@example.com',
+      options: { shouldCreateUser: true },
+    });
+  });
+});
+
+describe('sendCode — rate-limit', () => {
+  it('redirects with rate_limited when consumeLoginRateLimit denies (email bucket)', async () => {
+    consumeLoginRateLimitMock.mockResolvedValue({ ok: false, reason: 'email' });
+
+    const { sendCode } = await import('./actions');
+
+    await expect(
+      sendCode(fd({ email: 'spam@example.com' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/login?error=rate_limited');
+    // Critical: Supabase OTP is NOT called when rate-limit denies.
+    expect(signInWithOtpMock).not.toHaveBeenCalled();
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it('redirects with rate_limited (same error) when IP bucket denies — no leak of which bucket hit', async () => {
+    consumeLoginRateLimitMock.mockResolvedValue({ ok: false, reason: 'ip' });
+
+    const { sendCode } = await import('./actions');
+
+    await expect(
+      sendCode(fd({ email: 'anyone@example.com' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/login?error=rate_limited');
+  });
+
+  it('calls consumeLoginRateLimit with the trimmed/lowercased email and resolved IP', async () => {
+    rpcMock.mockResolvedValue({ data: false, error: null });
+    signInWithOtpMock.mockResolvedValue({ error: null });
+
+    const { sendCode } = await import('./actions');
+
+    await expect(
+      sendCode(fd({ email: '  Spammer@Example.com  ' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(consumeLoginRateLimitMock).toHaveBeenCalledWith({
+      email: 'spammer@example.com',
+      ip: '1.2.3.4',
+    });
   });
 });

@@ -56,7 +56,13 @@ export default async function LoginPage({
           )}
 
           {step === 'email' ? (
-            <SendCodeForm defaultEmail={email} next={next} />
+            <SendCodeForm
+              defaultEmail={email}
+              next={next}
+              allowSelfRegistration={
+                process.env.NEXT_PUBLIC_ALLOW_SELF_REGISTRATION === 'true'
+              }
+            />
           ) : (
             <VerifyCodeForm
               email={email}

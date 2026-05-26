@@ -196,7 +196,7 @@ async function HomeBody() {
           <p className="mt-3 font-sans text-sm leading-relaxed text-muted max-w-[280px]">
             {canCreateGame
               ? 'Ingen turneringer enda. Sett opp første runde og kom i gang.'
-              : 'Du er klar. Admin setter opp neste runde.'}
+              : 'Du er klar. Be en arrangør om å invitere deg til neste runde.'}
           </p>
           {handicapChip && <div className="mt-5">{handicapChip}</div>}
           {canCreateGame && (
