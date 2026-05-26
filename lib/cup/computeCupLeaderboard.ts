@@ -21,6 +21,14 @@ export type CupMatchInput = {
   matchLabel: string | null;
   team1PlayerName: string;
   team2PlayerName: string;
+  /**
+   * Game-mode for matchen. Brukes av cup-UI for å velge mellom spiller-fokusert
+   * («3&2 til Per») og lag-fokusert («3&2 til Lag Skog») result-tekst. Singles
+   * bruker spiller-navn, fourball bruker lag-navn (#217). Optional for backward-
+   * compat med pre-#217-call-sites; UI defaulter til singles-stil rendering når
+   * feltet er undefined.
+   */
+  gameMode?: 'singles_matchplay' | 'fourball_matchplay';
   status: 'draft' | 'scheduled' | 'active' | 'finished';
   result: { winnerSide: 1 | 2 | 'tied'; formatted: string } | null;
 };

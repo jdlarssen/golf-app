@@ -192,15 +192,23 @@ export default async function CupDetailPage({
 
       {/* Matches-liste */}
       <section className="mb-5">
-        <div className="flex items-center justify-between mb-2">
+        <div className="mb-2">
           <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
             Matches
           </h2>
+        </div>
+        <div className="mb-3 grid grid-cols-2 gap-2">
           <Link
-            href={`/admin/games/new?tournament_id=${id}`}
-            className="text-xs text-primary underline-offset-2 hover:underline"
+            href={`/admin/games/new?tournament_id=${id}&game_mode=singles_matchplay`}
+            className="rounded-md border border-border bg-surface px-3 py-2 text-center text-xs font-medium text-primary hover:border-primary/40"
           >
-            + Opprett match
+            + Singles match
+          </Link>
+          <Link
+            href={`/admin/games/new?tournament_id=${id}&game_mode=fourball_matchplay`}
+            className="rounded-md border border-border bg-surface px-3 py-2 text-center text-xs font-medium text-primary hover:border-primary/40"
+          >
+            + Fourball match
           </Link>
         </div>
         {leaderboard.matches.length === 0 ? (
@@ -231,8 +239,16 @@ export default async function CupDetailPage({
                             {m.result.winnerSide === 'tied'
                               ? 'Halvert (AS)'
                               : m.result.winnerSide === 1
-                                ? `${m.result.formatted} til ${m.team1PlayerName}`
-                                : `${m.result.formatted} til ${m.team2PlayerName}`}
+                                ? `${m.result.formatted} til ${
+                                    m.gameMode === 'fourball_matchplay'
+                                      ? tournament.team_1_name
+                                      : m.team1PlayerName
+                                  }`
+                                : `${m.result.formatted} til ${
+                                    m.gameMode === 'fourball_matchplay'
+                                      ? tournament.team_2_name
+                                      : m.team2PlayerName
+                                  }`}
                           </p>
                         )}
                       </div>

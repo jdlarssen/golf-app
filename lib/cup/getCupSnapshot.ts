@@ -1,6 +1,7 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { compute as computeSinglesMatchplay } from '@/lib/scoring/modes/singlesMatchplay';
+import { compute as computeFourballMatchplay } from '@/lib/scoring/modes/fourballMatchplay';
 import type { ScoringContext } from '@/lib/scoring/modes/types';
 import type { GameStatus } from '@/lib/games/status';
 import {
@@ -91,6 +92,18 @@ type ScoreRow = {
 function preferredName(p: { name: string | null; nickname: string | null } | null): string {
   if (!p) return 'Ukjent spiller';
   return p.nickname?.trim() || p.name?.trim() || 'Ukjent spiller';
+}
+
+/**
+ * Bygger en visnings-label for en sides spillere. Singles (1 spiller) → ett
+ * navn. Fourball (2 spillere) → «Navn1/Navn2», sortert deterministisk via
+ * eksisterende `user_id`-rekkefølge fra Supabase-queriet. Tom side → «Ukjent
+ * spiller» som defensiv fallback. #217.
+ */
+function formatSideLabel(sidePlayers: PlayerRow[]): string {
+  if (sidePlayers.length === 0) return 'Ukjent spiller';
+  if (sidePlayers.length === 1) return preferredName(userOf(sidePlayers[0].users));
+  return sidePlayers.map((p) => preferredName(userOf(p.users))).join('/');
 }
 
 export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot | null> {
@@ -194,8 +207,11 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
     const gScores = scoresByGame.get(game.id) ?? [];
     const holes = (game.course_id && holesByCourse.get(game.course_id)) || [];
 
-    const side1 = gPlayers.find((p) => p.team_number === 1) ?? null;
-    const side2 = gPlayers.find((p) => p.team_number === 2) ?? null;
+    // Per side: alle spillere med team_number 1 eller 2. Singles har 1 per side,
+    // fourball har 2 per side. Generaliser fra .find() til array for å støtte
+    // begge.
+    const side1Players = gPlayers.filter((p) => p.team_number === 1);
+    const side2Players = gPlayers.filter((p) => p.team_number === 2);
 
     // Collect roster: add players to their respective team-buckets.
     for (const p of gPlayers) {
@@ -210,10 +226,14 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
     }
 
     let result: CupMatchInput['result'] = null;
-    // Only run scoring for singles_matchplay matches with both sides defined
-    // and at least some scores. Defensive: scoring layer returns empty-shell
-    // for malformed input — we just need to extract the result.
-    if (game.game_mode === 'singles_matchplay' && side1 && side2) {
+    // Singles matchplay: 1 spiller per side, gjenbruker eksisterende scoring-modul.
+    if (
+      game.game_mode === 'singles_matchplay' &&
+      side1Players.length === 1 &&
+      side2Players.length === 1
+    ) {
+      const side1 = side1Players[0];
+      const side2 = side2Players[0];
       const ctx: ScoringContext = {
         game: {
           id: game.id,
@@ -249,11 +269,73 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
       }
     }
 
+    // Fourball matchplay (#217): 2 spillere per side, lag-best per hull,
+    // sammenlikn som matchplay. Henter allowance_pct fra games.mode_config (eller
+    // defaulter til 100 hvis manglende — scoring-laget håndterer det defensivt).
+    if (
+      game.game_mode === 'fourball_matchplay' &&
+      side1Players.length === 2 &&
+      side2Players.length === 2
+    ) {
+      const modeConfig = (game.mode_config ?? null) as {
+        kind?: string;
+        allowance_pct?: number;
+      } | null;
+      const allowancePct =
+        modeConfig && typeof modeConfig.allowance_pct === 'number'
+          ? modeConfig.allowance_pct
+          : 100;
+      const ctx: ScoringContext = {
+        game: {
+          id: game.id,
+          game_mode: 'fourball_matchplay',
+          mode_config: {
+            kind: 'fourball_matchplay',
+            team_size: 2,
+            teams_count: 2,
+            allowance_pct: allowancePct,
+          },
+        },
+        players: [...side1Players, ...side2Players].map((p) => ({
+          userId: p.user_id,
+          teamNumber: p.team_number,
+          flightNumber: null,
+          courseHandicap: p.course_handicap ?? 0,
+        })),
+        holes,
+        scores: gScores.map((s) => ({
+          userId: s.user_id,
+          holeNumber: s.hole_number,
+          gross: s.strokes,
+        })),
+      };
+      const r = computeFourballMatchplay(ctx);
+      if (r.result) {
+        const winnerSide: 1 | 2 | 'tied' =
+          r.result.winner === 'side1' ? 1 : r.result.winner === 'side2' ? 2 : 'tied';
+        result = { winnerSide, formatted: r.result.formatted };
+      }
+    }
+
+    // Navn-label per side: singles bruker enkelt-navn, fourball joiner med «/».
+    // Defensiv: tom side rendres som «Ukjent spiller» via preferredName.
+    const team1Label = formatSideLabel(side1Players);
+    const team2Label = formatSideLabel(side2Players);
+
+    // Bevart for backward-compat: typesikker fallback hvis future game_mode
+    // skulle vises i en cup. Per d.d. kun singles_matchplay og
+    // fourball_matchplay er gyldige.
+    const matchGameMode: 'singles_matchplay' | 'fourball_matchplay' =
+      game.game_mode === 'fourball_matchplay'
+        ? 'fourball_matchplay'
+        : 'singles_matchplay';
+
     matchInputs.push({
       gameId: game.id,
       matchLabel: game.tournament_match_label,
-      team1PlayerName: preferredName(userOf(side1?.users)),
-      team2PlayerName: preferredName(userOf(side2?.users)),
+      team1PlayerName: team1Label,
+      team2PlayerName: team2Label,
+      gameMode: matchGameMode,
       status: game.status,
       result,
     });
