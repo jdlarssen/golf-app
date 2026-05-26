@@ -1,13 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { TeamInvitationMailParams } from './teamInvitation';
+
+// Approval-style tester: snapshot subject + text + body-content HTML per case.
+// Når copy endres: kjør `vitest -u` og review diff-en.
+//
+// Strategi:
+//   - `subject` + `text` snapshot-es per case.
+//   - HTML body-content (regionen mellom <h2> og CTA-div) ekstraheres og
+//     snapshot-es per case — dekker både intro-paragraf (med personalisering)
+//     og login-instruks-paragraf (ren chrome).
+//   - HTML-chrome (header, button, footer) snapshot-es ÉN gang.
+//   - URL-encoding av next-param holdes som eksplisitt struktur-assertion
+//     (kontrakt mot login-flyt, ikke copy).
 
 type SendArgs = [
-  {
-    from: string;
-    to: string;
-    subject: string;
-    html: string;
-    text: string;
-  },
+  { from: string; to: string; subject: string; html: string; text: string },
 ];
 type SendResult = {
   data: { id: string } | null;
@@ -27,69 +34,160 @@ beforeEach(() => {
   process.env.RESEND_API_KEY = 'test-key';
 });
 
+async function send(params: TeamInvitationMailParams) {
+  const { sendTeamInvitationMail } = await import('./teamInvitation');
+  await sendTeamInvitationMail(params);
+  return sendMock.mock.calls[0]![0];
+}
+
+// Henter ut alt mellom </h2> og CTA-button-div-en. Dekker intro-line
+// (personalisert) + login-instruks-paragraf.
+function mainBodyHtml(html: string): string {
+  const m = html.match(
+    /<\/h2>\s*([\s\S]*?)\s*<div style="margin:32px 0;">/,
+  );
+  if (!m) throw new Error('Main body region not found in HTML');
+  return m[1].trim();
+}
+
+const baseParams = {
+  to: 'venn@example.com',
+  captainName: 'Jørgen',
+  gameName: 'Sommercup 2026',
+  teamName: 'Bjørketrærne',
+  gameShortId: 'abc12345',
+} satisfies TeamInvitationMailParams;
+
 describe('sendTeamInvitationMail', () => {
-  it('subject lokker både teamName og gameName', async () => {
-    const { sendTeamInvitationMail } = await import('./teamInvitation');
-    await sendTeamInvitationMail({
-      to: 'venn@example.com',
-      captainName: 'Jørgen',
-      gameName: 'Sommercup 2026',
-      teamName: 'Bjørketrærne',
-      gameShortId: 'abc12345',
-    });
-    const payload = sendMock.mock.calls[0]![0];
-    expect(payload.subject).toBe(
-      'Du er invitert til Bjørketrærne (Sommercup 2026)',
-    );
-  });
+  it('lag-invitasjon: subject + body med kaptein, lagnavn, spillnavn', async () => {
+    const payload = await send(baseParams);
+    expect(payload.subject).toMatchInlineSnapshot(`"Du er invitert til Bjørketrærne (Sommercup 2026)"`);
+    expect(payload.text).toMatchInlineSnapshot(`
+      "Du er invitert til Bjørketrærne (Sommercup 2026)
 
-  it('lenker til /login med next=/signup/[shortId]/team', async () => {
-    const { sendTeamInvitationMail } = await import('./teamInvitation');
-    await sendTeamInvitationMail({
-      to: 'venn@example.com',
-      captainName: 'Jørgen',
-      gameName: 'Sommercup',
-      teamName: 'Bjørka',
-      gameShortId: 'abc12345',
-    });
-    const payload = sendMock.mock.calls[0]![0];
-    // URL-encoded next-param: /signup/[shortId]/team
-    expect(payload.html).toContain('login?next=');
-    expect(payload.html).toContain('abc12345');
-    expect(payload.text).toContain('login?next=');
-  });
+      Jørgen vil ha deg med på laget Bjørketrærne i Sommercup 2026.
 
-  it('inneholder kaptein- og lag-navn i body', async () => {
-    const { sendTeamInvitationMail } = await import('./teamInvitation');
-    await sendTeamInvitationMail({
-      to: 'venn@example.com',
-      captainName: 'Jørgen',
-      gameName: 'Sommercup',
-      teamName: 'Bjørka',
-      gameShortId: 'abc12345',
-    });
-    const payload = sendMock.mock.calls[0]![0];
-    expect(payload.html).toContain('Jørgen');
-    expect(payload.html).toContain('Bjørka');
-    expect(payload.html).toContain('Sommercup');
-    expect(payload.text).toContain('Jørgen');
-    expect(payload.text).toContain('Bjørka');
-    expect(payload.text).toContain('Sommercup');
+      Gå til Tørny, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Etter pålogging lander du rett på lag-siden hvor du kan bekrefte plassen.
+
+      Bli med: https://tornygolf.no/login?next=%2Fsignup%2Fabc12345%2Fteam
+
+      Kjenner du ikke Jørgen? Ignorer denne meldingen.
+
+      Tørny — fyr opp golfturneringen på et par minutter.
+      "
+    `);
+    expect(mainBodyHtml(payload.html)).toMatchInlineSnapshot(`
+      "<p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
+                    <strong>Jørgen</strong> vil ha deg med på laget <em>Bjørketrærne</em> i <strong>Sommercup 2026</strong>.
+                  </p>
+                  <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
+                    For å bli med: gå til Tørny, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Etter pålogging lander du rett på lag-siden hvor du kan bekrefte plassen din.
+                  </p>"
+    `);
   });
 
   it('escaper HTML i alle bruker-styrte felt', async () => {
-    const { sendTeamInvitationMail } = await import('./teamInvitation');
-    await sendTeamInvitationMail({
-      to: 'venn@example.com',
+    const payload = await send({
+      ...baseParams,
       captainName: '<b>X</b>',
       gameName: '<i>Y</i>',
       teamName: '<u>Z</u>',
-      gameShortId: 'abc12345',
     });
+    expect(payload.subject).toMatchInlineSnapshot(`"Du er invitert til <u>Z</u> (<i>Y</i>)"`);
+    expect(mainBodyHtml(payload.html)).toMatchInlineSnapshot(`
+      "<p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
+                    <strong>&lt;b&gt;X&lt;/b&gt;</strong> vil ha deg med på laget <em>&lt;u&gt;Z&lt;/u&gt;</em> i <strong>&lt;i&gt;Y&lt;/i&gt;</strong>.
+                  </p>
+                  <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
+                    For å bli med: gå til Tørny, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Etter pålogging lander du rett på lag-siden hvor du kan bekrefte plassen din.
+                  </p>"
+    `);
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // HTML chrome — låses ÉN gang.
+  // ─────────────────────────────────────────────────────────────────────
+
+  it('HTML chrome: full template for default-case', async () => {
+    const payload = await send(baseParams);
+    expect(payload.html).toMatchInlineSnapshot(`
+      "<!DOCTYPE html><html lang="nb">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Du er invitert til Bjørketrærne (Sommercup 2026)</title>
+      </head>
+      <body style="margin:0;padding:0;background:#F8F6F0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1A1813;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#F8F6F0;">
+          <tr>
+            <td align="center" style="padding:48px 16px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width:480px;background:#ffffff;border-radius:12px;padding:32px;">
+                <tr><td>
+                  <h1 style="font-family:Georgia,'Times New Roman',serif;font-size:32px;line-height:1.1;margin:0 0 8px;color:#1B4332;letter-spacing:-0.01em;">
+                    Tørny<span style="color:#C9A961;">.</span>
+                  </h1>
+                  <p style="font-size:13px;color:#4A3F30;margin:0 0 32px;">
+                    Fyr opp golfturneringen på et par minutter.
+                  </p>
+                  <h2 style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;margin:0 0 16px;color:#1A1813;">
+                    Du er invitert på lag
+                  </h2>
+                  <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
+                    <strong>Jørgen</strong> vil ha deg med på laget <em>Bjørketrærne</em> i <strong>Sommercup 2026</strong>.
+                  </p>
+                  <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
+                    For å bli med: gå til Tørny, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Etter pålogging lander du rett på lag-siden hvor du kan bekrefte plassen din.
+                  </p>
+                  <div style="margin:32px 0;">
+                    <a href="https://tornygolf.no/login?next=%2Fsignup%2Fabc12345%2Fteam" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
+                      Bli med på laget
+                    </a>
+                  </div>
+                  <p style="font-size:13px;color:#4A3F30;line-height:1.5;margin:32px 0 0;border-top:1px solid #E6E2D6;padding-top:24px;">
+                    Kjenner du ikke Jørgen? Ignorer denne meldingen — ingenting skjer hvis du ikke logger inn.
+                  </p>
+                </td></tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>"
+    `);
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Strukturelle tester (ikke approval-basert) — kontrakt mot login-flyt
+  // + Resend.
+  // ─────────────────────────────────────────────────────────────────────
+
+  it('CTA-lenke bruker URL-encoded next=/signup/[shortId]/team', async () => {
+    const payload = await send(baseParams);
+    // encodeURIComponent('/signup/abc12345/team') === '%2Fsignup%2Fabc12345%2Fteam'
+    expect(payload.html).toContain(
+      'https://tornygolf.no/login?next=%2Fsignup%2Fabc12345%2Fteam',
+    );
+    expect(payload.text).toContain(
+      'https://tornygolf.no/login?next=%2Fsignup%2Fabc12345%2Fteam',
+    );
+  });
+
+  it('kaster når Resend returnerer feil', async () => {
+    sendMock.mockResolvedValueOnce({
+      data: null,
+      error: { message: 'rate-limited' },
+    });
+    const { sendTeamInvitationMail } = await import('./teamInvitation');
+    await expect(
+      sendTeamInvitationMail(baseParams),
+    ).rejects.toThrow(/Resend send failed/);
+  });
+
+  it('sender til mottakeren med korrekt avsender + ett kall per call', async () => {
+    await send(baseParams);
+    expect(sendMock).toHaveBeenCalledTimes(1);
     const payload = sendMock.mock.calls[0]![0];
-    expect(payload.html).not.toContain('<b>X</b>');
-    expect(payload.html).toContain('&lt;b&gt;X&lt;/b&gt;');
-    expect(payload.html).toContain('&lt;i&gt;Y&lt;/i&gt;');
-    expect(payload.html).toContain('&lt;u&gt;Z&lt;/u&gt;');
+    expect(payload.to).toBe('venn@example.com');
+    expect(payload.from).toBe('Tørny <noreply@tornygolf.no>');
   });
 });
