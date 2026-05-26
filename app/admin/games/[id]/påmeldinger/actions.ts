@@ -6,6 +6,8 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
 import { notify } from '@/lib/notifications/notify';
+import { sendRegistrationApprovedMail } from '@/lib/mail/registrationApproved';
+import { sendRegistrationRejectedMail } from '@/lib/mail/registrationRejected';
 
 /**
  * Approve/reject server-actions for game-registration-requests (issue #199).
@@ -208,23 +210,50 @@ export async function approveRequest(requestId: string): Promise<void> {
     redirect(`${detailPath}?error=db_players`);
   }
 
-  // Best-effort notifications + mail-TODO. Notify-feil swallow-es slik at
+  // Best-effort notifications + mail. Notify-feil swallow-es slik at
   // approval-flyten ikke ruller tilbake — admin har allerede bestemt seg.
-  await Promise.allSettled(
+  // Vi venter på alle notify()-callene i parallell og bruker
+  // shouldAlsoSendMail-flagget per recipient for å gate mail-utsendelse.
+  const notifyResults = await Promise.allSettled(
     allRows.map((r) =>
       notify({
         userId: r.user_id,
         kind: 'registration_approved',
         payload: { game_id: game.id, game_name: game.name },
-      }).catch((err) =>
-        console.error('[approveRequest] notify failed', err),
-      ),
+      }),
     ),
   );
 
-  // TODO(chunk 12): sendRegistrationApprovedMail({to: user.email, gameName: game.name})
-  // — krever en mail-template under lib/mail/registrationApproved.ts. Gated på
-  // shouldAlsoSendMail-flagget fra notify() (off-app-bruker → mail backup).
+  // Mail-backup for off-app-mottakere. Hent e-poster for alle godkjente
+  // brukere i én batch så vi unngår N round-trips.
+  const userIdsForMail: string[] = [];
+  notifyResults.forEach((res, idx) => {
+    if (res.status === 'fulfilled' && res.value.shouldAlsoSendMail) {
+      const row = allRows[idx];
+      if (row) userIdsForMail.push(row.user_id);
+    } else if (res.status === 'rejected') {
+      console.error('[approveRequest] notify failed', res.reason);
+    }
+  });
+
+  if (userIdsForMail.length > 0) {
+    const { data: emailRows } = await admin
+      .from('users')
+      .select('id, email')
+      .in('id', userIdsForMail)
+      .returns<{ id: string; email: string }[]>();
+    await Promise.allSettled(
+      (emailRows ?? []).map((u) =>
+        sendRegistrationApprovedMail({
+          to: u.email,
+          gameName: game.name,
+          gameId: game.id,
+        }).catch((err) =>
+          console.error('[approveRequest] mail failed', err),
+        ),
+      ),
+    );
+  }
 
   revalidateTag(`game-${game.id}`, 'max');
   redirect(`${detailPath}?status=approved`);
@@ -298,7 +327,7 @@ export async function rejectRequest(
     redirect(`${detailPath}?error=db_update`);
   }
 
-  await Promise.allSettled(
+  const notifyResults = await Promise.allSettled(
     allRows.map((r) =>
       notify({
         userId: r.user_id,
@@ -308,14 +337,38 @@ export async function rejectRequest(
           game_name: game.name,
           ...(reason ? { reason } : {}),
         },
-      }).catch((err) =>
-        console.error('[rejectRequest] notify failed', err),
-      ),
+      }),
     ),
   );
 
-  // TODO(chunk 12): sendRegistrationRejectedMail({to: user.email, gameName, reason})
-  // — gated på shouldAlsoSendMail. Mail-template lib/mail/registrationRejected.ts.
+  const userIdsForMail: string[] = [];
+  notifyResults.forEach((res, idx) => {
+    if (res.status === 'fulfilled' && res.value.shouldAlsoSendMail) {
+      const row = allRows[idx];
+      if (row) userIdsForMail.push(row.user_id);
+    } else if (res.status === 'rejected') {
+      console.error('[rejectRequest] notify failed', res.reason);
+    }
+  });
+
+  if (userIdsForMail.length > 0) {
+    const { data: emailRows } = await admin
+      .from('users')
+      .select('id, email')
+      .in('id', userIdsForMail)
+      .returns<{ id: string; email: string }[]>();
+    await Promise.allSettled(
+      (emailRows ?? []).map((u) =>
+        sendRegistrationRejectedMail({
+          to: u.email,
+          gameName: game.name,
+          ...(reason ? { reason } : {}),
+        }).catch((err) =>
+          console.error('[rejectRequest] mail failed', err),
+        ),
+      ),
+    );
+  }
 
   revalidateTag(`game-${game.id}`, 'max');
   redirect(`${detailPath}?status=rejected`);

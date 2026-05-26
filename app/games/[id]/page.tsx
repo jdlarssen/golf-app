@@ -404,6 +404,18 @@ export default async function GameHomePage({
         <p className="mt-2 px-6 pt-4 pb-2 text-center font-serif italic text-[11.5px] text-muted">
           Vær på 1. tee 10 minutter før start.
         </p>
+
+        {/* Self-withdraw — kun pre-active (#199 chunk 11). Trekker brukeren
+            ut av game_players + sender team_member_withdrew-varsel til
+            kapteinen hvis bruker var team-medlem. */}
+        <div className="pt-2 pb-4">
+          <SmartLink
+            href={`/games/${id}/trekk-fra`}
+            className="block text-center text-xs text-muted hover:text-text transition-colors underline underline-offset-2 decoration-muted/40"
+          >
+            Trekk deg fra spillet
+          </SmartLink>
+        </div>
       </AppShell>
     );
   }
@@ -619,6 +631,17 @@ export default async function GameHomePage({
               </span>
             </Card>
           </SmartLink>
+        )}
+
+        {isDraft && (
+          <div className="pt-2">
+            <SmartLink
+              href={`/games/${id}/trekk-fra`}
+              className="block text-center text-xs text-muted hover:text-text transition-colors underline underline-offset-2 decoration-muted/40"
+            >
+              Trekk deg fra spillet
+            </SmartLink>
+          </div>
         )}
 
         <div className="pt-2">

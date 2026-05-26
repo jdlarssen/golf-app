@@ -23,6 +23,8 @@ const ERROR_MESSAGES: Record<ActionError, string> = {
   message_too_long: 'Hilsenen er for lang (maks 200 tegn).',
   team_not_supported_yet:
     'Lag-påmelding kommer i neste versjon. Be arrangøren om å invitere deg direkte i mellomtiden.',
+  rate_limited:
+    'Du har gjort for mange påmeldinger den siste tida. Prøv igjen senere.',
   db_error: 'Klarte ikke å fullføre handlingen. Prøv igjen om litt.',
 };
 

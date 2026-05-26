@@ -61,6 +61,22 @@ vi.mock('@/lib/games/getGameByShortId', () => ({
   getGameByShortId: (shortId: string) => getGameByShortIdMock(shortId),
 }));
 
+// Rate-limit + IP-lookup mock-es som no-op default-«ok».
+const consumeRateLimitMock = vi.fn(async () => ({ ok: true as const }));
+vi.mock('@/lib/auth/registrationRateLimit', () => ({
+  consumeRegistrationRateLimit: (...args: unknown[]) =>
+    consumeRateLimitMock(...args),
+}));
+vi.mock('@/lib/admin/rateLimit', () => ({
+  getClientIp: async () => '127.0.0.1',
+}));
+
+const sendTeamInvitationMailMock = vi.fn(async () => {});
+vi.mock('@/lib/mail/teamInvitation', () => ({
+  sendTeamInvitationMail: (...args: unknown[]) =>
+    sendTeamInvitationMailMock(...args),
+}));
+
 const CAPTAIN_ID = '11111111-1111-1111-1111-111111111111';
 const GAME_ID = '22222222-2222-2222-2222-222222222222';
 const CAPTAIN_REQUEST_ID = '33333333-3333-3333-3333-333333333333';

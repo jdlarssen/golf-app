@@ -6,6 +6,9 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { notify } from '@/lib/notifications/notify';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
+import { consumeRegistrationRateLimit } from '@/lib/auth/registrationRateLimit';
+import { getClientIp } from '@/lib/admin/rateLimit';
+import { sendRegistrationRequestMail } from '@/lib/mail/registrationRequest';
 
 /**
  * Public selv-påmeldings-actions (#199 chunks 6+7).
@@ -45,6 +48,7 @@ export type ActionError =
   | 'already_requested'
   | 'message_too_long'
   | 'team_not_supported_yet'
+  | 'rate_limited'
   | 'db_error';
 
 const MESSAGE_MAX = 200;
@@ -148,6 +152,18 @@ export async function registerForOpenGame(
     return { ok: false, error: 'team_not_supported_yet' };
   }
 
+  // Rate-limit-sjekk FØR INSERT. Tre buckets (user / ip / game) — fanger
+  // både retry-spam og brute-force på enkelt-spill. Fail-open ved DB-error.
+  const ip = await getClientIp();
+  const rateLimit = await consumeRegistrationRateLimit({
+    userId,
+    ip,
+    gameId: game.id,
+  });
+  if (!rateLimit.ok) {
+    return { ok: false, error: 'rate_limited' };
+  }
+
   // INSERT via admin-client. Den nye RLS-policyen `self register open game`
   // (migrasjon 0042) tillater også INSERT via en cookie-basert klient med
   // user-session, men admin-client gir oss deterministisk feilhåndtering
@@ -244,6 +260,16 @@ export async function requestApproval(
     return { ok: false, error: 'team_not_supported_yet' };
   }
 
+  const ip = await getClientIp();
+  const rateLimit = await consumeRegistrationRateLimit({
+    userId,
+    ip,
+    gameId: game.id,
+  });
+  if (!rateLimit.ok) {
+    return { ok: false, error: 'rate_limited' };
+  }
+
   const admin = getAdminClient();
   const { data: inserted, error: insertError } = await admin
     .from('game_registration_requests')
@@ -269,7 +295,7 @@ export async function requestApproval(
 
   if (game.created_by && inserted?.id) {
     const requesterName = await getRequesterName(userId);
-    await notify({
+    const notifyResult = await notify({
       userId: game.created_by,
       kind: 'registration_request',
       payload: {
@@ -279,13 +305,33 @@ export async function requestApproval(
         request_id: inserted.id,
         ...(message ? { message } : {}),
       },
-    }).catch((err) =>
-      console.error('[requestApproval] notify failed', err),
-    );
+    }).catch((err) => {
+      console.error('[requestApproval] notify failed', err);
+      return { shouldAlsoSendMail: false };
+    });
 
-    // TODO(chunk 12): sendRegistrationRequestMail({to: adminEmail, gameName, requesterName, message})
-    // — gated på shouldAlsoSendMail-flagget fra notify(). Mail-template
-    // lib/mail/registrationRequest.ts.
+    if (notifyResult.shouldAlsoSendMail) {
+      // Mail-backup når admin har vært off-app i mer enn 5 minutter.
+      // Best-effort — Promise.allSettled-svelg i caller-context (catch-en
+      // i .catch() under) sørger for at en mail-feil ikke ruller tilbake
+      // selve forespørselen.
+      const { data: adminRow } = await admin
+        .from('users')
+        .select('email')
+        .eq('id', game.created_by)
+        .maybeSingle<{ email: string }>();
+      if (adminRow?.email) {
+        await sendRegistrationRequestMail({
+          to: adminRow.email,
+          gameName: game.name,
+          gameShortId: game.short_id,
+          requesterName,
+          ...(message ? { message } : {}),
+        }).catch((err) =>
+          console.error('[requestApproval] mail failed', err),
+        );
+      }
+    }
   }
 
   return { ok: true };

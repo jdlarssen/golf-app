@@ -51,6 +51,25 @@ vi.mock('@/lib/games/getGameByShortId', () => ({
   getGameByShortId: (shortId: string) => getGameByShortIdMock(shortId),
 }));
 
+// Rate-limit + IP-lookup mock-es som no-op default-«ok». Per-test kan vi
+// styre returverdien via consumeRateLimitMock for å teste rate_limited-grenen.
+const consumeRateLimitMock = vi.fn(async () => ({ ok: true as const }));
+vi.mock('@/lib/auth/registrationRateLimit', () => ({
+  consumeRegistrationRateLimit: (...args: unknown[]) =>
+    consumeRateLimitMock(...args),
+}));
+vi.mock('@/lib/admin/rateLimit', () => ({
+  getClientIp: async () => '127.0.0.1',
+}));
+
+// Mail-helper mock-es som no-op — mail-sending er best-effort i selve action,
+// vi tester mail-template-en i sin egen test-suite.
+const sendRegistrationRequestMailMock = vi.fn(async () => {});
+vi.mock('@/lib/mail/registrationRequest', () => ({
+  sendRegistrationRequestMail: (...args: unknown[]) =>
+    sendRegistrationRequestMailMock(...args),
+}));
+
 const USER_ID = '11111111-1111-1111-1111-111111111111';
 const GAME_ID = '22222222-2222-2222-2222-222222222222';
 const ADMIN_USER_ID = '33333333-3333-3333-3333-333333333333';

@@ -24,6 +24,8 @@ const ERROR_MESSAGES: Record<TeamRegistrationError, string> = {
   duplicate_emails: 'Du har lagt inn samme e-post på flere plasser.',
   self_in_slots: 'Du kan ikke legge til deg selv som medspiller.',
   already_registered: 'Du er allerede påmeldt dette spillet.',
+  rate_limited:
+    'Du har gjort for mange påmeldinger den siste tida. Prøv igjen senere.',
   db_error: 'Klarte ikke å fullføre handlingen. Prøv igjen om litt.',
 };
 

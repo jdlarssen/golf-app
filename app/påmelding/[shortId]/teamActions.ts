@@ -9,6 +9,9 @@ import { notifyInvitedToTeam } from '@/lib/notifications/notifyInvitedToTeam';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
 import { lookupUserByEmail } from '@/lib/users/lookupByEmail';
 import { gameModeSupportsTeams } from '@/lib/games/registration';
+import { consumeRegistrationRateLimit } from '@/lib/auth/registrationRateLimit';
+import { getClientIp } from '@/lib/admin/rateLimit';
+import { sendTeamInvitationMail } from '@/lib/mail/teamInvitation';
 
 /**
  * Lag-formasjons-actions for selv-påmelding (#199 chunks 8+9).
@@ -83,6 +86,7 @@ export type TeamRegistrationError =
   | 'duplicate_emails'
   | 'self_in_slots'
   | 'already_registered'
+  | 'rate_limited'
   | 'db_error';
 
 const TEAM_NAME_MIN = 3;
@@ -216,6 +220,20 @@ export async function submitTeamRegistration(
   // Kapteinen er én av de N spillerne — slots-arrayet er N-1.
   if (slots.length !== teamSize - 1) {
     return { ok: false, error: 'slots_count_wrong' };
+  }
+
+  // Rate-limit FØR vi gjør tunge DB-inserts. Ett lag-submit teller som én
+  // påmelding — vi rate-limiter ikke per slot (en kaptein som inviterer 3
+  // medspillere skal ikke bli straffet for å fylle laget). Per-spill-bucket
+  // (50/24t) er den naturlige grensen for et helt arrangement.
+  const ip = await getClientIp();
+  const rateLimit = await consumeRegistrationRateLimit({
+    userId: captain.id,
+    ip,
+    gameId: game.id,
+  });
+  if (!rateLimit.ok) {
+    return { ok: false, error: 'rate_limited' };
   }
 
   // Normaliser e-poster og fang duplikater / kaptein-egen-e-post.
@@ -437,14 +455,19 @@ export async function submitTeamRegistration(
           continue;
         }
 
-        // TODO(chunk 12): sendTeamInvitationMail({
-        //   to: slot.value,
-        //   gameName: game.name,
-        //   gameShortId: game.short_id,
-        //   teamName,
-        //   captainName,
-        // }) — gated på alltid-send (recipient har ingen konto ennå,
-        // så last_seen_at-terskelen gir ingen mening).
+        // Mail til ukjent e-post. Alltid-send fordi recipient ikke har
+        // konto, så last_seen_at-terskel gir ingen mening. Best-effort —
+        // mail-feil ruller ikke tilbake invitations-raden (admin kan
+        // re-sende via «Send påminnelse»).
+        await sendTeamInvitationMail({
+          to: slot.value,
+          captainName,
+          gameName: game.name,
+          teamName,
+          gameShortId: game.short_id,
+        }).catch((err) =>
+          console.error('[submitTeamRegistration] team mail failed', err),
+        );
 
         slotResults.push({
           ok: true,
