@@ -10,7 +10,44 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.36.y — Selv-påmelding til turnering
+
+Issue [#199](https://github.com/jdlarssen/golf-app/issues/199). Du kan nå sette opp et spill og dele en lenke i stedet for å invitere hver spiller manuelt. For Scramble og andre lagspill kan spillerne samle sitt eget lag, og kapteinen melder på medspillerne med navn eller e-post. Du velger selv om hvem som helst med lenken kan melde seg på, om du vil godkjenne hver påmelding, eller om du fortsatt vil styre invitasjonene som du gjør i dag.
+
+### [1.36.0] - 2026-05-26
+
+> Sett opp spillet, kopier lenken, og slipp den i Slack-gruppa, lagpraten eller hvor folk enn er, så melder de seg på selv. Da slipper du å sende invitasjoner én etter én. Vil du ha mer kontroll? Sett påmeldingen til «forespørsel — jeg godkjenner», og du får varsel hver gang noen ber om plass. Kapteinen kan samle sitt eget Scramble-lag: kjente Tørny-brukere får varsel i innboksen, ukjente e-poster får en invitasjon. Spillerne kan også trekke seg selv hvis det skjer noe — du slipper å rydde plassen for dem som faller fra.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- Fire nye migrasjoner ([supabase/migrations/0041_games_self_registration_columns.sql](supabase/migrations/0041_games_self_registration_columns.sql) m.fl.) gir `games.registration_mode` (`invite_only`/`manual_approval`/`open`), `games.registration_type` (`solo`/`team`/`both`), og en 8-char `short_id` per spill for delbar lenke. Ny `game_registration_requests`-tabell holder pending-forespørsler + audit-trail for godkjenninger og lag-formasjon. To nye RLS-policies på `game_players` lar spilleren inserte egen rad i open-modus og slette egen rad pre-start.
+- Offentlig påmeldings-flate på `/påmelding/[shortId]` med tre flyter: open (direkte-påmelding), manual_approval (forespørsel med valgfri hilsen), og invite_only (les-bare-melding). Kaptein-flyt for lag-påmelding lar første spiller fylle inn medspillere fra eksisterende-bruker-roster eller via e-post.
+- Admin-side `/admin/games/[id]/påmeldinger` med approve/reject (cascade for lag-medlemmer), filter-tabs for status, og kopier-lenke-knapp på `/admin/games/[id]`.
+- Fem nye notifikasjons-typer (`team_invite`, `registration_request`, `registration_approved`, `registration_rejected`, `team_member_withdrew`) m/ Zod-skjemaer, NotificationCard-rendering og deeplinks i innboksen.
+- Fire nye mail-templates ([lib/mail/registrationRequest.ts](lib/mail/registrationRequest.ts), [registrationApproved.ts](lib/mail/registrationApproved.ts), [registrationRejected.ts](lib/mail/registrationRejected.ts), [teamInvitation.ts](lib/mail/teamInvitation.ts)) — best-effort send med gating på `shouldAlsoSendMail` (off-app-terskel), unntatt team-invitation som alltid sendes til ukjente e-poster.
+- Rate-limit-helper [lib/auth/registrationRateLimit.ts](lib/auth/registrationRateLimit.ts) med tre buckets (per bruker, per IP, per spill) på `consume_admin_rate_limit`-RPC. Honeypot-felt på alle public server-actions.
+- Self-withdraw-flyt på dedikert konfirmasjons-side `/games/[id]/trekk-fra` per destructive-actions-pattern. Notify til kaptein hvis trekk-spilleren var lag-medlem.
+
+#### Changed
+- `GameWizard` har nytt «Påmelding»-felt-gruppe på format-steget med radio for modus og type. «Type»-radio er disablet for spill-moder uten lag-konsept (stableford, singles_matchplay, solo_strokeplay_netto). Spiller-steget blir valgfritt når modus er ikke-invite_only — admin kan opprette tomme spill og la folk melde seg på selv.
+- `app/(auth)/login/actions.ts:verifyCode` sjekker `games.registration_type` før den auto-inserter solo-rader i `game_players` etter OTP-aksept — unngår CHECK-constraint-brudd på team-only spill.
+- `lib/notifications/types.ts` utvidet med fem nye `kind`-verdier og Zod-skjemaer. `registration_request.request_id` er optional fordi open-modus ikke har en request-rad å peke til (kun manual_approval).
+
+#### Notes
+- `registration_mode = 'open'` for ukjente e-poster krever at `NEXT_PUBLIC_ALLOW_SELF_REGISTRATION` er aktivert i Vercel ([#166](https://github.com/jdlarssen/golf-app/issues/166)). Hvis flagget er av, faller open-modus tilbake til «kjente brukere kan melde seg på» og ukjente møter samme `user_not_found`-feilen som før.
+- Deferred team-attach for ukjente brukere skjer på `/påmelding/[shortId]/team`-siden, ikke i auth-hooken. Siden detekterer en pending `invitations`-rad for spillet og tilbyr en «Bli med på lag»-knapp som plukker nyeste kaptein-request via `created_at DESC`-heuristikk.
+- 2770 LOC fordelt over 14 chunks. Tests: 1369 grønne ved feature-completion.
+
+</details>
+
+---
+
 ## 1.35.y — Trygghetsnett for tee-lengde
+
+<details>
+<summary><strong>1.35.y — Trygghetsnett for tee-lengde (1 oppføring) — klikk for å vise</strong></summary>
 
 Et mykt varsel under banelengde-feltet i bane-admin når tallet ligger utenfor det som er typisk for norske baner. Fanger tastefeil før de havner i databasen, uten å blokkere lagring ([#236](https://github.com/jdlarssen/golf-app/issues/236)).
 
@@ -32,6 +69,8 @@ Et mykt varsel under banelengde-feltet i bane-admin når tallet ligger utenfor d
 - DB CHECK på `tee_boxes.length_meters` (1000–12000) endres ikke; warning er ren UI-veiledning og blokkerer ikke lagring. Server-actions berøres ikke.
 - Bevisst en hårsbredd videre enn de eksakte tallene i issue #236 (5400–6500 / 4800–5800 / 4500–5500) for å unngå falske advarsler på grenseverdier som 6550 m på en lang herretee.
 - Wirer side om side med per-kjønn typisk slope/CR-hint fra 1.30.1 (issue #235). De to gir komplementær veiledning: slope/CR-hint som statisk anker mot tastefeil, length-warning som dynamisk respons på faktisk innskrevet tall.
+
+</details>
 
 </details>
 
