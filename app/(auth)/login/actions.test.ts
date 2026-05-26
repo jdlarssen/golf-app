@@ -60,6 +60,15 @@ let pendingInvitations: Array<{
 }> = [];
 let adminUserLookup: { id: string } | null = null;
 let gamePlayersInsertResult: { error: unknown } = { error: null };
+/**
+ * Default for games-lookup i verifyCode (#199 chunk 9): vi sjekker
+ * registration_type for å skippe game_players-insert hvis spillet er team-only.
+ * Solo + both default-er til 'solo' (eksisterende #182-tester); team-only-
+ * tester override-er per case.
+ */
+let adminGameLookup: { registration_type: string } | null = {
+  registration_type: 'solo',
+};
 const adminUpdateMock = vi.fn();
 const adminGamePlayersInsertMock = vi.fn();
 
@@ -115,6 +124,17 @@ vi.mock('@/lib/supabase/admin', () => ({
           },
         };
       }
+      if (table === 'games') {
+        // verifyCode (#199 chunk 9) sjekker registration_type for å skippe
+        // game_players-insert på team-only spill.
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: async () => ({ data: adminGameLookup }),
+            }),
+          }),
+        };
+      }
       throw new Error(`unexpected admin.from(${table}) call`);
     },
     rpc: () => Promise.resolve({ data: true, error: null }),
@@ -161,6 +181,7 @@ beforeEach(() => {
   pendingInvitations = [];
   adminUserLookup = null;
   gamePlayersInsertResult = { error: null };
+  adminGameLookup = { registration_type: 'solo' };
 });
 
 describe('sendCode — honeypot', () => {
@@ -424,5 +445,27 @@ describe('verifyCode — deferred game-scoped invite-notify (#182)', () => {
     expect(adminGamePlayersInsertMock).not.toHaveBeenCalled();
     expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
     expect(lastRedirect()).toBe('/');
+  });
+
+  it('team-only spill: hopper over game_players-insert (chunk 9), men notify-er fortsatt', async () => {
+    verifyOtpMock.mockResolvedValue({ error: null });
+    pendingInvitations = [
+      {
+        id: 'inv-team-1',
+        game_id: '00000000-0000-0000-0000-0000000000aa',
+        invited_by: '00000000-0000-0000-0000-0000000000bb',
+      },
+    ];
+    adminUserLookup = { id: 'new-user-1' };
+    adminGameLookup = { registration_type: 'team' };
+    supabaseMock = buildSupabaseMock([{ data: null, error: null }]);
+
+    const { verifyCode } = await import('./actions');
+    await expect(
+      verifyCode(fd({ email: 'kompis@example.com', token: '123456' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(adminGamePlayersInsertMock).not.toHaveBeenCalled();
+    expect(notifyInvitedToGameMock).toHaveBeenCalledTimes(1);
   });
 });

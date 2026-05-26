@@ -8,7 +8,9 @@ import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { LinkButton } from '@/components/ui/Button';
 import { MODE_LABELS } from '@/lib/scoring/modes/types';
+import { gameModeSupportsTeams } from '@/lib/games/registration';
 import { RegistrationForm } from './RegistrationForm';
+import { TeamRegistrationForm } from './TeamRegistrationForm';
 
 export const metadata = {
   title: 'Påmelding – Tørny',
@@ -202,12 +204,38 @@ function renderBody({
     );
   }
 
-  if (game.registration_type === 'team') {
+  // Lag-flyt: spill med registration_type 'team' eller 'both' kan ta imot
+  // lag-påmelding fra en kaptein. 'both' tillater også solo — vi rendrer
+  // begge formene da, men i en MVP-utgave defaulter vi til lag-formen
+  // (admin som vil ha solo må eksplisitt bytte til solo i en framtidig
+  // toggle — for nå er det lag-flyten som er nytt).
+  if (game.registration_type === 'team' || game.registration_type === 'both') {
+    if (!gameModeSupportsTeams(game.game_mode)) {
+      return (
+        <Banner tone="warning">
+          Spillmodusen «{MODE_LABELS[game.game_mode]}» har ikke lag-konsept.
+          Be arrangøren bytte til solo-påmelding.
+        </Banner>
+      );
+    }
+    const teamSize = game.mode_config?.team_size ?? 4;
+    if (teamSize < 2) {
+      return (
+        <Banner tone="warning">
+          Lag-størrelsen er ikke riktig satt opp. Be arrangøren sjekke
+          innstillingene.
+        </Banner>
+      );
+    }
     return (
-      <Banner tone="info">
-        Lag-påmelding kommer i neste versjon. Be arrangøren om å invitere
-        deg eller kapteinen direkte i mellomtiden.
-      </Banner>
+      <div className="space-y-4">
+        <p className="font-sans text-sm leading-relaxed text-text">
+          Du melder på et helt lag som kaptein. Fyll inn lag-navn og
+          medspillere — kjente Tørny-brukere får varsel i appen, ukjente
+          får mail-invitasjon.
+        </p>
+        <TeamRegistrationForm shortId={game.short_id} teamSize={teamSize} />
+      </div>
     );
   }
 

@@ -1,7 +1,7 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import type { RegistrationMode, RegistrationType } from './registration';
-import type { GameMode } from '@/lib/scoring/modes/types';
+import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 
 /**
  * Public-landing-side henter `games`-rad via 8-char short_id. Bruker
@@ -10,6 +10,10 @@ import type { GameMode } from '@/lib/scoring/modes/types';
  * lander på `/påmelding/[shortId]` matcher ingen av delene. Returnerer bare
  * felter som er trygge å eksponere uten autentisering: base-info om spillet
  * pluss påmeldings-modus.
+ *
+ * `mode_config` er inkludert fordi team-flyten leser `team_size` for å
+ * vite hvor mange slots kaptein-formen skal vise. Solo-modi har
+ * `team_size: 1` og leser ikke feltet uansett.
  */
 
 export type ShortIdGame = {
@@ -20,6 +24,7 @@ export type ShortIdGame = {
   registration_mode: RegistrationMode;
   registration_type: RegistrationType;
   game_mode: GameMode;
+  mode_config: GameModeConfig;
   course_id: string | null;
   scheduled_tee_off_at: string | null;
   created_by: string | null;
@@ -39,7 +44,7 @@ export async function getGameByShortId(
   const { data, error } = await admin
     .from('games')
     .select(
-      'id, name, short_id, status, registration_mode, registration_type, game_mode, course_id, scheduled_tee_off_at, created_by',
+      'id, name, short_id, status, registration_mode, registration_type, game_mode, mode_config, course_id, scheduled_tee_off_at, created_by',
     )
     .eq('short_id', shortId)
     .maybeSingle<ShortIdGame>();

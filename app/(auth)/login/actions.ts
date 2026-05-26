@@ -188,36 +188,53 @@ export async function verifyCode(formData: FormData) {
       if (userRow?.id) {
         await Promise.allSettled(
           gameScoped.map(async (inv) => {
-            // Insert spilleren på rosteren. Skip silently hvis raden allerede
-            // finnes (UNIQUE-violation) eller hvis spillet er finished/gone
-            // — game_players.insert vil enten lykkes eller swallow-es her.
-            const { error: insertError } = await admin
-              .from('game_players')
-              .insert({
-                game_id: inv.game_id!,
-                user_id: userRow.id,
-                team_number: null,
-                flight_number: null,
-                course_handicap: null,
-              });
+            // Sjekk registration_type på spillet. Team-only spill (#199) skal
+            // ikke få en solo-rad i game_players auto-opprettet — det ville
+            // bryte CHECK-constraint på team_number/flight_number-konsistens.
+            // I stedet redirecter brukeren videre til
+            // `/påmelding/[shortId]/team`-siden hvor attachToCaptainTeam-
+            // action-en oppretter request-raden riktig.
+            const { data: gameRow } = await admin
+              .from('games')
+              .select('registration_type')
+              .eq('id', inv.game_id!)
+              .maybeSingle<{ registration_type: string }>();
 
-            const duplicate =
-              insertError != null &&
-              (insertError.code === '23505' ||
-                String(insertError.message ?? '')
-                  .toLowerCase()
-                  .includes('duplicate'));
+            const isTeamOnly = gameRow?.registration_type === 'team';
 
-            if (insertError && !duplicate) {
-              console.error(
-                '[login/verifyCode] game_players insert failed',
-                insertError,
-              );
-              return;
+            if (!isTeamOnly) {
+              const { error: insertError } = await admin
+                .from('game_players')
+                .insert({
+                  game_id: inv.game_id!,
+                  user_id: userRow.id,
+                  team_number: null,
+                  flight_number: null,
+                  course_handicap: null,
+                });
+
+              const duplicate =
+                insertError != null &&
+                (insertError.code === '23505' ||
+                  String(insertError.message ?? '')
+                    .toLowerCase()
+                    .includes('duplicate'));
+
+              if (insertError && !duplicate) {
+                console.error(
+                  '[login/verifyCode] game_players insert failed',
+                  insertError,
+                );
+                return;
+              }
             }
 
             // notifyInvitedToGame skipper finished-spill internt og swallow-er
             // egne feil, så vi trenger ingen guard her ut over Promise.allSettled.
+            // For team-only spill: invitéen får et team_invite-varsel når de
+            // klikker "Bli med på lag"-knappen på /påmelding/[shortId]/team
+            // — verifyCode trigger her bare standard game-scoped invite-varsel
+            // som en hilsen "du er logget inn, nå kan du melde deg på laget".
             await notifyInvitedToGame({
               recipientUserId: userRow.id,
               gameId: inv.game_id!,
