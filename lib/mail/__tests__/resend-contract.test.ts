@@ -11,8 +11,9 @@ import type { SendArgs, SendResult } from './_helpers';
 // vi.mock-registreringen hoistes til toppen av denne filen av Vitest, så
 // selve mock-oppsettet ligger her (ikke i _helpers.ts — se kommentar der).
 //
-// Refinement Loop: starter med 2 sendere for å verifisere mønsteret.
-// Utvides til alle 7 aktive sendere etter Check Alignment med hovedchat.
+// Dekker alle 7 aktive mail-sendere i lib/mail/. Per-modul-testene beholder
+// fortsatt sin egen Resend-mock for å snapshot-e copy/HTML — denne fila
+// kompletterer dem ved å samle de strukturelle kontraktene ett sted.
 
 const { sendMock } = vi.hoisted(() => ({
   sendMock: vi.fn<(...args: SendArgs) => Promise<SendResult>>(async () => ({
@@ -58,6 +59,71 @@ const senders = [
       return sendInviteNotification({
         to: 'venn@example.com',
         invitedByName: 'Jørgen',
+      });
+    },
+  },
+  {
+    name: 'sendRegistrationApprovedMail',
+    invoke: async () => {
+      const { sendRegistrationApprovedMail } = await import(
+        '../registrationApproved'
+      );
+      return sendRegistrationApprovedMail({
+        to: 'spiller@example.com',
+        gameName: 'Sommercup 2026',
+        gameId: '11111111-1111-1111-1111-111111111111',
+      });
+    },
+  },
+  {
+    name: 'sendRegistrationRejectedMail',
+    invoke: async () => {
+      const { sendRegistrationRejectedMail } = await import(
+        '../registrationRejected'
+      );
+      return sendRegistrationRejectedMail({
+        to: 'spiller@example.com',
+        gameName: 'Sommercup 2026',
+      });
+    },
+  },
+  {
+    name: 'sendRegistrationRequestMail',
+    invoke: async () => {
+      const { sendRegistrationRequestMail } = await import(
+        '../registrationRequest'
+      );
+      return sendRegistrationRequestMail({
+        to: 'admin@example.com',
+        gameName: 'Sommercup 2026',
+        gameShortId: 'abc12345',
+        requesterName: 'Per Spiller',
+      });
+    },
+  },
+  {
+    name: 'sendTeamInvitationMail',
+    invoke: async () => {
+      const { sendTeamInvitationMail } = await import('../teamInvitation');
+      return sendTeamInvitationMail({
+        to: 'venn@example.com',
+        captainName: 'Jørgen',
+        gameName: 'Sommercup 2026',
+        teamName: 'Bjørketrærne',
+        gameShortId: 'abc12345',
+      });
+    },
+  },
+  {
+    name: 'sendProductUpdateDigest',
+    invoke: async () => {
+      const { sendProductUpdateDigest } = await import('../productUpdateDigest');
+      return sendProductUpdateDigest({
+        to: 'spiller@example.com',
+        recipientFirstName: 'Per',
+        periodLabel: 'mai 2026',
+        updates: [{ title: 'X', body: 'Y' }],
+        unsubToken: 'tok',
       });
     },
   },
