@@ -134,11 +134,17 @@ export async function GET(
       nickname: p.users!.nickname,
       teamNumber: p.team_number,
       courseHandicap: p.course_handicap ?? 0,
+      teeGender: p.tee_gender,
     }));
 
   const holes: LbHole[] = (rawHolesRes.data ?? []).map((h) => ({
     holeNumber: h.hole_number,
     par: h.par_mens,
+    parByGender: {
+      mens: h.par_mens,
+      ladies: h.par_ladies,
+      juniors: h.par_juniors,
+    },
     strokeIndex: h.stroke_index,
   }));
 

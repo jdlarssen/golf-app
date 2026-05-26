@@ -22,6 +22,7 @@ type GamePlayerRow = {
   user_id: string;
   team_number: number;
   course_handicap: number | null;
+  tee_gender: 'mens' | 'ladies' | 'juniors';
   users: {
     name: string | null;
     nickname: string | null;
@@ -81,7 +82,7 @@ export default async function StatistikkPage() {
     supabase
       .from('game_players')
       .select(
-        'game_id, user_id, team_number, course_handicap, users!game_players_user_id_fkey(name, nickname)',
+        'game_id, user_id, team_number, course_handicap, tee_gender, users!game_players_user_id_fkey(name, nickname)',
       )
       .in('game_id', gameIds)
       .returns<GamePlayerRow[]>(),
@@ -141,12 +142,18 @@ export default async function StatistikkPage() {
       nickname: p.users?.nickname ?? null,
       teamNumber: p.team_number,
       courseHandicap: p.course_handicap ?? 0,
+      teeGender: p.tee_gender,
     }));
 
     const lbHoles: LbHole[] = (holesByCourse.get(game.course_id) ?? []).map(
       (h) => ({
         holeNumber: h.hole_number,
         par: h.par_mens,
+        parByGender: {
+          mens: h.par_mens,
+          ladies: h.par_ladies,
+          juniors: h.par_juniors,
+        },
         strokeIndex: h.stroke_index,
       }),
     );

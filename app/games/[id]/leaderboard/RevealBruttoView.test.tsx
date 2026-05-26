@@ -42,6 +42,7 @@ function makeTeam(opts: {
         extraStrokes: 0,
         net: scoreRow ? scoreRow.gross : null,
         isContributor: false,
+        par,
       };
     });
     const grosses = players

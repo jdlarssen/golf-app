@@ -1,5 +1,7 @@
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { bestBallForHole } from '@/lib/scoring/modes/bestBallNetto';
+import { parFor } from '@/lib/scoring/modes/parResolver';
+import type { ScoringGender, ScoringHole } from '@/lib/scoring/modes/types';
 import { rankTeams, type RankedTeam } from '@/lib/scoring/tiebreaker';
 
 export type LeaderboardMode = 'netto' | 'brutto';
@@ -10,12 +12,24 @@ export type LbPlayer = {
   nickname: string | null;
   teamNumber: number;
   courseHandicap: number;
+  /**
+   * Spillerens tee-gender. Brukes til å velge riktig par via `parFor()`
+   * når hullet har per-kjønn-overstyring. Optional — defaultes til `'mens'`
+   * av `parFor` når feltet ikke er satt. #240.
+   */
+  teeGender?: ScoringGender;
 };
 
 export type LbHole = {
   holeNumber: number;
   par: number;
   strokeIndex: number;
+  /**
+   * Valgfri per-kjønn-overstyring fra `course_holes.par_<gender>`. Når satt,
+   * leser legacy-leaderboarden riktig par per spiller (via spillerens
+   * `teeGender`); når NULL, faller alle spillere tilbake til `par`. #240.
+   */
+  parByGender?: { mens: number; ladies: number; juniors: number };
 };
 
 export type LbScore = {
@@ -30,6 +44,13 @@ export type PlayerHoleCell = {
   extraStrokes: number;
   net: number | null;
   isContributor: boolean;
+  /**
+   * Spillerens par for hullet (`parFor(hole, player.teeGender)`). Eksponert
+   * slik at blandet-kjønn-lag kan vise individuell par-referanse i hull-rad-
+   * cell uten å gå tilbake til LbHole. Speilet `BestBallPlayerCell.par`
+   * i mode-router. #240.
+   */
+  par: number;
 };
 
 export type TeamHoleRow = {
@@ -91,6 +112,14 @@ export function computeLeaderboard(opts: {
       const teamPlayers = players.filter((p) => p.teamNumber === teamNumber);
 
       const teamHoles: TeamHoleRow[] = holesSorted.map((hole) => {
+        // Adapter til ScoringHole-shape for parFor — parResolver er definert
+        // mot mode-router-typen, og LbHole er en (mindre) supersettet.
+        const holeAsScoring: ScoringHole = {
+          number: hole.holeNumber,
+          par: hole.par,
+          parByGender: hole.parByGender,
+          strokeIndex: hole.strokeIndex,
+        };
         const playerCells: PlayerHoleCell[] = teamPlayers.map((p) => {
           const gross = grossByKey.get(grossKey(p.userId, hole.holeNumber));
           const grossVal = gross == null ? null : gross;
@@ -105,6 +134,7 @@ export function computeLeaderboard(opts: {
             extraStrokes,
             net,
             isContributor: false,
+            par: parFor(holeAsScoring, p.teeGender),
           };
         });
 
@@ -121,9 +151,14 @@ export function computeLeaderboard(opts: {
           pc.isContributor = bb.contributors.includes(pc.userId);
         }
 
+        // Lag-rad-par: bruk første medlems tee-gender som lag-representant.
+        // Speilet BestBallHoleRow.par i mode-router. Ved tom lag faller vi
+        // tilbake til hole.par (defensiv).
+        const teamPar = parFor(holeAsScoring, teamPlayers[0]?.teeGender);
+
         return {
           holeNumber: hole.holeNumber,
-          par: hole.par,
+          par: teamPar,
           strokeIndex: hole.strokeIndex,
           teamNet: bb.teamNet,
           contributorIds: bb.contributors,
