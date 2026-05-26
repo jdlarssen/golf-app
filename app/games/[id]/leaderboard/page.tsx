@@ -69,6 +69,7 @@ import {
   getGameWithPlayers,
   type GameForHole,
 } from '@/lib/games/getGameWithPlayers';
+import type { TeeGender } from '@/lib/games/teeRating';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
 // Mode-router for stableford-stats. Aliaset til `computeModeResult` for å
 // unngå navnekollisjon med best-ball-spesifikke `computeLeaderboard` fra
@@ -887,6 +888,7 @@ async function renderStableford(opts: {
       team_number: number;
       users: { name: string | null; nickname: string | null } | null;
       course_handicap: number | null;
+      tee_gender: TeeGender;
     }[];
   };
   rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
@@ -921,10 +923,22 @@ async function renderStableford(opts: {
         teamNumber: isTeamVariant ? p.team_number : null,
         flightNumber: null,
         courseHandicap: p.course_handicap ?? 0,
+        // #240 — per-kjønn-par resolveres via parFor(hole, teeGender) inne i
+        // scoring-modulen. Sender tee_gender gjennom slik at dame/junior-
+        // spillere får sin par-variant når hullet har avvikende par.
+        teeGender: p.tee_gender,
       })),
     holes: rawHolesRows.map((h) => ({
       number: h.hole_number,
       par: h.par_mens,
+      // #240 — full per-kjønn-par-tabell per hull. Når alle tre verdier er
+      // like (vanlig tilfelle), faller scoring-laget naturlig tilbake til
+      // felles par. Når dame/junior avviker, leses riktig variant per spiller.
+      parByGender: {
+        mens: h.par_mens,
+        ladies: h.par_ladies,
+        juniors: h.par_juniors,
+      },
       strokeIndex: h.stroke_index,
     })),
     scores: rawScoresRows.map((s) => ({
@@ -1054,6 +1068,7 @@ async function renderStablefordWithSideTournament(opts: {
       team_number: number;
       users: { name: string | null; nickname: string | null } | null;
       course_handicap: number | null;
+      tee_gender: TeeGender;
     }[];
   };
   rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
@@ -1292,6 +1307,7 @@ function renderMatchplay(opts: {
       team_number: number;
       users: { name: string | null; nickname: string | null } | null;
       course_handicap: number | null;
+      tee_gender: TeeGender;
     }[];
   };
   rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
@@ -1316,10 +1332,21 @@ function renderMatchplay(opts: {
         teamNumber: p.team_number ?? 0,
         flightNumber: null,
         courseHandicap: p.course_handicap ?? 0,
+        // #240 — per-side par på matchplay-hull-rader leses fra
+        // parFor(hole, side.teeGender) inne i singlesMatchplay-modulen.
+        teeGender: p.tee_gender,
       })),
     holes: rawHolesRows.map((h) => ({
       number: h.hole_number,
       par: h.par_mens,
+      // #240 — per-kjønn-par for hver side. Når sidene har ulik teeGender
+      // (blandet-kjønn-match) og hullet har avvikende par, leser scoring-
+      // modulen riktig variant per side via parFor().
+      parByGender: {
+        mens: h.par_mens,
+        ladies: h.par_ladies,
+        juniors: h.par_juniors,
+      },
       strokeIndex: h.stroke_index,
     })),
     scores: rawScoresRows.map((s) => ({
@@ -1383,6 +1410,7 @@ function renderSoloStrokeplay(opts: {
       team_number: number;
       users: { name: string | null; nickname: string | null } | null;
       course_handicap: number | null;
+      tee_gender: TeeGender;
     }[];
   };
   rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
@@ -1409,10 +1437,21 @@ function renderSoloStrokeplay(opts: {
         teamNumber: null,
         flightNumber: null,
         courseHandicap: p.course_handicap ?? 0,
+        // #240 — solo strokeplay netto bruker netto strokes (gross − extra)
+        // til ranking, ikke par. Men sender teeGender uansett for shape-
+        // konsistens og fremtidig par-rendering i UI-laget.
+        teeGender: p.tee_gender,
       })),
     holes: rawHolesRows.map((h) => ({
       number: h.hole_number,
       par: h.par_mens,
+      // #240 — per-kjønn-par-tabell. Solo strokeplay ranker på netto-slag,
+      // men UI-laget kan rendre par-referanse per spiller via parFor().
+      parByGender: {
+        mens: h.par_mens,
+        ladies: h.par_ladies,
+        juniors: h.par_juniors,
+      },
       strokeIndex: h.stroke_index,
     })),
     scores: rawScoresRows.map((s) => ({
@@ -1488,6 +1527,7 @@ function renderTexasScramble(opts: {
       team_number: number;
       users: { name: string | null; nickname: string | null } | null;
       course_handicap: number | null;
+      tee_gender: TeeGender;
     }[];
   };
   rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
@@ -1512,10 +1552,21 @@ function renderTexasScramble(opts: {
         teamNumber: p.team_number ?? 0,
         flightNumber: null,
         courseHandicap: p.course_handicap ?? 0,
+        // #240 — Texas spiller én ball per lag, så par per hull avgjøres av
+        // lag-kapteinens tee_gender (lex-min userId). Sender per-spiller
+        // teeGender gjennom; texasScramble-modulen velger kaptein-varianten.
+        teeGender: p.tee_gender,
       })),
     holes: rawHolesRows.map((h) => ({
       number: h.hole_number,
       par: h.par_mens,
+      // #240 — per-kjønn-par-tabell. Texas-modulen leser parFor(hole, captain.teeGender)
+      // for å bestemme hull-par når lag har avvikende kapteins-tee.
+      parByGender: {
+        mens: h.par_mens,
+        ladies: h.par_ladies,
+        juniors: h.par_juniors,
+      },
       strokeIndex: h.stroke_index,
     })),
     scores: rawScoresRows.map((s) => ({

@@ -3,6 +3,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { computeStablefordPoints } from '@/lib/scoring/modes/stableford';
+import { parFor } from '@/lib/scoring/modes/parResolver';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { nameInitials } from '@/lib/names/initials';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
@@ -159,7 +160,23 @@ export default async function HolePage({ params }: { params: Params }) {
       if (!h) continue;
       const extra = strokesForHole(myCh, h.stroke_index);
       const net = s.strokes - extra;
-      const pts = computeStablefordPoints({ par: h.par_mens, netStrokes: net });
+      // #240 — meg's stableford-poeng skal bruke meg's tee_gender-par.
+      // parFor() leser av per-kjønn-tabellen og faller tilbake til mens
+      // når kolonnene er like (vanlig tilfelle).
+      const myPar = parFor(
+        {
+          number: h.hole_number,
+          par: h.par_mens,
+          parByGender: {
+            mens: h.par_mens,
+            ladies: h.par_ladies,
+            juniors: h.par_juniors,
+          },
+          strokeIndex: h.stroke_index,
+        },
+        me.tee_gender,
+      );
+      const pts = computeStablefordPoints({ par: myPar, netStrokes: net });
       total += pts;
       if (s.hole_number === holeNumber) {
         myStablefordForCurrent = pts;
@@ -259,7 +276,19 @@ export default async function HolePage({ params }: { params: Params }) {
         gameStatus={game.status}
         gameMode={game.game_mode}
         currentHole={holeNumber}
-        par={hole.par_mens}
+        par={parFor(
+          {
+            number: hole.hole_number,
+            par: hole.par_mens,
+            parByGender: {
+              mens: hole.par_mens,
+              ladies: hole.par_ladies,
+              juniors: hole.par_juniors,
+            },
+            strokeIndex: hole.stroke_index,
+          },
+          me.tee_gender,
+        )}
         strokeIndex={hole.stroke_index}
         myUserId={userId}
         myCompletedHoles={myCompletedHoles}
