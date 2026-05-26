@@ -189,17 +189,7 @@ Ingen start-kommentar, ingen self-assign, ingen `in-progress`-label, ingen `gh i
 - Eller rediger `package.json` direkte (one-liner)
 - Inkluder bump-en + CHANGELOG-oppdatering i SAMME commit som feature/fix-en
 
-**CHANGELOG-format:** Tre-lags struktur i `CHANGELOG.md`, designet for å være lesbar for både utvikler og produkteier (Jørgen er stakeholder, ikke utvikler):
-
-1. **Per-minor-serie tema-heading** (`## 0.X.y — [navn på temaet]`) med 1–2 setningers sammendrag av hva som ble gjort i den serien. Kun den nyeste minor-serien står åpen; alle eldre minor-serier wrappes i et `<details>`-element (med `<summary><strong>0.X.y — [tema] (N oppføringer) — klikk for å vise</strong></summary>`) slik at fila kan scrolles raskt.
-2. **Per-versjon oppføring** (`### [X.Y.Z] - YYYY-MM-DD`) ledes med en stakeholder-tagline på vanlig norsk, satt som blockquote (`> …` — ikke bold, fordi lange bold-avsnitt er tunge å lese). Tagline-en forklarer hva endringen betyr for brukeren, ikke hva som ble endret i koden.
-3. **Teknisk historikk** i et `<details><summary>Teknisk</summary>...</details>`-element under tagline-en, med [Keep a Changelog](https://keepachangelog.com/no/)-underseksjoner (`#### Added`, `#### Changed`, `#### Fixed`, `#### Removed`) og prosa-bullet points. (For oppføringer som ligger inne i en allerede-collapset minor-serie kan du droppe den indre `<details>`-en — den ytre tar seg av kollapsen.)
-
-Nyeste øverst, norsk på alt brukerrettet. Når du legger til en ny oppføring: skriv tagline-en *først*. Hvis du sliter med å forklare hva som endret seg på Jørgen-språk («Du kan nå …», «Forhindrer at …», «Hvis X skjer, sier appen nå …»), er det et tegn på at endringen kanskje ikke fortjener egen oppføring — sjekk skip-listen.
-
-**Språk-kvalitet på brukerrettede deler:** Når du skriver en ny tagline (`> …`-blockquote) eller serie-summary, kjør `humanizer:humanizer`-skillet (fra `floka-marketplace`) på teksten først — særlig norsk-seksjonen om anglisismer (`entry/features/release/by default`), særskriving, em-dash-kjeder, og «X-spillet»-redundans (`slagspill-spillet` → `slagspillet`, `matchplay-spillet` → `matchen`). Tekniske `<details>`-seksjoner er utvikler-prosa og trenger ikke samme stramming. Bakgrunn: [PR #170](https://github.com/jdlarssen/golf-app/pull/170) (2026-05-24) ryddet 39 historiske AI-tells; målet er å holde nye oppføringer på samme nivå.
-
-Når en ny minor-serie åpnes (f.eks. `1.8.0` → `1.9.0`), pakk den forrige (nå nest-nyeste) serien inn i `<details>` med samme `<summary><strong>…</strong></summary>`-mønster som de eldre. Bare den helt ferskeste minor-serien skal stå åpen.
+**CHANGELOG-format:** Tre-lags struktur (tema-heading + tagline-blockquote + Teknisk-details), tagline-veiledning, humanizer-skillet på taglines, og minor-serie-wrapping er dokumentert i [`docs/changelog-conventions.md`](docs/changelog-conventions.md) — les FØR ny oppføring. HTML-kommentar øverst i `CHANGELOG.md` peker dit; `.githooks/commit-msg` peker dit også når den blokkerer.
 
 **Håndheving via git commit-msg-hook (`.githooks/commit-msg`):** regelen er ikke valgfri — hooken blokkerer alle `feat(...)`/`fix(...)`/`perf(...)`-commits som ikke samtidig stager `package.json` (med endret version-felt) og `CHANGELOG.md`. Hooken er aktivert automatisk på `npm install` (via `postinstall` som setter `core.hooksPath=.githooks`). Hvis hooken blokkerer:
 
@@ -211,9 +201,9 @@ Skip-typene over (`docs/refactor/test/chore/style/ci/build`) passerer fritt — 
 
 ### Språk-kvalitet i bruker-rettet copy
 
-Når du legger til eller endrer norske strenger som vises til brukeren — i `.tsx`/`.ts`-filer, mail-templates (`lib/mail/`), feilmeldinger, banner-tekster, knappe-tekster, helper-tekster — kjør `humanizer:humanizer`-skillet (fra `floka-marketplace`) på det du har skrevet før commit. Pre-commit-hooken `.githooks/pre-commit` advarer (men blokkerer ikke) ved kjente AI-tells i nye linjer i `.tsx`/`.ts`-filer.
+Når du legger til eller endrer norske strenger som vises til brukeren — i `.tsx`/`.ts`-filer, mail-templates (`lib/mail/`), feilmeldinger, banner-tekster, knappe-tekster, helper-tekster — kjør `humanizer:humanizer`-skillet (fra `floka-marketplace`) på det du har skrevet før commit. Pre-commit-hooken `.githooks/pre-commit` advarer (men blokkerer ikke) ved kjente AI-tells i nye linjer i `.tsx`/`.ts`-filer. Markdown-filer skannes ikke.
 
-Markdown-filer (`CHANGELOG.md`, `docs/email-templates.md`) skannes ikke av hooken — prosjekt-dokumentasjon inneholder legitimt eksempler på mønstrene. CHANGELOG-taglines håndteres via policyen i `### Versjonering / CHANGELOG` over, og mail-malene via det manuelle humanizer-passet.
+**Full pattern-katalog + engelsk-konvertering (`no-nb`-skill) + code-switching-eksempler:** [`docs/copy-style.md`](docs/copy-style.md). `.githooks/pre-commit` peker dit når den advarer.
 
 **Hva hooken fanger mekanisk:**
 - «X-spillet»-redundans (`slagspill-spillet` → `slagspillet`, `matchplay-spillet` → `matchen`, `par-stableford-spillet` → `par-stableford-runden`)
@@ -221,28 +211,11 @@ Markdown-filer (`CHANGELOG.md`, `docs/email-templates.md`) skannes ikke av hooke
 - «Tap»-anglism (`Tap kort` → `Trykk kort`)
 - Em-dash-kjeder (`X — Y — Z` → splitt med punktum/komma/parens)
 
-**Hovedmønstre etablert (fra [PR #170](https://github.com/jdlarssen/golf-app/pull/170) og [PR #174](https://github.com/jdlarssen/golf-app/pull/174)) — utover hookens automatikk:**
-- **Anglisismer:** `feature` → `funksjon`, `release` → `lansering`, `entry` → `oppføring`, `by default` → `som standard`, «på login» → drop
-- **Significance-puffery:** drop frase som «markerer at», «representerer en pivotal», «spennings-moment» → noe konkret
-- **Curly quotes** → guillemets («…»)
-- **US-decimal i feilmeldinger** → norsk komma (`54.0` → `54,0`)
-- **Passiv → aktiv du-form:** «Vi mottok forespørsel» → «Du har bedt om»
-- **Generisk feilmelding → konkret:** «Noe gikk galt» → «Klarte ikke å fullføre handlingen»
-- **Idiomatisk definitt-form:** «leaderboard er åpen» → «leaderboardet er åpent»
-
 **Bevisst bevart (false-positives å ignorere ved hook-advarsel):**
 - Brand-tagline `Tørny — fyr opp golfturneringen` (kanonisk per `### Brand`)
 - Mail-subject «Resultatet er klart — ${gameName}» (5 snapshot-tester låser eksakt streng)
 - «Sekretariat»-stemmen i admin-flater
 - Engelske achievement-navn (Turkey/Solid/Snowman — bevisste sportstermer)
-
-Hooken er aktivert automatisk via `core.hooksPath=.githooks` (samme aktivering som commit-msg-hooken via `postinstall`). Tester (`*.test.ts`/`*.test.tsx`), kommentarer og console.log skannes ikke.
-
-**Engelsk → norsk-konvertering:** Hvis du har engelsk source-content som skal bli norsk (f.eks. dokumentasjon fra en library, kopier fra en utenlandsk app, eller framtidig engelsk-versjon per [issue #60](https://github.com/jdlarssen/golf-app/issues/60)), bruk `no-nb:no-nb`-skillet (fra `floka-marketplace`) til å oversette idiomatisk i stedet for å skrive direkte fra topp. no-nb pairer med humanizer — oversetter intent (ikke ord-for-ord) og påfører norske konvensjoner (`3,14`, «guillemets», `du`-form aldri `De`, lowercase måneder/språk). For ren norsk komposisjon (det normale tilfellet i Tørny i dag) er no-nb ikke nødvendig — komponer direkte og kjør humanizer.
-
-**Code-switching i bruker-rettet kopi:** En sentral kategori no-nb fanger er **engelske ord embedded i norske setninger** — typisk teknisk vokabular fra dev-context (`gender`, `preset`, `Custom`, `Achievements`, `Penalty`, `trigger`/`trigge`, `Hole-wins`, `streak`, `Best X` som mid-sentence-adjektiv). Disse er ofte usynlige i en helt-engelsk-streng-audit; må letes etter spesifikt. Norske erstatninger: `kjønn`, `forhåndsvalg`, `Egendefinert`, `Bragder`, `Minuspoeng`, `utløse`, `Hull-seire`, `rekke`, `Beste X`. Se [PR #175](https://github.com/jdlarssen/golf-app/pull/175) for første sweep (~22 forekomster ryddet i sideturnerings-flatene + bane-admin).
-
-For CHANGELOG-spesifikk guidance, se `### Versjonering / CHANGELOG` over.
 
 ### Feilhåndtering / bugs
 
@@ -349,6 +322,8 @@ Auth state via cookies (`@supabase/ssr`). Proxy (`proxy.ts`) refresher session.
 
 ⚠️ Realtime krever eksplisitt `supabase.realtime.setAuth()` med JWT — auto-propagering virker ikke for WebSocket-kanalen (kjent quirk).
 
+**Mail-debug:** Kode-mail går via Supabase Auth (sjekk Auth Logs). Invite/gameFinished/scorecardSubmitted går via Resend (sjekk Resend dashboard + Vercel runtime logs for `[endGame]` / `[submitScorecard]` / `[admin/spillere]`-prefiks). Alle tre Resend-helpers er best-effort med `Promise.allSettled` + `console.error` — feil blokkerer ikke brukerflyten.
+
 ### Offline-sync
 
 Lokal-først via Dexie. `writeScore()` → IndexedDB → sync-kø → `upsert_score_if_newer` RPC. Last-write-wins via `client_updated_at`. Sync-worker drainer kø på online-event, focus, og 30-sek-interval. Realtime sub for live updates fra flight-medlemmer.
@@ -364,61 +339,27 @@ Strengt håndhevet i Postgres. Spillere ser:
 
 Helper functions er `SECURITY DEFINER` for å unngå rekursjons-feller.
 
-## Status per session-handoff
+### Server-actions og caching
 
-Står på `v1.8.7` per 2026-05-23. `v1.0.0` shipped 2026-05-14 («Første stabile release»), `v1.1.0` shipped samme dag med sideturnering-feature. Siden da: polish-arc med dark mode (1.8.0 — OS-preferanse + semantiske tokens), CSV-eksport (1.6.0), klubbstatistikker (1.5.0), spiller-picker for klubbskala (1.7.0), pluss en serie back-nav/UX-fikser (1.8.4–1.8.7).
+`lib/games/getGameWithPlayers.ts` — `unstable_cache`-wrappet helper med tag `game-${id}` og admin-client for RLS-bypass (cookies fungerer ikke inne i cache-callbacks). Authz beholdes på call-site via `me = players.find(...)` → `notFound()`.
 
-**Tag-cached data-layer (shipped 2026-05-16):**
-- `lib/games/getGameWithPlayers.ts` — `unstable_cache`-wrappet helper med tag `game-${id}` og admin-client for RLS-bypass (cookies fungerer ikke inne i cache-callbacks). Authz beholdes på call-site via `me = players.find(...)` notFound().
-- Alle 6 game-konsumenter leser fra cachen: hull-page, scorecard, submit, approve, game-home, leaderboard, leaderboard/holes.
-- 12+ mutasjons-server-actions kaller `revalidateTag(\`game-${id}\`, 'max')` (Next.js 16 to-arg-form; single-arg er deprecated). Auto-start-fallback i game-home server-component bruker `after(() => revalidateTag(..., { expire: 0 }))` siden `revalidateTag` kaster under render-fase.
-- `courses(...)` / `tee_boxes(...)` joins er IKKE cachet — caching ville krevd cross-game fan-out på course-edits. Konsumenter som trenger join-data (submit, game-home) fetcher det som slim direkte-call parallelt med cached helper.
+Alle game-side-konsumenter leser fra cachen (hull-page, scorecard, submit, approve, game-home, leaderboard). Mutasjons-server-actions kaller `revalidateTag(\`game-${id}\`, 'max')` (Next.js 16 to-arg-form; single-arg er deprecated). Auto-start-fallback i game-home server-component bruker `after(() => revalidateTag(..., { expire: 0 }))` siden `revalidateTag` kaster under render-fase.
 
-⏸ **Ventende:**
-- **Multi-player scorekort-oversikt** — vise lag-medlemmer side om side med initialer øverst i hver kolonne (vs. dagens single-player-flate). Krever brainstorming — se [#17](https://github.com/jdlarssen/golf-app/issues/17).
+`courses(...)` / `tee_boxes(...)` joins er IKKE cachet — caching ville krevd cross-game fan-out på course-edits. Konsumenter som trenger join-data fetcher det som slim direkte-call parallelt med cached helper.
 
 📋 **Backlog:** [GitHub Issues](https://github.com/jdlarssen/golf-app/issues). `TODO.md` er en stub som peker dit — alle nye oppgaver opprettes som issues, ikke i markdown.
 
 ## Nøkkelfiler å kjenne til
 
-- [GitHub Issues](https://github.com/jdlarssen/golf-app/issues) — backlog (tagget etter type + område + scope). `TODO.md` er stub som peker dit.
-- `docs/launch-checklist.md` — admin-sjekkliste for lanseringsdagen
-- `docs/email-templates.md` — alle 5 mail-maler å lime inn i Supabase Auth
-- `docs/plans/2026-05-10-golf-best-ball-app-design.md` — opprinnelig design
-- `docs/plans/2026-05-10-golf-best-ball-app-implementation.md` — implementeringsplan (13 faser)
-- `app/globals.css` — palett og typografi-tokens
-- `components/ui/` — design system (Card, Button, Input, Banner, PageHeader, AppShell, BrandMark, TopBar, HistoryBackLink, StatusChip)
-- `components/ui/TopBar.tsx` — sticky top-bar (chevron + valgfri kicker), brukt på 19 sider. `back="history"` for `/legal/privacy` som kan nås fra hvor som helst
-- `components/pwa/` — install-flyten: `InstallBanner` (på `/`), `InstallButton` (på `/profile`), `InstallInstructionsModal` (iOS-trinn-for-trinn), `InstallPromptCapture` (mountet i layout for å fange `beforeinstallprompt`)
-- `lib/pwa/install-state.ts` + `lib/pwa/detect.ts` + `hooks/useInstallPrompt.ts` — plattform-detection og state-singleton for PWA-install
-- `lib/scoring/` — scoring-bibliotek (ikke rør uten ny test)
-- `lib/sync/` — offline-sync (Dexie + worker + realtime)
-- `lib/games/status.ts` — `GameStatus`-union + `STATUS_LABELS` (single source of truth)
-- `lib/admin/gameErrorMessages.ts` — shared error-message-maps for admin/games-flyten (kopi-variasjon mellom new-game og existing-game er dokumentert i JSDoc)
-- `supabase/migrations/` — 20 SQL-migrasjoner
-- `lib/mail/inviteNotification.ts` — Resend-mail-helper for invitasjons-notifikasjoner
-- `lib/mail/gameFinishedNotification.ts` — Resend-mail til spillere når admin avslutter spillet («Resultatet er klart»)
-- `lib/mail/scorecardSubmittedNotification.ts` — Resend-mail til admin når spiller leverer scorekort
-- `components/sync/SyncBanner.tsx` — sticky-top banner for kø-stuck/error med retry-knapp + friendly-error-mapping
-- `app/profile/historikk/page.tsx` + `app/profile/slett-konto/` + `app/profile/export/route.ts` — GDPR-self-service-flyten
-- `app/admin/games/[id]/slett/` + `app/admin/spillere/[id]/slett/` + `app/profile/slett-konto/` — destruktive flyter med dedikerte konfirmasjons-sider
-- `app/legal/privacy/page.tsx` — offentlig personvern-side (lenket fra AppVersionFooter), bypass auth-gate via `proxy.ts`-matcher
+Discoverable kataloger (`ls components/ui/`, `ls lib/`, etc.) er ikke listet her — kun ikke-åpenbare feller eller konvensjoner som forsvinner uten påminning:
 
-## Vanlige neste-steg-oppgaver
+- `lib/scoring/` — scoring-bibliotek (40 unit-tester; ikke rør uten ny test først, per Scoring-logikk)
+- `lib/sync/` — Dexie-DB heter `'golf-app'` historisk; **rename = sletter brukernes lokale data**
+- `proxy.ts` (ikke `middleware.ts`) — Next.js 16-konvensjonen for middleware
+- `app/legal/privacy/page.tsx` — offentlig side; bypass auth-gate via egen `proxy.ts`-matcher
+- `lib/games/getGameWithPlayers.ts` — `unstable_cache` med tag `game-${id}`; se «Server-actions og caching»
+- `lib/mail/inviteNotification.ts` + `gameFinishedNotification.ts` + `scorecardSubmittedNotification.ts` — tre Resend-helpers, alle best-effort med `Promise.allSettled`
+- `app/admin/games/[id]/slett/` + `app/admin/spillere/[id]/slett/` + `app/profile/slett-konto/` — destruktive flyter har dedikerte konfirmasjons-sider; aldri inline-toggle eller `<details>`-popout
+- `lib/games/status.ts` — `GameStatus`-union + `STATUS_LABELS` (single source of truth for status-tekster)
 
-Hvis bruker kommer tilbake til et tema, sjekk om dette stemmer:
-
-1. **«La oss teste med en kompis»** → guide gjennom invitasjon i Admin → Invitasjoner. Invitéen får først en notifikasjons-mail («Du er invitert»), så ber de selv om kode på /login og får 8-sifret kode på mail. Sjekk at `accepted_at` flippes når de logger inn første gang.
-2. **«Design oppgradering»** → bruker har planlagt å bruke claude.ai/design med design system. Setup beskrevet i forrige chat.
-3. **«Ny spilltype»** → stableford / matchplay / scramble / solo. Krever ny scoring-modul i `lib/scoring/`, nytt UI-flow. Datamodellen skalerer.
-4. **«Klubb-tier med flere admin/grupper»** → krever `groups` + `group_members`-tabeller, RLS-justering. Betydelig oppgave.
-5. **«Mail kommer ikke fram»** → systematisk debug. Sjekk Supabase Auth Logs (kode-mail) + Resend dashboard (notifikasjons-mail) + Vercel runtime logs. Tre Resend-mail-typer finnes nå: invite, gameFinished, scorecardSubmitted (alle i `lib/mail/`). Alle er best-effort med Promise.allSettled + console.error — sjekk Vercel logs for `[endGame]` / `[submitScorecard]` / `[admin/spillere]` prefiks ved feil.
-
-## Bruker-preferanser fra tidligere sesjon
-
-- Foretrekker norske navn med vokal-dropping (a la Flickr, Tumblr) — derav «Tørny»
-- Verdsetter premium-følelse men også «sporty energi»
-- Ikke har bedriftsregistrering — kjøper domener som privatperson
-- Bruker iPhone (Safari)
-- Har macOS — bruker `pbcopy` for clipboard
-- Har lokal git config satt opp for sin GitHub-konto (jdlarssen)
+[GitHub Issues](https://github.com/jdlarssen/golf-app/issues) er backlog. `docs/launch-checklist.md` er admin-sjekkliste. `docs/email-templates.md` har Supabase Auth-malene. `docs/test-discipline.md` er full referanse for test-typer. `docs/changelog-conventions.md` er CHANGELOG-format. `docs/copy-style.md` er pattern-katalog for bruker-rettet copy.
