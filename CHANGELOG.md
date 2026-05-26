@@ -10,16 +10,47 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.30.y — Spill-invitasjoner med bell-prikk
+
+Issue [#182](https://github.com/jdlarssen/golf-app/issues/182). Notifikasjons-systemet kobler seg nå på spill-rosteren. Når admin legger en spiller til på et spill kommer bell-prikken med en gang, både for kompiser som allerede har Tørny og for nye som inviteres på e-post.
+
+### [1.30.0] - 2026-05-26
+
+> Spillere som blir lagt til et spill får nå et varsel i appen, i tillegg til e-posten. Bell-prikken lyser så snart admin har lagt deg på rosteren, slik at du oppdager turneringen før spillet starter.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- Ny helper `lib/notifications/notifyInvitedToGame.ts`: henter spill + inviter, bygger `invite`-payload og kaller `notify()` best-effort. Skipper finished-spill. Brukes fra alle tre nye call-sites under.
+- Ny «Inviter spillere»-card på `/admin/games/[id]` for draft/scheduled-spill: substring-søk i registrerte brukere med per-rad «+ Legg til», pluss e-post-invite-felt under. Mode-aware kapasitets-banner gjør best-ball-card-en utilgjengelig ved 8/8.
+- Server-actions `addExistingPlayerToGame` + `inviteEmailToGame` (`app/admin/games/[id]/inviteToGameActions.ts`). Authz via `requireAdminOrTrustedCreator`, status-/kapasitets-/duplikat-checks, idempotent UNIQUE-violation-håndtering.
+- Mail-utvidelse `lib/mail/inviteNotification.ts` tar valgfri `gameName`-param. Game-scoped subject: «Du er invitert til {gameName} på Tørny», med spill-navnet også i body-en. Eksisterende friend/admin-invite-bruk er uendret.
+
+#### Changed
+- `createGameDraft` + `createAndPublishGame` (`app/admin/games/new/actions.ts`) fyrer `notifyInvitedToGame` for hver ny spiller på rosteren (skipper inviter selv).
+- Edit-flytens `updateGameInternal` (`app/admin/games/[id]/edit/actions.ts`) snapshot-er pre-update-rosteren og fyrer notify kun for spillere som er nye i diff-en. Eksisterende spillere får ikke duplikat-varsel når admin lagrer uten endring.
+- `verifyCode`-actionen (`app/(auth)/login/actions.ts`) plukker opp game-scoped pending invitasjoner etter OTP-verify, inserter spilleren i `game_players`, og fyrer notify deferred. Login-redirecten kjører uavhengig av om side-effektene lykkes.
+- Mark-as-read-hooken på `/admin/games/[id]` markerer nå også `invite`-kind for spillet, slik at bell-prikken forsvinner straks admin/invitee åpner runden.
+
+#### Notes
+- `inviteSchema` (`lib/notifications/types.ts`) er uendret — `game_id` forblir strikt ikke-null. Friend-invite og admin-invite uten spill-kontekst fyrer fortsatt kun e-post (ingen in-app-notifikasjon).
+- Card-rendering er server-fetcha (limit 200 registrerte brukere) — kompis-skala fyller aldri taket, klubb-skala kan trenge paginering senere.
+
+</details>
+
+---
+
 ## 1.29.y — Selv-registrering for nye spillere
+
+<details>
+<summary><strong>1.29.y — Selv-registrering for nye spillere (1 oppføring) — klikk for å vise</strong></summary>
 
 Lar nye besøkende få OTP-kode på `/login` uten admin-mellomledd, bak en kill-switch og to lag rate-limit. Forberedelse til å åpne tornygolf.no for spillere utenfor kompisgjengen ([#166](https://github.com/jdlarssen/golf-app/issues/166)).
 
 ### [1.29.0] - 2026-05-26
 
 > Nye besøkende kan nå skrive inn e-posten sin på innloggings-siden og få kode — uten at en admin må invitere dem først. Funksjonen er av i starten og slås på i Vercel manuelt etter at vi har testet den på preview. Et stille rate-vern på baksiden stopper noen som prøver å spamme inn forsøk.
-
-<details>
-<summary>Teknisk</summary>
 
 #### Added
 - [lib/auth/loginRateLimit.ts](lib/auth/loginRateLimit.ts) — `consumeLoginRateLimit({ email, ip })` gjenbruker `consume_admin_rate_limit`-RPC med nye bucket-prefikser (`login:email:<email>`, `login:ip:<ip>`). Default: 3 sendCode per e-post per 15 min, 10 per IP per 15 min. Service-role-call for å unngå GRANT-justering på en pre-auth RPC. Fail-open på DB-feil så en transient outage ikke låser alle ute. Sju unit-tester dekker happy-path, begge bucket-deny-stier, lowercase-normalisering, custom-limits, RPC-error- og throw-fail-open.
