@@ -24,6 +24,7 @@ vi.mock('next/navigation', () => ({
 let supabaseMock: ReturnType<typeof buildSupabaseMock>;
 const rpcMock = vi.fn();
 const signInWithOtpMock = vi.fn();
+const verifyOtpMock = vi.fn();
 
 vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => ({
@@ -32,45 +33,97 @@ vi.mock('@/lib/supabase/server', () => ({
     auth: {
       ...supabaseMock.auth,
       signInWithOtp: signInWithOtpMock,
+      verifyOtp: verifyOtpMock,
     },
   }),
 }));
 
-// Admin client mock. Used by two callers in actions.ts:
-// 1. The `opened_at`-stamping side-effect:
+// Admin client mock. Three call-sites i actions.ts treffer denne:
+//
+// 1. sendCode `opened_at`-stamping (main's #166-flyt):
 //      .from('invitations').update({...}).ilike(...).is(...).is(...)
-//    The .is() chain terminates by being awaited — supabase-js resolves the
-//    builder when treated as a thenable.
-// 2. The login rate-limit helper (which calls .rpc). Those tests live in
-//    lib/auth/loginRateLimit.test.ts; here we mock the helper itself
-//    (consumeLoginRateLimitMock below), so the rpc reachable through this
-//    mock only needs to exist for type-safety.
+//    awaitable terminal — supabase-js løser builderen som thenable.
+//
+// 2. verifyCode pending-pickup (#182 deferred-notify):
+//      .from('invitations').select(...).ilike().is().returns()
+//
+// 3. verifyCode user-lookup + game_players-insert for game-scoped invites:
+//      .from('users').select().ilike().maybeSingle()
+//      .from('game_players').insert(...)
+//
+// State variables under styres per-test slik at notify-grenen kan
+// eksersises uten å påvirke main's eksisterende coverage.
+let pendingInvitations: Array<{
+  id: string;
+  game_id: string | null;
+  invited_by: string | null;
+}> = [];
+let adminUserLookup: { id: string } | null = null;
+let gamePlayersInsertResult: { error: unknown } = { error: null };
 const adminUpdateMock = vi.fn();
+const adminGamePlayersInsertMock = vi.fn();
+
 function makeAdminBuilder() {
   const builder: Record<string, unknown> = {};
   for (const m of ['ilike', 'is', 'eq', 'select']) {
     builder[m] = () => builder;
   }
-  // Awaitable terminal — what supabase-js does when an update chain is awaited.
+  // Awaitable terminal — supabase-js gjør samme triks på update-chains.
   (builder as { then: unknown }).then = (
     resolve: (value: { data: null; error: null }) => void,
   ) => resolve({ data: null, error: null });
   return builder;
 }
+
 vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => ({
-    from: () => ({
-      update: (...args: unknown[]) => {
-        adminUpdateMock(...args);
-        return makeAdminBuilder();
-      },
-    }),
+    from: (table: string) => {
+      if (table === 'invitations') {
+        return {
+          // sendCode opened_at-stamp: .update().ilike().is().is() awaited
+          update: (...args: unknown[]) => {
+            adminUpdateMock(...args);
+            return makeAdminBuilder();
+          },
+          // verifyCode pending-pickup: .select().ilike().is().returns()
+          select: () => ({
+            ilike: () => ({
+              is: () => ({
+                returns: async () => ({
+                  data: pendingInvitations,
+                  error: null,
+                }),
+              }),
+            }),
+          }),
+        };
+      }
+      if (table === 'users') {
+        return {
+          select: () => ({
+            ilike: () => ({
+              maybeSingle: async () => ({ data: adminUserLookup }),
+            }),
+          }),
+        };
+      }
+      if (table === 'game_players') {
+        return {
+          insert: async (...args: unknown[]) => {
+            adminGamePlayersInsertMock(...args);
+            return gamePlayersInsertResult;
+          },
+        };
+      }
+      throw new Error(`unexpected admin.from(${table}) call`);
+    },
     rpc: () => Promise.resolve({ data: true, error: null }),
   }),
 }));
 
-// loginRateLimit is mocked so tests can deterministically allow/deny without
-// the admin RPC machinery. Default to ok; override per-test where needed.
+// loginRateLimit (#166) er mocket så tester deterministisk kan velge
+// allow/deny uten å gå gjennom admin RPC-maskineriet. Default = ok;
+// per-test override dekker deny-grenen.
 const consumeLoginRateLimitMock = vi.fn();
 vi.mock('@/lib/auth/loginRateLimit', () => ({
   consumeLoginRateLimit: (
@@ -80,6 +133,13 @@ vi.mock('@/lib/auth/loginRateLimit', () => ({
 
 vi.mock('@/lib/admin/rateLimit', () => ({
   getClientIp: async () => '1.2.3.4',
+}));
+
+const notifyInvitedToGameMock =
+  vi.fn<(...args: unknown[]) => Promise<void>>(async () => undefined);
+vi.mock('@/lib/notifications/notifyInvitedToGame', () => ({
+  notifyInvitedToGame: (...args: unknown[]) =>
+    notifyInvitedToGameMock(...args),
 }));
 
 function lastRedirect(): string | undefined {
@@ -96,8 +156,11 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.unstubAllEnvs();
   supabaseMock = buildSupabaseMock([]);
-  // Default: rate-limit allows; tests that exercise the deny path override.
+  // Default: rate-limit allows; tests som eksersiserer deny-grenen override-er.
   consumeLoginRateLimitMock.mockResolvedValue({ ok: true });
+  pendingInvitations = [];
+  adminUserLookup = null;
+  gamePlayersInsertResult = { error: null };
 });
 
 describe('sendCode — honeypot', () => {
@@ -260,5 +323,106 @@ describe('sendCode — rate-limit', () => {
       email: 'spammer@example.com',
       ip: '1.2.3.4',
     });
+  });
+});
+
+describe('verifyCode — deferred game-scoped invite-notify (#182)', () => {
+  it('game-scoped pending invitation: insertes i game_players + fyrer notify', async () => {
+    verifyOtpMock.mockResolvedValue({ error: null });
+    // En pending invitasjon med game_id satt. Også en game-løs en for å
+    // bekrefte at vi ikke prøver å inserte/notify på den.
+    pendingInvitations = [
+      {
+        id: 'inv-1',
+        game_id: '00000000-0000-0000-0000-0000000000aa',
+        invited_by: '00000000-0000-0000-0000-0000000000bb',
+      },
+      { id: 'inv-2', game_id: null, invited_by: 'admin-x' },
+    ];
+    adminUserLookup = { id: 'new-user-1' };
+
+    // accept-update bruker cookie-klienten — la mock-en svare null/null.
+    supabaseMock = buildSupabaseMock([{ data: null, error: null }]);
+
+    const { verifyCode } = await import('./actions');
+    await expect(
+      verifyCode(fd({ email: 'kompis@example.com', token: '123456' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(adminGamePlayersInsertMock).toHaveBeenCalledTimes(1);
+    expect(adminGamePlayersInsertMock).toHaveBeenCalledWith({
+      game_id: '00000000-0000-0000-0000-0000000000aa',
+      user_id: 'new-user-1',
+      team_number: null,
+      flight_number: null,
+      course_handicap: null,
+    });
+    expect(notifyInvitedToGameMock).toHaveBeenCalledTimes(1);
+    expect(notifyInvitedToGameMock).toHaveBeenCalledWith({
+      recipientUserId: 'new-user-1',
+      gameId: '00000000-0000-0000-0000-0000000000aa',
+      inviterUserId: '00000000-0000-0000-0000-0000000000bb',
+    });
+    expect(lastRedirect()).toBe('/');
+  });
+
+  it('kun game-løse invitasjoner: ingen insert / notify, login lykkes uansett', async () => {
+    verifyOtpMock.mockResolvedValue({ error: null });
+    pendingInvitations = [
+      { id: 'inv-friend', game_id: null, invited_by: 'admin-x' },
+    ];
+    adminUserLookup = { id: 'user-x' };
+
+    supabaseMock = buildSupabaseMock([{ data: null, error: null }]);
+
+    const { verifyCode } = await import('./actions');
+    await expect(
+      verifyCode(fd({ email: 'kompis@example.com', token: '123456' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(adminGamePlayersInsertMock).not.toHaveBeenCalled();
+    expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+    expect(lastRedirect()).toBe('/');
+  });
+
+  it('duplicate game_players UNIQUE-violation: notify fyrer fortsatt (idempotent)', async () => {
+    verifyOtpMock.mockResolvedValue({ error: null });
+    pendingInvitations = [
+      {
+        id: 'inv-1',
+        game_id: '00000000-0000-0000-0000-0000000000aa',
+        invited_by: '00000000-0000-0000-0000-0000000000bb',
+      },
+    ];
+    adminUserLookup = { id: 'new-user-1' };
+    gamePlayersInsertResult = {
+      error: { code: '23505', message: 'duplicate key' },
+    };
+
+    supabaseMock = buildSupabaseMock([{ data: null, error: null }]);
+
+    const { verifyCode } = await import('./actions');
+    await expect(
+      verifyCode(fd({ email: 'kompis@example.com', token: '123456' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    // notify fyrer fortsatt — målet er at invitee får varslet uavhengig av
+    // om de allerede var på rosteren via en annen vei.
+    expect(notifyInvitedToGameMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('ingen pending invitations: hopper over notify-pipelinen helt', async () => {
+    verifyOtpMock.mockResolvedValue({ error: null });
+    pendingInvitations = [];
+    supabaseMock = buildSupabaseMock([{ data: null, error: null }]);
+
+    const { verifyCode } = await import('./actions');
+    await expect(
+      verifyCode(fd({ email: 'first-login@example.com', token: '123456' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(adminGamePlayersInsertMock).not.toHaveBeenCalled();
+    expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+    expect(lastRedirect()).toBe('/');
   });
 });

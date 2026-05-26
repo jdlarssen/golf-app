@@ -5,6 +5,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { consumeLoginRateLimit } from '@/lib/auth/loginRateLimit';
 import { getClientIp } from '@/lib/admin/rateLimit';
+import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 
 // Step 1 of two-step OTP login. Verifies the email is either registered
 // (existing user) or has an open invitation, then asks Supabase to send a
@@ -145,16 +146,87 @@ export async function verifyCode(formData: FormData) {
     redirect(`/login?${qs.toString()}`);
   }
 
-  // Mark any pending invitation rows for this email as accepted. Best-effort:
-  // never block login on failure. Allowed by RLS policy 0012 ("invitations
-  // self mark accepted") since auth.jwt() ->> 'email' is populated post-
-  // verifyOtp.
+  // Mark any pending invitation rows for this email as accepted, and pick
+  // opp game-scoped invitations som ble opprettet via /admin/games/[id]
+  // -invite-card-en. For hver game-scoped invitasjon: insert i game_players
+  // og fyr in-app `invite`-varselet deferred. Best-effort hele veien —
+  // login-flyten redirecter til `next` uansett om side-effektene feiler.
+  //
+  // Henter pending invitasjoner FØR vi flipper accepted_at slik at vi
+  // også fanger game_id + invited_by. Bruker admin-client her fordi
+  // public.users.id-en til den nyverifiserte brukeren ennå ikke er
+  // tilgjengelig via cookie-klienten i denne action-en (auth-state
+  // propagerer asynkront); admin-client har uansett tilgang.
   try {
+    const admin = getAdminClient();
+    const { data: pendingInvites } = await admin
+      .from('invitations')
+      .select('id, game_id, invited_by')
+      .ilike('email', email)
+      .is('accepted_at', null)
+      .returns<
+        { id: string; game_id: string | null; invited_by: string | null }[]
+      >();
+
     await supabase
       .from('invitations')
       .update({ accepted_at: new Date().toISOString() })
       .ilike('email', email)
       .is('accepted_at', null);
+
+    const gameScoped = (pendingInvites ?? []).filter(
+      (inv) => inv.game_id != null && inv.invited_by != null,
+    );
+
+    if (gameScoped.length > 0) {
+      const { data: userRow } = await admin
+        .from('users')
+        .select('id')
+        .ilike('email', email)
+        .maybeSingle<{ id: string }>();
+
+      if (userRow?.id) {
+        await Promise.allSettled(
+          gameScoped.map(async (inv) => {
+            // Insert spilleren på rosteren. Skip silently hvis raden allerede
+            // finnes (UNIQUE-violation) eller hvis spillet er finished/gone
+            // — game_players.insert vil enten lykkes eller swallow-es her.
+            const { error: insertError } = await admin
+              .from('game_players')
+              .insert({
+                game_id: inv.game_id!,
+                user_id: userRow.id,
+                team_number: null,
+                flight_number: null,
+                course_handicap: null,
+              });
+
+            const duplicate =
+              insertError != null &&
+              (insertError.code === '23505' ||
+                String(insertError.message ?? '')
+                  .toLowerCase()
+                  .includes('duplicate'));
+
+            if (insertError && !duplicate) {
+              console.error(
+                '[login/verifyCode] game_players insert failed',
+                insertError,
+              );
+              return;
+            }
+
+            // notifyInvitedToGame skipper finished-spill internt og swallow-er
+            // egne feil, så vi trenger ingen guard her ut over Promise.allSettled.
+            await notifyInvitedToGame({
+              recipientUserId: userRow.id,
+              gameId: inv.game_id!,
+              inviterUserId: inv.invited_by!,
+            });
+          }),
+        );
+      }
+    }
   } catch (err) {
     console.warn('[login/verifyCode] invitation-accept side-effect threw', err);
   }
