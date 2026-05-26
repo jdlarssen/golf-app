@@ -278,7 +278,19 @@ export type MatchplayHoleResult = 'side1_wins' | 'side2_wins' | 'tied' | 'unplay
  */
 export interface MatchplayHoleRow {
   holeNumber: number;
+  /**
+   * Bevart for backward-compat. Sett lik `side1Par` slik at konsumenter som
+   * tidligere leste én felles par-verdi fortsatt fungerer. UI-laget bør bruke
+   * `side1Par`/`side2Par` direkte når blandet-kjønn-match skal vises korrekt.
+   */
   par: number;
+  /**
+   * Per-side par fra `parFor(hole, side.teeGender)`. Når begge sider har
+   * samme teeGender (eller hullet ikke har parByGender) er `side1Par === side2Par`.
+   * #240.
+   */
+  side1Par: number;
+  side2Par: number;
   strokeIndex: number;
   /** Per-side gross. null = ikke spilt. */
   side1Gross: number | null;
@@ -303,6 +315,13 @@ export interface MatchplaySide {
   sideNumber: 1 | 2;
   userId: string;
   courseHandicap: number;
+  /**
+   * Sidens tee-gender (fra `game_players.tee_gender`). Brukes til å velge
+   * riktig par via `parFor(hole, side.teeGender)` på hull med per-kjønn-
+   * overstyring. Default `'mens'` når undefined (samme fallback som
+   * `ScoringPlayer.teeGender`). #240.
+   */
+  teeGender?: ScoringGender;
 }
 
 /**

@@ -382,3 +382,64 @@ describe('compute — defensiv fallback ved feil sider', () => {
     expect(r.holes).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Per-kjønn-par (#240). I matchplay kan side 1 og side 2 spille fra ulike
+// tees (typisk herre vs dame). Hver side får sin egen par-referanse via
+// parFor() slik at netto-sammenligning per hull skjer mot riktig par per
+// side.
+// ---------------------------------------------------------------------------
+
+describe('compute — per-gender par (#240)', () => {
+  it('side1Par og side2Par reflekterer hver sides teeGender', () => {
+    // Side 1 herre (par_mens=4), side 2 dame (par_ladies=5). Begge gross=4,
+    // CH=0. Netto er lik gross for begge — selve hull-resultatet er tied
+    // (netto 4 vs netto 4) — men par-feltene skal vise ulike verdier.
+    const ctx = makeCtx({
+      players: [
+        { userId: 'a', teamNumber: 1, flightNumber: 1, courseHandicap: 0, teeGender: 'mens' },
+        { userId: 'b', teamNumber: 2, flightNumber: 2, courseHandicap: 0, teeGender: 'ladies' },
+      ],
+      holes: [
+        { number: 1, par: 4, parByGender: { mens: 4, ladies: 5, juniors: 4 }, strokeIndex: 1 },
+      ],
+      scores: [
+        { userId: 'a', holeNumber: 1, gross: 4 },
+        { userId: 'b', holeNumber: 1, gross: 4 },
+      ],
+    });
+    const r = compute(ctx);
+    expect(r.holes[0].side1Par).toBe(4);
+    expect(r.holes[0].side2Par).toBe(5);
+    // Backward-compat: par-feltet er fortsatt satt og speiler side1Par.
+    expect(r.holes[0].par).toBe(4);
+    // Hull-resultat: netto er lik begge → tied
+    expect(r.holes[0].result).toBe('tied');
+  });
+
+  it('faller tilbake til hole.par når parByGender ikke er satt', () => {
+    const ctx = makeCtx({
+      players: side1And2(),
+      holes: par4Holes(1),
+      scores: [],
+    });
+    const r = compute(ctx);
+    expect(r.holes[0].par).toBe(4);
+    expect(r.holes[0].side1Par).toBe(4);
+    expect(r.holes[0].side2Par).toBe(4);
+  });
+
+  it('sides-tuple bærer teeGender fra ScoringPlayer', () => {
+    const ctx = makeCtx({
+      players: [
+        { userId: 'a', teamNumber: 1, flightNumber: 1, courseHandicap: 0, teeGender: 'mens' },
+        { userId: 'b', teamNumber: 2, flightNumber: 2, courseHandicap: 0, teeGender: 'ladies' },
+      ],
+      holes: par4Holes(1),
+      scores: [],
+    });
+    const r = compute(ctx);
+    expect(r.sides[0].teeGender).toBe('mens');
+    expect(r.sides[1].teeGender).toBe('ladies');
+  });
+});

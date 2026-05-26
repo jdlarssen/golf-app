@@ -44,6 +44,8 @@ function makeHole(
   return {
     holeNumber,
     par: 4,
+    side1Par: 4,
+    side2Par: 4,
     strokeIndex: holeNumber,
     side1Gross: null,
     side2Gross: null,

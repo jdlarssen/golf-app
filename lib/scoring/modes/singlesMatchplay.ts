@@ -12,6 +12,7 @@
 //   - 'N&M'  — N hull foran med M hull igjen (mat-em før hull 18)
 
 import { strokesForHole } from '../strokeAllocation';
+import { parFor } from './parResolver';
 import type {
   ScoringContext,
   SinglesMatchplayResult,
@@ -244,11 +245,13 @@ export function compute(ctx: ScoringContext): SinglesMatchplayResult {
       sideNumber: 1,
       userId: side1Player.userId,
       courseHandicap: side1Player.courseHandicap,
+      teeGender: side1Player.teeGender,
     },
     {
       sideNumber: 2,
       userId: side2Player.userId,
       courseHandicap: side2Player.courseHandicap,
+      teeGender: side2Player.teeGender,
     },
   ];
 
@@ -287,9 +290,17 @@ export function compute(ctx: ScoringContext): SinglesMatchplayResult {
       holesPlayed += 1;
     }
 
+    // Per-side par via parFor — fanger blandet-kjønn-match der side 1 og
+    // side 2 spiller fra ulike tees med par_mens != par_ladies. `par` (felles)
+    // settes lik side1Par for backward-compat. #240.
+    const side1Par = parFor(hole, side1Player.teeGender);
+    const side2Par = parFor(hole, side2Player.teeGender);
+
     return {
       holeNumber: hole.number,
-      par: hole.par,
+      par: side1Par,
+      side1Par,
+      side2Par,
       strokeIndex: hole.strokeIndex,
       side1Gross,
       side2Gross,
