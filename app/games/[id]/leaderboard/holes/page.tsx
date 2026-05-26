@@ -20,6 +20,10 @@ import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { nameInitials } from '@/lib/names/initials';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
+import {
+  hasParDifference,
+  formatOtherGendersPar,
+} from '@/lib/games/parDisplay';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -558,6 +562,16 @@ function HoleRow({
         </span>
         <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
           P{row.par}
+          {row.parByGender && hasParDifference(row.parByGender) && (
+            <sup
+              data-testid="par-aside-marker"
+              title={`Dette hullet har annerledes par for andre kjønn. ${formatOtherGendersPar(row.parByGender, undefined)}.`}
+              aria-label={`Avvikende par for andre kjønn. ${formatOtherGendersPar(row.parByGender, undefined)}.`}
+              className="ml-0.5 cursor-help text-[0.65em] font-semibold text-muted"
+            >
+              *
+            </sup>
+          )}
         </span>
       </div>
 

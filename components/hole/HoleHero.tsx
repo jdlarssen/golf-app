@@ -1,9 +1,27 @@
 import type { CSSProperties, JSX } from 'react';
+import {
+  hasParDifference,
+  formatOtherGendersPar,
+  type HoleParByGender,
+} from '@/lib/games/parDisplay';
+import type { ScoringGender } from '@/lib/scoring/modes/types';
 
 export interface HoleHeroProps {
   holeNumber: number;
   par: number;
   strokeIndex: number;
+  /**
+   * Valgfri per-kjønn-par for hullet. Når hullet har avvik mellom kjønn
+   * (`hasParDifference`) vises en liten asterisk-indikator etter par-tallet.
+   * Title-attributtet på asterisken forklarer hva medspillere av andre kjønn
+   * ser. #240.
+   */
+  parByGender?: HoleParByGender;
+  /**
+   * Spillerens egen tee-gender. Brukes til å ekskludere egen kjønn fra
+   * tooltip-teksten. Default `'mens'` når undefined. #240.
+   */
+  playerGender?: ScoringGender;
 }
 
 const containerStyle: CSSProperties = {
@@ -58,7 +76,11 @@ const indexStyle: CSSProperties = {
 };
 
 export function HoleHero(props: HoleHeroProps): JSX.Element {
-  const { holeNumber, par, strokeIndex } = props;
+  const { holeNumber, par, strokeIndex, parByGender, playerGender } = props;
+  const showAside = parByGender ? hasParDifference(parByGender) : false;
+  const tooltip = showAside
+    ? `Dette hullet har annerledes par for andre kjønn. ${formatOtherGendersPar(parByGender!, playerGender)}.`
+    : '';
   return (
     <div style={containerStyle}>
       <div style={leftStyle}>
@@ -66,9 +88,39 @@ export function HoleHero(props: HoleHeroProps): JSX.Element {
         <div className="score-num" style={numberStyle}>{holeNumber}</div>
       </div>
       <div style={rightStyle}>
-        <div style={parStyle}>Par {par}</div>
+        <div style={parStyle}>
+          Par {par}
+          {showAside && (
+            <ParAsideMarker tooltip={tooltip} />
+          )}
+        </div>
         <div style={indexStyle}>indeks {strokeIndex}</div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Liten superskript-asterisk som signaliserer at hullet har avvikende par
+ * for medspillere av andre kjønn. Title-attributtet gir tooltip på desktop;
+ * long-press fanger det opp på iOS. Statisk (ingen state) — vi unngår å
+ * legge til klikkbar popover for v1. #240.
+ */
+function ParAsideMarker({ tooltip }: { tooltip: string }): JSX.Element {
+  return (
+    <sup
+      data-testid="par-aside-marker"
+      title={tooltip}
+      aria-label={tooltip}
+      style={{
+        marginLeft: 2,
+        fontSize: '0.55em',
+        fontWeight: 600,
+        color: 'var(--text-muted)',
+        cursor: 'help',
+      }}
+    >
+      *
+    </sup>
   );
 }

@@ -60,6 +60,13 @@ export type TeamHoleRow = {
   teamNet: number | null;
   contributorIds: string[];
   players: PlayerHoleCell[];
+  /**
+   * Per-kjønn-par for hullet, propagert fra `LbHole.parByGender`. UI-laget
+   * bruker dette til å vise avvik-indikator i hull-drill-down når hullet har
+   * annerledes par for medspillere av andre kjønn. Optional — fraværende når
+   * hullet ikke har per-kjønn-overstyring. #240.
+   */
+  parByGender?: { mens: number; ladies: number; juniors: number };
 };
 
 export type TeamLine = {
@@ -163,6 +170,7 @@ export function computeLeaderboard(opts: {
           teamNet: bb.teamNet,
           contributorIds: bb.contributors,
           players: playerCells,
+          parByGender: hole.parByGender,
         };
       });
 

@@ -30,6 +30,13 @@ import {
 } from '@/lib/games/scorecardLayout';
 import { nameInitials } from '@/lib/names/initials';
 import { firstName } from '@/lib/firstName';
+import {
+  hasParDifference,
+  formatOtherGendersPar,
+  parForPlayer,
+  type HoleParByGender,
+} from '@/lib/games/parDisplay';
+import type { ScoringGender } from '@/lib/scoring/modes/types';
 
 type Params = Promise<{ id: string }>;
 
@@ -137,6 +144,7 @@ export default async function ScorecardPage({ params }: { params: Params }) {
             layout={layout}
             submittedAt={me.submitted_at}
             revealState={state}
+            myTeeGender={me.tee_gender}
           />
         </Suspense>
       </div>
@@ -150,12 +158,14 @@ async function ScorecardTable({
   layout,
   submittedAt,
   revealState: state,
+  myTeeGender,
 }: {
   gameId: string;
   courseId: string;
   layout: ScorecardLayout;
   submittedAt: string | null;
   revealState: RevealState;
+  myTeeGender: ScoringGender;
 }) {
   const showHandicapTotal = state !== 'reveal-active';
   const showNetto = !shouldHideNetto(state);
@@ -209,6 +219,7 @@ async function ScorecardTable({
           primaryHandicap={layout.primaryHandicap}
           showNetto={showNetto}
           showHandicapTotal={showHandicapTotal}
+          myTeeGender={myTeeGender}
         />
       ) : (
         <LayoutBTable
@@ -218,6 +229,7 @@ async function ScorecardTable({
           isStableford={layout.isStableford}
           isMatchplay={layout.isMatchplay}
           showNetto={showNetto}
+          myTeeGender={myTeeGender}
         />
       )}
 
@@ -271,6 +283,7 @@ function LayoutATable({
   primaryHandicap,
   showNetto,
   showHandicapTotal,
+  myTeeGender,
 }: {
   holes: HoleRow[];
   scoresByUserHole: Map<string, number | null>;
@@ -278,11 +291,23 @@ function LayoutATable({
   primaryHandicap: number;
   showNetto: boolean;
   showHandicapTotal: boolean;
+  myTeeGender: ScoringGender;
 }) {
   const rows = holes.map((h) => {
     const strokes = scoresByUserHole.get(`${primaryUserId}#${h.hole_number}`) ?? null;
     const extra = strokesForHole(primaryHandicap, h.stroke_index);
-    return { ...h, par: h.par_mens, strokes, extra };
+    const parByGender: HoleParByGender = {
+      mens: h.par_mens,
+      ladies: h.par_ladies,
+      juniors: h.par_juniors,
+    };
+    return {
+      ...h,
+      par: parForPlayer(parByGender, myTeeGender),
+      parByGender,
+      strokes,
+      extra,
+    };
   });
 
   const playedHoles = rows.filter((r) => r.strokes != null);
@@ -328,6 +353,10 @@ function LayoutATable({
               </td>
               <td className="score-num px-3 py-2.5 text-right text-muted">
                 {r.par}
+                <ParAsideInline
+                  parByGender={r.parByGender}
+                  playerGender={myTeeGender}
+                />
               </td>
               <td className="score-num px-3 py-2.5 text-right text-muted">
                 {r.stroke_index}
@@ -410,6 +439,7 @@ interface LayoutBPlayerHole {
 
 interface LayoutBHoleRow extends HoleRow {
   par: number;
+  parByGender: HoleParByGender;
   perPlayer: LayoutBPlayerHole[];
   /** Team-best netto (laveste netto blant spillerne — for best-ball-footer). */
   bestNetto: number | null;
@@ -426,6 +456,7 @@ function LayoutBTable({
   isStableford,
   isMatchplay,
   showNetto,
+  myTeeGender,
 }: {
   holes: HoleRow[];
   scoresByUserHole: Map<string, number | null>;
@@ -433,16 +464,32 @@ function LayoutBTable({
   isStableford: boolean;
   isMatchplay: boolean;
   showNetto: boolean;
+  myTeeGender: ScoringGender;
 }) {
   const rows: LayoutBHoleRow[] = holes.map((h) => {
+    const parByGender: HoleParByGender = {
+      mens: h.par_mens,
+      ladies: h.par_ladies,
+      juniors: h.par_juniors,
+    };
+    const myPar = parForPlayer(parByGender, myTeeGender);
     const perPlayer: LayoutBPlayerHole[] = columns.map((c) => {
       const strokes =
         scoresByUserHole.get(`${c.userId}#${h.hole_number}`) ?? null;
       const extra = strokesForHole(c.courseHandicap, h.stroke_index);
       const netto = strokes !== null ? strokes - extra : null;
+      // Stableford-poeng for cellen baseres på spillerens-egen par. Per
+      // d.d. mangler LayoutB per-spiller-tee_gender (columns har bare
+      // courseHandicap), så vi bruker seerens (me's) par her. Konsekvens:
+      // for blandet-kjønn-lag på et hull med per-kjønn-overstyring vil
+      // partners stableford-poeng-cell være regnet med me's par. Akseptabel
+      // begrensning for v1 — kjernen i #240 er at me's egen scoring blir
+      // korrekt (det er det de fleste blir påvirket av), og at avvikene blir
+      // synliggjort via asterisk-en. Full per-spiller-par-cell krever utvidet
+      // ScorecardColumnPlayer + ny scorecardLayout-test-flytting.
       const stablefordPoints =
         isStableford && netto !== null
-          ? computeStablefordPoints({ par: h.par_mens, netStrokes: netto })
+          ? computeStablefordPoints({ par: myPar, netStrokes: netto })
           : null;
       return { strokes, extra, netto, stablefordPoints };
     });
@@ -468,7 +515,8 @@ function LayoutBTable({
 
     return {
       ...h,
-      par: h.par_mens,
+      par: myPar,
+      parByGender,
       perPlayer,
       bestNetto,
       teamPoints,
@@ -524,6 +572,10 @@ function LayoutBTable({
               </td>
               <td className="score-num px-2 py-2 text-right text-muted">
                 {r.par}
+                <ParAsideInline
+                  parByGender={r.parByGender}
+                  playerGender={myTeeGender}
+                />
               </td>
               {r.perPlayer.map((cell, idx) => (
                 <td
@@ -604,6 +656,32 @@ function LayoutBTable({
         </tfoot>
       </table>
     </Card>
+  );
+}
+
+/**
+ * Liten avvik-indikator vist etter par-tallet i scorekortets par-kolonne.
+ * Vises bare når `parByGender` har avvik mellom kjønn. Title-attributtet
+ * gir tooltip på desktop og long-press på iOS. #240.
+ */
+function ParAsideInline({
+  parByGender,
+  playerGender,
+}: {
+  parByGender: HoleParByGender;
+  playerGender: ScoringGender;
+}) {
+  if (!hasParDifference(parByGender)) return null;
+  const tooltip = `Dette hullet har annerledes par for andre kjønn. ${formatOtherGendersPar(parByGender, playerGender)}.`;
+  return (
+    <sup
+      data-testid="par-aside-marker"
+      title={tooltip}
+      aria-label={tooltip}
+      className="ml-0.5 cursor-help text-[0.65em] font-semibold text-muted"
+    >
+      *
+    </sup>
   );
 }
 

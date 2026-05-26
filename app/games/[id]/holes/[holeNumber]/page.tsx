@@ -289,6 +289,12 @@ export default async function HolePage({ params }: { params: Params }) {
           },
           me.tee_gender,
         )}
+        parByGender={{
+          mens: hole.par_mens,
+          ladies: hole.par_ladies,
+          juniors: hole.par_juniors,
+        }}
+        playerGender={me.tee_gender}
         strokeIndex={hole.stroke_index}
         myUserId={userId}
         myCompletedHoles={myCompletedHoles}

@@ -22,7 +22,8 @@ import { BottomActionBar } from '@/components/hole/BottomActionBar';
 import { SpecificValueSheet } from '@/components/hole/SpecificValueSheet';
 import { PokalIcon } from '@/components/icons';
 import { computeStablefordPoints } from '@/lib/scoring/modes/stableford';
-import type { GameMode } from '@/lib/scoring/modes/types';
+import type { GameMode, ScoringGender } from '@/lib/scoring/modes/types';
+import type { HoleParByGender } from '@/lib/games/parDisplay';
 
 export type ClientPlayer = {
   userId: string;
@@ -50,6 +51,17 @@ export interface HoleClientProps {
   gameMode?: GameMode;
   currentHole: number;
   par: number;
+  /**
+   * Per-kjønn-par for hullet (`course_holes.par_<gender>`). Brukes til å
+   * vise avvik-indikator i `HoleHero` når hullet har annerledes par for
+   * medspillere av andre kjønn. Optional — uten den vises ingen indikator. #240.
+   */
+  parByGender?: HoleParByGender;
+  /**
+   * Spillerens tee-gender (fra `game_players.tee_gender`). Brukes til å
+   * ekskludere egen kjønn fra avvik-tooltip-en. #240.
+   */
+  playerGender?: ScoringGender;
   strokeIndex: number;
   myUserId: string;
   /**
@@ -155,6 +167,8 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     gameMode = 'best_ball_netto',
     currentHole,
     par,
+    parByGender,
+    playerGender,
     strokeIndex,
     myUserId,
     myCompletedHoles,
@@ -448,6 +462,8 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
       <HoleHero
         holeNumber={currentHole}
         par={par}
+        parByGender={parByGender}
+        playerGender={playerGender}
         strokeIndex={strokeIndex}
       />
 

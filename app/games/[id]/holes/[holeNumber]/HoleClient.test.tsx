@@ -151,6 +151,59 @@ describe('HoleClient — bottom CTA', () => {
   });
 });
 
+describe('HoleClient — par-avvik-indikator (#240)', () => {
+  it('viser ingen asterisk når parByGender ikke er satt', () => {
+    render(<HoleClient {...baseProps()} />);
+    expect(screen.queryByTestId('par-aside-marker')).not.toBeInTheDocument();
+  });
+
+  it('viser ingen asterisk når alle kjønn har samme par', () => {
+    render(
+      <HoleClient
+        {...baseProps({
+          par: 4,
+          parByGender: { mens: 4, ladies: 4, juniors: 4 },
+          playerGender: 'mens',
+        })}
+      />,
+    );
+    expect(screen.queryByTestId('par-aside-marker')).not.toBeInTheDocument();
+  });
+
+  it('viser asterisk når dame-par avviker, og tooltip ekskluderer egen kjønn', () => {
+    render(
+      <HoleClient
+        {...baseProps({
+          par: 4,
+          parByGender: { mens: 4, ladies: 5, juniors: 4 },
+          playerGender: 'mens',
+        })}
+      />,
+    );
+    const marker = screen.getByTestId('par-aside-marker');
+    expect(marker).toBeInTheDocument();
+    expect(marker.getAttribute('title')).toContain('Damer: 5');
+    expect(marker.getAttribute('title')).toContain('Junior: 4');
+    expect(marker.getAttribute('title')).not.toContain('Herrer');
+  });
+
+  it('viser asterisk når junior-par avviker for en damespiller', () => {
+    render(
+      <HoleClient
+        {...baseProps({
+          par: 5,
+          parByGender: { mens: 4, ladies: 5, juniors: 4 },
+          playerGender: 'ladies',
+        })}
+      />,
+    );
+    const marker = screen.getByTestId('par-aside-marker');
+    expect(marker.getAttribute('title')).toContain('Herrer: 4');
+    expect(marker.getAttribute('title')).toContain('Junior: 4');
+    expect(marker.getAttribute('title')).not.toContain('Damer');
+  });
+});
+
 describe('HoleClient — onboarding banner', () => {
   it('shows banner on hole 1 by default', () => {
     render(<HoleClient {...baseProps({ currentHole: 1 })} />);
