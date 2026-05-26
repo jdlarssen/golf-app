@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { createTournamentDraft } from '@/lib/cup/actions';
-import { FourballAllowanceField } from '@/components/cup/FourballAllowanceField';
+import { AllowanceField } from '@/components/admin/AllowanceField';
 
 type SearchParams = Promise<{ error?: string | string[] }>;
 
@@ -96,7 +96,14 @@ export default async function NewCupPage({
           hint="Vanlig regel: halvparten av tilgjengelige point + 0,5. Med 8 matches blir det 4,5."
         />
 
-        <FourballAllowanceField />
+        <AllowanceField
+          fieldName="fourball_allowance_pct"
+          defaultPct={85}
+          legend="Scoring for fourball-matches"
+          description="Styrer handicap for fourball-matches. Netto bruker en andel av hver spillers handicap, brutto teller laveste gross per hull per side."
+          nettoHelperText="Andel av hver spillers handicap som teller. WHS-standard for four-ball matchplay er 85."
+          bruttoHelperText="Ingen handicap — laveste gross-score per hull per side vinner. Vanlig format på ekte Ryder Cup."
+        />
 
         <div className="pt-2">
           <Button type="submit" className="w-full">

@@ -15,7 +15,7 @@ import { PlayersSection } from './sections/PlayersSection';
 import { TeamsAssignmentSection } from './sections/TeamsAssignmentSection';
 import { AdvancedSettingsSection } from './sections/AdvancedSettingsSection';
 import { RegistrationSection } from './sections/RegistrationSection';
-import { FourballAllowanceField } from '@/components/cup/FourballAllowanceField';
+import { AllowanceField } from '@/components/admin/AllowanceField';
 
 export type CourseOption = {
   id: string;
@@ -337,7 +337,13 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           />
         )}
         {gameMode === 'fourball_matchplay' && (
-          <FourballAllowanceField
+          <AllowanceField
+            fieldName="fourball_allowance_pct"
+            defaultPct={85}
+            legend="Scoring for fourball-matches"
+            description="Styrer handicap for fourball-matches. Netto bruker en andel av hver spillers handicap, brutto teller laveste gross per hull per side."
+            nettoHelperText="Andel av hver spillers handicap som teller. WHS-standard for four-ball matchplay er 85."
+            bruttoHelperText="Ingen handicap — laveste gross-score per hull per side vinner. Vanlig format på ekte Ryder Cup."
             value={fourballAllowancePct}
             onChange={setFourballAllowancePct}
             hideHiddenInput
