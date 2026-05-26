@@ -554,3 +554,75 @@ describe('texasScramble.compute — edge cases', () => {
     expect(result.teams[0].members.slice(1).every((m) => !m.isCaptain)).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Per-kjønn-par (#240). Texas-laget spiller én ball med felles scorekort —
+// kapteinen (lexicographically minste userId) eier raden, og hans/hennes
+// teeGender brukes som lag-referanse for par-display.
+// ---------------------------------------------------------------------------
+
+describe('texasScramble.compute — per-gender par (#240)', () => {
+  it('hull-rad-par settes fra kapteinens teeGender (herre-kaptein)', () => {
+    // Kaptein u1 (lex first) er herre, partner u2 er dame. par_mens=4,
+    // par_ladies=5 → lag-radens par speiler kapteinen = 4.
+    const ctx = makeCtx({
+      players: [
+        { userId: 'u1', teamNumber: 1, flightNumber: 1, courseHandicap: 0, teeGender: 'mens' },
+        { userId: 'u2', teamNumber: 1, flightNumber: 1, courseHandicap: 0, teeGender: 'ladies' },
+      ],
+      holes: [
+        { number: 1, par: 4, parByGender: { mens: 4, ladies: 5, juniors: 4 }, strokeIndex: 1 },
+      ],
+      scores: [],
+      modeConfig: {
+        kind: 'texas_scramble',
+        team_size: 2,
+        teams_count: 1,
+        team_handicap_pct: 25,
+      },
+    });
+    const result = compute(ctx);
+    expect(result.teams[0].holes[0].par).toBe(4);
+  });
+
+  it('hull-rad-par bytter når kapteinen er dame', () => {
+    // Kaptein u1 (lex first) er nå dame, partner u2 herre → par = 5.
+    const ctx = makeCtx({
+      players: [
+        { userId: 'u1', teamNumber: 1, flightNumber: 1, courseHandicap: 0, teeGender: 'ladies' },
+        { userId: 'u2', teamNumber: 1, flightNumber: 1, courseHandicap: 0, teeGender: 'mens' },
+      ],
+      holes: [
+        { number: 1, par: 4, parByGender: { mens: 4, ladies: 5, juniors: 4 }, strokeIndex: 1 },
+      ],
+      scores: [],
+      modeConfig: {
+        kind: 'texas_scramble',
+        team_size: 2,
+        teams_count: 1,
+        team_handicap_pct: 25,
+      },
+    });
+    const result = compute(ctx);
+    expect(result.teams[0].holes[0].par).toBe(5);
+  });
+
+  it('faller tilbake til hole.par når parByGender ikke er satt', () => {
+    const ctx = makeCtx({
+      players: [
+        { userId: 'u1', teamNumber: 1, flightNumber: 1, courseHandicap: 0 },
+        { userId: 'u2', teamNumber: 1, flightNumber: 1, courseHandicap: 0 },
+      ],
+      holes: par4Holes(1),
+      scores: [],
+      modeConfig: {
+        kind: 'texas_scramble',
+        team_size: 2,
+        teams_count: 1,
+        team_handicap_pct: 25,
+      },
+    });
+    const result = compute(ctx);
+    expect(result.teams[0].holes[0].par).toBe(4);
+  });
+});

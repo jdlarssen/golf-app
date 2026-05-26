@@ -18,6 +18,7 @@
 import { pickTeamCaptain } from '@/lib/games/teamCaptain';
 import { strokesForHole } from '../strokeAllocation';
 import { rankTeams } from '../tiebreaker';
+import { parFor } from './parResolver';
 import type {
   ScoringContext,
   ScoringPlayer,
@@ -94,13 +95,20 @@ export function compute(ctx: ScoringContext): TexasScrambleResult {
       );
       const teamHandicap = Math.round((combinedCourseHandicap * handicapPct) / 100);
 
+      // Kapteinen eier scores-raden, og siden Texas-laget spiller én ball
+      // bruker vi kapteinens teeGender som lag-referanse for par-display.
+      // (Lag-medlemmer kan ha ulike tee-genders i prinsippet, men kun én
+      // par-verdi gir mening for delt scorekort.) Faller tilbake til hole.par
+      // når parByGender ikke er satt. #240.
+      const captainPlayer = groupMembers.find((m) => m.userId === captainUserId);
+
       const holes: TexasScrambleHoleRow[] = holesSorted.map((hole) => {
         const teamGross = grossByKey.get(`${captainUserId}#${hole.number}`) ?? null;
         const teamExtraStrokes = strokesForHole(teamHandicap, hole.strokeIndex);
         const teamNet = teamGross === null ? null : teamGross - teamExtraStrokes;
         return {
           holeNumber: hole.number,
-          par: hole.par,
+          par: parFor(hole, captainPlayer?.teeGender),
           strokeIndex: hole.strokeIndex,
           teamGross,
           teamExtraStrokes,
