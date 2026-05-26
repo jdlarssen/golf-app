@@ -658,15 +658,6 @@ async function PlayersSections({
         </SectionCard>
       )}
 
-      {(game.status === 'draft' || game.status === 'scheduled') && (
-        <InviteToGameSection
-          gameId={gameId}
-          status={game.status}
-          gameMode={game.game_mode}
-          currentPlayerIds={players.map((p) => p.user_id)}
-        />
-      )}
-
       {players.length > 0 && (
         <SectionCard ribbon="Spillere">
           <div className="overflow-x-auto px-2 pb-3.5 pt-2">
@@ -733,6 +724,15 @@ async function PlayersSections({
             </table>
           </div>
         </SectionCard>
+      )}
+
+      {(game.status === 'draft' || game.status === 'scheduled') && (
+        <InviteToGameSection
+          gameId={gameId}
+          status={game.status}
+          gameMode={game.game_mode}
+          currentPlayerIds={players.map((p) => p.user_id)}
+        />
       )}
 
       {game.status === 'active' && (() => {
