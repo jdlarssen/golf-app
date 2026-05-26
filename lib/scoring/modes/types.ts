@@ -64,12 +64,32 @@ export type GameModeConfig =
     };
 
 /**
+ * Tee-gender på spiller-nivå. Matcher `game_players.tee_gender`-enum-en
+ * (mens/ladies/juniors) som velger hvilken par-variant en spiller spiller
+ * fra på et hull med per-kjønn-overstyring. #240.
+ */
+export type ScoringGender = 'mens' | 'ladies' | 'juniors';
+
+/**
  * Minimal hole-shape som scoring-laget trenger. Holder oss løse fra
  * Supabase `course_holes`-raden — kallsteder mapper sin egen form ned.
  */
 export interface ScoringHole {
   number: number;
+  /**
+   * Felles par-verdi. Brukes som fallback når `parByGender` ikke er satt
+   * (eksisterende tester og test-fixtures som ikke trenger per-kjønn-par).
+   * Når `parByGender` er satt, leser scoring-laget par per spiller via
+   * `parFor(hole, player.teeGender)`. #240.
+   */
   par: number;
+  /**
+   * Valgfri per-kjønn-overstyring fra `course_holes.par_mens/_ladies/_juniors`.
+   * Når NULL/undefined: alle kjønn bruker `par`. Når satt: scoring-laget
+   * velger riktig variant per spiller (eller per lag-kaptein for Texas
+   * scramble der laget spiller felles ball). #240.
+   */
+  parByGender?: { mens: number; ladies: number; juniors: number };
   /**
    * Stroke index 1..18. Brukes av allocateStrokes/strokesForHole for
    * å bestemme hvilke hull spilleren får slag på.
@@ -84,6 +104,13 @@ export interface ScoringPlayer {
   /** Null for solo-spill (stableford). */
   flightNumber: number | null;
   courseHandicap: number;
+  /**
+   * Spillerens tee-gender (fra `game_players.tee_gender`). Brukes til å
+   * velge riktig par fra `hole.parByGender`. Default `'mens'` når feltet
+   * ikke er satt — bevarer eksisterende test-oppførsel og brukes også som
+   * fallback når hole bare har felles `par`. #240.
+   */
+  teeGender?: ScoringGender;
 }
 
 export interface ScoringHoleScore {
