@@ -194,6 +194,7 @@ async function TilesGrid() {
     coursesRes,
     lastFinishedRes,
     lastPublishedRes,
+    activeCupsRes,
   ] = await Promise.all([
     supabase
       .from('games')
@@ -223,6 +224,10 @@ async function TilesGrid() {
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
+    supabase
+      .from('tournaments')
+      .select('id', { count: 'exact', head: true })
+      .in('status', ['draft', 'active']),
   ]);
 
   const activeCount = activeGamesRes.count ?? 0;
@@ -235,6 +240,7 @@ async function TilesGrid() {
   const lastPublishedAt = (
     lastPublishedRes.data as { created_at: string | null } | null
   )?.created_at;
+  const activeCupCount = activeCupsRes.count ?? 0;
 
   // Trusted-non-admin: kun Baner-tile (resten av Sekretariatet er admin-only,
   // self-gatet på sub-route-nivå — å vise tiles til ruter de blir redirected
@@ -283,6 +289,15 @@ async function TilesGrid() {
             ? `Sist publisert ${formatShortDateNb(lastPublishedAt)}`
             : 'Ingen publisert ennå',
           icon: 'sparkle',
+        },
+        {
+          label: 'Cuper',
+          href: '/admin/cup',
+          meta:
+            activeCupCount === 0
+              ? 'Ingen aktive'
+              : `${activeCupCount} aktiv${activeCupCount === 1 ? '' : 'e'}`,
+          icon: 'pokal',
         },
       ]
     : [banerTile];

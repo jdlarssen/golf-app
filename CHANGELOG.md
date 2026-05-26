@@ -10,16 +10,44 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.31.y — Ryder Cup-stil cuper
+
+Fase 1 av [#47](https://github.com/jdlarssen/golf-app/issues/47). Du kan nå binde flere matchplay-runder sammen til én lag-vs-lag-cup, og følge fordelingen av point på et felles leaderboard.
+
+### [1.31.0] - 2026-05-26
+
+> Du kan nå sette opp en cup som binder flere matchplay-runder sammen mot hverandre. Lag «Team Skog» og «Team Sjø» kan møtes over flere matches gjennom helgen, og første lag til point-målet (typisk 4,5 av 8) vinner cupen. Hver match teller som vanlig — vunnet match = 1 point, halvert (AS) = 0,5 til hvert lag. Når cupen avsluttes går det ut en e-post til alle deltakere med vinneren og sluttresultatet.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- Ny migrasjon [supabase/migrations/0039_tournaments.sql](supabase/migrations/0039_tournaments.sql) med `tournaments`-tabell (navn, lag-navn, points_to_win, status draft/active/finished, winner_team) + `games.tournament_id` (FK med `ON DELETE SET NULL`) + `games.tournament_match_label`. RLS lar alle innloggede lese cup-en.
+- Ren scoring-aggregator [lib/cup/computeCupLeaderboard.ts](lib/cup/computeCupLeaderboard.ts) — mapper match-summary-er til lag-points (1 / 0,5 / 0) og deklarerer vinner når point-mål er nådd. 11 unit-tester dekker alle kombinasjoner (vunnet, halvert, in-progress, blanding, vinner-deklarert, eksplisitt winner_team fra DB).
+- Komposisjons-laget [lib/cup/getCupSnapshot.ts](lib/cup/getCupSnapshot.ts) — laster tournament + matches + game_players + scores + course_holes, kjører `singlesMatchplay.compute` per match, aggregerer til master-leaderboard. Returnerer `{tournament, leaderboard, roster}` for både admin-detalj og offentlig leaderboard.
+- Server-actions i [lib/cup/actions.ts](lib/cup/actions.ts): `createTournamentDraft`, `updateTournament`, `startTournament` (krever ≥2 matches), `finishTournament` (avgjør winner_team fra leaderboard), `deleteTournament`. Alle gated på `requireAdmin`. Start/finish kjører best-effort `Promise.allSettled`-fan-out til deltakere via to nye Resend-maler i [lib/mail/cupStartedNotification.ts](lib/mail/cupStartedNotification.ts) og [lib/mail/cupFinishedNotification.ts](lib/mail/cupFinishedNotification.ts).
+- Admin-flate på [app/admin/cup/](app/admin/cup): list-side, opprett-side, detalj-side (cup-info, master-leaderboard-preview, lag-roster, matches-liste, start/avslutt-knapper), og dedikert slett-konfirmasjons-side per destructive-actions-pattern.
+- Offentlig master-leaderboard på [app/cup/[id]/page.tsx](app/cup/%5Bid%5D/page.tsx). Store lag-point med `font-serif tabular-nums 5xl`, champagne-gold-accent på vinner-lag når cup-en er ferdig. Auth-gated av `proxy.ts` (innlogget-only, ikke admin-only).
+- «Cuper»-tile på [app/admin/page.tsx](app/admin/page.tsx) med count av aktive cuper.
+
+#### Changed
+- [app/admin/games/new/page.tsx](app/admin/games/new/page.tsx) leser nå `?tournament_id=` og pre-fyller `game_mode='singles_matchplay'` + `lock_game_mode=true` + auto-genererer match-label «Singles N». Submit redirecter tilbake til `/admin/cup/[id]` med revalidateTag for `tournament-${id}`. Hidden inputs i både `GameForm` og `GameWizard.FormDataInputs` slik at både wizard-mode og full-mode-form-en sender med cup-koblingen.
+- `lib/database.types.ts` regenerert med nye `tournaments`-rad + `games.tournament_id` / `tournament_match_label`-kolonner.
+
+</details>
+
+---
+
 ## 1.30.y — Spill-invitasjoner med bell-prikk
+
+<details>
+<summary><strong>1.30.y — Spill-invitasjoner med bell-prikk (2 oppføringer) — klikk for å vise</strong></summary>
 
 Issue [#182](https://github.com/jdlarssen/golf-app/issues/182). Notifikasjons-systemet kobler seg nå på spill-rosteren. Når admin legger en spiller til på et spill kommer bell-prikken med en gang, både for kompiser som allerede har Tørny og for nye som inviteres på e-post. Patch på toppen ([#235](https://github.com/jdlarssen/golf-app/issues/235)) la til typisk-range-hint på slope/CR-feltene i bane-skjemaet.
 
 ### [1.30.1] - 2026-05-26
 
 > Når du taster slope og CR for en tee, ser du nå hva som er typisk på norske baner — gjør det lettere å fange opp en tastefeil før du lagrer.
-
-<details>
-<summary>Teknisk</summary>
 
 #### Added
 - [app/admin/courses/CourseForm.tsx](app/admin/courses/CourseForm.tsx) — `TYPICAL_HINTS`-const per kjønn (mens/ladies/juniors) mapper til `{slope, cr}`-tekst. Videresendes til `Input`-komponentens eksisterende `hint`-prop ([components/ui/Input.tsx:29-31](components/ui/Input.tsx:29)), som rendrer muted `text-xs`-tekst rett under feltet. Identisk visuell vekt med eksisterende banelengde-hint.
@@ -31,14 +59,9 @@ Issue [#182](https://github.com/jdlarssen/golf-app/issues/182). Notifikasjons-sy
 - Beholder eksisterende herre-placeholder (113 / 70.0). Damer/junior beholder tomme placeholders — vi vil ikke pre-foreslå konkrete tall der admin oftere taster verdier som avviker fra suggested-value.
 - Utsatt fra Fase 1 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Ingen DB-migrasjon, ingen scoring-impact.
 
-</details>
-
 ### [1.30.0] - 2026-05-26
 
 > Spillere som blir lagt til et spill får nå et varsel i appen, i tillegg til e-posten. Bell-prikken lyser så snart admin har lagt deg på rosteren, slik at du oppdager turneringen før spillet starter.
-
-<details>
-<summary>Teknisk</summary>
 
 #### Added
 - Ny helper `lib/notifications/notifyInvitedToGame.ts`: henter spill + inviter, bygger `invite`-payload og kaller `notify()` best-effort. Skipper finished-spill. Brukes fra alle tre nye call-sites under.
@@ -124,6 +147,8 @@ Fase 4 (og siste fase) av epic [#223](https://github.com/jdlarssen/golf-app/issu
 
 #### Fixed
 - Inline `requireAdmin`-helper i [app/admin/courses/[id]/edit/actions.ts](app/admin/courses/%5Bid%5D/edit/actions.ts) er fjernet til fordel for delt helper i `lib/admin/auth.ts` — én sannhetskilde for rolle-gating på courses-flyten.
+
+</details>
 
 </details>
 
