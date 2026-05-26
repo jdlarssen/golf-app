@@ -2,7 +2,19 @@
 
 **Issue:** [#234](https://github.com/jdlarssen/golf-app/issues/234)
 **Branch:** `claude/stoic-sammet-5a66ab`
-**Status:** Active
+**Status:** Implemented — evaluating
+
+## Evidence
+
+- Knapp + plassering: [app/admin/courses/CourseForm.tsx:351-364](app/admin/courses/CourseForm.tsx) — `text-[11px] font-medium text-muted` text-link mellom herrer-block og dame-toggle.
+- Visibility: same lines — `tee.slope_mens !== '' && tee.course_rating_mens !== '' && (tee.slope_ladies === '' || ... || tee.course_rating_juniors === '')`.
+- Click handler: [app/admin/courses/CourseForm.tsx:198-210](app/admin/courses/CourseForm.tsx) `copyMensToAllGenders(index)`.
+- Per-tee: handler is index-scoped; verified by test "skjuler kopier-knappen på den tee-en hvor klikket skjedde, men ikke på andre tee-er".
+- Tests: 6 new cases in [app/admin/courses/CourseForm.test.tsx:272-451](app/admin/courses/CourseForm.test.tsx). `npx vitest run` → 1187 passed (102 files).
+- Lint: `npx eslint app/admin/courses/CourseForm.tsx CourseForm.test.tsx` clean (pre-existing baseline errors in `e2e/sync/offline-sync.spec.ts` are unrelated).
+- Typecheck: `npx tsc --noEmit` clean.
+- Bump + CHANGELOG: package.json 1.29.0 → 1.29.1, oppføring under `## 1.29.y` ([CHANGELOG.md:17-37](CHANGELOG.md)).
+- Commit: `d724b7a feat(admin/courses): «Kopier til alle kjønn»-helper på tee-rating`.
 
 ## Bakgrunn
 
@@ -28,26 +40,26 @@ For mange baner — særlig gul tee — er slope/CR nær identisk for herrer, da
 
 ## Success Criteria
 
-- [ ] **Knappen finnes og er korrekt plassert.** En text-link-stil knapp (`type="button"`) med teksten «Kopier til alle kjønn» rendres mellom herrer-`GenderRatingBlock` og dame-seksjonen, per tee-boks. Stil-mønster: liten tekst, samme subtile lenke-følelse som «Fjern dame-rating»-knappen (text-[11px] eller -xs, font-medium, text-muted/text-text-hover).
-- [ ] **Synlighets-logikk.** Knappen vises kun når **alle disse** er sanne for nåværende tee:
+- [x] **Knappen finnes og er korrekt plassert.** En text-link-stil knapp (`type="button"`) med teksten «Kopier til alle kjønn» rendres mellom herrer-`GenderRatingBlock` og dame-seksjonen, per tee-boks. Stil-mønster: liten tekst, samme subtile lenke-følelse som «Fjern dame-rating»-knappen (text-[11px] eller -xs, font-medium, text-muted/text-text-hover).
+- [x] **Synlighets-logikk.** Knappen vises kun når **alle disse** er sanne for nåværende tee:
   1. `slope_mens` er ikke tom streng.
   2. `course_rating_mens` er ikke tom streng.
   3. Minst én av: `slope_ladies`, `course_rating_ladies`, `slope_juniors`, `course_rating_juniors` er tom streng.
   
   Når begge dame- og junior-blokkene har komplette slope+CR-verdier (uansett om de matcher herrer eller ikke), skjules knappen.
-- [ ] **Klikk-handler oppfører seg korrekt.** Klikk utfører atomisk:
+- [x] **Klikk-handler oppfører seg korrekt.** Klikk utfører atomisk:
   1. Setter `slope_ladies` og `course_rating_ladies` til herrer-verdiene (overskriver eksisterende).
   2. Setter `slope_juniors` og `course_rating_juniors` til herrer-verdiene (overskriver eksisterende).
   3. Ekspanderer dame-blokken hvis kollapset.
   4. Ekspanderer junior-blokken hvis kollapset.
   5. Skjuler seg selv (siden begge nå har data).
-- [ ] **Per-tee uavhengighet.** I et skjema med flere tee-bokser (f.eks. Gul + Rød): klikk på Gul sin kopier-knapp påvirker kun Gul-radens dame/junior-felt, ikke Rød.
-- [ ] **Form-submit funker som vanlig.** Etter klikk skal FormData inneholde `tee_${index}_slope_ladies` og `_juniors` (samme verdier som `_mens`). Eksisterende server-action-validering (partial vs. complete per kjønn) i `[id]/edit/actions.ts` passerer fordi alle tre kjønn nå er komplette.
-- [ ] **Tester.** Minst tre nye tester i `CourseForm.test.tsx` som dekker:
+- [x] **Per-tee uavhengighet.** I et skjema med flere tee-bokser (f.eks. Gul + Rød): klikk på Gul sin kopier-knapp påvirker kun Gul-radens dame/junior-felt, ikke Rød.
+- [x] **Form-submit funker som vanlig.** Etter klikk skal FormData inneholde `tee_${index}_slope_ladies` og `_juniors` (samme verdier som `_mens`). Eksisterende server-action-validering (partial vs. complete per kjønn) i `[id]/edit/actions.ts` passerer fordi alle tre kjønn nå er komplette.
+- [x] **Tester.** Minst tre nye tester i `CourseForm.test.tsx` som dekker:
   - Synlighet: knapp vises ikke før herrer er fylt, vises når herrer fylt + dame/junior tomme, skjules når begge andre kjønn fullt utfylt.
   - Klikk-effekt: knapp ekspanderer + fyller begge kollapsede blokker.
   - Overskriv: gitt dame har eksisterende verdier ulik herrer, fyller klikket med herrer-verdiene.
-- [ ] **CHANGELOG + version-bump.** Patch-bump (1.29.0 → 1.29.1) med stakeholder-tagline + Teknisk-seksjon. Norsk på tagline, kjørt mentalt gjennom humanizer (ingen anglisismer, ingen «X-spillet»-redundans, ingen em-dash-kjeder).
+- [x] **CHANGELOG + version-bump.** Patch-bump (1.29.0 → 1.29.1) med stakeholder-tagline + Teknisk-seksjon. Norsk på tagline, kjørt mentalt gjennom humanizer (ingen anglisismer, ingen «X-spillet»-redundans, ingen em-dash-kjeder).
 
 ## UX-detaljer
 
