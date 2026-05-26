@@ -6,9 +6,11 @@
 
 import { strokesForHole } from '../strokeAllocation';
 import { rankTeams } from '../tiebreaker';
+import { parFor } from './parResolver';
 import type {
   ScoringContext,
   ScoringHole,
+  ScoringPlayer,
   StablefordResult,
   StablefordSoloResult,
   StablefordTeamResult,
@@ -57,7 +59,7 @@ interface PlayerHolePoints {
 }
 
 function computePlayerHolePoints(
-  player: { userId: string; courseHandicap: number },
+  player: ScoringPlayer,
   holesSorted: ScoringHole[],
   grossByKey: Map<string, number | null>,
 ): PlayerHolePoints {
@@ -73,7 +75,10 @@ function computePlayerHolePoints(
     }
     const extra = strokesForHole(player.courseHandicap, hole.strokeIndex);
     const net = gross - extra;
-    const points = computeStablefordPoints({ par: hole.par, netStrokes: net });
+    const points = computeStablefordPoints({
+      par: parFor(hole, player.teeGender),
+      netStrokes: net,
+    });
     perHole.push(points);
     totalPoints += points;
     holesPlayed += 1;
@@ -197,7 +202,7 @@ function computeTeam(ctx: ScoringContext): StablefordTeamResult {
         const extra = strokesForHole(p.courseHandicap, hole.strokeIndex);
         const netStrokes = grossVal === null ? null : grossVal - extra;
         const points = computeStablefordPoints({
-          par: hole.par,
+          par: parFor(hole, p.teeGender),
           netStrokes,
         });
         return {
@@ -227,9 +232,15 @@ function computeTeam(ctx: ScoringContext): StablefordTeamResult {
         pc.isContributor = hasRealContribution && pc.points === teamPoints;
       }
 
+      // StablefordTeamHoleRow.par representerer hullets par for display.
+      // For blandet-kjønn-lag bruker vi første medlem som lag-representant
+      // (parFor() faller tilbake til hole.par når parByGender ikke er satt).
+      // Tomme lag (defensiv edge-case) får hole.par direkte. #240.
+      const teamPar = members.length === 0 ? hole.par : parFor(hole, members[0].teeGender);
+
       return {
         holeNumber: hole.number,
-        par: hole.par,
+        par: teamPar,
         strokeIndex: hole.strokeIndex,
         teamPoints,
         contributorIds,

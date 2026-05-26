@@ -680,3 +680,110 @@ describe('compute (team stableford, par/4BBB)', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Per-kjønn-par (#240). Når hull har `parByGender` settes, leser scoring-
+// laget par via `parFor(hole, player.teeGender)` per spiller — slik at
+// herrer og damer kan ha ulik par-referanse på samme fysiske hull.
+// ---------------------------------------------------------------------------
+
+describe('compute — per-gender par (#240)', () => {
+  it('solo: herre og dame får ulike poeng på samme gross når parByGender differerer', () => {
+    // Hull 1: par_mens=4, par_ladies=5. Begge spillere skyter 5 strokes
+    // (CH=0 → ingen extra strokes).
+    //   Herre (u1, teeGender 'mens'):   5 mot par 4 = bogey  → 1 poeng.
+    //   Dame  (u2, teeGender 'ladies'): 5 mot par 5 = par    → 2 poeng.
+    const ctx = makeCtx({
+      players: [
+        { userId: 'u1', teamNumber: null, flightNumber: null, courseHandicap: 0, teeGender: 'mens' },
+        { userId: 'u2', teamNumber: null, flightNumber: null, courseHandicap: 0, teeGender: 'ladies' },
+      ],
+      holes: [
+        { number: 1, par: 4, parByGender: { mens: 4, ladies: 5, juniors: 4 }, strokeIndex: 1 },
+      ],
+      scores: [
+        { userId: 'u1', holeNumber: 1, gross: 5 },
+        { userId: 'u2', holeNumber: 1, gross: 5 },
+      ],
+    });
+    const result = compute(ctx);
+    if (result.variant !== 'solo') throw new Error('expected solo');
+    const u1 = result.players.find((p) => p.userId === 'u1')!;
+    const u2 = result.players.find((p) => p.userId === 'u2')!;
+    expect(u1.totalPoints).toBe(1); // bogey vs par 4
+    expect(u2.totalPoints).toBe(2); // par vs par 5
+  });
+
+  it('team: par-stableford med blandet kjønn — MAX-poeng plukker damens par-resultat', () => {
+    // To lag, hver med én herre og én dame. Par_mens=4, par_ladies=5 på hull 1.
+    // Alle gross=5, CH=0. Forventet:
+    //   herrer (u1, u3): bogey vs par 4 = 1 poeng
+    //   damer  (u2, u4): par   vs par 5 = 2 poeng
+    //   Lag-poeng = MAX(1, 2) = 2 for begge lag.
+    const ctx = {
+      game: {
+        id: 'g1',
+        game_mode: 'stableford' as const,
+        mode_config: { kind: 'stableford' as const, team_size: 2 as const, points_table: 'standard' as const },
+      },
+      players: [
+        { userId: 'u1', teamNumber: 1, flightNumber: 1, courseHandicap: 0, teeGender: 'mens' as const },
+        { userId: 'u2', teamNumber: 1, flightNumber: 1, courseHandicap: 0, teeGender: 'ladies' as const },
+        { userId: 'u3', teamNumber: 2, flightNumber: 2, courseHandicap: 0, teeGender: 'mens' as const },
+        { userId: 'u4', teamNumber: 2, flightNumber: 2, courseHandicap: 0, teeGender: 'ladies' as const },
+      ],
+      holes: [{ number: 1, par: 4, parByGender: { mens: 4, ladies: 5, juniors: 4 }, strokeIndex: 1 }],
+      scores: [
+        { userId: 'u1', holeNumber: 1, gross: 5 },
+        { userId: 'u2', holeNumber: 1, gross: 5 },
+        { userId: 'u3', holeNumber: 1, gross: 5 },
+        { userId: 'u4', holeNumber: 1, gross: 5 },
+      ],
+    };
+    const result = compute(ctx);
+    if (result.variant !== 'team') throw new Error('expected team');
+    const team1 = result.teams.find((t) => t.teamNumber === 1)!;
+    expect(team1.holes[0].teamPoints).toBe(2); // MAX(1, 2) = 2
+    expect(team1.holes[0].players.find((p) => p.userId === 'u1')!.points).toBe(1);
+    expect(team1.holes[0].players.find((p) => p.userId === 'u2')!.points).toBe(2);
+    // Contributor: kun damen (u2) hadde MAX.
+    expect(team1.holes[0].contributorIds).toEqual(['u2']);
+  });
+
+  it('backward compat: hull uten parByGender bruker hole.par for alle spillere', () => {
+    // Eksisterende tester sender ikke parByGender/teeGender — alt skal
+    // fortsatt fungere som før, dvs. hole.par brukes direkte.
+    const ctx = makeCtx({
+      players: [{ userId: 'u1', teamNumber: null, flightNumber: null, courseHandicap: 0 }],
+      holes: par4Holes(1), // par: 4, ingen parByGender
+      scores: [{ userId: 'u1', holeNumber: 1, gross: 4 }],
+    });
+    const result = compute(ctx);
+    if (result.variant !== 'solo') throw new Error('expected solo');
+    expect(result.players[0].totalPoints).toBe(2); // par
+  });
+
+  it('teamPar på StablefordTeamHoleRow.par bruker første medlem som representant', () => {
+    // Lag 1 har én dame (u1) først i player-listen og én herre (u2).
+    // Med par_mens=4, par_ladies=5 → teamPar = 5 (damens par).
+    const ctx = {
+      game: {
+        id: 'g1',
+        game_mode: 'stableford' as const,
+        mode_config: { kind: 'stableford' as const, team_size: 2 as const, points_table: 'standard' as const },
+      },
+      players: [
+        { userId: 'u1', teamNumber: 1, flightNumber: 1, courseHandicap: 0, teeGender: 'ladies' as const },
+        { userId: 'u2', teamNumber: 1, flightNumber: 1, courseHandicap: 0, teeGender: 'mens' as const },
+      ],
+      holes: [{ number: 1, par: 4, parByGender: { mens: 4, ladies: 5, juniors: 4 }, strokeIndex: 1 }],
+      scores: [
+        { userId: 'u1', holeNumber: 1, gross: 5 },
+        { userId: 'u2', holeNumber: 1, gross: 5 },
+      ],
+    };
+    const result = compute(ctx);
+    if (result.variant !== 'team') throw new Error('expected team');
+    expect(result.teams[0].holes[0].par).toBe(5);
+  });
+});
