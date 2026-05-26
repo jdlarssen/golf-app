@@ -266,10 +266,13 @@ async function EditCourseFormBody({
     : (affectedGamesResult.count ?? 0);
 
   // Numeric fields are stringified so the form's controlled inputs preserve
-  // in-progress decimal entry (see CourseForm.tsx for context).
+  // in-progress decimal entry (see CourseForm.tsx for context). Per-kjønn-
+  // par sendes ned slik at avvik kan vises og endres i form.
   const initialHoles = (holesResult.data ?? []).map((h) => ({
     hole_number: h.hole_number,
-    par: String(h.par_mens),
+    par_mens: String(h.par_mens),
+    par_ladies: String(h.par_ladies),
+    par_juniors: String(h.par_juniors),
     stroke_index: String(h.stroke_index),
   }));
 

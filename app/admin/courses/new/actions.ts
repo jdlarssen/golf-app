@@ -65,21 +65,36 @@ export async function createCourse(formData: FormData) {
     stroke_index: number;
   }[] = [];
   for (let i = 1; i <= 18; i++) {
-    const par = Number(formData.get(`hole_${i}_par`));
+    const parMensRaw = formData.get(`hole_${i}_par_mens`);
+    // Backward-compat: hvis ny `_mens`-feltet mangler (ingen formdata med
+    // det nye navnet), fall tilbake til det gamle `hole_${i}_par`-navnet.
+    // Hovedstien sender alltid `_mens` etter at CourseForm ble oppdatert.
+    const parMens = Number(parMensRaw ?? formData.get(`hole_${i}_par`));
+    // For damer og junior: når seksjonen er kollapset i form, sendes
+    // hidden-mirror-input med samme verdi som par_mens. Hvis ingen verdi
+    // finnes (eldre form-payload), fall tilbake til par_mens slik at
+    // INSERT-en alltid får tre tall.
+    const parLadiesRaw = formData.get(`hole_${i}_par_ladies`);
+    const parLadies =
+      parLadiesRaw === null ? parMens : Number(parLadiesRaw);
+    const parJuniorsRaw = formData.get(`hole_${i}_par_juniors`);
+    const parJuniors =
+      parJuniorsRaw === null ? parMens : Number(parJuniorsRaw);
     const si = Number(formData.get(`hole_${i}_si`));
-    if (!Number.isInteger(par) || par < 3 || par > 6) {
-      redirect('/admin/courses/new?error=bad_par');
+
+    for (const par of [parMens, parLadies, parJuniors]) {
+      if (!Number.isInteger(par) || par < 3 || par > 6) {
+        redirect('/admin/courses/new?error=bad_par');
+      }
     }
     if (!Number.isInteger(si) || si < 1 || si > 18) {
       redirect('/admin/courses/new?error=bad_si');
     }
-    // Per-kjønn-par lagres separat. I denne flyten (uten avvikende par UI ennå)
-    // setter vi samme par for alle tre kjønn — utvides i senere chunk.
     holes.push({
       hole_number: i,
-      par_mens: par,
-      par_ladies: par,
-      par_juniors: par,
+      par_mens: parMens,
+      par_ladies: parLadies,
+      par_juniors: parJuniors,
       stroke_index: si,
     });
   }
@@ -91,10 +106,12 @@ export async function createCourse(formData: FormData) {
     redirect('/admin/courses/new?error=si_duplicate');
   }
 
-  // par_total per kjønn er antatt identisk på tvers av kjønn (sann for ~99%
-  // av norske baner). Brukes per kjønn der slope+CR er fylt ut. Per-kjønn-
-  // overstyring er Fase 2-utvidelse hvis det blir aktuelt.
-  const parSum = holes.reduce((s, h) => s + h.par_mens, 0);
+  // par_total per kjønn deriveres fra hullene per kjønn — auto-sync med
+  // course_holes-radene som blir insertet. Når et kjønn ikke har avvik
+  // matcher dette tallet par_total_mens, så ingen migrasjons-impact.
+  const parSumMens = holes.reduce((s, h) => s + h.par_mens, 0);
+  const parSumLadies = holes.reduce((s, h) => s + h.par_ladies, 0);
+  const parSumJuniors = holes.reduce((s, h) => s + h.par_juniors, 0);
 
   // Parse tee boxes. Rows with an empty name are skipped — the form sends up
   // to MAX_TEE_BOXES slots but only the populated ones count.
@@ -155,13 +172,13 @@ export async function createCourse(formData: FormData) {
       length_meters: lengthMeters,
       slope_mens: mensRating.slope,
       course_rating_mens: mensRating.course_rating,
-      par_total_mens: isCompleteRating(mensRating) ? parSum : null,
+      par_total_mens: isCompleteRating(mensRating) ? parSumMens : null,
       slope_ladies: ladiesRating.slope,
       course_rating_ladies: ladiesRating.course_rating,
-      par_total_ladies: isCompleteRating(ladiesRating) ? parSum : null,
+      par_total_ladies: isCompleteRating(ladiesRating) ? parSumLadies : null,
       slope_juniors: juniorsRating.slope,
       course_rating_juniors: juniorsRating.course_rating,
-      par_total_juniors: isCompleteRating(juniorsRating) ? parSum : null,
+      par_total_juniors: isCompleteRating(juniorsRating) ? parSumJuniors : null,
     });
   }
   if (teeBoxes.length === 0) {

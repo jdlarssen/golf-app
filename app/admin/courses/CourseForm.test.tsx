@@ -10,7 +10,9 @@ import {
 function makeHoles(pars: number[]): HoleData[] {
   return pars.map((par, i) => ({
     hole_number: i + 1,
-    par: String(par),
+    par_mens: String(par),
+    par_ladies: String(par),
+    par_juniors: String(par),
     stroke_index: String(i + 1),
   }));
 }
@@ -26,7 +28,7 @@ describe('hasHoleChanges', () => {
 
   it('returnerer true når par på ett hull er endret', () => {
     const current = makeHoles(Array(18).fill(4));
-    current[4].par = '5';
+    current[4].par_mens = '5';
     expect(hasHoleChanges(baseline, current)).toBe(true);
   });
 
@@ -53,7 +55,7 @@ describe('sumHolePars', () => {
 
   it('ignorerer hull med ugyldig par-streng', () => {
     const holes = makeHoles([4, 4, 4]);
-    holes[1].par = '';
+    holes[1].par_mens = '';
     expect(sumHolePars(holes)).toBe(8);
   });
 
@@ -92,7 +94,7 @@ describe('CourseForm — par tap-knapper', () => {
 
     expect(five.getAttribute('aria-checked')).toBe('true');
     const hidden = container.querySelector<HTMLInputElement>(
-      'input[type="hidden"][name="hole_1_par"]',
+      'input[type="hidden"][name="hole_1_par_mens"]',
     );
     expect(hidden?.value).toBe('5');
   });
@@ -375,6 +377,210 @@ describe('CourseForm — Tøm dette kjønnet', () => {
     );
 
     expect(screen.getAllByRole('button', { name: /tøm dette kjønnet/i }).length).toBe(3);
+  });
+});
+
+describe('CourseForm — per-kjønn-par-overstyring', () => {
+  it('viser kollapset toggle for damer og junior som default på new-flyt', () => {
+    render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+
+    expect(
+      screen.getByRole('button', { name: /legg til avvikende par for damer/i }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: /legg til avvikende par for junior/i }),
+    ).toBeTruthy();
+    // Når kollapset: ingen ekstra radio-group for dame/junior-par på hull 1.
+    expect(
+      screen.queryByRole('radiogroup', {
+        name: /par for hull 1 \(avvikende par for damer\)/i,
+      }),
+    ).toBeNull();
+  });
+
+  it('eksponerer 18 nye par-rader når «avvikende par for damer» klikkes', () => {
+    render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /legg til avvikende par for damer/i }),
+    );
+
+    // Avvikende-seksjon viser 18 radiogrupper med matching aria-label.
+    const dameGroups = screen.getAllByRole('radiogroup', {
+      name: /\(avvikende par for damer\)/i,
+    });
+    expect(dameGroups).toHaveLength(18);
+  });
+
+  it('rendrer hidden-inputs hole_${n}_par_ladies når dame-par-seksjonen er utvidet', () => {
+    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /legg til avvikende par for damer/i }),
+    );
+
+    const ladiesHidden = container.querySelectorAll<HTMLInputElement>(
+      'input[type="hidden"][name^="hole_"][name$="_par_ladies"]',
+    );
+    expect(ladiesHidden.length).toBe(18);
+    expect(ladiesHidden[0].value).toBe('4');
+  });
+
+  it('rendrer mirror-input par_ladies = par_mens når dame-par-seksjonen er kollapset', () => {
+    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+
+    // Kollapset = mirror-inputs sender samme verdi som par_mens.
+    const ladiesHidden = container.querySelectorAll<HTMLInputElement>(
+      'input[type="hidden"][name^="hole_"][name$="_par_ladies"]',
+    );
+    expect(ladiesHidden.length).toBe(18);
+    expect(ladiesHidden[0].value).toBe('4');
+  });
+
+  it('hovedrad-endring speiles til par_ladies/par_juniors så lenge seksjonene er kollapset', () => {
+    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+
+    const hole1Group = screen.getByRole('radiogroup', { name: 'Par for hull 1' });
+    fireEvent.click(within(hole1Group).getByRole('radio', { name: '5' }));
+
+    const ladies1 = container.querySelector<HTMLInputElement>(
+      'input[type="hidden"][name="hole_1_par_ladies"]',
+    );
+    const juniors1 = container.querySelector<HTMLInputElement>(
+      'input[type="hidden"][name="hole_1_par_juniors"]',
+    );
+    expect(ladies1?.value).toBe('5');
+    expect(juniors1?.value).toBe('5');
+  });
+
+  it('når dame-seksjonen er åpen, fryses dame-par uavhengig av hovedraden', () => {
+    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+
+    // Åpne avvikende-par-seksjonen for damer.
+    fireEvent.click(
+      screen.getByRole('button', { name: /legg til avvikende par for damer/i }),
+    );
+
+    // Sett hovedraden hull 1 til par 5.
+    const hole1Group = screen.getByRole('radiogroup', { name: 'Par for hull 1' });
+    fireEvent.click(within(hole1Group).getByRole('radio', { name: '5' }));
+
+    // Dame-par-hull-1 skal fremdeles være 4 (frosset på sin egen verdi).
+    const ladies1 = container.querySelector<HTMLInputElement>(
+      'input[type="hidden"][name="hole_1_par_ladies"]',
+    );
+    expect(ladies1?.value).toBe('4');
+
+    // Junior-par-hull-1 skal speile par_mens siden seksjonen er kollapset.
+    const juniors1 = container.querySelector<HTMLInputElement>(
+      'input[type="hidden"][name="hole_1_par_juniors"]',
+    );
+    expect(juniors1?.value).toBe('5');
+  });
+
+  it('fjern-knapp tilbakestiller par_ladies til par_mens og kollapser seksjonen', () => {
+    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+
+    // Åpne dame-par + endre hull 1 til par 5.
+    fireEvent.click(
+      screen.getByRole('button', { name: /legg til avvikende par for damer/i }),
+    );
+    const dameHull1 = screen.getByRole('radiogroup', {
+      name: /par for hull 1 \(avvikende par for damer\)/i,
+    });
+    fireEvent.click(within(dameHull1).getByRole('radio', { name: '5' }));
+
+    let ladies1 = container.querySelector<HTMLInputElement>(
+      'input[type="hidden"][name="hole_1_par_ladies"]',
+    );
+    expect(ladies1?.value).toBe('5');
+
+    // Trykk «Fjern dame-overstyring»
+    fireEvent.click(
+      screen.getByRole('button', { name: /fjern dame-overstyring/i }),
+    );
+
+    // Seksjonen er kollapset.
+    expect(
+      screen.queryByRole('radiogroup', {
+        name: /par for hull 1 \(avvikende par for damer\)/i,
+      }),
+    ).toBeNull();
+
+    // Mirror-input har resatt par_ladies til par_mens (= 4).
+    ladies1 = container.querySelector<HTMLInputElement>(
+      'input[type="hidden"][name="hole_1_par_ladies"]',
+    );
+    expect(ladies1?.value).toBe('4');
+  });
+
+  it('åpner dame-par-seksjonen automatisk på edit-flyt når initialData har avvik', () => {
+    const holes = makeHoles(Array(18).fill(4));
+    holes[3].par_ladies = '5'; // Hull 4: dame-par 5 vs herre-par 4
+    render(
+      <CourseForm
+        action={NO_OP}
+        submitLabel="Lagre"
+        initialData={{
+          name: 'Test',
+          holes,
+          teeBoxes: [
+            {
+              name: 'Gul',
+              length_meters: '',
+              slope_mens: '113',
+              course_rating_mens: '70.0',
+              slope_ladies: '',
+              course_rating_ladies: '',
+              slope_juniors: '',
+              course_rating_juniors: '',
+            },
+          ],
+        }}
+      />,
+    );
+
+    // 18 dame-par-radiogrupper rendret.
+    const dameGroups = screen.getAllByRole('radiogroup', {
+      name: /\(avvikende par for damer\)/i,
+    });
+    expect(dameGroups).toHaveLength(18);
+
+    // Junior-seksjonen forblir kollapset (ingen junior-avvik i initialData).
+    expect(
+      screen.getByRole('button', { name: /legg til avvikende par for junior/i }),
+    ).toBeTruthy();
+  });
+
+  it('rendrer per-kjønn-par-total i avvikende-seksjon basert på dame-pars', () => {
+    const holes = makeHoles(Array(18).fill(4));
+    holes[0].par_ladies = '5'; // hull 1: dame-par 5
+    render(
+      <CourseForm
+        action={NO_OP}
+        submitLabel="Lagre"
+        initialData={{
+          name: 'Test',
+          holes,
+          teeBoxes: [
+            {
+              name: 'Gul',
+              length_meters: '',
+              slope_mens: '113',
+              course_rating_mens: '70.0',
+              slope_ladies: '',
+              course_rating_ladies: '',
+              slope_juniors: '',
+              course_rating_juniors: '',
+            },
+          ],
+        }}
+      />,
+    );
+
+    // Avvikende-seksjon: «Par-total damer: 73»
+    expect(screen.getByText(/par-total damer/i)).toBeTruthy();
+    expect(screen.getByText('73')).toBeTruthy();
   });
 });
 

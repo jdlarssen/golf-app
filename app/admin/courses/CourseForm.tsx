@@ -12,7 +12,9 @@ export { MAX_TEE_BOXES };
 // The server action converts them via Number() when reading FormData.
 export type HoleData = {
   hole_number: number;
-  par: string;
+  par_mens: string;
+  par_ladies: string;
+  par_juniors: string;
   stroke_index: string;
 };
 
@@ -52,7 +54,9 @@ type Props = {
 
 const DEFAULT_HOLES: HoleData[] = Array.from({ length: 18 }, (_, i) => ({
   hole_number: i + 1,
-  par: '4',
+  par_mens: '4',
+  par_ladies: '4',
+  par_juniors: '4',
   stroke_index: String(i + 1),
 }));
 
@@ -94,12 +98,17 @@ function isParOption(v: number): v is ParOption {
   return v === 3 || v === 4 || v === 5;
 }
 
-// Sum av hull-par. Brukes både i UI (read-only par-total per tee) og er
-// kilde-til-sannhet på server-siden — par_total_<gender> regnes ut fra
-// hullene istedenfor å tastes per kjønn.
-export function sumHolePars(holes: HoleData[]): number {
+// Sum av hull-par per kjønn. Brukes både i UI (read-only par-total per tee) og
+// er kilde-til-sannhet på server-siden — par_total_<gender> regnes ut fra
+// hullene istedenfor å tastes per kjønn. Default-gender er `mens` for
+// bakoverkompatibel oppførsel.
+export function sumHolePars(
+  holes: HoleData[],
+  gender: 'mens' | 'ladies' | 'juniors' = 'mens',
+): number {
+  const key = `par_${gender}` as 'par_mens' | 'par_ladies' | 'par_juniors';
   return holes.reduce((sum, h) => {
-    const n = Number(h.par);
+    const n = Number(h[key]);
     return Number.isInteger(n) ? sum + n : sum;
   }, 0);
 }
@@ -107,7 +116,8 @@ export function sumHolePars(holes: HoleData[]): number {
 // Sjekker om par eller stroke-indeks er endret på minst ett hull. Tee-data
 // + bane-navn ignoreres bevisst — kun per-hull-felter som leses live av
 // scoring-laget kan skape mid-runde-uforutsigbarhet. Returnerer false når
-// initial-listen er undefined (create-flyten har ingen baseline).
+// initial-listen er undefined (create-flyten har ingen baseline). Sammenligner
+// alle tre par-felter (mens/ladies/juniors) per #240.
 export function hasHoleChanges(
   initial: HoleData[] | undefined,
   current: HoleData[],
@@ -116,7 +126,12 @@ export function hasHoleChanges(
   return current.some((curr, i) => {
     const init = initial[i];
     if (!init) return true;
-    return curr.par !== init.par || curr.stroke_index !== init.stroke_index;
+    return (
+      curr.par_mens !== init.par_mens ||
+      curr.par_ladies !== init.par_ladies ||
+      curr.par_juniors !== init.par_juniors ||
+      curr.stroke_index !== init.stroke_index
+    );
   });
 }
 
@@ -150,6 +165,16 @@ function isMensAtDefault(tee: TeeBoxData): boolean {
   );
 }
 
+// Sjekker om hullene har avvikende par for et gitt kjønn — brukes for å
+// avgjøre om per-kjønn-par-seksjonen skal stå åpen ved mount på edit-flyten.
+function hasGenderParOverride(
+  holes: HoleData[],
+  gender: 'ladies' | 'juniors',
+): boolean {
+  const key = `par_${gender}` as 'par_ladies' | 'par_juniors';
+  return holes.some((h) => h[key] !== h.par_mens);
+}
+
 export function CourseForm({
   action,
   submitLabel,
@@ -181,7 +206,25 @@ export function CourseForm({
     initialTees.map((t) => hasGenderData(t, 'juniors')),
   );
 
-  const parTotal = useMemo(() => sumHolePars(holes), [holes]);
+  // Per-kjønn-par-overstyring: kollapset som standard. Åpen ved mount på
+  // edit-flyt hvis banen faktisk har avvik fra hovedparet (par_mens).
+  const [expandedLadiesPar, setExpandedLadiesPar] = useState<boolean>(
+    initialData?.holes
+      ? hasGenderParOverride(initialData.holes, 'ladies')
+      : false,
+  );
+  const [expandedJuniorsPar, setExpandedJuniorsPar] = useState<boolean>(
+    initialData?.holes
+      ? hasGenderParOverride(initialData.holes, 'juniors')
+      : false,
+  );
+
+  const parTotalMens = useMemo(() => sumHolePars(holes, 'mens'), [holes]);
+  const parTotalLadies = useMemo(() => sumHolePars(holes, 'ladies'), [holes]);
+  const parTotalJuniors = useMemo(
+    () => sumHolePars(holes, 'juniors'),
+    [holes],
+  );
 
   function updateHole(index: number, patch: Partial<HoleData>) {
     setHoles((prev) =>
@@ -270,6 +313,39 @@ export function CourseForm({
     setExpandedJuniors((prev) => prev.map((v, i) => (i === index ? true : v)));
   }
 
+  // Fjern per-kjønn-par-overstyring: tilbakestill alle 18 hull til par_mens
+  // og kollaps seksjonen. Brukes når admin trykker «Fjern dame/junior-
+  // overstyring» i avvikende-par-seksjonen.
+  function removeGenderParOverride(gender: 'ladies' | 'juniors') {
+    const key = `par_${gender}` as 'par_ladies' | 'par_juniors';
+    setHoles((prev) => prev.map((h) => ({ ...h, [key]: h.par_mens })));
+    if (gender === 'ladies') {
+      setExpandedLadiesPar(false);
+    } else {
+      setExpandedJuniorsPar(false);
+    }
+  }
+
+  // Når admin endrer par_mens på hovedraden, og en av per-kjønn-seksjonene
+  // er kollapset, må vi speile endringen ned til det kjønnet slik at
+  // hidden-inputene som server-action leser holder seg synkrone med
+  // hovedraden. Når seksjonen er åpen lar vi admin styre per-kjønn-verdien
+  // direkte.
+  function updateMensPar(index: number, par: ParOption) {
+    const next = String(par);
+    setHoles((prev) =>
+      prev.map((h, i) => {
+        if (i !== index) return h;
+        return {
+          ...h,
+          par_mens: next,
+          par_ladies: expandedLadiesPar ? h.par_ladies : next,
+          par_juniors: expandedJuniorsPar ? h.par_juniors : next,
+        };
+      }),
+    );
+  }
+
   return (
     <form
       action={action}
@@ -313,8 +389,9 @@ export function CourseForm({
               </div>
               <ParTapButtons
                 holeNumber={hole.hole_number}
-                value={hole.par}
-                onChange={(next) => updateHole(index, { par: String(next) })}
+                name={`hole_${hole.hole_number}_par_mens`}
+                value={hole.par_mens}
+                onChange={(next) => updateMensPar(index, next)}
               />
               <Input
                 id={`hole_${hole.hole_number}_si`}
@@ -335,6 +412,76 @@ export function CourseForm({
           ))}
         </div>
       </section>
+
+      <section className="space-y-3">
+        {expandedLadiesPar ? (
+          <GenderParOverrideSection
+            gender="ladies"
+            label="Avvikende par for damer"
+            removeLabel="Fjern dame-overstyring"
+            holes={holes}
+            parTotal={parTotalLadies}
+            onChange={(holeIndex, par) =>
+              updateHole(holeIndex, { par_ladies: String(par) })
+            }
+            onRemove={() => removeGenderParOverride('ladies')}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setExpandedLadiesPar(true)}
+            className="block w-full rounded-lg border border-dashed border-border/80 px-3 py-2.5 text-sm font-medium text-muted hover:text-text hover:border-border transition-colors"
+          >
+            + Legg til avvikende par for damer
+          </button>
+        )}
+
+        {expandedJuniorsPar ? (
+          <GenderParOverrideSection
+            gender="juniors"
+            label="Avvikende par for junior"
+            removeLabel="Fjern junior-overstyring"
+            holes={holes}
+            parTotal={parTotalJuniors}
+            onChange={(holeIndex, par) =>
+              updateHole(holeIndex, { par_juniors: String(par) })
+            }
+            onRemove={() => removeGenderParOverride('juniors')}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setExpandedJuniorsPar(true)}
+            className="block w-full rounded-lg border border-dashed border-border/80 px-3 py-2.5 text-sm font-medium text-muted hover:text-text hover:border-border transition-colors"
+          >
+            + Legg til avvikende par for junior
+          </button>
+        )}
+      </section>
+
+      {/* Hidden mirror-inputs for kjønn som ikke har egen seksjon åpen.
+          Server-action leser hole_${i}_par_ladies / _juniors fra FormData;
+          når seksjonen er kollapset må vi fortsatt sende verdien (= par_mens)
+          slik at INSERT setter alle tre kolonner. Når seksjonen er åpen
+          rendres ParTapButtons med samme name og tar over. */}
+      {!expandedLadiesPar &&
+        holes.map((h) => (
+          <input
+            key={`mirror-ladies-${h.hole_number}`}
+            type="hidden"
+            name={`hole_${h.hole_number}_par_ladies`}
+            value={h.par_ladies}
+          />
+        ))}
+      {!expandedJuniorsPar &&
+        holes.map((h) => (
+          <input
+            key={`mirror-juniors-${h.hole_number}`}
+            type="hidden"
+            name={`hole_${h.hole_number}_par_juniors`}
+            value={h.par_juniors}
+          />
+        ))}
 
       <section>
         <h2 className="text-sm font-medium text-text mb-3">
@@ -416,7 +563,7 @@ export function CourseForm({
                   label="Herrer"
                   slope={tee.slope_mens}
                   cr={tee.course_rating_mens}
-                  parTotal={parTotal}
+                  parTotal={parTotalMens}
                   showParTotal={
                     tee.slope_mens !== '' && tee.course_rating_mens !== ''
                   }
@@ -450,7 +597,7 @@ export function CourseForm({
                     label="Damer"
                     slope={tee.slope_ladies}
                     cr={tee.course_rating_ladies}
-                    parTotal={parTotal}
+                    parTotal={parTotalLadies}
                     showParTotal={
                       tee.slope_ladies !== '' &&
                       tee.course_rating_ladies !== ''
@@ -479,7 +626,7 @@ export function CourseForm({
                     label="Junior"
                     slope={tee.slope_juniors}
                     cr={tee.course_rating_juniors}
-                    parTotal={parTotal}
+                    parTotal={parTotalJuniors}
                     showParTotal={
                       tee.slope_juniors !== '' &&
                       tee.course_rating_juniors !== ''
@@ -527,15 +674,20 @@ export function CourseForm({
 
 // Tre-knapps tap-radio for par-valg. Eksponert som radio-group til
 // screen-readers via role+aria-checked. Hidden-input bærer verdien videre
-// til FormData under det samme name-et som det gamle number-input-feltet.
+// til FormData under name-et som consumeren oppgir (varierer per kjønn:
+// hole_${n}_par_mens / _ladies / _juniors).
 function ParTapButtons({
   holeNumber,
+  name,
   value,
   onChange,
+  ariaLabel,
 }: {
   holeNumber: number;
+  name: string;
   value: string;
   onChange: (par: ParOption) => void;
+  ariaLabel?: string;
 }) {
   const current = Number(value);
   return (
@@ -543,7 +695,11 @@ function ParTapButtons({
       <div className="block font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-1.5">
         Par
       </div>
-      <div role="radiogroup" aria-label={`Par for hull ${holeNumber}`} className="flex gap-1.5">
+      <div
+        role="radiogroup"
+        aria-label={ariaLabel ?? `Par for hull ${holeNumber}`}
+        className="flex gap-1.5"
+      >
         {PAR_OPTIONS.map((p) => {
           const selected = isParOption(current) && current === p;
           return (
@@ -564,12 +720,72 @@ function ParTapButtons({
           );
         })}
       </div>
-      <input
-        type="hidden"
-        name={`hole_${holeNumber}_par`}
-        value={value}
-      />
+      <input type="hidden" name={name} value={value} />
     </div>
+  );
+}
+
+function GenderParOverrideSection({
+  gender,
+  label,
+  removeLabel,
+  holes,
+  parTotal,
+  onChange,
+  onRemove,
+}: {
+  gender: 'ladies' | 'juniors';
+  label: string;
+  removeLabel: string;
+  holes: HoleData[];
+  parTotal: number;
+  onChange: (holeIndex: number, par: ParOption) => void;
+  onRemove: () => void;
+}) {
+  const key = `par_${gender}` as 'par_ladies' | 'par_juniors';
+  return (
+    <fieldset className="border border-border/60 rounded-lg p-3 space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <legend className="px-0 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          {label}
+        </legend>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="text-[11px] font-medium text-muted hover:text-danger transition-colors"
+        >
+          {removeLabel}
+        </button>
+      </div>
+      <p className="text-xs text-muted">
+        Velg avvikende par per hull. Hull som er like som hovedraden trenger
+        ingen endring.
+      </p>
+      <div className="space-y-3">
+        {holes.map((hole, index) => (
+          <div
+            key={hole.hole_number}
+            className="grid grid-cols-[3.5rem_1fr] gap-3 items-end"
+          >
+            <div className="text-sm font-medium text-text pb-2">
+              Hull {hole.hole_number}
+            </div>
+            <ParTapButtons
+              holeNumber={hole.hole_number}
+              name={`hole_${hole.hole_number}_par_${gender}`}
+              value={hole[key]}
+              ariaLabel={`Par for hull ${hole.hole_number} (${label.toLowerCase()})`}
+              onChange={(next) => onChange(index, next)}
+            />
+          </div>
+        ))}
+      </div>
+      <p className="font-sans text-[11.5px] tabular-nums text-muted">
+        Par-total {gender === 'ladies' ? 'damer' : 'junior'}:{' '}
+        <span className="text-text font-medium">{parTotal}</span>{' '}
+        <span className="text-muted/80">(sum av hullene)</span>
+      </p>
+    </fieldset>
   );
 }
 

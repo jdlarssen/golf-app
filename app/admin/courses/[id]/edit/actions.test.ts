@@ -279,7 +279,7 @@ describe('restoreTee', () => {
     const formData = new FormData();
     formData.set('name', 'Sjø-bane Trondheim');
     for (let i = 1; i <= 18; i++) {
-      formData.set(`hole_${i}_par`, '4');
+      formData.set(`hole_${i}_par_mens`, '4');
       formData.set(`hole_${i}_si`, String(i));
     }
     // Single mens-rated tee at index 0; index 1+ left blank (continue-branch).
@@ -513,7 +513,7 @@ describe('updateCourse — trusted-non-admin path (Fase 4)', () => {
     const formData = new FormData();
     formData.set('name', 'Sjø-bane Trondheim');
     for (let i = 1; i <= 18; i++) {
-      formData.set(`hole_${i}_par`, '4');
+      formData.set(`hole_${i}_par_mens`, '4');
       formData.set(`hole_${i}_si`, String(i));
     }
     formData.set('tee_0_name', 'Gul');
