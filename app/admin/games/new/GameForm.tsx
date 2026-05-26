@@ -102,6 +102,13 @@ export type InitialValues = {
    * når lagstørrelse endres (25 for 2-mannslag, 10 for 4-mannslag).
    */
   texas_team_handicap_pct?: string;
+  /**
+   * Cup-link (#47): kobler spillet til en parent tournament-rad. Settes når
+   * admin lander på `/admin/games/new?tournament_id=...` fra cup-detalj-
+   * siden. Rendres som hidden inputs på form-en og leses i actions.ts.
+   */
+  tournament_id?: string;
+  tournament_match_label?: string;
 };
 
 /**
@@ -198,6 +205,22 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           modus-payloads. */}
       <input type="hidden" name="game_mode" value={gameMode} />
       <input type="hidden" name="team_size" value={teamSize} />
+      {initialValues?.tournament_id && (
+        <>
+          <input
+            type="hidden"
+            name="tournament_id"
+            value={initialValues.tournament_id}
+          />
+          {initialValues.tournament_match_label && (
+            <input
+              type="hidden"
+              name="tournament_match_label"
+              value={initialValues.tournament_match_label}
+            />
+          )}
+        </>
+      )}
       {gameMode === 'stableford' && (
         <input
           type="hidden"

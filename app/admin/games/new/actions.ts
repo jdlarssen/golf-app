@@ -95,6 +95,27 @@ async function createGameInternal(
     }
   }
 
+  // Cup-link (#47): hvis admin lander via cup-detalj-side, kobles spillet
+  // til parent tournament-en. Validerer at tournament-en faktisk eksisterer
+  // før vi setter FK — defensiv mot manipulerte URL-er.
+  let tournamentId: string | null = null;
+  const tournamentMatchLabelRaw = String(
+    formData.get('tournament_match_label') ?? '',
+  ).trim();
+  const rawTournamentId = String(formData.get('tournament_id') ?? '').trim();
+  if (rawTournamentId) {
+    const { data: cup } = await supabase
+      .from('tournaments')
+      .select('id')
+      .eq('id', rawTournamentId)
+      .maybeSingle();
+    if (cup) tournamentId = cup.id;
+  }
+  const tournamentMatchLabel =
+    tournamentId && tournamentMatchLabelRaw
+      ? tournamentMatchLabelRaw.slice(0, 80)
+      : null;
+
   const { data: game, error: gameError } = await supabase
     .from('games')
     .insert({
@@ -122,6 +143,8 @@ async function createGameInternal(
       scheduled_tee_off_at: scheduledTeeOffAt,
       created_by: userId,
       started_at: null,
+      tournament_id: tournamentId,
+      tournament_match_label: tournamentMatchLabel,
     })
     .select('id')
     .single();
@@ -164,6 +187,17 @@ async function createGameInternal(
         }),
       ),
     );
+  }
+
+  // Hvis spillet er koblet til en cup, refresh cup-leaderboard-cachen så
+  // /admin/cup/[id] og /cup/[id] viser den nye matchen umiddelbart, og
+  // redirect tilbake til cup-detaljsiden i stedet for game-detalj.
+  if (tournamentId) {
+    const { revalidateTag, revalidatePath } = await import('next/cache');
+    revalidateTag(`tournament-${tournamentId}`, 'max');
+    revalidatePath(`/admin/cup/${tournamentId}`);
+    revalidatePath(`/cup/${tournamentId}`);
+    redirect(`/admin/cup/${tournamentId}?status=match_added`);
   }
 
   redirect(

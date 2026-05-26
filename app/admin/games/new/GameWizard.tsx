@@ -233,6 +233,8 @@ export function GameWizard({ courses, players, mode, initialValues }: Props) {
       game_mode: state.gameMode,
       team_size: state.teamSize,
       texas_team_handicap_pct: state.texasHandicapPct,
+      tournament_id: initialValues?.tournament_id,
+      tournament_match_label: initialValues?.tournament_match_label,
     };
     return (
       <div className="space-y-4">
@@ -322,7 +324,11 @@ export function GameWizard({ courses, players, mode, initialValues }: Props) {
           publiserer fra. Form-en wrappes rundt stegene + skjult-input-
           blokken; submit-knappene lever inne i ReadyStep og treffer
           denne form-en via formAction-prop. */}
-      <FormDataInputs state={state} />
+      <FormDataInputs
+        state={state}
+        tournamentId={initialValues?.tournament_id}
+        tournamentMatchLabel={initialValues?.tournament_match_label}
+      />
 
       {/* Wizard-footer: «Forrige»/«Neste» på steg 1-3, kun «Forrige» på
           steg 4 (publish/draft-knappene lever inne i ReadyStep). */}
@@ -347,8 +353,12 @@ export function GameWizard({ courses, players, mode, initialValues }: Props) {
 
 function FormDataInputs({
   state,
+  tournamentId,
+  tournamentMatchLabel,
 }: {
   state: ReturnType<typeof useGameFormState>;
+  tournamentId?: string;
+  tournamentMatchLabel?: string;
 }) {
   const {
     name,
@@ -418,6 +428,19 @@ function FormDataInputs({
           value={playerGenders[pid] ?? 'M'}
         />
       ))}
+
+      {tournamentId && (
+        <>
+          <input type="hidden" name="tournament_id" value={tournamentId} />
+          {tournamentMatchLabel && (
+            <input
+              type="hidden"
+              name="tournament_match_label"
+              value={tournamentMatchLabel}
+            />
+          )}
+        </>
+      )}
 
       {orderedPayload.map((row, i) => (
         <div key={row.user_id} className="hidden">

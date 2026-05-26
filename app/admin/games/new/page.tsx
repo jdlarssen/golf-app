@@ -14,10 +14,12 @@ import {
 } from '@/lib/admin/gameErrorMessages';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
+import { getServerClient } from '@/lib/supabase/server';
 
 type SearchParams = Promise<{
   error?: string | string[];
   emails?: string | string[];
+  tournament_id?: string | string[];
 }>;
 
 function first(value: string | string[] | undefined): string | undefined {
@@ -40,6 +42,13 @@ export default async function NewGamePage({
   const sp = await searchParams;
   const errorMessage = buildErrorMessage(first(sp.error), first(sp.emails));
   const userId = await getProxyVerifiedUserId();
+
+  // Cup-link (#47): hvis admin lander via /admin/cup/[id], pre-fyller vi
+  // game_mode + match-label og låser modus-velgeren.
+  const tournamentIdParam = first(sp.tournament_id);
+  const cupContext = tournamentIdParam
+    ? await loadCupContext(tournamentIdParam)
+    : null;
 
   return (
     <AdminShell>
@@ -66,6 +75,15 @@ export default async function NewGamePage({
         </div>
       )}
 
+      {cupContext && (
+        <div className="mt-4">
+          <Banner tone="info">
+            Match-en kobles til cupen <strong>{cupContext.name}</strong>.
+            Spillmodus er låst til matchplay (1 vs 1).
+          </Banner>
+        </div>
+      )}
+
       <Suspense fallback={null}>
         <PlayerShortageBanner />
       </Suspense>
@@ -73,12 +91,38 @@ export default async function NewGamePage({
       <div className="mt-5">
         <Card>
           <Suspense fallback={<GameFormSkeleton />}>
-            <GameFormBody />
+            <GameFormBody cupContext={cupContext} />
           </Suspense>
         </Card>
       </div>
     </AdminShell>
   );
+}
+
+type CupContext = {
+  id: string;
+  name: string;
+  nextMatchLabel: string;
+};
+
+async function loadCupContext(tournamentId: string): Promise<CupContext | null> {
+  const supabase = await getServerClient();
+  const { data: cup } = await supabase
+    .from('tournaments')
+    .select('id, name, status')
+    .eq('id', tournamentId)
+    .maybeSingle<{ id: string; name: string; status: string }>();
+  if (!cup) return null;
+  if (cup.status === 'finished') return null;
+  const { count } = await supabase
+    .from('games')
+    .select('id', { head: true, count: 'exact' })
+    .eq('tournament_id', cup.id);
+  return {
+    id: cup.id,
+    name: cup.name,
+    nextMatchLabel: `Singles ${(count ?? 0) + 1}`,
+  };
 }
 
 async function PlayerShortageBanner() {
@@ -106,7 +150,7 @@ async function PlayerShortageBanner() {
   );
 }
 
-async function GameFormBody() {
+async function GameFormBody({ cupContext }: { cupContext: CupContext | null }) {
   const { courses, players } = await getNewGameFormData();
   return (
     <GameWizard
@@ -117,6 +161,18 @@ async function GameFormBody() {
         createDraftAction: createGameDraft,
         createAndPublishAction: createAndPublishGame,
       }}
+      initialValues={
+        cupContext
+          ? {
+              game_mode: 'singles_matchplay',
+              team_size: 1,
+              lock_game_mode: true,
+              tournament_id: cupContext.id,
+              tournament_match_label: cupContext.nextMatchLabel,
+              name: cupContext.nextMatchLabel,
+            }
+          : undefined
+      }
     />
   );
 }
