@@ -124,3 +124,15 @@ export const ReplayIcon = ({ size, ...rest }: IconProps) => (
     <polyline points="3,3 4,12 13,11" />
   </svg>
 );
+
+// Four-pointed sparkle med to mindre satellitter — SVG-pendant til ✨-emojien
+// som brukes i product-update-banner og notification-card. Stor stjerne har
+// litt konkave «pinch»-kanter (samme silhuett som Unicode-glyphen); de små
+// satellittene er rene rhombuser. Holder seg innenfor 2px safe-zone.
+export const SparkleIcon = ({ size, ...rest }: IconProps) => (
+  <svg {...base(size)} {...rest}>
+    <path d="M 12 3 Q 12.6 8.4 13.5 9.3 Q 14.4 10.2 19.8 10.8 Q 14.4 11.4 13.5 12.3 Q 12.6 13.2 12 18.6 Q 11.4 13.2 10.5 12.3 Q 9.6 11.4 4.2 10.8 Q 9.6 10.2 10.5 9.3 Q 11.4 8.4 12 3 Z" />
+    <path d="M 18.5 14 L 19 16 L 21 16.5 L 19 17 L 18.5 19 L 18 17 L 16 16.5 L 18 16 Z" />
+    <path d="M 5.5 4 L 5.9 5.4 L 7.3 5.8 L 5.9 6.2 L 5.5 7.6 L 5.1 6.2 L 3.7 5.8 L 5.1 5.4 Z" />
+  </svg>
+);

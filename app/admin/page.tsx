@@ -11,6 +11,7 @@ import {
   FlaggIcon,
   KonvoluttIcon,
   PokalIcon,
+  SparkleIcon,
 } from '@/components/icons';
 import { firstName } from '@/lib/firstName';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
@@ -171,7 +172,7 @@ function GreetingSkeleton({ dateLine }: { dateLine: string }) {
 
 // ─── Tile grid ───────────────────────────────────────────────────────────
 
-type TileIconKind = 'flagg' | 'konvolutt' | 'bane' | 'pokal';
+type TileIconKind = 'flagg' | 'konvolutt' | 'bane' | 'pokal' | 'sparkle';
 type Tile = {
   label: string;
   href: string;
@@ -192,6 +193,7 @@ async function TilesGrid() {
     usersRes,
     coursesRes,
     lastFinishedRes,
+    lastPublishedRes,
   ] = await Promise.all([
     supabase
       .from('games')
@@ -215,6 +217,12 @@ async function TilesGrid() {
       .order('ended_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
+    supabase
+      .from('product_updates')
+      .select('created_at')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   const activeCount = activeGamesRes.count ?? 0;
@@ -224,6 +232,9 @@ async function TilesGrid() {
   const courseCount = coursesRes.count ?? 0;
   const lastFinishedAt = (lastFinishedRes.data as { ended_at: string | null } | null)
     ?.ended_at;
+  const lastPublishedAt = (
+    lastPublishedRes.data as { created_at: string | null } | null
+  )?.created_at;
 
   // Trusted-non-admin: kun Baner-tile (resten av Sekretariatet er admin-only,
   // self-gatet på sub-route-nivå — å vise tiles til ruter de blir redirected
@@ -264,6 +275,14 @@ async function TilesGrid() {
             ? `Sist signert ${formatShortDateNb(lastFinishedAt)}`
             : 'Ingen signerte runder',
           icon: 'pokal',
+        },
+        {
+          label: 'Lanseringer',
+          href: '/admin/lanseringer',
+          meta: lastPublishedAt
+            ? `Sist publisert ${formatShortDateNb(lastPublishedAt)}`
+            : 'Ingen publisert ennå',
+          icon: 'sparkle',
         },
       ]
     : [banerTile];
@@ -318,7 +337,7 @@ async function TilesGrid() {
 function TilesSkeleton() {
   return (
     <div className="mb-2 grid grid-cols-2 gap-2.5">
-      {[0, 1, 2, 3].map((i) => (
+      {[0, 1, 2, 3, 4].map((i) => (
         <div
           key={i}
           className="min-h-[108px] rounded-2xl border border-border bg-surface px-3.5 pt-3.5 pb-3"
@@ -537,5 +556,6 @@ function TileIcon({ kind }: { kind: TileIconKind }) {
   if (kind === 'flagg') return <FlaggIcon width={22} height={22} />;
   if (kind === 'konvolutt') return <KonvoluttIcon width={22} height={22} />;
   if (kind === 'bane') return <BaneIcon width={22} height={22} />;
+  if (kind === 'sparkle') return <SparkleIcon width={22} height={22} />;
   return <PokalIcon width={22} height={22} />;
 }

@@ -14,6 +14,22 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Fase 4 (og siste fase) av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Trusted creators får tilgang til Sekretariatet med en filtrert tile-grid, og kan opprette + oppdatere baner gjennom samme courses-katalogen som admin bruker.
 
+### [1.28.1] - 2026-05-26
+
+> Du finner nå Lanseringer rett fra Sekretariatet. En ny flis ved siden av Resultatprotokoll tar deg inn på publiserings-flaten, og viser dato for siste lansering rett under tittelen.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- Ny `SparkleIcon` i [components/icons/Icons.tsx](components/icons/Icons.tsx) — SVG-pendant til ✨-emojien som banneret og innboks-kortet allerede bruker, slik at de tre lanserings-flatene har samme visuelle uttrykk.
+- Lanseringer-flis i [app/admin/page.tsx](app/admin/page.tsx) `TilesGrid` (admin-only branch, 5. flis etter Resultatprotokoll). Henter siste publiserte dato fra `product_updates` parallelt med de andre tile-tellingene; meta-teksten faller tilbake til «Ingen publisert ennå» når tabellen er tom.
+
+#### Changed
+- `TileIconKind`-unionen utvidet med `'sparkle'`, og `TilesSkeleton` renderer nå 5 placeholders for å unngå skeleton-til-innhold-flicker.
+
+</details>
+
 ### [1.28.0] - 2026-05-25
 
 > Trusted creators kan nå legge til og oppdatere baner selv, ikke bare opprette spill. Når en kompis i allowlist-en logger inn ser de Sekretariatet med en Baner-tile, og kan vedlikeholde katalogen som om de var admin — men kun baner de selv har laget kan slettes.
