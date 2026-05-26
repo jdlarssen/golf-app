@@ -250,6 +250,33 @@ For CHANGELOG-spesifikk guidance, se `### Versjonering / CHANGELOG` over.
 - Bruk `superpowers:systematic-debugging`-skill ved bug-rapport
 - Legg til diagnostikk (console.log eller inline rendering) FØR du foreslår løsning
 
+### Test-disiplin (mandatory)
+
+**Full referanse:** `docs/test-discipline.md`. Les den før du rører tester. Område-spesifikke regler ligger i `AGENTS.md`-filer per `lib/`-mappe der stilen avviker fra default.
+
+**Fire test-typer — én per spørsmål:**
+
+- **A. Pure logic** (`lib/scoring/`, `lib/format/`, validators) — klassisk TDD, assertion-rik. `it.each` for parametriserte cases. Mock kun ved system-grenser.
+- **B. Rendered output** (`lib/mail/`, framtidige PDF/CSV) — approval-snapshot på `subject` + `text` + extracted body. ÉN chrome-lås per template. Strukturelle kontrakter (RFC-headere, URL-encoding, error-propagation) i ÉN delt fil, aldri duplisert per modul.
+- **C. Data-rendering UI** (leaderboards, podiums) — **maks én render-test per komponent**. Aldri re-asserter tall fra Type A. Default ved upassende eksisterende tester: foreslå sletting (krever brukerens go-ahead).
+- **D. E2E** (`e2e/`) — golden path + 1–2 edge-cases. Aldri assert på norsk copy; bruk `data-testid`/role.
+
+**Beslutningstre ved ny endring:**
+
+- **Ny feature:** Type A først (TDD) → Type B hvis output → maks én Type C hvis UI → én Type D for golden path. STOPP. Spør hvis du tenker «bare én test til».
+- **Bug-fix fra prod:** Capture log/payload som fikstur FØRST (Approved Logs), så test-feil, så fix.
+- **Copy-endring:** Endre source-streng → `npx vitest -u` → review diff visuelt. **Aldri** legg til nye tester.
+- **Refactor som rører tester (>3 filer):** Check Alignment — vis skjelett på ÉN fil først, vent på eksplisitt go-ahead, deretter batch resten. Atomic commit per fil. Hvis du oppdager scope-utvidelse underveis: STOPP og spør.
+
+**Universelt forbudt:**
+
+- Kopier-lim av mock-oppsett mellom filer (signal om at det skal være shared helper)
+- «Mens jeg var her»-tester som ikke kan forsvares mot endringens scope
+- `--no-verify` for å omgå pre-commit-/commit-msg-hook
+- Mer enn 3 `toContain`-kall på samme variabel i én test — bruk snapshot
+
+**Eksisterende test-suite er ikke i samsvar.** Cleanup-arbeid spores i et eget GitHub-issue. Inntil det er prioritert: reglene gjelder kun nye endringer, ikke retroaktivt på eksisterende tester.
+
 ### Arbeidsflyt — subagenter vs direkte
 
 **Plan-eksekvering: alltid subagent-drevet.** Når det finnes et implementeringsplan-dokument (typisk `docs/plans/*-implementation.md`), kjøres den via `superpowers:subagent-driven-development`-skillet — fresh subagent per task, review mellom tasks. Ikke spør brukeren hvilket alternativ — valget er gjort.

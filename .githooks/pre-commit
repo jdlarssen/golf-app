@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# Advarer mot kjente AI-tells i nye bruker-rettede strenger.
-# Følger «Språk-kvalitet i bruker-rettet copy»-policyen i CLAUDE.md
-# (etter PR #170 + PR #174).
+# Pre-commit-warns for Tørny. Non-blocking — alltid exit 0.
 #
-# Non-blocking: hooken kjører bare warn-pass; alltid exit 0.
-# Patterns har lav false-positive-risiko, men du kan ignorere advarsler
-# om de gjelder bevisst beholdt copy (brand-tagline, snapshot-låste mail-
-# subjects, sekretariat-stemmen i admin, achievement-navn).
+# To familier av sjekker:
+#   1. Humanizer: AI-tells i nye bruker-rettede strenger i komponent-kode.
+#      Følger «Språk-kvalitet i bruker-rettet copy»-policyen i CLAUDE.md.
+#   2. Test-disiplin: Type B/D-mønstre fra docs/test-discipline.md.
+#
+# False-positives kan ignoreres når de gjelder bevisst beholdt copy
+# (brand-tagline, snapshot-låste mail-subjects, sekretariat-stemmen, etc.).
 
 set -e
 
@@ -51,8 +52,53 @@ for f in $files; do
   [ -n "$m" ] && report "$f" "em-dash-kjede (splitt med punktum/komma/parens)" "$m"
 done
 
+# ─────────────────────────────────────────────────────────────────────
+# Test-disiplin (Type B/D-signaler) — referanse: docs/test-discipline.md
+# ─────────────────────────────────────────────────────────────────────
+
+test_files=$(git diff --cached --name-only --diff-filter=AM 2>/dev/null \
+  | grep -E '\.(test|spec)\.(tsx?|jsx?)$' \
+  || true)
+
+for f in $test_files; do
+  added=$(git diff --cached -U0 -- "$f" 2>/dev/null | grep '^+' | grep -v '^+++' || true)
+  [ -z "$added" ] && continue
+
+  # Type B-signal: mange nye .toContain()-kall i én commit → vurder approval-snapshot
+  tc_count=$(printf '%s\n' "$added" | grep -cE '\.toContain\(' || true)
+  if [ "$tc_count" -gt 10 ]; then
+    printf '⚠️  test-disiplin: %s — %d nye `.toContain()`-kall i én commit.\n' "$f" "$tc_count" >&2
+    printf '      Vurder approval-snapshot (Type B). Se docs/test-discipline.md.\n' >&2
+    warn_count=$((warn_count + 1))
+  fi
+
+  # Type B-signal: ny Resend-mock-setup når 3+ filer allerede har samme → vurder shared helper
+  has_resend_mock=$(printf '%s\n' "$added" | grep -E "vi\.mock\(['\"]resend['\"]" || true)
+  if [ -n "$has_resend_mock" ]; then
+    existing=$(grep -rlE "vi\.mock\(['\"]resend['\"]" --include='*.test.ts' --include='*.test.tsx' lib/mail/ 2>/dev/null | grep -v "^${f}$" | wc -l | tr -d ' ')
+    if [ "$existing" -gt 3 ]; then
+      printf '⚠️  test-disiplin: %s — duplikat `vi.mock(resend)`-setup. %d andre filer har samme.\n' "$f" "$existing" >&2
+      printf '      Vurder shared helper i lib/mail/__tests__/_helpers.ts. Se lib/mail/AGENTS.md.\n' >&2
+      warn_count=$((warn_count + 1))
+    fi
+  fi
+
+  # Type D-signal: norsk string-literal i E2E-locator/assertion
+  case "$f" in
+    e2e/*|tests/e2e/*)
+      m=$(printf '%s\n' "$added" | grep -nE "\.(toContain|toHaveText|getByText|locator)\([\"'][^\"']*[æøåÆØÅ][^\"']*[\"']" || true)
+      if [ -n "$m" ]; then
+        printf '⚠️  test-disiplin: %s — norsk string-literal i E2E-locator/assertion.\n' "$f" >&2
+        printf '%s\n' "$m" | sed 's/^/      /' >&2
+        printf '      Bruk `data-testid` eller role-baserte locators i stedet.\n' >&2
+        warn_count=$((warn_count + 1))
+      fi
+      ;;
+  esac
+done
+
 if [ "$warn_count" -gt 0 ]; then
-  printf '\n%d humanizer-advarsel(er). Commit fortsetter — bekreft mentalt eller kjør `humanizer:humanizer`-skillet om du er usikker.\n' "$warn_count" >&2
+  printf '\n%d pre-commit-advarsel(er). Commit fortsetter — bekreft mentalt eller juster om relevant.\n' "$warn_count" >&2
 fi
 
 exit 0
