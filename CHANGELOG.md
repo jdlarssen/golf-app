@@ -14,6 +14,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#199](https://github.com/jdlarssen/golf-app/issues/199). Du kan nå sette opp et spill og dele en lenke i stedet for å invitere hver spiller manuelt. For Scramble og andre lagspill kan spillerne samle sitt eget lag, og kapteinen melder på medspillerne med navn eller e-post. Du velger selv om hvem som helst med lenken kan melde seg på, om du vil godkjenne hver påmelding, eller om du fortsatt vil styre invitasjonene som du gjør i dag.
 
+### [1.36.1] - 2026-05-26
+
+> Påmeldings-lenken bruker nå ren engelsk i URL-en (`/signup/...`) i stedet for `/påmelding/...`, slik at å-tegnet ikke lager trøbbel når lenken deles via SMS eller e-post.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Vercel-edge feilet å rute URL-encoded `/p%C3%A5melding/...` til siden — ASCII-pathen `/signup/[shortId]` unngår problemet helt. Filsystem-rename: `app/påmelding` → `app/signup`, `app/admin/games/[id]/påmeldinger` → `app/admin/games/[id]/signups`, `e2e/påmelding` → `e2e/signup`. Alle URL-strenger i koden, mail-templates, proxy-whitelist og tester er oppdatert. Norsk UI-tekst («Påmeldinger»-overskrifter, mail-subjects, knappe-tekster) står urørt — det er kun selve URL-pathen som er ASCII.
+
+</details>
+
 ### [1.36.0] - 2026-05-26
 
 > Sett opp spillet, kopier lenken, og slipp den i Slack-gruppa, lagpraten eller hvor folk enn er, så melder de seg på selv. Da slipper du å sende invitasjoner én etter én. Vil du ha mer kontroll? Sett påmeldingen til «forespørsel — jeg godkjenner», og du får varsel hver gang noen ber om plass. Kapteinen kan samle sitt eget Scramble-lag: kjente Tørny-brukere får varsel i innboksen, ukjente e-poster får en invitasjon. Spillerne kan også trekke seg selv hvis det skjer noe — du slipper å rydde plassen for dem som faller fra.

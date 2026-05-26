@@ -71,7 +71,7 @@ const productUpdateSchema = z.object({
 
 // team_invite: kapteinen ber en kjent Tørny-bruker bli med i lag.
 // request_id peker til game_registration_requests-raden invitéen kan akseptere/avslå.
-// game_short_id er nødvendig for å deeplinke til /påmelding/[shortId]/team.
+// game_short_id er nødvendig for å deeplinke til /signup/[shortId]/team.
 const teamInviteSchema = z.object({
   game_id: uuid,
   game_short_id: z.string().regex(/^[0-9a-z]{8}$/),
@@ -108,7 +108,7 @@ const registrationRejectedSchema = z.object({
 });
 
 // team_member_withdrew: medspiller trakk seg pre-start. Til kaptein.
-// game_short_id for deeplink til /påmelding/[shortId]/team for å invitere ny medspiller.
+// game_short_id for deeplink til /signup/[shortId]/team for å invitere ny medspiller.
 const teamMemberWithdrewSchema = z.object({
   game_id: uuid,
   game_short_id: z.string().regex(/^[0-9a-z]{8}$/),

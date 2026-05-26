@@ -43,7 +43,7 @@ describe('sendTeamInvitationMail', () => {
     );
   });
 
-  it('lenker til /login med next=/påmelding/[shortId]/team', async () => {
+  it('lenker til /login med next=/signup/[shortId]/team', async () => {
     const { sendTeamInvitationMail } = await import('./teamInvitation');
     await sendTeamInvitationMail({
       to: 'venn@example.com',
@@ -53,7 +53,7 @@ describe('sendTeamInvitationMail', () => {
       gameShortId: 'abc12345',
     });
     const payload = sendMock.mock.calls[0]![0];
-    // URL-encoded next-param: /påmelding/[shortId]/team
+    // URL-encoded next-param: /signup/[shortId]/team
     expect(payload.html).toContain('login?next=');
     expect(payload.html).toContain('abc12345');
     expect(payload.text).toContain('login?next=');

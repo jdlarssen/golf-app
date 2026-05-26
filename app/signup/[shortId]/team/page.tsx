@@ -55,7 +55,7 @@ export default async function TeamDashboardPage({
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect(`/login?next=/påmelding/${shortId}/team`);
+    redirect(`/login?next=/signup/${shortId}/team`);
   }
 
   const admin = getAdminClient();
@@ -92,7 +92,7 @@ export default async function TeamDashboardPage({
   if (!myRow && !pendingInvitation) {
     return (
       <AppShell>
-        <TopBar backHref={`/påmelding/${shortId}`} back="history" kicker="Lag" />
+        <TopBar backHref={`/signup/${shortId}`} back="history" kicker="Lag" />
         <Card>
           <Banner tone="info">
             Du har ikke et lag på dette spillet. Be kapteinen om å legge
@@ -109,7 +109,7 @@ export default async function TeamDashboardPage({
   if (!myRow && pendingInvitation) {
     return (
       <AppShell>
-        <TopBar backHref={`/påmelding/${shortId}`} back="history" kicker="Lag" />
+        <TopBar backHref={`/signup/${shortId}`} back="history" kicker="Lag" />
         <Card>
           <div className="space-y-4">
             <h2 className="font-serif text-[20px] font-medium text-text">
@@ -141,7 +141,7 @@ export default async function TeamDashboardPage({
     // men vi gir en vennlig melding hvis det skjer.
     return (
       <AppShell>
-        <TopBar backHref={`/påmelding/${shortId}`} back="history" kicker="Lag" />
+        <TopBar backHref={`/signup/${shortId}`} back="history" kicker="Lag" />
         <Card>
           <Banner tone="info">
             Du er påmeldt som solo-spiller. Det er ikke noe lag å vise her.
@@ -186,7 +186,7 @@ export default async function TeamDashboardPage({
 
   return (
     <AppShell>
-      <TopBar backHref={`/påmelding/${shortId}`} back="history" kicker="Lag" />
+      <TopBar backHref={`/signup/${shortId}`} back="history" kicker="Lag" />
 
       <div className="space-y-5">
         <header className="px-1">

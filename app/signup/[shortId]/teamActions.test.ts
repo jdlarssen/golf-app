@@ -511,7 +511,7 @@ describe('submitTeamRegistration — happy paths', () => {
       }),
     ).rejects.toBeInstanceOf(RedirectError);
     expect(redirectMock).toHaveBeenCalledWith(
-      `/login?next=/påmelding/${SHORT_ID}`,
+      `/login?next=/signup/${SHORT_ID}`,
     );
   });
 });

@@ -15,7 +15,7 @@ import {
  * E2E for `manual_approval`-modus (#199 chunk 14).
  *
  * Two-actor-flyt: test-spiller sender forespørsel med hilsen, admin
- * navigerer til `/admin/games/[id]/påmeldinger`, ser den i Venter-fanen og
+ * navigerer til `/admin/games/[id]/signups`, ser den i Venter-fanen og
  * godkjenner. Etter godkjenning skal raden flytte seg til Godkjent-fanen og
  * spilleren skal være i `game_players`.
  *
@@ -52,11 +52,11 @@ test.describe('Påmelding · manual_approval-modus (full flow)', () => {
     const playerPage = await playerContext.newPage();
 
     await test.step('spiller åpner påmeldings-siden og logger inn', async () => {
-      await playerPage.goto(`/påmelding/${game!.shortId}`);
+      await playerPage.goto(`/signup/${game!.shortId}`);
       await expect(playerPage).toHaveURL(/\/login/, { timeout: 10_000 });
       await signInViaOtp(playerPage, PLAYER_EMAIL!);
       await expect(playerPage).toHaveURL(
-        new RegExp(`/påmelding/${game!.shortId}`),
+        new RegExp(`/signup/${game!.shortId}`),
         { timeout: 15_000 },
       );
     });
@@ -80,7 +80,7 @@ test.describe('Påmelding · manual_approval-modus (full flow)', () => {
     await test.step('admin logger inn og navigerer til påmeldinger', async () => {
       await adminPage.goto('/login');
       await signInViaOtp(adminPage, ADMIN_EMAIL!);
-      await adminPage.goto(`/admin/games/${game!.id}/påmeldinger`);
+      await adminPage.goto(`/admin/games/${game!.id}/signups`);
       await expect(
         adminPage.getByRole('heading', { name: 'Påmeldinger' }),
       ).toBeVisible({ timeout: 15_000 });
@@ -101,7 +101,7 @@ test.describe('Påmelding · manual_approval-modus (full flow)', () => {
       // Optimistisk skjuling i klienten fjerner raden umiddelbart. Vi
       // navigerer til Godkjent-fanen for å verifisere persistens.
       await adminPage.goto(
-        `/admin/games/${game!.id}/påmeldinger?tab=approved`,
+        `/admin/games/${game!.id}/signups?tab=approved`,
       );
       await expect(adminPage.getByText(hilsen)).toBeVisible({
         timeout: 15_000,

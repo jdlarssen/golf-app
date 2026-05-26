@@ -5,7 +5,7 @@
 // så last_seen_at-terskelen gir ingen mening).
 //
 // Brukeren går: mail → /login (legger inn samme e-post) → kode → fullfør
-// profil → /påmelding/[shortId]/team → klikker «Bli med på lag» (per
+// profil → /signup/[shortId]/team → klikker «Bli med på lag» (per
 // teamActions.attachToCaptainTeam).
 
 import { Resend } from 'resend';
@@ -30,7 +30,7 @@ export type TeamInvitationMailParams = {
   captainName: string;
   gameName: string;
   teamName: string;
-  /** 8-char short_id — brukes til å bygge /påmelding/[shortId]-deeplink via login. */
+  /** 8-char short_id — brukes til å bygge /signup/[shortId]-deeplink via login. */
   gameShortId: string;
 };
 
@@ -41,7 +41,7 @@ export async function sendTeamInvitationMail(
   const subject = `Du er invitert til ${teamName} (${gameName})`;
   // Vi sender brukeren til /login med next-param som tar dem til
   // påmeldings-siden etter OTP-verify + profil-fullføring.
-  const next = encodeURIComponent(`/påmelding/${gameShortId}/team`);
+  const next = encodeURIComponent(`/signup/${gameShortId}/team`);
   const loginUrl = `https://tornygolf.no/login?next=${next}`;
 
   const html = `<!DOCTYPE html><html lang="nb">

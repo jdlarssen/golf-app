@@ -6,7 +6,7 @@ import {
 } from '@/tests/serverActionMocks';
 
 /**
- * Unit-tester for approve/reject server-actions på /admin/games/[id]/påmeldinger
+ * Unit-tester for approve/reject server-actions på /admin/games/[id]/signups
  * (#199). Verifiserer:
  *  - Auth via requireAdminOrTrustedCreator (admin OR creator).
  *  - Status gate: kun pending-requests kan avgjøres.
@@ -138,7 +138,7 @@ describe('approveRequest', () => {
     );
     expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
     expect(lastRedirect()).toBe(
-      `/admin/games/${GAME_ID}/påmeldinger?status=approved`,
+      `/admin/games/${GAME_ID}/signups?status=approved`,
     );
 
     // Verify rekkefølge: UPDATE før UPSERT (status før game_players-insert)
@@ -246,7 +246,7 @@ describe('approveRequest', () => {
 
     expect(notifyMock).not.toHaveBeenCalled();
     expect(lastRedirect()).toBe(
-      `/admin/games/${GAME_ID}/påmeldinger?error=not_pending`,
+      `/admin/games/${GAME_ID}/signups?error=not_pending`,
     );
   });
 
@@ -289,7 +289,7 @@ describe('approveRequest', () => {
 
     expect(notifyMock).not.toHaveBeenCalled();
     expect(lastRedirect()).toBe(
-      `/admin/games/${GAME_ID}/påmeldinger?error=game_locked`,
+      `/admin/games/${GAME_ID}/signups?error=game_locked`,
     );
   });
 });
@@ -347,7 +347,7 @@ describe('rejectRequest', () => {
       }),
     );
     expect(lastRedirect()).toBe(
-      `/admin/games/${GAME_ID}/påmeldinger?status=rejected`,
+      `/admin/games/${GAME_ID}/signups?status=rejected`,
     );
   });
 
@@ -440,7 +440,7 @@ describe('rejectRequest', () => {
 
     // Bot ser samme suksess-redirect som ekte avvisning.
     expect(lastRedirect()).toBe(
-      `/admin/games/${GAME_ID}/påmeldinger?status=rejected`,
+      `/admin/games/${GAME_ID}/signups?status=rejected`,
     );
     // Critical: ingen notify, ingen revalidate.
     expect(notifyMock).not.toHaveBeenCalled();
@@ -486,7 +486,7 @@ describe('rejectRequest', () => {
 
     expect(notifyMock).not.toHaveBeenCalled();
     expect(lastRedirect()).toBe(
-      `/admin/games/${GAME_ID}/påmeldinger?error=reason_too_long`,
+      `/admin/games/${GAME_ID}/signups?error=reason_too_long`,
     );
   });
 });

@@ -122,7 +122,7 @@ export function TeamRegistrationForm({
           </Banner>
         )}
         <a
-          href={`/påmelding/${shortId}/team`}
+          href={`/signup/${shortId}/team`}
           className="inline-flex min-h-[44px] w-full items-center justify-center rounded-full bg-primary px-[18px] py-2.5 font-medium tracking-tight text-white hover:bg-primary-hover dark:text-bg"
         >
           Gå til lag-oversikten

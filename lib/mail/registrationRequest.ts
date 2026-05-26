@@ -41,7 +41,7 @@ export async function sendRegistrationRequestMail(
 ): Promise<void> {
   const { to, gameName, gameShortId, requesterName, message } = params;
   const subject = `Ny påmelding til ${gameName}`;
-  const approvalUrl = `https://tornygolf.no/påmelding/${gameShortId}`;
+  const approvalUrl = `https://tornygolf.no/signup/${gameShortId}`;
 
   // Bygg hilsen-blokk kun hvis message er satt — vi vil ikke ha en tom
   // blockquote-ramme som tar opp plass uten innhold.

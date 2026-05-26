@@ -45,7 +45,7 @@ export async function RegistrationOverviewSection({
     pendingCount = count ?? 0;
   }
 
-  const shareUrl = `https://tornygolf.no/påmelding/${shortId}`;
+  const shareUrl = `https://tornygolf.no/signup/${shortId}`;
   const modeLabel =
     registrationMode === 'open'
       ? 'Fri påmelding'
@@ -92,7 +92,7 @@ export async function RegistrationOverviewSection({
           <CopyShareLinkButton shareUrl={shareUrl} />
 
           <SmartLink
-            href={`/admin/games/${gameId}/påmeldinger`}
+            href={`/admin/games/${gameId}/signups`}
             className="block min-h-[44px] rounded-full border border-border bg-surface px-4 py-3 text-center text-sm font-medium tracking-tight text-text transition-colors hover:bg-primary-soft"
           >
             Vis alle påmeldinger →

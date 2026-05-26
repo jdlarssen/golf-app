@@ -14,7 +14,7 @@ import {
  * E2E for selv-påmelding i `open`-modus (#199 chunk 14).
  *
  * Happy path: admin oppretter et TEST-spill via service-role, test-spiller
- * navigerer til `/påmelding/[shortId]`, klikker «Meld meg på», og lander på
+ * navigerer til `/signup/[shortId]`, klikker «Meld meg på», og lander på
  * `/games/[id]`. Vi verifiserer både UI-overgangen og at det faktisk ble
  * INSERT i `game_players` (RLS-policyen + admin-client-fallbacken bekreftes).
  *
@@ -30,9 +30,9 @@ test.describe('Påmelding · open-modus (logged-out smoke)', () => {
     // Vi vet ikke om denne shortId-en finnes — det er greit. Proxy redirecter
     // før page-handleren rekker å returnere notFound(). Smoke-en bekrefter
     // bare at gating funker.
-    await page.goto('/påmelding/abcd1234');
+    await page.goto('/signup/abcd1234');
     await expect(page).toHaveURL(
-      /\/login\?next=%2Fp%C3%A5melding%2Fabcd1234/,
+      /\/login\?next=%2Fsignup%2Fabcd1234/,
       { timeout: 10_000 },
     );
   });
@@ -63,14 +63,14 @@ test.describe('Påmelding · open-modus (full flow)', () => {
   }) => {
     expect(game).not.toBeNull();
 
-    await test.step('navigerer til /påmelding/[shortId] og logger inn', async () => {
-      await page.goto(`/påmelding/${game!.shortId}`);
+    await test.step('navigerer til /signup/[shortId] og logger inn', async () => {
+      await page.goto(`/signup/${game!.shortId}`);
       // Proxy bouncer til /login med next-param.
       await expect(page).toHaveURL(/\/login/, { timeout: 10_000 });
       await signInViaOtp(page, PLAYER_EMAIL!);
       // Etter login skal vi være tilbake på påmeldings-siden.
       await expect(page).toHaveURL(
-        new RegExp(`/påmelding/${game!.shortId}`),
+        new RegExp(`/signup/${game!.shortId}`),
         { timeout: 15_000 },
       );
     });

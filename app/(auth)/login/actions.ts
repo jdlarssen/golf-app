@@ -192,7 +192,7 @@ export async function verifyCode(formData: FormData) {
             // ikke få en solo-rad i game_players auto-opprettet — det ville
             // bryte CHECK-constraint på team_number/flight_number-konsistens.
             // I stedet redirecter brukeren videre til
-            // `/påmelding/[shortId]/team`-siden hvor attachToCaptainTeam-
+            // `/signup/[shortId]/team`-siden hvor attachToCaptainTeam-
             // action-en oppretter request-raden riktig.
             const { data: gameRow } = await admin
               .from('games')
@@ -232,7 +232,7 @@ export async function verifyCode(formData: FormData) {
             // notifyInvitedToGame skipper finished-spill internt og swallow-er
             // egne feil, så vi trenger ingen guard her ut over Promise.allSettled.
             // For team-only spill: invitéen får et team_invite-varsel når de
-            // klikker "Bli med på lag"-knappen på /påmelding/[shortId]/team
+            // klikker "Bli med på lag"-knappen på /signup/[shortId]/team
             // — verifyCode trigger her bare standard game-scoped invite-varsel
             // som en hilsen "du er logget inn, nå kan du melde deg på laget".
             await notifyInvitedToGame({

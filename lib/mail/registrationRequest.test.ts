@@ -41,7 +41,7 @@ describe('sendRegistrationRequestMail', () => {
     expect(payload.subject).toBe('Ny påmelding til Sommercup 2026');
     expect(payload.html).toContain('Per Spiller');
     expect(payload.html).toContain('Sommercup 2026');
-    expect(payload.html).toContain('/påmelding/abc12345');
+    expect(payload.html).toContain('/signup/abc12345');
     expect(payload.text).toContain('Per Spiller');
     expect(payload.text).toContain('Sommercup 2026');
   });

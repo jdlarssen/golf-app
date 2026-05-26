@@ -13,7 +13,7 @@ import {
  * E2E for `invite_only`-modus (#199 chunk 14).
  *
  * Dette er default-moduset (matcher dagens kompis-flyt). Når en logget-inn
- * bruker uten pending invitation lander på /påmelding/[shortId], skal
+ * bruker uten pending invitation lander på /signup/[shortId], skal
  * landingen vise «Dette spillet krever invitasjon»-melding og INGEN
  * «Meld meg på»-knapp.
  */
@@ -43,12 +43,12 @@ test.describe('Påmelding · invite_only-modus (full flow)', () => {
   }) => {
     expect(game).not.toBeNull();
 
-    await page.goto(`/påmelding/${game!.shortId}`);
+    await page.goto(`/signup/${game!.shortId}`);
     // Bouncer til /login først.
     await expect(page).toHaveURL(/\/login/, { timeout: 10_000 });
     await signInViaOtp(page, PLAYER_EMAIL!);
     await expect(page).toHaveURL(
-      new RegExp(`/påmelding/${game!.shortId}`),
+      new RegExp(`/signup/${game!.shortId}`),
       { timeout: 15_000 },
     );
 

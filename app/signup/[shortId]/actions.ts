@@ -24,7 +24,7 @@ import { sendRegistrationRequestMail } from '@/lib/mail/registrationRequest';
  *
  * Felles authz-mønster:
  *   - Honeypot-felt `website` short-circuiter til "success"-shape.
- *   - Uautentisert → redirect til /login med `next=/påmelding/[shortId]`.
+ *   - Uautentisert → redirect til /login med `next=/signup/[shortId]`.
  *   - Manglende profil → redirect til /complete-profile med next-param.
  *   - Server-state-feil (feil mode, feil status) → returner error-shape.
  *
@@ -97,7 +97,7 @@ async function requireAuthedUser(shortId: string): Promise<string> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect(`/login?next=/påmelding/${shortId}`);
+    redirect(`/login?next=/signup/${shortId}`);
   }
   const { data: profile } = await supabase
     .from('users')
@@ -105,7 +105,7 @@ async function requireAuthedUser(shortId: string): Promise<string> {
     .eq('id', user!.id)
     .maybeSingle<{ profile_completed_at: string | null }>();
   if (!profile?.profile_completed_at) {
-    redirect(`/complete-profile?next=/påmelding/${shortId}`);
+    redirect(`/complete-profile?next=/signup/${shortId}`);
   }
   return user!.id;
 }
@@ -220,7 +220,7 @@ export async function registerForOpenGame(
  * `registration_request` + request_id for deeplink til godkjennings-siden.
  *
  * Ved suksess: returner { ok: true } så client-komponenten kan vise
- * kvittering. Vi redirecter ikke — siden samme `/påmelding/[shortId]`
+ * kvittering. Vi redirecter ikke — siden samme `/signup/[shortId]`
  * vil re-rendre i "Forespørsel sendt"-state ved neste navigasjon.
  */
 export async function requestApproval(

@@ -21,10 +21,10 @@ type Params = Promise<{ shortId: string }>;
 /**
  * Offentlig landing-side for selv-påmelding (#199 chunk 5).
  *
- * URL: `/påmelding/[shortId]` der shortId er 8-char base32 fra
+ * URL: `/signup/[shortId]` der shortId er 8-char base32 fra
  * `games.short_id`-kolonnen. Whitelisted i proxy.ts slik at uautentiserte
  * brukere får besøke siden — vi redirecter dem selv til /login med
- * `next=/påmelding/[shortId]` så de havner tilbake etter OTP-verify.
+ * `next=/signup/[shortId]` så de havner tilbake etter OTP-verify.
  *
  * Branch-logikken kjører serverside i prioritetsrekkefølge:
  *   1. Ugyldig/manglende short_id → notFound().
@@ -53,7 +53,7 @@ export default async function PåmeldingPage({ params }: { params: Params }) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect(`/login?next=/påmelding/${shortId}`);
+    redirect(`/login?next=/signup/${shortId}`);
   }
 
   // Bruk admin-client for profil/membership-sjekker. Vi er allerede authed
@@ -69,7 +69,7 @@ export default async function PåmeldingPage({ params }: { params: Params }) {
     .maybeSingle<{ profile_completed_at: string | null; email: string }>();
 
   if (!profile?.profile_completed_at) {
-    redirect(`/complete-profile?next=/påmelding/${shortId}`);
+    redirect(`/complete-profile?next=/signup/${shortId}`);
   }
 
   const { data: existingPlayer } = await admin

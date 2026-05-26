@@ -154,17 +154,17 @@ function buildDeeplink(notification: NotificationRow): string {
     }
     case 'team_invite': {
       const p = notification.payload as NotificationPayload<'team_invite'>;
-      return `/påmelding/${p.game_short_id}/team`;
+      return `/signup/${p.game_short_id}/team`;
     }
     case 'registration_request': {
       const p = notification.payload as NotificationPayload<'registration_request'>;
-      return `/admin/games/${p.game_id}/påmeldinger`;
+      return `/admin/games/${p.game_id}/signups`;
     }
     case 'registration_rejected':
       return '/innboks';
     case 'team_member_withdrew': {
       const p = notification.payload as NotificationPayload<'team_member_withdrew'>;
-      return `/påmelding/${p.game_short_id}/team`;
+      return `/signup/${p.game_short_id}/team`;
     }
   }
 }

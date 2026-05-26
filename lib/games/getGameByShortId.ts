@@ -7,7 +7,7 @@ import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
  * Public-landing-side henter `games`-rad via 8-char short_id. Bruker
  * admin-client for å bypass RLS — vanlig SELECT-policy gater på admin OR
  * game_players-membership, og en uautentisert (eller helt ny) bruker som
- * lander på `/påmelding/[shortId]` matcher ingen av delene. Returnerer bare
+ * lander på `/signup/[shortId]` matcher ingen av delene. Returnerer bare
  * felter som er trygge å eksponere uten autentisering: base-info om spillet
  * pluss påmeldings-modus.
  *

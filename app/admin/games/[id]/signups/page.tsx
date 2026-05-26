@@ -202,7 +202,7 @@ export default async function PåmeldingerPage({
           return (
             <SmartLink
               key={t.key}
-              href={`/admin/games/${id}/påmeldinger?tab=${t.key}`}
+              href={`/admin/games/${id}/signups?tab=${t.key}`}
               className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-full px-3.5 text-[13px] font-medium tracking-tight transition-colors ${
                 isActive
                   ? 'bg-primary text-white dark:text-bg'

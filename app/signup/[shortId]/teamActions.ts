@@ -16,7 +16,7 @@ import { sendTeamInvitationMail } from '@/lib/mail/teamInvitation';
 /**
  * Lag-formasjons-actions for selv-påmelding (#199 chunks 8+9).
  *
- * Kapteinen lander på `/påmelding/[shortId]`, fyller ut lag-formen og
+ * Kapteinen lander på `/signup/[shortId]`, fyller ut lag-formen og
  * submitter. Server-action gjør authz, validering, og deretter:
  *
  *   1. Insert kaptein-rad i `game_registration_requests` med
@@ -37,7 +37,7 @@ import { sendTeamInvitationMail } from '@/lib/mail/teamInvitation';
  * får aggregert status tilbake.
  *
  * Design-beslutning for chunk 9: vi hooker IKKE `verifyCode` for team-
- * invites. I stedet detekterer `/påmelding/[shortId]/team`-siden om
+ * invites. I stedet detekterer `/signup/[shortId]/team`-siden om
  * brukeren har en pending `invitations`-rad for spillet og tilbyr en
  * "Bli med på lag"-knapp som attacher dem til kapteinens team-request.
  * Sidesteg tatt fordi `invitations` ikke har et `team_request_id`-felt;
@@ -113,7 +113,7 @@ async function requireAuthedUser(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect(`/login?next=/påmelding/${shortId}`);
+    redirect(`/login?next=/signup/${shortId}`);
   }
   const { data: profile } = await supabase
     .from('users')
@@ -121,7 +121,7 @@ async function requireAuthedUser(
     .eq('id', user!.id)
     .maybeSingle<{ profile_completed_at: string | null }>();
   if (!profile?.profile_completed_at) {
-    redirect(`/complete-profile?next=/påmelding/${shortId}`);
+    redirect(`/complete-profile?next=/signup/${shortId}`);
   }
   return { id: user!.id, email: user!.email ?? null };
 }
@@ -518,7 +518,7 @@ export async function submitTeamRegistration(
  * request-status til approved (om den var pending, eller no-op om allerede
  * approved fra open-modus).
  *
- * Kalles fra `/påmelding/[shortId]/team`-siden av medspilleren selv.
+ * Kalles fra `/signup/[shortId]/team`-siden av medspilleren selv.
  */
 export type AcceptDeclineResult =
   | { ok: true }
@@ -813,7 +813,7 @@ export async function removeTeamMember(
 
 /**
  * Chunk-9-flyten: en ukjent bruker klikket team-invitasjons-mail, fullførte
- * OTP-login og landet på `/påmelding/[shortId]/team`. De har en åpen
+ * OTP-login og landet på `/signup/[shortId]/team`. De har en åpen
  * `invitations`-rad med `game_id` satt, men ingen `game_registration_requests`-
  * rad (kapteinen kunne ikke lage en uten user_id).
  *

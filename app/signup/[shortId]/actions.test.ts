@@ -151,7 +151,7 @@ describe('registerForOpenGame', () => {
       registerForOpenGame(fd({ shortId: SHORT_ID })),
     ).rejects.toBeInstanceOf(RedirectError);
     expect(redirectMock).toHaveBeenCalledWith(
-      `/login?next=/påmelding/${SHORT_ID}`,
+      `/login?next=/signup/${SHORT_ID}`,
     );
   });
 

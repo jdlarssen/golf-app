@@ -97,7 +97,7 @@ async function loadDecisionContext(requestId: string): Promise<{
   // Approve/reject gir bare mening pre-active. Etter at runden er startet
   // er rosteret låst.
   if (game!.status === 'active' || game!.status === 'finished') {
-    redirect(`/admin/games/${game!.id}/påmeldinger?error=game_locked`);
+    redirect(`/admin/games/${game!.id}/signups?error=game_locked`);
   }
 
   return {
@@ -115,7 +115,7 @@ async function loadDecisionContext(requestId: string): Promise<{
  */
 export async function approveRequest(requestId: string): Promise<void> {
   const { request, game, actorId } = await loadDecisionContext(requestId);
-  const detailPath = `/admin/games/${game.id}/påmeldinger`;
+  const detailPath = `/admin/games/${game.id}/signups`;
 
   if (request.status !== 'pending') {
     redirect(`${detailPath}?error=not_pending`);
@@ -268,7 +268,7 @@ export async function rejectRequest(
   formData: FormData,
 ): Promise<void> {
   const { request, game, actorId } = await loadDecisionContext(requestId);
-  const detailPath = `/admin/games/${game.id}/påmeldinger`;
+  const detailPath = `/admin/games/${game.id}/signups`;
 
   // Honeypot — felt skjult fra ekte admins, populated kun av bots.
   // Silent-reject med suksess-redirect så bot ikke kan probe forskjell.

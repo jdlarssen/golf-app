@@ -44,11 +44,11 @@ test.describe('Påmelding · self-withdraw (full flow)', () => {
     expect(game).not.toBeNull();
 
     await test.step('melder seg på via open-flyten', async () => {
-      await page.goto(`/påmelding/${game!.shortId}`);
+      await page.goto(`/signup/${game!.shortId}`);
       await expect(page).toHaveURL(/\/login/, { timeout: 10_000 });
       await signInViaOtp(page, PLAYER_EMAIL!);
       await expect(page).toHaveURL(
-        new RegExp(`/påmelding/${game!.shortId}`),
+        new RegExp(`/signup/${game!.shortId}`),
         { timeout: 15_000 },
       );
       await page.getByRole('button', { name: 'Meld meg på' }).click();
