@@ -81,13 +81,16 @@ const teamInviteSchema = z.object({
   request_id: uuid,
 });
 
-// registration_request: noen ba om å bli med i et manual_approval-spill.
-// Sendes til admin/creator. request_id deeplinker til godkjennings-siden.
+// registration_request: noen meldte seg på et `open`-spill, ELLER ba om å
+// bli med i et `manual_approval`-spill. Sendes til admin/creator.
+// `request_id` er kun satt for manual_approval (deeplinker til godkjennings-
+// siden); for open-modus utelates den fordi det ikke eksisterer en request-rad
+// — admin trenger ingen handling, kun en heads-up at en spiller har joined.
 const registrationRequestSchema = z.object({
   game_id: uuid,
   game_name: z.string().min(1),
   requester_name: z.string().min(1),
-  request_id: uuid,
+  request_id: uuid.optional(),
   message: z.string().optional(),
 });
 

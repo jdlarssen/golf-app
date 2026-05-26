@@ -59,11 +59,14 @@ export const config = {
   //   - login, register (must be reachable while logged out)
   //   - legal/* (privacy/terms — public, invitees must be able to read
   //     them before logging in)
+  //   - påmelding/* (public landing page for self-registration; the page
+  //     itself redirects unauthed visitors to /login with the correct
+  //     ?next= back-link, so the proxy must let them through)
   //   - PWA assets (must be reachable while logged out so the browser can
   //     evaluate them for install): sw.js, manifest.webmanifest, icon,
   //     icon0, apple-icon
   //   - favicon.ico, *.svg/png/jpg/jpeg/gif/webp/ico (static assets)
   matcher: [
-    '/((?!_next/static|_next/image|api/|login|register|legal/|sw\\.js|manifest\\.webmanifest|icon|icon0|apple-icon|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/((?!_next/static|_next/image|api/|login|register|legal/|påmelding/|sw\\.js|manifest\\.webmanifest|icon|icon0|apple-icon|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 };

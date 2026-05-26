@@ -1,0 +1,52 @@
+import 'server-only';
+import { getAdminClient } from '@/lib/supabase/admin';
+import type { RegistrationMode, RegistrationType } from './registration';
+import type { GameMode } from '@/lib/scoring/modes/types';
+
+/**
+ * Public-landing-side henter `games`-rad via 8-char short_id. Bruker
+ * admin-client for å bypass RLS — vanlig SELECT-policy gater på admin OR
+ * game_players-membership, og en uautentisert (eller helt ny) bruker som
+ * lander på `/påmelding/[shortId]` matcher ingen av delene. Returnerer bare
+ * felter som er trygge å eksponere uten autentisering: base-info om spillet
+ * pluss påmeldings-modus.
+ */
+
+export type ShortIdGame = {
+  id: string;
+  name: string;
+  short_id: string;
+  status: 'draft' | 'scheduled' | 'active' | 'finished';
+  registration_mode: RegistrationMode;
+  registration_type: RegistrationType;
+  game_mode: GameMode;
+  course_id: string | null;
+  scheduled_tee_off_at: string | null;
+  created_by: string | null;
+};
+
+export async function getGameByShortId(
+  shortId: string,
+): Promise<ShortIdGame | null> {
+  // Defensiv lengde-/charset-sjekk før DB-call. CHECK-constraint i migrasjon
+  // 0040 håndhever det samme på DB-nivå, men vi sparer en round-trip på
+  // åpenbart ugyldige inputs (typos i URL, scrapers, osv).
+  if (!/^[0-9a-z]{8}$/.test(shortId)) {
+    return null;
+  }
+
+  const admin = getAdminClient();
+  const { data, error } = await admin
+    .from('games')
+    .select(
+      'id, name, short_id, status, registration_mode, registration_type, game_mode, course_id, scheduled_tee_off_at, created_by',
+    )
+    .eq('short_id', shortId)
+    .maybeSingle<ShortIdGame>();
+
+  if (error) {
+    console.error('[getGameByShortId] lookup failed', error);
+    return null;
+  }
+  return data;
+}
