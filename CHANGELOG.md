@@ -14,6 +14,19 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#257](https://github.com/jdlarssen/golf-app/issues/257). Liten oppfølger til selv-påmeldings-flyten: når du logger inn ser du nå åpne turneringer du kan melde deg på rett på hjem-siden, og forespørslene dine som venter på godkjenning.
 
+### [1.37.1] - 2026-05-26
+
+> Velkomst-teksten på hjem-siden bytter nå når det faktisk finnes en åpen turnering du kan melde deg på. Før kunne du se «Be en arrangør om å invitere deg» rett over en seksjon med turneringer å melde seg på — litt rart. Nå sier den «Velg en turnering under» i stedet.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- [app/page.tsx](app/page.tsx) — `getDiscoverableGames`-fetchen flyttet opp før empty-state-grenen så `hasDiscoveryContent`-flagget kan styre velkomst-tekstvalget. Tre-grens-conditional: `canCreateGame` → opprett-CTA, `hasDiscoveryContent` → «Velg en turnering under», ellers «Be en arrangør om å invitere deg».
+- [app/HomeDiscoverySection.tsx](app/HomeDiscoverySection.tsx) tar nå `data`-prop i stedet for å gjøre egen fetch. Caller (`page.tsx`) henter data én gang og gjenbruker det for både tekstvalg og rendring.
+
+</details>
+
 ### [1.37.0] - 2026-05-26
 
 > Når du logger inn på Tørny ser du nå alle åpne turneringer du kan melde deg på, rett på hjem-siden. Hvis du har sendt en forespørsel som venter på godkjenning, dukker den også opp her, så du slipper å lete etter den i innboksen.

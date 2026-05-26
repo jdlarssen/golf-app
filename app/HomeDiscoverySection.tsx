@@ -1,27 +1,25 @@
 import { LinkButton } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { formatTeeOffDate, formatTeeOffTime } from '@/lib/format/teeOff';
-import { getDiscoverableGames } from '@/lib/games/getDiscoverableGames';
+import type {
+  DiscoverableOpenGame,
+  PendingRequest,
+} from '@/lib/games/getDiscoverableGames';
 
 /**
  * «Funn turneringer»-seksjon på hjem-siden (#257). Vises kun for non-admin/
- * non-trusted-creator-brukere som ellers ville sett en tom velkomst-skjerm.
+ * non-trusted-creator-brukere når det faktisk finnes innhold å vise.
  *
- * To lister:
- *   1. Åpne turneringer som brukeren IKKE er påmeldt og ikke har en aktiv
- *      forespørsel på — kobler til /signup/[shortId] med «Meld meg på».
- *   2. Egne pending-forespørsler (manual_approval-modus) — informativ,
- *      ingen action-knapp; bruker venter på admins beslutning.
- *
- * Hvis begge listene er tomme returneres null så caller kan beholde sin
- * dagens tom-tilstand uten ekstra spacing.
+ * Caller (app/page.tsx) henter data via `getDiscoverableGames()` slik at
+ * samme query kan styre BÅDE velkomst-teksten over og denne seksjonen —
+ * uten å fyre lookup-en to ganger.
  */
-export async function HomeDiscoverySection({ userId }: { userId: string }) {
-  const { openGames, pendingRequests } = await getDiscoverableGames(userId);
-
-  if (openGames.length === 0 && pendingRequests.length === 0) {
-    return null;
-  }
+export function HomeDiscoverySection({
+  data,
+}: {
+  data: { openGames: DiscoverableOpenGame[]; pendingRequests: PendingRequest[] };
+}) {
+  const { openGames, pendingRequests } = data;
 
   return (
     <section className="mt-10 w-full">

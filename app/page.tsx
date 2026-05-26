@@ -23,6 +23,7 @@ import { formatTeeOffDate, formatTeeOffTime } from '@/lib/format/teeOff';
 import { STATUS_LABELS } from '@/lib/games/status';
 import { isTrustedCreator } from '@/lib/admin/trustedCreators';
 import { HomeDiscoverySection } from './HomeDiscoverySection';
+import { getDiscoverableGames } from '@/lib/games/getDiscoverableGames';
 
 type SearchParams = Promise<{ profile?: string | string[] }>;
 
@@ -181,6 +182,17 @@ async function HomeBody() {
   const canCreateGame =
     profile?.is_admin === true || isTrustedCreator(profile?.email);
 
+  // «Funn turneringer»-data hentes kun for non-admin når vi rendrer empty-state.
+  // Brukes både til å bytte velkomst-teksten og til å rendre selve seksjonen
+  // uten å hente data to ganger.
+  const discoveryData =
+    isEmptyState && !canCreateGame && userId
+      ? await getDiscoverableGames(userId)
+      : null;
+  const hasDiscoveryContent =
+    (discoveryData?.openGames.length ?? 0) > 0 ||
+    (discoveryData?.pendingRequests.length ?? 0) > 0;
+
   if (isEmptyState) {
     return (
       <>
@@ -197,7 +209,9 @@ async function HomeBody() {
           <p className="mt-3 font-sans text-sm leading-relaxed text-muted max-w-[280px]">
             {canCreateGame
               ? 'Ingen turneringer enda. Sett opp første runde og kom i gang.'
-              : 'Du er klar. Be en arrangør om å invitere deg til neste runde.'}
+              : hasDiscoveryContent
+                ? 'Du er klar. Velg en turnering under, eller vent på en invitasjon.'
+                : 'Du er klar. Be en arrangør om å invitere deg til neste runde.'}
           </p>
           {handicapChip && <div className="mt-5">{handicapChip}</div>}
           {canCreateGame && (
@@ -215,8 +229,8 @@ async function HomeBody() {
           </PullQuote>
         </section>
 
-        {!profile?.is_admin && userId && (
-          <HomeDiscoverySection userId={userId} />
+        {discoveryData && hasDiscoveryContent && (
+          <HomeDiscoverySection data={discoveryData} />
         )}
 
         <footer className="mt-14 pt-6 border-t border-border/60 dark:border-border/80">
