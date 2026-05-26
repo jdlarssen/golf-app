@@ -12,6 +12,7 @@ import { TopBar } from '@/components/ui/TopBar';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
 import { CoursesLedgerClient } from './CoursesLedgerClient';
+import { deriveCourseItem, type CourseRow } from './derive';
 
 const COURSES_LEDGER_GRID = '1fr 64px 14px';
 
@@ -41,25 +42,11 @@ function first(value: string | string[] | undefined): string | undefined {
   return value;
 }
 
-type CourseRow = {
-  id: string;
-  name: string;
-  created_at: string;
-  updated_at: string;
-  tee_boxes: {
-    slope_ladies: number | null;
-    course_rating_ladies: number | null;
-    slope_juniors: number | null;
-    course_rating_juniors: number | null;
-    archived_at: string | null;
-  }[];
-  games: { status: 'draft' | 'scheduled' | 'active' | 'finished' }[];
-};
-
-// Embed-fetch av tee-rad-er og spill-statuser for å derivere filter-data
-// (tee-tall, has_ladies_tee, has_juniors_tee, active_game_count) i én
-// round-trip. Datasettet er lite — under ~50 baner med ~5 tees + ~50 spill
-// hver selv ved klubb-skala — så embed er rimeligere enn separate queries.
+// Embed-fetch av tee-rader, spill-statuser og spill-datoer for å derivere
+// filter-data (tee-tall, has_ladies_tee, has_juniors_tee, active_game_count,
+// last_played_at) i én round-trip. Datasettet er lite — under ~50 baner med
+// ~5 tees + ~50 spill hver selv ved klubb-skala — så embed er rimeligere
+// enn separate queries.
 const getCourses = cache(async () => {
   const supabase = await getServerClient();
   const { data, error } = await supabase
@@ -68,7 +55,7 @@ const getCourses = cache(async () => {
       `
       id, name, created_at, updated_at,
       tee_boxes(slope_ladies, course_rating_ladies, slope_juniors, course_rating_juniors, archived_at),
-      games(status)
+      games(status, scheduled_tee_off_at, ended_at)
     `,
     )
     .order('created_at', { ascending: false })
@@ -77,27 +64,6 @@ const getCourses = cache(async () => {
   if (error) throw error;
   return data ?? [];
 });
-
-// Avledningsfunksjoner — eksportert for testing.
-export function deriveCourseItem(c: CourseRow) {
-  const activeTees = c.tee_boxes.filter((t) => t.archived_at === null);
-  return {
-    id: c.id,
-    name: c.name,
-    created_at: c.created_at,
-    updated_at: c.updated_at,
-    tee_count: activeTees.length,
-    has_ladies_tee: activeTees.some(
-      (t) => t.slope_ladies !== null && t.course_rating_ladies !== null,
-    ),
-    has_juniors_tee: activeTees.some(
-      (t) => t.slope_juniors !== null && t.course_rating_juniors !== null,
-    ),
-    active_game_count: c.games.filter(
-      (g) => g.status === 'active' || g.status === 'scheduled',
-    ).length,
-  };
-}
 
 export default async function CoursesPage({
   searchParams,

@@ -23,27 +23,39 @@ export type CoursesLedgerItem = {
   has_ladies_tee: boolean;
   has_juniors_tee: boolean;
   active_game_count: number;
+  last_played_at: string | null;
 };
 
-export type SortBy = 'created_at' | 'updated_at' | 'active_game_count';
+export type SortBy =
+  | 'created_at'
+  | 'updated_at'
+  | 'last_played'
+  | 'active_game_count';
 
 export type Filters = {
   hasLadiesTee: boolean;
   hasJuniorsTee: boolean;
   activeGames: boolean;
+  playedRecently: boolean;
 };
 
 const SORT_LABELS: Record<SortBy, string> = {
   created_at: 'Nyeste først',
   updated_at: 'Sist endret',
+  last_played: 'Sist spilt',
   active_game_count: 'Flest aktive spill',
 };
 
 const SORT_VALUES = new Set<SortBy>([
   'created_at',
   'updated_at',
+  'last_played',
   'active_game_count',
 ]);
+
+// Vindu for «Spilt siste 30 dager»-filter. 30 dager = «aktiv i sesongen»
+// for norske golf-forhold. 90 dager dekker for mye av off-sesongen.
+const RECENT_PLAY_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
 // Pure helper — leser sort/filter/søk fra URL-params, fallback til defaults.
 // Eksportert for testing uavhengig av Next.js navigation-hooks.
@@ -64,14 +76,20 @@ export function readStateFromParams(params: URLSearchParams): {
       hasLadiesTee: params.get('ladies') === '1',
       hasJuniorsTee: params.get('juniors') === '1',
       activeGames: params.get('active') === '1',
+      playedRecently: params.get('recent') === '1',
     },
   };
 }
 
-// Avledet kicker-tekst per rad: «Endret DATO» når updated_at har gått fremover
-// mer enn buffer-en etter created_at, ellers «Lagt til DATO». Eksportert for
-// test-bruk.
+// Avledet kicker-tekst per rad. Prioritet:
+//   1. «Sist spilt DATO» når banen har blitt brukt i et spill
+//   2. «Endret DATO» når updated_at har gått fremover mer enn buffer-en
+//   3. «Lagt til DATO» (default)
+// Eksportert for test-bruk.
 export function rowKicker(item: CoursesLedgerItem): string {
+  if (item.last_played_at !== null) {
+    return `Sist spilt ${formatShortDateNb(item.last_played_at)}`;
+  }
   const created = new Date(item.created_at).getTime();
   const updated = new Date(item.updated_at).getTime();
   const wasUpdated = updated - created > SAME_TX_BUFFER_MS;
@@ -102,6 +120,14 @@ export function applySortAndFilter(
   if (filters.activeGames) {
     result = result.filter((c) => c.active_game_count > 0);
   }
+  if (filters.playedRecently) {
+    const cutoffMs = Date.now() - RECENT_PLAY_WINDOW_MS;
+    result = result.filter(
+      (c) =>
+        c.last_played_at !== null &&
+        new Date(c.last_played_at).getTime() >= cutoffMs,
+    );
+  }
 
   // Sortering muteres ikke på inn-arrayet.
   const sorted = [...result];
@@ -109,6 +135,17 @@ export function applySortAndFilter(
     sorted.sort((a, b) => b.created_at.localeCompare(a.created_at));
   } else if (sortBy === 'updated_at') {
     sorted.sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+  } else if (sortBy === 'last_played') {
+    // last_played_at desc; null (aldri spilt) plasseres sist, ties brytes
+    // med navn asc for stabil rekkefølge.
+    sorted.sort((a, b) => {
+      if (a.last_played_at === null && b.last_played_at === null) {
+        return a.name.localeCompare(b.name, 'nb');
+      }
+      if (a.last_played_at === null) return 1;
+      if (b.last_played_at === null) return -1;
+      return b.last_played_at.localeCompare(a.last_played_at);
+    });
   } else {
     // active_game_count desc, ties brytes med name asc for stabil rekkefølge.
     sorted.sort((a, b) => {
@@ -140,7 +177,10 @@ export function CoursesLedgerClient({
   );
 
   const hasActiveFilter =
-    filters.hasLadiesTee || filters.hasJuniorsTee || filters.activeGames;
+    filters.hasLadiesTee ||
+    filters.hasJuniorsTee ||
+    filters.activeGames ||
+    filters.playedRecently;
   const trimmedQuery = query.trim();
 
   // URL-state writer: oppdaterer kun de keys som er i `patch`. Verdier som er
@@ -176,6 +216,7 @@ export function CoursesLedgerClient({
       hasLadiesTee: 'ladies',
       hasJuniorsTee: 'juniors',
       activeGames: 'active',
+      playedRecently: 'recent',
     };
     updateParams({ [paramKey[key]]: filters[key] ? null : '1' });
   }
@@ -233,6 +274,11 @@ export function CoursesLedgerClient({
           label="Aktive spill"
           active={filters.activeGames}
           onClick={() => toggleFilter('activeGames')}
+        />
+        <FilterChip
+          label="Spilt siste 30 dager"
+          active={filters.playedRecently}
+          onClick={() => toggleFilter('playedRecently')}
         />
       </div>
 

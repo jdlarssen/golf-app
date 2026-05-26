@@ -10,16 +10,47 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.32.y — «Sist spilt»-indikator på bane-listen
+
+Issue [#239](https://github.com/jdlarssen/golf-app/issues/239). Vedlikeholds-flaten for baner viser nå når hver bane sist ble brukt, og lar deg sortere og filtrere på det.
+
+### [1.32.0] - 2026-05-26
+
+> Bane-listen viser nå når hver bane sist ble brukt i et spill, og du kan sortere på det. Det nye filteret «Spilt siste 30 dager» plukker ut banene som er i bruk nå. Det blir enklere å skille aktive baner fra gamle eksperimenter når katalogen vokser.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- Ny pure helper `app/admin/courses/derive.ts` med `deriveLastPlayedAt(games)` + flyttet `deriveCourseItem` ut av `page.tsx` for å gjøre dem rene testbare uten server-deps. `deriveLastPlayedAt` returnerer MAX av `ended_at` for finished spill og `scheduled_tee_off_at` for active; ignorerer draft + scheduled.
+- Ny sort-option «Sist spilt» i `CoursesLedgerClient` (`?sort=last_played`). Sorterer `last_played_at` desc med null-baner sist og navn-asc tie-break.
+- Ny filter-chip «Spilt siste 30 dager» (`?recent=1`). Cutoff beregnes client-side på render-tid via `Date.now()`; vinduet er en konstant i komponenten (30 dager).
+- 11 nye unit-tester i `app/admin/courses/derive.test.ts` for `deriveLastPlayedAt` + `deriveCourseItem`. 11 nye tester i `CoursesLedgerClient.test.tsx` for kicker-prioritet, ny sort, ny filter, URL-state-roundtrip.
+
+#### Changed
+- `getCourses` embed-fetcher nå `games(status, scheduled_tee_off_at, ended_at)` i samme PostgREST-call (var: `games(status)`). Ingen ekstra round-trip; embed-shapen er fortsatt single-fetch.
+- `rowKicker` prioriterer «Sist spilt {dato}» når banen har vært spilt; ellers fallback til eksisterende «Endret»/«Lagt til»-logikk.
+- `CoursesLedgerItem` utvidet med `last_played_at: string | null`. `SortBy`-union utvidet med `'last_played'`. `Filters` utvidet med `playedRecently: boolean`.
+
+#### Notes
+- Ingen migrasjon. `games.scheduled_tee_off_at` (fra [0010](supabase/migrations/0010_scheduled_status_and_tee_off.sql)) og `games.ended_at` (fra [0001](supabase/migrations/0001_initial_schema.sql)) finnes allerede.
+- Cache er react `cache`-wrappet og refetcher per request — nye spill plukkes opp på neste page-load uten `revalidateTag`-kobling.
+- Den eksisterende statiske «sortert nyeste først»-teksten på `CourseCountLine` er ikke oppdatert til å speile dynamisk sort. URL-styrt sort kan misvise tellelinjen; egen oppgave hvis det blir et problem.
+
+</details>
+
+---
+
 ## 1.31.y — Ryder Cup-stil cuper
+
+<details>
+<summary><strong>1.31.y — Ryder Cup-stil cuper (2 oppføringer) — klikk for å vise</strong></summary>
 
 Fase 1 av [#47](https://github.com/jdlarssen/golf-app/issues/47). Du kan nå binde flere matchplay-runder sammen til én lag-vs-lag-cup, og følge fordelingen av point på et felles leaderboard. Patch på toppen ([#234](https://github.com/jdlarssen/golf-app/issues/234)): liten kopier-snarvei på tee-rating-skjemaet.
 
 ### [1.31.1] - 2026-05-26
 
 > Du kan nå kopiere herrer-rating-en til damer og junior med ett klikk når du legger inn en ny bane eller redigerer en eksisterende. Knappen «Kopier til alle kjønn» dukker opp under herrer-feltene så snart slope og CR er fylt ut, og forsvinner igjen når begge andre kjønn har egne verdier. Justér gjerne etterpå om damene faktisk skal ha en annen slope.
-
-<details>
-<summary>Teknisk</summary>
 
 #### Added
 - [app/admin/courses/CourseForm.tsx](app/admin/courses/CourseForm.tsx) `copyMensToAllGenders(index)` — én ny click-handler som setter `slope_ladies`/`course_rating_ladies`/`slope_juniors`/`course_rating_juniors` til herrer-verdiene og auto-ekspanderer kollapsede dame/junior-blokker. Tekst-lenke-stil-knapp (`text-[11px] text-muted hover:text-text`) rendres mellom herrer-blokken og dame-toggle-en, kun synlig når herrer er fullt utfylt og minst ett dame/junior-felt mangler verdi.
@@ -30,14 +61,9 @@ Fase 1 av [#47](https://github.com/jdlarssen/golf-app/issues/47). Du kan nå bin
 - `par_total` per kjønn kopieres ikke. Den er auto-beregnet fra hull-pars og er kun lese-verdi i `GenderRatingBlock`-fieldset-en.
 - Utsatt fra Fase 1 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223).
 
-</details>
-
 ### [1.31.0] - 2026-05-26
 
 > Du kan nå sette opp en cup som binder flere matchplay-runder sammen mot hverandre. Lag «Team Skog» og «Team Sjø» kan møtes over flere matches gjennom helgen, og første lag til point-målet (typisk 4,5 av 8) vinner cupen. Hver match teller som vanlig — vunnet match = 1 point, halvert (AS) = 0,5 til hvert lag. Når cupen avsluttes går det ut en e-post til alle deltakere med vinneren og sluttresultatet.
-
-<details>
-<summary>Teknisk</summary>
 
 #### Added
 - Ny migrasjon [supabase/migrations/0039_tournaments.sql](supabase/migrations/0039_tournaments.sql) med `tournaments`-tabell (navn, lag-navn, points_to_win, status draft/active/finished, winner_team) + `games.tournament_id` (FK med `ON DELETE SET NULL`) + `games.tournament_match_label`. RLS lar alle innloggede lese cup-en.
