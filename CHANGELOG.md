@@ -10,7 +10,33 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.37.y — Funn-seksjon på hjem-siden
+
+Issue [#257](https://github.com/jdlarssen/golf-app/issues/257). Liten oppfølger til selv-påmeldings-flyten: når du logger inn ser du nå åpne turneringer du kan melde deg på rett på hjem-siden, og forespørslene dine som venter på godkjenning.
+
+### [1.37.0] - 2026-05-26
+
+> Når du logger inn på Tørny ser du nå alle åpne turneringer du kan melde deg på, rett på hjem-siden. Hvis du har sendt en forespørsel som venter på godkjenning, dukker den også opp her, så du slipper å lete etter den i innboksen.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- [lib/games/getDiscoverableGames.ts](lib/games/getDiscoverableGames.ts) — server-side helper som henter to lister via admin-client: åpne spill (`registration_mode = 'open'`, status pre-active) brukeren ikke er påmeldt og ikke har aktiv forespørsel på, pluss egne pending-rader fra `game_registration_requests`. Filtrerer i SQL via `not('id', 'in', ...)` med set-union av joined + requested game-ids.
+- [app/HomeDiscoverySection.tsx](app/HomeDiscoverySection.tsx) — server-component med to lister (open games m/ «Meld meg på»-knapp til `/signup/[shortId]`, pending requests m/ status-tekst). Returnerer `null` når begge listene er tomme så hjem-sidens dagens tom-tilstand beholdes.
+- Seks Vitest-tester for helperen dekker tom-tilstand, exclude-allerede-påmeldte, exclude-pending-request, course-join-mapping, team-request-mapping, og approved-filter (pending kun, ikke approved).
+
+#### Changed
+- [app/page.tsx](app/page.tsx) wirer `HomeDiscoverySection` inn for non-admin-brukere mellom velkomst-section og footer. Admin/trusted-creator ser ingen endring — de har egne CTAer for å opprette spill.
+
+</details>
+
+---
+
 ## 1.36.y — Selv-påmelding til turnering
+
+<details>
+<summary><strong>1.36.y — Selv-påmelding til turnering (2 oppføringer) — klikk for å vise</strong></summary>
 
 Issue [#199](https://github.com/jdlarssen/golf-app/issues/199). Du kan nå sette opp et spill og dele en lenke i stedet for å invitere hver spiller manuelt. For Scramble og andre lagspill kan spillerne samle sitt eget lag, og kapteinen melder på medspillerne med navn eller e-post. Du velger selv om hvem som helst med lenken kan melde seg på, om du vil godkjenne hver påmelding, eller om du fortsatt vil styre invitasjonene som du gjør i dag.
 
@@ -51,6 +77,8 @@ Issue [#199](https://github.com/jdlarssen/golf-app/issues/199). Du kan nå sette
 - `registration_mode = 'open'` for ukjente e-poster krever at `NEXT_PUBLIC_ALLOW_SELF_REGISTRATION` er aktivert i Vercel ([#166](https://github.com/jdlarssen/golf-app/issues/166)). Hvis flagget er av, faller open-modus tilbake til «kjente brukere kan melde seg på» og ukjente møter samme `user_not_found`-feilen som før.
 - Deferred team-attach for ukjente brukere skjer på `/påmelding/[shortId]/team`-siden, ikke i auth-hooken. Siden detekterer en pending `invitations`-rad for spillet og tilbyr en «Bli med på lag»-knapp som plukker nyeste kaptein-request via `created_at DESC`-heuristikk.
 - 2770 LOC fordelt over 14 chunks. Tests: 1369 grønne ved feature-completion.
+
+</details>
 
 </details>
 

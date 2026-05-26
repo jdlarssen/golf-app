@@ -22,6 +22,7 @@ import { firstName } from '@/lib/firstName';
 import { formatTeeOffDate, formatTeeOffTime } from '@/lib/format/teeOff';
 import { STATUS_LABELS } from '@/lib/games/status';
 import { isTrustedCreator } from '@/lib/admin/trustedCreators';
+import { HomeDiscoverySection } from './HomeDiscoverySection';
 
 type SearchParams = Promise<{ profile?: string | string[] }>;
 
@@ -213,6 +214,10 @@ async function HomeBody() {
             En god runde begynner med god planlegging.
           </PullQuote>
         </section>
+
+        {!profile?.is_admin && userId && (
+          <HomeDiscoverySection userId={userId} />
+        )}
 
         <footer className="mt-14 pt-6 border-t border-border/60 dark:border-border/80">
           <ul className="flex flex-col gap-1 items-center">
