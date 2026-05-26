@@ -12,7 +12,27 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ## 1.33.y — Sekretariatet, friksjons-rydding
 
-Tredje runde med små admin-polish-grep fra fase 1 av [#223](https://github.com/jdlarssen/golf-app/issues/223). Mål: kortere vei til recovery når noe går skeivt i bane-skjemaet.
+Tredje runde med små admin-polish-grep fra fase 1 av [#223](https://github.com/jdlarssen/golf-app/issues/223). Mål: kortere vei til recovery når noe går skeivt i bane-skjemaet. Patch lagt på toppen som forvarsler admin når par eller stroke-indeks endres på en bane med spill som pågår.
+
+### [1.33.1] - 2026-05-26
+
+> Når du endrer par eller stroke-indeks på en bane som brukes i et spill som pågår eller er planlagt, spør appen nå om du er sikker. Mid-runde-endringer påvirker netto-resultatet for spillere som allerede har levert kort, så du får sjansen til å avbryte før lagring går gjennom. Bane-navn og tee-data trigger ingen advarsel — kun hull-endringene som faktisk skifter scoringen.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `hasHoleChanges(initial, current)`-helper i [app/admin/courses/CourseForm.tsx](app/admin/courses/CourseForm.tsx) sammenligner per-hull `par` og `stroke_index` med baselinen fra server. Returnerer `false` når initial-listen er undefined (create-flyten har ingen baseline) eller når alle par/SI matcher. Defensive default ved manglende hull i initial.
+- Ny prop `affectedGamesCount` (default 0) på `CourseForm`. `onSubmit`-handler trigger `window.confirm` kun når både `affectedGamesCount > 0` og `hasHoleChanges` returnerer true. Cancel kaller `event.preventDefault()` så form-state beholdes uendret.
+- [app/admin/courses/[id]/edit/page.tsx](app/admin/courses/%5Bid%5D/edit/page.tsx) henter `count: 'exact', head: true` mot `games` filtrert på `course_id` + `status IN ('active', 'scheduled')` parallelt med hull/tee-fetchene. Resultatet sendes som prop til `CourseForm`. Count-feil defaultes til 0 (fail-open) så transient DB-feil ikke blokkerer redigering.
+- Fem nye vitest-cases for `hasHoleChanges` (no-change, par-change, SI-change, manglende initial, kortere initial-liste) og fem cases for confirm-gaten (vises ved par-endring + count > 0, ikke ved uendrede hull, ikke ved count 0, ikke på /new, entall-form ved count 1).
+
+#### Notes
+- Tee-data (slope/CR/length) trigger ikke advarselen fordi `game_players.course_handicap` fryses ved game-start. Kun per-hull-par og stroke-indeks leses live av scoring-laget under et pågående spill.
+- Server-action `updateCourse` har ingen ny blokk — advarselen er rent UX-laget. Admin kan fortsatt lagre par-endringer mid-spill om de gjør det bevisst.
+- `window.confirm` valgt over custom modal for å matche eksisterende mønster i [DeleteCourseButton.tsx](app/admin/courses/%5Bid%5D/edit/DeleteCourseButton.tsx). Plain-text-begrensningen er årsaken til at dialogen viser antall, ikke spill-navn.
+
+</details>
 
 ### [1.33.0] - 2026-05-26
 

@@ -41,6 +41,11 @@ type Props = {
   action: (formData: FormData) => void | Promise<void>;
   submitLabel: string;
   initialData?: CourseFormInitialData;
+  // Antall games på banen som har status 'active' eller 'scheduled'. Brukes
+  // til å gate en confirm-dialog ved par/SI-endringer som ville påvirke
+  // mid-runde-scoring. Default 0 så create-flyten og andre kall uten denne
+  // prop-en aldri trigger advarselen. Se issue #237.
+  affectedGamesCount?: number;
   // Optional extra footer (e.g. a delete button on the edit page).
   footer?: React.ReactNode;
 };
@@ -99,6 +104,32 @@ export function sumHolePars(holes: HoleData[]): number {
   }, 0);
 }
 
+// Sjekker om par eller stroke-indeks er endret på minst ett hull. Tee-data
+// + bane-navn ignoreres bevisst — kun per-hull-felter som leses live av
+// scoring-laget kan skape mid-runde-uforutsigbarhet. Returnerer false når
+// initial-listen er undefined (create-flyten har ingen baseline).
+export function hasHoleChanges(
+  initial: HoleData[] | undefined,
+  current: HoleData[],
+): boolean {
+  if (!initial) return false;
+  return current.some((curr, i) => {
+    const init = initial[i];
+    if (!init) return true;
+    return curr.par !== init.par || curr.stroke_index !== init.stroke_index;
+  });
+}
+
+function buildHoleChangeConfirmMessage(count: number): string {
+  const games = count === 1 ? 'ett spill' : `${count} spill`;
+  return (
+    `Banen brukes i ${games} som pågår eller er planlagt. ` +
+    `Endring av par eller stroke-indeks vil endre score-beregningen ` +
+    `mid-runde for spillere som allerede har levert scorekort. ` +
+    `Er du sikker på at du vil fortsette?`
+  );
+}
+
 // Sjekker om en tee har lagrede tall for et gitt kjønn — brukes for å
 // avgjøre om dame/junior-blokken skal stå åpen ved mount på edit-flyten.
 function hasGenderData(
@@ -123,6 +154,7 @@ export function CourseForm({
   action,
   submitLabel,
   initialData,
+  affectedGamesCount = 0,
   footer,
 }: Props) {
   // Skiller new-flyten (defaults i herrer-blokken) fra edit-flyten (lagrede
@@ -239,7 +271,21 @@ export function CourseForm({
   }
 
   return (
-    <form action={action} className="space-y-6">
+    <form
+      action={action}
+      onSubmit={(event) => {
+        if (
+          affectedGamesCount > 0 &&
+          hasHoleChanges(initialData?.holes, holes)
+        ) {
+          const ok = window.confirm(
+            buildHoleChangeConfirmMessage(affectedGamesCount),
+          );
+          if (!ok) event.preventDefault();
+        }
+      }}
+      className="space-y-6"
+    >
       <Input
         id="name"
         name="name"

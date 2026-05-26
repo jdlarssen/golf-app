@@ -1,6 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
-import { CourseForm, sumHolePars, type HoleData } from './CourseForm';
+import {
+  CourseForm,
+  hasHoleChanges,
+  sumHolePars,
+  type HoleData,
+} from './CourseForm';
 
 function makeHoles(pars: number[]): HoleData[] {
   return pars.map((par, i) => ({
@@ -11,6 +16,35 @@ function makeHoles(pars: number[]): HoleData[] {
 }
 
 const NO_OP = async () => {};
+
+describe('hasHoleChanges', () => {
+  const baseline = makeHoles(Array(18).fill(4));
+
+  it('returnerer false når current er identisk med initial', () => {
+    expect(hasHoleChanges(baseline, makeHoles(Array(18).fill(4)))).toBe(false);
+  });
+
+  it('returnerer true når par på ett hull er endret', () => {
+    const current = makeHoles(Array(18).fill(4));
+    current[4].par = '5';
+    expect(hasHoleChanges(baseline, current)).toBe(true);
+  });
+
+  it('returnerer true når stroke_index på ett hull er endret', () => {
+    const current = makeHoles(Array(18).fill(4));
+    current[3].stroke_index = '17';
+    expect(hasHoleChanges(baseline, current)).toBe(true);
+  });
+
+  it('returnerer false når initial er undefined (create-flyten har ingen baseline)', () => {
+    expect(hasHoleChanges(undefined, makeHoles(Array(18).fill(4)))).toBe(false);
+  });
+
+  it('returnerer true når initial mangler et hull som finnes i current (defensive default)', () => {
+    const truncated = baseline.slice(0, 17);
+    expect(hasHoleChanges(truncated, makeHoles(Array(18).fill(4)))).toBe(true);
+  });
+});
 
 describe('sumHolePars', () => {
   it('summerer 18 fire-er til 72', () => {
@@ -645,5 +679,118 @@ describe('CourseForm — kopier til alle kjønn', () => {
       name: /kopier til alle kjønn/i,
     });
     expect(remaining).toHaveLength(1);
+  });
+});
+
+describe('CourseForm — confirm-gate ved par/SI-endring + aktive spill', () => {
+  const baselineHoles = makeHoles(Array(18).fill(4));
+  const teeBoxes = [
+    {
+      id: 'tee-1',
+      name: 'Gul',
+      length_meters: '',
+      slope_mens: '113',
+      course_rating_mens: '70.0',
+      slope_ladies: '',
+      course_rating_ladies: '',
+      slope_juniors: '',
+      course_rating_juniors: '',
+    },
+  ];
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('viser confirm-dialog når par endres og affectedGamesCount > 0', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const action = vi.fn(async () => {});
+
+    render(
+      <CourseForm
+        action={action}
+        submitLabel="Lagre"
+        affectedGamesCount={2}
+        initialData={{ name: 'Test', holes: baselineHoles, teeBoxes }}
+      />,
+    );
+
+    const hole1Group = screen.getByRole('radiogroup', { name: 'Par for hull 1' });
+    fireEvent.click(within(hole1Group).getByRole('radio', { name: '5' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lagre' }));
+
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    const msg = confirmSpy.mock.calls[0][0] as string;
+    expect(msg).toMatch(/2 spill/);
+    expect(msg).toMatch(/par eller stroke-indeks/);
+  });
+
+  it('viser IKKE confirm-dialog når ingen hull-endring er gjort, selv om affectedGamesCount > 0', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    render(
+      <CourseForm
+        action={async () => {}}
+        submitLabel="Lagre"
+        affectedGamesCount={3}
+        initialData={{ name: 'Test', holes: baselineHoles, teeBoxes }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lagre' }));
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+  });
+
+  it('viser IKKE confirm-dialog når par endres men affectedGamesCount = 0', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    render(
+      <CourseForm
+        action={async () => {}}
+        submitLabel="Lagre"
+        affectedGamesCount={0}
+        initialData={{ name: 'Test', holes: baselineHoles, teeBoxes }}
+      />,
+    );
+
+    const hole1Group = screen.getByRole('radiogroup', { name: 'Par for hull 1' });
+    fireEvent.click(within(hole1Group).getByRole('radio', { name: '5' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Lagre' }));
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+  });
+
+  it('viser IKKE confirm-dialog på /new-flyten (ingen initialData)', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    render(<CourseForm action={async () => {}} submitLabel="Lagre" />);
+
+    const hole1Group = screen.getByRole('radiogroup', { name: 'Par for hull 1' });
+    fireEvent.click(within(hole1Group).getByRole('radio', { name: '5' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Lagre' }));
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+  });
+
+  it('bruker entall-form «ett spill» når affectedGamesCount = 1', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    render(
+      <CourseForm
+        action={async () => {}}
+        submitLabel="Lagre"
+        affectedGamesCount={1}
+        initialData={{ name: 'Test', holes: baselineHoles, teeBoxes }}
+      />,
+    );
+
+    const hole1Group = screen.getByRole('radiogroup', { name: 'Par for hull 1' });
+    fireEvent.click(within(hole1Group).getByRole('radio', { name: '5' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Lagre' }));
+
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    expect(confirmSpy.mock.calls[0][0]).toMatch(/ett spill/);
   });
 });

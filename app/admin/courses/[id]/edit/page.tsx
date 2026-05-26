@@ -233,7 +233,7 @@ async function EditCourseFormBody({
   courseName: string;
 }) {
   const { supabase } = await getEditCourseContext();
-  const [holesResult, teesResult] = await Promise.all([
+  const [holesResult, teesResult, affectedGamesResult] = await Promise.all([
     supabase
       .from('course_holes')
       .select('hole_number, par, stroke_index')
@@ -247,10 +247,23 @@ async function EditCourseFormBody({
       .eq('course_id', courseId)
       .is('archived_at', null)
       .order('name', { ascending: true }),
+    // Forvarsel-count: hvor mange spill på denne banen er live eller venter
+    // på tee-off. Brukes av CourseForm til å gate en confirm-dialog hvis
+    // admin endrer par/SI mens spill pågår. Se issue #237.
+    supabase
+      .from('games')
+      .select('id', { count: 'exact', head: true })
+      .eq('course_id', courseId)
+      .in('status', ['active', 'scheduled']),
   ]);
 
   if (holesResult.error) throw holesResult.error;
   if (teesResult.error) throw teesResult.error;
+  // Count-feil er ikke fatal — vi vil heller miste advarselen enn å hindre
+  // admin i å redigere banen. Default 0 ⇒ ingen confirm-dialog.
+  const affectedGamesCount = affectedGamesResult.error
+    ? 0
+    : (affectedGamesResult.count ?? 0);
 
   // Numeric fields are stringified so the form's controlled inputs preserve
   // in-progress decimal entry (see CourseForm.tsx for context).
@@ -295,6 +308,7 @@ async function EditCourseFormBody({
       key={teeSetKey}
       action={updateAction}
       submitLabel="Lagre endringer"
+      affectedGamesCount={affectedGamesCount}
       initialData={{
         name: courseName,
         holes: initialHoles,
