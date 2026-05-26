@@ -739,29 +739,6 @@ describe('sendGameFinishedNotification', () => {
     `);
   });
 
-  // ─────────────────────────────────────────────────────────────────────
-  // Strukturelle tester (ikke approval-basert) — sjekker oppførsel som
-  // ikke vises i copy-output men er kontrakt mellom mail-modulen og Resend.
-  // ─────────────────────────────────────────────────────────────────────
-
-  it('kaster når Resend returnerer feil', async () => {
-    sendMock.mockResolvedValueOnce({
-      data: null,
-      error: { message: 'rate-limited' },
-    });
-    const { sendGameFinishedNotification } = await import(
-      './gameFinishedNotification'
-    );
-    await expect(
-      sendGameFinishedNotification(baseParams),
-    ).rejects.toThrow(/Resend send failed/);
-  });
-
-  it('sender til mottakeren med korrekt avsender + ett kall per call', async () => {
-    await send(baseParams);
-    expect(sendMock).toHaveBeenCalledTimes(1);
-    const payload = sendMock.mock.calls[0]![0];
-    expect(payload.to).toBe('spiller@example.com');
-    expect(payload.from).toBe('Tørny <noreply@tornygolf.no>');
-  });
+  // Strukturelle Resend-kontrakter (error-propagation, from-format, call-count)
+  // konsolidert til lib/mail/__tests__/resend-contract.test.ts (issue #263).
 });
