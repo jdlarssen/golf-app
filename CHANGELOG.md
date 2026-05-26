@@ -10,7 +10,37 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.35.y — Trygghetsnett for tee-lengde
+
+Et mykt varsel under banelengde-feltet i bane-admin når tallet ligger utenfor det som er typisk for norske baner. Fanger tastefeil før de havner i databasen, uten å blokkere lagring ([#236](https://github.com/jdlarssen/golf-app/issues/236)).
+
+### [1.35.0] - 2026-05-26
+
+> Når du taster inn banelengde for en tee i bane-admin, sier appen nå fra hvis tallet ser uvanlig ut for norske forhold. Du blir ikke stoppet fra å lagre — det er bare en hjelpende hånd for å fange åpenbare tastefeil. Hvilket «typisk» intervall som gjelder, avhenger av hvilke kjønn du har lagt inn rating for på tee-en (herre, dame, junior, eller en kombinasjon).
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- [lib/courses/teeLengthWarning.ts](lib/courses/teeLengthWarning.ts) — pure helper `getTeeLengthWarning(tee)` som regner ut warning-tekst fra `length_meters` + hvilke gender-blokker (mens/ladies/juniors) som er fylt ut. Range-grenser er romslige (±100m) rundt typiske norske tall: herrer 5300–6600 m, damer 4700–5900 m, junior 4400–5600 m. Union-strategi for tee-er med flere gender-ratings (vanligst). Returnerer `null` når ingen gender er aktiv eller length-feltet er tomt/ugyldig. 25 unit-tester dekker alle 7 gender-kombinasjoner + grense-verdier + invalid input.
+- `warning?: string | null`-prop på [components/ui/Input.tsx](components/ui/Input.tsx) som rendrer i `text-warning` (amber) på samme plass som `hint`. Prioritet: `error` > `warning` > `hint`. Eksisterende callsites upåvirket.
+
+#### Changed
+- [app/admin/courses/CourseForm.tsx](app/admin/courses/CourseForm.tsx) sender `getTeeLengthWarning(tee)` til Banelengde-input-en for hver tee-boks. Warning oppdateres reaktivt når admin endrer length-feltet eller toggler dame-/junior-rating-blokkene.
+
+#### Notes
+- DB CHECK på `tee_boxes.length_meters` (1000–12000) endres ikke; warning er ren UI-veiledning og blokkerer ikke lagring. Server-actions berøres ikke.
+- Bevisst en hårsbredd videre enn de eksakte tallene i issue #236 (5400–6500 / 4800–5800 / 4500–5500) for å unngå falske advarsler på grenseverdier som 6550 m på en lang herretee.
+- Wirer side om side med per-kjønn typisk slope/CR-hint fra 1.30.1 (issue #235). De to gir komplementær veiledning: slope/CR-hint som statisk anker mot tastefeil, length-warning som dynamisk respons på faktisk innskrevet tall.
+
+</details>
+
+---
+
 ## 1.34.y — Per-kjønn-overstyring av hull-par
+
+<details>
+<summary><strong>1.34.y — Per-kjønn-overstyring av hull-par (1 oppføring) — klikk for å vise</strong></summary>
 
 Issue [#240](https://github.com/jdlarssen/golf-app/issues/240). Tørny støtter nå at hull kan ha avvikende par for damer eller junior — typisk dame-par-5 der herrer spiller par-4 fordi dame-tee er plassert kortere før et vannhinder. Stableford-poenget regnes riktig per spiller, og par-displayer viser en liten stjerne på hull med par-avvik.
 
@@ -40,6 +70,8 @@ Issue [#240](https://github.com/jdlarssen/golf-app/issues/240). Tørny støtter 
 - Stroke-index per kjønn er ikke i scope — dame-tee bruker normalt samme SI-fordeling. Hvis et behov dukker opp: egen kontrakt.
 - Blandet-kjønn Texas-scramble-lag bruker kapteinens `teeGender` som lag-par-default. Fungerer for vanlige tilfeller; sjeldne edge-cases (lag på 4 med to herrer og to damer på avvikende-par-hull) får herre-par fordi kapteinen typisk er en herre. Refines hvis bruk-mønsteret krever det.
 - Historiske spill: `course_holes` er ikke frozen ved game-start, så en endring av `par_ladies` på en bane kan endre stableford-poeng for ferdige spill på den banen. Pre-eksisterende svakhet (gjelder også gammel `par` og `stroke_index`); ikke utvidet i denne lanseringen.
+
+</details>
 
 </details>
 
@@ -239,8 +271,6 @@ Lar nye besøkende få OTP-kode på `/login` uten admin-mellomledd, bak en kill-
 - Trusted-creator-allowlisten utvides IKKE. Self-registrerte uten admin/trusted-status får ingen mulighet til å opprette spill selv før [#22](https://github.com/jdlarssen/golf-app/issues/22) (RLS-revisjon) lander. Det er bevisst — onboarding-kanalen åpnes først, RLS-åpning er sin egen jobb.
 - Ingen DB-migrasjon. Gjenbruker eksisterende `admin_action_rate_limit`-tabell og `consume_admin_rate_limit`-RPC fra `0026_admin_action_rate_limit.sql`. Bucket-strengen er generisk.
 - Cloudflare Turnstile / CAPTCHA er bevisst utelatt (overkill for current scale). Egen kontrakt hvis abuse-vinduer viser at rate-limit alene ikke holder.
-
-</details>
 
 </details>
 

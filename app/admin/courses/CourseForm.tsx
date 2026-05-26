@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { getTeeLengthWarning } from '@/lib/courses/teeLengthWarning';
 import { MAX_TEE_BOXES } from './constants';
 
 export { MAX_TEE_BOXES };
@@ -544,6 +545,7 @@ export function CourseForm({
                 step={1}
                 label="Banelengde (m)"
                 hint="Valgfritt. Total bane-lengde fra denne tee-boksen."
+                warning={getTeeLengthWarning(tee)}
                 placeholder="6124"
                 value={tee.length_meters}
                 onChange={(e) =>
