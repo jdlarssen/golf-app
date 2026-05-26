@@ -172,22 +172,7 @@ describe('sendTeamInvitationMail', () => {
     );
   });
 
-  it('kaster når Resend returnerer feil', async () => {
-    sendMock.mockResolvedValueOnce({
-      data: null,
-      error: { message: 'rate-limited' },
-    });
-    const { sendTeamInvitationMail } = await import('./teamInvitation');
-    await expect(
-      sendTeamInvitationMail(baseParams),
-    ).rejects.toThrow(/Resend send failed/);
-  });
-
-  it('sender til mottakeren med korrekt avsender + ett kall per call', async () => {
-    await send(baseParams);
-    expect(sendMock).toHaveBeenCalledTimes(1);
-    const payload = sendMock.mock.calls[0]![0];
-    expect(payload.to).toBe('venn@example.com');
-    expect(payload.from).toBe('Tørny <noreply@tornygolf.no>');
-  });
+  // Resend-error-propagation + to/from + call-count konsolideres til
+  // lib/mail/__tests__/resend-contract.test.ts i issue #263. URL-encoding-
+  // testen over beholdes per modul fordi `next`-routing er module-spesifikk.
 });
