@@ -12,7 +12,9 @@ type Params = Promise<{ id: string; holeNumber: string }>;
 
 type HoleRow = {
   hole_number: number;
-  par: number;
+  par_mens: number;
+  par_ladies: number;
+  par_juniors: number;
   stroke_index: number;
 };
 
@@ -95,7 +97,7 @@ export default async function HolePage({ params }: { params: Params }) {
     await Promise.all([
       supabase
         .from('course_holes')
-        .select('hole_number, par, stroke_index')
+        .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
         .eq('course_id', game.course_id)
         .eq('hole_number', holeNumber)
         .single<HoleRow>(),
@@ -115,7 +117,7 @@ export default async function HolePage({ params }: { params: Params }) {
       isStableford
         ? supabase
             .from('course_holes')
-            .select('hole_number, par, stroke_index')
+            .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
             .eq('course_id', game.course_id)
             .returns<HoleRow[]>()
         : Promise.resolve({ data: null, error: null }),
@@ -157,7 +159,7 @@ export default async function HolePage({ params }: { params: Params }) {
       if (!h) continue;
       const extra = strokesForHole(myCh, h.stroke_index);
       const net = s.strokes - extra;
-      const pts = computeStablefordPoints({ par: h.par, netStrokes: net });
+      const pts = computeStablefordPoints({ par: h.par_mens, netStrokes: net });
       total += pts;
       if (s.hole_number === holeNumber) {
         myStablefordForCurrent = pts;
@@ -257,7 +259,7 @@ export default async function HolePage({ params }: { params: Params }) {
         gameStatus={game.status}
         gameMode={game.game_mode}
         currentHole={holeNumber}
-        par={hole.par}
+        par={hole.par_mens}
         strokeIndex={hole.stroke_index}
         myUserId={userId}
         myCompletedHoles={myCompletedHoles}

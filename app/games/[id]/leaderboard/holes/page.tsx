@@ -29,7 +29,9 @@ type SearchParams = Promise<{
 
 type CourseHoleRow = {
   hole_number: number;
-  par: number;
+  par_mens: number;
+  par_ladies: number;
+  par_juniors: number;
   stroke_index: number;
 };
 
@@ -128,7 +130,7 @@ async function DrilldownBody({
     getGameWithPlayers(gameId),
     supabase
       .from('course_holes')
-      .select('hole_number, par, stroke_index')
+      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
       .eq('course_id', courseId)
       .order('hole_number', { ascending: true })
       .returns<CourseHoleRow[]>(),
@@ -156,7 +158,7 @@ async function DrilldownBody({
 
   const allHoles: LbHole[] = (rawHolesRes.data ?? []).map((h) => ({
     holeNumber: h.hole_number,
-    par: h.par,
+    par: h.par_mens,
     strokeIndex: h.stroke_index,
   }));
 

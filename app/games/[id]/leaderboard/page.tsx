@@ -123,7 +123,9 @@ type SideWinnerRow = {
 
 type CourseHoleRow = {
   hole_number: number;
-  par: number;
+  par_mens: number;
+  par_ladies: number;
+  par_juniors: number;
   stroke_index: number;
 };
 
@@ -266,7 +268,7 @@ async function LeaderboardBody({
     getGameWithPlayers(gameId),
     supabase
       .from('course_holes')
-      .select('hole_number, par, stroke_index')
+      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
       .eq('course_id', game.course_id)
       .order('hole_number', { ascending: true })
       .returns<CourseHoleRow[]>(),
@@ -359,7 +361,7 @@ async function LeaderboardBody({
 
   const holes: LbHole[] = (rawHolesRes.data ?? []).map((h) => ({
     holeNumber: h.hole_number,
-    par: h.par,
+    par: h.par_mens,
     strokeIndex: h.stroke_index,
   }));
 
@@ -887,7 +889,7 @@ async function renderStableford(opts: {
       course_handicap: number | null;
     }[];
   };
-  rawHolesRows: { hole_number: number; par: number; stroke_index: number }[];
+  rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
 }) {
@@ -922,7 +924,7 @@ async function renderStableford(opts: {
       })),
     holes: rawHolesRows.map((h) => ({
       number: h.hole_number,
-      par: h.par,
+      par: h.par_mens,
       strokeIndex: h.stroke_index,
     })),
     scores: rawScoresRows.map((s) => ({
@@ -1054,7 +1056,7 @@ async function renderStablefordWithSideTournament(opts: {
       course_handicap: number | null;
     }[];
   };
-  rawHolesRows: { hole_number: number; par: number; stroke_index: number }[];
+  rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
   backHref: string;
   mainContent: React.ReactNode;
 }) {
@@ -1078,7 +1080,7 @@ async function renderStablefordWithSideTournament(opts: {
   const parByHole = new Map<number, number>();
   const siByHole = new Map<number, number>();
   for (const h of rawHolesRows) {
-    parByHole.set(h.hole_number, h.par);
+    parByHole.set(h.hole_number, h.par_mens);
     siByHole.set(h.hole_number, h.stroke_index);
   }
   const coursePars: number[] = [];
@@ -1292,7 +1294,7 @@ function renderMatchplay(opts: {
       course_handicap: number | null;
     }[];
   };
-  rawHolesRows: { hole_number: number; par: number; stroke_index: number }[];
+  rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
 }) {
@@ -1317,7 +1319,7 @@ function renderMatchplay(opts: {
       })),
     holes: rawHolesRows.map((h) => ({
       number: h.hole_number,
-      par: h.par,
+      par: h.par_mens,
       strokeIndex: h.stroke_index,
     })),
     scores: rawScoresRows.map((s) => ({
@@ -1383,7 +1385,7 @@ function renderSoloStrokeplay(opts: {
       course_handicap: number | null;
     }[];
   };
-  rawHolesRows: { hole_number: number; par: number; stroke_index: number }[];
+  rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
 }) {
@@ -1410,7 +1412,7 @@ function renderSoloStrokeplay(opts: {
       })),
     holes: rawHolesRows.map((h) => ({
       number: h.hole_number,
-      par: h.par,
+      par: h.par_mens,
       strokeIndex: h.stroke_index,
     })),
     scores: rawScoresRows.map((s) => ({
@@ -1488,7 +1490,7 @@ function renderTexasScramble(opts: {
       course_handicap: number | null;
     }[];
   };
-  rawHolesRows: { hole_number: number; par: number; stroke_index: number }[];
+  rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
 }) {
@@ -1513,7 +1515,7 @@ function renderTexasScramble(opts: {
       })),
     holes: rawHolesRows.map((h) => ({
       number: h.hole_number,
-      par: h.par,
+      par: h.par_mens,
       strokeIndex: h.stroke_index,
     })),
     scores: rawScoresRows.map((s) => ({

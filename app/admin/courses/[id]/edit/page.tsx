@@ -236,7 +236,7 @@ async function EditCourseFormBody({
   const [holesResult, teesResult, affectedGamesResult] = await Promise.all([
     supabase
       .from('course_holes')
-      .select('hole_number, par, stroke_index')
+      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
       .eq('course_id', courseId)
       .order('hole_number', { ascending: true }),
     supabase
@@ -269,7 +269,7 @@ async function EditCourseFormBody({
   // in-progress decimal entry (see CourseForm.tsx for context).
   const initialHoles = (holesResult.data ?? []).map((h) => ({
     hole_number: h.hole_number,
-    par: String(h.par),
+    par: String(h.par_mens),
     stroke_index: String(h.stroke_index),
   }));
 

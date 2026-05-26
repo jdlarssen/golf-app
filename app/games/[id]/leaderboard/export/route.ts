@@ -12,7 +12,9 @@ import {
 
 type CourseHoleRow = {
   hole_number: number;
-  par: number;
+  par_mens: number;
+  par_ladies: number;
+  par_juniors: number;
   stroke_index: number;
 };
 
@@ -100,7 +102,7 @@ export async function GET(
   const [rawHolesRes, rawScoresRes] = await Promise.all([
     supabase
       .from('course_holes')
-      .select('hole_number, par, stroke_index')
+      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
       .eq('course_id', game.course_id)
       .order('hole_number', { ascending: true })
       .returns<CourseHoleRow[]>(),
@@ -136,7 +138,7 @@ export async function GET(
 
   const holes: LbHole[] = (rawHolesRes.data ?? []).map((h) => ({
     holeNumber: h.hole_number,
-    par: h.par,
+    par: h.par_mens,
     strokeIndex: h.stroke_index,
   }));
 

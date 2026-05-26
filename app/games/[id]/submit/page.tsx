@@ -39,7 +39,9 @@ type CourseTeeRow = {
 
 type HoleRow = {
   hole_number: number;
-  par: number;
+  par_mens: number;
+  par_ladies: number;
+  par_juniors: number;
   stroke_index: number;
 };
 
@@ -178,7 +180,7 @@ async function ReviewBody({
   const [holesRes, scoresRes] = await Promise.all([
     supabase
       .from('course_holes')
-      .select('hole_number, par, stroke_index')
+      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
       .eq('course_id', courseId)
       .order('hole_number', { ascending: true })
       .returns<HoleRow[]>(),
@@ -225,7 +227,7 @@ async function ReviewBody({
     const s = scoreByHole.get(h.hole_number);
     const strokes = s?.strokes ?? null;
     const enteredByName = s?.entered_by ? namesById.get(s.entered_by) : null;
-    return { ...h, strokes, enteredByName };
+    return { ...h, par: h.par_mens, strokes, enteredByName };
   });
 
   const playedHoles = rows.filter((r) => r.strokes != null);

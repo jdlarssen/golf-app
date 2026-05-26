@@ -55,8 +55,13 @@ export async function updateCourse(courseId: string, formData: FormData) {
   const name = String(formData.get('name') ?? '').trim();
   if (!name) redirect(`${editPath}?error=name_required`);
 
-  const holes: { hole_number: number; par: number; stroke_index: number }[] =
-    [];
+  const holes: {
+    hole_number: number;
+    par_mens: number;
+    par_ladies: number;
+    par_juniors: number;
+    stroke_index: number;
+  }[] = [];
   for (let i = 1; i <= 18; i++) {
     const par = Number(formData.get(`hole_${i}_par`));
     const si = Number(formData.get(`hole_${i}_si`));
@@ -66,7 +71,15 @@ export async function updateCourse(courseId: string, formData: FormData) {
     if (!Number.isInteger(si) || si < 1 || si > 18) {
       redirect(`${editPath}?error=bad_si`);
     }
-    holes.push({ hole_number: i, par, stroke_index: si });
+    // Per-kjønn-par lagres separat. I denne flyten (uten avvikende par UI ennå)
+    // setter vi samme par for alle tre kjønn — utvides i senere chunk.
+    holes.push({
+      hole_number: i,
+      par_mens: par,
+      par_ladies: par,
+      par_juniors: par,
+      stroke_index: si,
+    });
   }
 
   const siSet = new Set(holes.map((h) => h.stroke_index));
@@ -75,7 +88,7 @@ export async function updateCourse(courseId: string, formData: FormData) {
   // par_total per kjønn deriveres fra hullene; antagelse: identisk hull-par
   // for alle kjønn (sann for ~99% av norske baner). Per-kjønn-overstyring er
   // Fase 2-utvidelse hvis det blir aktuelt.
-  const parSum = holes.reduce((s, h) => s + h.par, 0);
+  const parSum = holes.reduce((s, h) => s + h.par_mens, 0);
 
   const teeBoxes: {
     id: string | null;

@@ -147,8 +147,8 @@ describe('buildGameFinishedRecipients', () => {
       {
         // course_holes-fetchen (Promise.all → andre)
         data: [
-          { hole_number: 1, par: 4, stroke_index: 1 },
-          { hole_number: 2, par: 4, stroke_index: 2 },
+          { hole_number: 1, par_mens: 4, par_ladies: 4, par_juniors: 4, stroke_index: 1 },
+          { hole_number: 2, par_mens: 4, par_ladies: 4, par_juniors: 4, stroke_index: 2 },
         ],
         error: null,
       },
@@ -211,7 +211,7 @@ describe('buildGameFinishedRecipients', () => {
         error: null,
       },
       {
-        data: [{ hole_number: 1, par: 4, stroke_index: 1 }],
+        data: [{ hole_number: 1, par_mens: 4, par_ladies: 4, par_juniors: 4, stroke_index: 1 }],
         error: null,
       },
     ]);
@@ -293,7 +293,7 @@ describe('buildGameFinishedRecipients', () => {
         error: null,
       },
       {
-        data: [{ hole_number: 1, par: 4, stroke_index: 1 }],
+        data: [{ hole_number: 1, par_mens: 4, par_ladies: 4, par_juniors: 4, stroke_index: 1 }],
         error: null,
       },
     ]);
@@ -373,7 +373,7 @@ describe('buildGameFinishedRecipients', () => {
       { data: players, error: null },
       { data: scores, error: null },
       {
-        data: [{ hole_number: 1, par: 4, stroke_index: 1 }],
+        data: [{ hole_number: 1, par_mens: 4, par_ladies: 4, par_juniors: 4, stroke_index: 1 }],
         error: null,
       },
     ]);
@@ -441,7 +441,7 @@ describe('buildGameFinishedRecipients', () => {
         error: null,
       },
       {
-        data: [{ hole_number: 1, par: 4, stroke_index: 1 }],
+        data: [{ hole_number: 1, par_mens: 4, par_ladies: 4, par_juniors: 4, stroke_index: 1 }],
         error: null,
       },
     ]);
@@ -500,7 +500,9 @@ describe('buildGameFinishedRecipients', () => {
     // holesUp=2, holesPlayed=18 → 2up.
     const holes = Array.from({ length: 18 }, (_, i) => ({
       hole_number: i + 1,
-      par: 4,
+      par_mens: 4,
+      par_ladies: 4,
+      par_juniors: 4,
       stroke_index: i + 1,
     }));
     const scores: { user_id: string; hole_number: number; strokes: number }[] =
@@ -575,7 +577,9 @@ describe('buildGameFinishedRecipients', () => {
     // 2 hull igjen → mat-em 3&2.
     const holes = Array.from({ length: 18 }, (_, i) => ({
       hole_number: i + 1,
-      par: 4,
+      par_mens: 4,
+      par_ladies: 4,
+      par_juniors: 4,
       stroke_index: i + 1,
     }));
     const scores: { user_id: string; hole_number: number; strokes: number }[] =
@@ -650,7 +654,9 @@ describe('buildGameFinishedRecipients', () => {
     // holesPlayed=18 → AS.
     const holes = Array.from({ length: 18 }, (_, i) => ({
       hole_number: i + 1,
-      par: 4,
+      par_mens: 4,
+      par_ladies: 4,
+      par_juniors: 4,
       stroke_index: i + 1,
     }));
     const scores: { user_id: string; hole_number: number; strokes: number }[] =
@@ -715,7 +721,9 @@ describe('buildGameFinishedRecipients', () => {
   it('matchplay: dropper spiller uten email — den andre beholder mode-payload', async () => {
     const holes = Array.from({ length: 18 }, (_, i) => ({
       hole_number: i + 1,
-      par: 4,
+      par_mens: 4,
+      par_ladies: 4,
+      par_juniors: 4,
       stroke_index: i + 1,
     }));
     const scores: { user_id: string; hole_number: number; strokes: number }[] =
@@ -772,7 +780,9 @@ describe('buildGameFinishedRecipients', () => {
   it('matchplay: motspiller uten navn → opponentName: null', async () => {
     const holes = Array.from({ length: 18 }, (_, i) => ({
       hole_number: i + 1,
-      par: 4,
+      par_mens: 4,
+      par_ladies: 4,
+      par_juniors: 4,
       stroke_index: i + 1,
     }));
     const scores: { user_id: string; hole_number: number; strokes: number }[] =
@@ -827,7 +837,9 @@ describe('buildGameFinishedRecipients', () => {
     // Ingen mat-em (|0| > 13 er falsk), ikke spilt 18 hull. result === null.
     const holes = Array.from({ length: 18 }, (_, i) => ({
       hole_number: i + 1,
-      par: 4,
+      par_mens: 4,
+      par_ladies: 4,
+      par_juniors: 4,
       stroke_index: i + 1,
     }));
     const scores: { user_id: string; hole_number: number; strokes: number }[] =
@@ -922,8 +934,8 @@ describe('buildGameFinishedRecipients', () => {
       },
       {
         data: [
-          { hole_number: 1, par: 4, stroke_index: 1 },
-          { hole_number: 2, par: 4, stroke_index: 2 },
+          { hole_number: 1, par_mens: 4, par_ladies: 4, par_juniors: 4, stroke_index: 1 },
+          { hole_number: 2, par_mens: 4, par_ladies: 4, par_juniors: 4, stroke_index: 2 },
         ],
         error: null,
       },
@@ -993,7 +1005,7 @@ describe('buildGameFinishedRecipients', () => {
         error: null,
       },
       {
-        data: [{ hole_number: 1, par: 4, stroke_index: 1 }],
+        data: [{ hole_number: 1, par_mens: 4, par_ladies: 4, par_juniors: 4, stroke_index: 1 }],
         error: null,
       },
     ]);
@@ -1040,7 +1052,7 @@ describe('buildGameFinishedRecipients', () => {
         error: null,
       },
       {
-        data: [{ hole_number: 1, par: 4, stroke_index: 1 }],
+        data: [{ hole_number: 1, par_mens: 4, par_ladies: 4, par_juniors: 4, stroke_index: 1 }],
         error: null,
       },
     ]);
@@ -1096,7 +1108,7 @@ describe('buildGameFinishedRecipients', () => {
         error: null,
       },
       {
-        data: [{ hole_number: 1, par: 4, stroke_index: 1 }],
+        data: [{ hole_number: 1, par_mens: 4, par_ladies: 4, par_juniors: 4, stroke_index: 1 }],
         error: null,
       },
     ]);
@@ -1177,7 +1189,7 @@ describe('buildGameFinishedRecipients', () => {
         error: null,
       },
       {
-        data: [{ hole_number: 1, par: 4, stroke_index: 1 }],
+        data: [{ hole_number: 1, par_mens: 4, par_ladies: 4, par_juniors: 4, stroke_index: 1 }],
         error: null,
       },
     ]);
@@ -1258,7 +1270,7 @@ describe('buildGameFinishedRecipients', () => {
         error: null,
       },
       {
-        data: [{ hole_number: 1, par: 4, stroke_index: 1 }],
+        data: [{ hole_number: 1, par_mens: 4, par_ladies: 4, par_juniors: 4, stroke_index: 1 }],
         error: null,
       },
     ]);
@@ -1317,7 +1329,7 @@ describe('buildGameFinishedRecipients', () => {
         error: null,
       },
       {
-        data: [{ hole_number: 1, par: 4, stroke_index: 1 }],
+        data: [{ hole_number: 1, par_mens: 4, par_ladies: 4, par_juniors: 4, stroke_index: 1 }],
         error: null,
       },
     ]);

@@ -154,19 +154,25 @@ export type Database = {
         Row: {
           course_id: string
           hole_number: number
-          par: number
+          par_juniors: number
+          par_ladies: number
+          par_mens: number
           stroke_index: number
         }
         Insert: {
           course_id: string
           hole_number: number
-          par: number
+          par_juniors: number
+          par_ladies: number
+          par_mens: number
           stroke_index: number
         }
         Update: {
           course_id?: string
           hole_number?: number
-          par?: number
+          par_juniors?: number
+          par_ladies?: number
+          par_mens?: number
           stroke_index?: number
         }
         Relationships: [

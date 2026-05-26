@@ -142,10 +142,10 @@ export async function buildGameFinishedRecipients(
       >(),
     supabase
       .from('course_holes')
-      .select('hole_number, par, stroke_index')
+      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
       .eq('course_id', game.course_id)
       .order('hole_number', { ascending: true })
-      .returns<{ hole_number: number; par: number; stroke_index: number }[]>(),
+      .returns<{ hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[]>(),
   ]);
   if (scoresRes.error || holesRes.error) {
     console.error(
@@ -172,7 +172,7 @@ export async function buildGameFinishedRecipients(
     })),
     holes: (holesRes.data ?? []).map((h) => ({
       number: h.hole_number,
-      par: h.par,
+      par: h.par_mens,
       strokeIndex: h.stroke_index,
     })),
     scores: (scoresRes.data ?? []).map((s) => ({
@@ -326,10 +326,10 @@ async function buildMatchplayRecipients(
       >(),
     supabase
       .from('course_holes')
-      .select('hole_number, par, stroke_index')
+      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
       .eq('course_id', game.course_id)
       .order('hole_number', { ascending: true })
-      .returns<{ hole_number: number; par: number; stroke_index: number }[]>(),
+      .returns<{ hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[]>(),
   ]);
   if (scoresRes.error || holesRes.error) {
     console.error(
@@ -353,7 +353,7 @@ async function buildMatchplayRecipients(
     })),
     holes: (holesRes.data ?? []).map((h) => ({
       number: h.hole_number,
-      par: h.par,
+      par: h.par_mens,
       strokeIndex: h.stroke_index,
     })),
     scores: (scoresRes.data ?? []).map((s) => ({
@@ -483,10 +483,10 @@ async function buildSoloStrokeplayRecipients(
       >(),
     supabase
       .from('course_holes')
-      .select('hole_number, par, stroke_index')
+      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
       .eq('course_id', game.course_id)
       .order('hole_number', { ascending: true })
-      .returns<{ hole_number: number; par: number; stroke_index: number }[]>(),
+      .returns<{ hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[]>(),
   ]);
   if (scoresRes.error || holesRes.error) {
     console.error(
@@ -510,7 +510,7 @@ async function buildSoloStrokeplayRecipients(
     })),
     holes: (holesRes.data ?? []).map((h) => ({
       number: h.hole_number,
-      par: h.par,
+      par: h.par_mens,
       strokeIndex: h.stroke_index,
     })),
     scores: (scoresRes.data ?? []).map((s) => ({
@@ -595,10 +595,10 @@ async function buildTexasScrambleRecipients(
       >(),
     supabase
       .from('course_holes')
-      .select('hole_number, par, stroke_index')
+      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
       .eq('course_id', game.course_id)
       .order('hole_number', { ascending: true })
-      .returns<{ hole_number: number; par: number; stroke_index: number }[]>(),
+      .returns<{ hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[]>(),
   ]);
   if (scoresRes.error || holesRes.error) {
     console.error(
@@ -622,7 +622,7 @@ async function buildTexasScrambleRecipients(
     })),
     holes: (holesRes.data ?? []).map((h) => ({
       number: h.hole_number,
-      par: h.par,
+      par: h.par_mens,
       strokeIndex: h.stroke_index,
     })),
     scores: (scoresRes.data ?? []).map((s) => ({

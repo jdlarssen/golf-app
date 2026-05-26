@@ -39,7 +39,9 @@ function genderLabelShort(g: 'mens' | 'ladies' | 'juniors'): string {
 
 type HoleRow = {
   hole_number: number;
-  par: number;
+  par_mens: number;
+  par_ladies: number;
+  par_juniors: number;
   stroke_index: number;
 };
 
@@ -169,7 +171,7 @@ async function ScorecardTable({
   const [holesRes, scoresRes] = await Promise.all([
     supabase
       .from('course_holes')
-      .select('hole_number, par, stroke_index')
+      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
       .eq('course_id', courseId)
       .order('hole_number', { ascending: true })
       .returns<HoleRow[]>(),
@@ -280,7 +282,7 @@ function LayoutATable({
   const rows = holes.map((h) => {
     const strokes = scoresByUserHole.get(`${primaryUserId}#${h.hole_number}`) ?? null;
     const extra = strokesForHole(primaryHandicap, h.stroke_index);
-    return { ...h, strokes, extra };
+    return { ...h, par: h.par_mens, strokes, extra };
   });
 
   const playedHoles = rows.filter((r) => r.strokes != null);
@@ -407,6 +409,7 @@ interface LayoutBPlayerHole {
 }
 
 interface LayoutBHoleRow extends HoleRow {
+  par: number;
   perPlayer: LayoutBPlayerHole[];
   /** Team-best netto (laveste netto blant spillerne — for best-ball-footer). */
   bestNetto: number | null;
@@ -439,7 +442,7 @@ function LayoutBTable({
       const netto = strokes !== null ? strokes - extra : null;
       const stablefordPoints =
         isStableford && netto !== null
-          ? computeStablefordPoints({ par: h.par, netStrokes: netto })
+          ? computeStablefordPoints({ par: h.par_mens, netStrokes: netto })
           : null;
       return { strokes, extra, netto, stablefordPoints };
     });
@@ -465,6 +468,7 @@ function LayoutBTable({
 
     return {
       ...h,
+      par: h.par_mens,
       perPlayer,
       bestNetto,
       teamPoints,
@@ -472,10 +476,16 @@ function LayoutBTable({
     };
   });
 
-  const totals = computeLayoutBTotals(holes, scoresByUserHole, columns, {
-    isStableford,
-    isMatchplay,
-  });
+  const totals = computeLayoutBTotals(
+    holes.map((h) => ({
+      hole_number: h.hole_number,
+      par: h.par_mens,
+      stroke_index: h.stroke_index,
+    })),
+    scoresByUserHole,
+    columns,
+    { isStableford, isMatchplay },
+  );
   const { perPlayer: playerTotals, teamTotalNetto, teamTotalPoints, playedTeamHoles, matchStatus } =
     totals;
 

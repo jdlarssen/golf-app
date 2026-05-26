@@ -31,7 +31,9 @@ type GamePlayerRow = {
 type CourseHoleRow = {
   course_id: string;
   hole_number: number;
-  par: number;
+  par_mens: number;
+  par_ladies: number;
+  par_juniors: number;
   stroke_index: number;
 };
 
@@ -85,7 +87,7 @@ export default async function StatistikkPage() {
       .returns<GamePlayerRow[]>(),
     supabase
       .from('course_holes')
-      .select('course_id, hole_number, par, stroke_index')
+      .select('course_id, hole_number, par_mens, par_ladies, par_juniors, stroke_index')
       .in('course_id', courseIds)
       .returns<CourseHoleRow[]>(),
     supabase
@@ -144,7 +146,7 @@ export default async function StatistikkPage() {
     const lbHoles: LbHole[] = (holesByCourse.get(game.course_id) ?? []).map(
       (h) => ({
         holeNumber: h.hole_number,
-        par: h.par,
+        par: h.par_mens,
         strokeIndex: h.stroke_index,
       }),
     );

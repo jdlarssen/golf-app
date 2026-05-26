@@ -57,8 +57,13 @@ export async function createCourse(formData: FormData) {
   }
 
   // Parse 18 holes.
-  const holes: { hole_number: number; par: number; stroke_index: number }[] =
-    [];
+  const holes: {
+    hole_number: number;
+    par_mens: number;
+    par_ladies: number;
+    par_juniors: number;
+    stroke_index: number;
+  }[] = [];
   for (let i = 1; i <= 18; i++) {
     const par = Number(formData.get(`hole_${i}_par`));
     const si = Number(formData.get(`hole_${i}_si`));
@@ -68,7 +73,15 @@ export async function createCourse(formData: FormData) {
     if (!Number.isInteger(si) || si < 1 || si > 18) {
       redirect('/admin/courses/new?error=bad_si');
     }
-    holes.push({ hole_number: i, par, stroke_index: si });
+    // Per-kjønn-par lagres separat. I denne flyten (uten avvikende par UI ennå)
+    // setter vi samme par for alle tre kjønn — utvides i senere chunk.
+    holes.push({
+      hole_number: i,
+      par_mens: par,
+      par_ladies: par,
+      par_juniors: par,
+      stroke_index: si,
+    });
   }
 
   // SIs must be a permutation of 1..18 — the schema enforces uniqueness per
@@ -81,7 +94,7 @@ export async function createCourse(formData: FormData) {
   // par_total per kjønn er antatt identisk på tvers av kjønn (sann for ~99%
   // av norske baner). Brukes per kjønn der slope+CR er fylt ut. Per-kjønn-
   // overstyring er Fase 2-utvidelse hvis det blir aktuelt.
-  const parSum = holes.reduce((s, h) => s + h.par, 0);
+  const parSum = holes.reduce((s, h) => s + h.par_mens, 0);
 
   // Parse tee boxes. Rows with an empty name are skipped — the form sends up
   // to MAX_TEE_BOXES slots but only the populated ones count.

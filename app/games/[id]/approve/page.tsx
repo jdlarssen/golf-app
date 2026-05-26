@@ -43,7 +43,9 @@ function first(value: string | string[] | undefined): string | undefined {
 
 type HoleRow = {
   hole_number: number;
-  par: number;
+  par_mens: number;
+  par_ladies: number;
+  par_juniors: number;
   stroke_index: number;
 };
 
@@ -154,7 +156,7 @@ async function PendingApprovals({
     getGameWithPlayers(gameId),
     supabase
       .from('course_holes')
-      .select('hole_number, par, stroke_index')
+      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
       .eq('course_id', courseId)
       .order('hole_number', { ascending: true })
       .returns<HoleRow[]>(),
@@ -275,15 +277,15 @@ async function PendingApprovals({
                             {h.hole_number}
                           </td>
                           <td className="score-num px-2 py-1.5 text-right text-muted">
-                            {h.par}
+                            {h.par_mens}
                           </td>
                           <td className="score-num px-2 py-1.5 text-right text-muted">
                             {h.stroke_index}
                           </td>
                           <td className="score-num px-2 py-1.5 text-right text-text">
                             <ScoreShape
-                              shape={scoreShape(s, h.par)}
-                              tone={scoreTone(s, h.par)}
+                              shape={scoreShape(s, h.par_mens)}
+                              tone={scoreTone(s, h.par_mens)}
                               size="sm"
                             >
                               {s ?? '—'}
