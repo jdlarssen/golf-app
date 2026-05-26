@@ -31,13 +31,31 @@ function getClient(): Resend {
 export type InviteNotificationParams = {
   to: string;
   invitedByName: string;
+  /**
+   * Spill-navnet når invitasjonen gjelder en konkret runde (game-scoped
+   * invitasjon fra `/admin/games/[id]`). Når satt, bytter mail-en til en
+   * spill-spesifikk subject + ekstra body-linje. Uten gameName beholdes
+   * dagens åpne app-invitasjon-copy (friend-invite + admin-invite).
+   */
+  gameName?: string;
 };
 
 export async function sendInviteNotification(
   params: InviteNotificationParams,
 ): Promise<void> {
-  const { to, invitedByName } = params;
-  const subject = 'Du er invitert til Tørny';
+  const { to, invitedByName, gameName } = params;
+  const hasGame = typeof gameName === 'string' && gameName.length > 0;
+  const subject = hasGame
+    ? `Du er invitert til ${gameName} på Tørny`
+    : 'Du er invitert til Tørny';
+
+  const introLineHtml = hasGame
+    ? `<strong>${escapeHtml(invitedByName)}</strong> har invitert deg til spillet <em>${escapeHtml(gameName!)}</em> på Tørny.`
+    : `<strong>${escapeHtml(invitedByName)}</strong> har invitert deg til en golf-turnering i Tørny.`;
+
+  const introLineText = hasGame
+    ? `${invitedByName} har invitert deg til spillet ${gameName} på Tørny.`
+    : `${invitedByName} har invitert deg til en golf-turnering i Tørny.`;
 
   const html = `<!DOCTYPE html><html lang="nb">
 <head>
@@ -61,7 +79,7 @@ export async function sendInviteNotification(
               Du er invitert
             </h2>
             <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-              <strong>${escapeHtml(invitedByName)}</strong> har invitert deg til en golf-turnering i Tørny.
+              ${introLineHtml}
             </p>
             <p style="font-size:16px;line-height:1.5;margin:0 0 32px;">
               For å komme i gang: gå til
@@ -85,8 +103,8 @@ export async function sendInviteNotification(
 </html>`;
 
   const text =
-    `Du er invitert til Tørny\n\n` +
-    `${invitedByName} har invitert deg til en golf-turnering i Tørny.\n\n` +
+    `${subject}\n\n` +
+    `${introLineText}\n\n` +
     `Gå til https://tornygolf.no/login, skriv inn denne e-posten, og logg inn med koden du får tilsendt.\n\n` +
     `Tørny — fyr opp golfturneringen på et par minutter.\n`;
 
