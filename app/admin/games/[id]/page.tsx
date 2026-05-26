@@ -43,6 +43,7 @@ import {
 } from '@/lib/games/teeRating';
 import { formatShortDateNb } from '@/lib/format/date';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
+import { InviteToGameSection } from './InviteToGameSection';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -67,6 +68,8 @@ const STATUS_BANNERS: Record<string, string> = {
   finished: '✓ Spillet er avsluttet. Leaderboard er åpen for alle.',
   scorecard_reopened: '✓ Scorekortet er åpnet for redigering.',
   game_reopened: '✓ Spillet er aktivt igjen.',
+  invite_added: '✓ Spilleren er lagt til på rosteren.',
+  invite_sent: '✓ Invitasjon sendt.',
 };
 
 function first(value: string | string[] | undefined): string | undefined {
@@ -202,17 +205,24 @@ export default async function GameDetailPage({
 
   const userId = await getProxyVerifiedUserId();
 
-  // Mark `scorecard_submitted`-varsler for dette spillet som lest når admin
-  // åpner protokoll-sida. Wrap i `after()` så DB-mutasjon + revalidateTag
-  // deferes til etter render (Next.js 16 sperrer revalidateTag i render-fase).
+  // Mark notifikasjoner for dette spillet som lest når admin åpner
+  // protokoll-sida. Dekker både `scorecard_submitted` og `invite` slik at
+  // bell-prikken forsvinner så snart admin (eller invitee) lander her.
+  // Wrap i `after()` så DB-mutasjon + revalidateTag deferes til etter render
+  // (Next.js 16 sperrer revalidateTag i render-fase).
   if (userId) {
-    after(() =>
-      markNotificationsRead({
+    after(() => {
+      void markNotificationsRead({
         userId,
         kind: 'scorecard_submitted',
         entityId: id,
-      }),
-    );
+      });
+      void markNotificationsRead({
+        userId,
+        kind: 'invite',
+        entityId: id,
+      });
+    });
   }
 
   return (
@@ -646,6 +656,15 @@ async function PlayersSections({
               ))}
           </ul>
         </SectionCard>
+      )}
+
+      {(game.status === 'draft' || game.status === 'scheduled') && (
+        <InviteToGameSection
+          gameId={gameId}
+          status={game.status}
+          gameMode={game.game_mode}
+          currentPlayerIds={players.map((p) => p.user_id)}
+        />
       )}
 
       {players.length > 0 && (
