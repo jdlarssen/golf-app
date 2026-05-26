@@ -288,6 +288,80 @@ export type Database = {
           },
         ]
       }
+      game_registration_requests: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by_user_id: string | null
+          game_id: string
+          id: string
+          is_team_captain: boolean
+          message: string | null
+          rejection_reason: string | null
+          status: Database["public"]["Enums"]["registration_request_status"]
+          team_name: string | null
+          team_request_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by_user_id?: string | null
+          game_id: string
+          id?: string
+          is_team_captain?: boolean
+          message?: string | null
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["registration_request_status"]
+          team_name?: string | null
+          team_request_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by_user_id?: string | null
+          game_id?: string
+          id?: string
+          is_team_captain?: boolean
+          message?: string | null
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["registration_request_status"]
+          team_name?: string | null
+          team_request_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_registration_requests_decided_by_user_id_fkey"
+            columns: ["decided_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_registration_requests_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_registration_requests_team_request_id_fkey"
+            columns: ["team_request_id"]
+            isOneToOne: false
+            referencedRelation: "game_registration_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_registration_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_side_winners: {
         Row: {
           category: string
@@ -338,9 +412,12 @@ export type Database = {
           id: string
           mode_config: Json
           name: string
+          registration_mode: Database["public"]["Enums"]["registration_mode"]
+          registration_type: Database["public"]["Enums"]["registration_type"]
           require_peer_approval: boolean
           scheduled_tee_off_at: string | null
           score_visibility: string
+          short_id: string
           side_ctp_count: number
           side_disabled_categories: string[]
           side_ld_count: number
@@ -361,9 +438,12 @@ export type Database = {
           id?: string
           mode_config?: Json
           name: string
+          registration_mode?: Database["public"]["Enums"]["registration_mode"]
+          registration_type?: Database["public"]["Enums"]["registration_type"]
           require_peer_approval?: boolean
           scheduled_tee_off_at?: string | null
           score_visibility?: string
+          short_id?: string
           side_ctp_count?: number
           side_disabled_categories?: string[]
           side_ld_count?: number
@@ -384,9 +464,12 @@ export type Database = {
           id?: string
           mode_config?: Json
           name?: string
+          registration_mode?: Database["public"]["Enums"]["registration_mode"]
+          registration_type?: Database["public"]["Enums"]["registration_type"]
           require_peer_approval?: boolean
           scheduled_tee_off_at?: string | null
           score_visibility?: string
+          short_id?: string
           side_ctp_count?: number
           side_disabled_categories?: string[]
           side_ld_count?: number
@@ -817,7 +900,12 @@ export type Database = {
       }
       email_is_invited: { Args: { check_email: string }; Returns: boolean }
       email_is_registered: { Args: { p_email: string }; Returns: boolean }
+      generate_game_short_id: { Args: never; Returns: string }
       is_admin: { Args: never; Returns: boolean }
+      is_game_creator_or_admin: {
+        Args: { p_game_id: string }
+        Returns: boolean
+      }
       is_in_game: { Args: { p_game_id: string }; Returns: boolean }
       same_flight: {
         Args: { p_game_id: string; p_other_user: string }
@@ -852,6 +940,13 @@ export type Database = {
       game_status: "draft" | "scheduled" | "active" | "finished"
       player_level: "junior" | "normal" | "senior"
       player_tee_gender: "mens" | "ladies" | "juniors"
+      registration_mode: "invite_only" | "manual_approval" | "open"
+      registration_request_status:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "withdrawn"
+      registration_type: "solo" | "team" | "both"
       user_gender: "mens" | "ladies"
     }
     CompositeTypes: {
@@ -983,6 +1078,14 @@ export const Constants = {
       game_status: ["draft", "scheduled", "active", "finished"],
       player_level: ["junior", "normal", "senior"],
       player_tee_gender: ["mens", "ladies", "juniors"],
+      registration_mode: ["invite_only", "manual_approval", "open"],
+      registration_request_status: [
+        "pending",
+        "approved",
+        "rejected",
+        "withdrawn",
+      ],
+      registration_type: ["solo", "team", "both"],
       user_gender: ["mens", "ladies"],
     },
   },

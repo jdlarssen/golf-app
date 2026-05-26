@@ -2,8 +2,8 @@
 
 **Issue:** [#199](https://github.com/jdlarssen/golf-app/issues/199) — Selv-påmelding til turnering (fri-slipp / manuell godkjenning / invite-only + solo/lag/begge)
 **Branch:** `claude/distracted-lalande-1d5cd3`
-**Berører ruter:** `app/admin/games/new`, `app/opprett-spill`, `app/admin/games/[id]`, `app/admin/games/[id]/påmeldinger` (ny), `app/påmelding/[shortId]` (ny), `app/profile/historikk` (selv-trekk), `app/(auth)/login/actions.ts` (defer-notify-utvidelse), `lib/notifications`, `lib/mail`, `supabase/migrations/0039–0042`
-**Bump:** MINOR. Ny bruker-synlig funksjon (offentlig påmeldings-flate, godkjennings-UI, lag-formasjon, ny notifikasjons-type). Bygger på `0.x`-alpha-kontrakten — datamodellen er additiv, ingen breaking endring for kompis-kjernen.
+**Berører ruter:** `app/admin/games/new`, `app/opprett-spill`, `app/admin/games/[id]`, `app/admin/games/[id]/påmeldinger` (ny), `app/påmelding/[shortId]` (ny), `app/profile/historikk` (selv-trekk), `app/(auth)/login/actions.ts` (utvider eksisterende `notifyInvitedToGame`-hook med team-invite-fallback), `lib/notifications`, `lib/mail`, `supabase/migrations/0040–0043`
+**Bump:** MINOR til `1.32.0`. Ny bruker-synlig funksjon (offentlig påmeldings-flate, godkjennings-UI, lag-formasjon, 5 nye notifikasjons-typer). Bygger oppå #166 (selv-registrering) + #182 (game-scoped invites, shipped 1.29.0) + #47 fase 1 (Ryder Cup-grunnmur). Datamodellen er additiv — ingen breaking endring for kompis-kjernen.
 **Sluttmål:** Closes #199.
 
 ## Problem
@@ -40,7 +40,8 @@ Ingen nye eksterne biblioteker. Verifisert mot dagens kode (post-#166-rebase, 20
 
 - **Fra [#166](https://github.com/jdlarssen/golf-app/issues/166) (selv-registrering, shipped 2026-05-26):** env-flagget `NEXT_PUBLIC_ALLOW_SELF_REGISTRATION` + login-rate-limit + honeypot finnes allerede. Vi avhenger av at flagget er `true` i prod for at `open`-modus skal fungere for ukjente e-poster. Hvis admin har slått flagget av, faller `open`-modus tilbake til "kjente brukere kan melde seg på" — ukjente møter samme `user_not_found`-error som før #166. Vi flagger dette i admin-UI med en infobokse hvis flagget er av.
 - **Fra [#198](https://github.com/jdlarssen/golf-app/issues/198) (trusted creators, shipped 2026-05-24):** `requireAdminOrTrustedCreator()` finnes som auth-gate. Trusted creators får samme rettigheter til å sette `registration_mode` / `registration_type` som admin. INSERT på `games` bypasses via `getAdminClient()` for å unngå RLS-konflikt — vi gjør samme her for `game_registration_requests`-approval-action.
-- **Fra [#182](https://github.com/jdlarssen/golf-app/issues/182) (game-scoped invite notifications, CLOSED men ikke shipped):** kontrakten beskriver en deferred-notify i `verifyCode`. Vi implementerer hovedmønsteret her som del av §5.6 (lag-formasjon for ukjente). Hvis #182 noen gang revives, må de tilpasses denne shippede formen — vi flagger det i closing-kommentaren på #199.
+- **Fra [#182](https://github.com/jdlarssen/golf-app/issues/182) (game-scoped invite notifications, shipped 1.29.0):** `notifyInvitedToGame(opts)`-helperen ([`lib/notifications/notifyInvitedToGame.ts`](lib/notifications/notifyInvitedToGame.ts)) finnes og kalles fra picker-add, backfill-flyten i `/admin/games/new` og deferred-notify i `verifyCode` ([`app/(auth)/login/actions.ts:219–221`](app/(auth)/login/actions.ts:219)). Vi bygger team-invite-flyten oppå dette: ny `notifyInvitedToTeam`-helper (eller utvidet `notifyInvitedToGame` med valgfri `team_name`-parameter, se §5.6) som bruker en ny `kind: 'team_invite'`-payload. Bruker IKKE samme `invite`-kind fordi semantikken er forskjellig — `invite` betyr «admin la deg til», `team_invite` betyr «kapteinen vil ha deg i sitt lag (du må bekrefte)».
+- **Fra [#47 fase 1](https://github.com/jdlarssen/golf-app/issues/47) (Ryder Cup-grunnmur, shipped 1.31.x):** `tournaments`-tabell + `games.tournament_id`-FK finnes (migrasjon 0039). Cup-er er multi-match wrappers. Denne kontrakten griper IKKE inn i cup-flyten — selv-påmelding gjelder per game-rad, ikke per tournament. Hvis en spiller melder seg på via `/påmelding/[shortId]` til en match som er del av en cup, behandles det som vanlig spill-påmelding; cup-aggregeringen plukker dem opp via tournament_id-joinen. Vi flagger evt. UX-implikasjoner i admin-pending-side om matchet tilhører en cup.
 - **Notifikasjons-pattern:** in-app-notification er primær signal; mail er backup via `shouldAlsoSendMail` (5-min `last_seen_at`-terskel). Ingen mail-preferences-tabell finnes — alle notifikasjoner bruker samme gating. Det er fint for denne kontrakten.
 - **`/complete-profile`-flow:** brukere uten `profile_completed_at` redirectes dit av middleware. Self-registered brukere (post-#166) går samme vei. Selv-påmeldings-flyten setter `next=/påmelding/<shortId>` så de lander tilbake på rett sted etter onboarding.
 
@@ -48,7 +49,7 @@ Ingen nye eksterne biblioteker. Verifisert mot dagens kode (post-#166-rebase, 20
 
 ### 5.1 Datamodell
 
-**Migrasjon 0039 — `games_self_registration_columns.sql`**
+**Migrasjon 0040 — `games_self_registration_columns.sql`**
 
 ```sql
 -- Akse 1: registration mode
@@ -100,7 +101,7 @@ ALTER TABLE public.games ALTER COLUMN short_id SET DEFAULT public.generate_game_
 CREATE INDEX games_short_id_idx ON public.games (short_id);
 ```
 
-**Migrasjon 0040 — `game_registration_requests.sql`**
+**Migrasjon 0041 — `game_registration_requests.sql`**
 
 ```sql
 CREATE TYPE public.registration_request_status AS ENUM ('pending', 'approved', 'rejected', 'withdrawn');
@@ -165,7 +166,7 @@ RETURNS boolean LANGUAGE sql SECURITY DEFINER STABLE AS $$
 $$;
 ```
 
-**Migrasjon 0041 — `game_players_self_register_and_withdraw.sql`**
+**Migrasjon 0042 — `game_players_self_register_and_withdraw.sql`**
 
 ```sql
 -- Tillat authenticated bruker å INSERT egen rad i game_players, men kun
@@ -195,7 +196,7 @@ CREATE POLICY "self withdraw before start" ON public.game_players
   );
 ```
 
-**Migrasjon 0042 — `notifications_self_registration_kinds.sql`**
+**Migrasjon 0043 — `notifications_self_registration_kinds.sql`**
 
 ```sql
 -- Utvid CHECK-constraint på notifications.kind med fire nye kinds.
@@ -482,8 +483,8 @@ Hver criterion er falsifierbar — evaluatoren skal kunne bekrefte med kommando-
 
 ### CHANGELOG + versjon
 
-- [ ] `package.json` bumpet til neste MINOR (`1.30.0`). **Evidence:** diff.
-- [ ] `CHANGELOG.md` har ny `## 1.30.y — Selv-påmelding`-tema-heading med blockquote-tagline («Du kan nå dele en lenke …»). Forrige minor-serie wrapped i `<details>`. **Evidence:** diff.
+- [ ] `package.json` bumpet til neste MINOR (`1.32.0` — current er 1.31.1). **Evidence:** diff.
+- [ ] `CHANGELOG.md` har ny `## 1.32.y — Selv-påmelding`-tema-heading med blockquote-tagline («Du kan nå dele en lenke …»). Forrige minor-serie (1.31.x) wrapped i `<details>`. **Evidence:** diff.
 
 ## Gates
 
@@ -532,7 +533,7 @@ Avklart i pre-kontrakt-diskusjon (2026-05-26):
 
 Foreslått commit-rekkefølge for `/forge:auto`-loopen. Hver chunk skal være atomic (kompiler + test før neste).
 
-1. **Datamodell — migrasjoner 0039–0042.** Kjør gjennom Supabase MCP. Inkluder rollback-script i kommentar. Verify constraints + policies.
+1. **Datamodell — migrasjoner 0040–0043.** Kjør gjennom Supabase MCP. Inkluder rollback-script i kommentar. Verify constraints + policies.
 2. **Notifikasjons-typer + Zod-schemas + NotificationCard-rendering.** TS-typer, Zod, UI-card per kind. Tester.
 3. **Game payload + GameWizard-skjema-utvidelse.** Felt-typer, validation, form-rendering. `gamePayload.ts` aksepterer registration_mode + registration_type. Tester.
 4. **Admin pending-requests-side + section-summary på game-detalj.** UI + server actions for approve/reject.
