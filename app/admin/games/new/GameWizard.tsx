@@ -32,6 +32,7 @@ import { TeamsAssignmentSection } from './sections/TeamsAssignmentSection';
 import { ReadyStep } from './sections/ReadyStep';
 import { RegistrationSection } from './sections/RegistrationSection';
 import { AllowanceField } from '@/components/admin/AllowanceField';
+import { bruttoHelperFor } from '@/lib/games/allowanceCopy';
 import {
   GameForm,
   type CourseOption,
@@ -227,7 +228,7 @@ export function GameWizard({ courses, players, mode, initialValues }: Props) {
       course_id: state.courseId,
       tee_box_id: state.teeBoxId,
       scheduled_tee_off_at: state.scheduledTeeOffAt,
-      hcp_allowance_pct: state.hcpAllowance,
+      hcp_allowance_pct: String(state.hcpAllowance),
       require_peer_approval: state.requirePeerApproval,
       side_tournament_enabled: state.sideEnabled,
       player_genders: state.playerGenders,
@@ -312,6 +313,26 @@ export function GameWizard({ courses, players, mode, initialValues }: Props) {
                 bruttoHelperText="Ingen handicap — laveste gross-score per hull per side vinner. Vanlig format på ekte Ryder Cup."
                 value={state.fourballAllowancePct}
                 onChange={state.setFourballAllowancePct}
+                hideHiddenInput
+              />
+            )}
+            {/* Non-fourball / non-texas allowance-toggle (#266). Skriver til
+                games.hcp_allowance_pct. Default 100 (fullt course handicap).
+                Hidden input rendres sentralt i `FormDataInputs` (linje
+                ~469) — toggle-en eier kun UI + state. */}
+            {(state.gameMode === 'best_ball' ||
+              state.gameMode === 'stableford' ||
+              state.gameMode === 'singles_matchplay' ||
+              state.gameMode === 'solo_strokeplay') && (
+              <AllowanceField
+                fieldName="hcp_allowance_pct"
+                defaultPct={100}
+                legend="Scoring"
+                description="Styrer hvor stor andel av handicap som regnes med. Brutto = ingen handicap, kun gross."
+                nettoHelperText="Andel av spillerens handicap som teller. 100 = fullt course handicap (standard)."
+                bruttoHelperText={bruttoHelperFor(state.gameMode)}
+                value={state.hcpAllowance}
+                onChange={state.setHcpAllowance}
                 hideHiddenInput
               />
             )}
@@ -466,7 +487,7 @@ function FormDataInputs({
       />
 
       <input type="hidden" name="name" value={name} />
-      <input type="hidden" name="hcp_allowance_pct" value={hcpAllowance} />
+      <input type="hidden" name="hcp_allowance_pct" value={String(hcpAllowance)} />
       {requirePeerApproval && (
         <input type="hidden" name="require_peer_approval" value="on" />
       )}

@@ -167,8 +167,15 @@ export function useGameFormState({
   const [flightByPlayer, setFlightByPlayer] = useState<Record<string, number>>(
     initialAssignments.flightByPlayer,
   );
-  const [hcpAllowance, setHcpAllowance] = useState<string>(
-    initialValues?.hcp_allowance_pct ?? '100',
+  // HCP-allowance for non-fourball/non-texas modes (best_ball, stableford,
+  // singles_matchplay, solo_strokeplay). 0 = brutto (gross-only), 1..100 = netto
+  // med den prosenten. Default 100 (fullt course handicap). #266 — eies av
+  // AllowanceField i Section 3 (Format), submittes via sentral hidden input.
+  const [hcpAllowance, setHcpAllowance] = useState<number>(
+    initialValues?.hcp_allowance_pct !== undefined &&
+      initialValues.hcp_allowance_pct !== ''
+      ? Number(initialValues.hcp_allowance_pct)
+      : 100,
   );
   // Texas scramble: lag-handicap-prosent. Initialiseres fra initialValues
   // hvis edit-flyt, ellers default per teamSize (settes ved første render og
@@ -603,9 +610,8 @@ export function useGameFormState({
         flightByPlayer[pid] <= 4,
     );
 
-  const allowanceNum = Number(hcpAllowance);
   const allowanceValid =
-    Number.isInteger(allowanceNum) && allowanceNum >= 0 && allowanceNum <= 100;
+    Number.isInteger(hcpAllowance) && hcpAllowance >= 0 && hcpAllowance <= 100;
 
   // Par-stableford-validitet: minst 1 lag (2 spillere), partall antall
   // spillere, alle valgte spillere har team_number satt, og hvert ikke-tomt

@@ -16,6 +16,7 @@ import { TeamsAssignmentSection } from './sections/TeamsAssignmentSection';
 import { AdvancedSettingsSection } from './sections/AdvancedSettingsSection';
 import { RegistrationSection } from './sections/RegistrationSection';
 import { AllowanceField } from '@/components/admin/AllowanceField';
+import { bruttoHelperFor } from '@/lib/games/allowanceCopy';
 
 export type CourseOption = {
   id: string;
@@ -178,6 +179,8 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     isTexas,
     isMatchplay,
     texasHandicapPct,
+    hcpAllowance,
+    setHcpAllowance,
     fourballAllowancePct,
     setFourballAllowancePct,
     handleModeChange,
@@ -347,6 +350,25 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             value={fourballAllowancePct}
             onChange={setFourballAllowancePct}
             hideHiddenInput
+          />
+        )}
+        {/* Non-fourball / non-texas allowance-toggle (#266). GameForm-pathen
+            har ingen sentral hidden input for hcp_allowance_pct — toggle-en
+            emitter sin egen (ingen hideHiddenInput). State persisterer i
+            useGameFormState via controlled-modus. */}
+        {(gameMode === 'best_ball' ||
+          gameMode === 'stableford' ||
+          gameMode === 'singles_matchplay' ||
+          gameMode === 'solo_strokeplay') && (
+          <AllowanceField
+            fieldName="hcp_allowance_pct"
+            defaultPct={100}
+            legend="Scoring"
+            description="Styrer hvor stor andel av handicap som regnes med. Brutto = ingen handicap, kun gross."
+            nettoHelperText="Andel av spillerens handicap som teller. 100 = fullt course handicap (standard)."
+            bruttoHelperText={bruttoHelperFor(gameMode)}
+            value={hcpAllowance}
+            onChange={setHcpAllowance}
           />
         )}
         {lockGameMode && (

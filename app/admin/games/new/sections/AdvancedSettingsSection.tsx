@@ -3,10 +3,11 @@
 /**
  * AdvancedSettingsSection — siste innstillinger før submit-knappene.
  *
- * Ansvar: HCP-allowance (eller Texas-team-handicap), peer-approval-checkbox,
- * og — når wizard-en ber om det via `includeVisibility` — også
- * «Synlighet under runden»-radios + sideturnering-fieldset (som ellers
- * lever i BasicsSection).
+ * Ansvar: peer-approval-checkbox, og — når wizard-en ber om det via
+ * `includeVisibility` — også «Synlighet under runden»-radios +
+ * sideturnering-fieldset (som ellers lever i BasicsSection). Texas-spesifikt
+ * lag-handicap-input vises ved isTexas; non-texas allowance-toggle er
+ * flyttet til Section 3 (Format) i #266.
  */
 
 import type { GameFormState } from '../useGameFormState';
@@ -39,8 +40,6 @@ export function AdvancedSettingsSection({
     texasHandicapPct,
     setTexasHandicapPct,
     teamSize,
-    hcpAllowance,
-    setHcpAllowance,
     requirePeerApproval,
     setRequirePeerApproval,
     // Visibility-blokk (kun når includeVisibility=true)
@@ -59,47 +58,36 @@ export function AdvancedSettingsSection({
       {!hideHeading && (
         <h2 className="text-sm font-medium text-text">6. Innstillinger</h2>
       )}
-      {isTexas ? (
-        <Input
-          id="texas_team_handicap_pct_input"
-          name="texas_team_handicap_pct_input"
-          type="number"
-          inputMode="numeric"
-          min={0}
-          max={100}
-          step={1}
-          label="Lag-handicap %"
-          value={texasHandicapPct}
-          onChange={(e) => setTexasHandicapPct(e.target.value)}
-          hint={
-            teamSize === 2
-              ? 'NGF-standard: 25 % av summen av spillernes spille-HCP for 2-mannslag.'
-              : 'NGF-standard: 10 % av summen av spillernes spille-HCP for 4-mannslag.'
-          }
-          required
-        />
-      ) : (
-        <Input
-          id="hcp_allowance_pct"
-          name="hcp_allowance_pct"
-          type="number"
-          inputMode="numeric"
-          min={0}
-          max={100}
-          step={1}
-          label="HCP-allowance %"
-          value={hcpAllowance}
-          onChange={(e) => setHcpAllowance(e.target.value)}
-          hint="100 = fullt course handicap (standard). 85 = WHS fourball-tillegg."
-          required
-        />
-      )}
-      {/* Texas trenger fortsatt en hcp_allowance_pct-verdi i payloaden siden
-          DB-kolonnen er NOT NULL. Vi sender 100 (no-op) som hidden input
-          slik at server-action ikke får null-verdi. Lag-HCP-prosenten
-          persisterer i mode_config istedenfor. */}
+      {/* Texas-spesifikk lag-handicap-input. #266 — non-texas-allowance er
+          flyttet til Section 3 (Format) som AllowanceField (netto/brutto-
+          toggle); Texas beholder dagens input inntil chunk 5 swapper det
+          ut. */}
       {isTexas && (
-        <input type="hidden" name="hcp_allowance_pct" value="100" />
+        <>
+          <Input
+            id="texas_team_handicap_pct_input"
+            name="texas_team_handicap_pct_input"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={100}
+            step={1}
+            label="Lag-handicap %"
+            value={texasHandicapPct}
+            onChange={(e) => setTexasHandicapPct(e.target.value)}
+            hint={
+              teamSize === 2
+                ? 'NGF-standard: 25 % av summen av spillernes spille-HCP for 2-mannslag.'
+                : 'NGF-standard: 10 % av summen av spillernes spille-HCP for 4-mannslag.'
+            }
+            required
+          />
+          {/* Texas trenger fortsatt en hcp_allowance_pct-verdi i payloaden
+              siden DB-kolonnen er NOT NULL. Vi sender 100 (no-op) som hidden
+              input slik at server-action ikke får null-verdi. Lag-HCP-
+              prosenten persisterer i mode_config istedenfor. */}
+          <input type="hidden" name="hcp_allowance_pct" value="100" />
+        </>
       )}
 
       <label className="flex items-start gap-3 cursor-pointer">
