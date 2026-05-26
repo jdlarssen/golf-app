@@ -268,3 +268,40 @@ describe('CourseForm — dupliser-tee', () => {
     expect(tee1LadiesSlope?.value).toBe('120');
   });
 });
+
+describe('CourseForm — typisk slope/CR-range hint', () => {
+  it('viser herre-spesifikk hint under slope og CR i default-state', () => {
+    render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+
+    expect(screen.getByText('Typisk 110–135')).toBeTruthy();
+    expect(screen.getByText('Typisk 67–72')).toBeTruthy();
+  });
+
+  it('viser dame-spesifikk hint når dame-blokken ekspanderes', () => {
+    render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+
+    fireEvent.click(screen.getByRole('button', { name: /legg til dame-rating/i }));
+
+    expect(screen.getByText('Typisk 115–140')).toBeTruthy();
+    expect(screen.getByText('Typisk 68–73')).toBeTruthy();
+  });
+
+  it('viser junior-spesifikk hint når junior-blokken ekspanderes', () => {
+    render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+
+    fireEvent.click(screen.getByRole('button', { name: /legg til junior-rating/i }));
+
+    expect(screen.getByText('Typisk 95–125')).toBeTruthy();
+    expect(screen.getByText('Typisk 60–68')).toBeTruthy();
+  });
+
+  it('skjuler dame-hint når dame-blokken kollapses (hint kun synlig på ekspanderte blokker)', () => {
+    render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+
+    fireEvent.click(screen.getByRole('button', { name: /legg til dame-rating/i }));
+    expect(screen.getByText('Typisk 115–140')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: /fjern dame-rating/i }));
+    expect(screen.queryByText('Typisk 115–140')).toBeNull();
+  });
+});

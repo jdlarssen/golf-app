@@ -62,6 +62,19 @@ const DEFAULT_TEE: TeeBoxData = {
   course_rating_juniors: '',
 };
 
+// Typisk slope/CR-range per kjønn for norske 18-hulls baner. Vises som
+// muted hint-tekst under hvert felt så admin har et anker mot inntastings-feil
+// (f.eks. CR-tall i slope-feltet). Hint-en er statisk — den endrer ikke
+// farge eller blokkerer lagring ved verdier utenfor typisk range.
+const TYPICAL_HINTS: Record<
+  'mens' | 'ladies' | 'juniors',
+  { slope: string; cr: string }
+> = {
+  mens: { slope: 'Typisk 110–135', cr: 'Typisk 67–72' },
+  ladies: { slope: 'Typisk 115–140', cr: 'Typisk 68–73' },
+  juniors: { slope: 'Typisk 95–125', cr: 'Typisk 60–68' },
+};
+
 // MAX_TEE_BOXES re-eksporteres øverst fra ./constants. Server-actions må
 // importere det fra ./constants direkte (ikke fra denne 'use client'-modulen
 // — Next.js 16 wrapper client-exports som throw-funksjoner på serveren).
@@ -508,6 +521,7 @@ function GenderRatingBlock({
           step={1}
           label="Slope"
           placeholder={slopePlaceholder}
+          hint={TYPICAL_HINTS[gender].slope}
           value={slope}
           onChange={(e) =>
             onChange({ [`slope_${gender}`]: e.target.value } as Partial<TeeBoxData>)
@@ -523,6 +537,7 @@ function GenderRatingBlock({
           step={0.1}
           label="CR"
           placeholder={crPlaceholder}
+          hint={TYPICAL_HINTS[gender].cr}
           value={cr}
           onChange={(e) =>
             onChange({ [`course_rating_${gender}`]: e.target.value } as Partial<TeeBoxData>)

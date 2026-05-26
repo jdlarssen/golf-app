@@ -12,7 +12,26 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ## 1.30.y — Spill-invitasjoner med bell-prikk
 
-Issue [#182](https://github.com/jdlarssen/golf-app/issues/182). Notifikasjons-systemet kobler seg nå på spill-rosteren. Når admin legger en spiller til på et spill kommer bell-prikken med en gang, både for kompiser som allerede har Tørny og for nye som inviteres på e-post.
+Issue [#182](https://github.com/jdlarssen/golf-app/issues/182). Notifikasjons-systemet kobler seg nå på spill-rosteren. Når admin legger en spiller til på et spill kommer bell-prikken med en gang, både for kompiser som allerede har Tørny og for nye som inviteres på e-post. Patch på toppen ([#235](https://github.com/jdlarssen/golf-app/issues/235)) la til typisk-range-hint på slope/CR-feltene i bane-skjemaet.
+
+### [1.30.1] - 2026-05-26
+
+> Når du taster slope og CR for en tee, ser du nå hva som er typisk på norske baner — gjør det lettere å fange opp en tastefeil før du lagrer.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- [app/admin/courses/CourseForm.tsx](app/admin/courses/CourseForm.tsx) — `TYPICAL_HINTS`-const per kjønn (mens/ladies/juniors) mapper til `{slope, cr}`-tekst. Videresendes til `Input`-komponentens eksisterende `hint`-prop ([components/ui/Input.tsx:29-31](components/ui/Input.tsx:29)), som rendrer muted `text-xs`-tekst rett under feltet. Identisk visuell vekt med eksisterende banelengde-hint.
+- Hint-tall: herre slope 110–135 / CR 67–72, dame 115–140 / 68–73, junior 95–125 / 60–68. Bruker norsk lang-tankestrek (U+2013) per humanizer-konvensjon.
+- Fire nye vitest-cases dekker hver av de tre kjønns-blokkene + at hint forsvinner når en blokk kollapses. Eksisterende 16 CourseForm-tester upåvirket.
+
+#### Notes
+- Statisk hint, ingen dynamisk soft-warning på verdier utenfor typisk range. Begrunnelse: holder kompleksiteten lav og fanger den dominerende feilen («CR-tall i slope-feltet») ved at admin ser intervallet før de taster.
+- Beholder eksisterende herre-placeholder (113 / 70.0). Damer/junior beholder tomme placeholders — vi vil ikke pre-foreslå konkrete tall der admin oftere taster verdier som avviker fra suggested-value.
+- Utsatt fra Fase 1 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Ingen DB-migrasjon, ingen scoring-impact.
+
+</details>
 
 ### [1.30.0] - 2026-05-26
 
