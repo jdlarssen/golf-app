@@ -64,13 +64,22 @@ type GameRow = {
   tournament_match_label: string | null;
 };
 
+type UserRel = { name: string | null; nickname: string | null };
 type PlayerRow = {
   game_id: string;
   user_id: string;
   team_number: number | null;
   course_handicap: number | null;
-  users: { name: string | null; nickname: string | null } | null;
+  // Supabase JS typer FK-joins som array selv på many-to-one. Normaliser
+  // i call-site (se `userOf`).
+  users: UserRel | UserRel[] | null;
 };
+
+function userOf(rel: UserRel | UserRel[] | null | undefined): UserRel | null {
+  if (!rel) return null;
+  if (Array.isArray(rel)) return rel[0] ?? null;
+  return rel;
+}
 
 type ScoreRow = {
   game_id: string;
@@ -190,10 +199,11 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
 
     // Collect roster: add players to their respective team-buckets.
     for (const p of gPlayers) {
+      const u = userOf(p.users);
       const entry: CupRosterPlayer = {
         userId: p.user_id,
-        name: p.users?.name ?? null,
-        nickname: p.users?.nickname ?? null,
+        name: u?.name ?? null,
+        nickname: u?.nickname ?? null,
       };
       if (p.team_number === 1 && !team1Map.has(p.user_id)) team1Map.set(p.user_id, entry);
       if (p.team_number === 2 && !team2Map.has(p.user_id)) team2Map.set(p.user_id, entry);
@@ -242,8 +252,8 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
     matchInputs.push({
       gameId: game.id,
       matchLabel: game.tournament_match_label,
-      team1PlayerName: preferredName(side1?.users ?? null),
-      team2PlayerName: preferredName(side2?.users ?? null),
+      team1PlayerName: preferredName(userOf(side1?.users)),
+      team2PlayerName: preferredName(userOf(side2?.users)),
       status: game.status,
       result,
     });
