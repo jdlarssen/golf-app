@@ -64,7 +64,20 @@ export type GameModeConfig =
       teams_count: number;
       team_handicap_pct: number;
     }
-  | { kind: 'fourball_matchplay'; team_size: 2; teams_count: 2 };
+  | {
+      kind: 'fourball_matchplay';
+      team_size: 2;
+      teams_count: 2;
+      /**
+       * HCP-allowance for fourball matchplay (0..100). WHS-default = 85 %.
+       * `compute()` leser feltet og kaller `applyAllowance(courseHandicap, pct)`
+       * per spiller før SI-allokering. 0 = brutto (gross-only matchplay),
+       * 100 = full handicap. Validatoren i `lib/games/gamePayload.ts` håndhever
+       * range; scoring-laget faller defensivt tilbake til 100 hvis feltet
+       * mangler i draft-state.
+       */
+      allowance_pct: number;
+    };
 
 /**
  * Tee-gender på spiller-nivå. Matcher `game_players.tee_gender`-enum-en
