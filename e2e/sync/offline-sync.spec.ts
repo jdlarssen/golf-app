@@ -1,4 +1,12 @@
 import { test, expect, type Page } from '@playwright/test';
+import type Dexie from 'dexie';
+import type { Table } from 'dexie';
+import type { LocalScore, SyncQueueItem } from '@/lib/sync/db';
+
+interface TornyDexie extends Dexie {
+  scores: Table<LocalScore, string>;
+  syncQueue: Table<SyncQueueItem, string>;
+}
 
 /**
  * Offline-sync e2e (issue #31)
@@ -77,7 +85,7 @@ async function bootDexie(page: Page): Promise<void> {
 
 async function clearDexie(page: Page): Promise<void> {
   await page.evaluate(async () => {
-    const db = (window as unknown as { __torny_dexie?: any }).__torny_dexie;
+    const db = (window as unknown as { __torny_dexie: TornyDexie }).__torny_dexie;
     if (!db) return;
     await db.scores.clear();
     await db.syncQueue.clear();
@@ -88,7 +96,7 @@ async function readQueue(
   page: Page,
 ): Promise<Array<{ id: string; attemptCount: number; lastError: string | null }>> {
   return page.evaluate(async () => {
-    const db = (window as unknown as { __torny_dexie?: any }).__torny_dexie;
+    const db = (window as unknown as { __torny_dexie: TornyDexie }).__torny_dexie;
     return db.syncQueue.orderBy('createdAt').toArray();
   });
 }
@@ -98,7 +106,7 @@ async function readScore(
   id: string,
 ): Promise<{ strokes: number | null; serverUpdatedAt: string | null } | undefined> {
   return page.evaluate(async (scoreId) => {
-    const db = (window as unknown as { __torny_dexie?: any }).__torny_dexie;
+    const db = (window as unknown as { __torny_dexie: TornyDexie }).__torny_dexie;
     const row = await db.scores.get(scoreId);
     if (!row) return undefined;
     return { strokes: row.strokes, serverUpdatedAt: row.serverUpdatedAt };
@@ -123,7 +131,7 @@ async function writeScoreInPage(
   },
 ): Promise<void> {
   await page.evaluate(async (a) => {
-    const db = (window as unknown as { __torny_dexie?: any }).__torny_dexie;
+    const db = (window as unknown as { __torny_dexie: TornyDexie }).__torny_dexie;
     const id = `${a.gameId}:${a.userId}:${a.holeNumber}`;
     const clientUpdatedAt = new Date().toISOString();
     await db.transaction('rw', db.scores, db.syncQueue, async () => {
@@ -155,7 +163,7 @@ async function writeScoreInPage(
  */
 async function drainQueueInPage(page: Page): Promise<void> {
   await page.evaluate(async () => {
-    const db = (window as unknown as { __torny_dexie?: any }).__torny_dexie;
+    const db = (window as unknown as { __torny_dexie: TornyDexie }).__torny_dexie;
     const queue = await db.syncQueue.orderBy('createdAt').toArray();
     for (const item of queue) {
       const score = await db.scores.get(item.scoreId);
