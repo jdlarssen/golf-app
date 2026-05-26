@@ -25,6 +25,7 @@ import { EndGameButton } from './EndGameButton';
 import { ApprovePlayerButton } from './ApprovePlayerButton';
 import { ReopenScorecardButton } from './ReopenScorecardButton';
 import { ReopenGameButton } from './ReopenGameButton';
+import { RegistrationOverviewSection } from './RegistrationOverviewSection';
 import {
   startGame,
   startScheduledGameAction,
@@ -111,6 +112,10 @@ type GameRow = {
   side_tournament_enabled: boolean;
   side_ld_count: number;
   side_ctp_count: number;
+  // #199 selv-påmelding — vises i Påmelding-oversikten med delbar lenke.
+  registration_mode: 'invite_only' | 'manual_approval' | 'open';
+  registration_type: 'solo' | 'team' | 'both';
+  short_id: string;
   courses: { name: string } | null;
   tee_boxes: (TeeBoxRatings & { name: string }) | null;
 };
@@ -187,7 +192,7 @@ export default async function GameDetailPage({
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, status, game_mode, mode_config, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, courses(name), tee_boxes(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+      'id, name, status, game_mode, mode_config, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, registration_mode, registration_type, short_id, courses(name), tee_boxes(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
     )
     .eq('id', id)
     .single<GameRow>();
@@ -486,6 +491,14 @@ async function PlayersSections({
           <Row label={teamsTotalLabel} value={`${teamCount} / ${teamsMax}`} />
         )}
       </SectionCard>
+
+      {/* Selv-påmelding-oversikt (#199) — kun for mode != invite_only */}
+      <RegistrationOverviewSection
+        gameId={gameId}
+        registrationMode={game.registration_mode}
+        shortId={game.short_id}
+        selfRegisteredCount={players.length}
+      />
 
       {/* Card 2 — Format */}
       <SectionCard ribbon="Format">
