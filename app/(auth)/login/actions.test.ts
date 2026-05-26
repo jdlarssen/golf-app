@@ -36,14 +36,34 @@ vi.mock('@/lib/supabase/server', () => ({
   }),
 }));
 
-// Admin client should never be touched on a honeypot hit. The same admin
-// client is also passed to `loginRateLimit` via getAdminClient, but those
-// tests live in lib/auth/loginRateLimit.test.ts so we don't double-cover here.
+// Admin client mock. Used by two callers in actions.ts:
+// 1. The `opened_at`-stamping side-effect:
+//      .from('invitations').update({...}).ilike(...).is(...).is(...)
+//    The .is() chain terminates by being awaited — supabase-js resolves the
+//    builder when treated as a thenable.
+// 2. The login rate-limit helper (which calls .rpc). Those tests live in
+//    lib/auth/loginRateLimit.test.ts; here we mock the helper itself
+//    (consumeLoginRateLimitMock below), so the rpc reachable through this
+//    mock only needs to exist for type-safety.
 const adminUpdateMock = vi.fn();
+function makeAdminBuilder() {
+  const builder: Record<string, unknown> = {};
+  for (const m of ['ilike', 'is', 'eq', 'select']) {
+    builder[m] = () => builder;
+  }
+  // Awaitable terminal — what supabase-js does when an update chain is awaited.
+  (builder as { then: unknown }).then = (
+    resolve: (value: { data: null; error: null }) => void,
+  ) => resolve({ data: null, error: null });
+  return builder;
+}
 vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => ({
     from: () => ({
-      update: adminUpdateMock,
+      update: (...args: unknown[]) => {
+        adminUpdateMock(...args);
+        return makeAdminBuilder();
+      },
     }),
     rpc: () => Promise.resolve({ data: true, error: null }),
   }),
