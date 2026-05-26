@@ -10,7 +10,38 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.38.y — Four-ball matchplay (Ryder Cup fase 2)
+
+Issue [#217](https://github.com/jdlarssen/golf-app/issues/217), fase 2 av [#47](https://github.com/jdlarssen/golf-app/issues/47). Cup-grunnmuren fra fase 1 utvides med four-ball matchplay: 2 mot 2 med best-ball-aggregering per hull, matchplay-overlay som regner ut «X up», «AS» og «3&2» på samme måte som singles-matchplay. Hver cup setter sin egen handicap-andel: netto med valgfri prosent, eller helt brutto.
+
+### [1.38.0] - 2026-05-26
+
+> Du kan nå sette opp fourball-matches (2 mot 2) i Ryder Cup-turneringene dine. Hvert lag har to spillere, hver med sin egen ball. Laget vinner hullet med den laveste netto-scoren av de to, og lagene møtes hull-for-hull som matchplay. Du velger handicap-andelen per cup: 85 % for en vanlig runde med kompisene, eller 0 % for ekte Ryder Cup-stemning helt uten handicap.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- Ny scoring-modus `fourball_matchplay` i [lib/scoring/modes/fourballMatchplay.ts](lib/scoring/modes/fourballMatchplay.ts) — 2v2 best-ball med matchplay-overlay. Komponerer eksisterende helpers: `applyAllowance` + `strokesForHole` per spiller, `bestBallForHole` for lag-best per hull, og `classifyMatchplayHole` + `computeMatchResult` (begge fra singles) for hull-utfall og match-format. Empty-shell defensive ved 0/1/3-spiller-context. 17 unit-tester dekker happy-path, mat-em, AS, allowance 0/50/85/100, blandet-kjønn-tees, og partial-state.
+- Migrasjon [0045_fourball_matchplay.sql](supabase/migrations/0045_fourball_matchplay.sql) utvider `games_mode_check` med `fourball_matchplay` og legger til `tournaments.fourball_allowance_pct` (smallint, 0..100, default 85 = WHS-standard). `0` betyr brutto, `1..100` betyr netto med den prosenten — én kolonne dekker begge tilstander.
+- Validator [`validateFourballMatchplay`](lib/games/gamePayload.ts) håndhever 4 spillere fordelt 2-2 ved publish, range 0..100 på `fourball_allowance_pct`. 13 nye validator-tester.
+- Shared client component [components/cup/FourballAllowanceField.tsx](components/cup/FourballAllowanceField.tsx) — netto/brutto-toggle med synlig allowance-input når netto er valgt. Brukes både i cup-create-form og game-wizard. Cross-wizard-utrulling av samme mønster på andre game-modes spores i [#266](https://github.com/jdlarssen/golf-app/issues/266).
+- [getCupSnapshot](lib/cup/getCupSnapshot.ts) generaliserer side1/side2 til arrays for å støtte både singles (1+1) og fourball (2+2). For fourball-matches kjøres `computeFourballMatchplay` og navn joines med «/» (eks. «Per/Knut mot Lise/Eva»). Cup-leaderboard viser lag-fokusert result-tekst («3&2 til Lag Skog») for fourball, spiller-fokusert for singles.
+- Per-game scorekort ([app/games/[id]/scorecard/page.tsx](app/games/%5Bid%5D/scorecard/page.tsx)) og match-leaderboard ([app/games/[id]/leaderboard/page.tsx](app/games/%5Bid%5D/leaderboard/page.tsx)) får fourball-rendring: 4 spillere fordelt 2+2 i scorecard-kolonner, matchplay-status i header («Laget ditt er X up etter N hull»), lag-best highlightet per hull, og ny `FourballMatchplayView` med lag-navn fra `tournaments` når matchen tilhører en cup.
+
+#### Changed
+- Cup-detalj-side ([app/admin/cup/[id]/page.tsx](app/admin/cup/%5Bid%5D/page.tsx)) erstatter «+ Opprett match»-link med to knapper: «+ Singles match» og «+ Fourball match», hver med riktig `?game_mode=` query.
+- Game-wizard ([app/admin/games/new/page.tsx](app/admin/games/new/page.tsx), [GameWizard.tsx](app/admin/games/new/GameWizard.tsx), [GameForm.tsx](app/admin/games/new/GameForm.tsx)) leser `?game_mode=` og pre-fyller mode + team_size + match-label («Fourball N» basert på antall eksisterende fourball-matches i cupen). For fourball pre-fylles `fourball_allowance_pct` fra cup-rad, og netto/brutto-toggle vises i wizarden. Banner-copy speiler valgt modus.
+- `CupMatchInput`-shape utvidet med valgfri `gameMode`-discriminator så UI kan velge spiller- vs. lag-fokusert result-tekst.
+
+</details>
+
+---
+
 ## 1.37.y — Funn-seksjon på hjem-siden
+
+<details>
+<summary><strong>1.37.y — Funn-seksjon på hjem-siden (2 oppføringer) — klikk for å vise</strong></summary>
 
 Issue [#257](https://github.com/jdlarssen/golf-app/issues/257). Liten oppfølger til selv-påmeldings-flyten: når du logger inn ser du nå åpne turneringer du kan melde deg på rett på hjem-siden, og forespørslene dine som venter på godkjenning.
 
@@ -18,21 +49,13 @@ Issue [#257](https://github.com/jdlarssen/golf-app/issues/257). Liten oppfølger
 
 > Velkomst-teksten på hjem-siden bytter nå når det faktisk finnes en åpen turnering du kan melde deg på. Før kunne du se «Be en arrangør om å invitere deg» rett over en seksjon med turneringer å melde seg på — litt rart. Nå sier den «Velg en turnering under» i stedet.
 
-<details>
-<summary>Teknisk</summary>
-
 #### Fixed
 - [app/page.tsx](app/page.tsx) — `getDiscoverableGames`-fetchen flyttet opp før empty-state-grenen så `hasDiscoveryContent`-flagget kan styre velkomst-tekstvalget. Tre-grens-conditional: `canCreateGame` → opprett-CTA, `hasDiscoveryContent` → «Velg en turnering under», ellers «Be en arrangør om å invitere deg».
 - [app/HomeDiscoverySection.tsx](app/HomeDiscoverySection.tsx) tar nå `data`-prop i stedet for å gjøre egen fetch. Caller (`page.tsx`) henter data én gang og gjenbruker det for både tekstvalg og rendring.
 
-</details>
-
 ### [1.37.0] - 2026-05-26
 
 > Når du logger inn på Tørny ser du nå alle åpne turneringer du kan melde deg på, rett på hjem-siden. Hvis du har sendt en forespørsel som venter på godkjenning, dukker den også opp her, så du slipper å lete etter den i innboksen.
-
-<details>
-<summary>Teknisk</summary>
 
 #### Added
 - [lib/games/getDiscoverableGames.ts](lib/games/getDiscoverableGames.ts) — server-side helper som henter to lister via admin-client: åpne spill (`registration_mode = 'open'`, status pre-active) brukeren ikke er påmeldt og ikke har aktiv forespørsel på, pluss egne pending-rader fra `game_registration_requests`. Filtrerer i SQL via `not('id', 'in', ...)` med set-union av joined + requested game-ids.
