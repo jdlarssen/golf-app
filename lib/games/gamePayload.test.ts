@@ -1172,3 +1172,285 @@ describe('buildGameInsertPayload — texas_scramble (issue #44)', () => {
     }
   });
 });
+
+describe('buildGameInsertPayload — fourball_matchplay (issue #217, fase 2 av #47)', () => {
+  /**
+   * Helper for fourball-payloads. Bygger en form med game_mode=fourball_matchplay,
+   * spillere fordelt 2-2 på sidene, og default allowance 85 (kan overstyres
+   * via extras). Speiler matchplayFd-mønsteret.
+   */
+  function fourballFd(opts: {
+    sides?: Array<{ userId: string; side: number }>;
+    allowancePct?: number | string | null;
+    extras?: Record<string, string>;
+  }): FormData {
+    const { sides = [], allowancePct = 85, extras = {} } = opts;
+    const base: Record<string, string> = {
+      name: 'Fourball Cup',
+      course_id: 'c1',
+      tee_box_id: 't1',
+      game_mode: 'fourball_matchplay',
+    };
+    if (allowancePct !== null) {
+      base['fourball_allowance_pct'] = String(allowancePct);
+    }
+    sides.forEach((p, i) => {
+      base[`player_${i}_id`] = p.userId;
+      base[`player_${i}_team`] = String(p.side);
+      base[`player_${i}_flight`] = String(p.side);
+    });
+    return fd({ ...base, ...extras });
+  }
+
+  it('publish med 4 spillere 2v2 → ok, mode_config med allowance_pct', () => {
+    const result = buildGameInsertPayload(
+      fourballFd({
+        sides: [
+          { userId: 'a', side: 1 },
+          { userId: 'b', side: 1 },
+          { userId: 'c', side: 2 },
+          { userId: 'd', side: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.game_mode).toBe('fourball_matchplay');
+    expect(result.mode_config).toEqual({
+      kind: 'fourball_matchplay',
+      team_size: 2,
+      teams_count: 2,
+      allowance_pct: 85,
+    });
+    expect(result.players).toEqual([
+      { user_id: 'a', team_number: 1, flight_number: 1 },
+      { user_id: 'b', team_number: 1, flight_number: 1 },
+      { user_id: 'c', team_number: 2, flight_number: 2 },
+      { user_id: 'd', team_number: 2, flight_number: 2 },
+    ]);
+  });
+
+  it('publish med 3 spillere → min_players_for_mode', () => {
+    const result = buildGameInsertPayload(
+      fourballFd({
+        sides: [
+          { userId: 'a', side: 1 },
+          { userId: 'b', side: 1 },
+          { userId: 'c', side: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('min_players_for_mode');
+  });
+
+  it('publish med 5 spillere → too_many_players_for_mode', () => {
+    const result = buildGameInsertPayload(
+      fourballFd({
+        sides: [
+          { userId: 'a', side: 1 },
+          { userId: 'b', side: 1 },
+          { userId: 'c', side: 2 },
+          { userId: 'd', side: 2 },
+          { userId: 'e', side: 1 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('too_many_players_for_mode');
+  });
+
+  it('publish med 4 spillere 3-1 → team_balance', () => {
+    const result = buildGameInsertPayload(
+      fourballFd({
+        sides: [
+          { userId: 'a', side: 1 },
+          { userId: 'b', side: 1 },
+          { userId: 'c', side: 1 },
+          { userId: 'd', side: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('team_balance');
+  });
+
+  it('publish med 4 spillere alle på side 1 → team_balance', () => {
+    const result = buildGameInsertPayload(
+      fourballFd({
+        sides: [
+          { userId: 'a', side: 1 },
+          { userId: 'b', side: 1 },
+          { userId: 'c', side: 1 },
+          { userId: 'd', side: 1 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('team_balance');
+  });
+
+  it('publish med ugyldig side (3) → bad_team', () => {
+    const result = buildGameInsertPayload(
+      fourballFd({
+        sides: [
+          { userId: 'a', side: 1 },
+          { userId: 'b', side: 1 },
+          { userId: 'c', side: 2 },
+          { userId: 'd', side: 3 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('bad_team');
+  });
+
+  it('publish med duplikat-spiller → duplicate_player', () => {
+    const result = buildGameInsertPayload(
+      fourballFd({
+        sides: [
+          { userId: 'dup', side: 1 },
+          { userId: 'b', side: 1 },
+          { userId: 'dup', side: 2 },
+          { userId: 'd', side: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('duplicate_player');
+  });
+
+  it('publish med allowance 0 (brutto) → ok', () => {
+    const result = buildGameInsertPayload(
+      fourballFd({
+        sides: [
+          { userId: 'a', side: 1 },
+          { userId: 'b', side: 1 },
+          { userId: 'c', side: 2 },
+          { userId: 'd', side: 2 },
+        ],
+        allowancePct: 0,
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'fourball_matchplay') {
+      expect(result.mode_config.allowance_pct).toBe(0);
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('publish med allowance 100 → ok', () => {
+    const result = buildGameInsertPayload(
+      fourballFd({
+        sides: [
+          { userId: 'a', side: 1 },
+          { userId: 'b', side: 1 },
+          { userId: 'c', side: 2 },
+          { userId: 'd', side: 2 },
+        ],
+        allowancePct: 100,
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'fourball_matchplay') {
+      expect(result.mode_config.allowance_pct).toBe(100);
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('publish med allowance 101 → bad_allowance', () => {
+    const result = buildGameInsertPayload(
+      fourballFd({
+        sides: [
+          { userId: 'a', side: 1 },
+          { userId: 'b', side: 1 },
+          { userId: 'c', side: 2 },
+          { userId: 'd', side: 2 },
+        ],
+        allowancePct: 101,
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('bad_allowance');
+  });
+
+  it('publish med negativ allowance → bad_allowance', () => {
+    const result = buildGameInsertPayload(
+      fourballFd({
+        sides: [
+          { userId: 'a', side: 1 },
+          { userId: 'b', side: 1 },
+          { userId: 'c', side: 2 },
+          { userId: 'd', side: 2 },
+        ],
+        allowancePct: -5,
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('bad_allowance');
+  });
+
+  it('publish med tom allowance-string → bad_allowance', () => {
+    const result = buildGameInsertPayload(
+      fourballFd({
+        sides: [
+          { userId: 'a', side: 1 },
+          { userId: 'b', side: 1 },
+          { userId: 'c', side: 2 },
+          { userId: 'd', side: 2 },
+        ],
+        allowancePct: '',
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('bad_allowance');
+  });
+
+  it('draft tolererer 2 spillere (ufullstendig fourball-oppsett)', () => {
+    const result = buildGameInsertPayload(
+      fourballFd({
+        sides: [
+          { userId: 'a', side: 1 },
+          { userId: 'b', side: 2 },
+        ],
+      }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(2);
+    if (result.mode_config.kind === 'fourball_matchplay') {
+      expect(result.mode_config.allowance_pct).toBe(85);
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('draft tolererer tom allowance (defaulter til 100)', () => {
+    const result = buildGameInsertPayload(
+      fourballFd({
+        sides: [{ userId: 'a', side: 1 }],
+        allowancePct: '',
+      }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'fourball_matchplay') {
+      expect(result.mode_config.allowance_pct).toBe(100);
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('draft tolererer 0 spillere', () => {
+    const result = buildGameInsertPayload(
+      fourballFd({ sides: [] }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(0);
+  });
+});

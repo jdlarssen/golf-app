@@ -695,15 +695,114 @@ function parseTexasHandicapPct(formData: FormData): number | null {
 }
 
 /**
- * Stub for fourball_matchplay-validator. Erstattes med full implementasjon i
- * chunk 4. Inntil da returnerer den `min_players_for_mode` så publish blokkeres
- * — UI-en eksponerer ikke modusen ennå.
+ * Four-ball matchplay-validator (issue #217, fase 2 av #47 — 2v2 best-ball-matchplay).
+ *
+ * Regler:
+ *  - hver spiller MÅ ha team_number = 1 eller 2 (sideNumber for matchplay)
+ *  - publish krever EKSAKT 4 spillere fordelt 2 på side 1 og 2 på side 2
+ *  - flight_number = team_number (samme pattern som singles_matchplay og
+ *    par-stableford for å oppfylle DB-CHECK `game_players_team_flight_consistency`
+ *    som krever begge satt eller null sammen)
+ *  - duplikat-sjekk uendret
+ *  - draft tolererer partial state (0..4 spillere, side-tilordning trenger
+ *    ikke være balansert)
+ *
+ * Feilkoder ved publish:
+ *  - 0..3 spillere → `min_players_for_mode`
+ *  - 5+ spillere → `too_many_players_for_mode`
+ *  - 4 spillere men ikke 2-2-fordeling → `team_balance`
+ *
+ * Allowance: leses fra form-feltet `fourball_allowance_pct` (0..100). Tom/
+ * ugyldig verdi defaulter til 100 i draft for å tolerere partial state; ved
+ * publish håndhever validatoren range (0..100). Wizard pre-fyller verdien fra
+ * `tournaments.fourball_allowance_pct` for cup-matches.
+ *
+ * Mode_config-output: `{kind, team_size: 2, teams_count: 2, allowance_pct}`.
  */
-function validateFourballMatchplayStub(
-  _formData: FormData,
-  _mode: PayloadMode,
+function validateFourballMatchplay(
+  formData: FormData,
+  mode: PayloadMode,
 ): ModeValidationResult {
-  return { ok: false, errorCode: 'min_players_for_mode' };
+  const allowancePct = parseFourballAllowancePct(formData, mode);
+  if (allowancePct === null) {
+    return { ok: false, errorCode: 'bad_allowance' };
+  }
+
+  const players: GamePlayerInput[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < 8; i++) {
+    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
+    if (!user_id) continue;
+    if (seen.has(user_id)) {
+      return { ok: false, errorCode: 'duplicate_player' };
+    }
+    seen.add(user_id);
+    const team_number = Number(formData.get(`player_${i}_team`));
+    // Fourball-sider er strengt 1 eller 2 (speiler singles_matchplay-mønsteret).
+    if (
+      !Number.isInteger(team_number) ||
+      team_number < 1 ||
+      team_number > 2
+    ) {
+      return { ok: false, errorCode: 'bad_team' };
+    }
+    // flight_number = team_number for å oppfylle DB-CHECK
+    // game_players_team_flight_consistency (begge satt sammen).
+    const flight_number = team_number;
+    players.push({ user_id, team_number, flight_number });
+  }
+
+  if (mode === 'publish') {
+    if (players.length < 4) {
+      return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    if (players.length > 4) {
+      return { ok: false, errorCode: 'too_many_players_for_mode' };
+    }
+    // Nøyaktig 4 spillere — sjekk 2-2-fordeling på sidene.
+    const sideCounts = new Map<number, number>();
+    for (const p of players) {
+      if (p.team_number === null) continue;
+      sideCounts.set(p.team_number, (sideCounts.get(p.team_number) ?? 0) + 1);
+    }
+    if (sideCounts.get(1) !== 2 || sideCounts.get(2) !== 2) {
+      return { ok: false, errorCode: 'team_balance' };
+    }
+  }
+
+  return {
+    ok: true,
+    players,
+    mode_config: {
+      kind: 'fourball_matchplay',
+      team_size: 2,
+      teams_count: 2,
+      allowance_pct: allowancePct,
+    },
+  };
+}
+
+/**
+ * Leser `fourball_allowance_pct` fra form-data. Returnerer 0..100 (heltall)
+ * eller null hvis ugyldig.
+ *
+ * Tom string i draft defaulter til 100 så partial form-state ikke kaster;
+ * publish krever eksplisitt gyldig verdi. Range 0..100 håndheves uansett —
+ * verdier utenfor (NaN, negative, >100) returnerer null → bad_allowance.
+ */
+function parseFourballAllowancePct(
+  formData: FormData,
+  mode: PayloadMode,
+): number | null {
+  const raw = formData.get('fourball_allowance_pct');
+  if (raw === null || raw === '') {
+    // Draft: defensiv default. Publish: krev eksplisitt verdi via wizard
+    // (som alltid pre-fyller fra cup eller setter 85 som fallback).
+    return mode === 'draft' ? 100 : null;
+  }
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0 || n > 100) return null;
+  return n;
 }
 
 const modeValidators: Record<
@@ -715,7 +814,7 @@ const modeValidators: Record<
   singles_matchplay: validateSinglesMatchplay,
   solo_strokeplay_netto: validateSoloStrokeplayNetto,
   texas_scramble: validateTexasScramble,
-  fourball_matchplay: validateFourballMatchplayStub,
+  fourball_matchplay: validateFourballMatchplay,
 };
 
 /**
