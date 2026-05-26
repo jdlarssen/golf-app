@@ -127,28 +127,26 @@ describe('CourseForm — progressive disclosure for kjønn-rating', () => {
     fireEvent.click(screen.getByRole('button', { name: /legg til dame-rating/i }));
 
     expect(screen.getByText('Damer')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /fjern dame-rating/i })).toBeTruthy();
   });
 
-  it('kollapser dame-rating-blokken og fjerner verdiene når «Fjern dame-rating» klikkes', () => {
-    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+  it('viser ikke «Fjern X-rating»-knapper i UI-en (erstattet av Tøm)', () => {
+    render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+    fireEvent.click(screen.getByRole('button', { name: /legg til dame-rating/i }));
+    fireEvent.click(screen.getByRole('button', { name: /legg til junior-rating/i }));
+
+    expect(screen.queryByRole('button', { name: /fjern dame-rating/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /fjern junior-rating/i })).toBeNull();
+  });
+
+  it('viser ikke Tøm-knappen i dame-blokken så lenge feltene er tomme etter ekspander', () => {
+    render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
 
     fireEvent.click(screen.getByRole('button', { name: /legg til dame-rating/i }));
-    const ladySlope = container.querySelector<HTMLInputElement>(
-      'input[name="tee_0_slope_ladies"]',
-    );
-    expect(ladySlope).toBeTruthy();
-    fireEvent.change(ladySlope!, { target: { value: '120' } });
-    expect(ladySlope?.value).toBe('120');
 
-    fireEvent.click(screen.getByRole('button', { name: /fjern dame-rating/i }));
-
-    expect(screen.queryByText('Damer')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: /legg til dame-rating/i }));
-    const ladySlopeAgain = container.querySelector<HTMLInputElement>(
-      'input[name="tee_0_slope_ladies"]',
-    );
-    expect(ladySlopeAgain?.value).toBe('');
+    // Tøm-knappen rendres i header med same legend som Damer — den finnes kun
+    // når minst ett av feltene har innhold. Akkurat etter ekspander er begge
+    // tomme, så knappen skal ikke vises.
+    expect(screen.queryAllByRole('button', { name: /tøm dette kjønnet/i }).length).toBe(0);
   });
 
   it('eksponerer dame-rating-blokken expand\'et fra start på edit-flyt med lagrede tall', () => {
@@ -179,6 +177,170 @@ describe('CourseForm — progressive disclosure for kjønn-rating', () => {
     expect(screen.getByText('Damer')).toBeTruthy();
     expect(screen.queryByText('Junior')).toBeNull();
     expect(screen.getByRole('button', { name: /legg til junior-rating/i })).toBeTruthy();
+  });
+});
+
+describe('CourseForm — Tøm dette kjønnet', () => {
+  it('viser IKKE Tøm-knappen på herrer-blokken på new-flyten når defaults er intakte', () => {
+    render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+
+    // Default herrer-state er slope 113 + CR 70.0 — Tøm skal være skjult for
+    // å hindre at admin utilsiktet tømmer defaults før de har lagt til noe.
+    expect(screen.queryByRole('button', { name: /tøm dette kjønnet/i })).toBeNull();
+  });
+
+  it('viser Tøm-knappen på herrer-blokken så snart admin endrer slope vekk fra default', () => {
+    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+
+    expect(screen.queryByRole('button', { name: /tøm dette kjønnet/i })).toBeNull();
+
+    const mensSlope = container.querySelector<HTMLInputElement>(
+      'input[name="tee_0_slope_mens"]',
+    );
+    fireEvent.change(mensSlope!, { target: { value: '120' } });
+
+    expect(screen.getAllByRole('button', { name: /tøm dette kjønnet/i }).length).toBe(1);
+  });
+
+  it('viser Tøm-knappen på herrer-blokken på edit-flyten selv om verdiene matcher defaults', () => {
+    render(
+      <CourseForm
+        action={NO_OP}
+        submitLabel="Lagre"
+        initialData={{
+          name: 'Edit Test',
+          holes: makeHoles(Array(18).fill(4)),
+          teeBoxes: [
+            {
+              id: 'tee-1',
+              name: 'Gul',
+              length_meters: '',
+              slope_mens: '113',
+              course_rating_mens: '70.0',
+              slope_ladies: '',
+              course_rating_ladies: '',
+              slope_juniors: '',
+              course_rating_juniors: '',
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getAllByRole('button', { name: /tøm dette kjønnet/i }).length).toBe(1);
+  });
+
+  it('skjuler Tøm-knappen på herrer-blokken på edit-flyten når BÅDE slope og CR er tomme', () => {
+    render(
+      <CourseForm
+        action={NO_OP}
+        submitLabel="Lagre"
+        initialData={{
+          name: 'Edit Test',
+          holes: makeHoles(Array(18).fill(4)),
+          teeBoxes: [
+            {
+              id: 'tee-1',
+              name: 'Gul',
+              length_meters: '',
+              slope_mens: '',
+              course_rating_mens: '',
+              slope_ladies: '',
+              course_rating_ladies: '',
+              slope_juniors: '',
+              course_rating_juniors: '',
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: /tøm dette kjønnet/i })).toBeNull();
+  });
+
+  it('nullstiller begge feltene og skjuler Tøm-knappen igjen ved klikk på herrer', () => {
+    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+
+    const mensSlope = container.querySelector<HTMLInputElement>(
+      'input[name="tee_0_slope_mens"]',
+    );
+    const mensCr = container.querySelector<HTMLInputElement>(
+      'input[name="tee_0_cr_mens"]',
+    );
+    fireEvent.change(mensSlope!, { target: { value: '120' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /tøm dette kjønnet/i }));
+
+    expect(mensSlope?.value).toBe('');
+    expect(mensCr?.value).toBe('');
+    // Begge felter er nå tomme → Tøm-knappen skal forsvinne.
+    expect(screen.queryByRole('button', { name: /tøm dette kjønnet/i })).toBeNull();
+  });
+
+  it('viser Tøm-knappen på damer-blokken så snart admin fyller ett felt', () => {
+    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+
+    fireEvent.click(screen.getByRole('button', { name: /legg til dame-rating/i }));
+    expect(screen.queryAllByRole('button', { name: /tøm dette kjønnet/i }).length).toBe(0);
+
+    const ladiesSlope = container.querySelector<HTMLInputElement>(
+      'input[name="tee_0_slope_ladies"]',
+    );
+    fireEvent.change(ladiesSlope!, { target: { value: '120' } });
+
+    expect(screen.getAllByRole('button', { name: /tøm dette kjønnet/i }).length).toBe(1);
+  });
+
+  it('nullstiller damer-feltene MEN beholder blokken ekspandert etter Tøm', () => {
+    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+
+    fireEvent.click(screen.getByRole('button', { name: /legg til dame-rating/i }));
+    const ladiesSlope = container.querySelector<HTMLInputElement>(
+      'input[name="tee_0_slope_ladies"]',
+    );
+    const ladiesCr = container.querySelector<HTMLInputElement>(
+      'input[name="tee_0_cr_ladies"]',
+    );
+    fireEvent.change(ladiesSlope!, { target: { value: '120' } });
+    fireEvent.change(ladiesCr!, { target: { value: '71.5' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /tøm dette kjønnet/i }));
+
+    expect(ladiesSlope?.value).toBe('');
+    expect(ladiesCr?.value).toBe('');
+    // Blokken skal fortsatt være ekspandert — admin kan fylle på nytt
+    // uten å klikke «+ Legg til dame-rating» igjen.
+    expect(screen.getByText('Damer')).toBeTruthy();
+    // Collapsed-state-knappen skal IKKE finnes (blokken er fortsatt åpen).
+    expect(screen.queryByRole('button', { name: /legg til dame-rating/i })).toBeNull();
+  });
+
+  it('viser Tøm-knappen for hver gender-blokk som har innhold på edit-flyten (3 knapper for full tee)', () => {
+    render(
+      <CourseForm
+        action={NO_OP}
+        submitLabel="Lagre"
+        initialData={{
+          name: 'Edit Test',
+          holes: makeHoles(Array(18).fill(4)),
+          teeBoxes: [
+            {
+              id: 'tee-1',
+              name: 'Gul',
+              length_meters: '',
+              slope_mens: '113',
+              course_rating_mens: '70.0',
+              slope_ladies: '120',
+              course_rating_ladies: '71.5',
+              slope_juniors: '105',
+              course_rating_juniors: '68.5',
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getAllByRole('button', { name: /tøm dette kjønnet/i }).length).toBe(3);
   });
 });
 
@@ -295,14 +457,13 @@ describe('CourseForm — typisk slope/CR-range hint', () => {
     expect(screen.getByText('Typisk 60–68')).toBeTruthy();
   });
 
-  it('skjuler dame-hint når dame-blokken kollapses (hint kun synlig på ekspanderte blokker)', () => {
+  it('skjuler dame-hint så lenge dame-blokken er kollapset (default-state for new-flyten)', () => {
     render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
 
-    fireEvent.click(screen.getByRole('button', { name: /legg til dame-rating/i }));
-    expect(screen.getByText('Typisk 115–140')).toBeTruthy();
-
-    fireEvent.click(screen.getByRole('button', { name: /fjern dame-rating/i }));
+    // Dame-blokken er kollapset som default på new-flyten — hint skal ikke
+    // vises i UI-en før admin klikker «+ Legg til dame-rating».
     expect(screen.queryByText('Typisk 115–140')).toBeNull();
+    expect(screen.queryByText('Typisk 68–73')).toBeNull();
   });
 });
 

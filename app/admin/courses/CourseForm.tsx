@@ -108,12 +108,28 @@ function hasGenderData(
   return tee[`slope_${gender}`] !== '' || tee[`course_rating_${gender}`] !== '';
 }
 
+// Brukes til å avgjøre om Tøm-knappen skal vises på herrer-blokken på
+// new-flyten: så lenge herrer er identisk med default (113/70.0), holder
+// vi knappen skjult for å hindre at admin utilsiktet tømmer prefylte
+// defaults før de har lagt til noe eget.
+function isMensAtDefault(tee: TeeBoxData): boolean {
+  return (
+    tee.slope_mens === DEFAULT_TEE.slope_mens &&
+    tee.course_rating_mens === DEFAULT_TEE.course_rating_mens
+  );
+}
+
 export function CourseForm({
   action,
   submitLabel,
   initialData,
   footer,
 }: Props) {
+  // Skiller new-flyten (defaults i herrer-blokken) fra edit-flyten (lagrede
+  // tall): Tøm-knappen på herrer-blokken skjules på new-flyten så lenge
+  // verdiene er identiske med default, men vises alltid på edit-flyten når
+  // minst ett felt har innhold.
+  const loadedFromInitialData = initialData !== undefined;
   const [holes, setHoles] = useState<HoleData[]>(
     initialData?.holes ?? DEFAULT_HOLES,
   );
@@ -190,22 +206,23 @@ export function CourseForm({
     setExpandedJuniors((prev) => prev.filter((_, i) => i !== index));
   }
 
-  function toggleGenderExpand(
-    index: number,
-    gender: 'ladies' | 'juniors',
-    next: boolean,
-  ) {
+  function expandGender(index: number, gender: 'ladies' | 'juniors') {
     const setter = gender === 'ladies' ? setExpandedLadies : setExpandedJuniors;
-    setter((prev) => prev.map((v, i) => (i === index ? next : v)));
-    // Når admin kollapser blokken: tøm verdiene så de ikke smugles inn i
-    // FormData. Når blokken er kollapset rendrer vi ingen hidden-input,
-    // men vi nullstiller state-en for konsistens på re-ekspandering.
-    if (!next) {
-      updateTee(index, {
-        [`slope_${gender}`]: '',
-        [`course_rating_${gender}`]: '',
-      } as Partial<TeeBoxData>);
-    }
+    setter((prev) => prev.map((v, i) => (i === index ? true : v)));
+  }
+
+  // Nullstiller slope+CR for ett kjønn på én tee. Endrer ikke expand-state
+  // — damer/junior-blokker forblir åpne etter Tøm så admin kan fylle på
+  // nytt manuelt. Tom slope + tom CR for et kjønn er gyldig submit-state
+  // (= ingen rating for det kjønnet), så ingen partial-rating-feil.
+  function clearGender(
+    index: number,
+    gender: 'mens' | 'ladies' | 'juniors',
+  ) {
+    updateTee(index, {
+      [`slope_${gender}`]: '',
+      [`course_rating_${gender}`]: '',
+    } as Partial<TeeBoxData>);
   }
 
   function copyMensToAllGenders(index: number) {
@@ -357,6 +374,11 @@ export function CourseForm({
                   showParTotal={
                     tee.slope_mens !== '' && tee.course_rating_mens !== ''
                   }
+                  showClear={
+                    (loadedFromInitialData || !isMensAtDefault(tee)) &&
+                    (tee.slope_mens !== '' || tee.course_rating_mens !== '')
+                  }
+                  onClear={() => clearGender(index, 'mens')}
                   onChange={(patch) => updateTee(index, patch)}
                 />
 
@@ -387,13 +409,17 @@ export function CourseForm({
                       tee.slope_ladies !== '' &&
                       tee.course_rating_ladies !== ''
                     }
-                    onRemove={() => toggleGenderExpand(index, 'ladies', false)}
+                    showClear={
+                      tee.slope_ladies !== '' ||
+                      tee.course_rating_ladies !== ''
+                    }
+                    onClear={() => clearGender(index, 'ladies')}
                     onChange={(patch) => updateTee(index, patch)}
                   />
                 ) : (
                   <button
                     type="button"
-                    onClick={() => toggleGenderExpand(index, 'ladies', true)}
+                    onClick={() => expandGender(index, 'ladies')}
                     className="block w-full rounded-lg border border-dashed border-border/80 px-3 py-2.5 text-sm font-medium text-muted hover:text-text hover:border-border transition-colors"
                   >
                     + Legg til dame-rating
@@ -412,15 +438,17 @@ export function CourseForm({
                       tee.slope_juniors !== '' &&
                       tee.course_rating_juniors !== ''
                     }
-                    onRemove={() =>
-                      toggleGenderExpand(index, 'juniors', false)
+                    showClear={
+                      tee.slope_juniors !== '' ||
+                      tee.course_rating_juniors !== ''
                     }
+                    onClear={() => clearGender(index, 'juniors')}
                     onChange={(patch) => updateTee(index, patch)}
                   />
                 ) : (
                   <button
                     type="button"
-                    onClick={() => toggleGenderExpand(index, 'juniors', true)}
+                    onClick={() => expandGender(index, 'juniors')}
                     className="block w-full rounded-lg border border-dashed border-border/80 px-3 py-2.5 text-sm font-medium text-muted hover:text-text hover:border-border transition-colors"
                   >
                     + Legg til junior-rating
@@ -507,7 +535,8 @@ function GenderRatingBlock({
   cr,
   parTotal,
   showParTotal,
-  onRemove,
+  showClear,
+  onClear,
   onChange,
 }: {
   teeIndex: number;
@@ -517,7 +546,8 @@ function GenderRatingBlock({
   cr: string;
   parTotal: number;
   showParTotal: boolean;
-  onRemove?: () => void;
+  showClear: boolean;
+  onClear: () => void;
   onChange: (patch: Partial<TeeBoxData>) => void;
 }) {
   const slopePlaceholder = gender === 'mens' ? '113' : '';
@@ -528,13 +558,13 @@ function GenderRatingBlock({
         <legend className="px-0 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
           {label}
         </legend>
-        {onRemove && (
+        {showClear && (
           <button
             type="button"
-            onClick={onRemove}
+            onClick={onClear}
             className="text-[11px] font-medium text-muted hover:text-danger transition-colors"
           >
-            Fjern {gender === 'ladies' ? 'dame' : 'junior'}-rating
+            Tøm dette kjønnet
           </button>
         )}
       </div>

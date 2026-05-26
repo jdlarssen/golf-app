@@ -10,16 +10,43 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.33.y — Sekretariatet, friksjons-rydding
+
+Tredje runde med små admin-polish-grep fra fase 1 av [#223](https://github.com/jdlarssen/golf-app/issues/223). Mål: kortere vei til recovery når noe går skeivt i bane-skjemaet.
+
+### [1.33.0] - 2026-05-26
+
+> En liten «Tøm dette kjønnet»-lenke i bane-skjemaet rydder slope og CR for ett kjønn med ett trykk. Hjelper hvis du har fylt inn bare det ene feltet og får «kan ikke lagre halve sett»-feilen.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- «Tøm dette kjønnet»-lenke i [GenderRatingBlock](app/admin/courses/CourseForm.tsx) i bane-skjemaet — nullstiller `slope_<gender>` og `course_rating_<gender>` i ett klikk uten å kollapse blokken. Synlig kun når minst ett felt har innhold.
+- Visibility-regelen for herrer-blokken er asymmetrisk: skjult på new-flyten så lenge feltene matcher default (slope 113 / CR 70.0), synlig på edit-flyten så snart minst ett felt har innhold. Hindrer at admin utilsiktet tømmer prefylte defaults på en fersk bane.
+- Ni nye Vitest-tester i [CourseForm.test.tsx](app/admin/courses/CourseForm.test.tsx) som dekker visibility-regelen (new vs edit, herrer-default vs damer-tom), clear-handler-semantikk, og at blokken forblir ekspandert etter Tøm. Refs [#238](https://github.com/jdlarssen/golf-app/issues/238).
+
+#### Changed
+- «Fjern dame-rating» / «Fjern junior-rating»-knappene erstattes av én konsekvent «Tøm dette kjønnet»-lenke på alle tre kjønn. Etter Tøm forblir blokken ekspandert med tomme felt — tom slope + tom CR for et kjønn er gyldig submit-state, så ingen affordance for å re-kollapse trengs.
+- `toggleGenderExpand` forenklet til `expandGender` siden clear-pathen er flyttet ut i sin egen funksjon `clearGender`.
+
+#### Notes
+- Ingen endring i server-actions, migrasjoner eller validering. Partial-rating-feilmeldingen («Hver tee må ha både slope og CR (eller ingen av dem) per kjønn») trigger fortsatt korrekt — den nye knappen er en raskere recovery-flyt for samme feil, ikke en omveiing av regelen.
+
+</details>
+
+---
+
 ## 1.32.y — «Sist spilt»-indikator på bane-listen
+
+<details>
+<summary><strong>1.32.y — «Sist spilt»-indikator på bane-listen (1 oppføring) — klikk for å vise</strong></summary>
 
 Issue [#239](https://github.com/jdlarssen/golf-app/issues/239). Vedlikeholds-flaten for baner viser nå når hver bane sist ble brukt, og lar deg sortere og filtrere på det.
 
 ### [1.32.0] - 2026-05-26
 
 > Bane-listen viser nå når hver bane sist ble brukt i et spill, og du kan sortere på det. Det nye filteret «Spilt siste 30 dager» plukker ut banene som er i bruk nå. Det blir enklere å skille aktive baner fra gamle eksperimenter når katalogen vokser.
-
-<details>
-<summary>Teknisk</summary>
 
 #### Added
 - Ny pure helper `app/admin/courses/derive.ts` med `deriveLastPlayedAt(games)` + flyttet `deriveCourseItem` ut av `page.tsx` for å gjøre dem rene testbare uten server-deps. `deriveLastPlayedAt` returnerer MAX av `ended_at` for finished spill og `scheduled_tee_off_at` for active; ignorerer draft + scheduled.
@@ -152,6 +179,8 @@ Lar nye besøkende få OTP-kode på `/login` uten admin-mellomledd, bak en kill-
 - Trusted-creator-allowlisten utvides IKKE. Self-registrerte uten admin/trusted-status får ingen mulighet til å opprette spill selv før [#22](https://github.com/jdlarssen/golf-app/issues/22) (RLS-revisjon) lander. Det er bevisst — onboarding-kanalen åpnes først, RLS-åpning er sin egen jobb.
 - Ingen DB-migrasjon. Gjenbruker eksisterende `admin_action_rate_limit`-tabell og `consume_admin_rate_limit`-RPC fra `0026_admin_action_rate_limit.sql`. Bucket-strengen er generisk.
 - Cloudflare Turnstile / CAPTCHA er bevisst utelatt (overkill for current scale). Egen kontrakt hvis abuse-vinduer viser at rate-limit alene ikke holder.
+
+</details>
 
 </details>
 
