@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { netScore, bestBallForHole, teamTotal } from './bestBallNetto';
+import { netScore, bestBallForHole, teamTotal, compute } from './bestBallNetto';
+import type { ScoringContext } from './types';
 
 describe('netScore', () => {
   it('subtracts strokes from gross', () => {
@@ -72,5 +73,82 @@ describe('teamTotal', () => {
     const result = teamTotal(holes);
     expect(result.total).toBe(7);  // 4 + 3, partial — caller must check missingHoles
     expect(result.missingHoles).toEqual([2]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Per-kjønn-par (#240). Når hull har `parByGender` settes, leser scoring-
+// laget par via `parFor(hole, player.teeGender)` per spiller — slik at
+// `BestBallPlayerCell.par` bærer riktig referanse for UI-rendering.
+// ---------------------------------------------------------------------------
+
+describe('compute — per-gender par (#240)', () => {
+  it('bærer riktig par per BestBallPlayerCell for blandet-kjønn-lag', () => {
+    // Lag 1 har én herre (u1, par_mens=4) og én dame (u2, par_ladies=5).
+    // Begge gross=5, CH=0. Per-spiller-par skal reflektere teeGender.
+    const ctx: ScoringContext = {
+      game: {
+        id: 'g1',
+        game_mode: 'best_ball_netto',
+        mode_config: { kind: 'best_ball_netto', team_size: 2, teams_count: 4 },
+      },
+      players: [
+        { userId: 'u1', teamNumber: 1, flightNumber: 1, courseHandicap: 0, teeGender: 'mens' },
+        { userId: 'u2', teamNumber: 1, flightNumber: 1, courseHandicap: 0, teeGender: 'ladies' },
+      ],
+      holes: [{ number: 1, par: 4, parByGender: { mens: 4, ladies: 5, juniors: 4 }, strokeIndex: 1 }],
+      scores: [
+        { userId: 'u1', holeNumber: 1, gross: 5 },
+        { userId: 'u2', holeNumber: 1, gross: 5 },
+      ],
+    };
+    const result = compute(ctx);
+    if (result.kind !== 'best_ball_netto') throw new Error('expected best_ball_netto');
+    const team1 = result.teams[0];
+    const cell1 = team1.holes[0].players.find((p) => p.userId === 'u1');
+    const cell2 = team1.holes[0].players.find((p) => p.userId === 'u2');
+    expect(cell1?.par).toBe(4);
+    expect(cell2?.par).toBe(5);
+  });
+
+  it('faller tilbake til hole.par når parByGender ikke er satt', () => {
+    // Backward-compat: eksisterende fixtures uten parByGender/teeGender
+    // skal fortsatt få hole.par.
+    const ctx: ScoringContext = {
+      game: {
+        id: 'g1',
+        game_mode: 'best_ball_netto',
+        mode_config: { kind: 'best_ball_netto', team_size: 2, teams_count: 4 },
+      },
+      players: [{ userId: 'u1', teamNumber: 1, flightNumber: 1, courseHandicap: 0 }],
+      holes: [{ number: 1, par: 4, strokeIndex: 1 }],
+      scores: [{ userId: 'u1', holeNumber: 1, gross: 4 }],
+    };
+    const result = compute(ctx);
+    if (result.kind !== 'best_ball_netto') throw new Error('expected best_ball_netto');
+    expect(result.teams[0].holes[0].players[0].par).toBe(4);
+  });
+
+  it('BestBallHoleRow.par bruker første medlem som lag-representant', () => {
+    // Damer først i player-listen → teamPar fra parByGender.ladies (5).
+    const ctx: ScoringContext = {
+      game: {
+        id: 'g1',
+        game_mode: 'best_ball_netto',
+        mode_config: { kind: 'best_ball_netto', team_size: 2, teams_count: 4 },
+      },
+      players: [
+        { userId: 'u1', teamNumber: 1, flightNumber: 1, courseHandicap: 0, teeGender: 'ladies' },
+        { userId: 'u2', teamNumber: 1, flightNumber: 1, courseHandicap: 0, teeGender: 'mens' },
+      ],
+      holes: [{ number: 1, par: 4, parByGender: { mens: 4, ladies: 5, juniors: 4 }, strokeIndex: 1 }],
+      scores: [
+        { userId: 'u1', holeNumber: 1, gross: 5 },
+        { userId: 'u2', holeNumber: 1, gross: 5 },
+      ],
+    };
+    const result = compute(ctx);
+    if (result.kind !== 'best_ball_netto') throw new Error('expected best_ball_netto');
+    expect(result.teams[0].holes[0].par).toBe(5);
   });
 });

@@ -141,6 +141,12 @@ export interface BestBallPlayerCell {
   extraStrokes: number;
   net: number | null;
   isContributor: boolean;
+  /**
+   * Spillerens par for hullet (`parFor(hole, player.teeGender)`).
+   * Per-spiller-par eksponeres slik at UI kan vise individuell par-referanse
+   * når blandet-kjønn-lag spiller på hull med per-kjønn-overstyring. #240.
+   */
+  par: number;
 }
 
 export interface BestBallHoleRow {

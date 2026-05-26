@@ -69,6 +69,7 @@ export function teamTotal(holes: HoleTeamScore[]): { total: number; missingHoles
 
 import { strokesForHole } from '../strokeAllocation';
 import { rankTeams } from '../tiebreaker';
+import { parFor } from './parResolver';
 import type {
   ScoringContext,
   BestBallNettoResult,
@@ -118,6 +119,10 @@ export function compute(ctx: ScoringContext): BestBallNettoResult {
           extraStrokes,
           net,
           isContributor: false,
+          // Per-spiller-par via parFor — bærer riktig par for blandet-kjønn-
+          // lag på hull med per-kjønn-overstyring. Faller tilbake til hole.par
+          // når parByGender ikke er satt. #240.
+          par: parFor(hole, p.teeGender),
         };
       });
 
@@ -133,9 +138,14 @@ export function compute(ctx: ScoringContext): BestBallNettoResult {
         pc.isContributor = bb.contributors.includes(pc.userId);
       }
 
+      // Lag-rad-par for UI: bruker første medlem som lag-representant
+      // (samme mønster som stableford-team). Tomme lag faller til hole.par
+      // som defensiv edge-case. #240.
+      const teamPar = members.length === 0 ? hole.par : parFor(hole, members[0].teeGender);
+
       return {
         holeNumber: hole.number,
-        par: hole.par,
+        par: teamPar,
         strokeIndex: hole.strokeIndex,
         teamNet: bb.teamNet,
         contributorIds: bb.contributors,
