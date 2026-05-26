@@ -10,7 +10,45 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.34.y — Per-kjønn-overstyring av hull-par
+
+Issue [#240](https://github.com/jdlarssen/golf-app/issues/240). Tørny støtter nå at hull kan ha avvikende par for damer eller junior — typisk dame-par-5 der herrer spiller par-4 fordi dame-tee er plassert kortere før et vannhinder. Stableford-poenget regnes riktig per spiller, og par-displayer viser en liten stjerne på hull med par-avvik.
+
+### [1.34.0] - 2026-05-26
+
+> Spillere på dame-tee eller junior-tee får nå riktig par-referanse på hull der tee-en er plassert kortere enn herrenes. Du som arrangerer kan registrere avvik per kjønn i bane-redigeringen — for det vanlige tilfellet der alle kjønn har samme par, ser admin og spillere ingen forskjell.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- Migrasjon `supabase/migrations/0040_course_holes_per_gender_par.sql` — `course_holes` har nå `par_mens`, `par_ladies`, `par_juniors` (alle NOT NULL, CHECK 3-6). Backfill setter alle tre kolonner lik gammel `par`-verdi før gammel `par` droppes (forced cutover — ingen produksjons-baner hadde avvikende par på migrasjons-tidspunktet).
+- `lib/scoring/modes/parResolver.ts` — `parFor(hole, gender)` returnerer `parByGender[gender ?? 'mens']` eller `hole.par` som fallback. Brukes av alle 4 mode-modulene.
+- `lib/games/parDisplay.ts` — `hasParDifference`, `formatOtherGendersPar`, `parForPlayer`-helpere + 14 unit-tester. UI-laget bruker disse til avvik-indikator (statisk `<sup title="...">`-asterisk; tooltip på desktop, long-press på iOS).
+- Per-kjønn-par-seksjon i CourseForm: ekspandert toggle under hovedhull-listen for «Avvikende par for damer» og «Avvikende par for junior». Default-kollapset for ~99 % av baner; åpen ved mount på edit-flyt hvis kursen faktisk har avvik. Fjern-knapp tilbakestiller per-kjønn-overstyring til hovedraden. 9 nye tester i `CourseForm.test.tsx`.
+
+#### Changed
+- `ScoringHole` får valgfri `parByGender: { mens; ladies; juniors }`-felt. `ScoringPlayer` får valgfri `teeGender: 'mens' | 'ladies' | 'juniors'`. Begge optional — eksisterende test-fixtures uten dem faller tilbake til `hole.par`.
+- Alle 4 mode-moduler (`stableford.ts`, `bestBallNetto.ts`, `singlesMatchplay.ts`, `texasScramble.ts`) leser nå par via `parFor(hole, player.teeGender)`. Stableford-poeng-beregningen er den eneste modus som påvirker ranking; de andre tre eksponerer per-spiller-par på celle-shape for UI-rendering. Texas scramble bruker kapteinens (lex-minste userId) `teeGender` som lag-representant. 13 nye scoring-tester.
+- Legacy `lib/leaderboard.ts` (best-ball-netto-routen) får parallell støtte: `LbHole.parByGender`, `LbPlayer.teeGender`, `PlayerHoleCell.par` (per-spiller), `TeamHoleRow.parByGender` (propagert for UI). Speilet mode-router-shape.
+- Alle 14 SELECT-call-sites mot `course_holes` plukker alle tre par-kolonner. 6 mapper-call-sites (leaderboard, hull-detail, scorecard, submit, approve, statistikk-side + 4 mail-helper-blokker) fyller `parByGender` på ScoringHole og `teeGender` på ScoringPlayer.
+- Server-actions for kurs-opprettelse/-edit parser `hole_${i}_par_mens/_ladies/_juniors` fra FormData og setter alle tre kolonner i `course_holes`-INSERT. Tee-boks `par_total_<gender>` regnes nå ut fra summen av per-kjønn-hull-par (auto-sync).
+- HoleHero, leaderboard-hull-tab og scorekort viser asterisk etter par-tallet på hull med avvik. Title-attributtet sier «Damer: 5, junior: 4».
+- Scorekortet bruker `parForPlayer(parByGender, me.tee_gender)` istedenfor hardkodet `par_mens` for spillerens egen rad (også for stableford-poeng-beregningen i LayoutB).
+
+#### Notes
+- Stroke-index per kjønn er ikke i scope — dame-tee bruker normalt samme SI-fordeling. Hvis et behov dukker opp: egen kontrakt.
+- Blandet-kjønn Texas-scramble-lag bruker kapteinens `teeGender` som lag-par-default. Fungerer for vanlige tilfeller; sjeldne edge-cases (lag på 4 med to herrer og to damer på avvikende-par-hull) får herre-par fordi kapteinen typisk er en herre. Refines hvis bruk-mønsteret krever det.
+- Historiske spill: `course_holes` er ikke frozen ved game-start, så en endring av `par_ladies` på en bane kan endre stableford-poeng for ferdige spill på den banen. Pre-eksisterende svakhet (gjelder også gammel `par` og `stroke_index`); ikke utvidet i denne lanseringen.
+
+</details>
+
+---
+
 ## 1.33.y — Sekretariatet, friksjons-rydding
+
+<details>
+<summary><strong>1.33.y — Sekretariatet, friksjons-rydding (2 oppføringer) — klikk for å vise</strong></summary>
 
 Tredje runde med små admin-polish-grep fra fase 1 av [#223](https://github.com/jdlarssen/golf-app/issues/223). Mål: kortere vei til recovery når noe går skeivt i bane-skjemaet. Patch lagt på toppen som forvarsler admin når par eller stroke-indeks endres på en bane med spill som pågår.
 
@@ -52,6 +90,8 @@ Tredje runde med små admin-polish-grep fra fase 1 av [#223](https://github.com/
 
 #### Notes
 - Ingen endring i server-actions, migrasjoner eller validering. Partial-rating-feilmeldingen («Hver tee må ha både slope og CR (eller ingen av dem) per kjønn») trigger fortsatt korrekt — den nye knappen er en raskere recovery-flyt for samme feil, ikke en omveiing av regelen.
+
+</details>
 
 </details>
 
