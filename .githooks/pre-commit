@@ -99,6 +99,7 @@ done
 
 if [ "$warn_count" -gt 0 ]; then
   printf '\n%d pre-commit-advarsel(er). Commit fortsetter — bekreft mentalt eller juster om relevant.\n' "$warn_count" >&2
+  printf 'Full pattern-katalog + bevisst-bevart-listen: docs/copy-style.md\n' >&2
 fi
 
 exit 0

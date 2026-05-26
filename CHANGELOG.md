@@ -1,3 +1,10 @@
+<!-- ─────────────────────────────────────────────────────────────────────
+     Format-konvensjoner: les docs/changelog-conventions.md FØR ny oppføring.
+     Tre-lags struktur (tema-heading + tagline-blockquote + Teknisk-details),
+     språk-kvalitet på taglines (humanizer-skill), og minor-serie-wrapping
+     er dokumentert der.
+     ───────────────────────────────────────────────────────────────────── -->
+
 # Changelog
 
 Alle bruker-synlige endringer i Tørny logges her. Versjonering følger [Semantic Versioning](https://semver.org/lang/no/).

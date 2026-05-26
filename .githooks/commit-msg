@@ -53,7 +53,8 @@ if [ "$fail" -eq 1 ]; then
 
   printf '\n✗ Commit blokkert: versjonering-disiplinen mangler\n\n' >&2
   printf '%b' "$errors" >&2
-  printf '\nReglene står i CLAUDE.md → "Versjonering / CHANGELOG".\n\n' >&2
+  printf '\nReglene står i CLAUDE.md → "Versjonering / CHANGELOG".\n' >&2
+  printf 'CHANGELOG-format: docs/changelog-conventions.md (les FØR ny oppføring).\n\n' >&2
   printf 'For å fortsette:\n' >&2
   printf '  1. %s\n' "$bump" >&2
   printf '  2. Legg til entry i CHANGELOG.md (## [X.Y.Z] - %s)\n' "$(date +%Y-%m-%d)" >&2
