@@ -9,6 +9,11 @@ import type { GameMode } from '@/lib/scoring/modes/types';
 import type { TeamSize } from './TeamSizeSelector';
 import type { CourseOption, InitialValues, PlayerOption } from './GameForm';
 import { playerGenderDefault } from '@/lib/games/playerGenderDefault';
+import {
+  gameModeSupportsTeams,
+  type RegistrationMode,
+  type RegistrationType,
+} from '@/lib/games/registration';
 
 // Lag-numre er en bevisst smal union — andre tall (5, 6, …) er ikke meningsfulle
 // i Tørny per d.d. og blir narrower'ed via `isTeamNumber`-guarden under.
@@ -216,6 +221,26 @@ export function useGameFormState({
   // siste ord, men UI-en speiler det for å unngå utilsiktet validation-error.
   const lockGameMode = initialValues?.lock_game_mode ?? false;
 
+  // Self-påmelding (#199). Defaultes til 'invite_only' + 'solo' — dagens
+  // flyt bevart 100% når admin ikke aktivt velger noe annet. Edit-flyten
+  // pre-fyller fra initialValues hvis spillet allerede er konfigurert.
+  const [registrationMode, setRegistrationMode] = useState<RegistrationMode>(
+    initialValues?.registration_mode ?? 'invite_only',
+  );
+  const [registrationType, setRegistrationType] = useState<RegistrationType>(
+    initialValues?.registration_type ?? 'solo',
+  );
+  // #199 derived flags
+  // - registrationModeSupportsTeams: speilet av gameModeSupportsTeams — UI-
+  //   et bruker det til å disable 'team'/'both'-radioene når modus ikke
+  //   støtter lag. Eksponert separat så seksjonen ikke trenger å vite om
+  //   GameMode-detaljer.
+  // - playersStepOptional: true når påmelding ikke er invite_only. Wizard-en
+  //   bruker det til å slå av required-gating i steg 3 (admin kan publisere
+  //   et tomt spill når andre kan melde seg på).
+  const registrationModeSupportsTeams = gameModeSupportsTeams(gameMode);
+  const playersStepOptional = registrationMode !== 'invite_only';
+
   // Bane-bytte: nullstill tee-boks (tee-id er bane-spesifikk) og re-derive
   // M/D/J-defaultene fra profilen. `playerGenders` er ikke tee-spesifikt —
   // re-derive holder D/J-merkene istedenfor å kollapse alle til 'M'.
@@ -237,6 +262,12 @@ export function useGameFormState({
     // (25 % for 2-mannslag, 10 % for 4-mannslag). Admin kan deretter justere.
     if (next === 'texas_scramble') {
       setTexasHandicapPct(String(defaultTexasHandicapPct(nextSize)));
+    }
+    // #199: hvis ny modus ikke har lag-konsept, force-reset registration_type
+    // til 'solo' — ellers ville payload-validatoren feilet med
+    // `team_registration_unsupported_mode` ved publish.
+    if (!gameModeSupportsTeams(next)) {
+      setRegistrationType('solo');
     }
   }
 
@@ -659,10 +690,14 @@ export function useGameFormState({
   // (allerede speilet i `texasPlayersValid` -> `playersValidForMode`) siden
   // hcp_allowance_pct ikke gjelder for Texas — lag-handicap-prosenten lever
   // i `mode_config.team_handicap_pct` istedenfor games.hcp_allowance_pct.
+  // Når selv-påmelding er på (open / manual_approval) blir spillerlisten
+  // valgfri ved publish — speiler effective-mode-flippen i
+  // `buildGameInsertPayload`. Admin kan publisere et tomt spill og la
+  // spillerne melde seg på via lenken.
   const canPublish =
     courseId !== '' &&
     teeBoxId !== '' &&
-    playersValidForMode &&
+    (playersStepOptional || playersValidForMode) &&
     (isTexas || allowanceValid) &&
     hasTeeOff;
 
@@ -676,7 +711,13 @@ export function useGameFormState({
   if (courseId === '') missingForPublish.push('bane');
   if (teeBoxId === '') missingForPublish.push('tee-boks');
   if (!hasTeeOff) missingForPublish.push('tee-off-tid');
-  if (isMatchplay) {
+  // Når selv-påmelding er på er spillerlisten valgfri ved publish; vi
+  // hopper over per-modus completeness-meldingene helt. hcp_allowance-
+  // sjekken nederst gjelder fortsatt fordi den er en konfig-verdi, ikke
+  // en spiller-liste-validering.
+  if (playersStepOptional) {
+    // intentionally skip player-list-related missing messages
+  } else if (isMatchplay) {
     if (selectedPlayerIds.length === 0) {
       missingForPublish.push('2 spillere');
     } else if (selectedPlayerIds.length === 1) {
@@ -775,6 +816,12 @@ export function useGameFormState({
     setSideEnabled,
     gameMode,
     teamSize,
+    registrationMode,
+    setRegistrationMode,
+    registrationType,
+    setRegistrationType,
+    registrationModeSupportsTeams,
+    playersStepOptional,
     // Initial / lock flags surfaced for components that render them as
     // defaultChecked / disabled (radios + Side-Tournament-fieldset).
     initialScoreVisibility,

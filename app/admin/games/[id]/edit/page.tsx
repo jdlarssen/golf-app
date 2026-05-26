@@ -102,6 +102,10 @@ type GameRow = {
   // team_handicap_pct) som ikke har dedikerte kolonner. Andre modi-konfig
   // utledes av GameForm fra game_mode + team_size.
   mode_config: GameModeConfig;
+  // #199 — self-påmeldings-akser. Pre-fylles inn i form-en så edit-flyten
+  // ikke nullstiller admin's valg.
+  registration_mode: 'invite_only' | 'manual_approval' | 'open';
+  registration_type: 'solo' | 'team' | 'both';
 };
 
 type GamePlayerRow = {
@@ -165,7 +169,7 @@ export default async function EditGamePage({
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config',
+      'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, registration_mode, registration_type',
     )
     .eq('id', id)
     .single<GameRow>();
@@ -390,6 +394,8 @@ async function EditGameFormBody({
       game.mode_config.kind === 'texas_scramble'
         ? String(game.mode_config.team_handicap_pct)
         : undefined,
+    registration_mode: game.registration_mode,
+    registration_type: game.registration_type,
   };
 
   if (game.status === 'draft') {

@@ -120,6 +120,187 @@ describe('buildGameInsertPayload (publish mode)', () => {
   });
 });
 
+describe('buildGameInsertPayload — registration_mode / registration_type (#199)', () => {
+  function regFd(extras: Record<string, string>): FormData {
+    return fd({
+      name: 'Selv-påmelding Cup',
+      ...extras,
+    });
+  }
+
+  it('defaulter til invite_only + solo når feltene mangler', () => {
+    const result = buildGameInsertPayload(regFd({}), 'draft');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.registration_mode).toBe('invite_only');
+    expect(result.registration_type).toBe('solo');
+  });
+
+  it('aksepterer manual_approval + solo', () => {
+    const result = buildGameInsertPayload(
+      regFd({
+        registration_mode: 'manual_approval',
+        registration_type: 'solo',
+      }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.registration_mode).toBe('manual_approval');
+    expect(result.registration_type).toBe('solo');
+  });
+
+  it('aksepterer open + team for best_ball_netto', () => {
+    const result = buildGameInsertPayload(
+      regFd({
+        registration_mode: 'open',
+        registration_type: 'team',
+        game_mode: 'best_ball_netto',
+      }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.registration_mode).toBe('open');
+    expect(result.registration_type).toBe('team');
+  });
+
+  it('aksepterer open + both for texas_scramble', () => {
+    const result = buildGameInsertPayload(
+      regFd({
+        registration_mode: 'open',
+        registration_type: 'both',
+        game_mode: 'texas_scramble',
+        texas_team_size: '4',
+        texas_team_handicap_pct: '10',
+      }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.registration_type).toBe('both');
+  });
+
+  it('rejecter ukjent registration_mode med bad_registration_mode', () => {
+    const result = buildGameInsertPayload(
+      regFd({ registration_mode: 'public' }),
+      'draft',
+    );
+    expect(result.errorCode).toBe('bad_registration_mode');
+  });
+
+  it('rejecter ukjent registration_type med bad_registration_type', () => {
+    const result = buildGameInsertPayload(
+      regFd({ registration_type: 'group' }),
+      'draft',
+    );
+    expect(result.errorCode).toBe('bad_registration_type');
+  });
+
+  it('rejecter team-påmelding på stableford (solo-modus)', () => {
+    const result = buildGameInsertPayload(
+      regFd({
+        registration_type: 'team',
+        game_mode: 'stableford',
+      }),
+      'draft',
+    );
+    expect(result.errorCode).toBe('team_registration_unsupported_mode');
+  });
+
+  it('rejecter both-påmelding på singles_matchplay (1v1)', () => {
+    const result = buildGameInsertPayload(
+      regFd({
+        registration_type: 'both',
+        game_mode: 'singles_matchplay',
+      }),
+      'draft',
+    );
+    expect(result.errorCode).toBe('team_registration_unsupported_mode');
+  });
+
+  it('rejecter team-påmelding på solo_strokeplay_netto', () => {
+    const result = buildGameInsertPayload(
+      regFd({
+        registration_type: 'team',
+        game_mode: 'solo_strokeplay_netto',
+      }),
+      'draft',
+    );
+    expect(result.errorCode).toBe('team_registration_unsupported_mode');
+  });
+
+  it('aksepterer solo-påmelding på stableford (defaulter til solo)', () => {
+    const result = buildGameInsertPayload(
+      regFd({
+        registration_type: 'solo',
+        game_mode: 'stableford',
+      }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.registration_type).toBe('solo');
+  });
+
+  it('open-modus publish tolererer tom spiller-liste (best_ball_netto)', () => {
+    // For open / manual_approval er spillerne tenkt å melde seg på via
+    // lenken etterpå. Mode-validatoren kjører i 'draft'-effective mode
+    // slik at eksakt-8-regelen ikke gjelder ved publish.
+    const result = buildGameInsertPayload(
+      regFd({
+        registration_mode: 'open',
+        registration_type: 'solo',
+        game_mode: 'best_ball_netto',
+        course_id: 'c1',
+        tee_box_id: 't1',
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toEqual([]);
+  });
+
+  it('manual_approval-modus publish tolererer 0 spillere på stableford', () => {
+    const result = buildGameInsertPayload(
+      regFd({
+        registration_mode: 'manual_approval',
+        game_mode: 'stableford',
+        course_id: 'c1',
+        tee_box_id: 't1',
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toEqual([]);
+  });
+
+  it('invite_only-modus publish krever fortsatt full spiller-liste', () => {
+    // Bakoverkompatibilitet: dagens flyt skal være helt uendret. Publish
+    // av best_ball_netto uten spillere → fortsatt players_required.
+    const result = buildGameInsertPayload(
+      regFd({
+        registration_mode: 'invite_only',
+        game_mode: 'best_ball_netto',
+        course_id: 'c1',
+        tee_box_id: 't1',
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('players_required');
+  });
+
+  it('open-modus publish håndhever fortsatt duplikat-spiller-regelen', () => {
+    const result = buildGameInsertPayload(
+      regFd({
+        registration_mode: 'open',
+        game_mode: 'stableford',
+        course_id: 'c1',
+        tee_box_id: 't1',
+        player_0_id: 'dup',
+        player_1_id: 'dup',
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('duplicate_player');
+  });
+});
+
 describe('buildGameInsertPayload — mode discriminator (epic #41)', () => {
   it('defaults to best_ball_netto when game_mode is missing (back-compat)', () => {
     // Form-feltet game_mode innføres først i fase 4 (GameForm UI). Inntil

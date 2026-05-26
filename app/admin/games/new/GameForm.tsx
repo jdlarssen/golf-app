@@ -3,6 +3,10 @@
 import { Button } from '@/components/ui/Button';
 import type { SideCategoryId } from '@/lib/scoring/sideTournamentConfig';
 import type { GameMode } from '@/lib/scoring/modes/types';
+import type {
+  RegistrationMode,
+  RegistrationType,
+} from '@/lib/games/registration';
 import { ModeSelector } from './ModeSelector';
 import { TeamSizeSelector, type TeamSize } from './TeamSizeSelector';
 import { useGameFormState } from './useGameFormState';
@@ -10,6 +14,7 @@ import { BasicsSection } from './sections/BasicsSection';
 import { PlayersSection } from './sections/PlayersSection';
 import { TeamsAssignmentSection } from './sections/TeamsAssignmentSection';
 import { AdvancedSettingsSection } from './sections/AdvancedSettingsSection';
+import { RegistrationSection } from './sections/RegistrationSection';
 
 export type CourseOption = {
   id: string;
@@ -109,6 +114,12 @@ export type InitialValues = {
    */
   tournament_id?: string;
   tournament_match_label?: string;
+  /**
+   * Self-påmelding (#199). Defaultes til 'invite_only' + 'solo' for å
+   * bevare dagens flyt. Edit-flyten leverer eksisterende valg fra DB.
+   */
+  registration_mode?: RegistrationMode;
+  registration_type?: RegistrationType;
 };
 
 /**
@@ -205,6 +216,16 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           modus-payloads. */}
       <input type="hidden" name="game_mode" value={gameMode} />
       <input type="hidden" name="team_size" value={teamSize} />
+      <input
+        type="hidden"
+        name="registration_mode"
+        value={state.registrationMode}
+      />
+      <input
+        type="hidden"
+        name="registration_type"
+        value={state.registrationType}
+      />
       {initialValues?.tournament_id && (
         <>
           <input
@@ -304,6 +325,11 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           </p>
         )}
       </section>
+
+      {/* Section 3b: Påmelding (#199) — to akser: hvem kan melde seg på, og
+          hva man melder på. Defaultes til invite_only + solo så dagens flyt
+          er uendret når admin ikke aktivt velger noe annet. */}
+      <RegistrationSection state={state} />
 
       {/* Section 4/5: Matchplay sides / team grid / flights / per-spiller-tee */}
       <TeamsAssignmentSection state={state} players={players} />

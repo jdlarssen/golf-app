@@ -1,0 +1,60 @@
+import { describe, it, expect } from 'vitest';
+import {
+  gameModeSupportsTeams,
+  isRegistrationMode,
+  isRegistrationType,
+} from './registration';
+
+describe('gameModeSupportsTeams', () => {
+  it('returns true for best_ball_netto', () => {
+    expect(gameModeSupportsTeams('best_ball_netto')).toBe(true);
+  });
+
+  it('returns true for texas_scramble', () => {
+    expect(gameModeSupportsTeams('texas_scramble')).toBe(true);
+  });
+
+  it('returns false for stableford (solo-modus i v1)', () => {
+    expect(gameModeSupportsTeams('stableford')).toBe(false);
+  });
+
+  it('returns false for singles_matchplay (1v1, ikke lag-påmelding)', () => {
+    expect(gameModeSupportsTeams('singles_matchplay')).toBe(false);
+  });
+
+  it('returns false for solo_strokeplay_netto', () => {
+    expect(gameModeSupportsTeams('solo_strokeplay_netto')).toBe(false);
+  });
+});
+
+describe('isRegistrationMode', () => {
+  it('accepts the three valid values', () => {
+    expect(isRegistrationMode('invite_only')).toBe(true);
+    expect(isRegistrationMode('manual_approval')).toBe(true);
+    expect(isRegistrationMode('open')).toBe(true);
+  });
+
+  it('rejects unknown values', () => {
+    expect(isRegistrationMode('public')).toBe(false);
+    expect(isRegistrationMode('')).toBe(false);
+    expect(isRegistrationMode(null)).toBe(false);
+    expect(isRegistrationMode(undefined)).toBe(false);
+    expect(isRegistrationMode(42)).toBe(false);
+  });
+});
+
+describe('isRegistrationType', () => {
+  it('accepts the three valid values', () => {
+    expect(isRegistrationType('solo')).toBe(true);
+    expect(isRegistrationType('team')).toBe(true);
+    expect(isRegistrationType('both')).toBe(true);
+  });
+
+  it('rejects unknown values', () => {
+    expect(isRegistrationType('group')).toBe(false);
+    expect(isRegistrationType('')).toBe(false);
+    expect(isRegistrationType(null)).toBe(false);
+    expect(isRegistrationType(undefined)).toBe(false);
+    expect(isRegistrationType(0)).toBe(false);
+  });
+});

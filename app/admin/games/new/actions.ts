@@ -130,6 +130,8 @@ async function createGameInternal(
       // dagens admin-flyt produserer samme rad som før migrering 0030.
       game_mode: payload.game_mode,
       mode_config: payload.mode_config,
+      registration_mode: payload.registration_mode,
+      registration_type: payload.registration_type,
       side_tournament_enabled: sideEnabled,
       side_ld_count: sideLdCount,
       side_ctp_count: sideCtpCount,

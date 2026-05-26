@@ -322,6 +322,77 @@ describe('GameWizard — auto-name + manuell override', () => {
   });
 });
 
+describe('GameWizard — Påmelding-felter (#199)', () => {
+  it('rendrer Påmelding-radioene med defaults invite_only + solo på steg 1', () => {
+    renderWizard();
+    expect(
+      screen.getByRole('radio', { name: /bare de jeg inviterer/i }),
+    ).toBeChecked();
+    expect(screen.getByRole('radio', { name: /^individuelt$/i })).toBeChecked();
+  });
+
+  it('disabler "lag"/"begge" når modus er stableford (solo-modus)', () => {
+    renderWizard();
+    fireEvent.click(screen.getByRole('radio', { name: /stableford/i }));
+    expect(screen.getByRole('radio', { name: /^lag$/i })).toBeDisabled();
+    expect(screen.getByRole('radio', { name: /^begge$/i })).toBeDisabled();
+    // Individuelt forblir aktivert
+    expect(screen.getByRole('radio', { name: /^individuelt$/i })).toBeChecked();
+  });
+
+  it('lar "lag" velges når modus er best_ball_netto', () => {
+    renderWizard();
+    // best_ball_netto er default
+    const teamRadio = screen.getByRole('radio', { name: /^lag$/i });
+    expect(teamRadio).not.toBeDisabled();
+    fireEvent.click(teamRadio);
+    expect(teamRadio).toBeChecked();
+  });
+
+  it('force-reseter registration_type til solo når admin bytter til en mode uten lag', () => {
+    renderWizard();
+    // Velg lag i best_ball_netto
+    fireEvent.click(screen.getByRole('radio', { name: /^lag$/i }));
+    expect(screen.getByRole('radio', { name: /^lag$/i })).toBeChecked();
+    // Bytt til stableford → må reset til solo
+    fireEvent.click(screen.getByRole('radio', { name: /stableford/i }));
+    expect(screen.getByRole('radio', { name: /^individuelt$/i })).toBeChecked();
+    expect(screen.getByRole('radio', { name: /^lag$/i })).toBeDisabled();
+  });
+
+  it('inkluderer registration_mode + registration_type i FormData', () => {
+    const { container } = renderWizard();
+    // Default invite_only + solo
+    let fd = new FormData(container.querySelector('form')!);
+    expect(fd.get('registration_mode')).toBe('invite_only');
+    expect(fd.get('registration_type')).toBe('solo');
+
+    // Bytt til open
+    fireEvent.click(screen.getByRole('radio', { name: /åpen påmelding/i }));
+    fd = new FormData(container.querySelector('form')!);
+    expect(fd.get('registration_mode')).toBe('open');
+  });
+
+  it('viser at "Spillere" er valgfri når påmelding ikke er invite_only', () => {
+    renderWizard();
+    fireEvent.click(screen.getByRole('radio', { name: /åpen påmelding/i }));
+    clickNext(); // → steg 2
+    fireEvent.change(screen.getByLabelText(/^bane$/i), {
+      target: { value: 'course-1' },
+    });
+    fireEvent.change(screen.getByLabelText(/^tee$/i), {
+      target: { value: 'tee-1' },
+    });
+    clickNext(); // → steg 3
+    expect(
+      screen.getByText(/du kan også la spillerne melde seg på selv/i),
+    ).toBeInTheDocument();
+    // Neste skal være enabled selv uten valgte spillere
+    const nextButton = screen.getByRole('button', { name: /^neste$/i });
+    expect(nextButton).not.toBeDisabled();
+  });
+});
+
 describe('GameWizard — FormData-skjema speiler GameForm (K10)', () => {
   it('publiserer med samme FormData-keys som GameForm ville sendt', async () => {
     const publishSpy = vi.fn(async () => {});

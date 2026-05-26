@@ -12,6 +12,13 @@
 // fase 4. Eksisterende admin-flyt produserer derfor samme payload som før.
 
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
+import {
+  gameModeSupportsTeams,
+  isRegistrationMode,
+  isRegistrationType,
+  type RegistrationMode,
+  type RegistrationType,
+} from './registration';
 
 /**
  * Parse a 'YYYY-MM-DDTHH:mm' string (as emitted by <input type="datetime-local">)
@@ -91,7 +98,19 @@ export type GameValidationErrorCode =
   // - too_many_players_for_mode: publish for singles_matchplay må ha EKSAKT
   //   2 spillere (én per side). Brukes for å skille "for mange" fra "for få"
   //   (min_players_for_mode) — gir tydeligere norsk feilmelding i admin-UI.
-  | 'too_many_players_for_mode';
+  | 'too_many_players_for_mode'
+  // Self-påmeldings-koder (#199):
+  // - bad_registration_mode: form sendte en verdi som ikke er en gyldig
+  //   registration_mode-enum (invite_only / manual_approval / open).
+  // - bad_registration_type: tilsvarende for registration_type (solo / team /
+  //   both).
+  // - team_registration_unsupported_mode: registration_type team/both valgt
+  //   sammen med en game_mode som ikke har lag-konsept (stableford,
+  //   singles_matchplay, solo_strokeplay_netto). UI burde forhindre dette,
+  //   men server-side gate beskytter mot DevTools-tampering.
+  | 'bad_registration_mode'
+  | 'bad_registration_type'
+  | 'team_registration_unsupported_mode';
 
 export type ParsedPayload = {
   name: string;
@@ -113,11 +132,29 @@ export type ParsedPayload = {
    * Diskrimineres på `kind` slik at konsumenter kan narrowe trygt på modusen.
    */
   mode_config: GameModeConfig;
+  /**
+   * Påmeldings-modus (#199). Defaulter til 'invite_only' for å speile dagens
+   * flyt: admin inviterer eksplisitt, ingen selv-påmelding.
+   */
+  registration_mode: RegistrationMode;
+  /**
+   * Type påmelding (#199). Defaulter til 'solo' siden de fleste spillmodi
+   * er individuelle; team/both krever at game_mode støtter lag.
+   */
+  registration_type: RegistrationType;
   errorCode?: GameValidationErrorCode;
 };
 
 /** Felles base-felter parset fra FormData, før modus-spesifikk validering. */
-type ParsedBase = Omit<ParsedPayload, 'players' | 'game_mode' | 'mode_config' | 'errorCode'>;
+type ParsedBase = Omit<
+  ParsedPayload,
+  | 'players'
+  | 'game_mode'
+  | 'mode_config'
+  | 'registration_mode'
+  | 'registration_type'
+  | 'errorCode'
+>;
 
 /**
  * Resultat fra en modus-spesifikk validator. Suksess gir den ferdige
@@ -157,6 +194,29 @@ function parseBase(formData: FormData): ParsedBase {
     require_peer_approval,
     score_visibility,
   };
+}
+
+/**
+ * Leser `registration_mode` fra form-data. Defaulter til DB-default
+ * 'invite_only' når feltet mangler (bevarer dagens flyt: ingen selv-
+ * påmelding). Ugyldig verdi returnerer null så top-level kan flagge
+ * `bad_registration_mode`.
+ */
+function parseRegistrationMode(formData: FormData): RegistrationMode | null {
+  const raw = String(formData.get('registration_mode') ?? '').trim();
+  if (raw === '') return 'invite_only';
+  return isRegistrationMode(raw) ? raw : null;
+}
+
+/**
+ * Leser `registration_type` fra form-data. Defaulter til 'solo' når
+ * feltet mangler. Ugyldig verdi returnerer null så top-level kan flagge
+ * `bad_registration_type`.
+ */
+function parseRegistrationType(formData: FormData): RegistrationType | null {
+  const raw = String(formData.get('registration_type') ?? '').trim();
+  if (raw === '') return 'solo';
+  return isRegistrationType(raw) ? raw : null;
 }
 
 /**
@@ -678,6 +738,8 @@ export function buildGameInsertPayload(
     players: [],
     game_mode: 'best_ball_netto',
     mode_config: { kind: 'best_ball_netto', team_size: 2, teams_count: 4 },
+    registration_mode: 'invite_only',
+    registration_type: 'solo',
     errorCode,
   });
 
@@ -698,7 +760,34 @@ export function buildGameInsertPayload(
   const gameMode = parseGameMode(formData);
   if (gameMode === null) return errorPayload('mode_required');
 
-  const modeResult = modeValidators[gameMode](formData, mode);
+  // Self-påmelding (#199): registration_mode + registration_type. Defaultes
+  // i parser-en til ('invite_only', 'solo') når feltene mangler så dagens
+  // payload-skjema er bakoverkompatibelt. Cross-field-validering håndhever
+  // at team/both kun er gyldig med en game_mode som har lag-konsept —
+  // server-side gate beskytter mot DevTools-tampering når UI ellers
+  // disabler radio-knappene.
+  const registrationMode = parseRegistrationMode(formData);
+  if (registrationMode === null) return errorPayload('bad_registration_mode');
+
+  const registrationType = parseRegistrationType(formData);
+  if (registrationType === null) return errorPayload('bad_registration_type');
+
+  if (
+    (registrationType === 'team' || registrationType === 'both') &&
+    !gameModeSupportsTeams(gameMode)
+  ) {
+    return errorPayload('team_registration_unsupported_mode');
+  }
+
+  // For self-påmeldings-modi (open / manual_approval) er spiller-listen
+  // valgfri ved publish — spillerne kan komme via lenken etterpå. Vi
+  // sender derfor 'draft' inn til mode-validatoren slik at completeness-
+  // sjekkene (eksakt 8 spillere på best-ball, balansert lag-fordeling osv.)
+  // hoppes over. Duplikat-sjekk og bad-team/bad-flight håndheves fortsatt
+  // siden de gjelder enhver innsendt rad.
+  const effectiveMode: PayloadMode =
+    mode === 'publish' && registrationMode !== 'invite_only' ? 'draft' : mode;
+  const modeResult = modeValidators[gameMode](formData, effectiveMode);
   if (!modeResult.ok) {
     return errorPayload(modeResult.errorCode);
   }
@@ -708,5 +797,7 @@ export function buildGameInsertPayload(
     players: modeResult.players,
     game_mode: gameMode,
     mode_config: modeResult.mode_config,
+    registration_mode: registrationMode,
+    registration_type: registrationType,
   };
 }

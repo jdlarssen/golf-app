@@ -1,0 +1,181 @@
+'use client';
+
+/**
+ * RegistrationSection — «Påmelding»-felt-gruppe i opprett-spill-flyten (#199).
+ *
+ * To akser:
+ *   1. Registreringsmodus: hvem kan melde seg på (invite_only / manual_approval / open)
+ *   2. Type påmelding: hva man melder på (solo / team / both)
+ *
+ * Type-radioene disables når valgt game_mode ikke har lag-konsept — i praksis
+ * når modus er stableford / singles_matchplay / solo_strokeplay_netto. State-
+ * hooken (`useGameFormState`) force-reseter dessuten registrationType til
+ * 'solo' når admin bytter til en slik modus, så payloaden alltid er
+ * konsistent uten å avhenge av at admin klikker en gyldig kombinasjon manuelt.
+ */
+
+import type { GameFormState } from '../useGameFormState';
+import type {
+  RegistrationMode,
+  RegistrationType,
+} from '@/lib/games/registration';
+
+type Props = {
+  state: GameFormState;
+  /**
+   * Skjul «N. Påmelding»-headingen. Wizard-flyten mounter seksjonen inne
+   * i steg 1 (Format) som allerede har en stepper-tittel, så dobbel-merking
+   * unngås ved å droppe headingen der.
+   */
+  hideHeading?: boolean;
+};
+
+type ModeOption = {
+  value: RegistrationMode;
+  title: string;
+  hint: string;
+};
+
+type TypeOption = {
+  value: RegistrationType;
+  title: string;
+  hint?: string;
+};
+
+const MODE_OPTIONS: readonly ModeOption[] = [
+  {
+    value: 'invite_only',
+    title: 'Bare de jeg inviterer',
+    hint: 'Dagens flyt: send invitasjoner manuelt fra Spillere-fanen.',
+  },
+  {
+    value: 'manual_approval',
+    title: 'Forespørsel — jeg godkjenner',
+    hint: 'Spillerne klikker en lenke og ber om plass. Du godkjenner eller avslår per forespørsel.',
+  },
+  {
+    value: 'open',
+    title: 'Åpen påmelding',
+    hint: 'Alle med lenken kan melde seg på. Best for klubb-skala. Krever at NEXT_PUBLIC_ALLOW_SELF_REGISTRATION er på for ukjente brukere.',
+  },
+] as const;
+
+const TYPE_OPTIONS: readonly TypeOption[] = [
+  { value: 'solo', title: 'Individuelt' },
+  { value: 'team', title: 'Lag' },
+  { value: 'both', title: 'Begge' },
+] as const;
+
+export function RegistrationSection({ state, hideHeading = false }: Props) {
+  const {
+    registrationMode,
+    setRegistrationMode,
+    registrationType,
+    setRegistrationType,
+    registrationModeSupportsTeams,
+    lockGameMode,
+  } = state;
+
+  // Disable team/both når modus ikke støtter lag. Lock-flagget (edit-flyt på
+  // publisert spill) deaktiverer hele seksjonen — payloaden er allerede
+  // persistert og kan ikke endres tilbake til en annen modell uten å rote
+  // til eksisterende påmeldinger.
+  const teamRadioDisabled = !registrationModeSupportsTeams || lockGameMode;
+  const teamDisabledReason = !registrationModeSupportsTeams
+    ? 'Valgt spillmodus støtter ikke lag-påmelding.'
+    : null;
+
+  return (
+    <section className="space-y-4">
+      {!hideHeading && (
+        <h2 className="text-sm font-medium text-text">Påmelding</h2>
+      )}
+
+      <fieldset>
+        <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          Hvem kan melde seg på?
+        </legend>
+        <div className="mt-2 space-y-3">
+          {MODE_OPTIONS.map((opt) => (
+            <label
+              key={opt.value}
+              className="flex items-start gap-3 cursor-pointer"
+            >
+              <input
+                type="radio"
+                name="registration_mode_input"
+                value={opt.value}
+                checked={registrationMode === opt.value}
+                onChange={() => setRegistrationMode(opt.value)}
+                disabled={lockGameMode}
+                className="mt-1 h-5 w-5"
+              />
+              <div>
+                <div className="font-serif text-base text-text">
+                  {opt.title}
+                </div>
+                <div className="text-xs text-muted">{opt.hint}</div>
+              </div>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          Hva melder man på?
+        </legend>
+        <div className="mt-2 space-y-3">
+          {TYPE_OPTIONS.map((opt) => {
+            const isTeamOption = opt.value === 'team' || opt.value === 'both';
+            const disabled = isTeamOption ? teamRadioDisabled : lockGameMode;
+            return (
+              <label
+                key={opt.value}
+                className={`flex items-start gap-3 ${
+                  disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+                }`}
+                title={
+                  isTeamOption && teamDisabledReason
+                    ? teamDisabledReason
+                    : undefined
+                }
+              >
+                <input
+                  type="radio"
+                  name="registration_type_input"
+                  value={opt.value}
+                  checked={registrationType === opt.value}
+                  onChange={() => setRegistrationType(opt.value)}
+                  disabled={disabled}
+                  className="mt-1 h-5 w-5"
+                />
+                <div>
+                  <div className="font-serif text-base text-text">
+                    {opt.title}
+                  </div>
+                  {opt.hint && (
+                    <div className="text-xs text-muted">{opt.hint}</div>
+                  )}
+                </div>
+              </label>
+            );
+          })}
+        </div>
+        {!registrationModeSupportsTeams && (
+          <p className="mt-2 text-xs text-muted">
+            Lag-påmelding er kun tilgjengelig for best ball netto og Texas
+            scramble. Bytt spillmodus først hvis du vil ta imot lag.
+          </p>
+        )}
+      </fieldset>
+
+      {registrationMode !== 'invite_only' && (
+        <p className="text-xs text-muted">
+          Du kan også la spillerne melde seg på selv. Lenken får du etter at
+          spillet er opprettet.
+        </p>
+      )}
+    </section>
+  );
+}

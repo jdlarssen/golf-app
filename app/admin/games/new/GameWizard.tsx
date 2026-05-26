@@ -30,6 +30,7 @@ import { BasicsSection } from './sections/BasicsSection';
 import { PlayersSection } from './sections/PlayersSection';
 import { TeamsAssignmentSection } from './sections/TeamsAssignmentSection';
 import { ReadyStep } from './sections/ReadyStep';
+import { RegistrationSection } from './sections/RegistrationSection';
 import {
   GameForm,
   type CourseOption,
@@ -179,7 +180,11 @@ export function GameWizard({ courses, players, mode, initialValues }: Props) {
   function canAdvance(): boolean {
     if (step === 1) return true;
     if (step === 2) return state.courseId !== '' && state.teeBoxId !== '';
-    if (step === 3) return state.playersValidForMode;
+    // Steg 3: vanligvis krever vi en gyldig spiller-fordeling per modus.
+    // #199: når selv-påmelding er på (open / manual_approval) er spiller-
+    // listen valgfri — admin kan publisere et tomt spill og la spillerne
+    // melde seg på via lenken.
+    if (step === 3) return state.playersStepOptional || state.playersValidForMode;
     return false; // steg 4 har ikke neste-knapp
   }
 
@@ -235,6 +240,8 @@ export function GameWizard({ courses, players, mode, initialValues }: Props) {
       texas_team_handicap_pct: state.texasHandicapPct,
       tournament_id: initialValues?.tournament_id,
       tournament_match_label: initialValues?.tournament_match_label,
+      registration_mode: state.registrationMode,
+      registration_type: state.registrationType,
     };
     return (
       <div className="space-y-4">
@@ -265,25 +272,28 @@ export function GameWizard({ courses, players, mode, initialValues }: Props) {
       <StepperHeader step={step} title={STEP_TITLES[step]} subText={subText} />
 
       {step === 1 && (
-        <section className="space-y-4">
-          <ModeSelector
-            value={state.gameMode}
-            onChange={state.handleModeChange}
-            disabled={state.lockGameMode}
-          />
-          {!state.isMatchplay && (
-            <TeamSizeSelector
-              mode={state.gameMode}
-              value={state.teamSize}
-              onChange={state.handleTeamSizeChange}
+        <section className="space-y-6">
+          <div className="space-y-4">
+            <ModeSelector
+              value={state.gameMode}
+              onChange={state.handleModeChange}
               disabled={state.lockGameMode}
             />
-          )}
-          {state.lockGameMode && (
-            <p className="text-xs text-muted">
-              <strong>Kan ikke endres etter spill-start.</strong>
-            </p>
-          )}
+            {!state.isMatchplay && (
+              <TeamSizeSelector
+                mode={state.gameMode}
+                value={state.teamSize}
+                onChange={state.handleTeamSizeChange}
+                disabled={state.lockGameMode}
+              />
+            )}
+            {state.lockGameMode && (
+              <p className="text-xs text-muted">
+                <strong>Kan ikke endres etter spill-start.</strong>
+              </p>
+            )}
+          </div>
+          <RegistrationSection state={state} hideHeading />
         </section>
       )}
 
@@ -298,6 +308,12 @@ export function GameWizard({ courses, players, mode, initialValues }: Props) {
 
       {step === 3 && (
         <div className="space-y-6">
+          {state.playersStepOptional && (
+            <p className="rounded-md border border-border bg-surface-2 px-3 py-2 text-xs text-muted">
+              Du kan også la spillerne melde seg på selv. Lenken får du etter at
+              spillet er opprettet.
+            </p>
+          )}
           <PlayersSection state={state} players={players} heading="Spillere" />
           {/* TeamsAssignmentSection er self-gating per modus — den rendrer
               kun de relevante under-blokkene (matchplay-sider / lag-grid /
@@ -374,6 +390,8 @@ function FormDataInputs({
     requirePeerApproval,
     playerGenders,
     selectedPlayerIds,
+    registrationMode,
+    registrationType,
   } = state;
 
   // Alle controlled state-verdier serialiseres som hidden inputs UANSETT
@@ -392,6 +410,8 @@ function FormDataInputs({
     <>
       <input type="hidden" name="game_mode" value={gameMode} />
       <input type="hidden" name="team_size" value={teamSize} />
+      <input type="hidden" name="registration_mode" value={registrationMode} />
+      <input type="hidden" name="registration_type" value={registrationType} />
       {gameMode === 'stableford' && (
         <input type="hidden" name="stableford_team_size" value={teamSize} />
       )}

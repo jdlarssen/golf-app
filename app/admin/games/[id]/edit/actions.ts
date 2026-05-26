@@ -148,6 +148,11 @@ async function updateGameInternal(
       // beholder sin config og draft-rader kan fritt veksle mode.
       game_mode: payload.game_mode,
       mode_config: payload.mode_config,
+      // #199: self-påmelding-akser. Følger samme optimistic-lock-mønster
+      // som de andre feltene — kun skrivbar mens status fortsatt er
+      // draft/scheduled (filteret nedenfor blokkerer writes etter start).
+      registration_mode: payload.registration_mode,
+      registration_type: payload.registration_type,
       // score_visibility is implicitly gated by the .eq('status', allowedFromStatus)
       // filter below — it only writes when the row is still draft/scheduled.
       // If status flipped to active/finished between form-render and submit,
