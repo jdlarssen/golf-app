@@ -32,6 +32,14 @@ vi.mock('next/cache', () => ({
   revalidateTag: (...args: unknown[]) => revalidateTagMock(...args),
 }));
 
+const notifyInvitedToGameMock = vi.fn<
+  (...args: unknown[]) => Promise<void>
+>(async () => undefined);
+vi.mock('@/lib/notifications/notifyInvitedToGame', () => ({
+  notifyInvitedToGame: (...args: unknown[]) =>
+    notifyInvitedToGameMock(...args),
+}));
+
 let supabaseMock: ReturnType<typeof buildSupabaseMock>;
 vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
@@ -145,6 +153,7 @@ describe('updateScheduledAction — mode-lock', () => {
         error: null,
       }, // games.select
       { data: { id: 'game-1' }, error: null }, // games.update
+      { data: [], error: null }, // game_players.select (priorRoster snapshot)
       { data: null, error: null }, // game_players.delete
       { data: null, error: null }, // game_players.insert
     ]);
@@ -163,6 +172,130 @@ describe('updateScheduledAction — mode-lock', () => {
   });
 });
 
+describe('backfill invite-notify (#182) — edit-flyten', () => {
+  it('diff-add: notify fyres kun for nye spillere, ikke for eksisterende', async () => {
+    // Eksisterende roster har u0, u1, u2, u3. Edit-en sender u0-u7 — så
+    // u4, u5, u6, u7 er nye og skal varsles. u0-u3 var med fra før og
+    // skal IKKE få ny notifikasjon (de ble varslet ved første add).
+    const completedRoster = Array.from({ length: 8 }, (_, i) => ({
+      id: `u${i}`,
+      email: `u${i}@example.com`,
+      profile_completed_at: '2026-01-01T00:00:00Z',
+    }));
+
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: completedRoster, error: null },
+      {
+        data: { status: 'scheduled', game_mode: 'best_ball_netto' },
+        error: null,
+      },
+      { data: { id: 'game-diff' }, error: null }, // games.update
+      // game_players.select (priorRoster) — u0..u3 var med fra før
+      {
+        data: [
+          { user_id: 'u0' },
+          { user_id: 'u1' },
+          { user_id: 'u2' },
+          { user_id: 'u3' },
+        ],
+        error: null,
+      },
+      { data: null, error: null }, // delete
+      { data: null, error: null }, // insert
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(
+      updateScheduledAction('game-diff', fullBestBallFormData()),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(notifyInvitedToGameMock).toHaveBeenCalledTimes(4);
+    const calledIds = notifyInvitedToGameMock.mock.calls.map(
+      (c) => (c[0] as { recipientUserId: string }).recipientUserId,
+    );
+    expect(calledIds.sort()).toEqual(['u4', 'u5', 'u6', 'u7']);
+  });
+
+  it('roster uendret: ingen notify fyres', async () => {
+    const completedRoster = Array.from({ length: 8 }, (_, i) => ({
+      id: `u${i}`,
+      email: `u${i}@example.com`,
+      profile_completed_at: '2026-01-01T00:00:00Z',
+    }));
+
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: completedRoster, error: null },
+      {
+        data: { status: 'scheduled', game_mode: 'best_ball_netto' },
+        error: null,
+      },
+      { data: { id: 'game-same' }, error: null },
+      // priorRoster identisk med payload
+      {
+        data: Array.from({ length: 8 }, (_, i) => ({ user_id: `u${i}` })),
+        error: null,
+      },
+      { data: null, error: null },
+      { data: null, error: null },
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(
+      updateScheduledAction('game-same', fullBestBallFormData()),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+  });
+
+  it('skipper inviter-self når admin legger seg selv til som ny spiller', async () => {
+    const completedRoster = Array.from({ length: 8 }, (_, i) => ({
+      id: i === 0 ? 'admin-1' : `u${i}`,
+      email: i === 0 ? 'admin@tornygolf.no' : `u${i}@example.com`,
+      profile_completed_at: '2026-01-01T00:00:00Z',
+    }));
+
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: completedRoster, error: null },
+      {
+        data: { status: 'scheduled', game_mode: 'best_ball_netto' },
+        error: null,
+      },
+      { data: { id: 'game-self' }, error: null },
+      // priorRoster: u1..u7, admin-1 er ny i diff-en
+      {
+        data: Array.from({ length: 7 }, (_, i) => ({
+          user_id: `u${i + 1}`,
+        })),
+        error: null,
+      },
+      { data: null, error: null },
+      { data: null, error: null },
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1', email: 'admin@tornygolf.no' } },
+    });
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(
+      updateScheduledAction(
+        'game-self',
+        fullBestBallFormData({ player_0_id: 'admin-1' }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
+  });
+});
+
 describe('saveDraftAction — mode-lock', () => {
   it('tillater mode-bytte når spillet fortsatt er draft', async () => {
     // Drafts er fortsatt under bygging — admin må fritt kunne veksle modus
@@ -173,6 +306,7 @@ describe('saveDraftAction — mode-lock', () => {
       // Ingen roster-gate i save_draft-modusen
       { data: { status: 'draft', game_mode: 'best_ball_netto' }, error: null }, // games.select
       { data: { id: 'draft-1' }, error: null }, // games.update
+      { data: [], error: null }, // game_players.select (priorRoster snapshot)
       { data: null, error: null }, // game_players.delete
       // Ingen game_players.insert siden vi sender 0 spillere
     ]);

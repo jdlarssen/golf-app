@@ -10,6 +10,7 @@ import {
 } from '@/lib/games/gamePayload';
 import { findPendingPlayers } from '@/lib/games/pendingPlayers';
 import { parseSideTournamentFromFormData } from '@/lib/games/sideTournamentPayload';
+import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 
 type UpdateMode = 'save_draft' | 'publish' | 'update_scheduled';
 
@@ -81,7 +82,7 @@ async function updateGameInternal(
   const supabase = await getServerClient();
   // Self-gate for Fase 4 chunk 2 layout-loosening (#223). Replaces the
   // previously-inlined auth.getUser + users.is_admin check.
-  await requireAdmin(supabase);
+  const { userId } = await requireAdmin(supabase);
 
   if (mode === 'publish' || mode === 'update_scheduled') {
     const { data: rosterUsers, error: rosterErr } = await supabase
@@ -179,6 +180,17 @@ async function updateGameInternal(
     redirect(`/admin/games/${gameId}?error=not_editable`);
   }
 
+  // Snapshot eksisterende roster FØR delete + insert. Brukes til å regne
+  // ut hvilke spillere som faktisk er nye i diff-en, slik at notify kun
+  // fyres for dem (ikke for spillere som var på rosteren fra før og ble
+  // re-insertet av wholesale-replace-strategien under).
+  const { data: priorRoster } = await supabase
+    .from('game_players')
+    .select('user_id')
+    .eq('game_id', gameId)
+    .returns<{ user_id: string }[]>();
+  const priorRosterIds = new Set((priorRoster ?? []).map((r) => r.user_id));
+
   // Replace the roster wholesale. For both 'draft' and 'scheduled' starting
   // states no `scores` rows exist yet (handicaps haven't been frozen — that
   // happens at "Start runden nå"), making delete+insert safe. A diff-based
@@ -212,6 +224,26 @@ async function updateGameInternal(
     if (insertError) {
       redirect(`/admin/games/${gameId}/edit?error=db_players`);
     }
+  }
+
+  // Best-effort notify for spillere som ER NYE i diff-en (var ikke på
+  // rosteren før denne edit-en). Skipper inviter selv. Eksisterende
+  // spillere som beholdes får ingen ny varsel — den fyrte allerede da de
+  // ble lagt til første gang. Promise.allSettled gjør at én feilet notify
+  // ikke påvirker action-redirecten.
+  const newPlayerIds = payload.players
+    .map((p) => p.user_id)
+    .filter((id) => !priorRosterIds.has(id) && id !== userId);
+  if (newPlayerIds.length > 0) {
+    await Promise.allSettled(
+      newPlayerIds.map((recipientUserId) =>
+        notifyInvitedToGame({
+          recipientUserId,
+          gameId,
+          inviterUserId: userId,
+        }),
+      ),
+    );
   }
 
   revalidateTag(`game-${gameId}`, 'max');
