@@ -208,6 +208,19 @@ export function CourseForm({
     }
   }
 
+  function copyMensToAllGenders(index: number) {
+    const source = teeBoxes[index];
+    if (!source) return;
+    updateTee(index, {
+      slope_ladies: source.slope_mens,
+      course_rating_ladies: source.course_rating_mens,
+      slope_juniors: source.slope_mens,
+      course_rating_juniors: source.course_rating_mens,
+    });
+    setExpandedLadies((prev) => prev.map((v, i) => (i === index ? true : v)));
+    setExpandedJuniors((prev) => prev.map((v, i) => (i === index ? true : v)));
+  }
+
   return (
     <form action={action} className="space-y-6">
       <Input
@@ -346,6 +359,21 @@ export function CourseForm({
                   }
                   onChange={(patch) => updateTee(index, patch)}
                 />
+
+                {tee.slope_mens !== '' &&
+                  tee.course_rating_mens !== '' &&
+                  (tee.slope_ladies === '' ||
+                    tee.course_rating_ladies === '' ||
+                    tee.slope_juniors === '' ||
+                    tee.course_rating_juniors === '') && (
+                    <button
+                      type="button"
+                      onClick={() => copyMensToAllGenders(index)}
+                      className="block w-full text-center text-[11px] font-medium text-muted hover:text-text transition-colors py-1.5"
+                    >
+                      Kopier til alle kjønn
+                    </button>
+                  )}
 
                 {expandedLadies[index] ? (
                   <GenderRatingBlock

@@ -12,7 +12,25 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ## 1.31.y — Ryder Cup-stil cuper
 
-Fase 1 av [#47](https://github.com/jdlarssen/golf-app/issues/47). Du kan nå binde flere matchplay-runder sammen til én lag-vs-lag-cup, og følge fordelingen av point på et felles leaderboard.
+Fase 1 av [#47](https://github.com/jdlarssen/golf-app/issues/47). Du kan nå binde flere matchplay-runder sammen til én lag-vs-lag-cup, og følge fordelingen av point på et felles leaderboard. Patch på toppen ([#234](https://github.com/jdlarssen/golf-app/issues/234)): liten kopier-snarvei på tee-rating-skjemaet.
+
+### [1.31.1] - 2026-05-26
+
+> Du kan nå kopiere herrer-rating-en til damer og junior med ett klikk når du legger inn en ny bane eller redigerer en eksisterende. Knappen «Kopier til alle kjønn» dukker opp under herrer-feltene så snart slope og CR er fylt ut, og forsvinner igjen når begge andre kjønn har egne verdier. Justér gjerne etterpå om damene faktisk skal ha en annen slope.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- [app/admin/courses/CourseForm.tsx](app/admin/courses/CourseForm.tsx) `copyMensToAllGenders(index)` — én ny click-handler som setter `slope_ladies`/`course_rating_ladies`/`slope_juniors`/`course_rating_juniors` til herrer-verdiene og auto-ekspanderer kollapsede dame/junior-blokker. Tekst-lenke-stil-knapp (`text-[11px] text-muted hover:text-text`) rendres mellom herrer-blokken og dame-toggle-en, kun synlig når herrer er fullt utfylt og minst ett dame/junior-felt mangler verdi.
+- Seks nye Vitest-cases i [app/admin/courses/CourseForm.test.tsx](app/admin/courses/CourseForm.test.tsx) — dekker synlighet (herrer-tom, begge kjønn-fulle), klikk-ekspansjon med riktig verdi, overskriv-semantikk på allerede-fylte dame-felt, og per-tee uavhengighet i en to-tee-konfigurasjon.
+
+#### Notes
+- Overskriv-semantikk er bevisst: klikket setter alltid dame/junior til herrer-verdiene. Forenkler mental modell mot «fyll-bare-tomme»; admin kan justere etterpå hvis tallene faktisk skal være forskjellige (per issue-tekst).
+- `par_total` per kjønn kopieres ikke. Den er auto-beregnet fra hull-pars og er kun lese-verdi i `GenderRatingBlock`-fieldset-en.
+- Utsatt fra Fase 1 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223).
+
+</details>
 
 ### [1.31.0] - 2026-05-26
 

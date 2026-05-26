@@ -305,3 +305,184 @@ describe('CourseForm — typisk slope/CR-range hint', () => {
     expect(screen.queryByText('Typisk 115–140')).toBeNull();
   });
 });
+
+describe('CourseForm — kopier til alle kjønn', () => {
+  function teeWith(overrides: Partial<{
+    id: string;
+    name: string;
+    slope_mens: string;
+    course_rating_mens: string;
+    slope_ladies: string;
+    course_rating_ladies: string;
+    slope_juniors: string;
+    course_rating_juniors: string;
+  }>) {
+    return {
+      id: 'tee-1',
+      name: 'Gul',
+      length_meters: '',
+      slope_mens: '',
+      course_rating_mens: '',
+      slope_ladies: '',
+      course_rating_ladies: '',
+      slope_juniors: '',
+      course_rating_juniors: '',
+      ...overrides,
+    };
+  }
+
+  it('skjuler kopier-knappen så lenge herrer-rating ikke er fullt utfylt', () => {
+    render(
+      <CourseForm
+        action={NO_OP}
+        submitLabel="Lagre"
+        initialData={{
+          name: 'Test',
+          holes: makeHoles(Array(18).fill(4)),
+          teeBoxes: [teeWith({ slope_mens: '113', course_rating_mens: '' })],
+        }}
+      />,
+    );
+
+    expect(
+      screen.queryByRole('button', { name: /kopier til alle kjønn/i }),
+    ).toBeNull();
+  });
+
+  it('viser kopier-knappen når herrer er fullt utfylt og dame/junior er tomme', () => {
+    // Default-tee i CourseForm har herrer prefylt 113/70.0 og dame/junior tomme.
+    render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+
+    expect(
+      screen.getByRole('button', { name: /kopier til alle kjønn/i }),
+    ).toBeTruthy();
+  });
+
+  it('skjuler kopier-knappen når både dame og junior har full slope + CR', () => {
+    render(
+      <CourseForm
+        action={NO_OP}
+        submitLabel="Lagre"
+        initialData={{
+          name: 'Test',
+          holes: makeHoles(Array(18).fill(4)),
+          teeBoxes: [
+            teeWith({
+              slope_mens: '113',
+              course_rating_mens: '70.0',
+              slope_ladies: '120',
+              course_rating_ladies: '71.5',
+              slope_juniors: '108',
+              course_rating_juniors: '67.0',
+            }),
+          ],
+        }}
+      />,
+    );
+
+    expect(
+      screen.queryByRole('button', { name: /kopier til alle kjønn/i }),
+    ).toBeNull();
+  });
+
+  it('ekspanderer kollapsede dame/junior-blokker og fyller med herrer-verdier ved klikk', () => {
+    const { container } = render(<CourseForm action={NO_OP} submitLabel="Lagre" />);
+
+    // Default-state: herrer 113/70.0, dame+junior kollapset.
+    expect(screen.queryByText('Damer')).toBeNull();
+    expect(screen.queryByText('Junior')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /kopier til alle kjønn/i }));
+
+    expect(screen.getByText('Damer')).toBeTruthy();
+    expect(screen.getByText('Junior')).toBeTruthy();
+
+    const ladiesSlope = container.querySelector<HTMLInputElement>(
+      'input[name="tee_0_slope_ladies"]',
+    );
+    const ladiesCr = container.querySelector<HTMLInputElement>(
+      'input[name="tee_0_cr_ladies"]',
+    );
+    const juniorsSlope = container.querySelector<HTMLInputElement>(
+      'input[name="tee_0_slope_juniors"]',
+    );
+    const juniorsCr = container.querySelector<HTMLInputElement>(
+      'input[name="tee_0_cr_juniors"]',
+    );
+
+    expect(ladiesSlope?.value).toBe('113');
+    expect(ladiesCr?.value).toBe('70.0');
+    expect(juniorsSlope?.value).toBe('113');
+    expect(juniorsCr?.value).toBe('70.0');
+  });
+
+  it('overskriver eksisterende dame-verdier med herrer-verdiene', () => {
+    const { container } = render(
+      <CourseForm
+        action={NO_OP}
+        submitLabel="Lagre"
+        initialData={{
+          name: 'Test',
+          holes: makeHoles(Array(18).fill(4)),
+          teeBoxes: [
+            teeWith({
+              slope_mens: '113',
+              course_rating_mens: '70.0',
+              slope_ladies: '125',
+              course_rating_ladies: '72.5',
+              // Junior tom så knappen vises.
+            }),
+          ],
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /kopier til alle kjønn/i }));
+
+    const ladiesSlope = container.querySelector<HTMLInputElement>(
+      'input[name="tee_0_slope_ladies"]',
+    );
+    const ladiesCr = container.querySelector<HTMLInputElement>(
+      'input[name="tee_0_cr_ladies"]',
+    );
+    expect(ladiesSlope?.value).toBe('113');
+    expect(ladiesCr?.value).toBe('70.0');
+  });
+
+  it('skjuler kopier-knappen på den tee-en hvor klikket skjedde, men ikke på andre tee-er', () => {
+    render(
+      <CourseForm
+        action={NO_OP}
+        submitLabel="Lagre"
+        initialData={{
+          name: 'Test',
+          holes: makeHoles(Array(18).fill(4)),
+          teeBoxes: [
+            teeWith({
+              id: 'tee-1',
+              slope_mens: '113',
+              course_rating_mens: '70.0',
+            }),
+            teeWith({
+              id: 'tee-2',
+              slope_mens: '120',
+              course_rating_mens: '71.5',
+            }),
+          ],
+        }}
+      />,
+    );
+
+    const copyButtons = screen.getAllByRole('button', {
+      name: /kopier til alle kjønn/i,
+    });
+    expect(copyButtons).toHaveLength(2);
+
+    fireEvent.click(copyButtons[0]);
+
+    const remaining = screen.getAllByRole('button', {
+      name: /kopier til alle kjønn/i,
+    });
+    expect(remaining).toHaveLength(1);
+  });
+});
