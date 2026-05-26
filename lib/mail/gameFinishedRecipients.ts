@@ -10,6 +10,7 @@ import { computeLeaderboard } from '@/lib/scoring';
 import type {
   GameMode,
   GameModeConfig,
+  ScoringGender,
 } from '@/lib/scoring/modes/types';
 import { firstName } from '@/lib/firstName';
 import type { GameFinishedNotificationMode } from './gameFinishedNotification';
@@ -61,13 +62,14 @@ export async function buildGameFinishedRecipients(
   const { data: playerRows, error: playerErr } = await supabase
     .from('game_players')
     .select(
-      'user_id, team_number, course_handicap, users!game_players_user_id_fkey(email, name)',
+      'user_id, team_number, tee_gender, course_handicap, users!game_players_user_id_fkey(email, name)',
     )
     .eq('game_id', gameId)
     .returns<
       {
         user_id: string;
         team_number: number | null;
+        tee_gender: ScoringGender;
         course_handicap: number | null;
         users: { email: string | null; name: string | null } | null;
       }[]
@@ -169,10 +171,21 @@ export async function buildGameFinishedRecipients(
       teamNumber: row.team_number,
       flightNumber: null,
       courseHandicap: row.course_handicap ?? 0,
+      // #240 — stableford-poeng per spiller skal bruke per-kjønn-par når
+      // dame/junior har avvikende hull-par. parFor() leser av tabellen
+      // basert på teeGender.
+      teeGender: row.tee_gender,
     })),
     holes: (holesRes.data ?? []).map((h) => ({
       number: h.hole_number,
       par: h.par_mens,
+      // #240 — full per-kjønn-par-tabell. Lik for alle kjønn = ingen effekt;
+      // avvikende = scoring-modulen velger riktig variant per spiller.
+      parByGender: {
+        mens: h.par_mens,
+        ladies: h.par_ladies,
+        juniors: h.par_juniors,
+      },
       strokeIndex: h.stroke_index,
     })),
     scores: (scoresRes.data ?? []).map((s) => ({
@@ -312,6 +325,7 @@ async function buildMatchplayRecipients(
   playerRows: {
     user_id: string;
     team_number: number | null;
+    tee_gender: ScoringGender;
     course_handicap: number | null;
     users: { email: string | null; name: string | null } | null;
   }[],
@@ -350,10 +364,19 @@ async function buildMatchplayRecipients(
       teamNumber: row.team_number,
       flightNumber: null,
       courseHandicap: row.course_handicap ?? 0,
+      // #240 — per-side par på matchplay-hull leses fra parFor(hole, side.teeGender).
+      teeGender: row.tee_gender,
     })),
     holes: (holesRes.data ?? []).map((h) => ({
       number: h.hole_number,
       par: h.par_mens,
+      // #240 — per-kjønn-par-tabell. Matchplay-modulen leser per-side-par via
+      // parFor() når sidene har ulik teeGender og hullet har avvik.
+      parByGender: {
+        mens: h.par_mens,
+        ladies: h.par_ladies,
+        juniors: h.par_juniors,
+      },
       strokeIndex: h.stroke_index,
     })),
     scores: (scoresRes.data ?? []).map((s) => ({
@@ -469,6 +492,7 @@ async function buildSoloStrokeplayRecipients(
   playerRows: {
     user_id: string;
     team_number: number | null;
+    tee_gender: ScoringGender;
     course_handicap: number | null;
     users: { email: string | null; name: string | null } | null;
   }[],
@@ -507,10 +531,20 @@ async function buildSoloStrokeplayRecipients(
       teamNumber: row.team_number,
       flightNumber: null,
       courseHandicap: row.course_handicap ?? 0,
+      // #240 — solo strokeplay ranker på netto-slag, men teeGender sendes
+      // gjennom for shape-konsistens med øvrige modi og fremtidig UI-bruk.
+      teeGender: row.tee_gender,
     })),
     holes: (holesRes.data ?? []).map((h) => ({
       number: h.hole_number,
       par: h.par_mens,
+      // #240 — per-kjønn-par-tabell. Solo strokeplay leser i hovedsak ikke
+      // par direkte (ranker på netto), men holdes konsistent på shape-laget.
+      parByGender: {
+        mens: h.par_mens,
+        ladies: h.par_ladies,
+        juniors: h.par_juniors,
+      },
       strokeIndex: h.stroke_index,
     })),
     scores: (scoresRes.data ?? []).map((s) => ({
@@ -581,6 +615,7 @@ async function buildTexasScrambleRecipients(
   playerRows: {
     user_id: string;
     team_number: number | null;
+    tee_gender: ScoringGender;
     course_handicap: number | null;
     users: { email: string | null; name: string | null } | null;
   }[],
@@ -619,10 +654,21 @@ async function buildTexasScrambleRecipients(
       teamNumber: row.team_number,
       flightNumber: null,
       courseHandicap: row.course_handicap ?? 0,
+      // #240 — Texas spiller én ball per lag, så par per hull avgjøres av
+      // lag-kapteinens tee_gender (lex-min userId). texasScramble-modulen
+      // plukker kaptein-varianten — vi sender per-spiller teeGender.
+      teeGender: row.tee_gender,
     })),
     holes: (holesRes.data ?? []).map((h) => ({
       number: h.hole_number,
       par: h.par_mens,
+      // #240 — per-kjønn-par-tabell. Texas-modulen velger kaptein-varianten
+      // via parFor() ved per-hull-utregning.
+      parByGender: {
+        mens: h.par_mens,
+        ladies: h.par_ladies,
+        juniors: h.par_juniors,
+      },
       strokeIndex: h.stroke_index,
     })),
     scores: (scoresRes.data ?? []).map((s) => ({
