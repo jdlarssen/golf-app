@@ -95,4 +95,73 @@ describe('parseNotificationPayload', () => {
       ).toThrow();
     });
   });
+
+  describe('selv-påmelding kinds (issue #199)', () => {
+    const validUuid = '11111111-1111-1111-1111-111111111111';
+    const validShortId = 'k7m3p9qx';
+
+    it('team_invite krever game_short_id i 8-char base36-format', () => {
+      const result = parseNotificationPayload('team_invite', {
+        game_id: validUuid,
+        game_short_id: validShortId,
+        game_name: 'Sommercup',
+        team_name: 'Skogen',
+        invited_by_name: 'Per',
+        request_id: validUuid,
+      });
+      expect(result.payload.team_name).toBe('Skogen');
+    });
+
+    it('avviser team_invite med ugyldig short_id (uppercase)', () => {
+      expect(() =>
+        parseNotificationPayload('team_invite', {
+          game_id: validUuid,
+          game_short_id: 'K7M3P9QX',
+          game_name: 'X',
+          team_name: 'Y',
+          invited_by_name: 'Z',
+          request_id: validUuid,
+        }),
+      ).toThrow();
+    });
+
+    it('registration_request aksepterer med valgfri message', () => {
+      const result = parseNotificationPayload('registration_request', {
+        game_id: validUuid,
+        game_name: 'Klubbcup',
+        requester_name: 'Per',
+        request_id: validUuid,
+        message: 'Gleder meg!',
+      });
+      expect(result.payload.requester_name).toBe('Per');
+    });
+
+    it('registration_approved krever bare game_id og game_name', () => {
+      const result = parseNotificationPayload('registration_approved', {
+        game_id: validUuid,
+        game_name: 'Vinterklassikeren',
+      });
+      expect(result.payload.game_name).toBe('Vinterklassikeren');
+    });
+
+    it('registration_rejected aksepterer valgfri reason', () => {
+      const result = parseNotificationPayload('registration_rejected', {
+        game_id: validUuid,
+        game_name: 'Klubbcup',
+        reason: 'Spillet er fullt',
+      });
+      expect(result.payload.reason).toBe('Spillet er fullt');
+    });
+
+    it('team_member_withdrew krever short_id + withdrawn_player_name', () => {
+      const result = parseNotificationPayload('team_member_withdrew', {
+        game_id: validUuid,
+        game_short_id: validShortId,
+        game_name: 'Sommercup',
+        withdrawn_player_name: 'Per',
+        team_name: 'Skogen',
+      });
+      expect(result.payload.withdrawn_player_name).toBe('Per');
+    });
+  });
 });

@@ -133,16 +133,38 @@ function buildDeeplink(notification: NotificationRow): string {
     const p = notification.payload as NotificationPayload<'product_update'>;
     return p.link ?? '/innboks';
   }
-  const gameId = (notification.payload as NotificationPayload<'invite'>).game_id;
   switch (notification.kind) {
     case 'invite':
     case 'scorecard_approved':
-      return `/games/${gameId}`;
-    case 'peer_approval_request':
-      return `/games/${gameId}/approve`;
-    case 'scorecard_submitted':
-      return `/admin/games/${gameId}`;
-    case 'game_finished':
-      return `/games/${gameId}/leaderboard`;
+    case 'registration_approved': {
+      const p = notification.payload as NotificationPayload<'invite'>;
+      return `/games/${p.game_id}`;
+    }
+    case 'peer_approval_request': {
+      const p = notification.payload as NotificationPayload<'peer_approval_request'>;
+      return `/games/${p.game_id}/approve`;
+    }
+    case 'scorecard_submitted': {
+      const p = notification.payload as NotificationPayload<'scorecard_submitted'>;
+      return `/admin/games/${p.game_id}`;
+    }
+    case 'game_finished': {
+      const p = notification.payload as NotificationPayload<'game_finished'>;
+      return `/games/${p.game_id}/leaderboard`;
+    }
+    case 'team_invite': {
+      const p = notification.payload as NotificationPayload<'team_invite'>;
+      return `/påmelding/${p.game_short_id}/team`;
+    }
+    case 'registration_request': {
+      const p = notification.payload as NotificationPayload<'registration_request'>;
+      return `/admin/games/${p.game_id}/påmeldinger`;
+    }
+    case 'registration_rejected':
+      return '/innboks';
+    case 'team_member_withdrew': {
+      const p = notification.payload as NotificationPayload<'team_member_withdrew'>;
+      return `/påmelding/${p.game_short_id}/team`;
+    }
   }
 }

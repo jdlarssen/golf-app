@@ -11,7 +11,12 @@ export type NotificationKind =
   | 'scorecard_submitted'
   | 'scorecard_approved'
   | 'game_finished'
-  | 'product_update';
+  | 'product_update'
+  | 'team_invite'
+  | 'registration_request'
+  | 'registration_approved'
+  | 'registration_rejected'
+  | 'team_member_withdrew';
 
 // `z.guid()` aksepterer enhver UUID-shaped string (8-4-4-4-12 hex), inkludert
 // nil-UUID og ikke-versjonerte kanoniske test-sentinels som "11111111-...".
@@ -62,6 +67,53 @@ const productUpdateSchema = z.object({
   cta_label: z.string().min(1).optional(),
 });
 
+// Selv-påmelding payload-skjemaer (issue #199).
+
+// team_invite: kapteinen ber en kjent Tørny-bruker bli med i lag.
+// request_id peker til game_registration_requests-raden invitéen kan akseptere/avslå.
+// game_short_id er nødvendig for å deeplinke til /påmelding/[shortId]/team.
+const teamInviteSchema = z.object({
+  game_id: uuid,
+  game_short_id: z.string().regex(/^[0-9a-z]{8}$/),
+  game_name: z.string().min(1),
+  team_name: z.string().min(1),
+  invited_by_name: z.string().min(1),
+  request_id: uuid,
+});
+
+// registration_request: noen ba om å bli med i et manual_approval-spill.
+// Sendes til admin/creator. request_id deeplinker til godkjennings-siden.
+const registrationRequestSchema = z.object({
+  game_id: uuid,
+  game_name: z.string().min(1),
+  requester_name: z.string().min(1),
+  request_id: uuid,
+  message: z.string().optional(),
+});
+
+// registration_approved: admin godkjente forespørsel. Til søker.
+const registrationApprovedSchema = z.object({
+  game_id: uuid,
+  game_name: z.string().min(1),
+});
+
+// registration_rejected: admin avslo forespørsel. Til søker.
+const registrationRejectedSchema = z.object({
+  game_id: uuid,
+  game_name: z.string().min(1),
+  reason: z.string().optional(),
+});
+
+// team_member_withdrew: medspiller trakk seg pre-start. Til kaptein.
+// game_short_id for deeplink til /påmelding/[shortId]/team for å invitere ny medspiller.
+const teamMemberWithdrewSchema = z.object({
+  game_id: uuid,
+  game_short_id: z.string().regex(/^[0-9a-z]{8}$/),
+  game_name: z.string().min(1),
+  withdrawn_player_name: z.string().min(1),
+  team_name: z.string().min(1),
+});
+
 const schemas = {
   invite: inviteSchema,
   peer_approval_request: peerApprovalRequestSchema,
@@ -69,6 +121,11 @@ const schemas = {
   scorecard_approved: scorecardApprovedSchema,
   game_finished: gameFinishedSchema,
   product_update: productUpdateSchema,
+  team_invite: teamInviteSchema,
+  registration_request: registrationRequestSchema,
+  registration_approved: registrationApprovedSchema,
+  registration_rejected: registrationRejectedSchema,
+  team_member_withdrew: teamMemberWithdrewSchema,
 } as const;
 
 export type NotificationPayload<K extends NotificationKind = NotificationKind> =

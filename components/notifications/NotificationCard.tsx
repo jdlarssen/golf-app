@@ -27,6 +27,11 @@ const EMOJI: Record<NotificationKind, string> = {
   scorecard_approved: '✅',
   game_finished: '🏆',
   product_update: '✨',
+  team_invite: '🤝',
+  registration_request: '📩',
+  registration_approved: '🎉',
+  registration_rejected: '🚫',
+  team_member_withdrew: '👋',
 };
 
 /**
@@ -152,6 +157,41 @@ function buildCardContent(
       return {
         title: p.title,
         detail: p.body,
+      };
+    }
+    case 'team_invite': {
+      const p = payload as NotificationPayload<'team_invite'>;
+      return {
+        title: `${p.invited_by_name} vil ha deg i ${p.team_name}`,
+        detail: p.game_name,
+      };
+    }
+    case 'registration_request': {
+      const p = payload as NotificationPayload<'registration_request'>;
+      return {
+        title: `${p.requester_name} vil bli med`,
+        detail: p.game_name,
+      };
+    }
+    case 'registration_approved': {
+      const p = payload as NotificationPayload<'registration_approved'>;
+      return {
+        title: `Du er med i ${p.game_name}`,
+        detail: 'Påmeldingen er godkjent',
+      };
+    }
+    case 'registration_rejected': {
+      const p = payload as NotificationPayload<'registration_rejected'>;
+      return {
+        title: `Søknad til ${p.game_name}`,
+        detail: p.reason ?? 'Påmeldingen ble dessverre ikke godkjent',
+      };
+    }
+    case 'team_member_withdrew': {
+      const p = payload as NotificationPayload<'team_member_withdrew'>;
+      return {
+        title: `${p.withdrawn_player_name} trakk seg`,
+        detail: `${p.team_name} i ${p.game_name}`,
       };
     }
   }
