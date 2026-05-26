@@ -49,6 +49,7 @@ const MODE_SUMMARY_LABELS: Record<GameMode, string> = {
   singles_matchplay: 'Singles matchplay',
   solo_strokeplay_netto: 'Solo slagspill netto',
   texas_scramble: 'Texas scramble',
+  fourball_matchplay: 'Four-ball matchplay',
 };
 
 function teamSizeLabel(size: TeamSize): string {

@@ -81,7 +81,8 @@ type GameRow = {
     | 'stableford'
     | 'singles_matchplay'
     | 'solo_strokeplay_netto'
-    | 'texas_scramble';
+    | 'texas_scramble'
+    | 'fourball_matchplay';
   /**
    * Mode-spesifikk config fra `games.mode_config` (JSONB). Type-en speilet
    * fra `GameForHole` slik at scorecardTitle() kan resolve riktig tittel/

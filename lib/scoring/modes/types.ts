@@ -7,7 +7,8 @@ export type GameMode =
   | 'stableford'
   | 'singles_matchplay'
   | 'solo_strokeplay_netto'
-  | 'texas_scramble';
+  | 'texas_scramble'
+  | 'fourball_matchplay';
 
 /**
  * Norske visnings-labels for hver spillmodus. Brukes av ModeChip i admin-
@@ -21,6 +22,7 @@ export const MODE_LABELS: Record<GameMode, string> = {
   singles_matchplay: 'Matchplay',
   solo_strokeplay_netto: 'Slagspill',
   texas_scramble: 'Texas scramble',
+  fourball_matchplay: 'Fourball',
 };
 
 /**
@@ -61,7 +63,8 @@ export type GameModeConfig =
       team_size: 2 | 4;
       teams_count: number;
       team_handicap_pct: number;
-    };
+    }
+  | { kind: 'fourball_matchplay'; team_size: 2; teams_count: 2 };
 
 /**
  * Tee-gender på spiller-nivå. Matcher `game_players.tee_gender`-enum-en
@@ -508,6 +511,143 @@ export interface TexasScrambleResult {
   teams: TexasScrambleTeamLine[];
 }
 
+// -----------------------------------------------------------------------------
+// Four-ball matchplay (issue #217, fase 2 av #47).
+//
+// 2v2 matchplay der hver spiller har egen ball, lagets score per hull = beste
+// av to spilleres netto-score, sammenlikn lag1.best vs lag2.best som matchplay.
+// Gjenbruker:
+//  - `bestBallForHole(players)` for «best av to per hull»-aggregering
+//  - `classifyMatchplayHole(side1Net, side2Net)` for per-hull-utfall (mater den
+//    med lag-best-netto i stedet for individuell-netto)
+//  - `computeMatchResult(holesUp, holesPlayed, holesRemaining)` for match-status
+//    + format-strengen («3&2», «AS», «2up») — identisk semantikk med singles
+//
+// Allowance-pipeline: `compute()` leser `mode_config` for å hente cup-bredt
+// allowance, kaller `applyAllowance(player.courseHandicap, pct)` per spiller før
+// SI-allokering. 0% = brutto (gross-only matchplay).
+//
+// Re-bruker `MatchplayHoleResult` og `MatchplayMatchResult` fra singles-modusen
+// — match-resultat-format-en er identisk.
+// -----------------------------------------------------------------------------
+
+/**
+ * Per-spiller-detalj på et fourball-hull. `isContributor` flagger spillere som
+ * hadde lag-best netto-score på hullet (kan være begge ved tie — speiler
+ * `BestBallPlayerCell`-mønsteret).
+ */
+export interface FourballPlayerCell {
+  userId: string;
+  gross: number | null;
+  /** Extra strokes for hullet fra SI-allokering (etter allowance). */
+  extraStrokes: number;
+  /** Netto = gross − extra. Null hvis gross er null. */
+  net: number | null;
+  isContributor: boolean;
+  /**
+   * Spillerens par for hullet (`parFor(hole, player.teeGender)`). Eksponeres
+   * slik at blandet-kjønn-par på hull med per-kjønn-overstyring kan vises
+   * korrekt. #240.
+   */
+  par: number;
+}
+
+/**
+ * Per-hull-rad i en four-ball matchplay-match. Inneholder begge siders 2
+ * spillere med per-spiller-detalj, lag-best-netto per side, og hvem som vant
+ * hullet. `unplayed` = ingen partner på minst én side har gross.
+ */
+export interface FourballHoleRow {
+  holeNumber: number;
+  /**
+   * Bevart for backward-compat. Sett lik `side1Par` slik at konsumenter som
+   * tidligere leste én felles par-verdi fortsatt fungerer. UI-laget bør bruke
+   * `side1Par`/`side2Par` direkte ved blandet-kjønn-par.
+   */
+  par: number;
+  /**
+   * Per-side par fra `parFor(hole, side.teeGender)`. Når begge sider har
+   * samme teeGender (eller hullet ikke har parByGender) er `side1Par === side2Par`.
+   * #240. For fourball bruker vi første medlem på hver side som side-representant.
+   */
+  side1Par: number;
+  side2Par: number;
+  strokeIndex: number;
+  /** Per-spiller-detalj for side 1 (alltid 2 spillere). */
+  side1Players: FourballPlayerCell[];
+  /** Per-spiller-detalj for side 2 (alltid 2 spillere). */
+  side2Players: FourballPlayerCell[];
+  /**
+   * Lag-best netto per side. Null hvis ingen av partnerne har gross på hullet.
+   * Best-ball-tradisjon: én partner med gross er nok — lag-best er den ene
+   * spillerens netto, hullet teller som spilt for siden. Hullet er kun
+   * `unplayed` når begge sider mangler best.
+   */
+  side1BestNet: number | null;
+  side2BestNet: number | null;
+  /** UserIds som hadde lag-best netto. Tom-array når siden er unplayed. */
+  side1ContributorIds: string[];
+  side2ContributorIds: string[];
+  /** Hvem vant hullet via `classifyMatchplayHole(side1BestNet, side2BestNet)`. */
+  result: MatchplayHoleResult;
+}
+
+/**
+ * Én av de to sidene i en four-ball matchplay-match. `sideNumber` 1 eller 2
+ * matcher `game_players.team_number`. Inneholder alltid 2 spillere.
+ */
+export interface FourballSide {
+  /** 1 eller 2 — matcher game_players.team_number for fourball-spillere. */
+  sideNumber: 1 | 2;
+  /** Begge partnere, sortert deterministisk på userId for stabil UI. */
+  players: [FourballSidePlayer, FourballSidePlayer];
+}
+
+/**
+ * Spiller-detalj på en fourball-side. `effectiveHandicap` reflekterer
+ * `applyAllowance(courseHandicap, mode_config.allowance_pct)` — det er denne
+ * verdien som brukes til SI-allokering.
+ */
+export interface FourballSidePlayer {
+  userId: string;
+  /** Raw CH før allowance, bevart for transparens. */
+  courseHandicap: number;
+  /** Etter `applyAllowance(courseHandicap, allowance_pct)`. */
+  effectiveHandicap: number;
+  /**
+   * Sidens spillers tee-gender (fra `game_players.tee_gender`). Brukes til
+   * `parFor(hole, teeGender)` på hull med per-kjønn-overstyring. Default
+   * `'mens'` når undefined. #240.
+   */
+  teeGender?: ScoringGender;
+}
+
+/**
+ * Resultat fra `fourballMatchplay.compute()`. Speiler `SinglesMatchplayResult`
+ * tett — eneste forskjell er 2 spillere per side og per-hull lag-best i tillegg
+ * til per-spiller-detalj. `result`-feltet og match-format-strenger («3&2»,
+ * «AS», «2up») er identisk med singles.
+ */
+export interface FourballMatchplayResult {
+  kind: 'fourball_matchplay';
+  /** Tuple: alltid to sider, sortert side 1 så side 2. */
+  sides: [FourballSide, FourballSide];
+  holes: FourballHoleRow[];
+  /** side1-hull-vinst − side2-hull-vinst. Positiv = side 1 up. */
+  holesUp: number;
+  /** Antall hull der begge sider har lag-best (= avgjorte hull, inklusiv tied). */
+  holesPlayed: number;
+  /** `max(0, 18 − holesPlayed)`. */
+  holesRemaining: number;
+  /**
+   * `null` = matchen er ikke avgjort ennå.
+   * Et `MatchplayMatchResult`-objekt = mat-em eller spilt 18 hull. Format-
+   * strengene («3&2», «AS», «2up») er identisk med singles via gjenbruk av
+   * `computeMatchResult`.
+   */
+  result: MatchplayMatchResult | null;
+}
+
 /**
  * Discriminated union — konsumenter narrower på `kind`:
  *   const r = computeLeaderboard(ctx);
@@ -530,4 +670,5 @@ export type ModeResult =
   | StablefordResult
   | SinglesMatchplayResult
   | SoloStrokeplayResult
-  | TexasScrambleResult;
+  | TexasScrambleResult
+  | FourballMatchplayResult;

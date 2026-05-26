@@ -56,6 +56,7 @@ const ENABLED_COMBOS: Record<GameMode, ReadonlySet<TeamSize>> = {
   singles_matchplay: new Set<TeamSize>([1]),
   solo_strokeplay_netto: new Set<TeamSize>([1]),
   texas_scramble: new Set<TeamSize>([2, 4]),
+  fourball_matchplay: new Set<TeamSize>([2]),
 };
 
 type TileDef = {

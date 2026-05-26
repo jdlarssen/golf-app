@@ -11,6 +11,7 @@
 //   - singles_matchplay      → modes/singlesMatchplay.ts (epic #45)
 //   - solo_strokeplay_netto  → modes/soloStrokeplayNetto.ts (epic #46)
 //   - texas_scramble         → modes/texasScramble.ts (issue #44)
+//   - fourball_matchplay     → modes/fourballMatchplay.ts (issue #217, fase 2 av #47)
 //
 // Re-eksporterer felles helpers (computeCourseHandicap, allocateStrokes,
 // resolveTiebreak) slik at andre konsumenter kan importere via
@@ -21,6 +22,7 @@ import * as stableford from './modes/stableford';
 import * as singlesMatchplay from './modes/singlesMatchplay';
 import * as soloStrokeplayNetto from './modes/soloStrokeplayNetto';
 import * as texasScramble from './modes/texasScramble';
+import * as fourballMatchplay from './modes/fourballMatchplay';
 import type { ScoringContext, ModeResult } from './modes/types';
 
 export function computeLeaderboard(ctx: ScoringContext): ModeResult {
@@ -35,6 +37,8 @@ export function computeLeaderboard(ctx: ScoringContext): ModeResult {
       return soloStrokeplayNetto.compute(ctx);
     case 'texas_scramble':
       return texasScramble.compute(ctx);
+    case 'fourball_matchplay':
+      return fourballMatchplay.compute(ctx);
   }
 }
 
@@ -74,4 +78,9 @@ export type {
   TexasScrambleTeamLine,
   TexasScrambleHoleRow,
   TexasScramblePlayerCell,
+  FourballMatchplayResult,
+  FourballSide,
+  FourballSidePlayer,
+  FourballHoleRow,
+  FourballPlayerCell,
 } from './modes/types';

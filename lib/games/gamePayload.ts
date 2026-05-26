@@ -233,7 +233,8 @@ function parseGameMode(formData: FormData): GameMode | null {
     raw === 'stableford' ||
     raw === 'singles_matchplay' ||
     raw === 'solo_strokeplay_netto' ||
-    raw === 'texas_scramble'
+    raw === 'texas_scramble' ||
+    raw === 'fourball_matchplay'
   )
     return raw;
   return null;
@@ -693,6 +694,18 @@ function parseTexasHandicapPct(formData: FormData): number | null {
   return n;
 }
 
+/**
+ * Stub for fourball_matchplay-validator. Erstattes med full implementasjon i
+ * chunk 4. Inntil da returnerer den `min_players_for_mode` så publish blokkeres
+ * — UI-en eksponerer ikke modusen ennå.
+ */
+function validateFourballMatchplayStub(
+  _formData: FormData,
+  _mode: PayloadMode,
+): ModeValidationResult {
+  return { ok: false, errorCode: 'min_players_for_mode' };
+}
+
 const modeValidators: Record<
   GameMode,
   (formData: FormData, mode: PayloadMode) => ModeValidationResult
@@ -702,6 +715,7 @@ const modeValidators: Record<
   singles_matchplay: validateSinglesMatchplay,
   solo_strokeplay_netto: validateSoloStrokeplayNetto,
   texas_scramble: validateTexasScramble,
+  fourball_matchplay: validateFourballMatchplayStub,
 };
 
 /**
