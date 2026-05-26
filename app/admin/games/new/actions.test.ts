@@ -30,6 +30,14 @@ vi.mock('next/navigation', () => ({
   redirect: (url: string) => redirectMock(url),
 }));
 
+const notifyInvitedToGameMock = vi.fn<
+  (...args: unknown[]) => Promise<void>
+>(async () => undefined);
+vi.mock('@/lib/notifications/notifyInvitedToGame', () => ({
+  notifyInvitedToGame: (...args: unknown[]) =>
+    notifyInvitedToGameMock(...args),
+}));
+
 let supabaseMock: ReturnType<typeof buildSupabaseMock>;
 vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
@@ -343,5 +351,125 @@ describe('createAndPublishGame', () => {
     const rows = playersInsertCall!.args[0] as Array<{ team_number: number | null; flight_number: number | null }>;
     expect(rows.every((r) => r.team_number === null)).toBe(true);
     expect(rows.every((r) => r.flight_number === null)).toBe(true);
+  });
+});
+
+describe('backfill invite-notify (#182)', () => {
+  it('publish: fyrer notifyInvitedToGame for hver ny spiller, skipper inviter-self', async () => {
+    // Inviter-en (admin-1) er IKKE på spillerlista. 8 spillere skal varsles.
+    const completedRoster = Array.from({ length: 8 }, (_, i) => ({
+      id: `u${i}`,
+      email: `u${i}@example.com`,
+      profile_completed_at: '2026-01-01T00:00:00Z',
+    }));
+
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: completedRoster, error: null },
+      { data: { id: 'game-with-notify' }, error: null },
+      { data: null, error: null },
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { createAndPublishGame } = await import('./actions');
+    await expect(
+      createAndPublishGame(fullPublishFormData()),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(notifyInvitedToGameMock).toHaveBeenCalledTimes(8);
+    for (let i = 0; i < 8; i++) {
+      expect(notifyInvitedToGameMock).toHaveBeenCalledWith({
+        recipientUserId: `u${i}`,
+        gameId: 'game-with-notify',
+        inviterUserId: 'admin-1',
+      });
+    }
+  });
+
+  it('publish med admin på rosteren: notify fyres for de andre, ikke admin selv', async () => {
+    // admin-1 er nå spiller u0 — den raden skal IKKE få varsel.
+    const completedRoster = Array.from({ length: 8 }, (_, i) => ({
+      id: i === 0 ? 'admin-1' : `u${i}`,
+      email: i === 0 ? 'admin@tornygolf.no' : `u${i}@example.com`,
+      profile_completed_at: '2026-01-01T00:00:00Z',
+    }));
+
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: completedRoster, error: null },
+      { data: { id: 'game-admin-plays' }, error: null },
+      { data: null, error: null },
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1', email: 'admin@tornygolf.no' } },
+    });
+
+    const formWithAdminAsPlayer = fullPublishFormData({
+      player_0_id: 'admin-1',
+    });
+
+    const { createAndPublishGame } = await import('./actions');
+    await expect(
+      createAndPublishGame(formWithAdminAsPlayer),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(notifyInvitedToGameMock).toHaveBeenCalledTimes(7);
+    const calledIds = notifyInvitedToGameMock.mock.calls.map(
+      (c) => (c[0] as { recipientUserId: string }).recipientUserId,
+    );
+    expect(calledIds).not.toContain('admin-1');
+  });
+
+  it('game-creation lykkes selv om notify-helperen kaster', async () => {
+    // notifyInvitedToGame skal aldri kaste (intern try/catch), men test
+    // for defence-in-depth — Promise.allSettled fanger eventuell rejection.
+    notifyInvitedToGameMock.mockRejectedValueOnce(new Error('boom'));
+
+    const completedRoster = Array.from({ length: 8 }, (_, i) => ({
+      id: `u${i}`,
+      email: `u${i}@example.com`,
+      profile_completed_at: '2026-01-01T00:00:00Z',
+    }));
+
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: completedRoster, error: null },
+      { data: { id: 'game-notify-rejected' }, error: null },
+      { data: null, error: null },
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { createAndPublishGame } = await import('./actions');
+    await expect(
+      createAndPublishGame(fullPublishFormData()),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    // Redirect treffer success-stien — game-creation har lykkes til tross
+    // for at notify-kallet rejecter.
+    expect(lastRedirect()).toBe(
+      '/admin/games/game-notify-rejected?status=scheduled',
+    );
+  });
+
+  it('draft uten spillere: ingen notify-kall fyres', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: { id: 'empty-draft' }, error: null },
+      { data: null, error: null },
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { createGameDraft } = await import('./actions');
+    await expect(
+      createGameDraft(fd({ name: 'Tom-cup', side_tournament_enabled: 'false' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
   });
 });

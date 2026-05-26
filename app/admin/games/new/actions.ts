@@ -9,6 +9,7 @@ import {
 } from '@/lib/games/gamePayload';
 import { findPendingPlayers } from '@/lib/games/pendingPlayers';
 import { parseSideTournamentFromFormData } from '@/lib/games/sideTournamentPayload';
+import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 // Course handicap is no longer frozen at create-time: the new flow has the
 // admin press "Start runden nå" (D5) to flip 'scheduled' → 'active' and
 // freeze handicaps then. Until D5 lands, scheduled rows persist with
@@ -144,6 +145,26 @@ async function createGameInternal(
   });
   const { error: gpError } = await supabase.from('game_players').insert(rows);
   if (gpError) redirect('/admin/games/new?error=db_players');
+
+  // Best-effort `invite`-varsler for hver tilkommet spiller (skip inviter
+  // selv — de vet allerede de opprettet spillet). Promise.allSettled så én
+  // feilet notify ikke ruller back game-creation. notifyInvitedToGame
+  // swallow-er sine egne feil, men vi wrapper inn allSettled for defence-
+  // in-depth ved eventuelle endringer i helperen.
+  const newPlayerIds = rows
+    .map((r) => r.user_id)
+    .filter((id) => id !== userId);
+  if (newPlayerIds.length > 0) {
+    await Promise.allSettled(
+      newPlayerIds.map((recipientUserId) =>
+        notifyInvitedToGame({
+          recipientUserId,
+          gameId: game!.id,
+          inviterUserId: userId,
+        }),
+      ),
+    );
+  }
 
   redirect(
     `/admin/games/${game!.id}?status=${mode === 'publish' ? 'scheduled' : 'draft_created'}`,
