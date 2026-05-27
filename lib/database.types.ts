@@ -481,6 +481,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           ended_at: string | null
+          foursomes_side1_tee_starter_user_id: string | null
+          foursomes_side2_tee_starter_user_id: string | null
           game_mode: string
           hcp_allowance_pct: number
           id: string
@@ -507,6 +509,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           ended_at?: string | null
+          foursomes_side1_tee_starter_user_id?: string | null
+          foursomes_side2_tee_starter_user_id?: string | null
           game_mode: string
           hcp_allowance_pct?: number
           id?: string
@@ -533,6 +537,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           ended_at?: string | null
+          foursomes_side1_tee_starter_user_id?: string | null
+          foursomes_side2_tee_starter_user_id?: string | null
           game_mode?: string
           hcp_allowance_pct?: number
           id?: string
@@ -565,6 +571,20 @@ export type Database = {
           {
             foreignKeyName: "games_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "games_foursomes_side1_tee_starter_user_id_fkey"
+            columns: ["foursomes_side1_tee_starter_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "games_foursomes_side2_tee_starter_user_id_fkey"
+            columns: ["foursomes_side2_tee_starter_user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -867,6 +887,7 @@ export type Database = {
           created_by: string
           finished_at: string | null
           fourball_allowance_pct: number
+          foursomes_allowance_pct: number
           id: string
           name: string
           points_to_win: number
@@ -881,6 +902,7 @@ export type Database = {
           created_by: string
           finished_at?: string | null
           fourball_allowance_pct?: number
+          foursomes_allowance_pct?: number
           id?: string
           name: string
           points_to_win: number
@@ -895,6 +917,7 @@ export type Database = {
           created_by?: string
           finished_at?: string | null
           fourball_allowance_pct?: number
+          foursomes_allowance_pct?: number
           id?: string
           name?: string
           points_to_win?: number
