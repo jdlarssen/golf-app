@@ -113,6 +113,15 @@ export function CupSetup({ cupEligibleFormats }: Props) {
         bruttoHelperText="Ingen handicap — laveste gross-score per hull per side vinner. Vanlig format på ekte Ryder Cup."
       />
 
+      <AllowanceField
+        fieldName="foursomes_allowance_pct"
+        defaultPct={50}
+        legend="Scoring for foursomes-matches"
+        description="Styrer handicap for foursomes-matches (alternate shot). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets gross-slag uten allowance."
+        nettoHelperText="Andel av differansen i lagenes summerte handicap som høyeste lag får som strokes. WHS-standard for foursomes matchplay er 50."
+        bruttoHelperText="Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+      />
+
       <fieldset>
         <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
           Tillatte match-formats

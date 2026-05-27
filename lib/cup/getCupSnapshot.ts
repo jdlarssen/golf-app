@@ -2,6 +2,7 @@ import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { compute as computeSinglesMatchplay } from '@/lib/scoring/modes/singlesMatchplay';
 import { compute as computeFourballMatchplay } from '@/lib/scoring/modes/fourballMatchplay';
+import { compute as computeFoursomesMatchplay } from '@/lib/scoring/modes/foursomesMatchplay';
 import type { ScoringContext } from '@/lib/scoring/modes/types';
 import type { GameStatus } from '@/lib/games/status';
 import {
@@ -317,18 +318,72 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
       }
     }
 
-    // Navn-label per side: singles bruker enkelt-navn, fourball joiner med «/».
-    // Defensiv: tom side rendres som «Ukjent spiller» via preferredName.
+    // Foursomes matchplay (#218): 2 spillere per side, én ball per lag
+    // (kaptein-pattern), WHS-diff-allowance. Henter allowance_pct fra
+    // games.mode_config (defaulter til 50 hvis manglende — WHS-standard).
+    if (
+      game.game_mode === 'foursomes_matchplay' &&
+      side1Players.length === 2 &&
+      side2Players.length === 2
+    ) {
+      const modeConfig = (game.mode_config ?? null) as {
+        kind?: string;
+        allowance_pct?: number;
+      } | null;
+      const allowancePct =
+        modeConfig && typeof modeConfig.allowance_pct === 'number'
+          ? modeConfig.allowance_pct
+          : 50;
+      const ctx: ScoringContext = {
+        game: {
+          id: game.id,
+          game_mode: 'foursomes_matchplay',
+          mode_config: {
+            kind: 'foursomes_matchplay',
+            team_size: 2,
+            teams_count: 2,
+            allowance_pct: allowancePct,
+          },
+        },
+        players: [...side1Players, ...side2Players].map((p) => ({
+          userId: p.user_id,
+          teamNumber: p.team_number,
+          flightNumber: null,
+          courseHandicap: p.course_handicap ?? 0,
+        })),
+        holes,
+        scores: gScores.map((s) => ({
+          userId: s.user_id,
+          holeNumber: s.hole_number,
+          gross: s.strokes,
+        })),
+      };
+      const r = computeFoursomesMatchplay(ctx);
+      if (r.result) {
+        const winnerSide: 1 | 2 | 'tied' =
+          r.result.winner === 'side1' ? 1 : r.result.winner === 'side2' ? 2 : 'tied';
+        result = { winnerSide, formatted: r.result.formatted };
+      }
+    }
+
+    // Navn-label per side: singles bruker enkelt-navn, fourball/foursomes
+    // joiner med «/». Defensiv: tom side rendres som «Ukjent spiller»
+    // via preferredName.
     const team1Label = formatSideLabel(side1Players);
     const team2Label = formatSideLabel(side2Players);
 
     // Bevart for backward-compat: typesikker fallback hvis future game_mode
-    // skulle vises i en cup. Per d.d. kun singles_matchplay og
-    // fourball_matchplay er gyldige.
-    const matchGameMode: 'singles_matchplay' | 'fourball_matchplay' =
+    // skulle vises i en cup. Per d.d. er singles_matchplay,
+    // fourball_matchplay og foursomes_matchplay gyldige.
+    const matchGameMode:
+      | 'singles_matchplay'
+      | 'fourball_matchplay'
+      | 'foursomes_matchplay' =
       game.game_mode === 'fourball_matchplay'
         ? 'fourball_matchplay'
-        : 'singles_matchplay';
+        : game.game_mode === 'foursomes_matchplay'
+          ? 'foursomes_matchplay'
+          : 'singles_matchplay';
 
     matchInputs.push({
       gameId: game.id,
