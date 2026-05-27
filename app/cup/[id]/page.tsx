@@ -149,12 +149,14 @@ export default async function PublicCupPage({ params }: { params: Params }) {
                               ? 'Halvert (AS)'
                               : m.result.winnerSide === 1
                                 ? `${m.result.formatted} til ${
-                                    m.gameMode === 'fourball_matchplay'
+                                    m.gameMode === 'fourball_matchplay' ||
+                                    m.gameMode === 'foursomes_matchplay'
                                       ? tournament.team_1_name
                                       : m.team1PlayerName
                                   }`
                                 : `${m.result.formatted} til ${
-                                    m.gameMode === 'fourball_matchplay'
+                                    m.gameMode === 'fourball_matchplay' ||
+                                    m.gameMode === 'foursomes_matchplay'
                                       ? tournament.team_2_name
                                       : m.team2PlayerName
                                   }`}
