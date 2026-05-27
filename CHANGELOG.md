@@ -21,6 +21,25 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#266](https://github.com/jdlarssen/golf-app/issues/266), oppfølger til [#217](https://github.com/jdlarssen/golf-app/issues/217). Bryteren som fourball-flyten fikk i forrige runde rulles ut til alle spillmodi: stableford, slagspill, singles matchplay, best ball og Texas scramble har nå samme valg mellom netto (med prosent-andel av handicap) og brutto (uten handicap). Mode-navnene er ryddet opp samtidig — `best_ball_netto` og `solo_strokeplay_netto` mister `_netto`-suffixet siden de nå kan spilles begge veier.
 
+### [1.39.1] - 2026-05-27
+
+> Klargjort under panseret for en mye større format-katalog. Du ser ingenting nytt i appen ennå — alt blir aktivert etter hvert som de nye spilltypene lander.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- [supabase/migrations/0047_formats_and_intent_mapping.sql](supabase/migrations/0047_formats_and_intent_mapping.sql) — `formats`-tabell som master-katalog over spilltyper (slug, display_name, icon_key, scoring_module, is_active, is_cup_eligible) og `format_intent_mapping`-tabell for admin-styrt wizard-placement per intent (kompis/klubb/solo). RLS: read for alle authenticated, write kun for admin. CHECK-constraint `primary_implies_visible` på mapping-tabellen. Seeded de 6 eksisterende formats — stableford, best_ball, texas_scramble, solo_strokeplay, singles_matchplay (cup-eligible) og fourball_matchplay (cup-eligible) — med default mapping.
+- [lib/formats/getFormatsForIntent.ts](lib/formats/getFormatsForIntent.ts) — tag-cached server-helper som henter synlige formats for en intent, sortert primary-først. `getCupEligibleFormats()`-helper for Cup step-2-pickeren. Begge tagget `format-mapping` for invalidasjon fra senere admin-mutasjoner.
+- [lib/formats/validateGameMode.ts](lib/formats/validateGameMode.ts) — `isValidActiveGameMode(slug)` for server-action-validering ved opprettelse av nye games (erstatter DB-CHECK).
+
+#### Removed
+- `games_mode_check`-CHECK-constraint på `public.games`. Server-action-validering tar over fordi `formats`-tabellen er ny sannhets-kilde — hver fremtidig format-issue trenger kun en INSERT i `formats`, ingen CHECK-rebuild. Constraint-en ble re-bygget av migrasjon 0046; 0047 dropper den til fordel for formats-katalogen.
+
+Foundation for epic [#270](https://github.com/jdlarssen/golf-app/issues/270) (intent-først wizard-redesign). Issuet: [#271](https://github.com/jdlarssen/golf-app/issues/271).
+
+</details>
+
 ### [1.39.0] - 2026-05-27
 
 > Du kan nå spille brutto (uten handicap) i alle spillmodi — ikke bare fourball. Nytt valg øverst i «Format»-seksjonen lar deg bytte mellom netto (med en andel av handicap) og brutto (ingen handicap). Stableford, slagspill, singles matchplay, best ball og Texas scramble har nå samme bryter som fourball fikk i forrige runde.

@@ -92,28 +92,30 @@ create policy format_intent_mapping_admin_write
 alter table public.games
   drop constraint if exists games_mode_check;
 
--- 6. Seed eksisterende 5 formats
+-- 6. Seed eksisterende 6 formats (etter #266 netto-suffix-drop og #217 fourball)
 insert into public.formats (slug, display_name, icon_key, short_description, scoring_module, is_active, is_cup_eligible) values
-  ('stableford',            'Stableford',     'stableford',            'Solo, poeng vs par. Klassisk klubb-format.',          '@/lib/scoring/modes/stableford',          true, false),
-  ('best_ball_netto',       'Best ball',      'best_ball_netto',       'Lag à 2, beste netto per hull.',                       '@/lib/scoring/modes/bestBall',            true, false),
-  ('texas_scramble',        'Texas scramble', 'texas_scramble',        'Lag à 4. Alle slår, beste velges.',                    '@/lib/scoring/modes/texasScramble',       true, false),
-  ('solo_strokeplay_netto', 'Slagspill',      'solo_strokeplay_netto', 'Individuell, lavest total vinner.',                    '@/lib/scoring/modes/soloStrokeplayNetto', true, false),
-  ('singles_matchplay',     'Matchplay',      'singles_matchplay',     '1v1, vinn flest hull.',                                '@/lib/scoring/modes/singlesMatchplay',    true, true);
+  ('stableford',         'Stableford',         'stableford',         'Solo, poeng vs par. Klassisk klubb-format.',           '@/lib/scoring/modes/stableford',         true,  false),
+  ('best_ball',          'Best ball',          'best_ball',          'Lag à 2, beste netto per hull.',                        '@/lib/scoring/modes/bestBall',           true,  false),
+  ('texas_scramble',     'Texas scramble',     'texas_scramble',     'Lag à 4. Alle slår, beste velges.',                     '@/lib/scoring/modes/texasScramble',      true,  false),
+  ('solo_strokeplay',    'Slagspill',          'solo_strokeplay',    'Individuell, lavest total vinner.',                     '@/lib/scoring/modes/soloStrokeplay',     true,  false),
+  ('singles_matchplay',  'Matchplay',          'singles_matchplay',  '1v1, vinn flest hull.',                                 '@/lib/scoring/modes/singlesMatchplay',   true,  true),
+  ('fourball_matchplay', 'Fourball matchplay', 'fourball_matchplay', '2v2 best-ball matchplay. Hvert lag har to spillere.',   '@/lib/scoring/modes/fourballMatchplay',  true,  true);
 
 -- 7. Seed default format_intent_mapping per design-doc-tabellen
 insert into public.format_intent_mapping (format_slug, intent, is_visible, is_primary, sort_order) values
   -- Stableford: primary under Kompis, Klubb, Solo
-  ('stableford',            'kompis', true,  true,  10),
-  ('stableford',            'klubb',  true,  true,  10),
-  ('stableford',            'solo',   true,  true,  10),
-  -- Best Ball Netto: primary under Kompis, Klubb
-  ('best_ball_netto',       'kompis', true,  true,  20),
-  ('best_ball_netto',       'klubb',  true,  true,  20),
+  ('stableford',        'kompis', true,  true,  10),
+  ('stableford',        'klubb',  true,  true,  10),
+  ('stableford',        'solo',   true,  true,  10),
+  -- Best Ball: primary under Kompis, Klubb
+  ('best_ball',         'kompis', true,  true,  20),
+  ('best_ball',         'klubb',  true,  true,  20),
   -- Texas Scramble: sekundær under Kompis, primary under Klubb
-  ('texas_scramble',        'kompis', true,  false, 30),
-  ('texas_scramble',        'klubb',  true,  true,  30),
+  ('texas_scramble',    'kompis', true,  false, 30),
+  ('texas_scramble',    'klubb',  true,  true,  30),
   -- Solo Strokeplay: primary under Klubb og Solo
-  ('solo_strokeplay_netto', 'klubb',  true,  true,  40),
-  ('solo_strokeplay_netto', 'solo',   true,  true,  20),
+  ('solo_strokeplay',   'klubb',  true,  true,  40),
+  ('solo_strokeplay',   'solo',   true,  true,  20),
   -- Singles matchplay: sekundær under Kompis (cup-eligibility håndteres via formats.is_cup_eligible)
-  ('singles_matchplay',     'kompis', true,  false, 40);
+  ('singles_matchplay', 'kompis', true,  false, 40);
+  -- Fourball matchplay: ikke synlig i wizard-step-2 (kun cup-bruk per is_cup_eligible)
