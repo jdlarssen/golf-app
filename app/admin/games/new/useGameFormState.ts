@@ -113,10 +113,17 @@ export function cryptoShuffle<T>(input: T[]): T[] {
   return arr;
 }
 
+import type { Intent } from '@/lib/wizard/intent';
+
 type UseGameFormStateInput = {
   initialValues?: InitialValues;
   players: PlayerOption[];
   courses: CourseOption[];
+  // F2 foundation (#272): wizard step 1 setter intent via URL eller bruker-
+  // klikk. Tom = wizard viser intent-pickeren først. Cup-link fra
+  // /admin/cup/[id] forhåndsvelger 'cup'. Ikke konsumert i denne chunken —
+  // bare plumbet gjennom så senere chunks kan render IntentSelector.
+  initialIntent?: Intent;
 };
 
 /**
@@ -130,7 +137,13 @@ export function useGameFormState({
   initialValues,
   players,
   courses,
+  initialIntent,
 }: UseGameFormStateInput) {
+  // F2 foundation (#272): intent-state for wizard step 1. Initialiseres fra
+  // URL via page.tsx → wizard → her. Settbar via setIntent når bruker
+  // klikker intent-kort i IntentSelector. Ikke validert mot game_mode ennå
+  // — sjekken kommer når FormatGrid/CupSetup lander.
+  const [intent, setIntent] = useState<Intent | undefined>(initialIntent);
   // `name` is controlled now (was uncontrolled) so initialValues can pre-fill
   // it on the edit page (D4). Default to '' when not provided.
   const [name, setName] = useState<string>(initialValues?.name ?? '');
@@ -834,6 +847,8 @@ export function useGameFormState({
     setSideEnabled,
     gameMode,
     teamSize,
+    intent,
+    setIntent,
     registrationMode,
     setRegistrationMode,
     registrationType,

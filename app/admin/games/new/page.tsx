@@ -15,12 +15,16 @@ import {
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
 import { getServerClient } from '@/lib/supabase/server';
+import { parseIntent, type Intent } from '@/lib/wizard/intent';
 
 type SearchParams = Promise<{
   error?: string | string[];
   emails?: string | string[];
   tournament_id?: string | string[];
   game_mode?: string | string[];
+  // F2 foundation (#272): wizard step 1 leser dette og pre-velger intent.
+  // Cup-link fra /admin/cup/[id] vil sette intent=cup. Direkte URL kan også.
+  intent?: string | string[];
 }>;
 
 /**
@@ -68,6 +72,13 @@ export default async function NewGamePage({
     ? await loadCupContext(tournamentIdParam, requestedCupMode)
     : null;
 
+  // F2 foundation (#272): URL-drevet intent for wizard step 1. Cup-link
+  // overstyrer alltid til 'cup' (en cup-link er per definisjon en
+  // cup-arrangement-flyt). Andre intents leses fra ?intent=.
+  const initialIntent: Intent | undefined = cupContext
+    ? 'cup'
+    : parseIntent(first(sp.intent));
+
   return (
     <AdminShell>
       <TopBar
@@ -111,7 +122,7 @@ export default async function NewGamePage({
       <div className="mt-5">
         <Card>
           <Suspense fallback={<GameFormSkeleton />}>
-            <GameFormBody cupContext={cupContext} />
+            <GameFormBody cupContext={cupContext} initialIntent={initialIntent} />
           </Suspense>
         </Card>
       </div>
@@ -198,7 +209,13 @@ async function PlayerShortageBanner() {
   );
 }
 
-async function GameFormBody({ cupContext }: { cupContext: CupContext | null }) {
+async function GameFormBody({
+  cupContext,
+  initialIntent,
+}: {
+  cupContext: CupContext | null;
+  initialIntent: Intent | undefined;
+}) {
   const { courses, players } = await getNewGameFormData();
   return (
     <GameWizard
@@ -212,6 +229,7 @@ async function GameFormBody({ cupContext }: { cupContext: CupContext | null }) {
       initialValues={
         cupContext ? buildCupInitialValues(cupContext) : undefined
       }
+      initialIntent={initialIntent}
     />
   );
 }

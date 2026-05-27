@@ -23,6 +23,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
+import type { Intent } from '@/lib/wizard/intent';
 import { ModeSelector } from './ModeSelector';
 import { TeamSizeSelector } from './TeamSizeSelector';
 import { useGameFormState } from './useGameFormState';
@@ -49,6 +50,9 @@ type Props = {
   players: PlayerOption[];
   mode: GameFormMode;
   initialValues?: InitialValues;
+  // F2 foundation (#272): cup-link og direkte URL kan pre-velge intent.
+  // Senere chunks vil rendere IntentSelector i step 1 når intent er undefined.
+  initialIntent?: Intent;
 };
 
 const STEP_TITLES: Record<Step, string> = {
@@ -70,7 +74,13 @@ function parseViewFromSearch(sp: URLSearchParams): 'wizard' | 'full' {
   return sp.get('view') === 'full' ? 'full' : 'wizard';
 }
 
-export function GameWizard({ courses, players, mode, initialValues }: Props) {
+export function GameWizard({
+  courses,
+  players,
+  mode,
+  initialValues,
+  initialIntent,
+}: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -90,7 +100,7 @@ export function GameWizard({ courses, players, mode, initialValues }: Props) {
     !!initialValues?.name && initialValues.name.trim() !== '',
   );
 
-  const state = useGameFormState({ initialValues, players, courses });
+  const state = useGameFormState({ initialValues, players, courses, initialIntent });
 
   // Når bruker går fram/tilbake via browser, oppdateres `searchParams`. Vi
   // reconciler lokal state til URL — men kun når URL-strengen faktisk er
