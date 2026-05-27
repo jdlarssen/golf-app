@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import {
   BaneIcon,
   FlaggIcon,
+  FormatsIcon,
   KonvoluttIcon,
   PokalIcon,
   SparkleIcon,
@@ -172,7 +173,7 @@ function GreetingSkeleton({ dateLine }: { dateLine: string }) {
 
 // ─── Tile grid ───────────────────────────────────────────────────────────
 
-type TileIconKind = 'flagg' | 'konvolutt' | 'bane' | 'pokal' | 'sparkle';
+type TileIconKind = 'flagg' | 'konvolutt' | 'bane' | 'pokal' | 'sparkle' | 'formats';
 type Tile = {
   label: string;
   href: string;
@@ -298,6 +299,15 @@ async function TilesGrid() {
               ? 'Ingen aktive'
               : `${activeCupCount} aktiv${activeCupCount === 1 ? '' : 'e'}`,
           icon: 'pokal',
+        },
+        // F3 (#273): admin format-mapping. Mappings + cup-eligibility +
+        // active-flagg styres herfra. Meta er statisk (vi har ingen tellbar
+        // KPI per d.d. — kan utvides hvis vi vil vise antall aktive formats).
+        {
+          label: 'Formats',
+          href: '/admin/formats',
+          meta: 'Styr spillformene i wizarden',
+          icon: 'formats',
         },
       ]
     : [banerTile];
@@ -572,5 +582,6 @@ function TileIcon({ kind }: { kind: TileIconKind }) {
   if (kind === 'konvolutt') return <KonvoluttIcon width={22} height={22} />;
   if (kind === 'bane') return <BaneIcon width={22} height={22} />;
   if (kind === 'sparkle') return <SparkleIcon width={22} height={22} />;
+  if (kind === 'formats') return <FormatsIcon width={22} height={22} />;
   return <PokalIcon width={22} height={22} />;
 }

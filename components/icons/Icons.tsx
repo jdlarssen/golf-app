@@ -136,3 +136,20 @@ export const SparkleIcon = ({ size, ...rest }: IconProps) => (
     <path d="M 5.5 4 L 5.9 5.4 L 7.3 5.8 L 5.9 6.2 L 5.5 7.6 L 5.1 6.2 L 3.7 5.8 L 5.1 5.4 Z" />
   </svg>
 );
+
+// F3 (#273): admin format-mapping-tile-ikon. 3x3-grid med to celler fylt
+// signalerer matrix-view + on/off-toggle. Currentcolor, 1.5 stroke som
+// resten av iconsettet.
+export const FormatsIcon = ({ size, ...rest }: IconProps) => (
+  <svg {...base(size)} {...rest}>
+    <rect x="3" y="3" width="5" height="5" rx="1" />
+    <rect x="10" y="3" width="5" height="5" rx="1" fill="currentColor" />
+    <rect x="17" y="3" width="4" height="5" rx="1" />
+    <rect x="3" y="10" width="5" height="5" rx="1" fill="currentColor" />
+    <rect x="10" y="10" width="5" height="5" rx="1" />
+    <rect x="17" y="10" width="4" height="5" rx="1" fill="currentColor" />
+    <rect x="3" y="17" width="5" height="4" rx="1" />
+    <rect x="10" y="17" width="5" height="4" rx="1" />
+    <rect x="17" y="17" width="4" height="4" rx="1" fill="currentColor" />
+  </svg>
+);

@@ -19,4 +19,5 @@ export {
   KalenderIcon,
   ReplayIcon,
   SparkleIcon,
+  FormatsIcon,
 } from './Icons';

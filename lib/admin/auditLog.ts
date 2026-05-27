@@ -11,7 +11,11 @@ export type AdminAuditEventType =
   | 'game.finished'
   | 'game.reopened'
   | 'scorecard.approved'
-  | 'scorecard.reopened';
+  | 'scorecard.reopened'
+  // F3 (#273): admin endrer format-mapping eller aktivitet/cup-eligibility.
+  // Payload bærer `format_slug`, `intent` (eller null), `change_type`,
+  // `before`/`after` (delvis state).
+  | 'format_mapping_change';
 
 /**
  * Record an admin action to the audit log. Best-effort: insert failures are
