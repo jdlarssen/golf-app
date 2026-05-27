@@ -17,7 +17,51 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.42.y — Foursomes matchplay (Ryder Cup fase 3)
+
+Issue [#218](https://github.com/jdlarssen/golf-app/issues/218), fase 3 av [#47](https://github.com/jdlarssen/golf-app/issues/47). Foursomes matchplay (2v2 alternate-shot — én ball per lag, partnerne alternerer slag) er klar for cupen. Lagene møtes hull-for-hull som matchplay, og scorekortet viser dere mot dem hele veien. Tee-rotasjonen avtales av flighten på hull 1.
+
+### [1.42.0] - 2026-05-27
+
+> Foursomes matchplay er klar for cupen. To og to spillere deler én ball og alternerer slag — laget med best score per hull vinner hullet. Før hull 1 velger flighten hvem på hver side som skal teer ut først, så ruller appen med riktig «X slår ut»-hint per hull. WHS-handicapen er forhåndsvalgt til 50 % av differansen mellom lagene; admin kan justere per cup.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- Migrasjon [0048_foursomes_matchplay.sql](supabase/migrations/0048_foursomes_matchplay.sql) — seeder `foursomes_matchplay` i `formats`-tabellen som cup-eligible. Legger til `tournaments.foursomes_allowance_pct` (smallint, default 50, check 0..100) og to nye nullable FK-er på `games`: `foursomes_side1_tee_starter_user_id` + `foursomes_side2_tee_starter_user_id`. Storage-pattern A: ingen skjema-endring på `scores` — kaptein-userId (lex-min per side) eier lagets scores-rader, samme mønster som Texas scramble. Resten av alternate-shot-familien ([#289 Greensome](https://github.com/jdlarssen/golf-app/issues/289), [#290 Chapman](https://github.com/jdlarssen/golf-app/issues/290), [#291 Gruesome](https://github.com/jdlarssen/golf-app/issues/291)) adopterer samme mønster.
+- [`lib/scoring/modes/foursomesMatchplay.ts`](lib/scoring/modes/foursomesMatchplay.ts) — ny scoring-modul med WHS-diff-formel: `highSideExtraHCP = round(|side1CombinedCH - side2CombinedCH| × allowance_pct / 100)`, lavlaget får 0 strokes, høylaget får extra-HCP allokert via SI (hardeste hull først). Gjenbruker `pickTeamCaptain`, `classifyMatchplayHole`, `computeMatchResult`, `strokesForHole`. 16 unit-tester dekker HCP-diff, mat-em («3&2»), AS, 18-hull-vinner («2up»), unplayed-hole, allowance 0/100, mixed-tee parByGender, empty-shell (0/1/3 spillere), captain-pick, holesPlayed-correctness.
+- [`app/games/[id]/foursomesActions.ts`](app/games/[id]/foursomesActions.ts) — ny `setFoursomesTeeStarter`-server-action med side-membership-validering på både kaller og valgt user, write til riktig `foursomes_side{N}_tee_starter_user_id`-kolonne, revalidateTag på game-id.
+- [`FoursomesTeeStarterBanner`](app/games/[id]/holes/[holeNumber]/FoursomesTeeStarterBanner.tsx) — klient-banner på hull 1 når sidens tee-starter ikke er valgt, viser to navn-knapper som ruter til server-actionen via `useTransition`. `FoursomesTeeHint` viser per hull «X slår ut» basert på odd/even-hull (standard foursomes-rotasjon).
+
+#### Changed
+- [`GameMode`, `MODE_LABELS`, `GameModeConfig`, `ModeResult`](lib/scoring/modes/types.ts) utvidet med `foursomes_matchplay` + tilhørende result-shapes (`FoursomesSide`, `FoursomesSidePlayer`, `FoursomesHoleRow`, `FoursomesMatchplayResult`). Mode-router-case wired i [lib/scoring/index.ts](lib/scoring/index.ts).
+- [`lib/games/gamePayload.ts`](lib/games/gamePayload.ts): ny `validateFoursomesMatchplay`-validator (speiler fourball: 2v2-fordeling, duplikat-sjekk, range-validert `foursomes_allowance_pct` med default 50 i draft). `parseGameMode` + `modeValidators`-map utvidet. 14 nye gamePayload-tester.
+- [`lib/cup/getCupSnapshot.ts`](lib/cup/getCupSnapshot.ts): foursomes-gren etter fourball — `computeFoursomesMatchplay` mater cup-aggregatoren med `{ winnerSide, formatted }`. `matchGameMode`-typen utvidet. [`computeCupLeaderboard.CupMatchInput.gameMode`](lib/cup/computeCupLeaderboard.ts) tar `'foursomes_matchplay'` så cup-UI kan velge lag-fokusert «X til Lag Skog» (matchet i `app/cup/[id]/page.tsx` og `app/admin/cup/[id]/page.tsx`).
+- [`lib/cup/actions.ts`](lib/cup/actions.ts): cup-create/edit-form persisterer ny `foursomes_allowance_pct` (parser med range 0..100, default 50). `CupSetup` får en ny `AllowanceField` for foursomes som forklarer WHS-diff-formelen i nettoHelper/bruttoHelper.
+- [`app/admin/games/new/page.tsx`](app/admin/games/new/page.tsx): `CupGameMode` utvidet med `foursomes_matchplay`. `loadCupContext` leser `foursomes_allowance_pct` (default 50) og setter labelPrefix='Foursomes'. `buildCupInitialValues` har egen gren for foursomes så match-en arver cup-en sin allowance.
+- [`useGameFormState`](app/admin/games/new/useGameFormState.ts), [`GameWizard`](app/admin/games/new/GameWizard.tsx) og [`GameForm`](app/admin/games/new/GameForm.tsx) eksponerer `foursomesAllowancePct` + dedikert `AllowanceField` i Section 3 + hidden input i submit-payload.
+- [`lib/games/scorecardLayout.ts`](lib/games/scorecardLayout.ts): ny `mode === 'foursomes_matchplay'`-gren produserer 2-kolonne Layout B (én per side, kaptein-userId som score-eier, lag-display «Per/Knut»). `courseHandicap` per kolonne = WHS-effective ekstra-HCP. Match-status faller gjennom til singles' 2-kolonne `computeMatchplayRunningStatus`-grenen uten endring. Ny `isFoursomes`-flag på `ScorecardLayout`.
+- [`app/admin/cup/[id]/page.tsx`](app/admin/cup/[id]/page.tsx): ny «+ Foursomes match»-knapp ved siden av singles/fourball; grid blir 3-kolonner på `sm+`.
+- [`app/games/[id]/holes/[holeNumber]/page.tsx`](app/games/[id]/holes/[holeNumber]/page.tsx): foursomes-flight collapses til én lag-kort (Texas-pattern). Tee-starter-banner rendres over `HoleClient` på hull 1 når valget ikke er gjort; hint vises på alle hull etter at valget er låst. [`getGameWithPlayers`](lib/games/getGameWithPlayers.ts) SELECT-en leser nå `foursomes_side1/2_tee_starter_user_id` via cache.
+- Exhaustive-map-utvidelser i [`ReadyStep`](app/admin/games/new/sections/ReadyStep.tsx), [`TeamSizeSelector`](app/admin/games/new/TeamSizeSelector.tsx), [`bruttoHelperFor`](lib/games/allowanceCopy.ts) og lokale GameRow-unions i [`app/games/[id]/page.tsx`](app/games/[id]/page.tsx) — strukturelle konsekvenser av å utvide `GameMode`-unionen.
+
+#### Tests
+- 16 `foursomesMatchplay.test.ts`-cases (Type A).
+- 14 nye gamePayload-cases for foursomes-validatoren.
+- 3 nye `scorecardLayout.test.ts`-cases (happy 2v2 med WHS-diff, non-captain ser kaptein som score-eier, ikke-2-2 → Layout A fallback).
+- 10 nye `foursomesActions.test.ts`-cases (server-action authz + happy path).
+
+Dette er første format i alternate-shot-familien som lander i prod; mønstret (storage-pattern A + Layout B head-to-head + diff-basert allowance + per-game tee-starter-felt) gjenbrukes i [#289 Greensome](https://github.com/jdlarssen/golf-app/issues/289), [#290 Chapman](https://github.com/jdlarssen/golf-app/issues/290) og [#291 Gruesome](https://github.com/jdlarssen/golf-app/issues/291) når de implementeres.
+
+</details>
+
+---
+
 ## 1.41.y — Admin format-mapping (Fase 3 av format-katalog-epic)
+
+<details>
+<summary><strong>1.41.y — Admin format-mapping (1 oppføring) — klikk for å vise</strong></summary>
 
 Issue [#273](https://github.com/jdlarssen/golf-app/issues/273), fase 3 av [#270](https://github.com/jdlarssen/golf-app/issues/270). Ny admin-side `/admin/formats` med matrix-view for å styre hvilke spillformer som dukker opp i wizardens step 2 — uten å trenge en kode-deploy. Hver endring logges til `admin_audit_log` og synes i bunnen av siden.
 
@@ -46,6 +90,8 @@ Issue [#273](https://github.com/jdlarssen/golf-app/issues/273), fase 3 av [#270]
 - 4 Type C render-tester: `FormatsManager.test.tsx` (matrix + tabs + action-dispatching), `RowStatusChip.test.tsx`, `AuditLogList.test.tsx` (entries + empty-state).
 
 Foundation for epic [#270](https://github.com/jdlarssen/golf-app/issues/270) — siste fase. F1 (datamodell), F2 (intent-først wizard) og F3 (admin-mapping) sammen gir kompletten katalog-styrings-løype.
+
+</details>
 
 </details>
 
