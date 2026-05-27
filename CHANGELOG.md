@@ -17,7 +17,44 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.41.y — Admin format-mapping (Fase 3 av format-katalog-epic)
+
+Issue [#273](https://github.com/jdlarssen/golf-app/issues/273), fase 3 av [#270](https://github.com/jdlarssen/golf-app/issues/270). Ny admin-side `/admin/formats` med matrix-view for å styre hvilke spillformer som dukker opp i wizardens step 2 — uten å trenge en kode-deploy. Hver endring logges til `admin_audit_log` og synes i bunnen av siden.
+
+### [1.41.0] - 2026-05-27
+
+> Ny side i Sekretariatet: «Formats». Som admin kan du nå styre hvilke spillformer som dukker opp i wizardens step 2 per arrangement, hvilke som er primary (stort kort) og hvilke som er cup-eligible. Endringene blir synlige neste gang noen åpner wizarden, og du ser de siste 50 endringene loggført nederst på siden.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- [`/admin/formats`](app/admin/formats/page.tsx) — server-component med admin-gate, leser `getAllFormatsWithMappings()` + `getFormatMappingAudit(50)`, rendrer `FormatsManager` + `AuditLogList`. Mobil viser 3 intent-tabs (Kompis/Klubb/Solo) + cup-accordion; desktop viser full matrix med stjerne+hake per celle.
+- [`lib/formats/getAllFormatsWithMappings.ts`](lib/formats/getAllFormatsWithMappings.ts) — admin-view-helper som henter ALLE formats + ALLE mapping-rader (inkl. is_visible=false / is_active=false). Ikke `unstable_cache`-d siden admin skal se fersk state etter mutasjon.
+- [`lib/formats/audit.ts`](lib/formats/audit.ts) — `recordFormatMappingChange()` (wrapper rundt `logAdminEvent` med F3-spesifikt payload) + `getFormatMappingAudit(limit)` (leser `admin_audit_log` filtrert på `event_type='format_mapping_change'`).
+- [`app/admin/formats/actions.ts`](app/admin/formats/actions.ts) — 4 server-actions: `toggleVisibility`, `togglePrimary`, `toggleCupEligible`, `toggleActive`. Hver er idempotent (no-op hvis `next === current`), validerer server-side (siste primary kan ikke fjernes; ikke-synlig primary er ikke lov), skriver audit-rad, og kaller `revalidateTag('format-mapping', 'max')` så wizarden ser oppdatert state.
+- [`FormatsManager`](app/admin/formats/FormatsManager.tsx) — client-komponent som eier `useOptimistic`-state for hele matrix + cup-section + active-flags. Renderer både desktop matrix og mobile tabs i samme DOM via Tailwind responsive klasser. Server-action submission kjøres i `startTransition` — React rollback-er state automatisk ved feil.
+- [`AuditLogList`](app/admin/formats/AuditLogList.tsx) — siste 50 endringer med norsk visningstekst per change-type. Accordion på mobil, åpen seksjon på desktop.
+- [`RowStatusChip`](app/admin/formats/RowStatusChip.tsx) — Aktiv/Inaktiv/Ny pill med klikk-handler for active-toggle.
+- [`FormatsIcon`](components/icons/Icons.tsx) — ny 3×3-grid-ikon i samme stil som resten av iconset-en, brukt på admin-tile.
+
+#### Changed
+- [`app/admin/page.tsx`](app/admin/page.tsx) — ny «Formats»-tile i admin-grid (admin-only), pekes på `/admin/formats`. Eksisterende tile-mønster bevart.
+- [`lib/admin/auditLog.ts`](lib/admin/auditLog.ts) — `AdminAuditEventType`-union utvidet med `'format_mapping_change'`.
+
+#### Tests
+- 4 Type C render-tester: `FormatsManager.test.tsx` (matrix + tabs + action-dispatching), `RowStatusChip.test.tsx`, `AuditLogList.test.tsx` (entries + empty-state).
+
+Foundation for epic [#270](https://github.com/jdlarssen/golf-app/issues/270) — siste fase. F1 (datamodell), F2 (intent-først wizard) og F3 (admin-mapping) sammen gir kompletten katalog-styrings-løype.
+
+</details>
+
+---
+
 ## 1.40.y — Intent-først wizard (Fase 2 av format-katalog-epic)
+
+<details>
+<summary><strong>1.40.y — Intent-først wizard (1 oppføring) — klikk for å vise</strong></summary>
 
 Issue [#272](https://github.com/jdlarssen/golf-app/issues/272), fase 2 av [#270](https://github.com/jdlarssen/golf-app/issues/270). «Sett opp ny runde» starter nå med et arrangement-valg (Kompis / Klubb / Cup / Solo) som filtrerer spillformene i neste steg. Cup-flyten er smeltet inn som ett av de fire valgene — den separate «Opprett ny Cup»-knappen er borte, alt skjer fra samme inngang.
 
@@ -42,6 +79,8 @@ Issue [#272](https://github.com/jdlarssen/golf-app/issues/272), fase 2 av [#270]
 
 #### Tests
 - 14 GameWizard-render-tester oppdatert til 5-stegs flyt + ny cup-intent-test. Mode-navigasjon i hver test starter nå med intent-valg + format-valg før bane/spillere/klar.
+
+</details>
 
 </details>
 
