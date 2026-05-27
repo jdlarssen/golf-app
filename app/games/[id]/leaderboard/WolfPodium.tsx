@@ -1,0 +1,351 @@
+'use client';
+
+import { useEffect, useState, type JSX } from 'react';
+import { SmartLink } from '@/components/ui/SmartLink';
+import { AppShell } from '@/components/ui/AppShell';
+import { Kicker } from '@/components/ui/Kicker';
+import { PullQuote } from '@/components/ui/PullQuote';
+import { Medallion } from '@/components/ui/Medallion';
+import { LeaderboardBackdrop } from '@/components/illustrations/LeaderboardBackdrop';
+import { formatRevealName } from '@/lib/names/formatRevealName';
+import type { WolfResult, WolfPlayerLine } from '@/lib/scoring/modes/types';
+import { ConfettiBurst } from './ConfettiBurst';
+import type { WolfPlayerInfo } from './WolfView';
+
+// Distinkt sessionStorage-prefiks fra andre podium-er — verifisert ved at det
+// inneholder ordet 'wolf' så vi ikke kolliderer med solo-stableford eller
+// solo-strokeplay sine prefikser.
+const STORAGE_PREFIX = 'torny-wolf-podium-confetti-seen-';
+
+export interface WolfPodiumProps {
+  /** Spill-id — brukes til sessionStorage-nøkkel + drilldown. */
+  gameId: string;
+  /** Turneringsnavn — vises som kicker i header. */
+  gameName: string;
+  /**
+   * Resultat fra `lib/scoring/modes/wolf.compute()`.
+   * Caller må narrowe på `kind === 'wolf'` før propen sendes inn.
+   */
+  result: WolfResult;
+  /** Spillerinfo per userId for å rendre navn + kallenavn. */
+  playersById: Map<string, WolfPlayerInfo>;
+  /** Hvor pilen tilbake skal peke. Defaults til spillets hjem. */
+  backHref?: string;
+}
+
+/**
+ * Finished-state view for Wolf — feirings-view ved
+ * `game.status === 'finished'`. Speilar `SoloStrokeplayPodium` tett med
+ * disse forskjellene:
+ *   - Hoved-tallet er `totalPoints` (poeng, ikke slag).
+ *   - Sub-tittel: «Wolf · Pakke-leder kåret».
+ *   - Tagline-strip under podiet: «Mest Wolf-hull» og «Blind Wolf-pott»
+ *     (kun for spillere med blindWolfWins > 0).
+ *   - Distinkt sessionStorage-key: `torny-wolf-podium-confetti-seen-${gameId}`.
+ *
+ * Wolf-spillere er alltid 4 i v1 (validatoren håndhever), så vi viser alle
+ * 4 på «podium-radene»: 1.-2.-3. som tradisjonelle trinn + 4. som en
+ * disket «sisteplass»-rad under. Sparer på <details>-collapsen siden
+ * 4 spillere er lite nok å vise alt sammen.
+ */
+export function WolfPodium({
+  gameId,
+  gameName,
+  result,
+  playersById,
+  backHref = '/',
+}: WolfPodiumProps): JSX.Element {
+  const [replayKey, setReplayKey] = useState(0);
+
+  useEffect(() => {
+    const key = `${STORAGE_PREFIX}${gameId}`;
+    try {
+      if (window.sessionStorage.getItem(key) === '1') return;
+      window.sessionStorage.setItem(key, '1');
+    } catch {
+      // Storage utilgjengelig — fyr konfettien uansett.
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setReplayKey(1);
+  }, [gameId]);
+
+  if (result.players.length === 0) {
+    return (
+      <Shell>
+        <Header gameName={gameName} backHref={backHref} />
+        <p className="mt-12 text-center text-sm text-muted">
+          Ingen spillere å vise.
+        </p>
+      </Shell>
+    );
+  }
+
+  // result.players er allerede sortert på rank fra scoring-laget.
+  const first = result.players[0];
+  const second = result.players[1] ?? null;
+  const third = result.players[2] ?? null;
+  const rest = result.players.slice(3);
+
+  // Bragging-stats: mest Wolf-hull + alle Blind Wolf-pott-vinnere.
+  const mostWolfHoles = result.players.reduce<WolfPlayerLine | null>(
+    (acc, p) => {
+      if (!acc || p.wolfHolesPlayed > acc.wolfHolesPlayed) return p;
+      return acc;
+    },
+    null,
+  );
+  const blindWinners = result.players.filter((p) => p.blindWolfWins > 0);
+
+  return (
+    <Shell>
+      <Header gameName={gameName} backHref={backHref} />
+
+      <div className="px-6 pt-1.5 pb-3.5 text-center">
+        <Kicker tone="accent">PODIUM</Kicker>
+        <h1 className="mt-2 font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
+          Pack-leder kåret
+        </h1>
+        <p className="mt-1 text-[11.5px] tabular-nums text-muted">
+          Wolf · {result.scoring === 'net' ? 'Netto' : 'Brutto'}
+        </p>
+      </div>
+
+      <div
+        data-testid="wolf-podium"
+        className="relative isolate px-3.5 pt-3 pb-2"
+      >
+        {replayKey > 0 && <ConfettiBurst key={replayKey} />}
+
+        <div className="grid grid-cols-3 items-end gap-2">
+          <div className="col-start-1">
+            {second && (
+              <PodiumStep
+                rank={2}
+                player={second}
+                playerInfo={playersById.get(second.userId)}
+                tier="silver"
+                staggerIndex={1}
+              />
+            )}
+          </div>
+
+          <div className="col-start-2">
+            <PodiumStep
+              rank={1}
+              player={first}
+              playerInfo={playersById.get(first.userId)}
+              tier="champagne"
+              staggerIndex={0}
+            />
+          </div>
+
+          <div className="col-start-3">
+            {third && (
+              <PodiumStep
+                rank={3}
+                player={third}
+                playerInfo={playersById.get(third.userId)}
+                tier="bronze"
+                staggerIndex={2}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {rest.length > 0 && (
+        <ul
+          data-testid="wolf-rest"
+          className="mx-4 mt-4 flex flex-col gap-2 list-none"
+        >
+          {rest.map((player) => {
+            const info = playersById.get(player.userId);
+            const displayName = info
+              ? formatRevealName(info.name, info.nickname)
+              : '(ukjent spiller)';
+            return (
+              <li key={player.userId} className="list-none">
+                <div className="flex items-center gap-3.5 rounded-2xl border border-border bg-surface px-4 py-3">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-surface font-serif text-[18px] font-medium text-muted">
+                    {player.rank}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-serif text-[16px] font-medium tracking-[-0.005em] text-text truncate">
+                      {displayName}
+                    </p>
+                    <p className="mt-0.5 text-[12px] text-muted tabular-nums">
+                      {player.wolfHolesPlayed} Wolf-hull
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <span className="score-num block text-[22px] leading-none tracking-[-0.02em] text-text tabular-nums">
+                      {player.totalPoints}
+                    </span>
+                    <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
+                      poeng
+                    </span>
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {/* Bragging-stats-strip: mest Wolf-hull + Blind Wolf-pott-vinnere. */}
+      <section
+        data-testid="wolf-bragging"
+        className="mx-4 mt-5 flex flex-col gap-2"
+      >
+        {mostWolfHoles && (
+          <div
+            data-testid="wolf-most-holes"
+            className="rounded-xl border border-border bg-surface px-4 py-2.5 text-center"
+          >
+            <p className="text-[11.5px] tabular-nums text-text">
+              <span className="font-serif font-medium">Mest Wolf-hull:</span>{' '}
+              {playerLabel(mostWolfHoles.userId, playersById)} (
+              {mostWolfHoles.wolfHolesPlayed})
+            </p>
+          </div>
+        )}
+        {blindWinners.length > 0 && (
+          <ul
+            data-testid="wolf-blind-strip"
+            className="flex flex-col gap-1.5 list-none"
+          >
+            {blindWinners.map((p) => (
+              <li
+                key={p.userId}
+                className="list-none rounded-xl border border-accent/40 bg-accent/[0.06] px-4 py-2.5 text-center"
+              >
+                <p className="text-[11.5px] tabular-nums text-text">
+                  <span className="font-serif font-medium text-accent">
+                    Blind Wolf:
+                  </span>{' '}
+                  {playerLabel(p.userId, playersById)} vant {p.blindWolfWins}{' '}
+                  {p.blindWolfWins === 1 ? 'pott' : 'potter'}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <PullQuote className="px-6 pt-4 pb-4">Gratulerer.</PullQuote>
+    </Shell>
+  );
+}
+
+function playerLabel(
+  userId: string,
+  playersById: Map<string, WolfPlayerInfo>,
+): string {
+  const info = playersById.get(userId);
+  return info ? formatRevealName(info.name, info.nickname) : '(ukjent)';
+}
+
+function Shell({ children }: { children: React.ReactNode }) {
+  return (
+    <AppShell>
+      <div className="relative isolate pb-12">
+        <LeaderboardBackdrop />
+        <div className="relative">{children}</div>
+      </div>
+    </AppShell>
+  );
+}
+
+function Header({
+  gameName,
+  backHref,
+}: {
+  gameName: string;
+  backHref: string;
+}) {
+  return (
+    <header className="mb-2 flex items-center justify-between gap-4">
+      <SmartLink
+        href={backHref}
+        aria-label="Tilbake"
+        className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
+      >
+        ‹
+      </SmartLink>
+      <Kicker tone="accent">{gameName.toUpperCase()}</Kicker>
+      <span className="w-11" aria-hidden />
+    </header>
+  );
+}
+
+type PodiumTier = 'champagne' | 'silver' | 'bronze';
+
+const TIER_HEIGHTS: Record<PodiumTier, string> = {
+  champagne: 'min-h-[180px]',
+  silver: 'min-h-[150px]',
+  bronze: 'min-h-[130px]',
+};
+
+const TIER_ACCENT: Record<PodiumTier, string> = {
+  champagne:
+    'border-accent bg-accent/[0.08] shadow-[0_2px_14px_rgba(201,169,97,0.18)]',
+  silver: 'border-muted/40 bg-surface',
+  bronze: 'border-warning/40 bg-surface',
+};
+
+function PodiumStep({
+  rank,
+  player,
+  playerInfo,
+  tier,
+  staggerIndex,
+}: {
+  rank: 1 | 2 | 3;
+  player: WolfPlayerLine;
+  playerInfo: WolfPlayerInfo | undefined;
+  tier: PodiumTier;
+  staggerIndex: number;
+}) {
+  const displayName = playerInfo
+    ? formatRevealName(playerInfo.name, playerInfo.nickname)
+    : '(ukjent spiller)';
+
+  const tierClass = TIER_ACCENT[tier];
+  const heightClass = TIER_HEIGHTS[tier];
+  const medallionSize = rank === 1 ? 48 : 36;
+
+  return (
+    <div
+      data-testid={`podium-rank-${rank}`}
+      className={`reveal-up flex flex-col items-center justify-end gap-2 rounded-2xl border ${tierClass} ${heightClass} px-2 py-3`}
+      style={{ animationDelay: `${80 + staggerIndex * 90}ms` }}
+    >
+      <Medallion place={rank} size={medallionSize} />
+
+      <p className="text-center font-serif text-[13px] font-medium leading-tight tracking-[-0.005em] text-text break-words">
+        {displayName}
+      </p>
+
+      <div className="text-center">
+        <span
+          className={`score-num block leading-none tracking-[-0.02em] tabular-nums ${
+            rank === 1
+              ? 'text-[32px] text-accent'
+              : rank === 2
+                ? 'text-[24px] text-text'
+                : 'text-[22px] text-text'
+          }`}
+        >
+          {player.totalPoints}
+        </span>
+        <span className="mt-1 block text-[9px] font-semibold uppercase tracking-[0.16em] text-muted">
+          poeng
+        </span>
+      </div>
+
+      <p className="text-[10px] tabular-nums text-muted">
+        {player.wolfHolesPlayed} Wolf-hull
+      </p>
+    </div>
+  );
+}
