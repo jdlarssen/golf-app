@@ -124,6 +124,13 @@ export type InitialValues = {
    */
   fourball_allowance_pct?: number;
   /**
+   * Foursomes matchplay (#218): allowance-prosent (0..100) som pre-fylles inn
+   * i netto/brutto-toggle-en i wizarden. Settes når admin lander via cup-link
+   * med `?game_mode=foursomes_matchplay`, slik at match-en arver cup-radens
+   * `tournaments.foursomes_allowance_pct`. Brukes IKKE for andre modi.
+   */
+  foursomes_allowance_pct?: number;
+  /**
    * Self-påmelding (#199). Defaultes til 'invite_only' + 'solo' for å
    * bevare dagens flyt. Edit-flyten leverer eksisterende valg fra DB.
    */
@@ -184,6 +191,8 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     setHcpAllowance,
     fourballAllowancePct,
     setFourballAllowancePct,
+    foursomesAllowancePct,
+    setFoursomesAllowancePct,
     handleModeChange,
     handleTeamSizeChange,
     lockGameMode,
@@ -284,6 +293,13 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           value={String(fourballAllowancePct)}
         />
       )}
+      {gameMode === 'foursomes_matchplay' && (
+        <input
+          type="hidden"
+          name="foursomes_allowance_pct"
+          value={String(foursomesAllowancePct)}
+        />
+      )}
 
       {/* Hidden inputs that carry the structured assignment payload. The server
           action only ever sees the FormData; keeping the names server-known
@@ -350,6 +366,19 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             bruttoHelperText="Ingen handicap — laveste gross-score per hull per side vinner. Vanlig format på ekte Ryder Cup."
             value={fourballAllowancePct}
             onChange={setFourballAllowancePct}
+            hideHiddenInput
+          />
+        )}
+        {gameMode === 'foursomes_matchplay' && (
+          <AllowanceField
+            fieldName="foursomes_allowance_pct"
+            defaultPct={50}
+            legend="Scoring for foursomes-matches"
+            description="Styrer handicap for foursomes-matches (alternate shot). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets gross-slag."
+            nettoHelperText="Andel av differansen i lagenes summerte handicap. WHS-standard for foursomes matchplay er 50."
+            bruttoHelperText="Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+            value={foursomesAllowancePct}
+            onChange={setFoursomesAllowancePct}
             hideHiddenInput
           />
         )}

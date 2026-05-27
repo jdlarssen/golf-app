@@ -213,6 +213,14 @@ export function useGameFormState({
   const [fourballAllowancePct, setFourballAllowancePct] = useState<number>(
     initialValues?.fourball_allowance_pct ?? 85,
   );
+  // Foursomes matchplay (#218): allowance-prosent (0 = brutto, 1..100 = netto).
+  // Pre-fylles fra cup-radens foursomes_allowance_pct via initialValues; ellers
+  // default 50 (WHS-standard for foursomes — diff-basert formel). Validator-en
+  // (`validateFoursomesMatchplay`) leser dette ved publish og avviser verdier
+  // utenfor 0..100.
+  const [foursomesAllowancePct, setFoursomesAllowancePct] = useState<number>(
+    initialValues?.foursomes_allowance_pct ?? 50,
+  );
   const [requirePeerApproval, setRequirePeerApproval] = useState(
     initialValues?.require_peer_approval ?? false,
   );
@@ -849,6 +857,8 @@ export function useGameFormState({
     setTexasHandicapPct,
     fourballAllowancePct,
     setFourballAllowancePct,
+    foursomesAllowancePct,
+    setFoursomesAllowancePct,
     requirePeerApproval,
     setRequirePeerApproval,
     sideEnabled,

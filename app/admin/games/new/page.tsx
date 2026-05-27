@@ -36,10 +36,14 @@ type SearchParams = Promise<{
  * per støttet modus — andre verdier (best-ball, stableford, …) hopper over
  * pre-fyllen og lar admin starte fra default i wizarden.
  */
-type CupGameMode = 'singles_matchplay' | 'fourball_matchplay';
+type CupGameMode =
+  | 'singles_matchplay'
+  | 'fourball_matchplay'
+  | 'foursomes_matchplay';
 
 function parseCupGameMode(raw: string | undefined): CupGameMode {
   if (raw === 'fourball_matchplay') return 'fourball_matchplay';
+  if (raw === 'foursomes_matchplay') return 'foursomes_matchplay';
   // Default + singles_matchplay → singles. Bevarer dagens oppførsel (cup-link
   // uten game_mode-parameter trådte tidligere alltid på singles-løypa).
   return 'singles_matchplay';
@@ -147,6 +151,12 @@ type CupContext = {
    * fourball.
    */
   fourballAllowancePct: number;
+  /**
+   * Cup-radens default foursomes-allowance (0 = brutto, 1..100 = netto-prosent
+   * av lagenes HCP-differanse). Pre-fylles inn i wizard sin netto/brutto-toggle
+   * for foursomes-matches. Default 50 (WHS) ved manglende verdi.
+   */
+  foursomesAllowancePct: number;
 };
 
 async function loadCupContext(
@@ -156,35 +166,42 @@ async function loadCupContext(
   const supabase = await getServerClient();
   const { data: cup } = await supabase
     .from('tournaments')
-    .select('id, name, status, fourball_allowance_pct')
+    .select('id, name, status, fourball_allowance_pct, foursomes_allowance_pct')
     .eq('id', tournamentId)
     .maybeSingle<{
       id: string;
       name: string;
       status: string;
       fourball_allowance_pct: number | null;
+      foursomes_allowance_pct: number | null;
     }>();
   if (!cup) return null;
   if (cup.status === 'finished') return null;
   // Match-label-numerering teller eksisterende matches AV SAMME modus så
-  // admin får «Fourball 1» / «Fourball 2» / «Singles 1» / «Singles 2»
-  // uavhengig av rekkefølge i cupen.
+  // admin får «Fourball 1» / «Foursomes 1» / «Singles 1» uavhengig av
+  // rekkefølge i cupen.
   const { count } = await supabase
     .from('games')
     .select('id', { head: true, count: 'exact' })
     .eq('tournament_id', cup.id)
     .eq('game_mode', requestedMode);
   const labelPrefix =
-    requestedMode === 'fourball_matchplay' ? 'Fourball' : 'Singles';
+    requestedMode === 'fourball_matchplay'
+      ? 'Fourball'
+      : requestedMode === 'foursomes_matchplay'
+        ? 'Foursomes'
+        : 'Singles';
   // Default 85 (WHS) hvis cup-raden ikke har verdien satt (eldre cups før
   // 0045-migrasjonen, eller cups opprettet før chunk 5 lå ute).
   const fourballAllowancePct = cup.fourball_allowance_pct ?? 85;
+  const foursomesAllowancePct = cup.foursomes_allowance_pct ?? 50;
   return {
     id: cup.id,
     name: cup.name,
     nextMatchLabel: `${labelPrefix} ${(count ?? 0) + 1}`,
     gameMode: requestedMode,
     fourballAllowancePct,
+    foursomesAllowancePct,
   };
 }
 
@@ -275,6 +292,14 @@ function buildCupInitialValues(cup: CupContext) {
       game_mode: 'fourball_matchplay' as const,
       team_size: 2 as const,
       fourball_allowance_pct: cup.fourballAllowancePct,
+    };
+  }
+  if (cup.gameMode === 'foursomes_matchplay') {
+    return {
+      ...base,
+      game_mode: 'foursomes_matchplay' as const,
+      team_size: 2 as const,
+      foursomes_allowance_pct: cup.foursomesAllowancePct,
     };
   }
   return {

@@ -296,6 +296,7 @@ export function GameWizard({
       team_size: state.teamSize,
       texas_team_handicap_pct: String(state.texasHandicapPct),
       fourball_allowance_pct: state.fourballAllowancePct,
+      foursomes_allowance_pct: state.foursomesAllowancePct,
       tournament_id: initialValues?.tournament_id,
       tournament_match_label: initialValues?.tournament_match_label,
       registration_mode: state.registrationMode,
@@ -435,6 +436,19 @@ export function GameWizard({
                   hideHiddenInput
                 />
               )}
+              {state.gameMode === 'foursomes_matchplay' && (
+                <AllowanceField
+                  fieldName="foursomes_allowance_pct"
+                  defaultPct={50}
+                  legend="Scoring for foursomes-matches"
+                  description="Styrer handicap for foursomes-matches (alternate shot). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets gross-slag."
+                  nettoHelperText="Andel av differansen i lagenes summerte handicap. WHS-standard for foursomes matchplay er 50."
+                  bruttoHelperText="Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+                  value={state.foursomesAllowancePct}
+                  onChange={state.setFoursomesAllowancePct}
+                  hideHiddenInput
+                />
+              )}
               {(state.gameMode === 'best_ball' ||
                 state.gameMode === 'stableford' ||
                 state.gameMode === 'singles_matchplay' ||
@@ -564,6 +578,7 @@ function FormDataInputs({
     isTexas,
     texasHandicapPct,
     fourballAllowancePct,
+    foursomesAllowancePct,
     orderedPayload,
     courseId,
     teeBoxId,
@@ -612,6 +627,13 @@ function FormDataInputs({
           type="hidden"
           name="fourball_allowance_pct"
           value={String(fourballAllowancePct)}
+        />
+      )}
+      {gameMode === 'foursomes_matchplay' && (
+        <input
+          type="hidden"
+          name="foursomes_allowance_pct"
+          value={String(foursomesAllowancePct)}
         />
       )}
 
