@@ -8,7 +8,8 @@ export type GameMode =
   | 'singles_matchplay'
   | 'solo_strokeplay'
   | 'texas_scramble'
-  | 'fourball_matchplay';
+  | 'fourball_matchplay'
+  | 'foursomes_matchplay';
 
 /**
  * Norske visnings-labels for hver spillmodus. Brukes av ModeChip i admin-
@@ -23,6 +24,7 @@ export const MODE_LABELS: Record<GameMode, string> = {
   solo_strokeplay: 'Slagspill',
   texas_scramble: 'Texas scramble',
   fourball_matchplay: 'Fourball',
+  foursomes_matchplay: 'Foursomes',
 };
 
 /**
@@ -75,6 +77,21 @@ export type GameModeConfig =
        * 100 = full handicap. Validatoren i `lib/games/gamePayload.ts` håndhever
        * range; scoring-laget faller defensivt tilbake til 100 hvis feltet
        * mangler i draft-state.
+       */
+      allowance_pct: number;
+    }
+  | {
+      kind: 'foursomes_matchplay';
+      team_size: 2;
+      teams_count: 2;
+      /**
+       * HCP-allowance for foursomes matchplay (0..100). WHS-default = 50 %.
+       * Diff-basert formel: `highSideExtraHCP = round(|side1CombinedCH -
+       * side2CombinedCH| × allowance_pct / 100)`. Lavlaget får 0 strokes;
+       * høylaget får `highSideExtraHCP` strokes allokert via SI. 0 = brutto
+       * (gross-only matchplay), 100 = full HCP-differanse. Validatoren i
+       * `lib/games/gamePayload.ts` håndhever range; scoring-laget faller
+       * defensivt tilbake til 100 hvis feltet mangler i draft-state.
        */
       allowance_pct: number;
     };
@@ -661,6 +678,121 @@ export interface FourballMatchplayResult {
   result: MatchplayMatchResult | null;
 }
 
+// -----------------------------------------------------------------------------
+// Foursomes matchplay (issue #218, fase 3 av #47).
+//
+// 2v2 alternate-shot matchplay: én ball per lag, partnerne alternerer slag.
+// Lag-score per hull → matchplay-sammenligning side 1 vs side 2. Storage
+// følger Texas-mønsteret: lag-kapteinen (lex-min userId) eier scores-radene,
+// non-captain-partneren skriver til samme rad via UI-routing.
+//
+// Allowance-pipeline (skiller seg fra fourball):
+//   highSideExtraHCP = round(|side1CombinedCH − side2CombinedCH| × pct / 100)
+//   side1Extra = highSideNumber === 1 ? strokesForHole(highSideExtraHCP, SI) : 0
+//   side2Extra = highSideNumber === 2 ? strokesForHole(highSideExtraHCP, SI) : 0
+// WHS-default pct = 50. Lavlaget får 0 strokes; høylaget får diff-strokene
+// allokert via SI (hardeste hull først). 0 % = brutto-matchplay.
+//
+// Re-bruker `MatchplayHoleResult` og `MatchplayMatchResult` fra singles —
+// match-resultat-format-strenger («3&2», «AS», «2up») er identisk.
+// -----------------------------------------------------------------------------
+
+/**
+ * Spiller-detalj på en foursomes-side. Begge partnere kontribuerer til
+ * `combinedCourseHandicap`-summen på sidens nivå; per-spiller-strokes finnes
+ * IKKE (foursomes spiller én ball per lag).
+ */
+export interface FoursomesSidePlayer {
+  userId: string;
+  courseHandicap: number;
+  /**
+   * Sidens spillers tee-gender (fra `game_players.tee_gender`). Kapteinens
+   * teeGender brukes som side-referanse for par-display (samme forenkling
+   * som Texas-scramble). #240.
+   */
+  teeGender?: ScoringGender;
+}
+
+/**
+ * Én av de to sidene i en foursomes matchplay-match. `captainUserId` (lex-min)
+ * eier scores-radene i DB; UI ruter writeScore til kapteinen uansett hvem som
+ * taster. `combinedCourseHandicap` er sum av partnernes courseHandicap (før
+ * allowance). `effectiveExtraHandicap` er strokene siden får ved SI-allokering
+ * — 0 på lavlaget, `round(|diff| × pct/100)` på høylaget.
+ */
+export interface FoursomesSide {
+  /** 1 eller 2 — matcher game_players.team_number for foursomes-spillere. */
+  sideNumber: 1 | 2;
+  /** Begge partnere, sortert deterministisk på userId for stabil UI. */
+  players: [FoursomesSidePlayer, FoursomesSidePlayer];
+  /** Lex-min userId av de to partnerne. Eier scores-radene. */
+  captainUserId: string;
+  /** Sum av partnernes courseHandicap (før allowance-reduksjon). */
+  combinedCourseHandicap: number;
+  /**
+   * Strokes som siden får i matchplay. 0 på low-side; `round(|diff| × pct/100)`
+   * på high-side. SI-allokering bruker denne verdien.
+   */
+  effectiveExtraHandicap: number;
+}
+
+/**
+ * Per-hull-rad i en foursomes matchplay-match. Lag-gross hentes fra
+ * kaptein-eide scores-rad; lag-extra-strokes kommer fra
+ * `strokesForHole(effectiveExtraHandicap, SI)` for high-side, 0 for low-side.
+ */
+export interface FoursomesHoleRow {
+  holeNumber: number;
+  /**
+   * Bevart for backward-compat. Sett lik `side1Par` slik at konsumenter som
+   * tidligere leste én felles par-verdi fortsatt fungerer. UI-laget bør bruke
+   * `side1Par`/`side2Par` direkte ved blandet-kjønn-par.
+   */
+  par: number;
+  /**
+   * Per-side par fra `parFor(hole, captain.teeGender)`. Kapteinens teeGender
+   * representerer siden (samme forenkling som Texas). #240.
+   */
+  side1Par: number;
+  side2Par: number;
+  strokeIndex: number;
+  /** Lag-gross per side fra kaptein-eide scores-rad. null = ikke spilt. */
+  side1Gross: number | null;
+  side2Gross: number | null;
+  /** Extra strokes per side fra SI-allokering. 0 på low-side. */
+  side1Extra: number;
+  side2Extra: number;
+  /** Lag-netto per side (gross − extra). null hvis gross er null. */
+  side1Net: number | null;
+  side2Net: number | null;
+  /** Hvem vant hullet via `classifyMatchplayHole(side1Net, side2Net)`. */
+  result: MatchplayHoleResult;
+}
+
+/**
+ * Resultat fra `foursomesMatchplay.compute()`. Speiler `SinglesMatchplayResult`
+ * og `FourballMatchplayResult` tett — 2 sider à 2 spillere, ett lag-gross per
+ * side per hull. `result`-feltet og match-format-strenger («3&2», «AS», «2up»)
+ * er identiske med singles og fourball via gjenbruk av `computeMatchResult`.
+ */
+export interface FoursomesMatchplayResult {
+  kind: 'foursomes_matchplay';
+  /** Tuple: alltid to sider, sortert side 1 så side 2. */
+  sides: [FoursomesSide, FoursomesSide];
+  holes: FoursomesHoleRow[];
+  /** side1-hull-vinst − side2-hull-vinst. Positiv = side 1 up. */
+  holesUp: number;
+  /** Antall hull der begge sider har lag-gross. */
+  holesPlayed: number;
+  /** `max(0, 18 − holesPlayed)`. */
+  holesRemaining: number;
+  /**
+   * `null` = matchen er ikke avgjort ennå.
+   * Et `MatchplayMatchResult`-objekt = mat-em eller spilt 18 hull.
+   */
+  result: MatchplayMatchResult | null;
+}
+
 /**
  * Discriminated union — konsumenter narrower på `kind`:
  *   const r = computeLeaderboard(ctx);
@@ -684,4 +816,5 @@ export type ModeResult =
   | SinglesMatchplayResult
   | SoloStrokeplayResult
   | TexasScrambleResult
-  | FourballMatchplayResult;
+  | FourballMatchplayResult
+  | FoursomesMatchplayResult;

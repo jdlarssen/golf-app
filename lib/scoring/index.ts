@@ -23,6 +23,7 @@ import * as singlesMatchplay from './modes/singlesMatchplay';
 import * as soloStrokeplay from './modes/soloStrokeplay';
 import * as texasScramble from './modes/texasScramble';
 import * as fourballMatchplay from './modes/fourballMatchplay';
+import * as foursomesMatchplay from './modes/foursomesMatchplay';
 import type { ScoringContext, ModeResult } from './modes/types';
 
 export function computeLeaderboard(ctx: ScoringContext): ModeResult {
@@ -39,6 +40,8 @@ export function computeLeaderboard(ctx: ScoringContext): ModeResult {
       return texasScramble.compute(ctx);
     case 'fourball_matchplay':
       return fourballMatchplay.compute(ctx);
+    case 'foursomes_matchplay':
+      return foursomesMatchplay.compute(ctx);
   }
 }
 
@@ -83,4 +86,8 @@ export type {
   FourballSidePlayer,
   FourballHoleRow,
   FourballPlayerCell,
+  FoursomesMatchplayResult,
+  FoursomesSide,
+  FoursomesSidePlayer,
+  FoursomesHoleRow,
 } from './modes/types';
