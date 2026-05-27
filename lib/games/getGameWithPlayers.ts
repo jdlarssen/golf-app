@@ -93,6 +93,15 @@ export type GameForHole = {
    * av scoring/leaderboard-konsumenter; ikke modifisert etter publisering.
    */
   mode_config: GameModeConfig;
+  /**
+   * Foursomes matchplay (#218): hvem på side 1 teer ut på odd-hull. NULL =
+   * ikke valgt ennå (banner vises på hull 1). Setter via
+   * `setFoursomesTeeStarter` server-action. Bare meningsfull for
+   * `game_mode === 'foursomes_matchplay'`.
+   */
+  foursomes_side1_tee_starter_user_id: string | null;
+  /** Som over, for side 2. */
+  foursomes_side2_tee_starter_user_id: string | null;
   // The game's single tee carries up to three independent rating-sets
   // (mens/ladies/juniors). Each player picks which set applies via their
   // tee_gender flag. Not nullable — games always have a tee assigned at
@@ -129,7 +138,7 @@ async function fetchGameWithPlayers(
     supabase
       .from('games')
       .select(
-        'id, name, status, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, tee_box:tee_boxes!games_tee_box_id_fkey(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+        'id, name, status, course_id, tee_box_id, score_visibility, require_peer_approval, scheduled_tee_off_at, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, foursomes_side1_tee_starter_user_id, foursomes_side2_tee_starter_user_id, tee_box:tee_boxes!games_tee_box_id_fkey(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
       )
       .eq('id', id)
       .single<GameForHole>(),

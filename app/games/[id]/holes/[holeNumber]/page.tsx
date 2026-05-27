@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
@@ -8,6 +9,10 @@ import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { nameInitials } from '@/lib/names/initials';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import { HoleClient, type ClientPlayer } from './HoleClient';
+import {
+  FoursomesTeeStarterBanner,
+  FoursomesTeeHint,
+} from './FoursomesTeeStarterBanner';
 
 type Params = Promise<{ id: string; holeNumber: string }>;
 
@@ -82,6 +87,7 @@ export default async function HolePage({ params }: { params: Params }) {
 
   const isStableford = game.game_mode === 'stableford';
   const isTexas = game.game_mode === 'texas_scramble';
+  const isFoursomes = game.game_mode === 'foursomes_matchplay';
 
   // Round 2 — hole row, flight scores and the user's completed-hole count.
   // All three are independent and can run in parallel:
@@ -204,7 +210,7 @@ export default async function HolePage({ params }: { params: Params }) {
   // og fordeles per hull via vanlig SI-allokering (strokesForHole).
   let playersForClient: ClientPlayer[];
 
-  if (isTexas) {
+  if (isTexas || isFoursomes) {
     const captain = flight.reduce(
       (min, p) => (p.user_id < min.user_id ? p : min),
       flight[0],
@@ -213,11 +219,31 @@ export default async function HolePage({ params }: { params: Params }) {
       (sum, p) => sum + (p.course_handicap ?? 0),
       0,
     );
-    const handicapPct =
-      game.mode_config.kind === 'texas_scramble'
-        ? game.mode_config.team_handicap_pct
-        : 0;
-    const teamHandicap = Math.round((combinedCH * handicapPct) / 100);
+    let teamHandicap: number;
+    if (isFoursomes) {
+      // Foursomes: WHS-diff-formel. Beregn motstander-sidens combined CH
+      // og gi diff til høyeste lag. Lavlaget får 0.
+      const oppPlayers = allPlayers.filter(
+        (p) => p.team_number !== me.team_number && p.team_number !== null,
+      );
+      const oppCombinedCH = oppPlayers.reduce(
+        (sum, p) => sum + (p.course_handicap ?? 0),
+        0,
+      );
+      const allowancePct =
+        game.mode_config.kind === 'foursomes_matchplay'
+          ? game.mode_config.allowance_pct
+          : 50;
+      const diff = Math.abs(combinedCH - oppCombinedCH);
+      const highSideExtraHCP = Math.round((diff * allowancePct) / 100);
+      teamHandicap = combinedCH > oppCombinedCH ? highSideExtraHCP : 0;
+    } else {
+      const handicapPct =
+        game.mode_config.kind === 'texas_scramble'
+          ? game.mode_config.team_handicap_pct
+          : 0;
+      teamHandicap = Math.round((combinedCH * handicapPct) / 100);
+    }
     const captainScoreRow = scoresByUser[captain.user_id];
     const memberNames = flight
       .map((p) => p.users?.name ?? '')
@@ -264,12 +290,46 @@ export default async function HolePage({ params }: { params: Params }) {
     });
   }
 
+  // Foursomes (#218): tee-starter-banner på hull 1 hvis ikke valgt; hint per
+  // hull etter at valget er gjort. Begrenset til foursomes-modus + me's side.
+  let foursomesTeeSlot: ReactNode = null;
+  if (isFoursomes && me.team_number != null) {
+    const sideNumber = me.team_number as 1 | 2;
+    const teeStarterCol =
+      sideNumber === 1
+        ? game.foursomes_side1_tee_starter_user_id
+        : game.foursomes_side2_tee_starter_user_id;
+    const partners = flight.map((p) => ({
+      userId: p.user_id,
+      displayName:
+        (p.users?.nickname ?? p.users?.name ?? '').split(/\s+/)[0] || 'Spiller',
+    }));
+    if (teeStarterCol == null && holeNumber === 1 && partners.length === 2) {
+      foursomesTeeSlot = (
+        <FoursomesTeeStarterBanner
+          gameId={id}
+          sideNumber={sideNumber}
+          options={partners}
+        />
+      );
+    } else if (teeStarterCol != null && partners.length === 2) {
+      foursomesTeeSlot = (
+        <FoursomesTeeHint
+          holeNumber={holeNumber}
+          teeStarterUserId={teeStarterCol}
+          partners={partners}
+        />
+      );
+    }
+  }
+
   return (
     <div
       key={holeNumber}
       className="min-h-screen bg-bg flex flex-col animate-hole-enter"
       style={{ paddingTop: 54, paddingBottom: 34 }}
     >
+      {foursomesTeeSlot && <div className="px-3">{foursomesTeeSlot}</div>}
       <HoleClient
         gameId={id}
         gameName={game.name}
