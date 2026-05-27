@@ -17,7 +17,39 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.39.y — Netto/brutto-bryter på tvers av alle spillmodi
+
+Issue [#266](https://github.com/jdlarssen/golf-app/issues/266), oppfølger til [#217](https://github.com/jdlarssen/golf-app/issues/217). Bryteren som fourball-flyten fikk i forrige runde rulles ut til alle spillmodi: stableford, slagspill, singles matchplay, best ball og Texas scramble har nå samme valg mellom netto (med prosent-andel av handicap) og brutto (uten handicap). Mode-navnene er ryddet opp samtidig — `best_ball_netto` og `solo_strokeplay_netto` mister `_netto`-suffixet siden de nå kan spilles begge veier.
+
+### [1.39.0] - 2026-05-27
+
+> Du kan nå spille brutto (uten handicap) i alle spillmodi — ikke bare fourball. Nytt valg øverst i «Format»-seksjonen lar deg bytte mellom netto (med en andel av handicap) og brutto (ingen handicap). Stableford, slagspill, singles matchplay, best ball og Texas scramble har nå samme bryter som fourball fikk i forrige runde.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- Generalisert [`<AllowanceField>`](components/admin/AllowanceField.tsx) i `components/admin/` — mode-agnostisk netto/brutto-toggle med parametrisert `fieldName`, `defaultPct`, `legend`, `description`, `nettoHelperText`, `bruttoHelperText`, `inputLabel`. Kontrollerbar/ukontrollerbar hybrid; `lastNettoPct`-memo så brutto→netto-bytte gjenoppretter forrige verdi; radio-group-navn deriveres fra `fieldName` så flere instanser på samme side ikke kolliderer. 7 unit-tester dekker toggle-tilstandsmaskinen.
+- Migrasjon [0046_drop_netto_suffix.sql](supabase/migrations/0046_drop_netto_suffix.sql) — `best_ball_netto` → `best_ball`, `solo_strokeplay_netto` → `solo_strokeplay`. Atomisk transaksjon: drop check constraint, backfill rader, recreate constraint med ny verdi-sett. Kjøres via Supabase MCP samtidig som kode-deploy.
+- [`bruttoHelperFor()`](lib/games/allowanceCopy.ts) — per-mode brutto-forklarende tekst delt mellom GameForm og GameWizard så samme copy ikke duplikat-vedlikeholdes. Stableford → «poeng beregnes på gross mot par», matchplay → «scratch-matchplay», osv.
+
+#### Changed
+- [GameForm](app/admin/games/new/GameForm.tsx) og [GameWizard](app/admin/games/new/GameWizard.tsx) Section 3 (Format) rendrer nå `<AllowanceField>` for alle modi: fourball (eksisterende), best_ball/stableford/singles_matchplay/solo_strokeplay (ny, skriver til `hcp_allowance_pct`, default 100), texas_scramble (ny, skriver til `texas_team_handicap_pct`, default per team-size 25/10). Texas-AllowanceField har `key={teamSize}` så toggle-state re-initialiseres ved team-size-bytte.
+- [`useGameFormState`](app/admin/games/new/useGameFormState.ts): `hcpAllowance` og `texasHandicapPct` endret fra `string` til `number` for å matche AllowanceField-API. `allowanceNum`-alias droppet — staten selv er numerisk. Boundary-konvertering til `String(...)` der HTML `value`-prop eller `InitialValues`-type-kontrakten krever det.
+- Mode-rename gjennomført på tvers av kodebasen (~50 filer): `GameMode`-union, `MODE_LABELS`, scoring-modul-filnavn (`bestBallNetto.ts` → `bestBall.ts`, `soloStrokeplayNetto.ts` → `soloStrokeplay.ts`), validator-funksjonsnavn (`validateBestBallNetto` → `validateBestBall`, etc.), mail-templates, leaderboard-views, test-fixturer og JSDoc-kommentarer. Mode-router-resultattype `BestBallNettoResult` ble `BestBallResult`; lokal per-hull-helper i `bestBall.ts` renamed til `BestBallHole` for å unngå navnekollisjon.
+
+#### Removed
+- [Section 6 (`AdvancedSettingsSection`)](app/admin/games/new/sections/AdvancedSettingsSection.tsx) mister allowance-blokken (både non-texas HCP-allowance-input og Texas Lag-handicap-input + tilhørende `Input`-import og state-destructures). Section 6 har nå kun peer-approval + visibility + sideturnering — single-purpose «Innstillinger».
+- [`<FourballAllowanceField>`](components/cup/FourballAllowanceField.tsx) slettet (sammen med tom `components/cup/`-mappe) — alle tre callere (cup-create-form, GameForm, GameWizard) migrert til den generaliserte `<AllowanceField>` med fourball-spesifikke props.
+
+</details>
+
+---
+
 ## 1.38.y — Four-ball matchplay (Ryder Cup fase 2)
+
+<details>
+<summary><strong>1.38.y — Four-ball matchplay (Ryder Cup fase 2) (1 oppføring) — klikk for å vise</strong></summary>
 
 Issue [#217](https://github.com/jdlarssen/golf-app/issues/217), fase 2 av [#47](https://github.com/jdlarssen/golf-app/issues/47). Cup-grunnmuren fra fase 1 utvides med four-ball matchplay: 2 mot 2 med best-ball-aggregering per hull, matchplay-overlay som regner ut «X up», «AS» og «3&2» på samme måte som singles-matchplay. Hver cup setter sin egen handicap-andel: netto med valgfri prosent, eller helt brutto.
 
@@ -40,6 +72,8 @@ Issue [#217](https://github.com/jdlarssen/golf-app/issues/217), fase 2 av [#47](
 - Cup-detalj-side ([app/admin/cup/[id]/page.tsx](app/admin/cup/%5Bid%5D/page.tsx)) erstatter «+ Opprett match»-link med to knapper: «+ Singles match» og «+ Fourball match», hver med riktig `?game_mode=` query.
 - Game-wizard ([app/admin/games/new/page.tsx](app/admin/games/new/page.tsx), [GameWizard.tsx](app/admin/games/new/GameWizard.tsx), [GameForm.tsx](app/admin/games/new/GameForm.tsx)) leser `?game_mode=` og pre-fyller mode + team_size + match-label («Fourball N» basert på antall eksisterende fourball-matches i cupen). For fourball pre-fylles `fourball_allowance_pct` fra cup-rad, og netto/brutto-toggle vises i wizarden. Banner-copy speiler valgt modus.
 - `CupMatchInput`-shape utvidet med valgfri `gameMode`-discriminator så UI kan velge spiller- vs. lag-fokusert result-tekst.
+
+</details>
 
 </details>
 
