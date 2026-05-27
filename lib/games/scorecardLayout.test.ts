@@ -278,6 +278,115 @@ describe('resolveScorecardLayout', () => {
       expect(layout.meTeamNumber).toBe(1);
     });
 
+    it('foursomes matchplay → Layout B med 2 kolonner (kaptein per side, lag-display)', () => {
+      const game: GameForHole = {
+        ...baseGame,
+        game_mode: 'foursomes_matchplay',
+        mode_config: {
+          kind: 'foursomes_matchplay',
+          team_size: 2,
+          teams_count: 2,
+          allowance_pct: 50,
+        },
+      };
+      // me=10, partner=10 (CH-sum 20); opp1=20, opp2=10 (CH-sum 30) → diff=10
+      // High side = opp; high side extra = round(10 × 50/100) = 5.
+      const me = player('me', 1, { course_handicap: 10 });
+      const partner = player('partner', 1, { course_handicap: 10 });
+      const opp1 = player('opp1', 2, { course_handicap: 20 });
+      const opp2 = player('opp2', 2, { course_handicap: 10 });
+      const layout = resolveScorecardLayout(
+        game,
+        [me, partner, opp1, opp2],
+        me,
+        false,
+        fmt,
+      );
+      expect(layout.variant).toBe('b');
+      expect(layout.columns).toHaveLength(2);
+      // Kolonne 0 = me's side, kaptein = lex-min('me','partner') = 'me'
+      expect(layout.columns[0].userId).toBe('me');
+      expect(layout.columns[0].isCurrentUser).toBe(true);
+      expect(layout.columns[0].teamNumber).toBe(1);
+      expect(layout.columns[0].displayName).toBe('me/partner');
+      // Lavside får 0 strokes.
+      expect(layout.columns[0].courseHandicap).toBe(0);
+
+      // Kolonne 1 = opp side, kaptein = lex-min('opp1','opp2') = 'opp1'
+      expect(layout.columns[1].userId).toBe('opp1');
+      expect(layout.columns[1].isCurrentUser).toBe(false);
+      expect(layout.columns[1].teamNumber).toBe(2);
+      expect(layout.columns[1].displayName).toBe('opp1/opp2');
+      // Høyside får 5 strokes (round(|30-20| × 50/100)).
+      expect(layout.columns[1].courseHandicap).toBe(5);
+
+      expect(layout.scoreUserIds).toEqual(['me', 'opp1']);
+      expect(layout.primaryUserId).toBe('me');
+      expect(layout.primaryHandicap).toBe(0);
+      expect(layout.isMatchplay).toBe(true);
+      expect(layout.isFoursomes).toBe(true);
+      expect(layout.isFourball).toBe(false);
+      expect(layout.meTeamNumber).toBe(1);
+    });
+
+    it('foursomes matchplay: non-captain ser sin sides kaptein som score-eier', () => {
+      const game: GameForHole = {
+        ...baseGame,
+        game_mode: 'foursomes_matchplay',
+        mode_config: {
+          kind: 'foursomes_matchplay',
+          team_size: 2,
+          teams_count: 2,
+          allowance_pct: 50,
+        },
+      };
+      // me='zoe' er lex-større enn 'aaron', så aaron blir kaptein.
+      // Score-input fra zoe må skrive til aaron-userId.
+      const me = player('zoe', 1, { course_handicap: 15 });
+      const partner = player('aaron', 1, { course_handicap: 15 });
+      const opp1 = player('opp1', 2, { course_handicap: 10 });
+      const opp2 = player('opp2', 2, { course_handicap: 10 });
+      const layout = resolveScorecardLayout(
+        game,
+        [me, partner, opp1, opp2],
+        me,
+        false,
+        fmt,
+      );
+      // Kaptein = 'aaron' (lex-min), så scoreUserIds = ['aaron', 'opp1'].
+      expect(layout.primaryUserId).toBe('aaron');
+      expect(layout.scoreUserIds).toEqual(['aaron', 'opp1']);
+      // Men kolonne[0] er fortsatt isCurrentUser=true (representerer me's side).
+      expect(layout.columns[0].isCurrentUser).toBe(true);
+      expect(layout.columns[0].userId).toBe('aaron');
+    });
+
+    it('foursomes matchplay uten 2-2-fordeling → defensiv Layout A fallback', () => {
+      const game: GameForHole = {
+        ...baseGame,
+        game_mode: 'foursomes_matchplay',
+        mode_config: {
+          kind: 'foursomes_matchplay',
+          team_size: 2,
+          teams_count: 2,
+          allowance_pct: 50,
+        },
+      };
+      const me = player('me', 1);
+      const partner = player('partner', 1);
+      // Bare 1 motstander → ikke gyldig foursomes.
+      const opp = player('opp', 2);
+      const layout = resolveScorecardLayout(
+        game,
+        [me, partner, opp],
+        me,
+        false,
+        fmt,
+      );
+      expect(layout.variant).toBe('a');
+      expect(layout.isFoursomes).toBe(false);
+    });
+
     it('matchplay → Layout B med motstander (annet team_number)', () => {
       const game: GameForHole = {
         ...baseGame,

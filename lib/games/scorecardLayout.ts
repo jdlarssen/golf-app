@@ -68,9 +68,23 @@ export interface ScorecardLayout {
    */
   isFourball: boolean;
   /**
-   * For Layout B (fourball + singles matchplay + best-ball + par-stableford):
-   * me sitt `team_number`. Fourball-grenen bruker dette for å skille side 1
-   * (me's lag) fra side 2 (motstander-laget) i match-status-beregningen.
+   * True for foursomes matchplay (2v2 alternate-shot). Layout B med 2 kolonner:
+   * me's side (kaptein-userId, lex-min) + motstander-siden (kaptein-userId).
+   * Hver kolonne representerer ett LAG, ikke én spiller — `displayName` rendres
+   * som «Per/Knut» og score-input ruter til kaptein-userId via primaryUserId.
+   * `courseHandicap` per kolonne = lagets effective extra-HCP (high side får
+   * diff via WHS-formelen, low side får 0).
+   *
+   * Når true er `isMatchplay` også true — foursomes er en variant av matchplay
+   * og bruker singles' 2-kolonne `computeMatchplayRunningStatus`-grenen for
+   * match-status. Konsumenter velger foursomes-spesifikk rendering (tee-starter-
+   * banner, lag-fokusert display) via dette flagget.
+   */
+  isFoursomes: boolean;
+  /**
+   * For Layout B (fourball + foursomes + singles matchplay + best-ball +
+   * par-stableford): me sitt `team_number`. Brukes til å skille side 1 (me's
+   * lag) fra side 2 (motstander-laget) i match-status-beregningen.
    */
   meTeamNumber: number | null;
 }
@@ -128,6 +142,116 @@ export function resolveScorecardLayout(
       isStableford: false,
       isMatchplay: false,
       isFourball: false,
+      isFoursomes: false,
+      meTeamNumber: me.team_number ?? null,
+    };
+  }
+
+  if (mode === 'foursomes_matchplay') {
+    // Foursomes adopterer Texas captain-pattern (én ball per lag, kaptein-userId
+    // eier scores-radene) men rendres som 2-kolonne head-to-head matchplay-
+    // scorekort. Allowance via WHS-diff-formel: lavlaget får 0 strokes,
+    // høylaget får round(|combined_diff| × allowance_pct / 100) strokes.
+    const mySidePlayers = players.filter(
+      (p) => p.team_number === me.team_number,
+    );
+    const oppSidePlayers = players.filter(
+      (p) => p.team_number !== me.team_number && p.team_number !== null,
+    );
+
+    // Defensiv fallback: må ha begge sider med 2 spillere hver. Solo-shell
+    // hindrer kræsj hvis draft-state mangler partner/motstander.
+    if (mySidePlayers.length !== 2 || oppSidePlayers.length !== 2) {
+      return {
+        variant: 'a',
+        columns: [],
+        scoreUserIds: [me.user_id],
+        primaryUserId: me.user_id,
+        primaryHandicap: me.course_handicap ?? 0,
+        isStableford: false,
+        isMatchplay: false,
+        isFourball: false,
+        isFoursomes: false,
+        meTeamNumber: me.team_number ?? null,
+      };
+    }
+
+    const mySideCaptainId = pickTeamCaptain(
+      mySidePlayers.map((p) => p.user_id),
+    );
+    const oppSideCaptainId = pickTeamCaptain(
+      oppSidePlayers.map((p) => p.user_id),
+    );
+
+    // WHS-diff: high side får (combined_diff × allowance_pct/100) som
+    // lag-strokes, low side 0. Allowance leses fra mode_config (default 50).
+    const allowancePct =
+      cfg.kind === 'foursomes_matchplay' ? cfg.allowance_pct : 50;
+    const mySideCombined = mySidePlayers.reduce(
+      (sum, p) => sum + (p.course_handicap ?? 0),
+      0,
+    );
+    const oppSideCombined = oppSidePlayers.reduce(
+      (sum, p) => sum + (p.course_handicap ?? 0),
+      0,
+    );
+    const diff = Math.abs(mySideCombined - oppSideCombined);
+    const highSideExtra = Math.round((diff * allowancePct) / 100);
+    const mySideExtra = mySideCombined > oppSideCombined ? highSideExtra : 0;
+    const oppSideExtra = oppSideCombined > mySideCombined ? highSideExtra : 0;
+
+    // Sort each side deterministisk på userId for stabil rendering. Kaptein
+    // ender opp først hvis dens userId er lex-min — som er konvensjonen.
+    const mySideSorted = [...mySidePlayers].sort((a, b) =>
+      a.user_id.localeCompare(b.user_id),
+    );
+    const oppSideSorted = [...oppSidePlayers].sort((a, b) =>
+      a.user_id.localeCompare(b.user_id),
+    );
+
+    const mySideDisplay =
+      mySideSorted
+        .map((p) => fmt.displayName(p, 'Partner'))
+        .join('/') || 'Ditt lag';
+    const oppSideDisplay =
+      oppSideSorted
+        .map((p) => fmt.displayName(p, 'Motstander'))
+        .join('/') || 'Motstander';
+
+    // Kolonne-initial: bruk kapteinens initialer. Layout B rendrer dette i
+    // header-celler — fullt navn vises i footer-totaler.
+    const mySideCaptain = mySideSorted.find((p) => p.user_id === mySideCaptainId);
+    const oppSideCaptain = oppSideSorted.find(
+      (p) => p.user_id === oppSideCaptainId,
+    );
+
+    const mySideColumn: ScorecardColumnPlayer = {
+      userId: mySideCaptainId,
+      initial: mySideCaptain ? fmt.initials(mySideCaptain) : '?',
+      displayName: mySideDisplay,
+      courseHandicap: mySideExtra,
+      isCurrentUser: true,
+      teamNumber: me.team_number ?? null,
+    };
+    const oppSideColumn: ScorecardColumnPlayer = {
+      userId: oppSideCaptainId,
+      initial: oppSideCaptain ? fmt.initials(oppSideCaptain) : '?',
+      displayName: oppSideDisplay,
+      courseHandicap: oppSideExtra,
+      isCurrentUser: false,
+      teamNumber: oppSidePlayers[0].team_number,
+    };
+
+    return {
+      variant: 'b',
+      columns: [mySideColumn, oppSideColumn],
+      scoreUserIds: [mySideCaptainId, oppSideCaptainId],
+      primaryUserId: mySideCaptainId,
+      primaryHandicap: mySideExtra,
+      isStableford: false,
+      isMatchplay: true,
+      isFourball: false,
+      isFoursomes: true,
       meTeamNumber: me.team_number ?? null,
     };
   }
@@ -150,6 +274,7 @@ export function resolveScorecardLayout(
       isStableford: false,
       isMatchplay: false,
       isFourball: false,
+      isFoursomes: false,
       meTeamNumber: me.team_number ?? null,
     };
   }
@@ -188,6 +313,7 @@ export function resolveScorecardLayout(
       isStableford: false,
       isMatchplay: false,
       isFourball: false,
+      isFoursomes: false,
       meTeamNumber: me.team_number ?? null,
     };
   }
@@ -227,6 +353,7 @@ export function resolveScorecardLayout(
     isStableford: isStablefordTeam,
     isMatchplay,
     isFourball,
+    isFoursomes: false,
     meTeamNumber: me.team_number ?? null,
   };
 }
