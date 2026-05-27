@@ -22,8 +22,16 @@ import { BottomActionBar } from '@/components/hole/BottomActionBar';
 import { SpecificValueSheet } from '@/components/hole/SpecificValueSheet';
 import { PokalIcon } from '@/components/icons';
 import { computeStablefordPoints } from '@/lib/scoring/modes/stableford';
-import type { GameMode, ScoringGender } from '@/lib/scoring/modes/types';
+import type {
+  GameMode,
+  ScoringGender,
+  WolfChoice,
+  WolfHoleChoice,
+} from '@/lib/scoring/modes/types';
 import type { HoleParByGender } from '@/lib/games/parDisplay';
+import { subscribeWolfChoices } from '@/lib/wolf/subscribeWolfChoices';
+import { WolfChoiceModal } from './WolfChoiceModal';
+import { determineWolfForHole } from './wolfRotation';
 
 export type ClientPlayer = {
   userId: string;
@@ -92,6 +100,24 @@ export interface HoleClientProps {
    * to each ScoreCard so the +N SLAG badge stays hidden until admin avslutter.
    */
   hideNetto?: boolean;
+  /**
+   * Wolf-mode-spesifikt: liste av de 4 spillerne med team_number 1-4.
+   * Brukes til å regne ut hvem som er Wolf på hvilket hull (rotasjon) og til
+   * å rendre partner-valg i WolfChoiceModal. Kun satt når gameMode === 'wolf'.
+   */
+  wolfPlayers?: Array<{ userId: string; teamNumber: number; name: string }>;
+  /**
+   * Wolf-mode-spesifikt: alle eksisterende valg fra `wolf_hole_choices` for
+   * dette spillet, lest server-side ved page-render. Brukes som initial state
+   * for realtime-merged client state. Empty array tilsvarer "ingen valg ennå".
+   */
+  wolfChoices?: WolfHoleChoice[];
+  /**
+   * Wolf-mode-spesifikt: akkumulerte poeng per userId før gjeldende hull,
+   * server-computert via `computeLeaderboard()`. Brukes til trailing-wolf-
+   * regelen (hull 17-18). Empty record = alle spillere på 0.
+   */
+  wolfPointsByUser?: Record<string, number>;
   players: ClientPlayer[];
 }
 
@@ -175,10 +201,14 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     myStablefordTotal = null,
     myStablefordForCurrentHole = null,
     hideNetto = false,
+    wolfPlayers,
+    wolfChoices: wolfChoicesInitial,
+    wolfPointsByUser,
     players,
   } = props;
 
   const isStableford = gameMode === 'stableford';
+  const isWolf = gameMode === 'wolf';
   // Texas scramble: ett kort per lag (server bygger players-array med
   // ÉN entry der userId = lag-kapteinens userId). Lookup-er som matcher
   // mot myUserId må derfor falle tilbake til lag-kortet for non-captain-
@@ -259,6 +289,101 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     : null;
 
   const [valueSheetFor, setValueSheetFor] = useState<string | null>(null);
+
+  // Wolf-mode state: vi initialiserer fra server-prop og merger inn realtime-
+  // endringer. Når Wolf-spilleren velger på sin device, broadcaster Supabase
+  // postgres_changes til alle 4 — vi merger den nye raden inn slik at alle
+  // sine UI-er oppdaterer badge-en uten å vente på neste server-render.
+  //
+  // Init-fra-prop er trygt her fordi parent-wrapperen har `key={holeNumber}`
+  // som remounter hele HoleClient ved hull-bytte; vi trenger ikke useEffect-
+  // sync mot wolfChoicesInitial-prop-endringer innen samme hull.
+  const [wolfChoices, setWolfChoices] = useState<WolfHoleChoice[]>(
+    wolfChoicesInitial ?? [],
+  );
+
+  useEffect(() => {
+    if (!isWolf) return;
+    const unsubscribe = subscribeWolfChoices(gameId, (change) => {
+      setWolfChoices((prev) => {
+        const next = prev.filter((c) => c.holeNumber !== change.holeNumber);
+        next.push({
+          holeNumber: change.holeNumber,
+          wolfUserId: change.wolfUserId,
+          choice: change.choice,
+          partnerUserId: change.partnerUserId,
+        });
+        next.sort((a, b) => a.holeNumber - b.holeNumber);
+        return next;
+      });
+    });
+    return unsubscribe;
+  }, [isWolf, gameId]);
+
+  // Hvem er Wolf på dette hullet? Wolf-tabellen kan ha en eksplisitt rad
+  // (f.eks. admin-override), ellers regner vi rotasjon eller trailing-wolf.
+  const currentHoleWolfChoice = wolfChoices.find(
+    (c) => c.holeNumber === currentHole,
+  );
+  const pointsByUserMap = useMemo(() => {
+    const m = new Map<string, number>();
+    if (wolfPointsByUser) {
+      for (const [userId, points] of Object.entries(wolfPointsByUser)) {
+        m.set(userId, points);
+      }
+    }
+    return m;
+  }, [wolfPointsByUser]);
+  const wolfUserIdForHole = isWolf
+    ? determineWolfForHole(
+        currentHole,
+        wolfPlayers ?? [],
+        pointsByUserMap,
+        currentHoleWolfChoice?.wolfUserId,
+      )
+    : null;
+  const iAmWolfForHole = isWolf && wolfUserIdForHole === myUserId;
+
+  // Trigger modal automatisk når dette er min tur og ingen valg finnes ennå.
+  // `dismissed` lar brukeren lukke modalen midt i et hull uten at den popper
+  // opp igjen. Når parent remounter (hull-bytte via `key={holeNumber}` på
+  // wrapper-div-en), starter dismissed på false igjen.
+  const shouldShowModal =
+    isWolf && iAmWolfForHole && !currentHoleWolfChoice && gameStatus === 'active';
+  const [modalDismissed, setModalDismissed] = useState(false);
+  const modalOpen = shouldShowModal && !modalDismissed;
+
+  // Wolf-badge tekst — vises over score-card-listen for å gi flighten
+  // raskt overblikk over hvem som er Wolf og hva valget ble.
+  const wolfBadgePlayerName = wolfUserIdForHole
+    ? (wolfPlayers?.find((p) => p.userId === wolfUserIdForHole)?.name ?? null)
+    : null;
+  const wolfPartnerName =
+    currentHoleWolfChoice?.choice === 'partner' && currentHoleWolfChoice.partnerUserId
+      ? (wolfPlayers?.find(
+          (p) => p.userId === currentHoleWolfChoice.partnerUserId,
+        )?.name ?? null)
+      : null;
+
+  let wolfBadgeText: string | null = null;
+  if (isWolf && wolfBadgePlayerName) {
+    if (!currentHoleWolfChoice) {
+      wolfBadgeText = iAmWolfForHole
+        ? 'Du er Wolf på dette hullet'
+        : `Wolf: ${wolfBadgePlayerName} — venter på valg`;
+    } else if (currentHoleWolfChoice.choice === 'partner' && wolfPartnerName) {
+      wolfBadgeText = `Wolf: ${wolfBadgePlayerName} — partner: ${wolfPartnerName}`;
+    } else if (currentHoleWolfChoice.choice === 'lone') {
+      wolfBadgeText = `Wolf: ${wolfBadgePlayerName} (Lone Wolf — 2x)`;
+    } else if (currentHoleWolfChoice.choice === 'blind') {
+      wolfBadgeText = `Wolf: ${wolfBadgePlayerName} (Blind Wolf — 3x)`;
+    }
+  }
+
+  // Modal-prop: hvilke 3 andre spillere skal vises som partner-alternativer?
+  const otherWolfPlayers = (wolfPlayers ?? [])
+    .filter((p) => p.userId !== myUserId)
+    .map((p) => ({ userId: p.userId, name: p.name }));
 
   // Onboarding banner: visible only on hole 1, and only if not dismissed.
   // We track "dismissed" rather than "show" so we never assign state inside an
@@ -469,6 +594,26 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
 
       <OnboardingBanner visible={showHint} onDismiss={dismissHint} />
 
+      {isWolf && wolfBadgeText && (
+        <div
+          data-testid="wolf-badge"
+          style={{
+            margin: '0 14px 8px',
+            padding: '10px 14px',
+            borderRadius: 12,
+            border: '1px solid var(--accent)',
+            background: 'var(--primary-soft)',
+            fontFamily: 'var(--font-sans)',
+            fontSize: 13,
+            fontWeight: 600,
+            color: 'var(--text)',
+            textAlign: 'center',
+          }}
+        >
+          {wolfBadgeText}
+        </div>
+      )}
+
       <div style={listStyle}>
         {cards.map((c) => {
           // Per-kort stableford-poeng for current hull. Vi regner client-side
@@ -515,6 +660,31 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
         onClear={onClearScore}
         onClose={() => setValueSheetFor(null)}
       />
+
+      {isWolf && iAmWolfForHole && wolfUserIdForHole && (
+        <WolfChoiceModal
+          isOpen={modalOpen}
+          gameId={gameId}
+          holeNumber={currentHole}
+          wolfUserId={wolfUserIdForHole}
+          otherPlayers={otherWolfPlayers}
+          onClose={() => setModalDismissed(true)}
+          onChoiceSaved={(choice: WolfChoice, partnerUserId: string | null) => {
+            // Optimistic merge — vi venter ikke på realtime-broadcast.
+            setWolfChoices((prev) => {
+              const next = prev.filter((c) => c.holeNumber !== currentHole);
+              next.push({
+                holeNumber: currentHole,
+                wolfUserId: wolfUserIdForHole,
+                choice,
+                partnerUserId,
+              });
+              next.sort((a, b) => a.holeNumber - b.holeNumber);
+              return next;
+            });
+          }}
+        />
+      )}
     </>
   );
 }

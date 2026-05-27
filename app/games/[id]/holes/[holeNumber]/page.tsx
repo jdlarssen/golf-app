@@ -8,6 +8,14 @@ import { parFor } from '@/lib/scoring/modes/parResolver';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { nameInitials } from '@/lib/names/initials';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
+import { getWolfChoices } from '@/lib/wolf/getWolfChoices';
+import { computeLeaderboard } from '@/lib/scoring';
+import type {
+  ScoringContext,
+  ScoringHole,
+  ScoringPlayer,
+  ScoringHoleScore,
+} from '@/lib/scoring/modes/types';
 import { HoleClient, type ClientPlayer } from './HoleClient';
 import {
   FoursomesTeeStarterBanner,
@@ -88,6 +96,7 @@ export default async function HolePage({ params }: { params: Params }) {
   const isStableford = game.game_mode === 'stableford';
   const isTexas = game.game_mode === 'texas_scramble';
   const isFoursomes = game.game_mode === 'foursomes_matchplay';
+  const isWolf = game.game_mode === 'wolf';
 
   // Round 2 — hole row, flight scores and the user's completed-hole count.
   // All three are independent and can run in parallel:
@@ -100,8 +109,16 @@ export default async function HolePage({ params }: { params: Params }) {
   // «Dine poeng»-headeren og per-hull-poeng-chip-en. Best-ball-modus dropper
   // disse to ekstra queryene (de er null) for å holde latency lik dagens.
   const supabase = await getServerClient();
-  const [holeRes, scoresRes, scoreCountRes, allHolesRes, myAllScoresRes] =
-    await Promise.all([
+  const [
+    holeRes,
+    scoresRes,
+    scoreCountRes,
+    allHolesRes,
+    myAllScoresRes,
+    wolfChoicesData,
+    wolfAllScoresRes,
+    wolfAllHolesRes,
+  ] = await Promise.all([
       supabase
         .from('course_holes')
         .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
@@ -135,6 +152,21 @@ export default async function HolePage({ params }: { params: Params }) {
             .eq('game_id', id)
             .eq('user_id', userId)
             .returns<{ hole_number: number; strokes: number | null }[]>()
+        : Promise.resolve({ data: null, error: null }),
+      isWolf ? getWolfChoices(id) : Promise.resolve([]),
+      isWolf
+        ? supabase
+            .from('scores')
+            .select('user_id, hole_number, strokes')
+            .eq('game_id', id)
+            .returns<{ user_id: string; hole_number: number; strokes: number | null }[]>()
+        : Promise.resolve({ data: null, error: null }),
+      isWolf
+        ? supabase
+            .from('course_holes')
+            .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
+            .eq('course_id', game.course_id)
+            .returns<HoleRow[]>()
         : Promise.resolve({ data: null, error: null }),
     ]);
 
@@ -198,6 +230,88 @@ export default async function HolePage({ params }: { params: Params }) {
   const hideNetto = shouldHideNetto(
     revealState(game.score_visibility, game.status),
   );
+
+  // Wolf-mode-spesifikt: regn ut pointsByUser server-side via scoring-modulen.
+  // Klient-laget bruker dette til trailing-wolf-regelen (hull 17-18). Vi
+  // kjører `computeLeaderboard()` med full ScoringContext slik at vi får
+  // konsistent answer med leaderboard-rendringen. wolfPlayers er server-
+  // valgt subset av game_players med team_number 1-4 og navn.
+  let wolfChoicesForClient: import(
+    '@/lib/scoring/modes/types'
+  ).WolfHoleChoice[] = [];
+  let wolfPointsByUser: Record<string, number> | undefined;
+  let wolfPlayersForClient:
+    | Array<{ userId: string; teamNumber: number; name: string }>
+    | undefined;
+
+  if (isWolf) {
+    wolfChoicesForClient = wolfChoicesData as import(
+      '@/lib/scoring/modes/types'
+    ).WolfHoleChoice[];
+
+    // 4 spillere med team_number 1-4 — validatoren sikrer at det er nøyaktig 4.
+    wolfPlayersForClient = allPlayers
+      .filter((p) => p.team_number != null)
+      .map((p) => ({
+        userId: p.user_id,
+        teamNumber: p.team_number as number,
+        name: p.users?.nickname?.trim() || p.users?.name || '(ukjent spiller)',
+      }));
+
+    // Bygg ScoringContext for compute(). Vi trenger course-holes for SI/par
+    // og scores for alle spillere over hele runden.
+    if (
+      !wolfAllHolesRes.error &&
+      !wolfAllScoresRes.error &&
+      game.mode_config.kind === 'wolf'
+    ) {
+      const holesForCtx: ScoringHole[] = (wolfAllHolesRes.data ?? []).map(
+        (h) => ({
+          number: h.hole_number,
+          par: h.par_mens,
+          parByGender: {
+            mens: h.par_mens,
+            ladies: h.par_ladies,
+            juniors: h.par_juniors,
+          },
+          strokeIndex: h.stroke_index,
+        }),
+      );
+      const playersForCtx: ScoringPlayer[] = allPlayers.map((p) => ({
+        userId: p.user_id,
+        teamNumber: p.team_number,
+        flightNumber: p.flight_number,
+        courseHandicap: p.course_handicap ?? 0,
+        teeGender: p.tee_gender ?? 'mens',
+      }));
+      const scoresForCtx: ScoringHoleScore[] = (wolfAllScoresRes.data ?? []).map(
+        (s) => ({
+          userId: s.user_id,
+          holeNumber: s.hole_number,
+          gross: s.strokes,
+        }),
+      );
+      const ctx: ScoringContext = {
+        game: {
+          id: id,
+          game_mode: 'wolf',
+          mode_config: game.mode_config,
+        },
+        players: playersForCtx,
+        holes: holesForCtx,
+        scores: scoresForCtx,
+        wolfChoices: wolfChoicesForClient,
+      };
+      const result = computeLeaderboard(ctx);
+      if (result.kind === 'wolf') {
+        const map: Record<string, number> = {};
+        for (const p of result.players) {
+          map[p.userId] = p.totalPoints;
+        }
+        wolfPointsByUser = map;
+      }
+    }
+  }
 
   // For Texas scramble collapses vi flight-medlemmer til ett kort per lag.
   // Lag-kapteinen (lex-min userId) eier scores-radene; alle medlemmer kan
@@ -361,6 +475,9 @@ export default async function HolePage({ params }: { params: Params }) {
         myStablefordTotal={myStablefordTotal}
         myStablefordForCurrentHole={myStablefordForCurrent}
         hideNetto={hideNetto}
+        wolfPlayers={wolfPlayersForClient}
+        wolfChoices={wolfChoicesForClient}
+        wolfPointsByUser={wolfPointsByUser}
         players={playersForClient}
       />
     </div>
