@@ -17,7 +17,50 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.43.y — Wolf-format (første kompis-format i epic)
+
+Issue [#274](https://github.com/jdlarssen/golf-app/issues/274), første kompis-format i [#270](https://github.com/jdlarssen/golf-app/issues/270). Wolf er en sosial 4-spillers spillform der én av dere er Wolf på hvert hull — vedkommende velger partner (2v2), går Lone Wolf (1v3, dobler innsatsen), eller deklarer Blind Wolf før noen slår (tredobler). Like hull bærer potten videre.
+
+### [1.43.0] - 2026-05-28
+
+> Ny spillform: Wolf. Fire spillere, og én av dere er Wolf på hvert hull — velg partner, gå alene som Lone Wolf (dobler), eller bli Blind Wolf før noen slår (tredobler). Like hull bærer potten videre til neste. Velg netto eller brutto når du oppretter spillet.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- [`supabase/migrations/0049_wolf.sql`](supabase/migrations/0049_wolf.sql) — ny `wolf_hole_choices`-tabell (én rad per `(game_id, hole_number)` med wolf_user_id + choice + partner_user_id + entered_by), CHECK-constraint `partner_only_when_partner_choice` håndhever choice/partner-konsistens, RLS-policies for read/insert/update/delete (wolf-spilleren selv eller admin). Seed format-row + `format_intent_mapping[wolf, kompis, primary]`.
+- [`lib/scoring/modes/wolf.ts`](lib/scoring/modes/wolf.ts) — full `compute(ctx)` med rotation (hull 1-16 lineær, 17-18 trailing-wolf), stake/carry-over-mekanikk, point-tabell (partner 2/1, lone 4/1, blind 6/2), gross vs net allokering via `strokesForHole`. 52 Type A unit-tester via `it.each` dekker hele scoring-matrisen.
+- [`lib/scoring/modes/types.ts`](lib/scoring/modes/types.ts) — `GameMode` + `GameModeConfig` utvidet med `wolf`-variant; nye `WolfResult`, `WolfHoleRow`, `WolfPlayerCell`, `WolfPlayerLine`, `WolfChoice`, `WolfHoleOutcome`, `WolfHoleChoice`-typer; `ScoringContext.wolfChoices` optional input.
+- [`lib/wolf/getWolfChoices.ts`](lib/wolf/getWolfChoices.ts) — tag-cachet (`game-${id}`) admin-client fetch av wolf-valg per spill. [`lib/wolf/setWolfChoice.ts`](lib/wolf/setWolfChoice.ts) — server-action med 8 validerings-cases + RLS-feilkonvertering. [`lib/wolf/subscribeWolfChoices.ts`](lib/wolf/subscribeWolfChoices.ts) — realtime-sub på alle event-typer.
+- [`app/admin/games/new/sections/WolfSetup.tsx`](app/admin/games/new/sections/WolfSetup.tsx) — wizard step 2-seksjon med scoring-toggle (netto/brutto) + 4 rotation-slots med shuffle-knapp. `useGameFormState` utvidet med `wolfScoring`, `wolfOrder` (deterministisk Fisher-Yates via splitmix32-PRNG), `shuffleWolfOrder()`, `isWolf`, `wolfPlayersValid`.
+- [`app/games/[id]/holes/[holeNumber]/WolfChoiceModal.tsx`](app/games/[id]/holes/[holeNumber]/WolfChoiceModal.tsx) — 5-knappers modal (3 partnere + Lone + Blind) med Escape-to-close og inline-feil. [`wolfRotation.ts`](app/games/[id]/holes/[holeNumber]/wolfRotation.ts) — client-helper for å bestemme Wolf per hull.
+- [`HoleClient.tsx`](app/games/[id]/holes/[holeNumber]/HoleClient.tsx) integration: wolf-badge over score-card, auto-modal når current user er Wolf og ingen choice finnes, realtime-sync av wolf-valg mellom de 4 spillerne.
+- [`WolfView`](app/games/[id]/leaderboard/WolfView.tsx) + [`WolfPodium`](app/games/[id]/leaderboard/WolfPodium.tsx) — leaderboard-rendering med per-hull-tabell (Wolf, choice, stake, outcome, per-spiller +poeng) + spiller-totals + 1./2./3.-plass-podium med bragging-stats-strip (Mest Blind Wolf-pott, Mest Wolf-hull). Reveal-modus skjuler tall mens runden er aktiv.
+- [`validateWolf`](lib/games/gamePayload.ts) — payload-validator med 4-spillers exact-count, team_number 1-4 unik, wolf_scoring gross|net parsing. 14 unit-tester.
+
+#### Changed
+- `Record<GameMode, …>`-mapper utvidet for type-completeness: `ENABLED_COMBOS` (TeamSizeSelector), `MODE_SUMMARY_LABELS` (ReadyStep), `bruttoHelperFor` (allowanceCopy), `MODE_LABELS` (types).
+
+#### Tests
+- 52 Type A unit-tester for scoring-modulen (scoring matrix, rotation, stake-carry, gross/net, ranking, pending-handling, blindWolfWins-stat).
+- 14 validator-tester (`gamePayload.test.ts`).
+- 16 server-helper-tester (`getWolfChoices.test.ts` + `setWolfChoice.test.ts`).
+- 15 rotation-helper-tester (`wolfRotation.test.ts`).
+- 2 + 7 render-tester (WolfSetup + WolfChoiceModal).
+- 2 render-tester (WolfView + WolfPodium).
+- Lightweight auth-gate E2E (`e2e/games/wolf.spec.ts`).
+
+Foundation for epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Wolf er første av 7 kompis-batch-formats (resten: Skins, Nassau, BBB, Nines, Acey Deucey, Round Robin).
+
+</details>
+
+---
+
 ## 1.42.y — Foursomes matchplay (Ryder Cup fase 3)
+
+<details>
+<summary><strong>1.42.y — Foursomes matchplay (1 oppføring) — klikk for å vise</strong></summary>
 
 Issue [#218](https://github.com/jdlarssen/golf-app/issues/218), fase 3 av [#47](https://github.com/jdlarssen/golf-app/issues/47). Foursomes matchplay (2v2 alternate-shot — én ball per lag, partnerne alternerer slag) er klar for cupen. Lagene møtes hull-for-hull som matchplay, og scorekortet viser dere mot dem hele veien. Tee-rotasjonen avtales av flighten på hull 1.
 
@@ -53,6 +96,8 @@ Issue [#218](https://github.com/jdlarssen/golf-app/issues/218), fase 3 av [#47](
 - 10 nye `foursomesActions.test.ts`-cases (server-action authz + happy path).
 
 Dette er første format i alternate-shot-familien som lander i prod; mønstret (storage-pattern A + Layout B head-to-head + diff-basert allowance + per-game tee-starter-felt) gjenbrukes i [#289 Greensome](https://github.com/jdlarssen/golf-app/issues/289), [#290 Chapman](https://github.com/jdlarssen/golf-app/issues/290) og [#291 Gruesome](https://github.com/jdlarssen/golf-app/issues/291) når de implementeres.
+
+</details>
 
 </details>
 
