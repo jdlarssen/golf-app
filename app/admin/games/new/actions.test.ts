@@ -43,6 +43,16 @@ vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
 }));
 
+// F2 (#272): server-action kaller isValidActiveGameMode før insert. Mocker
+// til true så happy-path-testene fortsatt slipper gjennom; egne tester for
+// validerings-stien er i lib/formats/validateGameMode.test.ts.
+const validateGameModeMock = vi.fn<(slug: string) => Promise<boolean>>(
+  async () => true,
+);
+vi.mock('@/lib/formats/validateGameMode', () => ({
+  isValidActiveGameMode: (slug: string) => validateGameModeMock(slug),
+}));
+
 function lastRedirect(): string | undefined {
   return redirectMock.mock.calls.at(-1)?.[0];
 }
@@ -106,6 +116,25 @@ describe('createGameDraft', () => {
       RedirectError,
     );
     expect(lastRedirect()).toBe('/admin/games/new?error=name_required');
+  });
+
+  // F2 (#272): isValidActiveGameMode gating før insert. Tester at avvist
+  // slug short-circuiter til ?error=invalid_game_mode uten å treffe DB
+  // game-insert.
+  it('validation: redirects with ?error=invalid_game_mode when slug not in formats table', async () => {
+    supabaseMock = buildSupabaseMock([]);
+    validateGameModeMock.mockResolvedValueOnce(false);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { createGameDraft } = await import('./actions');
+
+    await expect(
+      createGameDraft(fd({ name: 'Tester', side_tournament_enabled: 'false' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/games/new?error=invalid_game_mode');
+    expect(validateGameModeMock).toHaveBeenCalled();
   });
 
   it('happy path (draft): inserts game row + game_players, redirects with ?status=draft_created', async () => {

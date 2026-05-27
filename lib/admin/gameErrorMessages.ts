@@ -78,6 +78,11 @@ export const ERROR_MESSAGES_NEW_GAME: Record<string, string> = {
     'Singles matchplay krever nøyaktig 2 spillere. Fjern de overflødige før du publiserer.',
   mode_locked_after_publish:
     'Spillmodus kan ikke endres etter at spillet er publisert. Slett spillet og opprett et nytt hvis du vil bytte modus.',
+  // F2 (#272): server-action-validering mot formats-tabellen. Trigges hvis
+  // game_mode-slugen i form-en ikke finnes eller er deaktivert. Erstatter
+  // den droppede games_mode_check-DB-constraint.
+  invalid_game_mode:
+    'Den valgte spillmodusen er ikke tilgjengelig. Velg en annen modus og prøv igjen.',
   /**
    * NOTE: «kan publiseres» — used on both new-game and edit-game flows because
    * both lead to a publish/schedule transition. Compare `ERROR_MESSAGES_EXISTING_GAME`

@@ -10,6 +10,7 @@ import {
 import { findPendingPlayers } from '@/lib/games/pendingPlayers';
 import { parseSideTournamentFromFormData } from '@/lib/games/sideTournamentPayload';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
+import { isValidActiveGameMode } from '@/lib/formats/validateGameMode';
 // Course handicap is no longer frozen at create-time: the new flow has the
 // admin press "Start runden nå" (D5) to flip 'scheduled' → 'active' and
 // freeze handicaps then. Until D5 lands, scheduled rows persist with
@@ -35,6 +36,16 @@ async function createGameInternal(
 
   if (payload.errorCode) {
     redirect(`/admin/games/new?error=${payload.errorCode}`);
+  }
+
+  // F2 (#272): valider game_mode-slug mot formats-tabellen. Erstatter den
+  // droppede games_mode_check-CHECK-constraint fra 0047-migrasjonen.
+  // En slug som ikke finnes i formats — eller er deaktivert — slipper ikke
+  // gjennom her, så manipulerte URL-er eller stale klient-state ikke kan
+  // opprette ugyldige games.
+  const modeValid = await isValidActiveGameMode(payload.game_mode);
+  if (!modeValid) {
+    redirect('/admin/games/new?error=invalid_game_mode');
   }
 
   // Tee-off handling:
