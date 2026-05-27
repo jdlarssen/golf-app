@@ -1704,3 +1704,253 @@ describe('buildGameInsertPayload — foursomes_matchplay (issue #218)', () => {
     expect(result.players).toHaveLength(0);
   });
 });
+
+describe('buildGameInsertPayload — wolf (issue #274)', () => {
+  /**
+   * Helper for wolf-payloads. Bygger en form med game_mode=wolf og 4 spillere
+   * med team_number 1-4 (rotation-slots). Default scoring='net' — overstyres
+   * via opts.scoring når brukt eksplisitt.
+   */
+  function wolfFd(opts: {
+    slots?: Array<{ userId: string; slot: number }>;
+    scoring?: 'gross' | 'net' | '';
+    extras?: Record<string, string>;
+  }): FormData {
+    const { slots = [], scoring = 'net', extras = {} } = opts;
+    const base: Record<string, string> = {
+      name: 'Torsdags-wolf',
+      course_id: 'c1',
+      tee_box_id: 't1',
+      game_mode: 'wolf',
+    };
+    if (scoring !== '') {
+      base['wolf_scoring'] = scoring;
+    }
+    slots.forEach((p, i) => {
+      base[`player_${i}_id`] = p.userId;
+      base[`player_${i}_team`] = String(p.slot);
+      base[`player_${i}_flight`] = String(p.slot);
+    });
+    return fd({ ...base, ...extras });
+  }
+
+  it('publish med 4 spillere unike slot 1-4 → ok, mode_config med wolf_scoring=net', () => {
+    const result = buildGameInsertPayload(
+      wolfFd({
+        slots: [
+          { userId: 'a', slot: 1 },
+          { userId: 'b', slot: 2 },
+          { userId: 'c', slot: 3 },
+          { userId: 'd', slot: 4 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.game_mode).toBe('wolf');
+    expect(result.mode_config).toEqual({
+      kind: 'wolf',
+      team_size: 1,
+      teams_count: 4,
+      wolf_scoring: 'net',
+    });
+    expect(result.players).toEqual([
+      { user_id: 'a', team_number: 1, flight_number: 1 },
+      { user_id: 'b', team_number: 2, flight_number: 2 },
+      { user_id: 'c', team_number: 3, flight_number: 3 },
+      { user_id: 'd', team_number: 4, flight_number: 4 },
+    ]);
+  });
+
+  it('publish med wolf_scoring=gross → mode_config har gross', () => {
+    const result = buildGameInsertPayload(
+      wolfFd({
+        slots: [
+          { userId: 'a', slot: 1 },
+          { userId: 'b', slot: 2 },
+          { userId: 'c', slot: 3 },
+          { userId: 'd', slot: 4 },
+        ],
+        scoring: 'gross',
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'wolf') {
+      expect(result.mode_config.wolf_scoring).toBe('gross');
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('manglende wolf_scoring-felt defaulter til net', () => {
+    const result = buildGameInsertPayload(
+      wolfFd({
+        slots: [
+          { userId: 'a', slot: 1 },
+          { userId: 'b', slot: 2 },
+          { userId: 'c', slot: 3 },
+          { userId: 'd', slot: 4 },
+        ],
+        scoring: '',
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'wolf') {
+      expect(result.mode_config.wolf_scoring).toBe('net');
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('ugyldig wolf_scoring-verdi defaulter til net', () => {
+    const result = buildGameInsertPayload(
+      wolfFd({
+        slots: [
+          { userId: 'a', slot: 1 },
+          { userId: 'b', slot: 2 },
+          { userId: 'c', slot: 3 },
+          { userId: 'd', slot: 4 },
+        ],
+        // @ts-expect-error — tester defensiv fallback ved ugyldig verdi
+        scoring: 'stableford',
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'wolf') {
+      expect(result.mode_config.wolf_scoring).toBe('net');
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('publish med 3 spillere → min_players_for_mode', () => {
+    const result = buildGameInsertPayload(
+      wolfFd({
+        slots: [
+          { userId: 'a', slot: 1 },
+          { userId: 'b', slot: 2 },
+          { userId: 'c', slot: 3 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('min_players_for_mode');
+  });
+
+  it('publish med 5 spillere → too_many_players_for_mode', () => {
+    const result = buildGameInsertPayload(
+      wolfFd({
+        slots: [
+          { userId: 'a', slot: 1 },
+          { userId: 'b', slot: 2 },
+          { userId: 'c', slot: 3 },
+          { userId: 'd', slot: 4 },
+          { userId: 'e', slot: 1 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('too_many_players_for_mode');
+  });
+
+  it('publish med duplikat slot 1-1-2-3 → team_balance', () => {
+    const result = buildGameInsertPayload(
+      wolfFd({
+        slots: [
+          { userId: 'a', slot: 1 },
+          { userId: 'b', slot: 1 },
+          { userId: 'c', slot: 2 },
+          { userId: 'd', slot: 3 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('team_balance');
+  });
+
+  it('publish med slot=5 (utenfor 1-4) → bad_team', () => {
+    const result = buildGameInsertPayload(
+      wolfFd({
+        slots: [
+          { userId: 'a', slot: 1 },
+          { userId: 'b', slot: 2 },
+          { userId: 'c', slot: 3 },
+          { userId: 'd', slot: 5 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('bad_team');
+  });
+
+  it('publish med slot=0 (under 1) → bad_team', () => {
+    const result = buildGameInsertPayload(
+      wolfFd({
+        slots: [
+          { userId: 'a', slot: 0 },
+          { userId: 'b', slot: 2 },
+          { userId: 'c', slot: 3 },
+          { userId: 'd', slot: 4 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('bad_team');
+  });
+
+  it('publish med duplikat user_id → duplicate_player', () => {
+    const result = buildGameInsertPayload(
+      wolfFd({
+        slots: [
+          { userId: 'a', slot: 1 },
+          { userId: 'a', slot: 2 },
+          { userId: 'c', slot: 3 },
+          { userId: 'd', slot: 4 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('duplicate_player');
+  });
+
+  it('draft tolererer partial state (2 spillere)', () => {
+    const result = buildGameInsertPayload(
+      wolfFd({
+        slots: [
+          { userId: 'a', slot: 1 },
+          { userId: 'b', slot: 2 },
+        ],
+      }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(2);
+  });
+
+  it('draft tolererer 0 spillere', () => {
+    const result = buildGameInsertPayload(wolfFd({ slots: [] }), 'draft');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(0);
+  });
+
+  it('flight_number speilet til team_number for hver spiller (DB-CHECK)', () => {
+    const result = buildGameInsertPayload(
+      wolfFd({
+        slots: [
+          { userId: 'a', slot: 3 },
+          { userId: 'b', slot: 1 },
+          { userId: 'c', slot: 4 },
+          { userId: 'd', slot: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    for (const p of result.players) {
+      expect(p.flight_number).toBe(p.team_number);
+    }
+  });
+});
