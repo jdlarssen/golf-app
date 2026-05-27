@@ -227,6 +227,80 @@ export type Database = {
           },
         ]
       }
+      format_intent_mapping: {
+        Row: {
+          created_at: string
+          format_slug: string
+          intent: string
+          is_primary: boolean
+          is_visible: boolean
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          format_slug: string
+          intent: string
+          is_primary?: boolean
+          is_visible?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          format_slug?: string
+          intent?: string
+          is_primary?: boolean
+          is_visible?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "format_intent_mapping_format_slug_fkey"
+            columns: ["format_slug"]
+            isOneToOne: false
+            referencedRelation: "formats"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
+      formats: {
+        Row: {
+          created_at: string
+          display_name: string
+          icon_key: string
+          is_active: boolean
+          is_cup_eligible: boolean
+          scoring_module: string
+          short_description: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          icon_key: string
+          is_active?: boolean
+          is_cup_eligible?: boolean
+          scoring_module: string
+          short_description: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          icon_key?: string
+          is_active?: boolean
+          is_cup_eligible?: boolean
+          scoring_module?: string
+          short_description?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       game_players: {
         Row: {
           approved_at: string | null
