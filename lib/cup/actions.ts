@@ -83,15 +83,19 @@ export async function createTournamentDraft(formData: FormData) {
   const pointsRaw = String(formData.get('points_to_win') ?? '');
   const allowanceRaw = String(formData.get('fourball_allowance_pct') ?? '');
 
-  if (!NAME_RE.test(name)) redirect('/admin/cup/new?error=name');
-  if (!TEAM_NAME_RE.test(team1)) redirect('/admin/cup/new?error=team_1');
-  if (!TEAM_NAME_RE.test(team2)) redirect('/admin/cup/new?error=team_2');
+  // F2 (#272): valideringsfeil bouncer tilbake til wizard-en med
+  // ?intent=cup så CupSetup re-rendres. /admin/cup/new er fjernet.
+  // Error-koder prefiks-et med `cup_` for å unngå kollisjon med
+  // game-validerings-koder som flyter gjennom samme route.
+  if (!NAME_RE.test(name)) redirect('/admin/games/new?intent=cup&error=cup_name');
+  if (!TEAM_NAME_RE.test(team1)) redirect('/admin/games/new?intent=cup&error=cup_team_1');
+  if (!TEAM_NAME_RE.test(team2)) redirect('/admin/games/new?intent=cup&error=cup_team_2');
   if (team1.toLowerCase() === team2.toLowerCase())
-    redirect('/admin/cup/new?error=team_dup');
+    redirect('/admin/games/new?intent=cup&error=cup_team_dup');
   const points = parsePointsToWin(pointsRaw);
-  if (points === null) redirect('/admin/cup/new?error=points');
+  if (points === null) redirect('/admin/games/new?intent=cup&error=cup_points');
   const fourballAllowance = parseFourballAllowancePct(allowanceRaw);
-  if (fourballAllowance === null) redirect('/admin/cup/new?error=allowance');
+  if (fourballAllowance === null) redirect('/admin/games/new?intent=cup&error=cup_allowance');
 
   const supabase = await getServerClient();
   const admin = await requireAdmin(supabase);
@@ -111,7 +115,7 @@ export async function createTournamentDraft(formData: FormData) {
 
   if (error || !data) {
     console.error('[cup] createTournamentDraft failed', { error });
-    redirect('/admin/cup/new?error=insert_failed');
+    redirect('/admin/games/new?intent=cup&error=cup_insert_failed');
   }
 
   redirect(`/admin/cup/${data.id}?status=created`);

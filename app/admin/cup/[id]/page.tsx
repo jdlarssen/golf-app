@@ -199,13 +199,13 @@ export default async function CupDetailPage({
         </div>
         <div className="mb-3 grid grid-cols-2 gap-2">
           <Link
-            href={`/admin/games/new?tournament_id=${id}&game_mode=singles_matchplay`}
+            href={`/admin/games/new?intent=cup&tournament_id=${id}&game_mode=singles_matchplay`}
             className="rounded-md border border-border bg-surface px-3 py-2 text-center text-xs font-medium text-primary hover:border-primary/40"
           >
             + Singles match
           </Link>
           <Link
-            href={`/admin/games/new?tournament_id=${id}&game_mode=fourball_matchplay`}
+            href={`/admin/games/new?intent=cup&tournament_id=${id}&game_mode=fourball_matchplay`}
             className="rounded-md border border-border bg-surface px-3 py-2 text-center text-xs font-medium text-primary hover:border-primary/40"
           >
             + Fourball match

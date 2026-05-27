@@ -99,7 +99,7 @@ export default async function CupListPage({
       )}
 
       <div className="mb-5">
-        <Link href="/admin/cup/new">
+        <Link href="/admin/games/new?intent=cup">
           <Button className="w-full">Opprett ny cup</Button>
         </Link>
       </div>

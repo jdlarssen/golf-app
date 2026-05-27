@@ -83,6 +83,17 @@ export const ERROR_MESSAGES_NEW_GAME: Record<string, string> = {
   // den droppede games_mode_check-DB-constraint.
   invalid_game_mode:
     'Den valgte spillmodusen er ikke tilgjengelig. Velg en annen modus og prøv igjen.',
+  // F2 (#272): Cup-creation-form (CupSetup i wizard step 2) bouncer
+  // validerings-feil tilbake til wizarden. Cup-prefiksede koder unngår
+  // kollisjon med game-spesifikke koder.
+  cup_name: 'Cup-navnet må være mellom 1 og 80 tegn.',
+  cup_team_1: 'Navn på lag 1 må være mellom 1 og 40 tegn.',
+  cup_team_2: 'Navn på lag 2 må være mellom 1 og 40 tegn.',
+  cup_team_dup: 'Lagene må ha forskjellige navn.',
+  cup_points: 'Point-målet må være et positivt tall (typisk 4,5 for 8 matches).',
+  cup_allowance: 'Allowance må være mellom 0 og 100.',
+  cup_insert_failed:
+    'Klarte ikke å opprette cupen. Prøv igjen, eller sjekk Vercel-loggene.',
   /**
    * NOTE: «kan publiseres» — used on both new-game and edit-game flows because
    * both lead to a publish/schedule transition. Compare `ERROR_MESSAGES_EXISTING_GAME`
