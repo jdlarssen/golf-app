@@ -5,7 +5,7 @@ import {
   MAPPING_INTENTS,
   type FormatWithMappings,
   type MappingIntent,
-} from '@/lib/formats/getAllFormatsWithMappings';
+} from '@/lib/formats/types';
 import { formatIconFor } from '@/lib/formats/icons';
 import { RowStatusChip, type RowStatus } from './RowStatusChip';
 import {

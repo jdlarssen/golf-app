@@ -1,30 +1,19 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
+// Types lever i client-safe lib/formats/types.ts fordi `import 'server-only'`
+// her ville ellers blokkere client-komponenter fra å importere typer derfra
+// (Turbopack inspiserer module-imports før type-elision). Re-eksport så
+// eksisterende server-side call-sites fortsatt kan importere herfra.
+import type {
+  MappingIntent,
+  MappingEntry,
+  FormatWithMappings,
+} from './types';
 
-export type MappingIntent = 'kompis' | 'klubb' | 'solo';
-
-export const MAPPING_INTENTS: readonly MappingIntent[] = [
-  'kompis',
-  'klubb',
-  'solo',
-] as const;
-
-export type MappingEntry = {
-  is_visible: boolean;
-  is_primary: boolean;
-  sort_order: number;
-};
-
-export type FormatWithMappings = {
-  slug: string;
-  display_name: string;
-  icon_key: string;
-  short_description: string;
-  is_active: boolean;
-  is_cup_eligible: boolean;
-  /** Mapping-rad per intent, eller null hvis ingen rad finnes (= "Ny"). */
-  mappings: Record<MappingIntent, MappingEntry | null>;
-};
+export {
+  MAPPING_INTENTS,
+} from './types';
+export type { MappingIntent, MappingEntry, FormatWithMappings };
 
 /**
  * Admin-view-helper: henter ALLE formats sammen med ALLE mapping-rader (inkl.

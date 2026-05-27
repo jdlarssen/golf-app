@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { FormatsManager } from './FormatsManager';
-import type { FormatWithMappings } from '@/lib/formats/getAllFormatsWithMappings';
+import type { FormatWithMappings } from '@/lib/formats/types';
 
 // Mock server-actions så vi kan spionere på FormData uten å trigge faktiske
 // redirects/DB-kall.
