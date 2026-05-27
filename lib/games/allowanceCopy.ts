@@ -25,5 +25,10 @@ export function bruttoHelperFor(mode: GameMode): string {
     case 'texas_scramble':
       // Disse modusene har egne brutto-tekster i call-sites, ikke denne.
       return 'Ingen handicap — kun gross teller.';
+    case 'wolf':
+      // Wolf har egen scoring-toggle (gross|net) i WolfSetup-step. Denne
+      // helperen brukes av Section 3 sin generiske allowance-field som ikke
+      // vises for wolf, men returverdien defineres for type-completeness.
+      return 'Ingen handicap — point-utdeling bruker gross-score.';
   }
 }

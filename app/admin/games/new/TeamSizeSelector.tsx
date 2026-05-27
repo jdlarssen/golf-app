@@ -58,6 +58,11 @@ const ENABLED_COMBOS: Record<GameMode, ReadonlySet<TeamSize>> = {
   texas_scramble: new Set<TeamSize>([2, 4]),
   fourball_matchplay: new Set<TeamSize>([2]),
   foursomes_matchplay: new Set<TeamSize>([2]),
+  // Wolf: hver av de 4 spillerne er sin egen «row» (team_size=1). Selve
+  // team_number-feltet brukes som rotation-slot 1-4, ikke som lag-tildeling.
+  // TeamSizeSelector vises ikke for wolf (WolfSetup tar over), så denne
+  // entry-en er kun for type-completeness på ENABLED_COMBOS-mappen.
+  wolf: new Set<TeamSize>([1]),
 };
 
 type TileDef = {

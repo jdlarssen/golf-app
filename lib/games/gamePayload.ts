@@ -235,7 +235,8 @@ function parseGameMode(formData: FormData): GameMode | null {
     raw === 'solo_strokeplay' ||
     raw === 'texas_scramble' ||
     raw === 'fourball_matchplay' ||
-    raw === 'foursomes_matchplay'
+    raw === 'foursomes_matchplay' ||
+    raw === 'wolf'
   )
     return raw;
   return null;
@@ -856,8 +857,6 @@ function validateFoursomesMatchplay(
     ) {
       return { ok: false, errorCode: 'bad_team' };
     }
-    // flight_number = team_number for å oppfylle DB-CHECK
-    // game_players_team_flight_consistency (begge satt sammen).
     const flight_number = team_number;
     players.push({ user_id, team_number, flight_number });
   }
@@ -913,6 +912,93 @@ function parseFoursomesAllowancePct(
   return n;
 }
 
+/**
+ * Wolf-validator (issue #274 — 4-spiller rotating partner-format).
+ *
+ * Regler:
+ *  - EKSAKT 4 spillere ved publish
+ *  - team_number 1-4, alle distinct (representerer rotation-slot, ikke lag)
+ *  - flight_number = team_number (DB-CHECK game_players_team_flight_consistency)
+ *  - draft tolererer partial state (0..4 spillere, ufullstendig slot-fordeling)
+ *
+ * Feilkoder ved publish:
+ *  - 0..3 spillere → `min_players_for_mode`
+ *  - 5+ spillere → `too_many_players_for_mode`
+ *  - 4 spillere men ikke unike team_numbers 1-4 → `team_balance`
+ *
+ * Scoring-toggle: form-feltet `wolf_scoring` ('gross' | 'net'). Default 'net'
+ * når feltet mangler (matcher Tørny-default + design-doc).
+ *
+ * Mode_config-output: `{kind, team_size: 1, teams_count: 4, wolf_scoring}`.
+ */
+function validateWolf(
+  formData: FormData,
+  mode: PayloadMode,
+): ModeValidationResult {
+  const wolfScoring = parseWolfScoring(formData);
+
+  const players: GamePlayerInput[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < 8; i++) {
+    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
+    if (!user_id) continue;
+    if (seen.has(user_id)) {
+      return { ok: false, errorCode: 'duplicate_player' };
+    }
+    seen.add(user_id);
+    const team_number = Number(formData.get(`player_${i}_team`));
+    // Wolf-slot er strengt 1-4 (rotation-slot, ikke lag).
+    if (
+      !Number.isInteger(team_number) ||
+      team_number < 1 ||
+      team_number > 4
+    ) {
+      return { ok: false, errorCode: 'bad_team' };
+    }
+    const flight_number = team_number;
+    players.push({ user_id, team_number, flight_number });
+  }
+
+  if (mode === 'publish') {
+    if (players.length < 4) {
+      return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    if (players.length > 4) {
+      return { ok: false, errorCode: 'too_many_players_for_mode' };
+    }
+    // Nøyaktig 4 spillere — sjekk at team_numbers er unike 1-4.
+    const slotsSeen = new Set<number>();
+    for (const p of players) {
+      if (p.team_number === null) continue;
+      slotsSeen.add(p.team_number);
+    }
+    if (slotsSeen.size !== 4) {
+      return { ok: false, errorCode: 'team_balance' };
+    }
+  }
+
+  return {
+    ok: true,
+    players,
+    mode_config: {
+      kind: 'wolf',
+      team_size: 1,
+      teams_count: 4,
+      wolf_scoring: wolfScoring,
+    },
+  };
+}
+
+/**
+ * Leser `wolf_scoring` fra form-data. Defaulter til 'net' når feltet mangler
+ * eller har en ugyldig verdi — speiler Tørny's HCP-default-ethos.
+ */
+function parseWolfScoring(formData: FormData): 'gross' | 'net' {
+  const raw = String(formData.get('wolf_scoring') ?? '').trim();
+  if (raw === 'gross') return 'gross';
+  return 'net';
+}
+
 const modeValidators: Record<
   GameMode,
   (formData: FormData, mode: PayloadMode) => ModeValidationResult
@@ -924,6 +1010,7 @@ const modeValidators: Record<
   texas_scramble: validateTexasScramble,
   fourball_matchplay: validateFourballMatchplay,
   foursomes_matchplay: validateFoursomesMatchplay,
+  wolf: validateWolf,
 };
 
 /**

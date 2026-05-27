@@ -24,6 +24,7 @@ import * as soloStrokeplay from './modes/soloStrokeplay';
 import * as texasScramble from './modes/texasScramble';
 import * as fourballMatchplay from './modes/fourballMatchplay';
 import * as foursomesMatchplay from './modes/foursomesMatchplay';
+import * as wolf from './modes/wolf';
 import type { ScoringContext, ModeResult } from './modes/types';
 
 export function computeLeaderboard(ctx: ScoringContext): ModeResult {
@@ -42,6 +43,8 @@ export function computeLeaderboard(ctx: ScoringContext): ModeResult {
       return fourballMatchplay.compute(ctx);
     case 'foursomes_matchplay':
       return foursomesMatchplay.compute(ctx);
+    case 'wolf':
+      return wolf.compute(ctx);
   }
 }
 
@@ -90,4 +93,11 @@ export type {
   FoursomesSide,
   FoursomesSidePlayer,
   FoursomesHoleRow,
+  WolfResult,
+  WolfChoice,
+  WolfHoleOutcome,
+  WolfHoleChoice,
+  WolfHoleRow,
+  WolfPlayerCell,
+  WolfPlayerLine,
 } from './modes/types';

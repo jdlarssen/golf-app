@@ -83,7 +83,8 @@ type GameRow = {
     | 'solo_strokeplay'
     | 'texas_scramble'
     | 'fourball_matchplay'
-    | 'foursomes_matchplay';
+    | 'foursomes_matchplay'
+    | 'wolf';
   /**
    * Mode-spesifikk config fra `games.mode_config` (JSONB). Type-en speilet
    * fra `GameForHole` slik at scorecardTitle() kan resolve riktig tittel/

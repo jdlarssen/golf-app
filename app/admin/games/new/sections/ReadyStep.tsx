@@ -51,6 +51,7 @@ const MODE_SUMMARY_LABELS: Record<GameMode, string> = {
   texas_scramble: 'Texas scramble',
   fourball_matchplay: 'Four-ball matchplay',
   foursomes_matchplay: 'Foursomes matchplay',
+  wolf: 'Wolf',
 };
 
 function teamSizeLabel(size: TeamSize): string {

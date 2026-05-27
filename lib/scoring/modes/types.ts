@@ -9,7 +9,8 @@ export type GameMode =
   | 'solo_strokeplay'
   | 'texas_scramble'
   | 'fourball_matchplay'
-  | 'foursomes_matchplay';
+  | 'foursomes_matchplay'
+  | 'wolf';
 
 /**
  * Norske visnings-labels for hver spillmodus. Brukes av ModeChip i admin-
@@ -25,6 +26,7 @@ export const MODE_LABELS: Record<GameMode, string> = {
   texas_scramble: 'Texas scramble',
   fourball_matchplay: 'Fourball',
   foursomes_matchplay: 'Foursomes',
+  wolf: 'Wolf',
 };
 
 /**
@@ -94,6 +96,21 @@ export type GameModeConfig =
        * defensivt tilbake til 100 hvis feltet mangler i draft-state.
        */
       allowance_pct: number;
+    }
+  | {
+      kind: 'wolf';
+      team_size: 1;
+      teams_count: 4;
+      /**
+       * Brutto vs netto for Wolf. 'net' = hver spillers per-hull-score er
+       * gross − strokesForHole(courseHandicap, strokeIndex). 'gross' =
+       * ren gross-score (HCP ignoreres).
+       *
+       * Admin velger ved opprett. Default 'net' speiler Tørny's resten-av-
+       * appen-ethos. `games.hcp_allowance_pct` brukes IKKE for Wolf — vi
+       * bruker enten full HCP eller ingen.
+       */
+      wolf_scoring: 'gross' | 'net';
     };
 
 /**
@@ -161,6 +178,12 @@ export interface ScoringContext {
   players: ScoringPlayer[];
   holes: ScoringHole[];
   scores: ScoringHoleScore[];
+  /**
+   * Wolf-mode-spesifikk input: per-hull-valget fra `wolf_hole_choices`-tabellen.
+   * Kun lest av wolf-modulen — andre moduser ignorerer feltet. Optional så
+   * eksisterende ScoringContext-fixtures uten Wolf-data fortsetter å funke.
+   */
+  wolfChoices?: WolfHoleChoice[];
 }
 
 /**
@@ -793,6 +816,130 @@ export interface FoursomesMatchplayResult {
   result: MatchplayMatchResult | null;
 }
 
+// -----------------------------------------------------------------------------
+// Wolf (issue #274 — 4-spiller rotating partner-format).
+//
+// Hver spiller har en `team_number` 1-4 som er rotation-slot (random
+// permutasjon satt av wizard ved opprett). Wolf-spilleren skifter per hull:
+//   - Hull 1-16: wolf = player med team_number === ((holeNumber - 1) % 4) + 1
+//   - Hull 17-18: wolf = lavest totalPoints etter forrige hull
+//                 (tiebreak: team_number ASC, deterministisk)
+//
+// Per hull velger Wolf via `wolf_hole_choices`:
+//   - 'partner': 2v2 (Wolf + valgt partner mot de to andre)
+//   - 'lone':    1v3 (Wolf alene), 2x stake
+//   - 'blind':   1v3 deklarert FØR tee shots, 3x stake (honor-system)
+//
+// Point-tabell (hardkodet i v1, justerbar via senere mode_config-utvidelse):
+//   partner-side win:  2 × stake til hver av wolf+partner
+//   partner-side loss: 1 × stake til hver av de 2 motstanderne
+//   lone win:          4 × stake til wolf
+//   lone loss:         1 × stake til hver av de 3 motstanderne
+//   blind win:         6 × stake til wolf
+//   blind loss:        2 × stake til hver av de 3 motstanderne
+//   tied:              0 til alle, stake carrier (+1) til neste hull
+//
+// Stake-mekanikk: base = 1. Tied hull → stake += 1 til neste. Avgjort hull
+// → stake reset til 1 etter utbetaling. Pending hull (ikke valgt eller
+// ikke spilt) bevarer stake uendret.
+// -----------------------------------------------------------------------------
+
+export type WolfChoice = 'partner' | 'lone' | 'blind';
+
+export type WolfHoleOutcome =
+  | 'wolf_side_wins'
+  | 'opp_side_wins'
+  | 'tied'
+  | 'pending';
+
+/**
+ * Wolf-valg fra `wolf_hole_choices`-tabellen, normalisert til scoring-shape.
+ * Lest av `computeLeaderboard()` for wolf-modus via en utvidet ScoringContext.
+ */
+export interface WolfHoleChoice {
+  holeNumber: number;
+  wolfUserId: string;
+  choice: WolfChoice;
+  /** Required når choice='partner', null ellers (CHECK håndhever det i DB). */
+  partnerUserId: string | null;
+}
+
+/**
+ * Per-spiller-detalj på et Wolf-hull. `side` reflekterer hvilken side
+ * spilleren spilte på dette hullet (wolf-side eller opp-side); null når
+ * hullet er pending eller spilleren ikke er Wolf og Wolf valgte 'lone'/'blind'
+ * (alle 3 motstandere er på opp-side). `isContributor` flagger spillere
+ * som hadde best score på sin side på dette hullet — kan være begge ved
+ * tie innen en side (partner-modus, begge har samme netto).
+ */
+export interface WolfPlayerCell {
+  userId: string;
+  gross: number | null;
+  /** Etter HCP-fordeling hvis wolf_scoring='net', ellers === gross. */
+  effectiveScore: number | null;
+  /** 'wolf' = Wolf-siden (Wolf+partner eller Wolf alene), 'opp' = de andre. */
+  side: 'wolf' | 'opp' | null;
+  /** Hadde best score på sin side på dette hullet. */
+  isContributor: boolean;
+}
+
+export interface WolfHoleRow {
+  holeNumber: number;
+  par: number;
+  strokeIndex: number;
+  /** Spilleren som er Wolf på dette hullet (rotation eller trailing). */
+  wolfUserId: string;
+  /** null = ikke valgt ennå (outcome='pending'). */
+  choice: WolfChoice | null;
+  /** Required når choice='partner', null ellers. */
+  partnerUserId: string | null;
+  /**
+   * Stake-multiplier for dette hullet. Base = 1, +1 per tied carry-over fra
+   * forrige hull. Reset til 1 etter et avgjort hull. Pending/unplayed hull
+   * bevarer stake uendret for neste hull.
+   */
+  stake: number;
+  outcome: WolfHoleOutcome;
+  /** Per-spiller-detalj for de 4 spillere på dette hullet. */
+  players: WolfPlayerCell[];
+  /**
+   * Poeng utdelt på dette hullet, indeksert på userId. 0-verdi for spillere
+   * som ikke fikk poeng. Tom for pending/tied (alle 0). UI summerer på tvers
+   * av hullene for å vise totalpoeng.
+   */
+  pointsByPlayer: Record<string, number>;
+}
+
+/**
+ * Per-spiller-rad i Wolf-leaderboard. Ranking: høyest totalPoints vinner.
+ * Tiebreak (v1): siste Wolf-hull poeng, så team_number ASC (deterministisk).
+ *
+ * `wolfHolesPlayed` = hvor mange hull spilleren var Wolf (rotation +
+ * eventuelle trailing-wolf-hull). `blindWolfWins` = bragging-stat for podium.
+ */
+export interface WolfPlayerLine {
+  userId: string;
+  teamNumber: number;
+  totalPoints: number;
+  wolfHolesPlayed: number;
+  blindWolfWins: number;
+  rank: number;
+  tiedWith: string[];
+}
+
+export interface WolfResult {
+  kind: 'wolf';
+  scoring: 'gross' | 'net';
+  /**
+   * Hardkodet 'random_with_trailing' i v1 — random første 16 (lagret som
+   * game_players.team_number), trailing-wolf siste 2. Feltet eksisterer
+   * så fremtidige rotasjons-varianter kan legges til uten breaking type.
+   */
+  rotation: 'random_with_trailing';
+  holes: WolfHoleRow[];
+  players: WolfPlayerLine[];
+}
+
 /**
  * Discriminated union — konsumenter narrower på `kind`:
  *   const r = computeLeaderboard(ctx);
@@ -809,6 +956,9 @@ export interface FoursomesMatchplayResult {
  *
  * For texas_scramble narrower man på `kind` og leser `teams` direkte —
  * kun team-variant i v1 (3-mannslag utsatt).
+ *
+ * For wolf narrower man på `kind` og leser `holes`/`players` direkte —
+ * kun én variant i v1 (random_with_trailing).
  */
 export type ModeResult =
   | BestBallResult
@@ -817,4 +967,5 @@ export type ModeResult =
   | SoloStrokeplayResult
   | TexasScrambleResult
   | FourballMatchplayResult
-  | FoursomesMatchplayResult;
+  | FoursomesMatchplayResult
+  | WolfResult;

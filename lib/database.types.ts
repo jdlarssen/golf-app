@@ -985,6 +985,68 @@ export type Database = {
         }
         Relationships: []
       }
+      wolf_hole_choices: {
+        Row: {
+          choice: string
+          created_at: string
+          entered_by: string
+          game_id: string
+          hole_number: number
+          partner_user_id: string | null
+          updated_at: string
+          wolf_user_id: string
+        }
+        Insert: {
+          choice: string
+          created_at?: string
+          entered_by: string
+          game_id: string
+          hole_number: number
+          partner_user_id?: string | null
+          updated_at?: string
+          wolf_user_id: string
+        }
+        Update: {
+          choice?: string
+          created_at?: string
+          entered_by?: string
+          game_id?: string
+          hole_number?: number
+          partner_user_id?: string | null
+          updated_at?: string
+          wolf_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wolf_hole_choices_entered_by_fkey"
+            columns: ["entered_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wolf_hole_choices_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wolf_hole_choices_partner_user_id_fkey"
+            columns: ["partner_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wolf_hole_choices_wolf_user_id_fkey"
+            columns: ["wolf_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
