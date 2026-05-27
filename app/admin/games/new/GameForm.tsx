@@ -131,6 +131,11 @@ export type InitialValues = {
    */
   foursomes_allowance_pct?: number;
   /**
+   * Wolf (#274): scoring-modus ('gross' eller 'net'). Pre-fylles fra DB i
+   * edit-flyt; nye spill defaulter til 'net' i useGameFormState.
+   */
+  wolf_scoring?: 'gross' | 'net';
+  /**
    * Self-påmelding (#199). Defaultes til 'invite_only' + 'solo' for å
    * bevare dagens flyt. Edit-flyten leverer eksisterende valg fra DB.
    */

@@ -26,6 +26,26 @@ export function isTeamNumber(n: number): n is TeamNumber {
   return n === 1 || n === 2 || n === 3 || n === 4;
 }
 
+/**
+ * splitmix32 — kort, deterministisk PRNG for Wolf-rotasjon-shuffle.
+ *
+ * Fisher-Yates over en 4-element array trenger 3 random-uttrekk. Vi vil
+ * ha samme rekkefølge ved re-render for samme (seed, players)-input,
+ * men annerledes rekkefølge etter neste "Shuffle"-klikk. Native Math.random
+ * er ikke seedbar; splitmix32 gir det vi trenger i ~10 linjer.
+ */
+function splitmix32(seed: number): () => number {
+  let state = seed | 0;
+  return () => {
+    state = (state + 0x9e3779b9) | 0;
+    let z = state;
+    z = Math.imul(z ^ (z >>> 16), 0x85ebca6b);
+    z = Math.imul(z ^ (z >>> 13), 0xc2b2ae35);
+    z = (z ^ (z >>> 16)) >>> 0;
+    return z / 4294967296;
+  };
+}
+
 // Derive team/flight maps from the optional initialValues.players array so the
 // edit page (D4) can pre-fill these without re-implementing the math. Rows
 // med ute-av-rekkevidde-team_number eller null (solo-modus) hopper over
@@ -71,6 +91,10 @@ export function defaultTeamSizeForMode(mode: GameMode): TeamSize {
   // Texas scramble: default 4-mannslag (typisk firma-cup-størrelse).
   // 2-mannslag valgbart via TeamSizeSelector.
   if (mode === 'texas_scramble') return 4;
+  // Wolf: hver spiller er sin egen «row». team_number 1-4 brukes som
+  // rotation-slot, ikke som lag-tildeling. team_size=1 betyr requiresTeams=false
+  // så vi får solo-style player-selection i step 3.
+  if (mode === 'wolf') return 1;
   return 2;
 }
 
@@ -221,6 +245,19 @@ export function useGameFormState({
   const [foursomesAllowancePct, setFoursomesAllowancePct] = useState<number>(
     initialValues?.foursomes_allowance_pct ?? 50,
   );
+  // Wolf (#274): brutto vs netto-toggle. Default 'net' speiler Tørny's
+  // ethos. Validatoren (`validateWolf`) leser feltet og faller defensivt
+  // tilbake til 'net' ved ugyldig/manglende verdi.
+  const [wolfScoring, setWolfScoring] = useState<'gross' | 'net'>(
+    initialValues?.wolf_scoring === 'gross' ? 'gross' : 'net',
+  );
+  // Wolf-rotasjon: en counter som økes hver gang admin trykker "Shuffle".
+  // wolfOrder (derived under) hasher (selectedPlayerIds, wolfShuffleSeed) for
+  // å produsere en deterministisk-pseudo-random permutasjon. Da kan render-
+  // tester stub-e shuffle ved å passere kjent seed.
+  const [wolfShuffleSeed, setWolfShuffleSeed] = useState<number>(() =>
+    Math.floor(Math.random() * 1_000_000),
+  );
   const [requirePeerApproval, setRequirePeerApproval] = useState(
     initialValues?.require_peer_approval ?? false,
   );
@@ -364,6 +401,10 @@ export function useGameFormState({
   //   team_size. Lag-handicap = NGF-aggregat (default 25 % for 2-mannslag,
   //   10 % for 4-mannslag — admin kan justere).
   const isTexas = gameMode === 'texas_scramble';
+  // - isWolf: 4-spiller rotating partner-format. team_number 1-4 brukes som
+  //   rotation-slot (random permutasjon ved publish). team_size=1, ingen
+  //   lag-grid. Eget WolfSetup-step i step 2 for scoring-toggle + shuffle.
+  const isWolf = gameMode === 'wolf';
 
   // Drafts can be saved without a tee-off; publishing cannot. `canPublish`
   // below combines this with the rest of the validity gates.
@@ -582,7 +623,50 @@ export function useGameFormState({
   //   validatoren (`validateStableford` / `validateSoloStrokeplay`)
   //   leser opp til 8 slots og ignorerer manglende team/flight-felt for
   //   begge solo-modusene.
+  //
+  // Wolf-rotasjon: deterministisk shuffle av selectedPlayerIds basert på
+  // wolfShuffleSeed. Fisher-Yates med splitmix32-PRNG seedet på seed-en.
+  // Reseeding gjør at admin kan "Shuffle" til de er fornøyde, men ellers
+  // er rekkefølgen stabil ved re-render. Tom liste hvis !isWolf eller
+  // <4 valgte. ≥4 selected slices til de 4 første (defensive — UI bør
+  // gate dette).
+  const wolfOrder = useMemo<string[]>(() => {
+    if (!isWolf) return [];
+    if (selectedPlayerIds.length < 4) return [];
+    const base = selectedPlayerIds.slice(0, 4);
+    const rng = splitmix32(wolfShuffleSeed);
+    const shuffled = [...base];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }, [isWolf, selectedPlayerIds, wolfShuffleSeed]);
+
+  function shuffleWolfOrder() {
+    setWolfShuffleSeed(Math.floor(Math.random() * 1_000_000));
+  }
+
   const orderedPayload = useMemo(() => {
+    if (isWolf) {
+      // Wolf: emit 4 rader, hver med team_number 1-4 i shuffled rekkefølge.
+      // wolfOrder er allerede deterministisk-shuffled basert på
+      // (selectedPlayerIds, wolfShuffleSeed). Hvis <4 valgt: emit slot-frie
+      // rader så draft-state tåler det. Validator-en (`validateWolf`)
+      // håndhever 4-spillers-regelen ved publish.
+      if (selectedPlayerIds.length < 4) {
+        return selectedPlayerIds.map((pid) => ({
+          user_id: pid,
+          team_number: null as number | null,
+          flight_number: null as number | null,
+        }));
+      }
+      return wolfOrder.map((pid, idx) => ({
+        user_id: pid,
+        team_number: idx + 1,
+        flight_number: idx + 1,
+      }));
+    }
     if (isMatchplay) {
       const rows: {
         user_id: string;
@@ -632,7 +716,7 @@ export function useGameFormState({
       }
     }
     return rows;
-  }, [isMatchplay, requiresTeams, selectedPlayerIds, playersByTeam, teamByPlayer, flightByPlayer, isParStableford, isTexas]);
+  }, [isMatchplay, isWolf, requiresTeams, selectedPlayerIds, wolfOrder, playersByTeam, teamByPlayer, flightByPlayer, isParStableford, isTexas]);
 
   const flightsComplete =
     teamsComplete &&
@@ -706,6 +790,11 @@ export function useGameFormState({
     matchplaySide1Count === 1 &&
     matchplaySide2Count === 1;
 
+  // Wolf-validitet: nøyaktig 4 spillere. Rotation-slot 1-4 fordeles
+  // automatisk via wolfOrder (deterministisk shuffle), så admin trenger
+  // ikke å tilordne selv. Speiler `validateWolf` i gamePayload.ts.
+  const wolfPlayersValid = isWolf && selectedPlayerIds.length === 4;
+
   // Modus-spesifikk publish-validitet. Reglene speiler
   // `lib/games/gamePayload.ts` slik at klient og server forteller samme
   // historie til admin når noe mangler:
@@ -726,7 +815,9 @@ export function useGameFormState({
           ? parStablefordPlayersValid
           : isTexas
             ? texasPlayersValid
-            : false;
+            : isWolf
+              ? wolfPlayersValid
+              : false;
 
   // Publishing requires every section to be valid AND a tee-off time. Drafts
   // skip these gates entirely (they only need a name).
@@ -743,7 +834,7 @@ export function useGameFormState({
     courseId !== '' &&
     teeBoxId !== '' &&
     (playersStepOptional || playersValidForMode) &&
-    (isTexas || allowanceValid) &&
+    (isTexas || isWolf || allowanceValid) &&
     hasTeeOff;
 
   // Human-readable list of what's still missing for a publish. Mode-aware:
@@ -824,15 +915,28 @@ export function useGameFormState({
     if (!texasHandicapPctValid) {
       missingForPublish.push('lag-handicap-prosent (0-100)');
     }
+  } else if (isWolf) {
+    // Wolf: krever nøyaktig 4 spillere. Rotation-slot fordeles automatisk
+    // via wolfOrder, så ingen lag-tilordning trengs i UI.
+    if (selectedPlayerIds.length < 4) {
+      const remaining = 4 - selectedPlayerIds.length;
+      missingForPublish.push(
+        `${remaining} ${remaining === 1 ? 'spiller' : 'spillere'} til`,
+      );
+    } else if (selectedPlayerIds.length > 4) {
+      missingForPublish.push(
+        'for mange spillere — Wolf krever nøyaktig 4',
+      );
+    }
   } else if (selectedPlayerIds.length < 1) {
     // isSolo
     missingForPublish.push('minst én spiller');
   }
-  // hcp_allowance_pct gjelder ikke for Texas — det er erstattet av
-  // texas_team_handicap_pct i mode_config. Hopper over allowance-sjekken
-  // for Texas slik at admin ikke får mismatch mellom UI-skjult-felt og
-  // publish-feilmelding.
-  if (!isTexas && !allowanceValid) missingForPublish.push('gyldig HCP-allowance');
+  // hcp_allowance_pct gjelder ikke for Texas eller Wolf — disse modusene
+  // har sin egen scoring-konfig i mode_config. Hopper over allowance-sjekken
+  // så admin ikke får mismatch mellom UI-skjult-felt og publish-feilmelding.
+  if (!isTexas && !isWolf && !allowanceValid)
+    missingForPublish.push('gyldig HCP-allowance');
 
   return {
     // Raw state
@@ -859,6 +963,10 @@ export function useGameFormState({
     setFourballAllowancePct,
     foursomesAllowancePct,
     setFoursomesAllowancePct,
+    wolfScoring,
+    setWolfScoring,
+    wolfOrder,
+    shuffleWolfOrder,
     requirePeerApproval,
     setRequirePeerApproval,
     sideEnabled,
@@ -890,6 +998,7 @@ export function useGameFormState({
     isParStableford,
     isMatchplay,
     isTexas,
+    isWolf,
     hasTeeOff,
     // Memoiserte derivasjoner
     selectedCourse,

@@ -42,6 +42,7 @@ import { PlayersSection } from './sections/PlayersSection';
 import { TeamsAssignmentSection } from './sections/TeamsAssignmentSection';
 import { ReadyStep } from './sections/ReadyStep';
 import { RegistrationSection } from './sections/RegistrationSection';
+import { WolfSetup } from './sections/WolfSetup';
 import { AllowanceField } from '@/components/admin/AllowanceField';
 import { bruttoHelperFor } from '@/lib/games/allowanceCopy';
 import {
@@ -415,11 +416,22 @@ export function GameWizard({
 
           {state.formatChosen && (
             <div className="space-y-4">
-              {!state.isMatchplay && (
+              {!state.isMatchplay && !state.isWolf && (
                 <TeamSizeSelector
                   mode={state.gameMode}
                   value={state.teamSize}
                   onChange={state.handleTeamSizeChange}
+                  disabled={state.lockGameMode}
+                />
+              )}
+              {state.isWolf && (
+                <WolfSetup
+                  scoring={state.wolfScoring}
+                  onScoringChange={state.setWolfScoring}
+                  wolfOrder={state.wolfOrder
+                    .map((pid) => players.find((p) => p.id === pid))
+                    .filter((p): p is PlayerOption => p !== undefined)}
+                  onShuffle={state.shuffleWolfOrder}
                   disabled={state.lockGameMode}
                 />
               )}
@@ -576,9 +588,11 @@ function FormDataInputs({
     gameMode,
     teamSize,
     isTexas,
+    isWolf,
     texasHandicapPct,
     fourballAllowancePct,
     foursomesAllowancePct,
+    wolfScoring,
     orderedPayload,
     courseId,
     teeBoxId,
@@ -635,6 +649,9 @@ function FormDataInputs({
           name="foursomes_allowance_pct"
           value={String(foursomesAllowancePct)}
         />
+      )}
+      {isWolf && (
+        <input type="hidden" name="wolf_scoring" value={wolfScoring} />
       )}
 
       <input type="hidden" name="course_id" value={courseId} />
