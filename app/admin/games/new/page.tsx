@@ -16,6 +16,10 @@ import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
 import { getServerClient } from '@/lib/supabase/server';
 import { parseIntent, type Intent } from '@/lib/wizard/intent';
+import {
+  getFormatsForIntent,
+  getCupEligibleFormats,
+} from '@/lib/formats/getFormatsForIntent';
 
 type SearchParams = Promise<{
   error?: string | string[];
@@ -216,6 +220,18 @@ async function GameFormBody({
   cupContext: CupContext | null;
   initialIntent: Intent | undefined;
 }) {
+  // Forhåndshent format-katalogen for alle ikke-cup-intents + cup-eligible
+  // listen så client-wizard kan switche intent uten ekstra fetch. Parallell
+  // henting + unstable_cache i F1-helperen gjør dette billig (4 DB-queries
+  // sum, alle tag-cachet 24h).
+  const [kompisFormats, klubbFormats, soloFormats, cupEligibleFormats] =
+    await Promise.all([
+      getFormatsForIntent('kompis'),
+      getFormatsForIntent('klubb'),
+      getFormatsForIntent('solo'),
+      getCupEligibleFormats(),
+    ]);
+
   const { courses, players } = await getNewGameFormData();
   return (
     <GameWizard
@@ -230,6 +246,12 @@ async function GameFormBody({
         cupContext ? buildCupInitialValues(cupContext) : undefined
       }
       initialIntent={initialIntent}
+      formatsByIntent={{
+        kompis: kompisFormats,
+        klubb: klubbFormats,
+        solo: soloFormats,
+      }}
+      cupEligibleFormats={cupEligibleFormats}
     />
   );
 }

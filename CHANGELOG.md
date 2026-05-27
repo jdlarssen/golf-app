@@ -17,7 +17,40 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.40.y — Intent-først wizard (Fase 2 av format-katalog-epic)
+
+Issue [#272](https://github.com/jdlarssen/golf-app/issues/272), fase 2 av [#270](https://github.com/jdlarssen/golf-app/issues/270). «Sett opp ny runde» starter nå med et arrangement-valg (Kompis / Klubb / Cup / Solo) som filtrerer spillformene i neste steg. Cup-flyten er smeltet inn som ett av de fire valgene — den separate «Opprett ny Cup»-knappen er borte, alt skjer fra samme inngang.
+
+### [1.40.0] - 2026-05-27
+
+> Når du oppretter en ny runde, velger du først hva slags arrangement: Kompis-runde, Klubb-turnering, Cup eller Solo. Steg 2 viser bare formats som passer til det du har valgt, så listen er kortere og mer relevant. Cup-oppsettet ligger nå i samme flyt — du trenger ikke å lete etter en egen «Opprett ny Cup»-knapp lenger.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- [`IntentSelector`](app/admin/games/new/IntentSelector.tsx) — ny wizard step 1 med 4 intent-kort (Kompis / Klubb / Cup / Solo) i 2×2 mobil-grid. Hvert kort er ≥140px høyt med ikon over tekst, radiogroup-aria-mønster så tastatur-nav fungerer.
+- [`FormatGrid`](app/admin/games/new/FormatGrid.tsx) — ny wizard step 2 hovedflyt (Kompis / Klubb / Solo). Leser `getFormatsForIntent(intent)` fra F1-helperen, partisjonerer på `is_primary` i UI-laget. Primary-kort i 2×2-grid, sekundære i 2-kolonners kompakt strip.
+- [`CupSetup`](app/admin/games/new/CupSetup.tsx) — ny wizard step 2 cup-variant. Lag-navn (2 felt), points-to-win, fourball-allowance-toggle og multi-select av cup-eligible formats. Gjenbruker `createTournamentDraft`-action; multi-select er UI-only i fase 2 (default-all), persistens utsatt til Wave-2-issue.
+- [`SideTournamentsBanner`](app/admin/games/new/SideTournamentsBanner.tsx) — informasjons-banner nederst i step 2 som peker til Klar-steget for side-tournament-oppsett.
+- [`lib/formats/icons.tsx`](lib/formats/icons.tsx) — slug → ikon-komponent-mapping for de 6 seedede formats + en generisk fallback for fremtidige slugs. 28×28 inline-SVG i samme stil som `ModeSelector` for visuell konsistens.
+
+#### Changed
+- [`GameWizard`](app/admin/games/new/GameWizard.tsx) — 4-stegs → 5-stegs flyt. Nye steg-titler: Arrangement → Format → Bane og tidspunkt → Spillere → Klar. Cup-creation diverger til 2-stegs flyt (Intent → CupSetup) som submitter direkte til `createTournamentDraft`. Cup-link (`?tournament_id=...`) går fortsatt gjennom standard 5-stegs flyt med format låst via `lockGameMode`.
+- [`useGameFormState`](app/admin/games/new/useGameFormState.ts) — ny `formatChosen`-boolean så step 2 kan vite om bruker har klikket et format eller om `gameMode` bare er default-en. Settes til true når `handleModeChange` kalles eller når `initialValues.game_mode`/`lockGameMode` passerer eksplisitt format inn.
+- [`app/admin/games/new/page.tsx`](app/admin/games/new/page.tsx) og [`app/opprett-spill/page.tsx`](app/opprett-spill/page.tsx) — pre-fetcher format-katalogen for alle ikke-cup-intents + cup-eligible-listen parallelt (4 unstable_cache-queries), passerer til wizard som props.
+
+#### Tests
+- 14 GameWizard-render-tester oppdatert til 5-stegs flyt + ny cup-intent-test. Mode-navigasjon i hver test starter nå med intent-valg + format-valg før bane/spillere/klar.
+
+</details>
+
+---
+
 ## 1.39.y — Netto/brutto-bryter på tvers av alle spillmodi
+
+<details>
+<summary><strong>1.39.y — Netto/brutto-bryter på tvers av alle spillmodi (2 oppføringer) — klikk for å vise</strong></summary>
 
 Issue [#266](https://github.com/jdlarssen/golf-app/issues/266), oppfølger til [#217](https://github.com/jdlarssen/golf-app/issues/217). Bryteren som fourball-flyten fikk i forrige runde rulles ut til alle spillmodi: stableford, slagspill, singles matchplay, best ball og Texas scramble har nå samme valg mellom netto (med prosent-andel av handicap) og brutto (uten handicap). Mode-navnene er ryddet opp samtidig — `best_ball_netto` og `solo_strokeplay_netto` mister `_netto`-suffixet siden de nå kan spilles begge veier.
 
@@ -60,6 +93,8 @@ Foundation for epic [#270](https://github.com/jdlarssen/golf-app/issues/270) (in
 #### Removed
 - [Section 6 (`AdvancedSettingsSection`)](app/admin/games/new/sections/AdvancedSettingsSection.tsx) mister allowance-blokken (både non-texas HCP-allowance-input og Texas Lag-handicap-input + tilhørende `Input`-import og state-destructures). Section 6 har nå kun peer-approval + visibility + sideturnering — single-purpose «Innstillinger».
 - [`<FourballAllowanceField>`](components/cup/FourballAllowanceField.tsx) slettet (sammen med tom `components/cup/`-mappe) — alle tre callere (cup-create-form, GameForm, GameWizard) migrert til den generaliserte `<AllowanceField>` med fourball-spesifikke props.
+
+</details>
 
 </details>
 

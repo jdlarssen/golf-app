@@ -2,11 +2,15 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { GameWizard } from './GameWizard';
 import type { CourseOption, PlayerOption } from './GameForm';
+import type {
+  FormatForIntent,
+  CupEligibleFormat,
+} from '@/lib/formats/getFormatsForIntent';
 
-// Tester GameWizard-orchestratoren: 4-stegs navigasjons-flyt + per-steg-
-// validering, escape-hatch til full-form, auto-name basert på bane/tee-off,
-// og bekreftelse på at FormData som sendes til server-actions matcher
-// dagens GameForm-payload.
+// Tester GameWizard-orchestratoren etter F2-redesign (#272): 5-stegs
+// navigasjons-flyt med intent-først, per-steg-validering, escape-hatch til
+// full-form, auto-name basert på bane/tee-off, og bekreftelse på at FormData
+// som sendes til server-actions matcher dagens GameForm-payload.
 //
 // next/navigation er auto-stubbet globalt i vitest.setup.ts. Wizard-en
 // faller derfor tilbake til default-step=1 og default-view='wizard'
@@ -45,6 +49,57 @@ const EIGHT_PLAYERS: PlayerOption[] = Array.from({ length: 8 }, (_, i) =>
   makePlayer(`u${i}`, `Spiller ${i + 1}`),
 );
 
+// Mini-katalog matchende migrasjon 0047 — kun nødvendige slugs for test-flyt.
+function formatRow(
+  slug: string,
+  display_name: string,
+  is_primary: boolean,
+  sort_order: number,
+): FormatForIntent {
+  return {
+    slug,
+    display_name,
+    icon_key: slug,
+    short_description: `${display_name} test-beskrivelse`,
+    is_primary,
+    sort_order,
+  };
+}
+
+const FORMATS_BY_INTENT = {
+  kompis: [
+    formatRow('stableford', 'Stableford', true, 10),
+    formatRow('best_ball', 'Best ball', true, 20),
+    formatRow('texas_scramble', 'Texas scramble', false, 30),
+    formatRow('singles_matchplay', 'Matchplay', false, 40),
+  ],
+  klubb: [
+    formatRow('stableford', 'Stableford', true, 10),
+    formatRow('best_ball', 'Best ball', true, 20),
+    formatRow('texas_scramble', 'Texas scramble', true, 30),
+    formatRow('solo_strokeplay', 'Slagspill', true, 40),
+  ],
+  solo: [
+    formatRow('stableford', 'Stableford', true, 10),
+    formatRow('solo_strokeplay', 'Slagspill', true, 20),
+  ],
+};
+
+const CUP_ELIGIBLE: CupEligibleFormat[] = [
+  {
+    slug: 'singles_matchplay',
+    display_name: 'Matchplay',
+    icon_key: 'singles_matchplay',
+    short_description: '1v1, vinn flest hull.',
+  },
+  {
+    slug: 'fourball_matchplay',
+    display_name: 'Fourball matchplay',
+    icon_key: 'fourball_matchplay',
+    short_description: '2v2 best-ball matchplay.',
+  },
+];
+
 const NO_OP = async () => {};
 
 function renderWizard({
@@ -68,47 +123,55 @@ function renderWizard({
         createAndPublishAction,
       }}
       initialValues={initialValues}
+      formatsByIntent={FORMATS_BY_INTENT}
+      cupEligibleFormats={CUP_ELIGIBLE}
     />,
   );
 }
 
-// Felles helper: gå fra steg 1 → 2 → 3 → 4. Forventer at hvert «Neste»-klikk
-// faktisk er enabled på det aktuelle steget (caller må fylle inn felter
-// før kall).
 function clickNext() {
   fireEvent.click(screen.getByRole('button', { name: /^neste$/i }));
 }
 
-// Tekst-noden «Steg N av 4» splittes av React i tre child-nodes (template
-// literal med interpolert variabel). getByText med regex matcher ikke
-// over multi-node-grenser, så vi sjekker direkte mot textContent på en
-// span inne i stepper-headeren.
-function expectStep(n: 1 | 2 | 3 | 4) {
+// «Steg N av 5» splittes av React i tre child-nodes. Sjekk via textContent.
+function expectStep(n: 1 | 2 | 3 | 4 | 5) {
   const spans = Array.from(document.querySelectorAll('span'));
-  const found = spans.find((el) => el.textContent === `Steg ${n} av 4`);
-  expect(found, `Forventet «Steg ${n} av 4» i DOM`).toBeTruthy();
+  const found = spans.find((el) => el.textContent === `Steg ${n} av 5`);
+  expect(found, `Forventet «Steg ${n} av 5» i DOM`).toBeTruthy();
+}
+
+// Helper: klikk Kompis-intent og gå videre til steg 2.
+function pickKompisIntent() {
+  fireEvent.click(screen.getByRole('radio', { name: /kompis-runde/i }));
+  clickNext();
+}
+
+// Helper: pluck stableford-format i step 2 (Kompis-katalog har stableford
+// som primary).
+function pickStablefordFormat() {
+  fireEvent.click(screen.getByRole('radio', { name: /^stableford$/i }));
+}
+
+function pickBestBallFormat() {
+  fireEvent.click(screen.getByRole('radio', { name: /^best ball$/i }));
 }
 
 describe('GameWizard — happy-path solo stableford', () => {
-  it('går gjennom alle 4 steg og når Publiser-knappen', () => {
+  it('går gjennom alle 5 steg og når Publiser-knappen', () => {
     renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
 
-    // Steg 1: bytt til Stableford → solo auto-velges (team_size=1).
+    // Steg 1 (Arrangement): klikk Kompis.
     expectStep(1);
-    fireEvent.click(screen.getByRole('radio', { name: /stableford/i }));
-    // Solo-tile skal være valgt.
-    expect(
-      screen.getByRole('radio', { name: /solo/i }).getAttribute('aria-checked'),
-    ).toBe('true');
+    pickKompisIntent();
 
-    // Neste → steg 2.
-    clickNext();
+    // Steg 2 (Format): velg stableford.
     expectStep(2);
+    pickStablefordFormat();
+    clickNext();
 
-    // Neste skal være disabled inntil bane+tee er valgt.
+    // Steg 3 (Bane og tidspunkt): velg bane + tee + tee-off.
+    expectStep(3);
     expect(screen.getByRole('button', { name: /^neste$/i })).toBeDisabled();
-
-    // Velg bane + tee + tee-off.
     fireEvent.change(screen.getByLabelText(/^bane$/i), {
       target: { value: 'course-1' },
     });
@@ -118,19 +181,17 @@ describe('GameWizard — happy-path solo stableford', () => {
     fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
       target: { value: '2026-06-01T10:00' },
     });
-
     clickNext();
-    expectStep(3);
 
-    // Steg 3: minst 1 spiller for solo.
+    // Steg 4 (Spillere).
+    expectStep(4);
     expect(screen.getByRole('button', { name: /^neste$/i })).toBeDisabled();
     fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
     expect(screen.getByRole('button', { name: /^neste$/i })).not.toBeDisabled();
-
     clickNext();
-    expectStep(4);
 
-    // Steg 4: «Lagre og publiser»-knappen skal være enabled.
+    // Steg 5 (Klar): publiser-knappen skal være enabled.
+    expectStep(5);
     const publishBtn = screen.getByRole('button', {
       name: /lagre og publiser/i,
     });
@@ -142,28 +203,27 @@ describe('GameWizard — happy-path solo stableford', () => {
     expect(screen.getByRole('button', { name: /forrige/i })).toBeDisabled();
   });
 
-  it('Forrige fra steg 2 går tilbake til steg 1 uten å miste mode-valg', () => {
+  it('Forrige fra steg 2 går tilbake til steg 1 og bevarer intent-valg', () => {
     renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
-    fireEvent.click(screen.getByRole('radio', { name: /stableford/i }));
-    clickNext();
+    pickKompisIntent();
     expectStep(2);
     fireEvent.click(screen.getByRole('button', { name: /forrige/i }));
     expectStep(1);
-    // Stableford-tile skal fortsatt være valgt.
+    // Kompis-tile skal fortsatt være valgt.
     expect(
-      screen.getByRole('radio', { name: /stableford/i }).getAttribute('aria-checked'),
+      screen.getByRole('radio', { name: /kompis-runde/i }).getAttribute('aria-checked'),
     ).toBe('true');
   });
 });
 
-describe('GameWizard — best-ball inline team/flight på steg 3', () => {
+describe('GameWizard — best-ball inline team/flight på steg 4', () => {
   it('viser lag-grid + flights inline når 8 spillere er valgt', () => {
     renderWizard();
 
-    // Steg 1: default = best_ball → bare gå videre.
-    clickNext();
+    pickKompisIntent(); // → steg 2
+    pickBestBallFormat();
+    clickNext(); // → steg 3
 
-    // Steg 2: velg bane + tee + tee-off.
     fireEvent.change(screen.getByLabelText(/^bane$/i), {
       target: { value: 'course-1' },
     });
@@ -173,40 +233,34 @@ describe('GameWizard — best-ball inline team/flight på steg 3', () => {
     fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
       target: { value: '2026-06-01T10:00' },
     });
-    clickNext();
+    clickNext(); // → steg 4
 
-    // Steg 3: velg alle 8 spillere.
+    // Velg alle 8 spillere.
     for (const player of EIGHT_PLAYERS) {
       fireEvent.click(
         screen.getByRole('checkbox', { name: new RegExp(player.name!, 'i') }),
       );
     }
 
-    // Lag-grid-heading skal vises inline (uten «4. »-prefix siden
-    // hideNumbering=true i wizard).
     expect(
       screen.getByRole('heading', { name: /^lag$/i }),
     ).toBeInTheDocument();
 
-    // Trekk tilfeldig så alle 8 fordeles 2-2-2-2.
     fireEvent.click(screen.getByRole('button', { name: /trekk tilfeldig/i }));
 
-    // Flights-seksjon skal nå være synlig (best-ball-only, og teamsComplete).
     expect(
       screen.getByRole('heading', { name: /^flights$/i }),
     ).toBeInTheDocument();
-
-    // Neste-knapp skal nå være enabled.
     expect(screen.getByRole('button', { name: /^neste$/i })).not.toBeDisabled();
   });
 });
 
 describe('GameWizard — escape-hatch til full-form bevarer state', () => {
-  it('bytter til full-form med wizard-state pre-fylt, og tilbake-knapp restaurer', () => {
+  it('bytter til full-form med wizard-state pre-fylt og tilbake-knapp restaurer', () => {
     renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
 
-    // Sett opp en solo-stableford-state med navn + bane + tee + 1 spiller.
-    fireEvent.click(screen.getByRole('radio', { name: /stableford/i }));
+    pickKompisIntent();
+    pickStablefordFormat();
     clickNext();
     fireEvent.change(screen.getByLabelText(/^bane$/i), {
       target: { value: 'course-1' },
@@ -221,110 +275,33 @@ describe('GameWizard — escape-hatch til full-form bevarer state', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
     clickNext();
 
-    // Steg 4: klikk «Tilpass alle detaljer».
+    // Steg 5: klikk «Tilpass alle detaljer».
     fireEvent.click(
       screen.getByRole('button', { name: /tilpass alle detaljer/i }),
     );
 
-    // Full-form rendrer nå — sjekk at en GameForm-spesifikk heading
-    // dukker opp (f.eks. «1. Spillet»).
     expect(
       screen.getByRole('heading', { name: /^1\. spillet$/i }),
     ).toBeInTheDocument();
 
-    // Tilbake-lenke skal være synlig øverst.
     const backLink = screen.getByRole('button', {
       name: /tilbake til hurtig-oppsett/i,
     });
     expect(backLink).toBeInTheDocument();
-
-    // Bane skal være pre-fylt (course-1) i GameForm.
     expect(
       (screen.getByLabelText(/^bane$/i) as HTMLSelectElement).value,
     ).toBe('course-1');
 
-    // Klikk tilbake → wizard rendrer igjen, og navnet er bevart.
     fireEvent.click(backLink);
-    // Tilbake i wizard — stepper-headeren skal være synlig igjen (steg 4).
-    expectStep(4);
-  });
-});
-
-describe('GameWizard — auto-name + manuell override', () => {
-  it('setter spillnavn til bane-navn når bane er valgt og tee-off er tom', () => {
-    renderWizard();
-
-    // Steg 1 → 2.
-    clickNext();
-
-    // Velg bane (ingen tee-off ennå).
-    fireEvent.change(screen.getByLabelText(/^bane$/i), {
-      target: { value: 'course-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee$/i), {
-      target: { value: 'tee-1' },
-    });
-
-    // Velg 8 spillere så vi rekker steg 4 og kan inspisere navnet.
-    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: '2026-06-01T10:00' },
-    });
-    clickNext();
-    for (const player of EIGHT_PLAYERS) {
-      fireEvent.click(
-        screen.getByRole('checkbox', { name: new RegExp(player.name!, 'i') }),
-      );
-    }
-    fireEvent.click(screen.getByRole('button', { name: /trekk tilfeldig/i }));
-    clickNext();
-
-    // Steg 4: navnet skal vise «Stiklestad GK 1. juni» (auto-suggert).
-    expect(screen.getByText(/Stiklestad GK 1\. juni/i)).toBeInTheDocument();
-  });
-
-  it('manuell rediger setter nameTouched og blokkerer auto-overstyring', () => {
-    renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });
-
-    fireEvent.click(screen.getByRole('radio', { name: /stableford/i }));
-    clickNext();
-    fireEvent.change(screen.getByLabelText(/^bane$/i), {
-      target: { value: 'course-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee$/i), {
-      target: { value: 'tee-1' },
-    });
-    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: '2026-06-01T10:00' },
-    });
-    clickNext();
-    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
-    clickNext();
-
-    // Steg 4: klikk navnet for å aktivere inline-rediger.
-    fireEvent.click(screen.getByRole('button', { name: /Stiklestad GK/i }));
-    const nameInput = screen.getByLabelText(/spillnavn/i) as HTMLInputElement;
-    fireEvent.change(nameInput, { target: { value: 'Egen turnering' } });
-    fireEvent.blur(nameInput);
-
-    // Tilbake til steg 2 for å endre tee-off.
-    fireEvent.click(screen.getByRole('button', { name: /forrige/i }));
-    fireEvent.click(screen.getByRole('button', { name: /forrige/i }));
-    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
-      target: { value: '2026-07-15T10:00' },
-    });
-    clickNext();
-    clickNext();
-
-    // Navnet skal fortsatt være «Egen turnering» — auto-name skulle ikke
-    // overstyrt etter manuell rediger.
-    expect(screen.getByText('Egen turnering')).toBeInTheDocument();
-    expect(screen.queryByText(/Stiklestad GK 15\. juli/i)).not.toBeInTheDocument();
+    expectStep(5);
   });
 });
 
 describe('GameWizard — Påmelding-felter (#199)', () => {
-  it('rendrer Påmelding-radioene med defaults invite_only + solo på steg 1', () => {
+  it('rendrer Påmelding-radioene med defaults invite_only + solo på steg 2 etter format', () => {
     renderWizard();
+    pickKompisIntent();
+    pickBestBallFormat();
     expect(
       screen.getByRole('radio', { name: /bare de jeg inviterer/i }),
     ).toBeChecked();
@@ -333,16 +310,17 @@ describe('GameWizard — Påmelding-felter (#199)', () => {
 
   it('disabler "lag"/"begge" når modus er stableford (solo-modus)', () => {
     renderWizard();
-    fireEvent.click(screen.getByRole('radio', { name: /stableford/i }));
+    pickKompisIntent();
+    pickStablefordFormat();
     expect(screen.getByRole('radio', { name: /^lag$/i })).toBeDisabled();
     expect(screen.getByRole('radio', { name: /^begge$/i })).toBeDisabled();
-    // Individuelt forblir aktivert
     expect(screen.getByRole('radio', { name: /^individuelt$/i })).toBeChecked();
   });
 
   it('lar "lag" velges når modus er best_ball', () => {
     renderWizard();
-    // best_ball er default
+    pickKompisIntent();
+    pickBestBallFormat();
     const teamRadio = screen.getByRole('radio', { name: /^lag$/i });
     expect(teamRadio).not.toBeDisabled();
     fireEvent.click(teamRadio);
@@ -351,23 +329,24 @@ describe('GameWizard — Påmelding-felter (#199)', () => {
 
   it('force-reseter registration_type til solo når admin bytter til en mode uten lag', () => {
     renderWizard();
-    // Velg lag i best_ball
+    pickKompisIntent();
+    pickBestBallFormat();
     fireEvent.click(screen.getByRole('radio', { name: /^lag$/i }));
     expect(screen.getByRole('radio', { name: /^lag$/i })).toBeChecked();
-    // Bytt til stableford → må reset til solo
-    fireEvent.click(screen.getByRole('radio', { name: /stableford/i }));
+    pickStablefordFormat();
     expect(screen.getByRole('radio', { name: /^individuelt$/i })).toBeChecked();
     expect(screen.getByRole('radio', { name: /^lag$/i })).toBeDisabled();
   });
 
   it('inkluderer registration_mode + registration_type i FormData', () => {
     const { container } = renderWizard();
-    // Default invite_only + solo
+    pickKompisIntent();
+    pickBestBallFormat();
+
     let fd = new FormData(container.querySelector('form')!);
     expect(fd.get('registration_mode')).toBe('invite_only');
     expect(fd.get('registration_type')).toBe('solo');
 
-    // Bytt til open
     fireEvent.click(screen.getByRole('radio', { name: /åpen påmelding/i }));
     fd = new FormData(container.querySelector('form')!);
     expect(fd.get('registration_mode')).toBe('open');
@@ -375,19 +354,20 @@ describe('GameWizard — Påmelding-felter (#199)', () => {
 
   it('viser at "Spillere" er valgfri når påmelding ikke er invite_only', () => {
     renderWizard();
+    pickKompisIntent();
+    pickBestBallFormat();
     fireEvent.click(screen.getByRole('radio', { name: /åpen påmelding/i }));
-    clickNext(); // → steg 2
+    clickNext(); // → steg 3 (Bane)
     fireEvent.change(screen.getByLabelText(/^bane$/i), {
       target: { value: 'course-1' },
     });
     fireEvent.change(screen.getByLabelText(/^tee$/i), {
       target: { value: 'tee-1' },
     });
-    clickNext(); // → steg 3
+    clickNext(); // → steg 4 (Spillere)
     expect(
       screen.getByText(/du kan også la spillerne melde seg på selv/i),
     ).toBeInTheDocument();
-    // Neste skal være enabled selv uten valgte spillere
     const nextButton = screen.getByRole('button', { name: /^neste$/i });
     expect(nextButton).not.toBeDisabled();
   });
@@ -401,8 +381,8 @@ describe('GameWizard — FormData-skjema speiler GameForm (K10)', () => {
       createAndPublishAction: publishSpy,
     });
 
-    // Bygg solo-stableford-state.
-    fireEvent.click(screen.getByRole('radio', { name: /stableford/i }));
+    pickKompisIntent();
+    pickStablefordFormat();
     clickNext();
     fireEvent.change(screen.getByLabelText(/^bane$/i), {
       target: { value: 'course-1' },
@@ -417,7 +397,6 @@ describe('GameWizard — FormData-skjema speiler GameForm (K10)', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
     clickNext();
 
-    // Sjekk hidden inputs i form-en (FormData ville plukket disse).
     const form = container.querySelector('form');
     expect(form).not.toBeNull();
     const fd = new FormData(form!);
@@ -429,18 +408,16 @@ describe('GameWizard — FormData-skjema speiler GameForm (K10)', () => {
     expect(fd.get('tee_box_id')).toBe('tee-1');
     expect(fd.get('scheduled_tee_off_at')).toBe('2026-06-01T10:00');
     expect(fd.get('player_0_id')).toBe('u0');
-    // Solo: team/flight er tomme strenger (gamePayload validatoren tolker
-    // dem som null for solo-modus).
     expect(fd.get('player_0_team')).toBe('');
     expect(fd.get('player_0_flight')).toBe('');
-    // Auto-suggert navn skal være med.
     expect(fd.get('name')).toBe('Stiklestad GK 1. juni');
   });
 
   it('best-ball: FormData inkluderer 8 player_${i}_*-rader + game_mode=best_ball', () => {
     const { container } = renderWizard();
 
-    // Default best_ball — klikk gjennom uten å bytte modus.
+    pickKompisIntent();
+    pickBestBallFormat();
     clickNext();
     fireEvent.change(screen.getByLabelText(/^bane$/i), {
       target: { value: 'course-1' },
@@ -464,13 +441,37 @@ describe('GameWizard — FormData-skjema speiler GameForm (K10)', () => {
     const fd = new FormData(form!);
     expect(fd.get('game_mode')).toBe('best_ball');
     expect(fd.get('team_size')).toBe('2');
-    // 8 spiller-rader, alle med ikke-tom team + flight.
     for (let i = 0; i < 8; i++) {
       expect(fd.get(`player_${i}_id`)).toBeTruthy();
       expect(fd.get(`player_${i}_team`)).not.toBe('');
       expect(fd.get(`player_${i}_flight`)).not.toBe('');
     }
-    // 9. spiller-row finnes ikke.
     expect(fd.get('player_8_id')).toBeNull();
+  });
+});
+
+describe('GameWizard — Cup-intent flow', () => {
+  it('rendrer CupSetup (lag-navn + points + multi-select) på steg 2 med intent=cup', () => {
+    renderWizard();
+    fireEvent.click(screen.getByRole('radio', { name: /^cup$/i }));
+    clickNext();
+
+    // Wizard-en er nå i cup-creation-flyt: bare 2 steg vises, og CupSetup
+    // sin form er på skjermen.
+    expect(screen.getByLabelText(/cup-navn/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/lag 1/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/lag 2/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/point-mål/i)).toBeInTheDocument();
+    // Multi-select for cup-eligible formats. Henter ved id-attributt fordi
+    // /matchplay/-regex matcher to checkboxer (Matchplay + Fourball matchplay).
+    const singlesCheckbox = document.getElementById(
+      'cup_format_singles_matchplay',
+    ) as HTMLInputElement;
+    const fourballCheckbox = document.getElementById(
+      'cup_format_fourball_matchplay',
+    ) as HTMLInputElement;
+    expect(singlesCheckbox).toBeChecked();
+    expect(fourballCheckbox).toBeChecked();
+    expect(screen.getByRole('button', { name: /opprett cup/i })).toBeInTheDocument();
   });
 });

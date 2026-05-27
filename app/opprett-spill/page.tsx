@@ -18,6 +18,10 @@ import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
+import {
+  getFormatsForIntent,
+  getCupEligibleFormats,
+} from '@/lib/formats/getFormatsForIntent';
 
 // Trusted-creator-rute under #198 small-bet MVP. Gjenbruker GameForm fra
 // admin-flyten, men kjører i AppShell (ikke AdminShell/Sekretariatet) slik
@@ -114,6 +118,14 @@ async function PlayerShortageBanner() {
 }
 
 async function GameFormBody() {
+  // F2 (#272): pre-fetch format-katalog parallelt med courses/players.
+  const [kompisFormats, klubbFormats, soloFormats, cupEligibleFormats] =
+    await Promise.all([
+      getFormatsForIntent('kompis'),
+      getFormatsForIntent('klubb'),
+      getFormatsForIntent('solo'),
+      getCupEligibleFormats(),
+    ]);
   const { courses, players } = await getNewGameFormData();
   return (
     <GameWizard
@@ -124,6 +136,12 @@ async function GameFormBody() {
         createDraftAction: createGameDraft,
         createAndPublishAction: createAndPublishGame,
       }}
+      formatsByIntent={{
+        kompis: kompisFormats,
+        klubb: klubbFormats,
+        solo: soloFormats,
+      }}
+      cupEligibleFormats={cupEligibleFormats}
     />
   );
 }

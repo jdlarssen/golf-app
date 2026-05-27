@@ -251,6 +251,13 @@ export function useGameFormState({
   // Lås når et publisert spill redigeres — backend mode-lock-guard har
   // siste ord, men UI-en speiler det for å unngå utilsiktet validation-error.
   const lockGameMode = initialValues?.lock_game_mode ?? false;
+  // F2 (#272): wizard step 2 må vite om bruker faktisk har plukket et
+  // format eller om `gameMode` bare er default-en. Initialisert true når
+  // edit-flyten eller cup-link-flyten passerer eksplisitt game_mode inn,
+  // og when admin klikker et format-kort i FormatGrid.
+  const [formatChosen, setFormatChosen] = useState<boolean>(
+    initialValues?.game_mode !== undefined || lockGameMode,
+  );
 
   // Self-påmelding (#199). Defaultes til 'invite_only' + 'solo' — dagens
   // flyt bevart 100% når admin ikke aktivt velger noe annet. Edit-flyten
@@ -283,6 +290,7 @@ export function useGameFormState({
 
   function handleModeChange(next: GameMode) {
     setGameMode(next);
+    setFormatChosen(true);
     // Auto-velg eneste aktive lagstørrelse per modus så form-state alltid
     // matcher en gyldig kombinasjon. Når flere kombinasjoner aktiveres
     // (par-stableford, 4-mann-stableford), erstattes dette med en mer
@@ -847,6 +855,7 @@ export function useGameFormState({
     setSideEnabled,
     gameMode,
     teamSize,
+    formatChosen,
     intent,
     setIntent,
     registrationMode,

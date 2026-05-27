@@ -1,16 +1,18 @@
 'use client';
 
 /**
- * GameWizard — 4-stegs hurtig-oppsett av nye spill, med escape-hatch til
- * full-form for power-users.
+ * GameWizard — 5-stegs hurtig-oppsett av nye spill (F2 #272), med escape-
+ * hatch til full-form for power-users.
  *
  * Orchestrert som:
- *   Steg 1 (Format)   → ModeSelector + TeamSizeSelector
- *   Steg 2 (Bane)     → BasicsSection minus spillnavn + advanced
- *   Steg 3 (Spillere) → PlayersSection + TeamsAssignmentSection inline
- *   Steg 4 (Klar)     → ReadyStep (summary + avanserte + publish/draft)
+ *   Steg 1 (Arrangement) → IntentSelector (Kompis/Klubb/Cup/Solo)
+ *   Steg 2 (Format)      → FormatGrid (Kompis/Klubb/Solo) eller CupSetup
+ *                          (Cup, kort-circuit til 2-step cup-creation-flyt)
+ *   Steg 3 (Bane)        → BasicsSection minus spillnavn + advanced
+ *   Steg 4 (Spillere)    → PlayersSection + TeamsAssignmentSection inline
+ *   Steg 5 (Klar)        → ReadyStep (summary + avanserte + publish/draft)
  *
- * URL-state: `?step=2..4` og `?view=full`. Browser back fra steg N tilbake
+ * URL-state: `?step=2..5` og `?view=full`. Browser back fra steg N tilbake
  * til N-1; back fra steg 1 går ut av wizard-en.
  *
  * `view='full'` bytter til en sticky tilbake-lenke + standard GameForm med
@@ -24,7 +26,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import type { Intent } from '@/lib/wizard/intent';
-import { ModeSelector } from './ModeSelector';
+import type {
+  FormatForIntent,
+  CupEligibleFormat,
+} from '@/lib/formats/getFormatsForIntent';
+import { MODE_LABELS, type GameMode } from '@/lib/scoring/modes/types';
+import { IntentSelector } from './IntentSelector';
+import { FormatGrid } from './FormatGrid';
+import { CupSetup } from './CupSetup';
+import { SideTournamentsBanner } from './SideTournamentsBanner';
 import { TeamSizeSelector } from './TeamSizeSelector';
 import { useGameFormState } from './useGameFormState';
 import { BasicsSection } from './sections/BasicsSection';
@@ -43,30 +53,40 @@ import {
 } from './GameForm';
 import { suggestGameName } from '@/lib/games/autoGameName';
 
-type Step = 1 | 2 | 3 | 4;
+type Step = 1 | 2 | 3 | 4 | 5;
 
 type Props = {
   courses: CourseOption[];
   players: PlayerOption[];
   mode: GameFormMode;
   initialValues?: InitialValues;
-  // F2 foundation (#272): cup-link og direkte URL kan pre-velge intent.
-  // Senere chunks vil rendere IntentSelector i step 1 når intent er undefined.
+  // F2 (#272): cup-link og direkte URL kan pre-velge intent. Driver
+  // step-1-IntentSelector og påfølgende step-2-render-grening (FormatGrid vs
+  // CupSetup).
   initialIntent?: Intent;
+  // Format-katalog forhåndshentet i page.tsx (server-component) for hver av
+  // de tre ikke-cup-intents. Step 2 leser denne basert på state.intent.
+  formatsByIntent: Record<'kompis' | 'klubb' | 'solo', FormatForIntent[]>;
+  // Cup-eligible formats brukt av CupSetup-multi-select. Også forhåndshentet.
+  cupEligibleFormats: CupEligibleFormat[];
 };
 
 const STEP_TITLES: Record<Step, string> = {
-  1: 'Format',
-  2: 'Bane og tidspunkt',
-  3: 'Spillere',
-  4: 'Klar?',
+  1: 'Arrangement',
+  2: 'Format',
+  3: 'Bane og tidspunkt',
+  4: 'Spillere',
+  5: 'Klar?',
 };
+
+const TOTAL_STEPS = 5;
 
 function parseStepFromSearch(sp: URLSearchParams): Step {
   const raw = sp.get('step');
   if (raw === '2') return 2;
   if (raw === '3') return 3;
   if (raw === '4') return 4;
+  if (raw === '5') return 5;
   return 1;
 }
 
@@ -80,6 +100,8 @@ export function GameWizard({
   mode,
   initialValues,
   initialIntent,
+  formatsByIntent,
+  cupEligibleFormats,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -159,12 +181,13 @@ export function GameWizard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.selectedCourse?.name, state.scheduledTeeOffAt, nameTouched]);
 
-  // Steg-spesifikk sub-tekst under stepper-headeren. Mode-aware for steg 3
+  // Steg-spesifikk sub-tekst under stepper-headeren. Mode-aware for steg 4
   // siden lag/sider/flighter varierer per modus.
   const subText = useMemo<string | null>(() => {
-    if (step === 1) return 'Hva skal dere spille i dag?';
-    if (step === 2) return 'Hvor og når?';
-    if (step === 3) {
+    if (step === 1) return 'Hva slags arrangement?';
+    if (step === 2) return 'Hva skal dere spille?';
+    if (step === 3) return 'Hvor og når?';
+    if (step === 4) {
       if (state.isSolo) return 'Hvem skal spille?';
       if (state.isBestBall)
         return 'Velg 8 spillere, så fordeler du lag og flights';
@@ -187,27 +210,49 @@ export function GameWizard({
     state.teamSize,
   ]);
 
+  // Cup-creation-flyt diverger fra standard wizard: bare step 1 (intent) og
+  // step 2 (CupSetup-form). CupSetup eier sin egen `<form action=...>`
+  // submission, så vi rendrer ingen ytter-`<form>` rundt wizard-en når
+  // intent='cup' uten knyttet tournament. Når admin lander via cup-link
+  // (tournament_id satt), kjører de regulær wizard-flyt med locked format.
+  const tournamentIdFromInitial = initialValues?.tournament_id;
+  const isNewCupFlow =
+    state.intent === 'cup' && !tournamentIdFromInitial;
+
   // Neste-knappen gates per steg. Mangel-tekst under knappen henter første
   // element fra missingForPublish (mode-aware).
   function canAdvance(): boolean {
-    if (step === 1) return true;
-    if (step === 2) return state.courseId !== '' && state.teeBoxId !== '';
-    // Steg 3: vanligvis krever vi en gyldig spiller-fordeling per modus.
+    if (step === 1) return state.intent !== undefined;
+    if (step === 2) {
+      // Cup-creation-flyt har ingen «Neste» — CupSetup self-submitter.
+      if (isNewCupFlow) return false;
+      // For øvrige intents må format være valgt (klikket et kort i
+      // FormatGrid eller låst inn via cup-link/edit) før vi kan gå videre.
+      return state.formatChosen;
+    }
+    if (step === 3) return state.courseId !== '' && state.teeBoxId !== '';
+    // Steg 4: vanligvis krever vi en gyldig spiller-fordeling per modus.
     // #199: når selv-påmelding er på (open / manual_approval) er spiller-
     // listen valgfri — admin kan publisere et tomt spill og la spillerne
     // melde seg på via lenken.
-    if (step === 3) return state.playersStepOptional || state.playersValidForMode;
-    return false; // steg 4 har ikke neste-knapp
+    if (step === 4) return state.playersStepOptional || state.playersValidForMode;
+    return false; // steg 5 har ikke neste-knapp
   }
 
   function nextDisabledHint(): string | null {
-    if (step === 2) {
+    if (step === 1 && state.intent === undefined) {
+      return 'Velg hva slags arrangement først';
+    }
+    if (step === 2 && !isNewCupFlow && !state.formatChosen) {
+      return 'Velg spillform først';
+    }
+    if (step === 3) {
       if (state.courseId === '') return 'Velg bane først';
       if (state.teeBoxId === '') return 'Velg tee-boks';
     }
-    if (step === 3) {
+    if (step === 4) {
       // playersValidForMode false → ta første mangel fra liste-en. Filtrer
-      // bort bane/tee-off-mangler siden de håndteres i steg 2.
+      // bort bane/tee-off-mangler siden de håndteres i steg 3.
       const relevant = state.missingForPublish.filter(
         (m) => m !== 'bane' && m !== 'tee-boks' && m !== 'tee-off-tid',
       );
@@ -217,7 +262,7 @@ export function GameWizard({
   }
 
   function goNext() {
-    setStep((s) => (Math.min(4, s + 1) as Step));
+    setStep((s) => (Math.min(TOTAL_STEPS, s + 1) as Step));
   }
 
   function goPrev() {
@@ -276,106 +321,164 @@ export function GameWizard({
   }
 
   // ────────────────────────────────────────────────────────────────────
-  // View === 'wizard': stepper-header + steg-spesifikk content + footer.
-  // Wrappet i <form> så ReadyStep sine publish/draft-knapper (som er
-  // `type="submit"` med `formAction`) finner en form å sende til.
+  // Cup-creation-flyt: bare step 1 (intent) → step 2 (CupSetup). CupSetup
+  // eier sin egen `<form action=createTournamentDraft>` så vi rendrer ingen
+  // ytter-form rundt wizard-en — nestede form-elementer er ugyldig HTML.
+  // Når intent='cup' med tournament_id satt (cup-link for å legge til
+  // match i eksisterende cup) går vi i stedet videre til standard wizard
+  // for game-creation, med format låst via lockGameMode.
+  // ────────────────────────────────────────────────────────────────────
+  if (isNewCupFlow) {
+    return (
+      <div className="space-y-6">
+        <StepperHeader
+          step={step}
+          title={STEP_TITLES[step]}
+          subText={subText}
+          totalSteps={2}
+        />
+
+        {step === 1 && (
+          <IntentSelector
+            value={state.intent}
+            onChange={state.setIntent}
+            disabled={state.lockGameMode}
+          />
+        )}
+
+        {step === 2 && (
+          <section className="space-y-6">
+            <CupSetup cupEligibleFormats={cupEligibleFormats} />
+            <SideTournamentsBanner />
+          </section>
+        )}
+
+        <WizardFooter
+          step={step}
+          canAdvance={canAdvance()}
+          disabledHint={nextDisabledHint()}
+          onPrev={goPrev}
+          onNext={goNext}
+          showNext={step < 2}
+        />
+      </div>
+    );
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  // Standard 5-step wizard. Wrappet i <form> så ReadyStep sine publish/
+  // draft-knapper (som er `type="submit"` med `formAction`) finner en
+  // form å sende til.
   // ────────────────────────────────────────────────────────────────────
   return (
     <form className="space-y-6">
-      <StepperHeader step={step} title={STEP_TITLES[step]} subText={subText} />
+      <StepperHeader
+        step={step}
+        title={STEP_TITLES[step]}
+        subText={subText}
+        totalSteps={TOTAL_STEPS}
+      />
 
       {step === 1 && (
-        <section className="space-y-6">
-          <div className="space-y-4">
-            <ModeSelector
-              value={state.gameMode}
-              onChange={state.handleModeChange}
-              disabled={state.lockGameMode}
-            />
-            {!state.isMatchplay && (
-              <TeamSizeSelector
-                mode={state.gameMode}
-                value={state.teamSize}
-                onChange={state.handleTeamSizeChange}
-                disabled={state.lockGameMode}
-              />
-            )}
-            {state.lockGameMode && (
-              <p className="text-xs text-muted">
-                <strong>Kan ikke endres etter spill-start.</strong>
-              </p>
-            )}
-            {/* Fourball matchplay (#217): netto/brutto-toggle med pre-fyll fra
-                cup-radens fourball_allowance_pct hvis admin lander via cup-link.
-                Controlled-modus — verdien lever i `useGameFormState` så den
-                persisterer når admin navigerer mellom wizard-steg. Selve
-                hidden input-en rendres sentralt i `FormDataInputs` slik at
-                payload-en når server-action uansett hvilket steg admin
-                publiserer fra. Andre modi skjuler toggle-en helt — andre
-                modi-validatorer leser ikke feltet. */}
-            {state.gameMode === 'fourball_matchplay' && (
-              <AllowanceField
-                fieldName="fourball_allowance_pct"
-                defaultPct={85}
-                legend="Scoring for fourball-matches"
-                description="Styrer handicap for fourball-matches. Netto bruker en andel av hver spillers handicap, brutto teller laveste gross per hull per side."
-                nettoHelperText="Andel av hver spillers handicap som teller. WHS-standard for four-ball matchplay er 85."
-                bruttoHelperText="Ingen handicap — laveste gross-score per hull per side vinner. Vanlig format på ekte Ryder Cup."
-                value={state.fourballAllowancePct}
-                onChange={state.setFourballAllowancePct}
-                hideHiddenInput
-              />
-            )}
-            {/* Non-fourball / non-texas allowance-toggle (#266). Skriver til
-                games.hcp_allowance_pct. Default 100 (fullt course handicap).
-                Hidden input rendres sentralt i `FormDataInputs` (linje
-                ~469) — toggle-en eier kun UI + state. */}
-            {(state.gameMode === 'best_ball' ||
-              state.gameMode === 'stableford' ||
-              state.gameMode === 'singles_matchplay' ||
-              state.gameMode === 'solo_strokeplay') && (
-              <AllowanceField
-                fieldName="hcp_allowance_pct"
-                defaultPct={100}
-                legend="Scoring"
-                description="Styrer hvor stor andel av handicap som regnes med. Brutto = ingen handicap, kun gross."
-                nettoHelperText="Andel av spillerens handicap som teller. 100 = fullt course handicap (standard)."
-                bruttoHelperText={bruttoHelperFor(state.gameMode)}
-                value={state.hcpAllowance}
-                onChange={state.setHcpAllowance}
-                hideHiddenInput
-              />
-            )}
-            {/* Texas scramble (#266): toggle på lag-handicap (mode_config.
-                team_handicap_pct). Default per team-size; key={teamSize} for
-                remount så toggle-state re-initialiseres ved team-size-bytte.
-                Sentral hidden input texas_team_handicap_pct + hidden
-                hcp_allowance_pct=100 rendres i `FormDataInputs`. */}
-            {state.isTexas && (
-              <AllowanceField
-                key={state.teamSize}
-                fieldName="texas_team_handicap_pct"
-                defaultPct={state.texasHandicapPct}
-                legend="Lag-handicap"
-                description="Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = laveste lag-gross per hull vinner."
-                nettoHelperText={
-                  state.teamSize === 2
-                    ? 'NGF-standard: 25 % av summen av spillernes spille-HCP for 2-mannslag.'
-                    : 'NGF-standard: 10 % av summen av spillernes spille-HCP for 4-mannslag.'
-                }
-                bruttoHelperText="Ingen lag-handicap — laveste gross-score per hull per lag vinner. Scratch-format."
-                inputLabel="Lag-handicap (%)"
-                value={state.texasHandicapPct}
-                onChange={state.setTexasHandicapPct}
-                hideHiddenInput
-              />
-            )}
-          </div>
-          <RegistrationSection state={state} hideHeading />
-        </section>
+        <IntentSelector
+          value={state.intent}
+          onChange={state.setIntent}
+          disabled={state.lockGameMode}
+        />
       )}
 
       {step === 2 && (
+        <section className="space-y-6">
+          {/* Format-velger. Locked-flow (cup-link + lockGameMode) hopper
+              over selve grid-en og viser en banner med valgt format. */}
+          {state.lockGameMode ? (
+            <div className="rounded-md border border-border bg-surface-2 px-3 py-2 text-xs text-muted">
+              <p>
+                <strong>Format:</strong>{' '}
+                {MODE_LABELS[state.gameMode] ?? state.gameMode}.{' '}
+                Kan ikke endres etter spill-start.
+              </p>
+            </div>
+          ) : state.intent === 'cup' ? null : (
+            <FormatGrid
+              formats={
+                state.intent
+                  ? (formatsByIntent[state.intent] ?? [])
+                  : []
+              }
+              value={state.formatChosen ? state.gameMode : undefined}
+              onChange={(slug) => state.handleModeChange(slug as GameMode)}
+              disabled={state.lockGameMode}
+            />
+          )}
+
+          {state.formatChosen && (
+            <div className="space-y-4">
+              {!state.isMatchplay && (
+                <TeamSizeSelector
+                  mode={state.gameMode}
+                  value={state.teamSize}
+                  onChange={state.handleTeamSizeChange}
+                  disabled={state.lockGameMode}
+                />
+              )}
+              {state.gameMode === 'fourball_matchplay' && (
+                <AllowanceField
+                  fieldName="fourball_allowance_pct"
+                  defaultPct={85}
+                  legend="Scoring for fourball-matches"
+                  description="Styrer handicap for fourball-matches. Netto bruker en andel av hver spillers handicap, brutto teller laveste gross per hull per side."
+                  nettoHelperText="Andel av hver spillers handicap som teller. WHS-standard for four-ball matchplay er 85."
+                  bruttoHelperText="Ingen handicap — laveste gross-score per hull per side vinner. Vanlig format på ekte Ryder Cup."
+                  value={state.fourballAllowancePct}
+                  onChange={state.setFourballAllowancePct}
+                  hideHiddenInput
+                />
+              )}
+              {(state.gameMode === 'best_ball' ||
+                state.gameMode === 'stableford' ||
+                state.gameMode === 'singles_matchplay' ||
+                state.gameMode === 'solo_strokeplay') && (
+                <AllowanceField
+                  fieldName="hcp_allowance_pct"
+                  defaultPct={100}
+                  legend="Scoring"
+                  description="Styrer hvor stor andel av handicap som regnes med. Brutto = ingen handicap, kun gross."
+                  nettoHelperText="Andel av spillerens handicap som teller. 100 = fullt course handicap (standard)."
+                  bruttoHelperText={bruttoHelperFor(state.gameMode)}
+                  value={state.hcpAllowance}
+                  onChange={state.setHcpAllowance}
+                  hideHiddenInput
+                />
+              )}
+              {state.isTexas && (
+                <AllowanceField
+                  key={state.teamSize}
+                  fieldName="texas_team_handicap_pct"
+                  defaultPct={state.texasHandicapPct}
+                  legend="Lag-handicap"
+                  description="Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = laveste lag-gross per hull vinner."
+                  nettoHelperText={
+                    state.teamSize === 2
+                      ? 'NGF-standard: 25 % av summen av spillernes spille-HCP for 2-mannslag.'
+                      : 'NGF-standard: 10 % av summen av spillernes spille-HCP for 4-mannslag.'
+                  }
+                  bruttoHelperText="Ingen lag-handicap — laveste gross-score per hull per lag vinner. Scratch-format."
+                  inputLabel="Lag-handicap (%)"
+                  value={state.texasHandicapPct}
+                  onChange={state.setTexasHandicapPct}
+                  hideHiddenInput
+                />
+              )}
+              <RegistrationSection state={state} hideHeading />
+            </div>
+          )}
+
+          <SideTournamentsBanner />
+        </section>
+      )}
+
+      {step === 3 && (
         <BasicsSection
           state={state}
           courses={courses}
@@ -384,7 +487,7 @@ export function GameWizard({
         />
       )}
 
-      {step === 3 && (
+      {step === 4 && (
         <div className="space-y-6">
           {state.playersStepOptional && (
             <p className="rounded-md border border-border bg-surface-2 px-3 py-2 text-xs text-muted">
@@ -404,7 +507,7 @@ export function GameWizard({
         </div>
       )}
 
-      {step === 4 && (
+      {step === 5 && (
         <ReadyStep
           state={state}
           mode={mode}
@@ -424,15 +527,15 @@ export function GameWizard({
         tournamentMatchLabel={initialValues?.tournament_match_label}
       />
 
-      {/* Wizard-footer: «Forrige»/«Neste» på steg 1-3, kun «Forrige» på
-          steg 4 (publish/draft-knappene lever inne i ReadyStep). */}
+      {/* Wizard-footer: «Forrige»/«Neste» på steg 1-4, kun «Forrige» på
+          steg 5 (publish/draft-knappene lever inne i ReadyStep). */}
       <WizardFooter
         step={step}
         canAdvance={canAdvance()}
         disabledHint={nextDisabledHint()}
         onPrev={goPrev}
         onNext={goNext}
-        showNext={step < 4}
+        showNext={step < TOTAL_STEPS}
       />
     </form>
   );
@@ -577,21 +680,25 @@ function StepperHeader({
   step,
   title,
   subText,
+  totalSteps,
 }: {
   step: Step;
   title: string;
   subText: string | null;
+  totalSteps: number;
 }) {
   return (
     <div className="space-y-2">
       <div className="flex items-baseline justify-between text-sm">
-        <span className="text-muted tabular-nums">Steg {step} av 4</span>
+        <span className="text-muted tabular-nums">
+          Steg {step} av {totalSteps}
+        </span>
         <span className="font-serif text-lg text-text">{title}</span>
       </div>
       <div className="h-1 w-full overflow-hidden rounded-full bg-surface-2">
         <div
           className="h-full bg-primary transition-[width] duration-200 motion-reduce:transition-none"
-          style={{ width: `${(step / 4) * 100}%` }}
+          style={{ width: `${(step / totalSteps) * 100}%` }}
         />
       </div>
       {subText && <p className="text-xs text-muted">{subText}</p>}
