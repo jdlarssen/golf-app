@@ -6,8 +6,9 @@ import type { GameMode } from '@/lib/scoring/modes/types';
  * modusen — formatet endrer karakter (stableford-poeng vs match-vinnere vs
  * laveste team-gross), så generisk tekst blir misvisende.
  *
- * Fourball matchplay og texas scramble har sine egne helper-tekster definert
- * inline i call-sites (forskjellige felt-navn og defaults).
+ * Fourball matchplay, foursomes matchplay og texas scramble har sine egne
+ * helper-tekster definert inline i call-sites (forskjellige felt-navn og
+ * defaults).
  */
 export function bruttoHelperFor(mode: GameMode): string {
   switch (mode) {
@@ -20,6 +21,7 @@ export function bruttoHelperFor(mode: GameMode): string {
     case 'solo_strokeplay':
       return 'Scratch-slagspill — lavest sum av gross-slag vinner.';
     case 'fourball_matchplay':
+    case 'foursomes_matchplay':
     case 'texas_scramble':
       // Disse modusene har egne brutto-tekster i call-sites, ikke denne.
       return 'Ingen handicap — kun gross teller.';

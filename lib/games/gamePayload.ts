@@ -234,7 +234,8 @@ function parseGameMode(formData: FormData): GameMode | null {
     raw === 'singles_matchplay' ||
     raw === 'solo_strokeplay' ||
     raw === 'texas_scramble' ||
-    raw === 'fourball_matchplay'
+    raw === 'fourball_matchplay' ||
+    raw === 'foursomes_matchplay'
   )
     return raw;
   return null;
@@ -805,6 +806,113 @@ function parseFourballAllowancePct(
   return n;
 }
 
+/**
+ * Foursomes matchplay-validator (issue #218 — 2v2 alternate-shot).
+ *
+ * Speiler `validateFourballMatchplay` strukturelt — begge er 2v2 matchplay
+ * der hver spiller mappes til side 1 eller 2. Forskjellen er scoring-laget
+ * (foursomes spiller én ball per lag via kaptein-pattern; fourball har
+ * egen ball per spiller). Validatoren ser samme spiller-form ut.
+ *
+ * Regler:
+ *  - hver spiller MÅ ha team_number = 1 eller 2
+ *  - publish krever EKSAKT 4 spillere fordelt 2 på side 1 og 2 på side 2
+ *  - flight_number = team_number (DB-CHECK `game_players_team_flight_consistency`)
+ *  - duplikat-sjekk uendret
+ *  - draft tolererer partial state
+ *
+ * Allowance: leses fra form-feltet `foursomes_allowance_pct` (0..100).
+ * Default 50 (WHS-standard) settes av wizarden ved pre-fill fra
+ * `tournaments.foursomes_allowance_pct`; scoring-laget bruker
+ * diff-basert formel (round(|combined_diff| × pct/100) → strokes til
+ * high side via SI).
+ *
+ * Mode_config-output: `{kind, team_size: 2, teams_count: 2, allowance_pct}`.
+ */
+function validateFoursomesMatchplay(
+  formData: FormData,
+  mode: PayloadMode,
+): ModeValidationResult {
+  const allowancePct = parseFoursomesAllowancePct(formData, mode);
+  if (allowancePct === null) {
+    return { ok: false, errorCode: 'bad_allowance' };
+  }
+
+  const players: GamePlayerInput[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < 8; i++) {
+    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
+    if (!user_id) continue;
+    if (seen.has(user_id)) {
+      return { ok: false, errorCode: 'duplicate_player' };
+    }
+    seen.add(user_id);
+    const team_number = Number(formData.get(`player_${i}_team`));
+    // Foursomes-sider er strengt 1 eller 2 (speiler fourball/singles).
+    if (
+      !Number.isInteger(team_number) ||
+      team_number < 1 ||
+      team_number > 2
+    ) {
+      return { ok: false, errorCode: 'bad_team' };
+    }
+    // flight_number = team_number for å oppfylle DB-CHECK
+    // game_players_team_flight_consistency (begge satt sammen).
+    const flight_number = team_number;
+    players.push({ user_id, team_number, flight_number });
+  }
+
+  if (mode === 'publish') {
+    if (players.length < 4) {
+      return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    if (players.length > 4) {
+      return { ok: false, errorCode: 'too_many_players_for_mode' };
+    }
+    // Nøyaktig 4 spillere — sjekk 2-2-fordeling på sidene.
+    const sideCounts = new Map<number, number>();
+    for (const p of players) {
+      if (p.team_number === null) continue;
+      sideCounts.set(p.team_number, (sideCounts.get(p.team_number) ?? 0) + 1);
+    }
+    if (sideCounts.get(1) !== 2 || sideCounts.get(2) !== 2) {
+      return { ok: false, errorCode: 'team_balance' };
+    }
+  }
+
+  return {
+    ok: true,
+    players,
+    mode_config: {
+      kind: 'foursomes_matchplay',
+      team_size: 2,
+      teams_count: 2,
+      allowance_pct: allowancePct,
+    },
+  };
+}
+
+/**
+ * Leser `foursomes_allowance_pct` fra form-data. Returnerer 0..100 (heltall)
+ * eller null hvis ugyldig.
+ *
+ * Tom string i draft defaulter til 50 (WHS-standard) så partial form-state
+ * ikke kaster; publish krever eksplisitt gyldig verdi (wizarden pre-fyller
+ * fra cup eller setter 50 som fallback). Range 0..100 håndheves uansett.
+ */
+function parseFoursomesAllowancePct(
+  formData: FormData,
+  mode: PayloadMode,
+): number | null {
+  const raw = formData.get('foursomes_allowance_pct');
+  if (raw === null || raw === '') {
+    return mode === 'draft' ? 50 : null;
+  }
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0 || n > 100) return null;
+  return n;
+}
+
 const modeValidators: Record<
   GameMode,
   (formData: FormData, mode: PayloadMode) => ModeValidationResult
@@ -815,6 +923,7 @@ const modeValidators: Record<
   solo_strokeplay: validateSoloStrokeplay,
   texas_scramble: validateTexasScramble,
   fourball_matchplay: validateFourballMatchplay,
+  foursomes_matchplay: validateFoursomesMatchplay,
 };
 
 /**
