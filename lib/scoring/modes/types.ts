@@ -10,7 +10,8 @@ export type GameMode =
   | 'texas_scramble'
   | 'fourball_matchplay'
   | 'foursomes_matchplay'
-  | 'wolf';
+  | 'wolf'
+  | 'nassau';
 
 /**
  * Norske visnings-labels for hver spillmodus. Brukes av ModeChip i admin-
@@ -27,6 +28,7 @@ export const MODE_LABELS: Record<GameMode, string> = {
   fourball_matchplay: 'Fourball',
   foursomes_matchplay: 'Foursomes',
   wolf: 'Wolf',
+  nassau: 'Nassau',
 };
 
 /**
@@ -111,6 +113,16 @@ export type GameModeConfig =
        * bruker enten full HCP eller ingen.
        */
       wolf_scoring: 'gross' | 'net';
+    }
+  | {
+      kind: 'nassau';
+      team_size: 1;
+      /**
+       * Brutto vs netto for Nassau. 'net' = hver spillers per-hull-score er
+       * gross − strokesForHole(courseHandicap, strokeIndex). 'gross' = ren
+       * gross-score (HCP ignoreres). Speiler Wolf-mønstret.
+       */
+      nassau_scoring: 'gross' | 'net';
     };
 
 /**
@@ -940,6 +952,70 @@ export interface WolfResult {
   players: WolfPlayerLine[];
 }
 
+// -----------------------------------------------------------------------------
+// Nassau (issue #276 — front 9 + back 9 + total 18).
+//
+// Tre konkurranser i én runde. Hver seksjon er sin egen strokeplay-ranking
+// (lavest sum av effective-strokes vinner). En spiller som vinner en seksjon
+// alene får 1 unit; tie i seksjonen = push (ingen unit deles ut). Aggregert
+// ranking på unit-count med total18-cascade som tiebreak.
+//
+// Gross/net-toggle som Wolf: mode_config.nassau_scoring = 'gross' | 'net'.
+// -----------------------------------------------------------------------------
+
+export interface NassauSectionLine {
+  userId: string;
+  /** Sum av effective-strokes (net hvis scoring='net', gross hvis 'gross'). */
+  totalEffectiveStrokes: number;
+  /** Sum av gross-strokes (vises ved siden av effective på leaderboard). */
+  totalGrossStrokes: number;
+  /** Antall hull spilt i seksjonen (0-9 for front/back, 0-18 for total). */
+  holesPlayed: number;
+  rank: number;
+  /** Spillere med eksakt samme cascade-resultat. */
+  tiedWith: string[];
+}
+
+export interface NassauSection {
+  name: 'front9' | 'back9' | 'total18';
+  /** Hullnumre i seksjonen: [1..9], [10..18], eller [1..18]. */
+  holeNumbers: number[];
+  players: NassauSectionLine[];
+  /**
+   * Vinnernes userIds for denne seksjonen.
+   *  - Lengde 1: ren vinner, får 1 unit
+   *  - Lengde >1: push (tied etter cascade) — ingen unit deles ut
+   *  - Lengde 0: pending (ikke alle hull spilt ennå)
+   */
+  winnerUserIds: string[];
+  /** True = ingen spiller har spilt alle hull i seksjonen ennå. */
+  isPending: boolean;
+}
+
+export interface NassauUnitLine {
+  userId: string;
+  /** 0-3. Antall seksjoner spilleren vant alene. */
+  units: number;
+  unitBreakdown: { front9: boolean; back9: boolean; total18: boolean };
+  /** Total18-effective-strokes som tiebreak ved units-tie. */
+  total18EffectiveStrokes: number;
+  rank: number;
+  /** Spillere med eksakt samme (units, total18-cascade). */
+  tiedWith: string[];
+}
+
+export interface NassauResult {
+  kind: 'nassau';
+  scoring: 'gross' | 'net';
+  sections: {
+    front9: NassauSection;
+    back9: NassauSection;
+    total18: NassauSection;
+  };
+  /** Aggregert unit-ranking — primær leaderboard-row på podium. */
+  players: NassauUnitLine[];
+}
+
 /**
  * Discriminated union — konsumenter narrower på `kind`:
  *   const r = computeLeaderboard(ctx);
@@ -968,4 +1044,5 @@ export type ModeResult =
   | TexasScrambleResult
   | FourballMatchplayResult
   | FoursomesMatchplayResult
-  | WolfResult;
+  | WolfResult
+  | NassauResult;

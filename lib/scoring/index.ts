@@ -25,6 +25,7 @@ import * as texasScramble from './modes/texasScramble';
 import * as fourballMatchplay from './modes/fourballMatchplay';
 import * as foursomesMatchplay from './modes/foursomesMatchplay';
 import * as wolf from './modes/wolf';
+import * as nassau from './modes/nassau';
 import type { ScoringContext, ModeResult } from './modes/types';
 
 export function computeLeaderboard(ctx: ScoringContext): ModeResult {
@@ -45,6 +46,8 @@ export function computeLeaderboard(ctx: ScoringContext): ModeResult {
       return foursomesMatchplay.compute(ctx);
     case 'wolf':
       return wolf.compute(ctx);
+    case 'nassau':
+      return nassau.compute(ctx);
   }
 }
 
@@ -100,4 +103,8 @@ export type {
   WolfHoleRow,
   WolfPlayerCell,
   WolfPlayerLine,
+  NassauResult,
+  NassauSection,
+  NassauSectionLine,
+  NassauUnitLine,
 } from './modes/types';
