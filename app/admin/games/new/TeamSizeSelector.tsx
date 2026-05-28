@@ -63,6 +63,10 @@ const ENABLED_COMBOS: Record<GameMode, ReadonlySet<TeamSize>> = {
   // TeamSizeSelector vises ikke for wolf (WolfSetup tar over), så denne
   // entry-en er kun for type-completeness på ENABLED_COMBOS-mappen.
   wolf: new Set<TeamSize>([1]),
+  // Nassau: solo-format, 2-4 spillere. TeamSizeSelector vises ikke for
+  // nassau (NassauSetup tar over), så denne brukes ikke i praksis — men
+  // type-system krever en entry.
+  nassau: new Set<TeamSize>([1]),
 };
 
 type TileDef = {

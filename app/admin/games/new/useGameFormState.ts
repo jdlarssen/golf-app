@@ -251,6 +251,12 @@ export function useGameFormState({
   const [wolfScoring, setWolfScoring] = useState<'gross' | 'net'>(
     initialValues?.wolf_scoring === 'gross' ? 'gross' : 'net',
   );
+  // Nassau (#276): brutto vs netto-toggle. Default 'net' speiler Tørny's
+  // ethos. Validatoren (`validateNassau`) leser feltet og faller defensivt
+  // tilbake til 'net' ved ugyldig/manglende verdi.
+  const [nassauScoring, setNassauScoring] = useState<'gross' | 'net'>(
+    initialValues?.nassau_scoring === 'gross' ? 'gross' : 'net',
+  );
   // Wolf-rotasjon: en counter som økes hver gang admin trykker "Shuffle".
   // wolfOrder (derived under) hasher (selectedPlayerIds, wolfShuffleSeed) for
   // å produsere en deterministisk-pseudo-random permutasjon. Da kan render-
@@ -405,6 +411,9 @@ export function useGameFormState({
   //   rotation-slot (random permutasjon ved publish). team_size=1, ingen
   //   lag-grid. Eget WolfSetup-step i step 2 for scoring-toggle + shuffle.
   const isWolf = gameMode === 'wolf';
+  // - isNassau: solo-format, 2-4 spillere. Front 9 / back 9 / total 18 er tre
+  //   separate konkurranser. Egen NassauSetup-step i step 2 for scoring-toggle.
+  const isNassau = gameMode === 'nassau';
 
   // Drafts can be saved without a tee-off; publishing cannot. `canPublish`
   // below combines this with the rest of the validity gates.
@@ -795,6 +804,11 @@ export function useGameFormState({
   // ikke å tilordne selv. Speiler `validateWolf` i gamePayload.ts.
   const wolfPlayersValid = isWolf && selectedPlayerIds.length === 4;
 
+  // Nassau-validitet: 2-4 spillere. Solo-format (team/flight null), ingen
+  // lag-tilordning. Speiler `validateNassau` i gamePayload.ts.
+  const nassauPlayersValid =
+    isNassau && selectedPlayerIds.length >= 2 && selectedPlayerIds.length <= 4;
+
   // Modus-spesifikk publish-validitet. Reglene speiler
   // `lib/games/gamePayload.ts` slik at klient og server forteller samme
   // historie til admin når noe mangler:
@@ -817,7 +831,9 @@ export function useGameFormState({
             ? texasPlayersValid
             : isWolf
               ? wolfPlayersValid
-              : false;
+              : isNassau
+                ? nassauPlayersValid
+                : false;
 
   // Publishing requires every section to be valid AND a tee-off time. Drafts
   // skip these gates entirely (they only need a name).
@@ -834,7 +850,7 @@ export function useGameFormState({
     courseId !== '' &&
     teeBoxId !== '' &&
     (playersStepOptional || playersValidForMode) &&
-    (isTexas || isWolf || allowanceValid) &&
+    (isTexas || isWolf || isNassau || allowanceValid) &&
     hasTeeOff;
 
   // Human-readable list of what's still missing for a publish. Mode-aware:
@@ -928,14 +944,27 @@ export function useGameFormState({
         'for mange spillere — Wolf krever nøyaktig 4',
       );
     }
+  } else if (isNassau) {
+    // Nassau: 2-4 spillere, solo (ingen lag-tilordning).
+    if (selectedPlayerIds.length < 2) {
+      const remaining = 2 - selectedPlayerIds.length;
+      missingForPublish.push(
+        `${remaining === 1 ? 'minst 1 spiller til' : 'minst 2 spillere'}`,
+      );
+    } else if (selectedPlayerIds.length > 4) {
+      missingForPublish.push(
+        'for mange spillere — Nassau krever 2-4',
+      );
+    }
   } else if (selectedPlayerIds.length < 1) {
     // isSolo
     missingForPublish.push('minst én spiller');
   }
-  // hcp_allowance_pct gjelder ikke for Texas eller Wolf — disse modusene
-  // har sin egen scoring-konfig i mode_config. Hopper over allowance-sjekken
-  // så admin ikke får mismatch mellom UI-skjult-felt og publish-feilmelding.
-  if (!isTexas && !isWolf && !allowanceValid)
+  // hcp_allowance_pct gjelder ikke for Texas, Wolf eller Nassau — disse
+  // modusene har sin egen scoring-konfig i mode_config. Hopper over
+  // allowance-sjekken så admin ikke får mismatch mellom UI-skjult-felt og
+  // publish-feilmelding.
+  if (!isTexas && !isWolf && !isNassau && !allowanceValid)
     missingForPublish.push('gyldig HCP-allowance');
 
   return {
@@ -967,6 +996,8 @@ export function useGameFormState({
     setWolfScoring,
     wolfOrder,
     shuffleWolfOrder,
+    nassauScoring,
+    setNassauScoring,
     requirePeerApproval,
     setRequirePeerApproval,
     sideEnabled,
@@ -999,6 +1030,7 @@ export function useGameFormState({
     isMatchplay,
     isTexas,
     isWolf,
+    isNassau,
     hasTeeOff,
     // Memoiserte derivasjoner
     selectedCourse,

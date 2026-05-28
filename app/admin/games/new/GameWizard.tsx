@@ -43,6 +43,7 @@ import { TeamsAssignmentSection } from './sections/TeamsAssignmentSection';
 import { ReadyStep } from './sections/ReadyStep';
 import { RegistrationSection } from './sections/RegistrationSection';
 import { WolfSetup } from './sections/WolfSetup';
+import { NassauSetup } from './sections/NassauSetup';
 import { AllowanceField } from '@/components/admin/AllowanceField';
 import { bruttoHelperFor } from '@/lib/games/allowanceCopy';
 import {
@@ -298,6 +299,8 @@ export function GameWizard({
       texas_team_handicap_pct: String(state.texasHandicapPct),
       fourball_allowance_pct: state.fourballAllowancePct,
       foursomes_allowance_pct: state.foursomesAllowancePct,
+      wolf_scoring: state.wolfScoring,
+      nassau_scoring: state.nassauScoring,
       tournament_id: initialValues?.tournament_id,
       tournament_match_label: initialValues?.tournament_match_label,
       registration_mode: state.registrationMode,
@@ -416,7 +419,7 @@ export function GameWizard({
 
           {state.formatChosen && (
             <div className="space-y-4">
-              {!state.isMatchplay && !state.isWolf && (
+              {!state.isMatchplay && !state.isWolf && !state.isNassau && (
                 <TeamSizeSelector
                   mode={state.gameMode}
                   value={state.teamSize}
@@ -432,6 +435,13 @@ export function GameWizard({
                     .map((pid) => players.find((p) => p.id === pid))
                     .filter((p): p is PlayerOption => p !== undefined)}
                   onShuffle={state.shuffleWolfOrder}
+                  disabled={state.lockGameMode}
+                />
+              )}
+              {state.isNassau && (
+                <NassauSetup
+                  scoring={state.nassauScoring}
+                  onScoringChange={state.setNassauScoring}
                   disabled={state.lockGameMode}
                 />
               )}
@@ -589,10 +599,12 @@ function FormDataInputs({
     teamSize,
     isTexas,
     isWolf,
+    isNassau,
     texasHandicapPct,
     fourballAllowancePct,
     foursomesAllowancePct,
     wolfScoring,
+    nassauScoring,
     orderedPayload,
     courseId,
     teeBoxId,
@@ -652,6 +664,9 @@ function FormDataInputs({
       )}
       {isWolf && (
         <input type="hidden" name="wolf_scoring" value={wolfScoring} />
+      )}
+      {isNassau && (
+        <input type="hidden" name="nassau_scoring" value={nassauScoring} />
       )}
 
       <input type="hidden" name="course_id" value={courseId} />
