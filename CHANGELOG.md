@@ -17,7 +17,48 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.44.y — Nassau (andre kompis-format i epic)
+
+Issue [#276](https://github.com/jdlarssen/golf-app/issues/276), andre kompis-format i [#270](https://github.com/jdlarssen/golf-app/issues/270). Nassau er klassikeren: front 9, back 9 og hele runden er tre separate konkurranser i samme runde. Vinn én seksjon og du har én seier; vinn alle tre og du tok «Hele tavla».
+
+### [1.44.0] - 2026-05-28
+
+> Ny spillform: Nassau. Front 9, back 9 og hele runden er tre separate konkurranser — vinn alle tre og det heter «Hele tavla». 2–4 spillere, velg netto eller brutto når du oppretter spillet.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- [`supabase/migrations/0050_nassau.sql`](supabase/migrations/0050_nassau.sql) — seeder `nassau`-format-row + `format_intent_mapping[nassau, kompis, primary, sort_order=60]`. Ingen ny tabell — scoring leser eksisterende `scores`.
+- [`lib/scoring/modes/nassau.ts`](lib/scoring/modes/nassau.ts) — `compute(ctx)` rangerer tre seksjoner (front 9 / back 9 / total 18) hver for seg via samme `rankTeams`-cascade + `UNPLAYED_PADDING=999`-strategi som `soloStrokeplay`. Aggregert unit-ranking med primær units desc / sekundær total18EffectiveStrokes asc / tertiær userId asc tiebreak. Push på tie (klassisk Nassau-regel) — tied seksjon = ingen unit deles ut. Gross/net-toggle via `mode_config.nassau_scoring` med defensiv fallback til 'net'. 25 Type A unit-tester dekker hele matrisen (clean-win per seksjon, push, sweep, pending, partial play, gross vs net, unit-aggregering, tiebreak).
+- [`lib/scoring/modes/types.ts`](lib/scoring/modes/types.ts) — `GameMode` + `GameModeConfig` utvidet med `nassau`-variant; nye `NassauResult`, `NassauSection`, `NassauSectionLine`, `NassauUnitLine`-typer; `ModeResult` utvidet.
+- [`app/admin/games/new/sections/NassauSetup.tsx`](app/admin/games/new/sections/NassauSetup.tsx) — wizard step 2-seksjon med kun scoring-toggle (netto/brutto). Mye enklere enn WolfSetup (ingen rotasjon, ingen shuffle). `useGameFormState` utvidet med `nassauScoring`, `isNassau`, `nassauPlayersValid` (2-4 spillere).
+- [`app/games/[id]/leaderboard/NassauView.tsx`](app/games/[id]/leaderboard/NassauView.tsx) — tre stacked seksjoner med per-seksjon-rangering. Push viser «Delt 1.-plass» uten highlight. Pending viser «Venter på spilte hull». Reveal-mode følger Wolf-pattern (blanket venterom-card når `score_visibility=reveal` og `status=active`).
+- [`app/games/[id]/leaderboard/NassauPodium.tsx`](app/games/[id]/leaderboard/NassauPodium.tsx) — 1./2./3.-plass på aggregert unit-count med F9/B9/T18-badges per podium-step. Sweep-celebration «Hele tavla!» + «Tok alle tre seksjoner» når en spiller har `units=3`. Confetti-burst på first-mount per browser-sesjon (sessionStorage-gate). Rest-listen (rank 4+) i collapsed `<details>`.
+- [`validateNassau`](lib/games/gamePayload.ts) — payload-validator med 2-4 spillere range, solo-format (team/flight null), `nassau_scoring` gross|net parsing. 12 unit-tester.
+- Auth-gate E2E ([`e2e/games/nassau.spec.ts`](e2e/games/nassau.spec.ts)) speiler Wolf-mønstret.
+
+#### Changed
+- `Record<GameMode, …>`-mapper utvidet for type-completeness: `ENABLED_COMBOS` (TeamSizeSelector), `MODE_SUMMARY_LABELS` (ReadyStep), `MODE_LABELS` (types), `bruttoHelperFor` (allowanceCopy). Lokal `GameRow.game_mode`-union i [`app/games/[id]/page.tsx`](app/games/[id]/page.tsx).
+- [`renderNassau`](app/games/[id]/leaderboard/page.tsx) router-case etter Wolf — speiler `renderSoloStrokeplay` (ingen separat per-hull-tabell).
+- [`app/admin/games/new/GameWizard.tsx`](app/admin/games/new/GameWizard.tsx): render `<NassauSetup>` når `isNassau`, hidden `nassau_scoring`-input, skjul TeamSizeSelector. `wolf_scoring` lagt til i `initialValues`-passthrough.
+
+#### Tests
+- 25 Type A unit-tester for scoring-modulen.
+- 12 validator-tester (`gamePayload.test.ts`).
+- 2 render-tester (NassauSetup + NassauView + NassauPodium).
+- Lightweight auth-gate E2E.
+
+Andre av 7 kompis-batch-formats. Resten: Skins, BBB, Nines, Acey Deucey, Round Robin.
+
+</details>
+
+---
+
 ## 1.43.y — Wolf-format (første kompis-format i epic)
+
+<details>
+<summary><strong>1.43.y — Wolf-format (1 oppføring) — klikk for å vise</strong></summary>
 
 Issue [#274](https://github.com/jdlarssen/golf-app/issues/274), første kompis-format i [#270](https://github.com/jdlarssen/golf-app/issues/270). Wolf er en sosial 4-spillers spillform der én av dere er Wolf på hvert hull — vedkommende velger partner (2v2), går Lone Wolf (1v3, dobler innsatsen), eller deklarer Blind Wolf før noen slår (tredobler). Like hull bærer potten videre.
 
@@ -52,6 +93,8 @@ Issue [#274](https://github.com/jdlarssen/golf-app/issues/274), første kompis-f
 - Lightweight auth-gate E2E (`e2e/games/wolf.spec.ts`).
 
 Foundation for epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Wolf er første av 7 kompis-batch-formats (resten: Skins, Nassau, BBB, Nines, Acey Deucey, Round Robin).
+
+</details>
 
 </details>
 
