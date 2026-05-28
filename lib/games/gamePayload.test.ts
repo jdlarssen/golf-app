@@ -1954,3 +1954,160 @@ describe('buildGameInsertPayload — wolf (issue #274)', () => {
     }
   });
 });
+
+describe('buildGameInsertPayload — nassau (issue #276)', () => {
+  /**
+   * Helper for nassau-payloads. Bygger en form med game_mode=nassau og N
+   * solo-spillere (team/flight null). Default scoring='net'; overstyres via
+   * opts.scoring ved bevisst utenfor-default-test.
+   */
+  function nassauFd(opts: {
+    userIds?: string[];
+    scoring?: 'gross' | 'net' | '';
+    extras?: Record<string, string>;
+  }): FormData {
+    const { userIds = [], scoring = 'net', extras = {} } = opts;
+    const base: Record<string, string> = {
+      name: 'Søndags-nassau',
+      course_id: 'c1',
+      tee_box_id: 't1',
+      game_mode: 'nassau',
+    };
+    if (scoring !== '') {
+      base['nassau_scoring'] = scoring;
+    }
+    userIds.forEach((uid, i) => {
+      base[`player_${i}_id`] = uid;
+    });
+    return fd({ ...base, ...extras });
+  }
+
+  it('publish med 2 spillere (min) → ok, mode_config med nassau_scoring=net', () => {
+    const result = buildGameInsertPayload(
+      nassauFd({ userIds: ['a', 'b'] }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.game_mode).toBe('nassau');
+    expect(result.mode_config).toEqual({
+      kind: 'nassau',
+      team_size: 1,
+      nassau_scoring: 'net',
+    });
+    expect(result.players).toEqual([
+      { user_id: 'a', team_number: null, flight_number: null },
+      { user_id: 'b', team_number: null, flight_number: null },
+    ]);
+  });
+
+  it('publish med 4 spillere (max) → ok', () => {
+    const result = buildGameInsertPayload(
+      nassauFd({ userIds: ['a', 'b', 'c', 'd'] }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(4);
+  });
+
+  it('publish med nassau_scoring=gross → mode_config har gross', () => {
+    const result = buildGameInsertPayload(
+      nassauFd({ userIds: ['a', 'b'], scoring: 'gross' }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'nassau') {
+      expect(result.mode_config.nassau_scoring).toBe('gross');
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('manglende nassau_scoring-felt defaulter til net', () => {
+    const result = buildGameInsertPayload(
+      nassauFd({ userIds: ['a', 'b'], scoring: '' }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'nassau') {
+      expect(result.mode_config.nassau_scoring).toBe('net');
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('ugyldig nassau_scoring-verdi defaulter til net', () => {
+    const result = buildGameInsertPayload(
+      nassauFd({
+        userIds: ['a', 'b'],
+        // @ts-expect-error — tester defensiv fallback ved ugyldig verdi
+        scoring: 'stableford',
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'nassau') {
+      expect(result.mode_config.nassau_scoring).toBe('net');
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('publish med 1 spiller → min_players_for_mode', () => {
+    const result = buildGameInsertPayload(
+      nassauFd({ userIds: ['a'] }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('min_players_for_mode');
+  });
+
+  it('publish med 0 spillere → min_players_for_mode', () => {
+    const result = buildGameInsertPayload(
+      nassauFd({ userIds: [] }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('min_players_for_mode');
+  });
+
+  it('publish med 5 spillere → too_many_players_for_mode', () => {
+    const result = buildGameInsertPayload(
+      nassauFd({ userIds: ['a', 'b', 'c', 'd', 'e'] }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('too_many_players_for_mode');
+  });
+
+  it('publish med duplikat user_id → duplicate_player', () => {
+    const result = buildGameInsertPayload(
+      nassauFd({ userIds: ['a', 'a'] }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('duplicate_player');
+  });
+
+  it('draft tolererer 0 spillere', () => {
+    const result = buildGameInsertPayload(nassauFd({ userIds: [] }), 'draft');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(0);
+  });
+
+  it('draft tolererer 1 spiller (under min)', () => {
+    const result = buildGameInsertPayload(
+      nassauFd({ userIds: ['a'] }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(1);
+  });
+
+  it('team_number og flight_number er null for alle spillere (solo, DB-CHECK)', () => {
+    const result = buildGameInsertPayload(
+      nassauFd({ userIds: ['a', 'b', 'c'] }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    for (const p of result.players) {
+      expect(p.team_number).toBeNull();
+      expect(p.flight_number).toBeNull();
+    }
+  });
+});

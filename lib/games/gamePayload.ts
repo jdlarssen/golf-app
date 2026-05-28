@@ -236,7 +236,8 @@ function parseGameMode(formData: FormData): GameMode | null {
     raw === 'texas_scramble' ||
     raw === 'fourball_matchplay' ||
     raw === 'foursomes_matchplay' ||
-    raw === 'wolf'
+    raw === 'wolf' ||
+    raw === 'nassau'
   )
     return raw;
   return null;
@@ -999,6 +1000,73 @@ function parseWolfScoring(formData: FormData): 'gross' | 'net' {
   return 'net';
 }
 
+/**
+ * Nassau-validator (issue #276 — front 9 + back 9 + total 18).
+ *
+ * Regler:
+ *  - 2-4 spillere ved publish
+ *  - Solo-format: team_number/flight_number nullstilles (samme som
+ *    solo_strokeplay) — DB-CHECK game_players_team_flight_consistency
+ *    krever begge satt sammen eller begge null
+ *  - draft tolererer partial state (0..4 spillere)
+ *
+ * Feilkoder ved publish:
+ *  - 0..1 spillere → `min_players_for_mode`
+ *  - 5+ spillere → `too_many_players_for_mode`
+ *
+ * Scoring-toggle: form-feltet `nassau_scoring` ('gross' | 'net'). Default 'net'
+ * når feltet mangler (matcher Tørny-default + Wolf-mønstret).
+ *
+ * Mode_config-output: `{kind, team_size: 1, nassau_scoring}`.
+ */
+function validateNassau(
+  formData: FormData,
+  mode: PayloadMode,
+): ModeValidationResult {
+  const nassauScoring = parseNassauScoring(formData);
+
+  const players: GamePlayerInput[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < 8; i++) {
+    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
+    if (!user_id) continue;
+    if (seen.has(user_id)) {
+      return { ok: false, errorCode: 'duplicate_player' };
+    }
+    seen.add(user_id);
+    players.push({ user_id, team_number: null, flight_number: null });
+  }
+
+  if (mode === 'publish') {
+    if (players.length < 2) {
+      return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    if (players.length > 4) {
+      return { ok: false, errorCode: 'too_many_players_for_mode' };
+    }
+  }
+
+  return {
+    ok: true,
+    players,
+    mode_config: {
+      kind: 'nassau',
+      team_size: 1,
+      nassau_scoring: nassauScoring,
+    },
+  };
+}
+
+/**
+ * Leser `nassau_scoring` fra form-data. Defaulter til 'net' når feltet mangler
+ * eller har en ugyldig verdi — speiler Wolf-mønstret + Tørny's HCP-default.
+ */
+function parseNassauScoring(formData: FormData): 'gross' | 'net' {
+  const raw = String(formData.get('nassau_scoring') ?? '').trim();
+  if (raw === 'gross') return 'gross';
+  return 'net';
+}
+
 const modeValidators: Record<
   GameMode,
   (formData: FormData, mode: PayloadMode) => ModeValidationResult
@@ -1011,6 +1079,7 @@ const modeValidators: Record<
   fourball_matchplay: validateFourballMatchplay,
   foursomes_matchplay: validateFoursomesMatchplay,
   wolf: validateWolf,
+  nassau: validateNassau,
 };
 
 /**

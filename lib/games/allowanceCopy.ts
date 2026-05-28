@@ -30,5 +30,10 @@ export function bruttoHelperFor(mode: GameMode): string {
       // helperen brukes av Section 3 sin generiske allowance-field som ikke
       // vises for wolf, men returverdien defineres for type-completeness.
       return 'Ingen handicap — point-utdeling bruker gross-score.';
+    case 'nassau':
+      // Nassau har egen scoring-toggle (gross|net) i NassauSetup-step. Som
+      // for wolf vises ikke generisk allowance-field; returverdien er for
+      // type-completeness.
+      return 'Ingen handicap — slag-sum per seksjon bruker gross-score.';
   }
 }
