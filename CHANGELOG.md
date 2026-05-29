@@ -17,7 +17,42 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.49.y — Bingo Bango Bongo (tre poeng per hull)
+
+Issue [#277](https://github.com/jdlarssen/golf-app/issues/277), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Den første spillformen der poengene ikke kommer fra slag, men fra tre prestasjoner per hull. Sosial kompisrunde for 2–4 spillere.
+
+### [1.49.0] - 2026-05-29
+
+> Ny spillform for kompisrunden: Bingo Bango Bongo, for 2 til 4 spillere. Hvert hull gir tre poeng å kjempe om: bingo til den som først er på green, bango til den som ligger nærmest når alle er på green, og bongo til den som først er i hull. Du taster slag som før og krysser av de tre vinnerne per hull. Hvem som helst i flighten kan registrere, og leaderboardet kårer den med flest poeng sammenlagt.
+
+<details>
+<summary>Teknisk</summary>
+
+Bygget på Wolf-mønstret for kategorisk per-hull-input: poengene er rene prestasjons-poeng og utledes ikke fra slag. Det vanlige scorekortet står urørt — de tre velgerne legges på som et ekstra lag per hull. CTP/LD-sideturnering fungerer derfor fortsatt ut av boksen.
+
+#### Added
+- [`supabase/migrations/0053_bingo_bango_bongo.sql`](supabase/migrations/0053_bingo_bango_bongo.sql) — tabell `bingo_bango_bongo_holes` (bingo/bango/bongo-user-id per hull, alle nullable), delt lese/skrive-RLS for alle spillere i spillet + admin, og seed av format-rad + intent-mapping (sekundær under Kompis).
+- [`lib/scoring/modes/bingoBangoBongo.ts`](lib/scoring/modes/bingoBangoBongo.ts) — `compute(ctx)`: 1 poeng per kategori per hull, aggregert per spiller (bingos/bangos/bongos/sum), rangert på sum med bingos→bongos som tiebreak. 20 Type A-tester.
+- `lib/bbb/` — `getBingoBangoBongoHoles` (tag-cachet), `setBingoBangoBongoHole` (`'use server'`, låser når spillet er avsluttet), `subscribeBingoBangoBongo` (realtime).
+- `BingoBangoBongoEntry.tsx` — tre chip-rader (bingo/bango/bongo) med «Ingen»-valg, delt registrering, optimistisk lagring, integrert under det vanlige scorekortet.
+- `BingoBangoBongoView.tsx` + `BingoBangoBongoPodium.tsx` — per-spiller-tabell (Bingo/Bango/Bongo/Sum) + podium for avsluttet spill.
+
+#### Changed
+- `lib/scoring/modes/types.ts` + `lib/scoring/index.ts` — ny `bingo_bango_bongo`-modus i `GameMode`, `GameModeConfig`, `ModeResult`, `ScoringContext` og compute-routeren, samt alle `Record<GameMode,…>`-maps (`MODE_LABELS`, `modeValidators`, `bruttoHelperFor`, `MODE_GUIDE`, m.fl.).
+- [`lib/games/gamePayload.ts`](lib/games/gamePayload.ts) — `validateBingoBangoBongo` (2–4 spillere, individuell).
+- `HoleClient.tsx` + hull-`page.tsx`, leaderboard-`page.tsx`, `lib/formats/icons.tsx` — scorekort-integrasjon, leaderboard-routing og format-ikon.
+
+#### Tests
+- Type A: `bingoBangoBongo.test.ts` (20) + `lib/bbb/`-helper-tester. Type C: `BingoBangoBongoEntry.test.tsx` + `BingoBangoBongoView.test.tsx`.
+
+</details>
+
+---
+
 ## 1.48.y — 4BBB Stableford (lag-variant synliggjort)
+
+<details>
+<summary><strong>1.48.y — 4BBB Stableford (lag-variant synliggjort) (1 oppføring) — klikk for å vise</strong></summary>
 
 Issue [#282](https://github.com/jdlarssen/golf-app/issues/282), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Stableford for lag à 2 fantes allerede, men gjemte seg bak et kryptisk «Par»-valg. Nå heter varianten 4BBB og får en egen forklaring, uten ny scoring under panseret.
 
@@ -45,6 +80,8 @@ Ingen ny scoring, game_mode eller migrasjon: lag-Stableford (team_size 2) regnet
 
 #### Avvik fra issue #282
 - Issue-en spesifiserte ny `fourbb_stableford.ts`-scoring-modul + ny `formats`-rad. Begge droppet: scoringen finnes allerede i `stableford.ts` (team-MAX), og Jørgen valgte å la 4BBB leve som variant under Stableford-kortet, ikke som eget format-kort.
+
+</details>
 
 </details>
 
