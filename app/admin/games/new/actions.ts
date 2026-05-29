@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
 import {
   buildGameInsertPayload,
@@ -88,10 +89,19 @@ async function createGameInternal(
   const supabase = await getServerClient();
   // Allow trusted-non-admin creators alongside admins per #198 small-bet MVP.
   // Returns userId, isAdmin, isTrusted — we use userId for created_by below.
-  const { userId } = await requireAdminOrTrustedCreator(supabase);
+  const { userId, isAdmin } = await requireAdminOrTrustedCreator(supabase);
+
+  // games/game_players RLS only grants writes to is_admin(); a trusted-non-admin
+  // would otherwise fail the INSERT (#230 — silently broken since #198). Route
+  // the privileged path through the service-role client for them. Admins keep
+  // the request-scoped client, so their behaviour is unchanged. Single binding
+  // mirrors the courses-edit pattern from #223 Fase 4. The publish roster read
+  // uses it too, so the pending-players gate sees the full roster — RLS would
+  // otherwise hide not-yet-shared players and silently skip the gate.
+  const writeClient = isAdmin ? supabase : getAdminClient();
 
   if (mode === 'publish') {
-    const { data: rosterUsers, error: rosterErr } = await supabase
+    const { data: rosterUsers, error: rosterErr } = await writeClient
       .from('users')
       .select('id, email, profile_completed_at')
       .in('id', payload.players.map((p) => p.user_id));
@@ -127,7 +137,7 @@ async function createGameInternal(
       ? tournamentMatchLabelRaw.slice(0, 80)
       : null;
 
-  const { data: game, error: gameError } = await supabase
+  const { data: game, error: gameError } = await writeClient
     .from('games')
     .insert({
       name: payload.name,
@@ -179,7 +189,7 @@ async function createGameInternal(
       course_handicap: null,
     };
   });
-  const { error: gpError } = await supabase.from('game_players').insert(rows);
+  const { error: gpError } = await writeClient.from('game_players').insert(rows);
   if (gpError) redirect('/admin/games/new?error=db_players');
 
   // Best-effort `invite`-varsler for hver tilkommet spiller (skip inviter

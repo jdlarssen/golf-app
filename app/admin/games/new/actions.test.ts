@@ -43,6 +43,18 @@ vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
 }));
 
+// #230: trusted-non-admin creators write through the service-role client to
+// bypass is_admin()-RLS on games/game_players. A separate mock client lets the
+// tests assert *which* client the privileged path used — the assertion the
+// original #198 test lacked, which is exactly why the RLS gap shipped
+// undetected (mocking games.insert to succeed hid that the write would have
+// failed against real RLS).
+let adminMock: ReturnType<typeof buildSupabaseMock>;
+const getAdminClientMock = vi.fn(() => adminMock);
+vi.mock('@/lib/supabase/admin', () => ({
+  getAdminClient: () => getAdminClientMock(),
+}));
+
 // F2 (#272): server-action kaller isValidActiveGameMode før insert. Mocker
 // til true så happy-path-testene fortsatt slipper gjennom; egne tester for
 // validerings-stien er i lib/formats/validateGameMode.test.ts.
@@ -164,11 +176,17 @@ describe('createGameDraft', () => {
 });
 
 describe('createGameDraft — trusted creator gate (#198)', () => {
-  it('trusted non-admin: is_admin=false + email on allowlist → inserts draft', async () => {
+  it('trusted non-admin: is_admin=false + allowlist → writes via admin client (RLS bypass, #230)', async () => {
+    // Role lookup runs on the request-scoped client (loadRole). The game +
+    // game_players writes must go through the service-role client because
+    // games-RLS only grants writes to is_admin() — routing them through the
+    // request-scoped client (the pre-#230 bug) would fail against real RLS.
     supabaseMock = buildSupabaseMock([
       // users select returns { is_admin: false, email: 'fornes.even@yahoo.no' }
       // — the helper computes isTrusted from email, allowing the action through
       { data: { is_admin: false, email: 'fornes.even@yahoo.no' }, error: null },
+    ]);
+    adminMock = buildSupabaseMock([
       { data: { id: 'new-game-trusted-1' }, error: null }, // games.insert
       { data: null, error: null }, // game_players.insert
     ]);
@@ -188,12 +206,28 @@ describe('createGameDraft — trusted creator gate (#198)', () => {
       '/admin/games/new-game-trusted-1?status=draft_created',
     );
 
-    // Verify created_by captures the trusted user's id, not an admin's
-    const insertCall = supabaseMock.__fromCalls.find(
+    // The privileged path resolved the service-role client exactly once...
+    expect(getAdminClientMock).toHaveBeenCalledTimes(1);
+
+    // ...and both writes landed on it, NOT on the request-scoped client. This
+    // is the assertion the original #198 test lacked.
+    const adminGamesInsert = adminMock.__fromCalls.find(
       (c) => c.table === 'games' && c.method === 'insert',
     );
-    expect(insertCall).toBeDefined();
-    const insertRow = insertCall!.args[0] as { created_by: string };
+    expect(adminGamesInsert).toBeDefined();
+    expect(
+      adminMock.__fromCalls.some(
+        (c) => c.table === 'game_players' && c.method === 'insert',
+      ),
+    ).toBe(true);
+    expect(
+      supabaseMock.__fromCalls.some(
+        (c) => c.table === 'games' && c.method === 'insert',
+      ),
+    ).toBe(false);
+
+    // created_by still captures the trusted user's id, not an admin's.
+    const insertRow = adminGamesInsert!.args[0] as { created_by: string };
     expect(insertRow.created_by).toBe('trusted-1');
   });
 
@@ -236,6 +270,66 @@ describe('createGameDraft — trusted creator gate (#198)', () => {
     expect(lastRedirect()).toBe(
       '/admin/games/new-game-admin-1?status=draft_created',
     );
+
+    // Admin path never resolves the service-role client — writes stay on the
+    // request-scoped client so RLS still applies to them.
+    expect(getAdminClientMock).not.toHaveBeenCalled();
+    expect(
+      supabaseMock.__fromCalls.some(
+        (c) => c.table === 'games' && c.method === 'insert',
+      ),
+    ).toBe(true);
+  });
+});
+
+describe('createAndPublishGame — trusted creator (#230)', () => {
+  it('trusted non-admin publish: pending-players gate read + writes all run on admin client', async () => {
+    // Publish runs the pending-players gate via a `users.in(rosterIds)` read.
+    // For a brand-new game the added players don't yet share a game with the
+    // creator, so the request-scoped client's RLS would hide them and silently
+    // skip the gate. #230 routes that read through the service-role client too,
+    // so the gate sees the full roster — the same behaviour an admin gets.
+    supabaseMock = buildSupabaseMock([
+      // loadRole's users.eq(id).single — role lookup only.
+      { data: { is_admin: false, email: 'fornes.even@yahoo.no' }, error: null },
+    ]);
+    const completedRoster = Array.from({ length: 8 }, (_, i) => ({
+      id: `u${i}`,
+      email: `u${i}@example.com`,
+      profile_completed_at: '2026-05-01T00:00:00Z',
+    }));
+    adminMock = buildSupabaseMock([
+      { data: completedRoster, error: null }, // users.in(rosterIds) — gate read
+      { data: { id: 'new-game-trusted-pub' }, error: null }, // games.insert
+      { data: null, error: null }, // game_players.insert
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'trusted-1', email: 'fornes.even@yahoo.no' } },
+    });
+
+    const { createAndPublishGame } = await import('./actions');
+
+    await expect(
+      createAndPublishGame(fullPublishFormData()),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe(
+      '/admin/games/new-game-trusted-pub?status=scheduled',
+    );
+    expect(getAdminClientMock).toHaveBeenCalledTimes(1);
+
+    // Gate read (`users.in(...)`) ran on the admin client...
+    expect(
+      adminMock.__fromCalls.some(
+        (c) => c.table === 'users' && c.method === 'in',
+      ),
+    ).toBe(true);
+    // ...not on the request-scoped client (which only did the role lookup).
+    expect(
+      supabaseMock.__fromCalls.some(
+        (c) => c.table === 'users' && c.method === 'in',
+      ),
+    ).toBe(false);
   });
 });
 

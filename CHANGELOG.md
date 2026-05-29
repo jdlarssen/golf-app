@@ -21,6 +21,23 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#276](https://github.com/jdlarssen/golf-app/issues/276), andre kompis-format i [#270](https://github.com/jdlarssen/golf-app/issues/270). Nassau er klassikeren: front 9, back 9 og hele runden er tre separate konkurranser i samme runde. Vinn én seksjon og du har én seier; vinn alle tre og du tok «Hele tavla».
 
+### [1.44.2] - 2026-05-29
+
+> Spillere som har fått lov til å opprette turneringer uten å være administrator, kan endelig gjøre det. Før stoppet en tilgangssperre dem med «Klarte ikke å lagre spillet», selv om de hadde fått tilgang.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- [`app/admin/games/new/actions.ts`](app/admin/games/new/actions.ts) — `createGameInternal` kjørte `games`- og `game_players`-INSERT gjennom den request-scopede klienten, men RLS-policyene `games admin write` / `game_players admin write` krever `is_admin()`. Trusted-non-admin-skapere (#198-allowlista) feilet derfor INSERT-en stille siden #198 ble merget 2026-05-25, og landet på `error=db_game`. Nå velges `writeClient = isAdmin ? supabase : getAdminClient()` (service-role-bypass for trusted), samme mønster som #223 Fase 4 i courses-actions. Publish-roster-readen bruker samme klient, så pending-spiller-sperra ser hele rosteret — RLS skjulte ellers ennå-ikke-delte spillere og hoppet stille over sjekken.
+
+#### Tests
+- [`app/admin/games/new/actions.test.ts`](app/admin/games/new/actions.test.ts) — regresjonstester som beviser at admin-klienten faktisk brukes for trusted-skapere (draft + publish) og ikke for admin. Den gamle #198-testen mocket `games.insert` til å lykkes uansett klient, og fanget derfor aldri RLS-gapet.
+
+Verifisert via Supabase MCP (read-only): `fornes.even@yahoo.no` er `is_admin=false`, og `games`/`game_players`-policyene matcher migrasjon 0002 (ikke endret manuelt) — altså en bug, ikke konfigurasjonsdrift. Issue [#230](https://github.com/jdlarssen/golf-app/issues/230).
+
+</details>
+
 ### [1.44.1] - 2026-05-29
 
 > Spiller du fra en tee der dame- eller junior-par er annerledes enn herre-par, viser nå leverings-siden, godkjenning og leaderboardens hull-fane din egen par. Et 5-slag på et hull som er par 5 for deg teller som par, ikke bogey.
