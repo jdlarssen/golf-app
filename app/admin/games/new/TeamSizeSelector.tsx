@@ -86,6 +86,10 @@ const ENABLED_COMBOS: Record<GameMode, ReadonlySet<TeamSize>> = {
   // vil ta over wizard-steget, så TeamSizeSelector vises ikke i praksis —
   // men type-system krever en entry.
   round_robin: new Set<TeamSize>([1]),
+  // Acey Deucey: individuelt format, eksakt 4 spillere, team_size=1. En
+  // dedikert setup-steg tar over (speiler Wolf/Skins/Nassau), så
+  // TeamSizeSelector vises ikke i praksis — men type-system krever en entry.
+  acey_deucey: new Set<TeamSize>([1]),
 };
 
 type TileDef = {

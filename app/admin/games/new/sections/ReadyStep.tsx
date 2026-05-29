@@ -58,6 +58,7 @@ const MODE_SUMMARY_LABELS: Record<GameMode, string> = {
   bingo_bango_bongo: 'Bingo Bango Bongo',
   nines: 'Nines / Split Sixes',
   round_robin: 'Round Robin',
+  acey_deucey: 'Acey Deucey',
 };
 
 function teamSizeLabel(size: TeamSize): string {

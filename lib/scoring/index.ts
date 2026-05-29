@@ -31,6 +31,7 @@ import * as skins from './modes/skins';
 import * as bingoBangoBongo from './modes/bingoBangoBongo';
 import * as nines from './modes/nines';
 import * as roundRobin from './modes/roundRobin';
+import * as aceyDeucey from './modes/aceyDeucey';
 import type { ScoringContext, ModeResult } from './modes/types';
 
 export function computeLeaderboard(ctx: ScoringContext): ModeResult {
@@ -63,6 +64,8 @@ export function computeLeaderboard(ctx: ScoringContext): ModeResult {
       return nines.compute(ctx);
     case 'round_robin':
       return roundRobin.compute(ctx);
+    case 'acey_deucey':
+      return aceyDeucey.compute(ctx);
   }
 }
 
@@ -140,4 +143,7 @@ export type {
   RoundRobinPlayerCell,
   RoundRobinPlayerLine,
   RoundRobinSegmentLine,
+  AceyDeuceyResult,
+  AceyDeuceyHoleRow,
+  AceyDeuceyPlayerLine,
 } from './modes/types';

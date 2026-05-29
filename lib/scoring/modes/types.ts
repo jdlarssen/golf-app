@@ -16,7 +16,8 @@ export type GameMode =
   | 'skins'
   | 'bingo_bango_bongo'
   | 'nines'
-  | 'round_robin';
+  | 'round_robin'
+  | 'acey_deucey';
 
 /**
  * Norske visnings-labels for hver spillmodus. Brukes av ModeChip i admin-
@@ -39,6 +40,7 @@ export const MODE_LABELS: Record<GameMode, string> = {
   bingo_bango_bongo: 'Bingo Bango Bongo',
   nines: 'Nines / Split Sixes',
   round_robin: 'Round Robin',
+  acey_deucey: 'Acey Deucey',
 };
 
 /**
@@ -210,6 +212,18 @@ export type GameModeConfig =
       team_size: 1;
       teams_count: 4;
       allowance_pct: number;
+    }
+  | {
+      /**
+       * Acey Deucey: individuelt format, EKSAKT 4 spillere, ingen lag. Per
+       * hull: lavest unique effective score → +3 (ace), høyest unique → −3
+       * (deuce), de to midtre → 0. Delt lavest/høyest → den siden deles ikke
+       * ut. Hull uten score for alle 4 → 0 til alle, men ingen frys.
+       * Brutto/netto-toggle speiler Wolf/Nassau/Skins-mønstret.
+       */
+      kind: 'acey_deucey';
+      team_size: 1;
+      acey_deucey_scoring: 'gross' | 'net';
     };
 
 /**
@@ -1420,6 +1434,58 @@ export interface RoundRobinResult {
   players: RoundRobinPlayerLine[];
 }
 
+// Acey Deucey (issue #279 — 4-spiller per-hull point-game).
+//
+// Per hull: unikt lavest effective score → +3 (ace); unikt høyest → −3 (deuce);
+// de to midtre → 0. Delt lavest/høyest → den siden deles ikke ut, uavhengig.
+// Hull der ikke alle 4 har score → scored=false, alle 0, men ingen frys.
+// Løpende total kan bli negativ. Brutto/netto-toggle som Wolf/Nassau/Skins.
+// -----------------------------------------------------------------------------
+
+/**
+ * Per-hull-rad i Acey Deucey. `scored=true` betyr at alle 4 spillere hadde
+ * effective score og poeng ble distribuert (aceUserId/deuceUserId kan likevel
+ * være null hvis den siden var delt). `scored=false` betyr ufullstendig hull —
+ * alle 0, men later hulls prosesseres uavhengig.
+ */
+export interface AceyDeuceyHoleRow {
+  holeNumber: number;
+  par: number;
+  strokeIndex: number;
+  /** True = alle 4 spillere hadde score dette hullet. */
+  scored: boolean;
+  /** Spillerens userId som hadde unikt lavest effective score, ellers null. */
+  aceUserId: string | null;
+  /** Spillerens userId som hadde unikt høyest effective score, ellers null. */
+  deuceUserId: string | null;
+  /** +3 / 0 / −3 per spiller dette hullet, indeksert på userId. */
+  pointsByPlayer: Record<string, number>;
+}
+
+/**
+ * Per-spiller-rad i Acey Deucey-leaderboard. `total` kan være negativ
+ * (deuce-akkumulering). Ranking: total DESC → aces DESC → delt rank.
+ */
+export interface AceyDeuceyPlayerLine {
+  userId: string;
+  /** Antall hull der spilleren var unik lavest (ace). */
+  aces: number;
+  /** Antall hull der spilleren var unik høyest (deuce). */
+  deuces: number;
+  /** Sum av +3/0/−3 over alle hull (kan være negativ). */
+  total: number;
+  rank: number;
+  /** Spillere med eksakt samme (total, aces) — delt rank. */
+  tiedWith: string[];
+}
+
+export interface AceyDeuceyResult {
+  kind: 'acey_deucey';
+  scoring: 'gross' | 'net';
+  holes: AceyDeuceyHoleRow[];
+  players: AceyDeuceyPlayerLine[];
+}
+
 /**
  * Discriminated union — konsumenter narrower på `kind`:
  *   const r = computeLeaderboard(ctx);
@@ -1459,4 +1525,5 @@ export type ModeResult =
   | SkinsResult
   | BingoBangoBongoResult
   | NinesResult
-  | RoundRobinResult;
+  | RoundRobinResult
+  | AceyDeuceyResult;

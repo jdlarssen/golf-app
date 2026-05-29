@@ -56,5 +56,10 @@ export function bruttoHelperFor(mode: GameMode): string {
       // RoundRobinSetup-step. Generisk allowance-field vises ikke for round_robin;
       // returverdien er kun for type-completeness.
       return 'Ingen handicap — besteball matchplay bruker gross-score per hull.';
+    case 'acey_deucey':
+      // Acey Deucey har egen scoring-toggle (gross|net) i sin setup-steg. Som
+      // for Wolf/Nassau/Skins vises ikke generisk allowance-field; returverdien
+      // er kun for type-completeness.
+      return 'Ingen handicap — per-hull-poeng bruker gross-score.';
   }
 }

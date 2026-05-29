@@ -242,7 +242,8 @@ function parseGameMode(formData: FormData): GameMode | null {
     raw === 'skins' ||
     raw === 'bingo_bango_bongo' ||
     raw === 'nines' ||
-    raw === 'round_robin'
+    raw === 'round_robin' ||
+    raw === 'acey_deucey'
   )
     return raw;
   return null;
@@ -1161,6 +1162,73 @@ function parseSkinsScoring(formData: FormData): 'gross' | 'net' {
 }
 
 /**
+ * Acey Deucey-validator (issue #279 — 4-spiller per-hull point-game).
+ *
+ * Speiler `validateSkins`/`validateNassau` for scoring-toggle; speiler
+ * `validateWolf` for eksakt-4-player-håndhevingen.
+ *
+ * Regler:
+ *  - Solo-format: team_number/flight_number nullstilles alltid (ingen lag).
+ *  - publish: EKSAKT 4 spillere — < 4 → `min_players_for_mode`,
+ *    > 4 → `too_many_players_for_mode`.
+ *  - draft tolererer partial state (0..4 spillere).
+ *  - duplikat-sjekk uendret.
+ *
+ * Scoring-toggle: form-feltet `acey_deucey_scoring` ('gross' | 'net').
+ * Default 'net' når feltet mangler (Tørny HCP-default-ethos; hindrer at
+ * høy-handikapperen alltid er deuce).
+ *
+ * Mode_config-output: `{kind, team_size: 1, acey_deucey_scoring}`.
+ */
+function validateAceyDeucey(
+  formData: FormData,
+  mode: PayloadMode,
+): ModeValidationResult {
+  const aceyDeuceyScoring = parseAceyDeuceyScoring(formData);
+
+  const players: GamePlayerInput[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < 8; i++) {
+    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
+    if (!user_id) continue;
+    if (seen.has(user_id)) {
+      return { ok: false, errorCode: 'duplicate_player' };
+    }
+    seen.add(user_id);
+    players.push({ user_id, team_number: null, flight_number: null });
+  }
+
+  if (mode === 'publish') {
+    if (players.length < 4) {
+      return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    if (players.length > 4) {
+      return { ok: false, errorCode: 'too_many_players_for_mode' };
+    }
+  }
+
+  return {
+    ok: true,
+    players,
+    mode_config: {
+      kind: 'acey_deucey',
+      team_size: 1,
+      acey_deucey_scoring: aceyDeuceyScoring,
+    },
+  };
+}
+
+/**
+ * Leser `acey_deucey_scoring` fra form-data. Defaulter til 'net' når feltet
+ * mangler eller har en ugyldig verdi — speiler Nassau/Wolf/Skins-mønstret.
+ */
+function parseAceyDeuceyScoring(formData: FormData): 'gross' | 'net' {
+  const raw = String(formData.get('acey_deucey_scoring') ?? '').trim();
+  if (raw === 'gross') return 'gross';
+  return 'net';
+}
+
+/**
  * Bingo Bango Bongo-validator (issue #277).
  *
  * Speiler `validateNassau`/`validateSkins`: individuelt format, 2–4 spillere
@@ -1385,6 +1453,7 @@ const modeValidators: Record<
   bingo_bango_bongo: validateBingoBangoBongo,
   nines: validateNines,
   round_robin: validateRoundRobin,
+  acey_deucey: validateAceyDeucey,
 };
 
 /**

@@ -2650,3 +2650,114 @@ describe('buildGameInsertPayload — round_robin (issue #280)', () => {
     }
   });
 });
+
+describe('buildGameInsertPayload — acey_deucey (#279)', () => {
+  function aceyFd(opts: {
+    userIds?: string[];
+    scoring?: string;
+    extras?: Record<string, string>;
+  }): FormData {
+    const { userIds = [], scoring = 'net', extras = {} } = opts;
+    const base: Record<string, string> = {
+      name: 'Kompis-runde Acey',
+      course_id: 'c1',
+      tee_box_id: 't1',
+      game_mode: 'acey_deucey',
+    };
+    if (scoring !== '') {
+      base['acey_deucey_scoring'] = scoring;
+    }
+    userIds.forEach((uid, i) => {
+      base[`player_${i}_id`] = uid;
+    });
+    return fd({ ...base, ...extras });
+  }
+
+  it('publish med 4 spillere (eksakt krav) → ok, mode_config med acey_deucey_scoring=net', () => {
+    const result = buildGameInsertPayload(
+      aceyFd({ userIds: ['a', 'b', 'c', 'd'] }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.game_mode).toBe('acey_deucey');
+    expect(result.mode_config).toEqual({
+      kind: 'acey_deucey',
+      team_size: 1,
+      acey_deucey_scoring: 'net',
+    });
+    expect(result.players).toEqual([
+      { user_id: 'a', team_number: null, flight_number: null },
+      { user_id: 'b', team_number: null, flight_number: null },
+      { user_id: 'c', team_number: null, flight_number: null },
+      { user_id: 'd', team_number: null, flight_number: null },
+    ]);
+  });
+
+  it('publish med acey_deucey_scoring=gross → mode_config har gross', () => {
+    const result = buildGameInsertPayload(
+      aceyFd({ userIds: ['a', 'b', 'c', 'd'], scoring: 'gross' }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'acey_deucey') {
+      expect(result.mode_config.acey_deucey_scoring).toBe('gross');
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('manglende acey_deucey_scoring-felt defaulter til net', () => {
+    const result = buildGameInsertPayload(
+      aceyFd({ userIds: ['a', 'b', 'c', 'd'], scoring: '' }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'acey_deucey') {
+      expect(result.mode_config.acey_deucey_scoring).toBe('net');
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('publish med 3 spillere → min_players_for_mode', () => {
+    const result = buildGameInsertPayload(
+      aceyFd({ userIds: ['a', 'b', 'c'] }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('min_players_for_mode');
+  });
+
+  it('publish med 5 spillere → too_many_players_for_mode', () => {
+    const result = buildGameInsertPayload(
+      aceyFd({ userIds: ['a', 'b', 'c', 'd', 'e'] }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('too_many_players_for_mode');
+  });
+
+  it('draft tolererer 0 spillere', () => {
+    const result = buildGameInsertPayload(aceyFd({ userIds: [] }), 'draft');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(0);
+  });
+
+  it('publish med duplikat user_id → duplicate_player', () => {
+    const result = buildGameInsertPayload(
+      aceyFd({ userIds: ['a', 'a', 'b', 'c'] }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('duplicate_player');
+  });
+
+  it('team_number og flight_number er null for alle spillere (solo, DB-CHECK)', () => {
+    const result = buildGameInsertPayload(
+      aceyFd({ userIds: ['a', 'b', 'c', 'd'] }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    for (const p of result.players) {
+      expect(p.team_number).toBeNull();
+      expect(p.flight_number).toBeNull();
+    }
+  });
+});
