@@ -151,10 +151,10 @@ export const MODE_GUIDE: Record<GameMode, ModeGuide> = {
   },
   acey_deucey: {
     summary:
-      'Fire spillere. På hvert hull tar den med lavest score tre poeng — ett fra hver av de andre. Den med høyest gir tre poeng fra seg.',
+      'Fire spillere. På hvert hull tar den med lavest score tre poeng, ett fra hver av de andre. Den med høyest gir tre poeng fra seg.',
     points: [
       'Lavest score alene gir +3. Høyest score alene gir −3. De to i midten står i ro.',
-      'Deler to eller flere lavest (eller høyest), deles ikke den siden ut det hullet.',
+      'Deler to eller flere den laveste (eller høyeste) scoren, gir ikke den siden poeng det hullet.',
       'Du kan spille det brutto eller netto med handikap, alt etter hva som er valgt. Totalen kan bli negativ.',
     ],
   },

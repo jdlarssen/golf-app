@@ -277,8 +277,7 @@ function PlayerRow({
             {displayName}
           </p>
           <p className="mt-0.5 text-[12px] text-muted tabular-nums">
-            {aces} {aces === 1 ? 'ace' : 'ace'} · {deuces}{' '}
-            {deuces === 1 ? 'deuce' : 'deuce'}
+            {aces} ace · {deuces} deuce
           </p>
           {isTied && (
             <p className="text-[11px] text-muted mt-0.5">Delt {rank}. plass</p>
