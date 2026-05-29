@@ -404,7 +404,7 @@ export default async function GameHomePage({
           <Kicker tone="muted" className="mb-2 px-1">
             SPILLFORM
           </Kicker>
-          <ModeGuideCard mode={game.game_mode} />
+          <ModeGuideCard mode={game.game_mode} modeConfig={game.mode_config} />
         </div>
 
         {/* Countdown banner */}
@@ -520,7 +520,7 @@ export default async function GameHomePage({
           <Kicker tone="muted" className="mb-2">
             SPILLFORM
           </Kicker>
-          <ModeGuideCard mode={game.game_mode} />
+          <ModeGuideCard mode={game.game_mode} modeConfig={game.mode_config} />
         </div>
 
         {isDraft && (

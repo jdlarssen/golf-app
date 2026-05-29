@@ -1,5 +1,6 @@
-import { MODE_LABELS, type GameMode } from '@/lib/scoring/modes/types';
-import { MODE_GUIDE } from '@/lib/formats/modeGuide';
+import { MODE_LABELS, type GameMode, type GameModeConfig } from '@/lib/scoring/modes/types';
+import { MODE_GUIDE, resolveModeGuide } from '@/lib/formats/modeGuide';
+import { formatDisplayLabel } from '@/lib/games/formatLabel';
 
 /**
  * Gjenbrukbar utvidbar modus-forklaring (#299). Viser modus-navn + ett-linjes
@@ -15,13 +16,25 @@ import { MODE_GUIDE } from '@/lib/formats/modeGuide';
  */
 export function ModeGuideCard({
   mode,
+  modeConfig,
   className,
 }: {
   mode: GameMode;
+  /**
+   * Valgfri mode-config. Når satt brukes den til å vise variant-bevisst navn
+   * og guide — særlig 4BBB Stableford (team_size 2) som ellers ville arvet
+   * solo-Stableford-teksten siden de deler game_mode (#282). Uten prop:
+   * dagens game_mode-baserte oppførsel uendret.
+   */
+  modeConfig?: GameModeConfig;
   className?: string;
 }) {
-  const label = MODE_LABELS[mode] ?? mode;
-  const guide = MODE_GUIDE[mode];
+  const label = modeConfig
+    ? formatDisplayLabel(mode, modeConfig)
+    : (MODE_LABELS[mode] ?? mode);
+  const guide = modeConfig
+    ? resolveModeGuide(mode, modeConfig.team_size)
+    : MODE_GUIDE[mode];
 
   // Defensivt: en gammel/legacy game_mode uten guide-entry skal ikke krasje.
   // Vis i det minste modus-navnet.
