@@ -30,6 +30,7 @@ import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
 import { isHandicapStale } from '@/lib/handicap/staleness';
 import { HandicapConfirmCard } from '@/components/handicap/HandicapConfirmCard';
+import { ModeGuideCard } from '@/components/ModeGuideCard';
 import { ScheduledWaitingRoom } from './ScheduledWaitingRoom';
 
 type Params = Promise<{ id: string }>;
@@ -395,6 +396,15 @@ export default async function GameHomePage({
           )}
         </Card>
 
+        {/* Spillform — gir spilleren en rask forklaring av modusen før start
+            (#299). Synlig uavhengig av om de kjenner formatet fra før. */}
+        <div className="mx-4 mt-4">
+          <Kicker tone="muted" className="mb-2 px-1">
+            SPILLFORM
+          </Kicker>
+          <ModeGuideCard mode={game.game_mode} />
+        </div>
+
         {/* Countdown banner */}
         {teeOffDate && (
           <div className="mx-4 mt-4">
@@ -502,6 +512,14 @@ export default async function GameHomePage({
             )}
           </Card>
         )}
+
+        {/* Spillform — modus-forklaring tilgjengelig fra spill-siden (#299). */}
+        <div>
+          <Kicker tone="muted" className="mb-2">
+            SPILLFORM
+          </Kicker>
+          <ModeGuideCard mode={game.game_mode} />
+        </div>
 
         {isDraft && (
           <Card>

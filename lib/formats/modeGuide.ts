@@ -103,4 +103,13 @@ export const MODE_GUIDE: Record<GameMode, ModeGuide> = {
       'Vinner du alle tre, har du gjort rent bord.',
     ],
   },
+  skins: {
+    summary:
+      'Hvert hull er verdt ett «skin». Den som har lavest score på hullet helt alene, vinner skinnet.',
+    points: [
+      'Deler to eller flere den laveste scoren, ruller skinnet videre. Neste hull er da verdt to.',
+      'Du kan spille det brutto eller netto med handikap, alt etter hva som er valgt.',
+      'Flest skins til slutt vinner.',
+    ],
+  },
 };

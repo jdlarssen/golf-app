@@ -17,7 +17,37 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.46.y — Spillformer forklart for spillere
+
+Issue [#299](https://github.com/jdlarssen/golf-app/issues/299). Spillere som blir invitert til en ukjent spillform får nå en kort forklaring rett på spill-siden, og kan bla gjennom alle formene i et eget oppslagsverk. Lavere terskel for å bli med på noe nytt.
+
+### [1.46.0] - 2026-05-29
+
+> Får du en invitasjon til en spillform du ikke kjenner? Nå ligger det en kort forklaring rett på spill-siden. Trykk «Slik funker det», så er du i gang. Vil du lese deg opp på forhånd, finner du alle formene samlet under «Spillformer» på hjem-siden.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- [`lib/formats/modeGuide.ts`](lib/formats/modeGuide.ts) — statisk `MODE_GUIDE`-katalog: et player-rettet ett-linjes sammendrag + 2–3 «korte regler»-punkter for alle 10 spillformene (inkl. Skins, som landet parallelt). Egen kilde fra `formats.short_description` (som er admin-terse for wizarden). Type A completeness-test ([`modeGuide.test.ts`](lib/formats/modeGuide.test.ts)) håndhever ikke-tomt innhold per modus.
+- [`components/ModeGuideCard.tsx`](components/ModeGuideCard.tsx) — gjenbrukbar utvidbar modus-forklaring bygd på native `<details>` (server-renderbar, tastatur-tilgjengelig, reduced-motion-trygt). Faller defensivt tilbake til kun modus-navn for ukjente/legacy `game_mode`-verdier. Type C render-test dekker struktur + fallback.
+- [`app/spillformer/page.tsx`](app/spillformer/page.tsx) — nytt oppslagsverk som lister alle formene i pedagogisk rekkefølge, hver som et `ModeGuideCard`.
+
+#### Changed
+- [`app/games/[id]/page.tsx`](app/games/[id]/page.tsx) — nytt «SPILLFORM»-kort på spillerens game-side (både `scheduled`-ventestaten og draft/active/finished-visningen) som viser `ModeGuideCard` for spillets modus.
+- [`app/page.tsx`](app/page.tsx) — ny «Spillformer»-tile i hjem-navet som lenker til oppslagsverket.
+
+#### Tests
+- Type A completeness (`modeGuide.test.ts`) + Type C render (`ModeGuideCard.test.tsx`) dekker alle modusene. Hele suiten grønn.
+
+</details>
+
+---
+
 ## 1.45.y — Skins (tredje kompis-format i epic)
+
+<details>
+<summary><strong>1.45.y — Skins (1 oppføring) — klikk for å vise</strong></summary>
 
 Issue [#275](https://github.com/jdlarssen/golf-app/issues/275), tredje kompis-format i [#270](https://github.com/jdlarssen/golf-app/issues/270). Skins er hull-for-hull-klassikeren: lavest score vinner skinnet, og deler dere hullet, ruller potten videre til neste hull.
 
@@ -52,6 +82,8 @@ Issue [#275](https://github.com/jdlarssen/golf-app/issues/275), tredje kompis-fo
 - Lightweight auth-gate E2E. Carryover-scenariet («vunnet på hull 4») dekkes av Type A unit-test, ikke tung E2E — riktig hjem per test-disiplinen.
 
 Tredje av 7 kompis-batch-formats. Resten: BBB, Nines, Acey Deucey, Round Robin.
+
+</details>
 
 </details>
 

@@ -350,6 +350,19 @@ async function HomeBody() {
           </Section>
         )}
 
+        <Section label="Spillformer">
+          <SmartLink href="/spillformer" className="block">
+            <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
+              <span className="text-base font-medium text-text">
+                Slik spiller du formene
+              </span>
+              <span aria-hidden className="text-muted">
+                →
+              </span>
+            </Card>
+          </SmartLink>
+        </Section>
+
         <Section label="Profil">
           <SmartLink href="/profile" className="block">
             <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
