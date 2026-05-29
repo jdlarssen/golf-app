@@ -14,11 +14,11 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import type { GameStatus } from '@/lib/games/status';
 import {
-  MODE_LABELS,
   isStablefordFamily,
   type GameMode,
   type GameModeConfig,
 } from '@/lib/scoring/modes/types';
+import { formatDisplayLabel } from '@/lib/games/formatLabel';
 import { StartGameButton } from './StartGameButton';
 import { StartScheduledGameButton } from './StartScheduledGameButton';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
@@ -393,11 +393,11 @@ async function PlayersSections({
   // mekanisk (validatoren håndhever det).
   const isTexas = game.game_mode === 'texas_scramble';
 
-  // Spillform-label for Format-cardet — speiler leaderboard-flatene som
-  // skiller solo vs par-stableford eksplisitt. Matchplay og solo strokeplay
-  // netto leser ren mode-label fra MODE_LABELS (henholdsvis «Matchplay» og
-  // «Slagspill»).
-  const modeLabel = isParStableford ? 'Par-stableford' : MODE_LABELS[game.game_mode];
+  // Spillform-label for Format-cardet. Variant-bevisst via formatDisplayLabel:
+  // stableford-familien med team_size 2 vises som «4BBB Stableford» (samme navn
+  // som chip-en og resten av appen, #282); alt annet faller tilbake til
+  // MODE_LABELS (f.eks. «Matchplay», «Slagspill»).
+  const modeLabel = formatDisplayLabel(game.game_mode, game.mode_config);
 
   // Lag-terminologi: matchplay bruker «Side» i stedet for «Lag» (golf-standard
   // for 1v1-format). Holdt som lokale strings slik at vi ikke trenger å fyre
