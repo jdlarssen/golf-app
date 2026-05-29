@@ -23,7 +23,7 @@ Issue [#280](https://github.com/jdlarssen/golf-app/issues/280), del av format-ep
 
 ### [1.51.0] - 2026-05-30
 
-> Du kan nå opprette et Round Robin-spill for fire kompiser. Partnerne bytter hvert sjette hull — hull 1–6 spiller du med én, hull 7–12 med en annen og hull 13–18 med den siste — slik at alle har spilt med og mot hverandre når runden er ferdig. Appen regner best netto per side hvert hull, og den med flest hullseire totalt vinner. Du finner spillformen under Kompis i opprett-spill-wizarden.
+> Du kan nå opprette et Round Robin-spill for fire kompiser. Partnerne bytter hvert sjette hull: hull 1–6 spiller du med én, hull 7–12 med en annen og hull 13–18 med den siste. Slik har alle spilt med og mot hverandre når runden er ferdig. Appen regner best netto per side hvert hull, og den med flest hullseire totalt vinner. Du finner spillformen under Kompis i opprett-spill-wizarden.
 
 <details>
 <summary>Teknisk</summary>
