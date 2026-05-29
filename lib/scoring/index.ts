@@ -28,6 +28,7 @@ import * as foursomesMatchplay from './modes/foursomesMatchplay';
 import * as wolf from './modes/wolf';
 import * as nassau from './modes/nassau';
 import * as skins from './modes/skins';
+import * as bingoBangoBongo from './modes/bingoBangoBongo';
 import type { ScoringContext, ModeResult } from './modes/types';
 
 export function computeLeaderboard(ctx: ScoringContext): ModeResult {
@@ -54,6 +55,8 @@ export function computeLeaderboard(ctx: ScoringContext): ModeResult {
       return nassau.compute(ctx);
     case 'skins':
       return skins.compute(ctx);
+    case 'bingo_bango_bongo':
+      return bingoBangoBongo.compute(ctx);
   }
 }
 
@@ -119,4 +122,8 @@ export type {
   SkinsHoleRow,
   SkinsPlayerLine,
   SkinsHoleOutcome,
+  BingoBangoBongoResult,
+  BingoBangoBongoHoleInput,
+  BingoBangoBongoHoleRow,
+  BingoBangoBongoPlayerLine,
 } from './modes/types';

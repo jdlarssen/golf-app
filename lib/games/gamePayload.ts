@@ -1157,6 +1157,49 @@ function parseSkinsScoring(formData: FormData): 'gross' | 'net' {
   return 'net';
 }
 
+/**
+ * Bingo Bango Bongo-validator (issue #277).
+ *
+ * Speiler `validateNassau`/`validateSkins`: individuelt format, 2–4 spillere
+ * ved publish, ingen duplikater, team_number/flight_number nullstilles. BBB
+ * bruker ikke gross/net-toggle (poeng er rene prestasjons-poeng fra bingo/bango/
+ * bongo — ikke utledet fra slag). mode_config er {kind, team_size: 1}.
+ */
+function validateBingoBangoBongo(
+  formData: FormData,
+  mode: PayloadMode,
+): ModeValidationResult {
+  const players: GamePlayerInput[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < 8; i++) {
+    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
+    if (!user_id) continue;
+    if (seen.has(user_id)) {
+      return { ok: false, errorCode: 'duplicate_player' };
+    }
+    seen.add(user_id);
+    players.push({ user_id, team_number: null, flight_number: null });
+  }
+
+  if (mode === 'publish') {
+    if (players.length < 2) {
+      return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    if (players.length > 4) {
+      return { ok: false, errorCode: 'too_many_players_for_mode' };
+    }
+  }
+
+  return {
+    ok: true,
+    players,
+    mode_config: {
+      kind: 'bingo_bango_bongo',
+      team_size: 1,
+    },
+  };
+}
+
 const modeValidators: Record<
   GameMode,
   (formData: FormData, mode: PayloadMode) => ModeValidationResult
@@ -1172,6 +1215,7 @@ const modeValidators: Record<
   wolf: validateWolf,
   nassau: validateNassau,
   skins: validateSkins,
+  bingo_bango_bongo: validateBingoBangoBongo,
 };
 
 /**

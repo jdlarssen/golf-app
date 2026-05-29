@@ -55,6 +55,7 @@ const MODE_SUMMARY_LABELS: Record<GameMode, string> = {
   wolf: 'Wolf',
   nassau: 'Nassau',
   skins: 'Skins',
+  bingo_bango_bongo: 'Bingo Bango Bongo',
 };
 
 function teamSizeLabel(size: TeamSize): string {

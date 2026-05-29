@@ -13,7 +13,8 @@ export type GameMode =
   | 'foursomes_matchplay'
   | 'wolf'
   | 'nassau'
-  | 'skins';
+  | 'skins'
+  | 'bingo_bango_bongo';
 
 /**
  * Norske visnings-labels for hver spillmodus. Brukes av ModeChip i admin-
@@ -33,6 +34,7 @@ export const MODE_LABELS: Record<GameMode, string> = {
   wolf: 'Wolf',
   nassau: 'Nassau',
   skins: 'Skins',
+  bingo_bango_bongo: 'Bingo Bango Bongo',
 };
 
 /**
@@ -157,6 +159,16 @@ export type GameModeConfig =
        * gross-score (HCP ignoreres). Speiler Wolf/Nassau-mønstret.
        */
       skins_scoring: 'gross' | 'net';
+    }
+  | {
+      /**
+       * Bingo Bango Bongo: individuelt format, 2–4 spillere, ingen lag. Tre
+       * prestasjons-poeng per hull (bingo/bango/bongo). Slag registreres via
+       * vanlig scorekort, men teller ikke for BBB-poeng. Speiler
+       * `solo_strokeplay`-config (team_size: 1, ingen ekstra felt).
+       */
+      kind: 'bingo_bango_bongo';
+      team_size: 1;
     };
 
 /**
@@ -230,6 +242,14 @@ export interface ScoringContext {
    * eksisterende ScoringContext-fixtures uten Wolf-data fortsetter å funke.
    */
   wolfChoices?: WolfHoleChoice[];
+  /**
+   * Bingo Bango Bongo-spesifikk input: per-hull-prestasjonsvalget fra
+   * `bingo_bango_bongo_holes`-tabellen. Kun lest av bingoBangoBongo-modulen —
+   * andre moduser ignorerer feltet. Optional så eksisterende
+   * ScoringContext-fixtures uten BBB-data fortsetter å funke.
+   * Speiler `wolfChoices?`-mønstret.
+   */
+  bingoBangoBongoHoles?: BingoBangoBongoHoleInput[];
 }
 
 /**
@@ -1122,6 +1142,55 @@ export interface SkinsResult {
   carriedPot: number;
 }
 
+// -----------------------------------------------------------------------------
+// Bingo Bango Bongo (issue #277 — tres prestasjons-poeng per hull).
+//
+// Tre poeng per hull deles ut:
+//   - Bingo: første ball på green
+//   - Bango: nærmest hullet når alle baller er på green
+//   - Bongo: første ball i hull
+//
+// Slag registreres via eksisterende scorekort (uendret maskineri), men teller
+// IKKE for BBB-poeng. Poengene er rene prestasjons-poeng. Individuelt format,
+// 2–4 spillere, ingen lag (team_size: 1 — speiler solo_strokeplay).
+//
+// Tiebreak: totalPoints DESC → bingos DESC → bongos DESC → delt rank.
+// Full 5-tier-cascade gjelder ikke (BBB er ikke slag-basert).
+// -----------------------------------------------------------------------------
+
+export interface BingoBangoBongoHoleInput {
+  holeNumber: number;
+  bingoUserId: string | null;
+  bangoUserId: string | null;
+  bongoUserId: string | null;
+}
+
+export interface BingoBangoBongoHoleRow {
+  holeNumber: number;
+  bingoUserId: string | null;
+  bangoUserId: string | null;
+  bongoUserId: string | null;
+  /** 0–3 poeng per spiller på dette hullet. */
+  pointsByPlayer: Record<string, number>;
+}
+
+export interface BingoBangoBongoPlayerLine {
+  userId: string;
+  bingos: number;
+  bangos: number;
+  bongos: number;
+  /** bingos + bangos + bongos */
+  totalPoints: number;
+  rank: number;
+  tiedWith: string[];
+}
+
+export interface BingoBangoBongoResult {
+  kind: 'bingo_bango_bongo';
+  holes: BingoBangoBongoHoleRow[];
+  players: BingoBangoBongoPlayerLine[];
+}
+
 /**
  * Discriminated union — konsumenter narrower på `kind`:
  *   const r = computeLeaderboard(ctx);
@@ -1141,6 +1210,9 @@ export interface SkinsResult {
  *
  * For wolf narrower man på `kind` og leser `holes`/`players` direkte —
  * kun én variant i v1 (random_with_trailing).
+ *
+ * For bingo_bango_bongo narrower man på `kind` og leser `holes`/`players`
+ * direkte. Ingen variant-discriminator — individuelt format, ingen lag.
  */
 export type ModeResult =
   | BestBallResult
@@ -1152,4 +1224,5 @@ export type ModeResult =
   | FoursomesMatchplayResult
   | WolfResult
   | NassauResult
-  | SkinsResult;
+  | SkinsResult
+  | BingoBangoBongoResult;

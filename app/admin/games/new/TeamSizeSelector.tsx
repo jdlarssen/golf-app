@@ -73,6 +73,10 @@ const ENABLED_COMBOS: Record<GameMode, ReadonlySet<TeamSize>> = {
   // (SkinsSetup tar over), så denne brukes ikke i praksis — men type-system
   // krever en entry.
   skins: new Set<TeamSize>([1]),
+  // Bingo Bango Bongo: individuelt format, 2–4 spillere, team_size=1. En
+  // dedikert BBB-setup-steg vil ta over som for Wolf/Nassau/Skins, så
+  // TeamSizeSelector vises ikke i praksis — men type-system krever en entry.
+  bingo_bango_bongo: new Set<TeamSize>([1]),
 };
 
 type TileDef = {

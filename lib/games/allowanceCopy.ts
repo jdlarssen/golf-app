@@ -42,5 +42,10 @@ export function bruttoHelperFor(mode: GameMode): string {
       // wolf og nassau vises ikke generisk allowance-field; returverdien er
       // for type-completeness.
       return 'Ingen handicap — lavest gross-score per hull vinner skinnet.';
+    case 'bingo_bango_bongo':
+      // BBB bruker ikke handicap — poeng er rene prestasjons-poeng (bingo/bango/
+      // bongo) som ikke utledes fra slag. Generisk allowance-field vises ikke
+      // for BBB; returverdien er kun for type-completeness.
+      return 'Ingen handicap — Bingo Bango Bongo-poeng teller uavhengig av slag.';
   }
 }

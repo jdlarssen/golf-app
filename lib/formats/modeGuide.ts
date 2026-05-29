@@ -121,6 +121,15 @@ export const MODE_GUIDE: Record<GameMode, ModeGuide> = {
       'Flest skins til slutt vinner.',
     ],
   },
+  bingo_bango_bongo: {
+    summary:
+      'Tre poeng er på spill på hvert hull — én for å nå green først, én for å ligge nærmest hullet når alle er på green, og én for å gå i hull først.',
+    points: [
+      'Du trenger ikke de fleste slagene for å vinne — rekkefølge og presisjon teller.',
+      'Du spiller for deg selv, og alle tre poengene på et hull kan gå til én og samme spiller.',
+      'Flest poeng etter 18 hull vinner.',
+    ],
+  },
 };
 
 /**
