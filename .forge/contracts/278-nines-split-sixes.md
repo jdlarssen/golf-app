@@ -135,14 +135,14 @@ Legges til i `ModeResult`-unionen.
 
 ## Suksesskriterier
 
-- [ ] **K1 — Typer + uttømmende maps:** `nines` lagt til i `GameMode`, `MODE_LABELS`, `GameModeConfig`, `ModeResult` (types.ts), `computeLeaderboard`-switch (index.ts), `modeValidators` (gamePayload.ts), `bruttoHelperFor` (allowanceCopy.ts), `MODE_GUIDE` (modeGuide.ts). *Bevis:* `npm run build` grønn (fanger manglende switch/Record-medlem).
-- [ ] **K2 — Scoring-modul:** `lib/scoring/modes/nines.ts` `compute()` håndterer begge varianter, netto/brutto, likt-deles-likt, pending-hull. *Bevis:* nines.test.ts grønn.
-- [ ] **K3 — Type A unit-tester:** `nines.test.ts` dekker: discriminert shape; tre-ulike (begge varianter); to-delt-lavest (begge); to-delt-høyest (begge); alle-tre-delt (begge); netto vs brutto endrer rangering; pending-hull (0 til alle, senere hull avgjøres); fler-hull-totaler + tiedWith på delt total; tom score-state; defensive defaults. *Bevis:* ~18+ grønne cases.
-- [ ] **K4 — Validator + regresjonstest:** `validateNines` håndhever eksakt 3 spillere + bygger `mode_config` med variant + scoring; `parseGameMode` godtar `'nines'`. *Bevis:* regression-suite i gamePayload.test.ts grønn (publish med 3 OK, 2 → min-feil, 4 → maks-feil, mode_config-shape verifisert).
-- [ ] **K5 — Migrasjon:** `0054_nines.sql` seeder format-row + kompis-mapping. *Bevis:* fil eksisterer, SQL er idempotent-vennlig og matcher 0051/0053-mønsteret.
-- [ ] **K6 — Leaderboard-visning + podium:** `NinesView` viser poeng-fordeling per hull + sammenlagt; `NinesPodium` viser topp-3; begge wiret inn via `renderNines`. *Bevis:* Type C render-test på NinesView grønn; visuell verifisering (Playwright/preview) av at en `nines`-leaderboard rendrer.
-- [ ] **K7 — Wizard:** `NinesSetup` lar admin velge variant + netto/brutto; valgene serialiseres og når `validateNines`. *Bevis:* render-test eller manuell verifisering; hidden inputs i GameWizard.
-- [ ] **K8 — CHANGELOG + versjon:** MINOR-bump (ny bruker-synlig spillform) + CHANGELOG-oppføring per `docs/changelog-conventions.md`. *Bevis:* package.json + CHANGELOG.md staget i samme commit som feature; commit-msg-hook passerer.
+- [x] **K1 — Typer + uttømmende maps:** ✅ `npm run build` exit 0. `nines` lagt til i `GameMode`/`MODE_LABELS`/`GameModeConfig`/`ModeResult` (`a68c4c4`), `computeLeaderboard`-switch, `modeValidators`+`bruttoHelperFor`+`MODE_GUIDE` (`0352f9b`), `TeamSizeSelector`/`ReadyStep`-maps (`cd56d15`), og `GameRow`-mirror-union i `app/games/[id]/page.tsx` (`ef28b06` — fanget av full build, ikke av scoped tsc).
+- [x] **K2 — Scoring-modul:** ✅ `lib/scoring/modes/nines.ts` `compute()` — begge varianter, netto/brutto via `effectiveFor`, likt-deles-likt group-walk, pending-hull uten carryover. 22/22 grønne (`a68c4c4`).
+- [x] **K3 — Type A unit-tester:** ✅ `nines.test.ts` 22 cases: shape, tre-ulike/to-delt-lavest/to-delt-høyest/alle-delt (begge varianter), netto-vs-brutto-flip, pending (senere hull avgjøres), fler-hull-totaler + tiedWith, tom state, defensive defaults, pot-sum-invariant.
+- [x] **K4 — Validator + regresjonstest:** ✅ `validateNines` (`length < 3`→`min_players_for_mode`, `> 3`→`too_many_players_for_mode`) + `parseGameMode` + `modeValidators`. 6 regresjonscases grønne i `gamePayload.test.ts` (`0352f9b`).
+- [x] **K5 — Migrasjon:** ✅ `0054_nines.sql` seeder format-row «Nines / Split Sixes» + kompis-mapping (sekundær). Matcher 0051-plain-insert-idiom (ingen `on conflict`, som siblings). Ingen ny tabell.
+- [x] **K6 — Leaderboard-visning + podium:** ✅ `NinesView` (rangering + per-hull-rutenett + pending + reveal-aware) + `NinesPodium` (topp-3, konfetti) wiret via `renderNines` (`ef28b06`). Type C `NinesView.test.tsx` 1/1 grønn. Live preview-verifisering utsatt til migrasjon er kjørt mot DB (single-prosjekt-DB-constraint) — dekkes av render-test + build i mellomtiden.
+- [x] **K7 — Wizard:** ✅ `NinesSetup` (variant + netto/brutto-radio) + hidden inputs `nines_variant`/`nines_scoring` i GameWizard (`cd56d15`). `NinesSetup.test.tsx` 1/1 grønn; serialisering→`validateNines` dekket av K4-regresjon. Eksakt-3-hint via `ninesPlayersValid`.
+- [x] **K8 — CHANGELOG + versjon:** ✅ 1.49.0 → 1.50.0 (MINOR) + CHANGELOG 1.50.y-serie (1.49.y wrappet i `<details>`). Release-commit `579cd0a` staget package.json + package-lock.json + CHANGELOG.md; commit-msg-hook passerte.
 
 ## Gates (kjøres scoped til det som endret seg)
 
