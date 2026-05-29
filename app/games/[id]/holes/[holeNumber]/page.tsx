@@ -10,6 +10,7 @@ import { nameInitials } from '@/lib/names/initials';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import { getWolfChoices } from '@/lib/wolf/getWolfChoices';
 import { computeLeaderboard } from '@/lib/scoring';
+import * as skins from '@/lib/scoring/modes/skins';
 import type {
   ScoringContext,
   ScoringHole,
@@ -97,6 +98,7 @@ export default async function HolePage({ params }: { params: Params }) {
   const isTexas = game.game_mode === 'texas_scramble';
   const isFoursomes = game.game_mode === 'foursomes_matchplay';
   const isWolf = game.game_mode === 'wolf';
+  const isSkins = game.game_mode === 'skins';
 
   // Round 2 — hole row, flight scores and the user's completed-hole count.
   // All three are independent and can run in parallel:
@@ -118,6 +120,8 @@ export default async function HolePage({ params }: { params: Params }) {
     wolfChoicesData,
     wolfAllScoresRes,
     wolfAllHolesRes,
+    skinsAllScoresRes,
+    skinsAllHolesRes,
   ] = await Promise.all([
       supabase
         .from('course_holes')
@@ -162,6 +166,22 @@ export default async function HolePage({ params }: { params: Params }) {
             .returns<{ user_id: string; hole_number: number; strokes: number | null }[]>()
         : Promise.resolve({ data: null, error: null }),
       isWolf
+        ? supabase
+            .from('course_holes')
+            .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
+            .eq('course_id', game.course_id)
+            .returns<HoleRow[]>()
+        : Promise.resolve({ data: null, error: null }),
+      // Skins: alle scores for hele spillet + alle hull-definisjonar for å
+      // bygge full ScoringContext og finne riktig atStake for gjeldende hull.
+      isSkins
+        ? supabase
+            .from('scores')
+            .select('user_id, hole_number, strokes')
+            .eq('game_id', id)
+            .returns<{ user_id: string; hole_number: number; strokes: number | null }[]>()
+        : Promise.resolve({ data: null, error: null }),
+      isSkins
         ? supabase
             .from('course_holes')
             .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
@@ -310,6 +330,61 @@ export default async function HolePage({ params }: { params: Params }) {
         }
         wolfPointsByUser = map;
       }
+    }
+  }
+
+  // Skins-modus: beregn atStake for gjeldende hull via compute() over alle
+  // scorer. Sendes til HoleClient som informasjons-banner. Speiler Wolf-mønstret.
+  let skinsAtStake: number | undefined;
+  let skinsCarriedIn: number | undefined;
+
+  if (
+    isSkins &&
+    !skinsAllHolesRes.error &&
+    !skinsAllScoresRes.error &&
+    game.mode_config.kind === 'skins'
+  ) {
+    const holesForCtx: ScoringHole[] = (skinsAllHolesRes.data ?? []).map(
+      (h) => ({
+        number: h.hole_number,
+        par: h.par_mens,
+        parByGender: {
+          mens: h.par_mens,
+          ladies: h.par_ladies,
+          juniors: h.par_juniors,
+        },
+        strokeIndex: h.stroke_index,
+      }),
+    );
+    const playersForCtx: ScoringPlayer[] = allPlayers.map((p) => ({
+      userId: p.user_id,
+      teamNumber: p.team_number,
+      flightNumber: p.flight_number,
+      courseHandicap: p.course_handicap ?? 0,
+      teeGender: p.tee_gender ?? 'mens',
+    }));
+    const scoresForCtx: ScoringHoleScore[] = (skinsAllScoresRes.data ?? []).map(
+      (s) => ({
+        userId: s.user_id,
+        holeNumber: s.hole_number,
+        gross: s.strokes,
+      }),
+    );
+    const skinsCtx: ScoringContext = {
+      game: {
+        id: id,
+        game_mode: 'skins',
+        mode_config: game.mode_config,
+      },
+      players: playersForCtx,
+      holes: holesForCtx,
+      scores: scoresForCtx,
+    };
+    const skinsResult = skins.compute(skinsCtx);
+    const row = skinsResult.holes.find((r) => r.holeNumber === holeNumber);
+    if (row) {
+      skinsAtStake = row.atStake;
+      skinsCarriedIn = row.carriedIn;
     }
   }
 
@@ -478,6 +553,8 @@ export default async function HolePage({ params }: { params: Params }) {
         wolfPlayers={wolfPlayersForClient}
         wolfChoices={wolfChoicesForClient}
         wolfPointsByUser={wolfPointsByUser}
+        skinsAtStake={skinsAtStake}
+        skinsCarriedIn={skinsCarriedIn}
         players={playersForClient}
       />
     </div>

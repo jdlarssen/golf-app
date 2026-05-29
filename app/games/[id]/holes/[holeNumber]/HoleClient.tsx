@@ -118,6 +118,18 @@ export interface HoleClientProps {
    * regelen (hull 17-18). Empty record = alle spillere på 0.
    */
   wolfPointsByUser?: Record<string, number>;
+  /**
+   * Skins-modus: antall skins på spill på dette hullet (`atStake` fra
+   * `skins.compute(ctx).holes[holeNumber]`). Server-computert ved render.
+   * Vises som informasjons-banner over score-input. Undefined for andre modi.
+   */
+  skinsAtStake?: number;
+  /**
+   * Skins-modus: antall skins båret inn i dette hullet fra tidligere delte hull
+   * (`carriedIn`). 0 = friskt hull. Brukes til å vise «potten har rullet videre»-
+   * hint når > 0. Undefined for andre modi.
+   */
+  skinsCarriedIn?: number;
   players: ClientPlayer[];
 }
 
@@ -204,11 +216,14 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     wolfPlayers,
     wolfChoices: wolfChoicesInitial,
     wolfPointsByUser,
+    skinsAtStake,
+    skinsCarriedIn,
     players,
   } = props;
 
   const isStableford = gameMode === 'stableford';
   const isWolf = gameMode === 'wolf';
+  const isSkins = gameMode === 'skins';
   // Texas scramble: ett kort per lag (server bygger players-array med
   // ÉN entry der userId = lag-kapteinens userId). Lookup-er som matcher
   // mot myUserId må derfor falle tilbake til lag-kortet for non-captain-
@@ -611,6 +626,38 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
           }}
         >
           {wolfBadgeText}
+        </div>
+      )}
+
+      {isSkins && skinsAtStake != null && (
+        <div
+          data-testid="skins-banner"
+          style={{
+            margin: '0 14px 8px',
+            padding: '10px 14px',
+            borderRadius: 12,
+            border: '1px solid var(--accent)',
+            background: 'var(--primary-soft)',
+            fontFamily: 'var(--font-sans)',
+            fontSize: 13,
+            fontWeight: 600,
+            color: 'var(--text)',
+            textAlign: 'center',
+          }}
+        >
+          {skinsAtStake === 1 ? '1 skin på spill' : `${skinsAtStake} skins på spill`}
+          {skinsCarriedIn != null && skinsCarriedIn > 0 && (
+            <div
+              style={{
+                marginTop: 4,
+                fontWeight: 400,
+                fontSize: 12,
+                color: 'var(--text-muted)',
+              }}
+            >
+              Potten har rullet videre
+            </div>
+          )}
         </div>
       )}
 
