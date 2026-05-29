@@ -54,6 +54,8 @@ import { WolfPodium } from './WolfPodium';
 import { getWolfChoices } from '@/lib/wolf/getWolfChoices';
 import { NassauView, type NassauPlayerInfo } from './NassauView';
 import { NassauPodium } from './NassauPodium';
+import { SkinsView, type SkinsPlayerInfo } from './SkinsView';
+import { SkinsPodium } from './SkinsPodium';
 import {
   MatchplayMatchView,
   type MatchplayPlayerInfo,
@@ -394,6 +396,21 @@ async function LeaderboardBody({
   // (skjuler totaler når score_visibility='reveal' og status='active').
   if (game.game_mode === 'nassau') {
     return renderNassau({
+      gameId,
+      game,
+      gwp,
+      rawHolesRows: rawHolesRes.data ?? [],
+      rawScoresRows: rawScoresRes.data ?? [],
+      backHref,
+    });
+  }
+
+  // Skins med carryover (issue #275): hull-basert point-game med akkumulerende
+  // pott. Per-hull-carryover-kjeden er ren funksjon av scores — ingen ny DB-
+  // tabell. Live-view håndterer reveal-modus internt (skjuler totaler når
+  // score_visibility='reveal' og status='active').
+  if (game.game_mode === 'skins') {
+    return renderSkins({
       gameId,
       game,
       gwp,
@@ -2054,6 +2071,132 @@ function renderNassau(opts: {
 
   return (
     <NassauView
+      gameId={gameId}
+      gameName={game.name}
+      result={result}
+      playersById={playersById}
+      scoreVisibility={scoreVisibility}
+      gameStatus={game.status}
+      backHref={backHref}
+    />
+  );
+}
+
+/**
+ * Skins-grenen (issue #275) — bygger ScoringContext fra rå-rad-ene, kjører
+ * mode-router-en (`computeModeResult`) og velger view per `game.status`:
+ *
+ *   - `finished` → SkinsPodium på toppen + SkinsView under (chromeless): feirings-
+ *     podium med skins-vinner + per-hull carryover-drilldown under.
+ *   - alt annet (active/scheduled) → SkinsView alene: spiller-totals + per-hull-
+ *     tabell live. View-en håndterer reveal-modus internt basert på
+ *     `scoreVisibility` + `gameStatus` props.
+ *
+ * Skins trenger ingen ekstra DB-fetch utover scores (carryover er ren funksjon
+ * av scores). Speiler Nassau-pattern uten wolfChoices-injeksjon.
+ */
+function renderSkins(opts: {
+  gameId: string;
+  game: GameForHole;
+  gwp: {
+    players: {
+      user_id: string;
+      team_number: number;
+      users: { name: string | null; nickname: string | null } | null;
+      course_handicap: number | null;
+      tee_gender: TeeGender;
+    }[];
+  };
+  rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
+  rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
+  backHref: string;
+}) {
+  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
+
+  const ctx = {
+    game: {
+      id: gameId,
+      game_mode: 'skins' as const,
+      mode_config: game.mode_config,
+    },
+    players: gwp.players
+      .filter((p) => p.users != null)
+      .map((p) => ({
+        userId: p.user_id,
+        // Skins-validatoren setter team_number = null (solo), men DB-kolonnen
+        // er ikke nullable så den lander som 0. Sender null oppover for å
+        // matche scoring-lagets solo-narrowing — samme pattern som Nassau.
+        teamNumber: null,
+        flightNumber: null,
+        courseHandicap: p.course_handicap ?? 0,
+        // Skins bruker netto (eller gross, per mode_config.skins_scoring)
+        // basert på spillerens egen handicap. Sender teeGender gjennom for
+        // shape-konsistens; scoring-laget bruker den ikke for Skins i v1.
+        teeGender: p.tee_gender,
+      })),
+    holes: rawHolesRows.map((h) => ({
+      number: h.hole_number,
+      par: h.par_mens,
+      parByGender: {
+        mens: h.par_mens,
+        ladies: h.par_ladies,
+        juniors: h.par_juniors,
+      },
+      strokeIndex: h.stroke_index,
+    })),
+    scores: rawScoresRows.map((s) => ({
+      userId: s.user_id,
+      holeNumber: s.hole_number,
+      gross: s.strokes,
+    })),
+  };
+
+  const result = computeModeResult(ctx);
+  if (result.kind !== 'skins') {
+    notFound();
+  }
+
+  const playersById = new Map<string, SkinsPlayerInfo>();
+  for (const p of gwp.players) {
+    if (p.users == null) continue;
+    playersById.set(p.user_id, {
+      name: p.users.name ?? '(ukjent)',
+      nickname: p.users.nickname,
+    });
+  }
+
+  // Score-visibility normaliseres til 'live' | 'reveal' for view-en.
+  const scoreVisibility: 'live' | 'reveal' =
+    game.score_visibility === 'reveal' ? 'reveal' : 'live';
+
+  // Finished → SkinsPodium på toppen + SkinsView under (chromeless, så bare
+  // én outer shell). Active/scheduled → SkinsView alene.
+  if (game.status === 'finished') {
+    return (
+      <>
+        <SkinsPodium
+          gameId={gameId}
+          gameName={game.name}
+          result={result}
+          playersById={playersById}
+          backHref={backHref}
+        />
+        <SkinsView
+          gameId={gameId}
+          gameName={game.name}
+          result={result}
+          playersById={playersById}
+          scoreVisibility={scoreVisibility}
+          gameStatus={game.status}
+          backHref={backHref}
+          chromeless
+        />
+      </>
+    );
+  }
+
+  return (
+    <SkinsView
       gameId={gameId}
       gameName={game.name}
       result={result}
