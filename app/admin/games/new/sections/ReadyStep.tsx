@@ -53,6 +53,7 @@ const MODE_SUMMARY_LABELS: Record<GameMode, string> = {
   foursomes_matchplay: 'Foursomes matchplay',
   wolf: 'Wolf',
   nassau: 'Nassau',
+  skins: 'Skins',
 };
 
 function teamSizeLabel(size: TeamSize): string {

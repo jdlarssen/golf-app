@@ -26,6 +26,7 @@ import * as fourballMatchplay from './modes/fourballMatchplay';
 import * as foursomesMatchplay from './modes/foursomesMatchplay';
 import * as wolf from './modes/wolf';
 import * as nassau from './modes/nassau';
+import * as skins from './modes/skins';
 import type { ScoringContext, ModeResult } from './modes/types';
 
 export function computeLeaderboard(ctx: ScoringContext): ModeResult {
@@ -48,6 +49,8 @@ export function computeLeaderboard(ctx: ScoringContext): ModeResult {
       return wolf.compute(ctx);
     case 'nassau':
       return nassau.compute(ctx);
+    case 'skins':
+      return skins.compute(ctx);
   }
 }
 
@@ -107,4 +110,8 @@ export type {
   NassauSection,
   NassauSectionLine,
   NassauUnitLine,
+  SkinsResult,
+  SkinsHoleRow,
+  SkinsPlayerLine,
+  SkinsHoleOutcome,
 } from './modes/types';

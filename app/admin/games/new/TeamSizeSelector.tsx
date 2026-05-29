@@ -67,6 +67,10 @@ const ENABLED_COMBOS: Record<GameMode, ReadonlySet<TeamSize>> = {
   // nassau (NassauSetup tar over), så denne brukes ikke i praksis — men
   // type-system krever en entry.
   nassau: new Set<TeamSize>([1]),
+  // Skins: solo-format, 2-4 spillere. TeamSizeSelector vises ikke for skins
+  // (SkinsSetup tar over), så denne brukes ikke i praksis — men type-system
+  // krever en entry.
+  skins: new Set<TeamSize>([1]),
 };
 
 type TileDef = {

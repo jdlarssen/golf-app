@@ -11,7 +11,8 @@ export type GameMode =
   | 'fourball_matchplay'
   | 'foursomes_matchplay'
   | 'wolf'
-  | 'nassau';
+  | 'nassau'
+  | 'skins';
 
 /**
  * Norske visnings-labels for hver spillmodus. Brukes av ModeChip i admin-
@@ -29,6 +30,7 @@ export const MODE_LABELS: Record<GameMode, string> = {
   foursomes_matchplay: 'Foursomes',
   wolf: 'Wolf',
   nassau: 'Nassau',
+  skins: 'Skins',
 };
 
 /**
@@ -123,6 +125,16 @@ export type GameModeConfig =
        * gross-score (HCP ignoreres). Speiler Wolf-mønstret.
        */
       nassau_scoring: 'gross' | 'net';
+    }
+  | {
+      kind: 'skins';
+      team_size: 1;
+      /**
+       * Brutto vs netto for Skins. 'net' = hver spillers per-hull-score er
+       * gross − strokesForHole(courseHandicap, strokeIndex). 'gross' = ren
+       * gross-score (HCP ignoreres). Speiler Wolf/Nassau-mønstret.
+       */
+      skins_scoring: 'gross' | 'net';
     };
 
 /**
@@ -1016,6 +1028,70 @@ export interface NassauResult {
   players: NassauUnitLine[];
 }
 
+// -----------------------------------------------------------------------------
+// Skins med carryover (issue #275 — hull-basert sosialt point-game).
+//
+// Hvert hull er verdt 1 skin. Lavest effective-score på hullet vinner skinnet.
+// Blir hullet delt (≥2 spillere likt lavest), ruller skinnet videre (carryover)
+// til neste hull — som da er verdt 2, så 3, osv. — til noen vinner alene og
+// scooper hele potten. Carryover-state er en ren funksjon av scores (sekvensielt
+// over hull i sortert rekkefølge).
+//
+// Pending: et hull der ikke alle spillere har score kan ikke avgjøres. Siden
+// carryover er sekvensielt stopper resolving der — alle senere hull er også
+// pending til gapet fylles. Potten fryses.
+//
+// Rundeslutt: hvis potten henger ved siste resolverte hull (delt siste hull)
+// er disse skinsene uvunne (`unwonSkins`) — standard Skins, ingen omspill.
+//
+// Gross/net-toggle som Wolf/Nassau: mode_config.skins_scoring = 'gross' | 'net'.
+// -----------------------------------------------------------------------------
+
+export type SkinsHoleOutcome = 'won' | 'carryover' | 'pending';
+
+export interface SkinsHoleRow {
+  holeNumber: number;
+  par: number;
+  strokeIndex: number;
+  /** Skins båret inn i dette hullet (0 = friskt hull). */
+  carriedIn: number;
+  /** carriedIn + 1 — skins på spill på dette hullet. */
+  atStake: number;
+  outcome: SkinsHoleOutcome;
+  /** null hvis carryover/pending. */
+  winnerUserId: string | null;
+  /** = atStake hvis 'won', ellers 0. */
+  skinsAwarded: number;
+  perPlayer: Array<{
+    userId: string;
+    gross: number | null;
+    /** gross hvis 'gross', netto hvis 'net'. null hvis hullet ikke spilt. */
+    effectiveScore: number | null;
+    /** Hadde (delt) lavest effective-score på hullet blant spilte. */
+    isWinner: boolean;
+  }>;
+}
+
+export interface SkinsPlayerLine {
+  userId: string;
+  /** Sum skins vunnet (inkl. carryover-pott scoopet). */
+  totalSkins: number;
+  /** Antall hull vunnet alene. */
+  holesWon: number;
+  rank: number;
+  /** Spillere med eksakt samme (totalSkins, holesWon). */
+  tiedWith: string[];
+}
+
+export interface SkinsResult {
+  kind: 'skins';
+  scoring: 'gross' | 'net';
+  holes: SkinsHoleRow[];
+  players: SkinsPlayerLine[];
+  /** Henger-skins ved rundeslutt (delt siste hull). Uvunne, ingen omspill. */
+  unwonSkins: number;
+}
+
 /**
  * Discriminated union — konsumenter narrower på `kind`:
  *   const r = computeLeaderboard(ctx);
@@ -1045,4 +1121,5 @@ export type ModeResult =
   | FourballMatchplayResult
   | FoursomesMatchplayResult
   | WolfResult
-  | NassauResult;
+  | NassauResult
+  | SkinsResult;

@@ -237,7 +237,8 @@ function parseGameMode(formData: FormData): GameMode | null {
     raw === 'fourball_matchplay' ||
     raw === 'foursomes_matchplay' ||
     raw === 'wolf' ||
-    raw === 'nassau'
+    raw === 'nassau' ||
+    raw === 'skins'
   )
     return raw;
   return null;
@@ -1067,6 +1068,68 @@ function parseNassauScoring(formData: FormData): 'gross' | 'net' {
   return 'net';
 }
 
+/**
+ * Skins-validator (issue #275 — skins med carryover).
+ *
+ * Speiler `validateNassau`: solo-format, 2-4 spillere ved publish, ingen
+ * duplikater, team_number/flight_number nullstilles. Carryover er ren funksjon
+ * av scores, så ingen ekstra felt å validere.
+ *
+ * Scoring-toggle: form-feltet `skins_scoring` ('gross' | 'net'). Default 'net'
+ * når feltet mangler (matcher Tørny-default + Wolf/Nassau-mønstret).
+ * `games.hcp_allowance_pct` brukes IKKE — enten full HCP eller ingen.
+ *
+ * Mode_config-output: `{kind, team_size: 1, skins_scoring}`.
+ */
+function validateSkins(
+  formData: FormData,
+  mode: PayloadMode,
+): ModeValidationResult {
+  const skinsScoring = parseSkinsScoring(formData);
+
+  const players: GamePlayerInput[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < 8; i++) {
+    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
+    if (!user_id) continue;
+    if (seen.has(user_id)) {
+      return { ok: false, errorCode: 'duplicate_player' };
+    }
+    seen.add(user_id);
+    players.push({ user_id, team_number: null, flight_number: null });
+  }
+
+  if (mode === 'publish') {
+    if (players.length < 2) {
+      return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    if (players.length > 4) {
+      return { ok: false, errorCode: 'too_many_players_for_mode' };
+    }
+  }
+
+  return {
+    ok: true,
+    players,
+    mode_config: {
+      kind: 'skins',
+      team_size: 1,
+      skins_scoring: skinsScoring,
+    },
+  };
+}
+
+/**
+ * Leser `skins_scoring` fra form-data. Defaulter til 'net' når feltet mangler
+ * eller har en ugyldig verdi — speiler Nassau/Wolf-mønstret + Tørny's
+ * HCP-default.
+ */
+function parseSkinsScoring(formData: FormData): 'gross' | 'net' {
+  const raw = String(formData.get('skins_scoring') ?? '').trim();
+  if (raw === 'gross') return 'gross';
+  return 'net';
+}
+
 const modeValidators: Record<
   GameMode,
   (formData: FormData, mode: PayloadMode) => ModeValidationResult
@@ -1080,6 +1143,7 @@ const modeValidators: Record<
   foursomes_matchplay: validateFoursomesMatchplay,
   wolf: validateWolf,
   nassau: validateNassau,
+  skins: validateSkins,
 };
 
 /**
