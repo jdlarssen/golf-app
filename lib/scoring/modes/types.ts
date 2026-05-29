@@ -5,6 +5,7 @@
 export type GameMode =
   | 'best_ball'
   | 'stableford'
+  | 'modified_stableford'
   | 'singles_matchplay'
   | 'solo_strokeplay'
   | 'texas_scramble'
@@ -23,6 +24,7 @@ export type GameMode =
 export const MODE_LABELS: Record<GameMode, string> = {
   best_ball: 'Best ball',
   stableford: 'Stableford',
+  modified_stableford: 'Modifisert Stableford',
   singles_matchplay: 'Matchplay',
   solo_strokeplay: 'Slagspill',
   texas_scramble: 'Texas scramble',
@@ -41,6 +43,12 @@ export const MODE_LABELS: Record<GameMode, string> = {
  *  - `team_size: 1` = solo (en spiller = en deltager, ranking på spiller-poeng)
  *  - `team_size: 2` = par-stableford / 4BBB (to spillere per lag, lag-hull-poeng
  *    = MAX av partnernes individuelle poeng, ranking på lag-poeng)
+ *
+ * Modified stableford (issue #281) speiler stableford-shapen, men `points_table:
+ * 'modified'` velger pro-tabellen (dobbeltbogey+ = −3, bogey = −1, par = 0,
+ * birdie = +2, eagle = +5, albatross+ = +8). Samme solo/par-varianter, samme
+ * handicap-bruk. Returnerer `kind: 'stableford'` fra scoring-laget slik at
+ * leaderboard-/podium-visningen gjenbrukes uendret.
  *
  * Singles matchplay (epic #45):
  *  - `team_size: 1` = én spiller per side (ingen aggregering)
@@ -64,6 +72,8 @@ export type GameModeConfig =
   | { kind: 'best_ball'; team_size: 2; teams_count: 4 }
   | { kind: 'stableford'; team_size: 1; points_table: 'standard' }
   | { kind: 'stableford'; team_size: 2; points_table: 'standard' }
+  | { kind: 'modified_stableford'; team_size: 1; points_table: 'modified' }
+  | { kind: 'modified_stableford'; team_size: 2; points_table: 'modified' }
   | { kind: 'singles_matchplay'; team_size: 1; teams_count: 2 }
   | { kind: 'solo_strokeplay'; team_size: 1 }
   | {

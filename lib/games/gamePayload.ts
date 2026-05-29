@@ -231,6 +231,7 @@ function parseGameMode(formData: FormData): GameMode | null {
   if (
     raw === 'best_ball' ||
     raw === 'stableford' ||
+    raw === 'modified_stableford' ||
     raw === 'singles_matchplay' ||
     raw === 'solo_strokeplay' ||
     raw === 'texas_scramble' ||
@@ -329,9 +330,27 @@ function validateStableford(
 ): ModeValidationResult {
   const teamSize = parseStablefordTeamSize(formData);
   if (teamSize === 2) {
-    return validateStablefordTeam(formData, mode);
+    return validateStablefordTeam(formData, mode, 'stableford');
   }
-  return validateStablefordSolo(formData, mode);
+  return validateStablefordSolo(formData, mode, 'stableford');
+}
+
+/**
+ * Modified stableford (#281). Identisk spiller-parsing og lag-regler som
+ * standard Stableford — eneste forskjellen er `mode_config.kind` /
+ * `points_table` (pro-tabellen velges i scoring-laget). Gjenbruker derfor
+ * solo-/team-validatorene med `'modified_stableford'`-varianten og samme
+ * `stableford_team_size`-form-felt.
+ */
+function validateModifiedStableford(
+  formData: FormData,
+  mode: PayloadMode,
+): ModeValidationResult {
+  const teamSize = parseStablefordTeamSize(formData);
+  if (teamSize === 2) {
+    return validateStablefordTeam(formData, mode, 'modified_stableford');
+  }
+  return validateStablefordSolo(formData, mode, 'modified_stableford');
 }
 
 /**
@@ -356,6 +375,7 @@ function parseStablefordTeamSize(formData: FormData): 1 | 2 {
 function validateStablefordSolo(
   formData: FormData,
   mode: PayloadMode,
+  variant: 'stableford' | 'modified_stableford' = 'stableford',
 ): ModeValidationResult {
   const players: GamePlayerInput[] = [];
   const seen = new Set<string>();
@@ -376,7 +396,10 @@ function validateStablefordSolo(
   return {
     ok: true,
     players,
-    mode_config: { kind: 'stableford', team_size: 1, points_table: 'standard' },
+    mode_config:
+      variant === 'modified_stableford'
+        ? { kind: 'modified_stableford', team_size: 1, points_table: 'modified' }
+        : { kind: 'stableford', team_size: 1, points_table: 'standard' },
   };
 }
 
@@ -403,6 +426,7 @@ function validateStablefordSolo(
 function validateStablefordTeam(
   formData: FormData,
   mode: PayloadMode,
+  variant: 'stableford' | 'modified_stableford' = 'stableford',
 ): ModeValidationResult {
   const players: GamePlayerInput[] = [];
   const seen = new Set<string>();
@@ -449,7 +473,10 @@ function validateStablefordTeam(
   return {
     ok: true,
     players,
-    mode_config: { kind: 'stableford', team_size: 2, points_table: 'standard' },
+    mode_config:
+      variant === 'modified_stableford'
+        ? { kind: 'modified_stableford', team_size: 2, points_table: 'modified' }
+        : { kind: 'stableford', team_size: 2, points_table: 'standard' },
   };
 }
 
@@ -1136,6 +1163,7 @@ const modeValidators: Record<
 > = {
   best_ball: validateBestBall,
   stableford: validateStableford,
+  modified_stableford: validateModifiedStableford,
   singles_matchplay: validateSinglesMatchplay,
   solo_strokeplay: validateSoloStrokeplay,
   texas_scramble: validateTexasScramble,

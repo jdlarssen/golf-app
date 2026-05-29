@@ -46,6 +46,7 @@ type Props = {
 const MODE_SUMMARY_LABELS: Record<GameMode, string> = {
   best_ball: 'Best ball',
   stableford: 'Stableford',
+  modified_stableford: 'Modifisert Stableford',
   singles_matchplay: 'Singles matchplay',
   solo_strokeplay: 'Solo slagspill netto',
   texas_scramble: 'Texas scramble',

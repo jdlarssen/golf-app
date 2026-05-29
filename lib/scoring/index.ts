@@ -19,6 +19,7 @@
 
 import * as bestBall from './modes/bestBall';
 import * as stableford from './modes/stableford';
+import * as modifiedStableford from './modes/modifiedStableford';
 import * as singlesMatchplay from './modes/singlesMatchplay';
 import * as soloStrokeplay from './modes/soloStrokeplay';
 import * as texasScramble from './modes/texasScramble';
@@ -35,6 +36,8 @@ export function computeLeaderboard(ctx: ScoringContext): ModeResult {
       return bestBall.compute(ctx);
     case 'stableford':
       return stableford.compute(ctx);
+    case 'modified_stableford':
+      return modifiedStableford.compute(ctx);
     case 'singles_matchplay':
       return singlesMatchplay.compute(ctx);
     case 'solo_strokeplay':

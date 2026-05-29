@@ -27,6 +27,25 @@ export interface StablefordPointsInput {
 }
 
 /**
+ * Poeng-tabell-funksjon: konverterer ett hull-resultat til poeng. Standard-
+ * Stableford bruker `computeStablefordPoints`; modified stableford (#281) sender
+ * inn sin egen tabell via `computeWithPointsTable`. Lar motoren (solo + team)
+ * gjenbrukes uendret på tvers av tabell-variantene.
+ */
+export type StablefordPointsFn = (input: StablefordPointsInput) => number;
+
+/**
+ * Avgjør om et lag-hull har en reell «best ball»-bidragsyter. Standard-
+ * Stableford: kun når lag-poenget er > 0 (0 = dobbeltbogey/blank, ingen reell
+ * kontribusjon). Modified stableford: par gir 0 poeng og MAX kan være negativ,
+ * så et hull har bidragsyter så snart minst én partner faktisk spilte det.
+ */
+export type ContributorPredicate = (
+  teamPoints: number,
+  players: StablefordPlayerCell[],
+) => boolean;
+
+/**
  * Konverterer ett hull-resultat til stableford-poeng etter standard-tabellen:
  *   diff (netto − par)    poeng
  *   ≤ −3 (double eagle+)    5
@@ -62,6 +81,7 @@ function computePlayerHolePoints(
   player: ScoringPlayer,
   holesSorted: ScoringHole[],
   grossByKey: Map<string, number | null>,
+  pointsFn: StablefordPointsFn,
 ): PlayerHolePoints {
   const perHole: number[] = [];
   let totalPoints = 0;
@@ -75,7 +95,7 @@ function computePlayerHolePoints(
     }
     const extra = strokesForHole(player.courseHandicap, hole.strokeIndex);
     const net = gross - extra;
-    const points = computeStablefordPoints({
+    const points = pointsFn({
       par: parFor(hole, player.teeGender),
       netStrokes: net,
     });
@@ -114,27 +134,52 @@ function padTo18(perHole: number[]): number[] {
  *   4) back-3 poeng
  *   5) hole-18 poeng
  */
+/**
+ * Standard contributor-regel: bidragsyter kun når lag-poenget er > 0.
+ */
+const standardContributorPredicate: ContributorPredicate = (teamPoints) => teamPoints > 0;
+
+/**
+ * Standard-Stableford. Bruker standard poeng-tabellen og standard contributor-
+ * regelen. Modified stableford (#281) kaller `computeWithPointsTable` direkte
+ * med sin egen tabell.
+ */
 export function compute(ctx: ScoringContext): StablefordResult {
+  return computeWithPointsTable(ctx, computeStablefordPoints, standardContributorPredicate);
+}
+
+/**
+ * Parameterisert Stableford-motor: tar poeng-tabellen og contributor-regelen
+ * som argumenter slik at standard og modified stableford deler all solo-/team-
+ * logikk (ranking, tie-break, per-hull-detalj). Returnerer alltid
+ * `kind: 'stableford'` — modified stableford gjenbruker dermed visnings-laget.
+ */
+export function computeWithPointsTable(
+  ctx: ScoringContext,
+  pointsFn: StablefordPointsFn,
+  contributorPredicate: ContributorPredicate,
+): StablefordResult {
   // Defaulter til solo for å bevare tidligere oppførsel hvis mode_config
   // mangler team_size (skal ikke skje etter 0030-backfill, men solo er den
   // tryggere defaulten her siden den ikke krever team-assignment).
+  const cfg = ctx.game.mode_config;
   const teamSize =
-    ctx.game.mode_config.kind === 'stableford'
-      ? ctx.game.mode_config.team_size
-      : 1;
+    cfg.kind === 'stableford' || cfg.kind === 'modified_stableford' ? cfg.team_size : 1;
 
-  if (teamSize === 2) return computeTeam(ctx);
-  return computeSolo(ctx);
+  if (teamSize === 2) return computeTeam(ctx, pointsFn, contributorPredicate);
+  return computeSolo(ctx, pointsFn);
 }
 
-function computeSolo(ctx: ScoringContext): StablefordSoloResult {
+function computeSolo(ctx: ScoringContext, pointsFn: StablefordPointsFn): StablefordSoloResult {
   const holesSorted = [...ctx.holes].sort((a, b) => a.number - b.number);
   const grossByKey = new Map<string, number | null>();
   for (const s of ctx.scores) {
     grossByKey.set(`${s.userId}#${s.holeNumber}`, s.gross);
   }
 
-  const playerPoints = ctx.players.map((p) => computePlayerHolePoints(p, holesSorted, grossByKey));
+  const playerPoints = ctx.players.map((p) =>
+    computePlayerHolePoints(p, holesSorted, grossByKey, pointsFn),
+  );
 
   // index-basert id slik at vi kan mappe tilbake til userId etterpå
   const teamsForRanking = playerPoints.map((p, i) => ({
@@ -174,7 +219,11 @@ function computeSolo(ctx: ScoringContext): StablefordSoloResult {
  * "høyest vinner". Tie-break-cascaden er identisk med solo og best-ball
  * (5-tier på lag-poeng-arrays).
  */
-function computeTeam(ctx: ScoringContext): StablefordTeamResult {
+function computeTeam(
+  ctx: ScoringContext,
+  pointsFn: StablefordPointsFn,
+  contributorPredicate: ContributorPredicate,
+): StablefordTeamResult {
   const holesSorted = [...ctx.holes].sort((a, b) => a.number - b.number);
   const grossByKey = new Map<string, number | null>();
   for (const s of ctx.scores) {
@@ -201,7 +250,7 @@ function computeTeam(ctx: ScoringContext): StablefordTeamResult {
         const grossVal = grossByKey.get(`${p.userId}#${hole.number}`) ?? null;
         const extra = strokesForHole(p.courseHandicap, hole.strokeIndex);
         const netStrokes = grossVal === null ? null : grossVal - extra;
-        const points = computeStablefordPoints({
+        const points = pointsFn({
           par: parFor(hole, p.teeGender),
           netStrokes,
         });
@@ -219,17 +268,22 @@ function computeTeam(ctx: ScoringContext): StablefordTeamResult {
       const teamPoints =
         players.length === 0 ? 0 : Math.max(...players.map((pc) => pc.points));
 
-      // contributorIds = spillere som hadde MAX-poeng. Hvis teamPoints er 0
-      // (alle har 0 poeng, double-bogey-or-worse) er det ingen reell "best
-      // ball" på hullet — vi markerer ingen contributor i den situasjonen
-      // slik at view-laget kan skille en aktiv 0-er fra en passiv 0-er.
-      const hasRealContribution = teamPoints > 0;
+      // contributorIds = spillere som hadde MAX-poeng OG faktisk spilte hullet.
+      // Standard-Stableford: når teamPoints er 0 (alle double-bogey-or-worse
+      // eller blank) er det ingen reell "best ball" — ingen contributor.
+      // Modified stableford: par gir 0 poeng og MAX kan være negativ, så
+      // `contributorPredicate` markerer bidragsyter så snart minst én partner
+      // spilte. `gross !== null`-guarden hindrer at en ikke-spilt partner (0
+      // poeng) feilaktig matcher en lag-MAX på 0.
+      const hasRealContribution = contributorPredicate(teamPoints, players);
       const contributorIds = hasRealContribution
-        ? players.filter((pc) => pc.points === teamPoints).map((pc) => pc.userId)
+        ? players
+            .filter((pc) => pc.points === teamPoints && pc.gross !== null)
+            .map((pc) => pc.userId)
         : [];
 
       for (const pc of players) {
-        pc.isContributor = hasRealContribution && pc.points === teamPoints;
+        pc.isContributor = hasRealContribution && pc.points === teamPoints && pc.gross !== null;
       }
 
       // StablefordTeamHoleRow.par representerer hullets par for display.

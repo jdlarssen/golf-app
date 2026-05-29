@@ -31,6 +31,15 @@ export const MODE_GUIDE: Record<GameMode, ModeGuide> = {
       'Høyest poengsum til slutt vinner.',
     ],
   },
+  modified_stableford: {
+    summary:
+      'Stableford med proff-skala: du blir belønnet hardt for å satse, men straffet for de virkelig dårlige hullene. Her kan poengene gå i minus.',
+    points: [
+      'Birdie gir 2 poeng, eagle 5, albatross 8. Par gir 0.',
+      'Bogey trekker 1 poeng, dobbeltbogey eller verre trekker 3. Du kan altså havne under null.',
+      'Slagene du får på handikap regnes med, og høyest poengsum vinner.',
+    ],
+  },
   best_ball: {
     summary:
       'Dere er to på lag, og på hvert hull teller bare den beste netto-scoren av dere to.',

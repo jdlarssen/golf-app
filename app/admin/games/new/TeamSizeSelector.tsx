@@ -52,6 +52,8 @@ type Props = {
  */
 const ENABLED_COMBOS: Record<GameMode, ReadonlySet<TeamSize>> = {
   stableford: new Set<TeamSize>([1, 2]),
+  // Modified stableford (#281): samme solo/par-valg som standard Stableford.
+  modified_stableford: new Set<TeamSize>([1, 2]),
   best_ball: new Set<TeamSize>([2]),
   singles_matchplay: new Set<TeamSize>([1]),
   solo_strokeplay: new Set<TeamSize>([1]),

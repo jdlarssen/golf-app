@@ -86,6 +86,8 @@ export function deriveAssignmentsFromInitial(initial: InitialValues | undefined)
  */
 export function defaultTeamSizeForMode(mode: GameMode): TeamSize {
   if (mode === 'stableford') return 1;
+  // Modified stableford (#281): solo som default, par valgbart via selector.
+  if (mode === 'modified_stableford') return 1;
   if (mode === 'singles_matchplay') return 1;
   if (mode === 'solo_strokeplay') return 1;
   // Texas scramble: default 4-mannslag (typisk firma-cup-størrelse).

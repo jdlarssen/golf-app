@@ -80,6 +80,7 @@ type GameRow = {
   game_mode:
     | 'best_ball'
     | 'stableford'
+    | 'modified_stableford'
     | 'singles_matchplay'
     | 'solo_strokeplay'
     | 'texas_scramble'

@@ -16,6 +16,8 @@ export function bruttoHelperFor(mode: GameMode): string {
       return 'Ingen handicap — laveste gross-score per hull per lag vinner.';
     case 'stableford':
       return 'Stableford-poeng beregnes på gross-score mot par. Scratch-format.';
+    case 'modified_stableford':
+      return 'Modified-stableford-poeng beregnes på gross-score mot par (pro-skala). Scratch-format.';
     case 'singles_matchplay':
       return 'Scratch-matchplay — laveste gross-score per hull vinner.';
     case 'solo_strokeplay':

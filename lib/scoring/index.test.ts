@@ -56,6 +56,28 @@ describe('computeLeaderboard — mode-router', () => {
     }
   });
 
+  it('delegerer modified_stableford til modifiedStableford.compute (pro-tabell, kind: stableford)', () => {
+    const ctx: ScoringContext = {
+      game: {
+        id: 'g',
+        game_mode: 'modified_stableford',
+        mode_config: { kind: 'modified_stableford', team_size: 1, points_table: 'modified' },
+      },
+      players: [{ userId: 'u1', teamNumber: null, flightNumber: null, courseHandicap: 0 }],
+      holes: [{ number: 1, par: 4, strokeIndex: 1 }],
+      scores: [{ userId: 'u1', holeNumber: 1, gross: 6 }], // dobbeltbogey → −3
+    };
+
+    const result = computeLeaderboard(ctx);
+    // Gjenbruker stableford-resultatet → kind: 'stableford'.
+    expect(result.kind).toBe('stableford');
+    if (result.kind === 'stableford' && result.variant === 'solo') {
+      expect(result.players[0].totalPoints).toBe(-3);
+    } else {
+      throw new Error('expected stableford solo result');
+    }
+  });
+
   it('delegerer singles_matchplay til singlesMatchplay.compute', () => {
     const ctx: ScoringContext = {
       game: {
