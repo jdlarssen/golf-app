@@ -21,6 +21,24 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#276](https://github.com/jdlarssen/golf-app/issues/276), andre kompis-format i [#270](https://github.com/jdlarssen/golf-app/issues/270). Nassau er klassikeren: front 9, back 9 og hele runden er tre separate konkurranser i samme runde. Vinn én seksjon og du har én seier; vinn alle tre og du tok «Hele tavla».
 
+### [1.44.1] - 2026-05-29
+
+> Spiller du fra en tee der dame- eller junior-par er annerledes enn herre-par, viser nå leverings-siden, godkjenning og leaderboardens hull-fane din egen par. Et 5-slag på et hull som er par 5 for deg teller som par, ikke bogey.
+
+<details>
+<summary>Teknisk</summary>
+
+Oppfølger til [#240](https://github.com/jdlarssen/golf-app/issues/240) — tre display-flater brukte fortsatt `par_mens` (eller lagets representant-par) i stedet for spillerens egen par. Alle tre gjenbruker `parForPlayer`/`hasParDifference`/`formatOtherGendersPar` fra [`lib/games/parDisplay.ts`](lib/games/parDisplay.ts); ingen endring i scoring- eller leaderboard-helperne.
+
+#### Fixed
+- [`app/games/[id]/submit/page.tsx`](app/games/[id]/submit/page.tsx) — «DITT KORT»-preview mapper nå rad-par via `parForPlayer(parByGender, me.tee_gender)` i stedet for `h.par_mens`, og viser avvik-asterisk (`ParAsideInline`) i par-kolonnen. En damespiller ser nå sin egen par og slag-shape i preview før innlevering.
+- [`app/games/[id]/approve/page.tsx`](app/games/[id]/approve/page.tsx) — godkjennings-tabellen bruker scorekort-eierens (`p.tee_gender`) par for både par-tall og `scoreShape`/`scoreTone`, med avvik-asterisk. Admin/flight-mate ser eierens par, ikke herre-par.
+- [`app/games/[id]/leaderboard/holes/page.tsx`](app/games/[id]/leaderboard/holes/page.tsx) — per-spiller-rad bruker `pc.par` (per-spiller) i stedet for `row.par` (lagets) på både brutto-celle-tone og «+/− mot par»-merket. Begge fikset (samme rot-årsak) etter brukerbeslutning.
+
+Ingen nye tester: pure-logic-helperne er dekket i `parDisplay`/`parResolver` (#240), asterisk-rendering i `HoleClient.test.tsx`. Submit/approve er server-komponenter som fetcher fra Supabase — per test-disiplin ikke verdt redundante render-tester.
+
+</details>
+
 ### [1.44.0] - 2026-05-28
 
 > Ny spillform: Nassau. Front 9, back 9 og hele runden er tre separate konkurranser — vinn alle tre og det heter «Hele tavla». 2–4 spillere, velg netto eller brutto når du oppretter spillet.

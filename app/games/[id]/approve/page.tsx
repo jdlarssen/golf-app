@@ -18,6 +18,13 @@ import {
   type PlayerForHole,
 } from '@/lib/games/getGameWithPlayers';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
+import {
+  hasParDifference,
+  formatOtherGendersPar,
+  parForPlayer,
+  type HoleParByGender,
+} from '@/lib/games/parDisplay';
+import type { ScoringGender } from '@/lib/scoring/modes/types';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -268,6 +275,15 @@ async function PendingApprovals({
                   <tbody>
                     {holes.map((h) => {
                       const s = inner?.get(h.hole_number) ?? null;
+                      // Eierens (`p`) egen par — ikke seerens. På avvikshull
+                      // ser admin/flight-mate dermed dame-/junior-par der det
+                      // gjelder, og slag rendres mot riktig referanse. #252.
+                      const parByGender: HoleParByGender = {
+                        mens: h.par_mens,
+                        ladies: h.par_ladies,
+                        juniors: h.par_juniors,
+                      };
+                      const ownerPar = parForPlayer(parByGender, p.tee_gender);
                       return (
                         <tr
                           key={h.hole_number}
@@ -277,15 +293,19 @@ async function PendingApprovals({
                             {h.hole_number}
                           </td>
                           <td className="score-num px-2 py-1.5 text-right text-muted">
-                            {h.par_mens}
+                            {ownerPar}
+                            <ParAsideInline
+                              parByGender={parByGender}
+                              playerGender={p.tee_gender}
+                            />
                           </td>
                           <td className="score-num px-2 py-1.5 text-right text-muted">
                             {h.stroke_index}
                           </td>
                           <td className="score-num px-2 py-1.5 text-right text-text">
                             <ScoreShape
-                              shape={scoreShape(s, h.par_mens)}
-                              tone={scoreTone(s, h.par_mens)}
+                              shape={scoreShape(s, ownerPar)}
+                              tone={scoreTone(s, ownerPar)}
                               size="sm"
                             >
                               {s ?? '—'}
@@ -311,6 +331,33 @@ async function PendingApprovals({
         );
       })}
     </>
+  );
+}
+
+/**
+ * Liten avvik-indikator vist etter par-tallet i godkjennings-tabellen. Vises
+ * bare når `parByGender` har avvik mellom kjønn. `playerGender` er scorekort-
+ * eierens kjønn (ikke seerens) — eierens eget kjønn ekskluderes fra tooltipen,
+ * konsistent med scorecard/submit. #252.
+ */
+function ParAsideInline({
+  parByGender,
+  playerGender,
+}: {
+  parByGender: HoleParByGender;
+  playerGender: ScoringGender;
+}) {
+  if (!hasParDifference(parByGender)) return null;
+  const tooltip = `Dette hullet har annerledes par for andre kjønn. ${formatOtherGendersPar(parByGender, playerGender)}.`;
+  return (
+    <sup
+      data-testid="par-aside-marker"
+      title={tooltip}
+      aria-label={tooltip}
+      className="ml-0.5 cursor-help text-[0.65em] font-semibold text-muted"
+    >
+      *
+    </sup>
   );
 }
 

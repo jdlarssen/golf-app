@@ -583,7 +583,10 @@ function HoleRow({
           const grossText = pc.gross == null ? '–' : String(pc.gross);
           const nettoText = pc.net == null ? '–' : String(pc.net);
           const initial = initialFor.get(pc.userId) ?? '?';
-          const nettoVsPar = pc.net == null ? null : pc.net - row.par;
+          // Per-spiller-par (`pc.par`), ikke lagets representant-par
+          // (`row.par`). På blandet-kjønn-lag på avvikshull får medspiller
+          // av annet kjønn enn «kapteinen» riktig netto-vs-par og celle-tone. #252.
+          const nettoVsPar = pc.net == null ? null : pc.net - pc.par;
           const nettoTone = vsParTone(nettoVsPar ?? 0);
 
           return (
@@ -604,8 +607,8 @@ function HoleRow({
                 {initial}
               </span>
               <ScoreShape
-                shape={scoreShape(pc.gross, row.par)}
-                tone={scoreTone(pc.gross, row.par)}
+                shape={scoreShape(pc.gross, pc.par)}
+                tone={scoreTone(pc.gross, pc.par)}
                 size="sm"
               >
                 {grossText}

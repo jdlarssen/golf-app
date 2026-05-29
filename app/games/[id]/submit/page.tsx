@@ -16,6 +16,13 @@ import { scoreShape } from '@/lib/scoring/scoreShape';
 import { scoreTone } from '@/lib/scoring/scoreTone';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
+import {
+  hasParDifference,
+  formatOtherGendersPar,
+  parForPlayer,
+  type HoleParByGender,
+} from '@/lib/games/parDisplay';
+import type { ScoringGender } from '@/lib/scoring/modes/types';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -156,6 +163,7 @@ export default async function SubmitPage({
             gameId={id}
             courseId={game.course_id}
             currentUserId={userId}
+            meTeeGender={me.tee_gender}
             submitAction={submitAction}
           />
         </Suspense>
@@ -168,11 +176,13 @@ async function ReviewBody({
   gameId,
   courseId,
   currentUserId,
+  meTeeGender,
   submitAction,
 }: {
   gameId: string;
   courseId: string;
   currentUserId: string;
+  meTeeGender: ScoringGender;
   submitAction: () => void | Promise<void>;
 }) {
   const { supabase } = await getSubmitContext();
@@ -227,7 +237,18 @@ async function ReviewBody({
     const s = scoreByHole.get(h.hole_number);
     const strokes = s?.strokes ?? null;
     const enteredByName = s?.entered_by ? namesById.get(s.entered_by) : null;
-    return { ...h, par: h.par_mens, strokes, enteredByName };
+    const parByGender: HoleParByGender = {
+      mens: h.par_mens,
+      ladies: h.par_ladies,
+      juniors: h.par_juniors,
+    };
+    return {
+      ...h,
+      par: parForPlayer(parByGender, meTeeGender),
+      parByGender,
+      strokes,
+      enteredByName,
+    };
   });
 
   const playedHoles = rows.filter((r) => r.strokes != null);
@@ -275,6 +296,10 @@ async function ReviewBody({
                   </td>
                   <td className="score-num px-4 py-2.5 text-right text-muted">
                     {r.par}
+                    <ParAsideInline
+                      parByGender={r.parByGender}
+                      playerGender={meTeeGender}
+                    />
                   </td>
                   <td className="score-num px-4 py-2.5 text-right text-muted">
                     {r.stroke_index}
@@ -329,6 +354,32 @@ async function ReviewBody({
         />
       </div>
     </>
+  );
+}
+
+/**
+ * Liten avvik-indikator vist etter par-tallet i «DITT KORT»-preview. Vises
+ * bare når `parByGender` har avvik mellom kjønn. Speiler `ParAsideInline` i
+ * scorecard/page.tsx — eierens eget kjønn ekskluderes fra tooltipen. #252.
+ */
+function ParAsideInline({
+  parByGender,
+  playerGender,
+}: {
+  parByGender: HoleParByGender;
+  playerGender: ScoringGender;
+}) {
+  if (!hasParDifference(parByGender)) return null;
+  const tooltip = `Dette hullet har annerledes par for andre kjønn. ${formatOtherGendersPar(parByGender, playerGender)}.`;
+  return (
+    <sup
+      data-testid="par-aside-marker"
+      title={tooltip}
+      aria-label={tooltip}
+      className="ml-0.5 cursor-help text-[0.65em] font-semibold text-muted"
+    >
+      *
+    </sup>
   );
 }
 
