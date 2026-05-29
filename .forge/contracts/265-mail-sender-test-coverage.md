@@ -38,13 +38,13 @@ Body-extractor per template (ulik styling per mail):
 
 ## Suksesskriterier
 
-- [ ] **K1.** `lib/mail/scorecardSubmittedNotification.test.ts` finnes, med cases for: (a) default m/`adminFirstName`, (b) `adminFirstName: null` → «Hei!», (c) HTML-escaping av `playerName`/`gameName`. Inkl. én chrome-lås.
-- [ ] **K2.** `lib/mail/cupStartedNotification.test.ts` finnes, med cases for: (a) default m/`playerFirstName` + heltall-point, (b) `playerFirstName: null` → «Hei!», (c) desimal-point (`1.5` → `1,5` via `formatPoints`). Inkl. én chrome-lås.
-- [ ] **K3.** `lib/mail/cupFinishedNotification.test.ts` finnes, med cases for: (a) default m/vinner + heltall-point, (b) `winnerTeamName: null` → «Cupen endte uavgjort», (c) desimal-point på begge lag. Inkl. én chrome-lås.
-- [ ] **K4.** `lib/mail/__tests__/resend-contract.test.ts` `senders[]` utvidet med de 3 nye senderne (fixtures matcher per-modul base-params). `it.each` verifiserer error-propagation + from-format + call-count for alle 10.
-- [ ] **K5.** Alle snapshots populert med `vitest -u` og verifisert stabile på re-run uten `-u`. Snapshots reflekterer faktisk eksisterende copy (ingen source-endring).
-- [ ] **K6.** `lib/mail/AGENTS.md` referanse-tall oppdatert («alle 7 aktive mail-sendere» → «alle 10»).
-- [ ] **K7.** Ingen source-fil endret, med mindre en test avdekker en faktisk bug — i så fall flagges den eksplisitt (egen fix-commit + nevnt i closing-kommentar).
+- [x] **K1.** `lib/mail/scorecardSubmittedNotification.test.ts` — 4 tester (default, `adminFirstName: null` → «Hei!», HTML-escaping, chrome-lås). 7 snapshots, grønne. Evidens: `npx vitest run lib/mail/scorecardSubmittedNotification.test.ts` → 4 passed.
+- [x] **K2.** `lib/mail/cupStartedNotification.test.ts` — 4 tester (default + heltall-point, `playerFirstName: null`, desimal `10.5` → `10,5`, chrome-lås). 7 snapshots, grønne. Evidens: 4 passed.
+- [x] **K3.** `lib/mail/cupFinishedNotification.test.ts` — 4 tester (vinner, `winnerTeamName: null` → «Cupen endte uavgjort», desimal `3,5 — 2,5`, chrome-lås). 8 snapshots, grønne. Evidens: 4 passed.
+- [x] **K4.** `resend-contract.test.ts` `senders[]` utvidet med de 3 nye (fixtures matcher per-modul base-params). Evidens: `it.each` → 10 passed (var 7).
+- [x] **K5.** Snapshots populert med `vitest -u`, re-run uten `-u` stabil. Speiler eksisterende copy 1:1 (ingen source-endring). Evidens: full suite `npx vitest run lib/mail/` → 12 files, 93 passed.
+- [x] **K6.** Sender-count oppdatert «alle 7» → «alle 10». **Avvik fra ordlyd:** tallet lå i `resend-contract.test.ts`-kommentaren, ikke `AGENTS.md` (som ikke har noen sender-count). Oppdatert der det faktisk fantes.
+- [x] **K7.** Ingen source-fil endret. Ingen bug avdekket av testene — alle tre senderne produserer korrekt subject/text/HTML. Evidens: `npx tsc --noEmit` → ingen feil i lib/mail; `git diff --stat` viser kun `.test.ts` + kontrakt-filer.
 
 ## Gates
 
