@@ -17,7 +17,43 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.48.y — 4BBB Stableford (lag-variant synliggjort)
+
+Issue [#282](https://github.com/jdlarssen/golf-app/issues/282), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Stableford for lag à 2 fantes allerede, men gjemte seg bak et kryptisk «Par»-valg. Nå heter varianten 4BBB og får en egen forklaring, uten ny scoring under panseret.
+
+### [1.48.0] - 2026-05-29
+
+> Stableford for lag à 2 har fått et tydelig navn: 4BBB. Velg Stableford først, så Solo eller 4BBB. På et 4BBB-lag spiller dere hver deres ball, og den beste poengsummen av dere to teller på hvert hull. Appen forklarer regelen rett i spillform-kortet, så ingen lurer på hva «Par» betød.
+
+<details>
+<summary>Teknisk</summary>
+
+Ingen ny scoring, game_mode eller migrasjon: lag-Stableford (team_size 2) regnet allerede beste poeng per hull (4BBB). Endringen er ren synliggjøring + variant-bevisst navngiving.
+
+#### Added
+- [`lib/games/formatLabel.ts`](lib/games/formatLabel.ts) — `formatDisplayLabel(mode, modeConfig)` navngir stableford-familien med team_size 2 som «4BBB Stableford» / «4BBB Modifisert Stableford», ellers `MODE_LABELS[mode]`. Ren, server-trygg modul.
+- [`lib/formats/modeGuide.ts`](lib/formats/modeGuide.ts) — `STABLEFORD_4BBB_GUIDE` + `resolveModeGuide(mode, teamSize)`: spiller-forklaring for 4BBB (beste poeng per hull teller).
+- Egen 4BBB-rad i `/spillformer`-oppslagsverket.
+
+#### Changed
+- [`components/ModeGuideCard.tsx`](components/ModeGuideCard.tsx) + [`components/ui/ModeChip.tsx`](components/ui/ModeChip.tsx) — valgfri `modeConfig`-prop viser 4BBB-navn + -guide på game-home og admin-flatene. Uten prop: uendret.
+- [`app/admin/games/new/TeamSizeSelector.tsx`](app/admin/games/new/TeamSizeSelector.tsx) — team_size-2-tilen heter «4BBB» (hint «Lag à 2, beste poeng teller») for stableford-familien. Andre lag-moduser beholder «Par».
+- Admin spill-liste henter `mode_config` for å vise 4BBB-chip.
+
+#### Tests
+- Type A: `formatLabel.test.ts`, `modeGuide.test.ts`. Type C: 4BBB-variant i `ModeGuideCard.test.tsx` + `ModeChip.test.tsx`. Oppdaterte `TeamSizeSelector`- og `GameForm`-queries fra «Par» til «4BBB» i stableford-kontekst.
+
+#### Avvik fra issue #282
+- Issue-en spesifiserte ny `fourbb_stableford.ts`-scoring-modul + ny `formats`-rad. Begge droppet: scoringen finnes allerede i `stableford.ts` (team-MAX), og Jørgen valgte å la 4BBB leve som variant under Stableford-kortet, ikke som eget format-kort.
+
+</details>
+
+---
+
 ## 1.47.y — Modifisert Stableford (pro-skala med minuspoeng)
+
+<details>
+<summary><strong>1.47.y — Modifisert Stableford (pro-skala med minuspoeng) (1 oppføring) — klikk for å vise</strong></summary>
 
 Issue [#281](https://github.com/jdlarssen/golf-app/issues/281), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Modifisert Stableford er Stableford med proff-skala: birdie og eagle belønnes ekstra, mens dobbeltbogey eller verre gir minuspoeng. Premierer å satse foran å ligge trygt på par.
 
@@ -42,6 +78,8 @@ Issue [#281](https://github.com/jdlarssen/golf-app/issues/281), del av format-ep
 
 #### Tests
 - Type A: `modifiedStableford.test.ts` + router-delegering i `index.test.ts`. Type C: minus-poeng-banner i `HoleClient.test.tsx`. Eksisterende stableford-suite uendret og grønn.
+
+</details>
 
 </details>
 
