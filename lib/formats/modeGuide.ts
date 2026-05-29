@@ -53,7 +53,7 @@ export const MODE_GUIDE: Record<GameMode, ModeGuide> = {
     summary:
       'Laget spiller én ball: alle slår, dere plukker det beste slaget, og alle slår derfra igjen.',
     points: [
-      'Slik fortsetter dere helt i hull — én score per hull for hele laget.',
+      'Slik fortsetter dere til ballen er i hull. Laget får én score per hull.',
       'Laget får et felles handikap som trekkes fra.',
       'Lavest lagtotal vinner.',
     ],
