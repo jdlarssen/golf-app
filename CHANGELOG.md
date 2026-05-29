@@ -17,7 +17,41 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.50.y — Nines / Split Sixes (poeng per hull for tre)
+
+Issue [#278](https://github.com/jdlarssen/golf-app/issues/278), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Enda et kompis-format der poengene kommer fra hvor godt du spiller hvert hull, ikke fra sluttsummen. For nøyaktig tre spillere, med to varianter: Nines og Split Sixes.
+
+### [1.50.0] - 2026-05-30
+
+> Ny spillform for kompisrunden: Nines / Split Sixes, for nøyaktig tre spillere. Hvert hull deler ut en pott etter hvem som spilte det best. I Nines er det ni poeng å fordele (fem til lavest, tre til nest, ett til høyest), i Split Sixes seks (fire, to, null). Spiller dere likt på et hull, deler dere poengene likt. Du taster slag som vanlig, velger netto eller brutto, og appen kårer den med flest poeng sammenlagt.
+
+<details>
+<summary>Teknisk</summary>
+
+Bygget på Skins-mønstret: poengene utledes fra det vanlige strokeplay-scorekortet, så ingen egen input-tabell eller registreringssteg. Hvert hull er uavhengig (ingen carryover som i Skins). Mangler en spiller score på et hull, står hullet pending til alle tre har tastet, mens senere hull avgjøres normalt.
+
+#### Added
+- [`lib/scoring/modes/nines.ts`](lib/scoring/modes/nines.ts) — `compute(ctx)`: pott per hull (Nines 5–3–1, Split Sixes 4–2–0) fordelt på effective-score-rangering, likt-deles-likt ved tie, pending-hull uten carryover. 22 Type A-tester.
+- [`supabase/migrations/0054_nines.sql`](supabase/migrations/0054_nines.sql) — seed av format-rad «Nines / Split Sixes» + intent-mapping (sekundær under Kompis). Ingen ny tabell.
+- `NinesSetup.tsx` — variant-velger (Nines / Split Sixes) + netto/brutto-velger i wizarden.
+- `NinesView.tsx` + `NinesPodium.tsx` — poeng-tabell med per-hull-fordeling + podium for avsluttet spill.
+
+#### Changed
+- `lib/scoring/modes/types.ts` + `lib/scoring/index.ts` — ny `nines`-modus i `GameMode`, `GameModeConfig` (`nines_variant` + `nines_scoring`), `ModeResult` og compute-routeren, samt `MODE_LABELS`.
+- [`lib/games/gamePayload.ts`](lib/games/gamePayload.ts) — `validateNines` (nøyaktig 3 spillere, individuell) + `parseGameMode`-støtte + regresjonstester.
+- `lib/games/allowanceCopy.ts`, `lib/formats/modeGuide.ts`, `lib/formats/icons.tsx`, hull-`page.tsx`, leaderboard-`page.tsx` — brutto-hjelpetekst, spiller-forklaring, format-ikon, GameRow-union og leaderboard-routing.
+
+#### Tests
+- Type A: `nines.test.ts` (22) + 6 nines-cases i `gamePayload.test.ts`. Type C: `NinesView.test.tsx` + `NinesSetup.test.tsx`.
+
+</details>
+
+---
+
 ## 1.49.y — Bingo Bango Bongo (tre poeng per hull)
+
+<details>
+<summary><strong>1.49.y — Bingo Bango Bongo (tre poeng per hull) (1 oppføring) — klikk for å vise</strong></summary>
 
 Issue [#277](https://github.com/jdlarssen/golf-app/issues/277), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Den første spillformen der poengene ikke kommer fra slag, men fra tre prestasjoner per hull. Sosial kompisrunde for 2–4 spillere.
 
@@ -44,6 +78,8 @@ Bygget på Wolf-mønstret for kategorisk per-hull-input: poengene er rene presta
 
 #### Tests
 - Type A: `bingoBangoBongo.test.ts` (20) + `lib/bbb/`-helper-tester. Type C: `BingoBangoBongoEntry.test.tsx` + `BingoBangoBongoView.test.tsx`.
+
+</details>
 
 </details>
 
