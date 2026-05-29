@@ -31,7 +31,7 @@ export function SkinsSetup({ scoring, onScoringChange, disabled = false }: Skins
         <p className="mt-1 text-xs text-muted/80">
           Hvert hull er verdt 1 skin. Deler to eller flere spillere hullet, ruller
           skinnet videre til neste hull (da verdt 2, så 3, osv.), helt til én vinner
-          alene og scooper hele potten.
+          alene og tar hele potten.
         </p>
         <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Skins-scoring">
           <label

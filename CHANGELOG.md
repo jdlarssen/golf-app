@@ -17,7 +17,50 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.45.y — Skins (tredje kompis-format i epic)
+
+Issue [#275](https://github.com/jdlarssen/golf-app/issues/275), tredje kompis-format i [#270](https://github.com/jdlarssen/golf-app/issues/270). Skins er hull-for-hull-klassikeren: lavest score vinner skinnet, og deler dere hullet, ruller potten videre til neste hull.
+
+### [1.45.0] - 2026-05-29
+
+> Ny spillform: Skins. Hvert hull er verdt 1 skin, og lavest score tar det. Deler dere hullet, ruller skinnet videre til neste hull, som da er verdt mer. 2–4 spillere, og du velger netto eller brutto når du oppretter spillet. Resultatlista viser hvem som tok hvor mange skins, så dere kan gjøre opp en pott dere avtaler selv.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- [`supabase/migrations/0051_skins.sql`](supabase/migrations/0051_skins.sql) — seeder `skins`-format-row + `format_intent_mapping[skins, kompis, primary, sort_order=70]`. Ingen ny tabell — carryover er en ren funksjon av eksisterende `scores`, akkurat som Nassau.
+- [`lib/scoring/modes/skins.ts`](lib/scoring/modes/skins.ts) — `compute(ctx)` med sekvensiell carryover-state. Hvert hull legger 1 skin i potten; `atStake = carriedIn + 1`. Unik laveste effective-score vinner hele potten (`carriedPot` resettes); to eller flere på laveste = carryover (potten ruller videre). Pending hull (mangler score) fryser resolving — alle senere hull blir også pending. `unwonSkins` = potten som henger ved rundeslutt (standard Skins, ingen omspill). Gross/net via `mode_config.skins_scoring` med defensiv fallback til 'net'. 26 Type A unit-tester dekker enkel vinner, 2-/3-/4-veis delt, multi-tied sekvens (hull 1–3 delt → hull 4 scooper 4 skins), pending, uvunne skins, gross vs net, 2- og 4-spiller, ranking + tiebreak.
+- [`lib/scoring/modes/types.ts`](lib/scoring/modes/types.ts) — `GameMode` + `GameModeConfig` + `MODE_LABELS` utvidet med `skins`; nye `SkinsResult`, `SkinsHoleRow`, `SkinsPlayerLine`, `SkinsHoleOutcome`-typer; `ModeResult` utvidet.
+- [`app/admin/games/new/sections/SkinsSetup.tsx`](app/admin/games/new/sections/SkinsSetup.tsx) — wizard step 2-seksjon med scoring-toggle (netto/brutto) + carryover-forklaring. `useGameFormState` utvidet med `skinsScoring`, `isSkins`, `skinsPlayersValid` (2–4 spillere).
+- [`app/games/[id]/leaderboard/SkinsView.tsx`](app/games/[id]/leaderboard/SkinsView.tsx) — spiller-totals øverst (sortert på skins vunnet, prominent), per-hull-tabell som viser carryover-kjeden (på spill / delt → ruller videre / venter / vunnet av), og en egen linje for uvunne skins når potten henger ved rundeslutt. Reveal-mode følger Wolf/Nassau-pattern.
+- [`app/games/[id]/leaderboard/SkinsPodium.tsx`](app/games/[id]/leaderboard/SkinsPodium.tsx) — 1./2./3.-plass på `totalSkins`, confetti-burst på first-mount per browser-sesjon, rest-listen (rank 4+) i collapsed liste.
+- [`validateSkins`](lib/games/gamePayload.ts) — payload-validator med 2–4 spillere, solo-format (team/flight null), `skins_scoring` gross|net parsing. 10 unit-tester.
+- Skins-banner i [`HoleClient.tsx`](app/games/[id]/holes/[holeNumber]/HoleClient.tsx) — viser «X skins på spill» på hull-flaten + et hint når potten har rullet videre. Rent informativt (ingen modal, til forskjell fra Wolf).
+- Auth-gate E2E ([`e2e/games/skins.spec.ts`](e2e/games/skins.spec.ts)) speiler Wolf/Nassau-mønstret.
+
+#### Changed
+- `Record<GameMode, …>`-mapper utvidet for type-completeness (ReadyStep, TeamSizeSelector, `MODE_LABELS`, lokal `GameRow`-union i [`app/games/[id]/page.tsx`](app/games/[id]/page.tsx)). `validateSkins` wiret i `parseGameMode` + `modeValidators`.
+- [`renderSkins`](app/games/[id]/leaderboard/page.tsx) router-case etter Nassau.
+- [`app/admin/games/new/GameWizard.tsx`](app/admin/games/new/GameWizard.tsx): render `<SkinsSetup>` når `isSkins`, hidden `skins_scoring`-input, skjul TeamSizeSelector. `skins_scoring` lagt til i `initialValues`-passthrough.
+- [`app/games/[id]/holes/[holeNumber]/page.tsx`](app/games/[id]/holes/[holeNumber]/page.tsx): når `game_mode='skins'`, kjør `skins.compute` over nåværende scores og send `skinsAtStake` + `skinsCarriedIn` ned til `HoleClient`.
+
+#### Tests
+- 26 Type A unit-tester for scoring-modulen.
+- 10 validator-tester (`gamePayload.test.ts`).
+- 2 render-tester (SkinsSetup + SkinsView).
+- Lightweight auth-gate E2E. Carryover-scenariet («vunnet på hull 4») dekkes av Type A unit-test, ikke tung E2E — riktig hjem per test-disiplinen.
+
+Tredje av 7 kompis-batch-formats. Resten: BBB, Nines, Acey Deucey, Round Robin.
+
+</details>
+
+---
+
 ## 1.44.y — Nassau (andre kompis-format i epic)
+
+<details>
+<summary><strong>1.44.y — Nassau (3 oppføringer) — klikk for å vise</strong></summary>
 
 Issue [#276](https://github.com/jdlarssen/golf-app/issues/276), andre kompis-format i [#270](https://github.com/jdlarssen/golf-app/issues/270). Nassau er klassikeren: front 9, back 9 og hele runden er tre separate konkurranser i samme runde. Vinn én seksjon og du har én seier; vinn alle tre og du tok «Hele tavla».
 
@@ -85,6 +128,8 @@ Ingen nye tester: pure-logic-helperne er dekket i `parDisplay`/`parResolver` (#2
 - Lightweight auth-gate E2E.
 
 Andre av 7 kompis-batch-formats. Resten: Skins, BBB, Nines, Acey Deucey, Round Robin.
+
+</details>
 
 </details>
 

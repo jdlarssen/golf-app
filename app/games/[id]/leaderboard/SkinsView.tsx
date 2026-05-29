@@ -174,7 +174,7 @@ export function SkinsView({
               {result.unwonSkins}{' '}
               {result.unwonSkins === 1 ? 'skin' : 'skins'}
             </span>{' '}
-            ikke vunnet — siste hull delt
+            ikke vunnet. Siste hull ble delt.
           </p>
         </div>
       )}
@@ -318,7 +318,7 @@ function outcomeLabel(hole: SkinsHoleRow): string {
     case 'carryover':
       return 'Delt';
     default:
-      return 'Venter på scores';
+      return 'Venter på score';
   }
 }
 

@@ -158,7 +158,7 @@ describe('SkinsView', () => {
 
     // Hull 3: pending.
     const hole3 = within(holeList).getByTestId('skins-hole-row-3');
-    expect(hole3.textContent).toContain('Venter på scores');
+    expect(hole3.textContent).toContain('Venter på score');
 
     // Ingen uvunne skins (unwonSkins=0) — boksen skal ikke vises.
     expect(screen.queryByTestId('skins-unwon')).toBeNull();
@@ -176,7 +176,7 @@ describe('SkinsView', () => {
     const unwonBox = screen.getByTestId('skins-unwon');
     expect(unwonBox.textContent).toContain('3');
     expect(unwonBox.textContent).toContain('ikke vunnet');
-    expect(unwonBox.textContent).toContain('siste hull delt');
+    expect(unwonBox.textContent).toContain('Siste hull ble delt');
     unmount2();
 
     // 3) Reveal-modus midt-runde → skjuler tall, viser venterom-melding.
