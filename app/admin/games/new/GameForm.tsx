@@ -146,6 +146,16 @@ export type InitialValues = {
    */
   skins_scoring?: 'gross' | 'net';
   /**
+   * Nines / Split Sixes (#278): variant ('nines' eller 'split_sixes'). Pre-fylles
+   * fra DB i edit-flyt; nye spill defaulter til 'nines' i useGameFormState.
+   */
+  nines_variant?: 'nines' | 'split_sixes';
+  /**
+   * Nines / Split Sixes (#278): scoring-modus ('gross' eller 'net'). Pre-fylles
+   * fra DB i edit-flyt; nye spill defaulter til 'net' i useGameFormState.
+   */
+  nines_scoring?: 'gross' | 'net';
+  /**
    * Self-påmelding (#199). Defaultes til 'invite_only' + 'solo' for å
    * bevare dagens flyt. Edit-flyten leverer eksisterende valg fra DB.
    */

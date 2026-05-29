@@ -77,6 +77,10 @@ const ENABLED_COMBOS: Record<GameMode, ReadonlySet<TeamSize>> = {
   // dedikert BBB-setup-steg vil ta over som for Wolf/Nassau/Skins, så
   // TeamSizeSelector vises ikke i praksis — men type-system krever en entry.
   bingo_bango_bongo: new Set<TeamSize>([1]),
+  // Nines / Split Sixes: individuelt format, nøyaktig 3 spillere, team_size=1.
+  // NinesSetup tar over som for Wolf/Nassau/Skins, så TeamSizeSelector vises
+  // ikke i praksis — men type-system krever en entry.
+  nines: new Set<TeamSize>([1]),
 };
 
 type TileDef = {

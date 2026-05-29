@@ -182,6 +182,34 @@ function BingoBangoBongoIcon({ size = 28 }: { size?: number }) {
   );
 }
 
+// Nines / Split Sixes: tre spillere, poeng-deling per hull (9 eller 6 poeng totalt).
+// Tre pinner i en rad med fallende høyde illustrerer poeng-rangering (5–3–1 / 4–2–0).
+function NinesIcon({ size = 28 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 28 28"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      {/* Tre pinner med fallende høyde — 1. plass høyest */}
+      <line x1="7" y1="5" x2="7" y2="22" />
+      <path d="M 7 6 L 12 7.5 L 7 9 Z" fill="currentColor" stroke="none" />
+      <line x1="14" y1="9" x2="14" y2="22" />
+      <path d="M 14 10 L 19 11.5 L 14 13 Z" fill="currentColor" stroke="none" />
+      <line x1="21" y1="13" x2="21" y2="22" />
+      <path d="M 21 14 L 26 15.5 L 21 17 Z" fill="currentColor" stroke="none" />
+      {/* Bunn-linje */}
+      <line x1="4" y1="22" x2="24" y2="22" />
+    </svg>
+  );
+}
+
 // Fallback når en icon_key ikke har en dedikert komponent (nye formats før
 // designet er på plass). Et nøytralt flagg-ikon signaliserer «format» uten
 // å gjette på mekanikken.
@@ -212,6 +240,7 @@ const ICON_MAP: Record<string, (props: { size?: number }) => ReactNode> = {
   texas_scramble: TexasScrambleIcon,
   fourball_matchplay: FourballMatchplayIcon,
   bingo_bango_bongo: BingoBangoBongoIcon,
+  nines: NinesIcon,
 };
 
 export function formatIconFor(iconKey: string, size = 28): ReactNode {

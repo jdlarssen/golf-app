@@ -45,6 +45,7 @@ import { RegistrationSection } from './sections/RegistrationSection';
 import { WolfSetup } from './sections/WolfSetup';
 import { NassauSetup } from './sections/NassauSetup';
 import { SkinsSetup } from './sections/SkinsSetup';
+import { NinesSetup } from './sections/NinesSetup';
 import { AllowanceField } from '@/components/admin/AllowanceField';
 import { bruttoHelperFor } from '@/lib/games/allowanceCopy';
 import {
@@ -303,6 +304,8 @@ export function GameWizard({
       wolf_scoring: state.wolfScoring,
       nassau_scoring: state.nassauScoring,
       skins_scoring: state.skinsScoring,
+      nines_variant: state.ninesVariant,
+      nines_scoring: state.ninesScoring,
       tournament_id: initialValues?.tournament_id,
       tournament_match_label: initialValues?.tournament_match_label,
       registration_mode: state.registrationMode,
@@ -421,7 +424,7 @@ export function GameWizard({
 
           {state.formatChosen && (
             <div className="space-y-4">
-              {!state.isMatchplay && !state.isWolf && !state.isNassau && !state.isSkins && (
+              {!state.isMatchplay && !state.isWolf && !state.isNassau && !state.isSkins && !state.isNines && (
                 <TeamSizeSelector
                   mode={state.gameMode}
                   value={state.teamSize}
@@ -451,6 +454,15 @@ export function GameWizard({
                 <SkinsSetup
                   scoring={state.skinsScoring}
                   onScoringChange={state.setSkinsScoring}
+                  disabled={state.lockGameMode}
+                />
+              )}
+              {state.isNines && (
+                <NinesSetup
+                  variant={state.ninesVariant}
+                  onVariantChange={state.setNinesVariant}
+                  scoring={state.ninesScoring}
+                  onScoringChange={state.setNinesScoring}
                   disabled={state.lockGameMode}
                 />
               )}
@@ -610,12 +622,15 @@ function FormDataInputs({
     isWolf,
     isNassau,
     isSkins,
+    isNines,
     texasHandicapPct,
     fourballAllowancePct,
     foursomesAllowancePct,
     wolfScoring,
     nassauScoring,
     skinsScoring,
+    ninesVariant,
+    ninesScoring,
     orderedPayload,
     courseId,
     teeBoxId,
@@ -681,6 +696,12 @@ function FormDataInputs({
       )}
       {isSkins && (
         <input type="hidden" name="skins_scoring" value={skinsScoring} />
+      )}
+      {isNines && (
+        <>
+          <input type="hidden" name="nines_variant" value={ninesVariant} />
+          <input type="hidden" name="nines_scoring" value={ninesScoring} />
+        </>
       )}
 
       <input type="hidden" name="course_id" value={courseId} />

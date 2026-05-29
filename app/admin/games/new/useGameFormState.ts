@@ -97,6 +97,9 @@ export function defaultTeamSizeForMode(mode: GameMode): TeamSize {
   // rotation-slot, ikke som lag-tildeling. team_size=1 betyr requiresTeams=false
   // så vi får solo-style player-selection i step 3.
   if (mode === 'wolf') return 1;
+  // Nines / Split Sixes (#278): solo-format (ingen lag), team_size=1 betyr
+  // requiresTeams=false så vi får solo-style player-selection i step 3.
+  if (mode === 'nines') return 1;
   return 2;
 }
 
@@ -265,6 +268,16 @@ export function useGameFormState({
   const [skinsScoring, setSkinsScoring] = useState<'gross' | 'net'>(
     initialValues?.skins_scoring === 'gross' ? 'gross' : 'net',
   );
+  // Nines / Split Sixes (#278): variant-toggle (nines vs split_sixes) og
+  // scoring-toggle (net vs gross). Default 'nines' + 'net' speiler Tørny's
+  // ethos. Validatoren (`validateNines`) leser begge feltene og faller
+  // defensivt tilbake til 'nines'/'net' ved ugyldige verdier.
+  const [ninesVariant, setNinesVariant] = useState<'nines' | 'split_sixes'>(
+    initialValues?.nines_variant === 'split_sixes' ? 'split_sixes' : 'nines',
+  );
+  const [ninesScoring, setNinesScoring] = useState<'gross' | 'net'>(
+    initialValues?.nines_scoring === 'gross' ? 'gross' : 'net',
+  );
   // Wolf-rotasjon: en counter som økes hver gang admin trykker "Shuffle".
   // wolfOrder (derived under) hasher (selectedPlayerIds, wolfShuffleSeed) for
   // å produsere en deterministisk-pseudo-random permutasjon. Da kan render-
@@ -425,6 +438,10 @@ export function useGameFormState({
   // - isSkins: solo-format med carryover, 2-4 spillere. Hvert hull er verdt
   //   1 skin; delte hull ruller skinnet videre. Egen SkinsSetup-step i step 2.
   const isSkins = gameMode === 'skins';
+  // - isNines: individuelt format, nøyaktig 3 spillere. Nines (9 poeng per
+  //   hull, 5–3–1) eller Split Sixes (6 poeng, 4–2–0). Eigen NinesSetup-step
+  //   i step 2.
+  const isNines = gameMode === 'nines';
 
   // Drafts can be saved without a tee-off; publishing cannot. `canPublish`
   // below combines this with the rest of the validity gates.
@@ -825,6 +842,11 @@ export function useGameFormState({
   const skinsPlayersValid =
     isSkins && selectedPlayerIds.length >= 2 && selectedPlayerIds.length <= 4;
 
+  // Nines-validitet: nøyaktig 3 spillere. Solo-format (team/flight null),
+  // ingen lag-tilordning. Speiler `validateNines` i gamePayload.ts.
+  const ninesPlayersValid =
+    isNines && selectedPlayerIds.length === 3;
+
   // Modus-spesifikk publish-validitet. Reglene speiler
   // `lib/games/gamePayload.ts` slik at klient og server forteller samme
   // historie til admin når noe mangler:
@@ -851,7 +873,9 @@ export function useGameFormState({
                 ? nassauPlayersValid
                 : isSkins
                   ? skinsPlayersValid
-                  : false;
+                  : isNines
+                    ? ninesPlayersValid
+                    : false;
 
   // Publishing requires every section to be valid AND a tee-off time. Drafts
   // skip these gates entirely (they only need a name).
@@ -868,7 +892,7 @@ export function useGameFormState({
     courseId !== '' &&
     teeBoxId !== '' &&
     (playersStepOptional || playersValidForMode) &&
-    (isTexas || isWolf || isNassau || isSkins || allowanceValid) &&
+    (isTexas || isWolf || isNassau || isSkins || isNines || allowanceValid) &&
     hasTeeOff;
 
   // Human-readable list of what's still missing for a publish. Mode-aware:
@@ -986,6 +1010,18 @@ export function useGameFormState({
         'for mange spillere — Skins krever 2-4',
       );
     }
+  } else if (isNines) {
+    // Nines: nøyaktig 3 spillere, solo (ingen lag-tilordning).
+    if (selectedPlayerIds.length < 3) {
+      const remaining = 3 - selectedPlayerIds.length;
+      missingForPublish.push(
+        `${remaining === 1 ? '1 spiller til' : `${remaining} spillere til`}`,
+      );
+    } else if (selectedPlayerIds.length > 3) {
+      missingForPublish.push(
+        'for mange spillere — Nines krever nøyaktig 3',
+      );
+    }
   } else if (selectedPlayerIds.length < 1) {
     // isSolo
     missingForPublish.push('minst én spiller');
@@ -994,7 +1030,7 @@ export function useGameFormState({
   // modusene har sin egen scoring-konfig i mode_config. Hopper over
   // allowance-sjekken så admin ikke får mismatch mellom UI-skjult-felt og
   // publish-feilmelding.
-  if (!isTexas && !isWolf && !isNassau && !isSkins && !allowanceValid)
+  if (!isTexas && !isWolf && !isNassau && !isSkins && !isNines && !allowanceValid)
     missingForPublish.push('gyldig HCP-allowance');
 
   return {
@@ -1030,6 +1066,10 @@ export function useGameFormState({
     setNassauScoring,
     skinsScoring,
     setSkinsScoring,
+    ninesVariant,
+    setNinesVariant,
+    ninesScoring,
+    setNinesScoring,
     requirePeerApproval,
     setRequirePeerApproval,
     sideEnabled,
@@ -1064,6 +1104,7 @@ export function useGameFormState({
     isWolf,
     isNassau,
     isSkins,
+    isNines,
     hasTeeOff,
     // Memoiserte derivasjoner
     selectedCourse,
@@ -1080,6 +1121,7 @@ export function useGameFormState({
     parStablefordPlayersValid,
     texasPlayersValid,
     matchplayPlayersValid,
+    ninesPlayersValid,
     playersValidForMode,
     canPublish,
     missingForPublish,
