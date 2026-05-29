@@ -17,7 +17,41 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.52.y — Acey Deucey (lavest tar, høyest gir)
+
+Issue [#279](https://github.com/jdlarssen/golf-app/issues/279), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). En klassisk kompisrunde for nøyaktig fire spillere: hvert hull deler ut poeng etter hvem som spilte best og dårligst. Poengene regnes rett fra slagene, så det er ingen ekstra registrering.
+
+### [1.52.0] - 2026-05-30
+
+> Du kan nå spille Acey Deucey: på hvert hull tar den med lavest score tre poeng, og den med høyest score gir tre fra seg. De to i midten står i ro. Deler flere den laveste eller høyeste scoren, gir den siden ingen poeng det hullet. Du velger brutto eller netto med handikap når du setter opp spillet, og totalen kan godt havne under null. Krever fire spillere.
+
+<details>
+<summary>Teknisk</summary>
+
+Rent slag-derivert format. I motsetning til Bingo Bango Bongo trengs ingen ny tabell, scorekort-seksjon eller server-action: poengene regnes fra `scores` på samme måte som Skins sammenligner hull for hull, og brutto/netto styres av en bryter i oppsettet (speiler Skins/Wolf/Nassau).
+
+#### Added
+- [`supabase/migrations/0056_acey_deucey.sql`](supabase/migrations/0056_acey_deucey.sql) — seeder format-rad + intent-mapping (sekundær under Kompis, sort_order 95). Ingen ny tabell.
+- [`lib/scoring/modes/aceyDeucey.ts`](lib/scoring/modes/aceyDeucey.ts) — `compute(ctx)`: per hull gir unik lavest +3 og unik høyest −3, delt voider siden, uferdige hull deler ikke ut. Brutto/netto via `acey_deucey_scoring`, løpende total kan bli negativ. 16 Type A-tester.
+- `AceyDeuceyView.tsx` + `AceyDeuceyPodium.tsx` — løpende totaler med fortegn + per-hull-tabell (ace/deuce per hull, «Delt»/«Venter») + podium for avsluttet spill.
+- `AceyDeuceySetup.tsx` — brutto/netto-bryter i wizardens steg 2 (default netto).
+
+#### Changed
+- `lib/scoring/modes/types.ts` + `lib/scoring/index.ts` — ny `acey_deucey`-modus i `GameMode`, `GameModeConfig`, `ModeResult` og compute-routeren, samt alle `Record<GameMode,…>`-maps (`MODE_LABELS`, `modeValidators`, `bruttoHelperFor`, `MODE_GUIDE`, `MODE_SUMMARY_LABELS`, `ENABLED_COMBOS`).
+- [`lib/games/gamePayload.ts`](lib/games/gamePayload.ts) — `validateAceyDeucey` (nøyaktig 4 spillere, individuell, brutto/netto).
+- leaderboard-`page.tsx` + wizard (`GameWizard.tsx`, `useGameFormState.ts`) — leaderboard-routing og oppsett-steg.
+
+#### Tests
+- Type A: `aceyDeucey.test.ts` (16) + player-count-grenser i `gamePayload.test.ts`. Type C: `AceyDeuceyView.test.tsx` + `AceyDeuceySetup.test.tsx`.
+
+</details>
+
+---
+
 ## 1.51.y — Round Robin (roterende partnere)
+
+<details>
+<summary><strong>1.51.y — Round Robin (roterende partnere) (1 oppføring) — klikk for å vise</strong></summary>
 
 Issue [#280](https://github.com/jdlarssen/golf-app/issues/280), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Firespillers-format der partner-konstellasjonen bytter hvert sjette hull — alle spiller med og mot hverandre. Valgbart under Kompis i opprett-spill-wizarden.
 
@@ -42,6 +76,8 @@ Round Robin gjenbruker fourball matchplay-motorens per-hull-beregning (`applyAll
 
 #### Tests
 - Type C: `RoundRobinSetup.test.tsx` (2) — slots med spillerlabels, placeholder-rader ved <4 spillere.
+
+</details>
 
 </details>
 
