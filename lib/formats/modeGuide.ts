@@ -1,4 +1,4 @@
-import type { GameMode } from '@/lib/scoring/modes/types';
+import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 
 /**
  * Player-rettet «korte regler» per spillemodus (#299). Egen kilde fra
@@ -122,3 +122,30 @@ export const MODE_GUIDE: Record<GameMode, ModeGuide> = {
     ],
   },
 };
+
+/**
+ * Egen guide for 4BBB-varianten av Stableford (team_size 2, #282). Stableford-
+ * familien deler `game_mode` mellom solo og 4BBB, så MODE_GUIDE-oppslaget på
+ * game_mode alene ville vist solo-teksten («Du spiller for deg selv …») på et
+ * lag-spill. `resolveModeGuide` velger denne i stedet når team_size er 2.
+ */
+export const STABLEFORD_4BBB_GUIDE: ModeGuide = {
+  summary:
+    'Dere er to på lag. På hvert hull teller den beste poengsummen av dere to.',
+  points: [
+    'Begge spiller hele runden og samler stableford-poeng hver for seg.',
+    'På hvert hull tar laget med den høyeste poengsummen av de to.',
+    'Høyest lagtotal vinner.',
+  ],
+};
+
+/**
+ * Velger riktig spillform-guide. For stableford-familien med team_size 2
+ * (4BBB) returneres `STABLEFORD_4BBB_GUIDE`; alle andre tilfeller (inkl.
+ * solo-stableford) bruker det vanlige game_mode-oppslaget. Konsumenter som
+ * ikke kjenner team_size kan fortsatt slå opp `MODE_GUIDE[mode]` direkte.
+ */
+export function resolveModeGuide(mode: GameMode, teamSize: number): ModeGuide {
+  if (isStablefordFamily(mode) && teamSize === 2) return STABLEFORD_4BBB_GUIDE;
+  return MODE_GUIDE[mode];
+}
