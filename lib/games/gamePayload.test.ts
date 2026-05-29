@@ -2326,3 +2326,88 @@ describe('buildGameInsertPayload — skins (issue #275)', () => {
     }
   });
 });
+
+describe('buildGameInsertPayload — nines (issue #278)', () => {
+  /**
+   * Helper for Nines / Split Sixes-payloads. Individuell modus, NØYAKTIG 3
+   * spillere ved publish, ingen lag/flight-tilordning. Speiler bbbFd-mønsteret.
+   * Disse testene fanger spesielt parseGameMode-whitelisten: uten 'nines' der
+   * ville game_mode bli null og payloaden feile med mode_required før validatoren.
+   */
+  function ninesFd(
+    extras: Record<string, string> = {},
+    playerIds: string[] = ['u1', 'u2', 'u3'],
+  ): FormData {
+    const base: Record<string, string> = {
+      name: 'Nines-runde',
+      course_id: 'c1',
+      tee_box_id: 't1',
+      game_mode: 'nines',
+    };
+    playerIds.forEach((id, i) => {
+      base[`player_${i}_id`] = id;
+    });
+    return fd({ ...base, ...extras });
+  }
+
+  it('publish med 3 spillere → ok, mode_config med defaults (nines, net)', () => {
+    const result = buildGameInsertPayload(ninesFd(), 'publish');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.game_mode).toBe('nines');
+    expect(result.mode_config).toEqual({
+      kind: 'nines',
+      team_size: 1,
+      nines_variant: 'nines',
+      nines_scoring: 'net',
+    });
+    expect(result.players).toEqual([
+      { user_id: 'u1', team_number: null, flight_number: null },
+      { user_id: 'u2', team_number: null, flight_number: null },
+      { user_id: 'u3', team_number: null, flight_number: null },
+    ]);
+  });
+
+  it('publish med 2 spillere → min_players_for_mode', () => {
+    const result = buildGameInsertPayload(
+      ninesFd({}, ['u1', 'u2']),
+      'publish',
+    );
+    expect(result.errorCode).toBe('min_players_for_mode');
+  });
+
+  it('publish med 4 spillere → too_many_players_for_mode', () => {
+    const result = buildGameInsertPayload(
+      ninesFd({}, ['u1', 'u2', 'u3', 'u4']),
+      'publish',
+    );
+    expect(result.errorCode).toBe('too_many_players_for_mode');
+  });
+
+  it('rejecter duplikat spiller', () => {
+    const result = buildGameInsertPayload(
+      ninesFd({}, ['u1', 'u1', 'u3']),
+      'publish',
+    );
+    expect(result.errorCode).toBe('duplicate_player');
+  });
+
+  it('nines_variant=split_sixes + nines_scoring=gross → mode_config reflekterer begge', () => {
+    const result = buildGameInsertPayload(
+      ninesFd({ nines_variant: 'split_sixes', nines_scoring: 'gross' }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.mode_config).toEqual({
+      kind: 'nines',
+      team_size: 1,
+      nines_variant: 'split_sixes',
+      nines_scoring: 'gross',
+    });
+  });
+
+  it('draft med 1 spiller → ok (ingen spiller-antall-feil i draft)', () => {
+    const result = buildGameInsertPayload(ninesFd({}, ['u1']), 'draft');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(1);
+  });
+});

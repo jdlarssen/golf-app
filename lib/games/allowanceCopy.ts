@@ -47,5 +47,9 @@ export function bruttoHelperFor(mode: GameMode): string {
       // bongo) som ikke utledes fra slag. Generisk allowance-field vises ikke
       // for BBB; returverdien er kun for type-completeness.
       return 'Ingen handicap — Bingo Bango Bongo-poeng teller uavhengig av slag.';
+    case 'nines':
+      // Nines har egen scoring-toggle (gross|net) i NinesSetup-step. Generisk
+      // allowance-field vises ikke for nines; returverdien er for type-completeness.
+      return 'Ingen handicap — lavest gross-score per hull gir flest poeng.';
   }
 }

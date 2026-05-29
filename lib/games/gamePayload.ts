@@ -240,7 +240,8 @@ function parseGameMode(formData: FormData): GameMode | null {
     raw === 'wolf' ||
     raw === 'nassau' ||
     raw === 'skins' ||
-    raw === 'bingo_bango_bongo'
+    raw === 'bingo_bango_bongo' ||
+    raw === 'nines'
   )
     return raw;
   return null;
@@ -1201,6 +1202,67 @@ function validateBingoBangoBongo(
   };
 }
 
+function parseNinesVariant(formData: FormData): 'nines' | 'split_sixes' {
+  const raw = String(formData.get('nines_variant') ?? '').trim();
+  if (raw === 'split_sixes') return 'split_sixes';
+  return 'nines';
+}
+
+function parseNinesScoring(formData: FormData): 'gross' | 'net' {
+  const raw = String(formData.get('nines_scoring') ?? '').trim();
+  if (raw === 'gross') return 'gross';
+  return 'net';
+}
+
+/**
+ * Nines / Split Sixes-validator (issue #278).
+ *
+ * Individuelt format med NØYAKTIG 3 spillere ved publish. Strokeplay-utledet
+ * (ingen egen input-tabell). To config-dimensjoner: nines_variant (nines=9pts
+ * 5-3-1, split_sixes=6pts 4-2-0) og nines_scoring (gross|net, default net).
+ *
+ * Mode_config-output: `{kind, team_size: 1, nines_variant, nines_scoring}`.
+ */
+function validateNines(
+  formData: FormData,
+  mode: PayloadMode,
+): ModeValidationResult {
+  const ninesVariant = parseNinesVariant(formData);
+  const ninesScoring = parseNinesScoring(formData);
+
+  const players: GamePlayerInput[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < 8; i++) {
+    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
+    if (!user_id) continue;
+    if (seen.has(user_id)) {
+      return { ok: false, errorCode: 'duplicate_player' };
+    }
+    seen.add(user_id);
+    players.push({ user_id, team_number: null, flight_number: null });
+  }
+
+  if (mode === 'publish') {
+    if (players.length < 3) {
+      return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    if (players.length > 3) {
+      return { ok: false, errorCode: 'too_many_players_for_mode' };
+    }
+  }
+
+  return {
+    ok: true,
+    players,
+    mode_config: {
+      kind: 'nines',
+      team_size: 1,
+      nines_variant: ninesVariant,
+      nines_scoring: ninesScoring,
+    },
+  };
+}
+
 const modeValidators: Record<
   GameMode,
   (formData: FormData, mode: PayloadMode) => ModeValidationResult
@@ -1217,6 +1279,7 @@ const modeValidators: Record<
   nassau: validateNassau,
   skins: validateSkins,
   bingo_bango_bongo: validateBingoBangoBongo,
+  nines: validateNines,
 };
 
 /**

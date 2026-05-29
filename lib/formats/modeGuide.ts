@@ -130,6 +130,16 @@ export const MODE_GUIDE: Record<GameMode, ModeGuide> = {
       'Flest poeng etter 18 hull vinner.',
     ],
   },
+  nines: {
+    summary:
+      'Tre spillere kjemper om poeng på hvert hull. Lavest score tar mest, høyest tar minst.',
+    points: [
+      'Nines deler ut ni poeng per hull: fem til lavest, tre til nest, ett til høyest.',
+      'Split Sixes deler ut seks: fire, to og null.',
+      'Likt på et hull? Da deler dere poengene for plassene dere står på.',
+      'Flest poeng sammenlagt vinner.',
+    ],
+  },
 };
 
 /**
