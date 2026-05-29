@@ -387,7 +387,8 @@ async function EditGameFormBody({
     team_size:
       game.mode_config.kind === 'texas_scramble'
         ? game.mode_config.team_size
-        : game.mode_config.kind === 'stableford'
+        : game.mode_config.kind === 'stableford' ||
+            game.mode_config.kind === 'modified_stableford'
           ? game.mode_config.team_size
           : undefined,
     texas_team_handicap_pct:

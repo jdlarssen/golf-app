@@ -1,10 +1,12 @@
 import { pickTeamCaptain } from './teamCaptain';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { computeStablefordPoints } from '@/lib/scoring/modes/stableford';
+import type { StablefordPointsFn } from '@/lib/scoring/modes/stableford';
 import {
   classifyMatchplayHole,
   computeMatchplayRunningStatus,
 } from '@/lib/scoring/modes/singlesMatchplay';
+import { isStablefordFamily } from '@/lib/scoring/modes/types';
 import type { GameForHole, PlayerForHole } from './getGameWithPlayers';
 
 /**
@@ -257,7 +259,9 @@ export function resolveScorecardLayout(
   }
 
   const isStablefordTeam =
-    mode === 'stableford' && cfg.kind === 'stableford' && cfg.team_size === 2;
+    isStablefordFamily(mode) &&
+    (cfg.kind === 'stableford' || cfg.kind === 'modified_stableford') &&
+    cfg.team_size === 2;
   const isBestBall = mode === 'best_ball';
   const isMatchplaySingles = mode === 'singles_matchplay';
   const isFourball = mode === 'fourball_matchplay';
@@ -415,10 +419,17 @@ export function computeLayoutBTotals(
     isFourball?: boolean;
     /** For fourball: me's team_number. Bestemmer hvilken side som er «vi». */
     meTeamNumber?: number | null;
+    /**
+     * Poeng-tabell for stableford-poeng. Default standard-tabellen; modified
+     * stableford (#281) sender `computeModifiedStablefordPoints`. Ignorert når
+     * `isStableford` er false.
+     */
+    pointsFn?: StablefordPointsFn;
   },
 ): LayoutBTotals {
   const { isStableford, isMatchplay } = opts;
   const isFourball = opts.isFourball === true;
+  const pointsFn = opts.pointsFn ?? computeStablefordPoints;
 
   const perPlayer: LayoutBPlayerTotal[] = columns.map((c) => ({
     userId: c.userId,
@@ -452,7 +463,7 @@ export function computeLayoutBTotals(
       perPlayer[idx].netto += netto;
       nettos.push(netto);
       if (isStableford) {
-        const pts = computeStablefordPoints({ par: hole.par, netStrokes: netto });
+        const pts = pointsFn({ par: hole.par, netStrokes: netto });
         perPlayer[idx].points += pts;
         pointsPerPlayer.push(pts);
       } else {
@@ -461,10 +472,12 @@ export function computeLayoutBTotals(
     });
 
     if (isStableford) {
-      const teamPoints = pointsPerPlayer.reduce<number>(
-        (max, p) => Math.max(max, p ?? 0),
-        0,
-      );
+      // Lag-hull-poeng = MAX av spillernes poeng, der ikke-spilt teller som 0
+      // (pointsFn(null) = 0). Speiler scoring-motoren i stableford.ts. Ingen
+      // 0-gulv: modified stableford (#281) kan ha negativ lag-MAX når alle
+      // partnere spilte og fikk minuspoeng — da skal teamPoints være negativ,
+      // ikke klemt til 0, ellers drifter scorekort-footeren fra leaderboard.
+      const teamPoints = Math.max(...pointsPerPlayer.map((p) => p ?? 0));
       teamTotalPoints += teamPoints;
       if (hasAnyScore) playedTeamHoles += 1;
     } else if (!isMatchplay) {

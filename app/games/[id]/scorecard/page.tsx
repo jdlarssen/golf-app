@@ -14,6 +14,8 @@ import { ScoreShape } from '@/components/scoring/ScoreShape';
 import { scoreShape } from '@/lib/scoring/scoreShape';
 import { scoreTone } from '@/lib/scoring/scoreTone';
 import { computeStablefordPoints } from '@/lib/scoring/modes/stableford';
+import type { StablefordPointsFn } from '@/lib/scoring/modes/stableford';
+import { computeModifiedStablefordPoints } from '@/lib/scoring/modes/modifiedStableford';
 import {
   revealState,
   shouldHideNetto,
@@ -111,6 +113,12 @@ export default async function ScorecardPage({ params }: { params: Params }) {
     columnFormatter,
   );
   const title = scorecardTitle(game.game_mode, game.mode_config);
+  // Modified stableford (#281) bruker pro-tabellen for par-scorekortets
+  // poeng-celler og footer-total; standard Stableford bruker standard-tabellen.
+  const stablefordPointsFn: StablefordPointsFn =
+    game.game_mode === 'modified_stableford'
+      ? computeModifiedStablefordPoints
+      : computeStablefordPoints;
 
   return (
     <AppShell showVersion={false}>
@@ -145,6 +153,7 @@ export default async function ScorecardPage({ params }: { params: Params }) {
             submittedAt={me.submitted_at}
             revealState={state}
             myTeeGender={me.tee_gender}
+            pointsFn={stablefordPointsFn}
           />
         </Suspense>
       </div>
@@ -159,6 +168,7 @@ async function ScorecardTable({
   submittedAt,
   revealState: state,
   myTeeGender,
+  pointsFn,
 }: {
   gameId: string;
   courseId: string;
@@ -166,6 +176,7 @@ async function ScorecardTable({
   submittedAt: string | null;
   revealState: RevealState;
   myTeeGender: ScoringGender;
+  pointsFn: StablefordPointsFn;
 }) {
   const showHandicapTotal = state !== 'reveal-active';
   const showNetto = !shouldHideNetto(state);
@@ -232,6 +243,7 @@ async function ScorecardTable({
           meTeamNumber={layout.meTeamNumber}
           showNetto={showNetto}
           myTeeGender={myTeeGender}
+          pointsFn={pointsFn}
         />
       )}
 
@@ -461,6 +473,7 @@ function LayoutBTable({
   meTeamNumber,
   showNetto,
   myTeeGender,
+  pointsFn,
 }: {
   holes: HoleRow[];
   scoresByUserHole: Map<string, number | null>;
@@ -471,6 +484,7 @@ function LayoutBTable({
   meTeamNumber: number | null;
   showNetto: boolean;
   myTeeGender: ScoringGender;
+  pointsFn: StablefordPointsFn;
 }) {
   const rows: LayoutBHoleRow[] = holes.map((h) => {
     const parByGender: HoleParByGender = {
@@ -495,7 +509,7 @@ function LayoutBTable({
       // ScorecardColumnPlayer + ny scorecardLayout-test-flytting.
       const stablefordPoints =
         isStableford && netto !== null
-          ? computeStablefordPoints({ par: myPar, netStrokes: netto })
+          ? pointsFn({ par: myPar, netStrokes: netto })
           : null;
       return { strokes, extra, netto, stablefordPoints };
     });
@@ -554,7 +568,7 @@ function LayoutBTable({
     })),
     scoresByUserHole,
     columns,
-    { isStableford, isMatchplay, isFourball, meTeamNumber },
+    { isStableford, isMatchplay, isFourball, meTeamNumber, pointsFn },
   );
   const { perPlayer: playerTotals, teamTotalNetto, teamTotalPoints, playedTeamHoles, matchStatus } =
     totals;

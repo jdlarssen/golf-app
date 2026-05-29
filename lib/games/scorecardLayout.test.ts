@@ -6,6 +6,7 @@ import {
   type ScorecardColumnPlayer,
 } from './scorecardLayout';
 import * as singlesMatchplay from '@/lib/scoring/modes/singlesMatchplay';
+import { computeModifiedStablefordPoints } from '@/lib/scoring/modes/modifiedStableford';
 import type {
   ScoringContext,
   ScoringHole,
@@ -240,6 +241,19 @@ describe('resolveScorecardLayout', () => {
       expect(layout.variant).toBe('b');
       expect(layout.isStableford).toBe(true);
       expect(layout.isMatchplay).toBe(false);
+    });
+
+    it('par modified stableford (team_size=2) → Layout B med isStableford=true (#281)', () => {
+      const game: GameForHole = {
+        ...baseGame,
+        game_mode: 'modified_stableford',
+        mode_config: { kind: 'modified_stableford', team_size: 2, points_table: 'modified' },
+      };
+      const me = player('me', 1);
+      const partner = player('p', 1);
+      const layout = resolveScorecardLayout(game, [me, partner], me, false, fmt);
+      expect(layout.variant).toBe('b');
+      expect(layout.isStableford).toBe(true);
     });
 
     it('fourball matchplay → Layout B med 4 kolonner (me + partner + 2 motstandere)', () => {
@@ -568,6 +582,24 @@ describe('computeLayoutBTotals', () => {
       });
       expect(t.perPlayer[0].netto).toBe(5);
       expect(t.perPlayer[1].netto).toBe(4);
+    });
+
+    it('bruker modified-tabellen når pointsFn er satt → negative poeng (#281)', () => {
+      const holes = [par4Hole(1, 18)]; // SI 18 → ingen extra strokes
+      const me = col('me', 0);
+      const partner = col('p', 0);
+      const scores = new Map<string, number | null>([
+        ['me#1', 5], // bogey → modified −1 (standard ville gitt 1)
+        ['p#1', 6], // dobbeltbogey → modified −3 (standard ville gitt 0)
+      ]);
+      const t = computeLayoutBTotals(holes, scores, [me, partner], {
+        isStableford: true,
+        isMatchplay: false,
+        pointsFn: computeModifiedStablefordPoints,
+      });
+      expect(t.perPlayer[0].points).toBe(-1);
+      expect(t.perPlayer[1].points).toBe(-3);
+      expect(t.teamTotalPoints).toBe(-1); // MAX(−1, −3)
     });
   });
 

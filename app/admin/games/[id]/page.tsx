@@ -15,6 +15,7 @@ import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import type { GameStatus } from '@/lib/games/status';
 import {
   MODE_LABELS,
+  isStablefordFamily,
   type GameMode,
   type GameModeConfig,
 } from '@/lib/scoring/modes/types';
@@ -380,10 +381,10 @@ async function PlayersSections({
   //  - isBestBall: 4 lag à 2 spillere; flight kan avvike fra team. Full
   //    Lag-grid (4 hardkodet) + Lag+Flight-kolonner.
   const isSolo =
-    (game.game_mode === 'stableford' && game.mode_config.team_size === 1) ||
+    (isStablefordFamily(game.game_mode) && game.mode_config.team_size === 1) ||
     game.game_mode === 'solo_strokeplay';
   const isParStableford =
-    game.game_mode === 'stableford' && game.mode_config.team_size === 2;
+    isStablefordFamily(game.game_mode) && game.mode_config.team_size === 2;
   const isMatchplay = game.game_mode === 'singles_matchplay';
   const isBestBall = game.game_mode === 'best_ball';
   // Texas scramble: lag-modus med variabel lagstørrelse (2 eller 4) og
