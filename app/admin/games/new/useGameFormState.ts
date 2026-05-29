@@ -288,6 +288,12 @@ export function useGameFormState({
   const [ninesScoring, setNinesScoring] = useState<'gross' | 'net'>(
     initialValues?.nines_scoring === 'gross' ? 'gross' : 'net',
   );
+  // Acey Deucey (#279): brutto vs netto-toggle. Default 'net' — sikrer at
+  // en høy-handikapper ikke alltid blir «deuce». Validatoren
+  // (`validateAceyDeucey`) leser feltet og faller defensivt tilbake til 'net'.
+  const [aceyDeuceyScoring, setAceyDeuceyScoring] = useState<'gross' | 'net'>(
+    initialValues?.acey_deucey_scoring === 'gross' ? 'gross' : 'net',
+  );
   // Wolf-rotasjon: en counter som økes hver gang admin trykker "Shuffle".
   // wolfOrder (derived under) hasher (selectedPlayerIds, wolfShuffleSeed) for
   // å produsere en deterministisk-pseudo-random permutasjon. Da kan render-
@@ -456,6 +462,9 @@ export function useGameFormState({
   //   partnere bytter hvert 6. hull). team_number 1-4 = rotation-slot A/B/C/D.
   //   team_size=1, ingen lag-grid. Eget RoundRobinSetup-step i step 2.
   const isRoundRobin = gameMode === 'round_robin';
+  // - isAceyDeucey: solo-format, nøyaktig 4 spillere. Lavest tar +3, høyest
+  //   gir −3. Egen AceyDeuceySetup-step i step 2 for scoring-toggle.
+  const isAceyDeucey = gameMode === 'acey_deucey';
 
   // Drafts can be saved without a tee-off; publishing cannot. `canPublish`
   // below combines this with the rest of the validity gates.
@@ -895,6 +904,11 @@ export function useGameFormState({
   const ninesPlayersValid =
     isNines && selectedPlayerIds.length === 3;
 
+  // Acey Deucey-validitet: nøyaktig 4 spillere. Solo-format (team/flight
+  // null), ingen lag-tilordning. Speiler `validateAceyDeucey` i gamePayload.ts.
+  const aceyDeuceyPlayersValid =
+    isAceyDeucey && selectedPlayerIds.length === 4;
+
   // Modus-spesifikk publish-validitet. Reglene speiler
   // `lib/games/gamePayload.ts` slik at klient og server forteller samme
   // historie til admin når noe mangler:
@@ -925,7 +939,9 @@ export function useGameFormState({
                     ? ninesPlayersValid
                     : isRoundRobin
                       ? roundRobinPlayersValid
-                      : false;
+                      : isAceyDeucey
+                        ? aceyDeuceyPlayersValid
+                        : false;
 
   // Round Robin allowance-validitet: 0..100.
   const roundRobinAllowancePctValid =
@@ -1097,15 +1113,27 @@ export function useGameFormState({
     if (!roundRobinAllowancePctValid) {
       missingForPublish.push('gyldig handicap-prosent (0-100)');
     }
+  } else if (isAceyDeucey) {
+    // Acey Deucey: nøyaktig 4 spillere, solo (ingen lag-tilordning).
+    if (selectedPlayerIds.length < 4) {
+      const remaining = 4 - selectedPlayerIds.length;
+      missingForPublish.push(
+        `${remaining === 1 ? '1 spiller til' : `${remaining} spillere til`}`,
+      );
+    } else if (selectedPlayerIds.length > 4) {
+      missingForPublish.push(
+        'for mange spillere — Acey Deucey krever nøyaktig 4',
+      );
+    }
   } else if (selectedPlayerIds.length < 1) {
     // isSolo
     missingForPublish.push('minst én spiller');
   }
-  // hcp_allowance_pct gjelder ikke for Texas, Wolf, Nassau, Skins, Nines eller
-  // Round Robin — disse modusene har sin egen scoring-konfig i mode_config.
-  // Hopper over allowance-sjekken så admin ikke får mismatch mellom
-  // UI-skjult-felt og publish-feilmelding.
-  if (!isTexas && !isWolf && !isNassau && !isSkins && !isNines && !isRoundRobin && !allowanceValid)
+  // hcp_allowance_pct gjelder ikke for Texas, Wolf, Nassau, Skins, Nines,
+  // Round Robin eller Acey Deucey — disse modusene har sin egen scoring-konfig
+  // i mode_config. Hopper over allowance-sjekken så admin ikke får mismatch
+  // mellom UI-skjult-felt og publish-feilmelding.
+  if (!isTexas && !isWolf && !isNassau && !isSkins && !isNines && !isRoundRobin && !isAceyDeucey && !allowanceValid)
     missingForPublish.push('gyldig HCP-allowance');
 
   return {
@@ -1148,6 +1176,8 @@ export function useGameFormState({
     setNinesVariant,
     ninesScoring,
     setNinesScoring,
+    aceyDeuceyScoring,
+    setAceyDeuceyScoring,
     requirePeerApproval,
     setRequirePeerApproval,
     sideEnabled,
@@ -1184,6 +1214,7 @@ export function useGameFormState({
     isSkins,
     isNines,
     isRoundRobin,
+    isAceyDeucey,
     hasTeeOff,
     // Memoiserte derivasjoner
     selectedCourse,

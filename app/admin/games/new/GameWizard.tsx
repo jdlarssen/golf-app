@@ -47,6 +47,7 @@ import { NassauSetup } from './sections/NassauSetup';
 import { SkinsSetup } from './sections/SkinsSetup';
 import { NinesSetup } from './sections/NinesSetup';
 import { RoundRobinSetup } from './sections/RoundRobinSetup';
+import { AceyDeuceySetup } from './sections/AceyDeuceySetup';
 import { AllowanceField } from '@/components/admin/AllowanceField';
 import { bruttoHelperFor } from '@/lib/games/allowanceCopy';
 import {
@@ -308,6 +309,7 @@ export function GameWizard({
       skins_scoring: state.skinsScoring,
       nines_variant: state.ninesVariant,
       nines_scoring: state.ninesScoring,
+      acey_deucey_scoring: state.aceyDeuceyScoring,
       tournament_id: initialValues?.tournament_id,
       tournament_match_label: initialValues?.tournament_match_label,
       registration_mode: state.registrationMode,
@@ -473,6 +475,13 @@ export function GameWizard({
                   roundRobinOrder={state.roundRobinOrder
                     .map((pid) => players.find((p) => p.id === pid))
                     .filter((p): p is NonNullable<typeof p> => p !== undefined)}
+                  disabled={state.lockGameMode}
+                />
+              )}
+              {state.isAceyDeucey && (
+                <AceyDeuceySetup
+                  scoring={state.aceyDeuceyScoring}
+                  onScoringChange={state.setAceyDeuceyScoring}
                   disabled={state.lockGameMode}
                 />
               )}
@@ -647,6 +656,7 @@ function FormDataInputs({
     isSkins,
     isNines,
     isRoundRobin,
+    isAceyDeucey,
     texasHandicapPct,
     fourballAllowancePct,
     foursomesAllowancePct,
@@ -656,6 +666,7 @@ function FormDataInputs({
     skinsScoring,
     ninesVariant,
     ninesScoring,
+    aceyDeuceyScoring,
     orderedPayload,
     courseId,
     teeBoxId,
@@ -734,6 +745,9 @@ function FormDataInputs({
           name="round_robin_allowance_pct"
           value={String(roundRobinAllowancePct)}
         />
+      )}
+      {isAceyDeucey && (
+        <input type="hidden" name="acey_deucey_scoring" value={aceyDeuceyScoring} />
       )}
 
       <input type="hidden" name="course_id" value={courseId} />
