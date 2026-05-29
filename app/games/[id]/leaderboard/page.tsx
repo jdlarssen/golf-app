@@ -61,6 +61,8 @@ import { SkinsView, type SkinsPlayerInfo } from './SkinsView';
 import { SkinsPodium } from './SkinsPodium';
 import { NinesView, type NinesPlayerInfo } from './NinesView';
 import { NinesPodium } from './NinesPodium';
+import { RoundRobinView, type RoundRobinPlayerInfo } from './RoundRobinView';
+import { RoundRobinPodium } from './RoundRobinPodium';
 import {
   MatchplayMatchView,
   type MatchplayPlayerInfo,
@@ -448,6 +450,22 @@ async function LeaderboardBody({
   // status='active').
   if (game.game_mode === 'nines') {
     return renderNines({
+      gameId,
+      game,
+      gwp,
+      rawHolesRows: rawHolesRes.data ?? [],
+      rawScoresRows: rawScoresRes.data ?? [],
+      backHref,
+    });
+  }
+
+  // Round Robin (issue #280): 4-spiller rotating partner-format, 3 segmenter
+  // à 6 hull. Rotasjonen er ren deterministisk funksjon av slot-nummer + hull-
+  // nummer — ingen per-hull-tabell (forskjell fra Wolf og BBB). Scorer hentes
+  // fra eksisterende scores-tabell. Live-view + finished-podium speiler Wolf-
+  // pattern. View-en håndterer reveal-modus internt.
+  if (game.game_mode === 'round_robin') {
+    return renderRoundRobin({
       gameId,
       game,
       gwp,
@@ -2500,6 +2518,131 @@ function renderNines(opts: {
 
   return (
     <NinesView
+      gameId={gameId}
+      gameName={game.name}
+      result={result}
+      playersById={playersById}
+      scoreVisibility={scoreVisibility}
+      gameStatus={game.status}
+      backHref={backHref}
+    />
+  );
+}
+
+/**
+ * Round Robin-grenen (issue #280) — 4-spiller rotating partner-format. Henter
+ * scorer fra eksisterende `scores`-tabell (ingen per-hull-ekstratabell — rotasjonen
+ * er ren deterministisk funksjon av slot-nummer + hull-nummer). Velger view per
+ * `game.status`:
+ *
+ *   - `finished` → RoundRobinPodium på toppen + RoundRobinView under (chromeless).
+ *     Speiler Wolf-finished-pattern.
+ *   - alt annet (active/scheduled) → RoundRobinView alene: per-spiller-rangering
+ *     på hull-seire + segment-sammendrag (de 3 roterende konstellasjonene).
+ *     View-en håndterer reveal-modus internt.
+ *
+ * Forskjell fra Wolf: ingen `wolfChoices`-fetch. Scorer + spillere er nok.
+ * Speiler `renderBingoBangoBongo` uten per-hull-table-injektion.
+ */
+function renderRoundRobin(opts: {
+  gameId: string;
+  game: GameForHole;
+  gwp: {
+    players: {
+      user_id: string;
+      team_number: number;
+      users: { name: string | null; nickname: string | null } | null;
+      course_handicap: number | null;
+      tee_gender: TeeGender;
+    }[];
+  };
+  rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
+  rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
+  backHref: string;
+}) {
+  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
+
+  const ctx = {
+    game: {
+      id: gameId,
+      game_mode: 'round_robin' as const,
+      mode_config: game.mode_config,
+    },
+    players: gwp.players
+      .filter((p) => p.users != null)
+      .map((p) => ({
+        userId: p.user_id,
+        // Round Robin-validatoren håndhever team_number ∈ {1, 2, 3, 4} med
+        // unike verdier (slot A/B/C/D). Sendes som-er til scoring-laget som
+        // bruker det for å bestemme rotasjons-konstellasjon per segment.
+        teamNumber: p.team_number ?? 0,
+        flightNumber: null,
+        courseHandicap: p.course_handicap ?? 0,
+        teeGender: p.tee_gender,
+      })),
+    holes: rawHolesRows.map((h) => ({
+      number: h.hole_number,
+      par: h.par_mens,
+      parByGender: {
+        mens: h.par_mens,
+        ladies: h.par_ladies,
+        juniors: h.par_juniors,
+      },
+      strokeIndex: h.stroke_index,
+    })),
+    scores: rawScoresRows.map((s) => ({
+      userId: s.user_id,
+      holeNumber: s.hole_number,
+      gross: s.strokes,
+    })),
+  };
+
+  const result = computeModeResult(ctx);
+  if (result.kind !== 'round_robin') {
+    notFound();
+  }
+
+  const playersById = new Map<string, RoundRobinPlayerInfo>();
+  for (const p of gwp.players) {
+    if (p.users == null) continue;
+    playersById.set(p.user_id, {
+      name: p.users.name ?? '(ukjent)',
+      nickname: p.users.nickname,
+    });
+  }
+
+  // Score-visibility normaliseres til 'live' | 'reveal' for view-en.
+  const scoreVisibility: 'live' | 'reveal' =
+    game.score_visibility === 'reveal' ? 'reveal' : 'live';
+
+  // Finished → RoundRobinPodium på toppen + RoundRobinView under (chromeless,
+  // så bare én outer shell). Active/scheduled → RoundRobinView alene.
+  if (game.status === 'finished') {
+    return (
+      <>
+        <RoundRobinPodium
+          gameId={gameId}
+          gameName={game.name}
+          result={result}
+          playersById={playersById}
+          backHref={backHref}
+        />
+        <RoundRobinView
+          gameId={gameId}
+          gameName={game.name}
+          result={result}
+          playersById={playersById}
+          scoreVisibility={scoreVisibility}
+          gameStatus={game.status}
+          backHref={backHref}
+          chromeless
+        />
+      </>
+    );
+  }
+
+  return (
+    <RoundRobinView
       gameId={gameId}
       gameName={game.name}
       result={result}
