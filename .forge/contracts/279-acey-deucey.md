@@ -231,7 +231,7 @@ values
 - [x] **`lib/scoring/modes/aceyDeucey.test.ts`** — Type A: unik ace+deuce, delt lavest/høyest, begge delt, alle like, tre-veis ties, uferdig hull (no-freeze), netto vs brutto flip, negativ total, aces-tiebreak. **16/16 grønne** (59b4ebb + tiebreak-fix 90730fd).
 - [x] **`lib/scoring/index.ts`** har `acey_deucey`-case + type-re-eksport. (59b4ebb)
 - [x] **`lib/scoring/modes/types.ts`** har AceyDeucey-typene + utvidet `GameMode`/`GameModeConfig`/`ModeResult`/`MODE_LABELS`. (59b4ebb)
-- [x] **`lib/games/gamePayload.ts`** har `validateAceyDeucey` (eksakt 4, brutto/netto) wired i `parseGameMode` + `modeValidators`; `gamePayload.test.ts` **171/171** (8 nye: 3 avvist, 4 ok, 5 avvist, gross/net-parse). (59b4ebb)
+- [x] **`lib/games/gamePayload.ts`** har `validateAceyDeucey` (eksakt 4, brutto/netto) wired i `parseGameMode` + `modeValidators`; `gamePayload.test.ts` **155/155** (8 nye: 3 avvist, 4 ok, 5 avvist, gross/net-parse). (59b4ebb)
 - [x] **`lib/formats/modeGuide.ts`** har `acey_deucey`-entry i `MODE_GUIDE`. (59b4ebb)
 - [x] **Wizard** rendrer brutto/netto-bryteren for acey_deucey (`AceyDeuceySetup.tsx`, default netto). Felt-navn `acey_deucey_scoring` verifisert ende-til-ende: wizard-radio → FormData → `parseAceyDeuceyScoring` → `validateAceyDeucey` → `mode_config` (7dbeec1).
 - [x] **`AceyDeuceyView.tsx`** viser per-spiller totaler (med fortegn) + per-hull ace/deuce-tabell («Delt»/«Venter») fra fixture (Type C render-test); **`AceyDeuceyPodium.tsx`** viser 1/2/3 (6f3058b).
