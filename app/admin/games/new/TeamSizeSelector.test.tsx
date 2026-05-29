@@ -3,42 +3,51 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { TeamSizeSelector } from './TeamSizeSelector';
 
 describe('TeamSizeSelector', () => {
-  it('rendrer tre tiles: Solo / Par / 4-mann i et radiogroup', () => {
+  it('rendrer tre tiles for stableford: Solo / 4BBB / 4-mann i et radiogroup', () => {
     render(<TeamSizeSelector mode="stableford" value={1} onChange={() => {}} />);
 
     expect(
       screen.getByRole('group', { name: /velg lagstørrelse/i }),
     ).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /solo/i })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /par/i })).toBeInTheDocument();
+    // Stableford-familien: team_size 2 vises som «4BBB», ikke «Par» (#282).
+    expect(screen.getByRole('radio', { name: /4bbb/i })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /4-mann/i })).toBeInTheDocument();
   });
 
-  it('Stableford: Solo + Par aktiv, 4-mann disabled med "kommer snart"', () => {
-    // Par ble aktivert i epic #43 fase 2 (par-stableford / 4BBB). 4-mann
-    // er fortsatt grayed-out per roadmap.
+  it('Stableford: Solo + 4BBB aktiv, 4-mann disabled med "kommer snart"', () => {
+    // 4BBB (team_size 2) ble aktivert i epic #43 fase 2. 4-mann er fortsatt
+    // grayed-out per roadmap.
     render(<TeamSizeSelector mode="stableford" value={1} onChange={() => {}} />);
 
     const solo = screen.getByRole('radio', { name: /solo/i });
-    const par = screen.getByRole('radio', { name: /par/i });
+    const fourbb = screen.getByRole('radio', { name: /4bbb/i });
     const fourMann = screen.getByRole('radio', { name: /4-mann/i });
 
     expect(solo).not.toBeDisabled();
-    expect(par).not.toBeDisabled();
+    expect(fourbb).not.toBeDisabled();
     expect(fourMann).toBeDisabled();
 
     // "Kommer snart" kun på 4-mann nå.
     expect(screen.getAllByText(/kommer snart/i)).toHaveLength(1);
   });
 
-  it('Stableford + Par aktiveres: caller onChange(2) når Par-tile klikkes', () => {
+  it('Stableford + 4BBB aktiveres: caller onChange(2) når 4BBB-tile klikkes', () => {
     const onChange = vi.fn();
     render(
       <TeamSizeSelector mode="stableford" value={1} onChange={onChange} />,
     );
 
-    fireEvent.click(screen.getByRole('radio', { name: /par/i }));
+    fireEvent.click(screen.getByRole('radio', { name: /4bbb/i }));
     expect(onChange).toHaveBeenCalledWith(2);
+  });
+
+  it('Best ball beholder «Par»-label (ikke 4BBB) for team_size 2 (#282)', () => {
+    render(<TeamSizeSelector mode="best_ball" value={2} onChange={() => {}} />);
+    expect(screen.getByRole('radio', { name: /par/i })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('radio', { name: /4bbb/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('Stableford: 4-mann er fortsatt disabled og ignorerer klikk', () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import type { GameMode } from '@/lib/scoring/modes/types';
+import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 
 /**
  * Kanoniske lagstørrelser som UI-en kjenner til. Holdes som union for å gi
@@ -82,11 +82,23 @@ type TileDef = {
   hint: string;
 };
 
-const TILES: TileDef[] = [
-  { size: 1, title: 'Solo', hint: '1 spiller' },
-  { size: 2, title: 'Par', hint: '2 spillere' },
-  { size: 4, title: '4-mann', hint: '4 spillere' },
-];
+/**
+ * Tiles for en gitt modus. Size-2-tilen er mode-bevisst: for stableford-
+ * familien ER team_size 2 nettopp 4BBB (beste poeng per hull teller), så den
+ * vises som «4BBB» med forklarende hint i stedet for et kryptisk «Par» (#282).
+ * Andre lag-moduser (best ball, texas, fourball, foursomes) er IKKE 4BBB-
+ * stableford og beholder «Par».
+ */
+function tilesForMode(mode: GameMode): TileDef[] {
+  const teamTile: TileDef = isStablefordFamily(mode)
+    ? { size: 2, title: '4BBB', hint: 'Lag à 2, beste poeng teller' }
+    : { size: 2, title: 'Par', hint: '2 spillere' };
+  return [
+    { size: 1, title: 'Solo', hint: '1 spiller' },
+    teamTile,
+    { size: 4, title: '4-mann', hint: '4 spillere' },
+  ];
+}
 
 /**
  * Lagstørrelse-velger — tre tiles (Solo / Par / 4-mann) der den aktive
@@ -106,6 +118,7 @@ export function TeamSizeSelector({
   disabled = false,
 }: Props) {
   const enabledSet = ENABLED_COMBOS[mode];
+  const tiles = tilesForMode(mode);
 
   return (
     <fieldset disabled={disabled}>
@@ -113,7 +126,7 @@ export function TeamSizeSelector({
         Velg lagstørrelse
       </legend>
       <div role="radiogroup" className="mt-2 grid grid-cols-3 gap-3">
-        {TILES.map((tile) => {
+        {tiles.map((tile) => {
           const isEnabled = enabledSet.has(tile.size);
           const selected = value === tile.size;
           const tileDisabled = disabled || !isEnabled;

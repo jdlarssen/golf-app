@@ -295,7 +295,8 @@ describe('GameForm — par-stableford (epic #43 fase 2)', () => {
    */
   function selectParStableford() {
     fireEvent.click(screen.getByRole('radio', { name: /stableford/i }));
-    fireEvent.click(screen.getByRole('radio', { name: /par/i }));
+    // Stableford-familiens team_size-2-tile er merket «4BBB» (#282), ikke «Par».
+    fireEvent.click(screen.getByRole('radio', { name: /4bbb/i }));
   }
 
   it('hidden input stableford_team_size = 2 når mode=stableford + par', () => {
@@ -326,8 +327,8 @@ describe('GameForm — par-stableford (epic #43 fase 2)', () => {
       ) as HTMLInputElement).value,
     ).toBe('1');
 
-    // Klikk Par → stableford_team_size=2.
-    fireEvent.click(screen.getByRole('radio', { name: /par/i }));
+    // Klikk 4BBB → stableford_team_size=2.
+    fireEvent.click(screen.getByRole('radio', { name: /4bbb/i }));
     expect(
       (container.querySelector(
         'input[type="hidden"][name="stableford_team_size"]',
