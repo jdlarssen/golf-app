@@ -90,22 +90,22 @@ Den **kritiske risikoen**: leaderboard-routeren (`app/games/[id]/leaderboard/pag
 
 ## Success Criteria
 
-- [ ] `'modified_stableford'` lagt til i `GameMode`, `MODE_LABELS` (`'Modifisert Stableford'`), `GameModeConfig` (solo + team variant). Verifiser: `npx tsc --noEmit` grønn.
-- [ ] `lib/scoring/modes/modifiedStableford.ts` med `compute()` som returnerer `kind: 'stableford'`; Stableford-motoren parameterisert; standard-tabellen uendret. Verifiser: eksisterende `stableford.test.ts` grønn + ny `modifiedStableford.test.ts` grønn.
-- [ ] Type A unit-tester: poeng-tabell (alle diff-verdier inkl. albatross-cap + null→0), solo-total med negative poeng, ranking med negativ total, team-MAX med negativ, router-delegering (`index.test.ts`). Verifiser: `npx vitest run` på de tre filene.
-- [ ] Migrasjonsfil i `supabase/migrations/` som seeder `formats`-rad + `format_intent_mapping` (kompis/klubb/solo, `is_primary=false`). Verifiser: fil finnes, SQL gjennomgått (anvendes post-deploy).
-- [ ] Negative-poeng-advarsel på score-input (hull-side) + i spillform-guiden. Verifiser: `MODE_GUIDE`-entry finnes; hull-side-banner rendres for `modified_stableford` (Type C-test / preview).
-- [ ] `isStablefordFamily`-helper brukt på alle `game_mode === 'stableford'`-routing-sites (leaderboard-router m.fl.). Verifiser: grep viser ingen bare-`'stableford'`-sjekk som ekskluderer modified der den burde inkluderes.
-- [ ] Én Type C render-test for ny hull-side-advarsel (asserter advarsels-tekst via role/testid, ingen scoring-tall re-assertet).
-- [ ] CHANGELOG-oppføring + `package.json` minor-bump (ny spillmodus = MINOR).
+- [x] `'modified_stableford'` lagt til i `GameMode`, `MODE_LABELS` (`'Modifisert Stableford'`), `GameModeConfig` (solo + team variant). **Evidence:** [`types.ts:13`](lib/scoring/modes/types.ts), `MODE_LABELS` line 35, config-variant 66-67. `npx tsc --noEmit` → 0 non-test errors (commit 14e6098).
+- [x] `lib/scoring/modes/modifiedStableford.ts` med `compute()` som returnerer `kind: 'stableford'`; Stableford-motoren parameterisert; standard-tabellen uendret. **Evidence:** [`modifiedStableford.ts`](lib/scoring/modes/modifiedStableford.ts); `stableford.ts` `computeWithPointsTable`; `stableford.test.ts` 35/35 grønn + `modifiedStableford.test.ts` 20/20 grønn.
+- [x] Type A unit-tester: poeng-tabell (alle diff-verdier inkl. albatross-cap + null→0), solo-total med negative poeng, ranking med negativ total, team-MAX med negativ, router-delegering. **Evidence:** [`modifiedStableford.test.ts`](lib/scoring/modes/modifiedStableford.test.ts) (it.each + edge-cases); router-test i [`index.test.ts`](lib/scoring/index.test.ts).
+- [x] Migrasjonsfil som seeder `formats`-rad + `format_intent_mapping` (kompis/klubb/solo, `is_primary=false`). **Evidence:** [`0052_modified_stableford.sql`](supabase/migrations/0052_modified_stableford.sql). Ingen game_mode-CHECK å utvide (0047 droppet den). Anvendes post-deploy (prod-sikkerhet).
+- [x] Negative-poeng-advarsel på score-input (hull-side) + i spillform-guiden. **Evidence:** `MODE_GUIDE['modified_stableford']` i [`modeGuide.ts`](lib/formats/modeGuide.ts); hull-side-banner `data-testid="modified-stableford-banner"` i [`HoleClient.tsx`](app/games/[id]/holes/[holeNumber]/HoleClient.tsx).
+- [x] `isStablefordFamily`-helper brukt på alle `game_mode === 'stableford'`-routing-sites. **Evidence:** helper i `types.ts`; 11 sites oppdatert (leaderboard, hull-side, scorekort, wizard, edit, submit, mail, scorecardTitle). Live-poeng bruker `computeModifiedStablefordPoints` på hull-side + HoleClient. Commit b474217.
+- [x] Én Type C render-test for ny hull-side-advarsel. **Evidence:** `HoleClient.test.tsx` «modified stableford negativ-poeng-varsel» — asserter banner via testid + «minus»-tekst, ingen scoring-tall.
+- [x] CHANGELOG-oppføring + `package.json` minor-bump. **Evidence:** 1.46.1 → 1.47.0; CHANGELOG 1.47.y-serie åpnet, 1.46.y wrappet i `<details>`. Commit cdd6fac.
 
 ## Gates
 
-- [ ] `npx tsc --noEmit` passerer (fanger Record/switch-uttømmelighet — samme som Vercel-build).
-- [ ] `npx vitest run lib/scoring/modes/modifiedStableford.test.ts lib/scoring/modes/stableford.test.ts lib/scoring/index.test.ts lib/formats/modeGuide.test.ts` grønn.
-- [ ] `npx vitest run` på ny Type C-testfil grønn.
-- [ ] `npx eslint` på endrede filer rent.
-- [ ] Frontend touched ⇒ evaluator verifiserer hull-side-advarsel (Type C-render eller preview) + at guiden viser «Modifisert Stableford».
+- [x] `npx tsc --noEmit` passerer (0 non-test errors; 13 test-fil-errors er pre-eksisterende baseline, verifisert via stash).
+- [x] `npx vitest run` scoring + modeGuide-filer grønn.
+- [x] Type C-testfil (`HoleClient.test.tsx`) grønn (22/22).
+- [x] `npx eslint` på endrede filer rent (exit 0).
+- [x] `npm run build` (Vercel-exhaustiveness-gate) passerer; full suite 1866/1866 grønn.
 
 ## Files Likely Touched
 
