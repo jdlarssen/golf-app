@@ -11,7 +11,7 @@ import type { SendArgs, SendResult } from './_helpers';
 // vi.mock-registreringen hoistes til toppen av denne filen av Vitest, så
 // selve mock-oppsettet ligger her (ikke i _helpers.ts — se kommentar der).
 //
-// Dekker alle 7 aktive mail-sendere i lib/mail/. Per-modul-testene beholder
+// Dekker alle 10 aktive mail-sendere i lib/mail/. Per-modul-testene beholder
 // fortsatt sin egen Resend-mock for å snapshot-e copy/HTML — denne fila
 // kompletterer dem ved å samle de strukturelle kontraktene ett sted.
 
@@ -124,6 +124,57 @@ const senders = [
         periodLabel: 'mai 2026',
         updates: [{ title: 'X', body: 'Y' }],
         unsubToken: 'tok',
+      });
+    },
+  },
+  {
+    name: 'sendScorecardSubmittedNotification',
+    invoke: async () => {
+      const { sendScorecardSubmittedNotification } = await import(
+        '../scorecardSubmittedNotification'
+      );
+      return sendScorecardSubmittedNotification({
+        to: 'admin@example.com',
+        adminFirstName: 'Jørgen',
+        playerName: 'Per Spiller',
+        gameName: 'Sommercup 2026',
+        gameId: '11111111-1111-1111-1111-111111111111',
+      });
+    },
+  },
+  {
+    name: 'sendCupStartedNotification',
+    invoke: async () => {
+      const { sendCupStartedNotification } = await import(
+        '../cupStartedNotification'
+      );
+      return sendCupStartedNotification({
+        to: 'spiller@example.com',
+        playerFirstName: 'Per',
+        tournamentName: 'Høst-cup 2026',
+        tournamentId: '22222222-2222-2222-2222-222222222222',
+        team1Name: 'Bjørketrærne',
+        team2Name: 'Granskogen',
+        pointsToWin: 10,
+      });
+    },
+  },
+  {
+    name: 'sendCupFinishedNotification',
+    invoke: async () => {
+      const { sendCupFinishedNotification } = await import(
+        '../cupFinishedNotification'
+      );
+      return sendCupFinishedNotification({
+        to: 'spiller@example.com',
+        playerFirstName: 'Per',
+        tournamentName: 'Høst-cup 2026',
+        tournamentId: '33333333-3333-3333-3333-333333333333',
+        team1Name: 'Bjørketrærne',
+        team2Name: 'Granskogen',
+        team1Points: 3,
+        team2Points: 2,
+        winnerTeamName: 'Bjørketrærne',
       });
     },
   },
