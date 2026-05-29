@@ -227,6 +227,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   const stablefordPointsFn = gameMode === 'modified_stableford'
     ? computeModifiedStablefordPoints
     : computeStablefordPoints;
+  const isModifiedStableford = gameMode === 'modified_stableford';
   const isWolf = gameMode === 'wolf';
   const isSkins = gameMode === 'skins';
   // Texas scramble: ett kort per lag (server bygger players-array med
@@ -613,6 +614,32 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
       />
 
       <OnboardingBanner visible={showHint} onDismiss={dismissHint} />
+
+      {/* Modified stableford (#281): diskret påminnelse om at poengene kan gå
+          i minus. Den fulle tabellen står i spillform-guiden på spill-hjem;
+          her holder vi det til en rask, ikke-blokkerende linje over score-
+          input. Informativ tone, ikke alarmerende. */}
+      {isModifiedStableford && (
+        <div
+          data-testid="modified-stableford-banner"
+          style={{
+            margin: '0 14px 8px',
+            padding: '10px 14px',
+            borderRadius: 12,
+            border: '1px solid var(--border)',
+            background: 'var(--surface)',
+            fontFamily: 'var(--font-sans)',
+            fontSize: 12.5,
+            fontWeight: 500,
+            color: 'var(--text-muted)',
+            textAlign: 'center',
+            lineHeight: 1.4,
+          }}
+        >
+          Poengene kan gå i minus i denne formen. Dobbeltbogey eller verre
+          trekker 3, så sats på birdie.
+        </div>
+      )}
 
       {isWolf && wolfBadgeText && (
         <div

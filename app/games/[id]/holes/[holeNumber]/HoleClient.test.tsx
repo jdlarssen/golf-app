@@ -337,3 +337,19 @@ describe('HoleClient — stableford-modus', () => {
     expect(helpers[0].textContent).toBe('Netto 4');
   });
 });
+
+describe('HoleClient — modified stableford negativ-poeng-varsel (#281)', () => {
+  it('viser minus-poeng-banner når gameMode=modified_stableford, ikke for standard stableford', () => {
+    const { rerender } = render(
+      <HoleClient {...baseProps({ gameMode: 'modified_stableford' })} />,
+    );
+    const banner = screen.getByTestId('modified-stableford-banner');
+    expect(banner).toBeInTheDocument();
+    expect(banner.textContent).toContain('minus');
+
+    rerender(<HoleClient {...baseProps({ gameMode: 'stableford' })} />);
+    expect(
+      screen.queryByTestId('modified-stableford-banner'),
+    ).not.toBeInTheDocument();
+  });
+});
