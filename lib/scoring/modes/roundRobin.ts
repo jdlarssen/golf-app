@@ -105,6 +105,60 @@ function opponentsInSegment(
 }
 
 // ---------------------------------------------------------------------------
+// Offentlig pure helper for badge-visning (brukt av RoundRobinBadge)
+// ---------------------------------------------------------------------------
+
+export interface RoundRobinConstellationPlayer {
+  userId: string;
+  name: string;
+  teamNumber: number;
+}
+
+export interface RoundRobinConstellationResult {
+  segment: 1 | 2 | 3;
+  partnerUserId: string;
+  opponentUserIds: [string, string];
+}
+
+/**
+ * Returnerer konstellasjonen (segment + partner + motstandere) for en gitt
+ * spiller på et gitt hull. Ren funksjon — ingen bieffekter.
+ *
+ * Brukes av `RoundRobinBadge` til å vise «Segment {n}/3 · Du spiller med
+ * {partner} mot {opp1} + {opp2}» uten å duplisere rotasjonslogikken.
+ *
+ * Returnerer `null` hvis spilleroppsettet er ugyldig (≠ 4 spillere med
+ * unike slots 1–4) eller hvis `myUserId` ikke finnes i listen.
+ */
+export function roundRobinConstellationForHole(
+  holeNumber: number,
+  players: RoundRobinConstellationPlayer[],
+  myUserId: string,
+): RoundRobinConstellationResult | null {
+  const slots = new Set(players.map((p) => p.teamNumber));
+  if (
+    players.length !== 4 ||
+    slots.size !== 4 ||
+    ![1, 2, 3, 4].every((s) => slots.has(s))
+  ) {
+    return null;
+  }
+
+  const me = players.find((p) => p.userId === myUserId);
+  if (!me) return null;
+
+  const slotToUserId = new Map<number, string>(
+    players.map((p) => [p.teamNumber, p.userId]),
+  );
+
+  const segment = segmentForHole(holeNumber);
+  const partnerUserId = partnerInSegment(segment, me.teamNumber, slotToUserId);
+  const opponentUserIds = opponentsInSegment(segment, me.teamNumber, slotToUserId);
+
+  return { segment, partnerUserId, opponentUserIds };
+}
+
+// ---------------------------------------------------------------------------
 // Defensiv empty-shell
 // ---------------------------------------------------------------------------
 

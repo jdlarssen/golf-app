@@ -9,7 +9,8 @@
 // Rangering: totalHoleWins DESC → totalHolesLost ASC → teamNumber ASC.
 
 import { describe, it, expect } from 'vitest';
-import { compute } from './roundRobin';
+import { compute, roundRobinConstellationForHole } from './roundRobin';
+import type { RoundRobinConstellationPlayer } from './roundRobin';
 import type { ScoringContext, ScoringPlayer, ScoringHole, ScoringHoleScore } from './types';
 
 // ---------------------------------------------------------------------------
@@ -744,5 +745,67 @@ describe('compute — output-shape', () => {
     const result = compute(makeCtx(makePlayers(), []));
     const aLine = result.players.find((p) => p.userId === 'A')!;
     expect(aLine.teamNumber).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 10. roundRobinConstellationForHole — badge-helper
+// ---------------------------------------------------------------------------
+
+describe('roundRobinConstellationForHole', () => {
+  const players: RoundRobinConstellationPlayer[] = [
+    { userId: 'A', teamNumber: 1, name: 'Arne' },
+    { userId: 'B', teamNumber: 2, name: 'Bjørn' },
+    { userId: 'C', teamNumber: 3, name: 'Kari' },
+    { userId: 'D', teamNumber: 4, name: 'Ola' },
+  ];
+
+  it('seg1 hull 1: A har partner B og motstandere C+D', () => {
+    const result = roundRobinConstellationForHole(1, players, 'A');
+    expect(result).not.toBeNull();
+    expect(result!.segment).toBe(1);
+    expect(result!.partnerUserId).toBe('B');
+    expect(new Set(result!.opponentUserIds)).toEqual(new Set(['C', 'D']));
+  });
+
+  it('seg2 hull 7: A har partner C og motstandere B+D', () => {
+    const result = roundRobinConstellationForHole(7, players, 'A');
+    expect(result!.segment).toBe(2);
+    expect(result!.partnerUserId).toBe('C');
+    expect(new Set(result!.opponentUserIds)).toEqual(new Set(['B', 'D']));
+  });
+
+  it('seg3 hull 13: A har partner D og motstandere B+C', () => {
+    const result = roundRobinConstellationForHole(13, players, 'A');
+    expect(result!.segment).toBe(3);
+    expect(result!.partnerUserId).toBe('D');
+    expect(new Set(result!.opponentUserIds)).toEqual(new Set(['B', 'C']));
+  });
+
+  it('seg1 sett fra D sin synsvinkel: D har partner C og motstandere A+B', () => {
+    const result = roundRobinConstellationForHole(3, players, 'D');
+    expect(result!.segment).toBe(1);
+    expect(result!.partnerUserId).toBe('C');
+    expect(new Set(result!.opponentUserIds)).toEqual(new Set(['A', 'B']));
+  });
+
+  it('returnerer null når myUserId ikke finnes i listen', () => {
+    expect(roundRobinConstellationForHole(1, players, 'X')).toBeNull();
+  });
+
+  it('returnerer null ved ugyldig oppsett (3 spillere)', () => {
+    expect(
+      roundRobinConstellationForHole(1, players.slice(0, 3), 'A'),
+    ).toBeNull();
+  });
+
+  it('returnerer null ved duplikate slots', () => {
+    const bad: RoundRobinConstellationPlayer[] = [
+      { userId: 'A', teamNumber: 1, name: 'Arne' },
+      { userId: 'B', teamNumber: 1, name: 'Bjørn' }, // duplikat slot 1
+      { userId: 'C', teamNumber: 3, name: 'Kari' },
+      { userId: 'D', teamNumber: 4, name: 'Ola' },
+    ];
+    expect(roundRobinConstellationForHole(1, bad, 'A')).toBeNull();
   });
 });

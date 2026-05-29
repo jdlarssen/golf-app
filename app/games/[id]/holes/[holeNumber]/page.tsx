@@ -104,6 +104,7 @@ export default async function HolePage({ params }: { params: Params }) {
   const isWolf = game.game_mode === 'wolf';
   const isSkins = game.game_mode === 'skins';
   const isBBB = game.game_mode === 'bingo_bango_bongo';
+  const isRoundRobin = game.game_mode === 'round_robin';
 
   // Round 2 — hole row, flight scores and the user's completed-hole count.
   // All three are independent and can run in parallel:
@@ -491,6 +492,19 @@ export default async function HolePage({ params }: { params: Params }) {
     });
   }
 
+  // Round Robin: bygg spillerliste med teamNumber + visningsnavn for badge.
+  // Speiler wolfPlayersForClient-mønstret — samme datakilde (allPlayers),
+  // ingen ekstra fetch nødvendig.
+  const roundRobinPlayersForClient = isRoundRobin
+    ? allPlayers
+        .filter((p) => p.team_number != null)
+        .map((p) => ({
+          userId: p.user_id,
+          teamNumber: p.team_number as number,
+          name: p.users?.nickname?.trim() || p.users?.name || '(ukjent spiller)',
+        }))
+    : undefined;
+
   // Foursomes (#218): tee-starter-banner på hull 1 hvis ikke valgt; hint per
   // hull etter at valget er gjort. Begrenset til foursomes-modus + me's side.
   let foursomesTeeSlot: ReactNode = null;
@@ -568,6 +582,7 @@ export default async function HolePage({ params }: { params: Params }) {
         skinsAtStake={skinsAtStake}
         skinsCarriedIn={skinsCarriedIn}
         bingoBangoBongoHoles={isBBB ? (bbbHolesData as BingoBangoBongoHoleInput[]) : undefined}
+        roundRobinPlayers={roundRobinPlayersForClient}
         players={playersForClient}
       />
     </div>

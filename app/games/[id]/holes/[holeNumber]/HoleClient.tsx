@@ -36,7 +36,9 @@ import { subscribeWolfChoices } from '@/lib/wolf/subscribeWolfChoices';
 import { subscribeBingoBangoBongo } from '@/lib/bbb/subscribeBingoBangoBongo';
 import { WolfChoiceModal } from './WolfChoiceModal';
 import { BingoBangoBongoEntry } from './BingoBangoBongoEntry';
+import { RoundRobinBadge } from './RoundRobinBadge';
 import { determineWolfForHole } from './wolfRotation';
+import type { RoundRobinConstellationPlayer } from '@/lib/scoring/modes/roundRobin';
 
 export type ClientPlayer = {
   userId: string;
@@ -141,6 +143,12 @@ export interface HoleClientProps {
    * client state. Empty array = ingen rader ennå.
    */
   bingoBangoBongoHoles?: BingoBangoBongoHoleInput[];
+  /**
+   * Round Robin-modus: de 4 spillerne med teamNumber 1-4 og visningsnavn.
+   * Brukes til å beregne og vise partner-konstellasjon-badge per hull.
+   * Kun satt når gameMode === 'round_robin'.
+   */
+  roundRobinPlayers?: RoundRobinConstellationPlayer[];
   players: ClientPlayer[];
 }
 
@@ -230,6 +238,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     skinsAtStake,
     skinsCarriedIn,
     bingoBangoBongoHoles: bingoBangoBongoHolesInitial,
+    roundRobinPlayers,
     players,
   } = props;
 
@@ -241,6 +250,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   const isWolf = gameMode === 'wolf';
   const isSkins = gameMode === 'skins';
   const isBBB = gameMode === 'bingo_bango_bongo';
+  const isRoundRobin = gameMode === 'round_robin';
   // Texas scramble: ett kort per lag (server bygger players-array med
   // ÉN entry der userId = lag-kapteinens userId). Lookup-er som matcher
   // mot myUserId må derfor falle tilbake til lag-kortet for non-captain-
@@ -728,6 +738,14 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
             </div>
           )}
         </div>
+      )}
+
+      {isRoundRobin && roundRobinPlayers && (
+        <RoundRobinBadge
+          holeNumber={currentHole}
+          players={roundRobinPlayers}
+          myUserId={myUserId}
+        />
       )}
 
       <div style={listStyle}>
