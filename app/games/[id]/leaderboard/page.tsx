@@ -52,6 +52,9 @@ import { TexasScramblePodium } from './TexasScramblePodium';
 import { WolfView, type WolfPlayerInfo } from './WolfView';
 import { WolfPodium } from './WolfPodium';
 import { getWolfChoices } from '@/lib/wolf/getWolfChoices';
+import { BingoBangoBongoView, type BingoBangoBongoPlayerInfo } from './BingoBangoBongoView';
+import { BingoBangoBongoPodium } from './BingoBangoBongoPodium';
+import { getBingoBangoBongoHoles } from '@/lib/bbb/getBingoBangoBongoHoles';
 import { NassauView, type NassauPlayerInfo } from './NassauView';
 import { NassauPodium } from './NassauPodium';
 import { SkinsView, type SkinsPlayerInfo } from './SkinsView';
@@ -411,6 +414,22 @@ async function LeaderboardBody({
   // score_visibility='reveal' og status='active').
   if (game.game_mode === 'skins') {
     return renderSkins({
+      gameId,
+      game,
+      gwp,
+      rawHolesRows: rawHolesRes.data ?? [],
+      rawScoresRows: rawScoresRes.data ?? [],
+      backHref,
+    });
+  }
+
+  // Bingo Bango Bongo (issue #277): tre prestasjons-poeng per hull (bingo/
+  // bango/bongo). Per-hull-data lagres i `bingo_bango_bongo_holes`-tabellen og
+  // injectes i ScoringContext via `bingoBangoBongoHoles`-feltet — nøyaktig
+  // Wolf-mønstret. Live-view håndterer reveal-modus internt (skjuler totaler
+  // når score_visibility='reveal' og status='active').
+  if (game.game_mode === 'bingo_bango_bongo') {
+    return renderBingoBangoBongo({
       gameId,
       game,
       gwp,
@@ -2202,6 +2221,142 @@ function renderSkins(opts: {
 
   return (
     <SkinsView
+      gameId={gameId}
+      gameName={game.name}
+      result={result}
+      playersById={playersById}
+      scoreVisibility={scoreVisibility}
+      gameStatus={game.status}
+      backHref={backHref}
+    />
+  );
+}
+
+/**
+ * Bingo Bango Bongo-grenen (issue #277) — henter per-hull-data fra
+ * `bingo_bango_bongo_holes`-tabellen, bygger ScoringContext, kjører mode-router-
+ * en og velger view per `game.status`:
+ *
+ *   - `finished` → BingoBangoBongoPodium på toppen + BingoBangoBongoView under
+ *     (chromeless, så bare én outer shell). Speiler Wolf-finished-pattern.
+ *   - alt annet (active/scheduled) → BingoBangoBongoView alene: per-spiller-
+ *     tabell med Bingo/Bango/Bongo/Sum. View-en håndterer reveal-modus internt
+ *     (skjuler totaler når score_visibility='reveal' og status='active').
+ *
+ * Slag (`rawScoresRows`) sendes gjennom til scoring-laget selv om BBB-compute
+ * ignorerer dem — holder ScoringContext-shapen konsistent og lar fremtidige
+ * sekundær-leaderboards gjenbruke slag-dataen uten ny DB-query.
+ */
+async function renderBingoBangoBongo(opts: {
+  gameId: string;
+  game: GameForHole;
+  gwp: {
+    players: {
+      user_id: string;
+      team_number: number;
+      users: { name: string | null; nickname: string | null } | null;
+      course_handicap: number | null;
+      tee_gender: TeeGender;
+    }[];
+  };
+  rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
+  rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
+  backHref: string;
+}) {
+  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
+
+  // Per-hull-prestasjonsdata fra bingo_bango_bongo_holes. Tag-cachet på
+  // `game-${id}`, samme cache-tag som getGameWithPlayers — setBingoBangoBongoHole-
+  // mutasjons-action revaliderer den ved hver endring.
+  const bingoBangoBongoHoles = await getBingoBangoBongoHoles(gameId);
+
+  const ctx = {
+    game: {
+      id: gameId,
+      game_mode: 'bingo_bango_bongo' as const,
+      mode_config: game.mode_config,
+    },
+    players: gwp.players
+      .filter((p) => p.users != null)
+      .map((p) => ({
+        userId: p.user_id,
+        // BBB-validatoren setter team_number = null (solo/individuell), men
+        // DB-kolonnen er ikke nullable så den lander som 0. Sender null oppover
+        // for shape-konsistens — scoring-laget ignorerer teamNumber for BBB.
+        teamNumber: null,
+        flightNumber: null,
+        courseHandicap: p.course_handicap ?? 0,
+        // BBB bruker ikke handicap til poeng-beregning, men sender teeGender
+        // gjennom for shape-konsistens.
+        teeGender: p.tee_gender,
+      })),
+    holes: rawHolesRows.map((h) => ({
+      number: h.hole_number,
+      par: h.par_mens,
+      parByGender: {
+        mens: h.par_mens,
+        ladies: h.par_ladies,
+        juniors: h.par_juniors,
+      },
+      strokeIndex: h.stroke_index,
+    })),
+    scores: rawScoresRows.map((s) => ({
+      userId: s.user_id,
+      holeNumber: s.hole_number,
+      gross: s.strokes,
+    })),
+    bingoBangoBongoHoles,
+  };
+
+  const result = computeModeResult(ctx);
+  // Type-guard mot mode-router-output. Hvis routeren returnerer feil shape
+  // faller vi tilbake til notFound() — sikrere enn å rendre tom UI.
+  if (result.kind !== 'bingo_bango_bongo') {
+    notFound();
+  }
+
+  const playersById = new Map<string, BingoBangoBongoPlayerInfo>();
+  for (const p of gwp.players) {
+    if (p.users == null) continue;
+    playersById.set(p.user_id, {
+      name: p.users.name ?? '(ukjent)',
+      nickname: p.users.nickname,
+    });
+  }
+
+  // Score-visibility normaliseres til 'live' | 'reveal' for view-en.
+  const scoreVisibility: 'live' | 'reveal' =
+    game.score_visibility === 'reveal' ? 'reveal' : 'live';
+
+  // Finished → BingoBangoBongoPodium på toppen + BingoBangoBongoView under
+  // (chromeless, så bare én outer shell). Active/scheduled → BingoBangoBongoView
+  // alene. Speiler Wolf-finished-pattern.
+  if (game.status === 'finished') {
+    return (
+      <>
+        <BingoBangoBongoPodium
+          gameId={gameId}
+          gameName={game.name}
+          result={result}
+          playersById={playersById}
+          backHref={backHref}
+        />
+        <BingoBangoBongoView
+          gameId={gameId}
+          gameName={game.name}
+          result={result}
+          playersById={playersById}
+          scoreVisibility={scoreVisibility}
+          gameStatus={game.status}
+          backHref={backHref}
+          chromeless
+        />
+      </>
+    );
+  }
+
+  return (
+    <BingoBangoBongoView
       gameId={gameId}
       gameName={game.name}
       result={result}

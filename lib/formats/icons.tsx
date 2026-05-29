@@ -152,6 +152,36 @@ function FourballMatchplayIcon({ size = 28 }: { size?: number }) {
   );
 }
 
+// Bingo Bango Bongo: tre poeng per hull (bingo/bango/bongo). Tre sirkler i
+// triangulær arrangering — én per prestasjon. Holder samme språk som de andre
+// tile-ikonene (line-icons, 28x28, stroke=currentColor).
+function BingoBangoBongoIcon({ size = 28 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 28 28"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      {/* Bingo — øverst: første ball på green */}
+      <circle cx="14" cy="7" r="3.5" />
+      {/* Bango — nede til venstre: nærmest hullet */}
+      <circle cx="7.5" cy="20" r="3.5" />
+      {/* Bongo — nede til høyre: først i hull */}
+      <circle cx="20.5" cy="20" r="3.5" />
+      {/* Linjer mellom sirklene */}
+      <line x1="11" y1="9.5" x2="9" y2="17" />
+      <line x1="17" y1="9.5" x2="19" y2="17" />
+      <line x1="11" y1="20" x2="17" y2="20" />
+    </svg>
+  );
+}
+
 // Fallback når en icon_key ikke har en dedikert komponent (nye formats før
 // designet er på plass). Et nøytralt flagg-ikon signaliserer «format» uten
 // å gjette på mekanikken.
@@ -181,6 +211,7 @@ const ICON_MAP: Record<string, (props: { size?: number }) => ReactNode> = {
   solo_strokeplay: StrokeplayIcon,
   texas_scramble: TexasScrambleIcon,
   fourball_matchplay: FourballMatchplayIcon,
+  bingo_bango_bongo: BingoBangoBongoIcon,
 };
 
 export function formatIconFor(iconKey: string, size = 28): ReactNode {
