@@ -4,27 +4,43 @@ import { BackLink } from '@/components/ui/BackLink';
 import { Kicker } from '@/components/ui/Kicker';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ModeGuideCard } from '@/components/ModeGuideCard';
-import type { GameMode } from '@/lib/scoring/modes/types';
+import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 
 export const metadata: Metadata = {
   title: 'Spillformer',
 };
 
+type CatalogEntry = {
+  key: string;
+  mode: GameMode;
+  /**
+   * Valgfri config for variant-bevisste oppføringer. 4BBB Stableford (#282)
+   * deler game_mode med solo-Stableford, så den får en egen katalog-rad med
+   * team_size 2 slik at ModeGuideCard viser 4BBB-navn + -forklaring.
+   */
+  modeConfig?: GameModeConfig;
+};
+
 // Pedagogisk rekkefølge: de vanligste klubb-/kompis-formatene først, de mer
 // spesielle veddemåls-/lag-formatene til slutt. Eksplisitt array framfor
 // Object.keys så rekkefølgen er bevisst, ikke avhengig av union-rekkefølge.
-const MODE_ORDER: GameMode[] = [
-  'stableford',
-  'modified_stableford',
-  'solo_strokeplay',
-  'best_ball',
-  'texas_scramble',
-  'singles_matchplay',
-  'fourball_matchplay',
-  'foursomes_matchplay',
-  'nassau',
-  'skins',
-  'wolf',
+const CATALOG: CatalogEntry[] = [
+  { key: 'stableford', mode: 'stableford' },
+  {
+    key: 'stableford-4bbb',
+    mode: 'stableford',
+    modeConfig: { kind: 'stableford', team_size: 2, points_table: 'standard' },
+  },
+  { key: 'modified_stableford', mode: 'modified_stableford' },
+  { key: 'solo_strokeplay', mode: 'solo_strokeplay' },
+  { key: 'best_ball', mode: 'best_ball' },
+  { key: 'texas_scramble', mode: 'texas_scramble' },
+  { key: 'singles_matchplay', mode: 'singles_matchplay' },
+  { key: 'fourball_matchplay', mode: 'fourball_matchplay' },
+  { key: 'foursomes_matchplay', mode: 'foursomes_matchplay' },
+  { key: 'nassau', mode: 'nassau' },
+  { key: 'skins', mode: 'skins' },
+  { key: 'wolf', mode: 'wolf' },
 ];
 
 // Oppslagsverk over alle spillformene (#299). Ren, statisk lærings-ressurs —
@@ -45,8 +61,12 @@ export default function SpillformerPage() {
       />
 
       <div className="space-y-3">
-        {MODE_ORDER.map((mode) => (
-          <ModeGuideCard key={mode} mode={mode} />
+        {CATALOG.map((entry) => (
+          <ModeGuideCard
+            key={entry.key}
+            mode={entry.mode}
+            modeConfig={entry.modeConfig}
+          />
         ))}
       </div>
     </AppShell>
