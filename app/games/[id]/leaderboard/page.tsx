@@ -59,6 +59,8 @@ import { NassauView, type NassauPlayerInfo } from './NassauView';
 import { NassauPodium } from './NassauPodium';
 import { SkinsView, type SkinsPlayerInfo } from './SkinsView';
 import { SkinsPodium } from './SkinsPodium';
+import { NinesView, type NinesPlayerInfo } from './NinesView';
+import { NinesPodium } from './NinesPodium';
 import {
   MatchplayMatchView,
   type MatchplayPlayerInfo,
@@ -430,6 +432,22 @@ async function LeaderboardBody({
   // når score_visibility='reveal' og status='active').
   if (game.game_mode === 'bingo_bango_bongo') {
     return renderBingoBangoBongo({
+      gameId,
+      game,
+      gwp,
+      rawHolesRows: rawHolesRes.data ?? [],
+      rawScoresRows: rawScoresRes.data ?? [],
+      backHref,
+    });
+  }
+
+  // Nines / Split Sixes (issue #278): individuelt 3-spiller-format der poeng
+  // fordeles per hull etter effective-score-rangering. Ingen ny DB-tabell —
+  // ren funksjon av scores (speiler Skins-pattern). Live-view håndterer
+  // reveal-modus internt (skjuler totaler når score_visibility='reveal' og
+  // status='active').
+  if (game.game_mode === 'nines') {
+    return renderNines({
       gameId,
       game,
       gwp,
@@ -2357,6 +2375,131 @@ async function renderBingoBangoBongo(opts: {
 
   return (
     <BingoBangoBongoView
+      gameId={gameId}
+      gameName={game.name}
+      result={result}
+      playersById={playersById}
+      scoreVisibility={scoreVisibility}
+      gameStatus={game.status}
+      backHref={backHref}
+    />
+  );
+}
+
+/**
+ * Nines / Split Sixes-grenen (issue #278) — bygger ScoringContext fra rå-rad-ene,
+ * kjører mode-router-en (`computeModeResult`) og velger view per `game.status`:
+ *
+ *   - `finished` → NinesPodium på toppen + NinesView under (chromeless): feirings-
+ *     podium med poeng-vinner + per-hull-rutenett under.
+ *   - alt annet (active/scheduled) → NinesView alene: spiller-totals + per-hull-
+ *     tabell live. View-en håndterer reveal-modus internt basert på
+ *     `scoreVisibility` + `gameStatus` props.
+ *
+ * Nines trenger ingen ekstra DB-fetch utover scores (poengfordeling er ren funksjon
+ * av scores). Speiler Skins-pattern uten wolfChoices-/bbb-injeksjon.
+ */
+function renderNines(opts: {
+  gameId: string;
+  game: GameForHole;
+  gwp: {
+    players: {
+      user_id: string;
+      team_number: number;
+      users: { name: string | null; nickname: string | null } | null;
+      course_handicap: number | null;
+      tee_gender: TeeGender;
+    }[];
+  };
+  rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
+  rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
+  backHref: string;
+}) {
+  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
+
+  const ctx = {
+    game: {
+      id: gameId,
+      game_mode: 'nines' as const,
+      mode_config: game.mode_config,
+    },
+    players: gwp.players
+      .filter((p) => p.users != null)
+      .map((p) => ({
+        userId: p.user_id,
+        // Nines-validatoren setter team_number = null (solo/individuell), men
+        // DB-kolonnen er ikke nullable så den lander som 0. Sender null oppover
+        // for shape-konsistens — scoring-laget ignorerer teamNumber for Nines.
+        teamNumber: null,
+        flightNumber: null,
+        courseHandicap: p.course_handicap ?? 0,
+        // Nines bruker netto (eller gross, per mode_config.nines_scoring).
+        // Sender teeGender gjennom for shape-konsistens — speiler Skins-pattern.
+        teeGender: p.tee_gender,
+      })),
+    holes: rawHolesRows.map((h) => ({
+      number: h.hole_number,
+      par: h.par_mens,
+      parByGender: {
+        mens: h.par_mens,
+        ladies: h.par_ladies,
+        juniors: h.par_juniors,
+      },
+      strokeIndex: h.stroke_index,
+    })),
+    scores: rawScoresRows.map((s) => ({
+      userId: s.user_id,
+      holeNumber: s.hole_number,
+      gross: s.strokes,
+    })),
+  };
+
+  const result = computeModeResult(ctx);
+  if (result.kind !== 'nines') {
+    notFound();
+  }
+
+  const playersById = new Map<string, NinesPlayerInfo>();
+  for (const p of gwp.players) {
+    if (p.users == null) continue;
+    playersById.set(p.user_id, {
+      name: p.users.name ?? '(ukjent)',
+      nickname: p.users.nickname,
+    });
+  }
+
+  // Score-visibility normaliseres til 'live' | 'reveal' for view-en.
+  const scoreVisibility: 'live' | 'reveal' =
+    game.score_visibility === 'reveal' ? 'reveal' : 'live';
+
+  // Finished → NinesPodium på toppen + NinesView under (chromeless, så bare
+  // én outer shell). Active/scheduled → NinesView alene.
+  if (game.status === 'finished') {
+    return (
+      <>
+        <NinesPodium
+          gameId={gameId}
+          gameName={game.name}
+          result={result}
+          playersById={playersById}
+          backHref={backHref}
+        />
+        <NinesView
+          gameId={gameId}
+          gameName={game.name}
+          result={result}
+          playersById={playersById}
+          scoreVisibility={scoreVisibility}
+          gameStatus={game.status}
+          backHref={backHref}
+          chromeless
+        />
+      </>
+    );
+  }
+
+  return (
+    <NinesView
       gameId={gameId}
       gameName={game.name}
       result={result}

@@ -90,7 +90,8 @@ type GameRow = {
     | 'wolf'
     | 'nassau'
     | 'skins'
-    | 'bingo_bango_bongo';
+    | 'bingo_bango_bongo'
+    | 'nines';
   /**
    * Mode-spesifikk config fra `games.mode_config` (JSONB). Type-en speilet
    * fra `GameForHole` slik at scorecardTitle() kan resolve riktig tittel/
