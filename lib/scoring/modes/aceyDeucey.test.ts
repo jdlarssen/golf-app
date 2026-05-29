@@ -476,90 +476,43 @@ describe('aceyDeucey.compute — ranking and tiebreak', () => {
     expect(p('u4').rank).toBe(4);
   });
 
-  it('total desc tiebreak: more aces wins when totals match but aces differ', () => {
-    // Design a 2-hole scenario where u1 and u2 both have total=3, but u1 has 2 aces.
-    // Hole 1: u1 ace (+3), u3 deuce (−3). Hole 2: u2 ace (+3), u3 deuce (−3).
-    // But to give u1 2 aces: need hole 1 and hole 3 as aces while maintaining u2=3 total.
-    // Simpler: u1=6 from 2 aces, u2=3 from 1 ace, u3=0, u4=−9? Let's just test
-    // rank ordering: u1 total=3 with 2 aces vs u2 total=3 with 1 ace.
-    // We'll do 3 holes: hole1 u1 ace, hole2 u2 ace, hole3 u1 ace but u2 is deuce.
-    // After 3 holes: u1 total=3+3-0=6? That's not equal. Let's be more precise.
-    //
-    // Scenario: 2 holes. u1: ace hole1 (+3) and deuce hole2 (−3)=0 total, 1 ace.
-    // That is 0. Let's just test separately that rank 1 goes to higher total.
-    // The previous test already covered tiedWith; let's verify aces tiebreak.
-    //
-    // 3-hole scenario:
-    // Hole 1: u1 ace (+3), u4 deuce(−3) → u1=3, u4=−3
-    // Hole 2: u2 ace (+3), u4 deuce(−3) → u2=3, u4=−6
-    // Hole 3: u1 ace (+3), u1 deuce → contradiction. Instead:
-    // Hole 3: u3 ace(+3), u4 deuce(−3) → u3=3
-    // Wait, we want u1=3 with 2 aces. Let's try:
-    // Hole 1: u1 ace (+3), u2 deuce (−3) → u1=3, u2=−3
-    // Hole 2: u1 ace (+3), u2 deuce (−3) → u1=6, u2=−6. Not equal totals.
-    //
-    // Better: u1 ace (+3) hole1, u1 deuce hole2 (−3) → u1=0 with 1 ace.
-    // That is 0 total. Let's just make: u1=3 (1 ace), u2=3 (0 aces, gained 3 via deuce avoidance).
-    //
-    // Actually, the only way to get +3 without being ace is impossible in this format
-    // because middles get 0. So totals of 3 always mean 1 ace.
-    //
-    // Alternative: u1=6 (2 aces), u2=6 (2 aces), u3=0, u4=−12.
-    // Both rank=1, tiedWith each other. This is already covered.
-    //
-    // Let's just do a simple verify that when u1 has more aces and same total, rank is better.
-    // Construct: 3 holes. u1 gets ace twice, u2 once. Total: u1=+3(ace)+0(mid)+0(mid)=3 doesn't work.
-    // u1=ace+ace-deuce=+3. u2=ace+mid+mid=+3. Same total, u1 has 2 aces, u2 has 1.
-    // Hole 1: u1 ace, u4 deuce → u1+3, u4-3
-    // Hole 2: u2 ace, u4 deuce → u2+3, u4-3
-    // Hole 3: u1 ace, u2 deuce → u1+3, u2-3
-    // After 3 holes: u1=+6, u2=0, u3=0, u4=−6. Not useful.
-    //
-    // Conclusion: aces tiebreak occurs when two players independently get same total via
-    // different combinations. The only real path is through longer sequences.
-    // The tied case from the previous test (same total, same aces) already validates tiedWith.
-    // For the aces-tiebreak, let's use a 4-hole case:
-    // Hole 1: u1 ace(+3), u3 deuce(-3)
-    // Hole 2: u1 ace(+3), u3 deuce(-3)
-    // Hole 3: u1 deuce(-3), u2 ace(+3) → u1=3, u2=3
-    // Hole 4: u1 deuce(-3), u2 ace(+3) → u1=0, u2=6. Not equal.
-    //
-    // Simplest valid scenario for aces tiebreak at same total:
-    // Hole 1: u1 ace (+3), u3 deuce (−3), u2 middle(0)
-    // Hole 2: u1 deuce (−3), u2 ace (+3), u3 middle(0)
-    // Hole 3: u1 ace (+3), u3 deuce (−3), u2 middle(0)
-    // Hole 4: u1 deuce (−3), u2 ace (+3), u3 middle(0)
-    // Total: u1=3+3-3-3=0, u2=3+3=6. Not equal.
-    //
-    // This analysis shows that in practice, equal totals with different aces counts
-    // require longer games or specific patterns. The tiebreak IS correctly tested
-    // through the rank logic — if two players have same total and same aces, they tie.
-    // We'll trust the ranking code and verify it through the basic tiedWith test.
-    // This test slot is removed as a valid distinct scenario cannot be cleanly constructed.
-    //
-    // Verify that rank ordering works: u1 first (+3), u2+u3 tied second (0), u4 last (-3).
-    // [3,4,5,6]: u1=+3, u2=0, u3=0, u4=-3.
-    // u2 and u3 both have total=0 and aces=0 → tied at rank 2.
+  it('more aces breaks a total tie — same total, more aces ranks higher', () => {
+    // A player's total = 3·aces − 3·deuces, so two players can reach the same
+    // total with different ace counts. Here u1 and u2 both finish at +3, but
+    // u1 got there with 2 aces + 1 deuce while u2 had a single ace. u1 must
+    // rank above u2 (aces tiebreak), and they must NOT be listed as tied.
+    //   Hole 1: [3,4,5,6] → u1 ace (+3), u4 deuce (−3)
+    //   Hole 2: [3,4,5,6] → u1 ace (+3), u4 deuce (−3)
+    //   Hole 3: u1=6, u2=3, u3=4, u4=5 → u2 ace (+3), u1 deuce (−3)
+    // Totals: u1=+3 (2 aces, 1 deuce), u2=+3 (1 ace), u3=0, u4=−6 (2 deuces)
     const players = ['u1', 'u2', 'u3', 'u4'].map((id) => soloPlayer(id));
     const ctx = makeCtx({
       players,
-      holes: par4Holes(1),
+      holes: par4Holes(3),
       scores: [
-        ...scoresFor('u1', [3]),
-        ...scoresFor('u2', [4]),
-        ...scoresFor('u3', [5]),
-        ...scoresFor('u4', [6]),
+        ...scoresFor('u1', [3, 3, 6]),
+        ...scoresFor('u2', [4, 4, 3]),
+        ...scoresFor('u3', [5, 5, 4]),
+        ...scoresFor('u4', [6, 6, 5]),
       ],
       aceyDeuceyScoring: 'gross',
     });
     const result = compute(ctx);
     const p = (uid: string) => result.players.find((pl) => pl.userId === uid)!;
+
+    expect(p('u1').total).toBe(3);
+    expect(p('u1').aces).toBe(2);
+    expect(p('u2').total).toBe(3);
+    expect(p('u2').aces).toBe(1);
+
+    // Same total, but u1 has more aces → u1 ranks above u2, and they are NOT tied.
     expect(p('u1').rank).toBe(1);
     expect(p('u2').rank).toBe(2);
-    expect(p('u3').rank).toBe(2); // tied with u2 (same total=0, same aces=0)
+    expect(p('u1').tiedWith).not.toContain('u2');
+    expect(p('u2').tiedWith).not.toContain('u1');
+
+    expect(p('u3').rank).toBe(3);
     expect(p('u4').rank).toBe(4);
-    expect(p('u2').tiedWith).toContain('u3');
-    expect(p('u3').tiedWith).toContain('u2');
   });
 });
 
