@@ -22,7 +22,7 @@ import {
   parForPlayer,
   type HoleParByGender,
 } from '@/lib/games/parDisplay';
-import type { ScoringGender } from '@/lib/scoring/modes/types';
+import { isStablefordFamily, type ScoringGender } from '@/lib/scoring/modes/types';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -120,7 +120,7 @@ export default async function SubmitPage({
   // Solo-modus (stableford) har null team/flight, og kopien skifter fra
   // lag-rettet til personlig: «Lever ditt scorekort» i topp-baren og en
   // CH-only-info-linje i stedet for «Lag X · Flight Y».
-  const isStableford = game.game_mode === 'stableford';
+  const isStableford = isStablefordFamily(game.game_mode);
   const kicker = isStableford ? 'Lever ditt scorekort' : 'Lever scorekort';
 
   return (

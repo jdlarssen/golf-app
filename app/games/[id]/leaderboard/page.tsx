@@ -85,7 +85,7 @@ import { markNotificationsRead } from '@/lib/notifications/markRead';
 // Mode-router for stableford-stats. Aliaset til `computeModeResult` for å
 // unngå navnekollisjon med best-ball-spesifikke `computeLeaderboard` fra
 // `lib/leaderboard.ts`.
-import { computeLeaderboard as computeModeResult } from '@/lib/scoring';
+import { computeLeaderboard as computeModeResult, isStablefordFamily } from '@/lib/scoring';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -300,7 +300,7 @@ async function LeaderboardBody({
   // i mode-router-format og rendre SoloStablefordView med én gang — vi har
   // ingen state #3/#3.5/reveal-active for stableford ennå (fase 6 håndterer
   // reveal-flow). Midt-runde og post-finished bruker samme visning.
-  if (game.game_mode === 'stableford') {
+  if (isStablefordFamily(game.game_mode)) {
     return renderStableford({
       gameId,
       game,
@@ -986,13 +986,17 @@ async function renderStableford(opts: {
   // Vi sender den rå verdien gjennom uansett — scoring-router-en narrower på
   // team_size og bruker bare det den trenger.
   const isTeamVariant =
-    game.mode_config.kind === 'stableford' &&
+    (game.mode_config.kind === 'stableford' ||
+      game.mode_config.kind === 'modified_stableford') &&
     game.mode_config.team_size === 2;
 
   const ctx = {
     game: {
       id: gameId,
-      game_mode: 'stableford' as const,
+      // Send det reelle game_mode-et gjennom (stableford ELLER
+      // modified_stableford) slik at mode-router-en velger riktig poeng-tabell.
+      // Begge varianter returnerer kind: 'stableford', så guarden under holder.
+      game_mode: game.game_mode,
       mode_config: game.mode_config,
     },
     players: gwp.players
@@ -1241,7 +1245,8 @@ async function renderStablefordWithSideTournament(opts: {
   // gjør at SideTournamentView kan rendre én rad per spiller med spillernavn
   // som label, og at lag-aggregerte kategorier faller bort som forventet.
   const isTeamVariant =
-    game.mode_config.kind === 'stableford' &&
+    (game.mode_config.kind === 'stableford' ||
+      game.mode_config.kind === 'modified_stableford') &&
     game.mode_config.team_size === 2;
 
   type TeamGroup = {

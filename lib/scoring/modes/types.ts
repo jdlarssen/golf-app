@@ -36,6 +36,18 @@ export const MODE_LABELS: Record<GameMode, string> = {
 };
 
 /**
+ * True for stableford-familien (standard + modified). Begge deler all UI-,
+ * wizard-, scorekort- og leaderboard-oppførsel — eneste forskjellen er poeng-
+ * tabellen. Brukes på `game_mode`-baserte routing-/display-sjekker som ellers
+ * bare så `=== 'stableford'`. For `mode_config.kind`-narrows (der TS må narrowe
+ * til varianter med `team_size`) brukes en inline `kind === 'stableford' ||
+ * kind === 'modified_stableford'`-sjekk i stedet (#281).
+ */
+export function isStablefordFamily(mode: GameMode): boolean {
+  return mode === 'stableford' || mode === 'modified_stableford';
+}
+
+/**
  * Mode-spesifikk config som lagres i `games.mode_config` (JSONB).
  * Diskrimineres på `kind` slik at konsumenter narrower trygt.
  *

@@ -62,6 +62,8 @@ export { calculateCourseHandicap, applyAllowance } from './courseHandicap';
 export { strokesForHole, allStrokeAllocations } from './strokeAllocation';
 export { rankTeams } from './tiebreaker';
 export { computeStablefordPoints } from './modes/stableford';
+export { computeModifiedStablefordPoints } from './modes/modifiedStableford';
+export { isStablefordFamily } from './modes/types';
 export { computeMatchResult } from './modes/singlesMatchplay';
 export type {
   GameMode,

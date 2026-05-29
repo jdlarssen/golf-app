@@ -4,6 +4,8 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { computeStablefordPoints } from '@/lib/scoring/modes/stableford';
+import { computeModifiedStablefordPoints } from '@/lib/scoring/modes/modifiedStableford';
+import { isStablefordFamily } from '@/lib/scoring/modes/types';
 import { parFor } from '@/lib/scoring/modes/parResolver';
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { nameInitials } from '@/lib/names/initials';
@@ -94,7 +96,7 @@ export default async function HolePage({ params }: { params: Params }) {
       : allPlayers.filter((p) => p.flight_number === me.flight_number);
   const playerIds = flight.map((p) => p.user_id);
 
-  const isStableford = game.game_mode === 'stableford';
+  const isStableford = isStablefordFamily(game.game_mode);
   const isTexas = game.game_mode === 'texas_scramble';
   const isFoursomes = game.game_mode === 'foursomes_matchplay';
   const isWolf = game.game_mode === 'wolf';
@@ -211,6 +213,9 @@ export default async function HolePage({ params }: { params: Params }) {
     const myCh = me.course_handicap ?? 0;
     const holesByNum = new Map<number, HoleRow>();
     for (const h of allHolesRes.data ?? []) holesByNum.set(h.hole_number, h);
+    const stablefordPointsFn = game.game_mode === 'modified_stableford'
+      ? computeModifiedStablefordPoints
+      : computeStablefordPoints;
     let total = 0;
     for (const s of myAllScoresRes.data ?? []) {
       if (s.strokes == null) continue;
@@ -234,7 +239,7 @@ export default async function HolePage({ params }: { params: Params }) {
         },
         me.tee_gender,
       );
-      const pts = computeStablefordPoints({ par: myPar, netStrokes: net });
+      const pts = stablefordPointsFn({ par: myPar, netStrokes: net });
       total += pts;
       if (s.hole_number === holeNumber) {
         myStablefordForCurrent = pts;

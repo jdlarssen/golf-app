@@ -5,7 +5,7 @@ import {
   CLASSIC_DISABLED_CATEGORIES,
   type SideCategoryId,
 } from '@/lib/scoring/sideTournamentConfig';
-import type { GameMode } from '@/lib/scoring/modes/types';
+import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 import type { TeamSize } from './TeamSizeSelector';
 import type { CourseOption, InitialValues, PlayerOption } from './GameForm';
 import { playerGenderDefault } from '@/lib/games/playerGenderDefault';
@@ -403,9 +403,9 @@ export function useGameFormState({
   //   er meningsløst (kun 1v1 er gyldig).
   const isSolo =
     teamSize === 1 &&
-    (gameMode === 'stableford' || gameMode === 'solo_strokeplay');
+    (isStablefordFamily(gameMode) || gameMode === 'solo_strokeplay');
   const isBestBall = gameMode === 'best_ball' && teamSize === 2;
-  const isParStableford = gameMode === 'stableford' && teamSize === 2;
+  const isParStableford = isStablefordFamily(gameMode) && teamSize === 2;
   const isMatchplay = gameMode === 'singles_matchplay';
   // - isTexas: texas_scramble. Lagene spiller én ball — én score per lag per
   //   hull lagres på lag-kapteinens userId (scoring-laget velger kaptein

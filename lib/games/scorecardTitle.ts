@@ -1,4 +1,4 @@
-import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
+import { isStablefordFamily, type GameMode, type GameModeConfig } from '@/lib/scoring/modes/types';
 
 export interface ScorecardTitle {
   /** TopBar kicker / page heading. */
@@ -30,7 +30,7 @@ export function scorecardTitle(
   const isTeamMode =
     gameMode === 'best_ball' ||
     gameMode === 'texas_scramble' ||
-    (gameMode === 'stableford' && modeConfig.kind === 'stableford' && modeConfig.team_size === 2);
+    (isStablefordFamily(gameMode) && (modeConfig.kind === 'stableford' || modeConfig.kind === 'modified_stableford') && modeConfig.team_size === 2);
 
   if (isTeamMode) {
     return { title: 'Lagets scorekort', cardLabel: 'Lagets scorekort' };

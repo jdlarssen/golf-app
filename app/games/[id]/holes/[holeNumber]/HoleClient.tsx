@@ -22,6 +22,8 @@ import { BottomActionBar } from '@/components/hole/BottomActionBar';
 import { SpecificValueSheet } from '@/components/hole/SpecificValueSheet';
 import { PokalIcon } from '@/components/icons';
 import { computeStablefordPoints } from '@/lib/scoring/modes/stableford';
+import { computeModifiedStablefordPoints } from '@/lib/scoring/modes/modifiedStableford';
+import { isStablefordFamily } from '@/lib/scoring/modes/types';
 import type {
   GameMode,
   ScoringGender,
@@ -221,7 +223,10 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     players,
   } = props;
 
-  const isStableford = gameMode === 'stableford';
+  const isStableford = isStablefordFamily(gameMode);
+  const stablefordPointsFn = gameMode === 'modified_stableford'
+    ? computeModifiedStablefordPoints
+    : computeStablefordPoints;
   const isWolf = gameMode === 'wolf';
   const isSkins = gameMode === 'skins';
   // Texas scramble: ett kort per lag (server bygger players-array med
@@ -292,7 +297,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   const myExtraStrokesForCurrent = myLiveCard?.extraStrokes ?? 0;
   const myLivePointsForCurrent =
     isStableford && myLiveScoreForCurrent != null
-      ? computeStablefordPoints({
+      ? stablefordPointsFn({
           par,
           netStrokes: myLiveScoreForCurrent - myExtraStrokesForCurrent,
         })
@@ -669,7 +674,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
           // extraStrokes som allerede er bakt inn i ClientPlayer.
           const stablefordPoints =
             isStableford && c.score != null
-              ? computeStablefordPoints({
+              ? stablefordPointsFn({
                   par,
                   netStrokes: c.score - c.extraStrokes,
                 })

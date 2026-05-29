@@ -29,7 +29,7 @@ import {
   ALL_CATEGORY_IDS,
   type SideCategoryId,
 } from '@/lib/scoring/sideTournamentConfig';
-import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
+import { isStablefordFamily, type GameMode, type GameModeConfig } from '@/lib/scoring/modes/types';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -288,7 +288,7 @@ async function PlayerShortageBanner({ gameMode }: { gameMode: GameMode }) {
   // Stableford trenger bare 1 spiller — banner-en (som nudge om total
   // klubb-størrelse) er ikke relevant her, og «Du trenger 8 spillere»-copy-en
   // ville vært direkte misvisende for et solo-format.
-  if (gameMode === 'stableford') return null;
+  if (isStablefordFamily(gameMode)) return null;
   const { playerOptions } = await getOptions();
   if (playerOptions.length >= 8) return null;
   return (

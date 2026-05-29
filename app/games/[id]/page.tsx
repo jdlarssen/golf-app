@@ -16,6 +16,7 @@ import { Kicker } from '@/components/ui/Kicker';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { type GameStatus, STATUS_LABELS } from '@/lib/games/status';
+import { isStablefordFamily } from '@/lib/scoring/modes/types';
 import { MailEnvelope } from '@/components/icons/MailEnvelope';
 import { firstName } from '@/lib/firstName';
 import { nameInitials } from '@/lib/names/initials';
@@ -374,7 +375,7 @@ export default async function GameHomePage({
 
           <div className="h-px bg-border my-3.5" />
 
-          {game.game_mode === 'stableford' ? (
+          {isStablefordFamily(game.game_mode) ? (
             // Solo-modus har ingen flight-gruppering — vis hele deltaker-
             // listen i stedet for FlightRoster.
             <>
@@ -563,7 +564,7 @@ export default async function GameHomePage({
             <Kicker tone="muted" className="mb-2">
               DIN INFO
             </Kicker>
-            {game.game_mode === 'stableford' ? (
+            {isStablefordFamily(game.game_mode) ? (
               // Solo-modus har ingen lag- eller flight-tilordning, så den
               // klassiske dl-listen leser tomt («Lag —, Flight —»). Vi
               // erstatter med en kort modus-undertittel + CH-only-rad slik

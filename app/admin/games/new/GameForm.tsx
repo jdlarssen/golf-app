@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/Button';
 import type { SideCategoryId } from '@/lib/scoring/sideTournamentConfig';
-import type { GameMode } from '@/lib/scoring/modes/types';
+import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 import type {
   RegistrationMode,
   RegistrationType,
@@ -280,7 +280,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           )}
         </>
       )}
-      {gameMode === 'stableford' && (
+      {isStablefordFamily(gameMode) && (
         <input
           type="hidden"
           name="stableford_team_size"
@@ -402,7 +402,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             emitter sin egen (ingen hideHiddenInput). State persisterer i
             useGameFormState via controlled-modus. */}
         {(gameMode === 'best_ball' ||
-          gameMode === 'stableford' ||
+          isStablefordFamily(gameMode) ||
           gameMode === 'singles_matchplay' ||
           gameMode === 'solo_strokeplay') && (
           <AllowanceField

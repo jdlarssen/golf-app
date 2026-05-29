@@ -7,10 +7,11 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { computeLeaderboard } from '@/lib/scoring';
-import type {
-  GameMode,
-  GameModeConfig,
-  ScoringGender,
+import {
+  isStablefordFamily,
+  type GameMode,
+  type GameModeConfig,
+  type ScoringGender,
 } from '@/lib/scoring/modes/types';
 import { firstName } from '@/lib/firstName';
 import type { GameFinishedNotificationMode } from './gameFinishedNotification';
@@ -120,7 +121,7 @@ export async function buildGameFinishedRecipients(
   }
 
   // Best-ball-netto: ingen per-spiller-mode, returner kun userId+email+name.
-  if (game.game_mode !== 'stableford') {
+  if (!isStablefordFamily(game.game_mode)) {
     return playerRows
       .map((row) => ({
         userId: row.user_id,

@@ -30,7 +30,7 @@ import type {
   FormatForIntent,
   CupEligibleFormat,
 } from '@/lib/formats/getFormatsForIntent';
-import { MODE_LABELS, type GameMode } from '@/lib/scoring/modes/types';
+import { isStablefordFamily, MODE_LABELS, type GameMode } from '@/lib/scoring/modes/types';
 import { IntentSelector } from './IntentSelector';
 import { FormatGrid } from './FormatGrid';
 import { CupSetup } from './CupSetup';
@@ -481,7 +481,7 @@ export function GameWizard({
                 />
               )}
               {(state.gameMode === 'best_ball' ||
-                state.gameMode === 'stableford' ||
+                isStablefordFamily(state.gameMode) ||
                 state.gameMode === 'singles_matchplay' ||
                 state.gameMode === 'solo_strokeplay') && (
                 <AllowanceField
@@ -646,7 +646,7 @@ function FormDataInputs({
       <input type="hidden" name="team_size" value={teamSize} />
       <input type="hidden" name="registration_mode" value={registrationMode} />
       <input type="hidden" name="registration_type" value={registrationType} />
-      {gameMode === 'stableford' && (
+      {isStablefordFamily(gameMode) && (
         <input type="hidden" name="stableford_team_size" value={teamSize} />
       )}
       {isTexas && (
