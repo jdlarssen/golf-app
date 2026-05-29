@@ -29,10 +29,13 @@ import type {
   ScoringGender,
   WolfChoice,
   WolfHoleChoice,
+  BingoBangoBongoHoleInput,
 } from '@/lib/scoring/modes/types';
 import type { HoleParByGender } from '@/lib/games/parDisplay';
 import { subscribeWolfChoices } from '@/lib/wolf/subscribeWolfChoices';
+import { subscribeBingoBangoBongo } from '@/lib/bbb/subscribeBingoBangoBongo';
 import { WolfChoiceModal } from './WolfChoiceModal';
+import { BingoBangoBongoEntry } from './BingoBangoBongoEntry';
 import { determineWolfForHole } from './wolfRotation';
 
 export type ClientPlayer = {
@@ -132,6 +135,12 @@ export interface HoleClientProps {
    * hint når > 0. Undefined for andre modi.
    */
   skinsCarriedIn?: number;
+  /**
+   * Bingo Bango Bongo-modus: alle lagrede rader for dette spillet, lest
+   * server-side ved page-render. Brukes som initial state for realtime-merged
+   * client state. Empty array = ingen rader ennå.
+   */
+  bingoBangoBongoHoles?: BingoBangoBongoHoleInput[];
   players: ClientPlayer[];
 }
 
@@ -220,6 +229,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     wolfPointsByUser,
     skinsAtStake,
     skinsCarriedIn,
+    bingoBangoBongoHoles: bingoBangoBongoHolesInitial,
     players,
   } = props;
 
@@ -230,6 +240,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   const isModifiedStableford = gameMode === 'modified_stableford';
   const isWolf = gameMode === 'wolf';
   const isSkins = gameMode === 'skins';
+  const isBBB = gameMode === 'bingo_bango_bongo';
   // Texas scramble: ett kort per lag (server bygger players-array med
   // ÉN entry der userId = lag-kapteinens userId). Lookup-er som matcher
   // mot myUserId må derfor falle tilbake til lag-kortet for non-captain-
@@ -340,6 +351,32 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     });
     return unsubscribe;
   }, [isWolf, gameId]);
+
+  // Bingo Bango Bongo state: initialiseres fra server-prop, mergerer inn
+  // realtime-endringer — speiler wolf-mønstret ovenfor.
+  // Parent remounter HoleClient via `key={holeNumber}` ved hull-bytte, så vi
+  // trenger ikke useEffect-sync mot prop-endringer på samme hull.
+  const [bingoBangoBongoHoles, setBingoBangoBongoHoles] = useState<
+    BingoBangoBongoHoleInput[]
+  >(bingoBangoBongoHolesInitial ?? []);
+
+  useEffect(() => {
+    if (!isBBB) return;
+    const unsubscribe = subscribeBingoBangoBongo(gameId, (change) => {
+      setBingoBangoBongoHoles((prev) => {
+        const next = prev.filter((h) => h.holeNumber !== change.holeNumber);
+        next.push({
+          holeNumber: change.holeNumber,
+          bingoUserId: change.bingoUserId,
+          bangoUserId: change.bangoUserId,
+          bongoUserId: change.bongoUserId,
+        });
+        next.sort((a, b) => a.holeNumber - b.holeNumber);
+        return next;
+      });
+    });
+    return unsubscribe;
+  }, [isBBB, gameId]);
 
   // Hvem er Wolf på dette hullet? Wolf-tabellen kan ha en eksplisitt rad
   // (f.eks. admin-override), ellers regner vi rotasjon eller trailing-wolf.
@@ -725,6 +762,34 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
         })}
         <SyncStatusLine syncing={syncing} savedAt={savedAt} />
       </div>
+
+      {/* Bingo Bango Bongo — additiv seksjon under slag-padden, speiler
+          wolf-badge-mønstret (seksjonen er uavhengig av scorekortet). */}
+      {isBBB && (
+        <BingoBangoBongoEntry
+          gameId={gameId}
+          holeNumber={currentHole}
+          players={players.map((p) => ({
+            userId: p.userId,
+            name: p.nickname ?? p.name,
+          }))}
+          savedHole={
+            bingoBangoBongoHoles.find((h) => h.holeNumber === currentHole) ??
+            null
+          }
+          disabled={gameInactive}
+          onSaved={(updated) => {
+            setBingoBangoBongoHoles((prev) => {
+              const next = prev.filter(
+                (h) => h.holeNumber !== updated.holeNumber,
+              );
+              next.push(updated);
+              next.sort((a, b) => a.holeNumber - b.holeNumber);
+              return next;
+            });
+          }}
+        />
+      )}
 
       <BottomActionBar
         label={bottomLabel}

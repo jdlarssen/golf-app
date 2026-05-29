@@ -11,6 +11,7 @@ import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { nameInitials } from '@/lib/names/initials';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import { getWolfChoices } from '@/lib/wolf/getWolfChoices';
+import { getBingoBangoBongoHoles } from '@/lib/bbb/getBingoBangoBongoHoles';
 import { computeLeaderboard } from '@/lib/scoring';
 import * as skins from '@/lib/scoring/modes/skins';
 import type {
@@ -18,6 +19,7 @@ import type {
   ScoringHole,
   ScoringPlayer,
   ScoringHoleScore,
+  BingoBangoBongoHoleInput,
 } from '@/lib/scoring/modes/types';
 import { HoleClient, type ClientPlayer } from './HoleClient';
 import {
@@ -101,6 +103,7 @@ export default async function HolePage({ params }: { params: Params }) {
   const isFoursomes = game.game_mode === 'foursomes_matchplay';
   const isWolf = game.game_mode === 'wolf';
   const isSkins = game.game_mode === 'skins';
+  const isBBB = game.game_mode === 'bingo_bango_bongo';
 
   // Round 2 — hole row, flight scores and the user's completed-hole count.
   // All three are independent and can run in parallel:
@@ -124,6 +127,7 @@ export default async function HolePage({ params }: { params: Params }) {
     wolfAllHolesRes,
     skinsAllScoresRes,
     skinsAllHolesRes,
+    bbbHolesData,
   ] = await Promise.all([
       supabase
         .from('course_holes')
@@ -190,6 +194,9 @@ export default async function HolePage({ params }: { params: Params }) {
             .eq('course_id', game.course_id)
             .returns<HoleRow[]>()
         : Promise.resolve({ data: null, error: null }),
+      // Bingo Bango Bongo: henter alle hull-rader for spillet (tag-cachet).
+      // Speiler getWolfChoices-mønstret — returnerer tom array for andre modi.
+      isBBB ? getBingoBangoBongoHoles(id) : Promise.resolve([]),
     ]);
 
   const { data: hole, error: holeError } = holeRes;
@@ -560,6 +567,7 @@ export default async function HolePage({ params }: { params: Params }) {
         wolfPointsByUser={wolfPointsByUser}
         skinsAtStake={skinsAtStake}
         skinsCarriedIn={skinsCarriedIn}
+        bingoBangoBongoHoles={isBBB ? (bbbHolesData as BingoBangoBongoHoleInput[]) : undefined}
         players={playersForClient}
       />
     </div>
