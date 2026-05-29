@@ -15,6 +15,7 @@ export const metadata: Metadata = {
 // Object.keys så rekkefølgen er bevisst, ikke avhengig av union-rekkefølge.
 const MODE_ORDER: GameMode[] = [
   'stableford',
+  'modified_stableford',
   'solo_strokeplay',
   'best_ball',
   'texas_scramble',
