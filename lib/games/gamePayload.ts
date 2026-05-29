@@ -241,7 +241,8 @@ function parseGameMode(formData: FormData): GameMode | null {
     raw === 'nassau' ||
     raw === 'skins' ||
     raw === 'bingo_bango_bongo' ||
-    raw === 'nines'
+    raw === 'nines' ||
+    raw === 'round_robin'
   )
     return raw;
   return null;
@@ -1263,6 +1264,109 @@ function validateNines(
   };
 }
 
+/**
+ * Round Robin-validator (issue #280 — 4-spiller roterende-partner 4BBB-matchplay).
+ *
+ * Strukturell hybrid av `validateWolf` (4-slot) og `validateFourballMatchplay`
+ * (allowance). Speiler Wolf for spiller-strukturen: EKSAKT 4 spillere med
+ * unike team_number 1-4 ved publish. Speiler Fourball for allowance:
+ * form-feltet `round_robin_allowance_pct` (0..100), default 85 i draft.
+ *
+ * Regler:
+ *  - EKSAKT 4 spillere ved publish; 0–3 → `min_players_for_mode`, 5+ → `too_many_players_for_mode`
+ *  - team_number 1-4, alle distinct → ellers `bad_team` / `team_balance`
+ *  - flight_number = team_number (DB-CHECK `game_players_team_flight_consistency`)
+ *  - draft tolererer partial state (0..4 spillere, ufullstendig slot-fordeling)
+ *
+ * Mode_config-output: `{kind, team_size: 1, teams_count: 4, allowance_pct}`.
+ */
+function validateRoundRobin(
+  formData: FormData,
+  mode: PayloadMode,
+): ModeValidationResult {
+  const allowancePct = parseRoundRobinAllowancePct(formData, mode);
+  if (allowancePct === null) {
+    return { ok: false, errorCode: 'bad_allowance' };
+  }
+
+  const players: GamePlayerInput[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < 8; i++) {
+    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
+    if (!user_id) continue;
+    if (seen.has(user_id)) {
+      return { ok: false, errorCode: 'duplicate_player' };
+    }
+    seen.add(user_id);
+    const team_number = Number(formData.get(`player_${i}_team`));
+    // Round Robin-slot er strengt 1-4 (rotation-slot, ikke lag) — speiler Wolf.
+    if (
+      !Number.isInteger(team_number) ||
+      team_number < 1 ||
+      team_number > 4
+    ) {
+      return { ok: false, errorCode: 'bad_team' };
+    }
+    // flight_number = team_number for å oppfylle DB-CHECK
+    // game_players_team_flight_consistency (begge satt sammen) — speiler Wolf.
+    const flight_number = team_number;
+    players.push({ user_id, team_number, flight_number });
+  }
+
+  if (mode === 'publish') {
+    if (players.length < 4) {
+      return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    if (players.length > 4) {
+      return { ok: false, errorCode: 'too_many_players_for_mode' };
+    }
+    // Nøyaktig 4 spillere — sjekk at team_numbers er unike 1-4 (speiler Wolf).
+    const slotsSeen = new Set<number>();
+    for (const p of players) {
+      if (p.team_number === null) continue;
+      slotsSeen.add(p.team_number);
+    }
+    if (slotsSeen.size !== 4) {
+      return { ok: false, errorCode: 'team_balance' };
+    }
+  }
+
+  return {
+    ok: true,
+    players,
+    mode_config: {
+      kind: 'round_robin',
+      team_size: 1,
+      teams_count: 4,
+      allowance_pct: allowancePct,
+    },
+  };
+}
+
+/**
+ * Leser `round_robin_allowance_pct` fra form-data. Returnerer 0..100 (heltall)
+ * eller null hvis ugyldig.
+ *
+ * Tom string i draft defaulter til 85 (WHS-default for matchplay) så partial
+ * form-state ikke kaster; publish krever eksplisitt gyldig verdi (wizarden
+ * pre-fyller 85 som fallback). Range 0..100 håndheves uansett.
+ * Speiler `parseFourballAllowancePct`-mønsteret.
+ */
+function parseRoundRobinAllowancePct(
+  formData: FormData,
+  mode: PayloadMode,
+): number | null {
+  const raw = formData.get('round_robin_allowance_pct');
+  if (raw === null || raw === '') {
+    // Draft: defensiv default 85 (WHS-standard for matchplay). Publish: krev
+    // eksplisitt verdi via wizard (som alltid pre-fyller 85 som fallback).
+    return mode === 'draft' ? 85 : null;
+  }
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0 || n > 100) return null;
+  return n;
+}
+
 const modeValidators: Record<
   GameMode,
   (formData: FormData, mode: PayloadMode) => ModeValidationResult
@@ -1280,6 +1384,7 @@ const modeValidators: Record<
   skins: validateSkins,
   bingo_bango_bongo: validateBingoBangoBongo,
   nines: validateNines,
+  round_robin: validateRoundRobin,
 };
 
 /**

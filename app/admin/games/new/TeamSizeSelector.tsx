@@ -81,6 +81,11 @@ const ENABLED_COMBOS: Record<GameMode, ReadonlySet<TeamSize>> = {
   // NinesSetup tar over som for Wolf/Nassau/Skins, så TeamSizeSelector vises
   // ikke i praksis — men type-system krever en entry.
   nines: new Set<TeamSize>([1]),
+  // Round Robin: 4-spiller roterende-partner, team_size=1 (hver spiller er
+  // sin egen row, team_number=rotation-slot). En dedikert RoundRobinSetup
+  // vil ta over wizard-steget, så TeamSizeSelector vises ikke i praksis —
+  // men type-system krever en entry.
+  round_robin: new Set<TeamSize>([1]),
 };
 
 type TileDef = {

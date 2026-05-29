@@ -15,7 +15,8 @@ export type GameMode =
   | 'nassau'
   | 'skins'
   | 'bingo_bango_bongo'
-  | 'nines';
+  | 'nines'
+  | 'round_robin';
 
 /**
  * Norske visnings-labels for hver spillmodus. Brukes av ModeChip i admin-
@@ -37,6 +38,7 @@ export const MODE_LABELS: Record<GameMode, string> = {
   skins: 'Skins',
   bingo_bango_bongo: 'Bingo Bango Bongo',
   nines: 'Nines / Split Sixes',
+  round_robin: 'Round Robin',
 };
 
 /**
@@ -187,6 +189,27 @@ export type GameModeConfig =
       nines_variant: 'nines' | 'split_sixes';
       /** 'net' = gross − strokesForHole(CH, SI). 'gross' = rå gross. Speiler skins_scoring. */
       nines_scoring: 'gross' | 'net';
+    }
+  | {
+      /**
+       * Round Robin: 4-spiller roterende-partner 4BBB-matchplay (issue #280).
+       * Runden deles i tre 6-hulls-segmenter; partner-konstellasjonen roterer
+       * deterministisk slik at hver spiller spiller med + mot alle andre én gang.
+       * Seg1 (h1–6): [slot1,slot2] vs [slot3,slot4].
+       * Seg2 (h7–12): [slot1,slot3] vs [slot2,slot4].
+       * Seg3 (h13–18): [slot1,slot4] vs [slot2,slot3].
+       *
+       * Per hull: beste netto per side (bestBallForHole), sammenlign som matchplay
+       * (classifyMatchplayHole). Vinnende side: +1 hull-seire til hver spiller.
+       * Delt hull: 0 til alle. Rangering: flest hull-seire vinner.
+       *
+       * `allowance_pct`: WHS-standard 85 % (matchplay-modell). 0 = brutto.
+       * Speiler fourball_matchplay-config-shapen for allowance-feltet.
+       */
+      kind: 'round_robin';
+      team_size: 1;
+      teams_count: 4;
+      allowance_pct: number;
     };
 
 /**
@@ -1270,6 +1293,133 @@ export interface NinesResult {
   players: NinesPlayerLine[];
 }
 
+// Round Robin (issue #280 — 4-spiller roterende-partner 4BBB-matchplay).
+//
+// Runden deles i tre 6-hulls-segmenter. Partner-konstellasjonen roterer
+// deterministisk slik at hver spiller spiller med + mot alle andre én gang:
+//   Seg1 (h1–6):   [slot1, slot2] vs [slot3, slot4]
+//   Seg2 (h7–12):  [slot1, slot3] vs [slot2, slot4]
+//   Seg3 (h13–18): [slot1, slot4] vs [slot2, slot3]
+//
+// Per hull: bestBallForHole + classifyMatchplayHole (gjenbrukt fra fourball).
+// Hull-seire-modell: +1 til hver spiller på vinnende side; delt = 0 til alle.
+// Rangering: totalHoleWins DESC → totalHolesLost ASC → teamNumber ASC.
+//
+// Ingen ny tabell — rotasjonen er ren deterministisk funksjon av (slot, hull).
+// Scoring gjenbruker applyAllowance + strokesForHole fra fourball.
+// -----------------------------------------------------------------------------
+
+/**
+ * Per-spiller-detalj på ett Round Robin-hull. Speiler `FourballPlayerCell`
+ * tett — gross → extraStrokes → net pipeline og isContributor-flag.
+ */
+export interface RoundRobinPlayerCell {
+  userId: string;
+  gross: number | null;
+  /** Extra strokes for hullet fra SI-allokering (etter allowance). */
+  extraStrokes: number;
+  /** Netto = gross − extra. Null hvis gross er null. */
+  net: number | null;
+  /** Hadde side-best netto på hullet (kan være begge ved tie). */
+  isContributor: boolean;
+  /** Spillerens par for hullet (`parFor(hole, player.teeGender)`). #240. */
+  par: number;
+}
+
+/**
+ * Per-hull-rad i et Round Robin-spill. Inneholder begge siders 2 spillere med
+ * per-spiller-detalj, lag-best-netto per side, og hvem som vant hullet.
+ * `segment` (1/2/3) forteller hvilken rotasjonsfase hullet tilhører.
+ */
+export interface RoundRobinHoleRow {
+  holeNumber: number;
+  segment: 1 | 2 | 3;
+  /**
+   * Bevart for backward-compat. Satt lik `side1Par` slik at konsumenter
+   * som leser én felles par-verdi fortsatt fungerer. #240.
+   */
+  par: number;
+  /** Per-side par fra `parFor(hole, side.teeGender)`. */
+  side1Par: number;
+  side2Par: number;
+  strokeIndex: number;
+  /** Hvem som utgjør side 1 på DETTE hullet (avhenger av segment). */
+  side1PlayerIds: [string, string];
+  /** Hvem som utgjør side 2 på DETTE hullet (avhenger av segment). */
+  side2PlayerIds: [string, string];
+  /** Per-spiller-detalj for side 1 (alltid 2 spillere). */
+  side1Players: RoundRobinPlayerCell[];
+  /** Per-spiller-detalj for side 2 (alltid 2 spillere). */
+  side2Players: RoundRobinPlayerCell[];
+  /**
+   * Lag-best netto per side. Null hvis ingen av partnerne har gross.
+   * Best-ball-tradisjon: én partner med gross holder for at siden har best.
+   */
+  side1BestNet: number | null;
+  side2BestNet: number | null;
+  /** UserIds som hadde lag-best netto. Tom-array når siden er unplayed. */
+  side1ContributorIds: string[];
+  side2ContributorIds: string[];
+  /** Hvem vant hullet via `classifyMatchplayHole`. */
+  result: MatchplayHoleResult;
+  /**
+   * 0 eller 1 per spiller på dette hullet.
+   * 1 = spillerens side vant hullet; 0 = tapte, delte eller unplayed.
+   */
+  holeWinByPlayer: Record<string, number>;
+}
+
+/**
+ * Per-segment-sammendrag for én spiller. Forteller hvem spilleren spilte
+ * MED og MOT i segmentet, og resultater for de 6 hullene i segmentet.
+ */
+export interface RoundRobinSegmentLine {
+  segment: 1 | 2 | 3;
+  /** Hullnumre i segmentet: [1..6] | [7..12] | [13..18]. */
+  holeNumbers: number[];
+  /** Hvem spilleren spilte MED (partner) i dette segmentet. */
+  partnerUserId: string;
+  /** Hvem spilleren spilte MOT (begge to) i dette segmentet. */
+  opponentUserIds: [string, string];
+  /** Antall hull spillerens side vant i segmentet. */
+  holesWon: number;
+  holesLost: number;
+  holesHalved: number;
+}
+
+/**
+ * Per-spiller-rad i Round Robin-leaderboard. Primær rangering på
+ * `totalHoleWins`; fullt segment-sammendrag for de 3 konstellasjonene.
+ *
+ * Rangering: totalHoleWins DESC → totalHolesLost ASC → teamNumber ASC.
+ * (Full 5-tier-cascade gjelder ikke — Round Robin er ikke slag-basert.)
+ * `tiedWith` lister userIds med eksakt lik (totalHoleWins, totalHolesLost).
+ */
+export interface RoundRobinPlayerLine {
+  userId: string;
+  /** Slot 1-4 (A/B/C/D). Brukt som deterministisk tiebreak. */
+  teamNumber: number;
+  /** Totalt hull-seire over 18 hull (primær rangering). */
+  totalHoleWins: number;
+  totalHolesLost: number;
+  totalHolesHalved: number;
+  /** Alltid 3 segmenter — én per 6-hulls-fase. */
+  segments: RoundRobinSegmentLine[];
+  rank: number;
+  tiedWith: string[];
+}
+
+/**
+ * Resultat fra `roundRobin.compute()`. Inneholder per-hull-rader og
+ * per-spiller-linjer med totaler + segment-sammendrag.
+ */
+export interface RoundRobinResult {
+  kind: 'round_robin';
+  allowancePct: number;
+  holes: RoundRobinHoleRow[];
+  players: RoundRobinPlayerLine[];
+}
+
 /**
  * Discriminated union — konsumenter narrower på `kind`:
  *   const r = computeLeaderboard(ctx);
@@ -1292,6 +1442,9 @@ export interface NinesResult {
  *
  * For bingo_bango_bongo narrower man på `kind` og leser `holes`/`players`
  * direkte. Ingen variant-discriminator — individuelt format, ingen lag.
+ *
+ * For round_robin narrower man på `kind` og leser `holes`/`players` direkte.
+ * `players` er sortert etter rangering (totalHoleWins DESC).
  */
 export type ModeResult =
   | BestBallResult
@@ -1305,4 +1458,5 @@ export type ModeResult =
   | NassauResult
   | SkinsResult
   | BingoBangoBongoResult
-  | NinesResult;
+  | NinesResult
+  | RoundRobinResult;

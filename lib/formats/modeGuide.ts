@@ -140,6 +140,15 @@ export const MODE_GUIDE: Record<GameMode, ModeGuide> = {
       'Flest poeng sammenlagt vinner.',
     ],
   },
+  round_robin: {
+    summary:
+      'Fire spillere bytter partner hvert sjette hull. Du spiller med og mot alle de tre andre i løpet av runden.',
+    points: [
+      'Hvert hull spilles som besteball matchplay: lagets beste netto teller, og lavest beste netto vinner hullet.',
+      'Den som vinner hullet for laget sitt, får ett poeng. Delt hull gir ingenting til noen.',
+      'Flest vunne hull etter 18 vinner.',
+    ],
+  },
 };
 
 /**

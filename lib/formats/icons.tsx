@@ -210,6 +210,33 @@ function NinesIcon({ size = 28 }: { size?: number }) {
   );
 }
 
+// Round Robin: fire spillere (fire prikker i kvadrant) med sirkulær
+// rotasjonspil rundt midten. Viser rotation-motivet: alle bytter partner.
+function RoundRobinIcon({ size = 28 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 28 28"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      {/* Fire prikker i hjørnene — representerer de 4 spillerne */}
+      <circle cx="8" cy="8" r="2" fill="currentColor" stroke="none" />
+      <circle cx="20" cy="8" r="2" fill="currentColor" stroke="none" />
+      <circle cx="8" cy="20" r="2" fill="currentColor" stroke="none" />
+      <circle cx="20" cy="20" r="2" fill="currentColor" stroke="none" />
+      {/* Sirkulær pil rundt midten — rotasjons-motivet */}
+      <path d="M 14 5 A 9 9 0 1 1 5 14" />
+      <path d="M 5 14 L 3 11.5 M 5 14 L 7.5 11.5" />
+    </svg>
+  );
+}
+
 // Fallback når en icon_key ikke har en dedikert komponent (nye formats før
 // designet er på plass). Et nøytralt flagg-ikon signaliserer «format» uten
 // å gjette på mekanikken.
@@ -241,6 +268,7 @@ const ICON_MAP: Record<string, (props: { size?: number }) => ReactNode> = {
   fourball_matchplay: FourballMatchplayIcon,
   bingo_bango_bongo: BingoBangoBongoIcon,
   nines: NinesIcon,
+  round_robin: RoundRobinIcon,
 };
 
 export function formatIconFor(iconKey: string, size = 28): ReactNode {
