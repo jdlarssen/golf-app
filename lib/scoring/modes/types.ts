@@ -1042,7 +1042,8 @@ export interface NassauResult {
 // pending til gapet fylles. Potten fryses.
 //
 // Rundeslutt: hvis potten henger ved siste resolverte hull (delt siste hull)
-// er disse skinsene uvunne (`unwonSkins`) — standard Skins, ingen omspill.
+// er disse skinsene uvunne — modulen eksponerer den rå `carriedPot`, og
+// SkinsView avgjør label basert på gameStatus. Standard Skins, ingen omspill.
 //
 // Gross/net-toggle som Wolf/Nassau: mode_config.skins_scoring = 'gross' | 'net'.
 // -----------------------------------------------------------------------------
@@ -1088,8 +1089,15 @@ export interface SkinsResult {
   scoring: 'gross' | 'net';
   holes: SkinsHoleRow[];
   players: SkinsPlayerLine[];
-  /** Henger-skins ved rundeslutt (delt siste hull). Uvunne, ingen omspill. */
-  unwonSkins: number;
+  /**
+   * Rå carryover-pott som henger ved siste resolverte hull — frozen
+   * (pending-gap) eller ikke. Scoring-modulen kjenner ikke `gameStatus`, så
+   * den eksponerer den rå verdien og lar konsumenten (SkinsView) avgjøre
+   * label: «i potten» under aktivt spill vs «ikke vunnet» når spillet er
+   * ferdig (delt siste spilte hull, evt. avsluttet tidlig med gap etterpå).
+   * 0 når siste resolverte hull ble vunnet alene. Standard Skins, ingen omspill.
+   */
+  carriedPot: number;
 }
 
 /**

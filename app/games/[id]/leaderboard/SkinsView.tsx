@@ -64,8 +64,9 @@ export interface SkinsViewProps {
  *     utfall. Vunne hull viser vinner + skins scoopet; delte hull viser
  *     carryover-indikator; pending-hull viser at scores mangler. Carryover-
  *     kjeden er synlig slik at det er åpenbart hvor potten samlet seg.
- *   - Henger-skins-linje: når spillet er ferdig og `unwonSkins > 0`, vises
+ *   - Henger-skins-linje: når spillet er ferdig og `carriedPot > 0`, vises
  *     en eksplisitt linje om at disse skinsene er uvunne (standard Skins-regel).
+ *     Dekker også tidlig-avsluttede spill med gap etter et delt hull (#303).
  *
  * Reveal-modus (scoreVisibility='reveal' && status='active'): vi rendrer
  * en venterom-melding i stedet for tall — Skins er et penge-orientert spill
@@ -123,8 +124,13 @@ export function SkinsView({
     result.scoring === 'net' ? 'Netto' : 'Brutto',
   ];
 
+  // Henger-skins: scoring-modulen eksponerer den rå hengende potten (carriedPot)
+  // uten å kjenne gameStatus. Når spillet er ferdig er en hengende pott uvunnet —
+  // også når spillet ble avsluttet tidlig med et gap rett etter et delt hull
+  // (issue #303). Under aktivt spill vises potten i pending-hullets carriedIn,
+  // så vi holder banneret skjult til spillet er ferdig.
   const showUnwonSkins =
-    gameStatus === 'finished' && result.unwonSkins > 0;
+    gameStatus === 'finished' && result.carriedPot > 0;
 
   return (
     <Shell chromeless={chromeless}>
@@ -171,10 +177,10 @@ export function SkinsView({
         >
           <p className="font-sans text-[13px] text-muted">
             <span className="font-semibold tabular-nums text-text">
-              {result.unwonSkins}{' '}
-              {result.unwonSkins === 1 ? 'skin' : 'skins'}
+              {result.carriedPot}{' '}
+              {result.carriedPot === 1 ? 'skin' : 'skins'}
             </span>{' '}
-            ikke vunnet. Siste hull ble delt.
+            ikke vunnet. Siste spilte hull ble delt.
           </p>
         </div>
       )}

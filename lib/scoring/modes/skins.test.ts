@@ -156,7 +156,7 @@ describe('skins.compute — single unique winner takes the skin', () => {
     const u1 = result.players.find((p) => p.userId === 'u1')!;
     expect(u1.totalSkins).toBe(1);
     expect(u1.holesWon).toBe(1);
-    expect(result.unwonSkins).toBe(0);
+    expect(result.carriedPot).toBe(0);
   });
 
   it('perPlayer.isWinner og effectiveScore korrekt (gross)', () => {
@@ -201,7 +201,7 @@ describe('skins.compute — single unique winner takes the skin', () => {
     const u2 = result.players.find((p) => p.userId === 'u2')!;
     expect(u1.totalSkins).toBe(1);
     expect(u2.totalSkins).toBe(1);
-    expect(result.unwonSkins).toBe(0);
+    expect(result.carriedPot).toBe(0);
   });
 });
 
@@ -237,7 +237,7 @@ describe('skins.compute — ties produce carryover', () => {
     const u1 = result.players.find((p) => p.userId === 'u1')!;
     expect(u1.totalSkins).toBe(2);
     expect(u1.holesWon).toBe(1);
-    expect(result.unwonSkins).toBe(0);
+    expect(result.carriedPot).toBe(0);
   });
 
   it.each([
@@ -275,7 +275,7 @@ describe('skins.compute — ties produce carryover', () => {
       expect(p.holesWon).toBe(0);
     }
     // Siste hull delt → potten henger.
-    expect(result.unwonSkins).toBe(1);
+    expect(result.carriedPot).toBe(1);
   });
 
   it('partiell tie (2 av 3 deler lavest) → fortsatt carryover', () => {
@@ -333,7 +333,7 @@ describe('skins.compute — multi-tied carryover sequence (issue-scenario)', () 
     const u1 = result.players.find((p) => p.userId === 'u1')!;
     expect(u1.totalSkins).toBe(4);
     expect(u1.holesWon).toBe(1);
-    expect(result.unwonSkins).toBe(0);
+    expect(result.carriedPot).toBe(0);
   });
 
   it('carryover resetter etter avgjort hull (potten tømmes)', () => {
@@ -414,13 +414,14 @@ describe('skins.compute — pending holes stop resolution', () => {
       expect(p.holesWon).toBe(0);
     }
     // carriedPot frosset på 0 → ingen henger.
-    expect(result.unwonSkins).toBe(0);
+    expect(result.carriedPot).toBe(0);
   });
 
-  it('Carry fryses ved pending: hull 1 delt, hull 2 pending → unwonSkins=0 (frosset, ikke tapt)', () => {
-    // Hull 1 delt (carry 1). Hull 2 mangler u2 → pending, potten fryses men er
-    // ikke "rundeslutt-uvunnet" — den henger som pending. unwonSkins teller kun
-    // carry ved faktisk rundeslutt etter alle resolverte hull; pending fryser.
+  it('Carry fryses ved pending: hull 1 delt, hull 2 pending → carriedPot=1 (rå pott eksponert)', () => {
+    // Hull 1 delt (carry 1). Hull 2 mangler u2 → pending, potten fryses ved
+    // freeze-punktet. Modulen eksponerer den RÅ hengende potten (1); det er
+    // SkinsView (med gameStatus) som avgjør om dette er «i potten» (live) eller
+    // «ikke vunnet» (finished). Scoring-modulen forblir ren.
     const ctx = makeCtx({
       players: [soloPlayer('u1'), soloPlayer('u2')],
       holes: par4Holes(2),
@@ -434,13 +435,42 @@ describe('skins.compute — pending holes stop resolution', () => {
     const result = compute(ctx);
     expect(holeRow(result, 1).outcome).toBe('carryover');
     expect(holeRow(result, 2).outcome).toBe('pending');
-    // Potten (1) henger som pending, ikke som rundeslutt-uvunnet.
-    expect(result.unwonSkins).toBe(0);
+    // Rå pott (1) eksponert ved freeze-punktet — ikke nullstilt.
+    expect(result.carriedPot).toBe(1);
+  });
+
+  it('Tidlig avslutning på delt hull + trailing uspilte hull → carriedPot eksponerer rå pott (#303)', () => {
+    // Det rapporterte tilfellet: hull 1 delt (carry 1), hull 2 delt (carry 2),
+    // hull 3 pending (admin avsluttet før noen rakk å spille). Tidligere ga
+    // `frozen ? 0 : carriedPot` = 0 → henger-banneret forsvant. Nå eksponeres
+    // den rå potten (2) slik at SkinsView kan vise «2 skins ikke vunnet» når
+    // gameStatus === 'finished'.
+    const ctx = makeCtx({
+      players: [soloPlayer('u1'), soloPlayer('u2')],
+      holes: par4Holes(3),
+      scores: [
+        { userId: 'u1', holeNumber: 1, gross: 4 },
+        { userId: 'u2', holeNumber: 1, gross: 4 },
+        { userId: 'u1', holeNumber: 2, gross: 5 },
+        { userId: 'u2', holeNumber: 2, gross: 5 },
+        // Hull 3: ingen scores → pending, potten fryses på freeze-punktet.
+      ],
+      skinsScoring: 'gross',
+    });
+    const result = compute(ctx);
+    expect(holeRow(result, 1).outcome).toBe('carryover');
+    expect(holeRow(result, 2).outcome).toBe('carryover');
+    expect(holeRow(result, 3).outcome).toBe('pending');
+    // Rå hengende pott fra siste delte spilte hull = 2 (ikke 0).
+    expect(result.carriedPot).toBe(2);
+    for (const p of result.players) {
+      expect(p.totalSkins).toBe(0);
+    }
   });
 });
 
 describe('skins.compute — hanging / unwon skins at round end', () => {
-  it('Delt siste hull → unwonSkins > 0, ingen får dem', () => {
+  it('Delt siste hull → carriedPot > 0, ingen får dem', () => {
     // Hull 1 u1 vinner, hull 2 delt → potten (1) henger ved rundeslutt.
     const ctx = makeCtx({
       players: [soloPlayer('u1'), soloPlayer('u2')],
@@ -455,14 +485,14 @@ describe('skins.compute — hanging / unwon skins at round end', () => {
     });
     const result = compute(ctx);
     expect(holeRow(result, 2).outcome).toBe('carryover');
-    expect(result.unwonSkins).toBe(1);
+    expect(result.carriedPot).toBe(1);
     const u1 = result.players.find((p) => p.userId === 'u1')!;
     const u2 = result.players.find((p) => p.userId === 'u2')!;
     expect(u1.totalSkins).toBe(1);
     expect(u2.totalSkins).toBe(0);
   });
 
-  it('To delte hull på slutten → unwonSkins=2', () => {
+  it('To delte hull på slutten → carriedPot=2', () => {
     const ctx = makeCtx({
       players: [soloPlayer('u1'), soloPlayer('u2')],
       holes: par4Holes(2),
@@ -475,7 +505,7 @@ describe('skins.compute — hanging / unwon skins at round end', () => {
       skinsScoring: 'gross',
     });
     const result = compute(ctx);
-    expect(result.unwonSkins).toBe(2);
+    expect(result.carriedPot).toBe(2);
     for (const p of result.players) {
       expect(p.totalSkins).toBe(0);
     }

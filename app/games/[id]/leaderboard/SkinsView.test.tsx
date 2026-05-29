@@ -98,7 +98,7 @@ function makeResult(): SkinsResult {
       makePlayerLine('u2', 2, 0, 0),
       makePlayerLine('u3', 3, 0, 0),
     ],
-    unwonSkins: 0,
+    carriedPot: 0,
   };
 }
 
@@ -160,15 +160,18 @@ describe('SkinsView', () => {
     const hole3 = within(holeList).getByTestId('skins-hole-row-3');
     expect(hole3.textContent).toContain('Venter på score');
 
-    // Ingen uvunne skins (unwonSkins=0) — boksen skal ikke vises.
+    // Ingen uvunne skins (carriedPot=0) — boksen skal ikke vises.
     expect(screen.queryByTestId('skins-unwon')).toBeNull();
 
     unmount();
 
-    // 2) Uvunne skins vises når spillet er ferdig og unwonSkins > 0.
+    // 2) Uvunne skins vises når spillet er ferdig og carriedPot > 0 — inkludert
+    //    tidlig-avsluttet spill med gap etter et delt hull (#303). Mock-en har
+    //    et trailing pending hull (hull 3) men carriedPot fra siste delte spilte
+    //    hull skal likevel rapporteres som uvunnet når status='finished'.
     const resultWithUnwon: SkinsResult = {
       ...makeResult(),
-      unwonSkins: 3,
+      carriedPot: 3,
     };
     const { unmount: unmount2 } = render(
       <SkinsView {...defaultProps({ result: resultWithUnwon, gameStatus: 'finished' })} />,
@@ -176,8 +179,16 @@ describe('SkinsView', () => {
     const unwonBox = screen.getByTestId('skins-unwon');
     expect(unwonBox.textContent).toContain('3');
     expect(unwonBox.textContent).toContain('ikke vunnet');
-    expect(unwonBox.textContent).toContain('Siste hull ble delt');
+    expect(unwonBox.textContent).toContain('Siste spilte hull ble delt');
     unmount2();
+
+    // 2b) Samme hengende pott under AKTIVT spill → banneret skal IKKE vises
+    //     (potten er fortsatt i spill, synlig via pending-hullets carriedIn).
+    const { unmount: unmount2b } = render(
+      <SkinsView {...defaultProps({ result: resultWithUnwon, gameStatus: 'active' })} />,
+    );
+    expect(screen.queryByTestId('skins-unwon')).toBeNull();
+    unmount2b();
 
     // 3) Reveal-modus midt-runde → skjuler tall, viser venterom-melding.
     render(

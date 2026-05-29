@@ -21,6 +21,23 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#299](https://github.com/jdlarssen/golf-app/issues/299). Spillere som blir invitert til en ukjent spillform får nå en kort forklaring rett på spill-siden, og kan bla gjennom alle formene i et eget oppslagsverk. Lavere terskel for å bli med på noe nytt.
 
+### [1.46.1] - 2026-05-29
+
+> Avslutter du et Skins-spill rett etter et delt hull, viser resultatlista nå at de skinsene ikke ble vunnet. Før forsvant de fra oversikten.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- [`lib/scoring/modes/skins.ts`](lib/scoring/modes/skins.ts) + [`types.ts`](lib/scoring/modes/types.ts) — henger-skins ble under-rapportert når et spill ble avsluttet tidlig med et gap rett etter et delt hull ([#303](https://github.com/jdlarssen/golf-app/issues/303)). `SkinsResult.unwonSkins = frozen ? 0 : carriedPot` nullstilte den hengende potten så snart et hull var pending, slik at henger-banneret forsvant. Scoring-modulen kjenner ikke `gameStatus`, så feltet er erstattet med rå `SkinsResult.carriedPot` (den hengende potten ved siste resolverte hull, frozen eller ikke). [`SkinsView`](app/games/[id]/leaderboard/SkinsView.tsx) — som allerede mottar `gameStatus` — avgjør label: banneret vises når `gameStatus === 'finished' && carriedPot > 0` (dekker både komplett runde med delt siste hull og tidlig-avsluttet spill med trailing pending), og holdes skjult under aktivt spill der potten fortsatt er i spill. Kun display — spiller-totalene var alltid korrekte.
+- Banner-copy presisert: «Siste hull ble delt» → «Siste spilte hull ble delt» (presist for tidlig-avsluttede spill der siste *spilte* hull, ikke siste hull-nummer, var delt).
+
+#### Tests
+- 2 nye Type A scoring-tester: rå `carriedPot` eksponert ved pending-freeze; tidlig-avslutning på delt hull + trailing pending → `carriedPot` = rå hengende pott (ikke 0). Eksisterende `unwonSkins`-assertions re-pekt til `carriedPot`.
+- SkinsView-render-testen utvidet: frozen-finished-scenario viser banneret; samme pott under aktivt spill holder banneret skjult.
+
+</details>
+
 ### [1.46.0] - 2026-05-29
 
 > Får du en invitasjon til en spillform du ikke kjenner? Nå ligger det en kort forklaring rett på spill-siden. Trykk «Slik funker det», så er du i gang. Vil du lese deg opp på forhånd, finner du alle formene samlet under «Spillformer» på hjem-siden.

@@ -19,9 +19,10 @@
 //     else:
 //       outcome = 'carryover'; carriedPot = atStake
 //
-// Rundeslutt: etter siste resolverte hull er `unwonSkins = carriedPot` — disse
-// henger uvunnet (standard Skins, ingen omspill i Tørny). Pending fryser potten
-// uten å markere den som rundeslutt-uvunnet (gapet kan fylles senere).
+// Rundeslutt: etter siste resolverte hull eksponeres `carriedPot` rå — den
+// hengende potten (standard Skins, ingen omspill i Tørny). Pending fryser potten
+// på freeze-punktet. SkinsView avgjør label fra gameStatus: «i potten» under
+// aktivt spill vs «ikke vunnet» når ferdig (issue #303).
 //
 // Net vs gross (gjenbruk av effectiveFor-mønsteret fra nassau.ts):
 //   - 'gross': effectiveScore = gross direkte (HCP ignoreres).
@@ -221,10 +222,12 @@ export function compute(ctx: ScoringContext): SkinsResult {
     });
   }
 
-  // Rundeslutt: hvis potten henger ved siste resolverte hull (delt siste hull),
-  // er disse skinsene uvunne. Pending fryser potten uten å markere som uvunnet
-  // — gapet kan fylles senere, da re-deriverer scoring fra scores.
-  const unwonSkins = frozen ? 0 : carriedPot;
+  // Rundeslutt: `carriedPot` holder den rå hengende potten ved siste resolverte
+  // hull i begge tilfeller — etter en komplett runde med delt siste hull, OG
+  // frozen ved freeze-punktet når et pending-gap stoppet resolving. Modulen
+  // kjenner ikke `gameStatus`, så den eksponerer den rå verdien og lar SkinsView
+  // avgjøre om potten er «i potten» (aktivt spill) eller «ikke vunnet» (ferdig
+  // spill, evt. avsluttet tidlig med gap etter et delt hull — issue #303).
 
   const players = rankPlayers(ctx.players, working);
 
@@ -233,7 +236,7 @@ export function compute(ctx: ScoringContext): SkinsResult {
     scoring,
     holes: rows,
     players,
-    unwonSkins,
+    carriedPot,
   };
 }
 
