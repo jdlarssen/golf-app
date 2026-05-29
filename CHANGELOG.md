@@ -17,7 +17,40 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.51.y — Round Robin (roterende partnere)
+
+Issue [#280](https://github.com/jdlarssen/golf-app/issues/280), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Firespillers-format der partner-konstellasjonen bytter hvert sjette hull — alle spiller med og mot hverandre. Valgbart under Kompis i opprett-spill-wizarden.
+
+### [1.51.0] - 2026-05-30
+
+> Du kan nå opprette et Round Robin-spill for fire kompiser. Partnerne bytter hvert sjette hull — hull 1–6 spiller du med én, hull 7–12 med en annen og hull 13–18 med den siste — slik at alle har spilt med og mot hverandre når runden er ferdig. Appen regner best netto per side hvert hull, og den med flest hullseire totalt vinner. Du finner spillformen under Kompis i opprett-spill-wizarden.
+
+<details>
+<summary>Teknisk</summary>
+
+Round Robin gjenbruker fourball matchplay-motorens per-hull-beregning (`applyAllowance` + `bestBallForHole` + `classifyMatchplayHole`) og handicap-modell (allowance_pct, 85 % WHS-standard). Scoring-modulen er en tynn rotasjons- og aggregeringswrapper — ingen ny tabell (rotasjonen er ren deterministisk funksjon av spillerslot + hull).
+
+#### Added
+- [`supabase/migrations/0055_round_robin.sql`](supabase/migrations/0055_round_robin.sql) — seed av format-rad + intent-mapping (sekundær under Kompis, sort_order=100).
+- `app/admin/games/new/sections/RoundRobinSetup.tsx` — wizard-step som viser fire spillerslotter (A/B/C/D) med rotasjonsforklaring. Ingen shuffle-knapp (alle permutasjoner gir identiske totaler). Type C-render-test.
+
+#### Changed
+- `app/admin/games/new/useGameFormState.ts` — `isRoundRobin`-flag, `roundRobinAllowancePct`-state (default 85), `roundRobinOrder` (deterministisk valgrekkefølge), `roundRobinPlayersValid` (krever nøyaktig 4 spillere), `canPublish` + `missingForPublish` wired for Round Robin.
+- `app/admin/games/new/GameWizard.tsx` — renderer `RoundRobinSetup` og `AllowanceField` for `round_robin_allowance_pct`, skjuler generisk `TeamSizeSelector` for Round Robin. Hidden input for allowance-prosenten i FormData.
+- `app/admin/games/new/GameForm.tsx` — `round_robin_allowance_pct?: number` lagt til `InitialValues`.
+- `app/admin/games/new/useGameFormState.ts` — `defaultTeamSizeForMode` returnerer 1 for `round_robin`.
+
+#### Tests
+- Type C: `RoundRobinSetup.test.tsx` (2) — slots med spillerlabels, placeholder-rader ved <4 spillere.
+
+</details>
+
+---
+
 ## 1.50.y — Nines / Split Sixes (poeng per hull for tre)
+
+<details>
+<summary><strong>1.50.y — Nines / Split Sixes (poeng per hull for tre) (1 oppføring) — klikk for å vise</strong></summary>
 
 Issue [#278](https://github.com/jdlarssen/golf-app/issues/278), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Enda et kompis-format der poengene kommer fra hvor godt du spiller hvert hull, ikke fra sluttsummen. For nøyaktig tre spillere, med to varianter: Nines og Split Sixes.
 
@@ -43,6 +76,8 @@ Bygget på Skins-mønstret: poengene utledes fra det vanlige strokeplay-scorekor
 
 #### Tests
 - Type A: `nines.test.ts` (22) + 6 nines-cases i `gamePayload.test.ts`. Type C: `NinesView.test.tsx` + `NinesSetup.test.tsx`.
+
+</details>
 
 </details>
 

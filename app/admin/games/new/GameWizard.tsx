@@ -46,6 +46,7 @@ import { WolfSetup } from './sections/WolfSetup';
 import { NassauSetup } from './sections/NassauSetup';
 import { SkinsSetup } from './sections/SkinsSetup';
 import { NinesSetup } from './sections/NinesSetup';
+import { RoundRobinSetup } from './sections/RoundRobinSetup';
 import { AllowanceField } from '@/components/admin/AllowanceField';
 import { bruttoHelperFor } from '@/lib/games/allowanceCopy';
 import {
@@ -301,6 +302,7 @@ export function GameWizard({
       texas_team_handicap_pct: String(state.texasHandicapPct),
       fourball_allowance_pct: state.fourballAllowancePct,
       foursomes_allowance_pct: state.foursomesAllowancePct,
+      round_robin_allowance_pct: state.roundRobinAllowancePct,
       wolf_scoring: state.wolfScoring,
       nassau_scoring: state.nassauScoring,
       skins_scoring: state.skinsScoring,
@@ -424,7 +426,7 @@ export function GameWizard({
 
           {state.formatChosen && (
             <div className="space-y-4">
-              {!state.isMatchplay && !state.isWolf && !state.isNassau && !state.isSkins && !state.isNines && (
+              {!state.isMatchplay && !state.isWolf && !state.isNassau && !state.isSkins && !state.isNines && !state.isRoundRobin && (
                 <TeamSizeSelector
                   mode={state.gameMode}
                   value={state.teamSize}
@@ -466,6 +468,14 @@ export function GameWizard({
                   disabled={state.lockGameMode}
                 />
               )}
+              {state.isRoundRobin && (
+                <RoundRobinSetup
+                  roundRobinOrder={state.roundRobinOrder
+                    .map((pid) => players.find((p) => p.id === pid))
+                    .filter((p): p is NonNullable<typeof p> => p !== undefined)}
+                  disabled={state.lockGameMode}
+                />
+              )}
               {state.gameMode === 'fourball_matchplay' && (
                 <AllowanceField
                   fieldName="fourball_allowance_pct"
@@ -489,6 +499,19 @@ export function GameWizard({
                   bruttoHelperText="Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
                   value={state.foursomesAllowancePct}
                   onChange={state.setFoursomesAllowancePct}
+                  hideHiddenInput
+                />
+              )}
+              {state.isRoundRobin && (
+                <AllowanceField
+                  fieldName="round_robin_allowance_pct"
+                  defaultPct={85}
+                  legend="Scoring for Round Robin"
+                  description="Styrer handicap for Round Robin-matchplay. Netto bruker en andel av hver spillers handicap per hull, brutto teller laveste gross per side."
+                  nettoHelperText="Andel av hver spillers handicap som teller. WHS-standard for four-ball matchplay er 85."
+                  bruttoHelperText="Ingen handicap — laveste gross-score per hull per side avgjør. Ren brutto-runde."
+                  value={state.roundRobinAllowancePct}
+                  onChange={state.setRoundRobinAllowancePct}
                   hideHiddenInput
                 />
               )}
@@ -623,9 +646,11 @@ function FormDataInputs({
     isNassau,
     isSkins,
     isNines,
+    isRoundRobin,
     texasHandicapPct,
     fourballAllowancePct,
     foursomesAllowancePct,
+    roundRobinAllowancePct,
     wolfScoring,
     nassauScoring,
     skinsScoring,
@@ -702,6 +727,13 @@ function FormDataInputs({
           <input type="hidden" name="nines_variant" value={ninesVariant} />
           <input type="hidden" name="nines_scoring" value={ninesScoring} />
         </>
+      )}
+      {isRoundRobin && (
+        <input
+          type="hidden"
+          name="round_robin_allowance_pct"
+          value={String(roundRobinAllowancePct)}
+        />
       )}
 
       <input type="hidden" name="course_id" value={courseId} />

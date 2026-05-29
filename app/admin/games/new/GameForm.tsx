@@ -131,6 +131,12 @@ export type InitialValues = {
    */
   foursomes_allowance_pct?: number;
   /**
+   * Round Robin (#280): allowance-prosent (0..100) for matchplay-scoring.
+   * Pre-fylles fra DB i edit-flyt; nye spill defaulter til 85 (WHS-standard
+   * for matchplay) i useGameFormState.
+   */
+  round_robin_allowance_pct?: number;
+  /**
    * Wolf (#274): scoring-modus ('gross' eller 'net'). Pre-fylles fra DB i
    * edit-flyt; nye spill defaulter til 'net' i useGameFormState.
    */

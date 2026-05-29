@@ -100,6 +100,9 @@ export function defaultTeamSizeForMode(mode: GameMode): TeamSize {
   // Nines / Split Sixes (#278): solo-format (ingen lag), team_size=1 betyr
   // requiresTeams=false så vi får solo-style player-selection i step 3.
   if (mode === 'nines') return 1;
+  // Round Robin: 4 spillere, team_number 1-4 = rotation-slot (A/B/C/D).
+  // team_size=1 som Wolf — ingen lag-grid, solo-style player-selection.
+  if (mode === 'round_robin') return 1;
   return 2;
 }
 
@@ -241,6 +244,13 @@ export function useGameFormState({
   // dette ved publish og avviser verdier utenfor 0..100.
   const [fourballAllowancePct, setFourballAllowancePct] = useState<number>(
     initialValues?.fourball_allowance_pct ?? 85,
+  );
+  // Round Robin (#280): allowance-prosent (0 = brutto, 1..100 = netto).
+  // Speiler fourball-mønsteret — WHS-standard for matchplay er 85 %.
+  // Validator-en (`validateRoundRobin`) leser dette ved publish og avviser
+  // verdier utenfor 0..100.
+  const [roundRobinAllowancePct, setRoundRobinAllowancePct] = useState<number>(
+    initialValues?.round_robin_allowance_pct ?? 85,
   );
   // Foursomes matchplay (#218): allowance-prosent (0 = brutto, 1..100 = netto).
   // Pre-fylles fra cup-radens foursomes_allowance_pct via initialValues; ellers
@@ -442,6 +452,10 @@ export function useGameFormState({
   //   hull, 5–3–1) eller Split Sixes (6 poeng, 4–2–0). Eigen NinesSetup-step
   //   i step 2.
   const isNines = gameMode === 'nines';
+  // - isRoundRobin: 4-spiller roterende partner-format (4BBB matchplay der
+  //   partnere bytter hvert 6. hull). team_number 1-4 = rotation-slot A/B/C/D.
+  //   team_size=1, ingen lag-grid. Eget RoundRobinSetup-step i step 2.
+  const isRoundRobin = gameMode === 'round_robin';
 
   // Drafts can be saved without a tee-off; publishing cannot. `canPublish`
   // below combines this with the rest of the validity gates.
@@ -684,6 +698,17 @@ export function useGameFormState({
     setWolfShuffleSeed(Math.floor(Math.random() * 1_000_000));
   }
 
+  // Round Robin-rotasjon: deterministisk tildeling av de 4 spillerne til
+  // slots 1-4 (A/B/C/D) i valgrekkefølge. Tildeling er kosmetisk — alle
+  // permutasjoner gir identiske totaler (hver spiller partnerer alle andre
+  // uansett rekkefølge). Ingen shuffle-knapp: enklere enn Wolf og bevisst
+  // enklere UI. Tom liste hvis !isRoundRobin eller <4 valgte.
+  const roundRobinOrder = useMemo<string[]>(() => {
+    if (!isRoundRobin) return [];
+    if (selectedPlayerIds.length < 4) return [];
+    return selectedPlayerIds.slice(0, 4);
+  }, [isRoundRobin, selectedPlayerIds]);
+
   const orderedPayload = useMemo(() => {
     if (isWolf) {
       // Wolf: emit 4 rader, hver med team_number 1-4 i shuffled rekkefølge.
@@ -699,6 +724,24 @@ export function useGameFormState({
         }));
       }
       return wolfOrder.map((pid, idx) => ({
+        user_id: pid,
+        team_number: idx + 1,
+        flight_number: idx + 1,
+      }));
+    }
+    if (isRoundRobin) {
+      // Round Robin: emit 4 rader, team_number 1-4 = slot A/B/C/D.
+      // roundRobinOrder er deterministisk (valgrekkefølge).
+      // Validator-en (`validateRoundRobin`) håndhever 4-spillers-regelen
+      // ved publish. Drafts med <4 spillere emitter slot-frie rader.
+      if (selectedPlayerIds.length < 4) {
+        return selectedPlayerIds.map((pid) => ({
+          user_id: pid,
+          team_number: null as number | null,
+          flight_number: null as number | null,
+        }));
+      }
+      return roundRobinOrder.map((pid, idx) => ({
         user_id: pid,
         team_number: idx + 1,
         flight_number: idx + 1,
@@ -753,7 +796,7 @@ export function useGameFormState({
       }
     }
     return rows;
-  }, [isMatchplay, isWolf, requiresTeams, selectedPlayerIds, wolfOrder, playersByTeam, teamByPlayer, flightByPlayer, isParStableford, isTexas]);
+  }, [isMatchplay, isWolf, isRoundRobin, requiresTeams, selectedPlayerIds, wolfOrder, roundRobinOrder, playersByTeam, teamByPlayer, flightByPlayer, isParStableford, isTexas]);
 
   const flightsComplete =
     teamsComplete &&
@@ -832,6 +875,11 @@ export function useGameFormState({
   // ikke å tilordne selv. Speiler `validateWolf` i gamePayload.ts.
   const wolfPlayersValid = isWolf && selectedPlayerIds.length === 4;
 
+  // Round Robin-validitet: nøyaktig 4 spillere. Rotation-slot 1-4 fordeles
+  // automatisk i valgrekkefølge, ingen manuell tilordning nødvendig.
+  // Speiler `validateRoundRobin` i gamePayload.ts.
+  const roundRobinPlayersValid = isRoundRobin && selectedPlayerIds.length === 4;
+
   // Nassau-validitet: 2-4 spillere. Solo-format (team/flight null), ingen
   // lag-tilordning. Speiler `validateNassau` i gamePayload.ts.
   const nassauPlayersValid =
@@ -875,7 +923,15 @@ export function useGameFormState({
                   ? skinsPlayersValid
                   : isNines
                     ? ninesPlayersValid
-                    : false;
+                    : isRoundRobin
+                      ? roundRobinPlayersValid
+                      : false;
+
+  // Round Robin allowance-validitet: 0..100.
+  const roundRobinAllowancePctValid =
+    Number.isInteger(roundRobinAllowancePct) &&
+    roundRobinAllowancePct >= 0 &&
+    roundRobinAllowancePct <= 100;
 
   // Publishing requires every section to be valid AND a tee-off time. Drafts
   // skip these gates entirely (they only need a name).
@@ -884,6 +940,8 @@ export function useGameFormState({
   // (allerede speilet i `texasPlayersValid` -> `playersValidForMode`) siden
   // hcp_allowance_pct ikke gjelder for Texas — lag-handicap-prosenten lever
   // i `mode_config.team_handicap_pct` istedenfor games.hcp_allowance_pct.
+  // Round Robin har sitt eget `roundRobinAllowancePctValid`-felt og bruker
+  // ikke games.hcp_allowance_pct; hopper over generisk allowanceValid-sjekk.
   // Når selv-påmelding er på (open / manual_approval) blir spillerlisten
   // valgfri ved publish — speiler effective-mode-flippen i
   // `buildGameInsertPayload`. Admin kan publisere et tomt spill og la
@@ -892,7 +950,9 @@ export function useGameFormState({
     courseId !== '' &&
     teeBoxId !== '' &&
     (playersStepOptional || playersValidForMode) &&
-    (isTexas || isWolf || isNassau || isSkins || isNines || allowanceValid) &&
+    (isRoundRobin
+      ? roundRobinAllowancePctValid
+      : isTexas || isWolf || isNassau || isSkins || isNines || allowanceValid) &&
     hasTeeOff;
 
   // Human-readable list of what's still missing for a publish. Mode-aware:
@@ -1022,15 +1082,30 @@ export function useGameFormState({
         'for mange spillere — Nines krever nøyaktig 3',
       );
     }
+  } else if (isRoundRobin) {
+    // Round Robin: nøyaktig 4 spillere. Rotation-slot fordeles automatisk.
+    if (selectedPlayerIds.length < 4) {
+      const remaining = 4 - selectedPlayerIds.length;
+      missingForPublish.push(
+        `${remaining} ${remaining === 1 ? 'spiller til' : 'spillere til'}`,
+      );
+    } else if (selectedPlayerIds.length > 4) {
+      missingForPublish.push(
+        'for mange spillere — Round Robin krever nøyaktig 4',
+      );
+    }
+    if (!roundRobinAllowancePctValid) {
+      missingForPublish.push('gyldig handicap-prosent (0-100)');
+    }
   } else if (selectedPlayerIds.length < 1) {
     // isSolo
     missingForPublish.push('minst én spiller');
   }
-  // hcp_allowance_pct gjelder ikke for Texas, Wolf, Nassau eller Skins — disse
-  // modusene har sin egen scoring-konfig i mode_config. Hopper over
-  // allowance-sjekken så admin ikke får mismatch mellom UI-skjult-felt og
-  // publish-feilmelding.
-  if (!isTexas && !isWolf && !isNassau && !isSkins && !isNines && !allowanceValid)
+  // hcp_allowance_pct gjelder ikke for Texas, Wolf, Nassau, Skins, Nines eller
+  // Round Robin — disse modusene har sin egen scoring-konfig i mode_config.
+  // Hopper over allowance-sjekken så admin ikke får mismatch mellom
+  // UI-skjult-felt og publish-feilmelding.
+  if (!isTexas && !isWolf && !isNassau && !isSkins && !isNines && !isRoundRobin && !allowanceValid)
     missingForPublish.push('gyldig HCP-allowance');
 
   return {
@@ -1058,10 +1133,13 @@ export function useGameFormState({
     setFourballAllowancePct,
     foursomesAllowancePct,
     setFoursomesAllowancePct,
+    roundRobinAllowancePct,
+    setRoundRobinAllowancePct,
     wolfScoring,
     setWolfScoring,
     wolfOrder,
     shuffleWolfOrder,
+    roundRobinOrder,
     nassauScoring,
     setNassauScoring,
     skinsScoring,
@@ -1105,6 +1183,7 @@ export function useGameFormState({
     isNassau,
     isSkins,
     isNines,
+    isRoundRobin,
     hasTeeOff,
     // Memoiserte derivasjoner
     selectedCourse,
