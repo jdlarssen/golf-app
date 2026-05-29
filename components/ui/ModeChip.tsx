@@ -1,4 +1,5 @@
-import { MODE_LABELS, type GameMode } from '@/lib/scoring/modes/types';
+import { MODE_LABELS, type GameMode, type GameModeConfig } from '@/lib/scoring/modes/types';
+import { formatDisplayLabel } from '@/lib/games/formatLabel';
 
 /**
  * Subtil chip som indikerer spillmodus (Best ball / Stableford) per spill-rad
@@ -16,11 +17,20 @@ import { MODE_LABELS, type GameMode } from '@/lib/scoring/modes/types';
  */
 export function ModeChip({
   mode,
+  modeConfig,
   className,
 }: {
   mode: GameMode;
+  /**
+   * Valgfri mode-config. Når satt vises variant-bevisst navn («4BBB Stableford»
+   * for team_size 2) via formatDisplayLabel; ellers faller chipen tilbake til
+   * MODE_LABELS[mode]. Optional så call-sites uten config-tilgang ikke tvinges
+   * til å endre (#282).
+   */
+  modeConfig?: GameModeConfig;
   className?: string;
 }) {
+  const label = modeConfig ? formatDisplayLabel(mode, modeConfig) : MODE_LABELS[mode];
   return (
     <span
       className={`inline-block rounded-full border px-[7px] py-[2px] font-sans text-[9.5px] font-medium ${className ?? ''}`}
@@ -30,7 +40,7 @@ export function ModeChip({
         color: 'var(--text-muted)',
       }}
     >
-      {MODE_LABELS[mode]}
+      {label}
     </span>
   );
 }

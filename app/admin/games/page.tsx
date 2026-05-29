@@ -13,7 +13,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { TopBar } from '@/components/ui/TopBar';
 import type { GameStatus } from '@/lib/games/status';
-import type { GameMode } from '@/lib/scoring/modes/types';
+import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { formatShortDateNb } from '@/lib/format/date';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 
@@ -61,6 +61,9 @@ type GameRow = {
   // kjører. Backfilled til 'best_ball' for pre-multi-mode-spill
   // (migrasjon 0030).
   game_mode: GameMode;
+  // Variant-bevisst chip-navn (#282): 4BBB Stableford vises kun når team_size
+  // kjennes, så mode_config må hentes med i listen.
+  mode_config: GameModeConfig;
   created_at: string;
   started_at: string | null;
   ended_at: string | null;
@@ -161,7 +164,7 @@ async function fetchGames(filterFinished: boolean) {
   let q = supabase
     .from('games')
     .select(
-      'id, name, status, game_mode, created_at, started_at, ended_at, scheduled_tee_off_at, courses(name)',
+      'id, name, status, game_mode, mode_config, created_at, started_at, ended_at, scheduled_tee_off_at, courses(name)',
     )
     .order('created_at', { ascending: false })
     .limit(40);
@@ -303,7 +306,7 @@ async function GamesLedger({ filterFinished }: { filterFinished: boolean }) {
                     Inline-flex sikrer at chip-en ikke streches over hele
                     raden hvis spillnavnet er langt. */}
                 <div className="mt-1 inline-flex">
-                  <ModeChip mode={g.game_mode} />
+                  <ModeChip mode={g.game_mode} modeConfig={g.mode_config} />
                 </div>
               </div>
               <div className="text-right">

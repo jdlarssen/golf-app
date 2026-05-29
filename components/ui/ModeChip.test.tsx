@@ -13,6 +13,26 @@ describe('ModeChip', () => {
     expect(screen.getByText('Best ball')).toBeInTheDocument();
   });
 
+  it('rendrer «4BBB Stableford» når modeConfig har team_size 2 (#282)', () => {
+    render(
+      <ModeChip
+        mode="stableford"
+        modeConfig={{ kind: 'stableford', team_size: 2, points_table: 'standard' }}
+      />,
+    );
+    expect(screen.getByText('4BBB Stableford')).toBeInTheDocument();
+  });
+
+  it('beholder «Stableford» når modeConfig har team_size 1', () => {
+    render(
+      <ModeChip
+        mode="stableford"
+        modeConfig={{ kind: 'stableford', team_size: 1, points_table: 'standard' }}
+      />,
+    );
+    expect(screen.getByText('Stableford')).toBeInTheDocument();
+  });
+
   it('propagerer className når oppgitt', () => {
     const { container } = render(
       <ModeChip mode="stableford" className="ml-2" />,

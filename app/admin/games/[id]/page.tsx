@@ -245,7 +245,7 @@ export default async function GameDetailPage({
       <div className="px-1">
         <div className="mb-1.5 flex items-center gap-2">
           <StatusChip tone={STATUS_TO_TONE[game.status]} />
-          <ModeChip mode={game.game_mode} />
+          <ModeChip mode={game.game_mode} modeConfig={game.mode_config} />
           <Suspense fallback={<Skeleton className="h-3 w-20" />}>
             <SakNumber createdAt={game.created_at} />
           </Suspense>
