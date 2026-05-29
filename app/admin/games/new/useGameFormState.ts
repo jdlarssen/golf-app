@@ -257,6 +257,12 @@ export function useGameFormState({
   const [nassauScoring, setNassauScoring] = useState<'gross' | 'net'>(
     initialValues?.nassau_scoring === 'gross' ? 'gross' : 'net',
   );
+  // Skins (#275): brutto vs netto-toggle. Default 'net' speiler Tørny's
+  // ethos. Validatoren (`validateSkins`) leser feltet og faller defensivt
+  // tilbake til 'net' ved ugyldig/manglende verdi.
+  const [skinsScoring, setSkinsScoring] = useState<'gross' | 'net'>(
+    initialValues?.skins_scoring === 'gross' ? 'gross' : 'net',
+  );
   // Wolf-rotasjon: en counter som økes hver gang admin trykker "Shuffle".
   // wolfOrder (derived under) hasher (selectedPlayerIds, wolfShuffleSeed) for
   // å produsere en deterministisk-pseudo-random permutasjon. Da kan render-
@@ -414,6 +420,9 @@ export function useGameFormState({
   // - isNassau: solo-format, 2-4 spillere. Front 9 / back 9 / total 18 er tre
   //   separate konkurranser. Egen NassauSetup-step i step 2 for scoring-toggle.
   const isNassau = gameMode === 'nassau';
+  // - isSkins: solo-format med carryover, 2-4 spillere. Hvert hull er verdt
+  //   1 skin; delte hull ruller skinnet videre. Egen SkinsSetup-step i step 2.
+  const isSkins = gameMode === 'skins';
 
   // Drafts can be saved without a tee-off; publishing cannot. `canPublish`
   // below combines this with the rest of the validity gates.
@@ -809,6 +818,11 @@ export function useGameFormState({
   const nassauPlayersValid =
     isNassau && selectedPlayerIds.length >= 2 && selectedPlayerIds.length <= 4;
 
+  // Skins-validitet: 2-4 spillere. Solo-format (team/flight null), ingen
+  // lag-tilordning. Speiler `validateSkins` i gamePayload.ts.
+  const skinsPlayersValid =
+    isSkins && selectedPlayerIds.length >= 2 && selectedPlayerIds.length <= 4;
+
   // Modus-spesifikk publish-validitet. Reglene speiler
   // `lib/games/gamePayload.ts` slik at klient og server forteller samme
   // historie til admin når noe mangler:
@@ -833,7 +847,9 @@ export function useGameFormState({
               ? wolfPlayersValid
               : isNassau
                 ? nassauPlayersValid
-                : false;
+                : isSkins
+                  ? skinsPlayersValid
+                  : false;
 
   // Publishing requires every section to be valid AND a tee-off time. Drafts
   // skip these gates entirely (they only need a name).
@@ -850,7 +866,7 @@ export function useGameFormState({
     courseId !== '' &&
     teeBoxId !== '' &&
     (playersStepOptional || playersValidForMode) &&
-    (isTexas || isWolf || isNassau || allowanceValid) &&
+    (isTexas || isWolf || isNassau || isSkins || allowanceValid) &&
     hasTeeOff;
 
   // Human-readable list of what's still missing for a publish. Mode-aware:
@@ -956,15 +972,27 @@ export function useGameFormState({
         'for mange spillere — Nassau krever 2-4',
       );
     }
+  } else if (isSkins) {
+    // Skins: 2-4 spillere, solo (ingen lag-tilordning).
+    if (selectedPlayerIds.length < 2) {
+      const remaining = 2 - selectedPlayerIds.length;
+      missingForPublish.push(
+        `${remaining === 1 ? 'minst 1 spiller til' : 'minst 2 spillere'}`,
+      );
+    } else if (selectedPlayerIds.length > 4) {
+      missingForPublish.push(
+        'for mange spillere — Skins krever 2-4',
+      );
+    }
   } else if (selectedPlayerIds.length < 1) {
     // isSolo
     missingForPublish.push('minst én spiller');
   }
-  // hcp_allowance_pct gjelder ikke for Texas, Wolf eller Nassau — disse
+  // hcp_allowance_pct gjelder ikke for Texas, Wolf, Nassau eller Skins — disse
   // modusene har sin egen scoring-konfig i mode_config. Hopper over
   // allowance-sjekken så admin ikke får mismatch mellom UI-skjult-felt og
   // publish-feilmelding.
-  if (!isTexas && !isWolf && !isNassau && !allowanceValid)
+  if (!isTexas && !isWolf && !isNassau && !isSkins && !allowanceValid)
     missingForPublish.push('gyldig HCP-allowance');
 
   return {
@@ -998,6 +1026,8 @@ export function useGameFormState({
     shuffleWolfOrder,
     nassauScoring,
     setNassauScoring,
+    skinsScoring,
+    setSkinsScoring,
     requirePeerApproval,
     setRequirePeerApproval,
     sideEnabled,
@@ -1031,6 +1061,7 @@ export function useGameFormState({
     isTexas,
     isWolf,
     isNassau,
+    isSkins,
     hasTeeOff,
     // Memoiserte derivasjoner
     selectedCourse,

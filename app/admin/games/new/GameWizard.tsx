@@ -44,6 +44,7 @@ import { ReadyStep } from './sections/ReadyStep';
 import { RegistrationSection } from './sections/RegistrationSection';
 import { WolfSetup } from './sections/WolfSetup';
 import { NassauSetup } from './sections/NassauSetup';
+import { SkinsSetup } from './sections/SkinsSetup';
 import { AllowanceField } from '@/components/admin/AllowanceField';
 import { bruttoHelperFor } from '@/lib/games/allowanceCopy';
 import {
@@ -301,6 +302,7 @@ export function GameWizard({
       foursomes_allowance_pct: state.foursomesAllowancePct,
       wolf_scoring: state.wolfScoring,
       nassau_scoring: state.nassauScoring,
+      skins_scoring: state.skinsScoring,
       tournament_id: initialValues?.tournament_id,
       tournament_match_label: initialValues?.tournament_match_label,
       registration_mode: state.registrationMode,
@@ -419,7 +421,7 @@ export function GameWizard({
 
           {state.formatChosen && (
             <div className="space-y-4">
-              {!state.isMatchplay && !state.isWolf && !state.isNassau && (
+              {!state.isMatchplay && !state.isWolf && !state.isNassau && !state.isSkins && (
                 <TeamSizeSelector
                   mode={state.gameMode}
                   value={state.teamSize}
@@ -442,6 +444,13 @@ export function GameWizard({
                 <NassauSetup
                   scoring={state.nassauScoring}
                   onScoringChange={state.setNassauScoring}
+                  disabled={state.lockGameMode}
+                />
+              )}
+              {state.isSkins && (
+                <SkinsSetup
+                  scoring={state.skinsScoring}
+                  onScoringChange={state.setSkinsScoring}
                   disabled={state.lockGameMode}
                 />
               )}
@@ -600,11 +609,13 @@ function FormDataInputs({
     isTexas,
     isWolf,
     isNassau,
+    isSkins,
     texasHandicapPct,
     fourballAllowancePct,
     foursomesAllowancePct,
     wolfScoring,
     nassauScoring,
+    skinsScoring,
     orderedPayload,
     courseId,
     teeBoxId,
@@ -667,6 +678,9 @@ function FormDataInputs({
       )}
       {isNassau && (
         <input type="hidden" name="nassau_scoring" value={nassauScoring} />
+      )}
+      {isSkins && (
+        <input type="hidden" name="skins_scoring" value={skinsScoring} />
       )}
 
       <input type="hidden" name="course_id" value={courseId} />
