@@ -29,6 +29,7 @@ import * as wolf from './modes/wolf';
 import * as nassau from './modes/nassau';
 import * as skins from './modes/skins';
 import * as bingoBangoBongo from './modes/bingoBangoBongo';
+import * as nines from './modes/nines';
 import type { ScoringContext, ModeResult } from './modes/types';
 
 export function computeLeaderboard(ctx: ScoringContext): ModeResult {
@@ -57,6 +58,8 @@ export function computeLeaderboard(ctx: ScoringContext): ModeResult {
       return skins.compute(ctx);
     case 'bingo_bango_bongo':
       return bingoBangoBongo.compute(ctx);
+    case 'nines':
+      return nines.compute(ctx);
   }
 }
 
@@ -126,4 +129,7 @@ export type {
   BingoBangoBongoHoleInput,
   BingoBangoBongoHoleRow,
   BingoBangoBongoPlayerLine,
+  NinesResult,
+  NinesHoleRow,
+  NinesPlayerLine,
 } from './modes/types';

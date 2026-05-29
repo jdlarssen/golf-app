@@ -14,7 +14,8 @@ export type GameMode =
   | 'wolf'
   | 'nassau'
   | 'skins'
-  | 'bingo_bango_bongo';
+  | 'bingo_bango_bongo'
+  | 'nines';
 
 /**
  * Norske visnings-labels for hver spillmodus. Brukes av ModeChip i admin-
@@ -35,6 +36,7 @@ export const MODE_LABELS: Record<GameMode, string> = {
   nassau: 'Nassau',
   skins: 'Skins',
   bingo_bango_bongo: 'Bingo Bango Bongo',
+  nines: 'Nines / Split Sixes',
 };
 
 /**
@@ -169,6 +171,22 @@ export type GameModeConfig =
        */
       kind: 'bingo_bango_bongo';
       team_size: 1;
+    }
+  | {
+      /**
+       * Nines / Split Sixes (issue #278): individuelt 3-spiller-format. Poeng
+       * fordeles per hull etter effective-score-rangering. To varianter:
+       *  - 'nines': 9 poeng per hull (5–3–1)
+       *  - 'split_sixes': 6 poeng per hull (4–2–0)
+       * Likt på et hull → poengene for de delte plassene legges sammen og deles
+       * likt. Strokeplay-utledet (leser ctx.scores, ingen egen input-tabell).
+       * team_size: 1 (ingen lag). Speiler skins-config med en variant-flag i tillegg.
+       */
+      kind: 'nines';
+      team_size: 1;
+      nines_variant: 'nines' | 'split_sixes';
+      /** 'net' = gross − strokesForHole(CH, SI). 'gross' = rå gross. Speiler skins_scoring. */
+      nines_scoring: 'gross' | 'net';
     };
 
 /**
@@ -1191,6 +1209,67 @@ export interface BingoBangoBongoResult {
   players: BingoBangoBongoPlayerLine[];
 }
 
+// -----------------------------------------------------------------------------
+// Nines / Split Sixes (issue #278 — 3-spiller poeng-fordeling per hull).
+//
+// Hvert hull deler ut en fast pott etter effective-score-rangering blant de 3
+// spillerne:
+//   - Nines:       9 poeng — lavest 5, nest 3, høyest 1
+//   - Split Sixes: 6 poeng — lavest 4, nest 2, høyest 0
+//
+// Likt deles likt: spillere med EKSAKT samme effective-score danner en gruppe;
+// poengene for plassene gruppa opptar legges sammen og deles likt. F.eks. to
+// delt lavest i Nines: (5+3)/2 = 4 hver, tredje får 1.
+//
+// Pending-hull: mangler minst én spiller gross → hullet deler ikke ut poeng
+// (alle 0), teller ikke i holesScored. Ingen carryover — uavhengig per hull
+// (skiller seg fra Skins). Senere hull avgjøres normalt.
+//
+// Net vs gross (gjenbruk av effectiveFor-mønsteret fra skins.ts):
+//   - 'gross': effectiveScore = gross direkte (HCP ignoreres).
+//   - 'net':   effectiveScore = gross − strokesForHole(courseHandicap, SI).
+//
+// Ranking: totalPoints DESC, tiebreak tiedWith på EKSAKT lik total (deterministisk
+// userId-fallback for stabil rekkefølge). Full 5-tier-cascade utelates i v1
+// (samme avgjørelse som Wolf/Skins).
+// -----------------------------------------------------------------------------
+
+export interface NinesHoleRow {
+  holeNumber: number;
+  par: number;
+  strokeIndex: number;
+  /** True når ikke alle spillere har gross — hullet deler ikke ut poeng. */
+  pending: boolean;
+  perPlayer: Array<{
+    userId: string;
+    gross: number | null;
+    /** gross hvis 'gross', netto hvis 'net'. null hvis hullet ikke spilt. */
+    effectiveScore: number | null;
+    /** Poeng på dette hullet (0 når pending). */
+    points: number;
+  }>;
+  /** Poeng per spiller på dette hullet (0 for alle når pending). */
+  pointsByPlayer: Record<string, number>;
+}
+
+export interface NinesPlayerLine {
+  userId: string;
+  totalPoints: number;
+  /** Antall ikke-pending hull spilleren bidro på. */
+  holesScored: number;
+  rank: number;
+  /** Spillere med EKSAKT samme totalPoints. Tom for unike rader. */
+  tiedWith: string[];
+}
+
+export interface NinesResult {
+  kind: 'nines';
+  variant: 'nines' | 'split_sixes';
+  scoring: 'gross' | 'net';
+  holes: NinesHoleRow[];
+  players: NinesPlayerLine[];
+}
+
 /**
  * Discriminated union — konsumenter narrower på `kind`:
  *   const r = computeLeaderboard(ctx);
@@ -1225,4 +1304,5 @@ export type ModeResult =
   | WolfResult
   | NassauResult
   | SkinsResult
-  | BingoBangoBongoResult;
+  | BingoBangoBongoResult
+  | NinesResult;
