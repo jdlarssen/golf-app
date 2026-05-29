@@ -17,7 +17,40 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.47.y — Modifisert Stableford (pro-skala med minuspoeng)
+
+Issue [#281](https://github.com/jdlarssen/golf-app/issues/281), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Modifisert Stableford er Stableford med proff-skala: birdie og eagle belønnes ekstra, mens dobbeltbogey eller verre gir minuspoeng. Premierer å satse foran å ligge trygt på par.
+
+### [1.47.0] - 2026-05-29
+
+> Ny spillform: Modifisert Stableford. Samme Stableford-poeng du kjenner, men med proff-skala: birdie og eagle gir mye, og dobbeltbogey eller verre trekker fra. Poengene kan gå i minus, så her lønner det seg å satse. Solo eller par, og du velger handicap som vanlig når du oppretter spillet.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- [`lib/scoring/modes/modifiedStableford.ts`](lib/scoring/modes/modifiedStableford.ts) — ny scoring-modul med pro-poeng-tabellen (albatross+ 8, eagle 5, birdie 2, par 0, bogey −1, dobbeltbogey+ −3; condor caps på 8; ikke-spilt 0). Gjenbruker stableford-motoren via parameterisert `computeWithPointsTable` og returnerer `kind: 'stableford'`, så leaderboard/podium-visningen er uendret. Type A-tester dekker tabellen (inkl. albatross-cap + null→0), solo-totaler med negative poeng, ranking med negativ total, og team-MAX med negativ.
+- [`lib/scoring/modes/types.ts`](lib/scoring/modes/types.ts) — ny `modified_stableford` `GameMode` + `GameModeConfig`-variant (`points_table: 'modified'`, solo/par), `MODE_LABELS`-entry «Modifisert Stableford», og `isStablefordFamily(mode)`-helper.
+- [`supabase/migrations/0052_modified_stableford.sql`](supabase/migrations/0052_modified_stableford.sql) — seeder format-rad + tre sekundære intent-mappings (kompis/klubb/solo). Gjenbruker stableford-ikonet.
+- [`lib/formats/modeGuide.ts`](lib/formats/modeGuide.ts) — spiller-rettet regelforklaring (poeng-skala + minuspoeng-advarsel).
+
+#### Changed
+- [`lib/scoring/modes/stableford.ts`](lib/scoring/modes/stableford.ts) — motoren parameterisert med en poeng-funksjon og en contributor-regel slik at standard og modified deler all solo-/team-logikk. Standard-oppførselen er uendret (eksisterende tester grønne).
+- [`lib/games/gamePayload.ts`](lib/games/gamePayload.ts) — `modified_stableford`-validator (gjenbruker stableford-spiller-parsingen).
+- Leaderboard-, scorekort-, wizard-, mail- og game-home-flatene ruter `modified_stableford` via `isStablefordFamily`. Hull-siden og scorekortet bruker den modifiserte poeng-tabellen for live «Dine poeng».
+- [`app/games/[id]/holes/[holeNumber]/HoleClient.tsx`](app/games/[id]/holes/[holeNumber]/HoleClient.tsx) — diskret advarsel over score-input om at poengene kan gå i minus (andre advarsels-flate ved siden av spillform-guiden).
+
+#### Tests
+- Type A: `modifiedStableford.test.ts` + router-delegering i `index.test.ts`. Type C: minus-poeng-banner i `HoleClient.test.tsx`. Eksisterende stableford-suite uendret og grønn.
+
+</details>
+
+---
+
 ## 1.46.y — Spillformer forklart for spillere
+
+<details>
+<summary><strong>1.46.y — Spillformer forklart for spillere (2 oppføringer) — klikk for å vise</strong></summary>
 
 Issue [#299](https://github.com/jdlarssen/golf-app/issues/299). Spillere som blir invitert til en ukjent spillform får nå en kort forklaring rett på spill-siden, og kan bla gjennom alle formene i et eget oppslagsverk. Lavere terskel for å bli med på noe nytt.
 
@@ -56,6 +89,8 @@ Issue [#299](https://github.com/jdlarssen/golf-app/issues/299). Spillere som bli
 
 #### Tests
 - Type A completeness (`modeGuide.test.ts`) + Type C render (`ModeGuideCard.test.tsx`) dekker alle modusene. Hele suiten grønn.
+
+</details>
 
 </details>
 
