@@ -40,7 +40,7 @@ Issue [#275](https://github.com/jdlarssen/golf-app/issues/275), tredje kompis-fo
 - Auth-gate E2E ([`e2e/games/skins.spec.ts`](e2e/games/skins.spec.ts)) speiler Wolf/Nassau-mønstret.
 
 #### Changed
-- `Record<GameMode, …>`-mapper utvidet for type-completeness (ReadyStep, TeamSizeSelector, `MODE_LABELS`, lokal `GameRow`-union i [`app/games/[id]/page.tsx`](app/games/[id]/page.tsx)). `validateSkins` wiret i `parseGameMode` + `modeValidators`.
+- `Record<GameMode, …>`-mapper + uttømmende `switch`-er utvidet for type-completeness (ReadyStep, TeamSizeSelector, `MODE_LABELS`, `bruttoHelperFor` i [`allowanceCopy.ts`](lib/games/allowanceCopy.ts), lokal `GameRow`-union i [`app/games/[id]/page.tsx`](app/games/[id]/page.tsx)). `validateSkins` wiret i `parseGameMode` + `modeValidators`.
 - [`renderSkins`](app/games/[id]/leaderboard/page.tsx) router-case etter Nassau.
 - [`app/admin/games/new/GameWizard.tsx`](app/admin/games/new/GameWizard.tsx): render `<SkinsSetup>` når `isSkins`, hidden `skins_scoring`-input, skjul TeamSizeSelector. `skins_scoring` lagt til i `initialValues`-passthrough.
 - [`app/games/[id]/holes/[holeNumber]/page.tsx`](app/games/[id]/holes/[holeNumber]/page.tsx): når `game_mode='skins'`, kjør `skins.compute` over nåværende scores og send `skinsAtStake` + `skinsCarriedIn` ned til `HoleClient`.

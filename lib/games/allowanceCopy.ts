@@ -35,5 +35,10 @@ export function bruttoHelperFor(mode: GameMode): string {
       // for wolf vises ikke generisk allowance-field; returverdien er for
       // type-completeness.
       return 'Ingen handicap — slag-sum per seksjon bruker gross-score.';
+    case 'skins':
+      // Skins har egen scoring-toggle (gross|net) i SkinsSetup-step. Som for
+      // wolf og nassau vises ikke generisk allowance-field; returverdien er
+      // for type-completeness.
+      return 'Ingen handicap — lavest gross-score per hull vinner skinnet.';
   }
 }
