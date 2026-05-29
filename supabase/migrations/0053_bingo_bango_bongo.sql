@@ -1,7 +1,8 @@
 -- Bingo Bango Bongo — tre prestasjons-poeng per hull (kompis-batch, issue #277).
 --
--- Wolf=50, Nassau=60, Skins=70 under kompis-intent. BBB er sekundær
--- (is_primary=false) og plasseres på sort_order=80 — neste ledige verdi.
+-- Wolf=50, Nassau=60, Skins=70, Modifisert Stableford=80 under kompis-intent.
+-- BBB er sekundær (is_primary=false) og plasseres på sort_order=90 — neste
+-- ledige verdi (80 er allerede tatt av modified_stableford i 0052).
 
 -- 1. Tabell
 create table public.bingo_bango_bongo_holes (
@@ -67,6 +68,7 @@ insert into public.formats (slug, display_name, icon_key, short_description, sco
     false
   );
 
--- 5. Seed intent-mapping (sekundær under kompis; sort_order=80 etter skins=70)
+-- 5. Seed intent-mapping (sekundær under kompis; sort_order=90 etter
+--    modified_stableford=80)
 insert into public.format_intent_mapping (format_slug, intent, is_visible, is_primary, sort_order)
-  values ('bingo_bango_bongo', 'kompis', true, false, 80);
+  values ('bingo_bango_bongo', 'kompis', true, false, 90);

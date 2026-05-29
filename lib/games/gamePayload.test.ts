@@ -865,6 +865,81 @@ describe('buildGameInsertPayload — solo_strokeplay (epic #46)', () => {
   });
 });
 
+describe('buildGameInsertPayload — bingo_bango_bongo (issue #277)', () => {
+  /**
+   * Helper for BBB-payloads. Individuell modus (2–4 spillere), ingen lag/
+   * flight-tilordning. Speiler strokeplayFd-mønsteret. Disse testene fanger
+   * spesielt parseGameMode-whitelisten: uten 'bingo_bango_bongo' der ville
+   * game_mode bli null og payloaden feile med mode_required før validatoren.
+   */
+  function bbbFd(
+    extras: Record<string, string> = {},
+    playerIds: string[] = ['u1', 'u2', 'u3'],
+  ): FormData {
+    const base: Record<string, string> = {
+      name: 'Bingo-runde',
+      course_id: 'c1',
+      tee_box_id: 't1',
+      game_mode: 'bingo_bango_bongo',
+    };
+    playerIds.forEach((id, i) => {
+      base[`player_${i}_id`] = id;
+    });
+    return fd({ ...base, ...extras });
+  }
+
+  it('publish med 3 spillere → ok, mode_config korrekt, alle team/flight null', () => {
+    const result = buildGameInsertPayload(bbbFd(), 'publish');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.game_mode).toBe('bingo_bango_bongo');
+    expect(result.mode_config).toEqual({
+      kind: 'bingo_bango_bongo',
+      team_size: 1,
+    });
+    expect(result.players).toEqual([
+      { user_id: 'u1', team_number: null, flight_number: null },
+      { user_id: 'u2', team_number: null, flight_number: null },
+      { user_id: 'u3', team_number: null, flight_number: null },
+    ]);
+  });
+
+  it('publish med 4 spillere → ok', () => {
+    const result = buildGameInsertPayload(
+      bbbFd({}, ['u1', 'u2', 'u3', 'u4']),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(4);
+  });
+
+  it('publish med 1 spiller → min_players_for_mode', () => {
+    const result = buildGameInsertPayload(bbbFd({}, ['u1']), 'publish');
+    expect(result.errorCode).toBe('min_players_for_mode');
+  });
+
+  it('publish med 5 spillere → too_many_players_for_mode', () => {
+    const result = buildGameInsertPayload(
+      bbbFd({}, ['u1', 'u2', 'u3', 'u4', 'u5']),
+      'publish',
+    );
+    expect(result.errorCode).toBe('too_many_players_for_mode');
+  });
+
+  it('draft tolererer 0 spillere', () => {
+    const result = buildGameInsertPayload(bbbFd({}, []), 'draft');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toEqual([]);
+  });
+
+  it('rejecter duplikat spiller', () => {
+    const result = buildGameInsertPayload(
+      bbbFd({}, ['u1', 'u1']),
+      'publish',
+    );
+    expect(result.errorCode).toBe('duplicate_player');
+  });
+});
+
 describe('buildGameInsertPayload — texas_scramble (issue #44)', () => {
   /**
    * Helper for Texas-scramble-payloads. Bygger en form med game_mode=texas_scramble,

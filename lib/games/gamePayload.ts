@@ -239,7 +239,8 @@ function parseGameMode(formData: FormData): GameMode | null {
     raw === 'foursomes_matchplay' ||
     raw === 'wolf' ||
     raw === 'nassau' ||
-    raw === 'skins'
+    raw === 'skins' ||
+    raw === 'bingo_bango_bongo'
   )
     return raw;
   return null;
