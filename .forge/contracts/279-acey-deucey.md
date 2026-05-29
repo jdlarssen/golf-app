@@ -226,29 +226,31 @@ values
 
 ## Success Criteria
 
-- [ ] **Migrasjon `0054_acey_deucey.sql`** seeder format-row + intent-mapping. Verifiser: `select count(*) from formats where slug='acey_deucey'` = 1, `select count(*) from format_intent_mapping where format_slug='acey_deucey' and intent='kompis'` = 1.
-- [ ] **`lib/scoring/modes/aceyDeucey.ts`** eksporterer `compute(ctx): AceyDeuceyResult`; respekterer `acey_deucey_scoring` (brutto/netto).
-- [ ] **`lib/scoring/modes/aceyDeucey.test.ts`** — Type A `it.each`: unik ace+deuce (+3/0/0/−3), delt lavest (ingen ace), delt høyest (ingen deuce), begge delt, alle like, tre like lavest/høyest, uferdig hull (ingen utdeling), netto vs brutto flipper ace/deuce, negativ total, ranking + tiebreak (flest aces). Alle grønne.
-- [ ] **`lib/scoring/index.ts`** har `acey_deucey`-case + type-re-eksport.
-- [ ] **`lib/scoring/modes/types.ts`** har AceyDeucey-typene + utvidet `GameMode`/`GameModeConfig`/`ModeResult`/`MODE_LABELS`.
-- [ ] **`lib/games/gamePayload.ts`** har `validateAceyDeucey` (eksakt 4, brutto/netto) wired i `parseGameMode` + `modeValidators`; Type A i `gamePayload.test.ts` for player-count-grensene (3 avvist, 4 ok, 5 avvist).
-- [ ] **`lib/formats/modeGuide.ts`** har `acey_deucey`-entry i `MODE_GUIDE`.
-- [ ] **Wizard** rendrer brutto/netto-bryteren for acey_deucey (speiler Skins).
-- [ ] **`AceyDeuceyView.tsx`** viser per-spiller totaler (med fortegn) + per-hull ace/deuce-tabell fra fixture (Type C render-test); **`AceyDeuceyPodium.tsx`** viser 1/2/3.
-- [ ] **`renderAceyDeucey`** i leaderboard-`page.tsx` ruter acey_deucey-games korrekt (aktiv→View, finished→Podium).
-- [ ] Norsk copy gjennomgått med `humanizer:humanizer`-skill.
-- [ ] **CHANGELOG-oppføring + minor-bump 1.49.0 → 1.50.0** (verifiser nåværende ved bygging).
+- [x] **Migrasjon `0054_acey_deucey.sql`** seeder format-row + intent-mapping. Applied til live DB; verifisert: `formats_count=1`, `kompis_count=1`, `scoring_module=@/lib/scoring/modes/aceyDeucey`, `is_active=true`, `sort_order=95` (1643576). NB: sort_order justert fra kontraktens 100 → 95 fordi 100 allerede er en 3-veis bøtte (foursomes/solo/fourball).
+- [x] **`lib/scoring/modes/aceyDeucey.ts`** eksporterer `compute(ctx): AceyDeuceyResult`; respekterer `acey_deucey_scoring` (brutto/netto). — `aceyDeucey.ts:111` `effectiveFor` (59b4ebb).
+- [x] **`lib/scoring/modes/aceyDeucey.test.ts`** — Type A: unik ace+deuce, delt lavest/høyest, begge delt, alle like, tre-veis ties, uferdig hull (no-freeze), netto vs brutto flip, negativ total, aces-tiebreak. **16/16 grønne** (59b4ebb + tiebreak-fix 90730fd).
+- [x] **`lib/scoring/index.ts`** har `acey_deucey`-case + type-re-eksport. (59b4ebb)
+- [x] **`lib/scoring/modes/types.ts`** har AceyDeucey-typene + utvidet `GameMode`/`GameModeConfig`/`ModeResult`/`MODE_LABELS`. (59b4ebb)
+- [x] **`lib/games/gamePayload.ts`** har `validateAceyDeucey` (eksakt 4, brutto/netto) wired i `parseGameMode` + `modeValidators`; `gamePayload.test.ts` **171/171** (8 nye: 3 avvist, 4 ok, 5 avvist, gross/net-parse). (59b4ebb)
+- [x] **`lib/formats/modeGuide.ts`** har `acey_deucey`-entry i `MODE_GUIDE`. (59b4ebb)
+- [x] **Wizard** rendrer brutto/netto-bryteren for acey_deucey (`AceyDeuceySetup.tsx`, default netto). Felt-navn `acey_deucey_scoring` verifisert ende-til-ende: wizard-radio → FormData → `parseAceyDeuceyScoring` → `validateAceyDeucey` → `mode_config` (7dbeec1).
+- [x] **`AceyDeuceyView.tsx`** viser per-spiller totaler (med fortegn) + per-hull ace/deuce-tabell («Delt»/«Venter») fra fixture (Type C render-test); **`AceyDeuceyPodium.tsx`** viser 1/2/3 (6f3058b).
+- [x] **`renderAceyDeucey`** i leaderboard-`page.tsx` ruter acey_deucey-games korrekt (aktiv→View, finished→Podium + chromeless View) (6f3058b).
+- [x] Norsk copy gjennomgått med `humanizer:humanizer`-skill — em-dash + tie-bullet fikset i modeGuide (0db6ece); View/Setup-copy bekreftet idiomatisk.
+- [x] **CHANGELOG-oppføring + minor-bump 1.49.0 → 1.50.0** + 1.49.y-serie wrappet i `<details>` (1643576).
+
+**Sluttverifikasjon (alle chunks):** `npm run build` ✓ · full vitest **1966/1966** ✓ · `npm run lint` 0 errors ✓ · tsc kun pre-eksisterende feil i 4 urelaterte test-filer (signup/withdraw — ikke rørt av acey_deucey). Ekstra exhaustive-sites dekket: `allowanceCopy.ts`, `ReadyStep.tsx` (`MODE_SUMMARY_LABELS`), `TeamSizeSelector.tsx` (`ENABLED_COMBOS`), `app/games/[id]/page.tsx` (lokal union).
 
 ## Gates
 
 Etter hver chunk (scoped til det som endret seg):
-- [ ] `npx tsc --noEmit` — 0 nye errors
-- [ ] `npx vitest run lib/scoring/modes/aceyDeucey` — Type A grønn
-- [ ] `npx vitest run lib/games/gamePayload` — validator-tester grønne
-- [ ] `npx vitest run` — full suite grønn (regresjonsbeskyttelse)
-- [ ] `npm run lint` — 0 errors
-- [ ] `npm run build` — grønn (fanger exhaustive-switch/Record-gaps: `MODE_LABELS`, `MODE_GUIDE`, `modeValidators`, `ModeResult`-narrowing, index-switch — jf. minne om tsc-gate-fellen)
-- [ ] Manuell iPhone-Safari-sjekk av leaderboard-View hvis frontend rørt (Playwright valgfritt)
+- [x] `npx tsc --noEmit` — 0 nye errors (kun pre-eksisterende i urelaterte signup/withdraw-test-filer)
+- [x] `npx vitest run lib/scoring/modes/aceyDeucey` — 16/16 grønn
+- [x] `npx vitest run lib/games/gamePayload` — 171/171 grønn
+- [x] `npx vitest run` — full suite **1966/1966** grønn
+- [x] `npm run lint` — 0 errors
+- [x] `npm run build` — grønn (exhaustive-switch/Record-gaps dekket)
+- [ ] Manuell iPhone-Safari-sjekk av leaderboard-View — gjenstår for bruker (Vercel preview); evaluator bruker Playwright/preview der mulig
 
 ## Files Likely Touched
 
