@@ -60,12 +60,14 @@ Per-spiller-rad i best-ball-hull-drilldown. I dag bruker både brutto-fargen (`s
 
 ## Success Criteria
 
-- [ ] Submit-page: rad-par bruker `parForPlayer(parByGender, me.tee_gender)`, ikke `h.par_mens` (verifiser: `submit/page.tsx` rad-mapping leser `me.tee_gender`)
-- [ ] Submit-page: avvik-asterisk (`data-testid="par-aside-marker"`) rendres i par-kolonnen når hullet har par-avvik
-- [ ] Approve-page: par-tall + `scoreShape`/`scoreTone` bruker scorekort-eierens (`p.tee_gender`) par, ikke `h.par_mens`
-- [ ] Approve-page: avvik-asterisk rendres med `playerGender = p.tee_gender`
-- [ ] Leaderboard hull-fane: både `scoreShape`/`scoreTone` (linje ~607) OG netto-vs-par-merket (linje ~586) bruker `pc.par`, ikke `row.par`
-- [ ] Ingen regresjon på baner uten avvik: `parByGender` lik/fraværende → ingen asterisk, herre-par vises (eksisterende oppførsel)
+- [x] Submit-page: rad-par bruker `parForPlayer(parByGender, me.tee_gender)`, ikke `h.par_mens` — `submit/page.tsx` ReviewBody får `meTeeGender`, rad-mapping bygger `parByGender` + `parForPlayer`
+- [x] Submit-page: avvik-asterisk (`data-testid="par-aside-marker"`) rendres i par-kolonnen — `ParAsideInline` lagt til, kalt med `playerGender={meTeeGender}`
+- [x] Approve-page: par-tall + `scoreShape`/`scoreTone` bruker scorekort-eierens (`p.tee_gender`) par — `ownerPar` beregnet per pending-kort inne i løkka
+- [x] Approve-page: avvik-asterisk rendres med `playerGender = p.tee_gender` — `ParAsideInline` lagt til
+- [x] Leaderboard hull-fane: både `scoreShape`/`scoreTone` OG netto-vs-par-merket bruker `pc.par` — begge endret; team-summary-raden beholder korrekt `row.par`
+- [x] Ingen regresjon på baner uten avvik: `parForPlayer` defaulter til mens, `hasParDifference` false → ingen asterisk (verifisert via kodelesing + 1765 tester grønne)
+
+**Evaluering:** VERDICT ACCEPT (6/6) — `.forge/evaluations/252-per-spiller-par-display-flater.md`
 
 ## Gates
 
