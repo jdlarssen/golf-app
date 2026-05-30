@@ -72,7 +72,7 @@ export const MODE_GUIDE: Record<GameMode, ModeGuide> = {
       'Laget spiller én ball: alle slår, dere plukker det beste slaget, og alle slår derfra igjen.',
     points: [
       'Slik fortsetter dere til ballen er i hull. Laget får én score per hull.',
-      'Laget får et felles handikap fra summen av spillernes handikap, så jevne og ujevne lag møtes på like vilkår.',
+      'Laget får et felles handikap som jevner ut forskjellene mellom sterke og svake lag.',
       'Lavest lagtotal vinner.',
     ],
   },

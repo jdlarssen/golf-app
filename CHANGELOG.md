@@ -17,7 +17,41 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.53.y — Ambrose (net scramble med lag-handicap)
+
+Issue [#284](https://github.com/jdlarssen/golf-app/issues/284), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Enda en lagscramble, denne gangen den australske Ambrose-varianten — mekanisk lik Texas scramble, men med den klassiske Ambrose-regnemåten for lag-handicap. Primært for klubbturneringer.
+
+### [1.53.0] - 2026-05-30
+
+> Ny spillform for klubbturneringen: Ambrose. Hele laget spiller én ball: alle slår, dere plukker det beste slaget, og alle slår videre derfra til ballen er i hull. Laget får ett felles handicap som jevner ut forskjellene mellom sterke og svake lag, etter den klassiske Ambrose-regnemåten. Sett opp lag på 2 eller 4, så regner appen ut lag-handicapet og kårer laget med lavest lagtotal.
+
+<details>
+<summary>Teknisk</summary>
+
+Ambrose er mekanisk identisk med Texas scramble (én ball per lag, kapteinen eier scores-radene, lavest lag-netto vinner). `ambrose.compute()` returnerer `kind: 'texas_scramble'`, så hele leaderboard-, podium-, scorekort- og mail-visningen gjenbrukes uendret — samme mønster som modifisert Stableford → Stableford. Eneste reelle forskjell er default-lag-handicapet: standard Ambrose-formel (summen av spillernes handicap ÷ 2×lagstørrelse → 25 % for 2-mannslag, 12,5 % for 4-mannslag, justerbar) i stedet for Texas' NGF-konvensjon.
+
+#### Added
+- [`lib/scoring/modes/ambrose.ts`](lib/scoring/modes/ambrose.ts) — `compute(ctx)` delegerer til den ekstraherte `computeScramble`-kjernen; `ambroseDefaultPct` gir 25 % (2-mannslag) / 12,5 % (4-mannslag). 7 Type A-tester.
+- [`supabase/migrations/0057_ambrose.sql`](supabase/migrations/0057_ambrose.sql) — seed av format-rad «Ambrose» + intent-mapping (sekundær under Klubb). Ingen ny tabell.
+
+#### Changed
+- `lib/scoring/modes/types.ts` + `lib/scoring/index.ts` — ny `ambrose`-modus i `GameMode`, `GameModeConfig` og `MODE_LABELS`, ny `isScrambleFamily`-helper; `texasScramble.ts` ekstraherer den delte `computeScramble`-kjernen.
+- [`lib/games/gamePayload.ts`](lib/games/gamePayload.ts) — `validateAmbrose` (lag à 2/4, fraksjonell handicap-prosent tillatt) + `parseGameMode`-støtte + 6 regresjonstester.
+- Wizard (`ModeSelector`, `GameForm`, `GameWizard`, `useGameFormState`, sections) — Ambrose-tile + lag-handicap-felt med Ambrose-default per lagstørrelse.
+- Leaderboard, hull-side, scorekort, game-home, admin-detaljside og mail rutes via `isScrambleFamily`; Texas-viewet og -podiet tar nå et `formatLabel`-prop så Ambrose vises med riktig format-navn.
+- `lib/formats/icons.tsx`, `lib/formats/modeGuide.ts`, `app/spillformer/page.tsx` — format-ikon, spiller-forklaring og oppdagbarhet.
+
+#### Tests
+- Type A: `ambrose.test.ts` (7) + 6 ambrose-cases i `gamePayload.test.ts`. Ingen ny Type C — Ambrose gjenbruker Texas-viewet, så en egen render-test ville duplisert #44s dekning (per test-disiplin).
+
+</details>
+
+---
+
 ## 1.52.y — Acey Deucey (lavest tar, høyest gir)
+
+<details>
+<summary><strong>1.52.y — Acey Deucey (lavest tar, høyest gir) (1 oppføring) — klikk for å vise</strong></summary>
 
 Issue [#279](https://github.com/jdlarssen/golf-app/issues/279), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). En klassisk kompisrunde for nøyaktig fire spillere: hvert hull deler ut poeng etter hvem som spilte best og dårligst. Poengene regnes rett fra slagene, så det er ingen ekstra registrering.
 
@@ -43,6 +77,8 @@ Rent slag-derivert format. I motsetning til Bingo Bango Bongo trengs ingen ny ta
 
 #### Tests
 - Type A: `aceyDeucey.test.ts` (16) + player-count-grenser i `gamePayload.test.ts`. Type C: `AceyDeuceyView.test.tsx` + `AceyDeuceySetup.test.tsx`.
+
+</details>
 
 </details>
 

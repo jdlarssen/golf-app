@@ -11,7 +11,7 @@ insert into public.formats (
   'ambrose',
   'Ambrose',
   'ambrose',
-  'Lag à 2 eller 4. Alle slår, beste ball velges. Lag-handicap jevner ut forskjeller mellom lagene.',
+  'Lag à 2 eller 4. Alle slår, beste ball velges. Lag-handicap jevner ut forskjellene mellom lagene.',
   '@/lib/scoring/modes/ambrose',
   true,
   false
