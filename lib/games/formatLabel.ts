@@ -20,6 +20,8 @@ import {
  *
  *  - Standard Stableford, team_size 2  → «4BBB Stableford»
  *  - Modifisert Stableford, team_size 2 → «4BBB Modifisert Stableford»
+ *  - Shamble, variant 'champagne'        → «Champagne Scramble»
+ *  - Shamble, variant 'shamble'          → «Shamble»
  *  - Alt annet (inkl. solo-stableford)  → MODE_LABELS[mode]
  *
  * Defensivt: narrower på både `mode` (familie) og `mode_config.kind` +
@@ -29,6 +31,12 @@ export function formatDisplayLabel(
   mode: GameMode,
   modeConfig: GameModeConfig,
 ): string {
+  // Shamble/Champagne deler én umbrella-GameMode; variant gir konkret navn.
+  if (mode === 'shamble' && modeConfig.kind === 'shamble') {
+    return modeConfig.shamble_variant === 'champagne'
+      ? 'Champagne Scramble'
+      : 'Shamble';
+  }
   if (
     isStablefordFamily(mode) &&
     (modeConfig.kind === 'stableford' ||

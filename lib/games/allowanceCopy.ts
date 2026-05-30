@@ -51,5 +51,10 @@ export function bruttoHelperFor(mode: GameMode): string {
       // Nines har egen scoring-toggle (gross|net) i NinesSetup-step. Generisk
       // allowance-field vises ikke for nines; returverdien er for type-completeness.
       return 'Ingen handicap — lavest gross-score per hull gir flest poeng.';
+    case 'shamble':
+      // Shamble har egen scoring-toggle (gross|net) i ShambleSetup-step.
+      // Generisk allowance-field vises ikke for shamble; returverdien er for
+      // type-completeness.
+      return 'Ingen handicap — de laveste gross-scorene per hull teller for laget.';
   }
 }

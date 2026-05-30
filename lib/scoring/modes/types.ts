@@ -15,7 +15,8 @@ export type GameMode =
   | 'nassau'
   | 'skins'
   | 'bingo_bango_bongo'
-  | 'nines';
+  | 'nines'
+  | 'shamble';
 
 /**
  * Norske visnings-labels for hver spillmodus. Brukes av ModeChip i admin-
@@ -37,6 +38,7 @@ export const MODE_LABELS: Record<GameMode, string> = {
   skins: 'Skins',
   bingo_bango_bongo: 'Bingo Bango Bongo',
   nines: 'Nines / Split Sixes',
+  shamble: 'Shamble / Champagne Scramble',
 };
 
 /**
@@ -1394,4 +1396,5 @@ export type ModeResult =
   | NassauResult
   | SkinsResult
   | BingoBangoBongoResult
-  | NinesResult;
+  | NinesResult
+  | ShambleResult;

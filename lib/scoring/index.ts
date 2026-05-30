@@ -30,6 +30,7 @@ import * as nassau from './modes/nassau';
 import * as skins from './modes/skins';
 import * as bingoBangoBongo from './modes/bingoBangoBongo';
 import * as nines from './modes/nines';
+import * as shamble from './modes/shamble';
 import type { ScoringContext, ModeResult } from './modes/types';
 
 export function computeLeaderboard(ctx: ScoringContext): ModeResult {
@@ -60,6 +61,8 @@ export function computeLeaderboard(ctx: ScoringContext): ModeResult {
       return bingoBangoBongo.compute(ctx);
     case 'nines':
       return nines.compute(ctx);
+    case 'shamble':
+      return shamble.compute(ctx);
   }
 }
 
@@ -132,4 +135,8 @@ export type {
   NinesResult,
   NinesHoleRow,
   NinesPlayerLine,
+  ShambleResult,
+  ShambleHoleRow,
+  ShambleHoleTeamCell,
+  ShambleTeamLine,
 } from './modes/types';

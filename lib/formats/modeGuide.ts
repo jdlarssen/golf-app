@@ -140,6 +140,16 @@ export const MODE_GUIDE: Record<GameMode, ModeGuide> = {
       'Flest poeng sammenlagt vinner.',
     ],
   },
+  shamble: {
+    summary:
+      'Alle slår ut, laget velger det beste utslaget, og så spiller hver spiller sin egen ball inn. De laveste scorene på hullet teller for laget.',
+    points: [
+      'Etter det felles utslaget spiller dere hver deres ball helt i hull.',
+      'På hvert hull legges de laveste scorene sammen til lagets hull-score — som regel to av fire.',
+      'Champagne Scramble lar arrangøren velge om én, to eller tre scorer skal telle.',
+      'Lavest sammenlagt for laget vinner.',
+    ],
+  },
 };
 
 /**

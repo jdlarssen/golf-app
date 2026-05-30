@@ -57,6 +57,7 @@ const MODE_SUMMARY_LABELS: Record<GameMode, string> = {
   skins: 'Skins',
   bingo_bango_bongo: 'Bingo Bango Bongo',
   nines: 'Nines / Split Sixes',
+  shamble: 'Shamble / Champagne Scramble',
 };
 
 function teamSizeLabel(size: TeamSize): string {
