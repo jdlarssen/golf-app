@@ -240,6 +240,7 @@ function parseGameMode(formData: FormData): GameMode | null {
     raw === 'fourball_matchplay' ||
     raw === 'foursomes_matchplay' ||
     raw === 'greensome_matchplay' ||
+    raw === 'chapman_matchplay' ||
     raw === 'wolf' ||
     raw === 'nassau' ||
     raw === 'skins' ||
@@ -1265,6 +1266,91 @@ function parseGreensomeAllowancePct(
 }
 
 /**
+ * Chapman-matchplay-validator (issue #290). Mekanisk identisk med greensome/
+ * foursomes (2v2 alternate shot, eksakt 2+2 ved publish, flight = team), eneste
+ * forskjell er allowance-feltet (`chapman_allowance_pct`, default 100) og
+ * config-`kind`. Lag-handicap (60/40, samme som greensome) håndheves i
+ * scoring-modulen, ikke validatoren.
+ *
+ * Mode_config-output: `{kind: 'chapman_matchplay', team_size: 2, teams_count: 2,
+ * allowance_pct}`.
+ */
+function validateChapmanMatchplay(
+  formData: FormData,
+  mode: PayloadMode,
+): ModeValidationResult {
+  const allowancePct = parseChapmanAllowancePct(formData, mode);
+  if (allowancePct === null) {
+    return { ok: false, errorCode: 'bad_allowance' };
+  }
+
+  const players: GamePlayerInput[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < 8; i++) {
+    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
+    if (!user_id) continue;
+    if (seen.has(user_id)) {
+      return { ok: false, errorCode: 'duplicate_player' };
+    }
+    seen.add(user_id);
+    const team_number = Number(formData.get(`player_${i}_team`));
+    // Chapman-sider er strengt 1 eller 2 (speiler foursomes/greensome).
+    if (!Number.isInteger(team_number) || team_number < 1 || team_number > 2) {
+      return { ok: false, errorCode: 'bad_team' };
+    }
+    const flight_number = team_number;
+    players.push({ user_id, team_number, flight_number });
+  }
+
+  if (mode === 'publish') {
+    if (players.length < 4) {
+      return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    if (players.length > 4) {
+      return { ok: false, errorCode: 'too_many_players_for_mode' };
+    }
+    const sideCounts = new Map<number, number>();
+    for (const p of players) {
+      if (p.team_number === null) continue;
+      sideCounts.set(p.team_number, (sideCounts.get(p.team_number) ?? 0) + 1);
+    }
+    if (sideCounts.get(1) !== 2 || sideCounts.get(2) !== 2) {
+      return { ok: false, errorCode: 'team_balance' };
+    }
+  }
+
+  return {
+    ok: true,
+    players,
+    mode_config: {
+      kind: 'chapman_matchplay',
+      team_size: 2,
+      teams_count: 2,
+      allowance_pct: allowancePct,
+    },
+  };
+}
+
+/**
+ * Leser `chapman_allowance_pct` fra form-data. Returnerer 0..100 (heltall)
+ * eller null hvis ugyldig. Tom string i draft defaulter til 100 (WHS Chapman
+ * matchplay-standard — full diff etter 60/40-reduksjonen); publish krever
+ * eksplisitt gyldig verdi. Range 0..100 håndheves uansett.
+ */
+function parseChapmanAllowancePct(
+  formData: FormData,
+  mode: PayloadMode,
+): number | null {
+  const raw = formData.get('chapman_allowance_pct');
+  if (raw === null || raw === '') {
+    return mode === 'draft' ? 100 : null;
+  }
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0 || n > 100) return null;
+  return n;
+}
+
+/**
  * Wolf-validator (issue #274 — 4-spiller rotating partner-format).
  *
  * Regler:
@@ -1969,6 +2055,7 @@ const modeValidators: Record<
   fourball_matchplay: validateFourballMatchplay,
   foursomes_matchplay: validateFoursomesMatchplay,
   greensome_matchplay: validateGreensomeMatchplay,
+  chapman_matchplay: validateChapmanMatchplay,
   wolf: validateWolf,
   nassau: validateNassau,
   skins: validateSkins,

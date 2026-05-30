@@ -55,6 +55,7 @@ const MODE_SUMMARY_LABELS: Record<GameMode, string> = {
   fourball_matchplay: 'Four-ball matchplay',
   foursomes_matchplay: 'Foursomes matchplay',
   greensome_matchplay: 'Greensome matchplay',
+  chapman_matchplay: 'Chapman matchplay',
   wolf: 'Wolf',
   nassau: 'Nassau',
   skins: 'Skins',

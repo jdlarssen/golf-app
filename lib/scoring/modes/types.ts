@@ -14,6 +14,7 @@ export type GameMode =
   | 'fourball_matchplay'
   | 'foursomes_matchplay'
   | 'greensome_matchplay'
+  | 'chapman_matchplay'
   | 'wolf'
   | 'nassau'
   | 'skins'
@@ -42,6 +43,7 @@ export const MODE_LABELS: Record<GameMode, string> = {
   fourball_matchplay: 'Fourball',
   foursomes_matchplay: 'Foursomes',
   greensome_matchplay: 'Greensome',
+  chapman_matchplay: 'Chapman',
   wolf: 'Wolf',
   nassau: 'Nassau',
   skins: 'Skins',
@@ -83,17 +85,26 @@ export function isScrambleFamily(mode: GameMode): boolean {
 }
 
 /**
- * True for alternate-shot matchplay-familien (foursomes + greensome). Begge
- * deler struktur: én ball per lag, kaptein eier scores-radene, Layout B
- * head-to-head-scorekort, cup-snapshot, foursomes-view/podium. Eneste
- * forskjell er lag-handicap-formelen og tee-starter-feature (foursomes-eksklusiv).
- * Brukes på `game_mode`-baserte routing-/display-sjekker. #289 (Greensome).
+ * True for alternate-shot matchplay-familien (foursomes + greensome + chapman).
+ * Alle tre er 2v2 med én ball per lag, kaptein eier scores-radene, Layout B
+ * head-to-head-scorekort, cup-snapshot, foursomes-view/podium (alle returnerer
+ * `kind: 'foursomes_matchplay'` fra scoring-laget). Forskjellene er lag-handicap-
+ * formelen (foursomes = sum/50; greensome + chapman = 60/40/100) og on-course-
+ * mekanikken (greensome velger beste utslag; chapman bytter ball, så velger).
+ * Brukes på `game_mode`-baserte routing-/display-sjekker. #289, #290.
  *
- * NB: tee-starter-banner forblir foursomes-eksklusiv — bruk eksakt
- * `game_mode === 'foursomes_matchplay'`-sjekk for banner-gating.
+ * NB: hold mode-spesifikke greiner der oppførsel avviker:
+ *  - tee-starter-banner er foursomes-eksklusiv — bruk eksakt
+ *    `game_mode === 'foursomes_matchplay'`-sjekk for banner-gating (greensome
+ *    og chapman har begge utslag hvert hull, ingen fast rotasjon)
+ *  - chapman har en egen phase-stripe (bytt → velg → annenhver)
  */
 export function isAlternateShotMatchplay(mode: GameMode): boolean {
-  return mode === 'foursomes_matchplay' || mode === 'greensome_matchplay';
+  return (
+    mode === 'foursomes_matchplay' ||
+    mode === 'greensome_matchplay' ||
+    mode === 'chapman_matchplay'
+  );
 }
 
 /**
@@ -225,6 +236,21 @@ export type GameModeConfig =
       kind: 'greensome_matchplay';
       team_size: 2;
       teams_count: 2;
+      allowance_pct: number;
+    }
+  | {
+      kind: 'chapman_matchplay';
+      team_size: 2;
+      teams_count: 2;
+      /**
+       * HCP-allowance for Chapman matchplay (0..100). Default = 100. Identisk
+       * lag-handicap-formel som greensome (60/40-blanding på side-nivå:
+       * side-HCP = round(0.6×lav + 0.4×høy)) — Chapman og Greensome skiller
+       * seg kun i on-course-mekanikk (Chapman bytter ball først). Høylaget får
+       * `round(|side1Hcp − side2Hcp| × allowance_pct / 100)` strokes via SI;
+       * lavlaget får 0. 0 = brutto, 100 = full differanse. Validatoren
+       * håndhever range; scoring-laget faller defensivt tilbake til 100.
+       */
       allowance_pct: number;
     }
   | {

@@ -2048,6 +2048,115 @@ describe('buildGameInsertPayload — foursomes_matchplay (issue #218)', () => {
   });
 });
 
+describe('buildGameInsertPayload — chapman_matchplay (issue #290)', () => {
+  /**
+   * Helper for chapman-payloads. Speiler foursomesFd. Chapman deler 2v2-
+   * validator-logikken med foursomes — vi tester KUN det Chapman-spesifikke:
+   * config-kind, allowance-feltet `chapman_allowance_pct` og default 100 (vs
+   * foursomes' 50). Full 2v2-feilkode-matrise dekkes av foursomes-blokken.
+   */
+  function chapmanFd(opts: {
+    sides?: Array<{ userId: string; side: number }>;
+    allowancePct?: number | string | null;
+    extras?: Record<string, string>;
+  }): FormData {
+    const { sides = [], allowancePct, extras = {} } = opts;
+    const base: Record<string, string> = {
+      name: 'Chapman Cup',
+      course_id: 'c1',
+      tee_box_id: 't1',
+      game_mode: 'chapman_matchplay',
+    };
+    if (allowancePct !== null && allowancePct !== undefined) {
+      base['chapman_allowance_pct'] = String(allowancePct);
+    }
+    sides.forEach((p, i) => {
+      base[`player_${i}_id`] = p.userId;
+      base[`player_${i}_team`] = String(p.side);
+      base[`player_${i}_flight`] = String(p.side);
+    });
+    return fd({ ...base, ...extras });
+  }
+
+  const full2v2 = [
+    { userId: 'a', side: 1 },
+    { userId: 'b', side: 1 },
+    { userId: 'c', side: 2 },
+    { userId: 'd', side: 2 },
+  ];
+
+  it('publish 4 spillere 2v2 → ok, mode_config kind=chapman_matchplay, allowance 100', () => {
+    const result = buildGameInsertPayload(
+      chapmanFd({ sides: full2v2, allowancePct: 100 }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.game_mode).toBe('chapman_matchplay');
+    expect(result.mode_config).toEqual({
+      kind: 'chapman_matchplay',
+      team_size: 2,
+      teams_count: 2,
+      allowance_pct: 100,
+    });
+    expect(result.players).toEqual([
+      { user_id: 'a', team_number: 1, flight_number: 1 },
+      { user_id: 'b', team_number: 1, flight_number: 1 },
+      { user_id: 'c', team_number: 2, flight_number: 2 },
+      { user_id: 'd', team_number: 2, flight_number: 2 },
+    ]);
+  });
+
+  it('publish allowance 0 (brutto) → ok', () => {
+    const result = buildGameInsertPayload(
+      chapmanFd({ sides: full2v2, allowancePct: 0 }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'chapman_matchplay') {
+      expect(result.mode_config.allowance_pct).toBe(0);
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('publish allowance 101 → bad_allowance', () => {
+    const result = buildGameInsertPayload(
+      chapmanFd({ sides: full2v2, allowancePct: 101 }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('bad_allowance');
+  });
+
+  it('publish 3-1-fordeling → team_balance', () => {
+    const result = buildGameInsertPayload(
+      chapmanFd({
+        sides: [
+          { userId: 'a', side: 1 },
+          { userId: 'b', side: 1 },
+          { userId: 'c', side: 1 },
+          { userId: 'd', side: 2 },
+        ],
+        allowancePct: 100,
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('team_balance');
+  });
+
+  it('draft tom allowance defaulter til 100 (WHS Chapman matchplay-standard)', () => {
+    const result = buildGameInsertPayload(
+      chapmanFd({ sides: [{ userId: 'a', side: 1 }], allowancePct: '' }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'chapman_matchplay') {
+      expect(result.mode_config.allowance_pct).toBe(100);
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+});
+
 describe('buildGameInsertPayload — wolf (issue #274)', () => {
   /**
    * Helper for wolf-payloads. Bygger en form med game_mode=wolf og 4 spillere

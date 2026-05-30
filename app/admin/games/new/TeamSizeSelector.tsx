@@ -68,6 +68,9 @@ const ENABLED_COMBOS: Record<GameMode, ReadonlySet<TeamSize>> = {
   // TeamSizeSelector vises ikke for greensome i praksis (cup-only-format),
   // men type-system krever en entry.
   greensome_matchplay: new Set<TeamSize>([2]),
+  // Chapman (#290): 2v2 som foursomes. Cup-only — TeamSizeSelector vises ikke
+  // i cup-match-wizarden, så denne er for type-completeness.
+  chapman_matchplay: new Set<TeamSize>([2]),
   // Wolf: hver av de 4 spillerne er sin egen «row» (team_size=1). Selve
   // team_number-feltet brukes som rotation-slot 1-4, ikke som lag-tildeling.
   // TeamSizeSelector vises ikke for wolf (WolfSetup tar over), så denne

@@ -90,6 +90,7 @@ type GameRow = {
     | 'fourball_matchplay'
     | 'foursomes_matchplay'
     | 'greensome_matchplay'
+    | 'chapman_matchplay'
     | 'wolf'
     | 'nassau'
     | 'skins'

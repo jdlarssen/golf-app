@@ -121,6 +121,15 @@ export const MODE_GUIDE: Record<GameMode, ModeGuide> = {
       'Laget som leder med flere hull enn det er igjen, har vunnet.',
     ],
   },
+  chapman_matchplay: {
+    summary:
+      'To mot to. Begge slår ut, dere bytter ball, velger den beste og spiller annenhver derfra. Også kjent som Pinehurst.',
+    points: [
+      'Begge slår ut. Så slår hver av dere partnerens ball som andreslag.',
+      'Velg den beste ballen etter andreslagene, og spill annenhver til hullet er i mål.',
+      'Laget med best score vinner hullet — det er hull som teller, ikke total.',
+    ],
+  },
   wolf: {
     summary:
       'Fire spillere bytter på å være «ulv». Ulven velger på hvert hull om laget skal være to mot to, eller om ulven spiller alene mot de tre andre.',

@@ -28,6 +28,7 @@ import * as floridaScramble from './modes/floridaScramble';
 import * as fourballMatchplay from './modes/fourballMatchplay';
 import * as foursomesMatchplay from './modes/foursomesMatchplay';
 import * as greensomeMatchplay from './modes/greensomeMatchplay';
+import * as chapmanMatchplay from './modes/chapmanMatchplay';
 import * as wolf from './modes/wolf';
 import * as nassau from './modes/nassau';
 import * as skins from './modes/skins';
@@ -63,6 +64,8 @@ export function computeLeaderboard(ctx: ScoringContext): ModeResult {
       return foursomesMatchplay.compute(ctx);
     case 'greensome_matchplay':
       return greensomeMatchplay.compute(ctx);
+    case 'chapman_matchplay':
+      return chapmanMatchplay.compute(ctx);
     case 'wolf':
       return wolf.compute(ctx);
     case 'nassau':
