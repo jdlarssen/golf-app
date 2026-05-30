@@ -195,7 +195,7 @@ create table public.patsome_tee_starters (
 - **`lib/formats/modeGuide.ts`** — `patsome`-oppføring i `MODE_GUIDE` (`{ summary, points }`): forklar de tre segmentene + poeng-summering.
 
 ### Migrasjon
-- **`supabase/migrations/0055_patsome.sql`** — (a) `insert into public.formats` (slug `'patsome'`, display `'Patsome'`, icon_key `'patsome'`, short_description, scoring_module `'@/lib/scoring/modes/patsome'`, `is_active true`, `is_cup_eligible false`); (b) `insert into public.format_intent_mapping` (`'patsome'`, `'klubb'`, visible, **ikke** primary, sort_order ~neste ledige i klubb); (c) `create table public.patsome_tee_starters` + RLS-policies + `updated_at`-trigger (speil eksisterende tabell-mønster).
+- **`supabase/migrations/0061_patsome.sql`** — (a) `insert into public.formats` (slug `'patsome'`, display `'Patsome'`, icon_key `'patsome'`, short_description, scoring_module `'@/lib/scoring/modes/patsome'`, `is_active true`, `is_cup_eligible false`); (b) `insert into public.format_intent_mapping` (`'patsome'`, `'klubb'`, visible, **ikke** primary, sort_order ~neste ledige i klubb); (c) `create table public.patsome_tee_starters` + RLS-policies + `updated_at`-trigger (speil eksisterende tabell-mønster).
 - **`lib/database.types.ts`** — regenerert (ny tabell + format-row).
 
 ### Wizard
@@ -229,7 +229,7 @@ create table public.patsome_tee_starters (
 - [x] **K2 — Scoring-modul:** ✅ `lib/scoring/modes/patsome.ts` `compute()` — segment-bytte (1–6/7–12/13–18), 4BBB MAX, greensome `round(0.6·min+0.4·max)`, foursomes `round(0.5·sum)`, netto/brutto, segment-delsummer, total, ranking via `rankTeams` (negert). `2066062`.
 - [x] **K3 — Type A unit-tester:** ✅ `patsome.test.ts` 36 tester grønne — shape, 4BBB MAX + contributor, greensome 60/40, foursomes 50 %, segment-overganger, netto/brutto-flip, delsummer+total, pending-hull, fler-lags-ranking+`tiedWith`, draft-state (n≠2 ingen krasj), kaptein lex-min. `2066062`.
 - [x] **K4 — Validator + regresjon:** ✅ `validatePatsome` (<4 → `min_players_for_mode`, ujevne lag → `team_balance`, `bad_team`, `duplicate_player`) + `parseGameMode` + `modeValidators`. 14 nye cases i `gamePayload.test.ts` (166 grønne totalt). `2e9c0ea`.
-- [x] **K5 — Migrasjon + tee-starter-tabell:** ✅ `0055_patsome.sql` seeder «Patsome» (Klubb, sekundær, sort 90) + oppretter `patsome_tee_starters` m/ RLS + trigger. `lib/database.types.ts` håndskrevet (regenereres ved DB-apply). `60dbf42`. ⚠️ Migrasjon IKKE kjørt mot prod ennå (format-rad er `is_active` → application må koordineres med deploy).
+- [x] **K5 — Migrasjon + tee-starter-tabell:** ✅ `0061_patsome.sql` seeder «Patsome» (Klubb, sekundær, sort 90) + oppretter `patsome_tee_starters` m/ RLS + trigger. `lib/database.types.ts` håndskrevet (regenereres ved DB-apply). `60dbf42` (renummerert fra `0055` til `0061` etter parallell-merge av round_robin). ⚠️ Migrasjon IKKE kjørt mot prod ennå (format-rad er `is_active` → application må koordineres med deploy).
 - [x] **K6 — Hybrid scorekort-inntasting:** ✅ Collapse-betingelse `(isTexas || isFoursomes || (isPatsome && holeNumber >= 7))` ([page.tsx:431](app/games/[id]/holes/[holeNumber]/page.tsx)); hull 1–6 per-spiller, 7–18 kaptein-collapse m/ segment-handicap; `PatsomeSegmentBanner` per hull. `ad27abf`. Live preview-røyktest utsatt til migrasjon kjørt (single-DB-constraint), dekket av build + full suite.
 - [x] **K7 — Tee-starter (foursomes-segment):** ✅ Per-lag velger på hull 13–18 til satt, deretter «X slår ut»-hint (oddetall=valgt/partall=makker); greensome kun banner. `setPatsomeTeeStarter` (authz: lag-medlemskap + game_mode + ikke finished) → upsert i `patsome_tee_starters`. `patsomeActions.test.ts` grønn. `ad27abf`.
 - [x] **K8 — Leaderboard + podium:** ✅ `PatsomeView` (lag-rangering + segment-delsummer som signatur + per-hull-rutenett m/ skiller hull 7/13 + reveal-aware) + `PatsomePodium` (lag-podium) via `renderPatsome`. `PatsomeView.test.tsx` 11/11 (speiler `TeamStablefordView.test.tsx`). `79c9726`.
@@ -250,7 +250,7 @@ npm run build
 
 - **humanizer-skill** på all ny norsk copy (PatsomeSetup, segment-bannere, PatsomeView, modeGuide, CHANGELOG-tagline, allowanceCopy) FØR commit, per CLAUDE.md.
 - **Worktree-hook-fix** (gjort): `git config --worktree core.hooksPath .githooks`.
-- **Migrasjon mot DB:** brukeren/Supabase MCP kjører `0055_patsome.sql` før live preview-verifisering av wizard/scorekort (single-prosjekt-DB). Render-test + build dekker i mellomtiden.
+- **Migrasjon mot DB:** brukeren/Supabase MCP kjører `0061_patsome.sql` før live preview-verifisering av wizard/scorekort (single-prosjekt-DB). Render-test + build dekker i mellomtiden.
 
 ## Edge Cases & Guardrails
 

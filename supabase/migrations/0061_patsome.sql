@@ -1,4 +1,4 @@
--- 0055_patsome.sql
+-- 0061_patsome.sql
 -- Patsome — 6 hull 4BBB → 6 greensome → 6 foursomes (klubb-format, issue #286,
 -- del av format-epic #270).
 --
