@@ -6,6 +6,7 @@ import {
   type SideCategoryId,
 } from '@/lib/scoring/sideTournamentConfig';
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
+import { ambroseDefaultPct } from '@/lib/scoring';
 import type { TeamSize } from './TeamSizeSelector';
 import type { CourseOption, InitialValues, PlayerOption } from './GameForm';
 import { playerGenderDefault } from '@/lib/games/playerGenderDefault';
@@ -93,6 +94,9 @@ export function defaultTeamSizeForMode(mode: GameMode): TeamSize {
   // Texas scramble: default 4-mannslag (typisk firma-cup-størrelse).
   // 2-mannslag valgbart via TeamSizeSelector.
   if (mode === 'texas_scramble') return 4;
+  // Ambrose (#284): default 4-mannslag (mest vanlig i klubb-turneringer).
+  // 2-mannslag valgbart via TeamSizeSelector.
+  if (mode === 'ambrose') return 4;
   // Wolf: hver spiller er sin egen «row». team_number 1-4 brukes som
   // rotation-slot, ikke som lag-tildeling. team_size=1 betyr requiresTeams=false
   // så vi får solo-style player-selection i step 3.
@@ -234,6 +238,20 @@ export function useGameFormState({
       initialValues.texas_team_handicap_pct !== ''
       ? Number(initialValues.texas_team_handicap_pct)
       : defaultTexasHandicapPct(
+          initialValues?.team_size ??
+            defaultTeamSizeForMode(initialValues?.game_mode ?? 'best_ball'),
+        ),
+  );
+  // Ambrose (#284): lag-handicap-prosent. Standard Ambrose-formel:
+  // combinedCH ÷ (2 × lagstørrelse) → 25 % for 2-mannslag, 12,5 % for
+  // 4-mannslag. Kan være fraksjonell (12,5) — validator aksepterer desimaler.
+  // `key={teamSize}` på AllowanceField sørger for remount når lagstørrelse
+  // endres og re-seeder default. Edit-flyt: pre-fylles fra initialValues.
+  const [ambroseHandicapPct, setAmbroseHandicapPct] = useState<number>(
+    initialValues?.ambrose_team_handicap_pct !== undefined &&
+      initialValues.ambrose_team_handicap_pct !== ''
+      ? Number(initialValues.ambrose_team_handicap_pct)
+      : ambroseDefaultPct(
           initialValues?.team_size ??
             defaultTeamSizeForMode(initialValues?.game_mode ?? 'best_ball'),
         ),
@@ -390,6 +408,11 @@ export function useGameFormState({
     if (next === 'texas_scramble') {
       setTexasHandicapPct(defaultTexasHandicapPct(nextSize));
     }
+    // Ambrose (#284): default lag-handicap-prosent per standard Ambrose-formel
+    // (25 % for 2-mannslag, 12,5 % for 4-mannslag). Admin kan deretter justere.
+    if (next === 'ambrose') {
+      setAmbroseHandicapPct(ambroseDefaultPct(nextSize));
+    }
     // #199: hvis ny modus ikke har lag-konsept, force-reset registration_type
     // til 'solo' — ellers ville payload-validatoren feilet med
     // `team_registration_unsupported_mode` ved publish.
@@ -408,6 +431,9 @@ export function useGameFormState({
     setTeamSize(next);
     if (gameMode === 'texas_scramble') {
       setTexasHandicapPct(defaultTexasHandicapPct(next));
+    }
+    if (gameMode === 'ambrose') {
+      setAmbroseHandicapPct(ambroseDefaultPct(next));
     }
   }
 
@@ -444,6 +470,11 @@ export function useGameFormState({
   //   team_size. Lag-handicap = NGF-aggregat (default 25 % for 2-mannslag,
   //   10 % for 4-mannslag — admin kan justere).
   const isTexas = gameMode === 'texas_scramble';
+  // - isAmbrose: ambrose (#284). Mekanisk identisk med Texas scramble —
+  //   én ball per lag, kaptein eier scores-radene, lavest lag-netto vinner.
+  //   Eneste forskjell mot Texas er lag-handicap-formelen (standard Ambrose:
+  //   25 % for 2-mannslag, 12,5 % for 4-mannslag) og format-navnet.
+  const isAmbrose = gameMode === 'ambrose';
   // - isWolf: 4-spiller rotating partner-format. team_number 1-4 brukes som
   //   rotation-slot (random permutasjon ved publish). team_size=1, ingen
   //   lag-grid. Eget WolfSetup-step i step 2 for scoring-toggle + shuffle.
@@ -794,7 +825,7 @@ export function useGameFormState({
     for (const team of TEAM_NUMBERS) {
       for (const pid of playersByTeam[team]) {
         const flight =
-          isParStableford || isTexas
+          isParStableford || isTexas || isAmbrose
             ? team
             : (flightByPlayer[pid] ?? teamDefaultFlight(team));
         rows.push({
@@ -805,7 +836,7 @@ export function useGameFormState({
       }
     }
     return rows;
-  }, [isMatchplay, isWolf, isRoundRobin, requiresTeams, selectedPlayerIds, wolfOrder, roundRobinOrder, playersByTeam, teamByPlayer, flightByPlayer, isParStableford, isTexas]);
+  }, [isMatchplay, isWolf, isRoundRobin, requiresTeams, selectedPlayerIds, wolfOrder, roundRobinOrder, playersByTeam, teamByPlayer, flightByPlayer, isParStableford, isTexas, isAmbrose]);
 
   const flightsComplete =
     teamsComplete &&
@@ -863,6 +894,31 @@ export function useGameFormState({
     texasTeamsBalanced &&
     texasHasAtLeastOneTeam &&
     texasHandicapPctValid;
+
+  // Ambrose-validitet (#284): speiler Texas-validitets-reglene, men
+  // `ambroseHandicapPctValid` tillater fraksjonell prosent (12,5 % for
+  // 4-mannslag er default). `validateAmbrose` i gamePayload.ts aksepterer
+  // desimaler; UI-validiteten gjør det samme.
+  const ambroseTeamsBalanced = TEAM_NUMBERS.every(
+    (t) =>
+      playersByTeam[t].length === 0 ||
+      playersByTeam[t].length === teamSize,
+  );
+  const ambroseHasAtLeastOneTeam = TEAM_NUMBERS.some(
+    (t) => playersByTeam[t].length === teamSize,
+  );
+  const ambroseHandicapPctValid =
+    typeof ambroseHandicapPct === 'number' &&
+    !isNaN(ambroseHandicapPct) &&
+    ambroseHandicapPct >= 0 &&
+    ambroseHandicapPct <= 100;
+  const ambrosePlayersValid =
+    selectedPlayerIds.length >= teamSize &&
+    selectedPlayerIds.length % teamSize === 0 &&
+    selectedPlayerIds.every((pid) => teamByPlayer[pid] !== undefined) &&
+    ambroseTeamsBalanced &&
+    ambroseHasAtLeastOneTeam &&
+    ambroseHandicapPctValid;
 
   // Matchplay-validitet: nøyaktig 2 spillere, én på side 1 og én på side 2.
   // Speiler `validateSinglesMatchplay` i `lib/games/gamePayload.ts` —
@@ -941,7 +997,9 @@ export function useGameFormState({
                       ? roundRobinPlayersValid
                       : isAceyDeucey
                         ? aceyDeuceyPlayersValid
-                        : false;
+                        : isAmbrose
+                          ? ambrosePlayersValid
+                          : false;
 
   // Round Robin allowance-validitet: 0..100.
   const roundRobinAllowancePctValid =
@@ -968,7 +1026,7 @@ export function useGameFormState({
     (playersStepOptional || playersValidForMode) &&
     (isRoundRobin
       ? roundRobinAllowancePctValid
-      : isTexas || isWolf || isNassau || isSkins || isNines || allowanceValid) &&
+      : isTexas || isAmbrose || isWolf || isNassau || isSkins || isNines || allowanceValid) &&
     hasTeeOff;
 
   // Human-readable list of what's still missing for a publish. Mode-aware:
@@ -1047,6 +1105,26 @@ export function useGameFormState({
       );
     }
     if (!texasHandicapPctValid) {
+      missingForPublish.push('lag-handicap-prosent (0-100)');
+    }
+  } else if (isAmbrose) {
+    // Ambrose (#284): lagstørrelse 2 eller 4. Speiler Texas-mangler-meldingene.
+    if (selectedPlayerIds.length < teamSize) {
+      missingForPublish.push(`minst ${teamSize} spillere`);
+    } else if (selectedPlayerIds.length % teamSize !== 0) {
+      missingForPublish.push(
+        teamSize === 2
+          ? 'partall antall spillere (lag á 2)'
+          : 'antall spillere delelig på 4 (lag á 4)',
+      );
+    } else if (!ambrosePlayersValid) {
+      missingForPublish.push(
+        teamSize === 2
+          ? 'lag-fordeling (lag á 2)'
+          : 'lag-fordeling (lag á 4)',
+      );
+    }
+    if (!ambroseHandicapPctValid) {
       missingForPublish.push('lag-handicap-prosent (0-100)');
     }
   } else if (isWolf) {
@@ -1129,11 +1207,11 @@ export function useGameFormState({
     // isSolo
     missingForPublish.push('minst én spiller');
   }
-  // hcp_allowance_pct gjelder ikke for Texas, Wolf, Nassau, Skins, Nines,
-  // Round Robin eller Acey Deucey — disse modusene har sin egen scoring-konfig
-  // i mode_config. Hopper over allowance-sjekken så admin ikke får mismatch
-  // mellom UI-skjult-felt og publish-feilmelding.
-  if (!isTexas && !isWolf && !isNassau && !isSkins && !isNines && !isRoundRobin && !isAceyDeucey && !allowanceValid)
+  // hcp_allowance_pct gjelder ikke for Texas, Ambrose, Wolf, Nassau, Skins,
+  // Nines, Round Robin eller Acey Deucey — disse modusene har sin egen
+  // scoring-konfig i mode_config. Hopper over allowance-sjekken så admin ikke
+  // får mismatch mellom UI-skjult-felt og publish-feilmelding.
+  if (!isTexas && !isAmbrose && !isWolf && !isNassau && !isSkins && !isNines && !isRoundRobin && !isAceyDeucey && !allowanceValid)
     missingForPublish.push('gyldig HCP-allowance');
 
   return {
@@ -1157,6 +1235,8 @@ export function useGameFormState({
     setHcpAllowance,
     texasHandicapPct,
     setTexasHandicapPct,
+    ambroseHandicapPct,
+    setAmbroseHandicapPct,
     fourballAllowancePct,
     setFourballAllowancePct,
     foursomesAllowancePct,
@@ -1209,6 +1289,7 @@ export function useGameFormState({
     isParStableford,
     isMatchplay,
     isTexas,
+    isAmbrose,
     isWolf,
     isNassau,
     isSkins,
@@ -1228,8 +1309,10 @@ export function useGameFormState({
     // Validitets-flags
     allowanceValid,
     texasHandicapPctValid,
+    ambroseHandicapPctValid,
     parStablefordPlayersValid,
     texasPlayersValid,
+    ambrosePlayersValid,
     matchplayPlayersValid,
     ninesPlayersValid,
     playersValidForMode,

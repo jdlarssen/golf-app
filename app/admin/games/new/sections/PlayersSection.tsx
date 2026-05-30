@@ -49,6 +49,7 @@ export function PlayersSection({ state, players, heading = '2. Spillere' }: Prop
     isMatchplay,
     isParStableford,
     isTexas,
+    isAmbrose,
     requiresTeams,
     teamSize,
     eightSelected,
@@ -87,7 +88,7 @@ export function PlayersSection({ state, players, heading = '2. Spillere' }: Prop
               selectedPlayerIds.length % 2 !== 0 && (
               <span className="ml-1 text-muted/80">(par à 2)</span>
             )}
-            {isTexas &&
+            {(isTexas || isAmbrose) &&
               selectedPlayerIds.length >= teamSize &&
               selectedPlayerIds.length % teamSize !== 0 && (
               <span className="ml-1 text-muted/80">

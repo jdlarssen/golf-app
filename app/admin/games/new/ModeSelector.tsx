@@ -230,6 +230,12 @@ const TILES: TileDef[] = [
     description: 'Laget spiller én ball. Velg beste slag hvert hull. Lavest lag-total vinner.',
     icon: TexasScrambleIcon,
   },
+  {
+    mode: 'ambrose',
+    title: 'Ambrose',
+    description: 'Lag à 2 eller 4. Alle slår, beste ball velges. Lag-handicap jevner ut forskjellene mellom lagene.',
+    icon: TexasScrambleIcon,
+  },
 ];
 
 /**
@@ -254,7 +260,7 @@ export function ModeSelector({ value, onChange, disabled = false }: Props) {
       <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
         Velg spillmodus
       </legend>
-      <div role="radiogroup" className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div role="radiogroup" className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {TILES.map((tile) => {
           const selected = value === tile.mode;
           return (

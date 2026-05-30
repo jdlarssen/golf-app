@@ -203,6 +203,8 @@ export function GameWizard({
         return 'Velg minst 2 spillere fordelt to og to på lag';
       if (state.isTexas)
         return `Velg minst ${state.teamSize} spillere, så fordeler du lag`;
+      if (state.isAmbrose)
+        return `Velg minst ${state.teamSize} spillere, så fordeler du lag`;
       return null;
     }
     return null;
@@ -213,6 +215,7 @@ export function GameWizard({
     state.isMatchplay,
     state.isParStableford,
     state.isTexas,
+    state.isAmbrose,
     state.teamSize,
   ]);
 
@@ -301,6 +304,7 @@ export function GameWizard({
       game_mode: state.gameMode,
       team_size: state.teamSize,
       texas_team_handicap_pct: String(state.texasHandicapPct),
+      ambrose_team_handicap_pct: String(state.ambroseHandicapPct),
       fourball_allowance_pct: state.fourballAllowancePct,
       foursomes_allowance_pct: state.foursomesAllowancePct,
       round_robin_allowance_pct: state.roundRobinAllowancePct,
@@ -559,6 +563,27 @@ export function GameWizard({
                   hideHiddenInput
                 />
               )}
+              {/* Ambrose (#284): lag-handicap per standard Ambrose-formel.
+                  `key={teamSize}` forser remount ved lagstørrelse-bytte. */}
+              {state.isAmbrose && (
+                <AllowanceField
+                  key={state.teamSize}
+                  fieldName="ambrose_team_handicap_pct"
+                  defaultPct={state.ambroseHandicapPct}
+                  legend="Lag-handicap"
+                  description="Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = laveste lag-gross per hull vinner."
+                  nettoHelperText={
+                    state.teamSize === 2
+                      ? 'Standard Ambrose: 25 % av summen av spillernes spille-HCP for 2-mannslag.'
+                      : 'Standard Ambrose: 12,5 % av summen av spillernes spille-HCP for 4-mannslag.'
+                  }
+                  bruttoHelperText="Ingen lag-handicap — laveste gross-score per hull per lag vinner. Scratch-format."
+                  inputLabel="Lag-handicap (%)"
+                  value={state.ambroseHandicapPct}
+                  onChange={state.setAmbroseHandicapPct}
+                  hideHiddenInput
+                />
+              )}
               <RegistrationSection state={state} hideHeading />
             </div>
           )}
@@ -651,6 +676,7 @@ function FormDataInputs({
     gameMode,
     teamSize,
     isTexas,
+    isAmbrose,
     isWolf,
     isNassau,
     isSkins,
@@ -658,6 +684,7 @@ function FormDataInputs({
     isRoundRobin,
     isAceyDeucey,
     texasHandicapPct,
+    ambroseHandicapPct,
     fourballAllowancePct,
     foursomesAllowancePct,
     roundRobinAllowancePct,
@@ -707,6 +734,16 @@ function FormDataInputs({
             type="hidden"
             name="texas_team_handicap_pct"
             value={String(texasHandicapPct)}
+          />
+        </>
+      )}
+      {isAmbrose && (
+        <>
+          <input type="hidden" name="ambrose_team_size" value={teamSize} />
+          <input
+            type="hidden"
+            name="ambrose_team_handicap_pct"
+            value={String(ambroseHandicapPct)}
           />
         </>
       )}

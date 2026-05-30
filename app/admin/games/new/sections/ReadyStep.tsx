@@ -118,6 +118,7 @@ export function ReadyStep({
     isParStableford,
     isMatchplay,
     isTexas,
+    isAmbrose,
     isSolo,
   } = state;
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -153,7 +154,7 @@ export function ReadyStep({
     if (isParStableford) {
       return `${teamsCount} lag à 2 spillere`;
     }
-    if (isTexas) {
+    if (isTexas || isAmbrose) {
       return `${teamsCount} lag à ${teamSize} spillere`;
     }
     return `${count} ${count === 1 ? 'spiller' : 'spillere'}`;
