@@ -267,6 +267,35 @@ function ShambleIcon({ size = 28 }: { size?: number }) {
   );
 }
 
+// Patsome: lag à 2, tre segmenter (4BBB/greensome/foursomes). To flaggstenger
+// (representerer laget) med tre segmentmarkører under dem — illustrerer
+// rotasjonsformatet der hvert lag spiller alle tre segmentene.
+function PatsomeIcon({ size = 28 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 28 28"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      {/* To flaggstenger — representerer lag à 2 */}
+      <line x1="9" y1="4" x2="9" y2="16" />
+      <path d="M 9 5 L 15 6.5 L 9 8 Z" fill="currentColor" stroke="none" />
+      <line x1="19" y1="4" x2="19" y2="16" />
+      <path d="M 19 5 L 25 6.5 L 19 8 Z" fill="currentColor" stroke="none" />
+      {/* Tre segmentmarkører — 4BBB / greensome / foursomes */}
+      <circle cx="7" cy="22" r="2" />
+      <circle cx="14" cy="22" r="2" />
+      <circle cx="21" cy="22" r="2" />
+    </svg>
+  );
+}
+
 // Fallback når en icon_key ikke har en dedikert komponent (nye formats før
 // designet er på plass). Et nøytralt flagg-ikon signaliserer «format» uten
 // å gjette på mekanikken.
@@ -307,6 +336,7 @@ const ICON_MAP: Record<string, (props: { size?: number }) => ReactNode> = {
   nines: NinesIcon,
   round_robin: RoundRobinIcon,
   shamble: ShambleIcon,
+  patsome: PatsomeIcon,
 };
 
 export function formatIconFor(iconKey: string, size = 28): ReactNode {

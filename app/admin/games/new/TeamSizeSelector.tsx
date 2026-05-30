@@ -99,6 +99,8 @@ const ENABLED_COMBOS: Record<GameMode, ReadonlySet<TeamSize>> = {
   // men type-system krever en entry. Begge støttede størrelser listet for
   // dokumentasjonsformål (generisk selector kan ikke vise 3 uansett).
   shamble: new Set<TeamSize>([3, 4]),
+  // Patsome er alltid lag à 2. PatsomeSetup vises i step 2.
+  patsome: new Set<TeamSize>([2]),
 };
 
 type TileDef = {

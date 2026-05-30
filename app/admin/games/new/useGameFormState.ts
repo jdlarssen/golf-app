@@ -115,6 +115,8 @@ export function defaultTeamSizeForMode(mode: GameMode): TeamSize {
   // Shamble / Champagne Scramble: lag-format, default 4-mannslag (klassisk
   // shamble-størrelse). Admin kan endre til 3 via ShambleSetup.
   if (mode === 'shamble') return 4;
+  // Patsome (#286): lag à 2, alltid 2-mannslag.
+  if (mode === 'patsome') return 2;
   return 2;
 }
 
@@ -349,6 +351,12 @@ export function useGameFormState({
   const [shambleScoring, setShambleScoring] = useState<'gross' | 'net'>(
     initialValues?.shamble_scoring === 'gross' ? 'gross' : 'net',
   );
+  // Patsome (#286): lag à 2, 2+ lag. Scoring-toggle (net vs gross). Default
+  // 'net' speiler Tørny's ethos. Validatoren (`validatePatsome`) leser
+  // feltet og faller defensivt tilbake til 'net' ved ugyldig/manglende verdi.
+  const [patsomeScoring, setPatsomeScoring] = useState<'gross' | 'net'>(
+    initialValues?.patsome_scoring === 'gross' ? 'gross' : 'net',
+  );
   // Wolf-rotasjon: en counter som økes hver gang admin trykker "Shuffle".
   // wolfOrder (derived under) hasher (selectedPlayerIds, wolfShuffleSeed) for
   // å produsere en deterministisk-pseudo-random permutasjon. Da kan render-
@@ -550,6 +558,10 @@ export function useGameFormState({
   //   Delt drive, så spiller alle sin egen ball til hull. Lagets hull-score =
   //   sum av de N laveste individuelle scorene. Team_number/flight som Texas.
   const isShamble = gameMode === 'shamble';
+  // - isPatsome: lag-format, lag à 2, 2+ lag. Tre segmenter (4BBB/greensome/
+  //   foursomes). Scoring-toggle (net vs gross). Eget PatsomeSetup-step i
+  //   step 2.
+  const isPatsome = gameMode === 'patsome';
 
   // Drafts can be saved without a tee-off; publishing cannot. `canPublish`
   // below combines this with the rest of the validity gates.
@@ -879,7 +891,7 @@ export function useGameFormState({
     for (const team of TEAM_NUMBERS) {
       for (const pid of playersByTeam[team]) {
         const flight =
-          isParStableford || isTexas || isAmbrose || isShamble
+          isParStableford || isTexas || isAmbrose || isShamble || isPatsome
             ? team
             : (flightByPlayer[pid] ?? teamDefaultFlight(team));
         rows.push({
@@ -890,7 +902,7 @@ export function useGameFormState({
       }
     }
     return rows;
-  }, [isMatchplay, isWolf, isRoundRobin, requiresTeams, selectedPlayerIds, wolfOrder, roundRobinOrder, playersByTeam, teamByPlayer, flightByPlayer, isParStableford, isTexas, isAmbrose, isShamble]);
+  }, [isMatchplay, isWolf, isRoundRobin, requiresTeams, selectedPlayerIds, wolfOrder, roundRobinOrder, playersByTeam, teamByPlayer, flightByPlayer, isParStableford, isTexas, isAmbrose, isShamble, isPatsome]);
 
   const flightsComplete =
     teamsComplete &&
@@ -1061,6 +1073,23 @@ export function useGameFormState({
   const aceyDeuceyPlayersValid =
     isAceyDeucey && selectedPlayerIds.length === 4;
 
+  // Patsome-validitet: minst 4 spillere, partall antall, alle har lag-
+  // tilordning, hvert ikke-tomt lag har eksakt 2 spillere. Speiler
+  // `validatePatsome` i gamePayload.ts.
+  const patsomeTeamsBalanced = TEAM_NUMBERS.every(
+    (t) => playersByTeam[t].length === 0 || playersByTeam[t].length === 2,
+  );
+  const patsomeHasAtLeastOneTeam = TEAM_NUMBERS.some(
+    (t) => playersByTeam[t].length === 2,
+  );
+  const patsomePlayersValid =
+    isPatsome &&
+    selectedPlayerIds.length >= 4 &&
+    selectedPlayerIds.length % 2 === 0 &&
+    selectedPlayerIds.every((pid) => teamByPlayer[pid] !== undefined) &&
+    patsomeTeamsBalanced &&
+    patsomeHasAtLeastOneTeam;
+
   // Modus-spesifikk publish-validitet. Reglene speiler
   // `lib/games/gamePayload.ts` slik at klient og server forteller samme
   // historie til admin når noe mangler:
@@ -1099,7 +1128,9 @@ export function useGameFormState({
                             ? floridaPlayersValid
                             : isShamble
                               ? shamblePlayersValid
-                              : false;
+                              : isPatsome
+                                ? patsomePlayersValid
+                                : false;
 
   // Round Robin allowance-validitet: 0..100.
   const roundRobinAllowancePctValid =
@@ -1126,7 +1157,7 @@ export function useGameFormState({
     (playersStepOptional || playersValidForMode) &&
     (isRoundRobin
       ? roundRobinAllowancePctValid
-      : isTexas || isAmbrose || isShamble || isWolf || isNassau || isSkins || isNines || isAceyDeucey || allowanceValid) &&
+      : isTexas || isAmbrose || isShamble || isWolf || isNassau || isSkins || isNines || isAceyDeucey || isPatsome || allowanceValid) &&
     hasTeeOff;
 
   // Human-readable list of what's still missing for a publish. Mode-aware:
@@ -1343,6 +1374,18 @@ export function useGameFormState({
         'for mange spillere — Acey Deucey krever nøyaktig 4',
       );
     }
+  } else if (isPatsome) {
+    // Patsome: minst 4 spillere, partall, fordelt 2 per lag.
+    if (selectedPlayerIds.length < 4) {
+      const remaining = 4 - selectedPlayerIds.length;
+      missingForPublish.push(
+        `${remaining === 1 ? 'minst 1 spiller til' : `minst ${remaining} spillere til`}`,
+      );
+    } else if (selectedPlayerIds.length % 2 !== 0) {
+      missingForPublish.push('partall antall spillere (lag à 2)');
+    } else if (!patsomePlayersValid) {
+      missingForPublish.push('lag-fordeling (lag à 2)');
+    }
   } else if (selectedPlayerIds.length < 1) {
     // isSolo
     missingForPublish.push('minst én spiller');
@@ -1351,7 +1394,7 @@ export function useGameFormState({
   // Skins, Nines, Round Robin eller Acey Deucey — disse modusene har sin egen
   // scoring-konfig i mode_config. Hopper over allowance-sjekken så admin ikke
   // får mismatch mellom UI-skjult-felt og publish-feilmelding.
-  if (!isTexas && !isAmbrose && !isFlorida && !isShamble && !isWolf && !isNassau && !isSkins && !isNines && !isRoundRobin && !isAceyDeucey && !allowanceValid)
+  if (!isTexas && !isAmbrose && !isFlorida && !isShamble && !isWolf && !isNassau && !isSkins && !isNines && !isRoundRobin && !isAceyDeucey && !isPatsome && !allowanceValid)
     missingForPublish.push('gyldig HCP-allowance');
 
   return {
@@ -1406,6 +1449,8 @@ export function useGameFormState({
     setShambleCount,
     shambleScoring,
     setShambleScoring,
+    patsomeScoring,
+    setPatsomeScoring,
     requirePeerApproval,
     setRequirePeerApproval,
     sideEnabled,
@@ -1446,6 +1491,7 @@ export function useGameFormState({
     isRoundRobin,
     isAceyDeucey,
     isShamble,
+    isPatsome,
     hasTeeOff,
     // Memoiserte derivasjoner
     selectedCourse,
@@ -1468,6 +1514,7 @@ export function useGameFormState({
     shamblePlayersValid,
     matchplayPlayersValid,
     ninesPlayersValid,
+    patsomePlayersValid,
     playersValidForMode,
     canPublish,
     missingForPublish,

@@ -62,6 +62,7 @@ const MODE_SUMMARY_LABELS: Record<GameMode, string> = {
   round_robin: 'Round Robin',
   acey_deucey: 'Acey Deucey',
   shamble: 'Shamble / Champagne Scramble',
+  patsome: 'Patsome',
 };
 
 function teamSizeLabel(size: TeamSize): string {

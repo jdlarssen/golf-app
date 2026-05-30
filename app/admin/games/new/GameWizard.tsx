@@ -49,6 +49,7 @@ import { NinesSetup } from './sections/NinesSetup';
 import { RoundRobinSetup } from './sections/RoundRobinSetup';
 import { AceyDeuceySetup } from './sections/AceyDeuceySetup';
 import { ShambleSetup } from './sections/ShambleSetup';
+import { PatsomeSetup } from './sections/PatsomeSetup';
 import { AllowanceField } from '@/components/admin/AllowanceField';
 import { bruttoHelperFor } from '@/lib/games/allowanceCopy';
 import {
@@ -208,6 +209,8 @@ export function GameWizard({
         return `Velg minst ${state.teamSize} spillere, så fordeler du lag`;
       if (state.isShamble)
         return `Velg minst ${state.teamSize} spillere, så fordeler du lag`;
+      if (state.isPatsome)
+        return 'Velg minst 4 spillere, fordelt to og to på lag';
       return null;
     }
     return null;
@@ -220,6 +223,7 @@ export function GameWizard({
     state.isTexas,
     state.isAmbrose,
     state.isShamble,
+    state.isPatsome,
     state.teamSize,
   ]);
 
@@ -322,6 +326,7 @@ export function GameWizard({
       shamble_variant: state.shambleVariant,
       shamble_count: state.shambleCount,
       shamble_scoring: state.shambleScoring,
+      patsome_scoring: state.patsomeScoring,
       tournament_id: initialValues?.tournament_id,
       tournament_match_label: initialValues?.tournament_match_label,
       registration_mode: state.registrationMode,
@@ -507,6 +512,13 @@ export function GameWizard({
                   onScoringChange={state.setShambleScoring}
                   teamSize={state.teamSize as 3 | 4}
                   onTeamSizeChange={state.handleTeamSizeChange as (next: 3 | 4) => void}
+                  disabled={state.lockGameMode}
+                />
+              )}
+              {state.isPatsome && (
+                <PatsomeSetup
+                  scoring={state.patsomeScoring}
+                  onScoringChange={state.setPatsomeScoring}
                   disabled={state.lockGameMode}
                 />
               )}
@@ -727,6 +739,7 @@ function FormDataInputs({
     isNines,
     isRoundRobin,
     isAceyDeucey,
+    isPatsome,
     texasHandicapPct,
     ambroseHandicapPct,
     floridaHandicapPct,
@@ -742,6 +755,7 @@ function FormDataInputs({
     shambleVariant,
     shambleCount,
     shambleScoring,
+    patsomeScoring,
     orderedPayload,
     courseId,
     teeBoxId,
@@ -851,6 +865,9 @@ function FormDataInputs({
           <input type="hidden" name="shamble_scoring" value={shambleScoring} />
           <input type="hidden" name="shamble_team_size" value={String(teamSize)} />
         </>
+      )}
+      {isPatsome && (
+        <input type="hidden" name="patsome_scoring" value={patsomeScoring} />
       )}
 
       <input type="hidden" name="course_id" value={courseId} />

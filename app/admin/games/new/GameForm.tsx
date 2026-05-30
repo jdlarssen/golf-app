@@ -194,6 +194,11 @@ export type InitialValues = {
    */
   shamble_scoring?: 'gross' | 'net';
   /**
+   * Patsome (#286): scoring-modus ('gross' eller 'net'). Pre-fylles fra DB i
+   * edit-flyt; nye spill defaulter til 'net' i useGameFormState.
+   */
+  patsome_scoring?: 'gross' | 'net';
+  /**
    * Self-påmelding (#199). Defaultes til 'invite_only' + 'solo' for å
    * bevare dagens flyt. Edit-flyten leverer eksisterende valg fra DB.
    */
