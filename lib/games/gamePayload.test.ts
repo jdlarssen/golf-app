@@ -3210,3 +3210,255 @@ describe('buildGameInsertPayload — shamble (issue #285)', () => {
     expect(result.players).toHaveLength(2);
   });
 });
+
+describe('buildGameInsertPayload — patsome (issue #286)', () => {
+  /**
+   * Helper for patsome-payloads. Bygger en form med game_mode=patsome
+   * og spillere fordelt i lag à 2. flight settes til samme verdi som team
+   * i validatoren — vi trenger ikke sende player_${i}_flight i form-en.
+   */
+  function patsomeFd(opts: {
+    players?: Array<{ userId: string; team: number }>;
+    extras?: Record<string, string>;
+  }): FormData {
+    const { players = [], extras = {} } = opts;
+    const base: Record<string, string> = {
+      name: 'Patsome Cup',
+      course_id: 'c1',
+      tee_box_id: 't1',
+      game_mode: 'patsome',
+    };
+    players.forEach((p, i) => {
+      base[`player_${i}_id`] = p.userId;
+      base[`player_${i}_team`] = String(p.team);
+    });
+    return fd({ ...base, ...extras });
+  }
+
+  it('happy path: 4 spillere i 2 lag à 2, flight === team → ok, mode_config korrekt', () => {
+    const result = buildGameInsertPayload(
+      patsomeFd({
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 2 },
+          { userId: 'd', team: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.game_mode).toBe('patsome');
+    expect(result.mode_config).toEqual({
+      kind: 'patsome',
+      team_size: 2,
+      teams_count: 2,
+      patsome_scoring: 'net',
+    });
+    // flight_number = team_number (DB-CHECK game_players_team_flight_consistency)
+    expect(result.players).toEqual([
+      { user_id: 'a', team_number: 1, flight_number: 1 },
+      { user_id: 'b', team_number: 1, flight_number: 1 },
+      { user_id: 'c', team_number: 2, flight_number: 2 },
+      { user_id: 'd', team_number: 2, flight_number: 2 },
+    ]);
+  });
+
+  it('6 spillere i 3 lag à 2 → ok, teams_count === 3', () => {
+    const result = buildGameInsertPayload(
+      patsomeFd({
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 2 },
+          { userId: 'd', team: 2 },
+          { userId: 'e', team: 3 },
+          { userId: 'f', team: 3 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'patsome') {
+      expect(result.mode_config.teams_count).toBe(3);
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('< 4 spillere ved publish → min_players_for_mode', () => {
+    const result = buildGameInsertPayload(
+      patsomeFd({
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('min_players_for_mode');
+  });
+
+  it('0 spillere ved publish → min_players_for_mode', () => {
+    const result = buildGameInsertPayload(
+      patsomeFd({ players: [] }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('min_players_for_mode');
+  });
+
+  it('4 spillere men ubalanserte lag (3+1) → team_balance', () => {
+    const result = buildGameInsertPayload(
+      patsomeFd({
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 1 },
+          { userId: 'd', team: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('team_balance');
+  });
+
+  it('lag med kun 1 spiller (4 totalt: 1+1+1+1) → team_balance', () => {
+    const result = buildGameInsertPayload(
+      patsomeFd({
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 2 },
+          { userId: 'c', team: 3 },
+          { userId: 'd', team: 4 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('team_balance');
+  });
+
+  it('duplikat spiller → duplicate_player', () => {
+    const result = buildGameInsertPayload(
+      patsomeFd({
+        players: [
+          { userId: 'dup', team: 1 },
+          { userId: 'dup', team: 2 },
+          { userId: 'c', team: 2 },
+          { userId: 'd', team: 1 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('duplicate_player');
+  });
+
+  it('patsome_scoring=gross → mode_config reflekterer gross', () => {
+    const result = buildGameInsertPayload(
+      patsomeFd({
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 2 },
+          { userId: 'd', team: 2 },
+        ],
+        extras: { patsome_scoring: 'gross' },
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'patsome') {
+      expect(result.mode_config.patsome_scoring).toBe('gross');
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('patsome_scoring=net → mode_config reflekterer net', () => {
+    const result = buildGameInsertPayload(
+      patsomeFd({
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 2 },
+          { userId: 'd', team: 2 },
+        ],
+        extras: { patsome_scoring: 'net' },
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'patsome') {
+      expect(result.mode_config.patsome_scoring).toBe('net');
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('manglende patsome_scoring defaulter til net', () => {
+    // Tom / manglende felt → defensiv default 'net' (speiler Wolf/Skins/Nines)
+    const result = buildGameInsertPayload(
+      patsomeFd({
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 2 },
+          { userId: 'd', team: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'patsome') {
+      expect(result.mode_config.patsome_scoring).toBe('net');
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('draft tolererer < 4 spillere (partial state)', () => {
+    const result = buildGameInsertPayload(
+      patsomeFd({
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+        ],
+      }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(2);
+    expect(result.mode_config).toEqual({
+      kind: 'patsome',
+      team_size: 2,
+      teams_count: 1,
+      patsome_scoring: 'net',
+    });
+  });
+
+  it('draft tolererer 0 spillere', () => {
+    const result = buildGameInsertPayload(
+      patsomeFd({ players: [] }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toEqual([]);
+  });
+
+  it('flight_number = team_number for patsome-spillere (DB-CHECK consistency)', () => {
+    const result = buildGameInsertPayload(
+      patsomeFd({
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 5 },
+          { userId: 'd', team: 5 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players[0]).toMatchObject({ team_number: 1, flight_number: 1 });
+    expect(result.players[2]).toMatchObject({ team_number: 5, flight_number: 5 });
+  });
+});

@@ -246,7 +246,8 @@ function parseGameMode(formData: FormData): GameMode | null {
     raw === 'nines' ||
     raw === 'round_robin' ||
     raw === 'acey_deucey' ||
-    raw === 'shamble'
+    raw === 'shamble' ||
+    raw === 'patsome'
   )
     return raw;
   return null;
@@ -1762,6 +1763,93 @@ function validateShamble(
   };
 }
 
+/**
+ * Leser `patsome_scoring` fra form-data. Defaulter til 'net' når feltet
+ * mangler eller har en ugyldig verdi — speiler Wolf/Nassau/Skins/Nines-mønstret
+ * + Tørny's HCP-default.
+ */
+function parsePatsomeScoring(formData: FormData): 'gross' | 'net' {
+  const raw = String(formData.get('patsome_scoring') ?? '').trim();
+  if (raw === 'gross') return 'gross';
+  return 'net';
+}
+
+/**
+ * Patsome-validator (issue #286 — 6 hull 4BBB → 6 greensome → 6 foursomes).
+ *
+ * Lag à 2, felt av 2+ lag (ingen fast øvre grense — klubb-format). Speiler
+ * `validateTexasScramble` strukturelt for lag-grupperingslogikken, men
+ * håndhever `team_size` EKSAKT 2 (ikke konfigurerbar).
+ *
+ * Regler:
+ *  - Totalt < 4 spillere (= < 2 lag à 2) → `min_players_for_mode`.
+ *  - Hvert lag-nummer-gruppe må ha EKSAKT 2 spillere → `team_balance`.
+ *  - Duplikat-sjekk uendret → `duplicate_player`.
+ *  - `team_number` ≥ 1 (positivt heltall) → `bad_team`.
+ *  - `flight_number = team_number` for å oppfylle DB-CHECK
+ *    `game_players_team_flight_consistency` (begge satt eller null sammen).
+ *  - Draft tolererer partial state (ufullstendige lag, < 4 spillere totalt).
+ *
+ * Scoring-toggle: form-feltet `patsome_scoring` ('gross' | 'net'). Default
+ * 'net'. Speiler Wolf/Nassau/Skins/Nines-mønstret.
+ *
+ * Mode_config-output: `{kind: 'patsome', team_size: 2, teams_count, patsome_scoring}`.
+ */
+function validatePatsome(
+  formData: FormData,
+  mode: PayloadMode,
+): ModeValidationResult {
+  const patsomeScoring = parsePatsomeScoring(formData);
+
+  const players: GamePlayerInput[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < 8; i++) {
+    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
+    if (!user_id) continue;
+    if (seen.has(user_id)) {
+      return { ok: false, errorCode: 'duplicate_player' };
+    }
+    seen.add(user_id);
+    const team_number = Number(formData.get(`player_${i}_team`));
+    if (!Number.isInteger(team_number) || team_number < 1) {
+      return { ok: false, errorCode: 'bad_team' };
+    }
+    // Patsome-spillere speiler Texas/par-stableford/matchplay: flight = team
+    // for å oppfylle DB-CHECK game_players_team_flight_consistency (begge satt).
+    players.push({ user_id, team_number, flight_number: team_number });
+  }
+
+  if (mode === 'publish') {
+    if (players.length < 4) {
+      return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    const teamCounts = new Map<number, number>();
+    for (const p of players) {
+      if (p.team_number === null) continue;
+      teamCounts.set(p.team_number, (teamCounts.get(p.team_number) ?? 0) + 1);
+    }
+    // Hvert lag må ha EKSAKT 2 spillere — Patsome er 2-spiller-format.
+    for (const [, count] of teamCounts) {
+      if (count !== 2) {
+        return { ok: false, errorCode: 'team_balance' };
+      }
+    }
+  }
+
+  const teams_count = new Set(players.map((p) => p.team_number)).size;
+
+  return {
+    ok: true,
+    players,
+    mode_config: {
+      kind: 'patsome',
+      team_size: 2,
+      teams_count,
+      patsome_scoring: patsomeScoring,
+    },
+  };
+}
+
 const modeValidators: Record<
   GameMode,
   (formData: FormData, mode: PayloadMode) => ModeValidationResult
@@ -1784,6 +1872,7 @@ const modeValidators: Record<
   round_robin: validateRoundRobin,
   acey_deucey: validateAceyDeucey,
   shamble: validateShamble,
+  patsome: validatePatsome,
 };
 
 /**

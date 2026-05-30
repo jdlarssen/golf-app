@@ -186,6 +186,16 @@ export const MODE_GUIDE: Record<GameMode, ModeGuide> = {
       'Lavest sammenlagt for laget vinner.',
     ],
   },
+  patsome: {
+    summary:
+      'Dere er på lag à to og spiller 18 hull i tre lagformer, seks hull av hver.',
+    points: [
+      'Hull 1–6 er 4BBB: begge spiller sin egen ball, og lagets beste stableford-poeng teller.',
+      'Hull 7–12 er greensome: begge slår ut, dere velger det beste utslaget, og så slår dere annenhvert slag.',
+      'Hull 13–18 er foursomes: dere deler én ball og slår annenhvert slag, også fra tee.',
+      'Lagets samlede poeng fra alle tre delene teller. Flest poeng vinner.',
+    ],
+  },
 };
 
 /**

@@ -68,5 +68,9 @@ export function bruttoHelperFor(mode: GameMode): string {
       // Generisk allowance-field vises ikke for shamble; returverdien er for
       // type-completeness.
       return 'Ingen handicap — de laveste gross-scorene per hull teller for laget.';
+    case 'patsome':
+      // Patsome har egen scoring-toggle (gross|net) i PatsomeSetup-step. Generisk
+      // allowance-field vises ikke for patsome; returverdien er for type-completeness.
+      return 'Ingen handicap — stableford-poeng regnes på gross-score i alle tre segmentene.';
   }
 }
