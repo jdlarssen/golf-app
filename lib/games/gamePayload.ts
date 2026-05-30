@@ -235,6 +235,7 @@ function parseGameMode(formData: FormData): GameMode | null {
     raw === 'singles_matchplay' ||
     raw === 'solo_strokeplay' ||
     raw === 'texas_scramble' ||
+    raw === 'ambrose' ||
     raw === 'fourball_matchplay' ||
     raw === 'foursomes_matchplay' ||
     raw === 'wolf' ||
@@ -726,6 +727,114 @@ function parseTexasHandicapPct(formData: FormData): number | null {
   if (raw === null || raw === '') return null;
   const n = Number(raw);
   if (!Number.isInteger(n) || n < 0 || n > 100) return null;
+  return n;
+}
+
+/**
+ * Ambrose-validator (issue #284). Mekanisk identisk med Texas scramble — lagene
+ * spiller én ball, kapteinen (lex-min userId) eier scores-radene — men med egen
+ * config-kind og standard Ambrose-default-handicap (`combinedCH ÷ 2×team_size`,
+ * satt av wizarden via `ambroseDefaultPct`). `team_handicap_pct` er justerbar og
+ * kan være fraksjonell (4-mannslag-default = 12,5 %), i motsetning til Texas'
+ * heltall-felt.
+ *
+ * Form-felter:
+ *  - `ambrose_team_size`: 2 eller 4 (3-mannslag ikke i scope → unsupported_mode_size_combo)
+ *  - `ambrose_team_handicap_pct`: 0..100, fraksjonell tillatt (utenfor range → bad_allowance)
+ *  - `player_${i}_team`: positivt heltall, fri antall lag (klubb-turnering)
+ *
+ * Regler ved publish: minst 1 spiller, EKSAKT team_size per lag (team_balance),
+ * team_number ≥ 1 (bad_team). flight_number = team_number oppfyller DB-CHECK
+ * `game_players_team_flight_consistency`. Draft tolererer partial state.
+ * Mode_config-output: `{kind: 'ambrose', team_size, teams_count, team_handicap_pct}`.
+ */
+function validateAmbrose(
+  formData: FormData,
+  mode: PayloadMode,
+): ModeValidationResult {
+  const teamSize = parseAmbroseTeamSize(formData);
+  if (teamSize === null) {
+    return { ok: false, errorCode: 'unsupported_mode_size_combo' };
+  }
+
+  const handicapPct = parseAmbroseHandicapPct(formData);
+  if (handicapPct === null) {
+    return { ok: false, errorCode: 'bad_allowance' };
+  }
+
+  const players: GamePlayerInput[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < 8; i++) {
+    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
+    if (!user_id) continue;
+    if (seen.has(user_id)) {
+      return { ok: false, errorCode: 'duplicate_player' };
+    }
+    seen.add(user_id);
+    const team_number = Number(formData.get(`player_${i}_team`));
+    if (!Number.isInteger(team_number) || team_number < 1) {
+      return { ok: false, errorCode: 'bad_team' };
+    }
+    // Ambrose speiler Texas: flight = team for å oppfylle DB-CHECK
+    // game_players_team_flight_consistency (begge satt).
+    players.push({ user_id, team_number, flight_number: team_number });
+  }
+
+  if (mode === 'publish') {
+    if (players.length === 0) {
+      return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    const teamCounts = new Map<number, number>();
+    for (const p of players) {
+      if (p.team_number === null) continue;
+      teamCounts.set(p.team_number, (teamCounts.get(p.team_number) ?? 0) + 1);
+    }
+    for (const [, count] of teamCounts) {
+      if (count !== teamSize) {
+        return { ok: false, errorCode: 'team_balance' };
+      }
+    }
+  }
+
+  const teams_count = new Set(players.map((p) => p.team_number)).size;
+
+  return {
+    ok: true,
+    players,
+    mode_config: {
+      kind: 'ambrose',
+      team_size: teamSize,
+      teams_count,
+      team_handicap_pct: handicapPct,
+    },
+  };
+}
+
+/**
+ * Leser `ambrose_team_size` fra form-data. Returnerer 2, 4 eller null (3-mannslag
+ * ikke i scope — speiler Texas).
+ */
+function parseAmbroseTeamSize(formData: FormData): 2 | 4 | null {
+  const raw = String(formData.get('ambrose_team_size') ?? '').trim();
+  if (raw === '2') return 2;
+  if (raw === '4') return 4;
+  return null;
+}
+
+/**
+ * Leser `ambrose_team_handicap_pct` fra form-data. Returnerer et tall i range
+ * 0..100 (fraksjonell TILLATT, i motsetning til Texas' heltall-krav) eller null
+ * hvis utenfor range / ikke parseable. Standard Ambrose 4-mannslag-default er
+ * 12,5 %, derfor må fraksjonelle verdier passere.
+ *
+ * Tom string defaulter ikke — wizarden setter prosenten eksplisitt på
+ * lagstørrelse-endring (via `ambroseDefaultPct`).
+ */
+function parseAmbroseHandicapPct(formData: FormData): number | null {
+  const raw = formData.get('ambrose_team_handicap_pct');
+  if (raw === null || raw === '') return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0 || n > 100) return null;
   return n;
 }
 
@@ -1445,6 +1554,7 @@ const modeValidators: Record<
   singles_matchplay: validateSinglesMatchplay,
   solo_strokeplay: validateSoloStrokeplay,
   texas_scramble: validateTexasScramble,
+  ambrose: validateAmbrose,
   fourball_matchplay: validateFourballMatchplay,
   foursomes_matchplay: validateFoursomesMatchplay,
   wolf: validateWolf,

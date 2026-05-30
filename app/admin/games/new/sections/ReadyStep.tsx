@@ -50,6 +50,7 @@ const MODE_SUMMARY_LABELS: Record<GameMode, string> = {
   singles_matchplay: 'Singles matchplay',
   solo_strokeplay: 'Solo slagspill netto',
   texas_scramble: 'Texas scramble',
+  ambrose: 'Ambrose',
   fourball_matchplay: 'Four-ball matchplay',
   foursomes_matchplay: 'Foursomes matchplay',
   wolf: 'Wolf',

@@ -58,6 +58,8 @@ const ENABLED_COMBOS: Record<GameMode, ReadonlySet<TeamSize>> = {
   singles_matchplay: new Set<TeamSize>([1]),
   solo_strokeplay: new Set<TeamSize>([1]),
   texas_scramble: new Set<TeamSize>([2, 4]),
+  // Ambrose (#284): samme lagstørrelser som Texas scramble (2 eller 4).
+  ambrose: new Set<TeamSize>([2, 4]),
   fourball_matchplay: new Set<TeamSize>([2]),
   foursomes_matchplay: new Set<TeamSize>([2]),
   // Wolf: hver av de 4 spillerne er sin egen «row» (team_size=1). Selve

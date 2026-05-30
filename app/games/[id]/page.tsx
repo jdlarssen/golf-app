@@ -85,6 +85,7 @@ type GameRow = {
     | 'singles_matchplay'
     | 'solo_strokeplay'
     | 'texas_scramble'
+    | 'ambrose'
     | 'fourball_matchplay'
     | 'foursomes_matchplay'
     | 'wolf'

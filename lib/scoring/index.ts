@@ -23,6 +23,7 @@ import * as modifiedStableford from './modes/modifiedStableford';
 import * as singlesMatchplay from './modes/singlesMatchplay';
 import * as soloStrokeplay from './modes/soloStrokeplay';
 import * as texasScramble from './modes/texasScramble';
+import * as ambrose from './modes/ambrose';
 import * as fourballMatchplay from './modes/fourballMatchplay';
 import * as foursomesMatchplay from './modes/foursomesMatchplay';
 import * as wolf from './modes/wolf';
@@ -48,6 +49,8 @@ export function computeLeaderboard(ctx: ScoringContext): ModeResult {
       return soloStrokeplay.compute(ctx);
     case 'texas_scramble':
       return texasScramble.compute(ctx);
+    case 'ambrose':
+      return ambrose.compute(ctx);
     case 'fourball_matchplay':
       return fourballMatchplay.compute(ctx);
     case 'foursomes_matchplay':
@@ -75,7 +78,8 @@ export { strokesForHole, allStrokeAllocations } from './strokeAllocation';
 export { rankTeams } from './tiebreaker';
 export { computeStablefordPoints } from './modes/stableford';
 export { computeModifiedStablefordPoints } from './modes/modifiedStableford';
-export { isStablefordFamily } from './modes/types';
+export { isStablefordFamily, isScrambleFamily } from './modes/types';
+export { ambroseDefaultPct } from './modes/ambrose';
 export { computeMatchResult } from './modes/singlesMatchplay';
 export type {
   GameMode,

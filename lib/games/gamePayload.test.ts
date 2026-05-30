@@ -1248,6 +1248,144 @@ describe('buildGameInsertPayload — texas_scramble (issue #44)', () => {
   });
 });
 
+describe('buildGameInsertPayload — ambrose (issue #284)', () => {
+  /**
+   * Helper for Ambrose-payloads. Mekanisk lik texasFd, men game_mode=ambrose og
+   * ambrose_*-feltnavn. Ambrose-defaulten er standard Ambrose-formel (÷ 2×lag-
+   * størrelse): 25 % for 2-mannslag, 12,5 % for 4-mannslag — fraksjonell pct
+   * må passere validatoren.
+   */
+  function ambroseFd(opts: {
+    teamSize?: '2' | '4' | '3';
+    handicapPct?: string;
+    players?: Array<{ userId: string; team: number }>;
+    extras?: Record<string, string>;
+  }): FormData {
+    const { teamSize = '4', handicapPct = '12.5', players = [], extras = {} } = opts;
+    const base: Record<string, string> = {
+      name: 'Klubb Ambrose',
+      course_id: 'c1',
+      tee_box_id: 't1',
+      game_mode: 'ambrose',
+      ambrose_team_size: teamSize,
+      ambrose_team_handicap_pct: handicapPct,
+    };
+    players.forEach((p, i) => {
+      base[`player_${i}_id`] = p.userId;
+      base[`player_${i}_team`] = String(p.team);
+    });
+    return fd({ ...base, ...extras });
+  }
+
+  it('publish med 2 lag á 2 spillere (team_size=2, 25 %) → ok', () => {
+    const result = buildGameInsertPayload(
+      ambroseFd({
+        teamSize: '2',
+        handicapPct: '25',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 2 },
+          { userId: 'd', team: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.game_mode).toBe('ambrose');
+    expect(result.mode_config).toEqual({
+      kind: 'ambrose',
+      team_size: 2,
+      teams_count: 2,
+      team_handicap_pct: 25,
+    });
+    expect(result.players).toEqual([
+      { user_id: 'a', team_number: 1, flight_number: 1 },
+      { user_id: 'b', team_number: 1, flight_number: 1 },
+      { user_id: 'c', team_number: 2, flight_number: 2 },
+      { user_id: 'd', team_number: 2, flight_number: 2 },
+    ]);
+  });
+
+  it('publish med 4-mannslag aksepterer fraksjonell 12,5 % (Ambrose-default)', () => {
+    const result = buildGameInsertPayload(
+      ambroseFd({
+        teamSize: '4',
+        handicapPct: '12.5',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 1 },
+          { userId: 'd', team: 1 },
+          { userId: 'e', team: 2 },
+          { userId: 'f', team: 2 },
+          { userId: 'g', team: 2 },
+          { userId: 'h', team: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.mode_config).toEqual({
+      kind: 'ambrose',
+      team_size: 4,
+      teams_count: 2,
+      team_handicap_pct: 12.5,
+    });
+    expect(result.players).toHaveLength(8);
+  });
+
+  it('publish med ubalansert lag → team_balance', () => {
+    const result = buildGameInsertPayload(
+      ambroseFd({
+        teamSize: '2',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('team_balance');
+  });
+
+  it('3-mannslag avvises → unsupported_mode_size_combo', () => {
+    const result = buildGameInsertPayload(
+      ambroseFd({ teamSize: '3', players: [{ userId: 'a', team: 1 }] }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('unsupported_mode_size_combo');
+  });
+
+  it('pct utenfor range (101) → bad_allowance', () => {
+    const result = buildGameInsertPayload(
+      ambroseFd({
+        teamSize: '2',
+        handicapPct: '101',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('bad_allowance');
+  });
+
+  it('draft tolererer partial state (ufullstendige lag)', () => {
+    const result = buildGameInsertPayload(
+      ambroseFd({
+        teamSize: '4',
+        players: [{ userId: 'a', team: 1 }],
+      }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.game_mode).toBe('ambrose');
+  });
+});
+
 describe('buildGameInsertPayload — fourball_matchplay (issue #217, fase 2 av #47)', () => {
   /**
    * Helper for fourball-payloads. Bygger en form med game_mode=fourball_matchplay,

@@ -67,6 +67,15 @@ export const MODE_GUIDE: Record<GameMode, ModeGuide> = {
       'Lavest lagtotal vinner.',
     ],
   },
+  ambrose: {
+    summary:
+      'Laget spiller én ball: alle slår, dere plukker det beste slaget, og alle slår derfra igjen.',
+    points: [
+      'Slik fortsetter dere til ballen er i hull. Laget får én score per hull.',
+      'Laget får et felles handikap fra summen av spillernes handikap, så jevne og ujevne lag møtes på like vilkår.',
+      'Lavest lagtotal vinner.',
+    ],
+  },
   singles_matchplay: {
     summary:
       'Én mot én, hull for hull. Den som bruker færrest slag på et hull vinner hullet.',

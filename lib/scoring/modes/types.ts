@@ -9,6 +9,7 @@ export type GameMode =
   | 'singles_matchplay'
   | 'solo_strokeplay'
   | 'texas_scramble'
+  | 'ambrose'
   | 'fourball_matchplay'
   | 'foursomes_matchplay'
   | 'wolf'
@@ -32,6 +33,7 @@ export const MODE_LABELS: Record<GameMode, string> = {
   singles_matchplay: 'Matchplay',
   solo_strokeplay: 'Slagspill',
   texas_scramble: 'Texas scramble',
+  ambrose: 'Ambrose',
   fourball_matchplay: 'Fourball',
   foursomes_matchplay: 'Foursomes',
   wolf: 'Wolf',
@@ -53,6 +55,22 @@ export const MODE_LABELS: Record<GameMode, string> = {
  */
 export function isStablefordFamily(mode: GameMode): boolean {
   return mode === 'stableford' || mode === 'modified_stableford';
+}
+
+/**
+ * True for scramble-familien (Texas scramble + Ambrose). Begge deler all
+ * struktur: én ball per lag, lag-kaptein (lex-min userId) eier scores-radene,
+ * lag-grid i wizard/game-home, samme leaderboard-/podium-/mail-visning (begge
+ * returnerer `kind: 'texas_scramble'` fra scoring-laget). Eneste forskjellen er
+ * default-lag-handicapet og format-navnet. Brukes på `game_mode`-baserte
+ * routing-/display-sjekker som ellers bare så `=== 'texas_scramble'`. Speiler
+ * `isStablefordFamily`. #284.
+ *
+ * NB: hold mode-spesifikke greiner der default-pct eller copy avviker (Texas
+ * 4-mann 10 % vs Ambrose 12,5 %; ulik format-label/helper-tekst).
+ */
+export function isScrambleFamily(mode: GameMode): boolean {
+  return mode === 'texas_scramble' || mode === 'ambrose';
 }
 
 /**
@@ -98,6 +116,25 @@ export type GameModeConfig =
   | { kind: 'solo_strokeplay'; team_size: 1 }
   | {
       kind: 'texas_scramble';
+      team_size: 2 | 4;
+      teams_count: number;
+      team_handicap_pct: number;
+    }
+  | {
+      /**
+       * Ambrose (issue #284) — net scramble, mekanisk identisk med Texas
+       * scramble (én ball per lag, kaptein eier scores-radene, lavest lag-netto
+       * vinner). Eneste forskjell er default-lag-handicapet: standard Ambrose-
+       * formel `combinedCH ÷ (2 × team_size)` (2-mann 25 %, 4-mann 12,5 %) i
+       * stedet for Texas' NGF-konvensjon (2-mann 25 %, 4-mann 10 %).
+       *
+       * `team_handicap_pct` er justerbar (0–100) som i Texas — Ambrose-reglene
+       * er en klubb-konvensjon, ikke strengt regelbundet. Kan være fraksjonell
+       * (4-mann-default = 12,5). Scoring-laget (`ambrose.ts`) gjenbruker Texas-
+       * motoren og returnerer `kind: 'texas_scramble'` slik at all leaderboard-/
+       * podium-/mail-visning rendres uendret.
+       */
+      kind: 'ambrose';
       team_size: 2 | 4;
       teams_count: number;
       team_handicap_pct: number;
