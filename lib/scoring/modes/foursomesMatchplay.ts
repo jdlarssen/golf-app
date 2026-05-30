@@ -7,9 +7,15 @@
 // UI-routing. Scoring-laget her leser bare kapteinens scores-rad per hull.
 //
 // Allowance-pipeline (skiller seg fra fourball som bruker per-spiller-allowance):
-//   highSideExtraHCP = round(|side1CombinedCH − side2CombinedCH| × pct / 100)
+//   highSideExtraHCP = round(|side1Hcp − side2Hcp| × pct / 100)
 //   Lavlaget får 0 strokes; høylaget får highSideExtraHCP strokes allokert
 //   via SI (hardeste hull først). WHS-default pct = 50. 0 % = brutto-matchplay.
+//
+// Side-handicapet (`side1Hcp`/`side2Hcp`) regnes via en `SideHandicapFn`-strategi
+// slik at Chapman (#290) kan gjenbruke hele kjernen med 60/40-formel i stedet for
+// summen: `computeFoursomesCore(ctx, pct, chapmanSideHandicap)` returnerer fortsatt
+// `kind: 'foursomes_matchplay'` → all leaderboard-/scorekort-/mail-visning deles
+// (Ambrose-mønsteret, #284).
 //
 // Gjenbruker singles-helpers:
 //   - `classifyMatchplayHole(side1Net, side2Net)` → per-hull-utfall
@@ -96,7 +102,39 @@ function buildSidePlayers(
   return [players[0], players[1]];
 }
 
+/**
+ * Strategi for å regne en sides lag-handicap fra de to partnernes Course
+ * Handicap. Order-independent. Foursomes bruker summen; Chapman (#290) bruker
+ * WHS 60/40 (60 % av laveste + 40 % av høyeste).
+ */
+export type SideHandicapFn = (ch1: number, ch2: number) => number;
+
+/** Foursomes: sum av begge partneres CH (uendret oppførsel). */
+export const combinedSideHandicap: SideHandicapFn = (a, b) => a + b;
+
+/**
+ * Chapman/Pinehurst (#290): WHS-allowance = 60 % av laveste + 40 % av høyeste,
+ * rundet til heltall FØR diff (per WHS: rund hver sides playing handicap, så ta
+ * differansen). Eks: 10 + 20 → round(0.6×10 + 0.4×20) = round(14) = 14.
+ */
+export const chapmanSideHandicap: SideHandicapFn = (a, b) =>
+  Math.round(0.6 * Math.min(a, b) + 0.4 * Math.max(a, b));
+
 export function compute(ctx: ScoringContext): FoursomesMatchplayResult {
+  return computeFoursomesCore(ctx, readAllowancePct(ctx), combinedSideHandicap);
+}
+
+/**
+ * Delt matchplay-kjerne for alternate-shot-familien. `allowancePct` styrer hvor
+ * mye av lag-HCP-differansen høylaget får; `sideHcp` styrer hvordan en sides
+ * lag-handicap regnes (sum for foursomes, 60/40 for Chapman). Returnerer alltid
+ * `kind: 'foursomes_matchplay'` slik at alle view-/mail-konsumenter deles.
+ */
+export function computeFoursomesCore(
+  ctx: ScoringContext,
+  allowancePct: number,
+  sideHcp: SideHandicapFn,
+): FoursomesMatchplayResult {
   const side1Players = ctx.players
     .filter((p) => p.teamNumber === 1)
     .slice()
@@ -106,24 +144,29 @@ export function compute(ctx: ScoringContext): FoursomesMatchplayResult {
     .slice()
     .sort((a, b) => a.userId.localeCompare(b.userId));
 
-  // Foursomes krever EKSAKT 2 spillere per side. Avvik → defensiv empty shell.
+  // Krever EKSAKT 2 spillere per side. Avvik → defensiv empty shell.
   if (side1Players.length !== 2 || side2Players.length !== 2) {
     return emptyShell();
   }
 
-  const allowancePct = readAllowancePct(ctx);
-
   const side1CaptainId = pickTeamCaptain(side1Players.map((p) => p.userId));
   const side2CaptainId = pickTeamCaptain(side2Players.map((p) => p.userId));
 
-  const side1Combined = side1Players.reduce((sum, p) => sum + p.courseHandicap, 0);
-  const side2Combined = side2Players.reduce((sum, p) => sum + p.courseHandicap, 0);
+  // Lag-handicap per side via strategi (sum for foursomes, 60/40 for Chapman).
+  const side1Combined = sideHcp(
+    side1Players[0].courseHandicap,
+    side1Players[1].courseHandicap,
+  );
+  const side2Combined = sideHcp(
+    side2Players[0].courseHandicap,
+    side2Players[1].courseHandicap,
+  );
 
   // WHS-diff-formel: høylaget får (diff × allowance_pct/100) strokes via SI.
-  // Lavlaget får 0. Ved tie i combined CH får begge 0 — gross-only matchplay.
+  // Lavlaget får 0. Ved tie i lag-HCP får begge 0 — gross-only matchplay.
   const teamDiff = Math.abs(side1Combined - side2Combined);
   const highSideExtraHCP = Math.round((teamDiff * allowancePct) / 100);
-  // Når combined CH er like (teamDiff === 0): highSideNumber er irrelevant
+  // Når lag-HCP er like (teamDiff === 0): highSideNumber er irrelevant
   // (begge sider får 0 strokes uansett). Default til 1 for determinisme.
   const highSideNumber: 1 | 2 = side2Combined > side1Combined ? 2 : 1;
 
