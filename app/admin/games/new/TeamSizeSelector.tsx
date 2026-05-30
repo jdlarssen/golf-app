@@ -6,7 +6,7 @@ import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
  * Kanoniske lagstørrelser som UI-en kjenner til. Holdes som union for å gi
  * narrowing — andre tall (3, 5, ...) er ikke meningsfulle i Tørny per d.d.
  */
-export type TeamSize = 1 | 2 | 4;
+export type TeamSize = 1 | 2 | 3 | 4;
 
 type Props = {
   /** Valgt spillmodus styrer hvilke tiles som er aktive. */
@@ -60,6 +60,8 @@ const ENABLED_COMBOS: Record<GameMode, ReadonlySet<TeamSize>> = {
   texas_scramble: new Set<TeamSize>([2, 4]),
   // Ambrose (#284): samme lagstørrelser som Texas scramble (2 eller 4).
   ambrose: new Set<TeamSize>([2, 4]),
+  // Florida Scramble (#283): lagstørrelser 3 eller 4 (2-mannslag ikke støttet).
+  florida_scramble: new Set<TeamSize>([3, 4]),
   fourball_matchplay: new Set<TeamSize>([2]),
   foursomes_matchplay: new Set<TeamSize>([2]),
   // Wolf: hver av de 4 spillerne er sin egen «row» (team_size=1). Selve
@@ -107,8 +109,17 @@ type TileDef = {
  * vises som «4BBB» med forklarende hint i stedet for et kryptisk «Par» (#282).
  * Andre lag-moduser (best ball, texas, fourball, foursomes) er IKKE 4BBB-
  * stableford og beholder «Par».
+ *
+ * Florida Scramble (#283) viser 3-mannstile i stedet for Solo/Par — modusen
+ * støtter lagstørrelser 3 og 4, ikke 1 og 2.
  */
 function tilesForMode(mode: GameMode): TileDef[] {
+  if (mode === 'florida_scramble') {
+    return [
+      { size: 3, title: 'Tremannslag', hint: '3 spillere' },
+      { size: 4, title: '4-mann', hint: '4 spillere' },
+    ];
+  }
   const teamTile: TileDef = isStablefordFamily(mode)
     ? { size: 2, title: '4BBB', hint: 'Lag à 2, beste poeng teller' }
     : { size: 2, title: 'Par', hint: '2 spillere' };
@@ -144,7 +155,7 @@ export function TeamSizeSelector({
       <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
         Velg lagstørrelse
       </legend>
-      <div role="radiogroup" className="mt-2 grid grid-cols-3 gap-3">
+      <div role="radiogroup" className={`mt-2 grid gap-3 ${tiles.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
         {tiles.map((tile) => {
           const isEnabled = enabledSet.has(tile.size);
           const selected = value === tile.size;

@@ -59,6 +59,7 @@ export function TeamsAssignmentSection({
     isMatchplay,
     isTexas,
     isAmbrose,
+    isFlorida,
     requiresTeams,
     teamSize,
     drawRandomTeams,
@@ -75,7 +76,7 @@ export function TeamsAssignmentSection({
   // ellers 4. for solo. Wizard hopper over prefiket helt.
   const teePerPlayerPrefix = hideNumbering
     ? ''
-    : isParStableford || isMatchplay || isTexas || isAmbrose
+    : isParStableford || isMatchplay || isTexas || isAmbrose || isFlorida
       ? '5. '
       : '4. ';
 
@@ -156,7 +157,8 @@ export function TeamsAssignmentSection({
         ((isBestBall && eightSelected) ||
           (isParStableford && selectedPlayerIds.length >= 2) ||
           (isTexas && selectedPlayerIds.length >= teamSize) ||
-          (isAmbrose && selectedPlayerIds.length >= teamSize)) && (
+          (isAmbrose && selectedPlayerIds.length >= teamSize) ||
+          (isFlorida && selectedPlayerIds.length >= teamSize)) && (
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-text">
             {numberPrefix('4')}Lag
@@ -166,11 +168,13 @@ export function TeamsAssignmentSection({
               Inntil 4 lag à 2 spillere. Hvert lag må ha enten 0 eller 2
               spillere. Tomme lag publiseres ikke.
             </p>
-          ) : isTexas || isAmbrose ? (
+          ) : isTexas || isAmbrose || isFlorida ? (
             <p className="text-xs text-muted">
               {teamSize === 2
                 ? 'Inntil 4 lag à 2 spillere. Hvert lag må ha enten 0 eller 2 spillere. Tomme lag publiseres ikke.'
-                : 'Inntil 2 lag à 4 spillere. Hvert lag må ha enten 0 eller 4 spillere. Tomme lag publiseres ikke.'}
+                : teamSize === 3
+                  ? 'Inntil 2 lag à 3 spillere. Hvert lag må ha enten 0 eller 3 spillere. Tomme lag publiseres ikke.'
+                  : 'Inntil 2 lag à 4 spillere. Hvert lag må ha enten 0 eller 4 spillere. Tomme lag publiseres ikke.'}
             </p>
           ) : (
             <p className="text-xs text-muted">
@@ -201,7 +205,7 @@ export function TeamsAssignmentSection({
               </Button>
             </div>
           )}
-          {(isParStableford || isTexas || isAmbrose) &&
+          {(isParStableford || isTexas || isAmbrose || isFlorida) &&
             selectedPlayerIds.some((pid) => teamByPlayer[pid] !== undefined) && (
             <div className="flex">
               <Button
@@ -222,8 +226,9 @@ export function TeamsAssignmentSection({
               // for å unngå at admin tilordner spillere til et lag som ikke
               // kan publiseres. Best-ball og par-stableford fortsetter å vise
               // alle 4 lag uavhengig av lagstørrelse.
-              if ((isTexas || isAmbrose) && teamSize === 4 && team > 2) return null;
-              const slotCount = isTexas || isAmbrose ? teamSize : 2;
+              if ((isTexas || isAmbrose || isFlorida) && teamSize === 4 && team > 2) return null;
+              if (isFlorida && teamSize === 3 && team > 2) return null;
+              const slotCount = isTexas || isAmbrose || isFlorida ? teamSize : 2;
               return (
                 <div
                   key={team}
@@ -346,7 +351,7 @@ export function TeamsAssignmentSection({
           å regne riktig CH per medlem før NGF-aggregat-formelen kombinerer
           dem til lag-HCP. Vises kun når det faktisk er spillere å konfigurere.
           Best-ball håndterer tee inne i flights-seksjonen ovenfor. */}
-      {(isSolo || isParStableford || isMatchplay || isTexas || isAmbrose) &&
+      {(isSolo || isParStableford || isMatchplay || isTexas || isAmbrose || isFlorida) &&
         selectedPlayerIds.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-text">

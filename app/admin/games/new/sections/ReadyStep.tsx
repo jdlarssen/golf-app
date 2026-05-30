@@ -51,6 +51,7 @@ const MODE_SUMMARY_LABELS: Record<GameMode, string> = {
   solo_strokeplay: 'Solo slagspill netto',
   texas_scramble: 'Texas scramble',
   ambrose: 'Ambrose',
+  florida_scramble: 'Florida Scramble',
   fourball_matchplay: 'Four-ball matchplay',
   foursomes_matchplay: 'Foursomes matchplay',
   wolf: 'Wolf',
@@ -65,6 +66,7 @@ const MODE_SUMMARY_LABELS: Record<GameMode, string> = {
 function teamSizeLabel(size: TeamSize): string {
   if (size === 1) return 'Solo';
   if (size === 2) return '2-mannslag';
+  if (size === 3) return '3-mannslag';
   return '4-mannslag';
 }
 
