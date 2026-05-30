@@ -17,7 +17,45 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.56.y — Patsome (tre lagformer i én runde)
+
+Issue [#286](https://github.com/jdlarssen/golf-app/issues/286), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Det første rotasjonsformatet: 18 hull delt i tre seks-hulls-deler med hver sin lagform (4BBB, greensome og foursomes), scoret i én felles stableford-pott.
+
+### [1.56.0] - 2026-05-31
+
+> Ny spillform for klubbturneringen: Patsome, for lag på to. Runden er delt i tre: de første seks hullene spiller dere 4BBB (begge spiller sin egen ball, beste resultat teller), de neste seks greensome (begge slår ut, dere velger det beste utslaget, så annenhvert slag), og de siste seks foursomes (én ball, annenhvert slag fra tee). Appen sier hvilken form dere er i på hvert hull, summerer stableford-poeng fra alle tre delene, og kårer laget med flest poeng. Velg netto eller brutto når dere setter opp spillet.
+
+<details>
+<summary>Teknisk</summary>
+
+Selvstendig orchestrator i stedet for å bygge på separate greensome-/foursomes-strokeplay-moduler: `patsome.compute()` regner stableford-poeng per lag per hull direkte og bytter lag-poeng-regel etter segment. Felles valuta (stableford-poeng) forener 2-ball-segmentet (4BBB, MAX av partnernes poeng) og 1-ball-segmentene (greensome/foursomes, kaptein-eid lagball). Netto bruker WHS-allowance per segment: full CH i 4BBB, 60/40 i greensome, 50 % av summen i foursomes.
+
+#### Added
+- [`lib/scoring/modes/patsome.ts`](lib/scoring/modes/patsome.ts) — `compute(ctx)`: 6/6/6-orchestrator, segment-delsummer, ranking via `rankTeams`. 36 Type A-tester.
+- [`supabase/migrations/0061_patsome.sql`](supabase/migrations/0061_patsome.sql) — seed av format-rad «Patsome» (Klubb, sekundær) + ny tabell `patsome_tee_starters` (tee-starter per lag for foursomes-segmentet) med RLS.
+- `PatsomeSetup.tsx` — netto/brutto-velger i wizarden.
+- `PatsomeView.tsx` + `PatsomePodium.tsx` — lag-leaderboard med delsum per segment + podium.
+- `PatsomeSegmentBanner.tsx` + `PatsomeTeeStarterBanner.tsx` (m/ `PatsomeTeeHint`) — segment-banner per hull + tee-starter-velger/-hint i foursomes-segmentet.
+- [`app/games/[id]/patsomeActions.ts`](app/games/[id]/patsomeActions.ts) — `setPatsomeTeeStarter` (authz + upsert).
+
+#### Changed
+- `lib/scoring/modes/types.ts` + `lib/scoring/index.ts` — ny `patsome`-modus i `GameMode`, `GameModeConfig` (`patsome_scoring`), `ModeResult`, compute-routeren og `MODE_LABELS`.
+- [`lib/games/gamePayload.ts`](lib/games/gamePayload.ts) — `validatePatsome` (lag à 2, 2+ lag) + `parseGameMode` + regresjonstester.
+- `app/games/[id]/holes/[holeNumber]/page.tsx` — hybrid score-inntasting: per spiller hull 1–6, kaptein-eid lagball hull 7–18, segment-banner + tee-starter-slots.
+- `useGameFormState.ts` + `GameWizard.tsx` + `TeamSizeSelector.tsx` + `lib/games/registration.ts` — Patsome som lagformat i wizarden.
+- `lib/games/scorecardLayout.ts`, `lib/games/allowanceCopy.ts`, `lib/formats/modeGuide.ts`, `lib/formats/icons.tsx`, leaderboard- og game-`page.tsx` — scorekort-layout, hjelpetekst, spiller-forklaring, ikon og mirror-unions.
+
+#### Tests
+- Type A: `patsome.test.ts` (36) + patsome-cases i `gamePayload.test.ts`. Type C: `PatsomeView.test.tsx`, `PatsomeSetup.test.tsx`. Authz: `patsomeActions.test.ts`.
+
+</details>
+
+---
+
 ## 1.55.y — Shamble / Champagne Scramble (best N av M)
+
+<details>
+<summary><strong>1.55.y — Shamble / Champagne Scramble (best N av M) (1 oppføring) — klikk for å vise</strong></summary>
 
 Issue [#285](https://github.com/jdlarssen/golf-app/issues/285), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Det første ekte lag-formatet i familien: alle slår ut, laget velger det beste utslaget, og så spiller hver spiller sin egen ball inn. De laveste scorene per hull teller for laget.
 
@@ -45,6 +83,8 @@ Generalisering av best ball («best 1 av M») til «best N av M». Strokeplay-ut
 
 #### Tests
 - Type A: `shamble.test.ts` (19) + 7 shamble-cases i `gamePayload.test.ts`. Type C: `ShambleView.test.tsx` + `ShambleSetup.test.tsx`.
+
+</details>
 
 </details>
 
