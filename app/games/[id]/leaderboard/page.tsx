@@ -61,6 +61,8 @@ import { SkinsView, type SkinsPlayerInfo } from './SkinsView';
 import { SkinsPodium } from './SkinsPodium';
 import { NinesView, type NinesPlayerInfo } from './NinesView';
 import { NinesPodium } from './NinesPodium';
+import { ShambleView, type ShamblePlayerInfo } from './ShambleView';
+import { ShamblePodium } from './ShamblePodium';
 import {
   MatchplayMatchView,
   type MatchplayPlayerInfo,
@@ -448,6 +450,22 @@ async function LeaderboardBody({
   // status='active').
   if (game.game_mode === 'nines') {
     return renderNines({
+      gameId,
+      game,
+      gwp,
+      rawHolesRows: rawHolesRes.data ?? [],
+      rawScoresRows: rawScoresRes.data ?? [],
+      backHref,
+    });
+  }
+
+  // Shamble / Champagne Scramble (issue #285): lag-format. Delt drive, så
+  // egen ball til hull. Lagets hull-score = sum av de N laveste effective-
+  // scorene. Ingen ny DB-tabell — ren funksjon av scores (speiler Nines-
+  // datasti). Live-view håndterer reveal-modus internt (skjuler totaler
+  // når score_visibility='reveal' og status='active').
+  if (game.game_mode === 'shamble') {
+    return renderShamble({
       gameId,
       game,
       gwp,
@@ -2500,6 +2518,138 @@ function renderNines(opts: {
 
   return (
     <NinesView
+      gameId={gameId}
+      gameName={game.name}
+      result={result}
+      playersById={playersById}
+      scoreVisibility={scoreVisibility}
+      gameStatus={game.status}
+      backHref={backHref}
+    />
+  );
+}
+
+/**
+ * Shamble / Champagne Scramble-grenen (issue #285) — bygger ScoringContext fra
+ * rå-rad-ene, kjører mode-router-en (`computeModeResult`) og velger view per
+ * `game.status`:
+ *
+ *   - `finished` → ShamblePodium på toppen + ShambleView under (chromeless): feirings-
+ *     podium med vinner-laget + per-hull-rutenett under.
+ *   - alt annet (active/scheduled) → ShambleView alene: lag-rangering + per-hull-
+ *     tabell live. View-en håndterer reveal-modus internt basert på
+ *     `scoreVisibility` + `gameStatus` props.
+ *
+ * Shamble bruker team_number (validatoren håndhever ≥ 1 per spiller) — vi
+ * videresender reell `p.team_number` til scoring-laget, nøyaktig som Texas.
+ * Ingen ekstra DB-fetch utover scores (best-N-utledning er ren funksjon av
+ * scores). Speiler Nines-datasti for ScoringContext-byggingen, men med
+ * team_number fra Texas-mønstret.
+ */
+function renderShamble(opts: {
+  gameId: string;
+  game: GameForHole;
+  gwp: {
+    players: {
+      user_id: string;
+      team_number: number;
+      users: { name: string | null; nickname: string | null } | null;
+      course_handicap: number | null;
+      tee_gender: TeeGender;
+    }[];
+  };
+  rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
+  rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
+  backHref: string;
+}) {
+  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
+
+  const ctx = {
+    game: {
+      id: gameId,
+      game_mode: 'shamble' as const,
+      mode_config: game.mode_config,
+    },
+    players: gwp.players
+      .filter((p) => p.users != null)
+      .map((p) => ({
+        userId: p.user_id,
+        // Shamble-validatoren håndhever team_number ≥ 1 (speiler Texas-
+        // validatoren). Defensive fallback til 0 (som scoring-laget filtrerer
+        // bort) hvis kolonnen mot formodning er null.
+        teamNumber: p.team_number ?? 0,
+        flightNumber: null,
+        courseHandicap: p.course_handicap ?? 0,
+        // Shamble bruker netto (eller gross, per mode_config.shamble_scoring)
+        // basert på spillerens egen handicap — egne baller, ikke delt ball.
+        // Sender teeGender gjennom for per-kjønn-par-resolvering (#240).
+        teeGender: p.tee_gender,
+      })),
+    holes: rawHolesRows.map((h) => ({
+      number: h.hole_number,
+      par: h.par_mens,
+      parByGender: {
+        mens: h.par_mens,
+        ladies: h.par_ladies,
+        juniors: h.par_juniors,
+      },
+      strokeIndex: h.stroke_index,
+    })),
+    scores: rawScoresRows.map((s) => ({
+      userId: s.user_id,
+      holeNumber: s.hole_number,
+      gross: s.strokes,
+    })),
+  };
+
+  const result = computeModeResult(ctx);
+  // Type-guard mot mode-router-output. Hvis routeren returnerer feil shape
+  // faller vi tilbake til notFound() — sikrere enn å rendre tom UI.
+  if (result.kind !== 'shamble') {
+    notFound();
+  }
+
+  const playersById = new Map<string, ShamblePlayerInfo>();
+  for (const p of gwp.players) {
+    if (p.users == null) continue;
+    playersById.set(p.user_id, {
+      name: p.users.name ?? '(ukjent)',
+      nickname: p.users.nickname,
+    });
+  }
+
+  // Score-visibility normaliseres til 'live' | 'reveal' for view-en.
+  const scoreVisibility: 'live' | 'reveal' =
+    game.score_visibility === 'reveal' ? 'reveal' : 'live';
+
+  // Finished → ShamblePodium på toppen + ShambleView under (chromeless, så bare
+  // én outer shell). Active/scheduled → ShambleView alene.
+  if (game.status === 'finished') {
+    return (
+      <>
+        <ShamblePodium
+          gameId={gameId}
+          gameName={game.name}
+          result={result}
+          playersById={playersById}
+          backHref={backHref}
+        />
+        <ShambleView
+          gameId={gameId}
+          gameName={game.name}
+          result={result}
+          playersById={playersById}
+          scoreVisibility={scoreVisibility}
+          gameStatus={game.status}
+          backHref={backHref}
+          chromeless
+        />
+      </>
+    );
+  }
+
+  return (
+    <ShambleView
       gameId={gameId}
       gameName={game.name}
       result={result}
