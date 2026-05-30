@@ -19,11 +19,11 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ## 1.54.y — Florida Scramble (Texas-variant med step-aside)
 
-Issue [#283](https://github.com/jdlarssen/golf-app/issues/283), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Texas scramble med én ekstra regel: den som slo det valgte slaget, deltar ikke i neste slag. Lag à 3 eller 4. NGF-standard lag-handicap (15 % for tremannslag, 10 % for firmannslag).
+Issue [#283](https://github.com/jdlarssen/golf-app/issues/283), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Texas scramble med én ekstra regel: den som slo det valgte slaget, står over neste slag. Lag à 3 eller 4. NGF-standard lag-handicap (15 % for tremannslag, 10 % for firmannslag).
 
 ### [1.54.0] - 2026-05-30
 
-> Ny spillform: Florida Scramble. Laget spiller én ball som Texas — alle slår, dere velger beste slag, og alle slår videre derfra. Det lille ekstra: den som slo det valgte slaget, sitter over neste slag. Slik bytter alle på, og ingen hviler for lenge. Appen minner laget om regelen på hvert hull. Sett opp lag på tre eller fire, og appen beregner lag-handicap etter NGF-standarden.
+> Ny spillform: Florida Scramble. Laget spiller én ball som Texas — alle slår, dere velger beste slag, og alle slår videre derfra. Det lille ekstra: den som slo det valgte slaget, står over neste slag. Slik må hele laget bidra gjennom hullet. Appen minner laget om regelen på hvert hull. Sett opp lag på tre eller fire, og appen beregner lag-handicap etter NGF-standarden.
 
 <details>
 <summary>Teknisk</summary>
