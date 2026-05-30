@@ -156,6 +156,21 @@ export type InitialValues = {
    */
   nines_scoring?: 'gross' | 'net';
   /**
+   * Shamble / Champagne Scramble (#285): variant ('shamble' eller 'champagne').
+   * Pre-fylles fra DB i edit-flyt; nye spill defaulter til 'shamble' i useGameFormState.
+   */
+  shamble_variant?: 'shamble' | 'champagne';
+  /**
+   * Shamble / Champagne Scramble (#285): antall score som teller per hull (1/2/3).
+   * Shamble-preset låser til 2 server-side; Champagne lar arrangør velge 1/2/3.
+   */
+  shamble_count?: 1 | 2 | 3;
+  /**
+   * Shamble / Champagne Scramble (#285): scoring-modus ('gross' eller 'net').
+   * Pre-fylles fra DB i edit-flyt; nye spill defaulter til 'net' i useGameFormState.
+   */
+  shamble_scoring?: 'gross' | 'net';
+  /**
    * Self-påmelding (#199). Defaultes til 'invite_only' + 'solo' for å
    * bevare dagens flyt. Edit-flyten leverer eksisterende valg fra DB.
    */

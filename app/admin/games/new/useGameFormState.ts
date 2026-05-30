@@ -100,6 +100,9 @@ export function defaultTeamSizeForMode(mode: GameMode): TeamSize {
   // Nines / Split Sixes (#278): solo-format (ingen lag), team_size=1 betyr
   // requiresTeams=false så vi får solo-style player-selection i step 3.
   if (mode === 'nines') return 1;
+  // Shamble / Champagne Scramble: lag-format, default 4-mannslag (klassisk
+  // shamble-størrelse). Admin kan endre til 3 via ShambleSetup.
+  if (mode === 'shamble') return 4;
   return 2;
 }
 
@@ -278,6 +281,22 @@ export function useGameFormState({
   const [ninesScoring, setNinesScoring] = useState<'gross' | 'net'>(
     initialValues?.nines_scoring === 'gross' ? 'gross' : 'net',
   );
+  // Shamble / Champagne Scramble (#285): variant-toggle, count-velger og
+  // scoring-toggle. Default 'shamble' + count 2 + 'net' speiler Tørny's
+  // ethos. Validatoren (`validateShamble`) leser alle feltene og faller
+  // defensivt tilbake til 'shamble'/'net'/2 ved ugyldige verdier. Shamble-
+  // preset låser count til 2 server-side; Champagne lar arrangør velge 1/2/3.
+  const [shambleVariant, setShambleVariant] = useState<'shamble' | 'champagne'>(
+    initialValues?.shamble_variant === 'champagne' ? 'champagne' : 'shamble',
+  );
+  const [shambleCount, setShambleCount] = useState<1 | 2 | 3>(() => {
+    const raw = initialValues?.shamble_count;
+    if (raw === 1 || raw === 2 || raw === 3) return raw;
+    return 2;
+  });
+  const [shambleScoring, setShambleScoring] = useState<'gross' | 'net'>(
+    initialValues?.shamble_scoring === 'gross' ? 'gross' : 'net',
+  );
   // Wolf-rotasjon: en counter som økes hver gang admin trykker "Shuffle".
   // wolfOrder (derived under) hasher (selectedPlayerIds, wolfShuffleSeed) for
   // å produsere en deterministisk-pseudo-random permutasjon. Da kan render-
@@ -442,6 +461,10 @@ export function useGameFormState({
   //   hull, 5–3–1) eller Split Sixes (6 poeng, 4–2–0). Eigen NinesSetup-step
   //   i step 2.
   const isNines = gameMode === 'nines';
+  // - isShamble: lag-format à 3 eller 4, Shamble / Champagne Scramble (#285).
+  //   Delt drive, så spiller alle sin egen ball til hull. Lagets hull-score =
+  //   sum av de N laveste individuelle scorene. Team_number/flight som Texas.
+  const isShamble = gameMode === 'shamble';
 
   // Drafts can be saved without a tee-off; publishing cannot. `canPublish`
   // below combines this with the rest of the validity gates.
@@ -742,7 +765,7 @@ export function useGameFormState({
     for (const team of TEAM_NUMBERS) {
       for (const pid of playersByTeam[team]) {
         const flight =
-          isParStableford || isTexas
+          isParStableford || isTexas || isShamble
             ? team
             : (flightByPlayer[pid] ?? teamDefaultFlight(team));
         rows.push({
@@ -753,7 +776,7 @@ export function useGameFormState({
       }
     }
     return rows;
-  }, [isMatchplay, isWolf, requiresTeams, selectedPlayerIds, wolfOrder, playersByTeam, teamByPlayer, flightByPlayer, isParStableford, isTexas]);
+  }, [isMatchplay, isWolf, requiresTeams, selectedPlayerIds, wolfOrder, playersByTeam, teamByPlayer, flightByPlayer, isParStableford, isTexas, isShamble]);
 
   const flightsComplete =
     teamsComplete &&
@@ -812,6 +835,25 @@ export function useGameFormState({
     texasHasAtLeastOneTeam &&
     texasHandicapPctValid;
 
+  // Shamble-validitet: hvert ikke-tomt lag må ha eksakt teamSize spillere
+  // (3 eller 4), alle valgte spillere må ha team_number satt, og minst ett
+  // lag må være fullt. Speiler `validateShamble` i `lib/games/gamePayload.ts`.
+  // Ingen handicap-pct-sjekk (shamble bruker full course handicap per spiller).
+  const shambleTeamsBalanced = TEAM_NUMBERS.every(
+    (t) =>
+      playersByTeam[t].length === 0 ||
+      playersByTeam[t].length === teamSize,
+  );
+  const shambleHasAtLeastOneTeam = TEAM_NUMBERS.some(
+    (t) => playersByTeam[t].length === teamSize,
+  );
+  const shamblePlayersValid =
+    selectedPlayerIds.length >= teamSize &&
+    selectedPlayerIds.length % teamSize === 0 &&
+    selectedPlayerIds.every((pid) => teamByPlayer[pid] !== undefined) &&
+    shambleTeamsBalanced &&
+    shambleHasAtLeastOneTeam;
+
   // Matchplay-validitet: nøyaktig 2 spillere, én på side 1 og én på side 2.
   // Speiler `validateSinglesMatchplay` i `lib/games/gamePayload.ts` —
   // for-mange-feilen meldes separat fra for-få i missingForPublish-stien
@@ -867,15 +909,17 @@ export function useGameFormState({
           ? parStablefordPlayersValid
           : isTexas
             ? texasPlayersValid
-            : isWolf
-              ? wolfPlayersValid
-              : isNassau
-                ? nassauPlayersValid
-                : isSkins
-                  ? skinsPlayersValid
-                  : isNines
-                    ? ninesPlayersValid
-                    : false;
+            : isShamble
+              ? shamblePlayersValid
+              : isWolf
+                ? wolfPlayersValid
+                : isNassau
+                  ? nassauPlayersValid
+                  : isSkins
+                    ? skinsPlayersValid
+                    : isNines
+                      ? ninesPlayersValid
+                      : false;
 
   // Publishing requires every section to be valid AND a tee-off time. Drafts
   // skip these gates entirely (they only need a name).
@@ -892,7 +936,7 @@ export function useGameFormState({
     courseId !== '' &&
     teeBoxId !== '' &&
     (playersStepOptional || playersValidForMode) &&
-    (isTexas || isWolf || isNassau || isSkins || isNines || allowanceValid) &&
+    (isTexas || isShamble || isWolf || isNassau || isSkins || isNines || allowanceValid) &&
     hasTeeOff;
 
   // Human-readable list of what's still missing for a publish. Mode-aware:
@@ -973,6 +1017,25 @@ export function useGameFormState({
     if (!texasHandicapPctValid) {
       missingForPublish.push('lag-handicap-prosent (0-100)');
     }
+  } else if (isShamble) {
+    // Shamble: lagstørrelse 3 eller 4. Trenger minst teamSize spillere
+    // fordelt på minst ett fullt lag. Mangler-meldingene speiler
+    // `validateShamble`-feilene fra payload-laget.
+    if (selectedPlayerIds.length < teamSize) {
+      missingForPublish.push(`minst ${teamSize} spillere`);
+    } else if (selectedPlayerIds.length % teamSize !== 0) {
+      missingForPublish.push(
+        teamSize === 3
+          ? 'antall spillere delelig på 3 (lag á 3)'
+          : 'antall spillere delelig på 4 (lag á 4)',
+      );
+    } else if (!shamblePlayersValid) {
+      missingForPublish.push(
+        teamSize === 3
+          ? 'lag-fordeling (lag á 3)'
+          : 'lag-fordeling (lag á 4)',
+      );
+    }
   } else if (isWolf) {
     // Wolf: krever nøyaktig 4 spillere. Rotation-slot fordeles automatisk
     // via wolfOrder, så ingen lag-tilordning trengs i UI.
@@ -1030,7 +1093,7 @@ export function useGameFormState({
   // modusene har sin egen scoring-konfig i mode_config. Hopper over
   // allowance-sjekken så admin ikke får mismatch mellom UI-skjult-felt og
   // publish-feilmelding.
-  if (!isTexas && !isWolf && !isNassau && !isSkins && !isNines && !allowanceValid)
+  if (!isTexas && !isShamble && !isWolf && !isNassau && !isSkins && !isNines && !allowanceValid)
     missingForPublish.push('gyldig HCP-allowance');
 
   return {
@@ -1070,6 +1133,12 @@ export function useGameFormState({
     setNinesVariant,
     ninesScoring,
     setNinesScoring,
+    shambleVariant,
+    setShambleVariant,
+    shambleCount,
+    setShambleCount,
+    shambleScoring,
+    setShambleScoring,
     requirePeerApproval,
     setRequirePeerApproval,
     sideEnabled,
@@ -1105,6 +1174,7 @@ export function useGameFormState({
     isNassau,
     isSkins,
     isNines,
+    isShamble,
     hasTeeOff,
     // Memoiserte derivasjoner
     selectedCourse,
@@ -1120,6 +1190,7 @@ export function useGameFormState({
     texasHandicapPctValid,
     parStablefordPlayersValid,
     texasPlayersValid,
+    shamblePlayersValid,
     matchplayPlayersValid,
     ninesPlayersValid,
     playersValidForMode,

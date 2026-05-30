@@ -6,7 +6,7 @@ import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
  * Kanoniske lagstørrelser som UI-en kjenner til. Holdes som union for å gi
  * narrowing — andre tall (3, 5, ...) er ikke meningsfulle i Tørny per d.d.
  */
-export type TeamSize = 1 | 2 | 4;
+export type TeamSize = 1 | 2 | 3 | 4;
 
 type Props = {
   /** Valgt spillmodus styrer hvilke tiles som er aktive. */
@@ -82,9 +82,10 @@ const ENABLED_COMBOS: Record<GameMode, ReadonlySet<TeamSize>> = {
   // ikke i praksis — men type-system krever en entry.
   nines: new Set<TeamSize>([1]),
   // Shamble / Champagne Scramble: lag-format à 3 eller 4. ShambleSetup tar
-  // over med sin egen 3/4-velger (generisk TeamSizeSelector kan ikke vise 3,
-  // siden TeamSize = 1|2|4), så denne entry-en er kun for type-completeness.
-  shamble: new Set<TeamSize>([4]),
+  // over med sin egen 3/4-velger, så TeamSizeSelector vises ikke for shamble —
+  // men type-system krever en entry. Begge støttede størrelser listet for
+  // dokumentasjonsformål (generisk selector kan ikke vise 3 uansett).
+  shamble: new Set<TeamSize>([3, 4]),
 };
 
 type TileDef = {

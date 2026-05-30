@@ -63,6 +63,7 @@ const MODE_SUMMARY_LABELS: Record<GameMode, string> = {
 function teamSizeLabel(size: TeamSize): string {
   if (size === 1) return 'Solo';
   if (size === 2) return '2-mannslag';
+  if (size === 3) return '3-mannslag';
   return '4-mannslag';
 }
 
@@ -116,6 +117,7 @@ export function ReadyStep({
     isParStableford,
     isMatchplay,
     isTexas,
+    isShamble,
     isSolo,
   } = state;
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -151,7 +153,7 @@ export function ReadyStep({
     if (isParStableford) {
       return `${teamsCount} lag à 2 spillere`;
     }
-    if (isTexas) {
+    if (isTexas || isShamble) {
       return `${teamsCount} lag à ${teamSize} spillere`;
     }
     return `${count} ${count === 1 ? 'spiller' : 'spillere'}`;

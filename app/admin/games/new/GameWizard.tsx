@@ -46,6 +46,7 @@ import { WolfSetup } from './sections/WolfSetup';
 import { NassauSetup } from './sections/NassauSetup';
 import { SkinsSetup } from './sections/SkinsSetup';
 import { NinesSetup } from './sections/NinesSetup';
+import { ShambleSetup } from './sections/ShambleSetup';
 import { AllowanceField } from '@/components/admin/AllowanceField';
 import { bruttoHelperFor } from '@/lib/games/allowanceCopy';
 import {
@@ -201,6 +202,8 @@ export function GameWizard({
         return 'Velg minst 2 spillere fordelt to og to på lag';
       if (state.isTexas)
         return `Velg minst ${state.teamSize} spillere, så fordeler du lag`;
+      if (state.isShamble)
+        return `Velg minst ${state.teamSize} spillere, så fordeler du lag`;
       return null;
     }
     return null;
@@ -211,6 +214,7 @@ export function GameWizard({
     state.isMatchplay,
     state.isParStableford,
     state.isTexas,
+    state.isShamble,
     state.teamSize,
   ]);
 
@@ -306,6 +310,9 @@ export function GameWizard({
       skins_scoring: state.skinsScoring,
       nines_variant: state.ninesVariant,
       nines_scoring: state.ninesScoring,
+      shamble_variant: state.shambleVariant,
+      shamble_count: state.shambleCount,
+      shamble_scoring: state.shambleScoring,
       tournament_id: initialValues?.tournament_id,
       tournament_match_label: initialValues?.tournament_match_label,
       registration_mode: state.registrationMode,
@@ -424,7 +431,7 @@ export function GameWizard({
 
           {state.formatChosen && (
             <div className="space-y-4">
-              {!state.isMatchplay && !state.isWolf && !state.isNassau && !state.isSkins && !state.isNines && (
+              {!state.isMatchplay && !state.isWolf && !state.isNassau && !state.isSkins && !state.isNines && !state.isShamble && (
                 <TeamSizeSelector
                   mode={state.gameMode}
                   value={state.teamSize}
@@ -463,6 +470,19 @@ export function GameWizard({
                   onVariantChange={state.setNinesVariant}
                   scoring={state.ninesScoring}
                   onScoringChange={state.setNinesScoring}
+                  disabled={state.lockGameMode}
+                />
+              )}
+              {state.isShamble && (
+                <ShambleSetup
+                  variant={state.shambleVariant}
+                  onVariantChange={state.setShambleVariant}
+                  count={state.shambleCount}
+                  onCountChange={state.setShambleCount}
+                  scoring={state.shambleScoring}
+                  onScoringChange={state.setShambleScoring}
+                  teamSize={state.teamSize as 3 | 4}
+                  onTeamSizeChange={state.handleTeamSizeChange as (next: 3 | 4) => void}
                   disabled={state.lockGameMode}
                 />
               )}
@@ -619,6 +639,7 @@ function FormDataInputs({
     gameMode,
     teamSize,
     isTexas,
+    isShamble,
     isWolf,
     isNassau,
     isSkins,
@@ -631,6 +652,9 @@ function FormDataInputs({
     skinsScoring,
     ninesVariant,
     ninesScoring,
+    shambleVariant,
+    shambleCount,
+    shambleScoring,
     orderedPayload,
     courseId,
     teeBoxId,
@@ -701,6 +725,14 @@ function FormDataInputs({
         <>
           <input type="hidden" name="nines_variant" value={ninesVariant} />
           <input type="hidden" name="nines_scoring" value={ninesScoring} />
+        </>
+      )}
+      {isShamble && (
+        <>
+          <input type="hidden" name="shamble_variant" value={shambleVariant} />
+          <input type="hidden" name="shamble_count" value={String(shambleCount)} />
+          <input type="hidden" name="shamble_scoring" value={shambleScoring} />
+          <input type="hidden" name="shamble_team_size" value={String(teamSize)} />
         </>
       )}
 
