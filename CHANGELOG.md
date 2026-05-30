@@ -17,7 +17,39 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.53.y — Ambrose (net scramble med lag-handicap)
+## 1.54.y — Florida Scramble (Texas-variant med step-aside)
+
+Issue [#283](https://github.com/jdlarssen/golf-app/issues/283), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Texas scramble med én ekstra regel: den som slo det valgte slaget, deltar ikke i neste slag. Lag à 3 eller 4. NGF-standard lag-handicap (15 % for tremannslag, 10 % for firmannslag).
+
+### [1.54.0] - 2026-05-30
+
+> Ny spillform: Florida Scramble. Laget spiller én ball som Texas — alle slår, dere velger beste slag, og alle slår videre derfra. Det lille ekstra: den som slo det valgte slaget, sitter over neste slag. Slik bytter alle på, og ingen hviler for lenge. Appen minner laget om regelen på hvert hull. Sett opp lag på tre eller fire, og appen beregner lag-handicap etter NGF-standarden.
+
+<details>
+<summary>Teknisk</summary>
+
+Florida Scramble gjenbruker Texas scramble-motoren fullstendig. `floridaScramble.compute()` returnerer `kind: 'texas_scramble'`, så leaderboard, podium, scorekort, mail og hull-side rendres uendret via `isScrambleFamily`. Eneste UI-tillegg er en step-aside-påminnelse i `HoleClient.tsx` (synlig kun for `florida_scramble`, ikke Texas/Ambrose, `data-testid="florida-step-aside-reminder"`). Default lag-handicap: NGF-fasttabell — 15 % for tremannslag, 10 % for firmannslag.
+
+#### Added
+- [`lib/scoring/modes/floridaScramble.ts`](lib/scoring/modes/floridaScramble.ts) — `compute(ctx)` delegerer til `computeScramble`-kjernen; `defaultFloridaHandicapPct` gir 15 % (3-mannslag) / 10 % (4-mannslag). 5 Type A-tester.
+- [`supabase/migrations/0058_florida_scramble.sql`](supabase/migrations/0058_florida_scramble.sql) — seed av format-rad «Florida Scramble» + intent-mapping (sekundær under Klubb, sort_order 37). Ingen ny tabell.
+
+#### Changed
+- `lib/scoring/modes/types.ts` + `lib/scoring/index.ts` — ny `florida_scramble`-modus i `GameMode`, `GameModeConfig` (team_size: 3|4) og `MODE_LABELS`; `isScrambleFamily` utvides med florida.
+- [`lib/games/gamePayload.ts`](lib/games/gamePayload.ts) — `validateFloridaScramble` (lag à 3/4; 2-mannslag → `unsupported_mode_size_combo`) + `parseGameMode`-støtte + 6 regresjonstester.
+- Wizard (`ModeSelector`, `TeamSizeSelector`, `GameForm`, `GameWizard`, `useGameFormState`, sections) — Florida-tile, tremannstile, `floridaHandicapPct`-state, lag-handicap-felt med NGF-default per lagstørrelse.
+- Leaderboard, hull-side, scorekort, game-home, admin-detaljside, mail og spillformer rutes via `isScrambleFamily`; step-aside-påminnelse i `HoleClient.tsx` er florida-eksklusiv.
+- `lib/formats/icons.tsx`, `lib/formats/modeGuide.ts`, `app/spillformer/page.tsx` — format-ikon (gjenbruker Texas), spiller-forklaring med step-aside-punkt, oppdagbarhet.
+
+#### Tests
+- Type A: `floridaScramble.test.ts` (5) + 6 florida-cases i `gamePayload.test.ts`. Ingen ny Type C — gjenbruker Texas-viewet (per test-disiplin).
+
+</details>
+
+---
+
+<details>
+<summary><strong>1.53.y — Ambrose (net scramble med lag-handicap) (1 oppføring) — klikk for å vise</strong></summary>
 
 Issue [#284](https://github.com/jdlarssen/golf-app/issues/284), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Enda en lagscramble, denne gangen den australske Ambrose-varianten — mekanisk lik Texas scramble, men med den klassiske Ambrose-regnemåten for lag-handicap. Primært for klubbturneringer.
 
@@ -43,6 +75,8 @@ Ambrose er mekanisk identisk med Texas scramble (én ball per lag, kapteinen eie
 
 #### Tests
 - Type A: `ambrose.test.ts` (7) + 6 ambrose-cases i `gamePayload.test.ts`. Ingen ny Type C — Ambrose gjenbruker Texas-viewet, så en egen render-test ville duplisert #44s dekning (per test-disiplin).
+
+</details>
 
 </details>
 
