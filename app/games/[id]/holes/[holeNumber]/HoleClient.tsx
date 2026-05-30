@@ -255,7 +255,10 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   // med ÉN entry der userId = lag-kapteinens userId). Lookup-er som matcher
   // mot myUserId må derfor falle tilbake til lag-kortet for non-captain-
   // medlemmer. Submit-state speiler hele lagets state.
-  const isTexas = gameMode === 'texas_scramble' || gameMode === 'ambrose';
+  const isTexas = gameMode === 'texas_scramble' || gameMode === 'ambrose' || gameMode === 'florida_scramble';
+  // Florida Scramble (#283): step-aside-regelen vises som påminnelse på hull-flaten.
+  // Kun for florida — ikke for texas eller ambrose.
+  const isFlorida = gameMode === 'florida_scramble';
 
   // Sync listener — start once on mount.
   useEffect(() => {
@@ -746,6 +749,27 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
           players={roundRobinPlayers}
           myUserId={myUserId}
         />
+      )}
+
+      {/* Florida Scramble (#283): step-aside-påminnelse — kun for florida,
+          ikke for texas eller ambrose. Honor-system; ingen tracking. */}
+      {isFlorida && (
+        <div
+          data-testid="florida-step-aside-reminder"
+          style={{
+            margin: '0 14px 8px',
+            padding: '10px 14px',
+            borderRadius: 12,
+            border: '1px solid var(--border)',
+            background: 'var(--surface)',
+            fontFamily: 'var(--font-sans)',
+            fontSize: 12,
+            color: 'var(--text-muted)',
+            textAlign: 'center',
+          }}
+        >
+          Husk: den som slo det valgte slaget, står over neste slag.
+        </div>
       )}
 
       <div style={listStyle}>

@@ -6,7 +6,7 @@ import {
   type SideCategoryId,
 } from '@/lib/scoring/sideTournamentConfig';
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
-import { ambroseDefaultPct } from '@/lib/scoring';
+import { ambroseDefaultPct, defaultFloridaHandicapPct } from '@/lib/scoring';
 import type { TeamSize } from './TeamSizeSelector';
 import type { CourseOption, InitialValues, PlayerOption } from './GameForm';
 import { playerGenderDefault } from '@/lib/games/playerGenderDefault';
@@ -97,6 +97,9 @@ export function defaultTeamSizeForMode(mode: GameMode): TeamSize {
   // Ambrose (#284): default 4-mannslag (mest vanlig i klubb-turneringer).
   // 2-mannslag valgbart via TeamSizeSelector.
   if (mode === 'ambrose') return 4;
+  // Florida Scramble (#283): default 3-mannslag (step-aside-regelen er mest
+  // naturlig med 3 spillere). 4-mannslag valgbart via TeamSizeSelector.
+  if (mode === 'florida_scramble') return 3;
   // Wolf: hver spiller er sin egen «row». team_number 1-4 brukes som
   // rotation-slot, ikke som lag-tildeling. team_size=1 betyr requiresTeams=false
   // så vi får solo-style player-selection i step 3.
@@ -257,6 +260,19 @@ export function useGameFormState({
       initialValues.ambrose_team_handicap_pct !== ''
       ? Number(initialValues.ambrose_team_handicap_pct)
       : ambroseDefaultPct(
+          initialValues?.team_size ??
+            defaultTeamSizeForMode(initialValues?.game_mode ?? 'best_ball'),
+        ),
+  );
+  // Florida Scramble (#283): lag-handicap-prosent. NGF-fasttabell:
+  // 15 % for 3-mannslag, 10 % for 4-mannslag. Heltall (i motsetning til
+  // Ambrose' fraksjonelle 12,5 %), men validator aksepterer desimaler om
+  // admin justerer. Edit-flyt: pre-fylles fra initialValues.
+  const [floridaHandicapPct, setFloridaHandicapPct] = useState<number>(
+    initialValues?.florida_team_handicap_pct !== undefined &&
+      initialValues.florida_team_handicap_pct !== ''
+      ? Number(initialValues.florida_team_handicap_pct)
+      : defaultFloridaHandicapPct(
           initialValues?.team_size ??
             defaultTeamSizeForMode(initialValues?.game_mode ?? 'best_ball'),
         ),
@@ -434,6 +450,11 @@ export function useGameFormState({
     if (next === 'ambrose') {
       setAmbroseHandicapPct(ambroseDefaultPct(nextSize));
     }
+    // Florida Scramble (#283): default lag-handicap-prosent per NGF-fasttabell
+    // (15 % for 3-mannslag, 10 % for 4-mannslag). Admin kan deretter justere.
+    if (next === 'florida_scramble') {
+      setFloridaHandicapPct(defaultFloridaHandicapPct(nextSize));
+    }
     // #199: hvis ny modus ikke har lag-konsept, force-reset registration_type
     // til 'solo' — ellers ville payload-validatoren feilet med
     // `team_registration_unsupported_mode` ved publish.
@@ -455,6 +476,9 @@ export function useGameFormState({
     }
     if (gameMode === 'ambrose') {
       setAmbroseHandicapPct(ambroseDefaultPct(next));
+    }
+    if (gameMode === 'florida_scramble') {
+      setFloridaHandicapPct(defaultFloridaHandicapPct(next));
     }
   }
 
@@ -496,6 +520,11 @@ export function useGameFormState({
   //   Eneste forskjell mot Texas er lag-handicap-formelen (standard Ambrose:
   //   25 % for 2-mannslag, 12,5 % for 4-mannslag) og format-navnet.
   const isAmbrose = gameMode === 'ambrose';
+  // - isFlorida: florida_scramble (#283). Mekanisk identisk med Texas scramble —
+  //   én ball per lag, kaptein eier scores-radene, lavest lag-netto vinner.
+  //   Forskjeller mot Texas: lagstørrelser 3 eller 4 (ikke 2), NGF-fasttabell
+  //   for lag-handicap-default (15 %/10 %), og step-aside-påminnelse på hull-flaten.
+  const isFlorida = gameMode === 'florida_scramble';
   // - isWolf: 4-spiller rotating partner-format. team_number 1-4 brukes som
   //   rotation-slot (random permutasjon ved publish). team_size=1, ingen
   //   lag-grid. Eget WolfSetup-step i step 2 for scoring-toggle + shuffle.
@@ -964,6 +993,29 @@ export function useGameFormState({
     shambleTeamsBalanced &&
     shambleHasAtLeastOneTeam;
 
+  // Florida Scramble-validitet (#283): speiler Ambrose-validitets-reglene.
+  // Fraksjonell prosent tillatt (validator aksepterer desimaler).
+  const floridaTeamsBalanced = TEAM_NUMBERS.every(
+    (t) =>
+      playersByTeam[t].length === 0 ||
+      playersByTeam[t].length === teamSize,
+  );
+  const floridaHasAtLeastOneTeam = TEAM_NUMBERS.some(
+    (t) => playersByTeam[t].length === teamSize,
+  );
+  const floridaHandicapPctValid =
+    typeof floridaHandicapPct === 'number' &&
+    !isNaN(floridaHandicapPct) &&
+    floridaHandicapPct >= 0 &&
+    floridaHandicapPct <= 100;
+  const floridaPlayersValid =
+    selectedPlayerIds.length >= teamSize &&
+    selectedPlayerIds.length % teamSize === 0 &&
+    selectedPlayerIds.every((pid) => teamByPlayer[pid] !== undefined) &&
+    floridaTeamsBalanced &&
+    floridaHasAtLeastOneTeam &&
+    floridaHandicapPctValid;
+
   // Matchplay-validitet: nøyaktig 2 spillere, én på side 1 og én på side 2.
   // Speiler `validateSinglesMatchplay` i `lib/games/gamePayload.ts` —
   // for-mange-feilen meldes separat fra for-få i missingForPublish-stien
@@ -1043,9 +1095,11 @@ export function useGameFormState({
                         ? aceyDeuceyPlayersValid
                         : isAmbrose
                           ? ambrosePlayersValid
-                          : isShamble
-                            ? shamblePlayersValid
-                            : false;
+                          : isFlorida
+                            ? floridaPlayersValid
+                            : isShamble
+                              ? shamblePlayersValid
+                              : false;
 
   // Round Robin allowance-validitet: 0..100.
   const roundRobinAllowancePctValid =
@@ -1192,6 +1246,27 @@ export function useGameFormState({
           : 'lag-fordeling (lag á 4)',
       );
     }
+  } else if (isFlorida) {
+    // Florida Scramble (#283): lagstørrelse 3 eller 4. Speiler Texas-/Ambrose-
+    // mangler-meldingene.
+    if (selectedPlayerIds.length < teamSize) {
+      missingForPublish.push(`minst ${teamSize} spillere`);
+    } else if (selectedPlayerIds.length % teamSize !== 0) {
+      missingForPublish.push(
+        teamSize === 3
+          ? 'antall spillere delelig på 3 (lag á 3)'
+          : 'antall spillere delelig på 4 (lag á 4)',
+      );
+    } else if (!floridaPlayersValid) {
+      missingForPublish.push(
+        teamSize === 3
+          ? 'lag-fordeling (lag á 3)'
+          : 'lag-fordeling (lag á 4)',
+      );
+    }
+    if (!floridaHandicapPctValid) {
+      missingForPublish.push('lag-handicap-prosent (0-100)');
+    }
   } else if (isWolf) {
     // Wolf: krever nøyaktig 4 spillere. Rotation-slot fordeles automatisk
     // via wolfOrder, så ingen lag-tilordning trengs i UI.
@@ -1276,7 +1351,7 @@ export function useGameFormState({
   // Skins, Nines, Round Robin eller Acey Deucey — disse modusene har sin egen
   // scoring-konfig i mode_config. Hopper over allowance-sjekken så admin ikke
   // får mismatch mellom UI-skjult-felt og publish-feilmelding.
-  if (!isTexas && !isAmbrose && !isShamble && !isWolf && !isNassau && !isSkins && !isNines && !isRoundRobin && !isAceyDeucey && !allowanceValid)
+  if (!isTexas && !isAmbrose && !isFlorida && !isShamble && !isWolf && !isNassau && !isSkins && !isNines && !isRoundRobin && !isAceyDeucey && !allowanceValid)
     missingForPublish.push('gyldig HCP-allowance');
 
   return {
@@ -1302,6 +1377,8 @@ export function useGameFormState({
     setTexasHandicapPct,
     ambroseHandicapPct,
     setAmbroseHandicapPct,
+    floridaHandicapPct,
+    setFloridaHandicapPct,
     fourballAllowancePct,
     setFourballAllowancePct,
     foursomesAllowancePct,
@@ -1361,6 +1438,7 @@ export function useGameFormState({
     isMatchplay,
     isTexas,
     isAmbrose,
+    isFlorida,
     isWolf,
     isNassau,
     isSkins,
@@ -1382,9 +1460,11 @@ export function useGameFormState({
     allowanceValid,
     texasHandicapPctValid,
     ambroseHandicapPctValid,
+    floridaHandicapPctValid,
     parStablefordPlayersValid,
     texasPlayersValid,
     ambrosePlayersValid,
+    floridaPlayersValid,
     shamblePlayersValid,
     matchplayPlayersValid,
     ninesPlayersValid,

@@ -10,6 +10,7 @@ export type GameMode =
   | 'solo_strokeplay'
   | 'texas_scramble'
   | 'ambrose'
+  | 'florida_scramble'
   | 'fourball_matchplay'
   | 'foursomes_matchplay'
   | 'wolf'
@@ -35,6 +36,7 @@ export const MODE_LABELS: Record<GameMode, string> = {
   solo_strokeplay: 'Slagspill',
   texas_scramble: 'Texas scramble',
   ambrose: 'Ambrose',
+  florida_scramble: 'Florida Scramble',
   fourball_matchplay: 'Fourball',
   foursomes_matchplay: 'Foursomes',
   wolf: 'Wolf',
@@ -60,19 +62,20 @@ export function isStablefordFamily(mode: GameMode): boolean {
 }
 
 /**
- * True for scramble-familien (Texas scramble + Ambrose). Begge deler all
- * struktur: én ball per lag, lag-kaptein (lex-min userId) eier scores-radene,
- * lag-grid i wizard/game-home, samme leaderboard-/podium-/mail-visning (begge
- * returnerer `kind: 'texas_scramble'` fra scoring-laget). Eneste forskjellen er
- * default-lag-handicapet og format-navnet. Brukes på `game_mode`-baserte
- * routing-/display-sjekker som ellers bare så `=== 'texas_scramble'`. Speiler
- * `isStablefordFamily`. #284.
+ * True for scramble-familien (Texas scramble + Ambrose + Florida Scramble).
+ * Alle deler struktur: én ball per lag, lag-kaptein (lex-min userId) eier
+ * scores-radene, lag-grid i wizard/game-home, samme leaderboard-/podium-/
+ * mail-visning (alle returnerer `kind: 'texas_scramble'` fra scoring-laget).
+ * Eneste forskjeller er lagstørrelse, default-lag-handicap og format-navn.
+ * Brukes på `game_mode`-baserte routing-/display-sjekker. Speiler
+ * `isStablefordFamily`. #284 (Ambrose), #283 (Florida Scramble).
  *
  * NB: hold mode-spesifikke greiner der default-pct eller copy avviker (Texas
- * 4-mann 10 % vs Ambrose 12,5 %; ulik format-label/helper-tekst).
+ * 4-mann 10 %, Ambrose 12,5 %, Florida 3-mann 15 %/4-mann 10 %; ulik
+ * format-label/helper-tekst; Florida har step-aside-påminnelse).
  */
 export function isScrambleFamily(mode: GameMode): boolean {
-  return mode === 'texas_scramble' || mode === 'ambrose';
+  return mode === 'texas_scramble' || mode === 'ambrose' || mode === 'florida_scramble';
 }
 
 /**
@@ -138,6 +141,25 @@ export type GameModeConfig =
        */
       kind: 'ambrose';
       team_size: 2 | 4;
+      teams_count: number;
+      team_handicap_pct: number;
+    }
+  | {
+      /**
+       * Florida Scramble (issue #283) — Texas-variant med step-aside-regel.
+       * Mekanisk identisk med Texas scramble (én ball per lag, kaptein eier
+       * scores-radene, lavest lag-netto vinner). Eneste forskjeller:
+       *  1. Lagstørrelser: 3 eller 4 (ikke 2 som Texas/Ambrose).
+       *  2. Default-lag-handicap: NGF-fasttabell (3-mann 15 %, 4-mann 10 %).
+       *  3. Step-aside-regel (honor-system, kun UI-påminnelse, ingen tracking).
+       *
+       * `team_handicap_pct` er justerbar (0–100) som i Texas/Ambrose.
+       * Scoring-laget (`floridaScramble.ts`) gjenbruker Texas-motoren og
+       * returnerer `kind: 'texas_scramble'` slik at all leaderboard-/podium-/
+       * mail-visning rendres uendret. #283.
+       */
+      kind: 'florida_scramble';
+      team_size: 3 | 4;
       teams_count: number;
       team_handicap_pct: number;
     }

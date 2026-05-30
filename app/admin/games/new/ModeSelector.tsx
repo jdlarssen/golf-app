@@ -236,6 +236,12 @@ const TILES: TileDef[] = [
     description: 'Lag à 2 eller 4. Alle slår, beste ball velges. Lag-handicap jevner ut forskjellene mellom lagene.',
     icon: TexasScrambleIcon,
   },
+  {
+    mode: 'florida_scramble',
+    title: 'Florida Scramble',
+    description: 'Som Texas, men den som slo det valgte slaget, står over neste slag. Lag à 3 eller 4.',
+    icon: TexasScrambleIcon,
+  },
 ];
 
 /**

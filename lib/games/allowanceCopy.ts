@@ -26,6 +26,7 @@ export function bruttoHelperFor(mode: GameMode): string {
     case 'foursomes_matchplay':
     case 'texas_scramble':
     case 'ambrose':
+    case 'florida_scramble':
       // Disse modusene har egne brutto-tekster i call-sites, ikke denne.
       return 'Ingen handicap — kun gross teller.';
     case 'wolf':

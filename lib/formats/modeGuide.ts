@@ -76,6 +76,15 @@ export const MODE_GUIDE: Record<GameMode, ModeGuide> = {
       'Lavest lagtotal vinner.',
     ],
   },
+  florida_scramble: {
+    summary:
+      'Som Texas scramble, men med én ekstra regel: den som slo det valgte slaget, står over neste slag. Lag à 3 eller 4.',
+    points: [
+      'Den som slo det valgte slaget, står over neste slag. Resten av laget slår videre.',
+      'Slik bytter dere på, og alle er med gjennom hullet. Laget får én score per hull.',
+      'Laget får et felles handikap som trekkes fra. Lavest lagtotal vinner.',
+    ],
+  },
   singles_matchplay: {
     summary:
       'Én mot én, hull for hull. Den som bruker færrest slag på et hull vinner hullet.',

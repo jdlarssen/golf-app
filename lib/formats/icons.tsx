@@ -299,6 +299,9 @@ const ICON_MAP: Record<string, (props: { size?: number }) => ReactNode> = {
   // (én ball per lag, alle slår). Format-navnforskjellen synliggjøres via
   // label, ikke ikonet.
   ambrose: TexasScrambleIcon,
+  // Florida Scramble gjenbruker Texas scramble-ikonet — scramble-familie,
+  // kun step-aside-regelen skiller. #283.
+  florida_scramble: TexasScrambleIcon,
   fourball_matchplay: FourballMatchplayIcon,
   bingo_bango_bongo: BingoBangoBongoIcon,
   nines: NinesIcon,

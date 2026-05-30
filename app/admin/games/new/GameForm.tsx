@@ -116,6 +116,12 @@ export type InitialValues = {
    */
   ambrose_team_handicap_pct?: string;
   /**
+   * Florida Scramble (#283): lag-handicap-prosent (NGF-fasttabell). 0..100,
+   * heltall default (15 for 3-mannslag, 10 for 4-mannslag). Default settes av
+   * GameForm via `defaultFloridaHandicapPct(teamSize)` når lagstørrelse endres.
+   */
+  florida_team_handicap_pct?: string;
+  /**
    * Cup-link (#47): kobler spillet til en parent tournament-rad. Settes når
    * admin lander på `/admin/games/new?tournament_id=...` fra cup-detalj-
    * siden. Rendres som hidden inputs på form-en og leses i actions.ts.
@@ -242,11 +248,14 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     teamSize,
     isTexas,
     isAmbrose,
+    isFlorida,
     isMatchplay,
     texasHandicapPct,
     setTexasHandicapPct,
     ambroseHandicapPct,
     setAmbroseHandicapPct,
+    floridaHandicapPct,
+    setFloridaHandicapPct,
     hcpAllowance,
     setHcpAllowance,
     fourballAllowancePct,
@@ -357,6 +366,20 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             type="hidden"
             name="ambrose_team_handicap_pct"
             value={String(ambroseHandicapPct)}
+          />
+        </>
+      )}
+      {isFlorida && (
+        <>
+          <input
+            type="hidden"
+            name="florida_team_size"
+            value={teamSize}
+          />
+          <input
+            type="hidden"
+            name="florida_team_handicap_pct"
+            value={String(floridaHandicapPct)}
           />
         </>
       )}
@@ -524,6 +547,31 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
               inputLabel="Lag-handicap (%)"
               value={ambroseHandicapPct}
               onChange={setAmbroseHandicapPct}
+            />
+            <input type="hidden" name="hcp_allowance_pct" value="100" />
+          </>
+        )}
+        {/* Florida Scramble (#283): lag-handicap per NGF-fasttabell (15 % for
+            3-mannslag, 10 % for 4-mannslag). `key={teamSize}` forser remount
+            ved lagstørrelse-bytte. `hcp_allowance_pct=100` er no-op for DB
+            NOT NULL (reell prosent ligger i mode_config). */}
+        {isFlorida && (
+          <>
+            <AllowanceField
+              key={teamSize}
+              fieldName="florida_team_handicap_pct"
+              defaultPct={floridaHandicapPct}
+              legend="Lag-handicap"
+              description="Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = laveste lag-gross per hull vinner."
+              nettoHelperText={
+                teamSize === 3
+                  ? 'NGF-standard: 15 % av summen av spillernes spille-HCP for 3-mannslag.'
+                  : 'NGF-standard: 10 % av summen av spillernes spille-HCP for 4-mannslag.'
+              }
+              bruttoHelperText="Ingen lag-handicap — laveste gross-score per hull per lag vinner. Scratch-format."
+              inputLabel="Lag-handicap (%)"
+              value={floridaHandicapPct}
+              onChange={setFloridaHandicapPct}
             />
             <input type="hidden" name="hcp_allowance_pct" value="100" />
           </>

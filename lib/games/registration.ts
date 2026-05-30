@@ -38,7 +38,7 @@ export const REGISTRATION_TYPES: readonly RegistrationType[] = [
  * Vi holder den smal i v1 og åpner for stableford senere hvis nødvendig.
  */
 export function gameModeSupportsTeams(mode: GameMode): boolean {
-  return mode === 'best_ball' || mode === 'texas_scramble' || mode === 'ambrose';
+  return mode === 'best_ball' || mode === 'texas_scramble' || mode === 'ambrose' || mode === 'florida_scramble';
 }
 
 export function isRegistrationMode(v: unknown): v is RegistrationMode {

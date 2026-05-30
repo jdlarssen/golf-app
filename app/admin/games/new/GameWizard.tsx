@@ -309,6 +309,7 @@ export function GameWizard({
       team_size: state.teamSize,
       texas_team_handicap_pct: String(state.texasHandicapPct),
       ambrose_team_handicap_pct: String(state.ambroseHandicapPct),
+      florida_team_handicap_pct: String(state.floridaHandicapPct),
       fourball_allowance_pct: state.fourballAllowancePct,
       foursomes_allowance_pct: state.foursomesAllowancePct,
       round_robin_allowance_pct: state.roundRobinAllowancePct,
@@ -604,6 +605,27 @@ export function GameWizard({
                   hideHiddenInput
                 />
               )}
+              {/* Florida Scramble (#283): lag-handicap per NGF-fasttabell.
+                  `key={teamSize}` forser remount ved lagstørrelse-bytte. */}
+              {state.isFlorida && (
+                <AllowanceField
+                  key={state.teamSize}
+                  fieldName="florida_team_handicap_pct"
+                  defaultPct={state.floridaHandicapPct}
+                  legend="Lag-handicap"
+                  description="Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = laveste lag-gross per hull vinner."
+                  nettoHelperText={
+                    state.teamSize === 3
+                      ? 'NGF-standard: 15 % av summen av spillernes spille-HCP for 3-mannslag.'
+                      : 'NGF-standard: 10 % av summen av spillernes spille-HCP for 4-mannslag.'
+                  }
+                  bruttoHelperText="Ingen lag-handicap — laveste gross-score per hull per lag vinner. Scratch-format."
+                  inputLabel="Lag-handicap (%)"
+                  value={state.floridaHandicapPct}
+                  onChange={state.setFloridaHandicapPct}
+                  hideHiddenInput
+                />
+              )}
               <RegistrationSection state={state} hideHeading />
             </div>
           )}
@@ -697,6 +719,7 @@ function FormDataInputs({
     teamSize,
     isTexas,
     isAmbrose,
+    isFlorida,
     isShamble,
     isWolf,
     isNassau,
@@ -706,6 +729,7 @@ function FormDataInputs({
     isAceyDeucey,
     texasHandicapPct,
     ambroseHandicapPct,
+    floridaHandicapPct,
     fourballAllowancePct,
     foursomesAllowancePct,
     roundRobinAllowancePct,
@@ -768,6 +792,16 @@ function FormDataInputs({
             type="hidden"
             name="ambrose_team_handicap_pct"
             value={String(ambroseHandicapPct)}
+          />
+        </>
+      )}
+      {isFlorida && (
+        <>
+          <input type="hidden" name="florida_team_size" value={teamSize} />
+          <input
+            type="hidden"
+            name="florida_team_handicap_pct"
+            value={String(floridaHandicapPct)}
           />
         </>
       )}
