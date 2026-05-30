@@ -26,6 +26,11 @@ import {
   FoursomesTeeStarterBanner,
   FoursomesTeeHint,
 } from './FoursomesTeeStarterBanner';
+import { PatsomeSegmentBanner } from './PatsomeSegmentBanner';
+import {
+  PatsomeTeeStarterBanner,
+  PatsomeTeeHint,
+} from './PatsomeTeeStarterBanner';
 
 type Params = Promise<{ id: string; holeNumber: string }>;
 
@@ -101,6 +106,7 @@ export default async function HolePage({ params }: { params: Params }) {
   const isStableford = isStablefordFamily(game.game_mode);
   const isTexas = game.game_mode === 'texas_scramble' || game.game_mode === 'ambrose' || game.game_mode === 'florida_scramble';
   const isFoursomes = game.game_mode === 'foursomes_matchplay';
+  const isPatsome = game.game_mode === 'patsome';
   const isWolf = game.game_mode === 'wolf';
   const isSkins = game.game_mode === 'skins';
   const isBBB = game.game_mode === 'bingo_bango_bongo';
@@ -129,6 +135,7 @@ export default async function HolePage({ params }: { params: Params }) {
     skinsAllScoresRes,
     skinsAllHolesRes,
     bbbHolesData,
+    patsomeTeeStarterRes,
   ] = await Promise.all([
       supabase
         .from('course_holes')
@@ -198,6 +205,16 @@ export default async function HolePage({ params }: { params: Params }) {
       // Bingo Bango Bongo: henter alle hull-rader for spillet (tag-cachet).
       // Speiler getWolfChoices-mønstret — returnerer tom array for andre modi.
       isBBB ? getBingoBangoBongoHoles(id) : Promise.resolve([]),
+      // Patsome: henter lagets tee-starter-valg for foursomes-segmentet (13–18).
+      // Kun relevant for patsome-modus; andre modi returnerer null-shell.
+      isPatsome && me.team_number != null
+        ? supabase
+            .from('patsome_tee_starters')
+            .select('tee_starter_user_id')
+            .eq('game_id', id)
+            .eq('team_number', me.team_number)
+            .maybeSingle<{ tee_starter_user_id: string }>()
+        : Promise.resolve({ data: null, error: null }),
     ]);
 
   const { data: hole, error: holeError } = holeRes;
@@ -412,7 +429,7 @@ export default async function HolePage({ params }: { params: Params }) {
   // og fordeles per hull via vanlig SI-allokering (strokesForHole).
   let playersForClient: ClientPlayer[];
 
-  if (isTexas || isFoursomes) {
+  if (isTexas || isFoursomes || (isPatsome && holeNumber >= 7)) {
     const captain = flight.reduce(
       (min, p) => (p.user_id < min.user_id ? p : min),
       flight[0],
@@ -439,6 +456,22 @@ export default async function HolePage({ params }: { params: Params }) {
       const diff = Math.abs(combinedCH - oppCombinedCH);
       const highSideExtraHCP = Math.round((diff * allowancePct) / 100);
       teamHandicap = combinedCH > oppCombinedCH ? highSideExtraHCP : 0;
+    } else if (isPatsome) {
+      // Patsome: segment-avhengig allowance (WHS-standard per segment).
+      const patsomeScoring =
+        game.mode_config.kind === 'patsome'
+          ? game.mode_config.patsome_scoring
+          : 'net';
+      if (patsomeScoring === 'gross') {
+        teamHandicap = 0;
+      } else if (holeNumber <= 12) {
+        // Greensome (7–12): 60 % av laveste + 40 % av høyeste CH.
+        const chs = flight.map((p) => p.course_handicap ?? 0);
+        teamHandicap = Math.round(0.6 * Math.min(...chs) + 0.4 * Math.max(...chs));
+      } else {
+        // Foursomes-segmentet (13–18): 50 % av samlet CH.
+        teamHandicap = Math.round(0.5 * combinedCH);
+      }
     } else {
       const handicapPct =
         game.mode_config.kind === 'texas_scramble' || game.mode_config.kind === 'ambrose' || game.mode_config.kind === 'florida_scramble'
@@ -471,12 +504,21 @@ export default async function HolePage({ params }: { params: Params }) {
       },
     ];
   } else {
+    // Patsome hull 1–6: 4BBB — begge taster sin egen ball.
+    // I brutto-modus har ingen spillere ekstra slag.
+    const patsomeScoringForPerPlayer =
+      isPatsome && game.mode_config.kind === 'patsome'
+        ? game.mode_config.patsome_scoring
+        : 'net';
     playersForClient = flight.map((p) => {
       const name = p.users?.name ?? '(ukjent spiller)';
       const rawNickname = p.users?.nickname ?? null;
       const nickname =
         rawNickname && rawNickname.trim().length > 0 ? rawNickname : null;
-      const ch = p.course_handicap ?? 0;
+      const ch =
+        isPatsome && patsomeScoringForPerPlayer === 'gross'
+          ? 0
+          : (p.course_handicap ?? 0);
       const scoreRow = scoresByUser[p.user_id];
       return {
         userId: p.user_id,
@@ -538,12 +580,45 @@ export default async function HolePage({ params }: { params: Params }) {
     }
   }
 
+  // Patsome (#286): segment-banner på alle hull; tee-starter-velger/-hint kun i
+  // foursomes-segmentet (13–18). Velgeren vises på alle foursomes-hull til laget
+  // har valgt (mer tilgivende enn foursomes' kun-hull-1), deretter hint-chipen.
+  let patsomeSegmentSlot: ReactNode = null;
+  let patsomeTeeSlot: ReactNode = null;
+  if (isPatsome) {
+    patsomeSegmentSlot = <PatsomeSegmentBanner holeNumber={holeNumber} />;
+    if (me.team_number != null && holeNumber >= 13 && flight.length === 2) {
+      const teeStarter = patsomeTeeStarterRes.data?.tee_starter_user_id ?? null;
+      const partners = flight.map((p) => ({
+        userId: p.user_id,
+        displayName:
+          (p.users?.nickname ?? p.users?.name ?? '').split(/\s+/)[0] || 'Spiller',
+      }));
+      patsomeTeeSlot =
+        teeStarter == null ? (
+          <PatsomeTeeStarterBanner
+            gameId={id}
+            teamNumber={me.team_number}
+            options={partners}
+          />
+        ) : (
+          <PatsomeTeeHint
+            holeNumber={holeNumber}
+            teeStarterUserId={teeStarter}
+            partners={partners}
+          />
+        );
+    }
+  }
+
   return (
     <div
       key={holeNumber}
       className="min-h-screen bg-bg flex flex-col animate-hole-enter"
       style={{ paddingTop: 54, paddingBottom: 34 }}
     >
+      {patsomeSegmentSlot && <div className="px-3">{patsomeSegmentSlot}</div>}
+      {patsomeTeeSlot && <div className="px-3">{patsomeTeeSlot}</div>}
       {foursomesTeeSlot && <div className="px-3">{foursomesTeeSlot}</div>}
       <HoleClient
         gameId={id}

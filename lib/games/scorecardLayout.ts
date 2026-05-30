@@ -152,6 +152,31 @@ export function resolveScorecardLayout(
     };
   }
 
+  if (mode === 'patsome') {
+    // Patsome er hybrid: hull 1–6 per spiller (4BBB), hull 7–18 én lagball
+    // (kaptein-eid, som Texas). Scorekort-oversikten klarer ikke å uttrykke
+    // per-segment-handicap i én verdi, så vi viser lagets kort fra kapteinen
+    // (lex-min) uten strokes-dotter. De handicap-justerte poengene og hele
+    // segment-fordelingen vises på leaderboard (PatsomeView).
+    const teamMembers = players.filter((p) => p.team_number === me.team_number);
+    const captainId =
+      teamMembers.length > 0
+        ? pickTeamCaptain(teamMembers.map((m) => m.user_id))
+        : me.user_id;
+    return {
+      variant: 'a',
+      columns: [],
+      scoreUserIds: [captainId],
+      primaryUserId: captainId,
+      primaryHandicap: 0,
+      isStableford: false,
+      isMatchplay: false,
+      isFourball: false,
+      isFoursomes: false,
+      meTeamNumber: me.team_number ?? null,
+    };
+  }
+
   if (mode === 'foursomes_matchplay') {
     // Foursomes adopterer Texas captain-pattern (én ball per lag, kaptein-userId
     // eier scores-radene) men rendres som 2-kolonne head-to-head matchplay-
