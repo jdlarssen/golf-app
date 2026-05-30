@@ -177,14 +177,14 @@ ModeSelector tile-tekst, format short_description, lag-handicap helper-tekst (12
 
 ## Success criteria
 
-- [ ] `ambrose.compute(ctx)` returnerer `kind: 'texas_scramble'` og `computeLeaderboard` ruter `game_mode==='ambrose'` dit. Verifiseres i `lib/scoring/modes/ambrose.test.ts` + lesing av `index.ts`-switchen.
-- [ ] `ambroseDefaultPct(2)===25` og `ambroseDefaultPct(4)===12.5`; team-handicap for 4-mannslag med combinedCH 74 @ 12,5 % = 9 (Type A-test). Dekker issue-kriteriet «team-HCP-formel for 2-lag og 4-lag».
-- [ ] `texasScramble.compute` gir uendret resultat etter `computeScramble`-ekstraksjonen (eksisterende texas-tester grønne — ingen regresjon).
-- [ ] `validateAmbrose` produserer `mode_config {kind:'ambrose', team_size, teams_count, team_handicap_pct}`; avviser 3-mannslag, ubalanserte lag, og pct utenfor 0–100; aksepterer fraksjonell 12,5. Verifiseres i `lib/games/gamePayload.ambrose.test.ts`.
-- [ ] Migrasjon 0055 applisert mot prod: `select slug,is_active from formats where slug='ambrose'` returnerer raden, og `format_intent_mapping` har klubb-raden. Verifiseres via Supabase MCP.
+- [x] `ambrose.compute(ctx)` returnerer `kind: 'texas_scramble'` og `computeLeaderboard` ruter `game_mode==='ambrose'` dit. **Evidence:** `ambrose.test.ts` «returnerer kind: texas_scramble» grønn; `lib/scoring/index.ts:49` `case 'ambrose': return ambrose.compute(ctx);`.
+- [x] `ambroseDefaultPct(2)===25` og `ambroseDefaultPct(4)===12.5`; team-handicap for 4-mannslag med combinedCH 74 @ 12,5 % = 9 (Type A-test). **Evidence:** `ambrose.test.ts` 7/7 grønn (inkl. «combinedCH 74 @ 12,5 % → teamHandicap 9»).
+- [x] `texasScramble.compute` gir uendret resultat etter `computeScramble`-ekstraksjonen (ingen regresjon). **Evidence:** `texasScramble.test.ts` 25/25 grønn.
+- [x] `validateAmbrose` produserer `mode_config {kind:'ambrose', …}`; avviser 3-mannslag, ubalanserte lag, og pct utenfor 0–100; aksepterer fraksjonell 12,5. **Evidence:** `gamePayload.test.ts` «buildGameInsertPayload — ambrose» blokk grønn (6 cases).
+- [ ] Migrasjon 0055 applisert mot prod: `select slug,is_active from formats where slug='ambrose'` returnerer raden, og `format_intent_mapping` har klubb-raden. Verifiseres via Supabase MCP. (Fil skrevet; applisert i feat-chunk.)
 - [ ] Admin kan opprette et Ambrose-spill (team_size 2 og 4) via wizarden; det vises med label «Ambrose» i `/admin/games`. Verifiseres via Playwright-smoke + lesing av ModeSelector/validator.
 - [ ] Leaderboard for et Ambrose-spill rendrer Texas-scramble-viewet med brutto + team-HCP + netto, og format-label «Ambrose». (Gjenbruker `TexasScrambleView` — INGEN ny Type C-komponent-test, ville duplisert #44s test per test-disiplin; routing-assertion dekker det.)
-- [ ] `npm run build` (tsc) grønn — alle exhaustive switches (router, MODE_LABELS Record, format-helpers) dekker `'ambrose'`.
+- [x] `npm run build` (tsc) grønn — alle exhaustive switches dekker `'ambrose'`. **Evidence:** `npm run build` fullførte route-listing etter chunk 1 (re-verifiseres per chunk).
 - [ ] Versjons-bump 1.50.0 → 1.51.0 + CHANGELOG-oppføring i den bruker-synlige `feat`-commiten (håndheves av commit-msg-hook).
 
 ## Gates (etter hver chunk)

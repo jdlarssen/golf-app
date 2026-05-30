@@ -35,6 +35,12 @@ export interface TexasScrambleViewProps {
    * Brukes (fremtidig) inne i LeaderboardTabs ved side-tournament-fane.
    */
   chromeless?: boolean;
+  /**
+   * Format-navn som vises i sub-tittel. Default «Texas scramble». Settes av
+   * caller basert på `game.game_mode` slik at Ambrose-spill viser «Ambrose»
+   * i stedet for det hardkodede Texas-navnet.
+   */
+  formatLabel?: string;
 }
 
 /**
@@ -60,10 +66,11 @@ export function TexasScrambleView({
   playersById,
   backHref = '/',
   chromeless = false,
+  formatLabel = 'Texas scramble',
 }: TexasScrambleViewProps): JSX.Element {
   const subtitleParts = [
     'Etter 18 hull',
-    'Texas scramble',
+    formatLabel,
     'Sortert på laveste lag-netto',
   ];
 

@@ -123,7 +123,7 @@ export function resolveScorecardLayout(
   const mode = game.game_mode;
   const cfg = game.mode_config;
 
-  if (mode === 'texas_scramble') {
+  if (mode === 'texas_scramble' || mode === 'ambrose') {
     const teamMembers = players.filter((p) => p.team_number === me.team_number);
     const captainId =
       teamMembers.length > 0
@@ -133,7 +133,10 @@ export function resolveScorecardLayout(
       (sum, p) => sum + (p.course_handicap ?? 0),
       0,
     );
-    const pct = cfg.kind === 'texas_scramble' ? cfg.team_handicap_pct : 0;
+    const pct =
+      cfg.kind === 'texas_scramble' || cfg.kind === 'ambrose'
+        ? cfg.team_handicap_pct
+        : 0;
     const teamHandicap = Math.round((combinedCH * pct) / 100);
     return {
       variant: 'a',

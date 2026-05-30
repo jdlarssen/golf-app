@@ -31,6 +31,12 @@ export interface TexasScramblePodiumProps {
   /** Spillerinfo per userId for å rendre lag-medlemmenes navn. */
   playersById: Map<string, TexasScramblePlayerInfo>;
   backHref?: string;
+  /**
+   * Format-navn som vises i sub-tittel under podiet. Default «Texas scramble».
+   * Settes av caller basert på `game.game_mode` slik at Ambrose-spill viser
+   * «Ambrose» i stedet for det hardkodede Texas-navnet.
+   */
+  formatLabel?: string;
 }
 
 /**
@@ -50,6 +56,7 @@ export function TexasScramblePodium({
   result,
   playersById,
   backHref = '/',
+  formatLabel = 'Texas scramble',
 }: TexasScramblePodiumProps): JSX.Element {
   const [replayKey, setReplayKey] = useState(0);
 
@@ -94,7 +101,7 @@ export function TexasScramblePodium({
           Vinner-laget er kåret
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          Texas scramble · Etter 18 hull
+          {formatLabel} · Etter 18 hull
         </p>
       </div>
 

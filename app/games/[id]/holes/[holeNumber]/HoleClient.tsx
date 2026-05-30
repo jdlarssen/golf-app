@@ -251,11 +251,11 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   const isSkins = gameMode === 'skins';
   const isBBB = gameMode === 'bingo_bango_bongo';
   const isRoundRobin = gameMode === 'round_robin';
-  // Texas scramble: ett kort per lag (server bygger players-array med
-  // ÉN entry der userId = lag-kapteinens userId). Lookup-er som matcher
+  // Texas scramble og Ambrose: ett kort per lag (server bygger players-array
+  // med ÉN entry der userId = lag-kapteinens userId). Lookup-er som matcher
   // mot myUserId må derfor falle tilbake til lag-kortet for non-captain-
   // medlemmer. Submit-state speiler hele lagets state.
-  const isTexas = gameMode === 'texas_scramble';
+  const isTexas = gameMode === 'texas_scramble' || gameMode === 'ambrose';
 
   // Sync listener — start once on mount.
   useEffect(() => {

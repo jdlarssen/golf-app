@@ -99,7 +99,7 @@ export default async function HolePage({ params }: { params: Params }) {
   const playerIds = flight.map((p) => p.user_id);
 
   const isStableford = isStablefordFamily(game.game_mode);
-  const isTexas = game.game_mode === 'texas_scramble';
+  const isTexas = game.game_mode === 'texas_scramble' || game.game_mode === 'ambrose';
   const isFoursomes = game.game_mode === 'foursomes_matchplay';
   const isWolf = game.game_mode === 'wolf';
   const isSkins = game.game_mode === 'skins';
@@ -441,7 +441,7 @@ export default async function HolePage({ params }: { params: Params }) {
       teamHandicap = combinedCH > oppCombinedCH ? highSideExtraHCP : 0;
     } else {
       const handicapPct =
-        game.mode_config.kind === 'texas_scramble'
+        game.mode_config.kind === 'texas_scramble' || game.mode_config.kind === 'ambrose'
           ? game.mode_config.team_handicap_pct
           : 0;
       teamHandicap = Math.round((combinedCH * handicapPct) / 100);

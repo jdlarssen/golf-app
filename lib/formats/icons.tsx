@@ -265,6 +265,10 @@ const ICON_MAP: Record<string, (props: { size?: number }) => ReactNode> = {
   singles_matchplay: MatchplayIcon,
   solo_strokeplay: StrokeplayIcon,
   texas_scramble: TexasScrambleIcon,
+  // Ambrose gjenbruker Texas scramble-ikonet — mekanikken er identisk
+  // (én ball per lag, alle slår). Format-navnforskjellen synliggjøres via
+  // label, ikke ikonet.
+  ambrose: TexasScrambleIcon,
   fourball_matchplay: FourballMatchplayIcon,
   bingo_bango_bongo: BingoBangoBongoIcon,
   nines: NinesIcon,

@@ -94,7 +94,8 @@ import { markNotificationsRead } from '@/lib/notifications/markRead';
 // Mode-router for stableford-stats. Aliaset til `computeModeResult` for å
 // unngå navnekollisjon med best-ball-spesifikke `computeLeaderboard` fra
 // `lib/leaderboard.ts`.
-import { computeLeaderboard as computeModeResult, isStablefordFamily } from '@/lib/scoring';
+import { computeLeaderboard as computeModeResult, isStablefordFamily, isScrambleFamily } from '@/lib/scoring';
+import { MODE_LABELS } from '@/lib/scoring/modes/types';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -368,11 +369,12 @@ async function LeaderboardBody({
     });
   }
 
-  // Texas scramble (issue #44): lag-aggregert leaderboard, lavest totalNet
-  // vinner. Live-view og finished-podium speiler solo-strokeplay-pattern.
-  // State #3/#3.5-«venterom» skipped på samme måte som stableford/matchplay/
-  // solo-strokeplay (alle spillere ser hverandre via RLS umiddelbart).
-  if (game.game_mode === 'texas_scramble') {
+  // Texas scramble (issue #44) og Ambrose (issue #284): lag-aggregert
+  // leaderboard, lavest totalNet vinner. Ambrose gjenbruker Texas-view og -podium
+  // siden `ambrose.compute()` returnerer `kind: 'texas_scramble'` (Modified-
+  // Stableford-mønsteret). Live-view og finished-podium speiler solo-strokeplay-
+  // pattern. State #3/#3.5-«venterom» skipped på samme måte som de andre modi.
+  if (isScrambleFamily(game.game_mode)) {
     return renderTexasScramble({
       gameId,
       game,
@@ -380,6 +382,7 @@ async function LeaderboardBody({
       rawHolesRows: rawHolesRes.data ?? [],
       rawScoresRows: rawScoresRes.data ?? [],
       backHref,
+      formatLabel: MODE_LABELS[game.game_mode],
     });
   }
 
@@ -1809,13 +1812,15 @@ function renderTexasScramble(opts: {
   rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
+  /** Format-label for sub-tittel i view + podium. Gjennomgis fra MODE_LABELS[game.game_mode]. */
+  formatLabel?: string;
 }) {
-  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
+  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref, formatLabel } = opts;
 
   const ctx = {
     game: {
       id: gameId,
-      game_mode: 'texas_scramble' as const,
+      game_mode: game.game_mode,
       mode_config: game.mode_config,
     },
     players: gwp.players
@@ -1876,6 +1881,7 @@ function renderTexasScramble(opts: {
         result={result}
         playersById={playersById}
         backHref={backHref}
+        formatLabel={formatLabel}
       />
     );
   }
@@ -1887,6 +1893,7 @@ function renderTexasScramble(opts: {
       result={result}
       playersById={playersById}
       backHref={backHref}
+      formatLabel={formatLabel}
     />
   );
 }

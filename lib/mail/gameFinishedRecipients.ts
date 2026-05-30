@@ -9,6 +9,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { computeLeaderboard } from '@/lib/scoring';
 import {
   isStablefordFamily,
+  isScrambleFamily,
   type GameMode,
   type GameModeConfig,
   type ScoringGender,
@@ -112,11 +113,12 @@ export async function buildGameFinishedRecipients(
     return buildSoloStrokeplayRecipients(supabase, gameId, game, playerRows);
   }
 
-  // Texas scramble (issue #44): bygg per-spiller payload med teamRank +
-  // teamTotalNet + teamTotalGross + teamPartnerNames + totalTeams. Hver spiller
-  // får samme team-stats men sin egen partnerliste (medlemmer minus seg selv).
-  // Defensive fallback til best-ball-copy ved uventet result-shape.
-  if (game.game_mode === 'texas_scramble') {
+  // Texas scramble (issue #44) og Ambrose (issue #284): bygg per-spiller payload
+  // med teamRank + teamTotalNet + teamTotalGross + teamPartnerNames + totalTeams.
+  // Ambrose gjenbruker Texas-grenen siden `ambrose.compute()` returnerer
+  // `kind: 'texas_scramble'` og mail-body-en er format-agnostisk («Laget endte
+  // på X. plass …»). Ingen ny mail-variant eller snapshot.
+  if (isScrambleFamily(game.game_mode)) {
     return buildTexasScrambleRecipients(supabase, gameId, game, playerRows);
   }
 
@@ -647,7 +649,10 @@ async function buildTexasScrambleRecipients(
   const result = computeLeaderboard({
     game: {
       id: gameId,
-      game_mode: 'texas_scramble',
+      // Sender det reelle game_mode-et (texas_scramble eller ambrose) slik at
+      // mode-router-en velger riktig compute-funksjon. Begge returnerer
+      // kind: 'texas_scramble', så resultsjekken nedenfor holder.
+      game_mode: game.game_mode,
       mode_config: game.mode_config,
     },
     players: playerRows.map((row) => ({
@@ -655,9 +660,8 @@ async function buildTexasScrambleRecipients(
       teamNumber: row.team_number,
       flightNumber: null,
       courseHandicap: row.course_handicap ?? 0,
-      // #240 — Texas spiller én ball per lag, så par per hull avgjøres av
-      // lag-kapteinens tee_gender (lex-min userId). texasScramble-modulen
-      // plukker kaptein-varianten — vi sender per-spiller teeGender.
+      // #240 — Texas/Ambrose spiller én ball per lag, par avgjøres av
+      // lag-kapteinens tee_gender (lex-min userId). Sender per-spiller teeGender.
       teeGender: row.tee_gender,
     })),
     holes: (holesRes.data ?? []).map((h) => ({
