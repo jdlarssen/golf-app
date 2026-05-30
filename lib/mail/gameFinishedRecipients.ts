@@ -649,9 +649,9 @@ async function buildTexasScrambleRecipients(
   const result = computeLeaderboard({
     game: {
       id: gameId,
-      // Sender det reelle game_mode-et (texas_scramble eller ambrose) slik at
-      // mode-router-en velger riktig compute-funksjon. Begge returnerer
-      // kind: 'texas_scramble', så resultsjekken nedenfor holder.
+      // Sender det reelle game_mode-et (texas_scramble, ambrose, eller
+      // florida_scramble) slik at mode-router-en velger riktig compute-funksjon.
+      // Alle returnerer kind: 'texas_scramble', så resultsjekken nedenfor holder.
       game_mode: game.game_mode,
       mode_config: game.mode_config,
     },

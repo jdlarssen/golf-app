@@ -389,7 +389,9 @@ async function EditGameFormBody({
         ? game.mode_config.team_size
         : game.mode_config.kind === 'ambrose'
           ? game.mode_config.team_size
-          : game.mode_config.kind === 'stableford' ||
+          : game.mode_config.kind === 'florida_scramble'
+            ? game.mode_config.team_size
+            : game.mode_config.kind === 'stableford' ||
               game.mode_config.kind === 'modified_stableford'
             ? game.mode_config.team_size
             : undefined,
@@ -399,6 +401,10 @@ async function EditGameFormBody({
         : undefined,
     ambrose_team_handicap_pct:
       game.mode_config.kind === 'ambrose'
+        ? String(game.mode_config.team_handicap_pct)
+        : undefined,
+    florida_team_handicap_pct:
+      game.mode_config.kind === 'florida_scramble'
         ? String(game.mode_config.team_handicap_pct)
         : undefined,
     registration_mode: game.registration_mode,

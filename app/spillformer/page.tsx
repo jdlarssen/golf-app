@@ -36,6 +36,7 @@ const CATALOG: CatalogEntry[] = [
   { key: 'best_ball', mode: 'best_ball' },
   { key: 'texas_scramble', mode: 'texas_scramble' },
   { key: 'ambrose', mode: 'ambrose' },
+  { key: 'florida_scramble', mode: 'florida_scramble' },
   { key: 'singles_matchplay', mode: 'singles_matchplay' },
   { key: 'fourball_matchplay', mode: 'fourball_matchplay' },
   { key: 'foursomes_matchplay', mode: 'foursomes_matchplay' },
