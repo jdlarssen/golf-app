@@ -176,6 +176,16 @@ export const MODE_GUIDE: Record<GameMode, ModeGuide> = {
       'Du kan spille det brutto eller netto med handikap, alt etter hva som er valgt. Totalen kan bli negativ.',
     ],
   },
+  shamble: {
+    summary:
+      'Alle slår ut, laget velger det beste utslaget, og så spiller hver spiller sin egen ball inn. De laveste scorene på hullet teller for laget.',
+    points: [
+      'Etter det felles utslaget fortsetter hver spiller med sin egen ball.',
+      'På hvert hull legges de laveste scorene sammen til lagets resultat — som regel de to beste av fire.',
+      'I Champagne Scramble velger arrangøren om én, to eller tre scorer skal telle.',
+      'Lavest sammenlagt for laget vinner.',
+    ],
+  },
 };
 
 /**

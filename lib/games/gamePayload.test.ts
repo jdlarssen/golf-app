@@ -3029,3 +3029,184 @@ describe('buildGameInsertPayload — acey_deucey (#279)', () => {
     }
   });
 });
+
+describe('buildGameInsertPayload — shamble (issue #285)', () => {
+  /**
+   * Helper for Shamble-payloads. game_mode=shamble + lag-størrelse + variant/
+   * count/scoring + flat spillerliste med team_number (flight = team).
+   */
+  function shambleFd(opts: {
+    teamSize?: '3' | '4';
+    variant?: 'shamble' | 'champagne';
+    count?: '1' | '2' | '3';
+    scoring?: 'gross' | 'net';
+    players?: Array<{ userId: string; team: number }>;
+    extras?: Record<string, string>;
+  }): FormData {
+    const {
+      teamSize = '4',
+      variant = 'shamble',
+      count,
+      scoring = 'net',
+      players = [],
+      extras = {},
+    } = opts;
+    const base: Record<string, string> = {
+      name: 'Klubbcup',
+      course_id: 'c1',
+      tee_box_id: 't1',
+      game_mode: 'shamble',
+      shamble_team_size: teamSize,
+      shamble_variant: variant,
+      shamble_scoring: scoring,
+    };
+    if (count !== undefined) base.shamble_count = count;
+    players.forEach((p, i) => {
+      base[`player_${i}_id`] = p.userId;
+      base[`player_${i}_team`] = String(p.team);
+    });
+    return fd({ ...base, ...extras });
+  }
+
+  it('publish: 2 lag á 4, Shamble-preset → count låst til 2', () => {
+    const result = buildGameInsertPayload(
+      shambleFd({
+        teamSize: '4',
+        variant: 'shamble',
+        count: '3', // skal ignoreres av preset
+        scoring: 'net',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 1 },
+          { userId: 'd', team: 1 },
+          { userId: 'e', team: 2 },
+          { userId: 'f', team: 2 },
+          { userId: 'g', team: 2 },
+          { userId: 'h', team: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.game_mode).toBe('shamble');
+    expect(result.mode_config).toEqual({
+      kind: 'shamble',
+      team_size: 4,
+      teams_count: 2,
+      shamble_variant: 'shamble',
+      shamble_count: 2,
+      shamble_scoring: 'net',
+    });
+    expect(result.players).toHaveLength(8);
+  });
+
+  it('publish: Champagne lag á 3, count=1, brutto → ok', () => {
+    const result = buildGameInsertPayload(
+      shambleFd({
+        teamSize: '3',
+        variant: 'champagne',
+        count: '1',
+        scoring: 'gross',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 1 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.mode_config).toEqual({
+      kind: 'shamble',
+      team_size: 3,
+      teams_count: 1,
+      shamble_variant: 'champagne',
+      shamble_count: 1,
+      shamble_scoring: 'gross',
+    });
+    expect(result.players).toEqual([
+      { user_id: 'a', team_number: 1, flight_number: 1 },
+      { user_id: 'b', team_number: 1, flight_number: 1 },
+      { user_id: 'c', team_number: 1, flight_number: 1 },
+    ]);
+  });
+
+  it('publish: Champagne uten count → default 2', () => {
+    const result = buildGameInsertPayload(
+      shambleFd({
+        teamSize: '4',
+        variant: 'champagne',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 1 },
+          { userId: 'd', team: 1 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.mode_config).toMatchObject({ shamble_count: 2 });
+  });
+
+  it('publish: ubalansert lag (3 av 4) → team_balance', () => {
+    const result = buildGameInsertPayload(
+      shambleFd({
+        teamSize: '4',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 1 },
+          { userId: 'd', team: 2 },
+          { userId: 'e', team: 2 },
+          { userId: 'f', team: 2 },
+          { userId: 'g', team: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('team_balance');
+  });
+
+  it('publish uten shamble_team_size → unsupported_mode_size_combo', () => {
+    const result = buildGameInsertPayload(
+      shambleFd({
+        teamSize: '' as unknown as '3',
+        players: [{ userId: 'a', team: 1 }],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('unsupported_mode_size_combo');
+  });
+
+  it('duplikat spiller → duplicate_player', () => {
+    const result = buildGameInsertPayload(
+      shambleFd({
+        teamSize: '3',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'a', team: 1 },
+          { userId: 'c', team: 1 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('duplicate_player');
+  });
+
+  it('draft med 2 spillere → ok (ingen lag-balanse-krav i draft)', () => {
+    const result = buildGameInsertPayload(
+      shambleFd({
+        teamSize: '4',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+        ],
+      }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(2);
+  });
+});

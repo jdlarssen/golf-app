@@ -245,7 +245,8 @@ function parseGameMode(formData: FormData): GameMode | null {
     raw === 'bingo_bango_bongo' ||
     raw === 'nines' ||
     raw === 'round_robin' ||
-    raw === 'acey_deucey'
+    raw === 'acey_deucey' ||
+    raw === 'shamble'
   )
     return raw;
   return null;
@@ -1648,6 +1649,119 @@ function parseRoundRobinAllowancePct(
   return n;
 }
 
+function parseShambleVariant(formData: FormData): 'shamble' | 'champagne' {
+  const raw = String(formData.get('shamble_variant') ?? '').trim();
+  if (raw === 'champagne') return 'champagne';
+  return 'shamble';
+}
+
+function parseShambleScoring(formData: FormData): 'gross' | 'net' {
+  const raw = String(formData.get('shamble_scoring') ?? '').trim();
+  if (raw === 'gross') return 'gross';
+  return 'net';
+}
+
+/**
+ * Leser `shamble_team_size` fra form-data. Returnerer 3, 4 eller null
+ * (manglende felt / ugyldig verdi). Shamble spilles i lag à 3 eller 4.
+ */
+function parseShambleTeamSize(formData: FormData): 3 | 4 | null {
+  const raw = String(formData.get('shamble_team_size') ?? '').trim();
+  if (raw === '3') return 3;
+  if (raw === '4') return 4;
+  return null;
+}
+
+/**
+ * Leser hvor mange laveste scorer som teller per hull. Shamble-preset låser
+ * til 2 (count-felt ignoreres). Champagne leser `shamble_count` (1/2/3),
+ * defaulter til 2 ved manglende/ugyldig verdi.
+ */
+function parseShambleCount(
+  formData: FormData,
+  variant: 'shamble' | 'champagne',
+): 1 | 2 | 3 {
+  if (variant === 'shamble') return 2;
+  const raw = String(formData.get('shamble_count') ?? '').trim();
+  if (raw === '1') return 1;
+  if (raw === '3') return 3;
+  return 2;
+}
+
+/**
+ * Shamble / Champagne Scramble-validator (issue #285).
+ *
+ * Lag-format à 3 eller 4. Delt drive, så egen ball — hver spiller eier sin
+ * egen score-rad (som best ball, INGEN captain-rad). Lag-struktur speiler
+ * texas_scramble (team_number + balanse-sjekk ved publish), men uten
+ * captain/handicap-%. Tre config-dimensjoner: variant (shamble/champagne),
+ * count (1/2/3, laveste som teller per hull) og scoring (gross/net).
+ *
+ * Mode_config-output:
+ *   `{kind, team_size, teams_count, shamble_variant, shamble_count, shamble_scoring}`.
+ */
+function validateShamble(
+  formData: FormData,
+  mode: PayloadMode,
+): ModeValidationResult {
+  const teamSize = parseShambleTeamSize(formData);
+  if (teamSize === null) {
+    return { ok: false, errorCode: 'unsupported_mode_size_combo' };
+  }
+
+  const variant = parseShambleVariant(formData);
+  const scoring = parseShambleScoring(formData);
+  const count = parseShambleCount(formData, variant);
+
+  const players: GamePlayerInput[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < 8; i++) {
+    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
+    if (!user_id) continue;
+    if (seen.has(user_id)) {
+      return { ok: false, errorCode: 'duplicate_player' };
+    }
+    seen.add(user_id);
+    const team_number = Number(formData.get(`player_${i}_team`));
+    if (!Number.isInteger(team_number) || team_number < 1) {
+      return { ok: false, errorCode: 'bad_team' };
+    }
+    // Flight = team (DB-CHECK game_players_team_flight_consistency), som Texas.
+    players.push({ user_id, team_number, flight_number: team_number });
+  }
+
+  if (mode === 'publish') {
+    if (players.length === 0) {
+      return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    const teamCounts = new Map<number, number>();
+    for (const p of players) {
+      if (p.team_number === null) continue;
+      teamCounts.set(p.team_number, (teamCounts.get(p.team_number) ?? 0) + 1);
+    }
+    for (const [, teamMembers] of teamCounts) {
+      if (teamMembers !== teamSize) {
+        return { ok: false, errorCode: 'team_balance' };
+      }
+    }
+  }
+
+  const teams_count = new Set(players.map((p) => p.team_number)).size;
+
+  return {
+    ok: true,
+    players,
+    mode_config: {
+      kind: 'shamble',
+      team_size: teamSize,
+      teams_count,
+      shamble_variant: variant,
+      shamble_count: count,
+      shamble_scoring: scoring,
+    },
+  };
+}
+
 const modeValidators: Record<
   GameMode,
   (formData: FormData, mode: PayloadMode) => ModeValidationResult
@@ -1669,6 +1783,7 @@ const modeValidators: Record<
   nines: validateNines,
   round_robin: validateRoundRobin,
   acey_deucey: validateAceyDeucey,
+  shamble: validateShamble,
 };
 
 /**

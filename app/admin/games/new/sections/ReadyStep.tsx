@@ -61,6 +61,7 @@ const MODE_SUMMARY_LABELS: Record<GameMode, string> = {
   nines: 'Nines / Split Sixes',
   round_robin: 'Round Robin',
   acey_deucey: 'Acey Deucey',
+  shamble: 'Shamble / Champagne Scramble',
 };
 
 function teamSizeLabel(size: TeamSize): string {
@@ -121,6 +122,7 @@ export function ReadyStep({
     isMatchplay,
     isTexas,
     isAmbrose,
+    isShamble,
     isSolo,
   } = state;
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -156,7 +158,7 @@ export function ReadyStep({
     if (isParStableford) {
       return `${teamsCount} lag à 2 spillere`;
     }
-    if (isTexas || isAmbrose) {
+    if (isTexas || isAmbrose || isShamble) {
       return `${teamsCount} lag à ${teamSize} spillere`;
     }
     return `${count} ${count === 1 ? 'spiller' : 'spillere'}`;

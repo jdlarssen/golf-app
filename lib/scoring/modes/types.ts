@@ -19,7 +19,8 @@ export type GameMode =
   | 'bingo_bango_bongo'
   | 'nines'
   | 'round_robin'
-  | 'acey_deucey';
+  | 'acey_deucey'
+  | 'shamble';
 
 /**
  * Norske visnings-labels for hver spillmodus. Brukes av ModeChip i admin-
@@ -45,6 +46,7 @@ export const MODE_LABELS: Record<GameMode, string> = {
   nines: 'Nines / Split Sixes',
   round_robin: 'Round Robin',
   acey_deucey: 'Acey Deucey',
+  shamble: 'Shamble / Champagne Scramble',
 };
 
 /**
@@ -283,6 +285,23 @@ export type GameModeConfig =
       kind: 'acey_deucey';
       team_size: 1;
       acey_deucey_scoring: 'gross' | 'net';
+    }
+  | {
+      /**
+       * Shamble / Champagne Scramble (#285): lag-format. Delt drive, så egen
+       * ball til hull. Lagets hull-score = sum av de `shamble_count` laveste
+       * effective-scorene på hullet. Strokeplay-utledet (egne score-rader, som
+       * best ball / nines — ingen captain-rad).
+       */
+      kind: 'shamble';
+      team_size: 3 | 4;
+      teams_count: number;
+      /** 'shamble' = klassisk best-2-preset; 'champagne' = arrangør valgte antall. */
+      shamble_variant: 'shamble' | 'champagne';
+      /** Hvor mange laveste score som teller per hull (1/2/3). Klampes til ≤ team_size i validator. Shamble-preset = 2. */
+      shamble_count: 1 | 2 | 3;
+      /** 'net' = gross − strokesForHole(CH, SI). 'gross' = rå gross. Default 'net'. Speiler skins_scoring. */
+      shamble_scoring: 'gross' | 'net';
     };
 
 /**
@@ -1366,21 +1385,77 @@ export interface NinesResult {
   players: NinesPlayerLine[];
 }
 
-// Round Robin (issue #280 — 4-spiller roterende-partner 4BBB-matchplay).
-//
-// Runden deles i tre 6-hulls-segmenter. Partner-konstellasjonen roterer
-// deterministisk slik at hver spiller spiller med + mot alle andre én gang:
-//   Seg1 (h1–6):   [slot1, slot2] vs [slot3, slot4]
-//   Seg2 (h7–12):  [slot1, slot3] vs [slot2, slot4]
-//   Seg3 (h13–18): [slot1, slot4] vs [slot2, slot3]
-//
-// Per hull: bestBallForHole + classifyMatchplayHole (gjenbrukt fra fourball).
-// Hull-seire-modell: +1 til hver spiller på vinnende side; delt = 0 til alle.
-// Rangering: totalHoleWins DESC → totalHolesLost ASC → teamNumber ASC.
-//
-// Ingen ny tabell — rotasjonen er ren deterministisk funksjon av (slot, hull).
-// Scoring gjenbruker applyAllowance + strokesForHole fra fourball.
 // -----------------------------------------------------------------------------
+// Shamble / Champagne Scramble (issue #285 — best N av M per hull).
+//
+// Lag-format. Delt drive, så alle spiller sin egen ball til hull. Lagets
+// hull-score = sum av de N laveste individuelle effective-scorene. N er
+// konfigurerbar via shamble_count (1/2/3). Strokeplay-utledet — egne score-
+// rader som best ball / nines, ingen captain-rad.
+//
+// Shamble-preset: N låst til 2. Champagne Scramble: arrangør velger N.
+// Net vs gross: speiler Wolf/Nassau/Skins/Nines-mønstret.
+//
+// Ranking: lavest totalScore vinner (strokeplay). 5-tier cascade via rankTeams
+// på per-hull teamScore-arrays (total → back-9 → back-6 → back-3 → hull-18).
+// -----------------------------------------------------------------------------
+
+export interface ShambleHoleTeamCell {
+  teamNumber: number;
+  /**
+   * Sum av de `count` laveste effective-scorene på hullet. Null når pending
+   * (< count medlemmer har gross).
+   */
+  teamScore: number | null;
+  /** True når < count teammedlemmer har gross på hullet. */
+  pending: boolean;
+  /** Per-spiller-detalj for ALLE teammedlemmer på hullet. */
+  perPlayer: Array<{
+    userId: string;
+    gross: number | null;
+    /** gross hvis scoring='gross'; gross − strokes hvis scoring='net'. Null hvis gross er null. */
+    effectiveScore: number | null;
+    /** Blant de `count` laveste effective-scorene som ble summert. */
+    counted: boolean;
+  }>;
+}
+
+export interface ShambleHoleRow {
+  holeNumber: number;
+  par: number;
+  strokeIndex: number;
+  /** Én cell per lag, sortert teamNumber stigende. */
+  teams: ShambleHoleTeamCell[];
+}
+
+export interface ShambleTeamLine {
+  teamNumber: number;
+  /** userIds for alle teammedlemmer. */
+  members: string[];
+  /** Sum av ikke-pending hull-scorer. */
+  totalScore: number;
+  /** Antall hull med ikke-pending teamScore. */
+  holesCounted: number;
+  rank: number;
+  /** teamNumbers med eksakt samme rank etter 5-tier cascade. */
+  tiedWith: number[];
+}
+
+export interface ShambleResult {
+  kind: 'shamble';
+  /** Hvilken variant som ble spilt. */
+  variant: 'shamble' | 'champagne';
+  /** Antall laveste effective-scorer som teller per hull (1/2/3). */
+  count: 1 | 2 | 3;
+  /** Gross/net-modus. */
+  scoring: 'gross' | 'net';
+  /** Antall spillere per lag (3 eller 4). */
+  teamSize: 3 | 4;
+  /** Per-hull-rader — én per hull i ctx.holes, sortert hull-nummer stigende. */
+  holes: ShambleHoleRow[];
+  /** Per-lag-rader — sortert rank stigende (lavest totalScore = rank 1). */
+  teams: ShambleTeamLine[];
+}
 
 /**
  * Per-spiller-detalj på ett Round Robin-hull. Speiler `FourballPlayerCell`
@@ -1585,4 +1660,5 @@ export type ModeResult =
   | BingoBangoBongoResult
   | NinesResult
   | RoundRobinResult
-  | AceyDeuceyResult;
+  | AceyDeuceyResult
+  | ShambleResult;

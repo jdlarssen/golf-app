@@ -237,6 +237,36 @@ function RoundRobinIcon({ size = 28 }: { size?: number }) {
   );
 }
 
+// Shamble / Champagne Scramble: champagne-glass-motiv som speiler umbrella-
+// formatnavnet «Shamble / Champagne Scramble». Holder 28x28 line-icons-
+// stilen med stroke=currentColor og rounded caps.
+function ShambleIcon({ size = 28 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 28 28"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      {/* Champagne-glass: cuppa */}
+      <path d="M 9 4 L 19 4 L 16 13 Q 14 15 14 15 Q 14 15 12 13 Z" />
+      {/* Stett */}
+      <line x1="14" y1="15" x2="14" y2="22" />
+      {/* Bunn */}
+      <line x1="10" y1="22" x2="18" y2="22" />
+      {/* Boble-prikk 1 */}
+      <circle cx="13" cy="8" r="0.8" fill="currentColor" stroke="none" />
+      {/* Boble-prikk 2 */}
+      <circle cx="15.5" cy="6.5" r="0.8" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 // Fallback når en icon_key ikke har en dedikert komponent (nye formats før
 // designet er på plass). Et nøytralt flagg-ikon signaliserer «format» uten
 // å gjette på mekanikken.
@@ -276,6 +306,7 @@ const ICON_MAP: Record<string, (props: { size?: number }) => ReactNode> = {
   bingo_bango_bongo: BingoBangoBongoIcon,
   nines: NinesIcon,
   round_robin: RoundRobinIcon,
+  shamble: ShambleIcon,
 };
 
 export function formatIconFor(iconKey: string, size = 28): ReactNode {

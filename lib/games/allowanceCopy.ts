@@ -63,5 +63,10 @@ export function bruttoHelperFor(mode: GameMode): string {
       // for Wolf/Nassau/Skins vises ikke generisk allowance-field; returverdien
       // er kun for type-completeness.
       return 'Ingen handicap — per-hull-poeng bruker gross-score.';
+    case 'shamble':
+      // Shamble har egen scoring-toggle (gross|net) i ShambleSetup-step.
+      // Generisk allowance-field vises ikke for shamble; returverdien er for
+      // type-completeness.
+      return 'Ingen handicap — de laveste gross-scorene per hull teller for laget.';
   }
 }

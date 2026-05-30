@@ -17,7 +17,43 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.55.y — Shamble / Champagne Scramble (best N av M)
+
+Issue [#285](https://github.com/jdlarssen/golf-app/issues/285), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Det første ekte lag-formatet i familien: alle slår ut, laget velger det beste utslaget, og så spiller hver spiller sin egen ball inn. De laveste scorene per hull teller for laget.
+
+### [1.55.0] - 2026-05-31
+
+> Ny lagform for klubbturneringen: Shamble, med festvarianten Champagne Scramble. Alle slår ut, laget tar det beste utslaget, og så spiller hver spiller sin egen ball inn. De laveste scorene på hvert hull legges sammen for laget. I Shamble teller de to beste; i Champagne Scramble velger du selv om én, to eller tre skal telle. Lag på tre eller fire, netto eller brutto, lavest sammenlagt vinner.
+
+<details>
+<summary>Teknisk</summary>
+
+Generalisering av best ball («best 1 av M») til «best N av M». Strokeplay-utledet: hver spiller eier sin egen score-rad som i best ball og nines, så ingen captain-rad eller ny tabell. Lag-struktur og validator speiler texas_scramble (team_size + balanse-sjekk ved publish), men uten lag-handicap — hver spiller bruker full course handicap netto. Et hull står pending til minst N på laget har tastet.
+
+#### Added
+- [`lib/scoring/modes/shamble.ts`](lib/scoring/modes/shamble.ts) — `compute(ctx)`: lagets hull-score = sum av de N laveste effective-scorene (N = 1/2/3, klampet til lagstørrelse), pending uten carryover, lag-ranking via `rankTeams`-cascaden (lavest total vinner). 19 Type A-tester.
+- [`supabase/migrations/0060_shamble.sql`](supabase/migrations/0060_shamble.sql) — seed av format-rad «Shamble / Champagne Scramble» + intent-mapping (sekundær under Klubb). Ingen ny tabell.
+- `ShambleSetup.tsx` — lagstørrelse (3/4), variant (Shamble / Champagne Scramble), antall-velger for Champagne, netto/brutto i wizarden.
+- `ShambleView.tsx` + `ShamblePodium.tsx` — lag-leaderboard med per-hull-rutenett (markerer hvem som telte) + podium for avsluttet spill.
+
+#### Changed
+- `lib/scoring/modes/types.ts` + `lib/scoring/index.ts` — ny `shamble`-modus i `GameMode`, `GameModeConfig` (`shamble_variant` + `shamble_count` + `shamble_scoring`), `ModeResult` og compute-routeren, samt `MODE_LABELS`.
+- [`lib/games/gamePayload.ts`](lib/games/gamePayload.ts) — `validateShamble` (lag à 3/4, balanse, variant/count/scoring) + `parseGameMode`-støtte + regresjonstester.
+- `lib/games/allowanceCopy.ts`, `lib/games/formatLabel.ts`, `lib/formats/modeGuide.ts`, `lib/formats/icons.tsx` — brutto-hjelpetekst, variant-bevisst flate-navn (Shamble / Champagne Scramble), spiller-forklaring, format-ikon.
+- `app/admin/games/new/*` — `TeamSize` utvidet til 1|2|3|4, `isShamble` wiret gjennom `useGameFormState` (validering + lag-tildeling à 3 eller 4), `ShambleSetup`-render + skjulte form-felt.
+- `app/games/[id]/page.tsx` — `shamble` i GameRow-union; leaderboard-`page.tsx` — `renderShamble`-routing.
+
+#### Tests
+- Type A: `shamble.test.ts` (19) + 7 shamble-cases i `gamePayload.test.ts`. Type C: `ShambleView.test.tsx` + `ShambleSetup.test.tsx`.
+
+</details>
+
+---
+
 ## 1.54.y — Florida Scramble (Texas-variant med step-aside)
+
+<details>
+<summary><strong>1.54.y — Florida Scramble (Texas-variant med step-aside) (2 oppføringer) — klikk for å vise</strong></summary>
 
 Issue [#283](https://github.com/jdlarssen/golf-app/issues/283), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Texas scramble med én ekstra regel: den som slo det valgte slaget, står over neste slag. Lag à 3 eller 4. NGF-standard lag-handicap (15 % for tremannslag, 10 % for firmannslag).
 
@@ -57,6 +93,8 @@ Florida Scramble gjenbruker Texas scramble-motoren fullstendig. `floridaScramble
 
 #### Tests
 - Type A: `floridaScramble.test.ts` (5) + 6 florida-cases i `gamePayload.test.ts`. Ingen ny Type C — gjenbruker Texas-viewet (per test-disiplin).
+
+</details>
 
 </details>
 

@@ -94,6 +94,11 @@ const ENABLED_COMBOS: Record<GameMode, ReadonlySet<TeamSize>> = {
   // dedikert setup-steg tar over (speiler Wolf/Skins/Nassau), så
   // TeamSizeSelector vises ikke i praksis — men type-system krever en entry.
   acey_deucey: new Set<TeamSize>([1]),
+  // Shamble / Champagne Scramble: lag-format à 3 eller 4. ShambleSetup tar
+  // over med sin egen 3/4-velger, så TeamSizeSelector vises ikke for shamble —
+  // men type-system krever en entry. Begge støttede størrelser listet for
+  // dokumentasjonsformål (generisk selector kan ikke vise 3 uansett).
+  shamble: new Set<TeamSize>([3, 4]),
 };
 
 type TileDef = {
