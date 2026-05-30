@@ -31,6 +31,7 @@ export function scorecardTitle(
     gameMode === 'best_ball' ||
     gameMode === 'texas_scramble' ||
     gameMode === 'ambrose' ||
+    gameMode === 'florida_scramble' ||
     (isStablefordFamily(gameMode) && (modeConfig.kind === 'stableford' || modeConfig.kind === 'modified_stableford') && modeConfig.team_size === 2);
 
   if (isTeamMode) {

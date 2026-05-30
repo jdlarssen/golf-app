@@ -236,6 +236,7 @@ function parseGameMode(formData: FormData): GameMode | null {
     raw === 'solo_strokeplay' ||
     raw === 'texas_scramble' ||
     raw === 'ambrose' ||
+    raw === 'florida_scramble' ||
     raw === 'fourball_matchplay' ||
     raw === 'foursomes_matchplay' ||
     raw === 'wolf' ||
@@ -832,6 +833,109 @@ function parseAmbroseTeamSize(formData: FormData): 2 | 4 | null {
  */
 function parseAmbroseHandicapPct(formData: FormData): number | null {
   const raw = formData.get('ambrose_team_handicap_pct');
+  if (raw === null || raw === '') return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0 || n > 100) return null;
+  return n;
+}
+
+/**
+ * Florida Scramble-validator (issue #283). Mekanisk identisk med Ambrose-
+ * validatoren — lagene spiller én ball, kapteinen (lex-min userId) eier
+ * scores-radene — men med:
+ *  - Lagstørrelser: 3 eller 4 (ikke 2; 2-mannslag → unsupported_mode_size_combo)
+ *  - NGF-default-handicap: 15 % for 3-mann, 10 % for 4-mann (fasttabell, ikke
+ *    formel som Ambrose). Settes av wizarden via `defaultFloridaHandicapPct`.
+ *
+ * Form-felter:
+ *  - `florida_team_size`: 3 eller 4
+ *  - `florida_team_handicap_pct`: 0..100, fraksjonell tillatt
+ *  - `player_${i}_team`: positivt heltall, fri antall lag
+ *
+ * Regler ved publish: minst 1 spiller, EKSAKT team_size per lag (team_balance),
+ * team_number ≥ 1 (bad_team). flight_number = team_number oppfyller DB-CHECK.
+ * Mode_config-output: `{kind: 'florida_scramble', team_size, teams_count, team_handicap_pct}`.
+ */
+function validateFloridaScramble(
+  formData: FormData,
+  mode: PayloadMode,
+): ModeValidationResult {
+  const teamSize = parseFloridaTeamSize(formData);
+  if (teamSize === null) {
+    return { ok: false, errorCode: 'unsupported_mode_size_combo' };
+  }
+
+  const handicapPct = parseFloridaHandicapPct(formData);
+  if (handicapPct === null) {
+    return { ok: false, errorCode: 'bad_allowance' };
+  }
+
+  const players: GamePlayerInput[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < 8; i++) {
+    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
+    if (!user_id) continue;
+    if (seen.has(user_id)) {
+      return { ok: false, errorCode: 'duplicate_player' };
+    }
+    seen.add(user_id);
+    const team_number = Number(formData.get(`player_${i}_team`));
+    if (!Number.isInteger(team_number) || team_number < 1) {
+      return { ok: false, errorCode: 'bad_team' };
+    }
+    // Florida speiler Texas: flight = team for å oppfylle DB-CHECK
+    // game_players_team_flight_consistency (begge satt).
+    players.push({ user_id, team_number, flight_number: team_number });
+  }
+
+  if (mode === 'publish') {
+    if (players.length === 0) {
+      return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    const teamCounts = new Map<number, number>();
+    for (const p of players) {
+      if (p.team_number === null) continue;
+      teamCounts.set(p.team_number, (teamCounts.get(p.team_number) ?? 0) + 1);
+    }
+    for (const [, count] of teamCounts) {
+      if (count !== teamSize) {
+        return { ok: false, errorCode: 'team_balance' };
+      }
+    }
+  }
+
+  const teams_count = new Set(players.map((p) => p.team_number)).size;
+
+  return {
+    ok: true,
+    players,
+    mode_config: {
+      kind: 'florida_scramble',
+      team_size: teamSize,
+      teams_count,
+      team_handicap_pct: handicapPct,
+    },
+  };
+}
+
+/**
+ * Leser `florida_team_size` fra form-data. Returnerer 3 eller 4, eller null.
+ * 2-mannslag støttes ikke (→ unsupported_mode_size_combo).
+ */
+function parseFloridaTeamSize(formData: FormData): 3 | 4 | null {
+  const raw = String(formData.get('florida_team_size') ?? '').trim();
+  if (raw === '3') return 3;
+  if (raw === '4') return 4;
+  return null;
+}
+
+/**
+ * Leser `florida_team_handicap_pct` fra form-data. Returnerer et tall i range
+ * 0..100 (fraksjonell tillatt) eller null. Wizarden setter prosenten via
+ * `defaultFloridaHandicapPct` (15 % for 3-mann, 10 % for 4-mann).
+ */
+function parseFloridaHandicapPct(formData: FormData): number | null {
+  const raw = formData.get('florida_team_handicap_pct');
   if (raw === null || raw === '') return null;
   const n = Number(raw);
   if (!Number.isFinite(n) || n < 0 || n > 100) return null;
@@ -1555,6 +1659,7 @@ const modeValidators: Record<
   solo_strokeplay: validateSoloStrokeplay,
   texas_scramble: validateTexasScramble,
   ambrose: validateAmbrose,
+  florida_scramble: validateFloridaScramble,
   fourball_matchplay: validateFourballMatchplay,
   foursomes_matchplay: validateFoursomesMatchplay,
   wolf: validateWolf,

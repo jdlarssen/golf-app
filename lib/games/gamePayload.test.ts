@@ -1386,6 +1386,136 @@ describe('buildGameInsertPayload — ambrose (issue #284)', () => {
   });
 });
 
+describe('buildGameInsertPayload — florida_scramble (issue #283)', () => {
+  /**
+   * Helper for Florida-payloads. Mekanisk lik ambroseFd, men game_mode=florida_scramble
+   * og florida_*-feltnavn. Default: 3-mannslag @ 15 %.
+   */
+  function floridaFd(opts: {
+    teamSize?: '3' | '4' | '2';
+    handicapPct?: string;
+    players?: Array<{ userId: string; team: number }>;
+    extras?: Record<string, string>;
+  }): FormData {
+    const { teamSize = '3', handicapPct = '15', players = [], extras = {} } = opts;
+    const base: Record<string, string> = {
+      name: 'Klubb Florida',
+      course_id: 'c1',
+      tee_box_id: 't1',
+      game_mode: 'florida_scramble',
+      florida_team_size: teamSize,
+      florida_team_handicap_pct: handicapPct,
+    };
+    players.forEach((p, i) => {
+      base[`player_${i}_id`] = p.userId;
+      base[`player_${i}_team`] = String(p.team);
+    });
+    return fd({ ...base, ...extras });
+  }
+
+  it('publish med 1 lag á 3 spillere (team_size=3, 15 %) → ok', () => {
+    const result = buildGameInsertPayload(
+      floridaFd({
+        teamSize: '3',
+        handicapPct: '15',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 1 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.game_mode).toBe('florida_scramble');
+    expect(result.mode_config).toEqual({
+      kind: 'florida_scramble',
+      team_size: 3,
+      teams_count: 1,
+      team_handicap_pct: 15,
+    });
+    expect(result.players).toEqual([
+      { user_id: 'a', team_number: 1, flight_number: 1 },
+      { user_id: 'b', team_number: 1, flight_number: 1 },
+      { user_id: 'c', team_number: 1, flight_number: 1 },
+    ]);
+  });
+
+  it('publish med 4-mannslag (team_size=4, 10 %) → ok', () => {
+    const result = buildGameInsertPayload(
+      floridaFd({
+        teamSize: '4',
+        handicapPct: '10',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 1 },
+          { userId: 'd', team: 1 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.mode_config).toEqual({
+      kind: 'florida_scramble',
+      team_size: 4,
+      teams_count: 1,
+      team_handicap_pct: 10,
+    });
+  });
+
+  it('publish med ubalansert lag → team_balance', () => {
+    const result = buildGameInsertPayload(
+      floridaFd({
+        teamSize: '3',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('team_balance');
+  });
+
+  it('2-mannslag avvises → unsupported_mode_size_combo', () => {
+    const result = buildGameInsertPayload(
+      floridaFd({ teamSize: '2', players: [{ userId: 'a', team: 1 }] }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('unsupported_mode_size_combo');
+  });
+
+  it('pct utenfor range (101) → bad_allowance', () => {
+    const result = buildGameInsertPayload(
+      floridaFd({
+        teamSize: '3',
+        handicapPct: '101',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 1 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('bad_allowance');
+  });
+
+  it('draft tolererer partial state (ufullstendige lag)', () => {
+    const result = buildGameInsertPayload(
+      floridaFd({
+        teamSize: '3',
+        players: [{ userId: 'a', team: 1 }],
+      }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.game_mode).toBe('florida_scramble');
+  });
+});
+
 describe('buildGameInsertPayload — fourball_matchplay (issue #217, fase 2 av #47)', () => {
   /**
    * Helper for fourball-payloads. Bygger en form med game_mode=fourball_matchplay,
