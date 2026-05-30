@@ -35,6 +35,7 @@ import * as nines from './modes/nines';
 import * as roundRobin from './modes/roundRobin';
 import * as aceyDeucey from './modes/aceyDeucey';
 import * as shamble from './modes/shamble';
+import * as patsome from './modes/patsome';
 import type { ScoringContext, ModeResult } from './modes/types';
 
 export function computeLeaderboard(ctx: ScoringContext): ModeResult {
@@ -75,6 +76,8 @@ export function computeLeaderboard(ctx: ScoringContext): ModeResult {
       return aceyDeucey.compute(ctx);
     case 'shamble':
       return shamble.compute(ctx);
+    case 'patsome':
+      return patsome.compute(ctx);
   }
 }
 
@@ -161,4 +164,10 @@ export type {
   ShambleHoleRow,
   ShambleHoleTeamCell,
   ShambleTeamLine,
+  PatsomeResult,
+  PatsomeTeamLine,
+  PatsomeHoleRow,
+  PatsomePlayerCell,
+  PatsomeSegmentSubtotal,
+  PatsomeSegment,
 } from './modes/types';

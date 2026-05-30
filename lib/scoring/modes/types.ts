@@ -20,7 +20,8 @@ export type GameMode =
   | 'nines'
   | 'round_robin'
   | 'acey_deucey'
-  | 'shamble';
+  | 'shamble'
+  | 'patsome';
 
 /**
  * Norske visnings-labels for hver spillmodus. Brukes av ModeChip i admin-
@@ -47,6 +48,7 @@ export const MODE_LABELS: Record<GameMode, string> = {
   round_robin: 'Round Robin',
   acey_deucey: 'Acey Deucey',
   shamble: 'Shamble / Champagne Scramble',
+  patsome: 'Patsome',
 };
 
 /**
@@ -302,6 +304,18 @@ export type GameModeConfig =
       shamble_count: 1 | 2 | 3;
       /** 'net' = gross − strokesForHole(CH, SI). 'gross' = rå gross. Default 'net'. Speiler skins_scoring. */
       shamble_scoring: 'gross' | 'net';
+    }
+  | {
+      kind: 'patsome';
+      team_size: 2;
+      /** Antall lag (2+). Som texas_scramble. */
+      teams_count: number;
+      /**
+       * 'net' = WHS-allowance per segment (4BBB full CH, greensome 60/40,
+       * foursomes 50 % av sum). 'gross' = rå gross-stableford (ingen strokes).
+       * Default 'net'. Speiler Wolf/Nassau/Skins/Nines-mønstret.
+       */
+      patsome_scoring: 'gross' | 'net';
     };
 
 /**
@@ -1620,6 +1634,79 @@ export interface AceyDeuceyResult {
   players: AceyDeuceyPlayerLine[];
 }
 
+// -----------------------------------------------------------------------------
+// Patsome (issue #286 — 6 hull 4BBB → 6 greensome → 6 foursomes).
+//
+// Rotasjons-format: 18 hull delt i tre 6-hulls-segmenter, hvert med sin
+// lagspill-form. Felles valuta = stableford-poeng per lag per hull.
+//
+//   Hull 1–6:   4BBB       — begge spiller, MAX-av-to stableford per hull.
+//   Hull 7–12:  Greensome  — én lagball (kaptein-eide rad). Allowance 60/40.
+//   Hull 13–18: Foursomes  — én lagball (kaptein-eide rad). Allowance 50%.
+//
+// Lagets total = sum av stableford-poeng over alle 18 hull. Høyest vinner.
+// Ranking via `rankTeams` med negerte per-hull-poeng (5-tier cascade).
+// Forutsetter 18 hull — degraderer trygt (manglende hull = 0 poeng).
+// -----------------------------------------------------------------------------
+
+export type PatsomeSegment = 'fourball' | 'greensome' | 'foursomes';
+
+export interface PatsomePlayerCell {
+  userId: string;
+  gross: number | null;
+  /** net = gross − extra (eller = gross i brutto). null hvis ikke spilt. */
+  netStrokes: number | null;
+  points: number;
+  /** Kun meningsfull i 4BBB (MAX-bidragsyter). false i 1-ball-segmentene. */
+  isContributor: boolean;
+}
+
+export interface PatsomeHoleRow {
+  holeNumber: number;
+  par: number;
+  strokeIndex: number;
+  segment: PatsomeSegment;
+  /** 4BBB: begge spiller-celler. greensome/foursomes: tom (bruk teamGross). */
+  players: PatsomePlayerCell[];
+  /** 4BBB: userIds med MAX-poeng. greensome/foursomes: tom. */
+  contributorIds: string[];
+  /** greensome/foursomes: lag-ball-gross. 4BBB: null. */
+  teamGross: number | null;
+  /** Lag-strokes på hullet for 1-ball-segmentene (0 i brutto / i 4BBB). */
+  teamExtraStrokes: number;
+  /** greensome/foursomes: lag-ball-netto. 4BBB: null. */
+  teamNetStrokes: number | null;
+  /** Lag-hull-poeng (valutaen). 4BBB: MAX. 1-ball: lag-ballens poeng. */
+  teamPoints: number;
+}
+
+export interface PatsomeSegmentSubtotal {
+  segment: PatsomeSegment;
+  points: number;
+  holesPlayed: number;
+}
+
+export interface PatsomeTeamLine {
+  teamNumber: number;
+  playerIds: string[];
+  captainUserId: string;
+  holes: PatsomeHoleRow[];
+  segments: {
+    fourball: PatsomeSegmentSubtotal;
+    greensome: PatsomeSegmentSubtotal;
+    foursomes: PatsomeSegmentSubtotal;
+  };
+  totalPoints: number;
+  rank: number;
+  tiedWith: number[];
+}
+
+export interface PatsomeResult {
+  kind: 'patsome';
+  scoring: 'gross' | 'net';
+  teams: PatsomeTeamLine[];
+}
+
 /**
  * Discriminated union — konsumenter narrower på `kind`:
  *   const r = computeLeaderboard(ctx);
@@ -1661,4 +1748,5 @@ export type ModeResult =
   | NinesResult
   | RoundRobinResult
   | AceyDeuceyResult
-  | ShambleResult;
+  | ShambleResult
+  | PatsomeResult;
