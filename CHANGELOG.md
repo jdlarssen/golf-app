@@ -17,7 +17,43 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.51.y — Shamble / Champagne Scramble (best N av M)
+
+Issue [#285](https://github.com/jdlarssen/golf-app/issues/285), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Det første ekte lag-formatet i familien: alle slår ut, laget velger det beste utslaget, og så spiller hver spiller sin egen ball inn. De laveste scorene per hull teller for laget.
+
+### [1.51.0] - 2026-05-30
+
+> Ny lagform for klubbturneringen: Shamble, med festvarianten Champagne Scramble. Alle slår ut, laget tar det beste utslaget, og så spiller hver spiller sin egen ball inn. De laveste scorene på hvert hull legges sammen for laget. I Shamble teller de to beste; i Champagne Scramble velger du selv om én, to eller tre skal telle. Lag på tre eller fire, netto eller brutto, lavest sammenlagt vinner.
+
+<details>
+<summary>Teknisk</summary>
+
+Generalisering av best ball («best 1 av M») til «best N av M». Strokeplay-utledet: hver spiller eier sin egen score-rad som i best ball og nines, så ingen captain-rad eller ny tabell. Lag-struktur og validator speiler texas_scramble (team_size + balanse-sjekk ved publish), men uten lag-handicap — hver spiller bruker full course handicap netto. Et hull står pending til minst N på laget har tastet.
+
+#### Added
+- [`lib/scoring/modes/shamble.ts`](lib/scoring/modes/shamble.ts) — `compute(ctx)`: lagets hull-score = sum av de N laveste effective-scorene (N = 1/2/3, klampet til lagstørrelse), pending uten carryover, lag-ranking via `rankTeams`-cascaden (lavest total vinner). 19 Type A-tester.
+- [`supabase/migrations/0055_shamble.sql`](supabase/migrations/0055_shamble.sql) — seed av format-rad «Shamble / Champagne Scramble» + intent-mapping (sekundær under Klubb). Ingen ny tabell.
+- `ShambleSetup.tsx` — lagstørrelse (3/4), variant (Shamble / Champagne Scramble), antall-velger for Champagne, netto/brutto i wizarden.
+- `ShambleView.tsx` + `ShamblePodium.tsx` — lag-leaderboard med per-hull-rutenett (markerer hvem som telte) + podium for avsluttet spill.
+
+#### Changed
+- `lib/scoring/modes/types.ts` + `lib/scoring/index.ts` — ny `shamble`-modus i `GameMode`, `GameModeConfig` (`shamble_variant` + `shamble_count` + `shamble_scoring`), `ModeResult` og compute-routeren, samt `MODE_LABELS`.
+- [`lib/games/gamePayload.ts`](lib/games/gamePayload.ts) — `validateShamble` (lag à 3/4, balanse, variant/count/scoring) + `parseGameMode`-støtte + regresjonstester.
+- `lib/games/allowanceCopy.ts`, `lib/games/formatLabel.ts`, `lib/formats/modeGuide.ts`, `lib/formats/icons.tsx` — brutto-hjelpetekst, variant-bevisst flate-navn (Shamble / Champagne Scramble), spiller-forklaring, format-ikon.
+- `app/admin/games/new/*` — `TeamSize` utvidet til 1|2|3|4, `isShamble` wiret gjennom `useGameFormState` (validering + lag-tildeling à 3 eller 4), `ShambleSetup`-render + skjulte form-felt.
+- `app/games/[id]/page.tsx` — `shamble` i GameRow-union; leaderboard-`page.tsx` — `renderShamble`-routing.
+
+#### Tests
+- Type A: `shamble.test.ts` (19) + 7 shamble-cases i `gamePayload.test.ts`. Type C: `ShambleView.test.tsx` + `ShambleSetup.test.tsx`.
+
+</details>
+
+---
+
 ## 1.50.y — Nines / Split Sixes (poeng per hull for tre)
+
+<details>
+<summary><strong>1.50.y — Nines / Split Sixes (poeng per hull for tre) (1 oppføring) — klikk for å vise</strong></summary>
 
 Issue [#278](https://github.com/jdlarssen/golf-app/issues/278), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Enda et kompis-format der poengene kommer fra hvor godt du spiller hvert hull, ikke fra sluttsummen. For nøyaktig tre spillere, med to varianter: Nines og Split Sixes.
 
@@ -43,6 +79,8 @@ Bygget på Skins-mønstret: poengene utledes fra det vanlige strokeplay-scorekor
 
 #### Tests
 - Type A: `nines.test.ts` (22) + 6 nines-cases i `gamePayload.test.ts`. Type C: `NinesView.test.tsx` + `NinesSetup.test.tsx`.
+
+</details>
 
 </details>
 

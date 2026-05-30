@@ -10,7 +10,7 @@ insert into public.formats (
   'shamble',
   'Shamble / Champagne Scramble',
   'shamble',
-  'Lag à 3-4: felles beste utslag, så egen ball. De laveste scorene per hull teller. Champagne Scramble velger antall (1/2/3).',
+  'Lag à 3-4: felles beste utslag, så egen ball. De laveste scorene per hull teller. Champagne Scramble: velg antall (1/2/3).',
   '@/lib/scoring/modes/shamble',
   true,
   false
