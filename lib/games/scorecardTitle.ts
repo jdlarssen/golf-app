@@ -32,6 +32,7 @@ export function scorecardTitle(
     gameMode === 'texas_scramble' ||
     gameMode === 'ambrose' ||
     gameMode === 'florida_scramble' ||
+    gameMode === 'patsome' ||
     (isStablefordFamily(gameMode) && (modeConfig.kind === 'stableford' || modeConfig.kind === 'modified_stableford') && modeConfig.team_size === 2);
 
   if (isTeamMode) {

@@ -67,6 +67,8 @@ import { AceyDeuceyView, type AceyDeuceyPlayerInfo } from './AceyDeuceyView';
 import { AceyDeuceyPodium } from './AceyDeuceyPodium';
 import { ShambleView, type ShamblePlayerInfo } from './ShambleView';
 import { ShamblePodium } from './ShamblePodium';
+import { PatsomeView, type PatsomePlayerInfo } from './PatsomeView';
+import { PatsomePodium } from './PatsomePodium';
 import {
   MatchplayMatchView,
   type MatchplayPlayerInfo,
@@ -505,6 +507,20 @@ async function LeaderboardBody({
   // når score_visibility='reveal' og status='active').
   if (game.game_mode === 'shamble') {
     return renderShamble({
+      gameId,
+      game,
+      gwp,
+      rawHolesRows: rawHolesRes.data ?? [],
+      rawScoresRows: rawScoresRes.data ?? [],
+      backHref,
+    });
+  }
+
+  // Patsome (issue #286): rotasjons-lag-format med tre 6-hulls-segmenter
+  // (4BBB → greensome → foursomes). Ranking på stableford-poeng per lag.
+  // Segment-delsummer er formatets signatur-element og vises alltid.
+  if (game.game_mode === 'patsome') {
+    return renderPatsome({
       gameId,
       game,
       gwp,
@@ -2944,6 +2960,113 @@ function renderShamble(opts: {
 
   return (
     <ShambleView
+      gameId={gameId}
+      gameName={game.name}
+      result={result}
+      playersById={playersById}
+      scoreVisibility={scoreVisibility}
+      gameStatus={game.status}
+      backHref={backHref}
+    />
+  );
+}
+
+function renderPatsome(opts: {
+  gameId: string;
+  game: GameForHole;
+  gwp: {
+    players: {
+      user_id: string;
+      team_number: number;
+      users: { name: string | null; nickname: string | null } | null;
+      course_handicap: number | null;
+      tee_gender: TeeGender;
+    }[];
+  };
+  rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
+  rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
+  backHref: string;
+}) {
+  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
+
+  const ctx = {
+    game: {
+      id: gameId,
+      game_mode: 'patsome' as const,
+      mode_config: game.mode_config,
+    },
+    players: gwp.players
+      .filter((p) => p.users != null)
+      .map((p) => ({
+        userId: p.user_id,
+        teamNumber: p.team_number,
+        flightNumber: null,
+        courseHandicap: p.course_handicap ?? 0,
+        teeGender: p.tee_gender,
+      })),
+    holes: rawHolesRows.map((h) => ({
+      number: h.hole_number,
+      par: h.par_mens,
+      parByGender: {
+        mens: h.par_mens,
+        ladies: h.par_ladies,
+        juniors: h.par_juniors,
+      },
+      strokeIndex: h.stroke_index,
+    })),
+    scores: rawScoresRows.map((s) => ({
+      userId: s.user_id,
+      holeNumber: s.hole_number,
+      gross: s.strokes,
+    })),
+  };
+
+  const result = computeModeResult(ctx);
+  if (result.kind !== 'patsome') {
+    notFound();
+  }
+
+  const playersById = new Map<string, PatsomePlayerInfo>();
+  for (const p of gwp.players) {
+    if (p.users == null) continue;
+    playersById.set(p.user_id, {
+      name: p.users.name ?? '(ukjent)',
+      nickname: p.users.nickname,
+    });
+  }
+
+  // Score-visibility normaliseres til 'live' | 'reveal' for view-en.
+  const scoreVisibility: 'live' | 'reveal' =
+    game.score_visibility === 'reveal' ? 'reveal' : 'live';
+
+  // Finished → PatsomePodium på toppen + PatsomeView under (chromeless, så bare
+  // én outer shell). Active/scheduled → PatsomeView alene.
+  if (game.status === 'finished') {
+    return (
+      <>
+        <PatsomePodium
+          gameId={gameId}
+          gameName={game.name}
+          result={result}
+          playersById={playersById}
+          backHref={backHref}
+        />
+        <PatsomeView
+          gameId={gameId}
+          gameName={game.name}
+          result={result}
+          playersById={playersById}
+          scoreVisibility={scoreVisibility}
+          gameStatus={game.status}
+          backHref={backHref}
+          chromeless
+        />
+      </>
+    );
+  }
+
+  return (
+    <PatsomeView
       gameId={gameId}
       gameName={game.name}
       result={result}
