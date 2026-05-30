@@ -691,6 +691,42 @@ export type Database = {
           },
         ]
       }
+      patsome_tee_starters: {
+        Row: {
+          game_id: string
+          team_number: number
+          tee_starter_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          game_id: string
+          team_number: number
+          tee_starter_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          game_id?: string
+          team_number?: number
+          tee_starter_user_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patsome_tee_starters_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patsome_tee_starters_tee_starter_user_id_fkey"
+            columns: ["tee_starter_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_update_digests: {
         Row: {
           id: string
