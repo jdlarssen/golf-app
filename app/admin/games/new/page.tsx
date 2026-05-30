@@ -40,12 +40,14 @@ type CupGameMode =
   | 'singles_matchplay'
   | 'fourball_matchplay'
   | 'foursomes_matchplay'
-  | 'greensome_matchplay';
+  | 'greensome_matchplay'
+  | 'chapman_matchplay';
 
 function parseCupGameMode(raw: string | undefined): CupGameMode {
   if (raw === 'fourball_matchplay') return 'fourball_matchplay';
   if (raw === 'foursomes_matchplay') return 'foursomes_matchplay';
   if (raw === 'greensome_matchplay') return 'greensome_matchplay';
+  if (raw === 'chapman_matchplay') return 'chapman_matchplay';
   // Default + singles_matchplay → singles. Bevarer dagens oppførsel (cup-link
   // uten game_mode-parameter trådte tidligere alltid på singles-løypa).
   return 'singles_matchplay';
@@ -124,7 +126,9 @@ export default async function NewGamePage({
                 ? 'Spillmodus er låst til foursomes matchplay (2 vs 2, alternate shot).'
                 : cupContext.gameMode === 'greensome_matchplay'
                   ? 'Spillmodus er låst til greensome matchplay (2 vs 2, velg-beste-tee + alternate).'
-                  : 'Spillmodus er låst til matchplay (1 vs 1).'}
+                  : cupContext.gameMode === 'chapman_matchplay'
+                    ? 'Spillmodus er låst til chapman matchplay (2 vs 2, dobbel tee, bytt ball + alternate).'
+                    : 'Spillmodus er låst til matchplay (1 vs 1).'}
           </Banner>
         </div>
       )}
@@ -169,6 +173,12 @@ type CupContext = {
    * netto/brutto-toggle for greensome-matches. Default 100 (WHS) ved manglende verdi.
    */
   greensomeAllowancePct: number;
+  /**
+   * Cup-radens default chapman-allowance (0 = brutto, 1..100 = netto-prosent av
+   * lagenes 60/40-blandede HCP-differanse). Pre-fylles inn for chapman-matches.
+   * Default 100 (WHS Chapman matchplay-standard) ved manglende verdi. #290.
+   */
+  chapmanAllowancePct: number;
 };
 
 async function loadCupContext(
@@ -178,7 +188,7 @@ async function loadCupContext(
   const supabase = await getServerClient();
   const { data: cup } = await supabase
     .from('tournaments')
-    .select('id, name, status, fourball_allowance_pct, foursomes_allowance_pct, greensome_allowance_pct')
+    .select('id, name, status, fourball_allowance_pct, foursomes_allowance_pct, greensome_allowance_pct, chapman_allowance_pct')
     .eq('id', tournamentId)
     .maybeSingle<{
       id: string;
@@ -187,6 +197,7 @@ async function loadCupContext(
       fourball_allowance_pct: number | null;
       foursomes_allowance_pct: number | null;
       greensome_allowance_pct: number | null;
+      chapman_allowance_pct: number | null;
     }>();
   if (!cup) return null;
   if (cup.status === 'finished') return null;
@@ -205,12 +216,15 @@ async function loadCupContext(
         ? 'Foursomes'
         : requestedMode === 'greensome_matchplay'
           ? 'Greensome'
-          : 'Singles';
+          : requestedMode === 'chapman_matchplay'
+            ? 'Chapman'
+            : 'Singles';
   // Default 85 (WHS) hvis cup-raden ikke har verdien satt (eldre cups før
   // 0045-migrasjonen, eller cups opprettet før chunk 5 lå ute).
   const fourballAllowancePct = cup.fourball_allowance_pct ?? 85;
   const foursomesAllowancePct = cup.foursomes_allowance_pct ?? 50;
   const greensomeAllowancePct = cup.greensome_allowance_pct ?? 100;
+  const chapmanAllowancePct = cup.chapman_allowance_pct ?? 100;
   return {
     id: cup.id,
     name: cup.name,
@@ -219,6 +233,7 @@ async function loadCupContext(
     fourballAllowancePct,
     foursomesAllowancePct,
     greensomeAllowancePct,
+    chapmanAllowancePct,
   };
 }
 
@@ -325,6 +340,14 @@ function buildCupInitialValues(cup: CupContext) {
       game_mode: 'greensome_matchplay' as const,
       team_size: 2 as const,
       greensome_allowance_pct: cup.greensomeAllowancePct,
+    };
+  }
+  if (cup.gameMode === 'chapman_matchplay') {
+    return {
+      ...base,
+      game_mode: 'chapman_matchplay' as const,
+      team_size: 2 as const,
+      chapman_allowance_pct: cup.chapmanAllowancePct,
     };
   }
   return {

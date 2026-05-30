@@ -309,6 +309,13 @@ export function useGameFormState({
   const [greensomeAllowancePct, setGreensomeAllowancePct] = useState<number>(
     initialValues?.greensome_allowance_pct ?? 100,
   );
+  // Chapman matchplay (#290): allowance-prosent (0 = brutto, 1..100 = netto).
+  // Samme 60/40-handicap som greensome; default 100 (full diff). Pre-fylles fra
+  // cup-radens chapman_allowance_pct via initialValues. Validatoren
+  // (`validateChapmanMatchplay`) leser dette ved publish.
+  const [chapmanAllowancePct, setChapmanAllowancePct] = useState<number>(
+    initialValues?.chapman_allowance_pct ?? 100,
+  );
   // Wolf (#274): brutto vs netto-toggle. Default 'net' speiler Tørny's
   // ethos. Validatoren (`validateWolf`) leser feltet og faller defensivt
   // tilbake til 'net' ved ugyldig/manglende verdi.
@@ -1436,6 +1443,8 @@ export function useGameFormState({
     setFoursomesAllowancePct,
     greensomeAllowancePct,
     setGreensomeAllowancePct,
+    chapmanAllowancePct,
+    setChapmanAllowancePct,
     roundRobinAllowancePct,
     setRoundRobinAllowancePct,
     wolfScoring,

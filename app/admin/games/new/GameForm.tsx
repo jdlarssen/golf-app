@@ -150,6 +150,13 @@ export type InitialValues = {
    */
   greensome_allowance_pct?: number;
   /**
+   * Chapman matchplay (#290): allowance-prosent (0..100) som pre-fylles inn i
+   * netto/brutto-toggle-en. Settes når admin lander via cup-link med
+   * `?game_mode=chapman_matchplay`, arver cup-radens `chapman_allowance_pct`.
+   * Brukes IKKE for andre modi.
+   */
+  chapman_allowance_pct?: number;
+  /**
    * Round Robin (#280): allowance-prosent (0..100) for matchplay-scoring.
    * Pre-fylles fra DB i edit-flyt; nye spill defaulter til 85 (WHS-standard
    * for matchplay) i useGameFormState.
@@ -276,6 +283,8 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     setFoursomesAllowancePct,
     greensomeAllowancePct,
     setGreensomeAllowancePct,
+    chapmanAllowancePct,
+    setChapmanAllowancePct,
     handleModeChange,
     handleTeamSizeChange,
     lockGameMode,
@@ -411,6 +420,13 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           value={String(foursomesAllowancePct)}
         />
       )}
+      {gameMode === 'chapman_matchplay' && (
+        <input
+          type="hidden"
+          name="chapman_allowance_pct"
+          value={String(chapmanAllowancePct)}
+        />
+      )}
       {gameMode === 'greensome_matchplay' && (
         <input
           type="hidden"
@@ -510,6 +526,19 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             bruttoHelperText="Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
             value={greensomeAllowancePct}
             onChange={setGreensomeAllowancePct}
+            hideHiddenInput
+          />
+        )}
+        {gameMode === 'chapman_matchplay' && (
+          <AllowanceField
+            fieldName="chapman_allowance_pct"
+            defaultPct={100}
+            legend="Scoring for chapman-matches"
+            description="Styrer handicap for chapman-matches (dobbel tee, bytt ball, velg beste + alternate). Hvert lag får et handicap på 60 % av laveste pluss 40 % av høyeste. Netto gir høyeste lag en andel av differansen mellom lagene; brutto teller bare lagets gross-slag."
+            nettoHelperText="Andel av differansen mellom lagenes 60/40-handicap. 100 gir hele differansen (WHS-standard for chapman matchplay)."
+            bruttoHelperText="Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+            value={chapmanAllowancePct}
+            onChange={setChapmanAllowancePct}
             hideHiddenInput
           />
         )}

@@ -28,7 +28,12 @@ export type CupMatchInput = {
    * Optional for backward-compat med pre-#217-call-sites; UI defaulter til
    * singles-stil rendering når feltet er undefined.
    */
-  gameMode?: 'singles_matchplay' | 'fourball_matchplay' | 'foursomes_matchplay' | 'greensome_matchplay';
+  gameMode?:
+    | 'singles_matchplay'
+    | 'fourball_matchplay'
+    | 'foursomes_matchplay'
+    | 'greensome_matchplay'
+    | 'chapman_matchplay';
   status: 'draft' | 'scheduled' | 'active' | 'finished';
   result: { winnerSide: 1 | 2 | 'tied'; formatted: string } | null;
 };

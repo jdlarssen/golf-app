@@ -151,14 +151,16 @@ export default async function PublicCupPage({ params }: { params: Params }) {
                                 ? `${m.result.formatted} til ${
                                     m.gameMode === 'fourball_matchplay' ||
                                     m.gameMode === 'foursomes_matchplay' ||
-                                    m.gameMode === 'greensome_matchplay'
+                                    m.gameMode === 'greensome_matchplay' ||
+                                    m.gameMode === 'chapman_matchplay'
                                       ? tournament.team_1_name
                                       : m.team1PlayerName
                                   }`
                                 : `${m.result.formatted} til ${
                                     m.gameMode === 'fourball_matchplay' ||
                                     m.gameMode === 'foursomes_matchplay' ||
-                                    m.gameMode === 'greensome_matchplay'
+                                    m.gameMode === 'greensome_matchplay' ||
+                                    m.gameMode === 'chapman_matchplay'
                                       ? tournament.team_2_name
                                       : m.team2PlayerName
                                   }`}
