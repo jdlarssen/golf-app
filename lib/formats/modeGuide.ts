@@ -67,6 +67,15 @@ export const MODE_GUIDE: Record<GameMode, ModeGuide> = {
       'Lavest lagtotal vinner.',
     ],
   },
+  ambrose: {
+    summary:
+      'Laget spiller én ball: alle slår, dere plukker det beste slaget, og alle slår derfra igjen.',
+    points: [
+      'Slik fortsetter dere til ballen er i hull. Laget får én score per hull.',
+      'Laget får et felles handikap som jevner ut forskjellene mellom sterke og svake lag.',
+      'Lavest lagtotal vinner.',
+    ],
+  },
   singles_matchplay: {
     summary:
       'Én mot én, hull for hull. Den som bruker færrest slag på et hull vinner hullet.',
@@ -138,6 +147,24 @@ export const MODE_GUIDE: Record<GameMode, ModeGuide> = {
       'Split Sixes deler ut seks: fire, to og null.',
       'Likt på et hull? Da deler dere poengene for plassene dere står på.',
       'Flest poeng sammenlagt vinner.',
+    ],
+  },
+  round_robin: {
+    summary:
+      'Fire spillere bytter partner hvert sjette hull. Du spiller med og mot alle de tre andre i løpet av runden.',
+    points: [
+      'Hvert hull spilles som besteball matchplay: lagets beste netto teller, og lavest beste netto vinner hullet.',
+      'Den som vinner hullet for laget sitt, får ett poeng. Delt hull gir ingenting til noen.',
+      'Flest vunne hull etter 18 vinner.',
+    ],
+  },
+  acey_deucey: {
+    summary:
+      'Fire spillere. På hvert hull tar den med lavest score tre poeng, ett fra hver av de andre. Den med høyest gir tre poeng fra seg.',
+    points: [
+      'Lavest score alene gir +3. Høyest score alene gir −3. De to i midten står i ro.',
+      'Deler to eller flere den laveste (eller høyeste) scoren, gir ikke den siden poeng det hullet.',
+      'Du kan spille det brutto eller netto med handikap, alt etter hva som er valgt. Totalen kan bli negativ.',
     ],
   },
   shamble: {

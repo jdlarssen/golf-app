@@ -30,6 +30,7 @@ export function scorecardTitle(
   const isTeamMode =
     gameMode === 'best_ball' ||
     gameMode === 'texas_scramble' ||
+    gameMode === 'ambrose' ||
     (isStablefordFamily(gameMode) && (modeConfig.kind === 'stableford' || modeConfig.kind === 'modified_stableford') && modeConfig.team_size === 2);
 
   if (isTeamMode) {

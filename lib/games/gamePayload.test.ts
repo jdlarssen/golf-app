@@ -1248,6 +1248,144 @@ describe('buildGameInsertPayload — texas_scramble (issue #44)', () => {
   });
 });
 
+describe('buildGameInsertPayload — ambrose (issue #284)', () => {
+  /**
+   * Helper for Ambrose-payloads. Mekanisk lik texasFd, men game_mode=ambrose og
+   * ambrose_*-feltnavn. Ambrose-defaulten er standard Ambrose-formel (÷ 2×lag-
+   * størrelse): 25 % for 2-mannslag, 12,5 % for 4-mannslag — fraksjonell pct
+   * må passere validatoren.
+   */
+  function ambroseFd(opts: {
+    teamSize?: '2' | '4' | '3';
+    handicapPct?: string;
+    players?: Array<{ userId: string; team: number }>;
+    extras?: Record<string, string>;
+  }): FormData {
+    const { teamSize = '4', handicapPct = '12.5', players = [], extras = {} } = opts;
+    const base: Record<string, string> = {
+      name: 'Klubb Ambrose',
+      course_id: 'c1',
+      tee_box_id: 't1',
+      game_mode: 'ambrose',
+      ambrose_team_size: teamSize,
+      ambrose_team_handicap_pct: handicapPct,
+    };
+    players.forEach((p, i) => {
+      base[`player_${i}_id`] = p.userId;
+      base[`player_${i}_team`] = String(p.team);
+    });
+    return fd({ ...base, ...extras });
+  }
+
+  it('publish med 2 lag á 2 spillere (team_size=2, 25 %) → ok', () => {
+    const result = buildGameInsertPayload(
+      ambroseFd({
+        teamSize: '2',
+        handicapPct: '25',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 2 },
+          { userId: 'd', team: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.game_mode).toBe('ambrose');
+    expect(result.mode_config).toEqual({
+      kind: 'ambrose',
+      team_size: 2,
+      teams_count: 2,
+      team_handicap_pct: 25,
+    });
+    expect(result.players).toEqual([
+      { user_id: 'a', team_number: 1, flight_number: 1 },
+      { user_id: 'b', team_number: 1, flight_number: 1 },
+      { user_id: 'c', team_number: 2, flight_number: 2 },
+      { user_id: 'd', team_number: 2, flight_number: 2 },
+    ]);
+  });
+
+  it('publish med 4-mannslag aksepterer fraksjonell 12,5 % (Ambrose-default)', () => {
+    const result = buildGameInsertPayload(
+      ambroseFd({
+        teamSize: '4',
+        handicapPct: '12.5',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 1 },
+          { userId: 'd', team: 1 },
+          { userId: 'e', team: 2 },
+          { userId: 'f', team: 2 },
+          { userId: 'g', team: 2 },
+          { userId: 'h', team: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.mode_config).toEqual({
+      kind: 'ambrose',
+      team_size: 4,
+      teams_count: 2,
+      team_handicap_pct: 12.5,
+    });
+    expect(result.players).toHaveLength(8);
+  });
+
+  it('publish med ubalansert lag → team_balance', () => {
+    const result = buildGameInsertPayload(
+      ambroseFd({
+        teamSize: '2',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+          { userId: 'c', team: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('team_balance');
+  });
+
+  it('3-mannslag avvises → unsupported_mode_size_combo', () => {
+    const result = buildGameInsertPayload(
+      ambroseFd({ teamSize: '3', players: [{ userId: 'a', team: 1 }] }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('unsupported_mode_size_combo');
+  });
+
+  it('pct utenfor range (101) → bad_allowance', () => {
+    const result = buildGameInsertPayload(
+      ambroseFd({
+        teamSize: '2',
+        handicapPct: '101',
+        players: [
+          { userId: 'a', team: 1 },
+          { userId: 'b', team: 1 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('bad_allowance');
+  });
+
+  it('draft tolererer partial state (ufullstendige lag)', () => {
+    const result = buildGameInsertPayload(
+      ambroseFd({
+        teamSize: '4',
+        players: [{ userId: 'a', team: 1 }],
+      }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.game_mode).toBe('ambrose');
+  });
+});
+
 describe('buildGameInsertPayload — fourball_matchplay (issue #217, fase 2 av #47)', () => {
   /**
    * Helper for fourball-payloads. Bygger en form med game_mode=fourball_matchplay,
@@ -2409,6 +2547,356 @@ describe('buildGameInsertPayload — nines (issue #278)', () => {
     const result = buildGameInsertPayload(ninesFd({}, ['u1']), 'draft');
     expect(result.errorCode).toBeUndefined();
     expect(result.players).toHaveLength(1);
+  });
+});
+
+describe('buildGameInsertPayload — round_robin (issue #280)', () => {
+  /**
+   * Helper for round_robin-payloads. Bygger en form med game_mode=round_robin
+   * og 4 spillere med team_number 1-4 (rotation-slots). Default allowance 85
+   * (WHS-standard for matchplay). Speiler wolfFd-mønsteret.
+   */
+  function roundRobinFd(opts: {
+    slots?: Array<{ userId: string; slot: number }>;
+    allowancePct?: number | string | null;
+    extras?: Record<string, string>;
+  }): FormData {
+    const { slots = [], allowancePct = 85, extras = {} } = opts;
+    const base: Record<string, string> = {
+      name: 'Round Robin Cup',
+      course_id: 'c1',
+      tee_box_id: 't1',
+      game_mode: 'round_robin',
+    };
+    if (allowancePct !== null) {
+      base['round_robin_allowance_pct'] = String(allowancePct);
+    }
+    slots.forEach((p, i) => {
+      base[`player_${i}_id`] = p.userId;
+      base[`player_${i}_team`] = String(p.slot);
+      base[`player_${i}_flight`] = String(p.slot);
+    });
+    return fd({ ...base, ...extras });
+  }
+
+  const fourSlots = [
+    { userId: 'a', slot: 1 },
+    { userId: 'b', slot: 2 },
+    { userId: 'c', slot: 3 },
+    { userId: 'd', slot: 4 },
+  ];
+
+  it('publish med 4 spillere unike slot 1-4 og allowance 85 → ok, mode_config korrekt', () => {
+    const result = buildGameInsertPayload(
+      roundRobinFd({ slots: fourSlots }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.game_mode).toBe('round_robin');
+    expect(result.mode_config).toEqual({
+      kind: 'round_robin',
+      team_size: 1,
+      teams_count: 4,
+      allowance_pct: 85,
+    });
+    expect(result.players).toEqual([
+      { user_id: 'a', team_number: 1, flight_number: 1 },
+      { user_id: 'b', team_number: 2, flight_number: 2 },
+      { user_id: 'c', team_number: 3, flight_number: 3 },
+      { user_id: 'd', team_number: 4, flight_number: 4 },
+    ]);
+  });
+
+  it('publish med 3 spillere → min_players_for_mode', () => {
+    const result = buildGameInsertPayload(
+      roundRobinFd({
+        slots: [
+          { userId: 'a', slot: 1 },
+          { userId: 'b', slot: 2 },
+          { userId: 'c', slot: 3 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('min_players_for_mode');
+  });
+
+  it('publish med 5 spillere → too_many_players_for_mode', () => {
+    const result = buildGameInsertPayload(
+      roundRobinFd({
+        slots: [
+          { userId: 'a', slot: 1 },
+          { userId: 'b', slot: 2 },
+          { userId: 'c', slot: 3 },
+          { userId: 'd', slot: 4 },
+          { userId: 'e', slot: 4 }, // duplikat slot — feiler på too_many først
+        ],
+      }),
+      'publish',
+    );
+    // 5 spillere → too_many before slot-check
+    expect(result.errorCode).toBe('too_many_players_for_mode');
+  });
+
+  it('publish med 4 spillere men ikke-unike slots → team_balance', () => {
+    const result = buildGameInsertPayload(
+      roundRobinFd({
+        slots: [
+          { userId: 'a', slot: 1 },
+          { userId: 'b', slot: 1 }, // duplikat slot 1
+          { userId: 'c', slot: 3 },
+          { userId: 'd', slot: 4 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('team_balance');
+  });
+
+  it('publish med ugyldig slot (5) → bad_team', () => {
+    const result = buildGameInsertPayload(
+      roundRobinFd({
+        slots: [
+          { userId: 'a', slot: 1 },
+          { userId: 'b', slot: 2 },
+          { userId: 'c', slot: 3 },
+          { userId: 'd', slot: 5 }, // ugyldig slot
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('bad_team');
+  });
+
+  it('publish med bad allowance (101) → bad_allowance', () => {
+    const result = buildGameInsertPayload(
+      roundRobinFd({ slots: fourSlots, allowancePct: 101 }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('bad_allowance');
+  });
+
+  it('publish med negativ allowance → bad_allowance', () => {
+    const result = buildGameInsertPayload(
+      roundRobinFd({ slots: fourSlots, allowancePct: -1 }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('bad_allowance');
+  });
+
+  it('publish med tom allowance-string → bad_allowance', () => {
+    const result = buildGameInsertPayload(
+      roundRobinFd({ slots: fourSlots, allowancePct: '' }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('bad_allowance');
+  });
+
+  it('publish med allowance 0 (brutto) → ok', () => {
+    const result = buildGameInsertPayload(
+      roundRobinFd({ slots: fourSlots, allowancePct: 0 }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'round_robin') {
+      expect(result.mode_config.allowance_pct).toBe(0);
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('publish med allowance 100 → ok', () => {
+    const result = buildGameInsertPayload(
+      roundRobinFd({ slots: fourSlots, allowancePct: 100 }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'round_robin') {
+      expect(result.mode_config.allowance_pct).toBe(100);
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('draft tolererer 2 spillere (ufullstendig round_robin-oppsett)', () => {
+    const result = buildGameInsertPayload(
+      roundRobinFd({
+        slots: [
+          { userId: 'a', slot: 1 },
+          { userId: 'b', slot: 2 },
+        ],
+      }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(2);
+    if (result.mode_config.kind === 'round_robin') {
+      expect(result.mode_config.allowance_pct).toBe(85);
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('draft tolererer tom allowance (defaulter til 85 WHS)', () => {
+    const result = buildGameInsertPayload(
+      roundRobinFd({
+        slots: [{ userId: 'a', slot: 1 }],
+        allowancePct: '',
+      }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'round_robin') {
+      expect(result.mode_config.allowance_pct).toBe(85);
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('draft tolererer 0 spillere', () => {
+    const result = buildGameInsertPayload(
+      roundRobinFd({ slots: [] }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(0);
+  });
+
+  it('duplikat spiller → duplicate_player', () => {
+    const result = buildGameInsertPayload(
+      roundRobinFd({
+        slots: [
+          { userId: 'dup', slot: 1 },
+          { userId: 'dup', slot: 2 },
+          { userId: 'c', slot: 3 },
+          { userId: 'd', slot: 4 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('duplicate_player');
+  });
+
+  it('flight_number = team_number for round_robin-spillere (DB-CHECK)', () => {
+    const result = buildGameInsertPayload(
+      roundRobinFd({ slots: fourSlots }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    for (const p of result.players) {
+      expect(p.flight_number).toBe(p.team_number);
+    }
+  });
+});
+
+describe('buildGameInsertPayload — acey_deucey (#279)', () => {
+  function aceyFd(opts: {
+    userIds?: string[];
+    scoring?: string;
+    extras?: Record<string, string>;
+  }): FormData {
+    const { userIds = [], scoring = 'net', extras = {} } = opts;
+    const base: Record<string, string> = {
+      name: 'Kompis-runde Acey',
+      course_id: 'c1',
+      tee_box_id: 't1',
+      game_mode: 'acey_deucey',
+    };
+    if (scoring !== '') {
+      base['acey_deucey_scoring'] = scoring;
+    }
+    userIds.forEach((uid, i) => {
+      base[`player_${i}_id`] = uid;
+    });
+    return fd({ ...base, ...extras });
+  }
+
+  it('publish med 4 spillere (eksakt krav) → ok, mode_config med acey_deucey_scoring=net', () => {
+    const result = buildGameInsertPayload(
+      aceyFd({ userIds: ['a', 'b', 'c', 'd'] }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.game_mode).toBe('acey_deucey');
+    expect(result.mode_config).toEqual({
+      kind: 'acey_deucey',
+      team_size: 1,
+      acey_deucey_scoring: 'net',
+    });
+    expect(result.players).toEqual([
+      { user_id: 'a', team_number: null, flight_number: null },
+      { user_id: 'b', team_number: null, flight_number: null },
+      { user_id: 'c', team_number: null, flight_number: null },
+      { user_id: 'd', team_number: null, flight_number: null },
+    ]);
+  });
+
+  it('publish med acey_deucey_scoring=gross → mode_config har gross', () => {
+    const result = buildGameInsertPayload(
+      aceyFd({ userIds: ['a', 'b', 'c', 'd'], scoring: 'gross' }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'acey_deucey') {
+      expect(result.mode_config.acey_deucey_scoring).toBe('gross');
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('manglende acey_deucey_scoring-felt defaulter til net', () => {
+    const result = buildGameInsertPayload(
+      aceyFd({ userIds: ['a', 'b', 'c', 'd'], scoring: '' }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'acey_deucey') {
+      expect(result.mode_config.acey_deucey_scoring).toBe('net');
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('publish med 3 spillere → min_players_for_mode', () => {
+    const result = buildGameInsertPayload(
+      aceyFd({ userIds: ['a', 'b', 'c'] }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('min_players_for_mode');
+  });
+
+  it('publish med 5 spillere → too_many_players_for_mode', () => {
+    const result = buildGameInsertPayload(
+      aceyFd({ userIds: ['a', 'b', 'c', 'd', 'e'] }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('too_many_players_for_mode');
+  });
+
+  it('draft tolererer 0 spillere', () => {
+    const result = buildGameInsertPayload(aceyFd({ userIds: [] }), 'draft');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(0);
+  });
+
+  it('publish med duplikat user_id → duplicate_player', () => {
+    const result = buildGameInsertPayload(
+      aceyFd({ userIds: ['a', 'a', 'b', 'c'] }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('duplicate_player');
+  });
+
+  it('team_number og flight_number er null for alle spillere (solo, DB-CHECK)', () => {
+    const result = buildGameInsertPayload(
+      aceyFd({ userIds: ['a', 'b', 'c', 'd'] }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    for (const p of result.players) {
+      expect(p.team_number).toBeNull();
+      expect(p.flight_number).toBeNull();
+    }
   });
 });
 

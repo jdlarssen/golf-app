@@ -15,6 +15,7 @@ import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import type { GameStatus } from '@/lib/games/status';
 import {
   isStablefordFamily,
+  isScrambleFamily,
   type GameMode,
   type GameModeConfig,
 } from '@/lib/scoring/modes/types';
@@ -387,11 +388,11 @@ async function PlayersSections({
     isStablefordFamily(game.game_mode) && game.mode_config.team_size === 2;
   const isMatchplay = game.game_mode === 'singles_matchplay';
   const isBestBall = game.game_mode === 'best_ball';
-  // Texas scramble: lag-modus med variabel lagstørrelse (2 eller 4) og
-  // variabelt antall lag. Speilar par-stableford visuelt — vi viser kun
-  // lag som har spillere, og flight-seksjonen droppes siden flight = team
-  // mekanisk (validatoren håndhever det).
-  const isTexas = game.game_mode === 'texas_scramble';
+  // Scramble-familien (Texas scramble + Ambrose): lag-modus med variabel
+  // lagstørrelse (2 eller 4) og variabelt antall lag. Speilar par-stableford
+  // visuelt — vi viser kun lag som har spillere, og flight-seksjonen droppes
+  // siden flight = team mekanisk (validatoren håndhever det).
+  const isScramble = isScrambleFamily(game.game_mode);
 
   // Spillform-label for Format-cardet. Variant-bevisst via formatDisplayLabel:
   // stableford-familien med team_size 2 vises som «4BBB Stableford» (samme navn
@@ -616,7 +617,7 @@ async function PlayersSections({
             {[1, 2, 3, 4]
               .filter((team) => {
                 if (isMatchplay) return team <= 2;
-                if (isParStableford || isTexas) return byTeam[team].length > 0;
+                if (isParStableford || isScramble) return byTeam[team].length > 0;
                 return true;
               })
               .map((team) => (
@@ -649,7 +650,7 @@ async function PlayersSections({
           (flight = side via payload-laget). Texas scramble har samme regel
           (validatoren setter flight = team). Skip for solo (ingen flights),
           par-stableford, matchplay og Texas. */}
-      {!isSolo && !isParStableford && !isMatchplay && !isTexas &&
+      {!isSolo && !isParStableford && !isMatchplay && !isScramble &&
         [1, 2, 3, 4].some((f) => byFlight[f].length > 0) && (
         <SectionCard ribbon="Flights">
           <ul className="space-y-2 px-3.5 pb-3.5 pt-3">

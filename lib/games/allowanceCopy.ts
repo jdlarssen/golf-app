@@ -25,6 +25,7 @@ export function bruttoHelperFor(mode: GameMode): string {
     case 'fourball_matchplay':
     case 'foursomes_matchplay':
     case 'texas_scramble':
+    case 'ambrose':
       // Disse modusene har egne brutto-tekster i call-sites, ikke denne.
       return 'Ingen handicap — kun gross teller.';
     case 'wolf':
@@ -51,6 +52,16 @@ export function bruttoHelperFor(mode: GameMode): string {
       // Nines har egen scoring-toggle (gross|net) i NinesSetup-step. Generisk
       // allowance-field vises ikke for nines; returverdien er for type-completeness.
       return 'Ingen handicap — lavest gross-score per hull gir flest poeng.';
+    case 'round_robin':
+      // Round Robin har eget allowance-felt (`round_robin_allowance_pct`) i
+      // RoundRobinSetup-step. Generisk allowance-field vises ikke for round_robin;
+      // returverdien er kun for type-completeness.
+      return 'Ingen handicap — besteball matchplay bruker gross-score per hull.';
+    case 'acey_deucey':
+      // Acey Deucey har egen scoring-toggle (gross|net) i sin setup-steg. Som
+      // for Wolf/Nassau/Skins vises ikke generisk allowance-field; returverdien
+      // er kun for type-completeness.
+      return 'Ingen handicap — per-hull-poeng bruker gross-score.';
     case 'shamble':
       // Shamble har egen scoring-toggle (gross|net) i ShambleSetup-step.
       // Generisk allowance-field vises ikke for shamble; returverdien er for

@@ -23,6 +23,7 @@ import * as modifiedStableford from './modes/modifiedStableford';
 import * as singlesMatchplay from './modes/singlesMatchplay';
 import * as soloStrokeplay from './modes/soloStrokeplay';
 import * as texasScramble from './modes/texasScramble';
+import * as ambrose from './modes/ambrose';
 import * as fourballMatchplay from './modes/fourballMatchplay';
 import * as foursomesMatchplay from './modes/foursomesMatchplay';
 import * as wolf from './modes/wolf';
@@ -30,6 +31,8 @@ import * as nassau from './modes/nassau';
 import * as skins from './modes/skins';
 import * as bingoBangoBongo from './modes/bingoBangoBongo';
 import * as nines from './modes/nines';
+import * as roundRobin from './modes/roundRobin';
+import * as aceyDeucey from './modes/aceyDeucey';
 import * as shamble from './modes/shamble';
 import type { ScoringContext, ModeResult } from './modes/types';
 
@@ -47,6 +50,8 @@ export function computeLeaderboard(ctx: ScoringContext): ModeResult {
       return soloStrokeplay.compute(ctx);
     case 'texas_scramble':
       return texasScramble.compute(ctx);
+    case 'ambrose':
+      return ambrose.compute(ctx);
     case 'fourball_matchplay':
       return fourballMatchplay.compute(ctx);
     case 'foursomes_matchplay':
@@ -61,6 +66,10 @@ export function computeLeaderboard(ctx: ScoringContext): ModeResult {
       return bingoBangoBongo.compute(ctx);
     case 'nines':
       return nines.compute(ctx);
+    case 'round_robin':
+      return roundRobin.compute(ctx);
+    case 'acey_deucey':
+      return aceyDeucey.compute(ctx);
     case 'shamble':
       return shamble.compute(ctx);
   }
@@ -72,7 +81,8 @@ export { strokesForHole, allStrokeAllocations } from './strokeAllocation';
 export { rankTeams } from './tiebreaker';
 export { computeStablefordPoints } from './modes/stableford';
 export { computeModifiedStablefordPoints } from './modes/modifiedStableford';
-export { isStablefordFamily } from './modes/types';
+export { isStablefordFamily, isScrambleFamily } from './modes/types';
+export { ambroseDefaultPct } from './modes/ambrose';
 export { computeMatchResult } from './modes/singlesMatchplay';
 export type {
   GameMode,
@@ -135,6 +145,14 @@ export type {
   NinesResult,
   NinesHoleRow,
   NinesPlayerLine,
+  RoundRobinResult,
+  RoundRobinHoleRow,
+  RoundRobinPlayerCell,
+  RoundRobinPlayerLine,
+  RoundRobinSegmentLine,
+  AceyDeuceyResult,
+  AceyDeuceyHoleRow,
+  AceyDeuceyPlayerLine,
   ShambleResult,
   ShambleHoleRow,
   ShambleHoleTeamCell,

@@ -46,6 +46,8 @@ import { WolfSetup } from './sections/WolfSetup';
 import { NassauSetup } from './sections/NassauSetup';
 import { SkinsSetup } from './sections/SkinsSetup';
 import { NinesSetup } from './sections/NinesSetup';
+import { RoundRobinSetup } from './sections/RoundRobinSetup';
+import { AceyDeuceySetup } from './sections/AceyDeuceySetup';
 import { ShambleSetup } from './sections/ShambleSetup';
 import { AllowanceField } from '@/components/admin/AllowanceField';
 import { bruttoHelperFor } from '@/lib/games/allowanceCopy';
@@ -202,6 +204,8 @@ export function GameWizard({
         return 'Velg minst 2 spillere fordelt to og to på lag';
       if (state.isTexas)
         return `Velg minst ${state.teamSize} spillere, så fordeler du lag`;
+      if (state.isAmbrose)
+        return `Velg minst ${state.teamSize} spillere, så fordeler du lag`;
       if (state.isShamble)
         return `Velg minst ${state.teamSize} spillere, så fordeler du lag`;
       return null;
@@ -214,6 +218,7 @@ export function GameWizard({
     state.isMatchplay,
     state.isParStableford,
     state.isTexas,
+    state.isAmbrose,
     state.isShamble,
     state.teamSize,
   ]);
@@ -303,13 +308,16 @@ export function GameWizard({
       game_mode: state.gameMode,
       team_size: state.teamSize,
       texas_team_handicap_pct: String(state.texasHandicapPct),
+      ambrose_team_handicap_pct: String(state.ambroseHandicapPct),
       fourball_allowance_pct: state.fourballAllowancePct,
       foursomes_allowance_pct: state.foursomesAllowancePct,
+      round_robin_allowance_pct: state.roundRobinAllowancePct,
       wolf_scoring: state.wolfScoring,
       nassau_scoring: state.nassauScoring,
       skins_scoring: state.skinsScoring,
       nines_variant: state.ninesVariant,
       nines_scoring: state.ninesScoring,
+      acey_deucey_scoring: state.aceyDeuceyScoring,
       shamble_variant: state.shambleVariant,
       shamble_count: state.shambleCount,
       shamble_scoring: state.shambleScoring,
@@ -431,7 +439,7 @@ export function GameWizard({
 
           {state.formatChosen && (
             <div className="space-y-4">
-              {!state.isMatchplay && !state.isWolf && !state.isNassau && !state.isSkins && !state.isNines && !state.isShamble && (
+              {!state.isMatchplay && !state.isWolf && !state.isNassau && !state.isSkins && !state.isNines && !state.isRoundRobin && !state.isShamble && (
                 <TeamSizeSelector
                   mode={state.gameMode}
                   value={state.teamSize}
@@ -470,6 +478,21 @@ export function GameWizard({
                   onVariantChange={state.setNinesVariant}
                   scoring={state.ninesScoring}
                   onScoringChange={state.setNinesScoring}
+                  disabled={state.lockGameMode}
+                />
+              )}
+              {state.isRoundRobin && (
+                <RoundRobinSetup
+                  roundRobinOrder={state.roundRobinOrder
+                    .map((pid) => players.find((p) => p.id === pid))
+                    .filter((p): p is NonNullable<typeof p> => p !== undefined)}
+                  disabled={state.lockGameMode}
+                />
+              )}
+              {state.isAceyDeucey && (
+                <AceyDeuceySetup
+                  scoring={state.aceyDeuceyScoring}
+                  onScoringChange={state.setAceyDeuceyScoring}
                   disabled={state.lockGameMode}
                 />
               )}
@@ -512,6 +535,19 @@ export function GameWizard({
                   hideHiddenInput
                 />
               )}
+              {state.isRoundRobin && (
+                <AllowanceField
+                  fieldName="round_robin_allowance_pct"
+                  defaultPct={85}
+                  legend="Scoring for Round Robin"
+                  description="Styrer handicap for Round Robin-matchplay. Netto bruker en andel av hver spillers handicap per hull, brutto teller laveste gross per side."
+                  nettoHelperText="Andel av hver spillers handicap som teller. WHS-standard for four-ball matchplay er 85."
+                  bruttoHelperText="Ingen handicap — laveste gross-score per hull per side avgjør. Ren brutto-runde."
+                  value={state.roundRobinAllowancePct}
+                  onChange={state.setRoundRobinAllowancePct}
+                  hideHiddenInput
+                />
+              )}
               {(state.gameMode === 'best_ball' ||
                 isStablefordFamily(state.gameMode) ||
                 state.gameMode === 'singles_matchplay' ||
@@ -544,6 +580,27 @@ export function GameWizard({
                   inputLabel="Lag-handicap (%)"
                   value={state.texasHandicapPct}
                   onChange={state.setTexasHandicapPct}
+                  hideHiddenInput
+                />
+              )}
+              {/* Ambrose (#284): lag-handicap per standard Ambrose-formel.
+                  `key={teamSize}` forser remount ved lagstørrelse-bytte. */}
+              {state.isAmbrose && (
+                <AllowanceField
+                  key={state.teamSize}
+                  fieldName="ambrose_team_handicap_pct"
+                  defaultPct={state.ambroseHandicapPct}
+                  legend="Lag-handicap"
+                  description="Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = laveste lag-gross per hull vinner."
+                  nettoHelperText={
+                    state.teamSize === 2
+                      ? 'Standard Ambrose: 25 % av summen av spillernes spille-HCP for 2-mannslag.'
+                      : 'Standard Ambrose: 12,5 % av summen av spillernes spille-HCP for 4-mannslag.'
+                  }
+                  bruttoHelperText="Ingen lag-handicap — laveste gross-score per hull per lag vinner. Scratch-format."
+                  inputLabel="Lag-handicap (%)"
+                  value={state.ambroseHandicapPct}
+                  onChange={state.setAmbroseHandicapPct}
                   hideHiddenInput
                 />
               )}
@@ -639,19 +696,25 @@ function FormDataInputs({
     gameMode,
     teamSize,
     isTexas,
+    isAmbrose,
     isShamble,
     isWolf,
     isNassau,
     isSkins,
     isNines,
+    isRoundRobin,
+    isAceyDeucey,
     texasHandicapPct,
+    ambroseHandicapPct,
     fourballAllowancePct,
     foursomesAllowancePct,
+    roundRobinAllowancePct,
     wolfScoring,
     nassauScoring,
     skinsScoring,
     ninesVariant,
     ninesScoring,
+    aceyDeuceyScoring,
     shambleVariant,
     shambleCount,
     shambleScoring,
@@ -698,6 +761,16 @@ function FormDataInputs({
           />
         </>
       )}
+      {isAmbrose && (
+        <>
+          <input type="hidden" name="ambrose_team_size" value={teamSize} />
+          <input
+            type="hidden"
+            name="ambrose_team_handicap_pct"
+            value={String(ambroseHandicapPct)}
+          />
+        </>
+      )}
       {gameMode === 'fourball_matchplay' && (
         <input
           type="hidden"
@@ -726,6 +799,16 @@ function FormDataInputs({
           <input type="hidden" name="nines_variant" value={ninesVariant} />
           <input type="hidden" name="nines_scoring" value={ninesScoring} />
         </>
+      )}
+      {isRoundRobin && (
+        <input
+          type="hidden"
+          name="round_robin_allowance_pct"
+          value={String(roundRobinAllowancePct)}
+        />
+      )}
+      {isAceyDeucey && (
+        <input type="hidden" name="acey_deucey_scoring" value={aceyDeuceyScoring} />
       )}
       {isShamble && (
         <>

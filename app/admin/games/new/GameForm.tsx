@@ -110,6 +110,12 @@ export type InitialValues = {
    */
   texas_team_handicap_pct?: string;
   /**
+   * Ambrose (#284): lag-handicap-prosent (standard Ambrose-formel). 0..100,
+   * kan være fraksjonell (12,5 for 4-mannslag). Default settes av GameForm
+   * via `ambroseDefaultPct(teamSize)` når lagstørrelse endres.
+   */
+  ambrose_team_handicap_pct?: string;
+  /**
    * Cup-link (#47): kobler spillet til en parent tournament-rad. Settes når
    * admin lander på `/admin/games/new?tournament_id=...` fra cup-detalj-
    * siden. Rendres som hidden inputs på form-en og leses i actions.ts.
@@ -130,6 +136,12 @@ export type InitialValues = {
    * `tournaments.foursomes_allowance_pct`. Brukes IKKE for andre modi.
    */
   foursomes_allowance_pct?: number;
+  /**
+   * Round Robin (#280): allowance-prosent (0..100) for matchplay-scoring.
+   * Pre-fylles fra DB i edit-flyt; nye spill defaulter til 85 (WHS-standard
+   * for matchplay) i useGameFormState.
+   */
+  round_robin_allowance_pct?: number;
   /**
    * Wolf (#274): scoring-modus ('gross' eller 'net'). Pre-fylles fra DB i
    * edit-flyt; nye spill defaulter til 'net' i useGameFormState.
@@ -155,6 +167,11 @@ export type InitialValues = {
    * fra DB i edit-flyt; nye spill defaulter til 'net' i useGameFormState.
    */
   nines_scoring?: 'gross' | 'net';
+  /**
+   * Acey Deucey (#279): scoring-modus ('gross' eller 'net'). Pre-fylles fra DB
+   * i edit-flyt; nye spill defaulter til 'net' i useGameFormState.
+   */
+  acey_deucey_scoring?: 'gross' | 'net';
   /**
    * Shamble / Champagne Scramble (#285): variant ('shamble' eller 'champagne').
    * Pre-fylles fra DB i edit-flyt; nye spill defaulter til 'shamble' i useGameFormState.
@@ -224,9 +241,12 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     gameMode,
     teamSize,
     isTexas,
+    isAmbrose,
     isMatchplay,
     texasHandicapPct,
     setTexasHandicapPct,
+    ambroseHandicapPct,
+    setAmbroseHandicapPct,
     hcpAllowance,
     setHcpAllowance,
     fourballAllowancePct,
@@ -323,6 +343,20 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             type="hidden"
             name="texas_team_handicap_pct"
             value={texasHandicapPct}
+          />
+        </>
+      )}
+      {isAmbrose && (
+        <>
+          <input
+            type="hidden"
+            name="ambrose_team_size"
+            value={teamSize}
+          />
+          <input
+            type="hidden"
+            name="ambrose_team_handicap_pct"
+            value={String(ambroseHandicapPct)}
           />
         </>
       )}
@@ -465,6 +499,31 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
               inputLabel="Lag-handicap (%)"
               value={texasHandicapPct}
               onChange={setTexasHandicapPct}
+            />
+            <input type="hidden" name="hcp_allowance_pct" value="100" />
+          </>
+        )}
+        {/* Ambrose (#284): lag-handicap per standard Ambrose-formel (25 % for
+            2-mannslag, 12,5 % for 4-mannslag). `key={teamSize}` forser remount
+            ved lagstørrelse-bytte. `hcp_allowance_pct=100` er no-op for DB
+            NOT NULL (reell prosent ligger i mode_config). */}
+        {isAmbrose && (
+          <>
+            <AllowanceField
+              key={teamSize}
+              fieldName="ambrose_team_handicap_pct"
+              defaultPct={ambroseHandicapPct}
+              legend="Lag-handicap"
+              description="Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = laveste lag-gross per hull vinner."
+              nettoHelperText={
+                teamSize === 2
+                  ? 'Standard Ambrose: 25 % av summen av spillernes spille-HCP for 2-mannslag.'
+                  : 'Standard Ambrose: 12,5 % av summen av spillernes spille-HCP for 4-mannslag.'
+              }
+              bruttoHelperText="Ingen lag-handicap — laveste gross-score per hull per lag vinner. Scratch-format."
+              inputLabel="Lag-handicap (%)"
+              value={ambroseHandicapPct}
+              onChange={setAmbroseHandicapPct}
             />
             <input type="hidden" name="hcp_allowance_pct" value="100" />
           </>

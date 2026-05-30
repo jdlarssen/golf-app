@@ -35,6 +35,7 @@ const CATALOG: CatalogEntry[] = [
   { key: 'solo_strokeplay', mode: 'solo_strokeplay' },
   { key: 'best_ball', mode: 'best_ball' },
   { key: 'texas_scramble', mode: 'texas_scramble' },
+  { key: 'ambrose', mode: 'ambrose' },
   { key: 'singles_matchplay', mode: 'singles_matchplay' },
   { key: 'fourball_matchplay', mode: 'fourball_matchplay' },
   { key: 'foursomes_matchplay', mode: 'foursomes_matchplay' },

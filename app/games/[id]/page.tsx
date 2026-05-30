@@ -85,6 +85,7 @@ type GameRow = {
     | 'singles_matchplay'
     | 'solo_strokeplay'
     | 'texas_scramble'
+    | 'ambrose'
     | 'fourball_matchplay'
     | 'foursomes_matchplay'
     | 'wolf'
@@ -92,6 +93,8 @@ type GameRow = {
     | 'skins'
     | 'bingo_bango_bongo'
     | 'nines'
+    | 'round_robin'
+    | 'acey_deucey'
     | 'shamble';
   /**
    * Mode-spesifikk config fra `games.mode_config` (JSONB). Type-en speilet

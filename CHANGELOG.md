@@ -17,11 +17,11 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.51.y — Shamble / Champagne Scramble (best N av M)
+## 1.54.y — Shamble / Champagne Scramble (best N av M)
 
 Issue [#285](https://github.com/jdlarssen/golf-app/issues/285), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Det første ekte lag-formatet i familien: alle slår ut, laget velger det beste utslaget, og så spiller hver spiller sin egen ball inn. De laveste scorene per hull teller for laget.
 
-### [1.51.0] - 2026-05-30
+### [1.54.0] - 2026-05-30
 
 > Ny lagform for klubbturneringen: Shamble, med festvarianten Champagne Scramble. Alle slår ut, laget tar det beste utslaget, og så spiller hver spiller sin egen ball inn. De laveste scorene på hvert hull legges sammen for laget. I Shamble teller de to beste; i Champagne Scramble velger du selv om én, to eller tre skal telle. Lag på tre eller fire, netto eller brutto, lavest sammenlagt vinner.
 
@@ -32,7 +32,7 @@ Generalisering av best ball («best 1 av M») til «best N av M». Strokeplay-ut
 
 #### Added
 - [`lib/scoring/modes/shamble.ts`](lib/scoring/modes/shamble.ts) — `compute(ctx)`: lagets hull-score = sum av de N laveste effective-scorene (N = 1/2/3, klampet til lagstørrelse), pending uten carryover, lag-ranking via `rankTeams`-cascaden (lavest total vinner). 19 Type A-tester.
-- [`supabase/migrations/0055_shamble.sql`](supabase/migrations/0055_shamble.sql) — seed av format-rad «Shamble / Champagne Scramble» + intent-mapping (sekundær under Klubb). Ingen ny tabell.
+- [`supabase/migrations/0058_shamble.sql`](supabase/migrations/0058_shamble.sql) — seed av format-rad «Shamble / Champagne Scramble» + intent-mapping (sekundær under Klubb). Ingen ny tabell.
 - `ShambleSetup.tsx` — lagstørrelse (3/4), variant (Shamble / Champagne Scramble), antall-velger for Champagne, netto/brutto i wizarden.
 - `ShambleView.tsx` + `ShamblePodium.tsx` — lag-leaderboard med per-hull-rutenett (markerer hvem som telte) + podium for avsluttet spill.
 
@@ -45,6 +45,113 @@ Generalisering av best ball («best 1 av M») til «best N av M». Strokeplay-ut
 
 #### Tests
 - Type A: `shamble.test.ts` (19) + 7 shamble-cases i `gamePayload.test.ts`. Type C: `ShambleView.test.tsx` + `ShambleSetup.test.tsx`.
+
+</details>
+
+---
+
+## 1.53.y — Ambrose (net scramble med lag-handicap)
+
+<details>
+<summary><strong>1.53.y — Ambrose (net scramble med lag-handicap) (1 oppføring) — klikk for å vise</strong></summary>
+
+Issue [#284](https://github.com/jdlarssen/golf-app/issues/284), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Enda en lagscramble, denne gangen den australske Ambrose-varianten — mekanisk lik Texas scramble, men med den klassiske Ambrose-regnemåten for lag-handicap. Primært for klubbturneringer.
+
+### [1.53.0] - 2026-05-30
+
+> Ny spillform for klubbturneringen: Ambrose. Hele laget spiller én ball: alle slår, dere plukker det beste slaget, og alle slår videre derfra til ballen er i hull. Laget får ett felles handicap som jevner ut forskjellene mellom sterke og svake lag, etter den klassiske Ambrose-regnemåten. Sett opp lag på 2 eller 4, så regner appen ut lag-handicapet og kårer laget med lavest lagtotal.
+
+<details>
+<summary>Teknisk</summary>
+
+Ambrose er mekanisk identisk med Texas scramble (én ball per lag, kapteinen eier scores-radene, lavest lag-netto vinner). `ambrose.compute()` returnerer `kind: 'texas_scramble'`, så hele leaderboard-, podium-, scorekort- og mail-visningen gjenbrukes uendret — samme mønster som modifisert Stableford → Stableford. Eneste reelle forskjell er default-lag-handicapet: standard Ambrose-formel (summen av spillernes handicap ÷ 2×lagstørrelse → 25 % for 2-mannslag, 12,5 % for 4-mannslag, justerbar) i stedet for Texas' NGF-konvensjon.
+
+#### Added
+- [`lib/scoring/modes/ambrose.ts`](lib/scoring/modes/ambrose.ts) — `compute(ctx)` delegerer til den ekstraherte `computeScramble`-kjernen; `ambroseDefaultPct` gir 25 % (2-mannslag) / 12,5 % (4-mannslag). 7 Type A-tester.
+- [`supabase/migrations/0057_ambrose.sql`](supabase/migrations/0057_ambrose.sql) — seed av format-rad «Ambrose» + intent-mapping (sekundær under Klubb). Ingen ny tabell.
+
+#### Changed
+- `lib/scoring/modes/types.ts` + `lib/scoring/index.ts` — ny `ambrose`-modus i `GameMode`, `GameModeConfig` og `MODE_LABELS`, ny `isScrambleFamily`-helper; `texasScramble.ts` ekstraherer den delte `computeScramble`-kjernen.
+- [`lib/games/gamePayload.ts`](lib/games/gamePayload.ts) — `validateAmbrose` (lag à 2/4, fraksjonell handicap-prosent tillatt) + `parseGameMode`-støtte + 6 regresjonstester.
+- Wizard (`ModeSelector`, `GameForm`, `GameWizard`, `useGameFormState`, sections) — Ambrose-tile + lag-handicap-felt med Ambrose-default per lagstørrelse.
+- Leaderboard, hull-side, scorekort, game-home, admin-detaljside og mail rutes via `isScrambleFamily`; Texas-viewet og -podiet tar nå et `formatLabel`-prop så Ambrose vises med riktig format-navn.
+- `lib/formats/icons.tsx`, `lib/formats/modeGuide.ts`, `app/spillformer/page.tsx` — format-ikon, spiller-forklaring og oppdagbarhet.
+
+#### Tests
+- Type A: `ambrose.test.ts` (7) + 6 ambrose-cases i `gamePayload.test.ts`. Ingen ny Type C — Ambrose gjenbruker Texas-viewet, så en egen render-test ville duplisert #44s dekning (per test-disiplin).
+
+</details>
+
+</details>
+
+---
+
+## 1.52.y — Acey Deucey (lavest tar, høyest gir)
+
+<details>
+<summary><strong>1.52.y — Acey Deucey (lavest tar, høyest gir) (1 oppføring) — klikk for å vise</strong></summary>
+
+Issue [#279](https://github.com/jdlarssen/golf-app/issues/279), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). En klassisk kompisrunde for nøyaktig fire spillere: hvert hull deler ut poeng etter hvem som spilte best og dårligst. Poengene regnes rett fra slagene, så det er ingen ekstra registrering.
+
+### [1.52.0] - 2026-05-30
+
+> Du kan nå spille Acey Deucey: på hvert hull tar den med lavest score tre poeng, og den med høyest score gir tre fra seg. De to i midten står i ro. Deler flere den laveste eller høyeste scoren, gir den siden ingen poeng det hullet. Du velger brutto eller netto med handikap når du setter opp spillet, og totalen kan godt havne under null. Krever fire spillere.
+
+<details>
+<summary>Teknisk</summary>
+
+Rent slag-derivert format. I motsetning til Bingo Bango Bongo trengs ingen ny tabell, scorekort-seksjon eller server-action: poengene regnes fra `scores` på samme måte som Skins sammenligner hull for hull, og brutto/netto styres av en bryter i oppsettet (speiler Skins/Wolf/Nassau).
+
+#### Added
+- [`supabase/migrations/0056_acey_deucey.sql`](supabase/migrations/0056_acey_deucey.sql) — seeder format-rad + intent-mapping (sekundær under Kompis, sort_order 95). Ingen ny tabell.
+- [`lib/scoring/modes/aceyDeucey.ts`](lib/scoring/modes/aceyDeucey.ts) — `compute(ctx)`: per hull gir unik lavest +3 og unik høyest −3, delt voider siden, uferdige hull deler ikke ut. Brutto/netto via `acey_deucey_scoring`, løpende total kan bli negativ. 16 Type A-tester.
+- `AceyDeuceyView.tsx` + `AceyDeuceyPodium.tsx` — løpende totaler med fortegn + per-hull-tabell (ace/deuce per hull, «Delt»/«Venter») + podium for avsluttet spill.
+- `AceyDeuceySetup.tsx` — brutto/netto-bryter i wizardens steg 2 (default netto).
+
+#### Changed
+- `lib/scoring/modes/types.ts` + `lib/scoring/index.ts` — ny `acey_deucey`-modus i `GameMode`, `GameModeConfig`, `ModeResult` og compute-routeren, samt alle `Record<GameMode,…>`-maps (`MODE_LABELS`, `modeValidators`, `bruttoHelperFor`, `MODE_GUIDE`, `MODE_SUMMARY_LABELS`, `ENABLED_COMBOS`).
+- [`lib/games/gamePayload.ts`](lib/games/gamePayload.ts) — `validateAceyDeucey` (nøyaktig 4 spillere, individuell, brutto/netto).
+- leaderboard-`page.tsx` + wizard (`GameWizard.tsx`, `useGameFormState.ts`) — leaderboard-routing og oppsett-steg.
+
+#### Tests
+- Type A: `aceyDeucey.test.ts` (16) + player-count-grenser i `gamePayload.test.ts`. Type C: `AceyDeuceyView.test.tsx` + `AceyDeuceySetup.test.tsx`.
+
+</details>
+
+</details>
+
+---
+
+## 1.51.y — Round Robin (roterende partnere)
+
+<details>
+<summary><strong>1.51.y — Round Robin (roterende partnere) (1 oppføring) — klikk for å vise</strong></summary>
+
+Issue [#280](https://github.com/jdlarssen/golf-app/issues/280), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Firespillers-format der partner-konstellasjonen bytter hvert sjette hull — alle spiller med og mot hverandre. Valgbart under Kompis i opprett-spill-wizarden.
+
+### [1.51.0] - 2026-05-30
+
+> Du kan nå opprette et Round Robin-spill for fire kompiser. Partnerne bytter hvert sjette hull: hull 1–6 spiller du med én, hull 7–12 med en annen og hull 13–18 med den siste. Slik har alle spilt med og mot hverandre når runden er ferdig. Appen regner best netto per side hvert hull, og den med flest hullseire totalt vinner. Du finner spillformen under Kompis i opprett-spill-wizarden.
+
+<details>
+<summary>Teknisk</summary>
+
+Round Robin gjenbruker fourball matchplay-motorens per-hull-beregning (`applyAllowance` + `bestBallForHole` + `classifyMatchplayHole`) og handicap-modell (allowance_pct, 85 % WHS-standard). Scoring-modulen er en tynn rotasjons- og aggregeringswrapper — ingen ny tabell (rotasjonen er ren deterministisk funksjon av spillerslot + hull).
+
+#### Added
+- [`supabase/migrations/0055_round_robin.sql`](supabase/migrations/0055_round_robin.sql) — seed av format-rad + intent-mapping (sekundær under Kompis, sort_order=100).
+- `app/admin/games/new/sections/RoundRobinSetup.tsx` — wizard-step som viser fire spillerslotter (A/B/C/D) med rotasjonsforklaring. Ingen shuffle-knapp (alle permutasjoner gir identiske totaler). Type C-render-test.
+
+#### Changed
+- `app/admin/games/new/useGameFormState.ts` — `isRoundRobin`-flag, `roundRobinAllowancePct`-state (default 85), `roundRobinOrder` (deterministisk valgrekkefølge), `roundRobinPlayersValid` (krever nøyaktig 4 spillere), `canPublish` + `missingForPublish` wired for Round Robin.
+- `app/admin/games/new/GameWizard.tsx` — renderer `RoundRobinSetup` og `AllowanceField` for `round_robin_allowance_pct`, skjuler generisk `TeamSizeSelector` for Round Robin. Hidden input for allowance-prosenten i FormData.
+- `app/admin/games/new/GameForm.tsx` — `round_robin_allowance_pct?: number` lagt til `InitialValues`.
+- `app/admin/games/new/useGameFormState.ts` — `defaultTeamSizeForMode` returnerer 1 for `round_robin`.
+
+#### Tests
+- Type C: `RoundRobinSetup.test.tsx` (2) — slots med spillerlabels, placeholder-rader ved <4 spillere.
+
+</details>
 
 </details>
 

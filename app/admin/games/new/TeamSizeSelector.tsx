@@ -58,6 +58,8 @@ const ENABLED_COMBOS: Record<GameMode, ReadonlySet<TeamSize>> = {
   singles_matchplay: new Set<TeamSize>([1]),
   solo_strokeplay: new Set<TeamSize>([1]),
   texas_scramble: new Set<TeamSize>([2, 4]),
+  // Ambrose (#284): samme lagstørrelser som Texas scramble (2 eller 4).
+  ambrose: new Set<TeamSize>([2, 4]),
   fourball_matchplay: new Set<TeamSize>([2]),
   foursomes_matchplay: new Set<TeamSize>([2]),
   // Wolf: hver av de 4 spillerne er sin egen «row» (team_size=1). Selve
@@ -81,6 +83,15 @@ const ENABLED_COMBOS: Record<GameMode, ReadonlySet<TeamSize>> = {
   // NinesSetup tar over som for Wolf/Nassau/Skins, så TeamSizeSelector vises
   // ikke i praksis — men type-system krever en entry.
   nines: new Set<TeamSize>([1]),
+  // Round Robin: 4-spiller roterende-partner, team_size=1 (hver spiller er
+  // sin egen row, team_number=rotation-slot). En dedikert RoundRobinSetup
+  // vil ta over wizard-steget, så TeamSizeSelector vises ikke i praksis —
+  // men type-system krever en entry.
+  round_robin: new Set<TeamSize>([1]),
+  // Acey Deucey: individuelt format, eksakt 4 spillere, team_size=1. En
+  // dedikert setup-steg tar over (speiler Wolf/Skins/Nassau), så
+  // TeamSizeSelector vises ikke i praksis — men type-system krever en entry.
+  acey_deucey: new Set<TeamSize>([1]),
   // Shamble / Champagne Scramble: lag-format à 3 eller 4. ShambleSetup tar
   // over med sin egen 3/4-velger, så TeamSizeSelector vises ikke for shamble —
   // men type-system krever en entry. Begge støttede størrelser listet for

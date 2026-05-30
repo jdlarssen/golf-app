@@ -9,6 +9,7 @@ export type GameMode =
   | 'singles_matchplay'
   | 'solo_strokeplay'
   | 'texas_scramble'
+  | 'ambrose'
   | 'fourball_matchplay'
   | 'foursomes_matchplay'
   | 'wolf'
@@ -16,6 +17,8 @@ export type GameMode =
   | 'skins'
   | 'bingo_bango_bongo'
   | 'nines'
+  | 'round_robin'
+  | 'acey_deucey'
   | 'shamble';
 
 /**
@@ -31,6 +34,7 @@ export const MODE_LABELS: Record<GameMode, string> = {
   singles_matchplay: 'Matchplay',
   solo_strokeplay: 'Slagspill',
   texas_scramble: 'Texas scramble',
+  ambrose: 'Ambrose',
   fourball_matchplay: 'Fourball',
   foursomes_matchplay: 'Foursomes',
   wolf: 'Wolf',
@@ -38,6 +42,8 @@ export const MODE_LABELS: Record<GameMode, string> = {
   skins: 'Skins',
   bingo_bango_bongo: 'Bingo Bango Bongo',
   nines: 'Nines / Split Sixes',
+  round_robin: 'Round Robin',
+  acey_deucey: 'Acey Deucey',
   shamble: 'Shamble / Champagne Scramble',
 };
 
@@ -51,6 +57,22 @@ export const MODE_LABELS: Record<GameMode, string> = {
  */
 export function isStablefordFamily(mode: GameMode): boolean {
   return mode === 'stableford' || mode === 'modified_stableford';
+}
+
+/**
+ * True for scramble-familien (Texas scramble + Ambrose). Begge deler all
+ * struktur: én ball per lag, lag-kaptein (lex-min userId) eier scores-radene,
+ * lag-grid i wizard/game-home, samme leaderboard-/podium-/mail-visning (begge
+ * returnerer `kind: 'texas_scramble'` fra scoring-laget). Eneste forskjellen er
+ * default-lag-handicapet og format-navnet. Brukes på `game_mode`-baserte
+ * routing-/display-sjekker som ellers bare så `=== 'texas_scramble'`. Speiler
+ * `isStablefordFamily`. #284.
+ *
+ * NB: hold mode-spesifikke greiner der default-pct eller copy avviker (Texas
+ * 4-mann 10 % vs Ambrose 12,5 %; ulik format-label/helper-tekst).
+ */
+export function isScrambleFamily(mode: GameMode): boolean {
+  return mode === 'texas_scramble' || mode === 'ambrose';
 }
 
 /**
@@ -96,6 +118,25 @@ export type GameModeConfig =
   | { kind: 'solo_strokeplay'; team_size: 1 }
   | {
       kind: 'texas_scramble';
+      team_size: 2 | 4;
+      teams_count: number;
+      team_handicap_pct: number;
+    }
+  | {
+      /**
+       * Ambrose (issue #284) — net scramble, mekanisk identisk med Texas
+       * scramble (én ball per lag, kaptein eier scores-radene, lavest lag-netto
+       * vinner). Eneste forskjell er default-lag-handicapet: standard Ambrose-
+       * formel `combinedCH ÷ (2 × team_size)` (2-mann 25 %, 4-mann 12,5 %) i
+       * stedet for Texas' NGF-konvensjon (2-mann 25 %, 4-mann 10 %).
+       *
+       * `team_handicap_pct` er justerbar (0–100) som i Texas — Ambrose-reglene
+       * er en klubb-konvensjon, ikke strengt regelbundet. Kan være fraksjonell
+       * (4-mann-default = 12,5). Scoring-laget (`ambrose.ts`) gjenbruker Texas-
+       * motoren og returnerer `kind: 'texas_scramble'` slik at all leaderboard-/
+       * podium-/mail-visning rendres uendret.
+       */
+      kind: 'ambrose';
       team_size: 2 | 4;
       teams_count: number;
       team_handicap_pct: number;
@@ -189,6 +230,39 @@ export type GameModeConfig =
       nines_variant: 'nines' | 'split_sixes';
       /** 'net' = gross − strokesForHole(CH, SI). 'gross' = rå gross. Speiler skins_scoring. */
       nines_scoring: 'gross' | 'net';
+    }
+  | {
+      /**
+       * Round Robin: 4-spiller roterende-partner 4BBB-matchplay (issue #280).
+       * Runden deles i tre 6-hulls-segmenter; partner-konstellasjonen roterer
+       * deterministisk slik at hver spiller spiller med + mot alle andre én gang.
+       * Seg1 (h1–6): [slot1,slot2] vs [slot3,slot4].
+       * Seg2 (h7–12): [slot1,slot3] vs [slot2,slot4].
+       * Seg3 (h13–18): [slot1,slot4] vs [slot2,slot3].
+       *
+       * Per hull: beste netto per side (bestBallForHole), sammenlign som matchplay
+       * (classifyMatchplayHole). Vinnende side: +1 hull-seire til hver spiller.
+       * Delt hull: 0 til alle. Rangering: flest hull-seire vinner.
+       *
+       * `allowance_pct`: WHS-standard 85 % (matchplay-modell). 0 = brutto.
+       * Speiler fourball_matchplay-config-shapen for allowance-feltet.
+       */
+      kind: 'round_robin';
+      team_size: 1;
+      teams_count: 4;
+      allowance_pct: number;
+    }
+  | {
+      /**
+       * Acey Deucey: individuelt format, EKSAKT 4 spillere, ingen lag. Per
+       * hull: lavest unique effective score → +3 (ace), høyest unique → −3
+       * (deuce), de to midtre → 0. Delt lavest/høyest → den siden deles ikke
+       * ut. Hull uten score for alle 4 → 0 til alle, men ingen frys.
+       * Brutto/netto-toggle speiler Wolf/Nassau/Skins-mønstret.
+       */
+      kind: 'acey_deucey';
+      team_size: 1;
+      acey_deucey_scoring: 'gross' | 'net';
     }
   | {
       /**
@@ -1362,6 +1436,169 @@ export interface ShambleResult {
 }
 
 /**
+ * Per-spiller-detalj på ett Round Robin-hull. Speiler `FourballPlayerCell`
+ * tett — gross → extraStrokes → net pipeline og isContributor-flag.
+ */
+export interface RoundRobinPlayerCell {
+  userId: string;
+  gross: number | null;
+  /** Extra strokes for hullet fra SI-allokering (etter allowance). */
+  extraStrokes: number;
+  /** Netto = gross − extra. Null hvis gross er null. */
+  net: number | null;
+  /** Hadde side-best netto på hullet (kan være begge ved tie). */
+  isContributor: boolean;
+  /** Spillerens par for hullet (`parFor(hole, player.teeGender)`). #240. */
+  par: number;
+}
+
+/**
+ * Per-hull-rad i et Round Robin-spill. Inneholder begge siders 2 spillere med
+ * per-spiller-detalj, lag-best-netto per side, og hvem som vant hullet.
+ * `segment` (1/2/3) forteller hvilken rotasjonsfase hullet tilhører.
+ */
+export interface RoundRobinHoleRow {
+  holeNumber: number;
+  segment: 1 | 2 | 3;
+  /**
+   * Bevart for backward-compat. Satt lik `side1Par` slik at konsumenter
+   * som leser én felles par-verdi fortsatt fungerer. #240.
+   */
+  par: number;
+  /** Per-side par fra `parFor(hole, side.teeGender)`. */
+  side1Par: number;
+  side2Par: number;
+  strokeIndex: number;
+  /** Hvem som utgjør side 1 på DETTE hullet (avhenger av segment). */
+  side1PlayerIds: [string, string];
+  /** Hvem som utgjør side 2 på DETTE hullet (avhenger av segment). */
+  side2PlayerIds: [string, string];
+  /** Per-spiller-detalj for side 1 (alltid 2 spillere). */
+  side1Players: RoundRobinPlayerCell[];
+  /** Per-spiller-detalj for side 2 (alltid 2 spillere). */
+  side2Players: RoundRobinPlayerCell[];
+  /**
+   * Lag-best netto per side. Null hvis ingen av partnerne har gross.
+   * Best-ball-tradisjon: én partner med gross holder for at siden har best.
+   */
+  side1BestNet: number | null;
+  side2BestNet: number | null;
+  /** UserIds som hadde lag-best netto. Tom-array når siden er unplayed. */
+  side1ContributorIds: string[];
+  side2ContributorIds: string[];
+  /** Hvem vant hullet via `classifyMatchplayHole`. */
+  result: MatchplayHoleResult;
+  /**
+   * 0 eller 1 per spiller på dette hullet.
+   * 1 = spillerens side vant hullet; 0 = tapte, delte eller unplayed.
+   */
+  holeWinByPlayer: Record<string, number>;
+}
+
+/**
+ * Per-segment-sammendrag for én spiller. Forteller hvem spilleren spilte
+ * MED og MOT i segmentet, og resultater for de 6 hullene i segmentet.
+ */
+export interface RoundRobinSegmentLine {
+  segment: 1 | 2 | 3;
+  /** Hullnumre i segmentet: [1..6] | [7..12] | [13..18]. */
+  holeNumbers: number[];
+  /** Hvem spilleren spilte MED (partner) i dette segmentet. */
+  partnerUserId: string;
+  /** Hvem spilleren spilte MOT (begge to) i dette segmentet. */
+  opponentUserIds: [string, string];
+  /** Antall hull spillerens side vant i segmentet. */
+  holesWon: number;
+  holesLost: number;
+  holesHalved: number;
+}
+
+/**
+ * Per-spiller-rad i Round Robin-leaderboard. Primær rangering på
+ * `totalHoleWins`; fullt segment-sammendrag for de 3 konstellasjonene.
+ *
+ * Rangering: totalHoleWins DESC → totalHolesLost ASC → teamNumber ASC.
+ * (Full 5-tier-cascade gjelder ikke — Round Robin er ikke slag-basert.)
+ * `tiedWith` lister userIds med eksakt lik (totalHoleWins, totalHolesLost).
+ */
+export interface RoundRobinPlayerLine {
+  userId: string;
+  /** Slot 1-4 (A/B/C/D). Brukt som deterministisk tiebreak. */
+  teamNumber: number;
+  /** Totalt hull-seire over 18 hull (primær rangering). */
+  totalHoleWins: number;
+  totalHolesLost: number;
+  totalHolesHalved: number;
+  /** Alltid 3 segmenter — én per 6-hulls-fase. */
+  segments: RoundRobinSegmentLine[];
+  rank: number;
+  tiedWith: string[];
+}
+
+/**
+ * Resultat fra `roundRobin.compute()`. Inneholder per-hull-rader og
+ * per-spiller-linjer med totaler + segment-sammendrag.
+ */
+export interface RoundRobinResult {
+  kind: 'round_robin';
+  allowancePct: number;
+  holes: RoundRobinHoleRow[];
+  players: RoundRobinPlayerLine[];
+}
+
+// Acey Deucey (issue #279 — 4-spiller per-hull point-game).
+//
+// Per hull: unikt lavest effective score → +3 (ace); unikt høyest → −3 (deuce);
+// de to midtre → 0. Delt lavest/høyest → den siden deles ikke ut, uavhengig.
+// Hull der ikke alle 4 har score → scored=false, alle 0, men ingen frys.
+// Løpende total kan bli negativ. Brutto/netto-toggle som Wolf/Nassau/Skins.
+// -----------------------------------------------------------------------------
+
+/**
+ * Per-hull-rad i Acey Deucey. `scored=true` betyr at alle 4 spillere hadde
+ * effective score og poeng ble distribuert (aceUserId/deuceUserId kan likevel
+ * være null hvis den siden var delt). `scored=false` betyr ufullstendig hull —
+ * alle 0, men later hulls prosesseres uavhengig.
+ */
+export interface AceyDeuceyHoleRow {
+  holeNumber: number;
+  par: number;
+  strokeIndex: number;
+  /** True = alle 4 spillere hadde score dette hullet. */
+  scored: boolean;
+  /** Spillerens userId som hadde unikt lavest effective score, ellers null. */
+  aceUserId: string | null;
+  /** Spillerens userId som hadde unikt høyest effective score, ellers null. */
+  deuceUserId: string | null;
+  /** +3 / 0 / −3 per spiller dette hullet, indeksert på userId. */
+  pointsByPlayer: Record<string, number>;
+}
+
+/**
+ * Per-spiller-rad i Acey Deucey-leaderboard. `total` kan være negativ
+ * (deuce-akkumulering). Ranking: total DESC → aces DESC → delt rank.
+ */
+export interface AceyDeuceyPlayerLine {
+  userId: string;
+  /** Antall hull der spilleren var unik lavest (ace). */
+  aces: number;
+  /** Antall hull der spilleren var unik høyest (deuce). */
+  deuces: number;
+  /** Sum av +3/0/−3 over alle hull (kan være negativ). */
+  total: number;
+  rank: number;
+  /** Spillere med eksakt samme (total, aces) — delt rank. */
+  tiedWith: string[];
+}
+
+export interface AceyDeuceyResult {
+  kind: 'acey_deucey';
+  scoring: 'gross' | 'net';
+  holes: AceyDeuceyHoleRow[];
+  players: AceyDeuceyPlayerLine[];
+}
+
+/**
  * Discriminated union — konsumenter narrower på `kind`:
  *   const r = computeLeaderboard(ctx);
  *   if (r.kind === 'stableford') { r.players.forEach(...) }
@@ -1383,6 +1620,9 @@ export interface ShambleResult {
  *
  * For bingo_bango_bongo narrower man på `kind` og leser `holes`/`players`
  * direkte. Ingen variant-discriminator — individuelt format, ingen lag.
+ *
+ * For round_robin narrower man på `kind` og leser `holes`/`players` direkte.
+ * `players` er sortert etter rangering (totalHoleWins DESC).
  */
 export type ModeResult =
   | BestBallResult
@@ -1397,4 +1637,6 @@ export type ModeResult =
   | SkinsResult
   | BingoBangoBongoResult
   | NinesResult
+  | RoundRobinResult
+  | AceyDeuceyResult
   | ShambleResult;

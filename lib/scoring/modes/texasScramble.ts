@@ -54,7 +54,24 @@ export function compute(ctx: ScoringContext): TexasScrambleResult {
     ctx.game.mode_config.kind === 'texas_scramble'
       ? ctx.game.mode_config.team_handicap_pct
       : 0;
+  return computeScramble(ctx, handicapPct);
+}
 
+/**
+ * Delt scramble-kjerne. Regner ut lag-rader fra en ScoringContext gitt en
+ * allerede-utledet lag-handicap-prosent. Brukes av både Texas scramble
+ * (`compute` over) og Ambrose (`ambrose.ts`, #284) — sistnevnte utleder sin
+ * egen default-prosent via standard Ambrose-formel (÷ 2×lagstørrelse) før
+ * delegering hit.
+ *
+ * `handicapPct` kan være fraksjonell (Ambrose 4-mann = 12,5 %); team-handicapet
+ * rundes til heltall med `Math.round` for per-hull SI-allokering — konsistent
+ * med all annen netto-scoring i Tørny.
+ */
+export function computeScramble(
+  ctx: ScoringContext,
+  handicapPct: number,
+): TexasScrambleResult {
   const holesSorted = [...ctx.holes].sort((a, b) => a.number - b.number);
   const grossByKey = new Map<string, number | null>();
   for (const s of ctx.scores) {

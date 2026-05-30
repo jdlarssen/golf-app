@@ -235,6 +235,7 @@ function parseGameMode(formData: FormData): GameMode | null {
     raw === 'singles_matchplay' ||
     raw === 'solo_strokeplay' ||
     raw === 'texas_scramble' ||
+    raw === 'ambrose' ||
     raw === 'fourball_matchplay' ||
     raw === 'foursomes_matchplay' ||
     raw === 'wolf' ||
@@ -242,6 +243,8 @@ function parseGameMode(formData: FormData): GameMode | null {
     raw === 'skins' ||
     raw === 'bingo_bango_bongo' ||
     raw === 'nines' ||
+    raw === 'round_robin' ||
+    raw === 'acey_deucey' ||
     raw === 'shamble'
   )
     return raw;
@@ -729,6 +732,114 @@ function parseTexasHandicapPct(formData: FormData): number | null {
 }
 
 /**
+ * Ambrose-validator (issue #284). Mekanisk identisk med Texas scramble — lagene
+ * spiller én ball, kapteinen (lex-min userId) eier scores-radene — men med egen
+ * config-kind og standard Ambrose-default-handicap (`combinedCH ÷ 2×team_size`,
+ * satt av wizarden via `ambroseDefaultPct`). `team_handicap_pct` er justerbar og
+ * kan være fraksjonell (4-mannslag-default = 12,5 %), i motsetning til Texas'
+ * heltall-felt.
+ *
+ * Form-felter:
+ *  - `ambrose_team_size`: 2 eller 4 (3-mannslag ikke i scope → unsupported_mode_size_combo)
+ *  - `ambrose_team_handicap_pct`: 0..100, fraksjonell tillatt (utenfor range → bad_allowance)
+ *  - `player_${i}_team`: positivt heltall, fri antall lag (klubb-turnering)
+ *
+ * Regler ved publish: minst 1 spiller, EKSAKT team_size per lag (team_balance),
+ * team_number ≥ 1 (bad_team). flight_number = team_number oppfyller DB-CHECK
+ * `game_players_team_flight_consistency`. Draft tolererer partial state.
+ * Mode_config-output: `{kind: 'ambrose', team_size, teams_count, team_handicap_pct}`.
+ */
+function validateAmbrose(
+  formData: FormData,
+  mode: PayloadMode,
+): ModeValidationResult {
+  const teamSize = parseAmbroseTeamSize(formData);
+  if (teamSize === null) {
+    return { ok: false, errorCode: 'unsupported_mode_size_combo' };
+  }
+
+  const handicapPct = parseAmbroseHandicapPct(formData);
+  if (handicapPct === null) {
+    return { ok: false, errorCode: 'bad_allowance' };
+  }
+
+  const players: GamePlayerInput[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < 8; i++) {
+    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
+    if (!user_id) continue;
+    if (seen.has(user_id)) {
+      return { ok: false, errorCode: 'duplicate_player' };
+    }
+    seen.add(user_id);
+    const team_number = Number(formData.get(`player_${i}_team`));
+    if (!Number.isInteger(team_number) || team_number < 1) {
+      return { ok: false, errorCode: 'bad_team' };
+    }
+    // Ambrose speiler Texas: flight = team for å oppfylle DB-CHECK
+    // game_players_team_flight_consistency (begge satt).
+    players.push({ user_id, team_number, flight_number: team_number });
+  }
+
+  if (mode === 'publish') {
+    if (players.length === 0) {
+      return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    const teamCounts = new Map<number, number>();
+    for (const p of players) {
+      if (p.team_number === null) continue;
+      teamCounts.set(p.team_number, (teamCounts.get(p.team_number) ?? 0) + 1);
+    }
+    for (const [, count] of teamCounts) {
+      if (count !== teamSize) {
+        return { ok: false, errorCode: 'team_balance' };
+      }
+    }
+  }
+
+  const teams_count = new Set(players.map((p) => p.team_number)).size;
+
+  return {
+    ok: true,
+    players,
+    mode_config: {
+      kind: 'ambrose',
+      team_size: teamSize,
+      teams_count,
+      team_handicap_pct: handicapPct,
+    },
+  };
+}
+
+/**
+ * Leser `ambrose_team_size` fra form-data. Returnerer 2, 4 eller null (3-mannslag
+ * ikke i scope — speiler Texas).
+ */
+function parseAmbroseTeamSize(formData: FormData): 2 | 4 | null {
+  const raw = String(formData.get('ambrose_team_size') ?? '').trim();
+  if (raw === '2') return 2;
+  if (raw === '4') return 4;
+  return null;
+}
+
+/**
+ * Leser `ambrose_team_handicap_pct` fra form-data. Returnerer et tall i range
+ * 0..100 (fraksjonell TILLATT, i motsetning til Texas' heltall-krav) eller null
+ * hvis utenfor range / ikke parseable. Standard Ambrose 4-mannslag-default er
+ * 12,5 %, derfor må fraksjonelle verdier passere.
+ *
+ * Tom string defaulter ikke — wizarden setter prosenten eksplisitt på
+ * lagstørrelse-endring (via `ambroseDefaultPct`).
+ */
+function parseAmbroseHandicapPct(formData: FormData): number | null {
+  const raw = formData.get('ambrose_team_handicap_pct');
+  if (raw === null || raw === '') return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0 || n > 100) return null;
+  return n;
+}
+
+/**
  * Four-ball matchplay-validator (issue #217, fase 2 av #47 — 2v2 best-ball-matchplay).
  *
  * Regler:
@@ -1161,6 +1272,73 @@ function parseSkinsScoring(formData: FormData): 'gross' | 'net' {
 }
 
 /**
+ * Acey Deucey-validator (issue #279 — 4-spiller per-hull point-game).
+ *
+ * Speiler `validateSkins`/`validateNassau` for scoring-toggle; speiler
+ * `validateWolf` for eksakt-4-player-håndhevingen.
+ *
+ * Regler:
+ *  - Solo-format: team_number/flight_number nullstilles alltid (ingen lag).
+ *  - publish: EKSAKT 4 spillere — < 4 → `min_players_for_mode`,
+ *    > 4 → `too_many_players_for_mode`.
+ *  - draft tolererer partial state (0..4 spillere).
+ *  - duplikat-sjekk uendret.
+ *
+ * Scoring-toggle: form-feltet `acey_deucey_scoring` ('gross' | 'net').
+ * Default 'net' når feltet mangler (Tørny HCP-default-ethos; hindrer at
+ * høy-handikapperen alltid er deuce).
+ *
+ * Mode_config-output: `{kind, team_size: 1, acey_deucey_scoring}`.
+ */
+function validateAceyDeucey(
+  formData: FormData,
+  mode: PayloadMode,
+): ModeValidationResult {
+  const aceyDeuceyScoring = parseAceyDeuceyScoring(formData);
+
+  const players: GamePlayerInput[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < 8; i++) {
+    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
+    if (!user_id) continue;
+    if (seen.has(user_id)) {
+      return { ok: false, errorCode: 'duplicate_player' };
+    }
+    seen.add(user_id);
+    players.push({ user_id, team_number: null, flight_number: null });
+  }
+
+  if (mode === 'publish') {
+    if (players.length < 4) {
+      return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    if (players.length > 4) {
+      return { ok: false, errorCode: 'too_many_players_for_mode' };
+    }
+  }
+
+  return {
+    ok: true,
+    players,
+    mode_config: {
+      kind: 'acey_deucey',
+      team_size: 1,
+      acey_deucey_scoring: aceyDeuceyScoring,
+    },
+  };
+}
+
+/**
+ * Leser `acey_deucey_scoring` fra form-data. Defaulter til 'net' når feltet
+ * mangler eller har en ugyldig verdi — speiler Nassau/Wolf/Skins-mønstret.
+ */
+function parseAceyDeuceyScoring(formData: FormData): 'gross' | 'net' {
+  const raw = String(formData.get('acey_deucey_scoring') ?? '').trim();
+  if (raw === 'gross') return 'gross';
+  return 'net';
+}
+
+/**
  * Bingo Bango Bongo-validator (issue #277).
  *
  * Speiler `validateNassau`/`validateSkins`: individuelt format, 2–4 spillere
@@ -1262,6 +1440,109 @@ function validateNines(
       nines_scoring: ninesScoring,
     },
   };
+}
+
+/**
+ * Round Robin-validator (issue #280 — 4-spiller roterende-partner 4BBB-matchplay).
+ *
+ * Strukturell hybrid av `validateWolf` (4-slot) og `validateFourballMatchplay`
+ * (allowance). Speiler Wolf for spiller-strukturen: EKSAKT 4 spillere med
+ * unike team_number 1-4 ved publish. Speiler Fourball for allowance:
+ * form-feltet `round_robin_allowance_pct` (0..100), default 85 i draft.
+ *
+ * Regler:
+ *  - EKSAKT 4 spillere ved publish; 0–3 → `min_players_for_mode`, 5+ → `too_many_players_for_mode`
+ *  - team_number 1-4, alle distinct → ellers `bad_team` / `team_balance`
+ *  - flight_number = team_number (DB-CHECK `game_players_team_flight_consistency`)
+ *  - draft tolererer partial state (0..4 spillere, ufullstendig slot-fordeling)
+ *
+ * Mode_config-output: `{kind, team_size: 1, teams_count: 4, allowance_pct}`.
+ */
+function validateRoundRobin(
+  formData: FormData,
+  mode: PayloadMode,
+): ModeValidationResult {
+  const allowancePct = parseRoundRobinAllowancePct(formData, mode);
+  if (allowancePct === null) {
+    return { ok: false, errorCode: 'bad_allowance' };
+  }
+
+  const players: GamePlayerInput[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < 8; i++) {
+    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
+    if (!user_id) continue;
+    if (seen.has(user_id)) {
+      return { ok: false, errorCode: 'duplicate_player' };
+    }
+    seen.add(user_id);
+    const team_number = Number(formData.get(`player_${i}_team`));
+    // Round Robin-slot er strengt 1-4 (rotation-slot, ikke lag) — speiler Wolf.
+    if (
+      !Number.isInteger(team_number) ||
+      team_number < 1 ||
+      team_number > 4
+    ) {
+      return { ok: false, errorCode: 'bad_team' };
+    }
+    // flight_number = team_number for å oppfylle DB-CHECK
+    // game_players_team_flight_consistency (begge satt sammen) — speiler Wolf.
+    const flight_number = team_number;
+    players.push({ user_id, team_number, flight_number });
+  }
+
+  if (mode === 'publish') {
+    if (players.length < 4) {
+      return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    if (players.length > 4) {
+      return { ok: false, errorCode: 'too_many_players_for_mode' };
+    }
+    // Nøyaktig 4 spillere — sjekk at team_numbers er unike 1-4 (speiler Wolf).
+    const slotsSeen = new Set<number>();
+    for (const p of players) {
+      if (p.team_number === null) continue;
+      slotsSeen.add(p.team_number);
+    }
+    if (slotsSeen.size !== 4) {
+      return { ok: false, errorCode: 'team_balance' };
+    }
+  }
+
+  return {
+    ok: true,
+    players,
+    mode_config: {
+      kind: 'round_robin',
+      team_size: 1,
+      teams_count: 4,
+      allowance_pct: allowancePct,
+    },
+  };
+}
+
+/**
+ * Leser `round_robin_allowance_pct` fra form-data. Returnerer 0..100 (heltall)
+ * eller null hvis ugyldig.
+ *
+ * Tom string i draft defaulter til 85 (WHS-default for matchplay) så partial
+ * form-state ikke kaster; publish krever eksplisitt gyldig verdi (wizarden
+ * pre-fyller 85 som fallback). Range 0..100 håndheves uansett.
+ * Speiler `parseFourballAllowancePct`-mønsteret.
+ */
+function parseRoundRobinAllowancePct(
+  formData: FormData,
+  mode: PayloadMode,
+): number | null {
+  const raw = formData.get('round_robin_allowance_pct');
+  if (raw === null || raw === '') {
+    // Draft: defensiv default 85 (WHS-standard for matchplay). Publish: krev
+    // eksplisitt verdi via wizard (som alltid pre-fyller 85 som fallback).
+    return mode === 'draft' ? 85 : null;
+  }
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0 || n > 100) return null;
+  return n;
 }
 
 function parseShambleVariant(formData: FormData): 'shamble' | 'champagne' {
@@ -1387,6 +1668,7 @@ const modeValidators: Record<
   singles_matchplay: validateSinglesMatchplay,
   solo_strokeplay: validateSoloStrokeplay,
   texas_scramble: validateTexasScramble,
+  ambrose: validateAmbrose,
   fourball_matchplay: validateFourballMatchplay,
   foursomes_matchplay: validateFoursomesMatchplay,
   wolf: validateWolf,
@@ -1394,6 +1676,8 @@ const modeValidators: Record<
   skins: validateSkins,
   bingo_bango_bongo: validateBingoBangoBongo,
   nines: validateNines,
+  round_robin: validateRoundRobin,
+  acey_deucey: validateAceyDeucey,
   shamble: validateShamble,
 };
 

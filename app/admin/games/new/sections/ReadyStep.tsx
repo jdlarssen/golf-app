@@ -50,6 +50,7 @@ const MODE_SUMMARY_LABELS: Record<GameMode, string> = {
   singles_matchplay: 'Singles matchplay',
   solo_strokeplay: 'Solo slagspill netto',
   texas_scramble: 'Texas scramble',
+  ambrose: 'Ambrose',
   fourball_matchplay: 'Four-ball matchplay',
   foursomes_matchplay: 'Foursomes matchplay',
   wolf: 'Wolf',
@@ -57,6 +58,8 @@ const MODE_SUMMARY_LABELS: Record<GameMode, string> = {
   skins: 'Skins',
   bingo_bango_bongo: 'Bingo Bango Bongo',
   nines: 'Nines / Split Sixes',
+  round_robin: 'Round Robin',
+  acey_deucey: 'Acey Deucey',
   shamble: 'Shamble / Champagne Scramble',
 };
 
@@ -117,6 +120,7 @@ export function ReadyStep({
     isParStableford,
     isMatchplay,
     isTexas,
+    isAmbrose,
     isShamble,
     isSolo,
   } = state;
@@ -153,7 +157,7 @@ export function ReadyStep({
     if (isParStableford) {
       return `${teamsCount} lag à 2 spillere`;
     }
-    if (isTexas || isShamble) {
+    if (isTexas || isAmbrose || isShamble) {
       return `${teamsCount} lag à ${teamSize} spillere`;
     }
     return `${count} ${count === 1 ? 'spiller' : 'spillere'}`;
