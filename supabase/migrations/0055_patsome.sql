@@ -48,6 +48,7 @@ create policy patsome_tee_starters_read
       where gp.game_id = patsome_tee_starters.game_id
         and gp.user_id = auth.uid()
     )
+    or public.is_admin()
   );
 
 create policy patsome_tee_starters_insert
