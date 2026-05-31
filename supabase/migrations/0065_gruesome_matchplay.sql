@@ -9,7 +9,7 @@
 -- allowance default 50 (WHS foursomes matchplay-standard). Ingen tee-starter-
 -- felt: begge slår ut hvert hull, så ingen fast tee-rotasjon å spore.
 --
--- Til forskjell fra foursomes/greensome/chapman seeder vi ogsa en intent-
+-- Til forskjell fra foursomes/greensome/chapman seeder vi også en intent-
 -- mapping (kompis), så formatet er valgbart standalone i wizarden uten manuell
 -- admin-toggle — gruesome spilles typisk casual utenfor cup. Cup-eligible i
 -- tillegg, så det kan brukes som cup-leg.
