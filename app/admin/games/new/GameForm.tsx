@@ -17,6 +17,11 @@ import { AdvancedSettingsSection } from './sections/AdvancedSettingsSection';
 import { RegistrationSection } from './sections/RegistrationSection';
 import { AllowanceField } from '@/components/admin/AllowanceField';
 import { bruttoHelperFor } from '@/lib/games/allowanceCopy';
+import { WolfSetup } from './sections/WolfSetup';
+import { NassauSetup } from './sections/NassauSetup';
+import { SkinsSetup } from './sections/SkinsSetup';
+import { NinesSetup } from './sections/NinesSetup';
+import { ShambleSetup } from './sections/ShambleSetup';
 
 export type CourseOption = {
   id: string;
@@ -667,6 +672,59 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             />
             <input type="hidden" name="hcp_allowance_pct" value="100" />
           </>
+        )}
+        {/* Setup-step sections: Wolf, Nassau, Skins, Nines, Shamble.
+            Mirrored from GameWizard step 2 (same props from state).
+            Each section emits radio inputs directly into FormData — no
+            extra hidden inputs needed. Disabled follows lockGameMode so
+            mode-lock after publish prevents edits here too.
+            Refs: #322 */}
+        {state.isWolf && (
+          <WolfSetup
+            scoring={state.wolfScoring}
+            onScoringChange={state.setWolfScoring}
+            wolfOrder={state.wolfOrder
+              .map((pid) => players.find((p) => p.id === pid))
+              .filter((p): p is PlayerOption => p !== undefined)}
+            onShuffle={state.shuffleWolfOrder}
+            disabled={lockGameMode}
+          />
+        )}
+        {state.isNassau && (
+          <NassauSetup
+            scoring={state.nassauScoring}
+            onScoringChange={state.setNassauScoring}
+            disabled={lockGameMode}
+          />
+        )}
+        {state.isSkins && (
+          <SkinsSetup
+            scoring={state.skinsScoring}
+            onScoringChange={state.setSkinsScoring}
+            disabled={lockGameMode}
+          />
+        )}
+        {state.isNines && (
+          <NinesSetup
+            variant={state.ninesVariant}
+            onVariantChange={state.setNinesVariant}
+            scoring={state.ninesScoring}
+            onScoringChange={state.setNinesScoring}
+            disabled={lockGameMode}
+          />
+        )}
+        {state.isShamble && (
+          <ShambleSetup
+            variant={state.shambleVariant}
+            onVariantChange={state.setShambleVariant}
+            count={state.shambleCount}
+            onCountChange={state.setShambleCount}
+            scoring={state.shambleScoring}
+            onScoringChange={state.setShambleScoring}
+            teamSize={teamSize as 3 | 4}
+            onTeamSizeChange={handleTeamSizeChange as (next: 3 | 4) => void}
+            disabled={lockGameMode}
+          />
         )}
         {lockGameMode && (
           <p className="text-xs text-muted">

@@ -1254,3 +1254,108 @@ describe('GameForm — solo strokeplay (epic #46 fase 2)', () => {
     expect(player1Id?.value).toBe('u1');
   });
 });
+
+describe('GameForm — setup-step-seksjoner (fix #322)', () => {
+  it('wolf: WolfSetup vises med gross-radio checked når initialValues.wolf_scoring=gross', () => {
+    const { container } = render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+        initialValues={{
+          game_mode: 'wolf',
+          wolf_scoring: 'gross',
+        }}
+      />,
+    );
+
+    // WolfSetup-seksjon skal vises.
+    expect(screen.getByText(/wolf-oppsett/i)).toBeInTheDocument();
+
+    // Gross-radio skal være checked (reflekterer pre-fylt initialValues).
+    const grossRadio = container.querySelector(
+      'input[type="radio"][name="wolf_scoring"][value="gross"]',
+    ) as HTMLInputElement | null;
+    expect(grossRadio).not.toBeNull();
+    expect(grossRadio?.checked).toBe(true);
+
+    // Net-radio skal ikke være checked.
+    const netRadio = container.querySelector(
+      'input[type="radio"][name="wolf_scoring"][value="net"]',
+    ) as HTMLInputElement | null;
+    expect(netRadio?.checked).toBe(false);
+  });
+
+  it('wolf: WolfSetup vises ikke når game_mode er best_ball', () => {
+    render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+        initialValues={{ game_mode: 'best_ball' }}
+      />,
+    );
+
+    expect(screen.queryByText(/wolf-oppsett/i)).not.toBeInTheDocument();
+  });
+
+  it('shamble: ShambleSetup vises med champagne-variant checked når initialValues.shamble_variant=champagne', () => {
+    const { container } = render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+        initialValues={{
+          game_mode: 'shamble',
+          shamble_variant: 'champagne',
+          shamble_count: 3,
+          shamble_scoring: 'net',
+          team_size: 4,
+        }}
+      />,
+    );
+
+    // ShambleSetup-seksjon skal vises.
+    expect(screen.getByText(/shamble-oppsett/i)).toBeInTheDocument();
+
+    // Champagne-radio skal være checked.
+    const champagneRadio = container.querySelector(
+      'input[type="radio"][name="shamble_variant"][value="champagne"]',
+    ) as HTMLInputElement | null;
+    expect(champagneRadio).not.toBeNull();
+    expect(champagneRadio?.checked).toBe(true);
+  });
+
+  it('nassau: NassauSetup vises med net-radio checked (default)', () => {
+    const { container } = render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+        initialValues={{ game_mode: 'nassau', nassau_scoring: 'net' }}
+      />,
+    );
+
+    const netRadio = container.querySelector(
+      'input[type="radio"][name="nassau_scoring"][value="net"]',
+    ) as HTMLInputElement | null;
+    expect(netRadio).not.toBeNull();
+    expect(netRadio?.checked).toBe(true);
+  });
+});

@@ -25,6 +25,7 @@ import {
   ERROR_MESSAGES_NEW_GAME,
   buildErrorMessage as buildGameErrorMessage,
 } from '@/lib/admin/gameErrorMessages';
+import { buildSetupStepInitialValues } from '@/lib/games/setupStepInitialValues';
 import {
   ALL_CATEGORY_IDS,
   type SideCategoryId,
@@ -394,7 +395,13 @@ async function EditGameFormBody({
             : game.mode_config.kind === 'stableford' ||
               game.mode_config.kind === 'modified_stableford'
             ? game.mode_config.team_size
-            : undefined,
+            : game.mode_config.kind === 'shamble'
+              ? game.mode_config.team_size
+              : undefined,
+    // Setup-step formats (Wolf/Nassau/Skins/Nines/Shamble): pre-fill stored
+    // mode_config fields so useGameFormState restores the admin's choices.
+    // buildSetupStepInitialValues returns {} for all other mode kinds.
+    ...buildSetupStepInitialValues(game.mode_config),
     texas_team_handicap_pct:
       game.mode_config.kind === 'texas_scramble'
         ? String(game.mode_config.team_handicap_pct)

@@ -21,6 +21,33 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#291](https://github.com/jdlarssen/golf-app/issues/291), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Gruesome er foursomes med en vri: begge slår ut, men motstanderlaget velger hvilken av ballene paret må spille videre med. Standalone-spillbar (intent «kompis») i tillegg til cup. Samme serie gir hele alternate-shot-familien (foursomes/greensome/chapman/gruesome) en ekte individuell-spill matchplay-leaderboard.
 
+### [1.59.2] - 2026-05-31
+
+> Nå kan du redigere Wolf-, Nassau-, Skins-, Nines- og Shamble-spill som er i utkast eller planlagt. Tidligere forsvant spilloppsettet (brutto/netto, variant osv.) når du lagret på nytt, og Shamble-spill ga feilmelding ved redigering.
+
+<details>
+<summary>Teknisk</summary>
+
+Fikser [#322](https://github.com/jdlarssen/golf-app/issues/322). To gap:
+
+1. `app/admin/games/[id]/edit/page.tsx` bygde `initialValues` uten å inkludere `mode_config`-felt for Wolf/Nassau/Skins/Nines/Shamble. Ny ren helper `buildSetupStepInitialValues(modeConfig: GameModeConfig)` i [`lib/games/setupStepInitialValues.ts`](lib/games/setupStepInitialValues.ts) mapper config-en til de rette `InitialValues`-feltene og returnerer `{}` for alle andre format-typer. Edit-siden spreader resultatet inn i `initialValues`.
+
+2. `GameForm.tsx` rendret ikke `WolfSetup`/`NassauSetup`/`SkinsSetup`/`NinesSetup`/`ShambleSetup` — de lå kun i `GameWizard`. Uten disse seksjonene manglet radio-inputs i FormData → Wolf/Nassau/Skins/Nines silent-resettet til `net`-default; Shamble feilet hardt med `unsupported_mode_size_combo`. Seksjonene er nå lagt inn i `GameForm`s Format-seksjon, conditionally på de samme `state.is*`-flaggene som i `GameWizard`, med samme props og `disabled={lockGameMode}`.
+
+`team_size`-ternary-en i edit-siden er utvidet med shamble-grenen slik at `useGameFormState` mottar riktig lagstørrelse ved Shamble-redigering.
+
+#### Added
+- [`lib/games/setupStepInitialValues.ts`](lib/games/setupStepInitialValues.ts) — ren helper, mapper `GameModeConfig` → `Partial<InitialValues>` for de fem setup-formatene.
+- [`lib/games/setupStepInitialValues.test.ts`](lib/games/setupStepInitialValues.test.ts) — Type-A test: ett case per format + best_ball/texas_scramble/stableford/acey_deucey → `{}`.
+
+#### Changed
+- [`app/admin/games/[id]/edit/page.tsx`](app/admin/games/[id]/edit/page.tsx) — spreader `buildSetupStepInitialValues(game.mode_config)` inn i `initialValues`; shamble lagt til i `team_size`-ternary.
+- [`app/admin/games/new/GameForm.tsx`](app/admin/games/new/GameForm.tsx) — rendrer WolfSetup/NassauSetup/SkinsSetup/NinesSetup/ShambleSetup i Format-seksjonen, speilende GameWizard.
+- [`app/admin/games/new/GameForm.test.tsx`](app/admin/games/new/GameForm.test.tsx) — nye render-tester: Wolf med gross pre-fylt, Shamble champagne-variant, Nassau net.
+- [`app/admin/games/new/useGameFormState.test.ts`](app/admin/games/new/useGameFormState.test.ts) — nye hook-tester: `initialValues`-pre-fyll for alle fem formater bekreftet.
+
+</details>
+
 ### [1.59.1] - 2026-05-31
 
 > Greensome-matcher i en cup teller nå riktig. Tidligere ga de null poeng til vinneren uansett hvordan matchen endte. Nå får laget som vinner sin greensome-match poengene på cup-tabellen, på lik linje med foursomes, fourball og de andre matchformatene.

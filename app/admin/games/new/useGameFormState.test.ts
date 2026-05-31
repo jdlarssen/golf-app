@@ -148,3 +148,84 @@ describe('useGameFormState — initialValues.player_genders vinner ved mount', (
     });
   });
 });
+
+describe('useGameFormState — initialValues pre-fyll for setup-step-formater (#322)', () => {
+  it('wolf_scoring fra initialValues restorer state korrekt', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        initialValues: { game_mode: 'wolf', wolf_scoring: 'gross' },
+      }),
+    );
+
+    expect(result.current.wolfScoring).toBe('gross');
+    expect(result.current.isWolf).toBe(true);
+  });
+
+  it('nassau_scoring fra initialValues restorer state korrekt', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        initialValues: { game_mode: 'nassau', nassau_scoring: 'gross' },
+      }),
+    );
+
+    expect(result.current.nassauScoring).toBe('gross');
+    expect(result.current.isNassau).toBe(true);
+  });
+
+  it('skins_scoring fra initialValues restorer state korrekt', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        initialValues: { game_mode: 'skins', skins_scoring: 'gross' },
+      }),
+    );
+
+    expect(result.current.skinsScoring).toBe('gross');
+    expect(result.current.isSkins).toBe(true);
+  });
+
+  it('nines_variant og nines_scoring fra initialValues restorer state korrekt', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        initialValues: {
+          game_mode: 'nines',
+          nines_variant: 'split_sixes',
+          nines_scoring: 'gross',
+        },
+      }),
+    );
+
+    expect(result.current.ninesVariant).toBe('split_sixes');
+    expect(result.current.ninesScoring).toBe('gross');
+    expect(result.current.isNines).toBe(true);
+  });
+
+  it('shamble-felt fra initialValues restorer state korrekt', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        initialValues: {
+          game_mode: 'shamble',
+          team_size: 4,
+          shamble_variant: 'champagne',
+          shamble_count: 3,
+          shamble_scoring: 'gross',
+        },
+      }),
+    );
+
+    expect(result.current.shambleVariant).toBe('champagne');
+    expect(result.current.shambleCount).toBe(3);
+    expect(result.current.shambleScoring).toBe('gross');
+    expect(result.current.teamSize).toBe(4);
+    expect(result.current.isShamble).toBe(true);
+  });
+});
