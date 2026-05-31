@@ -332,12 +332,13 @@ const ICON_MAP: Record<string, (props: { size?: number }) => ReactNode> = {
   // kun step-aside-regelen skiller. #283.
   florida_scramble: TexasScrambleIcon,
   fourball_matchplay: FourballMatchplayIcon,
-  // Foursomes, greensome og chapman gjenbruker singles_matchplay-ikonet
+  // Foursomes, greensome, chapman og gruesome gjenbruker singles_matchplay-ikonet
   // (flagge) — alternate-shot-familien. #218 (foursomes), #289 (greensome),
-  // #290 (chapman / pinehurst).
+  // #290 (chapman / pinehurst), #291 (gruesome).
   foursomes_matchplay: MatchplayIcon,
   greensome_matchplay: MatchplayIcon,
   chapman_matchplay: MatchplayIcon,
+  gruesome_matchplay: MatchplayIcon,
   bingo_bango_bongo: BingoBangoBongoIcon,
   nines: NinesIcon,
   round_robin: RoundRobinIcon,

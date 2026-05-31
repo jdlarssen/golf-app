@@ -226,12 +226,14 @@ export function resolveScorecardLayout(
     const allowancePct =
       cfg.kind === 'foursomes_matchplay' ||
       cfg.kind === 'greensome_matchplay' ||
-      cfg.kind === 'chapman_matchplay'
+      cfg.kind === 'chapman_matchplay' ||
+      cfg.kind === 'gruesome_matchplay'
         ? cfg.allowance_pct
         : 50;
 
     const isSixtyForty =
       mode === 'greensome_matchplay' || mode === 'chapman_matchplay';
+    // Gruesome: same as foursomes (sum handicap, isSixtyForty = false)
     function sideHandicap(sidePlayers: typeof mySidePlayers): number {
       if (isSixtyForty) {
         const chs = sidePlayers.map((p) => p.course_handicap ?? 0);

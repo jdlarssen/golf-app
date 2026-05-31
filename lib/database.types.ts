@@ -924,6 +924,7 @@ export type Database = {
           finished_at: string | null
           fourball_allowance_pct: number
           foursomes_allowance_pct: number
+          gruesome_allowance_pct: number
           id: string
           name: string
           points_to_win: number
@@ -939,6 +940,7 @@ export type Database = {
           finished_at?: string | null
           fourball_allowance_pct?: number
           foursomes_allowance_pct?: number
+          gruesome_allowance_pct?: number
           id?: string
           name: string
           points_to_win: number
@@ -954,6 +956,7 @@ export type Database = {
           finished_at?: string | null
           fourball_allowance_pct?: number
           foursomes_allowance_pct?: number
+          gruesome_allowance_pct?: number
           id?: string
           name?: string
           points_to_win?: number

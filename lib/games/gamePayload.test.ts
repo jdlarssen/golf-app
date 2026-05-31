@@ -3571,3 +3571,128 @@ describe('buildGameInsertPayload — patsome (issue #286)', () => {
     expect(result.players[2]).toMatchObject({ team_number: 5, flight_number: 5 });
   });
 });
+
+describe('buildGameInsertPayload — gruesome_matchplay (issue #291)', () => {
+  /**
+   * Helper for gruesome-payloads. Speiler chapmanFd — Gruesome deler 2v2-
+   * validator-logikken med foursomes og chapman. Vi tester KUN det Gruesome-
+   * spesifikke: config-kind, allowance-feltet `gruesome_allowance_pct` og
+   * default 50 (WHS foursomes-standard, IKKE 100 som chapman).
+   * Full 2v2-feilkode-matrise dekkes av foursomes-blokken.
+   */
+  function gruesomeFd(opts: {
+    sides?: Array<{ userId: string; side: number }>;
+    allowancePct?: number | string | null;
+    extras?: Record<string, string>;
+  }): FormData {
+    const { sides = [], allowancePct, extras = {} } = opts;
+    const base: Record<string, string> = {
+      name: 'Gruesome Cup',
+      course_id: 'c1',
+      tee_box_id: 't1',
+      game_mode: 'gruesome_matchplay',
+    };
+    if (allowancePct !== null && allowancePct !== undefined) {
+      base['gruesome_allowance_pct'] = String(allowancePct);
+    }
+    sides.forEach((p, i) => {
+      base[`player_${i}_id`] = p.userId;
+      base[`player_${i}_team`] = String(p.side);
+      base[`player_${i}_flight`] = String(p.side);
+    });
+    return fd({ ...base, ...extras });
+  }
+
+  const full2v2 = [
+    { userId: 'a', side: 1 },
+    { userId: 'b', side: 1 },
+    { userId: 'c', side: 2 },
+    { userId: 'd', side: 2 },
+  ];
+
+  it('publish 4 spillere 2v2 → ok, mode_config kind=gruesome_matchplay, allowance 50', () => {
+    const result = buildGameInsertPayload(
+      gruesomeFd({ sides: full2v2, allowancePct: 50 }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.game_mode).toBe('gruesome_matchplay');
+    expect(result.mode_config).toEqual({
+      kind: 'gruesome_matchplay',
+      team_size: 2,
+      teams_count: 2,
+      allowance_pct: 50,
+    });
+    expect(result.players).toEqual([
+      { user_id: 'a', team_number: 1, flight_number: 1 },
+      { user_id: 'b', team_number: 1, flight_number: 1 },
+      { user_id: 'c', team_number: 2, flight_number: 2 },
+      { user_id: 'd', team_number: 2, flight_number: 2 },
+    ]);
+  });
+
+  it('publish allowance 0 (brutto) → ok', () => {
+    const result = buildGameInsertPayload(
+      gruesomeFd({ sides: full2v2, allowancePct: 0 }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'gruesome_matchplay') {
+      expect(result.mode_config.allowance_pct).toBe(0);
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+
+  it('publish allowance 101 → bad_allowance', () => {
+    const result = buildGameInsertPayload(
+      gruesomeFd({ sides: full2v2, allowancePct: 101 }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('bad_allowance');
+  });
+
+  it('publish 3-1-fordeling → team_balance', () => {
+    const result = buildGameInsertPayload(
+      gruesomeFd({
+        sides: [
+          { userId: 'a', side: 1 },
+          { userId: 'b', side: 1 },
+          { userId: 'c', side: 1 },
+          { userId: 'd', side: 2 },
+        ],
+        allowancePct: 50,
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('team_balance');
+  });
+
+  it('publish 3 spillere → min_players_for_mode', () => {
+    const result = buildGameInsertPayload(
+      gruesomeFd({
+        sides: [
+          { userId: 'a', side: 1 },
+          { userId: 'b', side: 1 },
+          { userId: 'c', side: 2 },
+        ],
+        allowancePct: 50,
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('min_players_for_mode');
+  });
+
+  it('draft tom allowance defaulter til 50 (WHS foursomes-standard)', () => {
+    const result = buildGameInsertPayload(
+      gruesomeFd({ sides: [{ userId: 'a', side: 1 }], allowancePct: '' }),
+      'draft',
+    );
+    expect(result.errorCode).toBeUndefined();
+    if (result.mode_config.kind === 'gruesome_matchplay') {
+      expect(result.mode_config.allowance_pct).toBe(50);
+    } else {
+      throw new Error('unexpected mode_config kind');
+    }
+  });
+});

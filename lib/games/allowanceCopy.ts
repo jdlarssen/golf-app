@@ -26,6 +26,7 @@ export function bruttoHelperFor(mode: GameMode): string {
     case 'foursomes_matchplay':
     case 'greensome_matchplay':
     case 'chapman_matchplay':
+    case 'gruesome_matchplay':
     case 'texas_scramble':
     case 'ambrose':
     case 'florida_scramble':

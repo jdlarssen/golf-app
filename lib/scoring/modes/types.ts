@@ -23,7 +23,8 @@ export type GameMode =
   | 'round_robin'
   | 'acey_deucey'
   | 'shamble'
-  | 'patsome';
+  | 'patsome'
+  | 'gruesome_matchplay';
 
 /**
  * Norske visnings-labels for hver spillmodus. Brukes av ModeChip i admin-
@@ -53,6 +54,7 @@ export const MODE_LABELS: Record<GameMode, string> = {
   acey_deucey: 'Acey Deucey',
   shamble: 'Shamble / Champagne Scramble',
   patsome: 'Patsome',
+  gruesome_matchplay: 'Gruesome',
 };
 
 /**
@@ -103,7 +105,8 @@ export function isAlternateShotMatchplay(mode: GameMode): boolean {
   return (
     mode === 'foursomes_matchplay' ||
     mode === 'greensome_matchplay' ||
-    mode === 'chapman_matchplay'
+    mode === 'chapman_matchplay' ||
+    mode === 'gruesome_matchplay'
   );
 }
 
@@ -251,6 +254,24 @@ export type GameModeConfig =
        * lavlaget får 0. 0 = brutto, 100 = full differanse. Validatoren
        * håndhever range; scoring-laget faller defensivt tilbake til 100.
        */
+      allowance_pct: number;
+    }
+  | {
+      /**
+       * Gruesome matchplay (issue #291) — 2v2 motstander-velger-tee + alternate.
+       * Begge slår ut, motstanderlaget velger hvilken tee-ball paret MÅ spille
+       * (typisk den dårligste), deretter alternate shot som foursomes.
+       * Scoring-laget returnerer `kind: 'foursomes_matchplay'` (gjenbruker
+       * FoursomesMatchplayResult + all visning). Config-kind er 'gruesome_matchplay'
+       * for validator/form-routing.
+       *
+       * Lag-handicap: sum av begge partneres CH (WHS-standard for foursomes —
+       * motstanderens tee-valg endrer IKKE handicapet). Allowance: WHS-default
+       * 50 % (identisk med foursomes). Justerbar 0..100.
+       */
+      kind: 'gruesome_matchplay';
+      team_size: 2;
+      teams_count: 2;
       allowance_pct: number;
     }
   | {

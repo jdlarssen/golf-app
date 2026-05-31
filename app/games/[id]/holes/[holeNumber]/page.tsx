@@ -109,6 +109,7 @@ export default async function HolePage({ params }: { params: Params }) {
   const isFoursomes = game.game_mode === 'foursomes_matchplay';
   const isGreensome = game.game_mode === 'greensome_matchplay';
   const isChapman = game.game_mode === 'chapman_matchplay';
+  const isGruesome = game.game_mode === 'gruesome_matchplay';
   const isPatsome = game.game_mode === 'patsome';
   const isWolf = game.game_mode === 'wolf';
   const isSkins = game.game_mode === 'skins';
@@ -437,6 +438,7 @@ export default async function HolePage({ params }: { params: Params }) {
     isFoursomes ||
     isGreensome ||
     isChapman ||
+    isGruesome ||
     (isPatsome && holeNumber >= 7)
   ) {
     const captain = flight.reduce(
@@ -448,10 +450,10 @@ export default async function HolePage({ params }: { params: Params }) {
       0,
     );
     let teamHandicap: number;
-    if (isFoursomes || isGreensome || isChapman) {
-      // Foursomes/greensome/chapman: WHS-diff-formel. Beregn motstander-sidens
+    if (isFoursomes || isGreensome || isChapman || isGruesome) {
+      // Foursomes/greensome/chapman/gruesome: WHS-diff-formel. Beregn motstander-sidens
       // combined CH og gi diff til høyeste lag. Lavlaget får 0.
-      // Foursomes: combined = sum. Greensome + chapman: combined = round(0,6×lavest + 0,4×høyest).
+      // Foursomes + gruesome: combined = sum. Greensome + chapman: combined = round(0,6×lavest + 0,4×høyest).
       const isSixtyForty = isGreensome || isChapman;
       const oppPlayers = allPlayers.filter(
         (p) => p.team_number !== me.team_number && p.team_number !== null,
@@ -472,7 +474,9 @@ export default async function HolePage({ params }: { params: Params }) {
             ? game.mode_config.allowance_pct
             : game.mode_config.kind === 'chapman_matchplay'
               ? game.mode_config.allowance_pct
-              : 50;
+              : game.mode_config.kind === 'gruesome_matchplay'
+                ? game.mode_config.allowance_pct
+                : 50;
       const diff = Math.abs(mySideCombinedCH - oppCombinedCH);
       const highSideExtraHCP = Math.round((diff * allowancePct) / 100);
       teamHandicap = mySideCombinedCH > oppCombinedCH ? highSideExtraHCP : 0;

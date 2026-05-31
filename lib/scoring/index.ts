@@ -29,6 +29,7 @@ import * as fourballMatchplay from './modes/fourballMatchplay';
 import * as foursomesMatchplay from './modes/foursomesMatchplay';
 import * as greensomeMatchplay from './modes/greensomeMatchplay';
 import * as chapmanMatchplay from './modes/chapmanMatchplay';
+import * as gruesomeMatchplay from './modes/gruesomeMatchplay';
 import * as wolf from './modes/wolf';
 import * as nassau from './modes/nassau';
 import * as skins from './modes/skins';
@@ -66,6 +67,8 @@ export function computeLeaderboard(ctx: ScoringContext): ModeResult {
       return greensomeMatchplay.compute(ctx);
     case 'chapman_matchplay':
       return chapmanMatchplay.compute(ctx);
+    case 'gruesome_matchplay':
+      return gruesomeMatchplay.compute(ctx);
     case 'wolf':
       return wolf.compute(ctx);
     case 'nassau':
@@ -93,7 +96,7 @@ export { strokesForHole, allStrokeAllocations } from './strokeAllocation';
 export { rankTeams } from './tiebreaker';
 export { computeStablefordPoints } from './modes/stableford';
 export { computeModifiedStablefordPoints } from './modes/modifiedStableford';
-export { isStablefordFamily, isScrambleFamily } from './modes/types';
+export { isStablefordFamily, isScrambleFamily, isAlternateShotMatchplay } from './modes/types';
 export { ambroseDefaultPct } from './modes/ambrose';
 export { defaultFloridaHandicapPct } from './modes/floridaScramble';
 export { computeMatchResult } from './modes/singlesMatchplay';

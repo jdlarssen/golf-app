@@ -26,7 +26,8 @@ export function scorecardTitle(
   if (
     gameMode === 'singles_matchplay' ||
     gameMode === 'fourball_matchplay' ||
-    gameMode === 'chapman_matchplay'
+    gameMode === 'chapman_matchplay' ||
+    gameMode === 'gruesome_matchplay'
   ) {
     return { title: 'Match-scorekort', cardLabel: 'Match-scorekort' };
   }

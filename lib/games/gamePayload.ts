@@ -249,7 +249,8 @@ function parseGameMode(formData: FormData): GameMode | null {
     raw === 'round_robin' ||
     raw === 'acey_deucey' ||
     raw === 'shamble' ||
-    raw === 'patsome'
+    raw === 'patsome' ||
+    raw === 'gruesome_matchplay'
   )
     return raw;
   return null;
@@ -1351,6 +1352,102 @@ function parseChapmanAllowancePct(
 }
 
 /**
+ * Gruesome matchplay-validator (issue #291 — 2v2 motstander-velger-tee + alternate).
+ *
+ * Speiler `validateChapmanMatchplay` 1:1 — eneste reelle forskjell er at
+ * allowance leses fra `gruesome_allowance_pct` (WHS-default 50, identisk med
+ * foursomes) og mode_config.kind = 'gruesome_matchplay'. Lag-handicap-formelen
+ * (sum, som foursomes) håndheves i scoring-modulen, ikke validatoren.
+ *
+ * Regler:
+ *  - EKSAKT 4 spillere fordelt 2-2 på side 1 og 2 ved publish
+ *  - team_number strengt 1 eller 2, flight_number = team_number
+ *  - draft tolererer partial state
+ *
+ * Feilkoder ved publish:
+ *  - ≤3 spillere → `min_players_for_mode`
+ *  - ≥5 spillere → `too_many_players_for_mode`
+ *  - 4 spillere men ikke 2-2 → `team_balance`
+ *  - ugyldig allowance → `bad_allowance`
+ *
+ * Mode_config-output: `{kind: 'gruesome_matchplay', team_size: 2, teams_count: 2, allowance_pct}`.
+ */
+function validateGruesomeMatchplay(
+  formData: FormData,
+  mode: PayloadMode,
+): ModeValidationResult {
+  const allowancePct = parseGruesomeAllowancePct(formData, mode);
+  if (allowancePct === null) {
+    return { ok: false, errorCode: 'bad_allowance' };
+  }
+
+  const players: GamePlayerInput[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < 8; i++) {
+    const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
+    if (!user_id) continue;
+    if (seen.has(user_id)) {
+      return { ok: false, errorCode: 'duplicate_player' };
+    }
+    seen.add(user_id);
+    const team_number = Number(formData.get(`player_${i}_team`));
+    // Gruesome-sider er strengt 1 eller 2 (speiler foursomes/greensome/chapman).
+    if (!Number.isInteger(team_number) || team_number < 1 || team_number > 2) {
+      return { ok: false, errorCode: 'bad_team' };
+    }
+    const flight_number = team_number;
+    players.push({ user_id, team_number, flight_number });
+  }
+
+  if (mode === 'publish') {
+    if (players.length < 4) {
+      return { ok: false, errorCode: 'min_players_for_mode' };
+    }
+    if (players.length > 4) {
+      return { ok: false, errorCode: 'too_many_players_for_mode' };
+    }
+    const sideCounts = new Map<number, number>();
+    for (const p of players) {
+      if (p.team_number === null) continue;
+      sideCounts.set(p.team_number, (sideCounts.get(p.team_number) ?? 0) + 1);
+    }
+    if (sideCounts.get(1) !== 2 || sideCounts.get(2) !== 2) {
+      return { ok: false, errorCode: 'team_balance' };
+    }
+  }
+
+  return {
+    ok: true,
+    players,
+    mode_config: {
+      kind: 'gruesome_matchplay',
+      team_size: 2,
+      teams_count: 2,
+      allowance_pct: allowancePct,
+    },
+  };
+}
+
+/**
+ * Leser `gruesome_allowance_pct` fra form-data. Returnerer 0..100 (heltall)
+ * eller null hvis ugyldig. Tom string i draft defaulter til 50 (WHS foursomes-
+ * standard — gruesome bruker sum-handicap, identisk med foursomes); publish
+ * krever eksplisitt gyldig verdi. Range 0..100 håndheves uansett.
+ */
+function parseGruesomeAllowancePct(
+  formData: FormData,
+  mode: PayloadMode,
+): number | null {
+  const raw = formData.get('gruesome_allowance_pct');
+  if (raw === null || raw === '') {
+    return mode === 'draft' ? 50 : null;
+  }
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0 || n > 100) return null;
+  return n;
+}
+
+/**
  * Wolf-validator (issue #274 — 4-spiller rotating partner-format).
  *
  * Regler:
@@ -2056,6 +2153,7 @@ const modeValidators: Record<
   foursomes_matchplay: validateFoursomesMatchplay,
   greensome_matchplay: validateGreensomeMatchplay,
   chapman_matchplay: validateChapmanMatchplay,
+  gruesome_matchplay: validateGruesomeMatchplay,
   wolf: validateWolf,
   nassau: validateNassau,
   skins: validateSkins,
