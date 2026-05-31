@@ -31,14 +31,14 @@ Tre etiketter for samme handling; en admin med spill mister opprett-CTA-en på h
 
 ## Akseptkriterier
 
-- [ ] **AC1** — Samme etikett «Opprett spill» for opprett-handlingen på alle flater (hjem tom-CTA, hjem ikke-tom primær-knapp, spill-lista action), fra én delt const. *Evidens: `CREATE_GAME_LABEL`-import i begge filer; grep viser ingen gjenværende «Opprett en turnering» / «+ Nytt» / «Sett opp ny runde» som opprett-etikett.*
-- [ ] **AC2** — Én fast, alltid-synlig Opprett-inngang på hjem i BEGGE tilstander (tom + ikke-tom), for både admin og trusted. *Evidens: ikke-tom-grenen rendrer Opprett-knapp for `canCreateGame`; file:line.*
-- [ ] **AC3** — Én representasjon av Sekretariatet-lenken fra hjem (delt footer i begge grener, konsistent vekt). *Evidens: `HomeUtilityFooter` brukt i begge return-grener; ingen accent-kort-vs-footer-lenke-divergens.*
-- [ ] **AC4** — Rolle-routing bevart: admin → `/admin/games/new`, trusted → `/opprett-spill`, i alle Opprett-flater. *Evidens: file:line.*
-- [ ] **AC5** — Spill-lista action relabelet til «Opprett spill»; rute uendret. *Evidens: `app/admin/games/page.tsx` file:line.*
-- [ ] **AC6** — Ikke-creators (vanlige spillere) ser INGEN Opprett-knapp; player-hjem uberørt funksjonelt. *Evidens: `canCreateGame`-gate intakt.*
-- [ ] **AC7** — Norsk copy passerer humanizer (verb-først, ingen særskriving/anglisisme). *Evidens: humanizer-skill.*
-- [ ] **AC8** — `package.json` PATCH-bump (1.60.2 → 1.60.3) + `CHANGELOG.md`-oppføring; commit-msg-hook grønn. *Evidens: hook passerer.*
+- [x] **AC1** — Samme etikett «Opprett spill» for opprett-handlingen på alle flater (hjem tom-CTA, hjem ikke-tom primær-knapp, spill-lista action), fra én delt const. *Evidens: `CREATE_GAME_LABEL`-import i begge filer; grep viser ingen gjenværende «Opprett en turnering» / «+ Nytt» / «Sett opp ny runde» som opprett-etikett.*
+- [x] **AC2** — Én fast, alltid-synlig Opprett-inngang på hjem i BEGGE tilstander (tom + ikke-tom), for både admin og trusted. *Evidens: ikke-tom-grenen rendrer Opprett-knapp for `canCreateGame`; file:line.*
+- [x] **AC3** — Én representasjon av Sekretariatet-lenken fra hjem (delt footer i begge grener, konsistent vekt). *Evidens: `HomeUtilityFooter` brukt i begge return-grener; ingen accent-kort-vs-footer-lenke-divergens.*
+- [x] **AC4** — Rolle-routing bevart: admin → `/admin/games/new`, trusted → `/opprett-spill`, i alle Opprett-flater. *Evidens: file:line.*
+- [x] **AC5** — Spill-lista action relabelet til «Opprett spill»; rute uendret. *Evidens: `app/admin/games/page.tsx` file:line.*
+- [x] **AC6** — Ikke-creators (vanlige spillere) ser INGEN Opprett-knapp; player-hjem uberørt funksjonelt. *Evidens: `canCreateGame`-gate intakt.*
+- [x] **AC7** — Norsk copy passerer humanizer (verb-først, ingen særskriving/anglisisme). *Evidens: humanizer-skill.*
+- [x] **AC8** — `package.json` PATCH-bump (1.60.2 → 1.60.3) + `CHANGELOG.md`-oppføring; commit-msg-hook grønn. *Evidens: hook passerer.*
 
 ## Filer
 
