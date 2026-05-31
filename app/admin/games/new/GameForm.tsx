@@ -157,6 +157,13 @@ export type InitialValues = {
    */
   chapman_allowance_pct?: number;
   /**
+   * Gruesome matchplay (#291): allowance-prosent (0..100) som pre-fylles inn i
+   * netto/brutto-toggle-en. Settes når admin lander via cup-link med
+   * `?game_mode=gruesome_matchplay`, arver cup-radens `gruesome_allowance_pct`.
+   * Brukes IKKE for andre modi.
+   */
+  gruesome_allowance_pct?: number;
+  /**
    * Round Robin (#280): allowance-prosent (0..100) for matchplay-scoring.
    * Pre-fylles fra DB i edit-flyt; nye spill defaulter til 85 (WHS-standard
    * for matchplay) i useGameFormState.
@@ -285,6 +292,8 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     setGreensomeAllowancePct,
     chapmanAllowancePct,
     setChapmanAllowancePct,
+    gruesomeAllowancePct,
+    setGruesomeAllowancePct,
     handleModeChange,
     handleTeamSizeChange,
     lockGameMode,
@@ -427,6 +436,13 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           value={String(chapmanAllowancePct)}
         />
       )}
+      {gameMode === 'gruesome_matchplay' && (
+        <input
+          type="hidden"
+          name="gruesome_allowance_pct"
+          value={String(gruesomeAllowancePct)}
+        />
+      )}
       {gameMode === 'greensome_matchplay' && (
         <input
           type="hidden"
@@ -539,6 +555,19 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             bruttoHelperText="Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
             value={chapmanAllowancePct}
             onChange={setChapmanAllowancePct}
+            hideHiddenInput
+          />
+        )}
+        {gameMode === 'gruesome_matchplay' && (
+          <AllowanceField
+            fieldName="gruesome_allowance_pct"
+            defaultPct={50}
+            legend="Scoring for gruesome-matches"
+            description="Styrer handicap for gruesome-matches (begge teer ut, motstanderlaget velger ballen + alternate). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets gross-slag."
+            nettoHelperText="Andel av differansen i lagenes summerte handicap. WHS-standard for gruesome matchplay er 50 (identisk med foursomes)."
+            bruttoHelperText="Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+            value={gruesomeAllowancePct}
+            onChange={setGruesomeAllowancePct}
             hideHiddenInput
           />
         )}

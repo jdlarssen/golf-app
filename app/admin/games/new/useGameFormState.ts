@@ -316,6 +316,13 @@ export function useGameFormState({
   const [chapmanAllowancePct, setChapmanAllowancePct] = useState<number>(
     initialValues?.chapman_allowance_pct ?? 100,
   );
+  // Gruesome matchplay (#291): allowance-prosent (0 = brutto, 1..100 = netto).
+  // Bruker sum-handicap som foursomes; default 50 (WHS foursomes-standard).
+  // Pre-fylles fra cup-radens gruesome_allowance_pct via initialValues.
+  // Validatoren (`validateGruesomeMatchplay`) leser dette ved publish.
+  const [gruesomeAllowancePct, setGruesomeAllowancePct] = useState<number>(
+    initialValues?.gruesome_allowance_pct ?? 50,
+  );
   // Wolf (#274): brutto vs netto-toggle. Default 'net' speiler Tørny's
   // ethos. Validatoren (`validateWolf`) leser feltet og faller defensivt
   // tilbake til 'net' ved ugyldig/manglende verdi.
@@ -1445,6 +1452,8 @@ export function useGameFormState({
     setGreensomeAllowancePct,
     chapmanAllowancePct,
     setChapmanAllowancePct,
+    gruesomeAllowancePct,
+    setGruesomeAllowancePct,
     roundRobinAllowancePct,
     setRoundRobinAllowancePct,
     wolfScoring,

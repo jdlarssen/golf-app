@@ -317,6 +317,7 @@ export function GameWizard({
       fourball_allowance_pct: state.fourballAllowancePct,
       foursomes_allowance_pct: state.foursomesAllowancePct,
       greensome_allowance_pct: state.greensomeAllowancePct,
+      gruesome_allowance_pct: state.gruesomeAllowancePct,
       round_robin_allowance_pct: state.roundRobinAllowancePct,
       wolf_scoring: state.wolfScoring,
       nassau_scoring: state.nassauScoring,
@@ -562,6 +563,19 @@ export function GameWizard({
                   hideHiddenInput
                 />
               )}
+              {state.gameMode === 'gruesome_matchplay' && (
+                <AllowanceField
+                  fieldName="gruesome_allowance_pct"
+                  defaultPct={50}
+                  legend="Scoring for gruesome-matches"
+                  description="Styrer handicap for gruesome-matches (begge teer ut, motstanderlaget velger ballen + alternate). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets gross-slag."
+                  nettoHelperText="Andel av differansen i lagenes summerte handicap. WHS-standard for gruesome matchplay er 50 (identisk med foursomes)."
+                  bruttoHelperText="Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+                  value={state.gruesomeAllowancePct}
+                  onChange={state.setGruesomeAllowancePct}
+                  hideHiddenInput
+                />
+              )}
               {state.isRoundRobin && (
                 <AllowanceField
                   fieldName="round_robin_allowance_pct"
@@ -760,6 +774,7 @@ function FormDataInputs({
     fourballAllowancePct,
     foursomesAllowancePct,
     greensomeAllowancePct,
+    gruesomeAllowancePct,
     roundRobinAllowancePct,
     wolfScoring,
     nassauScoring,
@@ -853,6 +868,13 @@ function FormDataInputs({
           type="hidden"
           name="greensome_allowance_pct"
           value={String(greensomeAllowancePct)}
+        />
+      )}
+      {gameMode === 'gruesome_matchplay' && (
+        <input
+          type="hidden"
+          name="gruesome_allowance_pct"
+          value={String(gruesomeAllowancePct)}
         />
       )}
       {isWolf && (

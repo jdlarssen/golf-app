@@ -228,6 +228,12 @@ export default async function CupDetailPage({
           >
             + Chapman match
           </Link>
+          <Link
+            href={`/admin/games/new?intent=cup&tournament_id=${id}&game_mode=gruesome_matchplay`}
+            className="rounded-md border border-border bg-surface px-3 py-2 text-center text-xs font-medium text-primary hover:border-primary/40"
+          >
+            + Gruesome match
+          </Link>
         </div>
         {leaderboard.matches.length === 0 ? (
           <Card>
@@ -261,7 +267,8 @@ export default async function CupDetailPage({
                                     m.gameMode === 'fourball_matchplay' ||
                                     m.gameMode === 'foursomes_matchplay' ||
                                     m.gameMode === 'greensome_matchplay' ||
-                                    m.gameMode === 'chapman_matchplay'
+                                    m.gameMode === 'chapman_matchplay' ||
+                                    m.gameMode === 'gruesome_matchplay'
                                       ? tournament.team_1_name
                                       : m.team1PlayerName
                                   }`
@@ -269,7 +276,8 @@ export default async function CupDetailPage({
                                     m.gameMode === 'fourball_matchplay' ||
                                     m.gameMode === 'foursomes_matchplay' ||
                                     m.gameMode === 'greensome_matchplay' ||
-                                    m.gameMode === 'chapman_matchplay'
+                                    m.gameMode === 'chapman_matchplay' ||
+                                    m.gameMode === 'gruesome_matchplay'
                                       ? tournament.team_2_name
                                       : m.team2PlayerName
                                   }`}

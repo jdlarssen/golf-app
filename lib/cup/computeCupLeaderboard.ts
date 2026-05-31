@@ -33,7 +33,8 @@ export type CupMatchInput = {
     | 'fourball_matchplay'
     | 'foursomes_matchplay'
     | 'greensome_matchplay'
-    | 'chapman_matchplay';
+    | 'chapman_matchplay'
+    | 'gruesome_matchplay';
   status: 'draft' | 'scheduled' | 'active' | 'finished';
   result: { winnerSide: 1 | 2 | 'tied'; formatted: string } | null;
 };

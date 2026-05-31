@@ -41,13 +41,15 @@ type CupGameMode =
   | 'fourball_matchplay'
   | 'foursomes_matchplay'
   | 'greensome_matchplay'
-  | 'chapman_matchplay';
+  | 'chapman_matchplay'
+  | 'gruesome_matchplay';
 
 function parseCupGameMode(raw: string | undefined): CupGameMode {
   if (raw === 'fourball_matchplay') return 'fourball_matchplay';
   if (raw === 'foursomes_matchplay') return 'foursomes_matchplay';
   if (raw === 'greensome_matchplay') return 'greensome_matchplay';
   if (raw === 'chapman_matchplay') return 'chapman_matchplay';
+  if (raw === 'gruesome_matchplay') return 'gruesome_matchplay';
   // Default + singles_matchplay → singles. Bevarer dagens oppførsel (cup-link
   // uten game_mode-parameter trådte tidligere alltid på singles-løypa).
   return 'singles_matchplay';
@@ -128,7 +130,9 @@ export default async function NewGamePage({
                   ? 'Spillmodus er låst til greensome matchplay (2 vs 2, velg-beste-tee + alternate).'
                   : cupContext.gameMode === 'chapman_matchplay'
                     ? 'Spillmodus er låst til chapman matchplay (2 vs 2, dobbel tee, bytt ball + alternate).'
-                    : 'Spillmodus er låst til matchplay (1 vs 1).'}
+                    : cupContext.gameMode === 'gruesome_matchplay'
+                      ? 'Spillmodus er låst til gruesome matchplay (2 vs 2, begge teer ut, motstanderlaget velger ball + alternate).'
+                      : 'Spillmodus er låst til matchplay (1 vs 1).'}
           </Banner>
         </div>
       )}
@@ -179,6 +183,12 @@ type CupContext = {
    * Default 100 (WHS Chapman matchplay-standard) ved manglende verdi. #290.
    */
   chapmanAllowancePct: number;
+  /**
+   * Cup-radens default gruesome-allowance (0 = brutto, 1..100 = netto-prosent av
+   * lagenes summerte HCP-differanse). Pre-fylles inn for gruesome-matches.
+   * Default 50 (WHS foursomes-standard — identisk handicap-formel) ved manglende verdi. #291.
+   */
+  gruesomeAllowancePct: number;
 };
 
 async function loadCupContext(
@@ -188,7 +198,7 @@ async function loadCupContext(
   const supabase = await getServerClient();
   const { data: cup } = await supabase
     .from('tournaments')
-    .select('id, name, status, fourball_allowance_pct, foursomes_allowance_pct, greensome_allowance_pct, chapman_allowance_pct')
+    .select('id, name, status, fourball_allowance_pct, foursomes_allowance_pct, greensome_allowance_pct, chapman_allowance_pct, gruesome_allowance_pct')
     .eq('id', tournamentId)
     .maybeSingle<{
       id: string;
@@ -198,6 +208,7 @@ async function loadCupContext(
       foursomes_allowance_pct: number | null;
       greensome_allowance_pct: number | null;
       chapman_allowance_pct: number | null;
+      gruesome_allowance_pct: number | null;
     }>();
   if (!cup) return null;
   if (cup.status === 'finished') return null;
@@ -218,13 +229,16 @@ async function loadCupContext(
           ? 'Greensome'
           : requestedMode === 'chapman_matchplay'
             ? 'Chapman'
-            : 'Singles';
+            : requestedMode === 'gruesome_matchplay'
+              ? 'Gruesome'
+              : 'Singles';
   // Default 85 (WHS) hvis cup-raden ikke har verdien satt (eldre cups før
   // 0045-migrasjonen, eller cups opprettet før chunk 5 lå ute).
   const fourballAllowancePct = cup.fourball_allowance_pct ?? 85;
   const foursomesAllowancePct = cup.foursomes_allowance_pct ?? 50;
   const greensomeAllowancePct = cup.greensome_allowance_pct ?? 100;
   const chapmanAllowancePct = cup.chapman_allowance_pct ?? 100;
+  const gruesomeAllowancePct = cup.gruesome_allowance_pct ?? 50;
   return {
     id: cup.id,
     name: cup.name,
@@ -234,6 +248,7 @@ async function loadCupContext(
     foursomesAllowancePct,
     greensomeAllowancePct,
     chapmanAllowancePct,
+    gruesomeAllowancePct,
   };
 }
 
@@ -348,6 +363,14 @@ function buildCupInitialValues(cup: CupContext) {
       game_mode: 'chapman_matchplay' as const,
       team_size: 2 as const,
       chapman_allowance_pct: cup.chapmanAllowancePct,
+    };
+  }
+  if (cup.gameMode === 'gruesome_matchplay') {
+    return {
+      ...base,
+      game_mode: 'gruesome_matchplay' as const,
+      team_size: 2 as const,
+      gruesome_allowance_pct: cup.gruesomeAllowancePct,
     };
   }
   return {
