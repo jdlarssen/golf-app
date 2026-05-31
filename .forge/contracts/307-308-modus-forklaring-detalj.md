@@ -35,15 +35,17 @@ alter table public.formats
 
 ## Suksesskriterier
 
-- [ ] Migrasjon: 4 nullable-kolonner på `formats` + seed av summary/points (alle 22) + rules_long/rules_example (alle 22). `lib/database.types.ts` oppdatert.
-- [ ] `mergeModeContent` ren helper: DB-verdi vinner per felt, null → MODE_GUIDE-fallback; Type-A-testet (DB-verdi, fallback, blandet).
-- [ ] `getModeContent` cached på `format-mapping`-tag (admin-client read).
-- [ ] `ModeGuideCard` tar data via props; spill-side (×2) + /spillformer henter via getModeContent; 4BBB-variant bevart.
-- [ ] `/spillformer`-indeks lenker hvert kort til detaljside.
-- [ ] `/spillformer/[slug]` viser summary + punkter + lang + eksempel; 404 ved ukjent slug; alle 22 slugs rendrer.
-- [ ] Admin kan redigere alle fire feltene per format fra `/admin/formats`; endring synlig på /spillformer + spill-side uten deploy (revalidateTag).
-- [ ] Innhold: rules_long + rules_example skrevet for alle 22 modi, brand-stemme, humanizer-pass. Eksempler konkrete (f.eks. «Hull 3: du 4, partner 5 → laget tar 4»).
-- [ ] Tester: mergeModeContent (Type A) + ÉN detalj-side-render (Type C) + admin-action minimal. Ingen re-assert av innholdsstrenger.
+- [x] Migrasjon 0066: 4 nullable-kolonner + seed rules_long/rules_example (alle 22; summary/points NULL → fallback). `lib/database.types.ts` oppdatert. Applisert til prod (22/22 verifisert).
+- [x] `mergeModeContent` ren helper: DB-verdi vinner per felt, null → resolveModeGuide-fallback (inkl. 4BBB-variant); Type-A-testet (6 cases).
+- [x] `getModeContentMap` cached på `format-mapping`-tag (admin-client read).
+- [x] `ModeGuideCard` tar data via props (summary/points/label/detailHref); spill-side (×2) + /spillformer henter via getModeContentMap; 4BBB-variant bevart via resolveModeGuide.
+- [x] `/spillformer`-indeks lenker hvert kort til detaljside; alle 22 modi listet (la til 6 spesial-modi).
+- [x] `/spillformer/[slug]` viser summary + punkter + lang + eksempel; 404 ved ukjent slug; slug-validering avledet fra MODE_LABELS (ingen drift).
+- [x] Admin redigerer alle fire felt per format fra `/admin/formats`; `updateFormatContent` + revalidateTag('format-mapping') → synlig uten deploy.
+- [x] Innhold: rules_long + rules_example for alle 22 modi, brand-stemme, språk-ryddet (11 anglicisme/typo-fixes + 1 antatt-feil-regel fjernet). Konkrete eksempler.
+- [x] Tester: mergeModeContent (Type A, 6) + parsePointsTextarea (Type A, 7) + detalj-side-render (Type C) + ModeGuideCard render. Full suite 2326 grønne.
+
+**Gates:** full vitest 2326 grønne · `npm run build` ✓ · tsc rent på feature-filer (13 baseline-feil i #263-filer). Fresh-context skeptisk evaluator: NEEDS WORK → 2 funn fikset (manglende CATALOG-modi + ModeGuideCard.test tsc) → ACCEPT. Bonus: fant + fikset #309-regresjon (inviteToGameActions-test) + #322 tsc-feil. Versjon → 1.60.0 (ny minor-serie). Migrasjon applisert post-merge.
 
 ## Gates
 
