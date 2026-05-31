@@ -21,6 +21,7 @@ import { HandicapChip } from '@/components/handicap/HandicapChip';
 import { firstName } from '@/lib/firstName';
 import { formatTeeOffDate, formatTeeOffTime } from '@/lib/format/teeOff';
 import { STATUS_LABELS } from '@/lib/games/status';
+import { CREATE_GAME_LABEL } from '@/lib/games/createGameLabel';
 import { isTrustedCreator } from '@/lib/admin/trustedCreators';
 import { HomeDiscoverySection } from './HomeDiscoverySection';
 import { getDiscoverableGames } from '@/lib/games/getDiscoverableGames';
@@ -220,7 +221,7 @@ async function HomeBody() {
                 href={profile?.is_admin ? '/admin/games/new' : '/opprett-spill'}
                 full
               >
-                Opprett en turnering
+                {CREATE_GAME_LABEL}
               </LinkButton>
             </div>
           )}
@@ -233,38 +234,7 @@ async function HomeBody() {
           <HomeDiscoverySection data={discoveryData} />
         )}
 
-        <footer className="mt-14 pt-6 border-t border-border/60 dark:border-border/80">
-          <ul className="flex flex-col gap-1 items-center">
-            <li>
-              <SmartLink
-                href="/profile"
-                className="inline-flex items-center min-h-[44px] px-3 text-sm text-muted hover:text-text transition-colors"
-              >
-                Min profil
-              </SmartLink>
-            </li>
-            {profile?.is_admin && (
-              <li>
-                <SmartLink
-                  href="/admin"
-                  className="inline-flex items-center min-h-[44px] px-3 text-sm text-muted hover:text-text transition-colors"
-                >
-                  Sekretariatet
-                </SmartLink>
-              </li>
-            )}
-            <li>
-              <form action="/logout" method="post">
-                <button
-                  type="submit"
-                  className="inline-flex items-center min-h-[44px] px-3 text-sm text-muted hover:text-danger transition-colors"
-                >
-                  Logg ut
-                </button>
-              </form>
-            </li>
-          </ul>
-        </footer>
+        <HomeUtilityFooter isAdmin={profile?.is_admin === true} />
       </>
     );
   }
@@ -275,6 +245,20 @@ async function HomeBody() {
         title={`Hei, ${profile?.name ?? 'spiller'}.`}
         action={handicapChip}
       />
+
+      {/* Fast Opprett-inngang — alltid synlig for de som kan opprette, ikke
+          bare i tom-tilstand (#346). Samme etikett + rolle-routing som tom-
+          CTA-en og spill-lista. */}
+      {canCreateGame && (
+        <div className="mb-6">
+          <LinkButton
+            href={profile?.is_admin ? '/admin/games/new' : '/opprett-spill'}
+            full
+          >
+            {CREATE_GAME_LABEL}
+          </LinkButton>
+        </div>
+      )}
 
       <nav className="space-y-6">
         {activeGames.length > 0 && (
@@ -363,65 +347,15 @@ async function HomeBody() {
           </SmartLink>
         </Section>
 
-        <Section label="Profil">
-          <SmartLink href="/profile" className="block">
-            <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
-              <span className="text-base font-medium text-text">
-                Min profil
-              </span>
-              <span aria-hidden className="text-muted">
-                →
-              </span>
-            </Card>
-          </SmartLink>
-        </Section>
-
-        {profile?.is_admin && (
-          <Section label="Admin" accent>
-            <SmartLink href="/admin" className="block">
-              <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
-                <span className="text-base font-medium text-text">
-                  Sekretariatet
-                </span>
-                <span aria-hidden className="text-muted">
-                  →
-                </span>
-              </Card>
-            </SmartLink>
-          </Section>
-        )}
-
-        {/* Trusted creators (#198): inngang til /opprett-spill uten å
-            eksponere resten av Sekretariatet. Admins har egen vei via
-            Sekretariat-seksjonen over. */}
-        {canCreateGame && !profile?.is_admin && (
-          <Section label="Opprett spill" accent>
-            <SmartLink href="/opprett-spill" className="block">
-              <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
-                <span className="text-base font-medium text-text">
-                  Sett opp ny runde
-                </span>
-                <span aria-hidden className="text-muted">
-                  →
-                </span>
-              </Card>
-            </SmartLink>
-          </Section>
-        )}
-
-        <form action="/logout" method="post" className="pt-2">
-          <button
-            type="submit"
-            className="w-full min-h-[44px] text-sm font-medium tracking-tight text-danger hover:bg-danger/[0.08] rounded-full px-4 py-2.5 transition-colors"
-          >
-            Logg ut
-          </button>
-        </form>
       </nav>
 
       <p className="mt-10 text-xs text-muted text-center">
         Mer kommer her snart.
       </p>
+
+      {/* Samme utility-footer i begge hjem-grener → én konsistent
+          representasjon av Sekretariatet-lenken (#346). */}
+      <HomeUtilityFooter isAdmin={profile?.is_admin === true} />
     </>
   );
 }
@@ -477,6 +411,49 @@ function SectionSkeleton({
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
+
+/**
+ * Shared utility footer used by BOTH home states (#346). Gives the
+ * Sekretariatet link one consistent representation and weight instead of the
+ * old split (muted footer link in empty-state, accent Section card in
+ * non-empty). Min profil + (admin) Sekretariatet + Logg ut, all muted.
+ */
+function HomeUtilityFooter({ isAdmin }: { isAdmin: boolean }) {
+  return (
+    <footer className="mt-14 pt-6 border-t border-border/60 dark:border-border/80">
+      <ul className="flex flex-col gap-1 items-center">
+        <li>
+          <SmartLink
+            href="/profile"
+            className="inline-flex items-center min-h-[44px] px-3 text-sm text-muted hover:text-text transition-colors"
+          >
+            Min profil
+          </SmartLink>
+        </li>
+        {isAdmin && (
+          <li>
+            <SmartLink
+              href="/admin"
+              className="inline-flex items-center min-h-[44px] px-3 text-sm text-muted hover:text-text transition-colors"
+            >
+              Sekretariatet
+            </SmartLink>
+          </li>
+        )}
+        <li>
+          <form action="/logout" method="post">
+            <button
+              type="submit"
+              className="inline-flex items-center min-h-[44px] px-3 text-sm text-muted hover:text-danger transition-colors"
+            >
+              Logg ut
+            </button>
+          </form>
+        </li>
+      </ul>
+    </footer>
+  );
+}
 
 function Section({
   label,

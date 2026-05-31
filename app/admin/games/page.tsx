@@ -16,6 +16,7 @@ import type { GameStatus } from '@/lib/games/status';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { formatShortDateNb } from '@/lib/format/date';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { CREATE_GAME_LABEL } from '@/lib/games/createGameLabel';
 
 const GAMES_LEDGER_GRID = '1fr 84px 14px';
 
@@ -123,7 +124,7 @@ export default async function GamesPage({
               href="/admin/games/new"
               className="rounded-full border border-border bg-surface-2/50 px-2.5 py-[5px] font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-text"
             >
-              + Nytt
+              {CREATE_GAME_LABEL}
             </SmartLink>
           )
         }
@@ -238,7 +239,7 @@ async function GamesLedger({ filterFinished }: { filterFinished: boolean }) {
         <p className="mt-1.5 max-w-[280px] font-sans text-[12.5px] leading-relaxed text-muted">
           {filterFinished
             ? 'Resultatene fra avsluttede spill samles her etterhvert som rundene fullføres.'
-            : 'Trykk «+ Nytt» for å sette opp den første runden.'}
+            : `Trykk «${CREATE_GAME_LABEL}» for å sette opp den første runden.`}
         </p>
       </div>
     );

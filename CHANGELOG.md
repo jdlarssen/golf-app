@@ -21,6 +21,29 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issues [#307](https://github.com/jdlarssen/golf-app/issues/307) + [#308](https://github.com/jdlarssen/golf-app/issues/308), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Hver spillform får en egen detaljside med fyldigere forklaring + konkret eksempel, og alle modus-tekstene blir redigerbare fra Sekretariatet uten deploy.
 
+### [1.60.3] - 2026-05-31
+
+> «Opprett spill» ser nå lik ut overalt: på hjem og i spill-lista. Knappen blir værende på hjem selv når du allerede har spill, ikke bare når lista er tom. Før het samme handling tre forskjellige ting avhengig av hvor du sto.
+
+<details>
+<summary>Teknisk</summary>
+
+Del av «Én vei til rom»-paraplyen ([#344](https://github.com/jdlarssen/golf-app/issues/344)). Fikser [#346](https://github.com/jdlarssen/golf-app/issues/346) — én konsistent Opprett-inngang (fast plassering + etikett).
+
+#### Added
+- [`lib/games/createGameLabel.ts`](lib/games/createGameLabel.ts) — `CREATE_GAME_LABEL = 'Opprett spill'`, én sannhetskilde for opprett-etiketten på tvers av flater.
+- Fast Opprett-knapp i hjem ikke-tom-tilstand ([`app/page.tsx`](app/page.tsx)) for `canCreateGame`, rollet til `/admin/games/new` (admin) / `/opprett-spill` (trusted) — så inngangen ikke lenger forsvinner når du har spill fra før.
+- Delt `HomeUtilityFooter` brukt i begge hjem-grener.
+
+#### Changed
+- Hjem tom-CTA, spill-lista sin TopBar-action og spill-lista sin tom-tekst bruker nå `CREATE_GAME_LABEL` (var «Opprett en turnering» / «+ Nytt»).
+- Sekretariatet-lenken fra hjem er konsolidert til én representasjon med konsistent vekt (delt footer i begge grener) i stedet for muted-footer-lenke (tom) vs. accent-kort (ikke-tom).
+
+#### Removed
+- Redundant trusted-only «Sett opp ny runde»-seksjon + duplikat Profil/Admin Section-kort i hjem ikke-tom-tilstand (erstattet av den faste Opprett-knappen + delt footer).
+
+</details>
+
 ### [1.60.2] - 2026-05-31
 
 > Er du med i en cup, ser du nå «Se cup-stillingen» rett på match-siden din, så du slipper å lete etter lenken. Og som arrangør tar tilbake-knappen på en cup deg til cup-lista i stedet for helt ut til Sekretariatet.
