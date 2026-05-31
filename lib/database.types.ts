@@ -272,6 +272,10 @@ export type Database = {
           icon_key: string
           is_active: boolean
           is_cup_eligible: boolean
+          rules_example: string | null
+          rules_long: string | null
+          rules_points: string[] | null
+          rules_summary: string | null
           scoring_module: string
           short_description: string
           slug: string
@@ -283,6 +287,10 @@ export type Database = {
           icon_key: string
           is_active?: boolean
           is_cup_eligible?: boolean
+          rules_example?: string | null
+          rules_long?: string | null
+          rules_points?: string[] | null
+          rules_summary?: string | null
           scoring_module: string
           short_description: string
           slug: string
@@ -294,6 +302,10 @@ export type Database = {
           icon_key?: string
           is_active?: boolean
           is_cup_eligible?: boolean
+          rules_example?: string | null
+          rules_long?: string | null
+          rules_points?: string[] | null
+          rules_summary?: string | null
           scoring_module?: string
           short_description?: string
           slug?: string
