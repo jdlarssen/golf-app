@@ -1,20 +1,22 @@
 <!--
-  Nedbrutte brukerflyt-diagrammer for Tørny. Hver fil finnes som .svg (skarp/zoom)
-  og .png (rask visning). Oversikts-kartet ligger ett nivå opp: docs/user-flows.svg.
-  ⚠-merker peker på GitHub-issues (#355–#363) fra UX-flyt-auditen.
+  Nedbrutte brukerflyt-diagrammer for Tørny. Hver flyt finnes i to versjoner:
+    <n>-<navn>.svg/.png          = slik flyten er i dag (med ⚠ forbedringspunkter)
+    <n>-<navn>-fremtid.svg/.png  = slik flyten blir etter planlagte endringer (NY-merker)
+  .svg = skarp/zoom · .png = rask visning. Oversikts-kartet: docs/user-flows.svg.
+  Gjennomgått flyt-for-flyt 2026-05-31, hver grunnet i faktisk kode. Forbedringer sporet som issues #355–#377.
 -->
 
 # Brukerflyt-diagrammer — de suksess-kritiske flytene
 
-Disse fem flytene er det appen står og faller på. Hver er tegnet som et eget steg-for-steg-diagram (les ovenfra og ned). Oversikten over alt henger sammen i [`../user-flows.svg`](../user-flows.svg); den fulle tekst-referansen er [`../user-flows.md`](../user-flows.md).
+Fem flyter appen står og faller på. Hver er tegnet steg-for-steg (les ovenfra og ned), i **to versjoner**: slik den er i dag, og slik den blir etter de planlagte endringene. Oversikten over alt: [`../user-flows.svg`](../user-flows.svg). Full tekst-referanse: [`../user-flows.md`](../user-flows.md).
 
-| # | Flyt | Hvem | Hvorfor kritisk | Diagram |
+| # | Flyt | Hvem | I dag | Fremtid |
 |---|---|---|---|---|
-| 1 | **Bli bruker** | Ny spiller | Første terskel — feiler den, kommer ingen i gang | [PNG](01-bli-bruker.png) · [SVG](01-bli-bruker.svg) |
-| 2 | **Bli med i et spill** | Spiller | Avgjør om folk faktisk møter opp | [PNG](02-bli-med-i-spill.png) · [SVG](02-bli-med-i-spill.svg) |
-| 3 | **Spille en runde** | Spiller | Hjertet i appen — tasting av slag må være knirkefritt | [PNG](03-spille-en-runde.png) · [SVG](03-spille-en-runde.svg) |
-| 4 | **Opprett spill** | Arrangør | Motoren — uten spill finnes ingenting for spillerne | [PNG](04-opprett-spill.png) · [SVG](04-opprett-spill.svg) |
-| 5 | **Kjør og avslutt spill** | Arrangør | Den siste milen — gir runden en delt avslutning | [PNG](05-kjor-og-avslutt-spill.png) · [SVG](05-kjor-og-avslutt-spill.svg) |
+| 1 | **Bli bruker** | Ny spiller | [PNG](01-bli-bruker.png) · [SVG](01-bli-bruker.svg) | [PNG](01-bli-bruker-fremtid.png) · [SVG](01-bli-bruker-fremtid.svg) |
+| 2 | **Bli med i et spill** | Spiller | [PNG](02-bli-med-i-spill.png) · [SVG](02-bli-med-i-spill.svg) | [PNG](02-bli-med-i-spill-fremtid.png) · [SVG](02-bli-med-i-spill-fremtid.svg) |
+| 3 | **Spille en runde** | Spiller | [PNG](03-spille-en-runde.png) · [SVG](03-spille-en-runde.svg) | [PNG](03-spille-en-runde-fremtid.png) · [SVG](03-spille-en-runde-fremtid.svg) |
+| 4 | **Opprett spill** | Arrangør | [PNG](04-opprett-spill.png) · [SVG](04-opprett-spill.svg) | [PNG](04-opprett-spill-fremtid.png) · [SVG](04-opprett-spill-fremtid.svg) |
+| 5 | **Kjør og avslutt spill** | Arrangør | [PNG](05-kjor-og-avslutt-spill.png) · [SVG](05-kjor-og-avslutt-spill.svg) | [PNG](05-kjor-og-avslutt-spill-fremtid.png) · [SVG](05-kjor-og-avslutt-spill-fremtid.svg) |
 
 ## Hvordan de henger sammen
 
@@ -25,16 +27,26 @@ Arrangør:  [4 Opprett] ───────────────► [5 Kjø
 Spiller:   [1 Bli bruker] ─► [2 Bli med] ─► [3 Spille en runde]
 ```
 
+## Forbedringer per flyt (sporet som GitHub-issues)
+
+- **Flyt 1 — Bli bruker:** #364 (aktiver selvregistrering), #365 (ekstra vern), #356 (land rett i spillet), #361 (vennlige feil), #366 (bruker-baner).
+- **Flyt 2 — Bli med:** #357 (vedvarende «Finn turneringer»), #367 (tydelig påmeldingsvalg = synlighet), #368 (invite_only-blindvei), #362 (lag-klarhet), #369 (venner/klubb-framtid).
+- **Flyt 3 — Spille en runde:** #360 (peer-godkjenning kan ikke låse seg). #358 (live leaderboard) + #359 (lagret-merke) var **allerede løst** — lukket etter kode-verifisering.
+- **Flyt 4 — Opprett spill:** #373 (antall før format), #374 (best ball uten 8-lås), #371 (peer-godkjenning av som default), #367 (tydelig påmelding), #372 (copy-bug env-var). Parkert større: #22 (alle kan opprette), #366 (bruker-baner). #370 lukket (beholder «kun invitasjon» som default).
+- **Flyt 5 — Kjør og avslutt:** #375 (avslutt-likevel — aldri permanent låst), #376 (auto-varsel når spilleren er ferdig + admin-purring), #377 (avslutnings-varsel via samme in-app-først-logikk, ingen egen avslutningsmail).
+
 ## Tegn-forklaring
 - **Grønt** = spiller-handling · **Champagne** = arrangør-handling · **Mørkegrønn** = start/felles.
-- **⚠ #NNN** = kjent forbedringspunkt, sporet som GitHub-issue (se [issues #355–#363](https://github.com/jdlarssen/golf-app/issues)).
+- **⚠ #NNN** (dagens-diagram) = forbedringspunkt · **NY #NNN** (fremtids-diagram) = planlagt endring.
+- **✓** = fungerer alt i dag.
+
+## Metode
+Hver flyt ble grunnet i faktisk kode før konklusjon. Det avdekket at auditen overdrev på flyt 3 (to av tre «funn» var alt løst), og at flere «mangler» egentlig var skrudd-av-funksjoner (selvregistrering) eller historiske låser (best ball = 8). Lærdom: verifiser mot koden før du bygger.
 
 ## Oppdatere diagrammene
 SVG-ene er kilden. Etter endring, regenerer PNG-ene:
 
 ```bash
 cd docs/flows
-for f in 01-bli-bruker 02-bli-med-i-spill 03-spille-en-runde 04-opprett-spill 05-kjor-og-avslutt-spill; do
-  qlmanage -t -s 2000 -o . "$f.svg" && mv -f "$f.svg.png" "$f.png"
-done
+for f in *.svg; do qlmanage -t -s 2000 -o . "$f" && mv -f "$f.png" "${f%.svg}.png"; done
 ```

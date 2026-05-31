@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1140" viewBox="0 0 1200 1140" font-family="-apple-system, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="a" markerWidth="10" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#5E6B63"/></marker>
+  </defs>
+  <rect width="1200" height="1140" fill="#F8F6F0"/>
+
+  <!-- Header -->
+  <text x="120" y="58" font-family="Georgia, serif" font-size="32" font-weight="600" fill="#1B4332">1 · Bli bruker — slik blir det</text>
+  <text x="121" y="88" font-size="15" fill="#6B7770">Fremtidig flyt etter endringene. Ingen invitasjon nødvendig: kjente brukere logger inn, ukjente blir bruker.</text>
+
+  <!-- Legend -->
+  <g font-size="13">
+    <rect x="118" y="104" width="34" height="20" rx="10" fill="#C9A961"/><text x="135" y="118" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">NY</text>
+    <text x="160" y="119" fill="#6B7770">= endringen vi skal gjøre (med issue-nummer)</text>
+  </g>
+
+  <!-- STEP 1: enter email -->
+  <rect x="360" y="146" width="480" height="74" rx="16" fill="#1B4332"/>
+  <text x="600" y="180" text-anchor="middle" font-size="17" font-weight="700" fill="#FFFFFF">✉️  Skriv e-posten din</text>
+  <text x="600" y="203" text-anchor="middle" font-size="12.5" fill="#C9A961">ingen invitasjon nødvendig lenger</text>
+  <!-- NY pill on step1 -->
+  <rect x="788" y="156" width="40" height="20" rx="10" fill="#C9A961"/><text x="808" y="170" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">#364</text>
+
+  <!-- split label -->
+  <text x="600" y="244" text-anchor="middle" font-size="13" font-style="italic" fill="#8A8472">appen kjenner deg igjen — automatisk</text>
+  <!-- split arrows -->
+  <path d="M600,220 V232 H350 V258" fill="none" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+  <path d="M600,232 H850 V258" fill="none" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- branch left: existing user -->
+  <rect x="110" y="260" width="480" height="92" rx="14" fill="#FFFFFF" stroke="#9DBFAC" stroke-width="1.5"/>
+  <text x="134" y="296" font-size="16" font-weight="600" fill="#213029">Eksisterende bruker</text>
+  <text x="134" y="320" font-size="13.5" fill="#46524B">→ får engangskode på mail</text>
+  <text x="134" y="340" font-size="13.5" fill="#46524B">→ logger inn (som i dag)</text>
+
+  <!-- branch right: new email (NY) -->
+  <rect x="610" y="260" width="480" height="92" rx="14" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8"/>
+  <rect x="1036" y="270" width="40" height="20" rx="10" fill="#C9A961"/><text x="1056" y="284" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">#364</text>
+  <text x="634" y="296" font-size="16" font-weight="600" fill="#7A5E13">Ny e-post</text>
+  <text x="634" y="320" font-size="13.5" fill="#6B5526">→ vi lager konto automatisk</text>
+  <text x="634" y="340" font-size="13.5" fill="#6B5526">→ får samme engangskode</text>
+
+  <!-- merge arrows to protection band -->
+  <path d="M350,352 V382" fill="none" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+  <path d="M850,352 V382" fill="none" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- protection band (NY #365) -->
+  <rect x="110" y="384" width="980" height="74" rx="14" fill="#EAF1F7" stroke="#6B9AD1" stroke-width="1.5"/>
+  <rect x="1036" y="394" width="40" height="20" rx="10" fill="#C9A961"/><text x="1056" y="408" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">#365</text>
+  <text x="134" y="418" font-size="15" font-weight="700" fill="#2E5C8A">🛡  Usynlig vern før koden sendes</text>
+  <text x="134" y="442" font-size="13" fill="#3C5876">rate-limit · honeypot · blokk av engangs-e-post — ingen captcha for vanlige brukere</text>
+
+  <!-- arrow band -> step 2 -->
+  <path d="M600,458 V488" fill="none" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- STEP 2: enter code -->
+  <rect x="360" y="490" width="480" height="66" rx="14" fill="#FFFFFF" stroke="#9DBFAC" stroke-width="1.5"/>
+  <circle cx="396" cy="523" r="16" fill="#2D6A4F"/><text x="396" y="528" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">2</text>
+  <text x="430" y="529" font-size="16" fill="#213029">Skriv koden fra mailen</text>
+  <path d="M600,556 V586" fill="none" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- STEP 3: complete profile -->
+  <rect x="360" y="588" width="480" height="72" rx="14" fill="#FFFFFF" stroke="#9DBFAC" stroke-width="1.5"/>
+  <circle cx="396" cy="624" r="16" fill="#2D6A4F"/><text x="396" y="629" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">3</text>
+  <text x="430" y="619" font-size="16" fill="#213029">Fullfør profil</text>
+  <text x="430" y="641" font-size="12.5" fill="#6B7770">kun første gang — navn + handicap</text>
+
+  <!-- landing split -->
+  <text x="600" y="686" text-anchor="middle" font-size="13" font-style="italic" fill="#8A8472">hvor du lander etterpå</text>
+  <path d="M600,660 V674 H350 V700" fill="none" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+  <path d="M600,674 H850 V700" fill="none" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- landing left: straight to game (NY #356) -->
+  <rect x="110" y="702" width="480" height="92" rx="14" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.8"/>
+  <rect x="536" y="712" width="40" height="20" rx="10" fill="#C9A961"/><text x="556" y="726" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">#356</text>
+  <text x="134" y="738" font-size="16" font-weight="600" fill="#7A5E13">Ble du invitert til et spill?</text>
+  <text x="134" y="762" font-size="13.5" fill="#6B5526">→ rett inn i spillet ditt</text>
+  <text x="134" y="782" font-size="13.5" fill="#6B5526">(slipper å lete på Hjem)</text>
+
+  <!-- landing right: home with discovery -->
+  <rect x="610" y="702" width="480" height="92" rx="14" fill="#FFFFFF" stroke="#9DBFAC" stroke-width="1.5"/>
+  <text x="634" y="738" font-size="16" font-weight="600" fill="#213029">Ellers → Hjem</text>
+  <text x="634" y="762" font-size="13.5" fill="#46524B">med «Finn turneringer» så du</text>
+  <text x="634" y="782" font-size="13.5" fill="#46524B">kan melde deg på selv (#357)</text>
+
+  <!-- merge to terminal -->
+  <path d="M350,794 V810 H600 V840" fill="none" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+  <path d="M850,794 V810 H600" fill="none" stroke="#5E6B63" stroke-width="1.6"/>
+
+  <!-- terminal -->
+  <rect x="360" y="842" width="480" height="74" rx="16" fill="#F4EBD7" stroke="#C9A961" stroke-width="1.6"/>
+  <text x="600" y="876" text-anchor="middle" font-size="18" font-weight="700" fill="#8A6D27">✓  Du er i gang</text>
+  <text x="600" y="900" text-anchor="middle" font-size="12.5" fill="#9C8552">klar til å spille eller finne en runde</text>
+
+  <!-- footnote: friendly errors #361 -->
+  <rect x="110" y="956" width="980" height="64" rx="14" fill="#FFF7F4" stroke="#E0B4A6" stroke-width="1.4"/>
+  <rect x="1036" y="966" width="40" height="20" rx="10" fill="#C9A961"/><text x="1056" y="980" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">#361</text>
+  <text x="134" y="986" font-size="14.5" font-weight="700" fill="#9A4A2F">Hvis noe er galt — vennlige norske meldinger</text>
+  <text x="134" y="1008" font-size="13" fill="#9A6B5A">utløpt invitasjon, ugyldig lenke → klar beskjed med vei videre, ikke en kryptisk feil</text>
+
+  <text x="120" y="1064" font-size="12.5" fill="#9A937F">Rekkefølge: #365 (vern) → #364 (skru på) → #356 + #361 + #357 polerer flyten.</text>
+</svg>

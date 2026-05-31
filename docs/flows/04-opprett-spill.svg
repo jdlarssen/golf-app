@@ -25,6 +25,13 @@
     <text x="352" y="335" font-size="15.5" font-weight="600" fill="#213029">Format / spillform</text>
     <text x="352" y="355" font-size="12" fill="#6B7770">Stableford, best ball, matchplay …</text>
   </g>
+  <!-- friction callout on format step: count mismatch -->
+  <rect x="918" y="296" width="246" height="86" rx="13" fill="#FFF7F4" stroke="#E0B4A6" stroke-width="1.4"/>
+  <text x="938" y="320" font-size="12.5" font-weight="700" fill="#9A4A2F">⚠ #373 vet ikke antall</text>
+  <text x="938" y="340" font-size="11.5" fill="#9A6B5A">velges blindt i steg 2,</text>
+  <text x="938" y="356" font-size="11.5" fill="#9A6B5A">spillere kommer i steg 4</text>
+  <text x="938" y="372" font-size="11.5" fill="#9A6B5A">→ må gå frem og tilbake</text>
+  <line x1="900" y1="339" x2="916" y2="339" stroke="#E0B4A6" stroke-width="1.3" stroke-dasharray="4 3"/>
   <line x1="590" y1="370" x2="590" y2="392" stroke="#8A6D27" stroke-width="1.5" marker-end="url(#a)"/>
   <g>
     <rect x="280" y="394" width="620" height="62" rx="13" fill="#FFFFFF" stroke="#D8C089" stroke-width="1.5"/>
@@ -63,12 +70,25 @@
   <text x="745" y="796" text-anchor="middle" font-size="12" fill="#46604F">spillerne kan bli med — se flyt 2</text>
 
   <!-- side: cup detour -->
-  <rect x="70" y="652" width="200" height="120" rx="14" fill="#FBF7EE" stroke="#D8C089" stroke-width="1.3" stroke-dasharray="4 4"/>
-  <text x="90" y="680" font-size="13" font-weight="700" fill="#8A6D27">Cup-vei</text>
-  <text x="90" y="703" font-size="11.5" fill="#8A7333">Velger du «Cup» i</text>
-  <text x="90" y="720" font-size="11.5" fill="#8A7333">steg 1, lager du i</text>
-  <text x="90" y="737" font-size="11.5" fill="#8A7333">stedet en turnering</text>
-  <text x="90" y="754" font-size="11.5" fill="#8A7333">og legger til matcher.</text>
+  <rect x="70" y="566" width="200" height="120" rx="14" fill="#FBF7EE" stroke="#D8C089" stroke-width="1.3" stroke-dasharray="4 4"/>
+  <text x="90" y="594" font-size="13" font-weight="700" fill="#8A6D27">Cup-vei</text>
+  <text x="90" y="617" font-size="11.5" fill="#8A7333">Velger du «Cup» i</text>
+  <text x="90" y="634" font-size="11.5" fill="#8A7333">steg 1, lager du i</text>
+  <text x="90" y="651" font-size="11.5" fill="#8A7333">stedet en turnering</text>
+  <text x="90" y="668" font-size="11.5" fill="#8A7333">og legger til matcher.</text>
 
-  <text x="120" y="858" font-size="12.5" fill="#9A937F">Samme veiviser for admin (/admin/games/new) og betrodde arrangører (/opprett-spill).</text>
+  <!-- friction callout: step-5 defaults -->
+  <rect x="918" y="394" width="246" height="234" rx="14" fill="#FFF7F4" stroke="#E0B4A6" stroke-width="1.4"/>
+  <text x="938" y="422" font-size="13.5" font-weight="700" fill="#9A4A2F">Friksjon i steg 5</text>
+  <text x="938" y="448" font-size="12" fill="#9A6B5A">⚠ #371 peer-godkj.</text>
+  <text x="938" y="465" font-size="12" fill="#9A6B5A">PÅ default → kan</text>
+  <text x="938" y="482" font-size="12" fill="#9A6B5A">låse seg (#360)</text>
+  <text x="938" y="508" font-size="12" fill="#9A6B5A">⚠ #367 påmeldings-</text>
+  <text x="938" y="525" font-size="12" fill="#9A6B5A">valget er utydelig</text>
+  <text x="938" y="551" font-size="12" fill="#9A6B5A">⚠ #372 viser env-</text>
+  <text x="938" y="568" font-size="12" fill="#9A6B5A">variabel-navn til</text>
+  <text x="938" y="585" font-size="12" fill="#9A6B5A">brukeren</text>
+  <line x1="900" y1="597" x2="916" y2="540" stroke="#E0B4A6" stroke-width="1.3" stroke-dasharray="4 3"/>
+
+  <text x="120" y="858" font-size="12.5" fill="#9A937F">⚠ = forbedringspunkt sporet som issue · Samme veiviser for admin (/admin/games/new) + betrodde arrangører (/opprett-spill).</text>
 </svg>

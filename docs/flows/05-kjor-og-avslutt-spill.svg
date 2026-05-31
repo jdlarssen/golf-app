@@ -57,5 +57,5 @@
   <text x="120" y="678" font-size="13.5" font-weight="700" fill="#1B4332">Hva spilleren opplever parallelt</text>
   <text x="120" y="704" font-size="13" fill="#46524B">Planlagt → ser «Du er påmeldt» · Pågående → kan taste slag · Avsluttet → får resultat-mail + endelig leaderboard.</text>
 
-  <text x="120" y="788" font-size="12.5" fill="#9A937F">Speiler spiller-flyten (flyt 3) sett fra arrangørens side.</text>
+  <text x="120" y="752" font-size="12.5" fill="#9A937F">⚠ = forbedringspunkt sporet som issue · Speiler spiller-flyten (flyt 3) sett fra arrangørens side.</text>
 </svg>

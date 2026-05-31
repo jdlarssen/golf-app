@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1080" viewBox="0 0 1240 1080" font-family="-apple-system, Helvetica, Arial, sans-serif">
+  <defs><marker id="a" markerWidth="10" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#5E6B63"/></marker></defs>
+  <rect width="1240" height="1080" fill="#F8F6F0"/>
+
+  <text x="120" y="58" font-family="Georgia, serif" font-size="32" font-weight="600" fill="#1B4332">2 · Bli med i et spill — slik blir det</text>
+  <text x="121" y="88" font-size="15" fill="#6B7770">Fremtidig flyt. Nytt: påmeldingsmåten styrer synligheten, og «Finn turneringer» er en fast inngang.</text>
+  <g font-size="13">
+    <rect x="118" y="104" width="34" height="20" rx="10" fill="#C9A961"/><text x="135" y="118" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">NY</text>
+    <text x="160" y="119" fill="#6B7770">= endringen vi skal gjøre (med issue-nummer)</text>
+  </g>
+
+  <!-- start -->
+  <rect x="450" y="146" width="340" height="62" rx="16" fill="#1B4332"/>
+  <text x="620" y="183" text-anchor="middle" font-size="16" font-weight="700" fill="#FFFFFF">Du har en konto</text>
+
+  <!-- fan to four -->
+  <path d="M620,208 V226 H210 V250" fill="none" stroke="#5E6B63" stroke-width="1.5" marker-end="url(#a)"/>
+  <path d="M620,226 H480 V250" fill="none" stroke="#5E6B63" stroke-width="1.5" marker-end="url(#a)"/>
+  <path d="M620,226 H760 V250" fill="none" stroke="#5E6B63" stroke-width="1.5" marker-end="url(#a)"/>
+  <path d="M620,226 H1030 V250" fill="none" stroke="#5E6B63" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <!-- ===== column headers ===== -->
+  <rect x="70" y="252" width="280" height="44" rx="11" fill="#E3EDE6" stroke="#2D6A4F"/>
+  <text x="210" y="280" text-anchor="middle" font-size="14.5" font-weight="700" fill="#1B4332">A · Du blir invitert</text>
+
+  <rect x="370" y="252" width="270" height="44" rx="11" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.6"/>
+  <rect x="586" y="262" width="44" height="20" rx="10" fill="#C9A961"/><text x="608" y="276" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#357</text>
+  <text x="495" y="280" text-anchor="middle" font-size="14.5" font-weight="700" fill="#7A5E13">B · Finn turneringer</text>
+
+  <rect x="660" y="252" width="270" height="44" rx="11" fill="#E3EDE6" stroke="#2D6A4F"/>
+  <text x="795" y="280" text-anchor="middle" font-size="14.5" font-weight="700" fill="#1B4332">C · Delt lenke</text>
+
+  <rect x="950" y="252" width="220" height="44" rx="11" fill="#E3EDE6" stroke="#2D6A4F"/>
+  <text x="1060" y="280" text-anchor="middle" font-size="14.5" font-weight="700" fill="#1B4332">D · Lag</text>
+
+  <!-- ===== A ===== -->
+  <rect x="70" y="312" width="280" height="92" rx="13" fill="#FFFFFF" stroke="#9DBFAC" stroke-width="1.4"/>
+  <text x="92" y="342" font-size="14" fill="#213029">Arrangør legger deg til</text>
+  <text x="92" y="364" font-size="12" fill="#6B7770">du får varsel + evt. mail</text>
+  <text x="92" y="386" font-size="12" fill="#6B7770">spillet er på Hjem</text>
+
+  <!-- ===== B (NY): persistent discovery ===== -->
+  <rect x="370" y="312" width="270" height="92" rx="13" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.6"/>
+  <text x="392" y="340" font-size="13.5" font-weight="600" fill="#7A5E13">Fast «Finn turneringer»</text>
+  <text x="392" y="361" font-size="12" fill="#6B5526">på Hjem — alltid synlig</text>
+  <text x="392" y="381" font-size="12" fill="#6B5526">viser åpne + be-om-å-bli-med</text>
+  <line x1="495" y1="404" x2="495" y2="428" stroke="#5E6B63" stroke-width="1.4" marker-end="url(#a)"/>
+  <rect x="370" y="430" width="270" height="64" rx="13" fill="#FFFFFF" stroke="#9DBFAC" stroke-width="1.4"/>
+  <text x="392" y="458" font-size="13.5" fill="#213029">«Meld meg på» / «Be om»</text>
+  <text x="392" y="479" font-size="12" fill="#6B7770">rett fra kortet</text>
+
+  <!-- ===== C ===== -->
+  <rect x="660" y="312" width="270" height="92" rx="13" fill="#FFFFFF" stroke="#9DBFAC" stroke-width="1.4"/>
+  <text x="682" y="340" font-size="14" fill="#213029">Åpne delt lenke</text>
+  <text x="682" y="361" font-size="12" fill="#6B7770">/signup/…</text>
+  <text x="682" y="381" font-size="12" fill="#6B7770">(arrangør kopierer + sender)</text>
+  <line x1="795" y1="404" x2="795" y2="428" stroke="#5E6B63" stroke-width="1.4" marker-end="url(#a)"/>
+  <rect x="660" y="430" width="270" height="64" rx="13" fill="#FFFFFF" stroke="#9DBFAC" stroke-width="1.4"/>
+  <text x="682" y="458" font-size="13.5" fill="#213029">«Meld meg på» / «Be om»</text>
+  <text x="682" y="479" font-size="12" fill="#6B7770">samme som B</text>
+
+  <!-- ===== D ===== -->
+  <rect x="950" y="312" width="220" height="92" rx="13" fill="#FFFFFF" stroke="#9DBFAC" stroke-width="1.4"/>
+  <text x="972" y="340" font-size="14" fill="#213029">Kaptein lager lag</text>
+  <text x="972" y="361" font-size="12" fill="#6B7770">kjente + ukjente</text>
+  <text x="972" y="381" font-size="12" fill="#6B7770">på e-post</text>
+  <line x1="1060" y1="404" x2="1060" y2="428" stroke="#5E6B63" stroke-width="1.4" marker-end="url(#a)"/>
+  <rect x="950" y="430" width="220" height="64" rx="13" fill="#FBF6EA" stroke="#C9A961" stroke-width="1.6"/>
+  <rect x="1116" y="436" width="44" height="20" rx="10" fill="#C9A961"/><text x="1138" y="450" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#362</text>
+  <text x="972" y="462" font-size="13" fill="#6B5526">«Bli med på lag»</text>
+  <text x="972" y="482" font-size="11.5" fill="#6B5526">tydelig hva som skjer</text>
+
+  <!-- A merge arrow straight down -->
+  <line x1="210" y1="404" x2="210" y2="540" stroke="#5E6B63" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <!-- merge B/C/D + A to terminal -->
+  <path d="M495,494 V520 H620 V540" fill="none" stroke="#5E6B63" stroke-width="1.5" marker-end="url(#a)"/>
+  <path d="M795,494 V520 H620" fill="none" stroke="#5E6B63" stroke-width="1.5"/>
+  <path d="M1060,494 V520 H620" fill="none" stroke="#5E6B63" stroke-width="1.5"/>
+  <path d="M210,520 H620" fill="none" stroke="#5E6B63" stroke-width="1.5"/>
+
+  <!-- terminal -->
+  <rect x="410" y="542" width="420" height="74" rx="16" fill="#F4EBD7" stroke="#C9A961" stroke-width="1.6"/>
+  <text x="620" y="574" text-anchor="middle" font-size="17" font-weight="700" fill="#8A6D27">✓  Du er med i spillet</text>
+  <text x="620" y="598" text-anchor="middle" font-size="12.5" fill="#9C8552">venter på at runden starter</text>
+
+  <!-- KEY CHANGE band: visibility = registration mode -->
+  <rect x="110" y="660" width="1020" height="96" rx="16" fill="#EAF1F7" stroke="#6B9AD1" stroke-width="1.5"/>
+  <rect x="1066" y="672" width="44" height="20" rx="10" fill="#C9A961"/><text x="1088" y="686" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#367</text>
+  <text x="134" y="692" font-size="15" font-weight="700" fill="#2E5C8A">🔑  Kjerne-endring: påmeldingsmåten ER synligheten</text>
+  <text x="134" y="717" font-size="13.5" fill="#3C5876">Åpen påmelding → spillet dukker opp i «Finn turneringer» (vei B). Kun invitasjon → privat (kun vei A/C).</text>
+  <text x="134" y="738" font-size="13.5" fill="#3C5876">Arrangøren velger dette tydelig i opprett-veiviseren — ingen egen synlighets-bryter.</text>
+
+  <!-- dead-end fix note -->
+  <rect x="110" y="772" width="1020" height="64" rx="14" fill="#FFF7F4" stroke="#E0B4A6" stroke-width="1.4"/>
+  <rect x="1066" y="782" width="44" height="20" rx="10" fill="#C9A961"/><text x="1088" y="796" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#368</text>
+  <text x="134" y="802" font-size="14.5" font-weight="700" fill="#9A4A2F">Ingen blindvei mer</text>
+  <text x="134" y="823" font-size="13" fill="#9A6B5A">Lander du på et «kun invitasjon»-spill, får du en konkret neste-handling — ikke bare «be arrangøren».</text>
+
+  <!-- future vision strip -->
+  <rect x="110" y="852" width="1020" height="64" rx="14" fill="#F1EEE6" stroke="#C9C2B2" stroke-width="1.3" stroke-dasharray="5 4"/>
+  <rect x="1066" y="862" width="44" height="20" rx="10" fill="#9C8552"/><text x="1088" y="876" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">#369</text>
+  <text x="134" y="882" font-size="14" font-weight="700" fill="#6B6258">Senere: venner &amp; klubb</text>
+  <text x="134" y="903" font-size="12.5" fill="#857C70">legge til venner · «åpen for venner» (mellom privat og helt åpen) · klubb-scoped påmelding</text>
+
+  <text x="120" y="962" font-size="12.5" fill="#9A937F">Rekkefølge: #367 (velg åpen) fyller lista → #357 (fast Finn turneringer) viser den → #368 fjerner blindvei → #369 framtid.</text>
+</svg>
