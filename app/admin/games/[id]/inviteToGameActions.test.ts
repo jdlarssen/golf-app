@@ -277,6 +277,7 @@ describe('inviteEmailToGame', () => {
       to: 'nykompis@example.com',
       invitedByName: 'Jørgen',
       gameName: 'Stiklestad',
+      gameMode: 'stableford',
     });
     expect(notifyInvitedToGameMock).not.toHaveBeenCalled();
     expect(lastRedirect()).toContain('status=invite_sent');

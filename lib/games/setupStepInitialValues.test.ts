@@ -142,6 +142,7 @@ describe('buildSetupStepInitialValues', () => {
     const config = {
       kind: 'stableford',
       team_size: 1,
+      points_table: 'standard',
     } satisfies GameModeConfig;
 
     expect(buildSetupStepInitialValues(config)).toEqual({});
