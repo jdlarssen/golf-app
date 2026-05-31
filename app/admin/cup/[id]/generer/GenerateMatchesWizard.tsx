@@ -58,12 +58,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 function StepIndicator({ current, total }: { current: number; total: number }) {
   return (
     <div className="flex items-center justify-between mb-6">
-      <p className="font-sans text-xs text-muted">
-        <span>Steg </span>
-        <span>{current}</span>
-        <span> av </span>
-        <span>{total}</span>
-      </p>
+      <p className="font-sans text-xs text-muted">{`Steg ${current} av ${total}`}</p>
       <div className="flex gap-1">
         {Array.from({ length: total }, (_, i) => (
           <div
