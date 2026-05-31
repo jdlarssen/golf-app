@@ -27,14 +27,14 @@ Bruker valgte **«Samle begge på RPC-en»**: begge dører bruker `email_is_invi
 
 ## Akseptkriterier
 
-- [ ] **AC1** — Venne-døra (`sendFriendInvite`) kaller `email_is_invited`; hvis true → `redirect('/profile?invite_error=already_invited')`, INGEN `invitations.insert`, INGEN invite-mail. *Evidens: kode + test.*
-- [ ] **AC2** — Admin-døra (`sendInvitation`) bruker `email_is_invited`-RPC for dedup (erstatter inline `invitations`-query); hvis true → `redirect(...error=already_invited)`, ingen insert, ingen mail. *Evidens: kode + test.*
-- [ ] **AC3** — Begge flyter gir en forståelig «allerede invitert»-melding. Admin: eksisterende `already_invited`-melding. Venn: ny `already_invited`-entry i `INVITE_ERROR_MESSAGES` (`app/profile/page.tsx`), vennlig + uten å lekke hvem som inviterte. *Evidens: file:line + humanizer.*
-- [ ] **AC4** — Ingen dobbel-mail på tvers: (admin→så venn) blokkeres av venne-døra; (venn→så admin) blokkeres av admin-døra. Begge gater på samme RPC. *Evidens: begge dører kaller `email_is_invited`.*
-- [ ] **AC5** — `email_is_invited` er den delte primitiven brukt av begge dører (single source of truth). *Evidens: grep.*
-- [ ] **AC6** — `buildSupabaseMock` utvidet med `.rpc()`-støtte (additivt, bakoverkompatibelt). Co-located tester: venne-dør (blokkerer ved invited; går videre når ikke-invitert) + admin-dør (blokkerer ved invited). Grønne. *Evidens: vitest.*
-- [ ] **AC7** — Norsk copy passerer humanizer. *Evidens: humanizer.*
-- [ ] **AC8** — `package.json` PATCH-bump (1.60.3 → 1.60.4) + `CHANGELOG.md`; commit-msg-hook grønn. *Evidens: hook.*
+- [x] **AC1** — Venne-døra (`sendFriendInvite`) kaller `email_is_invited`; hvis true → `redirect('/profile?invite_error=already_invited')`, INGEN `invitations.insert`, INGEN invite-mail. *Evidens: kode + test.*
+- [x] **AC2** — Admin-døra (`sendInvitation`) bruker `email_is_invited`-RPC for dedup (erstatter inline `invitations`-query); hvis true → `redirect(...error=already_invited)`, ingen insert, ingen mail. *Evidens: kode + test.*
+- [x] **AC3** — Begge flyter gir en forståelig «allerede invitert»-melding. Admin: eksisterende `already_invited`-melding. Venn: ny `already_invited`-entry i `INVITE_ERROR_MESSAGES` (`app/profile/page.tsx`), vennlig + uten å lekke hvem som inviterte. *Evidens: file:line + humanizer.*
+- [x] **AC4** — Ingen dobbel-mail på tvers: (admin→så venn) blokkeres av venne-døra; (venn→så admin) blokkeres av admin-døra. Begge gater på samme RPC. *Evidens: begge dører kaller `email_is_invited`.*
+- [x] **AC5** — `email_is_invited` er den delte primitiven brukt av begge dører (single source of truth). *Evidens: grep.*
+- [x] **AC6** — `buildSupabaseMock` utvidet med `.rpc()`-støtte (additivt, bakoverkompatibelt). Co-located tester: venne-dør (blokkerer ved invited; går videre når ikke-invitert) + admin-dør (blokkerer ved invited). Grønne. *Evidens: vitest.*
+- [x] **AC7** — Norsk copy passerer humanizer. *Evidens: humanizer.*
+- [x] **AC8** — `package.json` PATCH-bump (1.60.3 → 1.60.4) + `CHANGELOG.md`; commit-msg-hook grønn. *Evidens: hook.*
 
 ## Filer
 
