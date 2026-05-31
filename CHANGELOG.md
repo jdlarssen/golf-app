@@ -21,6 +21,23 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issues [#307](https://github.com/jdlarssen/golf-app/issues/307) + [#308](https://github.com/jdlarssen/golf-app/issues/308), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Hver spillform får en egen detaljside med fyldigere forklaring + konkret eksempel, og alle modus-tekstene blir redigerbare fra Sekretariatet uten deploy.
 
+### [1.60.2] - 2026-05-31
+
+> Er du med i en cup, ser du nå «Se cup-stillingen» rett på match-siden din, så du slipper å lete etter lenken. Og som arrangør tar tilbake-knappen på en cup deg til cup-lista i stedet for helt ut til Sekretariatet.
+
+<details>
+<summary>Teknisk</summary>
+
+Del av «Én vei til rom»-paraplyen ([#344](https://github.com/jdlarssen/golf-app/issues/344)). Fikser [#347](https://github.com/jdlarssen/golf-app/issues/347) — to navigasjons-døde-ender i cup-flyten.
+
+#### Fixed
+- [`app/admin/cup/[id]/page.tsx`](app/admin/cup/[id]/page.tsx) — cup-detalj `TopBar backHref` endret fra `/admin` til `/admin/cup` (i tråd med spill-detalj-mønsteret), så tilbake-lenka treffer cup-lista.
+
+#### Added
+- [`app/games/[id]/page.tsx`](app/games/[id]/page.tsx) — ny self-fetching `CupStandingsLink`-komponent (Suspense-wrappet, egen `tournament_id`-lookup) som rendrer et «Se cup-stillingen →»-nav-kort til `/cup/[tournament_id]` når spillet tilhører en cup. Synlig i alle tilstander (venterom/aktiv/avsluttet/draft); returnerer null for ikke-cup-spill og for slettede cuper. Den delte `getGameWithPlayers`-cachen er uberørt.
+
+</details>
+
 ### [1.60.1] - 2026-05-31
 
 > Du setter nå opp en cup på samme sted som alt annet, i oppsett-veiviseren, i stedet for via en egen knapp på cup-lista. Står lista tom, får du en lenke rett dit. Én vei inn gjør det lettere å treffe riktig.

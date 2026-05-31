@@ -95,7 +95,7 @@ export default async function CupDetailPage({
 
   return (
     <AdminShell>
-      <TopBar backHref="/admin" kicker="Sekretariatet" userId={userId} />
+      <TopBar backHref="/admin/cup" kicker="Sekretariatet" userId={userId} />
       <BrassRibbon kicker={`Cup · ${statusLabel}`} />
       <PageHeader
         title={tournament.name}
