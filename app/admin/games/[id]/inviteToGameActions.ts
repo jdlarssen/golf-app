@@ -204,6 +204,7 @@ export async function inviteEmailToGame(
       to: rawEmail,
       invitedByName,
       gameName: game.name,
+      gameMode: game.game_mode,
     });
   } catch (err) {
     console.error('[inviteToGame/inviteEmail] mail failed', err);

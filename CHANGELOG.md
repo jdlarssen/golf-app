@@ -21,6 +21,24 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#291](https://github.com/jdlarssen/golf-app/issues/291), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Gruesome er foursomes med en vri: begge slår ut, men motstanderlaget velger hvilken av ballene paret må spille videre med. Standalone-spillbar (intent «kompis») i tillegg til cup. Samme serie gir hele alternate-shot-familien (foursomes/greensome/chapman/gruesome) en ekte individuell-spill matchplay-leaderboard.
 
+### [1.59.5] - 2026-05-31
+
+> Invitasjons-mailen til et spill forteller nå kort hvilken spillform det er — navnet pluss én linje om hvordan den funker — med en lenke til oversikten over alle spillformene. Så en invitert spiller vet hva som venter før hen åpner appen.
+
+<details>
+<summary>Teknisk</summary>
+
+Fikser [#309](https://github.com/jdlarssen/golf-app/issues/309) (#299-tråden). `sendInviteNotification` fikk en optional `gameMode`. Når den er satt sammen med `gameName` og er en kjent `MODE_GUIDE`-nøkkel, rendres et kort modus-hint (navn fra `MODE_LABELS` + ett-linjes `MODE_GUIDE[mode].summary` + lenke til `/spillformer`) i både HTML og text. Defensiv lookup: ukjent/manglende modus → ingen hint, ingen kast. Den game-scoped invite-flyten (`inviteToGameActions.ts`) sender `game.game_mode`; de åpne (game-løse) invitasjonene er uendret.
+
+#### Added
+- [`lib/mail/inviteNotification.ts`](lib/mail/inviteNotification.ts) — `gameMode`-param + `resolveModeHint` + hint-callout i HTML/text.
+
+#### Changed
+- [`app/admin/games/[id]/inviteToGameActions.ts`](app/admin/games/[id]/inviteToGameActions.ts) — sender `gameMode: game.game_mode`.
+- Type B-snapshot utvidet med modus-hint-varianten + ukjent-modus/åpen-invitasjon-grenene.
+
+</details>
+
 ### [1.59.4] - 2026-05-31
 
 > Nå kan du redigere et Round Robin-spill i utkast eller planlagt uten å miste scoring-innstillingen. Tidligere ble handicap-andelen satt tilbake til standard når du lagret på nytt.

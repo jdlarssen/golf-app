@@ -9,6 +9,8 @@
 // is the source of truth — admin can resend manually if needed.
 
 import { Resend } from 'resend';
+import { MODE_GUIDE } from '@/lib/formats/modeGuide';
+import { MODE_LABELS, type GameMode } from '@/lib/scoring/modes/types';
 
 // RESEND_FROM_EMAIL in our env is the bare address (`noreply@tornygolf.no`).
 // We always want the display name "Tørny" in the From header, so wrap the
@@ -38,13 +40,51 @@ export type InviteNotificationParams = {
    * dagens åpne app-invitasjon-copy (friend-invite + admin-invite).
    */
   gameName?: string;
+  /**
+   * Spillets `game_mode` (#309). Når satt sammen med `gameName` OG verdien er en
+   * kjent modus, viser mailen et kort modus-hint (navn + ett-linjes sammendrag +
+   * lenke til /spillformer). Ukjent/manglende verdi → ingen hint (defensivt, så
+   * inaktive/fremtidige formats aldri kaster). Ignorert for åpne (game-løse)
+   * invitasjoner.
+   */
+  gameMode?: string;
 };
+
+/**
+ * Resolverer modus-hint-innholdet defensivt. Returnerer null når mailen ikke er
+ * spill-scoped, modus mangler, eller modus ikke er en kjent `MODE_GUIDE`-nøkkel.
+ */
+function resolveModeHint(
+  hasGame: boolean,
+  gameMode: string | undefined,
+): { label: string; summary: string } | null {
+  if (!hasGame || !gameMode) return null;
+  if (!Object.prototype.hasOwnProperty.call(MODE_GUIDE, gameMode)) return null;
+  const mode = gameMode as GameMode;
+  return { label: MODE_LABELS[mode], summary: MODE_GUIDE[mode].summary };
+}
 
 export async function sendInviteNotification(
   params: InviteNotificationParams,
 ): Promise<void> {
-  const { to, invitedByName, gameName } = params;
+  const { to, invitedByName, gameName, gameMode } = params;
   const hasGame = typeof gameName === 'string' && gameName.length > 0;
+  const modeHint = resolveModeHint(hasGame, gameMode);
+
+  // Modus-hint (#309): kort callout med navn + sammendrag + lenke. Distinkt
+  // styling (14px, lys boks) så det ikke kolliderer med intro-linjens regex i
+  // approval-testen. Tom streng når ingen hint → mal uendret fra før.
+  const modeHintHtml = modeHint
+    ? `<p style="font-size:14px;line-height:1.5;margin:0 0 24px;background:#F1EFE8;border-radius:8px;padding:12px 16px;color:#1A1813;">
+              <strong>Spillform: ${escapeHtml(modeHint.label)}</strong><br>
+              ${escapeHtml(modeHint.summary)}<br>
+              <a href="https://tornygolf.no/spillformer" style="color:#1B4332;font-weight:600;text-decoration:underline;">Les mer om spillformene</a>
+            </p>
+            `
+    : '';
+  const modeHintText = modeHint
+    ? `Spillform: ${modeHint.label} — ${modeHint.summary}\nLes mer om spillformene: https://tornygolf.no/spillformer\n\n`
+    : '';
   const subject = hasGame
     ? `Du er invitert til ${gameName} på Tørny`
     : 'Du er invitert til Tørny';
@@ -81,7 +121,7 @@ export async function sendInviteNotification(
             <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
               ${introLineHtml}
             </p>
-            <p style="font-size:16px;line-height:1.5;margin:0 0 32px;">
+            ${modeHintHtml}<p style="font-size:16px;line-height:1.5;margin:0 0 32px;">
               For å komme i gang: gå til
               <a href="https://tornygolf.no/login" style="color:#1B4332;font-weight:600;text-decoration:underline;">tornygolf.no</a>,
               skriv inn denne e-posten, og logg inn med koden du får tilsendt.
@@ -105,6 +145,7 @@ export async function sendInviteNotification(
   const text =
     `${subject}\n\n` +
     `${introLineText}\n\n` +
+    modeHintText +
     `Gå til https://tornygolf.no/login, skriv inn denne e-posten, og logg inn med koden du får tilsendt.\n\n` +
     `Tørny — fyr opp golfturneringen på et par minutter.\n`;
 

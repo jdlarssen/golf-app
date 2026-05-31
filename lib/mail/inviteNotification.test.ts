@@ -48,6 +48,16 @@ function bodyLineHtml(html: string): string {
   return m[1].trim();
 }
 
+// Modus-hint-callouten (#309) har distinkt 14px-styling, så den kolliderer ikke
+// med intro-linjens 16px-regex over.
+function modeHintHtml(html: string): string {
+  const m = html.match(
+    /<p style="font-size:14px;line-height:1\.5;margin:0 0 24px;[^"]*">\s*([\s\S]*?)\s*<\/p>/,
+  );
+  if (!m) throw new Error('Mode-hint paragraph not found in HTML');
+  return m[1].trim();
+}
+
 const baseParams = {
   to: 'venn@example.com',
   invitedByName: 'Jørgen',
@@ -87,6 +97,48 @@ describe('sendInviteNotification', () => {
       "
     `);
     expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"<strong>Jørgen</strong> har invitert deg til spillet <em>Stiklestad 25. mai</em> på Tørny."`);
+  });
+
+  it('med gameName + gameMode: viser modus-hint (navn + sammendrag + lenke) (#309)', async () => {
+    const payload = await send({
+      ...baseParams,
+      gameName: 'Stiklestad 25. mai',
+      gameMode: 'best_ball',
+    });
+    expect(payload.text).toMatchInlineSnapshot(`
+      "Du er invitert til Stiklestad 25. mai på Tørny
+
+      Jørgen har invitert deg til spillet Stiklestad 25. mai på Tørny.
+
+      Spillform: Best ball — Dere er to på lag, og på hvert hull teller bare den beste netto-scoren av dere to.
+      Les mer om spillformene: https://tornygolf.no/spillformer
+
+      Gå til https://tornygolf.no/login, skriv inn denne e-posten, og logg inn med koden du får tilsendt.
+
+      Tørny — fyr opp golfturneringen på et par minutter.
+      "
+    `);
+    expect(modeHintHtml(payload.html)).toMatchInlineSnapshot(`
+      "<strong>Spillform: Best ball</strong><br>
+                    Dere er to på lag, og på hvert hull teller bare den beste netto-scoren av dere to.<br>
+                    <a href="https://tornygolf.no/spillformer" style="color:#1B4332;font-weight:600;text-decoration:underline;">Les mer om spillformene</a>"
+    `);
+  });
+
+  it('ukjent gameMode: ingen modus-hint, mail uendret', async () => {
+    const payload = await send({
+      ...baseParams,
+      gameName: 'Stiklestad 25. mai',
+      gameMode: 'not_a_real_mode',
+    });
+    expect(payload.html).not.toContain('Spillform:');
+    expect(payload.text).not.toContain('Spillform:');
+  });
+
+  it('gameMode uten gameName (åpen invitasjon): ingen modus-hint', async () => {
+    const payload = await send({ ...baseParams, gameMode: 'best_ball' });
+    expect(payload.html).not.toContain('Spillform:');
+    expect(payload.text).not.toContain('Spillform:');
   });
 
   it('escaper HTML i gameName + invitedByName i body-line', async () => {
