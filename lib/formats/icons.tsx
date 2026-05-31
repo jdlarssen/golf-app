@@ -296,6 +296,133 @@ function PatsomeIcon({ size = 28 }: { size?: number }) {
   );
 }
 
+// Wolf: én spiller («ulven») velger partner per hull, eller går lone wolf.
+// Motiv: én fylt sirkel (ulven) med en pil mot en kolonne av tre outline-
+// sirkler (de tre andre å velge mellom). #274.
+function WolfIcon({ size = 28 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 28 28"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      {/* Ulven — fylt sirkel til venstre */}
+      <circle cx="6" cy="14" r="3" fill="currentColor" stroke="none" />
+      {/* Valg-pil mot de tre andre */}
+      <line x1="10" y1="14" x2="15" y2="14" />
+      <path d="M 13.5 12 L 16 14 L 13.5 16 Z" fill="currentColor" stroke="none" />
+      {/* Tre å velge mellom */}
+      <circle cx="21" cy="7" r="2" />
+      <circle cx="24" cy="14" r="2" />
+      <circle cx="21" cy="21" r="2" />
+    </svg>
+  );
+}
+
+// Nassau: tre veddemål per runde — front 9, back 9 og totalen. Tre pills:
+// to korte øverst (de to ni-hulls-halvdelene) + én bred under (totalen). #276.
+function NassauIcon({ size = 28 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 28 28"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      {/* Front 9 + back 9 */}
+      <rect x="4" y="6.5" width="8.5" height="5.5" rx="2" />
+      <rect x="15.5" y="6.5" width="8.5" height="5.5" rx="2" />
+      {/* Totalen */}
+      <rect x="6" y="16" width="16" height="5.5" rx="2" />
+    </svg>
+  );
+}
+
+// Skins: hull-basert pott med carryover. Motiv: stabel av tre mynter (potten
+// som vokser når hull deles). #275.
+function SkinsIcon({ size = 28 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 28 28"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      {/* Tre stablede mynter */}
+      <ellipse cx="14" cy="9" rx="7" ry="2.6" />
+      <path d="M 7 9 V 13" />
+      <path d="M 21 9 V 13" />
+      <ellipse cx="14" cy="13" rx="7" ry="2.6" />
+      <path d="M 7 13 V 17" />
+      <path d="M 21 13 V 17" />
+      <ellipse cx="14" cy="17" rx="7" ry="2.6" />
+    </svg>
+  );
+}
+
+// Modified Stableford: pro-stil poeng-tabell der eagle/albatross gir tunge
+// bonus-poeng. Motiv: scorekort med «+5» (eagle-bonusen) — speiler
+// StablefordIcon-tekst-grepet, men signaliserer den aggressive poeng-skalaen. #281.
+function ModifiedStablefordIcon({ size = 28 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 28 28"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="4.5" y="5.5" width="19" height="17" rx="2" />
+      <text x="14" y="17.5" fontSize="10" fontFamily="serif" fontWeight="600" stroke="none" fill="currentColor" textAnchor="middle">+5</text>
+    </svg>
+  );
+}
+
+// Acey Deucey: lavest score tar potten (ace), høyest gir (deuce). Motiv: en
+// opp-pil (ace, høyt) og en ned-pil (deuce, lavt) side om side. #279.
+function AceyDeuceyIcon({ size = 28 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 28 28"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      {/* Opp-pil — ace */}
+      <line x1="9" y1="23" x2="9" y2="7" />
+      <path d="M 5.5 10.5 L 9 6 L 12.5 10.5" />
+      {/* Ned-pil — deuce */}
+      <line x1="19" y1="5" x2="19" y2="21" />
+      <path d="M 15.5 17.5 L 19 22 L 22.5 17.5" />
+    </svg>
+  );
+}
+
 // Fallback når en icon_key ikke har en dedikert komponent (nye formats før
 // designet er på plass). Et nøytralt flagg-ikon signaliserer «format» uten
 // å gjette på mekanikken.
@@ -344,6 +471,11 @@ const ICON_MAP: Record<string, (props: { size?: number }) => ReactNode> = {
   round_robin: RoundRobinIcon,
   shamble: ShambleIcon,
   patsome: PatsomeIcon,
+  wolf: WolfIcon,
+  nassau: NassauIcon,
+  skins: SkinsIcon,
+  modified_stableford: ModifiedStablefordIcon,
+  acey_deucey: AceyDeuceyIcon,
 };
 
 export function formatIconFor(iconKey: string, size = 28): ReactNode {

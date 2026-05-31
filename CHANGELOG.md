@@ -21,6 +21,19 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#291](https://github.com/jdlarssen/golf-app/issues/291), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Gruesome er foursomes med en vri: begge slår ut, men motstanderlaget velger hvilken av ballene paret må spille videre med. Standalone-spillbar (intent «kompis») i tillegg til cup. Samme serie gir hele alternate-shot-familien (foursomes/greensome/chapman/gruesome) en ekte individuell-spill matchplay-leaderboard.
 
+### [1.59.6] - 2026-05-31
+
+> Wolf, Nassau, Skins, Modified Stableford og Acey Deucey har nå egne ikoner i oppsett-veiviseren, i stedet for det generiske flagget. Så hvert format-kort ser likt og gjennomført ut når du velger spillform.
+
+<details>
+<summary>Teknisk</summary>
+
+Fikser [#325](https://github.com/jdlarssen/golf-app/issues/325). La til fem dedikerte ikon-komponenter i [`lib/formats/icons.tsx`](lib/formats/icons.tsx) (`WolfIcon`, `NassauIcon`, `SkinsIcon`, `ModifiedStablefordIcon`, `AceyDeuceyIcon`) + `ICON_MAP`-oppføringer, i samme 28×28 line-icon-stil (`stroke=currentColor`, rounded caps) som resten. Motiv: Wolf = ulv (fylt) med valg-pil mot tre; Nassau = tre veddemål-pills (front/back/total); Skins = myntstabel (carryover-pott); Modified Stableford = scorekort med «+5» (eagle-bonus); Acey Deucey = opp/ned-pil (ace tar, deuce gir).
+
+Merk: issue-en listet `foursomes_matchplay` som manglende, men den er allerede mappet til `MatchplayIcon` (delt med alternate-shot-familien greensome/chapman/gruesome — bevisst, som ambrose/florida deler Texas-ikonet). Reelt gap var de fem over.
+
+</details>
+
 ### [1.59.5] - 2026-05-31
 
 > Invitasjons-mailen til et spill forteller nå kort hvilken spillform det er — navnet pluss én linje om hvordan den funker — med en lenke til oversikten over alle spillformene. Så en invitert spiller vet hva som venter før hen åpner appen.
