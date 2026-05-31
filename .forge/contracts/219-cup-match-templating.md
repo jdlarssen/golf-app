@@ -76,6 +76,17 @@ Stegvis (mobil-først, eksisterende `components/ui/`-primitiver, palett/typograf
 
 ---
 
+## Build-status (as-built, v1.62.0)
+
+**Alle K1–K7 oppfylt.** Gates grønne: `npx tsc --noEmit` → 0 feil; full `npx vitest run` → exit 0 (alle grønne, inkl. 26 cup-pure-logic + 9 batch-action + 1 wizard render-test); `npm run build` → «Compiled successfully». Commits: `chore(cup)` preset+pairing → `chore(cup)` batch-action → `feat(cup)` wizard+UI (v1.62.0 + CHANGELOG).
+
+**Arkitektur-avvik fra opprinnelig kontrakt (forventet — anker-doc var stale):**
+- Batch-action-en (`createCupMatchesFromPlan`) ble **selvstendig**, ikke et uttrekk av en `insertGameWithPlayers`-kjerne fra game-create. Den reelle `createGameInternal` er for sammenvevd (publish/draft, trusted-creator-client-routing, side-tournaments, notify) til en ren deling. Den manuelle stien er derfor **urørt** (K6).
+- Cup-matcher opprettes som `status='scheduled'` med `course_handicap=null` (fryses ved rundestart) — identisk med den manuelle per-match-stien, **ikke** `'active'` med ferdig-beregnet handicap. Derfor ingen course-handicap-beregning i batchen.
+- `mode_config`-allowance per format leses fra cup-radens `fourball_allowance_pct` / `foursomes_allowance_pct` (verifisert mot prod-shapes via SQL).
+- `GameModeConfig`-typen bor i `lib/scoring/modes/types.ts` (ikke `lib/games/modeConfig.ts`).
+- Wizard-rute: `app/admin/cup/[id]/generer/` (page + `GenerateMatchesWizard` + render-test). Inngang: «Generer matcher»-knapp på cup-detalj (kun `status='draft'`); de manuelle «+ format»-lenkene beholdt.
+
 ## Suksesskriterier (evidens før avhuking)
 
 - [ ] **K1 — Preset-bibliotek finnes og skalerer.** `lib/cup/cupTemplates.ts` eksporterer `CUP_PRESETS` (Klassisk cup, Four-ball + singler, Bare singler) + `buildSessions`. _Evidens:_ `cupTemplates.test.ts` grønn; viser f.eks. Klassisk cup @ teamSize 4 → 2 foursomes + 2 four-ball + 4 singler.
