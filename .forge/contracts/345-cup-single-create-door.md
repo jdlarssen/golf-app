@@ -32,15 +32,15 @@ Det bryter «én vei til rom». Vi går for **én Opprett-dør** (intent-først-
 
 ## Akseptkriterier
 
-- [ ] **AC1** — Ingen primær «opprett cup»-knapp på `/admin/cup`: `<Button>Opprett ny cup</Button>` + `<Link href="/admin/games/new?intent=cup">`-wrapper + omkringliggende `<div className="mb-5">` er fjernet. *Evidens: grep `Opprett ny cup` → 0 treff i `app/`.*
-- [ ] **AC2** — Tom-tilstand er en signpost med liten inline-`SmartLink` til `/admin/games/new?intent=cup`, ikke en konkurrerende primær-knapp. *Evidens: file:line + render.*
-- [ ] **AC3** — Ingen TopBar create-action lagt til på `/admin/cup` (døra relokeres ikke). *Evidens: `TopBar` har ingen `action`-prop.*
-- [ ] **AC4** — Cup opprettes fortsatt via veiviseren: `/admin/games/new` → IntentSelector → Cup → CupSetup, og lander på `/admin/cup/[id]`. *Evidens: kode-sti uendret; `IntentSelector` cup-kort + `CupSetup` intakt.*
-- [ ] **AC5** — `/admin/games/new?intent=cup` fungerer fortsatt; match-deep-links fra cup-detalj uberørt. *Evidens: `parseIntent('cup')` + `app/admin/cup/[id]/page.tsx` deep-links uendret.*
-- [ ] **AC6** — Ubrukte importer fjernet (`Link` fra `next/link`, `Button` fra `@/components/ui/Button` hvis ikke lenger brukt). *Evidens: lint/tsc grønn, grep.*
-- [ ] **AC7** — Ingen test asserter den fjernede knappen (bekreftet ingen finnes); ingen ny test lagt til (Type C-disiplin: maks én render-test per komponent, og dette er ren fjerning). *Evidens: grep `*.test.*` + `e2e/`.*
-- [ ] **AC8** — Norsk copy passerer humanizer (ingen AI-tells, ingen em-dash-kjede, action-verb). *Evidens: humanizer-skill kjørt på ny streng.*
-- [ ] **AC9** — `package.json` bumpet PATCH (1.60.0 → 1.60.1) + `CHANGELOG.md`-oppføring i samme commit; commit-msg-hook grønn. *Evidens: hook passerer, footer-versjon.*
+- [x] **AC1** — Ingen primær «opprett cup»-knapp på `/admin/cup`: `<Button>Opprett ny cup</Button>` + `<Link href="/admin/games/new?intent=cup">`-wrapper + omkringliggende `<div className="mb-5">` er fjernet. *Evidens: grep `Opprett ny cup` → 0 treff i `app/`.*
+- [x] **AC2** — Tom-tilstand er en signpost med liten inline-`SmartLink` til `/admin/games/new?intent=cup`, ikke en konkurrerende primær-knapp. *Evidens: file:line + render.*
+- [x] **AC3** — Ingen TopBar create-action lagt til på `/admin/cup` (døra relokeres ikke). *Evidens: `TopBar` har ingen `action`-prop.*
+- [x] **AC4** — Cup opprettes fortsatt via veiviseren: `/admin/games/new` → IntentSelector → Cup → CupSetup, og lander på `/admin/cup/[id]`. *Evidens: kode-sti uendret; `IntentSelector` cup-kort + `CupSetup` intakt.*
+- [x] **AC5** — `/admin/games/new?intent=cup` fungerer fortsatt; match-deep-links fra cup-detalj uberørt. *Evidens: `parseIntent('cup')` + `app/admin/cup/[id]/page.tsx` deep-links uendret.*
+- [x] **AC6** — Ubrukte importer fjernet (`Link` fra `next/link`, `Button` fra `@/components/ui/Button` hvis ikke lenger brukt). *Evidens: lint/tsc grønn, grep.*
+- [x] **AC7** — Ingen test asserter den fjernede knappen (bekreftet ingen finnes); ingen ny test lagt til (Type C-disiplin: maks én render-test per komponent, og dette er ren fjerning). *Evidens: grep `*.test.*` + `e2e/`.*
+- [x] **AC8** — Norsk copy passerer humanizer (ingen AI-tells, ingen em-dash-kjede, action-verb). *Evidens: humanizer-skill kjørt på ny streng.*
+- [x] **AC9** — `package.json` bumpet PATCH (1.60.0 → 1.60.1) + `CHANGELOG.md`-oppføring i samme commit; commit-msg-hook grønn. *Evidens: hook passerer, footer-versjon.*
 
 ## Filer
 
