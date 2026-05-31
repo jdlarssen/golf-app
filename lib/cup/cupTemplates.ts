@@ -56,7 +56,7 @@ export const CUP_PRESETS: CupPreset[] = [
   {
     id: 'singler',
     name: 'Bare singler',
-    description: 'Alle møter én motspiller. Skalerer til hvilken som helst lagstørrelse.',
+    description: 'Alle møter én motspiller. Funker uansett hvor mange dere er.',
     sessions: ['singles_matchplay'],
     minPerTeam: 1,
   },

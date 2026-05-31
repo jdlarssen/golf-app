@@ -37,6 +37,7 @@ const STATUS_MESSAGES: Record<string, string> = {
   updated: 'Cupen er oppdatert.',
   started: 'Cupen er startet. Spillerne får mail-varsel.',
   finished: 'Cupen er avsluttet. Resultatet er sendt til alle deltakere.',
+  matches_generated: 'Matchene er opprettet. Se gjennom listen under.',
 };
 
 function first(v: string | string[] | undefined): string | undefined {
@@ -197,6 +198,16 @@ export default async function CupDetailPage({
             Matches
           </h2>
         </div>
+        {tournament.status === 'draft' && (
+          <div className="mb-3">
+            <Link
+              href={`/admin/cup/${id}/generer`}
+              className="flex items-center justify-center gap-2 w-full rounded-xl bg-primary text-white px-4 py-3 text-sm font-medium hover:bg-primary/90 transition-colors"
+            >
+              Generer matcher
+            </Link>
+          </div>
+        )}
         <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
           <Link
             href={`/admin/games/new?intent=cup&tournament_id=${id}&game_mode=singles_matchplay`}

@@ -17,7 +17,31 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.60.y — Modus-skole: detaljsider + admin-redigerbar forklaring
+## 1.61.y — Cup-veiviser: generer alle matcher på én gang
+
+Issue [#219](https://github.com/jdlarssen/golf-app/issues/219), Ryder Cup fase 4. Administratorer kan nå lage et fullt cup-program fra ett skjema — velg lag, bane, formatmal og paring-strategi, forhåndsvis og juster, og opprett alle matchene i ett trykk.
+
+### [1.61.0] - 2026-05-31
+
+> Du kan nå generere et helt cup-program på sekunder: velg hvem som er på hvert lag, hvilken bane, et formatoppsett (Klassisk cup, Four-ball + singler eller Bare singler) og om matchene skal pares tilfeldig eller handicap-balansert — forhåndsvis resultatet, juster om du vil, og opprett alt i ett trykk. Du slipper å bygge match for match gjennom den vanlige veiviseren.
+
+<details>
+<summary>Teknisk</summary>
+
+Fikser [#219](https://github.com/jdlarssen/golf-app/issues/219) — cup match-templating (Ryder Cup fase 4).
+
+#### Added
+- [`app/admin/cup/[id]/generer/page.tsx`](app/admin/cup/[id]/generer/page.tsx) — server-side rute: henter cup, spillere og baner (auth-gated, kun draft-cuper).
+- [`app/admin/cup/[id]/generer/GenerateMatchesWizard.tsx`](app/admin/cup/[id]/generer/GenerateMatchesWizard.tsx) — 4-stegs klient-veiviser: lagvelger → bane+tee → formatmal + paringsstrategi → forhåndsvisning/justering → opprett via `createCupMatchesFromPlan`-action.
+- [`app/admin/cup/[id]/generer/GenerateMatchesWizard.test.tsx`](app/admin/cup/[id]/generer/GenerateMatchesWizard.test.tsx) — render-test (smoke).
+- «Generer matcher»-knapp i [`app/admin/cup/[id]/page.tsx`](app/admin/cup/[id]/page.tsx) (kun synlig i draft); viser `matches_generated`-statusmelding etter vellykket opprettelse.
+
+Rene hjelpebiblioteker (`lib/cup/cupTemplates.ts`, `lib/cup/cupPairing.ts`) og `createCupMatchesFromPlan`-server-action med tilhørende tester er committet i tidligere commits. Matcher opprettes som `scheduled`-spill med handicap frosset ved rundstart.
+
+</details>
+
+<details>
+<summary><strong>1.60.y — Modus-skole: detaljsider + admin-redigerbar forklaring (5 oppføringer) — klikk for å vise</strong></summary>
 
 Issues [#307](https://github.com/jdlarssen/golf-app/issues/307) + [#308](https://github.com/jdlarssen/golf-app/issues/308), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Hver spillform får en egen detaljside med fyldigere forklaring + konkret eksempel, og alle modus-tekstene blir redigerbare fra Sekretariatet uten deploy.
 
@@ -116,6 +140,8 @@ Flytter modus-forklaringene fra hardkodet `MODE_GUIDE` til DB-drevet, admin-redi
 - [`components/ModeGuideCard.tsx`](components/ModeGuideCard.tsx) — ren presentasjon (props i stedet for intern `MODE_GUIDE`-import) + valgfri «Les mer →»-lenke.
 - [`app/spillformer/page.tsx`](app/spillformer/page.tsx) — DB-drevet innhold + lenke til detaljside per kort; alle 22 modi listet.
 - [`app/games/[id]/page.tsx`](app/games/[id]/page.tsx) — henter modus-innhold server-side, sender til `ModeGuideCard` med `detailHref`.
+
+</details>
 
 </details>
 
