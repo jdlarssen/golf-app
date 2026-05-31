@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
@@ -7,7 +6,6 @@ import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Banner } from '@/components/ui/Banner';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
@@ -98,16 +96,17 @@ export default async function CupListPage({
         </div>
       )}
 
-      <div className="mb-5">
-        <Link href="/admin/games/new?intent=cup">
-          <Button className="w-full">Opprett ny cup</Button>
-        </Link>
-      </div>
-
       {rows.length === 0 ? (
         <Card>
           <p className="text-sm text-muted">
-            Ingen cuper ennå. Trykk «Opprett ny cup» over for å komme i gang.
+            Du har ingen cuper ennå.{' '}
+            <SmartLink
+              href="/admin/games/new?intent=cup"
+              className="text-text underline hover:no-underline"
+            >
+              Sett opp en cup
+            </SmartLink>{' '}
+            for å komme i gang.
           </p>
         </Card>
       ) : (

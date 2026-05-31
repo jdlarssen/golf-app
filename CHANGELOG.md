@@ -21,6 +21,23 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issues [#307](https://github.com/jdlarssen/golf-app/issues/307) + [#308](https://github.com/jdlarssen/golf-app/issues/308), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Hver spillform får en egen detaljside med fyldigere forklaring + konkret eksempel, og alle modus-tekstene blir redigerbare fra Sekretariatet uten deploy.
 
+### [1.60.1] - 2026-05-31
+
+> Du setter nå opp en cup på samme sted som alt annet, i oppsett-veiviseren, i stedet for via en egen knapp på cup-lista. Står lista tom, får du en lenke rett dit. Én vei inn gjør det lettere å treffe riktig.
+
+<details>
+<summary>Teknisk</summary>
+
+Del av «Én vei til rom»-paraplyen ([#344](https://github.com/jdlarssen/golf-app/issues/344)). Fikser [#345](https://github.com/jdlarssen/golf-app/issues/345): cup-lista hadde en egen «Opprett ny cup»-knapp som duplikerte intent-veiviseren. Cup-opprettelse skjer nå kun via den ene døra (`/admin/games/new` → `IntentSelector` → Cup → `CupSetup`).
+
+#### Removed
+- [`app/admin/cup/page.tsx`](app/admin/cup/page.tsx) — full-bredde «Opprett ny cup»-knappen + ubrukte `Link`/`Button`-importer.
+
+#### Changed
+- Tom-tilstand på cup-lista er nå en signpost med liten inline-lenke til `/admin/games/new?intent=cup`, ikke en konkurrerende primær-knapp. `?intent=cup`-ruten beholdt uendret — match-deep-links fra cup-detalj (`app/admin/cup/[id]/page.tsx`) er uberørt.
+
+</details>
+
 ### [1.60.0] - 2026-05-31
 
 > Hver spillform har nå sin egen side med en fyldigere forklaring og et konkret eksempel — trykk «Les mer» på et spillform-kort for å åpne den. Og som arrangør kan du endre selve forklaringene fra Sekretariatet selv, uten å vente på en oppdatering, hvis en formulering er uklar.
