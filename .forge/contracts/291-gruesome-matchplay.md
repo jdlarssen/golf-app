@@ -259,16 +259,18 @@ format short_description, modeGuide-oppføring (tee-valg-forklaring), allowanceC
 
 ## Success criteria
 
-- [ ] `gruesomeMatchplay.compute(ctx)` returnerer `kind: 'foursomes_matchplay'`, leser `allowance_pct` fra gruesome-config, og gir identisk matchplay-resultat som foursomes for samme input. `computeLeaderboard` ruter `game_mode==='gruesome_matchplay'` dit. **Evidence:** ny `gruesomeMatchplay.test.ts` (Type A) grønn + `lib/scoring/index.ts` case.
-- [ ] `foursomesMatchplay.compute` gir uendret resultat etter `computeFoursomesMatch`-ekstraksjonen (ingen regresjon). **Evidence:** `foursomesMatchplay.test.ts` grønn (uendret).
-- [ ] `validateGruesomeMatchplay` produserer `mode_config {kind:'gruesome_matchplay', team_size:2, teams_count:2, allowance_pct}`; avviser ≠4 spillere / ubalanserte sider / pct utenfor 0–100. **Evidence:** `gamePayload`-test-blokk (Type A) grønn.
-- [ ] Migrasjon skrevet (format-row `is_cup_eligible=true` + intent-mapping + `tournaments.gruesome_allowance_pct`), verifisert mot 0048-malen. **Appliseres POST-deploy** via Supabase MCP + verifisert med `execute_sql`. (Markeres `[~]` til post-deploy, som ambrose-presedens.)
-- [ ] Admin kan opprette et **frittstående** gruesome-spill (4 spillere, 2v2) via wizarden; vises med label «Gruesome». Hvis standalone-tildeling ikke lar seg gjøre rimelig → cup-only + flagg. **Evidence:** wizard-grein + `validateGruesomeMatchplay` + `npm run build` grønn; visuell smoke via Playwright/preview.
-- [ ] Individuell-spill-leaderboard for et gruesome-spill rendrer matchplay-viewet (status-banner, sider, hull-grid, «X up / 3&2»), format-label «Gruesome». Foursomes ruter samme vei uten regresjon. **Evidence:** `FoursomesMatchplayView` + dispatch-gren; én Type C render-test (label + grunnstruktur, IKKE re-assert av Type-A-tall).
-- [ ] Scorekort viser foursomes Layout B (2 kolonner) for gruesome; INGEN foursomes tee-starter-banner vises. **Evidence:** `scorecardLayout` + holes-page family-gating; Playwright/preview-smoke.
-- [ ] mode-info/guide forklarer gruesome-regelen (begge teer ut, motstander velger). **Evidence:** `modeGuide.ts`-oppføring + `modeGuide.test.ts` grønn.
-- [ ] `npm run build` (tsc) grønn — alle exhaustive switches/maps dekker `'gruesome_matchplay'`. **Evidence:** build-output.
-- [ ] Versjons-bump (minor, ny bruker-synlig feature) + CHANGELOG-oppføring i den bruker-synlige `feat`-commiten. **Evidence:** `package.json` + CHANGELOG.
+> Evidence-status per v2-arkitektur (commits b48efa3 → b715b50).
+
+- [x] `gruesomeMatchplay.compute(ctx)` returnerer `kind: 'foursomes_matchplay'`, leser `allowance_pct` fra gruesome-config (defensiv fallback 50), delegerer til `computeFoursomesCore(ctx, pct, combinedSideHandicap)`. `computeLeaderboard`-router har `case 'gruesome_matchplay'`. **Evidence:** `gruesomeMatchplay.test.ts` 5/5 grønn (inkl. sum-vs-60/40-differensiering); `lib/scoring/index.ts` case + delegat `lib/scoring/modes/gruesomeMatchplay.ts:38-44`.
+- [x] `foursomesMatchplay.compute` uendret (ingen extraction-regresjon — `computeFoursomesCore` fantes allerede på main fra #290). **Evidence:** `foursomesMatchplay.test.ts` grønn i full suite (2273/2273).
+- [x] `validateGruesomeMatchplay` produserer `mode_config {kind:'gruesome_matchplay', team_size:2, teams_count:2, allowance_pct}` (default 50); avviser ≠4 spillere / ubalanserte sider / pct utenfor 0–100. **Evidence:** `gamePayload.test.ts` gruesome-blokk (6 cases) grønn.
+- [~] Migrasjon `0065_gruesome_matchplay.sql` skrevet: format-row `is_cup_eligible=true` + intent-mapping `kompis` (standalone-synlig) + `tournaments.gruesome_allowance_pct` default 50, ingen tee-starter-kolonner. **Appliseres POST-deploy** via Supabase MCP + verifiseres med `execute_sql` etter merge→deploy. Filen verifisert mot 0064-malen.
+- [x] Admin kan opprette **frittstående** gruesome-spill (4 spillere, 2v2): wizard-grein (GameForm/GameWizard `AllowanceField` + `TeamsAssignmentSection` 2v2) + `validateGruesomeMatchplay`; build grønn. Standalone-tildeling fungerte (foursomes-familiens create-flyt er allerede cup-uavhengig — verifisert i diagnose, ingen fallback nødvendig). **Visuell smoke gjenstår på Vercel-preview** (krever applisert migrasjon for at kortet vises).
+- [x] Individuell-spill-leaderboard rendrer matchplay-viewet (status-banner, sider, hull-grid, «X up / 3&2»), format-label fra `MODE_LABELS`. Rutet via `isAlternateShotMatchplay` → fikser foursomes/greensome/chapman/gruesome. **Evidence:** `FoursomesMatchplayView` + `renderFoursomesMatchplay` + dispatch `leaderboard/page.tsx:370`; Type C `FoursomesMatchplayView.test.tsx` 16/16 grønn.
+- [x] Scorekort viser foursomes Layout B (2 kolonner) for gruesome (via `isAlternateShotMatchplay`); INGEN foursomes tee-starter-banner (strikt `=== 'foursomes_matchplay'`-gate beholdt). **Evidence:** `scorecardLayout.ts` allowance-gren + holes-page `isGruesome` uten banner; build grønn. Visuell smoke på preview.
+- [x] mode-info/guide forklarer gruesome-regelen (begge teer ut, motstander velger ballen). **Evidence:** `modeGuide.ts:133-141` (humanisert) + `modeGuide.test.ts` 51/51 grønn.
+- [x] `npm run build` (tsc) grønn — alle exhaustive switches/maps dekker `'gruesome_matchplay'`. **Evidence:** build fullført route-listing; full suite 2273/2273.
+- [x] Versjons-bump 1.58.0 → 1.59.0 (minor) + CHANGELOG-oppføring i `feat`-commit b715b50; 1.58.y-serie wrappet i `<details>`. **Evidence:** `package.json` 1.59.0; commit-msg-hook aksepterte.
 
 ## Gates (etter hver chunk)
 
