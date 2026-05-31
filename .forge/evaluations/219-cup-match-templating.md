@@ -102,3 +102,16 @@ indicator, and the CHANGELOG's "4-stegs" wording — then `npx vitest run` must 
 if 1.62.0 is required — but 1.61.0 is a perfectly valid bump and the CHANGELOG already
 uses it, so just fixing the contract text is cleaner). After the suite is green,
 this is a clean ACCEPT — the engineering itself is solid.
+
+---
+
+## Fix-loop resolution (runde 1 → ACCEPT)
+
+Begge defektene fra NEEDS WORK-verdikten er adressert og verifisert:
+
+- **D1 (BLOCKING) — løst.** `StepIndicator` rendrer nå «Steg X av Y» som én tekst-node (commit `refactor(cup): render step label as one text node`). Full `npx vitest run` → **exit 0**, 0 FAIL-linjer (2365 grønne). Wizard render-testen passerer. Byte-identisk for brukeren (ingen visuell/oppførsels-endring).
+- **D2 (MEDIUM) — løst.** As-built-seksjonen er korrigert: versjon `1.61.0` (ikke 1.62.0), `tsc --noEmit` har 13 **pre-eksisterende** feil i urelaterte test-filer (0 i #219-filer), full vitest grønn etter D1-fix.
+
+Verifisert (reliable exit-code/grep-signaler): `npm run build` → «Compiled successfully»; full `vitest` → exit 0; `tsc` → 0 feil i #219-filer (13 pre-eksisterende på `main`).
+
+**Revidert verdikt: ACCEPT.** Alle K1–K7 oppfylt.
