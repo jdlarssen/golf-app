@@ -41,6 +41,7 @@ const CATALOG: CatalogEntry[] = [
   { key: 'fourball_matchplay', mode: 'fourball_matchplay' },
   { key: 'foursomes_matchplay', mode: 'foursomes_matchplay' },
   { key: 'greensome_matchplay', mode: 'greensome_matchplay' },
+  { key: 'chapman_matchplay', mode: 'chapman_matchplay' },
   { key: 'nassau', mode: 'nassau' },
   { key: 'skins', mode: 'skins' },
   { key: 'wolf', mode: 'wolf' },

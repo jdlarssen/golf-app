@@ -17,7 +17,48 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.57.y — Greensome matchplay (2v2 velg-beste-tee + alternate, cup-klar)
+## 1.58.y — Chapman matchplay (2v2 dobbel tee + bytt + alternate, cup-klar)
+
+Issue [#290](https://github.com/jdlarssen/golf-app/issues/290), del av Ryder Cup-epic [#47](https://github.com/jdlarssen/golf-app/issues/47) og format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Cup-format der begge i paret slår ut, bytter ball og slår partnerens utslag, velger den beste ballen og spiller alternate derfra. Også kjent som Pinehurst — research bekreftet at det er samme spill, så vi seeder ett format «Chapman» (ikke to).
+
+### [1.58.0] - 2026-05-31
+
+> Chapman matchplay er klar for cupen, også kjent som Pinehurst. To mot to: begge slår ut, så slår dere partnerens ball som andreslag, velger den beste og spiller annenhver inn derfra. Lag-handicapet regnes etter Chapman-formelen (60 % av laveste pluss 40 % av høyeste handicap), og matchplay gir høyeste lag hele differansen som standard. Opprett en chapman-match fra cup-siden. På hvert hull minner appen dere på fasene, og scorekort, leaderboard og cup-poeng fungerer akkurat som for foursomes og greensome.
+
+<details>
+<summary>Teknisk</summary>
+
+Gjenbruker foursomes-mønsteret fullt ut: `chapmanMatchplay.compute()` returnerer `kind: 'foursomes_matchplay'` (ambrose-mønsteret) slik at leaderboard, scorekort, mail og cup-snapshot deles uten nye komponenter. Scoring er identisk med greensome (samme 60/40-lag-handicap og diff-baserte matchplay-allowance, default 100) — Chapman og Greensome skiller seg bare i on-course-mekanikk (Chapman bytter ball før paret velger). Motoren deler en parameterisert kjerne: `computeFoursomesCore(ctx, allowancePct, sideHcp)` i `foursomesMatchplay.ts`, der `chapmanSideHandicap` gir 60/40. Family-helper `isAlternateShotMatchplay(mode)` ruter struktursjekker for alle tre (foursomes + greensome + chapman); tee-starter-banneret forblir foursomes-eksklusivt (Chapman har dobbel tee hvert hull). Eneste Chapman-spesifikke UI er en statisk fase-stripe på hull-siden.
+
+#### Added
+- [`lib/scoring/modes/chapmanMatchplay.ts`](lib/scoring/modes/chapmanMatchplay.ts) — `compute(ctx)`: delegerer til `computeFoursomesCore` med 60/40-side-handicap. Returnerer `kind: 'foursomes_matchplay'`.
+- [`supabase/migrations/0064_chapman_matchplay.sql`](supabase/migrations/0064_chapman_matchplay.sql) — seed av format-rad «Chapman» (cup-eligible) + `tournaments.chapman_allowance_pct` (default 100). **Appliseres post-deploy.**
+- [`app/games/[id]/holes/[holeNumber]/ChapmanPhaseReminder.tsx`](app/games/[id]/holes/[holeNumber]/ChapmanPhaseReminder.tsx) — statisk fase-stripe (begge slår ut → bytt → velg → annenhver) på hver hull-side.
+
+#### Changed
+- `lib/scoring/modes/foursomesMatchplay.ts` — ekstrahert `computeFoursomesCore` + `SideHandicapFn` (`combinedSideHandicap` / `chapmanSideHandicap`) uten oppførselsendring for foursomes.
+- `lib/scoring/modes/types.ts` — `chapman_matchplay` i `GameMode`-union, `MODE_LABELS` («Chapman»), `GameModeConfig`-variant; `isAlternateShotMatchplay` utvidet til chapman.
+- `lib/scoring/index.ts` — compute-router-case for `chapman_matchplay`.
+- `lib/games/gamePayload.ts` — `validateChapmanMatchplay` + `parseChapmanAllowancePct` + `parseGameMode` + `modeValidators`.
+- `lib/games/scorecardLayout.ts` + `scorecardTitle.ts` + `allowanceCopy.ts` — chapman gjennom alternate-shot-grenen (60/40) + «Match-scorekort».
+- `lib/cup/computeCupLeaderboard.ts` + `lib/cup/getCupSnapshot.ts` — `chapman_matchplay` i type-unions + egen compute-gren i cup-snapshot.
+- `app/admin/cup/[id]/page.tsx` + `app/cup/[id]/page.tsx` — «+ Chapman match»-knapp + lag-navn i result-tekst.
+- `app/admin/games/new/page.tsx` + `GameForm.tsx` + `useGameFormState.ts` — `chapmanAllowancePct`-state, `AllowanceField`-blokk, hidden input, `CupGameMode`/`loadCupContext`/`buildCupInitialValues`.
+- `app/admin/games/new/TeamSizeSelector.tsx`, `sections/ReadyStep.tsx`, `lib/formats/modeGuide.ts`, `lib/formats/icons.tsx` — `chapman_matchplay`-oppføringer.
+- `app/games/[id]/holes/[holeNumber]/page.tsx` — `isChapman`-flag + 60/40 lag-handicap for score-inntasting + fase-stripe.
+- `app/games/[id]/page.tsx` — `chapman_matchplay` i `GameRow.game_mode`-union.
+
+#### Tests
+- Type A: `chapmanMatchplay.test.ts` — 13 tester (60/40-formel, kind, brutto, config-fallback, empty-shell).
+- Type A: `gamePayload.test.ts` — chapman-validator-blokk (kind, allowance-grenser, 2v2-balanse, draft-default 100).
+- Type C: `ChapmanPhaseReminder.test.tsx` — fase-stripa rendres.
+
+</details>
+
+---
+
+<details>
+<summary><strong>1.57.y — Greensome matchplay (2v2 velg-beste-tee + alternate) (1 oppføring) — klikk for å vise</strong></summary>
 
 Issue [#289](https://github.com/jdlarssen/golf-app/issues/289), del av Ryder Cup-epic [#47](https://github.com/jdlarssen/golf-app/issues/47) og format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Cup-format der begge i paret slår ut, paret velger det beste utslaget, og spiller alternate derfra mot motstander-paret.
 
@@ -54,6 +95,8 @@ Gjenbruker foursomes-mønsteret fullt ut: `greensomeMatchplay.compute()` returne
 
 #### Tests
 - Type A: `greensomeMatchplay.test.ts` — 18 tester (greensomeTeamHandicap, compute happy path, empty-shell, mat-em, AS, fraksjonell blanding, allowance 0 %, lek-min kaptein).
+
+</details>
 
 </details>
 
