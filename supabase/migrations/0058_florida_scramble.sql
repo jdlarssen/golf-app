@@ -15,7 +15,7 @@ insert into public.formats (
   'Lag à 3 eller 4. Alle slår, beste ball velges. Den som slo det valgte slaget, står over neste slag.',
   '@/lib/scoring/modes/floridaScramble',
   true,
-  true
+  false
 );
 
 insert into public.format_intent_mapping (

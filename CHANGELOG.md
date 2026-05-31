@@ -21,6 +21,20 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#291](https://github.com/jdlarssen/golf-app/issues/291), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Gruesome er foursomes med en vri: begge slår ut, men motstanderlaget velger hvilken av ballene paret må spille videre med. Standalone-spillbar (intent «kompis») i tillegg til cup. Samme serie gir hele alternate-shot-familien (foursomes/greensome/chapman/gruesome) en ekte individuell-spill matchplay-leaderboard.
 
+### [1.59.3] - 2026-05-31
+
+> Florida Scramble dukker ikke lenger opp som valgbart format når du setter opp en cup. Det hører hjemme blant enkeltrunde-formatene, sammen med Texas Scramble og Ambrose, og oppfører seg nå likt som dem.
+
+<details>
+<summary>Teknisk</summary>
+
+Fikser [#327](https://github.com/jdlarssen/golf-app/issues/327). `florida_scramble` ble seedet med `formats.is_cup_eligible = true`, mens resten av scramble-/moro-familien (texas_scramble, ambrose, round_robin, acey_deucey) er `false`. `getFormatsForIntent` filtrerer cup-steg 2 på `.eq('is_cup_eligible', true)`, så Florida ble feilaktig tilbudt som cup-format. Korrigert i seed-migrasjonen (fersk DB) + prod-raden satt til `false` via Supabase. Ingen kode-/logikk-endring.
+
+#### Fixed
+- [`supabase/migrations/0058_florida_scramble.sql`](supabase/migrations/0058_florida_scramble.sql) — `is_cup_eligible` `true` → `false` i format-seed-en.
+
+</details>
+
 ### [1.59.2] - 2026-05-31
 
 > Nå kan du redigere Wolf-, Nassau-, Skins-, Nines- og Shamble-spill som er i utkast eller planlagt. Tidligere forsvant spilloppsettet (brutto/netto, variant osv.) når du lagret på nytt, og Shamble-spill ga feilmelding ved redigering.
