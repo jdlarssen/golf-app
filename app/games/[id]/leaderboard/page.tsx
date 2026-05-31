@@ -78,6 +78,10 @@ import {
   type FourballPlayerInfo,
 } from './FourballMatchplayView';
 import {
+  FoursomesMatchplayView,
+  type FoursomesPlayerInfo,
+} from './FoursomesMatchplayView';
+import {
   SideTournamentView,
   type SideTournamentTeam,
 } from './SideTournamentView';
@@ -98,7 +102,7 @@ import { markNotificationsRead } from '@/lib/notifications/markRead';
 // Mode-router for stableford-stats. Aliaset til `computeModeResult` for å
 // unngå navnekollisjon med best-ball-spesifikke `computeLeaderboard` fra
 // `lib/leaderboard.ts`.
-import { computeLeaderboard as computeModeResult, isStablefordFamily, isScrambleFamily } from '@/lib/scoring';
+import { computeLeaderboard as computeModeResult, isStablefordFamily, isScrambleFamily, isAlternateShotMatchplay } from '@/lib/scoring';
 import { MODE_LABELS } from '@/lib/scoring/modes/types';
 
 type Params = Promise<{ id: string }>;
@@ -348,6 +352,23 @@ async function LeaderboardBody({
   // har `tournament_id` (cup-koblet); ellers brukes generisk «Lag 1»/«Lag 2».
   if (game.game_mode === 'fourball_matchplay') {
     return renderFourballMatchplay({
+      gameId,
+      game,
+      gwp,
+      rawHolesRows: rawHolesRes.data ?? [],
+      rawScoresRows: rawScoresRes.data ?? [],
+      backHref,
+    });
+  }
+
+  // Foursomes-familien (foursomes_matchplay, greensome_matchplay,
+  // chapman_matchplay, gruesome_matchplay — issue #291): vekselslag-format
+  // der begge sider spiller én ball per hull. Alle fire returnerer
+  // kind:'foursomes_matchplay' fra scoring-laget. FoursomesMatchplayView
+  // viser lag-HCP, netto per side og matchplay-resultat. formatLabel skiller
+  // variant-navnene visuelt («Foursomes», «Greensome», «Chapman», «Gruesome»).
+  if (isAlternateShotMatchplay(game.game_mode)) {
+    return renderFoursomesMatchplay({
       gameId,
       game,
       gwp,
@@ -1692,6 +1713,124 @@ async function renderFourballMatchplay(opts: {
       playerInfo={playerInfo}
       side1Label={side1Label}
       side2Label={side2Label}
+      gameStatus={game.status}
+      backHref={backHref}
+    />
+  );
+}
+
+/**
+ * Foursomes-familie-grenen — håndterer foursomes_matchplay, greensome_matchplay,
+ * chapman_matchplay og gruesome_matchplay (alle returnerer kind:'foursomes_matchplay'
+ * fra scoring-laget). Speilet renderFourballMatchplay tett, med tre tilpasninger:
+ *
+ * 1. game_mode sendes som-det-er (ikke hardkodet) slik at korrekt side-handicap-
+ *    strategi + config brukes av computeModeResult.
+ * 2. FoursomesMatchplayResult vs FourballMatchplayResult: kind-guard er
+ *    'foursomes_matchplay'; playerInfo er FoursomesPlayerInfo (uten effectiveHandicap).
+ * 3. formatLabel hentes fra MODE_LABELS[game.game_mode] og sendes til view-en
+ *    for å speile variant-navnet («Foursomes», «Greensome», «Chapman», «Gruesome»).
+ */
+async function renderFoursomesMatchplay(opts: {
+  gameId: string;
+  game: GameForHole;
+  gwp: {
+    players: {
+      user_id: string;
+      team_number: number;
+      users: { name: string | null; nickname: string | null } | null;
+      course_handicap: number | null;
+      tee_gender: TeeGender;
+    }[];
+  };
+  rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
+  rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
+  backHref: string;
+}) {
+  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
+
+  const ctx = {
+    game: {
+      id: gameId,
+      // game_mode sendes uendret slik at greensome/chapman/gruesome får riktig
+      // side-handicap-strategi fra sin respektive compute()-funksjon. Alle fire
+      // returnerer kind:'foursomes_matchplay', men config-oppsett kan avvike.
+      game_mode: game.game_mode,
+      mode_config: game.mode_config,
+    },
+    players: gwp.players
+      .filter((p) => p.users != null)
+      .map((p) => ({
+        userId: p.user_id,
+        teamNumber: p.team_number ?? 0,
+        flightNumber: null,
+        courseHandicap: p.course_handicap ?? 0,
+        teeGender: p.tee_gender,
+      })),
+    holes: rawHolesRows.map((h) => ({
+      number: h.hole_number,
+      par: h.par_mens,
+      parByGender: {
+        mens: h.par_mens,
+        ladies: h.par_ladies,
+        juniors: h.par_juniors,
+      },
+      strokeIndex: h.stroke_index,
+    })),
+    scores: rawScoresRows.map((s) => ({
+      userId: s.user_id,
+      holeNumber: s.hole_number,
+      gross: s.strokes,
+    })),
+  };
+
+  const result = computeModeResult(ctx);
+  if (result.kind !== 'foursomes_matchplay') {
+    notFound();
+  }
+
+  const playerInfo: Record<string, FoursomesPlayerInfo> = {};
+  for (const p of gwp.players) {
+    if (p.users == null) continue;
+    playerInfo[p.user_id] = {
+      name: p.users.name ?? '(ukjent)',
+      nickname: p.users.nickname,
+      courseHandicap: p.course_handicap ?? 0,
+    };
+  }
+
+  // Cup-aware lag-labels: hvis games.tournament_id er satt, hent
+  // team_1_name/team_2_name fra tournaments-radet. Ellers fall tilbake til
+  // generisk «Lag 1» / «Lag 2».
+  let side1Label = 'Lag 1';
+  let side2Label = 'Lag 2';
+  const { supabase } = await getLeaderboardContext();
+  const { data: tournamentLink } = await supabase
+    .from('games')
+    .select('tournament_id')
+    .eq('id', gameId)
+    .single<{ tournament_id: string | null }>();
+  if (tournamentLink?.tournament_id) {
+    const { data: tournament } = await supabase
+      .from('tournaments')
+      .select('team_1_name, team_2_name')
+      .eq('id', tournamentLink.tournament_id)
+      .single<{ team_1_name: string; team_2_name: string }>();
+    if (tournament) {
+      side1Label = tournament.team_1_name;
+      side2Label = tournament.team_2_name;
+    }
+  }
+
+  return (
+    <FoursomesMatchplayView
+      gameId={gameId}
+      gameName={game.name}
+      result={result}
+      playerInfo={playerInfo}
+      side1Label={side1Label}
+      side2Label={side2Label}
+      formatLabel={MODE_LABELS[game.game_mode]}
       gameStatus={game.status}
       backHref={backHref}
     />
