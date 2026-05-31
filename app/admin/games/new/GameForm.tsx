@@ -673,6 +673,27 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             <input type="hidden" name="hcp_allowance_pct" value="100" />
           </>
         )}
+        {/* Round Robin (#280): 4-spiller roterende-partner four-ball matchplay.
+            Mirrored from GameWizard step 2. AllowanceField emitter
+            round_robin_allowance_pct selv (ingen hideHiddenInput her, til
+            forskjell fra wizarden som har egen FormDataInputs-mirror). Trenger
+            hcp_allowance_pct=100 no-op for DB NOT NULL (reell prosent ligger i
+            mode_config.allowance_pct). Refs #337. */}
+        {state.isRoundRobin && (
+          <>
+            <AllowanceField
+              fieldName="round_robin_allowance_pct"
+              defaultPct={85}
+              legend="Scoring for Round Robin"
+              description="Styrer handicap for Round Robin-matchplay. Netto bruker en andel av hver spillers handicap per hull, brutto teller laveste gross per side."
+              nettoHelperText="Andel av hver spillers handicap som teller. WHS-standard for four-ball matchplay er 85."
+              bruttoHelperText="Ingen handicap — laveste gross-score per hull per side avgjør. Ren brutto-runde."
+              value={state.roundRobinAllowancePct}
+              onChange={state.setRoundRobinAllowancePct}
+            />
+            <input type="hidden" name="hcp_allowance_pct" value="100" />
+          </>
+        )}
         {/* Setup-step sections: Wolf, Nassau, Skins, Nines, Shamble.
             Mirrored from GameWizard step 2 (same props from state).
             Each section emits radio inputs directly into FormData — no

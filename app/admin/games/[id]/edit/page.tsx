@@ -414,6 +414,10 @@ async function EditGameFormBody({
       game.mode_config.kind === 'florida_scramble'
         ? String(game.mode_config.team_handicap_pct)
         : undefined,
+    // Round Robin (#337): allowance lever i mode_config.allowance_pct. Uten
+    // pre-fill resetter edit-lagring den silent til WHS-default (85).
+    round_robin_allowance_pct:
+      game.mode_config.kind === 'round_robin' ? game.mode_config.allowance_pct : undefined,
     registration_mode: game.registration_mode,
     registration_type: game.registration_type,
   };

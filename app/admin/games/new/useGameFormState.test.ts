@@ -228,4 +228,17 @@ describe('useGameFormState — initialValues pre-fyll for setup-step-formater (#
     expect(result.current.teamSize).toBe(4);
     expect(result.current.isShamble).toBe(true);
   });
+
+  it('round_robin_allowance_pct fra initialValues restorer state korrekt (#337)', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        initialValues: { game_mode: 'round_robin', round_robin_allowance_pct: 50 },
+      }),
+    );
+
+    expect(result.current.roundRobinAllowancePct).toBe(50);
+    expect(result.current.isRoundRobin).toBe(true);
+  });
 });

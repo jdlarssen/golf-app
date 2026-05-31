@@ -21,6 +21,21 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#291](https://github.com/jdlarssen/golf-app/issues/291), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Gruesome er foursomes med en vri: begge slår ut, men motstanderlaget velger hvilken av ballene paret må spille videre med. Standalone-spillbar (intent «kompis») i tillegg til cup. Samme serie gir hele alternate-shot-familien (foursomes/greensome/chapman/gruesome) en ekte individuell-spill matchplay-leaderboard.
 
+### [1.59.4] - 2026-05-31
+
+> Nå kan du redigere et Round Robin-spill i utkast eller planlagt uten å miste scoring-innstillingen. Tidligere ble handicap-andelen satt tilbake til standard når du lagret på nytt.
+
+<details>
+<summary>Teknisk</summary>
+
+Fikser [#337](https://github.com/jdlarssen/golf-app/issues/337) — samme bug-klasse som [#322](https://github.com/jdlarssen/golf-app/issues/322), men round_robin bruker AllowanceField (ikke en setup-seksjon), så det lå utenfor #322s scope. Edit-siden pre-fylte ikke `round_robin_allowance_pct` fra `mode_config.allowance_pct`, og `GameForm` rendret ikke round_robins AllowanceField. Resultat: silent reset til WHS-default (85) ved lagring.
+
+#### Fixed
+- [`app/admin/games/[id]/edit/page.tsx`](app/admin/games/[id]/edit/page.tsx) — pre-fyll `round_robin_allowance_pct` fra `mode_config.allowance_pct`.
+- [`app/admin/games/new/GameForm.tsx`](app/admin/games/new/GameForm.tsx) — rendrer round_robin AllowanceField (speiler GameWizard) + `hcp_allowance_pct=100` no-op for DB NOT NULL.
+
+</details>
+
 ### [1.59.3] - 2026-05-31
 
 > Florida Scramble dukker ikke lenger opp som valgbart format når du setter opp en cup. Det hører hjemme blant enkeltrunde-formatene, sammen med Texas Scramble og Ambrose, og oppfører seg nå likt som dem.

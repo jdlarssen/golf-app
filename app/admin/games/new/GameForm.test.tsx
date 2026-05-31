@@ -1307,6 +1307,48 @@ describe('GameForm — setup-step-seksjoner (fix #322)', () => {
     expect(screen.queryByText(/wolf-oppsett/i)).not.toBeInTheDocument();
   });
 
+  it('round_robin: AllowanceField vises med pre-fylt allowance fra initialValues (#337)', () => {
+    const { container } = render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+        initialValues={{ game_mode: 'round_robin', round_robin_allowance_pct: 50 }}
+      />,
+    );
+
+    // Round Robin-scoring-seksjonen skal vises.
+    expect(screen.getByText(/scoring for round robin/i)).toBeInTheDocument();
+
+    // Hidden input skal bære pre-fylt verdi (50), ikke WHS-default (85).
+    const hidden = container.querySelector(
+      'input[name="round_robin_allowance_pct"]',
+    ) as HTMLInputElement | null;
+    expect(hidden).not.toBeNull();
+    expect(hidden?.value).toBe('50');
+  });
+
+  it('round_robin: AllowanceField vises ikke når game_mode er best_ball', () => {
+    render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+        initialValues={{ game_mode: 'best_ball' }}
+      />,
+    );
+
+    expect(screen.queryByText(/scoring for round robin/i)).not.toBeInTheDocument();
+  });
+
   it('shamble: ShambleSetup vises med champagne-variant checked når initialValues.shamble_variant=champagne', () => {
     const { container } = render(
       <GameForm
