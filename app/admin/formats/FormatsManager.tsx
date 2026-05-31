@@ -13,6 +13,7 @@ import {
   togglePrimary,
   toggleCupEligible,
   toggleActive,
+  updateFormatContent,
 } from './actions';
 
 type Props = {
@@ -93,6 +94,7 @@ export function FormatsManager({ initialFormats }: Props) {
   );
   const [activeTab, setActiveTab] = useState<MappingIntent>('kompis');
   const [showInactive, setShowInactive] = useState<boolean>(false);
+  const [expandedEditor, setExpandedEditor] = useState<string | null>(null);
 
   function submit(action: Action, serverFn: typeof toggleVisibility) {
     const fd = new FormData();
@@ -165,6 +167,15 @@ export function FormatsManager({ initialFormats }: Props) {
           onCupEligible={handleCupEligibleToggle}
         />
       </div>
+
+      {/* Content editors */}
+      <ContentEditorSection
+        formats={optimisticFormats}
+        expandedSlug={expandedEditor}
+        onToggle={(slug) =>
+          setExpandedEditor((prev) => (prev === slug ? null : slug))
+        }
+      />
 
       {/* Mobile tabs */}
       <div className="md:hidden space-y-4">
@@ -284,6 +295,166 @@ export function FormatsManager({ initialFormats }: Props) {
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Content editor section
+// ---------------------------------------------------------------------------
+
+function ContentEditorSection({
+  formats,
+  expandedSlug,
+  onToggle,
+}: {
+  formats: FormatWithMappings[];
+  expandedSlug: string | null;
+  onToggle: (slug: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+        Forklaringstekster
+      </p>
+      <div className="rounded-lg border border-border bg-surface divide-y divide-border">
+        {formats.map((f) => (
+          <ContentEditorRow
+            key={f.slug}
+            format={f}
+            isOpen={expandedSlug === f.slug}
+            onToggle={() => onToggle(f.slug)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ContentEditorRow({
+  format,
+  isOpen,
+  onToggle,
+}: {
+  format: FormatWithMappings;
+  isOpen: boolean;
+  onToggle: () => void;
+}) {
+  const pointsDefaultValue = format.rules_points
+    ? format.rules_points.join('\n')
+    : '';
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left hover:bg-surface-2 transition-colors"
+        aria-expanded={isOpen}
+      >
+        <span className="flex items-center gap-2">
+          <span className="font-serif text-sm text-text">{format.display_name}</span>
+          {(format.rules_summary || format.rules_points || format.rules_long || format.rules_example) && (
+            <span className="rounded-full bg-primary/10 px-1.5 py-0.5 font-sans text-[10px] text-primary">
+              Redigert
+            </span>
+          )}
+        </span>
+        <span className="font-sans text-xs text-muted" aria-hidden="true">
+          {isOpen ? '▲' : '▼'}
+        </span>
+      </button>
+
+      {isOpen && (
+        <form
+          action={updateFormatContent}
+          className="border-t border-border px-3 pb-4 pt-3 space-y-4"
+        >
+          <input type="hidden" name="slug" value={format.slug} />
+
+          <div className="space-y-1">
+            <label
+              htmlFor={`summary-${format.slug}`}
+              className="block font-sans text-xs font-medium text-text"
+            >
+              Kortsammendrag
+            </label>
+            <input
+              id={`summary-${format.slug}`}
+              type="text"
+              name="rules_summary"
+              defaultValue={format.rules_summary ?? ''}
+              placeholder="Bruker standardteksten fra appen"
+              className="w-full rounded-md border border-border bg-bg px-3 py-2 font-sans text-sm text-text placeholder:text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label
+              htmlFor={`points-${format.slug}`}
+              className="block font-sans text-xs font-medium text-text"
+            >
+              Regelpoints{' '}
+              <span className="font-normal text-muted">(én per linje)</span>
+            </label>
+            <textarea
+              id={`points-${format.slug}`}
+              name="rules_points"
+              rows={4}
+              defaultValue={pointsDefaultValue}
+              placeholder="Bruker standardteksten fra appen"
+              className="w-full rounded-md border border-border bg-bg px-3 py-2 font-sans text-sm text-text placeholder:text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 resize-y"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label
+              htmlFor={`long-${format.slug}`}
+              className="block font-sans text-xs font-medium text-text"
+            >
+              Lang forklaring
+            </label>
+            <textarea
+              id={`long-${format.slug}`}
+              name="rules_long"
+              rows={5}
+              defaultValue={format.rules_long ?? ''}
+              placeholder="Ingen lang forklaring ennå"
+              className="w-full rounded-md border border-border bg-bg px-3 py-2 font-sans text-sm text-text placeholder:text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 resize-y"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label
+              htmlFor={`example-${format.slug}`}
+              className="block font-sans text-xs font-medium text-text"
+            >
+              Konkret eksempel
+            </label>
+            <textarea
+              id={`example-${format.slug}`}
+              name="rules_example"
+              rows={4}
+              defaultValue={format.rules_example ?? ''}
+              placeholder="Ingen eksempel ennå"
+              className="w-full rounded-md border border-border bg-bg px-3 py-2 font-sans text-sm text-text placeholder:text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 resize-y"
+            />
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              className="inline-flex min-h-[44px] items-center justify-center rounded-full bg-primary px-[18px] py-2.5 font-medium tracking-tight text-white transition-[background-color,transform,opacity] duration-100 hover:bg-primary-hover hover:-translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Lagre forklaring
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Desktop matrix
+// ---------------------------------------------------------------------------
 
 function DesktopMatrix({
   formats,

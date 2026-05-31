@@ -33,6 +33,8 @@ import { isHandicapStale } from '@/lib/handicap/staleness';
 import { HandicapConfirmCard } from '@/components/handicap/HandicapConfirmCard';
 import { ModeGuideCard } from '@/components/ModeGuideCard';
 import { ScheduledWaitingRoom } from './ScheduledWaitingRoom';
+import { getModeContentMap, mergeModeContent } from '@/lib/formats/getModeContent';
+import { formatDisplayLabel } from '@/lib/games/formatLabel';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -301,6 +303,19 @@ export default async function GameHomePage({
     ? getRatingForGender(game.tee_boxes, me.tee_gender)
     : null;
 
+  // Fetch mode content (cached on 'format-mapping' tag). One call shared by
+  // both ModeGuideCard call sites in scheduled + active branches below.
+  const modeContentMap = await getModeContentMap();
+  const modeTeamSize =
+    'team_size' in gwp.game.mode_config ? gwp.game.mode_config.team_size : 1;
+  const mergedModeContent = mergeModeContent(
+    modeContentMap[game.game_mode] ?? null,
+    game.game_mode,
+    modeTeamSize,
+  );
+  const modeLabel = formatDisplayLabel(game.game_mode, game.mode_config);
+  const modeDetailHref = `/spillformer/${game.game_mode}`;
+
   // State #2 — Scorekort venter. Shell renders synchronously; the flight
   // roster query streams in behind Suspense.
   if (game.status === 'scheduled') {
@@ -415,7 +430,12 @@ export default async function GameHomePage({
           <Kicker tone="muted" className="mb-2 px-1">
             SPILLFORM
           </Kicker>
-          <ModeGuideCard mode={game.game_mode} modeConfig={game.mode_config} />
+          <ModeGuideCard
+            label={modeLabel}
+            summary={mergedModeContent.summary}
+            points={mergedModeContent.points}
+            detailHref={modeDetailHref}
+          />
         </div>
 
         {/* Countdown banner */}
@@ -531,7 +551,12 @@ export default async function GameHomePage({
           <Kicker tone="muted" className="mb-2">
             SPILLFORM
           </Kicker>
-          <ModeGuideCard mode={game.game_mode} modeConfig={game.mode_config} />
+          <ModeGuideCard
+            label={modeLabel}
+            summary={mergedModeContent.summary}
+            points={mergedModeContent.points}
+            detailHref={modeDetailHref}
+          />
         </div>
 
         {isDraft && (

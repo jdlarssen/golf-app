@@ -6,6 +6,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/admin/auth';
 import { recordFormatMappingChange } from '@/lib/formats/audit';
+import { parsePointsTextarea } from '@/lib/formats/parsePointsTextarea';
 import type { MappingIntent } from '@/lib/formats/getAllFormatsWithMappings';
 
 const REDIRECT_BASE = '/admin/formats';
@@ -306,4 +307,46 @@ export async function toggleActive(formData: FormData): Promise<void> {
 
   revalidateTag('format-mapping', 'max');
   redirect(`${REDIRECT_BASE}?status=updated`);
+}
+
+/**
+ * Oppdaterer de fire redaksjonelle innholdsfeltene for et format:
+ * rules_summary, rules_points, rules_long, rules_example.
+ *
+ * Tom streng → null (faller tilbake til standardtekst fra MODE_GUIDE).
+ * rules_points er newline-separert textarea → string[] | null.
+ *
+ * Busts `format-mapping`-cachen så /spillformer og spillsiden reflekterer
+ * endringen uten deploy.
+ */
+export async function updateFormatContent(formData: FormData): Promise<void> {
+  const slug = String(formData.get('slug') ?? '').trim();
+  if (!slug) redirect(`${REDIRECT_BASE}?error=missing_slug`);
+
+  const supabase = await getServerClient();
+  await requireAdmin(supabase);
+  const adminClient = getAdminClient();
+
+  const rawSummary = String(formData.get('rules_summary') ?? '').trim();
+  const rawPoints = String(formData.get('rules_points') ?? '');
+  const rawLong = String(formData.get('rules_long') ?? '').trim();
+  const rawExample = String(formData.get('rules_example') ?? '').trim();
+
+  const rules_summary = rawSummary.length > 0 ? rawSummary : null;
+  const rules_points = parsePointsTextarea(rawPoints);
+  const rules_long = rawLong.length > 0 ? rawLong : null;
+  const rules_example = rawExample.length > 0 ? rawExample : null;
+
+  const { error } = await adminClient
+    .from('formats')
+    .update({ rules_summary, rules_points, rules_long, rules_example })
+    .eq('slug', slug);
+
+  if (error) {
+    console.error('[updateFormatContent] update failed', { slug, error });
+    redirect(`${REDIRECT_BASE}?error=db_error`);
+  }
+
+  revalidateTag('format-mapping', 'max');
+  redirect(`${REDIRECT_BASE}?status=content_saved`);
 }

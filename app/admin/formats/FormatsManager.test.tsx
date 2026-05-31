@@ -17,12 +17,16 @@ const toggleCupEligibleMock = vi.fn<(fd: FormData) => Promise<void>>(
 const toggleActiveMock = vi.fn<(fd: FormData) => Promise<void>>(
   async () => undefined,
 );
+const updateFormatContentMock = vi.fn<(fd: FormData) => Promise<void>>(
+  async () => undefined,
+);
 
 vi.mock('./actions', () => ({
   toggleVisibility: (fd: FormData) => toggleVisibilityMock(fd),
   togglePrimary: (fd: FormData) => togglePrimaryMock(fd),
   toggleCupEligible: (fd: FormData) => toggleCupEligibleMock(fd),
   toggleActive: (fd: FormData) => toggleActiveMock(fd),
+  updateFormatContent: (fd: FormData) => updateFormatContentMock(fd),
 }));
 
 const FORMATS: FormatWithMappings[] = [
@@ -38,6 +42,10 @@ const FORMATS: FormatWithMappings[] = [
       klubb: { is_visible: true, is_primary: true, sort_order: 10 },
       solo: { is_visible: true, is_primary: true, sort_order: 10 },
     },
+    rules_summary: null,
+    rules_points: null,
+    rules_long: null,
+    rules_example: null,
   },
   {
     slug: 'best_ball',
@@ -51,6 +59,10 @@ const FORMATS: FormatWithMappings[] = [
       klubb: { is_visible: true, is_primary: true, sort_order: 20 },
       solo: null,
     },
+    rules_summary: null,
+    rules_points: null,
+    rules_long: null,
+    rules_example: null,
   },
   {
     slug: 'singles_matchplay',
@@ -64,6 +76,10 @@ const FORMATS: FormatWithMappings[] = [
       klubb: null,
       solo: null,
     },
+    rules_summary: null,
+    rules_points: null,
+    rules_long: null,
+    rules_example: null,
   },
 ];
 

@@ -36,7 +36,7 @@ export async function getAllFormatsWithMappings(): Promise<
     supabase
       .from('formats')
       .select(
-        'slug, display_name, icon_key, short_description, is_active, is_cup_eligible',
+        'slug, display_name, icon_key, short_description, is_active, is_cup_eligible, rules_summary, rules_points, rules_long, rules_example',
       )
       .order('display_name', { ascending: true }),
     supabase
@@ -86,6 +86,10 @@ export async function getAllFormatsWithMappings(): Promise<
         klubb: mappings.klubb ?? null,
         solo: mappings.solo ?? null,
       },
+      rules_summary: (f.rules_summary as string | null) ?? null,
+      rules_points: (f.rules_points as string[] | null) ?? null,
+      rules_long: (f.rules_long as string | null) ?? null,
+      rules_example: (f.rules_example as string | null) ?? null,
     };
   });
 }

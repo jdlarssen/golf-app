@@ -4,7 +4,15 @@ import { BackLink } from '@/components/ui/BackLink';
 import { Kicker } from '@/components/ui/Kicker';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ModeGuideCard } from '@/components/ModeGuideCard';
-import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
+import type { GameMode } from '@/lib/scoring/modes/types';
+import { MODE_LABELS } from '@/lib/scoring/modes/types';
+import { getModeContentMap, mergeModeContent } from '@/lib/formats/getModeContent';
+import { formatDisplayLabel } from '@/lib/games/formatLabel';
+import type { GameModeConfig } from '@/lib/scoring/modes/types';
+
+// Dynamic: fetches DB content via getModeContentMap (requires SUPABASE_SERVICE_ROLE_KEY
+// at request time). Static pre-render would fail in build without env.
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Spillformer',
@@ -46,12 +54,21 @@ const CATALOG: CatalogEntry[] = [
   { key: 'nassau', mode: 'nassau' },
   { key: 'skins', mode: 'skins' },
   { key: 'wolf', mode: 'wolf' },
+  { key: 'bingo_bango_bongo', mode: 'bingo_bango_bongo' },
+  { key: 'nines', mode: 'nines' },
+  { key: 'round_robin', mode: 'round_robin' },
+  { key: 'acey_deucey', mode: 'acey_deucey' },
+  { key: 'shamble', mode: 'shamble' },
+  { key: 'patsome', mode: 'patsome' },
 ];
 
-// Oppslagsverk over alle spillformene (#299). Ren, statisk lærings-ressurs —
-// ingen per-bruker-data. Hvert format er et utvidbart ModeGuideCard, samme
-// komponent som på spill-siden.
-export default function SpillformerPage() {
+// Oppslagsverk over alle spillformene (#299, #307, #308). Ren lærings-ressurs —
+// ingen per-bruker-data. Hvert format er et utvidbart ModeGuideCard med
+// DB-drevet innhold + lenke til detaljside. Innhold hentes via getModeContentMap
+// (cached på 'format-mapping'-tag, admin-redigerbart uten deploy).
+export default async function SpillformerPage() {
+  const modeContentMap = await getModeContentMap();
+
   return (
     <AppShell>
       <header className="mb-2 flex items-center justify-between gap-4">
@@ -66,13 +83,32 @@ export default function SpillformerPage() {
       />
 
       <div className="space-y-3">
-        {CATALOG.map((entry) => (
-          <ModeGuideCard
-            key={entry.key}
-            mode={entry.mode}
-            modeConfig={entry.modeConfig}
-          />
-        ))}
+        {CATALOG.map((entry) => {
+          const teamSize =
+            entry.modeConfig && 'team_size' in entry.modeConfig
+              ? entry.modeConfig.team_size
+              : 1;
+          const merged = mergeModeContent(
+            modeContentMap[entry.mode] ?? null,
+            entry.mode,
+            teamSize,
+          );
+          const label = entry.modeConfig
+            ? formatDisplayLabel(entry.mode, entry.modeConfig)
+            : (MODE_LABELS[entry.mode] ?? entry.mode);
+          // 4BBB synthetic entry links to the base stableford slug
+          const detailHref = `/spillformer/${entry.mode}`;
+
+          return (
+            <ModeGuideCard
+              key={entry.key}
+              label={label}
+              summary={merged.summary}
+              points={merged.points}
+              detailHref={detailHref}
+            />
+          );
+        })}
       </div>
     </AppShell>
   );

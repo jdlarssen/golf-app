@@ -2,15 +2,23 @@ import { describe, it, expect } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { ModeGuideCard } from './ModeGuideCard';
 import { MODE_GUIDE, STABLEFORD_4BBB_GUIDE } from '@/lib/formats/modeGuide';
-import { MODE_LABELS, type GameModeConfig } from '@/lib/scoring/modes/types';
+import { MODE_LABELS } from '@/lib/scoring/modes/types';
 
-// Type C: én render-test for komponenten. Asserterer struktur (lukket
-// <details>, navn, sammendrag, riktig antall punkter) framfor å duplisere
-// copy-strenger — verdiene leses fra MODE_GUIDE/MODE_LABELS, ikke hardkodet.
+// Type C: én render-test for komponenten (ren presentasjon). Asserterer
+// struktur (lukket <details>, navn, sammendrag, riktig antall punkter) og
+// valgfri detailHref-lenke. Caller er ansvarlig for å hente merged content —
+// komponenten tar label/summary/points som props.
 
 describe('ModeGuideCard', () => {
   it('viser modus-navn og sammendrag, og folder ut punktene som en lukket disclosure', () => {
-    render(<ModeGuideCard mode="best_ball" />);
+    const guide = MODE_GUIDE.best_ball;
+    render(
+      <ModeGuideCard
+        label={MODE_LABELS.best_ball}
+        summary={guide.summary}
+        points={guide.points}
+      />,
+    );
 
     const card = screen.getByTestId('mode-guide');
     // Native <details>, lukket som default — punktene skjult til spilleren tar i.
@@ -19,22 +27,21 @@ describe('ModeGuideCard', () => {
 
     // Navn + sammendrag synlig i summary (verdier fra single source of truth).
     expect(within(card).getByText(MODE_LABELS.best_ball)).toBeInTheDocument();
-    expect(
-      within(card).getByText(MODE_GUIDE.best_ball.summary),
-    ).toBeInTheDocument();
+    expect(within(card).getByText(guide.summary)).toBeInTheDocument();
 
     // Alle korte-regler-punkter rendres (antall styres av innholdet).
     const items = within(card).getAllByRole('listitem');
-    expect(items).toHaveLength(MODE_GUIDE.best_ball.points.length);
+    expect(items).toHaveLength(guide.points.length);
   });
 
-  it('viser 4BBB-navn og 4BBB-guide for stableford med team_size 2 (#282)', () => {
-    const cfg: GameModeConfig = {
-      kind: 'stableford',
-      team_size: 2,
-      points_table: 'standard',
-    };
-    render(<ModeGuideCard mode="stableford" modeConfig={cfg} />);
+  it('viser 4BBB-navn og 4BBB-guide-innhold for stableford-lag-variant', () => {
+    render(
+      <ModeGuideCard
+        label="4BBB Stableford"
+        summary={STABLEFORD_4BBB_GUIDE.summary}
+        points={STABLEFORD_4BBB_GUIDE.points}
+      />,
+    );
 
     const card = screen.getByTestId('mode-guide');
     expect(within(card).getByText('4BBB Stableford')).toBeInTheDocument();
@@ -47,26 +54,31 @@ describe('ModeGuideCard', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('beholder solo-navn og solo-guide for stableford med team_size 1', () => {
-    const cfg: GameModeConfig = {
-      kind: 'stableford',
-      team_size: 1,
-      points_table: 'standard',
-    };
-    render(<ModeGuideCard mode="stableford" modeConfig={cfg} />);
+  it('rendrer detailHref som «Les mer»-lenke når satt', () => {
+    const guide = MODE_GUIDE.wolf;
+    render(
+      <ModeGuideCard
+        label={MODE_LABELS.wolf}
+        summary={guide.summary}
+        points={guide.points}
+        detailHref="/spillformer/wolf"
+      />,
+    );
 
-    const card = screen.getByTestId('mode-guide');
-    expect(within(card).getByText(MODE_LABELS.stableford)).toBeInTheDocument();
-    expect(
-      within(card).getByText(MODE_GUIDE.stableford.summary),
-    ).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: /les mer/i });
+    expect(link).toHaveAttribute('href', '/spillformer/wolf');
   });
 
-  it('faller tilbake til kun modus-navn for en modus uten guide-entry', () => {
-    // @ts-expect-error – simulerer en legacy/ukjent game_mode i runtime.
-    render(<ModeGuideCard mode="legacy_unknown_mode" />);
-    const card = screen.getByTestId('mode-guide');
-    expect(card.tagName).toBe('DIV');
-    expect(within(card).getByText('legacy_unknown_mode')).toBeInTheDocument();
+  it('rendrer IKKE Les mer-lenke når detailHref er utelatt', () => {
+    const guide = MODE_GUIDE.skins;
+    render(
+      <ModeGuideCard
+        label={MODE_LABELS.skins}
+        summary={guide.summary}
+        points={guide.points}
+      />,
+    );
+
+    expect(screen.queryByRole('link', { name: /les mer/i })).toBeNull();
   });
 });

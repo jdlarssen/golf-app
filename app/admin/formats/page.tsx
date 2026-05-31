@@ -33,6 +33,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 const STATUS_MESSAGES: Record<string, string> = {
   updated: 'Endringen er lagret.',
   noop: 'Ingen endring (verdien var allerede satt).',
+  content_saved: 'Forklaringen er lagret.',
 };
 
 function first(v: string | string[] | undefined): string | undefined {

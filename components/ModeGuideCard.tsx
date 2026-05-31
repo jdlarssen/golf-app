@@ -1,10 +1,14 @@
-import { MODE_LABELS, type GameMode, type GameModeConfig } from '@/lib/scoring/modes/types';
-import { MODE_GUIDE, resolveModeGuide } from '@/lib/formats/modeGuide';
-import { formatDisplayLabel } from '@/lib/games/formatLabel';
+import { SmartLink } from '@/components/ui/SmartLink';
 
 /**
- * Gjenbrukbar utvidbar modus-forklaring (#299). Viser modus-navn + ett-linjes
- * sammendrag alltid, og folder ut «korte regler» når spilleren trykker.
+ * Gjenbrukbar utvidbar modus-forklaring (#299, #307). Viser modus-navn +
+ * ett-linjes sammendrag alltid, og folder ut «korte regler» når spilleren
+ * trykker. Valgfri `detailHref` legger til en «Les mer →»-lenke til
+ * detaljsiden for modus-en (#308).
+ *
+ * Ren presentasjonskomponent — caller henter merged content via
+ * `mergeModeContent()` + `getModeContentMap()` server-side og sender inn
+ * summary/points/label som props. Ingen intern MODE_GUIDE-import.
  *
  * Bygd på native `<details>`/`<summary>`: server-renderbart (ingen client-
  * bundle), tastatur-tilgjengelig og reduced-motion-trygt uten JS-animasjon.
@@ -15,44 +19,28 @@ import { formatDisplayLabel } from '@/lib/games/formatLabel';
  * oppslagsverket `/spillformer`.
  */
 export function ModeGuideCard({
-  mode,
-  modeConfig,
+  summary,
+  points,
+  label,
+  detailHref,
   className,
 }: {
-  mode: GameMode;
+  /** Sammendrag-setning — alltid synlig i lukket tilstand. */
+  summary: string;
+  /** 2–4 korte forklaringspunkter, vises i åpen tilstand. */
+  points: string[];
+  /** Modus-navn (norsk), vises øverst i kortet. */
+  label: string;
   /**
-   * Valgfri mode-config. Når satt brukes den til å vise variant-bevisst navn
-   * og guide — særlig 4BBB Stableford (team_size 2) som ellers ville arvet
-   * solo-Stableford-teksten siden de deler game_mode (#282). Uten prop:
-   * dagens game_mode-baserte oppførsel uendret.
+   * Valgfri href til detalj-side for modus-en. Når satt rendres en
+   * «Les mer →»-lenke nederst i åpen tilstand.
    */
-  modeConfig?: GameModeConfig;
+  detailHref?: string;
   className?: string;
 }) {
-  const label = modeConfig
-    ? formatDisplayLabel(mode, modeConfig)
-    : (MODE_LABELS[mode] ?? mode);
-  const guide = modeConfig
-    ? resolveModeGuide(mode, modeConfig.team_size)
-    : MODE_GUIDE[mode];
-
-  // Defensivt: en gammel/legacy game_mode uten guide-entry skal ikke krasje.
-  // Vis i det minste modus-navnet.
-  if (!guide) {
-    return (
-      <div
-        data-testid="mode-guide"
-        className={`rounded-2xl border border-border bg-surface px-4 py-3 ${className ?? ''}`}
-      >
-        <p className="font-serif text-[17px] font-medium text-text">{label}</p>
-      </div>
-    );
-  }
-
   return (
     <details
       data-testid="mode-guide"
-      data-mode={mode}
       className={`group rounded-2xl border border-border bg-surface ${className ?? ''}`}
     >
       <summary className="flex min-h-[44px] cursor-pointer list-none items-start gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
@@ -60,7 +48,7 @@ export function ModeGuideCard({
           <p className="font-serif text-[17px] font-medium tracking-[-0.01em] text-text">
             {label}
           </p>
-          <p className="mt-1 text-sm text-muted">{guide.summary}</p>
+          <p className="mt-1 text-sm text-muted">{summary}</p>
           <span className="mt-2 inline-block text-xs font-medium text-primary">
             Slik funker det
             <span
@@ -72,8 +60,8 @@ export function ModeGuideCard({
           </span>
         </div>
       </summary>
-      <ul className="mt-1 space-y-2 border-t border-border px-4 pb-4 pt-3 text-sm text-text">
-        {guide.points.map((point) => (
+      <ul className="mt-1 space-y-2 border-t border-border px-4 pb-3 pt-3 text-sm text-text">
+        {points.map((point) => (
           <li key={point} className="flex gap-2">
             <span aria-hidden className="mt-[2px] text-primary">
               ›
@@ -82,6 +70,16 @@ export function ModeGuideCard({
           </li>
         ))}
       </ul>
+      {detailHref && (
+        <div className="border-t border-border px-4 pb-3 pt-2">
+          <SmartLink
+            href={detailHref}
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            Les mer →
+          </SmartLink>
+        </div>
+      )}
     </details>
   );
 }

@@ -17,7 +17,34 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.59.y — Gruesome matchplay (motstander velger din tee shot) + familie-leaderboard
+## 1.60.y — Modus-skole: detaljsider + admin-redigerbar forklaring
+
+Issues [#307](https://github.com/jdlarssen/golf-app/issues/307) + [#308](https://github.com/jdlarssen/golf-app/issues/308), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Hver spillform får en egen detaljside med fyldigere forklaring + konkret eksempel, og alle modus-tekstene blir redigerbare fra Sekretariatet uten deploy.
+
+### [1.60.0] - 2026-05-31
+
+> Hver spillform har nå sin egen side med en fyldigere forklaring og et konkret eksempel — trykk «Les mer» på et spillform-kort for å åpne den. Og som arrangør kan du endre selve forklaringene fra Sekretariatet selv, uten å vente på en oppdatering, hvis en formulering er uklar.
+
+<details>
+<summary>Teknisk</summary>
+
+Flytter modus-forklaringene fra hardkodet `MODE_GUIDE` til DB-drevet, admin-redigerbar innhold, og legger til en detaljside per spillform. Fire nye nullable-kolonner på `formats` (`rules_summary`, `rules_points`, `rules_long`, `rules_example`); `rules_long` + `rules_example` seedet for alle 22 modi, `rules_summary`/`rules_points` NULL → kode-fallback til `MODE_GUIDE`. Ren `mergeModeContent` (DB-verdi vinner per felt, ellers `resolveModeGuide`-fallback inkl. 4BBB-variant) + cachet `getModeContentMap` på samme `format-mapping`-tag som intent-mappingen. `ModeGuideCard` refaktorert til ren presentasjonskomponent (summary/points/label/detailHref som props). Admin-redigering i Sekretariatet buster cachen via `revalidateTag('format-mapping')` → endring synlig umiddelbart.
+
+#### Added
+- [`lib/formats/getModeContent.ts`](lib/formats/getModeContent.ts) — `mergeModeContent` (ren) + `getModeContentMap` (cachet, `format-mapping`-tag).
+- [`app/spillformer/[slug]/page.tsx`](app/spillformer/[slug]/page.tsx) — detaljside per spillform (sammendrag + punkter + fyldig forklaring + konkret eksempel); 404 ved ukjent slug, slug-validering avledet fra `MODE_LABELS`.
+- [`supabase/migrations/0066_format_rules_content.sql`](supabase/migrations/0066_format_rules_content.sql) — 4 innholds-kolonner + seed av forklaring/eksempel for alle 22 modi. **Appliseres post-deploy.**
+- Admin-innholds-editor i [`app/admin/formats/FormatsManager.tsx`](app/admin/formats/FormatsManager.tsx) + `updateFormatContent`-action + `parsePointsTextarea`-helper.
+
+#### Changed
+- [`components/ModeGuideCard.tsx`](components/ModeGuideCard.tsx) — ren presentasjon (props i stedet for intern `MODE_GUIDE`-import) + valgfri «Les mer →»-lenke.
+- [`app/spillformer/page.tsx`](app/spillformer/page.tsx) — DB-drevet innhold + lenke til detaljside per kort; alle 22 modi listet.
+- [`app/games/[id]/page.tsx`](app/games/[id]/page.tsx) — henter modus-innhold server-side, sender til `ModeGuideCard` med `detailHref`.
+
+</details>
+
+<details>
+<summary><strong>1.59.y — Gruesome matchplay (motstander velger din tee shot) + familie-leaderboard (7 oppføringer) — klikk for å vise</strong></summary>
 
 Issue [#291](https://github.com/jdlarssen/golf-app/issues/291), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Gruesome er foursomes med en vri: begge slår ut, men motstanderlaget velger hvilken av ballene paret må spille videre med. Standalone-spillbar (intent «kompis») i tillegg til cup. Samme serie gir hele alternate-shot-familien (foursomes/greensome/chapman/gruesome) en ekte individuell-spill matchplay-leaderboard.
 
@@ -160,6 +187,8 @@ Serien lukker også et hull for hele alternate-shot-familien: foursomes/greensom
 - Type A: `gruesomeMatchplay.test.ts` — sum vs 60/40-differensiering, kind, brutto, defensiv fallback.
 - Type A: `gamePayload.test.ts` — gruesome-validator-blokk (kind, allowance-grenser, 2v2-balanse, draft-default 50).
 - Type C: `FoursomesMatchplayView.test.tsx` — render-kontrakt for delt familie-view (status, sider, hull-grid, format-label).
+
+</details>
 
 </details>
 
