@@ -42,6 +42,10 @@ vi.mock('@/lib/admin/rateLimit', () => ({
   getClientIp: vi.fn(async () => '127.0.0.1'),
 }));
 
+vi.mock('@/lib/admin/auth', () => ({
+  requireAdmin: vi.fn(async () => ({ userId: 'admin-1', name: 'Admin' })),
+}));
+
 function lastRedirect(): string | undefined {
   return redirectMock.mock.calls.at(-1)?.[0];
 }
@@ -80,5 +84,33 @@ describe('sendInvitation — honeypot', () => {
     expect(supabaseMock.auth.getUser).not.toHaveBeenCalled();
     expect(sendInviteNotificationMock).not.toHaveBeenCalled();
     expect(adminClientMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('sendInvitation — shared dedup (#348)', () => {
+  it('redirects already_invited via the email_is_invited RPC: no insert, no mail', async () => {
+    // The cross-door dedup must use the shared SECURITY DEFINER RPC, not a
+    // direct invitations query — so it sees a friend-invite created by
+    // another user too (RLS 0020 would hide that row from a table query).
+    supabaseMock = buildSupabaseMock([], { email_is_invited: true });
+    const { sendInvitation } = await import('./actions');
+
+    await expect(
+      sendInvitation(fd({ email: 'Taken@Example.com' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe(
+      '/admin/spillere?error=already_invited&email=taken%40example.com',
+    );
+    // RPC called with the normalized (lowercased) email.
+    expect(supabaseMock.rpc).toHaveBeenCalledWith('email_is_invited', {
+      check_email: 'taken@example.com',
+    });
+    // No second invitation row, no second mail.
+    const insertCalls = supabaseMock.__fromCalls.filter(
+      (c) => c.method === 'insert',
+    );
+    expect(insertCalls).toHaveLength(0);
+    expect(sendInviteNotificationMock).not.toHaveBeenCalled();
   });
 });

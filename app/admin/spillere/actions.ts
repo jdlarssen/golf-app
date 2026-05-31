@@ -62,16 +62,17 @@ export async function sendInvitation(formData: FormData) {
     redirect(`/admin/spillere?${qs.toString()}`);
   }
 
-  // Guard against duplicate pending invitations — invitations.email has no
-  // UNIQUE constraint, so without this check admin can accidentally create
-  // two pending rows for the same address.
-  const { data: existing } = await supabase
-    .from('invitations')
-    .select('id')
-    .eq('email', email)
-    .is('accepted_at', null)
-    .maybeSingle();
-  if (existing) {
+  // Shared cross-door dedup (#348): email_is_invited is the SECURITY DEFINER
+  // RPC the friend door (app/invite/actions.ts) and the login flow also use,
+  // so all three agree on what "already invited" means (open = not-accepted
+  // AND not-expired). Stops a second invite-mail when a friend-invite already
+  // exists, without needing a UNIQUE constraint on invitations.email. An
+  // expired invitation no longer blocks a fresh one — admin uses «Send på
+  // nytt» to revive a still-valid pending invitation.
+  const { data: alreadyInvited } = await supabase.rpc('email_is_invited', {
+    check_email: email,
+  });
+  if (alreadyInvited) {
     const qs = new URLSearchParams({ error: 'already_invited', email });
     redirect(`/admin/spillere?${qs.toString()}`);
   }

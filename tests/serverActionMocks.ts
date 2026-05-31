@@ -42,14 +42,24 @@ export type QueryResult = { data?: unknown; error?: unknown };
  * Chainable filter methods (`select`, `eq`, `is`, `not`, `in`) return
  * the same builder so any chain length works without per-test config.
  *
- * Inspect calls via `client.__fromCalls` (FIFO list of `{table, method, args}`).
+ * `rpcResults` keys an RPC name to the `data` it should resolve with —
+ * `rpc(name, params)` resolves to `{ data: rpcResults[name] ?? null, error:
+ * null }`. Keyed (not FIFO) so `Promise.all([rpc('a'), rpc('b')])` is
+ * order-independent. Inspect via `client.__rpcCalls` ({name, params}).
+ *
+ * Inspect query calls via `client.__fromCalls` (FIFO list of
+ * `{table, method, args}`).
  */
-export function buildSupabaseMock(queue: QueryResult[]) {
+export function buildSupabaseMock(
+  queue: QueryResult[],
+  rpcResults: Record<string, unknown> = {},
+) {
   const fromCalls: Array<{
     table: string;
     method: string;
     args: unknown[];
   }> = [];
+  const rpcCalls: Array<{ name: string; params: unknown }> = [];
 
   let currentTable = '';
 
@@ -140,6 +150,14 @@ export function buildSupabaseMock(queue: QueryResult[]) {
       // (avoids one query's resolution accidentally satisfying the next).
       return makeBuilder();
     }),
+    rpc: vi.fn((name: string, params?: unknown) => {
+      rpcCalls.push({ name, params });
+      return Promise.resolve({
+        data: name in rpcResults ? rpcResults[name] : null,
+        error: null,
+      });
+    }),
     __fromCalls: fromCalls,
+    __rpcCalls: rpcCalls,
   };
 }

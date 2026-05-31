@@ -21,6 +21,25 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issues [#307](https://github.com/jdlarssen/golf-app/issues/307) + [#308](https://github.com/jdlarssen/golf-app/issues/308), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Hver spillform får en egen detaljside med fyldigere forklaring + konkret eksempel, og alle modus-tekstene blir redigerbare fra Sekretariatet uten deploy.
 
+### [1.60.4] - 2026-05-31
+
+> Inviterer du en venn som allerede er invitert til Tørny, får du beskjed om det med en gang i stedet for at de får enda en invitasjon på e-post. Samme adresse får ikke lenger to invitasjoner selv om både du og en arrangør inviterer.
+
+<details>
+<summary>Teknisk</summary>
+
+Siste barn i «Én vei til rom»-paraplyen ([#344](https://github.com/jdlarssen/golf-app/issues/344)). Fikser [#348](https://github.com/jdlarssen/golf-app/issues/348) — dobbel invite-mail på tvers av de to invite-dørene.
+
+#### Fixed
+- Begge invite-dører gater nå på den delte `email_is_invited`-RPC-en (samme `SECURITY DEFINER`-funksjon som login-flyten bruker). Venne-døra ([`app/invite/actions.ts`](app/invite/actions.ts)) manglet sjekken helt og kunne sende en andre invite-mail til en adresse en arrangør allerede hadde invitert. En direkte `invitations`-query ville ikke fanget det, fordi RLS (0020) skjuler andres rader — derav den `SECURITY DEFINER`-RPC-en.
+- Admin-døra ([`app/admin/spillere/actions.ts`](app/admin/spillere/actions.ts)) byttet sin inline `invitations`-query mot samme RPC, så begge dører og login deler én sannhetskilde for «er denne adressen invitert». Bivirkning: en *utløpt* invitasjon blokkerer ikke lenger en ny admin-invite (bruk «Send på nytt» for en gyldig ventende).
+
+#### Added
+- Venne-døra viser nå en «allerede invitert»-melding ([`app/profile/page.tsx`](app/profile/page.tsx)).
+- `.rpc()`-støtte i `buildSupabaseMock` ([`tests/serverActionMocks.ts`](tests/serverActionMocks.ts)) + dedup-tester for begge dører (venne-dør blokkerer/går-videre, admin-dør blokkerer).
+
+</details>
+
 ### [1.60.3] - 2026-05-31
 
 > «Opprett spill» ser nå lik ut overalt: på hjem og i spill-lista. Knappen blir værende på hjem selv når du allerede har spill, ikke bare når lista er tom. Før het samme handling tre forskjellige ting avhengig av hvor du sto.

@@ -66,16 +66,26 @@ export async function sendFriendInvite(formData: FormData) {
   //      partial accounts would slip through and receive a confusing invite
   //      mail, and their user_metadata.inviter_name would be overwritten
   //      by the subsequent signInWithOtp call.
-  const [registeredResult, inAuthResult] = await Promise.all([
+  // The third check is the shared cross-door dedup (#348): email_is_invited
+  // is the same SECURITY DEFINER RPC the admin door and the login flow use,
+  // so it sees open invitations regardless of who created them — which a
+  // direct `invitations` query couldn't (RLS 0020 hides other users' rows).
+  const [registeredResult, inAuthResult, invitedResult] = await Promise.all([
     supabase.rpc('email_is_registered', { p_email: email }),
     supabase.rpc('email_is_in_auth_users', { email_to_check: email }),
+    supabase.rpc('email_is_invited', { check_email: email }),
   ]);
 
-  if (registeredResult.error || inAuthResult.error) {
+  if (registeredResult.error || inAuthResult.error || invitedResult.error) {
     redirect('/profile?invite_error=unknown');
   }
   if (registeredResult.data || inAuthResult.data) {
     redirect('/profile?invite_error=already_user');
+  }
+  // An open invitation already exists for this address (from the admin door
+  // or another friend-invite) — don't send a second invite-mail.
+  if (invitedResult.data) {
+    redirect('/profile?invite_error=already_invited');
   }
 
   const inviterName = profile.name?.trim() || 'En venn';

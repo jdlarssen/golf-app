@@ -38,6 +38,7 @@ const INVITE_ERROR_MESSAGES: Record<string, string> = {
   invalid_email: 'Ugyldig e-postadresse.',
   already_user:
     'Denne personen er allerede på Tørny. Be admin om å legge dem til et spill.',
+  already_invited: 'Denne adressen er allerede invitert. Du trenger ikke gjøre noe mer.',
   quota: 'Du har brukt opp dagens kvote.',
   rate_limited: 'Vent litt før du prøver igjen.',
   unknown: 'Noe gikk galt med invitasjonen. Prøv igjen.',
