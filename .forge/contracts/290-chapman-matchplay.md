@@ -196,15 +196,17 @@ short_description, phase-stripe-tekst, modeGuide-entry, allowanceCopy, evt. cup-
 
 ## Success criteria
 
-- [ ] `chapmanMatchplay.compute(ctx)` returnerer `kind: 'foursomes_matchplay'` og `computeLeaderboard` ruter `game_mode==='chapman_matchplay'` dit. **Verifiser:** `lib/scoring/index.ts` har `case 'chapman_matchplay'`; chapman-test «returnerer kind foursomes_matchplay» grønn.
-- [ ] Type A: `chapmanSideHandicap(10,20)===14`; høylaget får riktig strokes ved 100 % default; `allowance_pct=0` → brutto (0 strokes). **Verifiser:** `npx vitest run lib/scoring/modes/chapmanMatchplay` grønn.
-- [ ] `foursomesMatchplay.compute` gir uendret resultat etter `computeFoursomesCore`-ekstraksjonen (ingen regresjon). **Verifiser:** `npx vitest run lib/scoring/modes/foursomesMatchplay` grønn.
-- [ ] `validateChapmanMatchplay` produserer `mode_config {kind:'chapman_matchplay', allowance_pct, team_size:2, teams_count:2}`; avviser ikke-2+2 og pct utenfor 0..100. **Verifiser:** `npx vitest run lib/games/gamePayload` (ny chapman-blokk) grønn.
-- [ ] Migrasjon 0058 skrevet (format-row is_cup_eligible=true + `chapman_allowance_pct`-kolonne) — **applisert POST-deploy** via Supabase MCP, ikke før merge. **Verifiser:** fil finnes + matcher 0048-mal; (post-deploy) `execute_sql` viser raden, is_active=true.
-- [ ] Admin kan opprette et Chapman-spill i en cup; det vises med label «Chapman» og foursomes-leaderboard (én ball/lag, match-resultat). **Verifiser:** «+ Chapman»-knapp + `validateChapmanMatchplay` + `isFoursomesFamily`-routing; `npm run build` grønn. Visuell smoke via evaluator/preview.
-- [ ] Hull-siden viser Chapman-phase-stripe (de 4 fasene) for chapman_matchplay, og IKKE tee-starter-banneret. **Verifiser:** komponent rendres gated på `chapman_matchplay`; tee-slot gated på `=== 'foursomes_matchplay'`. Type C render-test (data-testid).
-- [ ] `npm run build` (tsc) grønn — alle exhaustive switches/Records dekker `'chapman_matchplay'`. **Verifiser:** `npm run build`.
-- [ ] Versjons-bump 1.53.0 → 1.54.0 (minor) + CHANGELOG-oppføring i den bruker-synlige `feat`-commiten.
+> **Rebase-note:** mens dette ble bygget landet 4 parallelle formater på main (florida, shamble, patsome, **greensome #289**). Greensome er Chapmans tvilling (samme 60/40-handicap, samme result-kind). Rebase-konsekvenser: migrasjon **0058 → 0064**, versjon **1.54 → 1.58**, og family-helper `isFoursomesFamily` ble **droppet til fordel for greensomes `isAlternateShotMatchplay(mode)`** (utvidet til foursomes + greensome + chapman). Chapman-motoren beholdt sin DRY `computeFoursomesCore`-kjerne.
+
+- [x] `chapmanMatchplay.compute(ctx)` returnerer `kind: 'foursomes_matchplay'` og `computeLeaderboard` ruter `game_mode==='chapman_matchplay'` dit. **Evidens:** `lib/scoring/index.ts` `case 'chapman_matchplay'`; chapman-test «returnerer kind: foursomes_matchplay» grønn. Commit `35ce4d3`.
+- [x] Type A: `chapmanSideHandicap(10,20)===14`; høylaget får riktig strokes ved 100 % default; `allowance_pct=0` → brutto. **Evidens:** `npx vitest run lib/scoring/modes/chapmanMatchplay` — 13 grønne.
+- [x] `foursomesMatchplay.compute` uendret etter `computeFoursomesCore`-ekstraksjonen. **Evidens:** `foursomesMatchplay.test.ts` 16/16 grønn. Commit `35ce4d3`.
+- [x] `validateChapmanMatchplay` produserer `mode_config {kind:'chapman_matchplay', allowance_pct, team_size:2, teams_count:2}`; avviser ikke-2+2 og pct utenfor 0..100. **Evidens:** `gamePayload.test.ts` chapman-blokk (5 cases) grønn. Commit `5d8c7d2`.
+- [~] Migrasjon **0064** skrevet (format-row is_cup_eligible=true + `chapman_allowance_pct` default 100) — **applisert POST-deploy**, ikke før merge. **Evidens:** `supabase/migrations/0064_chapman_matchplay.sql` matcher 0063-greensome-malen. Prod-applisering gjenstår.
+- [x] Admin kan opprette et Chapman-spill i en cup; vises med label «Chapman» + foursomes-leaderboard. **Evidens:** «+ Chapman match»-knapp, `validateChapmanMatchplay`, `isAlternateShotMatchplay`-routing, cup-snapshot-gren; `npm run build` grønn. Visuell smoke gjenstår (preview krever post-deploy migrasjon).
+- [x] Hull-siden viser Chapman-phase-stripe for chapman_matchplay, og IKKE tee-starter-banneret. **Evidens:** `ChapmanPhaseReminder` gated på `isChapman`; tee-slot gated på `=== 'foursomes_matchplay'`; Type C-test grønn. Commit `4f8b8e7`.
+- [x] `npm run build` (tsc) grønn — alle exhaustive switches/Records dekker `'chapman_matchplay'`. **Evidens:** `npm run build` fullfører; full suite 2238 grønne.
+- [x] Versjons-bump **1.57.0 → 1.58.0** (minor) + CHANGELOG-oppføring i `feat`-commiten. **Evidens:** `package.json` 1.58.0; CHANGELOG «1.58.y — Chapman matchplay»; commit `6fa5afb` passerte commit-msg-hook.
 
 ## Gates (etter hver chunk)
 
