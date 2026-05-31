@@ -1,11 +1,6 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
-import { compute as computeSinglesMatchplay } from '@/lib/scoring/modes/singlesMatchplay';
-import { compute as computeFourballMatchplay } from '@/lib/scoring/modes/fourballMatchplay';
-import { compute as computeFoursomesMatchplay } from '@/lib/scoring/modes/foursomesMatchplay';
-import { compute as computeChapmanMatchplay } from '@/lib/scoring/modes/chapmanMatchplay';
-import { compute as computeGruesomeMatchplay } from '@/lib/scoring/modes/gruesomeMatchplay';
-import type { ScoringContext } from '@/lib/scoring/modes/types';
+import { computeCupMatchResult } from './computeCupMatchResult';
 import type { GameStatus } from '@/lib/games/status';
 import {
   computeCupLeaderboard,
@@ -211,8 +206,7 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
     const holes = (game.course_id && holesByCourse.get(game.course_id)) || [];
 
     // Per side: alle spillere med team_number 1 eller 2. Singles har 1 per side,
-    // fourball har 2 per side. Generaliser fra .find() til array for å støtte
-    // begge.
+    // lag-format (fourball/foursomes/greensome/chapman/gruesome) har 2.
     const side1Players = gPlayers.filter((p) => p.team_number === 1);
     const side2Players = gPlayers.filter((p) => p.team_number === 2);
 
@@ -228,241 +222,32 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
       if (p.team_number === 2 && !team2Map.has(p.user_id)) team2Map.set(p.user_id, entry);
     }
 
-    let result: CupMatchInput['result'] = null;
-    // Singles matchplay: 1 spiller per side, gjenbruker eksisterende scoring-modul.
-    if (
-      game.game_mode === 'singles_matchplay' &&
-      side1Players.length === 1 &&
-      side2Players.length === 1
-    ) {
-      const side1 = side1Players[0];
-      const side2 = side2Players[0];
-      const ctx: ScoringContext = {
-        game: {
-          id: game.id,
-          game_mode: 'singles_matchplay',
-          mode_config: { kind: 'singles_matchplay', team_size: 1, teams_count: 2 },
-        },
-        players: [
-          {
-            userId: side1.user_id,
-            teamNumber: 1,
-            flightNumber: null,
-            courseHandicap: side1.course_handicap ?? 0,
-          },
-          {
-            userId: side2.user_id,
-            teamNumber: 2,
-            flightNumber: null,
-            courseHandicap: side2.course_handicap ?? 0,
-          },
-        ],
-        holes,
-        scores: gScores.map((s) => ({
-          userId: s.user_id,
-          holeNumber: s.hole_number,
-          gross: s.strokes,
-        })),
-      };
-      const r = computeSinglesMatchplay(ctx);
-      if (r.result) {
-        const winnerSide: 1 | 2 | 'tied' =
-          r.result.winner === 'side1' ? 1 : r.result.winner === 'side2' ? 2 : 'tied';
-        result = { winnerSide, formatted: r.result.formatted };
-      }
-    }
-
-    // Fourball matchplay (#217): 2 spillere per side, lag-best per hull,
-    // sammenlikn som matchplay. Henter allowance_pct fra games.mode_config (eller
-    // defaulter til 100 hvis manglende — scoring-laget håndterer det defensivt).
-    if (
-      game.game_mode === 'fourball_matchplay' &&
-      side1Players.length === 2 &&
-      side2Players.length === 2
-    ) {
-      const modeConfig = (game.mode_config ?? null) as {
-        kind?: string;
-        allowance_pct?: number;
-      } | null;
-      const allowancePct =
-        modeConfig && typeof modeConfig.allowance_pct === 'number'
-          ? modeConfig.allowance_pct
-          : 100;
-      const ctx: ScoringContext = {
-        game: {
-          id: game.id,
-          game_mode: 'fourball_matchplay',
-          mode_config: {
-            kind: 'fourball_matchplay',
-            team_size: 2,
-            teams_count: 2,
-            allowance_pct: allowancePct,
-          },
-        },
-        players: [...side1Players, ...side2Players].map((p) => ({
-          userId: p.user_id,
-          teamNumber: p.team_number,
-          flightNumber: null,
-          courseHandicap: p.course_handicap ?? 0,
-        })),
-        holes,
-        scores: gScores.map((s) => ({
-          userId: s.user_id,
-          holeNumber: s.hole_number,
-          gross: s.strokes,
-        })),
-      };
-      const r = computeFourballMatchplay(ctx);
-      if (r.result) {
-        const winnerSide: 1 | 2 | 'tied' =
-          r.result.winner === 'side1' ? 1 : r.result.winner === 'side2' ? 2 : 'tied';
-        result = { winnerSide, formatted: r.result.formatted };
-      }
-    }
-
-    // Foursomes matchplay (#218): 2 spillere per side, én ball per lag
-    // (kaptein-pattern), WHS-diff-allowance. Henter allowance_pct fra
-    // games.mode_config (defaulter til 50 hvis manglende — WHS-standard).
-    if (
-      game.game_mode === 'foursomes_matchplay' &&
-      side1Players.length === 2 &&
-      side2Players.length === 2
-    ) {
-      const modeConfig = (game.mode_config ?? null) as {
-        kind?: string;
-        allowance_pct?: number;
-      } | null;
-      const allowancePct =
-        modeConfig && typeof modeConfig.allowance_pct === 'number'
-          ? modeConfig.allowance_pct
-          : 50;
-      const ctx: ScoringContext = {
-        game: {
-          id: game.id,
-          game_mode: 'foursomes_matchplay',
-          mode_config: {
-            kind: 'foursomes_matchplay',
-            team_size: 2,
-            teams_count: 2,
-            allowance_pct: allowancePct,
-          },
-        },
-        players: [...side1Players, ...side2Players].map((p) => ({
-          userId: p.user_id,
-          teamNumber: p.team_number,
-          flightNumber: null,
-          courseHandicap: p.course_handicap ?? 0,
-        })),
-        holes,
-        scores: gScores.map((s) => ({
-          userId: s.user_id,
-          holeNumber: s.hole_number,
-          gross: s.strokes,
-        })),
-      };
-      const r = computeFoursomesMatchplay(ctx);
-      if (r.result) {
-        const winnerSide: 1 | 2 | 'tied' =
-          r.result.winner === 'side1' ? 1 : r.result.winner === 'side2' ? 2 : 'tied';
-        result = { winnerSide, formatted: r.result.formatted };
-      }
-    }
-
-    // Chapman matchplay (#290): 2 spillere per side, én ball per lag (samme
-    // kaptein-pattern som foursomes), 60/40-side-handicap. Henter allowance_pct
-    // fra games.mode_config (defaulter til 100 — WHS Chapman matchplay-standard).
-    if (
-      game.game_mode === 'chapman_matchplay' &&
-      side1Players.length === 2 &&
-      side2Players.length === 2
-    ) {
-      const modeConfig = (game.mode_config ?? null) as {
-        kind?: string;
-        allowance_pct?: number;
-      } | null;
-      const allowancePct =
-        modeConfig && typeof modeConfig.allowance_pct === 'number'
-          ? modeConfig.allowance_pct
-          : 100;
-      const ctx: ScoringContext = {
-        game: {
-          id: game.id,
-          game_mode: 'chapman_matchplay',
-          mode_config: {
-            kind: 'chapman_matchplay',
-            team_size: 2,
-            teams_count: 2,
-            allowance_pct: allowancePct,
-          },
-        },
-        players: [...side1Players, ...side2Players].map((p) => ({
-          userId: p.user_id,
-          teamNumber: p.team_number,
-          flightNumber: null,
-          courseHandicap: p.course_handicap ?? 0,
-        })),
-        holes,
-        scores: gScores.map((s) => ({
-          userId: s.user_id,
-          holeNumber: s.hole_number,
-          gross: s.strokes,
-        })),
-      };
-      const r = computeChapmanMatchplay(ctx);
-      if (r.result) {
-        const winnerSide: 1 | 2 | 'tied' =
-          r.result.winner === 'side1' ? 1 : r.result.winner === 'side2' ? 2 : 'tied';
-        result = { winnerSide, formatted: r.result.formatted };
-      }
-    }
-
-    // Gruesome matchplay (#291): 2 spillere per side, én ball per lag (samme
-    // kaptein-pattern som foursomes), sum-side-handicap. Henter allowance_pct
-    // fra games.mode_config (defaulter til 50 — WHS foursomes-standard).
-    if (
-      game.game_mode === 'gruesome_matchplay' &&
-      side1Players.length === 2 &&
-      side2Players.length === 2
-    ) {
-      const modeConfig = (game.mode_config ?? null) as {
-        kind?: string;
-        allowance_pct?: number;
-      } | null;
-      const allowancePct =
-        modeConfig && typeof modeConfig.allowance_pct === 'number'
-          ? modeConfig.allowance_pct
-          : 50;
-      const ctx: ScoringContext = {
-        game: {
-          id: game.id,
-          game_mode: 'gruesome_matchplay',
-          mode_config: {
-            kind: 'gruesome_matchplay',
-            team_size: 2,
-            teams_count: 2,
-            allowance_pct: allowancePct,
-          },
-        },
-        players: [...side1Players, ...side2Players].map((p) => ({
-          userId: p.user_id,
-          teamNumber: p.team_number,
-          flightNumber: null,
-          courseHandicap: p.course_handicap ?? 0,
-        })),
-        holes,
-        scores: gScores.map((s) => ({
-          userId: s.user_id,
-          holeNumber: s.hole_number,
-          gross: s.strokes,
-        })),
-      };
-      const r = computeGruesomeMatchplay(ctx);
-      if (r.result) {
-        const winnerSide: 1 | 2 | 'tied' =
-          r.result.winner === 'side1' ? 1 : r.result.winner === 'side2' ? 2 : 'tied';
-        result = { winnerSide, formatted: r.result.formatted };
-      }
-    }
+    // Match-scoring via tabell-drevet dispatcher (#331). Dekker alle seks
+    // matchplay-modi (singles/fourball/foursomes/greensome/chapman/gruesome) med
+    // riktig compute-fn + allowance-default per modus. Returnerer null når
+    // game_mode ikke er matchplay, side-størrelsen ikke matcher, eller matchen
+    // ikke er avgjort ennå. allowance_pct leses fra mode_config (helperen
+    // defaulter per modus når feltet mangler).
+    const modeConfig = (game.mode_config ?? null) as { allowance_pct?: number } | null;
+    const result = computeCupMatchResult({
+      gameId: game.id,
+      gameMode: game.game_mode,
+      modeConfig,
+      side1: side1Players.map((p) => ({
+        userId: p.user_id,
+        courseHandicap: p.course_handicap ?? 0,
+      })),
+      side2: side2Players.map((p) => ({
+        userId: p.user_id,
+        courseHandicap: p.course_handicap ?? 0,
+      })),
+      holes,
+      scores: gScores.map((s) => ({
+        userId: s.user_id,
+        holeNumber: s.hole_number,
+        gross: s.strokes,
+      })),
+    });
 
     // Navn-label per side: singles bruker enkelt-navn, lag-format (fourball/
     // foursomes/greensome/chapman/gruesome) joiner med «/». Defensiv: tom side

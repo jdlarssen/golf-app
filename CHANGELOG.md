@@ -21,6 +21,26 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#291](https://github.com/jdlarssen/golf-app/issues/291), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Gruesome er foursomes med en vri: begge slår ut, men motstanderlaget velger hvilken av ballene paret må spille videre med. Standalone-spillbar (intent «kompis») i tillegg til cup. Samme serie gir hele alternate-shot-familien (foursomes/greensome/chapman/gruesome) en ekte individuell-spill matchplay-leaderboard.
 
+### [1.59.1] - 2026-05-31
+
+> Greensome-matcher i en cup teller nå riktig. Tidligere ga de null poeng til vinneren uansett hvordan matchen endte. Nå får laget som vinner sin greensome-match poengene på cup-tabellen, på lik linje med foursomes, fourball og de andre matchformatene.
+
+<details>
+<summary>Teknisk</summary>
+
+Fikser [#331](https://github.com/jdlarssen/golf-app/issues/331). `getCupSnapshot` hadde én scoring-gren per cup-matchplay-format (singles/fourball/foursomes/chapman/gruesome) men ingen for `greensome_matchplay` — greensome ble lagt til i match-mode-unionen og side-labelene, men aldri gitt en compute-gren. Resultatet: `result` forble `null`, så `computeCupLeaderboard` ga begge lag 0 poeng uansett vinner. Gapet oppsto fordi de fem grenene var nær-identisk copy-paste, og greensome var kopien som aldri ble laget.
+
+I stedet for en sjette copy-paste-gren ble per-match-scoringen ekstrahert til en ren, tabell-drevet helper `computeCupMatchResult` som dekker alle seks modi via et `{ modus → { compute, sideSize, defaultAllowance } }`-map. Det lukker greensome-gapet, fjerner duplikasjonen som forårsaket det, og gjør seamen Type-A-testbar (`getCupSnapshot` selv er utestet siden den krever Supabase-admin-mocks). Allowance-defaults bevart eksakt: fourball/greensome/chapman 100, foursomes/gruesome 50.
+
+#### Fixed
+- [`lib/cup/getCupSnapshot.ts`](lib/cup/getCupSnapshot.ts) — greensome-matcher scores nå (via ny dispatcher); fem inline-grener erstattet med ett helper-kall.
+
+#### Added
+- [`lib/cup/computeCupMatchResult.ts`](lib/cup/computeCupMatchResult.ts) — ren, tabell-drevet scoring-dispatcher for cup-matcher (alle seks matchplay-modi).
+- [`lib/cup/computeCupMatchResult.test.ts`](lib/cup/computeCupMatchResult.test.ts) — Type-A-test: dispatch per modus, greensome-regresjon, allowance-default 100, tied/ufullført/ukjent-modus → null.
+
+</details>
+
 ### [1.59.0] - 2026-05-31
 
 > Gruesome matchplay er klar. To mot to: begge slår ut, men nå velger motstanderlaget hvilken av ballene deres dere må spille videre med (som regel den verste). Resten av hullet slår dere vekselvis, som i foursomes. Du oppretter et gruesome-spill rett fra «kompis» i wizarden, eller legger det til som cup-match. På kjøpet viser leaderboardet nå ekte matchplay-resultat (3&2, 2 opp og lignende) for hele alternate-shot-familien, så foursomes, greensome og chapman får samme løft.
