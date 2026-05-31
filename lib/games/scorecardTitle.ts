@@ -23,7 +23,11 @@ export function scorecardTitle(
   gameMode: GameMode,
   modeConfig: GameModeConfig,
 ): ScorecardTitle {
-  if (gameMode === 'singles_matchplay' || gameMode === 'fourball_matchplay') {
+  if (
+    gameMode === 'singles_matchplay' ||
+    gameMode === 'fourball_matchplay' ||
+    gameMode === 'chapman_matchplay'
+  ) {
     return { title: 'Match-scorekort', cardLabel: 'Match-scorekort' };
   }
 

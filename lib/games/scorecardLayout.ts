@@ -6,7 +6,10 @@ import {
   classifyMatchplayHole,
   computeMatchplayRunningStatus,
 } from '@/lib/scoring/modes/singlesMatchplay';
-import { isStablefordFamily } from '@/lib/scoring/modes/types';
+import {
+  isStablefordFamily,
+  isAlternateShotMatchplay,
+} from '@/lib/scoring/modes/types';
 import type { GameForHole, PlayerForHole } from './getGameWithPlayers';
 
 /**
@@ -177,12 +180,13 @@ export function resolveScorecardLayout(
     };
   }
 
-  if (mode === 'foursomes_matchplay' || mode === 'greensome_matchplay') {
-    // Foursomes og greensome adopterer Texas captain-pattern (én ball per lag,
-    // kaptein-userId eier scores-radene) men rendres som 2-kolonne head-to-head
-    // matchplay-scorekort. Allowance via WHS-diff-formel: lavlaget får 0 strokes,
-    // høylaget får round(|combined_diff| × allowance_pct / 100) strokes.
-    // Greensome: combined = 0,6×laveste + 0,4×høyeste (ikke sum som foursomes).
+  if (isAlternateShotMatchplay(mode)) {
+    // Alternate-shot-familien (foursomes + greensome + chapman) adopterer Texas
+    // captain-pattern (én ball per lag, kaptein-userId eier scores-radene) men
+    // rendres som 2-kolonne head-to-head matchplay-scorekort. Allowance via
+    // WHS-diff-formel: lavlaget får 0 strokes, høylaget får round(|sideDiff| ×
+    // allowance_pct / 100) strokes. Side-HCP: foursomes = sum; greensome +
+    // chapman = 60/40-blanding (0,6×laveste + 0,4×høyeste).
     const mySidePlayers = players.filter(
       (p) => p.team_number === me.team_number,
     );
@@ -214,20 +218,22 @@ export function resolveScorecardLayout(
       oppSidePlayers.map((p) => p.user_id),
     );
 
-    // WHS-diff: high side får (combined_diff × allowance_pct/100) som
-    // lag-strokes, low side 0. Allowance leses fra mode_config (default 50
-    // for foursomes, 100 for greensome).
+    // WHS-diff: high side får (sideDiff × allowance_pct/100) som lag-strokes,
+    // low side 0. Allowance leses fra mode_config (default 50 for foursomes,
+    // 100 for greensome/chapman). Side-HCP: foursomes = sum; greensome + chapman
+    // = 0,6×laveste + 0,4×høyeste. Holdt i sync med scoring-engine så scorekort
+    // og leaderboard viser samme strokes.
     const allowancePct =
-      cfg.kind === 'foursomes_matchplay'
+      cfg.kind === 'foursomes_matchplay' ||
+      cfg.kind === 'greensome_matchplay' ||
+      cfg.kind === 'chapman_matchplay'
         ? cfg.allowance_pct
-        : cfg.kind === 'greensome_matchplay'
-          ? cfg.allowance_pct
-          : 50;
+        : 50;
 
-    // Foursomes: combined = sum av partnernes CH.
-    // Greensome: combined = 0,6×laveste + 0,4×høyeste (WHS-greensome-blanding).
+    const isSixtyForty =
+      mode === 'greensome_matchplay' || mode === 'chapman_matchplay';
     function sideHandicap(sidePlayers: typeof mySidePlayers): number {
-      if (mode === 'greensome_matchplay') {
+      if (isSixtyForty) {
         const chs = sidePlayers.map((p) => p.course_handicap ?? 0);
         const low = Math.min(...chs);
         const high = Math.max(...chs);
