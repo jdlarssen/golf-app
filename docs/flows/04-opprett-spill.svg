@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="900" viewBox="0 0 1180 900" font-family="-apple-system, Helvetica, Arial, sans-serif">
+  <defs><marker id="a" markerWidth="10" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#8A6D27"/></marker></defs>
+  <rect width="1180" height="900" fill="#F8F6F0"/>
+  <text x="120" y="60" font-family="Georgia, serif" font-size="32" font-weight="600" fill="#8A6D27">4 · Opprett spill (arrangør)</text>
+  <text x="121" y="90" font-size="15" fill="#6B7770">En 5-stegs veiviser. Uten et spill finnes det ingenting for spillerne — dette er motoren.</text>
+
+  <!-- start -->
+  <rect x="430" y="128" width="320" height="64" rx="16" fill="#1B4332"/>
+  <text x="590" y="160" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">«+ Opprett spill»</text>
+  <text x="590" y="180" text-anchor="middle" font-size="11.5" fill="#C9A961">én knapp, fast på Hjem</text>
+  <line x1="590" y1="192" x2="590" y2="220" stroke="#8A6D27" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- 5 wizard steps as champagne boxes, vertical, center 590 -->
+  <!-- step boxes w620 x280 -->
+  <g>
+    <rect x="280" y="222" width="620" height="62" rx="13" fill="#FFFFFF" stroke="#D8C089" stroke-width="1.5"/>
+    <circle cx="318" cy="253" r="16" fill="#B8973F"/><text x="318" y="258" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">1</text>
+    <text x="352" y="249" font-size="15.5" font-weight="600" fill="#213029">Arrangement</text>
+    <text x="352" y="269" font-size="12" fill="#6B7770">Kompis · Klubb · Cup · Solo</text>
+  </g>
+  <line x1="590" y1="284" x2="590" y2="306" stroke="#8A6D27" stroke-width="1.5" marker-end="url(#a)"/>
+  <g>
+    <rect x="280" y="308" width="620" height="62" rx="13" fill="#FFFFFF" stroke="#D8C089" stroke-width="1.5"/>
+    <circle cx="318" cy="339" r="16" fill="#B8973F"/><text x="318" y="344" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">2</text>
+    <text x="352" y="335" font-size="15.5" font-weight="600" fill="#213029">Format / spillform</text>
+    <text x="352" y="355" font-size="12" fill="#6B7770">Stableford, best ball, matchplay …</text>
+  </g>
+  <line x1="590" y1="370" x2="590" y2="392" stroke="#8A6D27" stroke-width="1.5" marker-end="url(#a)"/>
+  <g>
+    <rect x="280" y="394" width="620" height="62" rx="13" fill="#FFFFFF" stroke="#D8C089" stroke-width="1.5"/>
+    <circle cx="318" cy="425" r="16" fill="#B8973F"/><text x="318" y="430" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">3</text>
+    <text x="352" y="421" font-size="15.5" font-weight="600" fill="#213029">Bane og tidspunkt</text>
+    <text x="352" y="441" font-size="12" fill="#6B7770">velg bane, tee, tee-off-tid</text>
+  </g>
+  <line x1="590" y1="456" x2="590" y2="478" stroke="#8A6D27" stroke-width="1.5" marker-end="url(#a)"/>
+  <g>
+    <rect x="280" y="480" width="620" height="62" rx="13" fill="#FFFFFF" stroke="#D8C089" stroke-width="1.5"/>
+    <circle cx="318" cy="511" r="16" fill="#B8973F"/><text x="318" y="516" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">4</text>
+    <text x="352" y="507" font-size="15.5" font-weight="600" fill="#213029">Spillere</text>
+    <text x="352" y="527" font-size="12" fill="#6B7770">velg deltakere + lag/flight (eller la dem melde seg selv)</text>
+  </g>
+  <line x1="590" y1="542" x2="590" y2="564" stroke="#8A6D27" stroke-width="1.5" marker-end="url(#a)"/>
+  <g>
+    <rect x="280" y="566" width="620" height="62" rx="13" fill="#FFFFFF" stroke="#D8C089" stroke-width="1.5"/>
+    <circle cx="318" cy="597" r="16" fill="#B8973F"/><text x="318" y="602" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">5</text>
+    <text x="352" y="593" font-size="15.5" font-weight="600" fill="#213029">Klar?</text>
+    <text x="352" y="613" font-size="12" fill="#6B7770">oppsummering — lagre utkast eller publiser</text>
+  </g>
+  <line x1="590" y1="628" x2="590" y2="650" stroke="#8A6D27" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- fork: draft vs publish -->
+  <rect x="300" y="652" width="270" height="64" rx="14" fill="#ECEAE3" stroke="#B9B3A7" stroke-width="1.4"/>
+  <text x="435" y="682" text-anchor="middle" font-size="14.5" font-weight="600" fill="#6B6258">Lagre som utkast</text>
+  <text x="435" y="702" text-anchor="middle" font-size="11.5" fill="#857C70">skjult, ikke sendt</text>
+  <rect x="610" y="652" width="270" height="64" rx="14" fill="#F4EBD7" stroke="#C9A961" stroke-width="1.6"/>
+  <text x="745" y="682" text-anchor="middle" font-size="14.5" font-weight="700" fill="#8A6D27">Publiser &amp; inviter</text>
+  <text x="745" y="702" text-anchor="middle" font-size="11.5" fill="#9C8552">spillerne får beskjed</text>
+  <line x1="745" y1="716" x2="745" y2="740" stroke="#8A6D27" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <!-- terminal -->
+  <rect x="545" y="742" width="400" height="70" rx="16" fill="#E3EDE6" stroke="#2D6A4F" stroke-width="1.6"/>
+  <text x="745" y="773" text-anchor="middle" font-size="16" font-weight="700" fill="#1B4332">✓  Spillet er «Planlagt»</text>
+  <text x="745" y="796" text-anchor="middle" font-size="12" fill="#46604F">spillerne kan bli med — se flyt 2</text>
+
+  <!-- side: cup detour -->
+  <rect x="70" y="652" width="200" height="120" rx="14" fill="#FBF7EE" stroke="#D8C089" stroke-width="1.3" stroke-dasharray="4 4"/>
+  <text x="90" y="680" font-size="13" font-weight="700" fill="#8A6D27">Cup-vei</text>
+  <text x="90" y="703" font-size="11.5" fill="#8A7333">Velger du «Cup» i</text>
+  <text x="90" y="720" font-size="11.5" fill="#8A7333">steg 1, lager du i</text>
+  <text x="90" y="737" font-size="11.5" fill="#8A7333">stedet en turnering</text>
+  <text x="90" y="754" font-size="11.5" fill="#8A7333">og legger til matcher.</text>
+
+  <text x="120" y="858" font-size="12.5" fill="#9A937F">Samme veiviser for admin (/admin/games/new) og betrodde arrangører (/opprett-spill).</text>
+</svg>

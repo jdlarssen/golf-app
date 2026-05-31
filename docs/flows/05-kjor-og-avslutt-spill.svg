@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="880" viewBox="0 0 1180 880" font-family="-apple-system, Helvetica, Arial, sans-serif">
+  <defs><marker id="a" markerWidth="10" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#8A6D27"/></marker></defs>
+  <rect width="1180" height="880" fill="#F8F6F0"/>
+  <text x="120" y="60" font-family="Georgia, serif" font-size="32" font-weight="600" fill="#8A6D27">5 · Kjør og avslutt spillet (arrangør)</text>
+  <text x="121" y="90" font-size="15" fill="#6B7770">Fra start til resultat på mail. Den siste milen — gir runden en tydelig, delt avslutning.</text>
+
+  <!-- vertical main col center 400 w560 x120; right rail x740 w340 -->
+  <rect x="120" y="140" width="560" height="64" rx="16" fill="#E3EDE6" stroke="#2D6A4F" stroke-width="1.5"/>
+  <text x="400" y="172" text-anchor="middle" font-size="15" font-weight="700" fill="#1B4332">Spillet er «Planlagt»</text>
+  <text x="400" y="192" text-anchor="middle" font-size="11.5" fill="#46604F">fra flyt 4</text>
+  <line x1="400" y1="204" x2="400" y2="230" stroke="#8A6D27" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- 1 start -->
+  <rect x="120" y="232" width="560" height="72" rx="14" fill="#FFFFFF" stroke="#D8C089" stroke-width="1.5"/>
+  <circle cx="156" cy="268" r="16" fill="#B8973F"/><text x="156" y="273" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">1</text>
+  <text x="190" y="264" font-size="16" fill="#213029">Runden starter</text>
+  <text x="190" y="286" font-size="12.5" fill="#6B7770">automatisk ved tee-off — eller «Start nå» manuelt</text>
+  <line x1="400" y1="304" x2="400" y2="330" stroke="#8A6D27" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- 2 monitor -->
+  <rect x="120" y="332" width="560" height="72" rx="14" fill="#FFFFFF" stroke="#D8C089" stroke-width="1.5"/>
+  <circle cx="156" cy="368" r="16" fill="#B8973F"/><text x="156" y="373" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">2</text>
+  <text x="190" y="364" font-size="16" fill="#213029">Følg med mens de spiller</text>
+  <text x="190" y="386" font-size="12.5" fill="#6B7770">godkjenn scorekort, legg til etternølere, fiks feil</text>
+  <line x1="400" y1="404" x2="400" y2="430" stroke="#8A6D27" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- 3 end gate -->
+  <rect x="120" y="432" width="560" height="84" rx="14" fill="#FBF3DF" stroke="#C9A961" stroke-width="1.5"/>
+  <text x="156" y="480" font-size="20">🏁</text>
+  <text x="190" y="464" font-size="16" font-weight="600" fill="#7A5E13">«Avslutt spillet»</text>
+  <text x="190" y="486" font-size="12.5" fill="#8A7333">krever at alle har levert (og evt. er godkjent)</text>
+  <text x="190" y="505" font-size="12.5" fill="#8A7333">har du sidekonkurranser: velg vinnere (LD/CTP)</text>
+  <line x1="400" y1="516" x2="400" y2="542" stroke="#8A6D27" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- 4 terminal -->
+  <rect x="120" y="544" width="560" height="84" rx="16" fill="#F4EBD7" stroke="#C9A961" stroke-width="1.6"/>
+  <text x="400" y="578" text-anchor="middle" font-size="17" font-weight="700" fill="#8A6D27">✓  «Avsluttet» — resultatet er klart</text>
+  <text x="400" y="602" text-anchor="middle" font-size="12.5" fill="#9C8552">leaderboard åpen for alle · «Resultatet er klart»-mail sendes</text>
+  <text x="400" y="619" text-anchor="middle" font-size="11.5" fill="#9C8552">(kan gjenåpnes hvis noe må rettes)</text>
+
+  <!-- right rail: status lifecycle vertical chips -->
+  <rect x="760" y="232" width="320" height="396" rx="16" fill="#FFFFFF" stroke="#D8D2C4" stroke-width="1.4"/>
+  <text x="920" y="266" text-anchor="middle" font-size="14.5" font-weight="700" fill="#1B4332">Spillets status</text>
+  <g font-size="14" font-weight="600">
+    <rect x="800" y="288" width="240" height="46" rx="23" fill="#ECEAE3" stroke="#B9B3A7"/><text x="920" y="316" text-anchor="middle" fill="#6B6258">Utkast</text>
+    <rect x="800" y="356" width="240" height="46" rx="23" fill="#E7EEF6" stroke="#6B9AD1"/><text x="920" y="384" text-anchor="middle" fill="#2E5C8A">Planlagt</text>
+    <rect x="800" y="424" width="240" height="46" rx="23" fill="#E3EDE6" stroke="#2D6A4F"/><text x="920" y="452" text-anchor="middle" fill="#1B4332">Pågående</text>
+    <rect x="800" y="492" width="240" height="46" rx="23" fill="#F4EBD7" stroke="#C9A961"/><text x="920" y="520" text-anchor="middle" fill="#8A6D27">Avsluttet</text>
+  </g>
+  <line x1="920" y1="334" x2="920" y2="354" stroke="#8A6D27" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="920" y1="402" x2="920" y2="422" stroke="#8A6D27" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="920" y1="470" x2="920" y2="490" stroke="#8A6D27" stroke-width="1.5" marker-end="url(#a)"/>
+  <text x="920" y="566" text-anchor="middle" font-size="11.5" fill="#8A8472">arrangøren styrer hvert</text>
+  <text x="920" y="583" text-anchor="middle" font-size="11.5" fill="#8A8472">trinn (Pågående starter</text>
+  <text x="920" y="600" text-anchor="middle" font-size="11.5" fill="#8A8472">automatisk ved tee-off)</text>
+
+  <text x="120" y="678" font-size="13.5" font-weight="700" fill="#1B4332">Hva spilleren opplever parallelt</text>
+  <text x="120" y="704" font-size="13" fill="#46524B">Planlagt → ser «Du er påmeldt» · Pågående → kan taste slag · Avsluttet → får resultat-mail + endelig leaderboard.</text>
+
+  <text x="120" y="788" font-size="12.5" fill="#9A937F">Speiler spiller-flyten (flyt 3) sett fra arrangørens side.</text>
+</svg>

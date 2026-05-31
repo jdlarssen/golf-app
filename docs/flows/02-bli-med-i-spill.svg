@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="900" viewBox="0 0 1180 900" font-family="-apple-system, Helvetica, Arial, sans-serif">
+  <defs><marker id="a" markerWidth="10" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#5E6B63"/></marker></defs>
+  <rect width="1180" height="900" fill="#F8F6F0"/>
+  <text x="120" y="60" font-family="Georgia, serif" font-size="32" font-weight="600" fill="#1B4332">2 · Bli med i et spill</text>
+  <text x="121" y="90" font-size="15" fill="#6B7770">Tre veier inn — alt etter hvordan spillet er satt opp. Dette avgjør om folk faktisk møter opp.</text>
+
+  <!-- start -->
+  <rect x="430" y="130" width="320" height="64" rx="16" fill="#1B4332"/>
+  <text x="590" y="168" text-anchor="middle" font-size="16" font-weight="700" fill="#FFFFFF">Du har en konto</text>
+  <!-- fan to three -->
+  <path d="M590,194 V214 H250 V236" fill="none" stroke="#5E6B63" stroke-width="1.5" marker-end="url(#a)"/>
+  <path d="M590,214 V236" fill="none" stroke="#5E6B63" stroke-width="1.5" marker-end="url(#a)"/>
+  <path d="M590,214 H930 V236" fill="none" stroke="#5E6B63" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <!-- ===== column headers ===== -->
+  <!-- A: invitert -->
+  <rect x="70" y="238" width="360" height="44" rx="11" fill="#E3EDE6" stroke="#2D6A4F"/>
+  <text x="250" y="266" text-anchor="middle" font-size="15" font-weight="700" fill="#1B4332">A · Du blir invitert</text>
+  <!-- B: åpen -->
+  <rect x="450" y="238" width="280" height="44" rx="11" fill="#E3EDE6" stroke="#2D6A4F"/>
+  <text x="590" y="266" text-anchor="middle" font-size="15" font-weight="700" fill="#1B4332">B · Åpen påmelding</text>
+  <!-- C: lag -->
+  <rect x="750" y="238" width="360" height="44" rx="11" fill="#E3EDE6" stroke="#2D6A4F"/>
+  <text x="930" y="266" text-anchor="middle" font-size="15" font-weight="700" fill="#1B4332">C · Lag-påmelding</text>
+
+  <!-- ===== A steps ===== -->
+  <rect x="70" y="300" width="360" height="68" rx="13" fill="#FFFFFF" stroke="#9DBFAC" stroke-width="1.4"/>
+  <text x="92" y="330" font-size="14.5" fill="#213029">Arrangør legger deg til</text>
+  <text x="92" y="352" font-size="12" fill="#6B7770">du får varsel + evt. mail</text>
+  <line x1="250" y1="368" x2="250" y2="392" stroke="#5E6B63" stroke-width="1.4" marker-end="url(#a)"/>
+  <rect x="70" y="394" width="360" height="68" rx="13" fill="#FFFFFF" stroke="#9DBFAC" stroke-width="1.4"/>
+  <text x="92" y="424" font-size="14.5" fill="#213029">Spillet dukker opp på Hjem</text>
+  <text x="92" y="446" font-size="12" fill="#6B7770">under «Dine turneringer»</text>
+
+  <!-- ===== B steps ===== -->
+  <rect x="450" y="300" width="280" height="68" rx="13" fill="#FFFFFF" stroke="#9DBFAC" stroke-width="1.4"/>
+  <text x="472" y="330" font-size="14.5" fill="#213029">Åpne delt lenke</text>
+  <text x="472" y="352" font-size="12" fill="#6B7770">/signup/…</text>
+  <line x1="590" y1="368" x2="590" y2="392" stroke="#5E6B63" stroke-width="1.4" marker-end="url(#a)"/>
+  <rect x="450" y="394" width="280" height="68" rx="13" fill="#FBF3DF" stroke="#C9A961" stroke-width="1.4"/>
+  <text x="472" y="421" font-size="13.5" font-weight="600" fill="#7A5E13">«Meld meg på»</text>
+  <text x="472" y="442" font-size="11.5" fill="#8A7333">eller «Be om å bli med»</text>
+  <text x="472" y="457" font-size="11.5" fill="#8A7333">(må godkjennes)</text>
+
+  <!-- ===== C steps ===== -->
+  <rect x="750" y="300" width="360" height="68" rx="13" fill="#FFFFFF" stroke="#9DBFAC" stroke-width="1.4"/>
+  <text x="772" y="330" font-size="14.5" fill="#213029">Kaptein lager lag + fyller plasser</text>
+  <text x="772" y="352" font-size="12" fill="#6B7770">kjente spillere + ukjente på e-post</text>
+  <line x1="930" y1="368" x2="930" y2="392" stroke="#5E6B63" stroke-width="1.4" marker-end="url(#a)"/>
+  <rect x="750" y="394" width="360" height="68" rx="13" fill="#FFFFFF" stroke="#9DBFAC" stroke-width="1.4"/>
+  <text x="772" y="421" font-size="14.5" fill="#213029">Medspiller: «Bli med på lag»</text>
+  <text x="772" y="443" font-size="12" fill="#9A4A2F">⚠ #362: uklart hva som skjer videre</text>
+
+  <!-- merge to terminal -->
+  <path d="M250,462 V496 H590 V520" fill="none" stroke="#5E6B63" stroke-width="1.5" marker-end="url(#a)"/>
+  <path d="M590,462 V520" fill="none" stroke="#5E6B63" stroke-width="1.5" marker-end="url(#a)"/>
+  <path d="M930,462 V496 H590" fill="none" stroke="#5E6B63" stroke-width="1.5"/>
+
+  <!-- terminal -->
+  <rect x="380" y="522" width="420" height="74" rx="16" fill="#F4EBD7" stroke="#C9A961" stroke-width="1.6"/>
+  <text x="590" y="554" text-anchor="middle" font-size="17" font-weight="700" fill="#8A6D27">✓  Du er med i spillet</text>
+  <text x="590" y="578" text-anchor="middle" font-size="12.5" fill="#9C8552">venter på at runden starter</text>
+
+  <!-- discovery note -->
+  <rect x="120" y="650" width="940" height="120" rx="16" fill="#FFFFFF" stroke="#D8D2C4" stroke-width="1.4"/>
+  <text x="150" y="686" font-size="15" font-weight="700" fill="#1B4332">Slik finner du spill å bli med i</text>
+  <text x="150" y="714" font-size="13.5" fill="#46524B">• Invitasjon (A) kommer til deg — ingenting å lete etter.</text>
+  <text x="150" y="738" font-size="13.5" fill="#46524B">• Åpne spill (B) krever en delt lenke, eller «Funn turneringer» på Hjem.</text>
+  <text x="150" y="762" font-size="13.5" fill="#9A4A2F">  ⚠ #357: «Funn turneringer» vises kun når du IKKE har spill fra før — vanskelig å oppdage nye ellers.</text>
+
+  <text x="120" y="812" font-size="12.5" fill="#9A937F">⚠ = kjent forbedringspunkt sporet som GitHub-issue</text>
+</svg>

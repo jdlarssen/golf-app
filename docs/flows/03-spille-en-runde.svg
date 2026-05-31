@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="980" viewBox="0 0 1180 980" font-family="-apple-system, Helvetica, Arial, sans-serif">
+  <defs><marker id="a" markerWidth="10" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#5E6B63"/></marker>
+  <marker id="aL" markerWidth="10" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#7FA98E"/></marker></defs>
+  <rect width="1180" height="980" fill="#F8F6F0"/>
+  <text x="120" y="60" font-family="Georgia, serif" font-size="32" font-weight="600" fill="#1B4332">3 · Spille en runde</text>
+  <text x="121" y="90" font-size="15" fill="#6B7770">Selve hjertet i appen. Hvis tasting av slag ikke er knirkefritt, brukes appen aldri igjen.</text>
+
+  <!-- main column x120 w560 center400; right rail x740 w340 -->
+  <!-- start -->
+  <rect x="120" y="140" width="560" height="66" rx="16" fill="#1B4332"/>
+  <text x="400" y="172" text-anchor="middle" font-size="16" font-weight="700" fill="#FFFFFF">⛳  Runden har startet</text>
+  <text x="400" y="193" text-anchor="middle" font-size="12" fill="#C9A961">starter automatisk ved tee-off</text>
+  <line x1="400" y1="206" x2="400" y2="234" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- 1 -->
+  <rect x="120" y="236" width="560" height="66" rx="14" fill="#FFFFFF" stroke="#9DBFAC" stroke-width="1.5"/>
+  <circle cx="156" cy="269" r="16" fill="#2D6A4F"/><text x="156" y="274" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">1</text>
+  <text x="190" y="275" font-size="16" fill="#213029">Åpne spillet → «Start runden»</text>
+  <line x1="400" y1="302" x2="400" y2="330" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- 2 loop box -->
+  <rect x="120" y="332" width="560" height="96" rx="14" fill="#EAF3EE" stroke="#2D6A4F" stroke-width="1.6"/>
+  <circle cx="156" cy="380" r="16" fill="#2D6A4F"/><text x="156" y="385" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">2</text>
+  <text x="190" y="368" font-size="16" font-weight="600" fill="#1B4332">Tast slag på hullet → neste hull</text>
+  <text x="190" y="390" font-size="12.5" fill="#46604F">gjentas for alle 18 hull · «Fortsett runden» tar deg tilbake der du slapp</text>
+  <text x="190" y="411" font-size="12.5" fill="#46604F">🔁 ett tapp per spiller, så videre</text>
+  <!-- loop arrow -->
+  <path d="M120,400 C92,400 92,360 118,360" fill="none" stroke="#2D6A4F" stroke-width="1.5" marker-end="url(#aL)"/>
+
+  <!-- offline rail -->
+  <rect x="740" y="332" width="340" height="170" rx="16" fill="#FFFFFF" stroke="#9DBFAC" stroke-width="1.4"/>
+  <text x="762" y="362" font-size="14.5" font-weight="700" fill="#1B4332">⚙ Bak kulissene</text>
+  <text x="762" y="388" font-size="12.5" fill="#46524B">• Slag lagres på telefonen din først</text>
+  <text x="762" y="410" font-size="12.5" fill="#46524B">• Synker av seg selv når du er online</text>
+  <text x="762" y="432" font-size="12.5" fill="#46524B">• Flighten ser hverandres slag «live»</text>
+  <text x="762" y="458" font-size="12" fill="#9A4A2F">⚠ #359: ingen tydelig «lagret»-merke</text>
+  <text x="762" y="478" font-size="12" fill="#9A4A2F">⚠ #359: konflikt kan overskrive stille</text>
+  <line x1="680" y1="380" x2="736" y2="400" stroke="#7FA98E" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#aL)"/>
+  <line x1="400" y1="428" x2="400" y2="456" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- 3 -->
+  <rect x="120" y="458" width="560" height="66" rx="14" fill="#FFFFFF" stroke="#9DBFAC" stroke-width="1.5"/>
+  <circle cx="156" cy="491" r="16" fill="#2D6A4F"/><text x="156" y="496" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">3</text>
+  <text x="190" y="497" font-size="16" fill="#213029">Gjennomgå scorekortet</text>
+  <line x1="400" y1="524" x2="400" y2="552" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- 4 -->
+  <rect x="120" y="554" width="560" height="66" rx="14" fill="#FFFFFF" stroke="#9DBFAC" stroke-width="1.5"/>
+  <circle cx="156" cy="587" r="16" fill="#2D6A4F"/><text x="156" y="592" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">4</text>
+  <text x="190" y="593" font-size="16" fill="#213029">«Lever scorekort»</text>
+  <line x1="400" y1="620" x2="400" y2="648" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- 5 optional approval -->
+  <rect x="120" y="650" width="560" height="76" rx="14" fill="#FBF3DF" stroke="#C9A961" stroke-width="1.5"/>
+  <text x="156" y="694" font-size="20">🤝</text>
+  <text x="190" y="682" font-size="15" font-weight="600" fill="#7A5E13">Evt: en i flighten godkjenner</text>
+  <text x="190" y="704" font-size="12" fill="#8A7333">kun hvis arrangøren krever det · ⚠ #360: kan låse seg hvis ingen godkjenner</text>
+  <line x1="400" y1="726" x2="400" y2="754" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- 6 terminal -->
+  <rect x="120" y="756" width="560" height="74" rx="16" fill="#F4EBD7" stroke="#C9A961" stroke-width="1.6"/>
+  <text x="400" y="788" text-anchor="middle" font-size="17" font-weight="700" fill="#8A6D27">🏆  Se leaderboard</text>
+  <text x="400" y="812" text-anchor="middle" font-size="12.5" fill="#9C8552">live underveis · ⚠ #358: må oppdateres manuelt i dag</text>
+
+  <text x="120" y="876" font-size="12.5" fill="#9A937F">⚠ = kjent forbedringspunkt sporet som GitHub-issue</text>
+</svg>
