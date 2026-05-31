@@ -76,9 +76,14 @@ Stegvis (mobil-først, eksisterende `components/ui/`-primitiver, palett/typograf
 
 ---
 
-## Build-status (as-built, v1.62.0)
+## Build-status (as-built, v1.61.0)
 
-**Alle K1–K7 oppfylt.** Gates grønne: `npx tsc --noEmit` → 0 feil; full `npx vitest run` → exit 0 (alle grønne, inkl. 26 cup-pure-logic + 9 batch-action + 1 wizard render-test); `npm run build` → «Compiled successfully». Commits: `chore(cup)` preset+pairing → `chore(cup)` batch-action → `feat(cup)` wizard+UI (v1.62.0 + CHANGELOG).
+**Alle K1–K7 oppfylt.** Gates:
+- `npm run build` → «Compiled successfully» (Vercel-paritet, app-koden typesjekkes her).
+- full `npx vitest run` → exit 0, alle grønne (26 cup-pure-logic + 9 batch-action + 1 wizard render-test). Render-testen krasjet i første evaluering (split tekst-node i StepIndicator) og ble fikset i `fix(cup)`-commit etter ACCEPT-runde 1.
+- `npx tsc --noEmit` → 13 feil, **alle pre-eksisterende** i urelaterte test-filer (signup/withdrawActions) på `main` — **ingen** i #219-filer (verifisert via `git diff --name-only main HEAD`). Ikke en regresjon fra dette arbeidet. Build typesjekker ikke disse test-filene, derav grønn build.
+
+Versjon: `1.60.4` → `1.61.0` (MINOR). Commits: `chore(cup)` preset+pairing → `chore(cup)` batch-action → `feat(cup)` wizard+UI (v1.61.0 + CHANGELOG) → `fix(cup)` render-test.
 
 **Arkitektur-avvik fra opprinnelig kontrakt (forventet — anker-doc var stale):**
 - Batch-action-en (`createCupMatchesFromPlan`) ble **selvstendig**, ikke et uttrekk av en `insertGameWithPlayers`-kjerne fra game-create. Den reelle `createGameInternal` er for sammenvevd (publish/draft, trusted-creator-client-routing, side-tournaments, notify) til en ren deling. Den manuelle stien er derfor **urørt** (K6).
