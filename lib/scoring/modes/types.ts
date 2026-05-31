@@ -13,6 +13,7 @@ export type GameMode =
   | 'florida_scramble'
   | 'fourball_matchplay'
   | 'foursomes_matchplay'
+  | 'greensome_matchplay'
   | 'wolf'
   | 'nassau'
   | 'skins'
@@ -40,6 +41,7 @@ export const MODE_LABELS: Record<GameMode, string> = {
   florida_scramble: 'Florida Scramble',
   fourball_matchplay: 'Fourball',
   foursomes_matchplay: 'Foursomes',
+  greensome_matchplay: 'Greensome',
   wolf: 'Wolf',
   nassau: 'Nassau',
   skins: 'Skins',
@@ -78,6 +80,20 @@ export function isStablefordFamily(mode: GameMode): boolean {
  */
 export function isScrambleFamily(mode: GameMode): boolean {
   return mode === 'texas_scramble' || mode === 'ambrose' || mode === 'florida_scramble';
+}
+
+/**
+ * True for alternate-shot matchplay-familien (foursomes + greensome). Begge
+ * deler struktur: én ball per lag, kaptein eier scores-radene, Layout B
+ * head-to-head-scorekort, cup-snapshot, foursomes-view/podium. Eneste
+ * forskjell er lag-handicap-formelen og tee-starter-feature (foursomes-eksklusiv).
+ * Brukes på `game_mode`-baserte routing-/display-sjekker. #289 (Greensome).
+ *
+ * NB: tee-starter-banner forblir foursomes-eksklusiv — bruk eksakt
+ * `game_mode === 'foursomes_matchplay'`-sjekk for banner-gating.
+ */
+export function isAlternateShotMatchplay(mode: GameMode): boolean {
+  return mode === 'foursomes_matchplay' || mode === 'greensome_matchplay';
 }
 
 /**
@@ -192,6 +208,23 @@ export type GameModeConfig =
        * `lib/games/gamePayload.ts` håndhever range; scoring-laget faller
        * defensivt tilbake til 100 hvis feltet mangler i draft-state.
        */
+      allowance_pct: number;
+    }
+  | {
+      /**
+       * Greensome matchplay (issue #289) — 2v2 velg-beste-tee + alternate.
+       * Begge slår ut, paret velger beste utslag, spiller alternate derfra.
+       * Scoring-laget returnerer `kind: 'foursomes_matchplay'` (gjenbruker
+       * FoursomesMatchplayResult + all visning). Config-kind er 'greensome_matchplay'
+       * for validator/form-routing.
+       *
+       * Lag-handicap: 0,6×laveste + 0,4×høyeste (WHS-greensome-blanding).
+       * Allowance: WHS-default 100 % (full differanse — ett blandet enkelt-tall
+       * per side sammenliknes som individuelle spillere). Justerbar 0..100.
+       */
+      kind: 'greensome_matchplay';
+      team_size: 2;
+      teams_count: 2;
       allowance_pct: number;
     }
   | {

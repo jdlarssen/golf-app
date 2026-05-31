@@ -301,6 +301,14 @@ export function useGameFormState({
   const [foursomesAllowancePct, setFoursomesAllowancePct] = useState<number>(
     initialValues?.foursomes_allowance_pct ?? 50,
   );
+  // Greensome matchplay (#289): allowance-prosent (0 = brutto, 1..100 = netto).
+  // Pre-fylles fra cup-radens greensome_allowance_pct via initialValues; ellers
+  // default 100 (WHS-standard for greensome — full differanse mellom lagenes
+  // 60/40-blandede enkelt-tall). Validator-en (`validateGreensomeMatchplay`)
+  // leser dette ved publish og avviser verdier utenfor 0..100.
+  const [greensomeAllowancePct, setGreensomeAllowancePct] = useState<number>(
+    initialValues?.greensome_allowance_pct ?? 100,
+  );
   // Wolf (#274): brutto vs netto-toggle. Default 'net' speiler Tørny's
   // ethos. Validatoren (`validateWolf`) leser feltet og faller defensivt
   // tilbake til 'net' ved ugyldig/manglende verdi.
@@ -1426,6 +1434,8 @@ export function useGameFormState({
     setFourballAllowancePct,
     foursomesAllowancePct,
     setFoursomesAllowancePct,
+    greensomeAllowancePct,
+    setGreensomeAllowancePct,
     roundRobinAllowancePct,
     setRoundRobinAllowancePct,
     wolfScoring,

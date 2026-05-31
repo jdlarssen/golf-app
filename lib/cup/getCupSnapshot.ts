@@ -374,16 +374,19 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
 
     // Bevart for backward-compat: typesikker fallback hvis future game_mode
     // skulle vises i en cup. Per d.d. er singles_matchplay,
-    // fourball_matchplay og foursomes_matchplay gyldige.
+    // fourball_matchplay, foursomes_matchplay og greensome_matchplay gyldige.
     const matchGameMode:
       | 'singles_matchplay'
       | 'fourball_matchplay'
-      | 'foursomes_matchplay' =
+      | 'foursomes_matchplay'
+      | 'greensome_matchplay' =
       game.game_mode === 'fourball_matchplay'
         ? 'fourball_matchplay'
         : game.game_mode === 'foursomes_matchplay'
           ? 'foursomes_matchplay'
-          : 'singles_matchplay';
+          : game.game_mode === 'greensome_matchplay'
+            ? 'greensome_matchplay'
+            : 'singles_matchplay';
 
     matchInputs.push({
       gameId: game.id,

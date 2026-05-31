@@ -112,6 +112,15 @@ export const MODE_GUIDE: Record<GameMode, ModeGuide> = {
       'Laget som leder med flere hull enn det er igjen, har vunnet.',
     ],
   },
+  greensome_matchplay: {
+    summary:
+      'To mot to — begge slår ut, dere velger det beste utslaget og spiller annenhver gang derfra.',
+    points: [
+      'Begge i paret slår ut på hvert hull. Velg det beste utslaget, og spill alternate derfra.',
+      'Laget med lavest score vinner hullet — hull teller, ikke total.',
+      'Laget som leder med flere hull enn det er igjen, har vunnet.',
+    ],
+  },
   wolf: {
     summary:
       'Fire spillere bytter på å være «ulv». Ulven velger på hvert hull om laget skal være to mot to, eller om ulven spiller alene mot de tre andre.',

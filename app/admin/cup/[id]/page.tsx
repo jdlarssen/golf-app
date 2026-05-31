@@ -216,6 +216,12 @@ export default async function CupDetailPage({
           >
             + Foursomes match
           </Link>
+          <Link
+            href={`/admin/games/new?intent=cup&tournament_id=${id}&game_mode=greensome_matchplay`}
+            className="rounded-md border border-border bg-surface px-3 py-2 text-center text-xs font-medium text-primary hover:border-primary/40"
+          >
+            + Greensome match
+          </Link>
         </div>
         {leaderboard.matches.length === 0 ? (
           <Card>
@@ -247,13 +253,15 @@ export default async function CupDetailPage({
                               : m.result.winnerSide === 1
                                 ? `${m.result.formatted} til ${
                                     m.gameMode === 'fourball_matchplay' ||
-                                    m.gameMode === 'foursomes_matchplay'
+                                    m.gameMode === 'foursomes_matchplay' ||
+                                    m.gameMode === 'greensome_matchplay'
                                       ? tournament.team_1_name
                                       : m.team1PlayerName
                                   }`
                                 : `${m.result.formatted} til ${
                                     m.gameMode === 'fourball_matchplay' ||
-                                    m.gameMode === 'foursomes_matchplay'
+                                    m.gameMode === 'foursomes_matchplay' ||
+                                    m.gameMode === 'greensome_matchplay'
                                       ? tournament.team_2_name
                                       : m.team2PlayerName
                                   }`}

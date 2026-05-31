@@ -316,6 +316,7 @@ export function GameWizard({
       florida_team_handicap_pct: String(state.floridaHandicapPct),
       fourball_allowance_pct: state.fourballAllowancePct,
       foursomes_allowance_pct: state.foursomesAllowancePct,
+      greensome_allowance_pct: state.greensomeAllowancePct,
       round_robin_allowance_pct: state.roundRobinAllowancePct,
       wolf_scoring: state.wolfScoring,
       nassau_scoring: state.nassauScoring,
@@ -548,6 +549,19 @@ export function GameWizard({
                   hideHiddenInput
                 />
               )}
+              {state.gameMode === 'greensome_matchplay' && (
+                <AllowanceField
+                  fieldName="greensome_allowance_pct"
+                  defaultPct={100}
+                  legend="Scoring for greensome-matches"
+                  description="Styrer handicap for greensome-matches (velg-beste-tee + alternate shot). Netto gir høyeste lag en andel av differansen mellom lagenes 60/40-blandede handicap; brutto teller bare lagets gross-slag."
+                  nettoHelperText="Andel av differansen mellom lagenes 60/40-blandede handicap. WHS-standard for greensome er 100."
+                  bruttoHelperText="Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+                  value={state.greensomeAllowancePct}
+                  onChange={state.setGreensomeAllowancePct}
+                  hideHiddenInput
+                />
+              )}
               {state.isRoundRobin && (
                 <AllowanceField
                   fieldName="round_robin_allowance_pct"
@@ -745,6 +759,7 @@ function FormDataInputs({
     floridaHandicapPct,
     fourballAllowancePct,
     foursomesAllowancePct,
+    greensomeAllowancePct,
     roundRobinAllowancePct,
     wolfScoring,
     nassauScoring,
@@ -831,6 +846,13 @@ function FormDataInputs({
           type="hidden"
           name="foursomes_allowance_pct"
           value={String(foursomesAllowancePct)}
+        />
+      )}
+      {gameMode === 'greensome_matchplay' && (
+        <input
+          type="hidden"
+          name="greensome_allowance_pct"
+          value={String(greensomeAllowancePct)}
         />
       )}
       {isWolf && (

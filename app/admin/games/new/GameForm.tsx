@@ -143,6 +143,13 @@ export type InitialValues = {
    */
   foursomes_allowance_pct?: number;
   /**
+   * Greensome matchplay (#289): allowance-prosent (0..100) som pre-fylles inn
+   * i netto/brutto-toggle-en i wizarden. Settes når admin lander via cup-link
+   * med `?game_mode=greensome_matchplay`, slik at match-en arver cup-radens
+   * `tournaments.greensome_allowance_pct`. Brukes IKKE for andre modi.
+   */
+  greensome_allowance_pct?: number;
+  /**
    * Round Robin (#280): allowance-prosent (0..100) for matchplay-scoring.
    * Pre-fylles fra DB i edit-flyt; nye spill defaulter til 85 (WHS-standard
    * for matchplay) i useGameFormState.
@@ -267,6 +274,8 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
     setFourballAllowancePct,
     foursomesAllowancePct,
     setFoursomesAllowancePct,
+    greensomeAllowancePct,
+    setGreensomeAllowancePct,
     handleModeChange,
     handleTeamSizeChange,
     lockGameMode,
@@ -402,6 +411,13 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           value={String(foursomesAllowancePct)}
         />
       )}
+      {gameMode === 'greensome_matchplay' && (
+        <input
+          type="hidden"
+          name="greensome_allowance_pct"
+          value={String(greensomeAllowancePct)}
+        />
+      )}
 
       {/* Hidden inputs that carry the structured assignment payload. The server
           action only ever sees the FormData; keeping the names server-known
@@ -481,6 +497,19 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             bruttoHelperText="Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
             value={foursomesAllowancePct}
             onChange={setFoursomesAllowancePct}
+            hideHiddenInput
+          />
+        )}
+        {gameMode === 'greensome_matchplay' && (
+          <AllowanceField
+            fieldName="greensome_allowance_pct"
+            defaultPct={100}
+            legend="Scoring for greensome-matches"
+            description="Styrer handicap for greensome-matches (velg-beste-tee + alternate shot). Netto gir høyeste lag en andel av differansen mellom lagenes 60/40-blandede handicap; brutto teller bare lagets gross-slag."
+            nettoHelperText="Andel av differansen mellom lagenes 60/40-blandede handicap. WHS-standard for greensome er 100."
+            bruttoHelperText="Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+            value={greensomeAllowancePct}
+            onChange={setGreensomeAllowancePct}
             hideHiddenInput
           />
         )}

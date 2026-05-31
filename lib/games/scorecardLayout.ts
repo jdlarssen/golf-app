@@ -177,11 +177,12 @@ export function resolveScorecardLayout(
     };
   }
 
-  if (mode === 'foursomes_matchplay') {
-    // Foursomes adopterer Texas captain-pattern (én ball per lag, kaptein-userId
-    // eier scores-radene) men rendres som 2-kolonne head-to-head matchplay-
-    // scorekort. Allowance via WHS-diff-formel: lavlaget får 0 strokes,
+  if (mode === 'foursomes_matchplay' || mode === 'greensome_matchplay') {
+    // Foursomes og greensome adopterer Texas captain-pattern (én ball per lag,
+    // kaptein-userId eier scores-radene) men rendres som 2-kolonne head-to-head
+    // matchplay-scorekort. Allowance via WHS-diff-formel: lavlaget får 0 strokes,
     // høylaget får round(|combined_diff| × allowance_pct / 100) strokes.
+    // Greensome: combined = 0,6×laveste + 0,4×høyeste (ikke sum som foursomes).
     const mySidePlayers = players.filter(
       (p) => p.team_number === me.team_number,
     );
@@ -214,17 +215,28 @@ export function resolveScorecardLayout(
     );
 
     // WHS-diff: high side får (combined_diff × allowance_pct/100) som
-    // lag-strokes, low side 0. Allowance leses fra mode_config (default 50).
+    // lag-strokes, low side 0. Allowance leses fra mode_config (default 50
+    // for foursomes, 100 for greensome).
     const allowancePct =
-      cfg.kind === 'foursomes_matchplay' ? cfg.allowance_pct : 50;
-    const mySideCombined = mySidePlayers.reduce(
-      (sum, p) => sum + (p.course_handicap ?? 0),
-      0,
-    );
-    const oppSideCombined = oppSidePlayers.reduce(
-      (sum, p) => sum + (p.course_handicap ?? 0),
-      0,
-    );
+      cfg.kind === 'foursomes_matchplay'
+        ? cfg.allowance_pct
+        : cfg.kind === 'greensome_matchplay'
+          ? cfg.allowance_pct
+          : 50;
+
+    // Foursomes: combined = sum av partnernes CH.
+    // Greensome: combined = 0,6×laveste + 0,4×høyeste (WHS-greensome-blanding).
+    function sideHandicap(sidePlayers: typeof mySidePlayers): number {
+      if (mode === 'greensome_matchplay') {
+        const chs = sidePlayers.map((p) => p.course_handicap ?? 0);
+        const low = Math.min(...chs);
+        const high = Math.max(...chs);
+        return Math.round(0.6 * low + 0.4 * high);
+      }
+      return sidePlayers.reduce((sum, p) => sum + (p.course_handicap ?? 0), 0);
+    }
+    const mySideCombined = sideHandicap(mySidePlayers);
+    const oppSideCombined = sideHandicap(oppSidePlayers);
     const diff = Math.abs(mySideCombined - oppSideCombined);
     const highSideExtra = Math.round((diff * allowancePct) / 100);
     const mySideExtra = mySideCombined > oppSideCombined ? highSideExtra : 0;

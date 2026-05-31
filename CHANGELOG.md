@@ -17,7 +17,50 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.56.y — Patsome (tre lagformer i én runde)
+## 1.57.y — Greensome matchplay (2v2 velg-beste-tee + alternate, cup-klar)
+
+Issue [#289](https://github.com/jdlarssen/golf-app/issues/289), del av Ryder Cup-epic [#47](https://github.com/jdlarssen/golf-app/issues/47) og format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Cup-format der begge i paret slår ut, paret velger det beste utslaget, og spiller alternate derfra mot motstander-paret.
+
+### [1.57.0] - 2026-05-31
+
+> Greensome matchplay er klar for cupen. Begge i paret slår ut, dere velger det beste utslaget, og spiller annethvert slag derfra mot motstanderlaget. Lag-handicap regnes etter WHS-greensome-formelen (60/40-blanding av de to spillernes handicap), og matchplay-allowance er 100 % av differansen som standard. Opprett en greensome-match fra cup-siden — scorekort, leaderboard og cup-poengtelling fungerer som for foursomes og fourball.
+
+<details>
+<summary>Teknisk</summary>
+
+Gjenbruker foursomes-mønsteret fullt ut: `greensomeMatchplay.compute()` returnerer `kind: 'foursomes_matchplay'` (ambrose-mønsteret) slik at leaderboard-visning, scorekort og cup-snapshot gjenbrukes uten nye komponenter. Eneste reelle forskjell fra foursomes i scoring-laget er lag-handicap-formelen: `round(0.6 × laveste + 0.4 × høyeste)` i stedet for sum. Family-helper `isAlternateShotMatchplay(mode)` ruter struktursjekker; tee-starter-banneret forblir foursomes-eksklusivt (greensome har ingen fast tee-rotasjon).
+
+#### Added
+- [`lib/scoring/modes/greensomeMatchplay.ts`](lib/scoring/modes/greensomeMatchplay.ts) — `compute(ctx)`: WHS-greensome lag-handicap + diff-basert matchplay. Returnerer `kind: 'foursomes_matchplay'`.
+- [`supabase/migrations/0063_greensome_matchplay.sql`](supabase/migrations/0063_greensome_matchplay.sql) — seed av format-rad «Greensome matchplay» (cup-eligible) + `tournaments.greensome_allowance_pct` (default 100).
+- `isAlternateShotMatchplay(mode)` i `lib/scoring/modes/types.ts` — family-helper for alternate-shot-familien (foursomes + greensome).
+
+#### Changed
+- `lib/scoring/modes/types.ts` — `greensome_matchplay` i `GameMode`-union, `MODE_LABELS`, `GameModeConfig`-variant.
+- `lib/scoring/index.ts` — compute-router-case for `greensome_matchplay`.
+- `lib/games/gamePayload.ts` — `validateGreensomeMatchplay` + `parseGreensomeAllowancePct` + `parseGameMode` + `modeValidators`.
+- `lib/games/scorecardLayout.ts` — `greensome_matchplay` treffer Layout B-grenen med 60/40-blanding for lag-HCP.
+- `lib/games/allowanceCopy.ts` — `greensome_matchplay` i switch-case.
+- `lib/cup/computeCupLeaderboard.ts` + `lib/cup/getCupSnapshot.ts` — `greensome_matchplay` i type-unions og gameMode-mapping.
+- `app/admin/cup/[id]/page.tsx` — «+ Greensome match»-knapp + `greensome_matchplay` i result-tekst-sjekk.
+- `app/cup/[id]/page.tsx` — `greensome_matchplay` i result-tekst-sjekk.
+- `app/admin/games/new/page.tsx` — `greensome_matchplay` i `CupGameMode`, `parseCupGameMode`, `loadCupContext` (leser `greensome_allowance_pct`), `buildCupInitialValues`.
+- `app/admin/games/new/GameWizard.tsx` + `GameForm.tsx` + `useGameFormState.ts` — `greensomeAllowancePct`-state, `AllowanceField`-blokk og hidden input.
+- `app/admin/games/new/TeamSizeSelector.tsx`, `sections/ReadyStep.tsx`, `lib/formats/modeGuide.ts` — `greensome_matchplay`-oppføringer i exhaustive maps.
+- `app/games/[id]/holes/[holeNumber]/page.tsx` — `isGreensome`-flag + 60/40 lag-handicap for score-inntasting.
+- `lib/formats/icons.tsx` — `foursomes_matchplay` + `greensome_matchplay` i ICON_MAP.
+- `app/spillformer/page.tsx` — `greensome_matchplay` i format-katalogen.
+- `app/games/[id]/page.tsx` — `greensome_matchplay` i `GameRow.game_mode`-union.
+
+#### Tests
+- Type A: `greensomeMatchplay.test.ts` — 18 tester (greensomeTeamHandicap, compute happy path, empty-shell, mat-em, AS, fraksjonell blanding, allowance 0 %, lek-min kaptein).
+
+</details>
+
+---
+
+<details>
+<summary><strong>1.56.y — Patsome (tre lagformer i én runde) (1 oppføring) — klikk for å vise</strong></summary>
 
 Issue [#286](https://github.com/jdlarssen/golf-app/issues/286), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Det første rotasjonsformatet: 18 hull delt i tre seks-hulls-deler med hver sin lagform (4BBB, greensome og foursomes), scoret i én felles stableford-pott.
 
@@ -47,6 +90,8 @@ Selvstendig orchestrator i stedet for å bygge på separate greensome-/foursomes
 
 #### Tests
 - Type A: `patsome.test.ts` (36) + patsome-cases i `gamePayload.test.ts`. Type C: `PatsomeView.test.tsx`, `PatsomeSetup.test.tsx`. Authz: `patsomeActions.test.ts`.
+
+</details>
 
 </details>
 

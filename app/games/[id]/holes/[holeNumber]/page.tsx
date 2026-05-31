@@ -106,6 +106,7 @@ export default async function HolePage({ params }: { params: Params }) {
   const isStableford = isStablefordFamily(game.game_mode);
   const isTexas = game.game_mode === 'texas_scramble' || game.game_mode === 'ambrose' || game.game_mode === 'florida_scramble';
   const isFoursomes = game.game_mode === 'foursomes_matchplay';
+  const isGreensome = game.game_mode === 'greensome_matchplay';
   const isPatsome = game.game_mode === 'patsome';
   const isWolf = game.game_mode === 'wolf';
   const isSkins = game.game_mode === 'skins';
@@ -429,7 +430,7 @@ export default async function HolePage({ params }: { params: Params }) {
   // og fordeles per hull via vanlig SI-allokering (strokesForHole).
   let playersForClient: ClientPlayer[];
 
-  if (isTexas || isFoursomes || (isPatsome && holeNumber >= 7)) {
+  if (isTexas || isFoursomes || isGreensome || (isPatsome && holeNumber >= 7)) {
     const captain = flight.reduce(
       (min, p) => (p.user_id < min.user_id ? p : min),
       flight[0],
@@ -439,23 +440,31 @@ export default async function HolePage({ params }: { params: Params }) {
       0,
     );
     let teamHandicap: number;
-    if (isFoursomes) {
-      // Foursomes: WHS-diff-formel. Beregn motstander-sidens combined CH
-      // og gi diff til høyeste lag. Lavlaget får 0.
+    if (isFoursomes || isGreensome) {
+      // Foursomes/greensome: WHS-diff-formel. Beregn motstander-sidens
+      // combined CH og gi diff til høyeste lag. Lavlaget får 0.
+      // Foursomes: combined = sum. Greensome: combined = round(0,6×lavest + 0,4×høyest).
       const oppPlayers = allPlayers.filter(
         (p) => p.team_number !== me.team_number && p.team_number !== null,
       );
-      const oppCombinedCH = oppPlayers.reduce(
-        (sum, p) => sum + (p.course_handicap ?? 0),
-        0,
-      );
+      function sideHandicap(players: typeof flight): number {
+        if (isGreensome) {
+          const chs = players.map((p) => p.course_handicap ?? 0);
+          return Math.round(0.6 * Math.min(...chs) + 0.4 * Math.max(...chs));
+        }
+        return players.reduce((sum, p) => sum + (p.course_handicap ?? 0), 0);
+      }
+      const mySideCombinedCH = isGreensome ? sideHandicap(flight) : combinedCH;
+      const oppCombinedCH = sideHandicap(oppPlayers);
       const allowancePct =
         game.mode_config.kind === 'foursomes_matchplay'
           ? game.mode_config.allowance_pct
-          : 50;
-      const diff = Math.abs(combinedCH - oppCombinedCH);
+          : game.mode_config.kind === 'greensome_matchplay'
+            ? game.mode_config.allowance_pct
+            : 50;
+      const diff = Math.abs(mySideCombinedCH - oppCombinedCH);
       const highSideExtraHCP = Math.round((diff * allowancePct) / 100);
-      teamHandicap = combinedCH > oppCombinedCH ? highSideExtraHCP : 0;
+      teamHandicap = mySideCombinedCH > oppCombinedCH ? highSideExtraHCP : 0;
     } else if (isPatsome) {
       // Patsome: segment-avhengig allowance (WHS-standard per segment).
       const patsomeScoring =

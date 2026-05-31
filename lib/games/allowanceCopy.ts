@@ -24,6 +24,7 @@ export function bruttoHelperFor(mode: GameMode): string {
       return 'Scratch-slagspill — lavest sum av gross-slag vinner.';
     case 'fourball_matchplay':
     case 'foursomes_matchplay':
+    case 'greensome_matchplay':
     case 'texas_scramble':
     case 'ambrose':
     case 'florida_scramble':

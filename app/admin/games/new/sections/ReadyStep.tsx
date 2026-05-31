@@ -54,6 +54,7 @@ const MODE_SUMMARY_LABELS: Record<GameMode, string> = {
   florida_scramble: 'Florida Scramble',
   fourball_matchplay: 'Four-ball matchplay',
   foursomes_matchplay: 'Foursomes matchplay',
+  greensome_matchplay: 'Greensome matchplay',
   wolf: 'Wolf',
   nassau: 'Nassau',
   skins: 'Skins',
