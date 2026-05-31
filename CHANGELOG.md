@@ -17,7 +17,49 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.58.y — Chapman matchplay (2v2 dobbel tee + bytt + alternate, cup-klar)
+## 1.59.y — Gruesome matchplay (motstander velger din tee shot) + familie-leaderboard
+
+Issue [#291](https://github.com/jdlarssen/golf-app/issues/291), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Gruesome er foursomes med en vri: begge slår ut, men motstanderlaget velger hvilken av ballene paret må spille videre med. Standalone-spillbar (intent «kompis») i tillegg til cup. Samme serie gir hele alternate-shot-familien (foursomes/greensome/chapman/gruesome) en ekte individuell-spill matchplay-leaderboard.
+
+### [1.59.0] - 2026-05-31
+
+> Gruesome matchplay er klar. To mot to: begge slår ut, men nå velger motstanderlaget hvilken av ballene deres dere må spille videre med (som regel den verste). Resten av hullet slår dere vekselvis, som i foursomes. Du oppretter et gruesome-spill rett fra «kompis» i wizarden, eller legger det til som cup-match. På kjøpet viser leaderboardet nå ekte matchplay-resultat (3&2, 2 opp og lignende) for hele alternate-shot-familien, så foursomes, greensome og chapman får samme løft.
+
+<details>
+<summary>Teknisk</summary>
+
+Gjenbruker foursomes-mønsteret fullt ut: `gruesomeMatchplay.compute()` returnerer `kind: 'foursomes_matchplay'` (ambrose-mønsteret) og delegerer til `computeFoursomesCore(ctx, allowancePct, combinedSideHandicap)` — samme sum-baserte lag-handicap som foursomes, siden motstanderens tee-valg ikke endrer handicapet. Allowance default 50 (WHS foursomes-standard). «Motstander velger din tee shot» er en honor-system-regel uten scoring-impact: appen sporer ikke valget, men forklarer regelen i format-infoen. Ingen tee-starter-felt (begge slår ut hvert hull).
+
+Serien lukker også et hull for hele alternate-shot-familien: foursomes/greensome/chapman/gruesome manglet en individuell-spill matchplay-leaderboard og falt gjennom til best ball-tabellen utenfor cup. Ny delt `FoursomesMatchplayView` + `renderFoursomesMatchplay`, rutet via `isAlternateShotMatchplay`, gir alle fire en ekte match-status pluss per-hull win/loss-grid, med format-navn fra `MODE_LABELS`.
+
+#### Added
+- [`lib/scoring/modes/gruesomeMatchplay.ts`](lib/scoring/modes/gruesomeMatchplay.ts) — `compute(ctx)`: delegat til `computeFoursomesCore` med sum-side-handicap. Returnerer `kind: 'foursomes_matchplay'`.
+- [`app/games/[id]/leaderboard/FoursomesMatchplayView.tsx`](app/games/[id]/leaderboard/FoursomesMatchplayView.tsx) — delt matchplay-view for hele alternate-shot-familien (match-status + per-hull-grid + side-HCP).
+- [`supabase/migrations/0065_gruesome_matchplay.sql`](supabase/migrations/0065_gruesome_matchplay.sql) — seed av format-rad «Gruesome» (cup-eligible) + intent-mapping «kompis» (standalone-synlig) + `tournaments.gruesome_allowance_pct` (default 50). **Appliseres post-deploy.**
+
+#### Changed
+- `app/games/[id]/leaderboard/page.tsx` — `renderFoursomesMatchplay` + dispatch via `isAlternateShotMatchplay` (foursomes/greensome/chapman/gruesome).
+- `lib/scoring/modes/types.ts` — `gruesome_matchplay` i `GameMode`-union, `MODE_LABELS` («Gruesome»), `GameModeConfig`-variant; `isAlternateShotMatchplay` utvidet.
+- `lib/scoring/index.ts` — compute-router-case + eksport av `isAlternateShotMatchplay`.
+- `lib/games/gamePayload.ts` — `validateGruesomeMatchplay` + `parseGruesomeAllowancePct` (default 50) + `parseGameMode` + `modeValidators`.
+- `lib/games/scorecardLayout.ts` + `scorecardTitle.ts` + `allowanceCopy.ts`, `lib/formats/modeGuide.ts` + `icons.tsx`, `app/spillformer/page.tsx` — gruesome gjennom alternate-shot-grenen + format-oppføringer.
+- `lib/cup/computeCupLeaderboard.ts` + `lib/cup/getCupSnapshot.ts` — `gruesome_matchplay` i type-unions + compute-gren.
+- `app/admin/cup/[id]/page.tsx` + `app/cup/[id]/page.tsx` — «+ Gruesome match»-knapp + lag-navn i result-tekst.
+- `app/admin/games/new/page.tsx` + `GameForm.tsx` + `GameWizard.tsx` + `useGameFormState.ts` + `TeamSizeSelector.tsx` + `sections/ReadyStep.tsx` — gruesome-state, `AllowanceField`, `CupGameMode`/`loadCupContext`/`buildCupInitialValues`, standalone lag-tildeling.
+- `app/games/[id]/holes/[holeNumber]/page.tsx` + `app/games/[id]/page.tsx` — `isGruesome`-flag + sum lag-handicap + union.
+- `lib/database.types.ts` — `tournaments.gruesome_allowance_pct`.
+
+#### Tests
+- Type A: `gruesomeMatchplay.test.ts` — sum vs 60/40-differensiering, kind, brutto, defensiv fallback.
+- Type A: `gamePayload.test.ts` — gruesome-validator-blokk (kind, allowance-grenser, 2v2-balanse, draft-default 50).
+- Type C: `FoursomesMatchplayView.test.tsx` — render-kontrakt for delt familie-view (status, sider, hull-grid, format-label).
+
+</details>
+
+---
+
+<details>
+<summary><strong>1.58.y — Chapman matchplay (2v2 dobbel tee + bytt + alternate, cup-klar) (1 oppføring) — klikk for å vise</strong></summary>
 
 Issue [#290](https://github.com/jdlarssen/golf-app/issues/290), del av Ryder Cup-epic [#47](https://github.com/jdlarssen/golf-app/issues/47) og format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Cup-format der begge i paret slår ut, bytter ball og slår partnerens utslag, velger den beste ballen og spiller alternate derfra. Også kjent som Pinehurst — research bekreftet at det er samme spill, så vi seeder ett format «Chapman» (ikke to).
 
@@ -52,6 +94,8 @@ Gjenbruker foursomes-mønsteret fullt ut: `chapmanMatchplay.compute()` returnere
 - Type A: `chapmanMatchplay.test.ts` — 13 tester (60/40-formel, kind, brutto, config-fallback, empty-shell).
 - Type A: `gamePayload.test.ts` — chapman-validator-blokk (kind, allowance-grenser, 2v2-balanse, draft-default 100).
 - Type C: `ChapmanPhaseReminder.test.tsx` — fase-stripa rendres.
+
+</details>
 
 </details>
 

@@ -132,11 +132,11 @@ export const MODE_GUIDE: Record<GameMode, ModeGuide> = {
   },
   gruesome_matchplay: {
     summary:
-      'To mot to. Begge slår ut, men motstanderlaget velger hvilken av de to tee-ballene dere MÅ spille — som regel den verste. Deretter annenhver slag som i foursomes.',
+      'To mot to. Begge slår ut, men motstanderlaget velger hvilken av de to tee-ballene dere må spille videre med (som regel den verste). Resten av hullet slår dere vekselvis, som i foursomes.',
     points: [
-      'Begge på laget slår ut på hvert hull. Motstanderne peker på den ballen dere må spille videre med.',
-      'Partneren til den som eier den valgte ballen slår neste slag, og så spiller dere annenhver derfra.',
-      'Laget med best score vinner hullet — hull teller, ikke total.',
+      'Begge på laget slår ut på hvert hull. Motstanderne peker på ballen dere må spille videre med.',
+      'Partneren til den som eier den valgte ballen slår neste slag, så spiller dere vekselvis derfra.',
+      'Laget med lavest score vinner hullet. I matchplay teller vunne hull, ikke sammenlagt score.',
     ],
   },
   wolf: {
