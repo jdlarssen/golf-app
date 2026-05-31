@@ -31,6 +31,7 @@ import {
   PatsomeTeeStarterBanner,
   PatsomeTeeHint,
 } from './PatsomeTeeStarterBanner';
+import { ChapmanPhaseReminder } from './ChapmanPhaseReminder';
 
 type Params = Promise<{ id: string; holeNumber: string }>;
 
@@ -107,6 +108,7 @@ export default async function HolePage({ params }: { params: Params }) {
   const isTexas = game.game_mode === 'texas_scramble' || game.game_mode === 'ambrose' || game.game_mode === 'florida_scramble';
   const isFoursomes = game.game_mode === 'foursomes_matchplay';
   const isGreensome = game.game_mode === 'greensome_matchplay';
+  const isChapman = game.game_mode === 'chapman_matchplay';
   const isPatsome = game.game_mode === 'patsome';
   const isWolf = game.game_mode === 'wolf';
   const isSkins = game.game_mode === 'skins';
@@ -430,7 +432,13 @@ export default async function HolePage({ params }: { params: Params }) {
   // og fordeles per hull via vanlig SI-allokering (strokesForHole).
   let playersForClient: ClientPlayer[];
 
-  if (isTexas || isFoursomes || isGreensome || (isPatsome && holeNumber >= 7)) {
+  if (
+    isTexas ||
+    isFoursomes ||
+    isGreensome ||
+    isChapman ||
+    (isPatsome && holeNumber >= 7)
+  ) {
     const captain = flight.reduce(
       (min, p) => (p.user_id < min.user_id ? p : min),
       flight[0],
@@ -440,28 +448,31 @@ export default async function HolePage({ params }: { params: Params }) {
       0,
     );
     let teamHandicap: number;
-    if (isFoursomes || isGreensome) {
-      // Foursomes/greensome: WHS-diff-formel. Beregn motstander-sidens
+    if (isFoursomes || isGreensome || isChapman) {
+      // Foursomes/greensome/chapman: WHS-diff-formel. Beregn motstander-sidens
       // combined CH og gi diff til høyeste lag. Lavlaget får 0.
-      // Foursomes: combined = sum. Greensome: combined = round(0,6×lavest + 0,4×høyest).
+      // Foursomes: combined = sum. Greensome + chapman: combined = round(0,6×lavest + 0,4×høyest).
+      const isSixtyForty = isGreensome || isChapman;
       const oppPlayers = allPlayers.filter(
         (p) => p.team_number !== me.team_number && p.team_number !== null,
       );
       function sideHandicap(players: typeof flight): number {
-        if (isGreensome) {
+        if (isSixtyForty) {
           const chs = players.map((p) => p.course_handicap ?? 0);
           return Math.round(0.6 * Math.min(...chs) + 0.4 * Math.max(...chs));
         }
         return players.reduce((sum, p) => sum + (p.course_handicap ?? 0), 0);
       }
-      const mySideCombinedCH = isGreensome ? sideHandicap(flight) : combinedCH;
+      const mySideCombinedCH = isSixtyForty ? sideHandicap(flight) : combinedCH;
       const oppCombinedCH = sideHandicap(oppPlayers);
       const allowancePct =
         game.mode_config.kind === 'foursomes_matchplay'
           ? game.mode_config.allowance_pct
           : game.mode_config.kind === 'greensome_matchplay'
             ? game.mode_config.allowance_pct
-            : 50;
+            : game.mode_config.kind === 'chapman_matchplay'
+              ? game.mode_config.allowance_pct
+              : 50;
       const diff = Math.abs(mySideCombinedCH - oppCombinedCH);
       const highSideExtraHCP = Math.round((diff * allowancePct) / 100);
       teamHandicap = mySideCombinedCH > oppCombinedCH ? highSideExtraHCP : 0;
@@ -589,6 +600,11 @@ export default async function HolePage({ params }: { params: Params }) {
     }
   }
 
+  // Chapman (#290): statisk fase-stripe på hver hull-side (begge slår ut → bytt
+  // ball → velg beste → spill annenhver). Ingen tee-starter — begge teer hvert
+  // hull, så det finnes ingen fast odd/even-rotasjon å spore.
+  const chapmanPhaseSlot: ReactNode = isChapman ? <ChapmanPhaseReminder /> : null;
+
   // Patsome (#286): segment-banner på alle hull; tee-starter-velger/-hint kun i
   // foursomes-segmentet (13–18). Velgeren vises på alle foursomes-hull til laget
   // har valgt (mer tilgivende enn foursomes' kun-hull-1), deretter hint-chipen.
@@ -629,6 +645,7 @@ export default async function HolePage({ params }: { params: Params }) {
       {patsomeSegmentSlot && <div className="px-3">{patsomeSegmentSlot}</div>}
       {patsomeTeeSlot && <div className="px-3">{patsomeTeeSlot}</div>}
       {foursomesTeeSlot && <div className="px-3">{foursomesTeeSlot}</div>}
+      {chapmanPhaseSlot && <div className="px-3">{chapmanPhaseSlot}</div>}
       <HoleClient
         gameId={id}
         gameName={game.name}
