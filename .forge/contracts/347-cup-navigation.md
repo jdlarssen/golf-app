@@ -28,13 +28,13 @@ Bruker valgte «hva blir mest brukervennlig?» → **Option A: kun spill-/match-
 
 ## Akseptkriterier
 
-- [ ] **AC1** — Tilbake fra cup-detalj går til `/admin/cup`. *Evidens: `backHref="/admin/cup"` i `app/admin/cup/[id]/page.tsx`.*
-- [ ] **AC2** — En spiller i en cup-match kan nå `/cup/[id]` fra app-UI-et (ikke kun direkte URL), i alle tilstander (venterom/aktiv/avsluttet/draft). *Evidens: `CupStandingsLink` rendrer `SmartLink href="/cup/${tournament_id}"` i begge return-grener.*
-- [ ] **AC3** — Lenken vises KUN for spill som tilhører en cup (`tournament_id` satt + cup finnes). Ikke-cup-spill viser ingenting. *Evidens: komponenten returnerer null ved manglende `tournament_id` eller manglende cup-rad.*
-- [ ] **AC4** — Lenke-målet `/cup/[id]` funker for ikke-admin spillere. *Evidens: `app/cup/[id]/page.tsx` har ingen `requireAdmin`.*
-- [ ] **AC5** — Ingen endring i delt `getGameWithPlayers`-cache-helper; ingen regresjon for andre spill-side-konsumenter. *Evidens: helper-fil urørt i diff; build grønn.*
-- [ ] **AC6** — Norsk copy «Se cup-stillingen» passerer humanizer (ingen særskriving/anglisisme); nav-kort matcher eksisterende mønster. *Evidens: humanizer + file:line.*
-- [ ] **AC7** — `package.json` PATCH-bump (1.60.1 → 1.60.2) + `CHANGELOG.md`-oppføring i samme commit; commit-msg-hook grønn. *Evidens: hook passerer.*
+- [x] **AC1** — Tilbake fra cup-detalj går til `/admin/cup`. *Evidens: `backHref="/admin/cup"` i `app/admin/cup/[id]/page.tsx`.*
+- [x] **AC2** — En spiller i en cup-match kan nå `/cup/[id]` fra app-UI-et (ikke kun direkte URL), i alle tilstander (venterom/aktiv/avsluttet/draft). *Evidens: `CupStandingsLink` rendrer `SmartLink href="/cup/${tournament_id}"` i begge return-grener.*
+- [x] **AC3** — Lenken vises KUN for spill som tilhører en cup (`tournament_id` satt + cup finnes). Ikke-cup-spill viser ingenting. *Evidens: komponenten returnerer null ved manglende `tournament_id` eller manglende cup-rad.*
+- [x] **AC4** — Lenke-målet `/cup/[id]` funker for ikke-admin spillere. *Evidens: `app/cup/[id]/page.tsx` har ingen `requireAdmin`.*
+- [x] **AC5** — Ingen endring i delt `getGameWithPlayers`-cache-helper; ingen regresjon for andre spill-side-konsumenter. *Evidens: helper-fil urørt i diff; build grønn.*
+- [x] **AC6** — Norsk copy «Se cup-stillingen» passerer humanizer (ingen særskriving/anglisisme); nav-kort matcher eksisterende mønster. *Evidens: humanizer + file:line.*
+- [x] **AC7** — `package.json` PATCH-bump (1.60.1 → 1.60.2) + `CHANGELOG.md`-oppføring i samme commit; commit-msg-hook grønn. *Evidens: hook passerer.*
 
 ## Filer
 
