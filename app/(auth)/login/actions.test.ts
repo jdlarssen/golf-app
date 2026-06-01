@@ -62,6 +62,8 @@ let adminUserLookup: {
   id: string;
   profile_completed_at?: string | null;
 } | null = null;
+// #361: result of sendCode's lapsed-invitation lookup (null = none found).
+let expiredInviteLookup: { id: string } | null = null;
 let gamePlayersInsertResult: { error: unknown } = { error: null };
 /**
  * Default for games-lookup i verifyCode (#199 chunk 9): vi sjekker
@@ -97,17 +99,27 @@ vi.mock('@/lib/supabase/admin', () => ({
             adminUpdateMock(...args);
             return makeAdminBuilder();
           },
-          // verifyCode pending-pickup: .select().ilike().is().returns()
-          select: () => ({
-            ilike: () => ({
-              is: () => ({
-                returns: async () => ({
-                  data: pendingInvitations,
-                  error: null,
-                }),
-              }),
-            }),
-          }),
+          // Chainable select brukt av to call-sites:
+          //  - verifyCode pending-pickup: .ilike().is().returns()
+          //      → pendingInvitations
+          //  - sendCode #361 expired-invite:
+          //      .ilike().is().not().lte().limit().maybeSingle()
+          //      → expiredInviteLookup
+          select: () => {
+            const builder: Record<string, unknown> = {};
+            for (const m of ['ilike', 'is', 'not', 'lte', 'limit']) {
+              builder[m] = () => builder;
+            }
+            builder.returns = async () => ({
+              data: pendingInvitations,
+              error: null,
+            });
+            builder.maybeSingle = async () => ({
+              data: expiredInviteLookup,
+              error: null,
+            });
+            return builder;
+          },
         };
       }
       if (table === 'users') {
@@ -183,6 +195,7 @@ beforeEach(() => {
   consumeLoginRateLimitMock.mockResolvedValue({ ok: true });
   pendingInvitations = [];
   adminUserLookup = null;
+  expiredInviteLookup = null;
   gamePlayersInsertResult = { error: null };
   adminGameLookup = { registration_type: 'solo' };
 });
@@ -347,6 +360,40 @@ describe('sendCode — rate-limit', () => {
       email: 'spammer@example.com',
       ip: '1.2.3.4',
     });
+  });
+});
+
+describe('sendCode — #361 lapsed invitation', () => {
+  it('maps a lapsed invitation to invite_expired instead of user_not_found', async () => {
+    vi.stubEnv('NEXT_PUBLIC_ALLOW_SELF_REGISTRATION', 'false');
+    rpcMock.mockResolvedValue({ data: false, error: null });
+    signInWithOtpMock.mockResolvedValue({
+      error: { message: 'User not found' },
+    });
+    expiredInviteLookup = { id: 'inv-expired' };
+
+    const { sendCode } = await import('./actions');
+    await expect(
+      sendCode(fd({ email: 'lapsed@example.com' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/login?error=invite_expired');
+  });
+
+  it('keeps user_not_found when no lapsed invitation exists', async () => {
+    vi.stubEnv('NEXT_PUBLIC_ALLOW_SELF_REGISTRATION', 'false');
+    rpcMock.mockResolvedValue({ data: false, error: null });
+    signInWithOtpMock.mockResolvedValue({
+      error: { message: 'User not found' },
+    });
+    expiredInviteLookup = null;
+
+    const { sendCode } = await import('./actions');
+    await expect(
+      sendCode(fd({ email: 'stranger@example.com' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/login?error=user_not_found');
   });
 });
 

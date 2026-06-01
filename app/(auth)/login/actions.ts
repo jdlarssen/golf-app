@@ -70,7 +70,11 @@ export async function sendCode(formData: FormData) {
 
   if (error) {
     const msg = error.message?.toLowerCase() ?? '';
-    let code: 'rate_limited' | 'user_not_found' | 'unknown' = 'unknown';
+    let code:
+      | 'rate_limited'
+      | 'user_not_found'
+      | 'invite_expired'
+      | 'unknown' = 'unknown';
     if (
       msg.includes('rate') ||
       msg.includes('too many') ||
@@ -86,6 +90,32 @@ export async function sendCode(formData: FormData) {
     ) {
       code = 'user_not_found';
     }
+
+    // #361: a "not found" can mean "never invited" OR "was invited, but it
+    // lapsed". email_is_invited already filters expired rows, so both land
+    // here. Look for a lapsed invitation so we can show "ask for a new one"
+    // instead of a dead-end "not registered". Best-effort — falls back to the
+    // generic code if the lookup throws.
+    if (code === 'user_not_found') {
+      try {
+        const admin = getAdminClient();
+        const { data: expiredInvite } = await admin
+          .from('invitations')
+          .select('id')
+          .ilike('email', email)
+          .is('accepted_at', null)
+          .not('expires_at', 'is', null)
+          .lte('expires_at', new Date().toISOString())
+          .limit(1)
+          .maybeSingle<{ id: string }>();
+        if (expiredInvite) {
+          code = 'invite_expired';
+        }
+      } catch (err) {
+        console.error('[login/sendCode] expired-invite lookup failed', err);
+      }
+    }
+
     redirect(`/login?error=${code}`);
   }
 

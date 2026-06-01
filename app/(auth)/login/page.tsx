@@ -16,6 +16,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   rate_limited: 'Vent litt før du prøver igjen.',
   user_not_found:
     'Denne mailen er ikke registrert. Be admin om en invitasjon.',
+  invite_expired:
+    'Invitasjonen din er utløpt. Be arrangøren om å sende en ny.',
   code_invalid: 'Feil kode. Sjekk mailen og prøv igjen.',
   code_expired: 'Koden er gått ut. Be om ny kode.',
   link_expired: 'Lenken er gått ut. Be om ny kode.',

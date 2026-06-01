@@ -21,6 +21,24 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#219](https://github.com/jdlarssen/golf-app/issues/219), Ryder Cup fase 4. Administratorer kan nå lage et fullt cup-program fra ett skjema — velg lag, bane, formatmal og paring-strategi, forhåndsvis og juster, og opprett alle matchene i ett trykk.
 
+### [1.61.3] - 2026-06-01
+
+> Skriver du inn en e-post som ikke kan logge inn, får du nå en forklaring på hva som er galt og hva du skal gjøre. En utløpt invitasjon sier «Invitasjonen din er utløpt» i stedet for en kryptisk feil, og en død påmeldingslenke viser en egen side med vei videre i stedet for en blank 404.
+
+<details>
+<summary>Teknisk</summary>
+
+Fikser [#361](https://github.com/jdlarssen/golf-app/issues/361) — kryptiske feil i onboarding-kanttilfeller.
+
+#### Added
+- [`app/signup/[shortId]/not-found.tsx`](app/signup/[shortId]/not-found.tsx) — vennlig fallback når en signup-lenke peker på et slettet/ugyldig spill (`page.tsx` kaller `notFound()`). «Denne lenken gjelder ikke lenger» + vei til forsiden.
+
+#### Changed
+- [`app/(auth)/login/actions.ts`](app/(auth)/login/actions.ts) — `sendCode` skiller nå en utløpt invitasjon fra en aldri-invitert e-post: i `user_not_found`-grenen slås det opp om det finnes en lapset invitasjon (`accepted_at` null, `expires_at` passert), og i så fall vises `invite_expired` i stedet. Best-effort — faller tilbake til den generiske koden hvis oppslaget feiler.
+- [`app/(auth)/login/page.tsx`](app/(auth)/login/page.tsx) — ny `invite_expired`-melding.
+
+</details>
+
 ### [1.61.2] - 2026-06-01
 
 > Blir du invitert til et spill og logger inn for første gang, havner du nå rett på spillet etter at du har fylt ut profilen. Du slipper å lete det fram fra forsiden selv.
