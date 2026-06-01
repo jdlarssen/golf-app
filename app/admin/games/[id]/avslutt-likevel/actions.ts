@@ -3,6 +3,8 @@
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
+import { supportsWithdrawal } from '@/lib/scoring';
+import type { GameMode } from '@/lib/scoring/modes/types';
 import { endGame } from '../actions';
 
 /**
@@ -24,13 +26,22 @@ export async function endGameMarkingWithdrawals(
 
   const detailPath = `/admin/games/${gameId}`;
 
+  // WD is only valid for in-scope modes. Out-of-scope games get NO withdrawals
+  // even from a crafted POST — they fall back to «ikke levert» (defense-in-depth
+  // mirroring the page, which hides the checkboxes for these modes).
+  const { data: game } = await supabase
+    .from('games')
+    .select('game_mode')
+    .eq('id', gameId)
+    .single<{ game_mode: GameMode }>();
+  const allowWd = game ? supportsWithdrawal(game.game_mode) : false;
+
   // Collect all withdraw_<userId> keys that are checked.
-  const withdrawUserIds: string[] = [];
-  for (const [key, value] of formData.entries()) {
-    if (key.startsWith('withdraw_') && value === 'on') {
-      withdrawUserIds.push(key.slice('withdraw_'.length));
-    }
-  }
+  const withdrawUserIds: string[] = allowWd
+    ? [...formData.entries()]
+        .filter(([key, value]) => key.startsWith('withdraw_') && value === 'on')
+        .map(([key]) => key.slice('withdraw_'.length))
+    : [];
 
   // Mark each opted-in player as withdrawn. Uses the cookie server client
   // under the admin RLS policy (same pattern as reopenScorecard) — requireAdmin

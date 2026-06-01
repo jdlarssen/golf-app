@@ -7,6 +7,8 @@ import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import type { GameStatus } from '@/lib/games/status';
+import type { GameMode } from '@/lib/scoring/modes/types';
+import { supportsWithdrawal } from '@/lib/scoring';
 import { endGameMarkingWithdrawals } from './actions';
 
 type Params = Promise<{ id: string }>;
@@ -44,13 +46,14 @@ export default async function AvsluttLikevelPage({
   const { data: game } = await supabase
     .from('games')
     .select(
-      'id, name, status, side_tournament_enabled, side_ld_count, side_ctp_count',
+      'id, name, status, game_mode, side_tournament_enabled, side_ld_count, side_ctp_count',
     )
     .eq('id', gameId)
     .single<{
       id: string;
       name: string;
       status: GameStatus;
+      game_mode: GameMode;
       side_tournament_enabled: boolean;
       side_ld_count: number;
       side_ctp_count: number;
@@ -102,6 +105,10 @@ export default async function AvsluttLikevelPage({
     redirect(detailPath);
   }
 
+  // WD tilbys kun for in-scope-modi. For andre format (matchplay/pott) vises
+  // ingen «trukket»-hake — de manglende telles som «ikke levert» (som #375).
+  const allowWd = supportsWithdrawal(game.game_mode);
+
   const endAnywayAction = endGameMarkingWithdrawals.bind(null, gameId);
 
   return (
@@ -123,32 +130,50 @@ export default async function AvsluttLikevelPage({
               ? '1 spiller har ikke levert:'
               : `${missing.length} spillere har ikke levert:`}
           </p>
-          {/* Per-spiller valg: default = tell scorene (ingen hake), opt-in = marker som trukket */}
+          {/* Per-spiller valg (kun in-scope-modi): default = tell scorene
+              (ingen hake), opt-in = marker som trukket. */}
           <ul className="mt-2 space-y-2">
-            {missing.map(({ userId, displayName }) => (
-              <li key={userId} className="flex items-center gap-3">
-                <label className="flex min-h-[44px] flex-1 cursor-pointer items-center gap-3">
-                  <input
-                    type="checkbox"
-                    name={`withdraw_${userId}`}
-                    value="on"
-                    className="h-4 w-4 rounded accent-primary"
-                  />
-                  <span className="text-sm text-text">{displayName}</span>
-                  <span className="ml-auto text-xs text-muted">Marker som trukket</span>
-                </label>
-              </li>
-            ))}
+            {missing.map(({ userId, displayName }) =>
+              allowWd ? (
+                <li key={userId} className="flex items-center gap-3">
+                  <label className="flex min-h-[44px] flex-1 cursor-pointer items-center gap-3">
+                    <input
+                      type="checkbox"
+                      name={`withdraw_${userId}`}
+                      value="on"
+                      className="h-4 w-4 rounded accent-primary"
+                    />
+                    <span className="text-sm text-text">{displayName}</span>
+                    <span className="ml-auto text-xs text-muted">Marker som trukket</span>
+                  </label>
+                </li>
+              ) : (
+                <li key={userId} className="text-sm text-text">
+                  {displayName}
+                </li>
+              ),
+            )}
           </ul>
         </div>
 
         <p className="text-sm text-muted">
-          Avslutter du nå, blir spillere uten hake stående som{' '}
-          <span className="font-medium text-text">ikke levert</span>. Scorene de
-          rakk å registrere teller fortsatt i resultatet. Spillere med hake markeres
-          som <span className="font-medium text-text">Trukket</span> og teller ikke
-          i rangeringen. Du kan angre trekk etterpå ved å åpne spillet igjen.
-          Resten låses og leaderboard åpnes for alle.
+          {allowWd ? (
+            <>
+              Avslutter du nå, blir spillere uten hake stående som{' '}
+              <span className="font-medium text-text">ikke levert</span>. Scorene
+              de rakk å registrere teller fortsatt i resultatet. Spillere med hake
+              markeres som <span className="font-medium text-text">Trukket</span> og
+              teller ikke i rangeringen. Du kan angre trekk etterpå ved å åpne
+              spillet igjen. Resten låses og leaderboard åpnes for alle.
+            </>
+          ) : (
+            <>
+              Avslutter du nå, blir disse stående som{' '}
+              <span className="font-medium text-text">ikke levert</span>. Scorene
+              de rakk å registrere teller fortsatt i resultatet. Resten låses og
+              leaderboard åpnes for alle.
+            </>
+          )}
         </p>
 
         <form action={endAnywayAction}>
