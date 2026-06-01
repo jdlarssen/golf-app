@@ -19,7 +19,26 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ## 1.64.y — Avslutt selv om noen ikke har levert
 
-Issue [#375](https://github.com/jdlarssen/golf-app/issues/375). En spiller som aldri leverte scorekort kunne før låse hele spillet — det fantes ingen vei rundt. Nå kan arrangøren avslutte likevel: de som mangler markeres «ikke fullført», og resultatet låses for resten.
+Issue [#375](https://github.com/jdlarssen/golf-app/issues/375). En spiller som aldri leverte scorekort kunne før låse hele spillet — det fantes ingen vei rundt. Nå kan arrangøren avslutte likevel: de som mangler står som «ikke levert» (scorene deres teller fortsatt), og resultatet låses for resten.
+
+### [1.64.1] - 2026-06-01
+
+> En spiller som spilte men aldri trykket «lever», sto som «ikke fullført». Det var misvisende — de hadde jo spilt. Nå står de som «ikke levert», og scorene deres teller i resultatet akkurat som før.
+
+<details>
+<summary>Teknisk</summary>
+
+Oppfølging av [#375](https://github.com/jdlarssen/golf-app/issues/375) etter bruker-tilbakemelding: «ikke fullført» antydet at en spiller som spilte men ikke leverte var ute av rangeringen. Scorene har alltid telt — leaderboarden leser `scores` på `game_id`, aldri `submitted_at` — så kun etiketten var feil.
+
+#### Changed
+- [`app/admin/games/[id]/page.tsx`](app/admin/games/[id]/page.tsx) — roster-merke «Ikke fullført» → «Ikke levert»; «Levert scorekort»-sub «N spilte ikke ferdig» → «N leverte ikke»; end-kort-advarselen presiserer at scorene teller fortsatt.
+- [`app/admin/games/[id]/avslutt-likevel/page.tsx`](app/admin/games/[id]/avslutt-likevel/page.tsx) + [`avslutt/page.tsx`](app/admin/games/[id]/avslutt/page.tsx) — bekreftelses-copy: «ikke fullført» → «ikke levert», med en setning om at registrerte scorer fortsatt teller i resultatet.
+
+#### Notes
+- Ren copy-/etikett-retting. Ingen logikk-endring: scoring og leaderboard var alltid uavhengig av `submitted_at`.
+- Path 5 (spiller trekker seg / WD → ute av rangeringen) er en egen, kommende feature — ikke dekket her.
+
+</details>
 
 ### [1.64.0] - 2026-06-01
 

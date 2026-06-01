@@ -92,7 +92,8 @@ export default async function AvsluttPage({
 
   // «Avslutt likevel» (#375): spillere som aldri leverte blokkerer ikke lenger.
   // Vis hvem som mangler her, og send allowMissing til actionen så den hopper
-  // over dem (submitted_at forblir null → «ikke fullført», ikke falsk levering).
+  // over dem (submitted_at forblir null → «ikke levert», ikke falsk levering;
+  // scorene deres teller fortsatt i resultatet).
   const missing = (gamePlayers ?? [])
     .filter((gp) => !gp.submitted_at)
     .map((gp) =>
@@ -125,9 +126,9 @@ export default async function AvsluttPage({
             ))}
           </ul>
           <p className="mt-2 text-text">
-            Avslutter du nå, blir disse markert{' '}
-            <span className="font-medium">ikke fullført</span> — de telles ikke
-            som levert, men blokkerer ikke lenger.
+            Avslutter du nå, blir disse stående som{' '}
+            <span className="font-medium">ikke levert</span>. Scorene deres
+            teller fortsatt i resultatet.
           </p>
         </div>
       )}
