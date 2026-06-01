@@ -127,9 +127,7 @@ export default async function ProfilePage({
         <GdprSection />
       </div>
 
-      <Suspense fallback={null}>
-        <AccountActions />
-      </Suspense>
+      <AccountActions />
 
       <p className="mt-4 px-1 text-xs leading-relaxed text-muted">
         Les hvordan vi behandler og lagrer dataene dine i{' '}
@@ -146,45 +144,21 @@ export default async function ProfilePage({
 }
 
 /**
- * Konto-handlinger nederst på Profil-siden. Tidligere lå «Logg ut» og (for
- * admin) «Sekretariatet» i en muted footer på Hjem; med bunn-nav-en (#355)
- * er Profil-fanen konto-hubben, så de bor her i stedet. Sekretariatet er
- * døra til admin-rommet — vises kun for admin.
+ * Konto-handling nederst på Profil-siden. «Logg ut» er en konto-handling og
+ * bor her. «Sekretariatet» (admin-rommet) ble flyttet til Hjem — der admin
+ * lander og lett finner den — så den ligger ikke lenger her (#355-oppfølging).
  */
-async function AccountActions() {
-  const { supabase, userId } = await getProfileContext();
-  if (!userId) return null;
-  const { data: profile } = await supabase
-    .from('users')
-    .select('is_admin')
-    .eq('id', userId)
-    .maybeSingle<{ is_admin: boolean }>();
-  const isAdmin = profile?.is_admin === true;
-
+function AccountActions() {
   return (
     <div className="mt-8 border-t border-border/60 pt-6 dark:border-border/80">
-      <ul className="flex flex-col gap-1">
-        {isAdmin && (
-          <li>
-            <SmartLink
-              href="/admin"
-              className="inline-flex min-h-[44px] items-center px-1 text-sm text-muted transition-colors hover:text-text"
-            >
-              Sekretariatet
-            </SmartLink>
-          </li>
-        )}
-        <li>
-          <form action="/logout" method="post">
-            <button
-              type="submit"
-              className="inline-flex min-h-[44px] items-center px-1 text-sm text-muted transition-colors hover:text-danger"
-            >
-              Logg ut
-            </button>
-          </form>
-        </li>
-      </ul>
+      <form action="/logout" method="post">
+        <button
+          type="submit"
+          className="inline-flex min-h-[44px] items-center px-1 text-sm text-muted transition-colors hover:text-danger"
+        >
+          Logg ut
+        </button>
+      </form>
     </div>
   );
 }

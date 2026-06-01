@@ -179,6 +179,20 @@ async function HomeBody() {
   const canCreateGame =
     profile?.is_admin === true || isTrustedCreator(profile?.email);
 
+  // Admin-inngang til Sekretariatet (#355-oppfølging). Bunn-nav-en holder admin
+  // ute (eget rom), så admin trenger en tydelig, oppdagbar vei inn herfra — der
+  // de lander og der lenken bodde før (#346). Kun admin (betrodde opprettere
+  // går til /opprett-spill, ikke /admin).
+  const secretariatLink =
+    profile?.is_admin === true ? (
+      <SmartLink
+        href="/admin"
+        className="flex min-h-[48px] w-full items-center justify-center rounded-full border border-border px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-surface-2"
+      >
+        Sekretariatet
+      </SmartLink>
+    ) : null;
+
   // «Funn turneringer»-data hentes kun for non-admin når vi rendrer empty-state.
   // Brukes både til å bytte velkomst-teksten og til å rendre selve seksjonen
   // uten å hente data to ganger.
@@ -221,6 +235,9 @@ async function HomeBody() {
               </LinkButton>
             </div>
           )}
+          {secretariatLink && (
+            <div className="mt-3 w-full max-w-[280px]">{secretariatLink}</div>
+          )}
           <PullQuote className="mt-8">
             En god runde begynner med god planlegging.
           </PullQuote>
@@ -253,6 +270,8 @@ async function HomeBody() {
           </LinkButton>
         </div>
       )}
+
+      {secretariatLink && <div className="mb-6">{secretariatLink}</div>}
 
       <nav className="space-y-6">
         {activeGames.length > 0 && (

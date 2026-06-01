@@ -21,9 +21,24 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#355](https://github.com/jdlarssen/golf-app/issues/355). Appen hadde ingen fast navigasjon. For å nå profil, innboks eller bytte spill måtte du alltid tilbake til Hjem først. Nå ligger en fast bunn-meny (Hjem / Innboks / Profil) nederst på alle spiller-sider.
 
+### [1.66.1] - 2026-06-01
+
+> Som arrangør når du «Sekretariatet» med ett trykk fra Hjem igjen. En tydelig knapp der du lander, ikke gjemt bort under Profil.
+
+<details>
+<summary>Teknisk</summary>
+
+Fikser en regresjon fra 1.66.0: bunn-nav-en (som holder admin ute av menyen — eget rom) flyttet «Sekretariatet»-lenken til en muted lenke nederst på Profil-siden, som var vanskelig å finne for admin.
+
+#### Changed
+- [`app/page.tsx`](app/page.tsx) — tydelig admin-only «Sekretariatet»-knapp på Hjem, ved «Opprett spill»-CTA-en i begge hjem-grener (tom + ikke-tom). Der admin lander, og der lenken bodde før (#346).
+- [`app/profile/page.tsx`](app/profile/page.tsx) — `AccountActions` har nå kun «Logg ut» (én konto-handling); trenger ikke lenger lese `is_admin`, så DB-spørringen + `Suspense`-wrapperen er borte.
+
+</details>
+
 ### [1.66.0] - 2026-06-01
 
-> Før måtte du innom Hjem for å komme deg videre i appen. Nå ligger en fast meny nederst på alle sider med Hjem, Innboks og Profil, så du når alt med ett trykk. «Logg ut» og (for deg som arrangør) «Sekretariatet» finner du nå under Profil.
+> Før måtte du innom Hjem for å komme deg videre i appen. Nå ligger en fast meny nederst på alle sider med Hjem, Innboks og Profil, så du når alt med ett trykk. «Logg ut» finner du nå under Profil.
 
 <details>
 <summary>Teknisk</summary>
@@ -38,7 +53,7 @@ Fikser [#355](https://github.com/jdlarssen/golf-app/issues/355) — ingen vedvar
 #### Changed
 - [`components/ui/AppShell.tsx`](components/ui/AppShell.tsx) — reserverer bunn-padding som klarerer baren + home-indicator (baren rendres globalt, ikke per AppShell).
 - `NotificationBell` fjernet fra spiller-`TopBar` og home-headeren — Innboks-fanen overtar. Beholdt på admin-flater (ingen bunn-nav der).
-- Home-footeren fjernet: «Min profil» dekkes av Profil-fanen, «Logg ut» / «Sekretariatet» flyttet til Profil-siden.
+- Home-footeren fjernet: «Min profil» dekkes av Profil-fanen, «Logg ut» flyttet til Profil-siden (admin-inngangen «Sekretariatet» får sin plass i 1.66.1).
 
 #### Notes
 - Skjuler seg på hull-skjermen (fullskjerm scoring) og admin (eget rom) via `usePathname`; på offentlige/pre-profil-sider mangler proxy-headeren, så `userId` er null og baren rendres ikke.
