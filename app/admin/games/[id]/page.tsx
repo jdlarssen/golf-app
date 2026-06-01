@@ -16,9 +16,10 @@ import type { GameStatus } from '@/lib/games/status';
 import {
   isStablefordFamily,
   isScrambleFamily,
+  supportsWithdrawal,
   type GameMode,
   type GameModeConfig,
-} from '@/lib/scoring/modes/types';
+} from '@/lib/scoring';
 import { formatDisplayLabel } from '@/lib/games/formatLabel';
 import { StartGameButton } from './StartGameButton';
 import { StartScheduledGameButton } from './StartScheduledGameButton';
@@ -35,6 +36,8 @@ import {
   endGame,
   reopenScorecard,
   reopenGame,
+  adminWithdrawPlayer,
+  adminUndoWithdraw,
 } from './actions';
 import {
   ERROR_MESSAGES_EXISTING_GAME,
@@ -73,6 +76,8 @@ const STATUS_BANNERS: Record<string, string> = {
   game_reopened: '✓ Spillet er aktivt igjen.',
   invite_added: '✓ Spilleren er lagt til på rosteren.',
   invite_sent: '✓ Invitasjon sendt.',
+  player_withdrawn: '✓ Spilleren er trukket fra rangeringen.',
+  player_reinstated: '✓ Spilleren er gjeninnsatt i rangeringen.',
 };
 
 function first(value: string | string[] | undefined): string | undefined {
@@ -129,6 +134,7 @@ type GamePlayerRow = {
   course_handicap: number | null;
   submitted_at: string | null;
   approved_at: string | null;
+  withdrawn_at: string | null;
   users: {
     // name is null until the invitee completes their profile — see
     // migration 0014. Pre-created placeholder rows can still appear on a
@@ -338,7 +344,7 @@ async function PlayersSections({
   const playersPromise = supabase
     .from('game_players')
     .select(
-      'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, users!game_players_user_id_fkey(name, nickname, hcp_index, email)',
+      'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, withdrawn_at, users!game_players_user_id_fkey(name, nickname, hcp_index, email)',
     )
     .eq('game_id', gameId)
     .returns<GamePlayerRow[]>();
@@ -457,14 +463,18 @@ async function PlayersSections({
   const endAction = endGame.bind(null, gameId);
   const reopenGameAction = reopenGame.bind(null, gameId);
 
+  // Withdrawn players (#386): excluded from readiness counts and the
+  // «Levert X/Y» denominator. The total «Spillere»-row still uses players.length.
+  const rankablePlayers = players.filter((p) => !p.withdrawn_at);
+
   // Readiness preview for the end-game button (only meaningful when active).
-  const notSubmittedCount = players.filter((p) => !p.submitted_at).length;
+  const notSubmittedCount = rankablePlayers.filter((p) => !p.submitted_at).length;
   const pendingApprovalCount = game.require_peer_approval
-    ? players.filter((p) => p.submitted_at != null && p.approved_at == null)
+    ? rankablePlayers.filter((p) => p.submitted_at != null && p.approved_at == null)
         .length
     : 0;
   const everyPlayerReady =
-    players.length > 0 &&
+    rankablePlayers.length > 0 &&
     notSubmittedCount === 0 &&
     pendingApprovalCount === 0;
 
@@ -473,7 +483,7 @@ async function PlayersSections({
   // en blindvei. Sideturnering må innom vinnervalg-wizarden, som selv håndterer
   // de manglende; ellers går vi til den dedikerte bekreftelses-siden.
   const onlyMissingBlocks =
-    players.length > 0 && notSubmittedCount > 0 && pendingApprovalCount === 0;
+    rankablePlayers.length > 0 && notSubmittedCount > 0 && pendingApprovalCount === 0;
   const needsSideWizard =
     game.side_tournament_enabled &&
     game.side_ld_count + game.side_ctp_count > 0;
@@ -482,7 +492,7 @@ async function PlayersSections({
     : `/admin/games/${gameId}/avslutt-likevel`;
 
   const teamCount = [1, 2, 3, 4].filter((t) => byTeam[t].length > 0).length;
-  const submittedCount = players.filter((p) => p.submitted_at != null).length;
+  const submittedCount = rankablePlayers.filter((p) => p.submitted_at != null).length;
 
   return (
     <>
@@ -495,7 +505,7 @@ async function PlayersSections({
         />
         <Row
           label="Levert scorekort"
-          value={`${submittedCount} / ${players.length}`}
+          value={`${submittedCount} / ${rankablePlayers.length}`}
           sub={
             notSubmittedCount > 0
               ? game.status === 'finished'
@@ -718,7 +728,11 @@ async function PlayersSections({
                 {players.map((p) => {
                   let statusLabel: string;
                   let statusClass: string;
-                  if (!p.submitted_at) {
+                  // Withdrawn (#386): WD takes precedence over all other states.
+                  if (p.withdrawn_at) {
+                    statusLabel = 'Trukket';
+                    statusClass = 'text-muted';
+                  } else if (!p.submitted_at) {
                     // På avsluttet spill leverte spilleren aldri scorekortet
                     // («avslutt likevel», #375). «Ikke levert» (ikke «ikke
                     // fullført») — scorene deres teller fortsatt i resultatet;
@@ -737,6 +751,15 @@ async function PlayersSections({
                     statusLabel = '✓ Levert';
                     statusClass = 'text-success';
                   }
+
+                  // Per-player trekk/angre for active in-scope games.
+                  const showWdActions =
+                    game.status === 'active' &&
+                    supportsWithdrawal(game.game_mode);
+                  const undoWithdrawAction = showWdActions && p.withdrawn_at
+                    ? adminUndoWithdraw.bind(null, gameId, p.user_id)
+                    : null;
+
                   return (
                     <tr
                       key={p.user_id}
@@ -755,7 +778,30 @@ async function PlayersSections({
                       </td>
                       {game.status !== 'draft' && (
                         <td className={`px-2 py-2 text-xs ${statusClass}`}>
-                          {statusLabel}
+                          <div className="flex items-center gap-2">
+                            <span>{statusLabel}</span>
+                            {showWdActions && (
+                              p.withdrawn_at ? (
+                                // Angre-knapp: liten form-knapp, subtil stil
+                                <form action={undoWithdrawAction!}>
+                                  <button
+                                    type="submit"
+                                    className="min-h-[44px] rounded px-2 py-1 font-sans text-[11px] font-medium text-primary underline hover:opacity-70"
+                                  >
+                                    Angre
+                                  </button>
+                                </form>
+                              ) : (
+                                // Trekk-lenke til bekreftelses-siden
+                                <a
+                                  href={`/admin/games/${gameId}/trekk-spiller/${p.user_id}`}
+                                  className="min-h-[44px] inline-flex items-center rounded px-2 py-1 font-sans text-[11px] font-medium text-muted underline hover:opacity-70"
+                                >
+                                  Trekk
+                                </a>
+                              )
+                            )}
+                          </div>
                         </td>
                       )}
                     </tr>
@@ -924,7 +970,7 @@ async function PlayersSections({
               <div className="space-y-3">
                 <div className="rounded-xl border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning">
                   <p>
-                    {notSubmittedCount} av {players.length} spillere har ikke
+                    {notSubmittedCount} av {rankablePlayers.length} spillere har ikke
                     levert. Du kan avslutte likevel. De blir stående som «ikke
                     levert», men scorene deres teller fortsatt i resultatet.
                   </p>
@@ -940,7 +986,7 @@ async function PlayersSections({
               <div className="rounded-xl border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning">
                 {notSubmittedCount > 0 && (
                   <p>
-                    {notSubmittedCount} av {players.length} spillere har ikke
+                    {notSubmittedCount} av {rankablePlayers.length} spillere har ikke
                     levert.
                   </p>
                 )}

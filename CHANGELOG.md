@@ -17,7 +17,40 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.64.y — Avslutt selv om noen ikke har levert
+## 1.65.y — Trekk spiller: hold frafall ute av rangeringen
+
+Issue [#386](https://github.com/jdlarssen/golf-app/issues/386). Noen dro hjem etter ni hull, eller dukket aldri opp? Nå kan både spilleren selv og arrangøren markere et frafall. Den trukne tas helt ut av rangeringen (scorene teller ikke), står som «Trukket», og scorekortet låses. Forskjellen fra «ikke levert»: en som spilte men glemte å levere teller fortsatt; en som trakk seg gjør ikke.
+
+### [1.65.0] - 2026-06-01
+
+> Dro noen hjem før runden var ferdig? Du (eller spilleren selv) kan trekke dem fra spillet. De står som «Trukket» uten plassering, scorene deres teller ikke, og resten av leaderboardet er upåvirket. Angre når som helst mens spillet pågår.
+
+<details>
+<summary>Teknisk</summary>
+
+Fikser [#386](https://github.com/jdlarssen/golf-app/issues/386) — ingen måte å ta en no-show / et frafall ut av rangeringen; scorene deres telte alltid, og selv-uttrekk virket bare før start.
+
+#### Added
+- Migrasjon `0067_game_players_withdrawn.sql` — additive `withdrawn_at` + `withdrawn_by_user_id` på `game_players` (avledet WD-tilstand, ingen status-enum).
+- [`lib/scoring/modes/types.ts`](lib/scoring/modes/types.ts) — `supportsWithdrawal(mode)`: WD tilbys kun for individuell-ball-totalformat (best ball, stableford ×2, solo slagspill). Andre format faller tilbake på «ikke levert». Exhaustiv switch + Type-A-test.
+- [`app/games/[id]/leaderboard/WithdrawnPlayersSection.tsx`](app/games/[id]/leaderboard/WithdrawnPlayersSection.tsx) — delt «Trukne spillere»-seksjon under leaderboarden (vises for in-scope-modi).
+- [`app/admin/games/[id]/trekk-spiller/[userId]/page.tsx`](app/admin/games/[id]/trekk-spiller/[userId]/page.tsx) — dedikert bekreftelses-side for admin-WD. `adminWithdrawPlayer` / `adminUndoWithdraw` server-actions.
+- [`app/admin/games/[id]/avslutt-likevel/actions.ts`](app/admin/games/[id]/avslutt-likevel/actions.ts) — `endGameMarkingWithdrawals`: per-spiller «Marker som trukket»-valg i avslutt-likevel-flyten.
+
+#### Changed
+- [`app/games/[id]/withdrawActions.ts`](app/games/[id]/withdrawActions.ts) — `withdrawFromGame` setter `withdrawn_at` under aktivt spill (UPDATE) i stedet for å slette; pre-start beholder DELETE. Ny `undoWithdraw` (spiller angrer selv).
+- [`app/games/[id]/leaderboard/page.tsx`](app/games/[id]/leaderboard/page.tsx) — trukne spillere + scorene deres filtreres ut før `computeLeaderboard` for de fire in-scope-modiene; best ball fortsetter med gjenværende lagmedlem.
+- [`app/games/[id]/holes/[holeNumber]/HoleClient.tsx`](app/games/[id]/holes/[holeNumber]/HoleClient.tsx) — scorekortet låses read-only med «Du har trukket deg» når innlogget spiller er trukket.
+- [`app/admin/games/[id]/actions.ts`](app/admin/games/[id]/actions.ts) + [`avslutt/actions.ts`](app/admin/games/[id]/avslutt/actions.ts) — `endGame`/`endGameWithSideWinners` hopper over trukne spillere (verken levering eller godkjenning blokkerer). Admin-detalj-siden teller trukne ut av readiness-tallene og viser «Trukket» + Trekk/Angre per spiller.
+
+#### Notes
+- WD = ute av rangeringen, ingen plassering (som en golf-WD). Ren no-show folder inn i samme mekanisme. Matchplay-familien + pott-format (skins/wolf/nassau/m.fl.) er bevisst utenfor v1 — der faller en manglende spiller tilbake på «ikke levert».
+- Migrasjonen er additiv + nullable, trygg å kjøre før kode-deploy.
+
+</details>
+
+<details>
+<summary><strong>1.64.y — Avslutt selv om noen ikke har levert (2 oppføringer) — klikk for å vise</strong></summary>
 
 Issue [#375](https://github.com/jdlarssen/golf-app/issues/375). En spiller som aldri leverte scorekort kunne før låse hele spillet — det fantes ingen vei rundt. Nå kan arrangøren avslutte likevel: de som mangler står som «ikke levert» (scorene deres teller fortsatt), og resultatet låses for resten.
 
@@ -62,6 +95,8 @@ Fikser [#375](https://github.com/jdlarssen/golf-app/issues/375) — `not_all_sub
 - Ingen DB-endring: «ikke fullført» er avledet (`finished && submitted_at == null`), aldri en falsk levering. Tilstanden forsvinner av seg selv ved gjenåpning.
 - Leaderboard/podium håndterer no-shows som ufullstendige slik «ikke spilt»-hull alltid har gjort — ingen endring i view-/podium-komponentene (bruker valgte admin-only markering).
 - [`app/admin/games/[id]/actions.test.ts`](app/admin/games/[id]/actions.test.ts) — ny Type-A-test: `allowMissing=true` flipper til finished tross en ulevert spiller og skriver aldri `submitted_at`.
+
+</details>
 
 </details>
 

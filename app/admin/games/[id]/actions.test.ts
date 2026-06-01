@@ -86,6 +86,148 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+// ─── adminWithdrawPlayer ────────────────────────────────────────────────────
+
+describe('adminWithdrawPlayer', () => {
+  it('redirects to /login when unauthenticated (auth gate)', async () => {
+    supabaseMock = buildSupabaseMock([]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: null },
+    });
+
+    const { adminWithdrawPlayer } = await import('./actions');
+
+    await expect(adminWithdrawPlayer('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
+    expect(redirectMock).toHaveBeenCalledWith('/login');
+  });
+
+  it('redirects to / when user is not admin (authorization)', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false, name: 'Ola' }, error: null }, // users
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'user-1' } },
+    });
+
+    const { adminWithdrawPlayer } = await import('./actions');
+
+    await expect(adminWithdrawPlayer('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/');
+  });
+
+  it('sets withdrawn_at and redirects to ?status=player_withdrawn for active in-scope game', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null }, // users (requireAdmin)
+      {
+        data: {
+          id: 'game-1',
+          name: 'Vinter-cup',
+          status: 'active',
+          game_mode: 'best_ball',
+        },
+        error: null,
+      }, // games
+      { data: null, error: null }, // game_players.update (withdrawn_at)
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { adminWithdrawPlayer } = await import('./actions');
+
+    await expect(adminWithdrawPlayer('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=player_withdrawn');
+    expect(logAdminEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'game.player_withdrawn',
+        targetId: 'game-1',
+      }),
+    );
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+  });
+
+  it('redirects with ?error=not_active for non-active game', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null }, // users
+      {
+        data: {
+          id: 'game-1',
+          name: 'Vinter-cup',
+          status: 'finished',
+          game_mode: 'best_ball',
+        },
+        error: null,
+      }, // games
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { adminWithdrawPlayer } = await import('./actions');
+
+    await expect(adminWithdrawPlayer('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/games/game-1?error=not_active');
+  });
+});
+
+// ─── adminUndoWithdraw ──────────────────────────────────────────────────────
+
+describe('adminUndoWithdraw', () => {
+  it('nulls withdrawn_at and redirects to ?status=player_reinstated', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null }, // users
+      {
+        data: {
+          id: 'game-1',
+          name: 'Vinter-cup',
+          status: 'active',
+          game_mode: 'stableford',
+        },
+        error: null,
+      }, // games
+      { data: null, error: null }, // game_players.update (null out withdrawn)
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { adminUndoWithdraw } = await import('./actions');
+
+    await expect(adminUndoWithdraw('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=player_reinstated');
+    expect(logAdminEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'game.player_reinstated',
+        targetId: 'game-1',
+      }),
+    );
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+  });
+
+  it('redirects with ?error=not_active when game is finished', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null }, // users
+      {
+        data: {
+          id: 'game-1',
+          name: 'Vinter-cup',
+          status: 'finished',
+          game_mode: 'stableford',
+        },
+        error: null,
+      }, // games
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { adminUndoWithdraw } = await import('./actions');
+
+    await expect(adminUndoWithdraw('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/games/game-1?error=not_active');
+  });
+});
+
 describe('endGame', () => {
   it('redirects to /login when no user is authenticated (auth gate)', async () => {
     supabaseMock = buildSupabaseMock([]);

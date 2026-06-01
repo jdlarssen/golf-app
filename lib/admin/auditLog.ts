@@ -15,7 +15,10 @@ export type AdminAuditEventType =
   // F3 (#273): admin endrer format-mapping eller aktivitet/cup-eligibility.
   // Payload bærer `format_slug`, `intent` (eller null), `change_type`,
   // `before`/`after` (delvis state).
-  | 'format_mapping_change';
+  | 'format_mapping_change'
+  // #386: admin trekker eller gjeninnsetter en spiller (WD / angre-WD).
+  | 'game.player_withdrawn'
+  | 'game.player_reinstated';
 
 /**
  * Record an admin action to the audit log. Best-effort: insert failures are

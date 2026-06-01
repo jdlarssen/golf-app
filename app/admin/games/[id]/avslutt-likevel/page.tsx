@@ -7,7 +7,7 @@ import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import type { GameStatus } from '@/lib/games/status';
-import { endGame } from '../actions';
+import { endGameMarkingWithdrawals } from './actions';
 
 type Params = Promise<{ id: string }>;
 
@@ -17,8 +17,10 @@ type Params = Promise<{ id: string }>;
  * Når én eller flere spillere aldri leverte, blokkerer den vanlige
  * endGame-validering med `not_all_submitted`. Denne dedikerte siden er den
  * eksplisitte escapen: den lister hvem som mangler og lar arrangøren bekrefte.
- * De manglende blir stående som «ikke levert» (submitted_at forblir null) —
- * aldri en falsk levering, og scorene de rakk å registrere teller fortsatt.
+ *
+ * #386-utvidelse: allerede trukne spillere vises ikke i listen (de blokkerer
+ * ikke endGame). For gjenværende manglende spillere vises en avkrysningsboks
+ * «Marker som trukket» (default av = «tell scorene»).
  *
  * Guards:
  *  - game må finnes (notFound ellers)
@@ -26,7 +28,7 @@ type Params = Promise<{ id: string }>;
  *  - sideturneringsspill rutes til /avslutt (som håndterer manglende + vinnere)
  *  - hvis ingen mangler → redirect til detalj (bruk den vanlige avslutt-stien)
  *
- * Bekreftelses-knappen kaller `endGame(gameId, true)` (allowMissing) direkte.
+ * Skjemaet kaller `endGameMarkingWithdrawals(gameId, formData)`.
  */
 export default async function AvsluttLikevelPage({
   params,
@@ -68,12 +70,14 @@ export default async function AvsluttLikevelPage({
   const { data: gamePlayers } = await supabase
     .from('game_players')
     .select(
-      'submitted_at, users!game_players_user_id_fkey(name, nickname, email)',
+      'user_id, submitted_at, withdrawn_at, users!game_players_user_id_fkey(name, nickname, email)',
     )
     .eq('game_id', gameId)
     .returns<
       {
+        user_id: string;
         submitted_at: string | null;
+        withdrawn_at: string | null;
         users: {
           name: string | null;
           nickname: string | null;
@@ -82,12 +86,15 @@ export default async function AvsluttLikevelPage({
       }[]
     >();
 
+  // Allerede trukne er allerede ute av rangeringen — filtrer dem vekk.
+  // endGame hopper over dem automatisk (#386).
   const missing = (gamePlayers ?? [])
-    .filter((gp) => !gp.submitted_at)
+    .filter((gp) => !gp.submitted_at && !gp.withdrawn_at)
     .map((gp) => {
       const u = gp.users;
       const base = u?.name?.trim() || u?.email || '(ukjent spiller)';
-      return u?.nickname ? `${base} «${u.nickname}»` : base;
+      const displayName = u?.nickname ? `${base} «${u.nickname}»` : base;
+      return { userId: gp.user_id, displayName };
     });
 
   // Ingen mangler → ingenting å «avslutte likevel». Bruk den vanlige stien.
@@ -95,7 +102,7 @@ export default async function AvsluttLikevelPage({
     redirect(detailPath);
   }
 
-  const endAnywayAction = endGame.bind(null, gameId, true);
+  const endAnywayAction = endGameMarkingWithdrawals.bind(null, gameId);
 
   return (
     <AdminShell>
@@ -116,19 +123,32 @@ export default async function AvsluttLikevelPage({
               ? '1 spiller har ikke levert:'
               : `${missing.length} spillere har ikke levert:`}
           </p>
-          <ul className="mt-1.5 list-disc space-y-0.5 pl-5">
-            {missing.map((name, i) => (
-              <li key={i}>{name}</li>
+          {/* Per-spiller valg: default = tell scorene (ingen hake), opt-in = marker som trukket */}
+          <ul className="mt-2 space-y-2">
+            {missing.map(({ userId, displayName }) => (
+              <li key={userId} className="flex items-center gap-3">
+                <label className="flex min-h-[44px] flex-1 cursor-pointer items-center gap-3">
+                  <input
+                    type="checkbox"
+                    name={`withdraw_${userId}`}
+                    value="on"
+                    className="h-4 w-4 rounded accent-primary"
+                  />
+                  <span className="text-sm text-text">{displayName}</span>
+                  <span className="ml-auto text-xs text-muted">Marker som trukket</span>
+                </label>
+              </li>
             ))}
           </ul>
         </div>
 
         <p className="text-sm text-muted">
-          Avslutter du nå, blir disse stående som{' '}
+          Avslutter du nå, blir spillere uten hake stående som{' '}
           <span className="font-medium text-text">ikke levert</span>. Scorene de
-          rakk å registrere teller fortsatt i resultatet. De blokkerer bare ikke
-          lenger avslutningen. Resten låses og leaderboard åpnes for alle, og du
-          kan gjenåpne spillet etterpå hvis noen rekker å levere.
+          rakk å registrere teller fortsatt i resultatet. Spillere med hake markeres
+          som <span className="font-medium text-text">Trukket</span> og teller ikke
+          i rangeringen. Du kan angre trekk etterpå ved å åpne spillet igjen.
+          Resten låses og leaderboard åpnes for alle.
         </p>
 
         <form action={endAnywayAction}>

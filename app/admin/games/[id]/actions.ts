@@ -23,6 +23,7 @@ import type { GameStatus } from '@/lib/games/status';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { notify } from '@/lib/notifications/notify';
 import { notifyPlayersGameFinished } from '@/lib/notifications/events';
+import { supportsWithdrawal } from '@/lib/scoring';
 
 /**
  * Self-gate + load action context for the game-detail actions. Wraps the
@@ -431,6 +432,95 @@ export async function reopenScorecard(gameId: string, playerUserId: string) {
   revalidatePath(`/admin/games/${gameId}`);
   revalidatePath(`/games/${gameId}`);
   redirect(`${detailPath}?status=scorecard_reopened`);
+}
+
+/**
+ * Admin: mark a player as withdrawn (WD) in an active game (#386).
+ *
+ * The player's existing scores are preserved in DB but excluded from the
+ * leaderboard. Only supported for `supportsWithdrawal` modes. Redirects to
+ * the game detail page on success or on any validation failure.
+ */
+export async function adminWithdrawPlayer(gameId: string, userId: string) {
+  const { supabase, user, actorName } = await loadAdminContext();
+  const detailPath = `/admin/games/${gameId}`;
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('id, name, status, game_mode')
+    .eq('id', gameId)
+    .single<{ id: string; name: string; status: GameStatus; game_mode: GameMode }>();
+  if (!game) redirect(`${detailPath}?error=not_found`);
+  if (game!.status !== 'active') redirect(`${detailPath}?error=not_active`);
+  if (!supportsWithdrawal(game!.game_mode)) redirect(detailPath);
+
+  const { error } = await supabase
+    .from('game_players')
+    .update({
+      withdrawn_at: new Date().toISOString(),
+      withdrawn_by_user_id: user.id,
+    })
+    .eq('game_id', gameId)
+    .eq('user_id', userId);
+  if (error) redirect(`${detailPath}?error=db_players`);
+
+  await logAdminEvent({
+    actorId: user.id,
+    actorName,
+    eventType: 'game.player_withdrawn',
+    targetType: 'game',
+    targetId: gameId,
+    payload: { gameId, userId },
+  });
+
+  // No in-app notification yet: there is no «du ble trukket»-kind, and reusing
+  // an unrelated one (e.g. scorecard_approved) would mislead the player. A
+  // dedicated WD notification is deferred — the audit-log entry above is the
+  // record for now.
+
+  revalidateTag(`game-${gameId}`, 'max');
+  redirect(`${detailPath}?status=player_withdrawn`);
+}
+
+/**
+ * Admin: undo a withdrawal — nulls `withdrawn_at` and `withdrawn_by_user_id`
+ * so the player is re-included in readiness counts and the leaderboard (#386).
+ * Only while the game is still active.
+ */
+export async function adminUndoWithdraw(gameId: string, userId: string) {
+  const { supabase, user, actorName } = await loadAdminContext();
+  const detailPath = `/admin/games/${gameId}`;
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('id, name, status, game_mode')
+    .eq('id', gameId)
+    .single<{ id: string; name: string; status: GameStatus; game_mode: GameMode }>();
+  if (!game) redirect(`${detailPath}?error=not_found`);
+  if (game!.status !== 'active') redirect(`${detailPath}?error=not_active`);
+  if (!supportsWithdrawal(game!.game_mode)) redirect(detailPath);
+
+  const { error } = await supabase
+    .from('game_players')
+    .update({
+      withdrawn_at: null,
+      withdrawn_by_user_id: null,
+    })
+    .eq('game_id', gameId)
+    .eq('user_id', userId);
+  if (error) redirect(`${detailPath}?error=db_players`);
+
+  await logAdminEvent({
+    actorId: user.id,
+    actorName,
+    eventType: 'game.player_reinstated',
+    targetType: 'game',
+    targetId: gameId,
+    payload: { gameId, userId },
+  });
+
+  revalidateTag(`game-${gameId}`, 'max');
+  redirect(`${detailPath}?status=player_reinstated`);
 }
 
 /**
