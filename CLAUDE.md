@@ -92,6 +92,14 @@ Aldri si bare «sett dette i Supabase» — alltid med eksakt sti og kopier-lim-
 
 Alt backlog-arbeid spores i [GitHub Issues](https://github.com/jdlarssen/golf-app/issues), ikke i markdown-filer.
 
+#### Milestone på alle nye issues (mandatory)
+
+Hver `gh issue create` MÅ gi issuet en milestone — ingen issues skal ligge milestone-løse. Bruk `--milestone "<tittel>"` ved opprettelse (eller `gh api -X PATCH repos/jdlarssen/golf-app/issues/N -F milestone=<num>` etterpå).
+
+- **Velg beste passende milestone** mot flyt-kompasset (se under). Hører issuet til en kjerne-flyt-fase → riktig Tier. Er det epic/klubb-skala → `Klubb-skala (epic)`.
+- **Passer ingen → default `Backlog — uplanlagt / scale-triggered`**, og si fra i meldingen at det havnet i Backlog så det kan re-triages. Aldri la et nytt issue stå uten milestone «til senere».
+- **Mojibake-felle:** Tier 1- og Tier 5-titlene har korrupte tegn lagret (`f√∏rsteinntrykk`, `√Öpen`), så `--milestone "<ø-tittel>"` matcher ikke. Sett da via nummer: `gh api -X PATCH .../issues/N -F milestone=<num>` (hent nummer med `gh api repos/jdlarssen/golf-app/milestones`).
+
 #### Brukerflyt-forankring (mandatory, før alt annet)
 
 Brukerflytene er sannhetskilden for hva som er core. `docs/flows/*-fremtid.svg` = fremtidig kjerne-flyt vi bygger mot; `docs/user-flows.md` = tekst-referanse. Før du løser et issue:
@@ -173,11 +181,11 @@ Skal eksplisitt nevnes under «Teknisk» i closing-kommentaren — ikke skjul ku
 
 #### Nye funn underveis
 
-Funn som ikke hører hjemme i nåværende issue: opprett ny issue via `gh issue create` (med riktig `type:` + `area:` + scope-labels), spør bruker om det skal gjøres nå eller bare nevnes. Aldri smyge urelaterte fixes inn i nåværende PR.
+Funn som ikke hører hjemme i nåværende issue: opprett ny issue via `gh issue create` (med riktig `type:` + `area:` + scope-labels **+ milestone**, jf. «Milestone på alle nye issues»), spør bruker om det skal gjøres nå eller bare nevnes. Aldri smyge urelaterte fixes inn i nåværende PR.
 
 #### Reviewer-funn (mandatory)
 
-Når code-quality-reviewer, spec-reviewer eller annen subagent rapporterer findings som IKKE landerer i samme PR, MÅ hovedchatten opprette dem som GitHub Issues via `gh issue create` **før PR-merge**. Verbal rapport alene er ikke nok — funn forsvinner ut av kontekstvinduet etter neste sesjon. Adresserte funn (f.eks. JSDoc-stramming i siste commit) nevnes i closing-kommentaren under «Teknisk» i stedet. Ikke filer rene stil-meninger som issues — kun substantielle refactor/test/docs/edge-case-funn.
+Når code-quality-reviewer, spec-reviewer eller annen subagent rapporterer findings som IKKE landerer i samme PR, MÅ hovedchatten opprette dem som GitHub Issues via `gh issue create` (med milestone, jf. «Milestone på alle nye issues») **før PR-merge**. Verbal rapport alene er ikke nok — funn forsvinner ut av kontekstvinduet etter neste sesjon. Adresserte funn (f.eks. JSDoc-stramming i siste commit) nevnes i closing-kommentaren under «Teknisk» i stedet. Ikke filer rene stil-meninger som issues — kun substantielle refactor/test/docs/edge-case-funn.
 
 #### Ingen ceremoni utenom selve PR-en
 
