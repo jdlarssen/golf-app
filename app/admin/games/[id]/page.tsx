@@ -499,7 +499,7 @@ async function PlayersSections({
           sub={
             notSubmittedCount > 0
               ? game.status === 'finished'
-                ? `${notSubmittedCount} spilte ikke ferdig`
+                ? `${notSubmittedCount} leverte ikke`
                 : game.status === 'active'
                   ? `${notSubmittedCount} venter`
                   : undefined
@@ -719,10 +719,12 @@ async function PlayersSections({
                   let statusLabel: string;
                   let statusClass: string;
                   if (!p.submitted_at) {
-                    // På avsluttet spill er en uten levering en no-show
-                    // («avslutt likevel», #375) — ikke «spiller fortsatt».
+                    // På avsluttet spill leverte spilleren aldri scorekortet
+                    // («avslutt likevel», #375). «Ikke levert» (ikke «ikke
+                    // fullført») — scorene deres teller fortsatt i resultatet;
+                    // det er kun leveringen som mangler.
                     if (game.status === 'finished') {
-                      statusLabel = 'Ikke fullført';
+                      statusLabel = 'Ikke levert';
                       statusClass = 'text-muted';
                     } else {
                       statusLabel = '⏳ Spiller';
@@ -923,8 +925,8 @@ async function PlayersSections({
                 <div className="rounded-xl border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning">
                   <p>
                     {notSubmittedCount} av {players.length} spillere har ikke
-                    levert. Du kan avslutte likevel. De markeres «ikke fullført»
-                    og blokkerer ikke resultatet.
+                    levert. Du kan avslutte likevel. De blir stående som «ikke
+                    levert», men scorene deres teller fortsatt i resultatet.
                   </p>
                 </div>
                 <SmartLink

@@ -17,8 +17,8 @@ type Params = Promise<{ id: string }>;
  * Når én eller flere spillere aldri leverte, blokkerer den vanlige
  * endGame-validering med `not_all_submitted`. Denne dedikerte siden er den
  * eksplisitte escapen: den lister hvem som mangler og lar arrangøren bekrefte.
- * De manglende markeres «ikke fullført» (submitted_at forblir null) — aldri en
- * falsk levering.
+ * De manglende blir stående som «ikke levert» (submitted_at forblir null) —
+ * aldri en falsk levering, og scorene de rakk å registrere teller fortsatt.
  *
  * Guards:
  *  - game må finnes (notFound ellers)
@@ -124,11 +124,11 @@ export default async function AvsluttLikevelPage({
         </div>
 
         <p className="text-sm text-muted">
-          Avslutter du nå, blir disse markert{' '}
-          <span className="font-medium text-text">ikke fullført</span> — de
-          telles ikke som levert, men blokkerer ikke lenger. Resten av
-          resultatet låses og leaderboard åpnes for alle. Du kan gjenåpne spillet
-          etterpå hvis noen rekker å levere.
+          Avslutter du nå, blir disse stående som{' '}
+          <span className="font-medium text-text">ikke levert</span>. Scorene de
+          rakk å registrere teller fortsatt i resultatet. De blokkerer bare ikke
+          lenger avslutningen. Resten låses og leaderboard åpnes for alle, og du
+          kan gjenåpne spillet etterpå hvis noen rekker å levere.
         </p>
 
         <form action={endAnywayAction}>
