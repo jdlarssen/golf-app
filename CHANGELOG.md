@@ -17,7 +17,36 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.62.y — Best ball for alle kompislaget
+## 1.63.y — Kompis-wizard: velg antall spillere før format
+
+Issue [#373](https://github.com/jdlarssen/golf-app/issues/373). For Kompis-runder vises nå en enkel teller øverst i Format-steget. Velg antall spillere, og formater som ikke passer forsvinner — ingen feil format-valg, ingen tur frem og tilbake.
+
+### [1.63.0] - 2026-06-01
+
+> I Kompis-runden velger du antall spillere før format. Bare formater som passer det antallet vises — så slipper du å oppdage et mismatch to steg senere.
+
+<details>
+<summary>Teknisk</summary>
+
+Fikser [#373](https://github.com/jdlarssen/golf-app/issues/373) — format valgt blindt, mismatch oppdages i steg 4.
+
+#### Added
+- [`lib/wizard/fitsPlayerCount.ts`](lib/wizard/fitsPlayerCount.ts) — ren predikat-funksjon `fitsPlayerCount(gameMode, n): boolean`. Utledet fra `useGameFormState.ts` + `gamePayload.ts`-validerings-logikk. Dekker alle 22 `GameMode`-verdier med eksakt/partall/multiplum-regler. Ukjente fremtidige modes får `true` (permissivt). Exhaustiveness-sjekk via `never`-assertion i default-gren.
+- [`lib/wizard/fitsPlayerCount.test.ts`](lib/wizard/fitsPlayerCount.test.ts) — 90 Type-A-tester med `it.each`, én klynge per format-familie. Dekker grense-verdier, partall, multiplum, best ball 2–8-oppdateringen fra #374.
+- `app/admin/games/new/GameWizard.tsx` — `PlayerCountPicker`-komponent (+/−-knapper, ≥44px tap-targets, forest-and-champagne-palett). Vises atop FormatGrid kun for Kompis-intent. «Vis alle»-lenke nullstiller filteret. Steg 4 viser hint med antallet valgt i steg 2.
+- `app/admin/games/new/GameWizard.test.tsx` — én render/interaksjons-test: count=3 skjuler best_ball, viser nines; «Vis alle» gjenoppretter.
+
+#### Changed
+- [`app/admin/games/new/useGameFormState.ts`](app/admin/games/new/useGameFormState.ts) — nytt state-felt `expectedPlayerCount: number | undefined` + setter `setExpectedPlayerCount`. Setter nullstiller `gameMode`/`formatChosen` automatisk hvis det valgte formatet ikke lenger passer etter teller-endring. Importerer `fitsPlayerCount` statisk.
+
+#### Notes
+- `kompis`-katalogen fra DB inneholder 18 aktive formater. Alle er eksplisitt håndtert i predikatet; ingen defaultet permissivt for kjente katalog-slugs.
+- Avvik fra issue-tabell: best ball er `even 2–8` (ikke `nøyaktig 8`) — reflekterer #374-oppdateringen. Texas scramble er `multiplum av 2` (team_size 2 eller 4 begge gyldige; multiplum av 2 dekker begge). Shamble er `multiplum av 3 ELLER 4` (ikke bare 3/4-lag).
+
+</details>
+
+<details>
+<summary><strong>1.62.y — Best ball for alle kompislaget (1 oppføring) — klikk for å vise</strong></summary>
 
 Issue [#374](https://github.com/jdlarssen/golf-app/issues/374). Best ball støtter nå 2, 4, 6 eller 8 spillere — ikke bare 8. Trekk tilfeldig fungerer med alle partall-antall.
 
@@ -39,6 +68,8 @@ Fikser [#374](https://github.com/jdlarssen/golf-app/issues/374) — best ball ha
 
 #### Added
 - `lib/games/gamePayload.test.ts` — 7 nye best ball-tester: 2-spiller-publish (1 lag), 4-spiller-publish (2 lag, `teams_count = 2`), 6-spiller-publish (3 lag), 0-spiller → `min_players_for_mode`, ubalansert lag → `team_balance`, draft tolererer ubalanse + 0 spillere.
+
+</details>
 
 </details>
 

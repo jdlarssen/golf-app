@@ -255,6 +255,62 @@ describe('GameWizard — best-ball inline team/flight på steg 4', () => {
   });
 });
 
+// ─────────────────────────────────────────────────────────────────────────
+// #373: Kompis-intent teller-filter — én render/interaksjons-test
+// ─────────────────────────────────────────────────────────────────────────
+
+const FORMATS_BY_INTENT_WITH_NINES = {
+  ...FORMATS_BY_INTENT,
+  kompis: [
+    formatRow('stableford', 'Stableford', true, 10),
+    formatRow('best_ball', 'Best ball', true, 20),
+    formatRow('nines', 'Nines', false, 71),
+  ],
+};
+
+function renderWizardWithNines() {
+  return render(
+    <GameWizard
+      courses={COURSES}
+      players={EIGHT_PLAYERS}
+      mode={{ kind: 'create', createDraftAction: NO_OP, createAndPublishAction: NO_OP }}
+      formatsByIntent={FORMATS_BY_INTENT_WITH_NINES}
+      cupEligibleFormats={CUP_ELIGIBLE}
+    />,
+  );
+}
+
+describe('GameWizard — #373 Kompis teller-filter', () => {
+  it('count=3 skjuler best_ball og viser nines i steg 2', () => {
+    renderWizardWithNines();
+
+    // Steg 1: velg Kompis
+    fireEvent.click(screen.getByRole('radio', { name: /kompis-runde/i }));
+    clickNext();
+
+    // Steg 2: alle tre formater vises først (ingen count satt)
+    expect(screen.getByRole('radio', { name: /^best ball$/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /^nines$/i })).toBeInTheDocument();
+
+    // Trykk «Flere spillere» to ganger: → 6 (default 4 + 2)
+    // Trykk «Færre spillere» tre ganger: → 3
+    fireEvent.click(screen.getByRole('button', { name: /flere spillere/i }));
+    fireEvent.click(screen.getByRole('button', { name: /flere spillere/i }));
+    fireEvent.click(screen.getByRole('button', { name: /færre spillere/i }));
+    fireEvent.click(screen.getByRole('button', { name: /færre spillere/i }));
+    fireEvent.click(screen.getByRole('button', { name: /færre spillere/i }));
+
+    // count=3: best_ball passer ikke (trenger partall ≥2), nines passer (nøyaktig 3)
+    expect(screen.queryByRole('radio', { name: /^best ball$/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /^nines$/i })).toBeInTheDocument();
+
+    // «Vis alle»-lenke viser alt igjen
+    fireEvent.click(screen.getByRole('button', { name: /vis alle/i }));
+    expect(screen.getByRole('radio', { name: /^best ball$/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /^nines$/i })).toBeInTheDocument();
+  });
+});
+
 describe('GameWizard — escape-hatch til full-form bevarer state', () => {
   it('bytter til full-form med wizard-state pre-fylt og tilbake-knapp restaurer', () => {
     renderWizard({ players: EIGHT_PLAYERS.slice(0, 2) });

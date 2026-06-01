@@ -160,6 +160,7 @@ export function cryptoShuffle<T>(input: T[]): T[] {
 }
 
 import type { Intent } from '@/lib/wizard/intent';
+import { fitsPlayerCount as fitsPlayerCountFn } from '@/lib/wizard/fitsPlayerCount';
 
 type UseGameFormStateInput = {
   initialValues?: InitialValues;
@@ -432,6 +433,14 @@ export function useGameFormState({
     initialValues?.game_mode !== undefined || lockGameMode,
   );
 
+  // #373: Kompis-intent — antall spillere valgt FØR format. Undefined = ikke
+  // satt ennå (viser alle formater). Settes av teller-kontrollen i steg 2.
+  // Når count endres slik at gjeldende format ikke lenger passer, nullstilles
+  // gameMode til default og formatChosen til false slik at brukeren velger på nytt.
+  const [expectedPlayerCount, setExpectedPlayerCountRaw] = useState<
+    number | undefined
+  >(undefined);
+
   // Self-påmelding (#199). Defaultes til 'invite_only' + 'solo' — dagens
   // flyt bevart 100% når admin ikke aktivt velger noe annet. Edit-flyten
   // pre-fyller fra initialValues hvis spillet allerede er konfigurert.
@@ -459,6 +468,19 @@ export function useGameFormState({
     setCourseIdRaw(next);
     setTeeBoxId('');
     setPlayerGenders(deriveDefaultGenders(players));
+  }
+
+  // #373: setter for expectedPlayerCount. Når antallet endres slik at det
+  // allerede valgte formatet ikke lenger passer, nullstilles valget
+  // (formatChosen=false) så brukeren må velge et format som passer — ingen
+  // mismatch kan nå publisering. gameMode settes tilbake til default; verdien
+  // er uansett maskert av formatChosen=false i FormatGrid til et nytt valg.
+  function setExpectedPlayerCount(next: number | undefined) {
+    setExpectedPlayerCountRaw(next);
+    if (next !== undefined && formatChosen && !fitsPlayerCountFn(gameMode, next)) {
+      setGameMode('best_ball');
+      setFormatChosen(false);
+    }
   }
 
   function handleModeChange(next: GameMode) {
@@ -1495,6 +1517,8 @@ export function useGameFormState({
     formatChosen,
     intent,
     setIntent,
+    expectedPlayerCount,
+    setExpectedPlayerCount,
     registrationMode,
     setRegistrationMode,
     registrationType,

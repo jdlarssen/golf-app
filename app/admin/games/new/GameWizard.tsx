@@ -60,6 +60,7 @@ import {
   type InitialValues,
 } from './GameForm';
 import { suggestGameName } from '@/lib/games/autoGameName';
+import { fitsPlayerCount } from '@/lib/wizard/fitsPlayerCount';
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -433,16 +434,40 @@ export function GameWizard({
               </p>
             </div>
           ) : state.intent === 'cup' ? null : (
-            <FormatGrid
-              formats={
-                state.intent
-                  ? (formatsByIntent[state.intent] ?? [])
-                  : []
-              }
-              value={state.formatChosen ? state.gameMode : undefined}
-              onChange={(slug) => state.handleModeChange(slug as GameMode)}
-              disabled={state.lockGameMode}
-            />
+            <>
+              {/* #373: teller for antall spillere — kun for Kompis-intent */}
+              {state.intent === 'kompis' && (
+                <PlayerCountPicker
+                  value={state.expectedPlayerCount}
+                  onChange={state.setExpectedPlayerCount}
+                />
+              )}
+              <FormatGrid
+                formats={
+                  state.intent
+                    ? (() => {
+                        const all = formatsByIntent[state.intent] ?? [];
+                        // #373: filtrer på antall spillere for Kompis
+                        if (
+                          state.intent === 'kompis' &&
+                          state.expectedPlayerCount !== undefined
+                        ) {
+                          return all.filter((f) =>
+                            fitsPlayerCount(
+                              f.slug as GameMode,
+                              state.expectedPlayerCount as number,
+                            ),
+                          );
+                        }
+                        return all;
+                      })()
+                    : []
+                }
+                value={state.formatChosen ? state.gameMode : undefined}
+                onChange={(slug) => state.handleModeChange(slug as GameMode)}
+                disabled={state.lockGameMode}
+              />
+            </>
           )}
 
           {state.formatChosen && (
@@ -691,6 +716,14 @@ export function GameWizard({
               spillet er opprettet.
             </p>
           )}
+          {/* #373: hint om antall spillere valgt i steg 2 */}
+          {!state.playersStepOptional &&
+            state.intent === 'kompis' &&
+            state.expectedPlayerCount !== undefined && (
+              <p className="rounded-md border border-border bg-surface-2 px-3 py-2 text-xs text-muted">
+                Du valgte {state.expectedPlayerCount} spillere. Legg til nøyaktig så mange for best mulig spill.
+              </p>
+            )}
           <PlayersSection state={state} players={players} heading="Spillere" />
           {/* TeamsAssignmentSection er self-gating per modus — den rendrer
               kun de relevante under-blokkene (matchplay-sider / lag-grid /
@@ -966,6 +999,87 @@ function FormDataInputs({
         </div>
       ))}
     </>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// #373: Antall-spiller-velger for Kompis-intent i steg 2. Vises over
+// FormatGrid slik at admin velger antall FØR format. +/−-knapper med
+// ≥44px tap-target. Forest-and-champagne-palett via CSS-variabler.
+// Min 1, maks 16 (rimelig øvre grense for en kompis-runde).
+// ──────────────────────────────────────────────────────────────────────
+
+const PLAYER_COUNT_MIN = 1;
+const PLAYER_COUNT_MAX = 16;
+const PLAYER_COUNT_DEFAULT = 4;
+
+function PlayerCountPicker({
+  value,
+  onChange,
+}: {
+  value: number | undefined;
+  onChange: (next: number | undefined) => void;
+}) {
+  const count = value ?? PLAYER_COUNT_DEFAULT;
+
+  function decrement() {
+    const next = Math.max(PLAYER_COUNT_MIN, count - 1);
+    onChange(next);
+  }
+
+  function increment() {
+    const next = Math.min(PLAYER_COUNT_MAX, count + 1);
+    onChange(next);
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+        Hvor mange er dere?
+      </p>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          aria-label="Færre spillere"
+          onClick={decrement}
+          disabled={count <= PLAYER_COUNT_MIN}
+          className="flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-surface text-text transition-colors hover:bg-primary-soft/60 disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+        >
+          <span className="text-xl leading-none select-none">−</span>
+        </button>
+        <span
+          aria-live="polite"
+          aria-label={`${count} spillere`}
+          className="min-w-[3ch] text-center font-serif text-2xl tabular-nums text-text"
+        >
+          {value !== undefined ? count : '?'}
+        </span>
+        <button
+          type="button"
+          aria-label="Flere spillere"
+          onClick={increment}
+          disabled={count >= PLAYER_COUNT_MAX}
+          className="flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-surface text-text transition-colors hover:bg-primary-soft/60 disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+        >
+          <span className="text-xl leading-none select-none">+</span>
+        </button>
+        {value !== undefined && (
+          <button
+            type="button"
+            onClick={() => onChange(undefined)}
+            className="ml-1 font-sans text-xs text-muted underline underline-offset-2 hover:text-text"
+          >
+            Vis alle
+          </button>
+        )}
+      </div>
+      {value !== undefined && (
+        <p className="font-sans text-xs text-muted">
+          Viser formater som passer for {count}{' '}
+          {count === 1 ? 'spiller' : 'spillere'}.
+        </p>
+      )}
+    </div>
   );
 }
 
