@@ -257,13 +257,15 @@ function parseGameMode(formData: FormData): GameMode | null {
 }
 
 /**
- * Best-ball-netto-validator. Beholder dagens regler 1:1:
- *  - publish krever eksakt 8 spillere fordelt 2-2-2-2 på 4 lag
+ * Best-ball-netto-validator. Fleksibel lagstørrelse (#374):
+ *  - publish krever ≥1 lag à 2 spillere (2, 4, 6 eller 8 spillere),
+ *    hvert ikke-tomt lag har EKSAKT 2 spillere — speiler validateStablefordTeam
  *  - draft tillater partial state (0..8 spillere), men team/flight rangen
  *    blir likevel validert per ikke-tom rad
  *  - duplikat-sjekk gjelder begge moduser
+ *  - UI-gitteret har 4 lag (team_number 1..4); tomme lag er lov ved publish
  *
- * Mode_config-output speiler 0030-backfill: `{kind, team_size: 2, teams_count: 4}`.
+ * Mode_config-output: `{kind, team_size: 2, teams_count: <faktisk antall lag>}`.
  */
 function validateBestBall(
   formData: FormData,
@@ -273,12 +275,7 @@ function validateBestBall(
   const seen = new Set<string>();
   for (let i = 0; i < 8; i++) {
     const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
-    if (!user_id) {
-      if (mode === 'publish') {
-        return { ok: false, errorCode: 'players_required' };
-      }
-      continue; // draft: skip empty slot
-    }
+    if (!user_id) continue; // hopp over tomme slots i begge moduser
     if (seen.has(user_id)) {
       return { ok: false, errorCode: 'duplicate_player' };
     }
@@ -299,22 +296,27 @@ function validateBestBall(
   }
 
   if (mode === 'publish') {
+    if (players.length === 0) {
+      return { ok: false, errorCode: 'min_players_for_mode' };
+    }
     const teamCounts = new Map<number, number>();
     for (const p of players) {
       if (p.team_number === null) continue;
       teamCounts.set(p.team_number, (teamCounts.get(p.team_number) ?? 0) + 1);
     }
-    for (let t = 1; t <= 4; t++) {
-      if (teamCounts.get(t) !== 2) {
+    // Hvert ikke-tomt lag må ha EKSAKT 2 spillere
+    for (const [, count] of teamCounts) {
+      if (count !== 2) {
         return { ok: false, errorCode: 'team_balance' };
       }
     }
   }
 
+  const teams_count = new Set(players.map((p) => p.team_number)).size;
   return {
     ok: true,
     players,
-    mode_config: { kind: 'best_ball', team_size: 2, teams_count: 4 },
+    mode_config: { kind: 'best_ball', team_size: 2, teams_count },
   };
 }
 

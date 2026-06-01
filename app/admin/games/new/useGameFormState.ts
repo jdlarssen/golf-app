@@ -612,8 +612,6 @@ export function useGameFormState({
 
   const availableTees = selectedCourse?.tee_boxes ?? [];
 
-  const eightSelected = selectedPlayerIds.length === 8;
-
   // Map team -> [playerId, playerId | undefined] so each lag-card can display
   // its two slots even before they're filled.
   const playersByTeam = useMemo(() => {
@@ -625,10 +623,22 @@ export function useGameFormState({
     return result;
   }, [selectedPlayerIds, teamByPlayer]);
 
+  // Fleksibel best-ball-validitet (#374): speiler parStablefordTeamsBalanced /
+  // parStablefordHasAtLeastOneTeam — deles mellom best ball og par-stableford
+  // for å unngå duplisering av samme logikk.
+  const flexTeamsBalanced = TEAM_NUMBERS.every(
+    (t) => playersByTeam[t].length === 0 || playersByTeam[t].length === 2,
+  );
+  const flexTeamsHasAtLeastOneTeam = TEAM_NUMBERS.some(
+    (t) => playersByTeam[t].length === 2,
+  );
+
   const teamsComplete =
-    eightSelected &&
-    TEAM_NUMBERS.every((t) => playersByTeam[t].length === 2) &&
-    selectedPlayerIds.every((pid) => teamByPlayer[pid] !== undefined);
+    selectedPlayerIds.length >= 2 &&
+    selectedPlayerIds.length % 2 === 0 &&
+    selectedPlayerIds.every((pid) => teamByPlayer[pid] !== undefined) &&
+    flexTeamsBalanced &&
+    flexTeamsHasAtLeastOneTeam;
 
   // Default flights: lag 1 + lag 2 = flight 1, lag 3 + lag 4 = flight 2.
   // Recomputed any time teams change so admin sees a sensible baseline; the
@@ -670,11 +680,13 @@ export function useGameFormState({
   }
 
   function drawRandomTeams() {
-    if (!eightSelected) return;
+    const count = selectedPlayerIds.length;
+    // Krever partall antall spillere (2, 4, 6 eller 8) for å fordele 2 per lag
+    if (count < 2 || count % 2 !== 0) return;
     const shuffled = cryptoShuffle(selectedPlayerIds);
     const nextTeams: Record<string, TeamNumber> = {};
     const nextFlights: Record<string, number> = {};
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < count; i++) {
       const team = (Math.floor(i / 2) + 1) as TeamNumber;
       nextTeams[shuffled[i]] = team;
       nextFlights[shuffled[i]] = teamDefaultFlight(team);
@@ -945,18 +957,14 @@ export function useGameFormState({
   // flight settes automatisk til team_number (gjenbruker `teamDefaultFlight`
   // er overflødig her siden par-stableford uansett mapper flight = team
   // ved payload-bygging).
-  const parStablefordTeamsBalanced = TEAM_NUMBERS.every(
-    (t) => playersByTeam[t].length === 0 || playersByTeam[t].length === 2,
-  );
-  const parStablefordHasAtLeastOneTeam = TEAM_NUMBERS.some(
-    (t) => playersByTeam[t].length === 2,
-  );
+  // flexTeamsBalanced + flexTeamsHasAtLeastOneTeam (definert over) er identisk
+  // logikk — deles mellom best-ball og par-stableford.
   const parStablefordPlayersValid =
     selectedPlayerIds.length >= 2 &&
     selectedPlayerIds.length % 2 === 0 &&
     selectedPlayerIds.every((pid) => teamByPlayer[pid] !== undefined) &&
-    parStablefordTeamsBalanced &&
-    parStablefordHasAtLeastOneTeam;
+    flexTeamsBalanced &&
+    flexTeamsHasAtLeastOneTeam;
 
   // Texas-validitet: hvert ikke-tomt lag må ha eksakt teamSize spillere
   // (2 eller 4), alle valgte spillere må ha team_number satt, og minst ett
@@ -1117,8 +1125,8 @@ export function useGameFormState({
   // historie til admin når noe mangler:
   // - solo (stableford team_size=1 ELLER solo_strokeplay): minst 1
   //   spiller, ingen lag/flight
-  // - best-ball-netto: eksakt 8 spillere fordelt 2-2-2-2 på 4 lag +
-  //   flight-fordeling per spiller
+  // - best-ball-netto: 2/4/6/8 spillere, hvert ikke-tomt lag à 2 +
+  //   flight-fordeling per spiller (#374)
   // - par-stableford (team_size=2): 2/4/6/8 spillere, hvert ikke-tomt lag
   //   à 2, ingen separat flight-validering (flight = team automatisk)
   // - matchplay (singles_matchplay): nøyaktig 2 spillere, én på hver side
@@ -1127,7 +1135,7 @@ export function useGameFormState({
     : isSolo
       ? selectedPlayerIds.length >= 1
       : isBestBall
-        ? eightSelected && teamsComplete && flightsComplete
+        ? teamsComplete && flightsComplete
         : isParStableford
           ? parStablefordPlayersValid
           : isTexas
@@ -1217,13 +1225,12 @@ export function useGameFormState({
       missingForPublish.push('én spiller på hver side');
     }
   } else if (isBestBall) {
-    if (selectedPlayerIds.length < 8) {
-      const remaining = 8 - selectedPlayerIds.length;
-      missingForPublish.push(
-        `${remaining} ${remaining === 1 ? 'spiller' : 'spillere'}`,
-      );
+    if (selectedPlayerIds.length < 2) {
+      missingForPublish.push('minst 2 spillere (partall, fordelt 2 per lag)');
+    } else if (selectedPlayerIds.length % 2 !== 0) {
+      missingForPublish.push('partall antall spillere (2, 4, 6 eller 8)');
     } else if (!teamsComplete) {
-      missingForPublish.push('lag-fordeling');
+      missingForPublish.push('lag-fordeling (2 per lag)');
     } else if (!flightsComplete) {
       missingForPublish.push('flight-fordeling');
     }
@@ -1525,7 +1532,6 @@ export function useGameFormState({
     selectedCourse,
     filteredPlayers,
     availableTees,
-    eightSelected,
     playersByTeam,
     teamsComplete,
     flightsComplete,

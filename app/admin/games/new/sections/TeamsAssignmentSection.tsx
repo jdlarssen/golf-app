@@ -51,7 +51,6 @@ export function TeamsAssignmentSection({
     playerGenders,
     setPlayerGenders,
     playersByTeam,
-    eightSelected,
     teamsComplete,
     isSolo,
     isBestBall,
@@ -155,12 +154,13 @@ export function TeamsAssignmentSection({
           og matchplay hopper over hele seksjonen siden det ikke finnes lag
           å fordele (matchplay har sin egen side-tilordnings-seksjon over).
           Synlighet:
-          - Best-ball: vises når alle 8 spillere er valgt (eksakt 8-krav).
+          - Best-ball: vises så snart admin har valgt minst 2 spillere
+            (fleksibel 2/4/6/8-regel etter #374 — ingen 8-krav).
           - Par-stableford: vises så snart admin har valgt minst 2 spillere,
             siden lag-fordelingen skjer parallelt med spiller-valg (admin
-            kan ha 2/4/6/8 spillere på 1-4 lag, ingen 8-krav). */}
+            kan ha 2/4/6/8 spillere på 1-4 lag). */}
       {requiresTeams &&
-        ((isBestBall && eightSelected) ||
+        ((isBestBall && selectedPlayerIds.length >= 2) ||
           (isParStableford && selectedPlayerIds.length >= 2) ||
           (isTexas && selectedPlayerIds.length >= teamSize) ||
           (isAmbrose && selectedPlayerIds.length >= teamSize) ||
@@ -191,13 +191,11 @@ export function TeamsAssignmentSection({
             </p>
           ) : (
             <p className="text-xs text-muted">
-              4 lag à 2 spillere. Trekk tilfeldig eller velg manuelt.
+              Inntil 4 lag à 2 spillere. Hvert lag må ha enten 0 eller 2 spillere. Tomme lag publiseres ikke.
             </p>
           )}
-          {/* «Trekk tilfeldig»/«Tøm lag» er kun nyttig når antallet er fast
-              (best-ball: 8 spillere → 4 lag à 2). Par-stableford og Texas
-              har variabelt antall, så admin tilordner manuelt — kan
-              generaliseres i en senere fase hvis det blir vondt UX. */}
+          {/* «Trekk tilfeldig»/«Tøm lag» — best-ball støtter nå 2/4/6/8 spillere
+              (#374); drawRandomTeams bruker det faktiske partall-antallet. */}
           {isBestBall && (
             <div className="flex gap-2">
               <Button

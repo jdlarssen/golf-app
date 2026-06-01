@@ -144,7 +144,7 @@ export function isAlternateShotMatchplay(mode: GameMode): boolean {
  *    lag) eier scores-radene; andre lag-medlemmer har null på sine egne rader.
  */
 export type GameModeConfig =
-  | { kind: 'best_ball'; team_size: 2; teams_count: 4 }
+  | { kind: 'best_ball'; team_size: 2; teams_count: number }
   | { kind: 'stableford'; team_size: 1; points_table: 'standard' }
   | { kind: 'stableford'; team_size: 2; points_table: 'standard' }
   | { kind: 'modified_stableford'; team_size: 1; points_table: 'modified' }

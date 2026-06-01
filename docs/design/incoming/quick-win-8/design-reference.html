@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tørny · Skeleton-skjelett</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --primary: #1B4332;
+    --accent: #C9A961;
+    --accent-deep: #B89446;
+    --bg: #F8F6F0;
+    --surface: #FFFFFF;
+    --border: #E5E0D3;
+    --row-divider: #EDE6D2;
+    --text: #1A2E1F;
+    --text-muted: #5C5347;
+    --skel-base: #ECE5D2;
+    --skel-tint: #F3EDDD;
+    --brass-top: #D3C9A6;
+    --brass-bottom: #E5E0D3;
+    --serif: 'Fraunces', Georgia, serif;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(180deg, #1F2A24 0%, #131A16 100%);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  .stage {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 28px 16px 60px;
+  }
+
+  /* ── Top bar ─────────────────────── */
+  .topbar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 24px;
+    color: #D9D2C0;
+  }
+  .top-kicker {
+    font: 600 10px/1 var(--sans);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .top-title {
+    font: 500 22px/1.1 var(--serif);
+    letter-spacing: -0.012em;
+    color: #F0EDE5;
+  }
+  .switcher {
+    display: inline-flex;
+    background: rgba(15,22,18,0.55);
+    border: 1px solid rgba(201,169,97,0.18);
+    border-radius: 9999px;
+    padding: 4px;
+    gap: 2px;
+  }
+  .switcher button {
+    background: transparent;
+    border: none;
+    color: #D9D2C0;
+    padding: 8px 18px;
+    border-radius: 9999px;
+    font: 600 11px/1 var(--sans);
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 160ms ease, color 160ms ease;
+  }
+  .switcher button.active {
+    background: var(--accent);
+    color: #1F1B0F;
+  }
+
+  /* ── Phone frame ─────────────────── */
+  .phone {
+    width: 390px;
+    height: 780px;
+    background: var(--bg);
+    border-radius: 44px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.05) inset;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .statusbar {
+    height: 44px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 22px 0;
+    font: 600 14px/1 var(--sans);
+    color: var(--text);
+    position: relative;
+    z-index: 2;
+  }
+  .notch {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 110px;
+    height: 28px;
+    background: #000;
+    border-radius: 14px;
+    z-index: 3;
+  }
+  .home-indicator {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 134px;
+    height: 5px;
+    background: rgba(26,46,31,0.30);
+    border-radius: 9999px;
+    z-index: 2;
+  }
+
+  .screen {
+    position: absolute;
+    inset: 44px 0 34px;
+    overflow: hidden;
+  }
+
+  /* ── Headers in screen ───────────── */
+  .header {
+    padding: 8px 18px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .header-kicker {
+    font: 600 10px/1 var(--sans);
+    letter-spacing: 0.20em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .header-spacer { flex: 1; }
+  .header-icon {
+    font: 500 18px var(--sans);
+    color: var(--text-muted);
+  }
+
+  /* ── Skeleton shapes ─────────────── */
+  .sk {
+    background: linear-gradient(
+      100deg,
+      var(--skel-base) 0%,
+      var(--skel-tint) 50%,
+      var(--skel-base) 100%
+    );
+    background-size: 220% 100%;
+    background-position: 100% 0;
+    animation: shimmer 1.8s ease-in-out infinite;
+    border-radius: 6px;
+  }
+  @keyframes shimmer {
+    0%   { background-position: 100% 0; }
+    100% { background-position: -120% 0; }
+  }
+  .sk-circle { border-radius: 9999px; }
+  .sk-pill   { border-radius: 9999px; }
+
+  /* ── HJEM-skeleton ───────────────── */
+  .hj-greeting {
+    padding: 6px 18px 18px;
+  }
+  .hj-greeting .row1 { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+  .hj-greeting .row1 .sk-kicker { width: 86px; height: 10px; }
+  .hj-greeting .h-line1 { width: 200px; height: 26px; margin-bottom: 8px; border-radius: 7px; }
+  .hj-greeting .h-line2 { width: 130px; height: 13px; }
+
+  .hj-ribbon {
+    margin: 6px 18px 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .hj-ribbon .line {
+    flex: 1;
+    height: 6px;
+    position: relative;
+  }
+  .hj-ribbon .line::before,
+  .hj-ribbon .line::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+  }
+  .hj-ribbon .line::before { top: 1px; background: var(--brass-top); opacity: 0.6; }
+  .hj-ribbon .line::after  { top: 5px; background: var(--brass-bottom); opacity: 0.6; }
+  .hj-ribbon .sk-rib-text {
+    width: 80px; height: 11px;
+  }
+
+  .hj-cards {
+    padding: 0 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .hj-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px 18px 20px;
+    box-shadow: 0 1px 2px rgba(26,46,31,0.04), 0 2px 8px rgba(26,46,31,0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .hj-card .top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .hj-card .icon-tile {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+  }
+  .hj-card .titles { flex: 1; display: flex; flex-direction: column; gap: 7px; }
+  .hj-card .titles .t1 { width: 60%; height: 16px; border-radius: 5px; }
+  .hj-card .titles .t2 { width: 40%; height: 11px; }
+  .hj-card .chevron { width: 14px; height: 14px; border-radius: 4px; }
+
+  .hj-card .meta-row {
+    display: flex; align-items: center; gap: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--row-divider);
+  }
+  .hj-card .meta-row .m1 { width: 70px; height: 10px; }
+  .hj-card .meta-row .m2 { width: 50px; height: 10px; }
+  .hj-card .meta-row .m3 { margin-left: auto; width: 64px; height: 22px; border-radius: 9999px; }
+
+  /* admin menu skeleton */
+  .hj-admin-grid {
+    margin: 18px 14px 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .hj-admin-tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    height: 92px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .hj-admin-tile .ai { width: 32px; height: 32px; border-radius: 9px; }
+  .hj-admin-tile .at { width: 70%; height: 13px; border-radius: 5px; }
+
+  /* ── LEADERBOARD-skeleton ────────── */
+  .lb-title {
+    padding: 4px 18px 14px;
+  }
+  .lb-title .lk { width: 100px; height: 10px; margin-bottom: 14px; }
+  .lb-title .lh { width: 180px; height: 24px; border-radius: 6px; margin-bottom: 10px; }
+  .lb-title .lm { width: 140px; height: 12px; }
+
+  .lb-podium {
+    margin: 6px 14px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px 22px 22px;
+    box-shadow: 0 2px 8px rgba(26,46,31,0.06);
+    position: relative;
+    overflow: hidden;
+  }
+  .lb-podium::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(201,169,97,0.35) 40%, rgba(201,169,97,0.35) 60%, transparent 100%);
+  }
+  .lb-podium .num-row {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 18px;
+  }
+  .lb-podium .num {
+    width: 56px; height: 56px;
+    border-radius: 14px;
+  }
+  .lb-podium .name-stack { flex: 1; display: flex; flex-direction: column; gap: 9px; }
+  .lb-podium .name-stack .n1 { width: 70%; height: 19px; border-radius: 6px; }
+  .lb-podium .name-stack .n2 { width: 50%; height: 12px; }
+  .lb-podium .score-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+  }
+  .lb-podium .score-stack .s1 { width: 60px; height: 26px; border-radius: 6px; }
+  .lb-podium .score-stack .s2 { width: 40px; height: 11px; }
+
+  .lb-podium .meta-row {
+    display: flex; align-items: center; gap: 10px;
+    padding-top: 14px;
+    border-top: 1px solid var(--row-divider);
+  }
+  .lb-podium .meta-row .mp { width: 90px; height: 11px; }
+  .lb-podium .meta-row .mp2 { margin-left: auto; width: 60px; height: 22px; border-radius: 9999px; }
+
+  .lb-row {
+    margin: 0 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .lb-row .pos { width: 22px; height: 18px; }
+  .lb-row .name { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+  .lb-row .name .n1 { width: 70%; height: 15px; border-radius: 5px; }
+  .lb-row .name .n2 { width: 45%; height: 10px; }
+  .lb-row .score { width: 50px; height: 22px; border-radius: 6px; }
+  .lb-row .delta { width: 38px; height: 11px; }
+
+  /* Stagger the row mount */
+  .stagger-1 { animation-delay: 0ms !important; }
+  .stagger-2 { animation-delay: 90ms !important; }
+  .stagger-3 { animation-delay: 180ms !important; }
+  .stagger-4 { animation-delay: 270ms !important; }
+  .stagger-5 { animation-delay: 360ms !important; }
+  .stagger-6 { animation-delay: 450ms !important; }
+  .stagger-7 { animation-delay: 540ms !important; }
+  .stagger-8 { animation-delay: 630ms !important; }
+
+  /* ── Footer note ──────────────────── */
+  .note {
+    margin: 18px auto 0;
+    max-width: 390px;
+    color: #C9C2B0;
+    font: 400 12px/1.55 var(--sans);
+    text-align: center;
+    padding: 0 12px;
+  }
+  .note em { font: italic 500 12px var(--serif); color: var(--accent); }
+
+  .views { position: relative; width: 390px; }
+  .view  { display: none; }
+  .view.active { display: block; }
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <div class="topbar">
+    <div class="top-kicker">Tørny · Quick Win #8</div>
+    <div class="top-title">Skeleton-skjelett</div>
+    <div class="switcher" id="switcher">
+      <button class="active" data-view="hjem">Hjem</button>
+      <button data-view="lb">Leaderboard</button>
+    </div>
+  </div>
+
+  <div class="views">
+
+    <!-- ── VIEW: HJEM ─────────────────── -->
+    <div class="view active" id="view-hjem">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="statusbar">
+          <span>9:41</span>
+          <span></span>
+        </div>
+
+        <div class="screen">
+          <!-- Header bar -->
+          <div class="header">
+            <div class="header-kicker">Tørny</div>
+            <div class="header-spacer"></div>
+            <div class="sk sk-circle" style="width:30px;height:30px"></div>
+          </div>
+
+          <!-- Greeting -->
+          <div class="hj-greeting">
+            <div class="row1">
+              <div class="sk sk-kicker"></div>
+            </div>
+            <div class="sk h-line1"></div>
+            <div class="sk h-line2"></div>
+          </div>
+
+          <!-- Brass ribbon -->
+          <div class="hj-ribbon">
+            <div class="line"></div>
+            <div class="sk sk-rib-text"></div>
+            <div class="line"></div>
+          </div>
+
+          <!-- Active games cards -->
+          <div class="hj-cards">
+            <div class="hj-card">
+              <div class="top">
+                <div class="sk icon-tile"></div>
+                <div class="titles">
+                  <div class="sk t1"></div>
+                  <div class="sk t2"></div>
+                </div>
+                <div class="sk chevron"></div>
+              </div>
+              <div class="meta-row">
+                <div class="sk m1"></div>
+                <div class="sk m2"></div>
+                <div class="sk m3 sk-pill"></div>
+              </div>
+            </div>
+            <div class="hj-card">
+              <div class="top">
+                <div class="sk icon-tile stagger-2"></div>
+                <div class="titles">
+                  <div class="sk t1 stagger-2"></div>
+                  <div class="sk t2 stagger-2"></div>
+                </div>
+                <div class="sk chevron stagger-2"></div>
+              </div>
+              <div class="meta-row">
+                <div class="sk m1 stagger-2"></div>
+                <div class="sk m2 stagger-2"></div>
+                <div class="sk m3 sk-pill stagger-2"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Admin tiles -->
+          <div class="hj-admin-grid">
+            <div class="hj-admin-tile">
+              <div class="sk ai stagger-3"></div>
+              <div class="sk at stagger-3"></div>
+            </div>
+            <div class="hj-admin-tile">
+              <div class="sk ai stagger-4"></div>
+              <div class="sk at stagger-4"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="home-indicator"></div>
+      </div>
+    </div>
+
+    <!-- ── VIEW: LEADERBOARD ─────────── -->
+    <div class="view" id="view-lb">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="statusbar">
+          <span>9:41</span>
+          <span></span>
+        </div>
+
+        <div class="screen">
+          <!-- Header bar -->
+          <div class="header">
+            <div class="header-icon">‹</div>
+            <div class="header-kicker">Leaderboard</div>
+            <div class="header-spacer"></div>
+            <div class="sk sk-circle" style="width:24px;height:24px"></div>
+          </div>
+
+          <!-- Title block -->
+          <div class="lb-title">
+            <div class="sk lk"></div>
+            <div class="sk lh"></div>
+            <div class="sk lm"></div>
+          </div>
+
+          <!-- Podium / 1st place -->
+          <div class="lb-podium">
+            <div class="num-row">
+              <div class="sk num"></div>
+              <div class="name-stack">
+                <div class="sk n1"></div>
+                <div class="sk n2"></div>
+              </div>
+              <div class="score-stack">
+                <div class="sk s1"></div>
+                <div class="sk s2"></div>
+              </div>
+            </div>
+            <div class="meta-row">
+              <div class="sk mp"></div>
+              <div class="sk mp2"></div>
+            </div>
+          </div>
+
+          <!-- Rest of the rows -->
+          <div class="lb-row">
+            <div class="sk pos stagger-2"></div>
+            <div class="name">
+              <div class="sk n1 stagger-2"></div>
+              <div class="sk n2 stagger-2"></div>
+            </div>
+            <div class="sk score stagger-2"></div>
+            <div class="sk delta stagger-2"></div>
+          </div>
+          <div class="lb-row">
+            <div class="sk pos stagger-3"></div>
+            <div class="name">
+              <div class="sk n1 stagger-3"></div>
+              <div class="sk n2 stagger-3"></div>
+            </div>
+            <div class="sk score stagger-3"></div>
+            <div class="sk delta stagger-3"></div>
+          </div>
+          <div class="lb-row">
+            <div class="sk pos stagger-4"></div>
+            <div class="name">
+              <div class="sk n1 stagger-4"></div>
+              <div class="sk n2 stagger-4"></div>
+            </div>
+            <div class="sk score stagger-4"></div>
+            <div class="sk delta stagger-4"></div>
+          </div>
+        </div>
+
+        <div class="home-indicator"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="note">
+    Tørny-skjelettet bruker varm linen (<em>#ECE5D2</em>) i stedet for kald grå, med en 1.8&nbsp;s champagne-skygget shimmer som sveiper én gang per syklus. Radene mounter stagget — 90&nbsp;ms mellom hver — for å matche den ekte UI-en når data lander.
+  </div>
+
+</div>
+
+<script>
+  const sw = document.getElementById("switcher");
+  sw.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-view]");
+    if (!btn) return;
+    sw.querySelectorAll("button").forEach(b => b.classList.toggle("active", b === btn));
+    document.querySelectorAll(".view").forEach(v => {
+      v.classList.toggle("active", v.id === "view-" + btn.dataset.view);
+    });
+  });
+</script>
+</body>
+</html>

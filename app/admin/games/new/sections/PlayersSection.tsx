@@ -53,7 +53,6 @@ export function PlayersSection({ state, players, heading = '2. Spillere' }: Prop
     isFlorida,
     requiresTeams,
     teamSize,
-    eightSelected,
   } = state;
 
   return (
@@ -61,7 +60,8 @@ export function PlayersSection({ state, players, heading = '2. Spillere' }: Prop
       <div className="flex items-baseline justify-between">
         <h2 className="text-sm font-medium text-text">{heading}</h2>
         {/* Counter er mode-aware:
-            - best-ball: «X av 8 spillere valgt» (fast 8-krav)
+            - best-ball: «X spillere valgt» med partall-hint (#374 — ikke lenger
+              fast 8-krav; 2/4/6/8 er gyldige antall)
             - par-stableford: «X spillere valgt» med subtilt hint om
               partall-krav for å hjelpe admin før publish-feilen treffer
             - matchplay: «X av 2 spillere valgt» (fast 2-krav) — grønn
@@ -69,9 +69,13 @@ export function PlayersSection({ state, players, heading = '2. Spillere' }: Prop
             - solo: «X spillere valgt», ingen øvre tak */}
         {isBestBall ? (
           <span
-            className={`text-xs font-medium tabular-nums ${eightSelected ? 'text-primary' : 'text-muted'}`}
+            className={`text-xs font-medium tabular-nums ${selectedPlayerIds.length >= 2 && selectedPlayerIds.length % 2 === 0 ? 'text-primary' : 'text-muted'}`}
           >
-            {selectedPlayerIds.length} av 8 spillere valgt
+            {selectedPlayerIds.length}{' '}
+            {selectedPlayerIds.length === 1 ? 'spiller' : 'spillere'} valgt
+            {selectedPlayerIds.length >= 2 && selectedPlayerIds.length % 2 !== 0 && (
+              <span className="ml-1 text-muted/80">(par à 2)</span>
+            )}
           </span>
         ) : isMatchplay ? (
           <span

@@ -94,18 +94,15 @@ describe('buildGameInsertPayload (publish mode)', () => {
     expect(result.errorCode).toBe('course_required');
   });
 
-  it('requires 8 balanced players', () => {
+  it('requires at least 2 players (min_players_for_mode)', () => {
     const result = buildGameInsertPayload(
-      fd({
-        name: 'Test', course_id: 'c1', tee_box_id: 't1',
-        player_0_id: 'u1', player_0_team: '1', player_0_flight: '1',
-      }),
+      fd({ name: 'Test', course_id: 'c1', tee_box_id: 't1' }),
       'publish',
     );
-    expect(result.errorCode).toBe('players_required');
+    expect(result.errorCode).toBe('min_players_for_mode');
   });
 
-  it('accepts a full balanced lineup', () => {
+  it('accepts a full balanced lineup of 8 players', () => {
     const entries: Record<string, string> = {
       name: 'Test', course_id: 'c1', tee_box_id: 't1',
     };
@@ -117,6 +114,83 @@ describe('buildGameInsertPayload (publish mode)', () => {
     const result = buildGameInsertPayload(fd(entries), 'publish');
     expect(result.errorCode).toBeUndefined();
     expect(result.players).toHaveLength(8);
+    expect(result.mode_config).toMatchObject({ kind: 'best_ball', teams_count: 4 });
+  });
+});
+
+describe('buildGameInsertPayload — best ball flexible team count (#374)', () => {
+  // Hjelpefunksjon: bygger opp FormData for N spillere fordelt 2-2-2... på lag 1..N/2.
+  function bestBallFd(count: number, opts: { unbalance?: boolean; oddCount?: boolean } = {}): FormData {
+    const entries: Record<string, string> = {
+      name: 'Test', course_id: 'c1', tee_box_id: 't1',
+      hcp_allowance_pct: '90',
+    };
+    const total = opts.oddCount ? count : count;
+    for (let i = 0; i < total; i++) {
+      entries[`player_${i}_id`] = `u${i}`;
+      // Default: balanced (spillerne 0,1 → lag 1; 2,3 → lag 2; osv.)
+      const team = opts.unbalance
+        ? 1                             // alle på lag 1 → ubalansert
+        : Math.floor(i / 2) + 1;
+      entries[`player_${i}_team`] = String(team);
+      entries[`player_${i}_flight`] = String(team <= 2 ? 1 : 2);
+    }
+    return fd(entries);
+  }
+
+  it('publishes 4 players (2 teams of 2) — ok, teams_count = 2', () => {
+    const result = buildGameInsertPayload(bestBallFd(4), 'publish');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(4);
+    expect(result.mode_config).toMatchObject({ kind: 'best_ball', teams_count: 2 });
+  });
+
+  it('publishes 6 players (3 teams of 2) — ok, teams_count = 3', () => {
+    const result = buildGameInsertPayload(bestBallFd(6), 'publish');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(6);
+    expect(result.mode_config).toMatchObject({ kind: 'best_ball', teams_count: 3 });
+  });
+
+  it('publishes 2 players (1 team of 2) — ok, teams_count = 1', () => {
+    const result = buildGameInsertPayload(bestBallFd(2), 'publish');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(2);
+    expect(result.mode_config).toMatchObject({ kind: 'best_ball', teams_count: 1 });
+  });
+
+  it('rejects 0 players at publish (min_players_for_mode)', () => {
+    const result = buildGameInsertPayload(
+      fd({ name: 'Test', course_id: 'c1', tee_box_id: 't1' }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('min_players_for_mode');
+  });
+
+  it('rejects unbalanced team (3 on team 1, 1 on team 2) — team_balance', () => {
+    const entries: Record<string, string> = {
+      name: 'Test', course_id: 'c1', tee_box_id: 't1',
+    };
+    // 3 spillere på lag 1, 1 spiller på lag 2 — ulovlig
+    for (let i = 0; i < 4; i++) {
+      entries[`player_${i}_id`] = `u${i}`;
+      entries[`player_${i}_team`] = i < 3 ? '1' : '2';
+      entries[`player_${i}_flight`] = '1';
+    }
+    const result = buildGameInsertPayload(fd(entries), 'publish');
+    expect(result.errorCode).toBe('team_balance');
+  });
+
+  it('draft tolererer 4 spillere i ubalanse uten feil', () => {
+    const result = buildGameInsertPayload(bestBallFd(4, { unbalance: true }), 'draft');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(4);
+  });
+
+  it('draft tolererer 0 spillere', () => {
+    const result = buildGameInsertPayload(fd({ name: 'Test' }), 'draft');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(0);
   });
 });
 
@@ -270,9 +344,9 @@ describe('buildGameInsertPayload — registration_mode / registration_type (#199
     expect(result.players).toEqual([]);
   });
 
-  it('invite_only-modus publish krever fortsatt full spiller-liste', () => {
-    // Bakoverkompatibilitet: dagens flyt skal være helt uendret. Publish
-    // av best_ball uten spillere → fortsatt players_required.
+  it('invite_only-modus publish krever minst 2 spillere (best_ball)', () => {
+    // Publish av best_ball uten spillere → min_players_for_mode (#374: fleksibel
+    // lagstørrelse erstattet den hardkodede players_required-koden).
     const result = buildGameInsertPayload(
       regFd({
         registration_mode: 'invite_only',
@@ -282,7 +356,7 @@ describe('buildGameInsertPayload — registration_mode / registration_type (#199
       }),
       'publish',
     );
-    expect(result.errorCode).toBe('players_required');
+    expect(result.errorCode).toBe('min_players_for_mode');
   });
 
   it('open-modus publish håndhever fortsatt duplikat-spiller-regelen', () => {

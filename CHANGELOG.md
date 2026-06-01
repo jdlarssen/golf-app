@@ -17,7 +17,33 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.61.y — Cup-veiviser: generer alle matcher på én gang
+## 1.62.y — Best ball for alle kompislaget
+
+Issue [#374](https://github.com/jdlarssen/golf-app/issues/374). Best ball støtter nå 2, 4, 6 eller 8 spillere — ikke bare 8. Trekk tilfeldig fungerer med alle partall-antall.
+
+### [1.62.0] - 2026-06-01
+
+> Du kan nå spille best ball med 4 eller 6 spillere, ikke bare 8. Velg et partall antall og fordel 2 per lag — resten fungerer som før.
+
+<details>
+<summary>Teknisk</summary>
+
+Fikser [#374](https://github.com/jdlarssen/golf-app/issues/374) — best ball hardkodet til 8 spillere.
+
+#### Changed
+- [`lib/games/gamePayload.ts`](lib/games/gamePayload.ts) — `validateBestBall` speiler nå `validateStablefordTeam`: hopper over tomme slots, returnerer `min_players_for_mode` (ikke `players_required`) ved 0 spillere, validerer kun at hvert ikke-tomt lag har eksakt 2 spillere. `mode_config.teams_count` settes til faktisk antall ikke-tomme lag (ikke hardkodet 4).
+- [`lib/scoring/modes/types.ts`](lib/scoring/modes/types.ts) — `GameModeConfig` for `best_ball`: `teams_count: 4` → `teams_count: number`.
+- [`app/admin/games/new/useGameFormState.ts`](app/admin/games/new/useGameFormState.ts) — `teamsComplete` bruker nå fleksibel logikk (≥2 spillere, partall, alle tilordnet, hvert ikke-tomt lag à 2). Felles booleans `flexTeamsBalanced` + `flexTeamsHasAtLeastOneTeam` deles mellom best ball og par-stableford (ingen duplikat). `drawRandomTeams` fordeler 2 per lag basert på det faktiske antallet valgte spillere (ikke hardkodet 8). Feilmelding oppdatert: «partall antall spillere (2, 4, 6 eller 8)».
+- [`app/admin/games/new/sections/TeamsAssignmentSection.tsx`](app/admin/games/new/sections/TeamsAssignmentSection.tsx) — lag-grid vises fra 2 spillere (ikke 8); hint-tekst speiler par-stableford: «Inntil 4 lag à 2 spillere. Tomme lag publiseres ikke.»
+- [`app/admin/games/new/sections/PlayersSection.tsx`](app/admin/games/new/sections/PlayersSection.tsx) — teller viser «X spillere valgt» med partall-hint; «X av 8» er borte.
+
+#### Added
+- `lib/games/gamePayload.test.ts` — 7 nye best ball-tester: 2-spiller-publish (1 lag), 4-spiller-publish (2 lag, `teams_count = 2`), 6-spiller-publish (3 lag), 0-spiller → `min_players_for_mode`, ubalansert lag → `team_balance`, draft tolererer ubalanse + 0 spillere.
+
+</details>
+
+<details>
+<summary><strong>1.61.y — Cup-veiviser: generer alle matcher på én gang (4 oppføringer) — klikk for å vise</strong></summary>
 
 Issue [#219](https://github.com/jdlarssen/golf-app/issues/219), Ryder Cup fase 4. Administratorer kan nå lage et fullt cup-program fra ett skjema — velg lag, bane, formatmal og paring-strategi, forhåndsvis og juster, og opprett alle matchene i ett trykk.
 
@@ -87,6 +113,8 @@ Fikser [#219](https://github.com/jdlarssen/golf-app/issues/219) — cup match-te
 - «Generer matcher»-knapp i [`app/admin/cup/[id]/page.tsx`](app/admin/cup/[id]/page.tsx) (kun synlig i draft); viser `matches_generated`-statusmelding etter vellykket opprettelse.
 
 Rene hjelpebiblioteker (`lib/cup/cupTemplates.ts`, `lib/cup/cupPairing.ts`) og `createCupMatchesFromPlan`-server-action med tilhørende tester er committet i tidligere commits. Matcher opprettes som `scheduled`-spill med handicap frosset ved rundstart.
+
+</details>
 
 </details>
 
