@@ -40,14 +40,13 @@ export function RevealBruttoView({
   userId,
 }: Props) {
   return (
-    <AppShell>
+    <AppShell userId={userId}>
       <PreRoundLeaderboardRealtime gameId={gameId} />
 
       <TopBar
         backHref={backHref}
         backLabel="Tilbake"
         kicker={gameName}
-        userId={userId}
       />
 
       <section className="px-6 pt-2 pb-3 text-center">

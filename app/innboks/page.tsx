@@ -27,12 +27,11 @@ export default async function InboxPage() {
   const notifications = rows ?? [];
 
   return (
-    <AppShell>
+    <AppShell userId={userId}>
       <TopBar
         backHref="/"
         backLabel="Tilbake til hjem"
         kicker="Innboks"
-        userId={userId}
       />
       <InboxClient initialNotifications={notifications} />
     </AppShell>

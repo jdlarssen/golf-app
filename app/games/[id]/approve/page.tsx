@@ -110,12 +110,11 @@ export default async function ApprovePage({
   );
 
   return (
-    <AppShell showVersion={false}>
+    <AppShell showVersion={false} userId={userId}>
       <TopBar
         backHref={`/games/${id}`}
         backLabel={`Tilbake til ${game.name}`}
         kicker="Godkjenning"
-        userId={userId}
       />
 
       {statusBanner && (

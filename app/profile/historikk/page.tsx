@@ -105,12 +105,11 @@ export default async function HistorikkPage() {
         : `${finishedCount} fullførte runder`;
 
   return (
-    <AppShell>
+    <AppShell userId={userId}>
       <TopBar
         backHref="/profile"
         backLabel="Tilbake til profil"
         kicker="Historikk"
-        userId={userId}
       />
 
       <p className="mb-4 text-sm text-muted">{subtitle}</p>

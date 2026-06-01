@@ -649,6 +649,7 @@ async function LeaderboardBody({
       teeOffAt: game.scheduled_tee_off_at,
       players,
       backHref,
+      userId,
     });
   }
 
@@ -660,6 +661,7 @@ async function LeaderboardBody({
       holes,
       scores,
       backHref,
+      userId,
     });
   }
 
@@ -873,8 +875,8 @@ async function LeaderboardBody({
   // SideTournamentView was always chromeless; it sits inside the same shell
   // alongside the main view.
   return (
-    <AppShell>
-      <TopBar backHref={backHref} kicker={game.name} userId={userId} />
+    <AppShell userId={userId}>
+      <TopBar backHref={backHref} kicker={game.name} />
       <LeaderboardTabs
         mainContent={
           <>
@@ -1537,8 +1539,8 @@ async function renderStablefordWithSideTournament(opts: {
   }));
 
   return (
-    <AppShell>
-      <TopBar backHref={backHref} kicker={game.name} userId={userId} />
+    <AppShell userId={userId}>
+      <TopBar backHref={backHref} kicker={game.name} />
       <LeaderboardTabs
         mainContent={mainContent}
         sideContent={
@@ -3303,8 +3305,9 @@ function renderState3(opts: {
   teeOffAt: string | null;
   players: LbPlayer[];
   backHref: string;
+  userId: string | null;
 }) {
-  const { gameId, teeOffAt, players, backHref } = opts;
+  const { gameId, teeOffAt, players, backHref, userId } = opts;
   const teeOffDate = teeOffAt ? new Date(teeOffAt) : null;
   const teeOffLabel = teeOffDate ? formatTeeOffTime(teeOffDate) : '—';
 
@@ -3319,7 +3322,7 @@ function renderState3(opts: {
   const teamCount = teams.length;
 
   return (
-    <AppShell>
+    <AppShell userId={userId}>
       <PreRoundLeaderboardRealtime gameId={gameId} />
 
       <header className="mb-6 flex items-center justify-between gap-4">
@@ -3404,8 +3407,9 @@ function renderState35(opts: {
   holes: LbHole[];
   scores: LbScore[];
   backHref: string;
+  userId: string | null;
 }) {
-  const { gameId, mode, players, holes, scores, backHref } = opts;
+  const { gameId, mode, players, holes, scores, backHref, userId } = opts;
 
   const frontNineHoles = holes.filter(
     (h) => h.holeNumber >= 1 && h.holeNumber <= 9,
@@ -3424,7 +3428,7 @@ function renderState35(opts: {
   const leaderTotal = orderedLines.find((l) => l.rank === 1)?.total ?? 0;
 
   return (
-    <AppShell>
+    <AppShell userId={userId}>
       {/* Reuse the pre-round realtime — same scores-INSERT subscription
           works here too. When a new score lands the page refreshes; the
           server re-evaluates view (may stay #3.5 or eventually flip to

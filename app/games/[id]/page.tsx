@@ -339,7 +339,7 @@ export default async function GameHomePage({
       : false;
 
     return (
-      <AppShell>
+      <AppShell userId={userId}>
         <header className="mb-6 flex items-center justify-between gap-4">
           <BackLink href="/">← Hjem</BackLink>
           <Kicker tone="accent">{game.name.toUpperCase()}</Kicker>
@@ -486,12 +486,11 @@ export default async function GameHomePage({
       : null;
 
   return (
-    <AppShell>
+    <AppShell userId={userId}>
       <TopBar
         backHref="/"
         backLabel="Tilbake til hjem"
         kicker="Turnering"
-        userId={userId}
       />
       <PageHeader title={game.name} />
 

@@ -16,7 +16,6 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { PinFlag } from '@/components/icons/PinFlag';
 import { InstallBanner } from '@/components/pwa/InstallBanner';
 import { ProductUpdateBanner } from '@/components/products/ProductUpdateBanner';
-import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { HandicapChip } from '@/components/handicap/HandicapChip';
 import { firstName } from '@/lib/firstName';
 import { formatTeeOffDate, formatTeeOffTime } from '@/lib/format/teeOff';
@@ -56,14 +55,11 @@ export default async function Home({
   const profileUpdated = first(params.profile) === 'updated';
 
   return (
-    <AppShell>
-      {/* Header-rad: brand venstre, bjelle høyre. BrandMark er ikke en lenke
-          så vi pakker den i en flex-rad sammen med NotificationBell-en så
-          den lander på samme høyde som varselsbjella på indre sider med
-          TopBar. */}
-      <div className="mb-6 flex items-start justify-between">
+    <AppShell userId={userId}>
+      {/* Brand-rad. Innboks-bjella er flyttet til bunn-nav-en (#355), så
+          headeren er nå bare merket. */}
+      <div className="mb-6">
         <BrandMark />
-        <NotificationBell userId={userId} />
       </div>
 
       <InstallBanner />
@@ -233,8 +229,6 @@ async function HomeBody() {
         {discoveryData && hasDiscoveryContent && (
           <HomeDiscoverySection data={discoveryData} />
         )}
-
-        <HomeUtilityFooter isAdmin={profile?.is_admin === true} />
       </>
     );
   }
@@ -352,10 +346,6 @@ async function HomeBody() {
       <p className="mt-10 text-xs text-muted text-center">
         Mer kommer her snart.
       </p>
-
-      {/* Samme utility-footer i begge hjem-grener → én konsistent
-          representasjon av Sekretariatet-lenken (#346). */}
-      <HomeUtilityFooter isAdmin={profile?.is_admin === true} />
     </>
   );
 }
@@ -411,49 +401,6 @@ function SectionSkeleton({
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
-
-/**
- * Shared utility footer used by BOTH home states (#346). Gives the
- * Sekretariatet link one consistent representation and weight instead of the
- * old split (muted footer link in empty-state, accent Section card in
- * non-empty). Min profil + (admin) Sekretariatet + Logg ut, all muted.
- */
-function HomeUtilityFooter({ isAdmin }: { isAdmin: boolean }) {
-  return (
-    <footer className="mt-14 pt-6 border-t border-border/60 dark:border-border/80">
-      <ul className="flex flex-col gap-1 items-center">
-        <li>
-          <SmartLink
-            href="/profile"
-            className="inline-flex items-center min-h-[44px] px-3 text-sm text-muted hover:text-text transition-colors"
-          >
-            Min profil
-          </SmartLink>
-        </li>
-        {isAdmin && (
-          <li>
-            <SmartLink
-              href="/admin"
-              className="inline-flex items-center min-h-[44px] px-3 text-sm text-muted hover:text-text transition-colors"
-            >
-              Sekretariatet
-            </SmartLink>
-          </li>
-        )}
-        <li>
-          <form action="/logout" method="post">
-            <button
-              type="submit"
-              className="inline-flex items-center min-h-[44px] px-3 text-sm text-muted hover:text-danger transition-colors"
-            >
-              Logg ut
-            </button>
-          </form>
-        </li>
-      </ul>
-    </footer>
-  );
-}
 
 function Section({
   label,

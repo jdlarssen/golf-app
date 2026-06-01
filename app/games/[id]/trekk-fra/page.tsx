@@ -105,12 +105,11 @@ export default async function TrekkFraPage({
     : null;
 
   return (
-    <AppShell>
+    <AppShell userId={userId}>
       <TopBar
         backHref={`/games/${id}`}
         backLabel="Tilbake til spillet"
         kicker="Trekk deg"
-        userId={userId}
       />
 
       <div className="px-1">

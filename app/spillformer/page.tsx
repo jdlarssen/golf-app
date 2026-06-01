@@ -9,6 +9,7 @@ import { MODE_LABELS } from '@/lib/scoring/modes/types';
 import { getModeContentMap, mergeModeContent } from '@/lib/formats/getModeContent';
 import { formatDisplayLabel } from '@/lib/games/formatLabel';
 import type { GameModeConfig } from '@/lib/scoring/modes/types';
+import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 
 // Dynamic: fetches DB content via getModeContentMap (requires SUPABASE_SERVICE_ROLE_KEY
 // at request time). Static pre-render would fail in build without env.
@@ -67,10 +68,13 @@ const CATALOG: CatalogEntry[] = [
 // DB-drevet innhold + lenke til detaljside. Innhold hentes via getModeContentMap
 // (cached på 'format-mapping'-tag, admin-redigerbart uten deploy).
 export default async function SpillformerPage() {
-  const modeContentMap = await getModeContentMap();
+  const [modeContentMap, userId] = await Promise.all([
+    getModeContentMap(),
+    getProxyVerifiedUserId(),
+  ]);
 
   return (
-    <AppShell>
+    <AppShell userId={userId ?? null}>
       <header className="mb-2 flex items-center justify-between gap-4">
         <BackLink href="/">← Hjem</BackLink>
         <Kicker tone="accent">SPILLFORMER</Kicker>

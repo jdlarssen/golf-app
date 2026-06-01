@@ -78,13 +78,8 @@ export default async function ProfilePage({
     : undefined;
 
   return (
-    <AppShell>
-      <TopBar
-        backHref="/"
-        backLabel="Tilbake til hjem"
-        kicker="Profil"
-        userId={userId}
-      />
+    <AppShell userId={userId}>
+      <TopBar backHref="/" backLabel="Tilbake til hjem" kicker="Profil" />
 
       {profileUpdated && (
         <div className="mb-4">
@@ -132,6 +127,10 @@ export default async function ProfilePage({
         <GdprSection />
       </div>
 
+      <Suspense fallback={null}>
+        <AccountActions />
+      </Suspense>
+
       <p className="mt-4 px-1 text-xs leading-relaxed text-muted">
         Les hvordan vi behandler og lagrer dataene dine i{' '}
         <SmartLink
@@ -143,6 +142,50 @@ export default async function ProfilePage({
         .
       </p>
     </AppShell>
+  );
+}
+
+/**
+ * Konto-handlinger nederst på Profil-siden. Tidligere lå «Logg ut» og (for
+ * admin) «Sekretariatet» i en muted footer på Hjem; med bunn-nav-en (#355)
+ * er Profil-fanen konto-hubben, så de bor her i stedet. Sekretariatet er
+ * døra til admin-rommet — vises kun for admin.
+ */
+async function AccountActions() {
+  const { supabase, userId } = await getProfileContext();
+  if (!userId) return null;
+  const { data: profile } = await supabase
+    .from('users')
+    .select('is_admin')
+    .eq('id', userId)
+    .maybeSingle<{ is_admin: boolean }>();
+  const isAdmin = profile?.is_admin === true;
+
+  return (
+    <div className="mt-8 border-t border-border/60 pt-6 dark:border-border/80">
+      <ul className="flex flex-col gap-1">
+        {isAdmin && (
+          <li>
+            <SmartLink
+              href="/admin"
+              className="inline-flex min-h-[44px] items-center px-1 text-sm text-muted transition-colors hover:text-text"
+            >
+              Sekretariatet
+            </SmartLink>
+          </li>
+        )}
+        <li>
+          <form action="/logout" method="post">
+            <button
+              type="submit"
+              className="inline-flex min-h-[44px] items-center px-1 text-sm text-muted transition-colors hover:text-danger"
+            >
+              Logg ut
+            </button>
+          </form>
+        </li>
+      </ul>
+    </div>
   );
 }
 

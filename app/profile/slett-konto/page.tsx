@@ -56,12 +56,11 @@ export default async function SlettKontoPage({
   const displayName = userProfile?.name?.trim() || userProfile?.email || 'kontoen din';
 
   return (
-    <AppShell>
+    <AppShell userId={userId}>
       <TopBar
         backHref="/profile"
         backLabel="Tilbake til profil"
         kicker="Slett konto"
-        userId={userId}
       />
 
       {errorMessage && (

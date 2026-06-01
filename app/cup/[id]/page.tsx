@@ -27,8 +27,8 @@ export default async function PublicCupPage({ params }: { params: Params }) {
         : null;
 
   return (
-    <AppShell>
-      <TopBar backHref="/" back="history" kicker="Cup" userId={userId} />
+    <AppShell userId={userId}>
+      <TopBar backHref="/" back="history" kicker="Cup" />
 
       <header className="mb-6 text-center">
         <h1 className="font-serif text-3xl text-text leading-tight tracking-[-0.015em]">

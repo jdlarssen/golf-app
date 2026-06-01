@@ -17,7 +17,37 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.65.y — Trekk spiller: hold frafall ute av rangeringen
+## 1.66.y — Vedvarende navigasjon
+
+Issue [#355](https://github.com/jdlarssen/golf-app/issues/355). Appen hadde ingen fast navigasjon. For å nå profil, innboks eller bytte spill måtte du alltid tilbake til Hjem først. Nå ligger en fast bunn-meny (Hjem / Innboks / Profil) nederst på alle spiller-sider.
+
+### [1.66.0] - 2026-06-01
+
+> Før måtte du innom Hjem for å komme deg videre i appen. Nå ligger en fast meny nederst på alle sider med Hjem, Innboks og Profil, så du når alt med ett trykk. «Logg ut» og (for deg som arrangør) «Sekretariatet» finner du nå under Profil.
+
+<details>
+<summary>Teknisk</summary>
+
+Fikser [#355](https://github.com/jdlarssen/golf-app/issues/355) — ingen vedvarende nav; Hjem var eneste nav-nav, en blindvei i installert PWA. Profil var kun nåbar fra en muted footer på Hjem.
+
+#### Added
+- [`components/ui/BottomNav.tsx`](components/ui/BottomNav.tsx) — fast bunn-tab-bar (Hjem/Innboks/Profil), `position: fixed` + `env(safe-area-inset-bottom)`, aktiv-fane via `usePathname`, uleste-prikk på Innboks via `useUnreadNotificationsCount`.
+- [`components/icons/Icons.tsx`](components/icons/Icons.tsx) — `HjemIcon` + `ProfilIcon` (Innboks bruker `KonvoluttIcon`).
+- Konto-handlinger på Profil-siden: «Logg ut» + (for admin) «Sekretariatet».
+
+#### Changed
+- [`components/ui/AppShell.tsx`](components/ui/AppShell.tsx) — valgfri `userId`-prop rendrer baren + reserverer bunn-padding. Trådd inn på alle spiller-flater (spill, leaderboard, scorecard, levering, godkjenning, trekk, innboks, profil, opprett-spill, spillformer, cup).
+- `NotificationBell` fjernet fra spiller-`TopBar` og home-headeren — Innboks-fanen overtar. Beholdt på admin-flater (ingen bunn-nav der).
+- Home-footeren fjernet: «Min profil» dekkes av Profil-fanen, «Logg ut» / «Sekretariatet» flyttet til Profil-siden.
+
+#### Notes
+- Skjult på hull-skjermen (fullskjerm scoring), admin (eget rom) og offentlige/pre-profil-sider.
+- Integrert via AppShell-prop, ikke route-gruppe-layout (lavere risiko for stor diff). Sistnevnte er en mulig fremtidig optimalisering for persistent realtime-abonnement.
+
+</details>
+
+<details>
+<summary><strong>1.65.y — Trekk spiller: hold frafall ute av rangeringen (2 oppføringer) — klikk for å vise</strong></summary>
 
 Issue [#386](https://github.com/jdlarssen/golf-app/issues/386). Noen dro hjem etter ni hull, eller dukket aldri opp? Nå kan både spilleren selv og arrangøren markere et frafall. Den trukne tas helt ut av rangeringen (scorene teller ikke), står som «Trukket», og scorekortet låses. Forskjellen fra «ikke levert»: en som spilte men glemte å levere teller fortsatt; en som trakk seg gjør ikke.
 
@@ -63,6 +93,8 @@ Fikser [#386](https://github.com/jdlarssen/golf-app/issues/386) — ingen måte 
 #### Notes
 - WD = ute av rangeringen, ingen plassering (som en golf-WD). Ren no-show folder inn i samme mekanisme. Matchplay-familien + pott-format (skins/wolf/nassau/m.fl.) er bevisst utenfor v1 — der faller en manglende spiller tilbake på «ikke levert».
 - Migrasjonen er additiv + nullable, trygg å kjøre før kode-deploy.
+
+</details>
 
 </details>
 

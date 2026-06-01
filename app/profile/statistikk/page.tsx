@@ -186,12 +186,11 @@ export default async function StatistikkPage() {
   const mostActive = toSortedStats(participationCount, userNames).slice(0, 10);
 
   return (
-    <AppShell>
+    <AppShell userId={userId}>
       <TopBar
         backHref="/profile"
         backLabel="Tilbake til profil"
         kicker="Statistikk"
-        userId={userId}
       />
 
       <h1 className="font-serif text-2xl font-medium text-text mb-1">
@@ -226,12 +225,11 @@ export default async function StatistikkPage() {
 
 function EmptyStateView({ userId }: { userId: string }) {
   return (
-    <AppShell>
+    <AppShell userId={userId}>
       <TopBar
         backHref="/profile"
         backLabel="Tilbake til profil"
         kicker="Statistikk"
-        userId={userId}
       />
 
       <h1 className="font-serif text-2xl font-medium text-text mb-1">
