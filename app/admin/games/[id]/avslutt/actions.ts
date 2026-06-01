@@ -119,7 +119,7 @@ export async function endGameWithSideWinners(
   const { data: players } = await supabase
     .from('game_players')
     .select(
-      'user_id, submitted_at, approved_at, users!game_players_user_id_fkey(email, name)',
+      'user_id, submitted_at, approved_at, withdrawn_at, users!game_players_user_id_fkey(email, name)',
     )
     .eq('game_id', gameId)
     .returns<
@@ -127,6 +127,7 @@ export async function endGameWithSideWinners(
         user_id: string;
         submitted_at: string | null;
         approved_at: string | null;
+        withdrawn_at: string | null;
         users: { email: string | null; name: string | null } | null;
       }[]
     >();
@@ -135,6 +136,8 @@ export async function endGameWithSideWinners(
     redirect(`${detailPath}?error=no_players`);
   }
   for (const p of players!) {
+    // Withdrawn (WD, #386): out of the ranking — never blocks the end.
+    if (p.withdrawn_at) continue;
     if (!p.submitted_at) {
       // No-show: «avslutt likevel» skips them (submitted_at stays null).
       if (!allowMissing) redirect(`${detailPath}?error=not_all_submitted`);

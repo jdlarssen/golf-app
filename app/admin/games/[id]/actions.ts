@@ -282,7 +282,7 @@ export async function endGame(gameId: string, allowMissing = false) {
   const { data: players } = await supabase
     .from('game_players')
     .select(
-      'user_id, submitted_at, approved_at, users!game_players_user_id_fkey(email, name)',
+      'user_id, submitted_at, approved_at, withdrawn_at, users!game_players_user_id_fkey(email, name)',
     )
     .eq('game_id', gameId)
     .returns<
@@ -290,6 +290,7 @@ export async function endGame(gameId: string, allowMissing = false) {
         user_id: string;
         submitted_at: string | null;
         approved_at: string | null;
+        withdrawn_at: string | null;
         users: { email: string | null; name: string | null } | null;
       }[]
     >();
@@ -298,6 +299,9 @@ export async function endGame(gameId: string, allowMissing = false) {
     redirect(`${detailPath}?error=no_players`);
   }
   for (const p of players!) {
+    // Withdrawn (WD, #386): out of the ranking entirely — never counts as a
+    // missing submission or a pending approval, so they never block the end.
+    if (p.withdrawn_at) continue;
     if (!p.submitted_at) {
       // No-show: block by default, but let «avslutt likevel» skip past them.
       // submitted_at stays null — they show as «ikke levert», never a false

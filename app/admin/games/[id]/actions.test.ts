@@ -219,6 +219,61 @@ describe('endGame', () => {
     // didn't block — the absence of any submitted_at write proves AC3.
   });
 
+  it('WD (#386): a withdrawn player is skipped — game ends without allowMissing even though they never submitted', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null }, // users
+      {
+        data: {
+          id: 'game-1',
+          name: 'Vinter-cup',
+          status: 'active',
+          require_peer_approval: true, // even with approval required...
+          course_id: 'course-1',
+          game_mode: 'best_ball',
+          mode_config: { kind: 'best_ball', team_size: 2, teams_count: 4 },
+        },
+        error: null,
+      }, // games
+      {
+        data: [
+          {
+            user_id: 'user-a',
+            submitted_at: '2026-05-18T10:00:00Z',
+            approved_at: '2026-05-18T11:00:00Z',
+            withdrawn_at: null,
+            users: { email: 'a@example.com', name: 'Ada' },
+          },
+          {
+            // Withdrawn no-show: never submitted, never approved — must NOT
+            // trigger not_all_submitted or not_all_approved.
+            user_id: 'user-b',
+            submitted_at: null,
+            approved_at: null,
+            withdrawn_at: '2026-05-18T09:30:00Z',
+            users: { email: 'b@example.com', name: 'Bjørn' },
+          },
+        ],
+        error: null,
+      },
+      { data: null, error: null }, // games.update(status='finished')
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { endGame } = await import('./actions');
+
+    // No allowMissing — the withdrawn player alone must not block.
+    await expect(endGame('game-1')).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=finished');
+    expect(redirectMock).not.toHaveBeenCalledWith(
+      '/admin/games/game-1?error=not_all_submitted',
+    );
+    expect(redirectMock).not.toHaveBeenCalledWith(
+      '/admin/games/game-1?error=not_all_approved',
+    );
+  });
+
   it('happy path: flips to finished, logs admin event, sends mail to every player', async () => {
     supabaseMock = buildSupabaseMock([
       { data: { is_admin: true, name: 'Jørgen' }, error: null }, // users
