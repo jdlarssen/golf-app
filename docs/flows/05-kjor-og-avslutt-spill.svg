@@ -28,7 +28,7 @@
   <rect x="120" y="432" width="560" height="84" rx="14" fill="#FBF3DF" stroke="#C9A961" stroke-width="1.5"/>
   <text x="156" y="480" font-size="20">🏁</text>
   <text x="190" y="464" font-size="16" font-weight="600" fill="#7A5E13">«Avslutt spillet»</text>
-  <text x="190" y="486" font-size="12.5" fill="#8A7333">krever at alle har levert (og evt. er godkjent)</text>
+  <text x="190" y="486" font-size="12.5" fill="#8A7333">alle levert (og evt. godkjent), eller «avslutt likevel» når noen mangler</text>
   <text x="190" y="505" font-size="12.5" fill="#8A7333">har du sidekonkurranser: velg vinnere (LD/CTP)</text>
   <line x1="400" y1="516" x2="400" y2="542" stroke="#8A6D27" stroke-width="1.6" marker-end="url(#a)"/>
 
