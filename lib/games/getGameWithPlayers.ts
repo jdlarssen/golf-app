@@ -117,6 +117,8 @@ export type PlayerForHole = {
   submitted_at: string | null;
   approved_at: string | null;
   rejection_reason: string | null;
+  /** WD / «trekk spiller» (#386): non-null = player has been withdrawn. */
+  withdrawn_at: string | null;
   // Hole entry only renders when status is 'active' or 'finished'; pending
   // invitees can't reach those states per Task 7's publish-gate. Typed
   // nullable to match the DB column.
@@ -145,7 +147,7 @@ async function fetchGameWithPlayers(
     supabase
       .from('game_players')
       .select(
-        'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, rejection_reason, tee_gender, users!game_players_user_id_fkey(name, nickname)',
+        'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, rejection_reason, withdrawn_at, tee_gender, users!game_players_user_id_fkey(name, nickname)',
       )
       .eq('game_id', id)
       .returns<PlayerForHole[]>(),

@@ -152,3 +152,75 @@ describe('compute — per-gender par (#240)', () => {
     expect(result.teams[0].holes[0].par).toBe(5);
   });
 });
+
+// ---------------------------------------------------------------------------
+// WD / «trekk spiller» (#386): best-ball med redusert lag-størrelse.
+//
+// Leaderboard-siden filtrerer ut trukne spillere FØR ctx bygges, så
+// `compute()` mottar aldri withdrawn players direkte. Disse testene verifiserer
+// at scoring-laget håndterer 1-manns-lag riktig (bruker det ene
+// medlemmets netto), og at et lag med null members (begge trukket)
+// ikke dukker opp i resultatet.
+// ---------------------------------------------------------------------------
+
+describe('compute — WD-scenario: redusert lag-størrelse (#386)', () => {
+  it('ranker 1-manns-lag korrekt (bruker eneste members netto)', () => {
+    // Lag 1: u1 alene (u2 er filtrert ut som WD), CH=10, SI=1 → 1 ekstra slag
+    // Lag 2: u3 + u4, begge CH=0
+    // Lag 1: gross 5 - 1 = netto 4; Lag 2: gross 5 - 0 = netto 5 (begge).
+    // Forventet: Lag 1 vinner (4 < 5).
+    const ctx: ScoringContext = {
+      game: {
+        id: 'g1',
+        game_mode: 'best_ball',
+        mode_config: { kind: 'best_ball', team_size: 2, teams_count: 2 },
+      },
+      players: [
+        { userId: 'u1', teamNumber: 1, flightNumber: 1, courseHandicap: 10, teeGender: 'mens' },
+        { userId: 'u3', teamNumber: 2, flightNumber: 1, courseHandicap: 0, teeGender: 'mens' },
+        { userId: 'u4', teamNumber: 2, flightNumber: 1, courseHandicap: 0, teeGender: 'mens' },
+      ],
+      holes: [{ number: 1, par: 4, strokeIndex: 1 }],
+      scores: [
+        { userId: 'u1', holeNumber: 1, gross: 5 },
+        { userId: 'u3', holeNumber: 1, gross: 5 },
+        { userId: 'u4', holeNumber: 1, gross: 5 },
+      ],
+    };
+    const result = compute(ctx);
+    if (result.kind !== 'best_ball') throw new Error('expected best_ball');
+    expect(result.teams).toHaveLength(2);
+    const team1 = result.teams.find((t) => t.teamNumber === 1);
+    const team2 = result.teams.find((t) => t.teamNumber === 2);
+    expect(team1?.holes[0].teamNet).toBe(4);
+    expect(team2?.holes[0].teamNet).toBe(5);
+    expect(team1?.rank).toBe(1);
+    expect(team2?.rank).toBe(2);
+  });
+
+  it('utelater lag med null members (begge WD-filtrert)', () => {
+    // Kun Lag 2 har gjenværende spillere etter WD-filtrering.
+    const ctx: ScoringContext = {
+      game: {
+        id: 'g1',
+        game_mode: 'best_ball',
+        mode_config: { kind: 'best_ball', team_size: 2, teams_count: 2 },
+      },
+      players: [
+        // Lag 1 har ingen spillere (begge filtrert som WD)
+        { userId: 'u3', teamNumber: 2, flightNumber: 1, courseHandicap: 0, teeGender: 'mens' },
+        { userId: 'u4', teamNumber: 2, flightNumber: 1, courseHandicap: 0, teeGender: 'mens' },
+      ],
+      holes: [{ number: 1, par: 4, strokeIndex: 1 }],
+      scores: [
+        { userId: 'u3', holeNumber: 1, gross: 4 },
+        { userId: 'u4', holeNumber: 1, gross: 5 },
+      ],
+    };
+    const result = compute(ctx);
+    if (result.kind !== 'best_ball') throw new Error('expected best_ball');
+    // Only team 2 appears — team 1 has no members and is never built.
+    expect(result.teams).toHaveLength(1);
+    expect(result.teams[0].teamNumber).toBe(2);
+  });
+});

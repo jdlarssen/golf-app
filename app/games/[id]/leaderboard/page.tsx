@@ -86,6 +86,10 @@ import {
   type SideTournamentTeam,
 } from './SideTournamentView';
 import {
+  WithdrawnPlayersSection,
+  type WithdrawnPlayer,
+} from './WithdrawnPlayersSection';
+import {
   calculateSideTournament,
   type SideTournamentInput,
   type SideWinner,
@@ -551,8 +555,19 @@ async function LeaderboardBody({
     });
   }
 
+  // WD (#386): build the withdrawn list BEFORE the active-players map.
+  // Only for best_ball (this default branch); stableford + solo_strokeplay
+  // handle their own filtering inside their render functions.
+  const bestBallWithdrawn: WithdrawnPlayer[] = gwp.players
+    .filter((p) => p.users != null && p.withdrawn_at != null)
+    .map((p) => ({
+      user_id: p.user_id,
+      display_name: p.users!.name ?? '(ukjent)',
+    }));
+  const bestBallWithdrawnIds = new Set(bestBallWithdrawn.map((p) => p.user_id));
+
   const players: LbPlayer[] = gwp.players
-    .filter((p) => p.users != null)
+    .filter((p) => p.users != null && p.withdrawn_at == null)
     .map((p) => ({
       userId: p.user_id,
       // Defensive fallback: pending invitees can't reach an active/finished
@@ -576,11 +591,13 @@ async function LeaderboardBody({
     strokeIndex: h.stroke_index,
   }));
 
-  const scores: LbScore[] = (rawScoresRes.data ?? []).map((s) => ({
-    userId: s.user_id,
-    holeNumber: s.hole_number,
-    strokes: s.strokes,
-  }));
+  const scores: LbScore[] = (rawScoresRes.data ?? [])
+    .filter((s) => !bestBallWithdrawnIds.has(s.user_id))
+    .map((s) => ({
+      userId: s.user_id,
+      holeNumber: s.hole_number,
+      strokes: s.strokes,
+    }));
 
   // F1: view branching. State #3 (timeglass) when game hasn't progressed far
   // enough to show anything meaningful — either still scheduled, or active
@@ -689,14 +706,17 @@ async function LeaderboardBody({
     // Solo-view: State4View renders its own Shell + Header (back-arrow lives
     // inside the view itself).
     return (
-      <State4View
-        gameId={gameId}
-        gameName={game.name}
-        teams={orderedLines}
-        mode={mode}
-        coursePar={coursePar}
-        backHref={backHref}
-      />
+      <>
+        <State4View
+          gameId={gameId}
+          gameName={game.name}
+          teams={orderedLines}
+          mode={mode}
+          coursePar={coursePar}
+          backHref={backHref}
+        />
+        <WithdrawnPlayersSection players={bestBallWithdrawn} />
+      </>
     );
   }
 
@@ -857,15 +877,18 @@ async function LeaderboardBody({
       <TopBar backHref={backHref} kicker={game.name} userId={userId} />
       <LeaderboardTabs
         mainContent={
-          <State4View
-            gameId={gameId}
-            gameName={game.name}
-            teams={orderedLines}
-            mode={mode}
-            coursePar={coursePar}
-            backHref={backHref}
-            chromeless
-          />
+          <>
+            <State4View
+              gameId={gameId}
+              gameName={game.name}
+              teams={orderedLines}
+              mode={mode}
+              coursePar={coursePar}
+              backHref={backHref}
+              chromeless
+            />
+            <WithdrawnPlayersSection players={bestBallWithdrawn} />
+          </>
         }
         sideContent={
           <SideTournamentView
@@ -1099,6 +1122,7 @@ async function renderStableford(opts: {
       users: { name: string | null; nickname: string | null } | null;
       course_handicap: number | null;
       tee_gender: TeeGender;
+      withdrawn_at: string | null;
     }[];
   };
   rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
@@ -1121,6 +1145,15 @@ async function renderStableford(opts: {
       game.mode_config.kind === 'modified_stableford') &&
     game.mode_config.team_size === 2;
 
+  // WD (#386): build withdrawn list before active-players map.
+  const stablefordWithdrawn: WithdrawnPlayer[] = gwp.players
+    .filter((p) => p.users != null && p.withdrawn_at != null)
+    .map((p) => ({
+      user_id: p.user_id,
+      display_name: p.users!.name ?? '(ukjent)',
+    }));
+  const stablefordWithdrawnIds = new Set(stablefordWithdrawn.map((p) => p.user_id));
+
   const ctx = {
     game: {
       id: gameId,
@@ -1131,7 +1164,7 @@ async function renderStableford(opts: {
       mode_config: game.mode_config,
     },
     players: gwp.players
-      .filter((p) => p.users != null)
+      .filter((p) => p.users != null && p.withdrawn_at == null)
       .map((p) => ({
         userId: p.user_id,
         teamNumber: isTeamVariant ? p.team_number : null,
@@ -1155,11 +1188,13 @@ async function renderStableford(opts: {
       },
       strokeIndex: h.stroke_index,
     })),
-    scores: rawScoresRows.map((s) => ({
-      userId: s.user_id,
-      holeNumber: s.hole_number,
-      gross: s.strokes,
-    })),
+    scores: rawScoresRows
+      .filter((s) => !stablefordWithdrawnIds.has(s.user_id))
+      .map((s) => ({
+        userId: s.user_id,
+        holeNumber: s.hole_number,
+        gross: s.strokes,
+      })),
   };
 
   const result = computeModeResult(ctx);
@@ -1187,6 +1222,10 @@ async function renderStableford(opts: {
   const showSideTournament =
     game.status === 'finished' && game.side_tournament_enabled;
 
+  // The WD section is appended after the main leaderboard content on every
+  // return path. Renders nothing when stablefordWithdrawn is empty.
+  const wdSection = <WithdrawnPlayersSection players={stablefordWithdrawn} />;
+
   // Variant-router: par-stableford (team) → team-view/podium, solo → solo-
   // view/podium. State4-flippen (finished vs live) er identisk på begge:
   // finished → champagne-podium med konfetti, alt annet → flat live-leaderboard.
@@ -1202,24 +1241,34 @@ async function renderStableford(opts: {
           chromeless={chromeless}
         />
       );
-      if (!showSideTournament) return podium(false);
-      return renderStablefordWithSideTournament({
-        gameId,
-        game,
-        gwp,
-        rawHolesRows,
-        backHref,
-        mainContent: podium(true),
-      });
+      if (!showSideTournament) {
+        return <>{podium(false)}{wdSection}</>;
+      }
+      return (
+        <>
+          {await renderStablefordWithSideTournament({
+            gameId,
+            game,
+            gwp,
+            rawHolesRows,
+            backHref,
+            mainContent: podium(true),
+          })}
+          {wdSection}
+        </>
+      );
     }
     return (
-      <TeamStablefordView
-        gameId={gameId}
-        gameName={game.name}
-        result={result}
-        playersById={playersById}
-        backHref={backHref}
-      />
+      <>
+        <TeamStablefordView
+          gameId={gameId}
+          gameName={game.name}
+          result={result}
+          playersById={playersById}
+          backHref={backHref}
+        />
+        {wdSection}
+      </>
     );
   }
 
@@ -1235,25 +1284,35 @@ async function renderStableford(opts: {
         chromeless={chromeless}
       />
     );
-    if (!showSideTournament) return podium(false);
-    return renderStablefordWithSideTournament({
-      gameId,
-      game,
-      gwp,
-      rawHolesRows,
-      backHref,
-      mainContent: podium(true),
-    });
+    if (!showSideTournament) {
+      return <>{podium(false)}{wdSection}</>;
+    }
+    return (
+      <>
+        {await renderStablefordWithSideTournament({
+          gameId,
+          game,
+          gwp,
+          rawHolesRows,
+          backHref,
+          mainContent: podium(true),
+        })}
+        {wdSection}
+      </>
+    );
   }
 
   return (
-    <SoloStablefordView
-      gameId={gameId}
-      gameName={game.name}
-      result={result}
-      playersById={playersById}
-      backHref={backHref}
-    />
+    <>
+      <SoloStablefordView
+        gameId={gameId}
+        gameName={game.name}
+        result={result}
+        playersById={playersById}
+        backHref={backHref}
+      />
+      {wdSection}
+    </>
   );
 }
 
@@ -1283,6 +1342,7 @@ async function renderStablefordWithSideTournament(opts: {
       users: { name: string | null; nickname: string | null } | null;
       course_handicap: number | null;
       tee_gender: TeeGender;
+      withdrawn_at: string | null;
     }[];
   };
   rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
@@ -1325,7 +1385,8 @@ async function renderStablefordWithSideTournament(opts: {
   // sideturneringen krever brutto OG netto per hull — stableford-result-en
   // bærer kun stableford-poeng. Filtrerer ut spillere uten users (defensiv;
   // RLS slipper kun gjennom registrerte spillere på et finished-spill).
-  const eligiblePlayers = gwp.players.filter((p) => p.users != null);
+  // WD (#386): trukne spillere deltar ikke i sideturneringen.
+  const eligiblePlayers = gwp.players.filter((p) => p.users != null && p.withdrawn_at == null);
 
   // Hent rå-scores for sideturneringen separat fra LeaderboardBody (vi er
   // allerede inne i samme request-scope, men trenger en egen query siden
@@ -1863,6 +1924,7 @@ function renderSoloStrokeplay(opts: {
       users: { name: string | null; nickname: string | null } | null;
       course_handicap: number | null;
       tee_gender: TeeGender;
+      withdrawn_at: string | null;
     }[];
   };
   rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
@@ -1871,6 +1933,15 @@ function renderSoloStrokeplay(opts: {
 }) {
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
+  // WD (#386): build withdrawn list before active-players map.
+  const soloWithdrawn: WithdrawnPlayer[] = gwp.players
+    .filter((p) => p.users != null && p.withdrawn_at != null)
+    .map((p) => ({
+      user_id: p.user_id,
+      display_name: p.users!.name ?? '(ukjent)',
+    }));
+  const soloWithdrawnIds = new Set(soloWithdrawn.map((p) => p.user_id));
+
   const ctx = {
     game: {
       id: gameId,
@@ -1878,7 +1949,7 @@ function renderSoloStrokeplay(opts: {
       mode_config: game.mode_config,
     },
     players: gwp.players
-      .filter((p) => p.users != null)
+      .filter((p) => p.users != null && p.withdrawn_at == null)
       .map((p) => ({
         userId: p.user_id,
         // Solo strokeplay: validator setter team_number = null på persist (eller
@@ -1906,11 +1977,13 @@ function renderSoloStrokeplay(opts: {
       },
       strokeIndex: h.stroke_index,
     })),
-    scores: rawScoresRows.map((s) => ({
-      userId: s.user_id,
-      holeNumber: s.hole_number,
-      gross: s.strokes,
-    })),
+    scores: rawScoresRows
+      .filter((s) => !soloWithdrawnIds.has(s.user_id))
+      .map((s) => ({
+        userId: s.user_id,
+        holeNumber: s.hole_number,
+        gross: s.strokes,
+      })),
   };
 
   const result = computeModeResult(ctx);
@@ -1929,27 +2002,35 @@ function renderSoloStrokeplay(opts: {
     });
   }
 
+  const wdSection = <WithdrawnPlayersSection players={soloWithdrawn} />;
+
   // Finished → champagne-podium med konfetti. Active/scheduled → flat live-view.
   if (game.status === 'finished') {
     return (
-      <SoloStrokeplayPodium
+      <>
+        <SoloStrokeplayPodium
+          gameId={gameId}
+          gameName={game.name}
+          result={result}
+          playersById={playersById}
+          backHref={backHref}
+        />
+        {wdSection}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <SoloStrokeplayView
         gameId={gameId}
         gameName={game.name}
         result={result}
         playersById={playersById}
         backHref={backHref}
       />
-    );
-  }
-
-  return (
-    <SoloStrokeplayView
-      gameId={gameId}
-      gameName={game.name}
-      result={result}
-      playersById={playersById}
-      backHref={backHref}
-    />
+      {wdSection}
+    </>
   );
 }
 

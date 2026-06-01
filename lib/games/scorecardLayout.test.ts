@@ -64,6 +64,7 @@ function player(
     submitted_at: null,
     approved_at: null,
     rejection_reason: null,
+    withdrawn_at: null,
     users: { name: user_id, nickname: null },
     tee_gender: 'mens',
     ...opts,
