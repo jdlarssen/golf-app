@@ -153,3 +153,20 @@ export const FormatsIcon = ({ size, ...rest }: IconProps) => (
     <rect x="17" y="17" width="4" height="4" rx="1" fill="currentColor" />
   </svg>
 );
+
+// Hjem — house with pitched roof. Bottom-nav «Hjem»-fane.
+export const HjemIcon = ({ size, ...rest }: IconProps) => (
+  <svg {...base(size)} {...rest}>
+    <path d="M 4 11 L 12 4 L 20 11" />
+    <path d="M 6 9.5 L 6 20 L 18 20 L 18 9.5" />
+    <path d="M 10 20 L 10 14 L 14 14 L 14 20" />
+  </svg>
+);
+
+// Profil — head + shoulders. Bottom-nav «Profil»-fane.
+export const ProfilIcon = ({ size, ...rest }: IconProps) => (
+  <svg {...base(size)} {...rest}>
+    <circle cx="12" cy="8" r="3.5" />
+    <path d="M 5 20 Q 5 14.5 12 14.5 Q 19 14.5 19 20" />
+  </svg>
+);
