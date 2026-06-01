@@ -21,6 +21,23 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#386](https://github.com/jdlarssen/golf-app/issues/386). Noen dro hjem etter ni hull, eller dukket aldri opp? Nå kan både spilleren selv og arrangøren markere et frafall. Den trukne tas helt ut av rangeringen (scorene teller ikke), står som «Trukket», og scorekortet låses. Forskjellen fra «ikke levert»: en som spilte men glemte å levere teller fortsatt; en som trakk seg gjør ikke.
 
+### [1.65.1] - 2026-06-01
+
+> Har du skrudd på at flighten må godkjenne scorekortene? Blir ett kort hengende fordi noen dro hjem uten å godkjenne, viser «Avslutt spillet»-kortet nå tydelig at du kan godkjenne på vegne av flighten. Ingen runde blir stående låst.
+
+<details>
+<summary>Teknisk</summary>
+
+Fikser [#360](https://github.com/jdlarssen/golf-app/issues/360) — admin-overstyringen for å løse opp en hengende peer-godkjenning fantes, men var ikke oppdagbar: «Avslutt spillet»-kortet stoppet dødt med en passiv «N scorekort venter på godkjenning»-advarsel uten vei videre.
+
+#### Fixed
+- [`app/admin/games/[id]/page.tsx`](app/admin/games/[id]/page.tsx) — avslutt-kortets godkjennings-blokker er ikke lenger en blindvei: den peker nå til overstyringen («Godkjenn på vegne av flight» under «Leverte scorekort») med en anker-lenke. `SectionCard` fikk en valgfri `id`-prop for ankeret (`id="leverte-scorekort"`). Gjelder både ren godkjennings-blokker og kombinert levering + godkjenning. Selve overstyringen (`adminApproveScorecard`) er uendret — endringen gjør den oppdagbar.
+
+#### Notes
+- Tids-basert auto-eskalering (cron/push-varsel) ble bevisst holdt utenfor: peer-godkjenning skjer normalt i løpet av minutter, og proaktiv purring overlapper [#376](https://github.com/jdlarssen/golf-app/issues/376). Overstyringen er i stedet umiddelbart tilgjengelig idet et kort er ventende.
+
+</details>
+
 ### [1.65.0] - 2026-06-01
 
 > Dro noen hjem før runden var ferdig? Du (eller spilleren selv) kan trekke dem fra spillet. De står som «Trukket» uten plassering, scorene deres teller ikke, og resten av leaderboardet er upåvirket. Angre når som helst mens spillet pågår.

@@ -826,7 +826,7 @@ async function PlayersSections({
         const submitted = players.filter((p) => p.submitted_at != null);
         if (submitted.length === 0) return null;
         return (
-          <SectionCard ribbon="Leverte scorekort">
+          <SectionCard ribbon="Leverte scorekort" id="leverte-scorekort">
             <div className="px-3.5 pb-3.5 pt-3">
               <ul className="-mx-2 divide-y divide-border">
                 {submitted.map((p) => {
@@ -983,17 +983,32 @@ async function PlayersSections({
                 </SmartLink>
               </div>
             ) : (
-              <div className="rounded-xl border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning">
-                {notSubmittedCount > 0 && (
-                  <p>
-                    {notSubmittedCount} av {rankablePlayers.length} spillere har ikke
-                    levert.
-                  </p>
-                )}
+              <div className="space-y-3">
+                <div className="rounded-xl border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning">
+                  {notSubmittedCount > 0 && (
+                    <p>
+                      {notSubmittedCount} av {rankablePlayers.length} spillere har
+                      ikke levert.
+                    </p>
+                  )}
+                  {pendingApprovalCount > 0 && (
+                    <p className={notSubmittedCount > 0 ? 'mt-1.5' : undefined}>
+                      {pendingApprovalCount === 1
+                        ? '1 scorekort venter på godkjenning fra flighten.'
+                        : `${pendingApprovalCount} scorekort venter på godkjenning fra flighten.`}{' '}
+                      Får ikke en medspiller godkjent, kan du godkjenne på vegne av
+                      flighten i «Leverte scorekort» over. Da kan du avslutte
+                      spillet.
+                    </p>
+                  )}
+                </div>
                 {pendingApprovalCount > 0 && (
-                  <p>
-                    {pendingApprovalCount} scorekort venter på godkjenning.
-                  </p>
+                  <a
+                    href="#leverte-scorekort"
+                    className="block min-h-[44px] rounded-full border border-border px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-surface-2"
+                  >
+                    Til leverte scorekort ↑
+                  </a>
                 )}
               </div>
             )}
@@ -1069,12 +1084,14 @@ function PlayersSectionsSkeleton() {
 function SectionCard({
   ribbon,
   children,
+  id,
 }: {
   ribbon: string;
   children: React.ReactNode;
+  id?: string;
 }) {
   return (
-    <section className="mt-1.5">
+    <section id={id} className="mt-1.5">
       <MiniRibbon>{ribbon}</MiniRibbon>
       <div
         className="overflow-hidden rounded-xl border border-border bg-surface"
