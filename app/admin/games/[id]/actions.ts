@@ -240,8 +240,15 @@ export async function adminApproveScorecard(
  * Admin: end an active game. All players must have submitted, and (if peer
  * approval is required) all submissions must be approved. Flips the game to
  * `finished` and stamps `ended_at`, which opens the leaderboard for everyone.
+ *
+ * `allowMissing` is the «avslutt likevel»-escape (#375): when true, players who
+ * never submitted are skipped instead of blocking the end. Their `submitted_at`
+ * stays `null` — they're never marked as a false submission; the «ikke
+ * fullført»-state is derived (`finished && submitted_at == null`). The
+ * peer-approval gate is intentionally NOT relaxed (that lock is #360's domain):
+ * a submitted-but-unapproved scorecard still blocks, even when forcing.
  */
-export async function endGame(gameId: string) {
+export async function endGame(gameId: string, allowMissing = false) {
   const { supabase, user, actorName } = await loadAdminContext();
   const detailPath = `/admin/games/${gameId}`;
 
@@ -291,7 +298,12 @@ export async function endGame(gameId: string) {
   }
   for (const p of players!) {
     if (!p.submitted_at) {
-      redirect(`${detailPath}?error=not_all_submitted`);
+      // No-show: block by default, but let «avslutt likevel» skip past them.
+      // submitted_at stays null — they're marked «ikke fullført», not levert.
+      if (!allowMissing) {
+        redirect(`${detailPath}?error=not_all_submitted`);
+      }
+      continue;
     }
     if (game!.require_peer_approval && !p.approved_at) {
       redirect(`${detailPath}?error=not_all_approved`);

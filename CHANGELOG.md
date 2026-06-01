@@ -17,7 +17,37 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.63.y — Kompis-wizard: velg antall spillere før format
+## 1.64.y — Avslutt selv om noen ikke har levert
+
+Issue [#375](https://github.com/jdlarssen/golf-app/issues/375). En spiller som aldri leverte scorekort kunne før låse hele spillet — det fantes ingen vei rundt. Nå kan arrangøren avslutte likevel: de som mangler markeres «ikke fullført», og resultatet låses for resten.
+
+### [1.64.0] - 2026-06-01
+
+> Mangler én spiller levering, kan du nå avslutte likevel. Du ser hvem som ikke leverte, bekrefter, og de blir stående som «ikke fullført» — så et spill aldri blir hengende åpent fordi noen dro hjem tidlig.
+
+<details>
+<summary>Teknisk</summary>
+
+Fikser [#375](https://github.com/jdlarssen/golf-app/issues/375) — `not_all_submitted` var en hard sperre uten escape; én no-show låste spillet permanent.
+
+#### Added
+- [`app/admin/games/[id]/avslutt-likevel/page.tsx`](app/admin/games/[id]/avslutt-likevel/page.tsx) — dedikert bekreftelses-side for spill uten sideturnering. Lister hvem som ikke har levert, forklarer «ikke fullført»-konsekvensen, og kaller `endGame(gameId, true)`. Guards: notFound / not_active / ruter sideturnering til `/avslutt` / redirect til detalj hvis ingen mangler.
+
+#### Changed
+- [`app/admin/games/[id]/actions.ts`](app/admin/games/[id]/actions.ts) — `endGame(gameId, allowMissing = false)`. Når `allowMissing`, hopper validerings-loopen over spillere uten levering (`submitted_at` forblir null) i stedet for å redirecte `not_all_submitted`. Peer-godkjenning-gaten (`not_all_approved`) er bevisst IKKE lempet — den låsen eies av [#360](https://github.com/jdlarssen/golf-app/issues/360).
+- [`app/admin/games/[id]/avslutt/actions.ts`](app/admin/games/[id]/avslutt/actions.ts) — `endGameWithSideWinners(gameId, allowMissing, formData)` får samme escape (allowMissing bundet før formData).
+- [`app/admin/games/[id]/avslutt/page.tsx`](app/admin/games/[id]/avslutt/page.tsx) — sideturnerings-wizarden laster nå `submitted_at`, viser mangler-advarsel med navn over vinner-skjemaet, og binder `allowMissing`.
+- [`app/admin/games/[id]/page.tsx`](app/admin/games/[id]/page.tsx) — end-kortet viser «Avslutt likevel»-lenke når levering er eneste blokker (`notSubmittedCount > 0 && pendingApprovalCount === 0`). Roster viser «Ikke fullført» per no-show på avsluttet spill (ikke «⏳ Spiller»). «Levert scorekort»-raden får sub «N spilte ikke ferdig».
+
+#### Notes
+- Ingen DB-endring: «ikke fullført» er avledet (`finished && submitted_at == null`), aldri en falsk levering. Tilstanden forsvinner av seg selv ved gjenåpning.
+- Leaderboard/podium håndterer no-shows som ufullstendige slik «ikke spilt»-hull alltid har gjort — ingen endring i view-/podium-komponentene (bruker valgte admin-only markering).
+- [`app/admin/games/[id]/actions.test.ts`](app/admin/games/[id]/actions.test.ts) — ny Type-A-test: `allowMissing=true` flipper til finished tross en ulevert spiller og skriver aldri `submitted_at`.
+
+</details>
+
+<details>
+<summary><strong>1.63.y — Kompis-wizard: velg antall spillere før format (1 oppføring) — klikk for å vise</strong></summary>
 
 Issue [#373](https://github.com/jdlarssen/golf-app/issues/373). For Kompis-runder vises nå en enkel teller øverst i Format-steget. Velg antall spillere, og formater som ikke passer forsvinner — ingen feil format-valg, ingen tur frem og tilbake.
 
@@ -42,6 +72,8 @@ Fikser [#373](https://github.com/jdlarssen/golf-app/issues/373) — format valgt
 #### Notes
 - `kompis`-katalogen fra DB inneholder 18 aktive formater. Alle er eksplisitt håndtert i predikatet; ingen defaultet permissivt for kjente katalog-slugs.
 - Avvik fra issue-tabell: best ball er `even 2–8` (ikke `nøyaktig 8`) — reflekterer #374-oppdateringen. Texas scramble er `multiplum av 2` (team_size 2 eller 4 begge gyldige; multiplum av 2 dekker begge). Shamble er `multiplum av 3 ELLER 4` (ikke bare 3/4-lag).
+
+</details>
 
 </details>
 

@@ -38,9 +38,15 @@ async function loadAdminContext() {
  * is idempotent — re-submitting the wizard simply overwrites the previous
  * selection. The status flip happens AFTER the winners insert so a partial
  * failure leaves the game in `active` and the admin can retry.
+ *
+ * `allowMissing` mirrors the «avslutt likevel»-escape in `endGame` (#375):
+ * when true, players who never submitted are skipped instead of blocking the
+ * end (their `submitted_at` stays null). The peer-approval gate is NOT relaxed
+ * (that's #360). Bound before `formData` so the wizard form can pre-bind it.
  */
 export async function endGameWithSideWinners(
   gameId: string,
+  allowMissing: boolean,
   formData: FormData,
 ) {
   const { supabase, user, actorName } = await loadAdminContext();
@@ -129,7 +135,11 @@ export async function endGameWithSideWinners(
     redirect(`${detailPath}?error=no_players`);
   }
   for (const p of players!) {
-    if (!p.submitted_at) redirect(`${detailPath}?error=not_all_submitted`);
+    if (!p.submitted_at) {
+      // No-show: «avslutt likevel» skips them (submitted_at stays null).
+      if (!allowMissing) redirect(`${detailPath}?error=not_all_submitted`);
+      continue;
+    }
     if (game!.require_peer_approval && !p.approved_at) {
       redirect(`${detailPath}?error=not_all_approved`);
     }

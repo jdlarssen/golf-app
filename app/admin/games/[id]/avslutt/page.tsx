@@ -71,11 +71,12 @@ export default async function AvsluttPage({
 
   const { data: gamePlayers } = await supabase
     .from('game_players')
-    .select('user_id, users!game_players_user_id_fkey(name, nickname)')
+    .select('user_id, submitted_at, users!game_players_user_id_fkey(name, nickname)')
     .eq('game_id', gameId)
     .returns<
       {
         user_id: string;
+        submitted_at: string | null;
         users: { name: string | null; nickname: string | null } | null;
       }[]
     >();
@@ -89,7 +90,16 @@ export default async function AvsluttPage({
       ),
     })) ?? [];
 
-  const action = endGameWithSideWinners.bind(null, gameId);
+  // «Avslutt likevel» (#375): spillere som aldri leverte blokkerer ikke lenger.
+  // Vis hvem som mangler her, og send allowMissing til actionen så den hopper
+  // over dem (submitted_at forblir null → «ikke fullført», ikke falsk levering).
+  const missing = (gamePlayers ?? [])
+    .filter((gp) => !gp.submitted_at)
+    .map((gp) =>
+      formatRevealName(gp.users?.name ?? '', gp.users?.nickname ?? null),
+    );
+
+  const action = endGameWithSideWinners.bind(null, gameId, missing.length > 0);
 
   return (
     <AdminShell>
@@ -102,6 +112,25 @@ export default async function AvsluttPage({
         title="Avslutt spill"
         subtitle={`Velg sideturnerings-vinnere for «${game.name}». Spillet låses når du bekrefter.`}
       />
+      {missing.length > 0 && (
+        <div className="mb-4 rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-3 text-sm text-warning">
+          <p className="font-medium">
+            {missing.length === 1
+              ? '1 spiller har ikke levert:'
+              : `${missing.length} spillere har ikke levert:`}
+          </p>
+          <ul className="mt-1.5 list-disc space-y-0.5 pl-5">
+            {missing.map((name, i) => (
+              <li key={i}>{name}</li>
+            ))}
+          </ul>
+          <p className="mt-2 text-text">
+            Avslutter du nå, blir disse markert{' '}
+            <span className="font-medium">ikke fullført</span> — de telles ikke
+            som levert, men blokkerer ikke lenger.
+          </p>
+        </div>
+      )}
       <SideWinnersForm
         gameId={gameId}
         ldCount={game.side_ld_count}

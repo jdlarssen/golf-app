@@ -468,6 +468,19 @@ async function PlayersSections({
     notSubmittedCount === 0 &&
     pendingApprovalCount === 0;
 
+  // «Avslutt likevel» (#375): når levering er ENESTE blokker (ingen scorekort
+  // venter på godkjenning — det er #360s domene), tilby en escape i stedet for
+  // en blindvei. Sideturnering må innom vinnervalg-wizarden, som selv håndterer
+  // de manglende; ellers går vi til den dedikerte bekreftelses-siden.
+  const onlyMissingBlocks =
+    players.length > 0 && notSubmittedCount > 0 && pendingApprovalCount === 0;
+  const needsSideWizard =
+    game.side_tournament_enabled &&
+    game.side_ld_count + game.side_ctp_count > 0;
+  const avsluttLikevelHref = needsSideWizard
+    ? `/admin/games/${gameId}/avslutt`
+    : `/admin/games/${gameId}/avslutt-likevel`;
+
   const teamCount = [1, 2, 3, 4].filter((t) => byTeam[t].length > 0).length;
   const submittedCount = players.filter((p) => p.submitted_at != null).length;
 
@@ -484,8 +497,12 @@ async function PlayersSections({
           label="Levert scorekort"
           value={`${submittedCount} / ${players.length}`}
           sub={
-            game.status === 'active' && notSubmittedCount > 0
-              ? `${notSubmittedCount} venter`
+            notSubmittedCount > 0
+              ? game.status === 'finished'
+                ? `${notSubmittedCount} spilte ikke ferdig`
+                : game.status === 'active'
+                  ? `${notSubmittedCount} venter`
+                  : undefined
               : undefined
           }
         />
@@ -702,8 +719,15 @@ async function PlayersSections({
                   let statusLabel: string;
                   let statusClass: string;
                   if (!p.submitted_at) {
-                    statusLabel = '⏳ Spiller';
-                    statusClass = 'text-muted';
+                    // På avsluttet spill er en uten levering en no-show
+                    // («avslutt likevel», #375) — ikke «spiller fortsatt».
+                    if (game.status === 'finished') {
+                      statusLabel = 'Ikke fullført';
+                      statusClass = 'text-muted';
+                    } else {
+                      statusLabel = '⏳ Spiller';
+                      statusClass = 'text-muted';
+                    }
                   } else if (game.require_peer_approval && !p.approved_at) {
                     statusLabel = '⏳ Venter';
                     statusClass = 'text-warning';
@@ -893,6 +917,22 @@ async function PlayersSections({
                     ctpCount: game.side_ctp_count,
                   }}
                 />
+              </div>
+            ) : onlyMissingBlocks ? (
+              <div className="space-y-3">
+                <div className="rounded-xl border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning">
+                  <p>
+                    {notSubmittedCount} av {players.length} spillere har ikke
+                    levert. Du kan avslutte likevel. De markeres «ikke fullført»
+                    og blokkerer ikke resultatet.
+                  </p>
+                </div>
+                <SmartLink
+                  href={avsluttLikevelHref}
+                  className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover dark:text-bg"
+                >
+                  Avslutt likevel →
+                </SmartLink>
               </div>
             ) : (
               <div className="rounded-xl border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning">
