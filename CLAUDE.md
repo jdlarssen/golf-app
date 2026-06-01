@@ -92,6 +92,16 @@ Aldri si bare «sett dette i Supabase» — alltid med eksakt sti og kopier-lim-
 
 Alt backlog-arbeid spores i [GitHub Issues](https://github.com/jdlarssen/golf-app/issues), ikke i markdown-filer.
 
+#### Brukerflyt-forankring (mandatory, før alt annet)
+
+Brukerflytene er sannhetskilden for hva som er core. `docs/flows/*-fremtid.svg` = fremtidig kjerne-flyt vi bygger mot; `docs/user-flows.md` = tekst-referanse. Før du løser et issue:
+
+1. **Sjekk at issuet hører hjemme i en flyt.** Er featuren ikke representert i fremtids-flytene, still spørsmålet «trenger vi den?» og ta det med brukeren før du bygger — et eldre issue isolert er ikke mandat nok. Flytene definerer prioritet, ikke issue-alderen.
+2. **Prioriter mot flytene.** Når du velger hva som skal gjøres, vei det mot hvilken flyt det gjør optimal. Funksjonelle hull i kjernesløyfa (opprett → bli med → spill → avslutt) går foran polish.
+3. **Hold flytene levende.** Endrer arbeidet en flyt, oppdater diagrammet (regenerer PNG per `docs/flows/README.md`) i samme PR — ellers bygger vi noe som ikke står i kartet.
+
+Presedens: #318 (sømløs invitasjons-innlogging) ble satt til side fordi fremtids-flyten ikke inkluderte den — self-reg dekket retningen. Verifiser mot flyten, ikke mot et to-dager-gammelt issue.
+
 #### Branch + PR-flyt (default post-v1.0)
 
 Etter `v1.0.0` (2026-05-13) går alt arbeid via PR — **ikke direkte push til `main`**. Vercel deployer PR-branchen til preview-URL, gir et sjekkpunkt før prod-merge.
