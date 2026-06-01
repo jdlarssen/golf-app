@@ -6,7 +6,6 @@ import { Kicker } from '@/components/ui/Kicker';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { getModeContentMap, mergeModeContent } from '@/lib/formats/getModeContent';
 import { MODE_LABELS, type GameMode } from '@/lib/scoring/modes/types';
-import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 
 type Params = Promise<{ slug: string }>;
 
@@ -40,10 +39,7 @@ export default async function SpillformDetailPage({ params }: { params: Params }
   }
 
   const mode = slug as GameMode;
-  const [modeContentMap, userId] = await Promise.all([
-    getModeContentMap(),
-    getProxyVerifiedUserId(),
-  ]);
+  const modeContentMap = await getModeContentMap();
 
   // Detail page always uses team_size 1 (slug-based, no variant config)
   const merged = mergeModeContent(
@@ -55,7 +51,7 @@ export default async function SpillformDetailPage({ params }: { params: Params }
   const label = MODE_LABELS[mode] ?? slug;
 
   return (
-    <AppShell userId={userId ?? null}>
+    <AppShell>
       <header className="mb-6 flex items-center gap-3">
         <BackLink href="/spillformer">← Alle spillformer</BackLink>
       </header>

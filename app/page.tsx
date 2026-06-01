@@ -55,7 +55,7 @@ export default async function Home({
   const profileUpdated = first(params.profile) === 'updated';
 
   return (
-    <AppShell userId={userId}>
+    <AppShell>
       {/* Brand-rad. Innboks-bjella er flyttet til bunn-nav-en (#355), så
           headeren er nå bare merket. */}
       <div className="mb-6">

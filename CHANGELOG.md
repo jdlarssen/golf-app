@@ -31,18 +31,18 @@ Issue [#355](https://github.com/jdlarssen/golf-app/issues/355). Appen hadde inge
 Fikser [#355](https://github.com/jdlarssen/golf-app/issues/355) — ingen vedvarende nav; Hjem var eneste nav-nav, en blindvei i installert PWA. Profil var kun nåbar fra en muted footer på Hjem.
 
 #### Added
-- [`components/ui/BottomNav.tsx`](components/ui/BottomNav.tsx) — fast bunn-tab-bar (Hjem/Innboks/Profil), `position: fixed` + `env(safe-area-inset-bottom)`, aktiv-fane via `usePathname`, uleste-prikk på Innboks via `useUnreadNotificationsCount`.
+- [`components/ui/BottomNav.tsx`](components/ui/BottomNav.tsx) — fast bunn-tab-bar (Hjem/Innboks/Profil), `position: fixed` + `env(safe-area-inset-bottom)`, aktiv-fane via `usePathname`, uleste-prikk på Innboks via `useUnreadNotificationsCount`. Rendret én gang globalt i [`app/layout.tsx`](app/layout.tsx) med `userId` fra proxy-headeren, så den dekker ALLE innloggede spiller-flater — inkludert de ~30 format-spesifikke leaderboard-viewene som hver eier sin egen `AppShell`.
 - [`components/icons/Icons.tsx`](components/icons/Icons.tsx) — `HjemIcon` + `ProfilIcon` (Innboks bruker `KonvoluttIcon`).
 - Konto-handlinger på Profil-siden: «Logg ut» + (for admin) «Sekretariatet».
 
 #### Changed
-- [`components/ui/AppShell.tsx`](components/ui/AppShell.tsx) — valgfri `userId`-prop rendrer baren + reserverer bunn-padding. Trådd inn på alle spiller-flater (spill, leaderboard, scorecard, levering, godkjenning, trekk, innboks, profil, opprett-spill, spillformer, cup).
+- [`components/ui/AppShell.tsx`](components/ui/AppShell.tsx) — reserverer bunn-padding som klarerer baren + home-indicator (baren rendres globalt, ikke per AppShell).
 - `NotificationBell` fjernet fra spiller-`TopBar` og home-headeren — Innboks-fanen overtar. Beholdt på admin-flater (ingen bunn-nav der).
 - Home-footeren fjernet: «Min profil» dekkes av Profil-fanen, «Logg ut» / «Sekretariatet» flyttet til Profil-siden.
 
 #### Notes
-- Skjult på hull-skjermen (fullskjerm scoring), admin (eget rom) og offentlige/pre-profil-sider.
-- Integrert via AppShell-prop, ikke route-gruppe-layout (lavere risiko for stor diff). Sistnevnte er en mulig fremtidig optimalisering for persistent realtime-abonnement.
+- Skjuler seg på hull-skjermen (fullskjerm scoring) og admin (eget rom) via `usePathname`; på offentlige/pre-profil-sider mangler proxy-headeren, så `userId` er null og baren rendres ikke.
+- Global render i root-layout ble valgt framfor en `userId`-prop per `AppShell`: `AppShell` rendres ~50 steder (mange er client-component leaderboard-views), så per-prop-tråding ville bommet på dem og vært en felle for hver nye spillform. Root-layout-render gjør at headeren leses der, hvilket gjør de tre tidligere statiske sidene (`/_not-found`, `/invite`, `/legal/privacy`) dynamiske — ubetydelig for app-en. Route-gruppe-layout er en mulig fremtidig optimalisering for persistent realtime-abonnement.
 
 </details>
 

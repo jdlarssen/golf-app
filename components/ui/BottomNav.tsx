@@ -11,9 +11,10 @@ import { useUnreadNotificationsCount } from '@/hooks/useUnreadNotificationsCount
  * gamle «hjem er eneste nav»-modellen — fra hvilken som helst spiller-side når
  * brukeren alle tre i ett tap.
  *
- * Rendres av `AppShell` når en `userId` er satt. Admin-flater (AdminShell) og
- * offentlige/pre-profil-sider får den ikke. Hull-skjermen bruker ikke AppShell
- * og er bevisst nav-fri.
+ * Rendret én gang globalt i `app/layout.tsx`. `userId` kommer fra proxy-
+ * headeren: null på offentlige (umatchede) ruter → baren skjuler seg selv.
+ * I tillegg skjuler den seg på admin (eget rom), hull-skjermen (fullskjerm
+ * scoring) og pre-profil-onboarding, som har egen chrome.
  *
  * Innboks-fanen overtar rollen til den gamle `NotificationBell` i TopBar:
  * samme champagne-prikk via `useUnreadNotificationsCount`, ingen telletall.
@@ -22,10 +23,20 @@ import { useUnreadNotificationsCount } from '@/hooks/useUnreadNotificationsCount
  * home-indicator (`viewportFit: 'cover'` er satt i app/layout.tsx). AppShell
  * legger tilsvarende bunn-padding på innholdet så ingenting scroller under.
  */
-export function BottomNav({ userId }: { userId: string }) {
-  const pathname = usePathname();
+export function BottomNav({ userId }: { userId: string | null }) {
+  const pathname = usePathname() ?? '';
   const { count } = useUnreadNotificationsCount(userId);
   const hasUnread = count > 0;
+
+  // Skjul når utlogget (null på offentlige ruter) eller på flater med egen
+  // chrome: admin, hull-skjerm (fullskjerm scoring) og pre-profil-onboarding.
+  const hidden =
+    userId == null ||
+    pathname === '/login' ||
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/complete-profile') ||
+    /^\/games\/[^/]+\/holes\//.test(pathname);
+  if (hidden) return null;
 
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);

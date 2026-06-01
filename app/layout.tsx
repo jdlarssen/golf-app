@@ -4,6 +4,8 @@ import "./globals.css";
 import { PwaBoot } from "@/components/PwaBoot";
 import { InstallPromptCapture } from "@/components/pwa/InstallPromptCapture";
 import { PerfHud } from "@/components/PerfHud";
+import { BottomNav } from "@/components/ui/BottomNav";
+import { getProxyVerifiedUserId } from "@/lib/auth/userId";
 
 // Inter — body, UI labels, forms. Variable font for crisp small-size rendering.
 const inter = Inter({
@@ -47,11 +49,17 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Vedvarende bunn-nav (#355): rendret én gang globalt så den dekker ALLE
+  // innloggede spiller-flater — inkludert de ~30 format-spesifikke leaderboard-
+  // viewene som hver eier sin egen AppShell. `getProxyVerifiedUserId` leser
+  // headeren proxy.ts setter: null på offentlige (umatchede) ruter → ingen bar.
+  // BottomNav skjuler seg selv i tillegg på admin + hull-skjerm via usePathname.
+  const userId = await getProxyVerifiedUserId();
   return (
     <html
       lang="nb-NO"
@@ -59,6 +67,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col font-sans">
         {children}
+        <BottomNav userId={userId} />
         <InstallPromptCapture />
         <PwaBoot />
         <PerfHud />

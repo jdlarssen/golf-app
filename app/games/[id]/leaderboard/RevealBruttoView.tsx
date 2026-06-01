@@ -40,7 +40,7 @@ export function RevealBruttoView({
   userId,
 }: Props) {
   return (
-    <AppShell userId={userId}>
+    <AppShell>
       <PreRoundLeaderboardRealtime gameId={gameId} />
 
       <TopBar

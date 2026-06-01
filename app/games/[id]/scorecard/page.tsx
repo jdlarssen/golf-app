@@ -121,7 +121,7 @@ export default async function ScorecardPage({ params }: { params: Params }) {
       : computeStablefordPoints;
 
   return (
-    <AppShell showVersion={false} userId={userId}>
+    <AppShell showVersion={false}>
       <TopBar
         backHref={`/games/${id}`}
         backLabel={`Tilbake til ${game.name}`}

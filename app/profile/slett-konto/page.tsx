@@ -56,7 +56,7 @@ export default async function SlettKontoPage({
   const displayName = userProfile?.name?.trim() || userProfile?.email || 'kontoen din';
 
   return (
-    <AppShell userId={userId}>
+    <AppShell>
       <TopBar
         backHref="/profile"
         backLabel="Tilbake til profil"

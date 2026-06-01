@@ -78,7 +78,7 @@ export default async function ProfilePage({
     : undefined;
 
   return (
-    <AppShell userId={userId}>
+    <AppShell>
       <TopBar backHref="/" backLabel="Tilbake til hjem" kicker="Profil" />
 
       {profileUpdated && (

@@ -27,7 +27,7 @@ export default async function InboxPage() {
   const notifications = rows ?? [];
 
   return (
-    <AppShell userId={userId}>
+    <AppShell>
       <TopBar
         backHref="/"
         backLabel="Tilbake til hjem"

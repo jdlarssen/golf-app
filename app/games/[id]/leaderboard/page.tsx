@@ -875,7 +875,7 @@ async function LeaderboardBody({
   // SideTournamentView was always chromeless; it sits inside the same shell
   // alongside the main view.
   return (
-    <AppShell userId={userId}>
+    <AppShell>
       <TopBar backHref={backHref} kicker={game.name} />
       <LeaderboardTabs
         mainContent={
@@ -1539,7 +1539,7 @@ async function renderStablefordWithSideTournament(opts: {
   }));
 
   return (
-    <AppShell userId={userId}>
+    <AppShell>
       <TopBar backHref={backHref} kicker={game.name} />
       <LeaderboardTabs
         mainContent={mainContent}
@@ -3322,7 +3322,7 @@ function renderState3(opts: {
   const teamCount = teams.length;
 
   return (
-    <AppShell userId={userId}>
+    <AppShell>
       <PreRoundLeaderboardRealtime gameId={gameId} />
 
       <header className="mb-6 flex items-center justify-between gap-4">
@@ -3428,7 +3428,7 @@ function renderState35(opts: {
   const leaderTotal = orderedLines.find((l) => l.rank === 1)?.total ?? 0;
 
   return (
-    <AppShell userId={userId}>
+    <AppShell>
       {/* Reuse the pre-round realtime — same scores-INSERT subscription
           works here too. When a new score lands the page refreshes; the
           server re-evaluates view (may stay #3.5 or eventually flip to

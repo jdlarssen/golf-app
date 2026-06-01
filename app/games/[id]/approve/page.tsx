@@ -110,7 +110,7 @@ export default async function ApprovePage({
   );
 
   return (
-    <AppShell showVersion={false} userId={userId}>
+    <AppShell showVersion={false}>
       <TopBar
         backHref={`/games/${id}`}
         backLabel={`Tilbake til ${game.name}`}

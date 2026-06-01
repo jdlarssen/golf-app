@@ -124,7 +124,7 @@ export default async function SubmitPage({
   const kicker = isStableford ? 'Lever ditt scorekort' : 'Lever scorekort';
 
   return (
-    <AppShell showVersion={false} userId={userId}>
+    <AppShell showVersion={false}>
       <TopBar backHref={`/games/${id}`} kicker={kicker} />
 
       {errorMessage && (

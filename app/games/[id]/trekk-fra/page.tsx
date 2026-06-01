@@ -105,7 +105,7 @@ export default async function TrekkFraPage({
     : null;
 
   return (
-    <AppShell userId={userId}>
+    <AppShell>
       <TopBar
         backHref={`/games/${id}`}
         backLabel="Tilbake til spillet"

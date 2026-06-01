@@ -64,7 +64,7 @@ export default async function OpprettSpillPage({
   const userId = await getProxyVerifiedUserId();
 
   return (
-    <AppShell userId={userId}>
+    <AppShell>
       <TopBar backHref="/" kicker="Nytt spill" />
 
       <div className="px-1">
