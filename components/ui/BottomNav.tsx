@@ -25,11 +25,12 @@ import { useUnreadNotificationsCount } from '@/hooks/useUnreadNotificationsCount
  */
 export function BottomNav({ userId }: { userId: string | null }) {
   const pathname = usePathname() ?? '';
-  const { count } = useUnreadNotificationsCount(userId);
-  const hasUnread = count > 0;
 
   // Skjul når utlogget (null på offentlige ruter) eller på flater med egen
   // chrome: admin, hull-skjerm (fullskjerm scoring) og pre-profil-onboarding.
+  // Vi gater FØR `useUnreadNotificationsCount` (i Bar-en) slik at det globale
+  // realtime-abonnementet kun åpnes når baren faktisk vises — ikke på hver
+  // autentisert rute (hull-skjerm/admin) der den uansett er skjult.
   const hidden =
     userId == null ||
     pathname === '/login' ||
@@ -37,6 +38,13 @@ export function BottomNav({ userId }: { userId: string | null }) {
     pathname.startsWith('/complete-profile') ||
     /^\/games\/[^/]+\/holes\//.test(pathname);
   if (hidden) return null;
+
+  return <BottomNavBar userId={userId} pathname={pathname} />;
+}
+
+function BottomNavBar({ userId, pathname }: { userId: string; pathname: string }) {
+  const { count } = useUnreadNotificationsCount(userId);
+  const hasUnread = count > 0;
 
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);
