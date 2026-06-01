@@ -57,6 +57,13 @@ export interface HoleClientProps {
   gameName: string;
   gameStatus: 'draft' | 'scheduled' | 'active' | 'finished';
   /**
+   * True when the current player has been withdrawn (WD) from the game (#386).
+   * When set, a locked-banner is shown above the score cards and the player's
+   * own ScoreCard is disabled. Other players' cards remain interactive so
+   * flight-mates can still enter scores.
+   */
+  withdrawn?: boolean;
+  /**
    * Spillets modus. Stableford bytter ut «Lever lagets scorekort» med
    * «Lever ditt scorekort», viser «Dine poeng»-subtittel i headeren, og
    * surfacer stableford-poeng per hull på score-kortet. Default-prop
@@ -222,6 +229,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     gameName,
     gameStatus,
     gameMode = 'best_ball',
+    withdrawn = false,
     currentHole,
     par,
     parByGender,
@@ -772,6 +780,44 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
         </div>
       )}
 
+      {/* WD-banner: vises øverst i score-lista når innlogget spiller er
+          trukket (#386). Lenker til game-home for angre-knapp. */}
+      {withdrawn && (
+        <div
+          data-testid="withdrawn-banner"
+          style={{
+            margin: '0 14px 8px',
+            padding: '10px 14px',
+            borderRadius: 12,
+            border: '1px solid var(--danger)',
+            background: 'var(--danger-soft, color-mix(in srgb, var(--danger) 10%, transparent))',
+            fontFamily: 'var(--font-sans)',
+            fontSize: 13,
+            fontWeight: 500,
+            color: 'var(--text)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+          }}
+        >
+          <span>Du har trukket deg</span>
+          <SmartLink
+            href={`/games/${gameId}`}
+            style={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: 'var(--text)',
+              textDecoration: 'underline',
+              textUnderlineOffset: 2,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Angre
+          </SmartLink>
+        </div>
+      )}
+
       <div style={listStyle}>
         {cards.map((c) => {
           // Per-kort stableford-poeng for current hull. Vi regner client-side
@@ -785,6 +831,9 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
                   netStrokes: c.score - c.extraStrokes,
                 })
               : null;
+          // WD-spilleren kan ikke taste sin egen ball, men flight-kameratene
+          // kan fortsatt taste sine scorer (#386).
+          const isMyCard = c.userId === myUserId;
           return (
             <ScoreCard
               key={c.userId}
@@ -794,7 +843,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
               extraStrokes={c.extraStrokes}
               score={c.score}
               par={par}
-              disabled={disabled}
+              disabled={disabled || (withdrawn && isMyCard)}
               hideNetto={hideNetto}
               stablefordPoints={stablefordPoints}
               onSetScore={onSetScore}

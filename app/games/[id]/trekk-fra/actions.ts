@@ -1,7 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { withdrawFromGame } from '../withdrawActions';
+import { withdrawFromGame, undoWithdraw } from '../withdrawActions';
 
 /**
  * Form-handler wrapper rundt `withdrawFromGame`. Eksisterer kun fordi `<form
@@ -24,5 +24,29 @@ export async function submitWithdraw(formData: FormData): Promise<void> {
     redirect(`/games/${gameId}/trekk-fra?error=withdraw_failed`);
   }
 
-  redirect('/');
+  // Active withdrawal keeps the row → land on game home to show «Du har
+  // trukket deg» + angre. Pre-start deletes the row → game home would 404,
+  // so go to the app home instead.
+  redirect(result.kept ? `/games/${gameId}` : '/');
+}
+
+/**
+ * Angre WD-knapp på game-home og hull-siden (#386 chunk 3).
+ *
+ * FormData-wrapper rundt `undoWithdraw`. Ved suksess redirecter vi til
+ * `/games/[id]` slik at angre-banneret forsvinner og scorekort åpner på nytt.
+ */
+export async function submitUndoWithdraw(formData: FormData): Promise<void> {
+  const gameId = String(formData.get('gameId') ?? '');
+  if (!gameId) {
+    redirect('/');
+  }
+
+  const result = await undoWithdraw(gameId);
+  if (!result.ok) {
+    // Best-effort: gå tilbake til game home; brukeren kan prøve igjen.
+    redirect(`/games/${gameId}`);
+  }
+
+  redirect(`/games/${gameId}`);
 }

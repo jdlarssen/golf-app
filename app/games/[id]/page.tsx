@@ -10,13 +10,13 @@ import { BackLink } from '@/components/ui/BackLink';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
-import { LinkButton } from '@/components/ui/Button';
+import { LinkButton, Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Kicker } from '@/components/ui/Kicker';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { type GameStatus, STATUS_LABELS } from '@/lib/games/status';
-import { isStablefordFamily } from '@/lib/scoring/modes/types';
+import { isStablefordFamily, supportsWithdrawal } from '@/lib/scoring/modes/types';
 import { MailEnvelope } from '@/components/icons/MailEnvelope';
 import { firstName } from '@/lib/firstName';
 import { nameInitials } from '@/lib/names/initials';
@@ -35,6 +35,7 @@ import { ModeGuideCard } from '@/components/ModeGuideCard';
 import { ScheduledWaitingRoom } from './ScheduledWaitingRoom';
 import { getModeContentMap, mergeModeContent } from '@/lib/formats/getModeContent';
 import { formatDisplayLabel } from '@/lib/games/formatLabel';
+import { submitUndoWithdraw } from './trekk-fra/actions';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -643,7 +644,24 @@ export default async function GameHomePage({
           </Card>
         )}
 
-        {isActive ? (
+        {isActive && me.withdrawn_at ? (
+          // WD — viser angre-banner i stedet for scorekort-CTA (#386).
+          <div className="rounded-2xl border border-danger/40 bg-danger/5 px-4 py-4">
+            <p className="mb-3 font-sans text-[14px] font-medium text-text">
+              Du har trukket deg fra spillet
+            </p>
+            <p className="mb-4 font-sans text-[12px] leading-relaxed text-muted">
+              Scorene dine teller ikke i rangeringen. Du kan angre så lenge
+              spillet er aktivt.
+            </p>
+            <form action={submitUndoWithdraw}>
+              <input type="hidden" name="gameId" value={id} />
+              <Button type="submit" className="w-full">
+                Angre
+              </Button>
+            </form>
+          </div>
+        ) : isActive ? (
           <Suspense fallback={<PrimaryCtaSkeleton />}>
             <PrimaryCtaSection
               gameId={id}
@@ -718,6 +736,23 @@ export default async function GameHomePage({
             </SmartLink>
           </div>
         )}
+
+        {/* Aktive spill med WD-støtte: la spilleren trekke seg (#386). Vises
+            kun til spillere som ikke allerede er trukket — trukne ser angre-
+            banneret ovenfor i stedet. Diskret lenke-stil, ikke et prominent
+            kall-til-handling. */}
+        {isActive &&
+          !me.withdrawn_at &&
+          supportsWithdrawal(game.game_mode) && (
+            <div className="pt-1">
+              <SmartLink
+                href={`/games/${id}/trekk-fra`}
+                className="block text-center text-xs text-muted hover:text-text transition-colors underline underline-offset-2 decoration-muted/40"
+              >
+                Trekk deg fra spillet
+              </SmartLink>
+            </div>
+          )}
 
         <div className="pt-2">
           <SmartLink

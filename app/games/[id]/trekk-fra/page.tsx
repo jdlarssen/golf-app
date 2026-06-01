@@ -7,6 +7,8 @@ import { Banner } from '@/components/ui/Banner';
 import { Button } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
 import type { GameStatus } from '@/lib/games/status';
+import type { GameMode } from '@/lib/scoring/modes/types';
+import { supportsWithdrawal } from '@/lib/scoring';
 import { formatTeeOffDate } from '@/lib/format/teeOff';
 import { submitWithdraw } from './actions';
 
@@ -45,6 +47,7 @@ type GameRow = {
   id: string;
   name: string;
   status: GameStatus;
+  game_mode: GameMode;
   scheduled_tee_off_at: string | null;
   courses: { name: string } | null;
 };
@@ -70,7 +73,7 @@ export default async function TrekkFraPage({
 
   const { data: game } = await supabase
     .from('games')
-    .select('id, name, status, scheduled_tee_off_at, courses(name)')
+    .select('id, name, status, game_mode, scheduled_tee_off_at, courses(name)')
     .eq('id', id)
     .maybeSingle<GameRow>();
 
@@ -88,7 +91,12 @@ export default async function TrekkFraPage({
   if (!player) {
     redirect(`/games/${id}`);
   }
-  if (game.status !== 'draft' && game.status !== 'scheduled') {
+
+  const isPreStart = game.status === 'draft' || game.status === 'scheduled';
+  const isActiveWithdrawable =
+    game.status === 'active' && supportsWithdrawal(game.game_mode);
+
+  if (!isPreStart && !isActiveWithdrawable) {
     redirect(`/games/${id}`);
   }
 
@@ -122,8 +130,9 @@ export default async function TrekkFraPage({
 
       <div className="mt-5">
         <Banner tone="warning">
-          Du forsvinner fra påmeldings-lista og scorekortet åpner ikke for deg
-          ved tee-off. Arrangøren får automatisk beskjed hvis du var på lag.
+          {isActiveWithdrawable
+            ? 'Du trekker deg fra et pågående spill. Scorene dine teller ikke i resultatet, og scorekortet ditt låses. Du kan angre så lenge spillet pågår.'
+            : 'Du forsvinner fra påmeldings-lista og scorekortet åpner ikke for deg ved tee-off. Arrangøren får automatisk beskjed hvis du var på lag.'}
         </Banner>
       </div>
 
@@ -131,15 +140,31 @@ export default async function TrekkFraPage({
         <p className="mb-2 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
           Dette skjer
         </p>
-        <ul className="space-y-1 font-sans text-[13px] text-text">
-          <li>Påmeldingen din slettes</li>
-          <li>Eventuell forespørsel om å bli med slettes også</li>
-          <li>Lag-medlemmer og kaptein får varsel hvis du var på lag</li>
-        </ul>
-        <p className="mt-3 font-sans text-[12px] leading-relaxed text-muted">
-          Hvis du ombestemmer deg, kan du melde deg på igjen så lenge påmelding
-          fortsatt er åpen.
-        </p>
+        {isActiveWithdrawable ? (
+          <>
+            <ul className="space-y-1 font-sans text-[13px] text-text">
+              <li>Scorene dine teller ikke i rangeringen</li>
+              <li>Scorekortet ditt låses for ny inntasting</li>
+              <li>Du vises som «Trukket» under leaderboarden</li>
+            </ul>
+            <p className="mt-3 font-sans text-[12px] leading-relaxed text-muted">
+              Du kan angre og gjenoppta spillet fra startsiden så lenge spillet
+              er aktivt.
+            </p>
+          </>
+        ) : (
+          <>
+            <ul className="space-y-1 font-sans text-[13px] text-text">
+              <li>Påmeldingen din slettes</li>
+              <li>Eventuell forespørsel om å bli med slettes også</li>
+              <li>Lag-medlemmer og kaptein får varsel hvis du var på lag</li>
+            </ul>
+            <p className="mt-3 font-sans text-[12px] leading-relaxed text-muted">
+              Hvis du ombestemmer deg, kan du melde deg på igjen så lenge
+              påmelding fortsatt er åpen.
+            </p>
+          </>
+        )}
       </div>
 
       <div className="mt-6 flex flex-col gap-2.5">

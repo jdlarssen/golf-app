@@ -655,6 +655,7 @@ export default async function HolePage({ params }: { params: Params }) {
         gameName={game.name}
         gameStatus={game.status}
         gameMode={game.game_mode}
+        withdrawn={me.withdrawn_at != null}
         currentHole={holeNumber}
         par={parFor(
           {

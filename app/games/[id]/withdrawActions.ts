@@ -5,6 +5,7 @@ import { revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { notify } from '@/lib/notifications/notify';
+import { supportsWithdrawal } from '@/lib/scoring';
 
 /**
  * Self-withdraw fra et spill (#199 chunk 11).
@@ -29,7 +30,10 @@ import { notify } from '@/lib/notifications/notify';
  */
 
 export type WithdrawResult =
-  | { ok: true }
+  // `kept` = the game_players row still exists after the call (active soft-WD).
+  // false/undefined = the row was deleted (pre-start withdrawal). The form
+  // wrapper uses it to decide where to land: game home (kept) vs app home.
+  | { ok: true; kept?: boolean }
   | { ok: false; error: WithdrawError };
 
 export type WithdrawError =
@@ -39,11 +43,14 @@ export type WithdrawError =
   | 'game_locked'
   | 'db_error';
 
+import type { GameMode } from '@/lib/scoring/modes/types';
+
 type GameSnapshot = {
   id: string;
   name: string;
   short_id: string;
   status: 'draft' | 'scheduled' | 'active' | 'finished';
+  game_mode: GameMode;
 };
 
 type PlayerSnapshot = {
@@ -74,7 +81,7 @@ export async function withdrawFromGame(
   const [gameRes, playerRes] = await Promise.all([
     admin
       .from('games')
-      .select('id, name, short_id, status')
+      .select('id, name, short_id, status, game_mode')
       .eq('id', gameId)
       .maybeSingle<GameSnapshot>(),
     admin
@@ -89,6 +96,31 @@ export async function withdrawFromGame(
     return { ok: false, error: 'game_not_found' };
   }
   const game = gameRes.data;
+
+  // Active + in-scope mode → soft WD (set withdrawn_at). Pre-start → DELETE.
+  // Any other combination (finished, active+unsupported) → locked.
+  if (game.status === 'active' && supportsWithdrawal(game.game_mode)) {
+    if (!playerRes.data) {
+      return { ok: false, error: 'not_registered' };
+    }
+    // UPDATE game_players SET withdrawn_at, withdrawn_by_user_id.
+    const { error: updateError } = await admin
+      .from('game_players')
+      .update({
+        withdrawn_at: new Date().toISOString(),
+        withdrawn_by_user_id: user.id,
+      })
+      .eq('game_id', gameId)
+      .eq('user_id', user.id);
+
+    if (updateError) {
+      console.error('[withdrawFromGame] active update failed', updateError);
+      return { ok: false, error: 'db_error' };
+    }
+
+    revalidateTag(`game-${game.id}`, 'max');
+    return { ok: true, kept: true };
+  }
 
   if (game.status !== 'draft' && game.status !== 'scheduled') {
     return { ok: false, error: 'game_locked' };
@@ -196,5 +228,73 @@ export async function withdrawFromGame(
     );
   }
 
+  // Pre-start path deleted the row.
+  return { ok: true, kept: false };
+}
+
+/**
+ * Angre self-WD under aktivt spill (#386 chunk 3).
+ *
+ * Nullstiller `withdrawn_at` + `withdrawn_by_user_id` for innlogget bruker
+ * hvis spillet er `active` og spilleren faktisk er trukket. Kun for in-scope
+ * modi (same gate som withdrawFromGame aktiv-gren). Admin-angre håndteres
+ * av admin-server-action i chunk 4.
+ */
+export async function undoWithdraw(
+  gameId: string,
+): Promise<WithdrawResult> {
+  const supabase = await getServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect('/login');
+  }
+
+  if (!/^[0-9a-f-]{36}$/i.test(gameId)) {
+    return { ok: false, error: 'game_not_found' };
+  }
+
+  const admin = getAdminClient();
+
+  const [gameRes, playerRes] = await Promise.all([
+    admin
+      .from('games')
+      .select('id, status, game_mode')
+      .eq('id', gameId)
+      .maybeSingle<Pick<GameSnapshot, 'id' | 'status' | 'game_mode'>>(),
+    admin
+      .from('game_players')
+      .select('user_id, withdrawn_at')
+      .eq('game_id', gameId)
+      .eq('user_id', user.id)
+      .maybeSingle<{ user_id: string; withdrawn_at: string | null }>(),
+  ]);
+
+  if (!gameRes.data) {
+    return { ok: false, error: 'game_not_found' };
+  }
+  const game = gameRes.data;
+
+  if (game.status !== 'active' || !supportsWithdrawal(game.game_mode)) {
+    return { ok: false, error: 'game_locked' };
+  }
+
+  if (!playerRes.data || playerRes.data.withdrawn_at == null) {
+    return { ok: false, error: 'not_registered' };
+  }
+
+  const { error: updateError } = await admin
+    .from('game_players')
+    .update({ withdrawn_at: null, withdrawn_by_user_id: null })
+    .eq('game_id', gameId)
+    .eq('user_id', user.id);
+
+  if (updateError) {
+    console.error('[undoWithdraw] update failed', updateError);
+    return { ok: false, error: 'db_error' };
+  }
+
+  revalidateTag(`game-${game.id}`, 'max');
   return { ok: true };
 }
