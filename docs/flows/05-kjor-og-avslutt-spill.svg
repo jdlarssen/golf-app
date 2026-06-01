@@ -21,7 +21,7 @@
   <rect x="120" y="332" width="560" height="72" rx="14" fill="#FFFFFF" stroke="#D8C089" stroke-width="1.5"/>
   <circle cx="156" cy="368" r="16" fill="#B8973F"/><text x="156" y="373" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">2</text>
   <text x="190" y="364" font-size="16" fill="#213029">Følg med mens de spiller</text>
-  <text x="190" y="386" font-size="12.5" fill="#6B7770">godkjenn scorekort, legg til etternølere, fiks feil</text>
+  <text x="190" y="386" font-size="12.5" fill="#6B7770">godkjenn scorekort, legg til etternølere, trekk frafall (WD), fiks feil</text>
   <line x1="400" y1="404" x2="400" y2="430" stroke="#8A6D27" stroke-width="1.6" marker-end="url(#a)"/>
 
   <!-- 3 end gate -->
