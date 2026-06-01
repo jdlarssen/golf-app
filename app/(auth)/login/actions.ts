@@ -120,8 +120,9 @@ export async function verifyCode(formData: FormData) {
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
   const token = String(formData.get('token') ?? '').trim();
   const nextRaw = String(formData.get('next') ?? '').trim();
-  const next =
-    nextRaw.startsWith('/') && !nextRaw.startsWith('//') ? nextRaw : '/';
+  const hasExplicitNext =
+    nextRaw.startsWith('/') && !nextRaw.startsWith('//');
+  const next = hasExplicitNext ? nextRaw : '/';
 
   if (!email || !token) {
     const qs = new URLSearchParams({
@@ -157,6 +158,12 @@ export async function verifyCode(formData: FormData) {
   // public.users.id-en til den nyverifiserte brukeren ennå ikke er
   // tilgjengelig via cookie-klienten i denne action-en (auth-state
   // propagerer asynkront); admin-client har uansett tilgang.
+  //
+  // #356: gameDest/profileIncomplete settes inne i blokken, men brukes til
+  // redirect ETTER den (se note ved redirect-en under).
+  let gameDest: string | null = null;
+  let profileIncomplete = false;
+
   try {
     const admin = getAdminClient();
     const { data: pendingInvites } = await admin
@@ -181,27 +188,34 @@ export async function verifyCode(formData: FormData) {
     if (gameScoped.length > 0) {
       const { data: userRow } = await admin
         .from('users')
-        .select('id')
+        .select('id, profile_completed_at')
         .ilike('email', email)
-        .maybeSingle<{ id: string }>();
+        .maybeSingle<{ id: string; profile_completed_at: string | null }>();
 
       if (userRow?.id) {
-        await Promise.allSettled(
+        // Resolve hver scopet invitasjons registration_type FØRST. Vi trenger
+        // den til to ting: (a) hoppe over solo-game_players-insert på team-only
+        // spill (#199), og (b) #356 — avgjøre hvor invitéen skal lande etterpå.
+        // Team-only spill (#199) skal ikke få en solo-rad auto-opprettet — det
+        // ville bryte CHECK-constraint på team_number/flight_number-konsistens.
+        // I stedet havner invitéen på `/signup/[shortId]/team` når de melder seg
+        // på laget.
+        const resolved = await Promise.all(
           gameScoped.map(async (inv) => {
-            // Sjekk registration_type på spillet. Team-only spill (#199) skal
-            // ikke få en solo-rad i game_players auto-opprettet — det ville
-            // bryte CHECK-constraint på team_number/flight_number-konsistens.
-            // I stedet redirecter brukeren videre til
-            // `/signup/[shortId]/team`-siden hvor attachToCaptainTeam-
-            // action-en oppretter request-raden riktig.
             const { data: gameRow } = await admin
               .from('games')
               .select('registration_type')
               .eq('id', inv.game_id!)
               .maybeSingle<{ registration_type: string }>();
+            return {
+              inv,
+              isTeamOnly: gameRow?.registration_type === 'team',
+            };
+          }),
+        );
 
-            const isTeamOnly = gameRow?.registration_type === 'team';
-
+        await Promise.allSettled(
+          resolved.map(async ({ inv, isTeamOnly }) => {
             if (!isTeamOnly) {
               const { error: insertError } = await admin
                 .from('game_players')
@@ -242,10 +256,31 @@ export async function verifyCode(formData: FormData) {
             });
           }),
         );
+
+        // #356: send en spill-scopet invitee rett til spillet sitt i stedet for
+        // å dumpe dem på hjem-skjermen for å lete. Gjelder kun når det er ett
+        // entydig solo-spill og ingen eksplisitt `next` (f.eks. /signup-deep-
+        // link) — flere invitasjoner eller team-only faller tilbake til hjem.
+        const soloInvites = resolved.filter((r) => !r.isTeamOnly);
+        if (!hasExplicitNext && soloInvites.length === 1) {
+          gameDest = `/games/${soloInvites[0].inv.game_id}`;
+          profileIncomplete = userRow.profile_completed_at == null;
+        }
       }
     }
   } catch (err) {
     console.warn('[login/verifyCode] invitation-accept side-effect threw', err);
+  }
+
+  // #356: redirect skjer UTENFOR try/catch-en over — redirect() kaster
+  // NEXT_REDIRECT, som ville blitt slukt av catch-en og aldri navigert. Mangler
+  // profilen, sender vi via /complete-profile?next=… så den fullføres først, så
+  // lander brukeren på spillet.
+  if (gameDest) {
+    if (profileIncomplete) {
+      redirect(`/complete-profile?next=${encodeURIComponent(gameDest)}`);
+    }
+    redirect(gameDest);
   }
 
   redirect(next);

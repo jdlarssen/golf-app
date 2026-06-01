@@ -21,6 +21,24 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#219](https://github.com/jdlarssen/golf-app/issues/219), Ryder Cup fase 4. Administratorer kan nå lage et fullt cup-program fra ett skjema — velg lag, bane, formatmal og paring-strategi, forhåndsvis og juster, og opprett alle matchene i ett trykk.
 
+### [1.61.2] - 2026-06-01
+
+> Blir du invitert til et spill og logger inn for første gang, havner du nå rett på spillet etter at du har fylt ut profilen. Du slipper å lete det fram fra forsiden selv.
+
+<details>
+<summary>Teknisk</summary>
+
+Fikser [#356](https://github.com/jdlarssen/golf-app/issues/356) — spill-scopet invitee ble dumpet på hjem-skjermen etter onboarding.
+
+#### Changed
+- [`app/(auth)/login/actions.ts`](app/(auth)/login/actions.ts) — `verifyCode` regner ut et landingsmål når invitéen har én entydig solo-spill-invitasjon og ingen eksplisitt `next`. Mangler profilen, sendes brukeren via `/complete-profile?next=/games/[id]`; ellers rett til `/games/[id]`. Redirecten skjer bevisst utenfor den best-effort try/catch-en (den ville ellers slukt `NEXT_REDIRECT`). Team-only-spill og flere samtidige invitasjoner faller tilbake til hjem-landing.
+- [`app/complete-profile/page.tsx`](app/complete-profile/page.tsx) + [`actions.ts`](app/complete-profile/actions.ts) — bærer `next` gjennom profil-steget (skjult felt + validert relativ-path-redirect), og bevarer det ved valideringsfeil.
+
+#### Added
+- [`app/complete-profile/actions.test.ts`](app/complete-profile/actions.test.ts) — dekker `next`-rundturen (gyldig mål, hjem-default, off-site-avvisning, bevart ved feil). `login/actions.test.ts` utvidet med to nye spill-landing-caser.
+
+</details>
+
 ### [1.61.1] - 2026-06-01
 
 > Når du oppretter et spill og velger «Åpen påmelding», får du nå en forklaring på vanlig norsk i stedet for en teknisk innstilling med kodenavn.

@@ -9,7 +9,17 @@ import { Banner } from '@/components/ui/Banner';
 import { Kicker } from '@/components/ui/Kicker';
 import { completeProfile } from './actions';
 
-type SearchParams = Promise<{ error?: string | string[] }>;
+type SearchParams = Promise<{
+  error?: string | string[];
+  next?: string | string[];
+}>;
+
+/** Only accept same-origin relative paths as a post-onboarding destination. */
+function safeNext(value: string | undefined): string {
+  return value && value.startsWith('/') && !value.startsWith('//')
+    ? value
+    : '/';
+}
 
 const ERROR_MESSAGES: Record<string, string> = {
   name_required: 'Du må fylle inn navn.',
@@ -35,9 +45,14 @@ export default async function CompleteProfile({
   }
   const supabase = await getServerClient();
 
-  // If the user has already completed their profile, send them home.
-  // The trigger pre-creates a placeholder row with profile_completed_at = NULL,
-  // so the row existing is not enough on its own.
+  const params = await searchParams;
+  // #356: carry the post-onboarding destination (e.g. a game-scoped invitee's
+  // `/games/[id]`) through the profile step so the user lands there afterwards.
+  const next = safeNext(first(params.next));
+
+  // If the user has already completed their profile, send them on. The trigger
+  // pre-creates a placeholder row with profile_completed_at = NULL, so the row
+  // existing is not enough on its own.
   const { data: existing } = await supabase
     .from('users')
     .select('profile_completed_at')
@@ -45,10 +60,9 @@ export default async function CompleteProfile({
     .maybeSingle();
 
   if (existing?.profile_completed_at) {
-    redirect('/');
+    redirect(next);
   }
 
-  const params = await searchParams;
   const errorCode = first(params.error);
   const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
 
@@ -74,6 +88,7 @@ export default async function CompleteProfile({
         )}
 
         <form action={completeProfile} className="space-y-5">
+          <input type="hidden" name="next" value={next} />
           <Input
             id="name"
             name="name"

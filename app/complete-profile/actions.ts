@@ -19,23 +19,37 @@ export async function completeProfile(formData: FormData) {
   const genderRaw = String(formData.get('gender') ?? '').trim();
   const levelRaw = String(formData.get('level') ?? 'normal').trim();
 
+  // #356: post-onboarding destination carried from the login flow (e.g. a
+  // game-scoped invitee's `/games/[id]`). Default home for everyone else.
+  const nextRaw = String(formData.get('next') ?? '').trim();
+  const next =
+    nextRaw.startsWith('/') && !nextRaw.startsWith('//') ? nextRaw : '/';
+
+  // Bounce back to the form on a validation error, keeping `next` so the
+  // destination survives the round-trip.
+  const fail = (code: string): never => {
+    const qs = new URLSearchParams({ error: code });
+    if (next !== '/') qs.set('next', next);
+    redirect(`/complete-profile?${qs.toString()}`);
+  };
+
   if (!name) {
-    redirect('/complete-profile?error=name_required');
+    fail('name_required');
   }
 
   // Accept both comma and dot as decimal separator (Norwegian users).
   const hcpParsed = Number.parseFloat(hcpRaw.replace(',', '.'));
   if (!Number.isFinite(hcpParsed) || hcpParsed < HCP_MIN || hcpParsed > HCP_MAX) {
-    redirect('/complete-profile?error=hcp_invalid');
+    fail('hcp_invalid');
   }
 
   if (!GENDERS.includes(genderRaw as Gender)) {
-    redirect('/complete-profile?error=gender_required');
+    fail('gender_required');
   }
   const gender = genderRaw as Gender;
 
   if (!LEVELS.includes(levelRaw as Level)) {
-    redirect('/complete-profile?error=level_invalid');
+    fail('level_invalid');
   }
   const level = levelRaw as Level;
 
@@ -66,8 +80,8 @@ export async function completeProfile(formData: FormData) {
     .eq('id', user.id);
 
   if (error) {
-    redirect('/complete-profile?error=unknown');
+    fail('unknown');
   }
 
-  redirect('/');
+  redirect(next);
 }

@@ -58,7 +58,10 @@ let pendingInvitations: Array<{
   game_id: string | null;
   invited_by: string | null;
 }> = [];
-let adminUserLookup: { id: string } | null = null;
+let adminUserLookup: {
+  id: string;
+  profile_completed_at?: string | null;
+} | null = null;
 let gamePlayersInsertResult: { error: unknown } = { error: null };
 /**
  * Default for games-lookup i verifyCode (#199 chunk 9): vi sjekker
@@ -384,7 +387,65 @@ describe('verifyCode — deferred game-scoped invite-notify (#182)', () => {
       gameId: '00000000-0000-0000-0000-0000000000aa',
       inviterUserId: '00000000-0000-0000-0000-0000000000bb',
     });
-    expect(lastRedirect()).toBe('/');
+    // #356: a fresh invitee (no profile yet) is routed via /complete-profile
+    // carrying the game as `next`, so they land on it after onboarding.
+    expect(lastRedirect()).toBe(
+      '/complete-profile?next=%2Fgames%2F00000000-0000-0000-0000-0000000000aa',
+    );
+  });
+
+  it('#356: ferdig profil + ett solo-spill → lander rett på /games/[id]', async () => {
+    verifyOtpMock.mockResolvedValue({ error: null });
+    pendingInvitations = [
+      {
+        id: 'inv-1',
+        game_id: '00000000-0000-0000-0000-0000000000aa',
+        invited_by: '00000000-0000-0000-0000-0000000000bb',
+      },
+    ];
+    adminUserLookup = {
+      id: 'returning-user',
+      profile_completed_at: '2026-01-01T00:00:00.000Z',
+    };
+    supabaseMock = buildSupabaseMock([{ data: null, error: null }]);
+
+    const { verifyCode } = await import('./actions');
+    await expect(
+      verifyCode(fd({ email: 'kompis@example.com', token: '123456' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe(
+      '/games/00000000-0000-0000-0000-0000000000aa',
+    );
+  });
+
+  it('#356: eksplisitt next vinner over spill-landing (f.eks. /signup-deep-link)', async () => {
+    verifyOtpMock.mockResolvedValue({ error: null });
+    pendingInvitations = [
+      {
+        id: 'inv-1',
+        game_id: '00000000-0000-0000-0000-0000000000aa',
+        invited_by: '00000000-0000-0000-0000-0000000000bb',
+      },
+    ];
+    adminUserLookup = {
+      id: 'returning-user',
+      profile_completed_at: '2026-01-01T00:00:00.000Z',
+    };
+    supabaseMock = buildSupabaseMock([{ data: null, error: null }]);
+
+    const { verifyCode } = await import('./actions');
+    await expect(
+      verifyCode(
+        fd({
+          email: 'kompis@example.com',
+          token: '123456',
+          next: '/signup/abc12345',
+        }),
+      ),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/signup/abc12345');
   });
 
   it('kun game-løse invitasjoner: ingen insert / notify, login lykkes uansett', async () => {
