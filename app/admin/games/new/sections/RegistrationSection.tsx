@@ -56,7 +56,7 @@ const MODE_OPTIONS: readonly ModeOption[] = [
   {
     value: 'open',
     title: 'Åpen påmelding',
-    hint: 'Alle med lenken kan melde seg på. Best for klubb-skala. Krever at NEXT_PUBLIC_ALLOW_SELF_REGISTRATION er på for ukjente brukere.',
+    hint: 'Alle med lenken kan melde seg på. Best for klubb og åpne turneringer.',
   },
 ] as const;
 

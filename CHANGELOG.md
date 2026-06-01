@@ -21,6 +21,20 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#219](https://github.com/jdlarssen/golf-app/issues/219), Ryder Cup fase 4. Administratorer kan nå lage et fullt cup-program fra ett skjema — velg lag, bane, formatmal og paring-strategi, forhåndsvis og juster, og opprett alle matchene i ett trykk.
 
+### [1.61.1] - 2026-06-01
+
+> Når du oppretter et spill og velger «Åpen påmelding», får du nå en forklaring på vanlig norsk i stedet for en teknisk innstilling med kodenavn.
+
+<details>
+<summary>Teknisk</summary>
+
+Fikser [#372](https://github.com/jdlarssen/golf-app/issues/372) — hjelpeteksten for «Åpen påmelding» i opprett-spill-veiviseren eksponerte env-variabelnavnet `NEXT_PUBLIC_ALLOW_SELF_REGISTRATION` til en sluttbruker uten programmeringserfaring.
+
+#### Fixed
+- [`app/admin/games/new/sections/RegistrationSection.tsx`](app/admin/games/new/sections/RegistrationSection.tsx) — skrev om `open`-modus-hinten til «Alle med lenken kan melde seg på. Best for klubb og åpne turneringer.» Konfig-navnet er borte; meningen (åpen, oppdagbar påmelding) er bevart. Løftet om at ukjente brukere kan registrere seg uten konto er bevisst utelatt til selvregistrering faktisk er skrudd på ([#364](https://github.com/jdlarssen/golf-app/issues/364)).
+
+</details>
+
 ### [1.61.0] - 2026-05-31
 
 > Du kan nå generere et helt cup-program på sekunder: velg hvem som er på hvert lag, hvilken bane, et formatoppsett (Klassisk cup, Four-ball + singler eller Bare singler) og om matchene skal pares tilfeldig eller handicap-balansert — forhåndsvis resultatet, juster om du vil, og opprett alt i ett trykk. Du slipper å bygge match for match gjennom den vanlige veiviseren.
