@@ -96,7 +96,7 @@ export { strokesForHole, allStrokeAllocations } from './strokeAllocation';
 export { rankTeams } from './tiebreaker';
 export { computeStablefordPoints } from './modes/stableford';
 export { computeModifiedStablefordPoints } from './modes/modifiedStableford';
-export { isStablefordFamily, isScrambleFamily, isAlternateShotMatchplay } from './modes/types';
+export { isStablefordFamily, isScrambleFamily, isAlternateShotMatchplay, supportsWithdrawal } from './modes/types';
 export { ambroseDefaultPct } from './modes/ambrose';
 export { defaultFloridaHandicapPct } from './modes/floridaScramble';
 export { computeMatchResult } from './modes/singlesMatchplay';

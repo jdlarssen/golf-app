@@ -111,6 +111,53 @@ export function isAlternateShotMatchplay(mode: GameMode): boolean {
 }
 
 /**
+ * WD / «trekk spiller» (#386): hvilke format støtter at en spiller trekkes ut
+ * av rangeringen (scorene teller ikke). Kun individuell-ball-totalformat der
+ * eksklusjon faktisk endrer resultatet: best ball, stableford-familien, solo
+ * slagspill.
+ *
+ * Out-of-scope (faller tilbake på «ikke levert» — scorene teller, som i dag):
+ *  - scramble/shamble/patsome: delt lag-kort → WD har ingen scoring-effekt
+ *  - matchplay-familien: et frafall er en walkover, egen semantikk
+ *  - pott-format (wolf/nassau/skins/nines/bbb/acey-deucey/round-robin):
+ *    carryover/hode-mot-hode-oppgjør, egen semantikk
+ *
+ * Eksplisitt switch med `never`-uttømming: en ny GameMode MÅ klassifiseres her.
+ */
+export function supportsWithdrawal(mode: GameMode): boolean {
+  switch (mode) {
+    case 'best_ball':
+    case 'stableford':
+    case 'modified_stableford':
+    case 'solo_strokeplay':
+      return true;
+    case 'singles_matchplay':
+    case 'fourball_matchplay':
+    case 'foursomes_matchplay':
+    case 'greensome_matchplay':
+    case 'chapman_matchplay':
+    case 'gruesome_matchplay':
+    case 'texas_scramble':
+    case 'ambrose':
+    case 'florida_scramble':
+    case 'shamble':
+    case 'patsome':
+    case 'wolf':
+    case 'nassau':
+    case 'skins':
+    case 'bingo_bango_bongo':
+    case 'nines':
+    case 'round_robin':
+    case 'acey_deucey':
+      return false;
+    default: {
+      const _exhaustive: never = mode;
+      return _exhaustive;
+    }
+  }
+}
+
+/**
  * Mode-spesifikk config som lagres i `games.mode_config` (JSONB).
  * Diskrimineres på `kind` slik at konsumenter narrower trygt.
  *

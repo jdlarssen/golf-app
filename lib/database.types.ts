@@ -325,6 +325,8 @@ export type Database = {
           team_number: number | null
           tee_gender: Database["public"]["Enums"]["player_tee_gender"]
           user_id: string
+          withdrawn_at: string | null
+          withdrawn_by_user_id: string | null
         }
         Insert: {
           approved_at?: string | null
@@ -337,6 +339,8 @@ export type Database = {
           team_number?: number | null
           tee_gender?: Database["public"]["Enums"]["player_tee_gender"]
           user_id: string
+          withdrawn_at?: string | null
+          withdrawn_by_user_id?: string | null
         }
         Update: {
           approved_at?: string | null
@@ -349,6 +353,8 @@ export type Database = {
           team_number?: number | null
           tee_gender?: Database["public"]["Enums"]["player_tee_gender"]
           user_id?: string
+          withdrawn_at?: string | null
+          withdrawn_by_user_id?: string | null
         }
         Relationships: [
           {
