@@ -27,7 +27,9 @@ vi.mock('next/cache', () => ({
   revalidateTag: (...args: unknown[]) => revalidateTagMock(...args),
 }));
 
-const notifyMock = vi.fn(async () => ({ shouldAlsoSendMail: false }));
+const notifyMock = vi.fn<(...args: unknown[]) => Promise<{ shouldAlsoSendMail: boolean }>>(
+  async () => ({ shouldAlsoSendMail: false }),
+);
 vi.mock('@/lib/notifications/notify', () => ({
   notify: (...args: unknown[]) => notifyMock(...args),
 }));
@@ -53,7 +55,9 @@ vi.mock('@/lib/games/getGameByShortId', () => ({
 
 // Rate-limit + IP-lookup mock-es som no-op default-«ok». Per-test kan vi
 // styre returverdien via consumeRateLimitMock for å teste rate_limited-grenen.
-const consumeRateLimitMock = vi.fn(async () => ({ ok: true as const }));
+const consumeRateLimitMock = vi.fn<(...args: unknown[]) => Promise<{ ok: true }>>(
+  async () => ({ ok: true as const }),
+);
 vi.mock('@/lib/auth/registrationRateLimit', () => ({
   consumeRegistrationRateLimit: (...args: unknown[]) =>
     consumeRateLimitMock(...args),
@@ -64,7 +68,9 @@ vi.mock('@/lib/admin/rateLimit', () => ({
 
 // Mail-helper mock-es som no-op — mail-sending er best-effort i selve action,
 // vi tester mail-template-en i sin egen test-suite.
-const sendRegistrationRequestMailMock = vi.fn(async () => {});
+const sendRegistrationRequestMailMock = vi.fn<(...args: unknown[]) => Promise<void>>(
+  async () => {},
+);
 vi.mock('@/lib/mail/registrationRequest', () => ({
   sendRegistrationRequestMail: (...args: unknown[]) =>
     sendRegistrationRequestMailMock(...args),

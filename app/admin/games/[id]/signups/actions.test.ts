@@ -27,7 +27,9 @@ vi.mock('next/cache', () => ({
   revalidateTag: (...args: unknown[]) => revalidateTagMock(...args),
 }));
 
-const notifyMock = vi.fn(async () => ({ shouldAlsoSendMail: false }));
+const notifyMock = vi.fn<
+  (...args: unknown[]) => Promise<{ shouldAlsoSendMail: boolean }>
+>(async () => ({ shouldAlsoSendMail: false }));
 vi.mock('@/lib/notifications/notify', () => ({
   notify: (...args: unknown[]) => notifyMock(...args),
 }));

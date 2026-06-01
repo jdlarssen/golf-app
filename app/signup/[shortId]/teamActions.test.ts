@@ -28,14 +28,16 @@ vi.mock('next/cache', () => ({
   revalidateTag: (...args: unknown[]) => revalidateTagMock(...args),
 }));
 
-const notifyMock = vi.fn(async () => ({ shouldAlsoSendMail: false }));
+const notifyMock = vi.fn<
+  (...args: unknown[]) => Promise<{ shouldAlsoSendMail: boolean }>
+>(async () => ({ shouldAlsoSendMail: false }));
 vi.mock('@/lib/notifications/notify', () => ({
   notify: (...args: unknown[]) => notifyMock(...args),
 }));
 
-const notifyInvitedToTeamMock = vi.fn(async () => ({
-  shouldAlsoSendMail: false,
-}));
+const notifyInvitedToTeamMock = vi.fn<
+  (...args: unknown[]) => Promise<{ shouldAlsoSendMail: boolean }>
+>(async () => ({ shouldAlsoSendMail: false }));
 vi.mock('@/lib/notifications/notifyInvitedToTeam', () => ({
   notifyInvitedToTeam: (...args: unknown[]) => notifyInvitedToTeamMock(...args),
 }));
@@ -62,7 +64,9 @@ vi.mock('@/lib/games/getGameByShortId', () => ({
 }));
 
 // Rate-limit + IP-lookup mock-es som no-op default-«ok».
-const consumeRateLimitMock = vi.fn(async () => ({ ok: true as const }));
+const consumeRateLimitMock = vi.fn<(...args: unknown[]) => Promise<{ ok: true }>>(
+  async () => ({ ok: true as const }),
+);
 vi.mock('@/lib/auth/registrationRateLimit', () => ({
   consumeRegistrationRateLimit: (...args: unknown[]) =>
     consumeRateLimitMock(...args),
@@ -71,7 +75,9 @@ vi.mock('@/lib/admin/rateLimit', () => ({
   getClientIp: async () => '127.0.0.1',
 }));
 
-const sendTeamInvitationMailMock = vi.fn(async () => {});
+const sendTeamInvitationMailMock = vi.fn<(...args: unknown[]) => Promise<void>>(
+  async () => {},
+);
 vi.mock('@/lib/mail/teamInvitation', () => ({
   sendTeamInvitationMail: (...args: unknown[]) =>
     sendTeamInvitationMailMock(...args),
