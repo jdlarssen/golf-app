@@ -521,7 +521,8 @@ async function PlayersSections({
         )}
       </SectionCard>
 
-      {/* Selv-påmelding-oversikt (#199) — kun for mode != invite_only */}
+      {/* Påmelding-oversikt (#199, utvidet #368) — vises for alle modi;
+          invite_only tar nå imot «be om å bli med»-forespørsler. */}
       <RegistrationOverviewSection
         gameId={gameId}
         registrationMode={game.registration_mode}

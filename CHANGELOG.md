@@ -19,7 +19,7 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ## 1.68.y — Be om plass til private spill
 
-Issue [#368](https://github.com/jdlarssen/golf-app/issues/368). Lander du på et privat (invitasjons-basert) spill du ikke er invitert til, var skjermen før en blindvei. Nå kan du be arrangøren om plass derfra, og arrangøren ser forespørselen og slipper deg inn eller avslår.
+Issue [#368](https://github.com/jdlarssen/golf-app/issues/368). Lander du på et privat (invitasjonsbasert) spill du ikke er invitert til, var skjermen før en blindvei. Nå kan du be arrangøren om plass derfra, og arrangøren ser forespørselen og slipper deg inn eller avslår.
 
 ### [1.68.0] - 2026-06-02
 

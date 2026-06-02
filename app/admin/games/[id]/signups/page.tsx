@@ -188,7 +188,7 @@ export default async function PåmeldingerPage({
       {isInviteOnly && (
         <div className="mt-4">
           <Banner tone="info">
-            Dette spillet er invitasjons-basert og dukker ikke opp i Finn
+            Dette spillet er invitasjonsbasert og dukker ikke opp i Finn
             turneringer. Folk som har lenken kan likevel be om å bli med.
             Forespørslene havner her, så du kan godkjenne eller avslå.
           </Banner>
