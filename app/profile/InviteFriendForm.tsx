@@ -17,11 +17,7 @@ type Props = {
 function SendButton({ canSubmit }: { canSubmit: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <Button
-      type="submit"
-      className="w-full mt-2"
-      disabled={pending || !canSubmit}
-    >
+    <Button type="submit" className="w-full" disabled={pending || !canSubmit}>
       {pending ? 'Sender …' : 'Send invitasjon'}
     </Button>
   );
@@ -36,7 +32,7 @@ export function InviteFriendForm({ action }: Props) {
   }
 
   return (
-    <form action={action} onChange={handleChange} className="space-y-4">
+    <form action={action} onChange={handleChange} className="space-y-3">
       <Input
         id="email"
         name="email"
@@ -46,9 +42,8 @@ export function InviteFriendForm({ action }: Props) {
         required
       />
       <SendButton canSubmit={hasEmail} />
-      <p className="text-xs text-muted mt-2 text-center">
-        Vi sender vennen en mail med en lenke. De kan lage konto med ett
-        klikk.
+      <p className="text-xs text-muted text-center">
+        Vi sender vennen en mail med en lenke. De kan lage konto med ett klikk.
       </p>
     </form>
   );

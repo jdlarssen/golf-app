@@ -21,6 +21,31 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#368](https://github.com/jdlarssen/golf-app/issues/368). Lander du på et privat (invitasjonsbasert) spill du ikke er invitert til, var skjermen før en blindvei. Nå kan du be arrangøren om plass derfra, og arrangøren ser forespørselen og slipper deg inn eller avslår.
 
+### [1.68.2] - 2026-06-02
+
+> Profil-siden er kortere å scrolle på telefon. Rediger profil og «Invitér en venn» ligger øverst. Historikk, statistikk, app-installering, eksport og sletting er samlet i én kort liste lenger ned. «Logg ut» er nå en synlig knapp i stedet for en blek lenke.
+
+<details>
+<summary>Teknisk</summary>
+
+Løser [#393](https://github.com/jdlarssen/golf-app/issues/393) — etterslep fra [#355](https://github.com/jdlarssen/golf-app/issues/355) (bunn-nav gjorde Profil til fast destinasjon). Siden var en lang stabel av full-høyde-kort; «Logg ut» var en muted tekst-lenke, og «Avbryt» i profilskjemaet var overflødig nå som Profil er en fast nav-fane.
+
+#### Added
+- [`components/ui/SettingRow.tsx`](components/ui/SettingRow.tsx) — `SettingRow` + `SettingList`: kompakte, tappbare list-rader (SmartLink / download-anker / button, default- og danger-tone) for settings-stil-lister.
+
+#### Changed
+- [`app/profile/page.tsx`](app/profile/page.tsx) — historikk-, installer- og data-kortene (fem full-høyde-`Card`) erstattet av én `SettingList` med kompakte rader. «Invitér en venn» beholdt som åpent kort rett under profilskjemaet. «Logg ut» bruker nå `Button variant="secondary"` (outline) i stedet for en muted tekst-lenke.
+- [`components/pwa/InstallButton.tsx`](components/pwa/InstallButton.tsx) — rendrer nå som en `SettingRow` i lista i stedet for eget kort, og beholder self-hide når appen alt er installert.
+- [`app/profile/InviteFriendForm.tsx`](app/profile/InviteFriendForm.tsx) — tettere intern rytme i invitasjons-kortet.
+
+#### Removed
+- [`app/profile/ProfileFormBody.tsx`](app/profile/ProfileFormBody.tsx) — «Avbryt»-lenken (og den nå-ubrukte `SmartLink`-importen); «Lagre» står alene.
+
+#### Tests
+- [`components/ui/SettingRow.test.tsx`](components/ui/SettingRow.test.tsx) — link-, button- og danger-varianter.
+
+</details>
+
 ### [1.68.1] - 2026-06-02
 
 > Har du en runde på gang, ligger den nå øverst på Hjem som «Pågår nå». Og når du sletter en bane, får du en egen bekreftelses-side først, så ingenting forsvinner ved et uhell.

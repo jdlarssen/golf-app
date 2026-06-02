@@ -4,7 +4,6 @@ import { useRef, useState, type FormEvent } from 'react';
 import { useFormStatus } from 'react-dom';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { SmartLink } from '@/components/ui/SmartLink';
 
 type InitialValues = {
   name: string;
@@ -210,14 +209,8 @@ export function ProfileFormBody({ email, initial, action, next }: Props) {
         </label>
       </div>
 
-      <div className="flex items-center gap-3 pt-2">
+      <div className="pt-2">
         <SaveButton dirty={dirty} />
-        <SmartLink
-          href={next ?? '/'}
-          className="text-sm text-muted hover:text-text transition-colors"
-        >
-          Avbryt
-        </SmartLink>
       </div>
     </form>
   );

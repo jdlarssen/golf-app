@@ -14,6 +14,8 @@ import { sendFriendInvite } from '../invite/actions';
 import { ProfileFormBody } from './ProfileFormBody';
 import { InviteFriendForm } from './InviteFriendForm';
 import { SmartLink } from '@/components/ui/SmartLink';
+import { Button } from '@/components/ui/Button';
+import { SettingRow, SettingList } from '@/components/ui/SettingRow';
 import { InstallButton } from '@/components/pwa/InstallButton';
 
 type SearchParams = Promise<{
@@ -115,16 +117,25 @@ export default async function ProfilePage({
         </Suspense>
       </div>
 
-      <div className="mt-6">
-        <HistorikkCard />
-      </div>
-
-      <div className="mt-6">
-        <InstallButton />
-      </div>
-
-      <div className="mt-6">
-        <GdprSection />
+      <div className="mt-8">
+        <p className="mb-3 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          Mer
+        </p>
+        <SettingList ariaLabel="Konto og mer">
+          <SettingRow href="/profile/historikk" label="Min historikk" />
+          <SettingRow href="/profile/statistikk" label="Klubbstatistikker" />
+          <InstallButton />
+          <SettingRow
+            href="/profile/export"
+            download
+            label="Eksporter mine data"
+          />
+          <SettingRow
+            href="/profile/slett-konto"
+            label="Slett konto"
+            tone="danger"
+          />
+        </SettingList>
       </div>
 
       <AccountActions />
@@ -152,12 +163,9 @@ function AccountActions() {
   return (
     <div className="mt-8 border-t border-border/60 pt-6 dark:border-border/80">
       <form action="/logout" method="post">
-        <button
-          type="submit"
-          className="inline-flex min-h-[44px] items-center px-1 text-sm text-muted transition-colors hover:text-danger"
-        >
+        <Button type="submit" variant="secondary">
           Logg ut
-        </button>
+        </Button>
       </form>
     </div>
   );
@@ -270,7 +278,7 @@ async function InviteAFriendCard() {
     return (
       <Card>
         <div aria-disabled="true" className="opacity-60">
-          <h2 className="font-serif text-lg font-medium text-text mb-1">
+          <h2 className="font-serif text-base font-medium text-text mb-0.5">
             Invitér en venn
           </h2>
           <p className="text-sm text-muted">
@@ -284,8 +292,8 @@ async function InviteAFriendCard() {
 
   return (
     <Card>
-      <div className="mb-4">
-        <h2 className="font-serif text-lg font-medium text-text mb-1">
+      <div className="mb-3">
+        <h2 className="font-serif text-base font-medium text-text mb-0.5">
           Invitér en venn
         </h2>
         <p className="text-sm text-muted">Dra med kompiser inn på Tørny</p>
@@ -295,97 +303,3 @@ async function InviteAFriendCard() {
   );
 }
 
-function HistorikkCard() {
-  return (
-    <div className="space-y-3">
-      <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted px-1">
-        Historikk
-      </p>
-      <Card>
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="font-serif text-base font-medium text-text">
-              Min historikk
-            </h2>
-            <p className="text-sm text-muted mt-0.5">
-              Se dine fullførte runder og resultater
-            </p>
-          </div>
-          <SmartLink
-            href="/profile/historikk"
-            className="shrink-0 ml-4 rounded-full border border-border bg-surface px-4 py-2 font-sans text-[13px] font-medium text-text hover:bg-bg transition-colors"
-          >
-            Se runder
-          </SmartLink>
-        </div>
-      </Card>
-      <Card>
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="font-serif text-base font-medium text-text">
-              Klubbstatistikker
-            </h2>
-            <p className="text-sm text-muted mt-0.5">
-              Vinnerliste og mest aktive — på tvers av alle spill
-            </p>
-          </div>
-          <SmartLink
-            href="/profile/statistikk"
-            className="shrink-0 ml-4 rounded-full border border-border bg-surface px-4 py-2 font-sans text-[13px] font-medium text-text hover:bg-bg transition-colors"
-          >
-            Se topp 10
-          </SmartLink>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-function GdprSection() {
-  return (
-    <div className="space-y-3">
-      <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted px-1">
-        Mine data
-      </p>
-
-      <Card>
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="font-serif text-base font-medium text-text">
-              Eksporter mine data
-            </h2>
-            <p className="text-sm text-muted mt-0.5">
-              Last ned alt Tørny har lagret om deg
-            </p>
-          </div>
-          <a
-            href="/profile/export"
-            download
-            className="shrink-0 ml-4 rounded-full border border-border bg-surface px-4 py-2 font-sans text-[13px] font-medium text-text hover:bg-bg transition-colors"
-          >
-            Last ned
-          </a>
-        </div>
-      </Card>
-
-      <Card>
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="font-serif text-base font-medium text-danger-deep">
-              Slett konto
-            </h2>
-            <p className="text-sm text-muted mt-0.5">
-              Fjern kontoen din permanent
-            </p>
-          </div>
-          <SmartLink
-            href="/profile/slett-konto"
-            className="shrink-0 ml-4 rounded-full border border-danger-deep/40 px-4 py-2 font-sans text-[13px] font-medium text-danger-deep hover:bg-danger-deep/10 dark:hover:bg-danger-deep/20 transition-colors"
-          >
-            Slett konto
-          </SmartLink>
-        </div>
-      </Card>
-    </div>
-  );
-}
