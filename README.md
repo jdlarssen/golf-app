@@ -11,7 +11,7 @@ Live at [tornygolf.no](https://tornygolf.no) (also `tørny.no`).
 - More than twenty tournament formats, all on WHS net handicap. The full list is below.
 - A leaderboard that updates live while your flight taps scores.
 - Offline-first scoring. Tap in a dead spot on the course and it syncs once your phone has signal again.
-- Side tournaments for longest drive and closest to the pin. Winners are picked when the game ends.
+- A side tournament you can bolt onto any game: a points race across the round, plus longest-drive and closest-to-pin contests. More below.
 - An inbox for invitations, peer approvals, submitted scorecards, and finished games. Mail only goes out when you're not already in the app.
 - Installable on your home screen. It opens like a native app, with no browser bar on top.
 - GDPR self-service. Export or delete your data from your profile page without emailing anyone.
@@ -25,7 +25,13 @@ Tørny ships more than twenty scoring modes. Each one comes with a short rules c
 - Team: best ball, Texas and Florida scramble, Ambrose, shamble
 - Betting games: Wolf, Nassau, Skins, Bingo Bango Bongo, Nines, Acey Deucey
 
-Browse them all at [/spillformer](https://tornygolf.no/spillformer).
+## Side tournaments
+
+Any game can carry a side tournament next to the main result. Turn it on and it runs as an automatic points race across the round, and you can switch off any category you don't care about.
+
+The package counts things like the best net front and back nine, King of the par 3s, 4s and 5s, and most birdies and eagles. It also hands out named badges: Turkey for three birdies in a row, Solid for five, and Snowman for a blow-up hole (that last one costs you points).
+
+Then there are the two hole contests, longest drive and closest to the pin, with up to two of each. Those winners can't be read off the scorecard, so you pick them yourself when you end the game.
 
 ## Stack
 
