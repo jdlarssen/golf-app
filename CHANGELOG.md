@@ -17,7 +17,36 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.68.y — Be om plass til private spill
+## 1.69.y — Profilen din, ryddigere og smartere
+
+Issue [#401](https://github.com/jdlarssen/golf-app/issues/401). Et større løft av profil-siden: profil-header øverst, kompakt handicap-felt med plusshandicap-støtte og ferskhets-dato, kjønn og spillerklasse som knapper, demotert e-post, og månedsbrev-valget flyttet til Innboks.
+
+### [1.69.0] - 2026-06-02
+
+> Profil-siden din ser ut som en profil nå, med navn og handicap øverst. Handicap-feltet er mindre og viser når du sist oppdaterte det. Har du plusshandicap, markerer du det med ett trykk i stedet for å taste fortegn, og kjønn og spillerklasse velger du med knapper.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#401](https://github.com/jdlarssen/golf-app/issues/401), del 1 (profil-siden). Bygger på #393/#399.
+
+#### Added
+- [`components/ui/SegmentedField.tsx`](components/ui/SegmentedField.tsx) — gjenbrukbar segmentert enten-eller-velger (wizard-stil); brukt for kjønn + spillerklasse.
+- [`lib/handicap/sign.ts`](lib/handicap/sign.ts) — plusshandicap-fortegn: magnitude + plus-flagg ↔ signert lagret verdi (Golfbox «+1,5» = internt −1,5) + Golfbox-formattering for live-bekreftelsen.
+- Profil-header (initial-sirkel + navn + hcp) øverst i skjema-kortet.
+
+#### Changed
+- [`app/profile/ProfileFormBody.tsx`](app/profile/ProfileFormBody.tsx) — kontrollert skjema; Kallenavn + Handicap på samme rad; smalt handicap-felt med «+»-chip for plusshandicap (slipper å taste fortegn på mobil) + live «Lagres som …»-bekreftelse + «Handicap oppdatert {dato}»/stale-varsel; «Flere innstillinger» → «Golfprofil» med segmenterte kjønn/klasse; e-post demotert til grå linje nederst.
+- [`app/profile/page.tsx`](app/profile/page.tsx) — profil-header; «Logg ut» full bredde (outline); fjernet redundant personvern-prosa (footer-lenken dekker det).
+- [`app/profile/actions.ts`](app/profile/actions.ts) — handicap regnes fra magnitude + plus-flagg (`toSignedHcp`); `updateProfile` rører ikke lenger `product_updates_unsubscribed_at` (eierskap flyttes til Innboks).
+
+#### Tests
+- [`components/ui/SegmentedField.test.tsx`](components/ui/SegmentedField.test.tsx), [`lib/handicap/sign.test.ts`](lib/handicap/sign.test.ts), og oppdatert [`app/profile/ProfileFormBody.test.tsx`](app/profile/ProfileFormBody.test.tsx) (Golfprofil-disclosure, segmenter, plusshandicap-chip).
+
+</details>
+
+<details>
+<summary><strong>1.68.y — Be om plass til private spill (4 oppføringer) — klikk for å vise</strong></summary>
 
 Issue [#368](https://github.com/jdlarssen/golf-app/issues/368). Lander du på et privat (invitasjonsbasert) spill du ikke er invitert til, var skjermen før en blindvei. Nå kan du be arrangøren om plass derfra, og arrangøren ser forespørselen og slipper deg inn eller avslår.
 
@@ -104,6 +133,8 @@ Løser [#368](https://github.com/jdlarssen/golf-app/issues/368). `/signup/[short
 
 #### Tests
 - [`app/signup/[shortId]/actions.test.ts`](app/signup/[shortId]/actions.test.ts) — invite_only godtar forespørsel (insert + notify); `open` fortsatt avvist.
+
+</details>
 
 </details>
 

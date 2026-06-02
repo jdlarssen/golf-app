@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { safeNextPath } from './safeNext';
+import { toSignedHcp } from '@/lib/handicap/sign';
 
 const HCP_MIN = -10;
 const HCP_MAX = 54.0;
@@ -15,7 +16,10 @@ export async function updateProfile(formData: FormData) {
   const name = String(formData.get('name') ?? '').trim();
   const nicknameRaw = String(formData.get('nickname') ?? '').trim();
   const nickname = nicknameRaw === '' ? null : nicknameRaw;
+  // Hcp-feltet sender en positiv magnitude + et plus-flagg (spilleren slipper
+  // å taste fortegn på mobil). Plusshandicap lagres internt negativt.
   const hcpRaw = String(formData.get('hcp_index') ?? '').trim();
+  const hcpPlus = formData.get('hcp_plus') === 'on';
   const genderRaw = String(formData.get('gender') ?? '').trim();
   const levelRaw = String(formData.get('level') ?? 'normal').trim();
   // Optional ?next=-redirect target. Validation in safeNextPath rejects
@@ -30,8 +34,12 @@ export async function updateProfile(formData: FormData) {
     redirect(`${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=name_required`);
   }
 
-  const hcpParsed = Number.parseFloat(hcpRaw.replace(',', '.'));
-  if (!Number.isFinite(hcpParsed) || hcpParsed < HCP_MIN || hcpParsed > HCP_MAX) {
+  const hcpMagnitude = Number.parseFloat(hcpRaw.replace(',', '.'));
+  if (!Number.isFinite(hcpMagnitude) || hcpMagnitude < 0 || hcpMagnitude > HCP_MAX) {
+    redirect(`${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=hcp_invalid`);
+  }
+  const hcpParsed = toSignedHcp(hcpMagnitude, hcpPlus);
+  if (hcpParsed < HCP_MIN || hcpParsed > HCP_MAX) {
     redirect(`${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=hcp_invalid`);
   }
 
@@ -45,10 +53,9 @@ export async function updateProfile(formData: FormData) {
   }
   const level = levelRaw as Level;
 
-  // Product-updates opt-in toggle (issue #202). Checkbox-feltet er bare med
-  // i FormData når det er checked, så fravær = opt-out.
-  const productUpdatesOptIn = formData.get('product_updates_opt_in') === 'on';
-
+  // Månedsbrev-opt-in (#202) eies nå av Innboks-flaten (toggleProductUpdates),
+  // ikke dette skjemaet — så updateProfile rører ikke
+  // product_updates_unsubscribed_at lenger.
   const supabase = await getServerClient();
   const {
     data: { user },
@@ -78,8 +85,6 @@ export async function updateProfile(formData: FormData) {
       hcp_index: hcpParsed,
       handicap_updated_at: now,
       profile_completed_at: now,
-      // null = opted in (default), timestamp = opted out at that moment.
-      product_updates_unsubscribed_at: productUpdatesOptIn ? null : now,
       gender,
       level,
     })

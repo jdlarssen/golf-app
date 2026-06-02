@@ -1,39 +1,38 @@
 'use client';
 
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { SegmentedField } from '@/components/ui/SegmentedField';
+import { isHandicapStale } from '@/lib/handicap/staleness';
+import { fromSignedHcp, formatGolfboxHcp } from '@/lib/handicap/sign';
+
+type Gender = 'mens' | 'ladies';
+type Level = 'junior' | 'normal' | 'senior';
 
 type InitialValues = {
   name: string;
   nickname: string;
+  /** Lagret (signert) hcp-index som streng, f.eks. «25.5» eller «-1.5», eller «». */
   hcpIndex: string;
-  /** True når brukeren IKKE er meldt av månedsbrevet (product-updates). */
-  productUpdatesOptIn: boolean;
-  gender: 'mens' | 'ladies' | null;
-  level: 'junior' | 'normal' | 'senior';
+  gender: Gender | null;
+  level: Level;
 };
 
 type Props = {
   email: string;
   initial: InitialValues;
+  /** ISO-streng for sist handicap-oppdatering, eller null. */
+  handicapUpdatedAt?: string | null;
   action: (formData: FormData) => void;
   /**
    * Optional same-origin path the action should redirect to on success.
-   * Already validated by `safeNextPath` upstream — rendered as a hidden
-   * input so the action picks it up from FormData.
+   * Already validated by `safeNextPath` upstream — rendered as a hidden input.
    */
   next?: string | null;
 };
 
-/**
- * Save button gated on two flags:
- * - `dirty`: the form values differ from what was loaded from the server.
- * - `pending` (from useFormStatus): the action is in flight after submit.
- * The label flips to 'Lagrer …' while pending so the user sees something
- * happening and doesn't tap twice.
- */
 function SaveButton({ dirty }: { dirty: boolean }) {
   const { pending } = useFormStatus();
   return (
@@ -60,22 +59,54 @@ function DisclosureChevron({ open }: { open: boolean }) {
   );
 }
 
-export function ProfileFormBody({ email, initial, action, next }: Props) {
-  const [dirty, setDirty] = useState(false);
-  // Sjelden-endrede felt (kjønn, spillerklasse, månedsbrev) ligger bak en
-  // disclosure for å holde skjemaet kort. Åpen som standard når kjønn ennå
-  // ikke er satt, så gender-soft-prompten (#kjonn-ankeret) treffer et synlig
-  // felt. Innholdet skjules med `hidden` (ikke unmount) så verdiene fortsatt
-  // sendes med ved lagring — ellers ville en kollapset bruker tape gender.
+const GENDER_OPTIONS = [
+  { value: 'mens', label: 'Herre' },
+  { value: 'ladies', label: 'Dame' },
+];
+const LEVEL_OPTIONS = [
+  { value: 'junior', label: 'Junior' },
+  { value: 'normal', label: 'Voksen' },
+  { value: 'senior', label: 'Senior' },
+];
+
+const INPUT_CLASS =
+  'w-full rounded-xl border border-border bg-surface px-3.5 py-3 text-text placeholder-muted/70 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150';
+
+/** Splitt lagret signert hcp-streng til magnitude-streng + plus-flagg. */
+function splitInitialHcp(signed: string): { magnitude: string; isPlus: boolean } {
+  const trimmed = signed.trim();
+  if (trimmed === '') return { magnitude: '', isPlus: false };
+  const parsed = Number.parseFloat(trimmed.replace(',', '.'));
+  if (!Number.isFinite(parsed)) return { magnitude: '', isPlus: false };
+  const { magnitude, isPlus } = fromSignedHcp(parsed);
+  return { magnitude: String(magnitude), isPlus };
+}
+
+export function ProfileFormBody({
+  email,
+  initial,
+  handicapUpdatedAt,
+  action,
+  next,
+}: Props) {
+  const initialHcp = useMemo(() => splitInitialHcp(initial.hcpIndex), [initial.hcpIndex]);
+
+  const [name, setName] = useState(initial.name);
+  const [nickname, setNickname] = useState(initial.nickname);
+  const [magnitude, setMagnitude] = useState(initialHcp.magnitude);
+  const [isPlus, setIsPlus] = useState(initialHcp.isPlus);
+  const [gender, setGender] = useState<Gender | null>(initial.gender);
+  const [level, setLevel] = useState<Level>(initial.level);
+
+  // Golfprofil-feltene (kjønn/spillerklasse) ligger bak en disclosure for å
+  // holde skjemaet kort. Åpen som standard når kjønn ennå ikke er satt, så
+  // gender-soft-prompten (#kjonn-ankeret) treffer et synlig felt.
   const [showMore, setShowMore] = useState(initial.gender === null);
-  const initialRef = useRef(initial);
 
   useEffect(() => {
     function openIfKjonn() {
       if (window.location.hash === '#kjonn') {
         setShowMore(true);
-        // Re-scroll etter at seksjonen er foldet ut (ankeret rakk å scrolle
-        // mens elementet fortsatt var display:none).
         setTimeout(() => {
           document
             .getElementById('kjonn')
@@ -88,76 +119,113 @@ export function ProfileFormBody({ email, initial, action, next }: Props) {
     return () => window.removeEventListener('hashchange', openIfKjonn);
   }, []);
 
-  function recomputeDirty(form: HTMLFormElement) {
-    const fd = new FormData(form);
-    const cur = {
-      name: String(fd.get('name') ?? '').trim(),
-      nickname: String(fd.get('nickname') ?? '').trim(),
-      hcpIndex: String(fd.get('hcp_index') ?? '').trim(),
-      productUpdatesOptIn: fd.get('product_updates_opt_in') === 'on',
-      gender: (fd.get('gender') as string | null) ?? null,
-      level: (fd.get('level') as string | null) ?? null,
-    };
-    const base = initialRef.current;
-    setDirty(
-      cur.name !== base.name.trim() ||
-        cur.nickname !== base.nickname.trim() ||
-        cur.hcpIndex !== base.hcpIndex.trim() ||
-        cur.productUpdatesOptIn !== base.productUpdatesOptIn ||
-        cur.gender !== base.gender ||
-        cur.level !== base.level,
-    );
-  }
+  const dirty =
+    name.trim() !== initial.name.trim() ||
+    nickname.trim() !== initial.nickname.trim() ||
+    magnitude.trim() !== initialHcp.magnitude.trim() ||
+    isPlus !== initialHcp.isPlus ||
+    gender !== initial.gender ||
+    level !== initial.level;
 
-  function handleChange(e: FormEvent<HTMLFormElement>) {
-    recomputeDirty(e.currentTarget);
-  }
+  // Ferskhets-/bekreftelses-linja under hcp-raden. Når plusshandicap er på,
+  // bekrefter vi hva som lagres (sikkerhetsnett mot stille feil-oppsett).
+  const magnitudeNum = Number.parseFloat(magnitude.replace(',', '.'));
+  const hasMagnitude = Number.isFinite(magnitudeNum);
+  const stale = isHandicapStale(handicapUpdatedAt);
+  const oppdatertDato =
+    handicapUpdatedAt && !stale
+      ? new Date(handicapUpdatedAt).toLocaleDateString('nb-NO', {
+          day: 'numeric',
+          month: 'long',
+        })
+      : null;
 
   return (
-    <form action={action} onChange={handleChange} className="space-y-3">
+    <form action={action} className="space-y-3">
       {next ? <input type="hidden" name="next" value={next} /> : null}
-      <div>
-        <label className="block text-sm font-medium text-text mb-1">
-          E-post
-        </label>
-        <p className="text-sm text-text">{email}</p>
-        <p className="text-xs text-muted mt-1">E-post kan ikke endres her.</p>
-      </div>
 
       <Input
         id="name"
         name="name"
         type="text"
         label="Navn"
-        defaultValue={initial.name}
+        value={name}
+        onChange={(e) => setName(e.target.value)}
         autoComplete="name"
         required
       />
 
-      <Input
-        id="nickname"
-        name="nickname"
-        type="text"
-        label="Kallenavn"
-        hint="Valgfritt — navnet folk kjenner deg som på banen"
-        defaultValue={initial.nickname}
-        autoComplete="nickname"
-      />
+      <div className="flex items-start gap-3">
+        <div className="flex-1">
+          <Input
+            id="nickname"
+            name="nickname"
+            type="text"
+            label="Kallenavn"
+            placeholder="Valgfritt"
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            autoComplete="nickname"
+          />
+        </div>
+        <div className="w-[148px] shrink-0">
+          <label
+            htmlFor="hcp_index"
+            className="block text-sm font-medium text-text mb-1.5"
+          >
+            Handicap
+          </label>
+          <div className="flex gap-1.5">
+            <button
+              type="button"
+              onClick={() => setIsPlus((v) => !v)}
+              aria-pressed={isPlus}
+              aria-label="Plusshandicap"
+              className={`flex min-h-[46px] w-11 shrink-0 items-center justify-center rounded-xl border text-lg font-semibold transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+                isPlus
+                  ? 'border-primary bg-primary-soft text-text shadow-[inset_0_0_0_1px_var(--primary)]'
+                  : 'border-border bg-surface text-muted hover:text-text'
+              }`}
+            >
+              +
+            </button>
+            <input
+              id="hcp_index"
+              name="hcp_index"
+              type="number"
+              inputMode="decimal"
+              step="0.1"
+              min={0}
+              max={54}
+              required
+              value={magnitude}
+              onChange={(e) => setMagnitude(e.target.value)}
+              className={`${INPUT_CLASS} score-num min-w-0`}
+            />
+          </div>
+        </div>
+      </div>
 
-      <Input
-        id="hcp_index"
-        name="hcp_index"
-        type="number"
-        label="Handicap-index"
-        hint="Tallet du har i Golfbox akkurat nå"
-        step="0.1"
-        min={-10}
-        max={54.0}
-        defaultValue={initial.hcpIndex}
-        required
-        inputMode="decimal"
-        inputClassName="score-num"
-      />
+      {/* Skjult flagg for plusshandicap — action regner ut signert verdi. */}
+      <input type="hidden" name="hcp_plus" value={isPlus ? 'on' : ''} />
+
+      {isPlus && hasMagnitude ? (
+        <p className="-mt-1 text-xs text-muted">
+          Lagres som{' '}
+          <span className="font-medium text-text">
+            {formatGolfboxHcp(magnitudeNum, true)}
+          </span>{' '}
+          · plusshandicap
+        </p>
+      ) : stale ? (
+        <p className="-mt-1 text-xs text-warning">
+          ⚠ Handicap ikke oppdatert på over en måned
+        </p>
+      ) : oppdatertDato ? (
+        <p className="-mt-1 text-xs text-muted">
+          Handicap oppdatert {oppdatertDato}
+        </p>
+      ) : null}
 
       <div className="border-t border-border/60 pt-3 dark:border-border/80">
         <button
@@ -168,7 +236,7 @@ export function ProfileFormBody({ email, initial, action, next }: Props) {
           className="flex min-h-11 w-full items-center justify-between gap-3 text-left"
         >
           <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-            Flere innstillinger
+            Golfprofil
           </span>
           <DisclosureChevron open={showMore} />
         </button>
@@ -177,94 +245,30 @@ export function ProfileFormBody({ email, initial, action, next }: Props) {
           id="profile-more-settings"
           className={showMore ? 'mt-3 space-y-5' : 'hidden'}
         >
-          <fieldset id="kjonn">
-            <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-              Kjønn
-            </legend>
-            <div className="mt-2 flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="gender"
-                  value="mens"
-                  defaultChecked={initial.gender === 'mens'}
-                />
-                <span className="font-serif text-base text-text">Herre</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="gender"
-                  value="ladies"
-                  defaultChecked={initial.gender === 'ladies'}
-                />
-                <span className="font-serif text-base text-text">Dame</span>
-              </label>
-            </div>
-            <p className="mt-1 text-xs text-muted">
-              Brukes til å foreslå riktig tee og beregne course handicap riktig.
-            </p>
-          </fieldset>
+          <SegmentedField
+            id="kjonn"
+            legend="Kjønn"
+            options={GENDER_OPTIONS}
+            value={gender}
+            onChange={(v) => setGender(v as Gender)}
+            hint="Brukes til å foreslå riktig tee og beregne course handicap."
+          />
+          <input type="hidden" name="gender" value={gender ?? ''} />
 
-          <fieldset>
-            <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-              Spillerklasse
-            </legend>
-            <div className="mt-2 flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="level"
-                  value="junior"
-                  defaultChecked={initial.level === 'junior'}
-                />
-                <span className="font-serif text-base text-text">Junior</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="level"
-                  value="normal"
-                  defaultChecked={initial.level === 'normal'}
-                />
-                <span className="font-serif text-base text-text">Voksen</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="level"
-                  value="senior"
-                  defaultChecked={initial.level === 'senior'}
-                />
-                <span className="font-serif text-base text-text">Senior</span>
-              </label>
-            </div>
-            <p className="mt-1 text-xs text-muted">
-              Junior gir juniortee når banen har en. Senior er en informasjons-tag for nå.
-            </p>
-          </fieldset>
-
-          <div>
-            <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
-              Mail-innstillinger
-            </p>
-            <label className="flex items-start gap-3 cursor-pointer min-h-11">
-              <input
-                type="checkbox"
-                name="product_updates_opt_in"
-                defaultChecked={initial.productUpdatesOptIn}
-                className="mt-0.5 h-5 w-5 shrink-0 rounded border-border text-primary focus:ring-2 focus:ring-primary/30"
-              />
-              <span className="font-sans text-sm leading-snug text-text">
-                Få månedsbrev fra Tørny med oppsummering av nye funksjoner.
-                <span className="block text-xs text-muted mt-0.5">
-                  Maks én mail per måned. Du kan melde deg av når som helst.
-                </span>
-              </span>
-            </label>
-          </div>
+          <SegmentedField
+            legend="Spillerklasse"
+            options={LEVEL_OPTIONS}
+            value={level}
+            onChange={(v) => setLevel(v as Level)}
+            hint="Junior gir juniortee. Senior er en info-tag for nå."
+          />
+          <input type="hidden" name="level" value={level} />
         </div>
       </div>
+
+      <p className="border-t border-border/60 pt-3 text-xs text-muted dark:border-border/80">
+        E-post: <span className="text-text">{email}</span> · kan ikke endres
+      </p>
 
       <div className="pt-2">
         <SaveButton dirty={dirty} />

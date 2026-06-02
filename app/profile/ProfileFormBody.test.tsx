@@ -12,130 +12,73 @@ const baseInitial = {
   name: 'Per Hansen',
   nickname: 'Per',
   hcpIndex: '12.4',
-  productUpdatesOptIn: true,
   gender: 'mens' as const,
   level: 'normal' as const,
 };
 
-/** Folder ut «Flere innstillinger» der kjønn/klasse/månedsbrev nå bor. */
-function openMoreSettings() {
-  fireEvent.click(screen.getByRole('button', { name: /flere innstillinger/i }));
+function renderForm(overrides: Partial<typeof baseInitial> = {}) {
+  return render(
+    <ProfileFormBody
+      email="per@example.com"
+      initial={{ ...baseInitial, ...overrides }}
+      action={() => undefined}
+    />,
+  );
 }
 
-describe('ProfileFormBody — Mail-innstillinger toggle', () => {
-  it('rendrer toggle som checked når initial.productUpdatesOptIn=true', () => {
-    render(
-      <ProfileFormBody
-        email="per@example.com"
-        initial={baseInitial}
-        action={() => undefined}
-      />,
-    );
-    openMoreSettings();
-    const checkbox = screen.getByRole('checkbox', {
-      name: /månedsbrev fra Tørny/i,
-    });
-    expect(checkbox).toBeChecked();
-  });
-
-  it('rendrer toggle som unchecked når initial.productUpdatesOptIn=false', () => {
-    render(
-      <ProfileFormBody
-        email="per@example.com"
-        initial={{ ...baseInitial, productUpdatesOptIn: false }}
-        action={() => undefined}
-      />,
-    );
-    openMoreSettings();
-    const checkbox = screen.getByRole('checkbox', {
-      name: /månedsbrev fra Tørny/i,
-    });
-    expect(checkbox).not.toBeChecked();
-  });
-
-  it('toggle endring markerer skjema som dirty (Lagre-knappen aktiveres)', () => {
-    render(
-      <ProfileFormBody
-        email="per@example.com"
-        initial={baseInitial}
-        action={() => undefined}
-      />,
-    );
+describe('ProfileFormBody — dirty / Lagre', () => {
+  it('Lagre er deaktivert til noe endres, aktiveres ved navne-endring', () => {
+    renderForm();
     const saveBtn = screen.getByRole('button', { name: 'Lagre' });
     expect(saveBtn).toBeDisabled();
-
-    openMoreSettings();
-    const checkbox = screen.getByRole('checkbox', {
-      name: /månedsbrev fra Tørny/i,
+    fireEvent.change(screen.getByLabelText('Navn'), {
+      target: { value: 'Per Hansen Jr' },
     });
-    fireEvent.click(checkbox);
-
-    expect(saveBtn).not.toBeDisabled();
-  });
-
-  it('endring av navn aktiverer Lagre-knappen (eksisterende oppførsel uendret)', () => {
-    render(
-      <ProfileFormBody
-        email="per@example.com"
-        initial={baseInitial}
-        action={() => undefined}
-      />,
-    );
-    const saveBtn = screen.getByRole('button', { name: 'Lagre' });
-    expect(saveBtn).toBeDisabled();
-
-    const nameInput = screen.getByLabelText('Navn');
-    fireEvent.change(nameInput, { target: { value: 'Per Hansen Jr' } });
-
     expect(saveBtn).not.toBeDisabled();
   });
 });
 
-describe('ProfileFormBody — Flere innstillinger-disclosure', () => {
-  // NB: jsdom laster ikke Tailwind-CSS, så `hidden`-klassen gir ikke
-  // display:none her — vi tester disclosure-kontrakten via aria-expanded og
-  // at feltene fortsatt finnes i DOM (ikke unmountet), ikke via synlighet.
+describe('ProfileFormBody — Golfprofil-disclosure', () => {
   it('er kollapset som standard når kjønn alt er satt', () => {
-    render(
-      <ProfileFormBody
-        email="per@example.com"
-        initial={baseInitial}
-        action={() => undefined}
-      />,
-    );
-    const toggle = screen.getByRole('button', { name: /flere innstillinger/i });
+    renderForm();
+    const toggle = screen.getByRole('button', { name: /golfprofil/i });
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
   });
 
-  it('er åpen som standard når kjønn ikke er satt (gender-soft-prompt treffer #kjonn)', () => {
-    render(
-      <ProfileFormBody
-        email="per@example.com"
-        initial={{ ...baseInitial, gender: null }}
-        action={() => undefined}
-      />,
-    );
+  it('er åpen som standard når kjønn ikke er satt (gender-soft-prompt)', () => {
+    renderForm({ gender: null });
     expect(
-      screen.getByRole('button', { name: /flere innstillinger/i }),
+      screen.getByRole('button', { name: /golfprofil/i }),
     ).toHaveAttribute('aria-expanded', 'true');
   });
 
-  it('beholder feltene i DOM når kollapset, så verdiene sendes fortsatt med ved lagring', () => {
-    render(
-      <ProfileFormBody
-        email="per@example.com"
-        initial={baseInitial}
-        action={() => undefined}
-      />,
-    );
-    // Kollapset (gender satt), men gender-input ligger fortsatt i skjemaet med
-    // riktig verdi — ellers ville en kollapset bruker tape kjønn ved lagring.
-    const genderRadio = document.querySelector(
-      'input[name="gender"][value="mens"]',
-    );
-    expect(genderRadio).toBeInTheDocument();
-    expect(genderRadio).toBeChecked();
+  it('kjønn rendres som segmenterte radio-knapper med valgt verdi', () => {
+    renderForm(); // gender: 'mens'
+    expect(screen.getByRole('radio', { name: 'Herre' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Dame' })).not.toBeChecked();
+  });
+});
+
+describe('ProfileFormBody — plusshandicap-chip', () => {
+  it('toggler plusshandicap og viser «Lagres som +»-bekreftelse', () => {
+    renderForm({ hcpIndex: '1.5' });
+    const saveBtn = screen.getByRole('button', { name: 'Lagre' });
+    expect(saveBtn).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Plusshandicap' }));
+
+    expect(screen.getByText('+1,5')).toBeInTheDocument();
+    expect(screen.getByText(/plusshandicap/i)).toBeInTheDocument();
+    expect(saveBtn).not.toBeDisabled();
+  });
+
+  it('lagret negativ hcp lastes som chip på + positiv magnitude', () => {
+    renderForm({ hcpIndex: '-1.5' });
+    expect(
+      screen.getByRole('button', { name: 'Plusshandicap' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByLabelText('Handicap')).toHaveValue(1.5);
   });
 });

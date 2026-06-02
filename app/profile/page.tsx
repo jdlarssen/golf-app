@@ -17,6 +17,7 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { Button } from '@/components/ui/Button';
 import { SettingRow, SettingList } from '@/components/ui/SettingRow';
 import { InstallButton } from '@/components/pwa/InstallButton';
+import { fromSignedHcp, formatGolfboxHcp } from '@/lib/handicap/sign';
 
 type SearchParams = Promise<{
   error?: string | string[];
@@ -136,17 +137,6 @@ export default async function ProfilePage({
       </div>
 
       <AccountActions />
-
-      <p className="mt-4 px-1 text-xs leading-relaxed text-muted">
-        Les hvordan vi behandler og lagrer dataene dine i{' '}
-        <SmartLink
-          href="/legal/privacy"
-          className="text-text underline underline-offset-2"
-        >
-          personvernerklæringen
-        </SmartLink>
-        .
-      </p>
     </AppShell>
   );
 }
@@ -160,7 +150,7 @@ function AccountActions() {
   return (
     <div className="mt-8 border-t border-border/60 pt-6 dark:border-border/80">
       <form action="/logout" method="post">
-        <Button type="submit" variant="secondary">
+        <Button type="submit" variant="secondary" className="w-full">
           Logg ut
         </Button>
       </form>
@@ -180,7 +170,7 @@ async function ProfileFormCard({
   const { data: profile, error: profileError } = await supabase
     .from('users')
     .select(
-      'name, nickname, hcp_index, email, profile_completed_at, product_updates_unsubscribed_at, gender, level',
+      'name, nickname, hcp_index, handicap_updated_at, email, profile_completed_at, gender, level',
     )
     .eq('id', userId!)
     .single();
@@ -194,6 +184,16 @@ async function ProfileFormCard({
     redirect('/complete-profile');
   }
 
+  const displayName = profile.name ?? '';
+  const initial = displayName.trim().charAt(0).toUpperCase() || '?';
+  const hcpDisplay =
+    profile.hcp_index == null
+      ? '–'
+      : (() => {
+          const { magnitude, isPlus } = fromSignedHcp(profile.hcp_index);
+          return formatGolfboxHcp(magnitude, isPlus);
+        })();
+
   return (
     <Card>
       {errorMessage && (
@@ -201,14 +201,25 @@ async function ProfileFormCard({
           <Banner tone="error">{errorMessage}</Banner>
         </div>
       )}
+      <div className="mb-5 flex items-center gap-3">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary-soft font-serif text-lg font-medium text-text">
+          {initial}
+        </div>
+        <div className="min-w-0">
+          <p className="font-serif text-lg font-medium text-text leading-tight truncate">
+            {displayName || 'Profil'}
+          </p>
+          <p className="text-sm text-muted tabular-nums">hcp {hcpDisplay}</p>
+        </div>
+      </div>
       <ProfileFormBody
         email={profile.email}
+        handicapUpdatedAt={profile.handicap_updated_at}
         initial={{
           name: profile.name ?? '',
           nickname: profile.nickname ?? '',
           hcpIndex:
             profile.hcp_index == null ? '' : String(profile.hcp_index),
-          productUpdatesOptIn: profile.product_updates_unsubscribed_at == null,
           gender: profile.gender,
           level: profile.level,
         }}
