@@ -21,6 +21,27 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#401](https://github.com/jdlarssen/golf-app/issues/401). Et større løft av profil-siden: profil-header øverst, kompakt handicap-felt med plusshandicap-støtte og ferskhets-dato, kjønn og spillerklasse som knapper, demotert e-post, og månedsbrev-valget flyttet til Innboks.
 
+### [1.69.1] - 2026-06-02
+
+> Når du fullfører profilen din for første gang, kan du nå markere plusshandicap der også — ikke bare på profil-siden.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#401](https://github.com/jdlarssen/golf-app/issues/401), del 2 (onboarding-paritet).
+
+#### Added
+- [`app/complete-profile/OnboardingHcpField.tsx`](app/complete-profile/OnboardingHcpField.tsx) — handicap-felt med «+»-chip for plusshandicap + live «Lagres som …»-bekreftelse (gjenbruker `lib/handicap/sign`).
+
+#### Changed
+- [`app/complete-profile/page.tsx`](app/complete-profile/page.tsx) — bruker det nye feltet i stedet for et rått tall-felt.
+- [`app/complete-profile/actions.ts`](app/complete-profile/actions.ts) — regner signert hcp fra magnitude + plus-flagg (`toSignedHcp`).
+
+#### Tests
+- [`app/complete-profile/actions.test.ts`](app/complete-profile/actions.test.ts) — plusshandicap lagres negativt.
+
+</details>
+
 ### [1.69.0] - 2026-06-02
 
 > Profil-siden din ser ut som en profil nå, med navn og handicap øverst. Handicap-feltet er mindre og viser når du sist oppdaterte det. Har du plusshandicap, markerer du det med ett trykk i stedet for å taste fortegn, og kjønn og spillerklasse velger du med knapper.

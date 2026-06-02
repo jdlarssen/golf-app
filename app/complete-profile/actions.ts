@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
+import { toSignedHcp } from '@/lib/handicap/sign';
 
 const HCP_MIN = -10;
 const HCP_MAX = 54.0;
@@ -15,7 +16,10 @@ export async function completeProfile(formData: FormData) {
   const name = String(formData.get('name') ?? '').trim();
   const nicknameRaw = String(formData.get('nickname') ?? '').trim();
   const nickname = nicknameRaw === '' ? null : nicknameRaw;
+  // Magnitude + plus-flagg (spilleren slipper å taste fortegn på mobil);
+  // plusshandicap lagres internt negativt.
   const hcpRaw = String(formData.get('hcp_index') ?? '').trim();
+  const hcpPlus = formData.get('hcp_plus') === 'on';
   const genderRaw = String(formData.get('gender') ?? '').trim();
   const levelRaw = String(formData.get('level') ?? 'normal').trim();
 
@@ -38,8 +42,12 @@ export async function completeProfile(formData: FormData) {
   }
 
   // Accept both comma and dot as decimal separator (Norwegian users).
-  const hcpParsed = Number.parseFloat(hcpRaw.replace(',', '.'));
-  if (!Number.isFinite(hcpParsed) || hcpParsed < HCP_MIN || hcpParsed > HCP_MAX) {
+  const hcpMagnitude = Number.parseFloat(hcpRaw.replace(',', '.'));
+  if (!Number.isFinite(hcpMagnitude) || hcpMagnitude < 0 || hcpMagnitude > HCP_MAX) {
+    fail('hcp_invalid');
+  }
+  const hcpParsed = toSignedHcp(hcpMagnitude, hcpPlus);
+  if (hcpParsed < HCP_MIN || hcpParsed > HCP_MAX) {
     fail('hcp_invalid');
   }
 

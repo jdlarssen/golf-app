@@ -17,11 +17,12 @@ const getUserMock = vi.fn();
 const updateEqMock = vi.fn<(...args: unknown[]) => Promise<{ error: null }>>(
   async () => ({ error: null }),
 );
+const updateMock = vi.fn(() => ({ eq: updateEqMock }));
 
 vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => ({
     auth: { getUser: getUserMock },
-    from: () => ({ update: () => ({ eq: updateEqMock }) }),
+    from: () => ({ update: updateMock }),
   }),
 }));
 
@@ -71,6 +72,16 @@ describe('completeProfile — #356 next round-trip', () => {
     await expect(
       completeProfile(fd({ ...VALID, next: 'https://evil.example' })),
     ).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/');
+  });
+
+  it('lagrer plusshandicap negativt (magnitude + hcp_plus=on → -1.5)', async () => {
+    const { completeProfile } = await import('./actions');
+    await expect(
+      completeProfile(fd({ ...VALID, hcp_index: '1,5', hcp_plus: 'on' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(updateMock).toHaveBeenCalledTimes(1);
+    expect(updateMock.mock.calls[0][0]).toMatchObject({ hcp_index: -1.5 });
     expect(lastRedirect()).toBe('/');
   });
 

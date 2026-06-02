@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
 import { Kicker } from '@/components/ui/Kicker';
 import { completeProfile } from './actions';
+import { OnboardingHcpField } from './OnboardingHcpField';
 
 type SearchParams = Promise<{
   error?: string | string[];
@@ -107,19 +108,7 @@ export default async function CompleteProfile({
             autoComplete="nickname"
           />
 
-          <Input
-            id="hcp_index"
-            name="hcp_index"
-            type="number"
-            label="Handicap-index"
-            hint="Tallet du har i Golfbox akkurat nå"
-            step="0.1"
-            min={-10}
-            max={54.0}
-            required
-            inputMode="decimal"
-            inputClassName="score-num"
-          />
+          <OnboardingHcpField />
 
           <fieldset>
             <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
