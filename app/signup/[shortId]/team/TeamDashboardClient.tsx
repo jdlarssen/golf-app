@@ -34,12 +34,20 @@ type MemberDisplay = {
   status: Status;
 };
 
+/**
+ * Hva som skjer når du blir med: `instant` (open-modus → rett inn i spillet)
+ * eller `approval` (manual_approval → arrangøren må godkjenne laget først).
+ * Styrer neste-steg-copy så «bli med» ikke er en blind handling (#362).
+ */
+type JoinEffect = 'instant' | 'approval';
+
 type Props =
   | {
       mode: 'captain';
       shortId: string;
       myRowId: string;
       myStatus: Status;
+      joinEffect: JoinEffect;
       captain: {
         requestId: string;
         userId: string;
@@ -53,6 +61,7 @@ type Props =
       shortId: string;
       myRowId: string;
       myStatus: Status;
+      joinEffect: JoinEffect;
       captain: {
         requestId: string;
         userId: string;
@@ -65,6 +74,7 @@ type Props =
       mode: 'invited_unknown';
       shortId: string;
       invitationId: string;
+      joinEffect: JoinEffect;
     };
 
 /**
@@ -106,16 +116,23 @@ export function TeamDashboardClient(props: Props) {
   };
 
   if (props.mode === 'invited_unknown') {
+    const nextStep =
+      props.joinEffect === 'instant'
+        ? 'Du blir med i spillet med en gang, og får scorekortet når runden starter.'
+        : 'Arrangøren må godkjenne laget før dere er påmeldt. Du får varsel når det er klart.';
     return (
       <div className="space-y-3">
         {error && <Banner tone="error">{error}</Banner>}
         {success && <Banner tone="success">{success}</Banner>}
+        <p className="font-sans text-sm text-text">{nextStep}</p>
         <Button
           disabled={isPending}
           onClick={() =>
             runAction(
               () => attachToCaptainTeam(props.invitationId, props.shortId),
-              'Du er med på laget. Siden lastes på nytt…',
+              props.joinEffect === 'instant'
+                ? 'Du er med på laget. Siden lastes på nytt…'
+                : 'Meldt på laget. Venter på arrangøren. Siden lastes på nytt…',
             )
           }
           className="w-full"
@@ -204,13 +221,20 @@ export function TeamDashboardClient(props: Props) {
           <p className="font-sans text-sm text-text">
             Kapteinen har invitert deg. Vil du være med?
           </p>
+          <p className="font-sans text-sm text-muted">
+            {props.joinEffect === 'instant'
+              ? 'Sier du ja, er du med i spillet med en gang.'
+              : 'Sier du ja, må arrangøren godkjenne laget før dere er påmeldt. Du får varsel når det er klart.'}
+          </p>
           <div className="flex flex-wrap gap-2">
             <Button
               disabled={isPending}
               onClick={() =>
                 runAction(
                   () => acceptTeamInvite(props.myRowId, props.shortId),
-                  'Du er med på laget. Siden lastes på nytt…',
+                  props.joinEffect === 'instant'
+                    ? 'Du er med på laget. Siden lastes på nytt…'
+                    : 'Meldt på laget. Venter på arrangøren. Siden lastes på nytt…',
                 )
               }
             >

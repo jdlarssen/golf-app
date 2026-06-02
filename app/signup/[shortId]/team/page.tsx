@@ -50,6 +50,11 @@ export default async function TeamDashboardPage({
     notFound();
   }
 
+  // Hva «bli med» fører til: open → rett inn i spillet, ellers venter laget
+  // på at arrangøren godkjenner. Styrer neste-steg-copy (#362).
+  const joinEffect: 'instant' | 'approval' =
+    game.registration_mode === 'open' ? 'instant' : 'approval';
+
   const supabase = await getServerClient();
   const {
     data: { user },
@@ -115,14 +120,11 @@ export default async function TeamDashboardPage({
             <h2 className="font-serif text-[20px] font-medium text-text">
               Du er invitert til et lag i «{game.name}»
             </h2>
-            <p className="font-sans text-sm text-text">
-              Trykk under for å bli med. Du blir lagt til kapteinens lag og
-              får tilgang til scorekortet når spillet starter.
-            </p>
             <TeamDashboardClient
               mode="invited_unknown"
               shortId={shortId}
               invitationId={pendingInvitation.id}
+              joinEffect={joinEffect}
             />
           </div>
         </Card>
@@ -204,6 +206,7 @@ export default async function TeamDashboardPage({
             shortId={shortId}
             myRowId={myRow!.id}
             myStatus={myRow!.status}
+            joinEffect={joinEffect}
             captain={
               captainRow
                 ? {
