@@ -360,6 +360,25 @@ async function HomeBody() {
           </SmartLink>
         </Section>
 
+        {/* Vedvarende «Finn turneringer»-inngang (#357) — så spillere som alt
+            har spill fortsatt kan oppdage nye åpne turneringer, ikke bare i
+            tom-tilstand. Kun for spillere; admin har Sekretariatet, betrodde
+            opprettere lager egne spill. */}
+        {!canCreateGame && (
+          <Section label="Finn turneringer">
+            <SmartLink href="/finn-turneringer" className="block">
+              <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
+                <span className="text-base font-medium text-text">
+                  Se åpne turneringer du kan bli med i
+                </span>
+                <span aria-hidden className="text-muted">
+                  →
+                </span>
+              </Card>
+            </SmartLink>
+          </Section>
+        )}
+
       </nav>
 
       <p className="mt-10 text-xs text-muted text-center">

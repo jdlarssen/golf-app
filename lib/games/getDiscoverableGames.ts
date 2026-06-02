@@ -17,6 +17,12 @@ export type DiscoverableOpenGame = {
   short_id: string;
   scheduled_tee_off_at: string | null;
   course_name: string | null;
+  /**
+   * Påmeldingsmåten ER synligheten (flyt 2): `open` → «Meld meg på»,
+   * `manual_approval` → «Be om å bli med». `invite_only` er privat og
+   * ekskluderes av query-filteret, så det dukker aldri opp her.
+   */
+  registration_mode: 'open' | 'manual_approval';
 };
 
 export type PendingRequest = {
@@ -57,11 +63,13 @@ export async function getDiscoverableGames(userId: string): Promise<{
 
   let openQuery = admin
     .from('games')
-    .select('id, name, short_id, scheduled_tee_off_at, courses(name)')
-    .eq('registration_mode', 'open')
+    .select('id, name, short_id, scheduled_tee_off_at, registration_mode, courses(name)')
+    // Påmeldingsmåten ER synligheten: open + manual_approval er oppdagbare,
+    // invite_only er privat (#357). Ingen egen synlighets-bryter.
+    .in('registration_mode', ['open', 'manual_approval'])
     .in('status', ['draft', 'scheduled'])
     .order('scheduled_tee_off_at', { ascending: true, nullsFirst: false })
-    .limit(10);
+    .limit(50);
 
   if (excludedIds.size > 0) {
     openQuery = openQuery.not('id', 'in', `(${[...excludedIds].join(',')})`);
@@ -84,6 +92,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
         short_id: row.short_id as string,
         scheduled_tee_off_at: row.scheduled_tee_off_at as string | null,
         course_name: course?.name ?? null,
+        registration_mode: row.registration_mode as 'open' | 'manual_approval',
       };
     },
   );

@@ -6,6 +6,7 @@ const playerRows = vi.fn<() => { data: Row[] | null }>();
 const requestRows = vi.fn<() => { data: Row[] | null }>();
 const openGamesRows = vi.fn<() => { data: Row[] | null }>();
 const notInArg = vi.fn();
+const inArg = vi.fn();
 
 vi.mock('@/lib/supabase/admin', () => ({
   getAdminClient: () => ({
@@ -26,25 +27,31 @@ vi.mock('@/lib/supabase/admin', () => ({
           }),
         };
       }
-      // games
+      // games — chain: select → in(registration_mode) → in(status) → order → limit
       return {
         select: () => ({
-          eq: () => ({
-            in: () => ({
-              order: () => ({
-                limit: () => {
-                  return {
-                    not: (...args: unknown[]) => {
-                      notInArg(...args);
-                      return Promise.resolve(openGamesRows());
+          in: (...regModeArgs: unknown[]) => {
+            inArg(...regModeArgs);
+            return {
+              in: (...statusArgs: unknown[]) => {
+                inArg(...statusArgs);
+                return {
+                  order: () => ({
+                    limit: () => {
+                      return {
+                        not: (...args: unknown[]) => {
+                          notInArg(...args);
+                          return Promise.resolve(openGamesRows());
+                        },
+                        then: (resolve: (v: unknown) => unknown) =>
+                          Promise.resolve(openGamesRows()).then(resolve),
+                      };
                     },
-                    then: (resolve: (v: unknown) => unknown) =>
-                      Promise.resolve(openGamesRows()).then(resolve),
-                  };
-                },
-              }),
-            }),
-          }),
+                  }),
+                };
+              },
+            };
+          },
         }),
       };
     },
@@ -56,6 +63,7 @@ beforeEach(() => {
   requestRows.mockReset();
   openGamesRows.mockReset();
   notInArg.mockReset();
+  inArg.mockReset();
 });
 
 describe('getDiscoverableGames', () => {
@@ -71,7 +79,7 @@ describe('getDiscoverableGames', () => {
     expect(result.pendingRequests).toEqual([]);
   });
 
-  it('mapper open-game-rad til DiscoverableOpenGame med course-navn', async () => {
+  it('mapper open-game-rad til DiscoverableOpenGame med course-navn + modus', async () => {
     playerRows.mockReturnValue({ data: [] });
     requestRows.mockReturnValue({ data: [] });
     openGamesRows.mockReturnValue({
@@ -81,6 +89,7 @@ describe('getDiscoverableGames', () => {
           name: 'Sommercup',
           short_id: 'k7m3p9qx',
           scheduled_tee_off_at: '2026-06-01T10:00:00Z',
+          registration_mode: 'open',
           courses: { name: 'Hauger' },
         },
       ],
@@ -96,7 +105,56 @@ describe('getDiscoverableGames', () => {
         short_id: 'k7m3p9qx',
         scheduled_tee_off_at: '2026-06-01T10:00:00Z',
         course_name: 'Hauger',
+        registration_mode: 'open',
       },
+    ]);
+  });
+
+  it('query filtrerer på open + manual_approval (invite_only ekskluderes)', async () => {
+    playerRows.mockReturnValue({ data: [] });
+    requestRows.mockReturnValue({ data: [] });
+    openGamesRows.mockReturnValue({ data: [] });
+
+    const { getDiscoverableGames } = await import('./getDiscoverableGames');
+    await getDiscoverableGames('u1');
+
+    // Eksklusjon av invite_only er garantert av query-filteret, ikke av mock-en.
+    expect(inArg).toHaveBeenCalledWith('registration_mode', [
+      'open',
+      'manual_approval',
+    ]);
+  });
+
+  it('bevarer registration_mode per spill (open og manual_approval)', async () => {
+    playerRows.mockReturnValue({ data: [] });
+    requestRows.mockReturnValue({ data: [] });
+    openGamesRows.mockReturnValue({
+      data: [
+        {
+          id: 'g1',
+          name: 'Åpen runde',
+          short_id: 'open0001',
+          scheduled_tee_off_at: null,
+          registration_mode: 'open',
+          courses: null,
+        },
+        {
+          id: 'g2',
+          name: 'Klubbmesterskap',
+          short_id: 'appr0002',
+          scheduled_tee_off_at: null,
+          registration_mode: 'manual_approval',
+          courses: null,
+        },
+      ],
+    });
+
+    const { getDiscoverableGames } = await import('./getDiscoverableGames');
+    const result = await getDiscoverableGames('u1');
+
+    expect(result.openGames.map((g) => g.registration_mode)).toEqual([
+      'open',
+      'manual_approval',
     ]);
   });
 

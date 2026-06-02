@@ -17,7 +17,35 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.66.y — Vedvarende navigasjon
+## 1.67.y — Finn turneringer
+
+Issue [#357](https://github.com/jdlarssen/golf-app/issues/357). «Finn turneringer» dukket bare opp på Hjem når du ikke hadde noen spill fra før — hadde du først ett, fantes det ingen vei til å oppdage nye. Nå er det en fast inngang fra Hjem, og turneringer med «be om å bli med»-påmelding vises også, ikke bare de helt åpne.
+
+### [1.67.0] - 2026-06-02
+
+> Du finner og blir med i nye turneringer rett fra Hjem, også de som krever at arrangøren slipper deg inn. Før forsvant veien dit så snart du hadde ett spill gående.
+
+<details>
+<summary>Teknisk</summary>
+
+Løser [#357](https://github.com/jdlarssen/golf-app/issues/357). Discovery («Funn turneringer») rendret kun i Hjem-tom-tilstand, og `getDiscoverableGames` returnerte bare `registration_mode = 'open'` — så `manual_approval`-spill var usynlige selv om de skal være offentlig oppdagbare. Påmeldingsmåten ER synligheten (flyt 2): open + manual_approval oppdages, invite_only er privat.
+
+#### Added
+- [`app/finn-turneringer/page.tsx`](app/finn-turneringer/page.tsx) — dedikert side som lister oppdagbare spill (gjenbruker `HomeDiscoverySection`), med vennlig tom-tilstand. `force-dynamic` siden `getDiscoverableGames` bruker admin-client ved request-tid.
+- [`app/page.tsx`](app/page.tsx) — vedvarende «Finn turneringer»-inngangskort i has-games-nav, kun for spillere (`!canCreateGame`).
+
+#### Changed
+- [`lib/games/getDiscoverableGames.ts`](lib/games/getDiscoverableGames.ts) — inkluderer nå `open` + `manual_approval` (var kun `open`), returnerer `registration_mode` per spill, limit 10 → 50.
+- [`app/HomeDiscoverySection.tsx`](app/HomeDiscoverySection.tsx) — CTA speiler modus: «Meld meg på» (open) / «Be om å bli med» (manual_approval); begge lenker til `/signup/[shortId]`, som ruter videre på modus.
+
+#### Tests
+- [`lib/games/getDiscoverableGames.test.ts`](lib/games/getDiscoverableGames.test.ts) — filteret dekker open + manual_approval (invite_only ekskludert), `registration_mode` bevart per spill.
+- [`app/HomeDiscoverySection.test.tsx`](app/HomeDiscoverySection.test.tsx) — render-test for CTA-per-modus-svitsjen.
+
+</details>
+
+<details>
+<summary><strong>1.66.y — Vedvarende navigasjon (2 oppføringer) — klikk for å vise</strong></summary>
 
 Issue [#355](https://github.com/jdlarssen/golf-app/issues/355). Appen hadde ingen fast navigasjon. For å nå profil, innboks eller bytte spill måtte du alltid tilbake til Hjem først. Nå ligger en fast bunn-meny (Hjem / Innboks / Profil) nederst på alle spiller-sider.
 
@@ -58,6 +86,8 @@ Fikser [#355](https://github.com/jdlarssen/golf-app/issues/355) — ingen vedvar
 #### Notes
 - Skjuler seg på hull-skjermen (fullskjerm scoring) og admin (eget rom) via `usePathname`; på offentlige/pre-profil-sider mangler proxy-headeren, så `userId` er null og baren rendres ikke.
 - Global render i root-layout ble valgt framfor en `userId`-prop per `AppShell`: `AppShell` rendres ~50 steder (mange er client-component leaderboard-views), så per-prop-tråding ville bommet på dem og vært en felle for hver nye spillform. Root-layout-render gjør at headeren leses der, hvilket gjør de tre tidligere statiske sidene (`/_not-found`, `/invite`, `/legal/privacy`) dynamiske — ubetydelig for app-en. Route-gruppe-layout er en mulig fremtidig optimalisering for persistent realtime-abonnement.
+
+</details>
 
 </details>
 

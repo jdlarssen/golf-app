@@ -56,19 +56,16 @@ export function HomeDiscoverySection({
   );
 }
 
-function OpenGameCard({
-  game,
-}: {
-  game: {
-    name: string;
-    short_id: string;
-    scheduled_tee_off_at: string | null;
-    course_name: string | null;
-  };
-}) {
+function OpenGameCard({ game }: { game: DiscoverableOpenGame }) {
   const teeOff = game.scheduled_tee_off_at
     ? new Date(game.scheduled_tee_off_at)
     : null;
+  // Påmeldingsmåten ER synligheten (#357): open lar deg melde deg på direkte,
+  // manual_approval krever at arrangøren godkjenner forespørselen din.
+  const cta =
+    game.registration_mode === 'manual_approval'
+      ? 'Be om å bli med'
+      : 'Meld meg på';
 
   return (
     <div className="rounded-2xl border border-border bg-surface px-4 py-3.5">
@@ -92,7 +89,7 @@ function OpenGameCard({
       </div>
       <div className="mt-3.5">
         <LinkButton href={`/signup/${game.short_id}`} full>
-          Meld meg på
+          {cta}
         </LinkButton>
       </div>
     </div>
