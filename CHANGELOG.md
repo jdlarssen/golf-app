@@ -21,7 +21,7 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#368](https://github.com/jdlarssen/golf-app/issues/368). Lander du på et privat (invitasjonsbasert) spill du ikke er invitert til, var skjermen før en blindvei. Nå kan du be arrangøren om plass derfra, og arrangøren ser forespørselen og slipper deg inn eller avslår.
 
-### [1.68.3] - 2026-06-02
+### [1.68.4] - 2026-06-02
 
 > Profil-skjemaet er kortere nå. Det du endrer ofte (navn, kallenavn og handicap) ligger åpent, mens kjønn, spillerklasse og månedsbrev er flyttet under «Flere innstillinger». «Invitér en venn» har fått e-post-felt og Send-knapp på samme rad i stedet for en skjerm-vid knapp.
 
@@ -34,6 +34,7 @@ Oppfølging av [#393](https://github.com/jdlarssen/golf-app/issues/393) ([#399](
 - [`app/profile/ProfileFormBody.tsx`](app/profile/ProfileFormBody.tsx) — kjønn, spillerklasse og månedsbrev flyttet under en «Flere innstillinger»-disclosure (kollapset som standard, åpen når kjønn ennå ikke er satt så gender-soft-prompten + `#kjonn`-ankeret treffer et synlig felt). Innholdet skjules med `hidden` (ikke unmount) så verdiene fortsatt sendes med ved lagring — `required` på kjønn-radioene droppet til fordel for server-validering (`gender_required`), siden en skjult `required` blokkerer submit. Tettere `space-y` på de synlige feltene.
 - [`app/profile/InviteFriendForm.tsx`](app/profile/InviteFriendForm.tsx) — e-post-felt og «Send»-knapp på én rad (flex) i stedet for full-bredde-knapp + stablet hjelpetekst.
 - [`components/ui/Input.tsx`](components/ui/Input.tsx) — ny `labelHidden`-prop (label beholdes for skjermlesere, skjules visuelt) for inline-felt.
+- [`app/profile/page.tsx`](app/profile/page.tsx) — fjernet den unødvendige «Mer»-overskriften over konto-lista; `SettingList` har fortsatt `aria-label` for skjermlesere.
 
 #### Tests
 - [`app/profile/ProfileFormBody.test.tsx`](app/profile/ProfileFormBody.test.tsx) — disclosure-kontrakt (aria-expanded, åpen-når-gender-null, felt beholdt i DOM når kollapset). Mail-toggle-testene folder nå ut seksjonen først.

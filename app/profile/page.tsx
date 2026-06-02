@@ -118,9 +118,6 @@ export default async function ProfilePage({
       </div>
 
       <div className="mt-8">
-        <p className="mb-3 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          Mer
-        </p>
         <SettingList ariaLabel="Konto og mer">
           <SettingRow href="/profile/historikk" label="Min historikk" />
           <SettingRow href="/profile/statistikk" label="Klubbstatistikker" />
