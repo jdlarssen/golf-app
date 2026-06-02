@@ -2,7 +2,7 @@
 
 # Tørny — golf-turneringsapp
 
-Mobil-først PWA for å arrangere golf-turneringer. Skalerer fra 4 kompiser til klubb-skala (~150 deltakere). Per d.d. støttes **best ball netto** (lavest sum av beste netto-resultat per hull per lag).
+Mobil-først PWA for å arrangere golf-turneringer. Skalerer fra 4 kompiser til klubb-skala (~150 deltakere). Per d.d. støtter appen over 20 spillemodi: slagspill, stableford, matchplay-familien (singles, fourball, foursomes m.fl.), lag- og scramble-format (Texas, Florida, Ambrose, shamble, best ball) og spill som Wolf, Nassau og Skins. Alle kjører på WHS netto-handicap.
 
 **Produksjon:** [tornygolf.no](https://tornygolf.no) (også `tørny.no`)
 **Repo:** github.com/jdlarssen/golf-app

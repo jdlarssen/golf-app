@@ -1,69 +1,80 @@
 # Tørny
 
-> Fyr opp golfturneringen på et par minutter.
+> Fire up a golf tournament in a couple of minutes.
 
-Mobil-først PWA for å arrangere golfturneringer. Skalerer fra fire kompiser på lørdagsrunden til klubb-skala med 150 deltakere. Du oppretter spillet, inviterer gjengen og taster slag mens dere går runden. Resten tar appen seg av: regning, leaderboard, sideturneringer og varsling.
+Tørny is a mobile-first PWA for running golf tournaments. It scales from four friends on a Saturday round to a club event with 150 players. You create the game, invite the group, and everyone taps their strokes while they walk the course. The app handles the rest: scoring, the live leaderboard, side tournaments, and the mail that goes out when a game ends.
 
-Prod: [tornygolf.no](https://tornygolf.no) (også `tørny.no`).
+Live at [tornygolf.no](https://tornygolf.no) (also `tørny.no`).
 
-## Hva du får
+## What you get
 
-- Best ball netto med riktig WHS-handicap per hull
-- Sideturneringer for longest drive og closest to pin. Vinnerne plukkes når spillet avsluttes
-- Leaderboard som oppdateres live mens flighten din taster
-- Offline-først scoring. Taster du i en dødsone på banen, syncer det når mobilen får signal igjen
-- Innboks med varsler om invitasjoner, peer-godkjenninger, leverte scorekort og spill som er avsluttet. Mail kommer kun når du ikke allerede er i appen
-- Installerbar på hjem-skjermen. Åpner som en vanlig app, uten nettleserlinjer på toppen
-- GDPR-self-service. Eksporter eller slett dataene dine fra profilsiden uten å maile noen
+- More than twenty tournament formats, all on WHS net handicap. The full list is below.
+- A leaderboard that updates live while your flight taps scores.
+- Offline-first scoring. Tap in a dead spot on the course and it syncs once your phone has signal again.
+- Side tournaments for longest drive and closest to the pin. Winners are picked when the game ends.
+- An inbox for invitations, peer approvals, submitted scorecards, and finished games. Mail only goes out when you're not already in the app.
+- Installable on your home screen. It opens like a native app, with no browser bar on top.
+- GDPR self-service. Export or delete your data from your profile page without emailing anyone.
+
+## Formats
+
+Tørny ships more than twenty scoring modes. Each one comes with a short rules card in the app, so a player can pick something they've never tried and still know how to score it.
+
+- Solo: stroke play, Stableford, modified Stableford
+- Matchplay: singles, fourball, foursomes, greensome, gruesome, Chapman, patsome, round robin
+- Team: best ball, Texas and Florida scramble, Ambrose, shamble
+- Betting games: Wolf, Nassau, Skins, Bingo Bango Bongo, Nines, Acey Deucey
+
+Browse them all at [/spillformer](https://tornygolf.no/spillformer).
 
 ## Stack
 
 | | |
 |---|---|
-| Rammeverk | Next.js 16 (App Router) + React 19 + TypeScript |
-| Stil | Tailwind v4, forest-and-champagne-palett |
-| Database og auth | Supabase (Postgres + Auth + Realtime, EU-region) |
-| Offline-sync | Dexie (IndexedDB) med last-write-wins-RPC |
-| Mail | Resend via verifisert `tornygolf.no` |
-| Test | Vitest + Testing Library + Playwright |
-| Drift | Vercel, auto-deploy på push til `main` |
+| Framework | Next.js 16 (App Router) + React 19 + TypeScript |
+| Styling | Tailwind v4, forest-and-champagne palette |
+| Database and auth | Supabase (Postgres + Auth + Realtime, EU region) |
+| Offline sync | Dexie (IndexedDB) with a last-write-wins RPC |
+| Mail | Resend, through the verified `tornygolf.no` domain |
+| Testing | Vitest + Testing Library + Playwright |
+| Hosting | Vercel, auto-deploy on push to `main` |
 
-Auth bruker OTP-kode på mail. Magic-link gikk i søpla fordi iOS PWA-handoff og mail-scannere brøt flyten på hver sin måte samtidig.
+Auth uses a one-time code by mail. Magic links went in the bin because iOS PWA handoff and mail scanners each broke the flow in their own way at the same time.
 
-## Kjøre lokalt
+## Running it locally
 
 ```bash
 npm install
 npm run dev
 ```
 
-Åpne [http://localhost:3000](http://localhost:3000). Krever `.env.local` med Supabase- og Resend-nøkler (ligger ikke i repoet, spør Jørgen).
+Open [http://localhost:3000](http://localhost:3000). You need a `.env.local` with Supabase and Resend keys, which aren't in the repo. Ask Jørgen.
 
 ```bash
-npm test          # vitest (840+ unit + integration)
+npm test          # vitest (2000+ unit + integration)
 npm run e2e       # playwright
 npm run lint
 npm run build
 ```
 
-## Hvordan det henger sammen
+## How it fits together
 
-Scoring-logikken ([`lib/scoring/`](lib/scoring/)) er ren TypeScript uten Supabase-avhengighet. Den har egne tester og egen TDD-disiplin. Rør den ikke uten å skrive ny test først. Det er her WHS-formelen, slag-allokeringen, best-ball-aggregeringen og 5-tiers-tiebreakeren bor.
+The scoring logic ([`lib/scoring/`](lib/scoring/)) is plain TypeScript with no Supabase dependency. It has its own tests and its own TDD discipline, so don't touch it without writing a new test first. This is where the WHS formula, stroke allocation, best-ball aggregation, the five-tier tiebreaker, and all twenty-odd game modes live.
 
-Offline-sync ([`lib/sync/`](lib/sync/)) skriver til Dexie først og tømmer køen mot Supabase når mobilen får signal igjen. Last-write-wins via `client_updated_at`. Dexie-databasen heter `'golf-app'` av historiske grunner. Ikke endre navnet. Det invaliderer lokale data hos alle eksisterende brukere.
+Offline sync ([`lib/sync/`](lib/sync/)) writes to Dexie first and drains the queue against Supabase once the phone has signal again. Last write wins, keyed on `client_updated_at`. The Dexie database is named `'golf-app'` for historical reasons. Don't rename it, or you'll wipe local data for every existing user.
 
-RLS håndheves strengt i Postgres. Du ser dine egne scores, samme-flight-scores under aktivt spill, og alle scores etter at admin har avsluttet spillet. Realtime krever eksplisitt `supabase.realtime.setAuth()`. Auto-propagering virker ikke for WebSocket-kanalen. Det er en kjent rar oppførsel.
+RLS is enforced strictly in Postgres. You see your own scores, same-flight scores during an active game, and every score once the admin has ended the game. Realtime needs an explicit `supabase.realtime.setAuth()`; auto-propagation doesn't work for the WebSocket channel, which is a known quirk.
 
-Migrasjoner ligger i [`supabase/migrations/`](supabase/migrations/) (20+ filer, kronologisk).
+Migrations live in [`supabase/migrations/`](supabase/migrations/) (60+ files, chronological).
 
-## Hvor du finner resten
+## Where the rest lives
 
-- [CLAUDE.md](CLAUDE.md) er hovedoppslagsverket. Arbeidsmodell, konvensjoner, brand-stemme, nøkkelfiler.
-- [AGENTS.md](AGENTS.md) er kort, men viktig. Next.js 16 har brytende endringer mot det du tror du vet.
-- [CHANGELOG.md](CHANGELOG.md) er versjonshistorikken, med taglines på vanlig norsk og teknisk prosa kollapset under.
-- [GitHub Issues](https://github.com/jdlarssen/golf-app/issues) er hele arbeidskøen. Tagget etter type, område og scope.
-- [`docs/`](docs/) har lanseringssjekkliste, mail-maler og opprinnelig design.
+- [CLAUDE.md](CLAUDE.md) is the main reference: working model, conventions, brand voice, and the files worth knowing.
+- [AGENTS.md](AGENTS.md) is short but it matters. Next.js 16 has breaking changes against what you think you know.
+- [CHANGELOG.md](CHANGELOG.md) is the version history, with plain-language taglines and the technical detail collapsed underneath.
+- [GitHub Issues](https://github.com/jdlarssen/golf-app/issues) is the whole work queue, tagged by type, area, and scope.
+- [`docs/`](docs/) holds the launch checklist, mail templates, and the original design notes.
 
-## Versjonering
+## Versioning
 
-Semver. Hver bruker-synlig endring bumper `package.json` og legger til CHANGELOG-oppføring i samme commit. Disiplinen er ikke valgfri. `.githooks/commit-msg` blokkerer alle `feat`/`fix`/`perf`-commits som ikke stager begge filene. Footer-versjonen i prod hentes fra `package.json` ved build, så bumpen blir synlig så snart Vercel har deployet.
+Semver. Every user-visible change bumps `package.json` and adds a CHANGELOG entry in the same commit. The discipline isn't optional: `.githooks/commit-msg` blocks any `feat`, `fix`, or `perf` commit that doesn't stage both files. The production footer reads its version from `package.json` at build time, so the bump shows up as soon as Vercel deploys.
