@@ -2,6 +2,7 @@ import { InputHTMLAttributes } from 'react';
 
 export function Input({
   label,
+  labelHidden,
   hint,
   warning,
   error,
@@ -10,6 +11,8 @@ export function Input({
   ...props
 }: InputHTMLAttributes<HTMLInputElement> & {
   label: string;
+  /** Keep the label for screen readers but hide it visually (e.g. inline rows). */
+  labelHidden?: boolean;
   hint?: string;
   warning?: string | null;
   error?: string;
@@ -19,7 +22,9 @@ export function Input({
     <div>
       <label
         htmlFor={id}
-        className="block text-sm font-medium text-text mb-1.5"
+        className={
+          labelHidden ? 'sr-only' : 'block text-sm font-medium text-text mb-1.5'
+        }
       >
         {label}
       </label>

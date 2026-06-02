@@ -10,15 +10,15 @@ type Props = {
 };
 
 /**
- * Send button: disabled until an email has been typed, and switches to
- * 'Sender …' while the action is in flight so the user sees something
- * happening and a second tap can't fire a duplicate submission.
+ * Send button sized to sit inline next to the email field: disabled until an
+ * email is typed, and switches to 'Sender …' while the action is in flight so
+ * a second tap can't fire a duplicate submission.
  */
 function SendButton({ canSubmit }: { canSubmit: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" className="w-full" disabled={pending || !canSubmit}>
-      {pending ? 'Sender …' : 'Send invitasjon'}
+    <Button type="submit" className="shrink-0" disabled={pending || !canSubmit}>
+      {pending ? 'Sender …' : 'Send'}
     </Button>
   );
 }
@@ -32,19 +32,24 @@ export function InviteFriendForm({ action }: Props) {
   }
 
   return (
-    <form action={action} onChange={handleChange} className="space-y-3">
-      <Input
-        id="email"
-        name="email"
-        type="email"
-        label="E-post"
-        autoComplete="email"
-        required
-      />
+    <form
+      action={action}
+      onChange={handleChange}
+      className="flex items-stretch gap-2"
+    >
+      <div className="flex-1">
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          label="E-post"
+          labelHidden
+          placeholder="venn@epost.no"
+          autoComplete="email"
+          required
+        />
+      </div>
       <SendButton canSubmit={hasEmail} />
-      <p className="text-xs text-muted text-center">
-        Vi sender vennen en mail med en lenke. De kan lage konto med ett klikk.
-      </p>
     </form>
   );
 }

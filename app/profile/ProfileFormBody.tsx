@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useFormStatus } from 'react-dom';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -43,9 +43,50 @@ function SaveButton({ dirty }: { dirty: boolean }) {
   );
 }
 
+function DisclosureChevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className={`h-4 w-4 shrink-0 text-muted transition-transform duration-150 ${open ? 'rotate-180' : ''}`}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
 export function ProfileFormBody({ email, initial, action, next }: Props) {
   const [dirty, setDirty] = useState(false);
+  // Sjelden-endrede felt (kjønn, spillerklasse, månedsbrev) ligger bak en
+  // disclosure for å holde skjemaet kort. Åpen som standard når kjønn ennå
+  // ikke er satt, så gender-soft-prompten (#kjonn-ankeret) treffer et synlig
+  // felt. Innholdet skjules med `hidden` (ikke unmount) så verdiene fortsatt
+  // sendes med ved lagring — ellers ville en kollapset bruker tape gender.
+  const [showMore, setShowMore] = useState(initial.gender === null);
   const initialRef = useRef(initial);
+
+  useEffect(() => {
+    function openIfKjonn() {
+      if (window.location.hash === '#kjonn') {
+        setShowMore(true);
+        // Re-scroll etter at seksjonen er foldet ut (ankeret rakk å scrolle
+        // mens elementet fortsatt var display:none).
+        setTimeout(() => {
+          document
+            .getElementById('kjonn')
+            ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 0);
+      }
+    }
+    openIfKjonn();
+    window.addEventListener('hashchange', openIfKjonn);
+    return () => window.removeEventListener('hashchange', openIfKjonn);
+  }, []);
 
   function recomputeDirty(form: HTMLFormElement) {
     const fd = new FormData(form);
@@ -73,16 +114,14 @@ export function ProfileFormBody({ email, initial, action, next }: Props) {
   }
 
   return (
-    <form action={action} onChange={handleChange} className="space-y-4">
+    <form action={action} onChange={handleChange} className="space-y-3">
       {next ? <input type="hidden" name="next" value={next} /> : null}
       <div>
-        <label className="block text-sm font-medium text-text mb-1.5">
+        <label className="block text-sm font-medium text-text mb-1">
           E-post
         </label>
         <p className="text-sm text-text">{email}</p>
-        <p className="text-xs text-muted mt-1.5">
-          E-post kan ikke endres her.
-        </p>
+        <p className="text-xs text-muted mt-1">E-post kan ikke endres her.</p>
       </div>
 
       <Input
@@ -100,7 +139,7 @@ export function ProfileFormBody({ email, initial, action, next }: Props) {
         name="nickname"
         type="text"
         label="Kallenavn"
-        hint="Valgfritt — det navnet folk kjenner deg som på banen"
+        hint="Valgfritt — navnet folk kjenner deg som på banen"
         defaultValue={initial.nickname}
         autoComplete="nickname"
       />
@@ -120,93 +159,111 @@ export function ProfileFormBody({ email, initial, action, next }: Props) {
         inputClassName="score-num"
       />
 
-      <fieldset id="kjonn">
-        <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          Kjønn
-        </legend>
-        <div className="mt-2 flex gap-4">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="gender"
-              value="mens"
-              defaultChecked={initial.gender === 'mens'}
-              required
-            />
-            <span className="font-serif text-base text-text">Herre</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="gender"
-              value="ladies"
-              defaultChecked={initial.gender === 'ladies'}
-              required
-            />
-            <span className="font-serif text-base text-text">Dame</span>
-          </label>
-        </div>
-        <p className="mt-1 text-xs text-muted">
-          Brukes til å foreslå riktig tee og beregne course handicap riktig.
-        </p>
-      </fieldset>
-
-      <fieldset>
-        <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          Spillerklasse
-        </legend>
-        <div className="mt-2 flex gap-4">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="level"
-              value="junior"
-              defaultChecked={initial.level === 'junior'}
-            />
-            <span className="font-serif text-base text-text">Junior</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="level"
-              value="normal"
-              defaultChecked={initial.level === 'normal'}
-            />
-            <span className="font-serif text-base text-text">Voksen</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="level"
-              value="senior"
-              defaultChecked={initial.level === 'senior'}
-            />
-            <span className="font-serif text-base text-text">Senior</span>
-          </label>
-        </div>
-        <p className="mt-1 text-xs text-muted">
-          Junior gir juniortee når banen har en. Senior er en informasjons-tag for nå.
-        </p>
-      </fieldset>
-
-      <div className="pt-2">
-        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
-          Mail-innstillinger
-        </p>
-        <label className="flex items-start gap-3 cursor-pointer min-h-11">
-          <input
-            type="checkbox"
-            name="product_updates_opt_in"
-            defaultChecked={initial.productUpdatesOptIn}
-            className="mt-0.5 h-5 w-5 shrink-0 rounded border-border text-primary focus:ring-2 focus:ring-primary/30"
-          />
-          <span className="font-sans text-sm leading-snug text-text">
-            Få månedsbrev fra Tørny med oppsummering av nye funksjoner.
-            <span className="block text-xs text-muted mt-0.5">
-              Maks én mail per måned. Du kan melde deg av når som helst.
-            </span>
+      <div className="border-t border-border/60 pt-3 dark:border-border/80">
+        <button
+          type="button"
+          onClick={() => setShowMore((v) => !v)}
+          aria-expanded={showMore}
+          aria-controls="profile-more-settings"
+          className="flex min-h-11 w-full items-center justify-between gap-3 text-left"
+        >
+          <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+            Flere innstillinger
           </span>
-        </label>
+          <DisclosureChevron open={showMore} />
+        </button>
+
+        <div
+          id="profile-more-settings"
+          className={showMore ? 'mt-3 space-y-5' : 'hidden'}
+        >
+          <fieldset id="kjonn">
+            <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+              Kjønn
+            </legend>
+            <div className="mt-2 flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="gender"
+                  value="mens"
+                  defaultChecked={initial.gender === 'mens'}
+                />
+                <span className="font-serif text-base text-text">Herre</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="gender"
+                  value="ladies"
+                  defaultChecked={initial.gender === 'ladies'}
+                />
+                <span className="font-serif text-base text-text">Dame</span>
+              </label>
+            </div>
+            <p className="mt-1 text-xs text-muted">
+              Brukes til å foreslå riktig tee og beregne course handicap riktig.
+            </p>
+          </fieldset>
+
+          <fieldset>
+            <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+              Spillerklasse
+            </legend>
+            <div className="mt-2 flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="level"
+                  value="junior"
+                  defaultChecked={initial.level === 'junior'}
+                />
+                <span className="font-serif text-base text-text">Junior</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="level"
+                  value="normal"
+                  defaultChecked={initial.level === 'normal'}
+                />
+                <span className="font-serif text-base text-text">Voksen</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="level"
+                  value="senior"
+                  defaultChecked={initial.level === 'senior'}
+                />
+                <span className="font-serif text-base text-text">Senior</span>
+              </label>
+            </div>
+            <p className="mt-1 text-xs text-muted">
+              Junior gir juniortee når banen har en. Senior er en informasjons-tag for nå.
+            </p>
+          </fieldset>
+
+          <div>
+            <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
+              Mail-innstillinger
+            </p>
+            <label className="flex items-start gap-3 cursor-pointer min-h-11">
+              <input
+                type="checkbox"
+                name="product_updates_opt_in"
+                defaultChecked={initial.productUpdatesOptIn}
+                className="mt-0.5 h-5 w-5 shrink-0 rounded border-border text-primary focus:ring-2 focus:ring-primary/30"
+              />
+              <span className="font-sans text-sm leading-snug text-text">
+                Få månedsbrev fra Tørny med oppsummering av nye funksjoner.
+                <span className="block text-xs text-muted mt-0.5">
+                  Maks én mail per måned. Du kan melde deg av når som helst.
+                </span>
+              </span>
+            </label>
+          </div>
+        </div>
       </div>
 
       <div className="pt-2">
