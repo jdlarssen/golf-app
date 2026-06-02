@@ -32,13 +32,13 @@ export function MonthlyDigestToggle({ initialOptIn }: { initialOptIn: boolean })
         aria-checked={optIn}
         aria-label="Månedsbrev på e-post"
         onClick={toggle}
-        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
-          optIn ? 'bg-primary' : 'bg-border'
+        className={`flex h-6 w-11 shrink-0 items-center rounded-full px-0.5 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+          optIn ? 'bg-primary' : 'bg-text/20'
         }`}
       >
         <span
-          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-150 ${
-            optIn ? 'translate-x-[1.375rem]' : 'translate-x-0.5'
+          className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-150 ${
+            optIn ? 'translate-x-5' : 'translate-x-0'
           }`}
         />
       </button>

@@ -21,6 +21,17 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#401](https://github.com/jdlarssen/golf-app/issues/401). Et større løft av profil-siden: profil-header øverst, kompakt handicap-felt med plusshandicap-støtte og ferskhets-dato, kjønn og spillerklasse som knapper, demotert e-post, og månedsbrev-valget flyttet til Innboks.
 
+### [1.69.3] - 2026-06-02
+
+> Av/på-bryteren for månedsbrev i Innboks ser ordentlig ut nå — knappen lå litt utenfor sporet før.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#401](https://github.com/jdlarssen/golf-app/issues/401)-oppfølging. [`MonthlyDigestToggle`](app/innboks/MonthlyDigestToggle.tsx)-switchen brukte en absolutt-plassert knapp med hardkodet `translate-x` som skjøt forbi sporet, og et nær-usynlig av-spor. Byttet til standard flex + `px-0.5` + `translate-x-5`-mønster (knappen sitter nå med jevn marg inni sporet) og et synlig av-spor (`bg-text/20`).
+
+</details>
+
 ### [1.69.2] - 2026-06-02
 
 > Vil du ha (eller slippe) månedsbrevet fra Tørny, styrer du det nå fra Innboks i stedet for inne på profilen.
