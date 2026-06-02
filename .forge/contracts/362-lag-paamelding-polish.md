@@ -37,18 +37,18 @@ Fjerne tre friksjonspunkter i kaptein- og medspiller-flyten for lag-påmelding:
 
 ## Akseptkriterier
 
-- [ ] **K1 — Inline-validering:** Lag-navn (3–40 tegn) og hver medspiller-e-post valideres on-blur og ved submit-forsøk, med inline feilmelding per felt. Utfylt data bevares ved validerings- og submit-feil.
-  - Evidens: kode-ref + vitest-test som viser inline-feil ved ugyldig e-post on-blur, og at felt-state består.
-- [ ] **K2 — Submit-blokkering uten misvisende feil:** Klienten blokkerer submit når noe er ugyldig (ingen `team_name_invalid` fra server for en slot-feil). Første ugyldige felt får fokus. Dup-e-post og kaptein-egen-e-post fanges inline.
-  - Evidens: vitest-test som verifiserer at `submitTeamRegistration` ikke kalles ved ugyldig input; dup/self gir inline-feil.
-- [ ] **K3 — Autocomplete på co-players:** «Eksisterende spiller»-modus foreslår co-players mens kapteinen skriver (match på navn/kallenavn/e-post). Hvert forslag viser navn + «kallenavn» + maskert e-post. Valg fyller slot-en (vises som chip; submittes som `lookup` med brukers e-post).
-  - Evidens: render-test + manuell/Playwright-verifikasjon av forslagsliste og valg.
-- [ ] **K4 — Personvern + fallback:** Autocomplete-kandidatene er KUN co-players — ingen preload av alle brukere noe sted i klientbundelen. Fri-tekst «Inviter via e-post»-modus finnes fortsatt for folk utenfor lista.
-  - Evidens: `getTeamCandidates` scoper på felles `game_players`; ingen full-users-fetch sendt til klient; email-mode beholdt.
-- [ ] **K5 — Mode-aware «bli med»:** «Bli med på lag» (invited_unknown) og «Aksepter» (member) viser klar forklaring på neste steg, forskjellig for `open` (med i spillet med en gang) vs `manual_approval` (arrangør må godkjenne).
-  - Evidens: kode-ref som viser mode-avhengig copy + test/snapshot eller render-test.
-- [ ] **K6 — Gates grønne + versjon:** lint, tsc/build og co-located vitest grønne. `package.json` bumpet + `CHANGELOG.md`-oppføring per bruker-synlig commit.
-  - Evidens: kommando-output.
+- [x] **K1 — Inline-validering:** Lag-navn (3–40 tegn) og hver medspiller-e-post valideres on-blur og ved submit-forsøk, med inline feilmelding per felt. Utfylt data bevares ved validerings- og submit-feil.
+  - Evidens: validatorer i [`teamFormValidation.ts`](app/signup/[shortId]/teamFormValidation.ts); on-blur-håndtering + inline-feil-render i [`TeamRegistrationForm.tsx`](app/signup/[shortId]/TeamRegistrationForm.tsx) (`onBlur` → `validateSlotEmail`, render `slotError`). Test «viser inline-feil for ugyldig e-post on-blur og blokkerer submit» grønn. Felt-state er React-state som består gjennom feil (ingen reset).
+- [x] **K2 — Submit-blokkering uten misvisende feil:** Klienten blokkerer submit når noe er ugyldig (ingen `team_name_invalid` fra server for en slot-feil). Første ugyldige felt får fokus. Dup-e-post og kaptein-egen-e-post fanges inline.
+  - Evidens: `handleSubmit` validerer team-navn + slots + konflikter før server-kall, fokuserer første ugyldige felt (`teamNameRef`/`slotRefs`), og `return`-er uten å kalle action. Tester «blokkerer submit og viser inline-feil ved for kort lag-navn» + «...ugyldig e-post...» asserter `submitTeamRegistrationMock` IKKE kalt. Konflikt-deteksjon (`findSlotConflicts`) Type A-testet.
+- [x] **K3 — Autocomplete på co-players:** «Eksisterende spiller»-modus foreslår co-players mens kapteinen skriver (match på navn/kallenavn/e-post). Hvert forslag viser navn + «kallenavn» + maskert e-post. Valg fyller slot-en (vises som chip; submittes som `lookup` med brukers e-post).
+  - Evidens: `suggestionsFor` (substring-match på `name`/`nickname`/`email`), dropdown med `candidateLabel` + `maskEmail`, chip-render ved `selected`. Test «foreslår co-players i lookup-modus og fyller slot ved valg» verifiserer forslag, maskert e-post (`ka•••@example.com`), chip og submit-payload `{mode:'lookup', value:'kari@example.com'}`. (Live visuell sjekk: Vercel-preview — lokal preview blokkeres av manglende Supabase-env.)
+- [x] **K4 — Personvern + fallback:** Autocomplete-kandidatene er KUN co-players — ingen preload av alle brukere noe sted i klientbundelen. Fri-tekst «Inviter via e-post»-modus finnes fortsatt for folk utenfor lista.
+  - Evidens: [`getTeamCandidates`](lib/users/getTeamCandidates.ts) scoper via kapteinens egne `game_players` → felles-spill-medspillere, aldri full users-tabell. Hentes server-side i [`page.tsx`](app/signup/[shortId]/page.tsx) kun når lag-formen rendres. `import type` på `TeamCandidate` i klient-komponenten (server-only-modulen lekker ikke — bekreftet av grønn prod-build). Email-mode (`'Inviter via e-post'`) beholdt.
+- [x] **K5 — Mode-aware «bli med»:** «Bli med på lag» (invited_unknown) og «Aksepter» (member) viser klar forklaring på neste steg, forskjellig for `open` (med i spillet med en gang) vs `manual_approval` (arrangør må godkjenne).
+  - Evidens: `joinEffect` ('instant'|'approval') utledet i [`team/page.tsx`](app/signup/[shortId]/team/page.tsx), mode-aware nextStep + suksess-banner i [`TeamDashboardClient.tsx`](app/signup/[shortId]/team/TeamDashboardClient.tsx). 3 render-tester i `TeamDashboardClient.test.tsx` grønne.
+- [x] **K6 — Gates grønne + versjon:** lint, tsc/build og co-located vitest grønne. `package.json` bumpet + `CHANGELOG.md`-oppføring per bruker-synlig commit.
+  - Evidens: `npm run build` grønn; 86 vitest-tester grønne (`app/signup` + `lib/users`); eslint rent på endrede filer; tsc rent (kun 2 pre-eksisterende feil i urelaterte profil-test-filer på `origin/main`). Bumps: 1.70.0 (minor, K1–K4) + 1.70.1 (patch, K5), CHANGELOG-oppføringer i hver feat-commit.
 
 ## Gates
 
