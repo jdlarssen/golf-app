@@ -51,7 +51,7 @@ const MODE_OPTIONS: readonly ModeOption[] = [
   },
   {
     value: 'manual_approval',
-    title: 'Forespørsel – jeg godkjenner',
+    title: 'Forespørsel — jeg godkjenner',
     hint: 'Dukker opp i Finn turneringer. Folk ber om plass, og du godkjenner hver enkelt.',
   },
   {
