@@ -4,6 +4,7 @@ import { TopBar } from '@/components/ui/TopBar';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { InboxClient } from './InboxClient';
+import { MonthlyDigestToggle } from './MonthlyDigestToggle';
 import type { NotificationRow } from '@/components/notifications/NotificationCard';
 
 // /innboks-flaten lever ved siden av spill-rutene — TopBar med chevron
@@ -26,6 +27,13 @@ export default async function InboxPage() {
 
   const notifications = rows ?? [];
 
+  const { data: profile } = await supabase
+    .from('users')
+    .select('product_updates_unsubscribed_at')
+    .eq('id', userId)
+    .maybeSingle();
+  const monthlyOptIn = profile?.product_updates_unsubscribed_at == null;
+
   return (
     <AppShell>
       <TopBar
@@ -33,6 +41,9 @@ export default async function InboxPage() {
         backLabel="Tilbake til hjem"
         kicker="Innboks"
       />
+      <div className="mb-4">
+        <MonthlyDigestToggle initialOptIn={monthlyOptIn} />
+      </div>
       <InboxClient initialNotifications={notifications} />
     </AppShell>
   );

@@ -21,6 +21,25 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#401](https://github.com/jdlarssen/golf-app/issues/401). Et større løft av profil-siden: profil-header øverst, kompakt handicap-felt med plusshandicap-støtte og ferskhets-dato, kjønn og spillerklasse som knapper, demotert e-post, og månedsbrev-valget flyttet til Innboks.
 
+### [1.69.2] - 2026-06-02
+
+> Vil du ha (eller slippe) månedsbrevet fra Tørny, styrer du det nå fra Innboks i stedet for inne på profilen.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#401](https://github.com/jdlarssen/golf-app/issues/401), del 3 (månedsbrev → Innboks).
+
+#### Added
+- [`app/innboks/MonthlyDigestToggle.tsx`](app/innboks/MonthlyDigestToggle.tsx) — kompakt switch-rad øverst i Innboks (optimistisk state + server-action).
+- [`app/innboks/actions.ts`](app/innboks/actions.ts) — `toggleProductUpdates` skrur `product_updates_unsubscribed_at` på/av.
+
+#### Changed
+- [`app/innboks/page.tsx`](app/innboks/page.tsx) — henter opt-in-state og rendrer toggelen.
+- Product-updates-opt-in eies nå av Innboks; `updateProfile` (profil-skjemaet) rører det ikke lenger (gjort i 1.69.0), så profil-lagring kan ikke utilsiktet melde deg av.
+
+</details>
+
 ### [1.69.1] - 2026-06-02
 
 > Når du fullfører profilen din for første gang, kan du nå markere plusshandicap der også — ikke bare på profil-siden.

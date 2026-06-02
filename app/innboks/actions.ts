@@ -2,6 +2,7 @@
 
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
+import { getServerClient } from '@/lib/supabase/server';
 
 /**
  * Marker ett spesifikt varsel som lest. Caller (InboxClient) sender alltid
@@ -26,4 +27,21 @@ export async function markAllAsRead(): Promise<void> {
   const userId = await getProxyVerifiedUserId();
   if (!userId) return;
   await markNotificationsRead({ userId });
+}
+
+/**
+ * Skru månedsbrevet (product-updates, #202) på eller av. Eierskapet flyttet
+ * hit fra profil-skjemaet (#401) siden det er en varsel-innstilling, ikke en
+ * golfprofil-greie. `null` = på (default), timestamp = av-meldt da.
+ */
+export async function toggleProductUpdates(optIn: boolean): Promise<void> {
+  const userId = await getProxyVerifiedUserId();
+  if (!userId) return;
+  const supabase = await getServerClient();
+  await supabase
+    .from('users')
+    .update({
+      product_updates_unsubscribed_at: optIn ? null : new Date().toISOString(),
+    })
+    .eq('id', userId);
 }
