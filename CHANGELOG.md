@@ -17,7 +17,34 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.69.y — Profilen din, ryddigere og smartere
+## 1.70.y — Smidigere lag-påmelding
+
+Issue [#362](https://github.com/jdlarssen/golf-app/issues/362). Lag-påmeldings-skjemaet er ryddet opp: feltene sjekkes mens du fyller dem ut, du kan søke opp folk du har spilt med før i stedet for å taste e-post på nytt, og «bli med på lag» sier hva som skjer videre.
+
+### [1.70.0] - 2026-06-03
+
+> Å melde på et lag er mindre styr nå. Feltene sier fra med en gang noe er feil, og når du skal legge til en medspiller du har spilt med før, søker du opp navnet i stedet for å taste e-posten på nytt.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#362](https://github.com/jdlarssen/golf-app/issues/362). UX-flyt-audit-funn #8 (`docs/user-flows.md`).
+
+#### Added
+- [`lib/users/getTeamCandidates.ts`](lib/users/getTeamCandidates.ts) — co-player-kilde for autocomplete (felles `game_players`). Personvern-trygg: bare kapteinens eget nettverk, aldri alle brukere. Utvidelsespunkt for et framtidig venner-system ([#408](https://github.com/jdlarssen/golf-app/issues/408)).
+- [`lib/users/maskEmail.ts`](lib/users/maskEmail.ts) — maskerer e-post i forslagslista (`ol•••@gmail.com`).
+- [`app/signup/[shortId]/teamFormValidation.ts`](app/signup/[shortId]/teamFormValidation.ts) — rene klientside-validatorer (lag-navn, e-post-form, duplikat/kaptein-egen-e-post) som speiler server-reglene.
+
+#### Changed
+- [`TeamRegistrationForm`](app/signup/[shortId]/TeamRegistrationForm.tsx) — felt valideres on-blur og ved submit-forsøk: inline-feil per felt, submit blokkeres ved ugyldig input (ingen misvisende `team_name_invalid` for en slot-feil), og fokus hopper til første ugyldige felt. «Eksisterende spiller»-modus har nå autocomplete på co-players (navn + «kallenavn» + maskert e-post); valg vises som chip. Fri-tekst e-post-modus beholdt for folk utenfor lista.
+- [`app/signup/[shortId]/page.tsx`](app/signup/[shortId]/page.tsx) — preloader co-player-kandidater (kun når lag-formen faktisk rendres) og sender kaptein-e-post til inline egen-e-post-sjekk.
+
+</details>
+
+---
+
+<details>
+<summary><strong>1.69.y — Profilen din, ryddigere og smartere (4 oppføringer) — klikk for å vise</strong></summary>
 
 Issue [#401](https://github.com/jdlarssen/golf-app/issues/401). Et større løft av profil-siden: profil-header øverst, kompakt handicap-felt med plusshandicap-støtte og ferskhets-dato, kjønn og spillerklasse som knapper, demotert e-post, og månedsbrev-valget flyttet til Innboks.
 
@@ -93,6 +120,8 @@ Issue [#401](https://github.com/jdlarssen/golf-app/issues/401), del 1 (profil-si
 
 #### Tests
 - [`components/ui/SegmentedField.test.tsx`](components/ui/SegmentedField.test.tsx), [`lib/handicap/sign.test.ts`](lib/handicap/sign.test.ts), og oppdatert [`app/profile/ProfileFormBody.test.tsx`](app/profile/ProfileFormBody.test.tsx) (Golfprofil-disclosure, segmenter, plusshandicap-chip).
+
+</details>
 
 </details>
 

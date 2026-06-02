@@ -9,6 +9,7 @@ import { Banner } from '@/components/ui/Banner';
 import { LinkButton } from '@/components/ui/Button';
 import { MODE_LABELS } from '@/lib/scoring/modes/types';
 import { gameModeSupportsTeams } from '@/lib/games/registration';
+import { getTeamCandidates, type TeamCandidate } from '@/lib/users/getTeamCandidates';
 import { RegistrationForm } from './RegistrationForm';
 import { TeamRegistrationForm } from './TeamRegistrationForm';
 
@@ -106,6 +107,18 @@ export default async function PåmeldingPage({ params }: { params: Params }) {
   const hasOpenPendingRequest =
     existingRequest != null && existingRequest.status === 'pending';
 
+  // Co-player-kandidater til autocomplete i lag-formen (#362). Hentes bare
+  // når lag-formen faktisk skal rendres — ellers er det en unødig query.
+  const willRenderTeamForm =
+    (game.registration_type === 'team' || game.registration_type === 'both') &&
+    game.registration_mode !== 'invite_only' &&
+    !isAlreadyRegistered &&
+    !gameLocked &&
+    gameModeSupportsTeams(game.game_mode);
+  const teamCandidates: TeamCandidate[] = willRenderTeamForm
+    ? await getTeamCandidates(user!.id)
+    : [];
+
   return (
     <AppShell>
       <TopBar backHref="/" back="history" kicker="Påmelding" />
@@ -135,6 +148,8 @@ export default async function PåmeldingPage({ params }: { params: Params }) {
             isAlreadyRegistered,
             hasOpenPendingRequest,
             hasPendingInvitation,
+            teamCandidates,
+            captainEmail: profile.email,
           })}
         </Card>
       </div>
@@ -148,12 +163,16 @@ function renderBody({
   isAlreadyRegistered,
   hasOpenPendingRequest,
   hasPendingInvitation,
+  teamCandidates,
+  captainEmail,
 }: {
   game: NonNullable<Awaited<ReturnType<typeof getGameByShortId>>>;
   gameLocked: boolean;
   isAlreadyRegistered: boolean;
   hasOpenPendingRequest: boolean;
   hasPendingInvitation: boolean;
+  teamCandidates: TeamCandidate[];
+  captainEmail: string | null;
 }) {
   if (isAlreadyRegistered) {
     return (
@@ -250,7 +269,12 @@ function renderBody({
           medspillere — kjente Tørny-brukere får varsel i appen, ukjente
           får mail-invitasjon.
         </p>
-        <TeamRegistrationForm shortId={game.short_id} teamSize={teamSize} />
+        <TeamRegistrationForm
+          shortId={game.short_id}
+          teamSize={teamSize}
+          captainEmail={captainEmail}
+          candidates={teamCandidates}
+        />
       </div>
     );
   }

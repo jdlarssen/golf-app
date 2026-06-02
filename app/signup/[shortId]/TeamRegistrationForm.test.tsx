@@ -110,12 +110,7 @@ describe('TeamRegistrationForm — submit', () => {
     ).toBeInTheDocument();
   });
 
-  it('viser feilmelding ved team_name_invalid', async () => {
-    submitTeamRegistrationMock.mockResolvedValue({
-      ok: false,
-      error: 'team_name_invalid',
-    });
-
+  it('blokkerer submit og viser inline-feil ved for kort lag-navn', async () => {
     render(<TeamRegistrationForm shortId={SHORT_ID} teamSize={2} />);
     fireEvent.change(screen.getByPlaceholderText(/Birdie/), {
       target: { value: 'AB' },
@@ -125,7 +120,78 @@ describe('TeamRegistrationForm — submit', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: /Meld på laget/i }));
 
-    expect(await screen.findByText(/3–40 tegn/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/minst 3 tegn/),
+    ).toBeInTheDocument();
+    expect(submitTeamRegistrationMock).not.toHaveBeenCalled();
+  });
+
+  it('viser inline-feil for ugyldig e-post on-blur og blokkerer submit', async () => {
+    render(<TeamRegistrationForm shortId={SHORT_ID} teamSize={2} />);
+    fireEvent.change(screen.getByPlaceholderText(/Birdie/), {
+      target: { value: 'Birdie-jegerne' },
+    });
+    const slot = screen.getByLabelText('Medspiller 1');
+    fireEvent.change(slot, { target: { value: 'ikke-epost' } });
+    fireEvent.blur(slot);
+
+    expect(
+      await screen.findByText(/gyldig e-postadresse/),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Meld på laget/i }));
+    expect(submitTeamRegistrationMock).not.toHaveBeenCalled();
+  });
+
+  it('foreslår co-players i lookup-modus og fyller slot ved valg', async () => {
+    submitTeamRegistrationMock.mockResolvedValue({
+      ok: true,
+      captainRequestId: 'cap-1',
+      slotResults: [
+        { ok: true, outcome: 'known_added', email: 'kari@example.com' },
+      ],
+    });
+    render(
+      <TeamRegistrationForm
+        shortId={SHORT_ID}
+        teamSize={2}
+        candidates={[
+          {
+            id: 'u1',
+            name: 'Kari Nordmann',
+            nickname: 'Birdie',
+            email: 'kari@example.com',
+          },
+        ]}
+      />,
+    );
+    const slot = screen.getByLabelText('Medspiller 1');
+    fireEvent.focus(slot);
+    fireEvent.change(slot, { target: { value: 'kari' } });
+
+    const suggestion = await screen.findByText(/Kari Nordmann/);
+    expect(screen.getByText(/ka•••@example\.com/)).toBeInTheDocument();
+    fireEvent.mouseDown(suggestion);
+
+    // Valget vises som chip med maskert e-post; rå-adressen er ikke i et felt.
+    expect(screen.getByLabelText(/Fjern Kari Nordmann/)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText(/Birdie/), {
+      target: { value: 'Birdie-jegerne' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Meld på laget/i }));
+    await waitFor(() => {
+      expect(submitTeamRegistrationMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          slots: [
+            expect.objectContaining({
+              mode: 'lookup',
+              value: 'kari@example.com',
+            }),
+          ],
+        }),
+      );
+    });
   });
 
   it('viser warning for feilede slots i blandet resultat', async () => {
