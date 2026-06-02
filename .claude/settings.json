@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(gh pr create*)",
+            "statusMessage": "Checking README freshness",
+            "command": "printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"This is a gh pr create. You are packaging a branch for review. Run git diff origin/main...HEAD and check whether anything README.md documents has changed: user-facing capabilities (Hva du far), the stack table, the local-dev or test commands, the cited test or migration counts, or the architecture notes (Hvordan det henger sammen). If so: update README.md, run the humanizer skill on any new or changed Norwegian copy (and the no-nb skill if you translated from English) per docs/copy-style.md, then commit and push it so it lands in THIS PR before you create it. Most PRs need no README change; only touch it when one of those documented facts actually changed.\"}}'"
+          }
+        ]
+      }
+    ]
+  }
+}
