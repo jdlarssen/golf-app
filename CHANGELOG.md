@@ -17,7 +17,32 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.67.y — Finn turneringer
+## 1.68.y — Be om plass til private spill
+
+Issue [#368](https://github.com/jdlarssen/golf-app/issues/368). Lander du på et privat (invitasjons-basert) spill du ikke er invitert til, var skjermen før en blindvei. Nå kan du be arrangøren om plass derfra, og arrangøren ser forespørselen og slipper deg inn eller avslår.
+
+### [1.68.0] - 2026-06-02
+
+> Lander du på et privat spill du ikke er invitert til, står du ikke lenger fast. Du kan be arrangøren om plass med ett trykk, og de slipper deg inn eller avslår.
+
+<details>
+<summary>Teknisk</summary>
+
+Løser [#368](https://github.com/jdlarssen/golf-app/issues/368). `/signup/[shortId]` for et invite_only-spill uten ventende invitasjon var en blindvei — en beskjed uten handling. Nå gjenbruker den «be om å bli med»-forespørsel-flyten (#199). Spillet forblir uoppdagbart i «Finn turneringer»; kun folk som har lenken kan banke på.
+
+#### Changed
+- [`app/signup/[shortId]/page.tsx`](app/signup/[shortId]/page.tsx) — invite_only uten invitasjon viser nå en forespørsel-form (solo/both); team-only beholder en informativ melding.
+- [`app/signup/[shortId]/actions.ts`](app/signup/[shortId]/actions.ts) — `requestApproval` godtar `invite_only` i tillegg til `manual_approval`. `open` → fortsatt `wrong_mode`.
+- [`app/admin/games/[id]/RegistrationOverviewSection.tsx`](app/admin/games/[id]/RegistrationOverviewSection.tsx) — påmelding-oversikten vises nå også for invite_only (pending-teller + «Vis alle påmeldinger»), så arrangøren har en stående vei til forespørslene. Ingen del-lenke-knapp der — invite_only forblir privat.
+- [`app/admin/games/[id]/signups/page.tsx`](app/admin/games/[id]/signups/page.tsx) — invite_only-banneret hevder ikke lenger at selv-påmelding er umulig; det forklarer at folk med lenken kan be om å bli med.
+
+#### Tests
+- [`app/signup/[shortId]/actions.test.ts`](app/signup/[shortId]/actions.test.ts) — invite_only godtar forespørsel (insert + notify); `open` fortsatt avvist.
+
+</details>
+
+<details>
+<summary><strong>1.67.y — Finn turneringer (2 oppføringer) — klikk for å vise</strong></summary>
 
 Issue [#357](https://github.com/jdlarssen/golf-app/issues/357). «Finn turneringer» dukket bare opp på Hjem når du ikke hadde noen spill fra før — hadde du først ett, fantes det ingen vei til å oppdage nye. Nå er det en fast inngang fra Hjem, og turneringer med «be om å bli med»-påmelding vises også, ikke bare de helt åpne. I opprett-spill-wizarden ser arrangøren nå med en gang om påmeldingsvalget gjør turneringen oppdagbar eller privat, så lista faktisk fylles.
 
@@ -61,6 +86,8 @@ Løser [#357](https://github.com/jdlarssen/golf-app/issues/357). Discovery («Fu
 #### Tests
 - [`lib/games/getDiscoverableGames.test.ts`](lib/games/getDiscoverableGames.test.ts) — filteret dekker open + manual_approval (invite_only ekskludert), `registration_mode` bevart per spill.
 - [`app/HomeDiscoverySection.test.tsx`](app/HomeDiscoverySection.test.tsx) — render-test for CTA-per-modus-svitsjen.
+
+</details>
 
 </details>
 

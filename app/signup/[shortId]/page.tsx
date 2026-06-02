@@ -197,10 +197,26 @@ function renderBody({
         </div>
       );
     }
+    // Lag-spill via invitasjon: solo-forespørsel passer ikke. Behold en
+    // informativ melding (team self-request støttes ikke for noen modus ennå).
+    if (game.registration_type === 'team') {
+      return (
+        <Banner tone="info">
+          Dette spillet tar imot lag via invitasjon. Be arrangøren invitere
+          laget ditt direkte.
+        </Banner>
+      );
+    }
+    // Gjør blindveien til en handling (#368): du har lenken, så du kan be
+    // arrangøren om plass. Gjenbruker forespørsel-flyten — `requestApproval`
+    // godtar nå invite_only. Spillet forblir uoppdagbart i «Finn turneringer».
     return (
-      <Banner tone="info">
-        Dette spillet krever invitasjon. Be arrangøren om å sende deg en.
-      </Banner>
+      <div className="space-y-4">
+        <p className="font-sans text-sm leading-relaxed text-text">
+          Du er ikke invitert ennå, men du kan be arrangøren om plass.
+        </p>
+        <RegistrationForm mode="manual_approval" shortId={game.short_id} />
+      </div>
     );
   }
 

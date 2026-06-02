@@ -188,9 +188,9 @@ export default async function PåmeldingerPage({
       {isInviteOnly && (
         <div className="mt-4">
           <Banner tone="info">
-            Spillet bruker invitasjons-modus. Spillere kan ikke melde seg på
-            selv. Endre påmeldings-modus i innstillingene hvis du vil åpne for
-            selv-påmelding.
+            Dette spillet er invitasjons-basert og dukker ikke opp i Finn
+            turneringer. Folk som har lenken kan likevel be om å bli med.
+            Forespørslene havner her, så du kan godkjenne eller avslå.
           </Banner>
         </div>
       )}

@@ -12,9 +12,9 @@ type Props = {
 
 /**
  * Server-component for «Påmelding»-seksjonen på admin/games/[id] (#199).
- * Telles pending-requests via en lett count-query, og rendrer kun seksjonen
- * når mode != invite_only — invite-only-spill har ingen selv-påmelding så
- * seksjonen ville vært irrelevant der.
+ * Telles pending-requests via en lett count-query. Vises for alle modi:
+ * invite_only tar nå imot «be om å bli med»-forespørsler (#368), så
+ * arrangøren trenger en stående vei til dem her — ikke bare via varsel.
  *
  * `selfRegisteredCount` regnes ut hos caller (vi har allerede game_players-
  * raden ut fra players-fetchen i page.tsx — ingen ny round-trip her).
@@ -25,15 +25,16 @@ export async function RegistrationOverviewSection({
   shortId,
   selfRegisteredCount,
 }: Props) {
-  if (registrationMode === 'invite_only') return null;
-
   const supabase = await getServerClient();
 
-  // Telleren brukes kun for manual_approval (pending er meningsløst i open).
+  // Pending-telleren gjelder request-modiene (manual_approval + invite_only).
   // For open viser vi i stedet "antall selv-påmeldte spillere" som caller
   // har regnet ut.
   let pendingCount = 0;
-  if (registrationMode === 'manual_approval') {
+  if (
+    registrationMode === 'manual_approval' ||
+    registrationMode === 'invite_only'
+  ) {
     const { count, error } = await supabase
       .from('game_registration_requests')
       .select('id', { count: 'exact', head: true })
@@ -49,7 +50,9 @@ export async function RegistrationOverviewSection({
   const modeLabel =
     registrationMode === 'open'
       ? 'Fri påmelding'
-      : 'Manuell godkjenning';
+      : registrationMode === 'invite_only'
+        ? 'Bare inviterte'
+        : 'Manuell godkjenning';
 
   return (
     <section className="mt-1.5">
@@ -68,7 +71,7 @@ export async function RegistrationOverviewSection({
                 {modeLabel}
               </p>
             </div>
-            {registrationMode === 'manual_approval' ? (
+            {registrationMode !== 'open' ? (
               <div className="text-right">
                 <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
                   Venter
@@ -89,7 +92,11 @@ export async function RegistrationOverviewSection({
             )}
           </div>
 
-          <CopyShareLinkButton shareUrl={shareUrl} />
+          {/* invite_only er privat — ikke nudge arrangøren til å kringkaste
+              lenken. Forespørsel-veien (#368) tjener folk som alt har den. */}
+          {registrationMode !== 'invite_only' && (
+            <CopyShareLinkButton shareUrl={shareUrl} />
+          )}
 
           <SmartLink
             href={`/admin/games/${gameId}/signups`}

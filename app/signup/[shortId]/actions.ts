@@ -250,7 +250,14 @@ export async function requestApproval(
   if (!game) {
     return { ok: false, error: 'game_not_found' };
   }
-  if (game.registration_mode !== 'manual_approval') {
+  // manual_approval OG invite_only tar imot «be om å bli med»-forespørsler
+  // (#368). For invite_only er det en fallback for noen som har lenken men
+  // ikke er invitert — spillet forblir uoppdagbart i «Finn turneringer».
+  // Kun `open` (meld-deg-på-direkte) hører ikke hjemme i request-flyten.
+  if (
+    game.registration_mode !== 'manual_approval' &&
+    game.registration_mode !== 'invite_only'
+  ) {
     return { ok: false, error: 'wrong_mode' };
   }
   if (game.status !== 'draft' && game.status !== 'scheduled') {

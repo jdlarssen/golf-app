@@ -373,4 +373,32 @@ describe('requestApproval', () => {
       | undefined;
     expect(notifyArgs?.payload.message).toBeUndefined();
   });
+
+  it('invite_only godtar forespørsel → INSERT + notify (#368)', async () => {
+    // invite_only er en blindvei uten dette: noen med lenken kan nå banke på.
+    authedAsUser();
+    const requestId = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+    adminMock = buildSupabaseMock([
+      { data: { id: requestId }, error: null },
+      { data: { name: 'Per Banker', nickname: null, email: 'per@x.no' }, error: null },
+    ]);
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({ registration_mode: 'invite_only' }),
+    );
+
+    const { requestApproval } = await import('./actions');
+    const result = await requestApproval(
+      fd({ shortId: SHORT_ID, message: 'Håper det er plass!' }),
+    );
+
+    expect(result).toEqual({ ok: true });
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+    expect(notifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: ADMIN_USER_ID,
+        kind: 'registration_request',
+        payload: expect.objectContaining({ request_id: requestId }),
+      }),
+    );
+  });
 });
