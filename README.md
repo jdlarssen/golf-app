@@ -6,12 +6,14 @@ Tørny is a mobile-first PWA for running golf tournaments. It scales from four f
 
 Live at [tornygolf.no](https://tornygolf.no) (also `tørny.no`).
 
+It's invite-only: an admin sets up a game and invites the players, who sign in with a one-time code by mail. There's no open signup and no password to forget. Tørny is a solo project, built and run by Jørgen, and it runs in production for real tournaments.
+
 ## What you get
 
-- More than twenty tournament formats, all on WHS net handicap. The full list is below.
+- More than twenty tournament formats, all on WHS net handicap.
 - A leaderboard that updates live while your flight taps scores.
 - Offline-first scoring. Tap in a dead spot on the course and it syncs once your phone has signal again.
-- A side tournament you can bolt onto any game: a points race across the round, plus longest-drive and closest-to-pin contests. More below.
+- A side tournament you can bolt onto any game: a points race across the round, plus longest-drive and closest-to-pin contests.
 - An inbox for invitations, peer approvals, submitted scorecards, and finished games. Mail only goes out when you're not already in the app.
 - Installable on your home screen. It opens like a native app, with no browser bar on top.
 - GDPR self-service. Export or delete your data from your profile page without emailing anyone.
@@ -54,7 +56,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). You need a `.env.local` with Supabase and Resend keys, which aren't in the repo. Ask Jørgen.
+Open [http://localhost:3000](http://localhost:3000). You'll need a `.env.local` with Supabase and Resend keys. They're not in the repo, so a fresh clone won't boot on its own. This isn't wired up for outside contributors.
 
 ```bash
 npm test          # vitest (2000+ unit + integration)
@@ -80,7 +82,3 @@ Migrations live in [`supabase/migrations/`](supabase/migrations/) (60+ files, ch
 - [CHANGELOG.md](CHANGELOG.md) is the version history, with plain-language taglines and the technical detail collapsed underneath.
 - [GitHub Issues](https://github.com/jdlarssen/golf-app/issues) is the whole work queue, tagged by type, area, and scope.
 - [`docs/`](docs/) holds the launch checklist, mail templates, and the original design notes.
-
-## Versioning
-
-Semver. Every user-visible change bumps `package.json` and adds a CHANGELOG entry in the same commit. The discipline isn't optional: `.githooks/commit-msg` blocks any `feat`, `fix`, or `perf` commit that doesn't stage both files. The production footer reads its version from `package.json` at build time, so the bump shows up as soon as Vercel deploys.
