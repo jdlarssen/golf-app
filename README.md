@@ -2,6 +2,10 @@
 
 > Fire up a golf tournament in a couple of minutes.
 
+<p align="center">
+  <img src="docs/screenshot.jpg" alt="Tørny app, the in-app format guide" width="320">
+</p>
+
 Tørny is a mobile-first PWA for running golf tournaments. It scales from four friends on a Saturday round to a club event with 150 players. You create the game, invite the group, and everyone taps their strokes while they walk the course. The app handles the rest: scoring, the live leaderboard, side tournaments, and the mail that goes out when a game ends.
 
 Live at [tornygolf.no](https://tornygolf.no) (also `tørny.no`).
