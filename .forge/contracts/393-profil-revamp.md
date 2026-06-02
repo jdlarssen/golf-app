@@ -59,24 +59,26 @@ profilskjemaet er overflødig nå som Profil er en fast nav-fane (ingenting å a
 
 ## Success-kriterier
 
-- [ ] **K1 — Mindre scroll.** De fem sekundære navigasjons-seksjonene (Min historikk,
+- [x] **K1 — Mindre scroll.** De fem sekundære navigasjons-seksjonene (Min historikk,
   Klubbstatistikker, Installer app, Eksporter data, Slett konto) rendres som kompakte
   `SettingRow`-rader i én samlet liste — ikke fem separate full-høyde-`Card`-blokker.
-  *Evidens: page.tsx bruker SettingRow ×≥4 + InstallButton-rad; preview-screenshot viser kort liste.*
-- [ ] **K2 — «Logg ut» er en gjenkjennelig knapp**, ikke en muted tekst-lenke: bruker
+  *Evidens: [page.tsx:120-139](app/profile/page.tsx) — én `SettingList` med 4 `SettingRow`
+  + `InstallButton` (som selv rendrer en `SettingRow`). HistorikkCard + GdprSection (5 Card) slettet.*
+- [x] **K2 — «Logg ut» er en gjenkjennelig knapp**, ikke en muted tekst-lenke: bruker
   `Button variant="secondary"` (outline/border), auto-bredde, ikke primær fyll.
-  *Evidens: page.tsx AccountActions bruker Button variant="secondary"; preview viser outline-knapp.*
-- [ ] **K3 — Ingen «Avbryt»** i profilskjemaet; kun «Lagre» gjenstår. SmartLink-import
-  fjernet fra ProfileFormBody. *Evidens: `grep -c Avbryt app/profile/ProfileFormBody.tsx` = 0.*
-- [ ] **K4 — «Invitér en venn» beholdt som synlig kort**, plassert rett under
-  profilskjemaet, med tettere oppsett enn før. *Evidens: page.tsx rendrer InviteAFriendCard som Card; preview viser åpent skjema.*
-- [ ] **K5 — Ingen funksjonalitet tapt.** Alle mål fortsatt nåbare: invitér venn
+  *Evidens: [page.tsx:166-168](app/profile/page.tsx) — `<Button type="submit" variant="secondary">Logg ut</Button>`; variant=secondary = `bg-transparent border border-border` ([Button.tsx:15-16](components/ui/Button.tsx)).*
+- [x] **K3 — Ingen «Avbryt»** i profilskjemaet; kun «Lagre» gjenstår. SmartLink-import
+  fjernet fra ProfileFormBody. *Evidens: `grep -c Avbryt app/profile/ProfileFormBody.tsx` → `0`; SmartLink-import fjernet.*
+- [x] **K4 — «Invitér en venn» beholdt som synlig kort**, plassert rett under
+  profilskjemaet, med tettere oppsett enn før. *Evidens: [page.tsx:114-118](app/profile/page.tsx)
+  — `InviteAFriendCard` (Card) rett etter `ProfileFormCard`; header strammet (text-base, mb-3), form `space-y-3`, fjernet `mt-2`-er.*
+- [x] **K5 — Ingen funksjonalitet tapt.** Alle mål fortsatt nåbare: invitér venn
   (skjema), Min historikk (`/profile/historikk`), Klubbstatistikker (`/profile/statistikk`),
   Installer app (modal/native), Eksporter data (`/profile/export` download), Slett konto
-  (`/profile/slett-konto`), Logg ut (`/logout` POST), personvern. *Evidens: href/action per rad verifisert i page.tsx.*
-- [ ] **K6 — Slett konto fortsatt via dedikert side.** Raden er ren navigasjon til
-  `/profile/slett-konto` (ingen inline-confirm/`<details>`). *Evidens: SettingRow href, ingen inline toggle.*
-- [ ] **K7 — Kvalitetsgater grønne** (se under).
+  (`/profile/slett-konto`), Logg ut (`/logout` POST), personvern. *Evidens: alle href/action bevart i page.tsx:124-152 + InstallButton onClick.*
+- [x] **K6 — Slett konto fortsatt via dedikert side.** Raden er ren navigasjon til
+  `/profile/slett-konto` (ingen inline-confirm/`<details>`). *Evidens: [page.tsx:133-137](app/profile/page.tsx) — `SettingRow href="/profile/slett-konto" tone="danger"`, ingen inline toggle.*
+- [x] **K7 — Kvalitetsgater grønne** (se under). *Evidens: eslint 0 errors (1 pre-eksisterende warning i statistikk/page.tsx), `vitest run app/profile components/ui/SettingRow` → 18/18, `npm run build` → grønn.*
 
 ## Gates (kjør, scoped til det som endres)
 
