@@ -45,6 +45,19 @@ export function isRegistrationMode(v: unknown): v is RegistrationMode {
   return v === 'invite_only' || v === 'manual_approval' || v === 'open';
 }
 
+/**
+ * Hvorvidt et spill med denne påmeldingsmåten dukker opp i «Finn turneringer»
+ * (#357): `open` + `manual_approval` er oppdagbare, `invite_only` er privat.
+ * Påmeldingsmåten ER synligheten (flyt 2) — ingen egen synlighets-bryter.
+ *
+ * MÅ speile filteret i `getDiscoverableGames` (`.in('registration_mode',
+ * ['open','manual_approval'])`). Endrer du det ene, endre det andre — denne
+ * helperen er kilden wizard-en bruker for å vise «Oppdagbar»/«Privat».
+ */
+export function isDiscoverableRegistrationMode(mode: RegistrationMode): boolean {
+  return mode === 'open' || mode === 'manual_approval';
+}
+
 export function isRegistrationType(v: unknown): v is RegistrationType {
   return v === 'solo' || v === 'team' || v === 'both';
 }

@@ -19,7 +19,27 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ## 1.67.y — Finn turneringer
 
-Issue [#357](https://github.com/jdlarssen/golf-app/issues/357). «Finn turneringer» dukket bare opp på Hjem når du ikke hadde noen spill fra før — hadde du først ett, fantes det ingen vei til å oppdage nye. Nå er det en fast inngang fra Hjem, og turneringer med «be om å bli med»-påmelding vises også, ikke bare de helt åpne.
+Issue [#357](https://github.com/jdlarssen/golf-app/issues/357). «Finn turneringer» dukket bare opp på Hjem når du ikke hadde noen spill fra før — hadde du først ett, fantes det ingen vei til å oppdage nye. Nå er det en fast inngang fra Hjem, og turneringer med «be om å bli med»-påmelding vises også, ikke bare de helt åpne. I opprett-spill-wizarden ser arrangøren nå med en gang om påmeldingsvalget gjør turneringen oppdagbar eller privat, så lista faktisk fylles.
+
+### [1.67.1] - 2026-06-02
+
+> Når du setter opp et spill, ser du nå med en gang om påmeldingsvalget gjør turneringen synlig i Finn turneringer eller holder den privat. Hvert valg er merket «Oppdagbar» eller «Privat».
+
+<details>
+<summary>Teknisk</summary>
+
+Løser [#367](https://github.com/jdlarssen/golf-app/issues/367). Påmeldings-steget forklarte kun *hvem* som kan melde seg på, aldri at valget styrer synlighet i «Finn turneringer» (#357). Default er fortsatt `invite_only` — intent-styrt default er en flyt-4-beslutning, utenfor scope her.
+
+#### Changed
+- [`app/admin/games/new/sections/RegistrationSection.tsx`](app/admin/games/new/sections/RegistrationSection.tsx) — hver påmeldingsmåte får et «Oppdagbar»/«Privat»-merke + omskrevet hint som sier konsekvensen for «Finn turneringer» i klartekst. Delt komponent, så både wizard-steget og full-skjemaet får det.
+
+#### Added
+- [`lib/games/registration.ts`](lib/games/registration.ts) — `isDiscoverableRegistrationMode(mode)` (open + manual_approval = oppdagbar), speilet mot `getDiscoverableGames` så merket ikke kan drifte fra faktisk discovery.
+
+#### Tests
+- [`lib/games/registration.test.ts`](lib/games/registration.test.ts) — enhetstester for synlighets-helperen, inkl. en vakt som krever at nøyaktig `invite_only` er privat.
+
+</details>
 
 ### [1.67.0] - 2026-06-02
 

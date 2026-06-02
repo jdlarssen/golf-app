@@ -15,6 +15,7 @@
  */
 
 import type { GameFormState } from '../useGameFormState';
+import { isDiscoverableRegistrationMode } from '@/lib/games/registration';
 import type {
   RegistrationMode,
   RegistrationType,
@@ -46,17 +47,17 @@ const MODE_OPTIONS: readonly ModeOption[] = [
   {
     value: 'invite_only',
     title: 'Bare de jeg inviterer',
-    hint: 'Dagens flyt: send invitasjoner manuelt fra Spillere-fanen.',
+    hint: 'Privat. Vises ikke i Finn turneringer. Du sender invitasjoner selv fra Spillere-fanen.',
   },
   {
     value: 'manual_approval',
-    title: 'Forespørsel — jeg godkjenner',
-    hint: 'Spillerne klikker en lenke og ber om plass. Du godkjenner eller avslår per forespørsel.',
+    title: 'Forespørsel – jeg godkjenner',
+    hint: 'Dukker opp i Finn turneringer. Folk ber om plass, og du godkjenner hver enkelt.',
   },
   {
     value: 'open',
     title: 'Åpen påmelding',
-    hint: 'Alle med lenken kan melde seg på. Best for klubb og åpne turneringer.',
+    hint: 'Dukker opp i Finn turneringer så hvem som helst med lenken kan melde seg på.',
   },
 ] as const;
 
@@ -96,28 +97,34 @@ export function RegistrationSection({ state, hideHeading = false }: Props) {
           Hvem kan melde seg på?
         </legend>
         <div className="mt-2 space-y-3">
-          {MODE_OPTIONS.map((opt) => (
-            <label
-              key={opt.value}
-              className="flex items-start gap-3 cursor-pointer"
-            >
-              <input
-                type="radio"
-                name="registration_mode_input"
-                value={opt.value}
-                checked={registrationMode === opt.value}
-                onChange={() => setRegistrationMode(opt.value)}
-                disabled={lockGameMode}
-                className="mt-1 h-5 w-5"
-              />
-              <div>
-                <div className="font-serif text-base text-text">
-                  {opt.title}
+          {MODE_OPTIONS.map((opt) => {
+            const discoverable = isDiscoverableRegistrationMode(opt.value);
+            return (
+              <label
+                key={opt.value}
+                className="flex items-start gap-3 cursor-pointer"
+              >
+                <input
+                  type="radio"
+                  name="registration_mode_input"
+                  value={opt.value}
+                  checked={registrationMode === opt.value}
+                  onChange={() => setRegistrationMode(opt.value)}
+                  disabled={lockGameMode}
+                  className="mt-1 h-5 w-5"
+                />
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-serif text-base text-text">
+                      {opt.title}
+                    </span>
+                    <VisibilityBadge discoverable={discoverable} />
+                  </div>
+                  <div className="text-xs text-muted">{opt.hint}</div>
                 </div>
-                <div className="text-xs text-muted">{opt.hint}</div>
-              </div>
-            </label>
-          ))}
+              </label>
+            );
+          })}
         </div>
       </fieldset>
 
@@ -177,5 +184,25 @@ export function RegistrationSection({ state, hideHeading = false }: Props) {
         </p>
       )}
     </section>
+  );
+}
+
+/**
+ * Synlighets-merke (#367): viser om valgt påmeldingsmåte gjør spillet
+ * oppdagbart i «Finn turneringer» eller holder det privat. Oppdagbar = soft
+ * primær (positivt/synlig), privat = muted (stille). Klassifiseringen kommer
+ * fra `isDiscoverableRegistrationMode` så den ikke kan drifte fra discovery.
+ */
+function VisibilityBadge({ discoverable }: { discoverable: boolean }) {
+  return (
+    <span
+      className={`inline-block rounded-full px-2 py-0.5 font-sans text-[10px] font-semibold uppercase tracking-[0.12em] ${
+        discoverable
+          ? 'bg-primary-soft text-primary'
+          : 'bg-surface-2 text-muted'
+      }`}
+    >
+      {discoverable ? 'Oppdagbar' : 'Privat'}
+    </span>
   );
 }

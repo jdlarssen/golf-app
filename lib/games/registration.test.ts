@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
   gameModeSupportsTeams,
+  isDiscoverableRegistrationMode,
   isRegistrationMode,
   isRegistrationType,
+  REGISTRATION_MODES,
 } from './registration';
 
 describe('gameModeSupportsTeams', () => {
@@ -56,5 +58,27 @@ describe('isRegistrationType', () => {
     expect(isRegistrationType(null)).toBe(false);
     expect(isRegistrationType(undefined)).toBe(false);
     expect(isRegistrationType(0)).toBe(false);
+  });
+});
+
+describe('isDiscoverableRegistrationMode', () => {
+  // Speiler getDiscoverableGames-filteret (#357): open + manual_approval
+  // oppdages i «Finn turneringer», invite_only er privat.
+  it('open og manual_approval er oppdagbare', () => {
+    expect(isDiscoverableRegistrationMode('open')).toBe(true);
+    expect(isDiscoverableRegistrationMode('manual_approval')).toBe(true);
+  });
+
+  it('invite_only er privat', () => {
+    expect(isDiscoverableRegistrationMode('invite_only')).toBe(false);
+  });
+
+  it('dekker hver definerte modus (ingen modus uten klassifisering)', () => {
+    // Vakt mot at en framtidig modus glemmes: hver REGISTRATION_MODE må gi
+    // et eksplisitt boolsk svar, og nøyaktig invite_only skal være privat.
+    const privat = REGISTRATION_MODES.filter(
+      (m) => !isDiscoverableRegistrationMode(m),
+    );
+    expect(privat).toEqual(['invite_only']);
   });
 });
