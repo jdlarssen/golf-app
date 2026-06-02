@@ -21,6 +21,27 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#368](https://github.com/jdlarssen/golf-app/issues/368). Lander du på et privat (invitasjonsbasert) spill du ikke er invitert til, var skjermen før en blindvei. Nå kan du be arrangøren om plass derfra, og arrangøren ser forespørselen og slipper deg inn eller avslår.
 
+### [1.68.1] - 2026-06-02
+
+> Har du en runde på gang, ligger den nå øverst på Hjem som «Pågår nå». Og når du sletter en bane, får du en egen bekreftelses-side først, så ingenting forsvinner ved et uhell.
+
+<details>
+<summary>Teknisk</summary>
+
+Tre konsistens-fikser fra flyt-auditen ([#363](https://github.com/jdlarssen/golf-app/issues/363), `docs/user-flows.md` #9).
+
+#### Changed
+- [`app/page.tsx`](app/page.tsx) — pågående spill (status=active) løftes til en egen «Pågår nå»-seksjon øverst med champagne-ramme; planlagte spill blir i «Mine spill». Felles `renderGameCard`-helper for begge seksjonene.
+- [`app/admin/games/new/actions.ts`](app/admin/games/new/actions.ts) — trusted-non-admin creator lander nå på `/games/[id]` (game-home) etter opprett, i stedet for `/admin/games/[id]` som admin-layouten bouncet dem ut av til `/`. Admin-flyten uendret.
+
+#### Added
+- [`app/admin/courses/[id]/slett/page.tsx`](app/admin/courses/[id]/slett/page.tsx) — dedikert bekreftelses-side for bane-sletting (speiler spill/spiller-`/slett`), med barn-rad-tellere (hull + tee-bokser) og in-use-blokkering når banen brukes i et spill. Erstatter den inline `window.confirm`-knappen; `DeleteCourseButton` fjernet.
+
+#### Tests
+- [`app/admin/games/new/actions.test.ts`](app/admin/games/new/actions.test.ts) — trusted-creator-redirect-målene oppdatert til game-home (draft + publish).
+
+</details>
+
 ### [1.68.0] - 2026-06-02
 
 > Lander du på et privat spill du ikke er invitert til, står du ikke lenger fast. Du kan be arrangøren om plass med ett trykk, og de slipper deg inn eller avslår.

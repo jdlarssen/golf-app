@@ -8,8 +8,8 @@ import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { CourseForm } from '../../CourseForm';
-import { updateCourse, deleteCourse } from './actions';
-import { DeleteCourseButton } from './DeleteCourseButton';
+import { updateCourse } from './actions';
+import { SmartLink } from '@/components/ui/SmartLink';
 import {
   ArchivedTeesSection,
   type ArchivedTeeRow,
@@ -131,7 +131,6 @@ export default async function EditCoursePage({
 
   const archivedTees = await getArchivedTees(supabase, id);
 
-  const deleteAction = deleteCourse.bind(null, id);
   const userId = await getProxyVerifiedUserId();
 
   return (
@@ -181,10 +180,16 @@ export default async function EditCoursePage({
       )}
 
       <div className="mt-6">
-        <DeleteCourseButton
-          deleteAction={deleteAction}
-          courseName={course.name}
-        />
+        <SmartLink
+          href={`/admin/courses/${id}/slett`}
+          className="block min-h-[44px] rounded-full border px-4 py-3 text-center text-sm font-medium transition-colors hover:bg-surface-2"
+          style={{
+            color: 'var(--danger-deep)',
+            borderColor: 'rgba(180, 60, 60, 0.3)',
+          }}
+        >
+          Slett bane
+        </SmartLink>
       </div>
     </AdminShell>
   );

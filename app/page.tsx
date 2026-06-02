@@ -162,6 +162,11 @@ async function HomeBody() {
 
   const isEmptyState =
     activeGames.length === 0 && finishedGames.length === 0;
+
+  // Løft pågående runder øverst (#363): et aktivt spill skal ikke være bare
+  // ett kort blant flere. Splitt på status='active' vs. resten (planlagte).
+  const inProgressGames = activeGames.filter((g) => g.status === 'active');
+  const upcomingGames = activeGames.filter((g) => g.status !== 'active');
   const firstNameValue = firstName(profile?.name) ?? 'spiller';
   // Always-visible handicap reflection (#209). Only render when we have
   // both fields — defensive against a degraded fetch.
@@ -250,6 +255,49 @@ async function HomeBody() {
     );
   }
 
+  // Felles kort-render for «Pågår nå» + «Mine spill». `accent` gir det
+  // pågående spillet en champagne-ramme så det skiller seg ut (#363).
+  const renderGameCard = (g: (typeof activeGames)[number], accent: boolean) => (
+    <SmartLink key={g.id} href={`/games/${g.id}`} className="block">
+      <Card
+        className={`min-h-[44px] transition-colors p-5 ${
+          accent ? 'border-accent' : 'hover:border-primary/30'
+        }`}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <span className="block font-serif text-lg font-medium tracking-tight text-text truncate">
+              {g.name}
+            </span>
+            {g.courses?.name && (
+              <span className="block text-xs text-muted mt-1 truncate">
+                {g.courses.name}
+              </span>
+            )}
+            {g.scheduled_tee_off_at &&
+              (() => {
+                const d = new Date(g.scheduled_tee_off_at);
+                return (
+                  <span className="block text-xs text-muted mt-1 tabular-nums truncate">
+                    {formatTeeOffDate(d)} kl. {formatTeeOffTime(d)}
+                  </span>
+                );
+              })()}
+            <span className="block text-xs text-muted mt-1 truncate">
+              Lag {g.teamNumber} · Flight {g.flightNumber}
+            </span>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <StatusPill status={g.status} label={STATUS_LABELS[g.status]} />
+            <span aria-hidden className="text-muted">
+              →
+            </span>
+          </div>
+        </div>
+      </Card>
+    </SmartLink>
+  );
+
   return (
     <>
       <PageHeader
@@ -274,46 +322,15 @@ async function HomeBody() {
       {secretariatLink && <div className="mb-6">{secretariatLink}</div>}
 
       <nav className="space-y-6">
-        {activeGames.length > 0 && (
+        {inProgressGames.length > 0 && (
+          <Section label="Pågår nå">
+            {inProgressGames.map((g) => renderGameCard(g, true))}
+          </Section>
+        )}
+
+        {upcomingGames.length > 0 && (
           <Section label="Mine spill">
-            {activeGames.map((g) => (
-              <SmartLink key={g.id} href={`/games/${g.id}`} className="block">
-                <Card className="min-h-[44px] hover:border-primary/30 transition-colors p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <span className="block font-serif text-lg font-medium tracking-tight text-text truncate">
-                        {g.name}
-                      </span>
-                      {g.courses?.name && (
-                        <span className="block text-xs text-muted mt-1 truncate">
-                          {g.courses.name}
-                        </span>
-                      )}
-                      {g.scheduled_tee_off_at && (() => {
-                        const d = new Date(g.scheduled_tee_off_at);
-                        return (
-                          <span className="block text-xs text-muted mt-1 tabular-nums truncate">
-                            {formatTeeOffDate(d)} kl. {formatTeeOffTime(d)}
-                          </span>
-                        );
-                      })()}
-                      <span className="block text-xs text-muted mt-1 truncate">
-                        Lag {g.teamNumber} · Flight {g.flightNumber}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <StatusPill
-                        status={g.status}
-                        label={STATUS_LABELS[g.status]}
-                      />
-                      <span aria-hidden className="text-muted">
-                        →
-                      </span>
-                    </div>
-                  </div>
-                </Card>
-              </SmartLink>
-            ))}
+            {upcomingGames.map((g) => renderGameCard(g, false))}
           </Section>
         )}
 

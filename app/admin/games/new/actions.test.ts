@@ -202,9 +202,9 @@ describe('createGameDraft — trusted creator gate (#198)', () => {
       ),
     ).rejects.toBeInstanceOf(RedirectError);
 
-    expect(lastRedirect()).toBe(
-      '/admin/games/new-game-trusted-1?status=draft_created',
-    );
+    // #363: trusted-non-admin lander på game-home, ikke /admin/* (som ville
+    // bounce-et dem til `/`). Admin-flyten beholder /admin/games/[id] (egen test).
+    expect(lastRedirect()).toBe('/games/new-game-trusted-1');
 
     // The privileged path resolved the service-role client exactly once...
     expect(getAdminClientMock).toHaveBeenCalledTimes(1);
@@ -313,9 +313,8 @@ describe('createAndPublishGame — trusted creator (#230)', () => {
       createAndPublishGame(fullPublishFormData()),
     ).rejects.toBeInstanceOf(RedirectError);
 
-    expect(lastRedirect()).toBe(
-      '/admin/games/new-game-trusted-pub?status=scheduled',
-    );
+    // #363: trusted-non-admin lander på game-home etter publisering, ikke /admin/*.
+    expect(lastRedirect()).toBe('/games/new-game-trusted-pub');
     expect(getAdminClientMock).toHaveBeenCalledTimes(1);
 
     // Gate read (`users.in(...)`) ran on the admin client...

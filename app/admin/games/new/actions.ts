@@ -223,7 +223,13 @@ async function createGameInternal(
     redirect(`/admin/cup/${tournamentId}?status=match_added`);
   }
 
-  redirect(
-    `/admin/games/${game!.id}?status=${mode === 'publish' ? 'scheduled' : 'draft_created'}`,
-  );
+  if (isAdmin) {
+    redirect(
+      `/admin/games/${game!.id}?status=${mode === 'publish' ? 'scheduled' : 'draft_created'}`,
+    );
+  }
+  // Trusted-non-admin creator (#198): admin-layouten ville bounce-et dem fra
+  // /admin/* til `/`, så de aldri så spillet sitt. Send dem rett til game-home
+  // (spiller-visningen) i stedet for blindveien (#363).
+  redirect(`/games/${game!.id}`);
 }
