@@ -11,7 +11,7 @@ import type { SendArgs, SendResult } from './_helpers';
 // vi.mock-registreringen hoistes til toppen av denne filen av Vitest, så
 // selve mock-oppsettet ligger her (ikke i _helpers.ts — se kommentar der).
 //
-// Dekker alle 10 aktive mail-sendere i lib/mail/. Per-modul-testene beholder
+// Dekker alle 11 aktive mail-sendere i lib/mail/. Per-modul-testene beholder
 // fortsatt sin egen Resend-mock for å snapshot-e copy/HTML — denne fila
 // kompletterer dem ved å samle de strukturelle kontraktene ett sted.
 
@@ -175,6 +175,20 @@ const senders = [
         team1Points: 3,
         team2Points: 2,
         winnerTeamName: 'Bjørketrærne',
+      });
+    },
+  },
+  {
+    name: 'sendDeliverReminderNotification',
+    invoke: async () => {
+      const { sendDeliverReminderNotification } = await import(
+        '../deliverReminderNotification'
+      );
+      return sendDeliverReminderNotification({
+        to: 'spiller@example.com',
+        playerFirstName: 'Per',
+        gameName: 'Sommercup 2026',
+        gameId: '11111111-1111-1111-1111-111111111111',
       });
     },
   },
