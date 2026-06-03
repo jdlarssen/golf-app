@@ -170,5 +170,9 @@ function buildDeeplink(notification: NotificationRow): string {
       const p = notification.payload as NotificationPayload<'deliver_reminder'>;
       return `/games/${p.game_id}/submit`;
     }
+    case 'cup_finished': {
+      const p = notification.payload as NotificationPayload<'cup_finished'>;
+      return `/cup/${p.tournament_id}`;
+    }
   }
 }

@@ -17,7 +17,8 @@ export type NotificationKind =
   | 'registration_approved'
   | 'registration_rejected'
   | 'team_member_withdrew'
-  | 'deliver_reminder';
+  | 'deliver_reminder'
+  | 'cup_finished';
 
 // `z.guid()` aksepterer enhver UUID-shaped string (8-4-4-4-12 hex), inkludert
 // nil-UUID og ikke-versjonerte kanoniske test-sentinels som "11111111-...".
@@ -127,6 +128,16 @@ const deliverReminderSchema = z.object({
   game_name: z.string().min(1),
 });
 
+// cup_finished: en cup (tournament av matcher) er avsluttet. Fyres til alle
+// cup-deltakere fra `finishTournament` — in-app først, mail kun til off-app
+// (samme prinsipp som game_finished). Slank payload speiler game_finished:
+// tournament_name brukes i innboks-detalj, tournament_id i deeplink til
+// /cup/[id]. (#377)
+const cupFinishedSchema = z.object({
+  tournament_id: uuid,
+  tournament_name: z.string().min(1),
+});
+
 const schemas = {
   invite: inviteSchema,
   peer_approval_request: peerApprovalRequestSchema,
@@ -140,6 +151,7 @@ const schemas = {
   registration_rejected: registrationRejectedSchema,
   team_member_withdrew: teamMemberWithdrewSchema,
   deliver_reminder: deliverReminderSchema,
+  cup_finished: cupFinishedSchema,
 } as const;
 
 export type NotificationPayload<K extends NotificationKind = NotificationKind> =

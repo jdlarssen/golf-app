@@ -33,6 +33,7 @@ const EMOJI: Record<NotificationKind, string> = {
   registration_rejected: '🚫',
   team_member_withdrew: '👋',
   deliver_reminder: '📤',
+  cup_finished: '🏁',
 };
 
 /**
@@ -200,6 +201,13 @@ function buildCardContent(
       return {
         title: 'Husk å levere scorekortet',
         detail: `Du er ferdig i ${p.game_name}`,
+      };
+    }
+    case 'cup_finished': {
+      const p = payload as NotificationPayload<'cup_finished'>;
+      return {
+        title: 'Cupen er ferdigspilt',
+        detail: p.tournament_name,
       };
     }
   }
