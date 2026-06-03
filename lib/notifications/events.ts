@@ -41,3 +41,42 @@ export async function notifyPlayersGameFinished(
   }
   return sendMailByUserId;
 }
+
+/**
+ * Best-effort `cup_finished`-varsel til alle deltakere i en cup (tournament
+ * av matcher). Cup-analogen til `notifyPlayersGameFinished` — samme
+ * in-app-først + off-app-mail-prinsipp: `notify()` inserter alltid in-app,
+ * og returnert `shouldAlsoSendMail`-Map lar caller filtrere mail-mottakerne
+ * til kun off-app-deltakere (#377).
+ *
+ * `logPrefix` brukes som console.error-prefix ved notify-rejection — typisk
+ * `'finishTournament'` så feilen kan spores i Vercel-logs.
+ */
+export async function notifyParticipantsCupFinished(
+  participants: Array<{ user_id: string }>,
+  tournament: { id: string; name: string },
+  logPrefix: string,
+): Promise<Map<string, boolean>> {
+  const results = await Promise.allSettled(
+    participants.map((p) =>
+      notify({
+        userId: p.user_id,
+        kind: 'cup_finished',
+        payload: {
+          tournament_id: tournament.id,
+          tournament_name: tournament.name,
+        },
+      }).then((r) => ({ userId: p.user_id, sendMail: r.shouldAlsoSendMail })),
+    ),
+  );
+
+  const sendMailByUserId = new Map<string, boolean>();
+  for (const r of results) {
+    if (r.status === 'fulfilled') {
+      sendMailByUserId.set(r.value.userId, r.value.sendMail);
+    } else {
+      console.error(`[${logPrefix}] cup_finished notify failed`, r.reason);
+    }
+  }
+  return sendMailByUserId;
+}
