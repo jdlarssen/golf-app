@@ -16,7 +16,8 @@ export type NotificationKind =
   | 'registration_request'
   | 'registration_approved'
   | 'registration_rejected'
-  | 'team_member_withdrew';
+  | 'team_member_withdrew'
+  | 'deliver_reminder';
 
 // `z.guid()` aksepterer enhver UUID-shaped string (8-4-4-4-12 hex), inkludert
 // nil-UUID og ikke-versjonerte kanoniske test-sentinels som "11111111-...".
@@ -117,6 +118,15 @@ const teamMemberWithdrewSchema = z.object({
   team_name: z.string().min(1),
 });
 
+// deliver_reminder: spilleren har registrert alle 18 hull men ikke levert
+// scorekortet. Fyres automatisk (game-home-render) eller manuelt fra admin-
+// purringen. Deeplinker til /games/[game_id]/submit. Samme slanke payload
+// som game_finished — game_name brukes i innboks-detalj + mail. (#376)
+const deliverReminderSchema = z.object({
+  game_id: uuid,
+  game_name: z.string().min(1),
+});
+
 const schemas = {
   invite: inviteSchema,
   peer_approval_request: peerApprovalRequestSchema,
@@ -129,6 +139,7 @@ const schemas = {
   registration_approved: registrationApprovedSchema,
   registration_rejected: registrationRejectedSchema,
   team_member_withdrew: teamMemberWithdrewSchema,
+  deliver_reminder: deliverReminderSchema,
 } as const;
 
 export type NotificationPayload<K extends NotificationKind = NotificationKind> =

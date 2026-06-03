@@ -32,6 +32,7 @@ const EMOJI: Record<NotificationKind, string> = {
   registration_approved: '🎉',
   registration_rejected: '🚫',
   team_member_withdrew: '👋',
+  deliver_reminder: '📤',
 };
 
 /**
@@ -192,6 +193,13 @@ function buildCardContent(
       return {
         title: `${p.withdrawn_player_name} trakk seg`,
         detail: `${p.team_name} i ${p.game_name}`,
+      };
+    }
+    case 'deliver_reminder': {
+      const p = payload as NotificationPayload<'deliver_reminder'>;
+      return {
+        title: 'Husk å levere scorekortet',
+        detail: `Du er ferdig i ${p.game_name}`,
       };
     }
   }

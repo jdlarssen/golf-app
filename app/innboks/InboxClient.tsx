@@ -166,5 +166,9 @@ function buildDeeplink(notification: NotificationRow): string {
       const p = notification.payload as NotificationPayload<'team_member_withdrew'>;
       return `/signup/${p.game_short_id}/team`;
     }
+    case 'deliver_reminder': {
+      const p = notification.payload as NotificationPayload<'deliver_reminder'>;
+      return `/games/${p.game_id}/submit`;
+    }
   }
 }
