@@ -7,6 +7,7 @@ import { requireAdmin } from '@/lib/admin/auth';
 import { getCupSnapshot } from './getCupSnapshot';
 import { sendCupStartedNotification } from '@/lib/mail/cupStartedNotification';
 import { sendCupFinishedNotification } from '@/lib/mail/cupFinishedNotification';
+import { notifyParticipantsCupFinished } from '@/lib/notifications/events';
 
 // Form-felt-keyene matcher hidden inputs i cup-create-formet + admin-detalj-
 // formene. Holdt eksplisitt for å gjøre call-sites lesbare.
@@ -297,17 +298,34 @@ export async function finishTournament(formData: FormData) {
     redirect(`/admin/cup/${id}?error=finish_failed`);
   }
 
-  // Best-effort mail-notifikasjon med resultat-snapshot.
+  // Best-effort avslutnings-varsel: in-app til ALLE deltakere først, mail kun
+  // til off-app-deltakere (#377). Samme in-app-først-prinsipp som enkeltspill-
+  // avslutningen — ingen egen blanket-mail til alle.
+  //
+  // loadTournamentParticipantEmails dropper deltakere uten e-post, men
+  // Tørny-auth er e-post-OTP, så alle brukere HAR e-post — denne lista er
+  // dermed hele deltaker-settet, og in-app fyrer for alle reelle deltakere.
+  const recipients = await loadTournamentParticipantEmails(supabase, id);
+  const sendMailByUserId = await notifyParticipantsCupFinished(
+    recipients,
+    { id, name: snapshot.tournament.name },
+    'finishTournament',
+  );
+
+  // Mail går KUN til off-app-deltakere (shouldAlsoSendMail === true). Aktive
+  // deltakere ble nettopp varslet in-app og trenger ingen mail.
   try {
-    const recipients = await loadTournamentParticipantEmails(supabase, id);
     const winnerName =
       winnerTeam === 1
         ? snapshot.tournament.team_1_name
         : winnerTeam === 2
           ? snapshot.tournament.team_2_name
           : null;
+    const mailRecipients = recipients.filter(
+      (r) => sendMailByUserId.get(r.user_id) === true,
+    );
     const results = await Promise.allSettled(
-      recipients.map((r) =>
+      mailRecipients.map((r) =>
         sendCupFinishedNotification({
           to: r.email,
           playerFirstName: r.name?.split(' ')[0] ?? null,

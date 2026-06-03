@@ -17,7 +17,32 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.71.y — Leverings-påminnelse
+## 1.72.y — Avslutnings-varsel for cup
+
+Issue [#377](https://github.com/jdlarssen/golf-app/issues/377). Når en cup spilles ferdig, varsles deltakerne nå på samme måte som ellers i appen: in-app-varsel først, og e-post bare til dem som ikke er i appen. Før gikk det ut e-post til alle uansett.
+
+### [1.72.0] - 2026-06-03
+
+> Når en cup er ferdigspilt, dukker resultatet opp som varsel i appen. Er du borte fra appen, får du det på e-post i stedet.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#377](https://github.com/jdlarssen/golf-app/issues/377) — avslutnings-varsel via samme in-app-først-logikk. UX-flyt-audit-funn («Kjør og avslutt spill»). Enkeltspill-avslutningen fulgte allerede prinsippet; dette retter cup-avslutningen, som tidligere sendte e-post til alle uten in-app-varsel.
+
+#### Added
+- Ny `cup_finished` notification-kind (migrasjon `0069`) — wiret gjennom [`lib/notifications/types.ts`](lib/notifications/types.ts), [`components/notifications/NotificationCard.tsx`](components/notifications/NotificationCard.tsx) og [`app/innboks/InboxClient.tsx`](app/innboks/InboxClient.tsx) (deeplink til `/cup/[id]`).
+- [`notifyParticipantsCupFinished`](lib/notifications/events.ts) — cup-analog til `notifyPlayersGameFinished`: in-app til alle deltakere, returnerer per-deltaker mail-gating-flagg.
+
+#### Changed
+- [`lib/cup/actions.ts`](lib/cup/actions.ts) — `finishTournament` fyrer nå in-app `cup_finished` til alle deltakere først, og sender «cupen er ferdig»-mailen kun til off-app-deltakere. Ingen blanket-mail til alle.
+
+</details>
+
+---
+
+<details>
+<summary><strong>1.71.y — Leverings-påminnelse (2 oppføringer) — klikk for å vise</strong></summary>
 
 Issue [#376](https://github.com/jdlarssen/golf-app/issues/376). Spillere som har gått ferdig runden, men ikke levert scorekortet, får nå en påminnelse om å levere. Den kommer automatisk in-app når de er ferdige, og som e-post hvis de har lagt fra seg mobilen. Arrangøren får i tillegg en spillerstatus-side for å se hvem som mangler og purre dem.
 
@@ -57,6 +82,8 @@ Issue [#376](https://github.com/jdlarssen/golf-app/issues/376), del 1 — auto-n
 
 #### Changed
 - [`app/games/[id]/page.tsx`](app/games/[id]/page.tsx) — fyrer auto-nudgen via `after()` når spilleren er ferdig (18/18) men ikke har levert (og ikke er trukket).
+
+</details>
 
 </details>
 
