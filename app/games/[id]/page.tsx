@@ -29,6 +29,7 @@ import {
 import { scorecardTitle } from '@/lib/games/scorecardTitle';
 import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
+import { maybeSendDeliveryReminder } from '@/lib/notifications/deliveryReminder';
 import { isHandicapStale } from '@/lib/handicap/staleness';
 import { HandicapConfirmCard } from '@/components/handicap/HandicapConfirmCard';
 import { ModeGuideCard } from '@/components/ModeGuideCard';
@@ -296,6 +297,22 @@ export default async function GameHomePage({
     } else if (refreshed) {
       game = refreshed;
     }
+  }
+
+  // Auto-nudge (#376): har spilleren registrert alle 18 hull uten å levere,
+  // fyr én «husk å levere»-påminnelse. Pre-gate billig her (aktivt spill +
+  // ikke levert + ikke trukket); maybeSendDeliveryReminder self-gater på
+  // hull-telling + atomisk idempotens-guard, så den er trygg på hvert besøk.
+  // Wrap i `after()` fordi notify() kaller revalidateTag som kaster i
+  // render-fasen (samme mønster som markNotificationsRead + auto-start over).
+  if (game.status === 'active' && !me.submitted_at && !me.withdrawn_at) {
+    after(() =>
+      maybeSendDeliveryReminder({
+        gameId: id,
+        userId,
+        gameName: game.name,
+      }),
+    );
   }
 
   // Resolve this player's rating-set from the game's tee. Drives Par/Slope/CR

@@ -17,7 +17,33 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.70.y — Smidigere lag-påmelding
+## 1.71.y — Leverings-påminnelse
+
+Issue [#376](https://github.com/jdlarssen/golf-app/issues/376). Spillere som har gått ferdig runden men ikke levert scorekortet, får nå en påminnelse om å levere. Den kommer automatisk in-app når de er ferdige, og som e-post hvis de har lagt fra seg mobilen.
+
+### [1.71.0] - 2026-06-03
+
+> Har du tastet inn alle 18 hull men glemt å levere scorekortet, minner appen deg på det. Er du borte fra appen, kommer påminnelsen på e-post i stedet.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#376](https://github.com/jdlarssen/golf-app/issues/376), del 1 — auto-nudge. UX-flyt-audit-funn («Kjør og avslutt spill»).
+
+#### Added
+- [`lib/notifications/deliveryReminder.ts`](lib/notifications/deliveryReminder.ts) — `sendDeliveryReminder` (delt in-app + betinget off-app-mail-primitiv) og `maybeSendDeliveryReminder` (auto-nudge med hull-telling + atomisk `deliver_reminder_sent_at`-idempotens-guard).
+- [`lib/mail/deliverReminderNotification.ts`](lib/mail/deliverReminderNotification.ts) — spiller-rettet «Lever scorekortet»-mail (off-app-fallback), deeplinker til `/games/[id]/submit`.
+- Ny `deliver_reminder` notification-kind (migrasjon `0068`) + `game_players.deliver_reminder_sent_at`-kolonne for én-gang-per-spiller-idempotens.
+
+#### Changed
+- [`app/games/[id]/page.tsx`](app/games/[id]/page.tsx) — fyrer auto-nudgen via `after()` når spilleren er ferdig (18/18) men ikke har levert (og ikke er trukket).
+
+</details>
+
+---
+
+<details>
+<summary><strong>1.70.y — Smidigere lag-påmelding (2 oppføringer) — klikk for å vise</strong></summary>
 
 Issue [#362](https://github.com/jdlarssen/golf-app/issues/362). Lag-påmeldings-skjemaet er ryddet opp: feltene sjekkes mens du fyller dem ut, du kan søke opp folk du har spilt med før i stedet for å taste e-post på nytt, og «bli med på lag» sier hva som skjer videre.
 
@@ -53,6 +79,8 @@ Issue [#362](https://github.com/jdlarssen/golf-app/issues/362). UX-flyt-audit-fu
 #### Changed
 - [`TeamRegistrationForm`](app/signup/[shortId]/TeamRegistrationForm.tsx) — felt valideres on-blur og ved submit-forsøk: inline-feil per felt, submit blokkeres ved ugyldig input (ingen misvisende `team_name_invalid` for en slot-feil), og fokus hopper til første ugyldige felt. «Eksisterende spiller»-modus har nå autocomplete på co-players (navn + «kallenavn» + maskert e-post); valg vises som chip. Fri-tekst e-post-modus beholdt for folk utenfor lista.
 - [`app/signup/[shortId]/page.tsx`](app/signup/[shortId]/page.tsx) — preloader co-player-kandidater (kun når lag-formen faktisk rendres) og sender kaptein-e-post til inline egen-e-post-sjekk.
+
+</details>
 
 </details>
 
