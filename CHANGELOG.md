@@ -19,7 +19,7 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ## 1.71.y — Leverings-påminnelse
 
-Issue [#376](https://github.com/jdlarssen/golf-app/issues/376). Spillere som har gått ferdig runden men ikke levert scorekortet, får nå en påminnelse om å levere. Den kommer automatisk in-app når de er ferdige, og som e-post hvis de har lagt fra seg mobilen. Arrangøren får i tillegg en spillerstatus-side for å se hvem som mangler og purre dem.
+Issue [#376](https://github.com/jdlarssen/golf-app/issues/376). Spillere som har gått ferdig runden, men ikke levert scorekortet, får nå en påminnelse om å levere. Den kommer automatisk in-app når de er ferdige, og som e-post hvis de har lagt fra seg mobilen. Arrangøren får i tillegg en spillerstatus-side for å se hvem som mangler og purre dem.
 
 ### [1.71.1] - 2026-06-03
 
@@ -43,7 +43,7 @@ Issue [#376](https://github.com/jdlarssen/golf-app/issues/376), del 2 — admin-
 
 ### [1.71.0] - 2026-06-03
 
-> Har du tastet inn alle 18 hull men glemt å levere scorekortet, minner appen deg på det. Er du borte fra appen, kommer påminnelsen på e-post i stedet.
+> Har du tastet inn alle 18 hull, men glemt å levere scorekortet, minner appen deg på det. Er du borte fra appen, kommer påminnelsen på e-post i stedet.
 
 <details>
 <summary>Teknisk</summary>

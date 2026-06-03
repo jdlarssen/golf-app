@@ -200,8 +200,8 @@ export default async function GameStatusPage({
               <>
                 <p className="mb-3 font-sans text-[13px] leading-relaxed text-muted">
                   {targetCount === 1
-                    ? '1 spiller har gått ferdig men ikke levert scorekortet. Send en påminnelse om å levere.'
-                    : `${targetCount} spillere har gått ferdig men ikke levert scorekortet. Send en påminnelse om å levere.`}
+                    ? '1 spiller har gått ferdig, men ikke levert scorekortet. Send en påminnelse om å levere.'
+                    : `${targetCount} spillere har gått ferdig, men ikke levert scorekortet. Send en påminnelse om å levere.`}
                 </p>
                 <RemindButton remindAction={remindAction} count={targetCount} />
               </>
