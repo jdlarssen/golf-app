@@ -19,7 +19,27 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ## 1.71.y — Leverings-påminnelse
 
-Issue [#376](https://github.com/jdlarssen/golf-app/issues/376). Spillere som har gått ferdig runden men ikke levert scorekortet, får nå en påminnelse om å levere. Den kommer automatisk in-app når de er ferdige, og som e-post hvis de har lagt fra seg mobilen.
+Issue [#376](https://github.com/jdlarssen/golf-app/issues/376). Spillere som har gått ferdig runden men ikke levert scorekortet, får nå en påminnelse om å levere. Den kommer automatisk in-app når de er ferdige, og som e-post hvis de har lagt fra seg mobilen. Arrangøren får i tillegg en spillerstatus-side for å se hvem som mangler og purre dem.
+
+### [1.71.1] - 2026-06-03
+
+> Som arrangør ser du nå en egen spillerstatus-side: hvor langt hver spiller har kommet, hvem som er ferdige uten å ha levert, og hvor lenge siden de sist tastet noe. Derfra purrer du de som mangler med ett trykk.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#376](https://github.com/jdlarssen/golf-app/issues/376), del 2 — admin-purring.
+
+#### Added
+- [`app/admin/games/[id]/status/page.tsx`](app/admin/games/[id]/status/page.tsx) — spillerstatus-side: per spiller fremdrift (`X/18`), status-badge via `classifyDeliveryStatus`, og «siste registrering» (relativ tid fra `scores.updated_at`). Ferdige-men-ikke-leverte flagges og sorteres øverst. Ingen scorer-verdier hentes (ingen spoiler).
+- [`app/admin/games/[id]/status/actions.ts`](app/admin/games/[id]/status/actions.ts) — `remindUnsubmittedPlayers` sender påminnelse til alle ferdige-men-ikke-leverte (best-effort `Promise.allSettled`), og stamper `deliver_reminder_sent_at` så auto-nudgen ikke dobbel-fyrer.
+- [`app/admin/games/[id]/status/RemindButton.tsx`](app/admin/games/[id]/status/RemindButton.tsx) — to-trinns confirm-knapp.
+- [`lib/games/deliveryStatus.ts`](lib/games/deliveryStatus.ts) — ren `classifyDeliveryStatus`-klassifisering (Type A-testet).
+
+#### Changed
+- [`app/admin/games/[id]/page.tsx`](app/admin/games/[id]/page.tsx) — «Avslutt spillet»-kortet lenker nå til spillerstatus-sida (med «og send påminnelse» når noen mangler levering).
+
+</details>
 
 ### [1.71.0] - 2026-06-03
 

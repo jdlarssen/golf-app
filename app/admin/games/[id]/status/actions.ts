@@ -1,0 +1,99 @@
+'use server';
+
+import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
+import { getServerClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/admin/auth';
+import { sendDeliveryReminder } from '@/lib/notifications/deliveryReminder';
+import { TOTAL_HOLES } from '@/lib/games/deliveryStatus';
+
+type PlayerRow = {
+  user_id: string;
+  submitted_at: string | null;
+  withdrawn_at: string | null;
+  users: { email: string | null; name: string | null } | null;
+};
+
+/**
+ * Admin-purring (#376): send «husk å levere»-påminnelse til alle spillere som
+ * er ferdige (18/18 registrert) men ikke har levert — og ikke er trukket.
+ *
+ * Best-effort (Promise.allSettled) — én feil stopper ikke resten, og action-en
+ * aborterer aldri på mail/notify-feil. Bruker sendDeliveryReminder direkte (ikke
+ * auto-nudgens idempotens-guard), så admin kan purre på nytt ved behov. Stamper
+ * deliver_reminder_sent_at etterpå slik at auto-nudgen ikke dobbel-fyrer for de
+ * samme spillerne.
+ */
+export async function remindUnsubmittedPlayers(gameId: string) {
+  const supabase = await getServerClient();
+  await requireAdmin(supabase);
+
+  const statusPath = `/admin/games/${gameId}/status`;
+
+  const { data: game } = await supabase
+    .from('games')
+    .select('id, name, status')
+    .eq('id', gameId)
+    .single<{ id: string; name: string; status: string }>();
+
+  if (!game || game.status !== 'active') {
+    redirect(`${statusPath}?error=not_active`);
+  }
+
+  const [playersRes, scoresRes] = await Promise.all([
+    supabase
+      .from('game_players')
+      .select(
+        'user_id, submitted_at, withdrawn_at, users!game_players_user_id_fkey(email, name)',
+      )
+      .eq('game_id', gameId)
+      .returns<PlayerRow[]>(),
+    supabase
+      .from('scores')
+      .select('user_id')
+      .eq('game_id', gameId)
+      .not('strokes', 'is', null)
+      .returns<{ user_id: string }[]>(),
+  ]);
+
+  const filledByUser = new Map<string, number>();
+  for (const r of scoresRes.data ?? []) {
+    filledByUser.set(r.user_id, (filledByUser.get(r.user_id) ?? 0) + 1);
+  }
+
+  const targets = (playersRes.data ?? []).filter(
+    (p) =>
+      !p.submitted_at &&
+      !p.withdrawn_at &&
+      (filledByUser.get(p.user_id) ?? 0) >= TOTAL_HOLES,
+  );
+
+  await Promise.allSettled(
+    targets.map((p) =>
+      sendDeliveryReminder({
+        player: {
+          userId: p.user_id,
+          email: p.users?.email ?? null,
+          name: p.users?.name ?? null,
+        },
+        game: { id: game!.id, name: game!.name },
+        logPrefix: 'remindUnsubmittedPlayers',
+      }),
+    ),
+  );
+
+  // Stamp så auto-nudgen ikke dobbel-fyrer for de samme spillerne.
+  if (targets.length > 0) {
+    await supabase
+      .from('game_players')
+      .update({ deliver_reminder_sent_at: new Date().toISOString() })
+      .eq('game_id', gameId)
+      .in(
+        'user_id',
+        targets.map((t) => t.user_id),
+      );
+  }
+
+  revalidatePath(statusPath);
+  redirect(`${statusPath}?status=reminded&count=${targets.length}`);
+}
