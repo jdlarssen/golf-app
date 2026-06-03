@@ -102,16 +102,16 @@ Server-component, `requireAdmin`. Laster `game_players` (+ `users`) og en `score
 
 ## Akseptkriterier (sjekkes med evidens)
 
-- [ ] **K1** — Ny `deliver_reminder`-kind wiret gjennom alle uttømmende steder; `npm run build` grønn (tsc håndhever).
-- [ ] **K2** — Spiller med 18/18 registrert + ikke levert + ikke trukket får nøyaktig ETT in-app `deliver_reminder` (idempotent via `deliver_reminder_sent_at`-guard). Mail kun ved off-app (`shouldAlsoSendMail`).
-- [ ] **K3** — Gjentatt game-home-render/-besøk gir ingen duplikat-varsler (kolonne-guard).
-- [ ] **K4** — Admin spillerstatus-side viser per spiller: fremdrift X/18, status-badge, «siste registrering» relativ tid; ferdige-men-ikke-leverte flagges.
-- [ ] **K5** — Admin-purre-knapp sender `deliver_reminder` til alle ferdige-men-ikke-leverte (in-app + off-app-mail), best-effort, med confirm + suksess-feedback; nåbar fra game-detail (aktive spill).
-- [ ] **K6** — `lib/mail/deliverReminderNotification.ts` finnes (spiller-rettet, submit-deeplink) + Type B snapshot-test grønn.
-- [ ] **K7** — Ren `classifyDeliveryStatus` + Type A `it.each`-test grønn over alle 6 states.
-- [ ] **K8** — Migrasjon `0068_deliver_reminder.sql` skrevet + applisert (Supabase MCP; additiv, trygg).
-- [ ] **K9** — All ny norsk copy kjørt gjennom humanizer; version-bump (MINOR) + CHANGELOG-oppføring i samme commit som feature.
-- [ ] **K10** — Gates grønne: `npm run build` + `npx vitest run` (berørte filer).
+- [x] **K1** — Ny `deliver_reminder`-kind wiret gjennom alle uttømmende steder; `npm run build` grønn (tsc håndhever). _Evidens: union + `deliverReminderSchema` + schemas-map i `lib/notifications/types.ts`; `EMOJI`-Record + `buildCardContent`-switch i `NotificationCard.tsx`; `buildDeeplink`-switch i `InboxClient.tsx`; migrasjon-CHECK i `0068`. `npm run build` → «✓ Compiled successfully»._
+- [x] **K2** — Spiller med 18/18 registrert + ikke levert + ikke trukket får nøyaktig ETT in-app `deliver_reminder` (idempotent via `deliver_reminder_sent_at`-guard). Mail kun ved off-app (`shouldAlsoSendMail`). _Evidens: `maybeSendDeliveryReminder` ([deliveryReminder.ts](lib/notifications/deliveryReminder.ts)) teller hull → atomisk `.is('deliver_reminder_sent_at', null).is('submitted_at', null).is('withdrawn_at', null)`-update → `sendDeliveryReminder` (notify + betinget mail på `shouldAlsoSendMail`)._
+- [x] **K3** — Gjentatt game-home-render/-besøk gir ingen duplikat-varsler (kolonne-guard). _Evidens: kun raden der `deliver_reminder_sent_at IS NULL` vinner update-en; andre besøk får 0 rader → return._
+- [x] **K4** — Admin spillerstatus-side viser per spiller: fremdrift X/18, status-badge, «siste registrering» relativ tid; ferdige-men-ikke-leverte flagges. _Evidens: [status/page.tsx](app/admin/games/[id]/status/page.tsx) — `holesFilled/TOTAL_HOLES`, `STATUS_META`-badge, `formatRelativeNb(lastActionAt)`, `⚠️`-flag + topp-sortering for `ready_not_delivered`._
+- [x] **K5** — Admin-purre-knapp sender `deliver_reminder` til alle ferdige-men-ikke-leverte (in-app + off-app-mail), best-effort, med confirm + suksess-feedback; nåbar fra game-detail (aktive spill). _Evidens: `remindUnsubmittedPlayers` ([status/actions.ts](app/admin/games/[id]/status/actions.ts)) `Promise.allSettled`; `RemindButton` window.confirm; suksess-banner via `?status=reminded&count=`; lenke i «Avslutt spillet»-kortet ([page.tsx](app/admin/games/[id]/page.tsx))._
+- [x] **K6** — `lib/mail/deliverReminderNotification.ts` finnes (spiller-rettet, submit-deeplink) + Type B snapshot-test grønn. _Evidens: 4 snapshot-tester + registrert i `resend-contract.test.ts` (15 tester grønne)._
+- [x] **K7** — Ren `classifyDeliveryStatus` + Type A `it.each`-test grønn over alle 6 states. _Evidens: [deliveryStatus.test.ts](lib/games/deliveryStatus.test.ts) — 8 tester grønne._
+- [x] **K8** — Migrasjon `0068_deliver_reminder.sql` skrevet + applisert (Supabase MCP; additiv, trygg). _Evidens: `apply_migration` → `{"success":true}`; fil i `supabase/migrations/`._
+- [x] **K9** — All ny norsk copy kjørt gjennom humanizer; version-bump + CHANGELOG-oppføring i samme commit som feature. _Evidens: humanizer-skill kjørt (passiv→aktiv body-fix); 1.71.0 + 1.71.1 bumps + CHANGELOG 1.71.y-serie._
+- [x] **K10** — Gates grønne: `npm run build` + `npx vitest run` (berørte filer). _Evidens: build «✓ Compiled successfully»; full vitest 215 filer / 2599 tester grønne._
 
 ## Out of scope
 - Purring av spillere midt i runden (< 18 hull) — vises, men purres ikke.
