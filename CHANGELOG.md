@@ -21,6 +21,22 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#429](https://github.com/jdlarssen/golf-app/issues/429) (epic [#22](https://github.com/jdlarssen/golf-app/issues/22)), Fase 3 — siste del av epic-et. Lagde du spillet, bestemmer du nå hvem som er med, og kan holde runden i gang uten å vente på en administrator.
 
+### [1.77.1] - 2026-06-05
+
+> Klubbhuset er på plass: en samlet oversikt over spillene du arrangerer. Du finner den fra forsiden og under Profil, og kan trykke deg rett inn på et spill for å styre det.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#429](https://github.com/jdlarssen/golf-app/issues/429) — #22 Fase 3 («Mine spill»-hub). Frøet til Klubbhuset (#392); selve bunn-nav-fanen er fortsatt #392 sin jobb.
+
+#### Added
+- [`app/klubbhuset/page.tsx`](app/klubbhuset/page.tsx) — lister spill der `created_by` er innlogget bruker (request-scoped, RLS 0071 «games select own created»), formet som Sekretariat-lista men filtrert til egne spill. Hver rad lenker til spillets game-home der arrangør-kontrollene bor. Tom-tilstand peker til `/opprett-spill`.
+- [`app/page.tsx`](app/page.tsx) — «Klubbhuset»-inngang for ikke-admins som arrangerer minst ett spill (billig head-count i parallell-fetchen).
+- [`app/profile/page.tsx`](app/profile/page.tsx) — «Klubbhuset»-rad i konto-lista.
+
+</details>
+
 ### [1.77.0] - 2026-06-05
 
 > Lagde du spillet, bestemmer du nå hvem som er med. Legg til spillere du kjenner eller inviter nye på e-post, og fjern folk før runden starter. Er runden i gang, kan du trekke en spiller eller godkjenne et scorekort på vegne av flighten om en medspiller ikke får gjort det selv.

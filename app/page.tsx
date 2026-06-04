@@ -113,7 +113,7 @@ async function HomeBody() {
 
   // Parallel-fetch profile, active games, finished games — they don't depend
   // on each other and roughly triple-tripled the latency when run serially.
-  const [profileRes, rawActiveRes, rawFinishedRes] = await Promise.all([
+  const [profileRes, rawActiveRes, rawFinishedRes, createdCountRes] = await Promise.all([
     supabase
       .from('users')
       .select(
@@ -138,6 +138,12 @@ async function HomeBody() {
       .eq('games.status', 'finished')
       .order('ended_at', { foreignTable: 'games', ascending: false })
       .returns<GameRow[]>(),
+    // Klubbhuset (#429): does this user arrange any games of their own? Cheap
+    // head-count via the "games select own created" RLS policy (0071).
+    supabase
+      .from('games')
+      .select('id', { count: 'exact', head: true })
+      .eq('created_by', userId!),
   ]);
 
   const { data: profile, error: profileError } = profileRes;
@@ -205,6 +211,20 @@ async function HomeBody() {
         className="flex min-h-[48px] w-full items-center justify-center rounded-full border border-border px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-surface-2"
       >
         Sekretariatet
+      </SmartLink>
+    ) : null;
+
+  // Klubbhuset (#429): the arranger's hub, for non-admins who have created at
+  // least one game of their own. Admins manage every game via Sekretariatet, so
+  // a created-by-me subset would be redundant for them. Seed of the universal
+  // Klubbhus nav-tab (#392).
+  const klubbhusetLink =
+    profile?.is_admin !== true && (createdCountRes.count ?? 0) > 0 ? (
+      <SmartLink
+        href="/klubbhuset"
+        className="flex min-h-[48px] w-full items-center justify-center rounded-full border border-border px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-surface-2"
+      >
+        Klubbhuset
       </SmartLink>
     ) : null;
 
@@ -343,6 +363,8 @@ async function HomeBody() {
       )}
 
       {secretariatLink && <div className="mb-6">{secretariatLink}</div>}
+
+      {klubbhusetLink && <div className="mb-6">{klubbhusetLink}</div>}
 
       {courseCreateLink && (
         <div className="mb-6 flex justify-center">{courseCreateLink}</div>
