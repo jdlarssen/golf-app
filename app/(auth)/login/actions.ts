@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { consumeLoginRateLimit } from '@/lib/auth/loginRateLimit';
+import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
 import { getClientIp } from '@/lib/admin/rateLimit';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 
@@ -49,8 +50,6 @@ export async function sendCode(formData: FormData) {
     redirect('/login?error=rate_limited');
   }
 
-  const supabase = await getServerClient();
-
   // Self-registration is gated by an env flag so we can ramp it carefully
   // in prod (kill-switch on abuse). When the flag is off, behaviour is
   // identical to pre-#166: only emails with an open invitation row get
@@ -58,6 +57,23 @@ export async function sendCode(formData: FormData) {
   // a new auth.users row is created on first verifyOtp.
   const allowSelfReg =
     process.env.NEXT_PUBLIC_ALLOW_SELF_REGISTRATION === 'true';
+
+  // #365: with open self-reg on, refuse known disposable / throwaway inbox
+  // providers regardless of invitation status. They're the cheap mass-
+  // account-creation vector (public, readable inboxes), and blocking them
+  // here also closes the spray-invite bypass — any logged-in user can
+  // friend-invite up to 10 addresses/day, so an "invited = exempt" rule
+  // would let a self-registered seed account whitelist disposable domains.
+  // Sits after rate-limit (a disposable spray still burns the IP bucket)
+  // and before the email_is_invited RPC + Supabase OTP (saves quota on a
+  // known-bad domain). Off-flag behaviour is unchanged.
+  if (allowSelfReg && isDisposableEmailDomain(email)) {
+    console.warn('[login/sendCode] disposable email rejected');
+    redirect('/login?error=disposable_email');
+  }
+
+  const supabase = await getServerClient();
+
   const { data: isInvited } = await supabase.rpc('email_is_invited', {
     check_email: email,
   });

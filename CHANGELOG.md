@@ -17,7 +17,36 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.72.y — Avslutnings-varsel for cup
+## 1.73.y — Usynlig misbruks-vern før åpen påmelding
+
+Issue [#365](https://github.com/jdlarssen/golf-app/issues/365). Før vi åpner for at hvem som helst kan lage konto, har vi lagt inn et usynlig vern: engangs-e-post (bruk-og-kast-adresser som mailinator og co.) avvises på innlogging. Vanlige e-postadresser merker ingenting.
+
+### [1.73.0] - 2026-06-04
+
+> Et usynlig vern før vi åpner påmelding for alle: engangs-e-post blir avvist på innlogging, så ingen kan masseopprette kontoer med bruk-og-kast-adresser. Bruker du en vanlig e-post, merker du ingenting.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#365](https://github.com/jdlarssen/golf-app/issues/365) — usynlig misbruks-vern foran åpen selvregistrering ([#364](https://github.com/jdlarssen/golf-app/issues/364)). UX-flyt-audit-funn («Bli bruker»). Dormant til `NEXT_PUBLIC_ALLOW_SELF_REGISTRATION` skrus på i prod.
+
+#### Added
+- [`lib/auth/disposableDomains.ts`](lib/auth/disposableDomains.ts) — kuratert `Set` av kjente engangs-/disposable-e-postdomener (mailinator, guerrillamail, 10minutemail, yopmail m.fl.). Vendret liste, ingen npm-dep.
+- [`lib/auth/disposableEmail.ts`](lib/auth/disposableEmail.ts) — `isDisposableEmailDomain(email)`: eksakt domene-match, total funksjon (kaster aldri).
+
+#### Changed
+- [`app/(auth)/login/actions.ts`](app/(auth)/login/actions.ts) — `sendCode` avviser disposable-domener (ny `disposable_email`-feilkode) når self-reg er på, uavhengig av invitasjons-status. Lukker spray-invite-bypass (venne-invite-kvoten er 10/døgn). Plassert etter rate-limit, før `email_is_invited`-RPC.
+- [`app/(auth)/login/page.tsx`](app/(auth)/login/page.tsx) — ny norsk banner-tekst for `disposable_email`.
+
+#### Decided
+- IP-rate-limit beholdt på 10/IP/15 min (ikke strammet til 6): disposable-blokken dekker masse-opprettings-vektoren, og 6 ville gitt klubb-WiFi-friksjon uten reell spray-gevinst mot en IP-roterende angriper. Captcha fortsatt utsatt til faktisk misbruk.
+
+</details>
+
+---
+
+<details>
+<summary><strong>1.72.y — Avslutnings-varsel for cup (1 oppføring) — klikk for å vise</strong></summary>
 
 Issue [#377](https://github.com/jdlarssen/golf-app/issues/377). Når en cup spilles ferdig, varsles deltakerne nå på samme måte som ellers i appen: in-app-varsel først, og e-post bare til dem som ikke er i appen. Før gikk det ut e-post til alle uansett.
 
@@ -36,6 +65,8 @@ Issue [#377](https://github.com/jdlarssen/golf-app/issues/377) — avslutnings-v
 
 #### Changed
 - [`lib/cup/actions.ts`](lib/cup/actions.ts) — `finishTournament` fyrer nå in-app `cup_finished` til alle deltakere først, og sender «cupen er ferdig»-mailen kun til off-app-deltakere. Ingen blanket-mail til alle.
+
+</details>
 
 </details>
 

@@ -18,6 +18,8 @@ const ERROR_MESSAGES: Record<string, string> = {
     'Denne mailen er ikke registrert. Be admin om en invitasjon.',
   invite_expired:
     'Invitasjonen din er utløpt. Be arrangøren om å sende en ny.',
+  disposable_email:
+    'Engangs-e-post går ikke. Bruk en vanlig e-postadresse, så er du i gang.',
   code_invalid: 'Feil kode. Sjekk mailen og prøv igjen.',
   code_expired: 'Koden er gått ut. Be om ny kode.',
   link_expired: 'Lenken er gått ut. Be om ny kode.',

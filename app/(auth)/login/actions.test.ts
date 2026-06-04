@@ -318,6 +318,57 @@ describe('sendCode — self-registration flag', () => {
   });
 });
 
+describe('sendCode — disposable email block (#365)', () => {
+  it('blocks a known disposable domain when self-reg is on: redirect disposable_email, no Supabase work', async () => {
+    vi.stubEnv('NEXT_PUBLIC_ALLOW_SELF_REGISTRATION', 'true');
+
+    const { sendCode } = await import('./actions');
+
+    await expect(
+      sendCode(fd({ email: 'throwaway@mailinator.com' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/login?error=disposable_email');
+    // Short-circuits before the email_is_invited RPC and Supabase OTP, so we
+    // never pay quota on a known-bad domain.
+    expect(rpcMock).not.toHaveBeenCalled();
+    expect(signInWithOtpMock).not.toHaveBeenCalled();
+  });
+
+  it('blocks disposable domains regardless of invitation status (closes the spray-invite bypass)', async () => {
+    vi.stubEnv('NEXT_PUBLIC_ALLOW_SELF_REGISTRATION', 'true');
+    // Even if this address had an open invitation, the disposable guard fires
+    // first — email_is_invited is never consulted.
+    rpcMock.mockResolvedValue({ data: true, error: null });
+    signInWithOtpMock.mockResolvedValue({ error: null });
+
+    const { sendCode } = await import('./actions');
+
+    await expect(
+      sendCode(fd({ email: 'invited@guerrillamail.com' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/login?error=disposable_email');
+    expect(signInWithOtpMock).not.toHaveBeenCalled();
+  });
+
+  it('does not block disposable domains when self-reg is off (no change in invite-only mode)', async () => {
+    vi.stubEnv('NEXT_PUBLIC_ALLOW_SELF_REGISTRATION', 'false');
+    rpcMock.mockResolvedValue({ data: false, error: null });
+    signInWithOtpMock.mockResolvedValue({ error: null });
+
+    const { sendCode } = await import('./actions');
+
+    await expect(
+      sendCode(fd({ email: 'someone@mailinator.com' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    // Guard skipped → flow proceeds to Supabase OTP as before.
+    expect(lastRedirect()).not.toBe('/login?error=disposable_email');
+    expect(signInWithOtpMock).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('sendCode — rate-limit', () => {
   it('redirects with rate_limited when consumeLoginRateLimit denies (email bucket)', async () => {
     consumeLoginRateLimitMock.mockResolvedValue({ ok: false, reason: 'email' });
