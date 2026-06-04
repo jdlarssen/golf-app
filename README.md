@@ -13,7 +13,7 @@ Tørny is a mobile-first PWA for running golf tournaments. It scales from four f
 
 Live at [tornygolf.no](https://tornygolf.no) (also `tørny.no`).
 
-It's invite-only: an admin sets up a game and invites the players, who sign in with a one-time code by mail. There's no open signup and no password to forget. Tørny is a solo project, built and run by Jørgen, and it runs in production for real tournaments.
+It's invite-only: players sign in with a one-time code by mail, with no open signup and no password to forget. Any signed-in player can set up a game, run it, and finish it themselves; admins still run club-scale tournaments and the secretariat. Tørny is a solo project, built and run by Jørgen, and it runs in production for real tournaments.
 
 ## What you get
 
