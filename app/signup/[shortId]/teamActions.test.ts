@@ -293,6 +293,26 @@ describe('submitTeamRegistration — game-state-gating', () => {
     });
     expect(result).toEqual({ ok: false, error: 'self_in_slots' });
   });
+
+  it('disposable medspiller-e-post → disposable_email, ingen DB-write (#422)', async () => {
+    getGameByShortIdMock.mockResolvedValue(makeGame());
+    const { submitTeamRegistration } = await import('./teamActions');
+    const result = await submitTeamRegistration({
+      shortId: SHORT_ID,
+      teamName: 'Lag A',
+      slots: [
+        { mode: 'email', value: 'a@example.com' },
+        { mode: 'email', value: 'throwaway@mailinator.com' },
+        { mode: 'email', value: 'c@example.com' },
+      ],
+    });
+    expect(result).toEqual({ ok: false, error: 'disposable_email' });
+    // Pre-validation aborts before captain-row / invitations insert.
+    const insertCalls = adminMock.__fromCalls.filter(
+      (c) => c.method === 'insert',
+    );
+    expect(insertCalls).toHaveLength(0);
+  });
 });
 
 describe('submitTeamRegistration — happy paths', () => {

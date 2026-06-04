@@ -30,6 +30,8 @@ const ERROR_MESSAGES: Record<TeamRegistrationError, string> = {
   slots_count_wrong: 'Feil antall medspillere. Fyll inn alle plassene.',
   duplicate_emails: 'Du har lagt inn samme e-post på flere plasser.',
   self_in_slots: 'Du kan ikke legge til deg selv som medspiller.',
+  disposable_email:
+    'Engangs-e-post går ikke. Bruk en vanlig e-postadresse for medspilleren.',
   already_registered: 'Du er allerede påmeldt dette spillet.',
   rate_limited:
     'Du har gjort for mange påmeldinger den siste tida. Prøv igjen senere.',

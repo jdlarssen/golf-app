@@ -8,6 +8,7 @@ import { notify } from '@/lib/notifications/notify';
 import { notifyInvitedToTeam } from '@/lib/notifications/notifyInvitedToTeam';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
 import { lookupUserByEmail } from '@/lib/users/lookupByEmail';
+import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
 import { gameModeSupportsTeams } from '@/lib/games/registration';
 import { consumeRegistrationRateLimit } from '@/lib/auth/registrationRateLimit';
 import { getClientIp } from '@/lib/admin/rateLimit';
@@ -85,6 +86,7 @@ export type TeamRegistrationError =
   | 'slots_count_wrong'
   | 'duplicate_emails'
   | 'self_in_slots'
+  | 'disposable_email'
   | 'already_registered'
   | 'rate_limited'
   | 'db_error';
@@ -246,6 +248,13 @@ export async function submitTeamRegistration(
   for (const slot of normalizedSlots) {
     if (!slot.value || !slot.value.includes('@')) {
       return { ok: false, error: 'team_name_invalid' };
+    }
+    // #422: reject known disposable/throwaway inbox domains for co-players.
+    // Aborts the whole submission like the other slot-validation failures —
+    // the captain fixes the address and resubmits. Always on (a disposable
+    // co-player invite never has value); mirrors the friend-invite guard.
+    if (isDisposableEmailDomain(slot.value)) {
+      return { ok: false, error: 'disposable_email' };
     }
     if (seen.has(slot.value)) {
       return { ok: false, error: 'duplicate_emails' };

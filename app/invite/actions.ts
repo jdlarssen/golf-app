@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { randomUUID } from 'node:crypto';
 import { getServerClient } from '@/lib/supabase/server';
+import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
 import { getQuotaState } from '@/lib/invitations/quota';
 import { sendInviteNotification } from '@/lib/mail/inviteNotification';
 
@@ -21,6 +22,15 @@ export async function sendFriendInvite(formData: FormData) {
   }
   if (!looksLikeEmail(email)) {
     redirect('/profile?invite_error=invalid_email');
+  }
+  // #422: reject known disposable/throwaway inbox domains on the user-driven
+  // invite flows. Unlike the /login block (#365), this is always on — a
+  // disposable invitation never has value: with self-reg off it lets an
+  // invited throwaway address create an account, and with self-reg on it just
+  // leaves a dead invitations row + a wasted notification mail. Admin/trusted-
+  // creator invite flows are deliberately not guarded (owner decision, #422).
+  if (isDisposableEmailDomain(email)) {
+    redirect('/profile?invite_error=disposable_email');
   }
 
   const supabase = await getServerClient();

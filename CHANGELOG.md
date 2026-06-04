@@ -19,7 +19,26 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ## 1.73.y — Usynlig misbruks-vern før åpen påmelding
 
-Issue [#365](https://github.com/jdlarssen/golf-app/issues/365). Før vi åpner for at hvem som helst kan lage konto, har vi lagt inn et usynlig vern: engangs-e-post (bruk-og-kast-adresser som mailinator og co.) avvises på innlogging. Vanlige e-postadresser merker ingenting.
+Issue [#365](https://github.com/jdlarssen/golf-app/issues/365) + [#422](https://github.com/jdlarssen/golf-app/issues/422). Før vi åpner for at hvem som helst kan lage konto, har vi lagt inn et usynlig vern: engangs-e-post (bruk-og-kast-adresser som mailinator og co.) avvises både på innlogging og når en bruker prøver å invitere noen. Vanlige e-postadresser merker ingenting.
+
+### [1.73.1] - 2026-06-04
+
+> Prøver du å invitere en venn eller medspiller med en engangs-e-post, får du nå beskjed om å bruke en vanlig adresse i stedet. Vanlige adresser fungerer som før.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#422](https://github.com/jdlarssen/golf-app/issues/422) — code-review-funn fra #365. Disposable-blokken utvidet til de **bruker-drevne** invite-flatene, så en engangs-invitasjon ikke lager en død `invitations`-rad + bortkastet mail (self-reg på) eller en reell throwaway-konto via invitasjon (self-reg av). Gjenbruker `isDisposableEmailDomain` fra #365.
+
+#### Changed
+- [`app/invite/actions.ts`](app/invite/actions.ts) — `sendFriendInvite` avviser disposable-domener (ny `disposable_email`-feilkode) etter format-sjekk, før DB-arbeid.
+- [`app/signup/[shortId]/teamActions.ts`](app/signup/[shortId]/teamActions.ts) — `submitTeamRegistration` avviser disposable medspiller-e-post i pre-valideringen (ny `disposable_email`-variant i `TeamRegistrationError`).
+- [`app/profile/page.tsx`](app/profile/page.tsx) + [`app/signup/[shortId]/TeamRegistrationForm.tsx`](app/signup/[shortId]/TeamRegistrationForm.tsx) — nye norske feilmeldinger.
+
+#### Decided
+- **Alltid på** (ikke gated på self-reg-flagget, ulikt `/login`-blokken) — en engangs-invitasjon gir aldri verdi. **Admin/trusted-creator-flatene er bevisst ikke guardet** (eier-beslutning: admin er betrodd, «arrangør»-rollen fases ut).
+
+</details>
 
 ### [1.73.0] - 2026-06-04
 

@@ -80,6 +80,27 @@ describe('sendFriendInvite — shared dedup (#348)', () => {
     expect(sendInviteNotificationMock).not.toHaveBeenCalled();
   });
 
+  it('rejects a known disposable domain: redirect disposable_email, no Supabase work, no mail (#422)', async () => {
+    supabaseMock = buildSupabaseMock([], {});
+    supabaseMock.auth.getUser.mockResolvedValue({
+      data: { user: { id: 'u1' } },
+    });
+    const { sendFriendInvite } = await import('./actions');
+
+    await expect(
+      sendFriendInvite(fd({ email: 'throwaway@mailinator.com' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/profile?invite_error=disposable_email');
+    // Short-circuits before any DB lookup/insert and before the mail.
+    expect(supabaseMock.rpc).not.toHaveBeenCalled();
+    const insertCalls = supabaseMock.__fromCalls.filter(
+      (c) => c.method === 'insert',
+    );
+    expect(insertCalls).toHaveLength(0);
+    expect(sendInviteNotificationMock).not.toHaveBeenCalled();
+  });
+
   it('proceeds normally when the address has no open invitation: inserts + sends mail', async () => {
     supabaseMock = buildSupabaseMock(
       [COMPLETED_PROFILE, { error: null }],
