@@ -17,7 +17,9 @@ const getUserMock = vi.fn();
 const updateEqMock = vi.fn<(...args: unknown[]) => Promise<{ error: null }>>(
   async () => ({ error: null }),
 );
-const updateMock = vi.fn(() => ({ eq: updateEqMock }));
+const updateMock = vi.fn<(...args: unknown[]) => { eq: typeof updateEqMock }>(
+  () => ({ eq: updateEqMock }),
+);
 
 vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => ({

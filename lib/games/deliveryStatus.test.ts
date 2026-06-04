@@ -95,14 +95,15 @@ describe('classifyDeliveryStatus', () => {
   });
 
   it('teller kun ready_not_delivered som purre-mål', () => {
-    const targets: DeliveryStatus[] = [
+    const all: DeliveryStatus[] = [
       'withdrawn',
       'delivered',
       'pending_approval',
       'ready_not_delivered',
       'playing',
       'not_started',
-    ].filter(isDeliveryReminderTarget) as DeliveryStatus[];
+    ];
+    const targets = all.filter(isDeliveryReminderTarget);
     expect(targets).toEqual(['ready_not_delivered']);
   });
 });

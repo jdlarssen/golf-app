@@ -12,7 +12,7 @@ const baseInitial = {
   name: 'Per Hansen',
   nickname: 'Per',
   hcpIndex: '12.4',
-  gender: 'mens' as const,
+  gender: 'mens' as 'mens' | 'ladies' | null,
   level: 'normal' as const,
 };
 
