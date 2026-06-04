@@ -21,7 +21,6 @@ import { firstName } from '@/lib/firstName';
 import { formatTeeOffDate, formatTeeOffTime } from '@/lib/format/teeOff';
 import { STATUS_LABELS } from '@/lib/games/status';
 import { CREATE_GAME_LABEL } from '@/lib/games/createGameLabel';
-import { isTrustedCreator } from '@/lib/admin/trustedCreators';
 import { HomeDiscoverySection } from './HomeDiscoverySection';
 import { getDiscoverableGames } from '@/lib/games/getDiscoverableGames';
 
@@ -178,11 +177,10 @@ async function HomeBody() {
         nextPath="/"
       />
     ) : null;
-  // Trusted creators (#198 small-bet MVP) får samme «Opprett spill»-inngang
-  // som admin, men ledes til /opprett-spill istedenfor /admin/games/new så
-  // de slipper Sekretariat-shellen.
-  const canCreateGame =
-    profile?.is_admin === true || isTrustedCreator(profile?.email);
+  // #427: alle innloggede brukere kan opprette eget spill. Admin ledes til
+  // Sekretariat-wizarden (/admin/games/new), alle andre til /opprett-spill
+  // (AppShell). Tidligere gated på admin + trusted-creator-allowlisten (#198).
+  const canCreateGame = !!userId;
 
   // Admin-inngang til Sekretariatet (#355-oppfølging). Bunn-nav-en holder admin
   // ute (eget rom), så admin trenger en tydelig, oppdagbar vei inn herfra — der

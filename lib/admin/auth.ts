@@ -67,3 +67,29 @@ export async function requireAdminOrTrustedCreator(
   if (!ctx.isAdmin && !ctx.isTrusted) redirect('/');
   return ctx;
 }
+
+/**
+ * Gate for routes/actions a game's CREATOR — or an admin — may use, e.g. the
+ * non-admin finish flow (#427, `/games/[id]/avslutt`). Admins pass straight
+ * through. Otherwise the caller must own the game (`games.created_by` === them);
+ * the request-scoped client reads it via the "games select own created" RLS
+ * policy (migration 0071), so this works even for a non-playing creator.
+ * Anyone else → `/`.
+ *
+ * Returns the full `AdminRoleContext`; callers branch redirects on `isAdmin`
+ * (admin → `/admin/games/*`, creator → `/games/*`).
+ */
+export async function requireAdminOrCreator(
+  supabase: ServerSupabase,
+  gameId: string,
+): Promise<AdminRoleContext> {
+  const ctx = await loadRole(supabase);
+  if (ctx.isAdmin) return ctx;
+  const { data: game } = await supabase
+    .from('games')
+    .select('created_by')
+    .eq('id', gameId)
+    .maybeSingle();
+  if (game?.created_by === ctx.userId) return ctx;
+  redirect('/');
+}

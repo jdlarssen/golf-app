@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
-import { requireAdmin } from '@/lib/admin/auth';
+import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { supportsWithdrawal } from '@/lib/scoring';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { endGame } from '../actions';
@@ -22,9 +22,11 @@ export async function endGameMarkingWithdrawals(
   formData: FormData,
 ) {
   const supabase = await getServerClient();
-  const role = await requireAdmin(supabase);
+  const role = await requireAdminOrCreator(supabase, gameId);
 
-  const detailPath = `/admin/games/${gameId}`;
+  const detailPath = role.isAdmin
+    ? `/admin/games/${gameId}`
+    : `/games/${gameId}`;
 
   // WD is only valid for in-scope modes. Out-of-scope games get NO withdrawals
   // even from a crafted POST — they fall back to «ikke levert» (defense-in-depth

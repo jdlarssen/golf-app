@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
-import { requireAdmin } from '@/lib/admin/auth';
+import { requireAdmin, requireAdminOrCreator } from '@/lib/admin/auth';
 import {
   calculateCourseHandicap,
   applyAllowance,
@@ -251,8 +251,18 @@ export async function adminApproveScorecard(
  * unapproved scorecard still blocks, even when forcing.
  */
 export async function endGame(gameId: string, allowMissing = false) {
-  const { supabase, user, actorName } = await loadAdminContext();
-  const detailPath = `/admin/games/${gameId}`;
+  // #427: a game's creator — not just admins — can finish their own game.
+  // requireAdminOrCreator gates on is_admin() OR games.created_by; the status
+  // flip below runs on the request-scoped client under the creator-UPDATE RLS
+  // policy (migration 0071). Redirects branch on isAdmin so a creator lands on
+  // the player game-home, not the admin shell.
+  const supabase = await getServerClient();
+  const role = await requireAdminOrCreator(supabase, gameId);
+  const user = { id: role.userId };
+  const actorName = role.name?.trim() || (role.isAdmin ? 'Admin' : 'Arrangør');
+  const detailPath = role.isAdmin
+    ? `/admin/games/${gameId}`
+    : `/games/${gameId}`;
 
   // Verify game is active. Inkluderer game_mode + mode_config + course_id
   // slik at vi kan bygge mode-aware completion-mail uten å re-fetche game.

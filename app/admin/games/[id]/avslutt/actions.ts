@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
-import { requireAdmin } from '@/lib/admin/auth';
+import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { sendGameFinishedNotification } from '@/lib/mail/gameFinishedNotification';
 import { buildGameFinishedRecipients } from '@/lib/mail/gameFinishedRecipients';
 import { firstName } from '@/lib/firstName';
@@ -13,18 +13,19 @@ import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { notifyPlayersGameFinished } from '@/lib/notifications/events';
 
 /**
- * Self-gate + load action context for `endGameWithSideWinners`. Wraps the
- * shared `requireAdmin` helper so the action can keep destructuring
- * `{ supabase, user, actorName }` like before. Prepares for Fase 4 chunk 2
- * (#223) lifting the admin-layout-gate.
+ * Self-gate + load action context for `endGameWithSideWinners`. #427 opens the
+ * finish flow to a game's CREATOR (not just admins) via `requireAdminOrCreator`,
+ * and surfaces `isAdmin` so the action can branch its redirects (admin →
+ * `/admin/games/*`, creator → `/games/*`).
  */
-async function loadAdminContext() {
+async function loadFinishContext(gameId: string) {
   const supabase = await getServerClient();
-  const role = await requireAdmin(supabase);
+  const role = await requireAdminOrCreator(supabase, gameId);
   return {
     supabase,
     user: { id: role.userId },
-    actorName: role.name?.trim() || 'Admin',
+    actorName: role.name?.trim() || (role.isAdmin ? 'Admin' : 'Arrangør'),
+    isAdmin: role.isAdmin,
   };
 }
 
@@ -49,8 +50,8 @@ export async function endGameWithSideWinners(
   allowMissing: boolean,
   formData: FormData,
 ) {
-  const { supabase, user, actorName } = await loadAdminContext();
-  const detailPath = `/admin/games/${gameId}`;
+  const { supabase, user, actorName, isAdmin } = await loadFinishContext(gameId);
+  const detailPath = isAdmin ? `/admin/games/${gameId}` : `/games/${gameId}`;
   const wizardPath = `${detailPath}/avslutt`;
 
   // Inkluderer course_id + game_mode + mode_config slik at den mode-aware

@@ -2,13 +2,10 @@
 
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
-import { getAdminClient } from '@/lib/supabase/admin';
-import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
 import {
   buildGameInsertPayload,
   parseOsloDateTimeLocal,
 } from '@/lib/games/gamePayload';
-import { findPendingPlayers } from '@/lib/games/pendingPlayers';
 import { parseSideTournamentFromFormData } from '@/lib/games/sideTournamentPayload';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { isValidActiveGameMode } from '@/lib/formats/validateGameMode';
@@ -33,10 +30,29 @@ async function createGameInternal(
   formData: FormData,
   mode: 'draft' | 'publish',
 ) {
+  // #427: any logged-in user may create their own game (was admin/trusted-only).
+  // Gate first so we know `isAdmin` — it decides both where errors bounce back
+  // to (admins use /admin/games/new, everyone else /opprett-spill) and the
+  // success destination. created_by = the user; creator-owned RLS (migration
+  // 0071) covers the writes, so there's no service-role bypass anymore.
+  const supabase = await getServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+  const userId = user.id;
+  const { data: gateProfile } = await supabase
+    .from('users')
+    .select('is_admin')
+    .eq('id', userId)
+    .single();
+  const isAdmin = gateProfile?.is_admin === true;
+  const errorBase = isAdmin ? '/admin/games/new' : '/opprett-spill';
+
   const payload = buildGameInsertPayload(formData, mode);
 
   if (payload.errorCode) {
-    redirect(`/admin/games/new?error=${payload.errorCode}`);
+    redirect(`${errorBase}?error=${payload.errorCode}`);
   }
 
   // F2 (#272): valider game_mode-slug mot formats-tabellen. Erstatter den
@@ -46,7 +62,7 @@ async function createGameInternal(
   // opprette ugyldige games.
   const modeValid = await isValidActiveGameMode(payload.game_mode);
   if (!modeValid) {
-    redirect('/admin/games/new?error=invalid_game_mode');
+    redirect(`${errorBase}?error=invalid_game_mode`);
   }
 
   // Tee-off handling:
@@ -65,19 +81,19 @@ async function createGameInternal(
       // formats). Publish surfaces this as a validation error; draft
       // tolerates it as "no tee-off provided".
       if (mode === 'publish') {
-        redirect('/admin/games/new?error=tee_off_required');
+        redirect(`${errorBase}?error=tee_off_required`);
       }
       scheduledTeeOffAt = null;
     }
   } else if (mode === 'publish') {
-    redirect('/admin/games/new?error=tee_off_required');
+    redirect(`${errorBase}?error=tee_off_required`);
   }
 
   // Side-tournament config. Master toggle gates the LD/CTP counts; when off,
   // both counts persist as 0 (matches the DB CHECK in 0024_side_tournament).
   const sideResult = parseSideTournamentFromFormData(formData);
   if (!sideResult.ok) {
-    redirect(`/admin/games/new?error=${sideResult.errorCode}`);
+    redirect(`${errorBase}?error=${sideResult.errorCode}`);
   }
   const {
     enabled: sideEnabled,
@@ -86,33 +102,24 @@ async function createGameInternal(
     disabledCategories: sideDisabledCategories,
   } = sideResult.payload;
 
-  const supabase = await getServerClient();
-  // Allow trusted-non-admin creators alongside admins per #198 small-bet MVP.
-  // Returns userId, isAdmin, isTrusted — we use userId for created_by below.
-  const { userId, isAdmin } = await requireAdminOrTrustedCreator(supabase);
-
-  // games/game_players RLS only grants writes to is_admin(); a trusted-non-admin
-  // would otherwise fail the INSERT (#230 — silently broken since #198). Route
-  // the privileged path through the service-role client for them. Admins keep
-  // the request-scoped client, so their behaviour is unchanged. Single binding
-  // mirrors the courses-edit pattern from #223 Fase 4. The publish roster read
-  // uses it too, so the pending-players gate sees the full roster — RLS would
-  // otherwise hide not-yet-shared players and silently skip the gate.
-  const writeClient = isAdmin ? supabase : getAdminClient();
-
   if (mode === 'publish') {
-    const { data: rosterUsers, error: rosterErr } = await writeClient
-      .from('users')
-      .select('id, email, profile_completed_at')
-      .in('id', payload.players.map((p) => p.user_id));
+    // Block publishing a game whose roster still has not-yet-onboarded players
+    // (profile_completed_at IS NULL). Under request-scoped RLS a non-admin
+    // creator can't read OTHER users' rows, so a direct read would silently
+    // return nothing and skip the gate (#366 pending-read trap). The
+    // SECURITY DEFINER RPC (migration 0071) returns only the incomplete rows
+    // for the exact ids we pass, so the gate bites for admin and creator alike.
+    const { data: incomplete, error: rosterErr } = await supabase.rpc(
+      'incomplete_profiles_for_ids',
+      { p_user_ids: payload.players.map((p) => p.user_id) },
+    );
 
-    if (rosterErr || !rosterUsers) {
-      redirect('/admin/games/new?error=db_roster');
+    if (rosterErr) {
+      redirect(`${errorBase}?error=db_roster`);
     }
 
-    const pending = findPendingPlayers(rosterUsers);
-    if (pending.length > 0) {
-      redirect('/admin/games/new?error=pending_players');
+    if ((incomplete ?? []).length > 0) {
+      redirect(`${errorBase}?error=pending_players`);
     }
   }
 
@@ -137,7 +144,7 @@ async function createGameInternal(
       ? tournamentMatchLabelRaw.slice(0, 80)
       : null;
 
-  const { data: game, error: gameError } = await writeClient
+  const { data: game, error: gameError } = await supabase
     .from('games')
     .insert({
       name: payload.name,
@@ -173,7 +180,7 @@ async function createGameInternal(
     .single();
 
   if (gameError || !game) {
-    redirect('/admin/games/new?error=db_game');
+    redirect(`${errorBase}?error=db_game`);
   }
 
   const rows = payload.players.map((p) => {
@@ -189,8 +196,8 @@ async function createGameInternal(
       course_handicap: null,
     };
   });
-  const { error: gpError } = await writeClient.from('game_players').insert(rows);
-  if (gpError) redirect('/admin/games/new?error=db_players');
+  const { error: gpError } = await supabase.from('game_players').insert(rows);
+  if (gpError) redirect(`${errorBase}?error=db_players`);
 
   // Best-effort `invite`-varsler for hver tilkommet spiller (skip inviter
   // selv — de vet allerede de opprettet spillet). Promise.allSettled så én

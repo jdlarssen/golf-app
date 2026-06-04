@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { redirect } from 'next/navigation';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
@@ -14,23 +15,18 @@ import {
   ERROR_MESSAGES_NEW_GAME,
   buildErrorMessage as buildGameErrorMessage,
 } from '@/lib/admin/gameErrorMessages';
-import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
 import { getServerClient } from '@/lib/supabase/server';
-import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
 import {
   getFormatsForIntent,
   getCupEligibleFormats,
 } from '@/lib/formats/getFormatsForIntent';
 
-// Trusted-creator-rute under #198 small-bet MVP. Gjenbruker GameForm fra
-// admin-flyten, men kjører i AppShell (ikke AdminShell/Sekretariatet) slik
-// at ikke-admin-trusted-brukere ikke får admin-shell-utseendet.
-//
-// Suksess- og valideringsfeil bouncer fortsatt via /admin/games/* — som
-// admin-layouten redirecter trusted-brukere ut av til `/`. Akseptert ru
-// kant for MVP; polish hvis adopsjon > 30 % i 30-dagers observasjons-
-// vinduet.
+// Opprett-spill-ruten for ALLE innloggede brukere (#427 — tidligere bare
+// admin/trusted per #198). Gjenbruker GameWizard fra admin-flyten, men kjører
+// i AppShell (ikke AdminShell/Sekretariatet) så vanlige brukere aldri ser
+// admin-shellen. createGameInternal bouncer nå validerings-/publiseringsfeil
+// tilbake hit (ikke til /admin/games/new) for ikke-admins.
 
 type SearchParams = Promise<{
   error?: string | string[];
@@ -54,14 +50,15 @@ export default async function OpprettSpillPage({
 }: {
   searchParams: SearchParams;
 }) {
-  // Gate FØR vi rendrer noe — håndhever admin-eller-trusted og fanger
-  // ikke-trusted vanlige brukere før de ser form-en.
+  // Gate FØR vi rendrer noe — enhver innlogget bruker slipper inn (#427).
   const supabase = await getServerClient();
-  await requireAdminOrTrustedCreator(supabase);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
 
   const sp = await searchParams;
   const errorMessage = buildErrorMessage(first(sp.error), first(sp.emails));
-  const userId = await getProxyVerifiedUserId();
 
   return (
     <AppShell>

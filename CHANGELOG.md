@@ -17,6 +17,43 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.75.y — Lag og styr ditt eget spill
+
+Issue [#427](https://github.com/jdlarssen/golf-app/issues/427) (epic [#22](https://github.com/jdlarssen/golf-app/issues/22)). Til nå måtte en administrator opprette spill. Nå kan hvem som helst som er innlogget sette opp en runde, la den starte og avslutte den selv.
+
+### [1.75.0] - 2026-06-04
+
+> Nå kan du lage ditt eget spill rett fra forsiden, ikke bare administrator. Du setter opp runden. Den starter automatisk når tee-off er passert, uansett hvem av dere som åpner appen først. Og du avslutter den selv når alle har levert.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#427](https://github.com/jdlarssen/golf-app/issues/427) — #22 Fase 1 (RLS-fundament). Speiler #366-mønsteret: ekte eier-RLS (`created_by = auth.uid()`) i stedet for service-role-bypass, verifisert mot ekte `auth.uid()` i rollback-transaksjon.
+
+#### Added
+- [`supabase/migrations/0071_games_creator_rls.sql`](supabase/migrations/0071_games_creator_rls.sql) — permissive creator-policyer på `games` (INSERT/UPDATE/DELETE + egen-SELECT), `game_players` og `game_side_winners`, OR-et med eksisterende admin/self/is_in_game-policyer. Pluss `incomplete_profiles_for_ids(uuid[])` (SECURITY DEFINER, kun `authenticated`) som publish-gaten bruker for å se ufullstendige profiler under RLS.
+- [`app/games/[id]/avslutt/page.tsx`](app/games/[id]/avslutt/page.tsx) — ny avslutt-flate i `AppShell` for oppretter. Én side som dekker LD/CTP-sideturnering, «avslutt likevel» ved manglende levering, venter-på-godkjenning, og enkel bekreftelse — gjenbruker `SideWinnersForm` og de samme avslutt-actionene som admin.
+- [`lib/admin/auth.ts`](lib/admin/auth.ts) — `requireAdminOrCreator(supabase, gameId)`: slipper gjennom admin ELLER spillets oppretter.
+
+#### Changed
+- [`app/opprett-spill/page.tsx`](app/opprett-spill/page.tsx) + [`app/admin/games/new/actions.ts`](app/admin/games/new/actions.ts) — opprett+publiser åpnet fra admin/trusted til alle innloggede. Writes går på request-scoped klient (eier-RLS dekker), ikke `getAdminClient`. Validerings-/publiseringsfeil bouncer tilbake til `/opprett-spill` for ikke-admins.
+- [`app/page.tsx`](app/page.tsx) — «Opprett spill»-inngangen vises for alle innloggede (var admin + trusted-allowlist).
+- [`app/games/[id]/page.tsx`](app/games/[id]/page.tsx) — auto-start kjører nå på service-role-klienten, så runden starter uansett hvem som åpner siden etter tee-off (fikser også en stille svikt for admin-spill der bare admin sitt besøk flippet status). Ny «Avslutt spillet»-knapp synlig for oppretter ved aktivt spill.
+- [`app/admin/games/[id]/actions.ts`](app/admin/games/[id]/actions.ts) + [`avslutt/actions.ts`](app/admin/games/[id]/avslutt/actions.ts) + [`avslutt-likevel/actions.ts`](app/admin/games/[id]/avslutt-likevel/actions.ts) — `endGame`/`endGameWithSideWinners`/`endGameMarkingWithdrawals` gater nå på `requireAdminOrCreator` og forgrener redirect på `isAdmin` (admin → Sekretariatet, oppretter → game-home). Admin-flyten er byte-identisk.
+
+#### Decided
+- **Ekte eier-RLS, ikke service-role-bypass** — når create/finish åpnes for alle er en eier-policy riktigere enn å rute writes gjennom service-role (#230-lærdom).
+- **Auto-start som system-skriv** (eier-beslutning) — robust uansett hvem som åpner først; samme fix gjør admin-spill mer pålitelige.
+- **Full paritet i avslutt** (eier-beslutning) — oppretter får sideturnering + LD/CTP-vinnervalg + «avslutt likevel», samlet på én side.
+- **Ute av scope (senere faser):** rediger/slett eget spill, roster-styring, «Mine spill»-hub, cup-opprettelse (forblir admin).
+
+</details>
+
+---
+
+<details>
+<summary><strong>1.74.y — Baner alle kan legge til (1 oppføring) — klikk for å vise</strong></summary>
+
 ## 1.74.y — Baner alle kan legge til
 
 Issue [#366](https://github.com/jdlarssen/golf-app/issues/366). Til nå har bare administrator kunnet legge inn baner. Nå kan hvem som helst som er innlogget legge til en bane som mangler, så den er klar til neste runde.
@@ -45,6 +82,8 @@ Issue [#366](https://github.com/jdlarssen/golf-app/issues/366) — UX-flyt-audit
 - **Create-only** — vanlige brukere får ikke redigere/slette baner i denne omgangen; admin rydder. Ingen UPDATE/DELETE-RLS lagt til.
 - **Ekte RLS, ikke service-role-bypass** — når create åpnes for alle er en insert-own-policy riktigere enn å rute alle writes gjennom service-role. Selvstendig skive av RLS-jobben i #22.
 - **Frittstående dør → #392** — den permanente inngangen hører hjemme i Klubbhuset; hjem-inngangen her er midlertidig (notert på #392).
+
+</details>
 
 </details>
 

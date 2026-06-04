@@ -19,6 +19,7 @@ const baseGame: Omit<GameForHole, 'game_mode' | 'mode_config'> = {
   id: 'g1',
   name: 'Test',
   status: 'active',
+  created_by: 'creator-1',
   course_id: 'c1',
   tee_box_id: 't1',
   score_visibility: 'live',

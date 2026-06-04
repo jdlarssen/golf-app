@@ -4,6 +4,7 @@ import { notFound, redirect } from 'next/navigation';
 import { after } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
+import { getAdminClient } from '@/lib/supabase/admin';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { BackLink } from '@/components/ui/BackLink';
@@ -227,6 +228,12 @@ export default async function GameHomePage({
   const me = gwp.players.find((p) => p.user_id === userId);
   if (!me) notFound();
 
+  // #427: the game's creator gets an «Avslutt spill»-affordance on game-home
+  // (admins finish from Sekretariatet). Read from the immutable created_by on
+  // the cached game row so it survives the auto-start refetch below, which uses
+  // a slimmer GAME_SELECT without created_by.
+  const isCreator = gwp.game.created_by === userId;
+
   // Mark related inbox notifications as read on visit. Best-effort: helperen
   // svelger feil internt, så vi blokkerer aldri sida på dette. Vi markerer
   // både `invite`- og `scorecard_approved`-varsler for dette spillet siden
@@ -267,7 +274,15 @@ export default async function GameHomePage({
     game.scheduled_tee_off_at &&
     new Date(game.scheduled_tee_off_at).getTime() <= nowMs
   ) {
-    const result = await startScheduledGame(supabase, id);
+    // #427: run the start-transition on the service-role client. Any player
+    // (not just the admin/creator) can be the first to open the page after
+    // tee-off, and the transition writes ALL players' course_handicap + flips
+    // games.status — both gated to is_admin()/creator under RLS. On the
+    // request-scoped client a non-owner's writes silently no-op (0 rows), so
+    // the game would stay stuck in 'scheduled'. The transition is system-level,
+    // idempotent and optimistic-locked; authorization is already settled by the
+    // fact that this player could load the game at all.
+    const result = await startScheduledGame(getAdminClient(), id);
     if (!result.ok) {
       // Log to Vercel server logs so a "stuck in scheduled" report has a
       // trail. Don't crash — fall through to the existing scheduled fallback.
@@ -732,6 +747,27 @@ export default async function GameHomePage({
               <span aria-hidden className="text-muted">
                 →
               </span>
+            </Card>
+          </SmartLink>
+        )}
+
+        {/* #427: arrangør-kontroll — kun synlig for den som opprettet spillet.
+            Understated (under score-CTA + leaderboard), egen forklaring så det
+            er tydelig hvorfor nettopp du ser den. */}
+        {isActive && isCreator && (
+          <SmartLink href={`/games/${id}/avslutt`} className="block">
+            <Card className="min-h-[44px] transition-colors hover:border-primary/30">
+              <div className="flex items-center justify-between">
+                <span className="text-base font-medium text-text">
+                  Avslutt spillet
+                </span>
+                <span aria-hidden className="text-muted">
+                  →
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-muted">
+                Du arrangerer spillet. Lås det og åpne leaderboardet for alle.
+              </p>
             </Card>
           </SmartLink>
         )}

@@ -15,6 +15,9 @@ type Props = {
   players: PlayerOption[];
   action: (formData: FormData) => void | Promise<void>;
   error?: string;
+  /** Where «Avbryt» links back to. Defaults to the admin game-detail page;
+   *  the creator finish flow (#427) passes the player game-home instead. */
+  cancelHref?: string;
 };
 
 export function SideWinnersForm({
@@ -24,6 +27,7 @@ export function SideWinnersForm({
   players,
   action,
   error,
+  cancelHref,
 }: Props) {
   return (
     <form action={action} className="space-y-6">
@@ -100,7 +104,7 @@ export function SideWinnersForm({
           Avslutt spillet og publiser sideturneringen
         </Button>
         <Link
-          href={`/admin/games/${gameId}`}
+          href={cancelHref ?? `/admin/games/${gameId}`}
           className="self-center text-sm text-muted underline"
         >
           Avbryt
