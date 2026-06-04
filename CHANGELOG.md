@@ -21,7 +21,7 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#429](https://github.com/jdlarssen/golf-app/issues/429) (epic [#22](https://github.com/jdlarssen/golf-app/issues/22)), Fase 3 — siste del av epic-et. Lagde du spillet, bestemmer du nå hvem som er med, og kan holde runden i gang uten å vente på en administrator.
 
-### [1.77.1] - 2026-06-05
+### [1.77.1] - 2026-06-05 · #429
 
 > Klubbhuset er på plass: en samlet oversikt over spillene du arrangerer. Du finner den fra forsiden og under Profil, og kan trykke deg rett inn på et spill for å styre det.
 
@@ -37,7 +37,7 @@ Issue [#429](https://github.com/jdlarssen/golf-app/issues/429) — #22 Fase 3 (�
 
 </details>
 
-### [1.77.0] - 2026-06-05
+### [1.77.0] - 2026-06-05 · #429
 
 > Lagde du spillet, bestemmer du nå hvem som er med. Legg til spillere du kjenner eller inviter nye på e-post, og fjern folk før runden starter. Er runden i gang, kan du trekke en spiller eller godkjenne et scorekort på vegne av flighten om en medspiller ikke får gjort det selv.
 
@@ -59,14 +59,18 @@ Issue [#429](https://github.com/jdlarssen/golf-app/issues/429) — #22 Fase 3 (r
 
 ---
 
-<details>
-<summary><strong>1.76.y — Rediger og slett ditt eget spill (3 oppføringer) — klikk for å vise</strong></summary>
+## Tidligere versjoner
 
-## 1.76.y — Rediger og slett ditt eget spill
+
+<details>
+<summary><strong>Opprettelse & paamelding (#22, #366, #365) — 4 serier</strong></summary>
+
+<details>
+<summary><strong>1.76.y — Rediger og slett ditt eget spill (3 oppføringer)</strong></summary>
 
 Issue [#428](https://github.com/jdlarssen/golf-app/issues/428) (epic [#22](https://github.com/jdlarssen/golf-app/issues/22)), Fase 2. Du som lagde spillet kan nå styre det fullt ut selv: redigere det, og slette utkast eller planlagte runder du ikke trenger lenger.
 
-### [1.76.2] - 2026-06-04
+### [1.76.2] - 2026-06-04 · #428
 
 > Liten retting i den nye rediger-flyten: skulle lagringen feile, havner du nå tilbake på rediger-siden i stedet for på forsiden.
 
@@ -77,7 +81,7 @@ Issue [#428](https://github.com/jdlarssen/golf-app/issues/428) — Fase 2-oppfø
 
 </details>
 
-### [1.76.1] - 2026-06-04
+### [1.76.1] - 2026-06-04 · #428
 
 > Lagde du et spill du ikke trenger likevel? Nå kan du slette dine egne utkast og planlagte runder selv, med en bekreftelse først så ingenting forsvinner ved et uhell.
 
@@ -96,7 +100,7 @@ Issue [#428](https://github.com/jdlarssen/golf-app/issues/428) — #22 Fase 2 (s
 
 </details>
 
-### [1.76.0] - 2026-06-04
+### [1.76.0] - 2026-06-04 · #428
 
 > Du som lagde spillet kan nå redigere det selv. Bytt bane, tee-off, spillere eller innstillinger så lenge runden ikke har startet. Rediger-knappen ligger på spill-siden.
 
@@ -118,16 +122,12 @@ Issue [#428](https://github.com/jdlarssen/golf-app/issues/428) — #22 Fase 2 (r
 
 </details>
 
----
-
 <details>
-<summary><strong>1.75.y — Lag og styr ditt eget spill (1 oppføring) — klikk for å vise</strong></summary>
-
-## 1.75.y — Lag og styr ditt eget spill
+<summary><strong>1.75.y — Lag og styr ditt eget spill (1 oppføring)</strong></summary>
 
 Issue [#427](https://github.com/jdlarssen/golf-app/issues/427) (epic [#22](https://github.com/jdlarssen/golf-app/issues/22)). Til nå måtte en administrator opprette spill. Nå kan hvem som helst som er innlogget sette opp en runde, la den starte og avslutte den selv.
 
-### [1.75.0] - 2026-06-04
+### [1.75.0] - 2026-06-04 · #427
 
 > Nå kan du lage ditt eget spill rett fra forsiden, ikke bare administrator. Du setter opp runden. Den starter automatisk når tee-off er passert, uansett hvem av dere som åpner appen først. Og du avslutter den selv når alle har levert.
 
@@ -157,16 +157,12 @@ Issue [#427](https://github.com/jdlarssen/golf-app/issues/427) — #22 Fase 1 (R
 
 </details>
 
----
-
 <details>
-<summary><strong>1.74.y — Baner alle kan legge til (1 oppføring) — klikk for å vise</strong></summary>
-
-## 1.74.y — Baner alle kan legge til
+<summary><strong>1.74.y — Baner alle kan legge til (1 oppføring)</strong></summary>
 
 Issue [#366](https://github.com/jdlarssen/golf-app/issues/366). Til nå har bare administrator kunnet legge inn baner. Nå kan hvem som helst som er innlogget legge til en bane som mangler, så den er klar til neste runde.
 
-### [1.74.0] - 2026-06-04
+### [1.74.0] - 2026-06-04 · #366
 
 > Mangler hjemmebanen din i Tørny? Nå kan du legge den til selv. Fyll inn hull, par og tee-er, så havner banen i biblioteket og kan velges når noen setter opp en runde.
 
@@ -195,16 +191,12 @@ Issue [#366](https://github.com/jdlarssen/golf-app/issues/366) — UX-flyt-audit
 
 </details>
 
----
-
 <details>
-<summary><strong>1.73.y — Usynlig misbruks-vern før åpen påmelding (2 oppføringer) — klikk for å vise</strong></summary>
-
-## 1.73.y — Usynlig misbruks-vern før åpen påmelding
+<summary><strong>1.73.y — Usynlig misbruks-vern før åpen påmelding (2 oppføringer)</strong></summary>
 
 Issue [#365](https://github.com/jdlarssen/golf-app/issues/365) + [#422](https://github.com/jdlarssen/golf-app/issues/422). Før vi åpner for at hvem som helst kan lage konto, har vi lagt inn et usynlig vern: engangs-e-post (bruk-og-kast-adresser som mailinator og co.) avvises både på innlogging og når en bruker prøver å invitere noen. Vanlige e-postadresser merker ingenting.
 
-### [1.73.1] - 2026-06-04
+### [1.73.1] - 2026-06-04 · #422
 
 > Prøver du å invitere en venn eller medspiller med en engangs-e-post, får du nå beskjed om å bruke en vanlig adresse i stedet. Vanlige adresser fungerer som før.
 
@@ -223,7 +215,7 @@ Issue [#422](https://github.com/jdlarssen/golf-app/issues/422) — code-review-f
 
 </details>
 
-### [1.73.0] - 2026-06-04
+### [1.73.0] - 2026-06-04 · #365
 
 > Et usynlig vern før vi åpner påmelding for alle: engangs-e-post blir avvist på innlogging, så ingen kan masseopprette kontoer med bruk-og-kast-adresser. Bruker du en vanlig e-post, merker du ingenting.
 
@@ -247,14 +239,17 @@ Issue [#365](https://github.com/jdlarssen/golf-app/issues/365) — usynlig misbr
 
 </details>
 
----
+</details>
 
 <details>
-<summary><strong>1.72.y — Avslutnings-varsel for cup (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>Flyt-polish, varsler & end-game (#354-377) — 13 serier</strong></summary>
+
+<details>
+<summary><strong>1.72.y — Avslutnings-varsel for cup (1 oppføring)</strong></summary>
 
 Issue [#377](https://github.com/jdlarssen/golf-app/issues/377). Når en cup spilles ferdig, varsles deltakerne nå på samme måte som ellers i appen: in-app-varsel først, og e-post bare til dem som ikke er i appen. Før gikk det ut e-post til alle uansett.
 
-### [1.72.0] - 2026-06-03
+### [1.72.0] - 2026-06-03 · #377
 
 > Når en cup er ferdigspilt, dukker resultatet opp som varsel i appen. Er du borte fra appen, får du det på e-post i stedet.
 
@@ -274,14 +269,12 @@ Issue [#377](https://github.com/jdlarssen/golf-app/issues/377) — avslutnings-v
 
 </details>
 
----
-
 <details>
-<summary><strong>1.71.y — Leverings-påminnelse (2 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>1.71.y — Leverings-påminnelse (2 oppføringer)</strong></summary>
 
 Issue [#376](https://github.com/jdlarssen/golf-app/issues/376). Spillere som har gått ferdig runden, men ikke levert scorekortet, får nå en påminnelse om å levere. Den kommer automatisk in-app når de er ferdige, og som e-post hvis de har lagt fra seg mobilen. Arrangøren får i tillegg en spillerstatus-side for å se hvem som mangler og purre dem.
 
-### [1.71.1] - 2026-06-03
+### [1.71.1] - 2026-06-03 · #376
 
 > Som arrangør ser du nå en egen spillerstatus-side: hvor langt hver spiller har kommet, hvem som er ferdige uten å ha levert, og hvor lenge siden de sist tastet noe. Derfra purrer du de som mangler med ett trykk.
 
@@ -301,7 +294,7 @@ Issue [#376](https://github.com/jdlarssen/golf-app/issues/376), del 2 — admin-
 
 </details>
 
-### [1.71.0] - 2026-06-03
+### [1.71.0] - 2026-06-03 · #376
 
 > Har du tastet inn alle 18 hull, men glemt å levere scorekortet, minner appen deg på det. Er du borte fra appen, kommer påminnelsen på e-post i stedet.
 
@@ -322,14 +315,12 @@ Issue [#376](https://github.com/jdlarssen/golf-app/issues/376), del 1 — auto-n
 
 </details>
 
----
-
 <details>
-<summary><strong>1.70.y — Smidigere lag-påmelding (2 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>1.70.y — Smidigere lag-påmelding (2 oppføringer)</strong></summary>
 
 Issue [#362](https://github.com/jdlarssen/golf-app/issues/362). Lag-påmeldings-skjemaet er ryddet opp: feltene sjekkes mens du fyller dem ut, du kan søke opp folk du har spilt med før i stedet for å taste e-post på nytt, og «bli med på lag» sier hva som skjer videre.
 
-### [1.70.1] - 2026-06-03
+### [1.70.1] - 2026-06-03 · #362
 
 > Blir du invitert til et lag, sier appen nå hva som skjer når du takker ja: om du er med i spillet med en gang, eller om arrangøren må godkjenne laget først.
 
@@ -344,7 +335,7 @@ Issue [#362](https://github.com/jdlarssen/golf-app/issues/362), «bli med»-tyde
 
 </details>
 
-### [1.70.0] - 2026-06-03
+### [1.70.0] - 2026-06-03 · #362
 
 > Å melde på et lag er mindre styr nå. Feltene sier fra med en gang noe er feil, og når du skal legge til en medspiller du har spilt med før, søker du opp navnet i stedet for å taste e-posten på nytt.
 
@@ -366,14 +357,12 @@ Issue [#362](https://github.com/jdlarssen/golf-app/issues/362). UX-flyt-audit-fu
 
 </details>
 
----
-
 <details>
-<summary><strong>1.69.y — Profilen din, ryddigere og smartere (4 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>1.69.y — Profilen din, ryddigere og smartere (4 oppføringer)</strong></summary>
 
 Issue [#401](https://github.com/jdlarssen/golf-app/issues/401). Et større løft av profil-siden: profil-header øverst, kompakt handicap-felt med plusshandicap-støtte og ferskhets-dato, kjønn og spillerklasse som knapper, demotert e-post, og månedsbrev-valget flyttet til Innboks.
 
-### [1.69.3] - 2026-06-02
+### [1.69.3] - 2026-06-02 · #401
 
 > Av/på-bryteren for månedsbrev i Innboks ser ordentlig ut nå — knappen lå litt utenfor sporet før.
 
@@ -384,7 +373,7 @@ Issue [#401](https://github.com/jdlarssen/golf-app/issues/401)-oppfølging. [`Mo
 
 </details>
 
-### [1.69.2] - 2026-06-02
+### [1.69.2] - 2026-06-02 · #401
 
 > Vil du ha (eller slippe) månedsbrevet fra Tørny, styrer du det nå fra Innboks i stedet for inne på profilen.
 
@@ -403,7 +392,7 @@ Issue [#401](https://github.com/jdlarssen/golf-app/issues/401), del 3 (månedsbr
 
 </details>
 
-### [1.69.1] - 2026-06-02
+### [1.69.1] - 2026-06-02 · #401
 
 > Når du fullfører profilen din for første gang, kan du nå markere plusshandicap der også — ikke bare på profil-siden.
 
@@ -424,7 +413,7 @@ Issue [#401](https://github.com/jdlarssen/golf-app/issues/401), del 2 (onboardin
 
 </details>
 
-### [1.69.0] - 2026-06-02
+### [1.69.0] - 2026-06-02 · #401
 
 > Profil-siden din ser ut som en profil nå, med navn og handicap øverst. Handicap-feltet er mindre og viser når du sist oppdaterte det. Har du plusshandicap, markerer du det med ett trykk i stedet for å taste fortegn, og kjønn og spillerklasse velger du med knapper.
 
@@ -451,11 +440,11 @@ Issue [#401](https://github.com/jdlarssen/golf-app/issues/401), del 1 (profil-si
 </details>
 
 <details>
-<summary><strong>1.68.y — Be om plass til private spill (4 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>1.68.y — Be om plass til private spill (4 oppføringer)</strong></summary>
 
 Issue [#368](https://github.com/jdlarssen/golf-app/issues/368). Lander du på et privat (invitasjonsbasert) spill du ikke er invitert til, var skjermen før en blindvei. Nå kan du be arrangøren om plass derfra, og arrangøren ser forespørselen og slipper deg inn eller avslår.
 
-### [1.68.4] - 2026-06-02
+### [1.68.4] - 2026-06-02 · #393
 
 > Profil-skjemaet er kortere nå. Det du endrer ofte (navn, kallenavn og handicap) ligger åpent, mens kjønn, spillerklasse og månedsbrev er flyttet under «Flere innstillinger». «Invitér en venn» har fått e-post-felt og Send-knapp på samme rad i stedet for en skjerm-vid knapp.
 
@@ -475,7 +464,7 @@ Oppfølging av [#393](https://github.com/jdlarssen/golf-app/issues/393) ([#399](
 
 </details>
 
-### [1.68.2] - 2026-06-02
+### [1.68.2] - 2026-06-02 · #393
 
 > Profil-siden er kortere å scrolle på telefon. Rediger profil og «Invitér en venn» ligger øverst. Historikk, statistikk, app-installering, eksport og sletting er samlet i én kort liste lenger ned. «Logg ut» er nå en synlig knapp i stedet for en blek lenke.
 
@@ -500,7 +489,7 @@ Løser [#393](https://github.com/jdlarssen/golf-app/issues/393) — etterslep fr
 
 </details>
 
-### [1.68.1] - 2026-06-02
+### [1.68.1] - 2026-06-02 · #363
 
 > Har du en runde på gang, ligger den nå øverst på Hjem som «Pågår nå». Og når du sletter en bane, får du en egen bekreftelses-side først, så ingenting forsvinner ved et uhell.
 
@@ -521,7 +510,7 @@ Tre konsistens-fikser fra flyt-auditen ([#363](https://github.com/jdlarssen/golf
 
 </details>
 
-### [1.68.0] - 2026-06-02
+### [1.68.0] - 2026-06-02 · #368
 
 > Lander du på et privat spill du ikke er invitert til, står du ikke lenger fast. Du kan be arrangøren om plass med ett trykk, og de slipper deg inn eller avslår.
 
@@ -544,11 +533,11 @@ Løser [#368](https://github.com/jdlarssen/golf-app/issues/368). `/signup/[short
 </details>
 
 <details>
-<summary><strong>1.67.y — Finn turneringer (2 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>1.67.y — Finn turneringer (2 oppføringer)</strong></summary>
 
 Issue [#357](https://github.com/jdlarssen/golf-app/issues/357). «Finn turneringer» dukket bare opp på Hjem når du ikke hadde noen spill fra før — hadde du først ett, fantes det ingen vei til å oppdage nye. Nå er det en fast inngang fra Hjem, og turneringer med «be om å bli med»-påmelding vises også, ikke bare de helt åpne. I opprett-spill-wizarden ser arrangøren nå med en gang om påmeldingsvalget gjør turneringen oppdagbar eller privat, så lista faktisk fylles.
 
-### [1.67.1] - 2026-06-02
+### [1.67.1] - 2026-06-02 · #367
 
 > Når du setter opp et spill, ser du nå med en gang om påmeldingsvalget gjør turneringen synlig i Finn turneringer eller holder den privat. Hvert valg er merket «Oppdagbar» eller «Privat».
 
@@ -568,7 +557,7 @@ Løser [#367](https://github.com/jdlarssen/golf-app/issues/367). Påmeldings-ste
 
 </details>
 
-### [1.67.0] - 2026-06-02
+### [1.67.0] - 2026-06-02 · #357
 
 > Du finner og blir med i nye turneringer rett fra Hjem, også de som krever at arrangøren slipper deg inn. Før forsvant veien dit så snart du hadde ett spill gående.
 
@@ -594,11 +583,11 @@ Løser [#357](https://github.com/jdlarssen/golf-app/issues/357). Discovery («Fu
 </details>
 
 <details>
-<summary><strong>1.66.y — Vedvarende navigasjon (2 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>1.66.y — Vedvarende navigasjon (2 oppføringer)</strong></summary>
 
 Issue [#355](https://github.com/jdlarssen/golf-app/issues/355). Appen hadde ingen fast navigasjon. For å nå profil, innboks eller bytte spill måtte du alltid tilbake til Hjem først. Nå ligger en fast bunn-meny (Hjem / Innboks / Profil) nederst på alle spiller-sider.
 
-### [1.66.1] - 2026-06-01
+### [1.66.1] - 2026-06-01 · #346
 
 > Som arrangør når du «Sekretariatet» med ett trykk fra Hjem igjen. En tydelig knapp der du lander, ikke gjemt bort under Profil.
 
@@ -613,7 +602,7 @@ Fikser en regresjon fra 1.66.0: bunn-nav-en (som holder admin ute av menyen — 
 
 </details>
 
-### [1.66.0] - 2026-06-01
+### [1.66.0] - 2026-06-01 · #355
 
 > Før måtte du innom Hjem for å komme deg videre i appen. Nå ligger en fast meny nederst på alle sider med Hjem, Innboks og Profil, så du når alt med ett trykk. «Logg ut» finner du nå under Profil.
 
@@ -641,11 +630,11 @@ Fikser [#355](https://github.com/jdlarssen/golf-app/issues/355) — ingen vedvar
 </details>
 
 <details>
-<summary><strong>1.65.y — Trekk spiller: hold frafall ute av rangeringen (2 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>1.65.y — Trekk spiller: hold frafall ute av rangeringen (2 oppføringer)</strong></summary>
 
 Issue [#386](https://github.com/jdlarssen/golf-app/issues/386). Noen dro hjem etter ni hull, eller dukket aldri opp? Nå kan både spilleren selv og arrangøren markere et frafall. Den trukne tas helt ut av rangeringen (scorene teller ikke), står som «Trukket», og scorekortet låses. Forskjellen fra «ikke levert»: en som spilte men glemte å levere teller fortsatt; en som trakk seg gjør ikke.
 
-### [1.65.1] - 2026-06-01
+### [1.65.1] - 2026-06-01 · #360
 
 > Har du skrudd på at flighten må godkjenne scorekortene? Blir ett kort hengende fordi noen dro hjem uten å godkjenne, viser «Avslutt spillet»-kortet nå tydelig at du kan godkjenne på vegne av flighten. Ingen runde blir stående låst.
 
@@ -662,7 +651,7 @@ Fikser [#360](https://github.com/jdlarssen/golf-app/issues/360) — admin-overst
 
 </details>
 
-### [1.65.0] - 2026-06-01
+### [1.65.0] - 2026-06-01 · #386
 
 > Dro noen hjem før runden var ferdig? Du (eller spilleren selv) kan trekke dem fra spillet. De står som «Trukket» uten plassering, scorene deres teller ikke, og resten av leaderboardet er upåvirket. Angre når som helst mens spillet pågår.
 
@@ -693,11 +682,11 @@ Fikser [#386](https://github.com/jdlarssen/golf-app/issues/386) — ingen måte 
 </details>
 
 <details>
-<summary><strong>1.64.y — Avslutt selv om noen ikke har levert (2 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>1.64.y — Avslutt selv om noen ikke har levert (2 oppføringer)</strong></summary>
 
 Issue [#375](https://github.com/jdlarssen/golf-app/issues/375). En spiller som aldri leverte scorekort kunne før låse hele spillet — det fantes ingen vei rundt. Nå kan arrangøren avslutte likevel: de som mangler står som «ikke levert» (scorene deres teller fortsatt), og resultatet låses for resten.
 
-### [1.64.1] - 2026-06-01
+### [1.64.1] - 2026-06-01 · #375
 
 > En spiller som spilte men aldri trykket «lever», sto som «ikke fullført». Det var misvisende — de hadde jo spilt. Nå står de som «ikke levert», og scorene deres teller i resultatet akkurat som før.
 
@@ -716,7 +705,7 @@ Oppfølging av [#375](https://github.com/jdlarssen/golf-app/issues/375) etter br
 
 </details>
 
-### [1.64.0] - 2026-06-01
+### [1.64.0] - 2026-06-01 · #375
 
 > Mangler én spiller levering, kan du nå avslutte likevel. Du ser hvem som ikke leverte, bekrefter, og de blir stående som «ikke fullført» — så et spill aldri blir hengende åpent fordi noen dro hjem tidlig.
 
@@ -744,11 +733,11 @@ Fikser [#375](https://github.com/jdlarssen/golf-app/issues/375) — `not_all_sub
 </details>
 
 <details>
-<summary><strong>1.63.y — Kompis-wizard: velg antall spillere før format (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>1.63.y — Kompis-wizard: velg antall spillere før format (1 oppføring)</strong></summary>
 
 Issue [#373](https://github.com/jdlarssen/golf-app/issues/373). For Kompis-runder vises nå en enkel teller øverst i Format-steget. Velg antall spillere, og formater som ikke passer forsvinner — ingen feil format-valg, ingen tur frem og tilbake.
 
-### [1.63.0] - 2026-06-01
+### [1.63.0] - 2026-06-01 · #373
 
 > I Kompis-runden velger du antall spillere før format. Bare formater som passer det antallet vises — så slipper du å oppdage et mismatch to steg senere.
 
@@ -775,11 +764,11 @@ Fikser [#373](https://github.com/jdlarssen/golf-app/issues/373) — format valgt
 </details>
 
 <details>
-<summary><strong>1.62.y — Best ball for alle kompislaget (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>1.62.y — Best ball for alle kompislaget (1 oppføring)</strong></summary>
 
 Issue [#374](https://github.com/jdlarssen/golf-app/issues/374). Best ball støtter nå 2, 4, 6 eller 8 spillere — ikke bare 8. Trekk tilfeldig fungerer med alle partall-antall.
 
-### [1.62.0] - 2026-06-01
+### [1.62.0] - 2026-06-01 · #374
 
 > Du kan nå spille best ball med 4 eller 6 spillere, ikke bare 8. Velg et partall antall og fordel 2 per lag — resten fungerer som før.
 
@@ -803,11 +792,11 @@ Fikser [#374](https://github.com/jdlarssen/golf-app/issues/374) — best ball ha
 </details>
 
 <details>
-<summary><strong>1.61.y — Cup-veiviser: generer alle matcher på én gang (4 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>1.61.y — Cup-veiviser: generer alle matcher på én gang (4 oppføringer)</strong></summary>
 
 Issue [#219](https://github.com/jdlarssen/golf-app/issues/219), Ryder Cup fase 4. Administratorer kan nå lage et fullt cup-program fra ett skjema — velg lag, bane, formatmal og paring-strategi, forhåndsvis og juster, og opprett alle matchene i ett trykk.
 
-### [1.61.3] - 2026-06-01
+### [1.61.3] - 2026-06-01 · #361
 
 > Skriver du inn en e-post som ikke kan logge inn, får du nå en forklaring på hva som er galt og hva du skal gjøre. En utløpt invitasjon sier «Invitasjonen din er utløpt» i stedet for en kryptisk feil, og en død påmeldingslenke viser en egen side med vei videre i stedet for en blank 404.
 
@@ -825,7 +814,7 @@ Fikser [#361](https://github.com/jdlarssen/golf-app/issues/361) — kryptiske fe
 
 </details>
 
-### [1.61.2] - 2026-06-01
+### [1.61.2] - 2026-06-01 · #356
 
 > Blir du invitert til et spill og logger inn for første gang, havner du nå rett på spillet etter at du har fylt ut profilen. Du slipper å lete det fram fra forsiden selv.
 
@@ -843,7 +832,7 @@ Fikser [#356](https://github.com/jdlarssen/golf-app/issues/356) — spill-scopet
 
 </details>
 
-### [1.61.1] - 2026-06-01
+### [1.61.1] - 2026-06-01 · #372
 
 > Når du oppretter et spill og velger «Åpen påmelding», får du nå en forklaring på vanlig norsk i stedet for en teknisk innstilling med kodenavn.
 
@@ -857,7 +846,7 @@ Fikser [#372](https://github.com/jdlarssen/golf-app/issues/372) — hjelpetekste
 
 </details>
 
-### [1.61.0] - 2026-05-31
+### [1.61.0] - 2026-05-31 · #219
 
 > Du kan nå generere et helt cup-program på sekunder: velg hvem som er på hvert lag, hvilken bane, et formatoppsett (Klassisk cup, Four-ball + singler eller Bare singler) og om matchene skal pares tilfeldig eller handicap-balansert — forhåndsvis resultatet, juster om du vil, og opprett alt i ett trykk. Du slipper å bygge match for match gjennom den vanlige veiviseren.
 
@@ -879,11 +868,11 @@ Rene hjelpebiblioteker (`lib/cup/cupTemplates.ts`, `lib/cup/cupPairing.ts`) og `
 </details>
 
 <details>
-<summary><strong>1.60.y — Modus-skole: detaljsider + admin-redigerbar forklaring (5 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>1.60.y — Modus-skole: detaljsider + admin-redigerbar forklaring (5 oppføringer)</strong></summary>
 
 Issues [#307](https://github.com/jdlarssen/golf-app/issues/307) + [#308](https://github.com/jdlarssen/golf-app/issues/308), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Hver spillform får en egen detaljside med fyldigere forklaring + konkret eksempel, og alle modus-tekstene blir redigerbare fra Sekretariatet uten deploy.
 
-### [1.60.4] - 2026-05-31
+### [1.60.4] - 2026-05-31 · #344
 
 > Inviterer du en venn som allerede er invitert til Tørny, får du beskjed om det med en gang i stedet for at de får enda en invitasjon på e-post. Samme adresse får ikke lenger to invitasjoner selv om både du og en arrangør inviterer.
 
@@ -902,7 +891,7 @@ Siste barn i «Én vei til rom»-paraplyen ([#344](https://github.com/jdlarssen/
 
 </details>
 
-### [1.60.3] - 2026-05-31
+### [1.60.3] - 2026-05-31 · #344
 
 > «Opprett spill» ser nå lik ut overalt: på hjem og i spill-lista. Knappen blir værende på hjem selv når du allerede har spill, ikke bare når lista er tom. Før het samme handling tre forskjellige ting avhengig av hvor du sto.
 
@@ -925,7 +914,7 @@ Del av «Én vei til rom»-paraplyen ([#344](https://github.com/jdlarssen/golf-a
 
 </details>
 
-### [1.60.2] - 2026-05-31
+### [1.60.2] - 2026-05-31 · #344
 
 > Er du med i en cup, ser du nå «Se cup-stillingen» rett på match-siden din, så du slipper å lete etter lenken. Og som arrangør tar tilbake-knappen på en cup deg til cup-lista i stedet for helt ut til Sekretariatet.
 
@@ -942,7 +931,7 @@ Del av «Én vei til rom»-paraplyen ([#344](https://github.com/jdlarssen/golf-a
 
 </details>
 
-### [1.60.1] - 2026-05-31
+### [1.60.1] - 2026-05-31 · #344
 
 > Du setter nå opp en cup på samme sted som alt annet, i oppsett-veiviseren, i stedet for via en egen knapp på cup-lista. Står lista tom, får du en lenke rett dit. Én vei inn gjør det lettere å treffe riktig.
 
@@ -959,7 +948,7 @@ Del av «Én vei til rom»-paraplyen ([#344](https://github.com/jdlarssen/golf-a
 
 </details>
 
-### [1.60.0] - 2026-05-31
+### [1.60.0] - 2026-05-31 · #307
 
 > Hver spillform har nå sin egen side med en fyldigere forklaring og et konkret eksempel — trykk «Les mer» på et spillform-kort for å åpne den. Og som arrangør kan du endre selve forklaringene fra Sekretariatet selv, uten å vente på en oppdatering, hvis en formulering er uklar.
 
@@ -983,12 +972,17 @@ Flytter modus-forklaringene fra hardkodet `MODE_GUIDE` til DB-drevet, admin-redi
 
 </details>
 
+</details>
+
 <details>
-<summary><strong>1.59.y — Gruesome matchplay (motstander velger din tee shot) + familie-leaderboard (7 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>Format-katalogen: scramble & matchplay (#270) — 17 serier</strong></summary>
+
+<details>
+<summary><strong>1.59.y — Gruesome matchplay (motstander velger din tee shot) + familie-leaderboard (7 oppføringer)</strong></summary>
 
 Issue [#291](https://github.com/jdlarssen/golf-app/issues/291), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Gruesome er foursomes med en vri: begge slår ut, men motstanderlaget velger hvilken av ballene paret må spille videre med. Standalone-spillbar (intent «kompis») i tillegg til cup. Samme serie gir hele alternate-shot-familien (foursomes/greensome/chapman/gruesome) en ekte individuell-spill matchplay-leaderboard.
 
-### [1.59.6] - 2026-05-31
+### [1.59.6] - 2026-05-31 · #325
 
 > Wolf, Nassau, Skins, Modified Stableford og Acey Deucey har nå egne ikoner i oppsett-veiviseren, i stedet for det generiske flagget. Så hvert format-kort ser likt og gjennomført ut når du velger spillform.
 
@@ -1001,7 +995,7 @@ Merk: issue-en listet `foursomes_matchplay` som manglende, men den er allerede m
 
 </details>
 
-### [1.59.5] - 2026-05-31
+### [1.59.5] - 2026-05-31 · #309
 
 > Invitasjons-mailen til et spill forteller nå kort hvilken spillform det er — navnet pluss én linje om hvordan den funker — med en lenke til oversikten over alle spillformene. Så en invitert spiller vet hva som venter før hen åpner appen.
 
@@ -1019,7 +1013,7 @@ Fikser [#309](https://github.com/jdlarssen/golf-app/issues/309) (#299-tråden). 
 
 </details>
 
-### [1.59.4] - 2026-05-31
+### [1.59.4] - 2026-05-31 · #337
 
 > Nå kan du redigere et Round Robin-spill i utkast eller planlagt uten å miste scoring-innstillingen. Tidligere ble handicap-andelen satt tilbake til standard når du lagret på nytt.
 
@@ -1034,7 +1028,7 @@ Fikser [#337](https://github.com/jdlarssen/golf-app/issues/337) — samme bug-kl
 
 </details>
 
-### [1.59.3] - 2026-05-31
+### [1.59.3] - 2026-05-31 · #327
 
 > Florida Scramble dukker ikke lenger opp som valgbart format når du setter opp en cup. Det hører hjemme blant enkeltrunde-formatene, sammen med Texas Scramble og Ambrose, og oppfører seg nå likt som dem.
 
@@ -1048,7 +1042,7 @@ Fikser [#327](https://github.com/jdlarssen/golf-app/issues/327). `florida_scramb
 
 </details>
 
-### [1.59.2] - 2026-05-31
+### [1.59.2] - 2026-05-31 · #322
 
 > Nå kan du redigere Wolf-, Nassau-, Skins-, Nines- og Shamble-spill som er i utkast eller planlagt. Tidligere forsvant spilloppsettet (brutto/netto, variant osv.) når du lagret på nytt, og Shamble-spill ga feilmelding ved redigering.
 
@@ -1075,7 +1069,7 @@ Fikser [#322](https://github.com/jdlarssen/golf-app/issues/322). To gap:
 
 </details>
 
-### [1.59.1] - 2026-05-31
+### [1.59.1] - 2026-05-31 · #331
 
 > Greensome-matcher i en cup teller nå riktig. Tidligere ga de null poeng til vinneren uansett hvordan matchen endte. Nå får laget som vinner sin greensome-match poengene på cup-tabellen, på lik linje med foursomes, fourball og de andre matchformatene.
 
@@ -1095,7 +1089,7 @@ I stedet for en sjette copy-paste-gren ble per-match-scoringen ekstrahert til en
 
 </details>
 
-### [1.59.0] - 2026-05-31
+### [1.59.0] - 2026-05-31 · #291
 
 > Gruesome matchplay er klar. To mot to: begge slår ut, men nå velger motstanderlaget hvilken av ballene deres dere må spille videre med (som regel den verste). Resten av hullet slår dere vekselvis, som i foursomes. Du oppretter et gruesome-spill rett fra «kompis» i wizarden, eller legger det til som cup-match. På kjøpet viser leaderboardet nå ekte matchplay-resultat (3&2, 2 opp og lignende) for hele alternate-shot-familien, så foursomes, greensome og chapman får samme løft.
 
@@ -1132,14 +1126,12 @@ Serien lukker også et hull for hele alternate-shot-familien: foursomes/greensom
 
 </details>
 
----
-
 <details>
-<summary><strong>1.58.y — Chapman matchplay (2v2 dobbel tee + bytt + alternate, cup-klar) (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>1.58.y — Chapman matchplay (2v2 dobbel tee + bytt + alternate, cup-klar) (1 oppføring)</strong></summary>
 
 Issue [#290](https://github.com/jdlarssen/golf-app/issues/290), del av Ryder Cup-epic [#47](https://github.com/jdlarssen/golf-app/issues/47) og format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Cup-format der begge i paret slår ut, bytter ball og slår partnerens utslag, velger den beste ballen og spiller alternate derfra. Også kjent som Pinehurst — research bekreftet at det er samme spill, så vi seeder ett format «Chapman» (ikke to).
 
-### [1.58.0] - 2026-05-31
+### [1.58.0] - 2026-05-31 · #290
 
 > Chapman matchplay er klar for cupen, også kjent som Pinehurst. To mot to: begge slår ut, så slår dere partnerens ball som andreslag, velger den beste og spiller annenhver inn derfra. Lag-handicapet regnes etter Chapman-formelen (60 % av laveste pluss 40 % av høyeste handicap), og matchplay gir høyeste lag hele differansen som standard. Opprett en chapman-match fra cup-siden. På hvert hull minner appen dere på fasene, og scorekort, leaderboard og cup-poeng fungerer akkurat som for foursomes og greensome.
 
@@ -1175,14 +1167,12 @@ Gjenbruker foursomes-mønsteret fullt ut: `chapmanMatchplay.compute()` returnere
 
 </details>
 
----
-
 <details>
-<summary><strong>1.57.y — Greensome matchplay (2v2 velg-beste-tee + alternate) (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>1.57.y — Greensome matchplay (2v2 velg-beste-tee + alternate) (1 oppføring)</strong></summary>
 
 Issue [#289](https://github.com/jdlarssen/golf-app/issues/289), del av Ryder Cup-epic [#47](https://github.com/jdlarssen/golf-app/issues/47) og format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Cup-format der begge i paret slår ut, paret velger det beste utslaget, og spiller alternate derfra mot motstander-paret.
 
-### [1.57.0] - 2026-05-31
+### [1.57.0] - 2026-05-31 · #289
 
 > Greensome matchplay er klar for cupen. Begge i paret slår ut, dere velger det beste utslaget, og spiller annethvert slag derfra mot motstanderlaget. Lag-handicap regnes etter WHS-greensome-formelen (60/40-blanding av de to spillernes handicap), og matchplay-allowance er 100 % av differansen som standard. Opprett en greensome-match fra cup-siden — scorekort, leaderboard og cup-poengtelling fungerer som for foursomes og fourball.
 
@@ -1220,14 +1210,12 @@ Gjenbruker foursomes-mønsteret fullt ut: `greensomeMatchplay.compute()` returne
 
 </details>
 
----
-
 <details>
-<summary><strong>1.56.y — Patsome (tre lagformer i én runde) (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>1.56.y — Patsome (tre lagformer i én runde) (1 oppføring)</strong></summary>
 
 Issue [#286](https://github.com/jdlarssen/golf-app/issues/286), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Det første rotasjonsformatet: 18 hull delt i tre seks-hulls-deler med hver sin lagform (4BBB, greensome og foursomes), scoret i én felles stableford-pott.
 
-### [1.56.0] - 2026-05-31
+### [1.56.0] - 2026-05-31 · #286
 
 > Ny spillform for klubbturneringen: Patsome, for lag på to. Runden er delt i tre: de første seks hullene spiller dere 4BBB (begge spiller sin egen ball, beste resultat teller), de neste seks greensome (begge slår ut, dere velger det beste utslaget, så annenhvert slag), og de siste seks foursomes (én ball, annenhvert slag fra tee). Appen sier hvilken form dere er i på hvert hull, summerer stableford-poeng fra alle tre delene, og kårer laget med flest poeng. Velg netto eller brutto når dere setter opp spillet.
 
@@ -1260,14 +1248,13 @@ Selvstendig orchestrator i stedet for å bygge på separate greensome-/foursomes
 
 ---
 
-## 1.55.y — Shamble / Champagne Scramble (best N av M)
 
 <details>
-<summary><strong>1.55.y — Shamble / Champagne Scramble (best N av M) (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>1.55.y — Shamble / Champagne Scramble (best N av M) (1 oppføring)</strong></summary>
 
 Issue [#285](https://github.com/jdlarssen/golf-app/issues/285), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Det første ekte lag-formatet i familien: alle slår ut, laget velger det beste utslaget, og så spiller hver spiller sin egen ball inn. De laveste scorene per hull teller for laget.
 
-### [1.55.0] - 2026-05-31
+### [1.55.0] - 2026-05-31 · #285
 
 > Ny lagform for klubbturneringen: Shamble, med festvarianten Champagne Scramble. Alle slår ut, laget tar det beste utslaget, og så spiller hver spiller sin egen ball inn. De laveste scorene på hvert hull legges sammen for laget. I Shamble teller de to beste; i Champagne Scramble velger du selv om én, to eller tre skal telle. Lag på tre eller fire, netto eller brutto, lavest sammenlagt vinner.
 
@@ -1298,14 +1285,13 @@ Generalisering av best ball («best 1 av M») til «best N av M». Strokeplay-ut
 
 ---
 
-## 1.54.y — Florida Scramble (Texas-variant med step-aside)
 
 <details>
-<summary><strong>1.54.y — Florida Scramble (Texas-variant med step-aside) (2 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>1.54.y — Florida Scramble (Texas-variant med step-aside) (2 oppføringer)</strong></summary>
 
 Issue [#283](https://github.com/jdlarssen/golf-app/issues/283), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Texas scramble med én ekstra regel: den som slo det valgte slaget, står over neste slag. Lag à 3 eller 4. NGF-standard lag-handicap (15 % for tremannslag, 10 % for firmannslag).
 
-### [1.54.1] - 2026-05-30
+### [1.54.1] - 2026-05-30 · #217
 
 > Fourball matchplay har fått en ryddigere norsk beskrivelse i oppsettet, i samme stil som de andre spillformene. Selve formatet spilles akkurat som før.
 
@@ -1319,7 +1305,7 @@ Fourball matchplay (scoring, validator, leaderboard-view, scorekort) ble levert 
 
 </details>
 
-### [1.54.0] - 2026-05-30
+### [1.54.0] - 2026-05-30 · #283
 
 > Ny spillform: Florida Scramble. Laget spiller én ball som Texas — alle slår, dere velger beste slag, og alle slår videre derfra. Det lille ekstra: den som slo det valgte slaget, står over neste slag. Slik må hele laget bidra gjennom hullet. Appen minner laget om regelen på hvert hull. Sett opp lag på tre eller fire, og appen beregner lag-handicap etter NGF-standarden.
 
@@ -1346,14 +1332,12 @@ Florida Scramble gjenbruker Texas scramble-motoren fullstendig. `floridaScramble
 
 </details>
 
----
-
 <details>
-<summary><strong>1.53.y — Ambrose (net scramble med lag-handicap) (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>1.53.y — Ambrose (net scramble med lag-handicap) (1 oppføring)</strong></summary>
 
 Issue [#284](https://github.com/jdlarssen/golf-app/issues/284), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Enda en lagscramble, denne gangen den australske Ambrose-varianten — mekanisk lik Texas scramble, men med den klassiske Ambrose-regnemåten for lag-handicap. Primært for klubbturneringer.
 
-### [1.53.0] - 2026-05-30
+### [1.53.0] - 2026-05-30 · #284
 
 > Ny spillform for klubbturneringen: Ambrose. Hele laget spiller én ball: alle slår, dere plukker det beste slaget, og alle slår videre derfra til ballen er i hull. Laget får ett felles handicap som jevner ut forskjellene mellom sterke og svake lag, etter den klassiske Ambrose-regnemåten. Sett opp lag på 2 eller 4, så regner appen ut lag-handicapet og kårer laget med lavest lagtotal.
 
@@ -1382,14 +1366,13 @@ Ambrose er mekanisk identisk med Texas scramble (én ball per lag, kapteinen eie
 
 ---
 
-## 1.52.y — Acey Deucey (lavest tar, høyest gir)
 
 <details>
-<summary><strong>1.52.y — Acey Deucey (lavest tar, høyest gir) (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>1.52.y — Acey Deucey (lavest tar, høyest gir) (1 oppføring)</strong></summary>
 
 Issue [#279](https://github.com/jdlarssen/golf-app/issues/279), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). En klassisk kompisrunde for nøyaktig fire spillere: hvert hull deler ut poeng etter hvem som spilte best og dårligst. Poengene regnes rett fra slagene, så det er ingen ekstra registrering.
 
-### [1.52.0] - 2026-05-30
+### [1.52.0] - 2026-05-30 · #279
 
 > Du kan nå spille Acey Deucey: på hvert hull tar den med lavest score tre poeng, og den med høyest score gir tre fra seg. De to i midten står i ro. Deler flere den laveste eller høyeste scoren, gir den siden ingen poeng det hullet. Du velger brutto eller netto med handikap når du setter opp spillet, og totalen kan godt havne under null. Krever fire spillere.
 
@@ -1418,14 +1401,13 @@ Rent slag-derivert format. I motsetning til Bingo Bango Bongo trengs ingen ny ta
 
 ---
 
-## 1.51.y — Round Robin (roterende partnere)
 
 <details>
-<summary><strong>1.51.y — Round Robin (roterende partnere) (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>1.51.y — Round Robin (roterende partnere) (1 oppføring)</strong></summary>
 
 Issue [#280](https://github.com/jdlarssen/golf-app/issues/280), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Firespillers-format der partner-konstellasjonen bytter hvert sjette hull — alle spiller med og mot hverandre. Valgbart under Kompis i opprett-spill-wizarden.
 
-### [1.51.0] - 2026-05-30
+### [1.51.0] - 2026-05-30 · #280
 
 > Du kan nå opprette et Round Robin-spill for fire kompiser. Partnerne bytter hvert sjette hull: hull 1–6 spiller du med én, hull 7–12 med en annen og hull 13–18 med den siste. Slik har alle spilt med og mot hverandre når runden er ferdig. Appen regner best netto per side hvert hull, og den med flest hullseire totalt vinner. Du finner spillformen under Kompis i opprett-spill-wizarden.
 
@@ -1453,14 +1435,13 @@ Round Robin gjenbruker fourball matchplay-motorens per-hull-beregning (`applyAll
 
 ---
 
-## 1.50.y — Nines / Split Sixes (poeng per hull for tre)
 
 <details>
-<summary><strong>1.50.y — Nines / Split Sixes (poeng per hull for tre) (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>1.50.y — Nines / Split Sixes (poeng per hull for tre) (1 oppføring)</strong></summary>
 
 Issue [#278](https://github.com/jdlarssen/golf-app/issues/278), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Enda et kompis-format der poengene kommer fra hvor godt du spiller hvert hull, ikke fra sluttsummen. For nøyaktig tre spillere, med to varianter: Nines og Split Sixes.
 
-### [1.50.0] - 2026-05-30
+### [1.50.0] - 2026-05-30 · #278
 
 > Ny spillform for kompisrunden: Nines / Split Sixes, for nøyaktig tre spillere. Hvert hull deler ut en pott etter hvem som spilte det best. I Nines er det ni poeng å fordele (fem til lavest, tre til nest, ett til høyest), i Split Sixes seks (fire, to, null). Spiller dere likt på et hull, deler dere poengene likt. Du taster slag som vanlig, velger netto eller brutto, og appen kårer den med flest poeng sammenlagt.
 
@@ -1489,14 +1470,13 @@ Bygget på Skins-mønstret: poengene utledes fra det vanlige strokeplay-scorekor
 
 ---
 
-## 1.49.y — Bingo Bango Bongo (tre poeng per hull)
 
 <details>
-<summary><strong>1.49.y — Bingo Bango Bongo (tre poeng per hull) (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>1.49.y — Bingo Bango Bongo (tre poeng per hull) (1 oppføring)</strong></summary>
 
 Issue [#277](https://github.com/jdlarssen/golf-app/issues/277), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Den første spillformen der poengene ikke kommer fra slag, men fra tre prestasjoner per hull. Sosial kompisrunde for 2–4 spillere.
 
-### [1.49.0] - 2026-05-29
+### [1.49.0] - 2026-05-29 · #277
 
 > Ny spillform for kompisrunden: Bingo Bango Bongo, for 2 til 4 spillere. Hvert hull gir tre poeng å kjempe om: bingo til den som først er på green, bango til den som ligger nærmest når alle er på green, og bongo til den som først er i hull. Du taster slag som før og krysser av de tre vinnerne per hull. Hvem som helst i flighten kan registrere, og leaderboardet kårer den med flest poeng sammenlagt.
 
@@ -1526,14 +1506,13 @@ Bygget på Wolf-mønstret for kategorisk per-hull-input: poengene er rene presta
 
 ---
 
-## 1.48.y — 4BBB Stableford (lag-variant synliggjort)
 
 <details>
-<summary><strong>1.48.y — 4BBB Stableford (lag-variant synliggjort) (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>1.48.y — 4BBB Stableford (lag-variant synliggjort) (1 oppføring)</strong></summary>
 
 Issue [#282](https://github.com/jdlarssen/golf-app/issues/282), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Stableford for lag à 2 fantes allerede, men gjemte seg bak et kryptisk «Par»-valg. Nå heter varianten 4BBB og får en egen forklaring, uten ny scoring under panseret.
 
-### [1.48.0] - 2026-05-29
+### [1.48.0] - 2026-05-29 · #282
 
 > Stableford for lag à 2 har fått et tydelig navn: 4BBB. Velg Stableford først, så Solo eller 4BBB. På et 4BBB-lag spiller dere hver deres ball, og den beste poengsummen av dere to teller på hvert hull. Appen forklarer regelen rett i spillform-kortet, så ingen lurer på hva «Par» betød.
 
@@ -1564,14 +1543,13 @@ Ingen ny scoring, game_mode eller migrasjon: lag-Stableford (team_size 2) regnet
 
 ---
 
-## 1.47.y — Modifisert Stableford (pro-skala med minuspoeng)
 
 <details>
-<summary><strong>1.47.y — Modifisert Stableford (pro-skala med minuspoeng) (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>1.47.y — Modifisert Stableford (pro-skala med minuspoeng) (1 oppføring)</strong></summary>
 
 Issue [#281](https://github.com/jdlarssen/golf-app/issues/281), del av format-epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Modifisert Stableford er Stableford med proff-skala: birdie og eagle belønnes ekstra, mens dobbeltbogey eller verre gir minuspoeng. Premierer å satse foran å ligge trygt på par.
 
-### [1.47.0] - 2026-05-29
+### [1.47.0] - 2026-05-29 · #281
 
 > Ny spillform: Modifisert Stableford. Samme Stableford-poeng du kjenner, men med proff-skala: birdie og eagle gir mye, og dobbeltbogey eller verre trekker fra. Poengene kan gå i minus, så her lønner det seg å satse. Solo eller par, og du velger handicap som vanlig når du oppretter spillet.
 
@@ -1599,14 +1577,13 @@ Issue [#281](https://github.com/jdlarssen/golf-app/issues/281), del av format-ep
 
 ---
 
-## 1.46.y — Spillformer forklart for spillere
 
 <details>
-<summary><strong>1.46.y — Spillformer forklart for spillere (2 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>1.46.y — Spillformer forklart for spillere (2 oppføringer)</strong></summary>
 
 Issue [#299](https://github.com/jdlarssen/golf-app/issues/299). Spillere som blir invitert til en ukjent spillform får nå en kort forklaring rett på spill-siden, og kan bla gjennom alle formene i et eget oppslagsverk. Lavere terskel for å bli med på noe nytt.
 
-### [1.46.1] - 2026-05-29
+### [1.46.1] - 2026-05-29 · #303
 
 > Avslutter du et Skins-spill rett etter et delt hull, viser resultatlista nå at de skinsene ikke ble vunnet. Før forsvant de fra oversikten.
 
@@ -1623,7 +1600,7 @@ Issue [#299](https://github.com/jdlarssen/golf-app/issues/299). Spillere som bli
 
 </details>
 
-### [1.46.0] - 2026-05-29
+### [1.46.0] - 2026-05-29 · #299
 
 > Får du en invitasjon til en spillform du ikke kjenner? Nå ligger det en kort forklaring rett på spill-siden. Trykk «Slik funker det», så er du i gang. Vil du lese deg opp på forhånd, finner du alle formene samlet under «Spillformer» på hjem-siden.
 
@@ -1648,14 +1625,13 @@ Issue [#299](https://github.com/jdlarssen/golf-app/issues/299). Spillere som bli
 
 ---
 
-## 1.45.y — Skins (tredje kompis-format i epic)
 
 <details>
-<summary><strong>1.45.y — Skins (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>1.45.y — Skins (1 oppføring)</strong></summary>
 
 Issue [#275](https://github.com/jdlarssen/golf-app/issues/275), tredje kompis-format i [#270](https://github.com/jdlarssen/golf-app/issues/270). Skins er hull-for-hull-klassikeren: lavest score vinner skinnet, og deler dere hullet, ruller potten videre til neste hull.
 
-### [1.45.0] - 2026-05-29
+### [1.45.0] - 2026-05-29 · #275
 
 > Ny spillform: Skins. Hvert hull er verdt 1 skin, og lavest score tar det. Deler dere hullet, ruller skinnet videre til neste hull, som da er verdt mer. 2–4 spillere, og du velger netto eller brutto når du oppretter spillet. Resultatlista viser hvem som tok hvor mange skins, så dere kan gjøre opp en pott dere avtaler selv.
 
@@ -1693,14 +1669,13 @@ Tredje av 7 kompis-batch-formats. Resten: BBB, Nines, Acey Deucey, Round Robin.
 
 ---
 
-## 1.44.y — Nassau (andre kompis-format i epic)
 
 <details>
-<summary><strong>1.44.y — Nassau (3 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>1.44.y — Nassau (3 oppføringer)</strong></summary>
 
 Issue [#276](https://github.com/jdlarssen/golf-app/issues/276), andre kompis-format i [#270](https://github.com/jdlarssen/golf-app/issues/270). Nassau er klassikeren: front 9, back 9 og hele runden er tre separate konkurranser i samme runde. Vinn én seksjon og du har én seier; vinn alle tre og du tok «Hele tavla».
 
-### [1.44.2] - 2026-05-29
+### [1.44.2] - 2026-05-29 · #198
 
 > Spillere som har fått lov til å opprette turneringer uten å være administrator, kan endelig gjøre det. Før stoppet en tilgangssperre dem med «Klarte ikke å lagre spillet», selv om de hadde fått tilgang.
 
@@ -1717,7 +1692,7 @@ Verifisert via Supabase MCP (read-only): `fornes.even@yahoo.no` er `is_admin=fal
 
 </details>
 
-### [1.44.1] - 2026-05-29
+### [1.44.1] - 2026-05-29 · #240
 
 > Spiller du fra en tee der dame- eller junior-par er annerledes enn herre-par, viser nå leverings-siden, godkjenning og leaderboardens hull-fane din egen par. Et 5-slag på et hull som er par 5 for deg teller som par, ikke bogey.
 
@@ -1735,7 +1710,7 @@ Ingen nye tester: pure-logic-helperne er dekket i `parDisplay`/`parResolver` (#2
 
 </details>
 
-### [1.44.0] - 2026-05-28
+### [1.44.0] - 2026-05-28 · #276
 
 > Ny spillform: Nassau. Front 9, back 9 og hele runden er tre separate konkurranser — vinn alle tre og det heter «Hele tavla». 2–4 spillere, velg netto eller brutto når du oppretter spillet.
 
@@ -1771,14 +1746,13 @@ Andre av 7 kompis-batch-formats. Resten: Skins, BBB, Nines, Acey Deucey, Round R
 
 ---
 
-## 1.43.y — Wolf-format (første kompis-format i epic)
 
 <details>
-<summary><strong>1.43.y — Wolf-format (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>1.43.y — Wolf-format (1 oppføring)</strong></summary>
 
 Issue [#274](https://github.com/jdlarssen/golf-app/issues/274), første kompis-format i [#270](https://github.com/jdlarssen/golf-app/issues/270). Wolf er en sosial 4-spillers spillform der én av dere er Wolf på hvert hull — vedkommende velger partner (2v2), går Lone Wolf (1v3, dobler innsatsen), eller deklarer Blind Wolf før noen slår (tredobler). Like hull bærer potten videre.
 
-### [1.43.0] - 2026-05-28
+### [1.43.0] - 2026-05-28 · #270
 
 > Ny spillform: Wolf. Fire spillere, og én av dere er Wolf på hvert hull — velg partner, gå alene som Lone Wolf (dobler), eller bli Blind Wolf før noen slår (tredobler). Like hull bærer potten videre til neste. Velg netto eller brutto når du oppretter spillet.
 
@@ -1816,14 +1790,18 @@ Foundation for epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Wo
 
 ---
 
-## 1.42.y — Foursomes matchplay (Ryder Cup fase 3)
+
+</details>
 
 <details>
-<summary><strong>1.42.y — Foursomes matchplay (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>Ryder Cup & format-fundament (#47, #270) — 5 serier</strong></summary>
+
+<details>
+<summary><strong>1.42.y — Foursomes matchplay (1 oppføring)</strong></summary>
 
 Issue [#218](https://github.com/jdlarssen/golf-app/issues/218), fase 3 av [#47](https://github.com/jdlarssen/golf-app/issues/47). Foursomes matchplay (2v2 alternate-shot — én ball per lag, partnerne alternerer slag) er klar for cupen. Lagene møtes hull-for-hull som matchplay, og scorekortet viser dere mot dem hele veien. Tee-rotasjonen avtales av flighten på hull 1.
 
-### [1.42.0] - 2026-05-27
+### [1.42.0] - 2026-05-27 · #289
 
 > Foursomes matchplay er klar for cupen. To og to spillere deler én ball og alternerer slag — laget med best score per hull vinner hullet. Før hull 1 velger flighten hvem på hver side som skal teer ut først, så ruller appen med riktig «X slår ut»-hint per hull. WHS-handicapen er forhåndsvalgt til 50 % av differansen mellom lagene; admin kan justere per cup.
 
@@ -1862,14 +1840,13 @@ Dette er første format i alternate-shot-familien som lander i prod; mønstret (
 
 ---
 
-## 1.41.y — Admin format-mapping (Fase 3 av format-katalog-epic)
 
 <details>
-<summary><strong>1.41.y — Admin format-mapping (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>1.41.y — Admin format-mapping (1 oppføring)</strong></summary>
 
 Issue [#273](https://github.com/jdlarssen/golf-app/issues/273), fase 3 av [#270](https://github.com/jdlarssen/golf-app/issues/270). Ny admin-side `/admin/formats` med matrix-view for å styre hvilke spillformer som dukker opp i wizardens step 2 — uten å trenge en kode-deploy. Hver endring logges til `admin_audit_log` og synes i bunnen av siden.
 
-### [1.41.0] - 2026-05-27
+### [1.41.0] - 2026-05-27 · #270
 
 > Ny side i Sekretariatet: «Formats». Som admin kan du nå styre hvilke spillformer som dukker opp i wizardens step 2 per arrangement, hvilke som er primary (stort kort) og hvilke som er cup-eligible. Endringene blir synlige neste gang noen åpner wizarden, og du ser de siste 50 endringene loggført nederst på siden.
 
@@ -1901,14 +1878,13 @@ Foundation for epic [#270](https://github.com/jdlarssen/golf-app/issues/270) —
 
 ---
 
-## 1.40.y — Intent-først wizard (Fase 2 av format-katalog-epic)
 
 <details>
-<summary><strong>1.40.y — Intent-først wizard (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>1.40.y — Intent-først wizard (1 oppføring)</strong></summary>
 
 Issue [#272](https://github.com/jdlarssen/golf-app/issues/272), fase 2 av [#270](https://github.com/jdlarssen/golf-app/issues/270). «Sett opp ny runde» starter nå med et arrangement-valg (Kompis / Klubb / Cup / Solo) som filtrerer spillformene i neste steg. Cup-flyten er smeltet inn som ett av de fire valgene — den separate «Opprett ny Cup»-knappen er borte, alt skjer fra samme inngang.
 
-### [1.40.0] - 2026-05-27
+### [1.40.0] - 2026-05-27 · #272
 
 > Når du oppretter en ny runde, velger du først hva slags arrangement: Kompis-runde, Klubb-turnering, Cup eller Solo. Steg 2 viser bare formats som passer til det du har valgt, så listen er kortere og mer relevant. Cup-oppsettet ligger nå i samme flyt — du trenger ikke å lete etter en egen «Opprett ny Cup»-knapp lenger.
 
@@ -1936,14 +1912,13 @@ Issue [#272](https://github.com/jdlarssen/golf-app/issues/272), fase 2 av [#270]
 
 ---
 
-## 1.39.y — Netto/brutto-bryter på tvers av alle spillmodi
 
 <details>
-<summary><strong>1.39.y — Netto/brutto-bryter på tvers av alle spillmodi (2 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>1.39.y — Netto/brutto-bryter på tvers av alle spillmodi (2 oppføringer)</strong></summary>
 
 Issue [#266](https://github.com/jdlarssen/golf-app/issues/266), oppfølger til [#217](https://github.com/jdlarssen/golf-app/issues/217). Bryteren som fourball-flyten fikk i forrige runde rulles ut til alle spillmodi: stableford, slagspill, singles matchplay, best ball og Texas scramble har nå samme valg mellom netto (med prosent-andel av handicap) og brutto (uten handicap). Mode-navnene er ryddet opp samtidig — `best_ball_netto` og `solo_strokeplay_netto` mister `_netto`-suffixet siden de nå kan spilles begge veier.
 
-### [1.39.1] - 2026-05-27
+### [1.39.1] - 2026-05-27 · #270
 
 > Klargjort under panseret for en mye større format-katalog. Du ser ingenting nytt i appen ennå — alt blir aktivert etter hvert som de nye spilltypene lander.
 
@@ -1962,7 +1937,7 @@ Foundation for epic [#270](https://github.com/jdlarssen/golf-app/issues/270) (in
 
 </details>
 
-### [1.39.0] - 2026-05-27
+### [1.39.0] - 2026-05-27 · #266
 
 > Du kan nå spille brutto (uten handicap) i alle spillmodi — ikke bare fourball. Nytt valg øverst i «Format»-seksjonen lar deg bytte mellom netto (med en andel av handicap) og brutto (ingen handicap). Stableford, slagspill, singles matchplay, best ball og Texas scramble har nå samme bryter som fourball fikk i forrige runde.
 
@@ -1989,14 +1964,13 @@ Foundation for epic [#270](https://github.com/jdlarssen/golf-app/issues/270) (in
 
 ---
 
-## 1.38.y — Four-ball matchplay (Ryder Cup fase 2)
 
 <details>
-<summary><strong>1.38.y — Four-ball matchplay (Ryder Cup fase 2) (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>1.38.y — Four-ball matchplay (Ryder Cup fase 2) (1 oppføring)</strong></summary>
 
 Issue [#217](https://github.com/jdlarssen/golf-app/issues/217), fase 2 av [#47](https://github.com/jdlarssen/golf-app/issues/47). Cup-grunnmuren fra fase 1 utvides med four-ball matchplay: 2 mot 2 med best-ball-aggregering per hull, matchplay-overlay som regner ut «X up», «AS» og «3&2» på samme måte som singles-matchplay. Hver cup setter sin egen handicap-andel: netto med valgfri prosent, eller helt brutto.
 
-### [1.38.0] - 2026-05-26
+### [1.38.0] - 2026-05-26 · #266
 
 > Du kan nå sette opp fourball-matches (2 mot 2) i Ryder Cup-turneringene dine. Hvert lag har to spillere, hver med sin egen ball. Laget vinner hullet med den laveste netto-scoren av de to, og lagene møtes hull-for-hull som matchplay. Du velger handicap-andelen per cup: 85 % for en vanlig runde med kompisene, eller 0 % for ekte Ryder Cup-stemning helt uten handicap.
 
@@ -2022,14 +1996,18 @@ Issue [#217](https://github.com/jdlarssen/golf-app/issues/217), fase 2 av [#47](
 
 ---
 
-## 1.37.y — Funn-seksjon på hjem-siden
+
+</details>
 
 <details>
-<summary><strong>1.37.y — Funn-seksjon på hjem-siden (2 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>Baner, selvreg & sideturnering (#223 m.fl.) — 13 serier</strong></summary>
+
+<details>
+<summary><strong>1.37.y — Funn-seksjon på hjem-siden (2 oppføringer)</strong></summary>
 
 Issue [#257](https://github.com/jdlarssen/golf-app/issues/257). Liten oppfølger til selv-påmeldings-flyten: når du logger inn ser du nå åpne turneringer du kan melde deg på rett på hjem-siden, og forespørslene dine som venter på godkjenning.
 
-### [1.37.1] - 2026-05-26
+### [1.37.1] - 2026-05-26 · #257
 
 > Velkomst-teksten på hjem-siden bytter nå når det faktisk finnes en åpen turnering du kan melde deg på. Før kunne du se «Be en arrangør om å invitere deg» rett over en seksjon med turneringer å melde seg på — litt rart. Nå sier den «Velg en turnering under» i stedet.
 
@@ -2037,7 +2015,7 @@ Issue [#257](https://github.com/jdlarssen/golf-app/issues/257). Liten oppfølger
 - [app/page.tsx](app/page.tsx) — `getDiscoverableGames`-fetchen flyttet opp før empty-state-grenen så `hasDiscoveryContent`-flagget kan styre velkomst-tekstvalget. Tre-grens-conditional: `canCreateGame` → opprett-CTA, `hasDiscoveryContent` → «Velg en turnering under», ellers «Be en arrangør om å invitere deg».
 - [app/HomeDiscoverySection.tsx](app/HomeDiscoverySection.tsx) tar nå `data`-prop i stedet for å gjøre egen fetch. Caller (`page.tsx`) henter data én gang og gjenbruker det for både tekstvalg og rendring.
 
-### [1.37.0] - 2026-05-26
+### [1.37.0] - 2026-05-26 · #257
 
 > Når du logger inn på Tørny ser du nå alle åpne turneringer du kan melde deg på, rett på hjem-siden. Hvis du har sendt en forespørsel som venter på godkjenning, dukker den også opp her, så du slipper å lete etter den i innboksen.
 
@@ -2053,14 +2031,13 @@ Issue [#257](https://github.com/jdlarssen/golf-app/issues/257). Liten oppfølger
 
 ---
 
-## 1.36.y — Selv-påmelding til turnering
 
 <details>
-<summary><strong>1.36.y — Selv-påmelding til turnering (2 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>1.36.y — Selv-påmelding til turnering (2 oppføringer)</strong></summary>
 
 Issue [#199](https://github.com/jdlarssen/golf-app/issues/199). Du kan nå sette opp et spill og dele en lenke i stedet for å invitere hver spiller manuelt. For Scramble og andre lagspill kan spillerne samle sitt eget lag, og kapteinen melder på medspillerne med navn eller e-post. Du velger selv om hvem som helst med lenken kan melde seg på, om du vil godkjenne hver påmelding, eller om du fortsatt vil styre invitasjonene som du gjør i dag.
 
-### [1.36.1] - 2026-05-26
+### [1.36.1] - 2026-05-26 · #199
 
 > Påmeldings-lenken bruker nå ren engelsk i URL-en (`/signup/...`) i stedet for `/påmelding/...`, slik at å-tegnet ikke lager trøbbel når lenken deles via SMS eller e-post.
 
@@ -2072,7 +2049,7 @@ Issue [#199](https://github.com/jdlarssen/golf-app/issues/199). Du kan nå sette
 
 </details>
 
-### [1.36.0] - 2026-05-26
+### [1.36.0] - 2026-05-26 · #166
 
 > Sett opp spillet, kopier lenken, og slipp den i Slack-gruppa, lagpraten eller hvor folk enn er, så melder de seg på selv. Da slipper du å sende invitasjoner én etter én. Vil du ha mer kontroll? Sett påmeldingen til «forespørsel — jeg godkjenner», og du får varsel hver gang noen ber om plass. Kapteinen kan samle sitt eget Scramble-lag: kjente Tørny-brukere får varsel i innboksen, ukjente e-poster får en invitasjon. Spillerne kan også trekke seg selv hvis det skjer noe — du slipper å rydde plassen for dem som faller fra.
 
@@ -2104,14 +2081,13 @@ Issue [#199](https://github.com/jdlarssen/golf-app/issues/199). Du kan nå sette
 
 ---
 
-## 1.35.y — Trygghetsnett for tee-lengde
 
 <details>
-<summary><strong>1.35.y — Trygghetsnett for tee-lengde (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>1.35.y — Trygghetsnett for tee-lengde (1 oppføring)</strong></summary>
 
 Et mykt varsel under banelengde-feltet i bane-admin når tallet ligger utenfor det som er typisk for norske baner. Fanger tastefeil før de havner i databasen, uten å blokkere lagring ([#236](https://github.com/jdlarssen/golf-app/issues/236)).
 
-### [1.35.0] - 2026-05-26
+### [1.35.0] - 2026-05-26 · #236
 
 > Når du taster inn banelengde for en tee i bane-admin, sier appen nå fra hvis tallet ser uvanlig ut for norske forhold. Du blir ikke stoppet fra å lagre — det er bare en hjelpende hånd for å fange åpenbare tastefeil. Hvilket «typisk» intervall som gjelder, avhenger av hvilke kjønn du har lagt inn rating for på tee-en (herre, dame, junior, eller en kombinasjon).
 
@@ -2136,14 +2112,13 @@ Et mykt varsel under banelengde-feltet i bane-admin når tallet ligger utenfor d
 
 ---
 
-## 1.34.y — Per-kjønn-overstyring av hull-par
 
 <details>
-<summary><strong>1.34.y — Per-kjønn-overstyring av hull-par (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>1.34.y — Per-kjønn-overstyring av hull-par (1 oppføring)</strong></summary>
 
 Issue [#240](https://github.com/jdlarssen/golf-app/issues/240). Tørny støtter nå at hull kan ha avvikende par for damer eller junior — typisk dame-par-5 der herrer spiller par-4 fordi dame-tee er plassert kortere før et vannhinder. Stableford-poenget regnes riktig per spiller, og par-displayer viser en liten stjerne på hull med par-avvik.
 
-### [1.34.0] - 2026-05-26
+### [1.34.0] - 2026-05-26 · #240
 
 > Spillere på dame-tee eller junior-tee får nå riktig par-referanse på hull der tee-en er plassert kortere enn herrenes. Du som arrangerer kan registrere avvik per kjønn i bane-redigeringen — for det vanlige tilfellet der alle kjønn har samme par, ser admin og spillere ingen forskjell.
 
@@ -2176,14 +2151,13 @@ Issue [#240](https://github.com/jdlarssen/golf-app/issues/240). Tørny støtter 
 
 ---
 
-## 1.33.y — Sekretariatet, friksjons-rydding
 
 <details>
-<summary><strong>1.33.y — Sekretariatet, friksjons-rydding (2 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>1.33.y — Sekretariatet, friksjons-rydding (2 oppføringer)</strong></summary>
 
 Tredje runde med små admin-polish-grep fra fase 1 av [#223](https://github.com/jdlarssen/golf-app/issues/223). Mål: kortere vei til recovery når noe går skeivt i bane-skjemaet. Patch lagt på toppen som forvarsler admin når par eller stroke-indeks endres på en bane med spill som pågår.
 
-### [1.33.1] - 2026-05-26
+### [1.33.1] - 2026-05-26 · #223
 
 > Når du endrer par eller stroke-indeks på en bane som brukes i et spill som pågår eller er planlagt, spør appen nå om du er sikker. Mid-runde-endringer påvirker netto-resultatet for spillere som allerede har levert kort, så du får sjansen til å avbryte før lagring går gjennom. Bane-navn og tee-data trigger ingen advarsel — kun hull-endringene som faktisk skifter scoringen.
 
@@ -2203,7 +2177,7 @@ Tredje runde med små admin-polish-grep fra fase 1 av [#223](https://github.com/
 
 </details>
 
-### [1.33.0] - 2026-05-26
+### [1.33.0] - 2026-05-26 · #238
 
 > En liten «Tøm dette kjønnet»-lenke i bane-skjemaet rydder slope og CR for ett kjønn med ett trykk. Hjelper hvis du har fylt inn bare det ene feltet og får «kan ikke lagre halve sett»-feilen.
 
@@ -2228,14 +2202,13 @@ Tredje runde med små admin-polish-grep fra fase 1 av [#223](https://github.com/
 
 ---
 
-## 1.32.y — «Sist spilt»-indikator på bane-listen
 
 <details>
-<summary><strong>1.32.y — «Sist spilt»-indikator på bane-listen (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>1.32.y — «Sist spilt»-indikator på bane-listen (1 oppføring)</strong></summary>
 
 Issue [#239](https://github.com/jdlarssen/golf-app/issues/239). Vedlikeholds-flaten for baner viser nå når hver bane sist ble brukt, og lar deg sortere og filtrere på det.
 
-### [1.32.0] - 2026-05-26
+### [1.32.0] - 2026-05-26 · #239
 
 > Bane-listen viser nå når hver bane sist ble brukt i et spill, og du kan sortere på det. Det nye filteret «Spilt siste 30 dager» plukker ut banene som er i bruk nå. Det blir enklere å skille aktive baner fra gamle eksperimenter når katalogen vokser.
 
@@ -2259,14 +2232,13 @@ Issue [#239](https://github.com/jdlarssen/golf-app/issues/239). Vedlikeholds-fla
 
 ---
 
-## 1.31.y — Ryder Cup-stil cuper
 
 <details>
-<summary><strong>1.31.y — Ryder Cup-stil cuper (2 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>1.31.y — Ryder Cup-stil cuper (2 oppføringer)</strong></summary>
 
 Fase 1 av [#47](https://github.com/jdlarssen/golf-app/issues/47). Du kan nå binde flere matchplay-runder sammen til én lag-vs-lag-cup, og følge fordelingen av point på et felles leaderboard. Patch på toppen ([#234](https://github.com/jdlarssen/golf-app/issues/234)): liten kopier-snarvei på tee-rating-skjemaet.
 
-### [1.31.1] - 2026-05-26
+### [1.31.1] - 2026-05-26 · #223
 
 > Du kan nå kopiere herrer-rating-en til damer og junior med ett klikk når du legger inn en ny bane eller redigerer en eksisterende. Knappen «Kopier til alle kjønn» dukker opp under herrer-feltene så snart slope og CR er fylt ut, og forsvinner igjen når begge andre kjønn har egne verdier. Justér gjerne etterpå om damene faktisk skal ha en annen slope.
 
@@ -2279,7 +2251,7 @@ Fase 1 av [#47](https://github.com/jdlarssen/golf-app/issues/47). Du kan nå bin
 - `par_total` per kjønn kopieres ikke. Den er auto-beregnet fra hull-pars og er kun lese-verdi i `GenderRatingBlock`-fieldset-en.
 - Utsatt fra Fase 1 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223).
 
-### [1.31.0] - 2026-05-26
+### [1.31.0] - 2026-05-26 · #47
 
 > Du kan nå sette opp en cup som binder flere matchplay-runder sammen mot hverandre. Lag «Team Skog» og «Team Sjø» kan møtes over flere matches gjennom helgen, og første lag til point-målet (typisk 4,5 av 8) vinner cupen. Hver match teller som vanlig — vunnet match = 1 point, halvert (AS) = 0,5 til hvert lag. Når cupen avsluttes går det ut en e-post til alle deltakere med vinneren og sluttresultatet.
 
@@ -2300,14 +2272,13 @@ Fase 1 av [#47](https://github.com/jdlarssen/golf-app/issues/47). Du kan nå bin
 
 ---
 
-## 1.30.y — Spill-invitasjoner med bell-prikk
 
 <details>
-<summary><strong>1.30.y — Spill-invitasjoner med bell-prikk (2 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>1.30.y — Spill-invitasjoner med bell-prikk (2 oppføringer)</strong></summary>
 
 Issue [#182](https://github.com/jdlarssen/golf-app/issues/182). Notifikasjons-systemet kobler seg nå på spill-rosteren. Når admin legger en spiller til på et spill kommer bell-prikken med en gang, både for kompiser som allerede har Tørny og for nye som inviteres på e-post. Patch på toppen ([#235](https://github.com/jdlarssen/golf-app/issues/235)) la til typisk-range-hint på slope/CR-feltene i bane-skjemaet.
 
-### [1.30.1] - 2026-05-26
+### [1.30.1] - 2026-05-26 · #223
 
 > Når du taster slope og CR for en tee, ser du nå hva som er typisk på norske baner — gjør det lettere å fange opp en tastefeil før du lagrer.
 
@@ -2321,7 +2292,7 @@ Issue [#182](https://github.com/jdlarssen/golf-app/issues/182). Notifikasjons-sy
 - Beholder eksisterende herre-placeholder (113 / 70.0). Damer/junior beholder tomme placeholders — vi vil ikke pre-foreslå konkrete tall der admin oftere taster verdier som avviker fra suggested-value.
 - Utsatt fra Fase 1 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Ingen DB-migrasjon, ingen scoring-impact.
 
-### [1.30.0] - 2026-05-26
+### [1.30.0] - 2026-05-26 · #182
 
 > Spillere som blir lagt til et spill får nå et varsel i appen, i tillegg til e-posten. Bell-prikken lyser så snart admin har lagt deg på rosteren, slik at du oppdager turneringen før spillet starter.
 
@@ -2345,14 +2316,13 @@ Issue [#182](https://github.com/jdlarssen/golf-app/issues/182). Notifikasjons-sy
 
 ---
 
-## 1.29.y — Selv-registrering for nye spillere
 
 <details>
-<summary><strong>1.29.y — Selv-registrering for nye spillere (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>1.29.y — Selv-registrering for nye spillere (1 oppføring)</strong></summary>
 
 Lar nye besøkende få OTP-kode på `/login` uten admin-mellomledd, bak en kill-switch og to lag rate-limit. Forberedelse til å åpne tornygolf.no for spillere utenfor kompisgjengen ([#166](https://github.com/jdlarssen/golf-app/issues/166)).
 
-### [1.29.0] - 2026-05-26
+### [1.29.0] - 2026-05-26 · #22
 
 > Nye besøkende kan nå skrive inn e-posten sin på innloggings-siden og få kode — uten at en admin må invitere dem først. Funksjonen er av i starten og slås på i Vercel manuelt etter at vi har testet den på preview. Et stille rate-vern på baksiden stopper noen som prøver å spamme inn forsøk.
 
@@ -2375,14 +2345,13 @@ Lar nye besøkende få OTP-kode på `/login` uten admin-mellomledd, bak en kill-
 
 ---
 
-## 1.28.y — Bane-tilgang for kompis-gjengen
 
 <details>
-<summary><strong>1.28.y — Bane-tilgang for kompis-gjengen (2 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>1.28.y — Bane-tilgang for kompis-gjengen (2 oppføringer)</strong></summary>
 
 Fase 4 (og siste fase) av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Trusted creators får tilgang til Sekretariatet med en filtrert tile-grid, og kan opprette + oppdatere baner gjennom samme courses-katalogen som admin bruker. Patch lagt på toppen som åpner Lanseringer-flaten direkte fra Sekretariatet.
 
-### [1.28.1] - 2026-05-26
+### [1.28.1] - 2026-05-26 · #223
 
 > Du finner nå Lanseringer rett fra Sekretariatet. En ny flis ved siden av Resultatprotokoll tar deg inn på publiserings-flaten, og viser dato for siste lansering rett under tittelen.
 
@@ -2393,7 +2362,7 @@ Fase 4 (og siste fase) av epic [#223](https://github.com/jdlarssen/golf-app/issu
 #### Changed
 - `TileIconKind`-unionen utvidet med `'sparkle'`, og `TilesSkeleton` renderer nå 5 placeholders for å unngå skeleton-til-innhold-flicker.
 
-### [1.28.0] - 2026-05-25
+### [1.28.0] - 2026-05-25 · #198
 
 > Trusted creators kan nå legge til og oppdatere baner selv, ikke bare opprette spill. Når en kompis i allowlist-en logger inn ser de Sekretariatet med en Baner-tile, og kan vedlikeholde katalogen som om de var admin — men kun baner de selv har laget kan slettes.
 
@@ -2416,14 +2385,13 @@ Fase 4 (og siste fase) av epic [#223](https://github.com/jdlarssen/golf-app/issu
 
 ---
 
-## 1.27.y — Arkiv-UI og delbare filter-lenker
 
 <details>
-<summary><strong>1.27.y — Arkiv-UI og delbare filter-lenker (3 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>1.27.y — Arkiv-UI og delbare filter-lenker (3 oppføringer)</strong></summary>
 
 Fase 3 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Soft-arkiverte tees kan gjenåpnes fra edit-flaten, bane-listens filter-state ligger i URL-en, og legacy-rader uten `updated_by` er backfilt fra `created_by`.
 
-### [1.27.2] - 2026-05-25
+### [1.27.2] - 2026-05-25 · #223
 
 > Andre forsøk på samme fix. Når du gjenåpner en arkivert tee og klikker «Lagre endringer» rett etterpå, holder tee-en seg nå aktiv. Forrige fix (1.27.1) løste serverside-cachen, men ikke selve skjemaet — som tegnet med innholdet fra før gjenåpningen og dermed sendte det videre på neste lagring.
 
@@ -2440,7 +2408,7 @@ Fase 3 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Soft-ar
 
 </details>
 
-### [1.27.1] - 2026-05-25
+### [1.27.1] - 2026-05-25 · #228
 
 > Når du gjenåpner en arkivert tee og klikker «Lagre endringer» rett etterpå, blir tee-en nå værende aktiv. Tidligere kunne et stille mellomledd i Next.js-cachen gjøre at edit-skjemaet fortsatt så tee-en som arkivert, så lagringen re-arkiverte den.
 
@@ -2457,7 +2425,7 @@ Fase 3 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Soft-ar
 
 </details>
 
-### [1.27.0] - 2026-05-25
+### [1.27.0] - 2026-05-25 · #223
 
 > Du kan nå gjenåpne en arkivert tee fra bane-redigeringen — den dukker opp igjen i skjemaet og kan velges for nye spill. Bane-listens søk, sortering og chip-filter lagres nå i URL-en, så en filtrert visning er bokmerke-bar og kan deles via lenke. Eldre baner uten «Sist endret av»-navn har fått det fylt ut bakover-i-tid.
 
@@ -2488,14 +2456,13 @@ Fase 3 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Soft-ar
 
 ---
 
-## 1.26.y — Vedlikeholds-trygghet og filter på bane-admin
 
 <details>
-<summary><strong>1.26.y — Vedlikeholds-trygghet og filter på bane-admin (2 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>1.26.y — Vedlikeholds-trygghet og filter på bane-admin (2 oppføringer)</strong></summary>
 
 Fase 2 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Audit-felter på baner, soft-archive av tees i bruk, og sort + filter på bane-listen.
 
-### [1.26.1] - 2026-05-25
+### [1.26.1] - 2026-05-25 · #223
 
 > Lagring av bane-endringer fungerer igjen. En regresjon fra v1.25.0 stoppet save-knappen på `/admin/courses/[id]/edit` og `/admin/courses/new` med feilmeldingen «Minst én tee-boks må legges til» — selv når du faktisk hadde tees i skjemaet.
 
@@ -2512,7 +2479,7 @@ Fase 2 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Audit-f
 
 </details>
 
-### [1.26.0] - 2026-05-25
+### [1.26.0] - 2026-05-25 · #223
 
 > Når du endrer en bane, husker Tørny nå hvem som endret hva og når. Du kan fjerne en tee selv om den brukes i et historisk spill — spillet beholder tee-en, men den forsvinner fra bane-admin. Bane-listen har fått sortering (Sist endret, Flest aktive spill) og chip-filter (Har dame-tee, Har junior-tee, Aktive spill).
 
@@ -2545,14 +2512,13 @@ Fase 2 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Audit-f
 
 ---
 
-## 1.25.y — Mobile-first bane-admin
 
 <details>
-<summary><strong>1.25.y — Mobile-first bane-admin (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>1.25.y — Mobile-first bane-admin (1 oppføring)</strong></summary>
 
 Å opprette og redigere baner skal gå like raskt på telefon som på PC. Fase 1 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223) fjerner de største tastatur-popups-friksjonene i `/admin/courses`.
 
-### [1.25.0] - 2026-05-25
+### [1.25.0] - 2026-05-25 · #223
 
 > Å opprette en bane på telefon er nå tre trykk per hull i stedet for 18 tastatur-popups. Par-total regnes ut fra hullene, dame- og junior-rating dukker opp først når du legger dem til, og bane-listen har fått søk.
 
@@ -2584,14 +2550,18 @@ Fase 2 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Audit-f
 
 ---
 
-## 1.24.y — Kjønn og spillerklasse i profilen
+
+</details>
 
 <details>
-<summary><strong>1.24.y — Kjønn og spillerklasse i profilen (2 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>Innboks, handicap & hurtig-oppsett — 10 serier</strong></summary>
+
+<details>
+<summary><strong>1.24.y — Kjønn og spillerklasse i profilen (2 oppføringer)</strong></summary>
 
 Tørny husker nå om du spiller fra herretee, dametee eller juniortee, og foreslår riktig tee når noen oppretter et spill du skal være med på. Issue [#92](https://github.com/jdlarssen/golf-app/issues/92).
 
-### [1.24.1] - 2026-05-25
+### [1.24.1] - 2026-05-25 · #222
 
 > Når du bytter bane mens du setter opp et spill, beholdes nå dame- og junior-merkene på spillerne du har valgt. Tidligere måtte du klikke dem inn igjen.
 
@@ -2606,7 +2576,7 @@ Tørny husker nå om du spiller fra herretee, dametee eller juniortee, og foresl
 
 </details>
 
-### [1.24.0] - 2026-05-25
+### [1.24.0] - 2026-05-25 · #48
 
 > Du kan nå sette kjønn og spillerklasse i profilen din. Når noen oppretter et spill du skal være med på, foreslår Tørny riktig tee for deg, så damer og juniorer slipper å havne på herretee ved et uhell.
 
@@ -2640,14 +2610,13 @@ Tørny husker nå om du spiller fra herretee, dametee eller juniortee, og foresl
 
 ---
 
-## 1.23.y — Lanseringer-kanal: in-app drypp + månedsbrev
 
 <details>
-<summary><strong>1.23.y — Lanseringer-kanal: in-app drypp + månedsbrev (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>1.23.y — Lanseringer-kanal: in-app drypp + månedsbrev (1 oppføring)</strong></summary>
 
 Tørny får sin egen kanal for å fortelle deg om nye funksjoner. Når noe er ute, dukker det opp et lite drypp på hjem-siden og en oppføring i innboksen. En gang i måneden får du en oppsummering på mail. Du kan melde deg av mailen fra profilen din eller via lenken nederst i mailen. Issue [#202](https://github.com/jdlarssen/golf-app/issues/202).
 
-### [1.23.0] - 2026-05-25
+### [1.23.0] - 2026-05-25 · #202
 
 > Når noe nytt kommer i Tørny, får du nå et lite varsel på hjem-siden og en oppføring i innboksen. Én gang i måneden får du også en oppsummering på mail. Du er påmeldt fra start; meld deg av månedsbrevet i profilen din om du heller vil ha fred.
 
@@ -2685,16 +2654,12 @@ Tørny får sin egen kanal for å fortelle deg om nye funksjoner. Når noe er ut
 
 </details>
 
----
-
 <details>
-<summary><strong>1.22.y — Hurtig-oppsett for nye spill (1 oppføring) — klikk for å vise</strong></summary>
-
-## 1.22.y — Hurtig-oppsett for nye spill
+<summary><strong>1.22.y — Hurtig-oppsett for nye spill (1 oppføring)</strong></summary>
 
 Opprett-spill-flyten er omarbeidet til fire korte steg i stedet for én lang side med seks seksjoner. Format → bane → spillere → klar. «Tilpass alle detaljer» henter fram dagens fullform for power-users som vil styre alt. Issue [#203](https://github.com/jdlarssen/golf-app/issues/203).
 
-### [1.22.0] - 2026-05-25
+### [1.22.0] - 2026-05-25 · #203
 
 > Som admin setter du nå opp et spill i fire korte steg, ikke seks seksjoner på én lang side. Velg format, så bane og tidspunkt, så spillere — og til slutt sjekker du sammendraget før du publiserer. Trenger du flere detaljer (sideturnering, peer-godkjenning, HCP-allowance), finner du dem bak «Tilpass alle detaljer» på siste steg.
 
@@ -2727,16 +2692,12 @@ Opprett-spill-flyten er omarbeidet til fire korte steg i stedet for én lang sid
 
 </details>
 
----
-
 <details>
-<summary><strong>1.21.y — Sideturnering — 14 nye bonus-kategorier (1 oppføring) — klikk for å vise</strong></summary>
-
-## 1.21.y — Sideturnering — 14 nye bonus-kategorier
+<summary><strong>1.21.y — Sideturnering — 14 nye bonus-kategorier (1 oppføring)</strong></summary>
 
 Sideturneringen vokser fra 27 til 41 kategorier. Nye bragder dekker albatross, hole-in-one, konge-på-par-4, rein 9-tur, ren runde uten double-bogey, comeback-priser, og to nye lag-bonuser. To humor-kategorier (verste enkelthull og flest double-bogeys) gir mild straff. Som standard er alle nye skrudd på i Full pakke-presetet. Issue [#169](https://github.com/jdlarssen/golf-app/issues/169).
 
-### [1.21.0] - 2026-05-25
+### [1.21.0] - 2026-05-25 · #19
 
 > Sideturneringen har fått 14 nye bragder du kan jakte på — albatross, hole-in-one, konge på par-4, rein 9-tur og ren runde for ferdighet, comeback kid og to-birdier-på-rad for de hete rundene, «alle birdied» og «lag-par-hull» for laget, pluss litt humor med verste enkelthull og flest double-bogeys. I admin-panelet slår du av enkeltkategorier per spill. Full pakke har alle på fra start.
 
@@ -2770,16 +2731,12 @@ Sideturneringen vokser fra 27 til 41 kategorier. Nye bragder dekker albatross, h
 
 </details>
 
----
-
 <details>
-<summary><strong>1.20.y — Handicap-chip på hjem-siden (1 oppføring) — klikk for å vise</strong></summary>
-
-## 1.20.y — Handicap-chip på hjem-siden
+<summary><strong>1.20.y — Handicap-chip på hjem-siden (1 oppføring)</strong></summary>
 
 Handicapen din vises nå alltid øverst på hjem-siden så du ser hvor du står. Får en aksent-farge når den ikke har vært bekreftet på fire uker, så du oppdager passivt at den er gammel. Issue [#209](https://github.com/jdlarssen/golf-app/issues/209) — komplementerer [#168](https://github.com/jdlarssen/golf-app/issues/168) sitt prompt-kort i venterommet.
 
-### [1.20.0] - 2026-05-25
+### [1.20.0] - 2026-05-25 · #168
 
 > Handicapen din vises nå øverst på hjem-siden, alltid synlig. Trykk for å oppdatere. Hvis den ikke har vært bekreftet på fire uker, får den en aksent-farge — så du oppdager selv at den er gammel uten at appen må mase.
 
@@ -2802,16 +2759,12 @@ Handicapen din vises nå alltid øverst på hjem-siden så du ser hvor du står.
 
 </details>
 
----
-
 <details>
-<summary><strong>1.19.y — Handicap-sjekk før runden (1 oppføring) — klikk for å vise</strong></summary>
-
-## 1.19.y — Handicap-sjekk før runden
+<summary><strong>1.19.y — Handicap-sjekk før runden (1 oppføring)</strong></summary>
 
 Spilleren får et inline-kort i venterommet før hvert spill hvis handicapen ikke har vært bekreftet på fire uker. Forhindrer at runden beregnes mot en utdatert verdi fordi noen glemte å oppdatere etter sist. Issue [#168](https://github.com/jdlarssen/golf-app/issues/168).
 
-### [1.19.0] - 2026-05-25
+### [1.19.0] - 2026-05-25 · #168
 
 > Hvis handicapen din er eldre enn fire uker, spør appen nå før spillet starter om den fortsatt er riktig. Da slipper du å oppdage etter runden at slag-allokeringen ble feil.
 
@@ -2842,16 +2795,12 @@ Spilleren får et inline-kort i venterommet før hvert spill hvis handicapen ikk
 
 </details>
 
----
-
 <details>
-<summary><strong>1.18.y — Lag-scorekort (1 oppføring) — klikk for å vise</strong></summary>
-
-## 1.18.y — Lag-scorekort
+<summary><strong>1.18.y — Lag-scorekort (1 oppføring)</strong></summary>
 
 Scorekort-flaten viser nå begge spillerne side om side i alle lag-baserte spillformer (best-ball, par-stableford, matchplay og Texas scramble). Tidligere fikk du bare ditt eget scorekort — selv i 2-mannslag der partner og du deler resultat. Issue [#17](https://github.com/jdlarssen/golf-app/issues/17).
 
-### [1.18.0] - 2026-05-25
+### [1.18.0] - 2026-05-25 · #17
 
 > Når du spiller best-ball, par-stableford, matchplay eller Texas scramble, viser scorekortet nå deg og partner (eller motstander i matchplay) ved siden av hverandre per hull — som på papir. Lenken på spilloversikten heter «Lagets scorekort» eller «Match-scorekort» istedenfor «Mitt scorekort» når det er aktuelt. Texas-spillere som ikke er lag-kaptein får endelig se lagets faktiske score (før viste flaten blanke felt).
 
@@ -2881,16 +2830,12 @@ Scorekort-flaten viser nå begge spillerne side om side i alle lag-baserte spill
 
 </details>
 
----
-
 <details>
-<summary><strong>1.17.y — Allowlist for trusted creators (1 oppføring) — klikk for å vise</strong></summary>
-
-## 1.17.y — Allowlist for trusted creators
+<summary><strong>1.17.y — Allowlist for trusted creators (1 oppføring)</strong></summary>
 
 Mulighet for å la utvalgte spillere opprette egne turneringer uten å gjøre dem til admin. Liten variant av [#22](https://github.com/jdlarssen/golf-app/issues/22) — vi tester først om noen faktisk vil bruke det, før vi bygger full rolle-modell. Issue [#198](https://github.com/jdlarssen/golf-app/issues/198).
 
-### [1.17.0] - 2026-05-25
+### [1.17.0] - 2026-05-25 · #22
 
 > Som admin kan du gi utvalgte spillere lov til å opprette egne turneringer. Det legger til en «Opprett spill»-inngang på forsiden hos dem som er på lista.
 
@@ -2918,16 +2863,12 @@ Mulighet for å la utvalgte spillere opprette egne turneringer uten å gjøre de
 
 </details>
 
----
-
 <details>
-<summary><strong>1.16.y — Texas scramble (5 oppføringer) — klikk for å vise</strong></summary>
-
-## 1.16.y — Texas scramble
+<summary><strong>1.16.y — Texas scramble (5 oppføringer)</strong></summary>
 
 Ny spillmodus for laget som vil spille sosialt — én ball per lag, alle slår fra beste slag. Skalerer fra 2-mannslag (par-format) til 4-mannslag (klassisk firma-cup). Lag-handicap regnes etter NGF-aggregatet (25 % av summert HCP for 2-mannslag, 10 % for 4-mannslag), justerbart per spill. Issue [#44](https://github.com/jdlarssen/golf-app/issues/44).
 
-### [1.16.4] - 2026-05-25
+### [1.16.4] - 2026-05-25 · #44
 
 > Admin-flaten for Texas scramble-spill viser kun lag som faktisk har spillere, og dropper Flights-seksjonen siden flight automatisk speiler lag-tilordningen. Reduserer visuelt støy på Texas-detalj-sider.
 
@@ -2943,7 +2884,7 @@ Ny spillmodus for laget som vil spille sosialt — én ball per lag, alle slår 
 
 </details>
 
-### [1.16.3] - 2026-05-25
+### [1.16.3] - 2026-05-25 · #44
 
 > Når Texas scramble-spillet avsluttes får hver spiller mail med lagets plassering og lagets netto-total. Mailen navngir lagkameratene dine («Du spilte med Bjørn, Carla og Dagfinn») slik at du ser hvem du gikk runden med uten å åpne leaderboardet.
 
@@ -2962,7 +2903,7 @@ Ny spillmodus for laget som vil spille sosialt — én ball per lag, alle slår 
 
 </details>
 
-### [1.16.2] - 2026-05-25
+### [1.16.2] - 2026-05-25 · #3
 
 > Når Texas-spillet er i gang ser alle lagene sin sanntids-plassering rangert på laveste lag-netto. Når spillet avsluttes feires vinner-laget på podiet med konfetti, og resten av rangeringen ligger sammenfoldet under.
 
@@ -2980,7 +2921,7 @@ Ny spillmodus for laget som vil spille sosialt — én ball per lag, alle slår 
 
 </details>
 
-### [1.16.1] - 2026-05-25
+### [1.16.1] - 2026-05-25 · #44
 
 > Hullsiden for Texas scramble viser nå ett scorekort per lag i stedet for ett per spiller. Alle på laget ser samme stepper, og hvem som helst kan taste — tappet havner på lagets felles rad. Avataren på kortet viser lag-nummeret, og under står medlemmenes fornavn. «Lever lagets scorekort»-knappen erstatter «Lever scorekort» for Texas-spill.
 
@@ -2999,7 +2940,7 @@ Ny spillmodus for laget som vil spille sosialt — én ball per lag, alle slår 
 
 </details>
 
-### [1.16.0] - 2026-05-25
+### [1.16.0] - 2026-05-25 · #44
 
 > Du kan nå opprette Texas scramble-spill — velg Texas scramble som modus, velg 2- eller 4-mannslag, og fordel spillerne. Lag-handicap settes automatisk etter NGF-tabellen (25 % for 2-mannslag, 10 % for 4-mannslag) og kan justeres som i best ball. Hullsiden og leaderboardet for Texas kommer i neste lansering.
 
@@ -3028,16 +2969,12 @@ Ny spillmodus for laget som vil spille sosialt — én ball per lag, alle slår 
 
 </details>
 
----
-
 <details>
-<summary><strong>1.15.y — In-app innboks (5 oppføringer) — klikk for å vise</strong></summary>
-
-## 1.15.y — In-app innboks
+<summary><strong>1.15.y — In-app innboks (5 oppføringer)</strong></summary>
 
 Tørny får en innboks. Bjelle øverst-til-høyre på alle sider viser en champagne-prikk når det venter et nytt varsel, og en dedikert /innboks-flate samler hele historikken. Varslene wires inn etappevis (issue [#25](https://github.com/jdlarssen/golf-app/issues/25)): invitasjoner, peer-godkjenninger, scorekort-events og spill-avsluttet. Siste fase kuttet mail-spammen til aktive brukere — du får ikke lenger mail om noe som allerede er på skjermen din.
 
-### [1.15.4] - 2026-05-24
+### [1.15.4] - 2026-05-24 · #25
 
 > Mail-spam-reduksjonen som kom i 1.15.2 fungerer nå strammere. Tidligere kunne en aktiv bruker likevel få mail hvis siste «jeg er her»-pingen var mellom 5 og 30 minutter gammel; nå matcher pinge-frekvensen og mail-vinduet samme 5-minutters-terskel.
 
@@ -3050,7 +2987,7 @@ Tørny får en innboks. Bjelle øverst-til-høyre på alle sider viser en champa
 
 </details>
 
-### [1.15.3] - 2026-05-24
+### [1.15.3] - 2026-05-24 · #25
 
 > Et raskt dobbelt-trykk på «Lever scorekort» sender ikke lenger flere varsler eller mail. Ble du sittende uten å vite om første trykk gikk gjennom, og trykte igjen, får admin én melding — ikke to.
 
@@ -3062,7 +2999,7 @@ Tørny får en innboks. Bjelle øverst-til-høyre på alle sider viser en champa
 
 </details>
 
-### [1.15.2] - 2026-05-24
+### [1.15.2] - 2026-05-24 · #25
 
 > Du får færre mail når du er aktiv. Hvis du har vært i Tørny de siste fem minuttene når noen leverer scorekort eller avslutter et spill du er med i, dukker varselet kun opp i innboksen din. Mailen kommer som før hvis det er en stund siden du var her.
 
@@ -3084,7 +3021,7 @@ Tørny får en innboks. Bjelle øverst-til-høyre på alle sider viser en champa
 
 </details>
 
-### [1.15.1] - 2026-05-24
+### [1.15.1] - 2026-05-24 · #25
 
 > Innboksen lever nå. Du får varsel når noen leverer scorekort, godkjenner ditt eget kort, eller avslutter et spill du er med i. Mailen sendes fortsatt parallelt; neste lansering kutter mailen til de som allerede er aktive i appen.
 
@@ -3108,7 +3045,7 @@ Tørny får en innboks. Bjelle øverst-til-høyre på alle sider viser en champa
 
 </details>
 
-### [1.15.0] - 2026-05-24
+### [1.15.0] - 2026-05-24 · #25
 
 > Innboksen finnes nå som flate i appen — bjelle øverst-til-høyre og en /innboks-side. Selve varslene tikker inn fra og med neste fase; per i dag rendrer innboksen seg som tom for alle.
 
@@ -3139,12 +3076,13 @@ Tørny får en innboks. Bjelle øverst-til-høyre på alle sider viser en champa
 
 </details>
 
----
+</details>
 
 <details>
-<summary><strong>1.14.y — Stableford-runde-polish (4 entries) — klikk for å vise</strong></summary>
+<summary><strong>Spillmodi-grunnmuren & verktoy — 10 serier</strong></summary>
 
-## 1.14.y — Stableford-runde-polish
+<details>
+<summary><strong>1.14.y — Stableford-runde-polish (4 entries)</strong></summary>
 
 Polish etter første reelle stableford-runde med kompisene. Du kan nå føre slag for hele flighten i solo stableford, fortsette runden fra første tomme hull, og se sideturneringen på stableford-leaderbordet etter avsluttet spill. Hele appens norske copy er også strammet for AI-tells og engelske kalker — først via humanizer (1.14.3), så et no-nb-pass mot code-switched English som var igjen (1.14.4), og til slutt en oppfølger som fanget «Stackbare» + «Lag-koord»-forkortelsen (1.14.5).
 
@@ -3188,7 +3126,7 @@ Polish etter første reelle stableford-runde med kompisene. Du kan nå føre sla
 
 </details>
 
-### [1.14.3] - 2026-05-24
+### [1.14.3] - 2026-05-24 · #25
 
 > Hele Tørnys norske copy er polert: feilmeldinger, banner-tekster, mail-malene og knappe-tekster er strammet for AI-tells og engelske kalker. Du merker det som mer naturlig norsk på alle flatene. Under panseret er også datalaget for in-app innboks lagt inn — usynlig for deg ennå (fase 1 av 4 mot varslings-senter, [#25](https://github.com/jdlarssen/golf-app/issues/25)).
 
@@ -3251,16 +3189,12 @@ To uavhengige arbeidsstrømmer landet samme dag og delte versjonsnummer. Begge e
 
 </details>
 
----
-
 <details>
-<summary><strong>1.13.y — Slagspill (3 entries) — klikk for å vise</strong></summary>
-
-## 1.13.y — Slagspill
+<summary><strong>1.13.y — Slagspill (3 entries)</strong></summary>
 
 Klassisk slagspill (solo strokeplay netto) er nå tilgjengelig. Velg Slagspill som modus, meld på spillerne, og lavest netto-total over runden vinner. Hver spiller fører sitt eget kort — perfekt for klubbmesterskap og kompis-runder uten lag-fokus.
 
-### [1.13.2] - 2026-05-24
+### [1.13.2] - 2026-05-24 · #46
 
 > Når slagspillet avsluttes får spillerne mail med sin plassering og totalt antall netto-slag. Admin-flaten viser «Slagspill» konsistent for solo-strokeplay-spill.
 
@@ -3279,7 +3213,7 @@ Klassisk slagspill (solo strokeplay netto) er nå tilgjengelig. Velg Slagspill s
 
 </details>
 
-### [1.13.1] - 2026-05-24
+### [1.13.1] - 2026-05-24 · #3
 
 > Når slagspillet er i gang ser spillerne et leaderboard rangert på laveste netto-total. Avsluttet spill viser podium for topp 3 — 1.-plassen feires med konfetti.
 
@@ -3298,7 +3232,7 @@ Klassisk slagspill (solo strokeplay netto) er nå tilgjengelig. Velg Slagspill s
 
 </details>
 
-### [1.13.0] - 2026-05-24
+### [1.13.0] - 2026-05-24 · #159
 
 > Du kan nå opprette slagspill-turneringer — klassisk golf-format der hver spiller fører eget kort og laveste netto-total vinner. Velg Slagspill som modus og meld på spillerne.
 
@@ -3324,16 +3258,12 @@ Klassisk slagspill (solo strokeplay netto) er nå tilgjengelig. Velg Slagspill s
 
 </details>
 
----
-
 <details>
-<summary><strong>1.12.y — Matchplay (3 oppføringer) — klikk for å vise</strong></summary>
-
-## 1.12.y — Matchplay
+<summary><strong>1.12.y — Matchplay (3 oppføringer)</strong></summary>
 
 Matchplay-turneringer mellom to spillere er nå tilgjengelig. Velg Matchplay som modus og tilordne én spiller til Side 1 og én til Side 2 — vinneren av hvert hull (laveste netto) får et hull-poeng, og matchen avgjøres som «X up» (etter 18 hull) eller «X&Y» (mat-em før hull 18) etter golfreglene.
 
-### [1.12.2] - 2026-05-24
+### [1.12.2] - 2026-05-24 · #45
 
 > Når matchen avsluttes får begge spillere mail med matchresultatet («Du vant 3&2 over Per» / «Du tapte 1up mot Per» / «AS — uavgjort»). Admin-flaten viser Sider i stedet for Lag for matchplay-spill.
 
@@ -3359,7 +3289,7 @@ Matchplay-turneringer mellom to spillere er nå tilgjengelig. Velg Matchplay som
 
 </details>
 
-### [1.12.1] - 2026-05-24
+### [1.12.1] - 2026-05-24 · #3
 
 > Når matchen er i gang ser begge spillerne sin sanntids match-status («X up etter Y hull»), og når matchen er over feires vinneren med resultat i golf-standard format («3&2», «1up», «AS»).
 
@@ -3386,7 +3316,7 @@ Matchplay-turneringer mellom to spillere er nå tilgjengelig. Velg Matchplay som
 
 </details>
 
-### [1.12.0] - 2026-05-24
+### [1.12.0] - 2026-05-24 · #155
 
 > Du kan nå opprette matchplay-turneringer mellom to spillere — velg Matchplay som modus, tilordne én spiller til Side 1 og én til Side 2. Vinneren av hvert hull får poeng; matchen avgjøres som «X up» eller «X&Y» etter golfreglene.
 
@@ -3416,16 +3346,12 @@ Matchplay-turneringer mellom to spillere er nå tilgjengelig. Velg Matchplay som
 
 </details>
 
----
-
 <details>
-<summary><strong>1.11.y — Par-stableford (3 oppføringer) — klikk for å vise</strong></summary>
-
-## 1.11.y — Par-stableford
+<summary><strong>1.11.y — Par-stableford (3 oppføringer)</strong></summary>
 
 Stableford-turneringer kan nå spilles som par (4BBB / fyrball). Velg Stableford som modus og Par som lagstørrelse, så kan du melde på 2/4/6/8 spillere fordelt på 1–4 lag à 2 — laget får poengene fra det høyeste stableford-resultatet på hvert hull.
 
-### [1.11.2] - 2026-05-24
+### [1.11.2] - 2026-05-24 · #43
 
 > Når par-stableford-runden avsluttes får spillerne mail om lagets plassering og poeng, ikke en generisk best-ball-mail. Admin-flaten viser lag-grupperingen korrekt for par-spill — kun de lag som faktisk har spillere vises, og redundante Flight-kolonner er skjult.
 
@@ -3472,7 +3398,7 @@ Stableford-turneringer kan nå spilles som par (4BBB / fyrball). Velg Stableford
 
 </details>
 
-### [1.11.0] - 2026-05-24
+### [1.11.0] - 2026-05-24 · #151
 
 > Du kan nå opprette par-stableford-turneringer (fyrball / 4BBB). Velg Stableford som modus, så Par som lagstørrelse — admin tilordner 2/4/6/8 spillere til lag à 2.
 
@@ -3502,16 +3428,12 @@ Stableford-turneringer kan nå spilles som par (4BBB / fyrball). Velg Stableford
 
 </details>
 
----
-
 <details>
-<summary><strong>1.10.y — Stableford spillerflyt (6 oppføringer) — klikk for å vise</strong></summary>
-
-## 1.10.y — Stableford spillerflyt
+<summary><strong>1.10.y — Stableford spillerflyt (6 oppføringer)</strong></summary>
 
 Stableford-turneringer er nå spillbare end-to-end. Scorecard viser per-hull-poeng ved siden av netto-scoren, leaderboard rangerer spillerne på total stableford-poeng, og når runden avsluttes feires topp 3 med et eget podium — vinnerne får i tillegg en mail som forteller dem hvor de endte.
 
-### [1.10.5] - 2026-05-23
+### [1.10.5] - 2026-05-23 · bug
 
 > «Du trenger 8 spillere»-banneret i admin-flyten er ikke lenger misvisende for stableford. Når du redigerer et stableford-spill skjules det helt, og når du oppretter et nytt spill nevner det at best ball trenger 8 mens stableford holder med 1.
 
@@ -3536,7 +3458,7 @@ Stableford-turneringer er nå spillbare end-to-end. Scorecard viser per-hull-poe
 
 </details>
 
-### [1.10.3] - 2026-05-23
+### [1.10.3] - 2026-05-23 · bug
 
 > Når du åpner et stableford-spill i admin, ser du ikke lenger en tom «Lag»-seksjon eller Lag/Flight-kolonner i spillerlisten. De vises bare for spill som faktisk har lag.
 
@@ -3593,7 +3515,7 @@ Stableford-turneringer er nå spillbare end-to-end. Scorecard viser per-hull-poe
 
 </details>
 
-### [1.10.0] - 2026-05-23
+### [1.10.0] - 2026-05-23 · #4
 
 > Stableford-turneringer er nå spillbare end-to-end. Spillerne taster slag som vanlig, men ser stableford-poeng per hull og en flat leaderboard sortert på totalt poeng.
 
@@ -3620,16 +3542,12 @@ Stableford-turneringer er nå spillbare end-to-end. Scorecard viser per-hull-poe
 
 </details>
 
----
-
 <details>
-<summary><strong>1.9.y — Valgbar spillmodus (1 oppføring) — klikk for å vise</strong></summary>
-
-## 1.9.y — Valgbar spillmodus
+<summary><strong>1.9.y — Valgbar spillmodus (1 oppføring)</strong></summary>
 
 Tørny er ikke lenger låst til 4 lag à 2 spillere best-ball. Admin-flyten viser nå tydelige modus-tiles for Stableford og Best ball netto, og lagstørrelser som ennå ikke er aktivert vises som «kommer snart» så roadmapen er synlig der den hører hjemme.
 
-### [1.9.0] - 2026-05-23
+### [1.9.0] - 2026-05-23 · #41
 
 > Når du oppretter et nytt spill ser du nå et tydelig valg mellom Stableford og Best ball netto. Spillerne plukkes først som en flat liste, og lag-grid-en dukker opp først hvis spillformatet krever lag. Lagstørrelser som ennå ikke er tilgjengelige vises som «kommer snart» så du ser hvor det bærer.
 
@@ -3648,16 +3566,12 @@ Tørny er ikke lenger låst til 4 lag à 2 spillere best-ball. Admin-flyten vise
 
 </details>
 
----
-
 <details>
-<summary><strong>1.8.y — Mørk modus (12 oppføringer) — klikk for å vise</strong></summary>
-
-## 1.8.y — Mørk modus
+<summary><strong>1.8.y — Mørk modus (12 oppføringer)</strong></summary>
 
 Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark Appearance, blir Tørny mørk når du åpner appen — uten at noe annet endrer seg.
 
-### [1.8.12] - 2026-05-23
+### [1.8.12] - 2026-05-23 · #129
 
 > Admin-listene over baner og spill har fått en designpass — Sekretariatet-paletten er gjennomført, og oversikten leser nå like premium som resten av appen.
 
@@ -3671,7 +3585,7 @@ Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark App
 
 </details>
 
-### [1.8.11] - 2026-05-23
+### [1.8.11] - 2026-05-23 · #27
 
 > Leaderboarden etter en ferdigspilt runde har nå en subtil fairway-vinje med flaggstang i bakgrunnen — atmosfære uten å konkurrere med leader-cardet.
 
@@ -3692,7 +3606,7 @@ Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark App
 
 </details>
 
-### [1.8.10] - 2026-05-23
+### [1.8.10] - 2026-05-23 · #128
 
 > Profil-utfylling etter første innlogging er pusset opp — passer nå inn i Tørny-stilen sammen med resten av appen, med en varmere velkomst og roligere typografi-rytme.
 
@@ -3709,7 +3623,7 @@ Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark App
 
 </details>
 
-### [1.8.9] - 2026-05-23
+### [1.8.9] - 2026-05-23 · #113
 
 > Admin-listene over baner og spill bruker nå samme top-bar som resten av appen — konsistent navigasjon på tvers av Tørny.
 
@@ -3723,7 +3637,7 @@ Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark App
 
 </details>
 
-### [1.8.7] - 2026-05-23
+### [1.8.7] - 2026-05-23 · #113
 
 > To rare UX-flater i admin/games er ryddet: «+ Nytt»-knappen er borte i Resultatprotokoll-arkivet, og sideturnering-toggle kan nå aktiveres uavhengig av lag-status under spill-opprett. Du slipper å scrolle opp-ned for å aktivere sideturnering etter å ha satt opp lag.
 
@@ -3739,7 +3653,7 @@ Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark App
 
 </details>
 
-### [1.8.6] - 2026-05-23
+### [1.8.6] - 2026-05-23 · #117
 
 > Tilbake-pilen fra leaderboarden tar deg nå tilbake til Min historikk når du kom fra den listen. Bruker en eksplisitt URL-param i stedet for nettleser-history (som ikke var pålitelig i PWA-modus).
 
@@ -3757,7 +3671,7 @@ Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark App
 
 </details>
 
-### [1.8.5] - 2026-05-23
+### [1.8.5] - 2026-05-23 · bug
 
 > Replay-knappen for jubelscenene skjules nå hvis du har «Reduser bevegelse» på i iPhone-innstillinger — så du ikke får en knapp som ikke gjør noe. Konfetti-animasjonen var allerede skjult for brukere med den innstillingen; nå er trigger-knappen det også.
 
@@ -3769,7 +3683,7 @@ Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark App
 
 </details>
 
-### [1.8.4] - 2026-05-23
+### [1.8.4] - 2026-05-23 · #117
 
 > Tilbake-pilen fra en ferdigspilt leaderboard går tilbake til spillets hjemside igjen — fikser en loop som kunne oppstå mellom lag-drilldown og hovedturneringen i PWA-modus. Konsekvens: tilbake fra leaderboard lander ikke i Min historikk lenger (re-åpner det som et eget arbeid).
 
@@ -3814,7 +3728,7 @@ Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark App
 
 </details>
 
-### [1.8.0] - 2026-05-19
+### [1.8.0] - 2026-05-19 · #111
 
 > Tørny støtter nå mørk modus. Har du iPhonen på Dark Appearance (Innstillinger → Skjerm og lysstyrke → Mørk), bytter Tørny automatisk til en mørk klubbhus-natt-palett. Står den på lys eller automatisk, fortsetter appen å se ut som før. Ingen knapp å trykke — appen følger telefonen.
 
@@ -3835,10 +3749,8 @@ Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark App
 
 </details>
 
----
-
 <details>
-<summary><strong>1.7.y — Spiller-picker for klubbskala (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>1.7.y — Spiller-picker for klubbskala (1 oppføring)</strong></summary>
 
 Spill-opprett-formen har nå et søkefelt over spiller-listen. Klar for 100+ spillere når kompisgjengen vokser til klubb-størrelse.
 
@@ -3858,10 +3770,8 @@ Spill-opprett-formen har nå et søkefelt over spiller-listen. Klar for 100+ spi
 
 </details>
 
----
-
 <details>
-<summary><strong>1.6.y — Eksport (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>1.6.y — Eksport (1 oppføring)</strong></summary>
 
 Du kan nå laste ned resultatet fra ferdigspilte spill som CSV — praktisk for utskrift og deling utenfor appen.
 
@@ -3880,10 +3790,8 @@ Du kan nå laste ned resultatet fra ferdigspilte spill som CSV — praktisk for 
 
 </details>
 
----
-
 <details>
-<summary><strong>1.5.y — Klubbstatistikker (3 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>1.5.y — Klubbstatistikker (3 oppføringer)</strong></summary>
 
 Vinnerliste og «mest aktive»-listen fyller seg automatisk fra ferdigspilte spill. Underlag for både kompisgjengen og kommende klubbskala.
 
@@ -3943,12 +3851,13 @@ Vinnerliste og «mest aktive»-listen fyller seg automatisk fra ferdigspilte spi
 
 </details>
 
----
+</details>
 
 <details>
-<summary><strong>1.4.y — Multi-rating tee-bokser (3 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>Stabil lansering & tee-bokser — 5 serier</strong></summary>
 
-## 1.4.y — Multi-rating tee-bokser
+<details>
+<summary><strong>1.4.y — Multi-rating tee-bokser (3 oppføringer)</strong></summary>
 
 Hver fysisk tee legges nå inn én gang med valgfrie ratings pr. gender (Herrer / Damer / Junior). Lettere dataentry, og du kan fylle ut manglende ratings senere uten å re-opprette tees.
 
@@ -3966,7 +3875,7 @@ Hver fysisk tee legges nå inn én gang med valgfrie ratings pr. gender (Herrer 
 
 ---
 
-### [1.4.1] - 2026-05-18
+### [1.4.1] - 2026-05-18 · bug
 
 > Bane-redigering lagrer nå alle tee-bokser du har lagt inn. Tidligere mistet du tee 6 og 7 hvis du fylte ut mer enn fem rader.
 
@@ -4015,16 +3924,12 @@ Hver fysisk tee legges nå inn én gang med valgfrie ratings pr. gender (Herrer 
 
 </details>
 
----
-
 <details>
-<summary><strong>1.3.y — Mixed-gender tee-bokser (1 oppføring) — klikk for å vise</strong></summary>
-
-## 1.3.y — Mixed-gender tee-bokser
+<summary><strong>1.3.y — Mixed-gender tee-bokser (1 oppføring)</strong></summary>
 
 Herrer og damer kan nå spille fra ulike tees i samme runde med korrekt course handicap. Tee-bokser tagges med kjønn (herre/dame/junior) i bane-admin, og spill-formen får en valgfri dame-tee + M/D-toggle pr. spiller.
 
-### [1.3.0] - 2026-05-17
+### [1.3.0] - 2026-05-17 · #92
 
 > Du kan nå arrangere spill der herrer og damer spiller fra ulike tees i samme runde — alle får riktig course handicap. Tee-bokser tagges med kjønn i bane-admin, og du kan redigere baner selv om det er ferdigspilte spill på dem.
 
@@ -4050,16 +3955,12 @@ Herrer og damer kan nå spille fra ulike tees i samme runde med korrekt course h
 
 </details>
 
----
-
 <details>
-<summary><strong>1.2.y — Utvidet sideturnerings-poeng (1 oppføring) — klikk for å vise</strong></summary>
-
-## 1.2.y — Utvidet sideturnerings-poeng
+<summary><strong>1.2.y — Utvidet sideturnerings-poeng (1 oppføring)</strong></summary>
 
 Sideturneringen får 12 nye kategorier og 3 stackbare achievements (Turkey/Solid/Snowman) du kan slå av/på ved spill-opprett. Best netto totalt 18 forblir 10p-grunnpilaren.
 
-### [1.2.0] - 2026-05-16
+### [1.2.0] - 2026-05-16 · #41
 
 > Sideturneringen får 12 nye kategorier å spille om — fra «flest birdier» og «konge på par-3» til stackbare achievements som Turkey (3 birdier på rad) og Snowman (lagets felles katastrofe på ett hull). Du velger selv ved spill-opprett hvilke som er aktive.
 
@@ -4090,12 +3991,8 @@ Sideturneringen får 12 nye kategorier og 3 stackbare achievements (Turkey/Solid
 
 </details>
 
----
-
 <details>
-<summary><strong>1.1.y — Sideturnering (11 oppføringer) — klikk for å vise</strong></summary>
-
-## 1.1.y — Sideturnering
+<summary><strong>1.1.y — Sideturnering (11 oppføringer)</strong></summary>
 
 Første nye funksjon shipped etter v1.0.0. Lag kan nå konkurrere parallelt med best-ball-netto via en valgfri sideturnering med seks poeng-kategorier.
 
@@ -4146,7 +4043,7 @@ Første nye funksjon shipped etter v1.0.0. Lag kan nå konkurrere parallelt med 
 
 </details>
 
-### [1.1.7] - 2026-05-16
+### [1.1.7] - 2026-05-16 · #3
 
 > Du kan nå bytte mellom netto og brutto på det avsluttede leaderboardet — toggle-en er tydeligere (begge modus synes samtidig, gjeldende er framhevet), og "Total"-tallet på lederkortet oppdaterer seg når du bytter.
 
@@ -4173,7 +4070,7 @@ Første nye funksjon shipped etter v1.0.0. Lag kan nå konkurrere parallelt med 
 
 </details>
 
-### [1.1.5] - 2026-05-16
+### [1.1.5] - 2026-05-16 · #76
 
 > Når tee-off-tiden passerer og runden starter automatisk, kommer du nå rett inn på hull-skjermen — uten å bli sendt tilbake til startskjermen først.
 
@@ -4237,7 +4134,7 @@ Første nye funksjon shipped etter v1.0.0. Lag kan nå konkurrere parallelt med 
 
 </details>
 
-### [1.1.1] - 2026-05-16
+### [1.1.1] - 2026-05-16 · bug
 
 > I reveal-modus ser nå alle deltakere live brutto-leaderboardet på tvers av flights — ikke bare sin egen flight. Netto-rangeringen forblir skjult til admin avslutter spillet, akkurat som før.
 
@@ -4270,12 +4167,8 @@ Første nye funksjon shipped etter v1.0.0. Lag kan nå konkurrere parallelt med 
 
 </details>
 
----
-
 <details>
-<summary><strong>1.0.x — Første stabile lansering (11 oppføringer) — klikk for å vise</strong></summary>
-
-## 1.0.x — Første stabile lansering
+<summary><strong>1.0.x — Første stabile lansering (11 oppføringer)</strong></summary>
 
 Tørny er nå stabil. Tre funksjoner kobles til v1.0: reveal-modus for kompis-gjenger som vil ha drama under runden, scorekort-former som premium visuell touch, og navne-reveal når spillet er ferdig.
 
@@ -4396,7 +4289,7 @@ Tørny er nå stabil. Tre funksjoner kobles til v1.0: reveal-modus for kompis-gj
 
 </details>
 
-### [1.0.1] - 2026-05-14
+### [1.0.1] - 2026-05-14 · bug
 
 > Par-scorene står nå på samme kolonne som birdies og bogeys på hull-skjermen — de skjøvet seg litt til venstre fordi de manglet form rundt seg.
 
@@ -4444,12 +4337,13 @@ Hovedgrep:
 
 </details>
 
----
+</details>
 
 <details>
-<summary><strong>0.10.x — Resultat-mail og closing-the-loop (28 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>Pre-stabil historikk — 9 serier</strong></summary>
 
-## 0.10.x — Resultat-mail og closing-the-loop
+<details>
+<summary><strong>0.10.x — Resultat-mail og closing-the-loop (28 oppføringer)</strong></summary>
 
 Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leverer, spillere får mail når admin avslutter. Ingen polling av appen for å vite om det er noe nytt å gjøre. Pilot-polish underveis: ærligere feilmeldinger i admin når noe går galt med å lese spillerlisten, og første pass på personvern-siden.
 
@@ -4494,7 +4388,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ---
 
-### [0.10.25] - 2026-05-14
+### [0.10.25] - 2026-05-14 · #3
 
 > Scorekort-formene følger nå med over alt der tallene står — scorekort-oversikt, lever-skjerm, godkjenning og hull-leaderboard. Samtidig krymper «HULL»-kolonnen til kun «#» for å frigjøre plass på smale skjermer.
 
@@ -4575,7 +4469,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ---
 
-### [0.10.21] - 2026-05-14
+### [0.10.21] - 2026-05-14 · bug
 
 > Personvern-siden er nå faktisk lesbar uten å logge inn — tidligere ble du sendt til /login fordi auth-gaten ikke gjorde unntak.
 
@@ -4697,7 +4591,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ---
 
-### [0.10.15] - 2026-05-14
+### [0.10.15] - 2026-05-14 · bug
 
 > Du kan nå slette et spill helt uavhengig av status — også aktive spill der ikke alle har levert scorekort, og avsluttede spill. Slettesiden viser sterkere advarsel for aktive spill men blokkerer ikke handlingen.
 
@@ -4746,7 +4640,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ---
 
-### [0.10.13] - 2026-05-14
+### [0.10.13] - 2026-05-14 · bug
 
 > Defensiv sikkerhetsstramming: innloggede brukere kan ikke lenger SELECTe vilkårlige invitasjons-rader fra `public.invitations` — kun sine egne.
 
@@ -4895,7 +4789,7 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 ---
 
-### [0.10.5] - 2026-05-14
+### [0.10.5] - 2026-05-14 · bug
 
 > Kontakt-lenken på personvern-siden går nå til en faktisk e-postadresse (`personvern@tornygolf.no`) i stedet for en admin-bare side spilleren ikke kunne nå.
 
@@ -5007,12 +4901,8 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 
 </details>
 
----
-
 <details>
-<summary><strong>0.9.x — Sync-feedback under runden (5 oppføringer) — klikk for å vise</strong></summary>
-
-## 0.9.x — Sync-feedback under runden
+<summary><strong>0.9.x — Sync-feedback under runden (5 oppføringer)</strong></summary>
 
 Hvis et slag ikke kommer fram til serveren, sier appen ifra. Ny sticky banner viser hvor mange slag som mangler synk, surface'r faktiske feilmeldinger fra Supabase, og lar deg manuelt prøve igjen — i stedet for at sync-køen stille henger i bakgrunnen. Pilot-polish underveis: scorekort wiper ikke lenger settet score hvis du tilfeldigvis trykker på det igjen.
 
@@ -5078,7 +4968,7 @@ Hvis et slag ikke kommer fram til serveren, sier appen ifra. Ny sticky banner vi
 
 ---
 
-### [0.9.1] - 2026-05-13
+### [0.9.1] - 2026-05-13 · bug
 
 > Et score du har justert med + eller − blir ikke lenger nullstilt til par hvis du tilfeldigvis trykker på kortet igjen — og onboarding-banneret beskriver knappene som faktisk finnes.
 
@@ -5115,12 +5005,8 @@ Hvis et slag ikke kommer fram til serveren, sier appen ifra. Ny sticky banner vi
 
 </details>
 
----
-
 <details>
-<summary><strong>0.8.x — Sletting og «trekk tilbake»-flyt (27 oppføringer) — klikk for å vise</strong></summary>
-
-## 0.8.x — Sletting og «trekk tilbake»-flyt
+<summary><strong>0.8.x — Sletting og «trekk tilbake»-flyt (27 oppføringer)</strong></summary>
 
 Dedikert slett-side for spillere, fulgt av tre iterasjoner på «trekk tilbake»-bekreftelsen for å få den robust på iPhone-PWA. Pilot-polish på topp: tydeligere tekst utendørs i sol.
 
@@ -5140,7 +5026,7 @@ Dedikert slett-side for spillere, fulgt av tre iterasjoner på «trekk tilbake»
 
 ---
 
-### [0.8.4] - 2026-05-13
+### [0.8.4] - 2026-05-13 · bug
 
 > Du kan nå trekke tilbake en invitasjon fra iPhone uten at knappene oppfører seg rart.
 
@@ -5155,7 +5041,7 @@ Dedikert slett-side for spillere, fulgt av tre iterasjoner på «trekk tilbake»
 
 ---
 
-### [0.8.3] - 2026-05-13
+### [0.8.3] - 2026-05-13 · bug
 
 > Forsøk på å fikse «trekk tilbake»-bekreftelsen for iPhone — viste seg å ikke fungere helt, og ble erstattet av løsningen i 0.8.4.
 
@@ -5170,7 +5056,7 @@ Dedikert slett-side for spillere, fulgt av tre iterasjoner på «trekk tilbake»
 
 ---
 
-### [0.8.2] - 2026-05-13
+### [0.8.2] - 2026-05-13 · bug
 
 > Ventende invitéer dukker ikke lenger opp dobbelt i admin-spillerlista, og «trekk tilbake» frigjør e-postadressen som forventet.
 
@@ -5187,7 +5073,7 @@ Dedikert slett-side for spillere, fulgt av tre iterasjoner på «trekk tilbake»
 
 ---
 
-### [0.8.1] - 2026-05-13
+### [0.8.1] - 2026-05-13 · bug
 
 > Hvis sletting av en spiller mislykkes, sier appen nå hvorfor — i stedet for å se ut som om ingenting skjedde.
 
@@ -5217,10 +5103,8 @@ Dedikert slett-side for spillere, fulgt av tre iterasjoner på «trekk tilbake»
 
 </details>
 
----
-
 <details>
-<summary><strong>0.7.x — Bruker-detalj-redigering (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>0.7.x — Bruker-detalj-redigering (1 oppføring)</strong></summary>
 
 Klikk på en spiller i admin for å redigere navn, kallenavn og handicap. Faresone-seksjon på detalj-siden forbereder slett-flyten som lander i 0.8.0.
 
@@ -5239,10 +5123,8 @@ Klikk på en spiller i admin for å redigere navn, kallenavn og handicap. Fareso
 
 </details>
 
----
-
 <details>
-<summary><strong>0.6.x — Samlet spilleradministrasjon (1 oppføring) — klikk for å vise</strong></summary>
+<summary><strong>0.6.x — Samlet spilleradministrasjon (1 oppføring)</strong></summary>
 
 Erstatter den gamle `/admin/invitations`-flata med `/admin/spillere`, som samler registrerte spillere, ventende invitasjoner og invitasjons-form på ett sted og legger til «Send på nytt» og «Trekk tilbake»-actions.
 
@@ -5267,28 +5149,26 @@ Erstatter den gamle `/admin/invitations`-flata med `/admin/spillere`, som samler
 
 </details>
 
----
-
 <details>
-<summary><strong>0.5.x — Pending-invitees-integrasjon (11 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>0.5.x — Pending-invitees-integrasjon (11 oppføringer)</strong></summary>
 
 Ventende invitéer kan nå velges til lag og flight før de selv har logget inn. Ti patch-bumps fulgte for å rydde fallouten fra migrasjon 0014, som auto-oppretter `public.users`-rader for hver `auth.users` og som dermed brøt onboarding-gate, picker-filter, draft-validering og start-spill-guard.
 
-### [0.5.10] - 2026-05-13
+### [0.5.10] - 2026-05-13 · bug
 
 > «Akseptert»-statusen på en invitasjon stemmer nå med om spilleren faktisk har fullført profilen sin.
 
 #### Fixed
 - `Akseptert`-pille på `/admin/invitations` reflekterer nå faktisk onboarding (`profile_completed_at IS NOT NULL`), ikke bare at invitasjons-raden ble markert akseptert ved OTP-verify. Stoppet misvisende «Akseptert»-status for brukere som klikket gammel magic-link-mail uten å fullføre profil.
 
-### [0.5.9] - 2026-05-13
+### [0.5.9] - 2026-05-13 · bug
 
 > Beskytter mot at en bruker blir hengende som «Venter» selv etter at de har lagret profilen sin.
 
 #### Fixed
 - Profil-oppdateringen stamper nå `profile_completed_at` som defence-in-depth, så en bruker som havner på `/profile` uten å ha fullført onboarding (deploy-vindu-race i tidligere release) blir ikke sittende fast som «Venter» i picker-en.
 
-### [0.5.8] - 2026-05-13
+### [0.5.8] - 2026-05-13 · bug
 
 > Du kan ikke starte et planlagt spill hvis noen av deltakerne fortsatt mangler å fullføre profilen.
 
@@ -5296,49 +5176,49 @@ Ventende invitéer kan nå velges til lag og flight før de selv har logget inn.
 - «Start spillet» (draft → aktiv) blokkeres nå hvis ikke alle valgte spillere har fullført profil — samme guard som scheduled-pathen.
 - Invitér-en-venn-actionen sjekker `profile_completed_at` i stedet for "rad finnes ikke" som ble dødt etter migrasjon 0014.
 
-### [0.5.7] - 2026-05-13
+### [0.5.7] - 2026-05-13 · bug
 
 > Ventende invitéer uten utfylt navn vises med e-postadressen i stedet for tom plass.
 
 #### Fixed
 - Rendring av ventende invitéer (uten utfylt navn) faller tilbake til e-postadressen i stedet for å vise tom tekst — gjelder admins spill-detaljside (lag/flight-oversikt) og spillernes venterom-visning av draft-spill.
 
-### [0.5.6] - 2026-05-13
+### [0.5.6] - 2026-05-13 · bug
 
 > Nye brukere sendes igjen til onboarding-skjermen ved første innlogging.
 
 #### Fixed
 - Nye brukere ble ikke sendt til onboarding på `/` og `/profile` etter at trigger-en fra migrasjon 0014 begynte å pre-opprette `public.users`-rader. Gate-en sjekker nå `profile_completed_at` i stedet for "rad finnes ikke".
 
-### [0.5.5] - 2026-05-13
+### [0.5.5] - 2026-05-13 · bug
 
 > Førstegangs-onboarding fungerer igjen for nye brukere — var midlertidig brutt etter en bakgrunnsendring.
 
 #### Fixed
 - `complete-profile` oppdaterer nå den auto-opprettede `public.users`-raden i stedet for å forsøke å sette inn på nytt. Uten denne ville migrasjon 0014 brutt all ny brukerregistrering.
 
-### [0.5.4] - 2026-05-13
+### [0.5.4] - 2026-05-13 · bug
 
 > Feilmeldingen for ventende spillere på opprett-spill-siden viser nå e-postadressene i stedet for «{LIST}».
 
 #### Fixed
 - Feilmelding for ventende spillere viste `{LIST}`-plassholderen bokstavelig på opprett-spill-siden. Bruker nå samme `buildErrorMessage`-helper som rediger-spill og spill-detalj.
 
-### [0.5.3] - 2026-05-13
+### [0.5.3] - 2026-05-13 · bug
 
 > Ekstra sikkerhets-sjekk: et publisert spill kan ikke startes med ventende spillere selv om databasen blir manuelt redigert.
 
 #### Fixed
 - Start spill blokkeres også (defence-in-depth) hvis et publisert spill noensinne skulle få ventende spillere via direkte DB-redigering.
 
-### [0.5.2] - 2026-05-13
+### [0.5.2] - 2026-05-13 · bug
 
 > Du kan ikke endre et eksisterende spill til publisert hvis det fortsatt har ventende invitéer.
 
 #### Fixed
 - Publisering/oppdatering fra rediger-spill blokkeres med tydelig e-postliste hvis ventende invitasjoner står på rosteret.
 
-### [0.5.1] - 2026-05-13
+### [0.5.1] - 2026-05-13 · bug
 
 > Du kan ikke publisere et nytt spill hvis noen av deltakerne ikke har fullført profilen sin.
 
@@ -5354,10 +5234,8 @@ Ventende invitéer kan nå velges til lag og flight før de selv har logget inn.
 
 </details>
 
----
-
 <details>
-<summary><strong>0.4.x — OTP-kode-innlogging (4 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>0.4.x — OTP-kode-innlogging (4 oppføringer)</strong></summary>
 
 Bytte fra magic-link til 6–8-sifret kode i mail, som fjernet to iOS-PWA-blokkerings-bugs samtidig. Inkluderer ærligere admin-invitasjons-banner ved Resend-feil og forberedelse for pending-invitees-sporing i 0.5.x.
 
@@ -5369,7 +5247,7 @@ Bytte fra magic-link til 6–8-sifret kode i mail, som fjernet to iOS-PWA-blokke
 
 - Inviterte spillere som ikke har fullført registrering blir nå sporet via `profile_completed_at`. Forberedelse for å vise dem i game-picker-en.
 
-### [0.4.2] - 2026-05-13
+### [0.4.2] - 2026-05-13 · bug
 
 > Hvis «Du er invitert»-mailen ikke kommer fram, sier admin-banneret det ærlig i stedet for å lyve «Invitasjon sendt».
 
@@ -5377,7 +5255,7 @@ Bytte fra magic-link til 6–8-sifret kode i mail, som fjernet to iOS-PWA-blokke
 
 - **Admin-invitasjons-banneret lyver ikke lenger om mail-utsending.** Tidligere viste `/admin/invitations` alltid «✓ Invitasjon sendt»-banner etter at raden var lagret, selv om Resend-utsendingen faktisk feilet — feilen ble bare stille logget i Vercel-runtime-loggene. Hvis Resend kaster nå, vises et ærlig feil-banner: «Invitasjonen ble lagret, men «Du er invitert»-mail kom ikke ut. Sjekk Vercel-loggene for detaljer.» Raden i `invitations`-tabellen bevares fortsatt (admin kan re-sende manuelt når mail-konfigen er fikset).
 
-### [0.4.1] - 2026-05-13
+### [0.4.1] - 2026-05-13 · bug
 
 > Innloggings-kode-feltet godtar nå 8-sifrede koder, som er Supabase' faktiske standard.
 
@@ -5400,14 +5278,12 @@ Bytte fra magic-link til 6–8-sifret kode i mail, som fjernet to iOS-PWA-blokke
 
 </details>
 
----
-
 <details>
-<summary><strong>0.3.x — Logo og pre-OTP-fixes (4 oppføringer) — klikk for å vise</strong></summary>
+<summary><strong>0.3.x — Logo og pre-OTP-fixes (4 oppføringer)</strong></summary>
 
 Tørny fikk sin egen visuelle identitet (wordmark med champagne-prikk på login og app-ikoner), pluss tre fixes som ryddet opp før OTP-omleggingen: invitasjoner som sto som «VENTER» etter aksept, tee-off-tider som lå 1–2 timer feil, og «lagre utkast» som låste seg på native HTML5-validering.
 
-### [0.3.3] - 2026-05-13
+### [0.3.3] - 2026-05-13 · bug
 
 > Invitasjoner flippes nå korrekt til «Akseptert» når mottakeren logger inn første gang — før dette sto alle som «Venter» uansett.
 
@@ -5415,7 +5291,7 @@ Tørny fikk sin egen visuelle identitet (wordmark med champagne-prikk på login 
 
 - **Invitasjoner sto som «VENTER» selv etter aksept.** Hele tabellen `public.invitations` hadde `accepted_at = NULL` på alle 8 rader — ingen kode skrev til kolonnen noensinne. Auth-callback (`app/auth/callback/route.ts`) markerer nå alle ventende invitasjoner for innlogget brukers e-post som akseptert etter vellykket `exchangeCodeForSession`. Best-effort: feil i side-effekten blokkerer aldri innloggingen. Ny RLS-policy (`migration 0012`) lar bruker UPDATEe sin egen invitasjon — kun `accepted_at`-flippen er tillatt, alle andre kolonner må forbli identiske. Backfill kjørt mot 4 stranded rader som hadde `auth.users.confirmed_at` satt.
 
-### [0.3.2] - 2026-05-13
+### [0.3.2] - 2026-05-13 · bug
 
 > Tee-off-tider viser nå riktig tid på alle skjermer — var av med 1–2 timer i et kort vindu rett etter sideinnlasting.
 
@@ -5423,7 +5299,7 @@ Tørny fikk sin egen visuelle identitet (wordmark med champagne-prikk på login 
 
 - **Tee-off-tider rendret 1–2 timer feil under hydration.** `lib/format/teeOff.ts` brukte lokal-TZ `Date.getHours/getMinutes/getDate/getMonth` — på Vercel-serveren (UTC) ga det feil tid i HTML-en før hydration på iPhone (Europe/Oslo) tok over. Rammet hjem-skjermen, runde-siden og leaderboarden. Bytter til `Intl.DateTimeFormat` med eksplisitt `timeZone: 'Europe/Oslo'`, så server og klient nå renderer identiske strenger uavhengig av host-TZ. DST håndteres riktig (UTC → Oslo sommer +02, vinter +01). 11 nye tester verifiserer oppførselen under flere host-TZ-er.
 
-### [0.3.1] - 2026-05-13
+### [0.3.1] - 2026-05-13 · bug
 
 > Du kan lagre et halvferdig spill-utkast uten at bane- og handicap-feltene må fylles ut først.
 
@@ -5452,8 +5328,6 @@ Tørny fikk sin egen visuelle identitet (wordmark med champagne-prikk på login 
 </details>
 
 </details>
-
----
 
 ## [0.2.0] - 2026-05-12
 
@@ -5485,3 +5359,6 @@ Versjonen `0.1.0` dekker all utvikling fra Phase 0 til og med Phase 12.5. Ingen 
 - **Phase 12.5**: draft-mode på venterom med progressive disclosure, fargeharmonisering for status-bannere
 
 Full historikk: `git log` mellom prosjektstart og commit `02cf8c0`.
+
+
+</details>
