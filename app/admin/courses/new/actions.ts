@@ -2,8 +2,6 @@
 
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
-import { getAdminClient } from '@/lib/supabase/admin';
-import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
 import { MAX_TEE_BOXES } from '@/app/admin/courses/constants';
 
 type GenderRating = {
@@ -45,15 +43,53 @@ function isPartiallyFilled(
   return filled === 1;
 }
 
+// Open-redirect-guard: kun interne absolutte stier (start med ett '/', ikke
+// protokoll-relativ '//'). redirect_base/success_redirect er klient-kontrollert
+// FormData (CourseForm sender dem som skjulte inputs), så de saniteres her.
+function safeInternalPath(
+  value: FormDataEntryValue | null,
+  fallback: string,
+): string {
+  const s = typeof value === 'string' ? value.trim() : '';
+  if (s.startsWith('/') && !s.startsWith('//')) return s;
+  return fallback;
+}
+
+function appendQuery(base: string, key: string, value: string): string {
+  const sep = base.includes('?') ? '&' : '?';
+  return `${base}${sep}${key}=${value}`;
+}
+
 export async function createCourse(formData: FormData) {
   const supabase = await getServerClient();
-  // Defense in depth: re-gate at action-level too (the layout already gates,
-  // but server-actions can be invoked directly via fetch).
-  const role = await requireAdminOrTrustedCreator(supabase);
+  // #366: bane-opprettelse er åpen for ALLE innloggede brukere (ikke bare
+  // admin/trusted). Vi krever kun en innlogget bruker her; RLS (migrasjon
+  // 0070) håndhever created_by = auth.uid() på selve writen. Defense in depth:
+  // re-gate i action-en — server-actions kan kalles direkte via fetch.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect('/login');
+  }
+
+  // Hvor valideringsfeil bouncer / hvor suksess lander. Admin-flyten sender
+  // ingen verdier → admin-defaults. /opprett-bane sender egne stier så
+  // ikke-admin-brukere ikke kastes til /admin/courses (dit har de ikke tilgang).
+  const errorBase = safeInternalPath(
+    formData.get('redirect_base'),
+    '/admin/courses/new',
+  );
+  const successRedirect = safeInternalPath(
+    formData.get('success_redirect'),
+    '/admin/courses?status=created',
+  );
+  const fail = (code: string): never =>
+    redirect(appendQuery(errorBase, 'error', code));
 
   const name = String(formData.get('name') ?? '').trim();
   if (!name) {
-    redirect('/admin/courses/new?error=name_required');
+    fail('name_required');
   }
 
   // Parse 18 holes.
@@ -84,11 +120,11 @@ export async function createCourse(formData: FormData) {
 
     for (const par of [parMens, parLadies, parJuniors]) {
       if (!Number.isInteger(par) || par < 3 || par > 6) {
-        redirect('/admin/courses/new?error=bad_par');
+        fail('bad_par');
       }
     }
     if (!Number.isInteger(si) || si < 1 || si > 18) {
-      redirect('/admin/courses/new?error=bad_si');
+      fail('bad_si');
     }
     holes.push({
       hole_number: i,
@@ -103,7 +139,7 @@ export async function createCourse(formData: FormData) {
   // course but we'd rather show a friendly error than surface a DB constraint.
   const siSet = new Set(holes.map((h) => h.stroke_index));
   if (siSet.size !== 18) {
-    redirect('/admin/courses/new?error=si_duplicate');
+    fail('si_duplicate');
   }
 
   // par_total per kjønn deriveres fra hullene per kjønn — auto-sync med
@@ -151,7 +187,7 @@ export async function createCourse(formData: FormData) {
     // Per-gender rating: slope + CR må enten begge være satt eller begge tomme.
     for (const g of ['mens', 'ladies', 'juniors'] as const) {
       if (isPartiallyFilled(formData, i, g)) {
-        redirect('/admin/courses/new?error=tee_partial_rating');
+        fail('tee_partial_rating');
       }
     }
 
@@ -164,7 +200,7 @@ export async function createCourse(formData: FormData) {
       !isCompleteRating(ladiesRating) &&
       !isCompleteRating(juniorsRating)
     ) {
-      redirect('/admin/courses/new?error=tee_no_rating');
+      fail('tee_no_rating');
     }
 
     teeBoxes.push({
@@ -182,41 +218,40 @@ export async function createCourse(formData: FormData) {
     });
   }
   if (teeBoxes.length === 0) {
-    redirect('/admin/courses/new?error=tee_required');
+    fail('tee_required');
   }
 
-  // Writes go through admin-client when caller is trusted-non-admin to
-  // bypass RLS policies that require is_admin(). Trust is already verified
-  // by requireAdminOrTrustedCreator above. Same #198 mulighet A pattern.
-  const writeClient = role.isAdmin ? supabase : getAdminClient();
-
-  const { data: course, error: courseError } = await writeClient
+  // #366: alle innloggede skriver via request-scoped klient. RLS-policyen
+  // "courses authenticated insert own" (migrasjon 0070) tillater INSERT når
+  // created_by = auth.uid(); admin dekkes òg av "courses admin write". Ingen
+  // service-role-bypass — created_by = user.id er den eneste tillatte eieren.
+  const { data: course, error: courseError } = await supabase
     .from('courses')
-    .insert({ name, created_by: role.userId })
+    .insert({ name, created_by: user.id })
     .select('id')
     .single();
 
   if (courseError || !course) {
-    redirect('/admin/courses/new?error=db_course');
+    // `return` so TS narrows `course` to non-null below (a bare never-returning
+    // call through the `fail` arrow isn't recognized by control-flow analysis).
+    return fail('db_course');
   }
 
   const holesToInsert = holes.map((h) => ({ ...h, course_id: course.id }));
-  const { error: holesError } = await writeClient
+  const { error: holesError } = await supabase
     .from('course_holes')
     .insert(holesToInsert);
   if (holesError) {
-    redirect('/admin/courses/new?error=db_holes');
+    fail('db_holes');
   }
 
   const teesToInsert = teeBoxes.map((t) => ({ ...t, course_id: course.id }));
-  const { error: teeError } = await writeClient
+  const { error: teeError } = await supabase
     .from('tee_boxes')
     .insert(teesToInsert);
   if (teeError) {
-    redirect('/admin/courses/new?error=db_tees');
+    fail('db_tees');
   }
 
-  redirect(
-    `/admin/courses?status=created&name=${encodeURIComponent(name)}`,
-  );
+  redirect(appendQuery(successRedirect, 'name', encodeURIComponent(name)));
 }

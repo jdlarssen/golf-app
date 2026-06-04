@@ -51,6 +51,12 @@ type Props = {
   affectedGamesCount?: number;
   // Optional extra footer (e.g. a delete button on the edit page).
   footer?: React.ReactNode;
+  // Where createCourse should bounce validation errors / land on success.
+  // Admin-flyten lar dem stå udefinert → action-en bruker sine admin-defaults.
+  // /opprett-bane setter dem så ikke-admin-brukere holdes på sin egen rute
+  // (de har ikke tilgang til /admin/courses). Se createCourse-action.
+  redirectBase?: string;
+  successRedirect?: string;
 };
 
 const DEFAULT_HOLES: HoleData[] = Array.from({ length: 18 }, (_, i) => ({
@@ -182,6 +188,8 @@ export function CourseForm({
   initialData,
   affectedGamesCount = 0,
   footer,
+  redirectBase,
+  successRedirect,
 }: Props) {
   // Skiller new-flyten (defaults i herrer-blokken) fra edit-flyten (lagrede
   // tall): Tøm-knappen på herrer-blokken skjules på new-flyten så lenge
@@ -363,6 +371,12 @@ export function CourseForm({
       }}
       className="space-y-6"
     >
+      {redirectBase !== undefined && (
+        <input type="hidden" name="redirect_base" value={redirectBase} />
+      )}
+      {successRedirect !== undefined && (
+        <input type="hidden" name="success_redirect" value={successRedirect} />
+      )}
       <Input
         id="name"
         name="name"
