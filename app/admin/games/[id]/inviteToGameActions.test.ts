@@ -9,7 +9,9 @@ import {
  * Tests for `addExistingPlayerToGame` + `inviteEmailToGame` server-actions.
  *
  * Key invariants:
- *  - Authz via requireAdminOrTrustedCreator (admin OR trusted-creator allowed).
+ *  - Authz via requireAdminOrCreator (admin OR the game's creator — #429).
+ *    Admin redirects land on /admin/games/[id]; creator on /games/[id]/spillere.
+ *  - Disposable-domener blokkeres for ikke-admin-arrangør, ikke for admin (#422).
  *  - Status gate: only draft/scheduled allow add/invite.
  *  - Capacity gate: best_ball refuses at 8 players.
  *  - Idempotency: duplicate (game_id, user_id) swallow-es; duplicate pending
@@ -50,12 +52,27 @@ vi.mock('@/lib/supabase/server', () => ({
 const ADMIN_ID = '11111111-1111-1111-1111-111111111111';
 const RECIPIENT_ID = '22222222-2222-2222-2222-222222222222';
 const GAME_ID = '33333333-3333-3333-3333-333333333333';
+const CREATOR_ID = '44444444-4444-4444-4444-444444444444';
 
 function authedAsAdmin(): void {
   (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
     data: { user: { id: ADMIN_ID, email: 'admin@tornygolf.no' } },
   });
 }
+
+function authedAsCreator(): void {
+  (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+    data: { user: { id: CREATOR_ID, email: 'arrangor@example.com' } },
+  });
+}
+
+// loadRole users-read for a non-admin user, then requireAdminOrCreator's
+// games.created_by lookup confirming ownership.
+const CREATOR_ROLE_READ = {
+  data: { is_admin: false, email: 'arrangor@example.com', name: 'Kari' },
+  error: null,
+} as const;
+const CREATOR_OWNS_GAME = { data: { created_by: CREATOR_ID }, error: null } as const;
 
 function lastRedirect(): string | undefined {
   return redirectMock.mock.calls.at(-1)?.[0];
@@ -188,7 +205,10 @@ describe('addExistingPlayerToGame', () => {
   });
 
   it('avviser når recipient_user_id mangler i form', async () => {
-    supabaseMock = buildSupabaseMock([]);
+    // Auth kjører før form-validering nå (#429), så loadRole-lesningen må svare.
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, email: 'admin@tornygolf.no', name: 'Jørgen' }, error: null },
+    ]);
     authedAsAdmin();
 
     const { addExistingPlayerToGame } = await import('./inviteToGameActions');
@@ -197,6 +217,32 @@ describe('addExistingPlayerToGame', () => {
     ).rejects.toBeInstanceOf(RedirectError);
 
     expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=invite_missing_user`);
+  });
+
+  it('oppretter (ikke-admin): legger til spiller, lander på /games/[id]/spillere', async () => {
+    supabaseMock = buildSupabaseMock([
+      CREATOR_ROLE_READ,
+      CREATOR_OWNS_GAME,
+      {
+        data: { id: GAME_ID, name: 'Lørdagsrunde', status: 'scheduled', game_mode: 'stableford' },
+        error: null,
+      },
+      // game_players insert (stableford → ingen capacity-check)
+      { data: null, error: null },
+    ]);
+    authedAsCreator();
+
+    const { addExistingPlayerToGame } = await import('./inviteToGameActions');
+    await expect(
+      addExistingPlayerToGame(GAME_ID, formData({ recipient_user_id: RECIPIENT_ID })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(notifyInvitedToGameMock).toHaveBeenCalledWith({
+      recipientUserId: RECIPIENT_ID,
+      gameId: GAME_ID,
+      inviterUserId: CREATOR_ID,
+    });
+    expect(lastRedirect()).toBe(`/games/${GAME_ID}/spillere?status=invite_added`);
   });
 
   it('avviser ikke-best-ball-modus ved 10 spillere (ingen øvre grense)', async () => {
@@ -309,7 +355,10 @@ describe('inviteEmailToGame', () => {
   });
 
   it('avviser ugyldig e-post', async () => {
-    supabaseMock = buildSupabaseMock([]);
+    // Auth kjører før e-post-validering nå (#429).
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, email: 'admin@tornygolf.no', name: 'Jørgen' }, error: null },
+    ]);
     authedAsAdmin();
 
     const { inviteEmailToGame } = await import('./inviteToGameActions');
@@ -318,6 +367,76 @@ describe('inviteEmailToGame', () => {
     ).rejects.toBeInstanceOf(RedirectError);
 
     expect(lastRedirect()).toBe(`/admin/games/${GAME_ID}?error=invite_invalid_email`);
+  });
+
+  it('oppretter (ikke-admin): ukjent e-post → invitations-insert + mail, lander på /games/[id]/spillere', async () => {
+    supabaseMock = buildSupabaseMock([
+      CREATOR_ROLE_READ,
+      CREATOR_OWNS_GAME,
+      {
+        data: { id: GAME_ID, name: 'Lørdagsrunde', status: 'scheduled', game_mode: 'stableford' },
+        error: null,
+      },
+      // users.select.ilike.maybeSingle — ingen treff
+      { data: null, error: null },
+      // invitations.select…maybeSingle — ingen pending
+      { data: null, error: null },
+      // invitations insert
+      { data: null, error: null },
+    ]);
+    authedAsCreator();
+
+    const { inviteEmailToGame } = await import('./inviteToGameActions');
+    await expect(
+      inviteEmailToGame(GAME_ID, formData({ email: 'ny@example.com' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(sendInviteNotificationMock).toHaveBeenCalledWith({
+      to: 'ny@example.com',
+      invitedByName: 'Kari',
+      gameName: 'Lørdagsrunde',
+      gameMode: 'stableford',
+    });
+    expect(lastRedirect()).toContain(`/games/${GAME_ID}/spillere?status=invite_sent`);
+  });
+
+  it('oppretter (ikke-admin): disposable-domene blokkeres før mail', async () => {
+    supabaseMock = buildSupabaseMock([CREATOR_ROLE_READ, CREATOR_OWNS_GAME]);
+    authedAsCreator();
+
+    const { inviteEmailToGame } = await import('./inviteToGameActions');
+    await expect(
+      inviteEmailToGame(GAME_ID, formData({ email: 'throwaway@mailinator.com' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(sendInviteNotificationMock).not.toHaveBeenCalled();
+    expect(lastRedirect()).toBe(`/games/${GAME_ID}/spillere?error=disposable_email`);
+  });
+
+  it('admin: disposable-domene blokkeres IKKE (kurator-unntak #422)', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, email: 'admin@tornygolf.no', name: 'Jørgen' }, error: null },
+      {
+        data: { id: GAME_ID, name: 'Stiklestad', status: 'scheduled', game_mode: 'stableford' },
+        error: null,
+      },
+      // users.select.ilike.maybeSingle — ingen treff
+      { data: null, error: null },
+      // invitations pending — ingen
+      { data: null, error: null },
+      // invitations insert
+      { data: null, error: null },
+    ]);
+    authedAsAdmin();
+
+    const { inviteEmailToGame } = await import('./inviteToGameActions');
+    await expect(
+      inviteEmailToGame(GAME_ID, formData({ email: 'throwaway@mailinator.com' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    // Admin slipper gjennom guarden → mail sendes.
+    expect(sendInviteNotificationMock).toHaveBeenCalled();
+    expect(lastRedirect()).toContain('status=invite_sent');
   });
 
   it('avviser game_locked når spillet er active', async () => {

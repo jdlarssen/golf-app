@@ -4,7 +4,8 @@ import { redirect } from 'next/navigation';
 import { revalidateTag } from 'next/cache';
 import { randomUUID } from 'node:crypto';
 import { getServerClient } from '@/lib/supabase/server';
-import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
+import { requireAdminOrCreator } from '@/lib/admin/auth';
+import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { sendInviteNotification } from '@/lib/mail/inviteNotification';
 
@@ -19,27 +20,30 @@ const BEST_BALL_MAX_PLAYERS = 8;
 
 /**
  * Picker-add: legg en eksisterende registrert spiller til et game-roster.
- * Brukes fra «Inviter spillere»-card på `/admin/games/[id]`. Idempotent —
+ * Brukes fra «Inviter spillere»-card på `/admin/games/[id]` (admin) og fra
+ * arrangør-flaten `/games/[id]/spillere` (oppretter, #429). Idempotent —
  * UNIQUE-violation på (game_id, user_id) swallow-es slik at race-condition
- * mellom to admin-tabs ikke produserer en feilmelding.
+ * mellom to faner ikke produserer en feilmelding.
  *
  * Notify fyrer best-effort etter at game_players-insertet er commitet.
- * Spilleren får bell-prikk uten å måtte aksepte noe — admin-curator-modellen
- * forutsetter at administratoren har avklart deltakelse på forhånd.
+ * Spilleren får bell-prikk uten å måtte aksepte noe — curator-modellen
+ * forutsetter at arrangøren har avklart deltakelse på forhånd.
  */
 export async function addExistingPlayerToGame(
   gameId: string,
   formData: FormData,
 ): Promise<void> {
-  const recipientUserId = String(formData.get('recipient_user_id') ?? '').trim();
-  const detailPath = `/admin/games/${gameId}`;
+  const supabase = await getServerClient();
+  const ctx = await requireAdminOrCreator(supabase, gameId);
+  const detailPath = ctx.isAdmin
+    ? `/admin/games/${gameId}`
+    : `/games/${gameId}/spillere`;
+  const inviterUserId = ctx.userId;
 
+  const recipientUserId = String(formData.get('recipient_user_id') ?? '').trim();
   if (!recipientUserId) {
     redirect(`${detailPath}?error=invite_missing_user`);
   }
-
-  const supabase = await getServerClient();
-  const { userId: inviterUserId } = await requireAdminOrTrustedCreator(supabase);
 
   const game = await loadGameForInvite(supabase, gameId, detailPath);
 
@@ -107,16 +111,25 @@ export async function inviteEmailToGame(
   gameId: string,
   formData: FormData,
 ): Promise<void> {
-  const rawEmail = String(formData.get('email') ?? '').trim().toLowerCase();
-  const detailPath = `/admin/games/${gameId}`;
+  const supabase = await getServerClient();
+  const ctx = await requireAdminOrCreator(supabase, gameId);
+  const detailPath = ctx.isAdmin
+    ? `/admin/games/${gameId}`
+    : `/games/${gameId}/spillere`;
+  const inviterUserId = ctx.userId;
+  const inviterName = ctx.name;
 
+  const rawEmail = String(formData.get('email') ?? '').trim().toLowerCase();
   if (!rawEmail || !rawEmail.includes('@')) {
     redirect(`${detailPath}?error=invite_invalid_email`);
   }
 
-  const supabase = await getServerClient();
-  const { userId: inviterUserId, name: inviterName } =
-    await requireAdminOrTrustedCreator(supabase);
+  // Disposable-domener blokkeres for arrangører som ikke er admin (#422).
+  // Admin og trusted-creators er bevisst u-guardet (kurator-modellen — de
+  // inviterer folk de allerede har avklart med).
+  if (!ctx.isAdmin && isDisposableEmailDomain(rawEmail)) {
+    redirect(`${detailPath}?error=disposable_email`);
+  }
 
   const game = await loadGameForInvite(supabase, gameId, detailPath);
 
@@ -198,7 +211,8 @@ export async function inviteEmailToGame(
     redirect(`${detailPath}?error=invite_failed`);
   }
 
-  const invitedByName = inviterName?.trim() || 'Admin';
+  const invitedByName =
+    inviterName?.trim() || (ctx.isAdmin ? 'Admin' : 'En arrangør');
   try {
     await sendInviteNotification({
       to: rawEmail,
