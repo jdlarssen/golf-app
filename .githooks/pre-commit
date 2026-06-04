@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Pre-commit-warns for Tørny. Non-blocking — alltid exit 0.
 #
-# To familier av sjekker:
+# Tre familier av sjekker:
 #   1. Humanizer: AI-tells i nye bruker-rettede strenger i komponent-kode.
 #      Følger «Språk-kvalitet i bruker-rettet copy»-policyen i CLAUDE.md.
 #   2. Test-disiplin: Type B/D-mønstre fra docs/test-discipline.md.
+#   3. CHANGELOG: nye versjons-oppføringer skal ha kilde-tag (· #N / · bug).
 #
 # False-positives kan ignoreres når de gjelder bevisst beholdt copy
 # (brand-tagline, snapshot-låste mail-subjects, sekretariat-stemmen, etc.).
@@ -19,7 +20,9 @@ files=$(git diff --cached --name-only --diff-filter=AM 2>/dev/null \
   | grep -E '\.(tsx|ts)$' \
   | grep -vE '\.test\.|/__tests__/|/test/' \
   || true)
-[ -z "$files" ] && exit 0
+# Merk: vi exiter IKKE tidlig når $files er tom — test-disiplin- og CHANGELOG-
+# sjekkene under må kjøre selv om commiten ikke rører komponent-kode. Tomme
+# løkker no-op-er.
 
 warn_count=0
 
@@ -96,6 +99,27 @@ for f in $test_files; do
       ;;
   esac
 done
+
+# ─────────────────────────────────────────────────────────────────────
+# CHANGELOG-kilde-tag — referanse: docs/changelog-conventions.md
+#
+# Egen sjekk, ikke en del av copy-style-skanningen over (som hopper over
+# markdown). Her ser vi KUN på nye versjons-overskrifter (`### [X.Y.Z] - …`)
+# som legges til i denne commiten, og advarer hvis de mangler kilde-taggen
+# `· #N` / `· bug`. De ~71 historiske ut-taggede oppføringene rører vi ikke —
+# de er ikke «added» med mindre du faktisk redigerer dem.
+# ─────────────────────────────────────────────────────────────────────
+if git diff --cached --name-only --diff-filter=AM 2>/dev/null | grep -qx 'CHANGELOG.md'; then
+  cl_missing=$(git diff --cached -U0 -- CHANGELOG.md 2>/dev/null \
+    | grep -E '^\+#{3,4} \[[0-9]' \
+    | grep -vE '·' || true)
+  if [ -n "$cl_missing" ]; then
+    printf '⚠️  changelog: nye oppføringer uten kilde-tag (· #N eller · bug):\n' >&2
+    printf '%s\n' "$cl_missing" | sed 's/^+/      /' >&2
+    printf '      Legg til kilde-tag på overskrifts-linja. Se docs/changelog-conventions.md.\n' >&2
+    warn_count=$((warn_count + 1))
+  fi
+fi
 
 if [ "$warn_count" -gt 0 ]; then
   printf '\n%d pre-commit-advarsel(er). Commit fortsetter — bekreft mentalt eller juster om relevant.\n' "$warn_count" >&2
