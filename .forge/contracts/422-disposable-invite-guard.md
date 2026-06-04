@@ -119,13 +119,13 @@ Utkast (finaliseres ved bygging):
 
 ## 8. Suksesskriterier (evidens før avkrysning)
 
-- [ ] **K1 — Friend-invite blokkerer disposable.** Disposable e-post i `sendFriendInvite` → redirect `/profile?invite_error=disposable_email`, INGEN `invitations`-insert, INGEN mail. *Verifikasjon:* ny test i `app/invite/actions.test.ts`.
-- [ ] **K2 — Friend-feilmelding vist.** `disposable_email` mapper til vennlig norsk tekst i `app/profile/page.tsx`. *Verifikasjon:* map-oppføring + tekst lest.
-- [ ] **K3 — Team co-player blokkerer disposable.** Disposable slot-e-post → `submitTeamRegistration` returnerer `{ok:false, error:'disposable_email'}`, INGEN captain/co-player/invitations-insert. *Verifikasjon:* ny test i `teamActions.test.ts`.
-- [ ] **K4 — Team-feilmelding vist.** `disposable_email` mapper til norsk tekst i team-klientkomponenten. *Verifikasjon:* map-oppføring lest.
-- [ ] **K5 — Admin-flatene uendret.** `sendInvitation` + `inviteEmailToGame` har INGEN disposable-guard (Beslutning A). *Verifikasjon:* `git diff` rører ikke disse mht. disposable.
-- [ ] **K6 — Alltid på.** Ingen `NEXT_PUBLIC_ALLOW_SELF_REGISTRATION`-gating rundt de nye guards. *Verifikasjon:* kode lest.
-- [ ] **K7 — Gates grønne.** Typecheck + co-located tester + lint passerer; PATCH-bump + CHANGELOG.
+- [x] **K1 — Friend-invite blokkerer disposable.** *Evidens:* `app/invite/actions.ts` — guard etter `looksLikeEmail` (`if (isDisposableEmailDomain(email)) redirect('/profile?invite_error=disposable_email')`), plassert FØR `getServerClient()`. Test «rejects a known disposable domain» grønn: asserter redirect + `supabaseMock.rpc` not.toHaveBeenCalled() + 0 insert-calls + `sendInviteNotificationMock` not.toHaveBeenCalled().
+- [x] **K2 — Friend-feilmelding vist.** *Evidens:* `app/profile/page.tsx` `INVITE_ERROR_MESSAGES.disposable_email = 'Engangs-e-post går ikke. Be vennen om en vanlig e-postadresse.'`
+- [x] **K3 — Team co-player blokkerer disposable.** *Evidens:* `app/signup/[shortId]/teamActions.ts` — `if (isDisposableEmailDomain(slot.value)) return { ok: false, error: 'disposable_email' }` i pre-validerings-loopen (før `getAdminClient()`). Test «disposable medspiller-e-post» grønn: `toEqual({ok:false, error:'disposable_email'})` + 0 admin insert-calls.
+- [x] **K4 — Team-feilmelding vist.** *Evidens:* `app/signup/[shortId]/TeamRegistrationForm.tsx` `ERROR_MESSAGES.disposable_email = 'Engangs-e-post går ikke. Bruk en vanlig e-postadresse for medspilleren.'` + ny `'disposable_email'`-variant i `TeamRegistrationError`-unionen (teamActions.ts) — `Record<TeamRegistrationError, string>` ville ellers gitt tsc-feil.
+- [x] **K5 — Admin-flatene uendret.** *Evidens:* commit `4ebf8c9` rører ikke `app/admin/spillere/actions.ts` eller `app/admin/games/[id]/inviteToGameActions.ts` (ikke i `git show --stat`).
+- [x] **K6 — Alltid på.** *Evidens:* begge guards er ubetingede `if (isDisposableEmailDomain(...))` — ingen `NEXT_PUBLIC_ALLOW_SELF_REGISTRATION`-sjekk i nærheten (grep i de to filene gir 0 treff).
+- [x] **K7 — Gates grønne.** *Evidens:* `tsc --noEmit` → `TSC_EXIT=0`; `vitest run` (2 mål, matchet 4 filer) → **40 passed**; `eslint` 6 filer → `ESLINT_EXIT=0`; `package.json` 1.73.0→**1.73.1**; CHANGELOG `[1.73.1]` lagt til i 1.73.y-serien.
 
 ---
 
