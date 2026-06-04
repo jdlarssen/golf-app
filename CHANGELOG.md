@@ -63,7 +63,7 @@ Issue [#429](https://github.com/jdlarssen/golf-app/issues/429) — #22 Fase 3 (r
 
 
 <details>
-<summary><strong>Opprettelse & paamelding (#22, #366, #365) — 4 serier</strong></summary>
+<summary><strong>Opprettelse & påmelding (#22, #366, #365) — 4 serier</strong></summary>
 
 <details>
 <summary><strong>1.76.y — Rediger og slett ditt eget spill (3 oppføringer)</strong></summary>
@@ -242,7 +242,7 @@ Issue [#365](https://github.com/jdlarssen/golf-app/issues/365) — usynlig misbr
 </details>
 
 <details>
-<summary><strong>Flyt-polish, varsler & end-game (#354-377) — 13 serier</strong></summary>
+<summary><strong>Flyt-opprydding, varsler & avslutning (#354–377) — 13 serier</strong></summary>
 
 <details>
 <summary><strong>1.72.y — Avslutnings-varsel for cup (1 oppføring)</strong></summary>
@@ -3079,7 +3079,7 @@ Tørny får en innboks. Bjelle øverst-til-høyre på alle sider viser en champa
 </details>
 
 <details>
-<summary><strong>Spillmodi-grunnmuren & verktoy — 10 serier</strong></summary>
+<summary><strong>Spillmodi-grunnmuren & verktøy — 10 serier</strong></summary>
 
 <details>
 <summary><strong>1.14.y — Stableford-runde-polish (4 entries)</strong></summary>

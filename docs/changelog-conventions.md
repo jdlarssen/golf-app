@@ -36,7 +36,7 @@ Skuffene er **sammenhengende versjons-intervaller** navngitt etter det domineren
 | Skuff | Intervall |
 |-------|-----------|
 | Opprettelse & påmelding (#22, #366, #365) | 1.73–1.76 |
-| Flyt-polish, varsler & end-game (#354–377) | 1.60–1.72 |
+| Flyt-opprydding, varsler & avslutning (#354–377) | 1.60–1.72 |
 | Format-katalogen: scramble & matchplay (#270) | 1.43–1.59 |
 | Ryder Cup & format-fundament (#47, #270) | 1.38–1.42 |
 | Baner, selvreg & sideturnering (#223 m.fl.) | 1.25–1.37 |
