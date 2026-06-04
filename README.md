@@ -80,7 +80,7 @@ Offline sync ([`lib/sync/`](lib/sync/)) writes to Dexie first and drains the que
 
 RLS is enforced strictly in Postgres. You see your own scores, same-flight scores during an active game, and every score once the admin has ended the game. Realtime needs an explicit `supabase.realtime.setAuth()`; auto-propagation doesn't work for the WebSocket channel, which is a known quirk.
 
-Migrations live in [`supabase/migrations/`](supabase/migrations/) (60+ files, chronological).
+Migrations live in [`supabase/migrations/`](supabase/migrations/) (70+ files, chronological).
 
 ## Where the rest lives
 
