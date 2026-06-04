@@ -21,6 +21,25 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#428](https://github.com/jdlarssen/golf-app/issues/428) (epic [#22](https://github.com/jdlarssen/golf-app/issues/22)), Fase 2. Du som lagde spillet kan nå styre det fullt ut selv: redigere det, og slette utkast eller planlagte runder du ikke trenger lenger.
 
+### [1.76.1] - 2026-06-04
+
+> Lagde du et spill du ikke trenger likevel? Nå kan du slette dine egne utkast og planlagte runder selv, med en bekreftelse først så ingenting forsvinner ved et uhell.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#428](https://github.com/jdlarssen/golf-app/issues/428) — #22 Fase 2 (slett + inngang). Avslutter Fase 2.
+
+#### Added
+- [`app/games/[id]/slett/page.tsx`](app/games/[id]/slett/page.tsx) — ny slett-bekreftelse i `AppShell` for oppretter (dedikert rute per destruktiv-handling-disiplin). Kun draft/scheduled; active/finished sendes tilbake til game-home (der er sletting admin-only). Submitter den samme `deleteGame`-actionen som admin.
+- [`app/games/[id]/page.tsx`](app/games/[id]/page.tsx) — «Slett spill»-inngang i arrangør-kontrollen (ved siden av «Rediger spill»), kun draft/scheduled.
+
+#### Changed
+- [`app/admin/games/[id]/slett/actions.ts`](app/admin/games/[id]/slett/actions.ts) — `deleteGame` gater nå på `requireAdminOrCreator`; oppretter kan kun slette draft/scheduled (eier-beslutning), og redirect forgrenes på `isAdmin` (admin → Sekretariatet, oppretter → forsiden med bekreftelse). Admin-flyten er byte-identisk.
+- [`app/page.tsx`](app/page.tsx) — viser «{spillnavn} er slettet»-bekreftelse når oppretter lander her etter sletting (`?deleted=`).
+
+</details>
+
 ### [1.76.0] - 2026-06-04
 
 > Du som lagde spillet kan nå redigere det selv. Bytt bane, tee-off, spillere eller innstillinger så lenge runden ikke har startet. Rediger-knappen ligger på spill-siden.

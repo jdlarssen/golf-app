@@ -24,7 +24,12 @@ import { CREATE_GAME_LABEL } from '@/lib/games/createGameLabel';
 import { HomeDiscoverySection } from './HomeDiscoverySection';
 import { getDiscoverableGames } from '@/lib/games/getDiscoverableGames';
 
-type SearchParams = Promise<{ profile?: string | string[] }>;
+type SearchParams = Promise<{
+  profile?: string | string[];
+  // #428: set by the creator delete-flow (`/?deleted=<spillnavn>`) so we can
+  // confirm the deletion here — there's no «Mine spill»-hub to land on yet.
+  deleted?: string | string[];
+}>;
 
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
@@ -52,6 +57,7 @@ export default async function Home({
 
   const params = await searchParams;
   const profileUpdated = first(params.profile) === 'updated';
+  const deletedGameName = first(params.deleted);
 
   return (
     <AppShell>
@@ -70,6 +76,12 @@ export default async function Home({
       {profileUpdated && (
         <div className="mb-4">
           <Banner tone="success">✓ Profilen din er oppdatert.</Banner>
+        </div>
+      )}
+
+      {deletedGameName && (
+        <div className="mb-4">
+          <Banner tone="success">✓ «{deletedGameName}» er slettet.</Banner>
         </div>
       )}
 

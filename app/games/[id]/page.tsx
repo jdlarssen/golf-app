@@ -1183,11 +1183,11 @@ async function CupStandingsLink({ gameId }: { gameId: string }) {
 // ─── Creator controls (#428) ─────────────────────────────────────────────
 
 /**
- * Arrangør-kontroll for spillets oppretter: rediger (+ slett, #428 chunk 2). Kun
- * draft/scheduled — når runden har startet er handicaps frosset og scores finnes,
- * så spillet er effektivt låst (sletting av active/finished er admin-only,
- * eier-beslutning #428). Returnerer null for active/finished, så den kan rendres
- * ubetinget (gated på isCreator av kalleren) i både venterom- og hovedvisningen.
+ * Arrangør-kontroll for spillets oppretter: rediger + slett. Kun draft/scheduled
+ * — når runden har startet er handicaps frosset og scores finnes, så spillet er
+ * effektivt låst (sletting av active/finished er admin-only, eier-beslutning
+ * #428). Returnerer null for active/finished, så den kan rendres ubetinget
+ * (gated på isCreator av kalleren) i både venterom- og hovedvisningen.
  */
 function CreatorControls({
   gameId,
@@ -1203,14 +1203,28 @@ function CreatorControls({
       <Kicker tone="muted" className="mb-2">
         ARRANGØR
       </Kicker>
-      <SmartLink href={`/games/${gameId}/rediger`} className="block">
-        <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
-          <span className="text-base font-medium text-text">Rediger spill</span>
-          <span aria-hidden className="text-muted">
-            →
-          </span>
-        </Card>
-      </SmartLink>
+      <div className="space-y-2">
+        <SmartLink href={`/games/${gameId}/rediger`} className="block">
+          <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
+            <span className="text-base font-medium text-text">
+              Rediger spill
+            </span>
+            <span aria-hidden className="text-muted">
+              →
+            </span>
+          </Card>
+        </SmartLink>
+        <SmartLink href={`/games/${gameId}/slett`} className="block">
+          <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-danger/40">
+            <span className="text-base font-medium text-danger">
+              Slett spill
+            </span>
+            <span aria-hidden className="text-muted">
+              →
+            </span>
+          </Card>
+        </SmartLink>
+      </div>
     </div>
   );
 }
