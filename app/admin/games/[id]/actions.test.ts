@@ -101,9 +101,10 @@ describe('adminWithdrawPlayer', () => {
     expect(redirectMock).toHaveBeenCalledWith('/login');
   });
 
-  it('redirects to / when user is not admin (authorization)', async () => {
+  it('redirects to / when user is neither admin nor creator (authorization)', async () => {
     supabaseMock = buildSupabaseMock([
-      { data: { is_admin: false, name: 'Ola' }, error: null }, // users
+      { data: { is_admin: false, name: 'Ola' }, error: null }, // users (loadRole)
+      { data: { created_by: 'someone-else' }, error: null }, // games.created_by (not owner)
     ]);
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { user: { id: 'user-1' } },
@@ -113,6 +114,34 @@ describe('adminWithdrawPlayer', () => {
 
     await expect(adminWithdrawPlayer('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
     expect(lastRedirect()).toBe('/');
+  });
+
+  it('creator: withdraws on own game, lands on /games/[id]/spillere', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false, name: 'Kari' }, error: null }, // users (loadRole)
+      { data: { created_by: 'creator-1' }, error: null }, // games.created_by (owner)
+      {
+        data: {
+          id: 'game-1',
+          name: 'Lørdagsrunde',
+          status: 'active',
+          game_mode: 'stableford',
+        },
+        error: null,
+      }, // games (action body)
+      { data: null, error: null }, // game_players.update (withdrawn_at)
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'creator-1' } },
+    });
+
+    const { adminWithdrawPlayer } = await import('./actions');
+
+    await expect(adminWithdrawPlayer('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/games/game-1/spillere?status=player_withdrawn');
+    expect(logAdminEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: 'game.player_withdrawn', targetId: 'game-1' }),
+    );
   });
 
   it('sets withdrawn_at and redirects to ?status=player_withdrawn for active in-scope game', async () => {
@@ -225,6 +254,78 @@ describe('adminUndoWithdraw', () => {
 
     await expect(adminUndoWithdraw('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
     expect(lastRedirect()).toBe('/admin/games/game-1?error=not_active');
+  });
+});
+
+// ─── adminApproveScorecard (admin + creator override, #429) ─────────────────
+
+describe('adminApproveScorecard', () => {
+  it('admin: approves a pending scorecard, lands in Sekretariatet', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null }, // users (loadRole)
+      { data: { status: 'active' }, error: null }, // games.select(status)
+      { data: null, error: null }, // game_players.update (approved_at)
+      { data: { name: 'Vinter-cup' }, error: null }, // games.select(name) for notify
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { adminApproveScorecard } = await import('./actions');
+
+    await expect(adminApproveScorecard('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/games/game-1?status=admin_approved');
+    expect(notifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'user-a', kind: 'scorecard_approved' }),
+    );
+  });
+
+  it('creator: approves on own game, lands on /games/[id]/spillere', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false, name: 'Kari' }, error: null }, // users (loadRole)
+      { data: { created_by: 'creator-1' }, error: null }, // games.created_by (owner)
+      { data: { status: 'active' }, error: null }, // games.select(status)
+      { data: null, error: null }, // game_players.update (approved_at)
+      { data: { name: 'Lørdagsrunde' }, error: null }, // games.select(name)
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'creator-1' } },
+    });
+
+    const { adminApproveScorecard } = await import('./actions');
+
+    await expect(adminApproveScorecard('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/games/game-1/spillere?status=admin_approved');
+  });
+
+  it('redirects with ?error=not_active for a non-active game', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null }, // users
+      { data: { status: 'finished' }, error: null }, // games.select(status)
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { adminApproveScorecard } = await import('./actions');
+
+    await expect(adminApproveScorecard('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/games/game-1?error=not_active');
+  });
+
+  it('redirects to / when user is neither admin nor creator', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false, name: 'Ola' }, error: null }, // users
+      { data: { created_by: 'someone-else' }, error: null }, // games.created_by (not owner)
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'user-1' } },
+    });
+
+    const { adminApproveScorecard } = await import('./actions');
+
+    await expect(adminApproveScorecard('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/');
   });
 });
 

@@ -43,6 +43,29 @@ async function loadAdminContext() {
 }
 
 /**
+ * Like `loadAdminContext`, but also lets a game's CREATOR run the action on
+ * their own game (#429 — roster withdraw + scorecard approval-override). The
+ * returned `detailPath` is branched on role so redirects land where the actor
+ * came from: admin in Sekretariatet, creator on their `/games/[id]/spillere`
+ * cockpit. Admin behavior is byte-identical — `requireAdminOrCreator` returns
+ * straight after the same `loadRole` users-read, with no extra query on the
+ * admin path.
+ */
+async function loadAdminOrCreatorContext(gameId: string) {
+  const supabase = await getServerClient();
+  const ctx = await requireAdminOrCreator(supabase, gameId);
+  return {
+    supabase,
+    user: { id: ctx.userId },
+    actorName: ctx.name?.trim() || (ctx.isAdmin ? 'Admin' : 'En arrangør'),
+    isAdmin: ctx.isAdmin,
+    detailPath: ctx.isAdmin
+      ? `/admin/games/${gameId}`
+      : `/games/${gameId}/spillere`,
+  };
+}
+
+/**
  * Admin server action: flip a scheduled game to active. Delegates to the
  * shared `startScheduledGame` helper (in `lib/games/`) which is also used
  * by the E1 server-side auto-start fallback on `/games/[id]`.
@@ -164,16 +187,18 @@ export async function startGame(gameId: string) {
 }
 
 /**
- * Admin override: approve a submitted scorecard regardless of flight
- * membership. Same idempotent guard as the peer flow (only updates rows
- * that are still pending approval). Refuses to run on non-active games.
+ * Admin/creator override: approve a submitted scorecard regardless of flight
+ * membership (#429 opens this to the game's creator). Same idempotent guard as
+ * the peer flow (only updates rows that are still pending approval). Refuses to
+ * run on non-active games. Redirects to the actor's cockpit (Sekretariatet for
+ * admin, `/games/[id]/spillere` for creator).
  */
 export async function adminApproveScorecard(
   gameId: string,
   playerUserId: string,
 ) {
-  const { supabase, user, actorName } = await loadAdminContext();
-  const detailPath = `/admin/games/${gameId}`;
+  const { supabase, user, actorName, detailPath } =
+    await loadAdminOrCreatorContext(gameId);
 
   const { data: game } = await supabase
     .from('games')
@@ -445,15 +470,16 @@ export async function reopenScorecard(gameId: string, playerUserId: string) {
 }
 
 /**
- * Admin: mark a player as withdrawn (WD) in an active game (#386).
+ * Admin/creator: mark a player as withdrawn (WD) in an active game (#386;
+ * #429 opens this to the game's creator).
  *
  * The player's existing scores are preserved in DB but excluded from the
  * leaderboard. Only supported for `supportsWithdrawal` modes. Redirects to
- * the game detail page on success or on any validation failure.
+ * the actor's cockpit on success or on any validation failure.
  */
 export async function adminWithdrawPlayer(gameId: string, userId: string) {
-  const { supabase, user, actorName } = await loadAdminContext();
-  const detailPath = `/admin/games/${gameId}`;
+  const { supabase, user, actorName, detailPath } =
+    await loadAdminOrCreatorContext(gameId);
 
   const { data: game } = await supabase
     .from('games')
@@ -493,13 +519,14 @@ export async function adminWithdrawPlayer(gameId: string, userId: string) {
 }
 
 /**
- * Admin: undo a withdrawal — nulls `withdrawn_at` and `withdrawn_by_user_id`
- * so the player is re-included in readiness counts and the leaderboard (#386).
- * Only while the game is still active.
+ * Admin/creator: undo a withdrawal — nulls `withdrawn_at` and
+ * `withdrawn_by_user_id` so the player is re-included in readiness counts and
+ * the leaderboard (#386; #429 opens this to the game's creator). Only while
+ * the game is still active.
  */
 export async function adminUndoWithdraw(gameId: string, userId: string) {
-  const { supabase, user, actorName } = await loadAdminContext();
-  const detailPath = `/admin/games/${gameId}`;
+  const { supabase, user, actorName, detailPath } =
+    await loadAdminOrCreatorContext(gameId);
 
   const { data: game } = await supabase
     .from('games')
