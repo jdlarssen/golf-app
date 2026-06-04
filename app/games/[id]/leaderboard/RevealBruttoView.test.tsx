@@ -85,7 +85,6 @@ describe('RevealBruttoView', () => {
         teams={[]}
         holesPlayed={0}
         backHref="/games/g1"
-        userId="test-user-1"
       />,
     );
 
@@ -120,7 +119,6 @@ describe('RevealBruttoView', () => {
         teams={[team]}
         holesPlayed={2}
         backHref="/games/g1/holes/2"
-        userId="test-user-1"
       />,
     );
 
@@ -143,7 +141,6 @@ describe('RevealBruttoView', () => {
         teams={[]}
         holesPlayed={3}
         backHref="/games/g1"
-        userId="test-user-1"
       />,
     );
     expect(screen.getByText('Ingen lag å vise.')).toBeInTheDocument();

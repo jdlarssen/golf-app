@@ -17,12 +17,6 @@ type Props = {
   holesPlayed: number;
   /** Back-link href — typically points back to the originating hole. */
   backHref: string;
-  /**
-   * Verified user id (forwardet fra leaderboard-pagen). Brukes til å
-   * mounte NotificationBell i TopBar. Kan være null i teori (proxy
-   * redirecter ikke-innloggede), men vi forwarder for konsistens.
-   */
-  userId: string | null;
 };
 
 /**
@@ -37,7 +31,6 @@ export function RevealBruttoView({
   teams,
   holesPlayed,
   backHref,
-  userId,
 }: Props) {
   return (
     <AppShell>

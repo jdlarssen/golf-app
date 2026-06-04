@@ -294,7 +294,7 @@ async function LeaderboardBody({
   backHref: string;
   returnQuery: string;
 }) {
-  const { supabase, userId } = await getLeaderboardContext();
+  const { supabase } = await getLeaderboardContext();
 
   // Players come from the tag-cached helper (cache hit since the outer
   // page already warmed it). Holes + scores stay direct fetches.
@@ -649,7 +649,6 @@ async function LeaderboardBody({
       teeOffAt: game.scheduled_tee_off_at,
       players,
       backHref,
-      userId,
     });
   }
 
@@ -661,7 +660,6 @@ async function LeaderboardBody({
       holes,
       scores,
       backHref,
-      userId,
     });
   }
 
@@ -683,7 +681,6 @@ async function LeaderboardBody({
         teams={orderedBrutto}
         holesPlayed={holesPlayed}
         backHref={backHref}
-        userId={userId}
       />
     );
   }
@@ -1353,7 +1350,7 @@ async function renderStablefordWithSideTournament(opts: {
 }) {
   const { gameId, game, gwp, rawHolesRows, backHref, mainContent } = opts;
 
-  const { supabase, userId } = await getLeaderboardContext();
+  const { supabase } = await getLeaderboardContext();
 
   const sideWinnersRes = await supabase
     .from('game_side_winners')
@@ -3305,9 +3302,8 @@ function renderState3(opts: {
   teeOffAt: string | null;
   players: LbPlayer[];
   backHref: string;
-  userId: string | null;
 }) {
-  const { gameId, teeOffAt, players, backHref, userId } = opts;
+  const { gameId, teeOffAt, players, backHref } = opts;
   const teeOffDate = teeOffAt ? new Date(teeOffAt) : null;
   const teeOffLabel = teeOffDate ? formatTeeOffTime(teeOffDate) : '—';
 
@@ -3407,9 +3403,8 @@ function renderState35(opts: {
   holes: LbHole[];
   scores: LbScore[];
   backHref: string;
-  userId: string | null;
 }) {
-  const { gameId, mode, players, holes, scores, backHref, userId } = opts;
+  const { gameId, mode, players, holes, scores, backHref } = opts;
 
   const frontNineHoles = holes.filter(
     (h) => h.holeNumber >= 1 && h.holeNumber <= 9,
