@@ -198,6 +198,18 @@ async function HomeBody() {
       </SmartLink>
     ) : null;
 
+  // Midlertidig frittstående «Opprett bane»-inngang for ALLE innloggede (#366).
+  // Bevisst lavmælt — sjelden brukt escape-hatch for baner som mangler i
+  // biblioteket. Permanent hjem blir Klubbhuset (#392); da fjernes denne.
+  const courseCreateLink = userId ? (
+    <SmartLink
+      href="/opprett-bane"
+      className="inline-flex min-h-[44px] items-center justify-center text-sm text-muted underline decoration-border underline-offset-4 transition-colors hover:text-text hover:decoration-text"
+    >
+      Mangler en bane? Legg den til
+    </SmartLink>
+  ) : null;
+
   // «Funn turneringer»-data hentes kun for non-admin når vi rendrer empty-state.
   // Brukes både til å bytte velkomst-teksten og til å rendre selve seksjonen
   // uten å hente data to ganger.
@@ -243,6 +255,7 @@ async function HomeBody() {
           {secretariatLink && (
             <div className="mt-3 w-full max-w-[280px]">{secretariatLink}</div>
           )}
+          {courseCreateLink && <div className="mt-5">{courseCreateLink}</div>}
           <PullQuote className="mt-8">
             En god runde begynner med god planlegging.
           </PullQuote>
@@ -320,6 +333,10 @@ async function HomeBody() {
       )}
 
       {secretariatLink && <div className="mb-6">{secretariatLink}</div>}
+
+      {courseCreateLink && (
+        <div className="mb-6 flex justify-center">{courseCreateLink}</div>
+      )}
 
       <nav className="space-y-6">
         {inProgressGames.length > 0 && (

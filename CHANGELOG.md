@@ -17,6 +17,42 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.74.y — Baner alle kan legge til
+
+Issue [#366](https://github.com/jdlarssen/golf-app/issues/366). Til nå har bare administrator kunnet legge inn baner. Nå kan hvem som helst som er innlogget legge til en bane som mangler, så den er klar til neste runde.
+
+### [1.74.0] - 2026-06-04
+
+> Mangler hjemmebanen din i Tørny? Nå kan du legge den til selv. Fyll inn hull, par og tee-er, så havner banen i biblioteket og kan velges når noen setter opp en runde.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#366](https://github.com/jdlarssen/golf-app/issues/366) — UX-flyt-audit-funn («Opprett spill»-flyten). Gjenbruker `CourseForm` + `createCourse` (ingen ny skjema-mekanikk), men åpner tilgangen fra admin/trusted til alle innloggede.
+
+#### Added
+- [`app/opprett-bane/page.tsx`](app/opprett-bane/page.tsx) — ny rute i `AppShell` (ikke Sekretariatet), gated kun på innlogget bruker. Speiler `/opprett-spill`-mønsteret (#198). Håndterer feil- og suksess-bannere og bevarer `?next=` så «Finner du ikke banen?»-lenken i spill-velgeren tar deg tilbake.
+- [`supabase/migrations/0070_courses_user_create_rls.sql`](supabase/migrations/0070_courses_user_create_rls.sql) — ekte RLS insert-own-policy (`created_by = auth.uid()`) på `courses`/`course_holes`/`tee_boxes`, OR-et med de eksisterende admin-write-policyene. `created_by`/`updated_by` flippet til `ON DELETE SET NULL` så bruker-opprettede baner overlever konto-sletting.
+
+#### Changed
+- [`app/admin/courses/new/actions.ts`](app/admin/courses/new/actions.ts) — `createCourse` gates nå på `getUser()` (ikke admin/trusted), skriver via request-scoped klient (RLS i stedet for `getAdminClient`-bypass), og tar saniterte `redirect_base`/`success_redirect` så ikke-admin-ruten holder brukere utenfor `/admin/courses`.
+- [`app/admin/courses/CourseForm.tsx`](app/admin/courses/CourseForm.tsx) — valgfrie `redirectBase`/`successRedirect`-props (skjulte inputs). Admin-flyten er uendret.
+- [`app/page.tsx`](app/page.tsx) — lavmælt «Mangler en bane? Legg den til»-inngang for alle innloggede (midlertidig; permanent hjem blir Klubbhuset, #392).
+- [`app/admin/games/new/sections/BasicsSection.tsx`](app/admin/games/new/sections/BasicsSection.tsx) — «Finner du ikke banen? Opprett ny bane»-lenke under bane-velgeren.
+
+#### Decided
+- **Delt synlighet** — en bruker-opprettet bane havner i det felles biblioteket alle plukker fra (`SELECT` forblir `using(true)`, kritisk for at medspillere kan lese banen for å score).
+- **Create-only** — vanlige brukere får ikke redigere/slette baner i denne omgangen; admin rydder. Ingen UPDATE/DELETE-RLS lagt til.
+- **Ekte RLS, ikke service-role-bypass** — når create åpnes for alle er en insert-own-policy riktigere enn å rute alle writes gjennom service-role. Selvstendig skive av RLS-jobben i #22.
+- **Frittstående dør → #392** — den permanente inngangen hører hjemme i Klubbhuset; hjem-inngangen her er midlertidig (notert på #392).
+
+</details>
+
+---
+
+<details>
+<summary><strong>1.73.y — Usynlig misbruks-vern før åpen påmelding (2 oppføringer) — klikk for å vise</strong></summary>
+
 ## 1.73.y — Usynlig misbruks-vern før åpen påmelding
 
 Issue [#365](https://github.com/jdlarssen/golf-app/issues/365) + [#422](https://github.com/jdlarssen/golf-app/issues/422). Før vi åpner for at hvem som helst kan lage konto, har vi lagt inn et usynlig vern: engangs-e-post (bruk-og-kast-adresser som mailinator og co.) avvises både på innlogging og når en bruker prøver å invitere noen. Vanlige e-postadresser merker ingenting.
@@ -59,6 +95,8 @@ Issue [#365](https://github.com/jdlarssen/golf-app/issues/365) — usynlig misbr
 
 #### Decided
 - IP-rate-limit beholdt på 10/IP/15 min (ikke strammet til 6): disposable-blokken dekker masse-opprettings-vektoren, og 6 ville gitt klubb-WiFi-friksjon uten reell spray-gevinst mot en IP-roterende angriper. Captcha fortsatt utsatt til faktisk misbruk.
+
+</details>
 
 </details>
 

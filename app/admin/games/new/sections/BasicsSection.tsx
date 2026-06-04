@@ -12,6 +12,7 @@
 import type { CourseOption } from '../GameForm';
 import type { GameFormState } from '../useGameFormState';
 import { Input } from '@/components/ui/Input';
+import { SmartLink } from '@/components/ui/SmartLink';
 import { SideCategoriesPicker } from '@/components/admin/SideCategoriesPicker';
 
 type Props = {
@@ -108,6 +109,15 @@ export function BasicsSection({
             </option>
           ))}
         </select>
+        <p className="mt-1.5 text-xs text-muted">
+          Finner du ikke banen?{' '}
+          <SmartLink
+            href="/opprett-bane"
+            className="underline underline-offset-2 hover:text-text"
+          >
+            Opprett ny bane
+          </SmartLink>
+        </p>
       </div>
 
       <div>
