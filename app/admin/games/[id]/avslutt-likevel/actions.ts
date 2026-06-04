@@ -15,7 +15,9 @@ import { endGame } from '../actions';
  * before calling `endGame(gameId, true)` (allowMissing). Players without
  * the checkbox ticked keep their scores counting as «ikke levert».
  *
- * Must be called from the avslutt-likevel confirm page. Requires admin.
+ * Must be called from an avslutt-likevel confirm page. Requires admin OR the
+ * game's creator (#427), gated via requireAdminOrCreator. Redirects branch on
+ * isAdmin so a creator lands on /games/[id] instead of the admin shell.
  */
 export async function endGameMarkingWithdrawals(
   gameId: string,
