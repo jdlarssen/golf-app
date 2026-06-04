@@ -51,7 +51,11 @@ function safeInternalPath(
   fallback: string,
 ): string {
   const s = typeof value === 'string' ? value.trim() : '';
-  if (s.startsWith('/') && !s.startsWith('//')) return s;
+  // Må være en intern, enkelt-slash-rotet sti. Avvis protokoll-relativ
+  // (`//host`), backslash-triks (`/\host` — nettlesere normaliserer `\` til
+  // `/`), og alt med scheme. Defense-in-depth — verdien er server-konstruert,
+  // men behandles som upålitelig.
+  if (s.startsWith('/') && !s.startsWith('//') && !s.includes('\\')) return s;
   return fallback;
 }
 

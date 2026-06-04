@@ -50,7 +50,14 @@ function first(value: string | string[] | undefined): string | undefined {
 // Bare interne stier slipper gjennom — speiler open-redirect-guarden i
 // createCourse-action.
 function safeNext(value: string | undefined): string | undefined {
-  if (value && value.startsWith('/') && !value.startsWith('//')) return value;
+  if (
+    value &&
+    value.startsWith('/') &&
+    !value.startsWith('//') &&
+    !value.includes('\\')
+  ) {
+    return value;
+  }
   return undefined;
 }
 

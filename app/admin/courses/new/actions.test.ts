@@ -166,4 +166,15 @@ describe('createCourse — #366 gate + RLS-write', () => {
     await expect(createCourse(fd)).rejects.toThrow(RedirectError);
     expect(lastRedirect()).toBe('/admin/courses/new?error=name_required');
   });
+
+  it('rejects a backslash redirect_base (/\\evil — browsers normalize \\ to /)', async () => {
+    supabaseMock = buildSupabaseMock([]);
+    setAuth({ id: regularUserId });
+    const { createCourse } = await import('./actions');
+
+    const fd = validCourseFormData({ redirect_base: '/\\evil.example' });
+    fd.set('name', '');
+    await expect(createCourse(fd)).rejects.toThrow(RedirectError);
+    expect(lastRedirect()).toBe('/admin/courses/new?error=name_required');
+  });
 });
