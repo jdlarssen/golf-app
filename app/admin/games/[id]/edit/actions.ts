@@ -3,12 +3,11 @@
 import { redirect } from 'next/navigation';
 import { revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
-import { requireAdmin } from '@/lib/admin/auth';
+import { requireAdminOrCreator } from '@/lib/admin/auth';
 import {
   buildGameInsertPayload,
   parseOsloDateTimeLocal,
 } from '@/lib/games/gamePayload';
-import { findPendingPlayers } from '@/lib/games/pendingPlayers';
 import { parseSideTournamentFromFormData } from '@/lib/games/sideTournamentPayload';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 
@@ -41,11 +40,24 @@ async function updateGameInternal(
   formData: FormData,
   mode: UpdateMode,
 ) {
+  const supabase = await getServerClient();
+  // #428: admins keep their Sekretariat redirects; a game's creator gets the
+  // player-facing /games/[id]/rediger flow. Gate up front so every redirect
+  // below (including form-validation bounces) can branch on the actor.
+  const ctx = await requireAdminOrCreator(supabase, gameId);
+  const { userId } = ctx;
+  const editBase = ctx.isAdmin
+    ? `/admin/games/${gameId}/edit`
+    : `/games/${gameId}/rediger`;
+  const detailBase = ctx.isAdmin
+    ? `/admin/games/${gameId}`
+    : `/games/${gameId}`;
+
   const payloadMode = mode === 'save_draft' ? 'draft' : 'publish';
   const payload = buildGameInsertPayload(formData, payloadMode);
 
   if (payload.errorCode) {
-    redirect(`/admin/games/${gameId}/edit?error=${payload.errorCode}`);
+    redirect(`${editBase}?error=${payload.errorCode}`);
   }
 
   // Tee-off is required when publishing or editing a scheduled game (you
@@ -58,19 +70,19 @@ async function updateGameInternal(
       scheduledTeeOffAt = parseOsloDateTimeLocal(rawTeeOff);
     } catch {
       if (mode !== 'save_draft') {
-        redirect(`/admin/games/${gameId}/edit?error=tee_off_required`);
+        redirect(`${editBase}?error=tee_off_required`);
       }
       scheduledTeeOffAt = null;
     }
   } else if (mode !== 'save_draft') {
-    redirect(`/admin/games/${gameId}/edit?error=tee_off_required`);
+    redirect(`${editBase}?error=tee_off_required`);
   }
 
   // Side-tournament config (parsed up front; persisted below only if the row
   // is still in an editable state).
   const sideResult = parseSideTournamentFromFormData(formData);
   if (!sideResult.ok) {
-    redirect(`/admin/games/${gameId}/edit?error=${sideResult.errorCode}`);
+    redirect(`${editBase}?error=${sideResult.errorCode}`);
   }
   const {
     enabled: sideEnabled,
@@ -79,28 +91,29 @@ async function updateGameInternal(
     disabledCategories: sideDisabledCategories,
   } = sideResult.payload;
 
-  const supabase = await getServerClient();
-  // Self-gate for Fase 4 chunk 2 layout-loosening (#223). Replaces the
-  // previously-inlined auth.getUser + users.is_admin check.
-  const { userId } = await requireAdmin(supabase);
-
   if (mode === 'publish' || mode === 'update_scheduled') {
-    const { data: rosterUsers, error: rosterErr } = await supabase
-      .from('users')
-      .select('id, email, profile_completed_at')
-      .in('id', payload.players.map((p) => p.user_id));
+    // Pending-profile gate via SECURITY DEFINER RPC (migration 0071), not a
+    // direct users-read: under request-scoped RLS a non-admin creator can't see
+    // OTHER users' rows, so a direct read would silently drop them and the gate
+    // would no-op (#366 pending-read trap). The RPC returns only the incomplete
+    // rows for the exact ids we pass, so it bites for creator and admin alike —
+    // and returns the same set an admin's direct read would have.
+    const { data: pending, error: rosterErr } = await supabase.rpc(
+      'incomplete_profiles_for_ids',
+      { p_user_ids: payload.players.map((p) => p.user_id) },
+    );
 
-    if (rosterErr || !rosterUsers) {
-      redirect(`/admin/games/${gameId}/edit?error=db_roster`);
+    if (rosterErr) {
+      redirect(`${editBase}?error=db_roster`);
     }
 
-    const pending = findPendingPlayers(rosterUsers);
-    if (pending.length > 0) {
+    const pendingRows = (pending ?? []) as { id: string; email: string }[];
+    if (pendingRows.length > 0) {
       const qs = new URLSearchParams({
         error: 'pending_players',
-        emails: pending.map((p) => p.email).join(', '),
+        emails: pendingRows.map((p) => p.email).join(', '),
       });
-      redirect(`/admin/games/${gameId}/edit?${qs.toString()}`);
+      redirect(`${editBase}?${qs.toString()}`);
     }
   }
 
@@ -115,15 +128,13 @@ async function updateGameInternal(
     .eq('id', gameId)
     .single();
   if (existingError || !existing) {
-    redirect(`/admin/games/${gameId}?error=not_editable`);
+    redirect(`${detailBase}?error=not_editable`);
   }
   if (
     existing.status !== 'draft' &&
     existing.game_mode !== payload.game_mode
   ) {
-    redirect(
-      `/admin/games/${gameId}/edit?error=mode_locked_after_publish`,
-    );
+    redirect(`${editBase}?error=mode_locked_after_publish`);
   }
 
   // Optimistic lock: only update if the row's current status matches the
@@ -182,7 +193,7 @@ async function updateGameInternal(
     // Either the optimistic-lock filter excluded the row (status flipped) or
     // a real DB error. In both cases we bounce to the detail page; the user
     // will see the current state and (if applicable) the not_editable banner.
-    redirect(`/admin/games/${gameId}?error=not_editable`);
+    redirect(`${detailBase}?error=not_editable`);
   }
 
   // Snapshot eksisterende roster FØR delete + insert. Brukes til å regne
@@ -227,7 +238,7 @@ async function updateGameInternal(
       .from('game_players')
       .insert(rows);
     if (insertError) {
-      redirect(`/admin/games/${gameId}/edit?error=db_players`);
+      redirect(`${editBase}?error=db_players`);
     }
   }
 
@@ -253,8 +264,6 @@ async function updateGameInternal(
 
   revalidateTag(`game-${gameId}`, 'max');
   redirect(
-    `/admin/games/${gameId}?status=${
-      mode === 'publish' ? 'scheduled' : 'updated'
-    }`,
+    `${detailBase}?status=${mode === 'publish' ? 'scheduled' : 'updated'}`,
   );
 }

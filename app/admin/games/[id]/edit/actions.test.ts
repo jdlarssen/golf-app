@@ -8,18 +8,24 @@ import {
 /**
  * Unit tests for the edit-game server actions.
  *
- * Focus for fase 3 (#41): mode-lock-guarden i updateGameInternal må avvise
- * forsøk på å bytte game_mode etter at spillet har forlatt 'draft'-state.
+ * Mode-lock (#41): updateGameInternal must reject game_mode changes once the
+ * game has left 'draft'. #428: the actions are now gated on
+ * requireAdminOrCreator — admins keep their Sekretariat redirects, a game's
+ * creator gets /games/[id]/rediger + /games/[id]; the pending-profile gate
+ * runs through the incomplete_profiles_for_ids RPC (not a direct users-read)
+ * so it bites for a non-admin creator under request-scoped RLS.
  *
  * Query-sekvens (publish/update_scheduled):
- *   1. auth.getUser
- *   2. users.is_admin
- *   3. users.in(roster ids)              // pending-profile-gate
- *   4. games.select(status, game_mode)   // mode-lock-fetch (NY i fase 3)
- *   5. games.update                       // optimistic-lock på status
- *   6. game_players.delete
- *   7. game_players.insert
- *   8. revalidateTag + redirect
+ *   1. auth.getUser                        // loadRole
+ *   2. users.select(is_admin,email,name)   // loadRole
+ *   3. games.select(created_by)            // requireAdminOrCreator — ONLY when not admin
+ *   4. rpc(incomplete_profiles_for_ids)    // pending gate (keyed, not in FIFO queue)
+ *   5. games.select(status, game_mode)     // mode-lock fetch
+ *   6. games.update                        // optimistic-lock på status
+ *   7. game_players.select                 // priorRoster snapshot
+ *   8. game_players.delete
+ *   9. game_players.insert
+ *  10. revalidateTag + redirect
  */
 
 const redirectMock = makeRedirectMock();
@@ -47,6 +53,13 @@ vi.mock('@/lib/supabase/server', () => ({
 
 function lastRedirect(): string | undefined {
   return redirectMock.mock.calls.at(-1)?.[0];
+}
+
+/** Stub `auth.getUser` to return a signed-in user with the given id. */
+function signIn(id: string, email?: string) {
+  (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+    data: { user: { id, ...(email ? { email } : {}) } },
+  });
 }
 
 function fd(entries: Record<string, string>): FormData {
@@ -86,24 +99,18 @@ describe('updateScheduledAction — mode-lock', () => {
     // Admin har publisert en best-ball-runde og prøver nå å sende en
     // stableford-payload via edit-flyten. Mode-lock-guarden må returnere
     // den eksplisitte feilen i stedet for å tillate skriving.
-    const completedRoster = Array.from({ length: 8 }, (_, i) => ({
-      id: `u${i}`,
-      email: `u${i}@example.com`,
-      profile_completed_at: '2026-01-01T00:00:00Z',
-    }));
-
-    supabaseMock = buildSupabaseMock([
-      { data: { is_admin: true }, error: null }, // users.is_admin
-      { data: completedRoster, error: null }, // users.in(roster) — pending gate
-      // games.select(status, game_mode).single — mode-lock-fetch
-      {
-        data: { status: 'scheduled', game_mode: 'best_ball' },
-        error: null,
-      },
-    ]);
-    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: { user: { id: 'admin-1' } },
-    });
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: true }, error: null }, // loadRole: users.select
+        // games.select(status, game_mode).single — mode-lock-fetch
+        {
+          data: { status: 'scheduled', game_mode: 'best_ball' },
+          error: null,
+        },
+      ],
+      { incomplete_profiles_for_ids: [] }, // pending gate clears
+    );
+    signIn('admin-1');
 
     const { updateScheduledAction } = await import('./actions');
 
@@ -139,27 +146,21 @@ describe('updateScheduledAction — mode-lock', () => {
   it('tillater oppdatering når payload-mode matcher eksisterende game_mode', async () => {
     // Samme mode på begge sider: guarden passerer, og updaten skjer
     // som vanlig. Vi bryr oss bare om at den ikke blir avvist.
-    const completedRoster = Array.from({ length: 8 }, (_, i) => ({
-      id: `u${i}`,
-      email: `u${i}@example.com`,
-      profile_completed_at: '2026-01-01T00:00:00Z',
-    }));
-
-    supabaseMock = buildSupabaseMock([
-      { data: { is_admin: true }, error: null }, // users.is_admin
-      { data: completedRoster, error: null }, // users.in(roster)
-      {
-        data: { status: 'scheduled', game_mode: 'best_ball' },
-        error: null,
-      }, // games.select
-      { data: { id: 'game-1' }, error: null }, // games.update
-      { data: [], error: null }, // game_players.select (priorRoster snapshot)
-      { data: null, error: null }, // game_players.delete
-      { data: null, error: null }, // game_players.insert
-    ]);
-    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: { user: { id: 'admin-1' } },
-    });
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: true }, error: null }, // loadRole
+        {
+          data: { status: 'scheduled', game_mode: 'best_ball' },
+          error: null,
+        }, // games.select
+        { data: { id: 'game-1' }, error: null }, // games.update
+        { data: [], error: null }, // game_players.select (priorRoster snapshot)
+        { data: null, error: null }, // game_players.delete
+        { data: null, error: null }, // game_players.insert
+      ],
+      { incomplete_profiles_for_ids: [] },
+    );
+    signIn('admin-1');
 
     const { updateScheduledAction } = await import('./actions');
 
@@ -177,36 +178,30 @@ describe('backfill invite-notify (#182) — edit-flyten', () => {
     // Eksisterende roster har u0, u1, u2, u3. Edit-en sender u0-u7 — så
     // u4, u5, u6, u7 er nye og skal varsles. u0-u3 var med fra før og
     // skal IKKE få ny notifikasjon (de ble varslet ved første add).
-    const completedRoster = Array.from({ length: 8 }, (_, i) => ({
-      id: `u${i}`,
-      email: `u${i}@example.com`,
-      profile_completed_at: '2026-01-01T00:00:00Z',
-    }));
-
-    supabaseMock = buildSupabaseMock([
-      { data: { is_admin: true }, error: null },
-      { data: completedRoster, error: null },
-      {
-        data: { status: 'scheduled', game_mode: 'best_ball' },
-        error: null,
-      },
-      { data: { id: 'game-diff' }, error: null }, // games.update
-      // game_players.select (priorRoster) — u0..u3 var med fra før
-      {
-        data: [
-          { user_id: 'u0' },
-          { user_id: 'u1' },
-          { user_id: 'u2' },
-          { user_id: 'u3' },
-        ],
-        error: null,
-      },
-      { data: null, error: null }, // delete
-      { data: null, error: null }, // insert
-    ]);
-    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: { user: { id: 'admin-1' } },
-    });
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: true }, error: null }, // loadRole
+        {
+          data: { status: 'scheduled', game_mode: 'best_ball' },
+          error: null,
+        },
+        { data: { id: 'game-diff' }, error: null }, // games.update
+        // game_players.select (priorRoster) — u0..u3 var med fra før
+        {
+          data: [
+            { user_id: 'u0' },
+            { user_id: 'u1' },
+            { user_id: 'u2' },
+            { user_id: 'u3' },
+          ],
+          error: null,
+        },
+        { data: null, error: null }, // delete
+        { data: null, error: null }, // insert
+      ],
+      { incomplete_profiles_for_ids: [] },
+    );
+    signIn('admin-1');
 
     const { updateScheduledAction } = await import('./actions');
     await expect(
@@ -221,31 +216,25 @@ describe('backfill invite-notify (#182) — edit-flyten', () => {
   });
 
   it('roster uendret: ingen notify fyres', async () => {
-    const completedRoster = Array.from({ length: 8 }, (_, i) => ({
-      id: `u${i}`,
-      email: `u${i}@example.com`,
-      profile_completed_at: '2026-01-01T00:00:00Z',
-    }));
-
-    supabaseMock = buildSupabaseMock([
-      { data: { is_admin: true }, error: null },
-      { data: completedRoster, error: null },
-      {
-        data: { status: 'scheduled', game_mode: 'best_ball' },
-        error: null,
-      },
-      { data: { id: 'game-same' }, error: null },
-      // priorRoster identisk med payload
-      {
-        data: Array.from({ length: 8 }, (_, i) => ({ user_id: `u${i}` })),
-        error: null,
-      },
-      { data: null, error: null },
-      { data: null, error: null },
-    ]);
-    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: { user: { id: 'admin-1' } },
-    });
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: true }, error: null }, // loadRole
+        {
+          data: { status: 'scheduled', game_mode: 'best_ball' },
+          error: null,
+        },
+        { data: { id: 'game-same' }, error: null },
+        // priorRoster identisk med payload
+        {
+          data: Array.from({ length: 8 }, (_, i) => ({ user_id: `u${i}` })),
+          error: null,
+        },
+        { data: null, error: null },
+        { data: null, error: null },
+      ],
+      { incomplete_profiles_for_ids: [] },
+    );
+    signIn('admin-1');
 
     const { updateScheduledAction } = await import('./actions');
     await expect(
@@ -256,33 +245,27 @@ describe('backfill invite-notify (#182) — edit-flyten', () => {
   });
 
   it('skipper inviter-self når admin legger seg selv til som ny spiller', async () => {
-    const completedRoster = Array.from({ length: 8 }, (_, i) => ({
-      id: i === 0 ? 'admin-1' : `u${i}`,
-      email: i === 0 ? 'admin@tornygolf.no' : `u${i}@example.com`,
-      profile_completed_at: '2026-01-01T00:00:00Z',
-    }));
-
-    supabaseMock = buildSupabaseMock([
-      { data: { is_admin: true }, error: null },
-      { data: completedRoster, error: null },
-      {
-        data: { status: 'scheduled', game_mode: 'best_ball' },
-        error: null,
-      },
-      { data: { id: 'game-self' }, error: null },
-      // priorRoster: u1..u7, admin-1 er ny i diff-en
-      {
-        data: Array.from({ length: 7 }, (_, i) => ({
-          user_id: `u${i + 1}`,
-        })),
-        error: null,
-      },
-      { data: null, error: null },
-      { data: null, error: null },
-    ]);
-    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: { user: { id: 'admin-1', email: 'admin@tornygolf.no' } },
-    });
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: true }, error: null }, // loadRole
+        {
+          data: { status: 'scheduled', game_mode: 'best_ball' },
+          error: null,
+        },
+        { data: { id: 'game-self' }, error: null },
+        // priorRoster: u1..u7, admin-1 er ny i diff-en
+        {
+          data: Array.from({ length: 7 }, (_, i) => ({
+            user_id: `u${i + 1}`,
+          })),
+          error: null,
+        },
+        { data: null, error: null },
+        { data: null, error: null },
+      ],
+      { incomplete_profiles_for_ids: [] },
+    );
+    signIn('admin-1', 'admin@tornygolf.no');
 
     const { updateScheduledAction } = await import('./actions');
     await expect(
@@ -300,19 +283,16 @@ describe('saveDraftAction — mode-lock', () => {
   it('tillater mode-bytte når spillet fortsatt er draft', async () => {
     // Drafts er fortsatt under bygging — admin må fritt kunne veksle modus
     // før spillet publiseres. Mode-lock-guarden skal kun aktiveres når
-    // status !== 'draft'.
+    // status !== 'draft'. save_draft kjører ingen pending-gate (ingen RPC).
     supabaseMock = buildSupabaseMock([
-      { data: { is_admin: true }, error: null }, // users.is_admin
-      // Ingen roster-gate i save_draft-modusen
+      { data: { is_admin: true }, error: null }, // loadRole
       { data: { status: 'draft', game_mode: 'best_ball' }, error: null }, // games.select
       { data: { id: 'draft-1' }, error: null }, // games.update
       { data: [], error: null }, // game_players.select (priorRoster snapshot)
       { data: null, error: null }, // game_players.delete
       // Ingen game_players.insert siden vi sender 0 spillere
     ]);
-    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: { user: { id: 'admin-1' } },
-    });
+    signIn('admin-1');
 
     const { saveDraftAction } = await import('./actions');
 
@@ -328,5 +308,89 @@ describe('saveDraftAction — mode-lock', () => {
     ).rejects.toBeInstanceOf(RedirectError);
 
     expect(lastRedirect()).toBe('/admin/games/draft-1?status=updated');
+  });
+});
+
+describe('requireAdminOrCreator gate (#428) — creator-flaten', () => {
+  it('oppretter (ikke-admin, eier spillet) lander på /games/[id] etter update_scheduled', async () => {
+    // loadRole gir is_admin:false → requireAdminOrCreator leser games.created_by
+    // og matcher userId. Writes går på request-scoped klient (creator-RLS 0071),
+    // og redirect-basen forgrenes til /games/* i stedet for /admin/games/*.
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: false }, error: null }, // loadRole: not admin
+        { data: { created_by: 'creator-1' }, error: null }, // gate owner-check ✓
+        {
+          data: { status: 'scheduled', game_mode: 'best_ball' },
+          error: null,
+        }, // mode-lock
+        { data: { id: 'game-1' }, error: null }, // games.update
+        { data: [], error: null }, // priorRoster
+        { data: null, error: null }, // delete
+        { data: null, error: null }, // insert
+      ],
+      { incomplete_profiles_for_ids: [] },
+    );
+    signIn('creator-1');
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(
+      updateScheduledAction('game-1', fullBestBallFormData()),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/games/game-1?status=updated');
+    expect(revalidateTagMock).toHaveBeenCalledWith('game-game-1', 'max');
+  });
+
+  it('oppretter publish med pending-spiller bouncer til /games/[id]/rediger (ikke /admin/*)', async () => {
+    // RPC-en returnerer en ufullstendig profil → gaten må bite for oppretteren,
+    // og bouncen går til den ikke-admin rediger-flaten.
+    supabaseMock = buildSupabaseMock(
+      [
+        { data: { is_admin: false }, error: null }, // loadRole
+        { data: { created_by: 'creator-1' }, error: null }, // gate owner-check ✓
+      ],
+      {
+        incomplete_profiles_for_ids: [
+          { id: 'u1', email: 'u1@example.com' },
+        ],
+      },
+    );
+    signIn('creator-1');
+
+    const { publishFromDraftAction } = await import('./actions');
+    await expect(
+      publishFromDraftAction('game-1', fullBestBallFormData()),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toContain(
+      '/games/game-1/rediger?error=pending_players',
+    );
+    // Ingen skriv skjedde (blokkert før mode-lock + update).
+    const writeMethods = supabaseMock.__fromCalls.filter((c) =>
+      ['update', 'insert', 'delete'].includes(c.method),
+    );
+    expect(writeMethods).toHaveLength(0);
+  });
+
+  it('ikke-eier ikke-admin → redirect /', async () => {
+    // requireAdminOrCreator: loadRole gir is_admin:false, og games.created_by
+    // matcher ikke userId → redirect('/'). Ingen skriv.
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: false }, error: null }, // loadRole
+      { data: { created_by: 'someone-else' }, error: null }, // gate owner-check ✗
+    ]);
+    signIn('creator-1');
+
+    const { updateScheduledAction } = await import('./actions');
+    await expect(
+      updateScheduledAction('game-1', fullBestBallFormData()),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(lastRedirect()).toBe('/');
+    const writeMethods = supabaseMock.__fromCalls.filter((c) =>
+      ['update', 'insert', 'delete'].includes(c.method),
+    );
+    expect(writeMethods).toHaveLength(0);
   });
 });
