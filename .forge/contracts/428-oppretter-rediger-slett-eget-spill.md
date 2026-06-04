@@ -112,7 +112,7 @@ Gjenbruk `isCreator = gwp.game.created_by === userId` (finnes allerede). Vis for
 - [x] **K5 (suite grønn):** `npm run lint` + `npm test` + `npm run build` + `tsc --noEmit` grønt. Eksisterende admin-edit/slett-tester fortsatt grønne.
   - *Evidens:* `npx vitest run` → **2648 passed (218 filer)**. `npx tsc --noEmit` rent. `npm run build` clean (begge nye ruter i tabellen). `npx eslint` på alle rørte filer → 0 errors.
 - [x] **K6 (versjon):** `1.75.0` → `1.76.1` (MINOR-serie). CHANGELOG-oppføring under ny `1.76.y`-seksjon; forrige serie wrappet i `<details>`. Commit-msg-hook passerer.
-  - *Evidens:* `package.json` = `1.76.1`. Ny `## 1.76.y — Rediger og slett ditt eget spill` åpen med `[1.76.1]` (slett) + `[1.76.0]` (rediger); `1.75.y` wrappet i `<details>`. To `feat`-commits passerte commit-msg-hooken (package.json+CHANGELOG staged). Humanizer-skill kjørt på ny copy — alle strenger idiomatisk bokmål, ingen tells.
+  - *Evidens:* `package.json` = `1.76.2` (1.76.0 rediger, 1.76.1 slett, 1.76.2 post-eval redirect-fix). Ny `## 1.76.y — Rediger og slett ditt eget spill` åpen med `[1.76.2]`/`[1.76.1]`/`[1.76.0]`; `1.75.y` wrappet i `<details>`. To `feat`- + én `fix`-commit passerte commit-msg-hooken (package.json+CHANGELOG staged). Humanizer-skill kjørt på ny copy — alle strenger idiomatisk bokmål, ingen tells. README-kapabilitets-setning oppdatert (oppretter kan nå også rediger/slett egne spill).
 
 ## Gates (etter hver chunk; scoped underveis, full suite før evaluator)
 
