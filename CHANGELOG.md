@@ -21,6 +21,17 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#428](https://github.com/jdlarssen/golf-app/issues/428) (epic [#22](https://github.com/jdlarssen/golf-app/issues/22)), Fase 2. Du som lagde spillet kan nå styre det fullt ut selv: redigere det, og slette utkast eller planlagte runder du ikke trenger lenger.
 
+### [1.76.2] - 2026-06-04
+
+> Liten retting i den nye rediger-flyten: skulle lagringen feile, havner du nå tilbake på rediger-siden i stedet for på forsiden.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#428](https://github.com/jdlarssen/golf-app/issues/428) — Fase 2-oppfølging (forge-evaluering). `updateGameInternal` sin `game_players.delete`-feil-redirect var fortsatt hardkodet til admin-stien; nå forgrenet på `isAdmin` via `editBase` som resten av redirectene, så en oppretter holder seg i `/games/[id]/rediger`. Admin-flyten er uendret.
+
+</details>
+
 ### [1.76.1] - 2026-06-04
 
 > Lagde du et spill du ikke trenger likevel? Nå kan du slette dine egne utkast og planlagte runder selv, med en bekreftelse først så ingenting forsvinner ved et uhell.

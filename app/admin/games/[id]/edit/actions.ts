@@ -217,7 +217,7 @@ async function updateGameInternal(
     .delete()
     .eq('game_id', gameId);
   if (deleteError) {
-    redirect(`/admin/games/${gameId}/edit?error=db_players`);
+    redirect(`${editBase}?error=db_players`);
   }
 
   if (payload.players.length > 0) {
