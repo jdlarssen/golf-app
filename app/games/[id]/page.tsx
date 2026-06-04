@@ -1196,34 +1196,54 @@ function CreatorControls({
   gameId: string;
   status: GameStatus;
 }) {
-  const canManage = status === 'draft' || status === 'scheduled';
-  if (!canManage) return null;
+  // Pre-start: edit + delete the whole game. Roster management («Styr spillere»)
+  // opens once registration is live and stays available through active play
+  // (where it becomes withdraw + approval-override). Finished → nothing.
+  const preStart = status === 'draft' || status === 'scheduled';
+  const showRoster = status === 'scheduled' || status === 'active';
+  if (!preStart && !showRoster) return null;
   return (
     <div className="pt-2">
       <Kicker tone="muted" className="mb-2">
         ARRANGØR
       </Kicker>
       <div className="space-y-2">
-        <SmartLink href={`/games/${gameId}/rediger`} className="block">
-          <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
-            <span className="text-base font-medium text-text">
-              Rediger spill
-            </span>
-            <span aria-hidden className="text-muted">
-              →
-            </span>
-          </Card>
-        </SmartLink>
-        <SmartLink href={`/games/${gameId}/slett`} className="block">
-          <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-danger/40">
-            <span className="text-base font-medium text-danger">
-              Slett spill
-            </span>
-            <span aria-hidden className="text-muted">
-              →
-            </span>
-          </Card>
-        </SmartLink>
+        {showRoster && (
+          <SmartLink href={`/games/${gameId}/spillere`} className="block">
+            <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
+              <span className="text-base font-medium text-text">
+                Styr spillere
+              </span>
+              <span aria-hidden className="text-muted">
+                →
+              </span>
+            </Card>
+          </SmartLink>
+        )}
+        {preStart && (
+          <SmartLink href={`/games/${gameId}/rediger`} className="block">
+            <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
+              <span className="text-base font-medium text-text">
+                Rediger spill
+              </span>
+              <span aria-hidden className="text-muted">
+                →
+              </span>
+            </Card>
+          </SmartLink>
+        )}
+        {preStart && (
+          <SmartLink href={`/games/${gameId}/slett`} className="block">
+            <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-danger/40">
+              <span className="text-base font-medium text-danger">
+                Slett spill
+              </span>
+              <span aria-hidden className="text-muted">
+                →
+              </span>
+            </Card>
+          </SmartLink>
+        )}
       </div>
     </div>
   );

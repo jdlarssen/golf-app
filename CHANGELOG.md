@@ -17,6 +17,35 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.77.y — Styr ditt eget spill
+
+Issue [#429](https://github.com/jdlarssen/golf-app/issues/429) (epic [#22](https://github.com/jdlarssen/golf-app/issues/22)), Fase 3 — siste del av epic-et. Lagde du spillet, bestemmer du nå hvem som er med, og kan holde runden i gang uten å vente på en administrator.
+
+### [1.77.0] - 2026-06-05
+
+> Lagde du spillet, bestemmer du nå hvem som er med. Legg til spillere du kjenner eller inviter nye på e-post, og fjern folk før runden starter. Er runden i gang, kan du trekke en spiller eller godkjenne et scorekort på vegne av flighten om en medspiller ikke får gjort det selv.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#429](https://github.com/jdlarssen/golf-app/issues/429) — #22 Fase 3 (roster + godkjenning). Ny arrangør-flate `/games/[id]/spillere`, gated på `requireAdminOrCreator`, som leser rosteren via `getGameWithPlayers` (admin-client-cache, så den virker selv for en ikke-spillende oppretter) og skriver via request-scoped server-actions dekket av creator-RLS.
+
+#### Added
+- [`supabase/migrations/0072_invitations_creator_game_invite.sql`](supabase/migrations/0072_invitations_creator_game_invite.sql) — tre permissive RLS-policyer så en oppretter kan inserte/lese/slette game-scopede invitasjoner for eget spill. Game-invitasjoner var admin-only (0008 begrenset ikke-admin til `game_id IS NULL`). RLS-verifisert mot ekte `auth.uid()` i rollback-transaksjon.
+- [`app/games/[id]/spillere/page.tsx`](app/games/[id]/spillere/page.tsx) + [`CreatorRosterClient.tsx`](app/games/[id]/spillere/CreatorRosterClient.tsx) + [`actions.ts`](app/games/[id]/spillere/actions.ts) — arrangør-cockpit: legg til fra eget medspiller-nettverk (`getTeamCandidates`, #362), inviter ny på e-post (disposable-guard #422 for ikke-admin), fjern spiller (pre-start), trekk/angre (#386) og godkjenn scorekort på vegne av flighten (#360-paritet) under aktivt spill.
+- [`app/games/[id]/page.tsx`](app/games/[id]/page.tsx) — «Styr spillere»-inngang i `CreatorControls` ved påmelding og aktivt spill.
+
+#### Changed
+- [`app/admin/games/[id]/inviteToGameActions.ts`](app/admin/games/[id]/inviteToGameActions.ts) — `addExistingPlayerToGame` + `inviteEmailToGame` gater nå på `requireAdminOrCreator`, forgrener redirect på `isAdmin`, og legger disposable-guard på ikke-admin-invitasjoner. Admin-flyten byte-identisk.
+- [`app/admin/games/[id]/actions.ts`](app/admin/games/[id]/actions.ts) — `adminWithdrawPlayer`/`adminUndoWithdraw`/`adminApproveScorecard` gater nå på `requireAdminOrCreator` via en ny `loadAdminOrCreatorContext`-helper med forgrenet `detailPath`. Admin-flyten byte-identisk.
+
+</details>
+
+---
+
+<details>
+<summary><strong>1.76.y — Rediger og slett ditt eget spill (3 oppføringer) — klikk for å vise</strong></summary>
+
 ## 1.76.y — Rediger og slett ditt eget spill
 
 Issue [#428](https://github.com/jdlarssen/golf-app/issues/428) (epic [#22](https://github.com/jdlarssen/golf-app/issues/22)), Fase 2. Du som lagde spillet kan nå styre det fullt ut selv: redigere det, og slette utkast eller planlagte runder du ikke trenger lenger.
@@ -68,6 +97,8 @@ Issue [#428](https://github.com/jdlarssen/golf-app/issues/428) — #22 Fase 2 (r
 #### Changed
 - [`app/admin/games/[id]/edit/actions.ts`](app/admin/games/[id]/edit/actions.ts) — `saveDraftAction`/`publishFromDraftAction`/`updateScheduledAction` gater nå på `requireAdminOrCreator` og forgrener redirect på `isAdmin` (admin → Sekretariatet, oppretter → `/games/[id]`). Pending-gaten går via `incomplete_profiles_for_ids`-RPC-en (ikke direkte users-read) så den biter under request-scoped RLS. Admin-flyten er byte-identisk.
 - [`app/admin/games/[id]/edit/page.tsx`](app/admin/games/[id]/edit/page.tsx) — bruker den delte `buildEditInitialValues`-helperen.
+
+</details>
 
 </details>
 
