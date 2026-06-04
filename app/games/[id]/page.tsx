@@ -494,6 +494,13 @@ export default async function GameHomePage({
           Vær på 1. tee 10 minutter før start.
         </p>
 
+        {/* #428: rediger/slett for oppretter, også i venterommet (scheduled). */}
+        {isCreator && (
+          <div className="mx-4 mt-4">
+            <CreatorControls gameId={id} status={game.status} />
+          </div>
+        )}
+
         {/* Self-withdraw — kun pre-active (#199 chunk 11). Trekker brukeren
             ut av game_players + sender team_member_withdrew-varsel til
             kapteinen hvis bruker var team-medlem. */}
@@ -771,6 +778,10 @@ export default async function GameHomePage({
             </Card>
           </SmartLink>
         )}
+
+        {/* #428: rediger/slett for oppretter — vises kun ved draft/scheduled
+            (CreatorControls self-gater på status). */}
+        {isCreator && <CreatorControls gameId={id} status={game.status} />}
 
         {/* Cup-stilling — for spill som tilhører en cup (#347). Self-gated:
             renderer null for ikke-cup-spill. */}
@@ -1166,6 +1177,41 @@ async function CupStandingsLink({ gameId }: { gameId: string }) {
         </span>
       </Card>
     </SmartLink>
+  );
+}
+
+// ─── Creator controls (#428) ─────────────────────────────────────────────
+
+/**
+ * Arrangør-kontroll for spillets oppretter: rediger (+ slett, #428 chunk 2). Kun
+ * draft/scheduled — når runden har startet er handicaps frosset og scores finnes,
+ * så spillet er effektivt låst (sletting av active/finished er admin-only,
+ * eier-beslutning #428). Returnerer null for active/finished, så den kan rendres
+ * ubetinget (gated på isCreator av kalleren) i både venterom- og hovedvisningen.
+ */
+function CreatorControls({
+  gameId,
+  status,
+}: {
+  gameId: string;
+  status: GameStatus;
+}) {
+  const canManage = status === 'draft' || status === 'scheduled';
+  if (!canManage) return null;
+  return (
+    <div className="pt-2">
+      <Kicker tone="muted" className="mb-2">
+        ARRANGØR
+      </Kicker>
+      <SmartLink href={`/games/${gameId}/rediger`} className="block">
+        <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
+          <span className="text-base font-medium text-text">Rediger spill</span>
+          <span aria-hidden className="text-muted">
+            →
+          </span>
+        </Card>
+      </SmartLink>
+    </div>
   );
 }
 

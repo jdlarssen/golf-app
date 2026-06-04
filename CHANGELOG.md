@@ -17,6 +17,35 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.76.y — Rediger og slett ditt eget spill
+
+Issue [#428](https://github.com/jdlarssen/golf-app/issues/428) (epic [#22](https://github.com/jdlarssen/golf-app/issues/22)), Fase 2. Du som lagde spillet kan nå styre det fullt ut selv: redigere det, og slette utkast eller planlagte runder du ikke trenger lenger.
+
+### [1.76.0] - 2026-06-04
+
+> Du som lagde spillet kan nå redigere det selv. Bytt bane, tee-off, spillere eller innstillinger så lenge runden ikke har startet. Rediger-knappen ligger på spill-siden.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#428](https://github.com/jdlarssen/golf-app/issues/428) — #22 Fase 2 (rediger). Ingen ny migrasjon: creator-RLS fra 0071 (Fase 1) dekker allerede UPDATE-own på `games` + writes på `game_players`.
+
+#### Added
+- [`app/games/[id]/rediger/page.tsx`](app/games/[id]/rediger/page.tsx) — ny rediger-flate i `AppShell` for oppretter. Gjenbruker `GameForm` (edit-draft/edit-scheduled) og de samme save/publish/update-actionene som admin; options lastes via `getNewGameFormData` (RLS-trygg for ikke-admins).
+- [`lib/games/editGameInitialValues.ts`](lib/games/editGameInitialValues.ts) — delt `buildEditInitialValues` + typer, brukt av både admin-edit og creator-rediger så pre-fyll-logikken (mode-lock, mode_config, sideturnering) ikke divergerer.
+- [`app/games/[id]/page.tsx`](app/games/[id]/page.tsx) — «Rediger spill»-inngang for oppretter ved draft/scheduled, i både venterom og hovedvisning.
+
+#### Changed
+- [`app/admin/games/[id]/edit/actions.ts`](app/admin/games/[id]/edit/actions.ts) — `saveDraftAction`/`publishFromDraftAction`/`updateScheduledAction` gater nå på `requireAdminOrCreator` og forgrener redirect på `isAdmin` (admin → Sekretariatet, oppretter → `/games/[id]`). Pending-gaten går via `incomplete_profiles_for_ids`-RPC-en (ikke direkte users-read) så den biter under request-scoped RLS. Admin-flyten er byte-identisk.
+- [`app/admin/games/[id]/edit/page.tsx`](app/admin/games/[id]/edit/page.tsx) — bruker den delte `buildEditInitialValues`-helperen.
+
+</details>
+
+---
+
+<details>
+<summary><strong>1.75.y — Lag og styr ditt eget spill (1 oppføring) — klikk for å vise</strong></summary>
+
 ## 1.75.y — Lag og styr ditt eget spill
 
 Issue [#427](https://github.com/jdlarssen/golf-app/issues/427) (epic [#22](https://github.com/jdlarssen/golf-app/issues/22)). Til nå måtte en administrator opprette spill. Nå kan hvem som helst som er innlogget sette opp en runde, la den starte og avslutte den selv.
@@ -46,6 +75,8 @@ Issue [#427](https://github.com/jdlarssen/golf-app/issues/427) — #22 Fase 1 (R
 - **Auto-start som system-skriv** (eier-beslutning) — robust uansett hvem som åpner først; samme fix gjør admin-spill mer pålitelige.
 - **Full paritet i avslutt** (eier-beslutning) — oppretter får sideturnering + LD/CTP-vinnervalg + «avslutt likevel», samlet på én side.
 - **Ute av scope (senere faser):** rediger/slett eget spill, roster-styring, «Mine spill»-hub, cup-opprettelse (forblir admin).
+
+</details>
 
 </details>
 
