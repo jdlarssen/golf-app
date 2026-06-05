@@ -130,7 +130,7 @@ export async function respondFriendRequest(formData: FormData) {
   const accept = String(formData.get('accept') ?? '') === '1';
   if (!requestId) redirect(`${VENNER}?status=error`);
 
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
 
   // Hent avsender-id før avgjørelsen (raden slettes ved avslag).
   const admin = getAdminClient();
@@ -150,7 +150,6 @@ export async function respondFriendRequest(formData: FormData) {
   }
 
   if (status === 'accepted' && row?.requester_id) {
-    const { user } = await requireUser();
     await notifyFriend(row.requester_id, 'friend_accepted', user.id);
   }
   redirect(`${VENNER}?status=${status}`);
