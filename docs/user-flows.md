@@ -29,13 +29,13 @@ flowchart TD
   CP --> Home
   Home --> PH{har spill?}
   PH -- ja --> List["Mine spill / Avsluttede spill"]
-  PH -- nei --> Disc["Finn turneringer<br/>(åpne spill å melde seg på)"]
+  PH -- nei --> Disc["Finn turneringer<br/>(åpne spill + dine klubbers spill)"]
   Nav["Bunn-nav (alle innloggede):<br/>Hjem · Innboks · Klubbhuset · Profil"]
   Home --- Nav
   Nav --> Klub["Klubbhuset → /admin"]
   Klub --> KP{is_admin?}
   KP -- ja --> Sek["Hele Sekretariatet<br/>(Spill, Spillere, Baner, Cup, Formater, …)"]
-  KP -- nei --> PlayerKlub["Spill (egne, m/Opprett spill)<br/>+ Baner (m/Opprett bane)"]
+  KP -- nei --> PlayerKlub["Spill (egne, m/Opprett spill)<br/>+ Baner (m/Opprett bane)<br/>+ Klubber (#442)"]
 ```
 
 **Persistente nav-elementer** (verifisert i `app/layout.tsx` + sidene):
@@ -48,6 +48,16 @@ rommet `/admin`). Skjult kun på hull-skjerm, login og onboarding. «Klubbhuset�
 fanen gates ikke på rolle, men flatene inne gates — admin ser hele Sekretariatet, vanlige
 spillere ser Spill + Baner med oppretting. **Opprett spill/bane bor inne i Klubbhuset, ikke på
 Hjem.** Hjem er play + discover-navet: dine spill + «Finn turneringer».
+
+**Klubber** (#442, milepæl Klubb-skala): en klubb er en navngitt, styrt container folk og
+turneringer kan høre til. Alle innloggede kan opprette inntil to klubber (`create_club`-RPC —
+oppretteren blir `owner`). Klubbene dine bor under Klubbhuset (`/klubber`); klubb-siden
+(`/klubber/[id]`) viser medlemmer, lar eier/admin legge til på e-post eller dele en bli-med-lenke
+(`/klubber/bli-med/[shortId]` → forespørsel → eier godkjenner), og har en «Sett opp en runde for
+klubben»-dør. Når et spill opprettes for en klubb (valgfritt steg i veiviseren, `games.group_id`),
+ser **alle klubbens medlemmer** runden i «Finn turneringer» og melder seg på direkte — uansett
+påmeldingsmåte, også `invite_only`. Medlemskap ER invitasjonen. Klubb ≠ venner (#369): venner er en
+egen, flat relasjon.
 
 ---
 

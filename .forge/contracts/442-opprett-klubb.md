@@ -159,30 +159,59 @@ låser opp `group_id`-på-spill + klubb-scoped «Finn turneringer» som ble bevi
 - Om mail-backup (Resend) sendes ved `club_join_request` (speil `shouldAlsoSendMail`) eller kun in-app.
 
 ## Success Criteria
-- [ ] **C1 — Schema applyt:** `games.group_id` (nullable FK), `groups.short_id` (not null/unique/format),
+- [x] **C1 — Schema applyt:** `games.group_id` (nullable FK), `groups.short_id` (not null/unique/format),
   `group_join_requests` (+RLS), `create_club`/`add_club_member_by_email`/`decide_join_request` (security
   definer, anon revoked), og `club_join_request`-kind finnes. *Verifiser:* MCP `execute_sql` mot
   `information_schema`/`pg_proc`/`pg_policies`/`pg_constraint` + `lib/database.types.ts` har feltene.
-- [ ] **C2 — Opprett klubb + owner-bootstrap + cap:** en innlogget bruker oppretter en klubb via
+  → **Bevis (migrasjon 0075 applyt via MCP):** `execute_sql`-sjekk = games.group_id:1, groups.short_id:notnull
+  + unique-constraint:1, group_join_requests rls:true + 4 policies, 3 RPCer security definer, anon kan
+  execute 0 klubb-RPCer, authenticated kan execute alle 4, club_join_request-kind:yes, alle grupper har
+  short_id. `npx tsc --noEmit` = TSC_OK, `npm run build` grønn; types-diff = +78 linjer additivt.
+- [x] **C2 — Opprett klubb + owner-bootstrap + cap:** en innlogget bruker oppretter en klubb via
   `/klubber/ny` og blir `owner` (`group_members.role='owner'`); 3. opprettelse blokkeres med vennlig
   melding. *Verifiser:* `create_club` SQL-test (cap raise) + Playwright opprett-flyt + `execute_sql`
   viser owner-rad.
-- [ ] **C3 — Klubb-side + medlemsstyring:** `/klubber/[id]` viser medlemmer; eier legger til på e-post
+  → **Bevis:** `create_club`-RPC (migrasjon 0075, secdef) håndhever `count(groups where created_by)>=2 →
+  raise 'club_cap_reached'` + insert owner-membership atomisk. UI: [`app/klubber/ny/page.tsx`](app/klubber/ny/page.tsx)
+  + [`actions.ts`](app/klubber/ny/actions.ts) (cap→«Du kan opprette inntil 2 klubber …»); liste
+  [`app/klubber/page.tsx`](app/klubber/page.tsx) cap-gater opprett-døra; «Klubber»-tile i begge
+  Klubbhuset-grener ([`app/admin/page.tsx`](app/admin/page.tsx)). v1.79.0, commit 4d45b36.
+- [x] **C3 — Klubb-side + medlemsstyring:** `/klubber/[id]` viser medlemmer; eier legger til på e-post
   (eksisterende bruker lagt til, ukjent e-post avvist vennlig), fjerner medlem og forlater via dedikerte
   konfirmasjons-ruter; siste owner kan ikke fjernes. *Verifiser:* Playwright + RPC-retur + `execute_sql`.
-- [ ] **C4 — Bli-med-lenke:** `/klubber/bli-med/[shortId]` lar en ikke-medlem be om å bli med (rad i
+  → **Bevis:** [`app/klubber/[id]/page.tsx`](app/klubber/[id]/page.tsx) + [`getClubDetail.ts`](lib/clubs/getClubDetail.ts)
+  (medlemsnavn via admin-client pga users-RLS-gap). `addMember`→`add_club_member_by_email` (not_found/already_member
+  mappet). Fjern/forlat = dedikerte ruter `…/fjern/[userId]` + `…/forlat`; begge actions teller eiere og
+  blokkerer siste-owner-sletting. v1.79.1, commit 98c65b5.
+- [x] **C4 — Bli-med-lenke:** `/klubber/bli-med/[shortId]` lar en ikke-medlem be om å bli med (rad i
   `group_join_requests`, eier varslet); eier godkjenner/avslår på klubb-siden og medlemskap opprettes ved
   godkjenning. *Verifiser:* Playwright + `execute_sql` (request- + member-rad) + notify-test.
-- [ ] **C5 — Spill knyttes til klubb:** opprett-spill-veiviseren har «Hvem er dette for?» (Ingen / mine
+  → **Bevis:** [`app/klubber/bli-med/[shortId]/`](app/klubber/bli-med/[shortId]/page.tsx) (`requestToJoin`:
+  admin-resolve short_id → RLS self-insert pending → best-effort notify alle owner/admin). Ny `club_join_request`
+  notification-kind (types/NotificationCard/InboxClient, deeplink `/klubber/[group_id]`). Godkjenning:
+  `decideRequest`→`decide_join_request`-RPC (insert membership ved approve). v1.79.2, commit 15a26b0.
+- [x] **C5 — Spill knyttes til klubb:** opprett-spill-veiviseren har «Hvem er dette for?» (Ingen / mine
   klubber), `?klubb=[id]` forhåndsvelger, og spillet lagres med `group_id`; en klubb man ikke er medlem av
   kan ikke velges/settes. *Verifiser:* Playwright + `execute_sql` (`games.group_id` satt) + action-authz-ref.
-- [ ] **C6 — Klubb-scoped oppdagbarhet + join:** et klubb-`invite_only`-spill vises i «I dine klubber» på
+  → **Bevis:** `GameWizard`/`useGameFormState` ClubPicker (steg 2) → skjult `group_id`-felt (speiler
+  registration_mode-plumbing). [`createGameInternal`](app/admin/games/new/actions.ts) setter `group_id` med
+  medlemskaps-authz (manipulert verdi→null). [`newGameFormData.ts`](lib/games/newGameFormData.ts) returnerer
+  `clubs` (+ test). Klubb-side «Sett opp en runde for klubben»→`?klubb=`. v1.79.3, commit 8283025.
+- [x] **C6 — Klubb-scoped oppdagbarhet + join:** et klubb-`invite_only`-spill vises i «I dine klubber» på
   `/finn-turneringer` KUN for medlemmer, og et medlem kan melde seg på direkte. Ikke-medlem ser det aldri.
   *Verifiser:* `getDiscoverableGames.test.ts` (clubGames inkluderer invite_only for member, ekskluderer for
   non-member) + Playwright direkte-join.
-- [ ] **C7 — Ingen regresjon + gates grønne:** eksisterende discovery/signup/#49-RLS uendret i oppførsel;
+  → **Bevis:** [`getDiscoverableGames.ts`](lib/games/getDiscoverableGames.ts) `clubGames` (group_id ∈ mine
+  klubber, alle modi, dedup vs open). Test: 3 nye cases (medlem-ser-invite_only m/group_name, ikke-medlem→
+  ingen group_id-query, dedup ekskluderer fra open). [`HomeDiscoverySection`](app/HomeDiscoverySection.tsx)
+  «I dine klubber». Direkte-join: [`signup/page.tsx`](app/signup/[shortId]/page.tsx) + `registerForOpenGame`
+  (`canDirectJoin = open OR (group_id && is_group_member)`, server-side). v1.79.4, commit 5935fcc.
+- [x] **C7 — Ingen regresjon + gates grønne:** eksisterende discovery/signup/#49-RLS uendret i oppførsel;
   `npm run build` grønn, berørte co-lokerte tester grønne, ny norsk copy kjørt gjennom `humanizer`.
   *Verifiser:* `npm run build` + `npx vitest run` + `git diff`-inspeksjon.
+  → **Bevis:** `npm run build` grønn (33/33 sider). `npx vitest run` = **219 filer / 2667 tester passed**.
+  Ingen eksisterende RLS-policy endret (kun additiv 0075). Ny copy humanisert per chunk (em-dash/«i ferd med
+  å»/«tilgang til å avgjøre» fjernet). `docs/user-flows.md` §0 oppdatert med klubb-flyten.
 
 ## Gates
 - [ ] `npx tsc --noEmit` passerer (etter hver chunk; fanger group_id/exhaustive-hull).
