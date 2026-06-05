@@ -502,6 +502,7 @@ export type Database = {
           foursomes_side1_tee_starter_user_id: string | null
           foursomes_side2_tee_starter_user_id: string | null
           game_mode: string
+          group_id: string | null
           hcp_allowance_pct: number
           id: string
           mode_config: Json
@@ -530,6 +531,7 @@ export type Database = {
           foursomes_side1_tee_starter_user_id?: string | null
           foursomes_side2_tee_starter_user_id?: string | null
           game_mode: string
+          group_id?: string | null
           hcp_allowance_pct?: number
           id?: string
           mode_config?: Json
@@ -558,6 +560,7 @@ export type Database = {
           foursomes_side1_tee_starter_user_id?: string | null
           foursomes_side2_tee_starter_user_id?: string | null
           game_mode?: string
+          group_id?: string | null
           hcp_allowance_pct?: number
           id?: string
           mode_config?: Json
@@ -608,6 +611,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "games_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "games_tee_box_id_fkey"
             columns: ["tee_box_id"]
             isOneToOne: false
@@ -619,6 +629,61 @@ export type Database = {
             columns: ["tournament_id"]
             isOneToOne: false
             referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_join_requests: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by_user_id: string | null
+          group_id: string
+          id: string
+          message: string | null
+          status: Database["public"]["Enums"]["registration_request_status"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by_user_id?: string | null
+          group_id: string
+          id?: string
+          message?: string | null
+          status?: Database["public"]["Enums"]["registration_request_status"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by_user_id?: string | null
+          group_id?: string
+          id?: string
+          message?: string | null
+          status?: Database["public"]["Enums"]["registration_request_status"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_join_requests_decided_by_user_id_fkey"
+            columns: ["decided_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_join_requests_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_join_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -665,18 +730,21 @@ export type Database = {
           created_by: string | null
           id: string
           name: string
+          short_id: string
         }
         Insert: {
           created_at?: string
           created_by?: string | null
           id?: string
           name: string
+          short_id?: string
         }
         Update: {
           created_at?: string
           created_by?: string | null
           id?: string
           name?: string
+          short_id?: string
         }
         Relationships: [
           {
@@ -1174,9 +1242,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_club_member_by_email: {
+        Args: { p_email: string; p_group_id: string }
+        Returns: string
+      }
       consume_admin_rate_limit: {
         Args: { p_bucket: string; p_max: number; p_window_seconds: number }
         Returns: boolean
+      }
+      create_club: { Args: { p_name: string }; Returns: string }
+      decide_join_request: {
+        Args: { p_approve: boolean; p_request_id: string }
+        Returns: string
       }
       email_is_in_auth_users: {
         Args: { email_to_check: string }
@@ -1185,6 +1262,7 @@ export type Database = {
       email_is_invited: { Args: { check_email: string }; Returns: boolean }
       email_is_registered: { Args: { p_email: string }; Returns: boolean }
       generate_game_short_id: { Args: never; Returns: string }
+      generate_group_short_id: { Args: never; Returns: string }
       is_admin: { Args: never; Returns: boolean }
       is_game_creator_or_admin: {
         Args: { p_game_id: string }
