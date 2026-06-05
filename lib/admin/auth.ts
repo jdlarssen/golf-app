@@ -42,6 +42,21 @@ async function loadRole(supabase: ServerSupabase): Promise<AdminRoleContext> {
 }
 
 /**
+ * Auth-only role read for the universal Klubbhuset room (#392). Requires a
+ * logged-in user (redirects to `/login` via `loadRole` if there is no session)
+ * but does NOT redirect based on role — it returns the full `AdminRoleContext`
+ * so the caller can branch its own content per role. `/admin` is now reachable
+ * by every logged-in user (the layout gate is auth-only); each admin-only
+ * sub-route still self-gates with `requireAdmin*`, so this never widens access
+ * to admin data on its own.
+ */
+export async function getRoleContext(
+  supabase: ServerSupabase,
+): Promise<AdminRoleContext> {
+  return loadRole(supabase);
+}
+
+/**
  * Gate for admin-only routes. Authenticates the user, loads role context,
  * and redirects non-admins:
  *  - Trusted creators → `/admin` so they stay inside Sekretariatet (and

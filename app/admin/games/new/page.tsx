@@ -12,9 +12,10 @@ import {
   ERROR_MESSAGES_NEW_GAME,
   buildErrorMessage as buildGameErrorMessage,
 } from '@/lib/admin/gameErrorMessages';
-import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
 import { getServerClient } from '@/lib/supabase/server';
+import { getRoleContext } from '@/lib/admin/auth';
+import { redirect } from 'next/navigation';
 import { parseIntent, type Intent } from '@/lib/wizard/intent';
 import {
   getFormatsForIntent,
@@ -72,9 +73,17 @@ export default async function NewGamePage({
 }: {
   searchParams: SearchParams;
 }) {
+  // Klubbhuset (#392): the admin layout gate is now auth-only, so this page —
+  // which renders the full member roster (incl. emails) via getNewGameFormData
+  // — must self-gate. Non-admins (incl. trusted creators) belong in their own
+  // /opprett-spill flow, mirroring the home-page create routing.
+  const supabase = await getServerClient();
+  const role = await getRoleContext(supabase);
+  if (!role.isAdmin) redirect('/opprett-spill');
+  const userId = role.userId;
+
   const sp = await searchParams;
   const errorMessage = buildErrorMessage(first(sp.error), first(sp.emails));
-  const userId = await getProxyVerifiedUserId();
 
   // Cup-link (#47): hvis admin lander via /admin/cup/[id], pre-fyller vi
   // game_mode + match-label og låser modus-velgeren. `game_mode`-param-en
