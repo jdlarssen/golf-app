@@ -91,9 +91,34 @@ describe('submitScorecard', () => {
     expect(lastRedirect()).toBe('/games/game-1/submit?error=not_active');
   });
 
+  it('WD gate (#387): a withdrawn player is bounced to game-home, no submit, no notify', async () => {
+    // Defense-in-depth: the submit page redirects withdrawn players away, but a
+    // direct POST to this action must also be refused. A trukket spiller lands
+    // on game-home (which renders the «Du har trukket deg»-banner) and never
+    // touches submitted_at, notify, or mail.
+    supabaseMock = buildSupabaseMock([
+      { data: { name: 'Vinter-cup', status: 'active' }, error: null },
+      { data: { withdrawn_at: '2026-06-05T10:00:00Z' }, error: null }, // withdrawn!
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'user-1' } },
+    });
+
+    const { submitScorecard } = await import('./actions');
+
+    await expect(submitScorecard('game-1')).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+
+    expect(lastRedirect()).toBe('/games/game-1');
+    expect(notifyMock).not.toHaveBeenCalled();
+    expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
+  });
+
   it('happy path: marks submitted_at, notifies admins (filters self), redirects with ?status=submitted', async () => {
     supabaseMock = buildSupabaseMock([
       { data: { name: 'Vinter-cup', status: 'active' }, error: null },
+      { data: { withdrawn_at: null }, error: null }, // WD gate (#387): not withdrawn
       // UPDATE returns the matched row via .select('user_id') — non-empty
       // means this was a fresh submit, so notify + mail must fire.
       { data: [{ user_id: 'user-1' }], error: null },
@@ -142,6 +167,7 @@ describe('submitScorecard', () => {
 
     supabaseMock = buildSupabaseMock([
       { data: { name: 'Vinter-cup', status: 'active' }, error: null },
+      { data: { withdrawn_at: null }, error: null }, // WD gate (#387): not withdrawn
       { data: [{ user_id: 'user-1' }], error: null }, // UPDATE game_players (fresh)
       { data: { name: 'Ola Nordmann' }, error: null },
       {
@@ -175,6 +201,7 @@ describe('submitScorecard', () => {
 
     supabaseMock = buildSupabaseMock([
       { data: { name: 'Vinter-cup', status: 'active' }, error: null },
+      { data: { withdrawn_at: null }, error: null }, // WD gate (#387): not withdrawn
       { data: [{ user_id: 'user-1' }], error: null }, // UPDATE (fresh)
       { data: { name: 'Ola Nordmann' }, error: null },
       {
@@ -198,6 +225,7 @@ describe('submitScorecard', () => {
   it('edge case: redirects with ?error=db when the update returns an error', async () => {
     supabaseMock = buildSupabaseMock([
       { data: { name: 'Test', status: 'active' }, error: null },
+      { data: { withdrawn_at: null }, error: null }, // WD gate (#387): not withdrawn
       { data: null, error: { message: 'permission denied' } }, // UPDATE fails
     ]);
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -222,6 +250,7 @@ describe('submitScorecard', () => {
     // click eller race med peer-godkjenning).
     supabaseMock = buildSupabaseMock([
       { data: { name: 'Vinter-cup', status: 'active' }, error: null },
+      { data: { withdrawn_at: null }, error: null }, // WD gate (#387): not withdrawn
       { data: [], error: null }, // UPDATE matched 0 rows — already submitted
     ]);
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({

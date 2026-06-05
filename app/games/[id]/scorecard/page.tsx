@@ -102,6 +102,12 @@ export default async function ScorecardPage({ params }: { params: Params }) {
   const me = players.find((p) => p.user_id === userId);
   if (!me) notFound();
 
+  // Withdrawn (#387): bounce a trukket spiller to game-home (which shows the
+  // «Du har trukket deg»-banner + Angre) rather than their now-frozen card.
+  if (me.withdrawn_at) {
+    redirect(`/games/${id}`);
+  }
+
   const rating = getRatingForGender(game.tee_box, me.tee_gender);
   const state = revealState(game.score_visibility, game.status);
   const revealActive = state === 'reveal-active';

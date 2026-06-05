@@ -104,6 +104,13 @@ export default async function SubmitPage({
   const me = players.find((p) => p.user_id === userId);
   if (!me) notFound();
 
+  // Withdrawn (#387): a trukket spiller can't deliver. Bounce to game-home,
+  // which renders the «Du har trukket deg»-banner + Angre. Defense-in-depth —
+  // the submitScorecard action refuses a direct POST too.
+  if (me.withdrawn_at) {
+    redirect(`/games/${id}`);
+  }
+
   // Already submitted: nothing more to do here.
   if (me.submitted_at) {
     redirect(`/games/${id}`);

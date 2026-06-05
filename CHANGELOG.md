@@ -21,6 +21,25 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#392](https://github.com/jdlarssen/golf-app/issues/392) (milepæl Klubb-skala). Klubbhuset blir en fast fane i bunn-nav-en som alle har. Det du møter inne avhenger av hvem du er.
 
+### [1.78.2] - 2026-06-05 · #387
+
+> Har du trukket deg fra en runde, sender appen deg tilbake til spill-hjem hvis du prøver å levere eller åpne scorekortet. Slagene dine kan ikke endres så lenge du står som trukket.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#387](https://github.com/jdlarssen/golf-app/issues/387) (milepæl Tier 4 — End-game robusthet). Oppfølging fra #386 (WD/trekk spiller): #386 låste scorekort-tasting klient-side, men submit/scorekort-rutene og selve score-skrivingen var ikke gated på `withdrawn_at`. En trukket spiller kunne i prinsippet levere scorekort via en direkte URL eller en direkte POST til server-action-en. Ingen rangerings-effekt (trukne ekskluderes fra leaderboarden uansett), men en løs ende. Denne lukker den med defense-in-depth på både app- og databaselaget.
+
+#### Security
+- [`app/games/[id]/submit/page.tsx`](app/games/[id]/submit/page.tsx) + [`app/games/[id]/scorecard/page.tsx`](app/games/[id]/scorecard/page.tsx) — redirecter en trukket spiller til game-home (som viser «Du har trukket deg»-banneret + Angre), speiler den eksisterende `submitted_at`-redirecten.
+- [`app/games/[id]/submit/actions.ts`](app/games/[id]/submit/actions.ts) — `submitScorecard` re-henter innlogget spillers `withdrawn_at` og avviser en direkte POST før UPDATE/notify. Eksplisitt sjekk (ikke `.is()` i UPDATE-kjeden, som ville gitt falsk «levert»-melding).
+- [`supabase/migrations/0073_block_withdrawn_score_writes.sql`](supabase/migrations/0073_block_withdrawn_score_writes.sql) — to lag mot score-skriving: (1) `upsert_score_if_newer`-guard returnerer en graceful no-op (`was_applied = false`) for et trukket mål, så offline-sync-køen drenerer i stedet for å loope på RLS-rejecten under; (2) RLS `WITH CHECK` på `scores` INSERT/UPDATE blokkerer direkte skriving, utvider den eksisterende `submitted_at`-frosne guarden til `(submitted_at is not null or withdrawn_at is not null)`. Eksisterende scorer bevares; angre (`withdrawn_at = null`) gjenåpner skriving.
+
+#### Changed
+- [`app/games/[id]/submit/actions.test.ts`](app/games/[id]/submit/actions.test.ts) — ny test for WD-gaten (trukket → game-home, ingen submit/notify); de fire eksisterende testene fikk en `withdrawn_at: null`-rad injisert i FIFO-mocken etter den nye spørringen.
+
+</details>
+
 ### [1.78.1] - 2026-06-05 · #435
 
 > Når du setter opp eller redigerer en runde, sender ikke appen lenger med e-postadressene til de andre spillerne. Den trenger bare navn og handicap så du kan plukke medspillere. Har du invitert noen som ikke har fullført profilen sin ennå, står de nå som «Invitert spiller» i stedet for e-posten sin.

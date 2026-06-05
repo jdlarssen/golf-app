@@ -47,6 +47,20 @@ export async function submitScorecard(gameId: string) {
     redirect(`/games/${gameId}/submit?error=not_active`);
   }
 
+  // Withdrawn (#387): a trukket spiller can't submit. The submit page redirects
+  // them away, but a direct POST to this action must also be refused — defense-
+  // in-depth. Bounce to game-home, which renders the «Du har trukket deg»-banner.
+  const { data: meRow } = await supabase
+    .from('game_players')
+    .select('withdrawn_at')
+    .eq('game_id', gameId)
+    .eq('user_id', user.id)
+    .maybeSingle<{ withdrawn_at: string | null }>();
+
+  if (meRow?.withdrawn_at) {
+    redirect(`/games/${gameId}`);
+  }
+
   const { data: updated, error } = await supabase
     .from('game_players')
     .update({
