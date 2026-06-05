@@ -21,6 +21,20 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#369](https://github.com/jdlarssen/golf-app/issues/369) (lukker [#408](https://github.com/jdlarssen/golf-app/issues/408), milepæl Klubb-skala). Du kan nå legge til venner på Tørny. Venner ser spillene dine, og du finner dem raskt når du fyller lag.
 
+### [1.81.1] - 2026-06-05 · #408
+
+> Når du fyller et lag, foreslår Tørny nå vennene dine i tillegg til folk du har spilt med. En venn du aldri har delt en runde med, dukker opp med en gang.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#408](https://github.com/jdlarssen/golf-app/issues/408). Lag-påmeldings-autocomplete-en leser samme resolver som før; kilden er utvidet.
+
+#### Changed
+- [`lib/users/getTeamCandidates.ts`](lib/users/getTeamCandidates.ts) — kandidatene er nå `venner(userId) ∪ co-players(userId)`, deduplikert (4 unit-tester). `TeamRegistrationForm` er uendret. Co-player-oppslaget gjenbrukes fra `lib/users/getCoPlayerIds.ts`.
+
+</details>
+
 ### [1.81.0] - 2026-06-05 · #369, #408
 
 > Du har fått venner på Tørny: legg til folk du har spilt med, søk dem opp på e-post, eller del en lenke som gjør den som åpner den til venn med deg på flekken. Innboksen sier fra når noen vil bli venn eller godtar deg.
