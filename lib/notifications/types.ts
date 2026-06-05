@@ -19,7 +19,8 @@ export type NotificationKind =
   | 'team_member_withdrew'
   | 'deliver_reminder'
   | 'cup_finished'
-  | 'club_join_request';
+  | 'club_join_request'
+  | 'club_role_changed';
 
 // `z.guid()` aksepterer enhver UUID-shaped string (8-4-4-4-12 hex), inkludert
 // nil-UUID og ikke-versjonerte kanoniske test-sentinels som "11111111-...".
@@ -148,6 +149,15 @@ const clubJoinRequestSchema = z.object({
   requester_name: z.string().min(1),
 });
 
+// club_role_changed: en klubb-eier endret et medlems rolle. Sendes til den
+// berørte. group_id deeplinker til /klubber/[group_id]. new_role er den nye
+// rollen. (#50)
+const clubRoleChangedSchema = z.object({
+  group_id: uuid,
+  group_name: z.string().min(1),
+  new_role: z.enum(['owner', 'admin', 'member']),
+});
+
 const schemas = {
   invite: inviteSchema,
   peer_approval_request: peerApprovalRequestSchema,
@@ -163,6 +173,7 @@ const schemas = {
   deliver_reminder: deliverReminderSchema,
   cup_finished: cupFinishedSchema,
   club_join_request: clubJoinRequestSchema,
+  club_role_changed: clubRoleChangedSchema,
 } as const;
 
 export type NotificationPayload<K extends NotificationKind = NotificationKind> =

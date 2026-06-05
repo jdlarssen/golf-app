@@ -21,6 +21,24 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#50](https://github.com/jdlarssen/golf-app/issues/50) (milepæl Klubb-skala). Klubber settes nå opp via en avtale med Tørny. Eieren kan utnevne med-admins, og hver klubb har et medlemstak og en varighet.
 
+### [1.80.2] - 2026-06-05 · #50
+
+> Er du eier av en klubb, kan du gjøre andre medlemmer til admin eller eier, eller sette dem tilbake til vanlig medlem. Den det gjelder får et varsel. Den siste eieren kan ikke settes ned, så klubben alltid har noen som styrer.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#50](https://github.com/jdlarssen/golf-app/issues/50) (milepæl Klubb-skala). Eier-drevet rolle-delegering inne i klubben.
+
+#### Added
+- [`app/klubber/[id]/rolle/[userId]/page.tsx`](app/klubber/[id]/rolle/[userId]/page.tsx) + [`actions.ts`](app/klubber/[id]/rolle/[userId]/actions.ts) — dedikert «Endre rolle»-side per medlem (eier-only). `setMemberRole` kaller `set_club_member_role`-RPC (sist-eier-guard); ved suksess varsles den berørte best-effort (`Promise.allSettled`, awaitet før redirect).
+- `club_role_changed`-varsel: ny notification-kind ([`lib/notifications/types.ts`](lib/notifications/types.ts) + zod-skjema, [`NotificationCard`](components/notifications/NotificationCard.tsx) 🔑-ikon + rolle-spesifikk tekst, [`InboxClient`](app/innboks/InboxClient.tsx) deeplink → `/klubber/[group_id]`).
+
+#### Changed
+- [`app/klubber/[id]/page.tsx`](app/klubber/[id]/page.tsx) — «Endre rolle»-lenke på hvert medlemskort (kun for eier, ikke seg selv) + «Rollen er oppdatert»-banner.
+
+</details>
+
 ### [1.80.1] - 2026-06-05 · #50
 
 > Som administrator oppretter du nå klubber fra Sekretariatet: du velger eier, setter et medlemstak og en varighet (uendelig eller en sluttdato), og kan justere avtalen senere.

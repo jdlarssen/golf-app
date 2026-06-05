@@ -18,6 +18,7 @@ type SearchParams = Promise<{
   error?: string | string[];
   email?: string | string[];
   decided?: string | string[];
+  role_changed?: string | string[];
 }>;
 
 const ROLE_LABELS: Record<'owner' | 'admin' | 'member', string> = {
@@ -73,6 +74,7 @@ export default async function KlubbDetailPage({
   const errorCode = first(sp.error);
   const errorEmail = first(sp.email);
   const decidedCode = first(sp.decided);
+  const roleChanged = first(sp.role_changed);
 
   const errorMessages: Record<string, string> = {
     not_found: errorEmail
@@ -121,6 +123,12 @@ export default async function KlubbDetailPage({
           <Banner tone={decidedMessages[decidedCode].tone}>
             {decidedMessages[decidedCode].text}
           </Banner>
+        </div>
+      )}
+
+      {roleChanged && (
+        <div className="mb-6">
+          <Banner tone="success">Rollen er oppdatert.</Banner>
         </div>
       )}
 
@@ -197,6 +205,14 @@ export default async function KlubbDetailPage({
                   <span className="rounded-full border border-border px-2.5 py-0.5 font-sans text-xs text-muted">
                     {ROLE_LABELS[member.role]}
                   </span>
+                  {myRole === 'owner' && member.userId !== user.id && (
+                    <SmartLink
+                      href={`/klubber/${club.id}/rolle/${member.userId}`}
+                      className="min-h-[44px] flex items-center font-sans text-xs text-primary hover:underline"
+                    >
+                      Endre rolle
+                    </SmartLink>
+                  )}
                   {isAdmin && member.userId !== user.id && (
                     <SmartLink
                       href={`/klubber/${club.id}/fjern/${member.userId}`}

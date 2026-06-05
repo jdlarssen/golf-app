@@ -35,6 +35,7 @@ const EMOJI: Record<NotificationKind, string> = {
   deliver_reminder: '📤',
   cup_finished: '🏁',
   club_join_request: '🙋',
+  club_role_changed: '🔑',
 };
 
 /**
@@ -216,6 +217,19 @@ function buildCardContent(
       return {
         title: `${p.requester_name} vil bli med i klubben`,
         detail: p.group_name,
+      };
+    }
+    case 'club_role_changed': {
+      const p = payload as NotificationPayload<'club_role_changed'>;
+      const roleText =
+        p.new_role === 'owner'
+          ? `Du er nå eier av ${p.group_name}`
+          : p.new_role === 'admin'
+            ? `Du er nå admin i ${p.group_name}`
+            : `Rollen din i ${p.group_name} er nå medlem`;
+      return {
+        title: 'Rollen din er endret',
+        detail: roleText,
       };
     }
   }
