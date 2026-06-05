@@ -10,13 +10,14 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { CopyJoinLinkButton } from './CopyJoinLinkButton';
-import { addMember } from './actions';
+import { addMember, decideRequest } from './actions';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
   added?: string | string[];
   error?: string | string[];
   email?: string | string[];
+  decided?: string | string[];
 }>;
 
 const ROLE_LABELS: Record<'owner' | 'admin' | 'member', string> = {
@@ -61,7 +62,7 @@ export default async function KlubbDetailPage({
   const detail = await getClubDetail(supabase, id, user.id);
   if (!detail) notFound();
 
-  const { club, members, myRole } = detail;
+  const { club, members, myRole, pendingRequests } = detail;
   const isAdmin = myRole === 'owner' || myRole === 'admin';
 
   // Determine whether to show leave link (hide for the only owner).
@@ -71,6 +72,7 @@ export default async function KlubbDetailPage({
   const addedEmail = first(sp.added);
   const errorCode = first(sp.error);
   const errorEmail = first(sp.email);
+  const decidedCode = first(sp.decided);
 
   const errorMessages: Record<string, string> = {
     not_found: errorEmail
@@ -82,6 +84,15 @@ export default async function KlubbDetailPage({
     not_auth: 'Du har ikke tilgang til å legge til medlemmer.',
     email_req: 'Fyll inn en e-postadresse.',
     unknown: 'Noe gikk galt. Prøv igjen.',
+  };
+
+  const decidedMessages: Record<string, { tone: 'success' | 'error'; text: string }> = {
+    approved: { tone: 'success', text: 'Godkjent. Personen er nå medlem av klubben.' },
+    rejected: { tone: 'success', text: 'Forespørselen ble avslått.' },
+    not_auth: { tone: 'error', text: 'Du kan ikke avgjøre denne forespørselen.' },
+    already: { tone: 'error', text: 'Forespørselen var allerede avgjort.' },
+    not_found: { tone: 'error', text: 'Fant ikke forespørselen. Den kan ha blitt trukket tilbake.' },
+    unknown: { tone: 'error', text: 'Noe gikk galt. Prøv igjen.' },
   };
 
   const joinUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://tornygolf.no'}/klubber/bli-med/${club.short_id}`;
@@ -103,6 +114,68 @@ export default async function KlubbDetailPage({
             {errorMessages[errorCode] ?? 'Noe gikk galt. Prøv igjen.'}
           </Banner>
         </div>
+      )}
+
+      {decidedCode && decidedMessages[decidedCode] && (
+        <div className="mb-6">
+          <Banner tone={decidedMessages[decidedCode].tone}>
+            {decidedMessages[decidedCode].text}
+          </Banner>
+        </div>
+      )}
+
+      {/* Pending join requests — visible only to owner/admin */}
+      {isAdmin && pendingRequests.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-3 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+            Forespørsler ({pendingRequests.length})
+          </h2>
+          <div className="space-y-2">
+            {pendingRequests.map((req) => (
+              <Card key={req.id} className="p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-sans text-[15px] font-medium text-text">
+                      {req.requesterName}
+                    </span>
+                    <span className="font-sans text-xs text-muted">
+                      {new Date(req.requestedAt).toLocaleDateString('nb-NO', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <form action={decideRequest}>
+                      <input type="hidden" name="requestId" value={req.id} />
+                      <input type="hidden" name="groupId" value={club.id} />
+                      <input type="hidden" name="approve" value="true" />
+                      <Button
+                        type="submit"
+                        className="min-h-[44px] px-4 text-sm"
+                      >
+                        Godkjenn
+                      </Button>
+                    </form>
+                    <form action={decideRequest}>
+                      <input type="hidden" name="requestId" value={req.id} />
+                      <input type="hidden" name="groupId" value={club.id} />
+                      <input type="hidden" name="approve" value="false" />
+                      <Button
+                        type="submit"
+                        variant="secondary"
+                        className="min-h-[44px] px-4 text-sm"
+                      >
+                        Avslå
+                      </Button>
+                    </form>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </section>
       )}
 
       {/* Members list */}

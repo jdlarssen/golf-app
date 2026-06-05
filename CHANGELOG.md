@@ -21,6 +21,25 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#442](https://github.com/jdlarssen/golf-app/issues/442) (milepæl Klubb-skala). Du kan nå lage egne klubber, samle folk og turneringer på ett sted, og la medlemmene finne klubbens runder.
 
+### [1.79.2] - 2026-06-05 · #442
+
+> Du kan dele en lenke så folk kan be om å bli med i klubben din. Du får et varsel i innboksen, og godkjenner eller avslår med ett trykk. Den som ber om å bli med, ser at forespørselen er sendt.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#442](https://github.com/jdlarssen/golf-app/issues/442) (milepæl Klubb-skala). «Bli med via lenke»-flyten + eier-godkjenning.
+
+#### Added
+- [`app/klubber/bli-med/[shortId]/page.tsx`](app/klubber/bli-med/[shortId]/page.tsx) + [`actions.ts`](app/klubber/bli-med/[shortId]/actions.ts) — del-lenkens landingsside; `requestToJoin` slår opp klubben på `short_id` (admin-client), oppretter en pending `group_join_requests`-rad (RLS self-insert), og varsler klubbens eier/admin best-effort. Allerede-medlem og duplikat-forespørsel håndteres med vennlige tilstander.
+- `club_join_request`-varsel: ny notification-kind ([`lib/notifications/types.ts`](lib/notifications/types.ts) + zod-skjema, [`NotificationCard`](components/notifications/NotificationCard.tsx) emoji/tittel, [`InboxClient`](app/innboks/InboxClient.tsx) deeplink → `/klubber/[group_id]`).
+
+#### Changed
+- [`lib/clubs/getClubDetail.ts`](lib/clubs/getClubDetail.ts) — returnerer nå også klubbens ventende forespørsler (kun for eier/admin; lest via admin-client).
+- [`app/klubber/[id]/page.tsx`](app/klubber/[id]/page.tsx) + [`actions.ts`](app/klubber/[id]/actions.ts) — «Forespørsler»-seksjon for eier/admin med Godkjenn/Avslå; `decideRequest` kaller `decide_join_request`-RPC (lager medlemskap ved godkjenning).
+
+</details>
+
 ### [1.79.1] - 2026-06-05 · #442
 
 > Inne på en klubb ser du nå medlemmene. Er du eier eller admin, kan du legge til folk på e-post, fjerne medlemmer, og dele en lenke andre kan be om å bli med via. Alle kan forlate en klubb de er med i.

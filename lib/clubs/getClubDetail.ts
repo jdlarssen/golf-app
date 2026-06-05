@@ -9,6 +9,12 @@ export type ClubMember = {
   joinedAt: string;
 };
 
+export type PendingJoinRequest = {
+  id: string;
+  requesterName: string;
+  requestedAt: string;
+};
+
 export type ClubDetail = {
   club: {
     id: string;
@@ -17,6 +23,8 @@ export type ClubDetail = {
   };
   members: ClubMember[];
   myRole: 'owner' | 'admin' | 'member';
+  /** Pending join requests — populated only when caller is owner/admin; [] for members. */
+  pendingRequests: PendingJoinRequest[];
 };
 
 const ROLE_ORDER: Record<'owner' | 'admin' | 'member', number> = {
@@ -66,7 +74,9 @@ export async function getClubDetail(
   // Step 2 — fetch all data via admin client (bypasses users-table RLS).
   const admin = getAdminClient();
 
-  const [clubRes, membersRes] = await Promise.all([
+  const isAdmin = myRole === 'owner' || myRole === 'admin';
+
+  const [clubRes, membersRes, requestsRes] = await Promise.all([
     admin
       .from('groups')
       .select('id, name, short_id')
@@ -76,6 +86,15 @@ export async function getClubDetail(
       .from('group_members')
       .select('user_id, role, joined_at, users(name, nickname)')
       .eq('group_id', clubId),
+    // Pending requests are only fetched for owner/admin — members get [].
+    isAdmin
+      ? admin
+          .from('group_join_requests')
+          .select('id, created_at, user_id, users(name, nickname)')
+          .eq('group_id', clubId)
+          .eq('status', 'pending')
+          .order('created_at', { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
   if (!clubRes.data) return null;
@@ -104,6 +123,24 @@ export async function getClubDetail(
       return a.name.localeCompare(b.name, 'nb');
     });
 
+  const pendingRequests: PendingJoinRequest[] = (requestsRes.data ?? []).map((row) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rowAny = row as any;
+    const usersRaw = rowAny.users as unknown as
+      | { name: string | null; nickname: string | null }
+      | { name: string | null; nickname: string | null }[]
+      | null;
+    const userRow = Array.isArray(usersRaw) ? (usersRaw[0] ?? null) : usersRaw;
+    const requesterName =
+      userRow?.nickname?.trim() || userRow?.name?.trim() || 'Ukjent';
+
+    return {
+      id: rowAny.id as string,
+      requesterName,
+      requestedAt: rowAny.created_at as string,
+    };
+  });
+
   return {
     club: {
       id: clubRes.data.id,
@@ -112,5 +149,6 @@ export async function getClubDetail(
     },
     members,
     myRole,
+    pendingRequests,
   };
 }

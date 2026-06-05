@@ -34,6 +34,7 @@ const EMOJI: Record<NotificationKind, string> = {
   team_member_withdrew: '👋',
   deliver_reminder: '📤',
   cup_finished: '🏁',
+  club_join_request: '🙋',
 };
 
 /**
@@ -208,6 +209,13 @@ function buildCardContent(
       return {
         title: 'Cupen er ferdigspilt',
         detail: p.tournament_name,
+      };
+    }
+    case 'club_join_request': {
+      const p = payload as NotificationPayload<'club_join_request'>;
+      return {
+        title: `${p.requester_name} vil bli med i klubben`,
+        detail: p.group_name,
       };
     }
   }

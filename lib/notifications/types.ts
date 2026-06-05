@@ -18,7 +18,8 @@ export type NotificationKind =
   | 'registration_rejected'
   | 'team_member_withdrew'
   | 'deliver_reminder'
-  | 'cup_finished';
+  | 'cup_finished'
+  | 'club_join_request';
 
 // `z.guid()` aksepterer enhver UUID-shaped string (8-4-4-4-12 hex), inkludert
 // nil-UUID og ikke-versjonerte kanoniske test-sentinels som "11111111-...".
@@ -138,6 +139,15 @@ const cupFinishedSchema = z.object({
   tournament_name: z.string().min(1),
 });
 
+// club_join_request: noen ba om å bli med i en klubb via del-lenken. Sendes til
+// klubbens eier(e)/admin(er). group_id deeplinker til /klubber/[group_id] hvor
+// forespørselen godkjennes/avslås. (#442)
+const clubJoinRequestSchema = z.object({
+  group_id: uuid,
+  group_name: z.string().min(1),
+  requester_name: z.string().min(1),
+});
+
 const schemas = {
   invite: inviteSchema,
   peer_approval_request: peerApprovalRequestSchema,
@@ -152,6 +162,7 @@ const schemas = {
   team_member_withdrew: teamMemberWithdrewSchema,
   deliver_reminder: deliverReminderSchema,
   cup_finished: cupFinishedSchema,
+  club_join_request: clubJoinRequestSchema,
 } as const;
 
 export type NotificationPayload<K extends NotificationKind = NotificationKind> =

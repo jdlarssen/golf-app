@@ -174,5 +174,9 @@ function buildDeeplink(notification: NotificationRow): string {
       const p = notification.payload as NotificationPayload<'cup_finished'>;
       return `/cup/${p.tournament_id}`;
     }
+    case 'club_join_request': {
+      const p = notification.payload as NotificationPayload<'club_join_request'>;
+      return `/klubber/${p.group_id}`;
+    }
   }
 }

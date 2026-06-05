@@ -63,3 +63,63 @@ export async function addMember(formData: FormData) {
   revalidatePath(`/klubber/${groupId}`);
   redirect(`/klubber/${groupId}?added=${encodeURIComponent(email)}`);
 }
+
+/**
+ * decideRequest — server action for the Godkjenn/Avslå-forms on /klubber/[id].
+ *
+ * Calls the `decide_join_request` SECURITY DEFINER RPC (migrasjon 0075).
+ * The RPC requires the caller to be an owner/admin of the club, inserts a
+ * group_members row on approval, and returns 'approved' | 'rejected'.
+ *
+ * Error codes surfaced via ?decided= query param:
+ *   decided=approved     — request approved, member added
+ *   decided=rejected     — request rejected
+ *   decided=not_auth     — caller is not an owner/admin
+ *   decided=already      — request was already decided
+ *   decided=not_found    — request row not found
+ *   decided=unknown      — unexpected DB error
+ *
+ * Part of #442 (Opprett klubb — eierskap + klubb-scoped oppdagbarhet).
+ */
+export async function decideRequest(formData: FormData) {
+  const supabase = await getServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect('/login');
+  }
+
+  const requestId = String(formData.get('requestId') ?? '').trim();
+  const groupId = String(formData.get('groupId') ?? '').trim();
+  const approveStr = String(formData.get('approve') ?? '').trim();
+
+  if (!requestId || !groupId) redirect('/klubber');
+
+  const approve = approveStr === 'true';
+
+  const { data, error } = await supabase.rpc('decide_join_request', {
+    p_request_id: requestId,
+    p_approve: approve,
+  });
+
+  if (error) {
+    const msg = error.message ?? '';
+    if (msg.includes('not_authorized')) {
+      redirect(`/klubber/${groupId}?decided=not_auth`);
+    }
+    if (msg.includes('already_decided')) {
+      redirect(`/klubber/${groupId}?decided=already`);
+    }
+    if (msg.includes('request_not_found')) {
+      redirect(`/klubber/${groupId}?decided=not_found`);
+    }
+    console.error('[decideRequest]', error);
+    redirect(`/klubber/${groupId}?decided=unknown`);
+  }
+
+  // Invalidate club path so pending-requests list and member list refresh.
+  revalidatePath(`/klubber/${groupId}`);
+
+  redirect(`/klubber/${groupId}?decided=${data ?? (approve ? 'approved' : 'rejected')}`);
+}
