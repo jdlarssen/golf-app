@@ -200,6 +200,7 @@ async function HomeBody() {
   const hasDiscoveryContent =
     (discoveryData?.clubGames.length ?? 0) > 0 ||
     (discoveryData?.openGames.length ?? 0) > 0 ||
+    (discoveryData?.friendGames.length ?? 0) > 0 ||
     (discoveryData?.pendingRequests.length ?? 0) > 0;
 
   if (isEmptyState) {

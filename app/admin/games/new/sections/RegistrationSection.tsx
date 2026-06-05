@@ -75,6 +75,8 @@ export function RegistrationSection({ state, hideHeading = false }: Props) {
     setRegistrationType,
     registrationModeSupportsTeams,
     lockGameMode,
+    letFriendsSkipGate,
+    setLetFriendsSkipGate,
   } = state;
 
   // Disable team/both når modus ikke støtter lag. Lock-flagget (edit-flyt på
@@ -100,29 +102,53 @@ export function RegistrationSection({ state, hideHeading = false }: Props) {
           {MODE_OPTIONS.map((opt) => {
             const discoverable = isDiscoverableRegistrationMode(opt.value);
             return (
-              <label
-                key={opt.value}
-                className="flex items-start gap-3 cursor-pointer"
-              >
-                <input
-                  type="radio"
-                  name="registration_mode_input"
-                  value={opt.value}
-                  checked={registrationMode === opt.value}
-                  onChange={() => setRegistrationMode(opt.value)}
-                  disabled={lockGameMode}
-                  className="mt-1 h-5 w-5"
-                />
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-serif text-base text-text">
-                      {opt.title}
-                    </span>
-                    <VisibilityBadge discoverable={discoverable} />
+              <div key={opt.value}>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="registration_mode_input"
+                    value={opt.value}
+                    checked={registrationMode === opt.value}
+                    onChange={() => setRegistrationMode(opt.value)}
+                    disabled={lockGameMode}
+                    className="mt-1 h-5 w-5"
+                  />
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-serif text-base text-text">
+                        {opt.title}
+                      </span>
+                      <VisibilityBadge discoverable={discoverable} />
+                    </div>
+                    <div className="text-xs text-muted">{opt.hint}</div>
                   </div>
-                  <div className="text-xs text-muted">{opt.hint}</div>
-                </div>
-              </label>
+                </label>
+                {opt.value === 'manual_approval' &&
+                  registrationMode === 'manual_approval' && (
+                    <div className="mt-2 ml-8">
+                      <label className="flex items-start gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={letFriendsSkipGate}
+                          onChange={(e) =>
+                            setLetFriendsSkipGate(e.target.checked)
+                          }
+                          disabled={lockGameMode}
+                          className="mt-0.5 h-4 w-4 flex-shrink-0"
+                        />
+                        <div>
+                          <span className="font-sans text-sm text-text">
+                            Slipp venner direkte inn
+                          </span>
+                          <p className="mt-0.5 text-xs text-muted">
+                            Venner av deg slipper rett inn uten å be om plass.
+                            Andre må fortsatt be om å bli med.
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+                  )}
+              </div>
             );
           })}
         </div>

@@ -85,6 +85,12 @@ type Props = {
   // #442: forhåndsvalgt klubb-id (fra ?klubb= search-param). Sendes videre
   // til useGameFormState som defaultGroupId.
   defaultGroupId?: string;
+  /**
+   * #369: ids til spillere som er venner av arrangøren. Vises som hurtig-legg-til
+   * chips i steg 4 når intent er «kompis» — disse er allerede i `players`-listen
+   * men fremheves for enkel tilgang. Tom liste = ingen hurtig-legg-til.
+   */
+  friendPlayerIds?: string[];
 };
 
 const STEP_TITLES: Record<Step, string> = {
@@ -120,6 +126,7 @@ export function GameWizard({
   cupEligibleFormats,
   clubs = [],
   defaultGroupId,
+  friendPlayerIds = [],
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -343,6 +350,7 @@ export function GameWizard({
       tournament_match_label: initialValues?.tournament_match_label,
       registration_mode: state.registrationMode,
       registration_type: state.registrationType,
+      let_friends_skip_gate: state.letFriendsSkipGate,
       group_id: state.groupId,
     };
     return (
@@ -743,6 +751,17 @@ export function GameWizard({
                 Du valgte {state.expectedPlayerCount} spillere. Legg til nøyaktig så mange for best mulig spill.
               </p>
             )}
+          {/* #369: Kompis-rask-legg-til — venner av arrangøren vises som
+              hurtig-legg-til-chips øverst i spillerlisten. Kun for kompis-intent
+              (ikke klubb/solo/cup). Spillere som allerede er valgt vises ikke. */}
+          {state.intent === 'kompis' && friendPlayerIds.length > 0 && (
+            <FriendQuickAdd
+              players={players}
+              friendPlayerIds={friendPlayerIds}
+              selectedPlayerIds={state.selectedPlayerIds}
+              onToggle={state.togglePlayer}
+            />
+          )}
           <PlayersSection state={state} players={players} heading="Spillere" />
           {/* TeamsAssignmentSection er self-gating per modus — den rendrer
               kun de relevante under-blokkene (matchplay-sider / lag-grid /
@@ -848,6 +867,7 @@ function FormDataInputs({
     selectedPlayerIds,
     registrationMode,
     registrationType,
+    letFriendsSkipGate,
     groupId,
   } = state;
 
@@ -869,6 +889,7 @@ function FormDataInputs({
       <input type="hidden" name="team_size" value={teamSize} />
       <input type="hidden" name="registration_mode" value={registrationMode} />
       <input type="hidden" name="registration_type" value={registrationType} />
+      <input type="hidden" name="let_friends_skip_gate" value={letFriendsSkipGate ? '1' : ''} />
       <input type="hidden" name="group_id" value={groupId} />
       {isStablefordFamily(gameMode) && (
         <input type="hidden" name="stableford_team_size" value={teamSize} />
@@ -1020,6 +1041,65 @@ function FormDataInputs({
         </div>
       ))}
     </>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// #369: Kompis-hurtig-legg-til. Vises øverst i steg 4 når intent er
+// «kompis» og arrangøren har aksepterte venner i systemet. Vennene vises
+// som rader som kan trykkes for å legge til/fjerne fra utvalget.
+// Allerede valgte spillere vises ikke her (de er synlige som chips i
+// PlayersSection). Venner som ikke er i `players`-listen hoppes over
+// (defensive — kan skje hvis venn-oppslaget og players-listen divergerer).
+// ──────────────────────────────────────────────────────────────────────
+
+function FriendQuickAdd({
+  players,
+  friendPlayerIds,
+  selectedPlayerIds,
+  onToggle,
+}: {
+  players: PlayerOption[];
+  friendPlayerIds: string[];
+  selectedPlayerIds: string[];
+  onToggle: (id: string) => void;
+}) {
+  const selectedSet = new Set(selectedPlayerIds);
+  const notYetAdded = friendPlayerIds
+    .map((id) => players.find((p) => p.id === id))
+    .filter((p): p is PlayerOption => p !== undefined && !selectedSet.has(p.id));
+
+  if (notYetAdded.length === 0) return null;
+
+  return (
+    <div>
+      <p className="mb-2 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+        Vennene dine
+      </p>
+      <ul className="flex list-none flex-col gap-2 p-0">
+        {notYetAdded.map((p) => (
+          <li key={p.id}>
+            <button
+              type="button"
+              onClick={() => onToggle(p.id)}
+              className="flex w-full items-center justify-between rounded-xl border border-border bg-surface px-4 py-3 text-left transition-colors hover:bg-primary-soft/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 active:bg-primary-soft/60"
+            >
+              <span className="font-serif text-[15px] text-text">
+                {p.name ?? p.email ?? 'Ukjent spiller'}
+                {p.nickname && (
+                  <span className="ml-1 font-sans text-xs text-muted">
+                    «{p.nickname}»
+                  </span>
+                )}
+              </span>
+              <span className="ml-2 flex-shrink-0 font-sans text-xs text-muted tabular-nums">
+                + Legg til
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

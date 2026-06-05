@@ -3,6 +3,7 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { formatTeeOffDate, formatTeeOffTime } from '@/lib/format/teeOff';
 import type {
   DiscoverableClubGame,
+  DiscoverableFriendGame,
   DiscoverableOpenGame,
   PendingRequest,
 } from '@/lib/games/getDiscoverableGames';
@@ -21,10 +22,11 @@ export function HomeDiscoverySection({
   data: {
     clubGames: DiscoverableClubGame[];
     openGames: DiscoverableOpenGame[];
+    friendGames: DiscoverableFriendGame[];
     pendingRequests: PendingRequest[];
   };
 }) {
-  const { clubGames, openGames, pendingRequests } = data;
+  const { clubGames, openGames, friendGames, pendingRequests } = data;
 
   return (
     <section className="mt-10 w-full">
@@ -37,6 +39,21 @@ export function HomeDiscoverySection({
             {clubGames.map((game) => (
               <li key={game.id}>
                 <ClubGameCard game={game} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {friendGames.length > 0 && (
+        <div className="mb-8">
+          <h2 className="mb-3 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+            Fra vennene dine
+          </h2>
+          <ul className="flex list-none flex-col gap-3 p-0">
+            {friendGames.map((game) => (
+              <li key={game.id}>
+                <FriendGameCard game={game} />
               </li>
             ))}
           </ul>
@@ -108,6 +125,42 @@ function ClubGameCard({ game }: { game: DiscoverableClubGame }) {
       <div className="mt-3.5">
         <LinkButton href={`/signup/${game.short_id}`} full>
           Meld meg på
+        </LinkButton>
+      </div>
+    </div>
+  );
+}
+
+function FriendGameCard({ game }: { game: DiscoverableFriendGame }) {
+  const teeOff = game.scheduled_tee_off_at
+    ? new Date(game.scheduled_tee_off_at)
+    : null;
+  const cta =
+    game.joinMode === 'direct' ? 'Meld meg på' : 'Be om å bli med';
+
+  return (
+    <div className="rounded-2xl border border-border bg-surface px-4 py-3.5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-serif text-[17px] leading-tight text-text">
+            {game.name}
+          </p>
+          <p className="mt-1 font-sans text-[12px] text-muted">
+            {game.course_name ?? 'Bane ikke valgt'}
+            {teeOff && (
+              <>
+                {' · '}
+                <span className="tabular-nums">
+                  {formatTeeOffDate(teeOff)} kl. {formatTeeOffTime(teeOff)}
+                </span>
+              </>
+            )}
+          </p>
+        </div>
+      </div>
+      <div className="mt-3.5">
+        <LinkButton href={`/signup/${game.short_id}`} full>
+          {cta}
         </LinkButton>
       </div>
     </div>

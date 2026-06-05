@@ -21,6 +21,8 @@ import {
   getFormatsForIntent,
   getCupEligibleFormats,
 } from '@/lib/formats/getFormatsForIntent';
+import { getFriendIds } from '@/lib/friends/getFriendIds';
+import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 
 type SearchParams = Promise<{
   error?: string | string[];
@@ -306,6 +308,8 @@ async function GameFormBody({
   // listen så client-wizard kan switche intent uten ekstra fetch. Parallell
   // henting + unstable_cache i F1-helperen gjør dette billig (4 DB-queries
   // sum, alle tag-cachet 24h).
+  const userId = await getProxyVerifiedUserId();
+
   const [kompisFormats, klubbFormats, soloFormats, cupEligibleFormats] =
     await Promise.all([
       getFormatsForIntent('kompis'),
@@ -314,7 +318,13 @@ async function GameFormBody({
       getCupEligibleFormats(),
     ]);
 
-  const { courses, players, clubs } = await getNewGameFormData();
+  const [{ courses, players, clubs }, friendPlayerIds] = await Promise.all([
+    getNewGameFormData(),
+    // #369: vennene til admin-brukeren for kompis hurtig-legg-til.
+    // Best-effort — tom liste ved feil.
+    userId ? getFriendIds(userId).catch(() => []) : Promise.resolve([]),
+  ]);
+
   return (
     <GameWizard
       courses={courses}
@@ -336,6 +346,7 @@ async function GameFormBody({
       cupEligibleFormats={cupEligibleFormats}
       clubs={clubs}
       defaultGroupId={defaultGroupId}
+      friendPlayerIds={friendPlayerIds}
     />
   );
 }

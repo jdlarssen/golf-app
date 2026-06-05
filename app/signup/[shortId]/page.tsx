@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
+import { getFriendIds } from '@/lib/friends/getFriendIds';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
@@ -121,6 +122,19 @@ export default async function PåmeldingPage({ params }: { params: Params }) {
   const hasOpenPendingRequest =
     existingRequest != null && existingRequest.status === 'pending';
 
+  // #369: er brukeren en akseptert venn av spill-eieren? Brukes til å vise
+  // «Meld meg på» i stedet for «Be om å bli med» for manual_approval-spill
+  // med let_friends_skip_gate=true. Sjekken hoppes over for andre modi.
+  let viewerIsFriend = false;
+  if (
+    game.registration_mode === 'manual_approval' &&
+    game.let_friends_skip_gate === true &&
+    game.created_by
+  ) {
+    const friendIds = await getFriendIds(user!.id);
+    viewerIsFriend = friendIds.includes(game.created_by);
+  }
+
   // Co-player-kandidater til autocomplete i lag-formen (#362). Hentes bare
   // når lag-formen faktisk skal rendres — ellers er det en unødig query.
   const willRenderTeamForm =
@@ -163,6 +177,7 @@ export default async function PåmeldingPage({ params }: { params: Params }) {
             hasOpenPendingRequest,
             hasPendingInvitation,
             isClubMember,
+            viewerIsFriend,
             teamCandidates,
             captainEmail: profile.email,
           })}
@@ -179,6 +194,7 @@ function renderBody({
   hasOpenPendingRequest,
   hasPendingInvitation,
   isClubMember,
+  viewerIsFriend,
   teamCandidates,
   captainEmail,
 }: {
@@ -188,6 +204,7 @@ function renderBody({
   hasOpenPendingRequest: boolean;
   hasPendingInvitation: boolean;
   isClubMember: boolean;
+  viewerIsFriend: boolean;
   teamCandidates: TeamCandidate[];
   captainEmail: string | null;
 }) {
@@ -227,6 +244,24 @@ function renderBody({
       <div className="space-y-4">
         <p className="font-sans text-sm leading-relaxed text-text">
           Du er medlem av klubben, så du kan melde deg på direkte.
+        </p>
+        <RegistrationForm mode="open" shortId={game.short_id} />
+      </div>
+    );
+  }
+
+  // #369: er du venn av arrangøren og spillet har «Slipp venner direkte inn»
+  // aktivert, kan du melde deg på direkte selv om modus er manual_approval.
+  if (
+    viewerIsFriend &&
+    game.registration_mode === 'manual_approval' &&
+    game.let_friends_skip_gate === true &&
+    game.registration_type === 'solo'
+  ) {
+    return (
+      <div className="space-y-4">
+        <p className="font-sans text-sm leading-relaxed text-text">
+          Arrangøren lar venner melde seg på direkte. Trykk for å bli med.
         </p>
         <RegistrationForm mode="open" shortId={game.short_id} />
       </div>

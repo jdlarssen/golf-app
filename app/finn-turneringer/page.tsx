@@ -32,6 +32,7 @@ export default async function FinnTurneringerPage() {
   const isEmpty =
     data.clubGames.length === 0 &&
     data.openGames.length === 0 &&
+    data.friendGames.length === 0 &&
     data.pendingRequests.length === 0;
 
   return (

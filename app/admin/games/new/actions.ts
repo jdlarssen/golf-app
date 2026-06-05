@@ -184,6 +184,9 @@ async function createGameInternal(
       mode_config: payload.mode_config,
       registration_mode: payload.registration_mode,
       registration_type: payload.registration_type,
+      // #369: kun satt til true når registration_mode = 'manual_approval' +
+      // checkbox er avhuket — gamePayload.ts force-false ellers.
+      let_friends_skip_gate: payload.let_friends_skip_gate,
       side_tournament_enabled: sideEnabled,
       side_ld_count: sideLdCount,
       side_ctp_count: sideCtpCount,

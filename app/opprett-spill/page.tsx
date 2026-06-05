@@ -21,6 +21,7 @@ import {
   getFormatsForIntent,
   getCupEligibleFormats,
 } from '@/lib/formats/getFormatsForIntent';
+import { getFriendPlayerOptions } from '@/lib/friends/getFriendPlayerOptions';
 
 // Opprett-spill-ruten for ALLE innloggede brukere (#427 — tidligere bare
 // admin/trusted per #198). Gjenbruker GameWizard fra admin-flyten, men kjører
@@ -58,6 +59,7 @@ export default async function OpprettSpillPage({
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
+  const currentUserId = user.id;
 
   const sp = await searchParams;
   const errorMessage = buildErrorMessage(first(sp.error), first(sp.emails));
@@ -88,7 +90,10 @@ export default async function OpprettSpillPage({
       <div className="mt-5">
         <Card>
           <Suspense fallback={<GameFormSkeleton />}>
-            <GameFormBody defaultGroupId={first(sp.klubb)} />
+            <GameFormBody
+              defaultGroupId={first(sp.klubb)}
+              userId={currentUserId}
+            />
           </Suspense>
         </Card>
       </div>
@@ -121,8 +126,10 @@ async function PlayerShortageBanner() {
 
 async function GameFormBody({
   defaultGroupId,
+  userId,
 }: {
   defaultGroupId: string | undefined;
+  userId: string;
 }) {
   // F2 (#272): pre-fetch format-katalog parallelt med courses/players.
   const [kompisFormats, klubbFormats, soloFormats, cupEligibleFormats] =
@@ -132,11 +139,25 @@ async function GameFormBody({
       getFormatsForIntent('solo'),
       getCupEligibleFormats(),
     ]);
-  const { courses, players, clubs } = await getNewGameFormData(false);
+  const [{ courses, players, clubs }, friendPlayers] = await Promise.all([
+    getNewGameFormData(false),
+    // #369: vennene til brukeren for kompis hurtig-legg-til. Hentes som hele
+    // PlayerOption-rader fordi users-RLS skjuler venner du aldri har spilt med.
+    getFriendPlayerOptions(userId).catch(() => []),
+  ]);
+  // Union venner inn i spiller-lista (dedup på id) så kompis-hurtig-legg-til
+  // også når venner du aldri har delt et spill med (#369). Co-players ligger
+  // allerede i `players`.
+  const playerIds = new Set(players.map((p) => p.id));
+  const mergedPlayers = [
+    ...players,
+    ...friendPlayers.filter((f) => !playerIds.has(f.id)),
+  ];
+  const friendPlayerIds = friendPlayers.map((f) => f.id);
   return (
     <GameWizard
       courses={courses}
-      players={players}
+      players={mergedPlayers}
       mode={{
         kind: 'create',
         createDraftAction: createGameDraft,
@@ -153,6 +174,7 @@ async function GameFormBody({
       // En ?klubb=-dyplenke er en klubb-arrangement-flyt → pre-velg klubb-intent
       // så ClubPicker (kun for klubb-intent) viser den forhåndsvalgte klubben (#50-fix).
       initialIntent={defaultGroupId ? 'klubb' : undefined}
+      friendPlayerIds={friendPlayerIds}
     />
   );
 }

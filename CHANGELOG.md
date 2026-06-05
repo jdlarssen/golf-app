@@ -21,6 +21,25 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#369](https://github.com/jdlarssen/golf-app/issues/369) (lukker [#408](https://github.com/jdlarssen/golf-app/issues/408), milepæl Klubb-skala). Du kan nå legge til venner på Tørny. Venner ser spillene dine, og du finner dem raskt når du fyller lag.
 
+### [1.81.2] - 2026-06-05 · #369
+
+> «Åpen for venner» er her. Krysser du av «Slipp venner direkte inn» på et forespørsel-spill, slipper vennene dine forbi godkjenningen og melder seg på direkte. Vennenes egne spill dukker nå opp under «Fra vennene dine» i Finn turneringer. Og når du setter opp en kompis-runde, kan du kjapt legge til vennene dine som spillere.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#369](https://github.com/jdlarssen/golf-app/issues/369). «Åpen for venner» er uttrykt gjennom de eksisterende påmeldingsmodiene + et skip-gate-flagg — ingen ny `registration_mode`-enumverdi (unngår uttømmende-switch-eksplosjon).
+
+#### Added
+- `games.let_friends_skip_gate` + checkbox «Slipp venner direkte inn» i opprett-veiviseren ([`RegistrationSection.tsx`](app/admin/games/new/sections/RegistrationSection.tsx)), kun under «forespørsel»-modus. Persisteres via [`gamePayload.ts`](lib/games/gamePayload.ts) (tvinges `false` for andre modi).
+- «Fra vennene dine»-seksjon i [`getDiscoverableGames.ts`](lib/games/getDiscoverableGames.ts) (+ tester) + [`HomeDiscoverySection.tsx`](app/HomeDiscoverySection.tsx) — venners `open`/`manual_approval`-spill (ikke `invite_only`), med avledet `joinMode` (direkte / be-om) per spill og dedup mot klubb/open.
+- Kompis-hurtig-legg-til av venner i veiviser-steg 4; [`lib/friends/getFriendPlayerOptions.ts`](lib/friends/getFriendPlayerOptions.ts) unionerer venner inn i `/opprett-spill`-spiller-lista (admin-client forbi users-RLS).
+
+#### Changed
+- [`registerForOpenGame`](app/signup/[shortId]/actions.ts) + signup-siden: en akseptert venn av arrangøren på et skip-gate-spill melder seg på direkte (server-verifisert); ikke-venner ber fortsatt om plass.
+
+</details>
+
 ### [1.81.1] - 2026-06-05 · #408
 
 > Når du fyller et lag, foreslår Tørny nå vennene dine i tillegg til folk du har spilt med. En venn du aldri har delt en runde med, dukker opp med en gang.

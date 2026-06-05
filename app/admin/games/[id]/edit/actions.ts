@@ -164,6 +164,9 @@ async function updateGameInternal(
       // draft/scheduled (filteret nedenfor blokkerer writes etter start).
       registration_mode: payload.registration_mode,
       registration_type: payload.registration_type,
+      // #369: kun satt til true når registration_mode = 'manual_approval' +
+      // checkbox er avhuket — gamePayload.ts force-false ellers.
+      let_friends_skip_gate: payload.let_friends_skip_gate,
       // score_visibility is implicitly gated by the .eq('status', allowedFromStatus)
       // filter below — it only writes when the row is still draft/scheduled.
       // If status flipped to active/finished between form-render and submit,

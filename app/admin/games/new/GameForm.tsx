@@ -234,6 +234,12 @@ export type InitialValues = {
   registration_mode?: RegistrationMode;
   registration_type?: RegistrationType;
   /**
+   * #369: «Slipp venner direkte inn» for manual_approval-spill. Kun
+   * relevant + gyldig når registration_mode = 'manual_approval'. Edit-flyten
+   * pre-fyller fra DB; nye spill defaulter til false.
+   */
+  let_friends_skip_gate?: boolean;
+  /**
    * Klubb-tilknytning (#442). Valgfritt — kun satt i create-flyten når
    * admin velger en klubb i veiviseren. Edit-flyten berøres ikke.
    */
@@ -362,6 +368,11 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
         type="hidden"
         name="registration_type"
         value={state.registrationType}
+      />
+      <input
+        type="hidden"
+        name="let_friends_skip_gate"
+        value={state.letFriendsSkipGate ? '1' : ''}
       />
       {initialValues?.tournament_id && (
         <>

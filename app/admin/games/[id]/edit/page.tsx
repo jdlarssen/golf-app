@@ -107,7 +107,7 @@ export default async function EditGamePage({
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, registration_mode, registration_type',
+      'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, registration_mode, registration_type, let_friends_skip_gate',
     )
     .eq('id', id)
     .single<EditGameRow>();

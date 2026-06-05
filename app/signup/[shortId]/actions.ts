@@ -6,6 +6,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { notify } from '@/lib/notifications/notify';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
+import { getFriendIds } from '@/lib/friends/getFriendIds';
 import { consumeRegistrationRateLimit } from '@/lib/auth/registrationRateLimit';
 import { getClientIp } from '@/lib/admin/rateLimit';
 import { sendRegistrationRequestMail } from '@/lib/mail/registrationRequest';
@@ -142,6 +143,8 @@ export async function registerForOpenGame(
   // open lar alle melde seg på direkte. For et klubb-spill (#442) kan også et
   // klubb-medlem melde seg på direkte uansett registration_mode — medlemskap ER
   // invitasjonen. Verifiseres server-side (klienten kan ikke lyve om medlemskap).
+  // #369: manual_approval + let_friends_skip_gate=true → aksepterte venner
+  // av spill-eieren kan også melde seg på direkte uten å be om godkjenning.
   let canDirectJoin = game.registration_mode === 'open';
   if (!canDirectJoin && game.group_id) {
     const memberAdmin = getAdminClient();
@@ -152,6 +155,15 @@ export async function registerForOpenGame(
       .eq('user_id', userId)
       .maybeSingle<{ user_id: string }>();
     canDirectJoin = membership != null;
+  }
+  if (
+    !canDirectJoin &&
+    game.registration_mode === 'manual_approval' &&
+    game.let_friends_skip_gate === true &&
+    game.created_by
+  ) {
+    const friendIds = await getFriendIds(userId);
+    canDirectJoin = friendIds.includes(game.created_by);
   }
   if (!canDirectJoin) {
     return { ok: false, error: 'wrong_mode' };

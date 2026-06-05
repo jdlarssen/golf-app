@@ -1,6 +1,7 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { isClubExpired } from '@/lib/clubs/clubStatus';
+import { getFriendIds } from '@/lib/friends/getFriendIds';
 import type { RegistrationMode } from './registration';
 
 /**
@@ -42,6 +43,26 @@ export type DiscoverableClubGame = {
   group_name: string;
 };
 
+/**
+ * Et spill skapt av en venn (#369). Vises i «Fra vennene dine»-seksjonen.
+ * `joinMode` avgjør CTA-knappen: 'direct' = «Meld meg på», 'request' =
+ * «Be om å bli med». Regler: open → alltid direct; manual_approval +
+ * let_friends_skip_gate=true → direct; manual_approval ellers → request.
+ */
+export type DiscoverableFriendGame = {
+  id: string;
+  name: string;
+  short_id: string;
+  scheduled_tee_off_at: string | null;
+  course_name: string | null;
+  registration_mode: 'open' | 'manual_approval';
+  /**
+   * 'direct': vennen kan melde seg på uten godkjenning.
+   * 'request': vennen må be om plass.
+   */
+  joinMode: 'direct' | 'request';
+};
+
 export type PendingRequest = {
   id: string;
   game_id: string;
@@ -61,25 +82,28 @@ function firstJoined<T>(raw: T | T[] | null | undefined): T | null {
 export async function getDiscoverableGames(userId: string): Promise<{
   clubGames: DiscoverableClubGame[];
   openGames: DiscoverableOpenGame[];
+  friendGames: DiscoverableFriendGame[];
   pendingRequests: PendingRequest[];
 }> {
   const admin = getAdminClient();
 
-  const [playerRowsRes, requestRowsRes, myClubsRes] = await Promise.all([
-    admin
-      .from('game_players')
-      .select('game_id')
-      .eq('user_id', userId),
-    admin
-      .from('game_registration_requests')
-      .select('id, game_id, status, team_name, is_team_captain, created_at, games(name, short_id)')
-      .eq('user_id', userId)
-      .in('status', ['pending', 'approved']),
-    admin
-      .from('group_members')
-      .select('group_id, groups(valid_until)')
-      .eq('user_id', userId),
-  ]);
+  const [playerRowsRes, requestRowsRes, myClubsRes, friendIds] =
+    await Promise.all([
+      admin
+        .from('game_players')
+        .select('game_id')
+        .eq('user_id', userId),
+      admin
+        .from('game_registration_requests')
+        .select('id, game_id, status, team_name, is_team_captain, created_at, games(name, short_id)')
+        .eq('user_id', userId)
+        .in('status', ['pending', 'approved']),
+      admin
+        .from('group_members')
+        .select('group_id, groups(valid_until)')
+        .eq('user_id', userId),
+      getFriendIds(userId),
+    ]);
 
   const joinedIds = new Set(
     (playerRowsRes.data ?? []).map((r) => r.game_id as string),
@@ -146,6 +170,62 @@ export async function getDiscoverableGames(userId: string): Promise<{
     ...clubGames.map((g) => g.id),
   ]);
 
+  // #369: «Fra vennene dine» — spill opprettet av aksepterte venner med
+  // discoverable registration_mode (open / manual_approval). invite_only
+  // forblir privat. Best-effort: feil → tom liste.
+  let friendGames: DiscoverableFriendGame[] = [];
+  if (friendIds.length > 0) {
+    let friendQuery = admin
+      .from('games')
+      .select('id, name, short_id, scheduled_tee_off_at, registration_mode, let_friends_skip_gate, courses(name)')
+      .in('created_by', friendIds)
+      .in('registration_mode', ['open', 'manual_approval'])
+      .in('status', ['draft', 'scheduled'])
+      .neq('created_by', userId)
+      .order('scheduled_tee_off_at', { ascending: true, nullsFirst: false })
+      .limit(50);
+
+    // Ekskluder spill brukeren allerede er påmeldt/har forespurt, og spill
+    // som allerede dukker opp i klubb-seksjonen.
+    if (openExcludedIds.size > 0) {
+      friendQuery = friendQuery.not(
+        'id',
+        'in',
+        `(${[...openExcludedIds].join(',')})`,
+      );
+    }
+
+    const friendRes = await friendQuery;
+    friendGames = (friendRes.data ?? []).map((row) => {
+      const course = firstJoined(
+        row.courses as { name: string } | { name: string }[] | null,
+      );
+      const regMode = row.registration_mode as 'open' | 'manual_approval';
+      const joinMode: 'direct' | 'request' =
+        regMode === 'open' ||
+        (regMode === 'manual_approval' && row.let_friends_skip_gate === true)
+          ? 'direct'
+          : 'request';
+      return {
+        id: row.id as string,
+        name: row.name as string,
+        short_id: row.short_id as string,
+        scheduled_tee_off_at: row.scheduled_tee_off_at as string | null,
+        course_name: course?.name ?? null,
+        registration_mode: regMode,
+        joinMode,
+      };
+    });
+  }
+
+  // Dedup: et venn-spill skal ikke også dukke opp i den globale open-lista.
+  // Venn-seksjonen vinner (gir mer personlig kontekst).
+  const friendGameIds = new Set(friendGames.map((g) => g.id));
+  const openExcludedIdsWithFriends = new Set([
+    ...openExcludedIds,
+    ...friendGameIds,
+  ]);
+
   let openQuery = admin
     .from('games')
     .select('id, name, short_id, scheduled_tee_off_at, registration_mode, courses(name)')
@@ -156,8 +236,8 @@ export async function getDiscoverableGames(userId: string): Promise<{
     .order('scheduled_tee_off_at', { ascending: true, nullsFirst: false })
     .limit(50);
 
-  if (openExcludedIds.size > 0) {
-    openQuery = openQuery.not('id', 'in', `(${[...openExcludedIds].join(',')})`);
+  if (openExcludedIdsWithFriends.size > 0) {
+    openQuery = openQuery.not('id', 'in', `(${[...openExcludedIdsWithFriends].join(',')})`);
   }
 
   const openGamesRes = await openQuery;
@@ -195,5 +275,5 @@ export async function getDiscoverableGames(userId: string): Promise<{
       };
     });
 
-  return { clubGames, openGames, pendingRequests };
+  return { clubGames, openGames, friendGames, pendingRequests };
 }

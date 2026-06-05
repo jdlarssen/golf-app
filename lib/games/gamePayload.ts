@@ -142,6 +142,11 @@ export type ParsedPayload = {
    * er individuelle; team/both krever at game_mode støtter lag.
    */
   registration_type: RegistrationType;
+  /**
+   * #369: «Slipp venner direkte inn». Kun persistert som true når
+   * registration_mode = 'manual_approval'; force-false ellers.
+   */
+  let_friends_skip_gate: boolean;
   errorCode?: GameValidationErrorCode;
 };
 
@@ -153,6 +158,7 @@ type ParsedBase = Omit<
   | 'mode_config'
   | 'registration_mode'
   | 'registration_type'
+  | 'let_friends_skip_gate'
   | 'errorCode'
 >;
 
@@ -2203,6 +2209,7 @@ export function buildGameInsertPayload(
     mode_config: { kind: 'best_ball', team_size: 2, teams_count: 4 },
     registration_mode: 'invite_only',
     registration_type: 'solo',
+    let_friends_skip_gate: false,
     errorCode,
   });
 
@@ -2255,6 +2262,12 @@ export function buildGameInsertPayload(
     return errorPayload(modeResult.errorCode);
   }
 
+  // #369: «Slipp venner direkte inn». Kun gyldig for manual_approval —
+  // force-false for alle andre modi så stale form-verdi ikke lekker.
+  const letFriendsSkipGate =
+    registrationMode === 'manual_approval' &&
+    formData.get('let_friends_skip_gate') === '1';
+
   return {
     ...base,
     players: modeResult.players,
@@ -2262,5 +2275,6 @@ export function buildGameInsertPayload(
     mode_config: modeResult.mode_config,
     registration_mode: registrationMode,
     registration_type: registrationType,
+    let_friends_skip_gate: letFriendsSkipGate,
   };
 }

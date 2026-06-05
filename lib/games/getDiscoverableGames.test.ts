@@ -6,6 +6,7 @@ const playerRows = vi.fn<() => { data: Row[] | null }>();
 const requestRows = vi.fn<() => { data: Row[] | null }>();
 const openGamesRows = vi.fn<() => { data: Row[] | null }>();
 const clubGamesRows = vi.fn<() => { data: Row[] | null }>();
+const friendGamesRows = vi.fn<() => { data: Row[] | null }>();
 const myClubsRows = vi.fn<() => { data: Row[] | null }>();
 const notInArg = vi.fn();
 const inArg = vi.fn();
@@ -36,10 +37,11 @@ vi.mock('@/lib/supabase/admin', () => ({
           }),
         };
       }
-      // games — same table backs BOTH the club-scoped query (#442, first `.in`
-      // is `group_id`) and the global open query (#357, first `.in` is
-      // `registration_mode`). A fresh closure per `from('games')` call lets us
-      // resolve the right dataset by inspecting the first `.in` column.
+      // games — same table backs three queries: club-scoped (first `.in` is
+      // `group_id`), friend-scoped (first `.in` is `created_by`), and the
+      // global open query (first `.in` is `registration_mode`).
+      // A fresh closure per `from('games')` call lets us resolve the right
+      // dataset by inspecting the first `.in` column.
       let firstInCol: string | null = null;
       const b: Record<string, unknown> = {
         select: () => b,
@@ -57,12 +59,25 @@ vi.mock('@/lib/supabase/admin', () => ({
         },
         then: (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
           Promise.resolve(
-            firstInCol === 'group_id' ? clubGamesRows() : openGamesRows(),
+            firstInCol === 'group_id'
+              ? clubGamesRows()
+              : firstInCol === 'created_by'
+                ? friendGamesRows()
+                : openGamesRows(),
           ).then(resolve, reject),
       };
       return b;
     },
+    // getFriendIds uses from('friendships') but that is mocked via the
+    // @/lib/friends/getFriendIds module mock below.
   }),
+}));
+
+// getFriendIds is mocked at the module level so tests control which friend
+// ids are returned without needing to replicate the friendships table logic.
+const mockGetFriendIds = vi.fn<(userId: string) => Promise<string[]>>();
+vi.mock('@/lib/friends/getFriendIds', () => ({
+  getFriendIds: (userId: string) => mockGetFriendIds(userId),
 }));
 
 beforeEach(() => {
@@ -70,12 +85,17 @@ beforeEach(() => {
   requestRows.mockReset();
   openGamesRows.mockReset();
   clubGamesRows.mockReset();
+  friendGamesRows.mockReset();
   myClubsRows.mockReset();
   notInArg.mockReset();
   inArg.mockReset();
-  // Defaults: no clubs, no club games — so #357 tests behave exactly as before.
+  mockGetFriendIds.mockReset();
+  // Defaults: no clubs, no club games, no friends — so #357 tests behave
+  // exactly as before.
   myClubsRows.mockReturnValue({ data: [] });
   clubGamesRows.mockReturnValue({ data: [] });
+  friendGamesRows.mockReturnValue({ data: [] });
+  mockGetFriendIds.mockResolvedValue([]);
 });
 
 describe('getDiscoverableGames', () => {
@@ -89,6 +109,7 @@ describe('getDiscoverableGames', () => {
 
     expect(result.clubGames).toEqual([]);
     expect(result.openGames).toEqual([]);
+    expect(result.friendGames).toEqual([]);
     expect(result.pendingRequests).toEqual([]);
   });
 
@@ -370,5 +391,131 @@ describe('getDiscoverableGames', () => {
       'in',
       expect.stringContaining('dup1'),
     );
+  });
+
+  // ── Venn-discovery (#369) ────────────────────────────────────────────────
+
+  it('venn-manual_approval-spill med let_friends_skip_gate=false → joinMode request', async () => {
+    playerRows.mockReturnValue({ data: [] });
+    requestRows.mockReturnValue({ data: [] });
+    openGamesRows.mockReturnValue({ data: [] });
+    mockGetFriendIds.mockResolvedValue(['friend1']);
+    friendGamesRows.mockReturnValue({
+      data: [
+        {
+          id: 'fg1',
+          name: 'Kompis-runde',
+          short_id: 'frnd0001',
+          scheduled_tee_off_at: '2026-07-01T09:00:00Z',
+          registration_mode: 'manual_approval',
+          let_friends_skip_gate: false,
+          courses: { name: 'Bogstad' },
+        },
+      ],
+    });
+
+    const { getDiscoverableGames } = await import('./getDiscoverableGames');
+    const result = await getDiscoverableGames('u1');
+
+    expect(result.friendGames).toEqual([
+      {
+        id: 'fg1',
+        name: 'Kompis-runde',
+        short_id: 'frnd0001',
+        scheduled_tee_off_at: '2026-07-01T09:00:00Z',
+        course_name: 'Bogstad',
+        registration_mode: 'manual_approval',
+        joinMode: 'request',
+      },
+    ]);
+  });
+
+  it('venn-manual_approval-spill med let_friends_skip_gate=true → joinMode direct', async () => {
+    playerRows.mockReturnValue({ data: [] });
+    requestRows.mockReturnValue({ data: [] });
+    openGamesRows.mockReturnValue({ data: [] });
+    mockGetFriendIds.mockResolvedValue(['friend1']);
+    friendGamesRows.mockReturnValue({
+      data: [
+        {
+          id: 'fg2',
+          name: 'VIP-runde',
+          short_id: 'frnd0002',
+          scheduled_tee_off_at: null,
+          registration_mode: 'manual_approval',
+          let_friends_skip_gate: true,
+          courses: null,
+        },
+      ],
+    });
+
+    const { getDiscoverableGames } = await import('./getDiscoverableGames');
+    const result = await getDiscoverableGames('u1');
+
+    expect(result.friendGames[0].joinMode).toBe('direct');
+  });
+
+  it('venn-invite_only-spill vises ikke i friendGames', async () => {
+    playerRows.mockReturnValue({ data: [] });
+    requestRows.mockReturnValue({ data: [] });
+    openGamesRows.mockReturnValue({ data: [] });
+    mockGetFriendIds.mockResolvedValue(['friend1']);
+    // invite_only filtreres allerede av query (.in registration_mode open/manual_approval)
+    // — mock-en returnerer tomt for den spørringen
+    friendGamesRows.mockReturnValue({ data: [] });
+
+    const { getDiscoverableGames } = await import('./getDiscoverableGames');
+    const result = await getDiscoverableGames('u1');
+
+    expect(result.friendGames).toEqual([]);
+    // Bekrefter at query-filteret faktisk bruker registration_mode-listen
+    expect(inArg).toHaveBeenCalledWith('registration_mode', [
+      'open',
+      'manual_approval',
+    ]);
+  });
+
+  it('dedup: et venn-open-spill vises i friendGames og ikke i openGames', async () => {
+    playerRows.mockReturnValue({ data: [] });
+    requestRows.mockReturnValue({ data: [] });
+    openGamesRows.mockReturnValue({ data: [] });
+    mockGetFriendIds.mockResolvedValue(['friend1']);
+    friendGamesRows.mockReturnValue({
+      data: [
+        {
+          id: 'fg3',
+          name: 'Open venn-runde',
+          short_id: 'frnd0003',
+          scheduled_tee_off_at: null,
+          registration_mode: 'open',
+          let_friends_skip_gate: false,
+          courses: null,
+        },
+      ],
+    });
+
+    const { getDiscoverableGames } = await import('./getDiscoverableGames');
+    await getDiscoverableGames('u1');
+
+    // Venn-spillets id legges til open-lista sin eksklusjon → vises kun én gang.
+    expect(notInArg).toHaveBeenCalledWith(
+      'id',
+      'in',
+      expect.stringContaining('fg3'),
+    );
+  });
+
+  it('ingen venn-spill hentes når bruker ikke har venner', async () => {
+    playerRows.mockReturnValue({ data: [] });
+    requestRows.mockReturnValue({ data: [] });
+    openGamesRows.mockReturnValue({ data: [] });
+    mockGetFriendIds.mockResolvedValue([]);
+
+    const { getDiscoverableGames } = await import('./getDiscoverableGames');
+    const result = await getDiscoverableGames('u1');
+
+    expect(result.friendGames).toEqual([]);
+    // created_by-spørringen skal ikke ha blitt kalt
+    expect(inArg).not.toHaveBeenCalledWith('created_by', expect.anything());
   });
 });

@@ -42,6 +42,8 @@ export type EditGameRow = {
   // ikke nullstiller admin's valg.
   registration_mode: 'invite_only' | 'manual_approval' | 'open';
   registration_type: 'solo' | 'team' | 'both';
+  // #369 — venn-skip-gate for manual_approval.
+  let_friends_skip_gate: boolean;
 };
 
 export type EditGamePlayerRow = {
@@ -177,5 +179,7 @@ export function buildEditInitialValues(
         : undefined,
     registration_mode: game.registration_mode,
     registration_type: game.registration_type,
+    // #369: pre-fyller venn-skip-gate-checkbox i edit-flyten.
+    let_friends_skip_gate: game.let_friends_skip_gate,
   };
 }

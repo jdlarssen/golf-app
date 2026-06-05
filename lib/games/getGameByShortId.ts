@@ -29,6 +29,8 @@ export type ShortIdGame = {
   scheduled_tee_off_at: string | null;
   created_by: string | null;
   group_id: string | null;
+  // #369: «Slipp venner direkte inn» — kun relevant for manual_approval.
+  let_friends_skip_gate: boolean;
 };
 
 export async function getGameByShortId(
@@ -45,7 +47,7 @@ export async function getGameByShortId(
   const { data, error } = await admin
     .from('games')
     .select(
-      'id, name, short_id, status, registration_mode, registration_type, game_mode, mode_config, course_id, scheduled_tee_off_at, created_by, group_id',
+      'id, name, short_id, status, registration_mode, registration_type, game_mode, mode_config, course_id, scheduled_tee_off_at, created_by, group_id, let_friends_skip_gate',
     )
     .eq('short_id', shortId)
     .maybeSingle<ShortIdGame>();

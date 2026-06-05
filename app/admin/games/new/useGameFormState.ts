@@ -454,6 +454,13 @@ export function useGameFormState({
   const [registrationType, setRegistrationType] = useState<RegistrationType>(
     initialValues?.registration_type ?? 'solo',
   );
+  // #369: «Slipp venner direkte inn» — kun relevant for manual_approval.
+  // Persisteres som games.let_friends_skip_gate. Settes til false automatisk
+  // av server-action (gamePayload.ts) for andre modi, så stale verdi her
+  // aldri lekker til DB.
+  const [letFriendsSkipGate, setLetFriendsSkipGate] = useState<boolean>(
+    initialValues?.let_friends_skip_gate ?? false,
+  );
   // #442: valgfri klubb-tilknytning. Prioritert rekkefølge: initialValues
   // (edit-pre-fyll), deretter defaultGroupId (fra ?klubb=-param), ellers ''.
   const [groupId, setGroupId] = useState<string>(
@@ -1541,6 +1548,9 @@ export function useGameFormState({
     setRegistrationMode,
     registrationType,
     setRegistrationType,
+    // #369: venn-skip-gate — kun relevant for manual_approval
+    letFriendsSkipGate,
+    setLetFriendsSkipGate,
     registrationModeSupportsTeams,
     playersStepOptional,
     // #442: klubb-tilknytning for create-flyten

@@ -37,6 +37,7 @@ describe('HomeDiscoverySection', () => {
               registration_mode: 'manual_approval',
             }),
           ],
+          friendGames: [],
           pendingRequests: [],
         }}
       />,
