@@ -22,7 +22,8 @@ It's invite-only: players sign in with a one-time code by mail, with no open sig
 - Offline-first scoring. Tap in a dead spot on the course and it syncs once your phone has signal again.
 - A side tournament you can bolt onto any game: a points race across the round, plus longest-drive and closest-to-pin contests.
 - Clubs, set up through Tørny. A club gathers people and tournaments in one named place; you arrange one with us rather than spinning it up yourself, and each comes with a member cap and a duration. The owner runs it from there: appoint co-admins and owners, add members by mail or a shared join link, approve join requests, and set up rounds every member finds under "Finn turneringer" and joins straight away, even when the round would otherwise be private.
-- An inbox for invitations, peer approvals, submitted scorecards, finished games, and requests to join your club. Mail only goes out when you're not already in the app.
+- Friends. Add people you've played with, by mail, or with a share link that connects whoever opens it. Friends turn up when you fill a team, and their games appear under "Finn turneringer" in their own section. Open a round "for friends": tick a box on a request-to-join game and your friends skip the approval and join straight away, while everyone else still asks.
+- An inbox for invitations, friend requests, peer approvals, submitted scorecards, finished games, and requests to join your club. Mail only goes out when you're not already in the app.
 - Installable on your home screen. It opens like a native app, with no browser bar on top.
 - GDPR self-service. Export or delete your data from your profile page without emailing anyone.
 
