@@ -121,7 +121,6 @@ export default async function ProfilePage({
 
       <div className="mt-8">
         <SettingList ariaLabel="Konto og mer">
-          <SettingRow href="/klubbhuset" label="Klubbhuset" />
           <SettingRow href="/profile/historikk" label="Min historikk" />
           <SettingRow href="/profile/statistikk" label="Klubbstatistikker" />
           <InstallButton />

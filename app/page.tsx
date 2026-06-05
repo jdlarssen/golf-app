@@ -20,7 +20,6 @@ import { HandicapChip } from '@/components/handicap/HandicapChip';
 import { firstName } from '@/lib/firstName';
 import { formatTeeOffDate, formatTeeOffTime } from '@/lib/format/teeOff';
 import { STATUS_LABELS } from '@/lib/games/status';
-import { CREATE_GAME_LABEL } from '@/lib/games/createGameLabel';
 import { HomeDiscoverySection } from './HomeDiscoverySection';
 import { getDiscoverableGames } from '@/lib/games/getDiscoverableGames';
 
@@ -113,11 +112,11 @@ async function HomeBody() {
 
   // Parallel-fetch profile, active games, finished games — they don't depend
   // on each other and roughly triple-tripled the latency when run serially.
-  const [profileRes, rawActiveRes, rawFinishedRes, createdCountRes] = await Promise.all([
+  const [profileRes, rawActiveRes, rawFinishedRes] = await Promise.all([
     supabase
       .from('users')
       .select(
-        'name, email, is_admin, profile_completed_at, hcp_index, handicap_updated_at',
+        'name, email, profile_completed_at, hcp_index, handicap_updated_at',
       )
       .eq('id', userId!)
       .single(),
@@ -138,12 +137,6 @@ async function HomeBody() {
       .eq('games.status', 'finished')
       .order('ended_at', { foreignTable: 'games', ascending: false })
       .returns<GameRow[]>(),
-    // Klubbhuset (#429): does this user arrange any games of their own? Cheap
-    // head-count via the "games select own created" RLS policy (0071).
-    supabase
-      .from('games')
-      .select('id', { count: 'exact', head: true })
-      .eq('created_by', userId!),
   ]);
 
   const { data: profile, error: profileError } = profileRes;
@@ -195,58 +188,15 @@ async function HomeBody() {
         nextPath="/"
       />
     ) : null;
-  // #427: alle innloggede brukere kan opprette eget spill. Admin ledes til
-  // Sekretariat-wizarden (/admin/games/new), alle andre til /opprett-spill
-  // (AppShell). Tidligere gated på admin + trusted-creator-allowlisten (#198).
-  const canCreateGame = !!userId;
+  // #392: arrangering bor i Klubbhuset nå (Spill/Baner-seksjonene inne i
+  // /admin), nådd via den universelle bunn-nav-fanen. Hjem bærer ingen create-
+  // dører eller Sekretariat/Klubbhus-snarveier lenger — det er play + discover-
+  // navet. Tom-tilstanden peker en fersk bruker mot Klubbhuset under.
 
-  // Admin-inngang til Sekretariatet (#355-oppfølging). Bunn-nav-en holder admin
-  // ute (eget rom), så admin trenger en tydelig, oppdagbar vei inn herfra — der
-  // de lander og der lenken bodde før (#346). Kun admin (betrodde opprettere
-  // går til /opprett-spill, ikke /admin).
-  const secretariatLink =
-    profile?.is_admin === true ? (
-      <SmartLink
-        href="/admin"
-        className="flex min-h-[48px] w-full items-center justify-center rounded-full border border-border px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-surface-2"
-      >
-        Sekretariatet
-      </SmartLink>
-    ) : null;
-
-  // Klubbhuset (#429): the arranger's hub, for non-admins who have created at
-  // least one game of their own. Admins manage every game via Sekretariatet, so
-  // a created-by-me subset would be redundant for them. Seed of the universal
-  // Klubbhus nav-tab (#392).
-  const klubbhusetLink =
-    profile?.is_admin !== true && (createdCountRes.count ?? 0) > 0 ? (
-      <SmartLink
-        href="/klubbhuset"
-        className="flex min-h-[48px] w-full items-center justify-center rounded-full border border-border px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-surface-2"
-      >
-        Klubbhuset
-      </SmartLink>
-    ) : null;
-
-  // Midlertidig frittstående «Opprett bane»-inngang for ALLE innloggede (#366).
-  // Bevisst lavmælt — sjelden brukt escape-hatch for baner som mangler i
-  // biblioteket. Permanent hjem blir Klubbhuset (#392); da fjernes denne.
-  const courseCreateLink = userId ? (
-    <SmartLink
-      href="/opprett-bane"
-      className="inline-flex min-h-[44px] items-center justify-center text-sm text-muted underline decoration-border underline-offset-4 transition-colors hover:text-text hover:decoration-text"
-    >
-      Mangler en bane? Legg den til
-    </SmartLink>
-  ) : null;
-
-  // «Funn turneringer»-data hentes kun for non-admin når vi rendrer empty-state.
-  // Brukes både til å bytte velkomst-teksten og til å rendre selve seksjonen
-  // uten å hente data to ganger.
+  // Discovery i tom-tilstand: vis åpne turneringer en fersk spiller kan bli med
+  // i, ved siden av pekeren til Klubbhuset for å arrangere egne.
   const discoveryData =
-    isEmptyState && !canCreateGame && userId
-      ? await getDiscoverableGames(userId)
-      : null;
+    isEmptyState && userId ? await getDiscoverableGames(userId) : null;
   const hasDiscoveryContent =
     (discoveryData?.openGames.length ?? 0) > 0 ||
     (discoveryData?.pendingRequests.length ?? 0) > 0;
@@ -265,27 +215,16 @@ async function HomeBody() {
             Velkommen, {firstNameValue}.
           </h1>
           <p className="mt-3 font-sans text-sm leading-relaxed text-muted max-w-[280px]">
-            {canCreateGame
-              ? 'Ingen turneringer enda. Sett opp første runde og kom i gang.'
-              : hasDiscoveryContent
-                ? 'Du er klar. Velg en turnering under, eller vent på en invitasjon.'
-                : 'Du er klar. Be en arrangør om å invitere deg til neste runde.'}
+            {hasDiscoveryContent
+              ? 'Ingen turneringer enda. Sett opp en runde i Klubbhuset, eller bli med i en åpen turnering under.'
+              : 'Ingen turneringer enda. Sett opp en runde i Klubbhuset, så er du i gang.'}
           </p>
           {handicapChip && <div className="mt-5">{handicapChip}</div>}
-          {canCreateGame && (
-            <div className="mt-8 w-full max-w-[280px]">
-              <LinkButton
-                href={profile?.is_admin ? '/admin/games/new' : '/opprett-spill'}
-                full
-              >
-                {CREATE_GAME_LABEL}
-              </LinkButton>
-            </div>
-          )}
-          {secretariatLink && (
-            <div className="mt-3 w-full max-w-[280px]">{secretariatLink}</div>
-          )}
-          {courseCreateLink && <div className="mt-5">{courseCreateLink}</div>}
+          <div className="mt-8 w-full max-w-[280px]">
+            <LinkButton href="/admin" full>
+              Åpne Klubbhuset
+            </LinkButton>
+          </div>
           <PullQuote className="mt-8">
             En god runde begynner med god planlegging.
           </PullQuote>
@@ -348,28 +287,6 @@ async function HomeBody() {
         action={handicapChip}
       />
 
-      {/* Fast Opprett-inngang — alltid synlig for de som kan opprette, ikke
-          bare i tom-tilstand (#346). Samme etikett + rolle-routing som tom-
-          CTA-en og spill-lista. */}
-      {canCreateGame && (
-        <div className="mb-6">
-          <LinkButton
-            href={profile?.is_admin ? '/admin/games/new' : '/opprett-spill'}
-            full
-          >
-            {CREATE_GAME_LABEL}
-          </LinkButton>
-        </div>
-      )}
-
-      {secretariatLink && <div className="mb-6">{secretariatLink}</div>}
-
-      {klubbhusetLink && <div className="mb-6">{klubbhusetLink}</div>}
-
-      {courseCreateLink && (
-        <div className="mb-6 flex justify-center">{courseCreateLink}</div>
-      )}
-
       <nav className="space-y-6">
         {inProgressGames.length > 0 && (
           <Section label="Pågår nå">
@@ -426,24 +343,21 @@ async function HomeBody() {
           </SmartLink>
         </Section>
 
-        {/* Vedvarende «Finn turneringer»-inngang (#357) — så spillere som alt
-            har spill fortsatt kan oppdage nye åpne turneringer, ikke bare i
-            tom-tilstand. Kun for spillere; admin har Sekretariatet, betrodde
-            opprettere lager egne spill. */}
-        {!canCreateGame && (
-          <Section label="Finn turneringer">
-            <SmartLink href="/finn-turneringer" className="block">
-              <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
-                <span className="text-base font-medium text-text">
-                  Se åpne turneringer du kan bli med i
-                </span>
-                <span aria-hidden className="text-muted">
-                  →
-                </span>
-              </Card>
-            </SmartLink>
-          </Section>
-        )}
+        {/* Vedvarende «Finn turneringer»-inngang (#357, #392). Hjem er play +
+            discover-navet nå — arrangering bor i Klubbhuset — så alle innloggede
+            kan oppdage åpne turneringer herfra. */}
+        <Section label="Finn turneringer">
+          <SmartLink href="/finn-turneringer" className="block">
+            <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
+              <span className="text-base font-medium text-text">
+                Se åpne turneringer du kan bli med i
+              </span>
+              <span aria-hidden className="text-muted">
+                →
+              </span>
+            </Card>
+          </SmartLink>
+        </Section>
 
       </nav>
 

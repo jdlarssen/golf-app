@@ -17,9 +17,50 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.77.y — Styr ditt eget spill
+## 1.78.y — Klubbhuset, ett rom for alle
 
-Issue [#429](https://github.com/jdlarssen/golf-app/issues/429) (epic [#22](https://github.com/jdlarssen/golf-app/issues/22)), Fase 3 — siste del av epic-et. Lagde du spillet, bestemmer du nå hvem som er med, og kan holde runden i gang uten å vente på en administrator.
+Issue [#392](https://github.com/jdlarssen/golf-app/issues/392) (milepæl Klubb-skala). Klubbhuset blir en fast fane i bunn-nav-en som alle har. Det du møter inne avhenger av hvem du er.
+
+### [1.78.0] - 2026-06-05 · #392
+
+> Klubbhuset er nå en fast fane nederst på skjermen, ved siden av Hjem, Innboks og Profil. Trykk den for å sette opp en runde eller legge til en bane. Er du administrator, ligger alle administrator-verktøyene der inne. Opprett-knappene er flyttet fra forsiden inn i Klubbhuset, så forsiden viser spillene dine og åpne turneringer du kan bli med i.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#392](https://github.com/jdlarssen/golf-app/issues/392) — universell «Klubbhuset»-bunn-nav-fane (4. fane → `/admin`), bygd på #355 (bunn-nav) og #429 (`/klubbhuset`-frøet). Fanen gates ikke på rolle; flatene inne gates.
+
+#### Added
+- [`components/icons/Icons.tsx`](components/icons/Icons.tsx) — `KlubbhusIcon` (bygg + vimpel, bevisst distinkt fra `HjemIcon`).
+- [`lib/admin/auth.ts`](lib/admin/auth.ts) — `getRoleContext`: ikke-redirigerende rolle-lesning så `/admin` kan rendre en rolle-tilpasset delmengde i stedet for å bounce ikke-admins.
+- [`app/admin/page.tsx`](app/admin/page.tsx) — `PlayerKlubbhus`: minimal Klubbhus-visning for vanlige spillere (Spill + Baner-tiles, ingen admin-tellinger/ledger), delt `TileGridView`.
+
+#### Changed
+- [`components/ui/BottomNav.tsx`](components/ui/BottomNav.tsx) — 4. fane «Klubbhuset» → `/admin`, synlig for alle innloggede; `/admin`-eksklusjonen fjernet; aktiv på `/admin`, `/klubbhuset`, `/opprett-spill`, `/opprett-bane`.
+- [`app/admin/layout.tsx`](app/admin/layout.tsx) — layout-gaten er nå auth-only; per-seksjon-gating ligger i sidene + sub-rutenes egne `requireAdmin*`.
+- [`app/admin/page.tsx`](app/admin/page.tsx) — rolle-delt dashboard; «Sekretariatet»-kicker → «Klubbhuset»; redundant bjelle fjernet.
+- [`components/ui/AdminShell.tsx`](components/ui/AdminShell.tsx) — reserverer bunn-padding for den nå-synlige bunn-nav-en.
+- [`app/page.tsx`](app/page.tsx) — fjernet alle create-/Sekretariat-/Klubbhus-dører fra forsiden; tom-tilstand peker til Klubbhuset; «Finn turneringer» synlig igjen for alle.
+- [`app/klubbhuset/page.tsx`](app/klubbhuset/page.tsx) — re-merket som «Spill»-seksjonen («Spillene dine») så rommet og seksjonen ikke kolliderer i navn.
+- 24 admin-flater — `NotificationBell` fjernet fra admin-TopBar-ene (Innboks-fanen dekker det); navigasjons-«Sekretariatet» → «Klubbhuset».
+
+#### Security
+- [`app/admin/games/new/page.tsx`](app/admin/games/new/page.tsx) — self-gater nå med en rolle-sjekk (bouncer ikke-admin til `/opprett-spill`) siden layout-gaten er løftet; lukker en roster/e-post-eksponering. Audit bekreftet at action-laget allerede var self-gatet.
+
+#### Removed
+- [`app/profile/page.tsx`](app/profile/page.tsx) — «Klubbhuset»-raden (bunn-nav-fanen dekker den).
+
+</details>
+
+---
+
+## Tidligere versjoner
+
+<details>
+<summary><strong>Opprettelse & påmelding (#22, #366, #365) — 5 serier</strong></summary>
+
+<details>
+<summary><strong>1.77.y — Styr ditt eget spill (2 oppføringer)</strong></summary>
 
 ### [1.77.1] - 2026-06-05 · #429
 
@@ -57,13 +98,7 @@ Issue [#429](https://github.com/jdlarssen/golf-app/issues/429) — #22 Fase 3 (r
 
 </details>
 
----
-
-## Tidligere versjoner
-
-
-<details>
-<summary><strong>Opprettelse & påmelding (#22, #366, #365) — 4 serier</strong></summary>
+</details>
 
 <details>
 <summary><strong>1.76.y — Rediger og slett ditt eget spill (3 oppføringer)</strong></summary>
