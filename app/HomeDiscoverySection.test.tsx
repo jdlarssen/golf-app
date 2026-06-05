@@ -28,6 +28,7 @@ describe('HomeDiscoverySection', () => {
     render(
       <HomeDiscoverySection
         data={{
+          clubGames: [],
           openGames: [
             openGame({ id: 'g1', short_id: 'open0001', registration_mode: 'open' }),
             openGame({

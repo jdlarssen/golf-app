@@ -28,6 +28,7 @@ export type ShortIdGame = {
   course_id: string | null;
   scheduled_tee_off_at: string | null;
   created_by: string | null;
+  group_id: string | null;
 };
 
 export async function getGameByShortId(
@@ -44,7 +45,7 @@ export async function getGameByShortId(
   const { data, error } = await admin
     .from('games')
     .select(
-      'id, name, short_id, status, registration_mode, registration_type, game_mode, mode_config, course_id, scheduled_tee_off_at, created_by',
+      'id, name, short_id, status, registration_mode, registration_type, game_mode, mode_config, course_id, scheduled_tee_off_at, created_by, group_id',
     )
     .eq('short_id', shortId)
     .maybeSingle<ShortIdGame>();

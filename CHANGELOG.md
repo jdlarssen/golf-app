@@ -21,6 +21,26 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#442](https://github.com/jdlarssen/golf-app/issues/442) (milepæl Klubb-skala). Du kan nå lage egne klubber, samle folk og turneringer på ett sted, og la medlemmene finne klubbens runder.
 
+### [1.79.4] - 2026-06-05 · #442
+
+> Er du med i en klubb, dukker klubbens runder opp under «Finn turneringer» — også de som ellers er private. Du melder deg på direkte, uten å vente på en invitasjon. Det er dette som gjør en klubb verdt å ha.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#442](https://github.com/jdlarssen/golf-app/issues/442) (milepæl Klubb-skala). Klubb-scopet oppdagbarhet + direkte-påmelding — kjerneverdien i klubb-konseptet.
+
+#### Added
+- [`lib/games/getDiscoverableGames.ts`](lib/games/getDiscoverableGames.ts) — returnerer nå `clubGames`: spill i brukerens klubber, synlige uansett `registration_mode` (også `invite_only`), deduplisert mot den globale open-lista. + [`getDiscoverableGames.test.ts`](lib/games/getDiscoverableGames.test.ts) dekker medlem-ser-invite_only, ikke-medlem-ser-ingenting og dedup.
+- [`app/HomeDiscoverySection.tsx`](app/HomeDiscoverySection.tsx) — «I dine klubber»-seksjon (over de globale åpne turneringene), CTA «Meld meg på».
+
+#### Changed
+- [`app/signup/[shortId]/page.tsx`](app/signup/[shortId]/page.tsx) + [`actions.ts`](app/signup/[shortId]/actions.ts) — et klubb-medlem får direkte-påmelding på et klubb-spill uansett påmeldingsmåte (solo-flyt). Authz verifiseres server-side i `registerForOpenGame`.
+- [`lib/games/getGameByShortId.ts`](lib/games/getGameByShortId.ts) — henter `group_id` (trengs for klubb-medlemskaps-sjekken).
+- [`app/finn-turneringer/page.tsx`](app/finn-turneringer/page.tsx) + [`app/page.tsx`](app/page.tsx) — tom-tilstand/innholds-sjekk teller nå også klubb-spill.
+
+</details>
+
 ### [1.79.3] - 2026-06-05 · #442
 
 > Når du setter opp en runde, kan du velge hvilken klubb den er for. Da ser alle i klubben runden under «Finn turneringer» og kan melde seg på — også om den ellers er privat. Setter du opp runden fra en klubb-side, er klubben valgt på forhånd.

@@ -30,7 +30,9 @@ export default async function FinnTurneringerPage() {
 
   const data = await getDiscoverableGames(userId);
   const isEmpty =
-    data.openGames.length === 0 && data.pendingRequests.length === 0;
+    data.clubGames.length === 0 &&
+    data.openGames.length === 0 &&
+    data.pendingRequests.length === 0;
 
   return (
     <AppShell>

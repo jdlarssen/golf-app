@@ -87,6 +87,20 @@ export default async function PåmeldingPage({ params }: { params: Params }) {
     .eq('user_id', user!.id)
     .maybeSingle<{ id: string; status: 'pending' | 'approved' | 'rejected' | 'withdrawn' }>();
 
+  // #442: er brukeren medlem av spillets klubb? Klubb-medlemmer kan melde seg
+  // på klubb-spill direkte uansett registration_mode (medlemskap ER
+  // invitasjonen). Den autoritative authz-en gjentas i registerForOpenGame.
+  let isClubMember = false;
+  if (game.group_id) {
+    const { data: clubMembership } = await admin
+      .from('group_members')
+      .select('user_id')
+      .eq('group_id', game.group_id)
+      .eq('user_id', user!.id)
+      .maybeSingle<{ user_id: string }>();
+    isClubMember = clubMembership != null;
+  }
+
   // For invite_only: sjekk om brukeren har en pending invitation-rad
   // (matchende email + game_id). Det gir oss fallback-melding "du har en
   // invitasjon" i stedet for generisk "krever invitasjon".
@@ -148,6 +162,7 @@ export default async function PåmeldingPage({ params }: { params: Params }) {
             isAlreadyRegistered,
             hasOpenPendingRequest,
             hasPendingInvitation,
+            isClubMember,
             teamCandidates,
             captainEmail: profile.email,
           })}
@@ -163,6 +178,7 @@ function renderBody({
   isAlreadyRegistered,
   hasOpenPendingRequest,
   hasPendingInvitation,
+  isClubMember,
   teamCandidates,
   captainEmail,
 }: {
@@ -171,6 +187,7 @@ function renderBody({
   isAlreadyRegistered: boolean;
   hasOpenPendingRequest: boolean;
   hasPendingInvitation: boolean;
+  isClubMember: boolean;
   teamCandidates: TeamCandidate[];
   captainEmail: string | null;
 }) {
@@ -199,6 +216,20 @@ function renderBody({
         Påmelding er stengt. Spillet er{' '}
         {game.status === 'active' ? 'i gang' : 'avsluttet'}.
       </Banner>
+    );
+  }
+
+  // #442: er du medlem av spillets klubb, kan du melde deg på direkte uansett
+  // påmeldingsmåte — også invite_only. Solo-flyt; lag-klubb-spill faller
+  // gjennom til lag-logikken under.
+  if (isClubMember && game.registration_type === 'solo') {
+    return (
+      <div className="space-y-4">
+        <p className="font-sans text-sm leading-relaxed text-text">
+          Du er medlem av klubben, så du kan melde deg på direkte.
+        </p>
+        <RegistrationForm mode="open" shortId={game.short_id} />
+      </div>
     );
   }
 

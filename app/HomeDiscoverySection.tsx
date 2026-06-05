@@ -2,6 +2,7 @@ import { LinkButton } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { formatTeeOffDate, formatTeeOffTime } from '@/lib/format/teeOff';
 import type {
+  DiscoverableClubGame,
   DiscoverableOpenGame,
   PendingRequest,
 } from '@/lib/games/getDiscoverableGames';
@@ -17,12 +18,31 @@ import type {
 export function HomeDiscoverySection({
   data,
 }: {
-  data: { openGames: DiscoverableOpenGame[]; pendingRequests: PendingRequest[] };
+  data: {
+    clubGames: DiscoverableClubGame[];
+    openGames: DiscoverableOpenGame[];
+    pendingRequests: PendingRequest[];
+  };
 }) {
-  const { openGames, pendingRequests } = data;
+  const { clubGames, openGames, pendingRequests } = data;
 
   return (
     <section className="mt-10 w-full">
+      {clubGames.length > 0 && (
+        <div className="mb-8">
+          <h2 className="mb-3 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+            I dine klubber
+          </h2>
+          <ul className="flex list-none flex-col gap-3 p-0">
+            {clubGames.map((game) => (
+              <li key={game.id}>
+                <ClubGameCard game={game} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {openGames.length > 0 && (
         <div className="mb-8">
           <h2 className="mb-3 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
@@ -53,6 +73,44 @@ export function HomeDiscoverySection({
         </div>
       )}
     </section>
+  );
+}
+
+function ClubGameCard({ game }: { game: DiscoverableClubGame }) {
+  const teeOff = game.scheduled_tee_off_at
+    ? new Date(game.scheduled_tee_off_at)
+    : null;
+  // Klubb-medlem kan melde seg på direkte uansett påmeldingsmåte (#442) —
+  // medlemskap ER invitasjonen. Signup-siden kjenner igjen medlemskapet og
+  // viser direkte-påmelding.
+  return (
+    <div className="rounded-2xl border border-border bg-surface px-4 py-3.5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-serif text-[17px] leading-tight text-text">
+            {game.name}
+          </p>
+          <p className="mt-1 font-sans text-[12px] text-muted">
+            <span className="text-primary">{game.group_name}</span>
+            {' · '}
+            {game.course_name ?? 'Bane ikke valgt'}
+            {teeOff && (
+              <>
+                {' · '}
+                <span className="tabular-nums">
+                  {formatTeeOffDate(teeOff)} kl. {formatTeeOffTime(teeOff)}
+                </span>
+              </>
+            )}
+          </p>
+        </div>
+      </div>
+      <div className="mt-3.5">
+        <LinkButton href={`/signup/${game.short_id}`} full>
+          Meld meg på
+        </LinkButton>
+      </div>
+    </div>
   );
 }
 

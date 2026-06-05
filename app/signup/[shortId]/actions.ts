@@ -139,7 +139,21 @@ export async function registerForOpenGame(
   if (!game) {
     return { ok: false, error: 'game_not_found' };
   }
-  if (game.registration_mode !== 'open') {
+  // open lar alle melde seg på direkte. For et klubb-spill (#442) kan også et
+  // klubb-medlem melde seg på direkte uansett registration_mode — medlemskap ER
+  // invitasjonen. Verifiseres server-side (klienten kan ikke lyve om medlemskap).
+  let canDirectJoin = game.registration_mode === 'open';
+  if (!canDirectJoin && game.group_id) {
+    const memberAdmin = getAdminClient();
+    const { data: membership } = await memberAdmin
+      .from('group_members')
+      .select('user_id')
+      .eq('group_id', game.group_id)
+      .eq('user_id', userId)
+      .maybeSingle<{ user_id: string }>();
+    canDirectJoin = membership != null;
+  }
+  if (!canDirectJoin) {
     return { ok: false, error: 'wrong_mode' };
   }
   if (game.status !== 'draft' && game.status !== 'scheduled') {

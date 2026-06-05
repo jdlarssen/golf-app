@@ -198,6 +198,7 @@ async function HomeBody() {
   const discoveryData =
     isEmptyState && userId ? await getDiscoverableGames(userId) : null;
   const hasDiscoveryContent =
+    (discoveryData?.clubGames.length ?? 0) > 0 ||
     (discoveryData?.openGames.length ?? 0) > 0 ||
     (discoveryData?.pendingRequests.length ?? 0) > 0;
 
