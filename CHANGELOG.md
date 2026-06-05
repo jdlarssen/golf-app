@@ -118,8 +118,8 @@ Issue [#429](https://github.com/jdlarssen/golf-app/issues/429) — #22 Fase 3 (r
 - [`app/admin/games/[id]/actions.ts`](app/admin/games/[id]/actions.ts) — `adminWithdrawPlayer`/`adminUndoWithdraw`/`adminApproveScorecard` gater nå på `requireAdminOrCreator` via en ny `loadAdminOrCreatorContext`-helper med forgrenet `detailPath`. Admin-flyten byte-identisk.
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.76.y — Rediger og slett ditt eget spill (3 oppføringer)</strong></summary>
@@ -175,8 +175,8 @@ Issue [#428](https://github.com/jdlarssen/golf-app/issues/428) — #22 Fase 2 (r
 - [`app/admin/games/[id]/edit/page.tsx`](app/admin/games/[id]/edit/page.tsx) — bruker den delte `buildEditInitialValues`-helperen.
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.75.y — Lag og styr ditt eget spill (1 oppføring)</strong></summary>
@@ -210,8 +210,8 @@ Issue [#427](https://github.com/jdlarssen/golf-app/issues/427) — #22 Fase 1 (R
 - **Ute av scope (senere faser):** rediger/slett eget spill, roster-styring, «Mine spill»-hub, cup-opprettelse (forblir admin).
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.74.y — Baner alle kan legge til (1 oppføring)</strong></summary>
@@ -244,8 +244,8 @@ Issue [#366](https://github.com/jdlarssen/golf-app/issues/366) — UX-flyt-audit
 - **Frittstående dør → #392** — den permanente inngangen hører hjemme i Klubbhuset; hjem-inngangen her er midlertidig (notert på #392).
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.73.y — Usynlig misbruks-vern før åpen påmelding (2 oppføringer)</strong></summary>
@@ -292,10 +292,10 @@ Issue [#365](https://github.com/jdlarssen/golf-app/issues/365) — usynlig misbr
 - IP-rate-limit beholdt på 10/IP/15 min (ikke strammet til 6): disposable-blokken dekker masse-opprettings-vektoren, og 6 ville gitt klubb-WiFi-friksjon uten reell spray-gevinst mot en IP-roterende angriper. Captcha fortsatt utsatt til faktisk misbruk.
 
 </details>
-
+</details>
 </details>
 
-</details>
+
 
 <details>
 <summary><strong>Flyt-opprydding, varsler & avslutning (#354–377) — 13 serier</strong></summary>
@@ -322,8 +322,8 @@ Issue [#377](https://github.com/jdlarssen/golf-app/issues/377) — avslutnings-v
 - [`lib/cup/actions.ts`](lib/cup/actions.ts) — `finishTournament` fyrer nå in-app `cup_finished` til alle deltakere først, og sender «cupen er ferdig»-mailen kun til off-app-deltakere. Ingen blanket-mail til alle.
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.71.y — Leverings-påminnelse (2 oppføringer)</strong></summary>
@@ -368,8 +368,8 @@ Issue [#376](https://github.com/jdlarssen/golf-app/issues/376), del 1 — auto-n
 - [`app/games/[id]/page.tsx`](app/games/[id]/page.tsx) — fyrer auto-nudgen via `after()` når spilleren er ferdig (18/18) men ikke har levert (og ikke er trukket).
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.70.y — Smidigere lag-påmelding (2 oppføringer)</strong></summary>
@@ -410,8 +410,8 @@ Issue [#362](https://github.com/jdlarssen/golf-app/issues/362). UX-flyt-audit-fu
 - [`app/signup/[shortId]/page.tsx`](app/signup/[shortId]/page.tsx) — preloader co-player-kandidater (kun når lag-formen faktisk rendres) og sender kaptein-e-post til inline egen-e-post-sjekk.
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.69.y — Profilen din, ryddigere og smartere (4 oppføringer)</strong></summary>
@@ -492,8 +492,8 @@ Issue [#401](https://github.com/jdlarssen/golf-app/issues/401), del 1 (profil-si
 - [`components/ui/SegmentedField.test.tsx`](components/ui/SegmentedField.test.tsx), [`lib/handicap/sign.test.ts`](lib/handicap/sign.test.ts), og oppdatert [`app/profile/ProfileFormBody.test.tsx`](app/profile/ProfileFormBody.test.tsx) (Golfprofil-disclosure, segmenter, plusshandicap-chip).
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.68.y — Be om plass til private spill (4 oppføringer)</strong></summary>
@@ -585,8 +585,8 @@ Løser [#368](https://github.com/jdlarssen/golf-app/issues/368). `/signup/[short
 - [`app/signup/[shortId]/actions.test.ts`](app/signup/[shortId]/actions.test.ts) — invite_only godtar forespørsel (insert + notify); `open` fortsatt avvist.
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.67.y — Finn turneringer (2 oppføringer)</strong></summary>
@@ -635,8 +635,8 @@ Løser [#357](https://github.com/jdlarssen/golf-app/issues/357). Discovery («Fu
 - [`app/HomeDiscoverySection.test.tsx`](app/HomeDiscoverySection.test.tsx) — render-test for CTA-per-modus-svitsjen.
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.66.y — Vedvarende navigasjon (2 oppføringer)</strong></summary>
@@ -682,8 +682,8 @@ Fikser [#355](https://github.com/jdlarssen/golf-app/issues/355) — ingen vedvar
 - Global render i root-layout ble valgt framfor en `userId`-prop per `AppShell`: `AppShell` rendres ~50 steder (mange er client-component leaderboard-views), så per-prop-tråding ville bommet på dem og vært en felle for hver nye spillform. Root-layout-render gjør at headeren leses der, hvilket gjør de tre tidligere statiske sidene (`/_not-found`, `/invite`, `/legal/privacy`) dynamiske — ubetydelig for app-en. Route-gruppe-layout er en mulig fremtidig optimalisering for persistent realtime-abonnement.
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.65.y — Trekk spiller: hold frafall ute av rangeringen (2 oppføringer)</strong></summary>
@@ -734,8 +734,8 @@ Fikser [#386](https://github.com/jdlarssen/golf-app/issues/386) — ingen måte 
 - Migrasjonen er additiv + nullable, trygg å kjøre før kode-deploy.
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.64.y — Avslutt selv om noen ikke har levert (2 oppføringer)</strong></summary>
@@ -785,8 +785,8 @@ Fikser [#375](https://github.com/jdlarssen/golf-app/issues/375) — `not_all_sub
 - [`app/admin/games/[id]/actions.test.ts`](app/admin/games/[id]/actions.test.ts) — ny Type-A-test: `allowMissing=true` flipper til finished tross en ulevert spiller og skriver aldri `submitted_at`.
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.63.y — Kompis-wizard: velg antall spillere før format (1 oppføring)</strong></summary>
@@ -816,8 +816,8 @@ Fikser [#373](https://github.com/jdlarssen/golf-app/issues/373) — format valgt
 - Avvik fra issue-tabell: best ball er `even 2–8` (ikke `nøyaktig 8`) — reflekterer #374-oppdateringen. Texas scramble er `multiplum av 2` (team_size 2 eller 4 begge gyldige; multiplum av 2 dekker begge). Shamble er `multiplum av 3 ELLER 4` (ikke bare 3/4-lag).
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.62.y — Best ball for alle kompislaget (1 oppføring)</strong></summary>
@@ -844,8 +844,8 @@ Fikser [#374](https://github.com/jdlarssen/golf-app/issues/374) — best ball ha
 - `lib/games/gamePayload.test.ts` — 7 nye best ball-tester: 2-spiller-publish (1 lag), 4-spiller-publish (2 lag, `teams_count = 2`), 6-spiller-publish (3 lag), 0-spiller → `min_players_for_mode`, ubalansert lag → `team_balance`, draft tolererer ubalanse + 0 spillere.
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.61.y — Cup-veiviser: generer alle matcher på én gang (4 oppføringer)</strong></summary>
@@ -920,8 +920,8 @@ Fikser [#219](https://github.com/jdlarssen/golf-app/issues/219) — cup match-te
 Rene hjelpebiblioteker (`lib/cup/cupTemplates.ts`, `lib/cup/cupPairing.ts`) og `createCupMatchesFromPlan`-server-action med tilhørende tester er committet i tidligere commits. Matcher opprettes som `scheduled`-spill med handicap frosset ved rundstart.
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.60.y — Modus-skole: detaljsider + admin-redigerbar forklaring (5 oppføringer)</strong></summary>
@@ -1025,10 +1025,10 @@ Flytter modus-forklaringene fra hardkodet `MODE_GUIDE` til DB-drevet, admin-redi
 - [`app/games/[id]/page.tsx`](app/games/[id]/page.tsx) — henter modus-innhold server-side, sender til `ModeGuideCard` med `detailHref`.
 
 </details>
-
+</details>
 </details>
 
-</details>
+
 
 <details>
 <summary><strong>Format-katalogen: scramble & matchplay (#270) — 17 serier</strong></summary>
@@ -1179,8 +1179,8 @@ Serien lukker også et hull for hele alternate-shot-familien: foursomes/greensom
 - Type C: `FoursomesMatchplayView.test.tsx` — render-kontrakt for delt familie-view (status, sider, hull-grid, format-label).
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.58.y — Chapman matchplay (2v2 dobbel tee + bytt + alternate, cup-klar) (1 oppføring)</strong></summary>
@@ -1220,8 +1220,8 @@ Gjenbruker foursomes-mønsteret fullt ut: `chapmanMatchplay.compute()` returnere
 - Type C: `ChapmanPhaseReminder.test.tsx` — fase-stripa rendres.
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.57.y — Greensome matchplay (2v2 velg-beste-tee + alternate) (1 oppføring)</strong></summary>
@@ -1263,8 +1263,8 @@ Gjenbruker foursomes-mønsteret fullt ut: `greensomeMatchplay.compute()` returne
 - Type A: `greensomeMatchplay.test.ts` — 18 tester (greensomeTeamHandicap, compute happy path, empty-shell, mat-em, AS, fraksjonell blanding, allowance 0 %, lek-min kaptein).
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.56.y — Patsome (tre lagformer i én runde) (1 oppføring)</strong></summary>
@@ -1299,8 +1299,8 @@ Selvstendig orchestrator i stedet for å bygge på separate greensome-/foursomes
 - Type A: `patsome.test.ts` (36) + patsome-cases i `gamePayload.test.ts`. Type C: `PatsomeView.test.tsx`, `PatsomeSetup.test.tsx`. Authz: `patsomeActions.test.ts`.
 
 </details>
-
 </details>
+
 
 ---
 
@@ -1336,8 +1336,8 @@ Generalisering av best ball («best 1 av M») til «best N av M». Strokeplay-ut
 - Type A: `shamble.test.ts` (19) + 7 shamble-cases i `gamePayload.test.ts`. Type C: `ShambleView.test.tsx` + `ShambleSetup.test.tsx`.
 
 </details>
-
 </details>
+
 
 ---
 
@@ -1385,8 +1385,8 @@ Florida Scramble gjenbruker Texas scramble-motoren fullstendig. `floridaScramble
 - Type A: `floridaScramble.test.ts` (5) + 6 florida-cases i `gamePayload.test.ts`. Ingen ny Type C — gjenbruker Texas-viewet (per test-disiplin).
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.53.y — Ambrose (net scramble med lag-handicap) (1 oppføring)</strong></summary>
@@ -1417,8 +1417,8 @@ Ambrose er mekanisk identisk med Texas scramble (én ball per lag, kapteinen eie
 - Type A: `ambrose.test.ts` (7) + 6 ambrose-cases i `gamePayload.test.ts`. Ingen ny Type C — Ambrose gjenbruker Texas-viewet, så en egen render-test ville duplisert #44s dekning (per test-disiplin).
 
 </details>
-
 </details>
+
 
 ---
 
@@ -1452,8 +1452,8 @@ Rent slag-derivert format. I motsetning til Bingo Bango Bongo trengs ingen ny ta
 - Type A: `aceyDeucey.test.ts` (16) + player-count-grenser i `gamePayload.test.ts`. Type C: `AceyDeuceyView.test.tsx` + `AceyDeuceySetup.test.tsx`.
 
 </details>
-
 </details>
+
 
 ---
 
@@ -1486,8 +1486,8 @@ Round Robin gjenbruker fourball matchplay-motorens per-hull-beregning (`applyAll
 - Type C: `RoundRobinSetup.test.tsx` (2) — slots med spillerlabels, placeholder-rader ved <4 spillere.
 
 </details>
-
 </details>
+
 
 ---
 
@@ -1521,8 +1521,8 @@ Bygget på Skins-mønstret: poengene utledes fra det vanlige strokeplay-scorekor
 - Type A: `nines.test.ts` (22) + 6 nines-cases i `gamePayload.test.ts`. Type C: `NinesView.test.tsx` + `NinesSetup.test.tsx`.
 
 </details>
-
 </details>
+
 
 ---
 
@@ -1557,8 +1557,8 @@ Bygget på Wolf-mønstret for kategorisk per-hull-input: poengene er rene presta
 - Type A: `bingoBangoBongo.test.ts` (20) + `lib/bbb/`-helper-tester. Type C: `BingoBangoBongoEntry.test.tsx` + `BingoBangoBongoView.test.tsx`.
 
 </details>
-
 </details>
+
 
 ---
 
@@ -1594,8 +1594,8 @@ Ingen ny scoring, game_mode eller migrasjon: lag-Stableford (team_size 2) regnet
 - Issue-en spesifiserte ny `fourbb_stableford.ts`-scoring-modul + ny `formats`-rad. Begge droppet: scoringen finnes allerede i `stableford.ts` (team-MAX), og Jørgen valgte å la 4BBB leve som variant under Stableford-kortet, ikke som eget format-kort.
 
 </details>
-
 </details>
+
 
 ---
 
@@ -1628,8 +1628,8 @@ Issue [#281](https://github.com/jdlarssen/golf-app/issues/281), del av format-ep
 - Type A: `modifiedStableford.test.ts` + router-delegering i `index.test.ts`. Type C: minus-poeng-banner i `HoleClient.test.tsx`. Eksisterende stableford-suite uendret og grønn.
 
 </details>
-
 </details>
+
 
 ---
 
@@ -1676,8 +1676,8 @@ Issue [#299](https://github.com/jdlarssen/golf-app/issues/299). Spillere som bli
 - Type A completeness (`modeGuide.test.ts`) + Type C render (`ModeGuideCard.test.tsx`) dekker alle modusene. Hele suiten grønn.
 
 </details>
-
 </details>
+
 
 ---
 
@@ -1720,8 +1720,8 @@ Issue [#275](https://github.com/jdlarssen/golf-app/issues/275), tredje kompis-fo
 Tredje av 7 kompis-batch-formats. Resten: BBB, Nines, Acey Deucey, Round Robin.
 
 </details>
-
 </details>
+
 
 ---
 
@@ -1797,8 +1797,8 @@ Ingen nye tester: pure-logic-helperne er dekket i `parDisplay`/`parResolver` (#2
 Andre av 7 kompis-batch-formats. Resten: Skins, BBB, Nines, Acey Deucey, Round Robin.
 
 </details>
-
 </details>
+
 
 ---
 
@@ -1841,13 +1841,13 @@ Issue [#274](https://github.com/jdlarssen/golf-app/issues/274), første kompis-f
 Foundation for epic [#270](https://github.com/jdlarssen/golf-app/issues/270). Wolf er første av 7 kompis-batch-formats (resten: Skins, Nassau, BBB, Nines, Acey Deucey, Round Robin).
 
 </details>
-
 </details>
+</details>
+
 
 ---
 
 
-</details>
 
 <details>
 <summary><strong>Ryder Cup & format-fundament (#47, #270) — 5 serier</strong></summary>
@@ -1891,8 +1891,8 @@ Issue [#218](https://github.com/jdlarssen/golf-app/issues/218), fase 3 av [#47](
 Dette er første format i alternate-shot-familien som lander i prod; mønstret (storage-pattern A + Layout B head-to-head + diff-basert allowance + per-game tee-starter-felt) gjenbrukes i [#289 Greensome](https://github.com/jdlarssen/golf-app/issues/289), [#290 Chapman](https://github.com/jdlarssen/golf-app/issues/290) og [#291 Gruesome](https://github.com/jdlarssen/golf-app/issues/291) når de implementeres.
 
 </details>
-
 </details>
+
 
 ---
 
@@ -1929,8 +1929,8 @@ Issue [#273](https://github.com/jdlarssen/golf-app/issues/273), fase 3 av [#270]
 Foundation for epic [#270](https://github.com/jdlarssen/golf-app/issues/270) — siste fase. F1 (datamodell), F2 (intent-først wizard) og F3 (admin-mapping) sammen gir kompletten katalog-styrings-løype.
 
 </details>
-
 </details>
+
 
 ---
 
@@ -1963,8 +1963,8 @@ Issue [#272](https://github.com/jdlarssen/golf-app/issues/272), fase 2 av [#270]
 - 14 GameWizard-render-tester oppdatert til 5-stegs flyt + ny cup-intent-test. Mode-navigasjon i hver test starter nå med intent-valg + format-valg før bane/spillere/klar.
 
 </details>
-
 </details>
+
 
 ---
 
@@ -2015,8 +2015,8 @@ Foundation for epic [#270](https://github.com/jdlarssen/golf-app/issues/270) (in
 - [`<FourballAllowanceField>`](components/cup/FourballAllowanceField.tsx) slettet (sammen med tom `components/cup/`-mappe) — alle tre callere (cup-create-form, GameForm, GameWizard) migrert til den generaliserte `<AllowanceField>` med fourball-spesifikke props.
 
 </details>
-
 </details>
+
 
 ---
 
@@ -2047,13 +2047,13 @@ Issue [#217](https://github.com/jdlarssen/golf-app/issues/217), fase 2 av [#47](
 - `CupMatchInput`-shape utvidet med valgfri `gameMode`-discriminator så UI kan velge spiller- vs. lag-fokusert result-tekst.
 
 </details>
-
 </details>
+</details>
+
 
 ---
 
 
-</details>
 
 <details>
 <summary><strong>Baner, selvreg & sideturnering (#223 m.fl.) — 13 serier</strong></summary>
@@ -2082,8 +2082,8 @@ Issue [#257](https://github.com/jdlarssen/golf-app/issues/257). Liten oppfølger
 
 #### Changed
 - [app/page.tsx](app/page.tsx) wirer `HomeDiscoverySection` inn for non-admin-brukere mellom velkomst-section og footer. Admin/trusted-creator ser ingen endring — de har egne CTAer for å opprette spill.
-
 </details>
+
 
 ---
 
@@ -2132,8 +2132,8 @@ Issue [#199](https://github.com/jdlarssen/golf-app/issues/199). Du kan nå sette
 - 2770 LOC fordelt over 14 chunks. Tests: 1369 grønne ved feature-completion.
 
 </details>
-
 </details>
+
 
 ---
 
@@ -2163,8 +2163,8 @@ Et mykt varsel under banelengde-feltet i bane-admin når tallet ligger utenfor d
 - Wirer side om side med per-kjønn typisk slope/CR-hint fra 1.30.1 (issue #235). De to gir komplementær veiledning: slope/CR-hint som statisk anker mot tastefeil, length-warning som dynamisk respons på faktisk innskrevet tall.
 
 </details>
-
 </details>
+
 
 ---
 
@@ -2202,8 +2202,8 @@ Issue [#240](https://github.com/jdlarssen/golf-app/issues/240). Tørny støtter 
 - Historiske spill: `course_holes` er ikke frozen ved game-start, så en endring av `par_ladies` på en bane kan endre stableford-poeng for ferdige spill på den banen. Pre-eksisterende svakhet (gjelder også gammel `par` og `stroke_index`); ikke utvidet i denne lanseringen.
 
 </details>
-
 </details>
+
 
 ---
 
@@ -2253,8 +2253,8 @@ Tredje runde med små admin-polish-grep fra fase 1 av [#223](https://github.com/
 - Ingen endring i server-actions, migrasjoner eller validering. Partial-rating-feilmeldingen («Hver tee må ha både slope og CR (eller ingen av dem) per kjønn») trigger fortsatt korrekt — den nye knappen er en raskere recovery-flyt for samme feil, ikke en omveiing av regelen.
 
 </details>
-
 </details>
+
 
 ---
 
@@ -2283,8 +2283,8 @@ Issue [#239](https://github.com/jdlarssen/golf-app/issues/239). Vedlikeholds-fla
 - Ingen migrasjon. `games.scheduled_tee_off_at` (fra [0010](supabase/migrations/0010_scheduled_status_and_tee_off.sql)) og `games.ended_at` (fra [0001](supabase/migrations/0001_initial_schema.sql)) finnes allerede.
 - Cache er react `cache`-wrappet og refetcher per request — nye spill plukkes opp på neste page-load uten `revalidateTag`-kobling.
 - Den eksisterende statiske «sortert nyeste først»-teksten på `CourseCountLine` er ikke oppdatert til å speile dynamisk sort. URL-styrt sort kan misvise tellelinjen; egen oppgave hvis det blir et problem.
-
 </details>
+
 
 ---
 
@@ -2323,8 +2323,8 @@ Fase 1 av [#47](https://github.com/jdlarssen/golf-app/issues/47). Du kan nå bin
 #### Changed
 - [app/admin/games/new/page.tsx](app/admin/games/new/page.tsx) leser nå `?tournament_id=` og pre-fyller `game_mode='singles_matchplay'` + `lock_game_mode=true` + auto-genererer match-label «Singles N». Submit redirecter tilbake til `/admin/cup/[id]` med revalidateTag for `tournament-${id}`. Hidden inputs i både `GameForm` og `GameWizard.FormDataInputs` slik at både wizard-mode og full-mode-form-en sender med cup-koblingen.
 - `lib/database.types.ts` regenerert med nye `tournaments`-rad + `games.tournament_id` / `tournament_match_label`-kolonner.
-
 </details>
+
 
 ---
 
@@ -2367,8 +2367,8 @@ Issue [#182](https://github.com/jdlarssen/golf-app/issues/182). Notifikasjons-sy
 #### Notes
 - `inviteSchema` (`lib/notifications/types.ts`) er uendret — `game_id` forblir strikt ikke-null. Friend-invite og admin-invite uten spill-kontekst fyrer fortsatt kun e-post (ingen in-app-notifikasjon).
 - Card-rendering er server-fetcha (limit 200 registrerte brukere) — kompis-skala fyller aldri taket, klubb-skala kan trenge paginering senere.
-
 </details>
+
 
 ---
 
@@ -2396,8 +2396,8 @@ Lar nye besøkende få OTP-kode på `/login` uten admin-mellomledd, bak en kill-
 - Trusted-creator-allowlisten utvides IKKE. Self-registrerte uten admin/trusted-status får ingen mulighet til å opprette spill selv før [#22](https://github.com/jdlarssen/golf-app/issues/22) (RLS-revisjon) lander. Det er bevisst — onboarding-kanalen åpnes først, RLS-åpning er sin egen jobb.
 - Ingen DB-migrasjon. Gjenbruker eksisterende `admin_action_rate_limit`-tabell og `consume_admin_rate_limit`-RPC fra `0026_admin_action_rate_limit.sql`. Bucket-strengen er generisk.
 - Cloudflare Turnstile / CAPTCHA er bevisst utelatt (overkill for current scale). Egen kontrakt hvis abuse-vinduer viser at rate-limit alene ikke holder.
-
 </details>
+
 
 ---
 
@@ -2434,10 +2434,9 @@ Fase 4 (og siste fase) av epic [#223](https://github.com/jdlarssen/golf-app/issu
 
 #### Fixed
 - Inline `requireAdmin`-helper i [app/admin/courses/[id]/edit/actions.ts](app/admin/courses/%5Bid%5D/edit/actions.ts) er fjernet til fordel for delt helper i `lib/admin/auth.ts` — én sannhetskilde for rolle-gating på courses-flyten.
-
 </details>
 
-</details>
+
 
 ---
 
@@ -2507,8 +2506,8 @@ Fase 3 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Soft-ar
 - Per-kjønn-overstyring av hull-par fortsetter som egen Fase når det blir reelt smerte-punkt. Krever endring i alle 4 mode-implementasjoner som leser `hole.par` direkte.
 
 </details>
-
 </details>
+
 
 ---
 
@@ -2563,8 +2562,8 @@ Fase 2 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Audit-f
 - Per-kjønn-overstyring av hull-par ble vurdert for Fase 2 men flyttet til egen Fase basert på scoring-code-impact-funn (krever endring i 4 mode-implementasjoner).
 
 </details>
-
 </details>
+
 
 ---
 
@@ -2601,13 +2600,13 @@ Fase 2 av epic [#223](https://github.com/jdlarssen/golf-app/issues/223). Audit-f
 - Out of scope for Fase 1: SI smart-preset, lengde-warning, audit-felter, archive-flow, eksplisitt tee-sletting-impact-warning. Senere faser i [#223](https://github.com/jdlarssen/golf-app/issues/223).
 
 </details>
-
 </details>
+</details>
+
 
 ---
 
 
-</details>
 
 <details>
 <summary><strong>Innboks, handicap & hurtig-oppsett — 10 serier</strong></summary>
@@ -2661,8 +2660,8 @@ Tørny husker nå om du spiller fra herretee, dametee eller juniortee, og foresl
 - `gender` er nullable bevisst — eksisterende brukere uten verdi forblir null til soft-prompt-en spørres. Auto-default i wizard faller tilbake til 'M' for null-gender (med mindre level=junior).
 
 </details>
-
 </details>
+
 
 ---
 
@@ -2707,8 +2706,8 @@ Tørny får sin egen kanal for å fortelle deg om nye funksjoner. Når noe er ut
 - Test-suite vokst fra 1031 → 1062 (+31 nye tester).
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.22.y — Hurtig-oppsett for nye spill (1 oppføring)</strong></summary>
@@ -2745,8 +2744,8 @@ Opprett-spill-flyten er omarbeidet til fire korte steg i stedet for én lang sid
 - Test-suite vokst fra 1022 → 1031 (+9 wizard-tester). Eksisterende GameForm-/actions-tester passerer uendret.
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.21.y — Sideturnering — 14 nye bonus-kategorier (1 oppføring)</strong></summary>
@@ -2784,8 +2783,8 @@ Sideturneringen vokser fra 27 til 41 kategorier. Nye bragder dekker albatross, h
 - Test-suite vokst fra 958 → 986 (+28 nye tester).
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.20.y — Handicap-chip på hjem-siden (1 oppføring)</strong></summary>
@@ -2812,8 +2811,8 @@ Handicapen din vises nå alltid øverst på hjem-siden så du ser hvor du står.
 - Test-suite vokst fra 979 → 986 (+7 nye chip-tester).
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.19.y — Handicap-sjekk før runden (1 oppføring)</strong></summary>
@@ -2848,8 +2847,8 @@ Spilleren får et inline-kort i venterommet før hvert spill hvis handicapen ikk
 - Test-suite vokst fra 947 → 979 (+32 nye tester: 10 staleness + 11 safeNext + utvidelser).
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.18.y — Lag-scorekort (1 oppføring)</strong></summary>
@@ -2883,8 +2882,8 @@ Scorekort-flaten viser nå begge spillerne side om side i alle lag-baserte spill
 - Test-suite vokst fra 924 → 947 (+23 nye tester: 7 scorecardTitle + 5 teamCaptain + 11 scorecardLayout).
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.17.y — Allowlist for trusted creators (1 oppføring)</strong></summary>
@@ -2916,8 +2915,8 @@ Mulighet for å la utvalgte spillere opprette egne turneringer uten å gjøre de
 - Test-suite: 13 nye tester (10 `isTrustedCreator`-unit + 3 trusted-creator actions-tester), 924 totalt grønne.
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.16.y — Texas scramble (5 oppføringer)</strong></summary>
@@ -3022,8 +3021,8 @@ Ny spillmodus for laget som vil spille sosialt — én ball per lag, alle slår 
 - WHS-tiered handicap-formel (35/15 for 2-mannslag, 25/20/15/10 for 4-mannslag) som alternativ til NGF-aggregatet kommer eventuelt som `mode_config.handicap_formula: 'whs_tiered' | 'ngf_aggregate'` i v2 hvis brukerne ber om det.
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.15.y — In-app innboks (5 oppføringer)</strong></summary>
@@ -3129,10 +3128,10 @@ Tørny får en innboks. Bjelle øverst-til-høyre på alle sider viser en champa
 - Test-suite vokst fra 786 → 837 (+51 nye Phase 2-tester).
 
 </details>
-
+</details>
 </details>
 
-</details>
+
 
 <details>
 <summary><strong>Spillmodi-grunnmuren & verktøy — 10 serier</strong></summary>
@@ -3242,8 +3241,8 @@ To uavhengige arbeidsstrømmer landet samme dag og delte versjonsnummer. Begge e
 
 #### Notes
 - `HoleClient`-komponenten støtter allerede multi-player rendering (`cards.map` itererer over alle innsendte spillere, `onSetScore(playerId, value)` godtar hvilken som helst userId), så ingen client-side endringer var nødvendige. Den eksisterende «Bekreft alle scorer»-bekreftelses-gaten på BottomActionBar gjelder fortsatt — marker må fylle inn for alle spillerne før «Neste hull» aktiveres, samme regel som best ball.
-
 </details>
+
 
 <details>
 <summary><strong>1.13.y — Slagspill (3 entries)</strong></summary>
@@ -3311,8 +3310,8 @@ Klassisk slagspill (solo strokeplay netto) er nå tilgjengelig. Velg Slagspill s
 - TeamSizeSelector beholder `ENABLED_COMBOS.solo_strokeplay_netto = Set([1])` defensivt — `Record<GameMode, …>` krever alle keys, og Par/4-mann markeres som «kommer snart» istedenfor å fjernes helt (skaper en eksplisitt roadmap-signal for fremtidige varianter).
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.12.y — Matchplay (3 oppføringer)</strong></summary>
@@ -3399,8 +3398,8 @@ Matchplay-turneringer mellom to spillere er nå tilgjengelig. Velg Matchplay som
 - TeamSizeSelector beholder `ENABLED_COMBOS.singles_matchplay = Set([1])` defensivt selv om komponenten ikke rendres for matchplay — TypeScript-en `Record<GameMode, …>` krever alle keys, og fjerning av entryen ville tvunget oss til `Partial<Record<>>`. Defensiv kode er trygt.
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.11.y — Par-stableford (3 oppføringer)</strong></summary>
@@ -3481,8 +3480,8 @@ Stableford-turneringer kan nå spilles som par (4BBB / fyrball). Velg Stableford
 - Drag-tilfeldig-knappen for par-stableford ble bevisst utelatt fra Phase 2 for å holde scope strammere — kan generaliseres til 2/4/6/8 spillere i en senere fase hvis det blir vondt UX.
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.10.y — Stableford spillerflyt (6 oppføringer)</strong></summary>
@@ -3595,8 +3594,8 @@ Stableford-turneringer er nå spillbare end-to-end. Scorecard viser per-hull-poe
 - Side-tournaments (LD/CTP) for stableford verifiseres i fase 7 — sannsynligvis bare copy-justering siden eksisterende UI bruker flat spiller-velger uten lag-kontekst.
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.9.y — Valgbar spillmodus (1 oppføring)</strong></summary>
@@ -3619,8 +3618,8 @@ Tørny er ikke lenger låst til 4 lag à 2 spillere best-ball. Admin-flyten vise
 #### Notes
 - Aktive kombinasjoner i v1.9.0: Stableford + Solo (kommer ende-til-ende i v1.10.0) og Best ball netto + Par (dagens, men nå eksplisitt valgt). Par-stableford og 4-mann-stableford forberedes som disabled tiles — ingen DB-migrasjon nødvendig når en kombinasjon aktiveres, bare en mapping-utvidelse i `TeamSizeSelector.ENABLED_COMBOS`.
 - Påfølgende fase 5/7 av epic #41 wires spillerflyten (scorecard + leaderboard) for stableford.
-
 </details>
+
 
 <details>
 <summary><strong>1.8.y — Mørk modus (12 oppføringer)</strong></summary>
@@ -3802,8 +3801,8 @@ Tørny følger nå mobilens mørk-modus-innstilling. Har du iPhonen på Dark App
 - Migrering av hardkodede farger til semantiske tokens ble gjort i v1.7.0 (refactor-PR #111, 22 filer / ~95 LOC). Visual-verifikasjon i dark mode skjedde via preview-deploy av denne PR-en — der oppdaget vi at `var(--primary)`-bg-surfaces ble uleselige i dark (sage primary + lys foreground), derav `--surface-strong`-tokenet.
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.7.y — Spiller-picker for klubbskala (1 oppføring)</strong></summary>
@@ -3823,8 +3822,8 @@ Spill-opprett-formen har nå et søkefelt over spiller-listen. Klar for 100+ spi
 - ARIA-label på søkefelt + chip-knapper. Tab-rekkefølge: chips → søk → filtrert liste. Tap-targets ≥44px.
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.6.y — Eksport (1 oppføring)</strong></summary>
@@ -3843,8 +3842,8 @@ Du kan nå laste ned resultatet fra ferdigspilte spill som CSV — praktisk for 
 - «Last ned resultat (CSV)»-knapp på finished-leaderboarden (`State4View.tsx`), under team-listen. Filnavn er ASCII-safe (`torny-{game-id}-{YYYY-MM-DD}.csv`) for å unngå browser-quirks med æøå i `Content-Disposition`.
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.5.y — Klubbstatistikker (3 oppføringer)</strong></summary>
@@ -3904,10 +3903,10 @@ Vinnerliste og «mest aktive»-listen fyller seg automatisk fra ferdigspilte spi
 - Bulk-fetch i fire round-trips (games, game_players, course_holes, scores) + in-memory aggregering. Skalerer fint for nåværende volum (<1000 finished games); kan flyttes til en SQL-view ved klubbskala.
 
 </details>
-
+</details>
 </details>
 
-</details>
+
 
 <details>
 <summary><strong>Stabil lansering & tee-bokser — 5 serier</strong></summary>
@@ -3977,8 +3976,8 @@ Hver fysisk tee legges nå inn én gang med valgfrie ratings pr. gender (Herrer 
 - «Tee for damer»-dropdown i `GameForm` — én tee-dropdown nå.
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>1.3.y — Mixed-gender tee-bokser (1 oppføring)</strong></summary>
@@ -4008,8 +4007,8 @@ Herrer og damer kan nå spille fra ulike tees i samme runde med korrekt course h
 #### Notes
 - Oppfølger-issue [#92](https://github.com/jdlarssen/golf-app/issues/92) — `users.gender` + `users.level` for auto-default av M/D-toggle.
 - Oppfølger-issue [#93](https://github.com/jdlarssen/golf-app/issues/93) — pre-existing bug der tees 6-7 silent droppes i bane-actions (server-loop går bare 0..5).
-
 </details>
+
 
 <details>
 <summary><strong>1.2.y — Utvidet sideturnerings-poeng (1 oppføring)</strong></summary>
@@ -4042,10 +4041,9 @@ Sideturneringen får 12 nye kategorier og 3 stackbare achievements (Turkey/Solid
 - Regelsettet er team-size-aware (1v1, 2v2, 4v4) klar for [#41](https://github.com/jdlarssen/golf-app/issues/41), men admin-UI lager fortsatt kun 2v2-spill til den epicen lander.
 - Manuelle bragder (chip-ins, sand saves, one-putts, wow-shot) er ute av scope — egen leveranse v1.3.x med ny per-hull-UI for registrering.
 - Edge-case test-dekning (same-team-tie dedup + mixed-size game team-aggregate) sporet som follow-up i [#90](https://github.com/jdlarssen/golf-app/issues/90).
-
 </details>
 
-</details>
+
 
 <details>
 <summary><strong>1.1.y — Sideturnering (11 oppføringer)</strong></summary>
@@ -4172,7 +4170,6 @@ Første nye funksjon shipped etter v1.0.0. Lag kan nå konkurrere parallelt med 
 - `HoleWinGrid`-komponenten (3×6-rutenett over hele runden — kan revurderes i senere iterasjon hvis savnet)
 - `CategoryRow`, `SlotsSection`, `collectCategoryWinners` (per-kategori-seksjonen erstattet av per-team-collapse)
 
-</details>
 
 ### [1.1.2] - 2026-05-16
 
@@ -4218,10 +4215,9 @@ Første nye funksjon shipped etter v1.0.0. Lag kan nå konkurrere parallelt med 
 #### Changed
 - `app/admin/games/[id]/page.tsx` henter nå sideturnerings-config og passerer det til `EndGameButton`.
 - `app/games/[id]/leaderboard/page.tsx` henter `game_side_winners` når `status=finished AND side_tournament_enabled`, og bygger `SideTournamentInput` fra eksisterende score-data (gjenbruker `computeLeaderboard` for å unngå dobbel best-ball-beregning).
-
 </details>
 
-</details>
+
 
 <details>
 <summary><strong>1.0.x — Første stabile lansering (11 oppføringer)</strong></summary>
@@ -4390,10 +4386,10 @@ Hovedgrep:
 - Opprinnelig planlagt per-bruker `display_pref`-toggle ble strøket (erstattet av navne-reveal-mekanikken som er enklere og mer dramatisk).
 
 </details>
-
+</details>
 </details>
 
-</details>
+
 
 <details>
 <summary><strong>Pre-stabil historikk — 9 serier</strong></summary>
@@ -4954,8 +4950,8 @@ Mail begge veier rundt godkjennings-flyten: admin får mail når en spiller leve
 - **Initial game-fetch i `endGame`** inkluderer nå `name`-feltet (trengs som subject + body i mailen). Marginal data-overhead, sparer en re-fetch.
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>0.9.x — Sync-feedback under runden (5 oppføringer)</strong></summary>
@@ -5058,8 +5054,8 @@ Hvis et slag ikke kommer fram til serveren, sier appen ifra. Ny sticky banner vi
 - **Retry-knapp**: minimum 500ms feedback-tid via `Promise.all([drainQueue(), sleep(500)])` så «Sender…»-state ikke flasher forbi når retry blir no-op'et av `inFlight`-guarden i syncWorker. Brukeren får visuell bekreftelse på at klikket ble registrert.
 
 </details>
-
 </details>
+
 
 <details>
 <summary><strong>0.8.x — Sletting og «trekk tilbake»-flyt (27 oppføringer)</strong></summary>
@@ -5158,6 +5154,7 @@ Dedikert slett-side for spillere, fulgt av tre iterasjoner på «trekk tilbake»
 - **Block-betingelser** på server-side: kan ikke slette deg selv (self-protect), kan ikke slette en spiller som har en eller flere `game_players`-rader.
 
 </details>
+</details>
 
 <details>
 <summary><strong>0.7.x — Bruker-detalj-redigering (1 oppføring)</strong></summary>
@@ -5176,8 +5173,8 @@ Klikk på en spiller i admin for å redigere navn, kallenavn og handicap. Fareso
 #### Changed
 
 - **RLS:** Ny policy `users admin update` lar admin oppdatere andre bruker-rader (tidligere kun egen rad). Migrasjonen heter `0015_admin_user_management` (filnavn-kollisjon med `0014_pending_users` ble rensket opp ved merge).
-
 </details>
+
 
 <details>
 <summary><strong>0.6.x — Samlet spilleradministrasjon (1 oppføring)</strong></summary>
@@ -5202,8 +5199,8 @@ Erstatter den gamle `/admin/invitations`-flata med `/admin/spillere`, som samler
 #### Removed
 
 - **Rute `/admin/invitations`** — funksjonaliteten finnes nå på `/admin/spillere`.
-
 </details>
+
 
 <details>
 <summary><strong>0.5.x — Pending-invitees-integrasjon (11 oppføringer)</strong></summary>
@@ -5287,8 +5284,8 @@ Ventende invitéer kan nå velges til lag og flight før de selv har logget inn.
 
 #### Added
 - Inviterte spillere som ikke har logget inn ennå dukker opp i game-picker-en med en gul `Venter`-pille. Admin kan velge dem til lag og flight og lagre utkast.
-
 </details>
+
 
 <details>
 <summary><strong>0.4.x — OTP-kode-innlogging (4 oppføringer)</strong></summary>
@@ -5331,8 +5328,8 @@ Bytte fra magic-link til 6–8-sifret kode i mail, som fjernet to iOS-PWA-blokke
 #### Removed
 
 - **Magic-link-URL-flyten.** `/auth/callback`-route-en redirecter alle gamle klikk til `/login?error=link_expired` i en 30-dagers overgangsperiode. Etter 2026-06-13 fjernes route-en helt (tracked in TODO.md).
-
 </details>
+
 
 <details>
 <summary><strong>0.3.x — Logo og pre-OTP-fixes (4 oppføringer)</strong></summary>
@@ -5381,9 +5378,7 @@ Tørny fikk sin egen visuelle identitet (wordmark med champagne-prikk på login 
 
 - «Logg inn»-overskriften på `/login`. Hero-en + «Send meg lenke»-knappen + hjelpeteksten gir nok kontekst.
 
-</details>
 
-</details>
 
 ## [0.2.0] - 2026-05-12
 
@@ -5415,6 +5410,7 @@ Versjonen `0.1.0` dekker all utvikling fra Phase 0 til og med Phase 12.5. Ingen 
 - **Phase 12.5**: draft-mode på venterom med progressive disclosure, fargeharmonisering for status-bannere
 
 Full historikk: `git log` mellom prosjektstart og commit `02cf8c0`.
-
-
 </details>
+</details>
+
+
