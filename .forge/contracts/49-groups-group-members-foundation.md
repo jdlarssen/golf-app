@@ -142,21 +142,32 @@ Etter at migrasjonen er applyt: regenerer/oppdater `lib/database.types.ts` med `
 - Plassering av `revoke/grant` (samlet nederst vs. ved hver funksjon) — speil 0071.
 
 ## Success Criteria
-- [ ] **C1 — Tabeller + enum finnes:** `groups` (id, name, created_by, created_at) og
+- [x] **C1 — Tabeller + enum finnes:** `groups` (id, name, created_by, created_at) og
   `group_members` (group_id, user_id, role, joined_at; PK `(group_id,user_id)`) eksisterer med RLS
   enabled; enum `group_role` = {owner,admin,member}. *Verifiser:* MCP `execute_sql` mot
   `information_schema` + `pg_policies.rowsecurity`.
-- [ ] **C2 — Helpere + policyer finnes:** `is_group_member(uuid)` og `is_group_admin(uuid)` er
+  → **Bevis (SQL):** `C1_tables_rls` = begge `rls:true`; `C1_enum_values` = `["owner","admin","member"]`;
+  `C1_columns` = alle 8 kolonner med riktige typer (`group_members.role` = USER-DEFINED enum).
+- [x] **C2 — Helpere + policyer finnes:** `is_group_member(uuid)` og `is_group_admin(uuid)` er
   `security definer`, EXECUTE revoked fra `anon`/`public`, granted til `authenticated`; 4 policyer
   per tabell (select/insert/update/delete). *Verifiser:* `pg_proc` + `pg_policies`-query.
-- [ ] **C3 — Mange-til-mange mulig:** ingen unik/PK-constraint på `group_members.user_id` alene
+  → **Bevis (SQL):** `C2_helpers_secdef` = begge `true`; `C2_anon_can_execute_any` = `false`;
+  `C2_authenticated_can_execute_all` = `true`; `C2_policy_count_per_table` = `{groups:4, group_members:4}`.
+- [x] **C3 — Mange-til-mange mulig:** ingen unik/PK-constraint på `group_members.user_id` alene
   (kun samlet PK). *Verifiser:* `pg_constraint`/`pg_indexes`-query viser ingen `user_id`-unik.
-- [ ] **C4 — Backfill korrekt:** nøyaktig 1 gruppe; `count(group_members) == count(users)` (13);
+  → **Bevis (SQL):** `C3_user_id_alone_unique` = `0`.
+- [x] **C4 — Backfill korrekt:** nøyaktig 1 gruppe; `count(group_members) == count(users)` (13);
   nøyaktig 1 rad med `role='owner'` og den = den admin-brukeren. *Verifiser:* aggregat-SQL.
-- [ ] **C5 — Typer kompilerer:** `lib/database.types.ts` inneholder `groups`, `group_members`,
-  `group_role`; `npm run build` passerer. *Verifiser:* build-output + grep i fila.
-- [ ] **C6 — Ingen regresjon:** eksisterende tabeller/RLS urørt, full test-suite grønn.
+  → **Bevis (SQL):** `group_count:1`, `member_count:13`, `user_count:13`, `members_eq_users:true`,
+  `owner_count:1`, `owner_is_admin:true`, `group_name:"Tørny"`.
+- [x] **C5 — Typer kompilerer:** `lib/database.types.ts` inneholder `groups`, `group_members`,
+  `group_role`; bygg/typecheck passerer. *Verifiser:* tsc-output + grep i fila.
+  → **Bevis:** `npx tsc --noEmit` = `TSC_OK`; fila har `group_members:`/`groups:`-blokker (+67 linjer)
+  og `group_role` i begge enum-blokkene (type + Constants).
+- [x] **C6 — Ingen regresjon:** eksisterende tabeller/RLS urørt, full test-suite grønn.
   *Verifiser:* `git diff` rører ingen eksisterende `.sql`; `npx vitest run` grønn.
+  → **Bevis:** `git status` viser kun `lib/database.types.ts` endret (+ ny `0074_*.sql`); ingen
+  eksisterende `.sql` rørt. `npx vitest run` = **219 filer / 2662 tester passed**.
 
 ## Gates
 - [ ] `npm run build` passerer (tsc + Next — fanger types-brudd / exhaustive-switch, jf. tsc-gate-fella).
