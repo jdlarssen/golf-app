@@ -315,11 +315,11 @@ async function TilesGrid() {
       meta: 'Styr spillformene i wizarden',
       icon: 'formats',
     },
-    // #442: klubber — opprett og styr klubber.
+    // #50: klubber — admin governance (opprett og styr klubber).
     {
       label: 'Klubber',
-      href: '/klubber',
-      meta: 'Klubbene dine',
+      href: '/admin/klubber',
+      meta: 'Opprett og styr klubber',
       icon: 'laurbaer',
     },
   ];

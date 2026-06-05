@@ -21,6 +21,26 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#50](https://github.com/jdlarssen/golf-app/issues/50) (milepæl Klubb-skala). Klubber settes nå opp via en avtale med Tørny. Eieren kan utnevne med-admins, og hver klubb har et medlemstak og en varighet.
 
+### [1.80.1] - 2026-06-05 · #50
+
+> Som administrator oppretter du nå klubber fra Sekretariatet: du velger eier, setter et medlemstak og en varighet (uendelig eller en sluttdato), og kan justere avtalen senere.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#50](https://github.com/jdlarssen/golf-app/issues/50) (milepæl Klubb-skala). Admin-governance-flate for klubber.
+
+#### Added
+- [`app/admin/klubber/page.tsx`](app/admin/klubber/page.tsx) — liste over alle klubber (eier, medlemstall/-tak, status-badge Aktiv/Utløper/Utløpt) + «Opprett klubb»-dør.
+- [`app/admin/klubber/ny/page.tsx`](app/admin/klubber/ny/page.tsx) + [`actions.ts`](app/admin/klubber/ny/actions.ts) — opprett-klubb-skjema (navn, eier-e-post, medlemstak, varighet) → `admin_create_club`-RPC. `owner_not_found` mappes til en vennlig melding (klubben opprettes ikke).
+- [`app/admin/klubber/[id]/page.tsx`](app/admin/klubber/[id]/page.tsx) + [`actions.ts`](app/admin/klubber/[id]/actions.ts) — klubb-detalj + «Avtale»-redigering (medlemstak + valid_until). `updateClubTerms` gater `is_admin` i kode før admin-client-update.
+- [`lib/clubs/getAllClubsForAdmin.ts`](lib/clubs/getAllClubsForAdmin.ts) + [`getClubForAdmin.ts`](lib/clubs/getClubForAdmin.ts) — admin-client-helpere (ser klubber admin ikke er medlem av). [`lib/clubs/clubStatus.ts`](lib/clubs/clubStatus.ts) — delt `isClubExpired` + status-badge.
+
+#### Changed
+- [`app/admin/page.tsx`](app/admin/page.tsx) — «Klubber»-tile i admin-grenen peker nå til `/admin/klubber` (governance); spiller-grenen er uendret (`/klubber`).
+
+</details>
+
 ### [1.80.0] - 2026-06-05 · #50
 
 > Klubber settes nå opp via en avtale. Vil du ha en egen klubb for laget ditt, sender du en e-post til klubb@tornygolf.no, så fikser vi resten.
