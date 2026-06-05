@@ -7,7 +7,6 @@ import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { Button } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { deleteTournament } from '@/lib/cup/actions';
 
 type Params = Promise<{ id: string }>;
@@ -43,7 +42,6 @@ export default async function DeleteCupPage({
 
   const supabase = await getServerClient();
   await requireAdmin(supabase);
-  const userId = await getProxyVerifiedUserId();
 
   const { data: cup } = await supabase
     .from('tournaments')
@@ -70,8 +68,7 @@ export default async function DeleteCupPage({
     <AdminShell>
       <TopBar
         backHref={`/admin/cup/${id}`}
-        kicker="Sekretariatet"
-        userId={userId}
+        kicker="Klubbhuset"
       />
       <BrassRibbon kicker="Bekreft sletting" />
 

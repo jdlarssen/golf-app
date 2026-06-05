@@ -5,7 +5,6 @@ import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getCupSnapshot } from '@/lib/cup/getCupSnapshot';
 import { GenerateMatchesWizard } from './GenerateMatchesWizard';
 
@@ -51,7 +50,6 @@ export default async function GenerateMatchesPage({ params }: { params: Params }
 
   const supabase = await getServerClient();
   await requireAdmin(supabase);
-  const userId = await getProxyVerifiedUserId();
 
   const snapshot = await getCupSnapshot(id);
   if (!snapshot) notFound();
@@ -99,7 +97,7 @@ export default async function GenerateMatchesPage({ params }: { params: Params }
 
   return (
     <AdminShell>
-      <TopBar backHref={`/admin/cup/${id}`} kicker="Sekretariatet" userId={userId} />
+      <TopBar backHref={`/admin/cup/${id}`} kicker="Klubbhuset" />
       <BrassRibbon kicker={`Cup · ${tournament.name}`} />
       <PageHeader
         title="Generer matcher"

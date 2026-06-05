@@ -41,7 +41,7 @@ export default async function AvsluttLikevelPage({
   const detailPath = `/admin/games/${gameId}`;
 
   const supabase = await getServerClient();
-  const user = await requireAdmin(supabase);
+  await requireAdmin(supabase);
 
   const { data: game } = await supabase
     .from('games')
@@ -116,7 +116,6 @@ export default async function AvsluttLikevelPage({
       <TopBar
         backHref={detailPath}
         kicker="Avslutt spillet"
-        userId={user.userId}
       />
       <PageHeader
         title="Avslutt likevel?"

@@ -29,7 +29,7 @@ export default async function TrekkSpillerPage({ params }: { params: Params }) {
   const detailPath = `/admin/games/${gameId}`;
 
   const supabase = await getServerClient();
-  const adminUser = await requireAdmin(supabase);
+  await requireAdmin(supabase);
 
   const { data: game } = await supabase
     .from('games')
@@ -80,7 +80,6 @@ export default async function TrekkSpillerPage({ params }: { params: Params }) {
       <TopBar
         backHref={detailPath}
         kicker="Trekk spiller"
-        userId={adminUser.userId}
       />
       <PageHeader
         title="Trekk spiller?"

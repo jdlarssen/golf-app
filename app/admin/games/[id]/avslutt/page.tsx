@@ -40,7 +40,7 @@ export default async function AvsluttPage({
   // Self-gate for Fase 4 chunk 2 layout-loosening (#223). Replaces the
   // page-local inline `requireAdmin()` wrapper that previously did the
   // auth.getUser + users.is_admin round-trip inline.
-  const user = await requireAdmin(supabase);
+  await requireAdmin(supabase);
 
   const { data: game } = await supabase
     .from('games')
@@ -107,7 +107,6 @@ export default async function AvsluttPage({
       <TopBar
         backHref={`/admin/games/${gameId}`}
         kicker="Avslutt spillet"
-        userId={user.userId}
       />
       <PageHeader
         title="Avslutt spill"

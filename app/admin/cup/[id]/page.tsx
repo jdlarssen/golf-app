@@ -11,7 +11,6 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getCupSnapshot, type CupRosterPlayer } from '@/lib/cup/getCupSnapshot';
 import { startTournament, finishTournament } from '@/lib/cup/actions';
 
@@ -80,7 +79,6 @@ export default async function CupDetailPage({
 
   const supabase = await getServerClient();
   await requireAdmin(supabase);
-  const userId = await getProxyVerifiedUserId();
 
   const snapshot = await getCupSnapshot(id);
   if (!snapshot) notFound();
@@ -96,7 +94,7 @@ export default async function CupDetailPage({
 
   return (
     <AdminShell>
-      <TopBar backHref="/admin/cup" kicker="Sekretariatet" userId={userId} />
+      <TopBar backHref="/admin/cup" kicker="Klubbhuset" />
       <BrassRibbon kicker={`Cup · ${statusLabel}`} />
       <PageHeader
         title={tournament.name}

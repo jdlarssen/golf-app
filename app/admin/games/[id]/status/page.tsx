@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
-import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
@@ -79,7 +78,6 @@ export default async function GameStatusPage({
 
   const supabase = await getServerClient();
   await requireAdmin(supabase);
-  const userId = await getProxyVerifiedUserId();
 
   const { data: game, error: gameError } = await supabase
     .from('games')
@@ -160,7 +158,6 @@ export default async function GameStatusPage({
       <TopBar
         backHref={`/admin/games/${id}`}
         kicker="Spillerstatus"
-        userId={userId}
       />
 
       <BrassRibbon kicker="Spillerstatus" />

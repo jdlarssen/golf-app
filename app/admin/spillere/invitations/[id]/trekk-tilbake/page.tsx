@@ -7,7 +7,6 @@ import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { Button } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { withdrawInvitation } from '../../../actions';
-import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 
 type Params = Promise<{ id: string }>;
 
@@ -31,11 +30,9 @@ export default async function WithdrawInvitationPage({
     redirect('/admin/spillere?error=withdraw_failed');
   }
 
-  const userId = await getProxyVerifiedUserId();
-
   return (
     <AdminShell>
-      <TopBar backHref="/admin/spillere" kicker="Sekretariatet" userId={userId} />
+      <TopBar backHref="/admin/spillere" kicker="Klubbhuset" />
 
       <BrassRibbon kicker="Bekreft tilbaketrekking" />
 

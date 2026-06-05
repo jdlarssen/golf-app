@@ -243,7 +243,6 @@ export default async function GameDetailPage({
       <TopBar
         backHref="/admin/games"
         kicker="Spill · protokoll"
-        userId={userId}
       />
 
       <BrassRibbon kicker="Spill · protokoll" />

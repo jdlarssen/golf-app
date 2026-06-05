@@ -7,7 +7,6 @@ import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { MiniRibbon } from '@/components/ui/MiniRibbon';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { PåmeldingerClient } from './PåmeldingerClient';
 import type { RequestStatus, RequestRow, TabKey } from './types';
 
@@ -153,7 +152,6 @@ export default async function PåmeldingerPage({
     counts[row.status] += 1;
   }
 
-  const userId = await getProxyVerifiedUserId();
   const statusBanner = STATUS_BANNERS[first(sp.status) ?? ''];
   const errorCode = first(sp.error);
   const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
@@ -166,7 +164,6 @@ export default async function PåmeldingerPage({
       <TopBar
         backHref={`/admin/games/${id}`}
         kicker="Påmeldinger"
-        userId={userId}
       />
 
       <BrassRibbon kicker="Selv-påmelding" />

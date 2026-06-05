@@ -50,7 +50,7 @@ export default async function LanseringerPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const { userId } = await requireAdminContext();
+  await requireAdminContext();
   const params = await searchParams;
 
   const publishedFlag = first(params.published);
@@ -72,7 +72,7 @@ export default async function LanseringerPage({
 
   return (
     <AdminShell>
-      <TopBar backHref="/admin" kicker="Sekretariatet" userId={userId} />
+      <TopBar backHref="/admin" kicker="Klubbhuset" />
 
       <div className="px-1">
         <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">

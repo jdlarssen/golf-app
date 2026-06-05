@@ -8,7 +8,6 @@ import { Banner } from '@/components/ui/Banner';
 import { Card } from '@/components/ui/Card';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
-import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 
 type SearchParams = Promise<{
   error?: string | string[];
@@ -56,7 +55,6 @@ export default async function CupListPage({
 
   const supabase = await getServerClient();
   await requireAdmin(supabase);
-  const userId = await getProxyVerifiedUserId();
 
   const { data: cups } = await supabase
     .from('tournaments')
@@ -78,7 +76,7 @@ export default async function CupListPage({
 
   return (
     <AdminShell>
-      <TopBar backHref="/admin" kicker="Sekretariatet" userId={userId} />
+      <TopBar backHref="/admin" kicker="Klubbhuset" />
       <BrassRibbon kicker="Cuper" />
       <PageHeader
         title="Cuper"

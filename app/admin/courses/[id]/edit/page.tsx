@@ -14,7 +14,6 @@ import {
   ArchivedTeesSection,
   type ArchivedTeeRow,
 } from './ArchivedTeesSection';
-import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { formatShortDateNb } from '@/lib/format/date';
 import { displayName, type DisplayNameUser } from '@/lib/format/displayName';
 import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
@@ -131,14 +130,11 @@ export default async function EditCoursePage({
 
   const archivedTees = await getArchivedTees(supabase, id);
 
-  const userId = await getProxyVerifiedUserId();
-
   return (
     <AdminShell>
       <TopBar
         backHref="/admin/courses"
         kicker="Baner · protokoll"
-        userId={userId}
       />
 
       <BrassRibbon kicker="Rediger bane" />

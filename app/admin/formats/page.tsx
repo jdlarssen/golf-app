@@ -7,7 +7,6 @@ import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Banner } from '@/components/ui/Banner';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getAllFormatsWithMappings } from '@/lib/formats/getAllFormatsWithMappings';
 import { getFormatMappingAudit } from '@/lib/formats/audit';
 import { FormatsManager } from './FormatsManager';
@@ -47,7 +46,6 @@ export default async function AdminFormatsPage({
 }) {
   const supabase = await getServerClient();
   await requireAdmin(supabase);
-  const userId = await getProxyVerifiedUserId();
 
   const sp = await searchParams;
   const errorCode = first(sp.error);
@@ -60,7 +58,7 @@ export default async function AdminFormatsPage({
 
   return (
     <AdminShell>
-      <TopBar backHref="/admin" kicker="Sekretariatet" userId={userId} />
+      <TopBar backHref="/admin" kicker="Klubbhuset" />
       <BrassRibbon kicker="Format-mapping" />
       <PageHeader
         title="Format-mapping"

@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 export default function AdminLoading() {
   return (
     <AdminShell>
-      <TopBar backHref="/" kicker="Sekretariatet" />
+      <TopBar backHref="/" kicker="Klubbhuset" />
 
       <Skeleton className="mb-4 h-[88px] rounded-2xl" />
 

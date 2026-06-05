@@ -7,7 +7,6 @@ import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { Button } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { deleteCourse } from '../edit/actions';
 
 type Params = Promise<{ id: string }>;
@@ -78,14 +77,12 @@ export default async function SlettBanePage({
   const inUse = gameCount > 0;
 
   const deleteAction = deleteCourse.bind(null, id);
-  const userId = await getProxyVerifiedUserId();
 
   return (
     <AdminShell>
       <TopBar
         backHref={`/admin/courses/${id}/edit`}
-        kicker="Sekretariatet"
-        userId={userId}
+        kicker="Klubbhuset"
       />
 
       <BrassRibbon kicker="Bekreft sletting" />

@@ -80,7 +80,6 @@ export default async function NewGamePage({
   const supabase = await getServerClient();
   const role = await getRoleContext(supabase);
   if (!role.isAdmin) redirect('/opprett-spill');
-  const userId = role.userId;
 
   const sp = await searchParams;
   const errorMessage = buildErrorMessage(first(sp.error), first(sp.emails));
@@ -107,7 +106,6 @@ export default async function NewGamePage({
       <TopBar
         backHref="/admin/games"
         kicker="Spill · protokoll"
-        userId={userId}
       />
 
       <BrassRibbon kicker="Nytt spill" />

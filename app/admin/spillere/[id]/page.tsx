@@ -109,8 +109,7 @@ export default async function PlayerDetailPage({
     <AdminShell>
       <TopBar
         backHref="/admin/spillere"
-        kicker="Sekretariatet"
-        userId={adminUserId}
+        kicker="Klubbhuset"
       />
 
       <BrassRibbon kicker="Spillerprofil" />

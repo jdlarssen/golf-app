@@ -9,7 +9,6 @@ import { LedgerHeader } from '@/components/admin/LedgerHeader';
 import { BaneIcon } from '@/components/icons';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { TopBar } from '@/components/ui/TopBar';
-import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
 import { CoursesLedgerClient } from './CoursesLedgerClient';
 import { deriveCourseItem, type CourseRow } from './derive';
@@ -82,13 +81,12 @@ export default async function CoursesPage({
 
   const statusFn = status ? STATUS_MESSAGES[status] : undefined;
   const statusMessage = statusFn ? statusFn(name) : undefined;
-  const userId = await getProxyVerifiedUserId();
 
   return (
     <AdminShell>
       <TopBar
         backHref="/admin"
-        kicker="Sekretariatet"
+        kicker="Klubbhuset"
         action={
           <SmartLink
             href="/admin/courses/new"
@@ -97,7 +95,6 @@ export default async function CoursesPage({
             + Ny
           </SmartLink>
         }
-        userId={userId}
       />
 
       <BrassRibbon kicker="Baner · katalog" />
