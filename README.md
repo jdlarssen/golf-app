@@ -21,7 +21,8 @@ It's invite-only: players sign in with a one-time code by mail, with no open sig
 - A leaderboard that updates live while your flight taps scores.
 - Offline-first scoring. Tap in a dead spot on the course and it syncs once your phone has signal again.
 - A side tournament you can bolt onto any game: a points race across the round, plus longest-drive and closest-to-pin contests.
-- An inbox for invitations, peer approvals, submitted scorecards, and finished games. Mail only goes out when you're not already in the app.
+- Clubs you create and run. Gather people in a named club, then set up a round for it: every member finds it under "Finn turneringer" and joins straight away, even when the round would otherwise be private. Add members by mail or share a join link and approve the requests.
+- An inbox for invitations, peer approvals, submitted scorecards, finished games, and requests to join your club. Mail only goes out when you're not already in the app.
 - Installable on your home screen. It opens like a native app, with no browser bar on top.
 - GDPR self-service. Export or delete your data from your profile page without emailing anyone.
 
