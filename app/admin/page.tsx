@@ -11,6 +11,7 @@ import {
   FlaggIcon,
   FormatsIcon,
   KonvoluttIcon,
+  LaurbaerIcon,
   PokalIcon,
   SparkleIcon,
 } from '@/components/icons';
@@ -182,7 +183,7 @@ function GreetingSkeleton({ dateLine }: { dateLine: string }) {
 
 // ─── Tile grid ───────────────────────────────────────────────────────────
 
-type TileIconKind = 'flagg' | 'konvolutt' | 'bane' | 'pokal' | 'sparkle' | 'formats';
+type TileIconKind = 'flagg' | 'konvolutt' | 'bane' | 'pokal' | 'sparkle' | 'formats' | 'laurbaer';
 type Tile = {
   label: string;
   href: string;
@@ -314,6 +315,13 @@ async function TilesGrid() {
       meta: 'Styr spillformene i wizarden',
       icon: 'formats',
     },
+    // #442: klubber — opprett og styr klubber.
+    {
+      label: 'Klubber',
+      href: '/klubber',
+      meta: 'Klubbene dine',
+      icon: 'laurbaer',
+    },
   ];
 
   return <TileGridView tiles={tiles} />;
@@ -411,6 +419,13 @@ async function PlayerKlubbhus({ role }: { role: AdminRoleContext }) {
       accent: true,
     },
     banerTile,
+    // #442: klubber — opprett og styr klubber.
+    {
+      label: 'Klubber',
+      href: '/klubber',
+      meta: 'Klubbene dine',
+      icon: 'laurbaer',
+    },
   ];
 
   return (
@@ -670,5 +685,6 @@ function TileIcon({ kind }: { kind: TileIconKind }) {
   if (kind === 'bane') return <BaneIcon width={22} height={22} />;
   if (kind === 'sparkle') return <SparkleIcon width={22} height={22} />;
   if (kind === 'formats') return <FormatsIcon width={22} height={22} />;
+  if (kind === 'laurbaer') return <LaurbaerIcon width={22} height={22} />;
   return <PokalIcon width={22} height={22} />;
 }

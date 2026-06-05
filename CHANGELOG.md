@@ -17,9 +17,37 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.78.y — Klubbhuset, ett rom for alle
+## 1.79.y — Klubber: opprett og bli med
 
-Issue [#392](https://github.com/jdlarssen/golf-app/issues/392) (milepæl Klubb-skala). Klubbhuset blir en fast fane i bunn-nav-en som alle har. Det du møter inne avhenger av hvem du er.
+Issue [#442](https://github.com/jdlarssen/golf-app/issues/442) (milepæl Klubb-skala). Du kan nå lage egne klubber, samle folk og turneringer på ett sted, og la medlemmene finne klubbens runder.
+
+### [1.79.0] - 2026-06-05 · #442
+
+> Du kan nå lage en egen klubb i Tørny. Du blir eier med en gang, og klubben dukker opp under Klubbhuset. (Du kan lage inntil to klubber for nå.)
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#442](https://github.com/jdlarssen/golf-app/issues/442) (milepæl Klubb-skala). Første bruker-synlige bit av klubb-epicen: opprett-klubb-flyten + eierskap. Bygger på #49-fundamentet (groups/group_members).
+
+#### Added
+- Migrasjon [`0075_clubs_create_and_scope`](supabase/migrations/0075_clubs_create_and_scope.sql) — datafundamentet for hele klubb-serien: `games.group_id`, `groups.short_id`, `group_join_requests`-tabell, og SECURITY DEFINER-RPCene `create_club` / `add_club_member_by_email` / `decide_join_request`. `create_club` løser owner-bootstrap (oppretteren blir `owner` atomisk under RLS) og håndhever klubb-taket (2 opprettede per bruker).
+- [`app/klubber/page.tsx`](app/klubber/page.tsx) — «Klubbene dine»-liste med rolle-merke og en cap-gated «Opprett klubb»-dør.
+- [`app/klubber/ny/page.tsx`](app/klubber/ny/page.tsx) + [`actions.ts`](app/klubber/ny/actions.ts) — dedikert opprett-klubb-side; `createClub` kaller `create_club`-RPC og mapper RPC-feil (`club_cap_reached` / `name_too_long`) til vennlige norske meldinger.
+- [`lib/clubs/getMyClubs.ts`](lib/clubs/getMyClubs.ts) — henter brukerens klubb-medlemskap + antall opprettede klubber (cap-gating).
+- [`app/admin/page.tsx`](app/admin/page.tsx) — «Klubber»-tile i Klubbhuset, i både admin- og spiller-grenen.
+
+</details>
+
+---
+
+## Tidligere versjoner
+
+<details>
+<summary><strong>Klubb-skala: Klubbhuset & klubber (#392, #442) — 1 serie</strong></summary>
+
+<details>
+<summary><strong>1.78.y — Klubbhuset, ett rom for alle (3 oppføringer)</strong></summary>
 
 ### [1.78.2] - 2026-06-05 · #387
 
@@ -92,9 +120,9 @@ Issue [#392](https://github.com/jdlarssen/golf-app/issues/392) — universell «
 
 </details>
 
----
+</details>
 
-## Tidligere versjoner
+</details>
 
 <details>
 <summary><strong>Opprettelse & påmelding (#22, #366, #365) — 5 serier</strong></summary>
