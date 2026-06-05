@@ -170,3 +170,16 @@ export const ProfilIcon = ({ size, ...rest }: IconProps) => (
     <path d="M 5 20 Q 5 14.5 12 14.5 Q 19 14.5 19 20" />
   </svg>
 );
+
+// Klubbhus — wide building flying a pennant flag (golf clubhouse). Bottom-nav
+// «Klubbhuset»-fane. Deliberately distinct from HjemIcon's pitched-roof house:
+// flat-topped walls, a wide door, and the flag are the differentiators.
+export const KlubbhusIcon = ({ size, ...rest }: IconProps) => (
+  <svg {...base(size)} {...rest}>
+    <path d="M 4 20 L 4 10.5 L 20 10.5 L 20 20" />
+    <path d="M 3 10.5 L 12 6 L 21 10.5" />
+    <path d="M 9.5 20 L 9.5 15 L 14.5 15 L 14.5 20" />
+    <path d="M 12 6 L 12 3" />
+    <path d="M 12 3.2 L 15.5 4.4 L 12 5.6" />
+  </svg>
+);

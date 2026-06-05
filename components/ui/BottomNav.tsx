@@ -2,39 +2,50 @@
 
 import { usePathname } from 'next/navigation';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { HjemIcon, KonvoluttIcon, ProfilIcon } from '@/components/icons/Icons';
+import {
+  HjemIcon,
+  KonvoluttIcon,
+  ProfilIcon,
+  KlubbhusIcon,
+} from '@/components/icons/Icons';
 import { useUnreadNotificationsCount } from '@/hooks/useUnreadNotificationsCount';
 
 /**
- * Vedvarende bunn-tab-bar (#355) for innloggede spiller-flater. Fast nederst
- * i viewport, tre faste destinasjoner: Hjem / Innboks / Profil. Erstatter den
- * gamle «hjem er eneste nav»-modellen — fra hvilken som helst spiller-side når
- * brukeren alle tre i ett tap.
+ * Vedvarende bunn-tab-bar (#355, #392) for innloggede flater. Fast nederst i
+ * viewport, fire faste destinasjoner: Hjem / Innboks / Klubbhuset / Profil.
+ * Erstatter den gamle «hjem er eneste nav»-modellen — fra hvilken som helst
+ * side når brukeren alle fire i ett tap.
+ *
+ * «Klubbhuset» (#392) er en universell fane til `/admin`-rommet, synlig for
+ * ALLE innloggede — fanen gates ikke på rolle; flatene inne gates. Derfor er
+ * admin ikke lenger skjult: baren vises på Klubbhus-flatene så brukeren kommer
+ * seg ut igjen, og fanen er aktiv også på `/klubbhuset`, `/opprett-spill` og
+ * `/opprett-bane`.
  *
  * Rendret én gang globalt i `app/layout.tsx`. `userId` kommer fra proxy-
  * headeren: null på offentlige (umatchede) ruter → baren skjuler seg selv.
- * I tillegg skjuler den seg på admin (eget rom), hull-skjermen (fullskjerm
- * scoring) og pre-profil-onboarding, som har egen chrome.
+ * I tillegg skjuler den seg på hull-skjermen (fullskjerm scoring) og
+ * pre-profil-onboarding, som har egen chrome.
  *
  * Innboks-fanen overtar rollen til den gamle `NotificationBell` i TopBar:
  * samme champagne-prikk via `useUnreadNotificationsCount`, ingen telletall.
  *
  * `position: fixed` + `env(safe-area-inset-bottom)` så baren klarerer iPhone
- * home-indicator (`viewportFit: 'cover'` er satt i app/layout.tsx). AppShell
- * legger tilsvarende bunn-padding på innholdet så ingenting scroller under.
+ * home-indicator (`viewportFit: 'cover'` er satt i app/layout.tsx). App- og
+ * AdminShell legger tilsvarende bunn-padding på innholdet så ingenting
+ * scroller under.
  */
 export function BottomNav({ userId }: { userId: string | null }) {
   const pathname = usePathname() ?? '';
 
   // Skjul når utlogget (null på offentlige ruter) eller på flater med egen
-  // chrome: admin, hull-skjerm (fullskjerm scoring) og pre-profil-onboarding.
+  // chrome: hull-skjerm (fullskjerm scoring) og pre-profil-onboarding. Admin er
+  // IKKE lenger skjult (#392) — det er Klubbhus-rommet, baren hører hjemme der.
   // Vi gater FØR `useUnreadNotificationsCount` (i Bar-en) slik at det globale
-  // realtime-abonnementet kun åpnes når baren faktisk vises — ikke på hver
-  // autentisert rute (hull-skjerm/admin) der den uansett er skjult.
+  // realtime-abonnementet kun åpnes når baren faktisk vises.
   const hidden =
     userId == null ||
     pathname === '/login' ||
-    pathname.startsWith('/admin') ||
     pathname.startsWith('/complete-profile') ||
     /^\/games\/[^/]+\/holes\//.test(pathname);
   if (hidden) return null;
@@ -46,13 +57,26 @@ function BottomNavBar({ userId, pathname }: { userId: string; pathname: string }
   const { count } = useUnreadNotificationsCount(userId);
   const hasUnread = count > 0;
 
-  const isActive = (href: string) =>
-    href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);
+  const matchOne = (href: string) =>
+    href === '/'
+      ? pathname === '/'
+      : pathname === href || pathname.startsWith(`${href}/`);
+  // En fane kan eie flere ruter: Klubbhuset-rommet (/admin) dekker også Spill-
+  // seksjonen (/klubbhuset) og create-dørene (/opprett-spill, /opprett-bane).
+  const isActive = (href: string, also: readonly string[] = []) =>
+    matchOne(href) || also.some(matchOne);
 
   const tabs = [
-    { href: '/', label: 'Hjem', Icon: HjemIcon, dot: false },
-    { href: '/innboks', label: 'Innboks', Icon: KonvoluttIcon, dot: hasUnread },
-    { href: '/profile', label: 'Profil', Icon: ProfilIcon, dot: false },
+    { href: '/', label: 'Hjem', Icon: HjemIcon, dot: false, also: [] },
+    { href: '/innboks', label: 'Innboks', Icon: KonvoluttIcon, dot: hasUnread, also: [] },
+    {
+      href: '/admin',
+      label: 'Klubbhuset',
+      Icon: KlubbhusIcon,
+      dot: false,
+      also: ['/klubbhuset', '/opprett-spill', '/opprett-bane'],
+    },
+    { href: '/profile', label: 'Profil', Icon: ProfilIcon, dot: false, also: [] },
   ] as const;
 
   return (
@@ -62,8 +86,8 @@ function BottomNavBar({ userId, pathname }: { userId: string; pathname: string }
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <ul className="mx-auto flex max-w-md items-stretch">
-        {tabs.map(({ href, label, Icon, dot }) => {
-          const active = isActive(href);
+        {tabs.map(({ href, label, Icon, dot, also }) => {
+          const active = isActive(href, also);
           return (
             <li key={href} className="flex-1">
               <SmartLink
