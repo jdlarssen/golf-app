@@ -21,6 +21,24 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#442](https://github.com/jdlarssen/golf-app/issues/442) (milepæl Klubb-skala). Du kan nå lage egne klubber, samle folk og turneringer på ett sted, og la medlemmene finne klubbens runder.
 
+### [1.79.1] - 2026-06-05 · #442
+
+> Inne på en klubb ser du nå medlemmene. Er du eier eller admin, kan du legge til folk på e-post, fjerne medlemmer, og dele en lenke andre kan be om å bli med via. Alle kan forlate en klubb de er med i.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#442](https://github.com/jdlarssen/golf-app/issues/442) (milepæl Klubb-skala). Klubb-side + medlemsstyring.
+
+#### Added
+- [`app/klubber/[id]/page.tsx`](app/klubber/[id]/page.tsx) — klubb-side: medlemsliste med rolle-merke; for eier/admin også legg-til-på-e-post, del-lenke og fjern-medlem.
+- [`lib/clubs/getClubDetail.ts`](lib/clubs/getClubDetail.ts) — henter klubb + medlemmer; gater på medlemskap via request-scoped client, leser deretter medlemsnavn via admin-client (users-RLS lar deg ikke lese medspilleres navn ellers).
+- [`app/klubber/[id]/actions.ts`](app/klubber/[id]/actions.ts) — `addMember` kaller `add_club_member_by_email`-RPC; mapper `not_found` / `already_member` til vennlige meldinger.
+- [`app/klubber/[id]/forlat/page.tsx`](app/klubber/[id]/forlat/page.tsx) + [`fjern/[userId]/page.tsx`](app/klubber/[id]/fjern/[userId]/page.tsx) — dedikerte konfirmasjons-ruter for forlat-klubb / fjern-medlem (destruktivt → egen side, per repo-regel). Begge blokkerer å fjerne siste eier.
+- [`app/klubber/[id]/CopyJoinLinkButton.tsx`](app/klubber/[id]/CopyJoinLinkButton.tsx) — klient-knapp som kopierer bli-med-lenken.
+
+</details>
+
 ### [1.79.0] - 2026-06-05 · #442
 
 > Du kan nå lage en egen klubb i Tørny. Du blir eier med en gang, og klubben dukker opp under Klubbhuset. (Du kan lage inntil to klubber for nå.)
