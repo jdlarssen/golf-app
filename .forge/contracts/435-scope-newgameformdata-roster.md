@@ -79,21 +79,25 @@ app-laget; en evt. DB-lag-herding er et separat funn.
 
 ## Akseptansekriterier
 
-- [ ] **AK1** — En ikke-admin på `/opprett-spill` får **ikke** andre brukeres `email` i
-      side-payloaden. Verifiseres via at users-`.select()`-strengen i den e-post-frie
-      varianten ikke inneholder `email`, og at `PlayerOption` som sendes til klienten ikke
-      har `email`-nøkkel. (Loader-test + kode-lesning.)
-- [ ] **AK2** — `/games/[id]/rediger` (ikke-admin edit, #428) bruker også den e-post-frie
-      varianten.
-- [ ] **AK3** — Spiller-velgeren fungerer fortsatt for ikke-admin: navn + handicap synlig,
-      medspillere kan plukkes; pending-spillere vises som «Invitert spiller» (ingen e-post).
-- [ ] **AK4** — Admin-flaten `/admin/games/new` er uendret: full roster med e-post, default
-      `getNewGameFormData()`-kall.
-- [ ] **AK5** — Co-lokert test for endret loader: `getNewGameFormData(false)` utelater
-      `email` fra select + output; `getNewGameFormData()` beholder den.
-- [ ] **AK6** — `npx tsc --noEmit` grønt; `npm run build` grønt (eksaustive maps/switch).
-- [ ] **AK7** — Berørte co-lokerte tester grønne (GameForm/useGameFormState/sections som
-      setter `email` i fixtures kompilerer fortsatt med optional `email`).
+- [x] **AK1** — En ikke-admin på `/opprett-spill` får **ikke** andre brukeres `email` i
+      side-payloaden. *Bevis:* `getNewGameFormData(false)` velger `userColumns` uten `email`
+      ([`newGameFormData.ts:54-56`](../../lib/games/newGameFormData.ts)) og mapper `base` uten
+      `email`-nøkkel ([`:102-115`](../../lib/games/newGameFormData.ts)); `/opprett-spill` kaller
+      `(false)` begge steder ([`page.tsx:101,129`](../../app/opprett-spill/page.tsx)). Loader-test
+      `utelater email-kolonnen…` + `utelater email fra PlayerOption-output…` grønne.
+- [x] **AK2** — `/games/[id]/rediger` (ikke-admin edit, #428) bruker også den e-post-frie
+      varianten. *Bevis:* `getNewGameFormData(false)` på [`rediger/page.tsx:131`](../../app/games/[id]/rediger/page.tsx).
+- [x] **AK3** — Spiller-velgeren fungerer fortsatt for ikke-admin; pending-spillere vises som
+      «Invitert spiller». *Bevis:* alle fire helpere + søke-haystack faller tilbake på
+      `PENDING_PLAYER_LABEL` (PlayersSection `:28,30,37,38`, TeamsAssignmentSection `:38,39`,
+      WolfSetup `:159`, RoundRobinSetup `:110`, useGameFormState haystack `?? ''`). Build grønt.
+- [x] **AK4** — Admin-flaten `/admin/games/new` er uendret. *Bevis:* `getNewGameFormData()`
+      (default `true`) på [`page.tsx:263,306`](../../app/admin/games/new/page.tsx) — ingen `false`-arg.
+- [x] **AK5** — Co-lokert loader-test. *Bevis:* [`newGameFormData.test.ts`](../../lib/games/newGameFormData.test.ts)
+      4 tester grønne (select utelater/beholder `email`; output utelater/beholder; default = full).
+- [x] **AK6** — `npx tsc --noEmit` exit 0; `npm run build` fullført uten feil.
+- [x] **AK7** — Berørte co-lokerte tester grønne: GameForm/useGameFormState/GameWizard/WolfSetup/
+      RoundRobinSetup (75) + actions (17) + ny loader-test (4).
 
 ## Gates
 
