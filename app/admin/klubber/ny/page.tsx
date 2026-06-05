@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { VarighetField } from '../VarighetField';
 import { createClubForAdmin } from './actions';
 
 type SearchParams = Promise<{
@@ -100,41 +101,7 @@ export default async function NyKlubbPage({
             hint="La stå tom for ubegrenset."
           />
 
-          {/* Varighet */}
-          <div>
-            <p className="mb-2 block text-sm font-medium text-text">Varighet</p>
-            <div className="space-y-2">
-              <label className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl border border-border bg-surface px-3.5 py-3">
-                <input
-                  type="radio"
-                  name="varighet_mode"
-                  value="uendelig"
-                  defaultChecked
-                  className="h-4 w-4 accent-primary"
-                />
-                <span className="font-sans text-sm text-text">Uendelig</span>
-              </label>
-              <label className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl border border-border bg-surface px-3.5 py-3">
-                <input
-                  type="radio"
-                  name="varighet_mode"
-                  value="dato"
-                  className="h-4 w-4 accent-primary"
-                />
-                <span className="font-sans text-sm text-text">Sett sluttdato</span>
-              </label>
-            </div>
-            <div className="mt-3">
-              <input
-                type="date"
-                name="sluttdato"
-                className="w-full rounded-xl border border-border bg-surface px-3.5 py-3 text-text placeholder-muted/70 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40 transition-[border-color,box-shadow] duration-150"
-              />
-              <p className="mt-1.5 text-xs text-muted">
-                Gjelder til og med midnatt denne dagen.
-              </p>
-            </div>
-          </div>
+          <VarighetField defaultMode="uendelig" defaultDate="" />
 
           <Button type="submit" className="w-full">
             Opprett klubb
