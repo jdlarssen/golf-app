@@ -49,15 +49,23 @@ fanen gates ikke på rolle, men flatene inne gates — admin ser hele Sekretaria
 spillere ser Spill + Baner med oppretting. **Opprett spill/bane bor inne i Klubbhuset, ikke på
 Hjem.** Hjem er play + discover-navet: dine spill + «Finn turneringer».
 
-**Klubber** (#442, milepæl Klubb-skala): en klubb er en navngitt, styrt container folk og
-turneringer kan høre til. Alle innloggede kan opprette inntil to klubber (`create_club`-RPC —
-oppretteren blir `owner`). Klubbene dine bor under Klubbhuset (`/klubber`); klubb-siden
-(`/klubber/[id]`) viser medlemmer, lar eier/admin legge til på e-post eller dele en bli-med-lenke
-(`/klubber/bli-med/[shortId]` → forespørsel → eier godkjenner), og har en «Sett opp en runde for
-klubben»-dør. Når et spill opprettes for en klubb (valgfritt steg i veiviseren, `games.group_id`),
-ser **alle klubbens medlemmer** runden i «Finn turneringer» og melder seg på direkte — uansett
-påmeldingsmåte, også `invite_only`. Medlemskap ER invitasjonen. Klubb ≠ venner (#369): venner er en
-egen, flat relasjon.
+**Klubber** (#442 + #50, milepæl Klubb-skala): en klubb er en navngitt, styrt container folk og
+turneringer kan høre til. **Opprettelse er admin-gated** (#50): vanlige brukere oppretter ikke
+klubber — `/klubber` viser en kontakt-vei (klubb@tornygolf.no), og hoved-admin oppretter klubben fra
+Sekretariatet (`/admin/klubber/ny`, `admin_create_club`-RPC), velger eier (som blir **eneeier**) og
+setter avtale-rammer: et **medlemstak** (`member_cap`) og en **varighet** (`valid_until` — uendelig
+eller en sluttdato, redigerbar i `/admin/klubber/[id]`). Klubbene dine bor under Klubbhuset
+(`/klubber`); klubb-siden (`/klubber/[id]`) viser medlemmer, lar eier/admin legge til på e-post eller
+dele en bli-med-lenke (`/klubber/bli-med/[shortId]` → forespørsel → eier godkjenner), og har en «Sett
+opp en runde for klubben»-dør. **Eieren delegerer** (#50): via `/klubber/[id]/rolle/[userId]` gjør
+eieren medlemmer til admin eller eier (flere likestilte), eller setter dem ned (`set_club_member_role`
+— siste eier kan ikke degraderes; den berørte varsles). Når et spill opprettes for en klubb (valgfritt
+steg i veiviseren, `games.group_id`), ser **alle klubbens medlemmer** runden i «Finn turneringer» og
+melder seg på direkte, uansett påmeldingsmåte, også `invite_only`. Medlemskap ER invitasjonen.
+**Medlemstak + utløp håndheves** (#50): en full klubb tar ikke imot flere medlemmer; når `valid_until`
+passeres fryses klubben (borte fra discovery, ingen nye medlemmer/spill, «utløpt»-banner), men pågående
+runder spilles ferdig og en eier kan fornye via admin. Klubb ≠ venner (#369): venner er en egen, flat
+relasjon.
 
 ---
 

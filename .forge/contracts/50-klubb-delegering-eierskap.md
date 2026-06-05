@@ -163,46 +163,82 @@ rammer (medlemstak, varighet), og (b) eier-drevet rolle-delegering inne i klubbe
 - Eksakt copy på alle nye norske strenger (kjøres gjennom `humanizer` uansett).
 
 ## Success Criteria
-- [ ] **C1 — Schema + RPCer applyt (0076):** `groups.member_cap`+`valid_until` (nullable); `create_club`
+- [x] **C1 — Schema + RPCer applyt (0076):** `groups.member_cap`+`valid_until` (nullable); `create_club`
   droppet; `admin_create_club`+`set_club_member_role` finnes (security definer, anon revoked, is_admin/owner-
   gated); `add_club_member_by_email`+`decide_join_request` håndhever cap+utløp; `club_role_changed`-kind finnes.
   *Verifiser:* MCP `execute_sql` (information_schema/pg_proc/pg_constraint/pg_policies) + `lib/database.types.ts`
   regenerert + `npx tsc --noEmit` + `npm run build` grønn.
-- [ ] **C2 — Gating:** en vanlig (ikke-admin) bruker kan ikke opprette klubb noe sted; `/klubber` viser «ta
+  → **Bevis (migrasjon 0076 applyt via MCP):** `execute_sql` = `create_club`:0 (droppet), `admin_create_club`:1
+  + `set_club_member_role`:1 (begge `prosecdef=true`), `member_cap`/`valid_until`-kolonner:1, anon EXECUTE på
+  begge nye RPCer = false, authenticated = true, `club_role_changed` i kind-CHECK = true, cap-constraint =
+  `CHECK ((member_cap IS NULL) OR (member_cap >= 1))`, backfill-`'Tørny'` grandfathered (cap+valid_until = null).
+  `npx tsc --noEmit` = ren, `npm run build` grønn; `lib/database.types.ts` regenerert (+116 linjer, `create_club`
+  borte). Commit 3f73a95.
+- [x] **C2 — Gating:** en vanlig (ikke-admin) bruker kan ikke opprette klubb noe sted; `/klubber` viser «ta
   kontakt klubb@tornygolf.no»-affordancen i stedet for en opprett-dør; self-serve `/klubber/ny` finnes ikke;
   `create_club`-RPC kan ikke kalles (droppet). *Verifiser:* Playwright som ikke-admin + `execute_sql`
   (`create_club` fraværende i `pg_proc`) + grep (ingen self-serve `/klubber/ny`).
-- [ ] **C3 — Admin oppretter + overfører med avtale:** admin lager klubb via `/admin/klubber/ny` med
+  → **Bevis:** [`app/klubber/page.tsx`](app/klubber/page.tsx) viser «Vil du ha en klubb for laget ditt? … 
+  klubb@tornygolf.no»-kort i stedet for opprett-dørene; `app/klubber/ny/` slettet (route fraværende i
+  `npm run build`-rute-lista); `create_club` droppet i DB (C1-bevis). Browser-bekreftelse (ikke-admin ser ingen
+  opprett-dør) gjøres i evaluator-Playwright. Commit 3f73a95.
+- [x] **C3 — Admin oppretter + overfører med avtale:** admin lager klubb via `/admin/klubber/ny` med
   eier-e-post + medlemstak + varighet (uendelig/dato); den navngitte blir **eneeier**, admin er IKKE medlem;
   ukjent e-post avvises vennlig. *Verifiser:* Playwright + `execute_sql` (owner-rad finnes, ingen admin-
   membership-rad, `member_cap`/`valid_until` satt).
-- [ ] **C4 — Rolle-delegering + varsel:** en klubb-eier endrer et medlems rolle via `/klubber/[id]/rolle/
+  → **Bevis:** [`app/admin/klubber/ny/`](app/admin/klubber/ny/page.tsx) skjema (navn + eier-e-post + medlemstak
+  + varighet uendelig/dato) → [`createClubForAdmin`](app/admin/klubber/ny/actions.ts) → `admin_create_club`-RPC
+  (is_admin-gated; insert owner-membership, admin IKKE lagt til; `owner_not_found` → klubb opprettes ikke +
+  vennlig melding). Liste [`app/admin/klubber/page.tsx`](app/admin/klubber/page.tsx) + detalj/avtale-edit
+  [`[id]/`](app/admin/klubber/[id]/page.tsx). Admin-tile repointet. tsc rent, build grønn (34/34, 3 nye ruter).
+  Browser-bekreftelse + `execute_sql` rad-effekt gjøres i evaluator. Commit f59f287.
+- [x] **C4 — Rolle-delegering + varsel:** en klubb-eier endrer et medlems rolle via `/klubber/[id]/rolle/
   [userId]` (eier-only; member↔admin↔owner); siste owner kan ikke degraderes (blokkert m/ melding); berørt
   medlem får `club_role_changed`-varsel. *Verifiser:* Playwright + `execute_sql` (rolle oppdatert + notification-
   rad) + RPC-test (`last_owner` raise + non-owner `not_authorized`).
-- [ ] **C5 — Medlemstak håndhevet:** når en klubb har nådd `member_cap`, blokkeres legg-til-på-e-post OG
+  → **Bevis:** [`app/klubber/[id]/rolle/[userId]/page.tsx`](app/klubber/[id]/rolle/[userId]/page.tsx) eier-only
+  (myRole!=='owner'→redirect) + radio member/admin/owner; [`actions.ts`](app/klubber/[id]/rolle/[userId]/actions.ts)
+  `setMemberRole`→`set_club_member_role`-RPC (last_owner/not_member/not_auth mappet) + **awaitet** best-effort
+  `club_role_changed`-notify til target. Ny kind i types/NotificationCard(🔑)/InboxClient. «Endre rolle»-lenke
+  kun for eier på [`klubber/[id]/page.tsx`](app/klubber/[id]/page.tsx). tsc rent, build grønn. Commit 5ce8fca.
+- [x] **C5 — Medlemstak håndhevet:** når en klubb har nådd `member_cap`, blokkeres legg-til-på-e-post OG
   godkjenn-forespørsel med vennlig «klubben er full»; `member_cap = null` = ubegrenset. *Verifiser:* RPC/
   `execute_sql` (cap nådd → `club_full`) + observert Banner-melding.
-- [ ] **C6 — Utløp = myk frys:** en klubb forbi `valid_until` er borte fra «Finn turneringer», blokkerer nye
+  → **Bevis:** `add_club_member_by_email` + `decide_join_request` (0076) returnerer `club_full` når
+  `member_cap != null and count(members) >= member_cap` (RPC-laget). [`app/klubber/[id]/actions.ts`](app/klubber/[id]/actions.ts)
+  `addMember` mapper `club_full` → `?error=full`; klubb-siden viser «Klubben er full (maks {n} medlemmer).»;
+  decideRequest-grenen får `club_full`-melding i `decidedMessages`. Medlemstall vises `n / tak`. RPC-rad-effekt
+  verifiseres i evaluator. Commit f5b195b.
+- [x] **C6 — Utløp = myk frys:** en klubb forbi `valid_until` er borte fra «Finn turneringer», blokkerer nye
   medlemmer + nye klubb-spill, og viser medlemmer en «utløpt»-tilstand; pågående spill virker fortsatt; admin
   forlenger `valid_until` og klubben er aktiv igjen. *Verifiser:* `getDiscoverableGames.test.ts` (utløpt klubb
   ekskludert) + `execute_sql` + observert oppførsel + admin-edit-flyt.
-- [ ] **C7 — Ingen regresjon + gates grønne:** eksisterende discovery/signup/#49+#442-oppførsel uendret utenom
+  → **Bevis:** [`lib/clubs/clubStatus.ts`](lib/clubs/clubStatus.ts) `isClubExpired` (derivert, ingen cron).
+  [`getDiscoverableGames.ts`](lib/games/getDiscoverableGames.ts) filtrerer utløpte klubber bort + **ny test**
+  (`getDiscoverableGames.test.ts`: utløpt klubb → `clubGames=[]` + ingen `group_id`-spørring) — `npx vitest run`
+  = 219 filer / 2668 passed. [`newGameFormData.ts`](lib/games/newGameFormData.ts) utelater utløpte fra picker;
+  [`createGameInternal`](app/admin/games/new/actions.ts) dropper `group_id` på utløpt klubb. [`klubber/[id]/page.tsx`](app/klubber/[id]/page.tsx)
+  fryser legg-til/del-lenke/«sett opp runde» + utløpt-banner. Admin fornyer via `updateClubTerms` (C3). Pågående
+  spill rører ikke gruppe-status. Commit f5b195b.
+- [x] **C7 — Ingen regresjon + gates grønne:** eksisterende discovery/signup/#49+#442-oppførsel uendret utenom
   gating + additive tak/utløp-sjekker; `npm run build` grønn, berørte co-lokerte tester grønne, ny norsk copy
   gjennom `humanizer`; `docs/user-flows.md` §0 oppdatert med gated-klubb-modellen. *Verifiser:* `npm run build`
   + `npx vitest run` + `git diff`-inspeksjon.
+  → **Bevis:** `npm run build` grønn (34/34 sider). `npx vitest run` = **219 filer / 2668 tester passed** (+1 vs
+  #442-baseline = den nye utløp-testen). Ingen eksisterende RLS endret (kun additiv 0076 + drop av ubrukt
+  `create_club`). Ny norsk copy kjørt gjennom `humanizer` per chunk (alle rene — kort idiomatisk bokmål, ingen
+  em-dash-kjeder/anglismer). [`docs/user-flows.md`](docs/user-flows.md) §0 oppdatert med gating + admin-create +
+  delegering + tak/utløp.
 
 ## Gates
-- [ ] `npx tsc --noEmit` passerer (etter hver chunk; fanger nye GameMode/Record/exhaustive-hull + types).
-- [ ] `npx vitest run <co-lokerte testfiler>` passerer; full `npx vitest run` før evaluering hvis delte filer
-  (`getDiscoverableGames`, `notifications/types`, `newGameFormData`) er rørt.
-- [ ] `npm run build` passerer (nye ruter kompilerer; Record/switch-uttømming, jf. tsc-gate-fella).
-- [ ] MCP `execute_sql`-verifikasjon (C1–C6 schema/RLS/RPC/rad-effekter).
-- [ ] Playwright (preview-tools) verifiserer C2–C6 i nettleser.
-- [ ] `humanizer` på alle nye/endrede norske strenger før commit.
-- [ ] `feat(...)`-commits bumper `package.json` + `CHANGELOG.md` (commit-msg-hook); `chore(db):`/`refactor` for
-  ikke-bruker-synlig plumbing (chunk 1). **Worktree-hook-fix engang før første commit**
-  (`git config --worktree core.hooksPath .githooks`).
+- [x] `npx tsc --noEmit` passerer (kjørt etter hver chunk — alle rene).
+- [x] `npx vitest run` passerer — **219 filer / 2668 tester** (inkl. ny utløp-test).
+- [x] `npm run build` passerer (34/34 sider; alle nye ruter kompilerer).
+- [x] MCP `execute_sql`-verifikasjon C1 (schema/RPC/grants/CHECK/constraint). Rad-effekter (C3/C4/C5) → evaluator.
+- [ ] Playwright (preview-tools) verifiserer C2–C6 i nettleser — **gjøres i evaluator** (frontend rørt).
+- [x] `humanizer` på alle nye/endrede norske strenger før commit (alle rene per chunk).
+- [x] `feat(...)`-commits bumper `package.json` + `CHANGELOG.md` (commit-msg-hook passerte uten `--no-verify`);
+  `docs(forge):` for kontrakt. **Worktree-hook-fix kjørt før første commit** (`core.hooksPath=.githooks`).
 
 ## Files Likely Touched
 - `supabase/migrations/0076_clubs_governance_and_roles.sql` — **ny** (member_cap/valid_until, drop create_club,
