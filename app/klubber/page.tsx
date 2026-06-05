@@ -4,7 +4,6 @@ import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
-import { LinkButton } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getMyClubs } from '@/lib/clubs/getMyClubs';
 
@@ -17,11 +16,14 @@ const ROLE_LABELS: Record<'owner' | 'admin' | 'member', string> = {
 /**
  * /klubber — the user's club list.
  *
- * Shows all clubs the logged-in user is a member of, with their role.
- * Links to /klubber/[id] for each club. Shows «Opprett klubb» when the
- * user has created fewer than 2 clubs; a muted note otherwise.
+ * Shows all clubs the logged-in user is a member of, with their role, and
+ * links to /klubber/[id] for each.
  *
- * Part of #442 (Opprett klubb — eierskap + klubb-scoped oppdagbarhet).
+ * Klubb-opprettelse er admin-gated fra #50: vanlige brukere oppretter ikke
+ * klubber lenger. I stedet for en «Opprett klubb»-dør viser siden en
+ * kontakt-vei (klubb@tornygolf.no) — klubber settes opp via en avtale.
+ *
+ * Part of #50 (Klubb-eierskap, delegering & tilgangsstyring).
  */
 export default async function KlubbListePage() {
   const supabase = await getServerClient();
@@ -30,9 +32,7 @@ export default async function KlubbListePage() {
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const { clubs, createdCount } = await getMyClubs(supabase, user.id);
-
-  const canCreate = createdCount < 2;
+  const { clubs } = await getMyClubs(supabase, user.id);
 
   return (
     <AppShell>
@@ -40,58 +40,50 @@ export default async function KlubbListePage() {
       <PageHeader title="Klubbene dine" />
 
       {clubs.length === 0 ? (
-        <div className="space-y-5 text-center">
-          <p className="text-sm text-muted">
-            Du er ikke med i noen klubber ennå. Opprett en, eller be noen sende
-            deg en invitasjonslenke.
-          </p>
-          {canCreate && (
-            <LinkButton href="/klubber/ny" full>
-              Opprett klubb
-            </LinkButton>
-          )}
-        </div>
+        <p className="mb-6 text-center text-sm text-muted">
+          Du er ikke med i noen klubber ennå. Får du en invitasjonslenke, dukker
+          klubben opp her.
+        </p>
       ) : (
-        <>
-          <nav className="space-y-2">
-            {clubs.map((club) => (
-              <SmartLink
-                key={club.id}
-                href={`/klubber/${club.id}`}
-                className="block"
-              >
-                <Card className="min-h-[44px] p-5 transition-colors hover:border-primary/30">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="block truncate font-serif text-lg font-medium tracking-tight text-text">
-                      {club.name}
+        <nav className="mb-6 space-y-2">
+          {clubs.map((club) => (
+            <SmartLink key={club.id} href={`/klubber/${club.id}`} className="block">
+              <Card className="min-h-[44px] p-5 transition-colors hover:border-primary/30">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="block truncate font-serif text-lg font-medium tracking-tight text-text">
+                    {club.name}
+                  </span>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="rounded-full border border-border px-2.5 py-0.5 font-sans text-xs text-muted">
+                      {ROLE_LABELS[club.role]}
                     </span>
-                    <div className="flex shrink-0 items-center gap-3">
-                      <span className="rounded-full border border-border px-2.5 py-0.5 font-sans text-xs text-muted">
-                        {ROLE_LABELS[club.role]}
-                      </span>
-                      <span aria-hidden className="text-muted">
-                        →
-                      </span>
-                    </div>
+                    <span aria-hidden className="text-muted">
+                      →
+                    </span>
                   </div>
-                </Card>
-              </SmartLink>
-            ))}
-          </nav>
-
-          <div className="mt-6">
-            {canCreate ? (
-              <LinkButton href="/klubber/ny" full>
-                Opprett klubb
-              </LinkButton>
-            ) : (
-              <p className="text-center text-sm text-muted">
-                Du har opprettet så mange klubber du kan for nå.
-              </p>
-            )}
-          </div>
-        </>
+                </div>
+              </Card>
+            </SmartLink>
+          ))}
+        </nav>
       )}
+
+      {/* Admin-gated opprettelse (#50): kontakt-vei i stedet for opprett-dør. */}
+      <Card className="space-y-1.5 bg-surface/60">
+        <p className="font-sans text-sm font-medium text-text">
+          Vil du ha en klubb for laget ditt?
+        </p>
+        <p className="font-sans text-sm text-muted">
+          Send en e-post til{' '}
+          <a
+            href="mailto:klubb@tornygolf.no"
+            className="font-medium text-primary underline underline-offset-2"
+          >
+            klubb@tornygolf.no
+          </a>
+          , så setter vi den opp for deg.
+        </p>
+      </Card>
     </AppShell>
   );
 }

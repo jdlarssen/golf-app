@@ -17,7 +17,36 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.79.y — Klubber: opprett og bli med
+## 1.80.y — Klubber: eierskap, delegering og avtaler
+
+Issue [#50](https://github.com/jdlarssen/golf-app/issues/50) (milepæl Klubb-skala). Klubber settes nå opp via en avtale med Tørny. Eieren kan utnevne med-admins, og hver klubb har et medlemstak og en varighet.
+
+### [1.80.0] - 2026-06-05 · #50
+
+> Klubber settes nå opp via en avtale. Vil du ha en egen klubb for laget ditt, sender du en e-post til klubb@tornygolf.no, så fikser vi resten.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#50](https://github.com/jdlarssen/golf-app/issues/50) (milepæl Klubb-skala). Datafundament for klubb-governance + gating av self-serve-opprettelse. Bygger på #442 (0075).
+
+#### Added
+- Migrasjon [`0076_clubs_governance_and_roles`](supabase/migrations/0076_clubs_governance_and_roles.sql) — `groups.member_cap` + `groups.valid_until` (avtale-rammer: medlemstak + varighet). SECURITY DEFINER-RPCene `admin_create_club` (is_admin oppretter + overfører til eneeier) og `set_club_member_role` (eier/admin endrer rolle, sist-eier-guard). `add_club_member_by_email` / `decide_join_request` håndhever nå medlemstak + utløp. Ny `club_role_changed`-varselkind.
+
+#### Changed
+- [`app/klubber/page.tsx`](app/klubber/page.tsx) — «Opprett klubb»-døra er erstattet med en kontakt-vei (klubb@tornygolf.no); vanlige brukere oppretter ikke lenger klubber selv.
+- [`lib/clubs/getMyClubs.ts`](lib/clubs/getMyClubs.ts) — droppet «opprettet av meg»-tellingen (cap-gatingen er borte).
+- [`lib/database.types.ts`](lib/database.types.ts) — regenerert for 0076.
+
+#### Removed
+- `app/klubber/ny/` (self-serve opprett-klubb-side + action) + `create_club`-RPC — self-serve-opprettelse var en gating-hull (RPC-en kunne kalles direkte og omgå UI-gaten). Erstattet av admin-gated `admin_create_club`.
+
+</details>
+
+---
+
+<details>
+<summary><strong>1.79.y — Klubber: opprett og bli med (5 oppføringer)</strong></summary>
 
 Issue [#442](https://github.com/jdlarssen/golf-app/issues/442) (milepæl Klubb-skala). Du kan nå lage egne klubber, samle folk og turneringer på ett sted, og la medlemmene finne klubbens runder.
 
@@ -113,6 +142,8 @@ Issue [#442](https://github.com/jdlarssen/golf-app/issues/442) (milepæl Klubb-s
 - [`app/klubber/ny/page.tsx`](app/klubber/ny/page.tsx) + [`actions.ts`](app/klubber/ny/actions.ts) — dedikert opprett-klubb-side; `createClub` kaller `create_club`-RPC og mapper RPC-feil (`club_cap_reached` / `name_too_long`) til vennlige norske meldinger.
 - [`lib/clubs/getMyClubs.ts`](lib/clubs/getMyClubs.ts) — henter brukerens klubb-medlemskap + antall opprettede klubber (cap-gating).
 - [`app/admin/page.tsx`](app/admin/page.tsx) — «Klubber»-tile i Klubbhuset, i både admin- og spiller-grenen.
+
+</details>
 
 </details>
 

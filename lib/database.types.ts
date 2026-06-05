@@ -150,6 +150,75 @@ export type Database = {
         }
         Relationships: []
       }
+      bingo_bango_bongo_holes: {
+        Row: {
+          bango_user_id: string | null
+          bingo_user_id: string | null
+          bongo_user_id: string | null
+          created_at: string
+          entered_by: string
+          game_id: string
+          hole_number: number
+          updated_at: string
+        }
+        Insert: {
+          bango_user_id?: string | null
+          bingo_user_id?: string | null
+          bongo_user_id?: string | null
+          created_at?: string
+          entered_by: string
+          game_id: string
+          hole_number: number
+          updated_at?: string
+        }
+        Update: {
+          bango_user_id?: string | null
+          bingo_user_id?: string | null
+          bongo_user_id?: string | null
+          created_at?: string
+          entered_by?: string
+          game_id?: string
+          hole_number?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bingo_bango_bongo_holes_bango_user_id_fkey"
+            columns: ["bango_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bingo_bango_bongo_holes_bingo_user_id_fkey"
+            columns: ["bingo_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bingo_bango_bongo_holes_bongo_user_id_fkey"
+            columns: ["bongo_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bingo_bango_bongo_holes_entered_by_fkey"
+            columns: ["entered_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bingo_bango_bongo_holes_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       course_holes: {
         Row: {
           course_id: string
@@ -318,6 +387,7 @@ export type Database = {
           approved_at: string | null
           approved_by_user_id: string | null
           course_handicap: number | null
+          deliver_reminder_sent_at: string | null
           flight_number: number | null
           game_id: string
           rejection_reason: string | null
@@ -332,6 +402,7 @@ export type Database = {
           approved_at?: string | null
           approved_by_user_id?: string | null
           course_handicap?: number | null
+          deliver_reminder_sent_at?: string | null
           flight_number?: number | null
           game_id: string
           rejection_reason?: string | null
@@ -346,6 +417,7 @@ export type Database = {
           approved_at?: string | null
           approved_by_user_id?: string | null
           course_handicap?: number | null
+          deliver_reminder_sent_at?: string | null
           flight_number?: number | null
           game_id?: string
           rejection_reason?: string | null
@@ -374,6 +446,13 @@ export type Database = {
           {
             foreignKeyName: "game_players_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_players_withdrawn_by_user_id_fkey"
+            columns: ["withdrawn_by_user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -729,22 +808,28 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          member_cap: number | null
           name: string
           short_id: string
+          valid_until: string | null
         }
         Insert: {
           created_at?: string
           created_by?: string | null
           id?: string
+          member_cap?: number | null
           name: string
           short_id?: string
+          valid_until?: string | null
         }
         Update: {
           created_at?: string
           created_by?: string | null
           id?: string
+          member_cap?: number | null
           name?: string
           short_id?: string
+          valid_until?: string | null
         }
         Relationships: [
           {
@@ -1070,11 +1155,13 @@ export type Database = {
       }
       tournaments: {
         Row: {
+          chapman_allowance_pct: number
           created_at: string
           created_by: string
           finished_at: string | null
           fourball_allowance_pct: number
           foursomes_allowance_pct: number
+          greensome_allowance_pct: number
           gruesome_allowance_pct: number
           id: string
           name: string
@@ -1086,11 +1173,13 @@ export type Database = {
           winner_team: number | null
         }
         Insert: {
+          chapman_allowance_pct?: number
           created_at?: string
           created_by: string
           finished_at?: string | null
           fourball_allowance_pct?: number
           foursomes_allowance_pct?: number
+          greensome_allowance_pct?: number
           gruesome_allowance_pct?: number
           id?: string
           name: string
@@ -1102,11 +1191,13 @@ export type Database = {
           winner_team?: number | null
         }
         Update: {
+          chapman_allowance_pct?: number
           created_at?: string
           created_by?: string
           finished_at?: string | null
           fourball_allowance_pct?: number
           foursomes_allowance_pct?: number
+          greensome_allowance_pct?: number
           gruesome_allowance_pct?: number
           id?: string
           name?: string
@@ -1246,11 +1337,19 @@ export type Database = {
         Args: { p_email: string; p_group_id: string }
         Returns: string
       }
+      admin_create_club: {
+        Args: {
+          p_member_cap: number
+          p_name: string
+          p_owner_email: string
+          p_valid_until: string
+        }
+        Returns: string
+      }
       consume_admin_rate_limit: {
         Args: { p_bucket: string; p_max: number; p_window_seconds: number }
         Returns: boolean
       }
-      create_club: { Args: { p_name: string }; Returns: string }
       decide_join_request: {
         Args: { p_approve: boolean; p_request_id: string }
         Returns: string
@@ -1263,11 +1362,20 @@ export type Database = {
       email_is_registered: { Args: { p_email: string }; Returns: boolean }
       generate_game_short_id: { Args: never; Returns: string }
       generate_group_short_id: { Args: never; Returns: string }
+      incomplete_profiles_for_ids: {
+        Args: { p_user_ids: string[] }
+        Returns: {
+          email: string
+          id: string
+        }[]
+      }
       is_admin: { Args: never; Returns: boolean }
       is_game_creator_or_admin: {
         Args: { p_game_id: string }
         Returns: boolean
       }
+      is_group_admin: { Args: { p_group_id: string }; Returns: boolean }
+      is_group_member: { Args: { p_group_id: string }; Returns: boolean }
       is_in_game: { Args: { p_game_id: string }; Returns: boolean }
       same_flight: {
         Args: { p_game_id: string; p_other_user: string }
@@ -1276,6 +1384,14 @@ export type Database = {
       same_flight_or_solo: {
         Args: { p_game_id: string; p_other_user: string }
         Returns: boolean
+      }
+      set_club_member_role: {
+        Args: {
+          p_group_id: string
+          p_role: Database["public"]["Enums"]["group_role"]
+          p_user_id: string
+        }
+        Returns: string
       }
       upsert_score_if_newer: {
         Args: {
