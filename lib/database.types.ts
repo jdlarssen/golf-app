@@ -382,6 +382,48 @@ export type Database = {
         }
         Relationships: []
       }
+      friendships: {
+        Row: {
+          addressee_id: string
+          created_at: string
+          id: string
+          requester_id: string
+          responded_at: string | null
+          status: string
+        }
+        Insert: {
+          addressee_id: string
+          created_at?: string
+          id?: string
+          requester_id: string
+          responded_at?: string | null
+          status?: string
+        }
+        Update: {
+          addressee_id?: string
+          created_at?: string
+          id?: string
+          requester_id?: string
+          responded_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "friendships_addressee_id_fkey"
+            columns: ["addressee_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "friendships_requester_id_fkey"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_players: {
         Row: {
           approved_at: string | null
@@ -584,6 +626,7 @@ export type Database = {
           group_id: string | null
           hcp_allowance_pct: number
           id: string
+          let_friends_skip_gate: boolean
           mode_config: Json
           name: string
           registration_mode: Database["public"]["Enums"]["registration_mode"]
@@ -613,6 +656,7 @@ export type Database = {
           group_id?: string | null
           hcp_allowance_pct?: number
           id?: string
+          let_friends_skip_gate?: boolean
           mode_config?: Json
           name: string
           registration_mode?: Database["public"]["Enums"]["registration_mode"]
@@ -642,6 +686,7 @@ export type Database = {
           group_id?: string | null
           hcp_allowance_pct?: number
           id?: string
+          let_friends_skip_gate?: boolean
           mode_config?: Json
           name?: string
           registration_mode?: Database["public"]["Enums"]["registration_mode"]
@@ -1222,6 +1267,7 @@ export type Database = {
         Row: {
           created_at: string
           email: string
+          friend_code: string
           gender: Database["public"]["Enums"]["user_gender"] | null
           handicap_updated_at: string
           hcp_index: number
@@ -1237,6 +1283,7 @@ export type Database = {
         Insert: {
           created_at?: string
           email: string
+          friend_code?: string
           gender?: Database["public"]["Enums"]["user_gender"] | null
           handicap_updated_at?: string
           hcp_index?: number
@@ -1252,6 +1299,7 @@ export type Database = {
         Update: {
           created_at?: string
           email?: string
+          friend_code?: string
           gender?: Database["public"]["Enums"]["user_gender"] | null
           handicap_updated_at?: string
           hcp_index?: number
@@ -1346,6 +1394,7 @@ export type Database = {
         }
         Returns: string
       }
+      connect_via_friend_code: { Args: { p_code: string }; Returns: Json }
       consume_admin_rate_limit: {
         Args: { p_bucket: string; p_max: number; p_window_seconds: number }
         Returns: boolean
@@ -1360,6 +1409,7 @@ export type Database = {
       }
       email_is_invited: { Args: { check_email: string }; Returns: boolean }
       email_is_registered: { Args: { p_email: string }; Returns: boolean }
+      generate_friend_code: { Args: never; Returns: string }
       generate_game_short_id: { Args: never; Returns: string }
       generate_group_short_id: { Args: never; Returns: string }
       incomplete_profiles_for_ids: {
@@ -1377,6 +1427,11 @@ export type Database = {
       is_group_admin: { Args: { p_group_id: string }; Returns: boolean }
       is_group_member: { Args: { p_group_id: string }; Returns: boolean }
       is_in_game: { Args: { p_game_id: string }; Returns: boolean }
+      remove_friend: { Args: { p_other: string }; Returns: string }
+      respond_friend_request: {
+        Args: { p_accept: boolean; p_request_id: string }
+        Returns: string
+      }
       same_flight: {
         Args: { p_game_id: string; p_other_user: string }
         Returns: boolean
@@ -1385,6 +1440,8 @@ export type Database = {
         Args: { p_game_id: string; p_other_user: string }
         Returns: boolean
       }
+      send_friend_request: { Args: { p_addressee: string }; Returns: string }
+      send_friend_request_by_email: { Args: { p_email: string }; Returns: Json }
       set_club_member_role: {
         Args: {
           p_group_id: string
