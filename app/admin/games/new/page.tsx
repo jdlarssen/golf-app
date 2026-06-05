@@ -99,9 +99,12 @@ export default async function NewGamePage({
   // F2 foundation (#272): URL-drevet intent for wizard step 1. Cup-link
   // overstyrer alltid til 'cup' (en cup-link er per definisjon en
   // cup-arrangement-flyt). Andre intents leses fra ?intent=.
+  // En ?klubb=-dyplenke (fra «Sett opp en runde for klubben») er per definisjon
+  // en klubb-arrangement-flyt → pre-velg klubb-intent når intent ikke er gitt
+  // eksplisitt, så ClubPicker (kun for klubb-intent) viser den forhåndsvalgte klubben.
   const initialIntent: Intent | undefined = cupContext
     ? 'cup'
-    : parseIntent(first(sp.intent));
+    : parseIntent(first(sp.intent)) ?? (first(sp.klubb) ? 'klubb' : undefined);
 
   return (
     <AdminShell>

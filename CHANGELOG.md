@@ -21,6 +21,22 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#50](https://github.com/jdlarssen/golf-app/issues/50) (milepæl Klubb-skala). Klubber settes nå opp via en avtale med Tørny. Eieren kan utnevne med-admins, og hver klubb har et medlemstak og en varighet.
 
+### [1.80.4] - 2026-06-05 · #50
+
+> «For hvilken klubb?» dukker nå bare opp når du setter opp en klubb-turnering, ikke på en kompis-runde. Kommer du fra en klubb-side via «Sett opp en runde for klubben», er klubben valgt fra start.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#50](https://github.com/jdlarssen/golf-app/issues/50). Fix fra prod-testing: ClubPicker viste seg uansett arrangement-type.
+
+#### Fixed
+- [`app/admin/games/new/GameWizard.tsx`](app/admin/games/new/GameWizard.tsx) — `ClubPicker` («For hvilken klubb?») rendres nå kun for `intent === 'klubb'`, ikke på kompis/solo.
+- [`app/admin/games/new/useGameFormState.ts`](app/admin/games/new/useGameFormState.ts) — `setIntent` nullstiller `group_id` når man bytter til en ikke-klubb-intent, så et stale klubb-valg ikke scoper spillet i skjul.
+- [`app/admin/games/new/page.tsx`](app/admin/games/new/page.tsx) + [`app/opprett-spill/page.tsx`](app/opprett-spill/page.tsx) — en `?klubb=`-dyplenke pre-velger nå klubb-intent, så den forhåndsvalgte klubben vises.
+
+</details>
+
 ### [1.80.3] - 2026-06-05 · #50
 
 > Hver klubb har nå et medlemstak og en varighet. Er klubben full, sier appen fra. Går avtalen ut, fryses klubben: den forsvinner fra «Finn turneringer» og tar ikke imot nye medlemmer eller runder. Pågående runder spilles ferdig som normalt, og en eier kan fornye avtalen.

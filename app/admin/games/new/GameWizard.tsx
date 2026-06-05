@@ -702,7 +702,9 @@ export function GameWizard({
                 />
               )}
               <RegistrationSection state={state} hideHeading />
-              {clubs.length > 0 && (
+              {/* «For hvilken klubb?» hører kun til klubb-arrangement (#50-fix):
+                  en kompis-/solo-runde scopes ikke til en klubb. */}
+              {state.intent === 'klubb' && clubs.length > 0 && (
                 <ClubPicker
                   clubs={clubs}
                   value={state.groupId}

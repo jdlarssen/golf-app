@@ -150,6 +150,9 @@ async function GameFormBody({
       cupEligibleFormats={cupEligibleFormats}
       clubs={clubs}
       defaultGroupId={defaultGroupId}
+      // En ?klubb=-dyplenke er en klubb-arrangement-flyt → pre-velg klubb-intent
+      // så ClubPicker (kun for klubb-intent) viser den forhåndsvalgte klubben (#50-fix).
+      initialIntent={defaultGroupId ? 'klubb' : undefined}
     />
   );
 }

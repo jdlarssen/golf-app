@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   CLASSIC_DISABLED_CATEGORIES,
   type SideCategoryId,
@@ -194,7 +194,7 @@ export function useGameFormState({
   // URL via page.tsx → wizard → her. Settbar via setIntent når bruker
   // klikker intent-kort i IntentSelector. Ikke validert mot game_mode ennå
   // — sjekken kommer når FormatGrid/CupSetup lander.
-  const [intent, setIntent] = useState<Intent | undefined>(initialIntent);
+  const [intent, setIntentRaw] = useState<Intent | undefined>(initialIntent);
   // `name` is controlled now (was uncontrolled) so initialValues can pre-fill
   // it on the edit page (D4). Default to '' when not provided.
   const [name, setName] = useState<string>(initialValues?.name ?? '');
@@ -459,6 +459,15 @@ export function useGameFormState({
   const [groupId, setGroupId] = useState<string>(
     initialValues?.group_id ?? defaultGroupId ?? '',
   );
+
+  // Klubb-tilknytning gir bare mening for klubb-intent. Når brukeren bytter til
+  // en annen arrangement-type (kompis/solo/cup), nullstiller vi group_id så et
+  // stale valg fra et tidligere klubb-besøk ikke scoper spillet i skjul. ClubPicker
+  // vises kun for klubb-intent (GameWizard), og dette holder staten samkjørt.
+  const setIntent = useCallback((next: Intent | undefined) => {
+    setIntentRaw(next);
+    if (next !== 'klubb') setGroupId('');
+  }, []);
   // #199 derived flags
   // - registrationModeSupportsTeams: speilet av gameModeSupportsTeams — UI-
   //   et bruker det til å disable 'team'/'both'-radioene når modus ikke
