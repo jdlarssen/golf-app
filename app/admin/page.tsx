@@ -18,7 +18,7 @@ import { firstName } from '@/lib/firstName';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { formatShortDateNb } from '@/lib/format/date';
 import { displayName, type DisplayNameUser } from '@/lib/format/displayName';
-import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
+import { getRoleContext, type AdminRoleContext } from '@/lib/admin/auth';
 
 // Request-scoped Supabase client + verified user id. The id is forwarded by
 // proxy.ts (which already verified the session) so the three Suspense bodies
@@ -29,11 +29,12 @@ const getAdminContext = cache(async () => {
   return { supabase, userId };
 });
 
-// Role context (admin / trusted) cached for the whole request. TilesGrid
-// reads it to filter tiles per rolle; trusted-non-admin sees only «Baner».
+// Role context cached for the whole request. Non-redirecting (#392): /admin is
+// the universal Klubbhuset room, so a non-admin is NOT bounced — the page
+// branches on role and renders a minimal player view instead.
 const getRole = cache(async () => {
   const { supabase } = await getAdminContext();
-  return requireAdminOrTrustedCreator(supabase);
+  return getRoleContext(supabase);
 });
 
 function greeting(d: Date): string {
@@ -79,15 +80,23 @@ type Activity = {
 // wave resolves. Top-level er async kun for å hente userId til
 // NotificationBell-mountingen i TopBar — vi går via getAdminContext() så
 // header-lookup-en cachet og deles med Suspense-bodies under.
-export default async function AdminSekretariat() {
+export default async function KlubbhusetPage() {
+  // Klubbhuset (#392): the universal room. We branch on role BEFORE touching any
+  // admin-scoped query, so a regular player (or trusted creator) never loads the
+  // tile counts or activity ledger — they get a minimal player view instead.
+  // Admins fall through to the full Sekretariat dashboard below, unchanged.
+  const role = await getRole();
+  if (!role.isAdmin) return <PlayerKlubbhus role={role} />;
+
   const now = new Date();
   const dateLine = formatDateNb(now);
   const timeOfDay = greeting(now);
-  const { userId } = await getAdminContext();
 
   return (
     <AdminShell>
-      <TopBar backHref="/" kicker="Sekretariatet" userId={userId} />
+      {/* Bell dropped: the persistent bottom-nav «Innboks»-tab now covers
+          notifications inside the room (#392). */}
+      <TopBar backHref="/" kicker="Klubbhuset" />
 
       <Suspense fallback={<GreetingSkeleton dateLine={dateLine} />}>
         <GreetingCard dateLine={dateLine} timeOfDay={timeOfDay} />
@@ -183,8 +192,10 @@ type Tile = {
 };
 
 async function TilesGrid() {
+  // Admin-only: the page branches non-admins to PlayerKlubbhus before reaching
+  // here, so these counts (all games / all users / all courses) only ever run
+  // for an admin.
   const { supabase } = await getAdminContext();
-  const role = await getRole();
   const now = new Date();
 
   const [
@@ -243,75 +254,77 @@ async function TilesGrid() {
   )?.created_at;
   const activeCupCount = activeCupsRes.count ?? 0;
 
-  // Trusted-non-admin: kun Baner-tile (resten av Sekretariatet er admin-only,
-  // self-gatet på sub-route-nivå — å vise tiles til ruter de blir redirected
-  // bort fra er forvirrende). Admin: alle fire tiles, uendret.
-  const banerTile: Tile = {
-    label: 'Baner',
-    href: '/admin/courses',
-    meta:
-      courseCount === 0
-        ? 'Ingen registrerte ennå'
-        : `${courseCount} registrert${courseCount === 1 ? '' : 'e'}`,
-    icon: 'bane',
-  };
+  const tiles: Tile[] = [
+    {
+      label: 'Spill',
+      href: '/admin/games',
+      meta: `${activeCount} aktive · ${plannedCount} planlagte`,
+      icon: 'flagg',
+      accent: true,
+    },
+    {
+      label: 'Spillere',
+      href: '/admin/spillere',
+      meta:
+        userCount === 0
+          ? 'Ingen registrerte ennå'
+          : `${userCount} registrert${pendingInvites > 0 ? ` · ${pendingInvites} venter` : ''}`,
+      icon: 'konvolutt',
+    },
+    {
+      label: 'Baner',
+      href: '/admin/courses',
+      meta:
+        courseCount === 0
+          ? 'Ingen registrerte ennå'
+          : `${courseCount} registrert${courseCount === 1 ? '' : 'e'}`,
+      icon: 'bane',
+    },
+    {
+      label: 'Resultatprotokoll',
+      href: '/admin/games?status=finished',
+      meta: lastFinishedAt
+        ? `Sist signert ${formatShortDateNb(lastFinishedAt)}`
+        : 'Ingen signerte runder',
+      icon: 'pokal',
+    },
+    {
+      label: 'Lanseringer',
+      href: '/admin/lanseringer',
+      meta: lastPublishedAt
+        ? `Sist publisert ${formatShortDateNb(lastPublishedAt)}`
+        : 'Ingen publisert ennå',
+      icon: 'sparkle',
+    },
+    {
+      label: 'Cuper',
+      href: '/admin/cup',
+      meta:
+        activeCupCount === 0
+          ? 'Ingen aktive'
+          : `${activeCupCount} aktiv${activeCupCount === 1 ? '' : 'e'}`,
+      icon: 'pokal',
+    },
+    // F3 (#273): admin format-mapping. Mappings + cup-eligibility +
+    // active-flagg styres herfra. Meta er statisk (vi har ingen tellbar
+    // KPI per d.d. — kan utvides hvis vi vil vise antall aktive formats).
+    {
+      label: 'Formats',
+      href: '/admin/formats',
+      meta: 'Styr spillformene i wizarden',
+      icon: 'formats',
+    },
+  ];
 
-  const tiles: Tile[] = role.isAdmin
-    ? [
-        {
-          label: 'Spill',
-          href: '/admin/games',
-          meta: `${activeCount} aktive · ${plannedCount} planlagte`,
-          icon: 'flagg',
-          accent: true,
-        },
-        {
-          label: 'Spillere',
-          href: '/admin/spillere',
-          meta:
-            userCount === 0
-              ? 'Ingen registrerte ennå'
-              : `${userCount} registrert${pendingInvites > 0 ? ` · ${pendingInvites} venter` : ''}`,
-          icon: 'konvolutt',
-        },
-        banerTile,
-        {
-          label: 'Resultatprotokoll',
-          href: '/admin/games?status=finished',
-          meta: lastFinishedAt
-            ? `Sist signert ${formatShortDateNb(lastFinishedAt)}`
-            : 'Ingen signerte runder',
-          icon: 'pokal',
-        },
-        {
-          label: 'Lanseringer',
-          href: '/admin/lanseringer',
-          meta: lastPublishedAt
-            ? `Sist publisert ${formatShortDateNb(lastPublishedAt)}`
-            : 'Ingen publisert ennå',
-          icon: 'sparkle',
-        },
-        {
-          label: 'Cuper',
-          href: '/admin/cup',
-          meta:
-            activeCupCount === 0
-              ? 'Ingen aktive'
-              : `${activeCupCount} aktiv${activeCupCount === 1 ? '' : 'e'}`,
-          icon: 'pokal',
-        },
-        // F3 (#273): admin format-mapping. Mappings + cup-eligibility +
-        // active-flagg styres herfra. Meta er statisk (vi har ingen tellbar
-        // KPI per d.d. — kan utvides hvis vi vil vise antall aktive formats).
-        {
-          label: 'Formats',
-          href: '/admin/formats',
-          meta: 'Styr spillformene i wizarden',
-          icon: 'formats',
-        },
-      ]
-    : [banerTile];
+  return <TileGridView tiles={tiles} />;
+}
 
+/**
+ * Presentational tile grid — shared by the admin dashboard (TilesGrid) and the
+ * regular-player Klubbhuset view (PlayerKlubbhus) so both render identical
+ * card chrome. The `accent` tile gets the champagne-on-forest treatment.
+ */
+function TileGridView({ tiles }: { tiles: Tile[] }) {
   return (
     <div className="mb-2 grid grid-cols-2 gap-2.5">
       {tiles.map((tile, i) => (
@@ -356,6 +369,80 @@ async function TilesGrid() {
         </SmartLink>
       ))}
     </div>
+  );
+}
+
+/**
+ * Regular-player (and trusted-creator) view of the universal Klubbhuset room
+ * (#392). No admin counts, no activity ledger — just the two surfaces a
+ * non-admin owns: the games they arrange (Spill → /klubbhuset) and adding a
+ * course (Baner). Trusted creators reach the full course catalog; regular
+ * players get the create-only door (#366 gave them create, not edit).
+ */
+async function PlayerKlubbhus({ role }: { role: AdminRoleContext }) {
+  const { supabase } = await getAdminContext();
+  const { data: profile } = await supabase
+    .from('users')
+    .select('name')
+    .eq('id', role.userId)
+    .single();
+  const firstNameValue = firstName(profile?.name) ?? 'spiller';
+
+  const banerTile: Tile = role.isTrusted
+    ? {
+        label: 'Baner',
+        href: '/admin/courses',
+        meta: 'Se og legg til baner',
+        icon: 'bane',
+      }
+    : {
+        label: 'Baner',
+        href: '/opprett-bane',
+        meta: 'Legg til en bane',
+        icon: 'bane',
+      };
+
+  const tiles: Tile[] = [
+    {
+      label: 'Spill',
+      href: '/klubbhuset',
+      meta: 'Spillene du arrangerer',
+      icon: 'flagg',
+      accent: true,
+    },
+    banerTile,
+  ];
+
+  return (
+    <AdminShell>
+      <TopBar backHref="/" kicker="Klubbhuset" />
+
+      <section
+        className="relative mb-4 overflow-hidden rounded-2xl border px-5 py-[18px]"
+        style={{
+          background:
+            'linear-gradient(180deg, var(--admin-salutation-top) 0%, var(--admin-salutation-bottom) 100%)',
+          borderColor: 'var(--admin-salutation-border)',
+        }}
+      >
+        <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+          Klubbhuset
+        </p>
+        <h1 className="mt-1 font-serif text-[22px] font-medium leading-snug tracking-[-0.015em] text-text">
+          Hei, {firstNameValue}.
+        </h1>
+        <p className="mt-1.5 font-sans text-xs text-muted">
+          Sett opp en runde eller legg til en bane.
+        </p>
+        <ClubStamp className="absolute right-[14px] top-[14px]" />
+      </section>
+
+      <TileGridView tiles={tiles} />
+
+      <PullQuote className="mt-6">
+        En god runde begynner med god planlegging.
+      </PullQuote>
+    </AdminShell>
   );
 }
 

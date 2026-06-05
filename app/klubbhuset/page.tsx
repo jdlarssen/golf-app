@@ -31,10 +31,10 @@ const STATUS_TO_TONE: Record<GameStatus, StatusChipTone> = {
  * like the admin Sekretariat games list, but filtered to created_by = me via
  * the request-scoped client (RLS 0071 "games select own created").
  *
- * This is the first surface of the eventual universal Klubbhus nav-tab (#392);
- * for now it's reached from the home page and Profil. Each row links to the
- * game's home, where the «Styr spillere» / Rediger / Avslutt arranger controls
- * live.
+ * This is the «Spill» section of the universal Klubbhuset room (#392): reached
+ * from the Spill-tile in /admin (Klubbhuset) for non-admins, and active under
+ * the Klubbhuset bottom-nav tab. Each row links to the game's home, where the
+ * «Styr spillere» / Rediger / Avslutt arranger controls live.
  */
 export default async function KlubbhusetPage() {
   const supabase = await getServerClient();
@@ -54,9 +54,9 @@ export default async function KlubbhusetPage() {
 
   return (
     <AppShell>
-      <TopBar backHref="/" kicker="Klubbhuset" userId={user.id} />
+      <TopBar backHref="/admin" kicker="Klubbhuset" />
       <PageHeader
-        title="Klubbhuset"
+        title="Spillene dine"
         subtitle="Spillene du arrangerer. Trykk et spill for å styre det."
       />
 
