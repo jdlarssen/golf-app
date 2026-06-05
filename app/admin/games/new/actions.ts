@@ -144,6 +144,22 @@ async function createGameInternal(
       ? tournamentMatchLabelRaw.slice(0, 80)
       : null;
 
+  // #442: valgfri klubb-tilknytning. Authz: spillet kan kun scopes til en klubb
+  // brukeren selv er medlem av (en manipulert URL/form-verdi droppes til null,
+  // ikke en feil). Klubb-medlemmer ser + kan melde seg på klubb-spill uansett
+  // registration_mode (medlemskap ER invitasjonen).
+  const rawGroupId = String(formData.get('group_id') ?? '').trim();
+  let groupId: string | null = null;
+  if (rawGroupId) {
+    const { data: membership } = await supabase
+      .from('group_members')
+      .select('group_id')
+      .eq('group_id', rawGroupId)
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (membership) groupId = rawGroupId;
+  }
+
   const { data: game, error: gameError } = await supabase
     .from('games')
     .insert({
@@ -173,6 +189,7 @@ async function createGameInternal(
       scheduled_tee_off_at: scheduledTeeOffAt,
       created_by: userId,
       started_at: null,
+      group_id: groupId,
       tournament_id: tournamentId,
       tournament_match_label: tournamentMatchLabel,
     })

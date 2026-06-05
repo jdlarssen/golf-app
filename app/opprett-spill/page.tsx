@@ -31,6 +31,8 @@ import {
 type SearchParams = Promise<{
   error?: string | string[];
   emails?: string | string[];
+  // #442: klubb-side kan dyplenke med forhåndsvalgt klubb.
+  klubb?: string | string[];
 }>;
 
 function first(value: string | string[] | undefined): string | undefined {
@@ -86,7 +88,7 @@ export default async function OpprettSpillPage({
       <div className="mt-5">
         <Card>
           <Suspense fallback={<GameFormSkeleton />}>
-            <GameFormBody />
+            <GameFormBody defaultGroupId={first(sp.klubb)} />
           </Suspense>
         </Card>
       </div>
@@ -117,7 +119,11 @@ async function PlayerShortageBanner() {
   );
 }
 
-async function GameFormBody() {
+async function GameFormBody({
+  defaultGroupId,
+}: {
+  defaultGroupId: string | undefined;
+}) {
   // F2 (#272): pre-fetch format-katalog parallelt med courses/players.
   const [kompisFormats, klubbFormats, soloFormats, cupEligibleFormats] =
     await Promise.all([
@@ -126,7 +132,7 @@ async function GameFormBody() {
       getFormatsForIntent('solo'),
       getCupEligibleFormats(),
     ]);
-  const { courses, players } = await getNewGameFormData(false);
+  const { courses, players, clubs } = await getNewGameFormData(false);
   return (
     <GameWizard
       courses={courses}
@@ -142,6 +148,8 @@ async function GameFormBody() {
         solo: soloFormats,
       }}
       cupEligibleFormats={cupEligibleFormats}
+      clubs={clubs}
+      defaultGroupId={defaultGroupId}
     />
   );
 }

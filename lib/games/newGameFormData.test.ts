@@ -16,20 +16,29 @@ type Row = Record<string, unknown>;
 const capturedUserSelect = vi.fn<(cols: string) => void>();
 let usersData: Row[] = [];
 let coursesData: Row[] = [];
+let clubsData: Row[] = [];
 
 vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => ({
+    // #442: getNewGameFormData henter også brukerens klubber, så mocken må
+    // tilby auth.getUser() + en group_members-spørring (med .eq()).
+    auth: {
+      getUser: async () => ({ data: { user: { id: 'me' } }, error: null }),
+    },
     from: (table: string) => {
       const result =
         table === 'users'
           ? { data: usersData, error: null }
-          : { data: coursesData, error: null };
+          : table === 'group_members'
+            ? { data: clubsData, error: null }
+            : { data: coursesData, error: null };
       const builder: Record<string, unknown> = {
         select: (cols: string) => {
           if (table === 'users') capturedUserSelect(cols);
           return builder;
         },
         order: () => builder,
+        eq: () => builder,
         returns: () => builder,
         // The query builder is awaited inside Promise.all, so it must be a
         // thenable resolving to a PostgREST-shaped { data, error }.
@@ -46,6 +55,7 @@ import { getNewGameFormData } from './newGameFormData';
 beforeEach(() => {
   capturedUserSelect.mockReset();
   coursesData = [];
+  clubsData = [];
   usersData = [
     {
       id: 'u1',
@@ -112,5 +122,26 @@ describe('getNewGameFormData — e-post-scoping (#435)', () => {
     const { players } = await getNewGameFormData();
     expect(capturedUserSelect.mock.calls[0]![0]).toContain('email');
     expect(players[0]).toMatchObject({ email: 'kari@example.com' });
+  });
+});
+
+describe('getNewGameFormData — klubber (#442)', () => {
+  it('FK-normaliserer, hopper over tomme rader og sorterer klubbene på navn', async () => {
+    clubsData = [
+      { groups: { id: 'g2', name: 'Bjørnholt GK' } },
+      { groups: [{ id: 'g1', name: 'Aurskog' }] }, // FK-join som array
+      { groups: null }, // hoppes over
+    ];
+    const { clubs } = await getNewGameFormData(false);
+    expect(clubs).toEqual([
+      { id: 'g1', name: 'Aurskog' },
+      { id: 'g2', name: 'Bjørnholt GK' },
+    ]);
+  });
+
+  it('returnerer tom klubb-liste når brukeren ikke er medlem av noen', async () => {
+    clubsData = [];
+    const { clubs } = await getNewGameFormData(false);
+    expect(clubs).toEqual([]);
   });
 });

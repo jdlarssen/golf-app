@@ -30,6 +30,8 @@ type SearchParams = Promise<{
   // F2 foundation (#272): wizard step 1 leser dette og pre-velger intent.
   // Cup-link fra /admin/cup/[id] vil sette intent=cup. Direkte URL kan også.
   intent?: string | string[];
+  // #442: klubb-side kan dyplenke med forhåndsvalgt klubb.
+  klubb?: string | string[];
 }>;
 
 /**
@@ -151,7 +153,11 @@ export default async function NewGamePage({
       <div className="mt-5">
         <Card>
           <Suspense fallback={<GameFormSkeleton />}>
-            <GameFormBody cupContext={cupContext} initialIntent={initialIntent} />
+            <GameFormBody
+              cupContext={cupContext}
+              initialIntent={initialIntent}
+              defaultGroupId={first(sp.klubb)}
+            />
           </Suspense>
         </Card>
       </div>
@@ -287,9 +293,11 @@ async function PlayerShortageBanner() {
 async function GameFormBody({
   cupContext,
   initialIntent,
+  defaultGroupId,
 }: {
   cupContext: CupContext | null;
   initialIntent: Intent | undefined;
+  defaultGroupId: string | undefined;
 }) {
   // Forhåndshent format-katalogen for alle ikke-cup-intents + cup-eligible
   // listen så client-wizard kan switche intent uten ekstra fetch. Parallell
@@ -303,7 +311,7 @@ async function GameFormBody({
       getCupEligibleFormats(),
     ]);
 
-  const { courses, players } = await getNewGameFormData();
+  const { courses, players, clubs } = await getNewGameFormData();
   return (
     <GameWizard
       courses={courses}
@@ -323,6 +331,8 @@ async function GameFormBody({
         solo: soloFormats,
       }}
       cupEligibleFormats={cupEligibleFormats}
+      clubs={clubs}
+      defaultGroupId={defaultGroupId}
     />
   );
 }

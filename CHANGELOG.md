@@ -21,6 +21,26 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#442](https://github.com/jdlarssen/golf-app/issues/442) (milepæl Klubb-skala). Du kan nå lage egne klubber, samle folk og turneringer på ett sted, og la medlemmene finne klubbens runder.
 
+### [1.79.3] - 2026-06-05 · #442
+
+> Når du setter opp en runde, kan du velge hvilken klubb den er for. Da ser alle i klubben runden under «Finn turneringer» og kan melde seg på — også om den ellers er privat. Setter du opp runden fra en klubb-side, er klubben valgt på forhånd.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#442](https://github.com/jdlarssen/golf-app/issues/442) (milepæl Klubb-skala). Klubb-valg i opprett-spill-veiviseren + `group_id` på spill.
+
+#### Added
+- [`app/admin/games/new/GameWizard.tsx`](app/admin/games/new/GameWizard.tsx) + [`useGameFormState.ts`](app/admin/games/new/useGameFormState.ts) — valgfri «Hvem er dette for?»-velger (steg 2): «Ingen klubb» eller en av brukerens klubber. Speiler `registration_mode`-plumbingen; sender `group_id` som skjult felt. `?klubb=<id>` forhåndsvelger.
+- [`lib/games/newGameFormData.ts`](lib/games/newGameFormData.ts) — returnerer nå `clubs` (brukerens klubb-medlemskap) + [`newGameFormData.test.ts`](lib/games/newGameFormData.test.ts) dekker FK-normalisering/sortering.
+- [`app/klubber/[id]/page.tsx`](app/klubber/[id]/page.tsx) — «Sett opp en runde for klubben»-knapp (dyplenker til veiviseren med klubben forhåndsvalgt).
+
+#### Changed
+- [`app/admin/games/new/actions.ts`](app/admin/games/new/actions.ts) — `createGameInternal` setter `games.group_id` ved insert. Authz: spillet kan kun scopes til en klubb brukeren selv er medlem av (manipulert verdi droppes til null).
+- [`app/opprett-spill/page.tsx`](app/opprett-spill/page.tsx) + [`app/admin/games/new/page.tsx`](app/admin/games/new/page.tsx) — tråder `clubs` + `?klubb=`-forhåndsvalg inn i veiviseren.
+
+</details>
+
 ### [1.79.2] - 2026-06-05 · #442
 
 > Du kan dele en lenke så folk kan be om å bli med i klubben din. Du får et varsel i innboksen, og godkjenner eller avslår med ett trykk. Den som ber om å bli med, ser at forespørselen er sendt.

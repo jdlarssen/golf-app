@@ -6,7 +6,7 @@ import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
-import { Button } from '@/components/ui/Button';
+import { Button, LinkButton } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { CopyJoinLinkButton } from './CopyJoinLinkButton';
@@ -210,6 +210,13 @@ export default async function KlubbDetailPage({
             </Card>
           ))}
         </div>
+      </section>
+
+      {/* Create a game scoped to this club (any member). */}
+      <section className="mb-8">
+        <LinkButton href={`/opprett-spill?klubb=${club.id}`} full>
+          Sett opp en runde for klubben
+        </LinkButton>
       </section>
 
       {/* Admin controls */}

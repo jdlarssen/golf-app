@@ -59,6 +59,7 @@ import {
   type GameFormMode,
   type InitialValues,
 } from './GameForm';
+import type { ClubOption } from '@/lib/games/newGameFormData';
 import { suggestGameName } from '@/lib/games/autoGameName';
 import { fitsPlayerCount } from '@/lib/wizard/fitsPlayerCount';
 
@@ -78,6 +79,12 @@ type Props = {
   formatsByIntent: Record<'kompis' | 'klubb' | 'solo', FormatForIntent[]>;
   // Cup-eligible formats brukt av CupSetup-multi-select. Også forhåndshentet.
   cupEligibleFormats: CupEligibleFormat[];
+  // #442: klubber brukeren er medlem av — for «Hvem er dette for?»-velgeren.
+  // Tom liste = velgeren vises ikke. Alltid trygt å sende tom liste.
+  clubs?: ClubOption[];
+  // #442: forhåndsvalgt klubb-id (fra ?klubb= search-param). Sendes videre
+  // til useGameFormState som defaultGroupId.
+  defaultGroupId?: string;
 };
 
 const STEP_TITLES: Record<Step, string> = {
@@ -111,6 +118,8 @@ export function GameWizard({
   initialIntent,
   formatsByIntent,
   cupEligibleFormats,
+  clubs = [],
+  defaultGroupId,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -131,7 +140,7 @@ export function GameWizard({
     !!initialValues?.name && initialValues.name.trim() !== '',
   );
 
-  const state = useGameFormState({ initialValues, players, courses, initialIntent });
+  const state = useGameFormState({ initialValues, players, courses, initialIntent, defaultGroupId });
 
   // Når bruker går fram/tilbake via browser, oppdateres `searchParams`. Vi
   // reconciler lokal state til URL — men kun når URL-strengen faktisk er
@@ -334,6 +343,7 @@ export function GameWizard({
       tournament_match_label: initialValues?.tournament_match_label,
       registration_mode: state.registrationMode,
       registration_type: state.registrationType,
+      group_id: state.groupId,
     };
     return (
       <div className="space-y-4">
@@ -692,6 +702,13 @@ export function GameWizard({
                 />
               )}
               <RegistrationSection state={state} hideHeading />
+              {clubs.length > 0 && (
+                <ClubPicker
+                  clubs={clubs}
+                  value={state.groupId}
+                  onChange={state.setGroupId}
+                />
+              )}
             </div>
           )}
 
@@ -829,6 +846,7 @@ function FormDataInputs({
     selectedPlayerIds,
     registrationMode,
     registrationType,
+    groupId,
   } = state;
 
   // Alle controlled state-verdier serialiseres som hidden inputs UANSETT
@@ -849,6 +867,7 @@ function FormDataInputs({
       <input type="hidden" name="team_size" value={teamSize} />
       <input type="hidden" name="registration_mode" value={registrationMode} />
       <input type="hidden" name="registration_type" value={registrationType} />
+      <input type="hidden" name="group_id" value={groupId} />
       {isStablefordFamily(gameMode) && (
         <input type="hidden" name="stableford_team_size" value={teamSize} />
       )}
@@ -1116,6 +1135,46 @@ function StepperHeader({
       </div>
       {subText && <p className="text-xs text-muted">{subText}</p>}
     </div>
+  );
+}
+
+/**
+ * ClubPicker — «Hvem er dette for?»-velger i steg 2 (#442).
+ *
+ * Vises kun når brukeren er med i ≥1 klubb. Lar admin knytte spillet til
+ * en klubb — noe som gjør turneringen synlig for alle klubbens medlemmer
+ * (også invite_only-turneringer). Default er «Ingen klubb» (tom streng).
+ */
+function ClubPicker({
+  clubs,
+  value,
+  onChange,
+}: {
+  clubs: ClubOption[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  return (
+    <fieldset className="space-y-2">
+      <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+        For hvilken klubb?
+      </legend>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full min-h-[44px] rounded-lg border border-border bg-surface px-3 py-2 font-sans text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary"
+      >
+        <option value="">Ingen klubb</option>
+        {clubs.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
+        ))}
+      </select>
+      <p className="text-xs text-muted">
+        Medlemmene kan se og melde seg på alle spill du setter opp for klubben.
+      </p>
+    </fieldset>
   );
 }
 

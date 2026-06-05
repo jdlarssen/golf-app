@@ -22,6 +22,13 @@ type CourseRow = {
   }[];
 };
 
+/** En klubb brukeren er medlem av (#442) — for veiviserens klubb-valg. */
+export type ClubOption = { id: string; name: string };
+
+type ClubMembershipRow = {
+  groups: { id: string; name: string } | { id: string; name: string }[] | null;
+};
+
 type UserRow = {
   id: string;
   name: string | null;
@@ -51,10 +58,13 @@ type UserRow = {
  */
 export const getNewGameFormData = cache(async (includeEmail = true) => {
   const supabase = await getServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const userColumns = includeEmail
     ? 'id, name, nickname, hcp_index, email, profile_completed_at, gender, level'
     : 'id, name, nickname, hcp_index, profile_completed_at, gender, level';
-  const [coursesResult, usersResult] = await Promise.all([
+  const [coursesResult, usersResult, clubsResult] = await Promise.all([
     supabase
       .from('courses')
       .select(
@@ -68,6 +78,15 @@ export const getNewGameFormData = cache(async (includeEmail = true) => {
       .order('profile_completed_at', { ascending: true, nullsFirst: false })
       .order('name', { ascending: true, nullsFirst: true })
       .returns<UserRow[]>(),
+    // #442: klubbene innloggede er medlem av, så veiviseren kan tilby et
+    // valgfritt «Hvem er dette for?»-valg. RLS lar et medlem lese egne
+    // group_members-rader + sine gruppers navn. Tom liste hvis ikke medlem.
+    user
+      ? supabase
+          .from('group_members')
+          .select('groups(id, name)')
+          .eq('user_id', user.id)
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
   if (coursesResult.error) throw coursesResult.error;
@@ -115,5 +134,15 @@ export const getNewGameFormData = cache(async (includeEmail = true) => {
       : base;
   });
 
-  return { courses, players };
+  // Normaliser FK-join (Supabase typer en-til-en som array) → flat klubb-liste,
+  // sortert på navn. Tomme/manglende rader hoppes over.
+  const clubs: ClubOption[] = ((clubsResult.data ?? []) as ClubMembershipRow[])
+    .map((row) => {
+      const g = Array.isArray(row.groups) ? row.groups[0] ?? null : row.groups;
+      return g ? { id: g.id, name: g.name } : null;
+    })
+    .filter((c): c is ClubOption => c !== null)
+    .sort((a, b) => a.name.localeCompare(b.name, 'no'));
+
+  return { courses, players, clubs };
 });

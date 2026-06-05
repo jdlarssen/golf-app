@@ -171,6 +171,9 @@ type UseGameFormStateInput = {
   // /admin/cup/[id] forhåndsvelger 'cup'. Ikke konsumert i denne chunken —
   // bare plumbet gjennom så senere chunks kan render IntentSelector.
   initialIntent?: Intent;
+  // #442: forhåndsvalgt klubb-id (fra ?klubb= search-param eller
+  // initialValues.group_id). Tom streng = ingen klubb valgt.
+  defaultGroupId?: string;
 };
 
 /**
@@ -185,6 +188,7 @@ export function useGameFormState({
   players,
   courses,
   initialIntent,
+  defaultGroupId,
 }: UseGameFormStateInput) {
   // F2 foundation (#272): intent-state for wizard step 1. Initialiseres fra
   // URL via page.tsx → wizard → her. Settbar via setIntent når bruker
@@ -449,6 +453,11 @@ export function useGameFormState({
   );
   const [registrationType, setRegistrationType] = useState<RegistrationType>(
     initialValues?.registration_type ?? 'solo',
+  );
+  // #442: valgfri klubb-tilknytning. Prioritert rekkefølge: initialValues
+  // (edit-pre-fyll), deretter defaultGroupId (fra ?klubb=-param), ellers ''.
+  const [groupId, setGroupId] = useState<string>(
+    initialValues?.group_id ?? defaultGroupId ?? '',
   );
   // #199 derived flags
   // - registrationModeSupportsTeams: speilet av gameModeSupportsTeams — UI-
@@ -1525,6 +1534,9 @@ export function useGameFormState({
     setRegistrationType,
     registrationModeSupportsTeams,
     playersStepOptional,
+    // #442: klubb-tilknytning for create-flyten
+    groupId,
+    setGroupId,
     // Initial / lock flags surfaced for components that render them as
     // defaultChecked / disabled (radios + Side-Tournament-fieldset).
     initialScoreVisibility,

@@ -233,6 +233,11 @@ export type InitialValues = {
    */
   registration_mode?: RegistrationMode;
   registration_type?: RegistrationType;
+  /**
+   * Klubb-tilknytning (#442). Valgfritt — kun satt i create-flyten når
+   * admin velger en klubb i veiviseren. Edit-flyten berøres ikke.
+   */
+  group_id?: string;
 };
 
 /**
