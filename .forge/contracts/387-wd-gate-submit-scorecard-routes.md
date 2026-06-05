@@ -46,13 +46,13 @@
 
 ## Akseptkriterier
 
-- [ ] **AC1 — Submit-page gater trukket:** en trukket spiller som åpner `/games/[id]/submit` redirectes til game-home server-side, før skjemaet rendres. *(kode + build)*
-- [ ] **AC2 — Submit-action refuser trukket:** `submitScorecard` redirecter en trukket spiller til game-home; ingen `submitted_at`-skriving, ingen notify, ingen mail. *(ny vitest-test grønn)*
-- [ ] **AC3 — Scorekort-page gater trukket:** en trukket spiller som åpner `/games/[id]/scorecard` redirectes til game-home. *(kode + build)*
-- [ ] **AC4 — RPC-guard (lag 1):** `upsert_score_if_newer` returnerer `was_applied = false` no-op for et trukket mål, uten insert/update; eksisterende rad bevares; ikke-trukket mål uendret. *(migrasjon applied + `pg_get_functiondef` viser guarden)*
-- [ ] **AC5 — RLS `WITH CHECK` (lag 2):** `scores` INSERT + UPDATE blokkerer skriving til en trukket spillers scorer (speiler `submitted_at`-mønsteret); ikke-trukket skriving upåvirket. *(migrasjon applied + `pg_policies` viser `withdrawn_at` i begge policy-uttrykk)*
-- [ ] **AC6 — Ingen regresjon:** de eksisterende submit-action-testene grønne etter FIFO-oppdatering; `tsc --noEmit` rent; `npm run build` grønt. *(gate-output)*
-- [ ] **AC7 — Bump + CHANGELOG + commit-msg-hook:** PATCH-bump, humanisert CHANGELOG-tagline, `fix(security)`-commit passerer `.githooks/commit-msg`. *(commit-output)*
+- [x] **AC1 — Submit-page gater trukket:** `app/games/[id]/submit/page.tsx` — `if (me.withdrawn_at) redirect(\`/games/${id}\`)` lagt til rett før `submitted_at`-redirecten (server-side, før skjema-render). *(kode + `npm run build` grønt)*
+- [x] **AC2 — Submit-action refuser trukket:** `submitScorecard` re-henter `withdrawn_at` og redirecter til game-home før UPDATE/notify. Ny test «WD gate (#387): a withdrawn player is bounced to game-home, no submit, no notify» grønn — asserter redirect `/games/game-1`, `notifyMock` + mail ikke kalt. *(8/8 tester grønne)*
+- [x] **AC3 — Scorekort-page gater trukket:** `app/games/[id]/scorecard/page.tsx` — `if (me.withdrawn_at) redirect(\`/games/${id}\`)` lagt til etter `me`-oppslaget. *(kode + build)*
+- [x] **AC4 — RPC-guard (lag 1):** migrasjon 0073 applied. Statisk: `pg_get_functiondef` inneholder `withdrawn_at is not null`-guarden (`rpc_has_wd_guard=true`). Funksjonelt (rullet-tilbake tx): trukket mål med nyere `client_updated_at` + endret strokes → `was_applied=false`, lagret verdi uendret (`orig=3, stored_after=3`). Ikke-trukket kontroll → `was_applied=true`, oppdatert (`4→5`). *(MCP-probe)*
+- [x] **AC5 — RLS `WITH CHECK` (lag 2):** migrasjon 0073 applied. `pg_policies` viser `withdrawn_at` i både INSERT-`with_check` og UPDATE-`qual` (`insert_policy_has_wd=true`, `update_policy_has_wd=true`); uttrykket er `(submitted_at is not null or withdrawn_at is not null)`. *(MCP-probe)*
+- [x] **AC6 — Ingen regresjon:** `npx vitest run "app/games/[id]/submit/actions.test.ts"` → 8/8 grønt (4 eksisterende + ny etter FIFO-oppdatering); `npx tsc --noEmit` → exit 0; `npm run build` → grønt. *(gate-output)*
+- [x] **AC7 — Bump + CHANGELOG + commit-msg-hook:** `1.78.1 → 1.78.2`, humanisert tagline (em-dash fjernet, slogan-tail droppet), commit `25844d1 fix(security): …` passerte `.githooks/commit-msg`. *(commit-output)*
 
 ## Gates (scoped til det som endres)
 
