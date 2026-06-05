@@ -18,6 +18,7 @@
  */
 
 import type { PlayerOption } from '../GameForm';
+import { PENDING_PLAYER_LABEL } from '../playerDisplay';
 import type { GameFormState } from '../useGameFormState';
 import { Button } from '@/components/ui/Button';
 import { FLIGHT_NUMBERS, TEAM_NUMBERS, type TeamNumber } from '../useGameFormState';
@@ -34,8 +35,8 @@ type Props = {
 };
 
 function shortName(p: PlayerOption): string {
-  if (p.pending) return p.email;
-  const displayName = p.name ?? p.email;
+  if (p.pending) return p.email ?? PENDING_PLAYER_LABEL;
+  const displayName = p.name ?? p.email ?? PENDING_PLAYER_LABEL;
   return p.nickname ? `${displayName} «${p.nickname}»` : displayName;
 }
 

@@ -1,6 +1,7 @@
 'use client';
 
 import type { PlayerOption } from '../GameForm';
+import { PENDING_PLAYER_LABEL } from '../playerDisplay';
 
 export type WolfScoring = 'gross' | 'net';
 
@@ -155,5 +156,5 @@ export function WolfSetup({
 }
 
 function playerLabel(p: PlayerOption): string {
-  return p.nickname || p.name || p.email;
+  return p.nickname || p.name || p.email || PENDING_PLAYER_LABEL;
 }

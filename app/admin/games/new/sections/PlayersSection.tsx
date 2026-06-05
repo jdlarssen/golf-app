@@ -10,6 +10,7 @@
 
 import type { PlayerOption } from '../GameForm';
 import type { GameFormState } from '../useGameFormState';
+import { PENDING_PLAYER_LABEL } from '../playerDisplay';
 import { StatusChip } from '@/components/ui/StatusChip';
 
 type Props = {
@@ -24,17 +25,17 @@ type Props = {
 
 function playerLabel(p: PlayerOption): string {
   if (p.pending) {
-    return p.email;
+    return p.email ?? PENDING_PLAYER_LABEL;
   }
-  const displayName = p.name ?? p.email; // defensive — non-pending should always have name
+  const displayName = p.name ?? p.email ?? PENDING_PLAYER_LABEL; // defensive — non-pending should always have name
   const hcp = p.hcp_index.toFixed(1);
   if (p.nickname) return `${displayName} «${p.nickname}» — HCP ${hcp}`;
   return `${displayName} — HCP ${hcp}`;
 }
 
 function shortName(p: PlayerOption): string {
-  if (p.pending) return p.email;
-  const displayName = p.name ?? p.email;
+  if (p.pending) return p.email ?? PENDING_PLAYER_LABEL;
+  const displayName = p.name ?? p.email ?? PENDING_PLAYER_LABEL;
   return p.nickname ? `${displayName} «${p.nickname}»` : displayName;
 }
 

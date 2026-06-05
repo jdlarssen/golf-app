@@ -27,20 +27,33 @@ type UserRow = {
   name: string | null;
   nickname: string | null;
   hcp_index: number | string;
-  email: string;
+  // Absent in the e-post-fri variant (includeEmail === false) — the column is
+  // never selected, so other users' e-post never enters the RSC payload (#435).
+  email?: string;
   profile_completed_at: string | null;
   gender: 'mens' | 'ladies' | null;
   level: 'junior' | 'normal' | 'senior';
 };
 
 /**
- * Loads the data both create-game flows (/admin/games/new + /opprett-spill)
- * need: course/tee options and the player roster. Wrapped in React's `cache`
- * so two Suspense boundaries on the same page can read it without a
- * double-fetch.
+ * Loads the data the create/edit-game flows need: course/tee options and the
+ * player roster. Wrapped in React's `cache` so two Suspense boundaries on the
+ * same page can read it without a double-fetch.
+ *
+ * `includeEmail` (#435): the player picker only shows name/nickname + handicap,
+ * so the e-post column is dead weight there — and worse, it leaks co-players'
+ * e-postadresser into the page payload of any non-admin who opens the wizard.
+ * The admin flow (`/admin/games/new`) keeps `true` (full roster); the non-admin
+ * flows (`/opprett-spill`, `/games/[id]/rediger`) pass `false`, which drops the
+ * `email` column from the query entirely. Keep this a primitive boolean (not an
+ * options object) so `cache` dedupes by value — `/opprett-spill` calls this
+ * twice in one request, and an object literal would miss the cache each time.
  */
-export const getNewGameFormData = cache(async () => {
+export const getNewGameFormData = cache(async (includeEmail = true) => {
   const supabase = await getServerClient();
+  const userColumns = includeEmail
+    ? 'id, name, nickname, hcp_index, email, profile_completed_at, gender, level'
+    : 'id, name, nickname, hcp_index, profile_completed_at, gender, level';
   const [coursesResult, usersResult] = await Promise.all([
     supabase
       .from('courses')
@@ -51,7 +64,7 @@ export const getNewGameFormData = cache(async () => {
       .returns<CourseRow[]>(),
     supabase
       .from('users')
-      .select('id, name, nickname, hcp_index, email, profile_completed_at, gender, level')
+      .select(userColumns)
       .order('profile_completed_at', { ascending: true, nullsFirst: false })
       .order('name', { ascending: true, nullsFirst: true })
       .returns<UserRow[]>(),
@@ -84,16 +97,23 @@ export const getNewGameFormData = cache(async () => {
       .sort((a, b) => a.name.localeCompare(b.name, 'no')),
   }));
 
-  const players: PlayerOption[] = (usersResult.data ?? []).map((u) => ({
-    id: u.id,
-    name: u.name,
-    nickname: u.nickname ?? null,
-    hcp_index: Number(u.hcp_index),
-    email: u.email,
-    pending: u.profile_completed_at === null,
-    gender: u.gender,
-    level: u.level,
-  }));
+  const players: PlayerOption[] = (usersResult.data ?? []).map((u) => {
+    const base: PlayerOption = {
+      id: u.id,
+      name: u.name,
+      nickname: u.nickname ?? null,
+      hcp_index: Number(u.hcp_index),
+      pending: u.profile_completed_at === null,
+      gender: u.gender,
+      level: u.level,
+    };
+    // Spread the e-post in only when requested, so the e-post-fri variant
+    // omits the key entirely (not `email: undefined`) — nothing for a
+    // non-admin's RSC payload to carry (#435).
+    return includeEmail && u.email !== undefined
+      ? { ...base, email: u.email }
+      : base;
+  });
 
   return { courses, players };
 });

@@ -95,7 +95,10 @@ export default async function OpprettSpillPage({
 }
 
 async function PlayerShortageBanner() {
-  const { players } = await getNewGameFormData();
+  // includeEmail=false (#435): non-admin create must not leak co-players'
+  // e-postadresser into the page payload. Same `(false)` arg here and in
+  // GameFormBody so React `cache` dedupes the two Suspense reads.
+  const { players } = await getNewGameFormData(false);
   if (players.length >= 8) return null;
   const isSingular = players.length === 1;
   return (
@@ -123,7 +126,7 @@ async function GameFormBody() {
       getFormatsForIntent('solo'),
       getCupEligibleFormats(),
     ]);
-  const { courses, players } = await getNewGameFormData();
+  const { courses, players } = await getNewGameFormData(false);
   return (
     <GameWizard
       courses={courses}

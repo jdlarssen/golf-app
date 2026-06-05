@@ -21,6 +21,27 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#392](https://github.com/jdlarssen/golf-app/issues/392) (milepæl Klubb-skala). Klubbhuset blir en fast fane i bunn-nav-en som alle har. Det du møter inne avhenger av hvem du er.
 
+### [1.78.1] - 2026-06-05 · #435
+
+> Når du setter opp eller redigerer en runde, sender ikke appen lenger med e-postadressene til de andre spillerne. Den trenger bare navn og handicap så du kan plukke medspillere. Har du invitert noen som ikke har fullført profilen sin ennå, står de nå som «Invitert spiller» i stedet for e-posten sin.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#435](https://github.com/jdlarssen/golf-app/issues/435) (milepæl Backlog — scale-triggered). `getNewGameFormData()` selecter ikke lenger `email` for ikke-admin-flatene, så spiller-rosteren slipper å bære medspilleres e-postadresser inn i side-payloaden. RLS på `users` begrenset allerede rosteren til seg selv + delte-spill-medspillere (ikke hele medlemslista, som issuet antok), men e-post-kolonnen var fortsatt med. Nå droppes den på data-laget.
+
+#### Changed
+- [`lib/games/newGameFormData.ts`](lib/games/newGameFormData.ts) — `getNewGameFormData(includeEmail = true)`; primitiv boolean-arg så React `cache` deduper på verdi. `includeEmail=false` utelater `email`-kolonnen fra users-`.select()` og `email`-nøkkelen fra `PlayerOption`-output.
+- [`app/opprett-spill/page.tsx`](app/opprett-spill/page.tsx) + [`app/games/[id]/rediger/page.tsx`](app/games/[id]/rediger/page.tsx) — de to ikke-admin-create/edit-flatene kaller nå `getNewGameFormData(false)`. `/admin/games/new` beholder default (full roster, allerede admin-gated).
+- [`app/admin/games/new/GameForm.tsx`](app/admin/games/new/GameForm.tsx) — `PlayerOption.email` er nå optional.
+- Spiller-velger-helperne ([`PlayersSection`](app/admin/games/new/sections/PlayersSection.tsx), [`TeamsAssignmentSection`](app/admin/games/new/sections/TeamsAssignmentSection.tsx), [`WolfSetup`](app/admin/games/new/sections/WolfSetup.tsx), [`RoundRobinSetup`](app/admin/games/new/sections/RoundRobinSetup.tsx), [`useGameFormState`](app/admin/games/new/useGameFormState.ts)) faller tilbake på delt `PENDING_PLAYER_LABEL` («Invitert spiller») når `email` mangler, i stedet for å vise en e-postadresse.
+
+#### Added
+- [`app/admin/games/new/playerDisplay.ts`](app/admin/games/new/playerDisplay.ts) — delt `PENDING_PLAYER_LABEL`-konstant.
+- [`lib/games/newGameFormData.test.ts`](lib/games/newGameFormData.test.ts) — co-lokert loader-test: `includeEmail=false` utelater `email` fra select + output; default beholder den.
+
+</details>
+
 ### [1.78.0] - 2026-06-05 · #392
 
 > Klubbhuset er nå en fast fane nederst på skjermen, ved siden av Hjem, Innboks og Profil. Trykk den for å sette opp en runde eller legge til en bane. Er du administrator, ligger alle administrator-verktøyene der inne. Opprett-knappene er flyttet fra forsiden inn i Klubbhuset, så forsiden viser spillene dine og åpne turneringer du kan bli med i.

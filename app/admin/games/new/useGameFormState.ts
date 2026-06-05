@@ -627,7 +627,7 @@ export function useGameFormState({
     return players.filter((p) => {
       if (selectedSet.has(p.id)) return false;
       if (query === '') return true;
-      const haystacks = [p.name ?? '', p.nickname ?? '', p.email];
+      const haystacks = [p.name ?? '', p.nickname ?? '', p.email ?? ''];
       return haystacks.some((h) => h.toLowerCase().includes(query));
     });
   }, [players, playerSearch, selectedPlayerIds]);

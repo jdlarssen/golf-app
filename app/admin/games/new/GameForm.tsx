@@ -40,7 +40,10 @@ export type PlayerOption = {
   name: string | null;       // null while invitee hasn't completed profile
   nickname: string | null;
   hcp_index: number;
-  email: string;
+  // Optional: the e-post-fri roster variant for non-admin create/edit flows
+  // omits this so co-players' e-postadresser never reach the page payload
+  // (#435). Picker fallbacks use PENDING_PLAYER_LABEL when it's absent.
+  email?: string;
   pending: boolean;          // derived from profile_completed_at IS NULL
   gender: 'mens' | 'ladies' | null;  // null = not answered yet → soft-prompt on /profile
   level: 'junior' | 'normal' | 'senior';

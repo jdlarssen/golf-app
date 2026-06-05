@@ -34,9 +34,10 @@ import {
  * Reuses the SAME `GameForm` + the SAME `saveDraftAction` / `publishFromDraftAction`
  * / `updateScheduledAction` server actions the admin uses — those branch their
  * redirects to `/games/*` for a non-admin caller (#428). Options load through
- * `getNewGameFormData` (RLS-safe for non-admins: courses are world-readable, the
- * player picker shows the creator + their shared-game co-players, which already
- * covers this game's roster).
+ * `getNewGameFormData(false)` — the e-post-fri roster variant (#435). RLS on
+ * `users` already scopes the picker to the creator + their shared-game
+ * co-players (which covers this game's roster); `includeEmail=false` drops the
+ * `email` column so those co-players' e-postadresser never reach the payload.
  */
 
 type Params = Promise<{ id: string }>;
@@ -125,7 +126,9 @@ async function EditGameFormBody({
 }) {
   const supabase = await getServerClient();
   const [{ courses, players }, playersResult] = await Promise.all([
-    getNewGameFormData(),
+    // includeEmail=false (#435): the creator-facing edit flow is non-admin, so
+    // the roster must not carry co-players' e-postadresser into the payload.
+    getNewGameFormData(false),
     supabase
       .from('game_players')
       .select('user_id, team_number, flight_number, tee_gender')

@@ -1,6 +1,7 @@
 'use client';
 
 import type { PlayerOption } from '../GameForm';
+import { PENDING_PLAYER_LABEL } from '../playerDisplay';
 
 interface RoundRobinSetupProps {
   /**
@@ -106,5 +107,5 @@ export function RoundRobinSetup({
 }
 
 function playerLabel(p: PlayerOption): string {
-  return p.nickname || p.name || p.email;
+  return p.nickname || p.name || p.email || PENDING_PLAYER_LABEL;
 }
