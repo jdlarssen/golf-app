@@ -7,7 +7,7 @@
 # Tørny — brukerflyt-kart
 
 Mobil-først PWA. To personas: **Admin/arrangør** (`is_admin`) og **Spiller** (invitert).
-En tredje halv-rolle finnes: **Trusted creator** (e-post-allowlist) — kan opprette spill, men ser ikke Sekretariatet.
+En tredje halv-rolle finnes: **Trusted creator** (e-post-allowlist) — kan opprette spill og baner, men ser ikke admin-flatene inne i Klubbhuset.
 
 Diagrammene under er Mermaid (renderes på GitHub / i preview). Lenger ned:
 teknisk-kobling per steg, og en prioritert brukervennlighets-vurdering.
@@ -29,16 +29,25 @@ flowchart TD
   CP --> Home
   Home --> PH{har spill?}
   PH -- ja --> List["Mine spill / Avsluttede spill"]
-  PH -- "nei + ikke admin" --> Disc["Funn turneringer<br/>(åpne spill å melde seg på)"]
-  Home -. "kan opprette" .-> Create["+ Opprett spill"]
-  Home -. "is_admin" .-> Sek["Sekretariatet → /admin"]
+  PH -- nei --> Disc["Finn turneringer<br/>(åpne spill å melde seg på)"]
+  Nav["Bunn-nav (alle innloggede):<br/>Hjem · Innboks · Klubbhuset · Profil"]
+  Home --- Nav
+  Nav --> Klub["Klubbhuset → /admin"]
+  Klub --> KP{is_admin?}
+  KP -- ja --> Sek["Hele Sekretariatet<br/>(Spill, Spillere, Baner, Cup, Formater, …)"]
+  KP -- nei --> PlayerKlub["Spill (egne, m/Opprett spill)<br/>+ Baner (m/Opprett bane)"]
 ```
 
 **Persistente nav-elementer** (verifisert i `app/layout.tsx` + sidene):
-`BrandMark` (logo, ikke klikkbar) · `NotificationBell` → `/innboks` · `InstallBanner` (PWA) ·
-`ProductUpdateBanner` · `TopBar` (tilbake-pil + tittel, på indre sider) ·
-hjem-footer (Min profil / Sekretariatet / Logg ut) · `AppVersionFooter` (versjon + Personvern).
-**Det finnes ingen bunn-tab-bar og ingen meny.** Hjem er navet; alt annet er eiker.
+`BrandMark` (logo, ikke klikkbar) · `InstallBanner` (PWA) · `ProductUpdateBanner` ·
+`TopBar` (tilbake-pil + tittel, på indre sider) · `AppVersionFooter` (versjon + Personvern).
+
+**Vedvarende bunn-nav** (#355, #392): fire faste faner — Hjem, Innboks, Klubbhuset, Profil —
+rendret globalt i `app/layout.tsx`, synlig for alle innloggede på alle flater (også i Klubbhus-
+rommet `/admin`). Skjult kun på hull-skjerm, login og onboarding. «Klubbhuset» er universell:
+fanen gates ikke på rolle, men flatene inne gates — admin ser hele Sekretariatet, vanlige
+spillere ser Spill + Baner med oppretting. **Opprett spill/bane bor inne i Klubbhuset, ikke på
+Hjem.** Hjem er play + discover-navet: dine spill + «Finn turneringer».
 
 ---
 
@@ -128,7 +137,7 @@ flowchart LR
 
 ### A1 — Opprett spill (GameWizard, 5 steg)
 
-Inngang: «Opprett spill»-knapp på hjem → `/admin/games/new` (admin) eller `/opprett-spill` (trusted creator). Samme `GameWizard`-komponent, steg via `?step=1..5` + klient-state (ikke rute-per-steg).
+Inngang: via Klubbhuset (#392) — admin går Spill-flaten → `/admin/games/new`; vanlig spiller / trusted creator går Spill-flaten → `/opprett-spill`. Samme `GameWizard`-komponent, steg via `?step=1..5` + klient-state (ikke rute-per-steg).
 
 ```mermaid
 flowchart LR
@@ -168,9 +177,9 @@ flowchart LR
 | Formater | `/admin/formats` | Styr format-katalogen som driver wizard-grid-en. |
 | Lanseringer | `/admin/lanseringer` | Produkt-oppdaterings-digest. |
 
-### A4 — Sekretariatet (dashboard)
+### A4 — Klubbhuset / Sekretariatet (dashboard)
 
-`/admin` (`AdminShell`): hilsen + tile-grid (Spill / Spillere / Baner / Resultatprotokoll / Lanseringer / Cuper / Formats, rolle-filtrert) + aktivitets-logg (siste 14 dager).
+`/admin` (`AdminShell`) — nådd via den universelle «Klubbhuset»-bunn-nav-fanen (#392). For admin: hilsen + tile-grid (Spill / Spillere / Baner / Resultatprotokoll / Lanseringer / Cuper / Formats) + aktivitets-logg (siste 14 dager). For vanlig spiller / trusted creator: en minimal visning med Spill- og Baner-flatene (oppretting bor her), uten admin-tellinger eller aktivitets-logg.
 
 ---
 

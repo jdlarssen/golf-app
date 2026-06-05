@@ -344,7 +344,7 @@ async function HomeBody() {
         </Section>
 
         {/* Vedvarende «Finn turneringer»-inngang (#357, #392). Hjem er play +
-            discover-navet nå — arrangering bor i Klubbhuset — så alle innloggede
+            discover-navet nå (arrangering bor i Klubbhuset), så alle innloggede
             kan oppdage åpne turneringer herfra. */}
         <Section label="Finn turneringer">
           <SmartLink href="/finn-turneringer" className="block">
