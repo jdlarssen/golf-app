@@ -1,6 +1,7 @@
 import 'server-only';
 import { cache } from 'react';
 import { getServerClient } from '@/lib/supabase/server';
+import { isClubExpired } from '@/lib/clubs/clubStatus';
 import type { CourseOption, PlayerOption } from '@/app/admin/games/new/GameForm';
 
 type CourseRow = {
@@ -25,8 +26,9 @@ type CourseRow = {
 /** En klubb brukeren er medlem av (#442) — for veiviserens klubb-valg. */
 export type ClubOption = { id: string; name: string };
 
+type ClubGroup = { id: string; name: string; valid_until: string | null };
 type ClubMembershipRow = {
-  groups: { id: string; name: string } | { id: string; name: string }[] | null;
+  groups: ClubGroup | ClubGroup[] | null;
 };
 
 type UserRow = {
@@ -84,7 +86,7 @@ export const getNewGameFormData = cache(async (includeEmail = true) => {
     user
       ? supabase
           .from('group_members')
-          .select('groups(id, name)')
+          .select('groups(id, name, valid_until)')
           .eq('user_id', user.id)
       : Promise.resolve({ data: [], error: null }),
   ]);
@@ -135,11 +137,14 @@ export const getNewGameFormData = cache(async (includeEmail = true) => {
   });
 
   // Normaliser FK-join (Supabase typer en-til-en som array) → flat klubb-liste,
-  // sortert på navn. Tomme/manglende rader hoppes over.
+  // sortert på navn. Tomme/manglende rader hoppes over. Utløpte klubber (#50)
+  // utelates — en frossen klubb kan ikke ta imot nye spill, så veiviseren skal
+  // ikke tilby den som «Hvem er dette for?»-valg.
   const clubs: ClubOption[] = ((clubsResult.data ?? []) as ClubMembershipRow[])
     .map((row) => {
       const g = Array.isArray(row.groups) ? row.groups[0] ?? null : row.groups;
-      return g ? { id: g.id, name: g.name } : null;
+      if (!g || isClubExpired(g.valid_until)) return null;
+      return { id: g.id, name: g.name };
     })
     .filter((c): c is ClubOption => c !== null)
     .sort((a, b) => a.name.localeCompare(b.name, 'no'));

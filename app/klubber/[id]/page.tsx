@@ -10,6 +10,7 @@ import { Button, LinkButton } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { CopyJoinLinkButton } from './CopyJoinLinkButton';
+import { isClubExpired } from '@/lib/clubs/clubStatus';
 import { addMember, decideRequest } from './actions';
 
 type Params = Promise<{ id: string }>;
@@ -66,6 +67,11 @@ export default async function KlubbDetailPage({
   const { club, members, myRole, pendingRequests } = detail;
   const isAdmin = myRole === 'owner' || myRole === 'admin';
 
+  // #50: en utløpt klubb (frossen avtale) tar ikke imot nye medlemmer eller
+  // spill. Vi fryser legg-til-medlem, del-lenke og «sett opp runde», og viser
+  // et utløpt-banner. Medlemsstyring (roller, fjern, forlat) er fortsatt mulig.
+  const frozen = isClubExpired(club.valid_until);
+
   // Determine whether to show leave link (hide for the only owner).
   const ownerCount = members.filter((m) => m.role === 'owner').length;
   const iSoleOwner = myRole === 'owner' && ownerCount === 1;
@@ -85,6 +91,10 @@ export default async function KlubbDetailPage({
       : 'Denne personen er allerede med i klubben.',
     not_auth: 'Du har ikke tilgang til å legge til medlemmer.',
     email_req: 'Fyll inn en e-postadresse.',
+    full: club.member_cap
+      ? `Klubben er full (maks ${club.member_cap} medlemmer).`
+      : 'Klubben er full.',
+    expired: 'Klubben er utløpt. Ta kontakt på klubb@tornygolf.no for å fornye.',
     unknown: 'Noe gikk galt. Prøv igjen.',
   };
 
@@ -94,6 +104,16 @@ export default async function KlubbDetailPage({
     not_auth: { tone: 'error', text: 'Du kan ikke avgjøre denne forespørselen.' },
     already: { tone: 'error', text: 'Forespørselen var allerede avgjort.' },
     not_found: { tone: 'error', text: 'Fant ikke forespørselen. Den kan ha blitt trukket tilbake.' },
+    club_full: {
+      tone: 'error',
+      text: club.member_cap
+        ? `Klubben er full (maks ${club.member_cap} medlemmer). Forespørselen står fortsatt åpen.`
+        : 'Klubben er full. Forespørselen står fortsatt åpen.',
+    },
+    club_expired: {
+      tone: 'error',
+      text: 'Klubben er utløpt. Forespørselen kan ikke godkjennes før avtalen fornyes.',
+    },
     unknown: { tone: 'error', text: 'Noe gikk galt. Prøv igjen.' },
   };
 
@@ -129,6 +149,15 @@ export default async function KlubbDetailPage({
       {roleChanged && (
         <div className="mb-6">
           <Banner tone="success">Rollen er oppdatert.</Banner>
+        </div>
+      )}
+
+      {frozen && (
+        <div className="mb-6">
+          <Banner tone="warning">
+            Denne klubben er utløpt. Ta kontakt på klubb@tornygolf.no for å
+            fornye avtalen. Pågående runder spilles ferdig som normalt.
+          </Banner>
         </div>
       )}
 
@@ -189,7 +218,8 @@ export default async function KlubbDetailPage({
       {/* Members list */}
       <section className="mb-8">
         <h2 className="mb-3 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-          Medlemmer ({members.length})
+          Medlemmer ({members.length}
+          {club.member_cap != null ? ` / ${club.member_cap}` : ''})
         </h2>
         <div className="space-y-2">
           {members.map((member) => (
@@ -228,15 +258,17 @@ export default async function KlubbDetailPage({
         </div>
       </section>
 
-      {/* Create a game scoped to this club (any member). */}
-      <section className="mb-8">
-        <LinkButton href={`/opprett-spill?klubb=${club.id}`} full>
-          Sett opp en runde for klubben
-        </LinkButton>
-      </section>
+      {/* Create a game scoped to this club (any member) — frozen when expired. */}
+      {!frozen && (
+        <section className="mb-8">
+          <LinkButton href={`/opprett-spill?klubb=${club.id}`} full>
+            Sett opp en runde for klubben
+          </LinkButton>
+        </section>
+      )}
 
-      {/* Admin controls */}
-      {isAdmin && (
+      {/* Admin controls — hidden when the club is frozen (no new members). */}
+      {isAdmin && !frozen && (
         <>
           {/* Add member by email */}
           <section className="mb-8">

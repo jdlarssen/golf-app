@@ -9,6 +9,7 @@ import {
 import { parseSideTournamentFromFormData } from '@/lib/games/sideTournamentPayload';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { isValidActiveGameMode } from '@/lib/formats/validateGameMode';
+import { isClubExpired } from '@/lib/clubs/clubStatus';
 // Course handicap is no longer frozen at create-time: the new flow has the
 // admin press "Start runden nå" (D5) to flip 'scheduled' → 'active' and
 // freeze handicaps then. Until D5 lands, scheduled rows persist with
@@ -153,11 +154,18 @@ async function createGameInternal(
   if (rawGroupId) {
     const { data: membership } = await supabase
       .from('group_members')
-      .select('group_id')
+      .select('group_id, groups(valid_until)')
       .eq('group_id', rawGroupId)
       .eq('user_id', userId)
       .maybeSingle();
-    if (membership) groupId = rawGroupId;
+    // #50: en utløpt klubb (frossen avtale) kan ikke ta imot nye spill —
+    // dropp scopingen til null (samme «ugyldig verdi → null»-mønster).
+    if (membership) {
+      const g = Array.isArray(membership.groups)
+        ? membership.groups[0] ?? null
+        : membership.groups;
+      if (!isClubExpired(g?.valid_until ?? null)) groupId = rawGroupId;
+    }
   }
 
   const { data: game, error: gameError } = await supabase

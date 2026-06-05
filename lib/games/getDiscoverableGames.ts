@@ -1,5 +1,6 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
+import { isClubExpired } from '@/lib/clubs/clubStatus';
 import type { RegistrationMode } from './registration';
 
 /**
@@ -76,7 +77,7 @@ export async function getDiscoverableGames(userId: string): Promise<{
       .in('status', ['pending', 'approved']),
     admin
       .from('group_members')
-      .select('group_id')
+      .select('group_id, groups(valid_until)')
       .eq('user_id', userId),
   ]);
 
@@ -88,7 +89,17 @@ export async function getDiscoverableGames(userId: string): Promise<{
   );
   const excludedIds = new Set([...joinedIds, ...requestedIds]);
 
-  const myClubIds = (myClubsRes.data ?? []).map((r) => r.group_id as string);
+  // Ekskluder utløpte klubber (#50): en frossen avtale tar ikke imot nye
+  // medlemmer/spill og skal være borte fra «Finn turneringer». null valid_until
+  // = uendelig (alltid aktiv). Pågående spill berøres ikke — kun discovery.
+  const myClubIds = (myClubsRes.data ?? [])
+    .filter((r) => {
+      const g = firstJoined(
+        r.groups as { valid_until: string | null } | { valid_until: string | null }[] | null,
+      );
+      return !isClubExpired(g?.valid_until ?? null);
+    })
+    .map((r) => r.group_id as string);
 
   // Klubb-scopet discovery (#442): spill i mine klubber er synlige uansett
   // registration_mode — medlemskap ER invitasjonen. Ekskluder spill jeg selv

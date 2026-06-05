@@ -21,6 +21,26 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#50](https://github.com/jdlarssen/golf-app/issues/50) (milepæl Klubb-skala). Klubber settes nå opp via en avtale med Tørny. Eieren kan utnevne med-admins, og hver klubb har et medlemstak og en varighet.
 
+### [1.80.3] - 2026-06-05 · #50
+
+> Hver klubb har nå et medlemstak og en varighet. Er klubben full, sier appen fra. Går avtalen ut, fryses klubben: den forsvinner fra «Finn turneringer» og tar ikke imot nye medlemmer eller runder. Pågående runder spilles ferdig som normalt, og en eier kan fornye avtalen.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#50](https://github.com/jdlarssen/golf-app/issues/50) (milepæl Klubb-skala). Håndhevelse av medlemstak + utløp (RPC-laget kom i 1.80.0; dette surfacer det i UI + discovery/veiviser).
+
+#### Added
+- [`lib/clubs/clubStatus.ts`](lib/clubs/clubStatus.ts) `isClubExpired` brukes nå på tvers: en utløpt klubb (`valid_until` i fortid) er frossen.
+
+#### Changed
+- [`lib/games/getDiscoverableGames.ts`](lib/games/getDiscoverableGames.ts) — filtrerer bort utløpte klubber før klubb-spill-spørringen (+ [`getDiscoverableGames.test.ts`](lib/games/getDiscoverableGames.test.ts) ny case: utløpt klubb → ingen group_id-spørring).
+- [`lib/games/newGameFormData.ts`](lib/games/newGameFormData.ts) — veiviseren tilbyr ikke en utløpt klubb i «Hvem er dette for?». [`app/admin/games/new/actions.ts`](app/admin/games/new/actions.ts) — `createGameInternal` dropper `group_id` til null hvis klubben er utløpt.
+- [`app/klubber/[id]/page.tsx`](app/klubber/[id]/page.tsx) — utløpt-banner; legg-til-medlem, del-lenke og «Sett opp en runde» fryses; medlemstall vises som `n / tak`. [`actions.ts`](app/klubber/[id]/actions.ts) + side-meldinger mapper de nye `club_full`/`club_expired`-retur-kodene til vennlige bannere.
+- [`lib/clubs/getClubDetail.ts`](lib/clubs/getClubDetail.ts) — eksponerer `member_cap` + `valid_until`.
+
+</details>
+
 ### [1.80.2] - 2026-06-05 · #50
 
 > Er du eier av en klubb, kan du gjøre andre medlemmer til admin eller eier, eller sette dem tilbake til vanlig medlem. Den det gjelder får et varsel. Den siste eieren kan ikke settes ned, så klubben alltid har noen som styrer.

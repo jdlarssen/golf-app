@@ -16,6 +16,8 @@ import { getServerClient } from '@/lib/supabase/server';
  *   error=already     — user is already a member
  *   error=not_auth    — caller is not an owner/admin
  *   error=email_req   — email was empty
+ *   error=full        — club has reached its member_cap (#50)
+ *   error=expired     — club's avtale has expired / is frozen (#50)
  *   error=unknown     — unexpected DB error
  *
  * Part of #442 (Opprett klubb — eierskap + klubb-scoped oppdagbarhet).
@@ -57,6 +59,12 @@ export async function addMember(formData: FormData) {
   }
   if (data === 'already_member') {
     redirect(`/klubber/${groupId}?error=already&email=${encodeURIComponent(email)}`);
+  }
+  if (data === 'club_full') {
+    redirect(`/klubber/${groupId}?error=full`);
+  }
+  if (data === 'club_expired') {
+    redirect(`/klubber/${groupId}?error=expired`);
   }
 
   // data === 'added'

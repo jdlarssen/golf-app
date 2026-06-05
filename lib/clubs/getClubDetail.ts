@@ -20,6 +20,8 @@ export type ClubDetail = {
     id: string;
     name: string;
     short_id: string;
+    member_cap: number | null;
+    valid_until: string | null;
   };
   members: ClubMember[];
   myRole: 'owner' | 'admin' | 'member';
@@ -79,7 +81,7 @@ export async function getClubDetail(
   const [clubRes, membersRes, requestsRes] = await Promise.all([
     admin
       .from('groups')
-      .select('id, name, short_id')
+      .select('id, name, short_id, member_cap, valid_until')
       .eq('id', clubId)
       .maybeSingle(),
     admin
@@ -146,6 +148,8 @@ export async function getClubDetail(
       id: clubRes.data.id,
       name: clubRes.data.name,
       short_id: clubRes.data.short_id,
+      member_cap: clubRes.data.member_cap ?? null,
+      valid_until: clubRes.data.valid_until ?? null,
     },
     members,
     myRole,

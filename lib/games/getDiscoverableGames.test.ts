@@ -311,6 +311,23 @@ describe('getDiscoverableGames', () => {
     expect(inArg).toHaveBeenCalledWith('group_id', ['c1']);
   });
 
+  it('ekskluderer klubb-spill fra en utløpt klubb (frossen avtale, #50)', async () => {
+    playerRows.mockReturnValue({ data: [] });
+    requestRows.mockReturnValue({ data: [] });
+    openGamesRows.mockReturnValue({ data: [] });
+    // Klubben utløp i fortiden → dens group_id filtreres bort før games-spørringen.
+    myClubsRows.mockReturnValue({
+      data: [{ group_id: 'c1', groups: { valid_until: '2020-01-01T00:00:00Z' } }],
+    });
+
+    const { getDiscoverableGames } = await import('./getDiscoverableGames');
+    const result = await getDiscoverableGames('u1');
+
+    expect(result.clubGames).toEqual([]);
+    // Utløpt klubb → ingen group_id-spørring i det hele tatt.
+    expect(inArg).not.toHaveBeenCalledWith('group_id', expect.anything());
+  });
+
   it('gir ingen klubb-spill når brukeren ikke er medlem av noen klubb', async () => {
     playerRows.mockReturnValue({ data: [] });
     requestRows.mockReturnValue({ data: [] });
