@@ -36,6 +36,8 @@ const EMOJI: Record<NotificationKind, string> = {
   cup_finished: '🏁',
   club_join_request: '🙋',
   club_role_changed: '🔑',
+  friend_request: '👋',
+  friend_accepted: '🫂',
 };
 
 /**
@@ -230,6 +232,20 @@ function buildCardContent(
       return {
         title: 'Rollen din er endret',
         detail: roleText,
+      };
+    }
+    case 'friend_request': {
+      const p = payload as NotificationPayload<'friend_request'>;
+      return {
+        title: `${p.actor_name} vil bli venn`,
+        detail: 'Godta eller avslå i vennelista',
+      };
+    }
+    case 'friend_accepted': {
+      const p = payload as NotificationPayload<'friend_accepted'>;
+      return {
+        title: `${p.actor_name} ble venn med deg`,
+        detail: 'Dere er venner nå',
       };
     }
   }

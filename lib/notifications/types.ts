@@ -20,7 +20,9 @@ export type NotificationKind =
   | 'deliver_reminder'
   | 'cup_finished'
   | 'club_join_request'
-  | 'club_role_changed';
+  | 'club_role_changed'
+  | 'friend_request'
+  | 'friend_accepted';
 
 // `z.guid()` aksepterer enhver UUID-shaped string (8-4-4-4-12 hex), inkludert
 // nil-UUID og ikke-versjonerte kanoniske test-sentinels som "11111111-...".
@@ -158,6 +160,19 @@ const clubRoleChangedSchema = z.object({
   new_role: z.enum(['owner', 'admin', 'member']),
 });
 
+// friend_request: noen sendte deg en venneforespørsel. Sendes til mottaker.
+// Vennelista (/profile/venner) samler godta/avslå; actor_name vises i kortet.
+const friendRequestSchema = z.object({
+  actor_id: uuid,
+  actor_name: z.string().min(1),
+});
+
+// friend_accepted: noen godtok venneforespørselen din. Sendes til avsender. (#369)
+const friendAcceptedSchema = z.object({
+  actor_id: uuid,
+  actor_name: z.string().min(1),
+});
+
 const schemas = {
   invite: inviteSchema,
   peer_approval_request: peerApprovalRequestSchema,
@@ -174,6 +189,8 @@ const schemas = {
   cup_finished: cupFinishedSchema,
   club_join_request: clubJoinRequestSchema,
   club_role_changed: clubRoleChangedSchema,
+  friend_request: friendRequestSchema,
+  friend_accepted: friendAcceptedSchema,
 } as const;
 
 export type NotificationPayload<K extends NotificationKind = NotificationKind> =

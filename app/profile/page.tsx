@@ -121,6 +121,11 @@ export default async function ProfilePage({
 
       <div className="mt-8">
         <SettingList ariaLabel="Konto og mer">
+          <SettingRow
+            href="/profile/venner"
+            label="Venner"
+            sublabel="Legg til venner og se spillene deres"
+          />
           <SettingRow href="/profile/historikk" label="Min historikk" />
           <SettingRow href="/profile/statistikk" label="Klubbstatistikker" />
           <InstallButton />

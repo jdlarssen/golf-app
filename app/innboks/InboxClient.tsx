@@ -182,5 +182,8 @@ function buildDeeplink(notification: NotificationRow): string {
       const p = notification.payload as NotificationPayload<'club_role_changed'>;
       return `/klubber/${p.group_id}`;
     }
+    case 'friend_request':
+    case 'friend_accepted':
+      return '/profile/venner';
   }
 }

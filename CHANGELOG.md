@@ -17,7 +17,30 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.80.y — Klubber: eierskap, delegering og avtaler
+## 1.81.y — Venner og åpen-for-venner
+
+Issue [#369](https://github.com/jdlarssen/golf-app/issues/369) (lukker [#408](https://github.com/jdlarssen/golf-app/issues/408), milepæl Klubb-skala). Du kan nå legge til venner på Tørny. Venner ser spillene dine, og du finner dem raskt når du fyller lag.
+
+### [1.81.0] - 2026-06-05 · #369, #408
+
+> Du har fått venner på Tørny: legg til folk du har spilt med, søk dem opp på e-post, eller del en lenke som gjør den som åpner den til venn med deg på flekken. Innboksen sier fra når noen vil bli venn eller godtar deg.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#369](https://github.com/jdlarssen/golf-app/issues/369) + [#408](https://github.com/jdlarssen/golf-app/issues/408). Venne-fundamentet: gjensidig relasjon (forespørsel → godta), tre veier å legge til, og in-app-varsler. «Åpen for venner» (skip-gate + «Fra vennene dine»-discovery) kommer i påfølgende oppføringer.
+
+#### Added
+- Migrasjon `0077` — `friendships` (RLS select-own, mutasjoner kun via security-definer-RPC), `users.friend_code` (delbar lenke), RPCene `send_friend_request` / `send_friend_request_by_email` / `respond_friend_request` / `remove_friend` / `connect_via_friend_code`, og notification-kindene `friend_request` + `friend_accepted`.
+- [`app/profile/venner/`](app/profile/venner/page.tsx) — venneliste, innkommende + utgående forespørsler, co-player-forslag, legg-til-på-e-post (ukjent e-post → tilbud om å invitere på samme adresse), og kopier-del-lenke.
+- [`app/venner/legg-til/[code]/`](app/venner/legg-til/[code]/page.tsx) — landingsside for delt lenke; en innlogget som åpner den kobles som venn direkte.
+- [`lib/friends/`](lib/friends/getFriendData.ts) — ren graf-logikk (`friendGraph.ts`, 10 unit-tester) + resolvere (`getFriendIds`, `getFriendData`); co-player-oppslaget trukket ut til [`lib/users/getCoPlayerIds.ts`](lib/users/getCoPlayerIds.ts) og delt med lag-påmelding.
+- «Venner»-inngang i konto-lista på [`app/profile/page.tsx`](app/profile/page.tsx).
+
+</details>
+
+<details>
+<summary><strong>1.80.y — Klubber: eierskap, delegering og avtaler (6 oppføringer)</strong></summary>
 
 Issue [#50](https://github.com/jdlarssen/golf-app/issues/50) (milepæl Klubb-skala). Klubber settes nå opp via en avtale med Tørny. Eieren kan utnevne med-admins, og hver klubb har et medlemstak og en varighet.
 
@@ -129,6 +152,8 @@ Issue [#50](https://github.com/jdlarssen/golf-app/issues/50) (milepæl Klubb-ska
 
 #### Removed
 - `app/klubber/ny/` (self-serve opprett-klubb-side + action) + `create_club`-RPC — self-serve-opprettelse var en gating-hull (RPC-en kunne kalles direkte og omgå UI-gaten). Erstattet av admin-gated `admin_create_club`.
+
+</details>
 
 </details>
 
