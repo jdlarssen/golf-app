@@ -459,3 +459,40 @@ describe('bingoBangoBongo.compute — hole-rows', () => {
     expect(row.pointsByPlayer['u2']).toBe(1);
   });
 });
+
+describe('bingoBangoBongo.compute — antalls-agnostisk over 4 spillere (#460)', () => {
+  it('6 spillere: poeng fordeles på alle seks over fire hull', () => {
+    const ctx = makeCtx({
+      players: [
+        makePlayer('u1'),
+        makePlayer('u2'),
+        makePlayer('u3'),
+        makePlayer('u4'),
+        makePlayer('u5'),
+        makePlayer('u6'),
+      ],
+      holes: par4Holes(4),
+      bingoBangoBongoHoles: [
+        { holeNumber: 1, bingoUserId: 'u1', bangoUserId: 'u2', bongoUserId: 'u3' },
+        { holeNumber: 2, bingoUserId: 'u4', bangoUserId: 'u5', bongoUserId: 'u6' },
+        { holeNumber: 3, bingoUserId: 'u1', bangoUserId: 'u1', bongoUserId: 'u1' },
+        { holeNumber: 4, bingoUserId: 'u6', bangoUserId: 'u6', bongoUserId: 'u6' },
+      ],
+    });
+    const result = compute(ctx);
+
+    expect(result.players).toHaveLength(6);
+    const byId = Object.fromEntries(result.players.map((p) => [p.userId, p]));
+    // u1: hull 1 bingo (1) + hull 3 sweep (3) = 4. u6: hull 2 bongo (1) + hull 4 sweep (3) = 4.
+    expect(byId['u1'].totalPoints).toBe(4);
+    expect(byId['u6'].totalPoints).toBe(4);
+    // De midtre spillerne fikk ett poeng hver på hull 1-2.
+    expect(byId['u2'].totalPoints).toBe(1);
+    expect(byId['u3'].totalPoints).toBe(1);
+    expect(byId['u4'].totalPoints).toBe(1);
+    expect(byId['u5'].totalPoints).toBe(1);
+    // Total = 4 hull × 3 poeng = 12.
+    const total = result.players.reduce((sum, p) => sum + p.totalPoints, 0);
+    expect(total).toBe(12);
+  });
+});

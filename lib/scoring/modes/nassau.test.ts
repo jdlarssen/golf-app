@@ -641,3 +641,47 @@ describe('nassau.compute — strokeIndex allokering (net mode)', () => {
     expect(result.sections.total18.winnerUserIds).toEqual(['u1']);
   });
 });
+
+describe('nassau.compute — antalls-agnostisk over 4 spillere (#460)', () => {
+  it('6 spillere: den siste i feltet (u6) vinner alle tre seksjoner', () => {
+    // u6 spiller par (4) hele veien og vinner front9/back9/total18. u1..u5
+    // spiller bogey (5). Beviser at den 6. spilleren behandles fullt ut og at
+    // alle seks er med i resultatet.
+    const ctx = makeCtx({
+      players: [
+        soloPlayer('u1'),
+        soloPlayer('u2'),
+        soloPlayer('u3'),
+        soloPlayer('u4'),
+        soloPlayer('u5'),
+        soloPlayer('u6'),
+      ],
+      holes: par4Holes(18),
+      scores: [
+        ...scoresFor('u1', Array(18).fill(5)),
+        ...scoresFor('u2', Array(18).fill(5)),
+        ...scoresFor('u3', Array(18).fill(5)),
+        ...scoresFor('u4', Array(18).fill(5)),
+        ...scoresFor('u5', Array(18).fill(5)),
+        ...scoresFor('u6', Array(18).fill(4)),
+      ],
+    });
+    const result = compute(ctx);
+
+    expect(result.players).toHaveLength(6);
+    expect(result.sections.front9.winnerUserIds).toEqual(['u6']);
+    expect(result.sections.back9.winnerUserIds).toEqual(['u6']);
+    expect(result.sections.total18.winnerUserIds).toEqual(['u6']);
+
+    const u6 = result.players.find((p) => p.userId === 'u6')!;
+    expect(u6.unitBreakdown.front9).toBe(true);
+    expect(u6.unitBreakdown.back9).toBe(true);
+    expect(u6.unitBreakdown.total18).toBe(true);
+
+    // En ikke-vinner er fortsatt representert med null units.
+    const u1 = result.players.find((p) => p.userId === 'u1')!;
+    expect(u1.unitBreakdown.front9).toBe(false);
+    expect(u1.unitBreakdown.back9).toBe(false);
+    expect(u1.unitBreakdown.total18).toBe(false);
+  });
+});

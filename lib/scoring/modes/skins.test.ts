@@ -705,3 +705,47 @@ describe('skins.compute — ranking & tiebreak', () => {
     expect(result.players[0].totalSkins).toBe(3);
   });
 });
+
+describe('skins.compute — antalls-agnostisk over 4 spillere (#460)', () => {
+  it('6 spillere: fem distinkte vinnere + uavgjort på siste hull → carryover', () => {
+    // Gross-skins, 6 hull. u1..u5 vinner hvert sitt hull (gross 3 mot 5).
+    // Hull 6: u1 og u2 deler laveste → ingen unik vinner → skinnet bæres, og
+    // siden det er siste hull ender det uvunnet (carriedPot 1, jf. #303).
+    const ctx = makeCtx({
+      players: [
+        soloPlayer('u1'),
+        soloPlayer('u2'),
+        soloPlayer('u3'),
+        soloPlayer('u4'),
+        soloPlayer('u5'),
+        soloPlayer('u6'),
+      ],
+      holes: par4Holes(6),
+      scores: [
+        ...scoresFor('u1', [3, 5, 5, 5, 5, 3]),
+        ...scoresFor('u2', [5, 3, 5, 5, 5, 3]),
+        ...scoresFor('u3', [5, 5, 3, 5, 5, 5]),
+        ...scoresFor('u4', [5, 5, 5, 3, 5, 5]),
+        ...scoresFor('u5', [5, 5, 5, 5, 3, 5]),
+        ...scoresFor('u6', [5, 5, 5, 5, 5, 5]),
+      ],
+      skinsScoring: 'gross',
+    });
+    const result = compute(ctx);
+
+    // Alle seks spillere er med i resultatet — ingen kuttes over 4.
+    expect(result.players).toHaveLength(6);
+
+    const byId = Object.fromEntries(result.players.map((p) => [p.userId, p]));
+    for (const id of ['u1', 'u2', 'u3', 'u4', 'u5']) {
+      expect(byId[id].totalSkins).toBe(1);
+      expect(byId[id].holesWon).toBe(1);
+    }
+    // u6 vant ingenting, men er fortsatt representert.
+    expect(byId['u6'].totalSkins).toBe(0);
+    expect(byId['u6'].holesWon).toBe(0);
+
+    // Siste hull var uavgjort mellom u1 og u2 → potten bæres uvunnet.
+    expect(result.carriedPot).toBe(1);
+  });
+});
