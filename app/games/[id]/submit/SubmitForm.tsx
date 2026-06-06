@@ -1,7 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 
 type Props = {
   submitAction: () => void | Promise<void>;
@@ -14,8 +13,6 @@ type Props = {
  * not played.
  */
 export function SubmitForm({ submitAction, missingHoles }: Props) {
-  const [pending, setPending] = useState(false);
-
   return (
     <form
       action={submitAction}
@@ -27,14 +24,12 @@ export function SubmitForm({ submitAction, missingHoles }: Props) {
             : base;
         if (!window.confirm(msg)) {
           event.preventDefault();
-          return;
         }
-        setPending(true);
       }}
     >
-      <Button type="submit" disabled={pending} className="w-full">
-        {pending ? 'Leverer…' : 'Lever ✓'}
-      </Button>
+      <SubmitButton className="w-full" pendingLabel="Leverer …">
+        Lever ✓
+      </SubmitButton>
     </form>
   );
 }
