@@ -14,7 +14,7 @@ import { sendFriendInvite } from '../invite/actions';
 import { ProfileFormBody } from './ProfileFormBody';
 import { InviteFriendForm } from './InviteFriendForm';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SettingRow, SettingList } from '@/components/ui/SettingRow';
 import { InstallButton } from '@/components/pwa/InstallButton';
 import { fromSignedHcp, formatGolfboxHcp } from '@/lib/handicap/sign';
@@ -156,9 +156,9 @@ function AccountActions() {
   return (
     <div className="mt-8 border-t border-border/60 pt-6 dark:border-border/80">
       <form action="/logout" method="post">
-        <Button type="submit" variant="secondary" className="w-full">
+        <SubmitButton variant="secondary" className="w-full" pendingLabel="Logger ut …">
           Logg ut
-        </Button>
+        </SubmitButton>
       </form>
     </div>
   );
