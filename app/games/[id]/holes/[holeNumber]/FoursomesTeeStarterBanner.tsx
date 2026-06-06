@@ -26,20 +26,26 @@ export function FoursomesTeeStarterBanner({
   options: { userId: string; displayName: string }[];
 }) {
   const [isPending, startTransition] = useTransition();
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   function handlePick(userId: string) {
     setError(null);
+    setPendingUserId(userId);
     startTransition(async () => {
-      const res = await setFoursomesTeeStarter(gameId, sideNumber, userId);
-      if (!res.ok) {
-        setError(
-          res.error === 'unauthenticated'
-            ? 'Du må være innlogget.'
-            : res.error === 'wrong_side'
-              ? 'Du kan bare velge for ditt eget lag.'
-              : 'Noe gikk galt. Prøv igjen.',
-        );
+      try {
+        const res = await setFoursomesTeeStarter(gameId, sideNumber, userId);
+        if (!res.ok) {
+          setError(
+            res.error === 'unauthenticated'
+              ? 'Du må være innlogget.'
+              : res.error === 'wrong_side'
+                ? 'Du kan bare velge for ditt eget lag.'
+                : 'Noe gikk galt. Prøv igjen.',
+          );
+        }
+      } finally {
+        setPendingUserId(null);
       }
     });
   }
@@ -55,7 +61,8 @@ export function FoursomesTeeStarterBanner({
             key={o.userId}
             type="button"
             onClick={() => handlePick(o.userId)}
-            pending={isPending}
+            pending={pendingUserId === o.userId}
+            disabled={isPending}
             pendingLabel="Velger …"
             className="min-h-[44px] rounded-md border border-border bg-surface px-3 py-2 text-center text-sm font-medium text-primary transition-colors hover:border-primary/40 disabled:opacity-60"
           >
