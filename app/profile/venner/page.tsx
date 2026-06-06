@@ -15,11 +15,11 @@ import {
   respondFriendRequest,
   removeFriend,
 } from './actions';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import {
   AddByEmailForm,
   ConfirmSubmit,
   CopyLinkButton,
-  SubmitButton,
 } from './VennerClient';
 
 type SearchParams = Promise<{
@@ -126,12 +126,12 @@ export default async function VennerPage({
                   <form action={respondFriendRequest} className="flex shrink-0 items-center gap-2">
                     <input type="hidden" name="request_id" value={r.id} />
                     <input type="hidden" name="accept" value="0" />
-                    <SubmitButton label="Avslå" variant="ghost" />
+                    <SubmitButton variant="ghost" pendingLabel="Avslår …">Avslå</SubmitButton>
                   </form>
                   <form action={respondFriendRequest} className="shrink-0">
                     <input type="hidden" name="request_id" value={r.id} />
                     <input type="hidden" name="accept" value="1" />
-                    <SubmitButton label="Godta" />
+                    <SubmitButton pendingLabel="Godtar …">Godta</SubmitButton>
                   </form>
                 </li>
               ))}
@@ -176,7 +176,7 @@ export default async function VennerPage({
                   <PersonLine name={personName(r.user)} />
                   <form action={removeFriend} className="shrink-0">
                     <input type="hidden" name="other_id" value={r.user.id} />
-                    <SubmitButton label="Trekk tilbake" variant="ghost" />
+                    <SubmitButton variant="ghost" pendingLabel="Trekker …">Trekk tilbake</SubmitButton>
                   </form>
                 </li>
               ))}
@@ -196,7 +196,7 @@ export default async function VennerPage({
                   <PersonLine name={personName(s)} />
                   <form action={sendFriendRequest} className="shrink-0">
                     <input type="hidden" name="addressee_id" value={s.id} />
-                    <SubmitButton label="Legg til" variant="secondary" />
+                    <SubmitButton variant="secondary" pendingLabel="Legger til …">Legg til</SubmitButton>
                   </form>
                 </li>
               ))}

@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { useFormStatus } from 'react-dom';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { SubmitButton as UiSubmitButton } from '@/components/ui/SubmitButton';
 
 /**
  * Kopier-knapp for «legg til meg»-lenken. Bygger absolutt URL klient-side
@@ -29,28 +29,6 @@ export function CopyLinkButton({ path }: { path: string }) {
   return (
     <Button type="button" variant="secondary" onClick={copy} className="shrink-0">
       {copied ? 'Kopiert!' : 'Kopier lenke'}
-    </Button>
-  );
-}
-
-function PendingButton({
-  idleLabel,
-  variant,
-  className,
-}: {
-  idleLabel: string;
-  variant: 'primary' | 'secondary' | 'danger' | 'ghost';
-  className?: string;
-}) {
-  const { pending } = useFormStatus();
-  return (
-    <Button
-      type="submit"
-      variant={variant}
-      disabled={pending}
-      className={className}
-    >
-      {pending ? '…' : idleLabel}
     </Button>
   );
 }
@@ -98,23 +76,11 @@ export function ConfirmSubmit({
       >
         Avbryt
       </Button>
-      <PendingButton idleLabel={confirmLabel} variant="danger" />
+      <UiSubmitButton variant="danger" pendingLabel="Fjerner …">
+        {confirmLabel}
+      </UiSubmitButton>
     </form>
   );
-}
-
-/**
- * Send-knapp for en server-action-form (legg til / godta / avslå). Viser
- * «…» mens den er in-flight så et dobbelt-tap ikke fyrer to ganger.
- */
-export function SubmitButton({
-  label,
-  variant = 'primary',
-}: {
-  label: string;
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
-}) {
-  return <PendingButton idleLabel={label} variant={variant} />;
 }
 
 /**
@@ -151,16 +117,9 @@ export function AddByEmailForm({
           required
         />
       </div>
-      <AddSendButton canSubmit={hasEmail} />
+      <UiSubmitButton className="shrink-0" disabled={!hasEmail} pendingLabel="Sender …">
+        Legg til
+      </UiSubmitButton>
     </form>
-  );
-}
-
-function AddSendButton({ canSubmit }: { canSubmit: boolean }) {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" className="shrink-0" disabled={pending || !canSubmit}>
-      {pending ? 'Sender …' : 'Legg til'}
-    </Button>
   );
 }
