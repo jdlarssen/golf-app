@@ -4,8 +4,8 @@ import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import { Kicker } from '@/components/ui/Kicker';
 import { completeProfile } from './actions';
 import { OnboardingHcpField } from './OnboardingHcpField';
@@ -152,9 +152,9 @@ export default async function CompleteProfile({
             </p>
           </fieldset>
 
-          <Button type="submit" className="w-full mt-2">
+          <SubmitButton className="w-full mt-2" pendingLabel="Lagrer …">
             Sett i gang
-          </Button>
+          </SubmitButton>
         </form>
       </Card>
     </AppShell>
