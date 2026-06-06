@@ -6,7 +6,8 @@ import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
-import { Button, LinkButton } from '@/components/ui/Button';
+import { LinkButton } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import { Input } from '@/components/ui/Input';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { CopyJoinLinkButton } from './CopyJoinLinkButton';
@@ -188,24 +189,24 @@ export default async function KlubbDetailPage({
                       <input type="hidden" name="requestId" value={req.id} />
                       <input type="hidden" name="groupId" value={club.id} />
                       <input type="hidden" name="approve" value="true" />
-                      <Button
-                        type="submit"
+                      <SubmitButton
                         className="min-h-[44px] px-4 text-sm"
+                        pendingLabel="Godkjenner …"
                       >
                         Godkjenn
-                      </Button>
+                      </SubmitButton>
                     </form>
                     <form action={decideRequest}>
                       <input type="hidden" name="requestId" value={req.id} />
                       <input type="hidden" name="groupId" value={club.id} />
                       <input type="hidden" name="approve" value="false" />
-                      <Button
-                        type="submit"
+                      <SubmitButton
                         variant="secondary"
                         className="min-h-[44px] px-4 text-sm"
+                        pendingLabel="Avviser …"
                       >
                         Avslå
-                      </Button>
+                      </SubmitButton>
                     </form>
                   </div>
                 </div>
@@ -287,9 +288,9 @@ export default async function KlubbDetailPage({
                   autoComplete="email"
                   hint="Personen må ha Tørny-konto fra før."
                 />
-                <Button type="submit" className="w-full">
+                <SubmitButton className="w-full" pendingLabel="Legger til …">
                   Legg til
-                </Button>
+                </SubmitButton>
               </form>
             </Card>
           </section>
