@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { Button } from '@/components/ui/Button';
 import { setPatsomeTeeStarter } from '../../patsomeActions';
 
 /**
@@ -46,15 +47,16 @@ export function PatsomeTeeStarterBanner({
       </p>
       <div className="grid grid-cols-2 gap-2">
         {options.map((o) => (
-          <button
+          <Button
             key={o.userId}
             type="button"
             onClick={() => handlePick(o.userId)}
-            disabled={isPending}
+            pending={isPending}
+            pendingLabel="Velger …"
             className="min-h-[44px] rounded-md border border-border bg-surface px-3 py-2 text-center text-sm font-medium text-primary transition-colors hover:border-primary/40 disabled:opacity-60"
           >
             {o.displayName}
-          </button>
+          </Button>
         ))}
       </div>
       {error && <p className="mt-2 text-xs text-danger">{error}</p>}
