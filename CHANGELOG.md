@@ -21,6 +21,23 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#453](https://github.com/jdlarssen/golf-app/issues/453) (epic [#452](https://github.com/jdlarssen/golf-app/issues/452)). Du kan nå arrangere en liga: flere runder over en hel sesong, med en levende tabell som holder styr på hvem som leder.
 
+### [1.83.4] - 2026-06-06 · #453
+
+> Når du setter opp en liga inviterer du nå vennene dine — listen viser deg selv (forhåndsvalgt) og vennene dine, ikke alle på Tørny. Har du ingen venner ennå, får du en lenke for å legge dem til. Og sesong-datoene ligger ikke lenger oppå hverandre på mobil.
+
+<details>
+<summary>Teknisk</summary>
+
+Prod-tilbakemelding på opprett-veiviseren (etter at #453 gikk live):
+
+#### Changed
+- Deltaker-velgeren i [`app/admin/liga/new`](app/admin/liga/new/page.tsx) henter nå innloggers venner via `getFriendPlayerOptions` i stedet for alle spillere (`getNewGameFormData`). Skaperen prepends som forhåndsvalgt «(deg)»-rad så de kan spille i egen liga; tom venne-liste gir en lenke til `/profile/venner`. Gjelder frittstående ligaer (klubb-tilknytning er F3). Insentiverer å legge til venner på Tørny.
+
+#### Fixed
+- Sesong start/slutt-datoene overlappet på smale skjermer (native date-inputer + `grid-cols-2` med default `min-width:auto`). Nå `grid-cols-1 sm:grid-cols-2` + `min-w-0` — stables på mobil, side-om-side med plass på større skjermer.
+
+</details>
+
 ### [1.83.3] - 2026-06-06 · #453
 
 > Når du setter opp en liga, viser veiviseren nå med en gang hvor mange runder datoene og frekvensen gir — «Dette gir 6 runder: jun, jul, aug, sep, okt, nov» — så du ser antallet før du oppretter, ikke etterpå.

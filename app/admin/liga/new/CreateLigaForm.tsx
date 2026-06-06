@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useActionState, useMemo, useState } from 'react';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { Banner } from '@/components/ui/Banner';
@@ -15,7 +16,10 @@ const MONTHS_ABBR = [
 
 type Props = {
   courses: CourseOption[];
+  /** Invitable people: the creator (if found) first, then their friends. */
   players: PlayerOption[];
+  /** The creator's own id — pre-selected so they play in their own league. */
+  meId: string | null;
 };
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -44,7 +48,7 @@ function preferredName(p: PlayerOption): string {
 
 const INITIAL_STATE: LeagueActionError = { error: '' };
 
-export function CreateLigaForm({ courses, players }: Props) {
+export function CreateLigaForm({ courses, players, meId }: Props) {
   const [state, formAction] = useActionState(
     async (_prev: LeagueActionError, formData: FormData) => {
       return createLeagueDraft(formData) as Promise<LeagueActionError>;
@@ -57,13 +61,16 @@ export function CreateLigaForm({ courses, players }: Props) {
   const [standingsModel, setStandingsModel] = useState<StandingsModel>('total');
   const [missedPolicy, setMissedPolicy] = useState<MissedRoundPolicy>('penalty');
   const [penaltyKind, setPenaltyKind] = useState<PenaltyKind>('worst_plus_one');
-  const [selectedPlayerIds, setSelectedPlayerIds] = useState<Set<string>>(new Set());
+  const [selectedPlayerIds, setSelectedPlayerIds] = useState<Set<string>>(
+    () => new Set(meId ? [meId] : []),
+  );
   const [seasonStart, setSeasonStart] = useState('');
   const [seasonEnd, setSeasonEnd] = useState('');
   const [frequency, setFrequency] = useState<Frequency>('monthly');
 
   const selectedCourse = courses.find((c) => c.id === selectedCourseId);
   const availableTees = selectedCourse?.tee_boxes ?? [];
+  const friendCount = players.filter((p) => p.id !== meId).length;
 
   // Live preview of the rounds the chosen dates + frequency will generate.
   const roundPreview = useMemo(() => {
@@ -112,8 +119,8 @@ export function CreateLigaForm({ courses, players }: Props) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="min-w-0">
               <label
                 htmlFor="liga-season-start"
                 className="block font-sans text-[12px] font-medium text-text mb-1.5"
@@ -130,7 +137,7 @@ export function CreateLigaForm({ courses, players }: Props) {
                 className="w-full rounded-xl border border-border bg-bg px-4 py-3 font-sans text-[15px] text-text focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px]"
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <label
                 htmlFor="liga-season-end"
                 className="block font-sans text-[12px] font-medium text-text mb-1.5"
@@ -517,47 +524,55 @@ export function CreateLigaForm({ courses, players }: Props) {
           value={JSON.stringify(Array.from(selectedPlayerIds))}
         />
 
-        {players.length === 0 ? (
-          <p className="text-sm text-muted">Ingen spillere i systemet ennå.</p>
-        ) : (
-          <>
-            <p className="font-sans text-[12px] text-muted mb-3">
-              Velg hvem som skal delta i ligaen. Du kan legge til flere etterpå.
-            </p>
-            <ul className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
-              {players.map((p) => (
-                <li key={p.id}>
-                  <label className="flex items-center gap-3 cursor-pointer rounded-xl border border-transparent px-3 py-2 hover:border-border hover:bg-surface min-h-[44px]">
-                    <input
-                      type="checkbox"
-                      checked={selectedPlayerIds.has(p.id)}
-                      onChange={() => togglePlayer(p.id)}
-                      className="accent-primary"
-                    />
-                    <span className="flex-1 min-w-0">
-                      <span className="block font-sans text-[14px] text-text truncate">
-                        {preferredName(p)}
-                        {p.pending && (
-                          <span className="ml-1.5 font-sans text-[10px] text-muted">
-                            (venter)
-                          </span>
-                        )}
-                      </span>
-                      <span className="block font-sans text-[11px] tabular-nums text-muted">
-                        hcp {Number(p.hcp_index).toFixed(1)}
-                      </span>
+        <p className="font-sans text-[12px] text-muted mb-3">
+          Inviter vennene dine til ligaen. Du kan legge til flere etterpå.
+        </p>
+        {friendCount === 0 && (
+          <p className="font-sans text-[12px] text-muted mb-3">
+            Du har ingen venner på Tørny ennå.{' '}
+            <Link href="/profile/venner" className="text-primary underline">
+              Legg til venner
+            </Link>{' '}
+            for å invitere dem hit.
+          </p>
+        )}
+        {players.length > 0 && (
+          <ul className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+            {players.map((p) => (
+              <li key={p.id}>
+                <label className="flex items-center gap-3 cursor-pointer rounded-xl border border-transparent px-3 py-2 hover:border-border hover:bg-surface min-h-[44px]">
+                  <input
+                    type="checkbox"
+                    checked={selectedPlayerIds.has(p.id)}
+                    onChange={() => togglePlayer(p.id)}
+                    className="accent-primary"
+                  />
+                  <span className="flex-1 min-w-0">
+                    <span className="block font-sans text-[14px] text-text truncate">
+                      {preferredName(p)}
+                      {p.id === meId && (
+                        <span className="ml-1.5 font-sans text-[10px] text-accent">(deg)</span>
+                      )}
+                      {p.pending && (
+                        <span className="ml-1.5 font-sans text-[10px] text-muted">
+                          (venter)
+                        </span>
+                      )}
                     </span>
-                  </label>
-                </li>
-              ))}
-            </ul>
-            {selectedPlayerIds.size > 0 && (
-              <p className="mt-2 font-sans text-[12px] text-muted">
-                <span className="tabular-nums font-medium text-text">{selectedPlayerIds.size}</span>{' '}
-                {selectedPlayerIds.size === 1 ? 'deltaker' : 'deltakere'} valgt
-              </p>
-            )}
-          </>
+                    <span className="block font-sans text-[11px] tabular-nums text-muted">
+                      hcp {Number(p.hcp_index).toFixed(1)}
+                    </span>
+                  </span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        )}
+        {selectedPlayerIds.size > 0 && (
+          <p className="mt-2 font-sans text-[12px] text-muted">
+            <span className="tabular-nums font-medium text-text">{selectedPlayerIds.size}</span>{' '}
+            {selectedPlayerIds.size === 1 ? 'deltaker' : 'deltakere'} valgt
+          </p>
         )}
       </Card>
 

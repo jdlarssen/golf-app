@@ -5,13 +5,22 @@ import { TopBar } from '@/components/ui/TopBar';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
+import { getFriendPlayerOptions } from '@/lib/friends/getFriendPlayerOptions';
 import { CreateLigaForm } from './CreateLigaForm';
 
 export default async function NewLigaPage() {
   const supabase = await getServerClient();
-  await requireAdmin(supabase);
+  const { userId } = await requireAdmin(supabase);
 
-  const { courses, players } = await getNewGameFormData();
+  // Non-club leagues invite friends only — it nudges people to add friends on
+  // Tørny. The creator is offered too (pre-checked) so they can play in their
+  // own league. `courses` still comes from the shared form-data helper.
+  const [{ courses, players: allPlayers }, friends] = await Promise.all([
+    getNewGameFormData(),
+    getFriendPlayerOptions(userId),
+  ]);
+  const me = allPlayers.find((p) => p.id === userId) ?? null;
+  const invitable = [...(me ? [me] : []), ...friends.filter((f) => f.id !== userId)];
 
   return (
     <AdminShell>
@@ -19,10 +28,10 @@ export default async function NewLigaPage() {
       <BrassRibbon kicker="Ny liga" />
       <PageHeader
         title="Opprett liga"
-        subtitle="Sett opp en sesong-serie med netto slagspill."
+        subtitle="Sett opp en sesong-serie med netto slagspill. Du inviterer vennene dine."
       />
 
-      <CreateLigaForm courses={courses} players={players} />
+      <CreateLigaForm courses={courses} players={invitable} meId={me?.id ?? null} />
     </AdminShell>
   );
 }
