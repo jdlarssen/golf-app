@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 
 type Props = {
   approveAction: () => void | Promise<void>;
@@ -21,9 +21,9 @@ export function ApprovePlayerButton({ approveAction, playerName }: Props) {
         }
       }}
     >
-      <Button type="submit" className="whitespace-nowrap text-sm">
+      <SubmitButton className="whitespace-nowrap text-sm" pendingLabel="Godkjenner …">
         Godkjenn på vegne av flight
-      </Button>
+      </SubmitButton>
     </form>
   );
 }
