@@ -109,8 +109,8 @@ export function defaultTeamSizeForMode(mode: GameMode): TeamSize {
   // rotation-slot, ikke som lag-tildeling. team_size=1 betyr requiresTeams=false
   // så vi får solo-style player-selection i step 3.
   if (mode === 'wolf') return 1;
-  // Nassau / Skins / Bingo Bango Bongo: solo-formater (ingen lag), 2-4
-  // spillere. team_size=1 betyr requiresTeams=false → orderedPayload tar
+  // Nassau / Skins / Bingo Bango Bongo: solo-formater (ingen lag), 2-16
+  // spillere (#460). team_size=1 betyr requiresTeams=false → orderedPayload tar
   // solo-stien og emitter de valgte spillerne med team/flight null. Uten
   // disse entry-ene falt de til default-2, requiresTeams ble true, og
   // orderedPayload endte tom → publish sendte 0 spillere.
