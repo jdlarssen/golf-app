@@ -7,7 +7,7 @@ import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
-import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { connectFriend } from './actions';
 
@@ -102,9 +102,9 @@ export default async function LeggTilPage({
             </p>
             <form action={connectFriend}>
               <input type="hidden" name="code" value={code} />
-              <Button type="submit" className="w-full">
+              <SubmitButton className="w-full" pendingLabel="Blir venner …">
                 Bli venner
-              </Button>
+              </SubmitButton>
             </form>
           </>
         )}
