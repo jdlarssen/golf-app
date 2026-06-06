@@ -72,9 +72,12 @@ export function fitsPlayerCount(gameMode: GameMode, n: number): boolean {
     case 'nines':
       return n === 3;
 
-    // ── Multiplum av 3 ELLER 4 (team_size 3 el. 4 begge gyldige) ────────────
+    // ── shamble: krever ≥2 lag (lag på 3 eller 4) → {6, 8} (#469) ───────────
+    // Samme scramble-familie-prinsipp som #467: ett lag er ingen turnering.
+    // Minste turnering er 2 lag à 3 = 6; med 8-slot-cap er {6, 8} de byggbare
+    // størrelsene.
     case 'shamble':
-      return n >= 3 && (n % 3 === 0 || n % 4 === 0);
+      return n >= 6 && n <= 8 && (n % 3 === 0 || n % 4 === 0);
 
     // ── Partall 4+ (lag à 2, minst 2 lag) ───────────────────────────────────
     case 'patsome':

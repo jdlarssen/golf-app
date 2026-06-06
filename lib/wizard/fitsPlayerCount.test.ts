@@ -274,20 +274,23 @@ describe('fitsPlayerCount — patsome', () => {
   });
 });
 
-// ── shamble: multiple of 3 or 4 ──────────────────────────────────────────────
+// ── shamble: 6 or 8 — teams of 3 or 4, needs ≥2 teams (#469) ──────────────────
+// Same scramble-family principle as #467: a single team is not a tournament.
+// Teams of 3 or 4 → smallest competition is 2 lag à 3 = 6. 8-slot payload cap
+// means {6, 8} are the only buildable competition sizes.
 
-describe('fitsPlayerCount — shamble', () => {
+describe('fitsPlayerCount — shamble (6 or 8, ≥2 teams per #469)', () => {
   it.each([
     [1, false],
     [2, false],
-    [3, true],   // 1 lag à 3
-    [4, true],   // 1 lag à 4
+    [3, false],  // 1 lag à 3 — ingen turnering
+    [4, false],  // 1 lag à 4 — ingen turnering
     [5, false],
     [6, true],   // 2 lag à 3
     [7, false],
     [8, true],   // 2 lag à 4
-    [9, true],   // 3 lag à 3
-    [12, true],  // 3 lag à 4 or 4 lag à 3
+    [9, false],  // over 8-slot-cap (3 lag à 3 ikke byggbart)
+    [12, false], // over 8-slot-cap
   ])('shamble n=%i → %s', (n, expected) => {
     expect(fitsPlayerCount('shamble', n)).toBe(expected);
   });

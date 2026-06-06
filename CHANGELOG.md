@@ -21,6 +21,21 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#453](https://github.com/jdlarssen/golf-app/issues/453) (epic [#452](https://github.com/jdlarssen/golf-app/issues/452)). Du kan nå arrangere en liga: flere runder over en hel sesong, med en levende tabell som holder styr på hvem som leder.
 
+### [1.83.12] - 2026-06-06 · bug
+
+> Shamble dukket opp i veiviseren allerede ved tre eller fire spillere, for få til å stille to lag. Som de andre scramble-formatene viser den seg nå først fra seks spillere, så dere faktisk kan kjøre en turnering.
+
+<details>
+<summary>Teknisk</summary>
+
+Oppfølging av [#467](https://github.com/jdlarssen/golf-app/issues/467): shamble (samme scramble-familie) slapp fortsatt gjennom ett-lags-oppsett i Kompis-antall-filteret. Lag på 3 eller 4 → minste turnering er 2 lag à 3 = 6.
+
+#### Fixed
+- [`lib/wizard/fitsPlayerCount.ts`](lib/wizard/fitsPlayerCount.ts): `shamble` krever nå minst 2 lag. Regelen gikk fra `n >= 3 && (n % 3 === 0 || n % 4 === 0)` (viste 3, 4, 6, 8, 9, 12 …) til `n >= 6 && n <= 8 && (n % 3 === 0 || n % 4 === 0)` → `{6, 8}` med 8-slot-payload-cap.
+- Co-located Type-A-test i [`fitsPlayerCount.test.ts`](lib/wizard/fitsPlayerCount.test.ts) oppdatert for nytt gulv + cap.
+
+</details>
+
 ### [1.83.11] - 2026-06-06 · bug
 
 > Scramble-formatene (Texas, Ambrose og Florida) dukket opp i veiviseren selv når du bare hadde valgt 2 spillere. En scramble trenger lag, og minst to lag for å bli en turnering. Nå viser veiviseren dem først når dere er mange nok: fire for Texas og Ambrose, seks for Florida.
