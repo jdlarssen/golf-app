@@ -8,6 +8,7 @@ import {
 } from '@/lib/formats/types';
 import { formatIconFor } from '@/lib/formats/icons';
 import { RowStatusChip, type RowStatus } from './RowStatusChip';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import {
   toggleVisibility,
   togglePrimary,
@@ -439,12 +440,9 @@ function ContentEditorRow({
           </div>
 
           <div className="flex justify-end">
-            <button
-              type="submit"
-              className="inline-flex min-h-[44px] items-center justify-center rounded-full bg-primary px-[18px] py-2.5 font-medium tracking-tight text-white transition-[background-color,transform,opacity] duration-100 hover:bg-primary-hover hover:-translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
-            >
+            <SubmitButton pendingLabel="Lagrer …">
               Lagre forklaring
-            </button>
+            </SubmitButton>
           </div>
         </form>
       )}
