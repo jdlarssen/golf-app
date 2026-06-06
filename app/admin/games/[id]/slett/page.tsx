@@ -5,7 +5,7 @@ import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
-import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
 import type { GameStatus } from '@/lib/games/status';
 import { formatShortDateNbWithYear } from '@/lib/format/date';
@@ -172,13 +172,13 @@ export default async function DeleteGamePage({
       <div className="mt-6 flex flex-col gap-2.5">
         <form action={deleteGame}>
           <input type="hidden" name="gameId" value={game.id} />
-          <Button
-            type="submit"
+          <SubmitButton
             className="w-full"
             style={{ background: 'var(--danger-deep)', borderColor: 'var(--danger-deep)' }}
+            pendingLabel="Sletter …"
           >
             {buttonLabel}
-          </Button>
+          </SubmitButton>
         </form>
         <SmartLink
           href={`/admin/games/${id}`}
