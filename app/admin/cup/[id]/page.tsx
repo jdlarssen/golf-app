@@ -8,7 +8,7 @@ import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Banner } from '@/components/ui/Banner';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getCupSnapshot, type CupRosterPlayer } from '@/lib/cup/getCupSnapshot';
@@ -316,9 +316,9 @@ export default async function CupDetailPage({
             )}
             <form action={startTournament}>
               <input type="hidden" name="id" value={tournament.id} />
-              <Button type="submit" className="w-full" disabled={!canStart}>
+              <SubmitButton className="w-full" disabled={!canStart} pendingLabel="Starter …">
                 Start cupen
-              </Button>
+              </SubmitButton>
             </form>
           </>
         )}
@@ -326,9 +326,9 @@ export default async function CupDetailPage({
         {tournament.status === 'active' && (
           <form action={finishTournament}>
             <input type="hidden" name="id" value={tournament.id} />
-            <Button type="submit" className="w-full" disabled={!canFinish}>
+            <SubmitButton className="w-full" disabled={!canFinish} pendingLabel="Avslutter …">
               Avslutt cupen
-            </Button>
+            </SubmitButton>
           </form>
         )}
 
