@@ -5,7 +5,7 @@ import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
-import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { deleteCourse } from '../edit/actions';
 
@@ -131,16 +131,16 @@ export default async function SlettBanePage({
 
           <div className="mt-6 flex flex-col gap-2.5">
             <form action={deleteAction}>
-              <Button
-                type="submit"
+              <SubmitButton
                 className="w-full"
                 style={{
                   background: 'var(--danger-deep)',
                   borderColor: 'var(--danger-deep)',
                 }}
+                pendingLabel="Sletter …"
               >
                 Slett banen for alltid
-              </Button>
+              </SubmitButton>
             </form>
             <SmartLink
               href={`/admin/courses/${id}/edit`}
