@@ -10,6 +10,7 @@ vi.mock('./notify', () => ({
 import {
   notifyPlayersGameFinished,
   notifyParticipantsCupFinished,
+  notifyParticipantsCupStarted,
 } from './events';
 
 beforeEach(() => {
@@ -158,6 +159,79 @@ describe('notifyParticipantsCupFinished', () => {
       [],
       { id: 'tour-1', name: 'X' },
       'finishTournament',
+    );
+
+    expect(result.size).toBe(0);
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('notifyParticipantsCupStarted', () => {
+  it('fyrer cup_started in-app per deltaker + returnerer shouldAlsoSendMail-map', async () => {
+    notifyMock
+      .mockResolvedValueOnce({ shouldAlsoSendMail: true })
+      .mockResolvedValueOnce({ shouldAlsoSendMail: false });
+
+    const result = await notifyParticipantsCupStarted(
+      [{ user_id: 'a' }, { user_id: 'b' }],
+      { id: 'tour-1', name: 'Vinter-cup' },
+      'startTournament',
+    );
+
+    expect(result.get('a')).toBe(true);
+    expect(result.get('b')).toBe(false);
+    expect(notifyMock).toHaveBeenCalledTimes(2);
+    expect(notifyMock).toHaveBeenCalledWith({
+      userId: 'a',
+      kind: 'cup_started',
+      payload: { tournament_id: 'tour-1', tournament_name: 'Vinter-cup' },
+    });
+  });
+
+  it('utelater deltaker fra mappen ved notify-rejection (mail-gating fail-closed)', async () => {
+    // Samme fail-closed-rasjonale som cup_finished: aldri mail uten in-app.
+    const consoleErr = vi.spyOn(console, 'error').mockImplementation(() => {});
+    notifyMock
+      .mockResolvedValueOnce({ shouldAlsoSendMail: true })
+      .mockRejectedValueOnce(new Error('insert failed'));
+
+    const result = await notifyParticipantsCupStarted(
+      [{ user_id: 'a' }, { user_id: 'b' }],
+      { id: 'tour-1', name: 'Vinter-cup' },
+      'startTournament',
+    );
+
+    expect(result.get('a')).toBe(true);
+    expect(result.has('b')).toBe(false);
+    expect(consoleErr).toHaveBeenCalledWith(
+      '[startTournament] cup_started notify failed',
+      expect.any(Error),
+    );
+    consoleErr.mockRestore();
+  });
+
+  it('log-prefix kommer fra parameter', async () => {
+    const consoleErr = vi.spyOn(console, 'error').mockImplementation(() => {});
+    notifyMock.mockRejectedValueOnce(new Error('boom'));
+
+    await notifyParticipantsCupStarted(
+      [{ user_id: 'a' }],
+      { id: 'tour-1', name: 'X' },
+      'startTournament',
+    );
+
+    expect(consoleErr).toHaveBeenCalledWith(
+      '[startTournament] cup_started notify failed',
+      expect.any(Error),
+    );
+    consoleErr.mockRestore();
+  });
+
+  it('tom deltakerliste → tom map, ingen notify-call', async () => {
+    const result = await notifyParticipantsCupStarted(
+      [],
+      { id: 'tour-1', name: 'X' },
+      'startTournament',
     );
 
     expect(result.size).toBe(0);

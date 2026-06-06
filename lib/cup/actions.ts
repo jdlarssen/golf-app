@@ -7,7 +7,10 @@ import { requireAdmin } from '@/lib/admin/auth';
 import { getCupSnapshot } from './getCupSnapshot';
 import { sendCupStartedNotification } from '@/lib/mail/cupStartedNotification';
 import { sendCupFinishedNotification } from '@/lib/mail/cupFinishedNotification';
-import { notifyParticipantsCupFinished } from '@/lib/notifications/events';
+import {
+  notifyParticipantsCupFinished,
+  notifyParticipantsCupStarted,
+} from '@/lib/notifications/events';
 
 // Form-felt-keyene matcher hidden inputs i cup-create-formet + admin-detalj-
 // formene. Holdt eksplisitt for å gjøre call-sites lesbare.
@@ -231,11 +234,28 @@ export async function startTournament(formData: FormData) {
     redirect(`/admin/cup/${id}?error=start_failed`);
   }
 
-  // Best-effort mail-notifikasjon til alle deltakere.
+  // Best-effort start-varsel: in-app til ALLE deltakere først, mail kun til
+  // off-app-deltakere (#417). Symmetrisk søster av cup-avslutningen (#377) —
+  // samme in-app-først-prinsipp som enkeltspill, ingen blanket-mail til alle.
+  //
+  // loadTournamentParticipantEmails dropper deltakere uten e-post, men
+  // Tørny-auth er e-post-OTP, så alle brukere HAR e-post — denne lista er
+  // dermed hele deltaker-settet, og in-app fyrer for alle reelle deltakere.
+  const recipients = await loadTournamentParticipantEmails(supabase, id);
+  const sendMailByUserId = await notifyParticipantsCupStarted(
+    recipients,
+    { id, name: current.name },
+    'startTournament',
+  );
+
+  // Mail går KUN til off-app-deltakere (shouldAlsoSendMail === true). Aktive
+  // deltakere ble nettopp varslet in-app og trenger ingen mail.
   try {
-    const recipients = await loadTournamentParticipantEmails(supabase, id);
+    const mailRecipients = recipients.filter(
+      (r) => sendMailByUserId.get(r.user_id) === true,
+    );
     const results = await Promise.allSettled(
-      recipients.map((r) =>
+      mailRecipients.map((r) =>
         sendCupStartedNotification({
           to: r.email,
           playerFirstName: r.name?.split(' ')[0] ?? null,

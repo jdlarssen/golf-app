@@ -19,6 +19,7 @@ export type NotificationKind =
   | 'team_member_withdrew'
   | 'deliver_reminder'
   | 'cup_finished'
+  | 'cup_started'
   | 'club_join_request'
   | 'club_role_changed'
   | 'friend_request'
@@ -142,6 +143,16 @@ const cupFinishedSchema = z.object({
   tournament_name: z.string().min(1),
 });
 
+// cup_started: en cup (tournament av matcher) er startet. Fyres til alle
+// cup-deltakere fra `startTournament` — in-app først, mail kun til off-app
+// (symmetrisk søster av cup_finished, #417). Identisk slank payload:
+// tournament_name brukes i innboks-detalj, tournament_id i deeplink til
+// /cup/[id].
+const cupStartedSchema = z.object({
+  tournament_id: uuid,
+  tournament_name: z.string().min(1),
+});
+
 // club_join_request: noen ba om å bli med i en klubb via del-lenken. Sendes til
 // klubbens eier(e)/admin(er). group_id deeplinker til /klubber/[group_id] hvor
 // forespørselen godkjennes/avslås. (#442)
@@ -187,6 +198,7 @@ const schemas = {
   team_member_withdrew: teamMemberWithdrewSchema,
   deliver_reminder: deliverReminderSchema,
   cup_finished: cupFinishedSchema,
+  cup_started: cupStartedSchema,
   club_join_request: clubJoinRequestSchema,
   club_role_changed: clubRoleChangedSchema,
   friend_request: friendRequestSchema,

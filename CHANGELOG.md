@@ -17,7 +17,30 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.81.y — Venner og åpen-for-venner
+## 1.82.y — Cup-start-varsel
+
+Issue [#417](https://github.com/jdlarssen/golf-app/issues/417) (milepæl End-game robusthet). Når en cup settes i gang, varsles deltakerne nå i appen først. Mail går bare til dem som ikke er innom.
+
+### [1.82.0] - 2026-06-06 · #417
+
+> Når en cup settes i gang, dukker det opp et varsel i appen — «Cupen har startet» — for alle deltakerne. Er du innom appen, ser du det der med en gang. Er du ikke det, får du en mail i stedet. Ingen får lenger en mail de ikke trenger.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#417](https://github.com/jdlarssen/golf-app/issues/417). Symmetrisk søster av cup-avslutnings-varselet ([#377](https://github.com/jdlarssen/golf-app/issues/377)): cup-start fyrer nå in-app-varsel til alle deltakere først, og mail går kun til off-app-deltakere. Den gamle blanket-mailen til alle er borte.
+
+#### Added
+- Notification-kind `cup_started` (migrasjon `0079`) wiret gjennom alle uttømmende steder: [`types.ts`](lib/notifications/types.ts), [`NotificationCard.tsx`](components/notifications/NotificationCard.tsx) («Cupen har startet» 🏌️), [`InboxClient.tsx`](app/innboks/InboxClient.tsx) (deeplink → `/cup/[id]`).
+- Delt primitiv `notifyParticipantsCupStarted` ([`events.ts`](lib/notifications/events.ts), 4 Type A-tester) — speiler `notifyParticipantsCupFinished`.
+
+#### Changed
+- [`startTournament`](lib/cup/actions.ts) fyrer in-app `cup_started` til alle deltakere, deretter mail kun til off-app via `shouldAlsoSendMail`-gating. Den tidligere `recipients.map(...)`-blanket-mailen er erstattet.
+
+</details>
+
+<details>
+<summary><strong>1.81.y — Venner og åpen-for-venner (3 oppføringer)</strong></summary>
 
 Issue [#369](https://github.com/jdlarssen/golf-app/issues/369) (lukker [#408](https://github.com/jdlarssen/golf-app/issues/408), milepæl Klubb-skala). Du kan nå legge til venner på Tørny. Venner ser spillene dine, og du finner dem raskt når du fyller lag.
 
@@ -69,6 +92,8 @@ Issue [#369](https://github.com/jdlarssen/golf-app/issues/369) + [#408](https://
 - [`app/venner/legg-til/[code]/`](app/venner/legg-til/[code]/page.tsx) — landingsside for delt lenke; en innlogget som åpner den kobles som venn direkte.
 - [`lib/friends/`](lib/friends/getFriendData.ts) — ren graf-logikk (`friendGraph.ts`, 10 unit-tester) + resolvere (`getFriendIds`, `getFriendData`); co-player-oppslaget trukket ut til [`lib/users/getCoPlayerIds.ts`](lib/users/getCoPlayerIds.ts) og delt med lag-påmelding.
 - «Venner»-inngang i konto-lista på [`app/profile/page.tsx`](app/profile/page.tsx).
+
+</details>
 
 </details>
 
