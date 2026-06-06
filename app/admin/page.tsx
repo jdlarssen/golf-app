@@ -208,6 +208,7 @@ async function TilesGrid() {
     lastFinishedRes,
     lastPublishedRes,
     activeCupsRes,
+    activeLeaguesRes,
   ] = await Promise.all([
     supabase
       .from('games')
@@ -241,6 +242,10 @@ async function TilesGrid() {
       .from('tournaments')
       .select('id', { count: 'exact', head: true })
       .in('status', ['draft', 'active']),
+    supabase
+      .from('leagues')
+      .select('id', { count: 'exact', head: true })
+      .in('status', ['draft', 'active']),
   ]);
 
   const activeCount = activeGamesRes.count ?? 0;
@@ -254,6 +259,7 @@ async function TilesGrid() {
     lastPublishedRes.data as { created_at: string | null } | null
   )?.created_at;
   const activeCupCount = activeCupsRes.count ?? 0;
+  const activeLeagueCount = activeLeaguesRes.count ?? 0;
 
   const tiles: Tile[] = [
     {
@@ -304,6 +310,15 @@ async function TilesGrid() {
         activeCupCount === 0
           ? 'Ingen aktive'
           : `${activeCupCount} aktiv${activeCupCount === 1 ? '' : 'e'}`,
+      icon: 'pokal',
+    },
+    {
+      label: 'Ligaer',
+      href: '/admin/liga',
+      meta:
+        activeLeagueCount === 0
+          ? 'Ingen aktive'
+          : `${activeLeagueCount} aktiv${activeLeagueCount === 1 ? '' : 'e'}`,
       icon: 'pokal',
     },
     // F3 (#273): admin format-mapping. Mappings + cup-eligibility +

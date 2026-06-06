@@ -251,9 +251,28 @@ async function setLeagueStatus(
 }
 
 export async function startLeague(formData: FormData): Promise<LeagueActionError> {
+  const supabase = await getServerClient();
+  await requireAdmin(supabase);
   const leagueId = str(formData, 'league_id');
   if (!leagueId) return { error: 'missing' };
-  return setLeagueStatus(leagueId, 'active');
+
+  // A league can only start with at least one round and ≥2 participants
+  // (the marker rule needs two players to ever produce a counted result).
+  const [roundsCount, playersCount] = await Promise.all([
+    supabase.from('league_rounds').select('id', { count: 'exact', head: true }).eq('league_id', leagueId),
+    supabase.from('league_players').select('user_id', { count: 'exact', head: true }).eq('league_id', leagueId),
+  ]);
+  if ((roundsCount.count ?? 0) < 1) return { error: 'no_rounds' };
+  if ((playersCount.count ?? 0) < 2) return { error: 'too_few_players' };
+
+  const { error } = await supabase
+    .from('leagues')
+    .update({ status: 'active', started_at: new Date().toISOString() })
+    .eq('id', leagueId);
+  if (error) return { error: 'status_failed' };
+  revalidatePath(`/admin/liga/${leagueId}`);
+  revalidatePath(`/liga/${leagueId}`);
+  return { error: '' };
 }
 
 export async function finishLeague(formData: FormData): Promise<LeagueActionError> {

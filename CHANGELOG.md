@@ -17,7 +17,34 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.82.y — Cup-start-varsel
+## 1.83.y — Liga
+
+Issue [#453](https://github.com/jdlarssen/golf-app/issues/453) (epic [#452](https://github.com/jdlarssen/golf-app/issues/452)). Du kan nå arrangere en liga: flere runder over en hel sesong, med en levende tabell som holder styr på hvem som leder.
+
+### [1.83.0] - 2026-06-06 · #453
+
+> Du kan nå sette opp en liga. Velg om hele sesongen spilles på samme bane og tee, eller om det varierer fra runde til runde. Bestem hvor ofte det spilles (hver uke, annenhver eller hver måned) og hvordan vinneren kåres: sum mot par, eller snitt. Spillerne har hele runde-vinduet på seg og må spille sammen med minst én annen. Tabellen fylles ut etter hvert som flightene leveres.
+
+<details>
+<summary>Teknisk</summary>
+
+Issue [#453](https://github.com/jdlarssen/golf-app/issues/453), Fase 1 av liga-epicen [#452](https://github.com/jdlarssen/golf-app/issues/452). Frittstående slagspill-liga (netto), bygget som et paraply-lag over `games` — speiler cup-mønsteret.
+
+#### Added
+- Migrasjon `0080_leagues.sql` — `leagues` / `league_rounds` / `league_players` + `games.league_round_id` + `games.delivered_outside_window`. SELECT-RLS for alle innloggede; skriv gated til `is_admin()`.
+- [`lib/league/computeLeagueStandings.ts`](lib/league/computeLeagueStandings.ts) — ren sesong-aggregator (Total + Snitt, straffescore, countback-tiebreak). 10 Type A-tester.
+- [`lib/league/generateRounds.ts`](lib/league/generateRounds.ts) — frekvens → spillevinduer (uke / annenhver / måned). 7 Type A-tester.
+- [`lib/league/getLigaSnapshot.ts`](lib/league/getLigaSnapshot.ts) — IO-lag som kjører slagspill-scoring per flight og bygger netto-mot-par.
+- [`lib/league/actions.ts`](lib/league/actions.ts) — opprett liga, runde- og deltaker-styring, vindu-override, og deltaker-flight-starter (server-håndhevet markør-regel + spillevindu).
+- Flater: offentlig `/liga/[id]` (sesong-tabell + runder), fokusert runde-starter, admin `/admin/liga` (liste, opprett-veiviser, detalj med vindu-override + utenfor-vindu-flagg, slett), og «Ligaer»-flis i Klubbhuset.
+
+#### Changed
+- [`app/admin/page.tsx`](app/admin/page.tsx) — ny «Ligaer»-flis med aktiv-telling.
+
+</details>
+
+<details>
+<summary><strong>1.82.y — Cup-start-varsel (2 oppføringer)</strong></summary>
 
 Issue [#417](https://github.com/jdlarssen/golf-app/issues/417) (milepæl End-game robusthet). Når en cup settes i gang, varsles deltakerne nå i appen først. Mail går bare til dem som ikke er innom.
 
@@ -54,6 +81,8 @@ Issue [#417](https://github.com/jdlarssen/golf-app/issues/417). Symmetrisk søst
 
 #### Changed
 - [`startTournament`](lib/cup/actions.ts) fyrer in-app `cup_started` til alle deltakere, deretter mail kun til off-app via `shouldAlsoSendMail`-gating. Den tidligere `recipients.map(...)`-blanket-mailen er erstattet.
+
+</details>
 
 </details>
 
