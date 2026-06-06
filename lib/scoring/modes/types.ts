@@ -111,6 +111,59 @@ export function isAlternateShotMatchplay(mode: GameMode): boolean {
 }
 
 /**
+ * True for individuelle formater uten lag-/flight-gruppering — spilleren er en
+ * flat deltaker, ikke del av et lag eller en side. Single source of truth for
+ * når UI skal skjule «Lag»/«Flight»-rader, vise hele deltaker-lista i stedet
+ * for en flight-roster, og droppe lag-grid/lag-kolonner.
+ *
+ * Dekker pott-/individuell-formatene (solo slagspill, Wolf, Nassau, Skins,
+ * Bingo Bango Bongo, Nines, Round Robin, Acey Deucey) pluss stableford-familien
+ * på `team_size === 1`. Wolf/Round Robin har `team_number` som rotasjons-slot
+ * (ikke et lag), så de regnes også som solo her.
+ *
+ * IKKE solo: best ball, scramble-familien, shamble, patsome (delt lag-ball),
+ * matchplay-familien (sider/flight, 1v1 eller 2v2), og par-stableford
+ * (`team_size === 2`).
+ *
+ * Erstatter tidligere `isStablefordFamily`-proxy på display-call-sites som
+ * feilaktig viste tomme «Lag —/Flight —»-rader for pott-formatene. Eksplisitt
+ * switch med `never`-uttømming: en ny GameMode MÅ klassifiseres her.
+ */
+export function isSoloFormat(mode: GameMode, teamSize: number): boolean {
+  switch (mode) {
+    case 'solo_strokeplay':
+    case 'wolf':
+    case 'nassau':
+    case 'skins':
+    case 'bingo_bango_bongo':
+    case 'nines':
+    case 'round_robin':
+    case 'acey_deucey':
+      return true;
+    case 'stableford':
+    case 'modified_stableford':
+      return teamSize === 1;
+    case 'best_ball':
+    case 'singles_matchplay':
+    case 'fourball_matchplay':
+    case 'foursomes_matchplay':
+    case 'greensome_matchplay':
+    case 'chapman_matchplay':
+    case 'gruesome_matchplay':
+    case 'texas_scramble':
+    case 'ambrose':
+    case 'florida_scramble':
+    case 'shamble':
+    case 'patsome':
+      return false;
+    default: {
+      const _exhaustive: never = mode;
+      return _exhaustive;
+    }
+  }
+}
+
+/**
  * WD / «trekk spiller» (#386): hvilke format støtter at en spiller trekkes ut
  * av rangeringen (scorene teller ikke). Kun individuell-ball-totalformat der
  * eksklusjon faktisk endrer resultatet: best ball, stableford-familien, solo

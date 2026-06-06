@@ -18,7 +18,7 @@ import { Kicker } from '@/components/ui/Kicker';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { type GameStatus, STATUS_LABELS } from '@/lib/games/status';
-import { isStablefordFamily, supportsWithdrawal } from '@/lib/scoring/modes/types';
+import { isSoloFormat, supportsWithdrawal } from '@/lib/scoring/modes/types';
 import { MailEnvelope } from '@/components/icons/MailEnvelope';
 import { firstName } from '@/lib/firstName';
 import { nameInitials } from '@/lib/names/initials';
@@ -435,7 +435,7 @@ export default async function GameHomePage({
 
           <div className="h-px bg-border my-3.5" />
 
-          {isStablefordFamily(game.game_mode) ? (
+          {isSoloFormat(game.game_mode, modeTeamSize) ? (
             // Solo-modus har ingen flight-gruppering — vis hele deltaker-
             // listen i stedet for FlightRoster.
             <>
@@ -648,14 +648,17 @@ export default async function GameHomePage({
             <Kicker tone="muted" className="mb-2">
               DIN INFO
             </Kicker>
-            {isStablefordFamily(game.game_mode) ? (
+            {isSoloFormat(game.game_mode, modeTeamSize) ? (
               // Solo-modus har ingen lag- eller flight-tilordning, så den
               // klassiske dl-listen leser tomt («Lag —, Flight —»). Vi
               // erstatter med en kort modus-undertittel + CH-only-rad slik
-              // at brukeren skjønner formatet med ett blikk.
+              // at brukeren skjønner formatet med ett blikk. Gjelder hele
+              // solo-familien (stableford solo, Wolf, Nassau, Skins, BBB,
+              // Nines, Round Robin, Acey Deucey, solo slagspill).
               <>
-                <p className="text-sm text-text font-serif">
-                  Individuell stableford-turnering
+                <p className="text-sm text-text font-serif">{modeLabel}</p>
+                <p className="text-xs text-muted mt-1">
+                  Individuelt format. Du spiller for deg selv, uten lag.
                 </p>
                 <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-sm mt-2">
                   <dt className="text-muted">Course handicap</dt>

@@ -16,6 +16,7 @@ import type { GameStatus } from '@/lib/games/status';
 import {
   isStablefordFamily,
   isScrambleFamily,
+  isSoloFormat,
   supportsWithdrawal,
   type GameMode,
   type GameModeConfig,
@@ -386,9 +387,11 @@ async function PlayersSections({
   //    Flight-kolonnen skjules.
   //  - isBestBall: 4 lag à 2 spillere; flight kan avvike fra team. Full
   //    Lag-grid (4 hardkodet) + Lag+Flight-kolonner.
-  const isSolo =
-    (isStablefordFamily(game.game_mode) && game.mode_config.team_size === 1) ||
-    game.game_mode === 'solo_strokeplay';
+  // Solo = individuelt format uten lag-/flight-konstruksjon. Kanonisk helper
+  // (lib/scoring/modes/types) dekker stableford solo + solo slagspill + alle
+  // pott-formatene (Wolf/Nassau/Skins/BBB/Nines/Round Robin/Acey Deucey) — den
+  // gamle inline-sjekken glemte pott-formatene, så de viste tomme lag-flater.
+  const isSolo = isSoloFormat(game.game_mode, game.mode_config.team_size);
   const isParStableford =
     isStablefordFamily(game.game_mode) && game.mode_config.team_size === 2;
   const isMatchplay = game.game_mode === 'singles_matchplay';

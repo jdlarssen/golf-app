@@ -21,6 +21,22 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#453](https://github.com/jdlarssen/golf-app/issues/453) (epic [#452](https://github.com/jdlarssen/golf-app/issues/452)). Du kan nå arrangere en liga: flere runder over en hel sesong, med en levende tabell som holder styr på hvem som leder.
 
+### [1.83.10] - 2026-06-06 · bug
+
+> Spill uten lag (som Bingo Bango Bongo, Wolf, Nassau og Skins) viste en tom «Lag»- og «Flight»-rad i venterommet før start. Nå viser de bare det som gjelder for et individuelt format.
+
+<details>
+<summary>Teknisk</summary>
+
+Rapportert bug: et solo-spill (Bingo Bango Bongo) viste lag-info i spill-visningen «under påmelding». Rot: display-call-sites brukte `isStablefordFamily` som proxy for «solo», så pott-formatene (Wolf/Nassau/Skins/BBB/Nines/Round Robin/Acey Deucey) falt i lag-grenen og leste tomme `team_number`/`flight_number`.
+
+#### Fixed
+- Ny single source of truth [`isSoloFormat(mode, teamSize)`](lib/scoring/modes/types.ts) klassifiserer individuelle formater uten lag-/flight-gruppering (eksplisitt `switch` med `never`-uttømming, så en ny `GameMode` MÅ klassifiseres). Co-located Type-A-test i [`isSoloFormat.test.ts`](lib/scoring/modes/isSoloFormat.test.ts).
+- [`app/games/[id]/page.tsx`](app/games/[id]/page.tsx) (spiller-venterommet): «DIN INFO»-kortet og deltaker-/flight-lista bytter fra `isStablefordFamily` til `isSoloFormat`. Solo-kortet er nå modus-agnostisk (modus-label + «Individuelt format»-undertittel) i stedet for hardkodet «Individuell stableford-turnering».
+- [`app/admin/games/[id]/page.tsx`](app/admin/games/[id]/page.tsx): `isSolo` bruker nå samme helper, så admin-detaljsiden skjuler lag-seksjon + Lag/Flight-kolonner for de samme pott-formatene.
+
+</details>
+
 ### [1.83.9] - 2026-06-06 · bug
 
 > På iPhone strakk dato- og tidsfeltene seg utenfor kortet når du oppretter et spill, eller legger til og endrer en liga-runde. Nå står de pent innenfor rammen.
