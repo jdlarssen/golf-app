@@ -4,7 +4,7 @@ import { requireAdmin } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
-import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { withdrawInvitation } from '../../../actions';
 
@@ -52,13 +52,13 @@ export default async function WithdrawInvitationPage({
       <div className="mt-6 flex flex-col gap-2.5">
         <form action={withdrawInvitation}>
           <input type="hidden" name="id" value={inv.id} />
-          <Button
-            type="submit"
+          <SubmitButton
             className="w-full"
             style={{ background: 'var(--danger-deep)', borderColor: 'var(--danger-deep)' }}
+            pendingLabel="Trekker tilbake …"
           >
             Bekreft tilbaketrekking
-          </Button>
+          </SubmitButton>
         </form>
         <SmartLink
           href="/admin/spillere"
