@@ -12,6 +12,7 @@ import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { LinkButton, Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Kicker } from '@/components/ui/Kicker';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -694,9 +695,9 @@ export default async function GameHomePage({
             </p>
             <form action={submitUndoWithdraw}>
               <input type="hidden" name="gameId" value={id} />
-              <Button type="submit" className="w-full">
+              <SubmitButton className="w-full" pendingLabel="Angrer …">
                 Angre
-              </Button>
+              </SubmitButton>
             </form>
           </div>
         ) : isActive ? (
