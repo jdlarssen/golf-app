@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 
 type Props = {
   // The start action arrives pre-bound with the game id; submitting empty
@@ -22,9 +22,9 @@ export function StartGameButton({ startAction, gameName }: Props) {
         }
       }}
     >
-      <Button type="submit" className="w-full">
+      <SubmitButton className="w-full" pendingLabel="Starter …">
         Start spillet
-      </Button>
+      </SubmitButton>
     </form>
   );
 }
