@@ -5,7 +5,7 @@ import { requireAdmin } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { supportsWithdrawal } from '@/lib/scoring';
@@ -176,9 +176,9 @@ export default async function AvsluttLikevelPage({
         </p>
 
         <form action={endAnywayAction}>
-          <Button type="submit" className="w-full">
+          <SubmitButton className="w-full" pendingLabel="Avslutter …">
             Avslutt likevel
-          </Button>
+          </SubmitButton>
         </form>
 
         <Link
