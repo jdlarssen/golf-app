@@ -4,7 +4,7 @@ import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Banner } from '@/components/ui/Banner';
-import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode } from '@/lib/scoring/modes/types';
@@ -169,16 +169,16 @@ export default async function TrekkFraPage({
       <div className="mt-6 flex flex-col gap-2.5">
         <form action={submitWithdraw}>
           <input type="hidden" name="gameId" value={game.id} />
-          <Button
-            type="submit"
+          <SubmitButton
             className="w-full"
+            pendingLabel="Trekker tilbake …"
             style={{
               background: 'var(--danger-deep)',
               borderColor: 'var(--danger-deep)',
             }}
           >
             Trekk meg fra spillet
-          </Button>
+          </SubmitButton>
         </form>
         <SmartLink
           href={`/games/${id}`}
