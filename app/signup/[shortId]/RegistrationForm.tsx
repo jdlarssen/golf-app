@@ -109,12 +109,13 @@ export function RegistrationForm({
 
       {errorMessage && <Banner tone="error">{errorMessage}</Banner>}
 
-      <Button type="submit" disabled={isPending} className="w-full">
-        {isPending
-          ? 'Sender…'
-          : mode === 'open'
-            ? 'Meld meg på'
-            : 'Send forespørsel'}
+      <Button
+        type="submit"
+        pending={isPending}
+        pendingLabel={mode === 'open' ? 'Melder deg på …' : 'Sender forespørsel …'}
+        className="w-full"
+      >
+        {mode === 'open' ? 'Meld meg på' : 'Send forespørsel'}
       </Button>
     </form>
   );
