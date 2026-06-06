@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 
 type SideTournamentConfig = {
   enabled: boolean;
@@ -63,9 +63,9 @@ export function EndGameButton({
         }
       }}
     >
-      <Button type="submit" className="w-full" disabled={disabled}>
+      <SubmitButton className="w-full" disabled={disabled} pendingLabel="Avslutter …">
         Avslutt spillet
-      </Button>
+      </SubmitButton>
     </form>
   );
 }
