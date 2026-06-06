@@ -11,6 +11,7 @@ import {
   type DayGroup,
 } from '@/lib/notifications/groupByDay';
 import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 import { MailEnvelope } from '@/components/icons/MailEnvelope';
 import { PullQuote } from '@/components/ui/PullQuote';
 import { markOneAsRead, markAllAsRead } from './actions';
@@ -38,6 +39,7 @@ export function InboxClient({
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
+  const [markAllPending, startMarkAll] = useTransition();
   const [items, setItems] = useState<NotificationRow[]>(initialNotifications);
 
   const hasUnread = items.some((n) => n.read_at == null);
@@ -65,7 +67,7 @@ export function InboxClient({
     setItems((prev) =>
       prev.map((n) => (n.read_at == null ? { ...n, read_at: nowIso } : n)),
     );
-    startTransition(() => {
+    startMarkAll(() => {
       void markAllAsRead();
     });
   }
@@ -90,13 +92,16 @@ export function InboxClient({
     <div>
       {hasUnread && (
         <div className="mb-3 flex justify-end">
-          <button
+          <Button
             type="button"
+            variant="ghost"
             onClick={handleMarkAll}
+            pending={markAllPending}
+            pendingLabel="Markerer …"
             className="rounded-full border border-border bg-surface-2/50 px-3 py-1.5 font-sans text-[11px] font-medium text-text transition-colors hover:bg-surface-2 active:bg-surface-2"
           >
             Marker alle som lest
-          </button>
+          </Button>
         </div>
       )}
 
