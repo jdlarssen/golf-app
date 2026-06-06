@@ -62,11 +62,14 @@ export function fitsPlayerCount(gameMode: GameMode, n: number): boolean {
     case 'gruesome_matchplay':
       return n === 4;
 
-    // ── 2–4 (solo-format med carryover/segment-konkurranse) ─────────────────
+    // ── 2–16 (solo-format med carryover/segment-konkurranse) (#460) ─────────
+    // Antalls-agnostiske individuelle format: hver spiller konkurrerer i sin
+    // egen pott (skins-carryover, nassau-segment, BBB-poeng). 4-grensen var
+    // kunstig; 16 er den nye øvre grensen (slot-emisjon er dynamisk).
     case 'nassau':
     case 'skins':
     case 'bingo_bango_bongo':
-      return n >= 2 && n <= 4;
+      return n >= 2 && n <= 16;
 
     // ── Nøyaktig 3 ──────────────────────────────────────────────────────────
     case 'nines':

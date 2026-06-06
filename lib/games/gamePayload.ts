@@ -1546,15 +1546,15 @@ function parseWolfScoring(formData: FormData): 'gross' | 'net' {
  * Nassau-validator (issue #276 — front 9 + back 9 + total 18).
  *
  * Regler:
- *  - 2-4 spillere ved publish
+ *  - 2-16 spillere ved publish (#460 — hevet fra 4)
  *  - Solo-format: team_number/flight_number nullstilles (samme som
  *    solo_strokeplay) — DB-CHECK game_players_team_flight_consistency
  *    krever begge satt sammen eller begge null
- *  - draft tolererer partial state (0..4 spillere)
+ *  - draft tolererer partial state (0..16 spillere)
  *
  * Feilkoder ved publish:
  *  - 0..1 spillere → `min_players_for_mode`
- *  - 5+ spillere → `too_many_players_for_mode`
+ *  - 17+ spillere → `too_many_players_for_mode`
  *
  * Scoring-toggle: form-feltet `nassau_scoring` ('gross' | 'net'). Default 'net'
  * når feltet mangler (matcher Tørny-default + Wolf-mønstret).
@@ -1569,7 +1569,9 @@ function validateNassau(
 
   const players: GamePlayerInput[] = [];
   const seen = new Set<string>();
-  for (let i = 0; i < 8; i++) {
+  // #460: les opptil 17 slots — én over 16-cap-en, så en 17. spiller fanges
+  // av cap-sjekken under i stedet for å trunkeres stille til 16.
+  for (let i = 0; i < 17; i++) {
     const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
     if (!user_id) continue;
     if (seen.has(user_id)) {
@@ -1583,7 +1585,7 @@ function validateNassau(
     if (players.length < 2) {
       return { ok: false, errorCode: 'min_players_for_mode' };
     }
-    if (players.length > 4) {
+    if (players.length > 16) {
       return { ok: false, errorCode: 'too_many_players_for_mode' };
     }
   }
@@ -1612,7 +1614,7 @@ function parseNassauScoring(formData: FormData): 'gross' | 'net' {
 /**
  * Skins-validator (issue #275 — skins med carryover).
  *
- * Speiler `validateNassau`: solo-format, 2-4 spillere ved publish, ingen
+ * Speiler `validateNassau`: solo-format, 2-16 spillere ved publish (#460), ingen
  * duplikater, team_number/flight_number nullstilles. Carryover er ren funksjon
  * av scores, så ingen ekstra felt å validere.
  *
@@ -1630,7 +1632,9 @@ function validateSkins(
 
   const players: GamePlayerInput[] = [];
   const seen = new Set<string>();
-  for (let i = 0; i < 8; i++) {
+  // #460: les opptil 17 slots — én over 16-cap-en, så en 17. spiller fanges
+  // av cap-sjekken under i stedet for å trunkeres stille til 16.
+  for (let i = 0; i < 17; i++) {
     const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
     if (!user_id) continue;
     if (seen.has(user_id)) {
@@ -1644,7 +1648,7 @@ function validateSkins(
     if (players.length < 2) {
       return { ok: false, errorCode: 'min_players_for_mode' };
     }
-    if (players.length > 4) {
+    if (players.length > 16) {
       return { ok: false, errorCode: 'too_many_players_for_mode' };
     }
   }
@@ -1741,8 +1745,8 @@ function parseAceyDeuceyScoring(formData: FormData): 'gross' | 'net' {
 /**
  * Bingo Bango Bongo-validator (issue #277).
  *
- * Speiler `validateNassau`/`validateSkins`: individuelt format, 2–4 spillere
- * ved publish, ingen duplikater, team_number/flight_number nullstilles. BBB
+ * Speiler `validateNassau`/`validateSkins`: individuelt format, 2–16 spillere
+ * (#460) ved publish, ingen duplikater, team_number/flight_number nullstilles. BBB
  * bruker ikke gross/net-toggle (poeng er rene prestasjons-poeng fra bingo/bango/
  * bongo — ikke utledet fra slag). mode_config er {kind, team_size: 1}.
  */
@@ -1752,7 +1756,9 @@ function validateBingoBangoBongo(
 ): ModeValidationResult {
   const players: GamePlayerInput[] = [];
   const seen = new Set<string>();
-  for (let i = 0; i < 8; i++) {
+  // #460: les opptil 17 slots — én over 16-cap-en, så en 17. spiller fanges
+  // av cap-sjekken under i stedet for å trunkeres stille til 16.
+  for (let i = 0; i < 17; i++) {
     const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
     if (!user_id) continue;
     if (seen.has(user_id)) {
@@ -1766,7 +1772,7 @@ function validateBingoBangoBongo(
     if (players.length < 2) {
       return { ok: false, errorCode: 'min_players_for_mode' };
     }
-    if (players.length > 4) {
+    if (players.length > 16) {
       return { ok: false, errorCode: 'too_many_players_for_mode' };
     }
   }

@@ -21,6 +21,26 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#453](https://github.com/jdlarssen/golf-app/issues/453) (epic [#452](https://github.com/jdlarssen/golf-app/issues/452)). Du kan nå arrangere en liga: flere runder over en hel sesong, med en levende tabell som holder styr på hvem som leder.
 
+### [1.83.14] - 2026-06-07 · #460
+
+> Skins, Nassau og Bingo Bango Bongo forsvant fra veiviseren så snart dere ble flere enn fire. Nå tar alle tre opptil 16 spillere, så du kan kjøre en stor skins-pott på klubbkvelden.
+
+<details>
+<summary>Teknisk</summary>
+
+[#460](https://github.com/jdlarssen/golf-app/issues/460): 4-grensen for de tre solo-formatene var kunstig. Slot-emisjonen i veiviseren er allerede dynamisk, scoring itererer over alle spillere, og podiene viser topp-3 + en rest-liste — alt er antalls-agnostisk. 16 er den naturlige øvre grensen før ny slot-infrastruktur trengs.
+
+#### Changed
+- [`lib/wizard/fitsPlayerCount.ts`](lib/wizard/fitsPlayerCount.ts): `nassau`/`skins`/`bingo_bango_bongo` gikk fra `n >= 2 && n <= 4` til `<= 16`. Styrer hvilke kort som vises i Kompis-grid-et.
+- [`lib/games/gamePayload.ts`](lib/games/gamePayload.ts): de tre validatorene leser nå opptil 17 slots (én over cap-en, så en 17. spiller fanges i stedet for å trunkeres stille) og avviser ved `> 16`. Acey Deucey og de andre eksakt-antall-formatene er urørt.
+- [`app/admin/games/new/useGameFormState.ts`](app/admin/games/new/useGameFormState.ts): publish-validitetsflaggene og de tre «for mange spillere»-meldingene oppdatert til maks 16.
+
+#### Added
+- Boundary-tester i [`fitsPlayerCount.test.ts`](lib/wizard/fitsPlayerCount.test.ts) (16 → vises, 17 → skjules) og [`gamePayload.test.ts`](lib/games/gamePayload.test.ts) (publish 16 → ok, 17 → avvist) per format.
+- Scoring-tester i `lib/scoring/modes/{skins,nassau,bingoBangoBongo}.test.ts` med stort felt som bekrefter at beregningen er antalls-agnostisk over fire spillere.
+
+</details>
+
 ### [1.83.13] - 2026-06-06 · bug
 
 > I et sjeldent feiloppsett kunne et spill bli umulig å melde seg på via lenken. Du fikk en blindvei i stedet for påmeldingsknappen. Nå kommer du alltid fram til å melde deg på.

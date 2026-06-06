@@ -620,13 +620,13 @@ export function useGameFormState({
   //   rotation-slot (random permutasjon ved publish). team_size=1, ingen
   //   lag-grid. Eget WolfSetup-step i step 2 for scoring-toggle + shuffle.
   const isWolf = gameMode === 'wolf';
-  // - isNassau: solo-format, 2-4 spillere. Front 9 / back 9 / total 18 er tre
-  //   separate konkurranser. Egen NassauSetup-step i step 2 for scoring-toggle.
+  // - isNassau: solo-format, 2-16 spillere (#460). Front 9 / back 9 / total 18 er
+  //   tre separate konkurranser. Egen NassauSetup-step i step 2 for scoring-toggle.
   const isNassau = gameMode === 'nassau';
-  // - isSkins: solo-format med carryover, 2-4 spillere. Hvert hull er verdt
+  // - isSkins: solo-format med carryover, 2-16 spillere (#460). Hvert hull er verdt
   //   1 skin; delte hull ruller skinnet videre. Egen SkinsSetup-step i step 2.
   const isSkins = gameMode === 'skins';
-  // - isBingoBangoBongo: solo-format, 2-4 spillere (#277). Poeng for bingo
+  // - isBingoBangoBongo: solo-format, 2-16 spillere (#277, #460). Poeng for bingo
   //   (først på green), bango (nærmest når alle er på) og bongo (først i hull).
   //   Ingen gross/net-toggle, ingen lag — speiler Nassau/Skins-gatingen.
   const isBingoBangoBongo = gameMode === 'bingo_bango_bongo';
@@ -1148,22 +1148,22 @@ export function useGameFormState({
   // Speiler `validateRoundRobin` i gamePayload.ts.
   const roundRobinPlayersValid = isRoundRobin && selectedPlayerIds.length === 4;
 
-  // Nassau-validitet: 2-4 spillere. Solo-format (team/flight null), ingen
+  // Nassau-validitet: 2-16 spillere (#460). Solo-format (team/flight null), ingen
   // lag-tilordning. Speiler `validateNassau` i gamePayload.ts.
   const nassauPlayersValid =
-    isNassau && selectedPlayerIds.length >= 2 && selectedPlayerIds.length <= 4;
+    isNassau && selectedPlayerIds.length >= 2 && selectedPlayerIds.length <= 16;
 
-  // Skins-validitet: 2-4 spillere. Solo-format (team/flight null), ingen
+  // Skins-validitet: 2-16 spillere (#460). Solo-format (team/flight null), ingen
   // lag-tilordning. Speiler `validateSkins` i gamePayload.ts.
   const skinsPlayersValid =
-    isSkins && selectedPlayerIds.length >= 2 && selectedPlayerIds.length <= 4;
+    isSkins && selectedPlayerIds.length >= 2 && selectedPlayerIds.length <= 16;
 
-  // Bingo Bango Bongo-validitet: 2-4 spillere. Solo-format (team/flight null),
-  // ingen lag-tilordning. Speiler `validateBingoBangoBongo` i gamePayload.ts.
+  // Bingo Bango Bongo-validitet: 2-16 spillere (#460). Solo-format (team/flight
+  // null), ingen lag-tilordning. Speiler `validateBingoBangoBongo` i gamePayload.ts.
   const bingoBangoBongoPlayersValid =
     isBingoBangoBongo &&
     selectedPlayerIds.length >= 2 &&
-    selectedPlayerIds.length <= 4;
+    selectedPlayerIds.length <= 16;
 
   // Nines-validitet: nøyaktig 3 spillere. Solo-format (team/flight null),
   // ingen lag-tilordning. Speiler `validateNines` i gamePayload.ts.
@@ -1415,39 +1415,39 @@ export function useGameFormState({
       );
     }
   } else if (isNassau) {
-    // Nassau: 2-4 spillere, solo (ingen lag-tilordning).
+    // Nassau: 2-16 spillere (#460), solo (ingen lag-tilordning).
     if (selectedPlayerIds.length < 2) {
       const remaining = 2 - selectedPlayerIds.length;
       missingForPublish.push(
         `${remaining === 1 ? 'minst 1 spiller til' : 'minst 2 spillere'}`,
       );
-    } else if (selectedPlayerIds.length > 4) {
+    } else if (selectedPlayerIds.length > 16) {
       missingForPublish.push(
-        'for mange spillere — Nassau krever 2-4',
+        'for mange spillere — Nassau tar maks 16',
       );
     }
   } else if (isSkins) {
-    // Skins: 2-4 spillere, solo (ingen lag-tilordning).
+    // Skins: 2-16 spillere (#460), solo (ingen lag-tilordning).
     if (selectedPlayerIds.length < 2) {
       const remaining = 2 - selectedPlayerIds.length;
       missingForPublish.push(
         `${remaining === 1 ? 'minst 1 spiller til' : 'minst 2 spillere'}`,
       );
-    } else if (selectedPlayerIds.length > 4) {
+    } else if (selectedPlayerIds.length > 16) {
       missingForPublish.push(
-        'for mange spillere — Skins krever 2-4',
+        'for mange spillere — Skins tar maks 16',
       );
     }
   } else if (isBingoBangoBongo) {
-    // Bingo Bango Bongo: 2-4 spillere, solo (ingen lag-tilordning).
+    // Bingo Bango Bongo: 2-16 spillere (#460), solo (ingen lag-tilordning).
     if (selectedPlayerIds.length < 2) {
       const remaining = 2 - selectedPlayerIds.length;
       missingForPublish.push(
         `${remaining === 1 ? 'minst 1 spiller til' : 'minst 2 spillere'}`,
       );
-    } else if (selectedPlayerIds.length > 4) {
+    } else if (selectedPlayerIds.length > 16) {
       missingForPublish.push(
-        'for mange spillere — Bingo Bango Bongo krever 2-4',
+        'for mange spillere — Bingo Bango Bongo tar maks 16',
       );
     }
   } else if (isNines) {
