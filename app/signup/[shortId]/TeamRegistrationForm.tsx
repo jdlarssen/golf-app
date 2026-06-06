@@ -428,8 +428,13 @@ export function TeamRegistrationForm({
 
       {errorMessage && <Banner tone="error">{errorMessage}</Banner>}
 
-      <Button type="submit" disabled={isPending} className="w-full">
-        {isPending ? 'Sender…' : 'Meld på laget'}
+      <Button
+        type="submit"
+        pending={isPending}
+        pendingLabel="Melder på laget …"
+        className="w-full"
+      >
+        Meld på laget
       </Button>
     </form>
   );
