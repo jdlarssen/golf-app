@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 
 export type PlayerOption = {
   user_id: string;
@@ -100,9 +100,9 @@ export function SideWinnersForm({
       )}
 
       <div className="flex gap-3">
-        <Button type="submit" variant="primary">
+        <SubmitButton variant="primary" pendingLabel="Lagrer …">
           Avslutt spillet og publiser sideturneringen
-        </Button>
+        </SubmitButton>
         <Link
           href={cancelHref ?? `/admin/games/${gameId}`}
           className="self-center text-sm text-muted underline"
