@@ -10,6 +10,7 @@ import { Banner } from '@/components/ui/Banner';
 import { LinkButton } from '@/components/ui/Button';
 import { MODE_LABELS } from '@/lib/scoring/modes/types';
 import { gameModeSupportsTeams } from '@/lib/games/registration';
+import { resolveRegistrationTypeView } from './registrationTypeView';
 import { getTeamCandidates, type TeamCandidate } from '@/lib/users/getTeamCandidates';
 import { RegistrationForm } from './RegistrationForm';
 import { TeamRegistrationForm } from './TeamRegistrationForm';
@@ -305,20 +306,25 @@ function renderBody({
     );
   }
 
-  // Lag-flyt: spill med registration_type 'team' eller 'both' kan ta imot
-  // lag-påmelding fra en kaptein. 'both' tillater også solo — vi rendrer
-  // begge formene da, men i en MVP-utgave defaulter vi til lag-formen
-  // (admin som vil ha solo må eksplisitt bytte til solo i en framtidig
-  // toggle — for nå er det lag-flyten som er nytt).
-  if (game.registration_type === 'team' || game.registration_type === 'both') {
-    if (!gameModeSupportsTeams(game.game_mode)) {
-      return (
-        <Banner tone="warning">
-          Spillmodusen «{MODE_LABELS[game.game_mode]}» har ikke lag-konsept.
-          Be arrangøren bytte til solo-påmelding.
-        </Banner>
-      );
-    }
+  // Lag-/solo-flyt (#466): hvilken form vi viser avhenger av registration_type
+  // OG om modusen har lag-konsept. 'both' tillater eksplisitt solo, så en
+  // solo-format med 'both' faller til solo-formen i stedet for en blindvei —
+  // ellers blir et slikt spill umulig å melde seg på via lenken.
+  const typeView = resolveRegistrationTypeView(
+    game.registration_type,
+    gameModeSupportsTeams(game.game_mode),
+  );
+
+  if (typeView.kind === 'team_unsupported_mode') {
+    return (
+      <Banner tone="warning">
+        Spillmodusen «{MODE_LABELS[game.game_mode]}» har ikke lag-konsept.
+        Be arrangøren bytte til solo-påmelding.
+      </Banner>
+    );
+  }
+
+  if (typeView.kind === 'team_form') {
     const teamSize = game.mode_config?.team_size ?? 4;
     if (teamSize < 2) {
       return (
@@ -345,6 +351,8 @@ function renderBody({
     );
   }
 
+  // typeView.kind === 'solo_form' — registration_type 'solo', eller 'both' på
+  // en modus uten lag-konsept.
   const mode = game.registration_mode === 'open' ? 'open' : 'manual_approval';
   return (
     <div className="space-y-4">

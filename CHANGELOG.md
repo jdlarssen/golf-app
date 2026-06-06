@@ -21,6 +21,24 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#453](https://github.com/jdlarssen/golf-app/issues/453) (epic [#452](https://github.com/jdlarssen/golf-app/issues/452)). Du kan nå arrangere en liga: flere runder over en hel sesong, med en levende tabell som holder styr på hvem som leder.
 
+### [1.83.13] - 2026-06-06 · bug
+
+> I et sjeldent feiloppsett kunne et spill bli umulig å melde seg på via lenken. Du fikk en blindvei i stedet for påmeldingsknappen. Nå kommer du alltid fram til å melde deg på.
+
+<details>
+<summary>Teknisk</summary>
+
+[#466](https://github.com/jdlarssen/golf-app/issues/466): på den offentlige påmeldingssiden falt et solo-format med `registration_type = 'both'` inn i lag-grenen, traff `!gameModeSupportsTeams` og returnerte en blindvei-advarsel — selv om `'both'` eksplisitt tillater solo. Latent: ingen spill i prod har tilstanden, og `buildGameInsertPayload` gater den allerede ved opprett/rediger (`team_registration_unsupported_mode`). Den var bare nåbar ved direkte data-manipulasjon eller en framtidig ikke-validert skrivesti.
+
+#### Fixed
+- Ny ren utvalgs-funksjon `resolveRegistrationTypeView` i `app/signup/[shortId]/registrationTypeView.ts` (Type-A-testbar), trukket ut av `renderBody`: `'both'` på en solo-format → solo-form (ikke blindvei); `'team'` på en solo-format → informativ melding; team/both på en lag-modus → lag-form.
+- `app/signup/[shortId]/page.tsx`: `renderBody` bruker funksjonen i stedet for den sammenslåtte `'team' || 'both'`-grenen.
+- Co-located Type-A-test i `app/signup/[shortId]/registrationTypeView.test.ts` dekker hele 3×2-matrisen (registration_type × modeSupportsTeams).
+
+Validator-gaten (fix #2 i issuet) var allerede på plass som en avvisning, så `gamePayload.ts` er urørt.
+
+</details>
+
 ### [1.83.12] - 2026-06-06 · bug
 
 > Shamble dukket opp i veiviseren allerede ved tre eller fire spillere, for få til å stille to lag. Som de andre scramble-formatene viser den seg nå først fra seks spillere, så dere faktisk kan kjøre en turnering.
