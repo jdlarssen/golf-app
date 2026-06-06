@@ -4,7 +4,7 @@ import { getClubDetail } from '@/lib/clubs/getClubDetail';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Banner } from '@/components/ui/Banner';
-import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { leaveClub } from './actions';
 
@@ -89,16 +89,16 @@ export default async function ForlatKlubbPage({
         <div className="flex flex-col gap-2.5">
           <form action={leaveClub}>
             <input type="hidden" name="groupId" value={club.id} />
-            <Button
-              type="submit"
+            <SubmitButton
               className="w-full"
               style={{
                 background: 'var(--danger-deep)',
                 borderColor: 'var(--danger-deep)',
               }}
+              pendingLabel="Forlater …"
             >
               Forlat klubben
-            </Button>
+            </SubmitButton>
           </form>
           <SmartLink
             href={`/klubber/${id}`}
