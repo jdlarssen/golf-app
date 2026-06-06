@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 
 type Props = {
   reopenAction: () => void | Promise<void>;
@@ -19,9 +19,9 @@ export function ReopenGameButton({ reopenAction }: Props) {
         }
       }}
     >
-      <Button type="submit" variant="secondary" className="w-full">
+      <SubmitButton variant="secondary" className="w-full" pendingLabel="Gjenåpner …">
         Gjenåpne spillet
-      </Button>
+      </SubmitButton>
     </form>
   );
 }
