@@ -8,7 +8,7 @@ import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
-import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import { Input } from '@/components/ui/Input';
 import { getClubStatusBadge } from '@/lib/clubs/clubStatus';
 import { VarighetField } from '../VarighetField';
@@ -151,9 +151,9 @@ export default async function AdminKlubbDetailPage({
               defaultDate={currentDateStr}
             />
 
-            <Button type="submit" className="w-full">
+            <SubmitButton className="w-full" pendingLabel="Lagrer …">
               Lagre avtale
-            </Button>
+            </SubmitButton>
           </form>
         </Card>
       </section>
