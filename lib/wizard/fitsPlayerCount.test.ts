@@ -158,7 +158,7 @@ describe('fitsPlayerCount — wolf', () => {
   });
 });
 
-// ── nassau: 2–4 ──────────────────────────────────────────────────────────────
+// ── nassau: 2–16 (#460) ──────────────────────────────────────────────────────
 
 describe('fitsPlayerCount — nassau', () => {
   it.each([
@@ -166,20 +166,26 @@ describe('fitsPlayerCount — nassau', () => {
     [2, true],
     [3, true],
     [4, true],
-    [5, false],
+    [5, true],
+    [8, true],
+    [16, true],
+    [17, false],
   ])('nassau n=%i → %s', (n, expected) => {
     expect(fitsPlayerCount('nassau', n)).toBe(expected);
   });
 });
 
-// ── skins: 2–4 ───────────────────────────────────────────────────────────────
+// ── skins: 2–16 (#460) ───────────────────────────────────────────────────────
 
 describe('fitsPlayerCount — skins', () => {
   it.each([
     [1, false],
     [2, true],
     [4, true],
-    [5, false],
+    [5, true],
+    [8, true],
+    [16, true],
+    [17, false],
   ])('skins n=%i → %s', (n, expected) => {
     expect(fitsPlayerCount('skins', n)).toBe(expected);
   });
@@ -221,14 +227,17 @@ describe('fitsPlayerCount — acey_deucey', () => {
   });
 });
 
-// ── bingo_bango_bongo: 2–4 ───────────────────────────────────────────────────
+// ── bingo_bango_bongo: 2–16 (#460) ───────────────────────────────────────────
 
 describe('fitsPlayerCount — bingo_bango_bongo', () => {
   it.each([
     [1, false],
     [2, true],
     [4, true],
-    [5, false],
+    [5, true],
+    [8, true],
+    [16, true],
+    [17, false],
   ])('bingo_bango_bongo n=%i → %s', (n, expected) => {
     expect(fitsPlayerCount('bingo_bango_bongo', n)).toBe(expected);
   });

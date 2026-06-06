@@ -991,9 +991,27 @@ describe('buildGameInsertPayload — bingo_bango_bongo (issue #277)', () => {
     expect(result.errorCode).toBe('min_players_for_mode');
   });
 
-  it('publish med 5 spillere → too_many_players_for_mode', () => {
+  it('publish med 5 spillere → ok (over gammel 4-grense, #460)', () => {
     const result = buildGameInsertPayload(
       bbbFd({}, ['u1', 'u2', 'u3', 'u4', 'u5']),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(5);
+  });
+
+  it('publish med 16 spillere → ok (#460)', () => {
+    const result = buildGameInsertPayload(
+      bbbFd({}, Array.from({ length: 16 }, (_, i) => `u${i}`)),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(16);
+  });
+
+  it('publish med 17 spillere → too_many_players_for_mode (#460)', () => {
+    const result = buildGameInsertPayload(
+      bbbFd({}, Array.from({ length: 17 }, (_, i) => `u${i}`)),
       'publish',
     );
     expect(result.errorCode).toBe('too_many_players_for_mode');
@@ -2594,9 +2612,27 @@ describe('buildGameInsertPayload — nassau (issue #276)', () => {
     expect(result.errorCode).toBe('min_players_for_mode');
   });
 
-  it('publish med 5 spillere → too_many_players_for_mode', () => {
+  it('publish med 5 spillere → ok (over gammel 4-grense, #460)', () => {
     const result = buildGameInsertPayload(
       nassauFd({ userIds: ['a', 'b', 'c', 'd', 'e'] }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(5);
+  });
+
+  it('publish med 16 spillere → ok (#460)', () => {
+    const result = buildGameInsertPayload(
+      nassauFd({ userIds: Array.from({ length: 16 }, (_, i) => `u${i}`) }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(16);
+  });
+
+  it('publish med 17 spillere → too_many_players_for_mode (#460)', () => {
+    const result = buildGameInsertPayload(
+      nassauFd({ userIds: Array.from({ length: 17 }, (_, i) => `u${i}`) }),
       'publish',
     );
     expect(result.errorCode).toBe('too_many_players_for_mode');
@@ -2743,9 +2779,27 @@ describe('buildGameInsertPayload — skins (issue #275)', () => {
     expect(result.errorCode).toBe('min_players_for_mode');
   });
 
-  it('publish med 5 spillere → too_many_players_for_mode', () => {
+  it('publish med 5 spillere → ok (over gammel 4-grense, #460)', () => {
     const result = buildGameInsertPayload(
       skinsFd({ userIds: ['a', 'b', 'c', 'd', 'e'] }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(5);
+  });
+
+  it('publish med 16 spillere → ok (#460)', () => {
+    const result = buildGameInsertPayload(
+      skinsFd({ userIds: Array.from({ length: 16 }, (_, i) => `u${i}`) }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.players).toHaveLength(16);
+  });
+
+  it('publish med 17 spillere → too_many_players_for_mode (#460)', () => {
+    const result = buildGameInsertPayload(
+      skinsFd({ userIds: Array.from({ length: 17 }, (_, i) => `u${i}`) }),
       'publish',
     );
     expect(result.errorCode).toBe('too_many_players_for_mode');
