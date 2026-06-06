@@ -6,7 +6,7 @@ import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
-import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import { Input } from '@/components/ui/Input';
 import { VarighetField } from '../VarighetField';
 import { createClubForAdmin } from './actions';
@@ -103,9 +103,9 @@ export default async function NyKlubbPage({
 
           <VarighetField defaultMode="uendelig" defaultDate="" />
 
-          <Button type="submit" className="w-full">
+          <SubmitButton className="w-full" pendingLabel="Oppretter …">
             Opprett klubb
-          </Button>
+          </SubmitButton>
         </form>
       </Card>
     </AdminShell>
