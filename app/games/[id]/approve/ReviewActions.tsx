@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 
 type Props = {
   playerUserId: string;
@@ -27,9 +28,9 @@ export function ReviewActions({
       {!showReject ? (
         <div className="grid grid-cols-2 gap-2">
           <form action={approveAction}>
-            <Button type="submit" className="w-full">
+            <SubmitButton className="w-full" pendingLabel="Godkjenner …">
               Godkjenn ✓
-            </Button>
+            </SubmitButton>
           </form>
           <Button
             type="button"
@@ -78,9 +79,9 @@ export function ReviewActions({
             >
               Avbryt
             </Button>
-            <Button type="submit" variant="danger" className="w-full">
+            <SubmitButton variant="danger" className="w-full" pendingLabel="Avviser …">
               Send avvisning
-            </Button>
+            </SubmitButton>
           </div>
         </form>
       )}
