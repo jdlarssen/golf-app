@@ -68,7 +68,7 @@ export function CreateLigaForm({ courses, players }: Props) {
   }
 
   return (
-    <form action={formAction} className="space-y-6">
+    <form action={formAction} data-testid="liga-create-form" className="space-y-6">
       {/* Hidden fixed fields */}
       <input type="hidden" name="scoring" value="net" />
 

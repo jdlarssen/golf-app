@@ -176,7 +176,7 @@ export default async function LigaPublicPage({ params }: { params: Params }) {
               const canPlay = isParticipant && ws === 'open' && roundReady;
 
               return (
-                <li key={round.id}>
+                <li key={round.id} data-testid="liga-round">
                   <Card className="p-4 sm:p-5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">

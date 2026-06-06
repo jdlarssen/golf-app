@@ -74,7 +74,7 @@ export function LeagueStandingsTable({
 }) {
   if (rows.length === 0) {
     return (
-      <p className="text-sm text-muted text-center py-4">
+      <p data-testid="liga-standings-empty" className="text-sm text-muted text-center py-4">
         Ingen resultater ennå — første runde teller når flights er levert.
       </p>
     );
@@ -91,7 +91,11 @@ export function LeagueStandingsTable({
 
   return (
     <div className="w-full overflow-x-auto -mx-1">
-      <table className="w-full border-collapse text-sm" style={{ minWidth: '320px' }}>
+      <table
+        data-testid="liga-standings"
+        className="w-full border-collapse text-sm"
+        style={{ minWidth: '320px' }}
+      >
         <thead>
           <tr className="border-b border-border">
             <th className="w-8 px-2 py-2 text-left font-sans text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
@@ -123,6 +127,7 @@ export function LeagueStandingsTable({
             return (
               <tr
                 key={row.userId}
+                data-testid="liga-standings-row"
                 className={[
                   'border-b border-border/50 transition-colors',
                   isFirst
