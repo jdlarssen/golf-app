@@ -5,6 +5,7 @@ import {
   addExistingPlayerToGame,
   inviteEmailToGame,
 } from './inviteToGameActions';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 
 type Candidate = {
   id: string;
@@ -86,13 +87,13 @@ export function InviteToGameClient({ gameId, candidates, disabled }: Props) {
                 </div>
                 <form action={addAction}>
                   <input type="hidden" name="recipient_user_id" value={c.id} />
-                  <button
-                    type="submit"
+                  <SubmitButton
                     disabled={disabled}
-                    className="min-h-[44px] rounded-full bg-primary px-4 py-2 text-sm font-medium tracking-tight text-white transition-colors hover:bg-primary-hover disabled:opacity-50 dark:text-bg"
+                    className="px-4 py-2 text-sm"
+                    pendingLabel="Inviterer …"
                   >
                     + Legg til
-                  </button>
+                  </SubmitButton>
                 </form>
               </li>
             ))}
@@ -122,13 +123,13 @@ export function InviteToGameClient({ gameId, candidates, disabled }: Props) {
             className="flex-1 rounded-xl border border-border bg-surface px-3.5 py-3 text-text placeholder-muted/70 transition-[border-color,box-shadow] duration-150 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:opacity-50"
             aria-label="E-post"
           />
-          <button
-            type="submit"
+          <SubmitButton
             disabled={disabled}
-            className="min-h-[44px] rounded-full bg-primary px-4 py-3 font-medium tracking-tight text-white transition-colors hover:bg-primary-hover disabled:opacity-50 dark:text-bg"
+            className="px-4 py-3"
+            pendingLabel="Sender …"
           >
             Send invitasjon
-          </button>
+          </SubmitButton>
         </form>
       </div>
     </div>
