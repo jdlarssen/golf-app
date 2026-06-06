@@ -4,6 +4,7 @@ import { ChampagneMedallion } from '@/components/ui/ChampagneMedallion';
 import { MailEnvelope } from '@/components/icons';
 import { formatShortDateNb } from '@/lib/format/date';
 import { resendInvitation } from '../actions';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 
 type PendingInvitation = {
   id: string;
@@ -102,12 +103,12 @@ function PendingRow({
       <div className="flex shrink-0 items-center gap-1.5">
         <form action={resendInvitation}>
           <input type="hidden" name="id" value={inv.id} />
-          <button
-            type="submit"
+          <SubmitButton
             className="inline-flex min-h-[44px] items-center rounded-full border border-border bg-surface px-4 py-2 font-sans text-[13px] font-medium text-text transition hover:bg-row-hover"
+            pendingLabel="Sender …"
           >
             Send på nytt
-          </button>
+          </SubmitButton>
         </form>
         <SmartLink
           href={`/admin/spillere/invitations/${inv.id}/trekk-tilbake`}
