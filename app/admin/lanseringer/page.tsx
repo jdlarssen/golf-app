@@ -6,7 +6,7 @@ import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
-import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import { Input } from '@/components/ui/Input';
 import { MiniRibbon } from '@/components/ui/MiniRibbon';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -143,7 +143,7 @@ export default async function LanseringerPage({
               maxLength={40}
             />
             <div className="pt-1">
-              <Button type="submit">Publiser</Button>
+              <SubmitButton pendingLabel="Publiserer …">Publiser</SubmitButton>
             </div>
           </form>
         </Card>
@@ -195,7 +195,7 @@ async function DigestCard() {
       )}
       {!existing && (
         <form action={sendDigestNowAction} className="mt-4">
-          <Button type="submit">Send månedsbrev nå</Button>
+          <SubmitButton pendingLabel="Sender …">Send månedsbrev nå</SubmitButton>
         </form>
       )}
     </Card>
