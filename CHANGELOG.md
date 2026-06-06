@@ -21,6 +21,24 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#417](https://github.com/jdlarssen/golf-app/issues/417) (milepæl End-game robusthet). Når en cup settes i gang, varsles deltakerne nå i appen først. Mail går bare til dem som ikke er innom.
 
+### [1.82.1] - 2026-06-06 · #446
+
+> Trykker du en knapp som lagrer, sender eller avslutter, sier den nå ifra at den jobber — teksten bytter til «Lagrer …», «Sender …» og lignende, og knappen låses så du ikke trykker to ganger ved et uhell.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `components/ui/Spinner.tsx` — delt laster-spinner (arver tekstfarge via `border-current`).
+- `Button`-prop `pending` + `pendingLabel` — disabled + spinner + presens-tekst.
+- `components/ui/SubmitButton.tsx` — `useFormStatus`-bro for `<form action>`-flyter.
+
+#### Changed
+- Server-action-knapper app-wide bytter til en ensartet laster-tilstand (presens-tekst + spinner, disabled) mens handlingen kjører. Dekker lagring, levering, opprettelse, godkjenning, avslutning m.m. på tvers av spiller- og admin-flatene.
+- `SendCodeForm` bruker den delte `Spinner` i stedet for en lokal kopi.
+
+</details>
+
 ### [1.82.0] - 2026-06-06 · #417
 
 > Når en cup settes i gang, dukker det opp et varsel i appen — «Cupen har startet» — for alle deltakerne. Er du innom appen, ser du det der med en gang. Er du ikke det, får du en mail i stedet. Ingen får lenger en mail de ikke trenger.

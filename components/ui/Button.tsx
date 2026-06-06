@@ -1,6 +1,7 @@
-import { ButtonHTMLAttributes } from 'react';
+import { ButtonHTMLAttributes, type ReactNode } from 'react';
 import { type LinkProps } from 'next/link';
 import { SmartLink } from './SmartLink';
+import { Spinner } from './Spinner';
 
 type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
 
@@ -21,13 +22,32 @@ const VARIANTS: Record<Variant, string> = {
 export function Button({
   variant = 'primary',
   className = '',
+  pending = false,
+  pendingLabel,
+  disabled,
+  children,
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant }) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: Variant;
+  pending?: boolean;
+  pendingLabel?: ReactNode;
+}) {
   return (
     <button
       {...props}
+      disabled={disabled || pending}
+      aria-busy={pending || undefined}
       className={`${BASE_CLASSES} ${VARIANTS[variant]} ${className}`}
-    />
+    >
+      {pending ? (
+        <span className="inline-flex items-center gap-2">
+          <Spinner />
+          {pendingLabel ?? children}
+        </span>
+      ) : (
+        children
+      )}
+    </button>
   );
 }
 

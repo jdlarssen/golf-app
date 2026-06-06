@@ -3,6 +3,7 @@
 import { useFormStatus } from 'react-dom';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { Spinner } from '@/components/ui/Spinner';
 import { sendCode } from '../actions';
 
 /**
@@ -107,12 +108,3 @@ function FormBody({
   );
 }
 
-function Spinner() {
-  return (
-    <span
-      aria-label="Laster"
-      role="status"
-      className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-muted border-t-primary"
-    />
-  );
-}
