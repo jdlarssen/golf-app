@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="880" viewBox="0 0 1180 880" font-family="-apple-system, Helvetica, Arial, sans-serif">
+  <defs><marker id="a" markerWidth="10" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#8A6D27"/></marker></defs>
+  <rect width="1180" height="880" fill="#F8F6F0"/>
+  <text x="120" y="58" font-family="Georgia, serif" font-size="32" font-weight="600" fill="#8A6D27">6 · Liga — sesong over flere runder</text>
+  <text x="121" y="88" font-size="15" fill="#6B7770">Arrangøren setter opp en liga. Spillerne spiller hver runde i sitt eget vindu, og sesong-tabellen oppdaterer seg.</text>
+  <g font-size="13">
+    <rect x="118" y="104" width="124" height="20" rx="10" fill="#C9A961"/><text x="180" y="118" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">NY · hele flyten #453</text>
+    <text x="250" y="119" fill="#6B7770">Fase 1: frittstående slagspill-liga, netto. Brutto/klubb/flere modi kommer senere.</text>
+  </g>
+
+  <!-- 1 opprett liga -->
+  <rect x="120" y="142" width="560" height="72" rx="14" fill="#FFFFFF" stroke="#D8C089" stroke-width="1.5"/>
+  <circle cx="156" cy="178" r="16" fill="#B8973F"/><text x="156" y="183" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">1</text>
+  <text x="190" y="173" font-size="16" fill="#213029">Arrangør oppretter ligaen</text>
+  <text x="190" y="195" font-size="12.5" fill="#6B7770">navn · sesong · bane-omfang (1 bane+tee / 1 bane / flere) · sesong-modell</text>
+  <line x1="400" y1="214" x2="400" y2="238" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- 2 runder + deltakere -->
+  <rect x="120" y="240" width="560" height="72" rx="14" fill="#FFFFFF" stroke="#D8C089" stroke-width="1.5"/>
+  <circle cx="156" cy="276" r="16" fill="#B8973F"/><text x="156" y="281" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">2</text>
+  <text x="190" y="271" font-size="16" fill="#213029">Legg til runder + deltakere</text>
+  <text x="190" y="293" font-size="12.5" fill="#6B7770">frekvens (uke / annenhver / måned) gir runde-vinduer · tee per runde ved behov</text>
+  <line x1="400" y1="312" x2="400" y2="336" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- 3 start -->
+  <rect x="120" y="338" width="560" height="58" rx="14" fill="#FFFFFF" stroke="#D8C089" stroke-width="1.5"/>
+  <circle cx="156" cy="367" r="16" fill="#B8973F"/><text x="156" y="372" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">3</text>
+  <text x="190" y="372" font-size="16" fill="#213029">Start ligaen → «Aktiv» (krever ≥1 runde + ≥2 spillere)</text>
+  <line x1="400" y1="396" x2="400" y2="420" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- 4 player plays round (green) -->
+  <rect x="120" y="422" width="560" height="82" rx="14" fill="#E3EDE6" stroke="#2D6A4F" stroke-width="1.5"/>
+  <circle cx="156" cy="463" r="16" fill="#2D6A4F"/><text x="156" y="468" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">4</text>
+  <text x="190" y="452" font-size="16" font-weight="600" fill="#1B4332">Spiller: spill runden i vinduet</text>
+  <text x="190" y="473" font-size="12.5" fill="#46604F">du + minst én medspiller (markør) · hele perioden på deg · hardt vindu</text>
+  <text x="190" y="492" font-size="12.5" fill="#46604F">taster slag + leverer som vanlig (flyt 3) · admin kan utvide vinduet ved behov</text>
+  <line x1="400" y1="504" x2="400" y2="528" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+  <text x="412" y="520" font-size="11.5" fill="#6B7770">leverer flighten</text>
+
+  <!-- 5 standings update (terminal-ish) -->
+  <rect x="120" y="530" width="560" height="76" rx="16" fill="#F4EBD7" stroke="#C9A961" stroke-width="1.6"/>
+  <text x="400" y="562" text-anchor="middle" font-size="17" font-weight="700" fill="#8A6D27">Sesong-tabellen oppdateres — live</text>
+  <text x="400" y="585" text-anchor="middle" font-size="12.5" fill="#9C8552">netto mot par · Total eller Snitt · straffescore for uteblitte runder</text>
+  <line x1="400" y1="606" x2="400" y2="630" stroke="#5E6B63" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- 6 finish -->
+  <rect x="120" y="632" width="560" height="58" rx="14" fill="#FFFFFF" stroke="#D8C089" stroke-width="1.5"/>
+  <circle cx="156" cy="661" r="16" fill="#B8973F"/><text x="156" y="666" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">6</text>
+  <text x="190" y="666" font-size="16" fill="#213029">Arrangør avslutter sesongen → vinneren er kåret</text>
+
+  <!-- right rail -->
+  <rect x="760" y="142" width="320" height="280" rx="16" fill="#EDF5EF" stroke="#2D6A4F" stroke-width="1.3"/>
+  <text x="920" y="172" text-anchor="middle" font-size="14.5" font-weight="700" fill="#1B4332">Kjernen</text>
+  <text x="782" y="204" font-size="13" fill="#46604F">• Hver flight er et vanlig</text>
+  <text x="782" y="223" font-size="13" fill="#46604F">  spill (flyt 3) — gjenbruk</text>
+  <text x="782" y="249" font-size="13" fill="#46604F">• Markør-regel: minst to</text>
+  <text x="782" y="268" font-size="13" fill="#46604F">  spillere, ellers teller den ikke</text>
+  <text x="782" y="294" font-size="13" fill="#46604F">• Hardt vindu + admin kan</text>
+  <text x="782" y="313" font-size="13" fill="#46604F">  utvide; sene flagges for admin</text>
+  <text x="782" y="339" font-size="13" fill="#46604F">• Bane/tee kan variere</text>
+  <text x="782" y="358" font-size="13" fill="#46604F">  fra runde til runde</text>
+  <text x="782" y="392" font-size="12" fill="#6B7770">Speiler cup-mønsteret: en</text>
+  <text x="782" y="409" font-size="12" fill="#6B7770">paraply over flere spill.</text>
+
+  <!-- player parallel -->
+  <text x="120" y="730" font-size="13.5" font-weight="700" fill="#1B4332">Hva spilleren opplever</text>
+  <text x="120" y="756" font-size="13" fill="#46524B">Åpne liga-siden → se runder + tabell · «Spill denne runden» når vinduet er åpent · velg medspiller(e) → spill → tabellen rykker.</text>
+
+  <text x="120" y="812" font-size="12.5" fill="#9A937F">Kjernen: én liga binder mange runder til én sesong-tabell — spillerne styrer når, så lenge de er to og innenfor vinduet.</text>
+</svg>

@@ -8,7 +8,7 @@
 
 # Brukerflyt-diagrammer — de suksess-kritiske flytene
 
-Fem flyter appen står og faller på. Hver er tegnet steg-for-steg (les ovenfra og ned), i **to versjoner**: slik den er i dag, og slik den blir etter de planlagte endringene. Oversikten over alt: [`../user-flows.svg`](../user-flows.svg). Full tekst-referanse: [`../user-flows.md`](../user-flows.md).
+Fem kjerne-flyter appen står og faller på, pluss liga (flyt 6, ny). Hver er tegnet steg-for-steg (les ovenfra og ned), i **to versjoner**: slik den er i dag, og slik den blir etter de planlagte endringene (liga finnes kun som fremtids-flyt — den var ikke der før). Oversikten over alt: [`../user-flows.svg`](../user-flows.svg). Full tekst-referanse: [`../user-flows.md`](../user-flows.md).
 
 | # | Flyt | Hvem | I dag | Fremtid |
 |---|---|---|---|---|
@@ -17,6 +17,7 @@ Fem flyter appen står og faller på. Hver er tegnet steg-for-steg (les ovenfra 
 | 3 | **Spille en runde** | Spiller | [PNG](03-spille-en-runde.png) · [SVG](03-spille-en-runde.svg) | [PNG](03-spille-en-runde-fremtid.png) · [SVG](03-spille-en-runde-fremtid.svg) |
 | 4 | **Opprett spill** | Arrangør | [PNG](04-opprett-spill.png) · [SVG](04-opprett-spill.svg) | [PNG](04-opprett-spill-fremtid.png) · [SVG](04-opprett-spill-fremtid.svg) |
 | 5 | **Kjør og avslutt spill** | Arrangør | [PNG](05-kjor-og-avslutt-spill.png) · [SVG](05-kjor-og-avslutt-spill.svg) | [PNG](05-kjor-og-avslutt-spill-fremtid.png) · [SVG](05-kjor-og-avslutt-spill-fremtid.svg) |
+| 6 | **Liga** | Arrangør + spiller | — *(ny flyt)* | [PNG](06-liga-fremtid.png) · [SVG](06-liga-fremtid.svg) |
 
 ## Hvordan de henger sammen
 
@@ -34,6 +35,7 @@ Spiller:   [1 Bli bruker] ─► [2 Bli med] ─► [3 Spille en runde]
 - **Flyt 3 — Spille en runde:** #360 (peer-godkjenning kan ikke låse seg). #358 (live leaderboard) + #359 (lagret-merke) var **allerede løst** — lukket etter kode-verifisering.
 - **Flyt 4 — Opprett spill:** #373 (antall før format), #374 (best ball uten 8-lås), #371 (peer-godkjenning av som default), #367 (tydelig påmelding), #372 (copy-bug env-var). Parkert større: #22 (alle kan opprette), #366 (bruker-baner). #370 lukket (beholder «kun invitasjon» som default).
 - **Flyt 5 — Kjør og avslutt:** #375 (avslutt-likevel — aldri permanent låst), #376 (auto-varsel når spilleren er ferdig + admin-purring), #377 (avslutnings-varsel via samme in-app-først-logikk, ingen egen avslutningsmail).
+- **Flyt 6 — Liga:** #453 ✓ (bygget) — ny sesong-konkurranse over flere runder. Epic [#452](https://github.com/jdlarssen/golf-app/issues/452). Fase 1: frittstående slagspill netto; brutto/klubb/flere modi i senere faser. Kun fremtids-diagram (flyten fantes ikke før).
 
 ## Tegn-forklaring
 - **Grønt** = spiller-handling · **Champagne** = arrangør-handling · **Mørkegrønn** = start/felles.
