@@ -148,3 +148,22 @@ function computeLeagueStandings(config, rounds: LeagueRoundInput[], playerIds: s
 ## Out of Scope (F1)
 
 Brutto/parallell visning + Beste-N/Poeng-modeller (F2); klubb-kobling (`group_id` på liga, medlemmer=deltakere) (F3); flere spillmodi/stableford som liga-format (F4); runde-åpner-/påminnelses-mail; demokratisert (ikke-admin) liga-opprettelse; cup-lignende lag-liga; statistikk på tvers av sesonger; liga-historikk på profil.
+
+---
+
+## Status — self-eval (2026-06-06)
+
+Bygd i 9 atomiske commits (`278cc30`..`b30b693`). Gates på sluttilstand: `npx tsc --noEmit` rent · `npx vitest run lib/league` 17/17 · `npm run lint` ingen liga-funn · `npm run build` ✓ (alle 6 liga-ruter dynamiske).
+
+- [x] Migrasjon `0080_leagues.sql` + `database.types.ts`. Evidens: rollback-tx-validert mot prod (DDL + course_scope-CHECK); `grep leagues lib/database.types.ts` treffer Row/Insert/Update. **Migrasjon IKKE applyt til prod ennå** (eier-review først — se closing).
+- [x] `computeLeagueStandings` — 10 Type A-tester (Total+penalty worst+1/fixed, must_play_all, Snitt, countback, dedupe).
+- [x] `generateRounds` — 7 Type A-tester (uke/annenhver/måned, no-overlap, reversert-spenn).
+- [x] Admin oppretter liga (`/admin/liga/new`, 3 bane-omfang) + runde-generering. Verifisert via build + kode; prod-smoke = eier.
+- [x] Deltaker-flight via «Spill denne runden» → `solo_strokeplay` + `league_round_id`, handicap frosset via `startScheduledGame`.
+- [x] Markør-sperre (≥2) + vindu-sperre **server-håndhevet** i `startLeagueRoundFlight`.
+- [x] `/liga/[id]` live netto-tabell (Total/Snitt, per-runde-celler, penalty/uranked-markering).
+- [x] Admin vindu-override + `delivered_outside_window`-flagg på `/admin/liga/[id]`.
+- [~] E2E golden path — env-guardet spec (create-wizard + offentlig read-path render). Numerisk flight→scoring→tabell dekkes av Type A-testene, ikke en 18-hulls UI-scorecard (bevisst, ikke skjult).
+- [x] Flyt-diagram `06-liga-fremtid.svg/.png` + README · MINOR-bump 1.83.0 + CHANGELOG.
+
+**Avvik fra kontrakt:** (1) league-sider er `force-dynamic` i stedet for `revalidateTag('league-*')` — `getLigaSnapshot` er ucachet admin-read, så ingen cache-wiring i submit/endGame-stien nødvendig. (2) E2E dekker read-path, ikke full scoring (over). (3) Migrasjon hand-typet, applyes til prod etter eier-review.
