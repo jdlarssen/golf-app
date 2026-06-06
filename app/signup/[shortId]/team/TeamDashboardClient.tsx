@@ -89,28 +89,35 @@ type Props =
  */
 export function TeamDashboardClient(props: Props) {
   const [isPending, startTransition] = useTransition();
+  const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const runAction = (
+    key: string,
     action: () => Promise<{ ok: true } | { ok: false; error: string }>,
     successMessage: string,
   ) => {
     setError(null);
     setSuccess(null);
+    setPendingKey(key);
     startTransition(async () => {
-      const res = await action();
-      if (!res.ok) {
-        setError(mapError(res.error));
-      } else {
-        setSuccess(successMessage);
-        // Soft reload — server-componenten henter på nytt på neste
-        // navigasjon. For umiddelbar effekt anbefaler vi brukeren å
-        // refreshe (full reload), men suksess-banneret er tilstrekkelig
-        // feedback for nå.
-        if (typeof window !== 'undefined') {
-          setTimeout(() => window.location.reload(), 500);
+      try {
+        const res = await action();
+        if (!res.ok) {
+          setError(mapError(res.error));
+        } else {
+          setSuccess(successMessage);
+          // Soft reload — server-componenten henter på nytt på neste
+          // navigasjon. For umiddelbar effekt anbefaler vi brukeren å
+          // refreshe (full reload), men suksess-banneret er tilstrekkelig
+          // feedback for nå.
+          if (typeof window !== 'undefined') {
+            setTimeout(() => window.location.reload(), 500);
+          }
         }
+      } finally {
+        setPendingKey(null);
       }
     });
   };
@@ -126,10 +133,12 @@ export function TeamDashboardClient(props: Props) {
         {success && <Banner tone="success">{success}</Banner>}
         <p className="font-sans text-sm text-text">{nextStep}</p>
         <Button
-          pending={isPending}
+          pending={pendingKey === 'attach'}
+          disabled={isPending}
           pendingLabel="Kobler på …"
           onClick={() =>
             runAction(
+              'attach',
               () => attachToCaptainTeam(props.invitationId, props.shortId),
               props.joinEffect === 'instant'
                 ? 'Du er med på laget. Siden lastes på nytt…'
@@ -187,10 +196,12 @@ export function TeamDashboardClient(props: Props) {
                 <div className="flex flex-wrap gap-2">
                   <Button
                     variant="secondary"
-                    pending={isPending}
+                    pending={pendingKey === `resend:${m.requestId}`}
+                    disabled={isPending}
                     pendingLabel="Sender …"
                     onClick={() =>
                       runAction(
+                        `resend:${m.requestId}`,
                         () => resendTeamInvite(m.requestId, props.shortId),
                         'Påminnelse sendt.',
                       )
@@ -200,10 +211,12 @@ export function TeamDashboardClient(props: Props) {
                   </Button>
                   <Button
                     variant="danger"
-                    pending={isPending}
+                    pending={pendingKey === `remove:${m.requestId}`}
+                    disabled={isPending}
                     pendingLabel="Fjerner …"
                     onClick={() =>
                       runAction(
+                        `remove:${m.requestId}`,
                         () => removeTeamMember(m.requestId, props.shortId),
                         'Medspiller fjernet.',
                       )
@@ -231,10 +244,12 @@ export function TeamDashboardClient(props: Props) {
           </p>
           <div className="flex flex-wrap gap-2">
             <Button
-              pending={isPending}
-              pendingLabel="Behandler …"
+              pending={pendingKey === 'accept'}
+              disabled={isPending}
+              pendingLabel="Aksepterer …"
               onClick={() =>
                 runAction(
+                  'accept',
                   () => acceptTeamInvite(props.myRowId, props.shortId),
                   props.joinEffect === 'instant'
                     ? 'Du er med på laget. Siden lastes på nytt…'
@@ -246,10 +261,12 @@ export function TeamDashboardClient(props: Props) {
             </Button>
             <Button
               variant="secondary"
-              pending={isPending}
+              pending={pendingKey === 'decline'}
+              disabled={isPending}
               pendingLabel="Avslår …"
               onClick={() =>
                 runAction(
+                  'decline',
                   () => declineTeamInvite(props.myRowId, props.shortId),
                   'Avslag registrert.',
                 )
