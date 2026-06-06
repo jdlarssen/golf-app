@@ -21,6 +21,21 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#453](https://github.com/jdlarssen/golf-app/issues/453) (epic [#452](https://github.com/jdlarssen/golf-app/issues/452)). Du kan nå arrangere en liga: flere runder over en hel sesong, med en levende tabell som holder styr på hvem som leder.
 
+### [1.83.11] - 2026-06-06 · bug
+
+> Scramble-formatene (Texas, Ambrose og Florida) dukket opp i veiviseren selv når du bare hadde valgt 2 spillere. En scramble trenger lag, og minst to lag for å bli en turnering. Nå viser veiviseren dem først når dere er mange nok: fire for Texas og Ambrose, seks for Florida.
+
+<details>
+<summary>Teknisk</summary>
+
+Rapportert bug: i opprett-spill-veiviseren (Kompis-intent) viste antall-filteret scramble-formater som krever lag selv ved 2 spillere. Rot: [`fitsPlayerCount`](lib/wizard/fitsPlayerCount.ts) returnerte `true` (plassholder fra den gang `ambrose`/`florida_scramble` var klubb-only) for de to, og `texas_scramble` hadde gulv på 2 (ett lag à 2). Siden ble Ambrose/Florida/shamble lagt til Kompis-katalogen i live-DB (`format_intent_mapping`) uten at antall-regelen ble oppdatert, så de slapp gjennom — Ambrose og Florida ble til og med vist på 1 spiller.
+
+#### Fixed
+- [`lib/wizard/fitsPlayerCount.ts`](lib/wizard/fitsPlayerCount.ts): scramble-familien krever nå minst 2 lag for å vises i Kompis-antall-filteret. `texas_scramble` + `ambrose` (lag på 2 eller 4) → `{4, 6, 8}`; `florida_scramble` (lag på 3 eller 4) → `{6, 8}`. La samtidig på 8-slot-payload-cap som øvre grense (som best ball alt har).
+- Co-located Type-A-test i [`fitsPlayerCount.test.ts`](lib/wizard/fitsPlayerCount.test.ts) dekker gulv, partall/oddetall og 8-slot-cap per format; den permissive fallback-testen tester nå en ukjent modus i stedet for ambrose/florida.
+
+</details>
+
 ### [1.83.10] - 2026-06-06 · bug
 
 > Spill uten lag (som Bingo Bango Bongo, Wolf, Nassau og Skins) viste en tom «Lag»- og «Flight»-rad i venterommet før start. Nå viser de bare det som gjelder for et individuelt format.

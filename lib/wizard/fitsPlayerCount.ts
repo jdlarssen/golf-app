@@ -36,11 +36,20 @@ export function fitsPlayerCount(gameMode: GameMode, n: number): boolean {
     case 'best_ball':
       return n >= 2 && n <= 8 && n % 2 === 0;
 
-    // ── Multiplum av 2 (team_size 2 eller 4 begge gyldige) ──────────────────
-    // Med 8-slot-begrensning i payload gir det maks 4 lag à 2 (=8)
-    // eller 2 lag à 4 (=8). Multiplum av 2 dekker begge.
+    // ── Scramble-familien: krever ≥2 lag for å være en turnering (#467) ─────
+    // En scramble er et lag-format. Ett lag er ingen konkurranse, så
+    // antall-filteret i Kompis skjuler oppsett med bare ett lag.
+    //
+    // texas_scramble + ambrose: lag på 2 eller 4 → minste turnering er 2 lag
+    // à 2 = 4. Med 8-slot-cap i payload er {4, 6, 8} de byggbare størrelsene.
     case 'texas_scramble':
-      return n >= 2 && n % 2 === 0;
+    case 'ambrose':
+      return n >= 4 && n <= 8 && n % 2 === 0;
+
+    // florida_scramble ("step-aside"): lag på 3 eller 4 → minste turnering er
+    // 2 lag à 3 = 6. Byggbare turnerings-størrelser med 8-slot-cap: {6, 8}.
+    case 'florida_scramble':
+      return n >= 6 && n <= 8 && (n % 3 === 0 || n % 4 === 0);
 
     // ── Nøyaktig 4 ──────────────────────────────────────────────────────────
     case 'wolf':
@@ -70,14 +79,6 @@ export function fitsPlayerCount(gameMode: GameMode, n: number): boolean {
     // ── Partall 4+ (lag à 2, minst 2 lag) ───────────────────────────────────
     case 'patsome':
       return n >= 4 && n % 2 === 0;
-
-    // ── Formater som er gyldige i Kompis-katalogen, men ikke bruker
-    //    en strengt begrenset antalls-regel (permissivt):
-    //    ambrose og florida_scramble er IKKE i Kompis-katalogen ifølge DB,
-    //    men inkluderes her med true for fremtidssikkerhet. ─────────────────
-    case 'ambrose':
-    case 'florida_scramble':
-      return true;
 
     // ── Permissivt fallback for fremtidige GameMode-verdier ─────────────────
     // Bevisst IKKE en exhaustiveness-/never-sjekk: GameMode-unionen vokser

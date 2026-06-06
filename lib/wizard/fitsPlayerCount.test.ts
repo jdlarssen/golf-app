@@ -9,6 +9,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { fitsPlayerCount } from './fitsPlayerCount';
+import type { GameMode } from '@/lib/scoring/modes/types';
 
 // ── stableford / modified_stableford: 1+ (solo OR par config) ────────────────
 
@@ -85,18 +86,63 @@ describe('fitsPlayerCount — best_ball (even 2–8 per #374)', () => {
   });
 });
 
-// ── texas_scramble: multiple of 2 (teams of 2 or 4 both valid) ───────────────
+// ── texas_scramble: even 4–8 — needs ≥2 teams to be a tournament (#467) ──────
+// Teams of 2 or 4; a single team (n=2) is not a competition, so the floor is 4.
+// 8-slot payload cap means {4, 6, 8} are the only buildable competition sizes.
 
-describe('fitsPlayerCount — texas_scramble', () => {
+describe('fitsPlayerCount — texas_scramble (even 4–8, ≥2 teams per #467)', () => {
   it.each([
     [1, false],
-    [2, true],   // 1 lag à 2
+    [2, false],  // bare 1 lag à 2 — ingen turnering
     [3, false],
-    [4, true],   // 2 lag à 2 OR 1 lag à 4
+    [4, true],   // 2 lag à 2
+    [5, false],
     [6, true],   // 3 lag à 2
+    [7, false],
     [8, true],   // 4 lag à 2 OR 2 lag à 4
+    [10, false], // over 8-slot-cap
   ])('texas_scramble n=%i → %s', (n, expected) => {
     expect(fitsPlayerCount('texas_scramble', n)).toBe(expected);
+  });
+});
+
+// ── ambrose: even 4–8 — needs ≥2 teams (#467) ────────────────────────────────
+// Teams of 2 or 4, mechanically identical to Texas. Was previously permissive
+// (return true) since it was klubb-only; now in the Kompis catalog it needs a
+// real floor.
+
+describe('fitsPlayerCount — ambrose (even 4–8, ≥2 teams per #467)', () => {
+  it.each([
+    [1, false],
+    [2, false],
+    [3, false],
+    [4, true],   // 2 lag à 2
+    [5, false],
+    [6, true],   // 3 lag à 2
+    [8, true],   // 2 lag à 4 OR 4 lag à 2
+    [10, false],
+  ])('ambrose n=%i → %s', (n, expected) => {
+    expect(fitsPlayerCount('ambrose', n)).toBe(expected);
+  });
+});
+
+// ── florida_scramble: 6 or 8 — teams of 3 or 4, needs ≥2 teams (#467) ─────────
+// Florida ("step-aside") uses teams of 3 or 4, so the smallest competition is
+// 2 lag à 3 = 6. Was previously permissive (return true) as a klubb-only format.
+
+describe('fitsPlayerCount — florida_scramble (6 or 8, ≥2 teams per #467)', () => {
+  it.each([
+    [1, false],
+    [2, false],
+    [3, false],  // 1 lag à 3 — ingen turnering
+    [4, false],  // 1 lag à 4 — ingen turnering
+    [5, false],
+    [6, true],   // 2 lag à 3
+    [7, false],
+    [8, true],   // 2 lag à 4
+    [9, false],  // over 8-slot-cap (3 lag à 3 ikke byggbart)
+  ])('florida_scramble n=%i → %s', (n, expected) => {
+    expect(fitsPlayerCount('florida_scramble', n)).toBe(expected);
   });
 });
 
@@ -247,14 +293,19 @@ describe('fitsPlayerCount — shamble', () => {
   });
 });
 
-// ── permissive fallback for unknown modes ────────────────────────────────────
+// ── permissive fallback for unknown / future modes ───────────────────────────
+// Modes with no explicit case fall through to `default: return true` (we'd
+// rather show a possibly-unfitting format than hide a fitting one). Cast a
+// non-existent mode to exercise the branch without coupling to a real format.
 
 describe('fitsPlayerCount — permissive fallback', () => {
-  it('ambrose n=4 → true (permissive — not in Kompis catalog)', () => {
-    expect(fitsPlayerCount('ambrose', 4)).toBe(true);
+  const unknownMode = 'some_future_format' as GameMode;
+
+  it('unknown mode n=4 → true (permissive default)', () => {
+    expect(fitsPlayerCount(unknownMode, 4)).toBe(true);
   });
 
-  it('florida_scramble n=3 → true (permissive — not in Kompis catalog)', () => {
-    expect(fitsPlayerCount('florida_scramble', 3)).toBe(true);
+  it('unknown mode n=0 → false (n<=0 guard wins)', () => {
+    expect(fitsPlayerCount(unknownMode, 0)).toBe(false);
   });
 });
