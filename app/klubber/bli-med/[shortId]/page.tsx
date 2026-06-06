@@ -6,7 +6,7 @@ import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
-import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { requestToJoin } from './actions';
 
@@ -159,9 +159,9 @@ export default async function BliMedPage({
               />
               <p className="mt-1 font-sans text-xs text-muted">Maks 200 tegn.</p>
             </div>
-            <Button type="submit" className="w-full">
+            <SubmitButton className="w-full" pendingLabel="Sender forespørsel …">
               Be om å bli med
-            </Button>
+            </SubmitButton>
           </form>
         </Card>
       )}
