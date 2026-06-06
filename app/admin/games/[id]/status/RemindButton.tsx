@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 
 type Props = {
   remindAction: () => void | Promise<void>;
@@ -31,9 +31,9 @@ export function RemindButton({ remindAction, count }: Props) {
         }
       }}
     >
-      <Button type="submit" className="w-full">
+      <SubmitButton className="w-full" pendingLabel="Sender …">
         {label}
-      </Button>
+      </SubmitButton>
     </form>
   );
 }
