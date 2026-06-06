@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#453](https://github.com/jdlarssen/golf-app/issues/453) (epic [#452](https://github.com/jdlarssen/golf-app/issues/452)). Du kan nå arrangere en liga: flere runder over en hel sesong, med en levende tabell som holder styr på hvem som leder.
 
+### [1.83.6] - 2026-06-06 · bug
+
+> Når du setter opp Acey Deucey er den unødvendige «lagstørrelse»-velgeren borte. Acey Deucey er et solo-format, så valget hadde ingen mening — nå viser veiviseren bare det som faktisk gjelder.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- [`GameWizard`](app/admin/games/new/GameWizard.tsx) skjuler nå `TeamSizeSelector` for Acey Deucey (la til `!state.isAceyDeucey` i synlighets-gaten), på linje med de andre solo-/rotasjons-formatene (Wolf/Nassau/Skins/BBB/Nines/Round Robin). Acey Deucey er `team_size = 1` med eget `AceyDeuceySetup`-steg, så velgeren viste tre fliser der bare «Solo» var aktiv. Rent kosmetisk — opprettelse fungerte allerede.
+
+</details>
+
 ### [1.83.5] - 2026-06-06 · bug
 
 > Du kan nå sette opp Bingo Bango Bongo. Før låste veiviseren seg på spiller-steget: «Neste» lyste ikke opp selv om du hadde valgt to spillere. Samme feil rammet Nassau og Skins. Alle tre virker nå med 2 til 4 spillere.
