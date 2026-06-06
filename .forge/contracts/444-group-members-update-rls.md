@@ -48,12 +48,12 @@ Hvorfor B over A:
 
 ## Suksess-kriterier (én checkbox per kriterium, med bevis)
 
-- [ ] **K1:** Migrasjon `0078` finnes på disk med `drop policy if exists "group_members update group admin"` + forklarende header + `comment on table`. Bevis: fil-innhold.
-- [ ] **K2:** Migrasjon applyet til prod. Bevis: `list_migrations` viser `0078`; etterpå `pg_policy`-spørring på `group_members` returnerer **ingen** rad med `polcmd='w'` (UPDATE).
-- [ ] **K3:** INSERT/DELETE/SELECT-policyene urørt. Bevis: `pg_policy`-spørring viser fortsatt `group_members insert group admin` (a), `group_members delete admin or self` (d), `group_members select member or admin` (r) med uendrede uttrykk.
-- [ ] **K4:** Adversarielt — en innlogget klubb-admin (ikke eier) som forsøker direkte `UPDATE ... set role='owner'` avvises av RLS (0 rader). Bevis: transaksjon (BEGIN…ROLLBACK) der et Tørny-medlem midlertidig settes til `admin`, `set local role authenticated` + `request.jwt.claims.sub` = medlemmets uuid, `update group_members set role='owner'` → `0` rader berørt. (Kontroll: samme oppsett FØR drop ville gitt 1 rad.)
-- [ ] **K5:** RPC-en virker fortsatt — eier kan endre rolle via `set_club_member_role`. Bevis: transaksjon (BEGIN…ROLLBACK) som `request.jwt.claims.sub` = eierens uuid, kall `set_club_member_role(group, member, 'admin')` → returnerer `'admin'`, deretter rollback (ikke persistert).
-- [ ] **K6:** Ingen app-regresjon. Bevis: `npx tsc --noEmit` exit 0; `npx vitest run` grønn; `npm run build` exit 0.
+- [x] **K1:** Migrasjon `0078` finnes på disk med `drop policy if exists "group_members update group admin"` + forklarende header + `comment on table`. Bevis: `supabase/migrations/0078_group_members_tighten_update_rls.sql` (commit `9561f53`).
+- [x] **K2:** Migrasjon applyet til prod. Bevis: `list_migrations` → siste rad `20260606051731 group_members_tighten_update_rls`; `pg_policy`-spørring på `group_members` returnerer **ingen** rad med `polcmd='w'` (UPDATE) — kun `a`/`d`/`r`.
+- [x] **K3:** INSERT/DELETE/SELECT-policyene urørt. Bevis: `pg_policy` viser `group_members insert group admin` (a, `is_admin() OR is_group_admin(group_id)`), `group_members delete admin or self` (d, `... OR user_id = auth.uid()`), `group_members select member or admin` (r, `is_admin() OR is_group_member(group_id)`) — uendret fra før-tilstanden.
+- [x] **K4:** Adversarielt — klubb-admin (ikke eier) direkte `UPDATE ... role='owner'` avvises. Bevis (BEGIN…ROLLBACK): Tørny-medlem `1f016c6a` midlertidig satt til `admin`, `set local role authenticated` + jwt.sub = medlemmet → `update ... role='owner'` → `role_after_direct_patch='admin'` (uendret, RLS avviste). Kontroll (K4b): samme angriper har `is_group_admin=true`, `is_admin=false` → ville passert den GAMLE policyen, men avvises nå fordi policyen er borte. Bonus: samme angriper via RPC → `rejected: not_authorized` (eneste gjenværende vei avviser òg).
+- [x] **K5:** RPC virker fortsatt. Bevis (BEGIN…ROLLBACK): jwt.sub = eier `069cda6e`, `set_club_member_role('32806a13…','1f016c6a…','admin')` → `rpc_result='admin'`, rollback (ikke persistert).
+- [x] **K6:** Ingen app-regresjon. Bevis: `npx tsc --noEmit` exit 0; `npx vitest run` → 221 filer / 2687 tester grønn; `npm run build` → ✓ Compiled successfully, 35 ruter.
 
 ## Gates (kjøres etter chunk)
 
