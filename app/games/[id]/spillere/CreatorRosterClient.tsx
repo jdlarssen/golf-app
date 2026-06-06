@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import {
   addExistingPlayerToGame,
   inviteEmailToGame,
@@ -79,13 +80,13 @@ export function CreatorRosterClient({ gameId, candidates, disabled }: Props) {
                   </p>
                   <form action={addAction}>
                     <input type="hidden" name="recipient_user_id" value={c.id} />
-                    <button
-                      type="submit"
+                    <SubmitButton
                       disabled={disabled}
+                      pendingLabel="Legger til …"
                       className="min-h-[44px] rounded-full bg-primary px-4 py-2 text-sm font-medium tracking-tight text-white transition-colors hover:bg-primary-hover disabled:opacity-50 dark:text-bg"
                     >
                       + Legg til
-                    </button>
+                    </SubmitButton>
                   </form>
                 </li>
               ))}
@@ -118,13 +119,13 @@ export function CreatorRosterClient({ gameId, candidates, disabled }: Props) {
             className="flex-1 rounded-xl border border-border bg-surface px-3.5 py-3 text-text placeholder-muted/70 transition-[border-color,box-shadow] duration-150 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:opacity-50"
             aria-label="E-post"
           />
-          <button
-            type="submit"
+          <SubmitButton
             disabled={disabled}
+            pendingLabel="Sender …"
             className="min-h-[44px] rounded-full bg-primary px-4 py-3 font-medium tracking-tight text-white transition-colors hover:bg-primary-hover disabled:opacity-50 dark:text-bg"
           >
             Send invitasjon
-          </button>
+          </SubmitButton>
         </form>
         <p className="mt-2 text-xs text-muted">
           Personen får en invitasjon på e-post og blir med når de logger inn.
