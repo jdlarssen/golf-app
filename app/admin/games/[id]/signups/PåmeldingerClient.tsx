@@ -2,6 +2,8 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { approveRequest, rejectRequest } from './actions';
+import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import type { RequestRow, TabKey } from './types';
 
 type Props = {
@@ -205,20 +207,23 @@ export function PåmeldingerClient({ gameId, requests, tab, locked }: Props) {
 
                 {row.status === 'pending' && !locked && idx === 0 && (
                   <div className="flex flex-wrap gap-2">
-                    <button
+                    <Button
                       type="button"
                       onClick={() => handleApprove(row)}
-                      className="inline-flex min-h-[44px] items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-medium tracking-tight text-white transition-colors hover:bg-primary-hover dark:text-bg"
+                      pending={pendingIds.has(row.id)}
+                      pendingLabel="Godkjenner …"
                     >
                       Godkjenn
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
+                      variant="secondary"
                       onClick={() => openReject(row)}
-                      className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium tracking-tight text-text transition-colors hover:bg-primary-soft"
+                      pending={pendingIds.has(row.id)}
+                      pendingLabel="Avviser …"
                     >
                       Avvis
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
@@ -315,12 +320,12 @@ function RejectModal({
           </p>
 
           <div className="flex flex-col gap-2 sm:flex-row-reverse">
-            <button
-              type="submit"
-              className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-medium tracking-tight text-white transition-colors hover:bg-primary-hover dark:text-bg"
+            <SubmitButton
+              className="flex-1"
+              pendingLabel="Avviser …"
             >
               Avvis påmelding
-            </button>
+            </SubmitButton>
             <button
               type="button"
               onClick={onCancel}
