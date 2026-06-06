@@ -1,5 +1,6 @@
 import { restoreTee } from './actions';
 import { formatShortDateNb } from '@/lib/format/date';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 
 export type ArchivedTeeRow = {
   id: string;
@@ -58,12 +59,12 @@ export function ArchivedTeesSection({
               )}
             </div>
             <form action={restoreTee.bind(null, courseId, tee.id)}>
-              <button
-                type="submit"
-                className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-bg shadow-sm hover:bg-primary-hover"
+              <SubmitButton
+                className="rounded-full px-3 py-2 text-sm"
+                pendingLabel="Gjenåpner …"
               >
                 Gjenåpne
-              </button>
+              </SubmitButton>
             </form>
           </li>
         ))}
