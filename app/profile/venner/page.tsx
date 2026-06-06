@@ -6,7 +6,6 @@ import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
-import { Button } from '@/components/ui/Button';
 import { getFriendData, type FriendUser } from '@/lib/friends/getFriendData';
 import { sendFriendInvite } from '../../invite/actions';
 import {
@@ -108,7 +107,7 @@ export default async function VennerPage({
             </p>
             <form action={sendFriendInvite} className="flex items-center gap-2">
               <input type="hidden" name="email" value={inviteEmail} />
-              <Button type="submit">Inviter {inviteEmail}</Button>
+              <SubmitButton pendingLabel="Inviterer …">Inviter {inviteEmail}</SubmitButton>
             </form>
           </Card>
         </div>
