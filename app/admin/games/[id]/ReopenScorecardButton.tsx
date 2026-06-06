@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 
 type Props = {
   reopenAction: () => void | Promise<void>;
@@ -21,13 +21,13 @@ export function ReopenScorecardButton({ reopenAction, playerName }: Props) {
         }
       }}
     >
-      <Button
-        type="submit"
+      <SubmitButton
         variant="secondary"
         className="whitespace-nowrap text-sm"
+        pendingLabel="Gjenåpner …"
       >
         Åpne for redigering
-      </Button>
+      </SubmitButton>
     </form>
   );
 }
