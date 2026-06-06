@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import { getTeeLengthWarning } from '@/lib/courses/teeLengthWarning';
 import { MAX_TEE_BOXES } from './constants';
 
@@ -679,9 +680,12 @@ export function CourseForm({
         )}
       </section>
 
-      <Button type="submit" className="w-full">
+      <SubmitButton
+        className="w-full"
+        pendingLabel="Lagrer …"
+      >
         {submitLabel}
-      </Button>
+      </SubmitButton>
 
       {footer}
     </form>
