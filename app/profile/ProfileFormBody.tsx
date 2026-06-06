@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useFormStatus } from 'react-dom';
 import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SegmentedField } from '@/components/ui/SegmentedField';
 import { isHandicapStale } from '@/lib/handicap/staleness';
 import { fromSignedHcp, formatGolfboxHcp } from '@/lib/handicap/sign';
@@ -32,15 +31,6 @@ type Props = {
    */
   next?: string | null;
 };
-
-function SaveButton({ dirty }: { dirty: boolean }) {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending || !dirty}>
-      {pending ? 'Lagrer …' : 'Lagre'}
-    </Button>
-  );
-}
 
 function DisclosureChevron({ open }: { open: boolean }) {
   return (
@@ -271,7 +261,9 @@ export function ProfileFormBody({
       </p>
 
       <div className="pt-2">
-        <SaveButton dirty={dirty} />
+        <SubmitButton pendingLabel="Lagrer …" disabled={!dirty}>
+          Lagre
+        </SubmitButton>
       </div>
     </form>
   );
