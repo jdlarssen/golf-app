@@ -12,6 +12,7 @@ import { getLigaSnapshot } from '@/lib/league/getLigaSnapshot';
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
 import { formatShortDateNb } from '@/lib/format/date';
 import { LigaRoundRow } from './LigaRoundRow';
+import { LigaAddRound } from './LigaAddRound';
 import { LigaAddPlayers } from './LigaAddPlayers';
 import { LigaRemovePlayer } from './LigaRemovePlayer';
 import { LigaStatusActions } from './LigaStatusActions';
@@ -166,6 +167,9 @@ export default async function LigaDetailPage({ params }: { params: Params }) {
             ))}
           </ul>
         )}
+        <div className="mt-3">
+          <LigaAddRound leagueId={id} />
+        </div>
       </section>
 
       {/* Deltakere */}

@@ -21,6 +21,21 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#453](https://github.com/jdlarssen/golf-app/issues/453) (epic [#452](https://github.com/jdlarssen/golf-app/issues/452)). Du kan nå arrangere en liga: flere runder over en hel sesong, med en levende tabell som holder styr på hvem som leder.
 
+### [1.83.2] - 2026-06-06 · #453
+
+> Du kan nå legge til runder manuelt på en liga — én etter én, med egen start og frist. Det betyr at du kan bestemme akkurat hvor mange runder ligaen skal ha, og at «Egendefinert» frekvens nå faktisk fungerer (du bygger runde-lista selv).
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- [`addLeagueRound`](lib/league/actions.ts) server-action + [`LigaAddRound`](app/admin/liga/[id]/LigaAddRound.tsx)-komponent på liga-detalj — legg til en enkelt runde (sequence = maks + 1, bane/tee arvet fra ligaen per omfang).
+
+#### Fixed
+- «Egendefinert» frekvens var en blindvei: `generateRounds` lager null vinduer for den, og det fantes ingen vei til å legge til runder manuelt. Manuell runde-tillegg lukker hullet og gir samtidig direkte kontroll over antall runder.
+
+</details>
+
 ### [1.83.1] - 2026-06-06 · #453
 
 > «Start ligaen»-knappen krever nå riktig minst to deltakere, slik at du ikke får en uforklarlig feil når du prøver å starte med bare én.

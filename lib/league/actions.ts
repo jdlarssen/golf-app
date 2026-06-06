@@ -173,6 +173,55 @@ export async function updateLeagueRound(formData: FormData): Promise<LeagueActio
  * Admin extends/reopens a round window. Keeps original_closes_at so flights
  * created past it stay flagged. Stamps the override audit fields.
  */
+/**
+ * Adds a single round to a league — the manual path that complements
+ * frequency-generated rounds. This is also the only way to populate a 'custom'
+ * frequency league (generateRounds returns nothing for it). The new round's
+ * course/tee inherit from the league per course_scope (admin can refine tee via
+ * updateLeagueRound). Sequence = current max + 1.
+ */
+export async function addLeagueRound(formData: FormData): Promise<LeagueActionError> {
+  const supabase = await getServerClient();
+  await requireAdmin(supabase);
+  const leagueId = str(formData, 'league_id');
+  const opensAt = str(formData, 'opens_at');
+  const closesAt = str(formData, 'closes_at');
+  if (!leagueId || !opensAt || !closesAt) return { error: 'missing' };
+  if (new Date(closesAt).getTime() <= new Date(opensAt).getTime()) return { error: 'window' };
+
+  const { data: league } = await supabase
+    .from('leagues')
+    .select('course_scope, course_id, tee_box_id')
+    .eq('id', leagueId)
+    .maybeSingle();
+  if (!league) return { error: 'not_found' };
+
+  const { data: lastRound } = await supabase
+    .from('league_rounds')
+    .select('sequence')
+    .eq('league_id', leagueId)
+    .order('sequence', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const sequence = ((lastRound?.sequence as number | undefined) ?? 0) + 1;
+  const label = str(formData, 'label') || `Runde ${sequence}`;
+
+  const { error } = await supabase.from('league_rounds').insert({
+    league_id: leagueId,
+    sequence,
+    label,
+    course_id: league.course_scope === 'multi_course' ? null : league.course_id,
+    tee_box_id: league.course_scope === 'single_course_single_tee' ? league.tee_box_id : null,
+    opens_at: opensAt,
+    closes_at: closesAt,
+    original_closes_at: closesAt,
+  });
+  if (error) return { error: 'insert_failed' };
+  revalidatePath(`/admin/liga/${leagueId}`);
+  revalidatePath(`/liga/${leagueId}`);
+  return { error: '' };
+}
+
 export async function overrideRoundWindow(formData: FormData): Promise<LeagueActionError> {
   const supabase = await getServerClient();
   const { userId } = await requireAdmin(supabase);
