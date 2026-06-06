@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#453](https://github.com/jdlarssen/golf-app/issues/453) (epic [#452](https://github.com/jdlarssen/golf-app/issues/452)). Du kan nå arrangere en liga: flere runder over en hel sesong, med en levende tabell som holder styr på hvem som leder.
 
+### [1.83.3] - 2026-06-06 · #453
+
+> Når du setter opp en liga, viser veiviseren nå med en gang hvor mange runder datoene og frekvensen gir — «Dette gir 6 runder: jun, jul, aug, sep, okt, nov» — så du ser antallet før du oppretter, ikke etterpå.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- Live runde-forhåndsvisning i [`CreateLigaForm`](app/admin/liga/new/CreateLigaForm.tsx): sesong-datoene + frekvensen er nå kontrollert state og kjører `generateRounds` i nettleseren for å vise antall runder (+ månedsliste for månedlig / vindu-lengde for uke/annenhver) reaktivt. Gjør koblingen «datoer + frekvens → antall runder» synlig i veiviseren i stedet for først på detalj-siden.
+
+</details>
+
 ### [1.83.2] - 2026-06-06 · #453
 
 > Du kan nå legge til runder manuelt på en liga — én etter én, med egen start og frist. Det betyr at du kan bestemme akkurat hvor mange runder ligaen skal ha, og at «Egendefinert» frekvens nå faktisk fungerer (du bygger runde-lista selv).

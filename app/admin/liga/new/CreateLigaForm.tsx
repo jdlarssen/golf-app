@@ -1,11 +1,17 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useMemo, useState } from 'react';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { Banner } from '@/components/ui/Banner';
 import { Card } from '@/components/ui/Card';
 import { createLeagueDraft, type LeagueActionError } from '@/lib/league/actions';
+import { generateRounds } from '@/lib/league/generateRounds';
 import type { CourseOption, PlayerOption } from '@/app/admin/games/new/GameForm';
+
+const MONTHS_ABBR = [
+  'jan', 'feb', 'mar', 'apr', 'mai', 'jun',
+  'jul', 'aug', 'sep', 'okt', 'nov', 'des',
+];
 
 type Props = {
   courses: CourseOption[];
@@ -52,9 +58,19 @@ export function CreateLigaForm({ courses, players }: Props) {
   const [missedPolicy, setMissedPolicy] = useState<MissedRoundPolicy>('penalty');
   const [penaltyKind, setPenaltyKind] = useState<PenaltyKind>('worst_plus_one');
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<Set<string>>(new Set());
+  const [seasonStart, setSeasonStart] = useState('');
+  const [seasonEnd, setSeasonEnd] = useState('');
+  const [frequency, setFrequency] = useState<Frequency>('monthly');
 
   const selectedCourse = courses.find((c) => c.id === selectedCourseId);
   const availableTees = selectedCourse?.tee_boxes ?? [];
+
+  // Live preview of the rounds the chosen dates + frequency will generate.
+  const roundPreview = useMemo(() => {
+    if (frequency === 'custom') return null;
+    if (!seasonStart || !seasonEnd || seasonEnd < seasonStart) return null;
+    return generateRounds(seasonStart, seasonEnd, frequency);
+  }, [seasonStart, seasonEnd, frequency]);
 
   const errorMessage = state.error ? ERROR_MESSAGES[state.error] ?? `Uventet feil: ${state.error}` : null;
 
@@ -109,6 +125,8 @@ export function CreateLigaForm({ courses, players }: Props) {
                 name="season_start"
                 type="date"
                 required
+                value={seasonStart}
+                onChange={(e) => setSeasonStart(e.target.value)}
                 className="w-full rounded-xl border border-border bg-bg px-4 py-3 font-sans text-[15px] text-text focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px]"
               />
             </div>
@@ -124,6 +142,8 @@ export function CreateLigaForm({ courses, players }: Props) {
                 name="season_end"
                 type="date"
                 required
+                value={seasonEnd}
+                onChange={(e) => setSeasonEnd(e.target.value)}
                 className="w-full rounded-xl border border-border bg-bg px-4 py-3 font-sans text-[15px] text-text focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px]"
               />
             </div>
@@ -454,7 +474,8 @@ export function CreateLigaForm({ courses, players }: Props) {
                 type="radio"
                 name="frequency"
                 value={opt.value}
-                defaultChecked={opt.value === 'monthly'}
+                checked={frequency === opt.value}
+                onChange={() => setFrequency(opt.value)}
                 className="accent-primary"
               />
               <span className="font-sans text-[14px] font-medium text-text">
@@ -463,9 +484,25 @@ export function CreateLigaForm({ courses, players }: Props) {
             </label>
           ))}
         </fieldset>
-        <p className="mt-2 font-sans text-[12px] text-muted">
-          Egendefinert: runder legges til manuelt etterpå.
-        </p>
+        {frequency === 'custom' ? (
+          <p className="mt-2 font-sans text-[12px] text-muted">
+            Egendefinert: du legger til rundene manuelt etterpå.
+          </p>
+        ) : roundPreview && roundPreview.length > 0 ? (
+          <p className="mt-2 font-sans text-[12px] text-muted">
+            Dette gir{' '}
+            <span className="font-medium text-text tabular-nums">{roundPreview.length}</span>{' '}
+            {roundPreview.length === 1 ? 'runde' : 'runder'}
+            {frequency === 'monthly'
+              ? `: ${roundPreview.map((w) => MONTHS_ABBR[new Date(w.opens_at).getUTCMonth()]).join(', ')}`
+              : ` (${frequency === 'weekly' ? '7' : '14'}-dagers vinduer)`}
+            .
+          </p>
+        ) : (
+          <p className="mt-2 font-sans text-[12px] text-muted">
+            Sett sesong-datoene over, så viser vi hvor mange runder det blir.
+          </p>
+        )}
       </Card>
 
       {/* 5. Deltakere */}
