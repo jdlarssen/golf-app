@@ -6,7 +6,7 @@ import { TopBar } from '@/components/ui/TopBar';
 import { Banner } from '@/components/ui/Banner';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { formatShortDateNbWithYear } from '@/lib/format/date';
@@ -272,9 +272,9 @@ export default async function PlayerDetailPage({
                 Junior gir juniortee når banen har en. Senior er en informasjons-tag for nå.
               </p>
             </fieldset>
-            <Button type="submit" className="w-full">
+            <SubmitButton className="w-full" pendingLabel="Lagrer …">
               Lagre endringer
-            </Button>
+            </SubmitButton>
           </form>
         </div>
       </section>
