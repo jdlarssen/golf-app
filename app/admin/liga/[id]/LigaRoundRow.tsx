@@ -148,16 +148,18 @@ export function LigaRoundRow({ round, leagueId, courseScope, courses }: Props) {
           <input type="hidden" name="round_id" value={round.id} />
           <input type="hidden" name="league_id" value={leagueId} />
 
-          <div>
+          <div className="min-w-0">
             <label className="block font-sans text-[12px] font-medium text-text mb-1">
               Ny frist (stenger)
             </label>
+            {/* iOS: native datetime-local strekker seg utenfor kortet uten
+                appearance-none + min-w-0 (samme fiks som #453). */}
             <input
               type="datetime-local"
               name="closes_at"
               required
               defaultValue={toDatetimeLocal(round.closesAt)}
-              className="w-full rounded-xl border border-border bg-bg px-3 py-2 font-sans text-[14px] text-text focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px]"
+              className="w-full min-w-0 appearance-none rounded-xl border border-border bg-bg px-3 py-2 font-sans text-[14px] text-text focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px]"
             />
           </div>
 

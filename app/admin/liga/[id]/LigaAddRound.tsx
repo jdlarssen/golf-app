@@ -45,8 +45,11 @@ export function LigaAddRound({ leagueId }: { leagueId: string }) {
             className="w-full rounded-xl border border-border bg-bg px-3 py-2 font-sans text-[14px] text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px]"
           />
         </div>
+        {/* iOS: native datetime-local ignorerer width:100% og strekker seg
+            utenfor kortet. appearance-none + min-w-0 (på input + grid-cell)
+            krymper kontrollen til containeren (samme fiks som #453). */}
         <div className="grid grid-cols-2 gap-3">
-          <div>
+          <div className="min-w-0">
             <label className="block font-sans text-[12px] font-medium text-text mb-1">
               Åpner
             </label>
@@ -54,10 +57,10 @@ export function LigaAddRound({ leagueId }: { leagueId: string }) {
               type="datetime-local"
               name="opens_at"
               required
-              className="w-full rounded-xl border border-border bg-bg px-3 py-2 font-sans text-[14px] text-text focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px]"
+              className="w-full min-w-0 appearance-none rounded-xl border border-border bg-bg px-3 py-2 font-sans text-[14px] text-text focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px]"
             />
           </div>
-          <div>
+          <div className="min-w-0">
             <label className="block font-sans text-[12px] font-medium text-text mb-1">
               Stenger
             </label>
@@ -65,7 +68,7 @@ export function LigaAddRound({ leagueId }: { leagueId: string }) {
               type="datetime-local"
               name="closes_at"
               required
-              className="w-full rounded-xl border border-border bg-bg px-3 py-2 font-sans text-[14px] text-text focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px]"
+              className="w-full min-w-0 appearance-none rounded-xl border border-border bg-bg px-3 py-2 font-sans text-[14px] text-text focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px]"
             />
           </div>
         </div>

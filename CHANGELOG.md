@@ -21,6 +21,21 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#453](https://github.com/jdlarssen/golf-app/issues/453) (epic [#452](https://github.com/jdlarssen/golf-app/issues/452)). Du kan nå arrangere en liga: flere runder over en hel sesong, med en levende tabell som holder styr på hvem som leder.
 
+### [1.83.9] - 2026-06-06 · bug
+
+> På iPhone strakk dato- og tidsfeltene seg utenfor kortet når du oppretter et spill, eller legger til og endrer en liga-runde. Nå står de pent innenfor rammen.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Speiler 1.83.7-fiksen til de resterende `datetime-local`-feltene som manglet den. Native `input[type=date/datetime-local]` på iOS respekterer ikke `width:100%` og strekker seg utenfor kort-containeren. La til `appearance-none` + `min-w-0` på:
+  - Tee-off-feltet i [`BasicsSection`](app/admin/games/new/sections/BasicsSection.tsx) (opprett-spill-veiviseren) via `inputClassName`-proppen på `Input`.
+  - «Åpner»/«Stenger»-feltene i [`LigaAddRound`](app/admin/liga/[id]/LigaAddRound.tsx) (legg til egendefinert runde) + `min-w-0` på grid-cellene.
+  - «Ny frist»-feltet i [`LigaRoundRow`](app/admin/liga/[id]/LigaRoundRow.tsx) (utvid runde-vindu).
+
+</details>
+
 ### [1.83.8] - 2026-06-06 · bug
 
 > Når du oppretter en kompis-runde står antall-velgeren nå på 4 fra start, i stedet for et forvirrende «?». Veiviseren viser med en gang formatene som passer for fire spillere, og du justerer opp eller ned derfra.
