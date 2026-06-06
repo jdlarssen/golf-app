@@ -76,7 +76,7 @@ function FormBody({
         <p className="font-serif text-base text-text">Sender kode til</p>
         <p className="font-medium text-text break-words">{submittedEmail}</p>
         <div className="flex justify-center pt-1">
-          <Spinner />
+          <Spinner className="border-muted border-t-primary" />
         </div>
       </div>
     );
