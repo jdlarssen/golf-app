@@ -21,6 +21,26 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#453](https://github.com/jdlarssen/golf-app/issues/453) (epic [#452](https://github.com/jdlarssen/golf-app/issues/452)). Du kan nå arrangere en liga: flere runder over en hel sesong, med en levende tabell som holder styr på hvem som leder.
 
+### [1.83.5] - 2026-06-06 · bug
+
+> Du kan nå sette opp Bingo Bango Bongo. Før låste veiviseren seg på spiller-steget: «Neste» lyste ikke opp selv om du hadde valgt to spillere. Samme feil rammet Nassau og Skins. Alle tre virker nå med 2 til 4 spillere.
+
+<details>
+<summary>Teknisk</summary>
+
+Rapportert bug: veiviseren (`app/admin/games/new`) lot deg velge Bingo Bango Bongo, men «Neste» på spiller-steget ble aldri aktiv. Rot: solo-formater uten lag manglet riktig oppsett i `useGameFormState`.
+
+#### Fixed
+- [`defaultTeamSizeForMode`](app/admin/games/new/useGameFormState.ts) manglet `nassau`, `skins` og `bingo_bango_bongo` og falt til default-2. Det gjorde `requiresTeams` sann, så `orderedPayload` tok lag-stien og endte tom — publish ville sendt 0 spillere. Alle tre er nå `team_size = 1` (solo-stien emitter spillerne med `team_number`/`flight_number` null), som speiler `validateBingoBangoBongo`/`validateNassau`/`validateSkins` i [`gamePayload.ts`](lib/games/gamePayload.ts).
+- Bingo Bango Bongo manglet i tillegg en gren i `playersValidForMode` (falt til `false`), så «Neste» kunne aldri lyse opp. Lagt til `isBingoBangoBongo`-flagg, `bingoBangoBongoPlayersValid` (2–4 spillere), gren i `playersValidForMode`, mangel-melding i `missingForPublish`, og unntak fra den generiske `hcp_allowance`-sjekken (BBB har egen scoring-konfig, ingen allowance).
+- [`GameWizard`](app/admin/games/new/GameWizard.tsx) skjuler nå lagstørrelse-velgeren for Bingo Bango Bongo (som for Nassau/Skins/Nines) — den var meningsløs for et solo-format.
+
+#### Notes
+- Nassau og Skins var rammet av samme rot-årsak og er fikset i samme slengen. Ingen av de tre formatene hadde noensinne blitt opprettet i prod (bekreftet mot databasen), så ingen data ble berørt.
+- Regresjonstester i [`useGameFormState.test.ts`](app/admin/games/new/useGameFormState.test.ts) dekker alle tre formatene: 2 valgte spillere → `team_size 1`, gyldig for modus, payload med 2 rader (team/flight null).
+
+</details>
+
 ### [1.83.4] - 2026-06-06 · #453
 
 > Når du setter opp en liga inviterer du nå vennene dine — listen viser deg selv (forhåndsvalgt) og vennene dine, ikke alle på Tørny. Har du ingen venner ennå, får du en lenke for å legge dem til. Og sesong-datoene ligger ikke lenger oppå hverandre på mobil.

@@ -242,3 +242,64 @@ describe('useGameFormState — initialValues pre-fyll for setup-step-formater (#
     expect(result.current.isRoundRobin).toBe(true);
   });
 });
+
+// Solo-formater uten lag (Nassau / Skins / Bingo Bango Bongo) velges via
+// wizard-en sin FormatGrid → handleModeChange. De skal alle ende opp som
+// team_size=1 (requiresTeams=false), slik at:
+//  - «Neste»-knappen (gated på playersValidForMode) lyser når 2-4 er valgt
+//  - orderedPayload faktisk inneholder de valgte spillerne (team/flight null)
+// Regresjon: BBB manglet både en playersValidForMode-gren OG en
+// defaultTeamSizeForMode-entry; Nassau/Skins manglet sistnevnte og publiserte
+// derfor 0 spillere fra wizarden. Ingen av modusene var noensinne publisert.
+describe('useGameFormState — solo-format wizard-gating (Nassau / Skins / BBB)', () => {
+  for (const mode of ['nassau', 'skins', 'bingo_bango_bongo'] as const) {
+    it(`${mode}: 2 valgte spillere → team_size 1, gyldig for modus, payload med 2 rader`, () => {
+      const { result } = renderHook(() =>
+        useGameFormState({ players: PLAYERS, courses: COURSES }),
+      );
+
+      act(() => {
+        result.current.handleModeChange(mode);
+      });
+      act(() => {
+        result.current.togglePlayer('p-mann');
+        result.current.togglePlayer('p-dame');
+      });
+
+      // Solo: ingen lag → team_size 1, requiresTeams false.
+      expect(result.current.teamSize).toBe(1);
+      expect(result.current.requiresTeams).toBe(false);
+
+      // Gating for «Neste» på spiller-steget.
+      expect(result.current.playersValidForMode).toBe(true);
+
+      // Payload må faktisk inneholde spillerne (uten lag/flight).
+      expect(result.current.orderedPayload).toHaveLength(2);
+      for (const row of result.current.orderedPayload) {
+        expect(row.team_number).toBeNull();
+        expect(row.flight_number).toBeNull();
+      }
+
+      // Ingen spiller-relatert mangel når 2 er valgt.
+      const playerMissing = result.current.missingForPublish.filter(
+        (m) => m.includes('spiller'),
+      );
+      expect(playerMissing).toEqual([]);
+    });
+
+    it(`${mode}: 1 valgt spiller → ikke gyldig (krever minst 2)`, () => {
+      const { result } = renderHook(() =>
+        useGameFormState({ players: PLAYERS, courses: COURSES }),
+      );
+
+      act(() => {
+        result.current.handleModeChange(mode);
+      });
+      act(() => {
+        result.current.togglePlayer('p-mann');
+      });
+
+      expect(result.current.playersValidForMode).toBe(false);
+    });
+  }
+});

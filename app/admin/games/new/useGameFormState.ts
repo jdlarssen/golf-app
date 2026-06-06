@@ -104,6 +104,14 @@ export function defaultTeamSizeForMode(mode: GameMode): TeamSize {
   // rotation-slot, ikke som lag-tildeling. team_size=1 betyr requiresTeams=false
   // så vi får solo-style player-selection i step 3.
   if (mode === 'wolf') return 1;
+  // Nassau / Skins / Bingo Bango Bongo: solo-formater (ingen lag), 2-4
+  // spillere. team_size=1 betyr requiresTeams=false → orderedPayload tar
+  // solo-stien og emitter de valgte spillerne med team/flight null. Uten
+  // disse entry-ene falt de til default-2, requiresTeams ble true, og
+  // orderedPayload endte tom → publish sendte 0 spillere.
+  if (mode === 'nassau') return 1;
+  if (mode === 'skins') return 1;
+  if (mode === 'bingo_bango_bongo') return 1;
   // Nines / Split Sixes (#278): solo-format (ingen lag), team_size=1 betyr
   // requiresTeams=false så vi får solo-style player-selection i step 3.
   if (mode === 'nines') return 1;
@@ -612,6 +620,10 @@ export function useGameFormState({
   // - isSkins: solo-format med carryover, 2-4 spillere. Hvert hull er verdt
   //   1 skin; delte hull ruller skinnet videre. Egen SkinsSetup-step i step 2.
   const isSkins = gameMode === 'skins';
+  // - isBingoBangoBongo: solo-format, 2-4 spillere (#277). Poeng for bingo
+  //   (først på green), bango (nærmest når alle er på) og bongo (først i hull).
+  //   Ingen gross/net-toggle, ingen lag — speiler Nassau/Skins-gatingen.
+  const isBingoBangoBongo = gameMode === 'bingo_bango_bongo';
   // - isNines: individuelt format, nøyaktig 3 spillere. Nines (9 poeng per
   //   hull, 5–3–1) eller Split Sixes (6 poeng, 4–2–0). Eigen NinesSetup-step
   //   i step 2.
@@ -1140,6 +1152,13 @@ export function useGameFormState({
   const skinsPlayersValid =
     isSkins && selectedPlayerIds.length >= 2 && selectedPlayerIds.length <= 4;
 
+  // Bingo Bango Bongo-validitet: 2-4 spillere. Solo-format (team/flight null),
+  // ingen lag-tilordning. Speiler `validateBingoBangoBongo` i gamePayload.ts.
+  const bingoBangoBongoPlayersValid =
+    isBingoBangoBongo &&
+    selectedPlayerIds.length >= 2 &&
+    selectedPlayerIds.length <= 4;
+
   // Nines-validitet: nøyaktig 3 spillere. Solo-format (team/flight null),
   // ingen lag-tilordning. Speiler `validateNines` i gamePayload.ts.
   const ninesPlayersValid =
@@ -1193,21 +1212,23 @@ export function useGameFormState({
                 ? nassauPlayersValid
                 : isSkins
                   ? skinsPlayersValid
-                  : isNines
-                    ? ninesPlayersValid
-                    : isRoundRobin
-                      ? roundRobinPlayersValid
-                      : isAceyDeucey
-                        ? aceyDeuceyPlayersValid
-                        : isAmbrose
-                          ? ambrosePlayersValid
-                          : isFlorida
-                            ? floridaPlayersValid
-                            : isShamble
-                              ? shamblePlayersValid
-                              : isPatsome
-                                ? patsomePlayersValid
-                                : false;
+                  : isBingoBangoBongo
+                    ? bingoBangoBongoPlayersValid
+                    : isNines
+                      ? ninesPlayersValid
+                      : isRoundRobin
+                        ? roundRobinPlayersValid
+                        : isAceyDeucey
+                          ? aceyDeuceyPlayersValid
+                          : isAmbrose
+                            ? ambrosePlayersValid
+                            : isFlorida
+                              ? floridaPlayersValid
+                              : isShamble
+                                ? shamblePlayersValid
+                                : isPatsome
+                                  ? patsomePlayersValid
+                                  : false;
 
   // Round Robin allowance-validitet: 0..100.
   const roundRobinAllowancePctValid =
@@ -1234,7 +1255,7 @@ export function useGameFormState({
     (playersStepOptional || playersValidForMode) &&
     (isRoundRobin
       ? roundRobinAllowancePctValid
-      : isTexas || isAmbrose || isShamble || isWolf || isNassau || isSkins || isNines || isAceyDeucey || isPatsome || allowanceValid) &&
+      : isTexas || isAmbrose || isShamble || isWolf || isNassau || isSkins || isBingoBangoBongo || isNines || isAceyDeucey || isPatsome || allowanceValid) &&
     hasTeeOff;
 
   // Human-readable list of what's still missing for a publish. Mode-aware:
@@ -1411,6 +1432,18 @@ export function useGameFormState({
         'for mange spillere — Skins krever 2-4',
       );
     }
+  } else if (isBingoBangoBongo) {
+    // Bingo Bango Bongo: 2-4 spillere, solo (ingen lag-tilordning).
+    if (selectedPlayerIds.length < 2) {
+      const remaining = 2 - selectedPlayerIds.length;
+      missingForPublish.push(
+        `${remaining === 1 ? 'minst 1 spiller til' : 'minst 2 spillere'}`,
+      );
+    } else if (selectedPlayerIds.length > 4) {
+      missingForPublish.push(
+        'for mange spillere — Bingo Bango Bongo krever 2-4',
+      );
+    }
   } else if (isNines) {
     // Nines: nøyaktig 3 spillere, solo (ingen lag-tilordning).
     if (selectedPlayerIds.length < 3) {
@@ -1467,10 +1500,10 @@ export function useGameFormState({
     missingForPublish.push('minst én spiller');
   }
   // hcp_allowance_pct gjelder ikke for Texas, Ambrose, Shamble, Wolf, Nassau,
-  // Skins, Nines, Round Robin eller Acey Deucey — disse modusene har sin egen
-  // scoring-konfig i mode_config. Hopper over allowance-sjekken så admin ikke
-  // får mismatch mellom UI-skjult-felt og publish-feilmelding.
-  if (!isTexas && !isAmbrose && !isFlorida && !isShamble && !isWolf && !isNassau && !isSkins && !isNines && !isRoundRobin && !isAceyDeucey && !isPatsome && !allowanceValid)
+  // Skins, Bingo Bango Bongo, Nines, Round Robin eller Acey Deucey — disse
+  // modusene har sin egen scoring-konfig i mode_config. Hopper over allowance-
+  // sjekken så admin ikke får mismatch mellom UI-skjult-felt og publish-feilmelding.
+  if (!isTexas && !isAmbrose && !isFlorida && !isShamble && !isWolf && !isNassau && !isSkins && !isBingoBangoBongo && !isNines && !isRoundRobin && !isAceyDeucey && !isPatsome && !allowanceValid)
     missingForPublish.push('gyldig HCP-allowance');
 
   return {
@@ -1577,6 +1610,7 @@ export function useGameFormState({
     isWolf,
     isNassau,
     isSkins,
+    isBingoBangoBongo,
     isNines,
     isRoundRobin,
     isAceyDeucey,
