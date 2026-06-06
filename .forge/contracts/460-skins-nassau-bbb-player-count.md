@@ -51,20 +51,22 @@ Hev count-grensen **fra maks 4 til maks 16** for `skins`, `nassau`, `bingo_bango
 
 ## Success Criteria
 
-- [ ] I opprett-veiviser (Kompis) vises Skins/Nassau/BBB for 5–16 spillere, og skjules for 17+. *(Verifiser: `fitsPlayerCount('skins', n)` → true for 2..16, false for 17; unit-test eller node-eval.)*
-- [ ] Et spill med 16 spillere kan publiseres i hvert av de tre formatene uten valideringsfeil; 17 avvises med `too_many_players_for_mode`. *(Verifiser: `gamePayload.test.ts`-cases.)*
-- [ ] Scoring inkluderer og rangerer korrekt alle spillere ved antall >4 i hvert format. *(Verifiser: nye scenarier i `skins.test.ts`/`nassau.test.ts`/`bingoBangoBongo.test.ts`.)*
-- [ ] Ingen regresjon for 2–4 spillere (eksisterende tester grønne). *(Verifiser: full vitest på berørte filer.)*
-- [ ] Ingen eksakt-4-format (wolf/acey_deucey/round_robin/matchplay/nines) er påvirket. *(Verifiser: grep at deres caps/løkker er uendret; tester grønne.)*
-- [ ] `npx tsc --noEmit` + `npm run build` grønt; `package.json` minor-bumpet + CHANGELOG-oppføring. *(Verifiser: kommando-output.)*
+- [x] I opprett-veiviser (Kompis) vises Skins/Nassau/BBB for 5–16 spillere, og skjules for 17+. — `fitsPlayerCount.test.ts` grønn med `[5,true],[8,true],[16,true],[17,false]` per format (commit `c300bd5` red → `0781ed5` grønn).
+- [x] Et spill med 16 spillere kan publiseres i hvert av de tre formatene uten valideringsfeil; 17 avvises med `too_many_players_for_mode`. — `gamePayload.test.ts` «publish med 16 → ok» + «17 → too_many» for skins/nassau/bbb, alle grønne.
+- [x] Scoring inkluderer og rangerer korrekt alle spillere ved antall >4 i hvert format. — 6-spiller-scenarier i `skins.test.ts`/`nassau.test.ts`/`bingoBangoBongo.test.ts` (commit `505a3c5`), 75 scoring-tester grønne.
+- [x] Ingen regresjon for 2–4 spillere. — 430 tester grønne på tvers av berørte + co-located filer.
+- [x] Ingen eksakt-4-format (wolf/acey_deucey/round_robin/matchplay/nines) er påvirket. — grep bekrefter acey_deucey cap `> 4` (gamePayload.ts:1719) + løkke `i < 8` urørt; deres tester grønne.
+- [x] `npx tsc --noEmit` + `npm run build` grønt; `package.json` bumpet + CHANGELOG-oppføring. — tsc exit 0, build fullført (rute-tabell printet), v1.83.13 → 1.83.14, CHANGELOG [1.83.14]-oppføring under Liga-serien.
+
+> **Avvik fra kontrakt:** lese-løkka ble `i < 17` (ikke `i < 16` som skissert) — løkke-taket må ligge én over cap-en, ellers trunkeres en 17. spiller stille til 16 i stedet for å avvises. Cap-sjekken er `> 16`.
 
 ## Gates
 
-- [ ] `npx tsc --noEmit` passerer
-- [ ] `npm run build` passerer (per memory `feedback_tsc_gate_preexisting_trap`: ikke filtrer tsc-feil som «pre-existing»; nye/endrede exhaustive switch-er må bygge)
-- [ ] `npx vitest run lib/scoring/modes/skins.test.ts lib/scoring/modes/nassau.test.ts lib/scoring/modes/bingoBangoBongo.test.ts lib/games/gamePayload.test.ts lib/wizard/fitsPlayerCount.test.ts` grønt
-- [ ] Co-located tester for hver berørt fil kjørt (per memory `feedback_run_colocated_tests_for_changed_files`)
-- [ ] Humanizer-sjekk på nye/endrede norske strenger («krever 2-16») før commit
+- [x] `npx tsc --noEmit` passerer — exit 0.
+- [x] `npm run build` passerer — fullført uten feil (ingen nye GameMode-medlemmer, så exhaustive switch-er er uberørt).
+- [x] `npx vitest run` på alle berørte test-filer grønt — 430 passed (7 filer).
+- [x] Co-located tester for hver berørt fil kjørt — `SkinsSetup.test.tsx`, `NassauSetup.test.tsx`, scoring-modi + gamePayload + fitsPlayerCount inkludert.
+- [x] Humanizer-sjekk på nye/endrede norske strenger — kjørt; tagline + «tar maks 16»-strenger rene (single em-dash speiler eksisterende søsken-konvensjon).
 
 ## Files Likely Touched
 
