@@ -1,5 +1,5 @@
 import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import { sendInvitation } from '../actions';
 
 export function InviteForm() {
@@ -40,9 +40,9 @@ export function InviteForm() {
             autoComplete="email"
             required
           />
-          <Button type="submit" className="w-full">
+          <SubmitButton className="w-full" pendingLabel="Inviterer …">
             Send invitasjon
-          </Button>
+          </SubmitButton>
         </form>
       </div>
     </details>
