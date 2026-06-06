@@ -6,7 +6,7 @@ import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { supportsWithdrawal } from '@/lib/scoring';
 import type { GameStatus } from '@/lib/games/status';
@@ -234,9 +234,9 @@ export default async function CreatorAvsluttPage({
           )}
         </p>
         <form action={endAnywayAction}>
-          <Button type="submit" className="w-full">
+          <SubmitButton className="w-full" pendingLabel="Avslutter …">
             Avslutt likevel
-          </Button>
+          </SubmitButton>
         </form>
         <Link
           href={detailPath}
@@ -256,9 +256,9 @@ export default async function CreatorAvsluttPage({
           leaderboardet åpnes for alle deltakerne.
         </p>
         <form action={finishAction}>
-          <Button type="submit" className="w-full">
+          <SubmitButton className="w-full" pendingLabel="Avslutter …">
             Avslutt spillet
-          </Button>
+          </SubmitButton>
         </form>
         <Link
           href={detailPath}
