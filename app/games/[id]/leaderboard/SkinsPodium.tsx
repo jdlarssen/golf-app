@@ -41,8 +41,8 @@ export interface SkinsPodiumProps {
  *   - Ingen bragging-stat-strip i v1 (deferred per kontrakt #275).
  *   - Distinkt sessionStorage-key: `torny-skins-podium-confetti-seen-${gameId}`.
  *
- * Skins støtter 2–4 spillere. Alle vises: 1./2./3. som tradisjonelle trinn
- * + evt. 4. som en «sist»-rad under podiet.
+ * Skins støtter 2–16 spillere (#460). Alle vises: 1./2./3. som tradisjonelle
+ * trinn + resten som «sist»-rader under podiet.
  */
 export function SkinsPodium({
   gameId,

@@ -411,7 +411,7 @@ export type GameModeConfig =
     }
   | {
       /**
-       * Bingo Bango Bongo: individuelt format, 2–4 spillere, ingen lag. Tre
+       * Bingo Bango Bongo: individuelt format, 2–16 spillere (#460), ingen lag. Tre
        * prestasjons-poeng per hull (bingo/bango/bongo). Slag registreres via
        * vanlig scorekort, men teller ikke for BBB-poeng. Speiler
        * `solo_strokeplay`-config (team_size: 1, ingen ekstra felt).
@@ -1479,7 +1479,7 @@ export interface SkinsResult {
 //
 // Slag registreres via eksisterende scorekort (uendret maskineri), men teller
 // IKKE for BBB-poeng. Poengene er rene prestasjons-poeng. Individuelt format,
-// 2–4 spillere, ingen lag (team_size: 1 — speiler solo_strokeplay).
+// 2–16 spillere (#460), ingen lag (team_size: 1 — speiler solo_strokeplay).
 //
 // Tiebreak: totalPoints DESC → bingos DESC → bongos DESC → delt rank.
 // Full 5-tier-cascade gjelder ikke (BBB er ikke slag-basert).

@@ -12,7 +12,7 @@ export interface BingoBangoBongoEntryPlayer {
 export interface BingoBangoBongoEntryProps {
   gameId: string;
   holeNumber: number;
-  /** 2–4 flight-spillere med id + visningsnavn. */
+  /** 2–16 spillere (#460) med id + visningsnavn. */
   players: BingoBangoBongoEntryPlayer[];
   /** Gjeldende lagrede verdier for hullet — null betyr ingen rad finnes ennå. */
   savedHole: BingoBangoBongoHoleInput | null;

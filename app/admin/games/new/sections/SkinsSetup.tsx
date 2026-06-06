@@ -15,7 +15,7 @@ interface SkinsSetupProps {
  * Default-net-fallback speiler Tørny's HCP-ethos. Validator (validateSkins i
  * gamePayload.ts) leser feltet og faller defensivt tilbake til 'net'.
  *
- * Skins er et solo-format (2–4 spillere) — ingen rotasjon eller lagoppsett her.
+ * Skins er et solo-format (2–16 spillere, #460) — ingen rotasjon eller lagoppsett her.
  * Carryover er alltid på: delte hull ruller skinnet videre til neste hull, som
  * da er verdt mer. Ingen toggle — det er selve formatet.
  */

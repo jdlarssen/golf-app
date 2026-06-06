@@ -79,15 +79,15 @@ const ENABLED_COMBOS: Record<GameMode, ReadonlySet<TeamSize>> = {
   // TeamSizeSelector vises ikke for wolf (WolfSetup tar over), så denne
   // entry-en er kun for type-completeness på ENABLED_COMBOS-mappen.
   wolf: new Set<TeamSize>([1]),
-  // Nassau: solo-format, 2-4 spillere. TeamSizeSelector vises ikke for
+  // Nassau: solo-format, 2-16 spillere (#460). TeamSizeSelector vises ikke for
   // nassau (NassauSetup tar over), så denne brukes ikke i praksis — men
   // type-system krever en entry.
   nassau: new Set<TeamSize>([1]),
-  // Skins: solo-format, 2-4 spillere. TeamSizeSelector vises ikke for skins
+  // Skins: solo-format, 2-16 spillere (#460). TeamSizeSelector vises ikke for skins
   // (SkinsSetup tar over), så denne brukes ikke i praksis — men type-system
   // krever en entry.
   skins: new Set<TeamSize>([1]),
-  // Bingo Bango Bongo: individuelt format, 2–4 spillere, team_size=1. En
+  // Bingo Bango Bongo: individuelt format, 2–16 spillere (#460), team_size=1. En
   // dedikert BBB-setup-steg vil ta over som for Wolf/Nassau/Skins, så
   // TeamSizeSelector vises ikke i praksis — men type-system krever en entry.
   bingo_bango_bongo: new Set<TeamSize>([1]),
