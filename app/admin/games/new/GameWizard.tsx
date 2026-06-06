@@ -36,7 +36,7 @@ import { FormatGrid } from './FormatGrid';
 import { CupSetup } from './CupSetup';
 import { SideTournamentsBanner } from './SideTournamentsBanner';
 import { TeamSizeSelector } from './TeamSizeSelector';
-import { useGameFormState } from './useGameFormState';
+import { useGameFormState, PLAYER_COUNT_DEFAULT } from './useGameFormState';
 import { BasicsSection } from './sections/BasicsSection';
 import { PlayersSection } from './sections/PlayersSection';
 import { TeamsAssignmentSection } from './sections/TeamsAssignmentSection';
@@ -748,7 +748,7 @@ export function GameWizard({
             state.intent === 'kompis' &&
             state.expectedPlayerCount !== undefined && (
               <p className="rounded-md border border-border bg-surface-2 px-3 py-2 text-xs text-muted">
-                Du valgte {state.expectedPlayerCount} spillere. Legg til nøyaktig så mange for best mulig spill.
+                Dere er {state.expectedPlayerCount} spillere. Legg til nøyaktig så mange for best mulig spill.
               </p>
             )}
           {/* #369: Kompis-rask-legg-til — venner av arrangøren vises som
@@ -1112,7 +1112,8 @@ function FriendQuickAdd({
 
 const PLAYER_COUNT_MIN = 1;
 const PLAYER_COUNT_MAX = 16;
-const PLAYER_COUNT_DEFAULT = 4;
+// PLAYER_COUNT_DEFAULT importeres fra useGameFormState (state-eieren) så initial
+// state og picker-fallback aldri kommer ut av sync.
 
 function PlayerCountPicker({
   value,

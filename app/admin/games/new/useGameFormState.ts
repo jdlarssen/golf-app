@@ -23,6 +23,11 @@ export type TeamNumber = (typeof TEAM_NUMBERS)[number];
 
 export const FLIGHT_NUMBERS = [1, 2, 3, 4] as const;
 
+// #373: standard antall spillere for Kompis-runden. Brukes både som initial
+// state her og som fallback i PlayerCountPicker (GameWizard). 4 er det vanligste
+// kompis-følget og det mest permissive antallet (nesten alle format passer).
+export const PLAYER_COUNT_DEFAULT = 4;
+
 export function isTeamNumber(n: number): n is TeamNumber {
   return n === 1 || n === 2 || n === 3 || n === 4;
 }
@@ -445,13 +450,14 @@ export function useGameFormState({
     initialValues?.game_mode !== undefined || lockGameMode,
   );
 
-  // #373: Kompis-intent — antall spillere valgt FØR format. Undefined = ikke
-  // satt ennå (viser alle formater). Settes av teller-kontrollen i steg 2.
+  // #373: Kompis-intent — antall spillere valgt FØR format. Defaulter til 4
+  // (PLAYER_COUNT_DEFAULT) så grid-et er filtrert fra start; «Vis alle» i
+  // teller-kontrollen setter den til undefined for å vise hele katalogen.
   // Når count endres slik at gjeldende format ikke lenger passer, nullstilles
   // gameMode til default og formatChosen til false slik at brukeren velger på nytt.
   const [expectedPlayerCount, setExpectedPlayerCountRaw] = useState<
     number | undefined
-  >(undefined);
+  >(PLAYER_COUNT_DEFAULT);
 
   // Self-påmelding (#199). Defaultes til 'invite_only' + 'solo' — dagens
   // flyt bevart 100% når admin ikke aktivt velger noe annet. Edit-flyten

@@ -288,9 +288,10 @@ describe('GameWizard — #373 Kompis teller-filter', () => {
     fireEvent.click(screen.getByRole('radio', { name: /kompis-runde/i }));
     clickNext();
 
-    // Steg 2: alle tre formater vises først (ingen count satt)
+    // Steg 2: default er 4 spillere → best_ball passer (partall 2–8),
+    // nines (nøyaktig 3) er filtrert bort fra start
     expect(screen.getByRole('radio', { name: /^best ball$/i })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /^nines$/i })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /^nines$/i })).not.toBeInTheDocument();
 
     // Trykk «Flere spillere» to ganger: → 6 (default 4 + 2)
     // Trykk «Færre spillere» tre ganger: → 3

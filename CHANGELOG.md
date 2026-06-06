@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#453](https://github.com/jdlarssen/golf-app/issues/453) (epic [#452](https://github.com/jdlarssen/golf-app/issues/452)). Du kan nå arrangere en liga: flere runder over en hel sesong, med en levende tabell som holder styr på hvem som leder.
 
+### [1.83.8] - 2026-06-06 · bug
+
+> Når du oppretter en kompis-runde står antall-velgeren nå på 4 fra start, i stedet for et forvirrende «?». Veiviseren viser med en gang formatene som passer for fire spillere, og du justerer opp eller ned derfra.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `PlayerCountPicker` i [`GameWizard`](app/admin/games/new/GameWizard.tsx) viste «?» fordi `expectedPlayerCount` initialiserte til `undefined` (= ingen filter). Visuelt hoppet +/− fra «?» rett til 3/5 (forbi 4), siden den interne fallbacken var 4. Flyttet default til en delt konstant `PLAYER_COUNT_DEFAULT = 4` i [`useGameFormState`](app/admin/games/new/useGameFormState.ts) og satte initial state til den, så grid-et er filtrert til fire spillere fra start. «Vis alle»-knappen setter fortsatt `undefined` for å vise hele katalogen; Matchplay (krever 2) og Nines (krever 3) dukker opp når du trykker minus. Hint-teksten i steg 3 endret fra «Du valgte N» til «Dere er N» (default er ikke et aktivt valg), på linje med picker-spørsmålet «Hvor mange er dere?». Oppdaterte #373-filtertesten til ny default.
+
+</details>
+
 ### [1.83.7] - 2026-06-06 · #453
 
 > Dato-feltene når du oppretter en liga var fortsatt for brede og strakk seg utenfor kortet. Nå er de smale nok til å stå pent side om side, innenfor rammen.
