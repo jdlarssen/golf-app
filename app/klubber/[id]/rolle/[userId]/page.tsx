@@ -4,7 +4,7 @@ import { getClubDetail } from '@/lib/clubs/getClubDetail';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Banner } from '@/components/ui/Banner';
-import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { setMemberRole } from './actions';
 
@@ -140,9 +140,9 @@ export default async function EndreMedlemsrollePage({
             ))}
           </fieldset>
 
-          <Button type="submit" className="w-full">
+          <SubmitButton className="w-full" pendingLabel="Lagrer …">
             Lagre rolle
-          </Button>
+          </SubmitButton>
         </form>
 
         <SmartLink
