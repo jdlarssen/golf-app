@@ -71,11 +71,13 @@ export default async function LigaDetailPage({ params }: { params: Params }) {
   const chipTone = STATUS_TO_CHIP[status];
   const statusLabel = STATUS_LABEL[status];
 
-  const canStart = status === 'draft' && rounds.length >= 1 && participants.length >= 1;
+  // Mirror the server guard in startLeague: ≥1 round + ≥2 participants
+  // (the marker rule needs two players to ever produce a counted result).
+  const canStart = status === 'draft' && rounds.length >= 1 && participants.length >= 2;
   const canFinish = status === 'active';
   const startHint =
-    status === 'draft' && (!rounds.length || !participants.length)
-      ? 'Du trenger minst 1 runde og 1 deltaker for å starte ligaen.'
+    status === 'draft' && (rounds.length < 1 || participants.length < 2)
+      ? 'Du trenger minst 1 runde og 2 deltakere for å starte ligaen.'
       : undefined;
 
   const participantIds = new Set(participants.map((p) => p.userId));

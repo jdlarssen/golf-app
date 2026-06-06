@@ -58,6 +58,11 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
   if (!DATE_RE.test(seasonStart) || !DATE_RE.test(seasonEnd)) return { error: 'dates' };
   if (seasonEnd < seasonStart) return { error: 'dates' };
   if (standingsModel !== 'total' && standingsModel !== 'average') return { error: 'standings_model' };
+  // Defense-in-depth: validate the enum-backed fields rather than trusting the
+  // form (the DB CHECK is the final backstop, but fail clean here).
+  if (scoring !== 'net' && scoring !== 'gross' && scoring !== 'both') return { error: 'scoring' };
+  if (missedPolicy !== 'penalty' && missedPolicy !== 'must_play_all') return { error: 'missed_round_policy' };
+  if (penaltyKind !== 'worst_plus_one' && penaltyKind !== 'fixed') return { error: 'penalty_kind' };
   if (
     courseScope !== 'single_course_single_tee' &&
     courseScope !== 'single_course' &&
@@ -405,6 +410,10 @@ export async function startLeagueRoundFlight(
   }
 
   // Freeze handicaps + flip to active. On failure, roll back the half-made flight.
+  // ORDER MATTERS: game_players were inserted above, before this call. That is
+  // what lets startScheduledGame (on the user client) read co-players'
+  // users.hcp_index — the "users select own or shared games" RLS policy only
+  // grants that once the caller shares a game with them. Keep insert-before-start.
   const started = await startScheduledGame(supabase, gameId);
   if (!started.ok) {
     await supabase.from('game_players').delete().eq('game_id', gameId);

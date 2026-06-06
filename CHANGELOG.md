@@ -21,6 +21,21 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#453](https://github.com/jdlarssen/golf-app/issues/453) (epic [#452](https://github.com/jdlarssen/golf-app/issues/452)). Du kan nå arrangere en liga: flere runder over en hel sesong, med en levende tabell som holder styr på hvem som leder.
 
+### [1.83.1] - 2026-06-06 · #453
+
+> «Start ligaen»-knappen krever nå riktig minst to deltakere, slik at du ikke får en uforklarlig feil når du prøver å starte med bare én.
+
+<details>
+<summary>Teknisk</summary>
+
+Fikser fra skeptisk evaluering av Fase 1:
+
+#### Changed
+- [`app/admin/liga/[id]/page.tsx`](app/admin/liga/[id]/page.tsx) — `canStart`-terskelen + hint-teksten matcher nå server-guarden (≥1 runde + ≥2 deltakere). Tidligere lot UI-et deg trykke med 1 deltaker og fikk en generisk feil.
+- [`lib/league/actions.ts`](lib/league/actions.ts) — `createLeagueDraft` validerer nå `scoring`/`missed_round_policy`/`penalty_kind`-enumene (defense-in-depth), og en kommentar dokumenterer insert-før-start-ordringsinvarianten som lar flight-starteren lese medspilleres handicap under RLS.
+
+</details>
+
 ### [1.83.0] - 2026-06-06 · #453
 
 > Du kan nå sette opp en liga. Velg om hele sesongen spilles på samme bane og tee, eller om det varierer fra runde til runde. Bestem hvor ofte det spilles (hver uke, annenhver eller hver måned) og hvordan vinneren kåres: sum mot par, eller snitt. Spillerne har hele runde-vinduet på seg og må spille sammen med minst én annen. Tabellen fylles ut etter hvert som flightene leveres.
