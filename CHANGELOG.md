@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#453](https://github.com/jdlarssen/golf-app/issues/453) (epic [#452](https://github.com/jdlarssen/golf-app/issues/452)). Du kan nå arrangere en liga: flere runder over en hel sesong, med en levende tabell som holder styr på hvem som leder.
 
+### [1.83.7] - 2026-06-06 · #453
+
+> Dato-feltene når du oppretter en liga var fortsatt for brede og strakk seg utenfor kortet. Nå er de smale nok til å stå pent side om side, innenfor rammen.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Oppfølger til 1.83.4: native `input[type=date]` på iOS respekterte ikke `width:100%` og strakk seg utenfor kort-containeren (bredere enn de andre feltene). La til `appearance-none` + `min-w-0` (+ litt mindre `px`) kun på de to dato-feltene i [`CreateLigaForm`](app/admin/liga/new/CreateLigaForm.tsx), så native-kontrollen krymper til containeren. Tilbake til `grid-cols-2` (side om side) siden de nå får plass. Bane-`<select>` rørt ikke (ville mistet nedtrekks-pilen med `appearance-none`).
+
+</details>
+
 ### [1.83.6] - 2026-06-06 · bug
 
 > Når du setter opp Acey Deucey er den unødvendige «lagstørrelse»-velgeren borte. Acey Deucey er et solo-format, så valget hadde ingen mening — nå viser veiviseren bare det som faktisk gjelder.

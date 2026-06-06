@@ -119,7 +119,7 @@ export function CreateLigaForm({ courses, players, meId }: Props) {
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-3">
             <div className="min-w-0">
               <label
                 htmlFor="liga-season-start"
@@ -134,7 +134,7 @@ export function CreateLigaForm({ courses, players, meId }: Props) {
                 required
                 value={seasonStart}
                 onChange={(e) => setSeasonStart(e.target.value)}
-                className="w-full rounded-xl border border-border bg-bg px-4 py-3 font-sans text-[15px] text-text focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px]"
+                className="w-full min-w-0 appearance-none rounded-xl border border-border bg-bg px-3 py-3 font-sans text-[15px] text-text focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px]"
               />
             </div>
             <div className="min-w-0">
@@ -151,7 +151,7 @@ export function CreateLigaForm({ courses, players, meId }: Props) {
                 required
                 value={seasonEnd}
                 onChange={(e) => setSeasonEnd(e.target.value)}
-                className="w-full rounded-xl border border-border bg-bg px-4 py-3 font-sans text-[15px] text-text focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px]"
+                className="w-full min-w-0 appearance-none rounded-xl border border-border bg-bg px-3 py-3 font-sans text-[15px] text-text focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px]"
               />
             </div>
           </div>
