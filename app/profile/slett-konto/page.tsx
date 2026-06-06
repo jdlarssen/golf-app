@@ -4,8 +4,8 @@ import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Banner } from '@/components/ui/Banner';
-import { Button } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import { deleteOwnAccount } from './actions';
 
 type SearchParams = Promise<{ error?: string | string[] }>;
@@ -130,13 +130,13 @@ export default async function SlettKontoPage({
 
           <div className="flex flex-col gap-2.5">
             <form action={deleteOwnAccount}>
-              <Button
-                type="submit"
+              <SubmitButton
                 className="w-full"
                 style={{ background: 'var(--danger-deep)', borderColor: 'var(--danger-deep)' }}
+                pendingLabel="Sletter …"
               >
                 Slett kontoen min for alltid
-              </Button>
+              </SubmitButton>
             </form>
             <SmartLink
               href="/profile"
