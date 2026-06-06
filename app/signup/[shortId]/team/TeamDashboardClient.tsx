@@ -126,7 +126,8 @@ export function TeamDashboardClient(props: Props) {
         {success && <Banner tone="success">{success}</Banner>}
         <p className="font-sans text-sm text-text">{nextStep}</p>
         <Button
-          disabled={isPending}
+          pending={isPending}
+          pendingLabel="Kobler på …"
           onClick={() =>
             runAction(
               () => attachToCaptainTeam(props.invitationId, props.shortId),
@@ -137,7 +138,7 @@ export function TeamDashboardClient(props: Props) {
           }
           className="w-full"
         >
-          {isPending ? 'Kobler på…' : 'Bli med på lag'}
+          Bli med på lag
         </Button>
       </div>
     );
@@ -186,7 +187,8 @@ export function TeamDashboardClient(props: Props) {
                 <div className="flex flex-wrap gap-2">
                   <Button
                     variant="secondary"
-                    disabled={isPending}
+                    pending={isPending}
+                    pendingLabel="Sender …"
                     onClick={() =>
                       runAction(
                         () => resendTeamInvite(m.requestId, props.shortId),
@@ -198,7 +200,8 @@ export function TeamDashboardClient(props: Props) {
                   </Button>
                   <Button
                     variant="danger"
-                    disabled={isPending}
+                    pending={isPending}
+                    pendingLabel="Fjerner …"
                     onClick={() =>
                       runAction(
                         () => removeTeamMember(m.requestId, props.shortId),
@@ -228,7 +231,8 @@ export function TeamDashboardClient(props: Props) {
           </p>
           <div className="flex flex-wrap gap-2">
             <Button
-              disabled={isPending}
+              pending={isPending}
+              pendingLabel="Behandler …"
               onClick={() =>
                 runAction(
                   () => acceptTeamInvite(props.myRowId, props.shortId),
@@ -238,11 +242,12 @@ export function TeamDashboardClient(props: Props) {
                 )
               }
             >
-              {isPending ? 'Behandler…' : 'Aksepter'}
+              Aksepter
             </Button>
             <Button
               variant="secondary"
-              disabled={isPending}
+              pending={isPending}
+              pendingLabel="Avslår …"
               onClick={() =>
                 runAction(
                   () => declineTeamInvite(props.myRowId, props.shortId),
