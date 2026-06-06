@@ -627,9 +627,10 @@ function Step5Confirm({
         type="button"
         className="w-full"
         onClick={handleConfirm}
-        disabled={isPending}
+        pending={isPending}
+        pendingLabel="Genererer …"
       >
-        {isPending ? 'Oppretter…' : `Opprett ${matches.length} matcher`}
+        {`Opprett ${matches.length} matcher`}
       </Button>
     </div>
   );
