@@ -4,7 +4,7 @@ import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Banner } from '@/components/ui/Banner';
-import { Button } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
 import type { GameStatus } from '@/lib/games/status';
 import { formatShortDateNbWithYear } from '@/lib/format/date';
@@ -160,16 +160,16 @@ export default async function CreatorDeleteGamePage({
       <div className="mt-6 flex flex-col gap-2.5">
         <form action={deleteGame}>
           <input type="hidden" name="gameId" value={game.id} />
-          <Button
-            type="submit"
+          <SubmitButton
             className="w-full"
+            pendingLabel="Sletter …"
             style={{
               background: 'var(--danger-deep)',
               borderColor: 'var(--danger-deep)',
             }}
           >
             Slett spillet for alltid
-          </Button>
+          </SubmitButton>
         </form>
         <SmartLink
           href={`/games/${id}`}
