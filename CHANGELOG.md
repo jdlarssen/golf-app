@@ -21,6 +21,17 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#480](https://github.com/jdlarssen/golf-app/issues/480) (epos). En klubb kan nå kjøre sin egen liga: eieren eller en klubb-admin setter den opp rett fra klubb-siden, og medlemmene ser den og blir med.
 
+### [1.86.1] - 2026-06-07 · #480
+
+> Etter at du har satt opp en klubb-liga, lander du nå tilbake på klubb-siden der den nye ligaen står i lista — i stedet for å bli sendt til en side bare hovedadmin har tilgang til.
+
+<details>
+<summary>Teknisk</summary>
+
+[#480](https://github.com/jdlarssen/golf-app/issues/480): `createLeagueDraft` redirecter klubb-scopede ligaer til `/klubber/[groupId]` (klubb-admin når ikke det global-admin-gatede `/admin/liga/[id]`). Frittstående ligaer går fortsatt til `/admin/liga/[id]`.
+
+</details>
+
 ### [1.86.0] - 2026-06-07 · #480
 
 > Er du eier eller admin i en klubb på Tørny, kan du nå sette opp en liga for klubben rett fra klubb-siden. Deltaker-lista viser klubbens medlemmer, og alle i klubben ser ligaen og blir med på sesongen.

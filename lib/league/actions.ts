@@ -175,7 +175,10 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
     if (pErr) return { error: 'players_failed' };
   }
 
-  redirect(`/admin/liga/${leagueId}`);
+  // Klubb-liga: en klubb-admin når ikke /admin/liga (global-admin-gatet), så
+  // send dem tilbake til klubb-siden der den nye ligaen nå står i «Klubbens
+  // ligaer». Frittstående: global admin → liga-styringssiden som før.
+  redirect(groupId ? `/klubber/${groupId}` : `/admin/liga/${leagueId}`);
 }
 
 // ── admin round + roster management ──────────────────────────────────────────
