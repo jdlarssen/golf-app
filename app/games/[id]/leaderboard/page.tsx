@@ -108,6 +108,7 @@ import { markNotificationsRead } from '@/lib/notifications/markRead';
 // `lib/leaderboard.ts`.
 import { computeLeaderboard as computeModeResult, isStablefordFamily, isScrambleFamily, isAlternateShotMatchplay } from '@/lib/scoring';
 import { MODE_LABELS } from '@/lib/scoring/modes/types';
+import { buildSkinsContext } from '@/lib/scoring/context/buildSkinsContext';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -2451,43 +2452,15 @@ function renderSkins(opts: {
 }) {
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
-  const ctx = {
-    game: {
-      id: gameId,
-      game_mode: 'skins' as const,
-      mode_config: game.mode_config,
-    },
-    players: gwp.players
-      .filter((p) => p.users != null)
-      .map((p) => ({
-        userId: p.user_id,
-        // Skins-validatoren setter team_number = null (solo), men DB-kolonnen
-        // er ikke nullable så den lander som 0. Sender null oppover for å
-        // matche scoring-lagets solo-narrowing — samme pattern som Nassau.
-        teamNumber: null,
-        flightNumber: null,
-        courseHandicap: p.course_handicap ?? 0,
-        // Skins bruker netto (eller gross, per mode_config.skins_scoring)
-        // basert på spillerens egen handicap. Sender teeGender gjennom for
-        // shape-konsistens; scoring-laget bruker den ikke for Skins i v1.
-        teeGender: p.tee_gender,
-      })),
-    holes: rawHolesRows.map((h) => ({
-      number: h.hole_number,
-      par: h.par_mens,
-      parByGender: {
-        mens: h.par_mens,
-        ladies: h.par_ladies,
-        juniors: h.par_juniors,
-      },
-      strokeIndex: h.stroke_index,
-    })),
-    scores: rawScoresRows.map((s) => ({
-      userId: s.user_id,
-      holeNumber: s.hole_number,
-      gross: s.strokes,
-    })),
-  };
+  // Delt context-bygging (epic #496) — samme kilde som «Hull for hull»-flaten
+  // (SkinsHolesBody), så map-logikken ikke dupliseres.
+  const ctx = buildSkinsContext({
+    gameId,
+    modeConfig: game.mode_config,
+    players: gwp.players,
+    holesRows: rawHolesRows,
+    scoresRows: rawScoresRows,
+  });
 
   const result = computeModeResult(ctx);
   if (result.kind !== 'skins') {
