@@ -410,11 +410,19 @@ export async function deleteLeague(formData: FormData): Promise<LeagueActionErro
   const leagueId = str(formData, 'league_id');
   if (!leagueId) return { error: 'missing' };
   await requireAdminOrClubAdminOfLeague(supabase, leagueId);
+  // Capture the club before deleting so a club-admin lands back on the club
+  // page (they can't reach /admin/liga), not on a global-admin-only route.
+  const { data: league } = await supabase
+    .from('leagues')
+    .select('group_id')
+    .eq('id', leagueId)
+    .maybeSingle();
+  const groupId = (league?.group_id as string | null | undefined) ?? null;
   // Flight games keep their history (league_round_id → SET NULL via cascade of
   // league_rounds delete). Cascade removes rounds + players.
   const { error } = await supabase.from('leagues').delete().eq('id', leagueId);
   if (error) return { error: 'delete_failed' };
-  redirect('/admin/liga?status=deleted');
+  redirect(groupId ? `/klubber/${groupId}` : '/admin/liga?status=deleted');
 }
 
 // ── participant: start a flight for a round ──────────────────────────────────

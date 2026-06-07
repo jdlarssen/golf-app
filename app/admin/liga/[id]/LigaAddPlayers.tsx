@@ -10,6 +10,8 @@ type Props = {
   leagueId: string;
   players: PlayerOption[];
   participantIds: Set<string>;
+  /** #483: klubb-liga → kilden er klubbmedlemmer (ellers vennene dine). */
+  isClubLeague?: boolean;
 };
 
 const INITIAL: LeagueActionError = { error: '' };
@@ -18,7 +20,7 @@ function preferredName(p: PlayerOption): string {
   return p.nickname?.trim() || p.name?.trim() || 'Ukjent spiller';
 }
 
-export function LigaAddPlayers({ leagueId, players, participantIds }: Props) {
+export function LigaAddPlayers({ leagueId, players, participantIds, isClubLeague }: Props) {
   const [state, formAction] = useActionState(
     async (_prev: LeagueActionError, formData: FormData) =>
       addLeaguePlayers(formData) as Promise<LeagueActionError>,
@@ -38,8 +40,17 @@ export function LigaAddPlayers({ leagueId, players, participantIds }: Props) {
   }
 
   if (eligible.length === 0) {
-    // #464: kilden er nå vennene dine. Skill «ingen venner ennå» (vis lenke til
-    // vennegrafen) fra «alle venner er allerede med».
+    // #483: klubb-liga sourcer fra klubbmedlemmer; ellers (#464) fra vennene dine.
+    if (isClubLeague) {
+      return (
+        <p className="font-sans text-[12px] text-muted">
+          {players.length === 0
+            ? 'Ingen andre medlemmer i klubben ennå.'
+            : 'Alle klubbmedlemmene er allerede deltakere.'}
+        </p>
+      );
+    }
+    // Skill «ingen venner ennå» (vis lenke til vennegrafen) fra «alle er med».
     return players.length === 0 ? (
       <p className="font-sans text-[12px] text-muted">
         Du har ingen venner på Tørny ennå.{' '}

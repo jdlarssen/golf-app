@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
-import { requireAdmin } from '@/lib/admin/auth';
+import { getAdminClient } from '@/lib/supabase/admin';
+import { requireAdminOrClubAdminOfLeague } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
@@ -11,6 +12,8 @@ import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { getLigaSnapshot } from '@/lib/league/getLigaSnapshot';
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
 import { getFriendPlayerOptions } from '@/lib/friends/getFriendPlayerOptions';
+import { getClubMemberOptionsForClub } from '@/lib/clubs/getClubMemberOptionsForClub';
+import type { PlayerOption } from '@/app/admin/games/new/GameForm';
 import { formatShortDateNb } from '@/lib/format/date';
 import { LigaRoundRow } from './LigaRoundRow';
 import { LigaAddRound } from './LigaAddRound';
@@ -58,20 +61,32 @@ export default async function LigaDetailPage({ params }: { params: Params }) {
   const { id } = await params;
 
   const supabase = await getServerClient();
-  const { userId } = await requireAdmin(supabase);
+  const { userId } = await requireAdminOrClubAdminOfLeague(supabase, id);
 
-  // #464: «legg til deltakere» henter fra vennene dine, ikke hele brukerbasen —
-  // speiler liga-opprett. `courses` kommer fortsatt fra den delte form-data-
-  // helperen (rundene trenger dem).
-  const [snapshot, { courses }, friends] = await Promise.all([
+  const [snapshot, { courses }] = await Promise.all([
     getLigaSnapshot(id),
     getNewGameFormData(),
-    getFriendPlayerOptions(userId),
   ]);
 
   if (!snapshot) notFound();
 
   const { league, rounds, participants } = snapshot;
+
+  // #483: deltaker-picker følger ligaens kontekst — klubbmedlemmer for en klubb-
+  // liga (speiler #464/#480), ellers vennene dine. Klubb-navn til chrome.
+  const groupId = league.group_id;
+  let invitable: PlayerOption[];
+  let clubName: string | null = null;
+  if (groupId) {
+    const [members, clubRow] = await Promise.all([
+      getClubMemberOptionsForClub(groupId),
+      getAdminClient().from('groups').select('name').eq('id', groupId).maybeSingle(),
+    ]);
+    invitable = members;
+    clubName = (clubRow.data?.name as string | null | undefined) ?? null;
+  } else {
+    invitable = await getFriendPlayerOptions(userId);
+  }
 
   const status = league.status as 'draft' | 'active' | 'finished';
   const chipTone = STATUS_TO_CHIP[status];
@@ -90,8 +105,11 @@ export default async function LigaDetailPage({ params }: { params: Params }) {
 
   return (
     <AdminShell>
-      <TopBar backHref="/admin/liga" kicker="Klubbhuset" />
-      <BrassRibbon kicker={`Liga · ${statusLabel}`} />
+      <TopBar
+        backHref={groupId ? `/klubber/${groupId}` : '/admin/liga'}
+        kicker={clubName ?? 'Klubbhuset'}
+      />
+      <BrassRibbon kicker={`${groupId ? 'Klubb-liga' : 'Liga'} · ${statusLabel}`} />
       <PageHeader
         title={league.name}
         subtitle={`${formatShortDateNb(league.season_start)} – ${formatShortDateNb(league.season_end)}`}
@@ -208,8 +226,9 @@ export default async function LigaDetailPage({ params }: { params: Params }) {
               </p>
               <LigaAddPlayers
                 leagueId={id}
-                players={friends}
+                players={invitable}
                 participantIds={participantIds}
+                isClubLeague={Boolean(groupId)}
               />
             </>
           )}

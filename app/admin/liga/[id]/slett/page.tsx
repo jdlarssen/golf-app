@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
-import { requireAdmin } from '@/lib/admin/auth';
+import { requireAdminOrClubAdminOfLeague } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
@@ -43,7 +43,7 @@ export default async function DeleteLigaPage({
   const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
 
   const supabase = await getServerClient();
-  await requireAdmin(supabase);
+  await requireAdminOrClubAdminOfLeague(supabase, id);
 
   const { data: league } = await supabase
     .from('leagues')
