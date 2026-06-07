@@ -106,6 +106,10 @@ export function HeadToHeadResult({
   const nameA = formatRevealName(sideA.name, sideA.nickname);
   const nameB = formatRevealName(sideB.name, sideB.nickname);
 
+  // NB: dommen viser «høy–lav» og antar at høyest score vinner. Det stemmer
+  // for Skins (rank følger totalSkins). Når skallet gjenbrukes for et format
+  // der LAVEST vinner (f.eks. solo strokeplay-netto), må score-formatteringen
+  // gjøres metrikk-bevisst — winnerUserId styrer allerede crown/bar riktig.
   const high = Math.max(sideA.score, sideB.score);
   const low = Math.min(sideA.score, sideB.score);
   const winnerName = winner === 'a' ? nameA : nameB;
