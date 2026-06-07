@@ -5,7 +5,7 @@
   <text x="121" y="88" font-size="15" fill="#6B7770">Arrangøren setter opp en liga. Spillerne spiller hver runde i sitt eget vindu, og sesong-tabellen oppdaterer seg.</text>
   <g font-size="13">
     <rect x="118" y="104" width="124" height="20" rx="10" fill="#C9A961"/><text x="180" y="118" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">NY · hele flyten #453</text>
-    <text x="250" y="119" fill="#6B7770">Fase 1: frittstående slagspill-liga, netto. Brutto/klubb/flere modi kommer senere.</text>
+    <text x="250" y="119" fill="#6B7770">Fase 1: frittstående slagspill-liga, netto. Klubb-liga nå med (#480). Flere modi senere.</text>
   </g>
 
   <!-- 1 opprett liga -->
@@ -61,6 +61,16 @@
   <text x="782" y="358" font-size="13" fill="#46604F">  fra runde til runde</text>
   <text x="782" y="392" font-size="12" fill="#6B7770">Speiler cup-mønsteret: en</text>
   <text x="782" y="409" font-size="12" fill="#6B7770">paraply over flere spill.</text>
+
+  <!-- club-liga branch (#480) -->
+  <rect x="760" y="440" width="320" height="190" rx="16" fill="#F4EBD7" stroke="#C9A961" stroke-width="1.4"/>
+  <rect x="782" y="458" width="138" height="20" rx="10" fill="#C9A961"/><text x="851" y="472" text-anchor="middle" font-size="11" font-weight="700" fill="#FFFFFF">NY · klubb-liga #480</text>
+  <text x="782" y="502" font-size="13" fill="#46604F">• Klubb-eier/-admin oppretter en</text>
+  <text x="782" y="521" font-size="13" fill="#46604F">  liga fra klubb-siden</text>
+  <text x="782" y="547" font-size="13" fill="#46604F">• Pickeren viser klubbens</text>
+  <text x="782" y="566" font-size="13" fill="#46604F">  medlemmer (ikke venner)</text>
+  <text x="782" y="592" font-size="13" fill="#46604F">• Medlemmene ser klubbens</text>
+  <text x="782" y="611" font-size="13" fill="#46604F">  ligaer og spiller som vanlig</text>
 
   <!-- player parallel -->
   <text x="120" y="730" font-size="13.5" font-weight="700" fill="#1B4332">Hva spilleren opplever</text>

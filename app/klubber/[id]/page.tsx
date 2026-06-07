@@ -11,6 +11,7 @@ import { SubmitButton } from '@/components/ui/SubmitButton';
 import { Input } from '@/components/ui/Input';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { CopyJoinLinkButton } from './CopyJoinLinkButton';
+import { ClubLeaguesSection } from './ClubLeaguesSection';
 import { isClubExpired } from '@/lib/clubs/clubStatus';
 import { addMember, decideRequest } from './actions';
 
@@ -67,6 +68,14 @@ export default async function KlubbDetailPage({
 
   const { club, members, myRole, pendingRequests } = detail;
   const isAdmin = myRole === 'owner' || myRole === 'admin';
+
+  // #480: klubbens ligaer. RLS («leagues select scoped») lar medlemmer se
+  // klubb-scopede rader; oppretting/styring er klubb-admin (knapp nedenfor).
+  const { data: clubLeagues } = await supabase
+    .from('leagues')
+    .select('id, name, status, season_start, season_end')
+    .eq('group_id', id)
+    .order('created_at', { ascending: false });
 
   // #50: en utløpt klubb (frossen avtale) tar ikke imot nye medlemmer eller
   // spill. Vi fryser legg-til-medlem, del-lenke og «sett opp runde», og viser
@@ -258,6 +267,13 @@ export default async function KlubbDetailPage({
           ))}
         </div>
       </section>
+
+      {/* Klubbens ligaer (#480) — alle medlemmer ser lista; owner/admin oppretter. */}
+      <ClubLeaguesSection
+        leagues={clubLeagues ?? []}
+        clubId={club.id}
+        canCreate={isAdmin && !frozen}
+      />
 
       {/* Create a game scoped to this club (any member) — frozen when expired. */}
       {!frozen && (

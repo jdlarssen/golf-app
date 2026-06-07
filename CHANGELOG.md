@@ -17,7 +17,39 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.85.y — Venner i spiller-pickeren
+## 1.86.y — Klubb-liga
+
+Issue [#480](https://github.com/jdlarssen/golf-app/issues/480) (epos). En klubb kan nå kjøre sin egen liga: eieren eller en klubb-admin setter den opp rett fra klubb-siden, og medlemmene ser den og blir med.
+
+### [1.86.0] - 2026-06-07 · #480
+
+> Er du eier eller admin i en klubb på Tørny, kan du nå sette opp en liga for klubben rett fra klubb-siden. Deltaker-lista viser klubbens medlemmer, og alle i klubben ser ligaen og blir med på sesongen.
+
+<details>
+<summary>Teknisk</summary>
+
+[#480](https://github.com/jdlarssen/golf-app/issues/480) Fase 1 av eposet «klubben kjører egne konkurranser». Gir `leagues` en valgfri klubb-tilknytning og åpner skrive-tilgang for klubb-eiere og -admins på klubb-scopede rader.
+
+#### Added
+- Migrasjon `0083`: `leagues.group_id` (nullable FK → `groups`), medlems-scopet SELECT-policy (frittstående synlig for alle, klubb-scopet kun medlemmer + global admin), og admin/klubb-admin WRITE-policy på `leagues`/`league_rounds`/`league_players` via ny SECURITY DEFINER `league_group_id()`.
+- `requireAdminOrClubAdmin` (slipper klubb-eier/-admin eller global admin inn) + `getClubMemberOptionsForClub` (klubbens medlemmer som picker-kilde).
+- `/klubber/[id]/liga/ny` — klubb-eier/-admin oppretter en klubb-liga; deltaker-pickeren viser klubbens medlemmer i stedet for venner.
+- «Klubbens ligaer»-seksjon på klubb-siden: alle medlemmer ser klubbens ligaer; «Ny liga»-knapp kun for eier/admin.
+
+#### Changed
+- `createLeagueDraft` autoriserer etter `group_id`: satt → klubb-admin og deltakere filtrert til klubbmedlemmer; tom → global admin som før.
+- `/liga/[id]` vises kun for medlemmer, deltakere og global admin når ligaen er klubb-scopet (snapshot bruker admin-client, så gaten ligger i app-laget).
+- Frittstående liga er uendret: synlig for alle, opprettes kun av global admin. Å åpne frittstående liga-oppretting for alle er et eget issue.
+
+</details>
+
+## Tidligere versjoner
+
+<details>
+<summary><strong>Venner i spiller-pickeren (#464) — 1 serie</strong></summary>
+
+<details>
+<summary><strong>1.85.y — Venner i spiller-pickeren (1 oppføring)</strong></summary>
 
 Issue [#464](https://github.com/jdlarssen/golf-app/issues/464). Når du legger til folk i et spill eller en liga, viser plukk-lista nå vennene dine — eller klubbens medlemmer når du arrangerer for en klubb — i stedet for hele brukerbasen.
 
@@ -44,7 +76,9 @@ Issue [#464](https://github.com/jdlarssen/golf-app/issues/464). Når du legger t
 
 </details>
 
-## Tidligere versjoner
+</details>
+
+</details>
 
 <details>
 <summary><strong>Bekreftet deltakelse (#463) — 1 serie</strong></summary>
