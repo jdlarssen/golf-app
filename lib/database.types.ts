@@ -1652,7 +1652,9 @@ export type Database = {
       is_group_admin: { Args: { p_group_id: string }; Returns: boolean }
       is_group_member: { Args: { p_group_id: string }; Returns: boolean }
       is_in_game: { Args: { p_game_id: string }; Returns: boolean }
+      join_club_league: { Args: { p_league_id: string }; Returns: string }
       league_group_id: { Args: { p_league_id: string }; Returns: string }
+      leave_club_league: { Args: { p_league_id: string }; Returns: string }
       remove_friend: { Args: { p_other: string }; Returns: string }
       respond_friend_request: {
         Args: { p_accept: boolean; p_request_id: string }
@@ -1853,4 +1855,3 @@ export const Constants = {
     },
   },
 } as const
-
