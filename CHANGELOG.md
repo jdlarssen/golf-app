@@ -17,7 +17,39 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.93.y — Liga · meld deg på selv
+## 1.94.y — Liga · stableford
+
+Issue [#452](https://github.com/jdlarssen/golf-app/issues/452). Liga-epicen Fase 4 (siste fase): en liga kan nå gå på stableford eller modifisert stableford, ikke bare slagspill.
+
+### [1.94.0] - 2026-06-08 · #452
+
+> Du kan nå velge spillform når du lager en liga: slagspill, stableford eller modifisert stableford. Velger du stableford, teller sesongen poeng i stedet for slag, og høyest sammenlagt vinner. En runde du ikke spiller gir null poeng.
+
+<details>
+<summary>Teknisk</summary>
+
+[#452](https://github.com/jdlarssen/golf-app/issues/452) Fase 4 (epic, siste fase). `leagues.format` var de facto låst til `'stroke'`; denne fasen åpner den for `'stableford'` og `'modified_stableford'` (begge solo) og gjør sesong-aggregatoren retnings-bevisst på selve per-runde-verdien.
+
+#### Added
+- Spillform-velger i liga-veiviseren (Slagspill / Stableford / Modifisert Stableford). Stableford låser tabellen til netto og skjuler straffescore-type (uteblitt runde = 0 poeng).
+- `leagueFlightGameConfig` + `isPointsBasedFormat` (Type-A): mapper liga-formatet til flightens `game_mode`/`mode_config` og til sesong-retningen.
+- `computeFlightRoundValues` (Type-A): scorer hver flight etter formatet (slagspill → mot-par, stableford → poeng) og dropper ufullstendige kort.
+- CHECK-constraint på `leagues.format` (migrasjon 0087).
+
+#### Changed
+- `computeLeagueStandings` skiller nå per-runde-verdiens retning (stableford-poeng = høyest best) fra sesong-verdiens retning. Alle fire sesong-modellene (Total / Snitt / Beste-N / Poeng) regner på rå stableford-poeng; en uteblitt runde teller som 0. Slagspill-oppførselen er bit-for-bit uendret.
+- `getLigaSnapshot` ruter hver flight gjennom `computeFlightRoundValues` etter `league.format`; `startLeagueRoundFlight` lager flighten med formatets `game_mode`. Sesong-tabellen viser rå poeng (ikke mot-par) for stableford.
+- Per-runde-feltene `netToPar`/`grossToPar` heter nå `net`/`gross`, og celle-feltet `toPar` heter `value` (holder mot-par for slagspill, poeng for stableford).
+
+</details>
+
+## Tidligere versjoner
+
+<details>
+<summary><strong>Liga — sesong-konkurranse (3 serier)</strong></summary>
+
+<details>
+<summary><strong>1.93.y — Liga · meld deg på selv (1 oppføring)</strong></summary>
 
 Issue [#452](https://github.com/jdlarssen/golf-app/issues/452). Liga-epicen Fase 3: klubbmedlemmer kan melde seg på klubbens liga selv, og av igjen før de har spilt.
 
@@ -40,10 +72,7 @@ Issue [#452](https://github.com/jdlarssen/golf-app/issues/452). Liga-epicen Fase
 
 </details>
 
-## Tidligere versjoner
-
-<details>
-<summary><strong>Liga — sesong-konkurranse (2 serier)</strong></summary>
+</details>
 
 <details>
 <summary><strong>1.92.y — Liga · poeng per plassering (1 oppføring)</strong></summary>

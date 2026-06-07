@@ -30,6 +30,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   name: 'Liganavnet må være mellom 1 og 80 tegn.',
   dates: 'Sesong-datoene er ugyldige. Sjekk at sluttdato er etter startdato.',
   standings_model: 'Velg en sesong-modell.',
+  format: 'Velg en spillform.',
   course_scope: 'Velg et bane-omfang.',
   course: 'Bane og tee må velges for dette bane-omfanget.',
   penalty: 'Straffe-slag over par må være et tall.',
@@ -43,6 +44,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 };
 
 type CourseScope = 'single_course_single_tee' | 'single_course' | 'multi_course';
+type Format = 'stroke' | 'stableford' | 'modified_stableford';
 type Scoring = 'net' | 'gross' | 'both';
 type StandingsModel = 'total' | 'average' | 'best_n' | 'points';
 type MissedRoundPolicy = 'penalty' | 'must_play_all';
@@ -66,6 +68,7 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
 
   const [courseScope, setCourseScope] = useState<CourseScope>('single_course_single_tee');
   const [selectedCourseId, setSelectedCourseId] = useState('');
+  const [format, setFormat] = useState<Format>('stroke');
   const [scoring, setScoring] = useState<Scoring>('net');
   const [standingsModel, setStandingsModel] = useState<StandingsModel>('total');
   const [missedPolicy, setMissedPolicy] = useState<MissedRoundPolicy>('penalty');
@@ -80,6 +83,10 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
   const selectedCourse = courses.find((c) => c.id === selectedCourseId);
   const availableTees = selectedCourse?.tee_boxes ?? [];
   const friendCount = players.filter((p) => p.id !== meId).length;
+
+  // Stableford-formater rangeres på poeng (høyest best), netto-only — det styrer
+  // tabell-låsen, sesong-modell-teksten og om straffescore-type vises.
+  const pointsBased = format !== 'stroke';
 
   // Live preview of the rounds the chosen dates + frequency will generate.
   const roundPreview = useMemo(() => {
@@ -102,7 +109,9 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
   return (
     <form action={formAction} data-testid="liga-create-form" className="space-y-6">
       {/* Hidden fixed fields */}
-      <input type="hidden" name="scoring" value={scoring} />
+      <input type="hidden" name="format" value={format} />
+      {/* Poeng-ligaer er netto-only — lås tabell-verdien uansett radio-state. */}
+      <input type="hidden" name="scoring" value={pointsBased ? 'net' : scoring} />
       <input type="hidden" name="group_id" value={groupId ?? ''} />
 
       {/* Klubb-kontekst (#480): ligaen settes opp for en bestemt klubb. */}
@@ -176,7 +185,62 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
         </div>
       </Card>
 
-      {/* 2. Bane-omfang */}
+      {/* 2. Spillform */}
+      <Card>
+        <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-4">
+          Spillform
+        </h2>
+        <fieldset className="space-y-2">
+          <legend className="sr-only">Spillform</legend>
+          {(
+            [
+              {
+                value: 'stroke' as Format,
+                label: 'Slagspill',
+                desc: 'Netto mot par. Lavest sammenlagt vinner.',
+              },
+              {
+                value: 'stableford' as Format,
+                label: 'Stableford',
+                desc: 'Poeng per hull etter netto. Høyest sammenlagt vinner.',
+              },
+              {
+                value: 'modified_stableford' as Format,
+                label: 'Modifisert Stableford',
+                desc: 'Pro-poeng: birdie og bedre teller mer, svake hull trekker ned. Høyest vinner.',
+              },
+            ] as const
+          ).map((opt) => (
+            <label
+              key={opt.value}
+              className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition-colors ${
+                format === opt.value
+                  ? 'border-primary/50 bg-primary-soft'
+                  : 'border-border bg-surface hover:border-primary/30'
+              }`}
+            >
+              <input
+                type="radio"
+                name="_format_radio"
+                value={opt.value}
+                checked={format === opt.value}
+                onChange={() => setFormat(opt.value)}
+                className="mt-0.5 accent-primary"
+              />
+              <span>
+                <span className="block font-sans text-[14px] font-medium text-text">
+                  {opt.label}
+                </span>
+                <span className="block font-sans text-[12px] text-muted mt-0.5">
+                  {opt.desc}
+                </span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+      </Card>
+
+      {/* 3. Bane-omfang */}
       <Card>
         <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-4">
           Bane-omfang
@@ -313,44 +377,50 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
         />
         <input type="hidden" name="penalty_kind" value={penaltyKind} />
 
-        {/* Scoring — netto / brutto / begge */}
+        {/* Scoring — netto / brutto / begge. Stableford er netto-only. */}
         <div className="space-y-2 mb-4">
           <p className="font-sans text-[12px] font-medium text-text mb-1.5">
             Tabell
           </p>
-          {(
-            [
-              { value: 'net' as Scoring, label: 'Netto', desc: 'Netto mot par (handicap-justert).' },
-              { value: 'gross' as Scoring, label: 'Brutto', desc: 'Brutto mot par (uten handicap).' },
-              { value: 'both' as Scoring, label: 'Begge', desc: 'Begge tabeller, med en Netto/Brutto-bryter.' },
-            ] as const
-          ).map((opt) => (
-            <label
-              key={opt.value}
-              className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition-colors ${
-                scoring === opt.value
-                  ? 'border-primary/50 bg-primary-soft'
-                  : 'border-border bg-surface hover:border-primary/30'
-              }`}
-            >
-              <input
-                type="radio"
-                name="_scoring_radio"
-                value={opt.value}
-                checked={scoring === opt.value}
-                onChange={() => setScoring(opt.value)}
-                className="mt-0.5 accent-primary"
-              />
-              <span>
-                <span className="block font-sans text-[14px] font-medium text-text">
-                  {opt.label}
+          {pointsBased ? (
+            <p className="rounded-xl border border-border bg-surface px-4 py-3 font-sans text-[12px] text-muted">
+              Stableford rangeres på netto. Høyest sammenlagt vinner.
+            </p>
+          ) : (
+            (
+              [
+                { value: 'net' as Scoring, label: 'Netto', desc: 'Netto mot par (handicap-justert).' },
+                { value: 'gross' as Scoring, label: 'Brutto', desc: 'Brutto mot par (uten handicap).' },
+                { value: 'both' as Scoring, label: 'Begge', desc: 'Begge tabeller, med en Netto/Brutto-bryter.' },
+              ] as const
+            ).map((opt) => (
+              <label
+                key={opt.value}
+                className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition-colors ${
+                  scoring === opt.value
+                    ? 'border-primary/50 bg-primary-soft'
+                    : 'border-border bg-surface hover:border-primary/30'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="_scoring_radio"
+                  value={opt.value}
+                  checked={scoring === opt.value}
+                  onChange={() => setScoring(opt.value)}
+                  className="mt-0.5 accent-primary"
+                />
+                <span>
+                  <span className="block font-sans text-[14px] font-medium text-text">
+                    {opt.label}
+                  </span>
+                  <span className="block font-sans text-[12px] text-muted mt-0.5">
+                    {opt.desc}
+                  </span>
                 </span>
-                <span className="block font-sans text-[12px] text-muted mt-0.5">
-                  {opt.desc}
-                </span>
-              </span>
-            </label>
-          ))}
+              </label>
+            ))
+          )}
         </div>
 
         {/* Sesong-modell */}
@@ -363,17 +433,23 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
               {
                 value: 'total' as StandingsModel,
                 label: 'Total',
-                desc: 'Sum mot par over alle runder.',
+                desc: pointsBased
+                  ? 'Sum av stableford-poeng over alle runder.'
+                  : 'Sum mot par over alle runder.',
               },
               {
                 value: 'average' as StandingsModel,
                 label: 'Snitt per runde',
-                desc: 'Gjennomsnittlig mot par. Ingen straff for uteblitte runder.',
+                desc: pointsBased
+                  ? 'Gjennomsnittlig poeng per runde. Ingen straff for uteblitte runder.'
+                  : 'Gjennomsnittlig mot par. Ingen straff for uteblitte runder.',
               },
               {
                 value: 'best_n' as StandingsModel,
                 label: 'Beste N runder',
-                desc: 'Summen av spillerens N beste runder. Uteblitte runder straffefylles opp til N.',
+                desc: pointsBased
+                  ? 'Summen av spillerens N beste runder (poeng). Uteblitte runder teller som 0.'
+                  : 'Summen av spillerens N beste runder. Uteblitte runder straffefylles opp til N.',
               },
               {
                 value: 'points' as StandingsModel,
@@ -442,8 +518,10 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
               [
                 {
                   value: 'penalty' as MissedRoundPolicy,
-                  label: 'Straffescore',
-                  desc: 'Spillere som ikke leverer en runde får en straffe-score.',
+                  label: pointsBased ? 'Teller som 0 poeng' : 'Straffescore',
+                  desc: pointsBased
+                    ? 'En uteblitt runde gir 0 poeng. Det er straff nok i seg selv.'
+                    : 'Spillere som ikke leverer en runde får en straffe-score.',
                 },
                 {
                   value: 'must_play_all' as MissedRoundPolicy,
@@ -481,9 +559,11 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
           </div>
         )}
 
-        {/* Straffescore-variant — for total+penalty og best_n (som straffefyller) */}
-        {((standingsModel === 'total' && missedPolicy === 'penalty') ||
-          standingsModel === 'best_n') && (
+        {/* Straffescore-variant — kun slagspill (poeng-ligaer: uteblitt = 0 poeng).
+            Vises for total+penalty og best_n (som straffefyller). */}
+        {!pointsBased &&
+          ((standingsModel === 'total' && missedPolicy === 'penalty') ||
+            standingsModel === 'best_n') && (
           <div className="space-y-2">
             <p className="font-sans text-[12px] font-medium text-text mb-1.5">
               Straffescore-type
