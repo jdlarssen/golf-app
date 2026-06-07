@@ -426,6 +426,7 @@ export type Database = {
       }
       game_players: {
         Row: {
+          accepted_at: string | null
           approved_at: string | null
           approved_by_user_id: string | null
           course_handicap: number | null
@@ -441,6 +442,7 @@ export type Database = {
           withdrawn_by_user_id: string | null
         }
         Insert: {
+          accepted_at?: string | null
           approved_at?: string | null
           approved_by_user_id?: string | null
           course_handicap?: number | null
@@ -456,6 +458,7 @@ export type Database = {
           withdrawn_by_user_id?: string | null
         }
         Update: {
+          accepted_at?: string | null
           approved_at?: string | null
           approved_by_user_id?: string | null
           course_handicap?: number | null
@@ -1213,16 +1216,19 @@ export type Database = {
       }
       league_players: {
         Row: {
+          accepted_at: string | null
           joined_at: string
           league_id: string
           user_id: string
         }
         Insert: {
+          accepted_at?: string | null
           joined_at?: string
           league_id: string
           user_id: string
         }
         Update: {
+          accepted_at?: string | null
           joined_at?: string
           league_id?: string
           user_id?: string
