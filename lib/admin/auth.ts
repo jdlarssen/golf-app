@@ -108,3 +108,31 @@ export async function requireAdminOrCreator(
   if (game?.created_by === ctx.userId) return ctx;
   redirect('/');
 }
+
+/**
+ * Gate for routes/actions a CLUB's owner/admin — or a global admin — may use,
+ * e.g. creating a club-scoped league (#480, `/klubber/[id]/liga/ny`). Global
+ * admins pass straight through. Otherwise the caller must hold the `owner` or
+ * `admin` role in the club's `group_members`; the request-scoped client reads
+ * their own membership row via the "group_members select member or admin" RLS
+ * policy (0074). Anyone else → the club page (`/klubber/[clubId]`), which is
+ * itself member-gated.
+ *
+ * Returns the full `AdminRoleContext` so callers can read `userId` without a
+ * second round-trip.
+ */
+export async function requireAdminOrClubAdmin(
+  supabase: ServerSupabase,
+  clubId: string,
+): Promise<AdminRoleContext> {
+  const ctx = await loadRole(supabase);
+  if (ctx.isAdmin) return ctx;
+  const { data: membership } = await supabase
+    .from('group_members')
+    .select('role')
+    .eq('group_id', clubId)
+    .eq('user_id', ctx.userId)
+    .maybeSingle();
+  if (membership?.role === 'owner' || membership?.role === 'admin') return ctx;
+  redirect(`/klubber/${clubId}`);
+}
