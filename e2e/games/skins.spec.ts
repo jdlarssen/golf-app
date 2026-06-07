@@ -18,4 +18,16 @@ test.describe('Skins-runde ruter (logged-out)', () => {
     );
     await expect(page).toHaveURL(/\/login/);
   });
+
+  // «Hull for hull» (#496): den format-bevisste per-hull-flaten for Skins.
+  // Selve Skins-visningen + head-to-head-kortet dekkes av Type C render-tester
+  // (SkinsHolesView / HeadToHeadResult); her sikrer vi bare auth-gaten på ruta.
+  test('hull-for-hull på skins-spill redirecter til login', async ({
+    page,
+  }) => {
+    await page.goto(
+      '/games/00000000-0000-0000-0000-000000000000/leaderboard/holes',
+    );
+    await expect(page).toHaveURL(/\/login/);
+  });
 });
