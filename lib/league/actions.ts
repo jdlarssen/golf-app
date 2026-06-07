@@ -11,8 +11,10 @@ import {
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
 import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
 import { generateRounds } from './generateRounds';
+import { leagueFlightGameConfig, isPointsBasedFormat } from './flightFormat';
 import type {
   CourseScope,
+  LeagueFormat,
   MissedRoundPolicy,
   PenaltyKind,
   RoundFrequency,
@@ -67,10 +69,17 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
   const name = str(formData, 'name');
   const seasonStart = str(formData, 'season_start');
   const seasonEnd = str(formData, 'season_end');
-  const scoring = str(formData, 'scoring') || 'net';
+  const format = (str(formData, 'format') || 'stroke') as LeagueFormat;
+  // Poeng-baserte formater (stableford) rangeres netto-only — tving det her som
+  // andre forsvarslinje (wizard låser allerede valget). DB-CHECK (0087) er siste.
+  const scoring = isPointsBasedFormat(format) ? 'net' : str(formData, 'scoring') || 'net';
   const standingsModel = (str(formData, 'standings_model') || 'total') as StandingsModel;
   const missedPolicy = (str(formData, 'missed_round_policy') || 'penalty') as MissedRoundPolicy;
-  const penaltyKind = (str(formData, 'penalty_kind') || 'worst_plus_one') as PenaltyKind;
+  // Poeng-ligaer bruker ikke straffescore-type (uteblitt = 0 poeng), så lås den
+  // til default — wizard skjuler valget for stableford. Holder penaltyFixed = null.
+  const penaltyKind = (
+    isPointsBasedFormat(format) ? 'worst_plus_one' : str(formData, 'penalty_kind') || 'worst_plus_one'
+  ) as PenaltyKind;
   const penaltyFixedRaw = str(formData, 'penalty_fixed_over_par');
   const bestNCountRaw = str(formData, 'best_n_count');
   const courseScope = str(formData, 'course_scope') as CourseScope;
@@ -91,6 +100,9 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
   }
   // Defense-in-depth: validate the enum-backed fields rather than trusting the
   // form (the DB CHECK is the final backstop, but fail clean here).
+  if (format !== 'stroke' && format !== 'stableford' && format !== 'modified_stableford') {
+    return { error: 'format' };
+  }
   if (scoring !== 'net' && scoring !== 'gross' && scoring !== 'both') return { error: 'scoring' };
   if (missedPolicy !== 'penalty' && missedPolicy !== 'must_play_all') return { error: 'missed_round_policy' };
   if (penaltyKind !== 'worst_plus_one' && penaltyKind !== 'fixed') return { error: 'penalty_kind' };
@@ -132,7 +144,7 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
       name,
       season_start: seasonStart,
       season_end: seasonEnd,
-      format: 'stroke',
+      format,
       scoring,
       standings_model: standingsModel,
       missed_round_policy: missedPolicy,
@@ -535,11 +547,15 @@ export async function startLeagueRoundFlight(
 
   const { data: league, error: lErr } = await supabase
     .from('leagues')
-    .select('id, name, course_id, tee_box_id, status')
+    .select('id, name, course_id, tee_box_id, status, format')
     .eq('id', round.league_id)
     .maybeSingle();
   if (lErr || !league) return { error: 'league_not_found' };
   if (league.status !== 'active') return { error: 'league_not_active' };
+
+  // Flight-spillformatet følger ligaen (slagspill / stableford / modifisert).
+  // En stableford-flight rendrer det vanlige stableford-scorekortet uendret.
+  const { gameMode, modeConfig } = leagueFlightGameConfig(league.format as LeagueFormat);
 
   // Window gate (server-enforced).
   const now = Date.now();
@@ -592,8 +608,8 @@ export async function startLeagueRoundFlight(
       course_id: courseId,
       tee_box_id: teeBoxId,
       status: 'scheduled',
-      game_mode: 'solo_strokeplay',
-      mode_config: { kind: 'solo_strokeplay', team_size: 1 },
+      game_mode: gameMode,
+      mode_config: modeConfig,
       created_by: user.id,
       league_round_id: roundId,
       delivered_outside_window: deliveredOutsideWindow,
