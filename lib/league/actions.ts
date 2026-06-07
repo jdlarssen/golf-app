@@ -425,6 +425,16 @@ export async function deleteLeague(formData: FormData): Promise<LeagueActionErro
   redirect(groupId ? `/klubber/${groupId}` : '/admin/liga?status=deleted');
 }
 
+/**
+ * Thin void wrapper so `<form action={…}>` is satisfied (`deleteLeague` returns
+ * a `LeagueActionError` on failure, redirects on success). Lives here next to
+ * `deleteLeague` so both delete-confirm routes (admin + club, #485) and the
+ * shared `<LigaDeleteConfirm>` import it from one place.
+ */
+export async function handleDeleteLeague(formData: FormData): Promise<void> {
+  await deleteLeague(formData);
+}
+
 // ── participant: start a flight for a round ──────────────────────────────────
 
 /**
