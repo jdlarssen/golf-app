@@ -202,6 +202,24 @@ const { data: clubLeagues } = await supabase
 - `app/liga/[id]/page.tsx` — medlems-gate for klubb-scopet liga
 - `docs/flows/06-liga-fremtid.svg` (+ PNG) · `package.json` + `CHANGELOG.md` (MINOR `1.86.0`)
 
+---
+
+## Status — self-eval (2026-06-07)
+
+Bygd i 5 atomiske commits (`df43e0a` kontrakt · `54e0209` migrasjon+typer · `96bc379` helpers · `f64959a` wiring · `8e60f54` surfaces+bump). Sluttilstand-gates: `npx tsc --noEmit` 0 · `npx vitest run app/klubber + lib/league` 20/20 · `npm run lint` 0 errors (24 pre-eksisterende `_gameId`-warnings, ingen i mine filer) · `npm run build` ✓ (`/klubber/[id]/liga/ny` dynamisk i rute-treet).
+
+- [x] **Migrasjon 0083 + typer.** Applyt til prod (rollback-tx-validert: 4 nye policyer + kolonne + funksjon i tx, så ROLLBACK; deretter `apply_migration` success). `execute_sql`: `leagues.group_id` = uuid/nullable. `database.types.ts` har `group_id` i Row/Insert/Update + `leagues_group_id_fkey`-relasjon.
+- [x] **Klubb-admin oppretter klubb-liga fra klubb-siden.** `/klubber/[id]/liga/ny` (build: dynamisk rute) → `requireAdminOrClubAdmin` → `CreateLigaForm` m/ `groupId`; `createLeagueDraft` lagrer `group_id`.
+- [x] **Picker = klubbmedlemmer.** Ruten mater `getClubMemberOptionsForClub(id)` (klubbens medlemmer, e-post-fri) inn som `players`; form-copy bytter til «medlemmer».
+- [x] **Medlemmer ser «Klubbens ligaer»; «Ny liga» kun for eier/admin.** `ClubLeaguesSection` + Type-C-test (3 grønne: liste+lenke, knapp-vises-kun-når-`canCreate`, tom-tilstand).
+- [x] **RLS håndhevet (live probe, alt rullet tilbake).** Klubb-admin (is_admin=false) INSERT-er klubb-liga (WITH CHECK ok) + ser den (count 1). Ikke-medlem (is_admin=false, is_member=false): ser **0**. Vanlig medlem: ser **1**, men INSERT avvist med `42501: new row violates row-level security policy`. Frittstående (group_id null) uendret synlig (policy `group_id is null`).
+- [x] **`/liga/[id]` gates klubb-scopet til medlem/deltaker/global admin.** App-lag-gate i `page.tsx` (`notFound()` ellers), siden snapshot bruker admin-client.
+- [x] **`requireAdminOrClubAdmin` gater opprett-ruten.** Global admin / klubb-eier+admin inn, ellers redirect til klubb-siden.
+- [x] **Flyt-diagram + bump.** `06-liga-fremtid.svg/.png` har «NY · klubb-liga #480»-gren. `1.85.0` → `1.86.0` + CHANGELOG ny serie «1.86.y — Klubb-liga» (forrige serie kollapset).
+- [x] **Security-advisor.** Ny `league_group_id` faller i samme prosjekt-brede `*_security_definer_function_executable`-klasse som alle eksisterende RLS-helpers (`is_group_member`/`is_group_admin`/`is_admin`/…) — ingen ny finding-klasse; følger etablert konvensjon.
+
+**Avvik fra kontrakt:** (1) `/admin/liga/[id]`-styring av klubb-liga (rediger runder, legg til deltakere etterpå, vindu-override) forblir global-admin-only denne fasen — bevisst, jf. Out of Scope. (2) Barn-tabell-SELECT (`league_rounds`/`league_players`) forble `using(true)` (lesing går via admin-client-snapshot) — kun WRITE strammet til klubb-admin; bevisst, jf. Design §1.
+
 ## Out of Scope (egne issues / Fase 2)
 
 - **Klubb-CUP** (group_id på `tournaments`, klubb-cup-opprett fra klubb-siden, cup-kamper arver klubb + medlems-sourcing, medlems-cup-flate) — **#480 Fase 2** (eget barne-issue, gjenbruker `requireAdminOrClubAdmin` + RLS-mønsteret).
