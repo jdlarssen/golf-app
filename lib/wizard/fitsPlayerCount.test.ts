@@ -146,13 +146,15 @@ describe('fitsPlayerCount — florida_scramble (6 or 8, ≥2 teams per #467)', (
   });
 });
 
-// ── wolf: exactly 4 ──────────────────────────────────────────────────────────
+// ── wolf: 3–5 (#465) ─────────────────────────────────────────────────────────
 
 describe('fitsPlayerCount — wolf', () => {
   it.each([
-    [3, false],
+    [2, false],
+    [3, true],
     [4, true],
-    [5, false],
+    [5, true],
+    [6, false],
   ])('wolf n=%i → %s', (n, expected) => {
     expect(fitsPlayerCount('wolf', n)).toBe(expected);
   });

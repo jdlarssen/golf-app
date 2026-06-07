@@ -141,7 +141,7 @@ export const MODE_GUIDE: Record<GameMode, ModeGuide> = {
   },
   wolf: {
     summary:
-      'Fire spillere bytter på å være «ulv». Ulven velger på hvert hull om laget skal være to mot to, eller om ulven spiller alene mot de tre andre.',
+      'Tre til fem spillere bytter på å være «ulv». Ulven velger på hvert hull om den vil spille med en partner, eller alene mot de andre.',
     points: [
       'Velger ulven å spille alene og vinner hullet, gir det mest poeng. Men det er også mest å tape.',
       'Dere bytter på å være ulv gjennom runden.',

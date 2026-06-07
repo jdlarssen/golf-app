@@ -1514,8 +1514,9 @@ function validateWolf(
     }
     // 3-5 spillere — team_numbers må være sammenhengende 1..n så rotasjonen
     // (slot = ((hull-1) % n) + 1) finner en wolf på hvert hull.
-    const n = players.length;
-    const sorted = players.map((p) => p.team_number).sort((a, b) => a - b);
+    const sorted = players
+      .map((p) => p.team_number ?? 0)
+      .sort((a, b) => a - b);
     const contiguous = sorted.every((tn, idx) => tn === idx + 1);
     if (!contiguous) {
       return { ok: false, errorCode: 'team_balance' };

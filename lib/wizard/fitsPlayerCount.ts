@@ -51,8 +51,11 @@ export function fitsPlayerCount(gameMode: GameMode, n: number): boolean {
     case 'florida_scramble':
       return n >= 6 && n <= 8 && (n % 3 === 0 || n % 4 === 0);
 
-    // ── Nøyaktig 4 ──────────────────────────────────────────────────────────
+    // ── 3–5 (#465: Wolf har ekte 3- og 5-spiller-varianter) ─────────────────
     case 'wolf':
+      return n >= 3 && n <= 5;
+
+    // ── Nøyaktig 4 ──────────────────────────────────────────────────────────
     case 'round_robin':
     case 'acey_deucey':
     case 'fourball_matchplay':

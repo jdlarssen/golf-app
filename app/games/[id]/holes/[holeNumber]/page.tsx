@@ -303,7 +303,8 @@ export default async function HolePage({ params }: { params: Params }) {
       '@/lib/scoring/modes/types'
     ).WolfHoleChoice[];
 
-    // 4 spillere med team_number 1-4 — validatoren sikrer at det er nøyaktig 4.
+    // n spillere (3-5, #465) med team_number 1..n — validatoren sikrer riktig
+    // antall + sammenhengende slots.
     wolfPlayersForClient = allPlayers
       .filter((p) => p.team_number != null)
       .map((p) => ({

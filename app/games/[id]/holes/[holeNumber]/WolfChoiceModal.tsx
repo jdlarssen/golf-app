@@ -14,7 +14,7 @@ export interface WolfChoiceModalProps {
   gameId: string;
   holeNumber: number;
   wolfUserId: string;
-  /** De 3 andre spillerne i flighten (alle bortsett fra Wolf). */
+  /** De andre spillerne i flighten (alle bortsett fra Wolf — n-1 stk). */
   otherPlayers: WolfChoiceModalOtherPlayer[];
   onClose: () => void;
   /**
@@ -167,6 +167,9 @@ export function WolfChoiceModal(props: WolfChoiceModalProps): JSX.Element | null
 
   if (!isOpen) return null;
 
+  // #465: n = antall spillere. Lone-gevinst = n, blind = n+2 (vises i copy).
+  const n = otherPlayers.length + 1;
+
   async function submitChoice(
     choice: WolfChoice,
     partnerUserId: string | null,
@@ -212,7 +215,7 @@ export function WolfChoiceModal(props: WolfChoiceModalProps): JSX.Element | null
           Du er Wolf
         </h2>
         <p style={subHeaderStyle}>
-          Velg partner — eller gå alene mot de andre tre.
+          Velg partner, eller gå alene mot resten.
         </p>
 
         {otherPlayers.map((p) => (
@@ -225,7 +228,7 @@ export function WolfChoiceModal(props: WolfChoiceModalProps): JSX.Element | null
             onClick={() => void submitChoice('partner', p.userId)}
           >
             <span>Partner: {p.name}</span>
-            <span style={subtitleStyle}>2v2 — vinneren får 2 hver</span>
+            <span style={subtitleStyle}>Vinner-siden får 2 hver</span>
           </button>
         ))}
 
@@ -239,7 +242,7 @@ export function WolfChoiceModal(props: WolfChoiceModalProps): JSX.Element | null
           onClick={() => void submitChoice('lone', null)}
         >
           <span>Lone Wolf</span>
-          <span style={subtitleStyle}>2x innsats — vinner får 4</span>
+          <span style={subtitleStyle}>Alene mot resten. Vinner du, får du {n}.</span>
         </button>
 
         <button
@@ -251,7 +254,7 @@ export function WolfChoiceModal(props: WolfChoiceModalProps): JSX.Element | null
         >
           <span>Blind Wolf</span>
           <span style={subtitleStyle}>
-            3x innsats — vinner får 6. Velg før noen slår tee shot.
+            Meldt før utslag. Vinner du, får du {n + 2}.
           </span>
         </button>
 

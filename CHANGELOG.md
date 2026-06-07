@@ -21,6 +21,27 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#453](https://github.com/jdlarssen/golf-app/issues/453) (epic [#452](https://github.com/jdlarssen/golf-app/issues/452)). Du kan nå arrangere en liga: flere runder over en hel sesong, med en levende tabell som holder styr på hvem som leder.
 
+### [1.83.15] - 2026-06-07 · #465
+
+> Wolf krevde akkurat fire spillere. Nå kan dere kjøre Wolf med tre, fire eller fem — ulven velger partner eller går alene mot resten, og poengene følger antallet.
+
+<details>
+<summary>Teknisk</summary>
+
+[#465](https://github.com/jdlarssen/golf-app/issues/465): Wolf var det eneste «eksakt antall»-formatet med ekte 3- og 5-spiller-varianter i golf-kulturen. Bare to ting avhang reelt av antallet — rotasjonen og to scoring-konstanter — resten generaliserte av seg selv.
+
+#### Changed
+- [`lib/scoring/modes/wolf.ts`](lib/scoring/modes/wolf.ts) + speilet [`wolfRotation.ts`](app/games/[id]/holes/[holeNumber]/wolfRotation.ts): rotasjonen bruker `R = floor(18/n)*n` som siste rotasjons-hull, resten er trailing-wolf. n=3 → R=18 (ingen trailing), n=4 → R=16 (uendret), n=5 → R=15. Lone-gevinst = `n`, blind = `n+2` (var flatt 4/6). n=4 er byte-identisk.
+- [`lib/games/gamePayload.ts`](lib/games/gamePayload.ts) `validateWolf`: 3-5 spillere, team_numbers må være sammenhengende 1..n, `teams_count = n`.
+- [`lib/wizard/fitsPlayerCount.ts`](lib/wizard/fitsPlayerCount.ts): `wolf` flyttet ut av eksakt-4-blokken til `n >= 3 && n <= 5`.
+- [`useGameFormState.ts`](app/admin/games/new/useGameFormState.ts) + [`WolfSetup.tsx`](app/admin/games/new/sections/WolfSetup.tsx): dynamisk antall rotation-slots med R-basert hull-fordeling og trailing-note kun når R<18.
+- In-round-copy ([`WolfChoiceModal.tsx`](app/games/[id]/holes/[holeNumber]/WolfChoiceModal.tsx) + Wolf-badge i [`HoleClient.tsx`](app/games/[id]/holes/[holeNumber]/HoleClient.tsx)) og spillforklaringen ([`modeGuide.ts`](lib/formats/modeGuide.ts)) viser nå faktiske lone/blind-poeng for antallet i stedet for den gamle «2x/3x»-rammingen som bare stemte ved fire spillere.
+
+#### Added
+- n=3 og n=5-dekning i `wolf.test.ts` / `wolfRotation.test.ts` (rotasjon, trailing-segment, lone/blind/partner-utdeling); 3-5-grenser i `gamePayload.test.ts`, `fitsPlayerCount.test.ts`, `useGameFormState.test.ts` og `WolfSetup.test.tsx`. Alle eksisterende n=4-tester er uendret.
+
+</details>
+
 ### [1.83.14] - 2026-06-07 · #460
 
 > Skins, Nassau og Bingo Bango Bongo forsvant fra veiviseren så snart dere ble flere enn fire. Nå tar alle tre opptil 16 spillere, så du kan kjøre en stor skins-pott på klubbkvelden.

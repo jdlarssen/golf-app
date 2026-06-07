@@ -377,7 +377,8 @@ export type GameModeConfig =
   | {
       kind: 'wolf';
       team_size: 1;
-      teams_count: 4;
+      /** #465: antall spillere (3-5), = antall rotation-slots. */
+      teams_count: number;
       /**
        * Brutto vs netto for Wolf. 'net' = hver spillers per-hull-score er
        * gross − strokesForHole(courseHandicap, strokeIndex). 'gross' =

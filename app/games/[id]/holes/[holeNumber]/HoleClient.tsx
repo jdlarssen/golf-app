@@ -115,9 +115,9 @@ export interface HoleClientProps {
    */
   hideNetto?: boolean;
   /**
-   * Wolf-mode-spesifikt: liste av de 4 spillerne med team_number 1-4.
-   * Brukes til å regne ut hvem som er Wolf på hvilket hull (rotasjon) og til
-   * å rendre partner-valg i WolfChoiceModal. Kun satt når gameMode === 'wolf'.
+   * Wolf-mode-spesifikt: liste av de n spillerne (3-5, #465) med team_number
+   * 1..n. Brukes til å regne ut hvem som er Wolf på hvilket hull (rotasjon) og
+   * til å rendre partner-valg i WolfChoiceModal. Kun satt når gameMode === 'wolf'.
    */
   wolfPlayers?: Array<{ userId: string; teamNumber: number; name: string }>;
   /**
@@ -444,6 +444,9 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
         )?.name ?? null)
       : null;
 
+  // #465: Lone-gevinst = n, blind = n+2. Vis faktiske poeng i badgen i stedet
+  // for den nå-unøyaktige «2x/3x»-rammingen (gjaldt bare 4 spillere).
+  const wolfPlayerCount = wolfPlayers?.length ?? 0;
   let wolfBadgeText: string | null = null;
   if (isWolf && wolfBadgePlayerName) {
     if (!currentHoleWolfChoice) {
@@ -453,13 +456,13 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     } else if (currentHoleWolfChoice.choice === 'partner' && wolfPartnerName) {
       wolfBadgeText = `Wolf: ${wolfBadgePlayerName} — partner: ${wolfPartnerName}`;
     } else if (currentHoleWolfChoice.choice === 'lone') {
-      wolfBadgeText = `Wolf: ${wolfBadgePlayerName} (Lone Wolf — 2x)`;
+      wolfBadgeText = `Wolf: ${wolfBadgePlayerName} (Lone Wolf — ${wolfPlayerCount} poeng)`;
     } else if (currentHoleWolfChoice.choice === 'blind') {
-      wolfBadgeText = `Wolf: ${wolfBadgePlayerName} (Blind Wolf — 3x)`;
+      wolfBadgeText = `Wolf: ${wolfBadgePlayerName} (Blind Wolf — ${wolfPlayerCount + 2} poeng)`;
     }
   }
 
-  // Modal-prop: hvilke 3 andre spillere skal vises som partner-alternativer?
+  // Modal-prop: hvilke andre spillere (n-1) skal vises som partner-alternativer?
   const otherWolfPlayers = (wolfPlayers ?? [])
     .filter((p) => p.userId !== myUserId)
     .map((p) => ({ userId: p.userId, name: p.name }));

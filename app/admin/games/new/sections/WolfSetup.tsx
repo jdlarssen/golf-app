@@ -10,36 +10,40 @@ interface WolfSetupProps {
   onScoringChange: (next: WolfScoring) => void;
   /**
    * Spillere i nåværende rotasjonsrekkefølge. Slot 1 (= første element) er
-   * Wolf på hull 1, 5, 9, 13. Tom liste = brukeren har ikke valgt 4 spillere
-   * ennå, og preview-en viser placeholder-rader.
+   * Wolf på hull 1, n+1, 2n+1 … Tom liste (eller <3) = brukeren har ikke valgt
+   * nok spillere ennå, og preview-en viser en hint i stedet for slots.
    */
   wolfOrder: PlayerOption[];
   /**
-   * Trigger random permutasjon av wolfOrder. Disablet når selectedPlayers
-   * !== 4 (ingenting å shuffle med).
+   * Trigger random permutasjon av wolfOrder. Disablet når antall valgte
+   * spillere ikke er 3-5 (#465).
    */
   onShuffle: () => void;
   disabled?: boolean;
 }
 
-const SLOT_HOLES: Record<number, string> = {
-  1: '1, 5, 9, 13',
-  2: '2, 6, 10, 14',
-  3: '3, 7, 11, 15',
-  4: '4, 8, 12, 16',
-};
+/**
+ * Hull-fordeling for en rotation-slot (#465). n = antall spillere (3-5),
+ * R = floor(18/n)*n er siste rotasjons-hull. Slot s er Wolf på hull s, s+n,
+ * s+2n … ≤ R. Resten (R+1..18) er trailing-wolf, vist som egen note.
+ */
+function holesForSlot(slot: number, n: number, R: number): number[] {
+  const holes: number[] = [];
+  for (let h = slot; h <= R; h += n) holes.push(h);
+  return holes;
+}
 
 /**
  * Wolf-spesifikk konfig som vises i wizardens step 2 når game_mode='wolf'.
  *
  * To kontroller:
  *  - Scoring-toggle: 'Med handicap (netto)' vs 'Brutto'. Default netto.
- *  - Rotasjons-shuffle: viser de 4 valgte spillerne i rekkefølge, med
+ *  - Rotasjons-shuffle: viser de 3-5 valgte spillerne i rekkefølge, med
  *    badge for hvilke hull de er Wolf på. Knapp re-randomiserer.
  *
- * Hull 17 og 18 vises som "trailing-wolf" — spilleren med lavest poeng-
- * total etter forrige hull blir Wolf. Det avgjøres runtime og er ikke
- * en del av shuffle-state.
+ * Hull etter R (= floor(18/n)*n) vises som "trailing-wolf" — spilleren med
+ * lavest poeng-total etter forrige hull blir Wolf. Det avgjøres runtime og er
+ * ikke en del av shuffle-state. Med 3 spillere er R=18, så ingen trailing.
  */
 export function WolfSetup({
   scoring,
@@ -48,8 +52,13 @@ export function WolfSetup({
   onShuffle,
   disabled = false,
 }: WolfSetupProps) {
-  const slots = [1, 2, 3, 4] as const;
-  const canShuffle = !disabled && wolfOrder.length === 4;
+  const n = wolfOrder.length;
+  const hasRotation = n >= 3 && n <= 5;
+  const R = hasRotation ? Math.floor(18 / n) * n : 0;
+  const slots = hasRotation
+    ? Array.from({ length: n }, (_, i) => i + 1)
+    : [];
+  const canShuffle = !disabled && hasRotation;
 
   return (
     <fieldset className="space-y-5 rounded-md border border-border bg-surface px-4 py-4">
@@ -117,39 +126,52 @@ export function WolfSetup({
           </button>
         </div>
         <p className="mt-1 text-xs text-muted/80">
-          Velg 4 spillere først, så trekker du rotasjonen. Hull 17 og 18 går til
-          spilleren som ligger sist på poeng-totalen — det avgjøres underveis.
+          Velg 3 til 5 spillere, så trekker du rotasjonen.
         </p>
-        <ul className="mt-3 space-y-2">
-          {slots.map((slot) => {
-            const player = wolfOrder[slot - 1];
-            return (
-              <li
-                key={slot}
-                data-testid={`wolf-slot-${slot}`}
-                className="flex items-center justify-between rounded-md border border-border bg-surface-2 px-3 py-2 text-xs"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="grid h-7 w-7 place-items-center rounded-full bg-primary/10 font-semibold tabular-nums text-primary">
-                    {slot}
-                  </span>
-                  <span
-                    className={
-                      player
-                        ? 'font-medium text-foreground'
-                        : 'italic text-muted/60'
-                    }
+        {hasRotation ? (
+          <>
+            <ul className="mt-3 space-y-2">
+              {slots.map((slot) => {
+                const player = wolfOrder[slot - 1];
+                return (
+                  <li
+                    key={slot}
+                    data-testid={`wolf-slot-${slot}`}
+                    className="flex items-center justify-between rounded-md border border-border bg-surface-2 px-3 py-2 text-xs"
                   >
-                    {player ? playerLabel(player) : 'Velg en spiller'}
-                  </span>
-                </div>
-                <span className="tabular-nums text-muted">
-                  Hull {SLOT_HOLES[slot]}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
+                    <div className="flex items-center gap-3">
+                      <span className="grid h-7 w-7 place-items-center rounded-full bg-primary/10 font-semibold tabular-nums text-primary">
+                        {slot}
+                      </span>
+                      <span className="font-medium text-foreground">
+                        {player ? playerLabel(player) : 'Velg en spiller'}
+                      </span>
+                    </div>
+                    <span className="tabular-nums text-muted">
+                      Hull {holesForSlot(slot, n, R).join(', ')}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+            {R < 18 && (
+              <p
+                data-testid="wolf-trailing-note"
+                className="mt-2 text-xs text-muted/80"
+              >
+                Hull {R + 1}–18 går til den som ligger sist på poeng-totalen.
+                Det avgjøres underveis.
+              </p>
+            )}
+          </>
+        ) : (
+          <p
+            data-testid="wolf-rotation-hint"
+            className="mt-3 rounded-md border border-dashed border-border bg-surface-2 px-3 py-3 text-xs italic text-muted/70"
+          >
+            Velg 3 til 5 spillere for å se rotasjonen.
+          </p>
+        )}
       </div>
     </fieldset>
   );
