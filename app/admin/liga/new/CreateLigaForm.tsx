@@ -44,7 +44,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 type CourseScope = 'single_course_single_tee' | 'single_course' | 'multi_course';
 type Scoring = 'net' | 'gross' | 'both';
-type StandingsModel = 'total' | 'average' | 'best_n';
+type StandingsModel = 'total' | 'average' | 'best_n' | 'points';
 type MissedRoundPolicy = 'penalty' | 'must_play_all';
 type PenaltyKind = 'worst_plus_one' | 'fixed';
 type Frequency = 'weekly' | 'biweekly' | 'monthly' | 'custom';
@@ -374,6 +374,11 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
                 value: 'best_n' as StandingsModel,
                 label: 'Beste N runder',
                 desc: 'Summen av spillerens N beste runder. Uteblitte runder straffefylles opp til N.',
+              },
+              {
+                value: 'points' as StandingsModel,
+                label: 'Poeng per plassering',
+                desc: 'Vinneren av hver runde får flest poeng (synkende fra antall spillere). Uteblitt runde gir 0 poeng.',
               },
             ] as const
           ).map((opt) => (

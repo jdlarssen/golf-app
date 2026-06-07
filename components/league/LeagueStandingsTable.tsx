@@ -15,16 +15,26 @@ function formatNetToPar(n: number | null, decimals = 0): string {
   return n > 0 ? `+${str}` : `−${str}`;
 }
 
-/** Format the season value column. For 'average' model, show 1 decimal. */
+/** Format points: plain number, 1 decimal only when fractional (tie-split). */
+function formatPoints(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1).replace('.', ',');
+}
+
+/** Format the season value column per model. */
 function formatValue(value: number, model: string): string {
+  if (model === 'points') {
+    return formatPoints(value);
+  }
   if (model === 'average') {
     return formatNetToPar(value, 1);
   }
   return formatNetToPar(Math.round(value));
 }
 
-function RoundCell({ cell }: { cell: LeagueStandingCell | undefined }) {
-  if (!cell || cell.toPar === null) {
+function RoundCell({ cell, model }: { cell: LeagueStandingCell | undefined; model: string }) {
+  const isPoints = model === 'points';
+  const raw = cell ? (isPoints ? cell.points : cell.toPar) : null;
+  if (!cell || raw === null) {
     return (
       <td className="px-2 py-2 text-center font-serif tabular-nums text-xs text-muted/40">
         —
@@ -32,7 +42,7 @@ function RoundCell({ cell }: { cell: LeagueStandingCell | undefined }) {
     );
   }
 
-  const label = formatNetToPar(cell.toPar);
+  const label = isPoints ? formatPoints(raw) : formatNetToPar(raw);
   const isPenalty = cell.penalised;
   const isFlagged = cell.deliveredOutsideWindow;
 
@@ -91,13 +101,15 @@ export function LeagueStandingsTable({
   const ordered = [...ranked, ...unranked];
 
   const valueHeader =
-    standingsModel === 'average'
-      ? 'Snitt'
-      : standingsModel === 'best_n'
-        ? bestNCount
-          ? `Beste ${bestNCount}`
-          : 'Beste N'
-        : 'Totalt';
+    standingsModel === 'points'
+      ? 'Poeng'
+      : standingsModel === 'average'
+        ? 'Snitt'
+        : standingsModel === 'best_n'
+          ? bestNCount
+            ? `Beste ${bestNCount}`
+            : 'Beste N'
+          : 'Totalt';
 
   return (
     <div className="w-full overflow-x-auto -mx-1">
@@ -179,7 +191,7 @@ export function LeagueStandingsTable({
                 {/* Per-round cells */}
                 {rounds.map((r) => {
                   const cell = row.perRound.find((c) => c.roundId === r.id);
-                  return <RoundCell key={r.id} cell={cell} />;
+                  return <RoundCell key={r.id} cell={cell} model={standingsModel} />;
                 })}
 
                 {/* Season value */}

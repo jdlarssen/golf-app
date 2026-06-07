@@ -17,7 +17,35 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.91.y — Liga · netto, brutto og beste runder
+## 1.92.y — Liga · poeng per plassering
+
+Issue [#452](https://github.com/jdlarssen/golf-app/issues/452). Liga-epicen Fase 2b legger til den fjerde sesong-modellen: poeng per plassering.
+
+### [1.92.0] - 2026-06-07 · #452
+
+> Du kan nå la ligaen avgjøres på poeng: vinneren av hver runde får flest poeng, ned til ett for sisteplass, og sesongen er summen. Spiller du ikke en runde, får du null poeng den gangen.
+
+<details>
+<summary>Teknisk</summary>
+
+[#452](https://github.com/jdlarssen/golf-app/issues/452) Fase 2b (epic). Fullfører sesong-modellene fra Fase 2a; ingen ny migrasjon (`points` lå allerede i `standings_model`-CHECK-en fra 0080).
+
+#### Added
+- `points`-sesongmodell i `computeLeagueStandings`: hver runde rangeres på det aktive tallet (netto/brutto), spillerne får poeng synkende fra feltstørrelsen (vinner = antall spillere, ned til 1), uavgjort deler snittet av plassene de spenner. Sesong = sum av poeng; uteblitt runde = 0 poeng. Type-A-tester.
+- `points` i veiviserens sesong-modell-valg + admin-detalj-label.
+
+#### Changed
+- `computeLeagueStandings` er nå retnings-bevisst: poeng sorteres høyest-først (countback + sentinel snudd), mens mot-par-modellene er uendret (lavest-først). Nytt `points`-felt på sesong-cellen; tabellen viser poeng per runde og en «Poeng»-kolonne for poeng-ligaer.
+
+</details>
+
+## Tidligere versjoner
+
+<details>
+<summary><strong>Liga — sesong-konkurranse (1 serie)</strong></summary>
+
+<details>
+<summary><strong>1.91.y — Liga · netto, brutto og beste runder (1 oppføring)</strong></summary>
 
 Issue [#452](https://github.com/jdlarssen/golf-app/issues/452). Liga-epicen Fase 2a: sesong-tabellen kan nå regnes på brutto i tillegg til netto, og en ny «beste runder»-modell lar de svakeste rundene falle bort.
 
@@ -42,7 +70,9 @@ Issue [#452](https://github.com/jdlarssen/golf-app/issues/452). Liga-epicen Fase
 
 </details>
 
-## Tidligere versjoner
+</details>
+
+</details>
 
 <details>
 <summary><strong>Veiviser — tydeligere format-valg (1 serie)</strong></summary>

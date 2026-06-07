@@ -231,6 +231,59 @@ describe('computeLeagueStandings — best_n model', () => {
   });
 });
 
+describe('computeLeagueStandings — points model', () => {
+  const points = (over: Partial<LeagueStandingsConfig> = {}) =>
+    cfg({ standingsModel: 'points', ...over });
+
+  it('awards descending points by placement and sums them, highest wins', () => {
+    const rounds = [
+      round('r1', 1, [score('A', 2), score('B', 5), score('C', 10)]), // A=3, B=2, C=1
+      round('r2', 2, [score('A', 3), score('B', 1)]), // B=2, A=1; C missed → 0
+    ];
+    const res = computeLeagueStandings(points(), rounds, ['A', 'B', 'C']);
+    expect(rowOf(res, 'A').value).toBe(4); // 3 + 1
+    expect(rowOf(res, 'B').value).toBe(4); // 2 + 2
+    expect(rowOf(res, 'C').value).toBe(1); // 1 + 0
+    // A & B tie at 4; countback on most recent round (r2): B=2 > A=1 → B first.
+    expect(res.rows[0].userId).toBe('B');
+    expect(res.rows.map((r) => r.rank)).toEqual([1, 2, 3]);
+    const aR1 = rowOf(res, 'A').perRound.find((c) => c.roundId === 'r1')!;
+    expect(aR1.points).toBe(3);
+  });
+
+  it('splits points by the average of tied placements', () => {
+    const rounds = [round('r1', 1, [score('A', 4), score('B', 4), score('C', 9)])];
+    const res = computeLeagueStandings(points(), rounds, ['A', 'B', 'C']);
+    expect(rowOf(res, 'A').value).toBe(2.5); // (3 + 2) / 2
+    expect(rowOf(res, 'B').value).toBe(2.5);
+    expect(rowOf(res, 'C').value).toBe(1);
+  });
+
+  it('gives 0 points for a missed round (cell null) and leaves a no-show unranked', () => {
+    const rounds = [round('r1', 1, [score('A', 2), score('B', 5)])]; // A=2, B=1
+    const res = computeLeagueStandings(points(), rounds, ['A', 'B', 'C']);
+    expect(rowOf(res, 'A').value).toBe(2);
+    expect(rowOf(res, 'B').value).toBe(1);
+    expect(rowOf(res, 'C').ranked).toBe(false);
+    expect(rowOf(res, 'C').value).toBe(0);
+    expect(res.rows[res.rows.length - 1].userId).toBe('C');
+    const cCell = rowOf(res, 'C').perRound.find((c) => c.roundId === 'r1')!;
+    expect(cCell.points).toBeNull();
+    expect(rowOf(res, 'A').rank).toBe(1);
+  });
+
+  it('assigns placement on the active metric (net vs gross differ)', () => {
+    const rounds = [round('r1', 1, [score('A', 2, { gross: 12 }), score('B', 5, { gross: 7 })])];
+    const net = computeLeagueStandings(points(), rounds, ['A', 'B'], 'net');
+    expect(rowOf(net, 'A').value).toBe(2); // A wins net → 2 pts
+    expect(net.rows[0].userId).toBe('A');
+
+    const gross = computeLeagueStandings(points(), rounds, ['A', 'B'], 'gross');
+    expect(rowOf(gross, 'B').value).toBe(2); // B wins gross → 2 pts
+    expect(gross.rows[0].userId).toBe('B');
+  });
+});
+
 describe('computeLeagueStandings — average model', () => {
   it('ranks by mean net-to-par over played rounds (no penalty)', () => {
     const rounds = [

@@ -81,7 +81,12 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
   if (!NAME_RE.test(name)) return { error: 'name' };
   if (!DATE_RE.test(seasonStart) || !DATE_RE.test(seasonEnd)) return { error: 'dates' };
   if (seasonEnd < seasonStart) return { error: 'dates' };
-  if (standingsModel !== 'total' && standingsModel !== 'average' && standingsModel !== 'best_n') {
+  if (
+    standingsModel !== 'total' &&
+    standingsModel !== 'average' &&
+    standingsModel !== 'best_n' &&
+    standingsModel !== 'points'
+  ) {
     return { error: 'standings_model' };
   }
   // Defense-in-depth: validate the enum-backed fields rather than trusting the

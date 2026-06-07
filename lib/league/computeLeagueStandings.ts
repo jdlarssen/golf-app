@@ -12,19 +12,20 @@ import type {
  * Pure season-standings aggregator for a league (#453, epic #452). Mirrors
  * `lib/cup/computeCupLeaderboard` — zero IO. The caller (`getLigaSnapshot`)
  * runs the strokeplay scoring per flight-game and passes net- AND gross-to-par
- * per (round, player) here. `metric` selects which is ranked; lower is better.
+ * per (round, player) here. `metric` selects which is ranked.
  *
- * Fase 2a handles 'total', 'average' and 'best_n'. A round with no results is
- * ignored entirely (no penalty, null cells). Multiple results for the same
- * player in one round are deduped to the best (lowest) on the active metric —
- * a defensive guard so a replay never inflates a standing.
+ * A round with no results is ignored entirely. Multiple results for the same
+ * player in one round are deduped to the best (lowest) on the active metric.
  *
  * - total:   sum over all rounds-with-results; missed → penalty (or unranked
- *            under must_play_all).
- * - average: mean over played rounds; no penalty.
- * - best_n:  sum of the N lowest of {played scores} ∪ {penalty per missed round},
- *            N capped at the number of rounds-with-results. Penalty-fill keeps a
- *            short-season player ranked (last); per-round cells stay played-or-null.
+ *            under must_play_all). Lower is better.
+ * - average: mean over played rounds; no penalty. Lower is better.
+ * - best_n:  sum of the N lowest of {played} ∪ {penalty per missed round}, N
+ *            capped at rounds-with-results. Lower is better.
+ * - points:  per round, players are placed by the active metric and earn points
+ *            descending from the field size (winner = field size, last = 1; ties
+ *            share the average). Season = sum of points, missed round = 0.
+ *            HIGHER is better — the sort/countback flip direction for this model.
  */
 export function computeLeagueStandings(
   config: LeagueStandingsConfig,
@@ -34,6 +35,7 @@ export function computeLeagueStandings(
 ): LeagueStandings {
   const metricOf = (s: LeagueRoundPlayerScore): number =>
     metric === 'gross' ? s.grossToPar : s.netToPar;
+  const higherIsBetter = config.standingsModel === 'points';
 
   // Dedupe each round's scores to the best entry per player on the active metric.
   const roundMaps = rounds.map((r) => {
@@ -48,6 +50,31 @@ export function computeLeagueStandings(
   // Only rounds with at least one result count toward the standing.
   const counting = roundMaps.filter((rm) => rm.byUser.size > 0);
 
+  // Points model: pre-rank each round and award placement points (descending
+  // from the field size, ties sharing the average of the placements they span).
+  const pointsByRound = new Map<string, Map<string, number>>();
+  if (config.standingsModel === 'points') {
+    for (const rm of counting) {
+      const entries = [...rm.byUser.entries()]
+        .map(([uid, s]) => ({ uid, score: metricOf(s) }))
+        .sort((a, b) => a.score - b.score); // lower to-par = better placement
+      const n = entries.length;
+      const pts = new Map<string, number>();
+      let i = 0;
+      while (i < n) {
+        let j = i;
+        while (j + 1 < n && entries[j + 1].score === entries[i].score) j++;
+        // Positions i..j tie; base points for position k = n - k.
+        let sum = 0;
+        for (let k = i; k <= j; k++) sum += n - k;
+        const avg = sum / (j - i + 1);
+        for (let k = i; k <= j; k++) pts.set(entries[k].uid, avg);
+        i = j + 1;
+      }
+      pointsByRound.set(rm.round.roundId, pts);
+    }
+  }
+
   const rows: LeagueStandingRow[] = playerIds.map((userId) => {
     const perRound: LeagueStandingCell[] = roundMaps.map((rm) => {
       const s = rm.byUser.get(userId);
@@ -55,12 +82,14 @@ export function computeLeagueStandings(
         ? {
             roundId: rm.round.roundId,
             toPar: metricOf(s),
+            points: null,
             penalised: false,
             deliveredOutsideWindow: s.deliveredOutsideWindow,
           }
         : {
             roundId: rm.round.roundId,
             toPar: null,
+            points: null,
             penalised: false,
             deliveredOutsideWindow: false,
           };
@@ -96,6 +125,17 @@ export function computeLeagueStandings(
           .slice(0, n)
           .reduce((a, b) => a + b, 0);
       }
+    } else if (config.standingsModel === 'points') {
+      let sum = 0;
+      for (const rm of counting) {
+        const p = pointsByRound.get(rm.round.roundId)?.get(userId);
+        if (p === undefined) continue; // didn't play → 0 points, cell stays null
+        sum += p;
+        const cell = perRound.find((c) => c.roundId === rm.round.roundId)!;
+        cell.points = p;
+      }
+      value = sum;
+      if (roundsPlayed === 0) ranked = false;
     } else {
       // total
       let sum = 0;
@@ -127,10 +167,15 @@ export function computeLeagueStandings(
     .sort((a, b) => b.round.sequence - a.round.sequence)
     .map((rm) => rm.round.roundId);
 
+  // Direction-aware: points ranks high→low, the mot-par models low→high.
+  const worst = higherIsBetter ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY;
+  const byValue = (av: number, bv: number): number => (higherIsBetter ? bv - av : av - bv);
+
   const cellValue = (row: LeagueStandingRow, roundId: string): number => {
     const cell = row.perRound.find((c) => c.roundId === roundId);
+    const v = cell ? (higherIsBetter ? cell.points : cell.toPar) : null;
     // A round the player has no value for counts as worst possible in countback.
-    return cell && cell.toPar !== null ? cell.toPar : Number.POSITIVE_INFINITY;
+    return v == null ? worst : v;
   };
 
   // Equal under everything except the userId stabiliser → share a rank.
@@ -140,11 +185,11 @@ export function computeLeagueStandings(
   };
 
   const compare = (a: LeagueStandingRow, b: LeagueStandingRow): number => {
-    if (a.value !== b.value) return a.value - b.value;
+    if (a.value !== b.value) return byValue(a.value, b.value);
     for (const id of countingIdsNewestFirst) {
       const av = cellValue(a, id);
       const bv = cellValue(b, id);
-      if (av !== bv) return av - bv;
+      if (av !== bv) return byValue(av, bv);
     }
     if (a.roundsPlayed !== b.roundsPlayed) return b.roundsPlayed - a.roundsPlayed;
     return a.userId.localeCompare(b.userId);
@@ -157,7 +202,7 @@ export function computeLeagueStandings(
       a.roundsPlayed !== b.roundsPlayed
         ? b.roundsPlayed - a.roundsPlayed
         : a.value !== b.value
-          ? a.value - b.value
+          ? byValue(a.value, b.value)
           : a.userId.localeCompare(b.userId),
     );
 

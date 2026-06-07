@@ -35,10 +35,10 @@ export type StandingsMetric = 'net' | 'gross';
 
 /**
  * Konfig som styrer hvordan sesong-tabellen regnes ut. Hentes fra `leagues`-raden.
- * Fase 2a støtter 'total', 'average' og 'best_n'; 'points' er reservert til Fase 2b.
+ * Fase 2b støtter alle fire modellene: 'total', 'average', 'best_n' og 'points'.
  */
 export type LeagueStandingsConfig = {
-  standingsModel: Extract<StandingsModel, 'total' | 'average' | 'best_n'>;
+  standingsModel: StandingsModel;
   missedRoundPolicy: MissedRoundPolicy;
   penaltyKind: PenaltyKind;
   /** Kun lest når penaltyKind === 'fixed'. Slag over par for en uteblitt runde. */
@@ -70,6 +70,8 @@ export type LeagueStandingCell = {
   roundId: string;
   /** Det aktive tallet (netto eller brutto) mot par. null = spilte ikke runden. */
   toPar: number | null;
+  /** Poeng spilleren fikk denne runden under 'points'-modellen. null ellers / ikke spilt. */
+  points: number | null;
   /** true = verdien er en straffescore (uteblitt runde under penalty-modellen). */
   penalised: boolean;
   deliveredOutsideWindow: boolean;
@@ -78,7 +80,7 @@ export type LeagueStandingCell = {
 /** Én rad i sesong-tabellen. */
 export type LeagueStandingRow = {
   userId: string;
-  /** Rangerings-verdi (sum, snitt eller sum av beste N mot par). Lavere er bedre. */
+  /** Rangerings-verdi. Mot-par-modellene: lavere er bedre. Points-modellen: høyere er bedre. */
   value: number;
   roundsPlayed: number;
   /** false når 'must_play_all' og spilleren mangler en runde → sorteres nederst. */

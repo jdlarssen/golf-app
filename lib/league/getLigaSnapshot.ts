@@ -331,7 +331,9 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
         ? 'average'
         : league.standings_model === 'best_n'
           ? 'best_n'
-          : 'total',
+          : league.standings_model === 'points'
+            ? 'points'
+            : 'total',
     missedRoundPolicy: league.missed_round_policy === 'must_play_all' ? 'must_play_all' : 'penalty',
     penaltyKind: league.penalty_kind === 'fixed' ? 'fixed' : 'worst_plus_one',
     penaltyFixedOverPar: league.penalty_fixed_over_par,

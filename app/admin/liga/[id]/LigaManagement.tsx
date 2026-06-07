@@ -58,6 +58,7 @@ const STANDINGS_LABEL: Record<string, string> = {
   total: 'Total (sum mot par)',
   average: 'Snitt per runde',
   best_n: 'Beste N runder',
+  points: 'Poeng per plassering',
 };
 
 const SCORING_LABEL: Record<string, string> = {
