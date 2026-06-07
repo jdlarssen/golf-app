@@ -30,6 +30,8 @@ export type LeagueParticipant = {
   userId: string;
   name: string | null;
   nickname: string | null;
+  /** #463: null = lagt til av arrangør, ikke bekreftet ennå. */
+  acceptedAt: string | null;
 };
 
 export type LeagueRoundView = {
@@ -103,7 +105,7 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
       .order('sequence', { ascending: true }),
     supabase
       .from('league_players')
-      .select('user_id, users!league_players_user_id_fkey(name, nickname)')
+      .select('user_id, accepted_at, users!league_players_user_id_fkey(name, nickname)')
       .eq('league_id', leagueId),
   ]);
   if (roundsRes.error) throw roundsRes.error;
@@ -121,10 +123,19 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
     window_overridden_at: string | null;
   }>;
   const participants: LeagueParticipant[] = (
-    (participantsRes.data ?? []) as Array<{ user_id: string; users: UserRel | UserRel[] | null }>
+    (participantsRes.data ?? []) as Array<{
+      user_id: string;
+      accepted_at: string | null;
+      users: UserRel | UserRel[] | null;
+    }>
   ).map((p) => {
     const u = userOf(p.users);
-    return { userId: p.user_id, name: u?.name ?? null, nickname: u?.nickname ?? null };
+    return {
+      userId: p.user_id,
+      name: u?.name ?? null,
+      nickname: u?.nickname ?? null,
+      acceptedAt: p.accepted_at,
+    };
   });
 
   const roundIds = rounds.map((r) => r.id);

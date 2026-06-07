@@ -1,9 +1,11 @@
 import { notFound } from 'next/navigation';
+import { after } from 'next/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { LinkButton } from '@/components/ui/Button';
 import { getLigaSnapshot } from '@/lib/league/getLigaSnapshot';
+import { maybeAutoConfirmLeagueParticipation } from '@/lib/league/confirmLeagueParticipation';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getServerClient } from '@/lib/supabase/server';
 import { LeagueStandingsTable } from '@/components/league/LeagueStandingsTable';
@@ -123,9 +125,19 @@ export default async function LigaPublicPage({ params }: { params: Params }) {
     currentUserId = user?.id ?? null;
   }
 
-  const isParticipant =
-    currentUserId !== null &&
-    participants.some((p) => p.userId === currentUserId);
+  const me =
+    currentUserId !== null
+      ? participants.find((p) => p.userId === currentUserId)
+      : undefined;
+  const isParticipant = me !== undefined;
+
+  // #463: å åpne liga-siden er en aktivitet = implisitt bekreftelse. Rydder
+  // «Ikke bekreftet»-badgen for aktive deltakere. Deferert via after().
+  if (me && me.acceptedAt == null) {
+    after(() =>
+      maybeAutoConfirmLeagueParticipation({ leagueId: id, userId: me.userId }),
+    );
+  }
 
   return (
     <AppShell>

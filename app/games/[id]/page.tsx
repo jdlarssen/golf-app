@@ -32,6 +32,7 @@ import { scorecardTitle } from '@/lib/games/scorecardTitle';
 import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
 import { maybeSendDeliveryReminder } from '@/lib/notifications/deliveryReminder';
+import { maybeAutoConfirmParticipation } from '@/lib/games/confirmParticipation';
 import { isHandicapStale } from '@/lib/handicap/staleness';
 import { HandicapConfirmCard } from '@/components/handicap/HandicapConfirmCard';
 import { ModeGuideCard } from '@/components/ModeGuideCard';
@@ -252,6 +253,11 @@ export default async function GameHomePage({
         kind: 'scorecard_approved',
         entityId: id,
       }),
+      // #463: å åpne spillet er en aktivitet = implisitt bekreftelse. Rydder
+      // «Ikke bekreftet»-badgen for aktive spillere uten et eksplisitt trykk.
+      ...(me.accepted_at == null
+        ? [maybeAutoConfirmParticipation({ gameId: id, userId })]
+        : []),
     ]);
   });
 
