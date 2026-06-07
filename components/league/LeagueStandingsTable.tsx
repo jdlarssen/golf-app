@@ -20,9 +20,12 @@ function formatPoints(value: number): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(1).replace('.', ',');
 }
 
-/** Format the season value column per model. */
-function formatValue(value: number, model: string): string {
-  if (model === 'points') {
+/**
+ * Format the season value column per model. Poeng-baserte formater (stableford)
+ * og 'points'-modellen viser rene poeng; slagspill-modellene viser mot-par.
+ */
+function formatValue(value: number, model: string, pointsBased: boolean): string {
+  if (model === 'points' || pointsBased) {
     return formatPoints(value);
   }
   if (model === 'average') {
@@ -31,7 +34,15 @@ function formatValue(value: number, model: string): string {
   return formatNetToPar(Math.round(value));
 }
 
-function RoundCell({ cell, model }: { cell: LeagueStandingCell | undefined; model: string }) {
+function RoundCell({
+  cell,
+  model,
+  pointsBased,
+}: {
+  cell: LeagueStandingCell | undefined;
+  model: string;
+  pointsBased: boolean;
+}) {
   const isPoints = model === 'points';
   const raw = cell ? (isPoints ? cell.points : cell.value) : null;
   if (!cell || raw === null) {
@@ -42,7 +53,8 @@ function RoundCell({ cell, model }: { cell: LeagueStandingCell | undefined; mode
     );
   }
 
-  const label = isPoints ? formatPoints(raw) : formatNetToPar(raw);
+  // Stableford-runde-verdier (og plasserings-poeng) er rene poeng, ikke mot-par.
+  const label = isPoints || pointsBased ? formatPoints(raw) : formatNetToPar(raw);
   const isPenalty = cell.penalised;
   const isFlagged = cell.deliveredOutsideWindow;
 
@@ -78,12 +90,15 @@ export function LeagueStandingsTable({
   participants,
   standingsModel,
   bestNCount,
+  pointsBased = false,
 }: {
   rows: LeagueStandingRow[];
   rounds: LeagueRoundView[];
   participants: LeagueParticipant[];
   standingsModel: string;
   bestNCount?: number | null;
+  /** #452 Fase 4: stableford-formater viser rå poeng (høyest best) i cellene. */
+  pointsBased?: boolean;
 }) {
   if (rows.length === 0) {
     return (
@@ -191,7 +206,9 @@ export function LeagueStandingsTable({
                 {/* Per-round cells */}
                 {rounds.map((r) => {
                   const cell = row.perRound.find((c) => c.roundId === r.id);
-                  return <RoundCell key={r.id} cell={cell} model={standingsModel} />;
+                  return (
+                    <RoundCell key={r.id} cell={cell} model={standingsModel} pointsBased={pointsBased} />
+                  );
                 })}
 
                 {/* Season value */}
@@ -199,7 +216,7 @@ export function LeagueStandingsTable({
                   className="px-2 py-2.5 text-right font-serif tabular-nums text-sm font-semibold"
                   style={isFirst ? { color: 'var(--accent)' } : undefined}
                 >
-                  {formatValue(row.value, standingsModel)}
+                  {formatValue(row.value, standingsModel, pointsBased)}
                 </td>
               </tr>
             );

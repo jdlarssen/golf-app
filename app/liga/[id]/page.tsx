@@ -15,6 +15,8 @@ import type { LeagueStatus } from '@/lib/league/types';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getServerClient } from '@/lib/supabase/server';
 import { LeagueStandingsPanel } from '@/components/league/LeagueStandingsPanel';
+import { isPointsBasedFormat } from '@/lib/league/flightFormat';
+import type { LeagueFormat } from '@/lib/league/types';
 import { formatShortDateNbWithYear } from '@/lib/format/date';
 
 export const dynamic = 'force-dynamic';
@@ -264,6 +266,7 @@ export default async function LigaPublicPage({
             participants={participants}
             standingsModel={league.standings_model}
             bestNCount={league.best_n_count}
+            pointsBased={isPointsBasedFormat(league.format as LeagueFormat)}
           />
         </Card>
       </section>

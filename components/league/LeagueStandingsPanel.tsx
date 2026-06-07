@@ -18,12 +18,15 @@ export function LeagueStandingsPanel({
   participants,
   standingsModel,
   bestNCount,
+  pointsBased = false,
 }: {
   standings: LeagueStandingsByScoring;
   rounds: LeagueRoundView[];
   participants: LeagueParticipant[];
   standingsModel: string;
   bestNCount: number | null;
+  /** #452 Fase 4: stableford-formater viser rå poeng (ikke mot-par) i cellene. */
+  pointsBased?: boolean;
 }) {
   const both = standings.net !== null && standings.gross !== null;
   const [metric, setMetric] = useState<StandingsMetric>(standings.net !== null ? 'net' : 'gross');
@@ -58,6 +61,7 @@ export function LeagueStandingsPanel({
         participants={participants}
         standingsModel={standingsModel}
         bestNCount={bestNCount}
+        pointsBased={pointsBased}
       />
     </div>
   );

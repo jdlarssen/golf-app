@@ -70,3 +70,45 @@ describe('LeagueStandingsTable — points model', () => {
     expect(within(aliceRow).queryByText('+3')).toBeNull();
   });
 });
+
+// #452 Fase 4: stableford uses a non-points model (Total) but the per-round value
+// IS raw points → must render as plain numbers, never mot-par "+32"/"E".
+describe('LeagueStandingsTable — stableford (pointsBased) under the total model', () => {
+  const sfRows: LeagueStandings['rows'] = [
+    {
+      userId: 'A', value: 60, roundsPlayed: 2, ranked: true, rank: 1,
+      perRound: [
+        { roundId: 'r1', value: 32, points: null, penalised: false, deliveredOutsideWindow: false },
+        { roundId: 'r2', value: 28, points: null, penalised: false, deliveredOutsideWindow: false },
+      ],
+    },
+    {
+      userId: 'B', value: 30, roundsPlayed: 1, ranked: true, rank: 2,
+      perRound: [
+        { roundId: 'r1', value: 30, points: null, penalised: false, deliveredOutsideWindow: false },
+        { roundId: 'r2', value: 0, points: null, penalised: true, deliveredOutsideWindow: false },
+      ],
+    },
+  ];
+
+  it('shows raw points in cells + total; a penalised missed round reads "0", not "E"', () => {
+    render(
+      <LeagueStandingsTable
+        rows={sfRows}
+        rounds={rounds}
+        participants={participants}
+        standingsModel="total"
+        bestNCount={null}
+        pointsBased
+      />,
+    );
+    const aliceRow = screen.getAllByTestId('liga-standings-row')[0];
+    expect(within(aliceRow).getByText('32')).toBeInTheDocument(); // not "+32"
+    expect(within(aliceRow).getByText('60')).toBeInTheDocument();
+    expect(within(aliceRow).queryByText('+32')).toBeNull();
+
+    const bobRow = screen.getAllByTestId('liga-standings-row')[1];
+    expect(within(bobRow).getByText('0')).toBeInTheDocument(); // missed round = 0 points
+    expect(within(bobRow).queryByText('E')).toBeNull();
+  });
+});
