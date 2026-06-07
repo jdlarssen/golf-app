@@ -1,26 +1,26 @@
-// Wolf-scoring (issue #274): 4-spiller rotating partner-format.
+// Wolf-scoring (issue #274; #465: 3–5 spillere): rotating partner-format.
 //
 // Wolf er den eneste modus i Tørny i dag der lag-tildelingen er dynamisk
 // per hull. Spilleren med riktig `team_number` for hullet (= Wolf) velger
-// hvert hull en av tre strategier:
+// hvert hull en av tre strategier (n = antall spillere, 3–5):
 //
-//   - 'partner': 2v2, Wolf + valgt partner mot de to andre. Vinner-side får
+//   - 'partner': Wolf + valgt partner mot resten. Vinner-side får
 //     2 × stake til hver av sine to.
-//   - 'lone':    1v3, Wolf alene mot de tre andre. Wolf vinner → 4 × stake;
-//     opp vinner → 1 × stake til hver av de tre.
-//   - 'blind':   1v3 deklarert FØR tee shots. Wolf vinner → 6 × stake;
-//     opp vinner → 2 × stake til hver av de tre.
+//   - 'lone':    Wolf alene mot de andre. Wolf vinner → n × stake;
+//     opp vinner → 1 × stake til hver motstander.
+//   - 'blind':   alene, deklarert FØR tee shots. Wolf vinner → (n+2) × stake;
+//     opp vinner → 2 × stake til hver motstander.
 //
 // Stake-mekanikk: base = 1. Tied hull bærer stake +1 til neste hull. Avgjort
 // hull resetter stake til 1 for neste. Pending hull (ikke spilt/ikke valgt)
 // bevarer stake uendret. Multiplier (2x for lone, 3x for blind) ER stake-
 // uavhengig — selve choice-en på det aktuelle hullet bestemmer x-faktoren.
 //
-// Rotasjon (rotation: 'random_with_trailing'):
-//   - Hull 1-16: Wolf = player.find(p => p.teamNumber === ((hole-1) % 4) + 1).
+// Rotasjon (rotation: 'random_with_trailing'). La R = floor(18/n)*n:
+//   - Hull 1..R: Wolf = player.find(p => p.teamNumber === ((hole-1) % n) + 1).
 //     `team_number` er random permutasjon satt av wizard, lagret i DB.
-//   - Hull 17-18: Wolf = spilleren med lavest totalPoints etter forrige hull.
-//     Tiebreak: team_number ASC (deterministisk).
+//   - Hull R+1..18: Wolf = spilleren med lavest totalPoints etter forrige hull.
+//     Tiebreak: team_number ASC (deterministisk). n=3 → R=18, ingen trailing.
 //
 // Når `wolf_hole_choices`-tabellen har en eksplisitt `wolf_user_id` for et
 // hull, leses den direkte (kanonisk kilde). Rotasjons-regelen brukes som
@@ -75,11 +75,11 @@ function makeWorkingState(): PlayerWorkingState {
  * Bestemmer Wolf-spilleren for et hull.
  *
  *  - Hvis `wolfChoices`-entry har eksplisitt `wolfUserId`, returner den.
- *  - Ellers hull 1-16: lineær rotasjon på `team_number`.
- *  - Hull 17-18: lavest totalPoints i `working`, tiebreak team_number ASC.
+ *  - Ellers hull 1..R: lineær rotasjon på `team_number` (R = floor(18/n)*n).
+ *  - Hull R+1..18: lavest totalPoints i `working`, tiebreak team_number ASC.
  *
  * Returnerer null hvis vi ikke kan finne en gyldig wolf (defensive — bør
- * ikke skje når validatoren har gjort jobben sin med 4 distinct team_numbers).
+ * ikke skje når validatoren har gjort jobben sin med n distinct team_numbers).
  */
 function determineWolf(
   holeNumber: number,
@@ -92,12 +92,17 @@ function determineWolf(
     if (explicit) return explicit;
   }
 
-  if (holeNumber >= 1 && holeNumber <= 16) {
-    const slot = ((holeNumber - 1) % 4) + 1;
+  // #465: generalisert til n ∈ {3,4,5}. R = største multiplum av n ≤ 18 er
+  // siste rotasjons-hull; resten (R+1..18) er trailing. n=3 → R=18 (ingen
+  // trailing); n=4 → R=16 (trailing 17-18, = dagens); n=5 → R=15.
+  const n = players.length;
+  const R = Math.floor(18 / n) * n;
+  if (holeNumber >= 1 && holeNumber <= R) {
+    const slot = ((holeNumber - 1) % n) + 1;
     return players.find((p) => p.teamNumber === slot) ?? null;
   }
 
-  // Hull 17-18: trailing-wolf. Sorter på (totalPoints ASC, team_number ASC).
+  // Hull R+1..18: trailing-wolf. Sorter på (totalPoints ASC, team_number ASC).
   // Vi sorterer en kopi for å unngå å mutere caller-array.
   const sorted = [...players].sort((a, b) => {
     const ta = working.get(a.userId)?.totalPoints ?? 0;
@@ -256,9 +261,11 @@ function buildHoleRow(
         pointsByPlayer[id] = 2 * stake;
       }
     } else if (choice.choice === 'lone') {
-      pointsByPlayer[wolfPlayer.userId] = 4 * stake;
+      // #465: lone-gevinst = n (= antall spillere). n=4 → 4 (uendret).
+      pointsByPlayer[wolfPlayer.userId] = players.length * stake;
     } else if (choice.choice === 'blind') {
-      pointsByPlayer[wolfPlayer.userId] = 6 * stake;
+      // #465: blind-gevinst = n+2. n=4 → 6 (uendret).
+      pointsByPlayer[wolfPlayer.userId] = (players.length + 2) * stake;
       const blindState = working.get(wolfPlayer.userId);
       if (blindState) blindState.blindWolfWins += 1;
     }

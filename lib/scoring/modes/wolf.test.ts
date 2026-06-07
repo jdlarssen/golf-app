@@ -38,6 +38,20 @@ function fourPlayers(opts?: {
   ];
 }
 
+/**
+ * Generisk felt-bygger for n spillere (#465 — Wolf støtter 3–5). Tildeler
+ * team_number 1..n i rekkefølge. Brukes av n=3/n=5-testene; n=4-fikstur-en
+ * over (`fourPlayers`) er bevisst urørt som refaktor-bevis.
+ */
+function playersN(n: number, handicaps?: number[]): ScoringPlayer[] {
+  return Array.from({ length: n }, (_, i) => ({
+    userId: `p${i + 1}`,
+    teamNumber: i + 1,
+    flightNumber: i + 1,
+    courseHandicap: handicaps?.[i] ?? 0,
+  }));
+}
+
 function makeCtx(opts: {
   players?: ScoringPlayer[];
   holes?: ScoringHole[];
@@ -819,5 +833,207 @@ describe('wolf — outcome on hole row', () => {
     expect(points.p2 ?? 0).toBe(0);
     expect(points.p3 ?? 0).toBe(0);
     expect(points.p4 ?? 0).toBe(0);
+  });
+});
+
+// =============================================================================
+// #465 — Wolf støtter 3–5 spillere
+//
+// Generaliseringen: R = floor(18/n)*n er største multiplum av n ≤ 18.
+//   - Hull 1..R: rotasjon (slot = ((hull-1) % n) + 1).
+//   - Hull R+1..18: trailing-wolf (lavest total, tiebreak team_number ASC).
+// Scoring-økonomi: lone-gevinst = n, blind = n+2. Partner (2 hver) og
+// motstander-utdeling (1, eller 2 for blind) er per-person-faste.
+// =============================================================================
+
+describe('wolf — 3 spillere (#465)', () => {
+  it('basic shape: 3 spillere i resultatet', () => {
+    const result = compute(makeCtx({ players: playersN(3) }));
+    expect(result.kind).toBe('wolf');
+    expect(result.players).toHaveLength(3);
+  });
+
+  // n=3 → R=18: HELE runden er rotasjon, ingen trailing-segment.
+  it.each([
+    [1, 'p1'],
+    [2, 'p2'],
+    [3, 'p3'],
+    [4, 'p1'],
+    [16, 'p1'],
+    [17, 'p2'],
+    [18, 'p3'],
+  ])('hull %d har wolf %s (rotasjon hele runden, R=18)', (hole, expected) => {
+    const result = compute(makeCtx({ players: playersN(3) }));
+    expect(result.holes[hole - 1].wolfUserId).toBe(expected);
+  });
+
+  it('hull 17/18 følger rotasjon, IKKE trailing (n=3 har ingen trailing)', () => {
+    // p2 vinner lone på hull 2 (p2 er wolf hull 2) → p2 leder med 3.
+    // Hvis trailing gjaldt hull 17 ville lavest (p1) blitt wolf — men
+    // rotasjon gir p2. Assert p2 → beviser at trailing ikke trigges.
+    const result = compute(
+      makeCtx({
+        players: playersN(3),
+        scoring: 'gross',
+        scores: holeScores(2, { p1: 4, p2: 3, p3: 5 }),
+        wolfChoices: [
+          { holeNumber: 2, wolfUserId: 'p2', choice: 'lone', partnerUserId: null },
+        ],
+      }),
+    );
+    expect(result.holes[16].wolfUserId).toBe('p2'); // rotasjon, ikke trailing
+    expect(result.holes[17].wolfUserId).toBe('p3');
+  });
+
+  it.each([
+    {
+      desc: 'lone + wolf wins → +3 (= n) til wolf',
+      choice: 'lone' as const,
+      scores: { p1: 3, p2: 4, p3: 5 },
+      expected: { p1: 3, p2: 0, p3: 0 },
+    },
+    {
+      desc: 'lone + opp wins → +1 til hver av 2 opp',
+      choice: 'lone' as const,
+      scores: { p1: 6, p2: 3, p3: 5 },
+      expected: { p1: 0, p2: 1, p3: 1 },
+    },
+    {
+      desc: 'blind + wolf wins → +5 (= n+2) til wolf',
+      choice: 'blind' as const,
+      scores: { p1: 3, p2: 4, p3: 5 },
+      expected: { p1: 5, p2: 0, p3: 0 },
+    },
+    {
+      desc: 'blind + opp wins → +2 til hver av 2 opp',
+      choice: 'blind' as const,
+      scores: { p1: 6, p2: 3, p3: 5 },
+      expected: { p1: 0, p2: 2, p3: 2 },
+    },
+  ])('$desc', ({ choice, scores, expected }) => {
+    const result = compute(
+      makeCtx({
+        players: playersN(3),
+        scoring: 'gross',
+        scores: holeScores(1, scores),
+        wolfChoices: [{ holeNumber: 1, wolfUserId: 'p1', choice, partnerUserId: null }],
+      }),
+    );
+    expect(totalsByPlayer(result)).toEqual(expected);
+  });
+
+  it('partner: wolf+partner (2) mot 1 motstander', () => {
+    // wolf-win → +2 til p1, p2. (p3 er eneste motstander.)
+    const win = compute(
+      makeCtx({
+        players: playersN(3),
+        scoring: 'gross',
+        scores: holeScores(1, { p1: 3, p2: 4, p3: 5 }),
+        wolfChoices: [
+          { holeNumber: 1, wolfUserId: 'p1', choice: 'partner', partnerUserId: 'p2' },
+        ],
+      }),
+    );
+    expect(totalsByPlayer(win)).toEqual({ p1: 2, p2: 2, p3: 0 });
+
+    // opp-win → +1 til den ene motstanderen.
+    const lose = compute(
+      makeCtx({
+        players: playersN(3),
+        scoring: 'gross',
+        scores: holeScores(1, { p1: 5, p2: 5, p3: 3 }),
+        wolfChoices: [
+          { holeNumber: 1, wolfUserId: 'p1', choice: 'partner', partnerUserId: 'p2' },
+        ],
+      }),
+    );
+    expect(totalsByPlayer(lose)).toEqual({ p1: 0, p2: 0, p3: 1 });
+  });
+});
+
+describe('wolf — 5 spillere (#465)', () => {
+  it('basic shape: 5 spillere i resultatet', () => {
+    const result = compute(makeCtx({ players: playersN(5) }));
+    expect(result.players).toHaveLength(5);
+  });
+
+  // n=5 → R=15: hull 1-15 rotasjon, hull 16-18 trailing.
+  it.each([
+    [1, 'p1'],
+    [5, 'p5'],
+    [6, 'p1'],
+    [15, 'p5'],
+  ])('hull %d har wolf %s (rotasjon 1-15)', (hole, expected) => {
+    const result = compute(makeCtx({ players: playersN(5) }));
+    expect(result.holes[hole - 1].wolfUserId).toBe(expected);
+  });
+
+  it('hull 16 er trailing (lavest total), ikke rotasjon', () => {
+    // p1 vinner lone på hull 1 (+5) → p1 leder. Rotasjon for hull 16 ville
+    // gitt p1, men trailing skal velge lavest (p2, team_number ASC blant 0).
+    const result = compute(
+      makeCtx({
+        players: playersN(5),
+        scoring: 'gross',
+        scores: holeScores(1, { p1: 3, p2: 4, p3: 5, p4: 5, p5: 5 }),
+        wolfChoices: [
+          { holeNumber: 1, wolfUserId: 'p1', choice: 'lone', partnerUserId: null },
+        ],
+      }),
+    );
+    expect(result.holes[0].wolfUserId).toBe('p1'); // rotasjon hull 1
+    expect(result.holes[15].wolfUserId).toBe('p2'); // trailing hull 16
+  });
+
+  it.each([
+    {
+      desc: 'lone + wolf wins → +5 (= n) til wolf',
+      choice: 'lone' as const,
+      scores: { p1: 3, p2: 4, p3: 5, p4: 5, p5: 5 },
+      expected: { p1: 5, p2: 0, p3: 0, p4: 0, p5: 0 },
+    },
+    {
+      desc: 'lone + opp wins → +1 til hver av 4 opp',
+      choice: 'lone' as const,
+      scores: { p1: 6, p2: 3, p3: 5, p4: 5, p5: 5 },
+      expected: { p1: 0, p2: 1, p3: 1, p4: 1, p5: 1 },
+    },
+    {
+      desc: 'blind + wolf wins → +7 (= n+2) til wolf',
+      choice: 'blind' as const,
+      scores: { p1: 3, p2: 4, p3: 5, p4: 5, p5: 5 },
+      expected: { p1: 7, p2: 0, p3: 0, p4: 0, p5: 0 },
+    },
+    {
+      desc: 'blind + opp wins → +2 til hver av 4 opp',
+      choice: 'blind' as const,
+      scores: { p1: 6, p2: 3, p3: 5, p4: 5, p5: 5 },
+      expected: { p1: 0, p2: 2, p3: 2, p4: 2, p5: 2 },
+    },
+  ])('$desc', ({ choice, scores, expected }) => {
+    const result = compute(
+      makeCtx({
+        players: playersN(5),
+        scoring: 'gross',
+        scores: holeScores(1, scores),
+        wolfChoices: [{ holeNumber: 1, wolfUserId: 'p1', choice, partnerUserId: null }],
+      }),
+    );
+    expect(totalsByPlayer(result)).toEqual(expected);
+  });
+
+  it('partner: wolf+partner (2) mot 3 motstandere', () => {
+    const result = compute(
+      makeCtx({
+        players: playersN(5),
+        scoring: 'gross',
+        scores: holeScores(1, { p1: 3, p2: 4, p3: 5, p4: 5, p5: 5 }),
+        wolfChoices: [
+          { holeNumber: 1, wolfUserId: 'p1', choice: 'partner', partnerUserId: 'p2' },
+        ],
+      }),
+    );
+    // wolf-side wins → +2 til p1, p2. Motstandere uendret.
+    expect(totalsByPlayer(result)).toEqual({ p1: 2, p2: 2, p3: 0, p4: 0, p5: 0 });
   });
 });

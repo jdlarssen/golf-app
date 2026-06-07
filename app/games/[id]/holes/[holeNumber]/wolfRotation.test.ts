@@ -88,15 +88,77 @@ describe('determineWolfForHole — edge cases', () => {
     expect(determineWolfForHole(1, [], new Map())).toBeNull();
   });
 
-  it('hull 1-16 uten matchende team_number returnerer null', () => {
-    const incomplete: WolfRotationPlayer[] = [
+  it('rotasjon med hull på manglende team_number returnerer null', () => {
+    // n=2 (avledet fra listelengde), men team_number har et hull: 1 og 3.
+    // Hull 2 → slot ((2-1) % 2) + 1 = 2 → ingen spiller har team 2 → null.
+    const gapped: WolfRotationPlayer[] = [
       { userId: 'u1', teamNumber: 1 },
-      { userId: 'u2', teamNumber: 2 },
-      // mangler team 3 og 4
+      { userId: 'u3', teamNumber: 3 },
     ];
-    // hull 3 ber om team 3 — mangler
-    expect(determineWolfForHole(3, incomplete, new Map())).toBeNull();
-    // hull 1 fungerer fortsatt (team 1 finnes)
-    expect(determineWolfForHole(1, incomplete, new Map())).toBe('u1');
+    expect(determineWolfForHole(2, gapped, new Map())).toBeNull();
+    // Hull 1 → slot 1 finnes fortsatt.
+    expect(determineWolfForHole(1, gapped, new Map())).toBe('u1');
+  });
+});
+
+// #465 — n=3 og n=5. R = floor(18/n)*n.
+const PLAYERS3: WolfRotationPlayer[] = [
+  { userId: 'u1', teamNumber: 1 },
+  { userId: 'u2', teamNumber: 2 },
+  { userId: 'u3', teamNumber: 3 },
+];
+
+const PLAYERS5: WolfRotationPlayer[] = [
+  { userId: 'u1', teamNumber: 1 },
+  { userId: 'u2', teamNumber: 2 },
+  { userId: 'u3', teamNumber: 3 },
+  { userId: 'u4', teamNumber: 4 },
+  { userId: 'u5', teamNumber: 5 },
+];
+
+describe('determineWolfForHole — 3 spillere (#465)', () => {
+  // n=3 → R=18: hele runden er rotasjon, ingen trailing.
+  it.each<[number, string]>([
+    [1, 'u1'],
+    [2, 'u2'],
+    [3, 'u3'],
+    [4, 'u1'],
+    [16, 'u1'],
+    [17, 'u2'],
+    [18, 'u3'],
+  ])('hull %i → wolf %s (rotasjon hele runden)', (hole, expected) => {
+    expect(determineWolfForHole(hole, PLAYERS3, new Map())).toBe(expected);
+  });
+
+  it('hull 17/18 følger rotasjon selv med poeng-forskjeller (ingen trailing)', () => {
+    const points = new Map<string, number>([
+      ['u1', 0],
+      ['u2', 10], // ville ikke blitt trailing-wolf — men rotasjon gir u2
+      ['u3', 0],
+    ]);
+    expect(determineWolfForHole(17, PLAYERS3, points)).toBe('u2');
+  });
+});
+
+describe('determineWolfForHole — 5 spillere (#465)', () => {
+  // n=5 → R=15: hull 1-15 rotasjon, hull 16-18 trailing.
+  it.each<[number, string]>([
+    [1, 'u1'],
+    [5, 'u5'],
+    [6, 'u1'],
+    [15, 'u5'],
+  ])('hull %i → wolf %s (rotasjon 1-15)', (hole, expected) => {
+    expect(determineWolfForHole(hole, PLAYERS5, new Map())).toBe(expected);
+  });
+
+  it('hull 16-18 er trailing (lavest total, tiebreak team ASC)', () => {
+    const points = new Map<string, number>([
+      ['u1', 5],
+      ['u2', 3], // lavest → trailing-wolf
+      ['u3', 8],
+      ['u4', 6],
+      ['u5', 7],
+    ]);
+    expect(determineWolfForHole(16, PLAYERS5, points)).toBe('u2');
   });
 });
