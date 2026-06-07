@@ -953,6 +953,211 @@ export type Database = {
           },
         ]
       }
+      league_players: {
+        Row: {
+          accepted_at: string | null
+          joined_at: string
+          league_id: string
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          joined_at?: string
+          league_id: string
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          joined_at?: string
+          league_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "league_players_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_players_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      league_rounds: {
+        Row: {
+          closes_at: string
+          course_id: string | null
+          created_at: string
+          id: string
+          label: string
+          league_id: string
+          opens_at: string
+          original_closes_at: string
+          sequence: number
+          tee_box_id: string | null
+          window_overridden_at: string | null
+          window_overridden_by: string | null
+        }
+        Insert: {
+          closes_at: string
+          course_id?: string | null
+          created_at?: string
+          id?: string
+          label: string
+          league_id: string
+          opens_at: string
+          original_closes_at: string
+          sequence: number
+          tee_box_id?: string | null
+          window_overridden_at?: string | null
+          window_overridden_by?: string | null
+        }
+        Update: {
+          closes_at?: string
+          course_id?: string | null
+          created_at?: string
+          id?: string
+          label?: string
+          league_id?: string
+          opens_at?: string
+          original_closes_at?: string
+          sequence?: number
+          tee_box_id?: string | null
+          window_overridden_at?: string | null
+          window_overridden_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "league_rounds_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_rounds_league_id_fkey"
+            columns: ["league_id"]
+            isOneToOne: false
+            referencedRelation: "leagues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_rounds_tee_box_id_fkey"
+            columns: ["tee_box_id"]
+            isOneToOne: false
+            referencedRelation: "tee_boxes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "league_rounds_window_overridden_by_fkey"
+            columns: ["window_overridden_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leagues: {
+        Row: {
+          course_id: string | null
+          course_scope: string
+          created_at: string
+          created_by: string
+          finished_at: string | null
+          format: string
+          group_id: string | null
+          id: string
+          missed_round_policy: string
+          name: string
+          penalty_fixed_over_par: number | null
+          penalty_kind: string
+          scoring: string
+          season_end: string
+          season_start: string
+          standings_model: string
+          started_at: string | null
+          status: string
+          tee_box_id: string | null
+        }
+        Insert: {
+          course_id?: string | null
+          course_scope: string
+          created_at?: string
+          created_by: string
+          finished_at?: string | null
+          format?: string
+          group_id?: string | null
+          id?: string
+          missed_round_policy?: string
+          name: string
+          penalty_fixed_over_par?: number | null
+          penalty_kind?: string
+          scoring?: string
+          season_end: string
+          season_start: string
+          standings_model: string
+          started_at?: string | null
+          status?: string
+          tee_box_id?: string | null
+        }
+        Update: {
+          course_id?: string | null
+          course_scope?: string
+          created_at?: string
+          created_by?: string
+          finished_at?: string | null
+          format?: string
+          group_id?: string | null
+          id?: string
+          missed_round_policy?: string
+          name?: string
+          penalty_fixed_over_par?: number | null
+          penalty_kind?: string
+          scoring?: string
+          season_end?: string
+          season_start?: string
+          standings_model?: string
+          started_at?: string | null
+          status?: string
+          tee_box_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leagues_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leagues_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leagues_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leagues_tee_box_id_fkey"
+            columns: ["tee_box_id"]
+            isOneToOne: false
+            referencedRelation: "tee_boxes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string
@@ -1214,211 +1419,6 @@ export type Database = {
           },
         ]
       }
-      league_players: {
-        Row: {
-          accepted_at: string | null
-          joined_at: string
-          league_id: string
-          user_id: string
-        }
-        Insert: {
-          accepted_at?: string | null
-          joined_at?: string
-          league_id: string
-          user_id: string
-        }
-        Update: {
-          accepted_at?: string | null
-          joined_at?: string
-          league_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "league_players_league_id_fkey"
-            columns: ["league_id"]
-            isOneToOne: false
-            referencedRelation: "leagues"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "league_players_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      league_rounds: {
-        Row: {
-          closes_at: string
-          course_id: string | null
-          created_at: string
-          id: string
-          label: string
-          league_id: string
-          opens_at: string
-          original_closes_at: string
-          sequence: number
-          tee_box_id: string | null
-          window_overridden_at: string | null
-          window_overridden_by: string | null
-        }
-        Insert: {
-          closes_at: string
-          course_id?: string | null
-          created_at?: string
-          id?: string
-          label: string
-          league_id: string
-          opens_at: string
-          original_closes_at: string
-          sequence: number
-          tee_box_id?: string | null
-          window_overridden_at?: string | null
-          window_overridden_by?: string | null
-        }
-        Update: {
-          closes_at?: string
-          course_id?: string | null
-          created_at?: string
-          id?: string
-          label?: string
-          league_id?: string
-          opens_at?: string
-          original_closes_at?: string
-          sequence?: number
-          tee_box_id?: string | null
-          window_overridden_at?: string | null
-          window_overridden_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "league_rounds_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "league_rounds_league_id_fkey"
-            columns: ["league_id"]
-            isOneToOne: false
-            referencedRelation: "leagues"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "league_rounds_tee_box_id_fkey"
-            columns: ["tee_box_id"]
-            isOneToOne: false
-            referencedRelation: "tee_boxes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "league_rounds_window_overridden_by_fkey"
-            columns: ["window_overridden_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      leagues: {
-        Row: {
-          course_id: string | null
-          course_scope: string
-          created_at: string
-          created_by: string
-          finished_at: string | null
-          format: string
-          group_id: string | null
-          id: string
-          missed_round_policy: string
-          name: string
-          penalty_fixed_over_par: number | null
-          penalty_kind: string
-          scoring: string
-          season_end: string
-          season_start: string
-          standings_model: string
-          started_at: string | null
-          status: string
-          tee_box_id: string | null
-        }
-        Insert: {
-          course_id?: string | null
-          course_scope: string
-          created_at?: string
-          created_by: string
-          finished_at?: string | null
-          format?: string
-          group_id?: string | null
-          id?: string
-          missed_round_policy?: string
-          name: string
-          penalty_fixed_over_par?: number | null
-          penalty_kind?: string
-          scoring?: string
-          season_end: string
-          season_start: string
-          standings_model: string
-          started_at?: string | null
-          status?: string
-          tee_box_id?: string | null
-        }
-        Update: {
-          course_id?: string | null
-          course_scope?: string
-          created_at?: string
-          created_by?: string
-          finished_at?: string | null
-          format?: string
-          group_id?: string | null
-          id?: string
-          missed_round_policy?: string
-          name?: string
-          penalty_fixed_over_par?: number | null
-          penalty_kind?: string
-          scoring?: string
-          season_end?: string
-          season_start?: string
-          standings_model?: string
-          started_at?: string | null
-          status?: string
-          tee_box_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "leagues_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "leagues_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "leagues_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "groups"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "leagues_tee_box_id_fkey"
-            columns: ["tee_box_id"]
-            isOneToOne: false
-            referencedRelation: "tee_boxes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       tournaments: {
         Row: {
           chapman_allowance_pct: number
@@ -1649,6 +1649,7 @@ export type Database = {
       is_group_admin: { Args: { p_group_id: string }; Returns: boolean }
       is_group_member: { Args: { p_group_id: string }; Returns: boolean }
       is_in_game: { Args: { p_game_id: string }; Returns: boolean }
+      league_group_id: { Args: { p_league_id: string }; Returns: string }
       remove_friend: { Args: { p_other: string }; Returns: string }
       respond_friend_request: {
         Args: { p_accept: boolean; p_request_id: string }
@@ -1849,3 +1850,4 @@ export const Constants = {
     },
   },
 } as const
+
