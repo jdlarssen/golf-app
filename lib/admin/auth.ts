@@ -1,6 +1,7 @@
 import 'server-only';
 import { redirect } from 'next/navigation';
 import { isTrustedCreator } from './trustedCreators';
+import { getAdminClient } from '@/lib/supabase/admin';
 import type { getServerClient } from '@/lib/supabase/server';
 
 type ServerSupabase = Awaited<ReturnType<typeof getServerClient>>;
@@ -135,4 +136,34 @@ export async function requireAdminOrClubAdmin(
     .maybeSingle();
   if (membership?.role === 'owner' || membership?.role === 'admin') return ctx;
   redirect(`/klubber/${clubId}`);
+}
+
+/**
+ * Gate for managing a single LEAGUE (#483). Resolves the league's club and
+ * delegates:
+ *  - `group_id` set → klubb-liga: the league's club owner/admin (or a global
+ *    admin) may manage it (`requireAdminOrClubAdmin`).
+ *  - `group_id` null → frittstående liga: global-admin-only (`requireAdmin`),
+ *    unchanged from before.
+ *
+ * The `group_id` lookup uses the admin client so the authorization decision
+ * does not depend on the caller's own RLS visibility. This gate is a UX guard
+ * (redirect non-managers); the real security boundary is the RLS WRITE policies
+ * on leagues/league_rounds/league_players (migration 0083), which evaluate each
+ * row's actual parent-league club — so a manipulated `league_id`/`round_id`
+ * mismatch is still rejected at the data layer.
+ */
+export async function requireAdminOrClubAdminOfLeague(
+  supabase: ServerSupabase,
+  leagueId: string,
+): Promise<AdminRoleContext> {
+  const { data } = await getAdminClient()
+    .from('leagues')
+    .select('group_id')
+    .eq('id', leagueId)
+    .maybeSingle();
+  const groupId = (data?.group_id as string | null | undefined) ?? null;
+  return groupId
+    ? requireAdminOrClubAdmin(supabase, groupId)
+    : requireAdmin(supabase);
 }

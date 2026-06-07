@@ -3,7 +3,11 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
-import { requireAdmin, requireAdminOrClubAdmin } from '@/lib/admin/auth';
+import {
+  requireAdmin,
+  requireAdminOrClubAdmin,
+  requireAdminOrClubAdminOfLeague,
+} from '@/lib/admin/auth';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
 import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
 import { generateRounds } from './generateRounds';
@@ -185,11 +189,10 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
 
 export async function updateLeagueRound(formData: FormData): Promise<LeagueActionError> {
   const supabase = await getServerClient();
-  await requireAdmin(supabase);
-
   const roundId = str(formData, 'round_id');
   const leagueId = str(formData, 'league_id');
   if (!roundId || !leagueId) return { error: 'missing' };
+  await requireAdminOrClubAdminOfLeague(supabase, leagueId);
 
   const patch: Record<string, unknown> = {};
   const label = str(formData, 'label');
@@ -225,11 +228,11 @@ export async function updateLeagueRound(formData: FormData): Promise<LeagueActio
  */
 export async function addLeagueRound(formData: FormData): Promise<LeagueActionError> {
   const supabase = await getServerClient();
-  await requireAdmin(supabase);
   const leagueId = str(formData, 'league_id');
   const opensAt = str(formData, 'opens_at');
   const closesAt = str(formData, 'closes_at');
   if (!leagueId || !opensAt || !closesAt) return { error: 'missing' };
+  await requireAdminOrClubAdminOfLeague(supabase, leagueId);
   if (new Date(closesAt).getTime() <= new Date(opensAt).getTime()) return { error: 'window' };
 
   const { data: league } = await supabase
@@ -267,13 +270,12 @@ export async function addLeagueRound(formData: FormData): Promise<LeagueActionEr
 
 export async function overrideRoundWindow(formData: FormData): Promise<LeagueActionError> {
   const supabase = await getServerClient();
-  const { userId } = await requireAdmin(supabase);
-
   const roundId = str(formData, 'round_id');
   const leagueId = str(formData, 'league_id');
   const closesAt = str(formData, 'closes_at');
   const opensAt = str(formData, 'opens_at');
   if (!roundId || !leagueId || !closesAt) return { error: 'missing' };
+  const { userId } = await requireAdminOrClubAdminOfLeague(supabase, leagueId);
 
   const patch: Record<string, unknown> = {
     closes_at: closesAt,
@@ -291,9 +293,9 @@ export async function overrideRoundWindow(formData: FormData): Promise<LeagueAct
 
 export async function addLeaguePlayers(formData: FormData): Promise<LeagueActionError> {
   const supabase = await getServerClient();
-  await requireAdmin(supabase);
   const leagueId = str(formData, 'league_id');
   if (!leagueId) return { error: 'missing' };
+  await requireAdminOrClubAdminOfLeague(supabase, leagueId);
 
   let ids: string[] = [];
   try {
@@ -302,6 +304,27 @@ export async function addLeaguePlayers(formData: FormData): Promise<LeagueAction
   } catch {
     return { error: 'players' };
   }
+
+  // Klubb-liga (#483): behold kun klubbmedlemmer (speiler createLeagueDraft-
+  // guardrailen, så en manipulert post ikke smugler ikke-medlemmer inn).
+  if (ids.length > 0) {
+    const { data: league } = await supabase
+      .from('leagues')
+      .select('group_id')
+      .eq('id', leagueId)
+      .maybeSingle();
+    const groupId = (league?.group_id as string | null | undefined) ?? null;
+    if (groupId) {
+      const { data: memberRows } = await supabase
+        .from('group_members')
+        .select('user_id')
+        .eq('group_id', groupId)
+        .in('user_id', ids);
+      const memberSet = new Set((memberRows ?? []).map((r) => r.user_id));
+      ids = ids.filter((id) => memberSet.has(id));
+    }
+  }
+
   if (ids.length > 0) {
     const { error } = await supabase
       .from('league_players')
@@ -321,10 +344,10 @@ export async function addLeaguePlayers(formData: FormData): Promise<LeagueAction
 
 export async function removeLeaguePlayer(formData: FormData): Promise<LeagueActionError> {
   const supabase = await getServerClient();
-  await requireAdmin(supabase);
   const leagueId = str(formData, 'league_id');
   const userId = str(formData, 'user_id');
   if (!leagueId || !userId) return { error: 'missing' };
+  await requireAdminOrClubAdminOfLeague(supabase, leagueId);
   const { error } = await supabase
     .from('league_players')
     .delete()
@@ -340,7 +363,7 @@ async function setLeagueStatus(
   next: 'active' | 'finished',
 ): Promise<LeagueActionError> {
   const supabase = await getServerClient();
-  await requireAdmin(supabase);
+  await requireAdminOrClubAdminOfLeague(supabase, leagueId);
   const patch: Record<string, unknown> = { status: next };
   if (next === 'active') patch.started_at = new Date().toISOString();
   if (next === 'finished') patch.finished_at = new Date().toISOString();
@@ -353,9 +376,9 @@ async function setLeagueStatus(
 
 export async function startLeague(formData: FormData): Promise<LeagueActionError> {
   const supabase = await getServerClient();
-  await requireAdmin(supabase);
   const leagueId = str(formData, 'league_id');
   if (!leagueId) return { error: 'missing' };
+  await requireAdminOrClubAdminOfLeague(supabase, leagueId);
 
   // A league can only start with at least one round and ≥2 participants
   // (the marker rule needs two players to ever produce a counted result).
@@ -384,9 +407,9 @@ export async function finishLeague(formData: FormData): Promise<LeagueActionErro
 
 export async function deleteLeague(formData: FormData): Promise<LeagueActionError> {
   const supabase = await getServerClient();
-  await requireAdmin(supabase);
   const leagueId = str(formData, 'league_id');
   if (!leagueId) return { error: 'missing' };
+  await requireAdminOrClubAdminOfLeague(supabase, leagueId);
   // Flight games keep their history (league_round_id → SET NULL via cascade of
   // league_rounds delete). Cascade removes rounds + players.
   const { error } = await supabase.from('leagues').delete().eq('id', leagueId);
