@@ -40,6 +40,7 @@ Issue [#452](https://github.com/jdlarssen/golf-app/issues/452). Liga-epicen Fase
 - `computeLeagueStandings` skiller nå per-runde-verdiens retning (stableford-poeng = høyest best) fra sesong-verdiens retning. Alle fire sesong-modellene (Total / Snitt / Beste-N / Poeng) regner på rå stableford-poeng; en uteblitt runde teller som 0. Slagspill-oppførselen er bit-for-bit uendret.
 - `getLigaSnapshot` ruter hver flight gjennom `computeFlightRoundValues` etter `league.format`; `startLeagueRoundFlight` lager flighten med formatets `game_mode`. Sesong-tabellen viser rå poeng (ikke mot-par) for stableford.
 - Per-runde-feltene `netToPar`/`grossToPar` heter nå `net`/`gross`, og celle-feltet `toPar` heter `value` (holder mot-par for slagspill, poeng for stableford).
+- Liga-detaljen (admin + klubb) viser nå «Spillform», og Total-modellens label sier «sum poeng» for stableford i stedet for «sum mot par».
 
 </details>
 

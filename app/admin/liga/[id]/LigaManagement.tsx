@@ -55,7 +55,7 @@ const SCOPE_LABEL: Record<string, string> = {
 };
 
 const STANDINGS_LABEL: Record<string, string> = {
-  total: 'Total (sum mot par)',
+  total: 'Total',
   average: 'Snitt per runde',
   best_n: 'Beste N runder',
   points: 'Poeng per plassering',
@@ -65,6 +65,12 @@ const SCORING_LABEL: Record<string, string> = {
   net: 'Netto',
   gross: 'Brutto',
   both: 'Netto og brutto',
+};
+
+const FORMAT_LABEL: Record<string, string> = {
+  stroke: 'Slagspill',
+  stableford: 'Stableford',
+  modified_stableford: 'Modifisert Stableford',
 };
 
 const MISSED_LABEL: Record<string, string> = {
@@ -156,6 +162,10 @@ export async function LigaManagement({
       <Card className="mb-5">
         <dl className="space-y-2 font-sans text-[13px]">
           <div className="flex justify-between gap-2">
+            <dt className="text-muted">Spillform</dt>
+            <dd className="text-text font-medium">{FORMAT_LABEL[league.format] ?? league.format}</dd>
+          </div>
+          <div className="flex justify-between gap-2">
             <dt className="text-muted">Tabell</dt>
             <dd className="text-text font-medium">{SCORING_LABEL[league.scoring] ?? league.scoring}</dd>
           </div>
@@ -163,6 +173,9 @@ export async function LigaManagement({
             <dt className="text-muted">Sesong-modell</dt>
             <dd className="text-text font-medium">
               {STANDINGS_LABEL[league.standings_model] ?? league.standings_model}
+              {league.standings_model === 'total'
+                ? ` (sum ${league.format === 'stroke' ? 'mot par' : 'poeng'})`
+                : ''}
               {league.standings_model === 'best_n' && league.best_n_count
                 ? ` (${league.best_n_count})`
                 : ''}
