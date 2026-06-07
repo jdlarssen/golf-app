@@ -105,6 +105,8 @@ export default async function SpillformerPage() {
               summary={merged.summary}
               points={merged.points}
               detailHref={detailHref}
+              mode={entry.mode}
+              playStyleTeamSize={entry.modeConfig ? teamSize : undefined}
             />
           );
         })}

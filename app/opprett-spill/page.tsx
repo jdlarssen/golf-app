@@ -17,6 +17,7 @@ import {
 } from '@/lib/admin/gameErrorMessages';
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
 import { getServerClient } from '@/lib/supabase/server';
+import { getRoleContext } from '@/lib/admin/auth';
 import {
   getFormatsForIntent,
   getCupEligibleFormats,
@@ -61,6 +62,8 @@ export default async function OpprettSpillPage({
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
   const currentUserId = user.id;
+  // #477: «Solo / Test»-arrangementet vises kun for admin i veiviseren.
+  const { isAdmin } = await getRoleContext(supabase);
 
   const sp = await searchParams;
   const errorMessage = buildErrorMessage(first(sp.error), first(sp.emails));
@@ -94,6 +97,7 @@ export default async function OpprettSpillPage({
             <GameFormBody
               defaultGroupId={first(sp.klubb)}
               userId={currentUserId}
+              isAdmin={isAdmin}
             />
           </Suspense>
         </Card>
@@ -128,9 +132,11 @@ async function PlayerShortageBanner() {
 async function GameFormBody({
   defaultGroupId,
   userId,
+  isAdmin,
 }: {
   defaultGroupId: string | undefined;
   userId: string;
+  isAdmin: boolean;
 }) {
   // F2 (#272): pre-fetch format-katalog parallelt med courses/players.
   const [kompisFormats, klubbFormats, soloFormats, cupEligibleFormats] =
@@ -188,6 +194,7 @@ async function GameFormBody({
       friendPlayerIds={friendPlayerIds}
       clubMemberIdsByClub={clubMembers.memberIdsByClub}
       currentUserId={userId}
+      isAdmin={isAdmin}
     />
   );
 }

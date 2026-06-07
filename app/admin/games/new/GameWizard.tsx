@@ -104,6 +104,12 @@ type Props = {
    * arrangøren kan legge til seg selv (du er ikke din egen venn/klubbmedlem).
    */
   currentUserId?: string;
+  /**
+   * #477: styrer om «Solo / Test»-arrangementet vises i IntentSelector. Kun
+   * admin. Admin-flyten (`/admin/games/new`) sender true; den åpne `/opprett-
+   * spill`-flyten sender brukerens faktiske admin-status.
+   */
+  isAdmin?: boolean;
 };
 
 const STEP_TITLES: Record<Step, string> = {
@@ -142,6 +148,7 @@ export function GameWizard({
   friendPlayerIds = [],
   clubMemberIdsByClub = {},
   currentUserId = '',
+  isAdmin = false,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -433,6 +440,7 @@ export function GameWizard({
             value={state.intent}
             onChange={state.setIntent}
             disabled={state.lockGameMode}
+            isAdmin={isAdmin}
           />
         )}
 

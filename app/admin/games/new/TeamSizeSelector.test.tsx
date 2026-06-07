@@ -2,8 +2,10 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { TeamSizeSelector } from './TeamSizeSelector';
 
+// #478: velgeren viser kun lagstørrelsene formatet faktisk støtter — ingen
+// grayed-out «kommer snart»-fliser lenger.
 describe('TeamSizeSelector', () => {
-  it('rendrer tre tiles for stableford: Solo / 4BBB / 4-mann i et radiogroup', () => {
+  it('Stableford: viser kun Solo + 4BBB, ingen «kommer snart»', () => {
     render(<TeamSizeSelector mode="stableford" value={1} onChange={() => {}} />);
 
     expect(
@@ -12,27 +14,41 @@ describe('TeamSizeSelector', () => {
     expect(screen.getByRole('radio', { name: /solo/i })).toBeInTheDocument();
     // Stableford-familien: team_size 2 vises som «4BBB», ikke «Par» (#282).
     expect(screen.getByRole('radio', { name: /4bbb/i })).toBeInTheDocument();
+    // 4-mann finnes ikke for stableford → ingen tile, ingen «kommer snart».
+    expect(
+      screen.queryByRole('radio', { name: /4-mann/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/kommer snart/i)).not.toBeInTheDocument();
+  });
+
+  it('Best ball: viser kun «Par» (verken Solo eller 4-mann)', () => {
+    render(<TeamSizeSelector mode="best_ball" value={2} onChange={() => {}} />);
+
+    expect(screen.getByRole('radio', { name: /par/i })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('radio', { name: /solo/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('radio', { name: /4-mann/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('radio', { name: /4bbb/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('Texas scramble: viser Par + 4-mann, men ikke Solo (scramble er lag-spill)', () => {
+    render(
+      <TeamSizeSelector mode="texas_scramble" value={2} onChange={() => {}} />,
+    );
+
+    expect(screen.getByRole('radio', { name: /par/i })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /4-mann/i })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('radio', { name: /solo/i }),
+    ).not.toBeInTheDocument();
   });
 
-  it('Stableford: Solo + 4BBB aktiv, 4-mann disabled med "kommer snart"', () => {
-    // 4BBB (team_size 2) ble aktivert i epic #43 fase 2. 4-mann er fortsatt
-    // grayed-out per roadmap.
-    render(<TeamSizeSelector mode="stableford" value={1} onChange={() => {}} />);
-
-    const solo = screen.getByRole('radio', { name: /solo/i });
-    const fourbb = screen.getByRole('radio', { name: /4bbb/i });
-    const fourMann = screen.getByRole('radio', { name: /4-mann/i });
-
-    expect(solo).not.toBeDisabled();
-    expect(fourbb).not.toBeDisabled();
-    expect(fourMann).toBeDisabled();
-
-    // "Kommer snart" kun på 4-mann nå.
-    expect(screen.getAllByText(/kommer snart/i)).toHaveLength(1);
-  });
-
-  it('Stableford + 4BBB aktiveres: caller onChange(2) når 4BBB-tile klikkes', () => {
+  it('caller onChange med valgt størrelse når en tile klikkes', () => {
     const onChange = vi.fn();
     render(
       <TeamSizeSelector mode="stableford" value={1} onChange={onChange} />,
@@ -42,71 +58,18 @@ describe('TeamSizeSelector', () => {
     expect(onChange).toHaveBeenCalledWith(2);
   });
 
-  it('Best ball beholder «Par»-label (ikke 4BBB) for team_size 2 (#282)', () => {
-    render(<TeamSizeSelector mode="best_ball" value={2} onChange={() => {}} />);
-    expect(screen.getByRole('radio', { name: /par/i })).toBeInTheDocument();
-    expect(
-      screen.queryByRole('radio', { name: /4bbb/i }),
-    ).not.toBeInTheDocument();
-  });
-
-  it('Stableford: 4-mann er fortsatt disabled og ignorerer klikk', () => {
-    const onChange = vi.fn();
-    render(
-      <TeamSizeSelector mode="stableford" value={1} onChange={onChange} />,
-    );
-
-    fireEvent.click(screen.getByRole('radio', { name: /4-mann/i }));
-    expect(onChange).not.toHaveBeenCalled();
-  });
-
-  it('Best ball: Par aktiv, Solo + 4-mann disabled', () => {
-    render(
-      <TeamSizeSelector mode="best_ball" value={2} onChange={() => {}} />,
-    );
-
-    const solo = screen.getByRole('radio', { name: /solo/i });
-    const par = screen.getByRole('radio', { name: /par/i });
-    const fourMann = screen.getByRole('radio', { name: /4-mann/i });
-
-    expect(par).not.toBeDisabled();
-    expect(solo).toBeDisabled();
-    expect(fourMann).toBeDisabled();
-  });
-
-  it('caller onChange med ny størrelse når aktiv tile klikkes', () => {
-    const onChange = vi.fn();
-    render(
-      <TeamSizeSelector mode="stableford" value={1} onChange={onChange} />,
-    );
-
-    fireEvent.click(screen.getByRole('radio', { name: /solo/i }));
-    expect(onChange).toHaveBeenCalledWith(1);
-  });
-
-  it('ignorerer klikk på disabled tile (best-ball-modus: solo + 4-mann)', () => {
-    const onChange = vi.fn();
-    render(
-      <TeamSizeSelector mode="best_ball" value={2} onChange={onChange} />,
-    );
-
-    fireEvent.click(screen.getByRole('radio', { name: /solo/i }));
-    fireEvent.click(screen.getByRole('radio', { name: /4-mann/i }));
-    expect(onChange).not.toHaveBeenCalled();
-  });
-
   it('markerer valgt tile med aria-checked=true', () => {
-    render(
-      <TeamSizeSelector mode="best_ball" value={2} onChange={() => {}} />,
-    );
+    render(<TeamSizeSelector mode="stableford" value={2} onChange={() => {}} />);
 
-    const par = screen.getByRole('radio', { name: /par/i });
-    const solo = screen.getByRole('radio', { name: /solo/i });
-    expect(par.getAttribute('aria-checked')).toBe('true');
-    expect(solo.getAttribute('aria-checked')).toBe('false');
+    expect(
+      screen.getByRole('radio', { name: /4bbb/i }).getAttribute('aria-checked'),
+    ).toBe('true');
+    expect(
+      screen.getByRole('radio', { name: /solo/i }).getAttribute('aria-checked'),
+    ).toBe('false');
   });
 
-  it('hele kontrollen disables via disabled-prop (for edit-flyten med mode-lock)', () => {
+  it('hele kontrollen disables via disabled-prop (edit-flyten med mode-lock)', () => {
     const onChange = vi.fn();
     render(
       <TeamSizeSelector

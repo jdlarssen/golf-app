@@ -2,6 +2,8 @@
 
 import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
 import { formatIconFor } from '@/lib/formats/icons';
+import { FormatStyleBadge } from '@/components/ui/FormatStyleBadge';
+import type { GameMode } from '@/lib/scoring/modes/types';
 
 type Props = {
   formats: FormatForIntent[];
@@ -78,6 +80,7 @@ export function FormatGrid({ formats, value, onChange, disabled = false }: Props
                 <span className="font-sans text-xs leading-snug text-muted">
                   {f.short_description}
                 </span>
+                <FormatStyleBadge mode={f.slug as GameMode} className="mt-0.5" />
               </button>
             );
           })}
@@ -116,8 +119,11 @@ export function FormatGrid({ formats, value, onChange, disabled = false }: Props
                   >
                     {formatIconFor(f.icon_key, 20)}
                   </span>
-                  <span className="font-sans text-xs leading-snug">
-                    {f.display_name}
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <span className="font-sans text-xs leading-snug">
+                      {f.display_name}
+                    </span>
+                    <FormatStyleBadge mode={f.slug as GameMode} className="self-start" />
                   </span>
                 </button>
               );

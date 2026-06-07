@@ -359,6 +359,8 @@ async function GameFormBody({
       friendPlayerIds={friendPlayerIds}
       clubMemberIdsByClub={clubMembers.memberIdsByClub}
       currentUserId={userId ?? ''}
+      // #477: ruten er admin-gatet (redirect over), så «Solo / Test» vises her.
+      isAdmin
     />
   );
 }

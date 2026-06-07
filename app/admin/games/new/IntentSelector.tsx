@@ -13,6 +13,13 @@ type Props = {
    * det for å unngå utilsiktet validation-error.
    */
   disabled?: boolean;
+  /**
+   * #477: «Solo / Test»-arrangementet er en intern test-/øve-snarvei og vises
+   * kun for admin. Vanlige brukere ser bare Kompis / Klubb / Cup. Et eksisterende
+   * solo-spill som redigeres viser fortsatt kortet (value === 'solo') så intent-en
+   * er synlig.
+   */
+  isAdmin?: boolean;
 };
 
 type IntentTile = {
@@ -85,7 +92,18 @@ const TILES: IntentTile[] = [
  * Mobile-først: 2-col grid, ≥44px tap-targets (kortene blir ~140px høye
  * pga padding + ikon + tekst).
  */
-export function IntentSelector({ value, onChange, disabled = false }: Props) {
+export function IntentSelector({
+  value,
+  onChange,
+  disabled = false,
+  isAdmin = false,
+}: Props) {
+  // #477: skjul «Solo / Test» for ikke-admin. Behold kortet hvis et eksisterende
+  // solo-spill redigeres (value === 'solo') så intent-en forblir synlig.
+  const tiles = TILES.filter(
+    (tile) => tile.intent !== 'solo' || isAdmin || value === 'solo',
+  );
+
   return (
     <fieldset disabled={disabled}>
       <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
@@ -96,7 +114,7 @@ export function IntentSelector({ value, onChange, disabled = false }: Props) {
         aria-label="Hva slags arrangement?"
         className="mt-2 grid grid-cols-2 gap-3"
       >
-        {TILES.map((tile) => {
+        {tiles.map((tile) => {
           const selected = value === tile.intent;
           return (
             <button

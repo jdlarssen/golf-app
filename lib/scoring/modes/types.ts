@@ -164,6 +164,66 @@ export function isSoloFormat(mode: GameMode, teamSize: number): boolean {
 }
 
 /**
+ * Spillestil for format-kortene (#478) — hvordan deltakerne er organisert,
+ * vist som et lite merke i veiviseren og på /spillformer så man ser med en
+ * gang hva slags spill formatet er:
+ *
+ *  - `solo`       — du spiller alene / øver (solo slagspill).
+ *  - `individual` — flere spillere konkurrerer hver for seg, ingen lag
+ *                   (pott-format som Wolf/Skins/Nassau + 1-mot-1 matchplay).
+ *  - `team`       — dere er gruppert på lag eller sider (best ball, scramble-
+ *                   familien, foursomes/fourball, shamble, patsome).
+ *  - `flexible`   — kan spilles enten solo eller som lag (stableford-familien:
+ *                   solo eller 4BBB).
+ *
+ * Eksplisitt switch med `never`-uttømming: en ny GameMode MÅ klassifiseres her.
+ */
+export type PlayStyle = 'solo' | 'individual' | 'team' | 'flexible';
+
+export function formatPlayStyle(mode: GameMode): PlayStyle {
+  switch (mode) {
+    case 'solo_strokeplay':
+      return 'solo';
+    case 'stableford':
+    case 'modified_stableford':
+      return 'flexible';
+    case 'singles_matchplay':
+    case 'wolf':
+    case 'nassau':
+    case 'skins':
+    case 'bingo_bango_bongo':
+    case 'nines':
+    case 'round_robin':
+    case 'acey_deucey':
+      return 'individual';
+    case 'best_ball':
+    case 'texas_scramble':
+    case 'ambrose':
+    case 'florida_scramble':
+    case 'fourball_matchplay':
+    case 'foursomes_matchplay':
+    case 'greensome_matchplay':
+    case 'chapman_matchplay':
+    case 'gruesome_matchplay':
+    case 'shamble':
+    case 'patsome':
+      return 'team';
+    default: {
+      const _exhaustive: never = mode;
+      return _exhaustive;
+    }
+  }
+}
+
+/** Norske merke-labels per spillestil (#478). Single source of truth. */
+export const PLAY_STYLE_LABELS: Record<PlayStyle, string> = {
+  solo: 'Solo',
+  individual: 'Hver for seg',
+  team: 'Lag',
+  flexible: 'Solo eller lag',
+};
+
+/**
  * WD / «trekk spiller» (#386): hvilke format støtter at en spiller trekkes ut
  * av rangeringen (scorene teller ikke). Kun individuell-ball-totalformat der
  * eksklusjon faktisk endrer resultatet: best ball, stableford-familien, solo

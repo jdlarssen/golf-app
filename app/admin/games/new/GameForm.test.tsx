@@ -1023,7 +1023,7 @@ describe('GameForm — solo strokeplay (epic #46 fase 2)', () => {
     fireEvent.click(screen.getByRole('radio', { name: /slagspill/i }));
   }
 
-  it('slagspill: TeamSizeSelector er synlig med Solo som aktivt valg (Par/4-mann grayed-out)', () => {
+  it('slagspill: TeamSizeSelector viser kun Solo (ingen Par/4-mann-fliser)', () => {
     render(
       <GameForm
         courses={COURSES}
@@ -1039,16 +1039,19 @@ describe('GameForm — solo strokeplay (epic #46 fase 2)', () => {
     selectSoloStrokeplay();
 
     // TeamSizeSelector skal være synlig (i motsetning til matchplay som
-    // skjuler den helt) — Solo er aktiv, Par/4-mann står som «kommer snart».
+    // skjuler den helt), men #478 lister bare gyldige størrelser — solo
+    // slagspill har kun Solo, ingen grå Par/4-mann-«kommer snart»-fliser.
     expect(
       screen.getByRole('group', { name: /velg lagstørrelse/i }),
     ).toBeInTheDocument();
     const solo = screen.getByRole('radio', { name: /solo/i });
     expect(solo.getAttribute('aria-checked')).toBe('true');
-    const par = screen.getByRole('radio', { name: /par/i });
-    expect(par).toBeDisabled();
-    const fourMann = screen.getByRole('radio', { name: /4-mann/i });
-    expect(fourMann).toBeDisabled();
+    expect(
+      screen.queryByRole('radio', { name: /par/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('radio', { name: /4-mann/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('slagspill: hidden inputs sender game_mode=solo_strokeplay og team_size=1, ingen stableford_team_size', () => {

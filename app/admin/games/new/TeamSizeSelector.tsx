@@ -23,12 +23,13 @@ type Props = {
 };
 
 /**
- * Mapping fra modus til hvilke lagstørrelser som er aktive.
- * Andre kombinasjoner vises grayed-out med «kommer snart» — eksplisitt
- * design-beslutning per epic #41 + #43-planen:
+ * Mapping fra modus til hvilke lagstørrelser formatet faktisk støtter.
+ * `tilesForMode` viser kun disse — kombinasjoner som ikke gir mening (f.eks.
+ * solo scramble) listes ikke i det hele tatt (#478, var tidligere grayed-out
+ * «kommer snart»). Historikk per epic #41 + #43-planen:
  *
- *  - Modus = Stableford → Solo + Par aktiv (4-mann kommer)
- *  - Modus = Best ball → kun Par aktiv (solo/4-mann kommer)
+ *  - Modus = Stableford → Solo + 4BBB (par)
+ *  - Modus = Best ball → kun Par
  *
  * Par-stableford (4BBB) ble aktivert i epic #43 fase 2 — scoring-motoren
  * og payload-validatoren landet i fase 1 (PR #151), og lag-fordelings-
@@ -131,40 +132,48 @@ type TileDef = {
  * støtter lagstørrelser 3 og 4, ikke 1 og 2.
  */
 function tilesForMode(mode: GameMode): TileDef[] {
+  const enabled = ENABLED_COMBOS[mode];
   if (mode === 'florida_scramble') {
-    return [
+    const floridaTiles: TileDef[] = [
       { size: 3, title: 'Tremannslag', hint: '3 spillere' },
       { size: 4, title: '4-mann', hint: '4 spillere' },
     ];
+    return floridaTiles.filter((t) => enabled.has(t.size));
   }
   const teamTile: TileDef = isStablefordFamily(mode)
     ? { size: 2, title: '4BBB', hint: 'Lag à 2, beste poeng teller' }
     : { size: 2, title: 'Par', hint: '2 spillere' };
-  return [
+  const candidates: TileDef[] = [
     { size: 1, title: 'Solo', hint: '1 spiller' },
     teamTile,
     { size: 4, title: '4-mann', hint: '4 spillere' },
   ];
+  return candidates.filter((t) => enabled.has(t.size));
 }
 
 /**
- * Lagstørrelse-velger — tre tiles (Solo / Par / 4-mann) der den aktive
- * tilen styres av valgt modus. Disabled tiles vises med «kommer snart»-
- * subscript så admin ser hvor roadmap-en bærer uten å trenge eksplisitt
- * roadmap-side.
+ * Lagstørrelse-velger — viser kun lagstørrelsene som faktisk gjelder valgt
+ * modus (Solo / Par / 4BBB / 4-mann etter format). Formater som ikke kan
+ * spilles i en gitt størrelse listes ikke, så velgeren viser aldri tomme
+ * «kommer snart»-fliser for varianter som ikke gir mening (#478).
  *
  * Visuell konsistens: tile-stilen speiler `ModeSelector` (border, padding,
  * active-state via primary-soft + inset-ring) men droper ikon — per design-
  * dokumentet er lagstørrelse en sekundær parameter og fortjener ikke samme
  * symbolske vekting som modus-valget.
  */
+const GRID_COLS: Record<number, string> = {
+  1: 'grid-cols-1',
+  2: 'grid-cols-2',
+  3: 'grid-cols-3',
+};
+
 export function TeamSizeSelector({
   mode,
   value,
   onChange,
   disabled = false,
 }: Props) {
-  const enabledSet = ENABLED_COMBOS[mode];
   const tiles = tilesForMode(mode);
 
   return (
@@ -172,29 +181,24 @@ export function TeamSizeSelector({
       <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
         Velg lagstørrelse
       </legend>
-      <div role="radiogroup" className={`mt-2 grid gap-3 ${tiles.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+      <div role="radiogroup" className={`mt-2 grid gap-3 ${GRID_COLS[tiles.length] ?? 'grid-cols-3'}`}>
         {tiles.map((tile) => {
-          const isEnabled = enabledSet.has(tile.size);
           const selected = value === tile.size;
-          const tileDisabled = disabled || !isEnabled;
           return (
             <button
               key={tile.size}
               type="button"
               role="radio"
-              aria-checked={selected && isEnabled}
+              aria-checked={selected}
               aria-label={tile.title}
-              aria-disabled={tileDisabled || undefined}
-              disabled={tileDisabled}
+              disabled={disabled}
               onClick={() => {
-                if (!tileDisabled) onChange(tile.size);
+                if (!disabled) onChange(tile.size);
               }}
-              className={`flex min-h-[44px] flex-col items-start gap-1 rounded-xl border p-3 text-left transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
-                tileDisabled
-                  ? 'cursor-not-allowed border-border bg-surface opacity-50'
-                  : selected
-                    ? 'border-primary bg-primary-soft text-text shadow-[inset_0_0_0_1px_var(--primary)]'
-                    : 'cursor-pointer border-border bg-surface text-text hover:bg-primary-soft/60'
+              className={`flex min-h-[44px] flex-col items-start gap-1 rounded-xl border p-3 text-left transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50 ${
+                selected
+                  ? 'border-primary bg-primary-soft text-text shadow-[inset_0_0_0_1px_var(--primary)]'
+                  : 'cursor-pointer border-border bg-surface text-text hover:bg-primary-soft/60'
               }`}
             >
               <span className="font-serif text-base leading-snug">
@@ -203,11 +207,6 @@ export function TeamSizeSelector({
               <span className="font-sans text-[11px] leading-snug text-muted tabular-nums">
                 {tile.hint}
               </span>
-              {!isEnabled && (
-                <span className="font-sans text-[10px] font-medium uppercase tracking-[0.12em] text-accent-deep">
-                  Kommer snart
-                </span>
-              )}
             </button>
           );
         })}

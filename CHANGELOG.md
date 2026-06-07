@@ -17,7 +17,36 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.89.y — Venner · vennegrafen vokser av seg selv
+## 1.90.y — Veiviser · tydeligere format-valg
+
+Issue [#477](https://github.com/jdlarssen/golf-app/issues/477) + [#478](https://github.com/jdlarssen/golf-app/issues/478). Format-velgeren i veiviseren er ryddet: hvert format merkes med spillestil, lagstørrelse-valget viser bare det som faktisk gjelder, og test-snarveien er skjult for vanlige brukere.
+
+### [1.90.0] - 2026-06-07 · #477, #478
+
+> Når du setter opp et spill, ser du nå med en gang om et format spilles solo, hver for seg eller på lag. Et lite merke på hvert kort sier hva som gjelder, og lagstørrelse-valget viser bare størrelsene formatet faktisk støtter — ingen grå «kommer snart»-valg lenger.
+
+<details>
+<summary>Teknisk</summary>
+
+[#478](https://github.com/jdlarssen/golf-app/issues/478): format-kortene i veiviseren og på /spillformer får et spillestil-merke (Solo / Hver for seg / Lag / Solo eller lag) drevet av ny `formatPlayStyle(mode)`. `TeamSizeSelector` viser kun lagstørrelsene formatet faktisk støtter — de grå «kommer snart»-flisene (solo scramble, solo best ball, 4-mann stableford) er borte. [#477](https://github.com/jdlarssen/golf-app/issues/477): «Solo / Test»-arrangementet i `IntentSelector` vises kun for admin (et eksisterende solo-spill viser fortsatt kortet i edit-flyten).
+
+#### Added
+- `formatPlayStyle(mode)` + `PLAY_STYLE_LABELS` i `lib/scoring/modes/types.ts` og delt `<FormatStyleBadge>` — spillestil-klassifisering med enhetstester. 4BBB-kortet på /spillformer låses til «Lag» via valgfri `teamSize`.
+
+#### Changed
+- `TeamSizeSelector` lister kun gyldige lagstørrelser per format; «kommer snart»-flisene er fjernet (#478).
+- Format-kortene (veiviser + /spillformer) viser spillestil-merket.
+- `IntentSelector` gater «Solo / Test» bak `isAdmin` — tråd gjennom `GameWizard`, `/opprett-spill` og `/admin/games/new` (#477).
+
+</details>
+
+## Tidligere versjoner
+
+<details>
+<summary><strong>Venner — vennegrafen vokser (1 serie)</strong></summary>
+
+<details>
+<summary><strong>1.89.y — Venner · vennegrafen vokser av seg selv (1 oppføring)</strong></summary>
 
 Issue [#481](https://github.com/jdlarssen/golf-app/issues/481). Vennegrafen vokser nå av seg selv gjennom invitasjoner, ikke bare via manuelle venneforespørsler.
 
@@ -43,7 +72,9 @@ Issue [#481](https://github.com/jdlarssen/golf-app/issues/481). Vennegrafen voks
 
 </details>
 
-## Tidligere versjoner
+</details>
+
+</details>
 
 <details>
 <summary><strong>Klubb-liga (#480, #483, #485) — 3 serier</strong></summary>

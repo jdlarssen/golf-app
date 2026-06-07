@@ -1,4 +1,6 @@
 import { SmartLink } from '@/components/ui/SmartLink';
+import { FormatStyleBadge } from '@/components/ui/FormatStyleBadge';
+import type { GameMode } from '@/lib/scoring/modes/types';
 
 /**
  * Gjenbrukbar utvidbar modus-forklaring (#299, #307). Viser modus-navn +
@@ -23,6 +25,8 @@ export function ModeGuideCard({
   points,
   label,
   detailHref,
+  mode,
+  playStyleTeamSize,
   className,
 }: {
   /** Sammendrag-setning — alltid synlig i lukket tilstand. */
@@ -36,6 +40,14 @@ export function ModeGuideCard({
    * «Les mer →»-lenke nederst i åpen tilstand.
    */
   detailHref?: string;
+  /**
+   * Valgfri spillmodus — når satt vises et spillestil-merke (Solo / Hver for
+   * seg / Lag) ved siden av navnet (#478). Brukt på /spillformer; game-side-
+   * kortet utelater den (formatet er allerede valgt).
+   */
+  mode?: GameMode;
+  /** Valgfri lagstørrelse som låser et fleksibelt format-merke til Solo/Lag. */
+  playStyleTeamSize?: number;
   className?: string;
 }) {
   return (
@@ -45,9 +57,14 @@ export function ModeGuideCard({
     >
       <summary className="flex min-h-[44px] cursor-pointer list-none items-start gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
         <div className="min-w-0 flex-1">
-          <p className="font-serif text-[17px] font-medium tracking-[-0.01em] text-text">
-            {label}
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-serif text-[17px] font-medium tracking-[-0.01em] text-text">
+              {label}
+            </p>
+            {mode && (
+              <FormatStyleBadge mode={mode} teamSize={playStyleTeamSize} />
+            )}
+          </div>
           <p className="mt-1 text-sm text-muted">{summary}</p>
           <span className="mt-2 inline-block text-xs font-medium text-primary">
             Slik funker det
