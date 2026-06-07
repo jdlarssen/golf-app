@@ -21,6 +21,13 @@ type Props = {
    * (f.eks. «Hvem skal spille?»).
    */
   heading?: string;
+  /**
+   * #464: begrenser den valgbare checkbox-lista til disse id-ene (picker-kilden
+   * per kontekst — venner/klubbmedlemmer). `players` forblir full roster så
+   * allerede-valgte chips alltid slås opp. `undefined` = ingen begrensning
+   * (full-form-escape-hatchen viser hele rosteren som før).
+   */
+  selectableIds?: ReadonlySet<string>;
 };
 
 function playerLabel(p: PlayerOption): string {
@@ -39,7 +46,12 @@ function shortName(p: PlayerOption): string {
   return p.nickname ? `${displayName} «${p.nickname}»` : displayName;
 }
 
-export function PlayersSection({ state, players, heading = '2. Spillere' }: Props) {
+export function PlayersSection({
+  state,
+  players,
+  heading = '2. Spillere',
+  selectableIds,
+}: Props) {
   const {
     selectedPlayerIds,
     togglePlayer,
@@ -55,6 +67,13 @@ export function PlayersSection({ state, players, heading = '2. Spillere' }: Prop
     requiresTeams,
     teamSize,
   } = state;
+
+  // #464: den valgbare lista er roster-en (minus valgte/søk, via filteredPlayers)
+  // skåret ned til kontekst-kilden. Uten `selectableIds` (full-form) er den hele
+  // filteredPlayers. Chips og roster-oppslag bruker fortsatt full `players`-prop.
+  const visiblePlayers = selectableIds
+    ? filteredPlayers.filter((p) => selectableIds.has(p.id))
+    : filteredPlayers;
 
   return (
     <section className="space-y-3">
@@ -163,7 +182,7 @@ export function PlayersSection({ state, players, heading = '2. Spillere' }: Prop
             />
           </div>
 
-          {filteredPlayers.length === 0 ? (
+          {visiblePlayers.length === 0 ? (
             <p className="text-sm text-muted px-1">
               {playerSearch.trim() === ''
                 ? 'Alle spillere er valgt.'
@@ -171,7 +190,7 @@ export function PlayersSection({ state, players, heading = '2. Spillere' }: Prop
             </p>
           ) : (
             <ul className="space-y-2">
-              {filteredPlayers.map((p) => {
+              {visiblePlayers.map((p) => {
                 // Cap-en avhenger av modus:
                 //  - matchplay: 2 spillere (1v1, strengt)
                 //  - team-modi (best-ball/par-stableford): 8 (4 lag à 2)

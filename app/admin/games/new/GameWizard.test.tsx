@@ -221,6 +221,56 @@ describe('GameWizard — happy-path solo stableford', () => {
   });
 });
 
+describe('GameWizard — #464 picker-kilde (kun venner)', () => {
+  function goToPlayersStep() {
+    pickKompisIntent(); // steg 1 → 2
+    pickStablefordFormat();
+    clickNext(); // steg 2 → 3
+    fireEvent.change(screen.getByLabelText(/^bane$/i), {
+      target: { value: 'course-1' },
+    });
+    fireEvent.change(screen.getByLabelText(/^tee$/i), {
+      target: { value: 'tee-1' },
+    });
+    fireEvent.change(screen.getByLabelText(/^tee-off$/i), {
+      target: { value: '2026-06-01T10:00' },
+    });
+    clickNext(); // steg 3 → 4
+    expectStep(4);
+  }
+
+  it('kompis steg 4: venner er valgbare, fremmede er ikke', () => {
+    const friend = makePlayer('f1', 'Venn Person');
+    const stranger = makePlayer('s1', 'Fremmed Person');
+    // Begge i rosteren, men kun vennen i friendPlayerIds — den fremmede skal
+    // ikke dukke opp som valgbar checkbox (#464 headline-oppførsel).
+    renderWizard({ players: [friend, stranger], friendPlayerIds: ['f1'] });
+
+    goToPlayersStep();
+
+    expect(
+      screen.getByRole('checkbox', { name: /venn person/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('checkbox', { name: /fremmed person/i }),
+    ).toBeNull();
+  });
+
+  it('kompis steg 4 uten venner: viser «Legg til venner»-lenke', () => {
+    const stranger = makePlayer('s1', 'Fremmed Person');
+    renderWizard({ players: [stranger], friendPlayerIds: [] });
+
+    goToPlayersStep();
+
+    expect(
+      screen.queryByRole('checkbox', { name: /fremmed person/i }),
+    ).toBeNull();
+    expect(
+      screen.getByRole('link', { name: /legg til venner/i }),
+    ).toBeInTheDocument();
+  });
+});
+
 describe('GameWizard — best-ball inline team/flight på steg 4', () => {
   it('viser lag-grid + flights inline når 8 spillere er valgt', () => {
     renderWizard();

@@ -182,6 +182,9 @@ export function GameWizard({
       }),
     [state.intent, state.groupId, currentUserId, players, friendPlayerIds, clubMemberIdsByClub],
   );
+  // Id-settet brukes til å skjære ned PlayersSection sin valgbare liste; full
+  // `players` beholdes der (chips/lag-oppslag på allerede-valgte).
+  const pickIds = useMemo(() => new Set(pickList.map((p) => p.id)), [pickList]);
   const pickListOthers = pickList.filter((p) => p.id !== currentUserId).length;
 
   // Når bruker går fram/tilbake via browser, oppdateres `searchParams`. Vi
@@ -792,7 +795,12 @@ export function GameWizard({
           {state.intent !== 'solo' && pickListOthers === 0 && (
             <PickerSourceEmptyHint intent={state.intent} groupId={state.groupId} />
           )}
-          <PlayersSection state={state} players={pickList} heading="Spillere" />
+          <PlayersSection
+            state={state}
+            players={players}
+            selectableIds={pickIds}
+            heading="Spillere"
+          />
           {/* TeamsAssignmentSection er self-gating per modus — den rendrer
               kun de relevante under-blokkene (matchplay-sider / lag-grid /
               flights / per-spiller-tee) basert på state-flags. */}
