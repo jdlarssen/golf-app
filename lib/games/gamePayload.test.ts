@@ -2370,7 +2370,7 @@ describe('buildGameInsertPayload — wolf (issue #274)', () => {
     }
   });
 
-  it('publish med 3 spillere → min_players_for_mode', () => {
+  it('publish med 3 spillere unike slot 1-3 → ok, teams_count=3 (#465)', () => {
     const result = buildGameInsertPayload(
       wolfFd({
         slots: [
@@ -2381,10 +2381,17 @@ describe('buildGameInsertPayload — wolf (issue #274)', () => {
       }),
       'publish',
     );
-    expect(result.errorCode).toBe('min_players_for_mode');
+    expect(result.errorCode).toBeUndefined();
+    expect(result.mode_config).toEqual({
+      kind: 'wolf',
+      team_size: 1,
+      teams_count: 3,
+      wolf_scoring: 'net',
+    });
+    expect(result.players).toHaveLength(3);
   });
 
-  it('publish med 5 spillere → too_many_players_for_mode', () => {
+  it('publish med 5 spillere unike slot 1-5 → ok, teams_count=5 (#465)', () => {
     const result = buildGameInsertPayload(
       wolfFd({
         slots: [
@@ -2392,7 +2399,44 @@ describe('buildGameInsertPayload — wolf (issue #274)', () => {
           { userId: 'b', slot: 2 },
           { userId: 'c', slot: 3 },
           { userId: 'd', slot: 4 },
-          { userId: 'e', slot: 1 },
+          { userId: 'e', slot: 5 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBeUndefined();
+    expect(result.mode_config).toEqual({
+      kind: 'wolf',
+      team_size: 1,
+      teams_count: 5,
+      wolf_scoring: 'net',
+    });
+    expect(result.players).toHaveLength(5);
+  });
+
+  it('publish med 2 spillere → min_players_for_mode (#465)', () => {
+    const result = buildGameInsertPayload(
+      wolfFd({
+        slots: [
+          { userId: 'a', slot: 1 },
+          { userId: 'b', slot: 2 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('min_players_for_mode');
+  });
+
+  it('publish med 6 spillere → too_many_players_for_mode (#465)', () => {
+    const result = buildGameInsertPayload(
+      wolfFd({
+        slots: [
+          { userId: 'a', slot: 1 },
+          { userId: 'b', slot: 2 },
+          { userId: 'c', slot: 3 },
+          { userId: 'd', slot: 4 },
+          { userId: 'e', slot: 5 },
+          { userId: 'f', slot: 1 },
         ],
       }),
       'publish',
@@ -2415,7 +2459,8 @@ describe('buildGameInsertPayload — wolf (issue #274)', () => {
     expect(result.errorCode).toBe('team_balance');
   });
 
-  it('publish med slot=5 (utenfor 1-4) → bad_team', () => {
+  it('publish med 4 spillere men slot 1-2-3-5 (hull i rotasjonen) → team_balance (#465)', () => {
+    // Slot 5 er innenfor 1-5, men team_numbers må være sammenhengende 1..n.
     const result = buildGameInsertPayload(
       wolfFd({
         slots: [
@@ -2423,6 +2468,21 @@ describe('buildGameInsertPayload — wolf (issue #274)', () => {
           { userId: 'b', slot: 2 },
           { userId: 'c', slot: 3 },
           { userId: 'd', slot: 5 },
+        ],
+      }),
+      'publish',
+    );
+    expect(result.errorCode).toBe('team_balance');
+  });
+
+  it('publish med slot=6 (utenfor 1-5) → bad_team (#465)', () => {
+    const result = buildGameInsertPayload(
+      wolfFd({
+        slots: [
+          { userId: 'a', slot: 1 },
+          { userId: 'b', slot: 2 },
+          { userId: 'c', slot: 3 },
+          { userId: 'd', slot: 6 },
         ],
       }),
       'publish',

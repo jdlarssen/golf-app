@@ -1456,23 +1456,24 @@ function parseGruesomeAllowancePct(
 }
 
 /**
- * Wolf-validator (issue #274 — 4-spiller rotating partner-format).
+ * Wolf-validator (issue #274; #465 — 3–5-spiller rotating partner-format).
  *
  * Regler:
- *  - EKSAKT 4 spillere ved publish
- *  - team_number 1-4, alle distinct (representerer rotation-slot, ikke lag)
+ *  - 3-5 spillere ved publish (n = antall spillere)
+ *  - team_number sammenhengende 1..n, alle distinct (rotation-slot, ikke lag)
  *  - flight_number = team_number (DB-CHECK game_players_team_flight_consistency)
- *  - draft tolererer partial state (0..4 spillere, ufullstendig slot-fordeling)
+ *  - draft tolererer partial state (0..5 spillere, ufullstendig slot-fordeling)
  *
  * Feilkoder ved publish:
- *  - 0..3 spillere → `min_players_for_mode`
- *  - 5+ spillere → `too_many_players_for_mode`
- *  - 4 spillere men ikke unike team_numbers 1-4 → `team_balance`
+ *  - 0..2 spillere → `min_players_for_mode`
+ *  - 6+ spillere → `too_many_players_for_mode`
+ *  - team_number utenfor 1-5 → `bad_team`
+ *  - team_numbers ikke sammenhengende 1..n → `team_balance`
  *
  * Scoring-toggle: form-feltet `wolf_scoring` ('gross' | 'net'). Default 'net'
  * når feltet mangler (matcher Tørny-default + design-doc).
  *
- * Mode_config-output: `{kind, team_size: 1, teams_count: 4, wolf_scoring}`.
+ * Mode_config-output: `{kind, team_size: 1, teams_count: n, wolf_scoring}`.
  */
 function validateWolf(
   formData: FormData,
@@ -1482,7 +1483,9 @@ function validateWolf(
 
   const players: GamePlayerInput[] = [];
   const seen = new Set<string>();
-  for (let i = 0; i < 8; i++) {
+  // #465: les opptil 6 slots (én over 5-cap) så en 6. spiller fanges som
+  // `too_many` i stedet for å trunkeres stille.
+  for (let i = 0; i < 6; i++) {
     const user_id = String(formData.get(`player_${i}_id`) ?? '').trim();
     if (!user_id) continue;
     if (seen.has(user_id)) {
@@ -1490,11 +1493,11 @@ function validateWolf(
     }
     seen.add(user_id);
     const team_number = Number(formData.get(`player_${i}_team`));
-    // Wolf-slot er strengt 1-4 (rotation-slot, ikke lag).
+    // Wolf-slot er en rotation-slot 1-5 (n bestemmes av antall spillere).
     if (
       !Number.isInteger(team_number) ||
       team_number < 1 ||
-      team_number > 4
+      team_number > 5
     ) {
       return { ok: false, errorCode: 'bad_team' };
     }
@@ -1503,19 +1506,18 @@ function validateWolf(
   }
 
   if (mode === 'publish') {
-    if (players.length < 4) {
+    if (players.length < 3) {
       return { ok: false, errorCode: 'min_players_for_mode' };
     }
-    if (players.length > 4) {
+    if (players.length > 5) {
       return { ok: false, errorCode: 'too_many_players_for_mode' };
     }
-    // Nøyaktig 4 spillere — sjekk at team_numbers er unike 1-4.
-    const slotsSeen = new Set<number>();
-    for (const p of players) {
-      if (p.team_number === null) continue;
-      slotsSeen.add(p.team_number);
-    }
-    if (slotsSeen.size !== 4) {
+    // 3-5 spillere — team_numbers må være sammenhengende 1..n så rotasjonen
+    // (slot = ((hull-1) % n) + 1) finner en wolf på hvert hull.
+    const n = players.length;
+    const sorted = players.map((p) => p.team_number).sort((a, b) => a - b);
+    const contiguous = sorted.every((tn, idx) => tn === idx + 1);
+    if (!contiguous) {
       return { ok: false, errorCode: 'team_balance' };
     }
   }
@@ -1526,7 +1528,7 @@ function validateWolf(
     mode_config: {
       kind: 'wolf',
       team_size: 1,
-      teams_count: 4,
+      teams_count: players.length,
       wolf_scoring: wolfScoring,
     },
   };
@@ -1851,9 +1853,9 @@ function validateNines(
 /**
  * Round Robin-validator (issue #280 — 4-spiller roterende-partner 4BBB-matchplay).
  *
- * Strukturell hybrid av `validateWolf` (4-slot) og `validateFourballMatchplay`
- * (allowance). Speiler Wolf for spiller-strukturen: EKSAKT 4 spillere med
- * unike team_number 1-4 ved publish. Speiler Fourball for allowance:
+ * Strukturell hybrid av et rotation-slot-format og `validateFourballMatchplay`
+ * (allowance). Round Robin krever EKSAKT 4 spillere med unike team_number 1-4
+ * ved publish (matematisk tvunget, ikke 3-5 som Wolf). Speiler Fourball for allowance:
  * form-feltet `round_robin_allowance_pct` (0..100), default 85 i draft.
  *
  * Regler:
