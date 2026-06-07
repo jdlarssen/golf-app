@@ -34,7 +34,7 @@ export function computeLeagueStandings(
   metric: StandingsMetric = 'net',
 ): LeagueStandings {
   const metricOf = (s: LeagueRoundPlayerScore): number =>
-    metric === 'gross' ? s.grossToPar : s.netToPar;
+    metric === 'gross' ? s.gross : s.net;
   const higherIsBetter = config.standingsModel === 'points';
 
   // Dedupe each round's scores to the best entry per player on the active metric.
@@ -81,14 +81,14 @@ export function computeLeagueStandings(
       return s
         ? {
             roundId: rm.round.roundId,
-            toPar: metricOf(s),
+            value: metricOf(s),
             points: null,
             penalised: false,
             deliveredOutsideWindow: s.deliveredOutsideWindow,
           }
         : {
             roundId: rm.round.roundId,
-            toPar: null,
+            value: null,
             points: null,
             penalised: false,
             deliveredOutsideWindow: false,
@@ -151,7 +151,7 @@ export function computeLeagueStandings(
           const pen = penaltyForRound(config, rm.byUser, metricOf);
           sum += pen;
           const cell = perRound.find((c) => c.roundId === rm.round.roundId)!;
-          cell.toPar = pen;
+          cell.value = pen;
           cell.penalised = true;
         }
       }
@@ -173,7 +173,7 @@ export function computeLeagueStandings(
 
   const cellValue = (row: LeagueStandingRow, roundId: string): number => {
     const cell = row.perRound.find((c) => c.roundId === roundId);
-    const v = cell ? (higherIsBetter ? cell.points : cell.toPar) : null;
+    const v = cell ? (higherIsBetter ? cell.points : cell.value) : null;
     // A round the player has no value for counts as worst possible in countback.
     return v == null ? worst : v;
   };

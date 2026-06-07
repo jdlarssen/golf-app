@@ -34,15 +34,15 @@ const standings: LeagueStandings = {
     {
       userId: 'A', value: 5, roundsPlayed: 2, ranked: true, rank: 1,
       perRound: [
-        { roundId: 'r1', toPar: 3, points: 2, penalised: false, deliveredOutsideWindow: false },
-        { roundId: 'r2', toPar: 1, points: 3, penalised: false, deliveredOutsideWindow: false },
+        { roundId: 'r1', value: 3, points: 2, penalised: false, deliveredOutsideWindow: false },
+        { roundId: 'r2', value: 1, points: 3, penalised: false, deliveredOutsideWindow: false },
       ],
     },
     {
       userId: 'B', value: 3, roundsPlayed: 2, ranked: true, rank: 2,
       perRound: [
-        { roundId: 'r1', toPar: 7, points: 1, penalised: false, deliveredOutsideWindow: false },
-        { roundId: 'r2', toPar: 5, points: 2, penalised: false, deliveredOutsideWindow: false },
+        { roundId: 'r1', value: 7, points: 1, penalised: false, deliveredOutsideWindow: false },
+        { roundId: 'r2', value: 5, points: 2, penalised: false, deliveredOutsideWindow: false },
       ],
     },
   ],

@@ -53,13 +53,20 @@ export type LeagueStandingsConfig = {
   bestNCount: number | null;
 };
 
-/** Én spillers tellende resultat i én runde, både netto og brutto mot par. */
+/**
+ * Én spillers tellende per-runde-verdi, på netto- og brutto-aksen. Tallets
+ * betydning og retning følger liga-formatet (se `LeagueFormat`):
+ *  - slagspill: mot-par (totalStrokes − par), lavest best;
+ *  - stableford: stableford-poeng, høyest best (kun netto; brutto speiler netto
+ *    siden poeng-ligaer rangeres netto-only).
+ * Retningen styres av `LeagueStandingsConfig.pointsBased`, ikke av feltnavnet.
+ */
 export type LeagueRoundPlayerScore = {
   userId: string;
-  /** totalNetStrokes − par for tee. Lavere er bedre. */
-  netToPar: number;
-  /** totalGrossStrokes − par for tee. Lavere er bedre. */
-  grossToPar: number;
+  /** Per-runde-verdi på netto-aksen (mot-par for slagspill, poeng for stableford). */
+  net: number;
+  /** Per-runde-verdi på brutto-aksen. Speiler `net` for stableford (netto-only). */
+  gross: number;
   /** Flagget når flighten ble levert utenfor opprinnelig vindu (admin-override). */
   deliveredOutsideWindow: boolean;
 };
@@ -74,8 +81,11 @@ export type LeagueRoundInput = {
 /** Én celle i sesong-tabellen — en spillers resultat i én runde. */
 export type LeagueStandingCell = {
   roundId: string;
-  /** Det aktive tallet (netto eller brutto) mot par. null = spilte ikke runden. */
-  toPar: number | null;
+  /**
+   * Rå per-runde-verdi på aktiv akse (mot-par for slagspill, poeng for
+   * stableford). null = spilte ikke runden. Formateres format-bevisst i display.
+   */
+  value: number | null;
   /** Poeng spilleren fikk denne runden under 'points'-modellen. null ellers / ikke spilt. */
   points: number | null;
   /** true = verdien er en straffescore (uteblitt runde under penalty-modellen). */

@@ -319,8 +319,8 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
       const arr = roundScores.get(roundId) ?? [];
       arr.push({
         userId: line.userId,
-        netToPar: line.totalNetStrokes - par,
-        grossToPar: line.totalGrossStrokes - par,
+        net: line.totalNetStrokes - par,
+        gross: line.totalGrossStrokes - par,
         deliveredOutsideWindow: game.delivered_outside_window,
       });
       roundScores.set(roundId, arr);

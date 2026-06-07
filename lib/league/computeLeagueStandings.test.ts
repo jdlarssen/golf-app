@@ -14,12 +14,12 @@ const cfg = (over: Partial<LeagueStandingsConfig> = {}): LeagueStandingsConfig =
 // gross defaults to net so net-only tests need no extra metric; pass { gross } to differ.
 const score = (
   userId: string,
-  netToPar: number,
+  net: number,
   opts: { gross?: number; outside?: boolean } = {},
 ) => ({
   userId,
-  netToPar,
-  grossToPar: opts.gross ?? netToPar,
+  net,
+  gross: opts.gross ?? net,
   deliveredOutsideWindow: opts.outside ?? false,
 });
 
@@ -47,7 +47,7 @@ describe('computeLeagueStandings — total model', () => {
     expect(res.rows.map((r) => r.rank)).toEqual([1, 2, 3]);
 
     const cMissed = rowOf(res, 'C').perRound.find((c) => c.roundId === 'r2')!;
-    expect(cMissed).toMatchObject({ toPar: 4, penalised: true });
+    expect(cMissed).toMatchObject({ value: 4, penalised: true });
   });
 
   it('fixed penalty uses penaltyFixedOverPar for a missed round', () => {
@@ -109,7 +109,7 @@ describe('computeLeagueStandings — total model', () => {
     expect(rowOf(res, 'A').value).toBe(2);
     expect(rowOf(res, 'A').roundsPlayed).toBe(1);
     const aR2 = rowOf(res, 'A').perRound.find((c) => c.roundId === 'r2')!;
-    expect(aR2).toMatchObject({ toPar: null, penalised: false });
+    expect(aR2).toMatchObject({ value: null, penalised: false });
   });
 
   it('penalises a player who played nothing under the penalty policy', () => {
@@ -143,7 +143,7 @@ describe('computeLeagueStandings — gross metric', () => {
     expect(rowOf(gross, 'B').value).toBe(11); // 7 + 4
     expect(gross.rows[0].userId).toBe('B'); // gross 11 < 25
     const aCell = rowOf(gross, 'A').perRound.find((c) => c.roundId === 'r1')!;
-    expect(aCell.toPar).toBe(12); // cell shows gross under gross metric
+    expect(aCell.value).toBe(12); // cell shows gross under gross metric
   });
 
   it('computes the penalty from the active metric', () => {
@@ -227,7 +227,7 @@ describe('computeLeagueStandings — best_n model', () => {
     ];
     const res = computeLeagueStandings(bestN(2), rounds, ['A', 'B']);
     const bMissed = rowOf(res, 'B').perRound.find((c) => c.roundId === 'r2')!;
-    expect(bMissed).toMatchObject({ toPar: null, penalised: false });
+    expect(bMissed).toMatchObject({ value: null, penalised: false });
   });
 });
 

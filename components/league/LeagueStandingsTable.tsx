@@ -33,7 +33,7 @@ function formatValue(value: number, model: string): string {
 
 function RoundCell({ cell, model }: { cell: LeagueStandingCell | undefined; model: string }) {
   const isPoints = model === 'points';
-  const raw = cell ? (isPoints ? cell.points : cell.toPar) : null;
+  const raw = cell ? (isPoints ? cell.points : cell.value) : null;
   if (!cell || raw === null) {
     return (
       <td className="px-2 py-2 text-center font-serif tabular-nums text-xs text-muted/40">
