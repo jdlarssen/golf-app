@@ -2,8 +2,14 @@
 // Mirrors the cup layer: pure aggregation types live here so computeLeagueStandings,
 // generateRounds and their tests import from one place, decoupled from DB rows.
 
-/** Liga-format. Fase 1 er låst til slagspill ('stroke'). */
-export type LeagueFormat = 'stroke';
+/**
+ * Liga-format (liga-globalt, ikke per runde).
+ * - 'stroke' = slagspill: per-runde-verdi er mot-par, lavest best.
+ * - 'stableford' / 'modified_stableford' = poeng-basert: per-runde-verdi er
+ *   stableford-poeng, høyest best. Sesong-tabellen aggregeres retnings-bevisst
+ *   (se `LeagueStandingsConfig.pointsBased` + `computeLeagueStandings`). Fase 4 (#452).
+ */
+export type LeagueFormat = 'stroke' | 'stableford' | 'modified_stableford';
 
 /** Visning av sesong-tabellen. Fase 1 bruker 'net'. */
 export type LeagueScoring = 'net' | 'gross' | 'both';
