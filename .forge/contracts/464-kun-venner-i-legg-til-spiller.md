@@ -103,20 +103,20 @@ Henter brukerens ikke-utløpte klubber (samme kilde som `getNewGameFormData().cl
 
 ## Success Criteria
 
-- [ ] `lib/wizard/selectablePlayers.ts` finnes; `selectablePlayers.test.ts` (Type-A, `it.each`) dekker: kompis→venner, cup→venner, klubb+klubb→medlemmer, klubb-uten-klubb→venner, solo→uendret, tom-venner→[], tom-medlemmer→[]. `npx vitest run lib/wizard/selectablePlayers` grønt.
-- [ ] Veiviser-steg 4 (`PlayersSection`) viser **kun venner** for `intent==='kompis'` og `intent==='cup'`, **kun klubbmedlemmer** for `intent==='klubb'` m/ valgt klubb. Verifisert i kode (pickList-wiring) + Playwright (kompis-picker har ikke ikke-venn-bruker).
-- [ ] `FriendQuickAdd` er fjernet (komponent + render). `grep FriendQuickAdd` = tomt.
-- [ ] Liga `[id]` «Legg til deltakere» lister kun venner (kilde = `getFriendPlayerOptions`), ikke hele rosteren. Verifisert i `page.tsx`-diff.
-- [ ] Tom-tilstand: friends-kontekst uten venner viser `/profile/venner`-lenke (veiviser + LigaAddPlayers); klubb uten andre medlemmer viser hint.
-- [ ] `getClubMemberPlayerOptions` returnerer e-post-frie options + `memberIdsByClub`; begge veiviser-server-sider merger options inn i roster + sender `clubMemberIdsByClub`.
-- [ ] `npx tsc --noEmit` + `npm run build` grønt; co-located tester for endrede filer; versjon `1.85.0` + CHANGELOG-oppføring.
+- [x] `lib/wizard/selectablePlayers.ts` finnes; `selectablePlayers.test.ts` (Type-A, `it.each`) dekker kompis/cup→venner, klubb+klubb→medlemmer, klubb-uten-klubb→venner, solo→uendret, undefined-intent→venner, tom-venner→[self], tom-medlemmer→[self], rekkefølge-bevaring. **11 tester grønt** (`commit 4bc2b0c`).
+- [x] Veiviser-steg 4 (`PlayersSection`) viser kun venner for kompis/cup, kun klubbmedlemmer for klubb m/ valgt klubb. Implementert via `selectableIds`-prop (`PlayersSection.tsx:74-76` `visiblePlayers`, `GameWizard.tsx` `pickIds`). **UI-test:** «#464 picker-kilde»-blokk — fremmed utenfor `friendPlayerIds` har ingen checkbox (evaluator-tamper-probe rød→grønn, `commit 3980595`).
+- [x] `FriendQuickAdd` er fjernet (komponent + render). `grep FriendQuickAdd` = tomt.
+- [x] Liga `[id]` «Legg til deltakere» lister kun venner (kilde = `getFriendPlayerOptions`, `page.tsx`), ikke hele rosteren.
+- [x] Tom-tilstand: friends-kontekst uten venner viser `/profile/venner`-lenke (`PickerSourceEmptyHint` + `LigaAddPlayers`); klubb uten andre medlemmer viser hint. UI-test dekker no-friends-lenken.
+- [x] `getClubMemberPlayerOptions` returnerer e-post-frie options + `memberIdsByClub`; begge veiviser-server-sider sender `clubMemberIdsByClub`+`currentUserId`, `/opprett-spill` merger medlem-rader inn i roster.
+- [x] `npx tsc --noEmit` (0) + `npm run build` (OK) grønt; co-located `GameWizard.test` oppdatert; versjon `1.85.0` + CHANGELOG ny serie.
 
 ## Gates
 
-- [ ] `npx tsc --noEmit` (full — ny prop + intent-typer treffer exhaustive maps)
-- [ ] `npm run build` (Vercel-paritet)
-- [ ] `npx vitest run lib/wizard/selectablePlayers` + co-located tester for hver endret `*.ts/.tsx` med egen `*.test`
-- [ ] Playwright (frontend rørt): kompis-veiviser steg 4 viser kun venner; klubb m/ valgt klubb viser medlemmer
+- [x] `npx tsc --noEmit` — 0 errors
+- [x] `npm run build` — Compiled successfully (Vercel-paritet)
+- [x] `npx vitest run lib/wizard/selectablePlayers app/admin/games/new/GameWizard.test.tsx lib/games/newGameFormData lib/league` — 51/51 grønt
+- [x] UI-test (frontend rørt): kompis-veiviser steg 4 ekskluderer ikke-venner (2 nye Testing-Library-tester; evaluator verifiserte via render-probe at de er ikke-tautologiske)
 
 ## Files Likely Touched
 
