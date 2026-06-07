@@ -14,8 +14,10 @@ const LEAGUES: ClubLeagueRow[] = [
 ];
 
 describe('ClubLeaguesSection (#480)', () => {
-  it('lists the club leagues, each linking to its public liga page', () => {
-    render(<ClubLeaguesSection leagues={LEAGUES} clubId="c1" canCreate={false} />);
+  it('lists the club leagues, each name linking to its public liga page', () => {
+    render(
+      <ClubLeaguesSection leagues={LEAGUES} clubId="c1" canCreate={false} canManage={false} />,
+    );
     expect(screen.getByText('Vårserien')).toBeInTheDocument();
     expect(screen.getByText('Høstserien')).toBeInTheDocument();
     // Status badge uses the human label, not the raw enum value.
@@ -27,18 +29,31 @@ describe('ClubLeaguesSection (#480)', () => {
 
   it('shows the «Ny liga» entry only when the viewer may create (club owner/admin, not frozen)', () => {
     const { rerender } = render(
-      <ClubLeaguesSection leagues={LEAGUES} clubId="c1" canCreate={true} />,
+      <ClubLeaguesSection leagues={LEAGUES} clubId="c1" canCreate={true} canManage={true} />,
     );
     const create = screen.getByRole('link', { name: 'Ny liga' });
     expect(create).toHaveAttribute('href', '/klubber/c1/liga/ny');
 
     // A plain member (canCreate=false) gets the list but no create door.
-    rerender(<ClubLeaguesSection leagues={LEAGUES} clubId="c1" canCreate={false} />);
+    rerender(<ClubLeaguesSection leagues={LEAGUES} clubId="c1" canCreate={false} canManage={false} />);
     expect(screen.queryByRole('link', { name: 'Ny liga' })).toBeNull();
   });
 
+  it('shows a «Styr» link per league only when the viewer may manage (#483)', () => {
+    const { rerender } = render(
+      <ClubLeaguesSection leagues={LEAGUES} clubId="c1" canCreate={false} canManage={true} />,
+    );
+    const manage = screen.getAllByRole('link', { name: 'Styr' });
+    expect(manage).toHaveLength(LEAGUES.length);
+    expect(manage[0]).toHaveAttribute('href', '/admin/liga/l1');
+
+    // A plain member (canManage=false) sees the list but no management door.
+    rerender(<ClubLeaguesSection leagues={LEAGUES} clubId="c1" canCreate={false} canManage={false} />);
+    expect(screen.queryByRole('link', { name: 'Styr' })).toBeNull();
+  });
+
   it('renders an empty-state hint when the club has no leagues', () => {
-    render(<ClubLeaguesSection leagues={[]} clubId="c1" canCreate={false} />);
+    render(<ClubLeaguesSection leagues={[]} clubId="c1" canCreate={false} canManage={false} />);
     expect(screen.getByText('Ingen ligaer i klubben ennå.')).toBeInTheDocument();
   });
 });

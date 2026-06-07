@@ -17,7 +17,37 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.86.y — Klubb-liga
+## 1.87.y — Klubb-liga · klubb-admin styrer
+
+Issue [#483](https://github.com/jdlarssen/golf-app/issues/483). En klubb-eier eller -admin kan nå starte, avslutte og styre sin egen klubb-liga selv — ikke bare opprette den.
+
+### [1.87.0] - 2026-06-07 · #483
+
+> Er du eier eller admin i en klubb, kan du nå styre klubb-ligaen din selv: start og avslutt den, legg til runder og deltakere, og utvid spillevinduer. Du trenger ikke lenger be hovedadmin om hjelp.
+
+<details>
+<summary>Teknisk</summary>
+
+[#483](https://github.com/jdlarssen/golf-app/issues/483): Liga-styringen (`/admin/liga/[id]` + handlingene) var global-admin-only. Nå autoriserer en league-aware gate klubb-admins for deres egen klubb-liga. RLS (migrasjon `0083`) er fortsatt sikkerhets-grensa.
+
+#### Added
+- `requireAdminOrClubAdminOfLeague(leagueId)` — slår opp ligaens klubb og slipper klubb-eier/-admin (eller global admin) inn; frittstående liga forblir global-admin-only.
+- «Styr»-lenke per liga i «Klubbens ligaer» (kun for eier/admin) → liga-styringssiden.
+
+#### Changed
+- Alle 9 styrings-handlinger (start, avslutt, runder, deltakere, vindu-override, slett) + styringssiden + slett-siden bruker den nye gaten.
+- Liga-styringssiden er klubb-bevisst for en klubb-liga: deltaker-pickeren viser klubbmedlemmer, tilbake-lenke og slett peker til klubb-siden, og kicker viser klubbnavnet.
+- `addLeaguePlayers` filtrerer til klubbmedlemmer for klubb-ligaer (speiler opprett-guardrailen).
+
+</details>
+
+## Tidligere versjoner
+
+<details>
+<summary><strong>Klubb-liga (#480) — 1 serie</strong></summary>
+
+<details>
+<summary><strong>1.86.y — Klubb-liga (2 oppføringer)</strong></summary>
 
 Issue [#480](https://github.com/jdlarssen/golf-app/issues/480) (epos). En klubb kan nå kjøre sin egen liga: eieren eller en klubb-admin setter den opp rett fra klubb-siden, og medlemmene ser den og blir med.
 
@@ -54,7 +84,9 @@ Issue [#480](https://github.com/jdlarssen/golf-app/issues/480) (epos). En klubb 
 
 </details>
 
-## Tidligere versjoner
+</details>
+
+</details>
 
 <details>
 <summary><strong>Venner i spiller-pickeren (#464) — 1 serie</strong></summary>

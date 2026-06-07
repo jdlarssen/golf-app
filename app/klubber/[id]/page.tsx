@@ -273,6 +273,7 @@ export default async function KlubbDetailPage({
         leagues={clubLeagues ?? []}
         clubId={club.id}
         canCreate={isAdmin && !frozen}
+        canManage={isAdmin}
       />
 
       {/* Create a game scoped to this club (any member) — frozen when expired. */}

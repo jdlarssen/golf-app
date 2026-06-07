@@ -25,10 +25,14 @@ export function ClubLeaguesSection({
   leagues,
   clubId,
   canCreate,
+  canManage,
 }: {
   leagues: ClubLeagueRow[];
   clubId: string;
+  /** Owner/admin and club not frozen → may set up a new league. */
   canCreate: boolean;
+  /** Owner/admin → may manage existing leagues (start/finish/edit), even frozen. */
+  canManage: boolean;
 }) {
   return (
     <section className="mb-8">
@@ -38,18 +42,29 @@ export function ClubLeaguesSection({
       {leagues.length > 0 ? (
         <div className="space-y-2">
           {leagues.map((liga) => (
-            <SmartLink key={liga.id} href={`/liga/${liga.id}`} className="block">
-              <Card className="p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="truncate font-sans text-[15px] font-medium text-text">
-                    {liga.name}
-                  </span>
-                  <span className="shrink-0 rounded-full border border-border px-2.5 py-0.5 font-sans text-xs text-muted">
+            <Card key={liga.id} className="p-4">
+              <div className="flex items-center justify-between gap-3">
+                <SmartLink
+                  href={`/liga/${liga.id}`}
+                  className="truncate font-sans text-[15px] font-medium text-text hover:underline"
+                >
+                  {liga.name}
+                </SmartLink>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="rounded-full border border-border px-2.5 py-0.5 font-sans text-xs text-muted">
                     {LEAGUE_STATUS_LABELS[liga.status] ?? liga.status}
                   </span>
+                  {canManage && (
+                    <SmartLink
+                      href={`/admin/liga/${liga.id}`}
+                      className="min-h-[44px] flex items-center font-sans text-xs text-primary hover:underline"
+                    >
+                      Styr
+                    </SmartLink>
+                  )}
                 </div>
-              </Card>
-            </SmartLink>
+              </div>
+            </Card>
           ))}
         </div>
       ) : (
