@@ -104,6 +104,23 @@ export async function requireAdminOrClubAdminOfLeague(
 - `app/klubber/[id]/page.tsx` — send `canManage`
 - `package.json` + `CHANGELOG.md` (MINOR `1.87.0`)
 
+---
+
+## Status — self-eval (2026-06-07)
+
+Bygd i 4 atomiske commits (`69c2c6d` kontrakt · `f88a824` gate+actions · `e7ad081` styringsside · `83d6ab3` Styr-lenke+bump). Sluttilstand-gates: `tsc --noEmit` 0 · `vitest app/klubber + lib/league` 21/21 · `lint` 0 errors · `build` ✓.
+
+- [x] **`requireAdminOrClubAdminOfLeague`** finnes (`lib/admin/auth.ts`): admin-client group_id-oppslag → null=`requireAdmin`, satt=`requireAdminOrClubAdmin`.
+- [x] **Alle 9 handlinger + side + slett bruker den nye gaten.** `grep` i `lib/league/actions.ts`: eneste `requireAdmin(supabase)` igjen er `createLeagueDraft`s frittstående-gren; alle styrings-handlinger bruker `requireAdminOrClubAdminOfLeague`. Side + slett-side byttet.
+- [x] **Klubb-admin styrer kun sin egen klubb-liga (live RLS-probe, rullet tilbake).** Klubb-admin (is_admin=false) UPDATE status→active: egen klubb-liga **1**, annen klubbs **0**, frittstående **0**. RLS er sikkerhets-grensa under app-gaten.
+- [x] **Picker = klubbmedlemmer på styringssiden for klubb-liga.** Kilde = `getClubMemberOptionsForClub(group_id)` når satt; `LigaAddPlayers` tom-tilstand klubb-bevisst. `addLeaguePlayers` filtrerer til medlemmer.
+- [x] **Klubb-bevisst chrome.** TopBar `backHref`=`/klubber/${group_id}`, kicker=klubbnavn, BrassRibbon «Klubb-liga · …» når klubb-scopet. Slett + deleteLeague redirecter til klubb-siden.
+- [x] **«Styr»-lenke kun for eier/admin** → `/admin/liga/[ligaId]`. Type-C-test (`canManage` true → 2 «Styr»-lenker m/ rett href; false → ingen).
+- [x] **Frittstående uendret** (gate faller til `requireAdmin`; probe: frittstående-start avvist for klubb-admin).
+- [x] **MINOR-bump `1.87.0`** + CHANGELOG ny serie «1.87.y», forrige 1.86.y kollapset.
+
+**Avvik / merknad:** `/admin/liga`-LISTEN forblir global-admin-only (bevisst — klubb-admin når kun egen liga via «Styr»). Dedikert klubb-styringsflate under `/klubber` er bevisst utsatt (eier-valg) — files som oppfølging.
+
 ## Out of Scope (egne issues / oppfølging)
 
 - **Dedikert klubb-styringsflate** under `/klubber/[id]/liga/[ligaId]` (ingen admin-chrome) via en delt `<LigaManagement>`-komponent — eget oppfølgings-issue (eier-valg: bygges hvis pilot-en sier fra).
