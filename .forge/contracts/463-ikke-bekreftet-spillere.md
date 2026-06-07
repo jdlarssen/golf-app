@@ -66,15 +66,17 @@ Per-rad-regel: `user_id === actingUserId ? now() : null`.
 - `npx vitest run` på berørte: gamePayload, league actions, notifications, inviteToGame, signup actions, status actions
 
 ## Akseptkriterier
-- [ ] Migrasjon `0082` lagt til + applyt til prod (begge `accepted_at`-kolonner + backfill + RLS for begge tabeller). Verifisert via MCP.
-- [ ] Arrangør-add av annen bruker → `accepted_at = null`; self/egen-rad/OTP-aksept/selv-påmelding → `now()`. Dekket av Type-A-tester på hvert innsettings-sted.
-- [ ] «Bekreft»-knapp setter `accepted_at = now()` på egen rad (RLS-backed).
-- [ ] Auto-bekreft ved å åpne spillet (game-home `after()`), idempotent.
-- [ ] «Ikke bekreftet»-badge vises i game-roster, admin-spill/status, og liga-deltakere når `accepted_at is null`.
-- [ ] Arrangør-add fyrer `player_added`-varsel med «Bekreft»-handling.
-- [ ] Admin-purre-knapp for ubekreftede på spillerstatus-siden.
-- [ ] Historiske rader uberørt (backfill = now(), ingen eksisterende spiller markert ubekreftet).
-- [ ] `tsc` + `build` grønt; versjon `1.84.0` + CHANGELOG.
+- [x] Migrasjon `0082` lagt til + applyt til prod (begge `accepted_at`-kolonner + backfill + RLS for begge tabeller). Verifisert via MCP (gp 13/0 null, lp 0/0, 2 policies, kind_ok true).
+- [x] Arrangør-add av annen bruker → `accepted_at = null`; self/egen-rad/OTP-aksept/selv-påmelding → `now()`. `acceptedAtForActor`-helper (3 Type-A-tester) wiret på alle 9+ innsettings-steder; verifyCode-testen oppdatert.
+- [x] «Bekreft»-knapp setter `accepted_at = now()` på egen rad (RLS-backed). `confirmParticipation`/`confirmLeagueParticipation` i confirmActions.ts.
+- [x] Auto-bekreft ved å åpne spillet/liga-siden (`after()`), idempotent (`maybeAutoConfirmParticipation` / `...League...`, atomisk `is('accepted_at', null)`).
+- [x] «Ikke bekreftet»-badge vises i game-roster, admin-spill/status, og liga-deltakere når `accepted_at is null` (`UnconfirmedBadge`, 4 flater).
+- [x] Arrangør-add nudges via in-app-varsel (eksisterende `invite`-kind på add; `player_added` brukes som confirm-purre — bevisst forenkling, ingen dobbelt-varsel).
+- [x] Admin-purre-knapp for ubekreftede på spillerstatus-siden (`remindUnconfirmedPlayers` + knapp).
+- [x] Historiske rader uberørt (backfill = now() — MCP-verifisert 0 nulls).
+- [x] `tsc` + `build` grønt; versjon `1.84.0` + CHANGELOG (ny minor-serie, 1.83.y kollapset).
+
+**Avvik fra kontrakt:** `player_added`-varselet ble repurposed fra «on-add» til «admin-purre-reminder» — on-add beholder den eksisterende `invite`-kinden (konsistent på tvers av bulk-create/edit/picker-add; unngår to varsler på samme handling). `mode_config.teams_count`-type var allerede number. Team-medspiller dobbelt-varsel (subagent) fjernet.
 
 ## Utenfor scope
 - Auto-vennskap ved aksept (#464s nice-to-have).
