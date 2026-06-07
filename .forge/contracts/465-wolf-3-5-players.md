@@ -77,15 +77,15 @@ Kun `wolf.ts` linje ~259 (`4`→`n`) og ~261 (`6`→`n+2`) + `n = players.length
 
 ## Akseptkriterier
 
-- [ ] Wolf kan opprettes og publiseres med 3, 4 og 5 spillere via veiviseren.
-- [ ] Rotasjonen følger R-tabellen for hver n; trailing-wolf gjelder bare hull R+1..18 (n=3 → ingen trailing).
-- [ ] Lone-gevinst = `n`, blind = `n+2`; partner og motstander uendret.
-- [ ] Alle eksisterende n=4-tester passerer uendret (byte-identisk for n=4).
-- [ ] WolfSetup viser riktig antall slots + hull-fordeling for valgt antall (3/4/5).
-- [ ] In-round partner-valg viser n-1 alternativer; lone/blind-copy viser faktisk poengsum for n.
-- [ ] `modeGuide.ts` Wolf-summary nevner ikke lenger «fire spillere».
-- [ ] `npx tsc --noEmit` + `npm run build` grønt.
-- [ ] Versjon bumpet til 1.83.15 + CHANGELOG-oppføring.
+- [x] Wolf kan opprettes og publiseres med 3, 4 og 5 spillere via veiviseren. — `validateWolf` (gamePayload.test: 3/5→ok, 2→min, 6→too_many), `wolfPlayersValid` 3-5 (useGameFormState.test), `fitsPlayerCount('wolf', 3..5)=true` (fitsPlayerCount.test).
+- [x] Rotasjonen følger R-tabellen for hver n; trailing-wolf gjelder bare hull R+1..18 (n=3 → ingen trailing). — wolf.test «3 spillere»/«5 spillere» + wolfRotation.test (n=3 hull 17/18 rotasjon, n=5 hull 16 trailing).
+- [x] Lone-gevinst = `n`, blind = `n+2`; partner og motstander uendret. — wolf.test parametriserte n=3 (lone 3/blind 5) + n=5 (lone 5/blind 7); n=4 (4/6) uendret.
+- [x] Alle eksisterende n=4-tester passerer uendret (byte-identisk for n=4). — 64 opprinnelige wolf-tester grønne; ingen n=4-fikstur endret.
+- [x] WolfSetup viser riktig antall slots + hull-fordeling for valgt antall (3/4/5). — WolfSetup.test (4 tester: n=4 trailing 17, n=5 «1, 6, 11» + trailing 16, n=3 ingen trailing, <3 hint).
+- [x] In-round partner-valg viser n-1 alternativer; lone/blind-copy viser faktisk poengsum for n. — WolfChoiceModal utleder `n = otherPlayers.length + 1`, copy «får du {n}» / «{n+2}»; badge i HoleClient «{n} poeng» / «{n+2} poeng».
+- [x] `modeGuide.ts` Wolf-summary nevner ikke lenger «fire spillere». — endret til «Tre til fem spillere …».
+- [x] `npx tsc --noEmit` + `npm run build` grønt. — begge kjørt, exit 0.
+- [x] Versjon bumpet til 1.83.15 + CHANGELOG-oppføring. — package.json 1.83.15 + ny `### [1.83.15]`-blokk under åpen 1.83.y-serie.
 
 ## Utenfor scope
 
