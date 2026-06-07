@@ -24,8 +24,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import type { Intent } from '@/lib/wizard/intent';
+import { selectablePlayers } from '@/lib/wizard/selectablePlayers';
 import type {
   FormatForIntent,
   CupEligibleFormat,
@@ -86,11 +88,22 @@ type Props = {
   // til useGameFormState som defaultGroupId.
   defaultGroupId?: string;
   /**
-   * #369: ids til spillere som er venner av arrangøren. Vises som hurtig-legg-til
-   * chips i steg 4 når intent er «kompis» — disse er allerede i `players`-listen
-   * men fremheves for enkel tilgang. Tom liste = ingen hurtig-legg-til.
+   * #464: ids til spillere som er venner av arrangøren. Picker-kilden for
+   * kompis/cup-intent (og klubb uten valgt klubb) filtreres ned til disse +
+   * deg selv. Tom liste = bare deg selv kan legges til (tom-tilstand viser
+   * «Legg til venner»-lenke).
    */
   friendPlayerIds?: string[];
+  /**
+   * #464: clubId → medlemmenes user-ids. Picker-kilden for klubb-intent m/ valgt
+   * klubb filtreres ned til den klubbens medlemmer. Tom = ingen klubbdata.
+   */
+  clubMemberIdsByClub?: Record<string, string[]>;
+  /**
+   * #464: innlogget brukers id. Alltid valgbar i ikke-solo-kontekster slik at
+   * arrangøren kan legge til seg selv (du er ikke din egen venn/klubbmedlem).
+   */
+  currentUserId?: string;
 };
 
 const STEP_TITLES: Record<Step, string> = {
@@ -127,6 +140,8 @@ export function GameWizard({
   clubs = [],
   defaultGroupId,
   friendPlayerIds = [],
+  clubMemberIdsByClub = {},
+  currentUserId = '',
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -148,6 +163,26 @@ export function GameWizard({
   );
 
   const state = useGameFormState({ initialValues, players, courses, initialIntent, defaultGroupId });
+
+  // #464: picker-kilden følger konteksten (kompis/cup → venner, klubb m/ valgt
+  // klubb → klubbmedlemmer, ellers venner, solo → uendret). Filtrerer innenfor
+  // `players`-supersettet så intent kan byttes klient-side uten re-fetch.
+  // TeamsAssignmentSection beholder full `players` (må slå opp allerede-valgte).
+  const pickList = useMemo(
+    () =>
+      selectablePlayers({
+        intent: state.intent,
+        groupId: state.groupId,
+        selfId: currentUserId,
+        players,
+        friendIds: new Set(friendPlayerIds),
+        clubMemberIdsByClub: Object.fromEntries(
+          Object.entries(clubMemberIdsByClub).map(([id, ids]) => [id, new Set(ids)]),
+        ),
+      }),
+    [state.intent, state.groupId, currentUserId, players, friendPlayerIds, clubMemberIdsByClub],
+  );
+  const pickListOthers = pickList.filter((p) => p.id !== currentUserId).length;
 
   // Når bruker går fram/tilbake via browser, oppdateres `searchParams`. Vi
   // reconciler lokal state til URL — men kun når URL-strengen faktisk er
@@ -751,18 +786,13 @@ export function GameWizard({
                 Dere er {state.expectedPlayerCount} spillere. Legg til nøyaktig så mange for best mulig spill.
               </p>
             )}
-          {/* #369: Kompis-rask-legg-til — venner av arrangøren vises som
-              hurtig-legg-til-chips øverst i spillerlisten. Kun for kompis-intent
-              (ikke klubb/solo/cup). Spillere som allerede er valgt vises ikke. */}
-          {state.intent === 'kompis' && friendPlayerIds.length > 0 && (
-            <FriendQuickAdd
-              players={players}
-              friendPlayerIds={friendPlayerIds}
-              selectedPlayerIds={state.selectedPlayerIds}
-              onToggle={state.togglePlayer}
-            />
+          {/* #464: tom-tilstand når picker-kilden ikke har andre enn deg selv
+              (ingen venner, eller en klubb uten andre medlemmer). Solo viser
+              hele rosteren, så hintet gjelder ikke der. */}
+          {state.intent !== 'solo' && pickListOthers === 0 && (
+            <PickerSourceEmptyHint intent={state.intent} groupId={state.groupId} />
           )}
-          <PlayersSection state={state} players={players} heading="Spillere" />
+          <PlayersSection state={state} players={pickList} heading="Spillere" />
           {/* TeamsAssignmentSection er self-gating per modus — den rendrer
               kun de relevante under-blokkene (matchplay-sider / lag-grid /
               flights / per-spiller-tee) basert på state-flags. */}
@@ -1045,61 +1075,35 @@ function FormDataInputs({
 }
 
 // ──────────────────────────────────────────────────────────────────────
-// #369: Kompis-hurtig-legg-til. Vises øverst i steg 4 når intent er
-// «kompis» og arrangøren har aksepterte venner i systemet. Vennene vises
-// som rader som kan trykkes for å legge til/fjerne fra utvalget.
-// Allerede valgte spillere vises ikke her (de er synlige som chips i
-// PlayersSection). Venner som ikke er i `players`-listen hoppes over
-// (defensive — kan skje hvis venn-oppslaget og players-listen divergerer).
+// #464: tom-tilstand for picker-kilden i steg 4. Vises når det ikke finnes
+// andre kandidater enn deg selv — enten fordi du ikke har venner ennå
+// (kompis/cup, eller klubb uten valgt klubb), eller fordi en valgt klubb
+// ikke har andre medlemmer. Speiler «Legg til venner»-lenken fra liga-opprett
+// (CreateLigaForm) så det er én vei til vennegrafen.
 // ──────────────────────────────────────────────────────────────────────
 
-function FriendQuickAdd({
-  players,
-  friendPlayerIds,
-  selectedPlayerIds,
-  onToggle,
+function PickerSourceEmptyHint({
+  intent,
+  groupId,
 }: {
-  players: PlayerOption[];
-  friendPlayerIds: string[];
-  selectedPlayerIds: string[];
-  onToggle: (id: string) => void;
+  intent: Intent | undefined;
+  groupId: string;
 }) {
-  const selectedSet = new Set(selectedPlayerIds);
-  const notYetAdded = friendPlayerIds
-    .map((id) => players.find((p) => p.id === id))
-    .filter((p): p is PlayerOption => p !== undefined && !selectedSet.has(p.id));
-
-  if (notYetAdded.length === 0) return null;
-
+  const noClubMembers = intent === 'klubb' && groupId !== '';
   return (
-    <div>
-      <p className="mb-2 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-        Vennene dine
-      </p>
-      <ul className="flex list-none flex-col gap-2 p-0">
-        {notYetAdded.map((p) => (
-          <li key={p.id}>
-            <button
-              type="button"
-              onClick={() => onToggle(p.id)}
-              className="flex w-full items-center justify-between rounded-xl border border-border bg-surface px-4 py-3 text-left transition-colors hover:bg-primary-soft/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 active:bg-primary-soft/60"
-            >
-              <span className="font-serif text-[15px] text-text">
-                {p.name ?? p.email ?? 'Ukjent spiller'}
-                {p.nickname && (
-                  <span className="ml-1 font-sans text-xs text-muted">
-                    «{p.nickname}»
-                  </span>
-                )}
-              </span>
-              <span className="ml-2 flex-shrink-0 font-sans text-xs text-muted tabular-nums">
-                + Legg til
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <p className="rounded-md border border-border bg-surface-2 px-3 py-2 text-xs text-muted">
+      {noClubMembers ? (
+        'Ingen andre medlemmer i klubben ennå.'
+      ) : (
+        <>
+          Du har ingen venner på Tørny ennå.{' '}
+          <Link href="/profile/venner" className="text-primary underline">
+            Legg til venner
+          </Link>{' '}
+          for å legge dem til her.
+        </>
+      )}
+    </p>
   );
 }
 

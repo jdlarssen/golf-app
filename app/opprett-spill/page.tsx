@@ -22,6 +22,7 @@ import {
   getCupEligibleFormats,
 } from '@/lib/formats/getFormatsForIntent';
 import { getFriendPlayerOptions } from '@/lib/friends/getFriendPlayerOptions';
+import { getClubMemberPlayerOptions } from '@/lib/clubs/getClubMemberPlayerOptions';
 
 // Opprett-spill-ruten for ALLE innloggede brukere (#427 — tidligere bare
 // admin/trusted per #198). Gjenbruker GameWizard fra admin-flyten, men kjører
@@ -139,20 +140,30 @@ async function GameFormBody({
       getFormatsForIntent('solo'),
       getCupEligibleFormats(),
     ]);
-  const [{ courses, players, clubs }, friendPlayers] = await Promise.all([
-    getNewGameFormData(false),
-    // #369: vennene til brukeren for kompis hurtig-legg-til. Hentes som hele
-    // PlayerOption-rader fordi users-RLS skjuler venner du aldri har spilt med.
-    getFriendPlayerOptions(userId).catch(() => []),
-  ]);
-  // Union venner inn i spiller-lista (dedup på id) så kompis-hurtig-legg-til
-  // også når venner du aldri har delt et spill med (#369). Co-players ligger
-  // allerede i `players`.
-  const playerIds = new Set(players.map((p) => p.id));
-  const mergedPlayers = [
-    ...players,
-    ...friendPlayers.filter((f) => !playerIds.has(f.id)),
-  ];
+  const [{ courses, players, clubs }, friendPlayers, clubMembers] =
+    await Promise.all([
+      getNewGameFormData(false),
+      // #464: vennene til brukeren — picker-kilde for kompis/cup. Hentes som hele
+      // PlayerOption-rader fordi users-RLS skjuler venner du aldri har spilt med.
+      getFriendPlayerOptions(userId).catch(() => []),
+      // #464: klubbmedlemmer — picker-kilde for klubb-intent. Må merges inn (under)
+      // fordi medlemmer som ikke er co-players ellers ville forsvinne fra rosteren.
+      getClubMemberPlayerOptions(userId).catch(() => ({
+        memberIdsByClub: {},
+        options: [],
+      })),
+    ]);
+  // Union venner + klubbmedlemmer inn i spiller-lista (dedup på id) så picker-
+  // kilden har rad-data for alle, uansett om du har delt et spill med dem (#464).
+  // Co-players ligger allerede i `players`.
+  const seen = new Set(players.map((p) => p.id));
+  const mergedPlayers = [...players];
+  for (const extra of [...friendPlayers, ...clubMembers.options]) {
+    if (!seen.has(extra.id)) {
+      seen.add(extra.id);
+      mergedPlayers.push(extra);
+    }
+  }
   const friendPlayerIds = friendPlayers.map((f) => f.id);
   return (
     <GameWizard
@@ -175,6 +186,8 @@ async function GameFormBody({
       // så ClubPicker (kun for klubb-intent) viser den forhåndsvalgte klubben (#50-fix).
       initialIntent={defaultGroupId ? 'klubb' : undefined}
       friendPlayerIds={friendPlayerIds}
+      clubMemberIdsByClub={clubMembers.memberIdsByClub}
+      currentUserId={userId}
     />
   );
 }

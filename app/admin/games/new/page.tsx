@@ -22,6 +22,7 @@ import {
   getCupEligibleFormats,
 } from '@/lib/formats/getFormatsForIntent';
 import { getFriendIds } from '@/lib/friends/getFriendIds';
+import { getClubMemberPlayerOptions } from '@/lib/clubs/getClubMemberPlayerOptions';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 
 type SearchParams = Promise<{
@@ -318,12 +319,21 @@ async function GameFormBody({
       getCupEligibleFormats(),
     ]);
 
-  const [{ courses, players, clubs }, friendPlayerIds] = await Promise.all([
-    getNewGameFormData(),
-    // #369: vennene til admin-brukeren for kompis hurtig-legg-til.
-    // Best-effort — tom liste ved feil.
-    userId ? getFriendIds(userId).catch(() => []) : Promise.resolve([]),
-  ]);
+  const [{ courses, players, clubs }, friendPlayerIds, clubMembers] =
+    await Promise.all([
+      getNewGameFormData(),
+      // #464: vennene til admin-brukeren — picker-kilde for kompis/cup.
+      // Best-effort — tom liste ved feil.
+      userId ? getFriendIds(userId).catch(() => []) : Promise.resolve([]),
+      // #464: klubbmedlemmer — picker-kilde for klubb-intent. Admin-rosteren
+      // (hele basen) inneholder allerede medlemmene, så vi trenger bare id-mappet.
+      userId
+        ? getClubMemberPlayerOptions(userId).catch(() => ({
+            memberIdsByClub: {},
+            options: [],
+          }))
+        : Promise.resolve({ memberIdsByClub: {}, options: [] }),
+    ]);
 
   return (
     <GameWizard
@@ -347,6 +357,8 @@ async function GameFormBody({
       clubs={clubs}
       defaultGroupId={defaultGroupId}
       friendPlayerIds={friendPlayerIds}
+      clubMemberIdsByClub={clubMembers.memberIdsByClub}
+      currentUserId={userId ?? ''}
     />
   );
 }

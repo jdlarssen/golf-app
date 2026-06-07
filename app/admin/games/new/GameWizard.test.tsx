@@ -104,11 +104,15 @@ const NO_OP = async () => {};
 
 function renderWizard({
   players = EIGHT_PLAYERS,
+  // #464: picker-kilden er venne-filtrert for kompis/cup. Default-test-spillerne
+  // er arrangørens venner så de er valgbare i steg 4, slik de ville vært i bruk.
+  friendPlayerIds = players.map((p) => p.id),
   createDraftAction = NO_OP,
   createAndPublishAction = NO_OP,
   initialValues,
 }: {
   players?: PlayerOption[];
+  friendPlayerIds?: string[];
   createDraftAction?: (fd: FormData) => Promise<void>;
   createAndPublishAction?: (fd: FormData) => Promise<void>;
   initialValues?: Parameters<typeof GameWizard>[0]['initialValues'];
@@ -125,6 +129,7 @@ function renderWizard({
       initialValues={initialValues}
       formatsByIntent={FORMATS_BY_INTENT}
       cupEligibleFormats={CUP_ELIGIBLE}
+      friendPlayerIds={friendPlayerIds}
     />,
   );
 }
