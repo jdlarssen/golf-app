@@ -19,7 +19,8 @@ import type { PlayerOption } from '@/app/admin/games/new/GameForm';
  * klient-side.
  */
 export type SelectablePlayersCtx = {
-  intent: Intent;
+  /** `undefined` (intent ikke valgt ennå) behandles som venne-kontekst. */
+  intent: Intent | undefined;
   /** Valgt klubb-id ('' = «Ingen klubb»). */
   groupId: string;
   /** Innlogget brukers id — alltid valgbar i ikke-solo-kontekster. */

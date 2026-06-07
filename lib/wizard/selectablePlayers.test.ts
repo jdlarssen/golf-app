@@ -73,6 +73,11 @@ describe('selectablePlayers', () => {
     expect(ids(rows)).toEqual(ids(ROSTER));
   });
 
+  it('undefined intent (not picked yet) → friends + self (never the whole base)', () => {
+    const rows = selectablePlayers(ctx({ intent: undefined }));
+    expect(ids(rows)).toEqual(['self', 'friend-a', 'friend-b']);
+  });
+
   it('kompis with no friends → only self', () => {
     const rows = selectablePlayers(ctx({ intent: 'kompis', friendIds: new Set() }));
     expect(ids(rows)).toEqual(['self']);

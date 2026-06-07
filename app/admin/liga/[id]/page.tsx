@@ -10,6 +10,7 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { getLigaSnapshot } from '@/lib/league/getLigaSnapshot';
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
+import { getFriendPlayerOptions } from '@/lib/friends/getFriendPlayerOptions';
 import { formatShortDateNb } from '@/lib/format/date';
 import { LigaRoundRow } from './LigaRoundRow';
 import { LigaAddRound } from './LigaAddRound';
@@ -57,11 +58,15 @@ export default async function LigaDetailPage({ params }: { params: Params }) {
   const { id } = await params;
 
   const supabase = await getServerClient();
-  await requireAdmin(supabase);
+  const { userId } = await requireAdmin(supabase);
 
-  const [snapshot, { courses, players }] = await Promise.all([
+  // #464: «legg til deltakere» henter fra vennene dine, ikke hele brukerbasen —
+  // speiler liga-opprett. `courses` kommer fortsatt fra den delte form-data-
+  // helperen (rundene trenger dem).
+  const [snapshot, { courses }, friends] = await Promise.all([
     getLigaSnapshot(id),
     getNewGameFormData(),
+    getFriendPlayerOptions(userId),
   ]);
 
   if (!snapshot) notFound();
@@ -203,7 +208,7 @@ export default async function LigaDetailPage({ params }: { params: Params }) {
               </p>
               <LigaAddPlayers
                 leagueId={id}
-                players={players}
+                players={friends}
                 participantIds={participantIds}
               />
             </>

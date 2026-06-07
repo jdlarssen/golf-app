@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useState } from 'react';
+import Link from 'next/link';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { addLeaguePlayers, type LeagueActionError } from '@/lib/league/actions';
 import type { PlayerOption } from '@/app/admin/games/new/GameForm';
@@ -37,9 +38,19 @@ export function LigaAddPlayers({ leagueId, players, participantIds }: Props) {
   }
 
   if (eligible.length === 0) {
-    return (
+    // #464: kilden er nå vennene dine. Skill «ingen venner ennå» (vis lenke til
+    // vennegrafen) fra «alle venner er allerede med».
+    return players.length === 0 ? (
       <p className="font-sans text-[12px] text-muted">
-        Alle spillere i systemet er allerede deltakere.
+        Du har ingen venner på Tørny ennå.{' '}
+        <Link href="/profile/venner" className="text-primary underline">
+          Legg til venner
+        </Link>{' '}
+        så dukker de opp her.
+      </p>
+    ) : (
+      <p className="font-sans text-[12px] text-muted">
+        Alle vennene dine er allerede deltakere.
       </p>
     );
   }

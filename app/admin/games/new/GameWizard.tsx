@@ -1100,7 +1100,7 @@ function PickerSourceEmptyHint({
           <Link href="/profile/venner" className="text-primary underline">
             Legg til venner
           </Link>{' '}
-          for å legge dem til her.
+          så dukker de opp her.
         </>
       )}
     </p>

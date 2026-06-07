@@ -17,7 +17,40 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.84.y — Bekreftet deltakelse
+## 1.85.y — Venner i spiller-pickeren
+
+Issue [#464](https://github.com/jdlarssen/golf-app/issues/464). Når du legger til folk i et spill eller en liga, viser plukk-lista nå vennene dine — eller klubbens medlemmer når du arrangerer for en klubb — i stedet for hele brukerbasen.
+
+### [1.85.0] - 2026-06-07 · #464
+
+> Skal du legge til spillere i en kompis-runde, cup eller liga, ser du nå bare vennene dine i lista. Arrangerer du for en klubb, viser den medlemmene i klubben. Folk du ikke kjenner på Tørny ennå inviterer du som før, på e-post.
+
+<details>
+<summary>Teknisk</summary>
+
+[#464](https://github.com/jdlarssen/golf-app/issues/464): Picker-kilden følger nå konteksten i stedet for å vise alle brukere. Plukk-mengden filtreres ned per intent, aldri hele basen.
+
+#### Added
+- `lib/wizard/selectablePlayers.ts` — ren, testet beslutnings-funksjon: kompis/cup → venner, klubb m/ valgt klubb → klubbmedlemmer (ellers venner), solo → uendret. Du selv er alltid valgbar i ikke-solo-kontekster.
+- `lib/clubs/getClubMemberPlayerOptions.ts` — klubbmedlemmer som `PlayerOption`-rader (e-post-fri, admin-client), speiler `getFriendPlayerOptions`. Returnerer både id-map (filtrering) og rader (roster-merge).
+- Tom-tilstand i veiviseren og liga-«legg til deltakere»: «Legg til venner»-lenke når du ikke har venner ennå, eller et hint når en valgt klubb mangler andre medlemmer.
+
+#### Changed
+- Veiviser-steg 4 sourcer fra `selectablePlayers` (begge opprett-flater: `/admin/games/new` + `/opprett-spill`). `TeamsAssignmentSection` beholder full roster så allerede-valgte alltid slås opp.
+- Liga-«legg til deltakere» (`/admin/liga/[id]`) henter fra `getFriendPlayerOptions` i stedet for hele rosteren — speiler liga-opprett.
+
+#### Removed
+- `FriendQuickAdd`-raden — overflødig nå som hoved-pickeren *er* vennelista for kompis.
+
+</details>
+
+## Tidligere versjoner
+
+<details>
+<summary><strong>Bekreftet deltakelse (#463) — 1 serie</strong></summary>
+
+<details>
+<summary><strong>1.84.y — Bekreftet deltakelse (1 oppføring)</strong></summary>
 
 Issue [#463](https://github.com/jdlarssen/golf-app/issues/463). Legger en arrangør deg til i et spill eller en liga, må du nå bekrefte at du er med. Du er fullt med fra start — det er en merkelapp og et dytt for å dra folk inn i appen, ikke en sperre.
 
@@ -43,7 +76,9 @@ Issue [#463](https://github.com/jdlarssen/golf-app/issues/463). Legger en arrang
 
 </details>
 
-## Tidligere versjoner
+</details>
+
+</details>
 
 <details>
 <summary><strong>Liga (#452) — 1 serie</strong></summary>
