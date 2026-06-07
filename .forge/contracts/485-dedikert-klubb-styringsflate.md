@@ -146,3 +146,19 @@ Begge: gate (`requireAdminOrClubAdminOfLeague`) + les `?error=` searchParam + re
 - `app/klubber/[id]/liga/[ligaId]/slett/page.tsx` — **NY**
 - `app/klubber/[id]/ClubLeaguesSection.tsx` (+ `.test.tsx`) — «Styr» href → klubb-rute
 - `package.json` + `CHANGELOG.md` (MINOR `1.88.0`)
+
+---
+
+## Status — self-eval (2026-06-07)
+
+Bygd i 4 atomiske commits (`d7a1145` kontrakt · `ba70cc3` extract LigaManagement · `29fc3fe` extract LigaDeleteConfirm + flytt handleDeleteLeague · `fcc150f` feat klubb-flate + bump + CHANGELOG). Sluttilstand-gates: `tsc --noEmit` 0 · `vitest app/klubber app/admin/liga lib/league` 21/21 · `eslint` endrede filer 0 · `npm run build` ✓ (begge nye ruter registrert som ƒ dynamic).
+
+- [x] **Delt `<LigaManagement>` finnes; begge ruter rendrer den, ingen duplisering.** `grep`: styrings-JSX («Sesong-modell», «Legg til deltakere», «Se sesong-tabellen») kun i `app/admin/liga/[id]/LigaManagement.tsx` (CreateLigaForm-treffet er opprett-wizarden, ikke styringskroppen). Importert av `app/admin/liga/[id]/page.tsx` + `app/klubber/[id]/liga/[ligaId]/page.tsx`.
+- [x] **Ny rute `/klubber/[id]/liga/[ligaId]`** gatet til `requireAdminOrClubAdminOfLeague(ligaId)`, `variant="club"` → `AppShell`, `backHref` = `/klubber/${groupId}` (LigaManagement:127). Registrert i build-output.
+- [x] **Klubb-admin styrer uten admin-chrome:** `variant === 'admin' ? AdminShell : AppShell` (LigaManagement.tsx:126) → club-varianten bruker `AppShell`. (Live auth'd preview blokkert lokalt: dev-server mangler Supabase-env, `proxy.ts:9` 500-er ALLE ruter før route-kode kjører — env-/seed-begrensning, ikke kode-defekt; build kompilerer alle ruter. Live UI → Vercel PR-preview/prod per prod-only-workflow.)
+- [x] **Delt `<LigaDeleteConfirm>`; begge slett-ruter; club slett `AppShell` + redirect.** Liga-slett-JSX («Slett ligaen for alltid») kun i `LigaDeleteConfirm.tsx`. `deleteLeague` redirecter klubb-liga til `/klubber/${groupId}` (uendret). Avbryt/backHref club-variant → `/klubber/${groupId}/liga/${leagueId}`.
+- [x] **«Styr» → `/klubber/${clubId}/liga/${liga.id}`** (ClubLeaguesSection.tsx:59); ingen `/admin/liga`-URL igjen i klubb-koden (kun cross-route komponent-imports). Type-C-test oppdatert + grønn.
+- [x] **Global admin uendret:** `/admin/liga/[id]` `variant="admin"` → `AdminShell`; `/admin/liga`-lista (`app/admin/liga/page.tsx`) urørt.
+- [x] **MINOR-bump `1.88.0`** + CHANGELOG ny serie «1.88.y — Klubb-liga · dedikert styringsflate», 1.87.y kollapset i Klubb-liga-skuffen («#480, #483 — 2 serier»).
+
+**Avvik / merknad:** Ingen endring i `lib/league/actions.ts` utover å flytte `handleDeleteLeague` dit — gate/handlinger/RLS fra #483 er urørt (kontraktens kjerne-premiss). `backHref` for admin-varianten er klubb-bevisst (`groupId ? /klubber/${groupId} : /admin/liga`) framfor alltid `/admin/liga` som kontrakt-tabellen antydet — bevarer #483-sikkerhetsnettet for en klubb-admin på den gamle admin-URL-en, mindre variant-forgrening, innenfor «Claude's Discretion».
