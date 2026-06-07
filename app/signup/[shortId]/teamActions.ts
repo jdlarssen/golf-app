@@ -7,6 +7,7 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { notify } from '@/lib/notifications/notify';
 import { notifyInvitedToTeam } from '@/lib/notifications/notifyInvitedToTeam';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
+import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
 import { lookupUserByEmail } from '@/lib/users/lookupByEmail';
 import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
 import { gameModeSupportsTeams } from '@/lib/games/registration';
@@ -328,6 +329,8 @@ export async function submitTeamRegistration(
           team_number: assignedTeamNumber,
           flight_number: assignedTeamNumber,
           course_handicap: null,
+          // #463: kapteinen melder seg selv på → bekreftet med en gang.
+          accepted_at: acceptedAtForActor(captain.id, captain.id),
         },
         { onConflict: 'game_id,user_id', ignoreDuplicates: true },
       );
@@ -412,6 +415,8 @@ export async function submitTeamRegistration(
                 team_number: assignedTeamNumber,
                 flight_number: assignedTeamNumber,
                 course_handicap: null,
+                // #463: kapteinen legger til en medspiller → ikke bekreftet ennå.
+                accepted_at: acceptedAtForActor(captain.id, existingUser.id),
               },
               { onConflict: 'game_id,user_id', ignoreDuplicates: true },
             );
@@ -634,6 +639,8 @@ export async function acceptTeamInvite(
       team_number: teamNumber,
       flight_number: teamNumber,
       course_handicap: null,
+      // #463: spilleren godtar invitasjonen selv → bekreftet med en gang.
+      accepted_at: acceptedAtForActor(user.id, user.id),
     },
     { onConflict: 'game_id,user_id', ignoreDuplicates: true },
   );
@@ -949,6 +956,8 @@ export async function attachToCaptainTeam(
         team_number: teamNumber,
         flight_number: teamNumber,
         course_handicap: null,
+        // #463: brukeren kobler seg selv på et lag → bekreftet med en gang.
+        accepted_at: acceptedAtForActor(user.id, user.id),
       },
       { onConflict: 'game_id,user_id', ignoreDuplicates: true },
     );

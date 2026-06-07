@@ -478,6 +478,8 @@ describe('verifyCode — deferred game-scoped invite-notify (#182)', () => {
       team_number: null,
       flight_number: null,
       course_handicap: null,
+      // #463: OTP-aksept bekrefter deltakelse med en gang.
+      accepted_at: expect.any(String),
     });
     expect(notifyInvitedToGameMock).toHaveBeenCalledTimes(1);
     expect(notifyInvitedToGameMock).toHaveBeenCalledWith({

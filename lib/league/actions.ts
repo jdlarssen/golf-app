@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
+import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
 import { generateRounds } from './generateRounds';
 import type {
   CourseScope,
@@ -129,9 +130,16 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
   }
 
   if (playerIds.length > 0) {
-    const { error: pErr } = await supabase
-      .from('league_players')
-      .insert(playerIds.map((uid) => ({ league_id: leagueId, user_id: uid })));
+    const draftNow = new Date().toISOString();
+    const { error: pErr } = await supabase.from('league_players').insert(
+      // #463: oppretters egen rad bekreftes nå; andre deltakere er «Ikke
+      // bekreftet» til de selv bekrefter.
+      playerIds.map((uid) => ({
+        league_id: leagueId,
+        user_id: uid,
+        accepted_at: acceptedAtForActor(userId, uid, draftNow),
+      })),
+    );
     if (pErr) return { error: 'players_failed' };
   }
 
@@ -262,10 +270,14 @@ export async function addLeaguePlayers(formData: FormData): Promise<LeagueAction
   if (ids.length > 0) {
     const { error } = await supabase
       .from('league_players')
-      .upsert(ids.map((uid) => ({ league_id: leagueId, user_id: uid })), {
-        onConflict: 'league_id,user_id',
-        ignoreDuplicates: true,
-      });
+      // #463: arrangør legger til deltakere → ikke bekreftet ennå.
+      .upsert(
+        ids.map((uid) => ({ league_id: leagueId, user_id: uid, accepted_at: null })),
+        {
+          onConflict: 'league_id,user_id',
+          ignoreDuplicates: true,
+        },
+      );
     if (error) return { error: 'players_failed' };
   }
   revalidatePath(`/admin/liga/${leagueId}`);
@@ -444,6 +456,7 @@ export async function startLeagueRoundFlight(
   if (gErr || !game) return { error: 'insert_failed' };
   const gameId = (game as { id: string }).id;
 
+  const flightNow = new Date().toISOString();
   const { error: gpErr } = await supabase.from('game_players').insert(
     flightIds.map((uid) => ({
       game_id: gameId,
@@ -451,6 +464,9 @@ export async function startLeagueRoundFlight(
       team_number: 1,
       tee_gender: teeGenderOf(genderById.get(uid) ?? null),
       status: 'active',
+      // #463: den som starter flighten bekreftes nå; medspillere i flighten
+      // er «Ikke bekreftet» til de selv bekrefter / blir aktive.
+      accepted_at: acceptedAtForActor(user.id, uid, flightNow),
     })),
   );
   if (gpErr) {

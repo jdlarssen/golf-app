@@ -7,6 +7,7 @@ import {
   parseOsloDateTimeLocal,
 } from '@/lib/games/gamePayload';
 import { parseSideTournamentFromFormData } from '@/lib/games/sideTournamentPayload';
+import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { isValidActiveGameMode } from '@/lib/formats/validateGameMode';
 import { isClubExpired } from '@/lib/clubs/clubStatus';
@@ -211,6 +212,7 @@ async function createGameInternal(
     redirect(`${errorBase}?error=db_game`);
   }
 
+  const rowAcceptedAt = new Date().toISOString();
   const rows = payload.players.map((p) => {
     const playerGenderUi = String(formData.get(`player_${p.user_id}_gender`) ?? 'M');
     return {
@@ -222,6 +224,9 @@ async function createGameInternal(
       // Course handicap is no longer frozen at create-time. Both 'scheduled'
       // and 'draft' rows defer this until the round actually starts (D5).
       course_handicap: null,
+      // #463: oppretters egen rad bekreftes nå; andre spillere arrangøren
+      // legger til er «Ikke bekreftet» til de selv bekrefter / blir aktive.
+      accepted_at: acceptedAtForActor(userId, p.user_id, rowAcceptedAt),
     };
   });
   const { error: gpError } = await supabase.from('game_players').insert(rows);

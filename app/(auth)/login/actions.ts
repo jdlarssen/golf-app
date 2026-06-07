@@ -271,6 +271,8 @@ export async function verifyCode(formData: FormData) {
                   team_number: null,
                   flight_number: null,
                   course_handicap: null,
+                  // #463: brukeren godtar invitasjonen nå (handlingen ER aksept).
+                  accepted_at: new Date().toISOString(),
                 });
 
               const duplicate =

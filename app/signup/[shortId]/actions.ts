@@ -203,6 +203,8 @@ export async function registerForOpenGame(
     team_number: null,
     flight_number: null,
     course_handicap: null,
+    // #463: selv-påmelding → bekreftet med en gang.
+    accepted_at: new Date().toISOString(),
   });
 
   if (insertError) {

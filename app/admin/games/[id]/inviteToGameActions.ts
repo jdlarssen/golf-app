@@ -67,6 +67,8 @@ export async function addExistingPlayerToGame(
     team_number: null,
     flight_number: null,
     course_handicap: null,
+    // #463: arrangør legger til en annen bruker → ikke bekreftet ennå.
+    accepted_at: null,
   });
 
   // Idempotent: hvis spilleren allerede er på rosteren (UNIQUE-violation
@@ -161,6 +163,8 @@ export async function inviteEmailToGame(
       team_number: null,
       flight_number: null,
       course_handicap: null,
+      // #463: arrangør legger til en annen bruker → ikke bekreftet ennå.
+      accepted_at: null,
     });
     const duplicate =
       insertError != null &&
