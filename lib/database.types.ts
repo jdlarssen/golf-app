@@ -1615,6 +1615,7 @@ export type Database = {
         }
         Returns: string
       }
+      befriend_inviter: { Args: { p_inviter: string }; Returns: string }
       connect_via_friend_code: { Args: { p_code: string }; Returns: Json }
       consume_admin_rate_limit: {
         Args: { p_bucket: string; p_max: number; p_window_seconds: number }

@@ -7,6 +7,7 @@ import { consumeLoginRateLimit } from '@/lib/auth/loginRateLimit';
 import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
 import { getClientIp } from '@/lib/admin/rateLimit';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
+import { distinctInviterIds } from '@/lib/friends/friendGraph';
 
 // Step 1 of two-step OTP login. Verifies the email is either registered
 // (existing user) or has an open invitation, then asks Supabase to send a
@@ -302,6 +303,24 @@ export async function verifyCode(formData: FormData) {
               gameId: inv.game_id!,
               inviterUserId: inv.invited_by!,
             });
+          }),
+        );
+
+        // #481: e-postinvitert som blir med → auto-vennskap med inviteren, så
+        // vennegrafen vokser organisk gjennom invitasjoner (ikke bare manuelle
+        // forespørsler). Gjelder også team-only spill — vennskapet henger på
+        // invitasjonen, ikke på en game_players-rad. RPC-en er idempotent og
+        // gated på en akseptert invitasjon, så den er trygg å fyre per inviter.
+        // Best-effort: feiler stille, blokkerer aldri innloggingen.
+        const inviterIds = distinctInviterIds(gameScoped, userRow.id);
+        await Promise.allSettled(
+          inviterIds.map(async (inviterId) => {
+            const { error } = await supabase.rpc('befriend_inviter', {
+              p_inviter: inviterId,
+            });
+            if (error) {
+              console.error('[login/verifyCode] befriend_inviter failed', error);
+            }
           }),
         );
 

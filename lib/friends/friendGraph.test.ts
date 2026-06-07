@@ -4,6 +4,7 @@ import {
   friendIdsFromRows,
   partitionFriendships,
   suggestionIds,
+  distinctInviterIds,
   type FriendshipRow,
 } from './friendGraph';
 
@@ -86,5 +87,44 @@ describe('suggestionIds', () => {
 
   it('returns empty when every co-player is already related', () => {
     expect(suggestionIds([A, B], new Set([A, B]), ME)).toEqual([]);
+  });
+});
+
+describe('distinctInviterIds', () => {
+  it('dedupes multiple invites from the same inviter into one id', () => {
+    const invites = [
+      { game_id: 'g1', invited_by: A },
+      { game_id: 'g2', invited_by: A },
+    ];
+    expect(distinctInviterIds(invites, ME)).toEqual([A]);
+  });
+
+  it('collects all distinct inviters', () => {
+    const invites = [
+      { game_id: 'g1', invited_by: A },
+      { game_id: 'g2', invited_by: B },
+    ];
+    expect(distinctInviterIds(invites, ME).sort()).toEqual([A, B]);
+  });
+
+  it('excludes the invitee themselves as inviter', () => {
+    const invites = [
+      { game_id: 'g1', invited_by: ME },
+      { game_id: 'g2', invited_by: A },
+    ];
+    expect(distinctInviterIds(invites, ME)).toEqual([A]);
+  });
+
+  it('skips invites with no inviter or no game', () => {
+    const invites = [
+      { game_id: 'g1', invited_by: null },
+      { game_id: null, invited_by: A },
+      { game_id: 'g2', invited_by: B },
+    ];
+    expect(distinctInviterIds(invites, ME)).toEqual([B]);
+  });
+
+  it('returns empty for no invites', () => {
+    expect(distinctInviterIds([], ME)).toEqual([]);
   });
 });

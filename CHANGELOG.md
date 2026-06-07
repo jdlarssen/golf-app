@@ -17,7 +17,39 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.88.y — Klubb-liga · dedikert styringsflate
+## 1.89.y — Venner · vennegrafen vokser av seg selv
+
+Issue [#481](https://github.com/jdlarssen/golf-app/issues/481). Vennegrafen vokser nå av seg selv gjennom invitasjoner, ikke bare via manuelle venneforespørsler.
+
+### [1.89.0] - 2026-06-07 · #481
+
+> Inviterer du noen på e-post og de blir med i spillet, blir dere automatisk venner. Da ligger de klare i lista neste gang du skal legge til spillere, så du slipper å sende venneforespørsel i tillegg.
+
+<details>
+<summary>Teknisk</summary>
+
+[#481](https://github.com/jdlarssen/golf-app/issues/481): oppfølging av [#464](https://github.com/jdlarssen/golf-app/issues/464). Da «legg til spiller» ble begrenset til venner og klubbmedlemmer, manglet den organiske veksten av vennegrafen på e-post-stien. `verifyCode` har allerede inviterens id (`invitations.invited_by`) når en e-postinvitert logger inn og blir med, så vennskapet opprettes der.
+
+#### Added
+- Migrasjon `0084`: SECURITY DEFINER `befriend_inviter(p_inviter)` — speiler `connect_via_friend_code`, lager en `accepted`-rad (inviter = requester). Idempotent, og gated på en akseptert invitasjon som lenker de to, så ingen kan «bli venn» med vilkårlige bruker-ider.
+- `distinctInviterIds()` i `lib/friends/friendGraph.ts` — ren dedup av spill-scopede inviterere (ekskluderer invitéen selv), med enhetstester.
+
+#### Changed
+- `verifyCode` fyrer `befriend_inviter` per distinkt inviter etter at en e-postinvitert blir med (best-effort, blokkerer aldri innloggingen). Gjelder også team-only spill, der vennskapet henger på invitasjonen og ikke på en `game_players`-rad.
+
+#### Notes
+- Kun spill-invitasjoner: `invitations` har ingen `league_id`, så det finnes ingen e-post-invitasjons-flyt for ligaer å hekte auto-vennskap på.
+- Et bevisst `remove_friend` re-vennskaper ved en senere invitasjon (ingen tombstone): fersk invitasjon = fersk samtykke.
+
+</details>
+
+## Tidligere versjoner
+
+<details>
+<summary><strong>Klubb-liga (#480, #483, #485) — 3 serier</strong></summary>
+
+<details>
+<summary><strong>1.88.y — Klubb-liga · dedikert styringsflate (1 oppføring)</strong></summary>
 
 Issue [#485](https://github.com/jdlarssen/golf-app/issues/485). En klubb-eier eller -admin styrer nå klubb-ligaen sin fra en egen side under klubb-rommet, uten å havne i hovedadminens kontrollpanel.
 
@@ -40,10 +72,7 @@ Issue [#485](https://github.com/jdlarssen/golf-app/issues/485). En klubb-eier el
 
 </details>
 
-## Tidligere versjoner
-
-<details>
-<summary><strong>Klubb-liga (#480, #483) — 2 serier</strong></summary>
+</details>
 
 <details>
 <summary><strong>1.87.y — Klubb-liga · klubb-admin styrer (1 oppføring)</strong></summary>
