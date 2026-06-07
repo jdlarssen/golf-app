@@ -58,6 +58,7 @@ import { getBingoBangoBongoHoles } from '@/lib/bbb/getBingoBangoBongoHoles';
 import { NassauView, type NassauPlayerInfo } from './NassauView';
 import { NassauPodium } from './NassauPodium';
 import { SkinsView, type SkinsPlayerInfo } from './SkinsView';
+import { HeadToHeadResult, type StripCell } from './HeadToHeadResult';
 import { SkinsPodium } from './SkinsPodium';
 import { NinesView, type NinesPlayerInfo } from './NinesView';
 import { NinesPodium } from './NinesPodium';
@@ -2480,9 +2481,74 @@ function renderSkins(opts: {
   const scoreVisibility: 'live' | 'reveal' =
     game.score_visibility === 'reveal' ? 'reveal' : 'live';
 
-  // Finished → SkinsPodium på toppen + SkinsView under (chromeless, så bare
-  // én outer shell). Active/scheduled → SkinsView alene.
+  // Finished → resultat-flate på toppen + SkinsView under (chromeless, så bare
+  // én outer shell). Ved nøyaktig 2 spillere er det en duell → head-to-head-
+  // kort i stedet for podium (epic #496). 3+ → SkinsPodium som før.
+  // Active/scheduled → SkinsView alene.
   if (game.status === 'finished') {
+    if (result.players.length === 2) {
+      // Stabil rekkefølge etter game_players (ikke rank), så fargene følger
+      // spiller-identitet — ikke hvem som vant.
+      const order = gwp.players.map((p) => p.user_id);
+      const [a, b] = [...result.players].sort(
+        (x, y) => order.indexOf(x.userId) - order.indexOf(y.userId),
+      );
+      const sideFor = (pl: typeof a) => {
+        const info = playersById.get(pl.userId);
+        return {
+          userId: pl.userId,
+          name: info?.name ?? '(ukjent)',
+          nickname: info?.nickname ?? null,
+          score: pl.totalSkins,
+          subLabel: `${pl.holesWon} hull vunnet`,
+        };
+      };
+      const strip: StripCell[] = result.holes.map((h): StripCell => {
+        if (h.outcome === 'won') {
+          if (h.winnerUserId === a.userId) return 'a';
+          if (h.winnerUserId === b.userId) return 'b';
+          return 'unplayed';
+        }
+        if (h.outcome === 'carryover') return 'halved';
+        return 'unplayed';
+      });
+      // Tie iff begge deler rank (lik totalSkins OG holesWon); ellers er den
+      // rank-1 spilleren vinner — også på holesWon-tiebreak ved lik totalSkins.
+      const winnerUserId =
+        a.rank === b.rank ? null : (a.rank < b.rank ? a.userId : b.userId);
+      const hangingNote =
+        result.carriedPot > 0
+          ? `${result.carriedPot} ${
+              result.carriedPot === 1 ? 'skin' : 'skins'
+            } hang igjen. Siste spilte hull ble delt.`
+          : null;
+      return (
+        <>
+          <HeadToHeadResult
+            gameId={gameId}
+            gameName={game.name}
+            formatLabel={`Skins · ${result.scoring === 'net' ? 'Netto' : 'Brutto'}`}
+            unitLabel="skins"
+            sideA={sideFor(a)}
+            sideB={sideFor(b)}
+            winnerUserId={winnerUserId}
+            strip={strip}
+            hangingNote={hangingNote}
+            backHref={backHref}
+          />
+          <SkinsView
+            gameId={gameId}
+            gameName={game.name}
+            result={result}
+            playersById={playersById}
+            scoreVisibility={scoreVisibility}
+            gameStatus={game.status}
+            backHref={backHref}
+            chromeless
+          />
+        </>
+      );
+    }
     return (
       <>
         <SkinsPodium

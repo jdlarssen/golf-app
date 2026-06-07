@@ -24,6 +24,10 @@ import {
   hasParDifference,
   formatOtherGendersPar,
 } from '@/lib/games/parDisplay';
+import { computeLeaderboard as computeModeResult } from '@/lib/scoring';
+import { buildSkinsContext } from '@/lib/scoring/context/buildSkinsContext';
+import { SkinsHolesView } from './SkinsHolesView';
+import type { SkinsPlayerInfo } from '../SkinsView';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -100,6 +104,18 @@ export default async function LeaderboardHolesPage({
     notFound();
   }
 
+  // Format-bevisst «Hull for hull» (epic #496): solo-format får sin egen
+  // per-hull-visning i stedet for det generiske best-ball lag-scorekortet,
+  // som aldri forgrenet på game_mode. Skins først; øvrige solo-format følger
+  // i egne PR-er og treffer fortsatt lag-grid-en til de tas.
+  if (game.game_mode === 'skins') {
+    return (
+      <Suspense fallback={<DrilldownSkeleton />}>
+        <SkinsHolesBody gameId={id} courseId={game.course_id} />
+      </Suspense>
+    );
+  }
+
   return (
     <Suspense fallback={<DrilldownSkeleton />}>
       <DrilldownBody
@@ -110,6 +126,80 @@ export default async function LeaderboardHolesPage({
         requestedTeam={requestedTeam}
       />
     </Suspense>
+  );
+}
+
+/**
+ * Skins «Hull for hull» (epic #496). Henter samme rå-data som DrilldownBody,
+ * men bygger Skins-konteksten via den delte `buildSkinsContext`-helperen,
+ * kjører mode-router-en og rendrer den Skins-riktige per-hull-visningen i
+ * stedet for lag-scorekortet. Ingen front-9-clip — Skins viser alle hull
+ * (carryover er sekvensiell over hele runden), likt SkinsView.
+ */
+async function SkinsHolesBody({
+  gameId,
+  courseId,
+}: {
+  gameId: string;
+  courseId: string;
+}) {
+  const { supabase } = await getDrilldownContext();
+
+  const [gwp, rawHolesRes, rawScoresRes] = await Promise.all([
+    getGameWithPlayers(gameId),
+    supabase
+      .from('course_holes')
+      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
+      .eq('course_id', courseId)
+      .order('hole_number', { ascending: true })
+      .returns<CourseHoleRow[]>(),
+    supabase
+      .from('scores')
+      .select('user_id, hole_number, strokes')
+      .eq('game_id', gameId)
+      .returns<ScoreRow[]>(),
+  ]);
+
+  if (!gwp) notFound();
+  if (rawHolesRes.error) throw rawHolesRes.error;
+  if (rawScoresRes.error) throw rawScoresRes.error;
+
+  const game = gwp.game;
+
+  const ctx = buildSkinsContext({
+    gameId,
+    modeConfig: game.mode_config,
+    players: gwp.players,
+    holesRows: rawHolesRes.data ?? [],
+    scoresRows: rawScoresRes.data ?? [],
+  });
+
+  const result = computeModeResult(ctx);
+  if (result.kind !== 'skins') notFound();
+
+  const playersById = new Map<string, SkinsPlayerInfo>();
+  for (const p of gwp.players) {
+    if (p.users == null) continue;
+    playersById.set(p.user_id, {
+      name: p.users.name ?? '(ukjent)',
+      nickname: p.users.nickname,
+    });
+  }
+
+  const scoreVisibility: 'live' | 'reveal' =
+    game.score_visibility === 'reveal' ? 'reveal' : 'live';
+  const gameStatus: 'active' | 'finished' =
+    game.status === 'finished' ? 'finished' : 'active';
+
+  return (
+    <SkinsHolesView
+      gameId={gameId}
+      gameName={game.name}
+      result={result}
+      playersById={playersById}
+      scoreVisibility={scoreVisibility}
+      gameStatus={gameStatus}
+    />
   );
 }
 

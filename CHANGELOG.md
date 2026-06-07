@@ -17,7 +17,34 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.94.y — Liga · stableford
+## 1.95.y — Skins · hull for hull og duell
+
+Issue [#496](https://github.com/jdlarssen/golf-app/issues/496). Format-bevisst «Hull for hull» for solo-spill, og et eget resultat-kort for 1-mot-1. PR 1 av epicen: Skins.
+
+### [1.95.0] - 2026-06-08 · #496
+
+> Etter en Skins-runde viser «Hull for hull» nå hvem som vant hvert hull og hvordan potten rullet videre, i stedet for et lag-scorekort fra best-ball-tiden. Spilte dere to mot hverandre, kåres duellen på et eget scoreboard: scoren tegnet som en dragkamp, og en stripe som viser hvem som tok hvert hull underveis.
+
+<details>
+<summary>Teknisk</summary>
+
+[#496](https://github.com/jdlarssen/golf-app/issues/496) PR 1 av epic (kun Skins). «Hull for hull»-siden forgrenet aldri på `game_mode`. Den kjørte best-ball-`computeLeaderboard` for alle format og tegnet et lag-scorekort. Nå får Skins sin egen flate, og 1-mot-1 får et head-to-head-kort i stedet for podium.
+
+#### Added
+- `SkinsHolesView` (server-component) bak `/games/[id]/leaderboard/holes` når `game_mode === 'skins'`: per hull viser den hver spillers score (`perPlayer`), vinner-highlight, utfall og carryover-kjeden. Rikere enn SkinsView sin kompakte PER HULL.
+- `HeadToHeadResult` (gjenbrukbart klient-kort) som erstatter `SkinsPodium` ved nøyaktig 2 spillere: versus-header, tug-of-war-bar for scoren, og en momentum-strip med ett felt per hull farget per spiller. To nye spiller-farge-tokens (petrol + terrakotta) i `globals.css`, med dark-varianter.
+- Type C render-tester for begge komponentene.
+
+#### Changed
+- `buildSkinsContext`-helper trukket ut av `renderSkins` så leaderboard- og «Hull for hull»-flaten bygger `ScoringContext` fra samme kilde.
+- Holes-siden forgrener nå på `game_mode` (kun Skins; de andre solo-formatene følger i egne PR-er og treffer fortsatt lag-scorekortet til de tas).
+
+</details>
+
+## Tidligere versjoner
+
+<details>
+<summary><strong>1.94.y — Liga · stableford (2 oppføringer)</strong></summary>
 
 Issue [#452](https://github.com/jdlarssen/golf-app/issues/452). Liga-epicen Fase 4 (siste fase): en liga kan nå gå på stableford eller modifisert stableford, ikke bare slagspill.
 
@@ -59,7 +86,7 @@ Issue [#452](https://github.com/jdlarssen/golf-app/issues/452). Liga-epicen Fase
 
 </details>
 
-## Tidligere versjoner
+</details>
 
 <details>
 <summary><strong>Liga — sesong-konkurranse (3 serier)</strong></summary>

@@ -44,6 +44,13 @@
   --danger: #b8463e;       /* muted brick */
   --warning: #d89b3a;      /* amber */
 
+  /* Head-to-head duell-farger (#496). To distinkte spiller-farger til
+   * versus-kort + momentum-strip ved 1-mot-1. Bevisst utenfor forest/champagne:
+   * forest eies av brand-primary, champagne er reservert vinner-highlight.
+   * Petrol (kald) vs terrakotta (varm) — komplementære og maksimalt distinkte. */
+  --player-a: #2f6d83;     /* petrol blue */
+  --player-b: #c06542;     /* terracotta */
+
   /* Score-tone — under-par / par / +1 / +2-or-worse. Used by hole rows and
    * vs-par pills. Foreground is the readable text color; background is a
    * tinted surface used as the pill fill. */
@@ -134,6 +141,8 @@
     --success: #7daa8a;
     --danger: #d67268;
     --warning: #e5b26f;
+    --player-a: #6fa3bd;     /* lifted petrol for dark bg (#496) */
+    --player-b: #db8a66;     /* lifted terracotta for dark bg */
     --focus-ring: rgba(212, 184, 112, 0.45);
 
     /* Score tones — readable on warm forest surfaces. */
@@ -213,6 +222,8 @@
   --success: #7daa8a;
   --danger: #d67268;
   --warning: #e5b26f;
+  --player-a: #6fa3bd;     /* lifted petrol for dark bg (#496) */
+  --player-b: #db8a66;     /* lifted terracotta for dark bg */
   --focus-ring: rgba(212, 184, 112, 0.45);
 
   --score-under-fg: #7daa8a;
@@ -270,6 +281,8 @@
   --color-success: var(--success);
   --color-danger: var(--danger);
   --color-warning: var(--warning);
+  --color-player-a: var(--player-a);
+  --color-player-b: var(--player-b);
   --color-score-under-fg: var(--score-under-fg);
   --color-score-under-bg: var(--score-under-bg);
   --color-score-par-fg: var(--score-par-fg);
