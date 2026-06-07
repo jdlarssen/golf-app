@@ -23,7 +23,8 @@ export type NotificationKind =
   | 'club_join_request'
   | 'club_role_changed'
   | 'friend_request'
-  | 'friend_accepted';
+  | 'friend_accepted'
+  | 'player_added';
 
 // `z.guid()` aksepterer enhver UUID-shaped string (8-4-4-4-12 hex), inkludert
 // nil-UUID og ikke-versjonerte kanoniske test-sentinels som "11111111-...".
@@ -184,6 +185,15 @@ const friendAcceptedSchema = z.object({
   actor_name: z.string().min(1),
 });
 
+// player_added: en arrangør la deg til i et spill uten at du meldte deg på
+// selv. Mottaker oppfordres til å bekrefte deltakelse. Deeplinker til
+// /games/[game_id] — å åpne spillet auto-bekrefter. (#463)
+const playerAddedSchema = z.object({
+  game_id: uuid,
+  game_name: z.string().min(1),
+  added_by_name: z.string().min(1),
+});
+
 const schemas = {
   invite: inviteSchema,
   peer_approval_request: peerApprovalRequestSchema,
@@ -203,6 +213,7 @@ const schemas = {
   club_role_changed: clubRoleChangedSchema,
   friend_request: friendRequestSchema,
   friend_accepted: friendAcceptedSchema,
+  player_added: playerAddedSchema,
 } as const;
 
 export type NotificationPayload<K extends NotificationKind = NotificationKind> =

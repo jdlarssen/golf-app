@@ -17,7 +17,39 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.83.y — Liga
+## 1.84.y — Bekreftet deltakelse
+
+Issue [#463](https://github.com/jdlarssen/golf-app/issues/463). Legger en arrangør deg til i et spill eller en liga, må du nå bekrefte at du er med. Du er fullt med fra start — det er en merkelapp og et dytt for å dra folk inn i appen, ikke en sperre.
+
+### [1.84.0] - 2026-06-07 · #463
+
+> Når noen legger deg til i et spill eller en liga, blir du merket «Ikke bekreftet» til du sier ja. Du er med fra første slag uansett. Merkelappen er bare et lite dytt, og den forsvinner så snart du åpner spillet eller trykker bekreft.
+
+<details>
+<summary>Teknisk</summary>
+
+[#463](https://github.com/jdlarssen/golf-app/issues/463): Tidligere ble en spiller som ble lagt til av en arrangør stille satt rett inn. Nå bærer hver `game_players`- og `league_players`-rad en `accepted_at`. Modellen er «merkelapp + dytt» (eier-beslutning) — `accepted_at = null` gir kun en badge + et varsel, scorene teller og ingenting blokkeres.
+
+#### Added
+- Migrasjon `0082`: `accepted_at` på begge tabeller (backfill `now()` for eksisterende rader så ingen markeres ubekreftet), self-mark-accepted RLS på begge (speiler 0012, på `auth.uid()`), og ny `player_added` varsel-kind.
+- `lib/games/participantAcceptance.ts` (`acceptedAtForActor`) — testet single source of truth: self → `now()`, arrangør-legger-til-annen → `null`. Wiret inn på alle innsettings-steder.
+- «Bekreft deltakelse»-handlinger (RLS-backed) for spill og liga, og auto-bekreft når du åpner spillet/liga-siden (atomisk, idempotent, speiler `maybeSendDeliveryReminder`).
+- `UnconfirmedBadge` («Ikke bekreftet») i game-roster, admin spill-detalj, admin spillerstatus og liga-deltakerliste.
+- Admin-purre på spillerstatus-siden: «Purr ubekreftede spillere» sender et `player_added`-varsel til alle som ennå ikke har bekreftet.
+
+#### Changed
+- `accepted_at` tråt inn i `getGameWithPlayers` (`PlayerForHole`) og `getLigaSnapshot` (`LeagueParticipant.acceptedAt`) så flatene kan vise status.
+- `mode_config`-uavhengig: ingen endring i spill-logikk. Wolf/format-validering urørt.
+
+</details>
+
+## Tidligere versjoner
+
+<details>
+<summary><strong>Liga (#452) — 1 serie</strong></summary>
+
+<details>
+<summary><strong>1.83.y — Liga (16 oppføringer)</strong></summary>
 
 Issue [#453](https://github.com/jdlarssen/golf-app/issues/453) (epic [#452](https://github.com/jdlarssen/golf-app/issues/452)). Du kan nå arrangere en liga: flere runder over en hel sesong, med en levende tabell som holder styr på hvem som leder.
 
@@ -601,9 +633,9 @@ Issue [#442](https://github.com/jdlarssen/golf-app/issues/442) (milepæl Klubb-s
 
 </details>
 
----
+</details>
 
-## Tidligere versjoner
+</details>
 
 <details>
 <summary><strong>Klubb-skala: Klubbhuset & klubber (#392, #442) — 1 serie</strong></summary>

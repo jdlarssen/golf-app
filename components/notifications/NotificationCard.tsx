@@ -39,6 +39,7 @@ const EMOJI: Record<NotificationKind, string> = {
   club_role_changed: '🔑',
   friend_request: '👋',
   friend_accepted: '🫂',
+  player_added: '🏌️',
 };
 
 /**
@@ -254,6 +255,13 @@ function buildCardContent(
       return {
         title: `${p.actor_name} ble venn med deg`,
         detail: 'Dere er venner nå',
+      };
+    }
+    case 'player_added': {
+      const p = payload as NotificationPayload<'player_added'>;
+      return {
+        title: `${p.added_by_name} la deg til i ${p.game_name}`,
+        detail: 'Åpne spillet for å bekrefte at du er med.',
       };
     }
   }

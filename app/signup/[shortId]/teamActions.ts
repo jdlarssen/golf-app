@@ -425,11 +425,13 @@ export async function submitTeamRegistration(
               '[submitTeamRegistration] player upsert failed',
               playerError,
             );
-            // Notifiser uansett — request-raden er der.
           }
         }
 
-        // Best-effort notify. Mail-backup i chunk 12.
+        // Best-effort notify. #463: medspilleren får ALLEREDE et team_invite-
+        // varsel (under) som nudger dem; vi dobbelt-varsler ikke med
+        // player_added. «Ikke bekreftet»-badgen + auto-bekreft-ved-åpning
+        // dekker bekreftelses-løkka for lag-medspillere. Mail-backup i chunk 12.
         await notifyInvitedToTeam({
           recipientUserId: existingUser.id,
           gameId: game.id,

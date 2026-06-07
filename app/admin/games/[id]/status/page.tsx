@@ -13,8 +13,9 @@ import {
   TOTAL_HOLES,
   type DeliveryStatus,
 } from '@/lib/games/deliveryStatus';
-import { remindUnsubmittedPlayers } from './actions';
+import { remindUnsubmittedPlayers, remindUnconfirmedPlayers } from './actions';
 import { RemindButton } from './RemindButton';
+import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -35,6 +36,7 @@ type PlayerRow = {
   submitted_at: string | null;
   approved_at: string | null;
   withdrawn_at: string | null;
+  accepted_at: string | null;
   users: { name: string | null; nickname: string | null; email: string } | null;
 };
 
@@ -90,7 +92,7 @@ export default async function GameStatusPage({
     supabase
       .from('game_players')
       .select(
-        'user_id, submitted_at, approved_at, withdrawn_at, users!game_players_user_id_fkey(name, nickname, email)',
+        'user_id, submitted_at, approved_at, withdrawn_at, accepted_at, users!game_players_user_id_fkey(name, nickname, email)',
       )
       .eq('game_id', id)
       .returns<PlayerRow[]>(),
@@ -133,6 +135,7 @@ export default async function GameStatusPage({
         holesFilled,
         lastActionAt: lastActionByUser.get(p.user_id) ?? null,
         status,
+        acceptedAt: p.accepted_at,
       };
     })
     .sort(
@@ -146,11 +149,17 @@ export default async function GameStatusPage({
   const targetCount = rows.filter((r) =>
     isDeliveryReminderTarget(r.status),
   ).length;
+  const unconfirmedCount = players.filter(
+    (p) => p.accepted_at == null && !p.withdrawn_at,
+  ).length;
 
   const isActive = game.status === 'active';
   const remindAction = remindUnsubmittedPlayers.bind(null, id);
+  const remindUnconfirmedAction = remindUnconfirmedPlayers.bind(null, id);
 
   const remindedCount = sp.status === 'reminded' ? first(sp.count) : undefined;
+  const unconfirmedRemindedCount =
+    sp.status === 'reminded_unconfirmed' ? first(sp.count) : undefined;
   const showNotActiveError = first(sp.error) === 'not_active';
 
   return (
@@ -178,6 +187,15 @@ export default async function GameStatusPage({
             {remindedCount === '1'
               ? '✓ Påminnelse sendt til 1 spiller.'
               : `✓ Påminnelse sendt til ${remindedCount} spillere.`}
+          </Banner>
+        </div>
+      )}
+      {unconfirmedRemindedCount !== undefined && (
+        <div className="mt-4">
+          <Banner tone="success">
+            {unconfirmedRemindedCount === '1'
+              ? '✓ Bekreftelses-påminnelse sendt til 1 spiller.'
+              : `✓ Bekreftelses-påminnelse sendt til ${unconfirmedRemindedCount} spillere.`}
           </Banner>
         </div>
       )}
@@ -213,6 +231,33 @@ export default async function GameStatusPage({
         </section>
       )}
 
+      {/* Ubekreftet-purre-seksjon — kun spill med ubekreftede spillere. */}
+      {unconfirmedCount > 0 && (
+        <section className="mt-3">
+          <div className="rounded-xl border border-border bg-surface px-4 py-4">
+            <p className="mb-3 font-sans text-[13px] leading-relaxed text-muted">
+              {unconfirmedCount === 1
+                ? '1 spiller har ikke bekreftet deltakelse ennå. Send en påminnelse.'
+                : `${unconfirmedCount} spillere har ikke bekreftet deltakelse ennå. Send en påminnelse.`}
+            </p>
+            <RemindButton
+              remindAction={remindUnconfirmedAction}
+              count={unconfirmedCount}
+              label={
+                unconfirmedCount === 1
+                  ? 'Purr 1 ubekreftet spiller'
+                  : `Purr ${unconfirmedCount} ubekreftede spillere`
+              }
+              confirmText={
+                unconfirmedCount === 1
+                  ? 'Sende bekreftelses-påminnelse til 1 spiller?'
+                  : `Sende bekreftelses-påminnelse til ${unconfirmedCount} spillere?`
+              }
+            />
+          </div>
+        </section>
+      )}
+
       {/* Spiller-liste */}
       <section className="mt-5">
         <p className="mb-1.5 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
@@ -234,9 +279,14 @@ export default async function GameStatusPage({
                   style={{ borderColor: 'var(--row-divider-warm)' }}
                 >
                   <div className="min-w-0">
-                    <p className="truncate font-sans text-[14px] font-medium text-text">
-                      {r.displayName}
-                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="truncate font-sans text-[14px] font-medium text-text">
+                        {r.displayName}
+                      </p>
+                      {r.acceptedAt == null && (
+                        <UnconfirmedBadge />
+                      )}
+                    </div>
                     <p className="mt-0.5 font-sans text-[11.5px] text-muted">
                       {r.lastActionAt
                         ? `Siste registrering ${formatRelativeNb(r.lastActionAt)}`

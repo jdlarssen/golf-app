@@ -51,6 +51,7 @@ import {
 import { formatShortDateNb } from '@/lib/format/date';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
 import { InviteToGameSection } from './InviteToGameSection';
+import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -136,6 +137,7 @@ type GamePlayerRow = {
   submitted_at: string | null;
   approved_at: string | null;
   withdrawn_at: string | null;
+  accepted_at: string | null;
   users: {
     // name is null until the invitee completes their profile — see
     // migration 0014. Pre-created placeholder rows can still appear on a
@@ -344,7 +346,7 @@ async function PlayersSections({
   const playersPromise = supabase
     .from('game_players')
     .select(
-      'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, withdrawn_at, users!game_players_user_id_fkey(name, nickname, hcp_index, email)',
+      'user_id, team_number, flight_number, course_handicap, submitted_at, approved_at, withdrawn_at, accepted_at, users!game_players_user_id_fkey(name, nickname, hcp_index, email)',
     )
     .eq('game_id', gameId)
     .returns<GamePlayerRow[]>();
@@ -769,7 +771,14 @@ async function PlayersSections({
                       className="border-t"
                       style={{ borderColor: 'var(--row-divider-warm)' }}
                     >
-                      <td className="px-2 py-2 text-text">{displayName(p)}</td>
+                      <td className="px-2 py-2 text-text">
+                        <div className="flex items-center gap-1.5">
+                          <span>{displayName(p)}</span>
+                          {p.accepted_at == null && !p.withdrawn_at && (
+                            <UnconfirmedBadge />
+                          )}
+                        </div>
+                      </td>
                       {!isSolo && (
                         <td className="px-2 py-2 text-text">{p.team_number}</td>
                       )}

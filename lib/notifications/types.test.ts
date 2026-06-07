@@ -164,4 +164,27 @@ describe('parseNotificationPayload', () => {
       expect(result.payload.withdrawn_player_name).toBe('Per');
     });
   });
+
+  describe('player_added (#463)', () => {
+    const validUuid = '11111111-1111-1111-1111-111111111111';
+
+    it('aksepterer gyldig player_added-payload', () => {
+      const result = parseNotificationPayload('player_added', {
+        game_id: validUuid,
+        game_name: 'Sommercup',
+        added_by_name: 'Per',
+      });
+      expect(result.kind).toBe('player_added');
+      expect(result.payload.added_by_name).toBe('Per');
+    });
+
+    it('avviser player_added uten added_by_name', () => {
+      expect(() =>
+        parseNotificationPayload('player_added', {
+          game_id: validUuid,
+          game_name: 'X',
+        }),
+      ).toThrow();
+    });
+  });
 });

@@ -1,5 +1,6 @@
 import type { LeagueStandingRow, LeagueStandingCell } from '@/lib/league/types';
 import type { LeagueRoundView, LeagueParticipant } from '@/lib/league/getLigaSnapshot';
+import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
 
 function playerName(p: LeagueParticipant): string {
   return p.nickname?.trim() || p.name?.trim() || 'Ukjent spiller';
@@ -158,7 +159,12 @@ export function LeagueStandingsTable({
                   className="px-2 py-2.5 font-sans text-sm font-medium"
                   style={isFirst ? { color: 'var(--accent-deep)' } : undefined}
                 >
-                  {name}
+                  <div className="flex items-center gap-1.5">
+                    <span>{name}</span>
+                    {participant?.acceptedAt == null && (
+                      <UnconfirmedBadge />
+                    )}
+                  </div>
                 </td>
 
                 {/* Per-round cells */}

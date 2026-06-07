@@ -40,6 +40,7 @@ import { ScheduledWaitingRoom } from './ScheduledWaitingRoom';
 import { getModeContentMap, mergeModeContent } from '@/lib/formats/getModeContent';
 import { formatDisplayLabel } from '@/lib/games/formatLabel';
 import { submitUndoWithdraw } from './trekk-fra/actions';
+import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -128,6 +129,7 @@ const GAME_SELECT =
 type FlightRosterRow = {
   user_id: string;
   flight_number: number;
+  accepted_at: string | null;
   users: {
     // `name` is null for pending invitees per migration 0014. The flight
     // roster only renders for active games, and the publish-gate (Task 7)
@@ -855,7 +857,7 @@ async function FlightRoster({
   const { data: flightRows } = await supabase
     .from('game_players')
     .select(
-      'user_id, flight_number, users!game_players_user_id_fkey(name, nickname, hcp_index)',
+      'user_id, flight_number, accepted_at, users!game_players_user_id_fkey(name, nickname, hcp_index)',
     )
     .eq('game_id', gameId)
     .eq('flight_number', flightNumber)
@@ -868,6 +870,7 @@ async function FlightRoster({
     name: row.users?.name ?? '(ukjent)',
     hcpIndex:
       row.users?.hcp_index == null ? null : Number(row.users.hcp_index),
+    acceptedAt: row.accepted_at,
   }));
 
   return (
@@ -903,6 +906,9 @@ async function FlightRoster({
               </span>
             )}
           </span>
+          {p.acceptedAt == null && !p.isCurrentUser && (
+            <UnconfirmedBadge className="shrink-0" />
+          )}
           <span className="shrink-0 text-xs text-muted tabular-nums">
             HCP {p.hcpIndex != null ? p.hcpIndex.toFixed(1) : '—'}
           </span>
@@ -928,13 +934,14 @@ async function SoloRoster({
   const { data: rows } = await supabase
     .from('game_players')
     .select(
-      'user_id, users!game_players_user_id_fkey(name, nickname, hcp_index)',
+      'user_id, accepted_at, users!game_players_user_id_fkey(name, nickname, hcp_index)',
     )
     .eq('game_id', gameId)
     .order('user_id')
     .returns<
       {
         user_id: string;
+        accepted_at: string | null;
         users: {
           name: string | null;
           nickname: string | null;
@@ -949,6 +956,7 @@ async function SoloRoster({
     name: row.users?.name ?? '(ukjent)',
     hcpIndex:
       row.users?.hcp_index == null ? null : Number(row.users.hcp_index),
+    acceptedAt: row.accepted_at,
   }));
 
   return (
@@ -974,6 +982,9 @@ async function SoloRoster({
               </span>
             )}
           </span>
+          {p.acceptedAt == null && !p.isCurrentUser && (
+            <UnconfirmedBadge className="shrink-0" />
+          )}
           <span className="shrink-0 text-xs text-muted tabular-nums">
             HCP {p.hcpIndex != null ? p.hcpIndex.toFixed(1) : '—'}
           </span>

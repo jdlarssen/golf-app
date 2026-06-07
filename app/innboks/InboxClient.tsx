@@ -194,5 +194,9 @@ function buildDeeplink(notification: NotificationRow): string {
     case 'friend_request':
     case 'friend_accepted':
       return '/profile/venner';
+    case 'player_added': {
+      const p = notification.payload as NotificationPayload<'player_added'>;
+      return `/games/${p.game_id}`;
+    }
   }
 }
