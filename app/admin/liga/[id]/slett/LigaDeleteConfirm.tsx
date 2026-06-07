@@ -65,6 +65,10 @@ export async function LigaDeleteConfirm({
     }>();
 
   if (!league) notFound();
+  // #485: en frittstående liga hører ikke hjemme under /klubber — 404 i klubb-
+  // varianten så vi aldri bygger en /klubber/null/...-lenke (kun nåbar ved at en
+  // global admin håndskriver URL-en).
+  if (variant === 'club' && !league.group_id) notFound();
 
   // Count rounds, participants, and linked flights for the deletion summary.
   const [{ count: roundCount }, { count: playerCount }] = await Promise.all([

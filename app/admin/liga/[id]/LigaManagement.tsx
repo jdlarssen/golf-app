@@ -91,6 +91,10 @@ export async function LigaManagement({
   // #483: deltaker-picker følger ligaens kontekst — klubbmedlemmer for en klubb-
   // liga (speiler #464/#480), ellers vennene dine. Klubb-navn til chrome.
   const groupId = league.group_id;
+  // #485: en frittstående liga (group_id null) hører ikke hjemme under /klubber.
+  // Nås kun ved at en global admin håndskriver URL-en; behandle som 404 så vi
+  // aldri bygger en /klubber/null/...-lenke.
+  if (variant === 'club' && !groupId) notFound();
   let invitable: PlayerOption[];
   let clubName: string | null = null;
   if (groupId) {
