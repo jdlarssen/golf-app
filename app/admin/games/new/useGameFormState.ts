@@ -105,9 +105,9 @@ export function defaultTeamSizeForMode(mode: GameMode): TeamSize {
   // Florida Scramble (#283): default 3-mannslag (step-aside-regelen er mest
   // naturlig med 3 spillere). 4-mannslag valgbart via TeamSizeSelector.
   if (mode === 'florida_scramble') return 3;
-  // Wolf: hver spiller er sin egen «row». team_number 1-4 brukes som
-  // rotation-slot, ikke som lag-tildeling. team_size=1 betyr requiresTeams=false
-  // så vi får solo-style player-selection i step 3.
+  // Wolf: hver spiller er sin egen «row». team_number 1..n (#465: n=3-5)
+  // brukes som rotation-slot, ikke som lag-tildeling. team_size=1 betyr
+  // requiresTeams=false så vi får solo-style player-selection i step 3.
   if (mode === 'wolf') return 1;
   // Nassau / Skins / Bingo Bango Bongo: solo-formater (ingen lag), 2-16
   // spillere (#460). team_size=1 betyr requiresTeams=false → orderedPayload tar
@@ -616,9 +616,9 @@ export function useGameFormState({
   //   Forskjeller mot Texas: lagstørrelser 3 eller 4 (ikke 2), NGF-fasttabell
   //   for lag-handicap-default (15 %/10 %), og step-aside-påminnelse på hull-flaten.
   const isFlorida = gameMode === 'florida_scramble';
-  // - isWolf: 4-spiller rotating partner-format. team_number 1-4 brukes som
-  //   rotation-slot (random permutasjon ved publish). team_size=1, ingen
-  //   lag-grid. Eget WolfSetup-step i step 2 for scoring-toggle + shuffle.
+  // - isWolf: 3-5-spiller rotating partner-format (#465). team_number 1..n
+  //   brukes som rotation-slot (random permutasjon ved publish). team_size=1,
+  //   ingen lag-grid. Eget WolfSetup-step i step 2 for scoring-toggle + shuffle.
   const isWolf = gameMode === 'wolf';
   // - isNassau: solo-format, 2-16 spillere (#460). Front 9 / back 9 / total 18 er
   //   tre separate konkurranser. Egen NassauSetup-step i step 2 for scoring-toggle.
@@ -884,12 +884,13 @@ export function useGameFormState({
   // wolfShuffleSeed. Fisher-Yates med splitmix32-PRNG seedet på seed-en.
   // Reseeding gjør at admin kan "Shuffle" til de er fornøyde, men ellers
   // er rekkefølgen stabil ved re-render. Tom liste hvis !isWolf eller
-  // <4 valgte. ≥4 selected slices til de 4 første (defensive — UI bør
-  // gate dette).
+  // <3 valgte (#465: 3-5 spillere). 6+ selected slices til de 5 første
+  // (defensive — wolfPlayersValid gater publish ved >5).
   const wolfOrder = useMemo<string[]>(() => {
     if (!isWolf) return [];
-    if (selectedPlayerIds.length < 4) return [];
-    const base = selectedPlayerIds.slice(0, 4);
+    if (selectedPlayerIds.length < 3) return [];
+    // #465: 3-5 spillere. Cap på 5 (over-cap fanges av wolfPlayersValid).
+    const base = selectedPlayerIds.slice(0, 5);
     const rng = splitmix32(wolfShuffleSeed);
     const shuffled = [...base];
     for (let i = shuffled.length - 1; i > 0; i--) {
@@ -916,12 +917,12 @@ export function useGameFormState({
 
   const orderedPayload = useMemo(() => {
     if (isWolf) {
-      // Wolf: emit 4 rader, hver med team_number 1-4 i shuffled rekkefølge.
-      // wolfOrder er allerede deterministisk-shuffled basert på
-      // (selectedPlayerIds, wolfShuffleSeed). Hvis <4 valgt: emit slot-frie
+      // Wolf: emit n rader (#465: 3-5), hver med team_number 1..n i shuffled
+      // rekkefølge. wolfOrder er allerede deterministisk-shuffled basert på
+      // (selectedPlayerIds, wolfShuffleSeed). Hvis <3 valgt: emit slot-frie
       // rader så draft-state tåler det. Validator-en (`validateWolf`)
-      // håndhever 4-spillers-regelen ved publish.
-      if (selectedPlayerIds.length < 4) {
+      // håndhever 3-5-spillers-regelen ved publish.
+      if (selectedPlayerIds.length < 3) {
         return selectedPlayerIds.map((pid) => ({
           user_id: pid,
           team_number: null as number | null,
@@ -1138,10 +1139,11 @@ export function useGameFormState({
     matchplaySide1Count === 1 &&
     matchplaySide2Count === 1;
 
-  // Wolf-validitet: nøyaktig 4 spillere. Rotation-slot 1-4 fordeles
+  // Wolf-validitet: 3-5 spillere (#465). Rotation-slot 1..n fordeles
   // automatisk via wolfOrder (deterministisk shuffle), så admin trenger
   // ikke å tilordne selv. Speiler `validateWolf` i gamePayload.ts.
-  const wolfPlayersValid = isWolf && selectedPlayerIds.length === 4;
+  const wolfPlayersValid =
+    isWolf && selectedPlayerIds.length >= 3 && selectedPlayerIds.length <= 5;
 
   // Round Robin-validitet: nøyaktig 4 spillere. Rotation-slot 1-4 fordeles
   // automatisk i valgrekkefølge, ingen manuell tilordning nødvendig.
@@ -1402,17 +1404,15 @@ export function useGameFormState({
       missingForPublish.push('lag-handicap-prosent (0-100)');
     }
   } else if (isWolf) {
-    // Wolf: krever nøyaktig 4 spillere. Rotation-slot fordeles automatisk
-    // via wolfOrder, så ingen lag-tilordning trengs i UI.
-    if (selectedPlayerIds.length < 4) {
-      const remaining = 4 - selectedPlayerIds.length;
+    // Wolf: 3-5 spillere (#465). Rotation-slot fordeles automatisk via
+    // wolfOrder, så ingen lag-tilordning trengs i UI.
+    if (selectedPlayerIds.length < 3) {
+      const remaining = 3 - selectedPlayerIds.length;
       missingForPublish.push(
-        `${remaining} ${remaining === 1 ? 'spiller' : 'spillere'} til`,
+        `${remaining} ${remaining === 1 ? 'spiller' : 'spillere'} til (minst 3)`,
       );
-    } else if (selectedPlayerIds.length > 4) {
-      missingForPublish.push(
-        'for mange spillere — Wolf krever nøyaktig 4',
-      );
+    } else if (selectedPlayerIds.length > 5) {
+      missingForPublish.push('for mange spillere — Wolf tar 3 til 5');
     }
   } else if (isNassau) {
     // Nassau: 2-16 spillere (#460), solo (ingen lag-tilordning).

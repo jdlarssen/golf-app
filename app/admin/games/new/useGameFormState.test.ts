@@ -43,6 +43,16 @@ const PLAYERS: PlayerOption[] = [
   makePlayer('p-junior', { gender: 'mens', level: 'junior' }),
 ];
 
+// #465 — 6-spiller-roster for Wolf 3-5-tester (trenger flere enn PLAYERS gir).
+const WOLF_PLAYERS: PlayerOption[] = [
+  makePlayer('w1'),
+  makePlayer('w2'),
+  makePlayer('w3'),
+  makePlayer('w4'),
+  makePlayer('w5'),
+  makePlayer('w6'),
+];
+
 describe('deriveDefaultGenders', () => {
   it('mapper hver spiller til riktig M/D/J basert på profil', () => {
     expect(deriveDefaultGenders(PLAYERS)).toEqual({
@@ -146,6 +156,52 @@ describe('useGameFormState — initialValues.player_genders vinner ved mount', (
       'p-dame': 'J',
       'p-junior': 'M',
     });
+  });
+});
+
+describe('useGameFormState — Wolf 3-5 spillere (#465)', () => {
+  function setupWolf(count: number) {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: WOLF_PLAYERS, courses: COURSES }),
+    );
+    act(() => {
+      result.current.handleModeChange('wolf');
+    });
+    act(() => {
+      for (let i = 0; i < count; i++) {
+        result.current.togglePlayer(`w${i + 1}`);
+      }
+    });
+    return result;
+  }
+
+  it.each([3, 4, 5])('%i spillere → gyldig, wolfOrder har %i slots', (count) => {
+    const result = setupWolf(count);
+    expect(result.current.isWolf).toBe(true);
+    expect(result.current.playersValidForMode).toBe(true);
+    expect(result.current.wolfOrder).toHaveLength(count);
+  });
+
+  it.each([2, 6])('%i spillere → ugyldig (playersValidForMode false)', (count) => {
+    const result = setupWolf(count);
+    expect(result.current.playersValidForMode).toBe(false);
+  });
+
+  it('orderedPayload gir sammenhengende team_number 1..n for 5 spillere', () => {
+    const result = setupWolf(5);
+    expect(result.current.orderedPayload).toHaveLength(5);
+    const teams = result.current.orderedPayload
+      .map((p) => p.team_number)
+      .sort((a, b) => (a ?? 0) - (b ?? 0));
+    expect(teams).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it('3 spillere gir team_number 1-3 (ingen tomme slots)', () => {
+    const result = setupWolf(3);
+    const teams = result.current.orderedPayload
+      .map((p) => p.team_number)
+      .sort((a, b) => (a ?? 0) - (b ?? 0));
+    expect(teams).toEqual([1, 2, 3]);
   });
 });
 
