@@ -1065,6 +1065,7 @@ export type Database = {
       }
       leagues: {
         Row: {
+          best_n_count: number | null
           course_id: string | null
           course_scope: string
           created_at: string
@@ -1086,6 +1087,7 @@ export type Database = {
           tee_box_id: string | null
         }
         Insert: {
+          best_n_count?: number | null
           course_id?: string | null
           course_scope: string
           created_at?: string
@@ -1107,6 +1109,7 @@ export type Database = {
           tee_box_id?: string | null
         }
         Update: {
+          best_n_count?: number | null
           course_id?: string | null
           course_scope?: string
           created_at?: string

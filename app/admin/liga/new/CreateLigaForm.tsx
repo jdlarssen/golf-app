@@ -33,6 +33,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   course_scope: 'Velg et bane-omfang.',
   course: 'Bane og tee må velges for dette bane-omfanget.',
   penalty: 'Straffe-slag over par må være et tall.',
+  best_n: 'Antall beste runder må være et helt tall på minst 1.',
+  scoring: 'Velg hva tabellen skal rangeres på.',
   players: 'Deltakerlisten er ugyldig.',
   insert_failed: 'Klarte ikke å opprette ligaen. Prøv igjen.',
   rounds_failed: 'Ligaen ble opprettet, men noen runder feilet. Sjekk detalj-siden.',
@@ -41,7 +43,8 @@ const ERROR_MESSAGES: Record<string, string> = {
 };
 
 type CourseScope = 'single_course_single_tee' | 'single_course' | 'multi_course';
-type StandingsModel = 'total' | 'average';
+type Scoring = 'net' | 'gross' | 'both';
+type StandingsModel = 'total' | 'average' | 'best_n';
 type MissedRoundPolicy = 'penalty' | 'must_play_all';
 type PenaltyKind = 'worst_plus_one' | 'fixed';
 type Frequency = 'weekly' | 'biweekly' | 'monthly' | 'custom';
@@ -63,6 +66,7 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
 
   const [courseScope, setCourseScope] = useState<CourseScope>('single_course_single_tee');
   const [selectedCourseId, setSelectedCourseId] = useState('');
+  const [scoring, setScoring] = useState<Scoring>('net');
   const [standingsModel, setStandingsModel] = useState<StandingsModel>('total');
   const [missedPolicy, setMissedPolicy] = useState<MissedRoundPolicy>('penalty');
   const [penaltyKind, setPenaltyKind] = useState<PenaltyKind>('worst_plus_one');
@@ -98,7 +102,7 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
   return (
     <form action={formAction} data-testid="liga-create-form" className="space-y-6">
       {/* Hidden fixed fields */}
-      <input type="hidden" name="scoring" value="net" />
+      <input type="hidden" name="scoring" value={scoring} />
       <input type="hidden" name="group_id" value={groupId ?? ''} />
 
       {/* Klubb-kontekst (#480): ligaen settes opp for en bestemt klubb. */}
@@ -302,8 +306,52 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
           Oppsett
         </h2>
         <input type="hidden" name="standings_model" value={standingsModel} />
-        <input type="hidden" name="missed_round_policy" value={missedPolicy} />
+        <input
+          type="hidden"
+          name="missed_round_policy"
+          value={standingsModel === 'best_n' ? 'penalty' : missedPolicy}
+        />
         <input type="hidden" name="penalty_kind" value={penaltyKind} />
+
+        {/* Scoring — netto / brutto / begge */}
+        <div className="space-y-2 mb-4">
+          <p className="font-sans text-[12px] font-medium text-text mb-1.5">
+            Tabell
+          </p>
+          {(
+            [
+              { value: 'net' as Scoring, label: 'Netto', desc: 'Netto mot par (handicap-justert).' },
+              { value: 'gross' as Scoring, label: 'Brutto', desc: 'Brutto mot par (uten handicap).' },
+              { value: 'both' as Scoring, label: 'Begge', desc: 'Begge tabeller, med en Netto/Brutto-bryter.' },
+            ] as const
+          ).map((opt) => (
+            <label
+              key={opt.value}
+              className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition-colors ${
+                scoring === opt.value
+                  ? 'border-primary/50 bg-primary-soft'
+                  : 'border-border bg-surface hover:border-primary/30'
+              }`}
+            >
+              <input
+                type="radio"
+                name="_scoring_radio"
+                value={opt.value}
+                checked={scoring === opt.value}
+                onChange={() => setScoring(opt.value)}
+                className="mt-0.5 accent-primary"
+              />
+              <span>
+                <span className="block font-sans text-[14px] font-medium text-text">
+                  {opt.label}
+                </span>
+                <span className="block font-sans text-[12px] text-muted mt-0.5">
+                  {opt.desc}
+                </span>
+              </span>
+            </label>
+          ))}
+        </div>
 
         {/* Sesong-modell */}
         <div className="space-y-2 mb-4">
@@ -320,7 +368,12 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
               {
                 value: 'average' as StandingsModel,
                 label: 'Snitt per runde',
-                desc: 'Gjennomsnittlig netto mot par. Ingen straff for uteblitte runder.',
+                desc: 'Gjennomsnittlig mot par. Ingen straff for uteblitte runder.',
+              },
+              {
+                value: 'best_n' as StandingsModel,
+                label: 'Beste N runder',
+                desc: 'Summen av spillerens N beste runder. Uteblitte runder straffefylles opp til N.',
               },
             ] as const
           ).map((opt) => (
@@ -351,6 +404,28 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
             </label>
           ))}
         </div>
+
+        {/* Antall beste runder — kun for best_n */}
+        {standingsModel === 'best_n' && (
+          <div className="mb-4">
+            <label
+              htmlFor="liga-best-n"
+              className="block font-sans text-[12px] font-medium text-text mb-1.5"
+            >
+              Antall beste runder (N)
+            </label>
+            <input
+              id="liga-best-n"
+              name="best_n_count"
+              type="number"
+              min={1}
+              max={99}
+              required
+              placeholder="5"
+              className="w-full rounded-xl border border-border bg-bg px-4 py-3 font-sans text-[15px] tabular-nums text-text focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px]"
+            />
+          </div>
+        )}
 
         {/* Manglende runde — kun for total */}
         {standingsModel === 'total' && (
@@ -401,8 +476,9 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
           </div>
         )}
 
-        {/* Straffescore-variant — kun for total + penalty */}
-        {standingsModel === 'total' && missedPolicy === 'penalty' && (
+        {/* Straffescore-variant — for total+penalty og best_n (som straffefyller) */}
+        {((standingsModel === 'total' && missedPolicy === 'penalty') ||
+          standingsModel === 'best_n') && (
           <div className="space-y-2">
             <p className="font-sans text-[12px] font-medium text-text mb-1.5">
               Straffescore-type

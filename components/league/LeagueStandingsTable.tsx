@@ -24,7 +24,7 @@ function formatValue(value: number, model: string): string {
 }
 
 function RoundCell({ cell }: { cell: LeagueStandingCell | undefined }) {
-  if (!cell || cell.netToPar === null) {
+  if (!cell || cell.toPar === null) {
     return (
       <td className="px-2 py-2 text-center font-serif tabular-nums text-xs text-muted/40">
         —
@@ -32,7 +32,7 @@ function RoundCell({ cell }: { cell: LeagueStandingCell | undefined }) {
     );
   }
 
-  const label = formatNetToPar(cell.netToPar);
+  const label = formatNetToPar(cell.toPar);
   const isPenalty = cell.penalised;
   const isFlagged = cell.deliveredOutsideWindow;
 
@@ -67,11 +67,13 @@ export function LeagueStandingsTable({
   rounds,
   participants,
   standingsModel,
+  bestNCount,
 }: {
   rows: LeagueStandingRow[];
   rounds: LeagueRoundView[];
   participants: LeagueParticipant[];
   standingsModel: string;
+  bestNCount?: number | null;
 }) {
   if (rows.length === 0) {
     return (
@@ -88,7 +90,14 @@ export function LeagueStandingsTable({
   const unranked = rows.filter((r) => !r.ranked);
   const ordered = [...ranked, ...unranked];
 
-  const valueHeader = standingsModel === 'average' ? 'Snitt' : 'Totalt';
+  const valueHeader =
+    standingsModel === 'average'
+      ? 'Snitt'
+      : standingsModel === 'best_n'
+        ? bestNCount
+          ? `Beste ${bestNCount}`
+          : 'Beste N'
+        : 'Totalt';
 
   return (
     <div className="w-full overflow-x-auto -mx-1">

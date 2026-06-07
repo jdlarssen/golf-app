@@ -8,7 +8,7 @@ import { getLigaSnapshot } from '@/lib/league/getLigaSnapshot';
 import { maybeAutoConfirmLeagueParticipation } from '@/lib/league/confirmLeagueParticipation';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getServerClient } from '@/lib/supabase/server';
-import { LeagueStandingsTable } from '@/components/league/LeagueStandingsTable';
+import { LeagueStandingsPanel } from '@/components/league/LeagueStandingsPanel';
 import { formatShortDateNbWithYear } from '@/lib/format/date';
 
 export const dynamic = 'force-dynamic';
@@ -190,11 +190,12 @@ export default async function LigaPublicPage({ params }: { params: Params }) {
           Sesong-tabell
         </h2>
         <Card className="p-3 sm:p-4">
-          <LeagueStandingsTable
-            rows={standings.rows}
+          <LeagueStandingsPanel
+            standings={standings}
             rounds={rounds}
             participants={participants}
             standingsModel={league.standings_model}
+            bestNCount={league.best_n_count}
           />
         </Card>
       </section>

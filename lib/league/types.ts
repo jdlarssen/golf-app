@@ -30,23 +30,30 @@ export type RoundFrequency = 'weekly' | 'biweekly' | 'monthly' | 'custom';
 
 // ── computeLeagueStandings: pure aggregator ────────────────────────────────────
 
+/** Hvilket tall sesong-tabellen rangeres på. 'both' regner begge parallelt. */
+export type StandingsMetric = 'net' | 'gross';
+
 /**
  * Konfig som styrer hvordan sesong-tabellen regnes ut. Hentes fra `leagues`-raden.
- * Fase 1 leser kun netto-mot-par, så `standingsModel` er 'total' eller 'average'.
+ * Fase 2a støtter 'total', 'average' og 'best_n'; 'points' er reservert til Fase 2b.
  */
 export type LeagueStandingsConfig = {
-  standingsModel: Extract<StandingsModel, 'total' | 'average'>;
+  standingsModel: Extract<StandingsModel, 'total' | 'average' | 'best_n'>;
   missedRoundPolicy: MissedRoundPolicy;
   penaltyKind: PenaltyKind;
   /** Kun lest når penaltyKind === 'fixed'. Slag over par for en uteblitt runde. */
   penaltyFixedOverPar: number | null;
+  /** Antall beste runder som teller. Kun lest under 'best_n'. */
+  bestNCount: number | null;
 };
 
-/** Én spillers tellende resultat i én runde (netto mot par). */
+/** Én spillers tellende resultat i én runde, både netto og brutto mot par. */
 export type LeagueRoundPlayerScore = {
   userId: string;
   /** totalNetStrokes − par for tee. Lavere er bedre. */
   netToPar: number;
+  /** totalGrossStrokes − par for tee. Lavere er bedre. */
+  grossToPar: number;
   /** Flagget når flighten ble levert utenfor opprinnelig vindu (admin-override). */
   deliveredOutsideWindow: boolean;
 };
@@ -61,8 +68,8 @@ export type LeagueRoundInput = {
 /** Én celle i sesong-tabellen — en spillers resultat i én runde. */
 export type LeagueStandingCell = {
   roundId: string;
-  /** null = spilte ikke runden. */
-  netToPar: number | null;
+  /** Det aktive tallet (netto eller brutto) mot par. null = spilte ikke runden. */
+  toPar: number | null;
   /** true = verdien er en straffescore (uteblitt runde under penalty-modellen). */
   penalised: boolean;
   deliveredOutsideWindow: boolean;
@@ -71,7 +78,7 @@ export type LeagueStandingCell = {
 /** Én rad i sesong-tabellen. */
 export type LeagueStandingRow = {
   userId: string;
-  /** Rangerings-verdi (sum eller snitt av netto-mot-par). Lavere er bedre. */
+  /** Rangerings-verdi (sum, snitt eller sum av beste N mot par). Lavere er bedre. */
   value: number;
   roundsPlayed: number;
   /** false når 'must_play_all' og spilleren mangler en runde → sorteres nederst. */
@@ -83,4 +90,10 @@ export type LeagueStandingRow = {
 
 export type LeagueStandings = {
   rows: LeagueStandingRow[];
+};
+
+/** Sesong-tabeller per scoring. Én er null når ligaen ikke regner det tallet. */
+export type LeagueStandingsByScoring = {
+  net: LeagueStandings | null;
+  gross: LeagueStandings | null;
 };

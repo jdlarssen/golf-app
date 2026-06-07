@@ -7,8 +7,9 @@ import { computeLeagueStandings } from './computeLeagueStandings';
 import type {
   LeagueRoundInput,
   LeagueRoundPlayerScore,
-  LeagueStandings,
+  LeagueStandingsByScoring,
   LeagueStandingsConfig,
+  StandingsMetric,
 } from './types';
 
 /**
@@ -60,6 +61,8 @@ export type LeagueRow = {
   missed_round_policy: string;
   penalty_kind: string;
   penalty_fixed_over_par: number | null;
+  /** #452 Fase 2a: antall beste runder som teller under 'best_n'. */
+  best_n_count: number | null;
   course_scope: string;
   course_id: string | null;
   tee_box_id: string | null;
@@ -76,7 +79,8 @@ export type LeagueSnapshot = {
   league: LeagueRow;
   rounds: LeagueRoundView[];
   participants: LeagueParticipant[];
-  standings: LeagueStandings;
+  /** Per scoring; `.net`/`.gross` is null when the league doesn't rank on it. */
+  standings: LeagueStandingsByScoring;
 };
 
 type UserRel = { name: string | null; nickname: string | null };
@@ -89,7 +93,7 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
   const { data: leagueRow, error: lErr } = await supabase
     .from('leagues')
     .select(
-      'id, name, season_start, season_end, format, scoring, standings_model, missed_round_policy, penalty_kind, penalty_fixed_over_par, course_scope, course_id, tee_box_id, status, created_by, created_at, started_at, finished_at, group_id',
+      'id, name, season_start, season_end, format, scoring, standings_model, missed_round_policy, penalty_kind, penalty_fixed_over_par, best_n_count, course_scope, course_id, tee_box_id, status, created_by, created_at, started_at, finished_at, group_id',
     )
     .eq('id', leagueId)
     .maybeSingle();
@@ -308,6 +312,7 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
       arr.push({
         userId: line.userId,
         netToPar: line.totalNetStrokes - par,
+        grossToPar: line.totalGrossStrokes - par,
         deliveredOutsideWindow: game.delivered_outside_window,
       });
       roundScores.set(roundId, arr);
@@ -321,17 +326,27 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
   }));
 
   const config: LeagueStandingsConfig = {
-    standingsModel: league.standings_model === 'average' ? 'average' : 'total',
+    standingsModel:
+      league.standings_model === 'average'
+        ? 'average'
+        : league.standings_model === 'best_n'
+          ? 'best_n'
+          : 'total',
     missedRoundPolicy: league.missed_round_policy === 'must_play_all' ? 'must_play_all' : 'penalty',
     penaltyKind: league.penalty_kind === 'fixed' ? 'fixed' : 'worst_plus_one',
     penaltyFixedOverPar: league.penalty_fixed_over_par,
+    bestNCount: league.best_n_count,
   };
 
-  const standings = computeLeagueStandings(
-    config,
-    roundInputs,
-    participants.map((p) => p.userId),
-  );
+  const playerIds = participants.map((p) => p.userId);
+  const standingsFor = (metric: StandingsMetric) =>
+    computeLeagueStandings(config, roundInputs, playerIds, metric);
+
+  // `scoring` decides which tables to compute: net, gross, or both in parallel.
+  const standings: LeagueStandingsByScoring = {
+    net: league.scoring === 'gross' ? null : standingsFor('net'),
+    gross: league.scoring === 'gross' || league.scoring === 'both' ? standingsFor('gross') : null,
+  };
 
   const roundViews: LeagueRoundView[] = rounds.map((r) => ({
     id: r.id,

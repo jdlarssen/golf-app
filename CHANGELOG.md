@@ -17,7 +17,38 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.90.y — Veiviser · tydeligere format-valg
+## 1.91.y — Liga · netto, brutto og beste runder
+
+Issue [#452](https://github.com/jdlarssen/golf-app/issues/452). Liga-epicen Fase 2a: sesong-tabellen kan nå regnes på brutto i tillegg til netto, og en ny «beste runder»-modell lar de svakeste rundene falle bort.
+
+### [1.91.0] - 2026-06-07 · #452
+
+> Ligaen kan nå kåre vinneren på netto, brutto eller begge tallene side om side. Du kan også la sesongen telle bare spillerens beste runder, så en svak dag eller to ikke velter hele tabellen.
+
+<details>
+<summary>Teknisk</summary>
+
+[#452](https://github.com/jdlarssen/golf-app/issues/452) Fase 2a (epic). Poeng-per-plassering-modellen er bevisst skilt ut til Fase 2b.
+
+#### Added
+- «Beste N runder»-sesongmodell i `computeLeagueStandings`: summen av spillerens N laveste runder. Uteblitte runder straffefylles opp til N (gjenbruker straffe-maskineriet fra Total), og N kappes til antall runder med resultat. Ny `leagues.best_n_count`-kolonne (migrasjon 0085, to CHECK-er).
+- Brutto-tabell: `computeLeagueStandings` tar nå et `metric`-valg (netto/brutto), og `getLigaSnapshot` tråer bruttoen fra `computeSoloStrokeplay` videre som brutto-mot-par.
+- `LeagueStandingsPanel` med segmentert Netto/Brutto-bryter når ligaen scorer «begge» (gjenbruker `SegmentedField`).
+
+#### Changed
+- Liga-veiviseren eksponerer scoring-valget (Netto / Brutto / Begge) og «Beste N runder»-modellen med antall-felt; admin-detaljsiden viser scoring + beste-N.
+- `getLigaSnapshot` returnerer sesong-tabeller per scoring (`{ net, gross }`).
+- Sesong-celle-feltet `netToPar` heter nå `toPar` (holder det aktive tallet, netto eller brutto).
+
+</details>
+
+## Tidligere versjoner
+
+<details>
+<summary><strong>Veiviser — tydeligere format-valg (1 serie)</strong></summary>
+
+<details>
+<summary><strong>1.90.y — Veiviser · tydeligere format-valg (1 oppføring)</strong></summary>
 
 Issue [#477](https://github.com/jdlarssen/golf-app/issues/477) + [#478](https://github.com/jdlarssen/golf-app/issues/478). Format-velgeren i veiviseren er ryddet: hvert format merkes med spillestil, lagstørrelse-valget viser bare det som faktisk gjelder, og test-snarveien er skjult for vanlige brukere.
 
@@ -40,7 +71,9 @@ Issue [#477](https://github.com/jdlarssen/golf-app/issues/477) + [#478](https://
 
 </details>
 
-## Tidligere versjoner
+</details>
+
+</details>
 
 <details>
 <summary><strong>Venner — vennegrafen vokser (1 serie)</strong></summary>

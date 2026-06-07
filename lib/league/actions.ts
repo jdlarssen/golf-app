@@ -72,6 +72,7 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
   const missedPolicy = (str(formData, 'missed_round_policy') || 'penalty') as MissedRoundPolicy;
   const penaltyKind = (str(formData, 'penalty_kind') || 'worst_plus_one') as PenaltyKind;
   const penaltyFixedRaw = str(formData, 'penalty_fixed_over_par');
+  const bestNCountRaw = str(formData, 'best_n_count');
   const courseScope = str(formData, 'course_scope') as CourseScope;
   const courseId = str(formData, 'course_id') || null;
   const teeBoxId = str(formData, 'tee_box_id') || null;
@@ -80,7 +81,9 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
   if (!NAME_RE.test(name)) return { error: 'name' };
   if (!DATE_RE.test(seasonStart) || !DATE_RE.test(seasonEnd)) return { error: 'dates' };
   if (seasonEnd < seasonStart) return { error: 'dates' };
-  if (standingsModel !== 'total' && standingsModel !== 'average') return { error: 'standings_model' };
+  if (standingsModel !== 'total' && standingsModel !== 'average' && standingsModel !== 'best_n') {
+    return { error: 'standings_model' };
+  }
   // Defense-in-depth: validate the enum-backed fields rather than trusting the
   // form (the DB CHECK is the final backstop, but fail clean here).
   if (scoring !== 'net' && scoring !== 'gross' && scoring !== 'both') return { error: 'scoring' };
@@ -104,6 +107,12 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
     if (!Number.isFinite(penaltyFixed)) return { error: 'penalty' };
   }
 
+  let bestNCount: number | null = null;
+  if (standingsModel === 'best_n') {
+    bestNCount = Number.parseInt(bestNCountRaw, 10);
+    if (!Number.isInteger(bestNCount) || bestNCount < 1) return { error: 'best_n' };
+  }
+
   let playerIds: string[] = [];
   try {
     const parsed = JSON.parse(str(formData, 'player_ids') || '[]');
@@ -124,6 +133,7 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
       missed_round_policy: missedPolicy,
       penalty_kind: penaltyKind,
       penalty_fixed_over_par: penaltyFixed,
+      best_n_count: bestNCount,
       course_scope: courseScope,
       course_id: courseId,
       tee_box_id: teeBoxId,
