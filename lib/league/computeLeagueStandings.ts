@@ -15,17 +15,24 @@ import type {
  * per (round, player) here. `metric` selects which is ranked.
  *
  * A round with no results is ignored entirely. Multiple results for the same
- * player in one round are deduped to the best (lowest) on the active metric.
+ * player in one round are deduped to the best entry on the active metric.
  *
- * - total:   sum over all rounds-with-results; missed → penalty (or unranked
- *            under must_play_all). Lower is better.
- * - average: mean over played rounds; no penalty. Lower is better.
- * - best_n:  sum of the N lowest of {played} ∪ {penalty per missed round}, N
- *            capped at rounds-with-results. Lower is better.
- * - points:  per round, players are placed by the active metric and earn points
- *            descending from the field size (winner = field size, last = 1; ties
- *            share the average). Season = sum of points, missed round = 0.
- *            HIGHER is better — the sort/countback flip direction for this model.
+ * Two independent directions (Fase 4 #452): the PER-ROUND value can be lower-best
+ * (mot-par, slagspill) or higher-best (stableford-poeng) via `config.pointsBased`,
+ * and that direction governs dedup, points-placement, penalty and Beste-N. The
+ * SEASON value direction (`points`-modellen + alle poeng-baserte formater er
+ * høyest-best) governs the final sort + countback. For slagspill er begge lavest-
+ * best (uendret) bortsett fra `points`-modellen.
+ *
+ * - total:   sum over all rounds-with-results; missed → penalty (poeng-liga: 0)
+ *            or unranked under must_play_all.
+ * - average: mean over played rounds; no penalty.
+ * - best_n:  sum of the N best of {played} ∪ {penalty per missed round}, N
+ *            capped at rounds-with-results.
+ * - points:  per round, players are placed by the active metric (best-first per
+ *            `pointsBased`) and earn points descending from the field size
+ *            (winner = field size, last = 1; ties share the average). Season =
+ *            sum of points, missed round = 0. Always higher-is-better.
  */
 export function computeLeagueStandings(
   config: LeagueStandingsConfig,
@@ -35,14 +42,22 @@ export function computeLeagueStandings(
 ): LeagueStandings {
   const metricOf = (s: LeagueRoundPlayerScore): number =>
     metric === 'gross' ? s.gross : s.net;
-  const higherIsBetter = config.standingsModel === 'points';
+
+  // Per-round value direction (stableford points = higher best) vs season-value
+  // direction (points model + every points-based format rank high→low).
+  const roundHigherIsBetter = config.pointsBased;
+  const seasonHigherIsBetter = config.standingsModel === 'points' || config.pointsBased;
+  const usePlacementPoints = config.standingsModel === 'points';
+  /** a is a strictly better per-round value than b, in the active direction. */
+  const betterRound = (a: number, b: number): boolean =>
+    roundHigherIsBetter ? a > b : a < b;
 
   // Dedupe each round's scores to the best entry per player on the active metric.
   const roundMaps = rounds.map((r) => {
     const byUser = new Map<string, LeagueRoundPlayerScore>();
     for (const s of r.scores) {
       const existing = byUser.get(s.userId);
-      if (!existing || metricOf(s) < metricOf(existing)) byUser.set(s.userId, s);
+      if (!existing || betterRound(metricOf(s), metricOf(existing))) byUser.set(s.userId, s);
     }
     return { round: r, byUser };
   });
@@ -57,7 +72,8 @@ export function computeLeagueStandings(
     for (const rm of counting) {
       const entries = [...rm.byUser.entries()]
         .map(([uid, s]) => ({ uid, score: metricOf(s) }))
-        .sort((a, b) => a.score - b.score); // lower to-par = better placement
+        // best-first: lower mot-par or higher stableford points → better placement.
+        .sort((a, b) => (roundHigherIsBetter ? b.score - a.score : a.score - b.score));
       const n = entries.length;
       const pts = new Map<string, number>();
       let i = 0;
@@ -121,7 +137,8 @@ export function computeLeagueStandings(
         const n = Math.min(config.bestNCount ?? candidates.length, candidates.length);
         value = candidates
           .slice()
-          .sort((a, b) => a - b)
+          // best-first so slice(0, n) keeps the N best in the active direction.
+          .sort((a, b) => (roundHigherIsBetter ? b - a : a - b))
           .slice(0, n)
           .reduce((a, b) => a + b, 0);
       }
@@ -167,13 +184,16 @@ export function computeLeagueStandings(
     .sort((a, b) => b.round.sequence - a.round.sequence)
     .map((rm) => rm.round.roundId);
 
-  // Direction-aware: points ranks high→low, the mot-par models low→high.
-  const worst = higherIsBetter ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY;
-  const byValue = (av: number, bv: number): number => (higherIsBetter ? bv - av : av - bv);
+  // Season-value direction: points model + every points-based format rank
+  // high→low; the slagspill mot-par models rank low→high.
+  const worst = seasonHigherIsBetter ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY;
+  const byValue = (av: number, bv: number): number => (seasonHigherIsBetter ? bv - av : av - bv);
 
   const cellValue = (row: LeagueStandingRow, roundId: string): number => {
     const cell = row.perRound.find((c) => c.roundId === roundId);
-    const v = cell ? (higherIsBetter ? cell.points : cell.value) : null;
+    // Countback compares placement points under the points model, else the raw
+    // per-round value — independent of direction (which the worst-sentinel sets).
+    const v = cell ? (usePlacementPoints ? cell.points : cell.value) : null;
     // A round the player has no value for counts as worst possible in countback.
     return v == null ? worst : v;
   };
@@ -223,7 +243,12 @@ function penaltyForRound(
   byUser: Map<string, LeagueRoundPlayerScore>,
   metricOf: (s: LeagueRoundPlayerScore) => number,
 ): number {
+  // Poeng-liga (stableford): en uteblitt runde teller som 0 poeng — den naturlige
+  // straffen (du spilte ingenting, du får ingenting). Eieren valgte dette framfor
+  // en retnings-snudd «verste − 1»; straffescore-type-valget skjules da i wizard.
+  if (config.pointsBased) return 0;
   if (config.penaltyKind === 'fixed') return config.penaltyFixedOverPar ?? 0;
+  // Slagspill: dårligste talte mot-par i runden + 1 slag (skalerer med banen).
   const worst = Math.max(...[...byUser.values()].map(metricOf));
   return worst + 1;
 }

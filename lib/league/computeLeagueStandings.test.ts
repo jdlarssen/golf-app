@@ -8,6 +8,7 @@ const cfg = (over: Partial<LeagueStandingsConfig> = {}): LeagueStandingsConfig =
   penaltyKind: 'worst_plus_one',
   penaltyFixedOverPar: null,
   bestNCount: null,
+  pointsBased: false,
   ...over,
 });
 
@@ -302,5 +303,103 @@ describe('computeLeagueStandings — average model', () => {
     const res = computeLeagueStandings(cfg({ standingsModel: 'average' }), rounds, ['A', 'B']);
     expect(rowOf(res, 'B').ranked).toBe(false);
     expect(rowOf(res, 'A').rank).toBe(1);
+  });
+});
+
+// #452 Fase 4: stableford-formater aggregeres på rå poeng (høyest best). `score`
+// bærer da poeng (net=gross). Verifiserer at retnings-flippen treffer alle fire
+// modellene + uteblitt-runde-straffen (0 poeng) + Beste-N (N høyeste).
+describe('computeLeagueStandings — stableford (points-based, higher best)', () => {
+  const sf = (over: Partial<LeagueStandingsConfig> = {}) => cfg({ pointsBased: true, ...over });
+
+  it('total: sums points (higher wins); missed round counts as 0 (penalised cell)', () => {
+    const rounds = [
+      round('r1', 1, [score('A', 30), score('B', 20), score('C', 10)]),
+      round('r2', 2, [score('A', 25), score('B', 28)]), // C missed
+    ];
+    const res = computeLeagueStandings(sf(), rounds, ['A', 'B', 'C']);
+    expect(rowOf(res, 'A').value).toBe(55);
+    expect(rowOf(res, 'B').value).toBe(48);
+    expect(rowOf(res, 'C').value).toBe(10); // 10 + 0
+    expect(res.rows.map((r) => r.userId)).toEqual(['A', 'B', 'C']); // high → low
+    expect(res.rows.map((r) => r.rank)).toEqual([1, 2, 3]);
+    const cMissed = rowOf(res, 'C').perRound.find((c) => c.roundId === 'r2')!;
+    expect(cMissed).toMatchObject({ value: 0, penalised: true });
+  });
+
+  it('total + must_play_all: a missed round leaves the player unranked and last', () => {
+    const rounds = [
+      round('r1', 1, [score('A', 30), score('B', 20), score('C', 10)]),
+      round('r2', 2, [score('A', 25), score('B', 28)]),
+    ];
+    const res = computeLeagueStandings(sf({ missedRoundPolicy: 'must_play_all' }), rounds, ['A', 'B', 'C']);
+    expect(rowOf(res, 'C').ranked).toBe(false);
+    expect(res.rows[res.rows.length - 1].userId).toBe('C');
+  });
+
+  it('average: mean points, higher wins, no penalty', () => {
+    const rounds = [
+      round('r1', 1, [score('A', 30), score('B', 20)]),
+      round('r2', 2, [score('A', 20)]), // B missed
+    ];
+    const res = computeLeagueStandings(sf({ standingsModel: 'average' }), rounds, ['A', 'B']);
+    expect(rowOf(res, 'A').value).toBe(25); // (30 + 20) / 2
+    expect(rowOf(res, 'B').value).toBe(20);
+    expect(res.rows[0].userId).toBe('A');
+  });
+
+  it('best_n: sums the N highest point rounds', () => {
+    const rounds = [
+      round('r1', 1, [score('A', 30), score('B', 20)]),
+      round('r2', 2, [score('A', 10), score('B', 20)]),
+      round('r3', 3, [score('A', 28), score('B', 20)]),
+    ];
+    const res = computeLeagueStandings(sf({ standingsModel: 'best_n', bestNCount: 2 }), rounds, ['A', 'B']);
+    expect(rowOf(res, 'A').value).toBe(58); // best 2 of {30,10,28} = 30 + 28
+    expect(rowOf(res, 'B').value).toBe(40);
+    expect(res.rows[0].userId).toBe('A');
+  });
+
+  it('best_n: a no-show 0-fills and stays ranked last', () => {
+    const rounds = [
+      round('r1', 1, [score('A', 30), score('B', 20)]),
+      round('r2', 2, [score('A', 25), score('B', 20)]),
+    ];
+    const res = computeLeagueStandings(sf({ standingsModel: 'best_n', bestNCount: 2 }), rounds, ['A', 'B', 'C']);
+    expect(rowOf(res, 'C').value).toBe(0); // best 2 of {0, 0}
+    expect(rowOf(res, 'C').ranked).toBe(true);
+    expect(res.rows[res.rows.length - 1].userId).toBe('C');
+  });
+
+  it('points: placement by points (higher = better placement), countback on latest round', () => {
+    const rounds = [
+      round('r1', 1, [score('A', 30), score('B', 20), score('C', 10)]), // A=3, B=2, C=1
+      round('r2', 2, [score('A', 25), score('B', 28)]), // B=2, A=1; C missed → 0
+    ];
+    const res = computeLeagueStandings(sf({ standingsModel: 'points' }), rounds, ['A', 'B', 'C']);
+    expect(rowOf(res, 'A').value).toBe(4); // 3 + 1
+    expect(rowOf(res, 'B').value).toBe(4); // 2 + 2
+    expect(rowOf(res, 'C').value).toBe(1);
+    expect(res.rows[0].userId).toBe('B'); // tie at 4; r2: B=2 > A=1
+    const aR1 = rowOf(res, 'A').perRound.find((c) => c.roundId === 'r1')!;
+    expect(aR1.points).toBe(3);
+  });
+
+  it('dedupes a player’s multiple flights to the best (highest) points', () => {
+    const rounds = [round('r1', 1, [score('A', 20), score('A', 35), score('B', 30)])];
+    const res = computeLeagueStandings(sf(), rounds, ['A', 'B']);
+    expect(rowOf(res, 'A').value).toBe(35);
+    expect(res.rows[0].userId).toBe('A');
+  });
+
+  it('total: breaks ties by countback on the most recent round (higher better)', () => {
+    const rounds = [
+      round('r1', 1, [score('A', 20), score('B', 30)]),
+      round('r2', 2, [score('A', 30), score('B', 20)]), // both total 50
+    ];
+    const res = computeLeagueStandings(sf(), rounds, ['A', 'B']);
+    expect(rowOf(res, 'A').value).toBe(50);
+    expect(rowOf(res, 'B').value).toBe(50);
+    expect(res.rows[0].userId).toBe('A'); // A won the last round (30 > 20)
   });
 });

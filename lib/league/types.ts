@@ -51,6 +51,13 @@ export type LeagueStandingsConfig = {
   penaltyFixedOverPar: number | null;
   /** Antall beste runder som teller. Kun lest under 'best_n'. */
   bestNCount: number | null;
+  /**
+   * true når per-runde-verdien er stableford-poeng (høyest best); false for
+   * slagspill (mot-par, lavest best). Styrer dedup-til-beste, plasserings-
+   * sortering, Beste-N-utvalg og uteblitt-straff (poeng-ligaer: 0 = naturlig
+   * straff). #452 Fase 4. Utledet via `isPointsBasedFormat(league.format)`.
+   */
+  pointsBased: boolean;
 };
 
 /**

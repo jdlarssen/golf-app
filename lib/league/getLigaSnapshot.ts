@@ -1,10 +1,11 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
-import { compute as computeSoloStrokeplay } from '@/lib/scoring/modes/soloStrokeplay';
-import type { ScoringContext } from '@/lib/scoring/modes/types';
 import type { TeeGender } from '@/lib/games/teeRating';
 import { computeLeagueStandings } from './computeLeagueStandings';
+import { computeFlightRoundValues } from './roundScoring';
+import { isPointsBasedFormat } from './flightFormat';
 import type {
+  LeagueFormat,
   LeagueRoundInput,
   LeagueRoundPlayerScore,
   LeagueStandingsByScoring,
@@ -102,6 +103,8 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
   if (lErr) throw lErr;
   if (!leagueRow) return null;
   const league = leagueRow as LeagueRow;
+  // DB CHECK (0087) garanterer en av de tre støttede verdiene.
+  const leagueFormat = league.format as LeagueFormat;
 
   const [roundsRes, participantsRes] = await Promise.all([
     supabase
@@ -289,12 +292,16 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
     if (eligible.length < 2) continue;
 
     const gScores = scoresByGame.get(game.id) ?? [];
-    const ctx: ScoringContext = {
-      game: {
-        id: game.id,
-        game_mode: 'solo_strokeplay',
-        mode_config: { kind: 'solo_strokeplay', team_size: 1 },
-      },
+    // Tee-totalpar per spiller (kjønns-oppslått). Kun slagspill leser dette;
+    // stableford regner poeng mot hull-par internt.
+    const parByUser = new Map<string, number | null>(
+      eligible.map((p) => [p.user_id, teePar ? teePar[p.tee_gender] : null]),
+    );
+
+    // Score flighten med liga-formatet (slagspill → mot-par, stableford → poeng).
+    const flightValues = computeFlightRoundValues({
+      format: leagueFormat,
+      gameId: game.id,
       players: eligible.map((p) => ({
         userId: p.user_id,
         teamNumber: 1,
@@ -304,25 +311,13 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
       })),
       holes: holes.map((h) => ({ number: h.number, par: h.par, strokeIndex: h.strokeIndex })),
       scores: gScores.map((s) => ({ userId: s.user_id, holeNumber: s.hole_number, gross: s.strokes })),
-    };
+      parByUser,
+      deliveredOutsideWindow: game.delivered_outside_window,
+    });
 
-    const result = computeSoloStrokeplay(ctx);
-    const genderByUser = new Map(eligible.map((p) => [p.user_id, p.tee_gender]));
-
-    for (const line of result.players) {
-      // Only complete cards count toward a league round.
-      if (line.holesPlayed !== holes.length) continue;
-      const gender = genderByUser.get(line.userId);
-      const par = gender && teePar ? teePar[gender] : null;
-      if (par === null || par === undefined) continue;
-
+    if (flightValues.length > 0) {
       const arr = roundScores.get(roundId) ?? [];
-      arr.push({
-        userId: line.userId,
-        net: line.totalNetStrokes - par,
-        gross: line.totalGrossStrokes - par,
-        deliveredOutsideWindow: game.delivered_outside_window,
-      });
+      arr.push(...flightValues);
       roundScores.set(roundId, arr);
     }
   }
@@ -346,6 +341,7 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
     penaltyKind: league.penalty_kind === 'fixed' ? 'fixed' : 'worst_plus_one',
     penaltyFixedOverPar: league.penalty_fixed_over_par,
     bestNCount: league.best_n_count,
+    pointsBased: isPointsBasedFormat(leagueFormat),
   };
 
   const playerIds = participants.map((p) => p.userId);
