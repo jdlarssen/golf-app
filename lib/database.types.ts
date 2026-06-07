@@ -1332,6 +1332,7 @@ export type Database = {
           created_by: string
           finished_at: string | null
           format: string
+          group_id: string | null
           id: string
           missed_round_policy: string
           name: string
@@ -1352,6 +1353,7 @@ export type Database = {
           created_by: string
           finished_at?: string | null
           format?: string
+          group_id?: string | null
           id?: string
           missed_round_policy?: string
           name: string
@@ -1372,6 +1374,7 @@ export type Database = {
           created_by?: string
           finished_at?: string | null
           format?: string
+          group_id?: string | null
           id?: string
           missed_round_policy?: string
           name?: string
@@ -1398,6 +1401,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leagues_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
             referencedColumns: ["id"]
           },
           {
