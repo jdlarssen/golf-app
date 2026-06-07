@@ -17,7 +17,36 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.92.y — Liga · poeng per plassering
+## 1.93.y — Liga · meld deg på selv
+
+Issue [#452](https://github.com/jdlarssen/golf-app/issues/452). Liga-epicen Fase 3: klubbmedlemmer kan melde seg på klubbens liga selv, og av igjen før de har spilt.
+
+### [1.93.0] - 2026-06-07 · #452
+
+> Er du medlem i en klubb, kan du nå melde deg på klubbens liga selv så lenge den ikke har startet — du trenger ikke vente på at en arrangør legger deg til. Ombestemmer du deg, kan du melde deg av igjen helt til du har spilt din første runde.
+
+<details>
+<summary>Teknisk</summary>
+
+[#452](https://github.com/jdlarssen/golf-app/issues/452) Fase 3 (epic). Grunnmuren for klubb-liga (group_id, RLS, medlems-picker, medlems-flate) lå allerede fra #480/#483/#485; denne fasen legger til selvbetjent på- og avmelding.
+
+#### Added
+- To SECURITY DEFINER-RPC-er (`join_club_league` / `leave_club_league`, migrasjon 0086) som lar et klubbmedlem melde seg på en draft klubb-liga og av igjen før første spilte runde. Speiler `befriend_inviter`-mønsteret; `league_players`-skriving via RLS forblir admin/klubb-admin-only (forsvar i dybden).
+- «Bli med i ligaen»-knapp på `/liga/[id]` for klubbmedlemmer som ikke er med (kun før start), og en «Meld deg av»-lenke til en egen confirm-side `/liga/[id]/meld-av` (kun før spilt runde).
+- `leagueSelfServiceState`-predikat (Type-A-tester) som avgjør hvilke knapper som vises.
+
+#### Changed
+- `getLigaSnapshot` returnerer `hasPlayed` per deltaker (levert scorekort i en liga-flight), som gater avmeldingen.
+
+</details>
+
+## Tidligere versjoner
+
+<details>
+<summary><strong>Liga — sesong-konkurranse (2 serier)</strong></summary>
+
+<details>
+<summary><strong>1.92.y — Liga · poeng per plassering (1 oppføring)</strong></summary>
 
 Issue [#452](https://github.com/jdlarssen/golf-app/issues/452). Liga-epicen Fase 2b legger til den fjerde sesong-modellen: poeng per plassering.
 
@@ -39,10 +68,7 @@ Issue [#452](https://github.com/jdlarssen/golf-app/issues/452). Liga-epicen Fase
 
 </details>
 
-## Tidligere versjoner
-
-<details>
-<summary><strong>Liga — sesong-konkurranse (1 serie)</strong></summary>
+</details>
 
 <details>
 <summary><strong>1.91.y — Liga · netto, brutto og beste runder (1 oppføring)</strong></summary>

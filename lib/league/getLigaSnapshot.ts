@@ -33,6 +33,8 @@ export type LeagueParticipant = {
   nickname: string | null;
   /** #463: null = lagt til av arrangør, ikke bekreftet ennå. */
   acceptedAt: string | null;
+  /** #452 Fase 3: true når deltakeren har levert et scorekort i en liga-flight. */
+  hasPlayed: boolean;
 };
 
 export type LeagueRoundView = {
@@ -128,22 +130,6 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
     original_closes_at: string;
     window_overridden_at: string | null;
   }>;
-  const participants: LeagueParticipant[] = (
-    (participantsRes.data ?? []) as Array<{
-      user_id: string;
-      accepted_at: string | null;
-      users: UserRel | UserRel[] | null;
-    }>
-  ).map((p) => {
-    const u = userOf(p.users);
-    return {
-      userId: p.user_id,
-      name: u?.name ?? null,
-      nickname: u?.nickname ?? null,
-      acceptedAt: p.accepted_at,
-    };
-  });
-
   const roundIds = rounds.map((r) => r.id);
 
   // ── flight-games for these rounds ───────────────────────────────────────────
@@ -216,6 +202,28 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
 
   const gamePlayers = (playersRes.data ?? []) as PlayerRow[];
   const gameScores = (scoresRes.data ?? []) as ScoreRow[];
+
+  // #452 Fase 3: a participant has "played" once they delivered a scorecard in
+  // any of the league's flights — gates the self-leave button + RPC.
+  const playedUserIds = new Set(
+    gamePlayers.filter((p) => p.submitted_at !== null).map((p) => p.user_id),
+  );
+  const participants: LeagueParticipant[] = (
+    (participantsRes.data ?? []) as Array<{
+      user_id: string;
+      accepted_at: string | null;
+      users: UserRel | UserRel[] | null;
+    }>
+  ).map((p) => {
+    const u = userOf(p.users);
+    return {
+      userId: p.user_id,
+      name: u?.name ?? null,
+      nickname: u?.nickname ?? null,
+      acceptedAt: p.accepted_at,
+      hasPlayed: playedUserIds.has(p.user_id),
+    };
+  });
 
   const holesByCourse = new Map<string, Array<{ number: number; par: number; strokeIndex: number }>>();
   for (const h of (holesRes.data ?? []) as Array<{

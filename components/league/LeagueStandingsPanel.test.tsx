@@ -8,8 +8,8 @@ import type { LeagueParticipant } from '@/lib/league/getLigaSnapshot';
 beforeEach(() => cleanup());
 
 const participants: LeagueParticipant[] = [
-  { userId: 'A', name: 'Alice', nickname: null, acceptedAt: '2026-06-01' },
-  { userId: 'B', name: 'Bob', nickname: null, acceptedAt: '2026-06-01' },
+  { userId: 'A', name: 'Alice', nickname: null, acceptedAt: '2026-06-01', hasPlayed: false },
+  { userId: 'B', name: 'Bob', nickname: null, acceptedAt: '2026-06-01', hasPlayed: false },
 ];
 
 const row = (userId: string, rank: number): LeagueStandings['rows'][number] => ({

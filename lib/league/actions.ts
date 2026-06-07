@@ -373,6 +373,62 @@ export async function removeLeaguePlayer(formData: FormData): Promise<LeagueActi
   return { error: '' };
 }
 
+// ── member self-service (#452 Fase 3) ────────────────────────────────────────
+
+/**
+ * joinClubLeague — et klubbmedlem melder seg selv på en draft klubb-liga.
+ *
+ * Skriver via `join_club_league`-RPC (0086, SECURITY DEFINER) med request-scoped
+ * client, så `auth.uid()` inne i funksjonen er medlemmet. RPC-en er det eneste
+ * skrive-vinduet en vanlig medlem får mot `league_players` (RLS-write er
+ * admin/klubb-admin-only). Redirect-basert som `leaveClub` (forlat-flyten):
+ * suksess → tilbake til liga-siden (knappen forsvinner, de er nå deltaker);
+ * feil → `?error=<kode>` som siden mapper til norsk.
+ */
+export async function joinClubLeague(formData: FormData): Promise<void> {
+  const supabase = await getServerClient();
+  const leagueId = str(formData, 'league_id');
+  if (!leagueId) redirect('/');
+
+  const { data, error } = await supabase.rpc('join_club_league', {
+    p_league_id: leagueId,
+  });
+  if (error) {
+    console.error('[joinClubLeague]', error);
+    redirect(`/liga/${leagueId}?error=join_failed`);
+  }
+  if (data === 'joined' || data === 'already_member') {
+    revalidatePath(`/liga/${leagueId}`);
+    redirect(`/liga/${leagueId}`);
+  }
+  redirect(`/liga/${leagueId}?error=${data}`);
+}
+
+/**
+ * leaveClubLeague — et klubbmedlem melder seg av en klubb-liga før de har spilt
+ * en runde. Kalt fra `/liga/[id]/meld-av`-confirm-siden. Skriver via
+ * `leave_club_league`-RPC (0086). Suksess → tilbake til liga-siden; feil →
+ * tilbake til confirm-siden med `?error=<kode>`.
+ */
+export async function leaveClubLeague(formData: FormData): Promise<void> {
+  const supabase = await getServerClient();
+  const leagueId = str(formData, 'league_id');
+  if (!leagueId) redirect('/');
+
+  const { data, error } = await supabase.rpc('leave_club_league', {
+    p_league_id: leagueId,
+  });
+  if (error) {
+    console.error('[leaveClubLeague]', error);
+    redirect(`/liga/${leagueId}/meld-av?error=leave_failed`);
+  }
+  if (data === 'left') {
+    revalidatePath(`/liga/${leagueId}`);
+    redirect(`/liga/${leagueId}`);
+  }
+  redirect(`/liga/${leagueId}/meld-av?error=${data}`);
+}
+
 async function setLeagueStatus(
   leagueId: string,
   next: 'active' | 'finished',

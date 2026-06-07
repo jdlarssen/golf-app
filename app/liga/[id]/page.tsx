@@ -4,8 +4,14 @@ import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { LinkButton } from '@/components/ui/Button';
+import { SubmitButton } from '@/components/ui/SubmitButton';
+import { SmartLink } from '@/components/ui/SmartLink';
+import { Banner } from '@/components/ui/Banner';
 import { getLigaSnapshot } from '@/lib/league/getLigaSnapshot';
 import { maybeAutoConfirmLeagueParticipation } from '@/lib/league/confirmLeagueParticipation';
+import { leagueSelfServiceState } from '@/lib/league/selfService';
+import { joinClubLeague } from '@/lib/league/actions';
+import type { LeagueStatus } from '@/lib/league/types';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getServerClient } from '@/lib/supabase/server';
 import { LeagueStandingsPanel } from '@/components/league/LeagueStandingsPanel';
@@ -14,6 +20,20 @@ import { formatShortDateNbWithYear } from '@/lib/format/date';
 export const dynamic = 'force-dynamic';
 
 type Params = Promise<{ id: string }>;
+type SearchParams = Promise<{ error?: string | string[] }>;
+
+/** Join-feilkoder fra join_club_league-RPC-en → norsk melding. */
+const JOIN_ERROR_MESSAGES: Record<string, string> = {
+  not_draft: 'Ligaen har allerede startet. Be klubb-admin om å legge deg til.',
+  not_member: 'Du er ikke medlem av klubben.',
+  not_club_league: 'Denne ligaen kan du ikke bli med i selv.',
+  already_member: 'Du er allerede med i ligaen.',
+  join_failed: 'Noe gikk galt. Prøv igjen.',
+};
+
+function firstParam(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
 
 /** Determine window status relative to now. */
 function windowStatus(
@@ -102,7 +122,13 @@ function StatusChipLeague({ status }: { status: string }) {
   );
 }
 
-export default async function LigaPublicPage({ params }: { params: Params }) {
+export default async function LigaPublicPage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  searchParams: SearchParams;
+}) {
   const { id } = await params;
 
   // Load snapshot (admin client — no auth needed for RLS bypass; route is
@@ -129,10 +155,12 @@ export default async function LigaPublicPage({ params }: { params: Params }) {
   // og global admin. Snapshot-en bruker admin-client (RLS-bypass), så denne
   // gaten — ikke RLS — er det som skjuler klubb-ligaer på den lenke-delbare
   // siden for utenforstående.
+  let isClubMember = false;
   if (league.group_id) {
-    let allowed =
+    const isPart =
       currentUserId !== null &&
       participants.some((p) => p.userId === currentUserId);
+    let allowed = isPart;
     if (!allowed && currentUserId) {
       const supabase = await getServerClient();
       const [{ data: membership }, { data: profile }] = await Promise.all([
@@ -148,7 +176,8 @@ export default async function LigaPublicPage({ params }: { params: Params }) {
           .eq('id', currentUserId)
           .maybeSingle(),
       ]);
-      allowed = membership !== null || profile?.is_admin === true;
+      isClubMember = membership !== null;
+      allowed = isClubMember || profile?.is_admin === true;
     }
     if (!allowed) notFound();
   }
@@ -167,6 +196,19 @@ export default async function LigaPublicPage({ params }: { params: Params }) {
     );
   }
 
+  // #452 Fase 3: medlems-self-service. Knappene vises ut fra denne rene
+  // predikaten; RPC-ene (0086) er sannheten ved klikk.
+  const { canJoin, canLeave } = leagueSelfServiceState({
+    groupId: league.group_id,
+    status: league.status as LeagueStatus,
+    isClubMember,
+    isParticipant,
+    hasPlayed: me?.hasPlayed ?? false,
+  });
+  const sp = await searchParams;
+  const joinError = firstParam(sp.error);
+  const joinErrorMessage = joinError ? JOIN_ERROR_MESSAGES[joinError] : undefined;
+
   return (
     <AppShell>
       <TopBar backHref="/" back="history" kicker="Liga" userId={currentUserId} />
@@ -183,6 +225,32 @@ export default async function LigaPublicPage({ params }: { params: Params }) {
           {fmtWindow(league.season_start)} – {fmtWindow(league.season_end)}
         </p>
       </header>
+
+      {/* #452 Fase 3: medlems-self-service */}
+      {joinErrorMessage && (
+        <div className="mb-6">
+          <Banner tone="error">{joinErrorMessage}</Banner>
+        </div>
+      )}
+      {canJoin && (
+        <section className="mb-8">
+          <Card className="p-4 sm:p-5">
+            <p className="font-serif text-base text-text">Bli med i ligaen</p>
+            <p className="mt-1 mb-3 text-sm text-muted">
+              Du er medlem i klubben. Meld deg på før ligaen starter.
+            </p>
+            <form action={joinClubLeague}>
+              <input type="hidden" name="league_id" value={league.id} />
+              <SubmitButton
+                className="w-full sm:w-auto"
+                pendingLabel="Melder deg på …"
+              >
+                Bli med i ligaen
+              </SubmitButton>
+            </form>
+          </Card>
+        </section>
+      )}
 
       {/* Standings table */}
       <section className="mb-8">
@@ -265,6 +333,18 @@ export default async function LigaPublicPage({ params }: { params: Params }) {
           </ul>
         )}
       </section>
+
+      {/* #452 Fase 3: meld deg av (kun før spilt runde) */}
+      {canLeave && (
+        <div className="mb-6 text-center">
+          <SmartLink
+            href={`/liga/${id}/meld-av`}
+            className="font-sans text-[13px] text-muted underline underline-offset-2 hover:text-text"
+          >
+            Meld deg av ligaen
+          </SmartLink>
+        </div>
+      )}
     </AppShell>
   );
 }
