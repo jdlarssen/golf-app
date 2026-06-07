@@ -1211,26 +1211,27 @@ export interface FoursomesMatchplayResult {
 }
 
 // -----------------------------------------------------------------------------
-// Wolf (issue #274 — 4-spiller rotating partner-format).
+// Wolf (issue #274; #465 — 3-5-spiller rotating partner-format).
 //
-// Hver spiller har en `team_number` 1-4 som er rotation-slot (random
-// permutasjon satt av wizard ved opprett). Wolf-spilleren skifter per hull:
-//   - Hull 1-16: wolf = player med team_number === ((holeNumber - 1) % 4) + 1
-//   - Hull 17-18: wolf = lavest totalPoints etter forrige hull
-//                 (tiebreak: team_number ASC, deterministisk)
+// Hver spiller har en `team_number` 1..n (n=3-5) som er rotation-slot (random
+// permutasjon satt av wizard ved opprett). La R = floor(18/n)*n. Wolf-spilleren
+// skifter per hull:
+//   - Hull 1..R: wolf = player med team_number === ((holeNumber - 1) % n) + 1
+//   - Hull R+1..18: wolf = lavest totalPoints etter forrige hull
+//                 (tiebreak: team_number ASC, deterministisk). n=3 → ingen.
 //
 // Per hull velger Wolf via `wolf_hole_choices`:
-//   - 'partner': 2v2 (Wolf + valgt partner mot de to andre)
-//   - 'lone':    1v3 (Wolf alene), 2x stake
-//   - 'blind':   1v3 deklarert FØR tee shots, 3x stake (honor-system)
+//   - 'partner': Wolf + valgt partner mot resten
+//   - 'lone':    Wolf alene mot resten
+//   - 'blind':   alene, deklarert FØR tee shots (honor-system)
 //
-// Point-tabell (hardkodet i v1, justerbar via senere mode_config-utvidelse):
+// Point-tabell (justerbar via senere mode_config-utvidelse):
 //   partner-side win:  2 × stake til hver av wolf+partner
-//   partner-side loss: 1 × stake til hver av de 2 motstanderne
-//   lone win:          4 × stake til wolf
-//   lone loss:         1 × stake til hver av de 3 motstanderne
-//   blind win:         6 × stake til wolf
-//   blind loss:        2 × stake til hver av de 3 motstanderne
+//   partner-side loss: 1 × stake til hver motstander
+//   lone win:          n × stake til wolf
+//   lone loss:         1 × stake til hver motstander
+//   blind win:         (n+2) × stake til wolf
+//   blind loss:        2 × stake til hver motstander
 //   tied:              0 til alle, stake carrier (+1) til neste hull
 //
 // Stake-mekanikk: base = 1. Tied hull → stake += 1 til neste. Avgjort hull

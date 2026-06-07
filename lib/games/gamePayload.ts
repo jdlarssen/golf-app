@@ -1895,7 +1895,7 @@ function validateRoundRobin(
       return { ok: false, errorCode: 'bad_team' };
     }
     // flight_number = team_number for å oppfylle DB-CHECK
-    // game_players_team_flight_consistency (begge satt sammen) — speiler Wolf.
+    // game_players_team_flight_consistency (begge satt sammen).
     const flight_number = team_number;
     players.push({ user_id, team_number, flight_number });
   }
@@ -1907,7 +1907,8 @@ function validateRoundRobin(
     if (players.length > 4) {
       return { ok: false, errorCode: 'too_many_players_for_mode' };
     }
-    // Nøyaktig 4 spillere — sjekk at team_numbers er unike 1-4 (speiler Wolf).
+    // Nøyaktig 4 spillere — sjekk at team_numbers er unike 1-4 (matematisk
+    // tvunget for Round Robin, ikke 3-5 som Wolf).
     const slotsSeen = new Set<number>();
     for (const p of players) {
       if (p.team_number === null) continue;

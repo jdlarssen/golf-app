@@ -415,8 +415,8 @@ async function LeaderboardBody({
     });
   }
 
-  // Wolf (issue #274): 4-spiller rotating partner-format. Per-hull-valg lagres
-  // i `wolf_hole_choices` (egen tabell) og injectes i ScoringContext via
+  // Wolf (issue #274; #465): 3-5-spiller rotating partner-format. Per-hull-valg
+  // lagres i `wolf_hole_choices` (egen tabell) og injectes i ScoringContext via
   // `wolfChoices`-feltet. Live-view + finished-podium speiler solo-strokeplay-
   // pattern, men view-en håndterer reveal-modus internt (skjuler poeng-totaler
   // når score_visibility='reveal' og status='active').
@@ -2167,9 +2167,9 @@ function renderTexasScramble(opts: {
  * (tag-cachet på `game-${id}`) og injecter i ScoringContext. Scoring-laget leser
  * choices for å bestemme outcome per hull; mangler choice → outcome='pending'.
  *
- * Wolf har alltid `team_size: 1` og `teams_count: 4` i mode_config. team_number
- * 1-4 er rotation-slot (random permutasjon satt av wizard) — sendes som-er til
- * scoring-laget som bruker det for å bestemme Wolf per hull.
+ * Wolf har alltid `team_size: 1` og `teams_count: n` (n=3-5, #465) i mode_config.
+ * team_number 1..n er rotation-slot (random permutasjon satt av wizard) — sendes
+ * som-er til scoring-laget som bruker det for å bestemme Wolf per hull.
  */
 async function renderWolf(opts: {
   gameId: string;
