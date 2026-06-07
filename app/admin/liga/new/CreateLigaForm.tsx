@@ -16,10 +16,14 @@ const MONTHS_ABBR = [
 
 type Props = {
   courses: CourseOption[];
-  /** Invitable people: the creator (if found) first, then their friends. */
+  /** Invitable people: the creator (if found) first, then friends OR club members. */
   players: PlayerOption[];
   /** The creator's own id — pre-selected so they play in their own league. */
   meId: string | null;
+  /** Klubb-liga (#480): klubbens id. Tomt/undefined = frittstående liga. */
+  groupId?: string;
+  /** Klubb-liga: klubbens navn, vist i kontekst-banneret. */
+  clubName?: string;
 };
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -48,7 +52,8 @@ function preferredName(p: PlayerOption): string {
 
 const INITIAL_STATE: LeagueActionError = { error: '' };
 
-export function CreateLigaForm({ courses, players, meId }: Props) {
+export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Props) {
+  const isClubLeague = Boolean(groupId);
   const [state, formAction] = useActionState(
     async (_prev: LeagueActionError, formData: FormData) => {
       return createLeagueDraft(formData) as Promise<LeagueActionError>;
@@ -94,6 +99,15 @@ export function CreateLigaForm({ courses, players, meId }: Props) {
     <form action={formAction} data-testid="liga-create-form" className="space-y-6">
       {/* Hidden fixed fields */}
       <input type="hidden" name="scoring" value="net" />
+      <input type="hidden" name="group_id" value={groupId ?? ''} />
+
+      {/* Klubb-kontekst (#480): ligaen settes opp for en bestemt klubb. */}
+      {isClubLeague && clubName && (
+        <Banner tone="info">
+          Denne ligaen settes opp for <span className="font-medium">{clubName}</span>.
+          Bare medlemmer i klubben kan være med.
+        </Banner>
+      )}
 
       {/* 1. Grunninfo */}
       <Card>
@@ -525,17 +539,24 @@ export function CreateLigaForm({ courses, players, meId }: Props) {
         />
 
         <p className="font-sans text-[12px] text-muted mb-3">
-          Inviter vennene dine til ligaen. Du kan legge til flere etterpå.
+          {isClubLeague
+            ? 'Velg medlemmene som skal være med i ligaen.'
+            : 'Inviter vennene dine til ligaen. Du kan legge til flere etterpå.'}
         </p>
-        {friendCount === 0 && (
-          <p className="font-sans text-[12px] text-muted mb-3">
-            Du har ingen venner på Tørny ennå.{' '}
-            <Link href="/profile/venner" className="text-primary underline">
-              Legg til venner
-            </Link>{' '}
-            for å invitere dem hit.
-          </p>
-        )}
+        {friendCount === 0 &&
+          (isClubLeague ? (
+            <p className="font-sans text-[12px] text-muted mb-3">
+              Ingen andre medlemmer i klubben ennå.
+            </p>
+          ) : (
+            <p className="font-sans text-[12px] text-muted mb-3">
+              Du har ingen venner på Tørny ennå.{' '}
+              <Link href="/profile/venner" className="text-primary underline">
+                Legg til venner
+              </Link>{' '}
+              for å invitere dem hit.
+            </p>
+          ))}
         {players.length > 0 && (
           <ul className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
             {players.map((p) => (

@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
-import { requireAdmin } from '@/lib/admin/auth';
+import { requireAdmin, requireAdminOrClubAdmin } from '@/lib/admin/auth';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
 import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
 import { generateRounds } from './generateRounds';
@@ -31,16 +31,34 @@ const str = (fd: FormData, key: string) => String(fd.get(key) ?? '').trim();
 export type LeagueActionError = { error: string };
 
 /**
- * Creates a draft league + its generated rounds + participant list. Admin-only.
+ * Creates a draft league + its generated rounds + participant list.
+ *
+ * Authorization follows the `group_id` field (#480):
+ *  - `group_id` set → klubb-liga: caller must be the club's owner/admin (or a
+ *    global admin); the league is scoped to that club and participants are
+ *    filtered to actual club members.
+ *  - `group_id` empty → frittstående liga: global-admin-only (democratized
+ *    standalone creation is a separate issue).
+ *
  * Returns `{ error }` on validation/DB failure; redirects to the detail page on
  * success. Field contract (the create wizard posts these):
  *  name, season_start, season_end (YYYY-MM-DD), scoring, standings_model,
  *  missed_round_policy, penalty_kind, penalty_fixed_over_par, course_scope,
- *  course_id, tee_box_id, frequency, player_ids (JSON array of user ids).
+ *  course_id, tee_box_id, frequency, player_ids (JSON array of user ids),
+ *  group_id (optional club UUID).
  */
 export async function createLeagueDraft(formData: FormData): Promise<LeagueActionError> {
   const supabase = await getServerClient();
-  const { userId } = await requireAdmin(supabase);
+
+  const rawGroupId = str(formData, 'group_id');
+  let userId: string;
+  let groupId: string | null = null;
+  if (rawGroupId) {
+    ({ userId } = await requireAdminOrClubAdmin(supabase, rawGroupId));
+    groupId = rawGroupId;
+  } else {
+    ({ userId } = await requireAdmin(supabase));
+  }
 
   const name = str(formData, 'name');
   const seasonStart = str(formData, 'season_start');
@@ -106,6 +124,7 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
       course_id: courseId,
       tee_box_id: teeBoxId,
       created_by: userId,
+      group_id: groupId,
     })
     .select('id')
     .single();
@@ -127,6 +146,19 @@ export async function createLeagueDraft(formData: FormData): Promise<LeagueActio
     }));
     const { error: rErr } = await supabase.from('league_rounds').insert(roundRows);
     if (rErr) return { error: 'rounds_failed' };
+  }
+
+  // Klubb-liga: behold kun deltakere som faktisk er medlemmer av klubben.
+  // Pickeren begrenser allerede til medlemmer, men en manipulert post skal ikke
+  // kunne smugle ikke-medlemmer inn (RLS-write er andre forsvarslinje).
+  if (groupId && playerIds.length > 0) {
+    const { data: memberRows } = await supabase
+      .from('group_members')
+      .select('user_id')
+      .eq('group_id', groupId)
+      .in('user_id', playerIds);
+    const memberSet = new Set((memberRows ?? []).map((r) => r.user_id));
+    playerIds = playerIds.filter((id) => memberSet.has(id));
   }
 
   if (playerIds.length > 0) {

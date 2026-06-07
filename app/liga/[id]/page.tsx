@@ -125,6 +125,34 @@ export default async function LigaPublicPage({ params }: { params: Params }) {
     currentUserId = user?.id ?? null;
   }
 
+  // #480: en klubb-scopet liga er kun synlig for klubbens medlemmer, deltakerne
+  // og global admin. Snapshot-en bruker admin-client (RLS-bypass), så denne
+  // gaten — ikke RLS — er det som skjuler klubb-ligaer på den lenke-delbare
+  // siden for utenforstående.
+  if (league.group_id) {
+    let allowed =
+      currentUserId !== null &&
+      participants.some((p) => p.userId === currentUserId);
+    if (!allowed && currentUserId) {
+      const supabase = await getServerClient();
+      const [{ data: membership }, { data: profile }] = await Promise.all([
+        supabase
+          .from('group_members')
+          .select('user_id')
+          .eq('group_id', league.group_id)
+          .eq('user_id', currentUserId)
+          .maybeSingle(),
+        supabase
+          .from('users')
+          .select('is_admin')
+          .eq('id', currentUserId)
+          .maybeSingle(),
+      ]);
+      allowed = membership !== null || profile?.is_admin === true;
+    }
+    if (!allowed) notFound();
+  }
+
   const me =
     currentUserId !== null
       ? participants.find((p) => p.userId === currentUserId)
