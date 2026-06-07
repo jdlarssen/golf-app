@@ -56,7 +56,7 @@ export function ClubLeaguesSection({
                   </span>
                   {canManage && (
                     <SmartLink
-                      href={`/admin/liga/${liga.id}`}
+                      href={`/klubber/${clubId}/liga/${liga.id}`}
                       className="min-h-[44px] flex items-center font-sans text-xs text-primary hover:underline"
                     >
                       Styr

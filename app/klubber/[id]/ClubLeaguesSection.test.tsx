@@ -39,13 +39,15 @@ describe('ClubLeaguesSection (#480)', () => {
     expect(screen.queryByRole('link', { name: 'Ny liga' })).toBeNull();
   });
 
-  it('shows a «Styr» link per league only when the viewer may manage (#483)', () => {
+  it('shows a «Styr» link per league only when the viewer may manage, pointing at the club surface (#485)', () => {
     const { rerender } = render(
       <ClubLeaguesSection leagues={LEAGUES} clubId="c1" canCreate={false} canManage={true} />,
     );
     const manage = screen.getAllByRole('link', { name: 'Styr' });
     expect(manage).toHaveLength(LEAGUES.length);
-    expect(manage[0]).toHaveAttribute('href', '/admin/liga/l1');
+    // #485: «Styr» now opens the dedicated /klubber surface (no admin chrome),
+    // not the /admin/liga route.
+    expect(manage[0]).toHaveAttribute('href', '/klubber/c1/liga/l1');
 
     // A plain member (canManage=false) sees the list but no management door.
     rerender(<ClubLeaguesSection leagues={LEAGUES} clubId="c1" canCreate={false} canManage={false} />);

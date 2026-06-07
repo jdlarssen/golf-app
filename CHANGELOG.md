@@ -17,7 +17,36 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.87.y — Klubb-liga · klubb-admin styrer
+## 1.88.y — Klubb-liga · dedikert styringsflate
+
+Issue [#485](https://github.com/jdlarssen/golf-app/issues/485). En klubb-eier eller -admin styrer nå klubb-ligaen sin fra en egen side under klubb-rommet, uten å havne i hovedadminens kontrollpanel.
+
+### [1.88.0] - 2026-06-07 · #485
+
+> Styrer du en klubb-liga, gjør du det nå fra klubbens egen side, ikke fra hovedadminens kontrollpanel. «Styr»-knappen tar deg rett dit, og du gjør alt der: start og avslutt ligaen, legg til runder og deltakere, eller slett den.
+
+<details>
+<summary>Teknisk</summary>
+
+[#485](https://github.com/jdlarssen/golf-app/issues/485): oppfølging av [#483](https://github.com/jdlarssen/golf-app/issues/483) (approach b). Styrings-UI-et er trukket ut til en delt `<LigaManagement>`-komponent som rendres av både `/admin/liga/[id]` (global admin, `AdminShell`) og den nye `/klubber/[id]/liga/[ligaId]` (klubb-admin, `AppShell`). Ingen ny RLS eller auth — gaten og handlingene fra #483 er urørt.
+
+#### Added
+- `/klubber/[id]/liga/[ligaId]` + `/klubber/[id]/liga/[ligaId]/slett` — dedikert klubb-styrings- og slette-flate uten admin-chrome.
+- Delte server-komponenter `<LigaManagement>` og `<LigaDeleteConfirm>` med `'admin' | 'club'`-variant (styrer kun shell + slett-sti); alt styrings-innhold deles, ingen duplisering.
+
+#### Changed
+- «Styr»-lenken i «Klubbens ligaer» peker nå til klubb-ruten i stedet for `/admin/liga/[id]`.
+- `handleDeleteLeague` flyttet til `lib/league/actions.ts` så begge slett-rutene deler den.
+
+</details>
+
+## Tidligere versjoner
+
+<details>
+<summary><strong>Klubb-liga (#480, #483) — 2 serier</strong></summary>
+
+<details>
+<summary><strong>1.87.y — Klubb-liga · klubb-admin styrer (1 oppføring)</strong></summary>
 
 Issue [#483](https://github.com/jdlarssen/golf-app/issues/483). En klubb-eier eller -admin kan nå starte, avslutte og styre sin egen klubb-liga selv — ikke bare opprette den.
 
@@ -41,10 +70,7 @@ Issue [#483](https://github.com/jdlarssen/golf-app/issues/483). En klubb-eier el
 
 </details>
 
-## Tidligere versjoner
-
-<details>
-<summary><strong>Klubb-liga (#480) — 1 serie</strong></summary>
+</details>
 
 <details>
 <summary><strong>1.86.y — Klubb-liga (2 oppføringer)</strong></summary>
