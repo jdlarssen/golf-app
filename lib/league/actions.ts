@@ -522,8 +522,10 @@ export async function handleDeleteLeague(formData: FormData): Promise<void> {
 
 /**
  * A participant starts a flight for a round. Server-enforces the marker rule
- * (≥2 distinct members) and the play window. Creates a solo_strokeplay game
- * (course/tee resolved from the round, falling back to the league), freezes
+ * (≥2 distinct members) and the play window. Creates a flight game in the
+ * league's format (slagspill / stableford / modifisert, via
+ * `leagueFlightGameConfig`; course/tee resolved from the round, falling back to
+ * the league), freezes
  * handicaps + flips to 'active' via startScheduledGame, and flags the flight if
  * it was created past the round's original window (only possible after an admin
  * override). Redirects to the new game on success; returns `{ error }` otherwise.
