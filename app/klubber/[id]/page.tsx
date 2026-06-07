@@ -73,7 +73,7 @@ export default async function KlubbDetailPage({
   // klubb-scopede rader; oppretting/styring er klubb-admin (knapp nedenfor).
   const { data: clubLeagues } = await supabase
     .from('leagues')
-    .select('id, name, status, season_start, season_end')
+    .select('id, name, status')
     .eq('group_id', id)
     .order('created_at', { ascending: false });
 
