@@ -41,6 +41,10 @@ import type { RoundRobinPlayerInfo } from '../RoundRobinView';
 import { buildAceyDeuceyContext } from '@/lib/scoring/context/buildAceyDeuceyContext';
 import { AceyDeuceyHolesView } from './AceyDeuceyHolesView';
 import type { AceyDeuceyPlayerInfo } from '../AceyDeuceyView';
+import { buildBingoBangoBongoContext } from '@/lib/scoring/context/buildBingoBangoBongoContext';
+import { BingoBangoBongoHolesView } from './BingoBangoBongoHolesView';
+import type { BingoBangoBongoPlayerInfo } from '../BingoBangoBongoView';
+import { getBingoBangoBongoHoles } from '@/lib/bbb/getBingoBangoBongoHoles';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -157,6 +161,14 @@ export default async function LeaderboardHolesPage({
     return (
       <Suspense fallback={<DrilldownSkeleton />}>
         <AceyDeuceyHolesBody gameId={id} courseId={game.course_id} />
+      </Suspense>
+    );
+  }
+
+  if (game.game_mode === 'bingo_bango_bongo') {
+    return (
+      <Suspense fallback={<DrilldownSkeleton />}>
+        <BingoBangoBongoHolesBody gameId={id} courseId={game.course_id} />
       </Suspense>
     );
   }
@@ -532,6 +544,83 @@ async function AceyDeuceyHolesBody({
 
   return (
     <AceyDeuceyHolesView
+      gameId={gameId}
+      gameName={game.name}
+      result={result}
+      playersById={playersById}
+      scoreVisibility={scoreVisibility}
+      gameStatus={gameStatus}
+    />
+  );
+}
+
+/**
+ * Bingo Bango Bongo «Hull for hull» (epic #496, PR 6). Som WolfHolesBody: henter
+ * per-hull-prestasjonsdata fra `bingo_bango_bongo_holes` (`getBingoBangoBongoHoles`,
+ * tag-cachet) og injiserer dem i konteksten via `buildBingoBangoBongoContext`.
+ * BBB teller ikke slag — `rawScoresRes` sendes gjennom for shape-konsistens men
+ * ignoreres av scoring-laget. Rendrer den prestasjons-først per-hull-visningen.
+ */
+async function BingoBangoBongoHolesBody({
+  gameId,
+  courseId,
+}: {
+  gameId: string;
+  courseId: string;
+}) {
+  const { supabase } = await getDrilldownContext();
+
+  const [gwp, rawHolesRes, rawScoresRes, bingoBangoBongoHoles] =
+    await Promise.all([
+      getGameWithPlayers(gameId),
+      supabase
+        .from('course_holes')
+        .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
+        .eq('course_id', courseId)
+        .order('hole_number', { ascending: true })
+        .returns<CourseHoleRow[]>(),
+      supabase
+        .from('scores')
+        .select('user_id, hole_number, strokes')
+        .eq('game_id', gameId)
+        .returns<ScoreRow[]>(),
+      getBingoBangoBongoHoles(gameId),
+    ]);
+
+  if (!gwp) notFound();
+  if (rawHolesRes.error) throw rawHolesRes.error;
+  if (rawScoresRes.error) throw rawScoresRes.error;
+
+  const game = gwp.game;
+
+  const ctx = buildBingoBangoBongoContext({
+    gameId,
+    modeConfig: game.mode_config,
+    players: gwp.players,
+    holesRows: rawHolesRes.data ?? [],
+    scoresRows: rawScoresRes.data ?? [],
+    bingoBangoBongoHoles,
+  });
+
+  const result = computeModeResult(ctx);
+  if (result.kind !== 'bingo_bango_bongo') notFound();
+
+  const playersById = new Map<string, BingoBangoBongoPlayerInfo>();
+  for (const p of gwp.players) {
+    if (p.users == null) continue;
+    playersById.set(p.user_id, {
+      name: p.users.name ?? '(ukjent)',
+      nickname: p.users.nickname,
+    });
+  }
+
+  const scoreVisibility: 'live' | 'reveal' =
+    game.score_visibility === 'reveal' ? 'reveal' : 'live';
+  const gameStatus: 'active' | 'finished' =
+    game.status === 'finished' ? 'finished' : 'active';
+
+  return (
+    <BingoBangoBongoHolesView
       gameId={gameId}
       gameName={game.name}
       result={result}

@@ -2632,10 +2632,69 @@ async function renderBingoBangoBongo(opts: {
   const scoreVisibility: 'live' | 'reveal' =
     game.score_visibility === 'reveal' ? 'reveal' : 'live';
 
-  // Finished → BingoBangoBongoPodium på toppen + BingoBangoBongoView under
-  // (chromeless, så bare én outer shell). Active/scheduled → BingoBangoBongoView
-  // alene. Speiler Wolf-finished-pattern.
+  // Finished → resultat-flate på toppen + BingoBangoBongoView under (chromeless,
+  // så bare én outer shell). Ved nøyaktig 2 spillere er det en duell → head-to-
+  // head-kort i stedet for podium (epic #496, Stream B). BBB er det siste
+  // formatet som kan være 2p, så dette lukker H2H-strømmen. 3+ → BingoBangoBongoPodium
+  // som før. Active/scheduled → BingoBangoBongoView alene.
   if (game.status === 'finished') {
+    if (result.players.length === 2) {
+      // Stabil rekkefølge etter game_players (ikke rank), så fargene følger
+      // spiller-identitet — ikke hvem som vant.
+      const order = gwp.players.map((p) => p.user_id);
+      const [a, b] = [...result.players].sort(
+        (x, y) => order.indexOf(x.userId) - order.indexOf(y.userId),
+      );
+      const sideFor = (pl: typeof a) => {
+        const info = playersById.get(pl.userId);
+        return {
+          userId: pl.userId,
+          name: info?.name ?? '(ukjent)',
+          nickname: info?.nickname ?? null,
+          score: pl.totalPoints,
+          subLabel: `${pl.bingos} bingo · ${pl.bangos} bango · ${pl.bongos} bongo`,
+        };
+      };
+      // Momentum-strip: hvem fikk flest poeng på hullet. Begge 0 (uregistrert)
+      // → unplayed; likt og > 0 → delt.
+      const strip: StripCell[] = result.holes.map((h): StripCell => {
+        const aPts = h.pointsByPlayer[a.userId] ?? 0;
+        const bPts = h.pointsByPlayer[b.userId] ?? 0;
+        if (aPts === 0 && bPts === 0) return 'unplayed';
+        if (aPts > bPts) return 'a';
+        if (bPts > aPts) return 'b';
+        return 'halved';
+      });
+      // Tie iff begge deler rank (lik totalPoints OG cascade); ellers er rank-1
+      // vinner.
+      const winnerUserId =
+        a.rank === b.rank ? null : a.rank < b.rank ? a.userId : b.userId;
+      return (
+        <>
+          <HeadToHeadResult
+            gameId={gameId}
+            gameName={game.name}
+            formatLabel="Bingo Bango Bongo"
+            unitLabel="poeng"
+            sideA={sideFor(a)}
+            sideB={sideFor(b)}
+            winnerUserId={winnerUserId}
+            strip={strip}
+            backHref={backHref}
+          />
+          <BingoBangoBongoView
+            gameId={gameId}
+            gameName={game.name}
+            result={result}
+            playersById={playersById}
+            scoreVisibility={scoreVisibility}
+            gameStatus={game.status}
+            backHref={backHref}
+            chromeless
+          />
+        </>
+      );
+    }
     return (
       <>
         <BingoBangoBongoPodium

@@ -17,7 +17,34 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.99.y — Acey-Deucey · hull for hull
+## 1.100.y — Bingo Bango Bongo · hull for hull
+
+Issue [#496](https://github.com/jdlarssen/golf-app/issues/496). Format-bevisst «Hull for hull» fortsetter — Bingo Bango Bongo får sin egen per-hull-flate, og 1-mot-1-spill får et duell-oppgjør. PR 6 av epicen.
+
+### [1.100.0] - 2026-06-08 · #496
+
+> Etter en Bingo Bango Bongo-runde viser «Hull for hull» nå hvem som tok hver bingo, bango og bongo på hvert hull. Var dere bare to, møter du en duell i stedet for podium når runden er ferdig. Før så du bare hvor mange hver hadde tatt totalt, ikke hvem som tok hva hull for hull.
+
+<details>
+<summary>Teknisk</summary>
+
+[#496](https://github.com/jdlarssen/golf-app/issues/496) PR 6 av epic (Bingo Bango Bongo). Holes-siden forgrener nå også på `game_mode === 'bingo_bango_bongo'`.
+
+#### Added
+- `BingoBangoBongoHolesView` (server-component): prestasjons-først per-hull-flate. Hvert hull viser de tre prestasjonene (Bingo / Bango / Bongo) med vinnerens navn, eller «ikke satt» når en kategori mangler. Tok én spiller alle tre, markeres hullet som «Feiet!». BBB teller ikke slag, så flaten viser prestasjoner og ikke score. BingoBangoBongoView (leaderboard) hadde ingen per-hull-visning, så flaten er rent additiv.
+- Duell-kort (`HeadToHeadResult`) ved nøyaktig 2 spillere på et ferdig BBB-spill, i stedet for podium. Poeng som metrikk og en momentum-strip per hull. BBB er det siste solo-formatet som kan være 2 spillere, så dette fullfører head-to-head-strømmen i epicen.
+- Type C render-test for BingoBangoBongoHolesView, og `e2e/games/bingo-bango-bongo.spec.ts` med auth-gate.
+
+#### Changed
+- `buildBingoBangoBongoContext`-helper trukket ut av `renderBingoBangoBongo` så leaderboard- og «Hull for hull»-flaten bygger `ScoringContext` fra samme kilde (per-hull-prestasjonene injiseres som Wolf sine valg).
+- Holes-siden forgrener nå også på `game_mode === 'bingo_bango_bongo'` (Skins + Wolf + Nines + Round Robin + Acey-Deucey + Bingo Bango Bongo tatt; Nassau og solo-strokeplay/stableford følger i egne PR-er).
+
+</details>
+
+## Tidligere versjoner
+
+<details>
+<summary><strong>1.99.y — Acey-Deucey · hull for hull (1 oppføring)</strong></summary>
 
 Issue [#496](https://github.com/jdlarssen/golf-app/issues/496). Format-bevisst «Hull for hull» fortsetter — Acey-Deucey får sin egen per-hull-flate. PR 5 av epicen.
 
@@ -41,7 +68,7 @@ Issue [#496](https://github.com/jdlarssen/golf-app/issues/496). Format-bevisst �
 
 </details>
 
-## Tidligere versjoner
+</details>
 
 <details>
 <summary><strong>1.98.y — Round Robin · hull for hull (1 oppføring)</strong></summary>
