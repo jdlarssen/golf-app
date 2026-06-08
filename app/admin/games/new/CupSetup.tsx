@@ -10,6 +10,11 @@ import { createTournamentDraft } from '@/lib/cup/actions';
 
 type Props = {
   cupEligibleFormats: CupEligibleFormat[];
+  // #524: når satt rendres formen klubb-bevisst — et skjult group_id-felt binder
+  // cupen til klubben, og en banner forklarer at bare medlemmer kan delta. Tom
+  // (default) = frittstående cup, uendret admin-flyt.
+  groupId?: string;
+  clubName?: string;
 };
 
 /**
@@ -24,7 +29,7 @@ type Props = {
  * forventninger), men cup-detalj-sidens «+ Match»-knapper viser alle
  * cup-eligible formats inntil filtering legges på i Wave-2.
  */
-export function CupSetup({ cupEligibleFormats }: Props) {
+export function CupSetup({ cupEligibleFormats, groupId, clubName }: Props) {
   // Multi-select state — initialiserer med alle cup-eligible formats valgt
   // (default-all) så admin ikke trenger å klikke for å bekrefte standard-
   // oppsettet. Endring av valgene har ingen runtime-effekt i F2 (se docstring).
@@ -59,6 +64,15 @@ export function CupSetup({ cupEligibleFormats }: Props) {
 
   return (
     <form action={createTournamentDraft} className="space-y-5">
+      {groupId && (
+        <input type="hidden" name="group_id" value={groupId} />
+      )}
+      {clubName && (
+        <p className="rounded-lg border border-primary/30 bg-primary-soft px-3 py-2 text-xs text-text">
+          Denne cupen settes opp for <strong>{clubName}</strong>. Bare medlemmer i
+          klubben kan være med.
+        </p>
+      )}
       <Input
         label="Cup-navn"
         id="name"

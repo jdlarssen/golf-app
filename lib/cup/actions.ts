@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
-import { requireAdmin } from '@/lib/admin/auth';
+import { requireAdmin, requireAdminOrClubAdmin } from '@/lib/admin/auth';
 import { getCupSnapshot } from './getCupSnapshot';
 import { sendCupStartedNotification } from '@/lib/mail/cupStartedNotification';
 import { sendCupFinishedNotification } from '@/lib/mail/cupFinishedNotification';
@@ -96,6 +96,17 @@ async function loadTournamentParticipantEmails(
 }
 
 export async function createTournamentDraft(formData: FormData) {
+  // #524: group_id binder cupen til en klubb. Tom = frittstående (uendret
+  // admin-flyt). Lest først så validerings-feil bouncer til riktig form.
+  const rawGroupId = String(formData.get('group_id') ?? '').trim();
+  const groupId = rawGroupId || null;
+  // Klubb-sti: feil tilbake til klubb-opprett-formen. Frittstående: tilbake til
+  // wizard-en med ?intent=cup (F2 #272 — /admin/cup/new er fjernet). Error-koder
+  // prefiks-et med `cup_` for å unngå kollisjon med game-koder på samme route.
+  const errBase = groupId
+    ? `/klubber/${groupId}/cup/ny?error=`
+    : '/admin/games/new?intent=cup&error=';
+
   const name = String(formData.get('name') ?? '').trim();
   const team1 = String(formData.get('team_1_name') ?? '').trim();
   const team2 = String(formData.get('team_2_name') ?? '').trim();
@@ -105,25 +116,24 @@ export async function createTournamentDraft(formData: FormData) {
     formData.get('foursomes_allowance_pct') ?? '',
   );
 
-  // F2 (#272): valideringsfeil bouncer tilbake til wizard-en med
-  // ?intent=cup så CupSetup re-rendres. /admin/cup/new er fjernet.
-  // Error-koder prefiks-et med `cup_` for å unngå kollisjon med
-  // game-validerings-koder som flyter gjennom samme route.
-  if (!NAME_RE.test(name)) redirect('/admin/games/new?intent=cup&error=cup_name');
-  if (!TEAM_NAME_RE.test(team1)) redirect('/admin/games/new?intent=cup&error=cup_team_1');
-  if (!TEAM_NAME_RE.test(team2)) redirect('/admin/games/new?intent=cup&error=cup_team_2');
+  if (!NAME_RE.test(name)) redirect(`${errBase}cup_name`);
+  if (!TEAM_NAME_RE.test(team1)) redirect(`${errBase}cup_team_1`);
+  if (!TEAM_NAME_RE.test(team2)) redirect(`${errBase}cup_team_2`);
   if (team1.toLowerCase() === team2.toLowerCase())
-    redirect('/admin/games/new?intent=cup&error=cup_team_dup');
+    redirect(`${errBase}cup_team_dup`);
   const points = parsePointsToWin(pointsRaw);
-  if (points === null) redirect('/admin/games/new?intent=cup&error=cup_points');
+  if (points === null) redirect(`${errBase}cup_points`);
   const fourballAllowance = parseFourballAllowancePct(allowanceRaw);
-  if (fourballAllowance === null) redirect('/admin/games/new?intent=cup&error=cup_allowance');
+  if (fourballAllowance === null) redirect(`${errBase}cup_allowance`);
   const foursomesAllowance = parseFoursomesAllowancePct(foursomesAllowanceRaw);
-  if (foursomesAllowance === null)
-    redirect('/admin/games/new?intent=cup&error=cup_foursomes_allowance');
+  if (foursomesAllowance === null) redirect(`${errBase}cup_foursomes_allowance`);
 
   const supabase = await getServerClient();
-  const admin = await requireAdmin(supabase);
+  // Klubb-cup: klubb-eier/-admin (eller global admin) oppretter. Frittstående:
+  // global-admin-only (uendret). RLS (0089) er backstop på begge.
+  const { userId } = groupId
+    ? await requireAdminOrClubAdmin(supabase, groupId)
+    : await requireAdmin(supabase);
 
   const { data, error } = await supabase
     .from('tournaments')
@@ -134,17 +144,24 @@ export async function createTournamentDraft(formData: FormData) {
       points_to_win: points as number,
       fourball_allowance_pct: fourballAllowance as number,
       foursomes_allowance_pct: foursomesAllowance as number,
-      created_by: admin.userId,
+      created_by: userId,
+      group_id: groupId,
     })
     .select('id')
     .single();
 
   if (error || !data) {
     console.error('[cup] createTournamentDraft failed', { error });
-    redirect('/admin/games/new?intent=cup&error=cup_insert_failed');
+    redirect(`${errBase}cup_insert_failed`);
   }
 
-  redirect(`/admin/cup/${data.id}?status=created`);
+  // Klubb-sti: fortsett i klubb-chrome (generer kamper der). Frittstående:
+  // admin-cup-detalj som før.
+  redirect(
+    groupId
+      ? `/klubber/${groupId}/cup/${data.id}`
+      : `/admin/cup/${data.id}?status=created`,
+  );
 }
 
 export async function updateTournament(formData: FormData) {
