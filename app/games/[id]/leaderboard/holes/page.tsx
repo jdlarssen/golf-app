@@ -48,6 +48,9 @@ import { getBingoBangoBongoHoles } from '@/lib/bbb/getBingoBangoBongoHoles';
 import { buildNassauContext } from '@/lib/scoring/context/buildNassauContext';
 import { NassauHolesView } from './NassauHolesView';
 import type { NassauPlayerInfo } from '../NassauView';
+import { buildSoloStrokeplayContext } from '@/lib/scoring/context/buildSoloStrokeplayContext';
+import { SoloStrokeplayHolesView } from './SoloStrokeplayHolesView';
+import type { SoloStrokeplayPlayerInfo } from '../SoloStrokeplayView';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -127,8 +130,8 @@ export default async function LeaderboardHolesPage({
   // Format-bevisst «Hull for hull» (epic #496): solo-format får sin egen
   // per-hull-visning i stedet for det generiske best-ball lag-scorekortet,
   // som aldri forgrenet på game_mode. Skins + Wolf + Nines + Round Robin +
-  // Acey-Deucey + Bingo Bango Bongo + Nassau tatt; øvrige solo-format følger
-  // i egne PR-er.
+  // Acey-Deucey + Bingo Bango Bongo + Nassau + solo strokeplay tatt;
+  // solo-stableford følger i egen PR.
   if (game.game_mode === 'skins') {
     return (
       <Suspense fallback={<DrilldownSkeleton />}>
@@ -181,6 +184,14 @@ export default async function LeaderboardHolesPage({
     return (
       <Suspense fallback={<DrilldownSkeleton />}>
         <NassauHolesBody gameId={id} courseId={game.course_id} />
+      </Suspense>
+    );
+  }
+
+  if (game.game_mode === 'solo_strokeplay') {
+    return (
+      <Suspense fallback={<DrilldownSkeleton />}>
+        <SoloStrokeplayHolesBody gameId={id} courseId={game.course_id} />
       </Suspense>
     );
   }
@@ -706,6 +717,80 @@ async function NassauHolesBody({
 
   return (
     <NassauHolesView
+      gameId={gameId}
+      gameName={game.name}
+      result={result}
+      playersById={playersById}
+      scoreVisibility={scoreVisibility}
+      gameStatus={gameStatus}
+    />
+  );
+}
+
+/**
+ * Solo strokeplay «Hull for hull» (epic #496, PR 8). Som NassauHolesBody (solo,
+ * ingen ekstra fetch utover scores), men bygger konteksten via den delte
+ * `buildSoloStrokeplayContext`-helperen — som også eier WD-filtreringen (#386)
+ * av spillere + scorer, så «Hull for hull» og leaderboard ser samme felt.
+ * Rendrer det klassiske per-spiller-scorekortet.
+ */
+async function SoloStrokeplayHolesBody({
+  gameId,
+  courseId,
+}: {
+  gameId: string;
+  courseId: string;
+}) {
+  const { supabase } = await getDrilldownContext();
+
+  const [gwp, rawHolesRes, rawScoresRes] = await Promise.all([
+    getGameWithPlayers(gameId),
+    supabase
+      .from('course_holes')
+      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
+      .eq('course_id', courseId)
+      .order('hole_number', { ascending: true })
+      .returns<CourseHoleRow[]>(),
+    supabase
+      .from('scores')
+      .select('user_id, hole_number, strokes')
+      .eq('game_id', gameId)
+      .returns<ScoreRow[]>(),
+  ]);
+
+  if (!gwp) notFound();
+  if (rawHolesRes.error) throw rawHolesRes.error;
+  if (rawScoresRes.error) throw rawScoresRes.error;
+
+  const game = gwp.game;
+
+  const ctx = buildSoloStrokeplayContext({
+    gameId,
+    modeConfig: game.mode_config,
+    players: gwp.players,
+    holesRows: rawHolesRes.data ?? [],
+    scoresRows: rawScoresRes.data ?? [],
+  });
+
+  const result = computeModeResult(ctx);
+  if (result.kind !== 'solo_strokeplay') notFound();
+
+  const playersById = new Map<string, SoloStrokeplayPlayerInfo>();
+  for (const p of gwp.players) {
+    if (p.users == null) continue;
+    playersById.set(p.user_id, {
+      name: p.users.name ?? '(ukjent)',
+      nickname: p.users.nickname,
+    });
+  }
+
+  const scoreVisibility: 'live' | 'reveal' =
+    game.score_visibility === 'reveal' ? 'reveal' : 'live';
+  const gameStatus: 'active' | 'finished' =
+    game.status === 'finished' ? 'finished' : 'active';
+
+  return (
+    <SoloStrokeplayHolesView
       gameId={gameId}
       gameName={game.name}
       result={result}

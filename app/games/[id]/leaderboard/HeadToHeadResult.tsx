@@ -46,6 +46,13 @@ export interface HeadToHeadResultProps {
   strip: StripCell[];
   /** Valgfri linje om uvunne/hengende poeng (Skins: carriedPot). */
   hangingNote?: string | null;
+  /**
+   * Når true vinner LAVEST score (f.eks. slagspill-netto). Tug-of-war-baren
+   * inverteres så vinner-siden fortsatt får størst andel, og dommen viser
+   * vinnerens (lave) score først. Default false (Skins/BBB/Nassau: høyest
+   * vinner). `winnerUserId` styrer uansett crown/bar-side.
+   */
+  lowerWins?: boolean;
   /** Hvor pilen tilbake skal peke. Defaults til spillets hjem. */
   backHref?: string;
 }
@@ -68,6 +75,7 @@ export function HeadToHeadResult({
   winnerUserId,
   strip,
   hangingNote,
+  lowerWins = false,
   backHref = '/',
 }: HeadToHeadResultProps): JSX.Element {
   const [replayKey, setReplayKey] = useState(0);
@@ -100,26 +108,29 @@ export function HeadToHeadResult({
           : 'tie';
 
   const total = sideA.score + sideB.score;
-  const pctA = total === 0 ? 50 : Math.round((sideA.score / total) * 100);
+  // Tug-of-war: normalt fyller scoren proporsjonalt (høyest vinner = størst
+  // andel). Ved lowerWins (slagspill-netto) inverteres andelene så vinner-
+  // siden (lavest score) fortsatt får den største champagne-flaten.
+  const rawPctA = total === 0 ? 50 : Math.round((sideA.score / total) * 100);
+  const pctA = lowerWins ? 100 - rawPctA : rawPctA;
   const pctB = 100 - pctA;
 
   const nameA = formatRevealName(sideA.name, sideA.nickname);
   const nameB = formatRevealName(sideB.name, sideB.nickname);
 
-  // NB: dommen viser «høy–lav» og antar at høyest score vinner. Det stemmer
-  // for Skins (rank følger totalSkins). Når skallet gjenbrukes for et format
-  // der LAVEST vinner (f.eks. solo strokeplay-netto), må score-formatteringen
-  // gjøres metrikk-bevisst — winnerUserId styrer allerede crown/bar riktig.
-  const high = Math.max(sideA.score, sideB.score);
-  const low = Math.min(sideA.score, sideB.score);
+  // Dommen viser vinnerens score først, så den leser riktig uansett om høyest
+  // eller lavest vinner: Skins «5–3», slagspill-netto «78–85». winnerUserId
+  // styrer crown/bar; her trenger vi bare vinnerens og taperens score.
   const winnerName = winner === 'a' ? nameA : nameB;
+  const winnerScore = winner === 'a' ? sideA.score : sideB.score;
+  const loserScore = winner === 'a' ? sideB.score : sideA.score;
   const verdict =
     winner === 'tie'
       ? `Uavgjort ${sideA.score}–${sideB.score}.`
       : sideA.score === sideB.score
         ? // Lik score, men avgjort på tiebreak (f.eks. flest vunne hull).
           `${winnerName} vant.`
-        : `${winnerName} vant duellen ${high}–${low}.`;
+        : `${winnerName} vant duellen ${winnerScore}–${loserScore}.`;
 
   return (
     <AppShell>

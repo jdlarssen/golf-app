@@ -17,7 +17,35 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.101.y — Nassau · hull for hull
+## 1.102.y — Slagspill · hull for hull
+
+Issue [#496](https://github.com/jdlarssen/golf-app/issues/496). Format-bevisst «Hull for hull» fortsetter — solo slagspill får sitt eget klassiske scorekort, og 1-mot-1-spill får et duell-oppgjør. PR 8 av epicen.
+
+### [1.102.0] - 2026-06-08 · #496
+
+> Etter en slagspill-runde viser «Hull for hull» nå et klassisk scorekort: stillingen øverst, så hvert hull med brutto og netto per spiller og hvem som hadde lavest netto. Var dere bare to, møter du en duell i stedet for podium når runden er ferdig. Før tegnet appen et lag-scorekort med «Lag»-rader, selv om dere egentlig spilte hver for dere.
+
+<details>
+<summary>Teknisk</summary>
+
+[#496](https://github.com/jdlarssen/golf-app/issues/496) PR 8 av epic (solo strokeplay). Holes-siden forgrener nå også på `game_mode === 'solo_strokeplay'`.
+
+#### Added
+- `SoloStrokeplayHolesView` (server-component): klassisk per-spiller-scorekort. Rangert stillings-header (løpende netto), så Ut/Inn-bolker med per-hull-kort (brutto-shape → netto per spiller, sortert lavest først, hull-vinner i champagne) og netto-subtotal per ni. Erstatter det generiske best-ball «Lag N»-scorekortet. SoloStrokeplayView (leaderboard) viste kun totaler, så per-hull-flaten er additiv.
+- Duell-kort (`HeadToHeadResult`) ved nøyaktig 2 spillere på et ferdig slagspill, i stedet for podium. Slagspill er lavest-vinner, så skallet fikk en `lowerWins`-modus som inverterer tug-of-war-baren og viser vinnerens lave score først i dommen.
+- Type C render-test for SoloStrokeplayHolesView, ny `e2e/games/solo-strokeplay.spec.ts` med tre auth-gate-tester, og et `lowerWins`-case i HeadToHeadResult-testen.
+
+#### Changed
+- `SoloStrokeplayResult` eksponerer nå en `holes`-array (per-hull per-spiller brutto + netto + hull-vinner) via TDD. Solo strokeplay regnet allerede per hull internt, men eksponerte kun totaler.
+- `buildSoloStrokeplayContext`-helper trukket ut av `renderSoloStrokeplay` (eier WD-filtreringen #386) så leaderboard- og «Hull for hull»-flaten bygger `ScoringContext` fra samme kilde.
+- Holes-siden forgrener nå også på `game_mode === 'solo_strokeplay'` (Skins + Wolf + Nines + Round Robin + Acey-Deucey + Bingo Bango Bongo + Nassau + solo strokeplay tatt; solo-stableford følger i egen PR).
+
+</details>
+
+## Tidligere versjoner
+
+<details>
+<summary><strong>1.101.y — Nassau · hull for hull (1 oppføring)</strong></summary>
 
 Issue [#496](https://github.com/jdlarssen/golf-app/issues/496). Format-bevisst «Hull for hull» fortsetter — Nassau får sin egen per-hull-flate, og 1-mot-1-spill får et duell-oppgjør. PR 7 av epicen.
 
@@ -42,7 +70,7 @@ Issue [#496](https://github.com/jdlarssen/golf-app/issues/496). Format-bevisst �
 
 </details>
 
-## Tidligere versjoner
+</details>
 
 <details>
 <summary><strong>1.100.y — Bingo Bango Bongo · hull for hull (1 oppføring)</strong></summary>

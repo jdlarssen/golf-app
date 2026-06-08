@@ -1980,8 +1980,59 @@ function renderSoloStrokeplay(opts: {
 
   const wdSection = <WithdrawnPlayersSection players={soloWithdrawn} />;
 
-  // Finished → champagne-podium med konfetti. Active/scheduled → flat live-view.
+  // Finished → champagne-podium med konfetti. Ved nøyaktig 2 (aktive) spillere
+  // er det en duell → head-to-head-kort i stedet for podium (epic #496);
+  // slagspill er lavest-vinner, så `lowerWins` inverterer baren + dommen.
+  // 1 eller 3+ → SoloStrokeplayPodium som før. Active/scheduled → flat live-view.
   if (game.status === 'finished') {
+    if (result.players.length === 2) {
+      // Stabil rekkefølge etter game_players (ikke rank), så fargene følger
+      // spiller-identitet — ikke hvem som vant.
+      const order = gwp.players.map((p) => p.user_id);
+      const [a, b] = [...result.players].sort(
+        (x, y) => order.indexOf(x.userId) - order.indexOf(y.userId),
+      );
+      const sideFor = (pl: typeof a) => {
+        const info = playersById.get(pl.userId);
+        return {
+          userId: pl.userId,
+          name: info?.name ?? '(ukjent)',
+          nickname: info?.nickname ?? null,
+          score: pl.totalNetStrokes,
+          subLabel: `${pl.totalGrossStrokes} brutto`,
+        };
+      };
+      const strip: StripCell[] = result.holes.map((h): StripCell => {
+        if (h.bestUserIds.length === 1) {
+          if (h.bestUserIds[0] === a.userId) return 'a';
+          if (h.bestUserIds[0] === b.userId) return 'b';
+          return 'unplayed';
+        }
+        if (h.bestUserIds.length > 1) return 'halved';
+        return 'unplayed';
+      });
+      // Lavest netto vinner; rank fanger tie-break-cascaden. Tie iff begge
+      // deler rank.
+      const winnerUserId =
+        a.rank === b.rank ? null : a.rank < b.rank ? a.userId : b.userId;
+      return (
+        <>
+          <HeadToHeadResult
+            gameId={gameId}
+            gameName={game.name}
+            formatLabel="Slagspill · Netto"
+            unitLabel="slag"
+            lowerWins
+            sideA={sideFor(a)}
+            sideB={sideFor(b)}
+            winnerUserId={winnerUserId}
+            strip={strip}
+            backHref={backHref}
+          />
+          {wdSection}
+        </>
+      );
+    }
     return (
       <>
         <SoloStrokeplayPodium
