@@ -75,22 +75,22 @@ Etter Wolf-branchen: `if (game.game_mode === 'nines') return <Suspense …><Nine
 - Eksakt poeng-formatering for evt. ikke-heltall i degenererte n≠3-tilfeller.
 
 ## Success Criteria
-- [ ] «Hull for hull» på et Nines-spill viser per hull: pott (9/6 poeng), og for hver spiller **plassering + brutto/netto-score + poeng** — ikke lag-scorekortet. (Naviger `/games/<id>/leaderboard/holes` for et Nines-spill.)
-- [ ] NinesHolesView er **rikere** enn NinesView sin PER HULL (som kun viser poeng-tall + navn) — den viser også score + plassering + vinner-utheving.
-- [ ] `buildNinesContext` brukes av både `renderNines` og `NinesHolesBody` (ingen duplisert ctx-map; inline-mappen i `renderNines` er fjernet).
-- [ ] Andre format (inkl. Skins, Wolf, best-ball) uendret «Hull for hull».
-- [ ] Reveal-modus, dark mode, `tabular-nums`, ≥44px respektert.
-- [ ] Type C render-test for NinesHolesView (fra fixture m/ 1 normalt hull + 1 tie + 1 pending; verifiserer plassering + score + poeng — det NinesView.test ikke dekker).
-- [ ] Norsk copy via `humanizer` på nye strenger («poeng», «Venter på score» er gjenbrukt/godkjent).
-- [ ] CHANGELOG + MINOR-bump (1.97.0) i feature-commit.
+- [x] «Hull for hull» på et Nines-spill viser per hull: pott (9/6 poeng), og for hver spiller **plassering + brutto/netto-score + poeng** — ikke lag-scorekortet. → `holes/page.tsx` nines-branch + `NinesHolesBody` + `NinesHolesView` (pott-badge, plasserings-merke, score, poeng-chip).
+- [x] NinesHolesView er **rikere** enn NinesView sin PER HULL (som kun viser poeng-tall + navn) — den viser også score + plassering + vinner-utheving. → `NinesHolesView.tsx` HoleCard rader (brutto/netto + plassering 1./2./3. + accent-utheving); NinesView `HoleRow` viser kun `points`.
+- [x] `buildNinesContext` brukes av både `renderNines` og `NinesHolesBody` (ingen duplisert ctx-map; inline-mappen i `renderNines` er fjernet). → `lib/scoring/context/buildNinesContext.ts`; `renderNines` (page.tsx) + `NinesHolesBody` (holes/page.tsx) kaller den; inline-map slettet.
+- [x] Andre format (inkl. Skins, Wolf, best-ball) uendret «Hull for hull». → Kun `'nines'`-gren lagt til; full suite 2942 grønn.
+- [x] Reveal-modus, dark mode, `tabular-nums`, ≥44px respektert. → `nines-holes-reveal-hidden`-blokk; token-baserte farger; `tabular-nums` på tall; back-lenke `h-11 w-11`.
+- [x] Type C render-test for NinesHolesView (fra fixture m/ 1 normalt hull + 1 tie + 1 pending; verifiserer plassering + score + poeng — det NinesView.test ikke dekker). → `NinesHolesView.test.tsx` (1 test, grønn).
+- [x] Norsk copy via `humanizer` på nye strenger («poeng», «Venter på score» er gjenbrukt/godkjent). → humanizer-pass: tagline + UI-strenger rene, ingen AI-tells.
+- [x] CHANGELOG + MINOR-bump (1.97.0) i feature-commit. → `package.json` 1.97.0 + CHANGELOG 1.97.y-tema i commit a6ad901.
 
 ## Gates
-- [ ] `npx tsc --noEmit` — 0 nye errors
-- [ ] `npx vitest run "app/games/[id]/leaderboard"` — nye + NinesView-tester grønne
-- [ ] `npx vitest run` — full suite (regresjon)
-- [ ] `npm run lint` — 0 errors
-- [ ] `npm run build`
-- [ ] E2E auth-gate for holes-ruta på Nines (ny `e2e/games/nines.spec.ts`, speil `e2e/games/wolf.spec.ts`)
+- [x] `npx tsc --noEmit` — 0 nye errors → clean
+- [x] `npx vitest run "app/games/[id]/leaderboard"` — nye + NinesView-tester grønne → 170+ grønne; holes-dir 3/3
+- [x] `npx vitest run` — full suite (regresjon) → 242 filer / 2942 tester grønne
+- [x] `npm run lint` — 0 errors → 0 errors (kun pre-eksisterende warnings; nye filer 0 issues)
+- [x] `npm run build` → success
+- [x] E2E auth-gate for holes-ruta på Nines (ny `e2e/games/nines.spec.ts`, speil `e2e/games/wolf.spec.ts`) → opprettet (3 auth-gate-tester; kjøres i CI/prod som Wolf-PR)
 
 ## Files Likely Touched
 **Nye:** `app/games/[id]/leaderboard/holes/NinesHolesView.tsx` (+ `.test.tsx`), `lib/scoring/context/buildNinesContext.ts`, `e2e/games/nines.spec.ts`
