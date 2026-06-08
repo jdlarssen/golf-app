@@ -119,7 +119,7 @@ describe('HeadToHeadResult', () => {
     render(
       <HeadToHeadResult
         {...defaultProps({
-          formatLabel: 'Modified Stableford',
+          formatLabel: 'Modifisert Stableford',
           unitLabel: 'poeng',
           winnerUserId: 'u1',
           sideA: { userId: 'u1', name: 'Jørgen Larsen', nickname: null, score: 2 },
