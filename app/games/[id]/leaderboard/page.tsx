@@ -112,6 +112,7 @@ import { MODE_LABELS } from '@/lib/scoring/modes/types';
 import { buildSkinsContext } from '@/lib/scoring/context/buildSkinsContext';
 import { buildNassauContext } from '@/lib/scoring/context/buildNassauContext';
 import { buildSoloStrokeplayContext } from '@/lib/scoring/context/buildSoloStrokeplayContext';
+import { buildStablefordContext } from '@/lib/scoring/context/buildStablefordContext';
 import { buildWolfContext } from '@/lib/scoring/context/buildWolfContext';
 import { buildNinesContext } from '@/lib/scoring/context/buildNinesContext';
 import { buildRoundRobinContext } from '@/lib/scoring/context/buildRoundRobinContext';
@@ -1139,71 +1140,32 @@ async function renderStableford(opts: {
 }) {
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
-  // Mode-router-context: bygger ScoringContext fra game + players + holes +
-  // scores. Caster mode_config via type-narrow på stableford-grenen — vi vet
-  // game.game_mode er 'stableford' i denne grenen.
-  //
-  // teamNumber: for solo-stableford er DB-kolonnen alltid 0 (validation i
-  // gamePayload.ts setter den), men scoring-laget ignorerer den i solo-grenen.
-  // For par-stableford (team_size=2) er den 1..N og brukes til lag-gruppering.
-  // Vi sender den rå verdien gjennom uansett — scoring-router-en narrower på
-  // team_size og bruker bare det den trenger.
-  const isTeamVariant =
-    (game.mode_config.kind === 'stableford' ||
-      game.mode_config.kind === 'modified_stableford') &&
-    game.mode_config.team_size === 2;
+  // Stableford-grenen dekker både 'stableford' og 'modified_stableford'.
+  // game.game_mode er en GameMode-union; vi narrower til de to stableford-
+  // modusene for buildStablefordContext (game_mode-passthrough så router-en
+  // velger riktig poeng-tabell).
+  const stablefordMode: 'stableford' | 'modified_stableford' =
+    game.game_mode === 'modified_stableford' ? 'modified_stableford' : 'stableford';
 
-  // WD (#386): build withdrawn list before active-players map.
+  // WD (#386): build withdrawn list for the display section. The ctx-builder
+  // does its own WD-filtering of players + scores.
   const stablefordWithdrawn: WithdrawnPlayer[] = gwp.players
     .filter((p) => p.users != null && p.withdrawn_at != null)
     .map((p) => ({
       user_id: p.user_id,
       display_name: p.users!.name ?? '(ukjent)',
     }));
-  const stablefordWithdrawnIds = new Set(stablefordWithdrawn.map((p) => p.user_id));
 
-  const ctx = {
-    game: {
-      id: gameId,
-      // Send det reelle game_mode-et gjennom (stableford ELLER
-      // modified_stableford) slik at mode-router-en velger riktig poeng-tabell.
-      // Begge varianter returnerer kind: 'stableford', så guarden under holder.
-      game_mode: game.game_mode,
-      mode_config: game.mode_config,
-    },
-    players: gwp.players
-      .filter((p) => p.users != null && p.withdrawn_at == null)
-      .map((p) => ({
-        userId: p.user_id,
-        teamNumber: isTeamVariant ? p.team_number : null,
-        flightNumber: null,
-        courseHandicap: p.course_handicap ?? 0,
-        // #240 — per-kjønn-par resolveres via parFor(hole, teeGender) inne i
-        // scoring-modulen. Sender tee_gender gjennom slik at dame/junior-
-        // spillere får sin par-variant når hullet har avvikende par.
-        teeGender: p.tee_gender,
-      })),
-    holes: rawHolesRows.map((h) => ({
-      number: h.hole_number,
-      par: h.par_mens,
-      // #240 — full per-kjønn-par-tabell per hull. Når alle tre verdier er
-      // like (vanlig tilfelle), faller scoring-laget naturlig tilbake til
-      // felles par. Når dame/junior avviker, leses riktig variant per spiller.
-      parByGender: {
-        mens: h.par_mens,
-        ladies: h.par_ladies,
-        juniors: h.par_juniors,
-      },
-      strokeIndex: h.stroke_index,
-    })),
-    scores: rawScoresRows
-      .filter((s) => !stablefordWithdrawnIds.has(s.user_id))
-      .map((s) => ({
-        userId: s.user_id,
-        holeNumber: s.hole_number,
-        gross: s.strokes,
-      })),
-  };
+  // Delt context-bygging (epic #496) — samme kilde som «Hull for hull»-flaten
+  // (SoloStablefordHolesBody), inkl. WD-filtrering + team-variant teamNumber.
+  const ctx = buildStablefordContext({
+    gameId,
+    gameMode: stablefordMode,
+    modeConfig: game.mode_config,
+    players: gwp.players,
+    holesRows: rawHolesRows,
+    scoresRows: rawScoresRows,
+  });
 
   const result = computeModeResult(ctx);
   // Type-guard mot mode-router-output. Hvis routeren returnerer feil shape
