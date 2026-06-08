@@ -62,7 +62,7 @@ export default async function AdminFormatsPage({
       <BrassRibbon kicker="Format-mapping" />
       <PageHeader
         title="Format-mapping"
-        subtitle="Styr hvilke spillformer som vises i wizardens step 2 per arrangement."
+        subtitle="Styr hvilke spillformater som vises i wizardens step 2 per arrangement."
       />
 
       {errorMessage && (

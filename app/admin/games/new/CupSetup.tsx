@@ -127,7 +127,7 @@ export function CupSetup({ cupEligibleFormats }: Props) {
           Tillatte match-formats
         </legend>
         <p className="text-xs text-muted mb-3">
-          Velg hvilke spillformer som er lov i matchene. Du legger til de
+          Velg hvilke spillformater som er lov i matchene. Du legger til de
           enkelte matchene etter cupen er opprettet.
         </p>
         <ul className="space-y-2">

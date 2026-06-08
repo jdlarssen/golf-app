@@ -165,7 +165,7 @@ export function isSoloFormat(mode: GameMode, teamSize: number): boolean {
 
 /**
  * Spillestil for format-kortene (#478) — hvordan deltakerne er organisert,
- * vist som et lite merke i veiviseren og på /spillformer så man ser med en
+ * vist som et lite merke i veiviseren og på /spillformater så man ser med en
  * gang hva slags spill formatet er:
  *
  *  - `solo`       — du spiller alene / øver (solo slagspill).

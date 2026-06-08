@@ -16,7 +16,7 @@ const VALID_MODES = new Set<string>(Object.keys(MODE_LABELS));
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params;
-  if (!VALID_MODES.has(slug)) return { title: 'Spillform' };
+  if (!VALID_MODES.has(slug)) return { title: 'Spillformat' };
   const mode = slug as GameMode;
   return { title: MODE_LABELS[mode] ?? slug };
 }
@@ -53,11 +53,11 @@ export default async function SpillformDetailPage({ params }: { params: Params }
   return (
     <AppShell>
       <header className="mb-6 flex items-center gap-3">
-        <BackLink href="/spillformer">← Alle spillformer</BackLink>
+        <BackLink href="/spillformater">← Alle spillformater</BackLink>
       </header>
 
       <Kicker tone="accent" className="mb-2">
-        SPILLFORM
+        SPILLFORMAT
       </Kicker>
       <PageHeader title={label} />
 

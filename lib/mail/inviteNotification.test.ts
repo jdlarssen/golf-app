@@ -110,8 +110,8 @@ describe('sendInviteNotification', () => {
 
       Jørgen har invitert deg til spillet Stiklestad 25. mai på Tørny.
 
-      Spillform: Best ball — Dere er to på lag, og på hvert hull teller bare den beste netto-scoren av dere to.
-      Les mer om spillformene: https://tornygolf.no/spillformer
+      Spillformat: Best ball — Dere er to på lag, og på hvert hull teller bare den beste netto-scoren av dere to.
+      Les mer om spillformatene: https://tornygolf.no/spillformater
 
       Gå til https://tornygolf.no/login, skriv inn denne e-posten, og logg inn med koden du får tilsendt.
 
@@ -119,9 +119,9 @@ describe('sendInviteNotification', () => {
       "
     `);
     expect(modeHintHtml(payload.html)).toMatchInlineSnapshot(`
-      "<strong>Spillform: Best ball</strong><br>
+      "<strong>Spillformat: Best ball</strong><br>
                     Dere er to på lag, og på hvert hull teller bare den beste netto-scoren av dere to.<br>
-                    <a href="https://tornygolf.no/spillformer" style="color:#1B4332;font-weight:600;text-decoration:underline;">Les mer om spillformene</a>"
+                    <a href="https://tornygolf.no/spillformater" style="color:#1B4332;font-weight:600;text-decoration:underline;">Les mer om spillformatene</a>"
     `);
   });
 

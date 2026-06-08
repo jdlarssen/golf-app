@@ -10,7 +10,7 @@ import { getFormatGuideEntries } from '@/lib/formats/buildFormatGuide';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Spillformer',
+  title: 'Spillformater',
 };
 
 // Oppslagsverk over alle spillformene (#299, #307, #308). Ren lærings-ressurs —
@@ -19,20 +19,20 @@ export const metadata: Metadata = {
 // getFormatGuideEntries (cached på 'format-mapping'-tag) og rendres med den
 // delte FormatGuideList-komponenten (#498), samme liste som «?»-arket i
 // veiviseren bruker.
-export default async function SpillformerPage() {
+export default async function SpillformaterPage() {
   const entries = await getFormatGuideEntries();
 
   return (
     <AppShell>
       <header className="mb-2 flex items-center justify-between gap-4">
         <BackLink href="/">← Hjem</BackLink>
-        <Kicker tone="accent">SPILLFORMER</Kicker>
+        <Kicker tone="accent">SPILLFORMATER</Kicker>
         <span className="w-12" aria-hidden />
       </header>
 
       <PageHeader
-        title="Spillformer"
-        subtitle="Trykk på en form for å se hvordan den funker. Da tør du å bli med uansett hva som settes opp."
+        title="Spillformater"
+        subtitle="Trykk på et format for å se hvordan det funker. Da tør du å bli med uansett hva som settes opp."
       />
 
       <FormatGuideList entries={entries} />

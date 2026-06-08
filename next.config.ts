@@ -11,6 +11,22 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_APP_VERSION: pkg.version,
     NEXT_PUBLIC_APP_SHA: (process.env.VERCEL_GIT_COMMIT_SHA ?? "").slice(0, 7),
   },
+  // #498: «Spillformer» ble omdøpt til «Spillformater» (riktig ord). Permanent
+  // redirect så gamle bokmerker + allerede utsendte mail-lenker ikke brytes.
+  async redirects() {
+    return [
+      {
+        source: "/spillformer",
+        destination: "/spillformater",
+        permanent: true,
+      },
+      {
+        source: "/spillformer/:slug",
+        destination: "/spillformater/:slug",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

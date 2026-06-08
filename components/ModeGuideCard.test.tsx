@@ -61,12 +61,12 @@ describe('ModeGuideCard', () => {
         label={MODE_LABELS.wolf}
         summary={guide.summary}
         points={guide.points}
-        detailHref="/spillformer/wolf"
+        detailHref="/spillformater/wolf"
       />,
     );
 
     const link = screen.getByRole('link', { name: /les mer/i });
-    expect(link).toHaveAttribute('href', '/spillformer/wolf');
+    expect(link).toHaveAttribute('href', '/spillformater/wolf');
   });
 
   it('rendrer IKKE Les mer-lenke når detailHref er utelatt', () => {

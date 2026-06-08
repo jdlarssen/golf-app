@@ -18,7 +18,7 @@ import type { GameMode } from '@/lib/scoring/modes/types';
  * dedikert-side-konvensjonen for destruktive flyter gjelder ikke her.
  *
  * To hjem: et SPILLFORM-kort på spillerens game-side, og hver rad i
- * oppslagsverket `/spillformer`.
+ * oppslagsverket `/spillformater`.
  */
 export function ModeGuideCard({
   summary,
@@ -42,8 +42,8 @@ export function ModeGuideCard({
    */
   detailHref?: string;
   /**
-   * Valgfri spillmodus — når satt vises et spillestil-merke (Solo / Hver for
-   * seg / Lag) ved siden av navnet (#478). Brukt på /spillformer; game-side-
+   * Valgfri spillmodus — når satt vises et spillestil-merke (Solo / Lag) ved
+   * siden av navnet (#478/#498). Brukt på /spillformater; game-side-
    * kortet utelater den (formatet er allerede valgt).
    */
   mode?: GameMode;

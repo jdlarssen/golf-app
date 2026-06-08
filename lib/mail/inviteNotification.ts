@@ -43,7 +43,7 @@ export type InviteNotificationParams = {
   /**
    * Spillets `game_mode` (#309). Når satt sammen med `gameName` OG verdien er en
    * kjent modus, viser mailen et kort modus-hint (navn + ett-linjes sammendrag +
-   * lenke til /spillformer). Ukjent/manglende verdi → ingen hint (defensivt, så
+   * lenke til /spillformater). Ukjent/manglende verdi → ingen hint (defensivt, så
    * inaktive/fremtidige formats aldri kaster). Ignorert for åpne (game-løse)
    * invitasjoner.
    */
@@ -76,14 +76,14 @@ export async function sendInviteNotification(
   // approval-testen. Tom streng når ingen hint → mal uendret fra før.
   const modeHintHtml = modeHint
     ? `<p style="font-size:14px;line-height:1.5;margin:0 0 24px;background:#F1EFE8;border-radius:8px;padding:12px 16px;color:#1A1813;">
-              <strong>Spillform: ${escapeHtml(modeHint.label)}</strong><br>
+              <strong>Spillformat: ${escapeHtml(modeHint.label)}</strong><br>
               ${escapeHtml(modeHint.summary)}<br>
-              <a href="https://tornygolf.no/spillformer" style="color:#1B4332;font-weight:600;text-decoration:underline;">Les mer om spillformene</a>
+              <a href="https://tornygolf.no/spillformater" style="color:#1B4332;font-weight:600;text-decoration:underline;">Les mer om spillformatene</a>
             </p>
             `
     : '';
   const modeHintText = modeHint
-    ? `Spillform: ${modeHint.label} — ${modeHint.summary}\nLes mer om spillformene: https://tornygolf.no/spillformer\n\n`
+    ? `Spillformat: ${modeHint.label} — ${modeHint.summary}\nLes mer om spillformatene: https://tornygolf.no/spillformater\n\n`
     : '';
   const subject = hasGame
     ? `Du er invitert til ${gameName} på Tørny`

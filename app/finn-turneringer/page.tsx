@@ -9,7 +9,7 @@ import { getDiscoverableGames } from '@/lib/games/getDiscoverableGames';
 import { HomeDiscoverySection } from '../HomeDiscoverySection';
 
 // Dynamic: getDiscoverableGames bruker admin-client (service role) ved
-// request-tid; statisk pre-render ville feilet uten env (samme som /spillformer).
+// request-tid; statisk pre-render ville feilet uten env (samme som /spillformater).
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {

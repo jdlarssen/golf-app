@@ -316,7 +316,7 @@ export async function toggleActive(formData: FormData): Promise<void> {
  * Tom streng → null (faller tilbake til standardtekst fra MODE_GUIDE).
  * rules_points er newline-separert textarea → string[] | null.
  *
- * Busts `format-mapping`-cachen så /spillformer og spillsiden reflekterer
+ * Busts `format-mapping`-cachen så /spillformater og spillsiden reflekterer
  * endringen uten deploy.
  */
 export async function updateFormatContent(formData: FormData): Promise<void> {

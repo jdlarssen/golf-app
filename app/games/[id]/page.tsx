@@ -356,7 +356,7 @@ export default async function GameHomePage({
     modeTeamSize,
   );
   const modeLabel = formatDisplayLabel(game.game_mode, game.mode_config);
-  const modeDetailHref = `/spillformer/${game.game_mode}`;
+  const modeDetailHref = `/spillformater/${game.game_mode}`;
 
   // State #2 — Scorekort venter. Shell renders synchronously; the flight
   // roster query streams in behind Suspense.

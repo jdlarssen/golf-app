@@ -10,7 +10,7 @@ import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
  * endres ikke), version-controlled, humanizer-sjekket og testbart uten
  * migrasjon eller admin-UI. Se `.forge/contracts/299-mode-info-for-players.md`.
  *
- * Brukes av `ModeGuideCard` på spillerens game-side og på `/spillformer`.
+ * Brukes av `ModeGuideCard` på spillerens game-side og på `/spillformater`.
  * `Record<GameMode, ModeGuide>` tvinger en entry for hver modus ved compile;
  * `modeGuide.test.ts` fanger tomt innhold.
  */

@@ -332,8 +332,8 @@ async function HomeBody() {
           </Section>
         )}
 
-        <Section label="Spillformer">
-          <SmartLink href="/spillformer" className="block">
+        <Section label="Spillformater">
+          <SmartLink href="/spillformater" className="block">
             <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
               <span className="text-base font-medium text-text">
                 Slik spiller du formene
