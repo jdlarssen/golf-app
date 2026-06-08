@@ -167,3 +167,31 @@ export async function requireAdminOrClubAdminOfLeague(
     ? requireAdminOrClubAdmin(supabase, groupId)
     : requireAdmin(supabase);
 }
+
+/**
+ * Gate for managing a single CUP/tournament (#524, mirror of
+ * `requireAdminOrClubAdminOfLeague`). Resolves the tournament's club and
+ * delegates:
+ *  - `group_id` set → klubb-cup: the cup's club owner/admin (or a global admin)
+ *    may manage it (`requireAdminOrClubAdmin`).
+ *  - `group_id` null → frittstående cup: global-admin-only (`requireAdmin`).
+ *
+ * The `group_id` lookup uses the admin client so the authorization decision
+ * does not depend on the caller's own RLS visibility. This gate is a UX guard;
+ * the real security boundary is the RLS WRITE policy on tournaments (0089),
+ * which evaluates each row's actual `group_id`.
+ */
+export async function requireAdminOrClubAdminOfCup(
+  supabase: ServerSupabase,
+  tournamentId: string,
+): Promise<AdminRoleContext> {
+  const { data } = await getAdminClient()
+    .from('tournaments')
+    .select('group_id')
+    .eq('id', tournamentId)
+    .maybeSingle();
+  const groupId = (data?.group_id as string | null | undefined) ?? null;
+  return groupId
+    ? requireAdminOrClubAdmin(supabase, groupId)
+    : requireAdmin(supabase);
+}

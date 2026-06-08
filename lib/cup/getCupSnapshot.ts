@@ -49,6 +49,7 @@ export type CupSnapshot = {
     created_at: string;
     started_at: string | null;
     finished_at: string | null;
+    group_id: string | null;
   };
   leaderboard: CupLeaderboardResult;
   roster: CupRoster;
@@ -110,7 +111,7 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
   const { data: tournament, error: tErr } = await supabase
     .from('tournaments')
     .select(
-      'id, name, team_1_name, team_2_name, points_to_win, status, winner_team, created_by, created_at, started_at, finished_at',
+      'id, name, team_1_name, team_2_name, points_to_win, status, winner_team, created_by, created_at, started_at, finished_at, group_id',
     )
     .eq('id', tournamentId)
     .maybeSingle();
