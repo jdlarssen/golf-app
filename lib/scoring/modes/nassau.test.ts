@@ -685,3 +685,105 @@ describe('nassau.compute — antalls-agnostisk over 4 spillere (#460)', () => {
     expect(u1.unitBreakdown.total18).toBe(false);
   });
 });
+
+// -----------------------------------------------------------------------------
+// Per-hull-eksponering (epic #496, PR 7). `result.holes` mater den format-
+// bevisste «Hull for hull»-flaten (NassauHolesView) og H2H-momentum-strippen.
+// Additivt felt — eksisterende cases over forblir grønne.
+// -----------------------------------------------------------------------------
+describe('nassau.compute — per-hull holes-eksponering (#496)', () => {
+  it('eksponerer 18 sorterte hull-rader med par, strokeIndex og seksjon', () => {
+    const ctx = makeCtx({
+      players: [soloPlayer('u1'), soloPlayer('u2')],
+      holes: par4Holes(18),
+      scores: [
+        ...scoresFor('u1', Array(18).fill(4)),
+        ...scoresFor('u2', Array(18).fill(5)),
+      ],
+    });
+    const result = compute(ctx);
+    expect(result.holes).toHaveLength(18);
+    expect(result.holes.map((h) => h.holeNumber)).toEqual(
+      Array.from({ length: 18 }, (_, i) => i + 1),
+    );
+    expect(result.holes[0].par).toBe(4);
+    expect(result.holes[0].strokeIndex).toBe(1);
+    // Hull 1-9 = front9, 10-18 = back9 (total er unionen, ikke en hull-seksjon).
+    expect(result.holes.slice(0, 9).every((h) => h.section === 'front9')).toBe(
+      true,
+    );
+    expect(result.holes.slice(9).every((h) => h.section === 'back9')).toBe(
+      true,
+    );
+  });
+
+  it('perPlayer har gross + effective; net-modus trekker fra tildelte slag', () => {
+    // u1 hcp 18 → 1 slag på hvert hull (SI 1-18). gross 5 → effective 4.
+    const ctx = makeCtx({
+      players: [soloPlayer('u1', 18), soloPlayer('u2', 0)],
+      holes: par4Holes(18),
+      scores: [
+        ...scoresFor('u1', Array(18).fill(5)),
+        ...scoresFor('u2', Array(18).fill(4)),
+      ],
+      nassauScoring: 'net',
+    });
+    const result = compute(ctx);
+    const hole1 = result.holes[0];
+    const u1Cell = hole1.perPlayer.find((c) => c.userId === 'u1')!;
+    const u2Cell = hole1.perPlayer.find((c) => c.userId === 'u2')!;
+    expect(u1Cell.gross).toBe(5);
+    expect(u1Cell.effective).toBe(4); // 5 − 1 tildelt slag
+    expect(u2Cell.gross).toBe(4);
+    expect(u2Cell.effective).toBe(4); // hcp 0 → ingen slag
+  });
+
+  it('gross-modus ignorerer handicap (effective === gross)', () => {
+    const ctx = makeCtx({
+      players: [soloPlayer('u1', 18)],
+      holes: par4Holes(18),
+      scores: [...scoresFor('u1', Array(18).fill(5))],
+      nassauScoring: 'gross',
+    });
+    const result = compute(ctx);
+    const cell = result.holes[0].perPlayer.find((c) => c.userId === 'u1')!;
+    expect(cell.gross).toBe(5);
+    expect(cell.effective).toBe(5); // hcp ignorert i gross-modus
+  });
+
+  it('bestUserIds = lavest effective; én vinner, delt ved lik, tom ved uspilt', () => {
+    // Hull 1: u1=4 vinner alene. Hull 2: u1=u2=4 delt. Hull 3: ingen spilte.
+    const ctx = makeCtx({
+      players: [soloPlayer('u1'), soloPlayer('u2')],
+      holes: par4Holes(18),
+      scores: [
+        { userId: 'u1', holeNumber: 1, gross: 4 },
+        { userId: 'u2', holeNumber: 1, gross: 5 },
+        { userId: 'u1', holeNumber: 2, gross: 4 },
+        { userId: 'u2', holeNumber: 2, gross: 4 },
+        // hull 3: ingen score
+      ],
+    });
+    const result = compute(ctx);
+    expect(result.holes[0].bestUserIds).toEqual(['u1']);
+    expect([...result.holes[1].bestUserIds].sort()).toEqual(['u1', 'u2']);
+    expect(result.holes[2].bestUserIds).toEqual([]);
+  });
+
+  it('uspilt hull gir null effective/gross (ikke 999-padding-verdien)', () => {
+    const ctx = makeCtx({
+      players: [soloPlayer('u1'), soloPlayer('u2')],
+      holes: par4Holes(18),
+      scores: [
+        { userId: 'u1', holeNumber: 1, gross: 4 },
+        // u2 har ikke spilt hull 1
+      ],
+    });
+    const result = compute(ctx);
+    const u2Cell = result.holes[0].perPlayer.find((c) => c.userId === 'u2')!;
+    expect(u2Cell.gross).toBeNull();
+    expect(u2Cell.effective).toBeNull();
+    // bestUserIds ser bort fra uspilte → kun u1.
+    expect(result.holes[0].bestUserIds).toEqual(['u1']);
+  });
+});

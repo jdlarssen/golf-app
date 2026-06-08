@@ -115,6 +115,9 @@ function makeResult(): NassauResult {
         tiedWith: ['uA', 'uB'],
       },
     ],
+    // Per-hull-data brukes ikke av NassauView (seksjons-sammendrag) — den
+    // format-bevisste «Hull for hull»-flaten har egen render-test (#496).
+    holes: [],
   };
 }
 

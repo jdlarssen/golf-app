@@ -1447,6 +1447,33 @@ export interface NassauUnitLine {
   tiedWith: string[];
 }
 
+/**
+ * Per-spiller-celle på ett Nassau-hull. `effective` er net (gross − tildelte
+ * slag) eller gross, avhengig av `scoring`. Begge felt er `null` når hullet
+ * ikke er spilt — IKKE 999-padding-verdien ranking-cascaden bruker internt.
+ */
+export interface NassauHolePlayerCell {
+  userId: string;
+  gross: number | null;
+  effective: number | null;
+}
+
+/**
+ * Per-hull-rad for Nassau (epic #496, PR 7). Mater den format-bevisste «Hull
+ * for hull»-flaten (NassauHolesView) og head-to-head-momentum-strippen.
+ * `section` er hull-tilhørigheten (front 9 / back 9); total18 er unionen, ikke
+ * en egen hull-seksjon. `bestUserIds` = spillerne med lavest effective blant de
+ * som spilte hullet (tom hvis ingen spilte; lengde > 1 ved delt).
+ */
+export interface NassauHoleRow {
+  holeNumber: number;
+  par: number;
+  strokeIndex: number;
+  section: 'front9' | 'back9';
+  perPlayer: NassauHolePlayerCell[];
+  bestUserIds: string[];
+}
+
 export interface NassauResult {
   kind: 'nassau';
   scoring: 'gross' | 'net';
@@ -1457,6 +1484,8 @@ export interface NassauResult {
   };
   /** Aggregert unit-ranking — primær leaderboard-row på podium. */
   players: NassauUnitLine[];
+  /** Per-hull per-spiller-detalj (alle 18, sortert). Epic #496, PR 7. */
+  holes: NassauHoleRow[];
 }
 
 // -----------------------------------------------------------------------------

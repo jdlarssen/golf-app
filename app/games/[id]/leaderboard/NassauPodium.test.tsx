@@ -110,6 +110,9 @@ function makeSweepResult(): NassauResult {
       makeUnitLine('uC', 3, 0, { front9: false, back9: false, total18: false }, 81),
       makeUnitLine('uD', 4, 0, { front9: false, back9: false, total18: false }, 85),
     ],
+    // Per-hull-data brukes ikke av NassauPodium (unit-podium) — den format-
+    // bevisste «Hull for hull»-flaten har egen render-test (#496).
+    holes: [],
   };
 }
 

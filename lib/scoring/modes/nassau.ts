@@ -22,6 +22,7 @@
 import { strokesForHole } from '../strokeAllocation';
 import { rankTeams } from '../tiebreaker';
 import type {
+  NassauHoleRow,
   NassauResult,
   NassauSection,
   NassauSectionLine,
@@ -163,6 +164,50 @@ function computeSection(
 }
 
 /**
+ * Bygger per-hull-radene som mater «Hull for hull»-flaten (epic #496, PR 7).
+ * Til forskjell fra ranking-arrayet eksponeres `effective`/`gross` som `null`
+ * på uspilte hull (ikke 999-padding). `bestUserIds` = lavest effective blant de
+ * som faktisk spilte hullet — tom hvis ingen, lengde > 1 ved delt. Ren funksjon
+ * av samme `grossByKey` som rankingen, så de kan aldri divergere.
+ */
+function computeHoleRows(
+  holesSorted: ScoringHole[],
+  players: ScoringPlayer[],
+  grossByKey: Map<string, number | null>,
+  scoringMode: 'gross' | 'net',
+): NassauHoleRow[] {
+  return holesSorted.map((hole) => {
+    const perPlayer = players.map((p) => {
+      const gross = grossByKey.get(`${p.userId}#${hole.number}`) ?? null;
+      const effective =
+        gross === null
+          ? null
+          : effectiveFor(scoringMode, gross, p.courseHandicap, hole.strokeIndex);
+      return { userId: p.userId, gross, effective };
+    });
+
+    const played = perPlayer.filter(
+      (c): c is { userId: string; gross: number; effective: number } =>
+        c.effective !== null,
+    );
+    let bestUserIds: string[] = [];
+    if (played.length > 0) {
+      const min = Math.min(...played.map((c) => c.effective));
+      bestUserIds = played.filter((c) => c.effective === min).map((c) => c.userId);
+    }
+
+    return {
+      holeNumber: hole.number,
+      par: hole.par,
+      strokeIndex: hole.strokeIndex,
+      section: hole.number <= 9 ? 'front9' : 'back9',
+      perPlayer,
+      bestUserIds,
+    };
+  });
+}
+
+/**
  * Beregner Nassau-leaderboard fra en ScoringContext. Lager tre stacked
  * strokeplay-rangeringer (front 9, back 9, total 18) og en aggregert
  * unit-ranking på topp.
@@ -278,10 +323,18 @@ export function compute(ctx: ScoringContext): NassauResult {
       .map((other) => other.userId);
   }
 
+  const holes = computeHoleRows(
+    holesSorted,
+    ctx.players,
+    grossByKey,
+    scoringMode,
+  );
+
   return {
     kind: 'nassau',
     scoring: scoringMode,
     sections: { front9, back9, total18 },
     players: playersAggregated,
+    holes,
   };
 }
