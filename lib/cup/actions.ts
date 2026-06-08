@@ -3,7 +3,11 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
-import { requireAdmin, requireAdminOrClubAdmin } from '@/lib/admin/auth';
+import {
+  requireAdmin,
+  requireAdminOrClubAdmin,
+  requireAdminOrClubAdminOfCup,
+} from '@/lib/admin/auth';
 import { getCupSnapshot } from './getCupSnapshot';
 import { sendCupStartedNotification } from '@/lib/mail/cupStartedNotification';
 import { sendCupFinishedNotification } from '@/lib/mail/cupFinishedNotification';
@@ -95,6 +99,33 @@ async function loadTournamentParticipantEmails(
   return out;
 }
 
+/**
+ * Felles redirect/revalidate-mål for cup-styringshandlinger (#524). Klubb-cup
+ * (group_id satt) holder seg i klubb-chrome; frittstående går til admin-cup.
+ * Leses via request-scoped klient — kalleren er allerede gatet, så en klubb-cup
+ * er synlig (medlem/admin via scoped-select RLS 0089).
+ */
+async function cupRedirectBase(
+  supabase: Awaited<ReturnType<typeof getServerClient>>,
+  id: string,
+): Promise<{ path: string; groupId: string | null; revalidate: () => void }> {
+  const { data } = await supabase
+    .from('tournaments')
+    .select('group_id')
+    .eq('id', id)
+    .maybeSingle();
+  const groupId = (data?.group_id as string | null | undefined) ?? null;
+  const path = groupId ? `/klubber/${groupId}/cup/${id}` : `/admin/cup/${id}`;
+  return {
+    path,
+    groupId,
+    revalidate: () => {
+      revalidatePath(`/admin/cup/${id}`);
+      if (groupId) revalidatePath(`/klubber/${groupId}/cup/${id}`);
+    },
+  };
+}
+
 export async function createTournamentDraft(formData: FormData) {
   // #524: group_id binder cupen til en klubb. Tom = frittstående (uendret
   // admin-flyt). Lest først så validerings-feil bouncer til riktig form.
@@ -168,6 +199,12 @@ export async function updateTournament(formData: FormData) {
   const id = String(formData.get('id') ?? '');
   if (!id) redirect('/admin/cup?error=not_found');
 
+  const supabase = await getServerClient();
+  // #524: klubb-cup styres av klubb-admin (eller global admin); frittstående av
+  // global admin. group_id avgjør også hvor feil/suksess redirecter.
+  await requireAdminOrClubAdminOfCup(supabase, id);
+  const base = await cupRedirectBase(supabase, id);
+
   const name = String(formData.get('name') ?? '').trim();
   const team1 = String(formData.get('team_1_name') ?? '').trim();
   const team2 = String(formData.get('team_2_name') ?? '').trim();
@@ -177,21 +214,18 @@ export async function updateTournament(formData: FormData) {
     formData.get('foursomes_allowance_pct') ?? '',
   );
 
-  if (!NAME_RE.test(name)) redirect(`/admin/cup/${id}?error=name`);
-  if (!TEAM_NAME_RE.test(team1)) redirect(`/admin/cup/${id}?error=team_1`);
-  if (!TEAM_NAME_RE.test(team2)) redirect(`/admin/cup/${id}?error=team_2`);
+  if (!NAME_RE.test(name)) redirect(`${base.path}?error=name`);
+  if (!TEAM_NAME_RE.test(team1)) redirect(`${base.path}?error=team_1`);
+  if (!TEAM_NAME_RE.test(team2)) redirect(`${base.path}?error=team_2`);
   if (team1.toLowerCase() === team2.toLowerCase())
-    redirect(`/admin/cup/${id}?error=team_dup`);
+    redirect(`${base.path}?error=team_dup`);
   const points = parsePointsToWin(pointsRaw);
-  if (points === null) redirect(`/admin/cup/${id}?error=points`);
+  if (points === null) redirect(`${base.path}?error=points`);
   const fourballAllowance = parseFourballAllowancePct(allowanceRaw);
-  if (fourballAllowance === null) redirect(`/admin/cup/${id}?error=allowance`);
+  if (fourballAllowance === null) redirect(`${base.path}?error=allowance`);
   const foursomesAllowance = parseFoursomesAllowancePct(foursomesAllowanceRaw);
   if (foursomesAllowance === null)
-    redirect(`/admin/cup/${id}?error=foursomes_allowance`);
-
-  const supabase = await getServerClient();
-  await requireAdmin(supabase);
+    redirect(`${base.path}?error=foursomes_allowance`);
 
   const { error } = await supabase
     .from('tournaments')
@@ -207,13 +241,13 @@ export async function updateTournament(formData: FormData) {
 
   if (error) {
     console.error('[cup] updateTournament failed', { id, error });
-    redirect(`/admin/cup/${id}?error=update_failed`);
+    redirect(`${base.path}?error=update_failed`);
   }
 
   revalidateTag(`tournament-${id}`, 'max');
-  revalidatePath(`/admin/cup/${id}`);
+  base.revalidate();
   revalidatePath(`/cup/${id}`);
-  redirect(`/admin/cup/${id}?status=updated`);
+  redirect(`${base.path}?status=updated`);
 }
 
 export async function startTournament(formData: FormData) {
@@ -221,7 +255,8 @@ export async function startTournament(formData: FormData) {
   if (!id) redirect('/admin/cup?error=not_found');
 
   const supabase = await getServerClient();
-  await requireAdmin(supabase);
+  await requireAdminOrClubAdminOfCup(supabase, id);
+  const base = await cupRedirectBase(supabase, id);
 
   // Krev minst 2 matches før start (per kontrakt-success-kriterium).
   const { count } = await supabase
@@ -229,7 +264,7 @@ export async function startTournament(formData: FormData) {
     .select('id', { head: true, count: 'exact' })
     .eq('tournament_id', id);
   if ((count ?? 0) < 2) {
-    redirect(`/admin/cup/${id}?error=too_few_matches`);
+    redirect(`${base.path}?error=too_few_matches`);
   }
 
   const { data: current } = await supabase
@@ -239,7 +274,7 @@ export async function startTournament(formData: FormData) {
     .maybeSingle();
   if (!current) redirect(`/admin/cup?error=not_found`);
   if (current.status !== 'draft') {
-    redirect(`/admin/cup/${id}?error=wrong_status`);
+    redirect(`${base.path}?error=wrong_status`);
   }
 
   const { error } = await supabase
@@ -248,7 +283,7 @@ export async function startTournament(formData: FormData) {
     .eq('id', id);
   if (error) {
     console.error('[cup] startTournament failed', { id, error });
-    redirect(`/admin/cup/${id}?error=start_failed`);
+    redirect(`${base.path}?error=start_failed`);
   }
 
   // Best-effort start-varsel: in-app til ALLE deltakere først, mail kun til
@@ -294,9 +329,9 @@ export async function startTournament(formData: FormData) {
   }
 
   revalidateTag(`tournament-${id}`, 'max');
-  revalidatePath(`/admin/cup/${id}`);
+  base.revalidate();
   revalidatePath(`/cup/${id}`);
-  redirect(`/admin/cup/${id}?status=started`);
+  redirect(`${base.path}?status=started`);
 }
 
 export async function finishTournament(formData: FormData) {
@@ -304,12 +339,13 @@ export async function finishTournament(formData: FormData) {
   if (!id) redirect('/admin/cup?error=not_found');
 
   const supabase = await getServerClient();
-  await requireAdmin(supabase);
+  await requireAdminOrClubAdminOfCup(supabase, id);
+  const base = await cupRedirectBase(supabase, id);
 
   const snapshot = await getCupSnapshot(id);
   if (!snapshot) redirect('/admin/cup?error=not_found');
   if (snapshot.tournament.status === 'finished') {
-    redirect(`/admin/cup/${id}?error=already_finished`);
+    redirect(`${base.path}?error=already_finished`);
   }
 
   // Vinner bestemmes av point-status ved avslutning. Hvis ingen lag har nådd
@@ -332,7 +368,7 @@ export async function finishTournament(formData: FormData) {
     .eq('id', id);
   if (error) {
     console.error('[cup] finishTournament failed', { id, error });
-    redirect(`/admin/cup/${id}?error=finish_failed`);
+    redirect(`${base.path}?error=finish_failed`);
   }
 
   // Best-effort avslutnings-varsel: in-app til ALLE deltakere først, mail kun
@@ -386,9 +422,9 @@ export async function finishTournament(formData: FormData) {
   }
 
   revalidateTag(`tournament-${id}`, 'max');
-  revalidatePath(`/admin/cup/${id}`);
+  base.revalidate();
   revalidatePath(`/cup/${id}`);
-  redirect(`/admin/cup/${id}?status=finished`);
+  redirect(`${base.path}?status=finished`);
 }
 
 export async function deleteTournament(formData: FormData) {
@@ -396,24 +432,34 @@ export async function deleteTournament(formData: FormData) {
   if (!id) redirect('/admin/cup?error=not_found');
 
   const supabase = await getServerClient();
-  await requireAdmin(supabase);
+  await requireAdminOrClubAdminOfCup(supabase, id);
 
   const { data: cup } = await supabase
     .from('tournaments')
-    .select('id, name')
+    .select('id, name, group_id')
     .eq('id', id)
     .maybeSingle();
   if (!cup) redirect('/admin/cup?error=not_found');
+  const groupId = (cup.group_id as string | null | undefined) ?? null;
 
   // FK på games.tournament_id er ON DELETE SET NULL — historiske matches
   // blir frittstående spill, ikke slettet.
   const { error } = await supabase.from('tournaments').delete().eq('id', id);
   if (error) {
     console.error('[cup] deleteTournament failed', { id, error });
-    redirect(`/admin/cup/${id}/slett?error=delete_failed`);
+    redirect(
+      groupId
+        ? `/klubber/${groupId}/cup/${id}/slett?error=delete_failed`
+        : `/admin/cup/${id}/slett?error=delete_failed`,
+    );
   }
 
   revalidateTag(`tournament-${id}`, 'max');
+  // Klubb-cup: tilbake til klubb-siden (Klubbens cuper). Frittstående: admin-lista.
+  if (groupId) {
+    revalidatePath(`/klubber/${groupId}`);
+    redirect(`/klubber/${groupId}?status=cup_deleted&name=${encodeURIComponent(cup.name)}`);
+  }
   const qs = new URLSearchParams({ status: 'deleted', name: cup.name });
   redirect(`/admin/cup?${qs.toString()}`);
 }
