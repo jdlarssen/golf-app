@@ -338,9 +338,10 @@ function SummaryStrip({
 }
 
 /**
- * Ett hull: hull/par/SI + netto per spiller (sortert lavest først). Hull-
- * vinner(e) — lavest netto — uthevet i champagne med ★. Uspilte spillere viser
- * «–» og sorteres sist. Hull der ingen har spilt viser «Venter».
+ * Ett hull: hull/par/SI + netto per spiller (sortert lavest først). En enkelt
+ * hull-vinner (lavest netto) uthevet i champagne med ★; ble hullet delt får
+ * ingen utheving (samme nøytrale signal som duell-strippens «delt»). Uspilte
+ * spillere viser «–» og sorteres sist. Hull der ingen har spilt viser «Venter».
  */
 function HoleCard({
   hole,
@@ -350,6 +351,9 @@ function HoleCard({
   playersById: Map<string, NassauPlayerInfo>;
 }) {
   const scored = hole.bestUserIds.length > 0;
+  // Champagne kun ved en utvetydig hull-vinner. Delt lavest netto = nøytralt.
+  const uniqueWinnerId =
+    hole.bestUserIds.length === 1 ? hole.bestUserIds[0] : null;
   const rows = [...hole.perPlayer].sort(
     (a, b) =>
       (a.effective ?? Number.POSITIVE_INFINITY) -
@@ -380,7 +384,7 @@ function HoleCard({
             const name = info
               ? formatRevealName(info.name, info.nickname)
               : '(ukjent spiller)';
-            const isBest = hole.bestUserIds.includes(cell.userId);
+            const isBest = cell.userId === uniqueWinnerId;
             return (
               <li
                 key={cell.userId}
