@@ -69,11 +69,11 @@ export const MODE_GUIDE: Record<GameMode, ModeGuide> = {
   },
   ambrose: {
     summary:
-      'Laget spiller én ball: alle slår, dere plukker det beste slaget, og alle slår derfra igjen.',
+      'En scramble der laget plukker det beste slaget hele veien, men med et lag-handikap som veier inn alle og jevner ut sterke og svake lag.',
     points: [
-      'Slik fortsetter dere til ballen er i hull. Laget får én score per hull.',
-      'Laget får et felles handikap som jevner ut forskjellene mellom sterke og svake lag.',
-      'Lavest lagtotal vinner.',
+      'Alle slår fra tee, dere velger det beste slaget, og alle spiller videre derfra.',
+      'Lag-handikapet bygger på alle på laget, så sterke og svake lag stiller likere.',
+      'Lavest lagtotal etter handikap vinner.',
     ],
   },
   florida_scramble: {

@@ -21,6 +21,23 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#500](https://github.com/jdlarssen/golf-app/issues/500). Hjem-sida speiler kjerneflyten: oppdag og bli med i turneringer rett under egne spill, og det rolige format-oppslagsverket flytter til Klubbhuset.
 
+### [1.105.4] - 2026-06-08 · #515
+
+> Ambrose og Texas scramble hadde nøyaktig samme forklaring. Nå sier Ambrose-kortet det som faktisk skiller dem: et lag-handikap som jevner ut sterke og svake spillere, så blandede lag stiller likere.
+
+<details>
+<summary>Teknisk</summary>
+
+[#515](https://github.com/jdlarssen/golf-app/issues/515). Distinkt format-copy.
+
+#### Changed
+- `lib/formats/modeGuide.ts`: skrev om `ambrose`-entryens `summary` + `points` så den er distinkt fra `texas_scramble` og eier det utjevnende lag-handikapet (Ambrose-formelen) som sin vri. Texas forblir den «rene» scramblen. Player-rettet copy lever i kode (`MODE_GUIDE`), ikke DB — `formats.rules_summary` er NULL og faller tilbake hit, så ingen migrasjon trengs.
+
+#### Notes
+- Skannet alle 22 formater: Ambrose/Texas var det eneste paret med identisk player-summary. De øvrige er distinkte og golf-faktaene leser riktig. Ingen massiv copy-overhaling (jf. issuets opprinnelige bekymring).
+
+</details>
+
 ### [1.105.3] - 2026-06-08 · #516
 
 > Format-kortene sier nå «Vis regler» når de er lukket og «Skjul regler» når de er åpne, med en ren pil i stedet for det lille rå tegnet. Tydeligere at det ligger mer å lese bak.
