@@ -24,6 +24,9 @@ function makeResult(
   return {
     kind: 'solo_strokeplay',
     players: players.map((p) => ({ ...p, tiedWith: [] })),
+    // Per-hull-data brukes ikke av SoloStrokeplayView (totals-liste) — den
+    // format-bevisste «Hull for hull»-flaten har egen render-test (#496).
+    holes: [],
   };
 }
 

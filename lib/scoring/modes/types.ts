@@ -935,6 +935,31 @@ export interface SoloStrokeplayPlayerLine {
 }
 
 /**
+ * Per-spiller-celle på ett solo-strokeplay-hull. `net` = gross − tildelte slag.
+ * Begge felt er `null` når hullet ikke er spilt (pick-up / ikke tastet) — IKKE
+ * 999-padding-verdien ranking-cascaden bruker internt.
+ */
+export interface SoloStrokeplayHolePlayerCell {
+  userId: string;
+  gross: number | null;
+  net: number | null;
+}
+
+/**
+ * Per-hull-rad for solo strokeplay (epic #496, PR 8). Mater den format-bevisste
+ * «Hull for hull»-flaten (SoloStrokeplayHolesView) og head-to-head-momentum-
+ * strippen. `bestUserIds` = spillerne med lavest netto blant de som spilte
+ * hullet (tom hvis ingen; lengde > 1 ved delt).
+ */
+export interface SoloStrokeplayHoleRow {
+  holeNumber: number;
+  par: number;
+  strokeIndex: number;
+  perPlayer: SoloStrokeplayHolePlayerCell[];
+  bestUserIds: string[];
+}
+
+/**
  * Solo strokeplay-resultat — én rad per spiller. Returnert når
  * `game_mode === 'solo_strokeplay'`. Ingen variant-discriminator;
  * solo er den eneste varianten i v1.
@@ -942,6 +967,8 @@ export interface SoloStrokeplayPlayerLine {
 export interface SoloStrokeplayResult {
   kind: 'solo_strokeplay';
   players: SoloStrokeplayPlayerLine[];
+  /** Per-hull per-spiller-detalj (alle hull, sortert). Epic #496, PR 8. */
+  holes: SoloStrokeplayHoleRow[];
 }
 
 // -----------------------------------------------------------------------------

@@ -473,3 +473,91 @@ describe('soloStrokeplay.compute — extra strokes (HCP-allokering)', () => {
     expect(result.players[0].totalNetStrokes).toBe(9); // 4 + 5
   });
 });
+
+// -----------------------------------------------------------------------------
+// Per-hull-eksponering (epic #496, PR 8). `result.holes` mater den format-
+// bevisste «Hull for hull»-flaten (SoloStrokeplayHolesView) og H2H-momentum-
+// strippen. Additivt felt — eksisterende cases over forblir grønne.
+// -----------------------------------------------------------------------------
+describe('soloStrokeplay.compute — per-hull holes-eksponering (#496)', () => {
+  function solo(userId: string, courseHandicap = 0): ScoringPlayer {
+    return { userId, teamNumber: null, flightNumber: null, courseHandicap };
+  }
+
+  it('eksponerer sorterte hull-rader med par + strokeIndex', () => {
+    const ctx = makeCtx({
+      players: [solo('u1'), solo('u2')],
+      holes: par4Holes(18),
+      scores: [
+        ...Array.from({ length: 18 }, (_, i) => ({
+          userId: 'u1',
+          holeNumber: i + 1,
+          gross: 4,
+        })),
+        ...Array.from({ length: 18 }, (_, i) => ({
+          userId: 'u2',
+          holeNumber: i + 1,
+          gross: 5,
+        })),
+      ],
+    });
+    const result = compute(ctx);
+    expect(result.holes).toHaveLength(18);
+    expect(result.holes.map((h) => h.holeNumber)).toEqual(
+      Array.from({ length: 18 }, (_, i) => i + 1),
+    );
+    expect(result.holes[0].par).toBe(4);
+    expect(result.holes[0].strokeIndex).toBe(1);
+  });
+
+  it('perPlayer har gross + net; netto trekker fra tildelte slag', () => {
+    // u1 hcp 18 → 1 slag på hvert hull (SI 1-18). gross 5 → net 4.
+    const ctx = makeCtx({
+      players: [solo('u1', 18), solo('u2', 0)],
+      holes: par4Holes(18),
+      scores: [
+        { userId: 'u1', holeNumber: 1, gross: 5 },
+        { userId: 'u2', holeNumber: 1, gross: 4 },
+      ],
+    });
+    const result = compute(ctx);
+    const hole1 = result.holes[0];
+    const u1 = hole1.perPlayer.find((c) => c.userId === 'u1')!;
+    const u2 = hole1.perPlayer.find((c) => c.userId === 'u2')!;
+    expect(u1.gross).toBe(5);
+    expect(u1.net).toBe(4); // 5 − 1 tildelt slag
+    expect(u2.gross).toBe(4);
+    expect(u2.net).toBe(4); // hcp 0 → ingen slag
+  });
+
+  it('bestUserIds = lavest net; én vinner, delt ved lik, tom ved uspilt', () => {
+    const ctx = makeCtx({
+      players: [solo('u1'), solo('u2')],
+      holes: par4Holes(18),
+      scores: [
+        { userId: 'u1', holeNumber: 1, gross: 4 }, // u1 vinner hull 1
+        { userId: 'u2', holeNumber: 1, gross: 5 },
+        { userId: 'u1', holeNumber: 2, gross: 4 }, // delt hull 2
+        { userId: 'u2', holeNumber: 2, gross: 4 },
+        // hull 3: ingen score
+      ],
+    });
+    const result = compute(ctx);
+    expect(result.holes[0].bestUserIds).toEqual(['u1']);
+    expect([...result.holes[1].bestUserIds].sort()).toEqual(['u1', 'u2']);
+    expect(result.holes[2].bestUserIds).toEqual([]);
+  });
+
+  it('uspilt hull gir null net/gross (ikke 999-padding-verdien)', () => {
+    const ctx = makeCtx({
+      players: [solo('u1'), solo('u2')],
+      holes: par4Holes(18),
+      scores: [{ userId: 'u1', holeNumber: 1, gross: 4 }],
+    });
+    const result = compute(ctx);
+    const u2 = result.holes[0].perPlayer.find((c) => c.userId === 'u2')!;
+    expect(u2.gross).toBeNull();
+    expect(u2.net).toBeNull();
+    expect(result.holes[0].bestUserIds).toEqual(['u1']);
+  });
+});

@@ -15,6 +15,8 @@ import { rankTeams } from '../tiebreaker';
 import type {
   ScoringContext,
   ScoringHole,
+  ScoringPlayer,
+  SoloStrokeplayHoleRow,
   SoloStrokeplayResult,
   SoloStrokeplayPlayerLine,
 } from './types';
@@ -102,6 +104,47 @@ function padTo18(perHoleNet: number[]): number[] {
 }
 
 /**
+ * Bygger per-hull-radene som mater «Hull for hull»-flaten (epic #496, PR 8).
+ * Til forskjell fra ranking-arrayet eksponeres `net`/`gross` som `null` på
+ * uspilte hull (ikke 999-padding). `bestUserIds` = lavest netto blant de som
+ * faktisk spilte hullet — tom hvis ingen, lengde > 1 ved delt. Ren funksjon av
+ * samme `grossByKey` som rankingen, så de kan aldri divergere.
+ */
+function computeHoleRows(
+  holesSorted: ScoringHole[],
+  players: ScoringPlayer[],
+  grossByKey: Map<string, number | null>,
+): SoloStrokeplayHoleRow[] {
+  return holesSorted.map((hole) => {
+    const perPlayer = players.map((p) => {
+      const gross = grossByKey.get(`${p.userId}#${hole.number}`) ?? null;
+      const net =
+        gross === null
+          ? null
+          : gross - strokesForHole(p.courseHandicap, hole.strokeIndex);
+      return { userId: p.userId, gross, net };
+    });
+
+    const played = perPlayer.filter(
+      (c): c is { userId: string; gross: number; net: number } => c.net !== null,
+    );
+    let bestUserIds: string[] = [];
+    if (played.length > 0) {
+      const min = Math.min(...played.map((c) => c.net));
+      bestUserIds = played.filter((c) => c.net === min).map((c) => c.userId);
+    }
+
+    return {
+      holeNumber: hole.number,
+      par: hole.par,
+      strokeIndex: hole.strokeIndex,
+      perPlayer,
+      bestUserIds,
+    };
+  });
+}
+
+/**
  * Beregner solo strokeplay-leaderboard fra en ScoringContext. Bruker
  * `strokesForHole` for HCP-allokering og `rankTeams` for 5-tier tie-break-
  * cascaden (lavest vinner). Returnerer én rad per spiller, sortert lavest
@@ -144,5 +187,7 @@ export function compute(ctx: ScoringContext): SoloStrokeplayResult {
     };
   });
 
-  return { kind: 'solo_strokeplay', players };
+  const holes = computeHoleRows(holesSorted, ctx.players, grossByKey);
+
+  return { kind: 'solo_strokeplay', players, holes };
 }
