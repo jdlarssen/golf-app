@@ -120,30 +120,24 @@ function defaultProps(
 }
 
 describe('WolfHolesView', () => {
-  it('rendrer per-hull med Wolf, valg, utfall, innsats, per-spiller side/score og poeng', () => {
+  // Fokus: WolfHolesView sitt bidrag OVER WolfView sin PER HULL — per-spiller
+  // side + score + poeng + innsats. Choice/outcome-labelene er delte
+  // (lib/wolf/holeLabels) og dekkes av WolfView.test, så vi re-asserter dem ikke.
+  it('rendrer per-hull med per-spiller side, score og poeng', () => {
     render(<WolfHolesView {...defaultProps()} />);
 
     const list = screen.getByTestId('wolf-holes-list');
     // Direkte barn = hull-kortene (per-spiller-radene er nested <li>).
     expect(list.children).toHaveLength(2);
 
-    // Hull 1: Wolf = Alice, partner-valg (Bjørn), Wolf-siden vant.
+    // Hull 1: sidene + netto/brutto + poeng vises (det WolfView mangler).
     const card1 = screen.getByTestId('wolf-holes-card-1');
-    expect(card1.textContent).toContain('Hull 1');
-    expect(card1.textContent).toContain('Alice Andersen');
-    expect(card1.textContent).toContain('Partner:');
-    expect(card1.textContent).toContain('Bjørnen');
-    expect(card1.textContent).toContain('Wolf vant');
-    // Sider vises (det WolfView mangler).
     expect(card1.textContent).toContain('Wolf-side');
     expect(card1.textContent).toContain('Andre');
-    // Poeng + netto/brutto-skillet (Alice fikk et slag).
-    expect(card1.textContent).toContain('+2');
-    expect(card1.textContent).toContain('brutto 5');
+    expect(card1.textContent).toContain('brutto 5'); // Alice fikk et slag → netto 4
+    expect(card1.textContent).toContain('+2'); // poeng til Wolf-siden
 
-    // Hull 2: Lone Wolf, innsats 2x.
-    const card2 = screen.getByTestId('wolf-holes-card-2');
-    expect(card2.textContent).toContain('Lone Wolf');
-    expect(card2.textContent).toContain('2x');
+    // Hull 2: innsats-carry vises.
+    expect(screen.getByTestId('wolf-holes-card-2').textContent).toContain('2x');
   });
 });
