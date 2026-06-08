@@ -21,6 +21,17 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#496](https://github.com/jdlarssen/golf-app/issues/496). Format-bevisst «Hull for hull» fullføres — solo og modifisert stableford får sitt eget poeng-scorekort, og 1-mot-1-spill får et duell-oppgjør. PR 9 (siste) av epicen.
 
+### [1.103.1] - 2026-06-08 · #496
+
+> I en modifisert stableford-duell med minuspoeng leste dommen «vant duellen 4--3» — to streker klistret sammen. Nå står det «vant duellen 4 mot −3», så taperens minuspoeng leser rent.
+
+<details>
+<summary>Teknisk</summary>
+
+Fant under en visuell gjennomgang av epic #496. `HeadToHeadResult`-dommen brukte en-dash-separator (`4–−3`) som kolliderte visuelt med en negativ taper-score. Når en av scorene er negativ (kun modifisert stableford kan det) formatteres tallene nå med ekte minus (U+2212) og separatoren bytter til « mot ». Positive format (Skins/Nassau/BBB/slagspill) beholder den kompakte «5–3» — uendret. Låst med en assertion i det eksisterende negativ-score-caset.
+
+</details>
+
 ### [1.103.0] - 2026-06-08 · #496
 
 > Etter en stableford-runde viser «Hull for hull» nå poeng per spiller hull for hull, med stillingen øverst og hvem som tok flest poeng på hvert hull. Det gjelder både vanlig og modifisert stableford (der dårlige hull gir minuspoeng). Var dere bare to, møter du en duell i stedet for podium når runden er ferdig. Med dette ser alle spillemodi nå riktig «Hull for hull» — ikke lenger et lag-scorekort for spill dere egentlig spilte hver for dere.

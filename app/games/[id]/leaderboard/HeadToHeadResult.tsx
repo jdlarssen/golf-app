@@ -132,13 +132,19 @@ export function HeadToHeadResult({
   const winnerName = winner === 'a' ? nameA : nameB;
   const winnerScore = winner === 'a' ? sideA.score : sideB.score;
   const loserScore = winner === 'a' ? sideB.score : sideA.score;
+  // Negative scorer (modifisert stableford bruker netto-poeng der par = 0)
+  // formatteres med ekte minus, og separatoren bytter fra en-dash til « mot »
+  // så «4–−3» ikke kolliderer visuelt til «4--3». Positive format (Skins/
+  // Nassau/BBB/slagspill) beholder den kompakte «5–3».
+  const fmtScore = (n: number) => (n < 0 ? `−${Math.abs(n)}` : String(n));
+  const sep = sideA.score < 0 || sideB.score < 0 ? ' mot ' : '–';
   const verdict =
     winner === 'tie'
-      ? `Uavgjort ${sideA.score}–${sideB.score}.`
+      ? `Uavgjort ${fmtScore(sideA.score)}${sep}${fmtScore(sideB.score)}.`
       : sideA.score === sideB.score
         ? // Lik score, men avgjort på tiebreak (f.eks. flest vunne hull).
           `${winnerName} vant.`
-        : `${winnerName} vant duellen ${winnerScore}–${loserScore}.`;
+        : `${winnerName} vant duellen ${fmtScore(winnerScore)}${sep}${fmtScore(loserScore)}.`;
 
   return (
     <AppShell>

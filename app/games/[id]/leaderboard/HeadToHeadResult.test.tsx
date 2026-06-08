@@ -137,6 +137,11 @@ describe('HeadToHeadResult', () => {
     expect(widthB.startsWith('-')).toBe(false);
     // Vinner-siden (A, +2) får den største andelen.
     expect(parseInt(widthA, 10)).toBeGreaterThanOrEqual(parseInt(widthB, 10));
-    expect(screen.getByTestId('h2h-verdict').textContent).toContain('Jørgen Larsen');
+    // Dommen formatterer den negative scoren med ekte minus og « mot »-
+    // separator, så den ikke kolliderer til «2--3».
+    const verdict = screen.getByTestId('h2h-verdict').textContent ?? '';
+    expect(verdict).toContain('Jørgen Larsen');
+    expect(verdict).toContain('2 mot −3');
+    expect(verdict).not.toContain('2--3');
   });
 });
