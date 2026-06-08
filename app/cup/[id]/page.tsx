@@ -3,6 +3,7 @@ import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
+import { getServerClient } from '@/lib/supabase/server';
 import { getCupSnapshot } from '@/lib/cup/getCupSnapshot';
 
 type Params = Promise<{ id: string }>;
@@ -17,7 +18,43 @@ export default async function PublicCupPage({ params }: { params: Params }) {
   const snapshot = await getCupSnapshot(id);
   if (!snapshot) notFound();
 
-  const { tournament, leaderboard } = snapshot;
+  const { tournament, leaderboard, roster } = snapshot;
+
+  // #524: en klubb-scopet cup er kun synlig for klubbens medlemmer, deltakerne
+  // og global admin. Snapshot-en bruker admin-client (RLS-bypass), så denne
+  // gaten — ikke RLS — er det som skjuler klubb-cuper på den lenke-delbare siden.
+  if (tournament.group_id) {
+    let currentUserId = userId;
+    if (!currentUserId) {
+      const supabase = await getServerClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      currentUserId = user?.id ?? null;
+    }
+    const isParticipant =
+      currentUserId !== null &&
+      [...roster.team1, ...roster.team2].some((p) => p.userId === currentUserId);
+    let allowed = isParticipant;
+    if (!allowed && currentUserId) {
+      const supabase = await getServerClient();
+      const [{ data: membership }, { data: profile }] = await Promise.all([
+        supabase
+          .from('group_members')
+          .select('user_id')
+          .eq('group_id', tournament.group_id)
+          .eq('user_id', currentUserId)
+          .maybeSingle(),
+        supabase
+          .from('users')
+          .select('is_admin')
+          .eq('id', currentUserId)
+          .maybeSingle(),
+      ]);
+      allowed = membership !== null || profile?.is_admin === true;
+    }
+    if (!allowed) notFound();
+  }
 
   const winnerName =
     leaderboard.winner === 1

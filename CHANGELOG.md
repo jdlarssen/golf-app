@@ -17,7 +17,34 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.105.y — Hjem · finn turneringer øverst
+## 1.106.y — Klubb-cup
+
+Issue [#524](https://github.com/jdlarssen/golf-app/issues/524). Klubb-cup speiler klubb-ligaen: en klubb-eier/-admin oppretter og styrer en lag-mot-lag-cup fra klubb-rommet, lagene hentes fra medlemmene, og medlemmer ser klubbens cuper på klubb-siden.
+
+### [1.106.0] - 2026-06-08 · #524
+
+> Klubben din kan nå kjøre sin egen cup. Du som er klubb-admin setter den opp, plukker lagene fra medlemmene og styrer hele runden fra klubb-siden. Resten av klubben ser cupene samme sted.
+
+<details>
+<summary>Teknisk</summary>
+
+[#524](https://github.com/jdlarssen/golf-app/issues/524). Klubb-scopet cup (Fase 2 av epos #480), speiler klubb-liga (#480/#483/#485).
+
+#### Added
+- Migrasjon `0089_tournaments_group_scoping.sql`: `tournaments.group_id` + scoped SELECT-RLS + ny admin/klubb-admin WRITE-policy (mal: `leagues` 0083). WRITE-policyen fikser samtidig en latent bug — `tournaments` hadde RLS på uten write-policy, så cup-oppretting via request-scoped klient ble nektet (`42501`), og prod-tabellen var tom. Verifisert med live RLS-probe.
+- Nye klubb-ruter i klubb-chrome: `/klubber/[id]/cup/ny` (opprett), `/klubber/[id]/cup/[cupId]` (styring), `.../generer` (kamper) og `.../slett` — klubb-admin kjører hele cup-kjeden uten admin-chrome.
+- `requireAdminOrClubAdminOfCup`-gate; delte server-komponenter `CupManagement` / `GenerateMatches` / `CupDeleteConfirm` med `variant: 'admin' | 'club'` (admin-rutene ble tynne wrappere). `ClubCupsSection` på klubb-siden.
+
+#### Changed
+- `createTournamentDraft` + `start`/`finish`/`update`/`deleteTournament` er klubb-bevisste (gate via cupens `group_id`, lagrer `group_id`, kontekst-redirects via felles `cupRedirectBase`). Match-genereringen henter kun klubbmedlemmer for klubb-cup, avviser ikke-medlemmer, og stempler `group_id` på match-spillene.
+- Offentlig `/cup/[id]` gates til medlemmer/deltakere/global-admin for klubb-scopede cuper (snapshot bruker admin-client, så app-lag-gaten skjuler dem — speiler `/liga/[id]`).
+
+</details>
+
+## Tidligere versjoner
+
+<details>
+<summary><strong>1.105.y — Hjem · finn turneringer øverst (5 oppføringer)</strong></summary>
 
 Issue [#500](https://github.com/jdlarssen/golf-app/issues/500). Hjem-sida speiler kjerneflyten: oppdag og bli med i turneringer rett under egne spill, og det rolige format-oppslagsverket flytter til Klubbhuset.
 
@@ -97,7 +124,7 @@ Issue [#500](https://github.com/jdlarssen/golf-app/issues/500). Hjem-sida speile
 
 </details>
 
-## Tidligere versjoner
+</details>
 
 <details>
 <summary><strong>1.104.y — Veiviser · kompakte format-kort (2 oppføringer)</strong></summary>

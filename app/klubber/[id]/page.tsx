@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/Input';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { CopyJoinLinkButton } from './CopyJoinLinkButton';
 import { ClubLeaguesSection } from './ClubLeaguesSection';
+import { ClubCupsSection } from './ClubCupsSection';
 import { isClubExpired } from '@/lib/clubs/clubStatus';
 import { addMember, decideRequest } from './actions';
 
@@ -73,6 +74,14 @@ export default async function KlubbDetailPage({
   // klubb-scopede rader; oppretting/styring er klubb-admin (knapp nedenfor).
   const { data: clubLeagues } = await supabase
     .from('leagues')
+    .select('id, name, status')
+    .eq('group_id', id)
+    .order('created_at', { ascending: false });
+
+  // #524: klubbens cuper. RLS («tournaments select scoped») lar medlemmer se
+  // klubb-scopede rader; oppretting/styring er klubb-admin (knapp nedenfor).
+  const { data: clubCups } = await supabase
+    .from('tournaments')
     .select('id, name, status')
     .eq('group_id', id)
     .order('created_at', { ascending: false });
@@ -271,6 +280,14 @@ export default async function KlubbDetailPage({
       {/* Klubbens ligaer (#480) — alle medlemmer ser lista; owner/admin oppretter. */}
       <ClubLeaguesSection
         leagues={clubLeagues ?? []}
+        clubId={club.id}
+        canCreate={isAdmin && !frozen}
+        canManage={isAdmin}
+      />
+
+      {/* Klubbens cuper (#524) — alle medlemmer ser lista; owner/admin oppretter. */}
+      <ClubCupsSection
+        cups={clubCups ?? []}
         clubId={club.id}
         canCreate={isAdmin && !frozen}
         canManage={isAdmin}
