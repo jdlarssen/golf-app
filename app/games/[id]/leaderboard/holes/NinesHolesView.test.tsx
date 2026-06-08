@@ -130,9 +130,12 @@ describe('NinesHolesView', () => {
     expect(card2Rows[2].textContent).toContain('Alice Andersen');
 
     // Hull 3 (pending): ingen pott, venter-status, manglende score som «–».
+    // Selv om Alice har tastet (4) og de andre ikke har det, skal et pending
+    // hull ikke kåre en for tidlig leder — ingen accent-utheving / plassering.
     const card3 = screen.getByTestId('nines-holes-card-3');
     expect(card3.textContent).toContain('Venter på score');
     expect(card3.textContent).not.toContain('9 poeng');
     expect(card3.textContent).toContain('–');
+    expect(card3.querySelector('[class*="border-accent"]')).toBeNull();
   });
 });

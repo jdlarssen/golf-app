@@ -146,6 +146,11 @@ function Header({ gameName, gameId }: { gameName: string; gameId: string }) {
  * plassert.
  */
 function placementByPlayer(hole: NinesHoleRow): Map<string, number> {
+  // Pending hull deler ikke ut poeng (uavhengig per hull), så ingen spiller
+  // plasseres — heller ikke en som tilfeldigvis har tastet før de andre.
+  // Ellers ville et delvis scoret hull kåre en for tidlig leder.
+  if (hole.pending) return new Map();
+
   const ranked = hole.perPlayer
     .filter((c) => c.effectiveScore != null)
     .sort((a, b) => (a.effectiveScore as number) - (b.effectiveScore as number));

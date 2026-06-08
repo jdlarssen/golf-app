@@ -21,6 +21,17 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#496](https://github.com/jdlarssen/golf-app/issues/496). Format-bevisst «Hull for hull» fortsetter — Nines / Split Sixes får sin egen per-hull-flate. PR 3 av epicen.
 
+### [1.97.1] - 2026-06-08 · #496
+
+> Et Nines-hull der ikke alle har scoret ennå utroper ikke lenger en for tidlig leder i «Hull for hull». Plasseringen vises først når alle tre har levert på hullet.
+
+<details>
+<summary>Teknisk</summary>
+
+[#496](https://github.com/jdlarssen/golf-app/issues/496) Oppfølging fra skeptisk eval av PR 3. `NinesHolesView.placementByPlayer` rangerte på `effectiveScore != null` uten å sjekke `hole.pending`, så et delvis scoret hull ga den som hadde tastet et plasserings-merke + accent-utheving. Nå returnerer den tom map for pending hull (ingen plassering før potten faktisk deles ut). Type C-testen styrket med en assertion om at pending-kortet ikke har accent-utheving.
+
+</details>
+
 ### [1.97.0] - 2026-06-08 · #496
 
 > Etter en Nines-runde viser «Hull for hull» nå hvem som tok hvert hull og hvor mange poeng hver spiller fikk. Lavest score henter mest, og spiller dere likt deler dere poengene. Før så det ut som et lag-scorekort, selv om dere spilte hver for dere.
