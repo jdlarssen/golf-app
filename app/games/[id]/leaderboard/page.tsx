@@ -114,6 +114,7 @@ import { buildWolfContext } from '@/lib/scoring/context/buildWolfContext';
 import { buildNinesContext } from '@/lib/scoring/context/buildNinesContext';
 import { buildRoundRobinContext } from '@/lib/scoring/context/buildRoundRobinContext';
 import { buildAceyDeuceyContext } from '@/lib/scoring/context/buildAceyDeuceyContext';
+import { buildBingoBangoBongoContext } from '@/lib/scoring/context/buildBingoBangoBongoContext';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -2599,43 +2600,17 @@ async function renderBingoBangoBongo(opts: {
   // mutasjons-action revaliderer den ved hver endring.
   const bingoBangoBongoHoles = await getBingoBangoBongoHoles(gameId);
 
-  const ctx = {
-    game: {
-      id: gameId,
-      game_mode: 'bingo_bango_bongo' as const,
-      mode_config: game.mode_config,
-    },
-    players: gwp.players
-      .filter((p) => p.users != null)
-      .map((p) => ({
-        userId: p.user_id,
-        // BBB-validatoren setter team_number = null (solo/individuell), men
-        // DB-kolonnen er ikke nullable så den lander som 0. Sender null oppover
-        // for shape-konsistens — scoring-laget ignorerer teamNumber for BBB.
-        teamNumber: null,
-        flightNumber: null,
-        courseHandicap: p.course_handicap ?? 0,
-        // BBB bruker ikke handicap til poeng-beregning, men sender teeGender
-        // gjennom for shape-konsistens.
-        teeGender: p.tee_gender,
-      })),
-    holes: rawHolesRows.map((h) => ({
-      number: h.hole_number,
-      par: h.par_mens,
-      parByGender: {
-        mens: h.par_mens,
-        ladies: h.par_ladies,
-        juniors: h.par_juniors,
-      },
-      strokeIndex: h.stroke_index,
-    })),
-    scores: rawScoresRows.map((s) => ({
-      userId: s.user_id,
-      holeNumber: s.hole_number,
-      gross: s.strokes,
-    })),
+  // Bygges via den delte `buildBingoBangoBongoContext`-helperen (epic #496) slik
+  // at både leaderboard-flaten og «Hull for hull»-flaten bygger konteksten likt
+  // fra samme kilde — ingen duplisert ctx-map.
+  const ctx = buildBingoBangoBongoContext({
+    gameId,
+    modeConfig: game.mode_config,
+    players: gwp.players,
+    holesRows: rawHolesRows,
+    scoresRows: rawScoresRows,
     bingoBangoBongoHoles,
-  };
+  });
 
   const result = computeModeResult(ctx);
   // Type-guard mot mode-router-output. Hvis routeren returnerer feil shape
