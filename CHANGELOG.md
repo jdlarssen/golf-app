@@ -21,6 +21,20 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#500](https://github.com/jdlarssen/golf-app/issues/500). Hjem-sida speiler kjerneflyten: oppdag og bli med i turneringer rett under egne spill, og det rolige format-oppslagsverket flytter til Klubbhuset.
 
+### [1.105.3] - 2026-06-08 · #516
+
+> Format-kortene sier nå «Vis regler» når de er lukket og «Skjul regler» når de er åpne, med en ren pil i stedet for det lille rå tegnet. Tydeligere at det ligger mer å lese bak.
+
+<details>
+<summary>Teknisk</summary>
+
+[#516](https://github.com/jdlarssen/golf-app/issues/516). Tydeligere mer-info-affordanse på `ModeGuideCard`.
+
+#### Changed
+- `components/ModeGuideCard.tsx`: erstattet «Slik funker det» + rotert `⌄`-glyf med et ekte chevron-SVG (samme stroke-stil som `SettingRow`, `viewBox 0 0 24 24`, path `m6 9 6 6 6-6`) og en CSS-styrt tekst-veksling «Vis regler» (lukket) ↔ «Skjul regler» (åpen) via `group-open:hidden` / `hidden group-open:inline`. Fortsatt ren `<details>`/`<summary>` uten JS; `motion-reduce:transition-none` beholdt så rotasjonen ikke animeres når bevegelse er av.
+
+</details>
+
 ### [1.105.2] - 2026-06-08 · #520
 
 > «Finn turneringer» får samme rolige velkomst som Hjem når lista er tom: et flagg-ikon, en sentrert hilsen og et lite sitat, med «Fyr opp din egen turnering»-knappen midt i bildet. Mindre tom skjerm, mer invitasjon.

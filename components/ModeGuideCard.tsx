@@ -70,14 +70,21 @@ export function ModeGuideCard({
             )}
           </div>
           <p className="mt-1 text-sm text-muted">{summary}</p>
-          <span className="mt-2 inline-block text-xs font-medium text-primary">
-            Slik funker det
-            <span
-              aria-hidden
-              className="ml-1 inline-block transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
+          <span className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary">
+            <span className="group-open:hidden">Vis regler</span>
+            <span className="hidden group-open:inline">Skjul regler</span>
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="h-3.5 w-3.5 shrink-0 transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              ⌄
-            </span>
+              <path d="m6 9 6 6 6-6" />
+            </svg>
           </span>
         </div>
       </summary>
