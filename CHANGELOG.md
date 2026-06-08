@@ -21,6 +21,20 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#500](https://github.com/jdlarssen/golf-app/issues/500). Hjem-sida speiler kjerneflyten: oppdag og bli med i turneringer rett under egne spill, og det rolige format-oppslagsverket flytter til Klubbhuset.
 
+### [1.105.1] - 2026-06-08 · #518
+
+> Før var «Finn turneringer» en blindvei når lista var tom. Nå får du en knapp rett der som fyrer opp din egen turnering, så du slipper å vente på at noen andre inviterer deg.
+
+<details>
+<summary>Teknisk</summary>
+
+[#518](https://github.com/jdlarssen/golf-app/issues/518). Oppfølger til #500.
+
+#### Changed
+- `app/finn-turneringer/page.tsx`: tom-tilstanden (`isEmpty`) er reframet fra «be en arrangør om en invitasjon, eller stikk innom igjen senere» til «du trenger ikke vente på en invitasjon for å spille», og får en primær `LinkButton` → `/opprett-spill` («Fyr opp din egen turnering»). Alle innloggede kan opprette spill siden #427, så den gamle vent-på-invitasjon-teksten var en feilaktig blindvei. Hjem sin egen ingen-spill-tilstand (router til Klubbhuset) er uendret.
+
+</details>
+
 ### [1.105.0] - 2026-06-08 · #500
 
 > Hjem viser nå «Finn turneringer» rett under spillene dine i stedet for nederst, fordi det å finne en runde å bli med i er det viktigste herfra. Den gamle format-guide-snarveien og «Mer kommer her snart» er borte; vil du lese deg opp på spillformatene ligger de nå som en egen flate i Klubbhuset.

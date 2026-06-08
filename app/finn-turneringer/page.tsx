@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { AppShell } from '@/components/ui/AppShell';
 import { BackLink } from '@/components/ui/BackLink';
+import { LinkButton } from '@/components/ui/Button';
 import { Kicker } from '@/components/ui/Kicker';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
@@ -49,10 +50,17 @@ export default async function FinnTurneringerPage() {
       />
 
       {isEmpty ? (
-        <p className="mt-6 font-sans text-sm leading-relaxed text-muted">
-          Ingen åpne turneringer akkurat nå. Be en arrangør om en invitasjon,
-          eller stikk innom igjen senere.
-        </p>
+        <div className="mt-6">
+          <p className="font-sans text-sm leading-relaxed text-muted">
+            Ingen åpne turneringer akkurat nå. Men du trenger ikke vente på en
+            invitasjon for å spille.
+          </p>
+          <div className="mt-6 max-w-[280px]">
+            <LinkButton href="/opprett-spill" full>
+              Fyr opp din egen turnering
+            </LinkButton>
+          </div>
+        </div>
       ) : (
         <HomeDiscoverySection data={data} />
       )}
