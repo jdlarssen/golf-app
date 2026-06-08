@@ -32,6 +32,39 @@ vi.mock('@/lib/supabase/server', () => ({
   getServerClient: async () => supabaseMock,
 }));
 
+// #524: the gate (requireAdminOrClubAdminOfCup) + member-guardrail use the admin
+// client. Default group_id=null → frittstående (gate falls to requireAdmin on the
+// request-scoped mock, unchanged). Set adminCupGroupId to exercise the club path.
+let adminCupGroupId: string | null = null;
+let adminMemberIds: string[] = [];
+vi.mock('@/lib/supabase/admin', () => ({
+  getAdminClient: () => ({
+    from: (table: string) => {
+      if (table === 'group_members') {
+        return {
+          select: () => ({
+            eq: async () => ({
+              data: adminMemberIds.map((id) => ({ user_id: id })),
+              error: null,
+            }),
+          }),
+        };
+      }
+      // tournaments group_id lookup (gate)
+      return {
+        select: () => ({
+          eq: () => ({
+            maybeSingle: async () => ({
+              data: { group_id: adminCupGroupId },
+              error: null,
+            }),
+          }),
+        }),
+      };
+    },
+  }),
+}));
+
 function setUser(id: string | null) {
   (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
     data: { user: id ? { id, email: `${id}@x.no` } : null },
@@ -77,6 +110,8 @@ const draftCup = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  adminCupGroupId = null;
+  adminMemberIds = [];
 });
 
 describe('createCupMatchesFromPlan — authz', () => {
@@ -250,5 +285,61 @@ describe('createCupMatchesFromPlan — happy path', () => {
     expect(b3IsTeam2.team_number).toBe(2);
     // A3 is female in match 2 (singles); first match has A1/A2/B1/B2 all male
     expect(a1.tee_gender).toBe('mens');
+  });
+});
+
+describe('createCupMatchesFromPlan — klubb-cup (#524)', () => {
+  const genderRows = [
+    { id: 'A1', gender: 'male' },
+    { id: 'A2', gender: 'male' },
+    { id: 'A3', gender: 'female' },
+    { id: 'B1', gender: 'male' },
+    { id: 'B2', gender: 'male' },
+    { id: 'B3', gender: 'male' },
+  ];
+
+  it('club cup, all players members: games get group_id + redirects to klubb-route', async () => {
+    adminCupGroupId = 'club-1';
+    adminMemberIds = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3'];
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: { ...draftCup, group_id: 'club-1' }, error: null },
+      { data: genderRows, error: null },
+      { data: { id: 'game-1' }, error: null },
+      { data: null, error: null },
+      { data: { id: 'game-2' }, error: null },
+      { data: null, error: null },
+    ]);
+    setUser('admin-1');
+    const { createCupMatchesFromPlan } = await import('./actions');
+    await expect(createCupMatchesFromPlan(baseInput())).rejects.toBeInstanceOf(
+      RedirectError,
+    );
+    expect(lastRedirect()).toBe(
+      '/klubber/club-1/cup/cup-1?status=matches_generated',
+    );
+    const firstGame = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'insert',
+    )!.args[0] as Record<string, unknown>;
+    expect(firstGame.group_id).toBe('club-1');
+  });
+
+  it('club cup, a player is not a member: returns { error: not_members } without inserting', async () => {
+    adminCupGroupId = 'club-1';
+    adminMemberIds = ['A1', 'A2', 'A3', 'B1', 'B2']; // B3 mangler
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true }, error: null },
+      { data: { ...draftCup, group_id: 'club-1' }, error: null },
+    ]);
+    setUser('admin-1');
+    const { createCupMatchesFromPlan } = await import('./actions');
+    expect(await createCupMatchesFromPlan(baseInput())).toEqual({
+      error: 'not_members',
+    });
+    expect(
+      supabaseMock.__fromCalls.some(
+        (c) => c.table === 'games' && c.method === 'insert',
+      ),
+    ).toBe(false);
   });
 });

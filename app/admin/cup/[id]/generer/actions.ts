@@ -3,7 +3,8 @@
 import { redirect } from 'next/navigation';
 import { revalidateTag, revalidatePath } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
-import { requireAdmin } from '@/lib/admin/auth';
+import { getAdminClient } from '@/lib/supabase/admin';
+import { requireAdminOrClubAdminOfCup } from '@/lib/admin/auth';
 import type { GameModeConfig } from '@/lib/scoring/modes/types';
 import type { CupSessionFormat } from '@/lib/cup/cupTemplates';
 import type { PlannedMatch } from '@/lib/cup/cupPairing';
@@ -73,18 +74,37 @@ export async function createCupMatchesFromPlan(
   const { tournamentId, courseId, teeBoxId, matches } = input;
 
   const supabase = await getServerClient();
-  const { userId } = await requireAdmin(supabase);
+  // #524: klubb-cup styres av klubb-admin (eller global admin); frittstående av
+  // global admin. Gaten slår opp cupens group_id; RLS (0089) er backstop.
+  const { userId } = await requireAdminOrClubAdminOfCup(supabase, tournamentId);
 
   if (!courseId || !teeBoxId) return { error: 'missing_course' };
   if (!matches || matches.length === 0) return { error: 'no_matches' };
 
   const { data: cup, error: cupErr } = await supabase
     .from('tournaments')
-    .select('name, status, fourball_allowance_pct, foursomes_allowance_pct')
+    .select('name, status, group_id, fourball_allowance_pct, foursomes_allowance_pct')
     .eq('id', tournamentId)
     .maybeSingle();
   if (cupErr || !cup) return { error: 'not_found' };
   if (cup.status !== 'draft') return { error: 'not_draft' };
+
+  // Klubb-cup: matchene skal binde cupen til klubben (group_id på games) og kun
+  // inneholde klubbmedlemmer. Pickeren tilbyr bare medlemmer, så en ikke-medlem
+  // her betyr manipulert payload → avvis (guardrail, RLS på games er creator-
+  // basert og fanger ikke dette).
+  const groupId = (cup.group_id as string | null) ?? null;
+  if (groupId) {
+    const { data: memberRows } = await getAdminClient()
+      .from('group_members')
+      .select('user_id')
+      .eq('group_id', groupId);
+    const memberIds = new Set((memberRows ?? []).map((m) => m.user_id as string));
+    const allInClub = matches.every((m) =>
+      [...m.side1, ...m.side2].every((uid) => memberIds.has(uid)),
+    );
+    if (!allInClub) return { error: 'not_members' };
+  }
 
   const fourballPct =
     (cup.fourball_allowance_pct as number | null) ?? DEFAULT_FOURBALL_ALLOWANCE;
@@ -123,6 +143,9 @@ export async function createCupMatchesFromPlan(
         created_by: userId,
         tournament_id: tournamentId,
         tournament_match_label: match.label.slice(0, MATCH_LABEL_MAX),
+        // Klubb-cup: bind match-spillet til klubben (data-konsistens). Null for
+        // frittstående. Kolonnen er nullable (0075).
+        group_id: groupId,
       })
       .select('id')
       .single();
@@ -147,6 +170,11 @@ export async function createCupMatchesFromPlan(
 
   revalidateTag(`tournament-${tournamentId}`, 'max');
   revalidatePath(`/admin/cup/${tournamentId}`);
+  if (groupId) revalidatePath(`/klubber/${groupId}/cup/${tournamentId}`);
   revalidatePath(`/cup/${tournamentId}`);
-  redirect(`/admin/cup/${tournamentId}?status=matches_generated`);
+  redirect(
+    groupId
+      ? `/klubber/${groupId}/cup/${tournamentId}?status=matches_generated`
+      : `/admin/cup/${tournamentId}?status=matches_generated`,
+  );
 }

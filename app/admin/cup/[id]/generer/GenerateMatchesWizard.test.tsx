@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { GenerateMatchesWizard } from './GenerateMatchesWizard';
-import type { WizardPlayer, WizardCourse } from './page';
+import type { WizardPlayer, WizardCourse } from './GenerateMatches';
 
 // Én Type C render-test per docs/test-discipline.md — verifiserer at
 // steg 1 (Lag-roster) viser team-navn og spillere. Pairing-logikken

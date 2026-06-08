@@ -18,7 +18,7 @@ import {
   type PairingStrategy,
 } from '@/lib/cup/cupPairing';
 import { createCupMatchesFromPlan } from './actions';
-import type { WizardPlayer, WizardCourse } from './page';
+import type { WizardPlayer, WizardCourse } from './GenerateMatches';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
