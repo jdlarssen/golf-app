@@ -21,6 +21,21 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#525](https://github.com/jdlarssen/golf-app/issues/525). Veiviserens arrangement-valg rydder opp i hvem som ser hva: «Klubb-turnering» er for de som faktisk har en klubb, og den vanlige kompis-runden får plass til en hel turnering.
 
+### [1.107.1] - 2026-06-08 · #525
+
+> Kompis-runden tar nå opptil 24 spillere, ikke bare 16, så en større gjeng får plass uten å måtte være en klubb. Trenger dere flere enn det, er det en klubb-turnering som gjelder.
+
+<details>
+<summary>Teknisk</summary>
+
+[#525](https://github.com/jdlarssen/golf-app/issues/525). Hevet offentlig kompis-tak + oppdatert intent-copy.
+
+#### Changed
+- `app/admin/games/new/GameWizard.tsx`: `PLAYER_COUNT_MAX` hevet fra 16 til 24. Stepperen er kompis-only, så taket gjelder bare den offentlige kompis-veien (klubb går via klubb-roster). `fitsPlayerCount` er urørt — `stableford`/`modified_stableford`/`solo_strokeplay` (`n >= 1`) og slagspill holder format-grid-et fylt på 17–24, mens parti-formatene (Skins/Nassau/BBB ≤16, Wolf ≤5, matchplay-familien eksakt antall) faller ut som ønsket.
+- `lib/wizard/intent.ts`: oppdatert `INTENT_DESCRIPTIONS`. Kompis sier nå «Gjør runden mer spennende, opp til 24 spillere» (var «2–4 venner …», utdatert etter at taket ble 24). Klubb sier «For klubben din, alle medlemmer kan være med» — reflekterer at flisen nå er den klubb-scopede veien. Kjørt gjennom humanizer.
+
+</details>
+
 ### [1.107.0] - 2026-06-08 · #525
 
 > «Klubb-turnering» dukker nå bare opp hvis du faktisk har en klubb å arrangere for. Lager du en runde uten klubb, ser du Kompis-runde og Cup — ikke en fane som likevel ikke fører noe sted.

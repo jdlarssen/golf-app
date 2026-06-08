@@ -1179,11 +1179,12 @@ function PickerSourceEmptyHint({
 // #373: Antall-spiller-velger for Kompis-intent i steg 2. Vises over
 // FormatGrid slik at admin velger antall FØR format. +/−-knapper med
 // ≥44px tap-target. Forest-and-champagne-palett via CSS-variabler.
-// Min 1, maks 16 (rimelig øvre grense for en kompis-runde).
+// Min 1, maks 24 (#525: hevet fra 16 — den offentlige kompis-runden er nå
+// også veien for en større ad-hoc-turnering; over 24 hører klubb-skala til).
 // ──────────────────────────────────────────────────────────────────────
 
 const PLAYER_COUNT_MIN = 1;
-const PLAYER_COUNT_MAX = 16;
+const PLAYER_COUNT_MAX = 24;
 // PLAYER_COUNT_DEFAULT importeres fra useGameFormState (state-eieren) så initial
 // state og picker-fallback aldri kommer ut av sync.
 

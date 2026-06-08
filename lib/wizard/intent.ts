@@ -31,8 +31,8 @@ export const INTENT_LABELS: Record<Intent, string> = {
 };
 
 export const INTENT_DESCRIPTIONS: Record<Intent, string> = {
-  kompis: '2–4 venner som vil gjøre runden mer spennende',
-  klubb: '8+ deltakere, handicap-jevner alle',
+  kompis: 'Gjør runden mer spennende, opp til 24 spillere',
+  klubb: 'For klubben din, alle medlemmer kan være med',
   cup: 'To lag, flere matcher, lag-totalen vinner',
   solo: 'Egen runde, øving eller utforskning',
 };
