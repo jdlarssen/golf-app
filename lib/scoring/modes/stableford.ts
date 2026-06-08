@@ -13,6 +13,7 @@ import type {
   ScoringPlayer,
   StablefordResult,
   StablefordSoloResult,
+  StablefordSoloHoleRow,
   StablefordTeamResult,
   StablefordPlayerLine,
   StablefordPlayerCell,
@@ -170,6 +171,46 @@ export function computeWithPointsTable(
   return computeSolo(ctx, pointsFn);
 }
 
+/**
+ * Bygger per-hull-radene som mater «Hull for hull»-flaten (epic #496, PR 9).
+ * Eksponerer `gross` (null = uspilt) + `points` per spiller, der `points`
+ * kommer fra samme `pointsFn` som rankingen (så standard og modified deler
+ * tabell, og negative modified-poeng eksponeres fritt). `bestUserIds` = HØYEST
+ * poeng blant de som faktisk spilte hullet (`gross !== null`) — så et spilt
+ * 0-poengs-hull ikke forveksles med et uspilt.
+ */
+function computeSoloHoleRows(
+  holesSorted: ScoringHole[],
+  players: ScoringPlayer[],
+  grossByKey: Map<string, number | null>,
+  pointsFn: StablefordPointsFn,
+): StablefordSoloHoleRow[] {
+  return holesSorted.map((hole) => {
+    const perPlayer = players.map((p) => {
+      const gross = grossByKey.get(`${p.userId}#${hole.number}`) ?? null;
+      const netStrokes =
+        gross === null ? null : gross - strokesForHole(p.courseHandicap, hole.strokeIndex);
+      const points = pointsFn({ par: parFor(hole, p.teeGender), netStrokes });
+      return { userId: p.userId, gross, points };
+    });
+
+    const played = perPlayer.filter((c) => c.gross !== null);
+    let bestUserIds: string[] = [];
+    if (played.length > 0) {
+      const max = Math.max(...played.map((c) => c.points));
+      bestUserIds = played.filter((c) => c.points === max).map((c) => c.userId);
+    }
+
+    return {
+      holeNumber: hole.number,
+      par: hole.par,
+      strokeIndex: hole.strokeIndex,
+      perPlayer,
+      bestUserIds,
+    };
+  });
+}
+
 function computeSolo(ctx: ScoringContext, pointsFn: StablefordPointsFn): StablefordSoloResult {
   const holesSorted = [...ctx.holes].sort((a, b) => a.number - b.number);
   const grossByKey = new Map<string, number | null>();
@@ -203,7 +244,9 @@ function computeSolo(ctx: ScoringContext, pointsFn: StablefordPointsFn): Stablef
     };
   });
 
-  return { kind: 'stableford', variant: 'solo', players };
+  const holes = computeSoloHoleRows(holesSorted, ctx.players, grossByKey, pointsFn);
+
+  return { kind: 'stableford', variant: 'solo', players, holes };
 }
 
 /**

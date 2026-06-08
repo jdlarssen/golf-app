@@ -232,3 +232,37 @@ describe('compute — team (par) modified stableford', () => {
     expect(result.teams[0].totalPoints).toBe(1);
   });
 });
+
+// -----------------------------------------------------------------------------
+// Per-hull-eksponering for SOLO (epic #496, PR 9). Modified-tabellen kan gi
+// NEGATIVE poeng (bogey = −1) — per-hull-flaten må eksponere dem, og «best på
+// hullet» er fortsatt HØYEST poeng.
+// -----------------------------------------------------------------------------
+describe('compute — solo per-hull holes med negative poeng (#496)', () => {
+  function solo(userId: string, courseHandicap = 0): ScoringPlayer {
+    return { userId, teamNumber: null, flightNumber: null, courseHandicap };
+  }
+
+  it('eksponerer negative hull-poeng og høyest poeng vinner hullet', () => {
+    const ctx = makeCtx({
+      players: [solo('u1'), solo('u2')],
+      holes: par4Holes(2),
+      scores: [
+        { userId: 'u1', holeNumber: 1, gross: 3 }, // birdie → +2
+        { userId: 'u2', holeNumber: 1, gross: 5 }, // bogey → −1
+        { userId: 'u1', holeNumber: 2, gross: 6 }, // dobbeltbogey → −3
+        { userId: 'u2', holeNumber: 2, gross: 4 }, // par → 0
+      ],
+    });
+    const result = compute(ctx);
+    if (result.variant !== 'solo') throw new Error('expected solo');
+    const h1u1 = result.holes[0].perPlayer.find((c) => c.userId === 'u1')!;
+    const h1u2 = result.holes[0].perPlayer.find((c) => c.userId === 'u2')!;
+    expect(h1u1.points).toBe(2); // birdie
+    expect(h1u2.points).toBe(-1); // bogey — negativt poeng eksponert
+    expect(result.holes[0].bestUserIds).toEqual(['u1']); // høyest (+2)
+    // Hull 2: u2 par (0) slår u1 dobbeltbogey (−3) → høyest vinner.
+    expect(result.holes[1].perPlayer.find((c) => c.userId === 'u1')!.points).toBe(-3);
+    expect(result.holes[1].bestUserIds).toEqual(['u2']);
+  });
+});

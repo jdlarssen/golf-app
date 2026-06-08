@@ -787,3 +787,71 @@ describe('compute — per-gender par (#240)', () => {
     expect(result.teams[0].holes[0].par).toBe(5);
   });
 });
+
+// -----------------------------------------------------------------------------
+// Per-hull-eksponering for SOLO-varianten (epic #496, PR 9). `result.holes`
+// mater den format-bevisste «Hull for hull»-flaten (SoloStablefordHolesView) og
+// H2H-momentum-strippen. Team-varianten har allerede per-hull. Additivt felt.
+// -----------------------------------------------------------------------------
+describe('compute — solo per-hull holes-eksponering (#496)', () => {
+  function solo(userId: string, courseHandicap = 0): ScoringPlayer {
+    return { userId, teamNumber: null, flightNumber: null, courseHandicap };
+  }
+
+  it('eksponerer hull-rader med par, strokeIndex, og poeng + gross per spiller', () => {
+    const ctx = makeCtx({
+      players: [solo('u1'), solo('u2')],
+      holes: par4Holes(2),
+      scores: [
+        { userId: 'u1', holeNumber: 1, gross: 3 }, // birdie → 3 poeng
+        { userId: 'u2', holeNumber: 1, gross: 5 }, // bogey → 1 poeng
+        { userId: 'u1', holeNumber: 2, gross: 5 }, // bogey → 1
+        { userId: 'u2', holeNumber: 2, gross: 4 }, // par → 2
+      ],
+    });
+    const result = compute(ctx);
+    if (result.variant !== 'solo') throw new Error('expected solo');
+    expect(result.holes).toHaveLength(2);
+    expect(result.holes[0].par).toBe(4);
+    expect(result.holes[0].strokeIndex).toBe(1);
+    const h1u1 = result.holes[0].perPlayer.find((c) => c.userId === 'u1')!;
+    expect(h1u1.gross).toBe(3);
+    expect(h1u1.points).toBe(3); // birdie
+    // Hull 1: u1 (3 poeng) er entydig høyest → eneste i bestUserIds.
+    expect(result.holes[0].bestUserIds).toEqual(['u1']);
+  });
+
+  it('bestUserIds = HØYEST poeng; delt ved lik, tom ved uspilt', () => {
+    const ctx = makeCtx({
+      players: [solo('u1'), solo('u2')],
+      holes: par4Holes(18),
+      scores: [
+        { userId: 'u1', holeNumber: 1, gross: 4 }, // par → 2, delt
+        { userId: 'u2', holeNumber: 1, gross: 4 }, // par → 2, delt
+        // hull 2: ingen spilte
+      ],
+    });
+    const result = compute(ctx);
+    if (result.variant !== 'solo') throw new Error('expected solo');
+    expect([...result.holes[0].bestUserIds].sort()).toEqual(['u1', 'u2']);
+    expect(result.holes[1].bestUserIds).toEqual([]);
+  });
+
+  it('skiller spilt-0-poeng fra uspilt: gross null på uspilt, ikke i bestUserIds', () => {
+    // u1 dobbeltbogey (0 poeng, men SPILT), u2 uspilt (0 poeng, IKKE spilt).
+    const ctx = makeCtx({
+      players: [solo('u1'), solo('u2')],
+      holes: par4Holes(18),
+      scores: [{ userId: 'u1', holeNumber: 1, gross: 6 }], // double-bogey → 0 poeng
+    });
+    const result = compute(ctx);
+    if (result.variant !== 'solo') throw new Error('expected solo');
+    const h1u1 = result.holes[0].perPlayer.find((c) => c.userId === 'u1')!;
+    const h1u2 = result.holes[0].perPlayer.find((c) => c.userId === 'u2')!;
+    expect(h1u1.gross).toBe(6);
+    expect(h1u1.points).toBe(0); // spilt, men double-bogey
+    expect(h1u2.gross).toBeNull(); // uspilt
+    // u1 spilte (0 poeng) → høyest blant spilte; u2 uspilt ekskluderes.
+    expect(result.holes[0].bestUserIds).toEqual(['u1']);
+  });
+});

@@ -696,6 +696,33 @@ export interface StablefordPlayerLine {
 }
 
 /**
+ * Per-spiller-celle på ett solo-stableford-hull (epic #496, PR 9). `points` er
+ * stableford-poeng fra den aktive tabellen (kan være negativ i modified
+ * stableford). `gross` er `null` når hullet ikke er spilt — som skiller et
+ * spilt 0-poengs-hull (dobbeltbogey, eller par i modified) fra et uspilt hull.
+ */
+export interface StablefordSoloHolePlayerCell {
+  userId: string;
+  gross: number | null;
+  points: number;
+}
+
+/**
+ * Per-hull-rad for solo stableford (epic #496, PR 9). Mater den format-bevisste
+ * «Hull for hull»-flaten (SoloStablefordHolesView) og head-to-head-strippen.
+ * `bestUserIds` = spillerne med HØYEST poeng blant de som faktisk spilte hullet
+ * (tom hvis ingen; lengde > 1 ved delt). Team-varianten har sin egen
+ * `StablefordTeamHoleRow`.
+ */
+export interface StablefordSoloHoleRow {
+  holeNumber: number;
+  par: number;
+  strokeIndex: number;
+  perPlayer: StablefordSoloHolePlayerCell[];
+  bestUserIds: string[];
+}
+
+/**
  * Solo-variant av stableford-resultatet — én rad per spiller.
  * Returnert når `mode_config.team_size === 1`.
  */
@@ -703,6 +730,8 @@ export interface StablefordSoloResult {
   kind: 'stableford';
   variant: 'solo';
   players: StablefordPlayerLine[];
+  /** Per-hull per-spiller-detalj (alle hull, sortert). Epic #496, PR 9. */
+  holes: StablefordSoloHoleRow[];
 }
 
 /**
