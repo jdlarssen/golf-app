@@ -1431,6 +1431,7 @@ export type Database = {
           fourball_allowance_pct: number
           foursomes_allowance_pct: number
           greensome_allowance_pct: number
+          group_id: string | null
           gruesome_allowance_pct: number
           id: string
           name: string
@@ -1449,6 +1450,7 @@ export type Database = {
           fourball_allowance_pct?: number
           foursomes_allowance_pct?: number
           greensome_allowance_pct?: number
+          group_id?: string | null
           gruesome_allowance_pct?: number
           id?: string
           name: string
@@ -1467,6 +1469,7 @@ export type Database = {
           fourball_allowance_pct?: number
           foursomes_allowance_pct?: number
           greensome_allowance_pct?: number
+          group_id?: string | null
           gruesome_allowance_pct?: number
           id?: string
           name?: string
@@ -1483,6 +1486,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournaments_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
             referencedColumns: ["id"]
           },
         ]
