@@ -81,7 +81,7 @@ The scoring logic ([`lib/scoring/`](lib/scoring/)) is plain TypeScript with no S
 
 Offline sync ([`lib/sync/`](lib/sync/)) writes to Dexie first and drains the queue against Supabase once the phone has signal again. Last write wins, keyed on `client_updated_at`. The Dexie database is named `'golf-app'` for historical reasons. Don't rename it, or you'll wipe local data for every existing user.
 
-RLS is enforced strictly in Postgres. You see your own scores, same-flight scores during an active game, and every score once the admin has ended the game. Realtime needs an explicit `supabase.realtime.setAuth()`; auto-propagation doesn't work for the WebSocket channel, which is a known quirk.
+RLS is enforced strictly in Postgres. You see your own scores, your flight's scores during an active game (a flight-less solo round counts the whole group as one flight, so everyone sees everyone), and every score once the admin has ended the game. Realtime needs an explicit `supabase.realtime.setAuth()`; auto-propagation doesn't work for the WebSocket channel, which is a known quirk.
 
 Migrations live in [`supabase/migrations/`](supabase/migrations/) (80+ files, chronological).
 
