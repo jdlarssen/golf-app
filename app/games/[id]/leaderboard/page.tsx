@@ -111,6 +111,7 @@ import { computeLeaderboard as computeModeResult, isStablefordFamily, isScramble
 import { MODE_LABELS } from '@/lib/scoring/modes/types';
 import { buildSkinsContext } from '@/lib/scoring/context/buildSkinsContext';
 import { buildWolfContext } from '@/lib/scoring/context/buildWolfContext';
+import { buildNinesContext } from '@/lib/scoring/context/buildNinesContext';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -2725,42 +2726,16 @@ function renderNines(opts: {
 }) {
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
-  const ctx = {
-    game: {
-      id: gameId,
-      game_mode: 'nines' as const,
-      mode_config: game.mode_config,
-    },
-    players: gwp.players
-      .filter((p) => p.users != null)
-      .map((p) => ({
-        userId: p.user_id,
-        // Nines-validatoren setter team_number = null (solo/individuell), men
-        // DB-kolonnen er ikke nullable så den lander som 0. Sender null oppover
-        // for shape-konsistens — scoring-laget ignorerer teamNumber for Nines.
-        teamNumber: null,
-        flightNumber: null,
-        courseHandicap: p.course_handicap ?? 0,
-        // Nines bruker netto (eller gross, per mode_config.nines_scoring).
-        // Sender teeGender gjennom for shape-konsistens — speiler Skins-pattern.
-        teeGender: p.tee_gender,
-      })),
-    holes: rawHolesRows.map((h) => ({
-      number: h.hole_number,
-      par: h.par_mens,
-      parByGender: {
-        mens: h.par_mens,
-        ladies: h.par_ladies,
-        juniors: h.par_juniors,
-      },
-      strokeIndex: h.stroke_index,
-    })),
-    scores: rawScoresRows.map((s) => ({
-      userId: s.user_id,
-      holeNumber: s.hole_number,
-      gross: s.strokes,
-    })),
-  };
+  // Bygges via den delte `buildNinesContext`-helperen (epic #496) slik at
+  // leaderboard-flaten og «Hull for hull»-flaten (`NinesHolesBody`) deler
+  // kilde — ingen duplisert ctx-map.
+  const ctx = buildNinesContext({
+    gameId,
+    modeConfig: game.mode_config,
+    players: gwp.players,
+    holesRows: rawHolesRows,
+    scoresRows: rawScoresRows,
+  });
 
   const result = computeModeResult(ctx);
   if (result.kind !== 'nines') {
