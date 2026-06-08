@@ -28,6 +28,7 @@ export function ModeGuideCard({
   mode,
   playStyleTeamSize,
   className,
+  id,
 }: {
   /** Sammendrag-setning — alltid synlig i lukket tilstand. */
   summary: string;
@@ -49,9 +50,12 @@ export function ModeGuideCard({
   /** Valgfri lagstørrelse som låser et fleksibelt format-merke til Solo/Lag. */
   playStyleTeamSize?: number;
   className?: string;
+  /** Valgfri element-id — lar et ark scrolle til et bestemt format (#498). */
+  id?: string;
 }) {
   return (
     <details
+      id={id}
       data-testid="mode-guide"
       className={`group rounded-2xl border border-border bg-surface ${className ?? ''}`}
     >
