@@ -21,6 +21,21 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#452](https://github.com/jdlarssen/golf-app/issues/452). Liga-epicen Fase 4 (siste fase): en liga kan nå gå på stableford eller modifisert stableford, ikke bare slagspill.
 
+### [1.94.1] - 2026-06-08 · #499
+
+> Spiller dere fire eller færre sammen, kan nå alle taste inn score for hverandre, ikke bare for seg selv. Før var det bare den som lagde spillet som fikk det til. Det gjelder runder uten flight-inndeling (slagspill, stableford, skins, nassau og de andre solo-formatene), og dere ser også hverandres score live mens dere spiller.
+
+<details>
+<summary>Teknisk</summary>
+
+[#499](https://github.com/jdlarssen/golf-app/issues/499) Solo-formater lar `game_players.flight_number` være `NULL`. Score-policyene gatet medspiller-tilgang via `me.flight_number = them.flight_number`, og `NULL = NULL` er `NULL` (ikke `TRUE`) i SQL — så to flight-løse spillere matchet aldri. En ikke-admin kunne bare skrive/se sin egen score; admin slapp gjennom via `is_admin()`. Rapportert i en 2-spiller Skins-runde.
+
+#### Fixed
+- WRITE: ny `can_score_for()`-helper (migrasjon 0088) — samme tildelte flight, eller flight-løst spill med ≤ 4 aktive spillere. `scores insert/update by flight` peker nå hit i stedet for `same_flight()`.
+- READ: `same_flight_or_solo()` solo-gren generalisert fra literal `game_mode='stableford'` til strukturell «begge flight_number NULL», så alle solo-formater (ikke bare stableford) ser hverandres score live.
+- Verifisert mot live-data: medspiller write+read `true` etter fix, best-ball kryss-flight-lekkasje `0`. `same_flight()` beholdt uendret.
+</details>
+
 ### [1.94.0] - 2026-06-08 · #452
 
 > Du kan nå velge spillform når du lager en liga: slagspill, stableford eller modifisert stableford. Velger du stableford, teller sesongen poeng i stedet for slag, og høyest sammenlagt vinner. En runde du ikke spiller gir null poeng.
