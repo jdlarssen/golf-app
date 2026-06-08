@@ -22,7 +22,7 @@
  * ikke til full-form (det er en kjent edge case, se kontrakt #203).
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
@@ -35,6 +35,8 @@ import type {
 import { isStablefordFamily, MODE_LABELS, type GameMode } from '@/lib/scoring/modes/types';
 import { IntentSelector } from './IntentSelector';
 import { FormatGrid } from './FormatGrid';
+import { FormatGuideSheet } from '@/components/FormatGuideSheet';
+import type { FormatGuideEntry } from '@/components/FormatGuideList';
 import { CupSetup } from './CupSetup';
 import { SideTournamentsBanner } from './SideTournamentsBanner';
 import { TeamSizeSelector } from './TeamSizeSelector';
@@ -110,6 +112,12 @@ type Props = {
    * spill`-flyten sender brukerens faktiske admin-status.
    */
   isAdmin?: boolean;
+  /**
+   * #498: format-oppslagsverket (server-bygget i page.tsx) som mater «?»-arket
+   * på steg 2, så det kan rendre klient-side uten ekstra fetch. Tom = «?»-arket
+   * viser ingenting (defensivt; arket åpnes likevel uten å feile).
+   */
+  formatGuide?: FormatGuideEntry[];
 };
 
 const STEP_TITLES: Record<Step, string> = {
@@ -149,10 +157,22 @@ export function GameWizard({
   clubMemberIdsByClub = {},
   currentUserId = '',
   isAdmin = false,
+  formatGuide = [],
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+
+  // #498: «?»-format-ark-state. focusKey = valgt format-slug når arket åpnes
+  // fra «Slik funker det →»; undefined når det åpnes fra «?»-knappen (toppen).
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [guideFocusKey, setGuideFocusKey] = useState<string | undefined>(
+    undefined,
+  );
+  const openGuide = (slug?: string) => {
+    setGuideFocusKey(slug);
+    setGuideOpen(true);
+  };
 
   // Initial step + view leses fra URL ved mount. Senere browser-nav (back/
   // forward) reconcileres via useEffect under.
@@ -475,6 +495,18 @@ export function GameWizard({
         title={STEP_TITLES[step]}
         subText={subText}
         totalSteps={TOTAL_STEPS}
+        action={
+          step === 2 && state.intent !== 'cup' && !state.lockGameMode ? (
+            <button
+              type="button"
+              onClick={() => openGuide()}
+              aria-label="Spillformater, slik funker de"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-sm font-semibold text-muted hover:bg-primary-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            >
+              ?
+            </button>
+          ) : undefined
+        }
       />
 
       {step === 1 && (
@@ -529,6 +561,7 @@ export function GameWizard({
                 }
                 value={state.formatChosen ? state.gameMode : undefined}
                 onChange={(slug) => state.handleModeChange(slug as GameMode)}
+                onShowGuide={(slug) => openGuide(slug)}
                 disabled={state.lockGameMode}
               />
             </>
@@ -849,6 +882,15 @@ export function GameWizard({
         onPrev={goPrev}
         onNext={goNext}
         showNext={step < TOTAL_STEPS}
+      />
+
+      {/* #498: format-oppslagsverket som bunn-ark — over veiviseren, lukk
+          legger deg tilbake nøyaktig der du var. */}
+      <FormatGuideSheet
+        open={guideOpen}
+        entries={formatGuide}
+        focusKey={guideFocusKey}
+        onClose={() => setGuideOpen(false)}
       />
     </form>
   );
@@ -1216,19 +1258,25 @@ function StepperHeader({
   title,
   subText,
   totalSteps,
+  action,
 }: {
   step: Step;
   title: string;
   subText: string | null;
   totalSteps: number;
+  /** Valgfri handling til høyre for tittelen (#498: «?»-knapp på steg 2). */
+  action?: ReactNode;
 }) {
   return (
     <div className="space-y-2">
-      <div className="flex items-baseline justify-between text-sm">
+      <div className="flex items-center justify-between gap-3 text-sm">
         <span className="text-muted tabular-nums">
           Steg {step} av {totalSteps}
         </span>
-        <span className="font-serif text-lg text-text">{title}</span>
+        <div className="flex items-center gap-2">
+          <span className="font-serif text-lg text-text">{title}</span>
+          {action}
+        </div>
       </div>
       <div className="h-1 w-full overflow-hidden rounded-full bg-surface-2">
         <div

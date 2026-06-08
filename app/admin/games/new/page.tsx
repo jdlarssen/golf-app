@@ -21,6 +21,7 @@ import {
   getFormatsForIntent,
   getCupEligibleFormats,
 } from '@/lib/formats/getFormatsForIntent';
+import { getFormatGuideEntries } from '@/lib/formats/buildFormatGuide';
 import { getFriendIds } from '@/lib/friends/getFriendIds';
 import { getClubMemberPlayerOptions } from '@/lib/clubs/getClubMemberPlayerOptions';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
@@ -311,13 +312,19 @@ async function GameFormBody({
   // sum, alle tag-cachet 24h).
   const userId = await getProxyVerifiedUserId();
 
-  const [kompisFormats, klubbFormats, soloFormats, cupEligibleFormats] =
-    await Promise.all([
-      getFormatsForIntent('kompis'),
-      getFormatsForIntent('klubb'),
-      getFormatsForIntent('solo'),
-      getCupEligibleFormats(),
-    ]);
+  const [
+    kompisFormats,
+    klubbFormats,
+    soloFormats,
+    cupEligibleFormats,
+    formatGuide,
+  ] = await Promise.all([
+    getFormatsForIntent('kompis'),
+    getFormatsForIntent('klubb'),
+    getFormatsForIntent('solo'),
+    getCupEligibleFormats(),
+    getFormatGuideEntries(),
+  ]);
 
   const [{ courses, players, clubs }, friendPlayerIds, clubMembers] =
     await Promise.all([
@@ -361,6 +368,7 @@ async function GameFormBody({
       currentUserId={userId ?? ''}
       // #477: ruten er admin-gatet (redirect over), så «Solo / Test» vises her.
       isAdmin
+      formatGuide={formatGuide}
     />
   );
 }

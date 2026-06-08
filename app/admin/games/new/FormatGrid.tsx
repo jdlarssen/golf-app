@@ -1,7 +1,6 @@
 'use client';
 
 import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
-import { formatIconFor } from '@/lib/formats/icons';
 import { FormatStyleBadge } from '@/components/ui/FormatStyleBadge';
 import type { GameMode } from '@/lib/scoring/modes/types';
 
@@ -9,6 +8,11 @@ type Props = {
   formats: FormatForIntent[];
   value: string | undefined;
   onChange: (slug: string) => void;
+  /**
+   * Åpner «?»-arket fokusert på et bestemt format (#498). Kalles av «Slik funker
+   * det →» på det valgte kortet. Utelatt → ingen «Slik funker det»-knapp.
+   */
+  onShowGuide?: (slug: string) => void;
   disabled?: boolean;
 };
 
@@ -18,16 +22,22 @@ type Props = {
  * sort_order asc av getFormatsForIntent) og partisjonerer på is_primary i
  * UI-laget — F1-helper sender flat liste på prinsipp.
  *
- * Layout (mobil-først):
- * - Primary: 2x2 grid med store kort (28px ikon over navn + short_description)
- * - Sekundær: 2-kolonners kompakte kort med mini-ikon ved siden av tekst
- *
- * Hvis intent har færre enn 4 primary (eller 0 sekundære), rendres bare det
- * antallet — ingen padding. Tom liste totalt = caller (wizard) viser tom-state.
+ * #498: kompakt stil. Kollapset kort viser bare navn + spillestil-chip(s) — den
+ * som vet hva hen vil scroller ikke gjennom forklaringer. Det valgte kortet
+ * utvider til full bredde og viser kort-beskrivelsen + «Slik funker det →» som
+ * åpner format-arket (uten å forlate veiviseren). Ikonene er fjernet.
  */
-export function FormatGrid({ formats, value, onChange, disabled = false }: Props) {
+export function FormatGrid({
+  formats,
+  value,
+  onChange,
+  onShowGuide,
+  disabled = false,
+}: Props) {
   const primary = formats.filter((f) => f.is_primary);
   const secondary = formats.filter((f) => !f.is_primary);
+  // Vis gruppe-headere kun når begge gruppene finnes — ellers holder legenden.
+  const showGroupHeaders = primary.length > 0 && secondary.length > 0;
 
   if (formats.length === 0) {
     return (
@@ -40,6 +50,70 @@ export function FormatGrid({ formats, value, onChange, disabled = false }: Props
     );
   }
 
+  function renderCard(f: FormatForIntent) {
+    const selected = value === f.slug;
+
+    if (selected) {
+      return (
+        <div
+          key={f.slug}
+          className="col-[1/-1] overflow-hidden rounded-xl border border-primary bg-primary-soft shadow-[inset_0_0_0_1px_var(--primary)]"
+        >
+          <button
+            type="button"
+            role="radio"
+            aria-checked={true}
+            aria-label={f.display_name}
+            disabled={disabled}
+            onClick={() => {
+              if (!disabled) onChange(f.slug);
+            }}
+            className="flex w-full min-h-[44px] items-center justify-between gap-2 px-3 py-2.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span className="font-serif text-base leading-snug text-text">
+              {f.display_name}
+            </span>
+            <FormatStyleBadge mode={f.slug as GameMode} className="shrink-0" />
+          </button>
+          <div className="space-y-2 border-t border-primary/25 px-3 pb-3 pt-2">
+            <p className="font-sans text-xs leading-snug text-muted">
+              {f.short_description}
+            </p>
+            {onShowGuide && (
+              <button
+                type="button"
+                onClick={() => onShowGuide(f.slug)}
+                className="font-sans text-xs font-medium text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              >
+                Slik funker det →
+              </button>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <button
+        key={f.slug}
+        type="button"
+        role="radio"
+        aria-checked={false}
+        aria-label={f.display_name}
+        disabled={disabled}
+        onClick={() => {
+          if (!disabled) onChange(f.slug);
+        }}
+        className="flex min-h-[44px] items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3 py-2.5 text-left transition-colors duration-150 hover:bg-primary-soft/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <span className="min-w-0 font-serif text-sm leading-snug text-text">
+          {f.display_name}
+        </span>
+        <FormatStyleBadge mode={f.slug as GameMode} className="shrink-0" />
+      </button>
+    );
+  }
+
   return (
     <fieldset disabled={disabled} className="space-y-5">
       <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
@@ -47,43 +121,19 @@ export function FormatGrid({ formats, value, onChange, disabled = false }: Props
       </legend>
 
       {primary.length > 0 && (
-        <div role="radiogroup" aria-label="Hovedformater" className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {primary.map((f) => {
-            const selected = value === f.slug;
-            return (
-              <button
-                key={f.slug}
-                type="button"
-                role="radio"
-                aria-checked={selected}
-                aria-label={f.display_name}
-                disabled={disabled}
-                onClick={() => {
-                  if (!disabled) onChange(f.slug);
-                }}
-                className={`flex min-h-[44px] flex-col items-start gap-2 rounded-xl border p-3 text-left transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50 ${
-                  selected
-                    ? 'border-primary bg-primary-soft text-text shadow-[inset_0_0_0_1px_var(--primary)]'
-                    : 'border-border bg-surface text-text hover:bg-primary-soft/60'
-                }`}
-              >
-                <span
-                  className={`flex h-7 w-7 items-center justify-center ${
-                    selected ? 'text-primary' : 'text-muted'
-                  }`}
-                >
-                  {formatIconFor(f.icon_key)}
-                </span>
-                <span className="font-serif text-base leading-snug">
-                  {f.display_name}
-                </span>
-                <span className="font-sans text-xs leading-snug text-muted">
-                  {f.short_description}
-                </span>
-                <FormatStyleBadge mode={f.slug as GameMode} className="mt-0.5" />
-              </button>
-            );
-          })}
+        <div className="space-y-2">
+          {showGroupHeaders && (
+            <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+              Vanligst
+            </p>
+          )}
+          <div
+            role="radiogroup"
+            aria-label="Hovedformater"
+            className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+          >
+            {primary.map(renderCard)}
+          </div>
         </div>
       )}
 
@@ -92,42 +142,12 @@ export function FormatGrid({ formats, value, onChange, disabled = false }: Props
           <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
             Flere muligheter
           </p>
-          <div role="radiogroup" aria-label="Sekundære formater" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {secondary.map((f) => {
-              const selected = value === f.slug;
-              return (
-                <button
-                  key={f.slug}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  aria-label={f.display_name}
-                  disabled={disabled}
-                  onClick={() => {
-                    if (!disabled) onChange(f.slug);
-                  }}
-                  className={`flex min-h-[44px] items-center gap-2 rounded-lg border p-2 text-left transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50 ${
-                    selected
-                      ? 'border-primary bg-primary-soft text-text'
-                      : 'border-border bg-surface text-text hover:bg-primary-soft/60'
-                  }`}
-                >
-                  <span
-                    className={`flex h-5 w-5 shrink-0 items-center justify-center ${
-                      selected ? 'text-primary' : 'text-muted'
-                    }`}
-                  >
-                    {formatIconFor(f.icon_key, 20)}
-                  </span>
-                  <span className="flex min-w-0 flex-col gap-0.5">
-                    <span className="font-sans text-xs leading-snug">
-                      {f.display_name}
-                    </span>
-                    <FormatStyleBadge mode={f.slug as GameMode} className="self-start" />
-                  </span>
-                </button>
-              );
-            })}
+          <div
+            role="radiogroup"
+            aria-label="Sekundære formater"
+            className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+          >
+            {secondary.map(renderCard)}
           </div>
         </div>
       )}

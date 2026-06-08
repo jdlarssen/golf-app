@@ -17,7 +17,36 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.103.y — Stableford · hull for hull
+## 1.104.y — Veiviser · kompakte format-kort
+
+Issue [#498](https://github.com/jdlarssen/golf-app/issues/498). Format-steget i veiviseren ryddes: kortene blir minimale, forklaringen kommer når du velger, og hjelpen ligger ett trykk unna uten å forlate flyten. «Spillformer» får sitt riktige navn, «Spillformater».
+
+### [1.104.0] - 2026-06-08 · #498
+
+> Når du setter opp et spill viser format-steget nå kompakte kort: bare navnet og om formatet spilles solo eller på lag. Velger du ett, folder det seg ut med en kort forklaring og en «Slik funker det»-lenke. Trenger du oversikten, åpner «?»-knappen et ark med alle spillformatene rett over veiviseren, så du ikke mister det du holder på med. Og sida «Spillformer» heter nå det den burde: «Spillformater». Gamle lenker virker fortsatt.
+
+<details>
+<summary>Teknisk</summary>
+
+[#498](https://github.com/jdlarssen/golf-app/issues/498). Redesign av veiviserens steg 2 + opprydding rundt format-oppslagsverket.
+
+#### Added
+- `FormatGuideSheet` (klient bunn-ark): hele format-oppslagsverket glir opp over veiviseren, med fokus-felle, Esc/backdrop-lukk og reduced-motion-trygg slide-up (klasser i `globals.css`). «Slik funker det →» på det valgte kortet åpner arket scrollet til det formatet.
+- Delt `FormatGuideList` + server-side `getFormatGuideEntries` (eier CATALOG + DB-flettet innhold), brukt av både `/spillformater` og arket.
+- Spillestil-chips fikk kategori-farger — skifer for Solo, terrakotta for Lag — via nye tokens i `globals.css` (lys + 2× mørk). Fleksible format viser «Solo» + «Lag» side om side i veiviseren.
+- Permanent redirect `/spillformer` → `/spillformater` (page + `:slug`) i `next.config.ts`.
+
+#### Changed
+- `FormatGrid` kompakt stil: ikoner fjernet, 2-kolonners kort med navn + chip(s), valgt kort utvider til full bredde med kort-beskrivelse. `StepperHeader` fikk en valgfri «?»-handling.
+- «Hver for seg»-merket slått sammen til «Solo» (`PLAY_STYLE_LABELS`).
+- Rute `/spillformer` → `/spillformater` (page + `[slug]`), med oppdaterte interne lenker, synlig tekst og invite-mail-hint. `ModeGuideCard` fikk en valgfri `id` for scroll-to.
+
+</details>
+
+## Tidligere versjoner
+
+<details>
+<summary><strong>1.103.y — Stableford · hull for hull (2 oppføringer)</strong></summary>
 
 Issue [#496](https://github.com/jdlarssen/golf-app/issues/496). Format-bevisst «Hull for hull» fullføres — solo og modifisert stableford får sitt eget poeng-scorekort, og 1-mot-1-spill får et duell-oppgjør. PR 9 (siste) av epicen.
 
@@ -53,7 +82,7 @@ Fant under en visuell gjennomgang av epic #496. `HeadToHeadResult`-dommen brukte
 
 </details>
 
-## Tidligere versjoner
+</details>
 
 <details>
 <summary><strong>1.102.y — Slagspill · hull for hull (1 oppføring)</strong></summary>

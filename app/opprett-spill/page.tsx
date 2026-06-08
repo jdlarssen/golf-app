@@ -22,6 +22,7 @@ import {
   getFormatsForIntent,
   getCupEligibleFormats,
 } from '@/lib/formats/getFormatsForIntent';
+import { getFormatGuideEntries } from '@/lib/formats/buildFormatGuide';
 import { getFriendPlayerOptions } from '@/lib/friends/getFriendPlayerOptions';
 import { getClubMemberPlayerOptions } from '@/lib/clubs/getClubMemberPlayerOptions';
 
@@ -139,13 +140,19 @@ async function GameFormBody({
   isAdmin: boolean;
 }) {
   // F2 (#272): pre-fetch format-katalog parallelt med courses/players.
-  const [kompisFormats, klubbFormats, soloFormats, cupEligibleFormats] =
-    await Promise.all([
-      getFormatsForIntent('kompis'),
-      getFormatsForIntent('klubb'),
-      getFormatsForIntent('solo'),
-      getCupEligibleFormats(),
-    ]);
+  const [
+    kompisFormats,
+    klubbFormats,
+    soloFormats,
+    cupEligibleFormats,
+    formatGuide,
+  ] = await Promise.all([
+    getFormatsForIntent('kompis'),
+    getFormatsForIntent('klubb'),
+    getFormatsForIntent('solo'),
+    getCupEligibleFormats(),
+    getFormatGuideEntries(),
+  ]);
   const [{ courses, players, clubs }, friendPlayers, clubMembers] =
     await Promise.all([
       getNewGameFormData(false),
@@ -195,6 +202,7 @@ async function GameFormBody({
       clubMemberIdsByClub={clubMembers.memberIdsByClub}
       currentUserId={userId}
       isAdmin={isAdmin}
+      formatGuide={formatGuide}
     />
   );
 }
