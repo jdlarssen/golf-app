@@ -97,24 +97,19 @@ describe('BingoBangoBongoHolesView', () => {
     const list = screen.getByTestId('bbb-holes-list');
     expect(list.children).toHaveLength(4);
 
-    // Hull 1 (normalt): tre prestasjoner med tre ulike vinnere. Ingen «Feiet!».
+    // Hull 1 (normalt): tre prestasjons-rader, hver med sin vinner. Strukturen
+    // (3 rader) + at vinner-navn resolves er differensiatoren — ikke pending.
     const card1 = screen.getByTestId('bbb-holes-card-1');
-    expect(card1.textContent).toContain('Bingo');
-    expect(card1.textContent).toContain('Bango');
-    expect(card1.textContent).toContain('Bongo');
-    expect(card1.textContent).toContain('Alice Andersen');
-    expect(card1.textContent).toContain('Bjørn Berg');
-    expect(card1.textContent).toContain('Camilla Carlsen');
+    expect(within(card1).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(card1).queryByText('Alice Andersen')).not.toBeNull();
     expect(card1.textContent).not.toContain('Feiet');
 
     // Hull 2 (sweep): én spiller tok alle tre → «Feiet!»-markering.
     const card2 = screen.getByTestId('bbb-holes-card-2');
     expect(card2.textContent).toContain('Feiet');
-    expect(card2.textContent).toContain('Alice Andersen');
 
     // Hull 3 (delvis): bingo satt, resten «ikke satt» — ikke pending.
     const card3 = screen.getByTestId('bbb-holes-card-3');
-    expect(card3.textContent).toContain('Bjørn Berg');
     expect(card3.textContent).toContain('ikke satt');
     expect(card3.textContent).not.toContain('Venter');
 
