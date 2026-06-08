@@ -555,3 +555,79 @@ describe('aceyDeucey.compute — aces and deuces counters', () => {
     expect(p('u4').total).toBe(-9);
   });
 });
+
+// ---------------------------------------------------------------------------
+// perPlayer per-hull exposure (#496 PR 5 — format-bevisst «Hull for hull»)
+// ---------------------------------------------------------------------------
+
+describe('aceyDeucey.compute — perPlayer per-hull exposure', () => {
+  it('exposes gross, effectiveScore and points per player on a scored hole', () => {
+    const players = ['u1', 'u2', 'u3', 'u4'].map((id) => soloPlayer(id));
+    // Hull 1: u1 unik lavest (ace +3), u4 unik høyest (deuce −3), u2/u3 midt (0).
+    const ctx = makeCtx({
+      players,
+      holes: par4Holes(1),
+      scores: [
+        ...scoresFor('u1', [3]),
+        ...scoresFor('u2', [4]),
+        ...scoresFor('u3', [4]),
+        ...scoresFor('u4', [6]),
+      ],
+      aceyDeuceyScoring: 'gross',
+    });
+    const hole = compute(ctx).holes[0];
+    expect(hole.scored).toBe(true);
+    const cell = (uid: string) => hole.perPlayer.find((c) => c.userId === uid)!;
+    expect(cell('u1')).toEqual({ userId: 'u1', gross: 3, effectiveScore: 3, points: 3 });
+    expect(cell('u2')).toEqual({ userId: 'u2', gross: 4, effectiveScore: 4, points: 0 });
+    expect(cell('u3')).toEqual({ userId: 'u3', gross: 4, effectiveScore: 4, points: 0 });
+    expect(cell('u4')).toEqual({ userId: 'u4', gross: 6, effectiveScore: 6, points: -3 });
+    // perPlayer følger ctx.players-rekkefølge.
+    expect(hole.perPlayer.map((c) => c.userId)).toEqual(['u1', 'u2', 'u3', 'u4']);
+  });
+
+  it('exposes null effectiveScore + 0 points for an unfinished hole', () => {
+    const players = ['u1', 'u2', 'u3', 'u4'].map((id) => soloPlayer(id));
+    // Kun u1 har tastet → scored=false, ingen poeng deles ut.
+    const ctx = makeCtx({
+      players,
+      holes: par4Holes(1),
+      scores: [...scoresFor('u1', [4])],
+      aceyDeuceyScoring: 'gross',
+    });
+    const hole = compute(ctx).holes[0];
+    expect(hole.scored).toBe(false);
+    const cell = (uid: string) => hole.perPlayer.find((c) => c.userId === uid)!;
+    expect(cell('u1')).toEqual({ userId: 'u1', gross: 4, effectiveScore: 4, points: 0 });
+    expect(cell('u2')).toEqual({
+      userId: 'u2',
+      gross: null,
+      effectiveScore: null,
+      points: 0,
+    });
+  });
+
+  it('reflects net allocation in effectiveScore', () => {
+    // u1 har courseHandicap 18 → ett slag på SI-1-hull → netto = brutto − 1.
+    const players = [
+      soloPlayer('u1', 18),
+      soloPlayer('u2', 0),
+      soloPlayer('u3', 0),
+      soloPlayer('u4', 0),
+    ];
+    const ctx = makeCtx({
+      players,
+      holes: par4Holes(1), // hull 1 har strokeIndex 1
+      scores: [
+        ...scoresFor('u1', [5]),
+        ...scoresFor('u2', [4]),
+        ...scoresFor('u3', [5]),
+        ...scoresFor('u4', [6]),
+      ],
+      aceyDeuceyScoring: 'net',
+    });
+    const cell = compute(ctx).holes[0].perPlayer.find((c) => c.userId === 'u1')!;
+    expect(cell.gross).toBe(5);
+    expect(cell.effectiveScore).toBe(4); // netto reflekterer HCP-slaget
+  });
+});

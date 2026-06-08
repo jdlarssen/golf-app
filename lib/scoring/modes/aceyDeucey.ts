@@ -181,6 +181,18 @@ export function compute(ctx: ScoringContext): AceyDeuceyResult {
       }
     }
 
+    // Per-spiller-detalj for «Hull for hull»-flaten (#496 PR 5). Eksponerer
+    // gross + effective + poeng som allerede er regnet ut, i ctx.players-
+    // rekkefølge. Ren additiv eksponering — ingen endring i poeng/ranking.
+    const grossOf = (userId: string) =>
+      grossByKey.get(`${userId}#${hole.number}`) ?? null;
+    const perPlayer = effByPlayer.map((e) => ({
+      userId: e.userId,
+      gross: grossOf(e.userId),
+      effectiveScore: e.eff,
+      points: pointsByPlayer[e.userId] ?? 0,
+    }));
+
     rows.push({
       holeNumber: hole.number,
       par: hole.par,
@@ -189,6 +201,7 @@ export function compute(ctx: ScoringContext): AceyDeuceyResult {
       aceUserId,
       deuceUserId,
       pointsByPlayer,
+      perPlayer,
     });
   }
 

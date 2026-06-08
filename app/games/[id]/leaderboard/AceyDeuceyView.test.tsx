@@ -33,6 +33,7 @@ function makeHole(overrides: Partial<AceyDeuceyHoleRow>): AceyDeuceyHoleRow {
     aceUserId: null,
     deuceUserId: null,
     pointsByPlayer: {},
+    perPlayer: [],
     ...overrides,
   };
 }

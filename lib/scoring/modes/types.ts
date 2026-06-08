@@ -1850,6 +1850,17 @@ export interface AceyDeuceyHoleRow {
   deuceUserId: string | null;
   /** +3 / 0 / −3 per spiller dette hullet, indeksert på userId. */
   pointsByPlayer: Record<string, number>;
+  /**
+   * Per-spiller-detalj for «Hull for hull»-flaten (#496 PR 5), i ctx.players-
+   * rekkefølge. `effectiveScore` = gross hvis 'gross', netto hvis 'net'; null
+   * når hullet ikke er spilt for spilleren. `points` = +3/0/−3 (0 når uferdig).
+   */
+  perPlayer: Array<{
+    userId: string;
+    gross: number | null;
+    effectiveScore: number | null;
+    points: number;
+  }>;
 }
 
 /**
