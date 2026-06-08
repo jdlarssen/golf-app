@@ -79,23 +79,23 @@ Etter Round Robin-branchen: `if (game.game_mode === 'acey_deucey') return <Suspe
 - Eksakt undertittel-detalj.
 
 ## Success Criteria
-- [ ] `AceyDeuceyHoleRow.perPlayer` eksponerer per-spiller `{gross, effectiveScore, points}`, dekket av ny `aceyDeucey.test.ts`-case (scoret + uferdig hull). Poeng/ranking uendret (eksisterende tester grønne).
-- [ ] «Hull for hull» på et Acey-Deucey-spill viser per hull alle 4 spillere med **score + poeng (+3/0/−3) + ace/deuce-markering** — ikke lag-scorekortet. (Naviger `/games/<id>/leaderboard/holes`.)
-- [ ] AceyDeuceyHolesView er rikere enn AceyDeuceyView sin PER HULL (som kun viser ace/deuce-navn) — den viser også de to midt-spillerne + alle scorer.
-- [ ] Deuce får symmetrisk «kald» markering (eksisterende tokens); ace champagne+★. Delt lavest/høyest gir INGEN ace/deuce-utheving.
-- [ ] `buildAceyDeuceyContext` brukes av både `renderAceyDeucey` og `AceyDeuceyHolesBody` (ingen duplisert ctx-map).
-- [ ] Andre format (inkl. Skins, Wolf, Nines, Round Robin, best-ball) uendret «Hull for hull». Reveal/dark/`tabular-nums`/≥44px respektert.
-- [ ] Type C render-test for AceyDeuceyHolesView (fixture m/ 1 normalt hull + 1 delt-ekstrem + 1 pending; verifiserer score + ace/deuce-markering + at delt ikke uthever).
-- [ ] CHANGELOG + MINOR-bump (1.99.0) i feature-commit. Norsk copy via `humanizer`.
+- [x] `AceyDeuceyHoleRow.perPlayer` eksponerer per-spiller `{gross, effectiveScore, points}`, dekket av ny `aceyDeucey.test.ts`-case (scoret + uferdig hull). Poeng/ranking uendret. → 3 nye cases grønne; eksisterende 16 uendret (19/19). Commit 18db402.
+- [x] «Hull for hull» på et Acey-Deucey-spill viser per hull alle 4 spillere med **score + poeng (+3/0/−3) + ace/deuce-markering** — ikke lag-scorekortet. → `holes/page.tsx` acey_deucey-branch + `AceyDeuceyHolesBody` + `AceyDeuceyHolesView`.
+- [x] AceyDeuceyHolesView er rikere enn AceyDeuceyView sin PER HULL (kun ace/deuce-navn) — viser også midt-spillerne + alle scorer. → `AceyDeuceyHolesView` HoleCard rendrer hele `perPlayer`; AceyDeuceyView.HoleRow viser kun aceName/deuceName.
+- [x] Deuce får symmetrisk «kald» markering (eksisterende tokens); ace champagne+★. Delt lavest/høyest gir INGEN ace/deuce-utheving. → ace `border-accent/40 bg-accent/[0.06]`+★; deuce `border-border bg-surface-2`+muted; markering drevet av `aceUserId`/`deuceUserId` (null ved delt). Render-test asserter card2 (delt lavest) har ingen `border-accent`.
+- [x] `buildAceyDeuceyContext` brukes av både `renderAceyDeucey` og `AceyDeuceyHolesBody` (ingen duplisert ctx-map). → `lib/scoring/context/buildAceyDeuceyContext.ts`; inline-map slettet i commit b763723.
+- [x] Andre format uendret «Hull for hull». Reveal/dark/`tabular-nums`/≥44px respektert. → Kun `'acey_deucey'`-gren lagt til; reveal-blokk + tokens + `h-11 w-11`.
+- [x] Type C render-test for AceyDeuceyHolesView (1 normalt + 1 delt-ekstrem + 1 pending). → `AceyDeuceyHolesView.test.tsx` (1 test, grønn).
+- [x] CHANGELOG + MINOR-bump (1.99.0) i feature-commit. Norsk copy via `humanizer`. → `package.json` 1.99.0 + CHANGELOG 1.99.y-tema (1.98.y foldet) i commit 86859dc; humanizer-sjekk på tagline ren.
 
 ## Gates
-- [ ] `npx tsc --noEmit` — 0 nye errors
-- [ ] `npx vitest run lib/scoring/modes/aceyDeucey` — scoring-utvidelse + eksisterende grønne
-- [ ] `npx vitest run "app/games/[id]/leaderboard"` — nye + AceyDeuceyView-tester grønne
-- [ ] `npx vitest run` — full suite (regresjon)
-- [ ] `npm run lint` — 0 errors
-- [ ] `npm run build`
-- [ ] E2E auth-gate for holes-ruta på Acey-Deucey (ny `e2e/games/acey-deucey.spec.ts`, speil `e2e/games/round-robin.spec.ts`)
+- [x] `npx tsc --noEmit` — 0 nye errors → clean
+- [x] `npx vitest run lib/scoring/modes/aceyDeucey` — scoring-utvidelse + eksisterende → 19/19 grønne
+- [x] `npx vitest run "app/games/[id]/leaderboard"` — nye + AceyDeuceyView-tester → 172/172; holes-dir 5/5
+- [x] `npx vitest run` — full suite → én ren kjøring 2947/2947 grønn. NB: `GameForm/GameWizard.test` flaker intermitterende under full-suite parallell-last (timeout, urelatert til denne PR-en — passerer 61/61 i isolasjon); filt som [#506](https://github.com/jdlarssen/golf-app/issues/506).
+- [x] `npm run lint` — 0 errors → 0 errors (nye filer 0 issues)
+- [x] `npm run build` → exit 0, success
+- [x] E2E auth-gate for holes-ruta på Acey-Deucey (ny `e2e/games/acey-deucey.spec.ts`) → opprettet (3 auth-gate-tester), commit 4081c87
 
 ## Files Likely Touched
 **Nye:** `app/games/[id]/leaderboard/holes/AceyDeuceyHolesView.tsx` (+ `.test.tsx`), `lib/scoring/context/buildAceyDeuceyContext.ts`, `e2e/games/acey-deucey.spec.ts`
