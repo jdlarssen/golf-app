@@ -112,6 +112,7 @@ import { MODE_LABELS } from '@/lib/scoring/modes/types';
 import { buildSkinsContext } from '@/lib/scoring/context/buildSkinsContext';
 import { buildWolfContext } from '@/lib/scoring/context/buildWolfContext';
 import { buildNinesContext } from '@/lib/scoring/context/buildNinesContext';
+import { buildRoundRobinContext } from '@/lib/scoring/context/buildRoundRobinContext';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -2827,40 +2828,17 @@ function renderRoundRobin(opts: {
 }) {
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
-  const ctx = {
-    game: {
-      id: gameId,
-      game_mode: 'round_robin' as const,
-      mode_config: game.mode_config,
-    },
-    players: gwp.players
-      .filter((p) => p.users != null)
-      .map((p) => ({
-        userId: p.user_id,
-        // Round Robin-validatoren håndhever team_number ∈ {1, 2, 3, 4} med
-        // unike verdier (slot A/B/C/D). Sendes som-er til scoring-laget som
-        // bruker det for å bestemme rotasjons-konstellasjon per segment.
-        teamNumber: p.team_number ?? 0,
-        flightNumber: null,
-        courseHandicap: p.course_handicap ?? 0,
-        teeGender: p.tee_gender,
-      })),
-    holes: rawHolesRows.map((h) => ({
-      number: h.hole_number,
-      par: h.par_mens,
-      parByGender: {
-        mens: h.par_mens,
-        ladies: h.par_ladies,
-        juniors: h.par_juniors,
-      },
-      strokeIndex: h.stroke_index,
-    })),
-    scores: rawScoresRows.map((s) => ({
-      userId: s.user_id,
-      holeNumber: s.hole_number,
-      gross: s.strokes,
-    })),
-  };
+  // Bygges via den delte `buildRoundRobinContext`-helperen (epic #496) slik at
+  // leaderboard-flaten og «Hull for hull»-flaten (`RoundRobinHolesBody`) deler
+  // kilde — ingen duplisert ctx-map. team_number (slot A/B/C/D) sendes som-er
+  // til scoring-laget som bruker det til rotasjons-konstellasjon per segment.
+  const ctx = buildRoundRobinContext({
+    gameId,
+    modeConfig: game.mode_config,
+    players: gwp.players,
+    holesRows: rawHolesRows,
+    scoresRows: rawScoresRows,
+  });
 
   const result = computeModeResult(ctx);
   if (result.kind !== 'round_robin') {
