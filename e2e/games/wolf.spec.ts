@@ -18,4 +18,14 @@ test.describe('Wolf-runde ruter (logged-out)', () => {
     );
     await expect(page).toHaveURL(/\/login/);
   });
+
+  // «Hull for hull» (#496 PR 2): den format-bevisste per-hull-flaten for Wolf.
+  // Selve visningen dekkes av Type C render-test (WolfHolesView); her sikrer
+  // vi bare auth-gaten på ruta.
+  test('hull-for-hull på wolf-spill redirecter til login', async ({ page }) => {
+    await page.goto(
+      '/games/00000000-0000-0000-0000-000000000000/leaderboard/holes',
+    );
+    await expect(page).toHaveURL(/\/login/);
+  });
 });
