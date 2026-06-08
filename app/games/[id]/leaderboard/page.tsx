@@ -2332,9 +2332,86 @@ function renderNassau(opts: {
   const scoreVisibility: 'live' | 'reveal' =
     game.score_visibility === 'reveal' ? 'reveal' : 'live';
 
-  // Finished → NassauPodium på toppen + NassauView under (chromeless, så bare
-  // én outer shell). Active/scheduled → NassauView alene.
+  // Finished → resultat-flate på toppen + NassauView under (chromeless, så bare
+  // én outer shell). Ved nøyaktig 2 spillere er det en duell → head-to-head-
+  // kort i stedet for podium (epic #496). 3+ → NassauPodium som før.
+  // Active/scheduled → NassauView alene.
   if (game.status === 'finished') {
+    if (result.players.length === 2) {
+      // Stabil rekkefølge etter game_players (ikke rank), så fargene følger
+      // spiller-identitet — ikke hvem som vant.
+      const order = gwp.players.map((p) => p.user_id);
+      const [a, b] = [...result.players].sort(
+        (x, y) => order.indexOf(x.userId) - order.indexOf(y.userId),
+      );
+      const sectionLabel = (line: typeof a): string => {
+        const won: string[] = [];
+        if (line.unitBreakdown.front9) won.push('For 9');
+        if (line.unitBreakdown.back9) won.push('Bak 9');
+        if (line.unitBreakdown.total18) won.push('Totalt');
+        return won.length > 0 ? won.join(' · ') : 'Ingen seksjoner';
+      };
+      const sideFor = (pl: typeof a) => {
+        const info = playersById.get(pl.userId);
+        return {
+          userId: pl.userId,
+          name: info?.name ?? '(ukjent)',
+          nickname: info?.nickname ?? null,
+          score: pl.units,
+          subLabel: sectionLabel(pl),
+        };
+      };
+      const strip: StripCell[] = result.holes.map((h): StripCell => {
+        if (h.bestUserIds.length === 1) {
+          if (h.bestUserIds[0] === a.userId) return 'a';
+          if (h.bestUserIds[0] === b.userId) return 'b';
+          return 'unplayed';
+        }
+        if (h.bestUserIds.length > 1) return 'halved';
+        return 'unplayed';
+      });
+      // Units kan være like (f.eks. 1–1 med én pushet seksjon); da avgjør
+      // total18-cascaden, fanget av rank. Tie iff begge deler rank.
+      const winnerUserId =
+        a.rank === b.rank ? null : a.rank < b.rank ? a.userId : b.userId;
+      // Push-note: seksjoner som endte delt (tied 1.-plass) deler ingen unit ut.
+      const s = result.sections;
+      const pushed: string[] = [];
+      if (!s.front9.isPending && s.front9.winnerUserIds.length > 1)
+        pushed.push('For 9');
+      if (!s.back9.isPending && s.back9.winnerUserIds.length > 1)
+        pushed.push('Bak 9');
+      if (!s.total18.isPending && s.total18.winnerUserIds.length > 1)
+        pushed.push('Totalt');
+      const hangingNote =
+        pushed.length > 0 ? `${pushed.join(' og ')} endte delt.` : null;
+      return (
+        <>
+          <HeadToHeadResult
+            gameId={gameId}
+            gameName={game.name}
+            formatLabel={`Nassau · ${result.scoring === 'net' ? 'Netto' : 'Brutto'}`}
+            unitLabel="seksjoner"
+            sideA={sideFor(a)}
+            sideB={sideFor(b)}
+            winnerUserId={winnerUserId}
+            strip={strip}
+            hangingNote={hangingNote}
+            backHref={backHref}
+          />
+          <NassauView
+            gameId={gameId}
+            gameName={game.name}
+            result={result}
+            playersById={playersById}
+            scoreVisibility={scoreVisibility}
+            gameStatus={game.status}
+            backHref={backHref}
+            chromeless
+          />
+        </>
+      );
+    }
     return (
       <>
         <NassauPodium

@@ -17,7 +17,35 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.100.y — Bingo Bango Bongo · hull for hull
+## 1.101.y — Nassau · hull for hull
+
+Issue [#496](https://github.com/jdlarssen/golf-app/issues/496). Format-bevisst «Hull for hull» fortsetter — Nassau får sin egen per-hull-flate, og 1-mot-1-spill får et duell-oppgjør. PR 7 av epicen.
+
+### [1.101.0] - 2026-06-08 · #496
+
+> Etter en Nassau-runde viser «Hull for hull» nå de tre veddemålene hver for seg: For 9, Bak 9 og hele runden, med netto per spiller hull for hull og hvem som ledet hver bolk. Var dere bare to, møter du en duell i stedet for podium når runden er ferdig. Før tegnet appen det samme lag-scorekortet for alle format, også Nassau, der dere egentlig spilte hver for dere.
+
+<details>
+<summary>Teknisk</summary>
+
+[#496](https://github.com/jdlarssen/golf-app/issues/496) PR 7 av epic (Nassau). Holes-siden forgrener nå også på `game_mode === 'nassau'`.
+
+#### Added
+- `NassauHolesView` (server-component): seksjons-tro per-hull-flate. Tre bolker (For 9 / Bak 9 / Totalt) speiler Nassaus tre veddemål. Hver bolk har en sammendrags-stripe (netto-sum per spiller, bolk-leder i champagne) og per-hull-kort med netto per spiller og hull-vinner uthevet. Totalt-bolken er rent sammendrag, så de 18 hullene ikke repeteres en tredje gang. Et kompakt units-sammendrag på toppen viser hvem som leder de tre seksjonene. NassauView (leaderboard) viste kun seksjons-totaler, så flaten er additiv.
+- Duell-kort (`HeadToHeadResult`) ved nøyaktig 2 spillere på et ferdig Nassau-spill, i stedet for podium. Seksjoner vunnet (units) som metrikk, en momentum-strip per hull (hvem som vant hullet netto), og en push-note når en seksjon endte delt.
+- Type C render-test for NassauHolesView, og tredje auth-gate-test i `e2e/games/nassau.spec.ts` for «Hull for hull»-ruta.
+
+#### Changed
+- `NassauResult` eksponerer nå en `holes`-array (per-hull per-spiller netto + brutto + hull-vinner) via TDD. Nassau regnet allerede per hull internt, men eksponerte kun seksjons-totaler.
+- `buildNassauContext`-helper trukket ut av `renderNassau` så leaderboard- og «Hull for hull»-flaten bygger `ScoringContext` fra samme kilde.
+- Holes-siden forgrener nå også på `game_mode === 'nassau'` (Skins + Wolf + Nines + Round Robin + Acey-Deucey + Bingo Bango Bongo + Nassau tatt; solo-strokeplay/stableford følger i egne PR-er).
+
+</details>
+
+## Tidligere versjoner
+
+<details>
+<summary><strong>1.100.y — Bingo Bango Bongo · hull for hull (1 oppføring)</strong></summary>
 
 Issue [#496](https://github.com/jdlarssen/golf-app/issues/496). Format-bevisst «Hull for hull» fortsetter — Bingo Bango Bongo får sin egen per-hull-flate, og 1-mot-1-spill får et duell-oppgjør. PR 6 av epicen.
 
@@ -41,7 +69,7 @@ Issue [#496](https://github.com/jdlarssen/golf-app/issues/496). Format-bevisst �
 
 </details>
 
-## Tidligere versjoner
+</details>
 
 <details>
 <summary><strong>1.99.y — Acey-Deucey · hull for hull (1 oppføring)</strong></summary>
