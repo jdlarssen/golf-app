@@ -111,6 +111,7 @@ import { computeLeaderboard as computeModeResult, isStablefordFamily, isScramble
 import { MODE_LABELS } from '@/lib/scoring/modes/types';
 import { buildSkinsContext } from '@/lib/scoring/context/buildSkinsContext';
 import { buildNassauContext } from '@/lib/scoring/context/buildNassauContext';
+import { buildSoloStrokeplayContext } from '@/lib/scoring/context/buildSoloStrokeplayContext';
 import { buildWolfContext } from '@/lib/scoring/context/buildWolfContext';
 import { buildNinesContext } from '@/lib/scoring/context/buildNinesContext';
 import { buildRoundRobinContext } from '@/lib/scoring/context/buildRoundRobinContext';
@@ -1940,58 +1941,26 @@ function renderSoloStrokeplay(opts: {
 }) {
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
-  // WD (#386): build withdrawn list before active-players map.
+  // WD (#386): build withdrawn list for the display section. The ctx-builder
+  // does its own WD-filtering of players + scores, so we only need the list
+  // for the WithdrawnPlayersSection chrome here.
   const soloWithdrawn: WithdrawnPlayer[] = gwp.players
     .filter((p) => p.users != null && p.withdrawn_at != null)
     .map((p) => ({
       user_id: p.user_id,
       display_name: p.users!.name ?? '(ukjent)',
     }));
-  const soloWithdrawnIds = new Set(soloWithdrawn.map((p) => p.user_id));
 
-  const ctx = {
-    game: {
-      id: gameId,
-      game_mode: 'solo_strokeplay' as const,
-      mode_config: game.mode_config,
-    },
-    players: gwp.players
-      .filter((p) => p.users != null && p.withdrawn_at == null)
-      .map((p) => ({
-        userId: p.user_id,
-        // Solo strokeplay: validator setter team_number = null på persist (eller
-        // gamePayload normaliserer det), men DB-kolonnen er ikke nullable så
-        // den lander som 0. Vi sender null oppover for å matche scoring-lagets
-        // solo-narrowing (det laget bryr seg ikke om verdien for denne modusen,
-        // men null er den semantisk korrekte verdien for solo).
-        teamNumber: null,
-        flightNumber: null,
-        courseHandicap: p.course_handicap ?? 0,
-        // #240 — solo strokeplay bruker netto strokes (gross − extra)
-        // til ranking, ikke par. Men sender teeGender uansett for shape-
-        // konsistens og fremtidig par-rendering i UI-laget.
-        teeGender: p.tee_gender,
-      })),
-    holes: rawHolesRows.map((h) => ({
-      number: h.hole_number,
-      par: h.par_mens,
-      // #240 — per-kjønn-par-tabell. Solo strokeplay ranker på netto-slag,
-      // men UI-laget kan rendre par-referanse per spiller via parFor().
-      parByGender: {
-        mens: h.par_mens,
-        ladies: h.par_ladies,
-        juniors: h.par_juniors,
-      },
-      strokeIndex: h.stroke_index,
-    })),
-    scores: rawScoresRows
-      .filter((s) => !soloWithdrawnIds.has(s.user_id))
-      .map((s) => ({
-        userId: s.user_id,
-        holeNumber: s.hole_number,
-        gross: s.strokes,
-      })),
-  };
+  // Delt context-bygging (epic #496) — samme kilde som «Hull for hull»-flaten
+  // (SoloStrokeplayHolesBody), inkl. WD-filtrering, så map-logikken ikke
+  // dupliseres.
+  const ctx = buildSoloStrokeplayContext({
+    gameId,
+    modeConfig: game.mode_config,
+    players: gwp.players,
+    holesRows: rawHolesRows,
+    scoresRows: rawScoresRows,
+  });
 
   const result = computeModeResult(ctx);
   // Type-guard mot mode-router-output. Hvis routeren returnerer feil shape
