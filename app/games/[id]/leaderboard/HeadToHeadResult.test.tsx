@@ -111,4 +111,32 @@ describe('HeadToHeadResult', () => {
     expect(verdict.textContent).toContain('Jørgen Larsen');
     expect(verdict.textContent).toContain('vant duellen 78–85');
   });
+
+  it('tug-of-war-baren er robust mot negative scorer (modified stableford)', () => {
+    // Modified stableford bruker netto-poeng der par = 0, så totaler kan bli
+    // negative. u1 = +2 (vinner), u2 = −3 (taper). Baren skal ikke få negative
+    // bredder, og vinneren skal få den største andelen.
+    render(
+      <HeadToHeadResult
+        {...defaultProps({
+          formatLabel: 'Modified Stableford',
+          unitLabel: 'poeng',
+          winnerUserId: 'u1',
+          sideA: { userId: 'u1', name: 'Jørgen Larsen', nickname: null, score: 2 },
+          sideB: { userId: 'u2', name: 'Ola Olsen', nickname: null, score: -3 },
+          hangingNote: null,
+        })}
+      />,
+    );
+    const bar = screen.getByTestId('h2h-bar');
+    const spans = bar.querySelectorAll('span');
+    const widthA = (spans[0] as HTMLElement).style.width;
+    const widthB = (spans[1] as HTMLElement).style.width;
+    // Ingen negative bredder.
+    expect(widthA.startsWith('-')).toBe(false);
+    expect(widthB.startsWith('-')).toBe(false);
+    // Vinner-siden (A, +2) får den største andelen.
+    expect(parseInt(widthA, 10)).toBeGreaterThanOrEqual(parseInt(widthB, 10));
+    expect(screen.getByTestId('h2h-verdict').textContent).toContain('Jørgen Larsen');
+  });
 });
