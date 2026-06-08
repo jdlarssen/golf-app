@@ -17,7 +17,34 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.98.y — Round Robin · hull for hull
+## 1.99.y — Acey-Deucey · hull for hull
+
+Issue [#496](https://github.com/jdlarssen/golf-app/issues/496). Format-bevisst «Hull for hull» fortsetter — Acey-Deucey får sin egen per-hull-flate. PR 5 av epicen.
+
+### [1.99.0] - 2026-06-08 · #496
+
+> Etter en Acey-Deucey-runde viser «Hull for hull» nå alle fire spillerne hull for hull: hvem som tok ace-en (+3) og hvem som satt igjen med deuce-en (−3), med scoren til hver. Før så du bare ace- og deuce-navnet, ikke de to i midten eller hva noen faktisk scoret.
+
+<details>
+<summary>Teknisk</summary>
+
+[#496](https://github.com/jdlarssen/golf-app/issues/496) PR 5 av epic (Acey-Deucey). Holes-siden forgrener nå også på `game_mode === 'acey_deucey'`.
+
+#### Added
+- `AceyDeuceyHolesView` (server-component): alle fire spillere score-rangert per hull, med ace (unik lavest, +3) i champagne og deuce (unik høyest, −3) i en kald markering. Rikere enn AceyDeuceyView sin PER HULL, som kun viste ace/deuce-navnet. Delt lavest/høyest gir ingen utheving (som poengreglene).
+- `perPlayer` (gross/effective/points) eksponert på `AceyDeuceyHoleRow` — scoring-laget regnet det allerede ut for å finne ace/deuce, men kastet det. TDD, ingen endring i poeng/ranking.
+- Type C render-test for AceyDeuceyHolesView, og `e2e/games/acey-deucey.spec.ts` med auth-gate.
+
+#### Changed
+- `buildAceyDeuceyContext`-helper trukket ut av `renderAceyDeucey` så leaderboard- og «Hull for hull»-flaten bygger `ScoringContext` fra samme kilde.
+- Holes-siden forgrener nå også på `game_mode === 'acey_deucey'` (Skins + Wolf + Nines + Round Robin + Acey-Deucey tatt; øvrige solo-format følger i egne PR-er).
+
+</details>
+
+## Tidligere versjoner
+
+<details>
+<summary><strong>1.98.y — Round Robin · hull for hull (1 oppføring)</strong></summary>
 
 Issue [#496](https://github.com/jdlarssen/golf-app/issues/496). Format-bevisst «Hull for hull» fortsetter — Round Robin får sin egen per-hull-flate. PR 4 av epicen.
 
@@ -40,7 +67,7 @@ Issue [#496](https://github.com/jdlarssen/golf-app/issues/496). Format-bevisst �
 
 </details>
 
-## Tidligere versjoner
+</details>
 
 <details>
 <summary><strong>1.97.y — Nines · hull for hull (2 oppføringer)</strong></summary>

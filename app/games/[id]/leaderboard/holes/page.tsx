@@ -38,6 +38,9 @@ import type { NinesPlayerInfo } from '../NinesView';
 import { buildRoundRobinContext } from '@/lib/scoring/context/buildRoundRobinContext';
 import { RoundRobinHolesView } from './RoundRobinHolesView';
 import type { RoundRobinPlayerInfo } from '../RoundRobinView';
+import { buildAceyDeuceyContext } from '@/lib/scoring/context/buildAceyDeuceyContext';
+import { AceyDeuceyHolesView } from './AceyDeuceyHolesView';
+import type { AceyDeuceyPlayerInfo } from '../AceyDeuceyView';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -116,8 +119,8 @@ export default async function LeaderboardHolesPage({
 
   // Format-bevisst «Hull for hull» (epic #496): solo-format får sin egen
   // per-hull-visning i stedet for det generiske best-ball lag-scorekortet,
-  // som aldri forgrenet på game_mode. Skins + Wolf + Nines + Round Robin tatt;
-  // øvrige solo-format følger i egne PR-er og treffer fortsatt lag-grid-en.
+  // som aldri forgrenet på game_mode. Skins + Wolf + Nines + Round Robin +
+  // Acey-Deucey tatt; øvrige solo-format følger i egne PR-er.
   if (game.game_mode === 'skins') {
     return (
       <Suspense fallback={<DrilldownSkeleton />}>
@@ -146,6 +149,14 @@ export default async function LeaderboardHolesPage({
     return (
       <Suspense fallback={<DrilldownSkeleton />}>
         <RoundRobinHolesBody gameId={id} courseId={game.course_id} />
+      </Suspense>
+    );
+  }
+
+  if (game.game_mode === 'acey_deucey') {
+    return (
+      <Suspense fallback={<DrilldownSkeleton />}>
+        <AceyDeuceyHolesBody gameId={id} courseId={game.course_id} />
       </Suspense>
     );
   }
@@ -448,6 +459,79 @@ async function RoundRobinHolesBody({
 
   return (
     <RoundRobinHolesView
+      gameId={gameId}
+      gameName={game.name}
+      result={result}
+      playersById={playersById}
+      scoreVisibility={scoreVisibility}
+      gameStatus={gameStatus}
+    />
+  );
+}
+
+/**
+ * Acey-Deucey «Hull for hull» (epic #496, PR 5). Som NinesHolesBody (solo,
+ * ingen ekstra fetch — poeng er ren funksjon av scores), men bygger
+ * konteksten via den delte `buildAceyDeuceyContext`-helperen og rendrer den
+ * score-rangerte ace/deuce-visningen.
+ */
+async function AceyDeuceyHolesBody({
+  gameId,
+  courseId,
+}: {
+  gameId: string;
+  courseId: string;
+}) {
+  const { supabase } = await getDrilldownContext();
+
+  const [gwp, rawHolesRes, rawScoresRes] = await Promise.all([
+    getGameWithPlayers(gameId),
+    supabase
+      .from('course_holes')
+      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
+      .eq('course_id', courseId)
+      .order('hole_number', { ascending: true })
+      .returns<CourseHoleRow[]>(),
+    supabase
+      .from('scores')
+      .select('user_id, hole_number, strokes')
+      .eq('game_id', gameId)
+      .returns<ScoreRow[]>(),
+  ]);
+
+  if (!gwp) notFound();
+  if (rawHolesRes.error) throw rawHolesRes.error;
+  if (rawScoresRes.error) throw rawScoresRes.error;
+
+  const game = gwp.game;
+
+  const ctx = buildAceyDeuceyContext({
+    gameId,
+    modeConfig: game.mode_config,
+    players: gwp.players,
+    holesRows: rawHolesRes.data ?? [],
+    scoresRows: rawScoresRes.data ?? [],
+  });
+
+  const result = computeModeResult(ctx);
+  if (result.kind !== 'acey_deucey') notFound();
+
+  const playersById = new Map<string, AceyDeuceyPlayerInfo>();
+  for (const p of gwp.players) {
+    if (p.users == null) continue;
+    playersById.set(p.user_id, {
+      name: p.users.name ?? '(ukjent)',
+      nickname: p.users.nickname,
+    });
+  }
+
+  const scoreVisibility: 'live' | 'reveal' =
+    game.score_visibility === 'reveal' ? 'reveal' : 'live';
+  const gameStatus: 'active' | 'finished' =
+    game.status === 'finished' ? 'finished' : 'active';
+
+  return (
+    <AceyDeuceyHolesView
       gameId={gameId}
       gameName={game.name}
       result={result}
