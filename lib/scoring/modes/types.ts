@@ -215,10 +215,18 @@ export function formatPlayStyle(mode: GameMode): PlayStyle {
   }
 }
 
-/** Norske merke-labels per spillestil (#478). Single source of truth. */
+/**
+ * Norske merke-labels per spillestil (#478). Single source of truth.
+ *
+ * #498: «Hver for seg» ble slått sammen til «Solo» — for spilleren er pott-/
+ * 1-mot-1-format like mye «du spiller for deg selv» som rent solo-spill, og to
+ * nesten-synonyme labels skapte bare støy. `flexible`-labelen er ikke lenger
+ * en synlig chip (veiviseren viser «Solo» + «Lag» side om side), men beholdes
+ * her for å holde Record-et uttømmende.
+ */
 export const PLAY_STYLE_LABELS: Record<PlayStyle, string> = {
   solo: 'Solo',
-  individual: 'Hver for seg',
+  individual: 'Solo',
   team: 'Lag',
   flexible: 'Solo eller lag',
 };

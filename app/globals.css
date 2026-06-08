@@ -39,6 +39,14 @@
   --primary-soft: #e8efe8; /* very pale green tint */
   --accent: #c9a961;       /* champagne gold */
   --accent-deep: #b89446;  /* aksent-tekst på lys bg (kicker, tagline) */
+  /* Spillestil-chips (#498) — skifer for Solo, terrakotta for Lag. Gull er
+     reservert til vinnere, så stilen får sin egen rolige palett. */
+  --chip-solo-bg: #e7edf1;
+  --chip-solo-fg: #41637a;
+  --chip-solo-border: #d2dee6;
+  --chip-team-bg: #f2e8e1;
+  --chip-team-fg: #845239;
+  --chip-team-border: #e3d1c4;
   --bg-tint: #f0ede5;      /* body color on forest bg (primary/leader cards) */
   --success: #4a7c59;      /* sage */
   --danger: #b8463e;       /* muted brick */
@@ -137,6 +145,13 @@
     --primary-soft: #1f2c24;
     --accent: #d4b870;       /* dimmed champagne — keeps the glow */
     --accent-deep: #c9a961;
+    /* Spillestil-chips (#498) — løftet for mørk bg. */
+    --chip-solo-bg: rgba(125, 165, 195, 0.18);
+    --chip-solo-fg: #a6c3d8;
+    --chip-solo-border: rgba(125, 165, 195, 0.34);
+    --chip-team-bg: rgba(205, 135, 95, 0.18);
+    --chip-team-fg: #dbac8f;
+    --chip-team-border: rgba(205, 135, 95, 0.34);
     --bg-tint: #ece5d2;      /* body color on forest cards in dark mode */
     --success: #7daa8a;
     --danger: #d67268;
@@ -218,6 +233,13 @@
   --primary-soft: #1f2c24;
   --accent: #d4b870;
   --accent-deep: #c9a961;
+  /* Spillestil-chips (#498) — løftet for mørk bg. */
+  --chip-solo-bg: rgba(125, 165, 195, 0.18);
+  --chip-solo-fg: #a6c3d8;
+  --chip-solo-border: rgba(125, 165, 195, 0.34);
+  --chip-team-bg: rgba(205, 135, 95, 0.18);
+  --chip-team-fg: #dbac8f;
+  --chip-team-border: rgba(205, 135, 95, 0.34);
   --bg-tint: #ece5d2;
   --success: #7daa8a;
   --danger: #d67268;

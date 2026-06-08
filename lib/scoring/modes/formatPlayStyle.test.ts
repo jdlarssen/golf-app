@@ -6,9 +6,9 @@ import {
   type GameMode,
 } from './types';
 
-// #478: format-kortene merkes med spillestil (Solo / Hver for seg / Lag), og
-// fleksible format (stableford-familien) merkes «Solo eller lag». Ren
-// klassifisering — testes uten DB.
+// #478/#498: format-kortene merkes med spillestil (Solo / Lag). Pott- og
+// 1-mot-1-format er «Solo»; fleksible format (stableford-familien) viser begge.
+// Ren klassifisering — testes uten DB.
 
 describe('formatPlayStyle', () => {
   const cases: Array<[GameMode, PlayStyle]> = [
@@ -45,9 +45,10 @@ describe('formatPlayStyle', () => {
   });
 
   it('har en norsk label for hver spillestil', () => {
+    // #498: «Hver for seg» slått sammen til «Solo».
     expect(PLAY_STYLE_LABELS).toEqual({
       solo: 'Solo',
-      individual: 'Hver for seg',
+      individual: 'Solo',
       team: 'Lag',
       flexible: 'Solo eller lag',
     });
