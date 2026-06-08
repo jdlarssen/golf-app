@@ -13,6 +13,7 @@ import {
   KonvoluttIcon,
   LaurbaerIcon,
   PokalIcon,
+  ScorekortIcon,
   SparkleIcon,
 } from '@/components/icons';
 import { firstName } from '@/lib/firstName';
@@ -183,7 +184,7 @@ function GreetingSkeleton({ dateLine }: { dateLine: string }) {
 
 // ─── Tile grid ───────────────────────────────────────────────────────────
 
-type TileIconKind = 'flagg' | 'konvolutt' | 'bane' | 'pokal' | 'sparkle' | 'formats' | 'laurbaer';
+type TileIconKind = 'flagg' | 'konvolutt' | 'bane' | 'pokal' | 'sparkle' | 'formats' | 'laurbaer' | 'spillformater';
 type Tile = {
   label: string;
   href: string;
@@ -337,6 +338,14 @@ async function TilesGrid() {
       meta: 'Opprett og styr klubber',
       icon: 'laurbaer',
     },
+    // #500: oppslagsverket — et rolig sted å lese om formatene (flyttet hit fra
+    // Hjem; den raske «slik funker det» bor bak «?» i veiviseren).
+    {
+      label: 'Spillformater',
+      href: '/spillformater',
+      meta: 'Bli kjent med formatene',
+      icon: 'spillformater',
+    },
   ];
 
   return <TileGridView tiles={tiles} />;
@@ -440,6 +449,14 @@ async function PlayerKlubbhus({ role }: { role: AdminRoleContext }) {
       href: '/klubber',
       meta: 'Klubbene dine',
       icon: 'laurbaer',
+    },
+    // #500: oppslagsverket — også for vanlige spillere, så de beholder browse-
+    // tilgang til formatene når format-kortet fjernes fra Hjem.
+    {
+      label: 'Spillformater',
+      href: '/spillformater',
+      meta: 'Bli kjent med formatene',
+      icon: 'spillformater',
     },
   ];
 
@@ -701,5 +718,6 @@ function TileIcon({ kind }: { kind: TileIconKind }) {
   if (kind === 'sparkle') return <SparkleIcon width={22} height={22} />;
   if (kind === 'formats') return <FormatsIcon width={22} height={22} />;
   if (kind === 'laurbaer') return <LaurbaerIcon width={22} height={22} />;
+  if (kind === 'spillformater') return <ScorekortIcon width={22} height={22} />;
   return <PokalIcon width={22} height={22} />;
 }

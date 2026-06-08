@@ -17,7 +17,31 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.104.y — Veiviser · kompakte format-kort
+## 1.105.y — Hjem · finn turneringer øverst
+
+Issue [#500](https://github.com/jdlarssen/golf-app/issues/500). Hjem-sida speiler kjerneflyten: oppdag og bli med i turneringer rett under egne spill, og det rolige format-oppslagsverket flytter til Klubbhuset.
+
+### [1.105.0] - 2026-06-08 · #500
+
+> Hjem viser nå «Finn turneringer» rett under spillene dine i stedet for nederst, fordi det å finne en runde å bli med i er det viktigste herfra. Den gamle format-guide-snarveien og «Mer kommer her snart» er borte; vil du lese deg opp på spillformatene ligger de nå som en egen flate i Klubbhuset.
+
+<details>
+<summary>Teknisk</summary>
+
+[#500](https://github.com/jdlarssen/golf-app/issues/500). Hjem-IA + Klubbhus-tile (oppfølger til #498).
+
+#### Changed
+- `app/page.tsx`: seksjonsrekkefølge er nå `Pågår nå` → `Mine spill` → `Finn turneringer` → `Avsluttede spill` («Finn turneringer» flyttet opp fra bunnen). Format-guide-seksjonen og «Mer kommer her snart»-teksten fjernet.
+
+#### Added
+- `app/admin/page.tsx`: «Spillformater»-tile (→ `/spillformater`) i både admin-`TilesGrid` og vanlig-spiller-`PlayerKlubbhus`, så ingen mister browse-tilgang til oppslagsverket når Hjem-kortet fjernes. Ny `TileIconKind 'spillformater'` (`ScorekortIcon`).
+
+</details>
+
+## Tidligere versjoner
+
+<details>
+<summary><strong>1.104.y — Veiviser · kompakte format-kort (2 oppføringer)</strong></summary>
 
 Issue [#498](https://github.com/jdlarssen/golf-app/issues/498). Format-steget i veiviseren ryddes: kortene blir minimale, forklaringen kommer når du velger, og hjelpen ligger ett trykk unna uten å forlate flyten. «Spillformer» får sitt riktige navn, «Spillformater».
 
@@ -54,7 +78,7 @@ Visuell bug fanget på simulator etter v1.104.0. I det kollapsede format-kortet 
 
 </details>
 
-## Tidligere versjoner
+</details>
 
 <details>
 <summary><strong>1.103.y — Stableford · hull for hull (2 oppføringer)</strong></summary>

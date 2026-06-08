@@ -302,6 +302,23 @@ async function HomeBody() {
           </Section>
         )}
 
+        {/* Vedvarende «Finn turneringer»-inngang (#357, #392, #500). Hjem er
+            play + discover-navet (arrangering bor i Klubbhuset), så alle
+            innloggede kan oppdage åpne turneringer herfra — rett under egne
+            spill, over de avsluttede. */}
+        <Section label="Finn turneringer">
+          <SmartLink href="/finn-turneringer" className="block">
+            <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
+              <span className="text-base font-medium text-text">
+                Se åpne turneringer du kan bli med i
+              </span>
+              <span aria-hidden className="text-muted">
+                →
+              </span>
+            </Card>
+          </SmartLink>
+        </Section>
+
         {finishedGames.length > 0 && (
           <Section label="Avsluttede spill">
             {finishedGames.map((g) => (
@@ -332,40 +349,7 @@ async function HomeBody() {
           </Section>
         )}
 
-        <Section label="Spillformater">
-          <SmartLink href="/spillformater" className="block">
-            <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
-              <span className="text-base font-medium text-text">
-                Slik spiller du formene
-              </span>
-              <span aria-hidden className="text-muted">
-                →
-              </span>
-            </Card>
-          </SmartLink>
-        </Section>
-
-        {/* Vedvarende «Finn turneringer»-inngang (#357, #392). Hjem er play +
-            discover-navet nå (arrangering bor i Klubbhuset), så alle innloggede
-            kan oppdage åpne turneringer herfra. */}
-        <Section label="Finn turneringer">
-          <SmartLink href="/finn-turneringer" className="block">
-            <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
-              <span className="text-base font-medium text-text">
-                Se åpne turneringer du kan bli med i
-              </span>
-              <span aria-hidden className="text-muted">
-                →
-              </span>
-            </Card>
-          </SmartLink>
-        </Section>
-
       </nav>
-
-      <p className="mt-10 text-xs text-muted text-center">
-        Mer kommer her snart.
-      </p>
     </>
   );
 }
