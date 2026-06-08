@@ -17,7 +17,34 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.95.y — Skins · hull for hull og duell
+## 1.96.y — Wolf · hull for hull
+
+Issue [#496](https://github.com/jdlarssen/golf-app/issues/496). Format-bevisst «Hull for hull» fortsetter — Wolf får sin egen per-hull-flate. PR 2 av epicen.
+
+### [1.96.0] - 2026-06-08 · #496
+
+> Etter en Wolf-runde viser «Hull for hull» nå hvem som var Wolf på hvert hull, hva valget ble (alene, blind eller med en partner), hvem som vant, og hva hver spiller scoret på sin side. Før så det ut som et lag-scorekort, selv om dere spilte mot hverandre.
+
+<details>
+<summary>Teknisk</summary>
+
+[#496](https://github.com/jdlarssen/golf-app/issues/496) PR 2 av epic (Wolf). Holes-siden forgrener nå også på `game_mode === 'wolf'`.
+
+#### Added
+- `WolfHolesView` (server-component): per hull viser den Wolf, valg (Lone/Blind/Partner), utfall og innsats, og — det WolfView sin kompakte PER HULL mangler — hver spillers score, side (Wolf-side/Andre) og poeng.
+- `lib/wolf/holeLabels.ts`: delte choice/outcome-labels brukt av både WolfView og WolfHolesView.
+- Type C render-test for WolfHolesView.
+
+#### Changed
+- `buildWolfContext`-helper trukket ut av `renderWolf` (injiserer `wolfChoices` fra `wolf_hole_choices`) så leaderboard- og «Hull for hull»-flaten deler kilde.
+- `WolfView` bruker nå de delte label-helperne (strenger byte-identiske).
+
+</details>
+
+## Tidligere versjoner
+
+<details>
+<summary><strong>1.95.y — Skins · hull for hull og duell (1 oppføring)</strong></summary>
 
 Issue [#496](https://github.com/jdlarssen/golf-app/issues/496). Format-bevisst «Hull for hull» for solo-spill, og et eget resultat-kort for 1-mot-1. PR 1 av epicen: Skins.
 
@@ -41,7 +68,7 @@ Issue [#496](https://github.com/jdlarssen/golf-app/issues/496). Format-bevisst �
 
 </details>
 
-## Tidligere versjoner
+</details>
 
 <details>
 <summary><strong>1.94.y — Liga · stableford (2 oppføringer)</strong></summary>

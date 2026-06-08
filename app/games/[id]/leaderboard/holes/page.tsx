@@ -28,6 +28,10 @@ import { computeLeaderboard as computeModeResult } from '@/lib/scoring';
 import { buildSkinsContext } from '@/lib/scoring/context/buildSkinsContext';
 import { SkinsHolesView } from './SkinsHolesView';
 import type { SkinsPlayerInfo } from '../SkinsView';
+import { buildWolfContext } from '@/lib/scoring/context/buildWolfContext';
+import { WolfHolesView } from './WolfHolesView';
+import type { WolfPlayerInfo } from '../WolfView';
+import { getWolfChoices } from '@/lib/wolf/getWolfChoices';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -106,12 +110,20 @@ export default async function LeaderboardHolesPage({
 
   // Format-bevisst «Hull for hull» (epic #496): solo-format får sin egen
   // per-hull-visning i stedet for det generiske best-ball lag-scorekortet,
-  // som aldri forgrenet på game_mode. Skins først; øvrige solo-format følger
-  // i egne PR-er og treffer fortsatt lag-grid-en til de tas.
+  // som aldri forgrenet på game_mode. Skins + Wolf tatt; øvrige solo-format
+  // følger i egne PR-er og treffer fortsatt lag-grid-en til de tas.
   if (game.game_mode === 'skins') {
     return (
       <Suspense fallback={<DrilldownSkeleton />}>
         <SkinsHolesBody gameId={id} courseId={game.course_id} />
+      </Suspense>
+    );
+  }
+
+  if (game.game_mode === 'wolf') {
+    return (
+      <Suspense fallback={<DrilldownSkeleton />}>
+        <WolfHolesBody gameId={id} courseId={game.course_id} />
       </Suspense>
     );
   }
@@ -193,6 +205,80 @@ async function SkinsHolesBody({
 
   return (
     <SkinsHolesView
+      gameId={gameId}
+      gameName={game.name}
+      result={result}
+      playersById={playersById}
+      scoreVisibility={scoreVisibility}
+      gameStatus={gameStatus}
+    />
+  );
+}
+
+/**
+ * Wolf «Hull for hull» (epic #496, PR 2). Som SkinsHolesBody, men henter også
+ * per-hull-valgene fra `wolf_hole_choices` (`getWolfChoices`, tag-cachet) og
+ * injiserer dem i konteksten via `buildWolfContext`.
+ */
+async function WolfHolesBody({
+  gameId,
+  courseId,
+}: {
+  gameId: string;
+  courseId: string;
+}) {
+  const { supabase } = await getDrilldownContext();
+
+  const [gwp, rawHolesRes, rawScoresRes, wolfChoices] = await Promise.all([
+    getGameWithPlayers(gameId),
+    supabase
+      .from('course_holes')
+      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
+      .eq('course_id', courseId)
+      .order('hole_number', { ascending: true })
+      .returns<CourseHoleRow[]>(),
+    supabase
+      .from('scores')
+      .select('user_id, hole_number, strokes')
+      .eq('game_id', gameId)
+      .returns<ScoreRow[]>(),
+    getWolfChoices(gameId),
+  ]);
+
+  if (!gwp) notFound();
+  if (rawHolesRes.error) throw rawHolesRes.error;
+  if (rawScoresRes.error) throw rawScoresRes.error;
+
+  const game = gwp.game;
+
+  const ctx = buildWolfContext({
+    gameId,
+    modeConfig: game.mode_config,
+    players: gwp.players,
+    holesRows: rawHolesRes.data ?? [],
+    scoresRows: rawScoresRes.data ?? [],
+    wolfChoices,
+  });
+
+  const result = computeModeResult(ctx);
+  if (result.kind !== 'wolf') notFound();
+
+  const playersById = new Map<string, WolfPlayerInfo>();
+  for (const p of gwp.players) {
+    if (p.users == null) continue;
+    playersById.set(p.user_id, {
+      name: p.users.name ?? '(ukjent)',
+      nickname: p.users.nickname,
+    });
+  }
+
+  const scoreVisibility: 'live' | 'reveal' =
+    game.score_visibility === 'reveal' ? 'reveal' : 'live';
+  const gameStatus: 'active' | 'finished' =
+    game.status === 'finished' ? 'finished' : 'active';
+
+  return (
+    <WolfHolesView
       gameId={gameId}
       gameName={game.name}
       result={result}
