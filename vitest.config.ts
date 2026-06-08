@@ -19,5 +19,12 @@ export default defineConfig({
     setupFiles: ['./vitest.setup.ts'],
     globals: true,
     exclude: [...configDefaults.exclude, 'e2e/**'],
+    // #506: the 5000ms default is too tight for a 248-file parallel jsdom suite.
+    // Heavy render tests (GameForm/GameWizard) run in ≤122ms isolated but balloon
+    // to 5–7s under full-suite CPU/memory contention (10 forks saturating 10 cores
+    // + jsdom GC churn), tipping over 5s non-deterministically. 20s gives ~3×
+    // headroom over the worst observed (7s) without masking genuine hangs.
+    testTimeout: 20_000,
+    hookTimeout: 20_000,
   },
 });
