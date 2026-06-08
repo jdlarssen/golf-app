@@ -90,4 +90,25 @@ describe('HeadToHeadResult', () => {
     const verdict = screen.getByTestId('h2h-verdict');
     expect(verdict.textContent).toContain('Uavgjort 3–3');
   });
+
+  it('lowerWins: vinneren er lavest score, og dommen viser vinnerens score først', () => {
+    // Slagspill-netto: u1 = 78 (lavest, vinner), u2 = 85. winnerUserId styrer
+    // crown; dommen skal lese «78–85» (vinnerens lave score først), ikke «85–78».
+    render(
+      <HeadToHeadResult
+        {...defaultProps({
+          formatLabel: 'Slagspill · Netto',
+          unitLabel: 'slag',
+          lowerWins: true,
+          winnerUserId: 'u1',
+          sideA: { userId: 'u1', name: 'Jørgen Larsen', nickname: null, score: 78 },
+          sideB: { userId: 'u2', name: 'Ola Olsen', nickname: null, score: 85 },
+          hangingNote: null,
+        })}
+      />,
+    );
+    const verdict = screen.getByTestId('h2h-verdict');
+    expect(verdict.textContent).toContain('Jørgen Larsen');
+    expect(verdict.textContent).toContain('vant duellen 78–85');
+  });
 });
