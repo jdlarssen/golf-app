@@ -7,12 +7,12 @@ import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
 import { LeaderboardBackdrop } from '@/components/illustrations/LeaderboardBackdrop';
 import { formatRevealName } from '@/lib/names/formatRevealName';
-import type {
-  WolfResult,
-  WolfHoleRow,
-  WolfChoice,
-  WolfHoleOutcome,
-} from '@/lib/scoring/modes/types';
+import {
+  wolfChoiceLabel,
+  wolfOutcomeLabel,
+  wolfOutcomeClass,
+} from '@/lib/wolf/holeLabels';
+import type { WolfResult, WolfHoleRow } from '@/lib/scoring/modes/types';
 
 /**
  * Spillerinfo for WolfView. En map fra userId → navn + kallenavn.
@@ -293,48 +293,6 @@ function PlayerRow({
   );
 }
 
-function choiceLabel(
-  choice: WolfChoice | null,
-  partnerUserId: string | null,
-  playersById: Map<string, WolfPlayerInfo>,
-): string {
-  if (choice === null) return 'Venter…';
-  if (choice === 'partner') {
-    if (!partnerUserId) return 'Partner: ?';
-    const info = playersById.get(partnerUserId);
-    const name = info ? formatRevealName(info.name, info.nickname) : '?';
-    return `Partner: ${name}`;
-  }
-  if (choice === 'lone') return 'Lone Wolf';
-  return 'Blind Wolf';
-}
-
-function outcomeLabel(outcome: WolfHoleOutcome): string {
-  switch (outcome) {
-    case 'wolf_side_wins':
-      return 'Wolf vant';
-    case 'opp_side_wins':
-      return 'Andre vant';
-    case 'tied':
-      return 'Lik';
-    default:
-      return 'Venter';
-  }
-}
-
-function outcomeClass(outcome: WolfHoleOutcome): string {
-  switch (outcome) {
-    case 'wolf_side_wins':
-      return 'text-accent';
-    case 'opp_side_wins':
-      return 'text-text';
-    case 'tied':
-      return 'text-muted';
-    default:
-      return 'text-muted';
-  }
-}
-
 function HoleRow({
   hole,
   playersById,
@@ -346,8 +304,16 @@ function HoleRow({
   const wolfName = wolfInfo
     ? formatRevealName(wolfInfo.name, wolfInfo.nickname)
     : '(ukjent)';
-  const choice = choiceLabel(hole.choice, hole.partnerUserId, playersById);
-  const outcome = outcomeLabel(hole.outcome);
+  const partnerInfo = hole.partnerUserId
+    ? playersById.get(hole.partnerUserId)
+    : null;
+  const partnerName = partnerInfo
+    ? formatRevealName(partnerInfo.name, partnerInfo.nickname)
+    : hole.partnerUserId
+      ? '?'
+      : null;
+  const choice = wolfChoiceLabel(hole.choice, partnerName);
+  const outcome = wolfOutcomeLabel(hole.outcome);
   const points = Object.entries(hole.pointsByPlayer).filter(
     ([, pts]) => pts > 0,
   );
@@ -386,7 +352,7 @@ function HoleRow({
           <span aria-hidden className="text-muted/40">
             ·
           </span>
-          <span className={`font-medium ${outcomeClass(hole.outcome)}`}>
+          <span className={`font-medium ${wolfOutcomeClass(hole.outcome)}`}>
             {outcome}
           </span>
         </div>

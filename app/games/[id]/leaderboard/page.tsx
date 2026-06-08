@@ -110,6 +110,7 @@ import { markNotificationsRead } from '@/lib/notifications/markRead';
 import { computeLeaderboard as computeModeResult, isStablefordFamily, isScrambleFamily, isAlternateShotMatchplay } from '@/lib/scoring';
 import { MODE_LABELS } from '@/lib/scoring/modes/types';
 import { buildSkinsContext } from '@/lib/scoring/context/buildSkinsContext';
+import { buildWolfContext } from '@/lib/scoring/context/buildWolfContext';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -2196,44 +2197,16 @@ async function renderWolf(opts: {
   // den ved hver endring.
   const wolfChoices = await getWolfChoices(gameId);
 
-  const ctx = {
-    game: {
-      id: gameId,
-      game_mode: 'wolf' as const,
-      mode_config: game.mode_config,
-    },
-    players: gwp.players
-      .filter((p) => p.users != null)
-      .map((p) => ({
-        userId: p.user_id,
-        // Wolf-validatoren håndhever team_number ∈ {1, 2, 3, 4} med unike
-        // verdier. Sendes som-er; defensive fallback til 0 hvis kolonnen mot
-        // formodning er null (scoring-laget håndterer det grasiøst).
-        teamNumber: p.team_number ?? 0,
-        flightNumber: null,
-        courseHandicap: p.course_handicap ?? 0,
-        // #240 — Wolf bruker netto (eller gross, per mode_config.wolf_scoring)
-        // basert på spillerens egen handicap. Sender teeGender gjennom for
-        // shape-konsistens; scoring-laget bruker den ikke for Wolf i v1.
-        teeGender: p.tee_gender,
-      })),
-    holes: rawHolesRows.map((h) => ({
-      number: h.hole_number,
-      par: h.par_mens,
-      parByGender: {
-        mens: h.par_mens,
-        ladies: h.par_ladies,
-        juniors: h.par_juniors,
-      },
-      strokeIndex: h.stroke_index,
-    })),
-    scores: rawScoresRows.map((s) => ({
-      userId: s.user_id,
-      holeNumber: s.hole_number,
-      gross: s.strokes,
-    })),
+  // Delt context-bygging (epic #496) — samme kilde som «Hull for hull»-flaten
+  // (WolfHolesBody), så map-logikken ikke dupliseres.
+  const ctx = buildWolfContext({
+    gameId,
+    modeConfig: game.mode_config,
+    players: gwp.players,
+    holesRows: rawHolesRows,
+    scoresRows: rawScoresRows,
     wolfChoices,
-  };
+  });
 
   const result = computeModeResult(ctx);
   if (result.kind !== 'wolf') {
