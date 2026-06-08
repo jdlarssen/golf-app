@@ -17,7 +17,33 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.97.y — Nines · hull for hull
+## 1.98.y — Round Robin · hull for hull
+
+Issue [#496](https://github.com/jdlarssen/golf-app/issues/496). Format-bevisst «Hull for hull» fortsetter — Round Robin får sin egen per-hull-flate. PR 4 av epicen.
+
+### [1.98.0] - 2026-06-08 · #496
+
+> Etter en Round Robin-runde viser «Hull for hull» nå hvordan makkerne roterer hvert sjette hull, og hull for hull hva hver av dere scoret og hvilken side som tok hullet. Før fantes det ingen hull-oversikt for Round Robin i det hele tatt.
+
+<details>
+<summary>Teknisk</summary>
+
+[#496](https://github.com/jdlarssen/golf-app/issues/496) PR 4 av epic (Round Robin). Holes-siden forgrener nå også på `game_mode === 'round_robin'`.
+
+#### Added
+- `RoundRobinHolesView` (server-component): segment-gruppert per-hull-flate. Tre bolker (én per roterende segment) med konstellasjons-header, og per hull begge sidenes per-spiller-netto, contributor-markering og hvilken side som vant. RoundRobinView (leaderboard) hadde ingen per-hull-visning, så flaten er rent additiv.
+- Type C render-test for RoundRobinHolesView, og `e2e/games/round-robin.spec.ts` med auth-gate for round-robin-rutene.
+
+#### Changed
+- `buildRoundRobinContext`-helper trukket ut av `renderRoundRobin` så leaderboard- og «Hull for hull»-flaten bygger `ScoringContext` fra samme kilde.
+- Holes-siden forgrener nå også på `game_mode === 'round_robin'` (Skins + Wolf + Nines + Round Robin tatt; øvrige solo-format følger i egne PR-er og treffer fortsatt lag-scorekortet til de tas).
+
+</details>
+
+## Tidligere versjoner
+
+<details>
+<summary><strong>1.97.y — Nines · hull for hull (2 oppføringer)</strong></summary>
 
 Issue [#496](https://github.com/jdlarssen/golf-app/issues/496). Format-bevisst «Hull for hull» fortsetter — Nines / Split Sixes får sin egen per-hull-flate. PR 3 av epicen.
 
@@ -51,7 +77,7 @@ Issue [#496](https://github.com/jdlarssen/golf-app/issues/496). Format-bevisst �
 
 </details>
 
-## Tidligere versjoner
+</details>
 
 <details>
 <summary><strong>1.96.y — Wolf · hull for hull (1 oppføring)</strong></summary>

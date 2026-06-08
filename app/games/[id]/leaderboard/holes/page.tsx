@@ -35,6 +35,9 @@ import { getWolfChoices } from '@/lib/wolf/getWolfChoices';
 import { buildNinesContext } from '@/lib/scoring/context/buildNinesContext';
 import { NinesHolesView } from './NinesHolesView';
 import type { NinesPlayerInfo } from '../NinesView';
+import { buildRoundRobinContext } from '@/lib/scoring/context/buildRoundRobinContext';
+import { RoundRobinHolesView } from './RoundRobinHolesView';
+import type { RoundRobinPlayerInfo } from '../RoundRobinView';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -113,8 +116,8 @@ export default async function LeaderboardHolesPage({
 
   // Format-bevisst «Hull for hull» (epic #496): solo-format får sin egen
   // per-hull-visning i stedet for det generiske best-ball lag-scorekortet,
-  // som aldri forgrenet på game_mode. Skins + Wolf + Nines tatt; øvrige
-  // solo-format følger i egne PR-er og treffer fortsatt lag-grid-en til de tas.
+  // som aldri forgrenet på game_mode. Skins + Wolf + Nines + Round Robin tatt;
+  // øvrige solo-format følger i egne PR-er og treffer fortsatt lag-grid-en.
   if (game.game_mode === 'skins') {
     return (
       <Suspense fallback={<DrilldownSkeleton />}>
@@ -135,6 +138,14 @@ export default async function LeaderboardHolesPage({
     return (
       <Suspense fallback={<DrilldownSkeleton />}>
         <NinesHolesBody gameId={id} courseId={game.course_id} />
+      </Suspense>
+    );
+  }
+
+  if (game.game_mode === 'round_robin') {
+    return (
+      <Suspense fallback={<DrilldownSkeleton />}>
+        <RoundRobinHolesBody gameId={id} courseId={game.course_id} />
       </Suspense>
     );
   }
@@ -363,6 +374,80 @@ async function NinesHolesBody({
 
   return (
     <NinesHolesView
+      gameId={gameId}
+      gameName={game.name}
+      result={result}
+      playersById={playersById}
+      scoreVisibility={scoreVisibility}
+      gameStatus={gameStatus}
+    />
+  );
+}
+
+/**
+ * Round Robin «Hull for hull» (epic #496, PR 4). Som NinesHolesBody (ingen
+ * ekstra fetch — rotasjonen er ren funksjon av slot + hull, scorer fra
+ * scores-tabellen), men bygger Round Robin-konteksten via den delte
+ * `buildRoundRobinContext`-helperen og rendrer den segment-grupperte,
+ * roterende per-hull-visningen.
+ */
+async function RoundRobinHolesBody({
+  gameId,
+  courseId,
+}: {
+  gameId: string;
+  courseId: string;
+}) {
+  const { supabase } = await getDrilldownContext();
+
+  const [gwp, rawHolesRes, rawScoresRes] = await Promise.all([
+    getGameWithPlayers(gameId),
+    supabase
+      .from('course_holes')
+      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
+      .eq('course_id', courseId)
+      .order('hole_number', { ascending: true })
+      .returns<CourseHoleRow[]>(),
+    supabase
+      .from('scores')
+      .select('user_id, hole_number, strokes')
+      .eq('game_id', gameId)
+      .returns<ScoreRow[]>(),
+  ]);
+
+  if (!gwp) notFound();
+  if (rawHolesRes.error) throw rawHolesRes.error;
+  if (rawScoresRes.error) throw rawScoresRes.error;
+
+  const game = gwp.game;
+
+  const ctx = buildRoundRobinContext({
+    gameId,
+    modeConfig: game.mode_config,
+    players: gwp.players,
+    holesRows: rawHolesRes.data ?? [],
+    scoresRows: rawScoresRes.data ?? [],
+  });
+
+  const result = computeModeResult(ctx);
+  if (result.kind !== 'round_robin') notFound();
+
+  const playersById = new Map<string, RoundRobinPlayerInfo>();
+  for (const p of gwp.players) {
+    if (p.users == null) continue;
+    playersById.set(p.user_id, {
+      name: p.users.name ?? '(ukjent)',
+      nickname: p.users.nickname,
+    });
+  }
+
+  const scoreVisibility: 'live' | 'reveal' =
+    game.score_visibility === 'reveal' ? 'reveal' : 'live';
+  const gameStatus: 'active' | 'finished' =
+    game.status === 'finished' ? 'finished' : 'active';
+
+  return (
+    <RoundRobinHolesView
       gameId={gameId}
       gameName={game.name}
       result={result}
