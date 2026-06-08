@@ -45,19 +45,21 @@ function makeResult(): AceyDeuceyResult {
     kind: 'acey_deucey',
     scoring: 'net',
     holes: [
-      // Hull 1 (normalt): Alice ace (netto 3, fikk et slag → brutto 4) +3,
-      // Bjørn/Camilla midt (netto 4) 0, David deuce (netto 6) −3.
+      // Hull 1 (normalt): Camilla ace (netto 3, fikk et slag → brutto 4) +3,
+      // Alice/David midt (netto 4) 0, Bjørn deuce (netto 6) −3.
+      // perPlayer er i spiller-rekkefølge (u1..u4) — som i ekte data — så
+      // view-en MÅ sortere for å få ace øverst (u3) og deuce nederst (u2).
       makeHole({
         holeNumber: 1,
         scored: true,
-        aceUserId: 'u1',
-        deuceUserId: 'u4',
-        pointsByPlayer: { u1: 3, u2: 0, u3: 0, u4: -3 },
+        aceUserId: 'u3',
+        deuceUserId: 'u2',
+        pointsByPlayer: { u1: 0, u2: -3, u3: 3, u4: 0 },
         perPlayer: [
-          cell('u1', 4, 3, 3),
-          cell('u2', 4, 4, 0),
-          cell('u3', 4, 4, 0),
-          cell('u4', 6, 6, -3),
+          cell('u1', 4, 4, 0),
+          cell('u2', 6, 6, -3),
+          cell('u3', 4, 3, 3),
+          cell('u4', 4, 4, 0),
         ],
       }),
       // Hull 2 (delt lavest): Alice + Bjørn begge netto 4 → INGEN ace.
@@ -131,9 +133,11 @@ describe('AceyDeuceyHolesView', () => {
     expect(card1.textContent).toContain('★');
     expect(card1.textContent).toContain('brutto 4'); // Alice netto 3
     expect(card1.textContent).toContain('−3'); // deuce (U+2212)
+    // Score-rangert: ace (Camilla, lavest) øverst, deuce (Bjørn, høyest) nederst
+    // — selv om perPlayer kom inn i spiller-rekkefølge (u1..u4). Beviser sorten.
     const card1Rows = within(card1).getAllByRole('listitem');
-    expect(card1Rows[0].textContent).toContain('Alice Andersen'); // ace øverst
-    expect(card1Rows[3].textContent).toContain('David Dahl'); // deuce nederst
+    expect(card1Rows[0].textContent).toContain('Camilla Carlsen'); // ace øverst
+    expect(card1Rows[3].textContent).toContain('Bjørn Berg'); // deuce nederst
 
     // Hull 2 (delt lavest): INGEN ace-utheving (ingen champagne) selv om to har
     // laveste score — men deuce er fortsatt markert.
