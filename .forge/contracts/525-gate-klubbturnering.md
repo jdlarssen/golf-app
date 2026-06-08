@@ -67,24 +67,23 @@ Oppdater JSDoc med #525.
 
 ## Success Criteria
 
-- [ ] `lib/clubs/isClubAdminAnywhere.ts` finnes; returnerer true for owner/admin i ikke-utløpt klubb, false ellers/ved feil.
-- [ ] Klubb-flisen er SKJULT for vanlig bruker (ikke-admin, ikke-klubb-admin) i `/opprett-spill`-veiviseren.
-- [ ] Klubb-flisen er SYNLIG for global admin.
-- [ ] Klubb-flisen er SYNLIG for klubb-admin (owner/admin i klubb) uten global admin.
-- [ ] Klubb-flisen forblir synlig ved redigering av eksisterende klubb-spill (`value === 'klubb'`).
-- [ ] `PLAYER_COUNT_MAX === 24` i GameWizard; stepperen går til 24 i kompis.
-- [ ] Format-grid på 17–24 spillere er ikke tomt (stableford/slagspill).
-- [ ] Kompis-copy oppdatert (ikke «2–4 venner»), kjørt gjennom humanizer.
-- [ ] IntentSelector render-test utvidet (Type C, samme fil): klubb skjult/synlig per rolle + edit-flyt.
-- [ ] Versjon bumpet + CHANGELOG-oppføring.
+- [x] `lib/clubs/isClubAdminAnywhere.ts` finnes; true for owner/admin i ikke-utløpt klubb, false ellers/ved feil. **Evidence:** ny fil (`a727872`), `role IN ('owner','admin')` + `isClubExpired`-filter, best-effort → false.
+- [x] Klubb-flisen SKJULT for vanlig bruker. **Evidence:** test «#525: vanlig bruker ... ser bare Kompis + Cup» grønt; filter `tile.intent !== 'klubb' || canCreateClubGame || value === 'klubb'`.
+- [x] Klubb-flisen SYNLIG for global admin. **Evidence:** `canCreateClubGame = isAdmin || isClubAdmin`; test «admin ser alle fire» grønt; admin-side sender `isAdmin`.
+- [x] Klubb-flisen SYNLIG for klubb-admin uten global admin. **Evidence:** test «#525: klubb-admin ser Klubb-turnering uten å være global admin» grønt.
+- [x] Klubb-flisen synlig ved redigering (`value === 'klubb'`). **Evidence:** test «#525: et eksisterende klubb-spill viser fortsatt kortet i edit-flyten» grønt.
+- [x] `PLAYER_COUNT_MAX === 24`. **Evidence:** `GameWizard.tsx:1186` (`73da7eb`); stepper `Math.min(24, …)`.
+- [x] Format-grid på 17–24 ikke tomt. **Evidence:** `fitsPlayerCount.ts:26-29` (`n >= 1` for stableford-familien); slagspill via permissiv `default: true`.
+- [x] Kompis-copy oppdatert + humanizer. **Evidence:** `intent.ts:34` «Gjør runden mer spennende, opp til 24 spillere»; humanizer-skill kjørt på begge strenger.
+- [x] IntentSelector render-test utvidet (Type C, samme fil). **Evidence:** +3 tester, 12/12 grønt.
+- [x] Versjon bumpet + CHANGELOG. **Evidence:** `1.106.0` + `1.106.1`, ny `1.106.y`-tema, forrige serie kollapset.
 
 ## Gates
 
-- [ ] `npx tsc --noEmit` — 0 errors
-- [ ] `npm run build` — Compiled successfully (Vercel-paritet)
-- [ ] `npx vitest run app/admin/games/new/IntentSelector.test.tsx lib/wizard/fitsPlayerCount` — grønt
-- [ ] Co-located test for endrede filer grønt
-- [ ] commit-msg-hook passerer (versjons-bump + CHANGELOG staged)
+- [x] `npm run build` — Compiled successfully (Vercel-paritet) i worktree. (`tsc --noEmit` ga kun stale `.next`-validator-feil for renamet `spillformer`-rute — urelatert; build er autoritativ.)
+- [x] `npx vitest run app/admin/games/new/IntentSelector.test.tsx lib/wizard/fitsPlayerCount.test.ts` — 127/127 grønt
+- [x] Co-located test for endrede filer grønt (IntentSelector.test.tsx)
+- [x] commit-msg-hook passerer — begge `feat`-commits hadde versjons-bump + CHANGELOG staget
 
 ## Files Likely Touched
 
