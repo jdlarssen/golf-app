@@ -1244,6 +1244,57 @@ async function renderStableford(opts: {
 
   // Finished → reveal-podium (fase 6). Active/scheduled → flat live-view.
   if (game.status === 'finished') {
+    // Ved nøyaktig 2 spillere uten sideturnering er det en duell → head-to-head-
+    // kort i stedet for podium (epic #496). Stableford er høyest-vinner, så
+    // HeadToHeadResult brukes med default (ingen lowerWins). Sideturnering
+    // beholder podiet (flyten forventer et podium i tabs).
+    if (result.players.length === 2 && !showSideTournament) {
+      const order = gwp.players.map((p) => p.user_id);
+      const [a, b] = [...result.players].sort(
+        (x, y) => order.indexOf(x.userId) - order.indexOf(y.userId),
+      );
+      const sideFor = (pl: typeof a) => {
+        const info = playersById.get(pl.userId);
+        return {
+          userId: pl.userId,
+          name: info?.name ?? '(ukjent)',
+          nickname: info?.nickname ?? null,
+          score: pl.totalPoints,
+          subLabel: `${pl.holesPlayed} hull spilt`,
+        };
+      };
+      const strip: StripCell[] = result.holes.map((h): StripCell => {
+        if (h.bestUserIds.length === 1) {
+          if (h.bestUserIds[0] === a.userId) return 'a';
+          if (h.bestUserIds[0] === b.userId) return 'b';
+          return 'unplayed';
+        }
+        if (h.bestUserIds.length > 1) return 'halved';
+        return 'unplayed';
+      });
+      const winnerUserId =
+        a.rank === b.rank ? null : a.rank < b.rank ? a.userId : b.userId;
+      return (
+        <>
+          <HeadToHeadResult
+            gameId={gameId}
+            gameName={game.name}
+            formatLabel={
+              stablefordMode === 'modified_stableford'
+                ? 'Modifisert Stableford'
+                : 'Stableford'
+            }
+            unitLabel="poeng"
+            sideA={sideFor(a)}
+            sideB={sideFor(b)}
+            winnerUserId={winnerUserId}
+            strip={strip}
+            backHref={backHref}
+          />
+          {wdSection}
+        </>
+      );
+    }
     const podium = (chromeless: boolean) => (
       <SoloStablefordPodium
         gameId={gameId}

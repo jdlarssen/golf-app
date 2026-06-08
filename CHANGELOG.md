@@ -17,7 +17,35 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.102.y — Slagspill · hull for hull
+## 1.103.y — Stableford · hull for hull
+
+Issue [#496](https://github.com/jdlarssen/golf-app/issues/496). Format-bevisst «Hull for hull» fullføres — solo og modifisert stableford får sitt eget poeng-scorekort, og 1-mot-1-spill får et duell-oppgjør. PR 9 (siste) av epicen.
+
+### [1.103.0] - 2026-06-08 · #496
+
+> Etter en stableford-runde viser «Hull for hull» nå poeng per spiller hull for hull, med stillingen øverst og hvem som tok flest poeng på hvert hull. Det gjelder både vanlig og modifisert stableford (der dårlige hull gir minuspoeng). Var dere bare to, møter du en duell i stedet for podium når runden er ferdig. Med dette ser alle spillemodi nå riktig «Hull for hull» — ikke lenger et lag-scorekort for spill dere egentlig spilte hver for dere.
+
+<details>
+<summary>Teknisk</summary>
+
+[#496](https://github.com/jdlarssen/golf-app/issues/496) PR 9 (siste) av epic (solo + modifisert stableford). Holes-siden forgrener nå også på solo stableford/modified (`team_size === 1`).
+
+#### Added
+- `SoloStablefordHolesView` (server-component): klassisk per-spiller poeng-scorekort. Rangert stillings-header (løpende poeng), så Ut/Inn-bolker med per-hull-kort (brutto-shape → poeng per spiller, sortert høyest først, hull-vinner i champagne) og poeng-subtotal per ni. Modifisert stableford eksponerer negative hull-poeng. Erstatter det generiske best-ball «Lag N»-scorekortet. Dekker både `stableford` og `modified_stableford` (samme resultat-shape).
+- Duell-kort (`HeadToHeadResult`) ved nøyaktig 2 spillere på et ferdig solo stableford-spill uten sideturnering, i stedet for podium. Poeng som metrikk (høyest vinner). Tug-of-war-baren ble gjort robust mot negative totaler (modifisert stableford bruker netto-poeng der par = 0).
+- Type C render-test for SoloStablefordHolesView, ny `e2e/games/solo-stableford.spec.ts` med tre auth-gate-tester, og et negativ-score-case i HeadToHeadResult-testen.
+
+#### Changed
+- Solo-`StablefordSoloResult` eksponerer nå en `holes`-array (per-hull per-spiller brutto + poeng + hull-vinner) via TDD, testet på både standard og modifisert (negativ) tabell. Team-varianten hadde allerede per-hull.
+- `buildStablefordContext`-helper trukket ut av `renderStableford` (eier game_mode-passthrough, team-variant teamNumber og WD-filtrering #386) så leaderboard- og «Hull for hull»-flaten bygger `ScoringContext` fra samme kilde.
+- Holes-siden forgrener nå også på solo stableford/modified (par-/team-stableford beholder generisk visning). **Epic #496 er med dette fullført — alle solo-format har format-bevisst «Hull for hull».**
+
+</details>
+
+## Tidligere versjoner
+
+<details>
+<summary><strong>1.102.y — Slagspill · hull for hull (1 oppføring)</strong></summary>
 
 Issue [#496](https://github.com/jdlarssen/golf-app/issues/496). Format-bevisst «Hull for hull» fortsetter — solo slagspill får sitt eget klassiske scorekort, og 1-mot-1-spill får et duell-oppgjør. PR 8 av epicen.
 
@@ -42,7 +70,7 @@ Issue [#496](https://github.com/jdlarssen/golf-app/issues/496). Format-bevisst �
 
 </details>
 
-## Tidligere versjoner
+</details>
 
 <details>
 <summary><strong>1.101.y — Nassau · hull for hull (1 oppføring)</strong></summary>

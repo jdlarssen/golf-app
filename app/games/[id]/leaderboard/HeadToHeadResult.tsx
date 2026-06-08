@@ -107,11 +107,19 @@ export function HeadToHeadResult({
           ? 'b'
           : 'tie';
 
-  const total = sideA.score + sideB.score;
-  // Tug-of-war: normalt fyller scoren proporsjonalt (høyest vinner = størst
-  // andel). Ved lowerWins (slagspill-netto) inverteres andelene så vinner-
-  // siden (lavest score) fortsatt får den største champagne-flaten.
-  const rawPctA = total === 0 ? 50 : Math.round((sideA.score / total) * 100);
+  // Tug-of-war: andelen tegnes fra en 0-basislinje (eller den mest negative
+  // scoren). For ikke-negative scorer (Skins/BBB/Nassau/slagspill) er lo = 0,
+  // så formelen reduseres til ren score/sum-andel — ingen visuell endring for
+  // de formatene. Skiftet gjør baren robust mot negative totaler: modified
+  // stableford bruker netto-poeng der par = 0, så totalen kan bli negativ.
+  const lo = Math.min(sideA.score, sideB.score, 0);
+  const aShift = sideA.score - lo;
+  const bShift = sideB.score - lo;
+  const totalShift = aShift + bShift;
+  const rawPctA =
+    totalShift === 0 ? 50 : Math.round((aShift / totalShift) * 100);
+  // Ved lowerWins (slagspill-netto) inverteres andelene så vinner-siden
+  // (lavest score) fortsatt får den største champagne-flaten.
   const pctA = lowerWins ? 100 - rawPctA : rawPctA;
   const pctB = 100 - pctA;
 

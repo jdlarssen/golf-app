@@ -51,6 +51,9 @@ import type { NassauPlayerInfo } from '../NassauView';
 import { buildSoloStrokeplayContext } from '@/lib/scoring/context/buildSoloStrokeplayContext';
 import { SoloStrokeplayHolesView } from './SoloStrokeplayHolesView';
 import type { SoloStrokeplayPlayerInfo } from '../SoloStrokeplayView';
+import { buildStablefordContext } from '@/lib/scoring/context/buildStablefordContext';
+import { SoloStablefordHolesView } from './SoloStablefordHolesView';
+import type { SoloStablefordPlayerInfo } from '../SoloStablefordView';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -129,9 +132,9 @@ export default async function LeaderboardHolesPage({
 
   // Format-bevisst «Hull for hull» (epic #496): solo-format får sin egen
   // per-hull-visning i stedet for det generiske best-ball lag-scorekortet,
-  // som aldri forgrenet på game_mode. Skins + Wolf + Nines + Round Robin +
-  // Acey-Deucey + Bingo Bango Bongo + Nassau + solo strokeplay tatt;
-  // solo-stableford følger i egen PR.
+  // som aldri forgrenet på game_mode. Alle solo-format tatt: Skins + Wolf +
+  // Nines + Round Robin + Acey-Deucey + Bingo Bango Bongo + Nassau + solo
+  // strokeplay + solo/modified stableford.
   if (game.game_mode === 'skins') {
     return (
       <Suspense fallback={<DrilldownSkeleton />}>
@@ -192,6 +195,21 @@ export default async function LeaderboardHolesPage({
     return (
       <Suspense fallback={<DrilldownSkeleton />}>
         <SoloStrokeplayHolesBody gameId={id} courseId={game.course_id} />
+      </Suspense>
+    );
+  }
+
+  // Solo stableford + modified stableford (team_size === 1). Par-/team-
+  // stableford (team_size === 2) er et lag-format og faller gjennom til den
+  // generiske DrilldownBody — utenfor epic-scope.
+  if (
+    (game.mode_config.kind === 'stableford' ||
+      game.mode_config.kind === 'modified_stableford') &&
+    game.mode_config.team_size === 1
+  ) {
+    return (
+      <Suspense fallback={<DrilldownSkeleton />}>
+        <SoloStablefordHolesBody gameId={id} courseId={game.course_id} />
       </Suspense>
     );
   }
@@ -795,6 +813,90 @@ async function SoloStrokeplayHolesBody({
       gameName={game.name}
       result={result}
       playersById={playersById}
+      scoreVisibility={scoreVisibility}
+      gameStatus={gameStatus}
+    />
+  );
+}
+
+/**
+ * Solo / modified stableford «Hull for hull» (epic #496, PR 9). Som
+ * SoloStrokeplayHolesBody, men bygger konteksten via `buildStablefordContext`
+ * (game_mode-passthrough så modified får riktig poeng-tabell; eier WD #386-
+ * filtrering). Kun solo-varianten (team_size === 1) ruter hit — par-stableford
+ * faller til generisk visning. Rendrer det klassiske stableford-scorekortet.
+ */
+async function SoloStablefordHolesBody({
+  gameId,
+  courseId,
+}: {
+  gameId: string;
+  courseId: string;
+}) {
+  const { supabase } = await getDrilldownContext();
+
+  const [gwp, rawHolesRes, rawScoresRes] = await Promise.all([
+    getGameWithPlayers(gameId),
+    supabase
+      .from('course_holes')
+      .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
+      .eq('course_id', courseId)
+      .order('hole_number', { ascending: true })
+      .returns<CourseHoleRow[]>(),
+    supabase
+      .from('scores')
+      .select('user_id, hole_number, strokes')
+      .eq('game_id', gameId)
+      .returns<ScoreRow[]>(),
+  ]);
+
+  if (!gwp) notFound();
+  if (rawHolesRes.error) throw rawHolesRes.error;
+  if (rawScoresRes.error) throw rawScoresRes.error;
+
+  const game = gwp.game;
+  const stablefordMode: 'stableford' | 'modified_stableford' =
+    game.game_mode === 'modified_stableford' ? 'modified_stableford' : 'stableford';
+
+  const ctx = buildStablefordContext({
+    gameId,
+    gameMode: stablefordMode,
+    modeConfig: game.mode_config,
+    players: gwp.players,
+    holesRows: rawHolesRes.data ?? [],
+    scoresRows: rawScoresRes.data ?? [],
+  });
+
+  const result = computeModeResult(ctx);
+  // Solo-flaten kun for solo-varianten. Team faller aldri hit (page-branchen
+  // gater på team_size === 1), men vi narrower defensivt.
+  if (result.kind !== 'stableford' || result.variant !== 'solo') notFound();
+
+  const playersById = new Map<string, SoloStablefordPlayerInfo>();
+  for (const p of gwp.players) {
+    if (p.users == null) continue;
+    playersById.set(p.user_id, {
+      name: p.users.name ?? '(ukjent)',
+      nickname: p.users.nickname,
+    });
+  }
+
+  const scoreVisibility: 'live' | 'reveal' =
+    game.score_visibility === 'reveal' ? 'reveal' : 'live';
+  const gameStatus: 'active' | 'finished' =
+    game.status === 'finished' ? 'finished' : 'active';
+
+  return (
+    <SoloStablefordHolesView
+      gameId={gameId}
+      gameName={game.name}
+      result={result}
+      playersById={playersById}
+      formatLabel={
+        stablefordMode === 'modified_stableford'
+          ? 'Modifisert Stableford'
+          : 'Stableford'
+      }
       scoreVisibility={scoreVisibility}
       gameStatus={gameStatus}
     />
