@@ -21,6 +21,20 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#500](https://github.com/jdlarssen/golf-app/issues/500). Hjem-sida speiler kjerneflyten: oppdag og bli med i turneringer rett under egne spill, og det rolige format-oppslagsverket flytter til Klubbhuset.
 
+### [1.105.2] - 2026-06-08 · #520
+
+> «Finn turneringer» får samme rolige velkomst som Hjem når lista er tom: et flagg-ikon, en sentrert hilsen og et lite sitat, med «Fyr opp din egen turnering»-knappen midt i bildet. Mindre tom skjerm, mer invitasjon.
+
+<details>
+<summary>Teknisk</summary>
+
+[#520](https://github.com/jdlarssen/golf-app/issues/520). Visuell polish av tom-tilstanden fra #518.
+
+#### Changed
+- `app/finn-turneringer/page.tsx`: `isEmpty`-grenen er løftet til en sentrert hero som speiler Hjem-tomtilstanden — `ChampagneMedallion` + `PinFlag`, sentrert `font-serif`-H1, melding (`max-w-[280px]`), `LinkButton` → `/opprett-spill`, og en `PullQuote` på bunnen for vertikal balanse. `PageHeader` (med undertittelen «Åpne turneringer du kan melde deg på …») er flyttet inn i den populerte grenen, så undertittelen ikke lenger motsier «Ingen åpne turneringer» i tom-tilstand. Nav-headeren (BackLink + Kicker) står i begge tilstander.
+
+</details>
+
 ### [1.105.1] - 2026-06-08 · #518
 
 > Før var «Finn turneringer» en blindvei når lista var tom. Nå får du en knapp rett der som fyrer opp din egen turnering, så du slipper å vente på at noen andre inviterer deg.
