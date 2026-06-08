@@ -113,6 +113,7 @@ import { buildSkinsContext } from '@/lib/scoring/context/buildSkinsContext';
 import { buildWolfContext } from '@/lib/scoring/context/buildWolfContext';
 import { buildNinesContext } from '@/lib/scoring/context/buildNinesContext';
 import { buildRoundRobinContext } from '@/lib/scoring/context/buildRoundRobinContext';
+import { buildAceyDeuceyContext } from '@/lib/scoring/context/buildAceyDeuceyContext';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -2928,43 +2929,16 @@ function renderAceyDeucey(opts: {
 }) {
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
-  const ctx = {
-    game: {
-      id: gameId,
-      game_mode: 'acey_deucey' as const,
-      mode_config: game.mode_config,
-    },
-    players: gwp.players
-      .filter((p) => p.users != null)
-      .map((p) => ({
-        userId: p.user_id,
-        // Acey Deucey-validatoren setter team_number = null (solo), men DB-kolonnen
-        // er ikke nullable så den lander som 0. Sender null oppover for å
-        // matche scoring-lagets solo-narrowing — samme pattern som Skins/Nassau.
-        teamNumber: null,
-        flightNumber: null,
-        courseHandicap: p.course_handicap ?? 0,
-        // Acey Deucey bruker netto (eller gross, per mode_config.acey_deucey_scoring)
-        // basert på spillerens egen handicap. Sender teeGender gjennom for
-        // shape-konsistens.
-        teeGender: p.tee_gender,
-      })),
-    holes: rawHolesRows.map((h) => ({
-      number: h.hole_number,
-      par: h.par_mens,
-      parByGender: {
-        mens: h.par_mens,
-        ladies: h.par_ladies,
-        juniors: h.par_juniors,
-      },
-      strokeIndex: h.stroke_index,
-    })),
-    scores: rawScoresRows.map((s) => ({
-      userId: s.user_id,
-      holeNumber: s.hole_number,
-      gross: s.strokes,
-    })),
-  };
+  // Bygges via den delte `buildAceyDeuceyContext`-helperen (epic #496) slik at
+  // leaderboard-flaten og «Hull for hull»-flaten (`AceyDeuceyHolesBody`) deler
+  // kilde — ingen duplisert ctx-map.
+  const ctx = buildAceyDeuceyContext({
+    gameId,
+    modeConfig: game.mode_config,
+    players: gwp.players,
+    holesRows: rawHolesRows,
+    scoresRows: rawScoresRows,
+  });
 
   const result = computeModeResult(ctx);
   if (result.kind !== 'acey_deucey') {
