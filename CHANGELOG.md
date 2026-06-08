@@ -17,7 +17,36 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.106.y — Klubb-cup
+## 1.107.y — Veiviser · klubb for klubber, kompis vokser
+
+Issue [#525](https://github.com/jdlarssen/golf-app/issues/525). Veiviserens arrangement-valg rydder opp i hvem som ser hva: «Klubb-turnering» er for de som faktisk har en klubb, og den vanlige kompis-runden får plass til en hel turnering.
+
+### [1.107.0] - 2026-06-08 · #525
+
+> «Klubb-turnering» dukker nå bare opp hvis du faktisk har en klubb å arrangere for. Lager du en runde uten klubb, ser du Kompis-runde og Cup — ikke en fane som likevel ikke fører noe sted.
+
+<details>
+<summary>Teknisk</summary>
+
+[#525](https://github.com/jdlarssen/golf-app/issues/525). Gating av klubb-intenten i opprett-veiviseren.
+
+#### Added
+- `lib/clubs/isClubAdminAnywhere.ts`: server-helper som er `true` hvis brukeren er owner/admin i ≥1 ikke-utløpt klubb (admin-client, best-effort → `false` ved feil). Utløpte klubber teller ikke (samme regel som klubb-velgeren).
+
+#### Changed
+- `app/admin/games/new/IntentSelector.tsx`: «Klubb-turnering»-flisen er gatet bak `isAdmin || isClubAdmin`, samme mønster som #477-gatingen av «Solo / Test». Et eksisterende klubb-spill som redigeres beholder kortet (`value === 'klubb'`).
+- `app/admin/games/new/GameWizard.tsx`: ny `isClubAdmin`-prop sendt til begge `IntentSelector`-bruk. Standard-flyt-selektoren (5-stegs) manglet `isAdmin` helt — nå sender begge call-sites både `isAdmin` og `isClubAdmin`, noe som samtidig lukker et latent #477-hull (admin så ikke «Solo / Test» i den vanlige klikk-gjennom-flyten, kun via direktelenke).
+- `app/opprett-spill/page.tsx`: beregner `isClubAdmin` via den nye helperen (parallelt med øvrige fetch-er) og sender den inn. Admin-flyten trenger den ikke — `isAdmin` dekker.
+
+#### Tests
+- `app/admin/games/new/IntentSelector.test.tsx`: +3 Type-C-render-tester (klubb skjult for vanlig bruker, synlig for klubb-admin uten global admin, synlig i klubb-edit-flyt).
+
+</details>
+
+## Tidligere versjoner
+
+<details>
+<summary><strong>1.106.y — Klubb-cup (1 oppføring)</strong></summary>
 
 Issue [#524](https://github.com/jdlarssen/golf-app/issues/524). Klubb-cup speiler klubb-ligaen: en klubb-eier/-admin oppretter og styrer en lag-mot-lag-cup fra klubb-rommet, lagene hentes fra medlemmene, og medlemmer ser klubbens cuper på klubb-siden.
 
@@ -41,7 +70,7 @@ Issue [#524](https://github.com/jdlarssen/golf-app/issues/524). Klubb-cup speile
 
 </details>
 
-## Tidligere versjoner
+</details>
 
 <details>
 <summary><strong>1.105.y — Hjem · finn turneringer øverst (5 oppføringer)</strong></summary>

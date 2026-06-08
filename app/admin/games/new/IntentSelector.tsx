@@ -20,6 +20,14 @@ type Props = {
    * er synlig.
    */
   isAdmin?: boolean;
+  /**
+   * #525: «Klubb-turnering» er bygd rundt en ekte klubb (roster fra
+   * klubbmedlemmer, klubb-synlig). En vanlig spiller uten klubb skal ikke se
+   * den — flisen ville bare vært en blindvei. Vises for global admin (isAdmin)
+   * ELLER for en klubb-admin (owner/admin i ≥1 klubb). Et eksisterende
+   * klubb-spill som redigeres viser fortsatt kortet (value === 'klubb').
+   */
+  isClubAdmin?: boolean;
 };
 
 type IntentTile = {
@@ -97,11 +105,17 @@ export function IntentSelector({
   onChange,
   disabled = false,
   isAdmin = false,
+  isClubAdmin = false,
 }: Props) {
-  // #477: skjul «Solo / Test» for ikke-admin. Behold kortet hvis et eksisterende
-  // solo-spill redigeres (value === 'solo') så intent-en forblir synlig.
+  // #477: skjul «Solo / Test» for ikke-admin. #525: skjul «Klubb-turnering» for
+  // den som verken er global admin eller klubb-admin. Begge kortene beholdes hvis
+  // et eksisterende spill med den intent-en redigeres (value-sjekken) så det
+  // valgte arrangementet ikke forsvinner fra UI-en.
+  const canCreateClubGame = isAdmin || isClubAdmin;
   const tiles = TILES.filter(
-    (tile) => tile.intent !== 'solo' || isAdmin || value === 'solo',
+    (tile) =>
+      (tile.intent !== 'solo' || isAdmin || value === 'solo') &&
+      (tile.intent !== 'klubb' || canCreateClubGame || value === 'klubb'),
   );
 
   return (

@@ -25,6 +25,7 @@ import {
 import { getFormatGuideEntries } from '@/lib/formats/buildFormatGuide';
 import { getFriendPlayerOptions } from '@/lib/friends/getFriendPlayerOptions';
 import { getClubMemberPlayerOptions } from '@/lib/clubs/getClubMemberPlayerOptions';
+import { isClubAdminAnywhere } from '@/lib/clubs/isClubAdminAnywhere';
 
 // Opprett-spill-ruten for ALLE innloggede brukere (#427 — tidligere bare
 // admin/trusted per #198). Gjenbruker GameWizard fra admin-flyten, men kjører
@@ -153,7 +154,7 @@ async function GameFormBody({
     getCupEligibleFormats(),
     getFormatGuideEntries(),
   ]);
-  const [{ courses, players, clubs }, friendPlayers, clubMembers] =
+  const [{ courses, players, clubs }, friendPlayers, clubMembers, isClubAdmin] =
     await Promise.all([
       getNewGameFormData(false),
       // #464: vennene til brukeren — picker-kilde for kompis/cup. Hentes som hele
@@ -165,6 +166,8 @@ async function GameFormBody({
         memberIdsByClub: {},
         options: [],
       })),
+      // #525: er brukeren klubb-admin? Styrer om «Klubb-turnering»-flisen vises.
+      isClubAdminAnywhere(userId),
     ]);
   // Union venner + klubbmedlemmer inn i spiller-lista (dedup på id) så picker-
   // kilden har rad-data for alle, uansett om du har delt et spill med dem (#464).
@@ -202,6 +205,7 @@ async function GameFormBody({
       clubMemberIdsByClub={clubMembers.memberIdsByClub}
       currentUserId={userId}
       isAdmin={isAdmin}
+      isClubAdmin={isClubAdmin}
       formatGuide={formatGuide}
     />
   );

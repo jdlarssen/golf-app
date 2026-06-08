@@ -113,6 +113,12 @@ type Props = {
    */
   isAdmin?: boolean;
   /**
+   * #525: styrer om «Klubb-turnering» vises i IntentSelector for en ikke-admin.
+   * True når brukeren er owner/admin i ≥1 klubb. `/opprett-spill` beregner det
+   * via `isClubAdminAnywhere`; admin-flyten trenger det ikke (isAdmin dekker).
+   */
+  isClubAdmin?: boolean;
+  /**
    * #498: format-oppslagsverket (server-bygget i page.tsx) som mater «?»-arket
    * på steg 2, så det kan rendre klient-side uten ekstra fetch. Tom = «?»-arket
    * viser ingenting (defensivt; arket åpnes likevel uten å feile).
@@ -157,6 +163,7 @@ export function GameWizard({
   clubMemberIdsByClub = {},
   currentUserId = '',
   isAdmin = false,
+  isClubAdmin = false,
   formatGuide = [],
 }: Props) {
   const router = useRouter();
@@ -461,6 +468,7 @@ export function GameWizard({
             onChange={state.setIntent}
             disabled={state.lockGameMode}
             isAdmin={isAdmin}
+            isClubAdmin={isClubAdmin}
           />
         )}
 
@@ -514,6 +522,8 @@ export function GameWizard({
           value={state.intent}
           onChange={state.setIntent}
           disabled={state.lockGameMode}
+          isAdmin={isAdmin}
+          isClubAdmin={isClubAdmin}
         />
       )}
 

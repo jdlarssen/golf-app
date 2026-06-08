@@ -3,7 +3,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { IntentSelector } from './IntentSelector';
 
 // Type C render-tester per docs/test-discipline.md — verifiserer intent-kortene,
-// radiogroup-aria-mønstret, onChange-flyten, og #477-gatingen av «Solo / Test».
+// radiogroup-aria-mønstret, onChange-flyten, #477-gatingen av «Solo / Test», og
+// #525-gatingen av «Klubb-turnering» (admin + klubb-admin).
 
 describe('IntentSelector', () => {
   it('admin ser alle fire intent-kort med korrekt aria-checked + onChange', () => {
@@ -47,6 +48,43 @@ describe('IntentSelector', () => {
 
     expect(
       screen.getByRole('radio', { name: /solo \/ test/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('#525: vanlig bruker (verken admin eller klubb-admin) ser bare Kompis + Cup', () => {
+    render(<IntentSelector value="kompis" onChange={vi.fn()} />);
+
+    expect(
+      screen.getByRole('radio', { name: /kompis-runde/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /^cup$/i })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('radio', { name: /klubb-turnering/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('radio', { name: /solo \/ test/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('#525: klubb-admin ser «Klubb-turnering» uten å være global admin', () => {
+    render(<IntentSelector value="kompis" onChange={vi.fn()} isClubAdmin />);
+
+    expect(
+      screen.getByRole('radio', { name: /klubb-turnering/i }),
+    ).toBeInTheDocument();
+    // Klubb-admin er ikke global admin → «Solo / Test» er fortsatt skjult.
+    expect(
+      screen.queryByRole('radio', { name: /solo \/ test/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('#525: et eksisterende klubb-spill viser fortsatt kortet i edit-flyten', () => {
+    // Selv uten admin/klubb-admin må kortet vises når intent-en allerede ER
+    // klubb, ellers forsvinner det valgte arrangementet ved redigering.
+    render(<IntentSelector value="klubb" onChange={vi.fn()} disabled />);
+
+    expect(
+      screen.getByRole('radio', { name: /klubb-turnering/i }),
     ).toBeInTheDocument();
   });
 });
