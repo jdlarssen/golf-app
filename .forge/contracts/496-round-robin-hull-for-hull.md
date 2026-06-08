@@ -70,22 +70,22 @@ Etter Nines-branchen: `if (game.game_mode === 'round_robin') return <Suspense…
 - Eksakt back-lenke-tekst og undertittel-detalj (f.eks. om allowance-% nevnes).
 
 ## Success Criteria
-- [ ] «Hull for hull» på et Round Robin-spill viser de 3 roterende segmentene, hver med konstellasjons-header, og per hull begge sidene med **per-spiller netto + vinnende side + contributor** — ikke det generiske lag-scorekortet. (Naviger `/games/<id>/leaderboard/holes` for et Round Robin-spill.)
-- [ ] Flaten er rent additiv: RoundRobinView (leaderboard) er uendret, og den nye flaten er den eneste per-hull-visningen for Round Robin.
-- [ ] `buildRoundRobinContext` brukes av både `renderRoundRobin` og `RoundRobinHolesBody` (ingen duplisert ctx-map; inline-mappen i `renderRoundRobin` er fjernet).
-- [ ] Andre format (inkl. Skins, Wolf, Nines, best-ball) uendret «Hull for hull».
-- [ ] Reveal-modus, dark mode, `tabular-nums`, ≥44px respektert; unplayed + tied hull håndtert (ingen feil-utheving).
-- [ ] Type C render-test for RoundRobinHolesView (fixture m/ ≥2 segmenter + 1 vunnet + 1 delt + 1 unplayed; verifiserer segment-headere, per-spiller-netto, vinner-utheving).
-- [ ] Norsk copy via `humanizer` på nye strenger.
-- [ ] CHANGELOG + MINOR-bump (1.98.0) i feature-commit.
+- [x] «Hull for hull» på et Round Robin-spill viser de 3 roterende segmentene, hver med konstellasjons-header, og per hull begge sidene med **per-spiller netto + vinnende side + contributor** — ikke det generiske lag-scorekortet. → `holes/page.tsx` round_robin-branch + `RoundRobinHolesBody` + `RoundRobinHolesView` (SegmentBlock-konstellasjon + HoleCard med to SideBlock).
+- [x] Flaten er rent additiv: RoundRobinView (leaderboard) er uendret, og den nye flaten er den eneste per-hull-visningen for Round Robin. → `RoundRobinView.tsx` urørt i diffen; ny flate kun under `holes/`.
+- [x] `buildRoundRobinContext` brukes av både `renderRoundRobin` og `RoundRobinHolesBody` (ingen duplisert ctx-map; inline-mappen i `renderRoundRobin` er fjernet). → `lib/scoring/context/buildRoundRobinContext.ts`; begge call-sites kaller den; inline-map slettet i commit c4c2074.
+- [x] Andre format (inkl. Skins, Wolf, Nines, best-ball) uendret «Hull for hull». → Kun `'round_robin'`-gren lagt til; full suite 2943 grønn.
+- [x] Reveal-modus, dark mode, `tabular-nums`, ≥44px respektert; unplayed + tied hull håndtert (ingen feil-utheving). → `round-robin-holes-reveal-hidden`-blokk; token-farger; `tabular-nums`; back-lenke `h-11 w-11`; `outcomeChip` + `isWinner` gater utheving på `unplayed`/`tied`.
+- [x] Type C render-test for RoundRobinHolesView (fixture m/ ≥2 segmenter + 1 vunnet + 1 delt + 1 unplayed; verifiserer segment-headere, per-spiller-netto, vinner-utheving). → `RoundRobinHolesView.test.tsx` (1 test, grønn; asserter rotert konstellasjon + «Vant hullet» + brutto + unplayed «Venter»/«–» + ingen accent).
+- [x] Norsk copy via `humanizer` på nye strenger. → humanizer-checklist på tagline + UI-strenger («Vant hullet», «Delt», «Venter», «{navn} mot {navn}»): rene, ingen AI-tells.
+- [x] CHANGELOG + MINOR-bump (1.98.0) i feature-commit. → `package.json` 1.98.0 + CHANGELOG 1.98.y-tema (1.97.y foldet) i commit ebe3321.
 
 ## Gates
-- [ ] `npx tsc --noEmit` — 0 nye errors
-- [ ] `npx vitest run "app/games/[id]/leaderboard"` — nye + RoundRobinView-tester grønne
-- [ ] `npx vitest run` — full suite (regresjon)
-- [ ] `npm run lint` — 0 errors
-- [ ] `npm run build`
-- [ ] E2E auth-gate for holes-ruta på Round Robin (ny `e2e/games/round-robin.spec.ts`, speil `e2e/games/nines.spec.ts`)
+- [x] `npx tsc --noEmit` — 0 nye errors → clean (etter Kicker-string-fiks)
+- [x] `npx vitest run "app/games/[id]/leaderboard"` — nye + RoundRobinView-tester grønne → 171+ grønne; holes-dir 4/4
+- [x] `npx vitest run` — full suite (regresjon) → 243 filer / 2943 tester grønne
+- [x] `npm run lint` — 0 errors → 0 errors (nye filer 0 issues)
+- [x] `npm run build` → success
+- [x] E2E auth-gate for holes-ruta på Round Robin (ny `e2e/games/round-robin.spec.ts`, speil `e2e/games/nines.spec.ts`) → opprettet (3 auth-gate-tester)
 
 ## Files Likely Touched
 **Nye:** `app/games/[id]/leaderboard/holes/RoundRobinHolesView.tsx` (+ `.test.tsx`), `lib/scoring/context/buildRoundRobinContext.ts`, `e2e/games/round-robin.spec.ts`
