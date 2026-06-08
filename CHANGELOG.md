@@ -21,6 +21,17 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#498](https://github.com/jdlarssen/golf-app/issues/498). Format-steget i veiviseren ryddes: kortene blir minimale, forklaringen kommer når du velger, og hjelpen ligger ett trykk unna uten å forlate flyten. «Spillformer» får sitt riktige navn, «Spillformater».
 
+### [1.104.1] - 2026-06-08 · #498
+
+> På Stableford-kortene i veiviseren la «Solo»-merket seg oppå navnet. Nå står navnet på egen linje med Solo/Lag-merkene under, så alle format-kortene leser rent.
+
+<details>
+<summary>Teknisk</summary>
+
+Visuell bug fanget på simulator etter v1.104.0. I det kollapsede format-kortet lå navnet i en `justify-between`-rad med `min-w-0`; den brede to-chip-baren (Solo + Lag på fleksible format) holdt full bredde, så navne-boksen krympet og et ett-ords navn som «Stableford» fløt utenfor og oppå chippen. `FormatGrid` kollapset kort stabler nå navn over chip(s) (`flex-col items-start`), så lange navn og to chips alltid får plass. Enkelt-chip-kort er uendret i oppførsel. Det valgte (utvidede) kortet er full bredde og var aldri berørt.
+
+</details>
+
 ### [1.104.0] - 2026-06-08 · #498
 
 > Når du setter opp et spill viser format-steget nå kompakte kort: bare navnet og om formatet spilles solo eller på lag. Velger du ett, folder det seg ut med en kort forklaring og en «Slik funker det»-lenke. Trenger du oversikten, åpner «?»-knappen et ark med alle spillformatene rett over veiviseren, så du ikke mister det du holder på med. Og sida «Spillformer» heter nå det den burde: «Spillformater». Gamle lenker virker fortsatt.

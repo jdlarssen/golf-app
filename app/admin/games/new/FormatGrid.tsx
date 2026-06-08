@@ -104,12 +104,16 @@ export function FormatGrid({
         onClick={() => {
           if (!disabled) onChange(f.slug);
         }}
-        className="flex min-h-[44px] items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3 py-2.5 text-left transition-colors duration-150 hover:bg-primary-soft/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex min-h-[44px] flex-col items-start justify-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2.5 text-left transition-colors duration-150 hover:bg-primary-soft/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        <span className="min-w-0 font-serif text-sm leading-snug text-text">
+        {/* Navn over chip(s): et ett-ords navn («Stableford») + den brede
+            to-chip-baren (Solo + Lag) fikk ikke plass på én rad i en smal
+            2-kol-celle, så navnet fløt oppå chippen. Stablet unngår det og gir
+            lange navn full bredde. */}
+        <span className="font-serif text-sm leading-snug text-text">
           {f.display_name}
         </span>
-        <FormatStyleBadge mode={f.slug as GameMode} className="shrink-0" />
+        <FormatStyleBadge mode={f.slug as GameMode} />
       </button>
     );
   }
