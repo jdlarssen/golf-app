@@ -48,52 +48,47 @@ issuet stemmer ikke lenger, og kontrakten korrigerer dem:
 
 ## Suksess-kriterier
 
-- [ ] **K1 — Opprettelse åpnet.** `createTournamentDraft` for `group_id null`
-  krever kun innlogget bruker (ikke `requireAdmin`), setter `created_by = userId`.
-  Klubb-grenen uendret. *Bevis:* kode-diff + en vanlig bruker oppretter en cup i
-  prod uten redirect til `/`.
-- [ ] **K2 — Ny RLS-policy lar skaper skrive personlig cup.** Migrasjon `0090`
-  legger til en `for all`-policy `using/with check (group_id is null and
-  created_by = auth.uid())`, OR-et permissivt med eksisterende admin/klubb-policy.
-  *Bevis:* migrasjonsfil + `list_migrations` viser 0090 applied + insert/update/
-  delete av egen personlig cup lykkes for ikke-admin.
-- [ ] **K3 — Styringsgate slipper gjennom skaper.** Ny helper
-  `requireAdminOrTournamentCreator(supabase, tournamentId)` (speiler
-  `requireAdminOrCreator`); `requireAdminOrClubAdminOfCup` sin `group_id null`-
-  gren delegerer til den. En ikke-skaper/ikke-admin som åpner en annens cup-side
-  blir redirected. *Bevis:* kode-diff + Type-A/unit-test på gate-logikk der det er
-  praktisk, eller manuell verifikasjon.
-- [ ] **K4 — Generer-side-gate relaksert.** `app/admin/cup/[id]/generer/page.tsx`
-  bytter `requireAdmin` → `requireAdminOrClubAdminOfCup(supabase, id)` (matcher
-  sin egen action). *Bevis:* kode-diff.
-- [ ] **K5 — Cup-lista scopet.** `app/admin/cup/page.tsx` bruker `getRoleContext`;
-  ikke-admin ser kun egne personlige cuper (`created_by = userId`, `group_id`
-  null); admin ser alle. *Bevis:* kode-diff + ikke-admin ser bare egne i prod.
-- [ ] **K6 — Caps (ren logikk, TDD).** Ny modul `lib/cup/limits.ts` med
-  `MAX_PERSONAL_CUP_MATCHES = 4`, `MAX_PERSONAL_CUP_PLAYERS = 24` og rene
-  predikat-funksjoner (match-cap, spiller-cap, admin-bypass). Co-lokert
-  `limits.test.ts` med `it.each`. *Bevis:* test-fil grønn.
-- [ ] **K7 — Caps håndhevet i generering.** `createCupMatchesFromPlan` blokkerer
-  for ikke-admin personlig cup når total matcher > 4 (`error: 'too_many_matches'`)
-  eller distinkte deltakere > 24 (`error: 'too_many_players'`). Admin hopper over.
-  *Bevis:* kode-diff + Type-A på predikatene + handling returnerer rett feilkode.
-- [ ] **K8 — Cap synlig i UI.** Generer-wizarden deaktiverer «+ Match»/generer ved
-  4 matcher (ikke-admin personlig) med norsk forklaring + dytt mot klubb-cup. Feil-
-  kodene fra K7 mapper til norske banner-meldinger. *Bevis:* kode-diff + skjermbilde/
-  snapshot der det er praktisk.
-- [ ] **K9 — Pickeren bruker venner for ikke-admin.** Frittstående-grenen i
-  `GenerateMatches.tsx` henter `getFriendPlayerOptions(userId)` for ikke-admin-
-  skaper (+ alltid skaper selv), hele-brukerbasen for admin. *Bevis:* kode-diff.
-- [ ] **K10 — Copy justert.** `CupSetup.tsx` point-mål-default/hint er kontekst-
-  bevisst: personlig (capped 4) → default «2,5», hint refererer 4 matcher; admin/
-  klubb beholder dagens. Ny/endret norsk copy kjørt gjennom `humanizer`. *Bevis:*
-  kode-diff + humanizer-pass.
-- [ ] **K11 — Ingen admin-vegg i hele løkka.** Manuell prod-sjekk (iPhone Safari):
-  vanlig spiller oppretter cup → legger til opptil 4 matcher (5. blokkeres med
-  norsk melding) → starter → avslutter. Lander aldri på `/` uventet. *Bevis:*
-  beskrivelse av gjennomført flyt (gjøres av eieren / live-verifikasjon).
-- [ ] **K12 — Versjon + CHANGELOG.** `package.json` → `1.108.0`, CHANGELOG-
-  oppføring per `docs/changelog-conventions.md`. *Bevis:* diff.
+- [x] **K1 — Opprettelse åpnet.** `createTournamentDraft` for `group_id null`
+  bruker `getRoleContext` (enhver innlogget bruker), setter `created_by = userId`.
+  Klubb-grenen uendret. *Bevis:* `lib/cup/actions.ts` — null-gren `await getRoleContext(supabase)`; insert med `created_by: userId`. K11 (live) dekker prod-flyten.
+- [x] **K2 — Ny RLS-policy lar skaper skrive personlig cup.** Migrasjon `0090`
+  applied (`list_migrations` → `tournaments_creator_write`). `pg_policies`-probe:
+  `tournaments creator write own personal` (ALL) har qual + with_check
+  `((group_id IS NULL) AND (created_by = auth.uid()))`, OR-et permissivt med
+  admin/klubb-policyen og select-scoped. Speiler games-creator-RLS (0071).
+- [x] **K3 — Styringsgate slipper gjennom skaper.** `requireAdminOrTournamentCreator`
+  lagt til i `lib/admin/auth.ts` (admin → pass; ellers `created_by === userId`;
+  ellers `redirect('/')`). `requireAdminOrClubAdminOfCup` sin `group_id null`-gren
+  delegerer dit. *Bevis:* `lib/admin/auth.ts`.
+- [x] **K4 — Generer-side-gate relaksert.** `app/admin/cup/[id]/generer/page.tsx`
+  bruker nå `requireAdminOrClubAdminOfCup(supabase, id)`. *Bevis:* fil-diff.
+- [x] **K5 — Cup-lista scopet.** `app/admin/cup/page.tsx` bruker `getRoleContext`;
+  ikke-admin: `.eq('created_by', userId).is('group_id', null)`; admin ser alle.
+  *Bevis:* fil-diff.
+- [x] **K6 — Caps (ren logikk, TDD).** `lib/cup/limits.ts` med
+  `MAX_PERSONAL_CUP_MATCHES = 4`, `MAX_PERSONAL_CUP_PLAYERS = 24` +
+  `exceedsPersonalMatchCap`/`exceedsPersonalPlayerCap` (admin-bypass). *Bevis:*
+  `limits.test.ts` 13/13 grønn.
+- [x] **K7 — Caps håndhevet i generering.** `createCupMatchesFromPlan` har
+  `else if (!isAdmin)`-gren for personlig cup: teller eksisterende + nye, returnerer
+  `too_many_matches`/`too_many_players`. Admin/klubb hopper over. *Bevis:* fil-diff
+  + predikat-tester.
+- [x] **K8 — Cap synlig i UI.** Wizarden har `matchCap`-prop; steg 3 info-/varsel-
+  banner + `canAdvance` blokkerer «Neste» over taket; `too_many_*`-koder mapper til
+  norske banner-meldinger. *Bevis:* `GenerateMatchesWizard.tsx`, `GenerateMatchesWizard.test.tsx` grønn.
+- [x] **K9 — Pickeren bruker venner for ikke-admin.** `GenerateMatches.tsx`:
+  `else if (isAdmin)` → alle; `else` → `getFriendPlayerOptions(userId)` + skaper
+  selv (dedup, sortert). *Bevis:* fil-diff.
+- [x] **K10 — Copy justert.** `CupSetup.tsx` `matchCap`-prop → default «2,5» + hint
+  «Med 4 matcher blir det 2,5» for personlig; admin/klubb uendret. Kjørt gjennom
+  `humanizer` (strenger rene; tagline strammet). *Bevis:* fil-diff + humanizer-pass.
+- [ ] **K11 — Ingen admin-vegg i hele løkka.** Manuell prod-sjekk etter deploy
+  (iPhone Safari): vanlig spiller oppretter cup → ≤4 matcher (5. blokkeres) →
+  starter → avslutter. *Status:* PENDING — krever merge + deploy; eieren/live-
+  verifikasjon. Koden er bygd og enhetstestet for hele kjeden.
+- [x] **K12 — Versjon + CHANGELOG.** `package.json` → `1.108.1`; ny `1.108.y`-
+  serie «Cup · alle kan arrangere» med 1.108.0 + 1.108.1, forrige serie wrappet i
+  `<details>`. *Bevis:* CHANGELOG-diff.
 
 ## Implementasjons-rekkefølge (chunks)
 
