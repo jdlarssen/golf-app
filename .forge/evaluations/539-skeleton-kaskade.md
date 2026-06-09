@@ -82,3 +82,9 @@ Linje 13 og 107 refererer `app/admin/games/[id]/page.tsx` — dette er admin-rut
 ### Ingen Suspense-wrap i scorecard/page.tsx — avvik fra kontrakt-design? (ikke blokkerende)
 
 Kontrakten (C.K4) sier "scorecard/loading.tsx (chrome + delt TableSkeleton)". Scorecard/page.tsx beholder sin indre `<Suspense fallback={<ScorecardTableSkeleton />}>` rundt datahenting. Dette er riktig: scorecard har en indre async-komponent som drar data; den indre Suspense-grensen gir progressiv rendering av tabellen, mens `loading.tsx` dekker initial-ventetiden. Skjelettformene er nå konsistente (begge bruker `ScorecardTableSkeleton`). Ikke et avvik — dette er korrekt design.
+
+## Live prod-verifisering (2026-06-10 00:35, Claude in Chrome, tornygolf.no v1.108.5 · 0663f11)
+
+- **K1 LIVE PASS:** SPA-trykk fra hjem på «Byneset North 7. juni» (avsluttet) → første frame er LeaderboardSkeleton (podium + compact-rader, «‹ LEADERBOARD»-header) — riktig form, ingen GameLoading. Innhold (Skins-duellvisning) committer direkte fra samme form. Skjermbilde-sekvens: ss_71586n2yl → ss_949610anz.
+- **K2 LIVE PASS:** cmd+R på leaderboard-URL → innhold rendres direkte (varm path), ingen skjelett-kaskade observert. Maks én form.
+- **K3 LIVE PASS:** Direkte navigasjon til game-home → riktig innhold, alle CTA-er til stede, ingen regresjon.
