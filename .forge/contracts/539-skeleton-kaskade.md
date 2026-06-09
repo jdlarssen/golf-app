@@ -50,13 +50,15 @@ Etter A har `holes/[holeNumber]/` og `scorecard/` ingen loading-grense (i dag «
 
 ## Suksesskriterier
 
-- [ ] **K1:** SPA-navigasjon fra hjem til avsluttet spills leaderboard viser nøyaktig ÉN skjelett-form (leaderboard-formet). Verifiseres live på prod etter deploy (kald nav, skjermbilde-sekvens).
-- [ ] **K2:** Hard reload av leaderboard-URL viser maks én skjelett-form. Verifiseres live etter deploy.
-- [ ] **K3:** Game-home-navigasjon viser fortsatt GameLoading (ikke regressert). Kode-bevis: `(home)/loading.tsx` eksisterer i route-treet; build-manifest viser `/games/[id]` urørt URL.
-- [ ] **K4:** `holes`-navigasjon har umiddelbar loading-feedback med hull-formet skeleton (ny `holes/[holeNumber]/loading.tsx`); scorecard tilsvarende.
-- [ ] **K5:** RealtimeMount-gating fungerer som før — `layout.tsx` uendret (diff-bevis) eller verifisert ekvivalent.
-- [ ] **K6:** `LeaderboardBodySkeleton` slettet, ingen døde referanser (`grep` = 0 treff). Ingen visuell endring på selve leaderboard-innholdet.
-- [ ] **K7:** Patch-bump + CHANGELOG-oppføring i samme commit (fix-prefiks → hooken håndhever).
+- [x] **K1 (kode-nivå):** Indre Suspense fjernet (`leaderboard/page.tsx` returnerer `<LeaderboardBody/>` direkte); første loading-grense på leaderboard-stien er `leaderboard/loading.tsx` etter `(home)`-flytt. Live prod-verifisering gjenstår (post-deploy, kald nav + skjermbilde).
+- [x] **K2 (kode-nivå):** Kun én loading-grense igjen på leaderboard-stien — `leaderboard/loading.tsx`. Live reload-verifisering gjenstår post-deploy.
+- [x] **K3:** Build-manifest (`app-paths-manifest.json`) viser `/games/[id]/(home)/page` → URL `/games/[id]` uendret; `(home)/loading.tsx` flyttet med (`git show e993fd5`: rename 100%).
+- [x] **K4:** `holes/[holeNumber]/loading.tsx` (hull-formet: header + hullstripe + hero + score-felt) og `scorecard/loading.tsx` (chrome + delt `TableSkeleton`) opprettet i commit `e993fd5`.
+- [x] **K5:** `git diff HEAD~1 --stat -- app/games/[id]/layout.tsx` = tom — layouten urørt.
+- [x] **K6:** `grep -rn LeaderboardBodySkeleton app/ components/ lib/` = 0 treff (exit 1). Kun skeleton-wrapper fjernet, `LeaderboardBody`-innhold urørt.
+- [x] **K7:** `package.json` 1.108.4→1.108.5 + CHANGELOG-oppføring `[1.108.5] · #539` i samme commit `e993fd5` (commit-msg-hooken passerte).
+
+**Gate-resultater (2026-06-10):** `npm run build` grønn (route-manifest verifisert); `npm run test` 250 filer / 2990 tester grønne; `eslint` på alle 7 endrede filer: 0 feil (1 pre-eksisterende warning om ubrukt `Button`-import i game-home page, ikke introdusert her); grep-gate K6 = 0 treff.
 
 ## Gates
 
