@@ -1,4 +1,4 @@
-import { Suspense, cache } from 'react';
+import { cache } from 'react';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound, redirect } from 'next/navigation';
 import { after } from 'next/server';
@@ -10,7 +10,6 @@ import { BackLink } from '@/components/ui/BackLink';
 import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
-import { Skeleton } from '@/components/ui/Skeleton';
 import { HourGlass } from '@/components/icons/HourGlass';
 import { firstName } from '@/lib/firstName';
 import {
@@ -273,19 +272,17 @@ export default async function LeaderboardPage({
     }),
   );
 
-  // Body data fetch (players + holes + scores) is heavy and dictates the
-  // final view branch. Stream it behind Suspense so the user sees the shell
-  // immediately during navigation.
+  // No inner Suspense boundary here: the route-level loading.tsx
+  // (LeaderboardSkeleton) covers the whole wait. An inner boundary would
+  // only swap one skeleton for another mid-wait (#539).
   return (
-    <Suspense fallback={<LeaderboardBodySkeleton />}>
-      <LeaderboardBody
-        gameId={id}
-        game={game}
-        mode={mode}
-        backHref={backHref}
-        returnQuery={returnQuery}
-      />
-    </Suspense>
+    <LeaderboardBody
+      gameId={id}
+      game={game}
+      mode={mode}
+      backHref={backHref}
+      returnQuery={returnQuery}
+    />
   );
 }
 
@@ -915,34 +912,6 @@ async function LeaderboardBody({
           />
         }
       />
-    </AppShell>
-  );
-}
-
-function LeaderboardBodySkeleton() {
-  // Three skeleton cards inside an AppShell — close enough to state3.5
-  // chrome that no obvious shell-jump happens when the body commits.
-  return (
-    <AppShell>
-      <header className="mb-4 flex items-center justify-between gap-4">
-        <Skeleton className="h-4 w-16" />
-        <Skeleton className="h-3 w-24" />
-        <span className="w-12" aria-hidden />
-      </header>
-
-      <div className="flex justify-center mb-5">
-        <Skeleton className="h-6 w-20 rounded-full" />
-      </div>
-
-      <div className="space-y-3 px-4">
-        {[0, 1, 2].map((i) => (
-          <Skeleton
-            key={i}
-            className="h-[88px] rounded-2xl"
-            delay={i * 90}
-          />
-        ))}
-      </div>
     </AppShell>
   );
 }

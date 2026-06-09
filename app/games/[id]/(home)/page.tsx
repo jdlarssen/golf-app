@@ -36,10 +36,10 @@ import { maybeAutoConfirmParticipation } from '@/lib/games/confirmParticipation'
 import { isHandicapStale } from '@/lib/handicap/staleness';
 import { HandicapConfirmCard } from '@/components/handicap/HandicapConfirmCard';
 import { ModeGuideCard } from '@/components/ModeGuideCard';
-import { ScheduledWaitingRoom } from './ScheduledWaitingRoom';
+import { ScheduledWaitingRoom } from '../ScheduledWaitingRoom';
 import { getModeContentMap, mergeModeContent } from '@/lib/formats/getModeContent';
 import { formatDisplayLabel } from '@/lib/games/formatLabel';
-import { submitUndoWithdraw } from './trekk-fra/actions';
+import { submitUndoWithdraw } from '../trekk-fra/actions';
 import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
 
 type Params = Promise<{ id: string }>;

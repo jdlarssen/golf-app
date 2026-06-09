@@ -8,7 +8,7 @@ import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { LinkButton } from '@/components/ui/Button';
-import { Skeleton } from '@/components/ui/Skeleton';
+import { ScorecardTableSkeleton } from './TableSkeleton';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
 import { ScoreShape } from '@/components/scoring/ScoreShape';
 import { scoreShape } from '@/lib/scoring/scoreShape';
@@ -732,31 +732,3 @@ function ParAsideInline({
   );
 }
 
-function ScorecardTableSkeleton() {
-  return (
-    <Card className="p-0 overflow-hidden">
-      <div className="px-4 py-2.5 border-b border-border flex gap-2">
-        <Skeleton className="h-3 w-10" />
-        <Skeleton className="h-3 w-8 ml-auto" />
-        <Skeleton className="h-3 w-8" />
-        <Skeleton className="h-3 w-10" />
-        <Skeleton className="h-3 w-10" />
-      </div>
-      {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-        <div
-          key={i}
-          className="px-4 py-2.5 border-t border-border flex gap-2"
-          style={{
-            borderTop: i === 0 ? 'none' : undefined,
-          }}
-        >
-          <Skeleton className="h-3.5 w-6" delay={i * 60} />
-          <Skeleton className="h-3.5 w-6 ml-auto" delay={i * 60 + 20} />
-          <Skeleton className="h-3.5 w-6" delay={i * 60 + 40} />
-          <Skeleton className="h-3.5 w-8" delay={i * 60 + 60} />
-          <Skeleton className="h-3.5 w-8" delay={i * 60 + 80} />
-        </div>
-      ))}
-    </Card>
-  );
-}

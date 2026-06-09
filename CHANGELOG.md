@@ -21,6 +21,25 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#526](https://github.com/jdlarssen/golf-app/issues/526). Cup er ikke lenger låst til admin. En vanlig spiller kan lage og kjøre sin egen cup blant venner — en «1 helg»-Ryder Cup capped til 4 matcher og 24 spillere. Global admin er fortsatt uten tak.
 
+### [1.108.5] - 2026-06-10 · #539
+
+> Åpner du et avsluttet spill fra hjem-skjermen, blinker det ikke lenger tre ulike lasteskjermer før resultatlista kommer. Nå ligger én rolig plassholder i riktig fasong til resultatene er klare.
+
+<details>
+<summary>Teknisk</summary>
+
+[#539](https://github.com/jdlarssen/golf-app/issues/539). Deep-link inn på leaderboard traff en kaskade av tre mismatchende loading-skeletons (SPA-nav) / to (hard reload). Root cause: Next 16-prefetch viser «layout to first loading boundary» — første grense under `games/[id]/` var game-home-skjelettet, uansett hvilken underside man navigerte til; i tillegg byttet en indre `<Suspense>`-grense i leaderboard-sida ett leaderboard-skjelett mot et annet uten streaming-gevinst.
+
+#### Fixed
+- **Route group `(home)`:** `games/[id]/page.tsx` + `loading.tsx` flyttet inn i `games/[id]/(home)/` (URL uendret). GameLoading-skjelettet dekker nå kun game-home; leaderboard-navigasjon får `leaderboard/loading.tsx` (riktig form) som instant-state fra første frame.
+- **Indre Suspense-grense fjernet i `leaderboard/page.tsx`:** route-`loading.tsx` dekker hele ventetiden; `LeaderboardBodySkeleton` slettet. Ett stabilt skjelett på både SPA-nav og reload.
+- **Nye loading-grenser:** `holes/[holeNumber]/loading.tsx` (hull-formet) og `scorecard/loading.tsx` (scorekort-formet, gjenbruker tabell-skjelettet via ny delt `TableSkeleton.tsx`) — undersidene som tidligere «arvet» game-home-skjelettet i feil form. Øvrige undersider (submit/approve/avslutt/spillere/rediger/slett/trekk-fra) får bevisst ingen egen grense; SPA-nav beholder forrige side til ny er klar.
+
+#### Notes
+- `games/[id]/layout.tsx` (RealtimeMount-gating + SyncBanner) er urørt — gjelder fortsatt alle undersider.
+
+</details>
+
 ### [1.108.4] - 2026-06-09 · #416
 
 > Scorekortet, spillerlista og resultatsiden laster et hakk kjappere: de henter det de trenger samtidig i stedet for å vente på én ting av gangen.
