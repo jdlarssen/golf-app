@@ -16,7 +16,7 @@ våre. De kjører mot en **ekte lokal Postgres** med alle migrasjonene i
 > tall-prefiks (`0026_*` × 2, `0027_*` × 2), og CLI-ens `schema_migrations`-bokføring
 > krever unik versjon-nøkkel. Selve SQL-en har ingen konflikt — den ble verifisert ved
 > å boote en bar Postgres og påføre migrasjonene direkte med `psql` (se «Slik kjører
-> du»). Migrasjons-omdøpingen spores som eget issue; når den lander, virker
+> du»). Migrasjons-omdøpingen spores i #533; når den lander, virker
 > `supabase test db` rett ut av boksen. `npm run build` og resten av CI rører ikke disse
 > filene (se «CI / skip-guard»).
 
@@ -41,7 +41,7 @@ som beviser at RLS faktisk håndheves og ikke bare vinker alt gjennom.
 Krever **Docker Desktop** kjørende + **Supabase CLI** installert
 (`brew install supabase/tap/supabase`).
 
-### A) Standardveien (når duplikat-prefiks-issuet er løst)
+### A) Standardveien (når duplikat-prefiks-issuet #533 er løst)
 
 ```bash
 supabase start      # booter Postgres + påfører alle migrasjoner inkl. RLS-policyene
