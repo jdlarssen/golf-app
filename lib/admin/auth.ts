@@ -169,17 +169,48 @@ export async function requireAdminOrClubAdminOfLeague(
 }
 
 /**
+ * Gate for routes/actions a personal cup's CREATOR — or a global admin — may
+ * use (#526, mirror of `requireAdminOrCreator` for games). Admins pass straight
+ * through. Otherwise the caller must own the tournament
+ * (`tournaments.created_by` === them). Anyone else → `/`.
+ *
+ * The `created_by` lookup uses the admin client so the authorization decision
+ * does not depend on the caller's own RLS visibility. This is a UX guard; the
+ * real security boundary is the RLS WRITE policies on tournaments (0089 admin/
+ * club-admin + 0090 creator-of-personal-cup), which evaluate each row.
+ *
+ * Only frittstående cuper (`group_id` null) reach this —
+ * `requireAdminOrClubAdminOfCup` routes klubb-cuper to the club-admin gate.
+ */
+export async function requireAdminOrTournamentCreator(
+  supabase: ServerSupabase,
+  tournamentId: string,
+): Promise<AdminRoleContext> {
+  const ctx = await loadRole(supabase);
+  if (ctx.isAdmin) return ctx;
+  const { data } = await getAdminClient()
+    .from('tournaments')
+    .select('created_by')
+    .eq('id', tournamentId)
+    .maybeSingle();
+  if (data?.created_by === ctx.userId) return ctx;
+  redirect('/');
+}
+
+/**
  * Gate for managing a single CUP/tournament (#524, mirror of
  * `requireAdminOrClubAdminOfLeague`). Resolves the tournament's club and
  * delegates:
  *  - `group_id` set → klubb-cup: the cup's club owner/admin (or a global admin)
  *    may manage it (`requireAdminOrClubAdmin`).
- *  - `group_id` null → frittstående cup: global-admin-only (`requireAdmin`).
+ *  - `group_id` null → personlig cup: the cup's creator (or a global admin)
+ *    may manage it (`requireAdminOrTournamentCreator`, #526). Previously
+ *    global-admin-only; opening personal cups to everyone relaxed this.
  *
  * The `group_id` lookup uses the admin client so the authorization decision
  * does not depend on the caller's own RLS visibility. This gate is a UX guard;
- * the real security boundary is the RLS WRITE policy on tournaments (0089),
- * which evaluates each row's actual `group_id`.
+ * the real security boundary is the RLS WRITE policies on tournaments (0089 +
+ * 0090), which evaluate each row's actual `group_id`/`created_by`.
  */
 export async function requireAdminOrClubAdminOfCup(
   supabase: ServerSupabase,
@@ -193,5 +224,5 @@ export async function requireAdminOrClubAdminOfCup(
   const groupId = (data?.group_id as string | null | undefined) ?? null;
   return groupId
     ? requireAdminOrClubAdmin(supabase, groupId)
-    : requireAdmin(supabase);
+    : requireAdminOrTournamentCreator(supabase, tournamentId);
 }
