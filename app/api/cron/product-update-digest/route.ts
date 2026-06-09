@@ -12,7 +12,6 @@ import { sendDigestForPeriod } from '@/lib/productUpdates/digest';
 // If the header doesn't match, return 401 so accidental public-fetch is
 // blocked.
 
-export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;

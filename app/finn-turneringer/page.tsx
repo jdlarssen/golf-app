@@ -12,9 +12,9 @@ import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getDiscoverableGames } from '@/lib/games/getDiscoverableGames';
 import { HomeDiscoverySection } from '../HomeDiscoverySection';
 
-// Dynamic: getDiscoverableGames bruker admin-client (service role) ved
-// request-tid; statisk pre-render ville feilet uten env (samme som /spillformater).
-export const dynamic = 'force-dynamic';
+// getDiscoverableGames bruker admin-client (service role) ved request-tid.
+// Under cacheComponents (#538) prerendres aldri uncachet IO, så ruta trenger
+// ikke force-dynamic for å holdes ute av builden (samme som /spillformater).
 
 export const metadata: Metadata = {
   title: 'Finn turneringer',

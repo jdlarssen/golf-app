@@ -9,7 +9,6 @@ import { getServerClient } from '@/lib/supabase/server';
 import { formatShortDateNbWithYear } from '@/lib/format/date';
 import { RoundStartClient } from './RoundStartClient';
 
-export const dynamic = 'force-dynamic';
 
 type Params = Promise<{ id: string; roundId: string }>;
 

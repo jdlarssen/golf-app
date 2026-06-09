@@ -2,7 +2,6 @@ import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrClubAdminOfLeague } from '@/lib/admin/auth';
 import { LigaManagement } from './LigaManagement';
 
-export const dynamic = 'force-dynamic';
 
 type Params = Promise<{ id: string }>;
 

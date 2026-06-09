@@ -5,9 +5,9 @@ import { Kicker } from '@/components/ui/Kicker';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { FormatGuideList } from '@/components/FormatGuideList';
 import { getFormatGuideEntries } from '@/lib/formats/buildFormatGuide';
-// Dynamic: fetches DB content via getModeContentMap (requires SUPABASE_SERVICE_ROLE_KEY
-// at request time). Static pre-render would fail in build without env.
-export const dynamic = 'force-dynamic';
+// Content comes from the DB via getModeContentMap (service role) at request
+// time. Under cacheComponents (#538) uncached IO is never prerendered, so no
+// force-dynamic directive is needed to keep it out of the build.
 
 export const metadata: Metadata = {
   title: 'Spillformater',

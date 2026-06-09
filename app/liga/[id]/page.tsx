@@ -19,7 +19,6 @@ import { isPointsBasedFormat } from '@/lib/league/flightFormat';
 import type { LeagueFormat } from '@/lib/league/types';
 import { formatShortDateNbWithYear } from '@/lib/format/date';
 
-export const dynamic = 'force-dynamic';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;

@@ -2,7 +2,6 @@ import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrClubAdminOfLeague } from '@/lib/admin/auth';
 import { LigaDeleteConfirm } from '@/app/admin/liga/[id]/slett/LigaDeleteConfirm';
 
-export const dynamic = 'force-dynamic';
 
 type Params = Promise<{ id: string; ligaId: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;

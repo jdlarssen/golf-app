@@ -21,6 +21,26 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#526](https://github.com/jdlarssen/golf-app/issues/526). Cup er ikke lenger låst til admin. En vanlig spiller kan lage og kjøre sin egen cup blant venner — en «1 helg»-Ryder Cup capped til 4 matcher og 24 spillere. Global admin er fortsatt uten tak.
 
+### [1.108.6] - 2026-06-10 · #538
+
+> Appen svarer raskere når du åpner den kaldt eller laster en side på nytt: rammen rundt innholdet kommer fra et lynraskt lager i stedet for å vente på serveren, og selve innholdet strømmer inn rett etterpå.
+
+<details>
+<summary>Teknisk</summary>
+
+[#538](https://github.com/jdlarssen/golf-app/issues/538), fase 2 av #416. `cacheComponents: true` i `next.config.ts` — stabilt toppnivå-flagg i Next 16 (etterfølgeren til `experimental.ppr`, som issuet trodde fortsatt var eksperimentell). Alle 83 side-ruter bygger nå som `◐` Partial Prerender: statisk skall (chrome + loading-fallbacks) servert fra CDN, dynamisk innhold streamet bak Suspense. Route handlers (api/ikoner/export) forblir `ƒ`.
+
+#### Changed
+- **Root layout:** `getProxyVerifiedUserId()` (runtime-API `headers()`) flyttet ut av selve layouten til ny `BottomNavGate` bak `<Suspense fallback={null}>` — kjørte den i layouten, fikk ingen rute statisk skall. `PerfHud` (klient, `usePathname()`) tilsvarende Suspense-wrappet; pathname er runtime-data under flagget.
+- **12 × `export const dynamic = 'force-dynamic'` fjernet** (liga-/admin-/api-/spillformater-ruter): inkompatibelt med flagget og redundant — uncachet IO prerendres aldri under cacheComponents, så bekymringen direktivene adresserte (statisk prerender uten env) er borte by design.
+
+#### Notes
+- Null `'use cache'`-direktiver innført — alt cookie-/RLS-avhengig innhold streames. `proxy.ts`, `lib/supabase/server.ts` og hele auth-modellen urørt. `getGameWithPlayers` beholder `unstable_cache` (støttet under flagget).
+- Navigasjon bruker nå React `<Activity>` (ruter skjules i stedet for unmount; effects ryddes ved skjuling, så RealtimeMount-cleanup består).
+- Før-måling prod (www, 5 samples, kveld): `/login` TTFB median ~240 ms, `/legal/privacy` ~240 ms. Etter-måling i issue-kommentar.
+
+</details>
+
 ### [1.108.5] - 2026-06-10 · #539
 
 > Åpner du et avsluttet spill fra hjem-skjermen, blinker det ikke lenger tre ulike lasteskjermer før resultatlista kommer. Nå ligger én rolig plassholder i riktig fasong til resultatene er klare.

@@ -11,7 +11,6 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { formatShortDateNb } from '@/lib/format/date';
 
-export const dynamic = 'force-dynamic';
 
 type SearchParams = Promise<{
   status?: string | string[];

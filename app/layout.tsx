@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Fraunces, Inter } from "next/font/google";
 import "./globals.css";
 import { PwaBoot } from "@/components/PwaBoot";
 import { InstallPromptCapture } from "@/components/pwa/InstallPromptCapture";
 import { PerfHud } from "@/components/PerfHud";
-import { BottomNav } from "@/components/ui/BottomNav";
-import { getProxyVerifiedUserId } from "@/lib/auth/userId";
+import { BottomNavGate } from "@/components/ui/BottomNavGate";
 
 // Inter — body, UI labels, forms. Variable font for crisp small-size rendering.
 const inter = Inter({
@@ -49,17 +49,17 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   // Vedvarende bunn-nav (#355): rendret én gang globalt så den dekker ALLE
   // innloggede spiller-flater — inkludert de ~30 format-spesifikke leaderboard-
-  // viewene som hver eier sin egen AppShell. `getProxyVerifiedUserId` leser
-  // headeren proxy.ts setter: null på offentlige (umatchede) ruter → ingen bar.
-  // BottomNav skjuler seg selv i tillegg på admin + hull-skjerm via usePathname.
-  const userId = await getProxyVerifiedUserId();
+  // viewene som hver eier sin egen AppShell. BottomNavGate leser proxy-headeren
+  // (runtime-API) og må derfor streames bak Suspense (#538) — kjørte den i selve
+  // layouten, fikk ingen rute statisk skall. BottomNav skjuler seg selv på
+  // admin + hull-skjerm via usePathname.
   return (
     <html
       lang="nb-NO"
@@ -67,10 +67,16 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col font-sans">
         {children}
-        <BottomNav userId={userId} />
+        <Suspense fallback={null}>
+          <BottomNavGate />
+        </Suspense>
         <InstallPromptCapture />
         <PwaBoot />
-        <PerfHud />
+        {/* usePathname() er runtime-data under cacheComponents — må streames
+            bak Suspense for ikke å blokkere det statiske skallet (#538). */}
+        <Suspense fallback={null}>
+          <PerfHud />
+        </Suspense>
       </body>
     </html>
   );

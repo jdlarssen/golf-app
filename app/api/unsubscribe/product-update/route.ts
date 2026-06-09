@@ -16,7 +16,6 @@ import { verifyUnsubToken } from '@/lib/productUpdates/unsubscribeToken';
 // Token-en er HMAC-signert med PRODUCT_UPDATE_UNSUB_SECRET så uautentisert
 // kall kan ikke unsubscribe vilkårlige brukere.
 
-export const dynamic = 'force-dynamic';
 
 async function unsubscribe(token: string | null): Promise<{ ok: boolean; userId?: string }> {
   if (!token) return { ok: false };

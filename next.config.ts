@@ -7,6 +7,10 @@ const pkg = JSON.parse(
 ) as { version: string };
 
 const nextConfig: NextConfig = {
+  // #538: Partial Prerendering — every page gets a static shell served from
+  // CDN with dynamic content streamed behind Suspense. Rollback = remove this
+  // line (the removed force-dynamic directives are no-ops either way).
+  cacheComponents: true,
   env: {
     NEXT_PUBLIC_APP_VERSION: pkg.version,
     NEXT_PUBLIC_APP_SHA: (process.env.VERCEL_GIT_COMMIT_SHA ?? "").slice(0, 7),

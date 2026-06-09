@@ -10,7 +10,6 @@ import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { leaveClubLeague } from '@/lib/league/actions';
 
-export const dynamic = 'force-dynamic';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;
