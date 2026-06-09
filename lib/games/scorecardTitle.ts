@@ -10,7 +10,7 @@ export interface ScorecardTitle {
 /**
  * Per-modus tittel + CTA-label for scorekort-flaten. Single source of
  * truth slik at `app/games/[id]/scorecard/page.tsx` (TopBar) og
- * `app/games/[id]/page.tsx` (Card-link på spilloversikten) ikke driver
+ * `app/games/[id]/(home)/page.tsx` (Card-link på spilloversikten) ikke driver
  * ulike norske oversettelser.
  *
  * Regler:

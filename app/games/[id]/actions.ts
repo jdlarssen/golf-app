@@ -33,7 +33,7 @@ export async function confirmHandicap(gameId: string) {
   }
 
   // The handicap timestamp is fetched outside the tag-cached
-  // getGameWithPlayers payload (see app/games/[id]/page.tsx), so a path
+  // getGameWithPlayers payload (see app/games/[id]/(home)/page.tsx), so a path
   // revalidate is sufficient — no tag invalidation needed.
   revalidatePath(`/games/${gameId}`);
 }

@@ -60,7 +60,7 @@ test.describe('Påmelding · self-withdraw (full flow)', () => {
 
     await test.step('Trekk-deg-lenken vises på spill-siden', async () => {
       // Lenken er ankret som «Trekk deg fra spillet» (en footer-lenke i
-      // pre-active-status — se app/games/[id]/page.tsx:416).
+      // pre-active-status — se app/games/[id]/(home)/page.tsx:416).
       const link = page.getByRole('link', { name: 'Trekk deg fra spillet' });
       await expect(link).toBeVisible();
       await link.click();
