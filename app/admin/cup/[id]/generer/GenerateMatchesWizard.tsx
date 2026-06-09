@@ -18,6 +18,10 @@ import {
   type PairingStrategy,
 } from '@/lib/cup/cupPairing';
 import { createCupMatchesFromPlan } from './actions';
+import {
+  MAX_PERSONAL_CUP_MATCHES,
+  MAX_PERSONAL_CUP_PLAYERS,
+} from '@/lib/cup/limits';
 import type { WizardPlayer, WizardCourse } from './GenerateMatches';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -34,6 +38,9 @@ type WizardProps = {
   team2Name: string;
   players: WizardPlayer[];
   courses: WizardCourse[];
+  // #526: maks antall matcher for personlig cup (ikke-admin). undefined =
+  // uncapped (admin/klubb-cup).
+  matchCap?: number;
 };
 
 type Step = 1 | 2 | 3 | 4 | 5;
@@ -51,6 +58,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   missing_course: 'Velg bane og tee.',
   no_matches: 'Ingen matcher å opprette.',
   insert_failed: 'Klarte ikke å opprette matchene. Prøv igjen.',
+  too_many_matches: `En personlig cup tar maks ${MAX_PERSONAL_CUP_MATCHES} matcher. Vil du ha flere, lag en klubb-cup.`,
+  too_many_players: `En personlig cup tar maks ${MAX_PERSONAL_CUP_PLAYERS} spillere. Vil du ha flere, lag en klubb-cup.`,
 };
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
@@ -244,6 +253,7 @@ function Step3Setup({
   onCustomSessionsChange,
   strategy,
   onStrategyChange,
+  matchCap,
 }: {
   team1Count: number;
   team2Count: number;
@@ -253,6 +263,7 @@ function Step3Setup({
   onCustomSessionsChange: (sessions: CustomSession[]) => void;
   strategy: PairingStrategy;
   onStrategyChange: (s: PairingStrategy) => void;
+  matchCap?: number;
 }) {
   const teamSize = Math.min(team1Count, team2Count);
 
@@ -265,6 +276,7 @@ function Step3Setup({
   const currentSessions = getSessionsForId(presetId);
   const plan = buildSessions(currentSessions, teamSize);
   const totalMatches = plan.reduce((sum, s) => sum + s.matchCount, 0);
+  const overCap = matchCap !== undefined && totalMatches > matchCap;
 
   function addCustomSession() {
     onCustomSessionsChange([...customSessions, { format: 'singles_matchplay' }]);
@@ -284,6 +296,13 @@ function Step3Setup({
 
   return (
     <div className="space-y-6">
+      {matchCap !== undefined && (
+        <Banner tone={overCap ? 'warning' : 'info'}>
+          {overCap
+            ? `Oppsettet gir ${totalMatches} matcher. En personlig cup tar maks ${matchCap}. Velg færre sesjoner, eller lag en klubb-cup for flere.`
+            : `Personlig cup: maks ${matchCap} matcher. Trenger dere flere, er det en klubb-cup som gjelder.`}
+        </Banner>
+      )}
       <div>
         <SectionHeading>Format-oppsett</SectionHeading>
         <div className="space-y-2">
@@ -644,6 +663,7 @@ export function GenerateMatchesWizard({
   team2Name,
   players,
   courses,
+  matchCap,
 }: WizardProps) {
   const TOTAL_STEPS = 5;
 
@@ -726,7 +746,13 @@ export function GenerateMatchesWizard({
     if (step === 2) return courseId !== '' && teeBoxId !== '';
     if (step === 3) {
       const plan = getSessionPlan();
-      return plan.length > 0 && plan.some((s) => s.matchCount > 0);
+      if (plan.length === 0 || !plan.some((s) => s.matchCount > 0)) return false;
+      // #526: blokker «Neste» når personlig-cup-taket er overskredet.
+      if (matchCap !== undefined) {
+        const total = plan.reduce((sum, s) => sum + s.matchCount, 0);
+        if (total > matchCap) return false;
+      }
+      return true;
     }
     if (step === 4) return matches.length > 0;
     return true;
@@ -818,6 +844,7 @@ export function GenerateMatchesWizard({
             onCustomSessionsChange={setCustomSessions}
             strategy={strategy}
             onStrategyChange={setStrategy}
+            matchCap={matchCap}
           />
         )}
         {step === 4 && (

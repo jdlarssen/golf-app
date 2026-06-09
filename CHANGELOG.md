@@ -21,9 +21,25 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#526](https://github.com/jdlarssen/golf-app/issues/526). Cup er ikke lenger låst til admin. En vanlig spiller kan lage og kjøre sin egen cup blant venner — en «1 helg»-Ryder Cup capped til 4 matcher og 24 spillere. Global admin er fortsatt uten tak.
 
+### [1.108.1] - 2026-06-09 · #526
+
+> Lager du din egen cup, plukker du nå spillere fra vennelista di, og veiviseren sier fra med en gang du nærmer deg 4-match-taket — ikke etterpå. Point-målet foreslås også ut fra den mindre cupen.
+
+<details>
+<summary>Teknisk</summary>
+
+[#526](https://github.com/jdlarssen/golf-app/issues/526). UI-polish på den personlige cupen (kilde, cap-synlighet, copy).
+
+#### Changed
+- `app/admin/cup/[id]/generer/GenerateMatches.tsx`: spiller-kilden følger nå rollen for frittstående cup — global admin ser alle profil-fullførte brukere (uendret), en vanlig skaper ser kun vennene sine + seg selv (`getFriendPlayerOptions`, #464-presedens), ikke hele brukerbasen. Sender `matchCap` til veiviseren.
+- `app/admin/cup/[id]/generer/GenerateMatchesWizard.tsx`: ny `matchCap`-prop. Steg 3 viser en info-/varsel-banner om taket, og «Neste» blokkeres når oppsettet gir flere enn `matchCap` matcher. Nye feilkoder `too_many_matches`/`too_many_players` mapper til norske banner-meldinger.
+- `app/admin/games/new/CupSetup.tsx`: ny `matchCap`-prop justerer point-mål-default + hint for en capped personlig cup (4 matcher → 2,5); admin/klubb beholder 8-match-antagelsen. `GameWizard.tsx` sender taket for ikke-admin.
+
+</details>
+
 ### [1.108.0] - 2026-06-09 · #526
 
-> Du kan nå lage din egen cup, ikke bare admin. Sett opp lagene, plukk vennene dine og kjør en Ryder Cup blant gjengen på opptil 4 matcher. Trenger dere mer, er det en klubb-cup som gjelder.
+> Du kan nå lage din egen cup, ikke bare admin. Sett opp lagene, plukk vennene dine og kjør en Ryder Cup på opptil 4 matcher. Trenger dere mer, er det en klubb-cup som gjelder.
 
 <details>
 <summary>Teknisk</summary>

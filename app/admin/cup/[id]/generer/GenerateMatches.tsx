@@ -8,6 +8,9 @@ import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { getCupSnapshot } from '@/lib/cup/getCupSnapshot';
 import { getClubMemberOptionsForClub } from '@/lib/clubs/getClubMemberOptionsForClub';
+import { getFriendPlayerOptions } from '@/lib/friends/getFriendPlayerOptions';
+import { getRoleContext } from '@/lib/admin/auth';
+import { MAX_PERSONAL_CUP_MATCHES } from '@/lib/cup/limits';
 import { GenerateMatchesWizard } from './GenerateMatchesWizard';
 
 type CourseRow = {
@@ -52,8 +55,11 @@ type GenerateMatchesVariant = 'admin' | 'club';
  * og `/klubber/[id]/cup/[cupId]/generer`) rendrer denne. Gaten gjøres i ruten;
  * komponenten gjør all fetching + chrome.
  *
- * Spiller-kilden følger cupens kontekst: klubb-cup (group_id satt) henter KUN
- * klubbens medlemmer; frittstående henter alle profil-fullførte brukere.
+ * Spiller-kilden følger cupens kontekst (#524/#526/#464):
+ *  - klubb-cup (group_id satt) → KUN klubbens medlemmer.
+ *  - personlig cup, global admin → alle profil-fullførte brukere (sekretariat).
+ *  - personlig cup, vanlig skaper → skaperens venner + skaperen selv (samme
+ *    venne-scoping som opprett-veiviseren, ikke hele brukerbasen).
  */
 export async function GenerateMatches({
   tournamentId,
@@ -63,6 +69,7 @@ export async function GenerateMatches({
   variant: GenerateMatchesVariant;
 }) {
   const supabase = await getServerClient();
+  const { userId, isAdmin } = await getRoleContext(supabase);
 
   const snapshot = await getCupSnapshot(tournamentId);
   if (!snapshot) notFound();
@@ -97,9 +104,10 @@ export async function GenerateMatches({
     }))
     .filter((c) => c.teeBoxes.length > 0);
 
-  // Spiller-kilde: klubb-cup → kun medlemmer; frittstående → alle profil-fullførte.
+  // Spiller-kilde følger cupens kontekst (se docstring).
   let players: WizardPlayer[];
   if (groupId) {
+    // Klubb-cup → kun medlemmer.
     const members = await getClubMemberOptionsForClub(groupId);
     players = members
       .filter((m) => !m.pending)
@@ -109,7 +117,8 @@ export async function GenerateMatches({
         hcpIndex: m.hcp_index,
       }))
       .sort((a, b) => a.displayName.localeCompare(b.displayName, 'no'));
-  } else {
+  } else if (isAdmin) {
+    // Personlig cup, global admin → alle profil-fullførte brukere.
     const usersResult = await supabase
       .from('users')
       .select('id, name, nickname, hcp_index, profile_completed_at')
@@ -123,6 +132,39 @@ export async function GenerateMatches({
         displayName: u.nickname?.trim() || u.name?.trim() || 'Ukjent spiller',
         hcpIndex: Number(u.hcp_index),
       }));
+  } else {
+    // Personlig cup, vanlig skaper → skaperens venner + skaperen selv (#464).
+    // Skaperen selv hentes direkte (alltid synlig for seg selv via RLS); venner
+    // via admin-client-helperen så de ikke faller ut av users-RLS-en.
+    const [friends, selfResult] = await Promise.all([
+      getFriendPlayerOptions(userId),
+      supabase
+        .from('users')
+        .select('id, name, nickname, hcp_index, profile_completed_at')
+        .eq('id', userId)
+        .maybeSingle<UserRow>(),
+    ]);
+    const byId = new Map<string, WizardPlayer>();
+    const self = selfResult.data;
+    if (self && self.profile_completed_at !== null) {
+      byId.set(self.id, {
+        id: self.id,
+        displayName:
+          self.nickname?.trim() || self.name?.trim() || 'Ukjent spiller',
+        hcpIndex: Number(self.hcp_index),
+      });
+    }
+    for (const f of friends) {
+      if (f.pending || byId.has(f.id)) continue;
+      byId.set(f.id, {
+        id: f.id,
+        displayName: f.nickname?.trim() || f.name?.trim() || 'Ukjent spiller',
+        hcpIndex: f.hcp_index,
+      });
+    }
+    players = [...byId.values()].sort((a, b) =>
+      a.displayName.localeCompare(b.displayName, 'no'),
+    );
   }
 
   let clubName: string | null = null;
@@ -146,6 +188,11 @@ export async function GenerateMatches({
       ? `Klubb-cup · ${tournament.name}`
       : `Cup · ${tournament.name}`;
 
+  // #526: personlig cup av en vanlig bruker er capped; admin og klubb-cup er
+  // uncapped. Speiler cap-håndhevingen i createCupMatchesFromPlan.
+  const matchCap =
+    !groupId && !isAdmin ? MAX_PERSONAL_CUP_MATCHES : undefined;
+
   return (
     <Shell>
       <TopBar backHref={backHref} kicker={kicker} />
@@ -160,6 +207,7 @@ export async function GenerateMatches({
         team2Name={tournament.team_2_name}
         players={players}
         courses={courses}
+        matchCap={matchCap}
       />
     </Shell>
   );

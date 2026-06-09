@@ -15,6 +15,10 @@ type Props = {
   // (default) = frittstående cup, uendret admin-flyt.
   groupId?: string;
   clubName?: string;
+  // #526: maks antall matcher for en personlig cup (ikke-admin). Når satt
+  // justeres point-mål-default + hint til den mindre cupen. undefined =
+  // uncapped (admin/klubb).
+  matchCap?: number;
 };
 
 /**
@@ -29,7 +33,23 @@ type Props = {
  * forventninger), men cup-detalj-sidens «+ Match»-knapper viser alle
  * cup-eligible formats inntil filtering legges på i Wave-2.
  */
-export function CupSetup({ cupEligibleFormats, groupId, clubName }: Props) {
+export function CupSetup({
+  cupEligibleFormats,
+  groupId,
+  clubName,
+  matchCap,
+}: Props) {
+  // Point-mål: vanlig regel = halvparten av tilgjengelige point + 0,5. For en
+  // capped personlig cup (maks `matchCap` matcher) blir det en lavere default
+  // enn admin/klubb-cupens 8-match-antagelse.
+  const pointsDefault =
+    matchCap !== undefined
+      ? String(matchCap / 2 + 0.5).replace('.', ',')
+      : '4,5';
+  const pointsHint =
+    matchCap !== undefined
+      ? `Vanlig regel: halvparten av tilgjengelige point + 0,5. Med ${matchCap} matcher blir det ${pointsDefault}.`
+      : 'Vanlig regel: halvparten av tilgjengelige point + 0,5. Med 8 matches blir det 4,5.';
   // Multi-select state — initialiserer med alle cup-eligible formats valgt
   // (default-all) så admin ikke trenger å klikke for å bekrefte standard-
   // oppsettet. Endring av valgene har ingen runtime-effekt i F2 (se docstring).
@@ -114,8 +134,8 @@ export function CupSetup({ cupEligibleFormats, groupId, clubName }: Props) {
         type="text"
         inputMode="decimal"
         pattern="[0-9]+([,.][0-9]+)?"
-        defaultValue="4,5"
-        hint="Vanlig regel: halvparten av tilgjengelige point + 0,5. Med 8 matches blir det 4,5."
+        defaultValue={pointsDefault}
+        hint={pointsHint}
       />
 
       <AllowanceField
