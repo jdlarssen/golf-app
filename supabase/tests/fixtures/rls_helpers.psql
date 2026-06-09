@@ -1,0 +1,243 @@
+-- supabase/tests/fixtures/rls_helpers.sql
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Reusable RLS-integration-test fixtures for Tørny (#440).
+--
+-- These are the *parametrized* building blocks the score-write-RLS suite uses,
+-- factored out so the sibling RLS-policy-rewrite work (#412 / #414) can reuse the
+-- exact same seed + impersonation primitives instead of re-deriving them.
+--
+-- Pull this into a pgTAP test with psql's include-relative meta-command:
+--     \ir fixtures/rls_helpers.sql
+-- then call `torny_rls.reset()` once and seed via the helpers below.
+--
+-- Everything lives in a dedicated `torny_rls` schema so it can't collide with
+-- the app's `public` objects, and so a single `drop schema torny_rls cascade`
+-- (run automatically by `torny_rls.reset()`'s recreate) wipes the test scaffolding.
+--
+-- IMPORTANT — how impersonation maps to production:
+--   The app talks to Postgres as the `authenticated` role with a JWT whose `sub`
+--   claim is the user's id. RLS policies read that id via `auth.uid()`, which is
+--   defined (by GoTrue / supabase) as:
+--       (current_setting('request.jwt.claims', true)::json ->> 'sub')::uuid
+--   So to exercise a policy "as user X" we (a) SET ROLE authenticated and
+--   (b) SET request.jwt.claims to a JSON object carrying X's id as `sub`.
+--   `torny_rls.as_user(uuid)` does both; `torny_rls.as_service()` resets to the
+--   privileged role for seeding. This is the real runtime path, not a mock —
+--   the same SECURITY DEFINER helpers (is_admin / same_flight / is_in_game) run.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+create schema if not exists torny_rls;
+
+-- ── reset() ─────────────────────────────────────────────────────────────────
+-- Idempotent teardown of any rows this rig inserted. Safe to call at the top of
+-- a test. Deletes only the fixture rows (matched by the well-known fixture ids),
+-- so it never touches data seeded by other suites. Order respects FKs.
+create or replace function torny_rls.reset() returns void
+  language plpgsql
+  as $$
+  begin
+    delete from public.scores       where game_id = torny_rls.game_id();
+    delete from public.game_players where game_id = torny_rls.game_id();
+    delete from public.games        where id      = torny_rls.game_id();
+    delete from public.tee_boxes    where id      = torny_rls.tee_box_id();
+    delete from public.course_holes where course_id = torny_rls.course_id();
+    delete from public.courses      where id      = torny_rls.course_id();
+    delete from public.users        where id = any(torny_rls.all_user_ids());
+    delete from auth.users          where id = any(torny_rls.all_user_ids());
+  end;
+  $$;
+
+-- ── Well-known fixture ids ────────────────────────────────────────────────────
+-- Fixed UUIDs keep tests deterministic and let reset() find exactly our rows.
+create or replace function torny_rls.course_id()  returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-0000000000c0'::uuid $$;
+create or replace function torny_rls.tee_box_id() returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-0000000000c1'::uuid $$;
+create or replace function torny_rls.game_id()    returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-0000000000a0'::uuid $$;
+
+-- The four actors the score-write suite needs. Helpers return their ids so
+-- callers never hard-code UUIDs.
+create or replace function torny_rls.admin_id()      returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-0000000000d0'::uuid $$; -- is_admin = true
+create or replace function torny_rls.active_id()     returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-0000000000d1'::uuid $$; -- active flight-1 player
+create or replace function torny_rls.flightmate_id() returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-0000000000d2'::uuid $$; -- same flight as active_id
+create or replace function torny_rls.withdrawn_id()  returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-0000000000d3'::uuid $$; -- withdrawn_at set
+create or replace function torny_rls.submitted_id()  returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-0000000000d4'::uuid $$; -- submitted_at set
+create or replace function torny_rls.outsider_id()   returns uuid language sql immutable as $$ select '00000000-0000-4000-a000-0000000000d5'::uuid $$; -- not in the game at all
+
+create or replace function torny_rls.all_user_ids() returns uuid[] language sql immutable as $$
+  select array[
+    torny_rls.admin_id(), torny_rls.active_id(), torny_rls.flightmate_id(),
+    torny_rls.withdrawn_id(), torny_rls.submitted_id(), torny_rls.outsider_id()
+  ];
+$$;
+
+-- ── Impersonation ─────────────────────────────────────────────────────────────
+-- as_user(uuid): become the `authenticated` role with auth.uid() = the given id.
+-- Use inside a transaction; the runner rolls everything back per test file.
+create or replace function torny_rls.as_user(p_uid uuid) returns void
+  language plpgsql
+  as $$
+  begin
+    -- Drop superuser privileges so RLS is actually enforced. (postgres / the
+    -- seeding role BYPASSES RLS, which would silently make every assert pass.)
+    perform set_config('role', 'authenticated', true);
+    perform set_config(
+      'request.jwt.claims',
+      json_build_object('sub', p_uid::text, 'role', 'authenticated')::text,
+      true
+    );
+  end;
+  $$;
+
+-- as_service(): drop back to the privileged seeding role (RLS bypassed). Call
+-- before inserting fixtures and between impersonations when you need to mutate
+-- setup data the impersonated user couldn't.
+create or replace function torny_rls.as_service() returns void
+  language plpgsql
+  as $$
+  begin
+    perform set_config('role', 'postgres', true);
+    perform set_config('request.jwt.claims', null, true);
+  end;
+  $$;
+
+-- ── seed_active_game() ────────────────────────────────────────────────────────
+-- Builds the full graph the score-write asserts run against:
+--   • a course (+ 18 holes) and a tee box (FK targets for games)
+--   • an ACTIVE game owned by admin_id()
+--   • game_players rows for all five in-game actors, all in flight 1 so
+--     same_flight() relates them, with:
+--       active_id     → clean (no submitted_at / withdrawn_at)
+--       flightmate_id → clean (target for "write flight scores")
+--       withdrawn_id  → withdrawn_at set
+--       submitted_id  → submitted_at set
+--       admin_id      → also a player (and is_admin = true globally)
+--   • outsider_id is a user but NOT a game_player.
+-- Must run as the service role. Idempotent via reset() first.
+create or replace function torny_rls.seed_active_game() returns void
+  language plpgsql
+  as $$
+  begin
+    perform torny_rls.reset();
+
+    -- auth.users rows first (public.users.id FKs to auth.users.id).
+    -- NOTE: the on_auth_user_created trigger (migration 0014/0016,
+    -- handle_new_auth_user) auto-inserts a matching public.users row
+    -- (id, email, hcp_index) ON CONFLICT DO NOTHING the moment we insert here.
+    -- So the public.users upsert below uses ON CONFLICT DO UPDATE to stamp the
+    -- name + is_admin we actually need onto those trigger-created rows, rather
+    -- than colliding on the primary key. This mirrors the real signup path.
+    insert into auth.users (id, instance_id, aud, role, email)
+    select uid, '00000000-0000-0000-0000-000000000000'::uuid, 'authenticated', 'authenticated',
+           'rls-' || uid::text || '@example.test'
+      from unnest(torny_rls.all_user_ids()) as uid;
+
+    insert into public.users (id, email, name, is_admin) values
+      (torny_rls.admin_id(),      'rls-admin@example.test',      'RLS Admin',      true),
+      (torny_rls.active_id(),     'rls-active@example.test',     'RLS Active',     false),
+      (torny_rls.flightmate_id(), 'rls-flightmate@example.test', 'RLS Flightmate', false),
+      (torny_rls.withdrawn_id(),  'rls-withdrawn@example.test',  'RLS Withdrawn',  false),
+      (torny_rls.submitted_id(),  'rls-submitted@example.test',  'RLS Submitted',  false),
+      (torny_rls.outsider_id(),   'rls-outsider@example.test',   'RLS Outsider',   false)
+    on conflict (id) do update
+      set email = excluded.email, name = excluded.name, is_admin = excluded.is_admin;
+
+    insert into public.courses (id, name, created_by)
+      values (torny_rls.course_id(), 'RLS Test Course', torny_rls.admin_id());
+
+    -- course_holes carries per-gender par columns since migration 0040; all NOT NULL.
+    insert into public.course_holes (course_id, hole_number, stroke_index, par_mens, par_ladies, par_juniors)
+      select torny_rls.course_id(), h, h, 4, 4, 4 from generate_series(1, 18) as h;
+
+    -- tee_boxes carries per-gender slope/rating/par columns since 0028/0029.
+    insert into public.tee_boxes (id, course_id, name, slope_mens, course_rating_mens, par_total_mens)
+      values (torny_rls.tee_box_id(), torny_rls.course_id(), 'White', 113, 70.0, 72);
+
+    -- game_mode is NOT NULL since 0030; the score-write RLS policies don't read
+    -- it, so any mode works — strokeplay keeps the fixture minimal.
+    insert into public.games (id, name, course_id, tee_box_id, status, game_mode, created_by, started_at)
+      values (torny_rls.game_id(), 'RLS Test Game', torny_rls.course_id(),
+              torny_rls.tee_box_id(), 'active', 'strokeplay', torny_rls.admin_id(), now());
+
+    -- All in flight 1 so same_flight() relates them.
+    insert into public.game_players (game_id, user_id, team_number, flight_number, submitted_at, withdrawn_at) values
+      (torny_rls.game_id(), torny_rls.admin_id(),      1, 1, null, null),
+      (torny_rls.game_id(), torny_rls.active_id(),     1, 1, null, null),
+      (torny_rls.game_id(), torny_rls.flightmate_id(), 1, 1, null, null),
+      (torny_rls.game_id(), torny_rls.withdrawn_id(),  1, 1, null, now()),
+      (torny_rls.game_id(), torny_rls.submitted_id(),  1, 1, now(), null);
+  end;
+  $$;
+
+-- ── Score-write probes ────────────────────────────────────────────────────────
+-- These run a single INSERT / UPDATE against public.scores and return TRUE if it
+-- succeeded, FALSE if RLS (or any other policy) rejected it. They swallow the
+-- "new row violates row-level security policy" error so pgTAP can assert on the
+-- boolean instead of on raised-exception text. The current role / jwt claim
+-- (set via as_user / as_service) decides whether the write is allowed.
+--
+-- Each probe targets a distinct hole so repeated calls within one test don't
+-- collide on the (game_id, user_id, hole_number) unique index.
+
+-- try_insert_score(target_user, hole): the *current* impersonated user attempts
+-- to INSERT a score row FOR `target_user`. entered_by is set to the current
+-- auth.uid() (what the app always does). Returns whether the insert landed.
+create or replace function torny_rls.try_insert_score(p_target uuid, p_hole int) returns boolean
+  language plpgsql
+  as $$
+  declare
+    v_actor uuid := nullif(current_setting('request.jwt.claims', true), '')::json ->> 'sub';
+  begin
+    insert into public.scores (game_id, user_id, hole_number, strokes, entered_by, client_updated_at)
+      values (torny_rls.game_id(), p_target, p_hole, 4, coalesce(v_actor, p_target), now());
+    return true;
+  exception
+    when insufficient_privilege then return false;  -- RLS WITH CHECK / USING reject
+  end;
+  $$;
+
+-- seed_score(target_user, hole): insert a score row FOR target_user as the
+-- service role (RLS-bypassed), so update-probes have an existing row to mutate
+-- regardless of write-policy. entered_by = target so a later flight UPDATE can
+-- legitimately re-stamp entered_by to the actor under the WITH CHECK clause.
+create or replace function torny_rls.seed_score(p_target uuid, p_hole int) returns void
+  language plpgsql
+  as $$
+  begin
+    perform torny_rls.as_service();
+    insert into public.scores (game_id, user_id, hole_number, strokes, entered_by, client_updated_at)
+      values (torny_rls.game_id(), p_target, p_hole, 3, p_target, now())
+    on conflict (game_id, user_id, hole_number)
+      do update set strokes = excluded.strokes;
+  end;
+  $$;
+
+-- try_update_score(target_user, hole): the current impersonated user attempts to
+-- UPDATE the existing score row for target_user, re-stamping entered_by to
+-- itself (satisfies the WITH CHECK entered_by = auth.uid() branch when allowed).
+-- Returns whether any row was updated AND not rejected. An RLS USING failure
+-- raises insufficient_privilege; a USING that filters the row out updates 0 rows
+-- (also "blocked"), so we treat 0-rows-affected as FALSE too.
+create or replace function torny_rls.try_update_score(p_target uuid, p_hole int) returns boolean
+  language plpgsql
+  as $$
+  declare
+    v_actor uuid := nullif(current_setting('request.jwt.claims', true), '')::json ->> 'sub';
+    v_rows  int;
+  begin
+    update public.scores
+       set strokes = 7, entered_by = coalesce(v_actor, p_target), client_updated_at = now()
+     where game_id = torny_rls.game_id() and user_id = p_target and hole_number = p_hole;
+    get diagnostics v_rows = row_count;
+    return v_rows > 0;
+  exception
+    when insufficient_privilege then return false;  -- RLS WITH CHECK reject on UPDATE
+  end;
+  $$;
+
+-- ── Grants ────────────────────────────────────────────────────────────────────
+-- The probes run AS the impersonated `authenticated` role (SECURITY INVOKER, so
+-- the public.scores writes are genuinely RLS-checked). That means `authenticated`
+-- must be able to reach the torny_rls schema + call the probe functions. The
+-- seed/reset/impersonation helpers stay callable by everyone too (a test may seed
+-- before switching role, or probe right after as_service()).
+grant usage on schema torny_rls to authenticated, anon, service_role;
+grant execute on all functions in schema torny_rls to authenticated, anon, service_role;

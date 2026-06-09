@@ -1,0 +1,28 @@
+# Supabase local-dev config — added for the RLS integration-test rig (#440).
+#
+# This file lets `supabase start` boot a local Postgres that runs every
+# migration in supabase/migrations/ in order, after which `supabase test db`
+# executes the pgTAP suites in supabase/tests/. See supabase/tests/README.md.
+#
+# Kept intentionally minimal: only the keys `supabase start` + `supabase test db`
+# need. The remote project is managed via the Dashboard / MCP, not from this file,
+# so service-level config (auth providers, SMTP, storage) is deliberately omitted.
+
+# A string used to distinguish different Supabase projects on the same host.
+# Matches the production project ref so `supabase link` stays consistent.
+project_id = "glofubopddkjhymcbaph"
+
+[db]
+# Port to use for the local database URL.
+port = 54322
+# Port used by db diff command to initialize the shadow database.
+shadow_port = 54320
+# The database major version to use. Must match the production project
+# (Supabase Free tier, Postgres 15 at time of writing).
+major_version = 15
+
+[db.pooler]
+enabled = false
+
+# `supabase test db` runs everything matching supabase/tests/**/*.sql via pgTAP.
+# pgTAP itself is installed into the local stack by the CLI on `supabase start`.

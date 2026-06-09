@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
+    "test:rls": "if command -v supabase >/dev/null 2>&1; then supabase test db; else echo '[test:rls] Supabase CLI not found — RLS integration tests need a local Postgres. Install the CLI + start the stack, then re-run. See supabase/tests/README.md. (skipped, not failed)'; fi",
     "postinstall": "git config core.hooksPath .githooks 2>/dev/null || true"
   },
   "dependencies": {
