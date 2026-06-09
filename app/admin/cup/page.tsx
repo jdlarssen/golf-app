@@ -1,5 +1,5 @@
 import { getServerClient } from '@/lib/supabase/server';
-import { requireAdmin } from '@/lib/admin/auth';
+import { getRoleContext } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
@@ -54,15 +54,21 @@ export default async function CupListPage({
     : undefined;
 
   const supabase = await getServerClient();
-  await requireAdmin(supabase);
+  // #526: lista er reachable for alle (admin-layout er auth-only per #392).
+  // Admin ser alle cuper; en vanlig bruker ser kun sine egne personlige cuper.
+  const { userId, isAdmin } = await getRoleContext(supabase);
 
-  const { data: cups } = await supabase
+  let query = supabase
     .from('tournaments')
     .select(
       'id, name, status, team_1_name, team_2_name, points_to_win, created_at',
     )
     .order('created_at', { ascending: false })
     .limit(50);
+  if (!isAdmin) {
+    query = query.eq('created_by', userId).is('group_id', null);
+  }
+  const { data: cups } = await query;
 
   const rows = (cups ?? []) as Array<{
     id: string;

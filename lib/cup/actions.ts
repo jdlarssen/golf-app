@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import {
-  requireAdmin,
+  getRoleContext,
   requireAdminOrClubAdmin,
   requireAdminOrClubAdminOfCup,
 } from '@/lib/admin/auth';
@@ -160,11 +160,13 @@ export async function createTournamentDraft(formData: FormData) {
   if (foursomesAllowance === null) redirect(`${errBase}cup_foursomes_allowance`);
 
   const supabase = await getServerClient();
-  // Klubb-cup: klubb-eier/-admin (eller global admin) oppretter. Frittstående:
-  // global-admin-only (uendret). RLS (0089) er backstop på begge.
+  // Klubb-cup: klubb-eier/-admin (eller global admin) oppretter. Personlig
+  // (frittstående) cup: enhver innlogget bruker oppretter sin egen (#526);
+  // created_by settes til brukeren og caps håndheves når matcher genereres.
+  // RLS er backstop på begge (0089 admin/klubb-admin, 0090 skaper).
   const { userId } = groupId
     ? await requireAdminOrClubAdmin(supabase, groupId)
-    : await requireAdmin(supabase);
+    : await getRoleContext(supabase);
 
   const { data, error } = await supabase
     .from('tournaments')

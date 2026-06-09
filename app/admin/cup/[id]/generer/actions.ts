@@ -5,6 +5,10 @@ import { revalidateTag, revalidatePath } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdminOrClubAdminOfCup } from '@/lib/admin/auth';
+import {
+  exceedsPersonalMatchCap,
+  exceedsPersonalPlayerCap,
+} from '@/lib/cup/limits';
 import type { GameModeConfig } from '@/lib/scoring/modes/types';
 import type { CupSessionFormat } from '@/lib/cup/cupTemplates';
 import type { PlannedMatch } from '@/lib/cup/cupPairing';
@@ -74,9 +78,13 @@ export async function createCupMatchesFromPlan(
   const { tournamentId, courseId, teeBoxId, matches } = input;
 
   const supabase = await getServerClient();
-  // #524: klubb-cup styres av klubb-admin (eller global admin); frittstående av
-  // global admin. Gaten slår opp cupens group_id; RLS (0089) er backstop.
-  const { userId } = await requireAdminOrClubAdminOfCup(supabase, tournamentId);
+  // #524/#526: klubb-cup styres av klubb-admin (eller global admin); personlig
+  // cup av skaperen (eller global admin). Gaten slår opp cupens group_id; RLS
+  // (0089 + 0090) er backstop. isAdmin styrer cap-bypass under.
+  const { userId, isAdmin } = await requireAdminOrClubAdminOfCup(
+    supabase,
+    tournamentId,
+  );
 
   if (!courseId || !teeBoxId) return { error: 'missing_course' };
   if (!matches || matches.length === 0) return { error: 'no_matches' };
@@ -104,6 +112,39 @@ export async function createCupMatchesFromPlan(
       [...m.side1, ...m.side2].every((uid) => memberIds.has(uid)),
     );
     if (!allInClub) return { error: 'not_members' };
+  } else if (!isAdmin) {
+    // Personlig cup, ikke-admin: håndhev «1 helg»-tak (#526). Teller
+    // eksisterende + nye, så semantikken «≤4 matcher / ≤24 deltakere i cupen»
+    // holder selv ved re-generering. Match-taket er bindende i praksis. Admin
+    // hopper over (uncapped) — derfor `!isAdmin`-grenen.
+    const { data: existingGames } = await supabase
+      .from('games')
+      .select('id')
+      .eq('tournament_id', tournamentId);
+    const existingGameIds = (existingGames ?? []).map((g) => g.id as string);
+
+    let existingPlayerIds: string[] = [];
+    if (existingGameIds.length > 0) {
+      const { data: existingPlayers } = await supabase
+        .from('game_players')
+        .select('user_id')
+        .in('game_id', existingGameIds);
+      existingPlayerIds = (existingPlayers ?? []).map(
+        (p) => p.user_id as string,
+      );
+    }
+
+    const totalMatches = existingGameIds.length + matches.length;
+    if (exceedsPersonalMatchCap(totalMatches, isAdmin)) {
+      return { error: 'too_many_matches' };
+    }
+
+    const newPlayerIds = matches.flatMap((m) => [...m.side1, ...m.side2]);
+    const distinctPlayers = new Set([...existingPlayerIds, ...newPlayerIds])
+      .size;
+    if (exceedsPersonalPlayerCap(distinctPlayers, isAdmin)) {
+      return { error: 'too_many_players' };
+    }
   }
 
   const fourballPct =

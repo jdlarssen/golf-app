@@ -17,7 +17,36 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.107.y — Veiviser · klubb for klubber, kompis vokser
+## 1.108.y — Cup · alle kan arrangere
+
+Issue [#526](https://github.com/jdlarssen/golf-app/issues/526). Cup er ikke lenger låst til admin. En vanlig spiller kan lage og kjøre sin egen cup blant venner — en «1 helg»-Ryder Cup capped til 4 matcher og 24 spillere. Global admin er fortsatt uten tak.
+
+### [1.108.0] - 2026-06-09 · #526
+
+> Du kan nå lage din egen cup, ikke bare admin. Sett opp lagene, plukk vennene dine og kjør en Ryder Cup blant gjengen på opptil 4 matcher. Trenger dere mer, er det en klubb-cup som gjelder.
+
+<details>
+<summary>Teknisk</summary>
+
+[#526](https://github.com/jdlarssen/golf-app/issues/526). Personlig cup åpnet for alle, capped. Autorisasjons-relaksjon + RLS (ikke et epos: `tournaments.created_by` og scoped-select fantes; #524 hadde flyttet styringen til `requireAdminOrClubAdminOfCup`).
+
+#### Added
+- Migrasjon `0090_tournaments_creator_write.sql`: additiv WRITE-policy som lar en skaper skrive sin egen frittstående cup (`group_id is null and created_by = auth.uid()`). 0089 (klubb-cup) hadde kun admin/klubb-admin-write, så en ikke-admin fikk `42501`. Speiler games-creator-RLS (0071).
+- `requireAdminOrTournamentCreator`-gate (`lib/admin/auth.ts`): admin eller `tournaments.created_by`; speiler `requireAdminOrCreator` for spill. `requireAdminOrClubAdminOfCup` sin `group_id null`-gren delegerer hit.
+- `lib/cup/limits.ts`: `MAX_PERSONAL_CUP_MATCHES = 4`, `MAX_PERSONAL_CUP_PLAYERS = 24` + rene predikat-funksjoner med admin-bypass (Type-A-test, `it.each`).
+
+#### Changed
+- `createTournamentDraft`: frittstående cup gates nå med `getRoleContext` (enhver innlogget bruker) i stedet for `requireAdmin`; `created_by` settes til brukeren. Klubb-grenen uendret.
+- `createCupMatchesFromPlan`: håndhever taket for ikke-admin personlig cup (teller eksisterende + nye matcher/deltakere, så «≤4/≤24 i cupen» holder ved re-generering); returnerer `too_many_matches`/`too_many_players`. Admin og klubb-cup hopper over.
+- `app/admin/cup/[id]/generer/page.tsx`: gate `requireAdmin` → `requireAdminOrClubAdminOfCup` (matcher sin egen action, slik at skaperen når siden).
+- `app/admin/cup/page.tsx`: lista gates med `getRoleContext`; en vanlig bruker ser kun sine egne personlige cuper (`created_by`, `group_id` null), admin ser alle.
+
+</details>
+
+## Tidligere versjoner
+
+<details>
+<summary><strong>1.107.y — Veiviser · klubb for klubber, kompis vokser (2 oppføringer)</strong></summary>
 
 Issue [#525](https://github.com/jdlarssen/golf-app/issues/525). Veiviserens arrangement-valg rydder opp i hvem som ser hva: «Klubb-turnering» er for de som faktisk har en klubb, og den vanlige kompis-runden får plass til en hel turnering.
 
@@ -58,7 +87,7 @@ Issue [#525](https://github.com/jdlarssen/golf-app/issues/525). Veiviserens arra
 
 </details>
 
-## Tidligere versjoner
+</details>
 
 <details>
 <summary><strong>1.106.y — Klubb-cup (1 oppføring)</strong></summary>
