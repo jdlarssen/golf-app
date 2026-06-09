@@ -28,7 +28,7 @@ Issue [#526](https://github.com/jdlarssen/golf-app/issues/526). Cup er ikke leng
 <details>
 <summary>Teknisk</summary>
 
-[#538](https://github.com/jdlarssen/golf-app/issues/538), fase 2 av #416. `cacheComponents: true` i `next.config.ts` — stabilt toppnivå-flagg i Next 16 (etterfølgeren til `experimental.ppr`, som issuet trodde fortsatt var eksperimentell). Alle 83 side-ruter bygger nå som `◐` Partial Prerender: statisk skall (chrome + loading-fallbacks) servert fra CDN, dynamisk innhold streamet bak Suspense. Route handlers (api/ikoner/export) forblir `ƒ`.
+[#538](https://github.com/jdlarssen/golf-app/issues/538), fase 2 av #416. `cacheComponents: true` i `next.config.ts` — stabilt toppnivå-flagg i Next 16 (etterfølgeren til `experimental.ppr`, som issuet trodde fortsatt var eksperimentell). Alle 81 side-ruter bygger nå som `◐` Partial Prerender: statisk skall (chrome + loading-fallbacks) servert fra CDN, dynamisk innhold streamet bak Suspense. Route handlers (api/ikoner/export) forblir `ƒ`.
 
 #### Changed
 - **Root layout:** `getProxyVerifiedUserId()` (runtime-API `headers()`) flyttet ut av selve layouten til ny `BottomNavGate` bak `<Suspense fallback={null}>` — kjørte den i layouten, fikk ingen rute statisk skall. `PerfHud` (klient, `usePathname()`) tilsvarende Suspense-wrappet; pathname er runtime-data under flagget.

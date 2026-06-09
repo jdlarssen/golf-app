@@ -59,12 +59,14 @@ Hvis fase 3 krever **strukturell omskriving av mer enn ~15 ruter** (utover å le
 
 ## Suksesskriterier
 
-- [ ] **K1:** `cacheComponents: true` i `next.config.ts`; `npm run build` grønn; build-output viser statiske skall (◐/○-markører eller «Cache Components enabled» + vellykket static generation av alle 92 sider).
-- [ ] **K2:** Ingen bruker-synlig oppførsels-endring: full vitest-suite grønn + golden-path live-sjekk på prod (fase 5) uten regresjon.
-- [ ] **K3:** Auth-/RLS-modell 100 % bevart: `proxy.ts` og `lib/supabase/server.ts` uendret (diff-bevis); ingen `'use cache'` på cookie-/RLS-avhengig data (grep-bevis over nye direktiver).
-- [ ] **K4:** Før/etter-måling dokumentert i issue-kommentar (metodikk + tall, minst 2 ruter).
-- [ ] **K5:** Rollback dokumentert: revert av config-linja (+ ev. gjeninnsetting av force-dynamic er IKKE nødvendig — fjernede direktiver er no-op også uten flagget, verifiseres i K1-builds).
-- [ ] **K6:** PATCH-bump + CHANGELOG (perf) i samme commit som flagget flippes.
+- [x] **K1:** `cacheComponents: true` committet (`3c8bdd1`); `npm run build` exit 0; **81 av 90 ruter `◐` Partial Prerender**, resterende 9 er route handlers/manifest (`ƒ`/`○`, forventet). Bevis: `/tmp/538-build-r2.log`.
+- [x] **K2 (kode-nivå):** vitest 250 filer / 2990 tester grønne etter endringen. Golden-path live-sjekk gjenstår post-deploy (fase 5, obligatorisk før issue lukkes).
+- [x] **K3:** `git diff --stat -- proxy.ts lib/supabase/server.ts` = tom; `grep -rn "'use cache'" app/ lib/ components/` = **0 treff** — ingen caching av cookie-/RLS-avhengig data i det hele tatt.
+- [x] **K4 (før-halvdel):** FØR-måling prod www (5 samples, 00:40): `/login` TTFB 0.234–0.594s (median ~0.24s), `/legal/privacy` 0.216–0.776s (median ~0.24s). ETTER-måling gjøres post-deploy og dokumenteres i issue-kommentar.
+- [x] **K5:** Rollback = fjern config-linja (dokumentert i commit-body + config-kommentar). Fjernede force-dynamic er no-op begge veier — verifisert ved at probe-build 2 (uten flagg-relaterte feil i de 12 filene) kjørte compile+tsc grønt.
+- [x] **K6:** 1.108.5→1.108.6 + CHANGELOG `[1.108.6] · #538` i commit `3c8bdd1` (commit-msg-hook passerte).
+
+**Build-løkke-historikk (fase 3):** Runde 1: 2 rapporterte rute-feil → `--debug-prerender` viste at ALLE 51 rapporterte feilkilder pekte på samme linje: `<PerfHud />` i root layout (`usePathname()` = runtime-data). Runde 2 (PerfHud bak Suspense): grønn. Totalt inngrep: 12 strips + BottomNavGate + PerfHud-wrap — langt under bail-out-grensen på 15 strukturelle omskrivinger.
 
 ## Gates
 
