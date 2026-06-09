@@ -21,6 +21,27 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#526](https://github.com/jdlarssen/golf-app/issues/526). Cup er ikke lenger låst til admin. En vanlig spiller kan lage og kjøre sin egen cup blant venner — en «1 helg»-Ryder Cup capped til 4 matcher og 24 spillere. Global admin er fortsatt uten tak.
 
+### [1.108.2] - 2026-06-09 · #413
+
+> Leaderboard og spill-sider laster raskere: databasen slipper å skanne hele tabeller når den slår opp spillere og resultater.
+
+<details>
+<summary>Teknisk</summary>
+
+[#413](https://github.com/jdlarssen/golf-app/issues/413). FK-indeks-hygiene basert på live performance-advisor-kjøring 2026-06-09 (37 udekkede fremmednøkler flagget).
+
+#### Added
+- Migrasjon `0091_fk_index_hygiene.sql`: 37 `CREATE INDEX IF NOT EXISTS` på fremmednøkler uten dekkende indeks. Hot-tabeller først (`scores.user_id`, `scores.entered_by`, `game_players.user_id`, `game_players.approved_by_user_id`, `game_players.withdrawn_by_user_id`, `games.course_id`, `games.created_by`, `games.tee_box_id`, `games.foursomes_side{1,2}_tee_starter_user_id`, `invitations.game_id`, `invitations.invited_by`). Øvrige tabeller: `bingo_bango_bongo_holes` (4), `courses` (2), `game_registration_requests` (1), `game_side_winners` (1), `group_join_requests` (1), `groups` (1), `league_rounds` (3), `leagues` (3), `patsome_tee_starters` (1), `product_update_digests` (1), `product_updates` (1), `tee_boxes` (1), `tournaments` (1), `wolf_hole_choices` (3), `agent_findings` (1).
+
+#### Removed
+- `invitations_token`: `token`-kolonnen leses ikke lenger — magic-link-flyten ble skrotet til fordel for OTP 2026-05-13; ingen kode-sti bruker indeksen.
+- `groups_short_id_idx`: duplikat av `groups_short_id_unique` UNIQUE CONSTRAINT (Postgres genererer automatisk B-tree-indeks for UNIQUE constraints).
+- `users_friend_code_idx`: duplikat av `users_friend_code_unique` UNIQUE CONSTRAINT — samme årsak.
+
+13 andre «ubrukte» indekser beholdt: støtter aktive kode-stier (agent-monitoring, audit-log, cup, liga, gruppe-flyt) men har for lav trafikk til at advisoren registrerer bruk ennå.
+
+</details>
+
 ### [1.108.1] - 2026-06-09 · #526
 
 > Lager du din egen cup, plukker du nå spillere fra vennelista di, og veiviseren sier fra med en gang du nærmer deg 4-match-taket — ikke etterpå. Point-målet foreslås også ut fra den mindre cupen.
