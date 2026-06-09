@@ -3,10 +3,12 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { CupSetup } from './CupSetup';
 import type { CupEligibleFormat } from '@/lib/formats/getFormatsForIntent';
 
-// Én Type C render-test per docs/test-discipline.md — verifiserer at
-// CupSetup viser lag-navn-felt, points-to-win, og multi-select for de
-// passerte cup-eligible formats. Form action submits via createTournament-
-// Draft (server-action) — vi sjekker DOM-struktur, ikke submit-flyt.
+// Type C render-tester per docs/test-discipline.md — verifiserer DOM-strukturen
+// CupSetup rendrer: lag-navn-felt, points-to-win, og multi-select for de
+// passerte cup-eligible formats (default-grenen), pluss den capped personlige
+// cup-grenen (#526/#530: matchCap → lavere point-mål-default). Cap-logikken selv
+// er Type A i lib/cup/limits.test. Form action submits via createTournamentDraft
+// (server-action) — vi sjekker DOM-struktur, ikke submit-flyt.
 
 // Mock createTournamentDraft — vi binder action-en kun for type-safety,
 // tester aldri faktisk submit her (det testes i lib/cup/actions.test).
@@ -59,5 +61,14 @@ describe('CupSetup', () => {
     expect(fourball).not.toBeChecked();
     expect(screen.getByRole('button', { name: /opprett cup/i })).toBeDisabled();
     expect(screen.getByText(/velg minst ett match-format/i)).toBeInTheDocument();
+  });
+
+  it('senker point-mål-default til 2,5 og forklarer taket for en capped personlig cup', () => {
+    render(<CupSetup cupEligibleFormats={CUP_ELIGIBLE} matchCap={4} />);
+
+    // Point-mål-default følger taket: 4 / 2 + 0,5 = 2,5 (mot admin/klubb-cupens 4,5).
+    expect((screen.getByLabelText(/point-mål/i) as HTMLInputElement).value).toBe('2,5');
+    // Hinten forklarer regelen mot det personlige taket på 4 matcher.
+    expect(screen.getByText(/med 4 matcher blir det 2,5/i)).toBeInTheDocument();
   });
 });
