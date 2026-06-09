@@ -21,6 +21,7 @@ It's invite-only: players sign in with a one-time code by mail, with no open sig
 - A leaderboard that updates live while your flight taps scores.
 - Offline-first scoring. Tap in a dead spot on the course and it syncs once your phone has signal again.
 - A side tournament you can bolt onto any game: a points race across the round, plus longest-drive and closest-to-pin contests.
+- Your own cup. Run a team-vs-team Ryder Cup among friends without needing a club: name the two teams, generate the matches from your friends, then start and finish it yourself. A personal cup holds up to four matches and twenty-four players; need more and that's what a club cup is for.
 - Clubs, set up through Tørny. A club gathers people and tournaments in one named place; you arrange one with us rather than spinning it up yourself, and each comes with a member cap and a duration. The owner runs it from there: appoint co-admins and owners, add members by mail or a shared join link, approve join requests, and set up rounds every member finds under "Finn turneringer" and joins straight away, even when the round would otherwise be private. An owner or club admin can also set up and run a season-long league for the club: start it, manage its rounds and participants, and finish the season themselves. Members find it on the club page, and can join an upcoming league themselves before it starts, then back out again until they've played a round. They can run a team-vs-team cup the same way: create it from the club page, generate the matches from the members, and start or finish it there. The player picker draws from club members rather than your friends, and members find both the leagues and cups on the club page.
 - Friends. Add people you've played with, by mail, or with a share link that connects whoever opens it. Inviting someone to a game by mail also makes you friends once they join, so the list fills itself as you play. Friends turn up when you fill a team, and their games appear under "Finn turneringer" in their own section. Open a round "for friends": tick a box on a request-to-join game and your friends skip the approval and join straight away, while everyone else still asks.
 - Leagues. Run a season across several rounds: pick how often you play, keep one course and tee for the whole thing or change it round to round, and rank everyone on net-to-par with a table that updates as flights come in. Players have the full round window to play in their own flights of at least two, missed rounds take a penalty score or drop out, and you decide the winner by total or average.
@@ -83,7 +84,7 @@ Offline sync ([`lib/sync/`](lib/sync/)) writes to Dexie first and drains the que
 
 RLS is enforced strictly in Postgres. You see your own scores, your flight's scores during an active game (a flight-less solo round counts the whole group as one flight, so everyone sees everyone), and every score once the admin has ended the game. Realtime needs an explicit `supabase.realtime.setAuth()`; auto-propagation doesn't work for the WebSocket channel, which is a known quirk.
 
-Migrations live in [`supabase/migrations/`](supabase/migrations/) (80+ files, chronological).
+Migrations live in [`supabase/migrations/`](supabase/migrations/) (90+ files, chronological).
 
 ## Where the rest lives
 
