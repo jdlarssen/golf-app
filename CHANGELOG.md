@@ -21,6 +21,28 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#526](https://github.com/jdlarssen/golf-app/issues/526). Cup er ikke lenger låst til admin. En vanlig spiller kan lage og kjøre sin egen cup blant venner — en «1 helg»-Ryder Cup capped til 4 matcher og 24 spillere. Global admin er fortsatt uten tak.
 
+### [1.108.3] - 2026-06-09 · #412 #413 #414
+
+> Leaderboarden henter resultater kjappere når mange har tastet inn. Databasen sjekker hvem som får se hva én gang per oppslag i stedet for én gang per rad, så jo større turneringen blir, jo mer monner det.
+
+<details>
+<summary>Teknisk</summary>
+
+[#412](https://github.com/jdlarssen/golf-app/issues/412) + [#414](https://github.com/jdlarssen/golf-app/issues/414). Ren ytelses-migrasjon på RLS-policyene — ingen endring i hvilke rader noen ser, verifisert mot verbatim før/etter-dump av `pg_policies` (uendret access-sett per tabell/handling/rolle) + utvidet RLS-rigg.
+
+#### Changed
+- Migrasjon `0092_rls_policy_perf.sql`.
+- **#412 `auth_rls_initplan`:** Alle 55 public-policyer som kalte `auth.uid()` / `auth.role()` / `auth.jwt()` direkte wrappes nå i `(select …)`. Postgres cacher subselecten som et initplan og evaluerer auth-skalaren én gang per spørring i stedet for per rad. `(select auth.uid())` returnerer nøyaktig samme skalar — mekanisk substitusjon. SECURITY DEFINER-helpere (`is_admin()`, `is_in_game()`, `can_score_for()`, `same_flight_or_solo()` m.fl.) røres ikke.
+- **#414 `multiple_permissive_policies`:** Slått sammen beviselig-ekvivalente same-rolle permissive policyer til én OR-policy per (tabell, handling). Konsolidert: `courses`, `course_holes`, `tee_boxes`, `formats`, `format_intent_mapping`, `games`, `game_players`, `game_side_winners`, `invitations`, `game_registration_requests`, `group_join_requests`, `users`, `league_players`, `league_rounds`, `leagues`, `tournaments`. Den brede `ALL is_admin()`-admin-policyen er foldet inn i per-handling-self/deltaker-policyene der de deler rolle; for skrive-handlinger uten same-rolle-søsken er en målrettet admin-policy beholdt.
+- **Bevisst stående igjen (rolle-mismatch):** Der admin-grenen er `public` og søster-policyen er `authenticated` (skaper-policyer på `games`/`game_players`/`invitations`/`game_side_winners`; INSERT-own på `courses`/`course_holes`/`tee_boxes`) kan policyene ikke slås sammen uten å endre rolle-settet — de står igjen med vilje (advisoren flagger fortsatt overlappet, men å merge ville løsne/innsnevre tilgang). Bedre å la en advarsel stå enn å røre sikkerhets-grensen.
+
+#### Tested
+- `supabase/tests/scores_write_rls_test.sql` (#440-riggen): 19/19 grønt etter 0092.
+- Ny `supabase/tests/games_invitations_rls_test.sql`: 13 pgTAP-asserts for `games` SELECT, `game_players` SELECT/INSERT (self-register-open) og `invitations` SELECT (egen vs. andres vs. admin) — grønt både før og etter 0092, så det er ekte invarianter.
+- Verbatim `pg_policies` før/etter-diff: access-settet per (tabell, handling, rolle) er uendret (kun antall policy-rader + initplan-wrapping + fjernet `is_admin() OR true`-redundans endres).
+
+</details>
+
 ### [1.108.2] - 2026-06-09 · #413
 
 > Leaderboard og spill-sider laster raskere: databasen slipper å skanne hele tabeller når den slår opp spillere og resultater.
