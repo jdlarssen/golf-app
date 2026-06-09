@@ -1221,6 +1221,7 @@ async function renderStableford(opts: {
             game,
             gwp,
             rawHolesRows,
+            rawScoresRows,
             backHref,
             mainContent: podium(true),
           })}
@@ -1315,6 +1316,7 @@ async function renderStableford(opts: {
           game,
           gwp,
           rawHolesRows,
+          rawScoresRows,
           backHref,
           mainContent: podium(true),
         })}
@@ -1367,10 +1369,14 @@ async function renderStablefordWithSideTournament(opts: {
     }[];
   };
   rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
+  // Scores for the whole game, already fetched once by LeaderboardBody. Passed
+  // through here so the side-tournament path reuses them instead of issuing a
+  // second identical `scores` query in the same render tree.
+  rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
   mainContent: React.ReactNode;
 }) {
-  const { gameId, game, gwp, rawHolesRows, backHref, mainContent } = opts;
+  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref, mainContent } = opts;
 
   const { supabase } = await getLeaderboardContext();
 
@@ -1402,25 +1408,18 @@ async function renderStablefordWithSideTournament(opts: {
     courseStrokeIndices.push(siByHole.get(h) ?? h);
   }
 
-  // Per-spiller perHoleGross + perHoleNetto. Henter rå-scores fra DB siden
+  // Per-spiller perHoleGross + perHoleNetto. Henter rå-scores siden
   // sideturneringen krever brutto OG netto per hull — stableford-result-en
   // bærer kun stableford-poeng. Filtrerer ut spillere uten users (defensiv;
   // RLS slipper kun gjennom registrerte spillere på et finished-spill).
   // WD (#386): trukne spillere deltar ikke i sideturneringen.
   const eligiblePlayers = gwp.players.filter((p) => p.users != null && p.withdrawn_at == null);
 
-  // Hent rå-scores for sideturneringen separat fra LeaderboardBody (vi er
-  // allerede inne i samme request-scope, men trenger en egen query siden
-  // vi ikke har scores som parameter). Lite ekstra-cost — én query, samme
-  // tabell som best-ball-grenen leser fra.
-  const scoresRes = await supabase
-    .from('scores')
-    .select('user_id, hole_number, strokes')
-    .eq('game_id', gameId)
-    .returns<ScoreRow[]>();
-  if (scoresRes.error) throw scoresRes.error;
+  // Rå-scores er allerede hentet én gang av LeaderboardBody og sendt hit som
+  // `rawScoresRows` — gjenbruk dem i stedet for å fyre en ny identisk `scores`-
+  // query i samme render-tre (#416). Samme tabell, samme game_id-filter.
   const scoresByPlayer = new Map<string, Map<number, number>>();
-  for (const s of scoresRes.data ?? []) {
+  for (const s of rawScoresRows) {
     if (s.strokes == null) continue;
     let inner = scoresByPlayer.get(s.user_id);
     if (!inner) {

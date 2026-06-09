@@ -21,6 +21,26 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#526](https://github.com/jdlarssen/golf-app/issues/526). Cup er ikke lenger låst til admin. En vanlig spiller kan lage og kjøre sin egen cup blant venner — en «1 helg»-Ryder Cup capped til 4 matcher og 24 spillere. Global admin er fortsatt uten tak.
 
+### [1.108.4] - 2026-06-09 · #416
+
+> Scorekortet, spillerlista og resultatsiden laster et hakk kjappere: de henter det de trenger samtidig i stedet for å vente på én ting av gangen.
+
+<details>
+<summary>Teknisk</summary>
+
+[#416](https://github.com/jdlarssen/golf-app/issues/416). Profilering av de hotteste innloggede rutene (`app/games/[id]/*` + `app/page.tsx`). Mesteparten var allerede slankt — `getGameWithPlayers` er tag-cachet, hjem/hull/leaderboard kjører allerede `Promise.all` + `Suspense`, ingen rute har `force-dynamic`. Tre reelle funn rettet, ingen auth- eller RLS-endring.
+
+#### Changed
+- **Scorekort (`scorecard/page.tsx`):** auth-konteksten (cookie-rundtur) og det tag-cachede spill-oppslaget kjørte sekvensielt. De er uavhengige (spill-payloaden trenger ikke `userId`; authz beholdes på `me = players.find(...)`-call-site), så de er slått sammen til én `Promise.all`. Sparer én rundtur på den vanlige innloggede stien.
+- **Spillere (`spillere/page.tsx`):** før runde-start hentet sida ventende invitasjoner og medspiller-nettverket (`getTeamCandidates`) i to sekvensielle awaits. De er uavhengige → én `Promise.all`.
+- **Leaderboard (`leaderboard/page.tsx`):** sideturnerings-grenen for stableford kjørte en ny, identisk `scores`-query selv om `LeaderboardBody` allerede hadde hentet alle scorene for spillet. Rå-scorene tres nå gjennom til `renderStablefordWithSideTournament` som parameter — én duplikat-query fjernet på finished + sideturnering-stien.
+
+#### Notes
+- Forventet gevinst er beskjeden: kun scorekort-stien sparer en rundtur på hver navigasjon; spillere-fiksen treffer kun pre-start, leaderboard-fiksen kun finished-spill med sideturnering. Det arkitektoniske ~250ms-gulvet kommer fra at hver rute er dynamisk via cookie-auth — det røres ikke her.
+- **PPR (fase 2, ikke implementert):** I Next 16.2.6 finnes `experimental.ppr` ikke lenger — config kaster `HardDeprecatedConfigError` og peker til `cacheComponents` (Partial Prerendering er nå en del av den). Det er fortsatt eksperimentelt, krever per-rute `experimental_ppr = true` + en statisk-skall-oppdeling av layoutene, og gir usikker gevinst mot prod-risiko. Anbefaling: vent — ta det først om det dynamiske gulvet beviselig plager brukerne etter at DB-arbeidet (#412–#414) har satt seg.
+
+</details>
+
 ### [1.108.3] - 2026-06-09 · #412 #413 #414
 
 > Leaderboarden henter resultater kjappere når mange har tastet inn. Databasen sjekker hvem som får se hva én gang per oppslag i stedet for én gang per rad, så jo større turneringen blir, jo mer monner det.

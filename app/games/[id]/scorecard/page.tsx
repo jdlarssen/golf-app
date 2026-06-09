@@ -83,12 +83,18 @@ const columnFormatter = {
 
 export default async function ScorecardPage({ params }: { params: Params }) {
   const { id } = await params;
-  const { userId } = await getScorecardContext();
-  if (!userId) redirect('/login');
 
-  // games + game_players from the tag-cached helper. See
-  // lib/games/getGameWithPlayers.ts for cache + authz rationale.
-  const result = await getGameWithPlayers(id);
+  // Auth-context (cookie round-trip) and the tag-cached game read are
+  // independent — the game payload doesn't depend on the user id, and authz
+  // is enforced below at the `me = players.find(...)` call-site. Fetch them in
+  // parallel so the cookie round-trip and the (usually cache-hit) game read
+  // overlap instead of stacking. See lib/games/getGameWithPlayers.ts for the
+  // cache + authz rationale.
+  const [{ userId }, result] = await Promise.all([
+    getScorecardContext(),
+    getGameWithPlayers(id),
+  ]);
+  if (!userId) redirect('/login');
   if (!result) notFound();
   const { game, players } = result;
 

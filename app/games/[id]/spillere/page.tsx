@@ -95,25 +95,28 @@ export default async function CreatorSpillerePage({
   const isBestBall = game.game_mode === 'best_ball';
   const isFull = isBestBall && players.length >= BEST_BALL_MAX_PLAYERS;
 
-  // Pending game-scoped invitations (request-scoped: creator sees their own via
-  // RLS 0072, admin sees all). Only meaningful before the round starts.
+  // Pre-start the page needs two independent reads: the pending game-scoped
+  // invitations and the creator's co-player network for the add-picker. They
+  // don't depend on each other, so fetch them in parallel rather than letting
+  // the invitations round-trip block the network lookup.
+  //  - pendingInvites: request-scoped (creator sees their own via RLS 0072,
+  //    admin sees all). Only meaningful before the round starts.
+  //  - candidates: co-player network, minus whoever's already on the roster.
   let pendingInvites: { id: string; email: string }[] = [];
-  if (isPreStart) {
-    const { data } = await supabase
-      .from('invitations')
-      .select('id, email')
-      .eq('game_id', gameId)
-      .is('accepted_at', null)
-      .order('created_at', { ascending: true })
-      .returns<{ id: string; email: string }[]>();
-    pendingInvites = data ?? [];
-  }
-
-  // Co-player network for the add-picker, minus whoever's already on the roster.
   let candidates: { id: string; name: string | null; nickname: string | null; email: string }[] = [];
   if (isPreStart) {
     const rosterIds = new Set(players.map((p) => p.user_id));
-    const network = await getTeamCandidates(role.userId);
+    const [invitesRes, network] = await Promise.all([
+      supabase
+        .from('invitations')
+        .select('id, email')
+        .eq('game_id', gameId)
+        .is('accepted_at', null)
+        .order('created_at', { ascending: true })
+        .returns<{ id: string; email: string }[]>(),
+      getTeamCandidates(role.userId),
+    ]);
+    pendingInvites = invitesRes.data ?? [];
     candidates = network.filter((c) => !rosterIds.has(c.id));
   }
 
