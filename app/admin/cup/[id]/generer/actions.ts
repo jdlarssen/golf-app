@@ -117,7 +117,12 @@ export async function createCupMatchesFromPlan(
     // eksisterende + nye, så semantikken «≤4 matcher / ≤24 deltakere i cupen»
     // holder selv ved re-generering. Match-taket er bindende i praksis. Admin
     // hopper over (uncapped) — derfor `!isAdmin`-grenen.
-    const { data: existingGames } = await supabase
+    // Tellingene bruker admin-client: game_players-SELECT-RLS krever at man er
+    // spiller i kampen (is_in_game), så en skaper som ikke selv spiller ville
+    // lest 0 eksisterende deltakere og undertelt taket. Skaperen er allerede
+    // gatet (requireAdminOrTournamentCreator), så admin-client er trygt her.
+    const admin = getAdminClient();
+    const { data: existingGames } = await admin
       .from('games')
       .select('id')
       .eq('tournament_id', tournamentId);
@@ -125,7 +130,7 @@ export async function createCupMatchesFromPlan(
 
     let existingPlayerIds: string[] = [];
     if (existingGameIds.length > 0) {
-      const { data: existingPlayers } = await supabase
+      const { data: existingPlayers } = await admin
         .from('game_players')
         .select('user_id')
         .in('game_id', existingGameIds);

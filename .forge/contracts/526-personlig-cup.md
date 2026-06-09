@@ -71,17 +71,22 @@ issuet stemmer ikke lenger, og kontrakten korrigerer dem:
   `limits.test.ts` 13/13 grønn.
 - [x] **K7 — Caps håndhevet i generering.** `createCupMatchesFromPlan` har
   `else if (!isAdmin)`-gren for personlig cup: teller eksisterende + nye, returnerer
-  `too_many_matches`/`too_many_players`. Admin/klubb hopper over. *Bevis:* fil-diff
-  + predikat-tester.
+  `too_many_matches`/`too_many_players`. Admin/klubb hopper over. Tellingene bruker
+  admin-client så en ikke-spillende skaper ikke undertelle pga. `game_players`-RLS
+  (`is_in_game`). *Bevis:* fil-diff + predikat-tester (`limits.test.ts`).
 - [x] **K8 — Cap synlig i UI.** Wizarden har `matchCap`-prop; steg 3 info-/varsel-
   banner + `canAdvance` blokkerer «Neste» over taket; `too_many_*`-koder mapper til
-  norske banner-meldinger. *Bevis:* `GenerateMatchesWizard.tsx`, `GenerateMatchesWizard.test.tsx` grønn.
+  norske banner-meldinger. *Bevis:* `GenerateMatchesWizard.tsx` (kode); cap-logikken
+  er enhetstestet i `limits.test.ts`. Eksisterende `GenerateMatchesWizard.test.tsx`
+  passerer (ny prop er valgfri) men asserterer ikke selve cap-UI-en — server +
+  logikk er den reelle garantien.
 - [x] **K9 — Pickeren bruker venner for ikke-admin.** `GenerateMatches.tsx`:
   `else if (isAdmin)` → alle; `else` → `getFriendPlayerOptions(userId)` + skaper
   selv (dedup, sortert). *Bevis:* fil-diff.
 - [x] **K10 — Copy justert.** `CupSetup.tsx` `matchCap`-prop → default «2,5» + hint
-  «Med 4 matcher blir det 2,5» for personlig; admin/klubb uendret. Kjørt gjennom
-  `humanizer` (strenger rene; tagline strammet). *Bevis:* fil-diff + humanizer-pass.
+  «Med 4 matcher blir det 2,5» for personlig; admin/klubb uendret (`CupSetup.test.tsx`
+  passerer, dekker default-grenen). Kjørt gjennom `humanizer` (strenger rene; tagline
+  strammet). *Bevis:* fil-diff + humanizer-pass.
 - [ ] **K11 — Ingen admin-vegg i hele løkka.** Manuell prod-sjekk etter deploy
   (iPhone Safari): vanlig spiller oppretter cup → ≤4 matcher (5. blokkeres) →
   starter → avslutter. *Status:* PENDING — krever merge + deploy; eieren/live-
