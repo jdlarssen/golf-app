@@ -1509,6 +1509,7 @@ export type Database = {
           is_admin: boolean
           last_seen_at: string | null
           level: Database["public"]["Enums"]["player_level"]
+          locale: string | null
           name: string | null
           nickname: string | null
           product_updates_unsubscribed_at: string | null
@@ -1525,6 +1526,7 @@ export type Database = {
           is_admin?: boolean
           last_seen_at?: string | null
           level?: Database["public"]["Enums"]["player_level"]
+          locale?: string | null
           name?: string | null
           nickname?: string | null
           product_updates_unsubscribed_at?: string | null
@@ -1541,6 +1543,7 @@ export type Database = {
           is_admin?: boolean
           last_seen_at?: string | null
           level?: Database["public"]["Enums"]["player_level"]
+          locale?: string | null
           name?: string | null
           nickname?: string | null
           product_updates_unsubscribed_at?: string | null
