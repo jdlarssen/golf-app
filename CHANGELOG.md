@@ -49,6 +49,20 @@ Issue [#544](https://github.com/jdlarssen/golf-app/issues/544). Åpne matchplay-
 
 </details>
 
+### [1.109.1] - 2026-06-11 · #544
+
+> Etter tee-tid vises nå et varsel på spillsiden som forteller hvilken side som mangler spillere — slik at du vet hvorfor spillet ikke har startet.
+
+<details>
+<summary>Teknisk</summary>
+
+[#544](https://github.com/jdlarssen/golf-app/issues/544). Venter-banner i game-home planlagt-tilstand.
+
+#### Added
+- `app/[locale]/games/[id]/(home)/page.tsx`: når `startScheduledGame` returnerer `incomplete_sides` i E1-blokken, beregnes shortfall via `computeSideShortfall` og vises som `<Banner tone="warning">` med side-spesifikk tekst om antall manglende spillere.
+
+</details>
+
 <details>
 <summary><strong>1.108.y — Cup · alle kan arrangere (7 oppføringer)</strong></summary>
 

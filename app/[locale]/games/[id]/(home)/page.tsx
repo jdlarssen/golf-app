@@ -44,6 +44,10 @@ import { getModeContentMap, mergeModeContent } from '@/lib/formats/getModeConten
 import { formatDisplayLabel } from '@/lib/games/formatLabel';
 import { submitUndoWithdraw } from '../trekk-fra/actions';
 import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
+import {
+  isMatchplayMode,
+  computeSideShortfall,
+} from '@/lib/games/matchplaySides';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -276,6 +280,10 @@ export default async function GameHomePage({
   // Drafts are visible to invited players as a venterom — see the draft
   // branch in the default return below for progressive disclosure.
 
+  // #544: track whether the auto-start was blocked by incomplete matchplay sides.
+  // Used below to render a waiting banner in the scheduled fallback view.
+  let autoStartBlockedByIncompleteSides = false;
+
   // E1: server-side auto-start fallback. When the admin scheduled a tee-off
   // time but didn't manually click "Start runden nå", any player loading
   // this page after tee-off has passed triggers the same freeze-handicaps
@@ -297,6 +305,9 @@ export default async function GameHomePage({
     // fact that this player could load the game at all.
     const result = await startScheduledGame(getAdminClient(), id);
     if (!result.ok) {
+      if (result.reason === 'incomplete_sides') {
+        autoStartBlockedByIncompleteSides = true;
+      }
       // Log to Vercel server logs so a "stuck in scheduled" report has a
       // trail. Don't crash — fall through to the existing scheduled fallback.
       console.error(
@@ -382,6 +393,16 @@ export default async function GameHomePage({
     const showHandicapCard = meUser
       ? isHandicapStale(meUser.handicap_updated_at)
       : false;
+
+    // #544: beregn mangel per side for venter-banneret. Bruker den allerede
+    // lastede gwp.players-listen (team_number + withdrawn_at er inkludert).
+    // Vises bare når autostart ble blokkert av incomplete_sides — unngår å
+    // forvirre spillere i normale spill som venter på tee-off.
+    const incompleteSidesShortfall =
+      autoStartBlockedByIncompleteSides &&
+      isMatchplayMode(game.game_mode)
+        ? computeSideShortfall(gwp.players, modeTeamSize)
+        : null;
 
     return (
       <AppShell>
@@ -499,6 +520,20 @@ export default async function GameHomePage({
               gameId={id}
               teeOffAt={game.scheduled_tee_off_at!}
             />
+          </div>
+        )}
+
+        {/* #544: venter-banner etter tee-tid når sidene ikke er fullbooket */}
+        {incompleteSidesShortfall && (
+          <div className="mx-4 mt-3">
+            <Banner tone="warning">
+              {incompleteSidesShortfall.side1Needs > 0 &&
+              incompleteSidesShortfall.side2Needs > 0
+                ? `Venter på spillere — side 1 mangler ${incompleteSidesShortfall.side1Needs} og side 2 mangler ${incompleteSidesShortfall.side2Needs}.`
+                : incompleteSidesShortfall.side1Needs > 0
+                ? `Venter på spillere — side 1 mangler ${incompleteSidesShortfall.side1Needs}.`
+                : `Venter på spillere — side 2 mangler ${incompleteSidesShortfall.side2Needs}.`}
+            </Banner>
           </div>
         )}
 
