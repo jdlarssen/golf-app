@@ -1,7 +1,7 @@
 import { Card } from '@/components/ui/Card';
 import { Button, LinkButton } from '@/components/ui/Button';
 import { formatRelativeNb } from '@/lib/format/relativeTimeNb';
-import { confirmHandicap } from '@/app/games/[id]/actions';
+import { confirmHandicap } from '@/app/[locale]/games/[id]/actions';
 
 /**
  * Inline kort i scheduled-venterommet som ber spilleren bekrefte

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { markOneAsRead } from '@/app/innboks/actions';
+import { markOneAsRead } from '@/app/[locale]/innboks/actions';
 import { SmartLink } from '@/components/ui/SmartLink';
 
 /**

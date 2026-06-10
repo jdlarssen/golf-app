@@ -1,5 +1,5 @@
 import 'server-only';
-import type { InitialValues } from '@/app/admin/games/new/GameForm';
+import type { InitialValues } from '@/app/[locale]/admin/games/new/GameForm';
 import { buildSetupStepInitialValues } from '@/lib/games/setupStepInitialValues';
 import {
   ALL_CATEGORY_IDS,

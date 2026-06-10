@@ -2,7 +2,7 @@ import 'server-only';
 import { cache } from 'react';
 import { getServerClient } from '@/lib/supabase/server';
 import { isClubExpired } from '@/lib/clubs/clubStatus';
-import type { CourseOption, PlayerOption } from '@/app/admin/games/new/GameForm';
+import type { CourseOption, PlayerOption } from '@/app/[locale]/admin/games/new/GameForm';
 
 type CourseRow = {
   id: string;

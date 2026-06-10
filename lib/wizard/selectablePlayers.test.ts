@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { selectablePlayers, type SelectablePlayersCtx } from './selectablePlayers';
-import type { PlayerOption } from '@/app/admin/games/new/GameForm';
+import type { PlayerOption } from '@/app/[locale]/admin/games/new/GameForm';
 
 function mk(id: string): PlayerOption {
   return {

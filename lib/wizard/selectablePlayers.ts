@@ -1,5 +1,5 @@
 import type { Intent } from '@/lib/wizard/intent';
-import type { PlayerOption } from '@/app/admin/games/new/GameForm';
+import type { PlayerOption } from '@/app/[locale]/admin/games/new/GameForm';
 
 /**
  * Hvilke spillere som er valgbare i «legg til spiller»-pickeren, gitt

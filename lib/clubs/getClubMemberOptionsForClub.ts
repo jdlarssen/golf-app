@@ -1,6 +1,6 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
-import type { PlayerOption } from '@/app/admin/games/new/GameForm';
+import type { PlayerOption } from '@/app/[locale]/admin/games/new/GameForm';
 
 type MemberRow = { user_id: string };
 type MemberUserRow = {

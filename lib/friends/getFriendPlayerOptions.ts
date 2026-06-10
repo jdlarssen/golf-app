@@ -1,7 +1,7 @@
 import 'server-only';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getFriendIds } from './getFriendIds';
-import type { PlayerOption } from '@/app/admin/games/new/GameForm';
+import type { PlayerOption } from '@/app/[locale]/admin/games/new/GameForm';
 
 type FriendUserRow = {
   id: string;
