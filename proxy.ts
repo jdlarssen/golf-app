@@ -42,8 +42,10 @@ export async function proxy(request: NextRequest) {
   );
 
   // Public pages: no session work (same as the old matcher exclusions),
-  // locale routing only.
+  // locale routing only. Strip any client-sent x-torny-user-id so the
+  // verified-user header can never be spoofed on paths that skip getUser().
   if (PUBLIC_PATH_PATTERN.test(barePathname)) {
+    request.headers.delete('x-torny-user-id');
     return handleI18nRouting(request);
   }
 

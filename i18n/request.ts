@@ -53,6 +53,10 @@ export default getRequestConfig(async () => {
   return {
     locale,
     messages,
+    // Pin explicitly — otherwise next-intl serializes the SERVER's timezone
+    // into the client provider (Europe/Oslo on the dev machine, UTC on
+    // Vercel), making date output environment-dependent.
+    timeZone: 'Europe/Oslo',
     // Last-resort guard for a key missing in BOTH catalogs (developer error):
     // render the human-ish last key segment instead of the full dotted path.
     getMessageFallback: ({ key }) => key.split('.').pop() ?? key,
