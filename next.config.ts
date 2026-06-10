@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -11,6 +12,12 @@ const nextConfig: NextConfig = {
   // CDN with dynamic content streamed behind Suspense. Rollback = remove this
   // line (the removed force-dynamic directives are no-ops either way).
   cacheComponents: true,
+  // #475: `next/root-params` lets i18n/request.ts read the [locale] segment
+  // as a cache-key-safe route param instead of a request header — required
+  // for next-intl to coexist with cacheComponents (PPR shells per locale).
+  experimental: {
+    rootParams: true,
+  },
   env: {
     NEXT_PUBLIC_APP_VERSION: pkg.version,
     NEXT_PUBLIC_APP_SHA: (process.env.VERCEL_GIT_COMMIT_SHA ?? "").slice(0, 7),
@@ -33,4 +40,7 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Aliases i18n/request.ts as the next-intl request config.
+const withNextIntl = createNextIntlPlugin();
+
+export default withNextIntl(nextConfig);
