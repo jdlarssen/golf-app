@@ -19,7 +19,7 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ## 1.109.y — Matchplay · åpen påmelding med side-valg
 
-Issue [#544](https://github.com/jdlarssen/golf-app/issues/544). Åpne matchplay-spill har nå et skikkelig påmeldingsløp: du velger hvilken side du vil spille på, og spillet kan ikke starte automatisk før begge sider er fullbooket.
+Issue [#544](https://github.com/jdlarssen/golf-app/issues/544). Åpne matchplay-spill har nå et skikkelig påmeldingsløp: du velger hvilken side du vil spille på, og spillet kan ikke starte automatisk før begge sider er fulltallige.
 
 ### [1.109.0] - 2026-06-11 · #544
 
@@ -46,6 +46,17 @@ Issue [#544](https://github.com/jdlarssen/golf-app/issues/544). Åpne matchplay-
 - Manual-approval-flyten mangler fortsatt side-felt (`game_registration_requests` har ingen side-kolonne) — autostart-vakta beskytter. Egen issue hvis behovet oppstår.
 - Admin kan overstyre side-tilordning via edit-flyten (admin-wizard allerede laster `team_number`).
 - Legacy null-rader fra before-fix-perioden: vakta blokkerer; admin tildeler side via edit-flyten.
+
+</details>
+
+### [1.109.2] - 2026-06-11 · #544
+
+> Småpuss på tekstene fra side-valget: venter-varselet sier nå «1 spiller» / «2 spillere» i stedet for bare tallet, og «booket»-formuleringene er byttet ut med vanlig norsk.
+
+<details>
+<summary>Teknisk</summary>
+
+[#544](https://github.com/jdlarssen/golf-app/issues/544). Copy-polish etter humanizer-gjennomgang: `game_full`-melding + fullt-banner i `RegistrationForm.tsx` («booket» → «alle plassene er tatt»), `incomplete_sides` i `gameErrorMessages.ts` («fullbooket» → «fulltallige»), entall/flertall-bøying i venter-banneret på game-home.
 
 </details>
 

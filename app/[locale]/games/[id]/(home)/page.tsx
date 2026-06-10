@@ -523,16 +523,20 @@ export default async function GameHomePage({
           </div>
         )}
 
-        {/* #544: venter-banner etter tee-tid når sidene ikke er fullbooket */}
+        {/* #544: venter-banner etter tee-tid når sidene ikke er fulltallige */}
         {incompleteSidesShortfall && (
           <div className="mx-4 mt-3">
             <Banner tone="warning">
-              {incompleteSidesShortfall.side1Needs > 0 &&
-              incompleteSidesShortfall.side2Needs > 0
-                ? `Venter på spillere — side 1 mangler ${incompleteSidesShortfall.side1Needs} og side 2 mangler ${incompleteSidesShortfall.side2Needs}.`
-                : incompleteSidesShortfall.side1Needs > 0
-                ? `Venter på spillere — side 1 mangler ${incompleteSidesShortfall.side1Needs}.`
-                : `Venter på spillere — side 2 mangler ${incompleteSidesShortfall.side2Needs}.`}
+              {(() => {
+                const part = (side: number, needs: number) =>
+                  `side ${side} mangler ${needs} ${needs === 1 ? 'spiller' : 'spillere'}`;
+                const { side1Needs, side2Needs } = incompleteSidesShortfall;
+                const parts = [
+                  ...(side1Needs > 0 ? [part(1, side1Needs)] : []),
+                  ...(side2Needs > 0 ? [part(2, side2Needs)] : []),
+                ];
+                return `Venter på spillere — ${parts.join(' og ')}.`;
+              })()}
             </Banner>
           </div>
         )}

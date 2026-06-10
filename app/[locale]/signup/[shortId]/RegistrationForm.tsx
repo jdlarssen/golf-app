@@ -28,7 +28,7 @@ const ERROR_MESSAGES: Record<ActionError, string> = {
   db_error: 'Klarte ikke å fullføre handlingen. Prøv igjen om litt.',
   bad_side: 'Velg hvilken side du vil spille på.',
   side_full: 'Siden ble nettopp full. Velg den andre siden.',
-  game_full: 'Spillet er fullt — begge sider er booket.',
+  game_full: 'Spillet er fullt — alle plassene er tatt.',
 };
 
 const MESSAGE_MAX = 200;
@@ -105,7 +105,7 @@ export function RegistrationForm({
     if (bothFull) {
       return (
         <Banner tone="warning">
-          Spillet er fullt — begge sider er booket.
+          Spillet er fullt — alle plassene er tatt.
         </Banner>
       );
     }
