@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useLocale } from 'next-intl';
+import { formatDate } from '@/lib/i18n/format';
 import { Input } from '@/components/ui/Input';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SegmentedField } from '@/components/ui/SegmentedField';
@@ -79,6 +81,7 @@ export function ProfileFormBody({
   action,
   next,
 }: Props) {
+  const locale = useLocale();
   const initialHcp = useMemo(() => splitInitialHcp(initial.hcpIndex), [initial.hcpIndex]);
 
   const [name, setName] = useState(initial.name);
@@ -124,7 +127,7 @@ export function ProfileFormBody({
   const stale = isHandicapStale(handicapUpdatedAt);
   const oppdatertDato =
     handicapUpdatedAt && !stale
-      ? new Date(handicapUpdatedAt).toLocaleDateString('nb-NO', {
+      ? formatDate(handicapUpdatedAt, locale, {
           day: 'numeric',
           month: 'long',
         })

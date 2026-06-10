@@ -1,4 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
+import { getLocale } from 'next-intl/server';
+import type { AppLocale } from '@/i18n/routing';
+import { formatDate, formatTime } from '@/lib/i18n/format';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
@@ -44,6 +47,7 @@ type Params = Promise<{ shortId: string }>;
  */
 export default async function PåmeldingPage({ params }: { params: Params }) {
   const { shortId } = await params;
+  const locale = await getLocale();
 
   const game = await getGameByShortId(shortId);
   if (!game) {
@@ -164,7 +168,7 @@ export default async function PåmeldingPage({ params }: { params: Params }) {
             <p className="mt-1 font-sans text-sm text-muted">
               Tee-off:{' '}
               <time dateTime={game.scheduled_tee_off_at}>
-                {formatTeeOff(game.scheduled_tee_off_at)}
+                {formatTeeOff(game.scheduled_tee_off_at, locale)}
               </time>
             </p>
           )}
@@ -367,19 +371,18 @@ function renderBody({
 }
 
 /**
- * Format ISO-timestamp som norsk «8. mai 2026, 14:30». Bruker `nb-NO`-locale
- * og europeisk 24-timers tid. Faller tilbake til rå-strengen hvis Intl
+ * Format ISO-timestamp som «8. mai 2026, 14:30» i aktiv locale, med
+ * europeisk 24-timers tid. Faller tilbake til rå-strengen hvis Intl
  * feiler (skal aldri skje for gyldige ISO-strings).
  */
-function formatTeeOff(iso: string): string {
+function formatTeeOff(iso: string, locale: AppLocale): string {
   try {
-    const date = new Date(iso);
-    const datePart = date.toLocaleDateString('nb-NO', {
+    const datePart = formatDate(iso, locale, {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
     });
-    const timePart = date.toLocaleTimeString('nb-NO', {
+    const timePart = formatTime(iso, locale, {
       hour: '2-digit',
       minute: '2-digit',
     });

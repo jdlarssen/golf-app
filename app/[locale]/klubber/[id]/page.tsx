@@ -1,4 +1,6 @@
 import { notFound, redirect } from 'next/navigation';
+import { getLocale } from 'next-intl/server';
+import { formatDate } from '@/lib/i18n/format';
 import { getServerClient } from '@/lib/supabase/server';
 import { getClubDetail } from '@/lib/clubs/getClubDetail';
 import { AppShell } from '@/components/ui/AppShell';
@@ -57,6 +59,7 @@ export default async function KlubbDetailPage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
+  const locale = await getLocale();
 
   const supabase = await getServerClient();
   const {
@@ -195,7 +198,7 @@ export default async function KlubbDetailPage({
                       {req.requesterName}
                     </span>
                     <span className="font-sans text-xs text-muted">
-                      {new Date(req.requestedAt).toLocaleDateString('nb-NO', {
+                      {formatDate(req.requestedAt, locale, {
                         day: 'numeric',
                         month: 'short',
                         year: 'numeric',

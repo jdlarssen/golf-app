@@ -1,4 +1,6 @@
+import { useLocale } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
+import { formatNumber } from '@/lib/i18n/format';
 import { isHandicapStale } from '@/lib/handicap/staleness';
 
 /**
@@ -21,8 +23,9 @@ export function HandicapChip({
   handicapUpdatedAt: string;
   nextPath: string;
 }) {
+  const locale = useLocale();
   const stale = isHandicapStale(handicapUpdatedAt);
-  const hcpDisplay = hcpIndex.toLocaleString('nb-NO', {
+  const hcpDisplay = formatNumber(hcpIndex, locale, {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   });

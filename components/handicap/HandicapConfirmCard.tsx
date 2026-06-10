@@ -1,5 +1,7 @@
+import { useLocale } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { Button, LinkButton } from '@/components/ui/Button';
+import { formatNumber } from '@/lib/i18n/format';
 import { formatRelativeNb } from '@/lib/format/relativeTimeNb';
 import { confirmHandicap } from '@/app/[locale]/games/[id]/actions';
 
@@ -22,7 +24,8 @@ export function HandicapConfirmCard({
   hcpIndex: number;
   handicapUpdatedAt: string;
 }) {
-  const hcpDisplay = hcpIndex.toLocaleString('nb-NO', {
+  const locale = useLocale();
+  const hcpDisplay = formatNumber(hcpIndex, locale, {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   });

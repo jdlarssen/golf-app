@@ -3,7 +3,7 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
 const markOneAsReadMock = vi.fn();
-vi.mock('@/app/innboks/actions', () => ({
+vi.mock('@/app/[locale]/innboks/actions', () => ({
   markOneAsRead: (id: string) => markOneAsReadMock(id),
 }));
 

@@ -47,7 +47,10 @@ export async function generateMetadata({
   params,
 }: Pick<Props, "params">): Promise<Metadata> {
   const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: "common" });
+  const resolved = hasLocale(routing.locales, locale)
+    ? locale
+    : routing.defaultLocale;
+  const t = await getTranslations({ locale: resolved, namespace: "common" });
   return {
     title: t("appName"),
     description: "Turneringsapp for golf — for kompiser og klubber",

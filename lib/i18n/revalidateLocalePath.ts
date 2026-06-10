@@ -14,8 +14,17 @@ export function revalidatePath(
   path: string,
   type?: 'page' | 'layout',
 ): void {
-  nextRevalidatePath(path, type);
-  for (const locale of routing.locales) {
-    nextRevalidatePath(`/${locale}${path}`, type);
+  // Preserve exact call arity — passing an explicit `undefined` type changes
+  // the observable call shape (and Next may treat the arg differently).
+  if (type === undefined) {
+    nextRevalidatePath(path);
+    for (const locale of routing.locales) {
+      nextRevalidatePath(`/${locale}${path}`);
+    }
+  } else {
+    nextRevalidatePath(path, type);
+    for (const locale of routing.locales) {
+      nextRevalidatePath(`/${locale}${path}`, type);
+    }
   }
 }

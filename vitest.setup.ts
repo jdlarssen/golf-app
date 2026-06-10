@@ -18,3 +18,15 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
   useParams: () => ({}),
 }));
+
+// Stub next-intl's locale hook so components render without a
+// NextIntlClientProvider in unit tests. Default locale 'no' keeps rendered
+// output identical to the pre-i18n snapshots/assertions (#475). Everything
+// else (formatters, provider) stays real via importOriginal.
+vi.mock('next-intl', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('next-intl')>();
+  return {
+    ...actual,
+    useLocale: () => 'no',
+  };
+});

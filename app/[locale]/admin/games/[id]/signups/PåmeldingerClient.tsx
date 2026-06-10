@@ -1,6 +1,9 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
+import { useLocale } from 'next-intl';
+import type { AppLocale } from '@/i18n/routing';
+import { formatDateTime } from '@/lib/i18n/format';
 import { approveRequest, rejectRequest } from './actions';
 import { Button } from '@/components/ui/Button';
 import { SubmitButton } from '@/components/ui/SubmitButton';
@@ -36,11 +39,10 @@ const STATUS_TONE: Record<RequestRow['status'], string> = {
   withdrawn: 'border-border bg-surface text-muted',
 };
 
-function formatTimestamp(iso: string): string {
-  // Norsk lokalisert kort dato + klokkeslett. Vi sender en plain Date for
-  // å unngå å duplikere format-helpers — tabular-nums sikrer at radhøyden
+function formatTimestamp(iso: string, locale: AppLocale): string {
+  // Lokalisert kort dato + klokkeslett — tabular-nums sikrer at radhøyden
   // ikke hopper mellom rader.
-  return new Date(iso).toLocaleString('nb-NO', {
+  return formatDateTime(iso, locale, {
     day: '2-digit',
     month: 'short',
     hour: '2-digit',
@@ -81,6 +83,7 @@ function groupByTeam(rows: RequestRow[]): RequestRow[][] {
 }
 
 export function PåmeldingerClient({ gameId, requests, tab, locked }: Props) {
+  const locale = useLocale();
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [rejectingFor, setRejectingFor] = useState<RequestRow | null>(null);
   const [reason, setReason] = useState('');
@@ -188,9 +191,9 @@ export function PåmeldingerClient({ gameId, requests, tab, locked }: Props) {
                     </span>
                   </div>
                   <p className="mt-1 font-sans text-[11px] tabular-nums text-muted">
-                    Påmeldt {formatTimestamp(row.createdAt)}
+                    Påmeldt {formatTimestamp(row.createdAt, locale)}
                     {row.decidedAt
-                      ? ` · Avgjort ${formatTimestamp(row.decidedAt)}`
+                      ? ` · Avgjort ${formatTimestamp(row.decidedAt, locale)}`
                       : ''}
                   </p>
                   {row.message && (

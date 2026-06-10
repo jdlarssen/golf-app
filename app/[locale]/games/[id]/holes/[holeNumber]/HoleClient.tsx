@@ -8,6 +8,8 @@ import {
   type CSSProperties,
   type JSX,
 } from 'react';
+import { useLocale } from 'next-intl';
+import { formatTime } from '@/lib/i18n/format';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { localDb, scoreKey, type LocalScore } from '@/lib/sync/db';
@@ -224,6 +226,7 @@ const listStyle: CSSProperties = {
 };
 
 export function HoleClient(props: HoleClientProps): JSX.Element {
+  const locale = useLocale();
   const {
     gameId,
     gameName,
@@ -510,7 +513,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
     pulseTimerRef.current = setTimeout(() => {
       setSyncing(false);
       setSavedAt(
-        new Date().toLocaleTimeString('nb-NO', {
+        formatTime(new Date(), locale, {
           hour: '2-digit',
           minute: '2-digit',
         }),

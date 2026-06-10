@@ -1,4 +1,6 @@
 import { Suspense, cache } from 'react';
+import { getLocale } from 'next-intl/server';
+import { formatDateTime } from '@/lib/i18n/format';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound } from 'next/navigation';
 import { after } from 'next/server';
@@ -340,6 +342,7 @@ async function PlayersSections({
   game: GameRow;
 }) {
   const { supabase } = await getAdminGameContext();
+  const locale = await getLocale();
 
   // game_players has two FKs to users (user_id and approved_by_user_id), so
   // we must disambiguate via the named constraint.
@@ -548,14 +551,12 @@ async function PlayersSections({
         {game.scheduled_tee_off_at && (
           <Row
             label="Tee-off"
-            value={
-              new Intl.DateTimeFormat('nb-NO', {
-                day: '2-digit',
-                month: 'short',
-                hour: '2-digit',
-                minute: '2-digit',
-              }).format(new Date(game.scheduled_tee_off_at))
-            }
+            value={formatDateTime(game.scheduled_tee_off_at, locale, {
+              day: '2-digit',
+              month: 'short',
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
           />
         )}
       </SectionCard>

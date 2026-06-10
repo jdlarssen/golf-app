@@ -1,4 +1,7 @@
 import { Suspense, cache } from 'react';
+import { getLocale } from 'next-intl/server';
+import type { AppLocale } from '@/i18n/routing';
+import { formatNumber } from '@/lib/i18n/format';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound, redirect } from 'next/navigation';
 import { after } from 'next/server';
@@ -142,9 +145,9 @@ type FlightRosterRow = {
   } | null;
 };
 
-/** Norwegian thousands-separator (non-breaking space). 6124 → "6 124". */
-function formatLengthMeters(n: number): string {
-  return n.toLocaleString('nb-NO');
+/** Locale-aware thousands-separator. 6124 → "6 124" (no) / "6,124" (en). */
+function formatLengthMeters(n: number, locale: AppLocale): string {
+  return formatNumber(n, locale);
 }
 
 type FlightMatePlayerRow = {
@@ -196,6 +199,7 @@ export default async function GameHomePage({
   searchParams: SearchParams;
 }) {
   const { id } = await params;
+  const locale = await getLocale();
   const sp = await searchParams;
   const statusBanner = STATUS_BANNERS[first(sp.status) ?? ''] ?? undefined;
 
@@ -419,7 +423,7 @@ export default async function GameHomePage({
                   18 hull
                   {playerRating ? ` · Par ${playerRating.par}` : ''}
                   {teeBox.length_meters
-                    ? ` · ${formatLengthMeters(teeBox.length_meters)} m`
+                    ? ` · ${formatLengthMeters(teeBox.length_meters, locale)} m`
                     : ''}
                 </p>
               )}
