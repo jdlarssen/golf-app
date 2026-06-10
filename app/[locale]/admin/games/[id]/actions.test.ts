@@ -679,3 +679,76 @@ describe('endGame', () => {
     expect(sendGameFinishedNotificationMock).not.toHaveBeenCalled();
   });
 });
+
+// ─── startGame (SF-1: incomplete_sides guard on draft→active path) ──────────
+
+describe('startGame', () => {
+  /**
+   * Action query sequence (up to the incomplete_sides guard):
+   *   1. auth.getUser
+   *   2. users.select(is_admin).eq.single  (requireAdmin)
+   *   3. games.select(id, status, ..., game_mode, mode_config).eq.single
+   *   4. game_players.select(user_id, tee_gender, team_number, withdrawn_at, users).eq.returns
+   *   5. tee_boxes.select(...).eq.single  (tee rating, needed for handicap freeze)
+   *   6. users.select(id, email, profile_completed_at).in  (pending check)
+   *   → incomplete_sides guard fires before step 7 (handicap freeze loop)
+   *     so no game_players.update or games.update in the queue.
+   */
+  it('matchplay utkast med ufullstendige sider → redirect ?error=incomplete_sides, ingen status-flip', async () => {
+    supabaseMock = buildSupabaseMock([
+      { data: { is_admin: true, name: 'Jørgen' }, error: null }, // requireAdmin
+      {
+        data: {
+          id: 'game-1',
+          status: 'draft',
+          hcp_allowance_pct: 100,
+          tee_box_id: 'tee-1',
+          game_mode: 'singles_matchplay',
+          mode_config: { kind: 'singles_matchplay', team_size: 1, teams_count: 2 },
+        },
+        error: null,
+      }, // games
+      {
+        // One player on side 1, nobody on side 2 → isSideRosterComplete = false
+        data: [
+          {
+            user_id: 'user-a',
+            tee_gender: 'M',
+            team_number: 1,
+            withdrawn_at: null,
+            users: { hcp_index: 10 },
+          },
+        ],
+        error: null,
+      }, // game_players
+      {
+        // tee_boxes: one rating set (required before pending-players check)
+        data: {
+          slope_mens: 125, course_rating_mens: 71.5, par_total_mens: 72,
+          slope_ladies: 120, course_rating_ladies: 70.0, par_total_ladies: 72,
+          slope_juniors: 115, course_rating_juniors: 69.0, par_total_juniors: 72,
+        },
+        error: null,
+      }, // tee_boxes
+      {
+        // users lookup for pending-players check (profile completed)
+        data: [{ id: 'user-a', email: 'a@example.com', profile_completed_at: '2026-01-01T00:00:00Z' }],
+        error: null,
+      }, // users
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'admin-1' } },
+    });
+
+    const { startGame } = await import('./actions');
+
+    await expect(startGame('game-1')).rejects.toBeInstanceOf(RedirectError);
+    expect(lastRedirect()).toBe('/admin/games/game-1?error=incomplete_sides');
+
+    // Verify no status-flip occurred: no games.update call should be in fromCalls
+    const statusFlip = supabaseMock.__fromCalls.find(
+      (c) => c.table === 'games' && c.method === 'update',
+    );
+    expect(statusFlip).toBeUndefined();
+  });
+});

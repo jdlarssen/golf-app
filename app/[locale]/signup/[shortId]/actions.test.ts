@@ -335,12 +335,16 @@ describe('registerForOpenGame', () => {
     // buildSupabaseMock FIFO-kø for alle 4 DB-kall (thenable-terminering):
     //   1) side-count (count=0, plass ledig) — awaited via .then()
     //   2) game_players insert — awaited via .then()
-    //   3) race re-count (count=1, OK) — awaited via .then()
+    //   3) race guard SELECT: current user er blant vinnerne (side=2, teamSize=1)
     //   4) users lookup for notify-name — maybeSingle()
     adminMock = buildSupabaseMock([
       { data: null, error: null, count: 0 } as { data: null; error: null; count: number }, // 1) count=0
       { data: null, error: null },                                                            // 2) insert
-      { data: null, error: null, count: 1 } as { data: null; error: null; count: number }, // 3) count=1
+      {
+        // 3) race guard SELECT: user is the only (and thus first) row → vinner
+        data: [{ user_id: USER_ID, accepted_at: '2026-06-11T10:00:00Z' }],
+        error: null,
+      },
       { data: { name: 'Kari', nickname: null, email: 'kari@x.no' }, error: null },          // 4) users
     ]);
 
@@ -351,6 +355,90 @@ describe('registerForOpenGame', () => {
 
     expect(redirectMock).toHaveBeenCalledWith(`/games/${GAME_ID}`);
     expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+
+    // SF-3: verifiser insert-payload direkte via __fromCalls
+    const insertCall = adminMock.__fromCalls.find(
+      (c) => c.table === 'game_players' && c.method === 'insert',
+    );
+    expect(insertCall).toBeDefined();
+    expect(insertCall!.args[0]).toMatchObject({
+      team_number: 2,
+      flight_number: 2,
+    });
+  });
+
+  it('matchplay race guard: taper (ikke i vinnersett) → slett egen rad + side_full', async () => {
+    // Scenario: to samtidige påmeldinger til singles side 1 (teamSize=1).
+    // Begge passerer pre-insert-telling (0<1), begge inserter. Race guard
+    // SELECT returnerer to rader; vinneren er 'winner-id' (accepted_at eldre).
+    // Current user (USER_ID) er IKKE blant de første teamSize=1 radene → taper.
+    authedAsUser();
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({
+        game_mode: 'singles_matchplay',
+        mode_config: { kind: 'singles_matchplay', team_size: 1, teams_count: 2 },
+      }),
+    );
+    adminMock = buildSupabaseMock([
+      { data: null, error: null, count: 0 } as { data: null; error: null; count: number }, // 1) count=0
+      { data: null, error: null },                                                            // 2) insert
+      {
+        // 3) race guard SELECT: 2 rader, vinneren er 'winner-id' (eldre accepted_at)
+        data: [
+          { user_id: 'winner-id', accepted_at: '2026-06-11T09:59:59Z' },
+          { user_id: USER_ID, accepted_at: '2026-06-11T10:00:00Z' },
+        ],
+        error: null,
+      },
+      { data: null, error: null }, // 4) delete own row
+    ]);
+
+    const { registerForOpenGame } = await import('./actions');
+    const result = await registerForOpenGame(fd({ shortId: SHORT_ID, side: '1' }));
+    expect(result).toEqual({ ok: false, error: 'side_full' });
+
+    // Bekreft at delete ble kalt for current user
+    const deleteCall = adminMock.__fromCalls.find(
+      (c) => c.table === 'game_players' && c.method === 'delete',
+    );
+    expect(deleteCall).toBeDefined();
+  });
+
+  it('matchplay race guard: vinner (i vinnersett tross overbooking) → beholder rad og redirecter', async () => {
+    // Scenario: race guard SELECT returnerer 2 rader (overbooket), men current
+    // user er BLANT de første teamSize=1 radene → vinner, ingen slett.
+    authedAsUser();
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({
+        game_mode: 'singles_matchplay',
+        mode_config: { kind: 'singles_matchplay', team_size: 1, teams_count: 2 },
+      }),
+    );
+    adminMock = buildSupabaseMock([
+      { data: null, error: null, count: 0 } as { data: null; error: null; count: number }, // 1) count=0
+      { data: null, error: null },                                                            // 2) insert
+      {
+        // 3) race guard SELECT: current user er den FØRSTE (eldre accepted_at) → vinner
+        data: [
+          { user_id: USER_ID, accepted_at: '2026-06-11T09:59:59Z' },
+          { user_id: 'late-id', accepted_at: '2026-06-11T10:00:00Z' },
+        ],
+        error: null,
+      },
+      { data: { name: 'Kari', nickname: null, email: 'kari@x.no' }, error: null }, // 4) users
+    ]);
+
+    const { registerForOpenGame } = await import('./actions');
+    await expect(
+      registerForOpenGame(fd({ shortId: SHORT_ID, side: '1' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+    expect(redirectMock).toHaveBeenCalledWith(`/games/${GAME_ID}`);
+
+    // Ingen delete-kall
+    const deleteCall = adminMock.__fromCalls.find(
+      (c) => c.table === 'game_players' && c.method === 'delete',
+    );
+    expect(deleteCall).toBeUndefined();
   });
 
   it('stableford (ikke matchplay) ignorerer side-felt — insert med null/null', async () => {
@@ -368,6 +456,16 @@ describe('registerForOpenGame', () => {
     ).rejects.toBeInstanceOf(RedirectError);
 
     expect(redirectMock).toHaveBeenCalledWith(`/games/${GAME_ID}`);
+
+    // SF-3 regresjonstest: non-matchplay insert har team_number=null, flight_number=null
+    const insertCall = adminMock.__fromCalls.find(
+      (c) => c.table === 'game_players' && c.method === 'insert',
+    );
+    expect(insertCall).toBeDefined();
+    expect(insertCall!.args[0]).toMatchObject({
+      team_number: null,
+      flight_number: null,
+    });
   });
 });
 

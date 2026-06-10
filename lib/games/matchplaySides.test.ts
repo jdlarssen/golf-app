@@ -168,6 +168,12 @@ describe('isSideRosterComplete', () => {
       1,
       false,
     ],
+    [
+      'overbooket side (2 aktive på side 1, 1 på side 2, teamSize=1) → false',
+      [row(1), row(1), row(2)],
+      1,
+      false,
+    ],
   ])('%s', (_, roster, teamSize, expected) => {
     expect(isSideRosterComplete(roster, teamSize)).toBe(expected);
   });

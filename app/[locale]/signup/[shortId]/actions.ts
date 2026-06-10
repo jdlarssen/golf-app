@@ -242,21 +242,26 @@ export async function registerForOpenGame(
     accepted_at: new Date().toISOString(),
   });
 
-  // Race guard: re-tell etter insert. Dersom siden ble full mellom
-  // kapasitetssjekken og inserten (concurrent registrations), fjerner vi
-  // vår egen rad og returnerer side_full. Deterministisk — to spillere som
-  // treffer dette samtidi har to separate transactions; vi ruller alltid
-  // vår egen tilbake.
+  // Deterministisk race guard: etter insert, hent alle aktive spillere på
+  // siden sortert etter accepted_at ASC, user_id ASC. Vinnerne er de første
+  // teamSize radene. Begge samtidige tapere beregner SAMME vinnersett og
+  // sletter kun sin egen rad — siden strandes aldri tom (ulikt naiv re-tell
+  // som ville la begge slette seg selv ved true concurrent last-slot grab).
   if (!insertError && teamNumber !== null) {
     const teamSize2 = (game.mode_config as { team_size?: number } | null)?.team_size ?? 1;
-    const { count: reCount } = await admin
+    const { data: sideRows } = await admin
       .from('game_players')
-      .select('user_id', { count: 'exact', head: true })
+      .select('user_id, accepted_at')
       .eq('game_id', game.id)
       .eq('team_number', teamNumber)
-      .is('withdrawn_at', null);
-    if ((reCount ?? 0) > teamSize2) {
-      // Fjern vår egen rad — vi tapte racen.
+      .is('withdrawn_at', null)
+      .order('accepted_at', { ascending: true })
+      .order('user_id', { ascending: true });
+    const winnerIds = new Set(
+      (sideRows ?? []).slice(0, teamSize2).map((r: { user_id: string }) => r.user_id),
+    );
+    if (!winnerIds.has(userId)) {
+      // Vi tapte racen — fjern vår egen rad.
       await admin
         .from('game_players')
         .delete()

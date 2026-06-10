@@ -21,31 +21,24 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#544](https://github.com/jdlarssen/golf-app/issues/544). Åpne matchplay-spill har nå et skikkelig påmeldingsløp: du velger hvilken side du vil spille på, og spillet kan ikke starte automatisk før begge sider er fulltallige.
 
-### [1.109.0] - 2026-06-11 · #544
+### [1.109.3] - 2026-06-11 · #544
 
-> Melder du deg på et åpent matchplay-spill, velger du nå hvilken side du vil spille på. Siden som allerede har en spiller er forhåndsmarkert, og full side er sperret. Spillet starter ikke ved tee-tid hvis sidene ikke er klare.
+> Admin kan ikke lenger sette i gang et matchplay-spill med tomme eller skjeve sider — den manuelle start-knappen sjekker nå det samme som automatisk tee-tidstart.
 
 <details>
 <summary>Teknisk</summary>
 
-[#544](https://github.com/jdlarssen/golf-app/issues/544). Side-valg ved åpen påmelding for alle seks matchplay-modi (singles/fourball/foursomes/greensome/chapman/gruesome).
+[#544](https://github.com/jdlarssen/golf-app/issues/544). Tre evaluator-funn tettet:
 
-#### Added
-- `lib/games/matchplaySides.ts`: `isMatchplayMode()`, `countSidePlayers()`, `computeSideShortfall()`, `isSideRosterComplete()` — ren Type-A-logikk, 29 unit-tester.
-- Side-velger i `RegistrationForm.tsx`: to side-kort med spillernavn + ledige plasser; full side sperret, eneste ledige side forhåndsvalgt (nullfriksjon for singles); «Spillet er fullt»-tilstand erstatter skjemaet når begge sider er opptatt.
-- `startScheduledGame.ts`: ny `incomplete_sides`-vakt for matchplay-familien — spillet flipper ikke til `active` hvis sidene er underbemannet eller en spiller mangler side-tilordning. 20 unit-tester.
-- `app/[locale]/games/[id]/(home)/page.tsx`: venter-banner i planlagt-tilstanden etter tee-tid med tekst om hvilken side som mangler hvor mange spillere.
-- Race guard i `registerForOpenGame`: re-telling etter insert, slett egen rad og returner `side_full` ved overbooking.
-- Norsk feilmelding for `incomplete_sides` i `gameErrorMessages.ts`.
+#### Fixed
+- **SF-1 (`startGame` manglet vakt):** `app/[locale]/admin/games/[id]/actions.ts` — `startGame` (utkast→aktiv) kjørte `isMatchplayMode`/`isSideRosterComplete`-sjekk. Laster nå `game_mode` + `mode_config` + `team_number` + `withdrawn_at` fra `game_players` og redirecter til `?error=incomplete_sides` hvis sidene er ufullstendige — uten å flippe status. Ny test: matchplay-utkast med ufullstendig roster → redirect, ingen status-flip.
+- **SF-2 (race guard ikke-deterministisk):** `app/[locale]/signup/[shortId]/actions.ts` — race-guard byttet fra re-telling til SELECT-og-sjekk-vinnersett: etter insert hentes alle aktive spillere på siden sortert `accepted_at ASC, user_id ASC`; bare de første `teamSize` radene er vinnere. Begge tapere beregner samme vinnersett → siden strandes aldri tom. Tre nye tester: taper sletter rad + side_full, vinner beholder rad + redirect, happy-path med ny mock-struktur.
+- **SF-3 (insert-payload uassertert):** `app/[locale]/signup/[shortId]/actions.test.ts` — success-test + regresjonstest asserter nå `team_number`/`flight_number` i insert-kallet via `adminMock.__fromCalls`.
 
-#### Changed
-- `registerForOpenGame` leser `side`-felt fra formData for matchplay-modi; inserter `team_number = side, flight_number = side` (oppfyller `game_players_team_flight_consistency`-constraint). Ikke-matchplay-modi uendret (`null/null`).
-- `signup/[shortId]/page.tsx`: laster ikke-trukket roster for matchplay-åpne-spill og sender `MatchplaySideData` ned til `RegistrationForm`.
-
-#### Notes
-- Manual-approval-flyten mangler fortsatt side-felt (`game_registration_requests` har ingen side-kolonne) — autostart-vakta beskytter. Egen issue hvis behovet oppstår.
-- Admin kan overstyre side-tilordning via edit-flyten (admin-wizard allerede laster `team_number`).
-- Legacy null-rader fra before-fix-perioden: vakta blokkerer; admin tildeler side via edit-flyten.
+#### Changed (NIT)
+- `lib/games/matchplaySides.test.ts`: ny `isSideRosterComplete`-case for overbooket side (2 aktive på side 1, 1 på side 2, teamSize=1 → false).
+- `app/[locale]/games/[id]/(home)/page.tsx` linje 367: `'team_size' in …`-mønster erstattet med `(… as { team_size?: number } | null)?.team_size ?? 1` — konsistent med `actions.ts`.
+- `CHANGELOG.md`: 1.109.y-serien reordnet til synkende rekkefølge (2→1→0 var 0→2→1).
 
 </details>
 
@@ -71,6 +64,34 @@ Issue [#544](https://github.com/jdlarssen/golf-app/issues/544). Åpne matchplay-
 
 #### Added
 - `app/[locale]/games/[id]/(home)/page.tsx`: når `startScheduledGame` returnerer `incomplete_sides` i E1-blokken, beregnes shortfall via `computeSideShortfall` og vises som `<Banner tone="warning">` med side-spesifikk tekst om antall manglende spillere.
+
+</details>
+
+### [1.109.0] - 2026-06-11 · #544
+
+> Melder du deg på et åpent matchplay-spill, velger du nå hvilken side du vil spille på. Siden som allerede har en spiller er forhåndsmarkert, og full side er sperret. Spillet starter ikke ved tee-tid hvis sidene ikke er klare.
+
+<details>
+<summary>Teknisk</summary>
+
+[#544](https://github.com/jdlarssen/golf-app/issues/544). Side-valg ved åpen påmelding for alle seks matchplay-modi (singles/fourball/foursomes/greensome/chapman/gruesome).
+
+#### Added
+- `lib/games/matchplaySides.ts`: `isMatchplayMode()`, `countSidePlayers()`, `computeSideShortfall()`, `isSideRosterComplete()` — ren Type-A-logikk, 29 unit-tester.
+- Side-velger i `RegistrationForm.tsx`: to side-kort med spillernavn + ledige plasser; full side sperret, eneste ledige side forhåndsvalgt (nullfriksjon for singles); «Spillet er fullt»-tilstand erstatter skjemaet når begge sider er opptatt.
+- `startScheduledGame.ts`: ny `incomplete_sides`-vakt for matchplay-familien — spillet flipper ikke til `active` hvis sidene er underbemannet eller en spiller mangler side-tilordning. 20 unit-tester.
+- `app/[locale]/games/[id]/(home)/page.tsx`: venter-banner i planlagt-tilstanden etter tee-tid med tekst om hvilken side som mangler hvor mange spillere.
+- Race guard i `registerForOpenGame`: re-telling etter insert, slett egen rad og returner `side_full` ved overbooking.
+- Norsk feilmelding for `incomplete_sides` i `gameErrorMessages.ts`.
+
+#### Changed
+- `registerForOpenGame` leser `side`-felt fra formData for matchplay-modi; inserter `team_number = side, flight_number = side` (oppfyller `game_players_team_flight_consistency`-constraint). Ikke-matchplay-modi uendret (`null/null`).
+- `signup/[shortId]/page.tsx`: laster ikke-trukket roster for matchplay-åpne-spill og sender `MatchplaySideData` ned til `RegistrationForm`.
+
+#### Notes
+- Manual-approval-flyten mangler fortsatt side-felt (`game_registration_requests` har ingen side-kolonne) — autostart-vakta beskytter. Egen issue hvis behovet oppstår.
+- Admin kan overstyre side-tilordning via edit-flyten (admin-wizard allerede laster `team_number`).
+- Legacy null-rader fra before-fix-perioden: vakta blokkerer; admin tildeler side via edit-flyten.
 
 </details>
 

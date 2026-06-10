@@ -364,7 +364,7 @@ export default async function GameHomePage({
   // both ModeGuideCard call sites in scheduled + active branches below.
   const modeContentMap = await getModeContentMap();
   const modeTeamSize =
-    'team_size' in gwp.game.mode_config ? gwp.game.mode_config.team_size : 1;
+    (gwp.game.mode_config as { team_size?: number } | null)?.team_size ?? 1;
   const mergedModeContent = mergeModeContent(
     modeContentMap[game.game_mode] ?? null,
     game.game_mode,

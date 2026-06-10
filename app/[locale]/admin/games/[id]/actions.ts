@@ -25,6 +25,10 @@ import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { notify } from '@/lib/notifications/notify';
 import { notifyPlayersGameFinished } from '@/lib/notifications/events';
 import { supportsWithdrawal } from '@/lib/scoring';
+import {
+  isMatchplayMode,
+  isSideRosterComplete,
+} from '@/lib/games/matchplaySides';
 
 /**
  * Self-gate + load action context for the game-detail actions. Wraps the
@@ -102,24 +106,35 @@ export async function startGame(gameId: string) {
   const { supabase } = await loadAdminContext();
   const detailPath = `/admin/games/${gameId}`;
 
-  // Load the game (status + allowance + tee id) so we can compute frozen
-  // handicaps. Refuse to start anything that isn't currently a draft.
+  // Load the game (status + allowance + tee id + mode for the incomplete_sides
+  // guard). Refuse to start anything that isn't currently a draft.
   const { data: game, error: gameError } = await supabase
     .from('games')
-    .select('id, status, hcp_allowance_pct, tee_box_id')
+    .select('id, status, hcp_allowance_pct, tee_box_id, game_mode, mode_config')
     .eq('id', gameId)
-    .single();
+    .single<{
+      id: string;
+      status: string;
+      hcp_allowance_pct: number;
+      tee_box_id: string;
+      game_mode: GameMode;
+      mode_config: { team_size?: number } | null;
+    }>();
   if (gameError || !game) redirect(`${detailPath}?error=not_found`);
   if (game!.status !== 'draft') redirect(`${detailPath}?error=not_draft`);
 
+  // team_number + withdrawn_at are fetched alongside hcp fields for the
+  // incomplete_sides guard below (mirrors startScheduledGame.ts:91-92).
   const { data: gamePlayers, error: gpError } = await supabase
     .from('game_players')
-    .select('user_id, tee_gender, users(hcp_index)')
+    .select('user_id, tee_gender, team_number, withdrawn_at, users(hcp_index)')
     .eq('game_id', gameId)
     .returns<
       {
         user_id: string;
         tee_gender: TeeGender;
+        team_number: number | null;
+        withdrawn_at: string | null;
         users: { hcp_index: number | string } | null;
       }[]
     >();
@@ -154,6 +169,16 @@ export async function startGame(gameId: string) {
       emails: pending.map((p) => p.email).join(', '),
     });
     redirect(`${detailPath}?${qs.toString()}`);
+  }
+
+  // Guard: matchplay-familien krever eksakt team_size aktive spillere per
+  // side (team_number ∈ {1, 2}) — spiller uten side gir tomt scoring-skall.
+  // Mirrors startScheduledGame.ts:111-117 so both start paths behave alike.
+  if (isMatchplayMode(game!.game_mode)) {
+    const teamSize = (game!.mode_config as { team_size?: number } | null)?.team_size ?? 1;
+    if (!isSideRosterComplete(gamePlayers!, teamSize)) {
+      redirect(`${detailPath}?error=incomplete_sides`);
+    }
   }
 
   // Freeze a course handicap per player using their gender-specific
