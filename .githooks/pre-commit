@@ -101,6 +101,39 @@ for f in $test_files; do
 done
 
 # ─────────────────────────────────────────────────────────────────────
+# i18n-literal-vakt (#475) — referanse: messages/README.md
+#
+# Under i18n-utrullingen (epic #60) skal NY bruker-rettet norsk copy i
+# app/** og components/** legges i message-catalogs (messages/*.json) når
+# området er ekstrahert, ikke hardkodes. Warn-only: før et område er rullet
+# ut er hardkodet norsk fortsatt normalen — vakten er påminnelsen, ikke
+# politiet. Heuristikk: nye linjer med æ/ø/å inne i en streng-literal eller
+# JSX-tekst, etter at kommentarer er strippet (norske kode-kommentarer er
+# legitime og vanlige).
+# ─────────────────────────────────────────────────────────────────────
+i18n_files=$(git diff --cached --name-only --diff-filter=AM 2>/dev/null \
+  | grep -E '^(app|components)/.*\.(tsx|ts)$' \
+  | grep -vE '\.test\.|/__tests__/|/test/' \
+  || true)
+
+for f in $i18n_files; do
+  added=$(git diff --cached -U0 -- "$f" 2>/dev/null | grep '^+' | grep -v '^+++' || true)
+  [ -z "$added" ] && continue
+
+  m=$(printf '%s\n' "$added" \
+    | sed -e 's|^+||' -e 's|//.*||' -e 's|{/\*.*||' -e 's|/\*.*||' \
+    | grep -nE "[\"'][^\"']*[æøåÆØÅ]|>[^<]*[æøåÆØÅ]" \
+    || true)
+  if [ -n "$m" ]; then
+    printf '🌐 i18n-vakt: %s — ny hardkodet norsk streng i komponent-kode.\n' "$f" >&2
+    printf '%s\n' "$m" | head -5 | sed 's/^/      /' >&2
+    printf '      Er området ekstrahert (epic #60)? Bruk message-catalog (messages/*.json + useTranslations).\n' >&2
+    printf '      Ikke ekstrahert ennå? Da er hardkodet OK — dette er kun en påminnelse.\n' >&2
+    warn_count=$((warn_count + 1))
+  fi
+done
+
+# ─────────────────────────────────────────────────────────────────────
 # CHANGELOG-kilde-tag — referanse: docs/changelog-conventions.md
 #
 # Egen sjekk, ikke en del av copy-style-skanningen over (som hopper over
