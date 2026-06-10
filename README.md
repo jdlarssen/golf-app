@@ -54,6 +54,7 @@ Then there are the two hole contests, longest drive and closest to the pin, with
 | Styling | Tailwind v4, forest-and-champagne palette |
 | Database and auth | Supabase (Postgres + Auth + Realtime, EU region) |
 | Offline sync | Dexie (IndexedDB) with a last-write-wins RPC |
+| i18n | next-intl — Norwegian default on unprefixed URLs, other locales under `/<locale>/`, catalogs in `messages/` |
 | Mail | Resend, through the verified `tornygolf.no` domain |
 | Testing | Vitest + Testing Library + Playwright |
 | Hosting | Vercel, auto-deploy on push to `main` |
