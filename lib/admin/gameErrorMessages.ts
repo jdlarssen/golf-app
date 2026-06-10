@@ -136,6 +136,9 @@ export const ERROR_MESSAGES_EXISTING_GAME: Record<string, string> = {
    */
   pending_players:
     'Disse spillerne har ikke fullført registreringen ennå{LIST}. De må logge inn og fylle inn navn + HCP før spillet kan startes.',
+  // #544: matchplay åpen påmelding — ufullstendige sider ved tee-tid.
+  incomplete_sides:
+    'En eller begge sider mangler spillere. Alle spillere må ha valgt side og sidene må være fullbooket før spillet kan startes.',
 };
 
 /**

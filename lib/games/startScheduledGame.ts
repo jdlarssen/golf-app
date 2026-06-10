@@ -10,6 +10,7 @@ import {
   type TeeBoxRatings,
   type TeeGender,
 } from './teeRating';
+import { isMatchplayMode, isSideRosterComplete } from './matchplaySides';
 
 export type StartScheduledGameResult =
   | { ok: true }
@@ -22,6 +23,7 @@ export type StartScheduledGameResult =
         | 'tee_missing_rating'
         | 'no_players'
         | 'pending_players'
+        | 'incomplete_sides'
         | 'db_players'
         | 'db_game';
       pendingEmails?: string[];
@@ -52,10 +54,11 @@ export async function startScheduledGame(
   // 1. Verify status is still 'scheduled' and load tee-box + allowance.
   //    The game's tee carries up to three independent rating-sets
   //    (mens/ladies/juniors); each player picks one via tee_gender.
+  //    game_mode + mode_config are loaded for the incomplete_sides guard.
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, status, hcp_allowance_pct, tee_box_id, tee_boxes(slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+      'id, status, hcp_allowance_pct, tee_box_id, game_mode, mode_config, tee_boxes(slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
     )
     .eq('id', gameId)
     .single<{
@@ -63,6 +66,8 @@ export async function startScheduledGame(
       status: GameStatus;
       hcp_allowance_pct: number;
       tee_box_id: string | null;
+      game_mode: string;
+      mode_config: { team_size?: number } | null;
       tee_boxes: TeeBoxRatings | null;
     }>();
   if (gameError || !game) return { ok: false, reason: 'not_found' };
@@ -79,22 +84,36 @@ export async function startScheduledGame(
   if (!tee || !game.tee_box_id) return { ok: false, reason: 'tee_missing' };
 
   // 2. Load all players + their hcp_index + tee_gender.
+  //    team_number + withdrawn_at are also fetched for the incomplete_sides guard.
   const { data: roster, error: rosterError } = await supabase
     .from('game_players')
     .select(
-      'user_id, tee_gender, users!game_players_user_id_fkey(hcp_index)',
+      'user_id, tee_gender, team_number, withdrawn_at, users!game_players_user_id_fkey(hcp_index)',
     )
     .eq('game_id', gameId)
     .returns<
       {
         user_id: string;
         tee_gender: TeeGender;
+        team_number: number | null;
+        withdrawn_at: string | null;
         users: { hcp_index: number | string } | null;
       }[]
     >();
   if (rosterError) return { ok: false, reason: 'db_players' };
   if (!roster || roster.length === 0) {
     return { ok: false, reason: 'no_players' };
+  }
+
+  // Guard: matchplay-familien krever eksakt team_size aktive spillere per side
+  // (team_number ∈ {1, 2}). Spillere med null team_number eller trukkede
+  // spillere blokkerer start. Alle seks matchplay-modi dekkes i ett.
+  if (isMatchplayMode(game.game_mode as Parameters<typeof isMatchplayMode>[0])) {
+    const teamSize = game.mode_config?.team_size ?? 1;
+    const activeRoster = roster.filter((r) => r.withdrawn_at == null);
+    if (!isSideRosterComplete(activeRoster, teamSize)) {
+      return { ok: false, reason: 'incomplete_sides' };
+    }
   }
 
   // Defence-in-depth: refuse to start if any roster player is still pending
