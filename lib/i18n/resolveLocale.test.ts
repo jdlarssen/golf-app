@@ -12,7 +12,7 @@ describe('toSupportedLocale', () => {
     ['NO', 'no'],
     ['nb', 'no'],
     ['nn', 'no'],
-    ['sv', null],
+    ['fr', null],
     ['', null],
     [null, null],
     [undefined, null],
@@ -32,9 +32,9 @@ describe('matchAcceptLanguage', () => {
     ['nn-NO', 'no'],
     // q-values decide order
     ['en;q=0.5,nb;q=0.9', 'no'],
-    ['sv,en;q=0.8', 'en'],
+    ['fr,en;q=0.8', 'en'],
     // Unsupported-only headers give no match
-    ['sv-SE,da;q=0.9', null],
+    ['fr-FR,de;q=0.9', null],
     // Garbage and empty input
     ['', null],
     [null, null],
@@ -76,7 +76,7 @@ describe('resolveLocale precedence (users.locale -> cookie -> Accept-Language ->
 
   it('falls back to no when nothing matches', () => {
     expect(resolveLocale({})).toBe('no');
-    expect(resolveLocale({ acceptLanguage: 'sv-SE' })).toBe('no');
+    expect(resolveLocale({ acceptLanguage: 'fr-FR' })).toBe('no');
   });
 
   it('invalid users.locale falls through the chain instead of winning', () => {
