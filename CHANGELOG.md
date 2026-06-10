@@ -17,7 +17,40 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.108.y — Cup · alle kan arrangere
+## 1.109.y — Matchplay · åpen påmelding med side-valg
+
+Issue [#544](https://github.com/jdlarssen/golf-app/issues/544). Åpne matchplay-spill har nå et skikkelig påmeldingsløp: du velger hvilken side du vil spille på, og spillet kan ikke starte automatisk før begge sider er fullbooket.
+
+### [1.109.0] - 2026-06-11 · #544
+
+> Melder du deg på et åpent matchplay-spill, velger du nå hvilken side du vil spille på. Siden som allerede har en spiller er forhåndsmarkert, og full side er sperret. Spillet starter ikke ved tee-tid hvis sidene ikke er klare.
+
+<details>
+<summary>Teknisk</summary>
+
+[#544](https://github.com/jdlarssen/golf-app/issues/544). Side-valg ved åpen påmelding for alle seks matchplay-modi (singles/fourball/foursomes/greensome/chapman/gruesome).
+
+#### Added
+- `lib/games/matchplaySides.ts`: `isMatchplayMode()`, `countSidePlayers()`, `computeSideShortfall()`, `isSideRosterComplete()` — ren Type-A-logikk, 29 unit-tester.
+- Side-velger i `RegistrationForm.tsx`: to side-kort med spillernavn + ledige plasser; full side sperret, eneste ledige side forhåndsvalgt (nullfriksjon for singles); «Spillet er fullt»-tilstand erstatter skjemaet når begge sider er opptatt.
+- `startScheduledGame.ts`: ny `incomplete_sides`-vakt for matchplay-familien — spillet flipper ikke til `active` hvis sidene er underbemannet eller en spiller mangler side-tilordning. 20 unit-tester.
+- `app/[locale]/games/[id]/(home)/page.tsx`: venter-banner i planlagt-tilstanden etter tee-tid med tekst om hvilken side som mangler hvor mange spillere.
+- Race guard i `registerForOpenGame`: re-telling etter insert, slett egen rad og returner `side_full` ved overbooking.
+- Norsk feilmelding for `incomplete_sides` i `gameErrorMessages.ts`.
+
+#### Changed
+- `registerForOpenGame` leser `side`-felt fra formData for matchplay-modi; inserter `team_number = side, flight_number = side` (oppfyller `game_players_team_flight_consistency`-constraint). Ikke-matchplay-modi uendret (`null/null`).
+- `signup/[shortId]/page.tsx`: laster ikke-trukket roster for matchplay-åpne-spill og sender `MatchplaySideData` ned til `RegistrationForm`.
+
+#### Notes
+- Manual-approval-flyten mangler fortsatt side-felt (`game_registration_requests` har ingen side-kolonne) — autostart-vakta beskytter. Egen issue hvis behovet oppstår.
+- Admin kan overstyre side-tilordning via edit-flyten (admin-wizard allerede laster `team_number`).
+- Legacy null-rader fra before-fix-perioden: vakta blokkerer; admin tildeler side via edit-flyten.
+
+</details>
+
+<details>
+<summary><strong>1.108.y — Cup · alle kan arrangere (7 oppføringer)</strong></summary>
 
 Issue [#526](https://github.com/jdlarssen/golf-app/issues/526). Cup er ikke lenger låst til admin. En vanlig spiller kan lage og kjøre sin egen cup blant venner — en «1 helg»-Ryder Cup capped til 4 matcher og 24 spillere. Global admin er fortsatt uten tak.
 
@@ -158,6 +191,8 @@ Issue [#526](https://github.com/jdlarssen/golf-app/issues/526). Cup er ikke leng
 - `createCupMatchesFromPlan`: håndhever taket for ikke-admin personlig cup (teller eksisterende + nye matcher/deltakere, så «≤4/≤24 i cupen» holder ved re-generering); returnerer `too_many_matches`/`too_many_players`. Admin og klubb-cup hopper over.
 - `app/admin/cup/[id]/generer/page.tsx`: gate `requireAdmin` → `requireAdminOrClubAdminOfCup` (matcher sin egen action, slik at skaperen når siden).
 - `app/admin/cup/page.tsx`: lista gates med `getRoleContext`; en vanlig bruker ser kun sine egne personlige cuper (`created_by`, `group_id` null), admin ser alle.
+
+</details>
 
 </details>
 

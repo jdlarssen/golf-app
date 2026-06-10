@@ -6,6 +6,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { notify } from '@/lib/notifications/notify';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
+import { isMatchplayMode } from '@/lib/games/matchplaySides';
 import { getFriendIds } from '@/lib/friends/getFriendIds';
 import { consumeRegistrationRateLimit } from '@/lib/auth/registrationRateLimit';
 import { getClientIp } from '@/lib/admin/rateLimit';
@@ -50,7 +51,10 @@ export type ActionError =
   | 'message_too_long'
   | 'team_not_supported_yet'
   | 'rate_limited'
-  | 'db_error';
+  | 'db_error'
+  | 'bad_side'
+  | 'side_full'
+  | 'game_full';
 
 const MESSAGE_MAX = 200;
 
@@ -190,22 +194,77 @@ export async function registerForOpenGame(
     return { ok: false, error: 'rate_limited' };
   }
 
+  // #544: for matchplay-familien leser vi `side` fra formData og setter
+  // team_number + flight_number. Ikke-matchplay-modi ignorerer feltet.
+  const admin = getAdminClient();
+  let teamNumber: number | null = null;
+  let flightNumber: number | null = null;
+
+  if (isMatchplayMode(game.game_mode)) {
+    const rawSide = Number(formData.get('side') ?? '');
+    if (rawSide !== 1 && rawSide !== 2) {
+      return { ok: false, error: 'bad_side' };
+    }
+    const teamSize = (game.mode_config as { team_size?: number } | null)?.team_size ?? 1;
+
+    // Kapasitetssjekk: tell aktive (ikke-trukkede) spillere på valgt side.
+    const { count: sideCount, error: countError } = await admin
+      .from('game_players')
+      .select('user_id', { count: 'exact', head: true })
+      .eq('game_id', game.id)
+      .eq('team_number', rawSide)
+      .is('withdrawn_at', null);
+
+    if (countError) {
+      console.error('[registerForOpenGame] side count failed', countError);
+      return { ok: false, error: 'db_error' };
+    }
+    if ((sideCount ?? 0) >= teamSize) {
+      return { ok: false, error: 'side_full' };
+    }
+    teamNumber = rawSide;
+    flightNumber = rawSide;
+  }
+
   // INSERT via admin-client. Den nye RLS-policyen `self register open game`
   // (migrasjon 0042) tillater også INSERT via en cookie-basert klient med
   // user-session, men admin-client gir oss deterministisk feilhåndtering
   // uten å bli avhengig av at server-action cookie-handoff er konfigurert
   // riktig på edge runtime. Authz over (registration_mode + status) er
   // allerede sjekket på rad-nivå i koden.
-  const admin = getAdminClient();
   const { error: insertError } = await admin.from('game_players').insert({
     game_id: game.id,
     user_id: userId,
-    team_number: null,
-    flight_number: null,
+    team_number: teamNumber,
+    flight_number: flightNumber,
     course_handicap: null,
     // #463: selv-påmelding → bekreftet med en gang.
     accepted_at: new Date().toISOString(),
   });
+
+  // Race guard: re-tell etter insert. Dersom siden ble full mellom
+  // kapasitetssjekken og inserten (concurrent registrations), fjerner vi
+  // vår egen rad og returnerer side_full. Deterministisk — to spillere som
+  // treffer dette samtidi har to separate transactions; vi ruller alltid
+  // vår egen tilbake.
+  if (!insertError && teamNumber !== null) {
+    const teamSize2 = (game.mode_config as { team_size?: number } | null)?.team_size ?? 1;
+    const { count: reCount } = await admin
+      .from('game_players')
+      .select('user_id', { count: 'exact', head: true })
+      .eq('game_id', game.id)
+      .eq('team_number', teamNumber)
+      .is('withdrawn_at', null);
+    if ((reCount ?? 0) > teamSize2) {
+      // Fjern vår egen rad — vi tapte racen.
+      await admin
+        .from('game_players')
+        .delete()
+        .eq('game_id', game.id)
+        .eq('user_id', userId);
+      return { ok: false, error: 'side_full' };
+    }
+  }
 
   if (insertError) {
     if (isDuplicateError(insertError)) {

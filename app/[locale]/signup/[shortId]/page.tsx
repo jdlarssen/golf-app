@@ -13,9 +13,10 @@ import { Banner } from '@/components/ui/Banner';
 import { LinkButton } from '@/components/ui/Button';
 import { MODE_LABELS } from '@/lib/scoring/modes/types';
 import { gameModeSupportsTeams } from '@/lib/games/registration';
+import { isMatchplayMode, countSidePlayers } from '@/lib/games/matchplaySides';
 import { resolveRegistrationTypeView } from './registrationTypeView';
 import { getTeamCandidates, type TeamCandidate } from '@/lib/users/getTeamCandidates';
-import { RegistrationForm } from './RegistrationForm';
+import { RegistrationForm, type MatchplaySideData } from './RegistrationForm';
 import { TeamRegistrationForm } from './TeamRegistrationForm';
 
 export const metadata = {
@@ -152,6 +153,57 @@ export default async function PåmeldingPage({ params }: { params: Params }) {
     ? await getTeamCandidates(user!.id)
     : [];
 
+  // #544: side-velger for åpne matchplay-spill. Henter en slank roster
+  // (team_number + bruker-navn) slik at velgeren kan vise hvem som allerede
+  // er påmeldt per side og beregne ledige plasser.
+  let matchplaySideData: MatchplaySideData | null = null;
+  if (
+    isMatchplayMode(game.game_mode) &&
+    !gameLocked &&
+    !isAlreadyRegistered &&
+    (game.registration_mode === 'open' || isClubMember || viewerIsFriend)
+  ) {
+    const { data: rosterRows } = await admin
+      .from('game_players')
+      .select('team_number, withdrawn_at, users!game_players_user_id_fkey(name, nickname)')
+      .eq('game_id', game.id)
+      .is('withdrawn_at', null);
+
+    type RosterItem = {
+      team_number: number | null;
+      withdrawn_at: string | null;
+      users: { name: string | null; nickname: string | null } | null;
+    };
+
+    const rows: RosterItem[] = (rosterRows ?? []) as unknown as RosterItem[];
+    const teamSize = (game.mode_config as { team_size?: number } | null)?.team_size ?? 1;
+    const { side1: side1Count, side2: side2Count } = countSidePlayers(rows);
+
+    const nameOf = (r: RosterItem) => {
+      const u = r.users;
+      if (!u) return null;
+      return (u.nickname ?? u.name ?? null);
+    };
+
+    matchplaySideData = {
+      teamSize,
+      side1: {
+        count: side1Count,
+        playerNames: rows
+          .filter((r) => r.team_number === 1)
+          .map(nameOf)
+          .filter((n): n is string => n != null),
+      },
+      side2: {
+        count: side2Count,
+        playerNames: rows
+          .filter((r) => r.team_number === 2)
+          .map(nameOf)
+          .filter((n): n is string => n != null),
+      },
+    };
+  }
+
   return (
     <AppShell>
       <TopBar backHref="/" back="history" kicker="Påmelding" />
@@ -185,6 +237,7 @@ export default async function PåmeldingPage({ params }: { params: Params }) {
             viewerIsFriend,
             teamCandidates,
             captainEmail: profile.email,
+            matchplaySideData,
           })}
         </Card>
       </div>
@@ -202,6 +255,7 @@ function renderBody({
   viewerIsFriend,
   teamCandidates,
   captainEmail,
+  matchplaySideData,
 }: {
   game: NonNullable<Awaited<ReturnType<typeof getGameByShortId>>>;
   gameLocked: boolean;
@@ -212,6 +266,7 @@ function renderBody({
   viewerIsFriend: boolean;
   teamCandidates: TeamCandidate[];
   captainEmail: string | null;
+  matchplaySideData: MatchplaySideData | null;
 }) {
   if (isAlreadyRegistered) {
     return (
@@ -250,7 +305,11 @@ function renderBody({
         <p className="font-sans text-sm leading-relaxed text-text">
           Du er medlem av klubben, så du kan melde deg på direkte.
         </p>
-        <RegistrationForm mode="open" shortId={game.short_id} />
+        <RegistrationForm
+          mode="open"
+          shortId={game.short_id}
+          sideData={matchplaySideData}
+        />
       </div>
     );
   }
@@ -268,7 +327,11 @@ function renderBody({
         <p className="font-sans text-sm leading-relaxed text-text">
           Arrangøren lar venner melde seg på direkte. Trykk for å bli med.
         </p>
-        <RegistrationForm mode="open" shortId={game.short_id} />
+        <RegistrationForm
+          mode="open"
+          shortId={game.short_id}
+          sideData={matchplaySideData}
+        />
       </div>
     );
   }
@@ -360,12 +423,20 @@ function renderBody({
   const mode = game.registration_mode === 'open' ? 'open' : 'manual_approval';
   return (
     <div className="space-y-4">
-      <p className="font-sans text-sm leading-relaxed text-text">
-        {mode === 'open'
-          ? 'Trykk «Meld meg på» for å bli med i spillet med en gang.'
-          : 'Send en forespørsel til arrangøren. Du får varsel når den er godkjent.'}
-      </p>
-      <RegistrationForm mode={mode} shortId={game.short_id} />
+      {/* For matchplay + open mode, sideData drive the side-picker which replaces
+          the standard intro text — we skip the generic text in that case. */}
+      {!(mode === 'open' && matchplaySideData) && (
+        <p className="font-sans text-sm leading-relaxed text-text">
+          {mode === 'open'
+            ? 'Trykk «Meld meg på» for å bli med i spillet med en gang.'
+            : 'Send en forespørsel til arrangøren. Du får varsel når den er godkjent.'}
+        </p>
+      )}
+      <RegistrationForm
+        mode={mode}
+        shortId={game.short_id}
+        sideData={mode === 'open' ? matchplaySideData : null}
+      />
     </div>
   );
 }

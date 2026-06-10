@@ -258,6 +258,117 @@ describe('registerForOpenGame', () => {
     expect(result).toEqual({ ok: false, error: 'game_not_found' });
     expect(getGameByShortIdMock).not.toHaveBeenCalled();
   });
+
+  // ── matchplay side-valg (#544) ──────────────────────────────────────────
+
+  it('matchplay uten side-felt → bad_side', async () => {
+    authedAsUser();
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({
+        game_mode: 'singles_matchplay',
+        mode_config: { kind: 'singles_matchplay', team_size: 1, teams_count: 2 },
+      }),
+    );
+    // admin-mock trenger ingen queue-entries siden vi returnerer tidlig
+    adminMock = buildSupabaseMock([]);
+
+    const { registerForOpenGame } = await import('./actions');
+    const result = await registerForOpenGame(fd({ shortId: SHORT_ID }));
+    expect(result).toEqual({ ok: false, error: 'bad_side' });
+  });
+
+  it('matchplay med ugyldig side (3) → bad_side', async () => {
+    authedAsUser();
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({
+        game_mode: 'singles_matchplay',
+        mode_config: { kind: 'singles_matchplay', team_size: 1, teams_count: 2 },
+      }),
+    );
+    adminMock = buildSupabaseMock([]);
+
+    const { registerForOpenGame } = await import('./actions');
+    const result = await registerForOpenGame(fd({ shortId: SHORT_ID, side: '3' }));
+    expect(result).toEqual({ ok: false, error: 'bad_side' });
+  });
+
+  it('matchplay side 2 full → side_full', async () => {
+    authedAsUser();
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({
+        game_mode: 'singles_matchplay',
+        mode_config: { kind: 'singles_matchplay', team_size: 1, teams_count: 2 },
+      }),
+    );
+    // admin-mock: kapasitets-count-query returnerer count=1 (full for teamSize=1)
+    adminMock = buildSupabaseMock([{ data: null, error: null }]);
+    // Supabase count-query: builder-proxy returnerer { count: 1, error: null }
+    // via select(..., { count: 'exact', head: true })
+    // Vi overrider ved å bygge en custom mock for dette.
+    const countBuilder = {
+      select: () => countBuilder,
+      eq: () => countBuilder,
+      is: () => countBuilder,
+      then: (onFulfilled?: (v: unknown) => unknown) =>
+        Promise.resolve({ count: 1, error: null }).then(onFulfilled),
+    };
+    (adminMock.from as ReturnType<typeof vi.fn>).mockReturnValueOnce(
+      countBuilder,
+    );
+
+    const { registerForOpenGame } = await import('./actions');
+    const result = await registerForOpenGame(
+      fd({ shortId: SHORT_ID, side: '2' }),
+    );
+    expect(result).toEqual({ ok: false, error: 'side_full' });
+  });
+
+  it('matchplay vellykket påmelding med side=2 → INSERT med team_number=2 + redirect', async () => {
+    authedAsUser();
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({
+        game_mode: 'singles_matchplay',
+        mode_config: { kind: 'singles_matchplay', team_size: 1, teams_count: 2 },
+      }),
+    );
+
+    // buildSupabaseMock FIFO-kø for alle 4 DB-kall (thenable-terminering):
+    //   1) side-count (count=0, plass ledig) — awaited via .then()
+    //   2) game_players insert — awaited via .then()
+    //   3) race re-count (count=1, OK) — awaited via .then()
+    //   4) users lookup for notify-name — maybeSingle()
+    adminMock = buildSupabaseMock([
+      { data: null, error: null, count: 0 } as { data: null; error: null; count: number }, // 1) count=0
+      { data: null, error: null },                                                            // 2) insert
+      { data: null, error: null, count: 1 } as { data: null; error: null; count: number }, // 3) count=1
+      { data: { name: 'Kari', nickname: null, email: 'kari@x.no' }, error: null },          // 4) users
+    ]);
+
+    const { registerForOpenGame } = await import('./actions');
+    await expect(
+      registerForOpenGame(fd({ shortId: SHORT_ID, side: '2' })),
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(redirectMock).toHaveBeenCalledWith(`/games/${GAME_ID}`);
+    expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
+  });
+
+  it('stableford (ikke matchplay) ignorerer side-felt — insert med null/null', async () => {
+    // Regresjonstest: non-matchplay insert er uendret.
+    authedAsUser();
+    adminMock = buildSupabaseMock([
+      { data: null, error: null }, // insert
+      { data: { name: 'Per', nickname: null, email: 'per@x.no' }, error: null }, // notify lookup
+    ]);
+    getGameByShortIdMock.mockResolvedValue(makeGame()); // stableford default
+
+    const { registerForOpenGame } = await import('./actions');
+    await expect(
+      registerForOpenGame(fd({ shortId: SHORT_ID, side: '1' })), // side ignoreres
+    ).rejects.toBeInstanceOf(RedirectError);
+
+    expect(redirectMock).toHaveBeenCalledWith(`/games/${GAME_ID}`);
+  });
 });
 
 describe('requestApproval', () => {

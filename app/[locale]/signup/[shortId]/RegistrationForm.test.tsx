@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { RegistrationForm } from './RegistrationForm';
+import { RegistrationForm, type MatchplaySideData } from './RegistrationForm';
 
 const registerForOpenGameMock = vi.fn();
 const requestApprovalMock = vi.fn();
@@ -49,6 +49,83 @@ describe('RegistrationForm — open-modus', () => {
 
     expect(
       await screen.findByText(/allerede påmeldt/i),
+    ).toBeInTheDocument();
+  });
+});
+
+// ── Matchplay side-velger (#544) ──────────────────────────────────────────────
+
+describe('RegistrationForm — matchplay side-velger', () => {
+  const sideData: MatchplaySideData = {
+    teamSize: 1,
+    side1: { count: 1, playerNames: ['Per Balle'] },
+    side2: { count: 0, playerNames: [] },
+  };
+
+  it('viser side-kort med «Meld meg på»-knapp; side 2 forhåndsvalgt (kun ledig side)', async () => {
+    registerForOpenGameMock.mockResolvedValue({ ok: true });
+    render(
+      <RegistrationForm mode="open" shortId={SHORT_ID} sideData={sideData} />,
+    );
+
+    // Begge side-knappene finnes
+    expect(screen.getByRole('radio', { name: /Side 1/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Side 2/i })).toBeInTheDocument();
+
+    // Side 1 er full → disabled
+    expect(screen.getByRole('radio', { name: /Side 1/i })).toBeDisabled();
+
+    // Side 2 er forhåndsvalgt (eneste med plass)
+    expect(screen.getByRole('radio', { name: /Side 2/i })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+
+    // Per Balle vises som eksisterende spiller på side 1
+    expect(screen.getByText('Per Balle')).toBeInTheDocument();
+
+    // «Meld meg på»-knapp finnes og er aktiv
+    const btn = screen.getByRole('button', { name: 'Meld meg på' });
+    expect(btn).toBeEnabled();
+
+    // Submit sender formData med side=2
+    fireEvent.click(btn);
+    await waitFor(() => {
+      expect(registerForOpenGameMock).toHaveBeenCalledTimes(1);
+    });
+    const formData = registerForOpenGameMock.mock.calls[0]?.[0] as FormData;
+    expect(formData.get('side')).toBe('2');
+  });
+
+  it('begge sider fulle → viser «Spillet er fullt»-banner, ingen knapp', () => {
+    const fullData: MatchplaySideData = {
+      teamSize: 1,
+      side1: { count: 1, playerNames: ['A'] },
+      side2: { count: 1, playerNames: ['B'] },
+    };
+    render(
+      <RegistrationForm mode="open" shortId={SHORT_ID} sideData={fullData} />,
+    );
+    expect(screen.getByText(/Spillet er fullt/i)).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /Meld meg på/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('side_full error-melding vises', async () => {
+    registerForOpenGameMock.mockResolvedValue({
+      ok: false,
+      error: 'side_full',
+    });
+    render(
+      <RegistrationForm mode="open" shortId={SHORT_ID} sideData={sideData} />,
+    );
+
+    fireEvent.click(screen.getByRole('radio', { name: /Side 2/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Meld meg på' }));
+
+    expect(
+      await screen.findByText(/nettopp full/i),
     ).toBeInTheDocument();
   });
 });
