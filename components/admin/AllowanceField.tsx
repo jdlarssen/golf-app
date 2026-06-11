@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 /**
  * Netto/brutto-toggle for handicap-allowance.
@@ -56,7 +57,7 @@ type Props = {
    */
   bruttoHelperText: string;
   /**
-   * Label på selve tall-feltet. Default «Allowance (%)».
+   * Label på selve tall-feltet. Default fra catalog «Allowance (%)».
    */
   inputLabel?: string;
   /**
@@ -86,12 +87,14 @@ export function AllowanceField({
   description,
   nettoHelperText,
   bruttoHelperText,
-  inputLabel = 'Allowance (%)',
+  inputLabel,
   initialPct,
   value,
   onChange,
   hideHiddenInput = false,
 }: Props) {
+  const t = useTranslations('allowance');
+  const resolvedInputLabel = inputLabel ?? t('inputLabelDefault');
   const isControlled = value !== undefined && onChange !== undefined;
   const seed = initialPct ?? defaultPct;
   // pct = aktuelt valg (0 = brutto, 1..100 = netto). Uncontrolled-varianten
@@ -156,7 +159,7 @@ export function AllowanceField({
             onChange={() => selectMode('netto')}
             className="sr-only"
           />
-          Netto
+          {t('nettoLabel')}
         </label>
         <label
           className={`flex cursor-pointer items-center justify-center rounded-md border px-3 py-2 text-sm font-medium transition ${
@@ -173,7 +176,7 @@ export function AllowanceField({
             onChange={() => selectMode('brutto')}
             className="sr-only"
           />
-          Brutto
+          {t('bruttoLabel')}
         </label>
       </div>
 
@@ -183,7 +186,7 @@ export function AllowanceField({
             htmlFor={inputId}
             className="block text-xs font-medium text-text"
           >
-            {inputLabel}
+            {resolvedInputLabel}
           </label>
           <input
             id={inputId}

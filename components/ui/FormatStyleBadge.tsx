@@ -1,7 +1,9 @@
+'use client';
+
 import type { CSSProperties } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   formatPlayStyle,
-  PLAY_STYLE_LABELS,
   type GameMode,
 } from '@/lib/scoring/modes/types';
 
@@ -58,14 +60,15 @@ export function FormatStyleBadge({
   teamSize?: number;
   className?: string;
 }) {
+  const t = useTranslations('modes.playStyle');
   const base = formatPlayStyle(mode);
 
   // Fleksibelt format uten valgt lagstørrelse (veiviseren) → vis begge chips.
   if (base === 'flexible' && teamSize === undefined) {
     return (
       <span className={`inline-flex items-center gap-1.5 ${className ?? ''}`}>
-        <Chip kind="solo" label={PLAY_STYLE_LABELS.solo} />
-        <Chip kind="team" label={PLAY_STYLE_LABELS.team} />
+        <Chip kind="solo" label={t('solo')} />
+        <Chip kind="team" label={t('team')} />
       </span>
     );
   }
@@ -85,7 +88,7 @@ export function FormatStyleBadge({
 
   if (kind === null) return null;
 
-  const label = kind === 'team' ? PLAY_STYLE_LABELS.team : PLAY_STYLE_LABELS.solo;
+  const label = kind === 'team' ? t('team') : t('solo');
 
   return (
     <span className={`inline-flex items-center ${className ?? ''}`}>

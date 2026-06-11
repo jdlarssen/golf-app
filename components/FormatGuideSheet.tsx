@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { FormatGuideList, type FormatGuideEntry } from '@/components/FormatGuideList';
 
 const CARD_ID_PREFIX = 'format-guide-';
@@ -101,6 +102,8 @@ export function FormatGuideSheet({
     }
   }, [open, focusKey]);
 
+  const t = useTranslations('formatGuide');
+
   if (!open) return null;
 
   return (
@@ -114,20 +117,20 @@ export function FormatGuideSheet({
         className="format-guide-sheet flex max-h-[88vh] w-full max-w-xl flex-col rounded-t-2xl bg-bg shadow-2xl"
         role="dialog"
         aria-modal="true"
-        aria-label="Spillformater, slik funker de"
+        aria-label={t('sheetAriaLabel')}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mt-2 h-1 w-9 shrink-0 rounded-full bg-border" aria-hidden />
         <div className="flex items-center justify-between gap-4 border-b border-border px-4 pb-3 pt-3">
           <div className="min-w-0">
-            <h2 className="font-serif text-lg text-text">Spillformater</h2>
-            <p className="text-xs text-muted">Slik funker de. Trykk for å lese mer.</p>
+            <h2 className="font-serif text-lg text-text">{t('sheetTitle')}</h2>
+            <p className="text-xs text-muted">{t('sheetSubtitle')}</p>
           </div>
           <button
             ref={closeButtonRef}
             type="button"
             onClick={onClose}
-            aria-label="Lukk"
+            aria-label={t('closeButton')}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-lg text-muted hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
           >
             ✕
