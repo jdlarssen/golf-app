@@ -93,22 +93,22 @@ Gjelder spill der formatet er flight-løst by design (solo-buildere setter fligh
 
 ## Success Criteria
 
-- [ ] Singles matchplay (2 spillere): hull-siden viser begge, motstander kan taste min score (RLS-skriv), live-stilling synlig for begge (RLS-les), innlevering varsler motstanderen som kan godkjenne. Verifikasjon: vitest på flightScope + RLS-rigg-tester (#440-riggen) + fil:linje-referanser.
-- [ ] Foursomes/texas med 4 spillere: hull-siden viser ETT kort PER LAG (to kort), begge lag kan taste på begge kort, lag-handicap per lag korrekt. Verifikasjon: testene for hull-side-kollaps + manuell kodegjennomgang.
-- [ ] Wolf med 5 spillere: behandles som én flight (føring + les for alle). Verifikasjon: flightScope-test + RLS-test.
+- [x] Singles matchplay (2 spillere): hull-siden viser begge, motstander kan taste min score (RLS-skriv), live-stilling synlig for begge (RLS-les), innlevering varsler motstanderen som kan godkjenne. Verifikasjon: vitest på flightScope + RLS-rigg-tester (#440-riggen) + fil:linje-referanser. — Evidens: holes/[holeNumber]/page.tsx:92-117 (singleFlight-roster), 0094 can_score_for/same_flight_or_solo single-flight-gren, peersForApproval i approve/actions.ts + submit/actions.ts; tester: approve «singles matchplay opponent can approve», submit «motstander varsles som peer» — grønne.
+- [x] Foursomes/texas med 4 spillere: hull-siden viser ETT kort PER LAG (to kort), begge lag kan taste på begge kort, lag-handicap per lag korrekt. Verifikasjon: testene for hull-side-kollaps + manuell kodegjennomgang. — Evidens: holes-page teamNumbers (l.464) + teamHandicapFor(teamNum) (l.487) + playersForClient per lag (l.540-546); 2-lags-tilfellet gir to ClientPlayer-kort, >4 gir uendret ett-korts-semantikk.
+- [x] Wolf med 5 spillere: behandles som én flight (føring + les for alle). Verifikasjon: flightScope-test + RLS-test. — Evidens: flightScope.isSingleFlightGame wolf-gren + tester; 0094 g.game_mode='wolf'-gren i begge RLS-helpers; startScheduledGame.test «5-spiller wolf starter» grønn.
 - [ ] >4-spillers flight-løst solo-spill: Sekretariatet viser Flighter-seksjon med «Foreslå inndeling» (grupper på 4 i påmeldingsrekkefølge) + per-spiller-flytting; kun oppretter/admin. Verifikasjon: render-test (maks én) + actions-tester.
-- [ ] Venterommet (scheduled, >4 solo): spiller velger flight selv, full flight (4) avvises med norsk melding, oppretter-overstyring vinner. Verifikasjon: actions-tester inkl. race-guard.
-- [ ] Start-vakt: uinndelt >4-spill starter ikke (`unassigned_flights`), game-home viser banner med hvem som mangler; fullt inndelt spill starter. Verifikasjon: startScheduledGame-tester (it.each over moduser) + banner-render.
-- [ ] «Steng påmelding»: knapp i Sekretariatet stenger/gjenåpner; signup-siden viser stengt-tilstand uten skjema. Verifikasjon: actions-test + signup-page-test.
-- [ ] Ingen regresjon: ≤4-spill uten flights, best-ball (8), matchplay-sider ved >4 (finnes ikke strukturelt), scramble-lag — eksisterende full suite grønn.
+- [x] Venterommet (scheduled, >4 solo): spiller velger flight selv, full flight (4) avvises med norsk melding, oppretter-overstyring vinner. Verifikasjon: actions-tester inkl. race-guard. — Evidens: ScheduledWaitingRoom flight-picker + flightJoinActions.joinFlight med kapasitet+race-revert + 6 tester; (home)/page.tsx:426-446 bygger flightOptions inkl. én ekstra tom flight.
+- [x] Start-vakt: uinndelt >4-spill starter ikke (`unassigned_flights`), game-home viser banner med hvem som mangler; fullt inndelt spill starter. Verifikasjon: startScheduledGame-tester (it.each over moduser) + banner-render. — Evidens: startScheduledGame unassigned_flights-guard + 25 tester; (home)/page.tsx:320 banner-gren; gameErrorMessages-mapping.
+- [x] «Steng påmelding»: knapp i Sekretariatet stenger/gjenåpner; signup-siden viser stengt-tilstand uten skjema. Verifikasjon: actions-test + signup-page-test. — Evidens: admin page l.552-584 toggle (kun scheduled + open/manual_approval); signup page l.131 stengt-tilstand; guards i actions.ts:181/365 + teamActions.ts:216; signup_closed i begge form-error-maps; 3 nye tester.
+- [x] Ingen regresjon: ≤4-spill uten flights, best-ball (8), matchplay-sider ved >4 (finnes ikke strukturelt), scramble-lag — eksisterende full suite grønn. — Evidens: Full suite 3159/3159 grønn, tsc --noEmit 0 feil, npm run build OK, lint uten nye feil (alle 20 errors i ikke-endrede filer).
 
 ## Gates
 
-- [ ] `npx tsc --noEmit` passerer
-- [ ] `npx vitest run` full suite grønn
-- [ ] `npm run lint` ingen nye feil
-- [ ] `npm run build` OK
-- [ ] MINOR-bump + CHANGELOG-oppføring per `docs/changelog-conventions.md` (humanizer på taglines)
+- [x] `npx tsc --noEmit` passerer (0 feil, 2026-06-11)
+- [x] `npx vitest run` full suite grønn (255 filer / 3159 tester)
+- [x] `npm run lint` ingen nye feil (41 problemer, alle pre-eksisterende i ikke-endrede filer)
+- [x] `npm run build` OK (kompilert, PPR-rutetabell generert)
+- [x] MINOR-bump + CHANGELOG-oppføring (v1.110.0 + patch-serie til v1.110.6, tema «Flighter»)
 
 ## Files Likely Touched
 
