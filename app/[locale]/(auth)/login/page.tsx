@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
@@ -12,19 +13,20 @@ type SearchParams = Promise<{
   next?: string | string[];
 }>;
 
-const ERROR_MESSAGES: Record<string, string> = {
-  rate_limited: 'Vent litt før du prøver igjen.',
-  user_not_found:
-    'Denne mailen er ikke registrert. Be admin om en invitasjon.',
-  invite_expired:
-    'Invitasjonen din er utløpt. Be arrangøren om å sende en ny.',
-  disposable_email:
-    'Engangs-e-post går ikke. Bruk en vanlig e-postadresse, så er du i gang.',
-  code_invalid: 'Feil kode. Sjekk mailen og prøv igjen.',
-  code_expired: 'Koden er gått ut. Be om ny kode.',
-  link_expired: 'Lenken er gått ut. Be om ny kode.',
-  unknown: 'Noe gikk galt. Prøv igjen.',
-};
+// The set of valid error codes that map to a catalog key.
+// An unrecognised ?error= value falls back to 'unknown'.
+const KNOWN_ERROR_CODES = new Set([
+  'rate_limited',
+  'user_not_found',
+  'invite_expired',
+  'disposable_email',
+  'code_invalid',
+  'code_expired',
+  'link_expired',
+  'unknown',
+] as const);
+
+type ErrorCode = typeof KNOWN_ERROR_CODES extends Set<infer T> ? T : never;
 
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
@@ -36,12 +38,20 @@ export default async function LoginPage({
 }: {
   searchParams: SearchParams;
 }) {
+  const t = await getTranslations('auth');
+
   const params = await searchParams;
   const step = first(params.step) === 'verify' ? 'verify' : 'email';
   const email = first(params.email) ?? '';
   const next = first(params.next) ?? '';
-  const errorCode = first(params.error);
-  const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
+  const errorCodeRaw = first(params.error);
+  const errorCode: ErrorCode | undefined =
+    errorCodeRaw && KNOWN_ERROR_CODES.has(errorCodeRaw as ErrorCode)
+      ? (errorCodeRaw as ErrorCode)
+      : errorCodeRaw
+        ? 'unknown'
+        : undefined;
+  const errorMessage = errorCode ? t(`errors.${errorCode}`) : undefined;
 
   const resendQs = new URLSearchParams();
   if (email) resendQs.set('email', email);

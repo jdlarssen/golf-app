@@ -2,6 +2,7 @@
 
 import { useRef } from 'react';
 import { useFormStatus } from 'react-dom';
+import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { verifyCode } from '../actions';
@@ -40,11 +41,12 @@ function FormBody({
   resendHref: string;
 }) {
   const { pending } = useFormStatus();
+  const t = useTranslations('auth.verifyCode');
 
   if (pending) {
     return (
       <div className="py-3 text-center space-y-2">
-        <p className="font-serif text-base text-text">Logger inn …</p>
+        <p className="font-serif text-base text-text">{t('pending')}</p>
         <div className="flex justify-center pt-1">
           <Spinner />
         </div>
@@ -55,17 +57,18 @@ function FormBody({
   return (
     <>
       <p className="text-sm text-muted">
-        Skriv inn koden vi sendte til{' '}
-        <strong className="text-foreground">{email}</strong>.
+        {t('instructionPrefix')}{' '}
+        <strong className="text-foreground">{email}</strong>
+        {t('instructionSuffix')}
       </p>
       <CodeInput />
       <Button type="submit" className="w-full mt-2">
-        Logg inn
+        {t('submitButton')}
       </Button>
       <p className="text-xs text-muted mt-6 text-center">
-        Fikk du ikke koden?{' '}
+        {t('resendPrompt')}{' '}
         <a href={resendHref} className="underline">
-          Send ny kode
+          {t('resendLink')}
         </a>
       </p>
     </>
@@ -74,6 +77,7 @@ function FormBody({
 
 function CodeInput() {
   const { pending } = useFormStatus();
+  const t = useTranslations('auth.verifyCode');
   // Belt-and-suspenders guard against double-submit: useFormStatus.pending
   // flips asynchronously after requestSubmit, so there's a brief window
   // where pending is still false but we've already triggered the action.
@@ -106,7 +110,7 @@ function CodeInput() {
       autoComplete="one-time-code"
       pattern="[0-9]{6,8}"
       maxLength={OTP_LENGTH}
-      label="Kode"
+      label={t('codeLabel')}
       required
       autoFocus
       onChange={onChange}
@@ -116,9 +120,10 @@ function CodeInput() {
 }
 
 function Spinner() {
+  const t = useTranslations('auth.verifyCode');
   return (
     <span
-      aria-label="Laster"
+      aria-label={t('spinnerLabel')}
       role="status"
       className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-muted border-t-primary"
     />

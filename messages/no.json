@@ -1,5 +1,34 @@
 {
   "common": {
     "appName": "Tørny"
+  },
+  "auth": {
+    "errors": {
+      "rate_limited": "Vent litt før du prøver igjen.",
+      "user_not_found": "Denne mailen er ikke registrert. Be admin om en invitasjon.",
+      "invite_expired": "Invitasjonen din er utløpt. Be arrangøren om å sende en ny.",
+      "disposable_email": "Engangs-e-post går ikke. Bruk en vanlig e-postadresse, så er du i gang.",
+      "code_invalid": "Feil kode. Sjekk mailen og prøv igjen.",
+      "code_expired": "Koden er gått ut. Be om ny kode.",
+      "link_expired": "Lenken er gått ut. Be om ny kode.",
+      "unknown": "Noe gikk galt. Prøv igjen."
+    },
+    "sendCode": {
+      "pending": "Sender kode til",
+      "emailLabel": "E-post",
+      "selfRegHelper": "Skriv inn e-posten din. Er du ny her, lager vi en konto til deg.",
+      "submitButton": "Send meg kode",
+      "footerNote": "Vi sender deg en kode på mail."
+    },
+    "verifyCode": {
+      "pending": "Logger inn …",
+      "instructionPrefix": "Skriv inn koden vi sendte til",
+      "instructionSuffix": ".",
+      "codeLabel": "Kode",
+      "submitButton": "Logg inn",
+      "resendPrompt": "Fikk du ikke koden?",
+      "resendLink": "Send ny kode",
+      "spinnerLabel": "Laster"
+    }
   }
 }

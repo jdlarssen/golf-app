@@ -1,5 +1,34 @@
 {
   "common": {
     "appName": "Tørny"
+  },
+  "auth": {
+    "errors": {
+      "rate_limited": "Slow down — try again in a moment.",
+      "user_not_found": "This email isn't registered. Ask an admin for an invitation.",
+      "invite_expired": "Your invitation has expired. Ask the organizer to send a new one.",
+      "disposable_email": "Disposable emails don't work here. Use a regular address and you're good to go.",
+      "code_invalid": "Wrong code. Check your email and try again.",
+      "code_expired": "That code has expired. Request a new one.",
+      "link_expired": "That link has expired. Request a new code.",
+      "unknown": "Something went wrong. Please try again."
+    },
+    "sendCode": {
+      "pending": "Sending code to",
+      "emailLabel": "Email",
+      "selfRegHelper": "Enter your email. New here? We'll create an account for you.",
+      "submitButton": "Send me a code",
+      "footerNote": "We'll send a code to your inbox."
+    },
+    "verifyCode": {
+      "pending": "Logging in …",
+      "instructionPrefix": "Enter the code we sent to",
+      "instructionSuffix": ".",
+      "codeLabel": "Code",
+      "submitButton": "Log in",
+      "resendPrompt": "Didn't get the code?",
+      "resendLink": "Send a new code",
+      "spinnerLabel": "Loading"
+    }
   }
 }

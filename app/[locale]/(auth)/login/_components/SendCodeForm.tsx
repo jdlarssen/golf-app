@@ -1,6 +1,7 @@
 'use client';
 
 import { useFormStatus } from 'react-dom';
+import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
@@ -67,13 +68,14 @@ function FormBody({
   allowSelfRegistration: boolean;
 }) {
   const { pending, data } = useFormStatus();
+  const t = useTranslations('auth.sendCode');
 
   if (pending) {
     const submittedEmail =
       (data?.get('email') as string | null)?.trim() || defaultEmail;
     return (
       <div className="py-3 text-center space-y-2">
-        <p className="font-serif text-base text-text">Sender kode til</p>
+        <p className="font-serif text-base text-text">{t('pending')}</p>
         <p className="font-medium text-text break-words">{submittedEmail}</p>
         <div className="flex justify-center pt-1">
           <Spinner className="border-muted border-t-primary" />
@@ -88,23 +90,22 @@ function FormBody({
         id="email"
         name="email"
         type="email"
-        label="E-post"
+        label={t('emailLabel')}
         autoComplete="email"
         defaultValue={defaultEmail}
         required
       />
       {allowSelfRegistration && (
         <p className="text-sm text-muted -mt-1">
-          Skriv inn e-posten din. Er du ny her, lager vi en konto til deg.
+          {t('selfRegHelper')}
         </p>
       )}
       <Button type="submit" className="w-full mt-2">
-        Send meg kode
+        {t('submitButton')}
       </Button>
       <p className="text-xs text-muted mt-6 text-center">
-        Vi sender deg en kode på mail.
+        {t('footerNote')}
       </p>
     </>
   );
 }
-
