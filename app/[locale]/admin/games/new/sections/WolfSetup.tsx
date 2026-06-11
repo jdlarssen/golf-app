@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import type { PlayerOption } from '../GameForm';
 import { PENDING_PLAYER_LABEL } from '../playerDisplay';
 
@@ -52,6 +53,7 @@ export function WolfSetup({
   onShuffle,
   disabled = false,
 }: WolfSetupProps) {
+  const t = useTranslations('wizard.sections.wolf');
   const n = wolfOrder.length;
   const hasRotation = n >= 3 && n <= 5;
   const R = hasRotation ? Math.floor(18 / n) * n : 0;
@@ -63,16 +65,15 @@ export function WolfSetup({
   return (
     <fieldset className="space-y-5 rounded-md border border-border bg-surface px-4 py-4">
       <legend className="px-1 text-sm font-semibold text-foreground">
-        Wolf-oppsett
+        {t('legend')}
       </legend>
 
       <div>
-        <p className="text-xs font-medium text-muted">Scoring</p>
+        <p className="text-xs font-medium text-muted">{t('scoringLabel')}</p>
         <p className="mt-1 text-xs text-muted/80">
-          Velger om Wolf-scoringen bruker spillernes handicap-strokes, eller
-          om beste rene gross-slag avgjør hvert hull.
+          {t('scoringDescription')}
         </p>
-        <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Wolf-scoring">
+        <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('scoringAriaLabel')}>
           <label
             className={`flex cursor-pointer items-center justify-center rounded-md border px-3 py-2 text-xs font-medium transition ${
               scoring === 'net'
@@ -89,7 +90,7 @@ export function WolfSetup({
               disabled={disabled}
               className="sr-only"
             />
-            Med handicap (netto)
+            {t('scoringNet')}
           </label>
           <label
             className={`flex cursor-pointer items-center justify-center rounded-md border px-3 py-2 text-xs font-medium transition ${
@@ -107,14 +108,14 @@ export function WolfSetup({
               disabled={disabled}
               className="sr-only"
             />
-            Brutto
+            {t('scoringGross')}
           </label>
         </div>
       </div>
 
       <div>
         <div className="flex items-center justify-between">
-          <p className="text-xs font-medium text-muted">Wolf-rotasjon</p>
+          <p className="text-xs font-medium text-muted">{t('rotationLabel')}</p>
           <button
             type="button"
             onClick={onShuffle}
@@ -122,17 +123,18 @@ export function WolfSetup({
             data-testid="wolf-shuffle"
             className="rounded-md border border-border bg-surface-2 px-3 py-1.5 text-xs font-medium text-foreground transition enabled:hover:border-primary disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Shuffle
+            {t('shuffleButton')}
           </button>
         </div>
         <p className="mt-1 text-xs text-muted/80">
-          Velg 3 til 5 spillere, så trekker du rotasjonen.
+          {t('rotationHint')}
         </p>
         {hasRotation ? (
           <>
             <ul className="mt-3 space-y-2">
               {slots.map((slot) => {
                 const player = wolfOrder[slot - 1];
+                const holes = holesForSlot(slot, n, R).join(', ');
                 return (
                   <li
                     key={slot}
@@ -144,11 +146,11 @@ export function WolfSetup({
                         {slot}
                       </span>
                       <span className="font-medium text-foreground">
-                        {player ? playerLabel(player) : 'Velg en spiller'}
+                        {player ? playerLabel(player) : t('selectPlayerPlaceholder')}
                       </span>
                     </div>
                     <span className="tabular-nums text-muted">
-                      Hull {holesForSlot(slot, n, R).join(', ')}
+                      {t('hullLabel', { holes })}
                     </span>
                   </li>
                 );
@@ -159,8 +161,7 @@ export function WolfSetup({
                 data-testid="wolf-trailing-note"
                 className="mt-2 text-xs text-muted/80"
               >
-                Hull {R + 1}–18 går til den som ligger sist på poeng-totalen.
-                Det avgjøres underveis.
+                {t('trailingNote', { from: R + 1 })}
               </p>
             )}
           </>
@@ -169,7 +170,7 @@ export function WolfSetup({
             data-testid="wolf-rotation-hint"
             className="mt-3 rounded-md border border-dashed border-border bg-surface-2 px-3 py-3 text-xs italic text-muted/70"
           >
-            Velg 3 til 5 spillere for å se rotasjonen.
+            {t('rotationEmptyHint')}
           </p>
         )}
       </div>

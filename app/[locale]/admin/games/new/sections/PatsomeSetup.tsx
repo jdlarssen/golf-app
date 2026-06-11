@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 export type PatsomeScoring = 'gross' | 'net';
 
 interface PatsomeSetupProps {
@@ -30,36 +32,36 @@ export function PatsomeSetup({
   onScoringChange,
   disabled = false,
 }: PatsomeSetupProps) {
+  const t = useTranslations('wizard.sections.patsome');
   return (
     <fieldset className="space-y-4 rounded-md border border-border bg-surface px-4 py-4">
       <legend className="px-1 text-sm font-semibold text-foreground">
-        Patsome-oppsett
+        {t('legend')}
       </legend>
 
       {/* Forklaring av de tre segmentene */}
       <div className="rounded-md bg-surface-2 px-3 py-2.5 text-xs text-muted space-y-1">
         <p>
-          <span className="font-medium text-foreground">Hull 1–6: 4BBB.</span> Begge spiller
-          sin egen ball, og lagets beste stableford-poeng per hull teller.
+          <span className="font-medium text-foreground">{t('segment1Heading')}</span>{' '}
+          {t('segment1Body')}
         </p>
         <p>
-          <span className="font-medium text-foreground">Hull 7–12: Greensome.</span> Begge
-          slår ut, dere velger det beste utslaget, og så slår dere annenhvert slag.
+          <span className="font-medium text-foreground">{t('segment2Heading')}</span>{' '}
+          {t('segment2Body')}
         </p>
         <p>
-          <span className="font-medium text-foreground">Hull 13–18: Foursomes.</span> Dere deler
-          én ball og slår annenhvert slag, også fra tee.
+          <span className="font-medium text-foreground">{t('segment3Heading')}</span>{' '}
+          {t('segment3Body')}
         </p>
         <p className="pt-0.5">
-          Netto bruker riktige handicap per segment: full handicap i 4BBB,
-          60/40 i greensome og 50 % av summen i foursomes.
+          {t('handicapNote')}
         </p>
       </div>
 
       {/* Scoring-velger */}
       <div>
-        <p className="text-xs font-medium text-muted">Poeng fra</p>
-        <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Patsome-scoring">
+        <p className="text-xs font-medium text-muted">{t('scoringFromLabel')}</p>
+        <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('scoringAriaLabel')}>
           <label
             className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-md border px-3 py-2 transition ${
               scoring === 'net'
@@ -76,8 +78,8 @@ export function PatsomeSetup({
               disabled={disabled}
               className="sr-only"
             />
-            <span className="text-xs font-medium">Netto</span>
-            <span className="text-[11px] text-muted/80">Handicap-justert</span>
+            <span className="text-xs font-medium">{t('scoringNetTitle')}</span>
+            <span className="text-[11px] text-muted/80">{t('scoringNetDesc')}</span>
           </label>
           <label
             className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-md border px-3 py-2 transition ${
@@ -95,8 +97,8 @@ export function PatsomeSetup({
               disabled={disabled}
               className="sr-only"
             />
-            <span className="text-xs font-medium">Brutto</span>
-            <span className="text-[11px] text-muted/80">Rå slag</span>
+            <span className="text-xs font-medium">{t('scoringGrossTitle')}</span>
+            <span className="text-[11px] text-muted/80">{t('scoringGrossDesc')}</span>
           </label>
         </div>
       </div>

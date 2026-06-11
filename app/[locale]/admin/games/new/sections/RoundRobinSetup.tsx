@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import type { PlayerOption } from '../GameForm';
 import { PENDING_PLAYER_LABEL } from '../playerDisplay';
 
@@ -45,6 +46,7 @@ export function RoundRobinSetup({
   roundRobinOrder,
   disabled = false,
 }: RoundRobinSetupProps) {
+  const t = useTranslations('wizard.sections.roundRobin');
   const slots = [1, 2, 3, 4] as const;
 
   return (
@@ -53,14 +55,13 @@ export function RoundRobinSetup({
       disabled={disabled}
     >
       <legend className="px-1 text-sm font-semibold text-foreground">
-        Round Robin-oppsett
+        {t('legend')}
       </legend>
 
       <div>
-        <p className="text-xs font-medium text-muted">Spillerslotter</p>
+        <p className="text-xs font-medium text-muted">{t('slotsLabel')}</p>
         <p className="mt-1 text-xs text-muted/80">
-          Partnere roterer hvert 6. hull — du spiller med og mot alle de andre.
-          Legg til 4 spillere i steg 4, så fordeles slottene A–D automatisk.
+          {t('slotsDescription')}
         </p>
         <ul className="mt-3 space-y-2">
           {slots.map((slot) => {
@@ -84,11 +85,11 @@ export function RoundRobinSetup({
                         : 'italic text-muted/60'
                     }
                   >
-                    {player ? playerLabel(player) : 'Velg en spiller'}
+                    {player ? playerLabel(player) : t('selectPlayerPlaceholder')}
                   </span>
                 </div>
                 <span className="text-muted">
-                  Med: {partners[0]}·{partners[1]}·{partners[2]}
+                  {t('partnerLabel', { p1: partners[0], p2: partners[1], p3: partners[2] })}
                 </span>
               </li>
             );
@@ -97,10 +98,8 @@ export function RoundRobinSetup({
       </div>
 
       <div className="rounded-md bg-surface-2 px-3 py-2 text-xs text-muted/80">
-        <strong className="text-foreground">Rotasjon:</strong> Hull 1–6 er A+B
-        vs C+D · Hull 7–12 er A+C vs B+D · Hull 13–18 er A+D vs B+C. Beste
-        netto av de to på din side teller per hull. Flest hullseire totalt
-        vinner.
+        <strong className="text-foreground">{t('rotationHeading')}</strong>{' '}
+        {t('rotationSummary')}
       </div>
     </fieldset>
   );

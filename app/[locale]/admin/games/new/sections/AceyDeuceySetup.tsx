@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 export type AceyDeuceyScoring = 'gross' | 'net';
 
 interface AceyDeuceySetupProps {
@@ -25,22 +27,22 @@ export function AceyDeuceySetup({
   onScoringChange,
   disabled = false,
 }: AceyDeuceySetupProps) {
+  const t = useTranslations('wizard.sections.aceyDeucey');
   return (
     <fieldset className="space-y-3 rounded-md border border-border bg-surface px-4 py-4">
       <legend className="px-1 text-sm font-semibold text-foreground">
-        Acey Deucey-oppsett
+        {t('legend')}
       </legend>
 
       <div>
-        <p className="text-xs font-medium text-muted">Scoring</p>
+        <p className="text-xs font-medium text-muted">{t('scoringLabel')}</p>
         <p className="mt-1 text-xs text-muted/80">
-          Med handicap sammenlignes justerte slag, slik at en høy-handikapper
-          ikke automatisk er «deuce» hvert hull. Brutto teller råslagene direkte.
+          {t('scoringDescription')}
         </p>
         <div
           className="mt-2 grid grid-cols-2 gap-2"
           role="radiogroup"
-          aria-label="Acey Deucey-scoring"
+          aria-label={t('scoringAriaLabel')}
         >
           <label
             className={`flex cursor-pointer items-center justify-center rounded-md border px-3 py-2 text-xs font-medium transition ${
@@ -58,7 +60,7 @@ export function AceyDeuceySetup({
               disabled={disabled}
               className="sr-only"
             />
-            Med handicap (netto)
+            {t('scoringNet')}
           </label>
           <label
             className={`flex cursor-pointer items-center justify-center rounded-md border px-3 py-2 text-xs font-medium transition ${
@@ -76,7 +78,7 @@ export function AceyDeuceySetup({
               disabled={disabled}
               className="sr-only"
             />
-            Brutto
+            {t('scoringGross')}
           </label>
         </div>
       </div>

@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 export type ShambleVariant = 'shamble' | 'champagne';
 export type ShambleCount = 1 | 2 | 3;
 export type ShambleScoring = 'gross' | 'net';
@@ -42,16 +44,17 @@ export function ShambleSetup({
   onTeamSizeChange,
   disabled = false,
 }: ShambleSetupProps) {
+  const t = useTranslations('wizard.sections.shamble');
   return (
     <fieldset className="space-y-4 rounded-md border border-border bg-surface px-4 py-4">
       <legend className="px-1 text-sm font-semibold text-foreground">
-        Shamble-oppsett
+        {t('legend')}
       </legend>
 
       {/* Lagstørrelse-velger */}
       <div>
-        <p className="text-xs font-medium text-muted">Lagstørrelse</p>
-        <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Shamble-lagstørrelse">
+        <p className="text-xs font-medium text-muted">{t('teamSizeLabel')}</p>
+        <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('teamSizeAriaLabel')}>
           <label
             className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-md border px-3 py-2 transition ${
               teamSize === 3
@@ -68,8 +71,8 @@ export function ShambleSetup({
               disabled={disabled}
               className="sr-only"
             />
-            <span className="text-xs font-medium">3-mannslag</span>
-            <span className="text-[11px] text-muted/80">3 spillere per lag</span>
+            <span className="text-xs font-medium">{t('teamSize3Title')}</span>
+            <span className="text-[11px] text-muted/80">{t('teamSize3Desc')}</span>
           </label>
           <label
             className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-md border px-3 py-2 transition ${
@@ -87,16 +90,16 @@ export function ShambleSetup({
               disabled={disabled}
               className="sr-only"
             />
-            <span className="text-xs font-medium">4-mannslag</span>
-            <span className="text-[11px] text-muted/80">4 spillere per lag</span>
+            <span className="text-xs font-medium">{t('teamSize4Title')}</span>
+            <span className="text-[11px] text-muted/80">{t('teamSize4Desc')}</span>
           </label>
         </div>
       </div>
 
       {/* Variant-velger */}
       <div>
-        <p className="text-xs font-medium text-muted">Variant</p>
-        <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Shamble-variant">
+        <p className="text-xs font-medium text-muted">{t('variantLabel')}</p>
+        <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('variantAriaLabel')}>
           <label
             className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-md border px-3 py-2 transition ${
               variant === 'shamble'
@@ -113,8 +116,8 @@ export function ShambleSetup({
               disabled={disabled}
               className="sr-only"
             />
-            <span className="text-xs font-medium">Shamble</span>
-            <span className="text-[11px] text-muted/80">Best 2 teller</span>
+            <span className="text-xs font-medium">{t('variantShambleTitle')}</span>
+            <span className="text-[11px] text-muted/80">{t('variantShambleDesc')}</span>
           </label>
           <label
             className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-md border px-3 py-2 transition ${
@@ -132,8 +135,8 @@ export function ShambleSetup({
               disabled={disabled}
               className="sr-only"
             />
-            <span className="text-xs font-medium">Champagne Scramble</span>
-            <span className="text-[11px] text-muted/80">Velg antall</span>
+            <span className="text-xs font-medium">{t('variantChampagneTitle')}</span>
+            <span className="text-[11px] text-muted/80">{t('variantChampagneDesc')}</span>
           </label>
         </div>
       </div>
@@ -141,8 +144,8 @@ export function ShambleSetup({
       {/* Antall som teller — kun synlig ved Champagne Scramble */}
       {variant === 'champagne' && (
         <div>
-          <p className="text-xs font-medium text-muted">Antall som teller</p>
-          <div className="mt-2 grid grid-cols-3 gap-2" role="radiogroup" aria-label="Antall score som teller">
+          <p className="text-xs font-medium text-muted">{t('countLabel')}</p>
+          <div className="mt-2 grid grid-cols-3 gap-2" role="radiogroup" aria-label={t('countAriaLabel')}>
             {([1, 2, 3] as const).map((n) => (
               <label
                 key={n}
@@ -163,7 +166,7 @@ export function ShambleSetup({
                 />
                 <span className="text-xs font-medium">{n}</span>
                 <span className="text-[11px] text-muted/80">
-                  {n === 1 ? 'laveste score' : 'laveste scorer'}
+                  {n === 1 ? t('countSingle') : t('countPlural')}
                 </span>
               </label>
             ))}
@@ -173,8 +176,8 @@ export function ShambleSetup({
 
       {/* Tellemåte-velger */}
       <div>
-        <p className="text-xs font-medium text-muted">Tellemåte</p>
-        <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Shamble-scoring">
+        <p className="text-xs font-medium text-muted">{t('scoringLabel')}</p>
+        <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('scoringAriaLabel')}>
           <label
             className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-md border px-3 py-2 transition ${
               scoring === 'net'
@@ -191,8 +194,8 @@ export function ShambleSetup({
               disabled={disabled}
               className="sr-only"
             />
-            <span className="text-xs font-medium">Netto</span>
-            <span className="text-[11px] text-muted/80">Handicap-justert</span>
+            <span className="text-xs font-medium">{t('scoringNetTitle')}</span>
+            <span className="text-[11px] text-muted/80">{t('scoringNetDesc')}</span>
           </label>
           <label
             className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-md border px-3 py-2 transition ${
@@ -210,8 +213,8 @@ export function ShambleSetup({
               disabled={disabled}
               className="sr-only"
             />
-            <span className="text-xs font-medium">Brutto</span>
-            <span className="text-[11px] text-muted/80">Rå slag</span>
+            <span className="text-xs font-medium">{t('scoringGrossTitle')}</span>
+            <span className="text-[11px] text-muted/80">{t('scoringGrossDesc')}</span>
           </label>
         </div>
       </div>

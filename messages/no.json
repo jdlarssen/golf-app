@@ -159,6 +159,112 @@
     },
     "sideTournaments": {
       "banner": "Sideturneringer (longest drive, closest-to-pin) kan legges på i Klar-steget."
+    },
+    "sections": {
+      "wolf": {
+        "legend": "Wolf-oppsett",
+        "scoringLabel": "Scoring",
+        "scoringDescription": "Velger om Wolf-scoringen bruker spillernes handicap-strokes, eller om beste rene gross-slag avgjør hvert hull.",
+        "scoringNet": "Med handicap (netto)",
+        "scoringGross": "Brutto",
+        "scoringAriaLabel": "Wolf-scoring",
+        "rotationLabel": "Wolf-rotasjon",
+        "shuffleButton": "Shuffle",
+        "rotationHint": "Velg 3 til 5 spillere, så trekker du rotasjonen.",
+        "rotationEmptyHint": "Velg 3 til 5 spillere for å se rotasjonen.",
+        "hullLabel": "Hull {holes}",
+        "trailingNote": "Hull {from}–18 går til den som ligger sist på poeng-totalen. Det avgjøres underveis.",
+        "selectPlayerPlaceholder": "Velg en spiller"
+      },
+      "nassau": {
+        "legend": "Nassau-oppsett",
+        "scoringLabel": "Scoring",
+        "scoringDescription": "Nassau er tre konkurranser i én — front 9, back 9, og totalt 18. Velger om handicap eller brutto avgjør hver del.",
+        "scoringNet": "Med handicap (netto)",
+        "scoringGross": "Brutto",
+        "scoringAriaLabel": "Nassau-scoring"
+      },
+      "skins": {
+        "legend": "Skins-oppsett",
+        "scoringLabel": "Scoring",
+        "scoringDescription": "Hvert hull er verdt 1 skin. Deler to eller flere spillere hullet, ruller skinnet videre til neste hull (da verdt 2, så 3, osv.), helt til én vinner alene og tar hele potten.",
+        "scoringNet": "Med handicap (netto)",
+        "scoringGross": "Brutto",
+        "scoringAriaLabel": "Skins-scoring"
+      },
+      "nines": {
+        "legend": "Nines-oppsett",
+        "variantLabel": "Variant",
+        "variantAriaLabel": "Nines-variant",
+        "variantNinesTitle": "Nines",
+        "variantNinesDesc": "9 poeng per hull (5–3–1)",
+        "variantSplitSixesTitle": "Split Sixes",
+        "variantSplitSixesDesc": "6 poeng per hull (4–2–0)",
+        "scoringFromLabel": "Poeng fra",
+        "scoringAriaLabel": "Nines-scoring",
+        "scoringNetTitle": "Netto",
+        "scoringNetDesc": "Handicap-justert",
+        "scoringGrossTitle": "Brutto",
+        "scoringGrossDesc": "Rå slag"
+      },
+      "roundRobin": {
+        "legend": "Round Robin-oppsett",
+        "slotsLabel": "Spillerslotter",
+        "slotsDescription": "Partnere roterer hvert 6. hull — du spiller med og mot alle de andre. Legg til 4 spillere i steg 4, så fordeles slottene A–D automatisk.",
+        "partnerLabel": "Med: {p1}·{p2}·{p3}",
+        "rotationSummary": "Hull 1–6 er A+B vs C+D · Hull 7–12 er A+C vs B+D · Hull 13–18 er A+D vs B+C. Beste netto av de to på din side teller per hull. Flest hullseire totalt vinner.",
+        "rotationHeading": "Rotasjon:",
+        "selectPlayerPlaceholder": "Velg en spiller"
+      },
+      "aceyDeucey": {
+        "legend": "Acey Deucey-oppsett",
+        "scoringLabel": "Scoring",
+        "scoringDescription": "Med handicap sammenlignes justerte slag, slik at en høy-handikapper ikke automatisk er «deuce» hvert hull. Brutto teller råslagene direkte.",
+        "scoringNet": "Med handicap (netto)",
+        "scoringGross": "Brutto",
+        "scoringAriaLabel": "Acey Deucey-scoring"
+      },
+      "shamble": {
+        "legend": "Shamble-oppsett",
+        "teamSizeLabel": "Lagstørrelse",
+        "teamSizeAriaLabel": "Shamble-lagstørrelse",
+        "teamSize3Title": "3-mannslag",
+        "teamSize3Desc": "3 spillere per lag",
+        "teamSize4Title": "4-mannslag",
+        "teamSize4Desc": "4 spillere per lag",
+        "variantLabel": "Variant",
+        "variantAriaLabel": "Shamble-variant",
+        "variantShambleTitle": "Shamble",
+        "variantShambleDesc": "Best 2 teller",
+        "variantChampagneTitle": "Champagne Scramble",
+        "variantChampagneDesc": "Velg antall",
+        "countLabel": "Antall som teller",
+        "countAriaLabel": "Antall score som teller",
+        "countSingle": "laveste score",
+        "countPlural": "laveste scorer",
+        "scoringLabel": "Tellemåte",
+        "scoringAriaLabel": "Shamble-scoring",
+        "scoringNetTitle": "Netto",
+        "scoringNetDesc": "Handicap-justert",
+        "scoringGrossTitle": "Brutto",
+        "scoringGrossDesc": "Rå slag"
+      },
+      "patsome": {
+        "legend": "Patsome-oppsett",
+        "segment1Heading": "Hull 1–6: 4BBB.",
+        "segment1Body": "Begge spiller sin egen ball, og lagets beste stableford-poeng per hull teller.",
+        "segment2Heading": "Hull 7–12: Greensome.",
+        "segment2Body": "Begge slår ut, dere velger det beste utslaget, og så slår dere annenhvert slag.",
+        "segment3Heading": "Hull 13–18: Foursomes.",
+        "segment3Body": "Dere deler én ball og slår annenhvert slag, også fra tee.",
+        "handicapNote": "Netto bruker riktige handicap per segment: full handicap i 4BBB, 60/40 i greensome og 50 % av summen i foursomes.",
+        "scoringFromLabel": "Poeng fra",
+        "scoringAriaLabel": "Patsome-scoring",
+        "scoringNetTitle": "Netto",
+        "scoringNetDesc": "Handicap-justert",
+        "scoringGrossTitle": "Brutto",
+        "scoringGrossDesc": "Rå slag"
+      }
     }
   },
   "formatGuide": {

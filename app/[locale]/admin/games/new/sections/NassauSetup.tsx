@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 export type NassauScoring = 'gross' | 'net';
 
 interface NassauSetupProps {
@@ -19,19 +21,19 @@ interface NassauSetupProps {
  * spillere, #460), tee-up er identisk med soloStrokeplay.
  */
 export function NassauSetup({ scoring, onScoringChange, disabled = false }: NassauSetupProps) {
+  const t = useTranslations('wizard.sections.nassau');
   return (
     <fieldset className="space-y-3 rounded-md border border-border bg-surface px-4 py-4">
       <legend className="px-1 text-sm font-semibold text-foreground">
-        Nassau-oppsett
+        {t('legend')}
       </legend>
 
       <div>
-        <p className="text-xs font-medium text-muted">Scoring</p>
+        <p className="text-xs font-medium text-muted">{t('scoringLabel')}</p>
         <p className="mt-1 text-xs text-muted/80">
-          Nassau er tre konkurranser i én — front 9, back 9, og totalt 18.
-          Velger om handicap eller brutto avgjør hver del.
+          {t('scoringDescription')}
         </p>
-        <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Nassau-scoring">
+        <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('scoringAriaLabel')}>
           <label
             className={`flex cursor-pointer items-center justify-center rounded-md border px-3 py-2 text-xs font-medium transition ${
               scoring === 'net'
@@ -48,7 +50,7 @@ export function NassauSetup({ scoring, onScoringChange, disabled = false }: Nass
               disabled={disabled}
               className="sr-only"
             />
-            Med handicap (netto)
+            {t('scoringNet')}
           </label>
           <label
             className={`flex cursor-pointer items-center justify-center rounded-md border px-3 py-2 text-xs font-medium transition ${
@@ -66,7 +68,7 @@ export function NassauSetup({ scoring, onScoringChange, disabled = false }: Nass
               disabled={disabled}
               className="sr-only"
             />
-            Brutto
+            {t('scoringGross')}
           </label>
         </div>
       </div>

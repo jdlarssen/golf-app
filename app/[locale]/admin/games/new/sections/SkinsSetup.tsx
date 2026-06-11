@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 export type SkinsScoring = 'gross' | 'net';
 
 interface SkinsSetupProps {
@@ -20,20 +22,19 @@ interface SkinsSetupProps {
  * da er verdt mer. Ingen toggle — det er selve formatet.
  */
 export function SkinsSetup({ scoring, onScoringChange, disabled = false }: SkinsSetupProps) {
+  const t = useTranslations('wizard.sections.skins');
   return (
     <fieldset className="space-y-3 rounded-md border border-border bg-surface px-4 py-4">
       <legend className="px-1 text-sm font-semibold text-foreground">
-        Skins-oppsett
+        {t('legend')}
       </legend>
 
       <div>
-        <p className="text-xs font-medium text-muted">Scoring</p>
+        <p className="text-xs font-medium text-muted">{t('scoringLabel')}</p>
         <p className="mt-1 text-xs text-muted/80">
-          Hvert hull er verdt 1 skin. Deler to eller flere spillere hullet, ruller
-          skinnet videre til neste hull (da verdt 2, så 3, osv.), helt til én vinner
-          alene og tar hele potten.
+          {t('scoringDescription')}
         </p>
-        <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Skins-scoring">
+        <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('scoringAriaLabel')}>
           <label
             className={`flex cursor-pointer items-center justify-center rounded-md border px-3 py-2 text-xs font-medium transition ${
               scoring === 'net'
@@ -50,7 +51,7 @@ export function SkinsSetup({ scoring, onScoringChange, disabled = false }: Skins
               disabled={disabled}
               className="sr-only"
             />
-            Med handicap (netto)
+            {t('scoringNet')}
           </label>
           <label
             className={`flex cursor-pointer items-center justify-center rounded-md border px-3 py-2 text-xs font-medium transition ${
@@ -68,7 +69,7 @@ export function SkinsSetup({ scoring, onScoringChange, disabled = false }: Skins
               disabled={disabled}
               className="sr-only"
             />
-            Brutto
+            {t('scoringGross')}
           </label>
         </div>
       </div>

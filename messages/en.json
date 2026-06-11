@@ -159,6 +159,112 @@
     },
     "sideTournaments": {
       "banner": "Side competitions (longest drive, closest-to-pin) can be added in the Ready step."
+    },
+    "sections": {
+      "wolf": {
+        "legend": "Wolf setup",
+        "scoringLabel": "Scoring",
+        "scoringDescription": "Determines whether Wolf scoring uses players' handicap strokes or whether the lowest raw gross score decides each hole.",
+        "scoringNet": "With handicap (net)",
+        "scoringGross": "Gross",
+        "scoringAriaLabel": "Wolf scoring",
+        "rotationLabel": "Wolf rotation",
+        "shuffleButton": "Shuffle",
+        "rotationHint": "Select 3 to 5 players to draw the rotation.",
+        "rotationEmptyHint": "Select 3 to 5 players to see the rotation.",
+        "hullLabel": "Holes {holes}",
+        "trailingNote": "Holes {from}–18 go to the player with the lowest running score. Decided as you play.",
+        "selectPlayerPlaceholder": "Select a player"
+      },
+      "nassau": {
+        "legend": "Nassau setup",
+        "scoringLabel": "Scoring",
+        "scoringDescription": "Nassau is three competitions in one — front 9, back 9, and full 18. Determines whether handicap or gross decides each portion.",
+        "scoringNet": "With handicap (net)",
+        "scoringGross": "Gross",
+        "scoringAriaLabel": "Nassau scoring"
+      },
+      "skins": {
+        "legend": "Skins setup",
+        "scoringLabel": "Scoring",
+        "scoringDescription": "Each hole is worth 1 skin. If two or more players tie, the skin carries over to the next hole (worth 2, then 3, etc.) until one player wins outright and claims the pot.",
+        "scoringNet": "With handicap (net)",
+        "scoringGross": "Gross",
+        "scoringAriaLabel": "Skins scoring"
+      },
+      "nines": {
+        "legend": "Nines setup",
+        "variantLabel": "Variant",
+        "variantAriaLabel": "Nines variant",
+        "variantNinesTitle": "Nines",
+        "variantNinesDesc": "9 points per hole (5–3–1)",
+        "variantSplitSixesTitle": "Split Sixes",
+        "variantSplitSixesDesc": "6 points per hole (4–2–0)",
+        "scoringFromLabel": "Points from",
+        "scoringAriaLabel": "Nines scoring",
+        "scoringNetTitle": "Net",
+        "scoringNetDesc": "Handicap-adjusted",
+        "scoringGrossTitle": "Gross",
+        "scoringGrossDesc": "Raw strokes"
+      },
+      "roundRobin": {
+        "legend": "Round Robin setup",
+        "slotsLabel": "Player slots",
+        "slotsDescription": "Partners rotate every 6 holes — you play with and against everyone else. Add 4 players in step 4 and slots A–D are assigned automatically.",
+        "partnerLabel": "With: {p1}·{p2}·{p3}",
+        "rotationSummary": "Holes 1–6 are A+B vs C+D · Holes 7–12 are A+C vs B+D · Holes 13–18 are A+D vs B+C. Best net of the two on your side counts per hole. Most hole wins total wins.",
+        "rotationHeading": "Rotation:",
+        "selectPlayerPlaceholder": "Select a player"
+      },
+      "aceyDeucey": {
+        "legend": "Acey Deucey setup",
+        "scoringLabel": "Scoring",
+        "scoringDescription": "With handicap, adjusted scores are compared so a high-handicapper is not automatically the \"deuce\" on every hole. Gross counts raw strokes directly.",
+        "scoringNet": "With handicap (net)",
+        "scoringGross": "Gross",
+        "scoringAriaLabel": "Acey Deucey scoring"
+      },
+      "shamble": {
+        "legend": "Shamble setup",
+        "teamSizeLabel": "Team size",
+        "teamSizeAriaLabel": "Shamble team size",
+        "teamSize3Title": "3-player teams",
+        "teamSize3Desc": "3 players per team",
+        "teamSize4Title": "4-player teams",
+        "teamSize4Desc": "4 players per team",
+        "variantLabel": "Variant",
+        "variantAriaLabel": "Shamble variant",
+        "variantShambleTitle": "Shamble",
+        "variantShambleDesc": "Best 2 count",
+        "variantChampagneTitle": "Champagne Scramble",
+        "variantChampagneDesc": "Choose count",
+        "countLabel": "Count",
+        "countAriaLabel": "Number of scores that count",
+        "countSingle": "lowest score",
+        "countPlural": "lowest scores",
+        "scoringLabel": "Scoring",
+        "scoringAriaLabel": "Shamble scoring",
+        "scoringNetTitle": "Net",
+        "scoringNetDesc": "Handicap-adjusted",
+        "scoringGrossTitle": "Gross",
+        "scoringGrossDesc": "Raw strokes"
+      },
+      "patsome": {
+        "legend": "Patsome setup",
+        "segment1Heading": "Holes 1–6: 4BBB.",
+        "segment1Body": "Both play their own ball; the team's best Stableford score per hole counts.",
+        "segment2Heading": "Holes 7–12: Greensome.",
+        "segment2Body": "Both drive, the team picks the best drive, then alternate shots.",
+        "segment3Heading": "Holes 13–18: Foursomes.",
+        "segment3Body": "The team shares one ball and alternates shots, including from the tee.",
+        "handicapNote": "Net uses the correct handicap allowance per segment: full handicap in 4BBB, 60/40 in greensome, and 50% of the combined total in foursomes.",
+        "scoringFromLabel": "Points from",
+        "scoringAriaLabel": "Patsome scoring",
+        "scoringNetTitle": "Net",
+        "scoringNetDesc": "Handicap-adjusted",
+        "scoringGrossTitle": "Gross",
+        "scoringGrossDesc": "Raw strokes"
+      }
     }
   },
   "formatGuide": {

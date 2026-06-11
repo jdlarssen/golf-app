@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 export type NinesVariant = 'nines' | 'split_sixes';
 export type NinesScoring = 'gross' | 'net';
 
@@ -29,16 +31,17 @@ export function NinesSetup({
   onScoringChange,
   disabled = false,
 }: NinesSetupProps) {
+  const t = useTranslations('wizard.sections.nines');
   return (
     <fieldset className="space-y-4 rounded-md border border-border bg-surface px-4 py-4">
       <legend className="px-1 text-sm font-semibold text-foreground">
-        Nines-oppsett
+        {t('legend')}
       </legend>
 
       {/* Variant-velger */}
       <div>
-        <p className="text-xs font-medium text-muted">Variant</p>
-        <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Nines-variant">
+        <p className="text-xs font-medium text-muted">{t('variantLabel')}</p>
+        <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('variantAriaLabel')}>
           <label
             className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-md border px-3 py-2 transition ${
               variant === 'nines'
@@ -55,8 +58,8 @@ export function NinesSetup({
               disabled={disabled}
               className="sr-only"
             />
-            <span className="text-xs font-medium">Nines</span>
-            <span className="text-[11px] text-muted/80">9 poeng per hull (5–3–1)</span>
+            <span className="text-xs font-medium">{t('variantNinesTitle')}</span>
+            <span className="text-[11px] text-muted/80">{t('variantNinesDesc')}</span>
           </label>
           <label
             className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-md border px-3 py-2 transition ${
@@ -74,16 +77,16 @@ export function NinesSetup({
               disabled={disabled}
               className="sr-only"
             />
-            <span className="text-xs font-medium">Split Sixes</span>
-            <span className="text-[11px] text-muted/80">6 poeng per hull (4–2–0)</span>
+            <span className="text-xs font-medium">{t('variantSplitSixesTitle')}</span>
+            <span className="text-[11px] text-muted/80">{t('variantSplitSixesDesc')}</span>
           </label>
         </div>
       </div>
 
       {/* Scoring-velger */}
       <div>
-        <p className="text-xs font-medium text-muted">Poeng fra</p>
-        <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Nines-scoring">
+        <p className="text-xs font-medium text-muted">{t('scoringFromLabel')}</p>
+        <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('scoringAriaLabel')}>
           <label
             className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-md border px-3 py-2 transition ${
               scoring === 'net'
@@ -100,8 +103,8 @@ export function NinesSetup({
               disabled={disabled}
               className="sr-only"
             />
-            <span className="text-xs font-medium">Netto</span>
-            <span className="text-[11px] text-muted/80">Handicap-justert</span>
+            <span className="text-xs font-medium">{t('scoringNetTitle')}</span>
+            <span className="text-[11px] text-muted/80">{t('scoringNetDesc')}</span>
           </label>
           <label
             className={`flex cursor-pointer flex-col items-start gap-0.5 rounded-md border px-3 py-2 transition ${
@@ -119,8 +122,8 @@ export function NinesSetup({
               disabled={disabled}
               className="sr-only"
             />
-            <span className="text-xs font-medium">Brutto</span>
-            <span className="text-[11px] text-muted/80">Rå slag</span>
+            <span className="text-xs font-medium">{t('scoringGrossTitle')}</span>
+            <span className="text-[11px] text-muted/80">{t('scoringGrossDesc')}</span>
           </label>
         </div>
       </div>
