@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type CSSProperties, type JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { setWolfChoice } from '@/lib/wolf/setWolfChoice';
 import type { WolfChoice } from '@/lib/scoring/modes/types';
 
@@ -24,15 +25,15 @@ export interface WolfChoiceModalProps {
   onChoiceSaved: (choice: WolfChoice, partnerUserId: string | null) => void;
 }
 
-const ERROR_LABELS: Record<string, string> = {
-  not_authenticated: 'Du må være logget inn for å velge.',
-  invalid_choice: 'Ugyldig valg.',
-  partner_required: 'Du må velge en partner.',
-  partner_must_be_null: 'Partner skal ikke være satt for Lone/Blind Wolf.',
-  partner_cannot_be_wolf: 'Du kan ikke velge deg selv som partner.',
-  invalid_hole: 'Ugyldig hull-nummer.',
-  rls_denied: 'Du må være Wolf på dette hullet for å velge.',
-};
+const WOLF_ERROR_KEYS = new Set([
+  'not_authenticated',
+  'invalid_choice',
+  'partner_required',
+  'partner_must_be_null',
+  'partner_cannot_be_wolf',
+  'invalid_hole',
+  'rls_denied',
+]);
 
 const backdropStyle: CSSProperties = {
   position: 'fixed',
@@ -142,6 +143,7 @@ const closeButtonStyle: CSSProperties = {
 };
 
 export function WolfChoiceModal(props: WolfChoiceModalProps): JSX.Element | null {
+  const t = useTranslations('holes.wolf');
   const {
     isOpen,
     gameId,
@@ -189,11 +191,12 @@ export function WolfChoiceModal(props: WolfChoiceModalProps): JSX.Element | null
         onChoiceSaved(choice, partnerUserId);
         onClose();
       } else {
-        setError(ERROR_LABELS[result.error] ?? 'Noe gikk galt. Prøv igjen.');
+        const key = WOLF_ERROR_KEYS.has(result.error) ? result.error : 'unknown';
+        setError(t(`errors.${key}` as Parameters<typeof t>[0]));
       }
     } catch (e) {
       console.error('[WolfChoiceModal] setWolfChoice threw', e);
-      setError('Noe gikk galt. Prøv igjen.');
+      setError(t('errors.unknown'));
     } finally {
       setSubmitting(false);
     }
@@ -212,10 +215,10 @@ export function WolfChoiceModal(props: WolfChoiceModalProps): JSX.Element | null
     >
       <div style={cardStyle}>
         <h2 id="wolf-modal-title" style={headerStyle}>
-          Du er Wolf
+          {t('modalTitle')}
         </h2>
         <p style={subHeaderStyle}>
-          Velg partner, eller gå alene mot resten.
+          {t('modalSubtitle')}
         </p>
 
         {otherPlayers.map((p) => (
@@ -227,8 +230,8 @@ export function WolfChoiceModal(props: WolfChoiceModalProps): JSX.Element | null
             disabled={submitting}
             onClick={() => void submitChoice('partner', p.userId)}
           >
-            <span>Partner: {p.name}</span>
-            <span style={subtitleStyle}>Vinner-siden får 2 hver</span>
+            <span>{t('partnerButton', { name: p.name })}</span>
+            <span style={subtitleStyle}>{t('partnerButtonSubtitle')}</span>
           </button>
         ))}
 
@@ -241,8 +244,8 @@ export function WolfChoiceModal(props: WolfChoiceModalProps): JSX.Element | null
           disabled={submitting}
           onClick={() => void submitChoice('lone', null)}
         >
-          <span>Lone Wolf</span>
-          <span style={subtitleStyle}>Alene mot resten. Vinner du, får du {n}.</span>
+          <span>{t('loneWolfButton')}</span>
+          <span style={subtitleStyle}>{t('loneWolfSubtitle', { n })}</span>
         </button>
 
         <button
@@ -252,9 +255,9 @@ export function WolfChoiceModal(props: WolfChoiceModalProps): JSX.Element | null
           disabled={submitting}
           onClick={() => void submitChoice('blind', null)}
         >
-          <span>Blind Wolf</span>
+          <span>{t('blindWolfButton')}</span>
           <span style={subtitleStyle}>
-            Meldt før utslag. Vinner du, får du {n + 2}.
+            {t('blindWolfSubtitle', { n: n + 2 })}
           </span>
         </button>
 
@@ -272,7 +275,7 @@ export function WolfChoiceModal(props: WolfChoiceModalProps): JSX.Element | null
             disabled={submitting}
             onClick={onClose}
           >
-            Lukk
+            {t('closeButton')}
           </button>
         </div>
       </div>

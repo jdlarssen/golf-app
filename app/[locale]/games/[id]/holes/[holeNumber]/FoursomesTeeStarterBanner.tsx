@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { setFoursomesTeeStarter } from '../../foursomesActions';
 
@@ -25,6 +26,7 @@ export function FoursomesTeeStarterBanner({
    */
   options: { userId: string; displayName: string }[];
 }) {
+  const t = useTranslations('holes.foursomes');
   const [isPending, startTransition] = useTransition();
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -36,13 +38,10 @@ export function FoursomesTeeStarterBanner({
       try {
         const res = await setFoursomesTeeStarter(gameId, sideNumber, userId);
         if (!res.ok) {
-          setError(
-            res.error === 'unauthenticated'
-              ? 'Du må være innlogget.'
-              : res.error === 'wrong_side'
-                ? 'Du kan bare velge for ditt eget lag.'
-                : 'Noe gikk galt. Prøv igjen.',
-          );
+          const errKey = (res.error === 'unauthenticated' || res.error === 'wrong_side')
+            ? res.error
+            : 'unknown';
+          setError(t(`teeStarterErrors.${errKey}` as Parameters<typeof t>[0]));
         }
       } finally {
         setPendingUserId(null);
@@ -53,7 +52,7 @@ export function FoursomesTeeStarterBanner({
   return (
     <div className="mb-3 rounded-md border border-accent/40 bg-accent/5 px-3 py-3">
       <p className="mb-2 font-serif text-sm text-text">
-        Hvem teer ut på hull 1 for dere?
+        {t('teeStarterQuestion')}
       </p>
       <div className="grid grid-cols-2 gap-2">
         {options.map((o) => (
@@ -63,7 +62,7 @@ export function FoursomesTeeStarterBanner({
             onClick={() => handlePick(o.userId)}
             pending={pendingUserId === o.userId}
             disabled={isPending}
-            pendingLabel="Velger …"
+            pendingLabel={t('teeStarterSelectPending')}
             className="min-h-[44px] rounded-md border border-border bg-surface px-3 py-2 text-center text-sm font-medium text-primary transition-colors hover:border-primary/40 disabled:opacity-60"
           >
             {o.displayName}
@@ -94,6 +93,7 @@ export function FoursomesTeeHint({
   teeStarterUserId: string;
   partners: { userId: string; displayName: string }[];
 }) {
+  const t = useTranslations('holes.foursomes');
   const isOdd = holeNumber % 2 === 1;
   const targetId = isOdd
     ? teeStarterUserId
@@ -104,7 +104,7 @@ export function FoursomesTeeHint({
 
   return (
     <p className="mb-2 text-center text-xs text-muted">
-      <span className="font-medium text-text">{target.displayName}</span> slår ut
+      {t('teeHint', { name: target.displayName })}
     </p>
   );
 }

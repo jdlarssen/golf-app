@@ -1,6 +1,7 @@
 'use client';
 
 import type { CSSProperties, JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { scoreTone, type ScoreTone } from '@/lib/scoring/scoreTone';
 import { scoreShape, type ScoreShape as ScoreShapeKind } from '@/lib/scoring/scoreShape';
 import { ScoreShape } from '@/components/scoring/ScoreShape';
@@ -63,6 +64,7 @@ function scoreNumberColor(tone: ScoreTone): string {
 }
 
 export function ScoreCard(props: ScoreCardProps): JSX.Element {
+  const t = useTranslations('holes.scoreCard');
   const {
     playerId,
     name,
@@ -188,18 +190,18 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
 
   let helperText: string;
   if (score == null) {
-    helperText = 'Trykk kort = par. Bruk − / +.';
+    helperText = t('tapInstruction');
   } else if (hideNetto) {
     helperText = '';
   } else {
-    const nettoLabel = `Netto ${score - extraStrokes}`;
+    const netto = score - extraStrokes;
     // For stableford-modus appendes per-hull-poengene rett etter netto-en
     // for å vise sammenhengen netto → poeng på samme linje (sparer plass
     // og holder per-hull-info atomisk).
     helperText =
       stablefordPoints !== null
-        ? `${nettoLabel} · ${stablefordPoints} poeng`
-        : nettoLabel;
+        ? t('nettoWithPoints', { netto, points: stablefordPoints })
+        : t('nettoLabel', { netto });
   }
 
   const stepperBtnStyle: CSSProperties = {
@@ -232,7 +234,7 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
   return (
     <div
       role="button"
-      aria-label={`Sett score for ${name}`}
+      aria-label={t('setScoreAriaLabel', { name })}
       aria-disabled={disabled || undefined}
       style={cardStyle}
       onClick={onCardClick}
@@ -243,7 +245,7 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
         <div style={{ display: 'flex', alignItems: 'baseline' }}>
           <span style={nameStyle}>{name}</span>
           {!hideNetto && extraStrokes > 0 && (
-            <span style={badgeStyle}>+{extraStrokes} SLAG</span>
+            <span style={badgeStyle}>{t('strokesBadge', { n: extraStrokes })}</span>
           )}
         </div>
         <div data-testid="helper-text" style={helperStyle}>
@@ -295,7 +297,7 @@ export function ScoreCard(props: ScoreCardProps): JSX.Element {
         </button>
         <button
           type="button"
-          aria-label="Velg spesifikk score"
+          aria-label={t('moreAriaLabel')}
           onClick={onStepperMore}
           disabled={disabled}
           style={moreBtnStyle}

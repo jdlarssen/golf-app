@@ -376,6 +376,126 @@
     "backToHole": "Tilbake til hull {hole} →",
     "toGameOverview": "Til spilloversikt"
   },
+  "holes": {
+    "entry": {
+      "backToGame": "Tilbake til turneringen",
+      "viewLeaderboard": "Vis leaderboard",
+      "myPoints": "Dine poeng:",
+      "hullKicker": "HULL",
+      "hullAriaLabel": "Hull {n}",
+      "hullIndex": "indeks {si}",
+      "hullPar": "Par {par}",
+      "confirmAllScores": "Bekreft alle scorer",
+      "nextHole": "Neste hull · {next}",
+      "submitScorecard": "Lever scorekort",
+      "submitScorecardSolo": "Lever ditt scorekort",
+      "submitScorecardTeam": "Lever lagets scorekort",
+      "backAriaLabel": "Tilbake til turneringen",
+      "leaderboardAriaLabel": "Vis leaderboard"
+    },
+    "scoreCard": {
+      "tapInstruction": "Trykk kort = par. Bruk − / +.",
+      "nettoLabel": "Netto {netto}",
+      "nettoWithPoints": "Netto {netto} · {points} poeng",
+      "strokesBadge": "+{n} SLAG",
+      "setScoreAriaLabel": "Sett score for {name}",
+      "moreAriaLabel": "Velg spesifikk score",
+      "specificScoreTitle": "SPESIFIKK SCORE",
+      "specificScoreAriaLabel": "Spesifikk score",
+      "setScoreToAriaLabel": "Sett score til {value}",
+      "clearScoreAriaLabel": "Fjern score",
+      "specificScoreCaption": "Trykk for å sette. X fjerner."
+    },
+    "sync": {
+      "sending": "Sender…",
+      "savedAt": "Lagret · {time}",
+      "savedRecently": "Lagret nylig"
+    },
+    "onboarding": {
+      "prefix": "Prøv dette:",
+      "text": "Trykk på det øverste kortet for å sette par. Bruk + og − for å justere.",
+      "closeAriaLabel": "Lukk"
+    },
+    "banners": {
+      "floridaStepAside": "Husk: den som slo det valgte slaget, står over neste slag.",
+      "withdrawn": "Du har trukket deg",
+      "withdrawnUndo": "Angre",
+      "skinsBanner": "{count, plural, one {1 skin på spill} other {# skins på spill}}",
+      "skinsCarried": "Potten har rullet videre"
+    },
+    "wolf": {
+      "youAreWolf": "Du er Wolf på dette hullet",
+      "wolfWaiting": "Wolf: {name} — venter på valg",
+      "wolfPartner": "Wolf: {wolfName} — partner: {partnerName}",
+      "wolfLone": "Wolf: {name} (Lone Wolf — {points} poeng)",
+      "wolfBlind": "Wolf: {name} (Blind Wolf — {points} poeng)",
+      "modalTitle": "Du er Wolf",
+      "modalSubtitle": "Velg partner, eller gå alene mot resten.",
+      "partnerButton": "Partner: {name}",
+      "partnerButtonSubtitle": "Vinner-siden får 2 hver",
+      "loneWolfButton": "Lone Wolf",
+      "loneWolfSubtitle": "Alene mot resten. Vinner du, får du {n}.",
+      "blindWolfButton": "Blind Wolf",
+      "blindWolfSubtitle": "Meldt før utslag. Vinner du, får du {n}.",
+      "closeButton": "Lukk",
+      "errors": {
+        "not_authenticated": "Du må være logget inn for å velge.",
+        "invalid_choice": "Ugyldig valg.",
+        "partner_required": "Du må velge en partner.",
+        "partner_must_be_null": "Partner skal ikke være satt for Lone/Blind Wolf.",
+        "partner_cannot_be_wolf": "Du kan ikke velge deg selv som partner.",
+        "invalid_hole": "Ugyldig hull-nummer.",
+        "rls_denied": "Du må være Wolf på dette hullet for å velge.",
+        "unknown": "Noe gikk galt. Prøv igjen."
+      }
+    },
+    "bingoBangoBongo": {
+      "heading": "Bingo Bango Bongo",
+      "caption": "Tre poeng deles ut per hull — ett for hvert av de tre prestasjonene. Alle i flighten kan registrere.",
+      "bingo": "Bingo",
+      "bingoDesc": "Første ball på green",
+      "bango": "Bango",
+      "bangoDesc": "Nærmest hullet når alle er på green",
+      "bongo": "Bongo",
+      "bongoDesc": "Første ball i hull",
+      "noOne": "Ingen",
+      "saveFailed": "Kunne ikke lagre — prøv igjen.",
+      "unknownError": "Noe gikk galt. Prøv igjen."
+    },
+    "roundRobin": {
+      "badge": "Segment {segment}/3 · Du spiller med {partner} mot {opp1} + {opp2}"
+    },
+    "chapman": {
+      "reminderTitle": "Slik spiller dere hullet",
+      "reminderText": "Begge slår ut → bytt ball → velg den beste → spill annenhver inn."
+    },
+    "patsome": {
+      "fourballLabel": "4BBB · Hull 1–6",
+      "fourballRule": "Spill din egen ball. Lagets beste resultat per hull teller.",
+      "greensomeLabel": "Greensome · Hull 7–12",
+      "greensomeRule": "Begge slår ut, velg det beste utslaget, så annenhvert slag.",
+      "foursomesLabel": "Foursomes · Hull 13–18",
+      "foursomesRule": "Én ball, annenhvert slag fra tee.",
+      "teeStarterQuestion": "Hvem slår ut i foursomes for dere?",
+      "teeStarterSelectPending": "Velger …",
+      "teeStarterErrors": {
+        "unauthenticated": "Du må være innlogget.",
+        "wrong_team": "Du kan bare velge for ditt eget lag.",
+        "unknown": "Noe gikk galt. Prøv igjen."
+      },
+      "teeHint": "{name} slår ut"
+    },
+    "foursomes": {
+      "teeStarterQuestion": "Hvem teer ut på hull 1 for dere?",
+      "teeStarterSelectPending": "Velger …",
+      "teeStarterErrors": {
+        "unauthenticated": "Du må være innlogget.",
+        "wrong_side": "Du kan bare velge for ditt eget lag.",
+        "unknown": "Noe gikk galt. Prøv igjen."
+      },
+      "teeHint": "{name} slår ut"
+    }
+  },
   "auth": {
     "errors": {
       "rate_limited": "Vent litt før du prøver igjen.",

@@ -1,4 +1,5 @@
 import type { CSSProperties, JSX } from 'react';
+import { useTranslations } from 'next-intl';
 
 export interface SyncStatusLineProps {
   syncing: boolean;
@@ -25,17 +26,18 @@ const dotBaseStyle: CSSProperties = {
 
 export function SyncStatusLine(props: SyncStatusLineProps): JSX.Element {
   const { syncing, savedAt } = props;
+  const t = useTranslations('holes.sync');
   const dotStyle: CSSProperties = {
     ...dotBaseStyle,
     background: syncing ? 'var(--warning)' : 'var(--success)',
   };
   let text: string;
   if (syncing) {
-    text = 'Sender…';
+    text = t('sending');
   } else if (savedAt.length > 0) {
-    text = `Lagret · ${savedAt}`;
+    text = t('savedAt', { time: savedAt });
   } else {
-    text = 'Lagret nylig';
+    text = t('savedRecently');
   }
   return (
     <div style={containerStyle}>

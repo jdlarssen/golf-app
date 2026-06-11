@@ -1,4 +1,5 @@
 import type { CSSProperties, JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   hasParDifference,
   formatOtherGendersPar,
@@ -77,24 +78,26 @@ const indexStyle: CSSProperties = {
 
 export function HoleHero(props: HoleHeroProps): JSX.Element {
   const { holeNumber, par, strokeIndex, parByGender, playerGender } = props;
+  const t = useTranslations('holes.entry');
+  const ts = useTranslations('scorecard');
   const showAside = parByGender ? hasParDifference(parByGender) : false;
   const tooltip = showAside
-    ? `Dette hullet har annerledes par for andre kjønn. ${formatOtherGendersPar(parByGender!, playerGender)}.`
+    ? ts('parAsideTooltip', { genders: formatOtherGendersPar(parByGender!, playerGender) })
     : '';
   return (
     <div style={containerStyle}>
       <div style={leftStyle}>
-        <div style={kickerStyle}>HULL</div>
+        <div style={kickerStyle}>{t('hullKicker')}</div>
         <div className="score-num" style={numberStyle}>{holeNumber}</div>
       </div>
       <div style={rightStyle}>
         <div style={parStyle}>
-          Par {par}
+          {t('hullPar', { par })}
           {showAside && (
             <ParAsideMarker tooltip={tooltip} />
           )}
         </div>
-        <div style={indexStyle}>indeks {strokeIndex}</div>
+        <div style={indexStyle}>{t('hullIndex', { si: strokeIndex })}</div>
       </div>
     </div>
   );

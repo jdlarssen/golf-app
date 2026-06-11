@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { setPatsomeTeeStarter } from '../../patsomeActions';
 
@@ -21,6 +22,7 @@ export function PatsomeTeeStarterBanner({
   /** Begge lagmedlemmene. Etiketten viser fornavn. */
   options: { userId: string; displayName: string }[];
 }) {
+  const t = useTranslations('holes.patsome');
   const [isPending, startTransition] = useTransition();
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -32,13 +34,10 @@ export function PatsomeTeeStarterBanner({
       try {
         const res = await setPatsomeTeeStarter(gameId, teamNumber, userId);
         if (!res.ok) {
-          setError(
-            res.error === 'unauthenticated'
-              ? 'Du må være innlogget.'
-              : res.error === 'wrong_team'
-                ? 'Du kan bare velge for ditt eget lag.'
-                : 'Noe gikk galt. Prøv igjen.',
-          );
+          const errKey = (res.error === 'unauthenticated' || res.error === 'wrong_team')
+            ? res.error
+            : 'unknown';
+          setError(t(`teeStarterErrors.${errKey}` as Parameters<typeof t>[0]));
         }
       } finally {
         setPendingUserId(null);
@@ -49,7 +48,7 @@ export function PatsomeTeeStarterBanner({
   return (
     <div className="mb-3 rounded-md border border-accent/40 bg-accent/5 px-3 py-3">
       <p className="mb-2 font-serif text-sm text-text">
-        Hvem slår ut i foursomes for dere?
+        {t('teeStarterQuestion')}
       </p>
       <div className="grid grid-cols-2 gap-2">
         {options.map((o) => (
@@ -59,7 +58,7 @@ export function PatsomeTeeStarterBanner({
             onClick={() => handlePick(o.userId)}
             pending={pendingUserId === o.userId}
             disabled={isPending}
-            pendingLabel="Velger …"
+            pendingLabel={t('teeStarterSelectPending')}
             className="min-h-[44px] rounded-md border border-border bg-surface px-3 py-2 text-center text-sm font-medium text-primary transition-colors hover:border-primary/40 disabled:opacity-60"
           >
             {o.displayName}
@@ -86,6 +85,7 @@ export function PatsomeTeeHint({
   teeStarterUserId: string;
   partners: { userId: string; displayName: string }[];
 }) {
+  const t = useTranslations('holes.patsome');
   const isOdd = holeNumber % 2 === 1;
   const targetId = isOdd
     ? teeStarterUserId
@@ -96,7 +96,7 @@ export function PatsomeTeeHint({
 
   return (
     <p className="mb-2 text-center text-xs text-muted">
-      <span className="font-medium text-text">{target.displayName}</span> slår ut
+      {t('teeHint', { name: target.displayName })}
     </p>
   );
 }

@@ -8,7 +8,7 @@ import {
   type CSSProperties,
   type JSX,
 } from 'react';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { formatTime } from '@/lib/i18n/format';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -227,6 +227,7 @@ const listStyle: CSSProperties = {
 
 export function HoleClient(props: HoleClientProps): JSX.Element {
   const locale = useLocale();
+  const t = useTranslations('holes');
   const {
     gameId,
     gameName,
@@ -453,14 +454,14 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   if (isWolf && wolfBadgePlayerName) {
     if (!currentHoleWolfChoice) {
       wolfBadgeText = iAmWolfForHole
-        ? 'Du er Wolf på dette hullet'
-        : `Wolf: ${wolfBadgePlayerName} — venter på valg`;
+        ? t('wolf.youAreWolf')
+        : t('wolf.wolfWaiting', { name: wolfBadgePlayerName });
     } else if (currentHoleWolfChoice.choice === 'partner' && wolfPartnerName) {
-      wolfBadgeText = `Wolf: ${wolfBadgePlayerName} — partner: ${wolfPartnerName}`;
+      wolfBadgeText = t('wolf.wolfPartner', { wolfName: wolfBadgePlayerName, partnerName: wolfPartnerName });
     } else if (currentHoleWolfChoice.choice === 'lone') {
-      wolfBadgeText = `Wolf: ${wolfBadgePlayerName} (Lone Wolf — ${wolfPlayerCount} poeng)`;
+      wolfBadgeText = t('wolf.wolfLone', { name: wolfBadgePlayerName, points: wolfPlayerCount });
     } else if (currentHoleWolfChoice.choice === 'blind') {
-      wolfBadgeText = `Wolf: ${wolfBadgePlayerName} (Blind Wolf — ${wolfPlayerCount + 2} poeng)`;
+      wolfBadgeText = t('wolf.wolfBlind', { name: wolfBadgePlayerName, points: wolfPlayerCount + 2 });
     }
   }
 
@@ -585,17 +586,17 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
   // («Lever scorekort») holder vi som default for å unngå unødvendig
   // copy-endring der.
   const submitLabel = isStableford
-    ? 'Lever ditt scorekort'
+    ? t('entry.submitScorecardSolo')
     : isTexas
-      ? 'Lever lagets scorekort'
-      : 'Lever scorekort';
+      ? t('entry.submitScorecardTeam')
+      : t('entry.submitScorecard');
   const bottomLabel = roundComplete
     ? submitLabel
     : !allConfirmed
-      ? 'Bekreft alle scorer'
+      ? t('entry.confirmAllScores')
       : isLastHole
         ? submitLabel
-        : `Neste hull · ${next}`;
+        : t('entry.nextHole', { next });
 
   const bottomHref = roundComplete
     ? `/games/${gameId}/submit`
@@ -612,7 +613,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
       <div style={headerRowStyle}>
         <SmartLink
           href={`/games/${gameId}`}
-          aria-label="Tilbake til turneringen"
+          aria-label={t('entry.backAriaLabel')}
           style={backLinkStyle}
         >
           ‹
@@ -620,7 +621,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
         <div style={titleStyle}>{gameName}</div>
         <SmartLink
           href={`/games/${gameId}/leaderboard?return=hole&n=${currentHole}`}
-          aria-label="Vis leaderboard"
+          aria-label={t('entry.leaderboardAriaLabel')}
           style={leaderboardIconLinkStyle}
         >
           <PokalIcon size={20} />
@@ -651,7 +652,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
               color: 'var(--text-muted)',
             }}
           >
-            Dine poeng:{' '}
+            {t('entry.myPoints')}{' '}
             <span
               className="score-num"
               style={{
@@ -714,7 +715,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
             textAlign: 'center',
           }}
         >
-          {skinsAtStake === 1 ? '1 skin på spill' : `${skinsAtStake} skins på spill`}
+          {t('banners.skinsBanner', { count: skinsAtStake })}
           {skinsCarriedIn != null && skinsCarriedIn > 0 && (
             <div
               style={{
@@ -724,7 +725,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
                 color: 'var(--text-muted)',
               }}
             >
-              Potten har rullet videre
+              {t('banners.skinsCarried')}
             </div>
           )}
         </div>
@@ -755,7 +756,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
             textAlign: 'center',
           }}
         >
-          Husk: den som slo det valgte slaget, står over neste slag.
+          {t('banners.floridaStepAside')}
         </div>
       )}
 
@@ -780,7 +781,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
             gap: 8,
           }}
         >
-          <span>Du har trukket deg</span>
+          <span>{t('banners.withdrawn')}</span>
           <SmartLink
             href={`/games/${gameId}`}
             style={{
@@ -792,7 +793,7 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
               whiteSpace: 'nowrap',
             }}
           >
-            Angre
+            {t('banners.withdrawnUndo')}
           </SmartLink>
         </div>
       )}

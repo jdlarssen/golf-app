@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type CSSProperties, type JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { setBingoBangoBongoHole } from '@/lib/bbb/setBingoBangoBongoHole';
 import type { BingoBangoBongoHoleInput } from '@/lib/scoring/modes/types';
 
@@ -25,22 +26,10 @@ export interface BingoBangoBongoEntryProps {
   onSaved: (updated: BingoBangoBongoHoleInput) => void;
 }
 
-const CATEGORIES = [
-  {
-    key: 'bingoUserId' as const,
-    label: 'Bingo',
-    description: 'Første ball på green',
-  },
-  {
-    key: 'bangoUserId' as const,
-    label: 'Bango',
-    description: 'Nærmest hullet når alle er på green',
-  },
-  {
-    key: 'bongoUserId' as const,
-    label: 'Bongo',
-    description: 'Første ball i hull',
-  },
+const CATEGORY_KEYS = [
+  { key: 'bingoUserId' as const, labelKey: 'bingo' as const, descKey: 'bingoDesc' as const },
+  { key: 'bangoUserId' as const, labelKey: 'bango' as const, descKey: 'bangoDesc' as const },
+  { key: 'bongoUserId' as const, labelKey: 'bongo' as const, descKey: 'bongoDesc' as const },
 ] as const;
 
 type CategoryKey = 'bingoUserId' | 'bangoUserId' | 'bongoUserId';
@@ -136,6 +125,7 @@ const errorStyle: CSSProperties = {
 export function BingoBangoBongoEntry(
   props: BingoBangoBongoEntryProps,
 ): JSX.Element {
+  const t = useTranslations('holes.bingoBangoBongo');
   const { gameId, holeNumber, players, savedHole, disabled = false, onSaved } =
     props;
 
@@ -179,11 +169,11 @@ export function BingoBangoBongoEntry(
       } else {
         // Tilbakestill ved feil.
         setLocalHole(prev);
-        setError('Kunne ikke lagre — prøv igjen.');
+        setError(t('saveFailed'));
       }
     } catch {
       setLocalHole(prev);
-      setError('Noe gikk galt. Prøv igjen.');
+      setError(t('unknownError'));
     } finally {
       setSaving(false);
     }
@@ -191,19 +181,18 @@ export function BingoBangoBongoEntry(
 
   return (
     <div data-testid="bbb-entry" style={wrapperStyle}>
-      <h3 style={headingStyle}>Bingo Bango Bongo</h3>
+      <h3 style={headingStyle}>{t('heading')}</h3>
       <p style={captionStyle}>
-        Tre poeng deles ut per hull — ett for hvert av de tre prestasjonene.
-        Alle i flighten kan registrere.
+        {t('caption')}
       </p>
 
-      {CATEGORIES.map(({ key, label, description }) => {
+      {CATEGORY_KEYS.map(({ key, labelKey, descKey }) => {
         const selectedUserId = localHole[key];
         return (
           <div key={key} style={rowStyle} data-testid={`bbb-row-${key}`}>
             <span style={rowLabelStyle}>
-              {label}
-              <span style={rowDescStyle}>({description})</span>
+              {t(labelKey)}
+              <span style={rowDescStyle}>({t(descKey)})</span>
             </span>
             <div style={chipRowStyle}>
               {players.map((player) => {
@@ -237,7 +226,7 @@ export function BingoBangoBongoEntry(
                 onClick={() => void handleSelect(key, null)}
                 style={chipStyle(selectedUserId === null, disabled || saving)}
               >
-                Ingen
+                {t('noOne')}
               </button>
             </div>
           </div>

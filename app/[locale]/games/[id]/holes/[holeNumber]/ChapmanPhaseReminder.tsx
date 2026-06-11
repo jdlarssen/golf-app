@@ -1,3 +1,5 @@
+import { useTranslations } from 'next-intl';
+
 /**
  * Statisk regelpåminnelse for Chapman matchplay (#290), vist øverst på hver
  * hull-side. Rent presentasjonskomponent — ingen logikk, ingen API-kall, ingen
@@ -7,16 +9,17 @@
  * veiledning — ikke noe komponenten regner ut.
  */
 export function ChapmanPhaseReminder() {
+  const t = useTranslations('holes.chapman');
   return (
     <div
       data-testid="chapman-phase-reminder"
       className="mb-3 rounded-md border border-border bg-bg/60 px-3 py-2.5"
     >
       <span className="font-serif text-sm font-semibold text-primary">
-        Slik spiller dere hullet
+        {t('reminderTitle')}
       </span>
       <p className="mt-0.5 text-xs text-muted">
-        Begge slår ut → bytt ball → velg den beste → spill annenhver inn.
+        {t('reminderText')}
       </p>
     </div>
   );

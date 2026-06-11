@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import type { CSSProperties, JSX, MouseEvent } from 'react';
+import { useTranslations } from 'next-intl';
 
 export interface SpecificValueSheetProps {
   open: boolean;
@@ -76,6 +77,7 @@ export function SpecificValueSheet(
   props: SpecificValueSheetProps,
 ): JSX.Element | null {
   const { open, par, onPick, onClear, onClose } = props;
+  const t = useTranslations('holes.scoreCard');
 
   useEffect(() => {
     if (!open) return;
@@ -110,10 +112,10 @@ export function SpecificValueSheet(
         data-testid="specific-value-sheet"
         role="dialog"
         aria-modal="true"
-        aria-label="Spesifikk score"
+        aria-label={t('specificScoreAriaLabel')}
       >
         <div style={handleStyle} aria-hidden="true" />
-        <div style={kickerStyle}>SPESIFIKK SCORE</div>
+        <div style={kickerStyle}>{t('specificScoreTitle')}</div>
         <div style={gridStyle}>
           {values.map((v) => (
             <button
@@ -124,7 +126,7 @@ export function SpecificValueSheet(
                 onClose();
               }}
               style={buttonStyle}
-              aria-label={`Sett score til ${v}`}
+              aria-label={t('setScoreToAriaLabel', { value: v })}
             >
               {v}
             </button>
@@ -136,12 +138,12 @@ export function SpecificValueSheet(
               onClose();
             }}
             style={buttonStyle}
-            aria-label="Fjern score"
+            aria-label={t('clearScoreAriaLabel')}
           >
             X
           </button>
         </div>
-        <div style={captionStyle}>Trykk for å sette. X fjerner.</div>
+        <div style={captionStyle}>{t('specificScoreCaption')}</div>
       </div>
     </div>
   );

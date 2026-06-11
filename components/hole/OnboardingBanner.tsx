@@ -1,6 +1,7 @@
 'use client';
 
 import type { CSSProperties, JSX } from 'react';
+import { useTranslations } from 'next-intl';
 
 export interface OnboardingBannerProps {
   visible: boolean;
@@ -65,6 +66,7 @@ export function OnboardingBanner(
   props: OnboardingBannerProps,
 ): JSX.Element | null {
   const { visible, onDismiss } = props;
+  const t = useTranslations('holes.onboarding');
   if (!visible) return null;
   return (
     <div style={bannerStyle}>
@@ -72,13 +74,13 @@ export function OnboardingBanner(
         ↓
       </div>
       <div>
-        <b style={prefixStyle}>Prøv dette:</b>{' '}
-        Trykk på det øverste kortet for å sette par. Bruk + og − for å justere.
+        <b style={prefixStyle}>{t('prefix')}</b>{' '}
+        {t('text')}
       </div>
       <div style={closeHitStyle}>
         <button
           type="button"
-          aria-label="Lukk"
+          aria-label={t('closeAriaLabel')}
           onClick={onDismiss}
           style={closeBtnStyle}
         >

@@ -376,6 +376,126 @@
     "backToHole": "Back to hole {hole} →",
     "toGameOverview": "Game overview"
   },
+  "holes": {
+    "entry": {
+      "backToGame": "Back to tournament",
+      "viewLeaderboard": "View leaderboard",
+      "myPoints": "Your points:",
+      "hullKicker": "HOLE",
+      "hullAriaLabel": "Hole {n}",
+      "hullIndex": "index {si}",
+      "hullPar": "Par {par}",
+      "confirmAllScores": "Confirm all scores",
+      "nextHole": "Next hole · {next}",
+      "submitScorecard": "Submit scorecard",
+      "submitScorecardSolo": "Submit your scorecard",
+      "submitScorecardTeam": "Submit team scorecard",
+      "backAriaLabel": "Back to tournament",
+      "leaderboardAriaLabel": "View leaderboard"
+    },
+    "scoreCard": {
+      "tapInstruction": "Tap to set par. Use − / +.",
+      "nettoLabel": "Net {netto}",
+      "nettoWithPoints": "Net {netto} · {points} pts",
+      "strokesBadge": "+{n} STROKES",
+      "setScoreAriaLabel": "Set score for {name}",
+      "moreAriaLabel": "Pick specific score",
+      "specificScoreTitle": "SPECIFIC SCORE",
+      "specificScoreAriaLabel": "Specific score",
+      "setScoreToAriaLabel": "Set score to {value}",
+      "clearScoreAriaLabel": "Clear score",
+      "specificScoreCaption": "Tap to set. X clears."
+    },
+    "sync": {
+      "sending": "Sending…",
+      "savedAt": "Saved · {time}",
+      "savedRecently": "Saved recently"
+    },
+    "onboarding": {
+      "prefix": "Try this:",
+      "text": "Tap the top card to set par. Use + and − to adjust.",
+      "closeAriaLabel": "Close"
+    },
+    "banners": {
+      "floridaStepAside": "Remember: the player who hit the chosen shot sits out the next shot.",
+      "withdrawn": "You have withdrawn",
+      "withdrawnUndo": "Undo",
+      "skinsBanner": "{count, plural, one {1 skin at stake} other {# skins at stake}}",
+      "skinsCarried": "The pot has carried over"
+    },
+    "wolf": {
+      "youAreWolf": "You are Wolf on this hole",
+      "wolfWaiting": "Wolf: {name} — waiting for pick",
+      "wolfPartner": "Wolf: {wolfName} — partner: {partnerName}",
+      "wolfLone": "Wolf: {name} (Lone Wolf — {points} pts)",
+      "wolfBlind": "Wolf: {name} (Blind Wolf — {points} pts)",
+      "modalTitle": "You are the Wolf",
+      "modalSubtitle": "Pick a partner, or go it alone against the rest.",
+      "partnerButton": "Partner: {name}",
+      "partnerButtonSubtitle": "Winning side gets 2 each",
+      "loneWolfButton": "Lone Wolf",
+      "loneWolfSubtitle": "Alone against the rest. Win and you get {n}.",
+      "blindWolfButton": "Blind Wolf",
+      "blindWolfSubtitle": "Called before the tee shot. Win and you get {n}.",
+      "closeButton": "Close",
+      "errors": {
+        "not_authenticated": "You must be logged in to make a pick.",
+        "invalid_choice": "Invalid choice.",
+        "partner_required": "You must pick a partner.",
+        "partner_must_be_null": "Partner must not be set for Lone/Blind Wolf.",
+        "partner_cannot_be_wolf": "You cannot pick yourself as a partner.",
+        "invalid_hole": "Invalid hole number.",
+        "rls_denied": "You must be the Wolf on this hole to make a pick.",
+        "unknown": "Something went wrong. Please try again."
+      }
+    },
+    "bingoBangoBongo": {
+      "heading": "Bingo Bango Bongo",
+      "caption": "Three points are awarded per hole — one for each of the three achievements. Anyone in the flight can record.",
+      "bingo": "Bingo",
+      "bingoDesc": "First ball on the green",
+      "bango": "Bango",
+      "bangoDesc": "Closest to the hole when all are on the green",
+      "bongo": "Bongo",
+      "bongoDesc": "First ball in the hole",
+      "noOne": "None",
+      "saveFailed": "Could not save — please try again.",
+      "unknownError": "Something went wrong. Please try again."
+    },
+    "roundRobin": {
+      "badge": "Segment {segment}/3 · You play with {partner} against {opp1} + {opp2}"
+    },
+    "chapman": {
+      "reminderTitle": "How to play this hole",
+      "reminderText": "Both tee off → swap balls → pick the best → alternate in."
+    },
+    "patsome": {
+      "fourballLabel": "4BBB · Holes 1–6",
+      "fourballRule": "Play your own ball. The team''s best result per hole counts.",
+      "greensomeLabel": "Greensome · Holes 7–12",
+      "greensomeRule": "Both tee off, pick the best drive, then alternate shots.",
+      "foursomesLabel": "Foursomes · Holes 13–18",
+      "foursomesRule": "One ball, alternate shots from the tee.",
+      "teeStarterQuestion": "Who tees off in foursomes for your team?",
+      "teeStarterSelectPending": "Selecting …",
+      "teeStarterErrors": {
+        "unauthenticated": "You must be logged in.",
+        "wrong_team": "You can only pick for your own team.",
+        "unknown": "Something went wrong. Please try again."
+      },
+      "teeHint": "{name} tees off"
+    },
+    "foursomes": {
+      "teeStarterQuestion": "Who tees off on hole 1 for your side?",
+      "teeStarterSelectPending": "Selecting …",
+      "teeStarterErrors": {
+        "unauthenticated": "You must be logged in.",
+        "wrong_side": "You can only pick for your own side.",
+        "unknown": "Something went wrong. Please try again."
+      },
+      "teeHint": "{name} tees off"
+    }
+  },
   "auth": {
     "errors": {
       "rate_limited": "Slow down — try again in a moment.",

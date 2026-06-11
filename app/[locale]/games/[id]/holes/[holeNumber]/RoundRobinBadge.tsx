@@ -1,6 +1,7 @@
 'use client';
 
 import type { CSSProperties } from 'react';
+import { useTranslations } from 'next-intl';
 import { roundRobinConstellationForHole } from '@/lib/scoring/modes/roundRobin';
 import type { RoundRobinConstellationPlayer } from '@/lib/scoring/modes/roundRobin';
 
@@ -24,6 +25,7 @@ const badgeStyle: CSSProperties = {
 };
 
 export function RoundRobinBadge({ holeNumber, players, myUserId }: Props) {
+  const t = useTranslations('holes.roundRobin');
   const constellation = roundRobinConstellationForHole(holeNumber, players, myUserId);
   if (!constellation) return null;
 
@@ -38,7 +40,7 @@ export function RoundRobinBadge({ holeNumber, players, myUserId }: Props) {
 
   return (
     <div data-testid="round-robin-badge" style={badgeStyle}>
-      Segment {segment}/3 · Du spiller med {partnerName} mot {opp1Name} + {opp2Name}
+      {t('badge', { segment, partner: partnerName, opp1: opp1Name, opp2: opp2Name })}
     </div>
   );
 }

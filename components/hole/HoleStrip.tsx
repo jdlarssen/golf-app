@@ -2,6 +2,7 @@
 
 import { SmartLink } from '@/components/ui/SmartLink';
 import type { CSSProperties, JSX } from 'react';
+import { useTranslations } from 'next-intl';
 
 export interface HoleStripProps {
   gameId: string;
@@ -71,6 +72,7 @@ function cellStyle(state: 'current' | 'completed' | 'future'): CSSProperties {
 
 export function HoleStrip(props: HoleStripProps): JSX.Element {
   const { gameId, currentHole } = props;
+  const t = useTranslations('holes.entry');
   return (
     <div style={containerStyle}>
       <div style={innerStyle}>
@@ -86,7 +88,7 @@ export function HoleStrip(props: HoleStripProps): JSX.Element {
               key={n}
               href={`/games/${gameId}/holes/${n}`}
               style={hitAreaStyle}
-              aria-label={`Hull ${n}`}
+              aria-label={t('hullAriaLabel', { n })}
               aria-current={state === 'current' ? 'page' : undefined}
             >
               <span style={cellStyle(state)}>{n}</span>

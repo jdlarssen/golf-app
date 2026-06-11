@@ -1,3 +1,5 @@
+import { useTranslations } from 'next-intl';
+
 /**
  * Viser aktivt Patsome-segment på gjeldende hull med en kort regelforklaring.
  * Rent presentasjonskomponent — ingen logikk, ingen API-kall.
@@ -8,34 +10,35 @@
  *   13–18 → Foursomes
  */
 export function PatsomeSegmentBanner({ holeNumber }: { holeNumber: number }) {
+  const t = useTranslations('holes.patsome');
   const segment =
     holeNumber <= 6 ? 'fourball' : holeNumber <= 12 ? 'greensome' : 'foursomes';
 
   const config = {
     fourball: {
-      label: '4BBB · Hull 1–6',
-      rule: 'Spill din egen ball. Lagets beste resultat per hull teller.',
+      labelKey: 'fourballLabel' as const,
+      ruleKey: 'fourballRule' as const,
     },
     greensome: {
-      label: 'Greensome · Hull 7–12',
-      rule: 'Begge slår ut, velg det beste utslaget, så annenhvert slag.',
+      labelKey: 'greensomeLabel' as const,
+      ruleKey: 'greensomeRule' as const,
     },
     foursomes: {
-      label: 'Foursomes · Hull 13–18',
-      rule: 'Én ball, annenhvert slag fra tee.',
+      labelKey: 'foursomesLabel' as const,
+      ruleKey: 'foursomesRule' as const,
     },
   } as const;
 
-  const { label, rule } = config[segment];
+  const { labelKey, ruleKey } = config[segment];
 
   return (
     <div className="mb-3 rounded-md border border-border bg-bg/60 px-3 py-2.5">
       <div className="flex items-baseline gap-2">
         <span className="font-serif text-sm font-semibold text-primary">
-          {label}
+          {t(labelKey)}
         </span>
       </div>
-      <p className="mt-0.5 text-xs text-muted">{rule}</p>
+      <p className="mt-0.5 text-xs text-muted">{t(ruleKey)}</p>
     </div>
   );
 }
