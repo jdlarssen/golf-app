@@ -19,7 +19,9 @@ test.describe('Login form smoke (OTP step 1)', () => {
   test('rendres med e-post-input og "Send meg kode"-knapp', async ({ page }) => {
     await page.goto('/login');
 
-    await expect(page.getByRole('heading', { name: 'Logg inn' })).toBeVisible();
+    // BrandHero-wordmarket er sidas heading — «Logg inn»-h1-en ble fjernet
+    // i db8b73e (BrandHero-swap), så den gamle asserten var stale.
+    await expect(page.getByRole('heading', { name: 'Tørny' })).toBeVisible();
     await expect(page.getByLabel('E-post')).toBeVisible();
     await expect(
       page.getByRole('button', { name: 'Send meg kode' }),
