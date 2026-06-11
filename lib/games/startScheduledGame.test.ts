@@ -353,7 +353,7 @@ describe('startScheduledGame — unassigned_flights guard (#543)', () => {
       { data: null, error: null },
     ]);
     const result = await startScheduledGame(supabase as never, 'game-id');
-    expect(result).toEqual({ ok: true });
+    expect(result).toEqual({ ok: true, started: false });
   });
 
   it('≤4 flightless solo players → guard skips (single-flight rule)', async () => {
@@ -378,7 +378,7 @@ describe('startScheduledGame — unassigned_flights guard (#543)', () => {
       { data: null, error: null }, // status flip
     ]);
     const result = await startScheduledGame(supabase as never, 'game-id');
-    expect(result).toEqual({ ok: true });
+    expect(result).toEqual({ ok: true, started: false });
   });
 
   it('wolf with 5 flightless players → guard skips (wolf always single-flight)', async () => {
@@ -404,7 +404,7 @@ describe('startScheduledGame — unassigned_flights guard (#543)', () => {
       { data: null, error: null }, // status flip
     ]);
     const result = await startScheduledGame(supabase as never, 'game-id');
-    expect(result).toEqual({ ok: true });
+    expect(result).toEqual({ ok: true, started: false });
   });
 
   it('matchplay modes are unaffected — singles_matchplay skips flight guard', async () => {
@@ -429,6 +429,6 @@ describe('startScheduledGame — unassigned_flights guard (#543)', () => {
       { data: null, error: null },
     ]);
     const result = await startScheduledGame(supabase as never, 'game-id');
-    expect(result).toEqual({ ok: true });
+    expect(result).toEqual({ ok: true, started: false });
   });
 });

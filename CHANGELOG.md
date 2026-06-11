@@ -28,7 +28,7 @@ Issue [#543](https://github.com/jdlarssen/golf-app/issues/543). I spill med fire
 <details>
 <summary>Teknisk</summary>
 
-[#543](https://github.com/jdlarssen/golf-app/issues/543). Evaluator-funn NIT-1: `acceptTeamInvite` og `attachToCaptainTeam` i `teamActions.ts` manglet `signups_closed_at`-guarden som de øvrige påmeldingsstiene fikk i 1.110.6 — en medspiller kunne fullføre lag-aksept på et stengt spill. Begge stiene returnerer nå `signup_closed`, `AcceptDeclineResult`-unionen og `mapError` i `TeamDashboardClient` har fått koden, og lag-dashboardet viser stengt-banner. NIT-2: `(home)/page.tsx` re-deklarerte flight-størrelsen lokalt i stedet for å importere `MAX_FLIGHT_SIZE` fra `flightScope`. Tre nye guard-tester i `teamActions.test.ts`.
+[#543](https://github.com/jdlarssen/golf-app/issues/543). Evaluator-funn NIT-1: `acceptTeamInvite` og `attachToCaptainTeam` i `teamActions.ts` manglet `signups_closed_at`-guarden som de øvrige påmeldingsstiene fikk i 1.112.6 — en medspiller kunne fullføre lag-aksept på et stengt spill. Begge stiene returnerer nå `signup_closed`, `AcceptDeclineResult`-unionen og `mapError` i `TeamDashboardClient` har fått koden, og lag-dashboardet viser stengt-banner. NIT-2: `(home)/page.tsx` re-deklarerte flight-størrelsen lokalt i stedet for å importere `MAX_FLIGHT_SIZE` fra `flightScope`. Tre nye guard-tester i `teamActions.test.ts`.
 
 </details>
 
@@ -163,7 +163,7 @@ Issue [#543](https://github.com/jdlarssen/golf-app/issues/543). I spill med fire
 
 #### Added
 - `lib/games/flightScope.ts` (ny): ren TypeScript-modul med `isSingleFlightGame`, `needsFlightAssignment`, `unassignedActivePlayers`, `suggestFlightSplit`, `flightBuckets` og `MAX_FLIGHT_SIZE`. Wolf er alltid én gruppe; ellers er ≤4 aktive spillere grensen. 32 unit-tester.
-- `supabase/migrations/0094_flight_single_group_and_assignment.sql`: erstatter `can_score_for` og `same_flight_or_solo` med én-flight-logikk (≤4 aktive ELLER wolf → ubegrenset kryss-skriv og kryss-les, uavhengig av `flight_number`-verdier). Fjerner øvre grense på `flight_number`-CHECK (`>= 1` i stedet for `BETWEEN 1 AND 4`). Ny kolonne `games.signups_closed_at timestamptz null`.
+- `supabase/migrations/0095_flight_single_group_and_assignment.sql`: erstatter `can_score_for` og `same_flight_or_solo` med én-flight-logikk (≤4 aktive ELLER wolf → ubegrenset kryss-skriv og kryss-les, uavhengig av `flight_number`-verdier). Fjerner øvre grense på `flight_number`-CHECK (`>= 1` i stedet for `BETWEEN 1 AND 4`). Ny kolonne `games.signups_closed_at timestamptz null`.
 - `supabase/tests/flight_scope_rls_test.sql`: pgTAP-suite (12 asserts) som verifiserer de fire RLS-invariantene: singelmatch kryss-skriv/-les tillatt, wolf 5 spillere tillatt, 6-spillers flight-løst spill blokkert, 6-spillers med flighter — samme-flight tillatt/kryss blokkert.
 - `lib/database.types.ts`: `signups_closed_at: string | null` i `games.Row`; valgfri i `Insert`/`Update`.
 

@@ -1,7 +1,7 @@
 -- supabase/tests/flight_scope_rls_test.sql
 -- ─────────────────────────────────────────────────────────────────────────────
 -- RLS integration test: én-flight-regelen (#543) for can_score_for() and
--- same_flight_or_solo(), as updated in migration 0094.
+-- same_flight_or_solo(), as updated in migration 0095.
 --
 -- Verifies the invariants from the contract:
 --
@@ -21,7 +21,7 @@
 -- path the app uses. All four scenarios are seeded independently; each resets
 -- the fixture data between scenarios.
 --
--- NOTE: Requires a local Postgres with all migrations applied (migration 0094
+-- NOTE: Requires a local Postgres with all migrations applied (migration 0095
 -- must be present). See supabase/tests/README.md for how to run.
 -- ─────────────────────────────────────────────────────────────────────────────
 

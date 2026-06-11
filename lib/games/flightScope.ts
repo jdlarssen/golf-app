@@ -13,7 +13,7 @@
  *
  * Erstatter den null-only-grenen i 0088 (coscore_flightless_small_games):
  * RLS-hjelperne `can_score_for` og `same_flight_or_solo` oppdateres i
- * migrasjon 0094 til å tillate på tvers av sider/lag ved ≤4 aktive ELLER wolf.
+ * migrasjon 0095 til å tillate på tvers av sider/lag ved ≤4 aktive ELLER wolf.
  */
 
 import type { GameMode } from '@/lib/scoring/modes/types';
