@@ -139,6 +139,9 @@ export const ERROR_MESSAGES_EXISTING_GAME: Record<string, string> = {
   // #544: matchplay åpen påmelding — ufullstendige sider ved tee-tid.
   incomplete_sides:
     'En eller begge sider mangler spillere. Alle spillere må ha en side og begge sider må være fulltallige før spillet kan startes.',
+  // #543: store solo-spill (>4 aktive) krever flight-inndeling før start.
+  unassigned_flights:
+    'Spillerne er ikke fordelt i flighter ennå. Del inn flightene før spillet kan startes.',
 };
 
 /**

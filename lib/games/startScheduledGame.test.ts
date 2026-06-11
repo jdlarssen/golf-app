@@ -3,6 +3,7 @@ import { buildSupabaseMock } from '@/tests/serverActionMocks';
 import { startScheduledGame } from './startScheduledGame';
 import type { GameMode } from '@/lib/scoring/modes/types';
 
+
 /**
  * Unit-tester for startScheduledGame (#544 — incomplete_sides-vakt,
  * #502 — started-flagg).
@@ -268,5 +269,166 @@ describe('startScheduledGame — started-flagg', () => {
 
     const result = await startScheduledGame(supabase as never, 'game-id');
     expect(result).toEqual({ ok: true, started: false });
+  });
+});
+
+// ─── unassigned_flights guard (#543) ─────────────────────────────────────────
+
+const VALID_TEE_2 = {
+  slope_mens: 113,
+  course_rating_mens: 72.0,
+  par_total_mens: 72,
+  slope_ladies: 113,
+  course_rating_ladies: 72.0,
+  par_total_ladies: 72,
+  slope_juniors: 113,
+  course_rating_juniors: 72.0,
+  par_total_juniors: 72,
+};
+
+function makeGameRow2(game_mode: GameMode) {
+  return {
+    id: 'game-id',
+    status: 'scheduled',
+    hcp_allowance_pct: 100,
+    tee_box_id: 'tee-id',
+    game_mode,
+    mode_config: { kind: game_mode },
+    tee_boxes: VALID_TEE_2,
+  };
+}
+
+function soloPlayer(userId: string, flightNumber: number | null) {
+  return {
+    user_id: userId,
+    tee_gender: 'M' as const,
+    team_number: null,
+    flight_number: flightNumber,
+    withdrawn_at: null,
+    users: { hcp_index: 10 },
+  };
+}
+
+describe('startScheduledGame — unassigned_flights guard (#543)', () => {
+  it('>4 flightless solo players (skins) → unassigned_flights', async () => {
+    const roster = Array.from({ length: 5 }, (_, i) =>
+      soloPlayer(`u${i}`, null),
+    );
+    const supabase = buildSupabaseMock([
+      { data: makeGameRow2('skins'), error: null },
+      { data: roster, error: null },
+    ]);
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: false, reason: 'unassigned_flights' });
+  });
+
+  it('>4 solo players, all with flights assigned → proceeds past guard', async () => {
+    // All 5 players have flight_number set; guard should pass.
+    const roster = [
+      soloPlayer('u1', 1),
+      soloPlayer('u2', 1),
+      soloPlayer('u3', 1),
+      soloPlayer('u4', 1),
+      soloPlayer('u5', 2),
+    ];
+    // After both guards pass → pending_players check → users → hcp updates → flip.
+    const supabase = buildSupabaseMock([
+      { data: makeGameRow2('skins'), error: null },
+      { data: roster, error: null },
+      {
+        data: roster.map((r) => ({
+          id: r.user_id,
+          email: `${r.user_id}@x.no`,
+          profile_completed_at: '2026-01-01',
+        })),
+        error: null,
+      },
+      // 5 hcp updates
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      // status flip
+      { data: null, error: null },
+    ]);
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: true });
+  });
+
+  it('≤4 flightless solo players → guard skips (single-flight rule)', async () => {
+    const roster = Array.from({ length: 4 }, (_, i) =>
+      soloPlayer(`u${i}`, null),
+    );
+    const supabase = buildSupabaseMock([
+      { data: makeGameRow2('stableford'), error: null },
+      { data: roster, error: null },
+      {
+        data: roster.map((r) => ({
+          id: r.user_id,
+          email: `${r.user_id}@x.no`,
+          profile_completed_at: '2026-01-01',
+        })),
+        error: null,
+      },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null }, // status flip
+    ]);
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: true });
+  });
+
+  it('wolf with 5 flightless players → guard skips (wolf always single-flight)', async () => {
+    const roster = Array.from({ length: 5 }, (_, i) =>
+      soloPlayer(`u${i}`, null),
+    );
+    const supabase = buildSupabaseMock([
+      { data: makeGameRow2('wolf'), error: null },
+      { data: roster, error: null },
+      {
+        data: roster.map((r) => ({
+          id: r.user_id,
+          email: `${r.user_id}@x.no`,
+          profile_completed_at: '2026-01-01',
+        })),
+        error: null,
+      },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null }, // status flip
+    ]);
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: true });
+  });
+
+  it('matchplay modes are unaffected — singles_matchplay skips flight guard', async () => {
+    // The incomplete_sides guard runs first for matchplay; if sides are complete,
+    // the flight guard must also be skipped (matchplay has 2 players — single-flight).
+    const roster = [
+      { user_id: 'u1', tee_gender: 'M' as const, team_number: 1, flight_number: 1, withdrawn_at: null, users: { hcp_index: 10 } },
+      { user_id: 'u2', tee_gender: 'M' as const, team_number: 2, flight_number: 2, withdrawn_at: null, users: { hcp_index: 10 } },
+    ];
+    const supabase = buildSupabaseMock([
+      { data: makeGameRow2('singles_matchplay'), error: null },
+      { data: roster, error: null },
+      {
+        data: [
+          { id: 'u1', email: 'a@x.no', profile_completed_at: '2026-01-01' },
+          { id: 'u2', email: 'b@x.no', profile_completed_at: '2026-01-01' },
+        ],
+        error: null,
+      },
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: null, error: null },
+    ]);
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: true });
   });
 });

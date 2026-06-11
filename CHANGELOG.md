@@ -21,6 +21,22 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#543](https://github.com/jdlarssen/golf-app/issues/543). I spill med fire eller færre deltagere går alle i én gruppe — uansett format. Det betyr at du og motstanderen din i en singelmatch kan se og skrive hverandres scorer på direkten, og at spill med wolf alltid behandles som én gruppe.
 
+### [1.112.1] - 2026-06-11 · #543
+
+> Store spill med mer enn fire spillere kan ikke lenger starte automatisk ved tee-tid før alle spillere er fordelt i flighter.
+
+<details>
+<summary>Teknisk</summary>
+
+[#543](https://github.com/jdlarssen/golf-app/issues/543). Start-vakt for uinndelte store spill.
+
+#### Changed
+- `lib/games/startScheduledGame.ts`: ny `unassigned_flights`-reason — henter `flight_number` fra `game_players`, og avviser start hvis `needsFlightAssignment` er sann (>4 aktive, ikke wolf, minst én uten flight). Vakta kjører etter `incomplete_sides`-vakta og gjenbruker den eksisterende roster-spørringen.
+- `lib/admin/gameErrorMessages.ts`: `ERROR_MESSAGES_EXISTING_GAME` får `unassigned_flights`-nøkkel med norsk melding.
+- `lib/games/startScheduledGame.test.ts`: 6 nye tester i egen blokk — >4 flightless solo blokkert, >4 fullt tildelt tillatt, ≤4 flightless tillatt (single-flight-regelen), wolf med 5 flightless tillatt, singles matchplay upåvirket.
+
+</details>
+
 ### [1.112.0] - 2026-06-11 · #543
 
 > I singelmatch og andre spill med inntil fire spillere ser og fører dere scorer for hverandre — uten ekstra oppsett.

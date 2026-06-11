@@ -11,6 +11,7 @@ import {
   type TeeGender,
 } from './teeRating';
 import { isMatchplayMode, isSideRosterComplete } from './matchplaySides';
+import { needsFlightAssignment } from './flightScope';
 
 export type StartScheduledGameResult =
   // `started` = denne calleren vant status-flippen (scheduled → active).
@@ -28,6 +29,7 @@ export type StartScheduledGameResult =
         | 'no_players'
         | 'pending_players'
         | 'incomplete_sides'
+        | 'unassigned_flights'
         | 'db_players'
         | 'db_game';
       pendingEmails?: string[];
@@ -92,7 +94,7 @@ export async function startScheduledGame(
   const { data: roster, error: rosterError } = await supabase
     .from('game_players')
     .select(
-      'user_id, tee_gender, team_number, withdrawn_at, users!game_players_user_id_fkey(hcp_index)',
+      'user_id, tee_gender, team_number, flight_number, withdrawn_at, users!game_players_user_id_fkey(hcp_index)',
     )
     .eq('game_id', gameId)
     .returns<
@@ -100,6 +102,7 @@ export async function startScheduledGame(
         user_id: string;
         tee_gender: TeeGender;
         team_number: number | null;
+        flight_number: number | null;
         withdrawn_at: string | null;
         users: { hcp_index: number | string } | null;
       }[]
@@ -118,6 +121,23 @@ export async function startScheduledGame(
     if (!isSideRosterComplete(activeRoster, teamSize)) {
       return { ok: false, reason: 'incomplete_sides' };
     }
+  }
+
+  // Guard: store solo-formater (>4 aktive, ikke wolf) må ha alle spillere
+  // fordelt i flighter før start. Matchplay og lag-formater er aldri rammet
+  // (≤4 aktive, eller flight = side/lag satt av validatorene).
+  // roster er allerede lastet over — vi mappar ned til FlightPlayer-formen.
+  if (
+    needsFlightAssignment(
+      game.game_mode as Parameters<typeof needsFlightAssignment>[0],
+      roster.map((r) => ({
+        user_id: r.user_id,
+        flight_number: r.flight_number,
+        withdrawn_at: r.withdrawn_at,
+      })),
+    )
+  ) {
+    return { ok: false, reason: 'unassigned_flights' };
   }
 
   // Defence-in-depth: refuse to start if any roster player is still pending
