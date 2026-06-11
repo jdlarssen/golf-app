@@ -1,5 +1,6 @@
 import { Suspense, cache } from 'react';
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
@@ -17,6 +18,7 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SettingRow, SettingList } from '@/components/ui/SettingRow';
 import { InstallButton } from '@/components/pwa/InstallButton';
+import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { fromSignedHcp, formatGolfboxHcp } from '@/lib/handicap/sign';
 
 type SearchParams = Promise<{
@@ -64,6 +66,7 @@ export default async function ProfilePage({
 }: {
   searchParams: SearchParams;
 }) {
+  const tProfile = await getTranslations('profile');
   const { userId } = await getProfileContext();
   if (!userId) {
     redirect('/login');
@@ -128,6 +131,12 @@ export default async function ProfilePage({
           />
           <SettingRow href="/profile/historikk" label="Min historikk" />
           <SettingRow href="/profile/statistikk" label="Klubbstatistikker" />
+          <div className="flex w-full items-center justify-between gap-3 min-h-[56px] px-5 py-3 border-t border-border first:border-t-0">
+            <span className="font-serif text-base font-medium text-text">
+              {tProfile('languageRowLabel')}
+            </span>
+            <LocaleSwitcher />
+          </div>
           <InstallButton />
           <SettingRow
             href="/profile/export"

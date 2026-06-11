@@ -17,7 +17,35 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.112.y — Flighter · én gruppe i små spill
+## 1.113.y — i18n · norsk og engelsk
+
+Issue [#552](https://github.com/jdlarssen/golf-app/issues/552). Første synlige del av flerspråligheten: alle innloggings- og profil-strenger hentes fra omsettbare kataloger, og det dukker opp en liten «Norsk / English»-velger på innloggingssiden og i profilinnstillingene.
+
+### [1.113.0] - 2026-06-11 · #552
+
+> Du kan nå bytte mellom norsk og engelsk på innloggingssiden — uten å ha logget inn. Valget huskes, og profilen din under «Språk» gir deg tilgang til samme velger etter innlogging.
+
+<details>
+<summary>Teknisk</summary>
+
+[#552](https://github.com/jdlarssen/golf-app/issues/552). i18n Fase 1 — første vertikale skive av oversettelsespipelinen.
+
+#### Added
+- `messages/no.json` + `messages/en.json`: nye namespaces `auth`, `onboarding`, `profile`, `localeSwitcher` med alle brukervendte strenger fra innloggings- og profilflyten.
+- `lib/i18n/localeActions.ts`: `setLocale` server-action — validerer locale mot `routing.locales`, setter `NEXT_LOCALE`-cookie (1 år, sameSite lax), oppdaterer `users.locale` best-effort hvis session finnes, redirecter til locale-korrekt versjon av nåværende side via `i18n/navigation.ts redirect`.
+- `components/LocaleSwitcher.tsx`: segmentert «Norsk / English»-velger (endonymer, data-testid-er for E2E, tap-targets ≥44 px) — brukt på innloggingssiden og i SettingList på Profil.
+
+#### Changed
+- `app/[locale]/(auth)/login/page.tsx` + `_components/SendCodeForm.tsx` + `_components/VerifyCodeForm.tsx`: alle strenger hentes via `getTranslations`/`useTranslations('auth.*')`; ukjent `?error=`-kode faller tilbake til `auth.errors.unknown`.
+- `app/[locale]/complete-profile/page.tsx` + `OnboardingHcpField.tsx`: tilsvarende for `onboarding.*`-namespace.
+- `app/[locale]/profile/page.tsx`: «Språk»-rad lagt til i `SettingList («Konto og mer»)` med inline `LocaleSwitcher`.
+- `app/[locale]/(auth)/login/actions.ts` (`verifyCode`): etter vellykket OTP-verifisering persisteres cookie-locale til `users.locale` dersom den er NULL — aldri overskriver eksisterende verdi.
+- `vitest.setup.ts`: `useTranslations`-stub lagt til i next-intl-mock — resolver nøkler mot `messages/no.json` slik at komponenttester fortsetter å asserte ekte norsk copy uten provider.
+
+</details>
+
+<details>
+<summary><strong>1.112.y — Flighter · én gruppe i små spill (8 oppføringer)</strong></summary>
 
 Issue [#543](https://github.com/jdlarssen/golf-app/issues/543). I spill med fire eller færre deltagere går alle i én gruppe — uansett format. Det betyr at du og motstanderen din i en singelmatch kan se og skrive hverandres scorer på direkten, og at spill med wolf alltid behandles som én gruppe.
 
@@ -170,6 +198,8 @@ Issue [#543](https://github.com/jdlarssen/golf-app/issues/543). I spill med fire
 #### Changed
 - `lib/games/startScheduledGame.ts`: `flight_number` hentes nå fra `game_players`-spørringen; ny `unassigned_flights`-vakt etter `incomplete_sides`-vakta — store solo-spill (>4 aktive, ikke wolf) starter ikke før alle spillere har flight. `StartScheduledGameResult` får `'unassigned_flights'` som ny `reason`.
 - `lib/admin/gameErrorMessages.ts`: norsk melding for `unassigned_flights` i `ERROR_MESSAGES_EXISTING_GAME`.
+
+</details>
 
 </details>
 

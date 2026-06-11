@@ -3,6 +3,7 @@ import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { BrandHero } from '@/components/ui/BrandHero';
+import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { SendCodeForm } from './_components/SendCodeForm';
 import { VerifyCodeForm } from './_components/VerifyCodeForm';
 
@@ -62,6 +63,9 @@ export default async function LoginPage({
     <AppShell>
       <div className="mt-10">
         <BrandHero className="mb-10" />
+        <div className="flex justify-center mb-4">
+          <LocaleSwitcher />
+        </div>
         <Card>
           {errorMessage && (
             <div role="alert" className="mb-4">

@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { consumeLoginRateLimit } from '@/lib/auth/loginRateLimit';
@@ -8,6 +9,7 @@ import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
 import { getClientIp } from '@/lib/admin/rateLimit';
 import { notifyInvitedToGame } from '@/lib/notifications/notifyInvitedToGame';
 import { distinctInviterIds } from '@/lib/friends/friendGraph';
+import { routing, type AppLocale } from '@/i18n/routing';
 
 // Step 1 of two-step OTP login. Verifies the email is either registered
 // (existing user) or has an open invitation, then asks Supabase to send a
@@ -192,6 +194,32 @@ export async function verifyCode(formData: FormData) {
     const code = msg.includes('expired') ? 'code_expired' : 'code_invalid';
     const qs = new URLSearchParams({ step: 'verify', email, error: code });
     redirect(`/login?${qs.toString()}`);
+  }
+
+  // i18n: persist the cookie-resolved locale to users.locale when it is NULL.
+  // Covers the "switched to English pre-auth, then logged in" path so the
+  // choice follows the user cross-device via the proxy negotiation chain.
+  // NULL-only: never overwrites a value already set by the user.
+  // Best-effort — must never block login.
+  try {
+    const cookieStore = await cookies();
+    const cookieLocale = cookieStore.get('NEXT_LOCALE')?.value;
+    if (cookieLocale && routing.locales.includes(cookieLocale as AppLocale)) {
+      const {
+        data: { user: authedUser },
+      } = await supabase.auth.getUser();
+      if (authedUser) {
+        // Use .is('locale', null) guard so we never overwrite an existing value
+        // even in the presence of a race condition.
+        await supabase
+          .from('users')
+          .update({ locale: cookieLocale })
+          .eq('id', authedUser.id)
+          .is('locale', null);
+      }
+    }
+  } catch (err) {
+    console.error('[login/verifyCode] locale-persist threw', err);
   }
 
   // Mark any pending invitation rows for this email as accepted, and pick

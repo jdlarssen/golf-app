@@ -33,6 +33,13 @@
     "hcpSavedAs": "Saved as",
     "hcpPlusshandicap": "plus handicap"
   },
+  "profile": {
+    "languageRowLabel": "Language"
+  },
+  "localeSwitcher": {
+    "no": "Norsk",
+    "en": "English"
+  },
   "auth": {
     "errors": {
       "rate_limited": "Slow down — try again in a moment.",
