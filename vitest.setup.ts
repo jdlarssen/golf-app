@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 import { vi } from 'vitest';
+import { createTranslator } from 'use-intl/core';
 import noMessages from './messages/no.json';
 
 // Stub next/navigation so components that call useRouter / usePathname /
@@ -23,25 +24,22 @@ vi.mock('next/navigation', () => ({
 // Stub next-intl's locale hook and useTranslations so components render
 // without a NextIntlClientProvider in unit tests. Default locale 'no' keeps
 // rendered output identical to the pre-i18n snapshots/assertions (#475).
-// useTranslations resolves keys against messages/no.json so component tests
-// keep asserting the real Norwegian copy.
-function resolveKey(catalog: Record<string, unknown>, dotPath: string): string {
-  const parts = dotPath.split('.');
-  let node: unknown = catalog;
-  for (const part of parts) {
-    if (node == null || typeof node !== 'object') return dotPath;
-    node = (node as Record<string, unknown>)[part];
-  }
-  return typeof node === 'string' ? node : dotPath;
-}
-
+//
+// Uses next-intl's real createTranslator (from use-intl/core) so ICU
+// plurals/interpolation resolve correctly in component tests. Missing keys
+// return the full dot-path (same fallback as the old hand-rolled resolver).
 function makeTranslator(namespace: string) {
-  return function t(key: string): string {
-    return resolveKey(
-      noMessages as Record<string, unknown>,
-      namespace ? `${namespace}.${key}` : key,
-    );
-  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return createTranslator<any, any>({
+    locale: 'no',
+    messages: noMessages,
+    namespace: namespace || undefined,
+    onError: () => {
+      // Suppress errors — missing keys fall back to the key path below.
+    },
+    getMessageFallback: ({ namespace: ns, key }) =>
+      ns ? `${ns}.${key}` : key,
+  });
 }
 
 vi.mock('next-intl', async (importOriginal) => {

@@ -1,4 +1,10 @@
 import type { AppLocale } from '@/i18n/routing';
+import {
+  formatTeeOffDate as formatTeeOffDateNb,
+  formatTeeOffTime as formatTeeOffTimeNb,
+} from '@/lib/format/teeOff';
+import { formatShortDateNbWithYear as formatShortDateNbWithYearLegacy } from '@/lib/format/date';
+import { formatCountdown as formatCountdownNb } from '@/lib/format/countdown';
 
 /**
  * Locale-aware date/number formatting (#475).
@@ -61,4 +67,122 @@ export function formatNumber(
   options?: Intl.NumberFormatOptions,
 ): string {
   return value.toLocaleString(intlLocaleTag(locale), options);
+}
+
+// ---------------------------------------------------------------------------
+// Locale-aware tee-off / countdown helpers (#554 Fase 2a prerequisites).
+//
+// Norwegian ('no') path DELEGATES to the legacy hand-rolled helpers so output
+// is byte-identical to what the existing tests assert. Non-Norwegian paths
+// render via Intl with Europe/Oslo timezone so the wall-clock is always Oslo.
+//
+// Call-sites in the core game loop pass the active locale from useLocale() or
+// getLocale() — these helpers are pure and Type A-testable.
+// ---------------------------------------------------------------------------
+
+const OSLO = 'Europe/Oslo';
+
+/**
+ * Locale-aware tee-off time string. Output: "14:24" for all locales
+ * (24-hour HH:MM, Oslo wall-clock — same format regardless of locale).
+ * Delegates to the legacy helper for 'no' to guarantee byte-identical output.
+ */
+export function formatTeeOffTimeLocale(date: Date, locale: AppLocale): string {
+  if (locale === 'no') return formatTeeOffTimeNb(date);
+  // All locales: 24-hour HH:MM in Oslo time.
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: OSLO,
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+  }).formatToParts(date);
+  const hour = parts.find((p) => p.type === 'hour')?.value ?? '00';
+  const minute = parts.find((p) => p.type === 'minute')?.value ?? '00';
+  // Intl may render midnight as '24' on some engines — normalise.
+  const h = hour === '24' ? '00' : hour;
+  return `${h}:${minute}`;
+}
+
+/**
+ * Locale-aware tee-off date string.
+ *
+ * Norwegian ('no'): delegates to legacy helper → "tir. 12. mai" (byte-identical).
+ * English ('en'):   "Tue 12 May" — weekday-abbrev (no dot), day, month-abbrev,
+ *                   matching the structure of the Norwegian output.
+ */
+export function formatTeeOffDateLocale(date: Date, locale: AppLocale): string {
+  if (locale === 'no') return formatTeeOffDateNb(date);
+  // en-GB: weekday short ("Tue"), day numeric, month short ("May"), no year.
+  const fmt = new Intl.DateTimeFormat('en-GB', {
+    timeZone: OSLO,
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+  // formatToParts to control the output structure precisely.
+  const parts = fmt.formatToParts(date);
+  const weekday = parts.find((p) => p.type === 'weekday')?.value ?? '';
+  const day = parts.find((p) => p.type === 'day')?.value ?? '';
+  const month = parts.find((p) => p.type === 'month')?.value ?? '';
+  return `${weekday} ${day} ${month}`;
+}
+
+/**
+ * Locale-aware short date with year.
+ *
+ * Norwegian ('no'): delegates to legacy helper → "14. mai 2026" (byte-identical).
+ * English ('en'):   "14 May 2026" — day numeric, month short, year numeric (en-GB).
+ *
+ * Note: the legacy helper reads local (server/browser) TZ via Date#getDate etc.
+ * For values that must be TZ-stable (tee-off times), use formatTeeOffDateLocale.
+ * This helper is used for admin/slett-page dates where local-TZ behaviour is
+ * acceptable (matches the legacy helper's existing behaviour for 'no').
+ */
+export function formatShortDateWithYearLocale(
+  input: Date | string,
+  locale: AppLocale,
+): string {
+  if (locale === 'no') return formatShortDateNbWithYearLegacy(input);
+  const d = input instanceof Date ? input : new Date(input);
+  return d.toLocaleDateString(intlLocaleTag(locale), {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+/**
+ * Locale-aware countdown string.
+ *
+ * Norwegian ('no'): delegates to legacy helper (byte-identical output).
+ * English ('en'):   analogous English phrasing:
+ *   ≤0 ms     → "Starting soon"
+ *   <60 s     → "Starting in {n}s"
+ *   <60 min   → "Starting in {n} min"
+ *   <24 h     → "Starting in {h}h {m} min"
+ *   ≥24 h     → "Starting in {n} day" / "Starting in {n} days"
+ */
+export function formatCountdownLocale(
+  msUntilTeeOff: number,
+  locale: AppLocale,
+): string {
+  if (locale === 'no') return formatCountdownNb(msUntilTeeOff);
+
+  // English path — same arithmetic as the Norwegian helper.
+  if (msUntilTeeOff <= 0) return 'Starting soon';
+
+  const totalSeconds = Math.floor(msUntilTeeOff / 1000);
+  if (totalSeconds < 60) return `Starting in ${totalSeconds}s`;
+
+  const totalMinutes = Math.floor(totalSeconds / 60);
+  if (totalMinutes < 60) return `Starting in ${totalMinutes} min`;
+
+  const totalHours = Math.floor(totalMinutes / 60);
+  if (totalHours < 24) {
+    const minutes = totalMinutes - totalHours * 60;
+    return `Starting in ${totalHours}h ${minutes} min`;
+  }
+
+  const days = Math.floor(totalHours / 24);
+  return `Starting in ${days} ${days === 1 ? 'day' : 'days'}`;
 }

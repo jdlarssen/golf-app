@@ -40,6 +40,42 @@
     "no": "Norsk",
     "en": "English"
   },
+  "gameStatus": {
+    "draft": "Draft",
+    "scheduled": "Scheduled",
+    "active": "In progress",
+    "finished": "Finished"
+  },
+  "modes": {
+    "best_ball": "Best ball",
+    "stableford": "Stableford",
+    "modified_stableford": "Modified Stableford",
+    "singles_matchplay": "Match play",
+    "solo_strokeplay": "Stroke play",
+    "texas_scramble": "Texas Scramble",
+    "ambrose": "Ambrose",
+    "florida_scramble": "Florida Scramble",
+    "fourball_matchplay": "Four-ball match play",
+    "foursomes_matchplay": "Foursomes",
+    "greensome_matchplay": "Greensome",
+    "chapman_matchplay": "Chapman",
+    "wolf": "Wolf",
+    "nassau": "Nassau",
+    "skins": "Skins",
+    "bingo_bango_bongo": "Bingo Bango Bongo",
+    "nines": "Nines / Split Sixes",
+    "round_robin": "Round Robin",
+    "acey_deucey": "Acey Deucey",
+    "shamble": "Shamble / Champagne Scramble",
+    "patsome": "Patsome",
+    "gruesome_matchplay": "Gruesome",
+    "modeVariants": {
+      "stableford_team": "4BBB Stableford",
+      "modified_stableford_team": "4BBB Modified Stableford",
+      "shamble_champagne": "Champagne Scramble",
+      "shamble_shamble": "Shamble"
+    }
+  },
   "auth": {
     "errors": {
       "rate_limited": "Slow down — try again in a moment.",

@@ -49,3 +49,39 @@ export function formatDisplayLabel(
   }
   return MODE_LABELS[mode];
 }
+
+/**
+ * Returns the catalog key path (under the `modes` namespace) that corresponds
+ * to the display label for the given mode/config combination.
+ *
+ * Used by core-loop components that translate via `t()` instead of reading
+ * the Norwegian constant directly, and by drift-guard tests that assert the
+ * catalog key resolves to the same string as `formatDisplayLabel`.
+ *
+ *  - Stableford team_size 2        → 'modeVariants.stableford_team'
+ *  - Modified stableford team_size 2 → 'modeVariants.modified_stableford_team'
+ *  - Shamble champagne variant     → 'modeVariants.shamble_champagne'
+ *  - Shamble shamble variant       → 'modeVariants.shamble_shamble'
+ *  - All other modes               → the mode code itself (e.g. 'solo_strokeplay')
+ */
+export function formatDisplayLabelKey(
+  mode: GameMode,
+  modeConfig: GameModeConfig,
+): string {
+  if (mode === 'shamble' && modeConfig.kind === 'shamble') {
+    return modeConfig.shamble_variant === 'champagne'
+      ? 'modeVariants.shamble_champagne'
+      : 'modeVariants.shamble_shamble';
+  }
+  if (
+    isStablefordFamily(mode) &&
+    (modeConfig.kind === 'stableford' ||
+      modeConfig.kind === 'modified_stableford') &&
+    modeConfig.team_size === 2
+  ) {
+    return mode === 'modified_stableford'
+      ? 'modeVariants.modified_stableford_team'
+      : 'modeVariants.stableford_team';
+  }
+  return mode;
+}
