@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { formatGolfboxHcp } from '@/lib/handicap/sign';
 
 const INPUT_CLASS =
@@ -15,6 +16,7 @@ const INPUT_CLASS =
 export function OnboardingHcpField() {
   const [magnitude, setMagnitude] = useState('');
   const [isPlus, setIsPlus] = useState(false);
+  const t = useTranslations('onboarding');
   const num = Number.parseFloat(magnitude.replace(',', '.'));
   const hasMagnitude = Number.isFinite(num);
 
@@ -24,14 +26,14 @@ export function OnboardingHcpField() {
         htmlFor="hcp_index"
         className="block text-sm font-medium text-text mb-1.5"
       >
-        Handicap-index
+        {t('hcpLabel')}
       </label>
       <div className="flex gap-1.5">
         <button
           type="button"
           onClick={() => setIsPlus((v) => !v)}
           aria-pressed={isPlus}
-          aria-label="Plusshandicap"
+          aria-label={t('hcpPlusLabel')}
           className={`flex min-h-[46px] w-11 shrink-0 items-center justify-center rounded-xl border text-lg font-semibold transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
             isPlus
               ? 'border-primary bg-primary-soft text-text shadow-[inset_0_0_0_1px_var(--primary)]'
@@ -58,14 +60,14 @@ export function OnboardingHcpField() {
       <p className="mt-1.5 text-xs text-muted">
         {isPlus && hasMagnitude ? (
           <>
-            Lagres som{' '}
+            {t('hcpSavedAs')}{' '}
             <span className="font-medium text-text">
               {formatGolfboxHcp(num, true)}
             </span>{' '}
-            · plusshandicap
+            · {t('hcpPlusshandicap')}
           </>
         ) : (
-          'Tallet du har i Golfbox akkurat nå'
+          t('hcpGolfboxHelper')
         )}
       </p>
     </div>

@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
@@ -22,13 +23,16 @@ function safeNext(value: string | undefined): string {
     : '/';
 }
 
-const ERROR_MESSAGES: Record<string, string> = {
-  name_required: 'Du må fylle inn navn.',
-  hcp_invalid: 'Handicap-index må være et tall mellom -10 og 54,0.',
-  gender_required: 'Velg kjønn.',
-  level_invalid: 'Ugyldig spillerklasse.',
-  unknown: 'Noe gikk galt. Prøv igjen.',
-};
+// The set of valid error codes that map to a catalog key.
+const KNOWN_ERROR_CODES = new Set([
+  'name_required',
+  'hcp_invalid',
+  'gender_required',
+  'level_invalid',
+  'unknown',
+] as const);
+
+type ErrorCode = typeof KNOWN_ERROR_CODES extends Set<infer T> ? T : never;
 
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
@@ -40,6 +44,8 @@ export default async function CompleteProfile({
 }: {
   searchParams: SearchParams;
 }) {
+  const t = await getTranslations('onboarding');
+
   const userId = await getProxyVerifiedUserId();
   if (!userId) {
     redirect('/login');
@@ -64,20 +70,26 @@ export default async function CompleteProfile({
     redirect(next);
   }
 
-  const errorCode = first(params.error);
-  const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
+  const errorCodeRaw = first(params.error);
+  const errorCode: ErrorCode | undefined =
+    errorCodeRaw && KNOWN_ERROR_CODES.has(errorCodeRaw as ErrorCode)
+      ? (errorCodeRaw as ErrorCode)
+      : errorCodeRaw
+        ? 'unknown'
+        : undefined;
+  const errorMessage = errorCode ? t(`errors.${errorCode}`) : undefined;
 
   return (
     <AppShell>
       <header className="mb-8">
         <Kicker tone="accent" className="mb-2">
-          Velkommen til Tørny
+          {t('kicker')}
         </Kicker>
         <h1 className="font-serif text-3xl font-medium tracking-tight text-text leading-tight">
-          Fullfør profilen din
+          {t('heading')}
         </h1>
         <p className="font-sans text-sm leading-relaxed text-muted mt-2">
-          Fortell oss litt om deg, så er du klar til å spille.
+          {t('subheading')}
         </p>
       </header>
 
@@ -94,7 +106,7 @@ export default async function CompleteProfile({
             id="name"
             name="name"
             type="text"
-            label="Navn"
+            label={t('nameLabel')}
             autoComplete="name"
             required
           />
@@ -103,8 +115,8 @@ export default async function CompleteProfile({
             id="nickname"
             name="nickname"
             type="text"
-            label="Kallenavn"
-            hint="Valgfritt — navnet du går under på banen"
+            label={t('nicknameLabel')}
+            hint={t('nicknameHint')}
             autoComplete="nickname"
           />
 
@@ -112,48 +124,48 @@ export default async function CompleteProfile({
 
           <fieldset>
             <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-              Kjønn
+              {t('genderLegend')}
             </legend>
             <div className="mt-2 flex gap-4">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="radio" name="gender" value="mens" required />
-                <span className="font-serif text-base text-text">Herre</span>
+                <span className="font-serif text-base text-text">{t('genderMale')}</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="radio" name="gender" value="ladies" required />
-                <span className="font-serif text-base text-text">Dame</span>
+                <span className="font-serif text-base text-text">{t('genderFemale')}</span>
               </label>
             </div>
             <p className="mt-1 text-xs text-muted">
-              Brukes til å foreslå riktig tee og beregne course handicap riktig.
+              {t('genderHint')}
             </p>
           </fieldset>
 
           <fieldset>
             <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-              Spillerklasse
+              {t('levelLegend')}
             </legend>
             <div className="mt-2 flex gap-4">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="radio" name="level" value="junior" />
-                <span className="font-serif text-base text-text">Junior</span>
+                <span className="font-serif text-base text-text">{t('levelJunior')}</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="radio" name="level" value="normal" defaultChecked />
-                <span className="font-serif text-base text-text">Voksen</span>
+                <span className="font-serif text-base text-text">{t('levelAdult')}</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="radio" name="level" value="senior" />
-                <span className="font-serif text-base text-text">Senior</span>
+                <span className="font-serif text-base text-text">{t('levelSenior')}</span>
               </label>
             </div>
             <p className="mt-1 text-xs text-muted">
-              Junior gir juniortee når banen har en. Senior er en informasjons-tag for nå.
+              {t('levelHint')}
             </p>
           </fieldset>
 
-          <SubmitButton className="w-full mt-2" pendingLabel="Lagrer …">
-            Sett i gang
+          <SubmitButton className="w-full mt-2" pendingLabel={t('submitPending')}>
+            {t('submitButton')}
           </SubmitButton>
         </form>
       </Card>
