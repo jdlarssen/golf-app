@@ -108,3 +108,53 @@ The work is high quality and near-complete: gates all reproduce (tsc 0, 3260/326
 
 **Recommended (NIT, can fold into the same fix or a follow-up):**
 - Extract the raw `'(ukjent)'` / `'Spiller'` null-name fallbacks listed in NIT #2 to catalog keys (several keys already exist).
+
+---
+
+## Re-evaluation (round 2)
+
+**Fix commit:** `f69ae1c` (`refactor(i18n): fix evaluator findings …`)
+**Branch HEAD:** `f69ae1c` vs `origin/main` `2e983d8`
+**Re-evaluator:** fresh-context skeptical re-verification (2026-06-12), independent gate re-run + diff audit.
+
+The fix commit touches exactly 7 files (5 code + both catalogs), `63 +/36 −`. Tight, scoped to the two findings. Nothing else moved (`git diff --stat 6c15f3e..HEAD` confirms).
+
+### BLOCKER #1 (raw `next/navigation` redirect with bare paths) — **RESOLVED**
+
+- **Both leaderboard pages migrated.** `leaderboard/page.tsx:6` and `leaderboard/holes/page.tsx:4` now `import { redirect } from '@/i18n/navigation'`; `notFound` stays on `next/navigation`. All 5 former bare-path call-sites now pass the object form with `locale` from `getLocale()`:
+  - `leaderboard/page.tsx`: `:239` `redirect({ href: '/login', locale })`, `:257` `redirect({ href: \`/games/${id}\` …, locale })`. `locale` resolved at `:237` (`await getLocale()`).
+  - `leaderboard/holes/page.tsx`: `:102` `/login`, `:119` `/games/${id}`, `:1000` `/games/${gameId}/leaderboard?mode=…` (each `{ href, locale }`; `locale` at `:100`, plus a fresh `await getLocale()` inline at the `:1000` deep-body site).
+- **Whole-scope grep re-run** (`app/[locale]/games/[id]/**`, `components/hole/**`): the ONLY `from 'next/navigation'` imports remaining are `notFound` (12 files) and one pre-existing `useRouter` in `PreRoundLeaderboard.tsx:4` — used solely for `router.refresh()` (same-route, locale-neutral; file untouched by the phase, allowed per the prompt's hooks carve-out). **Zero `redirect` imported from `next/navigation` anywhere in scope.** Every `redirect(` call across the entire `games/[id]` tree (actions + pages, ~40 sites) is the `@/i18n/navigation` object form. Criterion 6 now holds as written and as behavior — the EN draft-game bounce and the holes mode-redirect keep the `/en` prefix.
+
+### NIT #2 (raw Norwegian null-name fallbacks) — **RESOLVED for the enumerated set; one residual pre-existing variant noted**
+
+- All call-sites the round-1 NIT named are now catalog-driven: `(home)/page.tsx` (5×, `t`/`tHome` bound to `game.home` → `t('unknownPlayer')`); `leaderboard/holes/page.tsx` (10 body fns, each adds `const tCommon = getTranslations('leaderboard.common')` → `tCommon('unknownPlayer')`); `RoundRobinHolesView.tsx` (fallback now threaded as a param from `t('common.unknownPlayer')`, fixing the prior hardcode); `holes/[holeNumber]/page.tsx:640,684` (`tEntry('playerFallback')`, namespace `holes.entry`).
+- **New catalog keys verified byte-correct in BOTH catalogs:** `game.home.unknownPlayer` = `'(ukjent)'` / `'(unknown)'`; `leaderboard.common.unknownPlayer` = `'(ukjent)'` / `'(unknown)'`; `holes.entry.playerFallback` = `'Spiller'` / `'Player'`. All 5 distinct key references in the fix resolve to existing keys (no raw-key render). `catalogParity.test.ts` green (3/3) → full no/en symmetry preserved.
+- **Contract's stated verification (æøå-grep) passes clean:** after stripping comments, the only code-literal special-char hit in scope is `scheduled: 'påmelding'` (`(home)/page.tsx:75`) — a `StatusChipTone` union id, not copy. Same single PASS hit as round 1.
+- **Residual (not a regression, not blocking):** four `'(ukjent spiller)'` literals survive — two UI-rendered (`submit/page.tsx:241` scorecard `enteredByName`; `approve/page.tsx:206,209` pending-player `displayName`) and two mail/notify payloads (`submit/actions.ts:128`, `approve/actions.ts` — Phase M, correctly out of scope). The two UI ones are **pre-existing on `origin/main`** (verified: `git show origin/main:…submit/page.tsx` and `…approve/page.tsx` both carry them) and **predate this phase** (present at `cf00d55^`). Round 1's NIT enumerated only the bare `'(ukjent)'` / `'Spiller'` variants and missed the `'(ukjent spiller)'` suffix variant in these two pages. Invisible to the contract's æøå-grep (no special chars); both guarded by an explicit "name is non-null in active games" invariant comment → defensive-only, fires only on a null `users.name` that the publish-gate prevents. Same NIT class as round 1, lower severity (pre-existing extraction gap, not introduced). Worth a small follow-up for 100% EN coverage; does not gate this contract whose stated verification method passes.
+
+### `userId as string` cast (`leaderboard/page.tsx:273`) — **SAFE by construction**
+
+`if (!userId) redirect({ href: '/login', locale })` at `:239` throws (`NEXT_REDIRECT`) before any later code runs, so `userId` is provably non-null at `:273`. The cast became *necessary* (not sloppy) because next-intl's `createNavigation` `redirect` is typed to return `void`, not Next-native's `never` — so TS no longer auto-narrows `userId` past the guard. Minimal, correct, unreachable-null.
+
+### Gates (re-run independently at `f69ae1c`)
+
+| Gate | Result | Verdict |
+|------|--------|---------|
+| `npx tsc --noEmit` | exit 0, no output | PASS |
+| `npm run test` | **3260 passed (262 files)**, 0 failures, 29.18s | PASS |
+| `npm run build` | **✓ Compiled successfully**, **82 ◐** PPR routes | PASS |
+| `catalogParity.test.ts` | 3 passed | PASS |
+
+PPR shape unchanged: 82 ◐ (matches round 1). Every player-facing `games/[id]` route stays ◐; the only ƒ under `games/[id]` is `leaderboard/export` (a `route.ts` Response handler — dynamic by default on main and HEAD, not new force-dynamic). No regression.
+
+### Regression sweep (diff `6c15f3e..HEAD`)
+
+- Only the 7 expected files changed; no collateral edits.
+- **Zero** new Norwegian special-char string literals added to code.
+- All catalog keys referenced by the fix exist in both catalogs (no raw-key render risk).
+- Norwegian byte-identical preserved (full suite green with zero assertion edits; the round-1 5/5 byte-checks are untouched by this commit).
+
+### Final verdict: **ACCEPT**
+
+Both round-1 findings are genuinely fixed. The BLOCKER (criterion 6) is fully resolved — every `redirect` in the `games/[id]` scope is now the locale-aware `@/i18n/navigation` object form, EN users keep their `/en` prefix on all bounces. The NIT's enumerated fallbacks are catalog-driven with byte-correct keys in both locales. The `userId` cast is provably safe. All four gates reproduce green (tsc 0, 3260/3260, build 82 ◐, parity 3/3), the contract's æøå-grep passes, and no regression entered. The one residual `'(ukjent spiller)'` in `submit`/`approve` pages is a **pre-existing** extraction gap (origin/main carries it), out of round 1's named scope, behind a non-null invariant — a recommended follow-up, not a blocker. Contract success criteria met.
