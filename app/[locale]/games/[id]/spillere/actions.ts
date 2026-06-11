@@ -1,6 +1,7 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { getLocale } from 'next-intl/server';
+import { redirect } from '@/i18n/navigation';
 import { revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
@@ -31,13 +32,14 @@ export async function removePlayerFromGame(
   gameId: string,
   formData: FormData,
 ): Promise<void> {
+  const locale = await getLocale();
   const supabase = await getServerClient();
   const ctx = await requireAdminOrCreator(supabase, gameId);
   const detailPath = detailPathFor(ctx.isAdmin, gameId);
 
   const playerUserId = String(formData.get('user_id') ?? '').trim();
   if (!playerUserId) {
-    redirect(`${detailPath}?error=remove_missing_user`);
+    redirect({ href: `${detailPath}?error=remove_missing_user` as string, locale });
   }
 
   const { data: game } = await supabase
@@ -45,10 +47,10 @@ export async function removePlayerFromGame(
     .select('status')
     .eq('id', gameId)
     .single<{ status: GameStatus }>();
-  if (!game) redirect(`${detailPath}?error=not_found`);
+  if (!game) redirect({ href: `${detailPath}?error=not_found` as string, locale });
   if (game!.status !== 'draft' && game!.status !== 'scheduled') {
     // Active/finished: removal isn't allowed — use withdrawal instead.
-    redirect(`${detailPath}?error=roster_locked`);
+    redirect({ href: `${detailPath}?error=roster_locked` as string, locale });
   }
 
   const { error } = await supabase
@@ -58,11 +60,11 @@ export async function removePlayerFromGame(
     .eq('user_id', playerUserId);
   if (error) {
     console.error('[removePlayerFromGame] delete failed', error);
-    redirect(`${detailPath}?error=db_players`);
+    redirect({ href: `${detailPath}?error=db_players` as string, locale });
   }
 
   revalidateTag(`game-${gameId}`, 'max');
-  redirect(`${detailPath}?status=player_removed`);
+  redirect({ href: `${detailPath}?status=player_removed` as string, locale });
 }
 
 /**
@@ -75,13 +77,14 @@ export async function cancelGameInvitation(
   gameId: string,
   formData: FormData,
 ): Promise<void> {
+  const locale = await getLocale();
   const supabase = await getServerClient();
   const ctx = await requireAdminOrCreator(supabase, gameId);
   const detailPath = detailPathFor(ctx.isAdmin, gameId);
 
   const invitationId = String(formData.get('invitation_id') ?? '').trim();
   if (!invitationId) {
-    redirect(`${detailPath}?error=cancel_missing_invitation`);
+    redirect({ href: `${detailPath}?error=cancel_missing_invitation` as string, locale });
   }
 
   const { error } = await supabase
@@ -91,9 +94,9 @@ export async function cancelGameInvitation(
     .eq('game_id', gameId);
   if (error) {
     console.error('[cancelGameInvitation] delete failed', error);
-    redirect(`${detailPath}?error=cancel_failed`);
+    redirect({ href: `${detailPath}?error=cancel_failed` as string, locale });
   }
 
   revalidateTag(`game-${gameId}`, 'max');
-  redirect(`${detailPath}?status=invite_cancelled`);
+  redirect({ href: `${detailPath}?status=invite_cancelled` as string, locale });
 }

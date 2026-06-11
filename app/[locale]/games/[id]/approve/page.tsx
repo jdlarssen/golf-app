@@ -1,7 +1,8 @@
 import { Suspense, cache } from 'react';
 import { useTranslations } from 'next-intl';
-import { getTranslations } from 'next-intl/server';
-import { notFound, redirect } from 'next/navigation';
+import { getTranslations, getLocale } from 'next-intl/server';
+import { notFound } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
 import { after } from 'next/server';
 import { TopBar } from '@/components/ui/TopBar';
 import { getServerClient } from '@/lib/supabase/server';
@@ -73,8 +74,10 @@ export default async function ApprovePage({
   const statusBanner = statusKey ? tApprove(`banners.${statusKey}` as Parameters<typeof tApprove>[0]) : undefined;
   const errorMessage = errorKey ? tApprove(`errors.${errorKey}` as Parameters<typeof tApprove>[0]) : undefined;
 
-  const { userId } = await getApproveContext();
-  if (!userId) redirect('/login');
+  const locale = await getLocale();
+  const { userId: userIdOrNull } = await getApproveContext();
+  if (!userIdOrNull) redirect({ href: '/login', locale });
+  const userId = userIdOrNull as string;
 
   // games + game_players from the tag-cached helper. See
   // lib/games/getGameWithPlayers.ts for cache + authz rationale.
@@ -83,7 +86,7 @@ export default async function ApprovePage({
   const { game, players } = result;
 
   if (game.status !== 'active') {
-    redirect(`/games/${id}`);
+    redirect({ href: `/games/${id}` as string, locale });
   }
 
   const me = players.find((p) => p.user_id === userId);

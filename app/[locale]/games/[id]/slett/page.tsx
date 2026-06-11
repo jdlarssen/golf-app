@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { AppShell } from '@/components/ui/AppShell';
@@ -77,7 +78,7 @@ export default async function CreatorDeleteGamePage({
   // active/finished → only an admin can remove them (from Sekretariatet), so send
   // the creator back to game-home.
   if (game.status !== 'draft' && game.status !== 'scheduled') {
-    redirect(`/games/${id}`);
+    redirect({ href: `/games/${id}` as string, locale });
   }
 
   // Count child rows so the confirmation copy is accurate. A creator-who-plays

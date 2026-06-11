@@ -1,6 +1,7 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { getLocale } from 'next-intl/server';
+import { redirect } from '@/i18n/navigation';
 import { revalidateTag } from 'next/cache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
@@ -26,11 +27,13 @@ import type { GameMode } from '@/lib/scoring/modes/types';
  * the admin polling the app.
  */
 export async function submitScorecard(gameId: string) {
+  const locale = await getLocale();
   const supabase = await getServerClient();
   const {
-    data: { user },
+    data: { user: maybeUser },
   } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  if (!maybeUser) redirect({ href: '/login', locale });
+  const user = maybeUser!;
 
   // Refuse to submit if the game isn't active. Draft games shouldn't have
   // scores yet and finished games are read-only. `name` is fetched here so
@@ -49,7 +52,7 @@ export async function submitScorecard(gameId: string) {
     }>();
 
   if (!game || game.status !== 'active') {
-    redirect(`/games/${gameId}/submit?error=not_active`);
+    redirect({ href: `/games/${gameId}/submit?error=not_active` as string, locale });
   }
 
   // Withdrawn (#387): a trukket spiller can't submit. The submit page redirects
@@ -63,7 +66,7 @@ export async function submitScorecard(gameId: string) {
     .maybeSingle<{ withdrawn_at: string | null }>();
 
   if (meRow?.withdrawn_at) {
-    redirect(`/games/${gameId}`);
+    redirect({ href: `/games/${gameId}` as string, locale });
   }
 
   const { data: updated, error } = await supabase
@@ -79,7 +82,7 @@ export async function submitScorecard(gameId: string) {
     .select('user_id');
 
   if (error) {
-    redirect(`/games/${gameId}/submit?error=db`);
+    redirect({ href: `/games/${gameId}/submit?error=db` as string, locale });
   }
 
   // Zero rows = already submitted (re-click or race). Skip notify + mail
@@ -87,7 +90,7 @@ export async function submitScorecard(gameId: string) {
   if ((updated?.length ?? 0) === 0) {
     revalidateTag(`game-${gameId}`, 'max');
     revalidatePath(`/games/${gameId}`);
-    redirect(`/games/${gameId}?status=submitted`);
+    redirect({ href: `/games/${gameId}?status=submitted` as string, locale });
   }
 
   // Best-effort admin notification + peer in-app varsel. Tre queries fyres
@@ -214,5 +217,5 @@ export async function submitScorecard(gameId: string) {
 
   revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/games/${gameId}`);
-  redirect(`/games/${gameId}?status=submitted`);
+  redirect({ href: `/games/${gameId}?status=submitted` as string, locale });
 }

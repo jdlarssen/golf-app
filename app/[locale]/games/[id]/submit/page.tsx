@@ -1,8 +1,9 @@
 import { Suspense, cache } from 'react';
 import { useTranslations } from 'next-intl';
-import { getTranslations } from 'next-intl/server';
+import { getTranslations, getLocale } from 'next-intl/server';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
@@ -71,11 +72,13 @@ export default async function SubmitPage({
   const { id } = await params;
   const sp = await searchParams;
   const t = await getTranslations('game.submit');
+  const locale = await getLocale();
   const errorKey = first(sp.error);
   const errorMessage = errorKey ? t(`errors.${errorKey}` as Parameters<typeof t>[0]) : undefined;
 
-  const { supabase, userId } = await getSubmitContext();
-  if (!userId) redirect('/login');
+  const { supabase, userId: userIdOrNull } = await getSubmitContext();
+  if (!userIdOrNull) redirect({ href: '/login', locale });
+  const userId = userIdOrNull as string;
 
   // games + game_players from the tag-cached helper, course/tee_box joins
   // direct (kept out of the cache since invalidating on course edits would
@@ -97,7 +100,7 @@ export default async function SubmitPage({
 
   // Only active games can be submitted to. Anything else: bounce home.
   if (game.status !== 'active') {
-    redirect(`/games/${id}`);
+    redirect({ href: `/games/${id}` as string, locale });
   }
 
   const me = players.find((p) => p.user_id === userId);
@@ -107,12 +110,12 @@ export default async function SubmitPage({
   // which renders the «Du har trukket deg»-banner + Angre. Defense-in-depth —
   // the submitScorecard action refuses a direct POST too.
   if (me.withdrawn_at) {
-    redirect(`/games/${id}`);
+    redirect({ href: `/games/${id}` as string, locale });
   }
 
   // Already submitted: nothing more to do here.
   if (me.submitted_at) {
-    redirect(`/games/${id}`);
+    redirect({ href: `/games/${id}` as string, locale });
   }
 
   if (courseTeeRes.error || !courseTeeRes.data) notFound();

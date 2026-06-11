@@ -1,5 +1,6 @@
 import { getTranslations, getLocale } from 'next-intl/server';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
@@ -65,7 +66,7 @@ export default async function TrekkFraPage({
 
   const userId = await getProxyVerifiedUserId();
   if (!userId) {
-    redirect('/login');
+    redirect({ href: '/login', locale });
   }
 
   const supabase = await getServerClient();
@@ -88,7 +89,7 @@ export default async function TrekkFraPage({
     .maybeSingle<{ user_id: string }>();
 
   if (!player) {
-    redirect(`/games/${id}`);
+    redirect({ href: `/games/${id}` as string, locale });
   }
 
   const isPreStart = game.status === 'draft' || game.status === 'scheduled';
@@ -96,7 +97,7 @@ export default async function TrekkFraPage({
     game.status === 'active' && supportsWithdrawal(game.game_mode);
 
   if (!isPreStart && !isActiveWithdrawable) {
-    redirect(`/games/${id}`);
+    redirect({ href: `/games/${id}` as string, locale });
   }
 
   const teeOffDate = game.scheduled_tee_off_at

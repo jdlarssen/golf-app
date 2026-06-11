@@ -4,7 +4,8 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import type { AppLocale } from '@/i18n/routing';
 import { formatNumber, formatTeeOffTimeLocale, formatTeeOffDateLocale } from '@/lib/i18n/format';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
 import { after } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
@@ -228,9 +229,10 @@ export default async function GameHomePage({
   // eslint-disable-next-line react-hooks/purity
   const nowMs = Date.now();
 
-  const { supabase, userId } = await getGameContext();
+  const { supabase, userId: userIdOrNull } = await getGameContext();
   // Proxy redirects unauthenticated users, but be defensive.
-  if (!userId) redirect('/login');
+  if (!userIdOrNull) redirect({ href: '/login', locale });
+  const userId = userIdOrNull as string;
 
   // Initial gating data — game + game_players come from the tag-cached
   // helper (per-hole-bytte cache hit; see lib/games/getGameWithPlayers.ts).

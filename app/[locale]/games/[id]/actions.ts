@@ -1,6 +1,7 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { getLocale } from 'next-intl/server';
+import { redirect } from '@/i18n/navigation';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 
@@ -19,9 +20,13 @@ import { getServerClient } from '@/lib/supabase/server';
 export async function confirmHandicap(gameId: string) {
   const supabase = await getServerClient();
   const {
-    data: { user },
+    data: { user: maybeUser },
   } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  if (!maybeUser) {
+    const locale = await getLocale();
+    redirect({ href: '/login', locale });
+  }
+  const user = maybeUser!;
 
   const { error } = await supabase
     .from('users')

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   buildSupabaseMock,
-  makeRedirectMock,
+  makeLocaleRedirectMock,
   RedirectError,
 } from '@/tests/serverActionMocks';
 
@@ -9,16 +9,21 @@ import {
  * Unit tests for `submitScorecard`.
  *
  * Mocking approach (shared across all four server-action test files):
- * - `redirect` from `next/navigation` throws `RedirectError` so callers
- *   never run code past a redirect. Tests catch and inspect the URL.
+ * - `redirect` from `@/i18n/navigation` throws `RedirectError` so callers
+ *   never run code past a redirect. Tests catch and inspect the URL via
+ *   `RedirectError.url`.
  * - `next/cache` revalidate helpers are no-op spies.
  * - `getServerClient` returns a chainable fake whose query results come
  *   from a per-test FIFO queue.
  */
 
-const redirectMock = makeRedirectMock();
-vi.mock('next/navigation', () => ({
-  redirect: (url: string) => redirectMock(url),
+const redirectMock = makeLocaleRedirectMock();
+vi.mock('@/i18n/navigation', () => ({
+  redirect: (arg: { href: string; locale?: string } | string) =>
+    redirectMock(arg),
+}));
+vi.mock('next-intl/server', () => ({
+  getLocale: async () => 'nb',
 }));
 
 const revalidatePathMock = vi.fn();
@@ -52,7 +57,9 @@ vi.mock('@/lib/supabase/server', () => ({
 }));
 
 function lastRedirect(): string | undefined {
-  return redirectMock.mock.calls.at(-1)?.[0];
+  const arg = redirectMock.mock.calls.at(-1)?.[0];
+  if (!arg) return undefined;
+  return typeof arg === 'string' ? arg : (arg as { href: string }).href;
 }
 
 beforeEach(() => {
@@ -71,7 +78,9 @@ describe('submitScorecard', () => {
     await expect(submitScorecard('game-1')).rejects.toBeInstanceOf(
       RedirectError,
     );
-    expect(redirectMock).toHaveBeenCalledWith('/login');
+    expect(redirectMock).toHaveBeenCalledWith(
+      expect.objectContaining({ href: '/login' }),
+    );
   });
 
   it('redirects with ?error=not_active when game status is not active (validation)', async () => {

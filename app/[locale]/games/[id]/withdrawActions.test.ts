@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   buildSupabaseMock,
-  makeRedirectMock,
+  makeLocaleRedirectMock,
   RedirectError,
 } from '@/tests/serverActionMocks';
 
@@ -24,9 +24,13 @@ import {
  *   - Bruker ikke trukket → not_registered
  */
 
-const redirectMock = makeRedirectMock();
-vi.mock('next/navigation', () => ({
-  redirect: (url: string) => redirectMock(url),
+const redirectMock = makeLocaleRedirectMock();
+vi.mock('@/i18n/navigation', () => ({
+  redirect: (arg: { href: string; locale?: string } | string) =>
+    redirectMock(arg),
+}));
+vi.mock('next-intl/server', () => ({
+  getLocale: async () => 'nb',
 }));
 
 const revalidateTagMock = vi.fn();
@@ -86,7 +90,9 @@ describe('withdrawFromGame', () => {
     await expect(withdrawFromGame(GAME_ID)).rejects.toBeInstanceOf(
       RedirectError,
     );
-    expect(redirectMock).toHaveBeenCalledWith('/login');
+    expect(redirectMock).toHaveBeenCalledWith(
+      expect.objectContaining({ href: '/login' }),
+    );
   });
 
   it('ugyldig gameId-format → game_not_found uten DB-call', async () => {

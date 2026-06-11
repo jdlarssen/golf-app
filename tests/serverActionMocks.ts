@@ -30,6 +30,18 @@ export function makeRedirectMock() {
   });
 }
 
+/**
+ * Build a locale-aware `redirect` spy for actions that use next-intl's
+ * `redirect({ href, locale })` form. Throws RedirectError(href) so
+ * tests can inspect the destination URL via `err.url`.
+ */
+export function makeLocaleRedirectMock() {
+  return vi.fn((arg: { href: string; locale?: string } | string) => {
+    const url = typeof arg === 'string' ? arg : arg.href;
+    throw new RedirectError(url);
+  });
+}
+
 export type QueryResult = { data?: unknown; error?: unknown };
 
 /**

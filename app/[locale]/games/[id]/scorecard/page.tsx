@@ -1,8 +1,9 @@
 import { Suspense, cache } from 'react';
 import { useTranslations } from 'next-intl';
-import { getTranslations } from 'next-intl/server';
+import { getTranslations, getLocale } from 'next-intl/server';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
@@ -81,6 +82,7 @@ const columnFormatter = {
 export default async function ScorecardPage({ params }: { params: Params }) {
   const { id } = await params;
   const tScorecard = await getTranslations('scorecard');
+  const locale = await getLocale();
 
   // Auth-context (cookie round-trip) and the tag-cached game read are
   // independent — the game payload doesn't depend on the user id, and authz
@@ -92,15 +94,15 @@ export default async function ScorecardPage({ params }: { params: Params }) {
     getScorecardContext(),
     getGameWithPlayers(id),
   ]);
-  if (!userId) redirect('/login');
+  if (!userId) redirect({ href: '/login', locale });
   if (!result) notFound();
   const { game, players } = result;
 
   if (game.status === 'draft') {
-    redirect('/');
+    redirect({ href: '/', locale });
   }
   if (game.status === 'scheduled') {
-    redirect(`/games/${id}`);
+    redirect({ href: `/games/${id}` as string, locale });
   }
 
   const me = players.find((p) => p.user_id === userId);
@@ -109,7 +111,7 @@ export default async function ScorecardPage({ params }: { params: Params }) {
   // Withdrawn (#387): bounce a trukket spiller to game-home (which shows the
   // «Du har trukket deg»-banner + Angre) rather than their now-frozen card.
   if (me.withdrawn_at) {
-    redirect(`/games/${id}`);
+    redirect({ href: `/games/${id}` as string, locale });
   }
 
   const rating = getRatingForGender(game.tee_box, me.tee_gender);

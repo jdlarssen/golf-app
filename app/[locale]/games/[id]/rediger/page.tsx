@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
-import { getTranslations } from 'next-intl/server';
-import { redirect } from 'next/navigation';
+import { getTranslations, getLocale } from 'next-intl/server';
+import { redirect } from '@/i18n/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { AppShell } from '@/components/ui/AppShell';
@@ -65,6 +65,7 @@ export default async function CreatorEditGamePage({
   const { id } = await params;
   const sp = await searchParams;
   const t = await getTranslations('game.edit');
+  const locale = await getLocale();
   const errorMessage = buildGameErrorMessage(
     ERROR_MESSAGES_NEW_GAME,
     first(sp.error),
@@ -74,21 +75,22 @@ export default async function CreatorEditGamePage({
   const supabase = await getServerClient();
   const role = await requireAdminOrCreator(supabase, id);
 
-  const { data: game, error: gameError } = await supabase
+  const { data: maybeGame, error: gameError } = await supabase
     .from('games')
     .select(GAME_SELECT)
     .eq('id', id)
     .single<EditGameRow>();
 
-  if (gameError || !game) {
-    redirect(`/games/${id}`);
+  if (gameError || !maybeGame) {
+    redirect({ href: `/games/${id}` as string, locale });
   }
+  const game = maybeGame!;
 
   // Edits are allowed while the game is still in 'draft' or 'scheduled'. Once it
   // flips to 'active' or 'finished', frozen handicaps + recorded scores make the
   // roster and tee-off effectively immutable (same gate as the admin flow).
   if (game.status !== 'draft' && game.status !== 'scheduled') {
-    redirect(`/games/${id}?error=not_editable`);
+    redirect({ href: `/games/${id}?error=not_editable` as string, locale });
   }
 
   return (

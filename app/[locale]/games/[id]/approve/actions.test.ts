@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   buildSupabaseMock,
-  makeRedirectMock,
+  makeLocaleRedirectMock,
   RedirectError,
 } from '@/tests/serverActionMocks';
 
@@ -21,9 +21,13 @@ import {
  * Tests configure the queue to match this sequence per case.
  */
 
-const redirectMock = makeRedirectMock();
-vi.mock('next/navigation', () => ({
-  redirect: (url: string) => redirectMock(url),
+const redirectMock = makeLocaleRedirectMock();
+vi.mock('@/i18n/navigation', () => ({
+  redirect: (arg: { href: string; locale?: string } | string) =>
+    redirectMock(arg),
+}));
+vi.mock('next-intl/server', () => ({
+  getLocale: async () => 'nb',
 }));
 
 const revalidatePathMock = vi.fn();
@@ -39,7 +43,9 @@ vi.mock('@/lib/supabase/server', () => ({
 }));
 
 function lastRedirect(): string | undefined {
-  return redirectMock.mock.calls.at(-1)?.[0];
+  const arg = redirectMock.mock.calls.at(-1)?.[0];
+  if (!arg) return undefined;
+  return typeof arg === 'string' ? arg : (arg as { href: string }).href;
 }
 
 beforeEach(() => {
@@ -58,7 +64,9 @@ describe('approveScorecard', () => {
     await expect(approveScorecard('game-1', 'player-2')).rejects.toBeInstanceOf(
       RedirectError,
     );
-    expect(redirectMock).toHaveBeenCalledWith('/login');
+    expect(redirectMock).toHaveBeenCalledWith(
+      expect.objectContaining({ href: '/login' }),
+    );
   });
 
   it('redirects to /approve?error=not_active when game is finished (validation)', async () => {

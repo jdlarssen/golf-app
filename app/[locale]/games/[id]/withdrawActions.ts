@@ -1,6 +1,7 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { getLocale } from 'next-intl/server';
+import { redirect } from '@/i18n/navigation';
 import { revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -63,11 +64,13 @@ export async function withdrawFromGame(
 ): Promise<WithdrawResult> {
   const supabase = await getServerClient();
   const {
-    data: { user },
+    data: { user: maybeUser },
   } = await supabase.auth.getUser();
-  if (!user) {
-    redirect('/login');
+  if (!maybeUser) {
+    const locale = await getLocale();
+    redirect({ href: '/login', locale });
   }
+  const user = maybeUser!;
 
   // UUID-sanity før DB-call. Trenger ikke å være strikt — Postgres avviser
   // ugyldig UUID — men vi gir tidlig feil for å unngå unødvendig round-trip.
@@ -245,11 +248,13 @@ export async function undoWithdraw(
 ): Promise<WithdrawResult> {
   const supabase = await getServerClient();
   const {
-    data: { user },
+    data: { user: maybeUser },
   } = await supabase.auth.getUser();
-  if (!user) {
-    redirect('/login');
+  if (!maybeUser) {
+    const locale = await getLocale();
+    redirect({ href: '/login', locale });
   }
+  const user = maybeUser!;
 
   if (!/^[0-9a-f-]{36}$/i.test(gameId)) {
     return { ok: false, error: 'game_not_found' };

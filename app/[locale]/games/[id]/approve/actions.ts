@@ -1,6 +1,7 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { getLocale } from 'next-intl/server';
+import { redirect } from '@/i18n/navigation';
 import { revalidateTag } from 'next/cache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
@@ -21,23 +22,26 @@ type AuthorizationResult = {
  * player to update their own row only).
  */
 async function loadAndAuthorize(gameId: string, playerUserId: string) {
+  const locale = await getLocale();
   const supabase = await getServerClient();
   const {
-    data: { user },
+    data: { user: maybeUser },
   } = await supabase.auth.getUser();
-  if (!user) {
-    redirect('/login');
+  if (!maybeUser) {
+    redirect({ href: '/login', locale });
   }
+  const user = maybeUser!;
 
   // Refuse to act on finished games.
-  const { data: game } = await supabase
+  const { data: maybeGame } = await supabase
     .from('games')
     .select('status, game_mode')
     .eq('id', gameId)
     .single<{ status: 'draft' | 'scheduled' | 'active' | 'finished'; game_mode: string }>();
-  if (!game || game.status !== 'active') {
-    redirect(`/games/${gameId}/approve?error=not_active`);
+  if (!maybeGame || maybeGame.status !== 'active') {
+    redirect({ href: `/games/${gameId}/approve?error=not_active` as string, locale });
   }
+  const game = maybeGame!;
 
   const { data: profile } = await supabase
     .from('users')
@@ -50,6 +54,7 @@ async function loadAndAuthorize(gameId: string, playerUserId: string) {
     return {
       supabase,
       user,
+      locale,
       authz: { ok: true, isAdmin } satisfies AuthorizationResult,
     };
   }
@@ -73,6 +78,7 @@ async function loadAndAuthorize(gameId: string, playerUserId: string) {
   return {
     supabase,
     user,
+    locale,
     authz: { ok: canApprove, isAdmin } satisfies AuthorizationResult,
   };
 }
@@ -82,11 +88,11 @@ async function loadAndAuthorize(gameId: string, playerUserId: string) {
  * is a no-op. Clears any prior rejection_reason so it can't linger.
  */
 export async function approveScorecard(gameId: string, playerUserId: string) {
-  const { supabase, user, authz } = await loadAndAuthorize(
+  const { supabase, user, locale, authz } = await loadAndAuthorize(
     gameId,
     playerUserId,
   );
-  if (!authz.ok) redirect('/');
+  if (!authz.ok) redirect({ href: '/', locale });
 
   const { error } = await supabase
     .from('game_players')
@@ -101,7 +107,7 @@ export async function approveScorecard(gameId: string, playerUserId: string) {
     .is('approved_at', null);
 
   if (error) {
-    redirect(`/games/${gameId}/approve?error=db`);
+    redirect({ href: `/games/${gameId}/approve?error=db` as string, locale });
   }
 
   // Best-effort in-app varsel til submitter om at scorekortet er godkjent.
@@ -140,7 +146,7 @@ export async function approveScorecard(gameId: string, playerUserId: string) {
   revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/games/${gameId}`);
   revalidatePath(`/games/${gameId}/approve`);
-  redirect(`/games/${gameId}/approve?status=approved`);
+  redirect({ href: `/games/${gameId}/approve?status=approved` as string, locale });
 }
 
 /**
@@ -149,15 +155,16 @@ export async function approveScorecard(gameId: string, playerUserId: string) {
  * game home page next time they open the app.
  */
 export async function rejectScorecard(gameId: string, formData: FormData) {
+  const locale = await getLocale();
   const playerUserId = String(formData.get('player_user_id') ?? '');
   const reasonRaw = String(formData.get('reason') ?? '').trim();
   if (!playerUserId) {
-    redirect(`/games/${gameId}/approve?error=bad_request`);
+    redirect({ href: `/games/${gameId}/approve?error=bad_request` as string, locale });
   }
   const reason = reasonRaw.length > 0 ? reasonRaw.slice(0, 500) : 'Ingen grunn oppgitt';
 
   const { supabase, authz } = await loadAndAuthorize(gameId, playerUserId);
-  if (!authz.ok) redirect('/');
+  if (!authz.ok) redirect({ href: '/', locale });
 
   const { error } = await supabase
     .from('game_players')
@@ -171,11 +178,11 @@ export async function rejectScorecard(gameId: string, formData: FormData) {
     .eq('user_id', playerUserId);
 
   if (error) {
-    redirect(`/games/${gameId}/approve?error=db`);
+    redirect({ href: `/games/${gameId}/approve?error=db` as string, locale });
   }
 
   revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/games/${gameId}`);
   revalidatePath(`/games/${gameId}/approve`);
-  redirect(`/games/${gameId}/approve?status=rejected`);
+  redirect({ href: `/games/${gameId}/approve?status=rejected` as string, locale });
 }

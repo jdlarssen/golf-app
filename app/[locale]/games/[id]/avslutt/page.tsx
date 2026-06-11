@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import { getTranslations } from 'next-intl/server';
-import { notFound, redirect } from 'next/navigation';
-import { Link } from '@/i18n/navigation';
+import { getTranslations, getLocale } from 'next-intl/server';
+import { notFound } from 'next/navigation';
+import { Link, redirect } from '@/i18n/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { AppShell } from '@/components/ui/AppShell';
@@ -51,6 +51,7 @@ export default async function CreatorAvsluttPage({
   const { id: gameId } = await params;
   const { error } = await searchParams;
   const t = await getTranslations('game.finish');
+  const locale = await getLocale();
   const detailPath = `/games/${gameId}`;
 
   const supabase = await getServerClient();
@@ -75,7 +76,7 @@ export default async function CreatorAvsluttPage({
 
   if (!game) notFound();
   if (game.status !== 'active') {
-    redirect(`${detailPath}?error=not_active`);
+    redirect({ href: `${detailPath}?error=not_active` as string, locale });
   }
 
   const { data: gamePlayers } = await supabase
