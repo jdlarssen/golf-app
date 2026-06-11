@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { AllowanceField } from '@/components/admin/AllowanceField';
@@ -39,6 +40,7 @@ export function CupSetup({
   clubName,
   matchCap,
 }: Props) {
+  const t = useTranslations('wizard.cupSetup');
   // Point-mål: vanlig regel = halvparten av tilgjengelige point + 0,5. For en
   // capped personlig cup (maks `matchCap` matcher) blir det en lavere default
   // enn admin/klubb-cupens 8-match-antagelse.
@@ -48,8 +50,8 @@ export function CupSetup({
       : '4,5';
   const pointsHint =
     matchCap !== undefined
-      ? `Vanlig regel: halvparten av tilgjengelige point + 0,5. Med ${matchCap} matcher blir det ${pointsDefault}.`
-      : 'Vanlig regel: halvparten av tilgjengelige point + 0,5. Med 8 matches blir det 4,5.';
+      ? t('pointsHintCapped', { matchCap, pointsDefault })
+      : t('pointsHintDefault');
   // Multi-select state — initialiserer med alle cup-eligible formats valgt
   // (default-all) så admin ikke trenger å klikke for å bekrefte standard-
   // oppsettet. Endring av valgene har ingen runtime-effekt i F2 (se docstring).
@@ -77,7 +79,7 @@ export function CupSetup({
         role="status"
         className="rounded-md border border-border bg-surface-2 px-3 py-2 text-xs text-muted"
       >
-        Ingen cup-eligible formats konfigurert — kontakt admin.
+        {t('noCupFormats')}
       </p>
     );
   }
@@ -89,45 +91,47 @@ export function CupSetup({
       )}
       {clubName && (
         <p className="rounded-lg border border-primary/30 bg-primary-soft px-3 py-2 text-xs text-text">
-          Denne cupen settes opp for <strong>{clubName}</strong>. Bare medlemmer i
-          klubben kan være med.
+          {t.rich('clubBanner', {
+            clubName,
+            strong: (chunks) => <strong>{chunks}</strong>,
+          })}
         </p>
       )}
       <Input
-        label="Cup-navn"
+        label={t('cupNameLabel')}
         id="name"
         name="name"
         required
         maxLength={80}
-        placeholder="Tørny Cup 2026 — Sommer-runde"
+        placeholder={t('cupNamePlaceholder')}
       />
 
       <fieldset>
         <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
-          Lag-navn
+          {t('teamNamesLegend')}
         </legend>
         <div className="grid grid-cols-2 gap-3">
           <Input
-            label="Lag 1"
+            label={t('team1Label')}
             id="team_1_name"
             name="team_1_name"
             required
             maxLength={40}
-            placeholder="Team Skog"
+            placeholder={t('team1Placeholder')}
           />
           <Input
-            label="Lag 2"
+            label={t('team2Label')}
             id="team_2_name"
             name="team_2_name"
             required
             maxLength={40}
-            placeholder="Team Sjø"
+            placeholder={t('team2Placeholder')}
           />
         </div>
       </fieldset>
 
       <Input
-        label="Point-mål"
+        label={t('pointsToWinLabel')}
         id="points_to_win"
         name="points_to_win"
         required
@@ -158,11 +162,10 @@ export function CupSetup({
 
       <fieldset>
         <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted mb-2">
-          Tillatte match-formats
+          {t('allowedFormatsLegend')}
         </legend>
         <p className="text-xs text-muted mb-3">
-          Velg hvilke spillformater som er lov i matchene. Du legger til de
-          enkelte matchene etter cupen er opprettet.
+          {t('allowedFormatsHint')}
         </p>
         <ul className="space-y-2">
           {cupEligibleFormats.map((f) => {
@@ -207,7 +210,7 @@ export function CupSetup({
         </ul>
         {!atLeastOneFormat && (
           <p className="mt-2 text-xs text-danger">
-            Velg minst ett match-format.
+            {t('atLeastOneFormatError')}
           </p>
         )}
       </fieldset>
@@ -218,7 +221,7 @@ export function CupSetup({
           className="w-full"
           disabled={!atLeastOneFormat}
         >
-          Opprett cup
+          {t('submitButton')}
         </Button>
       </div>
     </form>

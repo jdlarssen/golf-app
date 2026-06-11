@@ -46,7 +46,131 @@
     "active": "In progress",
     "finished": "Finished"
   },
+  "wizard": {
+    "intent": {
+      "legend": "What kind of event?",
+      "kompis": {
+        "label": "Friends round",
+        "description": "Make the round more exciting, up to 24 players"
+      },
+      "klubb": {
+        "label": "Club tournament",
+        "description": "For your club — all members can join"
+      },
+      "cup": {
+        "label": "Cup",
+        "description": "Two teams, multiple matches, team total wins"
+      },
+      "solo": {
+        "label": "Solo / test",
+        "description": "Your own round, practice, or exploration"
+      }
+    },
+    "modeSelector": {
+      "legend": "Choose game mode",
+      "tiles": {
+        "stableford": {
+          "title": "Stableford",
+          "description": "Points per hole. Par = 2, birdie = 3, eagle = 4, etc. Highest total wins."
+        },
+        "best_ball": {
+          "title": "Best ball",
+          "description": "Sum of best net result per hole per team. Lowest wins."
+        },
+        "singles_matchplay": {
+          "title": "Match play",
+          "description": "1v1 hole by hole. Winner decided as 'X up' or 'X&Y'."
+        },
+        "solo_strokeplay": {
+          "title": "Stroke play",
+          "description": "Individual scorecard. Lowest net total wins."
+        },
+        "texas_scramble": {
+          "title": "Texas Scramble",
+          "description": "Team plays one ball. Choose best shot each hole. Lowest team total wins."
+        },
+        "ambrose": {
+          "title": "Ambrose",
+          "description": "Teams of 2 or 4. All play, best ball chosen. Team handicap evens out differences."
+        },
+        "florida_scramble": {
+          "title": "Florida Scramble",
+          "description": "Like Texas, but the player who hit the chosen shot sits out the next. Teams of 3 or 4."
+        }
+      }
+    },
+    "formatGrid": {
+      "legend": "Choose game format",
+      "groupPrimary": "Most popular",
+      "groupSecondary": "More options",
+      "groupAriaMain": "Main formats",
+      "groupAriaSecondary": "Secondary formats",
+      "emptyState": "No formats available for this intent — contact admin.",
+      "howItWorks": "How it works →"
+    },
+    "teamSize": {
+      "legend": "Choose team size",
+      "solo": {
+        "title": "Solo",
+        "hint": "1 player"
+      },
+      "par": {
+        "title": "Pairs",
+        "hint": "2 players"
+      },
+      "fourBBB": {
+        "title": "4BBB",
+        "hint": "Teams of 2, best points count"
+      },
+      "tremannslag": {
+        "title": "Three-man team",
+        "hint": "3 players"
+      },
+      "firemann": {
+        "title": "4-man",
+        "hint": "4 players"
+      }
+    },
+    "cupSetup": {
+      "noCupFormats": "No cup-eligible formats configured — contact admin.",
+      "clubBanner": "This cup is being set up for <strong>{clubName}</strong>. Only club members can participate.",
+      "cupNameLabel": "Cup name",
+      "cupNamePlaceholder": "Tørny Cup 2026 — Summer round",
+      "teamNamesLegend": "Team names",
+      "team1Label": "Team 1",
+      "team1Placeholder": "Team Forest",
+      "team2Label": "Team 2",
+      "team2Placeholder": "Team Lake",
+      "pointsToWinLabel": "Points target",
+      "pointsHintDefault": "Standard rule: half of available points + 0.5. With 8 matches that is 4.5.",
+      "pointsHintCapped": "Standard rule: half of available points + 0.5. With {matchCap} matches that is {pointsDefault}.",
+      "allowedFormatsLegend": "Allowed match formats",
+      "allowedFormatsHint": "Choose which game formats are permitted in the matches. You add the individual matches after the cup is created.",
+      "atLeastOneFormatError": "Choose at least one match format.",
+      "submitButton": "Create cup"
+    },
+    "sideTournaments": {
+      "banner": "Side competitions (longest drive, closest-to-pin) can be added in the Ready step."
+    }
+  },
+  "formatGuide": {
+    "sheetAriaLabel": "Game formats, how they work",
+    "sheetTitle": "Game formats",
+    "sheetSubtitle": "How they work. Tap to read more.",
+    "closeButton": "Close"
+  },
+  "allowance": {
+    "nettoLabel": "Net",
+    "bruttoLabel": "Gross",
+    "inputLabelDefault": "Allowance (%)"
+  },
   "modes": {
+    "playStyle": {
+      "solo": "Solo",
+      "individual": "Solo",
+      "team": "Team",
+      "flexible": "Solo or team"
+    },
     "best_ball": "Best ball",
     "stableford": "Stableford",
     "modified_stableford": "Modified Stableford",

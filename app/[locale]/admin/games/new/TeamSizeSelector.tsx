@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 
 /**
@@ -114,11 +115,12 @@ const ENABLED_COMBOS: Record<GameMode, ReadonlySet<TeamSize>> = {
   patsome: new Set<TeamSize>([2]),
 };
 
+type TeamSizeTileKey = 'solo' | 'par' | 'fourBBB' | 'tremannslag' | 'firemann';
+
 type TileDef = {
   size: TeamSize;
-  title: string;
-  /** Kort under-tekst — antall spillere per lag, kompakt format. */
-  hint: string;
+  /** Translation key suffix within wizard.teamSize.* */
+  key: TeamSizeTileKey;
 };
 
 /**
@@ -135,18 +137,18 @@ function tilesForMode(mode: GameMode): TileDef[] {
   const enabled = ENABLED_COMBOS[mode];
   if (mode === 'florida_scramble') {
     const floridaTiles: TileDef[] = [
-      { size: 3, title: 'Tremannslag', hint: '3 spillere' },
-      { size: 4, title: '4-mann', hint: '4 spillere' },
+      { size: 3, key: 'tremannslag' },
+      { size: 4, key: 'firemann' },
     ];
     return floridaTiles.filter((t) => enabled.has(t.size));
   }
   const teamTile: TileDef = isStablefordFamily(mode)
-    ? { size: 2, title: '4BBB', hint: 'Lag à 2, beste poeng teller' }
-    : { size: 2, title: 'Par', hint: '2 spillere' };
+    ? { size: 2, key: 'fourBBB' }
+    : { size: 2, key: 'par' };
   const candidates: TileDef[] = [
-    { size: 1, title: 'Solo', hint: '1 spiller' },
+    { size: 1, key: 'solo' },
     teamTile,
-    { size: 4, title: '4-mann', hint: '4 spillere' },
+    { size: 4, key: 'firemann' },
   ];
   return candidates.filter((t) => enabled.has(t.size));
 }
@@ -174,23 +176,26 @@ export function TeamSizeSelector({
   onChange,
   disabled = false,
 }: Props) {
+  const t = useTranslations('wizard.teamSize');
   const tiles = tilesForMode(mode);
 
   return (
     <fieldset disabled={disabled}>
       <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-        Velg lagstørrelse
+        {t('legend')}
       </legend>
       <div role="radiogroup" className={`mt-2 grid gap-3 ${GRID_COLS[tiles.length] ?? 'grid-cols-3'}`}>
         {tiles.map((tile) => {
           const selected = value === tile.size;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const tileTitle = t(`${tile.key}.title` as any);
           return (
             <button
               key={tile.size}
               type="button"
               role="radio"
               aria-checked={selected}
-              aria-label={tile.title}
+              aria-label={tileTitle}
               disabled={disabled}
               onClick={() => {
                 if (!disabled) onChange(tile.size);
@@ -202,10 +207,11 @@ export function TeamSizeSelector({
               }`}
             >
               <span className="font-serif text-base leading-snug">
-                {tile.title}
+                {tileTitle}
               </span>
               <span className="font-sans text-[11px] leading-snug text-muted tabular-nums">
-                {tile.hint}
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {t(`${tile.key}.hint` as any)}
               </span>
             </button>
           );

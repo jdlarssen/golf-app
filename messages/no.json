@@ -46,7 +46,131 @@
     "active": "Pågående",
     "finished": "Avsluttet"
   },
+  "wizard": {
+    "intent": {
+      "legend": "Hva slags arrangement?",
+      "kompis": {
+        "label": "Kompis-runde",
+        "description": "Gjør runden mer spennende, opp til 24 spillere"
+      },
+      "klubb": {
+        "label": "Klubb-turnering",
+        "description": "For klubben din, alle medlemmer kan være med"
+      },
+      "cup": {
+        "label": "Cup",
+        "description": "To lag, flere matcher, lag-totalen vinner"
+      },
+      "solo": {
+        "label": "Solo / test",
+        "description": "Egen runde, øving eller utforskning"
+      }
+    },
+    "modeSelector": {
+      "legend": "Velg spillmodus",
+      "tiles": {
+        "stableford": {
+          "title": "Stableford",
+          "description": "Poeng per hull. Par = 2, birdie = 3, eagle = 4 osv. Høyest total vinner."
+        },
+        "best_ball": {
+          "title": "Best ball",
+          "description": "Sum av beste netto-resultat per hull per lag. Laveste vinner."
+        },
+        "singles_matchplay": {
+          "title": "Matchplay",
+          "description": "1v1 hull-for-hull. Vinneren avgjøres som «X up» eller «X&Y»."
+        },
+        "solo_strokeplay": {
+          "title": "Slagspill",
+          "description": "Individuelt scorekort. Lavest netto-total vinner."
+        },
+        "texas_scramble": {
+          "title": "Texas scramble",
+          "description": "Laget spiller én ball. Velg beste slag hvert hull. Lavest lag-total vinner."
+        },
+        "ambrose": {
+          "title": "Ambrose",
+          "description": "Lag à 2 eller 4. Alle slår, beste ball velges. Lag-handicap jevner ut forskjellene mellom lagene."
+        },
+        "florida_scramble": {
+          "title": "Florida Scramble",
+          "description": "Som Texas, men den som slo det valgte slaget, står over neste slag. Lag à 3 eller 4."
+        }
+      }
+    },
+    "formatGrid": {
+      "legend": "Velg spillform",
+      "groupPrimary": "Vanligst",
+      "groupSecondary": "Flere muligheter",
+      "groupAriaMain": "Hovedformater",
+      "groupAriaSecondary": "Sekundære formater",
+      "emptyState": "Ingen formats tilgjengelig for denne intent — kontakt admin.",
+      "howItWorks": "Slik funker det →"
+    },
+    "teamSize": {
+      "legend": "Velg lagstørrelse",
+      "solo": {
+        "title": "Solo",
+        "hint": "1 spiller"
+      },
+      "par": {
+        "title": "Par",
+        "hint": "2 spillere"
+      },
+      "fourBBB": {
+        "title": "4BBB",
+        "hint": "Lag à 2, beste poeng teller"
+      },
+      "tremannslag": {
+        "title": "Tremannslag",
+        "hint": "3 spillere"
+      },
+      "firemann": {
+        "title": "4-mann",
+        "hint": "4 spillere"
+      }
+    },
+    "cupSetup": {
+      "noCupFormats": "Ingen cup-eligible formats konfigurert — kontakt admin.",
+      "clubBanner": "Denne cupen settes opp for <strong>{clubName}</strong>. Bare medlemmer i klubben kan være med.",
+      "cupNameLabel": "Cup-navn",
+      "cupNamePlaceholder": "Tørny Cup 2026 — Sommer-runde",
+      "teamNamesLegend": "Lag-navn",
+      "team1Label": "Lag 1",
+      "team1Placeholder": "Team Skog",
+      "team2Label": "Lag 2",
+      "team2Placeholder": "Team Sjø",
+      "pointsToWinLabel": "Point-mål",
+      "pointsHintDefault": "Vanlig regel: halvparten av tilgjengelige point + 0,5. Med 8 matches blir det 4,5.",
+      "pointsHintCapped": "Vanlig regel: halvparten av tilgjengelige point + 0,5. Med {matchCap} matcher blir det {pointsDefault}.",
+      "allowedFormatsLegend": "Tillatte match-formats",
+      "allowedFormatsHint": "Velg hvilke spillformater som er lov i matchene. Du legger til de enkelte matchene etter cupen er opprettet.",
+      "atLeastOneFormatError": "Velg minst ett match-format.",
+      "submitButton": "Opprett cup"
+    },
+    "sideTournaments": {
+      "banner": "Sideturneringer (longest drive, closest-to-pin) kan legges på i Klar-steget."
+    }
+  },
+  "formatGuide": {
+    "sheetAriaLabel": "Spillformater, slik funker de",
+    "sheetTitle": "Spillformater",
+    "sheetSubtitle": "Slik funker de. Trykk for å lese mer.",
+    "closeButton": "Lukk"
+  },
+  "allowance": {
+    "nettoLabel": "Netto",
+    "bruttoLabel": "Brutto",
+    "inputLabelDefault": "Allowance (%)"
+  },
   "modes": {
+    "playStyle": {
+      "solo": "Solo",
+      "individual": "Solo",
+      "team": "Lag",
+      "flexible": "Solo eller lag"
+    },
     "best_ball": "Best ball",
     "stableford": "Stableford",
     "modified_stableford": "Modifisert Stableford",

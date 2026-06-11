@@ -23,16 +23,3 @@ export function isCupIntent(intent: Intent | undefined): boolean {
   return intent === 'cup';
 }
 
-export const INTENT_LABELS: Record<Intent, string> = {
-  kompis: 'Kompis-runde',
-  klubb: 'Klubb-turnering',
-  cup: 'Cup',
-  solo: 'Solo / test',
-};
-
-export const INTENT_DESCRIPTIONS: Record<Intent, string> = {
-  kompis: 'Gjør runden mer spennende, opp til 24 spillere',
-  klubb: 'For klubben din, alle medlemmer kan være med',
-  cup: 'To lag, flere matcher, lag-totalen vinner',
-  solo: 'Egen runde, øving eller utforskning',
-};

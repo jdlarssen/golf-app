@@ -1,8 +1,8 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 import type { Intent } from '@/lib/wizard/intent';
-import { INTENT_LABELS, INTENT_DESCRIPTIONS } from '@/lib/wizard/intent';
 
 type Props = {
   value: Intent | undefined;
@@ -107,6 +107,7 @@ export function IntentSelector({
   isAdmin = false,
   isClubAdmin = false,
 }: Props) {
+  const t = useTranslations('wizard.intent');
   // #477: skjul «Solo / Test» for ikke-admin. #525: skjul «Klubb-turnering» for
   // den som verken er global admin eller klubb-admin. Begge kortene beholdes hvis
   // et eksisterende spill med den intent-en redigeres (value-sjekken) så det
@@ -121,11 +122,11 @@ export function IntentSelector({
   return (
     <fieldset disabled={disabled}>
       <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-        Hva slags arrangement?
+        {t('legend')}
       </legend>
       <div
         role="radiogroup"
-        aria-label="Hva slags arrangement?"
+        aria-label={t('legend')}
         className="mt-2 grid grid-cols-2 gap-3"
       >
         {tiles.map((tile) => {
@@ -136,7 +137,7 @@ export function IntentSelector({
               type="button"
               role="radio"
               aria-checked={selected}
-              aria-label={INTENT_LABELS[tile.intent]}
+              aria-label={t(`${tile.intent}.label`)}
               disabled={disabled}
               onClick={() => {
                 if (!disabled) onChange(tile.intent);
@@ -155,10 +156,10 @@ export function IntentSelector({
                 {tile.icon}
               </span>
               <span className="font-serif text-base leading-snug">
-                {INTENT_LABELS[tile.intent]}
+                {t(`${tile.intent}.label`)}
               </span>
               <span className="font-sans text-xs leading-snug text-muted">
-                {INTENT_DESCRIPTIONS[tile.intent]}
+                {t(`${tile.intent}.description`)}
               </span>
             </button>
           );

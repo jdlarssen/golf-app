@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import type { GameMode } from '@/lib/scoring/modes/types';
 
 type Props = {
@@ -14,10 +15,17 @@ type Props = {
   disabled?: boolean;
 };
 
+type ModeSelectorMode =
+  | 'stableford'
+  | 'best_ball'
+  | 'singles_matchplay'
+  | 'solo_strokeplay'
+  | 'texas_scramble'
+  | 'ambrose'
+  | 'florida_scramble';
+
 type TileDef = {
-  mode: GameMode;
-  title: string;
-  description: string;
+  mode: ModeSelectorMode;
   icon: React.ReactNode;
 };
 
@@ -199,49 +207,13 @@ const StrokeplayIcon = (
 );
 
 const TILES: TileDef[] = [
-  {
-    mode: 'stableford',
-    title: 'Stableford',
-    description:
-      'Poeng per hull. Par = 2, birdie = 3, eagle = 4 osv. Høyest total vinner.',
-    icon: StablefordIcon,
-  },
-  {
-    mode: 'best_ball',
-    title: 'Best ball',
-    description: 'Sum av beste netto-resultat per hull per lag. Laveste vinner.',
-    icon: BestBallIcon,
-  },
-  {
-    mode: 'singles_matchplay',
-    title: 'Matchplay',
-    description: '1v1 hull-for-hull. Vinneren avgjøres som «X up» eller «X&Y».',
-    icon: MatchplayIcon,
-  },
-  {
-    mode: 'solo_strokeplay',
-    title: 'Slagspill',
-    description: 'Individuelt scorekort. Lavest netto-total vinner.',
-    icon: StrokeplayIcon,
-  },
-  {
-    mode: 'texas_scramble',
-    title: 'Texas scramble',
-    description: 'Laget spiller én ball. Velg beste slag hvert hull. Lavest lag-total vinner.',
-    icon: TexasScrambleIcon,
-  },
-  {
-    mode: 'ambrose',
-    title: 'Ambrose',
-    description: 'Lag à 2 eller 4. Alle slår, beste ball velges. Lag-handicap jevner ut forskjellene mellom lagene.',
-    icon: TexasScrambleIcon,
-  },
-  {
-    mode: 'florida_scramble',
-    title: 'Florida Scramble',
-    description: 'Som Texas, men den som slo det valgte slaget, står over neste slag. Lag à 3 eller 4.',
-    icon: TexasScrambleIcon,
-  },
+  { mode: 'stableford', icon: StablefordIcon },
+  { mode: 'best_ball', icon: BestBallIcon },
+  { mode: 'singles_matchplay', icon: MatchplayIcon },
+  { mode: 'solo_strokeplay', icon: StrokeplayIcon },
+  { mode: 'texas_scramble', icon: TexasScrambleIcon },
+  { mode: 'ambrose', icon: TexasScrambleIcon },
+  { mode: 'florida_scramble', icon: TexasScrambleIcon },
 ];
 
 /**
@@ -261,21 +233,24 @@ const TILES: TileDef[] = [
  * et hidden input bærer verdien i FormData — settes av GameForm, ikke her.
  */
 export function ModeSelector({ value, onChange, disabled = false }: Props) {
+  const t = useTranslations('wizard.modeSelector');
   return (
     <fieldset disabled={disabled}>
       <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-        Velg spillmodus
+        {t('legend')}
       </legend>
       <div role="radiogroup" className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {TILES.map((tile) => {
           const selected = value === tile.mode;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const tileTitle = t(`tiles.${tile.mode}.title` as any);
           return (
             <button
               key={tile.mode}
               type="button"
               role="radio"
               aria-checked={selected}
-              aria-label={tile.title}
+              aria-label={tileTitle}
               disabled={disabled}
               onClick={() => {
                 if (!disabled) onChange(tile.mode);
@@ -294,10 +269,11 @@ export function ModeSelector({ value, onChange, disabled = false }: Props) {
                 {tile.icon}
               </span>
               <span className="font-serif text-base leading-snug">
-                {tile.title}
+                {tileTitle}
               </span>
               <span className="font-sans text-xs leading-snug text-muted">
-                {tile.description}
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {t(`tiles.${tile.mode}.description` as any)}
               </span>
             </button>
           );

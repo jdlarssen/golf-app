@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
 import { FormatStyleBadge } from '@/components/ui/FormatStyleBadge';
 import type { GameMode } from '@/lib/scoring/modes/types';
@@ -34,6 +35,7 @@ export function FormatGrid({
   onShowGuide,
   disabled = false,
 }: Props) {
+  const t = useTranslations('wizard.formatGrid');
   const primary = formats.filter((f) => f.is_primary);
   const secondary = formats.filter((f) => !f.is_primary);
   // Vis gruppe-headere kun når begge gruppene finnes — ellers holder legenden.
@@ -45,7 +47,7 @@ export function FormatGrid({
         role="status"
         className="rounded-md border border-border bg-surface-2 px-3 py-2 text-xs text-muted"
       >
-        Ingen formats tilgjengelig for denne intent — kontakt admin.
+        {t('emptyState')}
       </p>
     );
   }
@@ -85,7 +87,7 @@ export function FormatGrid({
                 onClick={() => onShowGuide(f.slug)}
                 className="font-sans text-xs font-medium text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
               >
-                Slik funker det →
+                {t('howItWorks')}
               </button>
             )}
           </div>
@@ -121,19 +123,19 @@ export function FormatGrid({
   return (
     <fieldset disabled={disabled} className="space-y-5">
       <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-        Velg spillform
+        {t('legend')}
       </legend>
 
       {primary.length > 0 && (
         <div className="space-y-2">
           {showGroupHeaders && (
             <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-              Vanligst
+              {t('groupPrimary')}
             </p>
           )}
           <div
             role="radiogroup"
-            aria-label="Hovedformater"
+            aria-label={t('groupAriaMain')}
             className="grid grid-cols-2 gap-2 sm:grid-cols-3"
           >
             {primary.map(renderCard)}
@@ -144,11 +146,11 @@ export function FormatGrid({
       {secondary.length > 0 && (
         <div className="space-y-2">
           <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-            Flere muligheter
+            {t('groupSecondary')}
           </p>
           <div
             role="radiogroup"
-            aria-label="Sekundære formater"
+            aria-label={t('groupAriaSecondary')}
             className="grid grid-cols-2 gap-2 sm:grid-cols-3"
           >
             {secondary.map(renderCard)}
