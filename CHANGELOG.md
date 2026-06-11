@@ -21,6 +21,29 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#543](https://github.com/jdlarssen/golf-app/issues/543). I spill med fire eller færre deltagere går alle i én gruppe — uansett format. Det betyr at du og motstanderen din i en singelmatch kan se og skrive hverandres scorer på direkten, og at spill med wolf alltid behandles som én gruppe.
 
+### [1.112.2] - 2026-06-11 · #543
+
+> I singelmatch ser begge spillerne hverandres scorer direkte, og motstanderen kan godkjenne scorekortet ditt — uten at noen trenger å sette opp noe.
+
+<details>
+<summary>Teknisk</summary>
+
+[#543](https://github.com/jdlarssen/golf-app/issues/543). Hull-side og attestant-krets for én-flight-spill.
+
+#### Changed
+- `app/[locale]/games/[id]/holes/[holeNumber]/page.tsx`: roster-logikk bruker `isSingleFlightGame` — ved ≤4 aktive spillere eller wolf vises alle aktive spillere uavhengig av `flight_number`. Shared-ball-formater (texas/foursomes/greensome m.fl.) bygger nå ett lagkort **per lag** (ikke bare «mitt lag») ved singleFlight; handicap-formlene er identiske med eksisterende logikk per side.
+- `app/[locale]/games/[id]/(home)/page.tsx`: «DIN FLIGHT»-seksjonen bruker ny roster-logikk — ikke-solo + singleFlight viser hele gruppen (FlightRoster med `flightNumber=null`). `FlightRoster` støtter `flightNumber: number | null`. `PendingApprovalsBanner` er oppdatert tilsvarende.
+- `app/[locale]/games/[id]/approve/actions.ts`: autorisasjons-gate bruker nå `peersForApproval` fra `flightScope.ts` istedenfor direkte flight-sammenligning — motstander i singelmatch (og alle i ≤4-spill) kan attestere.
+- `app/[locale]/games/[id]/submit/actions.ts`: peer-varsel-loop bruker `peersForApproval` — samme utvidelse.
+- `lib/games/flightScope.ts`: ny eksportert funksjon `peersForApproval(players, gameMode, userId)` — returnerer user_id-ene som kan attestere et scorekort.
+
+#### Tests
+- `lib/games/flightScope.test.ts`: 7 nye tester for `peersForApproval` — singelmatch, foursomes, wolf 5, >4 assigned flights, >4 flightless, trukkede ekskludert, self ekskludert.
+- `approve/actions.test.ts`: oppdatert til ny query-sekvens (én game_players-spørring for hele spillet); ny test for singleFlight-motstander-godkjenning.
+- `submit/actions.test.ts`: ny test for singles matchplay — motstander varsles som peer.
+
+</details>
+
 ### [1.112.1] - 2026-06-11 · #543
 
 > Store spill med mer enn fire spillere kan ikke lenger starte automatisk ved tee-tid før alle spillere er fordelt i flighter.

@@ -6,6 +6,7 @@ import {
   unassignedActivePlayers,
   suggestFlightSplit,
   flightBuckets,
+  peersForApproval,
   type FlightPlayer,
 } from './flightScope';
 import type { GameMode } from '@/lib/scoring/modes/types';
@@ -259,6 +260,66 @@ describe('suggestFlightSplit', () => {
     expect(result.find((r) => r.user_id === 'u1')?.flight_number).toBe(1);
     expect(result.find((r) => r.user_id === 'u4')?.flight_number).toBe(1);
     expect(result.find((r) => r.user_id === 'u5')?.flight_number).toBe(2);
+  });
+});
+
+// ─── peersForApproval ────────────────────────────────────────────────────────
+
+describe('peersForApproval', () => {
+  const singles: GameMode = 'singles_matchplay';
+  const stableford: GameMode = 'stableford';
+  const skins: GameMode = 'skins';
+  const wolf: GameMode = 'wolf';
+
+  it('singles matchplay, 2 spillere: motstander er peer', () => {
+    // Én-flight-regel: 2 aktive → singleFlight.
+    const players = [p('alice', 1), p('bob', 2)];
+    expect(peersForApproval(players, singles, 'alice')).toEqual(['bob']);
+    expect(peersForApproval(players, singles, 'bob')).toEqual(['alice']);
+  });
+
+  it('foursomes, 4 spillere: alle tre andre er peers (kryss-lag)', () => {
+    const foursomes: GameMode = 'foursomes_matchplay';
+    const players = [p('a', 1), p('b', 1), p('c', 2), p('d', 2)];
+    const peers = peersForApproval(players, foursomes, 'a');
+    expect(peers.sort()).toEqual(['b', 'c', 'd']);
+  });
+
+  it('wolf med 5 spillere: alle fire andre er peers', () => {
+    const players = Array.from({ length: 5 }, (_, i) => p(`u${i + 1}`, null));
+    const peers = peersForApproval(players, wolf, 'u1');
+    expect(peers.sort()).toEqual(['u2', 'u3', 'u4', 'u5']);
+  });
+
+  it('>4 spillere med tildelte flighter: kun samme flight', () => {
+    // 6 spillere: flight 1 = a,b,c,d; flight 2 = e,f
+    const players = [
+      p('a', 1), p('b', 1), p('c', 1), p('d', 1),
+      p('e', 2), p('f', 2),
+    ];
+    const peers = peersForApproval(players, skins, 'a');
+    expect(peers.sort()).toEqual(['b', 'c', 'd']);
+    // flight 2
+    expect(peersForApproval(players, skins, 'e').sort()).toEqual(['f']);
+  });
+
+  it('>4 spillere uten flight: ingen peers', () => {
+    const players = Array.from({ length: 5 }, (_, i) => p(`u${i + 1}`, null));
+    expect(peersForApproval(players, stableford, 'u1')).toEqual([]);
+  });
+
+  it('trukkede spillere ekskluderes alltid', () => {
+    // 4 aktive + 1 trukket → singleFlight, men trukket teller ikke som peer.
+    const players = [p('a', 1), p('b', 2), p('c', null), p('d', null), withdrawn('wd')];
+    const peers = peersForApproval(players, singles, 'a');
+    expect(peers).not.toContain('wd');
+    expect(peers.sort()).toEqual(['b', 'c', 'd']);
+  });
+
+  it('userId selv ekskluderes alltid', () => {
+    const players = [p('me', 1), p('other', 2)];
+    const peers = peersForApproval(players, singles, 'me');
+    expect(peers).not.toContain('me');
   });
 });
 

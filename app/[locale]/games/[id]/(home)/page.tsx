@@ -49,6 +49,7 @@ import {
   isMatchplayMode,
   computeSideShortfall,
 } from '@/lib/games/matchplaySides';
+import { isSingleFlightGame } from '@/lib/games/flightScope';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -136,7 +137,7 @@ const GAME_SELECT =
 
 type FlightRosterRow = {
   user_id: string;
-  flight_number: number;
+  flight_number: number | null;
   accepted_at: string | null;
   users: {
     // `name` is null for pending invitees per migration 0014. The flight
@@ -486,27 +487,78 @@ export default async function GameHomePage({
 
           <div className="h-px bg-border my-3.5" />
 
-          {isSoloFormat(game.game_mode, modeTeamSize) ? (
-            // Solo-modus har ingen flight-gruppering — vis hele deltaker-
-            // listen i stedet for FlightRoster.
-            <>
-              <Kicker tone="muted">DELTAKERE</Kicker>
-              <Suspense fallback={<FlightRosterSkeleton />}>
-                <SoloRoster gameId={id} currentUserId={userId} />
-              </Suspense>
-            </>
-          ) : (
-            <>
-              <Kicker tone="muted">DIN FLIGHT</Kicker>
-              <Suspense fallback={<FlightRosterSkeleton />}>
-                <FlightRoster
-                  gameId={id}
-                  flightNumber={me.flight_number}
-                  currentUserId={userId}
-                />
-              </Suspense>
-            </>
-          )}
+          {(() => {
+            // #543: ny roster-logikk for scheduled-tilstand.
+            //
+            // Regler:
+            //   1. Ikke-solo + singleFlight (≤4 aktive eller wolf):
+            //      «DIN FLIGHT» viser hele gruppen (flight IS alle).
+            //      FlightRoster med flightNumber=null betyr «hele spillet».
+            //   2. Solo + flight satt (>4 med inndeling, ankomst Chunk 3):
+            //      «DIN FLIGHT» viser flight-medlemmene.
+            //   3. Solo + flightless (dagens default, ≤4 solo):
+            //      «DELTAKERE» viser alle (uendret).
+            //   4. Ikke-solo + flight satt (>4 best-ball):
+            //      «DIN FLIGHT» viser kun min flight (uendret).
+            const singleFlight = isSingleFlightGame(
+              game.game_mode,
+              gwp.players,
+            );
+            const soloMode = isSoloFormat(game.game_mode, modeTeamSize);
+            if (!soloMode && singleFlight) {
+              // Regel 1: team/matchplay ≤4 — hele gruppen er én flight.
+              return (
+                <>
+                  <Kicker tone="muted">DIN FLIGHT</Kicker>
+                  <Suspense fallback={<FlightRosterSkeleton />}>
+                    <FlightRoster
+                      gameId={id}
+                      flightNumber={null}
+                      currentUserId={userId}
+                    />
+                  </Suspense>
+                </>
+              );
+            } else if (soloMode && me.flight_number != null) {
+              // Regel 2: solo med inndeling (Chunk 3).
+              return (
+                <>
+                  <Kicker tone="muted">DIN FLIGHT</Kicker>
+                  <Suspense fallback={<FlightRosterSkeleton />}>
+                    <FlightRoster
+                      gameId={id}
+                      flightNumber={me.flight_number}
+                      currentUserId={userId}
+                    />
+                  </Suspense>
+                </>
+              );
+            } else if (soloMode) {
+              // Regel 3: solo uten inndeling — vis alle deltakere (uendret).
+              return (
+                <>
+                  <Kicker tone="muted">DELTAKERE</Kicker>
+                  <Suspense fallback={<FlightRosterSkeleton />}>
+                    <SoloRoster gameId={id} currentUserId={userId} />
+                  </Suspense>
+                </>
+              );
+            } else {
+              // Regel 4: ikke-solo med assigned flights (>4 best-ball).
+              return (
+                <>
+                  <Kicker tone="muted">DIN FLIGHT</Kicker>
+                  <Suspense fallback={<FlightRosterSkeleton />}>
+                    <FlightRoster
+                      gameId={id}
+                      flightNumber={me.flight_number}
+                      currentUserId={userId}
+                    />
+                  </Suspense>
+                </>
+              );
+            }
+          })()}
         </Card>
 
         {/* Spillform — gir spilleren en rask forklaring av modusen før start
@@ -636,6 +688,7 @@ export default async function GameHomePage({
       <Suspense fallback={null}>
         <PendingApprovalsBanner
           gameId={id}
+          gameMode={game.game_mode}
           flightNumber={me.flight_number}
           currentUserId={userId}
           requirePeerApproval={game.require_peer_approval}
@@ -911,19 +964,22 @@ async function FlightRoster({
   currentUserId,
 }: {
   gameId: string;
-  flightNumber: number;
+  /** null betyr «hele spillet» (singleFlight-modus — #543). */
+  flightNumber: number | null;
   currentUserId: string;
 }) {
   const { supabase } = await getGameContext();
-  const { data: flightRows } = await supabase
+  // #543: flightNumber=null betyr singleFlight → hent alle, ingen flight-filter.
+  const query = supabase
     .from('game_players')
     .select(
       'user_id, flight_number, accepted_at, users!game_players_user_id_fkey(name, nickname, hcp_index)',
     )
     .eq('game_id', gameId)
-    .eq('flight_number', flightNumber)
-    .order('user_id')
-    .returns<FlightRosterRow[]>();
+    .order('user_id');
+  const { data: flightRows } = await (
+    flightNumber != null ? query.eq('flight_number', flightNumber) : query
+  ).returns<FlightRosterRow[]>();
 
   const flight = (flightRows ?? []).map((row) => ({
     userId: row.user_id,
@@ -1171,13 +1227,15 @@ async function DraftTeamsOverview({
 
 async function PendingApprovalsBanner({
   gameId,
+  gameMode,
   flightNumber,
   currentUserId,
   requirePeerApproval,
   isActive,
 }: {
   gameId: string;
-  flightNumber: number;
+  gameMode: GameRow['game_mode'];
+  flightNumber: number | null;
   currentUserId: string;
   requirePeerApproval: boolean;
   isActive: boolean;
@@ -1185,12 +1243,29 @@ async function PendingApprovalsBanner({
   if (!requirePeerApproval || !isActive) return null;
 
   const { supabase } = await getGameContext();
-  const { data: mates } = await supabase
+  // Hent alle aktive spillere for å avgjøre singleFlight.
+  const { data: allMates } = await supabase
     .from('game_players')
-    .select('user_id, flight_number, submitted_at, approved_at')
+    .select('user_id, flight_number, submitted_at, approved_at, withdrawn_at')
     .eq('game_id', gameId)
-    .eq('flight_number', flightNumber)
-    .returns<FlightMatePlayerRow[]>();
+    .returns<(FlightMatePlayerRow & { withdrawn_at: string | null })[]>();
+
+  // #543: én-flight-regelen — alle i spillet er attestanter.
+  const singleFlight = isSingleFlightGame(
+    gameMode as Parameters<typeof isSingleFlightGame>[0],
+    (allMates ?? []).map((m) => ({
+      user_id: m.user_id,
+      flight_number: m.flight_number,
+      withdrawn_at: m.withdrawn_at,
+    })),
+  );
+  const mates = singleFlight
+    ? (allMates ?? [])
+    : (allMates ?? []).filter(
+        (m) =>
+          flightNumber != null && m.flight_number === flightNumber,
+      );
+
   const pendingApprovalsForMe = (mates ?? []).filter(
     (m) =>
       m.user_id !== currentUserId &&

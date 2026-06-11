@@ -101,6 +101,41 @@ export function suggestFlightSplit(
 }
 
 /**
+ * Returnerer bruker-id-ene som kan attestere et scorekort for `userId` i
+ * dette spillet. Brukes av `approve/actions.ts` (autorisasjons-gate) og
+ * `submit/actions.ts` (peer-varsel-loop) slik at logikken ikke dupliseres.
+ *
+ * Regler:
+ *   • Én-flight-spill (≤4 aktive ELLER wolf): alle andre aktive spillere er
+ *     attestanter — de er i samme fysiske gruppe.
+ *   • Spill med assigned flights (>4, solo-inndeling): kun spillere med
+ *     samme flight_number (eksisterende oppførsel).
+ *   • Spillere uten flight_number i et ikke-én-flight-spill (legacy- eller
+ *     delvis-inndelte spill): ingen attestanter.
+ *   • Trukkede spillere ekskluderes alltid (de er ikke på banen).
+ *   • `userId` selv ekskluderes alltid.
+ */
+export function peersForApproval(
+  players: FlightPlayer[],
+  gameMode: GameMode,
+  userId: string,
+): string[] {
+  const active = activePlayers(players);
+  if (isSingleFlightGame(gameMode, players)) {
+    // Én-flight: alle andre aktive spillere er attestanter.
+    return active
+      .filter((p) => p.user_id !== userId)
+      .map((p) => p.user_id);
+  }
+  // >4-spill med assigned flights: kun samme flight.
+  const me = active.find((p) => p.user_id === userId);
+  if (!me || me.flight_number == null) return [];
+  return active
+    .filter((p) => p.user_id !== userId && p.flight_number === me.flight_number)
+    .map((p) => p.user_id);
+}
+
+/**
  * Grupperer aktive spillere i en Map keyed på flight_number, pluss en
  * `unassigned`-liste for spillere uten flight. Trukkede ekskluderes.
  *

@@ -21,6 +21,7 @@ import type {
   ScoringHoleScore,
   BingoBangoBongoHoleInput,
 } from '@/lib/scoring/modes/types';
+import { isSingleFlightGame } from '@/lib/games/flightScope';
 import { HoleClient, type ClientPlayer } from './HoleClient';
 import {
   FoursomesTeeStarterBanner,
@@ -88,20 +89,31 @@ export default async function HolePage({ params }: { params: Params }) {
     redirect(`/games/${id}`);
   }
 
-  // For solo-modus (stableford, solo strokeplay) er flight_number null
-  // på alle game_players. Spillere går likevel typisk i en felles fysisk
-  // flight på 1-4 personer, og en av dem fungerer som «marker» for resten
-  // (issue #163). Vi behandler derfor hele spillerlisten som én flight og lar
-  // hvem som helst taste slag for alle. Best-ball- og matchplay-modus beholder
-  // per-flight-filtreringen som før.
+  // #543: én-flight-regelen — alle aktive spillere er i samme gruppe når
+  // spillet har ≤4 aktive spillere ELLER formatet er wolf.
   //
-  // Texas scramble: flight_number = team_number per validator, så flight-
-  // filtreringen returnerer kun spillere på samme lag som «me». Disse
-  // collapses senere til EN ClientPlayer (lag-kaptein-keyed) i playersForClient.
-  const flight =
-    me.flight_number == null
-      ? allPlayers
-      : allPlayers.filter((p) => p.flight_number === me.flight_number);
+  // Når singleFlight er true vises ALLE aktive spillere uavhengig av
+  // flight_number. Dette fikser bl.a. matchplay-motstanderens scorer
+  // (side 1 vs side 2) og foursomes/texas (lag 1 vs lag 2) for 4-spiller-spill.
+  //
+  // Når singleFlight er false brukes eksisterende logikk:
+  //   • flight_number == null → alle spillere (legacy ≤4 flightless)
+  //   • flight_number != null → kun samme flight
+  //
+  // Trukkede spillere filtreres ut av roster slik at de ikke vises som
+  // aktive kort på hull-siden (#386/#387-presedensen).
+  const singleFlight = isSingleFlightGame(game.game_mode, allPlayers);
+  const roster: typeof allPlayers = singleFlight
+    ? allPlayers.filter((p) => p.withdrawn_at == null)
+    : me.flight_number == null
+      ? allPlayers.filter((p) => p.withdrawn_at == null)
+      : allPlayers.filter(
+          (p) => p.flight_number === me.flight_number && p.withdrawn_at == null,
+        );
+
+  // «flight» er nå et alias for roster (backward compat for resten av siden
+  // som bruker «flight» for å referere til den aktive gruppen).
+  const flight = roster;
   const playerIds = flight.map((p) => p.user_id);
 
   const isStableford = isStablefordFamily(game.game_mode);
@@ -423,11 +435,16 @@ export default async function HolePage({ params }: { params: Params }) {
     }
   }
 
-  // For Texas scramble collapses vi flight-medlemmer til ett kort per lag.
+  // For Texas scramble collapses vi lag-medlemmer til ett kort per lag.
   // Lag-kapteinen (lex-min userId) eier scores-radene; alle medlemmer kan
   // taste, alle tap skriver til kapteinens userId. Kortets `name` viser
   // «Lag N · Navn1, Navn2» og `initial`-avataren viser lag-nummeret slik at
   // det visuelt skiller seg fra per-spiller-kort i andre moduser.
+  //
+  // #543: når singleFlight er true og rosteret spenner over flere lag (f.eks.
+  // foursomes med 4 spillere totalt), bygger vi ETT kort PER LAG slik at alle
+  // kan taste på begge kortene. Handicap-formlene er identiske med eksisterende
+  // logikk: begge lags tall produserer det den andre siden ser i dag.
   //
   // Lag-handicap beregnes etter NGF-konvensjon:
   //   teamHCP = round(combinedCourseHandicap × team_handicap_pct / 100)
@@ -442,92 +459,112 @@ export default async function HolePage({ params }: { params: Params }) {
     isGruesome ||
     (isPatsome && holeNumber >= 7)
   ) {
-    const captain = flight.reduce(
-      (min, p) => (p.user_id < min.user_id ? p : min),
-      flight[0],
-    );
-    const combinedCH = flight.reduce(
-      (sum, p) => sum + (p.course_handicap ?? 0),
-      0,
-    );
-    let teamHandicap: number;
-    if (isFoursomes || isGreensome || isChapman || isGruesome) {
-      // Foursomes/greensome/chapman/gruesome: WHS-diff-formel. Beregn motstander-sidens
-      // combined CH og gi diff til høyeste lag. Lavlaget får 0.
-      // Foursomes + gruesome: combined = sum. Greensome + chapman: combined = round(0,6×lavest + 0,4×høyest).
-      const isSixtyForty = isGreensome || isChapman;
-      const oppPlayers = allPlayers.filter(
-        (p) => p.team_number !== me.team_number && p.team_number !== null,
+    // Grupper roster på team_number. Vanligvis ett lag (når flight-filteret kun
+    // returnerer mitt lag), men ved singleFlight får vi alle lag.
+    const teamNumbers = [
+      ...new Set(
+        flight
+          .map((p) => p.team_number)
+          .filter((t): t is number => t != null),
+      ),
+    ].sort((a, b) => a - b);
+
+    // WHS-diff-formel (foursomes/greensome/chapman/gruesome) beregnes globalt
+    // mot motstander-sidens combined CH. Vi trenger alle aktive lag-spillere
+    // for begge sider — bruk allPlayers (ikke flight) for å få motstander-tallene.
+    const isSixtyForty = isGreensome || isChapman;
+    const isDiffFormat = isFoursomes || isGreensome || isChapman || isGruesome;
+
+    function sideHandicap(players: typeof flight): number {
+      if (isSixtyForty) {
+        const chs = players.map((p) => p.course_handicap ?? 0);
+        if (chs.length === 0) return 0;
+        return Math.round(0.6 * Math.min(...chs) + 0.4 * Math.max(...chs));
+      }
+      return players.reduce((sum, p) => sum + (p.course_handicap ?? 0), 0);
+    }
+
+    function teamHandicapFor(teamNum: number): number {
+      const teamPlayers = flight.filter((p) => p.team_number === teamNum);
+      const combinedCH = teamPlayers.reduce(
+        (sum, p) => sum + (p.course_handicap ?? 0),
+        0,
       );
-      function sideHandicap(players: typeof flight): number {
-        if (isSixtyForty) {
-          const chs = players.map((p) => p.course_handicap ?? 0);
+      if (isDiffFormat) {
+        // Alle aktive lag-spillere — bruk allPlayers for diff-beregning.
+        const oppPlayers = allPlayers.filter(
+          (p) =>
+            p.team_number !== teamNum &&
+            p.team_number !== null &&
+            p.withdrawn_at == null,
+        );
+        const thisSideCH = isSixtyForty ? sideHandicap(teamPlayers) : combinedCH;
+        const oppCH = sideHandicap(oppPlayers);
+        const allowancePct =
+          game.mode_config.kind === 'foursomes_matchplay'
+            ? game.mode_config.allowance_pct
+            : game.mode_config.kind === 'greensome_matchplay'
+              ? game.mode_config.allowance_pct
+              : game.mode_config.kind === 'chapman_matchplay'
+                ? game.mode_config.allowance_pct
+                : game.mode_config.kind === 'gruesome_matchplay'
+                  ? game.mode_config.allowance_pct
+                  : 50;
+        const diff = Math.abs(thisSideCH - oppCH);
+        const highSideExtra = Math.round((diff * allowancePct) / 100);
+        return thisSideCH > oppCH ? highSideExtra : 0;
+      } else if (isPatsome) {
+        const patsomeScoring =
+          game.mode_config.kind === 'patsome'
+            ? game.mode_config.patsome_scoring
+            : 'net';
+        if (patsomeScoring === 'gross') return 0;
+        if (holeNumber <= 12) {
+          const chs = teamPlayers.map((p) => p.course_handicap ?? 0);
+          if (chs.length === 0) return 0;
           return Math.round(0.6 * Math.min(...chs) + 0.4 * Math.max(...chs));
         }
-        return players.reduce((sum, p) => sum + (p.course_handicap ?? 0), 0);
-      }
-      const mySideCombinedCH = isSixtyForty ? sideHandicap(flight) : combinedCH;
-      const oppCombinedCH = sideHandicap(oppPlayers);
-      const allowancePct =
-        game.mode_config.kind === 'foursomes_matchplay'
-          ? game.mode_config.allowance_pct
-          : game.mode_config.kind === 'greensome_matchplay'
-            ? game.mode_config.allowance_pct
-            : game.mode_config.kind === 'chapman_matchplay'
-              ? game.mode_config.allowance_pct
-              : game.mode_config.kind === 'gruesome_matchplay'
-                ? game.mode_config.allowance_pct
-                : 50;
-      const diff = Math.abs(mySideCombinedCH - oppCombinedCH);
-      const highSideExtraHCP = Math.round((diff * allowancePct) / 100);
-      teamHandicap = mySideCombinedCH > oppCombinedCH ? highSideExtraHCP : 0;
-    } else if (isPatsome) {
-      // Patsome: segment-avhengig allowance (WHS-standard per segment).
-      const patsomeScoring =
-        game.mode_config.kind === 'patsome'
-          ? game.mode_config.patsome_scoring
-          : 'net';
-      if (patsomeScoring === 'gross') {
-        teamHandicap = 0;
-      } else if (holeNumber <= 12) {
-        // Greensome (7–12): 60 % av laveste + 40 % av høyeste CH.
-        const chs = flight.map((p) => p.course_handicap ?? 0);
-        teamHandicap = Math.round(0.6 * Math.min(...chs) + 0.4 * Math.max(...chs));
+        return Math.round(0.5 * combinedCH);
       } else {
-        // Foursomes-segmentet (13–18): 50 % av samlet CH.
-        teamHandicap = Math.round(0.5 * combinedCH);
+        // Texas/ambrose/florida
+        const handicapPct =
+          game.mode_config.kind === 'texas_scramble' ||
+          game.mode_config.kind === 'ambrose' ||
+          game.mode_config.kind === 'florida_scramble'
+            ? game.mode_config.team_handicap_pct
+            : 0;
+        return Math.round((combinedCH * handicapPct) / 100);
       }
-    } else {
-      const handicapPct =
-        game.mode_config.kind === 'texas_scramble' || game.mode_config.kind === 'ambrose' || game.mode_config.kind === 'florida_scramble'
-          ? game.mode_config.team_handicap_pct
-          : 0;
-      teamHandicap = Math.round((combinedCH * handicapPct) / 100);
     }
-    const captainScoreRow = scoresByUser[captain.user_id];
-    const memberNames = flight
-      .map((p) => p.users?.name ?? '')
-      .map((n) => n.split(/\s+/)[0])
-      .filter((n) => n.length > 0)
-      .join(', ');
-    // Lag-tilstand er «innlevert» hvis NOEN på laget har submitted_at — alle
-    // medlemmer ser samme lag-kort og samme submit-status. Strammere flow
-    // (kun én submit per lag) er en separat design-oppgave, ikke nødvendig
-    // for v1-rendering.
-    const anyTeamMemberSubmitted = flight.some((p) => p.submitted_at != null);
-    playersForClient = [
-      {
+
+    playersForClient = teamNumbers.map((teamNum) => {
+      const teamPlayers = flight.filter((p) => p.team_number === teamNum);
+      const captain = teamPlayers.reduce(
+        (min, p) => (p.user_id < min.user_id ? p : min),
+        teamPlayers[0],
+      );
+      const teamHCP = teamHandicapFor(teamNum);
+      const captainScoreRow = scoresByUser[captain.user_id];
+      const memberNames = teamPlayers
+        .map((p) => p.users?.name ?? '')
+        .map((n) => n.split(/\s+/)[0])
+        .filter((n) => n.length > 0)
+        .join(', ');
+      const anyTeamMemberSubmitted = teamPlayers.some(
+        (p) => p.submitted_at != null,
+      );
+      return {
         userId: captain.user_id,
-        name: `Lag ${me.team_number} · ${memberNames}`,
+        name: `Lag ${teamNum} · ${memberNames}`,
         nickname: null,
-        initial: String(me.team_number),
-        extraStrokes: strokesForHole(teamHandicap, hole.stroke_index),
+        initial: String(teamNum),
+        extraStrokes: strokesForHole(teamHCP, hole.stroke_index),
         initialStrokes: captainScoreRow?.strokes ?? null,
         initialClientUpdatedAt: captainScoreRow?.client_updated_at ?? null,
         initialServerUpdatedAt: captainScoreRow?.updated_at ?? null,
         submitted: anyTeamMemberSubmitted,
-      },
-    ];
+      };
+    });
   } else {
     // Patsome hull 1–6: 4BBB — begge taster sin egen ball.
     // I brutto-modus har ingen spillere ekstra slag.
@@ -581,7 +618,12 @@ export default async function HolePage({ params }: { params: Params }) {
       sideNumber === 1
         ? game.foursomes_side1_tee_starter_user_id
         : game.foursomes_side2_tee_starter_user_id;
-    const partners = flight.map((p) => ({
+    // Tee-starter-banneret gjelder kun mitt lag (2 spillere) — filtrer til
+    // min side uavhengig av om hele flighten er synlig (#543).
+    const myTeamPlayers = flight.filter(
+      (p) => p.team_number === me.team_number,
+    );
+    const partners = myTeamPlayers.map((p) => ({
       userId: p.user_id,
       displayName:
         (p.users?.nickname ?? p.users?.name ?? '').split(/\s+/)[0] || 'Spiller',
@@ -617,9 +659,14 @@ export default async function HolePage({ params }: { params: Params }) {
   let patsomeTeeSlot: ReactNode = null;
   if (isPatsome) {
     patsomeSegmentSlot = <PatsomeSegmentBanner holeNumber={holeNumber} />;
-    if (me.team_number != null && holeNumber >= 13 && flight.length === 2) {
+    // Patsome tee-starter: filtrer til mitt lag (2 spillere) — uavhengig av
+    // om hele flighten er synlig (#543).
+    const myPatsomeTeam = flight.filter(
+      (p) => p.team_number === me.team_number,
+    );
+    if (me.team_number != null && holeNumber >= 13 && myPatsomeTeam.length === 2) {
       const teeStarter = patsomeTeeStarterRes.data?.tee_starter_user_id ?? null;
-      const partners = flight.map((p) => ({
+      const partners = myPatsomeTeam.map((p) => ({
         userId: p.user_id,
         displayName:
           (p.users?.nickname ?? p.users?.name ?? '').split(/\s+/)[0] || 'Spiller',
