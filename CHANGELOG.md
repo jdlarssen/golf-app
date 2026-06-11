@@ -17,7 +17,30 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.109.y — Matchplay · åpen påmelding med side-valg
+## 1.110.y — Matchplay · duellkort i resultatlista
+
+Issue [#546](https://github.com/jdlarssen/golf-app/issues/546). Hele matchplay-familien får skins-duellens utseende i leaderboarden: vunne hull i hver sin farge, dragkamp-stripe, én rute per hull og en dom som snakker matchplay («3&2», «2up», «AS»). Tabellen viser i tillegg stillingen etter hvert hull.
+
+### [1.110.0] - 2026-06-11 · #546
+
+> Resultatlista for matchplay 1 mot 1 ser nå ut som en duell: vunne hull i hver sin farge, en dragkamp-stripe som viser styrkeforholdet, én rute per hull og dommen («Kari vant 3&2»). Tabellen under forteller stillingen etter hvert hull — 1up, 2up, AS.
+
+<details>
+<summary>Teknisk</summary>
+
+[#546](https://github.com/jdlarssen/golf-app/issues/546). Singles matchplay først; fourball/foursomes følger i neste oppføring.
+
+#### Added
+- `MatchplayDuelCard.tsx` — delt client-kort for matchplay-familien med samme visuelle språk som skins-duellens `HeadToHeadResult` (`--player-a`/`--player-b`, dragkamp-bar, momentum-strip, tegnforklaring), men matchplay-nativ dom i fem tilstander (vant `formatted` / endte AS / ikke startet / alt likt / leder N up). Konfetti-reglene (kun avgjort vinner, én gang per sesjon, historiske sessionStorage-prefikser) er flyttet inn i kortet. Testid-kontraktene `*-banner-decided`/`*-banner-tied`/`*-banner-live` og `*-side-1`/`*-side-2` bevart.
+- `lib/scoring/modes/matchplayRunningStatus.ts` — ren helper for løpende match-status per hull (`runningMatchStatus` + `runningStatusLabel`), TDD med 9 Type-A-tester. Uspilte hull gir `null` og endrer ikke stillingen, også midt i sekvensen.
+
+#### Changed
+- `MatchplayMatchView.tsx`: duellkortet erstatter status-banner + side-kort; per-hull-tabellen har ny «Stilling»-kolonne (1up/2up/AS farget mot lederens side-farge, «—» for uspilte hull); meta-raden (Spilt/Igjen/Status) er fjernet — dekkes av kortet og kolonnen. View-en er nå server-komponent (all client-state bor i kortet).
+
+</details>
+
+<details>
+<summary><strong>1.109.y — Matchplay · åpen påmelding med side-valg (4 oppføringer)</strong></summary>
 
 Issue [#544](https://github.com/jdlarssen/golf-app/issues/544). Åpne matchplay-spill har nå et skikkelig påmeldingsløp: du velger hvilken side du vil spille på, og spillet kan ikke starte automatisk før begge sider er fulltallige.
 
@@ -92,6 +115,8 @@ Issue [#544](https://github.com/jdlarssen/golf-app/issues/544). Åpne matchplay-
 - Manual-approval-flyten mangler fortsatt side-felt (`game_registration_requests` har ingen side-kolonne) — autostart-vakta beskytter. Egen issue hvis behovet oppstår.
 - Admin kan overstyre side-tilordning via edit-flyten (admin-wizard allerede laster `team_number`).
 - Legacy null-rader fra before-fix-perioden: vakta blokkerer; admin tildeler side via edit-flyten.
+
+</details>
 
 </details>
 

@@ -538,38 +538,45 @@ describe('MatchplayMatchView', () => {
     });
   });
 
-  describe('match-meta', () => {
-    it('viser Spilt / Igjen / Status med korrekte tall', () => {
+  describe('stilling-kolonne (#546)', () => {
+    it('viser løpende stilling per spilt hull og «—» for uspilte', () => {
       const holes = [
         makeHole(1, { side1Gross: 4, side2Gross: 5, side1Net: 4, side2Net: 5, result: 'side1_wins' }),
         makeHole(2, { side1Gross: 5, side2Gross: 5, side1Net: 5, side2Net: 5, result: 'tied' }),
-        ...Array.from({ length: 16 }, (_, i) => makeHole(i + 3)),
+        makeHole(3, { side1Gross: 6, side2Gross: 4, side1Net: 6, side2Net: 4, result: 'side2_wins' }),
+        ...Array.from({ length: 15 }, (_, i) => makeHole(i + 4)),
       ];
       render(
         <MatchplayMatchView
           {...defaultProps({
             result: makeResult({
               holes,
-              holesUp: 1,
-              holesPlayed: 2,
-              holesRemaining: 16,
+              holesUp: 0,
+              holesPlayed: 3,
+              holesRemaining: 15,
             }),
           })}
         />,
       );
-      const meta = screen.getByTestId('matchplay-meta');
-      expect(meta.textContent).toMatch(/Spilt/);
-      expect(meta.textContent).toMatch(/2/);
-      expect(meta.textContent).toMatch(/Igjen/);
-      expect(meta.textContent).toMatch(/16/);
-      expect(meta.textContent).toMatch(/Status/);
-      expect(meta.textContent).toMatch(/1 up/);
+      // 1up etter hull 1, fortsatt 1up etter delt hull 2, AS etter hull 3.
+      expect(
+        screen.getByTestId('matchplay-hole-1').textContent,
+      ).toContain('1up');
+      expect(
+        screen.getByTestId('matchplay-hole-2').textContent,
+      ).toContain('1up');
+      expect(
+        screen.getByTestId('matchplay-hole-3').textContent,
+      ).toContain('AS');
+      // Uspilt hull har ingen stilling.
+      expect(
+        screen.getByTestId('matchplay-hole-4').textContent,
+      ).toContain('—');
     });
 
-    it('viser «AS» som Status når holesUp er 0', () => {
+    it('match-meta-raden er fjernet', () => {
       render(<MatchplayMatchView {...defaultProps()} />);
-      const meta = screen.getByTestId('matchplay-meta');
-      expect(meta.textContent).toMatch(/AS/);
+      expect(screen.queryByTestId('matchplay-meta')).not.toBeInTheDocument();
     });
   });
 

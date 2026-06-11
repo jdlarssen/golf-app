@@ -1,24 +1,24 @@
-'use client';
-
-import { useEffect, useState, type JSX } from 'react';
+import type { JSX } from 'react';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
-import { Medallion } from '@/components/ui/Medallion';
 import { LeaderboardBackdrop } from '@/components/illustrations/LeaderboardBackdrop';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { firstName } from '@/lib/firstName';
 import type { GameStatus } from '@/lib/games/status';
+import {
+  runningMatchStatus,
+  runningStatusLabel,
+} from '@/lib/scoring/modes/matchplayRunningStatus';
 import type {
   SinglesMatchplayResult,
   MatchplayHoleRow,
-  MatchplaySide,
 } from '@/lib/scoring/modes/types';
-import { ConfettiBurst } from './ConfettiBurst';
+import { MatchplayDuelCard } from './MatchplayDuelCard';
 
-// Distinkt nøkkel-prefiks slik at konfetti i matchplay-podium ikke deler
+// Distinkt nøkkel-prefiks slik at konfetti i matchplay-duellen ikke deler
 // "seen"-state med stableford-podiene (`torny-stableford-podium-...` og
 // `torny-par-stableford-podium-...`). Brukeren skal kunne se konfetti i
 // matchplay selv om hen har sett stableford-podium for samme gameId først
@@ -30,7 +30,7 @@ const STORAGE_PREFIX = 'torny-matchplay-result-confetti-seen-';
  * Spillerinfo for matchplay-view. Map fra userId → navn + kallenavn +
  * course-handicap. Caller (leaderboard-page) bygger map fra game_players-
  * joinen — samme felter som stableford-view-ene leser, pluss `courseHandicap`
- * for å vise HCP under spiller-navnet i sider-headeren.
+ * for å vise HCP under spiller-navnet i duellkortet.
  */
 export interface MatchplayPlayerInfo {
   name: string;
@@ -62,33 +62,24 @@ export interface MatchplayMatchViewProps {
 }
 
 /**
- * Match-view for singles matchplay (epic #45 Phase 3). Erstatter leaderboard-
- * grenene for `game_mode === 'singles_matchplay'`.
+ * Match-view for singles matchplay (epic #45 Phase 3, redesignet i #546).
+ * Erstatter leaderboard-grenene for `game_mode === 'singles_matchplay'`.
  *
  * Matchplay er fundamentalt ulikt poeng-baserte modi: ingen totaler å rangere
  * mot, men én løpende match-status og en per-hull-historie av W/L/T-utfall.
- * View-en speilet ikke 1:1 stableford-podiet (som er rangeringsfokusert) —
- * den kombinerer "live status" + "finished feiring" i én komponent siden
- * matchen er den samme historien som gradvis avgjøres.
  *
- * Tre seksjoner stablet vertikalt:
- *   1. **Status-banner** — løpende "X up etter Y hull" mens matchen er live,
- *      eller "{Vinner} vant {formatted}" når mat-em / spilt ferdig 18 hull.
- *      Avgjorte matcher (`result.result !== null`) får champagne-tinted card
- *      + Medallion. Tied-matcher får en saklig "AS"-card uten konfetti.
- *   2. **Sider-header** — to rader med "Side 1" / "Side 2"-kicker, navn (via
- *      formatRevealName) og course-handicap.
- *   3. **Per-hull-grid** — tabell med en rad per hull-rad i `result.holes`.
+ * To seksjoner stablet vertikalt:
+ *   1. **Duellkort** (`MatchplayDuelCard`) — samme visuelle språk som
+ *      skins-duellen: versus-header med hull vunnet per side i side-farger,
+ *      dragkamp-bar, momentum-strip og dom («{Vinner} vant 3&2» / «X leder
+ *      2 up etter 13 hull» / «Matchen endte AS»). Konfetti ved avgjort vinner.
+ *   2. **Per-hull-grid** — tabell med en rad per hull-rad i `result.holes`.
  *      Kolonner: Hull, Par, Side 1 (gross + Nnet), Side 2 (gross + Nnet),
- *      Vinner-indikator. Vant side får champagne-accent på sin gross-celle;
- *      tied = "=", uplayed = "—".
- *   4. **Match-meta** — kompakt rad "Spilt N · Igjen M · Status: X up".
+ *      Vinner-indikator, og løpende Stilling (1up/2up/AS) etter hvert hull.
+ *      Vant side får accent på sin gross-celle; tied = "=", uplayed = "—".
  *
- * Konfetti fyrer en gang per browser-sesjon når matchen er avgjort med en
- * vinner. Sessionstorage-key er distinkt fra stableford-podiene.
- *
- * Hele view-en er client-only på grunn av konfetti-burst + sessionStorage.
- * Data fetches server-side og pasres som plain props.
+ * Data fetches server-side og passes som plain props; konfetti/sessionStorage
+ * er innkapslet i det client-side duellkortet.
  */
 export function MatchplayMatchView({
   gameId,
@@ -98,26 +89,6 @@ export function MatchplayMatchView({
   gameStatus: _gameStatus,
   backHref = '/',
 }: MatchplayMatchViewProps): JSX.Element {
-  const [replayKey, setReplayKey] = useState(0);
-
-  // Konfetti kun ved avgjorte matcher med en vinner (ikke ved AS). Wrapped i
-  // try/catch siden sessionStorage kan kaste i private-browsing.
-  const hasDecidedWinner =
-    result.result !== null && result.result.winner !== 'tied';
-
-  useEffect(() => {
-    if (!hasDecidedWinner) return;
-    const key = `${STORAGE_PREFIX}${gameId}`;
-    try {
-      if (window.sessionStorage.getItem(key) === '1') return;
-      window.sessionStorage.setItem(key, '1');
-    } catch {
-      // Fall through — fyr konfettien uansett om storage er utilgjengelig.
-    }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setReplayKey(1);
-  }, [gameId, hasDecidedWinner]);
-
   // Defensiv fallback: scoring-laget returnerer `holes.length === 0` når
   // matchen mangler nøyaktig to gyldige sider (validatoren i gamePayload.ts
   // håndhever 1+1, men draft-state eller halvferdig payload kan trigge dette).
@@ -145,6 +116,9 @@ export function MatchplayMatchView({
   const side1Name = displayNameFor(side1Info);
   const side2Name = displayNameFor(side2Info);
 
+  const hasDecidedWinner =
+    result.result !== null && result.result.winner !== 'tied';
+
   return (
     <Shell>
       <Header gameName={gameName} backHref={backHref} />
@@ -158,39 +132,37 @@ export function MatchplayMatchView({
         </p>
       </div>
 
-      {/* 1. Status-banner */}
+      {/* 1. Duellkort — versus, dragkamp, momentum-strip, dom */}
       <div
         data-testid="matchplay-status-banner"
         className="relative isolate px-3.5 pt-3 pb-2"
       >
-        {replayKey > 0 && <ConfettiBurst key={replayKey} />}
-        <StatusBanner
-          result={result}
-          side1Name={side1Name}
-          side2Name={side2Name}
+        <MatchplayDuelCard
+          gameId={gameId}
+          storagePrefix={STORAGE_PREFIX}
+          testIdPrefix="matchplay"
+          sideA={{
+            label: side1Name,
+            sublines:
+              side1Info !== undefined
+                ? [`HCP ${side1Info.courseHandicap}`]
+                : undefined,
+          }}
+          sideB={{
+            label: side2Name,
+            sublines:
+              side2Info !== undefined
+                ? [`HCP ${side2Info.courseHandicap}`]
+                : undefined,
+          }}
+          holeResults={result.holes.map((h) => h.result)}
+          holesUp={result.holesUp}
+          holesPlayed={result.holesPlayed}
+          matchResult={result.result}
         />
       </div>
 
-      {/* 2. Sider-header */}
-      <section
-        data-testid="matchplay-sides"
-        className="px-3.5 pt-2 pb-1 flex flex-col gap-2"
-      >
-        <SideRow
-          sideNumber={1}
-          name={side1Name}
-          courseHandicap={side1Info?.courseHandicap}
-          isLeading={result.holesUp > 0}
-        />
-        <SideRow
-          sideNumber={2}
-          name={side2Name}
-          courseHandicap={side2Info?.courseHandicap}
-          isLeading={result.holesUp < 0}
-        />
-      </section>
-
-      {/* 3. Per-hull-grid */}
+      {/* 2. Per-hull-grid */}
       <section className="px-3.5 pt-4 pb-2">
         <div className="px-2 pb-2 text-center">
           <Kicker tone="muted">PER HULL</Kicker>
@@ -200,18 +172,6 @@ export function MatchplayMatchView({
           side1ShortName={shortNameFor(side1Info)}
           side2ShortName={shortNameFor(side2Info)}
         />
-      </section>
-
-      {/* 4. Match-meta */}
-      <section
-        data-testid="matchplay-meta"
-        className="mx-4 mt-4 rounded-2xl border border-border bg-surface px-4 py-3"
-      >
-        <dl className="grid grid-cols-3 gap-2 text-center">
-          <MetaCell label="Spilt" value={result.holesPlayed.toString()} />
-          <MetaCell label="Igjen" value={result.holesRemaining.toString()} />
-          <MetaCell label="Status" value={statusLabel(result.holesUp)} />
-        </dl>
       </section>
 
       <PullQuote className="px-6 pt-4 pb-4">
@@ -239,15 +199,6 @@ function shortNameFor(info: MatchplayPlayerInfo | undefined): string {
   const first = firstName(info.name);
   if (first) return first;
   return formatRevealName(info.name, info.nickname);
-}
-
-/**
- * "X up etter Y hull"-tekst for live-status. 0 = "Alt likt"; positiv = side 1
- * leder; negativ = side 2 leder. Bruker `Math.abs` for å unngå "-N up"-tekst.
- */
-function statusLabel(holesUp: number): string {
-  if (holesUp === 0) return 'AS';
-  return `${Math.abs(holesUp)} up`;
 }
 
 // ─── Subcomponents ───────────────────────────────────────────────────────────
@@ -285,154 +236,6 @@ function Header({
   );
 }
 
-function StatusBanner({
-  result,
-  side1Name,
-  side2Name,
-}: {
-  result: SinglesMatchplayResult;
-  side1Name: string;
-  side2Name: string;
-}): JSX.Element {
-  // Avgjort match (mat-em eller spilt 18 hull).
-  if (result.result !== null) {
-    const r = result.result;
-    if (r.winner === 'tied') {
-      return (
-        <div
-          data-testid="matchplay-banner-tied"
-          className="reveal-up"
-          style={{ animationDelay: '60ms' }}
-        >
-          <Card className="flex flex-col items-center gap-2 border-border bg-surface px-5 py-5 text-center">
-            <Kicker tone="muted">UAVGJORT</Kicker>
-            <p className="font-serif text-[22px] font-medium leading-tight tracking-[-0.01em] text-text">
-              Matchen endte AS
-            </p>
-            <p className="text-[12px] text-muted">All square etter 18 hull</p>
-          </Card>
-        </div>
-      );
-    }
-    const winnerName = r.winner === 'side1' ? side1Name : side2Name;
-    const winnerSide = r.winner === 'side1' ? 1 : 2;
-    return (
-      <div
-        data-testid="matchplay-banner-decided"
-        className="reveal-up"
-        style={{ animationDelay: '60ms' }}
-      >
-        <Card className="flex flex-col items-center gap-2 border-accent bg-accent/[0.08] px-5 py-5 text-center shadow-[0_2px_14px_rgba(201,169,97,0.18)]">
-          <Medallion place={1} size={48} title={`${winnerName} vant`} />
-          <Kicker tone="accent">VINNER</Kicker>
-          <p className="font-serif text-[22px] font-medium leading-tight tracking-[-0.01em] text-text">
-            {winnerName} vant {r.formatted}
-          </p>
-          <p className="text-[12px] text-muted tabular-nums">
-            Side {winnerSide} · Avgjort på hull {r.decidedAtHole}
-          </p>
-        </Card>
-      </div>
-    );
-  }
-
-  // Live: matchen er ikke avgjort ennå.
-  // Skille mellom "ikke startet" (0 hull spilt) og "live midt i runden".
-  if (result.holesPlayed === 0) {
-    return (
-      <div
-        data-testid="matchplay-banner-live"
-        className="reveal-up"
-        style={{ animationDelay: '60ms' }}
-      >
-        <Card className="flex flex-col items-center gap-2 border-border bg-surface px-5 py-5 text-center">
-          <Kicker tone="muted">LIVE</Kicker>
-          <p className="font-serif text-[20px] font-medium leading-tight tracking-[-0.01em] text-text">
-            Matchen er ikke startet ennå
-          </p>
-          <p className="text-[12px] text-muted">
-            Tabellen våkner når første hull er spilt.
-          </p>
-        </Card>
-      </div>
-    );
-  }
-
-  if (result.holesUp === 0) {
-    return (
-      <div
-        data-testid="matchplay-banner-live"
-        className="reveal-up"
-        style={{ animationDelay: '60ms' }}
-      >
-        <Card className="flex flex-col items-center gap-2 border-border bg-surface px-5 py-5 text-center">
-          <Kicker tone="muted">LIVE</Kicker>
-          <p className="font-serif text-[22px] font-medium leading-tight tracking-[-0.01em] text-text tabular-nums">
-            Alt likt etter {result.holesPlayed} hull
-          </p>
-          <p className="text-[12px] text-muted">Matchen står og vipper.</p>
-        </Card>
-      </div>
-    );
-  }
-
-  const leaderName = result.holesUp > 0 ? side1Name : side2Name;
-  const leadingSide = result.holesUp > 0 ? 1 : 2;
-  const margin = Math.abs(result.holesUp);
-  return (
-    <div
-      data-testid="matchplay-banner-live"
-      className="reveal-up"
-      style={{ animationDelay: '60ms' }}
-    >
-      <Card className="flex flex-col items-center gap-2 border-border bg-surface px-5 py-5 text-center">
-        <Kicker tone="muted">LIVE</Kicker>
-        <p className="font-serif text-[22px] font-medium leading-tight tracking-[-0.01em] text-text">
-          {leaderName} leder{' '}
-          <span className="tabular-nums">{margin} up</span>
-        </p>
-        <p className="text-[12px] text-muted tabular-nums">
-          Side {leadingSide} · Etter {result.holesPlayed} hull
-        </p>
-      </Card>
-    </div>
-  );
-}
-
-function SideRow({
-  sideNumber,
-  name,
-  courseHandicap,
-  isLeading,
-}: {
-  sideNumber: 1 | 2;
-  name: string;
-  courseHandicap: number | undefined;
-  isLeading: boolean;
-}): JSX.Element {
-  const cardClass = isLeading
-    ? 'border-accent/60 bg-accent/[0.05]'
-    : '';
-  return (
-    <div data-testid={`matchplay-side-${sideNumber}`}>
-      <Card className={`flex items-center gap-3.5 px-4 py-3 ${cardClass}`}>
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-surface font-serif text-[14px] font-medium uppercase tracking-[0.05em] text-muted">
-          S{sideNumber}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="font-serif text-[16px] font-medium tracking-[-0.005em] text-text truncate">
-            {name}
-          </p>
-          <p className="mt-0.5 text-[11.5px] text-muted tabular-nums">
-            Side {sideNumber}
-            {courseHandicap !== undefined && ` · HCP ${courseHandicap}`}
-          </p>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
 function HoleGrid({
   holes,
   side1ShortName,
@@ -442,6 +245,9 @@ function HoleGrid({
   side1ShortName: string;
   side2ShortName: string;
 }): JSX.Element {
+  // Løpende stilling etter hvert hull — «1up, 2up, 3up, 2up, 1up, AS»-
+  // historien (#546). Uspilte hull gir null (vises som «—»).
+  const running = runningMatchStatus(holes.map((h) => h.result));
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-surface">
       <table
@@ -480,11 +286,22 @@ function HoleGrid({
             >
               Vinner
             </th>
+            <th
+              scope="col"
+              className="px-2 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[10px] text-muted"
+            >
+              Stilling
+            </th>
           </tr>
         </thead>
         <tbody>
           {holes.map((hole, i) => (
-            <HoleRow key={hole.holeNumber} hole={hole} isLast={i === holes.length - 1} />
+            <HoleRow
+              key={hole.holeNumber}
+              hole={hole}
+              runningStatus={running[i]}
+              isLast={i === holes.length - 1}
+            />
           ))}
         </tbody>
       </table>
@@ -492,7 +309,15 @@ function HoleGrid({
   );
 }
 
-function HoleRow({ hole, isLast }: { hole: MatchplayHoleRow; isLast: boolean }): JSX.Element {
+function HoleRow({
+  hole,
+  runningStatus,
+  isLast,
+}: {
+  hole: MatchplayHoleRow;
+  runningStatus: number | null;
+  isLast: boolean;
+}): JSX.Element {
   const side1Won = hole.result === 'side1_wins';
   const side2Won = hole.result === 'side2_wins';
   const tied = hole.result === 'tied';
@@ -542,7 +367,38 @@ function HoleRow({ hole, isLast }: { hole: MatchplayHoleRow; isLast: boolean }):
           </span>
         )}
       </td>
+      <StatusCell runningStatus={runningStatus} />
     </tr>
+  );
+}
+
+/**
+ * Stilling-celle: løpende match-status etter hullet, farget mot lederens
+ * side-farge (side 1 = petrol, side 2 = terracotta). «AS» muted ved likt,
+ * «—» for uspilte hull (stillingen endres ikke av hull uten resultat).
+ */
+function StatusCell({
+  runningStatus,
+}: {
+  runningStatus: number | null;
+}): JSX.Element {
+  if (runningStatus === null) {
+    return (
+      <td className="px-2 py-2 text-center tabular-nums text-muted">—</td>
+    );
+  }
+  const colorClass =
+    runningStatus > 0
+      ? 'text-player-a'
+      : runningStatus < 0
+        ? 'text-player-b'
+        : 'text-muted';
+  return (
+    <td
+      className={`px-2 py-2 text-center tabular-nums text-[11.5px] font-semibold ${colorClass}`}
+    >
+      {runningStatusLabel(runningStatus)}
+    </td>
   );
 }
 
@@ -572,18 +428,5 @@ function ScoreCell({
         </span>
       ) : null}
     </span>
-  );
-}
-
-function MetaCell({ label, value }: { label: string; value: string }): JSX.Element {
-  return (
-    <div className="flex flex-col items-center gap-0.5">
-      <dt className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
-        {label}
-      </dt>
-      <dd className="font-serif text-[18px] font-medium tabular-nums text-text">
-        {value}
-      </dd>
-    </div>
   );
 }
