@@ -98,21 +98,21 @@ Kopiere `CRON_SECRET`-verdien fra Vercel → kjøre `select vault.create_secret(
 
 ## Success Criteria
 
-- [ ] `POST /api/cron/start-scheduled-games` uten/med feil bearer → 401; uten `CRON_SECRET`-env → 500 (verifiseres med curl mot lokal dev-server eller route-lesning)
-- [ ] Due scheduled-spill startes av sweepen: handicap frosset + status `active` + `revalidateTag` (verifiseres via test eller kode-lesning av at sweepen kaller eksisterende `startScheduledGame` + tag-invalidering)
-- [ ] `startScheduledGame` returnerer `started: true` kun for flip-vinneren — ny Type A-test grønn i `lib/games/startScheduledGame.test.ts`
-- [ ] `game_started`-varsel: kind + zod + CHECK + NotificationCard-rendering + fan-out fra alle tre stier, gated på `started` (fil:linje-evidens per sti)
-- [ ] `auto_start_blocked`-varsel: én gang per spill via atomisk guard, kun strukturelle årsaker — Type A-test på filteret grønn
-- [ ] Migrasjon komplett (extensions, kolonne, indeks, CHECK, cron.schedule med Vault-oppslag + EXISTS-gate) og applisert i prod via MCP
-- [ ] `cron.job` viser jobben scheduled i prod; `select * from cron.job_run_details order by start_time desc limit 5` viser kjøringer etter applisering
+- [x] `POST /api/cron/start-scheduled-games` uten/med feil bearer → 401; uten `CRON_SECRET`-env → 500 — **Evidens:** curl mot lokal dev-server (`CRON_SECRET=test… next dev -p 4502`): uten auth → 401, feil bearer → 401, GET → 405. 500-stien speiler product-update-digest linje-for-linje (`route.ts:42-45`).
+- [x] Due scheduled-spill startes av sweepen — **Evidens:** `route.ts:86` kaller `startScheduledGame(admin, game.id)` (frys + flip, eksisterende testet helper); `route.ts:93` `revalidateTag(\`game-${id}\`, 'max')` for vinnere.
+- [x] `startScheduledGame` returnerer `started: true` kun for flip-vinneren — **Evidens:** `lib/games/startScheduledGame.test.ts` «started-flagg (#502)»-describe, 22/22 grønne (vinner true; 0-raders flip false; allerede-aktiv false).
+- [x] `game_started`-varsel komplett — **Evidens:** kind+zod `lib/notifications/types.ts`; CHECK i 0094; rendering `NotificationCard.tsx` («Runden er i gang»); deeplink `InboxClient.tsx`; fan-out gated på `started`: cron `route.ts:88-115`, E1 `app/[locale]/games/[id]/(home)/page.tsx:333-345` (i `after()`, ekskl. besøkende), admin `app/[locale]/admin/games/[id]/actions.ts:104-131` (ekskl. admin).
+- [x] `auto_start_blocked`-varsel én gang, kun strukturelle årsaker — **Evidens:** `lib/notifications/autoStartBlocked.ts` atomisk vinn-raden-update; `autoStartBlocked.test.ts` 9 cases grønne (filter begge veier + vant/tapte raden + null-creator).
+- [ ] Migrasjon komplett og applisert i prod via MCP — **fil komplett (0094), applisering skjer etter merge+deploy (per kontraktens rekkefølge)**
+- [ ] `cron.job` viser jobben scheduled i prod + kjøringer i `cron.job_run_details` — **verifiseres etter applisering**
 
 ## Gates
 
-- [ ] `npx tsc --noEmit` rent
-- [ ] `npx vitest run lib/games lib/notifications components/notifications` grønt (+ co-located tester for alle endrede filer)
-- [ ] `npm run build` grønt (NotificationKind-utvidelse treffer exhaustive maps)
-- [ ] `npx vitest run` full suite grønn før PR
-- [ ] Humanizer-skill kjørt på nye norske strenger før commit
+- [x] `npx tsc --noEmit` rent — kjørt etter hver chunk, sist etter rebase mot 1.110.2
+- [x] `npx vitest run lib/games lib/notifications components/notifications` + co-located `admin/games/[id]/actions.test.ts` — 563/563 grønne
+- [x] `npm run build` grønt — route-lista viser `ƒ /api/cron/start-scheduled-games`, 81 ◐ PPR-ruter intakt
+- [x] `npx vitest run` full suite — 3119/3119 grønne (256 filer)
+- [x] Humanizer-skill kjørt — «Runden fikk ikke startet» → «Runden kom ikke i gang» (få+partisipp krever agentivt subjekt)
 
 ## Files Likely Touched
 
