@@ -1,6 +1,7 @@
 import { Suspense, cache } from 'react';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound, redirect } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -1091,6 +1092,8 @@ function DrilldownView({
   selected: TeamLine;
   holeWinners: Array<number | null>;
 }) {
+  const t = useTranslations('leaderboard.holes');
+  const tc = useTranslations('leaderboard.common');
   const frontRows = selected.holes.filter((h) => h.holeNumber <= 9);
   const backRows = selected.holes.filter((h) => h.holeNumber >= 10);
 
@@ -1129,13 +1132,13 @@ function DrilldownView({
         <header className="flex items-center justify-between gap-2 px-4 pb-2 pt-3.5">
           <SmartLink
             href={`/games/${gameId}/leaderboard?mode=${mode}`}
-            aria-label="Tilbake til leaderboard"
+            aria-label={t('backAriaLabel')}
             className="-ml-2 inline-flex h-8 w-8 items-center justify-center text-lg text-text"
           >
             ‹
           </SmartLink>
           <span className="flex-1 truncate text-center text-[10px] font-semibold uppercase tracking-[0.20em] text-muted">
-            Lag {selected.teamNumber} · {selected.rank}. plass
+            {t('teamHeader', { number: selected.teamNumber, rank: selected.rank })}
           </span>
           <span className="w-8" aria-hidden />
         </header>
@@ -1151,10 +1154,10 @@ function DrilldownView({
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="m-0 font-serif text-[22px] font-medium tracking-[-0.015em] text-text">
-              Lag {selected.teamNumber}
+              {tc('teamLabel', { number: selected.teamNumber })}
             </h1>
             <p className="mt-0.5 truncate text-[11.5px] text-muted">
-              {playerMeta || '(uten spillere)'}
+              {playerMeta || t('noPlayers')}
             </p>
           </div>
           <div className="shrink-0 text-right">
@@ -1171,21 +1174,21 @@ function DrilldownView({
         <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 px-5 pb-2 text-[10.5px] text-muted">
           <span className="inline-flex items-center gap-1.5">
             <strong className="font-serif font-bold text-text">B</strong>
-            <span>= brukt netto</span>
+            <span>{t('legendNetLabel')}</span>
           </span>
           <span className="ml-auto font-serif text-[11px] italic">
-            initial · brutto · netto · vs par   →   lag
+            {t('legendFormat')}
           </span>
         </div>
 
         {/* Front nine */}
         <div className="px-5 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.20em] text-muted">
-          Ut · hull 1–9
+          {t('frontNineLabel')}
         </div>
         <HoleTable
           rows={frontRows}
-teamPlayers={selected.players}
-          summaryLabel="UT"
+          teamPlayers={selected.players}
+          summaryLabel={t('summaryUt')}
           summaryPar={frontPar}
           summaryNet={frontNet}
         />
@@ -1194,21 +1197,21 @@ teamPlayers={selected.players}
         {isActive ? (
           <div className="mx-4 mt-5 rounded-2xl border border-dashed border-border bg-surface px-5 py-6 text-center">
             <p className="font-serif text-[16px] font-medium text-text">
-              🤫 Vi sees ved hull 18.
+              {t('hiddenBackNineHeading')}
             </p>
             <p className="mt-2 text-xs text-muted">
-              Hull 10–18 vises når alle scorekort er levert og godkjent.
+              {t('hiddenBackNineSub')}
             </p>
           </div>
         ) : (
           <>
             <div className="px-5 pt-5 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.20em] text-muted">
-              Inn · hull 10–18
+              {t('backNineLabel')}
             </div>
             <HoleTable
               rows={backRows}
-teamPlayers={selected.players}
-              summaryLabel="INN"
+              teamPlayers={selected.players}
+              summaryLabel={t('summaryInn')}
               summaryPar={backPar}
               summaryNet={backNet}
             />
@@ -1220,10 +1223,10 @@ teamPlayers={selected.players}
             <div className="mx-4 mt-5 mb-5 flex items-center justify-between rounded-[14px] border border-border bg-surface px-5 py-3.5 text-text">
               <div>
                 <span className="block text-[10px] font-semibold uppercase tracking-[0.20em] text-accent">
-                  Totalt
+                  {t('totalLabel')}
                 </span>
                 <span className="mt-0.5 block text-[11.5px] tabular-nums text-muted">
-                  {holesWon} hull vunnet
+                  {t('holesWon', { count: holesWon })}
                 </span>
               </div>
               <div className="flex items-baseline gap-3">
@@ -1276,7 +1279,7 @@ function HoleTable({
 }: {
   rows: TeamLine['holes'];
   teamPlayers: LbPlayer[];
-  summaryLabel: 'UT' | 'INN';
+  summaryLabel: string;
   summaryPar: number;
   summaryNet: number;
 }) {
@@ -1331,6 +1334,7 @@ function HoleRow({
   teamPlayers: LbPlayer[];
   staggerIndex: number;
 }) {
+  const t = useTranslations('leaderboard.holes');
   // Map userId → first + last name initial (e.g. "Karl Hansen" → "KH").
   const initialFor = new Map<string, string>();
   for (const p of teamPlayers) {
@@ -1355,8 +1359,8 @@ function HoleRow({
           {row.parByGender && hasParDifference(row.parByGender) && (
             <sup
               data-testid="par-aside-marker"
-              title={`Dette hullet har annerledes par for andre kjønn. ${formatOtherGendersPar(row.parByGender, undefined)}.`}
-              aria-label={`Avvikende par for andre kjønn. ${formatOtherGendersPar(row.parByGender, undefined)}.`}
+              title={t('parAsideTitle', { genders: formatOtherGendersPar(row.parByGender, undefined) })}
+              aria-label={t('parAsideAriaLabel', { genders: formatOtherGendersPar(row.parByGender, undefined) })}
               className="ml-0.5 cursor-help text-[0.65em] font-semibold text-muted"
             >
               *
@@ -1385,8 +1389,8 @@ function HoleRow({
               className="flex items-center gap-2 font-serif tabular-nums"
               aria-label={
                 isBestNet
-                  ? `Brukt netto for laget: ${initial}, brutto ${grossText}, +${pc.extraStrokes} slag, netto ${nettoText}`
-                  : `${initial}, brutto ${grossText}, +${pc.extraStrokes} slag, netto ${nettoText}`
+                  ? t('playerScoreAriaUsed', { initial, gross: grossText, extra: pc.extraStrokes, net: nettoText })
+                  : t('playerScoreAria', { initial, gross: grossText, extra: pc.extraStrokes, net: nettoText })
               }
             >
               <span
@@ -1462,6 +1466,7 @@ function TeamNavLink({
   target: TeamLine | null;
   direction: 'prev' | 'next';
 }) {
+  const t = useTranslations('leaderboard.holes');
   if (!target) {
     return <span className="w-1/2" aria-hidden />;
   }
@@ -1475,7 +1480,9 @@ function TeamNavLink({
     >
       {isPrev && <span aria-hidden>‹</span>}
       <span>
-        {isPrev ? 'Forrige' : 'Neste'} · {target.rank}. Lag {target.teamNumber}
+        {isPrev
+          ? t('prevTeam', { rank: target.rank, number: target.teamNumber })
+          : t('nextTeam', { rank: target.rank, number: target.teamNumber })}
       </span>
       {!isPrev && <span aria-hidden>›</span>}
     </SmartLink>

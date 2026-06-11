@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 
 type Tab = 'main' | 'side';
 
@@ -21,10 +22,11 @@ type Props = {
  */
 export function LeaderboardTabs({ mainContent, sideContent }: Props) {
   const [active, setActive] = useState<Tab>('main');
+  const t = useTranslations('leaderboard.tabs');
 
   return (
     <div className="space-y-4">
-      <div className="flex border-b border-border" role="tablist" aria-label="Leaderboard-fane">
+      <div className="flex border-b border-border" role="tablist" aria-label={t('tablistAriaLabel')}>
         <button
           type="button"
           role="tab"
@@ -36,7 +38,7 @@ export function LeaderboardTabs({ mainContent, sideContent }: Props) {
               : 'text-muted hover:text-text'
           }`}
         >
-          Hovedturnering
+          {t('main')}
         </button>
         <button
           type="button"
@@ -49,7 +51,7 @@ export function LeaderboardTabs({ mainContent, sideContent }: Props) {
               : 'text-muted hover:text-text'
           }`}
         >
-          Sideturnering
+          {t('side')}
         </button>
       </div>
 

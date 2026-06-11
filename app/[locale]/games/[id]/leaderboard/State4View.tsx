@@ -2,6 +2,7 @@
 
 import { SmartLink } from '@/components/ui/SmartLink';
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Laurel, PinFlagSm, ReplayIcon } from '@/components/icons';
 import { Medallion } from '@/components/ui/Medallion';
 import { formatRevealName } from '@/lib/names/formatRevealName';
@@ -59,6 +60,9 @@ export function State4View({
   backHref = '/',
   chromeless = false,
 }: Props) {
+  const t = useTranslations('leaderboard');
+  const tc = useTranslations('leaderboard.common');
+  const ts = useTranslations('leaderboard.state4');
   const [replayKey, setReplayKey] = useState(0);
 
   // Auto-fire confetti on first visit per browser session. Re-fires happen
@@ -89,25 +93,24 @@ export function State4View({
     return (
       <Shell chromeless={chromeless}>
         {!chromeless && (
-          <Header gameName={gameName} onReplay={null} backHref={backHref} />
+          <Header gameName={gameName} onReplay={null} backHref={backHref} t={tc} />
         )}
-        <p className="mt-12 text-center text-sm text-muted">Ingen lag å vise.</p>
+        <p className="mt-12 text-center text-sm text-muted">{tc('noTeams')}</p>
       </Shell>
     );
   }
 
   const leader = teams[0]!;
   const rest = teams.slice(1);
+  const modeLabel = mode === 'netto' ? tc('netto') : tc('brutto');
   const subtitleParts = [
-    'Etter 18 hull',
-    'Best ball',
-    mode === 'netto' ? 'Netto' : 'Brutto',
+    ts('subtitle', { mode: modeLabel }),
   ];
 
   return (
     <Shell chromeless={chromeless}>
       {!chromeless && (
-        <Header gameName={gameName} onReplay={onReplay} backHref={backHref} />
+        <Header gameName={gameName} onReplay={onReplay} backHref={backHref} t={tc} />
       )}
 
       {chromeless && (
@@ -115,20 +118,20 @@ export function State4View({
         // but inline above the title since the outer TopBar owns the back
         // chrome.
         <div className="flex justify-end px-4 pt-1">
-          <ReplayButton onClick={onReplay} />
+          <ReplayButton onClick={onReplay} t={tc} />
         </div>
       )}
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          Leaderboard
+          {ts('heading')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          {subtitleParts.join(' · ')}
+          {subtitleParts.join('')}
         </p>
       </div>
 
-      <ModeChip gameId={gameId} mode={mode} />
+      <ModeChip gameId={gameId} mode={mode} t={tc} />
 
       <div className="relative px-3.5 pt-3">
         {replayKey > 0 && <ConfettiBurst key={replayKey} />}
@@ -137,6 +140,8 @@ export function State4View({
           mode={mode}
           line={leader}
           coursePar={coursePar}
+          t={tc}
+          ts={ts}
         />
       </div>
 
@@ -150,15 +155,17 @@ export function State4View({
             leaderTotal={leader.total}
             coursePar={coursePar}
             staggerIndex={i}
+            t={tc}
+            ts={ts}
           />
         ))}
       </ul>
 
       <p className="px-6 pt-1 pb-3 text-center font-serif text-[11px] italic text-muted">
-        Trykk på et lag for hull-for-hull
+        {tc('hullForHullDrillHint')}
       </p>
 
-      <ExportLink gameId={gameId} />
+      <ExportLink gameId={gameId} t={tc} />
     </Shell>
   );
 }
@@ -173,7 +180,7 @@ export function State4View({
  * `Button variant="secondary"`, men ikke `LinkButton` siden vi trenger
  * en rå `<a>` med `download` for at nettleseren skal trigge nedlasting.
  */
-function ExportLink({ gameId }: { gameId: string }) {
+function ExportLink({ gameId, t }: { gameId: string; t: ReturnType<typeof useTranslations<'leaderboard.common'>> }) {
   const today = new Date().toISOString().slice(0, 10);
   return (
     <div className="flex justify-center px-6 pb-5">
@@ -182,7 +189,7 @@ function ExportLink({ gameId }: { gameId: string }) {
         download={`torny-${gameId}-${today}.csv`}
         className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-border bg-transparent px-[18px] py-2.5 text-sm font-medium tracking-tight text-text transition-[background-color,transform,opacity] duration-100 hover:bg-primary-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
       >
-        Last ned resultat (CSV)
+        {t('downloadCsv')}
       </a>
     </div>
   );
@@ -226,16 +233,18 @@ function Header({
   gameName,
   onReplay,
   backHref,
+  t,
 }: {
   gameName: string;
   onReplay: (() => void) | null;
   backHref: string;
+  t: ReturnType<typeof useTranslations<'leaderboard.common'>>;
 }) {
   return (
     <header className="flex items-center justify-between gap-2 px-4 pb-2 pt-3.5">
       <SmartLink
         href={backHref}
-        aria-label="Tilbake"
+        aria-label={t('backAriaLabel')}
         className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
       >
         ‹
@@ -244,7 +253,7 @@ function Header({
         {gameName}
       </span>
       {onReplay ? (
-        <ReplayButton onClick={onReplay} />
+        <ReplayButton onClick={onReplay} t={t} />
       ) : (
         <span className="w-11" aria-hidden />
       )}
@@ -268,13 +277,13 @@ function Header({
  * button would be a dead-tap since `.confetti-piece { display: none }` already
  * suppresses the actual confetti for that preference.
  */
-function ReplayButton({ onClick }: { onClick: () => void }) {
+function ReplayButton({ onClick, t }: { onClick: () => void; t: ReturnType<typeof useTranslations<'leaderboard.common'>> }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-label="Spill av jubelscenene igjen"
-      title="Spill av jubelscenene igjen"
+      aria-label={t('replayAriaLabel')}
+      title={t('replayAriaLabel')}
       className="confetti-replay-button group inline-flex h-11 w-11 items-center justify-center rounded-full text-muted transition-colors hover:bg-primary-soft hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 active:scale-95"
     >
       <ReplayIcon size={20} />
@@ -285,9 +294,11 @@ function ReplayButton({ onClick }: { onClick: () => void }) {
 function ModeChip({
   gameId,
   mode,
+  t,
 }: {
   gameId: string;
   mode: LeaderboardMode;
+  t: ReturnType<typeof useTranslations<'leaderboard.common'>>;
 }) {
   // Tab-style toggle (both modes visible at once, current is highlighted) —
   // matches the state #3.5 ModeToggle pattern, so the brutto/netto affordance
@@ -300,7 +311,7 @@ function ModeChip({
     <div className="flex justify-center pb-2">
       <div
         role="tablist"
-        aria-label="Modus"
+        aria-label={t('modeToggleAriaLabel')}
         className="inline-flex rounded-full border border-border bg-surface p-0.5"
       >
         {(['netto', 'brutto'] as const).map((m) => {
@@ -317,7 +328,7 @@ function ModeChip({
                   : 'text-muted hover:text-text'
               }`}
             >
-              {m === 'netto' ? 'Netto' : 'Brutto'}
+              {m === 'netto' ? t('netto') : t('brutto')}
             </SmartLink>
           );
         })}
@@ -331,17 +342,22 @@ function LeaderCard({
   mode,
   line,
   coursePar,
+  t,
+  ts,
 }: {
   gameId: string;
   mode: LeaderboardMode;
   line: TeamLine;
   coursePar: number;
+  t: ReturnType<typeof useTranslations<'leaderboard.common'>>;
+  ts: ReturnType<typeof useTranslations<'leaderboard.state4'>>;
 }) {
   const vsPar = line.total - coursePar;
   const playersLine = line.players
     .map((p) => formatRevealName(p.name, p.nickname))
     .join(' · ');
   const drilldownHref = `/games/${gameId}/leaderboard/holes?team=${line.teamNumber}&mode=${mode}`;
+  const modeLabel = mode === 'netto' ? t('netto') : t('brutto');
 
   return (
     // Two-layer structure: outer wrapper owns the entry animation (reveal-up),
@@ -366,7 +382,7 @@ function LeaderCard({
 
         <div className="relative flex flex-col items-center">
           <span className="leader-badge-pulse text-[10px] font-semibold uppercase tracking-[0.20em] text-accent">
-            Leder · {line.rank}. plass
+            {ts('leaderBadge', { rank: line.rank })}
           </span>
           <span
             className="score-num my-1 text-[64px] leading-none tracking-[-0.04em] text-accent"
@@ -377,7 +393,7 @@ function LeaderCard({
           <div className="mt-1 flex items-center gap-2">
             <PinFlagSm size={14} />
             <h2 className="m-0 font-serif text-[26px] font-medium tracking-[-0.015em] text-text">
-              Lag {line.teamNumber}
+              {t('teamLabel', { number: line.teamNumber })}
             </h2>
             <PinFlagSm size={14} />
           </div>
@@ -396,7 +412,7 @@ function LeaderCard({
         >
           <div className="text-left">
             <span className="block text-[10px] font-semibold uppercase tracking-[0.20em] text-muted">
-              Total {mode}
+              {ts('totalLabel', { mode: modeLabel })}
             </span>
             <span className="score-num mt-0.5 block text-[34px] leading-none tracking-[-0.02em] text-text">
               {line.total}
@@ -404,7 +420,7 @@ function LeaderCard({
           </div>
           <div className="text-right">
             <span className="block text-[10px] font-semibold uppercase tracking-[0.20em] text-muted">
-              Mot par
+              {ts('vsParLabel')}
             </span>
             <span
               className={`score-num mt-0.5 block text-[34px] leading-none tracking-[-0.02em] ${
@@ -418,7 +434,7 @@ function LeaderCard({
 
         <SmartLink
           href={drilldownHref}
-          aria-label={`Vis hull-for-hull for lag ${line.teamNumber}`}
+          aria-label={ts('drillAriaLabel', { number: line.teamNumber })}
           className="absolute inset-0 rounded-[18px]"
         />
       </div>
@@ -433,6 +449,8 @@ function TeamRow({
   leaderTotal,
   coursePar,
   staggerIndex,
+  t,
+  ts,
 }: {
   gameId: string;
   mode: LeaderboardMode;
@@ -440,6 +458,8 @@ function TeamRow({
   leaderTotal: number;
   coursePar: number;
   staggerIndex: number;
+  t: ReturnType<typeof useTranslations<'leaderboard.common'>>;
+  ts: ReturnType<typeof useTranslations<'leaderboard.state4'>>;
 }) {
   const gap = line.total - leaderTotal;
   const vsPar = line.total - coursePar;
@@ -473,19 +493,19 @@ function TeamRow({
         )}
         <div className="min-w-0 flex-1">
           <p className="font-serif text-[17px] font-medium tracking-[-0.005em] text-text">
-            Lag {line.teamNumber}
+            {t('teamLabel', { number: line.teamNumber })}
           </p>
           <p className="mt-0.5 truncate text-[13px]">
             <span className="font-serif font-medium text-text">
-              {firstNames || '(uten spillere)'}
+              {firstNames || t('noPlayers')}
             </span>
             {gap > 0 && (
               <span className="text-muted">
                 {' · '}
-                <span className="tabular-nums">+{gap}</span> bak leder
+                <span className="tabular-nums">+{gap}</span> {ts('behindLeader')}
               </span>
             )}
-            {isTied && <span className="text-muted"> · delt</span>}
+            {isTied && <span className="text-muted"> · {ts('tiedLabel')}</span>}
           </p>
         </div>
         <div className="shrink-0 text-right">
@@ -493,7 +513,7 @@ function TeamRow({
             {line.total}
           </span>
           <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.12em] tabular-nums text-muted">
-            {formatVsPar(vsPar)} PAR
+            {formatVsPar(vsPar)} {ts('parLabel')}
           </span>
         </div>
         <span aria-hidden className="text-muted">

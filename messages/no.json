@@ -496,6 +496,92 @@
       "teeHint": "{name} slår ut"
     }
   },
+  "leaderboard": {
+    "common": {
+      "unknownPlayer": "(ukjent)",
+      "teamLabel": "Lag {number}",
+      "noPlayers": "(uten spillere)",
+      "netto": "Netto",
+      "brutto": "Brutto",
+      "modeToggleAriaLabel": "Modus",
+      "backAriaLabel": "Tilbake",
+      "replayAriaLabel": "Spill av jubelscenene igjen",
+      "downloadCsv": "Last ned resultat (CSV)",
+      "hullForHullDrillHint": "Trykk på et lag for hull-for-hull",
+      "noTeams": "Ingen lag å vise."
+    },
+    "tabs": {
+      "tablistAriaLabel": "Leaderboard-fane",
+      "main": "Hovedturnering",
+      "side": "Sideturnering"
+    },
+    "state4": {
+      "heading": "Leaderboard",
+      "subtitle": "Etter 18 hull · Best ball · {mode}",
+      "leaderBadge": "Leder · {rank}. plass",
+      "totalLabel": "Total {mode}",
+      "vsParLabel": "Mot par",
+      "behindLeader": "bak leder",
+      "tiedLabel": "delt",
+      "tiedWithLabel": "Delt {rank}. plass med {teams}",
+      "missingHoles": "{count} hull mangler",
+      "drillAriaLabel": "Vis hull-for-hull for lag {number}",
+      "parLabel": "PAR"
+    },
+    "withdrawn": {
+      "sectionTitle": "Trukne spillere",
+      "badge": "Trukket"
+    },
+    "duel": {
+      "holesWon": "hull vunnet",
+      "halved": "delt",
+      "decidedKicker": "VINNER",
+      "decidedText": "{winner} vant {formatted}",
+      "decidedAtHole": "Avgjort på hull {hole}",
+      "tiedKicker": "UAVGJORT",
+      "tiedText": "Matchen endte AS",
+      "tiedSubtext": "All square etter 18 hull",
+      "liveKicker": "LIVE",
+      "liveNotStarted": "Matchen er ikke startet ennå",
+      "liveNotStartedSub": "Tabellen våkner når første hull er spilt.",
+      "liveAllSquare": "Alt likt etter {holes} hull",
+      "liveAllSquareSub": "Matchen står og vipper.",
+      "liveLeading": "{leader} leder {margin} up",
+      "liveLeadingSub": "Etter {holes} hull",
+      "barAriaLabel": "{sideA} {holesA} hull mot {sideB} {holesB} hull"
+    },
+    "h2h": {
+      "kicker": "DUELL",
+      "backAriaLabel": "Tilbake",
+      "barAriaLabel": "{nameA} {scoreA} mot {nameB} {scoreB}",
+      "halvedLegend": "delt",
+      "verdictTie": "Uavgjort {scoreA}{sep}{scoreB}.",
+      "verdictWinTiebreak": "{winner} vant.",
+      "verdictWin": "{winner} vant duellen {winnerScore}{sep}{loserScore}."
+    },
+    "holes": {
+      "unknownPlayer": "(ukjent spiller)",
+      "backAriaLabel": "Tilbake til leaderboard",
+      "teamHeader": "Lag {number} · {rank}. plass",
+      "noPlayers": "(uten spillere)",
+      "legendNetLabel": "= brukt netto",
+      "legendFormat": "initial · brutto · netto · vs par   →   lag",
+      "frontNineLabel": "Ut · hull 1–9",
+      "backNineLabel": "Inn · hull 10–18",
+      "hiddenBackNineHeading": "🤫 Vi sees ved hull 18.",
+      "hiddenBackNineSub": "Hull 10–18 vises når alle scorekort er levert og godkjent.",
+      "totalLabel": "Totalt",
+      "holesWon": "{count} hull vunnet",
+      "summaryUt": "UT",
+      "summaryInn": "INN",
+      "prevTeam": "Forrige · {rank}. Lag {number}",
+      "nextTeam": "Neste · {rank}. Lag {number}",
+      "playerScoreAriaUsed": "Brukt netto for laget: {initial}, brutto {gross}, +{extra} slag, netto {net}",
+      "playerScoreAria": "{initial}, brutto {gross}, +{extra} slag, netto {net}",
+      "parAsideTitle": "Dette hullet har annerledes par for andre kjønn. {genders}.",
+      "parAsideAriaLabel": "Avvikende par for andre kjønn. {genders}."
+    }
+  },
   "auth": {
     "errors": {
       "rate_limited": "Vent litt før du prøver igjen.",

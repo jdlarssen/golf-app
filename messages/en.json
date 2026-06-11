@@ -496,6 +496,92 @@
       "teeHint": "{name} tees off"
     }
   },
+  "leaderboard": {
+    "common": {
+      "unknownPlayer": "(unknown)",
+      "teamLabel": "Team {number}",
+      "noPlayers": "(no players)",
+      "netto": "Net",
+      "brutto": "Gross",
+      "modeToggleAriaLabel": "Mode",
+      "backAriaLabel": "Back",
+      "replayAriaLabel": "Replay the celebration",
+      "downloadCsv": "Download results (CSV)",
+      "hullForHullDrillHint": "Tap a team for hole by hole",
+      "noTeams": "No teams to show."
+    },
+    "tabs": {
+      "tablistAriaLabel": "Leaderboard tab",
+      "main": "Main tournament",
+      "side": "Side game"
+    },
+    "state4": {
+      "heading": "Leaderboard",
+      "subtitle": "After 18 holes · Best ball · {mode}",
+      "leaderBadge": "Leader · {rank}{suffix}",
+      "totalLabel": "Total {mode}",
+      "vsParLabel": "Vs par",
+      "behindLeader": "behind leader",
+      "tiedLabel": "tied",
+      "tiedWithLabel": "Tied {rank}{suffix} with {teams}",
+      "missingHoles": "{count} holes missing",
+      "drillAriaLabel": "View hole-by-hole for team {number}",
+      "parLabel": "PAR"
+    },
+    "withdrawn": {
+      "sectionTitle": "Withdrawn players",
+      "badge": "Withdrawn"
+    },
+    "duel": {
+      "holesWon": "holes won",
+      "halved": "halved",
+      "decidedKicker": "WINNER",
+      "decidedText": "{winner} won {formatted}",
+      "decidedAtHole": "Decided on hole {hole}",
+      "tiedKicker": "ALL SQUARE",
+      "tiedText": "The match ended all square",
+      "tiedSubtext": "All square after 18 holes",
+      "liveKicker": "LIVE",
+      "liveNotStarted": "The match hasn't started yet",
+      "liveNotStartedSub": "The board wakes up when the first hole is played.",
+      "liveAllSquare": "All square after {holes} holes",
+      "liveAllSquareSub": "The match is on a knife-edge.",
+      "liveLeading": "{leader} leads {margin} up",
+      "liveLeadingSub": "After {holes} holes",
+      "barAriaLabel": "{sideA} {holesA} holes vs {sideB} {holesB} holes"
+    },
+    "h2h": {
+      "kicker": "DUEL",
+      "backAriaLabel": "Back",
+      "barAriaLabel": "{nameA} {scoreA} vs {nameB} {scoreB}",
+      "halvedLegend": "halved",
+      "verdictTie": "Tied {scoreA}{sep}{scoreB}.",
+      "verdictWinTiebreak": "{winner} won.",
+      "verdictWin": "{winner} won the duel {winnerScore}{sep}{loserScore}."
+    },
+    "holes": {
+      "unknownPlayer": "(unknown player)",
+      "backAriaLabel": "Back to leaderboard",
+      "teamHeader": "Team {number} · {rank}{suffix}",
+      "noPlayers": "(no players)",
+      "legendNetLabel": "= best net used",
+      "legendFormat": "initial · gross · net · vs par   →   team",
+      "frontNineLabel": "Out · holes 1–9",
+      "backNineLabel": "In · holes 10–18",
+      "hiddenBackNineHeading": "🤫 See you at hole 18.",
+      "hiddenBackNineSub": "Holes 10–18 are revealed once all scorecards are submitted and approved.",
+      "totalLabel": "Total",
+      "holesWon": "{count} holes won",
+      "summaryUt": "OUT",
+      "summaryInn": "IN",
+      "prevTeam": "Prev · {rank}{suffix} Team {number}",
+      "nextTeam": "Next · {rank}{suffix} Team {number}",
+      "playerScoreAriaUsed": "Best net used: {initial}, gross {gross}, +{extra} strokes, net {net}",
+      "playerScoreAria": "{initial}, gross {gross}, +{extra} strokes, net {net}",
+      "parAsideTitle": "This hole has a different par for other genders. {genders}.",
+      "parAsideAriaLabel": "Different par for other genders. {genders}."
+    }
+  },
   "auth": {
     "errors": {
       "rate_limited": "Slow down — try again in a moment.",

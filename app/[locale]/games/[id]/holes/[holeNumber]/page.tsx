@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getTranslations, getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { strokesForHole } from '@/lib/scoring/strokeAllocation';
@@ -59,8 +61,15 @@ export default async function HolePage({ params }: { params: Params }) {
     notFound();
   }
 
-  const userId = await getProxyVerifiedUserId();
-  if (!userId) redirect('/login');
+  const [tHoles, locale] = await Promise.all([
+    getTranslations('leaderboard.holes'),
+    getLocale(),
+  ]);
+  const unknownPlayer = tHoles('unknownPlayer');
+
+  const userIdOrNull = await getProxyVerifiedUserId();
+  if (!userIdOrNull) redirect({ href: '/login', locale });
+  const userId = userIdOrNull as string;
 
   // games + game_players come from the tag-cached helper (see
   // lib/games/getGameWithPlayers.ts). These rows don't change during a
@@ -73,11 +82,11 @@ export default async function HolePage({ params }: { params: Params }) {
   const { game, players: allPlayers } = result;
 
   if (game.status === 'draft') {
-    redirect('/');
+    redirect({ href: '/', locale });
   }
   if (game.status === 'scheduled') {
     // Round hasn't started; state #2 venterom lives on the game home page.
-    redirect(`/games/${id}`);
+    redirect({ href: `/games/${id}` as string, locale });
   }
 
   const me = allPlayers.find((p) => p.user_id === userId);
@@ -86,7 +95,7 @@ export default async function HolePage({ params }: { params: Params }) {
   // Once the player has submitted their scorecard, the hole pages are
   // read-only and confusing to land on. Bounce them home.
   if (me.submitted_at) {
-    redirect(`/games/${id}`);
+    redirect({ href: `/games/${id}` as string, locale });
   }
 
   // #543: én-flight-regelen — alle aktive spillere er i samme gruppe når
@@ -322,7 +331,7 @@ export default async function HolePage({ params }: { params: Params }) {
       .map((p) => ({
         userId: p.user_id,
         teamNumber: p.team_number as number,
-        name: p.users?.nickname?.trim() || p.users?.name || '(ukjent spiller)',
+        name: p.users?.nickname?.trim() || p.users?.name || unknownPlayer,
       }));
 
     // Bygg ScoringContext for compute(). Vi trenger course-holes for SI/par
@@ -573,7 +582,7 @@ export default async function HolePage({ params }: { params: Params }) {
         ? game.mode_config.patsome_scoring
         : 'net';
     playersForClient = flight.map((p) => {
-      const name = p.users?.name ?? '(ukjent spiller)';
+      const name = p.users?.name ?? unknownPlayer;
       const rawNickname = p.users?.nickname ?? null;
       const nickname =
         rawNickname && rawNickname.trim().length > 0 ? rawNickname : null;
@@ -605,7 +614,7 @@ export default async function HolePage({ params }: { params: Params }) {
         .map((p) => ({
           userId: p.user_id,
           teamNumber: p.team_number as number,
-          name: p.users?.nickname?.trim() || p.users?.name || '(ukjent spiller)',
+          name: p.users?.nickname?.trim() || p.users?.name || unknownPlayer,
         }))
     : undefined;
 

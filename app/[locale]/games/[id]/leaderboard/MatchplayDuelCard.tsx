@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
 import { ConfettiBurst } from './ConfettiBurst';
@@ -66,6 +67,7 @@ export function MatchplayDuelCard({
   holesPlayed,
   matchResult,
 }: MatchplayDuelCardProps): JSX.Element {
+  const t = useTranslations('leaderboard.duel');
   const [replayKey, setReplayKey] = useState(0);
 
   const hasDecidedWinner =
@@ -113,6 +115,7 @@ export function MatchplayDuelCard({
             colorVar="--player-a"
             isWinner={winner === 'a'}
             align="left"
+            t={t}
           />
           <SidePanel
             testId={`${testIdPrefix}-side-2`}
@@ -121,6 +124,7 @@ export function MatchplayDuelCard({
             colorVar="--player-b"
             isWinner={winner === 'b'}
             align="right"
+            t={t}
           />
         </div>
 
@@ -129,7 +133,7 @@ export function MatchplayDuelCard({
           data-testid={`${testIdPrefix}-duel-bar`}
           className="mt-4 flex h-3 w-full overflow-hidden rounded-full border border-border"
           role="img"
-          aria-label={`${sideA.label} ${holesWonA} hull mot ${sideB.label} ${holesWonB} hull`}
+          aria-label={t('barAriaLabel', { sideA: sideA.label, holesA: holesWonA, sideB: sideB.label, holesB: holesWonB })}
         >
           <span
             className="h-full"
@@ -159,7 +163,7 @@ export function MatchplayDuelCard({
         <div className="mt-2.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[10.5px] text-muted">
           <LegendDot colorVar="--player-a" label={sideA.label} />
           <LegendDot colorVar="--player-b" label={sideB.label} />
-          <LegendDot muted label="delt" />
+          <LegendDot muted label={t('halved')} />
         </div>
 
         {/* Dom */}
@@ -170,6 +174,7 @@ export function MatchplayDuelCard({
           holesUp={holesUp}
           holesPlayed={holesPlayed}
           matchResult={matchResult}
+          t={t}
         />
       </Card>
     </div>
@@ -198,6 +203,7 @@ function SidePanel({
   colorVar,
   isWinner,
   align,
+  t,
 }: {
   testId: string;
   side: DuelSide;
@@ -205,6 +211,7 @@ function SidePanel({
   colorVar: string;
   isWinner: boolean;
   align: 'left' | 'right';
+  t: ReturnType<typeof useTranslations<'leaderboard.duel'>>;
 }): JSX.Element {
   const alignClass =
     align === 'left' ? 'items-start text-left' : 'items-end text-right';
@@ -227,7 +234,7 @@ function SidePanel({
         {holesWon}
       </span>
       <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
-        hull vunnet
+        {t('holesWon')}
       </span>
       {side.sublines?.map((line, i) => (
         <span
@@ -279,6 +286,7 @@ function Verdict({
   holesUp,
   holesPlayed,
   matchResult,
+  t,
 }: {
   testIdPrefix: string;
   sideA: DuelSide;
@@ -286,6 +294,7 @@ function Verdict({
   holesUp: number;
   holesPlayed: number;
   matchResult: MatchplayMatchResult | null;
+  t: ReturnType<typeof useTranslations<'leaderboard.duel'>>;
 }): JSX.Element {
   if (matchResult !== null) {
     if (matchResult.winner === 'tied') {
@@ -294,11 +303,11 @@ function Verdict({
           data-testid={`${testIdPrefix}-banner-tied`}
           className="mt-4 flex flex-col items-center gap-1 text-center"
         >
-          <Kicker tone="muted">UAVGJORT</Kicker>
+          <Kicker tone="muted">{t('tiedKicker')}</Kicker>
           <p className="font-serif text-[18px] font-medium leading-tight tracking-[-0.01em] text-text">
-            Matchen endte AS
+            {t('tiedText')}
           </p>
-          <p className="text-[12px] text-muted">All square etter 18 hull</p>
+          <p className="text-[12px] text-muted">{t('tiedSubtext')}</p>
         </div>
       );
     }
@@ -309,12 +318,12 @@ function Verdict({
         data-testid={`${testIdPrefix}-banner-decided`}
         className="mt-4 flex flex-col items-center gap-1 text-center"
       >
-        <Kicker tone="accent">VINNER</Kicker>
+        <Kicker tone="accent">{t('decidedKicker')}</Kicker>
         <p className="font-serif text-[18px] font-medium leading-tight tracking-[-0.01em] text-text">
-          {winnerLabel} vant {matchResult.formatted}
+          {t('decidedText', { winner: winnerLabel, formatted: matchResult.formatted })}
         </p>
         <p className="text-[12px] text-muted tabular-nums">
-          Avgjort på hull {matchResult.decidedAtHole}
+          {t('decidedAtHole', { hole: matchResult.decidedAtHole })}
         </p>
       </div>
     );
@@ -326,12 +335,12 @@ function Verdict({
         data-testid={`${testIdPrefix}-banner-live`}
         className="mt-4 flex flex-col items-center gap-1 text-center"
       >
-        <Kicker tone="muted">LIVE</Kicker>
+        <Kicker tone="muted">{t('liveKicker')}</Kicker>
         <p className="font-serif text-[18px] font-medium leading-tight tracking-[-0.01em] text-text">
-          Matchen er ikke startet ennå
+          {t('liveNotStarted')}
         </p>
         <p className="text-[12px] text-muted">
-          Tabellen våkner når første hull er spilt.
+          {t('liveNotStartedSub')}
         </p>
       </div>
     );
@@ -343,11 +352,11 @@ function Verdict({
         data-testid={`${testIdPrefix}-banner-live`}
         className="mt-4 flex flex-col items-center gap-1 text-center"
       >
-        <Kicker tone="muted">LIVE</Kicker>
+        <Kicker tone="muted">{t('liveKicker')}</Kicker>
         <p className="font-serif text-[18px] font-medium leading-tight tracking-[-0.01em] text-text tabular-nums">
-          Alt likt etter {holesPlayed} hull
+          {t('liveAllSquare', { holes: holesPlayed })}
         </p>
-        <p className="text-[12px] text-muted">Matchen står og vipper.</p>
+        <p className="text-[12px] text-muted">{t('liveAllSquareSub')}</p>
       </div>
     );
   }
@@ -359,12 +368,12 @@ function Verdict({
       data-testid={`${testIdPrefix}-banner-live`}
       className="mt-4 flex flex-col items-center gap-1 text-center"
     >
-      <Kicker tone="muted">LIVE</Kicker>
+      <Kicker tone="muted">{t('liveKicker')}</Kicker>
       <p className="font-serif text-[18px] font-medium leading-tight tracking-[-0.01em] text-text">
-        {leaderLabel} leder <span className="tabular-nums">{margin} up</span>
+        {t('liveLeading', { leader: leaderLabel, margin })}
       </p>
       <p className="text-[12px] text-muted tabular-nums">
-        Etter {holesPlayed} hull
+        {t('liveLeadingSub', { holes: holesPlayed })}
       </p>
     </div>
   );

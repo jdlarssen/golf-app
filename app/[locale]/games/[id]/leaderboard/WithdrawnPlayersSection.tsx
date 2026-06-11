@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 
 export type WithdrawnPlayer = {
@@ -16,12 +17,14 @@ type Props = {
  * no position. Renders nothing when the list is empty.
  */
 export function WithdrawnPlayersSection({ players }: Props) {
+  const t = useTranslations('leaderboard.withdrawn');
+
   if (players.length === 0) return null;
 
   return (
     <div className="mt-4 px-4">
       <p className="text-xs font-medium uppercase tracking-wider text-muted mb-2">
-        Trukne spillere
+        {t('sectionTitle')}
       </p>
       <Card className="p-0 overflow-hidden">
         <ul className="divide-y divide-border">
@@ -34,7 +37,7 @@ export function WithdrawnPlayersSection({ players }: Props) {
                 {p.display_name}
               </span>
               <span className="shrink-0 rounded-full bg-muted/10 px-2.5 py-0.5 text-xs font-medium text-muted">
-                Trukket
+                {t('badge')}
               </span>
             </li>
           ))}

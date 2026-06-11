@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Kicker } from '@/components/ui/Kicker';
@@ -78,6 +79,7 @@ export function HeadToHeadResult({
   lowerWins = false,
   backHref = '/',
 }: HeadToHeadResultProps): JSX.Element {
+  const t = useTranslations('leaderboard.h2h');
   const [replayKey, setReplayKey] = useState(0);
 
   useEffect(() => {
@@ -140,11 +142,11 @@ export function HeadToHeadResult({
   const sep = sideA.score < 0 || sideB.score < 0 ? ' mot ' : '–';
   const verdict =
     winner === 'tie'
-      ? `Uavgjort ${fmtScore(sideA.score)}${sep}${fmtScore(sideB.score)}.`
+      ? t('verdictTie', { scoreA: fmtScore(sideA.score), sep, scoreB: fmtScore(sideB.score) })
       : sideA.score === sideB.score
         ? // Lik score, men avgjort på tiebreak (f.eks. flest vunne hull).
-          `${winnerName} vant.`
-        : `${winnerName} vant duellen ${fmtScore(winnerScore)}${sep}${fmtScore(loserScore)}.`;
+          t('verdictWinTiebreak', { winner: winnerName })
+        : t('verdictWin', { winner: winnerName, winnerScore: fmtScore(winnerScore), sep, loserScore: fmtScore(loserScore) });
 
   return (
     <AppShell>
@@ -154,7 +156,7 @@ export function HeadToHeadResult({
           <header className="mb-2 flex items-center justify-between gap-4">
             <SmartLink
               href={backHref}
-              aria-label="Tilbake"
+              aria-label={t('backAriaLabel')}
               className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
             >
               ‹
@@ -164,7 +166,7 @@ export function HeadToHeadResult({
           </header>
 
           <div className="px-6 pt-1.5 pb-2 text-center">
-            <Kicker tone="accent">DUELL</Kicker>
+            <Kicker tone="accent">{t('kicker')}</Kicker>
             <p className="mt-2 text-[11.5px] tabular-nums text-muted">
               {formatLabel}
             </p>
@@ -203,7 +205,7 @@ export function HeadToHeadResult({
               data-testid="h2h-bar"
               className="mt-4 flex h-3 w-full overflow-hidden rounded-full border border-border"
               role="img"
-              aria-label={`${nameA} ${sideA.score} mot ${nameB} ${sideB.score}`}
+              aria-label={t('barAriaLabel', { nameA, scoreA: sideA.score, nameB, scoreB: sideB.score })}
             >
               <span
                 className="h-full"
@@ -233,7 +235,7 @@ export function HeadToHeadResult({
             <div className="mt-2.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[10.5px] text-muted">
               <LegendDot colorVar="--player-a" label={nameA} />
               <LegendDot colorVar="--player-b" label={nameB} />
-              <LegendDot muted label="delt" />
+              <LegendDot muted label={t('halvedLegend')} />
             </div>
 
             {/* Dom */}
