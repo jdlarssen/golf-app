@@ -55,8 +55,8 @@ export async function maybeNotifyAutoStartBlocked(opts: {
     return;
   }
 
-  const admin = getAdminClient();
   try {
+    const admin = getAdminClient();
     const { data: won, error: updErr } = await admin
       .from('games')
       .update({ auto_start_blocked_notified_at: new Date().toISOString() })
