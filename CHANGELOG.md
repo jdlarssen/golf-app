@@ -19,11 +19,11 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ## 1.113.y — i18n · norsk og engelsk
 
-Issue [#552](https://github.com/jdlarssen/golf-app/issues/552). Første synlige del av flerspråligheten: alle innloggings- og profil-strenger hentes fra omsettbare kataloger, og det dukker opp en liten «Norsk / English»-velger på innloggingssiden og i profilinnstillingene.
+Issue [#552](https://github.com/jdlarssen/golf-app/issues/552). Første synlige del av flerspråkligheten: alle innloggings- og profil-strenger hentes fra omsettbare kataloger, og det dukker opp en liten «Norsk / English»-velger på innloggingssiden og i profilinnstillingene.
 
 ### [1.113.0] - 2026-06-11 · #552
 
-> Du kan nå bytte mellom norsk og engelsk på innloggingssiden — uten å ha logget inn. Valget huskes, og profilen din under «Språk» gir deg tilgang til samme velger etter innlogging.
+> Du kan nå bytte mellom norsk og engelsk rett på innloggingssiden, før du i det hele tatt har logget inn. Valget huskes, og etter innlogging ligger samme velger under «Språk» på profilen din.
 
 <details>
 <summary>Teknisk</summary>
