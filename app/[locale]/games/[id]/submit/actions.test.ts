@@ -257,9 +257,8 @@ describe('submitScorecard', () => {
       },
       { data: { withdrawn_at: null }, error: null }, // WD gate
       { data: [{ user_id: 'side1' }], error: null }, // UPDATE (fresh)
-      { data: { name: 'Side 1-spiller' }, error: null }, // submitter name
-      { data: [], error: null }, // admins (ingen her)
-      // game_players for peersForApproval:
+      // game_players for peersForApproval — peersQuery-konstanten bygges (og
+      // dequeuer sin mock) FØR Promise.all-en med name/admins:
       {
         data: [
           { user_id: 'side1', flight_number: 1, withdrawn_at: null },
@@ -267,6 +266,8 @@ describe('submitScorecard', () => {
         ],
         error: null,
       },
+      { data: { name: 'Side 1-spiller' }, error: null }, // submitter name
+      { data: [], error: null }, // admins (ingen her)
     ]);
     (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: { user: { id: 'side1' } },
