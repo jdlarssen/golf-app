@@ -17,7 +17,37 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.113.y — i18n · norsk og engelsk
+## 1.114.y — i18n · engelsk i hele kjernesløyfa
+
+Issue [#554](https://github.com/jdlarssen/golf-app/issues/554), del av epic [#60](https://github.com/jdlarssen/golf-app/issues/60). Fase 2a av flerspråkligheten: hele spilleflaten (spillside, hull-scoring, scorekort, leaderboard og podier) hentes fra omsettbare kataloger og finnes nå på engelsk.
+
+### [1.114.0] - 2026-06-11 · #554
+
+> Spiller du på engelsk, er hele runden nå oversatt: spillsiden, scoreføringen hull for hull, scorekortet og leaderboardet for alle spillformene. Til og med CSV-eksporten følger språket ditt. På norsk er alt som før.
+
+<details>
+<summary>Teknisk</summary>
+
+[#554](https://github.com/jdlarssen/golf-app/issues/554). i18n Fase 2a — per-område-ekstraksjon av kjernesløyfa (~90 filer).
+
+#### Added
+- `messages/{no,en}.json`: nye namespaces `gameStatus`, `modes` (+`modeVariants`), `game.*` (home/waitingRoom/submit/approve/finish/delete/withdraw/edit/players), `scorecard`, `holes.*`, `leaderboard.*` (inkl. alle formatvisninger, podier, sideturneringer og CSV-eksport) — flere hundre nøkler per språk.
+- `messages/catalogParity.test.ts`: låser `no.json`/`en.json` til symmetriske nøkkelsett.
+- `lib/i18n/format.ts`: `formatTeeOffDateLocale`/`-TimeLocale`, `formatShortDateWithYearLocale`, `formatCountdownLocale` — `no` delegerer til de håndrullede hjelperne (byte-identisk norsk), andre språk rendres via `Intl` med Oslo-tidssone.
+- Drift-guards (Type A): `STATUS_LABELS`, `MODE_LABELS` og `formatDisplayLabel` asserteres mot katalogverdiene så konstanter og kataloger ikke glir fra hverandre mens admin/wizard fortsatt leser konstantene.
+
+#### Changed
+- Alle sider og komponenter under `app/[locale]/games/[id]/**` + `components/hole/**` renderer via `useTranslations`/`getTranslations`; norsk output er uendret.
+- `vitest.setup.ts`: stubben oppgradert til next-intl `createTranslator` — ekte ICU-plural/interpolasjon i komponenttester.
+- `redirect`/`Link` migrert til `@/i18n/navigation` i alle berørte filer (objekt-form med locale).
+- `lib/games/scorecardTitle.ts` og `lib/wolf/holeLabels.ts` returnerer katalognøkler/id-er; `lib/leaderboard/formatHolesList.ts` tar hull-ordet som parameter.
+- CSV-eksporten (`leaderboard/export/route.ts`) følger brukerens locale i kolonneoverskrifter og feilmeldinger.
+- Engelsk katalog gjennom idiomatisk golf-engelsk-pass; `{suffix}`-interpolasjoner som aldri ble sendt inn erstattet med ICU `selectordinal` (1st/2nd/3rd).
+
+</details>
+
+<details>
+<summary><strong>1.113.y — i18n · norsk og engelsk (5 oppføringer)</strong></summary>
 
 Issue [#552](https://github.com/jdlarssen/golf-app/issues/552). Første synlige del av flerspråkligheten: alle innloggings- og profil-strenger hentes fra omsettbare kataloger, og det dukker opp en liten «Norsk / English»-velger på innloggingssiden og i profilinnstillingene.
 
@@ -100,6 +130,8 @@ Etterslep fra i18n Fase 1 ([#552](https://github.com/jdlarssen/golf-app/issues/5
 - `app/[locale]/profile/page.tsx`: «Språk»-rad lagt til i `SettingList («Konto og mer»)` med inline `LocaleSwitcher`.
 - `app/[locale]/(auth)/login/actions.ts` (`verifyCode`): etter vellykket OTP-verifisering persisteres cookie-locale til `users.locale` dersom den er NULL — aldri overskriver eksisterende verdi.
 - `vitest.setup.ts`: `useTranslations`-stub lagt til i next-intl-mock — resolver nøkler mot `messages/no.json` slik at komponenttester fortsetter å asserte ekte norsk copy uten provider.
+
+</details>
 
 </details>
 
