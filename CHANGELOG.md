@@ -21,6 +21,21 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#552](https://github.com/jdlarssen/golf-app/issues/552). Første synlige del av flerspråkligheten: alle innloggings- og profil-strenger hentes fra omsettbare kataloger, og det dukker opp en liten «Norsk / English»-velger på innloggingssiden og i profilinnstillingene.
 
+### [1.113.1] - 2026-06-11 · #552
+
+> Mens du tastet scorer lå «Neste hull»-knappen delvis gjemt bak bunnmenyen. Nå skjuler bunnmenyen seg på hull-skjermen som den skal, så knappen ligger fritt nederst igjen.
+
+<details>
+<summary>Teknisk</summary>
+
+Etterslep fra i18n Fase 1 ([#552](https://github.com/jdlarssen/golf-app/issues/552)). `as-needed`-routingen rewriter `/games/x` → `/no/games/x` internt, og `BottomNav` leste `usePathname` fra `next/navigation` — den lekker det interne `/no`-prefikset under server-render. Hull-regexen `/^\/games\/[^/]+\/holes\//` matchet dermed ikke, baren skjulte seg ikke på hull-skjermen, og den fastlåste `position: fixed`-baren la seg over «Neste hull»-knappen.
+
+#### Fixed
+- `components/ui/BottomNav.tsx`: bytter `usePathname`-import til `@/i18n/navigation` (lokale-bevisst) — stripper locale-prefikset konsistent på server og klient, så skjul-regexen treffer i begge faser. Samme fiks retter også fane-markeringen (`aria-current`) på `/no`-prefiksede ruter under server-render. Følger konvensjonen `i18n/navigation.ts` allerede dokumenterer.
+- `components/ui/BottomNav.test.tsx`: mocker nå `@/i18n/navigation` for `usePathname` (beholder `next/navigation`-mocken for `SmartLink`s `useRouter`).
+
+</details>
+
 ### [1.113.0] - 2026-06-11 · #552
 
 > Du kan nå bytte mellom norsk og engelsk rett på innloggingssiden, før du i det hele tatt har logget inn. Valget huskes, og etter innlogging ligger samme velger under «Språk» på profilen din.

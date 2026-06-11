@@ -6,7 +6,15 @@ import { BottomNav } from './BottomNav';
 // kritisk: den skjuler seg på hull-skjerm og når utlogget, men VISES på
 // Klubbhus-rommet (/admin) etter #392. Styr usePathname per test; uleste-
 // prikken kommer fra en Supabase-rørt hook.
+//
+// BottomNav leser `usePathname` fra `@/i18n/navigation` (lokale-stripper),
+// ikke `next/navigation` — ellers lekker `as-needed`-rewriten et `/no`-prefiks
+// som bryter hull-regexen. SmartLink bruker fortsatt `useRouter` fra
+// `next/navigation`, så vi mocker begge.
 let mockPathname = '/';
+vi.mock('@/i18n/navigation', () => ({
+  usePathname: () => mockPathname,
+}));
 vi.mock('next/navigation', () => ({
   usePathname: () => mockPathname,
   useRouter: () => ({ prefetch: () => {} }),

@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname } from '@/i18n/navigation';
 import { SmartLink } from '@/components/ui/SmartLink';
 import {
   HjemIcon,
@@ -26,6 +26,13 @@ import { useUnreadNotificationsCount } from '@/hooks/useUnreadNotificationsCount
  * headeren: null på offentlige (umatchede) ruter → baren skjuler seg selv.
  * I tillegg skjuler den seg på hull-skjermen (fullskjerm scoring) og
  * pre-profil-onboarding, som har egen chrome.
+ *
+ * `usePathname` MÅ komme fra `@/i18n/navigation`, ikke `next/navigation`:
+ * `as-needed`-routingen rewriter `/games/x` → `/no/games/x` internt, og
+ * `next/navigation`-varianten lekker det `/no`-prefikset under server-render.
+ * Da matcher ikke hull-regexen `/^\/games\/…\/holes\//`, baren skjuler seg
+ * ikke, og «Neste hull»-knappen havner under den. Den lokale-bevisste
+ * varianten stripper prefikset konsistent (server + klient).
  *
  * Innboks-fanen overtar rollen til den gamle `NotificationBell` i TopBar:
  * samme champagne-prikk via `useUnreadNotificationsCount`, ingen telletall.
