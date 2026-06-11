@@ -1,4 +1,6 @@
 import { cache } from 'react';
+import { useTranslations } from 'next-intl';
+import { getTranslations } from 'next-intl/server';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound, redirect } from 'next/navigation';
 import { after } from 'next/server';
@@ -301,7 +303,10 @@ async function LeaderboardBody({
   backHref: string;
   returnQuery: string;
 }) {
-  const { supabase } = await getLeaderboardContext();
+  const [tc, { supabase }] = await Promise.all([
+    getTranslations('leaderboard.common'),
+    getLeaderboardContext(),
+  ]);
 
   // Players come from the tag-cached helper (cache hit since the outer
   // page already warmed it). Holes + scores stay direct fetches.
@@ -565,11 +570,13 @@ async function LeaderboardBody({
   // WD (#386): build the withdrawn list BEFORE the active-players map.
   // Only for best_ball (this default branch); stableford + solo_strokeplay
   // handle their own filtering inside their render functions.
+  const unknownPlayer = tc('unknownPlayer');
+
   const bestBallWithdrawn: WithdrawnPlayer[] = gwp.players
     .filter((p) => p.users != null && p.withdrawn_at != null)
     .map((p) => ({
       user_id: p.user_id,
-      display_name: p.users!.name ?? '(ukjent)',
+      display_name: p.users!.name ?? unknownPlayer,
     }));
   const bestBallWithdrawnIds = new Set(bestBallWithdrawn.map((p) => p.user_id));
 
@@ -580,7 +587,7 @@ async function LeaderboardBody({
       // Defensive fallback: pending invitees can't reach an active/finished
       // leaderboard per Task 7's publish-gate, but the DB column is nullable
       // so we coalesce to keep TS honest.
-      name: p.users!.name ?? '(ukjent)',
+      name: p.users!.name ?? unknownPlayer,
       nickname: p.users!.nickname,
       teamNumber: p.team_number,
       courseHandicap: p.course_handicap ?? 0,
@@ -758,7 +765,7 @@ async function LeaderboardBody({
 
   const sideTeams: SideTournamentTeam[] = sortedNettoLines.map((line) => ({
     teamId: line.teamNumber,
-    label: `Lag ${line.teamNumber}`,
+    label: tc('teamLabel', { number: line.teamNumber }),
     members: line.players.map((p) => ({
       userId: p.userId,
       displayName: formatRevealName(p.name ?? '', p.nickname),
@@ -959,6 +966,7 @@ function TeamCard({
   line: TeamLine;
   leaderTotal: number;
 }) {
+  const tc = useTranslations('leaderboard.common');
   const accent = rankAccent(line.rank);
   const members = teamMembersLabel(line.players);
   const missing = line.missingHoles.length;
@@ -975,21 +983,23 @@ function TeamCard({
                 {accent.badge}
               </span>
               <p className="font-serif text-xl font-medium tracking-tight text-text">
-                Lag {line.teamNumber}
+                {tc('teamLabel', { number: line.teamNumber })}
               </p>
             </div>
             <p className="text-sm text-muted truncate mt-1">
-              {members || '(uten spillere)'}
+              {members || tc('noPlayers')}
             </p>
             {line.tiedWith.length > 0 && (
               <p className="text-xs text-muted mt-1">
-                Delt {line.rank}. plass med{' '}
-                {line.tiedWith.map((id) => `Lag ${id}`).join(', ')}
+                {tc('tiedWith', {
+                  rank: line.rank,
+                  teams: line.tiedWith.map((id) => tc('teamLabel', { number: id })).join(', '),
+                })}
               </p>
             )}
             {missing > 0 && (
               <p className="text-xs text-warning mt-1">
-                ⚠️ {missing} hull mangler
+                ⚠️ {tc('missingHoles', { count: missing })}
               </p>
             )}
           </div>
@@ -1023,11 +1033,12 @@ export function ModeToggle({
   // e.g. "/leaderboard" or "/leaderboard/holes"
   basePath: string;
 }) {
+  const tc = useTranslations('leaderboard.common');
   const base = `/games/${gameId}${basePath}`;
   return (
     <div
       role="tablist"
-      aria-label="Modus"
+      aria-label={tc('modeToggleAriaLabel')}
       className="inline-flex rounded-full bg-primary-soft p-1"
     >
       <SmartLink
@@ -1040,7 +1051,7 @@ export function ModeToggle({
             : 'text-muted hover:text-text'
         }`}
       >
-        Netto
+        {tc('netto')}
       </SmartLink>
       <SmartLink
         role="tab"
@@ -1052,7 +1063,7 @@ export function ModeToggle({
             : 'text-muted hover:text-text'
         }`}
       >
-        Brutto
+        {tc('brutto')}
       </SmartLink>
     </div>
   );
@@ -1107,6 +1118,8 @@ async function renderStableford(opts: {
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
 }) {
+  const tc = await getTranslations('leaderboard.common');
+  const th2h = await getTranslations('leaderboard.h2h');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
   // Stableford-grenen dekker både 'stableford' og 'modified_stableford'.
@@ -1118,11 +1131,13 @@ async function renderStableford(opts: {
 
   // WD (#386): build withdrawn list for the display section. The ctx-builder
   // does its own WD-filtering of players + scores.
+  const unknownPlayer = tc('unknownPlayer');
+
   const stablefordWithdrawn: WithdrawnPlayer[] = gwp.players
     .filter((p) => p.users != null && p.withdrawn_at != null)
     .map((p) => ({
       user_id: p.user_id,
-      display_name: p.users!.name ?? '(ukjent)',
+      display_name: p.users!.name ?? unknownPlayer,
     }));
 
   // Delt context-bygging (epic #496) — samme kilde som «Hull for hull»-flaten
@@ -1148,7 +1163,7 @@ async function renderStableford(opts: {
   for (const p of gwp.players) {
     if (p.users == null) continue;
     playersById.set(p.user_id, {
-      name: p.users.name ?? '(ukjent)',
+      name: p.users.name ?? unknownPlayer,
       nickname: p.users.nickname,
     });
   }
@@ -1227,10 +1242,10 @@ async function renderStableford(opts: {
         const info = playersById.get(pl.userId);
         return {
           userId: pl.userId,
-          name: info?.name ?? '(ukjent)',
+          name: info?.name ?? unknownPlayer,
           nickname: info?.nickname ?? null,
           score: pl.totalPoints,
-          subLabel: `${pl.holesPlayed} hull spilt`,
+          subLabel: th2h('subLabelHolesPlayed', { count: pl.holesPlayed }),
         };
       };
       const strip: StripCell[] = result.holes.map((h): StripCell => {
@@ -1345,9 +1360,11 @@ async function renderStablefordWithSideTournament(opts: {
   backHref: string;
   mainContent: React.ReactNode;
 }) {
+  const [tc, { supabase }] = await Promise.all([
+    getTranslations('leaderboard.common'),
+    getLeaderboardContext(),
+  ]);
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref, mainContent } = opts;
-
-  const { supabase } = await getLeaderboardContext();
 
   const sideWinnersRes = await supabase
     .from('game_side_winners')
@@ -1449,13 +1466,14 @@ async function renderStablefordWithSideTournament(opts: {
     for (const t of teamNumbers) {
       teamGroups.push({
         teamId: t,
-        label: `Lag ${t}`,
+        label: tc('teamLabel', { number: t }),
         userIds: byTeam.get(t) ?? [],
       });
     }
   } else {
+    const unknownPlayer = tc('unknownPlayer');
     eligiblePlayers.forEach((p, idx) => {
-      const name = p.users?.name ?? '(ukjent)';
+      const name = p.users?.name ?? unknownPlayer;
       teamGroups.push({
         teamId: idx + 1,
         label: firstName(name) ?? name,
@@ -1514,7 +1532,7 @@ async function renderStablefordWithSideTournament(opts: {
     label: tg.label,
     members: tg.userIds.map((uid) => {
       const p = eligiblePlayers.find((q) => q.user_id === uid);
-      const name = p?.users?.name ?? '(ukjent)';
+      const name = p?.users?.name ?? tc('unknownPlayer');
       const nickname = p?.users?.nickname ?? null;
       return {
         userId: uid,
@@ -1579,6 +1597,7 @@ function renderMatchplay(opts: {
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
 }) {
+  const tc = useTranslations('leaderboard.common');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
   const ctx = {
@@ -1628,11 +1647,12 @@ function renderMatchplay(opts: {
     notFound();
   }
 
+  const unknownPlayer = tc('unknownPlayer');
   const playerInfo: Record<string, MatchplayPlayerInfo> = {};
   for (const p of gwp.players) {
     if (p.users == null) continue;
     playerInfo[p.user_id] = {
-      name: p.users.name ?? '(ukjent)',
+      name: p.users.name ?? unknownPlayer,
       nickname: p.users.nickname,
       courseHandicap: p.course_handicap ?? 0,
     };
@@ -1681,6 +1701,7 @@ async function renderFourballMatchplay(opts: {
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
 }) {
+  const tc = await getTranslations('leaderboard.common');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
   const ctx = {
@@ -1721,11 +1742,12 @@ async function renderFourballMatchplay(opts: {
     notFound();
   }
 
+  const unknownPlayer = tc('unknownPlayer');
   const playerInfo: Record<string, FourballPlayerInfo> = {};
   for (const p of gwp.players) {
     if (p.users == null) continue;
     playerInfo[p.user_id] = {
-      name: p.users.name ?? '(ukjent)',
+      name: p.users.name ?? unknownPlayer,
       nickname: p.users.nickname,
       courseHandicap: p.course_handicap ?? 0,
     };
@@ -1735,8 +1757,8 @@ async function renderFourballMatchplay(opts: {
   // team_1_name/team_2_name fra tournaments-radet. Ellers fall tilbake til
   // generisk «Lag 1» / «Lag 2». Slim direkte query — cache hits sjelden
   // siden tournament-radet ikke endres ofte.
-  let side1Label = 'Lag 1';
-  let side2Label = 'Lag 2';
+  let side1Label = tc('teamLabel', { number: 1 });
+  let side2Label = tc('teamLabel', { number: 2 });
   const { supabase } = await getLeaderboardContext();
   const { data: tournamentLink } = await supabase
     .from('games')
@@ -1797,6 +1819,7 @@ async function renderFoursomesMatchplay(opts: {
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
 }) {
+  const tc = await getTranslations('leaderboard.common');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
   const ctx = {
@@ -1839,11 +1862,12 @@ async function renderFoursomesMatchplay(opts: {
     notFound();
   }
 
+  const unknownPlayer = tc('unknownPlayer');
   const playerInfo: Record<string, FoursomesPlayerInfo> = {};
   for (const p of gwp.players) {
     if (p.users == null) continue;
     playerInfo[p.user_id] = {
-      name: p.users.name ?? '(ukjent)',
+      name: p.users.name ?? unknownPlayer,
       nickname: p.users.nickname,
       courseHandicap: p.course_handicap ?? 0,
     };
@@ -1852,8 +1876,8 @@ async function renderFoursomesMatchplay(opts: {
   // Cup-aware lag-labels: hvis games.tournament_id er satt, hent
   // team_1_name/team_2_name fra tournaments-radet. Ellers fall tilbake til
   // generisk «Lag 1» / «Lag 2».
-  let side1Label = 'Lag 1';
-  let side2Label = 'Lag 2';
+  let side1Label = tc('teamLabel', { number: 1 });
+  let side2Label = tc('teamLabel', { number: 2 });
   const { supabase } = await getLeaderboardContext();
   const { data: tournamentLink } = await supabase
     .from('games')
@@ -1920,16 +1944,20 @@ function renderSoloStrokeplay(opts: {
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
 }) {
+  const tc = useTranslations('leaderboard.common');
+  const th2h = useTranslations('leaderboard.h2h');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
   // WD (#386): build withdrawn list for the display section. The ctx-builder
   // does its own WD-filtering of players + scores, so we only need the list
   // for the WithdrawnPlayersSection chrome here.
+  const unknownPlayer = tc('unknownPlayer');
+
   const soloWithdrawn: WithdrawnPlayer[] = gwp.players
     .filter((p) => p.users != null && p.withdrawn_at != null)
     .map((p) => ({
       user_id: p.user_id,
-      display_name: p.users!.name ?? '(ukjent)',
+      display_name: p.users!.name ?? unknownPlayer,
     }));
 
   // Delt context-bygging (epic #496) — samme kilde som «Hull for hull»-flaten
@@ -1954,7 +1982,7 @@ function renderSoloStrokeplay(opts: {
   for (const p of gwp.players) {
     if (p.users == null) continue;
     playersById.set(p.user_id, {
-      name: p.users.name ?? '(ukjent)',
+      name: p.users.name ?? unknownPlayer,
       nickname: p.users.nickname,
     });
   }
@@ -1977,10 +2005,10 @@ function renderSoloStrokeplay(opts: {
         const info = playersById.get(pl.userId);
         return {
           userId: pl.userId,
-          name: info?.name ?? '(ukjent)',
+          name: info?.name ?? unknownPlayer,
           nickname: info?.nickname ?? null,
           score: pl.totalNetStrokes,
-          subLabel: `${pl.totalGrossStrokes} brutto`,
+          subLabel: th2h('subLabelGross', { gross: pl.totalGrossStrokes }),
         };
       };
       const strip: StripCell[] = result.holes.map((h): StripCell => {
@@ -2001,7 +2029,7 @@ function renderSoloStrokeplay(opts: {
           <HeadToHeadResult
             gameId={gameId}
             gameName={game.name}
-            formatLabel="Slagspill · Netto"
+            formatLabel={`Slagspill · ${tc('netto')}`}
             unitLabel="slag"
             lowerWins
             sideA={sideFor(a)}
@@ -2077,6 +2105,7 @@ function renderTexasScramble(opts: {
   /** Format-label for sub-tittel i view + podium. Gjennomgis fra MODE_LABELS[game.game_mode]. */
   formatLabel?: string;
 }) {
+  const tc = useTranslations('leaderboard.common');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref, formatLabel } = opts;
 
   const ctx = {
@@ -2126,11 +2155,12 @@ function renderTexasScramble(opts: {
     notFound();
   }
 
+  const unknownPlayer = tc('unknownPlayer');
   const playersById = new Map<string, TexasScramblePlayerInfo>();
   for (const p of gwp.players) {
     if (p.users == null) continue;
     playersById.set(p.user_id, {
-      name: p.users.name ?? '(ukjent)',
+      name: p.users.name ?? unknownPlayer,
       nickname: p.users.nickname,
     });
   }
@@ -2196,6 +2226,7 @@ async function renderWolf(opts: {
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
 }) {
+  const tc = await getTranslations('leaderboard.common');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
   // Per-hull-valg fra wolf_hole_choices. Tag-cachet på `game-${id}`, samme
@@ -2219,11 +2250,12 @@ async function renderWolf(opts: {
     notFound();
   }
 
+  const unknownPlayer = tc('unknownPlayer');
   const playersById = new Map<string, WolfPlayerInfo>();
   for (const p of gwp.players) {
     if (p.users == null) continue;
     playersById.set(p.user_id, {
-      name: p.users.name ?? '(ukjent)',
+      name: p.users.name ?? unknownPlayer,
       nickname: p.users.nickname,
     });
   }
@@ -2302,6 +2334,8 @@ function renderNassau(opts: {
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
 }) {
+  const tc = useTranslations('leaderboard.common');
+  const tn = useTranslations('leaderboard.nassau');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
   // Delt context-bygging (epic #496) — samme kilde som «Hull for hull»-flaten
@@ -2319,11 +2353,13 @@ function renderNassau(opts: {
     notFound();
   }
 
+  const unknownPlayer = tc('unknownPlayer');
+
   const playersById = new Map<string, NassauPlayerInfo>();
   for (const p of gwp.players) {
     if (p.users == null) continue;
     playersById.set(p.user_id, {
-      name: p.users.name ?? '(ukjent)',
+      name: p.users.name ?? unknownPlayer,
       nickname: p.users.nickname,
     });
   }
@@ -2347,16 +2383,16 @@ function renderNassau(opts: {
       );
       const sectionLabel = (line: typeof a): string => {
         const won: string[] = [];
-        if (line.unitBreakdown.front9) won.push('For 9');
-        if (line.unitBreakdown.back9) won.push('Bak 9');
-        if (line.unitBreakdown.total18) won.push('Totalt');
-        return won.length > 0 ? won.join(' · ') : 'Ingen seksjoner';
+        if (line.unitBreakdown.front9) won.push(tn('front9Label'));
+        if (line.unitBreakdown.back9) won.push(tn('back9Label'));
+        if (line.unitBreakdown.total18) won.push(tn('totalLabel'));
+        return won.length > 0 ? won.join(' · ') : tn('noSections');
       };
       const sideFor = (pl: typeof a) => {
         const info = playersById.get(pl.userId);
         return {
           userId: pl.userId,
-          name: info?.name ?? '(ukjent)',
+          name: info?.name ?? unknownPlayer,
           nickname: info?.nickname ?? null,
           score: pl.units,
           subLabel: sectionLabel(pl),
@@ -2379,20 +2415,20 @@ function renderNassau(opts: {
       const s = result.sections;
       const pushed: string[] = [];
       if (!s.front9.isPending && s.front9.winnerUserIds.length > 1)
-        pushed.push('For 9');
+        pushed.push(tn('front9Label'));
       if (!s.back9.isPending && s.back9.winnerUserIds.length > 1)
-        pushed.push('Bak 9');
+        pushed.push(tn('back9Label'));
       if (!s.total18.isPending && s.total18.winnerUserIds.length > 1)
-        pushed.push('Totalt');
+        pushed.push(tn('totalLabel'));
       const hangingNote =
-        pushed.length > 0 ? `${pushed.join(' og ')} endte delt.` : null;
+        pushed.length > 0 ? tn('pushedNote', { sections: pushed.join(' og ') }) : null;
       return (
         <>
           <HeadToHeadResult
             gameId={gameId}
             gameName={game.name}
-            formatLabel={`Nassau · ${result.scoring === 'net' ? 'Netto' : 'Brutto'}`}
-            unitLabel="seksjoner"
+            formatLabel={`Nassau · ${result.scoring === 'net' ? tc('netto') : tc('brutto')}`}
+            unitLabel={tn('unitSections')}
             sideA={sideFor(a)}
             sideB={sideFor(b)}
             winnerUserId={winnerUserId}
@@ -2478,6 +2514,9 @@ function renderSkins(opts: {
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
 }) {
+  const tc = useTranslations('leaderboard.common');
+  const tsk = useTranslations('leaderboard.skins');
+  const th2h = useTranslations('leaderboard.h2h');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
   // Delt context-bygging (epic #496) — samme kilde som «Hull for hull»-flaten
@@ -2495,11 +2534,13 @@ function renderSkins(opts: {
     notFound();
   }
 
+  const unknownPlayer = tc('unknownPlayer');
+
   const playersById = new Map<string, SkinsPlayerInfo>();
   for (const p of gwp.players) {
     if (p.users == null) continue;
     playersById.set(p.user_id, {
-      name: p.users.name ?? '(ukjent)',
+      name: p.users.name ?? unknownPlayer,
       nickname: p.users.nickname,
     });
   }
@@ -2524,10 +2565,10 @@ function renderSkins(opts: {
         const info = playersById.get(pl.userId);
         return {
           userId: pl.userId,
-          name: info?.name ?? '(ukjent)',
+          name: info?.name ?? unknownPlayer,
           nickname: info?.nickname ?? null,
           score: pl.totalSkins,
-          subLabel: `${pl.holesWon} hull vunnet`,
+          subLabel: th2h('subLabelHolesWon', { count: pl.holesWon }),
         };
       };
       const strip: StripCell[] = result.holes.map((h): StripCell => {
@@ -2545,16 +2586,14 @@ function renderSkins(opts: {
         a.rank === b.rank ? null : (a.rank < b.rank ? a.userId : b.userId);
       const hangingNote =
         result.carriedPot > 0
-          ? `${result.carriedPot} ${
-              result.carriedPot === 1 ? 'skin' : 'skins'
-            } hang igjen. Siste spilte hull ble delt.`
+          ? tsk('carriedNote', { count: result.carriedPot })
           : null;
       return (
         <>
           <HeadToHeadResult
             gameId={gameId}
             gameName={game.name}
-            formatLabel={`Skins · ${result.scoring === 'net' ? 'Netto' : 'Brutto'}`}
+            formatLabel={`Skins · ${result.scoring === 'net' ? tc('netto') : tc('brutto')}`}
             unitLabel="skins"
             sideA={sideFor(a)}
             sideB={sideFor(b)}
@@ -2643,6 +2682,7 @@ async function renderBingoBangoBongo(opts: {
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
 }) {
+  const tc = await getTranslations('leaderboard.common');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
   // Per-hull-prestasjonsdata fra bingo_bango_bongo_holes. Tag-cachet på
@@ -2669,11 +2709,12 @@ async function renderBingoBangoBongo(opts: {
     notFound();
   }
 
+  const unknownPlayer = tc('unknownPlayer');
   const playersById = new Map<string, BingoBangoBongoPlayerInfo>();
   for (const p of gwp.players) {
     if (p.users == null) continue;
     playersById.set(p.user_id, {
-      name: p.users.name ?? '(ukjent)',
+      name: p.users.name ?? unknownPlayer,
       nickname: p.users.nickname,
     });
   }
@@ -2699,7 +2740,7 @@ async function renderBingoBangoBongo(opts: {
         const info = playersById.get(pl.userId);
         return {
           userId: pl.userId,
-          name: info?.name ?? '(ukjent)',
+          name: info?.name ?? unknownPlayer,
           nickname: info?.nickname ?? null,
           score: pl.totalPoints,
           subLabel: `${pl.bingos} bingo · ${pl.bangos} bango · ${pl.bongos} bongo`,
@@ -2810,6 +2851,7 @@ function renderNines(opts: {
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
 }) {
+  const tc = useTranslations('leaderboard.common');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
   // Bygges via den delte `buildNinesContext`-helperen (epic #496) slik at
@@ -2828,11 +2870,12 @@ function renderNines(opts: {
     notFound();
   }
 
+  const unknownPlayer = tc('unknownPlayer');
   const playersById = new Map<string, NinesPlayerInfo>();
   for (const p of gwp.players) {
     if (p.users == null) continue;
     playersById.set(p.user_id, {
-      name: p.users.name ?? '(ukjent)',
+      name: p.users.name ?? unknownPlayer,
       nickname: p.users.nickname,
     });
   }
@@ -2911,6 +2954,7 @@ function renderRoundRobin(opts: {
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
 }) {
+  const tc = useTranslations('leaderboard.common');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
   // Bygges via den delte `buildRoundRobinContext`-helperen (epic #496) slik at
@@ -2930,11 +2974,12 @@ function renderRoundRobin(opts: {
     notFound();
   }
 
+  const unknownPlayer = tc('unknownPlayer');
   const playersById = new Map<string, RoundRobinPlayerInfo>();
   for (const p of gwp.players) {
     if (p.users == null) continue;
     playersById.set(p.user_id, {
-      name: p.users.name ?? '(ukjent)',
+      name: p.users.name ?? unknownPlayer,
       nickname: p.users.nickname,
     });
   }
@@ -3011,6 +3056,7 @@ function renderAceyDeucey(opts: {
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
 }) {
+  const tc = useTranslations('leaderboard.common');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
   // Bygges via den delte `buildAceyDeuceyContext`-helperen (epic #496) slik at
@@ -3029,11 +3075,12 @@ function renderAceyDeucey(opts: {
     notFound();
   }
 
+  const unknownPlayer = tc('unknownPlayer');
   const playersById = new Map<string, AceyDeuceyPlayerInfo>();
   for (const p of gwp.players) {
     if (p.users == null) continue;
     playersById.set(p.user_id, {
-      name: p.users.name ?? '(ukjent)',
+      name: p.users.name ?? unknownPlayer,
       nickname: p.users.nickname,
     });
   }
@@ -3114,6 +3161,7 @@ function renderShamble(opts: {
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
 }) {
+  const tc = useTranslations('leaderboard.common');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
   const ctx = {
@@ -3161,11 +3209,12 @@ function renderShamble(opts: {
     notFound();
   }
 
+  const unknownPlayer = tc('unknownPlayer');
   const playersById = new Map<string, ShamblePlayerInfo>();
   for (const p of gwp.players) {
     if (p.users == null) continue;
     playersById.set(p.user_id, {
-      name: p.users.name ?? '(ukjent)',
+      name: p.users.name ?? unknownPlayer,
       nickname: p.users.nickname,
     });
   }
@@ -3229,6 +3278,7 @@ function renderPatsome(opts: {
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
 }) {
+  const tc = useTranslations('leaderboard.common');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
   const ctx = {
@@ -3268,11 +3318,12 @@ function renderPatsome(opts: {
     notFound();
   }
 
+  const unknownPlayer = tc('unknownPlayer');
   const playersById = new Map<string, PatsomePlayerInfo>();
   for (const p of gwp.players) {
     if (p.users == null) continue;
     playersById.set(p.user_id, {
-      name: p.users.name ?? '(ukjent)',
+      name: p.users.name ?? unknownPlayer,
       nickname: p.users.nickname,
     });
   }
@@ -3326,6 +3377,8 @@ function renderState3(opts: {
   players: LbPlayer[];
   backHref: string;
 }) {
+  const tc = useTranslations('leaderboard.common');
+  const ts3 = useTranslations('leaderboard.state3');
   const { gameId, teeOffAt, players, backHref } = opts;
   const teeOffDate = teeOffAt ? new Date(teeOffAt) : null;
   const teeOffLabel = teeOffDate ? formatTeeOffTime(teeOffDate) : '—';
@@ -3345,10 +3398,10 @@ function renderState3(opts: {
       <PreRoundLeaderboardRealtime gameId={gameId} />
 
       <header className="mb-6 flex items-center justify-between gap-4">
-        <BackLink href={backHref}>Tilbake</BackLink>
+        <BackLink href={backHref}>{tc('back')}</BackLink>
         {/* Per design spec § state 3: kicker is the literal "LEADERBOARD"
             section label (not the game name like state #2 uses). */}
-        <Kicker tone="accent">LEADERBOARD</Kicker>
+        <Kicker tone="accent">{tc('leaderboardKicker')}</Kicker>
         <span className="w-12" aria-hidden />
       </header>
 
@@ -3356,22 +3409,21 @@ function renderState3(opts: {
       <section className="flex flex-col items-center text-center px-5 pt-6 pb-2">
         <HourGlass size={48} className="text-primary" />
         <Kicker tone="muted" className="mt-14">
-          STILLE FØR STORMEN
+          {ts3('kicker')}
         </Kicker>
         <h1 className="mt-6 font-serif text-[24px] font-medium tracking-[-0.015em] leading-tight text-text">
           {teeOffDate
-            ? `Første score forventet kl ${expectedFirstScoreTime(teeOffDate)}.`
-            : 'Stille før stormen.'}
+            ? ts3('firstScoreExpected', { time: expectedFirstScoreTime(teeOffDate) })
+            : ts3('headingFallback')}
         </h1>
         <p className="mt-10 max-w-[280px] font-sans text-[13px] leading-[1.5] text-muted">
-          {teamCount} lag er på vei ut. Tabellen våkner når første kort kommer
-          inn.
+          {ts3('teamCountText', { count: teamCount })}
         </p>
       </section>
 
       {/* Startliste header */}
       <section className="px-6 pt-[22px] pb-2 text-center">
-        <Kicker tone="muted">STARTLISTE</Kicker>
+        <Kicker tone="muted">{ts3('startlistKicker')}</Kicker>
       </section>
 
       {/* Team list */}
@@ -3386,16 +3438,16 @@ function renderState3(opts: {
             </span>
             <div className="min-w-0 flex-1">
               <p className="font-serif text-[15px] font-medium tracking-[-0.005em] text-text">
-                Lag {team.teamNumber}
+                {tc('teamLabel', { number: team.teamNumber })}
               </p>
               <p className="mt-0.5 truncate font-sans text-[11.5px] text-muted">
                 {team.members
                   .map((m) => firstName(m.name) ?? m.name)
-                  .join(' · ') || '(uten spillere)'}
+                  .join(' · ') || tc('noPlayers')}
               </p>
             </div>
             <div className="text-right shrink-0">
-              <Kicker tone="muted">TEE</Kicker>
+              <Kicker tone="muted">{tc('teeKicker')}</Kicker>
               <p className="mt-0.5 font-serif text-[15px] font-medium tracking-[-0.01em] tabular-nums text-text">
                 {teeOffLabel}
               </p>
@@ -3404,7 +3456,7 @@ function renderState3(opts: {
         ))}
       </ul>
 
-      <PullQuote className="px-6 pt-1 pb-4">Lykke til.</PullQuote>
+      <PullQuote className="px-6 pt-1 pb-4">{tc('goodLuck')}</PullQuote>
     </AppShell>
   );
 }
@@ -3427,6 +3479,8 @@ function renderState35(opts: {
   scores: LbScore[];
   backHref: string;
 }) {
+  const tc = useTranslations('leaderboard.common');
+  const ts35 = useTranslations('leaderboard.state35');
   const { gameId, mode, players, holes, scores, backHref } = opts;
 
   const frontNineHoles = holes.filter(
@@ -3454,15 +3508,15 @@ function renderState35(opts: {
       <PreRoundLeaderboardRealtime gameId={gameId} />
 
       <header className="mb-4 flex items-center justify-between gap-4">
-        <BackLink href={backHref}>Tilbake</BackLink>
-        <Kicker tone="accent">LEADERBOARD</Kicker>
+        <BackLink href={backHref}>{tc('back')}</BackLink>
+        <Kicker tone="accent">{tc('leaderboardKicker')}</Kicker>
         <span className="w-12" aria-hidden />
       </header>
 
       {/* FRONT 9 champagne pill — signals this isn't the final standing. */}
       <div className="flex justify-center mb-5">
         <span className="inline-flex items-center text-[10px] font-semibold uppercase tracking-[0.18em] px-3 py-1 rounded-full bg-accent/10 text-accent border border-accent/30">
-          FRONT 9
+          {ts35('front9Label')}
         </span>
       </div>
 
@@ -3473,7 +3527,7 @@ function renderState35(opts: {
       <div className="space-y-3 px-4">
         {orderedLines.length === 0 && (
           <Card>
-            <p className="text-sm text-muted">Ingen lag å vise.</p>
+            <p className="text-sm text-muted">{tc('noTeams')}</p>
           </Card>
         )}
         {orderedLines.map((line) => (
@@ -3492,15 +3546,14 @@ function renderState35(opts: {
           /50 we tried first read too subtle in dark mode. */}
       <div className="mx-4 mt-6 rounded-2xl border border-dashed border-border bg-surface px-5 py-6 text-center">
         <p className="font-serif text-[16px] font-medium text-text">
-          🤫 Vi sees ved hull 18.
+          {ts35('lockedHeading')}
         </p>
         <p className="mt-2 font-sans text-xs text-muted">
-          Alle scorekort må være levert og godkjent før resten av tabellen
-          vises.
+          {ts35('lockedSub')}
         </p>
       </div>
 
-      <PullQuote className="px-6 pt-4 pb-4">Lykke til.</PullQuote>
+      <PullQuote className="px-6 pt-4 pb-4">{tc('goodLuck')}</PullQuote>
     </AppShell>
   );
 }

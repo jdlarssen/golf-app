@@ -504,11 +504,17 @@
       "netto": "Netto",
       "brutto": "Brutto",
       "modeToggleAriaLabel": "Modus",
+      "back": "Tilbake",
       "backAriaLabel": "Tilbake",
       "replayAriaLabel": "Spill av jubelscenene igjen",
       "downloadCsv": "Last ned resultat (CSV)",
       "hullForHullDrillHint": "Trykk på et lag for hull-for-hull",
-      "noTeams": "Ingen lag å vise."
+      "noTeams": "Ingen lag å vise.",
+      "leaderboardKicker": "LEADERBOARD",
+      "teeKicker": "TEE",
+      "goodLuck": "Lykke til.",
+      "tiedWith": "Delt {rank}. plass med {teams}",
+      "missingHoles": "{count} hull mangler"
     },
     "tabs": {
       "tablistAriaLabel": "Leaderboard-fane",
@@ -557,7 +563,33 @@
       "halvedLegend": "delt",
       "verdictTie": "Uavgjort {scoreA}{sep}{scoreB}.",
       "verdictWinTiebreak": "{winner} vant.",
-      "verdictWin": "{winner} vant duellen {winnerScore}{sep}{loserScore}."
+      "verdictWin": "{winner} vant duellen {winnerScore}{sep}{loserScore}.",
+      "subLabelHolesPlayed": "{count} hull spilt",
+      "subLabelGross": "{gross} brutto",
+      "subLabelHolesWon": "{count} hull vunnet"
+    },
+    "state3": {
+      "kicker": "STILLE FØR STORMEN",
+      "firstScoreExpected": "Første score forventet kl {time}.",
+      "headingFallback": "Stille før stormen.",
+      "teamCountText": "{count} lag er på vei ut. Tabellen våkner når første kort kommer inn.",
+      "startlistKicker": "STARTLISTE"
+    },
+    "state35": {
+      "front9Label": "FRONT 9",
+      "lockedHeading": "🤫 Vi sees ved hull 18.",
+      "lockedSub": "Alle scorekort må være levert og godkjent før resten av tabellen vises."
+    },
+    "nassau": {
+      "front9Label": "For 9",
+      "back9Label": "Bak 9",
+      "totalLabel": "Totalt",
+      "noSections": "Ingen seksjoner",
+      "pushedNote": "{sections} endte delt.",
+      "unitSections": "seksjoner"
+    },
+    "skins": {
+      "carriedNote": "{count, plural, one{# skin} other{# skins}} hang igjen. Siste spilte hull ble delt."
     },
     "holes": {
       "unknownPlayer": "(ukjent spiller)",

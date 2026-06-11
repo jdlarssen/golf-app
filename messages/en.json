@@ -504,11 +504,17 @@
       "netto": "Net",
       "brutto": "Gross",
       "modeToggleAriaLabel": "Mode",
+      "back": "Back",
       "backAriaLabel": "Back",
       "replayAriaLabel": "Replay the celebration",
       "downloadCsv": "Download results (CSV)",
       "hullForHullDrillHint": "Tap a team for hole by hole",
-      "noTeams": "No teams to show."
+      "noTeams": "No teams to show.",
+      "leaderboardKicker": "LEADERBOARD",
+      "teeKicker": "TEE",
+      "goodLuck": "Good luck.",
+      "tiedWith": "Tied {rank} with {teams}",
+      "missingHoles": "{count} holes missing"
     },
     "tabs": {
       "tablistAriaLabel": "Leaderboard tab",
@@ -557,7 +563,33 @@
       "halvedLegend": "halved",
       "verdictTie": "Tied {scoreA}{sep}{scoreB}.",
       "verdictWinTiebreak": "{winner} won.",
-      "verdictWin": "{winner} won the duel {winnerScore}{sep}{loserScore}."
+      "verdictWin": "{winner} won the duel {winnerScore}{sep}{loserScore}.",
+      "subLabelHolesPlayed": "{count} holes played",
+      "subLabelGross": "{gross} gross",
+      "subLabelHolesWon": "{count} holes won"
+    },
+    "state3": {
+      "kicker": "CALM BEFORE THE STORM",
+      "firstScoreExpected": "First score expected at {time}.",
+      "headingFallback": "Calm before the storm.",
+      "teamCountText": "{count} teams on their way. The board wakes up when the first card comes in.",
+      "startlistKicker": "START LIST"
+    },
+    "state35": {
+      "front9Label": "FRONT 9",
+      "lockedHeading": "🤫 See you at hole 18.",
+      "lockedSub": "All scorecards must be submitted and approved before the rest of the board is shown."
+    },
+    "nassau": {
+      "front9Label": "Front 9",
+      "back9Label": "Back 9",
+      "totalLabel": "Total",
+      "noSections": "No sections",
+      "pushedNote": "{sections} ended tied.",
+      "unitSections": "sections"
+    },
+    "skins": {
+      "carriedNote": "{count, plural, one{# skin} other{# skins}} carried over. The last played hole was halved."
     },
     "holes": {
       "unknownPlayer": "(unknown player)",
