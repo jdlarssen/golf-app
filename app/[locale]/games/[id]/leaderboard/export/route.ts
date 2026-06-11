@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server';
+import { hasLocale } from 'next-intl';
+import { getTranslations } from 'next-intl/server';
+import { routing } from '@/i18n/routing';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
@@ -59,13 +62,17 @@ function csvRow(fields: Array<string | number | null | undefined>): string {
 
 export async function GET(
   _req: Request,
-  ctx: { params: Promise<{ id: string }> },
+  ctx: { params: Promise<{ locale: string; id: string }> },
 ) {
-  const { id } = await ctx.params;
+  const { locale: rawLocale, id } = await ctx.params;
+  const locale = hasLocale(routing.locales, rawLocale)
+    ? rawLocale
+    : routing.defaultLocale;
+  const t = await getTranslations({ locale, namespace: 'leaderboard.export' });
 
   const userId = await getProxyVerifiedUserId();
   if (!userId) {
-    return NextResponse.json({ error: 'Ikke innlogget' }, { status: 401 });
+    return NextResponse.json({ error: t('errors.notLoggedIn') }, { status: 401 });
   }
 
   const supabase = await getServerClient();
@@ -80,7 +87,7 @@ export async function GET(
   ]);
 
   if (!gwp) {
-    return NextResponse.json({ error: 'Spillet finnes ikke' }, { status: 404 });
+    return NextResponse.json({ error: t('errors.gameNotFound') }, { status: 404 });
   }
   const game = gwp.game;
 
@@ -89,14 +96,14 @@ export async function GET(
   // skjules uansett til status flipper til finished.
   if (game.status !== 'finished') {
     return NextResponse.json(
-      { error: 'Eksport er bare tilgjengelig for ferdigspilte spill' },
+      { error: t('errors.finishedOnly') },
       { status: 404 },
     );
   }
 
   const isAdmin = profileRes.data?.is_admin === true;
   if (!isAdmin && !gwp.players.some((p) => p.user_id === userId)) {
-    return NextResponse.json({ error: 'Ingen tilgang' }, { status: 404 });
+    return NextResponse.json({ error: t('errors.noAccess') }, { status: 404 });
   }
 
   const [rawHolesRes, rawScoresRes] = await Promise.all([
@@ -115,13 +122,13 @@ export async function GET(
 
   if (rawHolesRes.error) {
     return NextResponse.json(
-      { error: 'Klarte ikke å hente baneinformasjon' },
+      { error: t('errors.courseFetchFailed') },
       { status: 500 },
     );
   }
   if (rawScoresRes.error) {
     return NextResponse.json(
-      { error: 'Klarte ikke å hente scores' },
+      { error: t('errors.scoresFetchFailed') },
       { status: 500 },
     );
   }
@@ -130,7 +137,7 @@ export async function GET(
     .filter((p) => p.users != null)
     .map((p) => ({
       userId: p.user_id,
-      name: p.users!.name ?? '(ukjent)',
+      name: p.users!.name ?? t('unknownPlayer'),
       nickname: p.users!.nickname,
       teamNumber: p.team_number,
       courseHandicap: p.course_handicap ?? 0,
@@ -182,10 +189,10 @@ export async function GET(
 
   // Header-blokk: spill-metadata over leaderboard-tabellen. Tomme rader
   // separerer seksjoner så CSV-en leser ryddig i Numbers/Excel.
-  rows.push(csvRow(['Tørny - resultater']));
-  rows.push(csvRow(['Spill', game.name]));
-  rows.push(csvRow(['Eksportert', new Date().toISOString().slice(0, 10)]));
-  rows.push(csvRow(['Par (bane)', coursePar]));
+  rows.push(csvRow([t('title')]));
+  rows.push(csvRow([t('gameLabel'), game.name]));
+  rows.push(csvRow([t('exportedLabel'), new Date().toISOString().slice(0, 10)]));
+  rows.push(csvRow([t('courseParLabel'), coursePar]));
   rows.push(csvRow([]));
 
   // Leaderboard-tabell. Kolonner valgt for å være lesbar på utskrift:
@@ -193,13 +200,13 @@ export async function GET(
   // antall hull spilt.
   rows.push(
     csvRow([
-      'Plass',
-      'Lag',
-      'Spillere',
-      'Brutto',
-      'Netto',
-      'Mot par (netto)',
-      'Hull spilt',
+      t('colRank'),
+      t('colTeam'),
+      t('colPlayers'),
+      t('colGross'),
+      t('colNet'),
+      t('colVsPar'),
+      t('colHolesPlayed'),
     ]),
   );
 
@@ -209,12 +216,12 @@ export async function GET(
     const vsPar = line.total - coursePar;
     const vsParLabel = vsPar === 0 ? 'E' : vsPar > 0 ? `+${vsPar}` : String(vsPar);
     const holesPlayed = totalHoles - line.missingHoles.length;
-    const tiedSuffix = line.tiedWith.length > 0 ? ' (delt)' : '';
+    const tiedSuffix = line.tiedWith.length > 0 ? ` ${t('tiedSuffix')}` : '';
 
     rows.push(
       csvRow([
         `${line.rank}.${tiedSuffix}`,
-        `Lag ${line.teamNumber}`,
+        t('teamRow', { n: line.teamNumber }),
         teamMembersLabel(line.players),
         bruttoTotal,
         line.total,

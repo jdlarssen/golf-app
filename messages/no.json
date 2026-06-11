@@ -1019,6 +1019,30 @@
           "mostDoubleBogeys": "−1p"
         }
       }
+    },
+    "export": {
+      "title": "Tørny - resultater",
+      "gameLabel": "Spill",
+      "exportedLabel": "Eksportert",
+      "courseParLabel": "Par (bane)",
+      "colRank": "Plass",
+      "colTeam": "Lag",
+      "colPlayers": "Spillere",
+      "colGross": "Brutto",
+      "colNet": "Netto",
+      "colVsPar": "Mot par (netto)",
+      "colHolesPlayed": "Hull spilt",
+      "tiedSuffix": "(delt)",
+      "teamRow": "Lag {n}",
+      "unknownPlayer": "(ukjent)",
+      "errors": {
+        "notLoggedIn": "Ikke innlogget",
+        "gameNotFound": "Spillet finnes ikke",
+        "finishedOnly": "Eksport er bare tilgjengelig for ferdigspilte spill",
+        "noAccess": "Ingen tilgang",
+        "courseFetchFailed": "Klarte ikke å hente baneinformasjon",
+        "scoresFetchFailed": "Klarte ikke å hente scores"
+      }
     }
   },
   "auth": {

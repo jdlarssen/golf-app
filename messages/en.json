@@ -1019,6 +1019,30 @@
           "mostDoubleBogeys": "−1 pt"
         }
       }
+    },
+    "export": {
+      "title": "Tørny - results",
+      "gameLabel": "Game",
+      "exportedLabel": "Exported",
+      "courseParLabel": "Par (course)",
+      "colRank": "Pos",
+      "colTeam": "Team",
+      "colPlayers": "Players",
+      "colGross": "Gross",
+      "colNet": "Net",
+      "colVsPar": "Vs par (net)",
+      "colHolesPlayed": "Holes played",
+      "tiedSuffix": "(tied)",
+      "teamRow": "Team {n}",
+      "unknownPlayer": "(unknown)",
+      "errors": {
+        "notLoggedIn": "Not signed in",
+        "gameNotFound": "Game not found",
+        "finishedOnly": "Export is only available for finished games",
+        "noAccess": "No access",
+        "courseFetchFailed": "Could not load course information",
+        "scoresFetchFailed": "Could not load scores"
+      }
     }
   },
   "auth": {
