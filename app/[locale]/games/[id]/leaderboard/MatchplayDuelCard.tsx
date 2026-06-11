@@ -230,7 +230,10 @@ function SidePanel({
         hull vunnet
       </span>
       {side.sublines?.map((line, i) => (
-        <span key={i} className="text-[11px] tabular-nums text-muted">
+        <span
+          key={i}
+          className="max-w-full break-words text-[11px] tabular-nums text-muted"
+        >
           {line}
         </span>
       ))}

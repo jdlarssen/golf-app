@@ -21,6 +21,17 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#546](https://github.com/jdlarssen/golf-app/issues/546). Hele matchplay-familien får skins-duellens utseende i leaderboarden: vunne hull i hver sin farge, dragkamp-stripe, én rute per hull og en dom på matchplay-språket («3&2», «2up», «AS»). Tabellen viser i tillegg stillingen etter hvert hull.
 
+### [1.110.2] - 2026-06-11 · #546
+
+> Svært lange navn eller lagnavn sprenger ikke lenger bredden på duellkortet — de brytes over flere linjer.
+
+<details>
+<summary>Teknisk</summary>
+
+[#546](https://github.com/jdlarssen/golf-app/issues/546). Evaluator-NIT: sub-linjene i versus-panelene (`MatchplayDuelCard.tsx`) manglet `break-words` (navnet over hadde det). Lagt på `max-w-full break-words`.
+
+</details>
+
 ### [1.110.1] - 2026-06-11 · #546
 
 > Lagmatchene har fått samme duellvisning: fourball, foursomes, greensome, chapman og gruesome viser nå lagene mot hverandre med vunne hull, dragkamp-stripe og stilling etter hvert hull.
