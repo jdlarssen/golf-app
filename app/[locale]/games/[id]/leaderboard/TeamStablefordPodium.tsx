@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
@@ -67,6 +68,7 @@ export function TeamStablefordPodium({
   backHref = '/',
   chromeless = false,
 }: TeamStablefordPodiumProps): JSX.Element {
+  const t = useTranslations('leaderboard');
   const [replayKey, setReplayKey] = useState(0);
 
   // Auto-fyr konfetti på første besøk per browser-sesjon. Wrapped i try/catch
@@ -89,7 +91,7 @@ export function TeamStablefordPodium({
       <Shell chromeless={chromeless}>
         {!chromeless && <Header gameName={gameName} backHref={backHref} />}
         <p className="mt-12 text-center text-sm text-muted">
-          Ingen lag å vise.
+          {t('common.noTeams')}
         </p>
       </Shell>
     );
@@ -109,10 +111,10 @@ export function TeamStablefordPodium({
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <Kicker tone="accent">PODIUM</Kicker>
         <h1 className="mt-2 font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          Vinnerlaget er kåret
+          {t('common.winnerTeamAnnounced')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          Par-stableford · Etter 18 hull
+          {t('teamStableford.podiumSubtitle')}
         </p>
       </div>
 
@@ -177,7 +179,7 @@ export function TeamStablefordPodium({
           className="mx-4 mt-4 rounded-2xl border border-border bg-surface px-4 py-3"
         >
           <summary className="cursor-pointer list-none font-serif text-[15px] font-medium tracking-[-0.005em] text-text marker:hidden">
-            Se hele rangeringen ({result.teams.length} lag)
+            {t('common.showFullRankingTeams', { count: result.teams.length })}
             <span aria-hidden className="ml-1 text-muted">
               ›
             </span>
@@ -191,10 +193,10 @@ export function TeamStablefordPodium({
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="font-serif text-[16px] font-medium tracking-[-0.005em] text-text truncate">
-                      Lag {team.teamNumber}
+                      {t('common.teamLabel', { number: team.teamNumber })}
                     </p>
                     <p className="mt-0.5 text-[12px] text-muted truncate">
-                      {teamPartnerLabel(team.playerIds, playersById)}
+                      {teamPartnerLabel(team.playerIds, playersById, t('common.noPlayers'), t('common.unknownPlayer'))}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
@@ -202,7 +204,7 @@ export function TeamStablefordPodium({
                       {team.totalPoints}
                     </span>
                     <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
-                      poeng
+                      {t('common.poengLabel')}
                     </span>
                   </div>
                 </Card>
@@ -212,7 +214,7 @@ export function TeamStablefordPodium({
         </details>
       )}
 
-      <PullQuote className="px-6 pt-4 pb-4">Gratulerer.</PullQuote>
+      <PullQuote className="px-6 pt-4 pb-4">{t('common.congratulations')}</PullQuote>
     </Shell>
   );
 }
@@ -252,11 +254,12 @@ function Header({
   gameName: string;
   backHref: string;
 }) {
+  const t = useTranslations('leaderboard');
   return (
     <header className="mb-2 flex items-center justify-between gap-4">
       <SmartLink
         href={backHref}
-        aria-label="Tilbake"
+        aria-label={t('common.backAriaLabel')}
         className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
       >
         ‹
@@ -296,11 +299,13 @@ const TIER_ACCENT: Record<PodiumTier, string> = {
 function teamPartnerLabel(
   playerIds: string[],
   playersById: Map<string, SoloStablefordPlayerInfo>,
+  noPlayersLabel: string,
+  unknownLabel: string,
 ): string {
-  if (playerIds.length === 0) return '(uten spillere)';
+  if (playerIds.length === 0) return noPlayersLabel;
   const labels = playerIds.map((id) => {
     const info = playersById.get(id);
-    if (!info) return '(ukjent)';
+    if (!info) return unknownLabel;
     const first = firstName(info.name);
     return first ?? formatRevealName(info.name, info.nickname);
   });
@@ -320,7 +325,13 @@ function PodiumStep({
   tier: PodiumTier;
   staggerIndex: number;
 }) {
-  const partners = teamPartnerLabel(team.playerIds, playersById);
+  const t = useTranslations('leaderboard');
+  const partners = teamPartnerLabel(
+    team.playerIds,
+    playersById,
+    t('common.noPlayers'),
+    t('common.unknownPlayer'),
+  );
   const tierClass = TIER_ACCENT[tier];
   const heightClass = TIER_HEIGHTS[tier];
   // Medallion-størrelse: 1.-plass får større for å forsterke hierarkiet.
@@ -336,7 +347,7 @@ function PodiumStep({
 
       {/* Lag-label — sentrert, bold-vekt for visuell vekt over partnernavn. */}
       <p className="text-center font-serif text-[14px] font-medium leading-tight tracking-[-0.005em] text-text">
-        Lag {team.teamNumber}
+        {t('common.teamLabel', { number: team.teamNumber })}
       </p>
 
       {/* Partnernavn — sentrert, mindre, brytes på 2 linjer hvis lange. */}
@@ -358,7 +369,7 @@ function PodiumStep({
           {team.totalPoints}
         </span>
         <span className="mt-1 block text-[9px] font-semibold uppercase tracking-[0.16em] text-muted">
-          poeng
+          {t('common.poengLabel')}
         </span>
       </div>
     </div>

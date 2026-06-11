@@ -514,7 +514,32 @@
       "teeKicker": "TEE",
       "goodLuck": "Lykke til.",
       "tiedWith": "Delt {rank}. plass med {teams}",
-      "missingHoles": "{count} hull mangler"
+      "missingHoles": "{count} hull mangler",
+      "unknownPlayerFull": "(ukjent spiller)",
+      "noPlayersToShow": "Ingen spillere å vise.",
+      "slagLabel": "slag",
+      "poengLabel": "poeng",
+      "holesPlayedCount": "{count} hull spilt",
+      "hullChip": "{count} hull",
+      "grossBrutto": "{count} brutto",
+      "showFullRankingPlayers": "Se hele rangeringen ({count} spillere)",
+      "showFullRankingTeams": "Se hele rangeringen ({count} lag)",
+      "congratulations": "Gratulerer.",
+      "wellPlayed": "Godt spilt.",
+      "stillingen": "Stillingen",
+      "venter": "Venter",
+      "perHullKicker": "PER HULL",
+      "revealHiddenTitle": "Resultatene avsløres etter runden",
+      "winnerAnnounced": "Vinneren er kåret",
+      "winnerTeamAnnounced": "Vinnerlaget er kåret",
+      "winnerTeamAnnounced2": "Vinner-laget er kåret",
+      "after18Holes": "Etter 18 hull",
+      "live": "Live",
+      "tiedRank": "Delt {rank}. plass",
+      "hullForHullHeading": "Hull for hull",
+      "hullForHullRevealSub": "Hull for hull åpnes når admin avslutter spillet.",
+      "leaderboardHeading": "Leaderboard",
+      "teamLeaderboardHeading": "Lag-leaderboard"
     },
     "tabs": {
       "tablistAriaLabel": "Leaderboard-fane",
@@ -590,6 +615,42 @@
     },
     "skins": {
       "carriedNote": "{count, plural, one{# skin} other{# skins}} hang igjen. Siste spilte hull ble delt."
+    },
+    "soloStrokeplay": {
+      "subtitle": "Etter 18 hull · Slagspill · Sortert på laveste netto",
+      "grossHolesRow": "{gross} brutto · {holes} hull spilt",
+      "hullForHullSubtitle": "Slagspill · Netto",
+      "podiumSubtitle": "Slagspill · Etter 18 hull"
+    },
+    "soloStableford": {
+      "subtitle": "Etter 18 hull · Stableford · Poeng",
+      "podiumSubtitle": "Stableford · Etter 18 hull"
+    },
+    "teamStableford": {
+      "subtitle": "Etter 18 hull · Par-stableford · Poeng",
+      "podiumSubtitle": "Par-stableford · Etter 18 hull"
+    },
+    "texasScramble": {
+      "subtitle": "Etter 18 hull · {format} · Sortert på laveste lag-netto",
+      "podiumSubtitle": "{format} · Etter 18 hull"
+    },
+    "shamble": {
+      "revealHiddenSub": "Poengsummen holdes hemmelig til admin avslutter spillet.",
+      "noTeamsScored": "Ingen lag scoret",
+      "teller": "Teller",
+      "tellerIkke": "Teller ikke",
+      "spiltHullOf18": "spilt {played}/18 hull"
+    },
+    "patsome": {
+      "revealHiddenSub": "Poengene holdes hemmelig til admin avslutter spillet.",
+      "totalLabel": "totalt",
+      "podiumSubtitle": "Patsome · {scoring}"
+    },
+    "revealBrutto": {
+      "kicker": "LIVE LEADERBOARD",
+      "heading": "Brutto · etter {count} hull",
+      "description": "Best-ball brutto. Rangeringen kommer når runden er ferdig.",
+      "pullquote": "🤫 Vinneren avsløres når runden er ferdig"
     },
     "holes": {
       "unknownPlayer": "(ukjent spiller)",

@@ -1,4 +1,5 @@
 import type { JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
@@ -49,6 +50,7 @@ export function SoloStrokeplayHolesView({
   scoreVisibility,
   gameStatus,
 }: SoloStrokeplayHolesViewProps): JSX.Element {
+  const t = useTranslations('leaderboard');
   const isRevealHidden =
     scoreVisibility === 'reveal' && gameStatus !== 'finished';
 
@@ -61,13 +63,13 @@ export function SoloStrokeplayHolesView({
           className="mx-4 mt-12 rounded-2xl border border-dashed border-border bg-surface px-5 py-8 text-center"
         >
           <p className="font-serif text-[18px] font-medium text-text">
-            Resultatene avsløres etter runden
+            {t('common.revealHiddenTitle')}
           </p>
           <p className="mt-2 font-sans text-xs text-muted">
-            Hull for hull åpnes når admin avslutter spillet.
+            {t('common.hullForHullRevealSub')}
           </p>
         </div>
-        <PullQuote className="px-6 pt-4 pb-4">Lykke til.</PullQuote>
+        <PullQuote className="px-6 pt-4 pb-4">{t('common.goodLuck')}</PullQuote>
       </Shell>
     );
   }
@@ -83,10 +85,10 @@ export function SoloStrokeplayHolesView({
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          Hull for hull
+          {t('common.hullForHullHeading')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          Slagspill · Netto
+          {t('soloStrokeplay.hullForHullSubtitle')}
         </p>
       </div>
 
@@ -111,7 +113,7 @@ export function SoloStrokeplayHolesView({
         />
       </div>
 
-      <PullQuote className="px-6 pt-1 pb-4">Godt spilt.</PullQuote>
+      <PullQuote className="px-6 pt-1 pb-4">{t('common.wellPlayed')}</PullQuote>
     </Shell>
   );
 }
@@ -128,11 +130,12 @@ function Shell({ children }: { children: React.ReactNode }) {
 }
 
 function Header({ gameName, gameId }: { gameName: string; gameId: string }) {
+  const t = useTranslations('leaderboard');
   return (
     <header className="mb-2 flex items-center justify-between gap-4">
       <SmartLink
         href={`/games/${gameId}`}
-        aria-label="Tilbake"
+        aria-label={t('common.backAriaLabel')}
         className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
       >
         ‹
@@ -155,11 +158,12 @@ function TotalsHeader({
   result: SoloStrokeplayResult;
   playersById: Map<string, SoloStrokeplayPlayerInfo>;
 }) {
+  const t = useTranslations('leaderboard');
   return (
     <div className="px-3.5">
       <Card className="flex flex-col gap-2 px-4 py-3">
         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
-          Stillingen
+          {t('common.stillingen')}
         </p>
         <ul
           data-testid="solo-strokeplay-holes-totals"
@@ -169,7 +173,7 @@ function TotalsHeader({
             const info = playersById.get(line.userId);
             const name = info
               ? formatRevealName(info.name, info.nickname)
-              : '(ukjent spiller)';
+              : t('common.unknownPlayerFull');
             const isLeader = line.rank === 1 && line.tiedWith.length === 0;
             return (
               <li
@@ -190,7 +194,7 @@ function TotalsHeader({
                 </span>
                 <span className="flex shrink-0 items-baseline gap-2 tabular-nums">
                   <span className="text-[10.5px] text-muted/70">
-                    {line.totalGrossStrokes} brutto
+                    {t('common.grossBrutto', { count: line.totalGrossStrokes })}
                   </span>
                   <span
                     className={`score-num text-[20px] leading-none ${
@@ -264,6 +268,7 @@ function SubtotalStrip({
   rankedIds: string[];
   playersById: Map<string, SoloStrokeplayPlayerInfo>;
 }) {
+  const t = useTranslations('leaderboard');
   // Netto-sum per spiller for nien (kun spilte hull). null = ingen spilte hull.
   const sums = new Map<string, number | null>();
   for (const id of rankedIds) {
@@ -288,7 +293,7 @@ function SubtotalStrip({
     >
       {rankedIds.map((id) => {
         const info = playersById.get(id);
-        const name = info ? formatRevealName(info.name, info.nickname) : '(ukjent)';
+        const name = info ? formatRevealName(info.name, info.nickname) : t('common.unknownPlayer');
         const sum = sums.get(id) ?? null;
         const isLeader = sum != null && sum === leaderSum;
         return (
@@ -322,6 +327,7 @@ function HoleCard({
   hole: SoloStrokeplayHoleRow;
   playersById: Map<string, SoloStrokeplayPlayerInfo>;
 }) {
+  const t = useTranslations('leaderboard');
   const scored = hole.bestUserIds.length > 0;
   const uniqueWinnerId =
     hole.bestUserIds.length === 1 ? hole.bestUserIds[0] : null;
@@ -342,7 +348,7 @@ function HoleCard({
               Par {hole.par} · SI {hole.strokeIndex}
             </span>
           </div>
-          {!scored && <span className="text-[10.5px] text-muted/70">Venter</span>}
+          {!scored && <span className="text-[10.5px] text-muted/70">{t('common.venter')}</span>}
         </div>
 
         <ul className="mt-1.5 flex flex-col gap-1 list-none">
@@ -350,7 +356,7 @@ function HoleCard({
             const info = playersById.get(cell.userId);
             const name = info
               ? formatRevealName(info.name, info.nickname)
-              : '(ukjent spiller)';
+              : t('common.unknownPlayerFull');
             const isBest = cell.userId === uniqueWinnerId;
             return (
               <li

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
@@ -56,6 +57,7 @@ export function PatsomePodium({
   backHref = '/',
   chromeless = false,
 }: PatsomePodiumProps): JSX.Element {
+  const t = useTranslations('leaderboard');
   const [replayKey, setReplayKey] = useState(0);
 
   useEffect(() => {
@@ -75,7 +77,7 @@ export function PatsomePodium({
       <Shell chromeless={chromeless}>
         {!chromeless && <Header gameName={gameName} backHref={backHref} />}
         <p className="mt-12 text-center text-sm text-muted">
-          Ingen lag å vise.
+          {t('common.noTeams')}
         </p>
       </Shell>
     );
@@ -87,7 +89,7 @@ export function PatsomePodium({
   const third = result.teams[2] ?? null;
   const rest = result.teams.slice(3);
 
-  const scoringLabel = result.scoring === 'net' ? 'Netto' : 'Brutto';
+  const scoringLabel = result.scoring === 'net' ? t('common.netto') : t('common.brutto');
 
   return (
     <Shell chromeless={chromeless}>
@@ -96,10 +98,10 @@ export function PatsomePodium({
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <Kicker tone="accent">PODIUM</Kicker>
         <h1 className="mt-2 font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          Vinnerlaget er kåret
+          {t('common.winnerTeamAnnounced')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          Patsome · {scoringLabel}
+          {t('patsome.podiumSubtitle', { scoring: scoringLabel })}
         </p>
       </div>
 
@@ -156,7 +158,7 @@ export function PatsomePodium({
           className="mx-4 mt-4 rounded-2xl border border-border bg-surface px-4 py-3"
         >
           <summary className="cursor-pointer list-none font-serif text-[15px] font-medium tracking-[-0.005em] text-text marker:hidden">
-            Se hele rangeringen ({result.teams.length} lag)
+            {t('common.showFullRankingTeams', { count: result.teams.length })}
             <span aria-hidden className="ml-1 text-muted">
               ›
             </span>
@@ -170,10 +172,10 @@ export function PatsomePodium({
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="font-serif text-[16px] font-medium tracking-[-0.005em] text-text truncate">
-                      Lag {team.teamNumber}
+                      {t('common.teamLabel', { number: team.teamNumber })}
                     </p>
                     <p className="mt-0.5 text-[12px] text-muted truncate">
-                      {teamPartnerLabel(team.playerIds, playersById)}
+                      {teamPartnerLabel(team.playerIds, playersById, t('common.noPlayers'), t('common.unknownPlayer'))}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
@@ -181,7 +183,7 @@ export function PatsomePodium({
                       {team.totalPoints}
                     </span>
                     <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
-                      poeng
+                      {t('common.poengLabel')}
                     </span>
                   </div>
                 </Card>
@@ -191,7 +193,7 @@ export function PatsomePodium({
         </details>
       )}
 
-      <PullQuote className="px-6 pt-4 pb-4">Gratulerer.</PullQuote>
+      <PullQuote className="px-6 pt-4 pb-4">{t('common.congratulations')}</PullQuote>
     </Shell>
   );
 }
@@ -228,11 +230,12 @@ function Header({
   gameName: string;
   backHref: string;
 }) {
+  const t = useTranslations('leaderboard');
   return (
     <header className="mb-2 flex items-center justify-between gap-4">
       <SmartLink
         href={backHref}
-        aria-label="Tilbake"
+        aria-label={t('common.backAriaLabel')}
         className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
       >
         ‹
@@ -261,11 +264,13 @@ const TIER_ACCENT: Record<PodiumTier, string> = {
 function teamPartnerLabel(
   playerIds: string[],
   playersById: Map<string, PatsomePlayerInfo>,
+  noPlayersLabel: string,
+  unknownLabel: string,
 ): string {
-  if (playerIds.length === 0) return '(uten spillere)';
+  if (playerIds.length === 0) return noPlayersLabel;
   const labels = playerIds.map((id) => {
     const info = playersById.get(id);
-    if (!info) return '(ukjent)';
+    if (!info) return unknownLabel;
     const first = firstName(info.name);
     return first ?? formatRevealName(info.name, info.nickname);
   });
@@ -285,7 +290,13 @@ function PodiumStep({
   tier: PodiumTier;
   staggerIndex: number;
 }) {
-  const partners = teamPartnerLabel(team.playerIds, playersById);
+  const t = useTranslations('leaderboard');
+  const partners = teamPartnerLabel(
+    team.playerIds,
+    playersById,
+    t('common.noPlayers'),
+    t('common.unknownPlayer'),
+  );
   const tierClass = TIER_ACCENT[tier];
   const heightClass = TIER_HEIGHTS[tier];
   const medallionSize = rank === 1 ? 48 : 36;
@@ -299,7 +310,7 @@ function PodiumStep({
       <Medallion place={rank} size={medallionSize} />
 
       <p className="text-center font-serif text-[14px] font-medium leading-tight tracking-[-0.005em] text-text">
-        Lag {team.teamNumber}
+        {t('common.teamLabel', { number: team.teamNumber })}
       </p>
 
       <p className="text-center font-sans text-[11px] leading-tight text-muted break-words">
@@ -319,7 +330,7 @@ function PodiumStep({
           {team.totalPoints}
         </span>
         <span className="mt-1 block text-[9px] font-semibold uppercase tracking-[0.16em] text-muted">
-          poeng
+          {t('common.poengLabel')}
         </span>
       </div>
     </div>

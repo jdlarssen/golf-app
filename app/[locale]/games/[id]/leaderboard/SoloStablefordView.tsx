@@ -1,4 +1,5 @@
 import type { JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
@@ -60,18 +61,16 @@ export function SoloStablefordView({
   backHref = '/',
   chromeless = false,
 }: SoloStablefordViewProps): JSX.Element {
-  const subtitleParts = [
-    'Etter 18 hull',
-    'Stableford',
-    'Poeng',
-  ];
+  const t = useTranslations('leaderboard');
+
+  const subtitle = t('soloStableford.subtitle');
 
   if (result.players.length === 0) {
     return (
       <Shell chromeless={chromeless}>
         {!chromeless && <Header gameName={gameName} backHref={backHref} />}
         <p className="mt-12 text-center text-sm text-muted">
-          Ingen spillere å vise.
+          {t('common.noPlayersToShow')}
         </p>
       </Shell>
     );
@@ -83,10 +82,10 @@ export function SoloStablefordView({
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          Leaderboard
+          {t('common.leaderboardHeading')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          {subtitleParts.join(' · ')}
+          {subtitle}
         </p>
       </div>
 
@@ -98,7 +97,7 @@ export function SoloStablefordView({
           const info = playersById.get(player.userId);
           const displayName = info
             ? formatRevealName(info.name, info.nickname)
-            : '(ukjent spiller)';
+            : t('common.unknownPlayerFull');
           return (
             <PlayerRow
               key={player.userId}
@@ -107,12 +106,14 @@ export function SoloStablefordView({
               totalPoints={player.totalPoints}
               holesPlayed={player.holesPlayed}
               staggerIndex={i}
+              holesPlayedLabel={t('common.holesPlayedCount', { count: player.holesPlayed })}
+              poengLabel={t('common.poengLabel')}
             />
           );
         })}
       </ul>
 
-      <PullQuote className="px-6 pt-1 pb-4">Lykke til.</PullQuote>
+      <PullQuote className="px-6 pt-1 pb-4">{t('common.goodLuck')}</PullQuote>
     </Shell>
   );
 }
@@ -149,11 +150,12 @@ function Header({
   gameName: string;
   backHref: string;
 }) {
+  const t = useTranslations('leaderboard');
   return (
     <header className="mb-2 flex items-center justify-between gap-4">
       <SmartLink
         href={backHref}
-        aria-label="Tilbake"
+        aria-label={t('common.backAriaLabel')}
         className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
       >
         ‹
@@ -168,14 +170,17 @@ function PlayerRow({
   rank,
   displayName,
   totalPoints,
-  holesPlayed,
   staggerIndex,
+  holesPlayedLabel,
+  poengLabel,
 }: {
   rank: number;
   displayName: string;
   totalPoints: number;
   holesPlayed: number;
   staggerIndex: number;
+  holesPlayedLabel: string;
+  poengLabel: string;
 }) {
   const isPodium = rank >= 1 && rank <= 3;
   // Champagne-tinted Card for vinneren, helt diskret accent for 2-3, og
@@ -207,7 +212,7 @@ function PlayerRow({
             {displayName}
           </p>
           <p className="mt-0.5 text-[12px] text-muted tabular-nums">
-            {holesPlayed} hull spilt
+            {holesPlayedLabel}
           </p>
         </div>
 
@@ -216,7 +221,7 @@ function PlayerRow({
             {totalPoints}
           </span>
           <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-            poeng
+            {poengLabel}
           </span>
         </div>
       </Card>

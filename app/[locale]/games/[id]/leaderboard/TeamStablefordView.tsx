@@ -1,4 +1,5 @@
 import type { JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
@@ -56,14 +57,14 @@ export function TeamStablefordView({
   backHref = '/',
   chromeless = false,
 }: TeamStablefordViewProps): JSX.Element {
-  const subtitleParts = ['Etter 18 hull', 'Par-stableford', 'Poeng'];
+  const t = useTranslations('leaderboard');
 
   if (result.teams.length === 0) {
     return (
       <Shell chromeless={chromeless}>
         {!chromeless && <Header gameName={gameName} backHref={backHref} />}
         <p className="mt-12 text-center text-sm text-muted">
-          Ingen lag å vise.
+          {t('common.noTeams')}
         </p>
       </Shell>
     );
@@ -75,10 +76,10 @@ export function TeamStablefordView({
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          Lag-leaderboard
+          {t('common.teamLeaderboardHeading')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          {subtitleParts.join(' · ')}
+          {t('teamStableford.subtitle')}
         </p>
       </div>
 
@@ -100,7 +101,7 @@ export function TeamStablefordView({
         ))}
       </ul>
 
-      <PullQuote className="px-6 pt-1 pb-4">Lykke til.</PullQuote>
+      <PullQuote className="px-6 pt-1 pb-4">{t('common.goodLuck')}</PullQuote>
     </Shell>
   );
 }
@@ -137,11 +138,12 @@ function Header({
   gameName: string;
   backHref: string;
 }) {
+  const t = useTranslations('leaderboard');
   return (
     <header className="mb-2 flex items-center justify-between gap-4">
       <SmartLink
         href={backHref}
-        aria-label="Tilbake"
+        aria-label={t('common.backAriaLabel')}
         className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
       >
         ‹
@@ -162,11 +164,13 @@ function Header({
 function teamPartnerLabel(
   playerIds: string[],
   playersById: Map<string, SoloStablefordPlayerInfo>,
+  noPlayersLabel: string,
+  unknownLabel: string,
 ): string {
-  if (playerIds.length === 0) return '(uten spillere)';
+  if (playerIds.length === 0) return noPlayersLabel;
   const labels = playerIds.map((id) => {
     const info = playersById.get(id);
-    if (!info) return '(ukjent)';
+    if (!info) return unknownLabel;
     const first = firstName(info.name);
     return first ?? formatRevealName(info.name, info.nickname);
   });
@@ -190,6 +194,7 @@ function TeamRow({
   tiedWith: number[];
   staggerIndex: number;
 }) {
+  const t = useTranslations('leaderboard');
   const isPodium = rank >= 1 && rank <= 3;
   // Champagne-tinted Card for vinneren (rank 1), nøytral for 2+ slik at
   // live-leaderboard-en ikke skriker «cermoni». Mirrors SoloStablefordView.
@@ -198,7 +203,14 @@ function TeamRow({
       ? 'border-accent bg-accent/[0.06] shadow-[0_2px_12px_rgba(201,169,97,0.15)]'
       : '';
 
-  const partnerLabel = teamPartnerLabel(playerIds, playersById);
+  const partnerLabel = teamPartnerLabel(
+    playerIds,
+    playersById,
+    t('common.noPlayers'),
+    t('common.unknownPlayer'),
+  );
+
+  const tiedTeams = tiedWith.map((n) => t('common.teamLabel', { number: n })).join(', ');
 
   return (
     <li
@@ -218,14 +230,14 @@ function TeamRow({
 
         <div className="min-w-0 flex-1">
           <p className="font-serif text-[17px] font-medium tracking-[-0.005em] text-text truncate">
-            Lag {teamNumber}
+            {t('common.teamLabel', { number: teamNumber })}
           </p>
           <p className="mt-0.5 text-[12px] text-muted truncate">
             {partnerLabel}
           </p>
           {tiedWith.length > 0 && (
             <p className="mt-0.5 text-[11px] text-muted tabular-nums">
-              Delt {rank}. plass med {tiedWith.map((n) => `Lag ${n}`).join(', ')}
+              {t('common.tiedWith', { rank, teams: tiedTeams })}
             </p>
           )}
         </div>
@@ -235,7 +247,7 @@ function TeamRow({
             {totalPoints}
           </span>
           <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-            poeng
+            {t('common.poengLabel')}
           </span>
         </div>
       </Card>

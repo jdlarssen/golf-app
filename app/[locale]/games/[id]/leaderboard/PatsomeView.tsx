@@ -1,4 +1,5 @@
 import type { JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
@@ -68,11 +69,13 @@ const SEGMENT_LABELS: Record<PatsomeSegment, string> = {
 function teamPartnerLabel(
   playerIds: string[],
   playersById: Map<string, PatsomePlayerInfo>,
+  noPlayersLabel: string,
+  unknownLabel: string,
 ): string {
-  if (playerIds.length === 0) return '(uten spillere)';
+  if (playerIds.length === 0) return noPlayersLabel;
   const labels = playerIds.map((id) => {
     const info = playersById.get(id);
-    if (!info) return '(ukjent)';
+    if (!info) return unknownLabel;
     const first = firstName(info.name);
     return first ?? formatRevealName(info.name, info.nickname);
   });
@@ -99,6 +102,7 @@ export function PatsomeView({
   backHref = '/',
   chromeless = false,
 }: PatsomeViewProps): JSX.Element {
+  const t = useTranslations('leaderboard');
   const isRevealHidden =
     scoreVisibility === 'reveal' && gameStatus !== 'finished';
 
@@ -107,7 +111,7 @@ export function PatsomeView({
       <Shell chromeless={chromeless}>
         {!chromeless && <Header gameName={gameName} backHref={backHref} />}
         <p className="mt-12 text-center text-sm text-muted">
-          Ingen lag å vise.
+          {t('common.noTeams')}
         </p>
       </Shell>
     );
@@ -122,19 +126,19 @@ export function PatsomeView({
           className="mx-4 mt-12 rounded-2xl border border-dashed border-border bg-surface px-5 py-8 text-center"
         >
           <p className="font-serif text-[18px] font-medium text-text">
-            Resultatene avsløres etter runden
+            {t('common.revealHiddenTitle')}
           </p>
           <p className="mt-2 font-sans text-xs text-muted">
-            Poengene holdes hemmelig til admin avslutter spillet.
+            {t('patsome.revealHiddenSub')}
           </p>
         </div>
-        <PullQuote className="px-6 pt-4 pb-4">Lykke til.</PullQuote>
+        <PullQuote className="px-6 pt-4 pb-4">{t('common.goodLuck')}</PullQuote>
       </Shell>
     );
   }
 
-  const scoringLabel = result.scoring === 'net' ? 'Netto' : 'Brutto';
-  const statusLabel = gameStatus === 'finished' ? 'Etter 18 hull' : 'Live';
+  const scoringLabel = result.scoring === 'net' ? t('common.netto') : t('common.brutto');
+  const statusLabel = gameStatus === 'finished' ? t('common.after18Holes') : t('common.live');
   const subtitleParts = [statusLabel, 'Patsome', scoringLabel];
 
   return (
@@ -143,7 +147,7 @@ export function PatsomeView({
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          Lag-leaderboard
+          {t('common.teamLeaderboardHeading')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
           {subtitleParts.join(' · ')}
@@ -168,7 +172,7 @@ export function PatsomeView({
       {/* Per-hull-rutenett med segment-skillelinjer */}
       <section className="px-3.5 pt-2 pb-3.5">
         <Kicker tone="muted" className="px-1 pb-2">
-          PER HULL
+          {t('common.perHullKicker')}
         </Kicker>
         <div
           data-testid="patsome-hole-grid"
@@ -185,7 +189,7 @@ export function PatsomeView({
         </div>
       </section>
 
-      <PullQuote className="px-6 pt-1 pb-4">Lykke til.</PullQuote>
+      <PullQuote className="px-6 pt-1 pb-4">{t('common.goodLuck')}</PullQuote>
     </Shell>
   );
 }
@@ -222,11 +226,12 @@ function Header({
   gameName: string;
   backHref: string;
 }) {
+  const t = useTranslations('leaderboard');
   return (
     <header className="mb-2 flex items-center justify-between gap-4">
       <SmartLink
         href={backHref}
-        aria-label="Tilbake"
+        aria-label={t('common.backAriaLabel')}
         className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
       >
         ‹
@@ -246,13 +251,19 @@ function TeamRow({
   playersById: Map<string, PatsomePlayerInfo>;
   staggerIndex: number;
 }) {
+  const t = useTranslations('leaderboard');
   const isPodium = team.rank >= 1 && team.rank <= 3;
   const cardClass =
     team.rank === 1
       ? 'border-accent bg-accent/[0.06] shadow-[0_2px_12px_rgba(201,169,97,0.15)]'
       : '';
 
-  const partnerLabel = teamPartnerLabel(team.playerIds, playersById);
+  const partnerLabel = teamPartnerLabel(
+    team.playerIds,
+    playersById,
+    t('common.noPlayers'),
+    t('common.unknownPlayer'),
+  );
 
   const { fourball, greensome, foursomes } = team.segments;
 
@@ -277,7 +288,7 @@ function TeamRow({
           {/* Lag-info + segment-delsummer */}
           <div className="min-w-0 flex-1">
             <p className="font-serif text-[17px] font-medium tracking-[-0.005em] text-text truncate">
-              Lag {team.teamNumber}
+              {t('common.teamLabel', { number: team.teamNumber })}
             </p>
             <p className="mt-0.5 text-[12px] text-muted truncate">
               {partnerLabel}
@@ -297,8 +308,10 @@ function TeamRow({
 
             {team.tiedWith.length > 0 && (
               <p className="mt-0.5 text-[11px] text-muted tabular-nums">
-                Delt {team.rank}. plass med{' '}
-                {team.tiedWith.map((n) => `Lag ${n}`).join(', ')}
+                {t('common.tiedWith', {
+                  rank: team.rank,
+                  teams: team.tiedWith.map((n) => t('common.teamLabel', { number: n })).join(', '),
+                })}
               </p>
             )}
           </div>
@@ -312,7 +325,7 @@ function TeamRow({
               {team.totalPoints}
             </span>
             <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-              totalt
+              {t('patsome.totalLabel')}
             </span>
           </div>
         </div>
@@ -335,6 +348,7 @@ function HoleRow({
   teams: PatsomeTeamLine[];
   playersById: Map<string, PatsomePlayerInfo>;
 }) {
+  const t = useTranslations('leaderboard');
   const isFirstGreensome = hole.holeNumber === 7;
   const isFirstFoursomes = hole.holeNumber === 13;
 
@@ -379,7 +393,12 @@ function HoleRow({
               (h) => h.holeNumber === hole.holeNumber,
             );
             const points = teamHole?.teamPoints ?? 0;
-            const partnerLabel = teamPartnerLabel(team.playerIds, playersById);
+            const partnerLabel = teamPartnerLabel(
+              team.playerIds,
+              playersById,
+              t('common.noPlayers'),
+              t('common.unknownPlayer'),
+            );
             const isUnplayed =
               teamHole === undefined ||
               (hole.segment === 'fourball'

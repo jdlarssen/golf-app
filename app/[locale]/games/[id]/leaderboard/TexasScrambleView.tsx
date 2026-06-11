@@ -1,4 +1,5 @@
 import type { JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
@@ -11,8 +12,9 @@ import type { TexasScrambleResult } from '@/lib/scoring/modes/types';
 
 /**
  * Spillerinfo for TexasScrambleView. En map fra userId → navn + kallenavn.
- * Caller (leaderboard-page) bygger map-en fra game_players-joinen. Brukes til
- * å vise lag-medlemmenes navn under lag-tittelen.
+ * Caller (leaderboard-page) bygger map-en fra game_players-joinen og
+ * sender den inn slik at view-en kan rendre menneske-lesbare navn der
+ * scoring-laget kun har userId-er.
  */
 export interface TexasScramblePlayerInfo {
   name: string;
@@ -68,18 +70,14 @@ export function TexasScrambleView({
   chromeless = false,
   formatLabel = 'Texas scramble',
 }: TexasScrambleViewProps): JSX.Element {
-  const subtitleParts = [
-    'Etter 18 hull',
-    formatLabel,
-    'Sortert på laveste lag-netto',
-  ];
+  const t = useTranslations('leaderboard');
 
   if (result.teams.length === 0) {
     return (
       <Shell chromeless={chromeless}>
         {!chromeless && <Header gameName={gameName} backHref={backHref} />}
         <p className="mt-12 text-center text-sm text-muted">
-          Ingen lag å vise.
+          {t('common.noTeams')}
         </p>
       </Shell>
     );
@@ -96,10 +94,10 @@ export function TexasScrambleView({
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          Leaderboard
+          {t('common.leaderboardHeading')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          {subtitleParts.join(' · ')}
+          {t('texasScramble.subtitle', { format: formatLabel })}
         </p>
       </div>
 
@@ -111,7 +109,7 @@ export function TexasScrambleView({
           const memberNames = team.members
             .map((m) => {
               const info = playersById.get(m.userId);
-              return info ? formatRevealName(info.name, info.nickname) : '(ukjent)';
+              return info ? formatRevealName(info.name, info.nickname) : t('common.unknownPlayer');
             })
             .join(', ');
           return (
@@ -129,7 +127,7 @@ export function TexasScrambleView({
         })}
       </ul>
 
-      <PullQuote className="px-6 pt-1 pb-4">Lykke til.</PullQuote>
+      <PullQuote className="px-6 pt-1 pb-4">{t('common.goodLuck')}</PullQuote>
     </Shell>
   );
 }
@@ -166,11 +164,12 @@ function Header({
   gameName: string;
   backHref: string;
 }) {
+  const t = useTranslations('leaderboard');
   return (
     <header className="mb-2 flex items-center justify-between gap-4">
       <SmartLink
         href={backHref}
-        aria-label="Tilbake"
+        aria-label={t('common.backAriaLabel')}
         className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
       >
         ‹
@@ -198,6 +197,7 @@ function TeamRow({
   missingHoles: number;
   staggerIndex: number;
 }) {
+  const t = useTranslations('leaderboard');
   const isPodium = rank >= 1 && rank <= 3;
   const cardClass =
     rank === 1
@@ -222,16 +222,16 @@ function TeamRow({
 
         <div className="min-w-0 flex-1">
           <p className="font-serif text-[17px] font-medium tracking-[-0.005em] text-text truncate">
-            Lag {teamNumber}
+            {t('common.teamLabel', { number: teamNumber })}
           </p>
           <p className="mt-0.5 text-[12px] text-muted truncate">
             {memberNames}
           </p>
           <p className="mt-0.5 text-[12px] text-muted tabular-nums">
-            {totalGross} brutto
+            {t('common.grossBrutto', { count: totalGross })}
             {missingHoles > 0 && (
               <span className="ml-1 text-muted/80">
-                · {missingHoles} hull mangler
+                · {t('common.missingHoles', { count: missingHoles })}
               </span>
             )}
           </p>
@@ -242,7 +242,7 @@ function TeamRow({
             {totalNet}
           </span>
           <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-            slag
+            {t('common.slagLabel')}
           </span>
         </div>
       </Card>

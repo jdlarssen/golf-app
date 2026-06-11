@@ -514,7 +514,32 @@
       "teeKicker": "TEE",
       "goodLuck": "Good luck.",
       "tiedWith": "Tied {rank} with {teams}",
-      "missingHoles": "{count} holes missing"
+      "missingHoles": "{count} holes missing",
+      "unknownPlayerFull": "(unknown player)",
+      "noPlayersToShow": "No players to show.",
+      "slagLabel": "strokes",
+      "poengLabel": "points",
+      "holesPlayedCount": "{count} holes played",
+      "hullChip": "{count} holes",
+      "grossBrutto": "{count} gross",
+      "showFullRankingPlayers": "Show full standings ({count} players)",
+      "showFullRankingTeams": "Show full standings ({count} teams)",
+      "congratulations": "Congratulations.",
+      "wellPlayed": "Well played.",
+      "stillingen": "Standings",
+      "venter": "Waiting",
+      "perHullKicker": "BY HOLE",
+      "revealHiddenTitle": "Results revealed after the round",
+      "winnerAnnounced": "The winner has been crowned",
+      "winnerTeamAnnounced": "The winning team has been crowned",
+      "winnerTeamAnnounced2": "The winning team has been crowned",
+      "after18Holes": "After 18 holes",
+      "live": "Live",
+      "tiedRank": "Tied {rank}",
+      "hullForHullHeading": "Hole by hole",
+      "hullForHullRevealSub": "Hole by hole opens when the admin ends the round.",
+      "leaderboardHeading": "Leaderboard",
+      "teamLeaderboardHeading": "Team leaderboard"
     },
     "tabs": {
       "tablistAriaLabel": "Leaderboard tab",
@@ -590,6 +615,42 @@
     },
     "skins": {
       "carriedNote": "{count, plural, one{# skin} other{# skins}} carried over. The last played hole was halved."
+    },
+    "soloStrokeplay": {
+      "subtitle": "After 18 holes · Stroke play · Sorted by lowest net",
+      "grossHolesRow": "{gross} gross · {holes} holes played",
+      "hullForHullSubtitle": "Stroke play · Net",
+      "podiumSubtitle": "Stroke play · After 18 holes"
+    },
+    "soloStableford": {
+      "subtitle": "After 18 holes · Stableford · Points",
+      "podiumSubtitle": "Stableford · After 18 holes"
+    },
+    "teamStableford": {
+      "subtitle": "After 18 holes · Par Stableford · Points",
+      "podiumSubtitle": "Par Stableford · After 18 holes"
+    },
+    "texasScramble": {
+      "subtitle": "After 18 holes · {format} · Sorted by lowest team net",
+      "podiumSubtitle": "{format} · After 18 holes"
+    },
+    "shamble": {
+      "revealHiddenSub": "Scores are kept secret until admin finishes the game.",
+      "noTeamsScored": "No teams have scored",
+      "teller": "Counts",
+      "tellerIkke": "Does not count",
+      "spiltHullOf18": "played {played}/18 holes"
+    },
+    "patsome": {
+      "revealHiddenSub": "Points are kept secret until admin finishes the game.",
+      "totalLabel": "total",
+      "podiumSubtitle": "Patsome · {scoring}"
+    },
+    "revealBrutto": {
+      "kicker": "LIVE LEADERBOARD",
+      "heading": "Gross · after {count} {count, plural, one {hole} other {holes}}",
+      "description": "Best-ball gross. The final standings are revealed when the round is finished.",
+      "pullquote": "🤫 The winner is revealed when the round is done"
     },
     "holes": {
       "unknownPlayer": "(unknown player)",

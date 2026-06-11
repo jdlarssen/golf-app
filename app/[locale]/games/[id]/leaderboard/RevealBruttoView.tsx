@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
@@ -32,23 +33,24 @@ export function RevealBruttoView({
   holesPlayed,
   backHref,
 }: Props) {
+  const t = useTranslations('leaderboard');
   return (
     <AppShell>
       <PreRoundLeaderboardRealtime gameId={gameId} />
 
       <TopBar
         backHref={backHref}
-        backLabel="Tilbake"
+        backLabel={t('common.back')}
         kicker={gameName}
       />
 
       <section className="px-6 pt-2 pb-3 text-center">
-        <Kicker tone="accent">LIVE LEADERBOARD</Kicker>
+        <Kicker tone="accent">{t('revealBrutto.kicker')}</Kicker>
         <h1 className="mt-2 font-serif text-[24px] font-medium tracking-[-0.015em] leading-tight text-text">
-          Brutto · etter {holesPlayed} {holesPlayed === 1 ? 'hull' : 'hull'}
+          {t('revealBrutto.heading', { count: holesPlayed })}
         </h1>
         <p className="mt-2 font-sans text-[12px] text-muted">
-          Best-ball brutto. Rangeringen kommer når runden er ferdig.
+          {t('revealBrutto.description')}
         </p>
       </section>
 
@@ -56,7 +58,7 @@ export function RevealBruttoView({
         {teams.length === 0 && (
           <li>
             <Card>
-              <p className="text-sm text-muted">Ingen lag å vise.</p>
+              <p className="text-sm text-muted">{t('common.noTeams')}</p>
             </Card>
           </li>
         )}
@@ -66,7 +68,7 @@ export function RevealBruttoView({
       </ul>
 
       <PullQuote className="px-6 pt-2 pb-4">
-        🤫 Vinneren avsløres når runden er ferdig
+        {t('revealBrutto.pullquote')}
       </PullQuote>
     </AppShell>
   );
@@ -81,6 +83,7 @@ function deltaText(total: number, parPlayed: number): string {
 }
 
 function RevealTeamRow({ line }: { line: TeamLine }) {
+  const t = useTranslations('leaderboard');
   // Per-player brutto sum + par-played across played holes.
   const perPlayerBrutto = new Map<string, number>();
   const perPlayerParPlayed = new Map<string, number>();
@@ -113,7 +116,7 @@ function RevealTeamRow({ line }: { line: TeamLine }) {
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <p className="font-serif text-[19px] font-medium tracking-tight text-text">
-              Lag {line.teamNumber}
+              {t('common.teamLabel', { number: line.teamNumber })}
             </p>
             <ul className="mt-1.5 flex flex-col gap-0.5 list-none">
               {line.players.map((p) => {
@@ -151,7 +154,7 @@ function RevealTeamRow({ line }: { line: TeamLine }) {
                   {teamDelta}
                 </span>
               )}
-              Brutto
+              {t('common.brutto')}
             </p>
           </div>
         </div>

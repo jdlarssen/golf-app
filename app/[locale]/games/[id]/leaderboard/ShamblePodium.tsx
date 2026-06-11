@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
@@ -49,6 +50,7 @@ export function ShamblePodium({
   playersById,
   backHref = '/',
 }: ShamblePodiumProps): JSX.Element {
+  const t = useTranslations('leaderboard');
   const [replayKey, setReplayKey] = useState(0);
 
   useEffect(() => {
@@ -68,7 +70,7 @@ export function ShamblePodium({
       <Shell>
         <Header gameName={gameName} backHref={backHref} />
         <p className="mt-12 text-center text-sm text-muted">
-          Ingen lag å vise.
+          {t('common.noTeams')}
         </p>
       </Shell>
     );
@@ -83,7 +85,7 @@ export function ShamblePodium({
 
   const variantLabel =
     result.variant === 'champagne' ? 'Champagne Scramble' : 'Shamble';
-  const scoringLabel = result.scoring === 'net' ? 'Netto' : 'Brutto';
+  const scoringLabel = result.scoring === 'net' ? t('common.netto') : t('common.brutto');
 
   return (
     <Shell>
@@ -92,10 +94,10 @@ export function ShamblePodium({
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <Kicker tone="accent">PODIUM</Kicker>
         <h1 className="mt-2 font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          Vinner-laget er kåret
+          {t('common.winnerTeamAnnounced2')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          {variantLabel} · {scoringLabel} · Etter 18 hull
+          {variantLabel} · {scoringLabel} · {t('common.after18Holes')}
         </p>
       </div>
 
@@ -153,7 +155,7 @@ export function ShamblePodium({
                 const info = playersById.get(uid);
                 return info
                   ? formatRevealName(info.name, info.nickname)
-                  : '(ukjent)';
+                  : t('common.unknownPlayer');
               })
               .join(', ');
             return (
@@ -164,7 +166,7 @@ export function ShamblePodium({
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="font-serif text-[16px] font-medium tracking-[-0.005em] text-text truncate">
-                      Lag {team.teamNumber}
+                      {t('common.teamLabel', { number: team.teamNumber })}
                     </p>
                     <p className="mt-0.5 text-[12px] text-muted truncate">
                       {memberNames}
@@ -175,7 +177,7 @@ export function ShamblePodium({
                       {team.totalScore}
                     </span>
                     <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
-                      slag
+                      {t('common.slagLabel')}
                     </span>
                   </div>
                 </Card>
@@ -185,7 +187,7 @@ export function ShamblePodium({
         </ul>
       )}
 
-      <PullQuote className="px-6 pt-4 pb-4">Gratulerer.</PullQuote>
+      <PullQuote className="px-6 pt-4 pb-4">{t('common.congratulations')}</PullQuote>
     </Shell>
   );
 }
@@ -208,11 +210,12 @@ function Header({
   gameName: string;
   backHref: string;
 }) {
+  const t = useTranslations('leaderboard');
   return (
     <header className="mb-2 flex items-center justify-between gap-4">
       <SmartLink
         href={backHref}
-        aria-label="Tilbake"
+        aria-label={t('common.backAriaLabel')}
         className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
       >
         ‹
@@ -251,10 +254,11 @@ function PodiumStep({
   tier: PodiumTier;
   staggerIndex: number;
 }) {
+  const t = useTranslations('leaderboard');
   const memberNames = team.members
     .map((uid) => {
       const info = playersById.get(uid);
-      return info ? formatRevealName(info.name, info.nickname) : '(ukjent)';
+      return info ? formatRevealName(info.name, info.nickname) : t('common.unknownPlayer');
     })
     .join(', ');
 
@@ -271,7 +275,7 @@ function PodiumStep({
       <Medallion place={rank} size={medallionSize} />
 
       <p className="text-center font-serif text-[14px] font-medium leading-tight tracking-[-0.005em] text-text">
-        Lag {team.teamNumber}
+        {t('common.teamLabel', { number: team.teamNumber })}
       </p>
       <p className="text-center text-[10.5px] leading-tight text-muted break-words">
         {memberNames}
@@ -290,7 +294,7 @@ function PodiumStep({
           {team.totalScore}
         </span>
         <span className="mt-1 block text-[9px] font-semibold uppercase tracking-[0.16em] text-muted">
-          slag
+          {t('common.slagLabel')}
         </span>
       </div>
     </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
@@ -63,6 +64,7 @@ export function SoloStablefordPodium({
   backHref = '/',
   chromeless = false,
 }: SoloStablefordPodiumProps): JSX.Element {
+  const t = useTranslations('leaderboard');
   const [replayKey, setReplayKey] = useState(0);
 
   // Auto-fyr konfetti på første besøk per browser-sesjon. Wrapped i try/catch
@@ -85,7 +87,7 @@ export function SoloStablefordPodium({
       <Shell chromeless={chromeless}>
         {!chromeless && <Header gameName={gameName} backHref={backHref} />}
         <p className="mt-12 text-center text-sm text-muted">
-          Ingen spillere å vise.
+          {t('common.noPlayersToShow')}
         </p>
       </Shell>
     );
@@ -105,10 +107,10 @@ export function SoloStablefordPodium({
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <Kicker tone="accent">PODIUM</Kicker>
         <h1 className="mt-2 font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          Vinneren er kåret
+          {t('common.winnerAnnounced')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          Stableford · Etter 18 hull
+          {t('soloStableford.podiumSubtitle')}
         </p>
       </div>
 
@@ -136,6 +138,9 @@ export function SoloStablefordPodium({
                 playerInfo={playersById.get(second.userId)}
                 tier="silver"
                 staggerIndex={1}
+                poengLabel={t('common.poengLabel')}
+                hullChip={t('common.hullChip', { count: second.holesPlayed })}
+                unknownPlayerLabel={t('common.unknownPlayerFull')}
               />
             )}
           </div>
@@ -148,6 +153,9 @@ export function SoloStablefordPodium({
               playerInfo={playersById.get(first.userId)}
               tier="champagne"
               staggerIndex={0}
+              poengLabel={t('common.poengLabel')}
+              hullChip={t('common.hullChip', { count: first.holesPlayed })}
+              unknownPlayerLabel={t('common.unknownPlayerFull')}
             />
           </div>
 
@@ -160,6 +168,9 @@ export function SoloStablefordPodium({
                 playerInfo={playersById.get(third.userId)}
                 tier="bronze"
                 staggerIndex={2}
+                poengLabel={t('common.poengLabel')}
+                hullChip={t('common.hullChip', { count: third.holesPlayed })}
+                unknownPlayerLabel={t('common.unknownPlayerFull')}
               />
             )}
           </div>
@@ -173,7 +184,7 @@ export function SoloStablefordPodium({
           className="mx-4 mt-4 rounded-2xl border border-border bg-surface px-4 py-3"
         >
           <summary className="cursor-pointer list-none font-serif text-[15px] font-medium tracking-[-0.005em] text-text marker:hidden">
-            Se hele rangeringen ({result.players.length} spillere)
+            {t('common.showFullRankingPlayers', { count: result.players.length })}
             <span aria-hidden className="ml-1 text-muted">
               ›
             </span>
@@ -183,7 +194,7 @@ export function SoloStablefordPodium({
               const info = playersById.get(player.userId);
               const displayName = info
                 ? formatRevealName(info.name, info.nickname)
-                : '(ukjent spiller)';
+                : t('common.unknownPlayerFull');
               return (
                 <li key={player.userId} className="list-none">
                   <Card className="flex items-center gap-3.5 px-4 py-3">
@@ -195,7 +206,7 @@ export function SoloStablefordPodium({
                         {displayName}
                       </p>
                       <p className="mt-0.5 text-[12px] text-muted tabular-nums">
-                        {player.holesPlayed} hull spilt
+                        {t('common.holesPlayedCount', { count: player.holesPlayed })}
                       </p>
                     </div>
                     <div className="shrink-0 text-right">
@@ -203,7 +214,7 @@ export function SoloStablefordPodium({
                         {player.totalPoints}
                       </span>
                       <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
-                        poeng
+                        {t('common.poengLabel')}
                       </span>
                     </div>
                   </Card>
@@ -214,7 +225,7 @@ export function SoloStablefordPodium({
         </details>
       )}
 
-      <PullQuote className="px-6 pt-4 pb-4">Gratulerer.</PullQuote>
+      <PullQuote className="px-6 pt-4 pb-4">{t('common.congratulations')}</PullQuote>
     </Shell>
   );
 }
@@ -254,11 +265,12 @@ function Header({
   gameName: string;
   backHref: string;
 }) {
+  const t = useTranslations('leaderboard');
   return (
     <header className="mb-2 flex items-center justify-between gap-4">
       <SmartLink
         href={backHref}
-        aria-label="Tilbake"
+        aria-label={t('common.backAriaLabel')}
         className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
       >
         ‹
@@ -295,16 +307,22 @@ function PodiumStep({
   playerInfo,
   tier,
   staggerIndex,
+  poengLabel,
+  hullChip,
+  unknownPlayerLabel,
 }: {
   rank: 1 | 2 | 3;
   player: { userId: string; totalPoints: number; holesPlayed: number };
   playerInfo: SoloStablefordPlayerInfo | undefined;
   tier: PodiumTier;
   staggerIndex: number;
+  poengLabel: string;
+  hullChip: string;
+  unknownPlayerLabel: string;
 }) {
   const displayName = playerInfo
     ? formatRevealName(playerInfo.name, playerInfo.nickname)
-    : '(ukjent spiller)';
+    : unknownPlayerLabel;
 
   const tierClass = TIER_ACCENT[tier];
   const heightClass = TIER_HEIGHTS[tier];
@@ -339,13 +357,13 @@ function PodiumStep({
           {player.totalPoints}
         </span>
         <span className="mt-1 block text-[9px] font-semibold uppercase tracking-[0.16em] text-muted">
-          poeng
+          {poengLabel}
         </span>
       </div>
 
-      {/* «X hull spilt»-chip */}
+      {/* «X hull»-chip */}
       <p className="text-[10px] tabular-nums text-muted">
-        {player.holesPlayed} hull
+        {hullChip}
       </p>
     </div>
   );
