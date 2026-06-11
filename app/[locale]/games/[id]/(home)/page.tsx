@@ -14,7 +14,7 @@ import { BackLink } from '@/components/ui/BackLink';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
-import { LinkButton, Button } from '@/components/ui/Button';
+import { LinkButton } from '@/components/ui/Button';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Kicker } from '@/components/ui/Kicker';
@@ -49,7 +49,13 @@ import {
   isMatchplayMode,
   computeSideShortfall,
 } from '@/lib/games/matchplaySides';
-import { isSingleFlightGame } from '@/lib/games/flightScope';
+import {
+  isSingleFlightGame,
+  unassignedActivePlayers,
+  eligibleForFlightAssignment,
+  type FlightPlayer,
+} from '@/lib/games/flightScope';
+import type { FlightOption } from '../ScheduledWaitingRoom';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -285,6 +291,8 @@ export default async function GameHomePage({
   // #544: track whether the auto-start was blocked by incomplete matchplay sides.
   // Used below to render a waiting banner in the scheduled fallback view.
   let autoStartBlockedByIncompleteSides = false;
+  // #543: track whether auto-start was blocked by unassigned flights.
+  let autoStartBlockedByUnassignedFlights = false;
 
   // E1: server-side auto-start fallback. When the admin scheduled a tee-off
   // time but didn't manually click "Start runden nå", any player loading
@@ -309,6 +317,9 @@ export default async function GameHomePage({
     if (!result.ok) {
       if (result.reason === 'incomplete_sides') {
         autoStartBlockedByIncompleteSides = true;
+      }
+      if (result.reason === 'unassigned_flights') {
+        autoStartBlockedByUnassignedFlights = true;
       }
       // Log to Vercel server logs so a "stuck in scheduled" report has a
       // trail. Don't crash — fall through to the existing scheduled fallback.
@@ -422,6 +433,49 @@ export default async function GameHomePage({
       isMatchplayMode(game.game_mode)
         ? computeSideShortfall(gwp.players, modeTeamSize)
         : null;
+
+    // #543: venteroms-velger og unassigned_flights-banner.
+    // Vises bare når spillet er eligible for flight-inndeling (>4 aktive, ikke wolf).
+    const flightPlayers: FlightPlayer[] = gwp.players.map((p) => ({
+      user_id: p.user_id,
+      flight_number: p.flight_number,
+      withdrawn_at: p.withdrawn_at,
+    }));
+    const showFlightPicker = eligibleForFlightAssignment(game.game_mode, flightPlayers);
+
+    // Bygg flight-alternativ-listen for velgeren. Grupper aktive spillere på
+    // flight_number; én ekstra tom flight så spillere kan omfordele 3+3.
+    let flightOptions: FlightOption[] | null = null;
+    if (showFlightPicker) {
+      const MAX_FLIGHT_SIZE_LOCAL = 4;
+      const activePlayers2 = gwp.players.filter((p) => !p.withdrawn_at);
+      const buckets = new Map<number, string[]>();
+      for (const p of activePlayers2) {
+        if (p.flight_number != null) {
+          const b = buckets.get(p.flight_number) ?? [];
+          const name = p.users
+            ? (p.users.nickname ?? p.users.name ?? '(ukjent)')
+            : '(ukjent)';
+          b.push(name);
+          buckets.set(p.flight_number, b);
+        }
+      }
+      const maxFlight = Math.ceil(activePlayers2.length / MAX_FLIGHT_SIZE_LOCAL);
+      flightOptions = Array.from({ length: maxFlight + 1 }, (_, i) => {
+        const flightNum = i + 1;
+        const members = buckets.get(flightNum) ?? [];
+        return {
+          flightNumber: flightNum,
+          memberCount: members.length,
+          memberNames: members,
+        };
+      });
+    }
+
+    // Teller ufordelte spillere for banneret (vises bare etter tee-tid).
+    const unassignedCount = autoStartBlockedByUnassignedFlights
+      ? unassignedActivePlayers(flightPlayers).length
+      : 0;
 
     return (
       <AppShell>
@@ -583,12 +637,14 @@ export default async function GameHomePage({
           </Suspense>
         </div>
 
-        {/* Countdown banner */}
+        {/* Countdown banner + flight-velger (#543) */}
         {teeOffDate && (
           <div className="mx-4 mt-4">
             <ScheduledWaitingRoom
               gameId={id}
               teeOffAt={game.scheduled_tee_off_at!}
+              flightOptions={flightOptions}
+              currentFlightNumber={me.flight_number}
             />
           </div>
         )}
@@ -607,6 +663,18 @@ export default async function GameHomePage({
                 ];
                 return `Venter på spillere — ${parts.join(' og ')}.`;
               })()}
+            </Banner>
+          </div>
+        )}
+
+        {/* #543: venter-banner etter tee-tid når ikke alle er fordelt i flighter */}
+        {unassignedCount > 0 && (
+          <div className="mx-4 mt-3">
+            <Banner tone="warning">
+              {unassignedCount === 1
+                ? '1 spiller er ikke fordelt i flight ennå.'
+                : `${unassignedCount} spillere er ikke fordelt i flighter ennå.`}
+              {' '}Arrangøren fordeler flightene før start.
             </Banner>
           </div>
         )}

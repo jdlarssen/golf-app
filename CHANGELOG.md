@@ -21,6 +21,25 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#543](https://github.com/jdlarssen/golf-app/issues/543). I spill med fire eller færre deltagere går alle i én gruppe — uansett format. Det betyr at du og motstanderen din i en singelmatch kan se og skrive hverandres scorer på direkten, og at spill med wolf alltid behandles som én gruppe.
 
+### [1.112.5] - 2026-06-11 · #543
+
+> I venterommet kan du nå velge flight selv — du ser hvor mange som allerede er i hver gruppe, og appen hindrer at en flight fylles opp med mer enn fire spillere.
+
+<details>
+<summary>Teknisk</summary>
+
+[#543](https://github.com/jdlarssen/golf-app/issues/543). Selvbetjening i venterommet — spillere velger flight.
+
+#### Added
+- `app/[locale]/games/[id]/flightJoinActions.ts`: server-action `joinFlight(gameId, targetFlight)` — verifiserer aktiv deltakelse, sjekker kapasitet før skriv, skriver ny `flight_number`, og re-teller etter skriv for å fange race-conditions (angrer ved overbooking). Returnerer `FlightJoinResult`.
+- `app/[locale]/games/[id]/flightJoinActions.test.ts`: 6 enhetstester — not_authed, not_member (ingen rad), not_member (trukket), flight_full (4 i flight), happy path + revalidateTag, race-guard-revert ved after-count > 4.
+
+#### Changed
+- `app/[locale]/games/[id]/ScheduledWaitingRoom.tsx`: viser flight-velger når `flightOptions` er satt — én knapp per flight med antall/navn, kaller `joinFlight` og viser norsk feilmelding ved `flight_full`.
+- `app/[locale]/games/[id]/(home)/page.tsx`: beregner `flightOptions` og `currentFlightNumber` ved `scheduled`-status når `eligibleForFlightAssignment`. Banner med antall ufordelte spillere vises når `unassigned_flights`-vakta stopper auto-start.
+
+</details>
+
 ### [1.112.4] - 2026-06-11 · #543
 
 > Du kan nå fordele spillere i flighter direkte fra Sekretariatet. Appen foreslår inndeling automatisk, og du kan flytte enkeltspillere fritt mellom flighter — med en kapasitetsgrense på fire per group.
