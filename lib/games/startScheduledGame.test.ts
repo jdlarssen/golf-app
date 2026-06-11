@@ -4,12 +4,16 @@ import { startScheduledGame } from './startScheduledGame';
 import type { GameMode } from '@/lib/scoring/modes/types';
 
 /**
- * Unit-tester for startScheduledGame (#544 — incomplete_sides-vakt).
+ * Unit-tester for startScheduledGame (#544 — incomplete_sides-vakt,
+ * #502 — started-flagg).
  *
  * Fokus: verifiser at alle 6 matchplay-modi blokkeres med `incomplete_sides`
  * når sidene er ufullstendige, og at komplette sider passerer til vanlig
  * tee-box-sjekk. Eksisterende reasons (no_players, pending_players osv.)
  * er ikke re-testet her — de er dekket i integrerende tester per call-site.
+ *
+ * #502: `started` skiller calleren som vant status-flippen (skal fan-oute
+ * game_started-varsler) fra no-op-tapere i kappløp (cron vs. E1 vs. admin).
  */
 
 // Gyldige tee-box-rader (alle tre ratingssett). Brukes i success-path der
@@ -162,12 +166,12 @@ describe('startScheduledGame — incomplete_sides guard', () => {
       { data: null, error: null },
       // 5) course_handicap update user-2
       { data: null, error: null },
-      // 6) status flip
-      { data: null, error: null },
+      // 6) status flip — vant raden (1 rad tilbake fra .select('id'))
+      { data: [{ id: 'game-id' }], error: null },
     ]);
 
     const result = await startScheduledGame(supabase as never, 'game-id');
-    expect(result).toEqual({ ok: true });
+    expect(result).toEqual({ ok: true, started: true });
   });
 
   it('non-matchplay mode (stableford) ignorerer side-guard', async () => {
@@ -208,11 +212,61 @@ describe('startScheduledGame — incomplete_sides guard', () => {
       },
       // 4) course_handicap update
       { data: null, error: null },
-      // 5) status flip
-      { data: null, error: null },
+      // 5) status flip — vant raden
+      { data: [{ id: 'game-id' }], error: null },
     ]);
 
     const result = await startScheduledGame(supabase as never, 'game-id');
-    expect(result).toEqual({ ok: true });
+    expect(result).toEqual({ ok: true, started: true });
+  });
+});
+
+// ─── started-flagg (#502) ─────────────────────────────────────────────────────
+
+describe('startScheduledGame — started-flagg', () => {
+  const SOLO_GAME = {
+    id: 'game-id',
+    status: 'scheduled',
+    hcp_allowance_pct: 100,
+    tee_box_id: 'tee-id',
+    game_mode: 'stableford',
+    mode_config: { kind: 'stableford', team_size: 1 },
+    tee_boxes: VALID_TEE,
+  };
+  const SOLO_ROSTER = [
+    {
+      user_id: 'user-1',
+      tee_gender: 'M',
+      team_number: null,
+      withdrawn_at: null,
+      users: { hcp_index: 10 },
+    },
+  ];
+  const SOLO_USERS = [
+    { id: 'user-1', email: 'a@x.no', profile_completed_at: '2026-01-01' },
+  ];
+
+  it('konkurrent tapte flippen (0 rader fra optimistisk lås) → started: false', async () => {
+    const supabase = buildSupabaseMock([
+      { data: SOLO_GAME, error: null },
+      { data: SOLO_ROSTER, error: null },
+      { data: SOLO_USERS, error: null },
+      // course_handicap update
+      { data: null, error: null },
+      // status flip — en annen caller vant; .eq('status','scheduled') matchet 0 rader
+      { data: [], error: null },
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: true, started: false });
+  });
+
+  it('spill allerede aktivt ved lesing → ok uten started', async () => {
+    const supabase = buildSupabaseMock([
+      { data: { ...SOLO_GAME, status: 'active' }, error: null },
+    ]);
+
+    const result = await startScheduledGame(supabase as never, 'game-id');
+    expect(result).toEqual({ ok: true, started: false });
   });
 });

@@ -13,7 +13,11 @@ import {
 import { isMatchplayMode, isSideRosterComplete } from './matchplaySides';
 
 export type StartScheduledGameResult =
-  | { ok: true }
+  // `started` = denne calleren vant status-flippen (scheduled → active).
+  // Konkurrerende callere (cron-sweep, E1-fallback, admin-knapp) får
+  // ok:true/started:false når en annen var først — varsel-fan-out skal
+  // kun skje hos vinneren, ellers dobles game_started-varslene (#502).
+  | { ok: true; started: boolean }
   | {
       ok: false;
       reason:
@@ -76,7 +80,7 @@ export async function startScheduledGame(
     // reached for the auto-start caller; admin button caller can still
     // surface the reason if it wants to.
     if (game.status === 'active' || game.status === 'finished') {
-      return { ok: true };
+      return { ok: true, started: false };
     }
     return { ok: false, reason: 'not_scheduled' };
   }
@@ -161,12 +165,15 @@ export async function startScheduledGame(
   // 4. Flip status to 'active' with optimistic-lock guard. If another
   //    caller beat us to the flip, the `.eq('status', 'scheduled')` clause
   //    makes this a no-op — that's fine, the end state is what we want.
-  const { error: flipError } = await supabase
+  //    `.select('id')` reveals who won: the winner gets the updated row
+  //    back, no-op losers get an empty array (drives `started`).
+  const { data: flipped, error: flipError } = await supabase
     .from('games')
     .update({ status: 'active', started_at: new Date().toISOString() })
     .eq('id', gameId)
-    .eq('status', 'scheduled');
+    .eq('status', 'scheduled')
+    .select('id');
   if (flipError) return { ok: false, reason: 'db_game' };
 
-  return { ok: true };
+  return { ok: true, started: (flipped?.length ?? 0) > 0 };
 }
