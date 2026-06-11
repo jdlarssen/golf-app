@@ -82,6 +82,7 @@ export type TeamRegistrationError =
   | 'wrong_type'
   | 'wrong_mode'
   | 'game_locked'
+  | 'signup_closed'
   | 'mode_does_not_support_teams'
   | 'team_name_invalid'
   | 'slots_count_wrong'
@@ -210,6 +211,10 @@ export async function submitTeamRegistration(
   }
   if (game.status !== 'draft' && game.status !== 'scheduled') {
     return { ok: false, error: 'game_locked' };
+  }
+  // #543: steng-påmelding-guard — speilar solo-flyten i actions.ts.
+  if (game.signups_closed_at != null) {
+    return { ok: false, error: 'signup_closed' };
   }
   if (!gameModeSupportsTeams(game.game_mode)) {
     return { ok: false, error: 'mode_does_not_support_teams' };

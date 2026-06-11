@@ -18,6 +18,7 @@ const ERROR_MESSAGES: Record<ActionError, string> = {
   game_not_found: 'Fant ikke spillet. Lenken kan være feil.',
   wrong_mode: 'Påmelding er ikke åpen for dette spillet.',
   game_locked: 'Spillet er startet eller avsluttet — påmelding er stengt.',
+  signup_closed: 'Påmeldingen er stengt. Arrangøren gjør de siste justeringene.',
   already_registered: 'Du er allerede påmeldt dette spillet.',
   already_requested: 'Du har allerede sendt en forespørsel.',
   message_too_long: 'Hilsenen er for lang (maks 200 tegn).',

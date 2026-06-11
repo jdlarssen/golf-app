@@ -46,6 +46,7 @@ export type ActionError =
   | 'game_not_found'
   | 'wrong_mode'
   | 'game_locked'
+  | 'signup_closed'
   | 'already_registered'
   | 'already_requested'
   | 'message_too_long'
@@ -174,6 +175,11 @@ export async function registerForOpenGame(
   }
   if (game.status !== 'draft' && game.status !== 'scheduled') {
     return { ok: false, error: 'game_locked' };
+  }
+  // #543: arrangøren kan stenge påmeldingen manuelt. Stengt slår inn etter
+  // game_locked slik at «stengt» ikke vises for spill som allerede er aktive.
+  if (game.signups_closed_at != null) {
+    return { ok: false, error: 'signup_closed' };
   }
   // Lag-påmelding kommer i chunk 8 — for nå avviser vi team-only spill i
   // åpen-modus med en plassholdermelding slik at solo-flyten kan landes
@@ -354,6 +360,10 @@ export async function requestApproval(
   }
   if (game.status !== 'draft' && game.status !== 'scheduled') {
     return { ok: false, error: 'game_locked' };
+  }
+  // #543: steng-påmelding-guard — speilar registerForOpenGame.
+  if (game.signups_closed_at != null) {
+    return { ok: false, error: 'signup_closed' };
   }
   if (game.registration_type === 'team') {
     return { ok: false, error: 'team_not_supported_yet' };

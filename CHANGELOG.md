@@ -21,6 +21,27 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#543](https://github.com/jdlarssen/golf-app/issues/543). I spill med fire eller færre deltagere går alle i én gruppe — uansett format. Det betyr at du og motstanderen din i en singelmatch kan se og skrive hverandres scorer på direkten, og at spill med wolf alltid behandles som én gruppe.
 
+### [1.112.6] - 2026-06-11 · #543
+
+> Du kan nå stenge påmeldingen mens du gjør de siste justeringene — spillere som prøver å melde seg på etter det ser en tydelig melding om at påmeldingen er stengt, og du kan åpne den igjen når du vil.
+
+<details>
+<summary>Teknisk</summary>
+
+[#543](https://github.com/jdlarssen/golf-app/issues/543). Arrangøren kan stenge og gjenåpne påmeldingen.
+
+#### Added
+- `lib/games/getGameByShortId.ts`: `signups_closed_at: string | null` lagt til i `ShortIdGame`-typen og SQL-spørringen.
+
+#### Changed
+- `app/[locale]/signup/[shortId]/actions.ts`: `ActionError`-union får `'signup_closed'`. Begge `registerForOpenGame` og `requestApproval` sjekker `signups_closed_at != null` etter game-locked-guard og returnerer `{ ok: false, error: 'signup_closed' }` ved treff.
+- `app/[locale]/signup/[shortId]/teamActions.ts`: `TeamRegistrationError`-union får `'signup_closed'`. `submitTeamRegistration` får tilsvarende guard.
+- `app/[locale]/signup/[shortId]/RegistrationForm.tsx` + `TeamRegistrationForm.tsx`: `signup_closed`-nøkkel i `ERROR_MESSAGES`.
+- `app/[locale]/signup/[shortId]/page.tsx`: ny `signupsClosed`-branch i `renderBody` — viser `<Banner tone="info">` med melding om at arrangøren gjør siste justeringer.
+- `app/[locale]/signup/[shortId]/actions.test.ts`: 3 nye tester — `requestApproval > signups_closed_at satt`, `registerForOpenGame > signups_closed_at satt`, `registerForOpenGame > signups_closed_at null → ikke signup_closed`.
+
+</details>
+
 ### [1.112.5] - 2026-06-11 · #543
 
 > I venterommet kan du nå velge flight selv — du ser hvor mange som allerede er i hver gruppe, og appen hindrer at en flight fylles opp med mer enn fire spillere.

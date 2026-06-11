@@ -24,6 +24,7 @@ const ERROR_MESSAGES: Record<TeamRegistrationError, string> = {
   wrong_type: 'Dette spillet tar ikke imot lag-påmelding.',
   wrong_mode: 'Påmelding er ikke åpen for dette spillet.',
   game_locked: 'Spillet er startet eller avsluttet — påmelding er stengt.',
+  signup_closed: 'Påmeldingen er stengt. Arrangøren gjør de siste justeringene.',
   mode_does_not_support_teams:
     'Spillmodusen støtter ikke lag. Velg solo-påmelding i stedet.',
   team_name_invalid: 'Lag-navnet må være 3–40 tegn.',

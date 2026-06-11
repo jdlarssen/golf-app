@@ -610,4 +610,58 @@ describe('requestApproval', () => {
       }),
     );
   });
+
+  // ── #543: steng påmelding ──────────────────────────────────────────────────
+
+  it('signups_closed_at satt → signup_closed-error (#543)', async () => {
+    authedAsUser();
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({
+        registration_mode: 'manual_approval',
+        signups_closed_at: '2026-06-11T12:00:00Z',
+      }),
+    );
+
+    const { requestApproval } = await import('./actions');
+    const result = await requestApproval(fd({ shortId: SHORT_ID }));
+
+    expect(result).toEqual({ ok: false, error: 'signup_closed' });
+    expect(adminMock.from).not.toHaveBeenCalled();
+  });
+});
+
+// ─── #543 registerForOpenGame — steng påmelding ───────────────────────────────
+
+describe('registerForOpenGame — signup_closed guard (#543)', () => {
+  it('signups_closed_at satt → signup_closed-error', async () => {
+    authedAsUser();
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({ signups_closed_at: '2026-06-11T12:00:00Z' }),
+    );
+    adminMock = buildSupabaseMock([]);
+
+    const { registerForOpenGame } = await import('./actions');
+    const result = await registerForOpenGame(fd({ shortId: SHORT_ID }));
+
+    expect(result).toEqual({ ok: false, error: 'signup_closed' });
+  });
+
+  it('signups_closed_at null → ikke signup_closed (går videre i flyten)', async () => {
+    authedAsUser();
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({ signups_closed_at: null }),
+    );
+    // Må stille opp nok mock-data for at INSERT-path kaller videre.
+    // Vi lar insert returnere en UNIQUE-conflict slik at testen stopper tidlig
+    // men vi kan verifisere at signup_closed IKKE ble returnert.
+    adminMock = buildSupabaseMock([
+      { data: null, error: { code: '23505', message: 'duplicate key' } },
+    ]);
+
+    const { registerForOpenGame } = await import('./actions');
+    const result = await registerForOpenGame(fd({ shortId: SHORT_ID }));
+
+    // Flyten gikk forbi signup_closed-guarden — fikk already_registered i stedet.
+    expect(result).toEqual({ ok: false, error: 'already_registered' });
+  });
 });

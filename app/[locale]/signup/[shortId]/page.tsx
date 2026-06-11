@@ -124,6 +124,11 @@ export default async function PåmeldingPage({ params }: { params: Params }) {
   }
 
   const gameLocked = game.status === 'active' || game.status === 'finished';
+  // #543: påmeldingen er stengt manuelt av arrangøren, men spillet er
+  // fortsatt planlagt. Stengt vises etter allerede-påmeldt-sjekken (brukere
+  // som allerede er med, skal komme til spill-siden som vanlig) men FØR
+  // søknadsprosessen. game_locked prioriteres over signups_closed.
+  const signupsClosed = !gameLocked && game.signups_closed_at != null;
   const isAlreadyRegistered = existingPlayer != null;
   const hasOpenPendingRequest =
     existingRequest != null && existingRequest.status === 'pending';
@@ -230,6 +235,7 @@ export default async function PåmeldingPage({ params }: { params: Params }) {
           {renderBody({
             game,
             gameLocked,
+            signupsClosed,
             isAlreadyRegistered,
             hasOpenPendingRequest,
             hasPendingInvitation,
@@ -248,6 +254,7 @@ export default async function PåmeldingPage({ params }: { params: Params }) {
 function renderBody({
   game,
   gameLocked,
+  signupsClosed,
   isAlreadyRegistered,
   hasOpenPendingRequest,
   hasPendingInvitation,
@@ -259,6 +266,7 @@ function renderBody({
 }: {
   game: NonNullable<Awaited<ReturnType<typeof getGameByShortId>>>;
   gameLocked: boolean;
+  signupsClosed: boolean;
   isAlreadyRegistered: boolean;
   hasOpenPendingRequest: boolean;
   hasPendingInvitation: boolean;
@@ -292,6 +300,16 @@ function renderBody({
       <Banner tone="warning">
         Påmelding er stengt. Spillet er{' '}
         {game.status === 'active' ? 'i gang' : 'avsluttet'}.
+      </Banner>
+    );
+  }
+
+  // #543: arrangøren har stengt påmeldingen manuelt — viser en melding uten
+  // skjema. Gjelder scheduled spill der arrangøren gjør siste justeringer.
+  if (signupsClosed) {
+    return (
+      <Banner tone="info">
+        Påmeldingen er stengt. Arrangøren gjør de siste justeringene før start.
       </Banner>
     );
   }
