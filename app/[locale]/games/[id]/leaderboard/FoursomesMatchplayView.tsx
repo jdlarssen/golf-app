@@ -188,7 +188,7 @@ function displayNameFor(info: FoursomesPlayerInfo | undefined): string {
 function sideSublines(
   side: FoursomesMatchplayResult['sides'][0],
   playerInfo: Record<string, FoursomesPlayerInfo>,
-  t: ReturnType<typeof useTranslations>,
+  t: ReturnType<typeof useTranslations<'leaderboard'>>,
 ): string[] {
   const extra =
     side.effectiveExtraHandicap > 0
@@ -244,7 +244,7 @@ function HoleGrid({
   holes: FoursomesHoleRow[];
   side1Label: string;
   side2Label: string;
-  t: ReturnType<typeof useTranslations>;
+  t: ReturnType<typeof useTranslations<'leaderboard'>>;
 }): JSX.Element {
   // Kompakt: vis kun lag-label i header (forkortet).
   const side1Short = side1Label.length > 6 ? `L1` : side1Label;

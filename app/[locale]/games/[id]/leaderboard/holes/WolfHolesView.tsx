@@ -149,8 +149,8 @@ function HoleCard({
   hole: WolfHoleRow;
   scoring: WolfResult['scoring'];
   playersById: Map<string, WolfPlayerInfo>;
-  t: ReturnType<typeof useTranslations>;
-  tc: ReturnType<typeof useTranslations>;
+  t: ReturnType<typeof useTranslations<'leaderboard'>>;
+  tc: ReturnType<typeof useTranslations<'leaderboard.common'>>;
 }) {
   const wolfInfo = playersById.get(hole.wolfUserId);
   const wolfName = wolfInfo

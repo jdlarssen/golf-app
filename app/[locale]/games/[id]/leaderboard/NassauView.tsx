@@ -241,7 +241,7 @@ function SectionBlock({
   subheading: string;
   section: NassauSection;
   playersById: Map<string, NassauPlayerInfo>;
-  t: ReturnType<typeof useTranslations>;
+  t: ReturnType<typeof useTranslations<'leaderboard'>>;
 }) {
   const hasCleanWinner =
     !section.isPending && section.winnerUserIds.length === 1;
@@ -322,7 +322,7 @@ function SectionPlayerRow({
   displayName: string;
   isWinnerHighlight: boolean;
   staggerIndex: number;
-  t: ReturnType<typeof useTranslations>;
+  t: ReturnType<typeof useTranslations<'leaderboard'>>;
 }) {
   const isTied = line.tiedWith.length > 0;
   const rankLabel = isTied ? `T${line.rank}` : `${line.rank}`;

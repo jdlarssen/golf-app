@@ -276,7 +276,7 @@ function PlayerRow({
   holesWon: number;
   tiedWith: string[];
   staggerIndex: number;
-  t: ReturnType<typeof useTranslations>;
+  t: ReturnType<typeof useTranslations<'leaderboard'>>;
 }) {
   const isPodium = rank >= 1 && rank <= 3;
   const isTied = tiedWith.length > 0;
@@ -342,7 +342,7 @@ function HoleRow({
 }: {
   hole: SkinsHoleRow;
   playersById: Map<string, SkinsPlayerInfo>;
-  t: ReturnType<typeof useTranslations>;
+  t: ReturnType<typeof useTranslations<'leaderboard'>>;
 }) {
   const winnerInfo = hole.winnerUserId
     ? playersById.get(hole.winnerUserId)

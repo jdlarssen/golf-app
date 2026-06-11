@@ -163,7 +163,7 @@ function UnitsHeader({
 }: {
   result: NassauResult;
   playersById: Map<string, NassauPlayerInfo>;
-  t: ReturnType<typeof useTranslations>;
+  t: ReturnType<typeof useTranslations<'leaderboard'>>;
 }) {
   return (
     <div className="px-3.5">
@@ -248,7 +248,7 @@ function SectionBlock({
   section: NassauSection;
   holes: NassauHoleRow[];
   playersById: Map<string, NassauPlayerInfo>;
-  t: ReturnType<typeof useTranslations>;
+  t: ReturnType<typeof useTranslations<'leaderboard'>>;
 }) {
   const cleanWinnerId =
     !section.isPending && section.winnerUserIds.length === 1
@@ -362,7 +362,7 @@ function HoleCard({
 }: {
   hole: NassauHoleRow;
   playersById: Map<string, NassauPlayerInfo>;
-  t: ReturnType<typeof useTranslations>;
+  t: ReturnType<typeof useTranslations<'leaderboard'>>;
 }) {
   const scored = hole.bestUserIds.length > 0;
   // Champagne kun ved en utvetydig hull-vinner. Delt lavest netto = nøytralt.
@@ -449,7 +449,7 @@ function TotalBlock({
 }: {
   section: NassauSection;
   playersById: Map<string, NassauPlayerInfo>;
-  t: ReturnType<typeof useTranslations>;
+  t: ReturnType<typeof useTranslations<'leaderboard'>>;
 }) {
   const cleanWinnerId =
     !section.isPending && section.winnerUserIds.length === 1

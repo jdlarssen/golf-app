@@ -251,7 +251,7 @@ function PlayerRow({
   wolfHolesPlayed: number;
   blindWolfWins: number;
   staggerIndex: number;
-  tWolf: ReturnType<typeof useTranslations>;
+  tWolf: ReturnType<typeof useTranslations<'leaderboard'>>;
 }) {
   const isPodium = rank >= 1 && rank <= 3;
   const cardClass =
@@ -310,8 +310,8 @@ function HoleRow({
 }: {
   hole: WolfHoleRow;
   playersById: Map<string, WolfPlayerInfo>;
-  t: ReturnType<typeof useTranslations>;
-  tc: ReturnType<typeof useTranslations>;
+  t: ReturnType<typeof useTranslations<'leaderboard'>>;
+  tc: ReturnType<typeof useTranslations<'leaderboard.common'>>;
 }) {
   const wolfInfo = playersById.get(hole.wolfUserId);
   const wolfName = wolfInfo

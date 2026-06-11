@@ -237,7 +237,7 @@ function HoleGrid({
   side1Label: string;
   side2Label: string;
   playerInfo: Record<string, FourballPlayerInfo>;
-  t: ReturnType<typeof useTranslations>;
+  t: ReturnType<typeof useTranslations<'leaderboard'>>;
 }): JSX.Element {
   // Kompakt: vis kun lag-label i header (forkortet). Per-rad contributor-
   // initialer underline gross-cellen.

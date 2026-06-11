@@ -251,7 +251,7 @@ function PodiumStep({
   playerInfo: SkinsPlayerInfo | undefined;
   tier: PodiumTier;
   staggerIndex: number;
-  t: ReturnType<typeof useTranslations>;
+  t: ReturnType<typeof useTranslations<'leaderboard'>>;
 }) {
   const displayName = playerInfo
     ? formatRevealName(playerInfo.name, playerInfo.nickname)

@@ -249,7 +249,7 @@ function HoleGrid({
   holes: MatchplayHoleRow[];
   side1ShortName: string;
   side2ShortName: string;
-  t: ReturnType<typeof useTranslations>;
+  t: ReturnType<typeof useTranslations<'leaderboard'>>;
 }): JSX.Element {
   // Løpende stilling etter hvert hull — «1up, 2up, 3up, 2up, 1up, AS»-
   // historien (#546). Uspilte hull gir null (vises som «—»).

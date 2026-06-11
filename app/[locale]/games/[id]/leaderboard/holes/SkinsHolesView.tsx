@@ -178,8 +178,8 @@ function HoleCard({
   hole: SkinsHoleRow;
   scoring: SkinsResult['scoring'];
   playersById: Map<string, SkinsPlayerInfo>;
-  t: ReturnType<typeof useTranslations>;
-  tc: ReturnType<typeof useTranslations>;
+  t: ReturnType<typeof useTranslations<'leaderboard'>>;
+  tc: ReturnType<typeof useTranslations<'leaderboard.common'>>;
 }) {
   const atStakeLabel = t('skins.atStakeLabel', { count: hole.atStake });
 
