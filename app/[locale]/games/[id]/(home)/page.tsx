@@ -462,8 +462,8 @@ export default async function GameHomePage({
         if (p.flight_number != null) {
           const b = buckets.get(p.flight_number) ?? [];
           const name = p.users
-            ? (p.users.nickname ?? p.users.name ?? '(ukjent)')
-            : '(ukjent)';
+            ? (p.users.nickname ?? p.users.name ?? t('unknownPlayer'))
+            : t('unknownPlayer');
           b.push(name);
           buckets.set(p.flight_number, b);
         }
@@ -1054,7 +1054,7 @@ async function FlightRoster({
   const flight = (flightRows ?? []).map((row) => ({
     userId: row.user_id,
     isCurrentUser: row.user_id === currentUserId,
-    name: row.users?.name ?? '(ukjent)',
+    name: row.users?.name ?? tHome('unknownPlayer'),
     hcpIndex:
       row.users?.hcp_index == null ? null : Number(row.users.hcp_index),
     acceptedAt: row.accepted_at,
@@ -1141,7 +1141,7 @@ async function SoloRoster({
   const players = (rows ?? []).map((row) => ({
     userId: row.user_id,
     isCurrentUser: row.user_id === currentUserId,
-    name: row.users?.name ?? '(ukjent)',
+    name: row.users?.name ?? tHome('unknownPlayer'),
     hcpIndex:
       row.users?.hcp_index == null ? null : Number(row.users.hcp_index),
     acceptedAt: row.accepted_at,
@@ -1259,7 +1259,7 @@ async function DraftTeamsOverview({
                 const displayName =
                   (fullName && firstName(fullName)) ??
                   fullName ??
-                  '(ukjent)';
+                  tHome('unknownPlayer');
                 return (
                   <li
                     key={p.user_id}

@@ -1,8 +1,9 @@
 import { cache } from 'react';
 import { useTranslations } from 'next-intl';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
 import { after } from 'next/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
@@ -233,8 +234,9 @@ export default async function LeaderboardPage({
       ? `&return=hole&n=${nNum}`
       : '';
 
+  const locale = await getLocale();
   const { supabase, userId } = await getLeaderboardContext();
-  if (!userId) redirect('/login');
+  if (!userId) redirect({ href: '/login', locale });
 
   // Game + players come from the tag-cached helper. Profile lookup
   // (is_admin) stays direct since it isn't game-scoped.
@@ -252,7 +254,7 @@ export default async function LeaderboardPage({
 
   // Draft games have no leaderboard view — bounce to game home.
   if (game.status === 'draft') {
-    redirect(`/games/${id}`);
+    redirect({ href: `/games/${id}` as string, locale });
   }
 
   const isAdmin = profileRes.data?.is_admin === true;
@@ -268,7 +270,7 @@ export default async function LeaderboardPage({
   // før admin avslutter.
   after(() =>
     markNotificationsRead({
-      userId,
+      userId: userId as string,
       kind: 'game_finished',
       entityId: id,
     }),

@@ -35,16 +35,18 @@ export interface RoundRobinHolesViewProps {
 function nameOf(
   userId: string,
   playersById: Map<string, RoundRobinPlayerInfo>,
+  fallback: string,
 ): string {
   const info = playersById.get(userId);
-  return info ? formatRevealName(info.name, info.nickname) : '(ukjent)';
+  return info ? formatRevealName(info.name, info.nickname) : fallback;
 }
 
 function sideNames(
   ids: readonly string[],
   playersById: Map<string, RoundRobinPlayerInfo>,
+  fallback: string,
 ): string {
-  return ids.map((id) => nameOf(id, playersById)).join(' + ');
+  return ids.map((id) => nameOf(id, playersById, fallback)).join(' + ');
 }
 
 /**
@@ -174,8 +176,8 @@ function SegmentBlock({
   };
 
   const first = holes[0]!;
-  const side1 = sideNames(first.side1PlayerIds, playersById);
-  const side2 = sideNames(first.side2PlayerIds, playersById);
+  const side1 = sideNames(first.side1PlayerIds, playersById, t('common.unknownPlayer'));
+  const side2 = sideNames(first.side2PlayerIds, playersById, t('common.unknownPlayer'));
 
   return (
     <section data-testid={`round-robin-holes-segment-${segment}`}>
@@ -299,7 +301,7 @@ function SideBlock({
       )}
       <ul className="flex flex-col gap-1 list-none">
         {players.map((cell) => {
-          const name = nameOf(cell.userId, playersById);
+          const name = nameOf(cell.userId, playersById, t('common.unknownPlayer'));
           const showGross =
             cell.gross != null && cell.net != null && cell.gross !== cell.net;
 

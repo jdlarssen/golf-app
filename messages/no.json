@@ -142,7 +142,8 @@
       "incompleteSidesBanner": "Venter på spillere — {parts}.",
       "incompleteSidesPart": "side {side} mangler {count, plural, one {1 spiller} other {# spillere}}",
       "incompleteSidesAnd": " og ",
-      "unassignedFlightBanner": "{count, plural, one {1 spiller er ikke fordelt i flight ennå.} other {# spillere er ikke fordelt i flighter ennå.}} Arrangøren fordeler flightene før start."
+      "unassignedFlightBanner": "{count, plural, one {1 spiller er ikke fordelt i flight ennå.} other {# spillere er ikke fordelt i flighter ennå.}} Arrangøren fordeler flightene før start.",
+      "unknownPlayer": "(ukjent)"
     },
     "waitingRoom": {
       "countdownBody": "Vi gir deg beskjed når kortet åpner.",
@@ -391,7 +392,8 @@
       "submitScorecardSolo": "Lever ditt scorekort",
       "submitScorecardTeam": "Lever lagets scorekort",
       "backAriaLabel": "Tilbake til turneringen",
-      "leaderboardAriaLabel": "Vis leaderboard"
+      "leaderboardAriaLabel": "Vis leaderboard",
+      "playerFallback": "Spiller"
     },
     "scoreCard": {
       "tapInstruction": "Trykk kort = par. Bruk − / +.",

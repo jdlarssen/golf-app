@@ -61,8 +61,9 @@ export default async function HolePage({ params }: { params: Params }) {
     notFound();
   }
 
-  const [tHoles, locale] = await Promise.all([
+  const [tHoles, tEntry, locale] = await Promise.all([
     getTranslations('leaderboard.holes'),
+    getTranslations('holes.entry'),
     getLocale(),
   ]);
   const unknownPlayer = tHoles('unknownPlayer');
@@ -635,7 +636,8 @@ export default async function HolePage({ params }: { params: Params }) {
     const partners = myTeamPlayers.map((p) => ({
       userId: p.user_id,
       displayName:
-        (p.users?.nickname ?? p.users?.name ?? '').split(/\s+/)[0] || 'Spiller',
+        (p.users?.nickname ?? p.users?.name ?? '').split(/\s+/)[0] ||
+          tEntry('playerFallback'),
     }));
     if (teeStarterCol == null && holeNumber === 1 && partners.length === 2) {
       foursomesTeeSlot = (
@@ -678,7 +680,8 @@ export default async function HolePage({ params }: { params: Params }) {
       const partners = myPatsomeTeam.map((p) => ({
         userId: p.user_id,
         displayName:
-          (p.users?.nickname ?? p.users?.name ?? '').split(/\s+/)[0] || 'Spiller',
+          (p.users?.nickname ?? p.users?.name ?? '').split(/\s+/)[0] ||
+          tEntry('playerFallback'),
       }));
       patsomeTeeSlot =
         teeStarter == null ? (

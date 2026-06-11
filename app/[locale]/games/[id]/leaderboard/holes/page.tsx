@@ -1,6 +1,8 @@
 import { Suspense, cache } from 'react';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { useTranslations } from 'next-intl';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
@@ -95,8 +97,9 @@ export default async function LeaderboardHolesPage({
   const teamParam = Array.isArray(sp.team) ? sp.team[0] : sp.team;
   const requestedTeam = teamParam ? Number.parseInt(teamParam, 10) : null;
 
+  const locale = await getLocale();
   const { supabase, userId } = await getDrilldownContext();
-  if (!userId) redirect('/login');
+  if (!userId) redirect({ href: '/login', locale });
 
   // Game + players come from the tag-cached helper. Admin check stays
   // direct since it isn't game-scoped.
@@ -113,7 +116,7 @@ export default async function LeaderboardHolesPage({
   const game = gwp.game;
 
   if (game.status === 'draft' || game.status === 'scheduled') {
-    redirect(`/games/${id}`);
+    redirect({ href: `/games/${id}` as string, locale });
   }
   const isActive = game.status === 'active';
 
@@ -243,6 +246,7 @@ async function SkinsHolesBody({
   courseId: string;
 }) {
   const { supabase } = await getDrilldownContext();
+  const tCommon = await getTranslations('leaderboard.common');
 
   const [gwp, rawHolesRes, rawScoresRes] = await Promise.all([
     getGameWithPlayers(gameId),
@@ -280,7 +284,7 @@ async function SkinsHolesBody({
   for (const p of gwp.players) {
     if (p.users == null) continue;
     playersById.set(p.user_id, {
-      name: p.users.name ?? '(ukjent)',
+      name: p.users.name ?? tCommon('unknownPlayer'),
       nickname: p.users.nickname,
     });
   }
@@ -315,6 +319,7 @@ async function WolfHolesBody({
   courseId: string;
 }) {
   const { supabase } = await getDrilldownContext();
+  const tCommon = await getTranslations('leaderboard.common');
 
   const [gwp, rawHolesRes, rawScoresRes, wolfChoices] = await Promise.all([
     getGameWithPlayers(gameId),
@@ -354,7 +359,7 @@ async function WolfHolesBody({
   for (const p of gwp.players) {
     if (p.users == null) continue;
     playersById.set(p.user_id, {
-      name: p.users.name ?? '(ukjent)',
+      name: p.users.name ?? tCommon('unknownPlayer'),
       nickname: p.users.nickname,
     });
   }
@@ -390,6 +395,7 @@ async function NinesHolesBody({
   courseId: string;
 }) {
   const { supabase } = await getDrilldownContext();
+  const tCommon = await getTranslations('leaderboard.common');
 
   const [gwp, rawHolesRes, rawScoresRes] = await Promise.all([
     getGameWithPlayers(gameId),
@@ -427,7 +433,7 @@ async function NinesHolesBody({
   for (const p of gwp.players) {
     if (p.users == null) continue;
     playersById.set(p.user_id, {
-      name: p.users.name ?? '(ukjent)',
+      name: p.users.name ?? tCommon('unknownPlayer'),
       nickname: p.users.nickname,
     });
   }
@@ -464,6 +470,7 @@ async function RoundRobinHolesBody({
   courseId: string;
 }) {
   const { supabase } = await getDrilldownContext();
+  const tCommon = await getTranslations('leaderboard.common');
 
   const [gwp, rawHolesRes, rawScoresRes] = await Promise.all([
     getGameWithPlayers(gameId),
@@ -501,7 +508,7 @@ async function RoundRobinHolesBody({
   for (const p of gwp.players) {
     if (p.users == null) continue;
     playersById.set(p.user_id, {
-      name: p.users.name ?? '(ukjent)',
+      name: p.users.name ?? tCommon('unknownPlayer'),
       nickname: p.users.nickname,
     });
   }
@@ -537,6 +544,7 @@ async function AceyDeuceyHolesBody({
   courseId: string;
 }) {
   const { supabase } = await getDrilldownContext();
+  const tCommon = await getTranslations('leaderboard.common');
 
   const [gwp, rawHolesRes, rawScoresRes] = await Promise.all([
     getGameWithPlayers(gameId),
@@ -574,7 +582,7 @@ async function AceyDeuceyHolesBody({
   for (const p of gwp.players) {
     if (p.users == null) continue;
     playersById.set(p.user_id, {
-      name: p.users.name ?? '(ukjent)',
+      name: p.users.name ?? tCommon('unknownPlayer'),
       nickname: p.users.nickname,
     });
   }
@@ -611,6 +619,7 @@ async function BingoBangoBongoHolesBody({
   courseId: string;
 }) {
   const { supabase } = await getDrilldownContext();
+  const tCommon = await getTranslations('leaderboard.common');
 
   const [gwp, rawHolesRes, rawScoresRes, bingoBangoBongoHoles] =
     await Promise.all([
@@ -651,7 +660,7 @@ async function BingoBangoBongoHolesBody({
   for (const p of gwp.players) {
     if (p.users == null) continue;
     playersById.set(p.user_id, {
-      name: p.users.name ?? '(ukjent)',
+      name: p.users.name ?? tCommon('unknownPlayer'),
       nickname: p.users.nickname,
     });
   }
@@ -687,6 +696,7 @@ async function NassauHolesBody({
   courseId: string;
 }) {
   const { supabase } = await getDrilldownContext();
+  const tCommon = await getTranslations('leaderboard.common');
 
   const [gwp, rawHolesRes, rawScoresRes] = await Promise.all([
     getGameWithPlayers(gameId),
@@ -724,7 +734,7 @@ async function NassauHolesBody({
   for (const p of gwp.players) {
     if (p.users == null) continue;
     playersById.set(p.user_id, {
-      name: p.users.name ?? '(ukjent)',
+      name: p.users.name ?? tCommon('unknownPlayer'),
       nickname: p.users.nickname,
     });
   }
@@ -761,6 +771,7 @@ async function SoloStrokeplayHolesBody({
   courseId: string;
 }) {
   const { supabase } = await getDrilldownContext();
+  const tCommon = await getTranslations('leaderboard.common');
 
   const [gwp, rawHolesRes, rawScoresRes] = await Promise.all([
     getGameWithPlayers(gameId),
@@ -798,7 +809,7 @@ async function SoloStrokeplayHolesBody({
   for (const p of gwp.players) {
     if (p.users == null) continue;
     playersById.set(p.user_id, {
-      name: p.users.name ?? '(ukjent)',
+      name: p.users.name ?? tCommon('unknownPlayer'),
       nickname: p.users.nickname,
     });
   }
@@ -835,6 +846,7 @@ async function SoloStablefordHolesBody({
   courseId: string;
 }) {
   const { supabase } = await getDrilldownContext();
+  const tCommon = await getTranslations('leaderboard.common');
 
   const [gwp, rawHolesRes, rawScoresRes] = await Promise.all([
     getGameWithPlayers(gameId),
@@ -877,7 +889,7 @@ async function SoloStablefordHolesBody({
   for (const p of gwp.players) {
     if (p.users == null) continue;
     playersById.set(p.user_id, {
-      name: p.users.name ?? '(ukjent)',
+      name: p.users.name ?? tCommon('unknownPlayer'),
       nickname: p.users.nickname,
     });
   }
@@ -918,6 +930,7 @@ async function DrilldownBody({
   requestedTeam: number | null;
 }) {
   const { supabase } = await getDrilldownContext();
+  const tCommon = await getTranslations('leaderboard.common');
 
   // Players come from the tag-cached helper (cache hit — outer page already
   // warmed it). Holes + scores stay direct fetches.
@@ -945,7 +958,7 @@ async function DrilldownBody({
     .map((p) => ({
       userId: p.user_id,
       // Defensive: see comment on LbPlayer in the leaderboard page.
-      name: p.users!.name ?? '(ukjent)',
+      name: p.users!.name ?? tCommon('unknownPlayer'),
       nickname: p.users!.nickname,
       teamNumber: p.team_number,
       courseHandicap: p.course_handicap ?? 0,
@@ -984,7 +997,10 @@ async function DrilldownBody({
   if (orderedLines.length === 0) {
     // Nothing to drill into — bounce back to the parent leaderboard, which
     // will render its own empty state.
-    redirect(`/games/${gameId}/leaderboard?mode=${mode}`);
+    redirect({
+      href: `/games/${gameId}/leaderboard?mode=${mode}` as string,
+      locale: await getLocale(),
+    });
   }
 
   // Resolve which team's drilldown to render. Default = the leader (rank 1).

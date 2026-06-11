@@ -142,7 +142,8 @@
       "incompleteSidesBanner": "Waiting for players — {parts}.",
       "incompleteSidesPart": "side {side} needs {count, plural, one {1 player} other {# players}}",
       "incompleteSidesAnd": " and ",
-      "unassignedFlightBanner": "{count, plural, one {1 player hasn't been assigned to a flight yet.} other {# players haven't been assigned to flights yet.}} The organiser will assign flights before the start."
+      "unassignedFlightBanner": "{count, plural, one {1 player hasn't been assigned to a flight yet.} other {# players haven't been assigned to flights yet.}} The organiser will assign flights before the start.",
+      "unknownPlayer": "(unknown)"
     },
     "waitingRoom": {
       "countdownBody": "We'll notify you when the scorecard opens.",
@@ -391,7 +392,8 @@
       "submitScorecardSolo": "Submit your scorecard",
       "submitScorecardTeam": "Submit team scorecard",
       "backAriaLabel": "Back to tournament",
-      "leaderboardAriaLabel": "View leaderboard"
+      "leaderboardAriaLabel": "View leaderboard",
+      "playerFallback": "Player"
     },
     "scoreCard": {
       "tapInstruction": "Tap to set par. Use − / +.",
