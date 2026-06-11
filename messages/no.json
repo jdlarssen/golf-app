@@ -315,6 +315,8 @@
         "teamModeDisabledReason": "Valgt spillmodus støtter ikke lag-påmelding."
       },
       "players": {
+        "headingDefault": "2. Spillere",
+        "waitingChip": "Venter",
         "searchLabel": "Søk i spillere",
         "searchPlaceholder": "Søk i spillere…",
         "noPlayersYet": "Ingen registrerte spillere ennå.",

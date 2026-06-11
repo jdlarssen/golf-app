@@ -315,6 +315,8 @@
         "teamModeDisabledReason": "The selected game mode does not support team registration."
       },
       "players": {
+        "headingDefault": "2. Players",
+        "waitingChip": "Waiting",
         "searchLabel": "Search players",
         "searchPlaceholder": "Search players…",
         "noPlayersYet": "No registered players yet.",

@@ -50,10 +50,11 @@ function shortName(p: PlayerOption): string {
 export function PlayersSection({
   state,
   players,
-  heading = '2. Spillere',
+  heading,
   selectableIds,
 }: Props) {
   const t = useTranslations('wizard.sections.players');
+  const resolvedHeading = heading ?? t('headingDefault');
   const {
     selectedPlayerIds,
     togglePlayer,
@@ -88,7 +89,7 @@ export function PlayersSection({
   return (
     <section className="space-y-3">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-sm font-medium text-text">{heading}</h2>
+        <h2 className="text-sm font-medium text-text">{resolvedHeading}</h2>
         {/* Counter er mode-aware:
             - best-ball: «X spillere valgt» med partall-hint (#374 — ikke lenger
               fast 8-krav; 2/4/6/8 er gyldige antall)
@@ -222,7 +223,7 @@ export function PlayersSection({
                         {playerLabel(p)}
                       </span>
                       {p.pending && (
-                        <StatusChip tone="påmelding" label="Venter" className="shrink-0" />
+                        <StatusChip tone="påmelding" label={t('waitingChip')} className="shrink-0" />
                       )}
                     </label>
                   </li>
