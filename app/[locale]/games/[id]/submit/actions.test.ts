@@ -242,6 +242,48 @@ describe('submitScorecard', () => {
     expect(sendScorecardSubmittedNotificationMock).not.toHaveBeenCalled();
   });
 
+  it('#543: singles matchplay (singleFlight) — motstander varsles som peer', async () => {
+    // Én-flight-regel: 2 aktive spillere (sides 1+2) → singleFlight.
+    // peersForApproval() returnerer motstanderens user_id som eneste peer.
+    supabaseMock = buildSupabaseMock([
+      {
+        data: {
+          name: 'Singles-match',
+          status: 'active',
+          require_peer_approval: true,
+          game_mode: 'singles_matchplay',
+        },
+        error: null,
+      },
+      { data: { withdrawn_at: null }, error: null }, // WD gate
+      { data: [{ user_id: 'side1' }], error: null }, // UPDATE (fresh)
+      { data: { name: 'Side 1-spiller' }, error: null }, // submitter name
+      { data: [], error: null }, // admins (ingen her)
+      // game_players for peersForApproval:
+      {
+        data: [
+          { user_id: 'side1', flight_number: 1, withdrawn_at: null },
+          { user_id: 'side2', flight_number: 2, withdrawn_at: null },
+        ],
+        error: null,
+      },
+    ]);
+    (supabaseMock.auth.getUser as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { user: { id: 'side1' } },
+    });
+
+    const { submitScorecard } = await import('./actions');
+
+    await expect(submitScorecard('game-1')).rejects.toBeInstanceOf(RedirectError);
+
+    // Motstander (side2) skal ha fått peer_approval_request-varsel.
+    expect(notifyMock).toHaveBeenCalledTimes(1);
+    expect(notifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'side2', kind: 'peer_approval_request' }),
+    );
+    expect(lastRedirect()).toBe('/games/game-1?status=submitted');
+  });
+
   it('re-submit: 0 rader oppdatert → ingen notify, ingen mail, men redirect OK', async () => {
     // Phase 4-regresjon: tidligere fyrte vi notify + mail på nytt hver gang
     // submitScorecard ble kalt fordi `.is('submitted_at', null)` returnerer

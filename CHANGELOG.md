@@ -21,6 +21,25 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#543](https://github.com/jdlarssen/golf-app/issues/543). I spill med fire eller færre deltagere går alle i én gruppe — uansett format. Det betyr at du og motstanderen din i en singelmatch kan se og skrive hverandres scorer på direkten, og at spill med wolf alltid behandles som én gruppe.
 
+### [1.112.3] - 2026-06-11 · #543
+
+> Motstanderen din i en singelmatch kan nå godkjenne scorekortet ditt, og ved innlevering får hen varslet automatisk.
+
+<details>
+<summary>Teknisk</summary>
+
+[#543](https://github.com/jdlarssen/golf-app/issues/543). Attestant-krets for én-flight-spill.
+
+#### Changed
+- `app/[locale]/games/[id]/approve/actions.ts`: `loadAndAuthorize` bruker nå `peersForApproval` fra `flightScope.ts` — henter alle aktive spillere i spillet og bruker én-flight-regelen til å avgjøre om attestasjon er tillatt. `games`-spørringen henter nå `game_mode` i tillegg til `status`.
+- `app/[locale]/games/[id]/submit/actions.ts`: peer-varsel-loopen bruker `peersForApproval` — `games`-spørringen henter nå `game_mode`. Peers-spørringen henter `withdrawn_at` i tillegg til `flight_number`.
+
+#### Tests
+- `approve/actions.test.ts`: oppdatert mock-sekvens (én game_players-spørring i stedet for to); ny test for singles matchplay motstander-godkjenning; ulik-flight-testen oppdatert til >4-spill-scenario.
+- `submit/actions.test.ts`: ny test — singles matchplay singleFlight sender peer-varsel til motstanderen.
+
+</details>
+
 ### [1.112.2] - 2026-06-11 · #543
 
 > I singelmatch ser begge spillerne hverandres scorer direkte, og motstanderen kan godkjenne scorekortet ditt — uten at noen trenger å sette opp noe.

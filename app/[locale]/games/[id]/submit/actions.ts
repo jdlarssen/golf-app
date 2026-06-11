@@ -7,6 +7,8 @@ import { getServerClient } from '@/lib/supabase/server';
 import { sendScorecardSubmittedNotification } from '@/lib/mail/scorecardSubmittedNotification';
 import { firstName } from '@/lib/firstName';
 import { notify } from '@/lib/notifications/notify';
+import { peersForApproval } from '@/lib/games/flightScope';
+import type { GameMode } from '@/lib/scoring/modes/types';
 
 /**
  * Mark the current user's scorecard as submitted.
@@ -34,14 +36,16 @@ export async function submitScorecard(gameId: string) {
   // scores yet and finished games are read-only. `name` is fetched here so
   // we can use it as the mail subject + body without a re-fetch.
   // `require_peer_approval` brukes nedenfor til å gate peer-varsel-loopen.
+  // `game_mode` trengs for peersForApproval (#543).
   const { data: game } = await supabase
     .from('games')
-    .select('name, status, require_peer_approval')
+    .select('name, status, require_peer_approval, game_mode')
     .eq('id', gameId)
     .single<{
       name: string;
       status: 'draft' | 'scheduled' | 'active' | 'finished';
       require_peer_approval: boolean;
+      game_mode: string;
     }>();
 
   if (!game || game.status !== 'active') {
@@ -90,22 +94,22 @@ export async function submitScorecard(gameId: string) {
   // i parallell:
   //   1) the submitter's own name (for mail body + notify-payload)
   //   2) every admin's email + name (mail recipients + notify-targets)
-  //   3) flight-medlemmer som må peer-godkjenne (notify-targets — peers
-  //      varsles ikke via mail, kun in-app i denne fasen). Inkluderer
-  //      submitter selv; vi filtrerer ut nedenfor.
+  //   3) alle aktive spillere i spillet (for peersForApproval — #543).
   // The submitter is filtered out of recipients so a player-admin who
   // submits their own scorecard doesn't mail themselves a notification.
-  // Flight-query gates på require_peer_approval — for solo-modus eller spill
-  // uten peer-godkjenning sparer vi en DB-runde per submit (klubb-skala-perf).
-  const flightQuery = game!.require_peer_approval
+  // Peers-query gates på require_peer_approval — for spill uten
+  // peer-godkjenning sparer vi en DB-runde per submit (klubb-skala-perf).
+  const peersQuery = game!.require_peer_approval
     ? supabase
         .from('game_players')
-        .select('user_id, flight_number')
+        .select('user_id, flight_number, withdrawn_at')
         .eq('game_id', gameId)
-        .returns<{ user_id: string; flight_number: number | null }[]>()
+        .returns<
+          { user_id: string; flight_number: number | null; withdrawn_at: string | null }[]
+        >()
     : Promise.resolve({ data: null });
 
-  const [playerRes, adminsRes, flightRes] = await Promise.all([
+  const [playerRes, adminsRes, peersRes] = await Promise.all([
     supabase.from('users').select('name').eq('id', user.id).maybeSingle<{
       name: string | null;
     }>(),
@@ -115,29 +119,26 @@ export async function submitScorecard(gameId: string) {
       .eq('is_admin', true)
       .not('email', 'is', null)
       .returns<{ id: string; email: string; name: string | null }[]>(),
-    flightQuery,
+    peersQuery,
   ]);
 
   const playerName = playerRes.data?.name?.trim() || '(ukjent spiller)';
   const admins = (adminsRes.data ?? []).filter((a) => a.id !== user.id);
 
-  // Peer-varsler hvis peer-godkjenning er på. Vi finner submitterens flight
-  // og loope over de andre i samme flight. Solo-modus (flight_number = null)
-  // bypasser hele blokken siden ingen peer-godkjenning kan finne sted.
+  // Peer-varsler hvis peer-godkjenning er på.
+  // #543: peersForApproval() håndterer én-flight-regelen: alle andre aktive
+  // spillere i ≤4-spill (eller wolf) er attestanter, ellers kun samme flight.
   if (game!.require_peer_approval) {
-    const me = (flightRes.data ?? []).find((p) => p.user_id === user.id);
-    const peers =
-      me?.flight_number != null
-        ? (flightRes.data ?? []).filter(
-            (p) =>
-              p.user_id !== user.id && p.flight_number === me.flight_number,
-          )
-        : [];
-    if (peers.length > 0) {
+    const peerIds = peersForApproval(
+      peersRes.data ?? [],
+      game!.game_mode as GameMode,
+      user.id,
+    );
+    if (peerIds.length > 0) {
       const peerResults = await Promise.allSettled(
-        peers.map((peer) =>
+        peerIds.map((peerId) =>
           notify({
-            userId: peer.user_id,
+            userId: peerId,
             kind: 'peer_approval_request',
             payload: {
               game_id: gameId,

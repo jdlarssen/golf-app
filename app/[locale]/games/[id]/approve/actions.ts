@@ -5,6 +5,8 @@ import { revalidateTag } from 'next/cache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { notify } from '@/lib/notifications/notify';
+import { peersForApproval } from '@/lib/games/flightScope';
+import type { GameMode } from '@/lib/scoring/modes/types';
 
 type AuthorizationResult = {
   ok: boolean;
@@ -14,9 +16,9 @@ type AuthorizationResult = {
 /**
  * Returns the supabase client, the current user, and whether the user is
  * authorised to act on `playerUserId`'s scorecard in `gameId`. Authorisation
- * means same-flight OR admin. This is defence in depth on top of the RLS
- * `game_players self submit` policy (which allows a player to update their
- * own row only).
+ * means same-flight OR admin OR single-flight game (#543). This is defence in
+ * depth on top of the RLS `game_players self submit` policy (which allows a
+ * player to update their own row only).
  */
 async function loadAndAuthorize(gameId: string, playerUserId: string) {
   const supabase = await getServerClient();
@@ -30,9 +32,9 @@ async function loadAndAuthorize(gameId: string, playerUserId: string) {
   // Refuse to act on finished games.
   const { data: game } = await supabase
     .from('games')
-    .select('status')
+    .select('status, game_mode')
     .eq('id', gameId)
-    .single<{ status: 'draft' | 'scheduled' | 'active' | 'finished' }>();
+    .single<{ status: 'draft' | 'scheduled' | 'active' | 'finished'; game_mode: string }>();
   if (!game || game.status !== 'active') {
     redirect(`/games/${gameId}/approve?error=not_active`);
   }
@@ -52,26 +54,26 @@ async function loadAndAuthorize(gameId: string, playerUserId: string) {
     };
   }
 
-  // Same flight as the target player?
-  const { data: me } = await supabase
+  // #543: bruk peersForApproval — tillat når spillet er én-flight (≤4 aktive
+  // spillere eller wolf) ELLER spillerne er i samme tildelte flight.
+  const { data: allPlayers } = await supabase
     .from('game_players')
-    .select('flight_number')
+    .select('user_id, flight_number, withdrawn_at')
     .eq('game_id', gameId)
-    .eq('user_id', user.id)
-    .maybeSingle<{ flight_number: number }>();
-  const { data: target } = await supabase
-    .from('game_players')
-    .select('flight_number')
-    .eq('game_id', gameId)
-    .eq('user_id', playerUserId)
-    .maybeSingle<{ flight_number: number }>();
+    .returns<
+      { user_id: string; flight_number: number | null; withdrawn_at: string | null }[]
+    >();
 
-  const sameFlight =
-    !!me && !!target && me.flight_number === target.flight_number;
+  const peers = peersForApproval(
+    allPlayers ?? [],
+    game.game_mode as GameMode,
+    user.id,
+  );
+  const canApprove = peers.includes(playerUserId);
   return {
     supabase,
     user,
-    authz: { ok: sameFlight, isAdmin } satisfies AuthorizationResult,
+    authz: { ok: canApprove, isAdmin } satisfies AuthorizationResult,
   };
 }
 
