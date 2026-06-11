@@ -19,6 +19,7 @@ It's invite-only: players sign in with a one-time code by mail, with no open sig
 
 - More than twenty tournament formats, all on WHS net handicap.
 - A leaderboard that updates live while your flight taps scores.
+- Flights that match the course. Four or fewer players walk as one group where anyone can keep score for anyone; bigger fields are split into flights — the organizer can auto-split and adjust them, players can pick their own group in the waiting room, and signup can be closed while the final adjustments are made.
 - Offline-first scoring. Tap in a dead spot on the course and it syncs once your phone has signal again.
 - A side tournament you can bolt onto any game: a points race across the round, plus longest-drive and closest-to-pin contests.
 - Your own cup. Run a team-vs-team Ryder Cup among friends without needing a club: name the two teams, generate the matches from your friends, then start and finish it yourself. A personal cup holds up to four matches and twenty-four players; need more and that's what a club cup is for.
@@ -83,7 +84,7 @@ The scoring logic ([`lib/scoring/`](lib/scoring/)) is plain TypeScript with no S
 
 Offline sync ([`lib/sync/`](lib/sync/)) writes to Dexie first and drains the queue against Supabase once the phone has signal again. Last write wins, keyed on `client_updated_at`. The Dexie database is named `'golf-app'` for historical reasons. Don't rename it, or you'll wipe local data for every existing user.
 
-RLS is enforced strictly in Postgres. You see your own scores, your flight's scores during an active game (a flight-less solo round counts the whole group as one flight, so everyone sees everyone), and every score once the admin has ended the game. Realtime needs an explicit `supabase.realtime.setAuth()`; auto-propagation doesn't work for the WebSocket channel, which is a known quirk.
+RLS is enforced strictly in Postgres. You see your own scores, your flight's scores during an active game (a game with four or fewer active players counts as one flight regardless of format — matchplay opponents included — and Wolf is always one group, so everyone sees and can score for everyone), and every score once the admin has ended the game. Realtime needs an explicit `supabase.realtime.setAuth()`; auto-propagation doesn't work for the WebSocket channel, which is a known quirk.
 
 Migrations live in [`supabase/migrations/`](supabase/migrations/) (90+ files, chronological).
 
