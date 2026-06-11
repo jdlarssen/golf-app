@@ -692,7 +692,7 @@ export default async function HolePage({ params }: { params: Params }) {
     <div
       key={holeNumber}
       className="min-h-screen bg-bg flex flex-col animate-hole-enter"
-      style={{ paddingTop: 54, paddingBottom: 34 }}
+      style={{ paddingTop: 54 }}
     >
       {patsomeSegmentSlot && <div className="px-3">{patsomeSegmentSlot}</div>}
       {patsomeTeeSlot && <div className="px-3">{patsomeTeeSlot}</div>}

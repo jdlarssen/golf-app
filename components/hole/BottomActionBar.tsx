@@ -10,7 +10,11 @@ export interface BottomActionBarProps {
 }
 
 const containerStyle: CSSProperties = {
-  padding: '10px 16px 18px',
+  // Flush mot skjermkanten som den globale bunn-nav-en: bakgrunnen går helt
+  // ned, og `env(safe-area-inset-bottom)` løfter knappen klar av iPhone
+  // home-indicator-en. Hull-siden dropper sin egen `paddingBottom` så denne
+  // baren eier bunn-klareringen alene.
+  padding: '10px 16px calc(18px + env(safe-area-inset-bottom, 0px))',
   borderTop: '1px solid var(--border)',
   background: 'var(--surface)',
 };

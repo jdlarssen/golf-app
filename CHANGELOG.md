@@ -21,6 +21,21 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#552](https://github.com/jdlarssen/golf-app/issues/552). Første synlige del av flerspråkligheten: alle innloggings- og profil-strenger hentes fra omsettbare kataloger, og det dukker opp en liten «Norsk / English»-velger på innloggingssiden og i profilinnstillingene.
 
+### [1.113.3] - 2026-06-11
+
+> Handlingsknappen nederst på hull-skjermen («Neste hull» / «Bekreft alle scorer» / «Lever scorekort») ligger nå helt nederst mot skjermkanten, ikke med en stripe luft under seg. Knappen holder seg klar av home-indicator-en på iPhone.
+
+<details>
+<summary>Teknisk</summary>
+
+Brukerønske: `BottomActionBar` lå ~34 px over skjermkanten fordi hull-siden la en fast `paddingBottom: 34` på hele wrapperen. Flytter bunn-klareringen inn i baren selv via `env(safe-area-inset-bottom)`, slik den globale `BottomNav` allerede gjør — bakgrunnen går nå flush til kanten og knappen løftes klar av home-indicator-en.
+
+#### Changed
+- `components/hole/BottomActionBar.tsx`: `paddingBottom` → `calc(18px + env(safe-area-inset-bottom, 0px))`.
+- `app/[locale]/games/[id]/holes/[holeNumber]/page.tsx` + `loading.tsx`: dropper wrapperens `paddingBottom: 34` så baren eier bunn-klareringen alene (skjelett-wrapperen holdes i synk for å unngå layout-hopp).
+
+</details>
+
 ### [1.113.2] - 2026-06-11 · #281
 
 > Påminnelsen om at poengene kan gå i minus er borte fra hull-skjermen i modifisert stableford. Den fulle forklaringen ligger fortsatt i spillform-guiden på spill-hjem, så hull-skjermen holder seg ren mens du taster.

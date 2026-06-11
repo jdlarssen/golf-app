@@ -12,7 +12,7 @@ export default function HoleLoading() {
   return (
     <div
       className="min-h-screen bg-bg flex flex-col"
-      style={{ paddingTop: 54, paddingBottom: 34 }}
+      style={{ paddingTop: 54 }}
     >
       <div className="flex items-center justify-between gap-3 px-[18px] pb-3">
         <Skeleton className="h-5 w-4" />
