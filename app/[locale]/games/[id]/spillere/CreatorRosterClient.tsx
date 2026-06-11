@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import {
   addExistingPlayerToGame,
@@ -34,6 +35,7 @@ function displayName(c: Candidate): string {
  * creators) which redirect, so no local transition state is needed.
  */
 export function CreatorRosterClient({ gameId, candidates, disabled }: Props) {
+  const t = useTranslations('game.players');
   const [search, setSearch] = useState('');
 
   const filtered = useMemo(() => {
@@ -55,19 +57,19 @@ export function CreatorRosterClient({ gameId, candidates, disabled }: Props) {
       {candidates.length > 0 && (
         <div>
           <h3 className="mb-2 font-sans text-xs font-semibold uppercase tracking-[0.18em] text-muted">
-            Legg til fra spillere du kjenner
+            {t('rosterSearch')}
           </h3>
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Søk blant medspillere…"
+            placeholder={t('rosterSearchPlaceholder')}
             disabled={disabled}
             className="w-full rounded-xl border border-border bg-surface px-3.5 py-3 text-text placeholder-muted/70 transition-[border-color,box-shadow] duration-150 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:opacity-50"
-            aria-label="Søk blant medspillere"
+            aria-label={t('rosterSearchAriaLabel')}
           />
           {filtered.length === 0 ? (
-            <p className="mt-3 text-sm text-muted">Ingen treff på «{search}».</p>
+            <p className="mt-3 text-sm text-muted">{t('rosterNoResults', { query: search })}</p>
           ) : (
             <ul className="mt-3 space-y-2">
               {filtered.map((c) => (
@@ -82,10 +84,10 @@ export function CreatorRosterClient({ gameId, candidates, disabled }: Props) {
                     <input type="hidden" name="recipient_user_id" value={c.id} />
                     <SubmitButton
                       disabled={disabled}
-                      pendingLabel="Legger til …"
+                      pendingLabel={t('rosterAddPending')}
                       className="min-h-[44px] rounded-full bg-primary px-4 py-2 text-sm font-medium tracking-tight text-white transition-colors hover:bg-primary-hover disabled:opacity-50 dark:text-bg"
                     >
-                      + Legg til
+                      {t('rosterAddButton')}
                     </SubmitButton>
                   </form>
                 </li>
@@ -99,7 +101,7 @@ export function CreatorRosterClient({ gameId, candidates, disabled }: Props) {
         <div className="flex items-center gap-3">
           <span className="h-px flex-1 bg-border" />
           <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-muted">
-            eller
+            {t('rosterOr')}
           </span>
           <span className="h-px flex-1 bg-border" />
         </div>
@@ -107,28 +109,28 @@ export function CreatorRosterClient({ gameId, candidates, disabled }: Props) {
 
       <div>
         <h3 className="mb-2 font-sans text-xs font-semibold uppercase tracking-[0.18em] text-muted">
-          Inviter ny spiller på e-post
+          {t('inviteByEmail')}
         </h3>
         <form action={inviteAction} className="flex flex-col gap-2 sm:flex-row">
           <input
             type="email"
             name="email"
             required
-            placeholder="eksempel@gmail.no"
+            placeholder={t('inviteEmailPlaceholder')}
             disabled={disabled}
             className="flex-1 rounded-xl border border-border bg-surface px-3.5 py-3 text-text placeholder-muted/70 transition-[border-color,box-shadow] duration-150 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:opacity-50"
-            aria-label="E-post"
+            aria-label={t('inviteEmailAriaLabel')}
           />
           <SubmitButton
             disabled={disabled}
-            pendingLabel="Sender …"
+            pendingLabel={t('invitePending')}
             className="min-h-[44px] rounded-full bg-primary px-4 py-3 font-medium tracking-tight text-white transition-colors hover:bg-primary-hover disabled:opacity-50 dark:text-bg"
           >
-            Send invitasjon
+            {t('inviteButton')}
           </SubmitButton>
         </form>
         <p className="mt-2 text-xs text-muted">
-          Personen får en invitasjon på e-post og blir med når de logger inn.
+          {t('inviteHint')}
         </p>
       </div>
     </div>

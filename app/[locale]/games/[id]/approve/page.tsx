@@ -1,4 +1,6 @@
 import { Suspense, cache } from 'react';
+import { useTranslations } from 'next-intl';
+import { getTranslations } from 'next-intl/server';
 import { notFound, redirect } from 'next/navigation';
 import { after } from 'next/server';
 import { TopBar } from '@/components/ui/TopBar';
@@ -20,7 +22,6 @@ import {
 import { markNotificationsRead } from '@/lib/notifications/markRead';
 import {
   hasParDifference,
-  formatOtherGendersPar,
   parForPlayer,
   type HoleParByGender,
 } from '@/lib/games/parDisplay';
@@ -31,17 +32,6 @@ type SearchParams = Promise<{
   status?: string | string[];
   error?: string | string[];
 }>;
-
-const STATUS_BANNERS: Record<string, string> = {
-  approved: '✓ Scorekort godkjent.',
-  rejected: 'Scorekortet ble avvist. Spilleren blir varslet.',
-};
-
-const ERROR_MESSAGES: Record<string, string> = {
-  db: 'Klarte ikke å lagre endringen. Prøv igjen.',
-  not_active: 'Spillet er ikke aktivt — godkjenning kreves ikke nå.',
-  bad_request: 'Ugyldig forespørsel.',
-};
 
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
@@ -77,8 +67,11 @@ export default async function ApprovePage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  const statusBanner = STATUS_BANNERS[first(sp.status) ?? ''] ?? undefined;
-  const errorMessage = ERROR_MESSAGES[first(sp.error) ?? ''] ?? undefined;
+  const tApprove = await getTranslations('game.approve');
+  const statusKey = first(sp.status);
+  const errorKey = first(sp.error);
+  const statusBanner = statusKey ? tApprove(`banners.${statusKey}` as Parameters<typeof tApprove>[0]) : undefined;
+  const errorMessage = errorKey ? tApprove(`errors.${errorKey}` as Parameters<typeof tApprove>[0]) : undefined;
 
   const { userId } = await getApproveContext();
   if (!userId) redirect('/login');
@@ -109,12 +102,13 @@ export default async function ApprovePage({
     }),
   );
 
+  const tScorecard = await getTranslations('scorecard');
   return (
     <AppShell showVersion={false}>
       <TopBar
         backHref={`/games/${id}`}
-        backLabel={`Tilbake til ${game.name}`}
-        kicker="Godkjenning"
+        backLabel={tScorecard('backLabel', { name: game.name })}
+        kicker={tApprove('kicker')}
       />
 
       {statusBanner && (
@@ -153,6 +147,8 @@ async function PendingApprovals({
   currentUserId: string;
   flightNumber: number;
 }) {
+  const t = await getTranslations('game.approve');
+  const tScorecard = await getTranslations('scorecard');
   const { supabase } = await getApproveContext();
 
   // Flight-mates come from the tag-cached helper (already warm from the
@@ -215,7 +211,7 @@ async function PendingApprovals({
     return (
       <Card>
         <p className="text-sm text-muted">
-          Ingen scorekort venter på godkjenning i flighten din.
+          {t('noPending')}
         </p>
       </Card>
     );
@@ -241,8 +237,8 @@ async function PendingApprovals({
                   {name}
                 </p>
                 <p className="text-xs text-muted mt-0.5">
-                  Brutto: <span className="score-num">{total}</span> ·
-                  Spilte hull:{' '}
+                  {t('brutto')} <span className="score-num">{total}</span> ·{' '}
+                  {t('playedHoles')}{' '}
                   <span className="score-num">{played.length}</span>
                   <span className="inline-num">/18</span>
                 </p>
@@ -251,23 +247,23 @@ async function PendingApprovals({
 
             <details className="px-4 py-3 border-b border-border">
               <summary className="text-sm text-muted cursor-pointer hover:text-text transition-colors">
-                Vis 18-hulls-kort
+                {t('showCard')}
               </summary>
               <div className="overflow-x-auto mt-3 -mx-2">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left">
                       <th className="px-2 py-1.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
-                        #
+                        {t('colHole')}
                       </th>
                       <th className="px-2 py-1.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
-                        Par
+                        {t('colPar')}
                       </th>
                       <th className="px-2 py-1.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
-                        SI
+                        {t('colSi')}
                       </th>
                       <th className="px-2 py-1.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
-                        Slag
+                        {t('colStrokes')}
                       </th>
                     </tr>
                   </thead>
@@ -346,8 +342,13 @@ function ParAsideInline({
   parByGender: HoleParByGender;
   playerGender: ScoringGender;
 }) {
+  const t = useTranslations('scorecard');
   if (!hasParDifference(parByGender)) return null;
-  const tooltip = `Dette hullet har annerledes par for andre kjønn. ${formatOtherGendersPar(parByGender, playerGender)}.`;
+  const parts: string[] = [];
+  if (playerGender !== 'mens') parts.push(t('parGenderMens', { par: parByGender.mens }));
+  if (playerGender !== 'ladies') parts.push(t('parGenderLadies', { par: parByGender.ladies }));
+  if (playerGender !== 'juniors') parts.push(t('parGenderJuniors', { par: parByGender.juniors }));
+  const tooltip = t('parAsideTooltip', { genders: parts.join(', ') });
   return (
     <sup
       data-testid="par-aside-marker"

@@ -1,7 +1,8 @@
 import { Suspense, cache } from 'react';
-import { getLocale } from 'next-intl/server';
+import { useTranslations } from 'next-intl';
+import { getLocale, getTranslations } from 'next-intl/server';
 import type { AppLocale } from '@/i18n/routing';
-import { formatNumber } from '@/lib/i18n/format';
+import { formatNumber, formatTeeOffTimeLocale, formatTeeOffDateLocale } from '@/lib/i18n/format';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound, redirect } from 'next/navigation';
 import { after } from 'next/server';
@@ -20,12 +21,11 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Kicker } from '@/components/ui/Kicker';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
-import { type GameStatus, STATUS_LABELS } from '@/lib/games/status';
+import { type GameStatus } from '@/lib/games/status';
 import { isSoloFormat, supportsWithdrawal } from '@/lib/scoring/modes/types';
 import { MailEnvelope } from '@/components/icons/MailEnvelope';
 import { firstName } from '@/lib/firstName';
 import { nameInitials } from '@/lib/names/initials';
-import { formatTeeOffTime, formatTeeOffDate } from '@/lib/format/teeOff';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
 import { notifyPlayersGameStarted } from '@/lib/notifications/events';
 import {
@@ -33,6 +33,7 @@ import {
   type GameForHole,
 } from '@/lib/games/getGameWithPlayers';
 import { scorecardTitle } from '@/lib/games/scorecardTitle';
+import { formatDisplayLabelKey } from '@/lib/games/formatLabel';
 import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
 import { maybeSendDeliveryReminder } from '@/lib/notifications/deliveryReminder';
@@ -42,7 +43,6 @@ import { HandicapConfirmCard } from '@/components/handicap/HandicapConfirmCard';
 import { ModeGuideCard } from '@/components/ModeGuideCard';
 import { ScheduledWaitingRoom } from '../ScheduledWaitingRoom';
 import { getModeContentMap, mergeModeContent } from '@/lib/formats/getModeContent';
-import { formatDisplayLabel } from '@/lib/games/formatLabel';
 import { submitUndoWithdraw } from '../trekk-fra/actions';
 import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
 import {
@@ -76,8 +76,8 @@ const STATUS_TONES: Record<GameStatus, StatusChipTone> = {
   finished: 'signert',
 };
 
-const STATUS_BANNERS: Record<string, string> = {
-  submitted: '✓ Scorekortet er levert.',
+const STATUS_BANNER_KEYS: Record<string, string> = {
+  submitted: 'bannerSubmitted',
 };
 
 function first(value: string | string[] | undefined): string | undefined {
@@ -212,9 +212,14 @@ export default async function GameHomePage({
   searchParams: SearchParams;
 }) {
   const { id } = await params;
-  const locale = await getLocale();
+  const locale = await getLocale() as AppLocale;
   const sp = await searchParams;
-  const statusBanner = STATUS_BANNERS[first(sp.status) ?? ''] ?? undefined;
+  const t = await getTranslations('game.home');
+  const tModes = await getTranslations('modes');
+  const tGameStatus = await getTranslations('gameStatus');
+  const tScorecard = await getTranslations('scorecard');
+  const statusBannerKey = STATUS_BANNER_KEYS[first(sp.status) ?? ''] ?? undefined;
+  const statusBanner = statusBannerKey ? t(statusBannerKey as Parameters<typeof t>[0]) : undefined;
 
   // Snapshot "now" once per request for the E1 auto-start guard below.
   // The react-hooks/purity lint rule flags Date.now() as impure regardless
@@ -401,7 +406,8 @@ export default async function GameHomePage({
     game.game_mode,
     modeTeamSize,
   );
-  const modeLabel = formatDisplayLabel(game.game_mode, game.mode_config);
+  const modeLabelKey = formatDisplayLabelKey(game.game_mode, game.mode_config);
+  const modeLabel = tModes(modeLabelKey as Parameters<typeof tModes>[0]);
   const modeDetailHref = `/spillformater/${game.game_mode}`;
 
   // State #2 — Scorekort venter. Shell renders synchronously; the flight
@@ -480,7 +486,7 @@ export default async function GameHomePage({
     return (
       <AppShell>
         <header className="mb-6 flex items-center justify-between gap-4">
-          <BackLink href="/">← Hjem</BackLink>
+          <BackLink href="/">{t('backHome')}</BackLink>
           <Kicker tone="accent">{game.name.toUpperCase()}</Kicker>
           <span className="w-12" aria-hidden />
         </header>
@@ -497,10 +503,10 @@ export default async function GameHomePage({
         <section className="flex flex-col items-center text-center px-6 pt-6 pb-7">
           <MailEnvelope size={56} className="text-primary" />
           <Kicker tone="muted" className="mt-4">
-            DU ER PÅMELDT
+            {t('registered')}
           </Kicker>
           <h1 className="mt-1.5 font-serif text-[26px] font-medium tracking-[-0.015em] leading-tight text-text">
-            Scorekortet åpner ved tee-off.
+            {t('scorecardOpensAtTeeOff')}
           </h1>
         </section>
 
@@ -508,13 +514,13 @@ export default async function GameHomePage({
         <Card className="mx-4 p-[18px]">
           <div className="flex justify-between items-baseline gap-4">
             <div className="min-w-0">
-              <Kicker tone="muted">BANE</Kicker>
+              <Kicker tone="muted">{t('courseLabel')}</Kicker>
               <p className="mt-1 font-serif text-[19px] font-medium tracking-[-0.01em] text-text truncate">
-                {game.courses?.name ?? '(ukjent bane)'}
+                {game.courses?.name ?? t('unknownCourse')}
               </p>
               {teeBox && (
                 <p className="mt-1 text-xs text-muted">
-                  18 hull
+                  {t('holeCount')}
                   {playerRating ? ` · Par ${playerRating.par}` : ''}
                   {teeBox.length_meters
                     ? ` · ${formatLengthMeters(teeBox.length_meters, locale)} m`
@@ -523,18 +529,18 @@ export default async function GameHomePage({
               )}
             </div>
             <div className="text-right shrink-0">
-              <Kicker tone="muted">TEE-OFF</Kicker>
+              <Kicker tone="muted">{t('teeOffLabel')}</Kicker>
               {teeOffDate ? (
                 <>
                   <p className="mt-1 font-serif text-[22px] font-semibold tracking-[-0.02em] text-text tabular-nums">
-                    {formatTeeOffTime(teeOffDate)}
+                    {formatTeeOffTimeLocale(teeOffDate, locale)}
                   </p>
                   <p className="mt-1 text-[11px] text-muted">
-                    {formatTeeOffDate(teeOffDate)}
+                    {formatTeeOffDateLocale(teeOffDate, locale)}
                   </p>
                 </>
               ) : (
-                <p className="mt-1 text-[11px] text-muted">Ikke satt</p>
+                <p className="mt-1 text-[11px] text-muted">{t('teeOffNotSet')}</p>
               )}
             </div>
           </div>
@@ -563,7 +569,7 @@ export default async function GameHomePage({
               // Regel 1: team/matchplay ≤4 — hele gruppen er én flight.
               return (
                 <>
-                  <Kicker tone="muted">DIN FLIGHT</Kicker>
+                  <Kicker tone="muted">{t('flightLabel')}</Kicker>
                   <Suspense fallback={<FlightRosterSkeleton />}>
                     <FlightRoster
                       gameId={id}
@@ -577,7 +583,7 @@ export default async function GameHomePage({
               // Regel 2: solo med inndeling (Chunk 3).
               return (
                 <>
-                  <Kicker tone="muted">DIN FLIGHT</Kicker>
+                  <Kicker tone="muted">{t('flightLabel')}</Kicker>
                   <Suspense fallback={<FlightRosterSkeleton />}>
                     <FlightRoster
                       gameId={id}
@@ -591,7 +597,7 @@ export default async function GameHomePage({
               // Regel 3: solo uten inndeling — vis alle deltakere (uendret).
               return (
                 <>
-                  <Kicker tone="muted">DELTAKERE</Kicker>
+                  <Kicker tone="muted">{t('participantsLabel')}</Kicker>
                   <Suspense fallback={<FlightRosterSkeleton />}>
                     <SoloRoster gameId={id} currentUserId={userId} />
                   </Suspense>
@@ -601,7 +607,7 @@ export default async function GameHomePage({
               // Regel 4: ikke-solo med assigned flights (>4 best-ball).
               return (
                 <>
-                  <Kicker tone="muted">DIN FLIGHT</Kicker>
+                  <Kicker tone="muted">{t('flightLabel')}</Kicker>
                   <Suspense fallback={<FlightRosterSkeleton />}>
                     <FlightRoster
                       gameId={id}
@@ -619,7 +625,7 @@ export default async function GameHomePage({
             (#299). Synlig uavhengig av om de kjenner formatet fra før. */}
         <div className="mx-4 mt-4">
           <Kicker tone="muted" className="mb-2 px-1">
-            SPILLFORM
+            {t('formatLabel')}
           </Kicker>
           <ModeGuideCard
             label={modeLabel}
@@ -654,14 +660,12 @@ export default async function GameHomePage({
           <div className="mx-4 mt-3">
             <Banner tone="warning">
               {(() => {
-                const part = (side: number, needs: number) =>
-                  `side ${side} mangler ${needs} ${needs === 1 ? 'spiller' : 'spillere'}`;
                 const { side1Needs, side2Needs } = incompleteSidesShortfall;
                 const parts = [
-                  ...(side1Needs > 0 ? [part(1, side1Needs)] : []),
-                  ...(side2Needs > 0 ? [part(2, side2Needs)] : []),
+                  ...(side1Needs > 0 ? [t('incompleteSidesPart', { side: 1, count: side1Needs })] : []),
+                  ...(side2Needs > 0 ? [t('incompleteSidesPart', { side: 2, count: side2Needs })] : []),
                 ];
-                return `Venter på spillere — ${parts.join(' og ')}.`;
+                return t('incompleteSidesBanner', { parts: parts.join(t('incompleteSidesAnd')) });
               })()}
             </Banner>
           </div>
@@ -671,17 +675,14 @@ export default async function GameHomePage({
         {unassignedCount > 0 && (
           <div className="mx-4 mt-3">
             <Banner tone="warning">
-              {unassignedCount === 1
-                ? '1 spiller er ikke fordelt i flight ennå.'
-                : `${unassignedCount} spillere er ikke fordelt i flighter ennå.`}
-              {' '}Arrangøren fordeler flightene før start.
+              {t('unassignedFlightBanner', { count: unassignedCount })}
             </Banner>
           </div>
         )}
 
         {/* Footer caption */}
         <p className="mt-2 px-6 pt-4 pb-2 text-center font-serif italic text-[11.5px] text-muted">
-          Vær på 1. tee 10 minutter før start.
+          {t('teeArriveEarly')}
         </p>
 
         {/* #428: rediger/slett for oppretter, også i venterommet (scheduled). */}
@@ -699,7 +700,7 @@ export default async function GameHomePage({
             href={`/games/${id}/trekk-fra`}
             className="block text-center text-xs text-muted hover:text-text transition-colors underline underline-offset-2 decoration-muted/40"
           >
-            Trekk deg fra spillet
+            {t('withdrawLink')}
           </SmartLink>
         </div>
       </AppShell>
@@ -718,22 +719,22 @@ export default async function GameHomePage({
     <AppShell>
       <TopBar
         backHref="/"
-        backLabel="Tilbake til hjem"
-        kicker="Turnering"
+        backLabel={t('backToHome')}
+        kicker={t('tournamentKicker')}
       />
       <PageHeader title={game.name} />
 
       <div className="mb-4">
         <StatusChip
           tone={STATUS_TONES[game.status]}
-          label={STATUS_LABELS[game.status]}
+          label={tGameStatus(game.status)}
         />
       </div>
 
       {isDraft && (
         <div className="mb-4">
           <Banner tone="warning">
-            Utkast — admin planlegger fortsatt. Detaljer kan endre seg.
+            {t('draftBanner')}
           </Banner>
         </div>
       )}
@@ -747,8 +748,7 @@ export default async function GameHomePage({
       {me.rejection_reason && (
         <div className="mb-4">
           <Banner tone="info">
-            Scorekortet ditt ble avvist: «{me.rejection_reason}». Rediger
-            hullene og lever på nytt.
+            {t('rejectionBannerPrefix')}{me.rejection_reason}{t('rejectionBannerSuffix')}
           </Banner>
         </div>
       )}
@@ -768,14 +768,14 @@ export default async function GameHomePage({
         {game.courses?.name && (
           <Card>
             <Kicker tone="muted" className="mb-2">
-              BANE
+              {t('courseLabel')}
             </Kicker>
             <p className="font-serif text-[19px] font-medium tracking-[-0.01em] text-text">
               {game.courses.name}
             </p>
             {game.tee_boxes && (
               <p className="text-xs text-muted mt-1.5 tabular-nums">
-                Tee: {game.tee_boxes.name}
+                {t('teeInfo', { teeName: game.tee_boxes.name })}
                 {playerRating
                   ? ` · Slope ${playerRating.slope} · CR ${playerRating.courseRating.toFixed(1)} · Par ${playerRating.par}`
                   : ''}
@@ -787,7 +787,7 @@ export default async function GameHomePage({
         {/* Spillform — modus-forklaring tilgjengelig fra spill-siden (#299). */}
         <div>
           <Kicker tone="muted" className="mb-2">
-            SPILLFORM
+            {t('formatLabel')}
           </Kicker>
           <ModeGuideCard
             label={modeLabel}
@@ -800,19 +800,19 @@ export default async function GameHomePage({
         {isDraft && (
           <Card>
             <Kicker tone="muted" className="mb-2">
-              TEE-OFF
+              {t('draftTeeOffLabel')}
             </Kicker>
             {draftTeeOffDate ? (
               <p className="text-sm text-text tabular-nums">
-                Tee-off planlagt:{' '}
+                {t('draftTeeOffPlanned')}{' '}
                 <span className="font-medium">
-                  {formatTeeOffDate(draftTeeOffDate)} kl.{' '}
-                  {formatTeeOffTime(draftTeeOffDate)}
+                  {formatTeeOffDateLocale(draftTeeOffDate, locale)} {t('draftTeeOffDateAt')}{' '}
+                  {formatTeeOffTimeLocale(draftTeeOffDate, locale)}
                 </span>
               </p>
             ) : (
               <p className="text-sm text-muted">
-                Tidspunkt ikke avklart enda.
+                {t('draftTeeOffUnknown')}
               </p>
             )}
           </Card>
@@ -821,12 +821,12 @@ export default async function GameHomePage({
         {isDraft ? (
           <Card>
             <Kicker tone="muted" className="mb-2">
-              LAG
+              {t('draftTeamsLabel')}
             </Kicker>
             <Suspense
               fallback={
                 <p className="text-sm text-muted text-center py-4">
-                  Laster…
+                  {t('draftTeamsLoading')}
                 </p>
               }
             >
@@ -836,7 +836,7 @@ export default async function GameHomePage({
         ) : (
           <Card>
             <Kicker tone="muted" className="mb-2">
-              DIN INFO
+              {t('infoLabel')}
             </Kicker>
             {isSoloFormat(game.game_mode, modeTeamSize) ? (
               // Solo-modus har ingen lag- eller flight-tilordning, så den
@@ -848,10 +848,10 @@ export default async function GameHomePage({
               <>
                 <p className="text-sm text-text font-serif">{modeLabel}</p>
                 <p className="text-xs text-muted mt-1">
-                  Individuelt format. Du spiller for deg selv, uten lag.
+                  {t('soloIndividual')}
                 </p>
                 <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-sm mt-2">
-                  <dt className="text-muted">Course handicap</dt>
+                  <dt className="text-muted">{t('courseHandicap')}</dt>
                   <dd className="score-num text-text text-right">
                     {me.course_handicap ?? '—'}
                   </dd>
@@ -859,15 +859,15 @@ export default async function GameHomePage({
               </>
             ) : (
               <dl className="grid grid-cols-[1fr_auto] gap-y-1.5 text-sm">
-                <dt className="text-muted">Lag</dt>
+                <dt className="text-muted">{t('teamLabel')}</dt>
                 <dd className="text-text text-right">
-                  Lag <span className="score-num">{me.team_number}</span>
+                  {t('teamValue', { number: me.team_number })}
                 </dd>
-                <dt className="text-muted">Flight</dt>
+                <dt className="text-muted">{t('flightValueLabel')}</dt>
                 <dd className="text-text text-right">
-                  Flight <span className="score-num">{me.flight_number}</span>
+                  {t('flightValue', { number: me.flight_number })}
                 </dd>
-                <dt className="text-muted">Course handicap</dt>
+                <dt className="text-muted">{t('courseHandicap')}</dt>
                 <dd className="score-num text-text text-right">
                   {me.course_handicap ?? '—'}
                 </dd>
@@ -880,16 +880,15 @@ export default async function GameHomePage({
           // WD — viser angre-banner i stedet for scorekort-CTA (#386).
           <div className="rounded-2xl border border-danger/40 bg-danger/5 px-4 py-4">
             <p className="mb-3 font-sans text-[14px] font-medium text-text">
-              Du har trukket deg fra spillet
+              {t('withdrawnHeading')}
             </p>
             <p className="mb-4 font-sans text-[12px] leading-relaxed text-muted">
-              Scorene dine teller ikke i rangeringen. Du kan angre så lenge
-              spillet er aktivt.
+              {t('withdrawnBody')}
             </p>
             <form action={submitUndoWithdraw}>
               <input type="hidden" name="gameId" value={id} />
-              <SubmitButton className="w-full" pendingLabel="Angrer …">
-                Angre
+              <SubmitButton className="w-full" pendingLabel={t('undoWithdrawPending')}>
+                {t('undoWithdraw')}
               </SubmitButton>
             </form>
           </div>
@@ -905,11 +904,11 @@ export default async function GameHomePage({
           </Suspense>
         ) : isFinished ? (
           <LinkButton href={`/games/${id}/leaderboard`} full>
-            🏆 Se leaderboard →
+            {t('leaderboardButton')}
           </LinkButton>
         ) : isDraft ? null : (
           <div className="rounded-2xl border border-border px-4 py-3 text-sm text-muted text-center">
-            Spillet er ikke startet ennå.
+            {t('gameNotStarted')}
           </div>
         )}
 
@@ -917,7 +916,7 @@ export default async function GameHomePage({
           <SmartLink href={`/games/${id}/leaderboard/holes`} className="block">
             <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
               <span className="text-base font-medium text-text">
-                Hull for hull
+                {t('hullForHull')}
               </span>
               <span aria-hidden className="text-muted">
                 →
@@ -930,7 +929,7 @@ export default async function GameHomePage({
           <SmartLink href={`/games/${id}/scorecard`} className="block">
             <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
               <span className="text-base font-medium text-text">
-                {scorecardTitle(game.game_mode, game.mode_config).cardLabel}
+                {tScorecard(scorecardTitle(game.game_mode, game.mode_config).cardLabelKey as Parameters<typeof tScorecard>[0])}
               </span>
               <span aria-hidden className="text-muted">
                 →
@@ -943,7 +942,7 @@ export default async function GameHomePage({
           <SmartLink href={`/games/${id}/leaderboard`} className="block">
             <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
               <span className="text-base font-medium text-text">
-                Leaderboard
+                {t('leaderboard')}
               </span>
               <span aria-hidden className="text-muted">
                 →
@@ -960,14 +959,14 @@ export default async function GameHomePage({
             <Card className="min-h-[44px] transition-colors hover:border-primary/30">
               <div className="flex items-center justify-between">
                 <span className="text-base font-medium text-text">
-                  Avslutt spillet
+                  {t('finishGame')}
                 </span>
                 <span aria-hidden className="text-muted">
                   →
                 </span>
               </div>
               <p className="mt-1 text-xs text-muted">
-                Du arrangerer spillet. Lås det og åpne leaderboardet for alle.
+                {t('finishGameHint')}
               </p>
             </Card>
           </SmartLink>
@@ -989,7 +988,7 @@ export default async function GameHomePage({
               href={`/games/${id}/trekk-fra`}
               className="block text-center text-xs text-muted hover:text-text transition-colors underline underline-offset-2 decoration-muted/40"
             >
-              Trekk deg fra spillet
+              {t('withdrawLink')}
             </SmartLink>
           </div>
         )}
@@ -1006,7 +1005,7 @@ export default async function GameHomePage({
                 href={`/games/${id}/trekk-fra`}
                 className="block text-center text-xs text-muted hover:text-text transition-colors underline underline-offset-2 decoration-muted/40"
               >
-                Trekk deg fra spillet
+                {t('withdrawLink')}
               </SmartLink>
             </div>
           )}
@@ -1016,7 +1015,7 @@ export default async function GameHomePage({
             href="/"
             className="block text-center text-sm text-muted hover:text-text transition-colors"
           >
-            Tilbake til hjem
+            {t('backToHome')}
           </SmartLink>
         </div>
       </div>
@@ -1049,6 +1048,7 @@ async function FlightRoster({
     flightNumber != null ? query.eq('flight_number', flightNumber) : query
   ).returns<FlightRosterRow[]>();
 
+  const tHome = await getTranslations('game.home');
   const flight = (flightRows ?? []).map((row) => ({
     userId: row.user_id,
     isCurrentUser: row.user_id === currentUserId,
@@ -1087,7 +1087,7 @@ async function FlightRoster({
             {firstName(p.name) ?? p.name}
             {p.isCurrentUser && (
               <span className="font-sans text-[9.5px] font-semibold uppercase tracking-[0.18em] text-accent ml-2">
-                DEG
+                {tHome('youLabel')}
               </span>
             )}
           </span>
@@ -1135,6 +1135,7 @@ async function SoloRoster({
       }[]
     >();
 
+  const tHome = await getTranslations('game.home');
   const players = (rows ?? []).map((row) => ({
     userId: row.user_id,
     isCurrentUser: row.user_id === currentUserId,
@@ -1163,7 +1164,7 @@ async function SoloRoster({
             {firstName(p.name) ?? p.name}
             {p.isCurrentUser && (
               <span className="font-sans text-[9.5px] font-semibold uppercase tracking-[0.18em] text-accent ml-2">
-                DEG
+                {tHome('youLabel')}
               </span>
             )}
           </span>
@@ -1227,9 +1228,10 @@ async function DraftTeamsOverview({
 
   const players = rows ?? [];
 
+  const tHome = await getTranslations('game.home');
   if (players.length === 0) {
     return (
-      <p className="text-sm text-muted text-center py-4">Spillere kommer.</p>
+      <p className="text-sm text-muted text-center py-4">{tHome('playersComingSoon')}</p>
     );
   }
 
@@ -1244,7 +1246,7 @@ async function DraftTeamsOverview({
         return (
           <li key={teamNum}>
             <p className="text-xs text-muted uppercase tracking-[0.14em] font-semibold mb-1.5">
-              Lag {teamNum}
+              {tHome('teamLabel2', { number: teamNum })}
             </p>
             <ul className="flex flex-col gap-1">
               {teamPlayers.map((p) => {
@@ -1276,7 +1278,7 @@ async function DraftTeamsOverview({
                       {displayName}
                       {isCurrent && (
                         <span className="font-sans text-[9.5px] font-semibold uppercase tracking-[0.18em] text-accent ml-2">
-                          DEG
+                          {tHome('youLabel')}
                         </span>
                       )}
                     </span>
@@ -1343,19 +1345,19 @@ async function PendingApprovalsBanner({
 
   if (pendingApprovalsForMe === 0) return null;
 
+  const tHome = await getTranslations('game.home');
   return (
     <div className="mb-4">
       <Banner tone="info">
         <div className="flex items-center justify-between gap-3">
           <span>
-            {pendingApprovalsForMe} spillere i flighten din venter på
-            godkjenning
+            {tHome('pendingApprovals', { count: pendingApprovalsForMe })}
           </span>
           <SmartLink
             href={`/games/${gameId}/approve`}
             className="text-sm font-medium text-primary underline underline-offset-2 decoration-primary/30 hover:decoration-primary whitespace-nowrap"
           >
-            Gjennomgå →
+            {tHome('reviewLink')}
           </SmartLink>
         </div>
       </Banner>
@@ -1391,11 +1393,12 @@ async function CupStandingsLink({ gameId }: { gameId: string }) {
     .maybeSingle<{ id: string }>();
   if (!cup) return null;
 
+  const tHome = await getTranslations('game.home');
   return (
     <SmartLink href={`/cup/${tournamentId}`} className="block">
       <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
         <span className="text-base font-medium text-text">
-          Se cup-stillingen
+          {tHome('cupStandings')}
         </span>
         <span aria-hidden className="text-muted">
           →
@@ -1421,6 +1424,7 @@ function CreatorControls({
   gameId: string;
   status: GameStatus;
 }) {
+  const t = useTranslations('game.home');
   // Pre-start: edit + delete the whole game. Roster management («Styr spillere»)
   // opens once registration is live and stays available through active play
   // (where it becomes withdraw + approval-override). Finished → nothing.
@@ -1430,14 +1434,14 @@ function CreatorControls({
   return (
     <div className="pt-2">
       <Kicker tone="muted" className="mb-2">
-        ARRANGØR
+        {t('arrangerSection')}
       </Kicker>
       <div className="space-y-2">
         {showRoster && (
           <SmartLink href={`/games/${gameId}/spillere`} className="block">
             <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
               <span className="text-base font-medium text-text">
-                Styr spillere
+                {t('managePlayersLink')}
               </span>
               <span aria-hidden className="text-muted">
                 →
@@ -1449,7 +1453,7 @@ function CreatorControls({
           <SmartLink href={`/games/${gameId}/rediger`} className="block">
             <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-primary/30">
               <span className="text-base font-medium text-text">
-                Rediger spill
+                {t('editGameLink')}
               </span>
               <span aria-hidden className="text-muted">
                 →
@@ -1461,7 +1465,7 @@ function CreatorControls({
           <SmartLink href={`/games/${gameId}/slett`} className="block">
             <Card className="min-h-[44px] flex items-center justify-between transition-colors hover:border-danger/40">
               <span className="text-base font-medium text-danger">
-                Slett spill
+                {t('deleteGameLink')}
               </span>
               <span aria-hidden className="text-muted">
                 →
@@ -1545,15 +1549,16 @@ function PrimaryCta({
   strokesCount: number;
   nextHole: number;
 }) {
+  const t = useTranslations('game.home');
   const subtext =
     state === 'in_progress' || state === 'ready_to_submit'
-      ? `${strokesCount} av 18 hull tastet inn`
+      ? t('ctaHolesFilled', { count: strokesCount })
       : null;
 
   if (state === 'not_started') {
     return (
       <LinkButton href={`/games/${gameId}/holes/${nextHole}`} full>
-        Start runden →
+        {t('ctaStartRound')}
       </LinkButton>
     );
   }
@@ -1562,7 +1567,7 @@ function PrimaryCta({
     return (
       <div className="space-y-1.5">
         <LinkButton href={`/games/${gameId}/holes/${nextHole}`} full>
-          Fortsett runden →
+          {t('ctaContinueRound')}
         </LinkButton>
         {subtext && (
           <p className="text-center text-xs text-muted tabular-nums">
@@ -1577,7 +1582,7 @@ function PrimaryCta({
     return (
       <div className="space-y-1.5">
         <LinkButton href={`/games/${gameId}/submit`} full>
-          Gjennomgå og lever →
+          {t('ctaReviewAndSubmit')}
         </LinkButton>
         {subtext && (
           <p className="text-center text-xs text-muted tabular-nums">
@@ -1591,7 +1596,7 @@ function PrimaryCta({
   if (state === 'submitted_pending_approval') {
     return (
       <div className="rounded-2xl border border-border px-4 py-3 text-sm text-muted text-center">
-        Scorekort levert — venter på godkjenning fra en i flighten din.
+        {t('ctaSubmittedPendingApproval')}
       </div>
     );
   }
@@ -1599,7 +1604,7 @@ function PrimaryCta({
   // submitted_approved
   return (
     <div className="rounded-2xl border border-border px-4 py-3 text-sm text-muted text-center">
-      Scorekort levert og godkjent. Venter på at admin avslutter spillet.
+      {t('ctaSubmittedApproved')}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
@@ -19,37 +20,37 @@ import {
 import { removePlayerFromGame, cancelGameInvitation } from './actions';
 import { CreatorRosterClient } from './CreatorRosterClient';
 import type { PlayerForHole } from '@/lib/games/getGameWithPlayers';
+import type { AppLocale } from '@/i18n/routing';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ status?: string; error?: string }>;
 
 const BEST_BALL_MAX_PLAYERS = 8;
 
-const STATUS_MESSAGES: Record<string, string> = {
-  invite_added: 'Spilleren er lagt til.',
-  invite_sent: 'Invitasjonen er sendt.',
-  player_removed: 'Spilleren er fjernet.',
-  player_withdrawn: 'Spilleren er trukket fra spillet.',
-  player_reinstated: 'Spilleren er med igjen.',
-  admin_approved: 'Scorekortet er godkjent.',
-  invite_cancelled: 'Invitasjonen er trukket tilbake.',
-};
+const STATUS_KEYS = new Set([
+  'invite_added',
+  'invite_sent',
+  'player_removed',
+  'player_withdrawn',
+  'player_reinstated',
+  'admin_approved',
+  'invite_cancelled',
+]);
 
-const ERROR_MESSAGES: Record<string, string> = {
-  disposable_email:
-    'Den e-postadressen ser ut som en engangsadresse. Be om en vanlig e-post.',
-  invite_invalid_email: 'Ugyldig e-postadresse.',
-  invite_missing_user: 'Fant ikke spilleren.',
-  remove_missing_user: 'Fant ikke spilleren.',
-  game_locked: 'Spillet er i gang. Du kan ikke endre spillerne nå.',
-  roster_locked: 'Spillet er i gang. Trekk spilleren i stedet for å fjerne.',
-  game_full: `Spillet er fullt (${BEST_BALL_MAX_PLAYERS} spillere).`,
-  db_players: 'Noe gikk galt. Prøv igjen.',
-  invite_failed: 'Invitasjonen kunne ikke sendes. Prøv igjen.',
-  mail_failed: 'Invitasjonen ble lagret, men e-posten kom ikke fram.',
-  cancel_failed: 'Kunne ikke trekke invitasjonen.',
-  not_found: 'Fant ikke spillet.',
-};
+const ERROR_KEYS = new Set([
+  'disposable_email',
+  'invite_invalid_email',
+  'invite_missing_user',
+  'remove_missing_user',
+  'game_locked',
+  'roster_locked',
+  'game_full',
+  'db_players',
+  'invite_failed',
+  'mail_failed',
+  'cancel_failed',
+  'not_found',
+]);
 
 function playerName(p: Pick<PlayerForHole, 'users'>): string {
   return formatRevealName(p.users?.name ?? '', p.users?.nickname ?? null);
@@ -80,6 +81,8 @@ export default async function CreatorSpillerePage({
   const { id: gameId } = await params;
   const { status: statusParam, error: errorParam } = await searchParams;
   const detailPath = `/games/${gameId}`;
+
+  const t = await getTranslations('game.players');
 
   const supabase = await getServerClient();
   const role = await requireAdminOrCreator(supabase, gameId);
@@ -120,11 +123,11 @@ export default async function CreatorSpillerePage({
     candidates = network.filter((c) => !rosterIds.has(c.id));
   }
 
-  const banner = statusParam && STATUS_MESSAGES[statusParam] ? (
-    <Banner tone="success">{STATUS_MESSAGES[statusParam]}</Banner>
-  ) : errorParam && ERROR_MESSAGES[errorParam] ? (
+  const banner = statusParam && STATUS_KEYS.has(statusParam) ? (
+    <Banner tone="success">{t(`statusMessages.${statusParam}` as Parameters<typeof t>[0])}</Banner>
+  ) : errorParam && ERROR_KEYS.has(errorParam) ? (
     <Banner tone={errorParam === 'mail_failed' ? 'warning' : errorParam === 'game_full' ? 'info' : 'error'}>
-      {ERROR_MESSAGES[errorParam]}
+      {t(`errorMessages.${errorParam}` as Parameters<typeof t>[0], { max: BEST_BALL_MAX_PLAYERS })}
     </Banner>
   ) : null;
 
@@ -136,10 +139,10 @@ export default async function CreatorSpillerePage({
 
   return (
     <AppShell>
-      <TopBar backHref={detailPath} kicker="Spillere" userId={role.userId} />
+      <TopBar backHref={detailPath} kicker={t('kicker')} userId={role.userId} />
       <PageHeader
-        title="Spillere"
-        subtitle={`Styr hvem som er med i «${game.name}».`}
+        title={t('heading')}
+        subtitle={t('subtitle', { name: game.name })}
       />
 
       <div className="space-y-6">
@@ -147,9 +150,9 @@ export default async function CreatorSpillerePage({
 
         {/* ── Roster ───────────────────────────────────────────────── */}
         <section>
-          <MiniRibbon>Med i spillet</MiniRibbon>
+          <MiniRibbon>{t('rosterSection')}</MiniRibbon>
           {players.length === 0 ? (
-            <p className="px-1 text-sm text-muted">Ingen spillere ennå.</p>
+            <p className="px-1 text-sm text-muted">{t('noPlayers')}</p>
           ) : (
             <ul className="space-y-2">
               {players.map((p) => {
@@ -157,13 +160,13 @@ export default async function CreatorSpillerePage({
                 const submitted = !!p.submitted_at;
                 const approved = !!p.approved_at;
                 const stateLabel = wd
-                  ? 'Trukket'
+                  ? t('stateWithdrawn')
                   : approved
-                    ? 'Godkjent'
+                    ? t('stateApproved')
                     : submitted
-                      ? 'Levert'
+                      ? t('stateSubmitted')
                       : isActive
-                        ? 'Ikke levert'
+                        ? t('stateNotSubmitted')
                         : null;
                 return (
                   <li
@@ -186,7 +189,7 @@ export default async function CreatorSpillerePage({
                           type="submit"
                           className="min-h-[44px] rounded-full border border-border px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:border-danger/40 hover:text-danger"
                         >
-                          Fjern
+                          {t('removeButton')}
                         </button>
                       </form>
                     )}
@@ -197,7 +200,7 @@ export default async function CreatorSpillerePage({
                           type="submit"
                           className="min-h-[44px] whitespace-nowrap rounded-full border border-border px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:border-danger/40 hover:text-danger"
                         >
-                          Trekk
+                          {t('withdrawButton')}
                         </button>
                       </form>
                     )}
@@ -208,7 +211,7 @@ export default async function CreatorSpillerePage({
                           type="submit"
                           className="min-h-[44px] whitespace-nowrap rounded-full border border-border px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:border-accent/50 hover:text-text"
                         >
-                          Angre
+                          {t('undoWithdrawButton')}
                         </button>
                       </form>
                     )}
@@ -222,10 +225,9 @@ export default async function CreatorSpillerePage({
         {/* ── Pending approvals (active + peer approval) ───────────── */}
         {awaitingApproval.length > 0 && (
           <section>
-            <MiniRibbon>Venter på godkjenning</MiniRibbon>
+            <MiniRibbon>{t('approvalSection')}</MiniRibbon>
             <p className="mb-2 px-1 text-sm text-muted">
-              Får ikke en medspiller godkjent et scorekort, kan du godkjenne på
-              vegne av flighten her. Da kan du avslutte spillet.
+              {t('approvalHint')}
             </p>
             <ul className="space-y-2">
               {awaitingApproval.map((p) => (
@@ -249,7 +251,7 @@ export default async function CreatorSpillerePage({
         {/* ── Pending invitations (pre-start) ──────────────────────── */}
         {isPreStart && pendingInvites.length > 0 && (
           <section>
-            <MiniRibbon>Inviterte (venter på innlogging)</MiniRibbon>
+            <MiniRibbon>{t('pendingInvitesSection')}</MiniRibbon>
             <ul className="space-y-2">
               {pendingInvites.map((inv) => (
                 <li
@@ -263,7 +265,7 @@ export default async function CreatorSpillerePage({
                       type="submit"
                       className="min-h-[44px] rounded-full border border-border px-3.5 py-2 text-sm font-medium text-muted transition-colors hover:border-danger/40 hover:text-danger"
                     >
-                      Trekk
+                      {t('cancelInviteButton')}
                     </button>
                   </form>
                 </li>
@@ -275,13 +277,12 @@ export default async function CreatorSpillerePage({
         {/* ── Add players (pre-start) ──────────────────────────────── */}
         {isPreStart && (
           <section>
-            <MiniRibbon>Legg til spillere</MiniRibbon>
+            <MiniRibbon>{t('addPlayersSection')}</MiniRibbon>
             <div className="rounded-xl border border-border bg-surface px-3.5 py-4">
               {isFull && (
                 <div className="mb-4">
                   <Banner tone="info">
-                    Spillet er fullt ({BEST_BALL_MAX_PLAYERS} av{' '}
-                    {BEST_BALL_MAX_PLAYERS}). Fjern noen for å invitere flere.
+                    {t('fullBanner', { max: BEST_BALL_MAX_PLAYERS })}
                   </Banner>
                 </div>
               )}

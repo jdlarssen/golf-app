@@ -1,35 +1,38 @@
 import { isStablefordFamily, type GameMode, type GameModeConfig } from '@/lib/scoring/modes/types';
 
-export interface ScorecardTitle {
-  /** TopBar kicker / page heading. */
-  title: string;
-  /** CTA-label på spilloversiktens lenke-Card til scorekortet. */
-  cardLabel: string;
+export interface ScorecardTitleKeys {
+  /** Key in the `scorecard` namespace — TopBar kicker / page heading. */
+  titleKey: string;
+  /** Key in the `scorecard` namespace — CTA label on the game-home card link. */
+  cardLabelKey: string;
 }
 
 /**
- * Per-modus tittel + CTA-label for scorekort-flaten. Single source of
- * truth slik at `app/games/[id]/scorecard/page.tsx` (TopBar) og
- * `app/games/[id]/(home)/page.tsx` (Card-link på spilloversikten) ikke driver
- * ulike norske oversettelser.
+ * Per-mode title + CTA-label keys for the scorecard surface. Single source of
+ * truth so `app/games/[id]/scorecard/page.tsx` (TopBar) and
+ * `app/games/[id]/(home)/page.tsx` (Card-link) resolve from the same catalog.
  *
- * Regler:
- *  - Matchplay (singles 1v1 og fourball 2v2) → «Match-scorekort»
- *  - Lag-baserte modi (best-ball, par-stableford team_size=2, texas scramble)
- *    → «Lagets scorekort»
- *  - Solo-modi (stableford team_size=1, solo strokeplay) → «Mitt scorekort»
+ * Returns keys within the `scorecard` namespace that callers translate via
+ * `t(key)`. Norwegian output remains identical — the catalog values are the
+ * same strings that were previously hardcoded.
+ *
+ * Rules:
+ *  - Matchplay (singles 1v1 and fourball 2v2) → 'kickerMatch' / 'cardLabelMatch'
+ *  - Team modes (best-ball, par-stableford team_size=2, texas scramble)
+ *    → 'kickerTeam' / 'cardLabelTeam'
+ *  - Solo modes (stableford team_size=1, solo strokeplay) → 'kickerSolo' / 'cardLabelSolo'
  */
 export function scorecardTitle(
   gameMode: GameMode,
   modeConfig: GameModeConfig,
-): ScorecardTitle {
+): ScorecardTitleKeys {
   if (
     gameMode === 'singles_matchplay' ||
     gameMode === 'fourball_matchplay' ||
     gameMode === 'chapman_matchplay' ||
     gameMode === 'gruesome_matchplay'
   ) {
-    return { title: 'Match-scorekort', cardLabel: 'Match-scorekort' };
+    return { titleKey: 'kickerMatch', cardLabelKey: 'cardLabelMatch' };
   }
 
   const isTeamMode =
@@ -41,8 +44,8 @@ export function scorecardTitle(
     (isStablefordFamily(gameMode) && (modeConfig.kind === 'stableford' || modeConfig.kind === 'modified_stableford') && modeConfig.team_size === 2);
 
   if (isTeamMode) {
-    return { title: 'Lagets scorekort', cardLabel: 'Lagets scorekort' };
+    return { titleKey: 'kickerTeam', cardLabelKey: 'cardLabelTeam' };
   }
 
-  return { title: 'Mitt scorekort', cardLabel: 'Mitt scorekort' };
+  return { titleKey: 'kickerSolo', cardLabelKey: 'cardLabelSolo' };
 }

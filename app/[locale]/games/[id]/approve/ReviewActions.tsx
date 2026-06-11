@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 
@@ -21,6 +22,7 @@ export function ReviewActions({
   approveAction,
   rejectAction,
 }: Props) {
+  const t = useTranslations('game.approve');
   const [showReject, setShowReject] = useState(false);
 
   return (
@@ -28,8 +30,8 @@ export function ReviewActions({
       {!showReject ? (
         <div className="grid grid-cols-2 gap-2">
           <form action={approveAction}>
-            <SubmitButton className="w-full" pendingLabel="Godkjenner …">
-              Godkjenn ✓
+            <SubmitButton className="w-full" pendingLabel={t('approvePending')}>
+              {t('approveButton')}
             </SubmitButton>
           </form>
           <Button
@@ -38,7 +40,7 @@ export function ReviewActions({
             onClick={() => setShowReject(true)}
             className="w-full"
           >
-            Avvis
+            {t('rejectButton')}
           </Button>
         </div>
       ) : (
@@ -50,7 +52,7 @@ export function ReviewActions({
             if (!reason) {
               if (
                 !window.confirm(
-                  `Avvise ${playerName} uten begrunnelse? Skriv gjerne en kort grunn først.`,
+                  t('rejectWithoutReasonConfirm', { name: playerName }),
                 )
               ) {
                 event.preventDefault();
@@ -61,13 +63,13 @@ export function ReviewActions({
         >
           <input type="hidden" name="player_user_id" value={playerUserId} />
           <label className="block text-xs text-muted">
-            Grunn til avvisning (kort)
+            {t('rejectReasonLabel')}
           </label>
           <textarea
             name="reason"
             rows={2}
             maxLength={500}
-            placeholder="F.eks. «Hull 7 var 5 slag, ikke 4.»"
+            placeholder={t('rejectReasonPlaceholder')}
             className="w-full rounded-xl border border-border bg-surface text-text px-3 py-2 text-sm placeholder-muted/70 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
           />
           <div className="grid grid-cols-2 gap-2">
@@ -77,10 +79,10 @@ export function ReviewActions({
               onClick={() => setShowReject(false)}
               className="w-full"
             >
-              Avbryt
+              {t('cancelButton')}
             </Button>
-            <SubmitButton variant="danger" className="w-full" pendingLabel="Avviser …">
-              Send avvisning
+            <SubmitButton variant="danger" className="w-full" pendingLabel={t('rejectPending')}>
+              {t('sendRejection')}
             </SubmitButton>
           </div>
         </form>

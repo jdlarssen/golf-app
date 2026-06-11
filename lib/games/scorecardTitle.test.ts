@@ -3,66 +3,66 @@ import { scorecardTitle } from './scorecardTitle';
 import type { GameModeConfig } from '@/lib/scoring/modes/types';
 
 describe('scorecardTitle', () => {
-  it('returnerer «Lagets scorekort» for best-ball', () => {
+  it('returnerer team-nøkler for best-ball', () => {
     const cfg: GameModeConfig = {
       kind: 'best_ball',
       team_size: 2,
       teams_count: 4,
     };
     expect(scorecardTitle('best_ball', cfg)).toEqual({
-      title: 'Lagets scorekort',
-      cardLabel: 'Lagets scorekort',
+      titleKey: 'kickerTeam',
+      cardLabelKey: 'cardLabelTeam',
     });
   });
 
-  it('returnerer «Lagets scorekort» for par-stableford (team_size=2)', () => {
+  it('returnerer team-nøkler for par-stableford (team_size=2)', () => {
     const cfg: GameModeConfig = {
       kind: 'stableford',
       team_size: 2,
       points_table: 'standard',
     };
     expect(scorecardTitle('stableford', cfg)).toEqual({
-      title: 'Lagets scorekort',
-      cardLabel: 'Lagets scorekort',
+      titleKey: 'kickerTeam',
+      cardLabelKey: 'cardLabelTeam',
     });
   });
 
-  it('returnerer «Mitt scorekort» for solo stableford (team_size=1)', () => {
+  it('returnerer solo-nøkler for solo stableford (team_size=1)', () => {
     const cfg: GameModeConfig = {
       kind: 'stableford',
       team_size: 1,
       points_table: 'standard',
     };
     expect(scorecardTitle('stableford', cfg)).toEqual({
-      title: 'Mitt scorekort',
-      cardLabel: 'Mitt scorekort',
+      titleKey: 'kickerSolo',
+      cardLabelKey: 'cardLabelSolo',
     });
   });
 
-  it('returnerer «Match-scorekort» for singles matchplay', () => {
+  it('returnerer matchplay-nøkler for singles matchplay', () => {
     const cfg: GameModeConfig = {
       kind: 'singles_matchplay',
       team_size: 1,
       teams_count: 2,
     };
     expect(scorecardTitle('singles_matchplay', cfg)).toEqual({
-      title: 'Match-scorekort',
-      cardLabel: 'Match-scorekort',
+      titleKey: 'kickerMatch',
+      cardLabelKey: 'cardLabelMatch',
     });
   });
 
-  it('returnerer «Mitt scorekort» for solo strokeplay', () => {
+  it('returnerer solo-nøkler for solo strokeplay', () => {
     const cfg: GameModeConfig = {
       kind: 'solo_strokeplay',
       team_size: 1,
     };
     expect(scorecardTitle('solo_strokeplay', cfg)).toEqual({
-      title: 'Mitt scorekort',
-      cardLabel: 'Mitt scorekort',
+      titleKey: 'kickerSolo',
+      cardLabelKey: 'cardLabelSolo',
     });
   });
 
-  it('returnerer «Lagets scorekort» for texas scramble (2-mannslag)', () => {
+  it('returnerer team-nøkler for texas scramble (2-mannslag)', () => {
     const cfg: GameModeConfig = {
       kind: 'texas_scramble',
       team_size: 2,
@@ -70,12 +70,12 @@ describe('scorecardTitle', () => {
       team_handicap_pct: 25,
     };
     expect(scorecardTitle('texas_scramble', cfg)).toEqual({
-      title: 'Lagets scorekort',
-      cardLabel: 'Lagets scorekort',
+      titleKey: 'kickerTeam',
+      cardLabelKey: 'cardLabelTeam',
     });
   });
 
-  it('returnerer «Match-scorekort» for fourball matchplay', () => {
+  it('returnerer matchplay-nøkler for fourball matchplay', () => {
     const cfg: GameModeConfig = {
       kind: 'fourball_matchplay',
       team_size: 2,
@@ -83,12 +83,12 @@ describe('scorecardTitle', () => {
       allowance_pct: 85,
     };
     expect(scorecardTitle('fourball_matchplay', cfg)).toEqual({
-      title: 'Match-scorekort',
-      cardLabel: 'Match-scorekort',
+      titleKey: 'kickerMatch',
+      cardLabelKey: 'cardLabelMatch',
     });
   });
 
-  it('returnerer «Lagets scorekort» for texas scramble (4-mannslag)', () => {
+  it('returnerer team-nøkler for texas scramble (4-mannslag)', () => {
     const cfg: GameModeConfig = {
       kind: 'texas_scramble',
       team_size: 4,
@@ -96,8 +96,8 @@ describe('scorecardTitle', () => {
       team_handicap_pct: 10,
     };
     expect(scorecardTitle('texas_scramble', cfg)).toEqual({
-      title: 'Lagets scorekort',
-      cardLabel: 'Lagets scorekort',
+      titleKey: 'kickerTeam',
+      cardLabelKey: 'cardLabelTeam',
     });
   });
 });

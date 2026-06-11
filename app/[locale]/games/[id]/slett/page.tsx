@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { notFound, redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
@@ -7,7 +8,9 @@ import { Banner } from '@/components/ui/Banner';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
 import type { GameStatus } from '@/lib/games/status';
-import { formatShortDateNbWithYear } from '@/lib/format/date';
+import { formatShortDateWithYearLocale } from '@/lib/i18n/format';
+import { getLocale } from 'next-intl/server';
+import type { AppLocale } from '@/i18n/routing';
 import { deleteGame } from '@/app/[locale]/admin/games/[id]/slett/actions';
 
 /**
@@ -25,13 +28,9 @@ import { deleteGame } from '@/app/[locale]/admin/games/[id]/slett/actions';
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;
 
-const ERROR_MESSAGES: Record<string, string> = {
-  delete_failed: 'Slettingen feilet. Prøv igjen om litt.',
-};
-
-function shortNb(iso: string | null | undefined): string | null {
+function shortLocale(iso: string | null | undefined, locale: AppLocale): string | null {
   if (!iso) return null;
-  return formatShortDateNbWithYear(iso);
+  return formatShortDateWithYearLocale(iso, locale);
 }
 
 function first(v: string | string[] | undefined): string | undefined {
@@ -56,8 +55,10 @@ export default async function CreatorDeleteGamePage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
+  const t = await getTranslations('game.delete');
+  const locale = await getLocale() as AppLocale;
   const errorCode = first(sp.error);
-  const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
+  const errorMessage = errorCode ? t(`errors.${errorCode}` as Parameters<typeof t>[0]) : undefined;
 
   const supabase = await getServerClient();
   const role = await requireAdminOrCreator(supabase, id);
@@ -98,22 +99,22 @@ export default async function CreatorDeleteGamePage({
   const scoreCount = scoresRes.count ?? 0;
 
   const dateLine =
-    shortNb(game.scheduled_tee_off_at) ?? shortNb(game.created_at);
+    shortLocale(game.scheduled_tee_off_at, locale) ?? shortLocale(game.created_at, locale);
 
   // Only scheduled games carry a warning here (players are already invited).
   // Drafts are private to the creator, so no one needs telling.
   const warning =
     game.status === 'scheduled'
-      ? 'Spillet er planlagt og spillerne er invitert. De får ingen melding om at det er avlyst, så si gjerne fra selv.'
+      ? t('scheduledWarning')
       : null;
 
   return (
     <AppShell>
-      <TopBar backHref={`/games/${id}`} kicker="Slett spill" userId={role.userId} />
+      <TopBar backHref={`/games/${id}`} kicker={t('kicker')} userId={role.userId} />
 
       <div className="px-1">
         <h1 className="mb-3 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-          Slett «{game.name}»?
+          {t('heading', { name: game.name })}
         </h1>
         <p className="font-sans text-[13px] leading-relaxed text-muted">
           {[game.courses?.name, dateLine].filter(Boolean).join(' · ')}
@@ -137,23 +138,19 @@ export default async function CreatorDeleteGamePage({
         style={{ borderColor: 'rgba(180, 60, 60, 0.18)' }}
       >
         <p className="mb-2 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-          Slettes permanent
+          {t('permanentLabel')}
         </p>
         <ul className="space-y-1 font-sans text-[13px] text-text">
-          <li>Spillet «{game.name}»</li>
+          <li>{t('gameEntry', { name: game.name })}</li>
           {playerCount > 0 && (
-            <li>
-              {playerCount} {playerCount === 1 ? 'spiller' : 'spillere'} i spillet
-            </li>
+            <li>{t('playerCount', { count: playerCount })}</li>
           )}
           {scoreCount > 0 && (
-            <li>
-              {scoreCount} {scoreCount === 1 ? 'slaggerad' : 'slaggerader'}
-            </li>
+            <li>{t('scoreCount', { count: scoreCount })}</li>
           )}
         </ul>
         <p className="mt-3 font-sans text-[12px] leading-relaxed text-muted">
-          Handlingen kan ikke angres.
+          {t('cannotUndo')}
         </p>
       </div>
 
@@ -162,20 +159,20 @@ export default async function CreatorDeleteGamePage({
           <input type="hidden" name="gameId" value={game.id} />
           <SubmitButton
             className="w-full"
-            pendingLabel="Sletter …"
+            pendingLabel={t('deletePending')}
             style={{
               background: 'var(--danger-deep)',
               borderColor: 'var(--danger-deep)',
             }}
           >
-            Slett spillet for alltid
+            {t('deleteButton')}
           </SubmitButton>
         </form>
         <SmartLink
           href={`/games/${id}`}
           className="rounded-full border border-border bg-surface px-3 py-3 text-center font-sans text-[13px] font-medium text-text"
         >
-          Avbryt
+          {t('cancelButton')}
         </SmartLink>
       </div>
     </AppShell>

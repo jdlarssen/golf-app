@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
-import { formatCountdown } from '@/lib/format/countdown';
+import { useRouter } from '@/i18n/navigation';
+import { useLocale, useTranslations } from 'next-intl';
+import type { AppLocale } from '@/i18n/routing';
+import { formatCountdownLocale } from '@/lib/i18n/format';
 import { subscribeRealtimeChannel } from '@/lib/sync/realtimeChannel';
 import { joinFlight, type FlightJoinError } from './flightJoinActions';
 import { MAX_FLIGHT_SIZE } from '@/lib/games/flightScope';
@@ -23,13 +25,6 @@ type WaitingRoomProps = {
   currentFlightNumber?: number | null;
 };
 
-const FLIGHT_JOIN_ERRORS: Record<FlightJoinError, string> = {
-  not_authed: 'Du må logge inn for å velge flight.',
-  not_member: 'Du er ikke deltaker i dette spillet.',
-  game_not_scheduled: 'Spillet er ikke lenger i planleggingsfasen.',
-  flight_full: 'Den flighten ble nettopp full. Velg en annen.',
-  db_error: 'Noe gikk galt. Prøv igjen.',
-};
 
 /**
  * Client-side countdown ticker + realtime listener for the "scheduled" state
@@ -47,6 +42,8 @@ export function ScheduledWaitingRoom({
   currentFlightNumber = null,
 }: WaitingRoomProps) {
   const router = useRouter();
+  const locale = useLocale() as AppLocale;
+  const t = useTranslations('game.waitingRoom');
   const [now, setNow] = useState(() => Date.now());
   const [isPending, startTransition] = useTransition();
   const [joinError, setJoinError] = useState<string | null>(null);
@@ -95,7 +92,7 @@ export function ScheduledWaitingRoom({
   }, [gameId, router]);
 
   const msUntil = new Date(teeOffAt).getTime() - now;
-  const text = formatCountdown(msUntil);
+  const text = formatCountdownLocale(msUntil, locale);
 
   function handleJoinFlight(flightNumber: number) {
     setJoinError(null);
@@ -105,7 +102,7 @@ export function ScheduledWaitingRoom({
         setSelectedFlight(flightNumber);
         router.refresh();
       } else {
-        setJoinError(FLIGHT_JOIN_ERRORS[result.error]);
+        setJoinError(t(`errors.${result.error}` as Parameters<typeof t>[0]));
       }
     });
   }
@@ -121,7 +118,7 @@ export function ScheduledWaitingRoom({
         <div className="flex-1">
           <p className="font-serif text-[15px] font-medium">{text}</p>
           <p className="text-[11.5px] opacity-75 mt-0.5">
-            Vi gir deg beskjed når kortet åpner.
+            {t('countdownBody')}
           </p>
         </div>
       </div>
@@ -130,7 +127,7 @@ export function ScheduledWaitingRoom({
       {flightOptions && flightOptions.length > 0 && (
         <div className="rounded-2xl border border-border bg-surface px-4 py-3.5">
           <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-muted mb-3">
-            Velg din flight
+            {t('joinFlightLabel')}
           </p>
           {joinError && (
             <p className="mb-2 rounded-lg bg-warning/10 px-3 py-2 text-[12.5px] text-warning">
@@ -158,12 +155,12 @@ export function ScheduledWaitingRoom({
                     ]
                       .filter(Boolean)
                       .join(' ')}
-                    aria-label={`Bli med i flight ${opt.flightNumber}`}
+                    aria-label={t('flightJoinAriaLabel', { number: opt.flightNumber })}
                   >
                     <div className="flex items-center justify-between">
                       <div>
                         <span className="font-sans text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
-                          Flight {opt.flightNumber}
+                          {t('flightLabel', { number: opt.flightNumber })}
                         </span>
                         {opt.memberNames.length > 0 && (
                           <p className="mt-0.5 text-[12.5px] text-text">
@@ -177,12 +174,12 @@ export function ScheduledWaitingRoom({
                         </span>
                         {isMine && (
                           <p className="font-sans text-[9.5px] font-semibold uppercase tracking-[0.18em] text-accent">
-                            Din
+                            {t('flightYours')}
                           </p>
                         )}
                         {isFull && !isMine && (
                           <p className="font-sans text-[9.5px] uppercase tracking-[0.14em] text-muted">
-                            Full
+                            {t('flightFull')}
                           </p>
                         )}
                       </div>
@@ -194,7 +191,7 @@ export function ScheduledWaitingRoom({
           </ul>
           {selectedFlight == null && (
             <p className="mt-2 text-[11.5px] text-muted">
-              Du er ikke plassert i en flight ennå. Trykk «Bli med» for å velge.
+              {t('notInFlight')}
             </p>
           )}
         </div>

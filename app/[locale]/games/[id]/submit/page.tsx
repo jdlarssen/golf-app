@@ -1,4 +1,6 @@
 import { Suspense, cache } from 'react';
+import { useTranslations } from 'next-intl';
+import { getTranslations } from 'next-intl/server';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound, redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
@@ -18,7 +20,6 @@ import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
 import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
 import {
   hasParDifference,
-  formatOtherGendersPar,
   parForPlayer,
   type HoleParByGender,
 } from '@/lib/games/parDisplay';
@@ -29,15 +30,11 @@ type SearchParams = Promise<{
   error?: string | string[];
 }>;
 
-const ERROR_MESSAGES: Record<string, string> = {
-  db: 'Klarte ikke å lagre leveringen. Prøv igjen.',
-  not_active: 'Spillet er ikke aktivt — du kan ikke levere nå.',
-};
-
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
   return value;
 }
+
 
 type CourseTeeRow = {
   courses: { name: string } | null;
@@ -73,7 +70,9 @@ export default async function SubmitPage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  const errorMessage = ERROR_MESSAGES[first(sp.error) ?? ''] ?? undefined;
+  const t = await getTranslations('game.submit');
+  const errorKey = first(sp.error);
+  const errorMessage = errorKey ? t(`errors.${errorKey}` as Parameters<typeof t>[0]) : undefined;
 
   const { supabase, userId } = await getSubmitContext();
   if (!userId) redirect('/login');
@@ -128,7 +127,7 @@ export default async function SubmitPage({
   // lag-rettet til personlig: «Lever ditt scorekort» i topp-baren og en
   // CH-only-info-linje i stedet for «Lag X · Flight Y».
   const isStableford = isStablefordFamily(game.game_mode);
-  const kicker = isStableford ? 'Lever ditt scorekort' : 'Lever scorekort';
+  const kicker = isStableford ? t('kickerSolo') : t('kicker');
 
   return (
     <AppShell showVersion={false}>
@@ -146,20 +145,20 @@ export default async function SubmitPage({
             {game.name}
           </p>
           <p className="text-xs text-muted mt-1.5">
-            {courseTee.courses?.name ?? '(ukjent bane)'}
+            {courseTee.courses?.name ?? t('unknownCourse')}
             {courseTee.tee_boxes
-              ? ` · Tee: ${courseTee.tee_boxes.name}${playerRating ? ` · Par ${playerRating.par}` : ''}`
+              ? ` · ${t('teePrefix')}${courseTee.tee_boxes.name}${playerRating ? `${t('parPrefix')}${playerRating.par}` : ''}`
               : ''}
           </p>
           {isStableford ? (
             <p className="text-xs text-muted mt-1">
-              Individuell stableford · CH{' '}
+              {t('soloInfo')}
               <span className="score-num">{me.course_handicap ?? '—'}</span>
             </p>
           ) : (
             <p className="text-xs text-muted mt-1">
-              Lag <span className="score-num">{me.team_number}</span> · Flight{' '}
-              <span className="score-num">{me.flight_number}</span> · CH{' '}
+              {t('teamInfo')}<span className="score-num">{me.team_number}</span>{t('flightInfo')}
+              <span className="score-num">{me.flight_number}</span>{t('chInfo')}
               <span className="score-num">{me.course_handicap ?? '—'}</span>
             </p>
           )}
@@ -192,6 +191,7 @@ async function ReviewBody({
   meTeeGender: ScoringGender;
   submitAction: () => void | Promise<void>;
 }) {
+  const t = await getTranslations('game.submit');
   const { supabase } = await getSubmitContext();
 
   const [holesRes, scoresRes] = await Promise.all([
@@ -269,26 +269,26 @@ async function ReviewBody({
     <>
       <Card className="p-0 overflow-hidden">
         <div className="px-4 py-3 border-b border-border">
-          <Kicker tone="muted">DITT KORT</Kicker>
+          <Kicker tone="muted">{t('myCard')}</Kicker>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left bg-bg/40">
                 <th className="px-4 py-2.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
-                  #
+                  {t('colHole')}
                 </th>
                 <th className="px-4 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
-                  Par
+                  {t('colPar')}
                 </th>
                 <th className="px-4 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
-                  SI
+                  {t('colSi')}
                 </th>
                 <th className="px-4 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
-                  Slag
+                  {t('colStrokes')}
                 </th>
                 <th className="px-4 py-2.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
-                  Ført av
+                  {t('colEnteredBy')}
                 </th>
               </tr>
             </thead>
@@ -332,10 +332,10 @@ async function ReviewBody({
 
       <Card>
         <p className="text-sm text-muted">
-          Brutto totalt:{' '}
+          {t('summaryBrutto')}{' '}
           <span className="score-num text-text">{totalBrutto}</span>
           {' · '}
-          Spilte hull:{' '}
+          {t('summaryHoles')}{' '}
           <span className="score-num text-text">{playedHoles.length}</span>
           <span className="inline-num">/18</span>
         </p>
@@ -343,8 +343,7 @@ async function ReviewBody({
 
       {missingHoles > 0 && (
         <Banner tone="info">
-          {missingHoles} hull mangler. Hvis du leverer nå, går disse som
-          ikke spilt.
+          {t('missingHolesBanner', { count: missingHoles })}
         </Banner>
       )}
 
@@ -353,7 +352,7 @@ async function ReviewBody({
           href={`/games/${gameId}/holes/1`}
           className="inline-flex items-center justify-center min-h-[44px] rounded-full border border-border px-[18px] py-2.5 text-sm font-medium text-text hover:bg-primary-soft transition-colors"
         >
-          ← Rediger
+          {t('editButton')}
         </SmartLink>
         <SubmitForm
           submitAction={submitAction}
@@ -376,8 +375,13 @@ function ParAsideInline({
   parByGender: HoleParByGender;
   playerGender: ScoringGender;
 }) {
+  const t = useTranslations('scorecard');
   if (!hasParDifference(parByGender)) return null;
-  const tooltip = `Dette hullet har annerledes par for andre kjønn. ${formatOtherGendersPar(parByGender, playerGender)}.`;
+  const parts: string[] = [];
+  if (playerGender !== 'mens') parts.push(t('parGenderMens', { par: parByGender.mens }));
+  if (playerGender !== 'ladies') parts.push(t('parGenderLadies', { par: parByGender.ladies }));
+  if (playerGender !== 'juniors') parts.push(t('parGenderJuniors', { par: parByGender.juniors }));
+  const tooltip = t('parAsideTooltip', { genders: parts.join(', ') });
   return (
     <sup
       data-testid="par-aside-marker"

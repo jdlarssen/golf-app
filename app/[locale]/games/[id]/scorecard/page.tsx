@@ -1,4 +1,6 @@
 import { Suspense, cache } from 'react';
+import { useTranslations } from 'next-intl';
+import { getTranslations } from 'next-intl/server';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound, redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
@@ -34,17 +36,12 @@ import { nameInitials } from '@/lib/names/initials';
 import { firstName } from '@/lib/firstName';
 import {
   hasParDifference,
-  formatOtherGendersPar,
   parForPlayer,
   type HoleParByGender,
 } from '@/lib/games/parDisplay';
 import type { ScoringGender } from '@/lib/scoring/modes/types';
 
 type Params = Promise<{ id: string }>;
-
-function genderLabelShort(g: 'mens' | 'ladies' | 'juniors'): string {
-  return g === 'mens' ? 'herre' : g === 'ladies' ? 'dame' : 'junior';
-}
 
 type HoleRow = {
   hole_number: number;
@@ -83,6 +80,7 @@ const columnFormatter = {
 
 export default async function ScorecardPage({ params }: { params: Params }) {
   const { id } = await params;
+  const tScorecard = await getTranslations('scorecard');
 
   // Auth-context (cookie round-trip) and the tag-cached game read are
   // independent — the game payload doesn't depend on the user id, and authz
@@ -124,7 +122,9 @@ export default async function ScorecardPage({ params }: { params: Params }) {
     revealActive,
     columnFormatter,
   );
-  const title = scorecardTitle(game.game_mode, game.mode_config);
+  const titleKeys = scorecardTitle(game.game_mode, game.mode_config);
+  const kickerText = tScorecard(titleKeys.titleKey as Parameters<typeof tScorecard>[0]);
+  const genderLabel = tScorecard(`gender${me.tee_gender.charAt(0).toUpperCase()}${me.tee_gender.slice(1)}` as Parameters<typeof tScorecard>[0]);
   // Modified stableford (#281) bruker pro-tabellen for par-scorekortets
   // poeng-celler og footer-total; standard Stableford bruker standard-tabellen.
   const stablefordPointsFn: StablefordPointsFn =
@@ -136,17 +136,17 @@ export default async function ScorecardPage({ params }: { params: Params }) {
     <AppShell showVersion={false}>
       <TopBar
         backHref={`/games/${id}`}
-        backLabel={`Tilbake til ${game.name}`}
-        kicker={title.title}
+        backLabel={tScorecard('backLabel', { name: game.name })}
+        kicker={kickerText}
       />
 
       <div className="space-y-4">
         <Card className="px-4 py-3">
-          <div className="text-xs text-muted">Du spiller fra</div>
+          <div className="text-xs text-muted">{tScorecard('playingFrom')}</div>
           <div className="font-serif text-base text-text">
             {game.tee_box.name}
             <span className="ml-1.5 text-muted text-sm">
-              ({genderLabelShort(me.tee_gender)})
+              ({genderLabel})
             </span>
           </div>
           {rating && (
@@ -189,6 +189,7 @@ async function ScorecardTable({
   myTeeGender: ScoringGender;
   pointsFn: StablefordPointsFn;
 }) {
+  const t = await getTranslations('scorecard');
   const showHandicapTotal = state !== 'reveal-active';
   const showNetto = !shouldHideNetto(state);
 
@@ -260,12 +261,12 @@ async function ScorecardTable({
 
       {submittedAt ? (
         <LinkButton href={`/games/${gameId}`} full variant="secondary">
-          Tilbake til spillet →
+          {t('backToGame')}
         </LinkButton>
       ) : (
         <>
           <LinkButton href={continueHref} full>
-            Tilbake til hull {extractHoleFromHref(continueHref)} →
+            {t('backToHole', { hole: extractHoleFromHref(continueHref) })}
           </LinkButton>
 
           <div className="pt-2">
@@ -273,7 +274,7 @@ async function ScorecardTable({
               href={`/games/${gameId}`}
               className="block text-center text-sm text-muted hover:text-text transition-colors"
             >
-              Til spilloversikt
+              {t('toGameOverview')}
             </SmartLink>
           </div>
         </>
@@ -318,6 +319,7 @@ function LayoutATable({
   showHandicapTotal: boolean;
   myTeeGender: ScoringGender;
 }) {
+  const t = useTranslations('scorecard');
   const rows = holes.map((h) => {
     const strokes = scoresByUserHole.get(`${primaryUserId}#${h.hole_number}`) ?? null;
     const extra = strokesForHole(primaryHandicap, h.stroke_index);
@@ -352,20 +354,20 @@ function LayoutATable({
         <thead>
           <tr className="text-left bg-bg/40">
             <th className="px-3 py-2.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
-              #
+              {t('colHole')}
             </th>
             <th className="px-3 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
-              Par
+              {t('colPar')}
             </th>
             <th className="px-3 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
-              SI
+              {t('colSi')}
             </th>
             <th className="px-3 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
-              Slag
+              {t('colStrokes')}
             </th>
             {showNetto && (
               <th className="px-3 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
-                Netto
+                {t('colNetto')}
               </th>
             )}
           </tr>
@@ -421,18 +423,18 @@ function LayoutATable({
             >
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <span>
-                  Spilte hull:{' '}
+                  {t('footerPlayedHoles')}{' '}
                   <span className="inline-num">
                     {playedHoles.length}/18
                   </span>
                 </span>
                 <span>
-                  Brutto:{' '}
+                  {t('footerBrutto')}{' '}
                   <span className="score-num text-text">{totalBrutto}</span>
                 </span>
                 {showHandicapTotal && (
                   <span>
-                    Slag fått:{' '}
+                    {t('footerStrokesGiven')}{' '}
                     <span className="score-num text-text">
                       {totalExtraSlag}
                     </span>
@@ -440,7 +442,7 @@ function LayoutATable({
                 )}
                 {showNetto && (
                   <span>
-                    Netto:{' '}
+                    {t('footerNetto')}{' '}
                     <span className="score-num text-text">{totalNetto}</span>
                   </span>
                 )}
@@ -497,6 +499,7 @@ function LayoutBTable({
   myTeeGender: ScoringGender;
   pointsFn: StablefordPointsFn;
 }) {
+  const t = useTranslations('scorecard');
   const rows: LayoutBHoleRow[] = holes.map((h) => {
     const parByGender: HoleParByGender = {
       mens: h.par_mens,
@@ -592,10 +595,10 @@ function LayoutBTable({
         <thead>
           <tr className="text-left bg-bg/40">
             <th className="px-2.5 py-2.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
-              #
+              {t('colHole')}
             </th>
             <th className="px-2 py-2.5 text-right text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted">
-              Par
+              {t('colPar')}
             </th>
             {columns.map((c) => (
               <th
@@ -663,16 +666,16 @@ function LayoutBTable({
               <div className="flex flex-col gap-1.5">
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                   {columns.map((c, idx) => {
-                    const t = playerTotals[idx];
+                    const pt = playerTotals[idx];
                     return (
                       <span key={c.userId}>
-                        {c.isCurrentUser ? 'Du' : c.displayName}:{' '}
-                        <span className="score-num text-text">{t.brutto}</span>
+                        {c.isCurrentUser ? t('footerYou') : c.displayName}:{' '}
+                        <span className="score-num text-text">{pt.brutto}</span>
                         {showNetto && (
                           <>
                             {' / '}
                             <span className="score-num text-text">
-                              {isStableford ? t.points : t.netto}
+                              {isStableford ? pt.points : pt.netto}
                               <span className="text-muted ml-0.5 text-[10.5px]">
                                 {secondaryLabel}
                               </span>
@@ -685,7 +688,7 @@ function LayoutBTable({
                 </div>
                 {showNetto && !isMatchplay && (
                   <div className="text-text">
-                    {isStableford ? 'Lagets poeng' : 'Lag-best (netto)'}:{' '}
+                    {isStableford ? t('footerTeamPoints') : t('footerTeamBestNetto')}:{' '}
                     <span className="score-num">
                       {isStableford ? teamTotalPoints : teamTotalNetto}
                     </span>
@@ -718,8 +721,13 @@ function ParAsideInline({
   parByGender: HoleParByGender;
   playerGender: ScoringGender;
 }) {
+  const t = useTranslations('scorecard');
   if (!hasParDifference(parByGender)) return null;
-  const tooltip = `Dette hullet har annerledes par for andre kjønn. ${formatOtherGendersPar(parByGender, playerGender)}.`;
+  const parts: string[] = [];
+  if (playerGender !== 'mens') parts.push(t('parGenderMens', { par: parByGender.mens }));
+  if (playerGender !== 'ladies') parts.push(t('parGenderLadies', { par: parByGender.ladies }));
+  if (playerGender !== 'juniors') parts.push(t('parGenderJuniors', { par: parByGender.juniors }));
+  const tooltip = t('parAsideTooltip', { genders: parts.join(', ') });
   return (
     <sup
       data-testid="par-aside-marker"

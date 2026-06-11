@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 
 type Props = {
@@ -13,22 +14,23 @@ type Props = {
  * not played.
  */
 export function SubmitForm({ submitAction, missingHoles }: Props) {
+  const t = useTranslations('game.submit');
   return (
     <form
       action={submitAction}
       onSubmit={(event) => {
-        const base = 'Levere scorekortet? Dette kan ikke angres uten admin.';
+        const base = t('confirmBase');
         const msg =
           missingHoles > 0
-            ? `${base}\n\n${missingHoles} hull mangler og blir lagret som ikke spilt.`
+            ? `${base}\n\n${t('confirmMissing', { count: missingHoles })}`
             : base;
         if (!window.confirm(msg)) {
           event.preventDefault();
         }
       }}
     >
-      <SubmitButton className="w-full" pendingLabel="Leverer …">
-        Lever ✓
+      <SubmitButton className="w-full" pendingLabel={t('submitPending')}>
+        {t('submitButton')}
       </SubmitButton>
     </form>
   );

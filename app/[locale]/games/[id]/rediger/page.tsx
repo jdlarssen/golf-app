@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
@@ -63,6 +64,7 @@ export default async function CreatorEditGamePage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
+  const t = await getTranslations('game.edit');
   const errorMessage = buildGameErrorMessage(
     ERROR_MESSAGES_NEW_GAME,
     first(sp.error),
@@ -91,18 +93,16 @@ export default async function CreatorEditGamePage({
 
   return (
     <AppShell>
-      <TopBar backHref={`/games/${id}`} kicker="Rediger spill" userId={role.userId} />
+      <TopBar backHref={`/games/${id}`} kicker={t('kicker')} userId={role.userId} />
       <PageHeader
         title={game.name}
-        subtitle="Endre bane, spillere, lag eller innstillinger"
+        subtitle={t('subtitle')}
       />
 
       <div className="space-y-2">
         {errorMessage && <Banner tone="error">{errorMessage}</Banner>}
         <Banner tone="info">
-          {game.status === 'draft'
-            ? 'Spillet er fortsatt et utkast, så bare du ser det. Fyll inn det som mangler og publiser når dere er klare.'
-            : 'Spillet er planlagt. Spillerne ser endringene neste gang de åpner appen.'}
+          {game.status === 'draft' ? t('draftBanner') : t('scheduledBanner')}
         </Banner>
       </div>
 
