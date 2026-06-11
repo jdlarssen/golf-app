@@ -214,37 +214,65 @@ order of view migrations.
 
 ## Success Criteria
 
-- [ ] **No hardcoded Norwegian UI literals** remain in
+- [x] **No hardcoded Norwegian UI literals** remain in
       `app/[locale]/games/[id]/**`, `components/hole/**`, and the
       core-loop-only lib modules (§2) — verified by the repo's æøå-grep
       (comments/test files excluded; `modeGuide`/DB fallback excluded as
-      Phase D).
-- [ ] **Norwegian output unchanged:** full `npm run test` green with zero
+      Phase D). *Evidence: non-comment æøå-grep over scope returns only JSX
+      comments + the `'påmelding'` StatusChipTone enum value (code id, not
+      copy); string-literal sweep clean after CSV-export extraction
+      (commit 0beb715); lib modules return ids/keys (scorecardTitle,
+      holeLabels) or take the word as param (formatHolesList).*
+- [x] **Norwegian output unchanged:** full `npm run test` green with zero
       assertion edits; `npx playwright test` smoke green unmodified.
-- [ ] **English coverage:** catalog-parity test passes (every new `no` key
+      *Evidence: 3260/3260 vitest (262 files); component Norwegian-copy
+      assertions untouched (only sanctioned changes: redirect-mock targets +
+      lib return-contract tests per §2). Playwright: 48 passed, 7 env-skipped,
+      1 failed — `e2e/signup/open-register.spec.ts:27` verified failing
+      identically on clean origin/main (isolated worktree @ 2e983d8) →
+      pre-existing, filed as #559.*
+- [x] **English coverage:** catalog-parity test passes (every new `no` key
       has an `en` key); `npm run build` green; no raw catalog key in either
-      locale (spot-check via build-time render or component tests).
-- [ ] **Drift-guards in place** for `STATUS_LABELS`, `MODE_LABELS`,
+      locale. *Evidence: `messages/catalogParity.test.ts` asserts full no/en
+      key symmetry; build green; opus idiomatic-English pass (commit 5b4bdff)
+      reviewed all six namespaces, fixed 12 values incl. broken `{suffix}`
+      interpolations → ICU selectordinal.*
+- [x] **Drift-guards in place** for `STATUS_LABELS`, `MODE_LABELS`,
       `formatDisplayLabel` (Type A, parametrized over all members).
-- [ ] **Locale-aware date/countdown helpers** in `lib/i18n/format.ts` with
+      *Evidence: `lib/games/status.i18n.test.ts` (4 statuses),
+      `lib/scoring/modes/types.i18n.test.ts` (22 modes + 6 variant cases).*
+- [x] **Locale-aware date/countdown helpers** in `lib/i18n/format.ts` with
       Type A tests proving `no` === legacy output; core-loop call-sites
-      migrated.
-- [ ] **Navigation imports migrated** in every touched file
+      migrated. *Evidence: formatTeeOffDateLocale/-TimeLocale,
+      formatShortDateWithYearLocale, formatCountdownLocale delegate to legacy
+      for 'no' (lib/i18n/format.test.ts); call-sites in (home)/page.tsx,
+      trekk-fra, slett, ScheduledWaitingRoom migrated.*
+- [x] **Navigation imports migrated** in every touched file
       (`@/i18n/navigation`), verified by grep over the phase's file set.
-- [ ] **PPR shape holds:** build output shows no route in `games/[id]`
-      losing ◐/static status vs current main.
-- [ ] MINOR version bump + CHANGELOG entry per `docs/changelog-conventions.md`
-      in the user-visible commit.
+      *Evidence: zero `from 'next/link'` in scope; redirect object-form with
+      getLocale in 14 files (commit 5225f2f + holes carry-over); notFound
+      stays next/navigation by design.*
+- [x] **PPR shape holds:** build output shows no route in `games/[id]`
+      losing ◐/static status vs current main. *Evidence: 82 ◐ routes after
+      chunk 1 (stub/catalog-only state) and 82 ◐ in the final build — stable
+      across all extraction chunks.*
+- [x] MINOR version bump + CHANGELOG entry per `docs/changelog-conventions.md`
+      in the user-visible commit. *Evidence: commit cf00d55 — v1.114.0, new
+      open 1.114.y series, 1.113.y wrapped per convention, tagline through
+      humanizer.*
 
 ## Gates (per chunk)
 
-- [ ] `npx tsc --noEmit` after every chunk.
-- [ ] Co-located `*.test.ts(x)` for changed files after every chunk.
-- [ ] `npm run build` after the shared-modules chunk, after the leaderboard
-      page chunk, and before evaluation (route-shape diff checked).
-- [ ] Full `npm run test` before evaluation.
-- [ ] `npx playwright test` (existing smoke) before evaluation.
-- [ ] Version bump + CHANGELOG in the same commit as the user-visible change;
+- [x] `npx tsc --noEmit` after every chunk.
+- [x] Co-located `*.test.ts(x)` for changed files after every chunk.
+- [x] `npm run build` after the shared-modules chunk, after the leaderboard
+      page chunk, and before evaluation (route-shape diff checked — 82 ◐
+      stable).
+- [x] Full `npm run test` before evaluation (3260/3260, post-rebase onto
+      origin/main @ 2e983d8).
+- [x] `npx playwright test` (existing smoke) before evaluation (48 passed /
+      7 env-skipped / 1 pre-existing main failure → #559).
+- [x] Version bump + CHANGELOG in the same commit as the user-visible change;
       extraction-only commits use `refactor(...)`.
 
 ## Files Likely Touched
