@@ -87,8 +87,11 @@ select cron.schedule(
   'start-scheduled-games',
   '* * * * *',
   $job$
+  -- NB: www-host, ikke apex — tornygolf.no 307-redirecter til www på
+  -- domenenivå, og pg_net følger ikke redirects (Authorization ville
+  -- uansett blitt strippet ved kryss-host-redirect). Verifisert med curl.
   select net.http_post(
-    url := 'https://tornygolf.no/api/cron/start-scheduled-games',
+    url := 'https://www.tornygolf.no/api/cron/start-scheduled-games',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
       'Authorization', 'Bearer ' || (
