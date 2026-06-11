@@ -21,6 +21,21 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#552](https://github.com/jdlarssen/golf-app/issues/552). Første synlige del av flerspråkligheten: alle innloggings- og profil-strenger hentes fra omsettbare kataloger, og det dukker opp en liten «Norsk / English»-velger på innloggingssiden og i profilinnstillingene.
 
+### [1.113.2] - 2026-06-11 · #281
+
+> Påminnelsen om at poengene kan gå i minus er borte fra hull-skjermen i modifisert stableford. Den fulle forklaringen ligger fortsatt i spillform-guiden på spill-hjem, så hull-skjermen holder seg ren mens du taster.
+
+<details>
+<summary>Teknisk</summary>
+
+[#281](https://github.com/jdlarssen/golf-app/issues/281). Fjerner `modified-stableford-banner` fra `HoleClient` etter brukerønske — påminnelsen ble vurdert som unødvendig støy på score-flaten. Den fulle minus-poeng-tabellen lever videre i format-guiden på spill-hjem.
+
+#### Removed
+- `app/[locale]/games/[id]/holes/[holeNumber]/HoleClient.tsx`: minus-poeng-banneret og den nå ubrukte `isModifiedStableford`-konstanten. `stablefordPointsFn` (som velger `computeModifiedStablefordPoints`) er uberørt.
+- `HoleClient.test.tsx`: #281-testen asserter nå at banneret IKKE rendres på hull-skjermen.
+
+</details>
+
 ### [1.113.1] - 2026-06-11 · #552
 
 > Mens du tastet scorer lå «Neste hull»-knappen delvis gjemt bak bunnmenyen. Nå skjuler bunnmenyen seg på hull-skjermen som den skal, så knappen ligger fritt nederst igjen.

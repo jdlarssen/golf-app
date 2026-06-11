@@ -338,16 +338,9 @@ describe('HoleClient — stableford-modus', () => {
   });
 });
 
-describe('HoleClient — modified stableford negativ-poeng-varsel (#281)', () => {
-  it('viser minus-poeng-banner når gameMode=modified_stableford, ikke for standard stableford', () => {
-    const { rerender } = render(
-      <HoleClient {...baseProps({ gameMode: 'modified_stableford' })} />,
-    );
-    const banner = screen.getByTestId('modified-stableford-banner');
-    expect(banner).toBeInTheDocument();
-    expect(banner.textContent).toContain('minus');
-
-    rerender(<HoleClient {...baseProps({ gameMode: 'stableford' })} />);
+describe('HoleClient — modified stableford (#281)', () => {
+  it('viser ikke lenger minus-poeng-banner på hull-skjermen', () => {
+    render(<HoleClient {...baseProps({ gameMode: 'modified_stableford' })} />);
     expect(
       screen.queryByTestId('modified-stableford-banner'),
     ).not.toBeInTheDocument();
