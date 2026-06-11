@@ -21,6 +21,21 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#546](https://github.com/jdlarssen/golf-app/issues/546). Hele matchplay-familien får skins-duellens utseende i leaderboarden: vunne hull i hver sin farge, dragkamp-stripe, én rute per hull og en dom som snakker matchplay («3&2», «2up», «AS»). Tabellen viser i tillegg stillingen etter hvert hull.
 
+### [1.110.1] - 2026-06-11 · #546
+
+> Lag-matchene har fått samme duell-visning: fourball, foursomes, greensome, chapman og gruesome viser nå lagene mot hverandre med vunne hull, dragkamp-stripe og stilling etter hvert hull.
+
+<details>
+<summary>Teknisk</summary>
+
+[#546](https://github.com/jdlarssen/golf-app/issues/546). Fourball + foursomes-familien over på duellkortet.
+
+#### Changed
+- `FourballMatchplayView.tsx`: duellkort erstatter status-banner + lag-kort; versus-panelene viser lagets spillere som sub-linjer («{navn} · HCP {effektiv}»); «Stilling»-kolonne i grid-en; meta-rad fjernet. Server-komponent nå (client-state bor i kortet).
+- `FoursomesMatchplayView.tsx`: samme — sub-linjer er spillernavn + «Lag-HCP: {kombinert} (+{extra} slag)». Greensome/chapman/gruesome rendres via samme view og arver redesignet uten egne endringer.
+
+</details>
+
 ### [1.110.0] - 2026-06-11 · #546
 
 > Resultatlista for matchplay 1 mot 1 ser nå ut som en duell: vunne hull i hver sin farge, en dragkamp-stripe som viser styrkeforholdet, én rute per hull og dommen («Kari vant 3&2»). Tabellen under forteller stillingen etter hvert hull — 1up, 2up, AS.

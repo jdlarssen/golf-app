@@ -385,8 +385,8 @@ describe('FourballMatchplayView', () => {
     });
   });
 
-  describe('match-meta', () => {
-    it('viser Spilt / Igjen / Status med korrekte tall', () => {
+  describe('stilling-kolonne (#546)', () => {
+    it('viser løpende stilling per spilt hull og «—» for uspilte, uten meta-rad', () => {
       const holes = [
         makeHole(1, {
           side1BestNet: 4,
@@ -407,11 +407,13 @@ describe('FourballMatchplayView', () => {
           })}
         />,
       );
-      const meta = screen.getByTestId('fourball-meta');
-      expect(meta.textContent).toMatch(/Spilt/);
-      expect(meta.textContent).toMatch(/Igjen/);
-      expect(meta.textContent).toMatch(/Status/);
-      expect(meta.textContent).toMatch(/1 up/);
+      expect(
+        screen.getByTestId('fourball-hole-1').textContent,
+      ).toContain('1up');
+      expect(
+        screen.getByTestId('fourball-hole-2').textContent,
+      ).toContain('—');
+      expect(screen.queryByTestId('fourball-meta')).not.toBeInTheDocument();
     });
   });
 

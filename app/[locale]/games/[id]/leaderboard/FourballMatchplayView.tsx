@@ -1,24 +1,25 @@
-'use client';
-
-import { useEffect, useState, type JSX } from 'react';
+import type { JSX } from 'react';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
-import { Medallion } from '@/components/ui/Medallion';
 import { LeaderboardBackdrop } from '@/components/illustrations/LeaderboardBackdrop';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { firstName } from '@/lib/firstName';
 import type { GameStatus } from '@/lib/games/status';
+import {
+  runningMatchStatus,
+  runningStatusLabel,
+} from '@/lib/scoring/modes/matchplayRunningStatus';
 import type {
   FourballMatchplayResult,
   FourballHoleRow,
 } from '@/lib/scoring/modes/types';
-import { ConfettiBurst } from './ConfettiBurst';
+import { MatchplayDuelCard } from './MatchplayDuelCard';
 
-// Distinkt nøkkel-prefiks slik at konfetti i fourball-podium ikke deler
-// "seen"-state med singles-matchplay-podium eller stableford-podiene.
+// Distinkt nøkkel-prefiks slik at konfetti i fourball-duellen ikke deler
+// "seen"-state med singles-matchplay eller stableford-podiene.
 const STORAGE_PREFIX = 'torny-fourball-result-confetti-seen-';
 
 /**
@@ -60,20 +61,17 @@ export interface FourballMatchplayViewProps {
 }
 
 /**
- * Match-view for fourball matchplay (issue #217). Hybrid av
- * `MatchplayMatchView` (status-banner, mat-em-feiring, konfetti) og
- * `TeamCard` (2+2-lag-gruppering). Speiler MatchplayMatchView tett for
- * konsistent UX mellom singles og fourball — eneste reelle forskjell er
- * at hver side har 2 spillere og at hull-grid-en har 6 kolonner.
+ * Match-view for fourball matchplay (issue #217, redesignet i #546). Speiler
+ * MatchplayMatchView tett for konsistent UX mellom singles og fourball —
+ * eneste reelle forskjell er at hver side har 2 spillere og at hull-grid-en
+ * viser lag-best netto med contributor-initialer.
  *
  * Layout:
- *  1. Status-banner — «{Side} leder X up» / «Lag 1 vant 3&2» / «AS»
- *  2. Lag-header — to lag-kort, hvert med 2 spillere + HCP, side1 til
- *     venstre når den leder.
- *  3. Per-hull-grid — 6 kolonner: Hull, Par, Side 1 best, Side 2 best, Vinner.
- *     Per side viser vi LAGSCORE (= lag-best netto) i hovedrad og
- *     contributor-spillerens initialer som muted underline.
- *  4. Match-meta — Spilt / Igjen / Status.
+ *  1. Duellkort (`MatchplayDuelCard`) — versus-header med hull vunnet per lag
+ *     i side-farger, dragkamp-bar, momentum-strip og dom («Lag 1 vant 3&2» /
+ *     «Lag 2 leder 2 up etter 13 hull» / «AS»). Konfetti ved avgjort vinner.
+ *  2. Per-hull-grid — Hull, Par, lag-best netto per side (med contributor-
+ *     spillerens initialer som muted underline), Vinner, løpende Stilling.
  */
 export function FourballMatchplayView({
   gameId,
@@ -85,24 +83,6 @@ export function FourballMatchplayView({
   gameStatus: _gameStatus,
   backHref = '/',
 }: FourballMatchplayViewProps): JSX.Element {
-  const [replayKey, setReplayKey] = useState(0);
-
-  const hasDecidedWinner =
-    result.result !== null && result.result.winner !== 'tied';
-
-  useEffect(() => {
-    if (!hasDecidedWinner) return;
-    const key = `${STORAGE_PREFIX}${gameId}`;
-    try {
-      if (window.sessionStorage.getItem(key) === '1') return;
-      window.sessionStorage.setItem(key, '1');
-    } catch {
-      // Fall through — fyr konfettien uansett om storage er utilgjengelig.
-    }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setReplayKey(1);
-  }, [gameId, hasDecidedWinner]);
-
   if (result.holes.length === 0) {
     return (
       <Shell>
@@ -121,6 +101,8 @@ export function FourballMatchplayView({
   }
 
   const [side1, side2] = result.sides;
+  const hasDecidedWinner =
+    result.result !== null && result.result.winner !== 'tied';
 
   return (
     <Shell>
@@ -135,47 +117,35 @@ export function FourballMatchplayView({
         </p>
       </div>
 
-      {/* 1. Status-banner */}
+      {/* 1. Duellkort — versus, dragkamp, momentum-strip, dom */}
       <div
         data-testid="fourball-status-banner"
         className="relative isolate px-3.5 pt-3 pb-2"
       >
-        {replayKey > 0 && <ConfettiBurst key={replayKey} />}
-        <StatusBanner
-          result={result}
-          side1Label={side1Label}
-          side2Label={side2Label}
+        <MatchplayDuelCard
+          gameId={gameId}
+          storagePrefix={STORAGE_PREFIX}
+          testIdPrefix="fourball"
+          sideA={{
+            label: side1Label,
+            sublines: side1.players.map((p) =>
+              playerSubline(playerInfo[p.userId], p.effectiveHandicap),
+            ),
+          }}
+          sideB={{
+            label: side2Label,
+            sublines: side2.players.map((p) =>
+              playerSubline(playerInfo[p.userId], p.effectiveHandicap),
+            ),
+          }}
+          holeResults={result.holes.map((h) => h.result)}
+          holesUp={result.holesUp}
+          holesPlayed={result.holesPlayed}
+          matchResult={result.result}
         />
       </div>
 
-      {/* 2. Lag-header — 2 lag, 2 spillere hver */}
-      <section
-        data-testid="fourball-sides"
-        className="px-3.5 pt-2 pb-1 flex flex-col gap-2"
-      >
-        <SideRow
-          sideNumber={1}
-          label={side1Label}
-          players={side1.players.map((p) => ({
-            userId: p.userId,
-            info: playerInfo[p.userId],
-            effectiveHandicap: p.effectiveHandicap,
-          }))}
-          isLeading={result.holesUp > 0}
-        />
-        <SideRow
-          sideNumber={2}
-          label={side2Label}
-          players={side2.players.map((p) => ({
-            userId: p.userId,
-            info: playerInfo[p.userId],
-            effectiveHandicap: p.effectiveHandicap,
-          }))}
-          isLeading={result.holesUp < 0}
-        />
-      </section>
-
-      {/* 3. Per-hull-grid — viser lag-best netto per side + contributor-initialer */}
+      {/* 2. Per-hull-grid — viser lag-best netto per side + contributor-initialer */}
       <section className="px-3.5 pt-4 pb-2">
         <div className="px-2 pb-2 text-center">
           <Kicker tone="muted">PER HULL</Kicker>
@@ -186,18 +156,6 @@ export function FourballMatchplayView({
           side2Label={side2Label}
           playerInfo={playerInfo}
         />
-      </section>
-
-      {/* 4. Match-meta */}
-      <section
-        data-testid="fourball-meta"
-        className="mx-4 mt-4 rounded-2xl border border-border bg-surface px-4 py-3"
-      >
-        <dl className="grid grid-cols-3 gap-2 text-center">
-          <MetaCell label="Spilt" value={result.holesPlayed.toString()} />
-          <MetaCell label="Igjen" value={result.holesRemaining.toString()} />
-          <MetaCell label="Status" value={statusLabel(result.holesUp)} />
-        </dl>
       </section>
 
       <PullQuote className="px-6 pt-4 pb-4">
@@ -221,9 +179,12 @@ function shortNameFor(info: FourballPlayerInfo | undefined): string {
   return formatRevealName(info.name, info.nickname);
 }
 
-function statusLabel(holesUp: number): string {
-  if (holesUp === 0) return 'AS';
-  return `${Math.abs(holesUp)} up`;
+/** Sub-linje i duellkortets versus-panel: «{navn} · HCP {effektiv}». */
+function playerSubline(
+  info: FourballPlayerInfo | undefined,
+  effectiveHandicap: number,
+): string {
+  return `${displayNameFor(info)} · HCP ${effectiveHandicap}`;
 }
 
 // ─── Subcomponents ───────────────────────────────────────────────────────────
@@ -261,156 +222,6 @@ function Header({
   );
 }
 
-function StatusBanner({
-  result,
-  side1Label,
-  side2Label,
-}: {
-  result: FourballMatchplayResult;
-  side1Label: string;
-  side2Label: string;
-}): JSX.Element {
-  if (result.result !== null) {
-    const r = result.result;
-    if (r.winner === 'tied') {
-      return (
-        <div
-          data-testid="fourball-banner-tied"
-          className="reveal-up"
-          style={{ animationDelay: '60ms' }}
-        >
-          <Card className="flex flex-col items-center gap-2 border-border bg-surface px-5 py-5 text-center">
-            <Kicker tone="muted">UAVGJORT</Kicker>
-            <p className="font-serif text-[22px] font-medium leading-tight tracking-[-0.01em] text-text">
-              Matchen endte AS
-            </p>
-            <p className="text-[12px] text-muted">All square etter 18 hull</p>
-          </Card>
-        </div>
-      );
-    }
-    const winnerLabel = r.winner === 'side1' ? side1Label : side2Label;
-    return (
-      <div
-        data-testid="fourball-banner-decided"
-        className="reveal-up"
-        style={{ animationDelay: '60ms' }}
-      >
-        <Card className="flex flex-col items-center gap-2 border-accent bg-accent/[0.08] px-5 py-5 text-center shadow-[0_2px_14px_rgba(201,169,97,0.18)]">
-          <Medallion place={1} size={48} title={`${winnerLabel} vant`} />
-          <Kicker tone="accent">VINNER</Kicker>
-          <p className="font-serif text-[22px] font-medium leading-tight tracking-[-0.01em] text-text">
-            {winnerLabel} vant {r.formatted}
-          </p>
-          <p className="text-[12px] text-muted tabular-nums">
-            Avgjort på hull {r.decidedAtHole}
-          </p>
-        </Card>
-      </div>
-    );
-  }
-
-  // Live: matchen er ikke avgjort ennå.
-  if (result.holesPlayed === 0) {
-    return (
-      <div
-        data-testid="fourball-banner-live"
-        className="reveal-up"
-        style={{ animationDelay: '60ms' }}
-      >
-        <Card className="flex flex-col items-center gap-2 border-border bg-surface px-5 py-5 text-center">
-          <Kicker tone="muted">LIVE</Kicker>
-          <p className="font-serif text-[20px] font-medium leading-tight tracking-[-0.01em] text-text">
-            Matchen er ikke startet ennå
-          </p>
-          <p className="text-[12px] text-muted">
-            Tabellen våkner når første hull er spilt.
-          </p>
-        </Card>
-      </div>
-    );
-  }
-
-  if (result.holesUp === 0) {
-    return (
-      <div
-        data-testid="fourball-banner-live"
-        className="reveal-up"
-        style={{ animationDelay: '60ms' }}
-      >
-        <Card className="flex flex-col items-center gap-2 border-border bg-surface px-5 py-5 text-center">
-          <Kicker tone="muted">LIVE</Kicker>
-          <p className="font-serif text-[22px] font-medium leading-tight tracking-[-0.01em] text-text tabular-nums">
-            Alt likt etter {result.holesPlayed} hull
-          </p>
-          <p className="text-[12px] text-muted">Matchen står og vipper.</p>
-        </Card>
-      </div>
-    );
-  }
-
-  const leaderLabel = result.holesUp > 0 ? side1Label : side2Label;
-  const margin = Math.abs(result.holesUp);
-  return (
-    <div
-      data-testid="fourball-banner-live"
-      className="reveal-up"
-      style={{ animationDelay: '60ms' }}
-    >
-      <Card className="flex flex-col items-center gap-2 border-border bg-surface px-5 py-5 text-center">
-        <Kicker tone="muted">LIVE</Kicker>
-        <p className="font-serif text-[22px] font-medium leading-tight tracking-[-0.01em] text-text">
-          {leaderLabel} leder <span className="tabular-nums">{margin} up</span>
-        </p>
-        <p className="text-[12px] text-muted tabular-nums">
-          Etter {result.holesPlayed} hull
-        </p>
-      </Card>
-    </div>
-  );
-}
-
-function SideRow({
-  sideNumber,
-  label,
-  players,
-  isLeading,
-}: {
-  sideNumber: 1 | 2;
-  label: string;
-  players: {
-    userId: string;
-    info: FourballPlayerInfo | undefined;
-    effectiveHandicap: number;
-  }[];
-  isLeading: boolean;
-}): JSX.Element {
-  const cardClass = isLeading ? 'border-accent/60 bg-accent/[0.05]' : '';
-  return (
-    <div data-testid={`fourball-side-${sideNumber}`}>
-      <Card className={`flex items-center gap-3.5 px-4 py-3 ${cardClass}`}>
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-surface font-serif text-[14px] font-medium uppercase tracking-[0.05em] text-muted">
-          L{sideNumber}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="font-serif text-[16px] font-medium tracking-[-0.005em] text-text truncate">
-            {label}
-          </p>
-          <ul className="mt-0.5 flex flex-col gap-0.5 text-[11.5px] text-muted tabular-nums">
-            {players.map((p) => (
-              <li key={p.userId} className="flex items-center gap-1.5">
-                <span className="truncate">{displayNameFor(p.info)}</span>
-                <span className="text-muted/70">·</span>
-                <span>HCP {p.effectiveHandicap}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
 function HoleGrid({
   holes,
   side1Label,
@@ -426,6 +237,8 @@ function HoleGrid({
   // initialer underline gross-cellen.
   const side1Short = side1Label.length > 6 ? `L1` : side1Label;
   const side2Short = side2Label.length > 6 ? `L2` : side2Label;
+  // Løpende stilling etter hvert hull (#546). Uspilte hull gir null («—»).
+  const running = runningMatchStatus(holes.map((h) => h.result));
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-surface">
       <table
@@ -464,6 +277,12 @@ function HoleGrid({
             >
               Vinner
             </th>
+            <th
+              scope="col"
+              className="px-2 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[10px] text-muted"
+            >
+              Stilling
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -471,6 +290,7 @@ function HoleGrid({
             <HoleRow
               key={hole.holeNumber}
               hole={hole}
+              runningStatus={running[i]}
               isLast={i === holes.length - 1}
               playerInfo={playerInfo}
             />
@@ -483,10 +303,12 @@ function HoleGrid({
 
 function HoleRow({
   hole,
+  runningStatus,
   isLast,
   playerInfo,
 }: {
   hole: FourballHoleRow;
+  runningStatus: number | null;
   isLast: boolean;
   playerInfo: Record<string, FourballPlayerInfo>;
 }): JSX.Element {
@@ -538,7 +360,38 @@ function HoleRow({
           </span>
         )}
       </td>
+      <StatusCell runningStatus={runningStatus} />
     </tr>
+  );
+}
+
+/**
+ * Stilling-celle: løpende match-status etter hullet, farget mot lederens
+ * side-farge (lag 1 = petrol, lag 2 = terracotta). «AS» muted ved likt,
+ * «—» for uspilte hull.
+ */
+function StatusCell({
+  runningStatus,
+}: {
+  runningStatus: number | null;
+}): JSX.Element {
+  if (runningStatus === null) {
+    return (
+      <td className="px-2 py-2 text-center tabular-nums text-muted">—</td>
+    );
+  }
+  const colorClass =
+    runningStatus > 0
+      ? 'text-player-a'
+      : runningStatus < 0
+        ? 'text-player-b'
+        : 'text-muted';
+  return (
+    <td
+      className={`px-2 py-2 text-center tabular-nums text-[11.5px] font-semibold ${colorClass}`}
+    >
+      {runningStatusLabel(runningStatus)}
+    </td>
   );
 }
 
@@ -571,24 +424,5 @@ function SideCell({
         </span>
       )}
     </span>
-  );
-}
-
-function MetaCell({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}): JSX.Element {
-  return (
-    <div className="flex flex-col items-center gap-0.5">
-      <dt className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
-        {label}
-      </dt>
-      <dd className="font-serif text-[18px] font-medium tabular-nums text-text">
-        {value}
-      </dd>
-    </div>
   );
 }

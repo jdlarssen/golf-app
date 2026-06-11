@@ -1,23 +1,24 @@
-'use client';
-
-import { useEffect, useState, type JSX } from 'react';
+import type { JSX } from 'react';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
-import { Medallion } from '@/components/ui/Medallion';
 import { LeaderboardBackdrop } from '@/components/illustrations/LeaderboardBackdrop';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import type { GameStatus } from '@/lib/games/status';
+import {
+  runningMatchStatus,
+  runningStatusLabel,
+} from '@/lib/scoring/modes/matchplayRunningStatus';
 import type {
   FoursomesMatchplayResult,
   FoursomesHoleRow,
 } from '@/lib/scoring/modes/types';
-import { ConfettiBurst } from './ConfettiBurst';
+import { MatchplayDuelCard } from './MatchplayDuelCard';
 
-// Distinkt nøkkel-prefiks slik at konfetti i foursomes-podium ikke deler
-// "seen"-state med fourball-matchplay-podium, singles-matchplay eller stableford.
+// Distinkt nøkkel-prefiks slik at konfetti i foursomes-duellen ikke deler
+// "seen"-state med fourball-matchplay, singles-matchplay eller stableford.
 const STORAGE_PREFIX = 'torny-foursomes-result-confetti-seen-';
 
 /**
@@ -65,23 +66,21 @@ export interface FoursomesMatchplayViewProps {
 
 /**
  * Match-view for foursomes-familien (foursomes_matchplay, greensome_matchplay,
- * chapman_matchplay, gruesome_matchplay — issue #291). Speiler
- * FourballMatchplayView tett, men tilpasset FoursomesMatchplayResult:
+ * chapman_matchplay, gruesome_matchplay — issue #291, redesignet i #546).
+ * Speiler MatchplayMatchView/FourballMatchplayView tett, men tilpasset
+ * FoursomesMatchplayResult:
  *
  * Forskjeller fra fourball:
  * - Én ball per side (alternate shot / greensome / chapman / gruesome-valg),
  *   ikke best-of-2. Ingen contributor-initialer.
  * - side1Net/side2Net brukes direkte (ikke side1BestNet/side2BestNet).
- * - HCP vises som lag-nivå combinedCourseHandicap + effectiveExtraHandicap,
- *   ikke per-spiller effectiveHandicap.
+ * - HCP vises som lag-nivå combinedCourseHandicap + effectiveExtraHandicap.
  * - formatLabel-prop bestemmer format-navn i sub-tittelen.
  *
  * Layout:
- *  1. Status-banner — «{Side} leder X up» / «Lag 1 vant 3&2» / «AS»
- *  2. Lag-header — to lag-kort, hvert med 2 spillere + lag-HCP, side1 til
- *     venstre når den leder.
- *  3. Per-hull-grid — 5 kolonner: Hull, Par, Side 1 netto, Side 2 netto, Vinner.
- *  4. Match-meta — Spilt / Igjen / Status.
+ *  1. Duellkort (`MatchplayDuelCard`) — versus-header med hull vunnet per lag,
+ *     dragkamp-bar, momentum-strip og dom. Konfetti ved avgjort vinner.
+ *  2. Per-hull-grid — Hull, Par, lag-netto per side, Vinner, løpende Stilling.
  */
 export function FoursomesMatchplayView({
   gameId,
@@ -94,24 +93,6 @@ export function FoursomesMatchplayView({
   gameStatus: _gameStatus,
   backHref = '/',
 }: FoursomesMatchplayViewProps): JSX.Element {
-  const [replayKey, setReplayKey] = useState(0);
-
-  const hasDecidedWinner =
-    result.result !== null && result.result.winner !== 'tied';
-
-  useEffect(() => {
-    if (!hasDecidedWinner) return;
-    const key = `${STORAGE_PREFIX}${gameId}`;
-    try {
-      if (window.sessionStorage.getItem(key) === '1') return;
-      window.sessionStorage.setItem(key, '1');
-    } catch {
-      // Fall through — fyr konfettien uansett om storage er utilgjengelig.
-    }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setReplayKey(1);
-  }, [gameId, hasDecidedWinner]);
-
   if (result.holes.length === 0) {
     return (
       <Shell>
@@ -130,6 +111,8 @@ export function FoursomesMatchplayView({
   }
 
   const [side1, side2] = result.sides;
+  const hasDecidedWinner =
+    result.result !== null && result.result.winner !== 'tied';
 
   return (
     <Shell>
@@ -144,41 +127,31 @@ export function FoursomesMatchplayView({
         </p>
       </div>
 
-      {/* 1. Status-banner */}
+      {/* 1. Duellkort — versus, dragkamp, momentum-strip, dom */}
       <div
         data-testid="foursomes-status-banner"
         className="relative isolate px-3.5 pt-3 pb-2"
       >
-        {replayKey > 0 && <ConfettiBurst key={replayKey} />}
-        <StatusBanner
-          result={result}
-          side1Label={side1Label}
-          side2Label={side2Label}
+        <MatchplayDuelCard
+          gameId={gameId}
+          storagePrefix={STORAGE_PREFIX}
+          testIdPrefix="foursomes"
+          sideA={{
+            label: side1Label,
+            sublines: sideSublines(side1, playerInfo),
+          }}
+          sideB={{
+            label: side2Label,
+            sublines: sideSublines(side2, playerInfo),
+          }}
+          holeResults={result.holes.map((h) => h.result)}
+          holesUp={result.holesUp}
+          holesPlayed={result.holesPlayed}
+          matchResult={result.result}
         />
       </div>
 
-      {/* 2. Lag-header — 2 lag, 2 spillere + lag-HCP */}
-      <section
-        data-testid="foursomes-sides"
-        className="px-3.5 pt-2 pb-1 flex flex-col gap-2"
-      >
-        <SideRow
-          sideNumber={1}
-          label={side1Label}
-          side={side1}
-          playerInfo={playerInfo}
-          isLeading={result.holesUp > 0}
-        />
-        <SideRow
-          sideNumber={2}
-          label={side2Label}
-          side={side2}
-          playerInfo={playerInfo}
-          isLeading={result.holesUp < 0}
-        />
-      </section>
-
-      {/* 3. Per-hull-grid — viser lag-netto per side */}
+      {/* 2. Per-hull-grid — viser lag-netto per side */}
       <section className="px-3.5 pt-4 pb-2">
         <div className="px-2 pb-2 text-center">
           <Kicker tone="muted">PER HULL</Kicker>
@@ -188,18 +161,6 @@ export function FoursomesMatchplayView({
           side1Label={side1Label}
           side2Label={side2Label}
         />
-      </section>
-
-      {/* 4. Match-meta */}
-      <section
-        data-testid="foursomes-meta"
-        className="mx-4 mt-4 rounded-2xl border border-border bg-surface px-4 py-3"
-      >
-        <dl className="grid grid-cols-3 gap-2 text-center">
-          <MetaCell label="Spilt" value={result.holesPlayed.toString()} />
-          <MetaCell label="Igjen" value={result.holesRemaining.toString()} />
-          <MetaCell label="Status" value={statusLabel(result.holesUp)} />
-        </dl>
       </section>
 
       <PullQuote className="px-6 pt-4 pb-4">
@@ -216,9 +177,22 @@ function displayNameFor(info: FoursomesPlayerInfo | undefined): string {
   return formatRevealName(info.name, info.nickname);
 }
 
-function statusLabel(holesUp: number): string {
-  if (holesUp === 0) return 'AS';
-  return `${Math.abs(holesUp)} up`;
+/**
+ * Sub-linjer i duellkortets versus-panel: lagets to spillere + lag-nivå
+ * HCP (kombinert CH + eventuell extra-handicap fra greensome/chapman-regler).
+ */
+function sideSublines(
+  side: FoursomesMatchplayResult['sides'][0],
+  playerInfo: Record<string, FoursomesPlayerInfo>,
+): string[] {
+  const extra =
+    side.effectiveExtraHandicap > 0
+      ? ` (+${side.effectiveExtraHandicap} slag)`
+      : '';
+  return [
+    ...side.players.map((p) => displayNameFor(playerInfo[p.userId])),
+    `Lag-HCP: ${side.combinedCourseHandicap}${extra}`,
+  ];
 }
 
 // ─── Subcomponents ───────────────────────────────────────────────────────────
@@ -256,161 +230,6 @@ function Header({
   );
 }
 
-function StatusBanner({
-  result,
-  side1Label,
-  side2Label,
-}: {
-  result: FoursomesMatchplayResult;
-  side1Label: string;
-  side2Label: string;
-}): JSX.Element {
-  if (result.result !== null) {
-    const r = result.result;
-    if (r.winner === 'tied') {
-      return (
-        <div
-          data-testid="foursomes-banner-tied"
-          className="reveal-up"
-          style={{ animationDelay: '60ms' }}
-        >
-          <Card className="flex flex-col items-center gap-2 border-border bg-surface px-5 py-5 text-center">
-            <Kicker tone="muted">UAVGJORT</Kicker>
-            <p className="font-serif text-[22px] font-medium leading-tight tracking-[-0.01em] text-text">
-              Matchen endte AS
-            </p>
-            <p className="text-[12px] text-muted">All square etter 18 hull</p>
-          </Card>
-        </div>
-      );
-    }
-    const winnerLabel = r.winner === 'side1' ? side1Label : side2Label;
-    return (
-      <div
-        data-testid="foursomes-banner-decided"
-        className="reveal-up"
-        style={{ animationDelay: '60ms' }}
-      >
-        <Card className="flex flex-col items-center gap-2 border-accent bg-accent/[0.08] px-5 py-5 text-center shadow-[0_2px_14px_rgba(201,169,97,0.18)]">
-          <Medallion place={1} size={48} title={`${winnerLabel} vant`} />
-          <Kicker tone="accent">VINNER</Kicker>
-          <p className="font-serif text-[22px] font-medium leading-tight tracking-[-0.01em] text-text">
-            {winnerLabel} vant {r.formatted}
-          </p>
-          <p className="text-[12px] text-muted tabular-nums">
-            Avgjort på hull {r.decidedAtHole}
-          </p>
-        </Card>
-      </div>
-    );
-  }
-
-  // Live: matchen er ikke avgjort ennå.
-  if (result.holesPlayed === 0) {
-    return (
-      <div
-        data-testid="foursomes-banner-live"
-        className="reveal-up"
-        style={{ animationDelay: '60ms' }}
-      >
-        <Card className="flex flex-col items-center gap-2 border-border bg-surface px-5 py-5 text-center">
-          <Kicker tone="muted">LIVE</Kicker>
-          <p className="font-serif text-[20px] font-medium leading-tight tracking-[-0.01em] text-text">
-            Matchen er ikke startet ennå
-          </p>
-          <p className="text-[12px] text-muted">
-            Tabellen våkner når første hull er spilt.
-          </p>
-        </Card>
-      </div>
-    );
-  }
-
-  if (result.holesUp === 0) {
-    return (
-      <div
-        data-testid="foursomes-banner-live"
-        className="reveal-up"
-        style={{ animationDelay: '60ms' }}
-      >
-        <Card className="flex flex-col items-center gap-2 border-border bg-surface px-5 py-5 text-center">
-          <Kicker tone="muted">LIVE</Kicker>
-          <p className="font-serif text-[22px] font-medium leading-tight tracking-[-0.01em] text-text tabular-nums">
-            Alt likt etter {result.holesPlayed} hull
-          </p>
-          <p className="text-[12px] text-muted">Matchen står og vipper.</p>
-        </Card>
-      </div>
-    );
-  }
-
-  const leaderLabel = result.holesUp > 0 ? side1Label : side2Label;
-  const margin = Math.abs(result.holesUp);
-  return (
-    <div
-      data-testid="foursomes-banner-live"
-      className="reveal-up"
-      style={{ animationDelay: '60ms' }}
-    >
-      <Card className="flex flex-col items-center gap-2 border-border bg-surface px-5 py-5 text-center">
-        <Kicker tone="muted">LIVE</Kicker>
-        <p className="font-serif text-[22px] font-medium leading-tight tracking-[-0.01em] text-text">
-          {leaderLabel} leder <span className="tabular-nums">{margin} up</span>
-        </p>
-        <p className="text-[12px] text-muted tabular-nums">
-          Etter {result.holesPlayed} hull
-        </p>
-      </Card>
-    </div>
-  );
-}
-
-function SideRow({
-  sideNumber,
-  label,
-  side,
-  playerInfo,
-  isLeading,
-}: {
-  sideNumber: 1 | 2;
-  label: string;
-  side: FoursomesMatchplayResult['sides'][0];
-  playerInfo: Record<string, FoursomesPlayerInfo>;
-  isLeading: boolean;
-}): JSX.Element {
-  const cardClass = isLeading ? 'border-accent/60 bg-accent/[0.05]' : '';
-  return (
-    <div data-testid={`foursomes-side-${sideNumber}`}>
-      <Card className={`flex items-center gap-3.5 px-4 py-3 ${cardClass}`}>
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-surface font-serif text-[14px] font-medium uppercase tracking-[0.05em] text-muted">
-          L{sideNumber}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="font-serif text-[16px] font-medium tracking-[-0.005em] text-text truncate">
-            {label}
-          </p>
-          <ul className="mt-0.5 flex flex-col gap-0.5 text-[11.5px] text-muted tabular-nums">
-            {side.players.map((p) => (
-              <li key={p.userId} className="flex items-center gap-1.5">
-                <span className="truncate">{displayNameFor(playerInfo[p.userId])}</span>
-              </li>
-            ))}
-          </ul>
-          {/* Lag-nivå HCP: kombinert CH + eventuell extra-handicap */}
-          <p className="mt-1 text-[11px] text-muted tabular-nums">
-            Lag-HCP: {side.combinedCourseHandicap}
-            {side.effectiveExtraHandicap > 0 && (
-              <span className="ml-1 text-muted/80">
-                (+{side.effectiveExtraHandicap} slag)
-              </span>
-            )}
-          </p>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
 function HoleGrid({
   holes,
   side1Label,
@@ -423,6 +242,8 @@ function HoleGrid({
   // Kompakt: vis kun lag-label i header (forkortet).
   const side1Short = side1Label.length > 6 ? `L1` : side1Label;
   const side2Short = side2Label.length > 6 ? `L2` : side2Label;
+  // Løpende stilling etter hvert hull (#546). Uspilte hull gir null («—»).
+  const running = runningMatchStatus(holes.map((h) => h.result));
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-surface">
       <table
@@ -461,6 +282,12 @@ function HoleGrid({
             >
               Vinner
             </th>
+            <th
+              scope="col"
+              className="px-2 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[10px] text-muted"
+            >
+              Stilling
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -468,6 +295,7 @@ function HoleGrid({
             <HoleRow
               key={hole.holeNumber}
               hole={hole}
+              runningStatus={running[i]}
               isLast={i === holes.length - 1}
             />
           ))}
@@ -479,9 +307,11 @@ function HoleGrid({
 
 function HoleRow({
   hole,
+  runningStatus,
   isLast,
 }: {
   hole: FoursomesHoleRow;
+  runningStatus: number | null;
   isLast: boolean;
 }): JSX.Element {
   const side1Won = hole.result === 'side1_wins';
@@ -522,7 +352,38 @@ function HoleRow({
           </span>
         )}
       </td>
+      <StatusCell runningStatus={runningStatus} />
     </tr>
+  );
+}
+
+/**
+ * Stilling-celle: løpende match-status etter hullet, farget mot lederens
+ * side-farge (lag 1 = petrol, lag 2 = terracotta). «AS» muted ved likt,
+ * «—» for uspilte hull.
+ */
+function StatusCell({
+  runningStatus,
+}: {
+  runningStatus: number | null;
+}): JSX.Element {
+  if (runningStatus === null) {
+    return (
+      <td className="px-2 py-2 text-center tabular-nums text-muted">—</td>
+    );
+  }
+  const colorClass =
+    runningStatus > 0
+      ? 'text-player-a'
+      : runningStatus < 0
+        ? 'text-player-b'
+        : 'text-muted';
+  return (
+    <td
+      className={`px-2 py-2 text-center tabular-nums text-[11.5px] font-semibold ${colorClass}`}
+    >
+      {runningStatusLabel(runningStatus)}
+    </td>
   );
 }
 
@@ -540,23 +401,4 @@ function NetCell({
     ? 'font-semibold text-score-under-fg tabular-nums'
     : 'text-text tabular-nums';
   return <span className={netClass}>{net}</span>;
-}
-
-function MetaCell({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}): JSX.Element {
-  return (
-    <div className="flex flex-col items-center gap-0.5">
-      <dt className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
-        {label}
-      </dt>
-      <dd className="font-serif text-[18px] font-medium tabular-nums text-text">
-        {value}
-      </dd>
-    </div>
-  );
 }
