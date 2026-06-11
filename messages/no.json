@@ -147,6 +147,14 @@
       "allowedFormatsLegend": "Tillatte match-formats",
       "allowedFormatsHint": "Velg hvilke spillformater som er lov i matchene. Du legger til de enkelte matchene etter cupen er opprettet.",
       "atLeastOneFormatError": "Velg minst ett match-format.",
+      "fourballAllowanceLegend": "Scoring for fourball-matches",
+      "fourballAllowanceDescription": "Styrer handicap for fourball-matches. Netto bruker en andel av hver spillers handicap, brutto teller laveste gross per hull per side.",
+      "fourballAllowanceNettoHelper": "Andel av hver spillers handicap som teller. WHS-standard for four-ball matchplay er 85.",
+      "fourballAllowanceBruttoHelper": "Ingen handicap — laveste gross-score per hull per side vinner. Vanlig format på ekte Ryder Cup.",
+      "foursomesAllowanceLegend": "Scoring for foursomes-matches",
+      "foursomesAllowanceDescription": "Styrer handicap for foursomes-matches (alternate shot). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets gross-slag uten allowance.",
+      "foursomesAllowanceNettoHelper": "Andel av differansen i lagenes summerte handicap som høyeste lag får som strokes. WHS-standard for foursomes matchplay er 50.",
+      "foursomesAllowanceBruttoHelper": "Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes.",
       "submitButton": "Opprett cup"
     },
     "sideTournaments": {

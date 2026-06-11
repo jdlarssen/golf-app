@@ -7,7 +7,7 @@
  * catalog keys are used by core-loop components that call t('modes.X').
  */
 import { describe, it, expect } from 'vitest';
-import { MODE_LABELS, type GameMode } from './types';
+import { MODE_LABELS, PLAY_STYLE_LABELS, type GameMode } from './types';
 import { formatDisplayLabel, formatDisplayLabelKey } from '@/lib/games/formatLabel';
 import type { GameModeConfig } from './types';
 import noMessages from '@/messages/no.json';
@@ -135,4 +135,22 @@ describe('formatDisplayLabel + catalog drift-guard', () => {
       expect(resolveModesCatalogKey(key)).toBe(expectedLabel);
     },
   );
+});
+
+// PLAY_STYLE_LABELS lost its last rendering consumer when FormatStyleBadge
+// migrated to the modes.playStyle catalog keys (#561). The constant stays for
+// exhaustiveness/type purposes; this guard keeps it in lockstep with the
+// catalog until it can be removed outright.
+describe('PLAY_STYLE_LABELS ↔ modes.playStyle drift-guard', () => {
+  const playStyles = Object.keys(PLAY_STYLE_LABELS) as Array<
+    keyof typeof PLAY_STYLE_LABELS
+  >;
+
+  it.each(playStyles)('%s matches catalog', (style) => {
+    const catalog = (noMessages.modes as Record<string, unknown>).playStyle as Record<
+      string,
+      string
+    >;
+    expect(PLAY_STYLE_LABELS[style]).toBe(catalog[style]);
+  });
 });

@@ -147,6 +147,14 @@
       "allowedFormatsLegend": "Allowed match formats",
       "allowedFormatsHint": "Choose which game formats are permitted in the matches. You add the individual matches after the cup is created.",
       "atLeastOneFormatError": "Choose at least one match format.",
+      "fourballAllowanceLegend": "Scoring for four-ball matches",
+      "fourballAllowanceDescription": "Controls handicaps for four-ball matches. Net uses a share of each player's handicap; gross counts the lowest gross score per hole per side.",
+      "fourballAllowanceNettoHelper": "The share of each player's handicap that counts. The WHS standard for four-ball match play is 85.",
+      "fourballAllowanceBruttoHelper": "No handicaps — the lowest gross score per hole per side wins. The usual format in the real Ryder Cup.",
+      "foursomesAllowanceLegend": "Scoring for foursomes matches",
+      "foursomesAllowanceDescription": "Controls handicaps for foursomes matches (alternate shot). Net gives the higher-handicap team a share of the difference between the teams' combined handicaps; gross counts only the team's gross strokes with no allowance.",
+      "foursomesAllowanceNettoHelper": "The share of the difference between the teams' combined handicaps that the higher team receives as strokes. The WHS standard for foursomes match play is 50.",
+      "foursomesAllowanceBruttoHelper": "No handicaps — the team's gross score per hole decides, no extra strokes.",
       "submitButton": "Create cup"
     },
     "sideTournaments": {

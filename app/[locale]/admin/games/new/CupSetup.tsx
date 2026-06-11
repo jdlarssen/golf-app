@@ -145,19 +145,19 @@ export function CupSetup({
       <AllowanceField
         fieldName="fourball_allowance_pct"
         defaultPct={85}
-        legend="Scoring for fourball-matches"
-        description="Styrer handicap for fourball-matches. Netto bruker en andel av hver spillers handicap, brutto teller laveste gross per hull per side."
-        nettoHelperText="Andel av hver spillers handicap som teller. WHS-standard for four-ball matchplay er 85."
-        bruttoHelperText="Ingen handicap — laveste gross-score per hull per side vinner. Vanlig format på ekte Ryder Cup."
+        legend={t('fourballAllowanceLegend')}
+        description={t('fourballAllowanceDescription')}
+        nettoHelperText={t('fourballAllowanceNettoHelper')}
+        bruttoHelperText={t('fourballAllowanceBruttoHelper')}
       />
 
       <AllowanceField
         fieldName="foursomes_allowance_pct"
         defaultPct={50}
-        legend="Scoring for foursomes-matches"
-        description="Styrer handicap for foursomes-matches (alternate shot). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets gross-slag uten allowance."
-        nettoHelperText="Andel av differansen i lagenes summerte handicap som høyeste lag får som strokes. WHS-standard for foursomes matchplay er 50."
-        bruttoHelperText="Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+        legend={t('foursomesAllowanceLegend')}
+        description={t('foursomesAllowanceDescription')}
+        nettoHelperText={t('foursomesAllowanceNettoHelper')}
+        bruttoHelperText={t('foursomesAllowanceBruttoHelper')}
       />
 
       <fieldset>

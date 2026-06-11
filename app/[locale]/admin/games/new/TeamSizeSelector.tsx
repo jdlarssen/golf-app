@@ -187,8 +187,7 @@ export function TeamSizeSelector({
       <div role="radiogroup" className={`mt-2 grid gap-3 ${GRID_COLS[tiles.length] ?? 'grid-cols-3'}`}>
         {tiles.map((tile) => {
           const selected = value === tile.size;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const tileTitle = t(`${tile.key}.title` as any);
+          const tileTitle = t(`${tile.key}.title` as Parameters<typeof t>[0]);
           return (
             <button
               key={tile.size}
@@ -210,8 +209,7 @@ export function TeamSizeSelector({
                 {tileTitle}
               </span>
               <span className="font-sans text-[11px] leading-snug text-muted tabular-nums">
-                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                {t(`${tile.key}.hint` as any)}
+                {t(`${tile.key}.hint` as Parameters<typeof t>[0])}
               </span>
             </button>
           );
