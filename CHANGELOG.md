@@ -21,6 +21,20 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#552](https://github.com/jdlarssen/golf-app/issues/552). Første synlige del av flerspråkligheten: alle innloggings- og profil-strenger hentes fra omsettbare kataloger, og det dukker opp en liten «Norsk / English»-velger på innloggingssiden og i profilinnstillingene.
 
+### [1.113.4] - 2026-06-11
+
+> Handlingsknappen nederst på hull-skjermen er nå selve bunn-baren: full bredde, kant-til-kant, og knappens farge går helt ned til skjermkanten. Ingen tom stripe under knappen lenger.
+
+<details>
+<summary>Teknisk</summary>
+
+Brukerønske: etter at baren ble flush (1.113.3) fylte `--surface`-bakgrunnen safe-area-stripa under den avrundede knappen — en farget stripe mellom knappen og skjermkanten. `BottomActionBar` er nå knappen selv: full-bleed, avrundet topp / flush bunn, og knappens egen farge (`--primary` / `--disabled-bg`) fyller `env(safe-area-inset-bottom)` ned til kanten.
+
+#### Changed
+- `components/hole/BottomActionBar.tsx`: fjerner `--surface`-wrapperen; `<button>`/`<SmartLink>` får bar-stilen direkte (`width: 100%`, `borderRadius: 18px 18px 0 0`, `padding-bottom: calc(17px + env(safe-area-inset-bottom))`). Knappens farge eier nå bunn-stripa.
+
+</details>
+
 ### [1.113.3] - 2026-06-11
 
 > Handlingsknappen nederst på hull-skjermen («Neste hull» / «Bekreft alle scorer» / «Lever scorekort») ligger nå helt nederst mot skjermkanten, ikke med en stripe luft under seg. Knappen holder seg klar av home-indicator-en på iPhone.
