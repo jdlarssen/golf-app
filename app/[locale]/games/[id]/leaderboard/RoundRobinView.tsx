@@ -59,9 +59,10 @@ const SLOT_LABEL: Record<number, string> = { 1: 'A', 2: 'B', 3: 'C', 4: 'D' };
 function playerLabel(
   userId: string,
   playersById: Map<string, RoundRobinPlayerInfo>,
+  fallback: string,
 ): string {
   const info = playersById.get(userId);
-  return info ? formatRevealName(info.name, info.nickname) : '(ukjent)';
+  return info ? formatRevealName(info.name, info.nickname) : fallback;
 }
 
 /**
@@ -290,6 +291,7 @@ function SegmentRow({
   playersById: Map<string, RoundRobinPlayerInfo>;
 }) {
   const t = useTranslations('leaderboard');
+  const tc = useTranslations('leaderboard.common');
 
   const SEGMENT_HOLES: Record<1 | 2 | 3, string> = {
     1: t('roundRobin.segmentHoles1'),
@@ -297,9 +299,9 @@ function SegmentRow({
     3: t('roundRobin.segmentHoles3'),
   };
 
-  const partnerName = playerLabel(seg.partnerUserId, playersById);
+  const partnerName = playerLabel(seg.partnerUserId, playersById, tc('unknownPlayer'));
   const oppNames = seg.opponentUserIds
-    .map((id) => playerLabel(id, playersById))
+    .map((id) => playerLabel(id, playersById, tc('unknownPlayer')))
     .join(' + ');
   const holeLabel = SEGMENT_HOLES[seg.segment as 1 | 2 | 3] ?? `Seg ${seg.segment}`;
 

@@ -146,6 +146,7 @@ function HoleCard({
   playersById: Map<string, AceyDeuceyPlayerInfo>;
 }) {
   const t = useTranslations('leaderboard');
+  const tc = useTranslations('leaderboard.common');
   // Scoret hull: rangér på effective-score ASC (ace øverst, deuce nederst).
   // Uferdig hull: behold ctx.players-rekkefølge (ingen meningsfull rangering).
   const rows: AdCell[] = hole.scored
@@ -168,7 +169,7 @@ function HoleCard({
               {t('common.hullNumber', { number: hole.holeNumber })}
             </span>
             <span className="text-[10.5px] tabular-nums text-muted">
-              Par {hole.par} · SI {hole.strokeIndex}
+              {tc('parSiChip', { par: hole.par, si: hole.strokeIndex })}
             </span>
           </div>
           {!hole.scored && (

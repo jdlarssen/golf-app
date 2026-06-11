@@ -51,6 +51,7 @@ export function SoloStrokeplayHolesView({
   gameStatus,
 }: SoloStrokeplayHolesViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
+  const tc = useTranslations('leaderboard.common');
   const isRevealHidden =
     scoreVisibility === 'reveal' && gameStatus !== 'finished';
 
@@ -97,16 +98,16 @@ export function SoloStrokeplayHolesView({
       <div className="flex flex-col gap-6 px-3.5 pt-4 pb-3.5">
         <NineBlock
           testId="solo-strokeplay-holes-front9"
-          heading="Ut"
-          subheading="Hull 1–9"
+          heading={tc('nineHeadingFront')}
+          subheading={tc('nineSubFront')}
           holes={frontHoles}
           rankedIds={rankedIds}
           playersById={playersById}
         />
         <NineBlock
           testId="solo-strokeplay-holes-back9"
-          heading="Inn"
-          subheading="Hull 10–18"
+          heading={tc('nineHeadingBack')}
+          subheading={tc('nineSubBack')}
           holes={backHoles}
           rankedIds={rankedIds}
           playersById={playersById}
@@ -328,6 +329,7 @@ function HoleCard({
   playersById: Map<string, SoloStrokeplayPlayerInfo>;
 }) {
   const t = useTranslations('leaderboard');
+  const tc = useTranslations('leaderboard.common');
   const scored = hole.bestUserIds.length > 0;
   const uniqueWinnerId =
     hole.bestUserIds.length === 1 ? hole.bestUserIds[0] : null;
@@ -342,10 +344,10 @@ function HoleCard({
         <div className="flex items-baseline justify-between gap-3">
           <div className="flex items-baseline gap-2">
             <span className="font-serif text-[15px] font-medium tabular-nums text-text">
-              Hull {hole.holeNumber}
+              {tc('hullNumber', { number: hole.holeNumber })}
             </span>
             <span className="text-[10.5px] tabular-nums text-muted">
-              Par {hole.par} · SI {hole.strokeIndex}
+              {tc('parSiChip', { par: hole.par, si: hole.strokeIndex })}
             </span>
           </div>
           {!scored && <span className="text-[10.5px] text-muted/70">{t('common.venter')}</span>}

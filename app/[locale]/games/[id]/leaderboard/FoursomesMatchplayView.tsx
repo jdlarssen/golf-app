@@ -141,11 +141,11 @@ export function FoursomesMatchplayView({
           testIdPrefix="foursomes"
           sideA={{
             label: side1Label,
-            sublines: sideSublines(side1, playerInfo, t),
+            sublines: sideSublines(side1, playerInfo, t, tc('unknownPlayerFull')),
           }}
           sideB={{
             label: side2Label,
-            sublines: sideSublines(side2, playerInfo, t),
+            sublines: sideSublines(side2, playerInfo, t, tc('unknownPlayerFull')),
           }}
           holeResults={result.holes.map((h) => h.result)}
           holesUp={result.holesUp}
@@ -176,8 +176,8 @@ export function FoursomesMatchplayView({
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function displayNameFor(info: FoursomesPlayerInfo | undefined): string {
-  if (!info) return '(ukjent spiller)';
+function displayNameFor(info: FoursomesPlayerInfo | undefined, fallback: string): string {
+  if (!info) return fallback;
   return formatRevealName(info.name, info.nickname);
 }
 
@@ -189,13 +189,14 @@ function sideSublines(
   side: FoursomesMatchplayResult['sides'][0],
   playerInfo: Record<string, FoursomesPlayerInfo>,
   t: ReturnType<typeof useTranslations<'leaderboard'>>,
+  fallback: string,
 ): string[] {
   const extra =
     side.effectiveExtraHandicap > 0
       ? t('matchplay.extraHandicap', { n: side.effectiveExtraHandicap })
       : '';
   return [
-    ...side.players.map((p) => displayNameFor(playerInfo[p.userId])),
+    ...side.players.map((p) => displayNameFor(playerInfo[p.userId], fallback)),
     t('matchplay.lagHCP', { hcp: side.combinedCourseHandicap, extra }),
   ];
 }
@@ -220,11 +221,12 @@ function Header({
   gameName: string;
   backHref: string;
 }) {
+  const tc = useTranslations('leaderboard.common');
   return (
     <header className="mb-2 flex items-center justify-between gap-4">
       <SmartLink
         href={backHref}
-        aria-label="Tilbake"
+        aria-label={tc('backAriaLabel')}
         className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
       >
         ‹

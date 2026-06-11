@@ -540,7 +540,14 @@
       "hullForHullRevealSub": "Hole by hole opens when the admin ends the round.",
       "leaderboardHeading": "Leaderboard",
       "teamLeaderboardHeading": "Team leaderboard",
-      "hullNumber": "Hole {number}"
+      "hullNumber": "Hole {number}",
+      "parSiChip": "Par {par} · SI {si}",
+      "podiumKicker": "PODIUM",
+      "nineHeadingFront": "Out",
+      "nineHeadingBack": "In",
+      "nineSubFront": "Holes 1–9",
+      "nineSubBack": "Holes 10–18",
+      "winnerFallback": "Winner"
     },
     "tabs": {
       "tablistAriaLabel": "Leaderboard tab",

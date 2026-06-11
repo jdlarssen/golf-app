@@ -317,6 +317,7 @@ function HoleRow({
   playersById: Map<string, ShamblePlayerInfo>;
 }) {
   const t = useTranslations('leaderboard');
+  const tc = useTranslations('leaderboard.common');
   return (
     <li
       className="list-none"
@@ -327,10 +328,10 @@ function HoleRow({
         <div className="flex items-baseline justify-between gap-3">
           <div className="flex items-baseline gap-2">
             <span className="font-serif text-[15px] font-medium tabular-nums text-text">
-              Hull {hole.holeNumber}
+              {tc('hullNumber', { number: hole.holeNumber })}
             </span>
             <span className="text-[10.5px] tabular-nums text-muted">
-              Par {hole.par} · SI {hole.strokeIndex}
+              {tc('parSiChip', { par: hole.par, si: hole.strokeIndex })}
             </span>
           </div>
         </div>

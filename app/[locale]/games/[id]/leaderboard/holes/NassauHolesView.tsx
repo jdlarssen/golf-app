@@ -136,11 +136,12 @@ function Shell({ children }: { children: React.ReactNode }) {
 }
 
 function Header({ gameName, gameId }: { gameName: string; gameId: string }) {
+  const tc = useTranslations('leaderboard.common');
   return (
     <header className="mb-2 flex items-center justify-between gap-4">
       <SmartLink
         href={`/games/${gameId}`}
-        aria-label="Tilbake"
+        aria-label={tc('backAriaLabel')}
         className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
       >
         ‹
@@ -165,6 +166,7 @@ function UnitsHeader({
   playersById: Map<string, NassauPlayerInfo>;
   t: ReturnType<typeof useTranslations<'leaderboard'>>;
 }) {
+  const tc = useTranslations('leaderboard.common');
   return (
     <div className="px-3.5">
       <Card className="flex flex-col gap-2 px-4 py-3">
@@ -179,7 +181,7 @@ function UnitsHeader({
             const info = playersById.get(line.userId);
             const name = info
               ? formatRevealName(info.name, info.nickname)
-              : '(ukjent spiller)';
+              : tc('unknownPlayerFull');
             const isLeader = line.rank === 1 && line.tiedWith.length === 0;
             return (
               <li
@@ -250,6 +252,7 @@ function SectionBlock({
   playersById: Map<string, NassauPlayerInfo>;
   t: ReturnType<typeof useTranslations<'leaderboard'>>;
 }) {
+  const tc = useTranslations('leaderboard.common');
   const cleanWinnerId =
     !section.isPending && section.winnerUserIds.length === 1
       ? section.winnerUserIds[0]
@@ -272,7 +275,7 @@ function SectionBlock({
             data-testid={`${testId}-winner`}
             className="rounded-full border border-accent/40 bg-accent/[0.08] px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-accent"
           >
-            ★ {winnerLabel(cleanWinnerId, playersById)}
+            ★ {winnerLabel(cleanWinnerId, playersById, tc('winnerFallback'))}
           </span>
         )}
         {isPush && (
@@ -310,6 +313,7 @@ function SummaryStrip({
   section: NassauSection;
   playersById: Map<string, NassauPlayerInfo>;
 }) {
+  const tc = useTranslations('leaderboard.common');
   // Laveste effective-sum blant spillere som faktisk har spilt hull. Brukes til
   // live-leder-highlight når seksjonen ikke er avgjort ennå.
   const playedTotals = section.players
@@ -326,7 +330,7 @@ function SummaryStrip({
         const info = playersById.get(line.userId);
         const name = info
           ? formatRevealName(info.name, info.nickname)
-          : '(ukjent)';
+          : tc('unknownPlayer');
         const isLeader =
           line.holesPlayed > 0 && line.totalEffectiveStrokes === leaderTotal;
         return (
@@ -364,6 +368,7 @@ function HoleCard({
   playersById: Map<string, NassauPlayerInfo>;
   t: ReturnType<typeof useTranslations<'leaderboard'>>;
 }) {
+  const tc = useTranslations('leaderboard.common');
   const scored = hole.bestUserIds.length > 0;
   // Champagne kun ved en utvetydig hull-vinner. Delt lavest netto = nøytralt.
   const uniqueWinnerId =
@@ -383,10 +388,10 @@ function HoleCard({
         <div className="flex items-baseline justify-between gap-3">
           <div className="flex items-baseline gap-2">
             <span className="font-serif text-[15px] font-medium tabular-nums text-text">
-              Hull {hole.holeNumber}
+              {tc('hullNumber', { number: hole.holeNumber })}
             </span>
             <span className="text-[10.5px] tabular-nums text-muted">
-              Par {hole.par} · SI {hole.strokeIndex}
+              {tc('parSiChip', { par: hole.par, si: hole.strokeIndex })}
             </span>
           </div>
           {!scored && <span className="text-[10.5px] text-muted/70">{t('nassau.hullVenter')}</span>}
@@ -397,7 +402,7 @@ function HoleCard({
             const info = playersById.get(cell.userId);
             const name = info
               ? formatRevealName(info.name, info.nickname)
-              : '(ukjent spiller)';
+              : tc('unknownPlayerFull');
             const isBest = cell.userId === uniqueWinnerId;
             return (
               <li
@@ -451,6 +456,7 @@ function TotalBlock({
   playersById: Map<string, NassauPlayerInfo>;
   t: ReturnType<typeof useTranslations<'leaderboard'>>;
 }) {
+  const tc = useTranslations('leaderboard.common');
   const cleanWinnerId =
     !section.isPending && section.winnerUserIds.length === 1
       ? section.winnerUserIds[0]
@@ -469,7 +475,7 @@ function TotalBlock({
         </div>
         {cleanWinnerId && (
           <span className="rounded-full border border-accent/40 bg-accent/[0.08] px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-accent">
-            ★ {winnerLabel(cleanWinnerId, playersById)}
+            ★ {winnerLabel(cleanWinnerId, playersById, tc('winnerFallback'))}
           </span>
         )}
       </header>
@@ -481,7 +487,8 @@ function TotalBlock({
 function winnerLabel(
   userId: string,
   playersById: Map<string, NassauPlayerInfo>,
+  fallback: string,
 ): string {
   const info = playersById.get(userId);
-  return info ? formatRevealName(info.name, info.nickname) : 'Vinner';
+  return info ? formatRevealName(info.name, info.nickname) : fallback;
 }

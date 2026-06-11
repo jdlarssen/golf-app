@@ -318,14 +318,14 @@ function HoleRow({
   const aceName = hole.aceUserId
     ? (() => {
         const info = playersById.get(hole.aceUserId);
-        return info ? formatRevealName(info.name, info.nickname) : '(ukjent)';
+        return info ? formatRevealName(info.name, info.nickname) : t('common.unknownPlayer');
       })()
     : null;
 
   const deuceName = hole.deuceUserId
     ? (() => {
         const info = playersById.get(hole.deuceUserId);
-        return info ? formatRevealName(info.name, info.nickname) : '(ukjent)';
+        return info ? formatRevealName(info.name, info.nickname) : t('common.unknownPlayer');
       })()
     : null;
 

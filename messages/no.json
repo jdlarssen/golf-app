@@ -540,7 +540,14 @@
       "hullForHullRevealSub": "Hull for hull åpnes når admin avslutter spillet.",
       "leaderboardHeading": "Leaderboard",
       "teamLeaderboardHeading": "Lag-leaderboard",
-      "hullNumber": "Hull {number}"
+      "hullNumber": "Hull {number}",
+      "parSiChip": "Par {par} · SI {si}",
+      "podiumKicker": "PODIUM",
+      "nineHeadingFront": "Ut",
+      "nineHeadingBack": "Inn",
+      "nineSubFront": "Hull 1–9",
+      "nineSubBack": "Hull 10–18",
+      "winnerFallback": "Vinner"
     },
     "tabs": {
       "tablistAriaLabel": "Leaderboard-fane",

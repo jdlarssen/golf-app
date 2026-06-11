@@ -228,6 +228,7 @@ function HoleCard({
   playersById: Map<string, RoundRobinPlayerInfo>;
 }) {
   const t = useTranslations('leaderboard');
+  const tc = useTranslations('leaderboard.common');
   const chip = outcomeChip(hole.result, t);
 
   return (
@@ -243,7 +244,7 @@ function HoleCard({
               {t('common.hullNumber', { number: hole.holeNumber })}
             </span>
             <span className="text-[10.5px] tabular-nums text-muted">
-              Par {hole.par} · SI {hole.strokeIndex}
+              {tc('parSiChip', { par: hole.par, si: hole.strokeIndex })}
             </span>
           </div>
           {chip && (

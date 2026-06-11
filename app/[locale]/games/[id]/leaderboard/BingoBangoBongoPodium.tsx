@@ -85,7 +85,7 @@ export function BingoBangoBongoPodium({
       <Header gameName={gameName} backHref={backHref} />
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
-        <Kicker tone="accent">PODIUM</Kicker>
+        <Kicker tone="accent">{t('common.podiumKicker')}</Kicker>
         <h1 className="mt-2 font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
           {t('common.winnerAnnounced')}
         </h1>

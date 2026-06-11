@@ -207,11 +207,12 @@ function Header({
   gameName: string;
   backHref: string;
 }) {
+  const tc = useTranslations('leaderboard.common');
   return (
     <header className="mb-2 flex items-center justify-between gap-4">
       <SmartLink
         href={backHref}
-        aria-label="Tilbake"
+        aria-label={tc('backAriaLabel')}
         className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
       >
         ‹
@@ -243,6 +244,7 @@ function SectionBlock({
   playersById: Map<string, NassauPlayerInfo>;
   t: ReturnType<typeof useTranslations<'leaderboard'>>;
 }) {
+  const tc = useTranslations('leaderboard.common');
   const hasCleanWinner =
     !section.isPending && section.winnerUserIds.length === 1;
   const hasPushWinner =
@@ -290,7 +292,7 @@ function SectionBlock({
             const info = playersById.get(line.userId);
             const displayName = info
               ? formatRevealName(info.name, info.nickname)
-              : '(ukjent spiller)';
+              : tc('unknownPlayerFull');
             const isWinnerHighlight =
               hasCleanWinner && section.winnerUserIds[0] === line.userId;
 

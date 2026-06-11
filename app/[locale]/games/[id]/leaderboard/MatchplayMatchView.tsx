@@ -116,8 +116,8 @@ export function MatchplayMatchView({
   const side1Info = playerInfo[side1.userId];
   const side2Info = playerInfo[side2.userId];
 
-  const side1Name = displayNameFor(side1Info);
-  const side2Name = displayNameFor(side2Info);
+  const side1Name = displayNameFor(side1Info, tc('unknownPlayerFull'));
+  const side2Name = displayNameFor(side2Info, tc('unknownPlayerFull'));
 
   const hasDecidedWinner =
     result.result !== null && result.result.winner !== 'tied';
@@ -187,8 +187,8 @@ export function MatchplayMatchView({
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function displayNameFor(info: MatchplayPlayerInfo | undefined): string {
-  if (!info) return '(ukjent spiller)';
+function displayNameFor(info: MatchplayPlayerInfo | undefined, fallback: string): string {
+  if (!info) return fallback;
   return formatRevealName(info.name, info.nickname);
 }
 
@@ -225,11 +225,12 @@ function Header({
   gameName: string;
   backHref: string;
 }) {
+  const tc = useTranslations('leaderboard.common');
   return (
     <header className="mb-2 flex items-center justify-between gap-4">
       <SmartLink
         href={backHref}
-        aria-label="Tilbake"
+        aria-label={tc('backAriaLabel')}
         className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
       >
         ‹

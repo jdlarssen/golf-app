@@ -91,7 +91,7 @@ export function SkinsPodium({
       <Header gameName={gameName} backHref={backHref} />
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
-        <Kicker tone="accent">PODIUM</Kicker>
+        <Kicker tone="accent">{t('common.podiumKicker')}</Kicker>
         <h1 className="mt-2 font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
           {t('skins.skinsWinnerKronet')}
         </h1>
@@ -155,7 +155,7 @@ export function SkinsPodium({
             const info = playersById.get(player.userId);
             const displayName = info
               ? formatRevealName(info.name, info.nickname)
-              : '(ukjent spiller)';
+              : t('common.unknownPlayerFull');
             return (
               <li key={player.userId} className="list-none">
                 <div className="flex items-center gap-3.5 rounded-2xl border border-border bg-surface px-4 py-3">
@@ -208,11 +208,12 @@ function Header({
   gameName: string;
   backHref: string;
 }) {
+  const tc = useTranslations('leaderboard.common');
   return (
     <header className="mb-2 flex items-center justify-between gap-4">
       <SmartLink
         href={backHref}
-        aria-label="Tilbake"
+        aria-label={tc('backAriaLabel')}
         className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
       >
         ‹
@@ -255,7 +256,7 @@ function PodiumStep({
 }) {
   const displayName = playerInfo
     ? formatRevealName(playerInfo.name, playerInfo.nickname)
-    : '(ukjent spiller)';
+    : t('common.unknownPlayerFull');
 
   const tierClass = TIER_ACCENT[tier];
   const heightClass = TIER_HEIGHTS[tier];

@@ -79,13 +79,15 @@ export function FourballMatchplayView({
   gameName,
   result,
   playerInfo,
-  side1Label = 'Lag 1',
-  side2Label = 'Lag 2',
+  side1Label: side1LabelProp,
+  side2Label: side2LabelProp,
   gameStatus: _gameStatus,
   backHref = '/',
 }: FourballMatchplayViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const tc = useTranslations('leaderboard.common');
+  const side1Label = side1LabelProp ?? tc('teamLabel', { number: 1 });
+  const side2Label = side2LabelProp ?? tc('teamLabel', { number: 2 });
 
   if (result.holes.length === 0) {
     return (
@@ -132,13 +134,13 @@ export function FourballMatchplayView({
           sideA={{
             label: side1Label,
             sublines: side1.players.map((p) =>
-              playerSubline(playerInfo[p.userId], p.effectiveHandicap),
+              playerSubline(playerInfo[p.userId], p.effectiveHandicap, tc('unknownPlayerFull')),
             ),
           }}
           sideB={{
             label: side2Label,
             sublines: side2.players.map((p) =>
-              playerSubline(playerInfo[p.userId], p.effectiveHandicap),
+              playerSubline(playerInfo[p.userId], p.effectiveHandicap, tc('unknownPlayerFull')),
             ),
           }}
           holeResults={result.holes.map((h) => h.result)}
@@ -171,8 +173,8 @@ export function FourballMatchplayView({
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function displayNameFor(info: FourballPlayerInfo | undefined): string {
-  if (!info) return '(ukjent spiller)';
+function displayNameFor(info: FourballPlayerInfo | undefined, fallback: string): string {
+  if (!info) return fallback;
   return formatRevealName(info.name, info.nickname);
 }
 
@@ -187,8 +189,9 @@ function shortNameFor(info: FourballPlayerInfo | undefined): string {
 function playerSubline(
   info: FourballPlayerInfo | undefined,
   effectiveHandicap: number,
+  fallback: string,
 ): string {
-  return `${displayNameFor(info)} · HCP ${effectiveHandicap}`;
+  return `${displayNameFor(info, fallback)} · HCP ${effectiveHandicap}`;
 }
 
 // ─── Subcomponents ───────────────────────────────────────────────────────────
@@ -211,11 +214,12 @@ function Header({
   gameName: string;
   backHref: string;
 }) {
+  const tc = useTranslations('leaderboard.common');
   return (
     <header className="mb-2 flex items-center justify-between gap-4">
       <SmartLink
         href={backHref}
-        aria-label="Tilbake"
+        aria-label={tc('backAriaLabel')}
         className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
       >
         ‹
