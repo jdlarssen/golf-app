@@ -101,3 +101,16 @@ Begge er rene polish-observasjoner som naturlig fanges i den utsatte Vercel-prev
 Seks av syv success-kriterier er PASS ved selvstendig kodelesing; det syvende er korrekt klassifisert som DEFERRED (dark-mode kode-PASS, 380px-render utsatt til preview slik kontrakten eksplisitt tillater). Gates jeg kjørte er grønne (tsc EXIT 0, 991/991 scoped tester). Out-of-Scope er respektert til punkt og prikke. Server/client-grensen er trygg: viewene mistet `'use client'` men har null gjenværende hooks/event-handlers/`window`/`sessionStorage` (kun JSDoc-omtaler), og all interaktivitet bor i `MatchplayDuelCard` som beholder `'use client'`. Konfetti-nøkkelen er bit-identisk med før, så ingen «seen»-regresjon. De to funnene er rene NITs som dekkes av den planlagte preview-sjekken.
 
 **ACCEPT** — klar for Vercel-preview-verifisering (dark-mode + 380px) og deretter merge.
+
+---
+
+## Live prod-verifisering (2026-06-11, etter merge av PR #547)
+
+Verifisert på tornygolf.no via Claude in Chrome mot eneste matchplay-spill i prod («Byneset North 10. juni», singles, ferdigspilt 18 hull):
+
+- **Duellkort rendrer korrekt i dark mode:** ★ + «Karl "Jussa"» 8 HULL VUNNET (petrol) mot «Jørgen "J"» 6 HULL VUNNET (terracotta), HCP-sub-linjer, dragkamp-bar proporsjonert 8:6, momentum-strip med alle 18 celler i riktig sekvens (4 grå delte + 8 petrol + 6 terracotta), tegnforklaring, dom «VINNER / Karl "Jussa" vant 2up / Avgjort på hull 18».
+- **Stilling-kolonnen:** full sekvens AS → 1up(S2, terracotta) → AS → 1up → 2up → 3up → 4up → 5up → 4up → 5up → 5up → 6up → 5up → 5up → 4up → 3up → 3up → **2up** — ender nøyaktig på dommens «2up». Farge følger leder (terracotta da side 2 ledet, petrol resten).
+- **Ingen horisontal overflow:** `document.documentElement.scrollWidth === window.innerWidth`. Innholdskolonnen (AppShell) er ~408px bred — kortet 408px, tabellen 378px, dvs. reell mobil-bredde. C7 (DEFERRED) er dermed lukket for dark mode + smal bredde.
+- Merk: første screenshot fanget reveal-up-animasjonen midt i stagger (kort/celler så tomme ut) — DOM-inspeksjon bekreftet opacity 1 og korrekte computed backgrounds; neste screenshot viste alt.
+
+C7: DEFERRED → **PASS**.
