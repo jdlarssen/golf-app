@@ -136,6 +136,30 @@ export function peersForApproval(
 }
 
 /**
+ * True når spillet er et kandidat for flight-inndeling via admin-UI og
+ * venteroms-velgeren. Betingelser:
+ *   1. Solo-format (ikke lag, ikke matchplay) med team_size = 1.
+ *   2. Ikke wolf (wolf = alltid én gruppe, håndteres av isSingleFlightGame).
+ *   3. Status scheduled ELLER active (inndeling kan justeres på banen).
+ *   4. Aktive spillere > 4 (ellers er vi én-flight og trenger ingen inndeling).
+ *
+ * Brukes av admin-siden, venterommet og actions for at UI og guards deler
+ * én sannhetskilde.
+ */
+export function eligibleForFlightAssignment(
+  gameMode: GameMode,
+  players: FlightPlayer[],
+): boolean {
+  // Wolf er alltid én gruppe — ingen inndeling
+  if (gameMode === 'wolf') return false;
+  // Vi gater bare på >4 aktive, ikke på solo-format: lag/matchplay-formater
+  // er alltid ≤4 aktive i praksis (begge sider + begge lag = maks 8 best-ball,
+  // men matchplay ≤4, lag ≤4 per flight satt av validatoren).
+  // isSingleFlightGame vil returnere true for dem og blokkerer.
+  return !isSingleFlightGame(gameMode, players);
+}
+
+/**
  * Grupperer aktive spillere i en Map keyed på flight_number, pluss en
  * `unassigned`-liste for spillere uten flight. Trukkede ekskluderes.
  *

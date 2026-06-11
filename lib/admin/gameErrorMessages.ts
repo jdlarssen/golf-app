@@ -142,6 +142,15 @@ export const ERROR_MESSAGES_EXISTING_GAME: Record<string, string> = {
   // #543: store solo-spill (>4 aktive) krever flight-inndeling før start.
   unassigned_flights:
     'Spillerne er ikke fordelt i flighter ennå. Del inn flightene før spillet kan startes.',
+  // #543: flight-kapasitetsgrense nådd ved per-spiller-justering.
+  flight_full:
+    'Den valgte flighten er full (maks 4 spillere). Velg en annen flight.',
+  // #543: prøvde å stenge påmelding på et ikke-planlagt spill.
+  signups_not_scheduled:
+    'Kun planlagte spill kan stenge eller gjenåpne påmeldingen.',
+  // #543: bad flight number
+  bad_flight:
+    'Ugyldig flight-nummer. Velg en positiv flight fra listen.',
 };
 
 /**

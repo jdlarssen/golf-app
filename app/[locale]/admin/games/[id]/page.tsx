@@ -39,7 +39,6 @@ import {
   endGame,
   reopenScorecard,
   reopenGame,
-  adminWithdrawPlayer,
   adminUndoWithdraw,
 } from './actions';
 import {
@@ -54,6 +53,12 @@ import { formatShortDateNb } from '@/lib/format/date';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
 import { InviteToGameSection } from './InviteToGameSection';
 import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
+import { FlighterSeksjon } from './FlighterSeksjon';
+import {
+  eligibleForFlightAssignment,
+  type FlightPlayer,
+} from '@/lib/games/flightScope';
+import { toggleSignupsClosed } from './flightActions';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -82,6 +87,11 @@ const STATUS_BANNERS: Record<string, string> = {
   invite_sent: '✓ Invitasjon sendt.',
   player_withdrawn: '✓ Spilleren er trukket fra rangeringen.',
   player_reinstated: '✓ Spilleren er gjeninnsatt i rangeringen.',
+  // #543
+  flight_suggested: '✓ Inndeling er foreslått og lagret.',
+  flight_updated: '✓ Spillerens flight er oppdatert.',
+  signups_closed: '✓ Påmeldingen er stengt. Nye søknader avvises.',
+  signups_reopened: '✓ Påmeldingen er gjenåpnet.',
 };
 
 function first(value: string | string[] | undefined): string | undefined {
@@ -127,6 +137,8 @@ type GameRow = {
   registration_mode: 'invite_only' | 'manual_approval' | 'open';
   registration_type: 'solo' | 'team' | 'both';
   short_id: string;
+  // #543: arrangøren kan stenge påmeldingen manuelt.
+  signups_closed_at: string | null;
   courses: { name: string } | null;
   tee_boxes: (TeeBoxRatings & { name: string }) | null;
 };
@@ -205,7 +217,7 @@ export default async function GameDetailPage({
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, status, game_mode, mode_config, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, registration_mode, registration_type, short_id, courses(name), tee_boxes(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
+      'id, name, status, game_mode, mode_config, hcp_allowance_pct, require_peer_approval, course_id, tee_box_id, started_at, ended_at, scheduled_tee_off_at, created_at, side_tournament_enabled, side_ld_count, side_ctp_count, registration_mode, registration_type, short_id, signups_closed_at, courses(name), tee_boxes(name, slope_mens, course_rating_mens, par_total_mens, slope_ladies, course_rating_ladies, par_total_ladies, slope_juniors, course_rating_juniors, par_total_juniors)',
     )
     .eq('id', id)
     .single<GameRow>();
@@ -537,6 +549,47 @@ async function PlayersSections({
         selfRegisteredCount={players.length}
       />
 
+      {/* #543: Steng påmelding — kun scheduled + open/manual_approval. */}
+      {game.status === 'scheduled' &&
+        (game.registration_mode === 'open' ||
+          game.registration_mode === 'manual_approval') && (
+          <SectionCard ribbon="Administrer påmelding">
+            <div className="px-3.5 pb-3.5 pt-3">
+              {game.signups_closed_at ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted">
+                    Påmeldingen er stengt. Spillerne ser en melding om at
+                    arrangøren gjør siste justeringer.
+                  </p>
+                  <form action={toggleSignupsClosed.bind(null, gameId, false)}>
+                    <button
+                      type="submit"
+                      className="block w-full min-h-[44px] rounded-full border border-border bg-surface px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-surface-2"
+                    >
+                      Gjenåpne påmeldingen
+                    </button>
+                  </form>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted">
+                    Steng påmeldingen mens du gjør de siste justeringene.
+                    Spillere som prøver å melde seg på, får beskjed om å vente.
+                  </p>
+                  <form action={toggleSignupsClosed.bind(null, gameId, true)}>
+                    <button
+                      type="submit"
+                      className="block w-full min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover dark:text-bg"
+                    >
+                      Steng påmeldingen
+                    </button>
+                  </form>
+                </div>
+              )}
+            </div>
+          </SectionCard>
+        )}
+
       {/* Card 2 — Format */}
       <SectionCard ribbon="Format">
         <Row label="Spillform" value={modeLabel} />
@@ -705,6 +758,32 @@ async function PlayersSections({
           </ul>
         </SectionCard>
       )}
+
+      {/* #543: Flighter-seksjon for solo-spill >4 aktive — scheduled og active.
+          eligibleForFlightAssignment er den delte sannhetskilden for om seksjonen
+          vises, slik at admin-UI og start-vakten holder seg i sync. */}
+      {(() => {
+        if (game.status !== 'scheduled' && game.status !== 'active') return null;
+        const flightPlayers: FlightPlayer[] = players.map((p) => ({
+          user_id: p.user_id,
+          flight_number: p.flight_number,
+          withdrawn_at: p.withdrawn_at,
+        }));
+        if (!eligibleForFlightAssignment(game.game_mode, flightPlayers)) return null;
+        const activePlayers = flightPlayers.filter((p) => !p.withdrawn_at);
+        return (
+          <FlighterSeksjon
+            gameId={gameId}
+            players={activePlayers.map((p) => ({
+              user_id: p.user_id,
+              displayName: displayName(
+                players.find((r) => r.user_id === p.user_id)!,
+              ),
+              flight_number: p.flight_number,
+            }))}
+          />
+        );
+      })()}
 
       {players.length > 0 && (
         <SectionCard ribbon="Spillere">

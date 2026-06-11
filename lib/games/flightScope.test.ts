@@ -7,6 +7,7 @@ import {
   suggestFlightSplit,
   flightBuckets,
   peersForApproval,
+  eligibleForFlightAssignment,
   type FlightPlayer,
 } from './flightScope';
 import type { GameMode } from '@/lib/scoring/modes/types';
@@ -320,6 +321,68 @@ describe('peersForApproval', () => {
     const players = [p('me', 1), p('other', 2)];
     const peers = peersForApproval(players, singles, 'me');
     expect(peers).not.toContain('me');
+  });
+});
+
+// ─── eligibleForFlightAssignment ─────────────────────────────────────────────
+
+describe('eligibleForFlightAssignment', () => {
+  const skins: GameMode = 'skins';
+  const stableford: GameMode = 'stableford';
+  const wolf: GameMode = 'wolf';
+  const singles: GameMode = 'singles_matchplay';
+
+  it.each<[string, GameMode, FlightPlayer[], boolean]>([
+    [
+      '5 aktive skins-spillere → eligible',
+      skins,
+      Array.from({ length: 5 }, (_, i) => p(`u${i + 1}`)),
+      true,
+    ],
+    [
+      '8 aktive stableford-spillere → eligible',
+      stableford,
+      Array.from({ length: 8 }, (_, i) => p(`u${i + 1}`)),
+      true,
+    ],
+    [
+      '4 aktive spillere → ikke eligible (single-flight)',
+      skins,
+      [p('u1'), p('u2'), p('u3'), p('u4')],
+      false,
+    ],
+    [
+      '3 aktive spillere → ikke eligible (single-flight)',
+      stableford,
+      [p('u1'), p('u2'), p('u3')],
+      false,
+    ],
+    [
+      'wolf med 5 spillere → ikke eligible (wolf = alltid én gruppe)',
+      wolf,
+      Array.from({ length: 5 }, (_, i) => p(`u${i + 1}`)),
+      false,
+    ],
+    [
+      'singles matchplay 2 spillere → ikke eligible (single-flight)',
+      singles,
+      [p('u1', 1), p('u2', 2)],
+      false,
+    ],
+    [
+      'trukkede teller ikke: 6 totalt, 2 trukkede → 4 aktive → ikke eligible',
+      skins,
+      [p('u1'), p('u2'), p('u3'), p('u4'), withdrawn('u5'), withdrawn('u6')],
+      false,
+    ],
+    [
+      'trukkede teller ikke: 6 totalt, 1 trukket → 5 aktive → eligible',
+      skins,
+      [p('u1'), p('u2'), p('u3'), p('u4'), p('u5'), withdrawn('u6')],
+      true,
+    ],
+  ])('%s', (_, mode, players, expected) => {
+    expect(eligibleForFlightAssignment(mode, players)).toBe(expected);
   });
 });
 

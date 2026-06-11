@@ -21,6 +21,28 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#543](https://github.com/jdlarssen/golf-app/issues/543). I spill med fire eller færre deltagere går alle i én gruppe — uansett format. Det betyr at du og motstanderen din i en singelmatch kan se og skrive hverandres scorer på direkten, og at spill med wolf alltid behandles som én gruppe.
 
+### [1.112.4] - 2026-06-11 · #543
+
+> Du kan nå fordele spillere i flighter direkte fra Sekretariatet. Appen foreslår inndeling automatisk, og du kan flytte enkeltspillere fritt mellom flighter — med en kapasitetsgrense på fire per group.
+
+<details>
+<summary>Teknisk</summary>
+
+[#543](https://github.com/jdlarssen/golf-app/issues/543). Flight-inndeling i admin-sidekanalens spillside.
+
+#### Added
+- `app/[locale]/admin/games/[id]/FlighterSeksjon.tsx`: ny klient-komponent som viser flight-buckets, «Uten flight»-advarsel, «Foreslå inndeling»-knapp og per-spiller flight-velger med «Flytt»-knapp. Bruker `useTransition` for optimistisk feedback.
+- `app/[locale]/admin/games/[id]/flightActions.ts`: tre server-actions — `suggestFlightAssignment` (beregner fordeling via `suggestFlightSplit`, skriver én `UPDATE` per aktiv spiller), `setPlayerFlight` (kapasitetssjekk + skriv), `toggleSignupsClosed` (setter/fjerner `signups_closed_at`, validerer `status === 'scheduled'`). Alle autentisert via `requireAdminOrCreator`.
+- `app/[locale]/admin/games/[id]/flightActions.test.ts`: 8 enhetstester — authz-rejects, kapasitets-avvisning, happy-path for alle tre actions og toggle-revert.
+- `lib/games/flightScope.ts`: `eligibleForFlightAssignment(gameMode, players)` og `flightBuckets(players)` — avgjør om flight-UI vises og bygger buckets for visning.
+- `lib/games/flightScope.test.ts`: 8 nye tester for `eligibleForFlightAssignment` og 4 for `flightBuckets`.
+
+#### Changed
+- `app/[locale]/admin/games/[id]/page.tsx`: `FlighterSeksjon` rendres når `eligibleForFlightAssignment` og spillet er `scheduled`/`active`. «Administrer påmelding»-seksjon viser «Steng»/«Gjenåpne»-knapper wired til `toggleSignupsClosed`. Statusbannere for `flight_suggested`, `flight_updated`, `signups_closed`, `signups_reopened` lagt til.
+- `lib/admin/gameErrorMessages.ts`: `signups_not_scheduled`, `flight_full`, `bad_flight` — nye feilnøkler for flight-actions.
+
+</details>
+
 ### [1.112.3] - 2026-06-11 · #543
 
 > Motstanderen din i en singelmatch kan nå godkjenne scorekortet ditt, og ved innlevering får hen varslet automatisk.
