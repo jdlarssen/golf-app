@@ -1,4 +1,5 @@
 import type { JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
@@ -48,6 +49,9 @@ export function NassauHolesView({
   scoreVisibility,
   gameStatus,
 }: NassauHolesViewProps): JSX.Element {
+  const t = useTranslations('leaderboard');
+  const tc = useTranslations('leaderboard.common');
+
   const isRevealHidden =
     scoreVisibility === 'reveal' && gameStatus !== 'finished';
 
@@ -60,13 +64,13 @@ export function NassauHolesView({
           className="mx-4 mt-12 rounded-2xl border border-dashed border-border bg-surface px-5 py-8 text-center"
         >
           <p className="font-serif text-[18px] font-medium text-text">
-            Resultatene avsløres etter runden
+            {tc('revealHiddenTitle')}
           </p>
           <p className="mt-2 font-sans text-xs text-muted">
-            Hull for hull åpnes når admin avslutter spillet.
+            {tc('hullForHullRevealSub')}
           </p>
         </div>
-        <PullQuote className="px-6 pt-4 pb-4">Lykke til.</PullQuote>
+        <PullQuote className="px-6 pt-4 pb-4">{tc('goodLuck')}</PullQuote>
       </Shell>
     );
   }
@@ -80,39 +84,42 @@ export function NassauHolesView({
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          Hull for hull
+          {tc('hullForHullHeading')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          Nassau · {result.scoring === 'net' ? 'Netto' : 'Brutto'}
+          Nassau · {result.scoring === 'net' ? tc('netto') : tc('brutto')}
         </p>
       </div>
 
-      <UnitsHeader result={result} playersById={playersById} />
+      <UnitsHeader result={result} playersById={playersById} t={t} />
 
       <div className="flex flex-col gap-6 px-3.5 pt-4 pb-3.5">
         <SectionBlock
           testId="nassau-holes-front9"
-          heading="For 9"
-          subheading="Hull 1–9"
+          heading={t('nassau.front9Heading')}
+          subheading={t('nassau.front9Sub')}
           section={result.sections.front9}
           holes={frontHoles}
           playersById={playersById}
+          t={t}
         />
         <SectionBlock
           testId="nassau-holes-back9"
-          heading="Bak 9"
-          subheading="Hull 10–18"
+          heading={t('nassau.back9Heading')}
+          subheading={t('nassau.back9Sub')}
           section={result.sections.back9}
           holes={backHoles}
           playersById={playersById}
+          t={t}
         />
         <TotalBlock
           section={result.sections.total18}
           playersById={playersById}
+          t={t}
         />
       </div>
 
-      <PullQuote className="px-6 pt-1 pb-4">Godt spilt.</PullQuote>
+      <PullQuote className="px-6 pt-1 pb-4">{tc('wellPlayed')}</PullQuote>
     </Shell>
   );
 }
@@ -152,15 +159,17 @@ function Header({ gameName, gameId }: { gameName: string; gameId: string }) {
 function UnitsHeader({
   result,
   playersById,
+  t,
 }: {
   result: NassauResult;
   playersById: Map<string, NassauPlayerInfo>;
+  t: ReturnType<typeof useTranslations>;
 }) {
   return (
     <div className="px-3.5">
       <Card className="flex flex-col gap-2 px-4 py-3">
         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
-          Seksjoner vunnet
+          {t('nassau.sectionVunnetLabel')}
         </p>
         <ul
           data-testid="nassau-holes-units"
@@ -231,6 +240,7 @@ function SectionBlock({
   section,
   holes,
   playersById,
+  t,
 }: {
   testId: string;
   heading: string;
@@ -238,6 +248,7 @@ function SectionBlock({
   section: NassauSection;
   holes: NassauHoleRow[];
   playersById: Map<string, NassauPlayerInfo>;
+  t: ReturnType<typeof useTranslations>;
 }) {
   const cleanWinnerId =
     !section.isPending && section.winnerUserIds.length === 1
@@ -266,7 +277,7 @@ function SectionBlock({
         )}
         {isPush && (
           <span className="rounded-full border border-border bg-surface px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-muted">
-            Delt 1.-plass
+            {t('nassau.sectionTied')}
           </span>
         )}
       </header>
@@ -279,6 +290,7 @@ function SectionBlock({
             key={hole.holeNumber}
             hole={hole}
             playersById={playersById}
+            t={t}
           />
         ))}
       </ul>
@@ -346,9 +358,11 @@ function SummaryStrip({
 function HoleCard({
   hole,
   playersById,
+  t,
 }: {
   hole: NassauHoleRow;
   playersById: Map<string, NassauPlayerInfo>;
+  t: ReturnType<typeof useTranslations>;
 }) {
   const scored = hole.bestUserIds.length > 0;
   // Champagne kun ved en utvetydig hull-vinner. Delt lavest netto = nøytralt.
@@ -375,7 +389,7 @@ function HoleCard({
               Par {hole.par} · SI {hole.strokeIndex}
             </span>
           </div>
-          {!scored && <span className="text-[10.5px] text-muted/70">Venter</span>}
+          {!scored && <span className="text-[10.5px] text-muted/70">{t('nassau.hullVenter')}</span>}
         </div>
 
         <ul className="mt-1.5 flex flex-col gap-1 list-none">
@@ -431,9 +445,11 @@ function HoleCard({
 function TotalBlock({
   section,
   playersById,
+  t,
 }: {
   section: NassauSection;
   playersById: Map<string, NassauPlayerInfo>;
+  t: ReturnType<typeof useTranslations>;
 }) {
   const cleanWinnerId =
     !section.isPending && section.winnerUserIds.length === 1
@@ -445,10 +461,10 @@ function TotalBlock({
       <header className="flex items-baseline justify-between gap-3 px-1">
         <div>
           <h2 className="font-serif text-[19px] font-medium tracking-[-0.01em] text-text">
-            Totalt 18 hull
+            {t('nassau.total18Heading')}
           </h2>
           <p className="mt-0.5 text-[11px] tabular-nums text-muted">
-            Hele runden
+            {t('nassau.total18Sub')}
           </p>
         </div>
         {cleanWinnerId && (

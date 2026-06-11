@@ -1,4 +1,5 @@
 import type { JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
@@ -7,8 +8,8 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { LeaderboardBackdrop } from '@/components/illustrations/LeaderboardBackdrop';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import {
-  wolfChoiceLabel,
-  wolfOutcomeLabel,
+  wolfChoiceKey,
+  wolfOutcomeKey,
   wolfOutcomeClass,
 } from '@/lib/wolf/holeLabels';
 import type { WolfResult, WolfHoleRow } from '@/lib/scoring/modes/types';
@@ -47,6 +48,9 @@ export function WolfHolesView({
   scoreVisibility,
   gameStatus,
 }: WolfHolesViewProps): JSX.Element {
+  const t = useTranslations('leaderboard');
+  const tc = useTranslations('leaderboard.common');
+
   const isRevealHidden =
     scoreVisibility === 'reveal' && gameStatus !== 'finished';
 
@@ -59,13 +63,13 @@ export function WolfHolesView({
           className="mx-4 mt-12 rounded-2xl border border-dashed border-border bg-surface px-5 py-8 text-center"
         >
           <p className="font-serif text-[18px] font-medium text-text">
-            Resultatene avsløres etter runden
+            {tc('revealHiddenTitle')}
           </p>
           <p className="mt-2 font-sans text-xs text-muted">
-            Hull for hull åpnes når admin avslutter spillet.
+            {t('wolf.hullForHullRevealSub')}
           </p>
         </div>
-        <PullQuote className="px-6 pt-4 pb-4">Lykke til.</PullQuote>
+        <PullQuote className="px-6 pt-4 pb-4">{tc('goodLuck')}</PullQuote>
       </Shell>
     );
   }
@@ -76,10 +80,10 @@ export function WolfHolesView({
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          Hull for hull
+          {tc('hullForHullHeading')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          Wolf · {result.scoring === 'net' ? 'Netto' : 'Brutto'}
+          Wolf · {result.scoring === 'net' ? tc('netto') : tc('brutto')}
         </p>
       </div>
 
@@ -93,11 +97,13 @@ export function WolfHolesView({
             hole={hole}
             scoring={result.scoring}
             playersById={playersById}
+            t={t}
+            tc={tc}
           />
         ))}
       </ul>
 
-      <PullQuote className="px-6 pt-1 pb-4">Godt spilt.</PullQuote>
+      <PullQuote className="px-6 pt-1 pb-4">{tc('wellPlayed')}</PullQuote>
     </Shell>
   );
 }
@@ -137,10 +143,14 @@ function HoleCard({
   hole,
   scoring,
   playersById,
+  t,
+  tc,
 }: {
   hole: WolfHoleRow;
   scoring: WolfResult['scoring'];
   playersById: Map<string, WolfPlayerInfo>;
+  t: ReturnType<typeof useTranslations>;
+  tc: ReturnType<typeof useTranslations>;
 }) {
   const wolfInfo = playersById.get(hole.wolfUserId);
   const wolfName = wolfInfo
@@ -184,20 +194,26 @@ function HoleCard({
         {/* Wolf-linje: hvem var Wolf, valg, utfall */}
         <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[12px] text-muted">
           <span>
-            <span className="text-muted/80">Wolf:</span>{' '}
+            <span className="text-muted/80">{t('wolf.wolfLabel')}</span>{' '}
             <span className="text-text">{wolfName}</span>
           </span>
           <span aria-hidden className="text-muted/40">
             ·
           </span>
           <span className="text-text">
-            {wolfChoiceLabel(hole.choice, partnerName)}
+            {(() => {
+              const choiceKey = wolfChoiceKey(hole.choice);
+              if (choiceKey === 'choicePartner') {
+                return t('wolf.choicePartner', { partnerName: partnerName ?? '?' });
+              }
+              return t(`wolf.${choiceKey}`);
+            })()}
           </span>
           <span aria-hidden className="text-muted/40">
             ·
           </span>
           <span className={`font-medium ${wolfOutcomeClass(hole.outcome)}`}>
-            {wolfOutcomeLabel(hole.outcome)}
+            {t(`wolf.${wolfOutcomeKey(hole.outcome)}`)}
           </span>
         </div>
 
@@ -238,7 +254,7 @@ function HoleCard({
                   </span>
                   {cell.side != null && (
                     <span className="shrink-0 text-[10px] uppercase tracking-[0.1em] text-muted">
-                      {cell.side === 'wolf' ? 'Wolf-side' : 'Andre'}
+                      {cell.side === 'wolf' ? t('wolf.wolfSide') : t('wolf.andreSide')}
                     </span>
                   )}
                 </span>
@@ -250,7 +266,7 @@ function HoleCard({
                   )}
                   {showGross && (
                     <span className="text-[10.5px] text-muted/70">
-                      brutto {cell.gross}
+                      {t('wolf.bruttoLabel', { count: cell.gross ?? 0 })}
                     </span>
                   )}
                   <span className="score-num text-[18px] leading-none text-text">

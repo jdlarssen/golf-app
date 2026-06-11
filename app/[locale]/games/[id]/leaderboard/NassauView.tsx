@@ -1,4 +1,5 @@
 import type { JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
@@ -81,6 +82,9 @@ export function NassauView({
   backHref = '/',
   chromeless = false,
 }: NassauViewProps): JSX.Element {
+  const t = useTranslations('leaderboard');
+  const tc = useTranslations('leaderboard.common');
+
   const isRevealHidden =
     scoreVisibility === 'reveal' && gameStatus !== 'finished';
 
@@ -91,7 +95,7 @@ export function NassauView({
       <Shell chromeless={chromeless}>
         {!chromeless && <Header gameName={gameName} backHref={backHref} />}
         <p className="mt-12 text-center text-sm text-muted">
-          Ingen spillere å vise.
+          {tc('noPlayersToShow')}
         </p>
       </Shell>
     );
@@ -106,22 +110,21 @@ export function NassauView({
           className="mx-4 mt-12 rounded-2xl border border-dashed border-border bg-surface px-5 py-8 text-center"
         >
           <p className="font-serif text-[18px] font-medium text-text">
-            Resultatene avsløres etter runden
+            {tc('revealHiddenTitle')}
           </p>
           <p className="mt-2 font-sans text-xs text-muted">
-            Nassau-rundens tre konkurranser holdes hemmelig til admin avslutter
-            spillet.
+            {t('nassau.revealHiddenSub')}
           </p>
         </div>
-        <PullQuote className="px-6 pt-4 pb-4">Lykke til.</PullQuote>
+        <PullQuote className="px-6 pt-4 pb-4">{tc('goodLuck')}</PullQuote>
       </Shell>
     );
   }
 
   const subtitleParts = [
-    gameStatus === 'finished' ? 'Etter 18 hull' : 'Live',
+    gameStatus === 'finished' ? tc('after18Holes') : tc('live'),
     'Nassau',
-    result.scoring === 'net' ? 'Netto' : 'Brutto',
+    result.scoring === 'net' ? tc('netto') : tc('brutto'),
   ];
 
   return (
@@ -143,28 +146,31 @@ export function NassauView({
       >
         <SectionBlock
           testId="nassau-section-front9"
-          heading="Front 9"
-          subheading="Hull 1–9"
+          heading={t('nassau.front9Heading')}
+          subheading={t('nassau.front9Sub')}
           section={result.sections.front9}
           playersById={playersById}
+          t={t}
         />
         <SectionBlock
           testId="nassau-section-back9"
-          heading="Back 9"
-          subheading="Hull 10–18"
+          heading={t('nassau.back9Heading')}
+          subheading={t('nassau.back9Sub')}
           section={result.sections.back9}
           playersById={playersById}
+          t={t}
         />
         <SectionBlock
           testId="nassau-section-total18"
-          heading="Totalt 18 hull"
-          subheading="Hele runden"
+          heading={t('nassau.total18Heading')}
+          subheading={t('nassau.total18Sub')}
           section={result.sections.total18}
           playersById={playersById}
+          t={t}
         />
       </div>
 
-      <PullQuote className="px-6 pt-1 pb-4">Lykke til.</PullQuote>
+      <PullQuote className="px-6 pt-1 pb-4">{tc('goodLuck')}</PullQuote>
     </Shell>
   );
 }
@@ -228,12 +234,14 @@ function SectionBlock({
   subheading,
   section,
   playersById,
+  t,
 }: {
   testId: string;
   heading: string;
   subheading: string;
   section: NassauSection;
   playersById: Map<string, NassauPlayerInfo>;
+  t: ReturnType<typeof useTranslations>;
 }) {
   const hasCleanWinner =
     !section.isPending && section.winnerUserIds.length === 1;
@@ -256,7 +264,7 @@ function SectionBlock({
             data-testid={`${testId}-push`}
             className="rounded-full border border-border bg-surface px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-muted"
           >
-            Delt 1.-plass
+            {t('nassau.sectionTied')}
           </span>
         )}
       </header>
@@ -267,10 +275,10 @@ function SectionBlock({
           className="rounded-2xl border border-dashed border-border bg-surface px-4 py-5 text-center"
         >
           <p className="font-serif text-[15px] font-medium text-text">
-            Venter på spilte hull
+            {t('nassau.sectionsPending')}
           </p>
           <p className="mt-1 text-[12px] text-muted">
-            Vinneren kåres når noen har fullført alle hull i seksjonen.
+            {t('nassau.sectionsPendingNote')}
           </p>
         </div>
       ) : (
@@ -293,6 +301,7 @@ function SectionBlock({
                 displayName={displayName}
                 isWinnerHighlight={isWinnerHighlight}
                 staggerIndex={i}
+                t={t}
               />
             );
           })}
@@ -307,11 +316,13 @@ function SectionPlayerRow({
   displayName,
   isWinnerHighlight,
   staggerIndex,
+  t,
 }: {
   line: NassauSectionLine;
   displayName: string;
   isWinnerHighlight: boolean;
   staggerIndex: number;
+  t: ReturnType<typeof useTranslations>;
 }) {
   const isTied = line.tiedWith.length > 0;
   const rankLabel = isTied ? `T${line.rank}` : `${line.rank}`;
@@ -347,7 +358,9 @@ function SectionPlayerRow({
             {displayName}
           </p>
           <p className="mt-0.5 text-[12px] text-muted tabular-nums">
-            {line.totalGrossStrokes} brutto · {line.holesPlayed} hull spilt
+            {t('nassau.sectionBrutto', { gross: line.totalGrossStrokes })}
+            {' · '}
+            {t('nassau.sectionHullSpilt', { holes: line.holesPlayed })}
           </p>
         </div>
 
@@ -356,7 +369,7 @@ function SectionPlayerRow({
             {line.totalEffectiveStrokes}
           </span>
           <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
-            slag
+            {t('nassau.totalEffectiveStrokesLabel')}
           </span>
         </div>
       </Card>

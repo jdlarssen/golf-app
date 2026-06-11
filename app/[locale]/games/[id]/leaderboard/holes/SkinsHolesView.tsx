@@ -1,4 +1,5 @@
 import type { JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
@@ -44,6 +45,9 @@ export function SkinsHolesView({
   scoreVisibility,
   gameStatus,
 }: SkinsHolesViewProps): JSX.Element {
+  const t = useTranslations('leaderboard');
+  const tc = useTranslations('leaderboard.common');
+
   const isRevealHidden =
     scoreVisibility === 'reveal' && gameStatus !== 'finished';
 
@@ -56,20 +60,20 @@ export function SkinsHolesView({
           className="mx-4 mt-12 rounded-2xl border border-dashed border-border bg-surface px-5 py-8 text-center"
         >
           <p className="font-serif text-[18px] font-medium text-text">
-            Resultatene avsløres etter runden
+            {tc('revealHiddenTitle')}
           </p>
           <p className="mt-2 font-sans text-xs text-muted">
-            Hull for hull åpnes når admin avslutter spillet.
+            {tc('hullForHullRevealSub')}
           </p>
         </div>
-        <PullQuote className="px-6 pt-4 pb-4">Lykke til.</PullQuote>
+        <PullQuote className="px-6 pt-4 pb-4">{tc('goodLuck')}</PullQuote>
       </Shell>
     );
   }
 
   const subtitleParts = [
     'Skins',
-    result.scoring === 'net' ? 'Netto' : 'Brutto',
+    result.scoring === 'net' ? tc('netto') : tc('brutto'),
   ];
 
   return (
@@ -78,7 +82,7 @@ export function SkinsHolesView({
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          Hull for hull
+          {tc('hullForHullHeading')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
           {subtitleParts.join(' · ')}
@@ -95,6 +99,8 @@ export function SkinsHolesView({
             hole={hole}
             scoring={result.scoring}
             playersById={playersById}
+            t={t}
+            tc={tc}
           />
         ))}
       </ul>
@@ -106,15 +112,14 @@ export function SkinsHolesView({
         >
           <p className="font-sans text-[13px] text-muted">
             <span className="font-semibold tabular-nums text-text">
-              {result.carriedPot}{' '}
-              {result.carriedPot === 1 ? 'skin' : 'skins'}
+              {t('skins.skinCount', { count: result.carriedPot })}
             </span>{' '}
-            ikke vunnet. Siste spilte hull ble delt.
+            {t('skins.unwonNote')}
           </p>
         </div>
       )}
 
-      <PullQuote className="px-6 pt-1 pb-4">Godt spilt.</PullQuote>
+      <PullQuote className="px-6 pt-1 pb-4">{tc('wellPlayed')}</PullQuote>
     </Shell>
   );
 }
@@ -152,17 +157,6 @@ function Header({
   );
 }
 
-function outcomeLabel(hole: SkinsHoleRow): string {
-  switch (hole.outcome) {
-    case 'won':
-      return `+${hole.skinsAwarded} ${hole.skinsAwarded === 1 ? 'skin' : 'skins'}`;
-    case 'carryover':
-      return 'Delt → dratt videre';
-    default:
-      return 'Venter på score';
-  }
-}
-
 function outcomeClass(outcome: SkinsHoleRow['outcome']): string {
   switch (outcome) {
     case 'won':
@@ -178,13 +172,16 @@ function HoleCard({
   hole,
   scoring,
   playersById,
+  t,
+  tc,
 }: {
   hole: SkinsHoleRow;
   scoring: SkinsResult['scoring'];
   playersById: Map<string, SkinsPlayerInfo>;
+  t: ReturnType<typeof useTranslations>;
+  tc: ReturnType<typeof useTranslations>;
 }) {
-  const atStakeLabel =
-    hole.atStake === 1 ? '1 skin på spill' : `${hole.atStake} skins på spill`;
+  const atStakeLabel = t('skins.atStakeLabel', { count: hole.atStake });
 
   return (
     <li className="list-none" data-testid={`skins-holes-card-${hole.holeNumber}`}>
@@ -252,7 +249,7 @@ function HoleCard({
                 <span className="flex shrink-0 items-baseline gap-1.5 tabular-nums">
                   {showGross && (
                     <span className="text-[10.5px] text-muted/70">
-                      brutto {cell.gross}
+                      {tc('grossBrutto', { count: cell.gross ?? 0 })}
                     </span>
                   )}
                   <span
@@ -271,7 +268,11 @@ function HoleCard({
         {/* Utfall + carryover-kjede */}
         <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[12px]">
           <span className={`font-medium ${outcomeClass(hole.outcome)}`}>
-            {outcomeLabel(hole)}
+            {hole.outcome === 'won'
+              ? `+${hole.skinsAwarded} ${t('skins.skinLabel', { count: hole.skinsAwarded })}`
+              : hole.outcome === 'carryover'
+                ? t('skins.drattVidere')
+                : t('skins.outcomePending')}
           </span>
           {hole.carriedIn > 0 && (
             <>
@@ -279,8 +280,7 @@ function HoleCard({
                 ·
               </span>
               <span className="tabular-nums text-muted/70">
-                {hole.carriedIn} {hole.carriedIn === 1 ? 'skin' : 'skins'}{' '}
-                rullet inn
+                {t('skins.carriedInLabel', { count: hole.carriedIn })}
               </span>
             </>
           )}

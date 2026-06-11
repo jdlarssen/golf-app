@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Kicker } from '@/components/ui/Kicker';
@@ -55,6 +56,9 @@ export function WolfPodium({
   playersById,
   backHref = '/',
 }: WolfPodiumProps): JSX.Element {
+  const t = useTranslations('leaderboard');
+  const tc = useTranslations('leaderboard.common');
+
   const [replayKey, setReplayKey] = useState(0);
 
   useEffect(() => {
@@ -74,7 +78,7 @@ export function WolfPodium({
       <Shell>
         <Header gameName={gameName} backHref={backHref} />
         <p className="mt-12 text-center text-sm text-muted">
-          Ingen spillere å vise.
+          {tc('noPlayersToShow')}
         </p>
       </Shell>
     );
@@ -103,10 +107,10 @@ export function WolfPodium({
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <Kicker tone="accent">PODIUM</Kicker>
         <h1 className="mt-2 font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          Pack-leder kåret
+          {t('wolf.packLeaderKronet')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          Wolf · {result.scoring === 'net' ? 'Netto' : 'Brutto'}
+          {t('wolf.wolfSubtitle', { scoring: result.scoring === 'net' ? tc('netto') : tc('brutto') })}
         </p>
       </div>
 
@@ -125,6 +129,7 @@ export function WolfPodium({
                 playerInfo={playersById.get(second.userId)}
                 tier="silver"
                 staggerIndex={1}
+                t={t}
               />
             )}
           </div>
@@ -136,6 +141,7 @@ export function WolfPodium({
               playerInfo={playersById.get(first.userId)}
               tier="champagne"
               staggerIndex={0}
+              t={t}
             />
           </div>
 
@@ -147,6 +153,7 @@ export function WolfPodium({
                 playerInfo={playersById.get(third.userId)}
                 tier="bronze"
                 staggerIndex={2}
+                t={t}
               />
             )}
           </div>
@@ -174,7 +181,7 @@ export function WolfPodium({
                       {displayName}
                     </p>
                     <p className="mt-0.5 text-[12px] text-muted tabular-nums">
-                      {player.wolfHolesPlayed} Wolf-hull
+                      {t('wolf.wolfHullPlayed', { count: player.wolfHolesPlayed })}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
@@ -182,7 +189,7 @@ export function WolfPodium({
                       {player.totalPoints}
                     </span>
                     <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
-                      poeng
+                      {t('wolf.poengLabel')}
                     </span>
                   </div>
                 </div>
@@ -203,7 +210,7 @@ export function WolfPodium({
             className="rounded-xl border border-border bg-surface px-4 py-2.5 text-center"
           >
             <p className="text-[11.5px] tabular-nums text-text">
-              <span className="font-serif font-medium">Mest Wolf-hull:</span>{' '}
+              <span className="font-serif font-medium">{t('wolf.mestWolfHull')}</span>{' '}
               {playerLabel(mostWolfHoles.userId, playersById)} (
               {mostWolfHoles.wolfHolesPlayed})
             </p>
@@ -220,11 +227,10 @@ export function WolfPodium({
                 className="list-none rounded-xl border border-accent/40 bg-accent/[0.06] px-4 py-2.5 text-center"
               >
                 <p className="text-[11.5px] tabular-nums text-text">
-                  <span className="font-serif font-medium text-accent">
-                    Blind Wolf:
-                  </span>{' '}
-                  {playerLabel(p.userId, playersById)} vant {p.blindWolfWins}{' '}
-                  {p.blindWolfWins === 1 ? 'pott' : 'potter'}
+                  {t('wolf.blindWolfVant', {
+                    name: playerLabel(p.userId, playersById),
+                    count: p.blindWolfWins,
+                  })}
                 </p>
               </li>
             ))}
@@ -232,7 +238,7 @@ export function WolfPodium({
         )}
       </section>
 
-      <PullQuote className="px-6 pt-4 pb-4">Gratulerer.</PullQuote>
+      <PullQuote className="px-6 pt-4 pb-4">{tc('congratulations')}</PullQuote>
     </Shell>
   );
 }
@@ -299,12 +305,14 @@ function PodiumStep({
   playerInfo,
   tier,
   staggerIndex,
+  t,
 }: {
   rank: 1 | 2 | 3;
   player: WolfPlayerLine;
   playerInfo: WolfPlayerInfo | undefined;
   tier: PodiumTier;
   staggerIndex: number;
+  t: ReturnType<typeof useTranslations>;
 }) {
   const displayName = playerInfo
     ? formatRevealName(playerInfo.name, playerInfo.nickname)
@@ -339,12 +347,12 @@ function PodiumStep({
           {player.totalPoints}
         </span>
         <span className="mt-1 block text-[9px] font-semibold uppercase tracking-[0.16em] text-muted">
-          poeng
+          {t('wolf.poengLabel')}
         </span>
       </div>
 
       <p className="text-[10px] tabular-nums text-muted">
-        {player.wolfHolesPlayed} Wolf-hull
+        {t('wolf.wolfHullPlayed', { count: player.wolfHolesPlayed })}
       </p>
     </div>
   );

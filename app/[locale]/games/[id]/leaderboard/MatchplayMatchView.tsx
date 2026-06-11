@@ -1,4 +1,5 @@
 import type { JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
@@ -89,6 +90,9 @@ export function MatchplayMatchView({
   gameStatus: _gameStatus,
   backHref = '/',
 }: MatchplayMatchViewProps): JSX.Element {
+  const t = useTranslations('leaderboard');
+  const tc = useTranslations('leaderboard.common');
+
   // Defensiv fallback: scoring-laget returnerer `holes.length === 0` når
   // matchen mangler nøyaktig to gyldige sider (validatoren i gamePayload.ts
   // håndhever 1+1, men draft-state eller halvferdig payload kan trigge dette).
@@ -98,11 +102,10 @@ export function MatchplayMatchView({
         <Header gameName={gameName} backHref={backHref} />
         <Card className="mx-4 mt-12 px-5 py-6 text-center">
           <p className="font-serif text-[16px] font-medium text-text">
-            Matchen kan ikke vises
+            {t('matchplay.matchCannotShow')}
           </p>
           <p className="mt-2 font-sans text-xs text-muted">
-            Spillere er ikke korrekt fordelt på to sider. Sjekk admin-flyten
-            og at hver side har én spiller.
+            {t('matchplay.singlesDistribution')}
           </p>
         </Card>
       </Shell>
@@ -128,7 +131,7 @@ export function MatchplayMatchView({
           Matchplay
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          1 mot 1 · Hull-for-hull
+          {t('matchplay.subtitle1v1')}
         </p>
       </div>
 
@@ -165,17 +168,18 @@ export function MatchplayMatchView({
       {/* 2. Per-hull-grid */}
       <section className="px-3.5 pt-4 pb-2">
         <div className="px-2 pb-2 text-center">
-          <Kicker tone="muted">PER HULL</Kicker>
+          <Kicker tone="muted">{tc('perHullKicker')}</Kicker>
         </div>
         <HoleGrid
           holes={result.holes}
           side1ShortName={shortNameFor(side1Info)}
           side2ShortName={shortNameFor(side2Info)}
+          t={t}
         />
       </section>
 
       <PullQuote className="px-6 pt-4 pb-4">
-        {hasDecidedWinner ? 'Gratulerer.' : 'Lykke til.'}
+        {hasDecidedWinner ? tc('congratulations') : tc('goodLuck')}
       </PullQuote>
     </Shell>
   );
@@ -240,10 +244,12 @@ function HoleGrid({
   holes,
   side1ShortName,
   side2ShortName,
+  t,
 }: {
   holes: MatchplayHoleRow[];
   side1ShortName: string;
   side2ShortName: string;
+  t: ReturnType<typeof useTranslations>;
 }): JSX.Element {
   // Løpende stilling etter hvert hull — «1up, 2up, 3up, 2up, 1up, AS»-
   // historien (#546). Uspilte hull gir null (vises som «—»).
@@ -260,13 +266,13 @@ function HoleGrid({
               scope="col"
               className="px-2 py-2 text-left font-semibold uppercase tracking-[0.08em] text-[10px] text-muted"
             >
-              Hull
+              {t('matchplay.colHull')}
             </th>
             <th
               scope="col"
               className="px-1 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[10px] text-muted"
             >
-              Par
+              {t('matchplay.colPar')}
             </th>
             <th
               scope="col"
@@ -284,13 +290,13 @@ function HoleGrid({
               scope="col"
               className="px-2 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[10px] text-muted"
             >
-              Vinner
+              {t('matchplay.colVinner')}
             </th>
             <th
               scope="col"
               className="px-2 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[10px] text-muted"
             >
-              Stilling
+              {t('matchplay.colStilling')}
             </th>
           </tr>
         </thead>

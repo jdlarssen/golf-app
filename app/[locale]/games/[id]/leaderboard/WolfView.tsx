@@ -1,4 +1,5 @@
 import type { JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
@@ -8,8 +9,8 @@ import { PullQuote } from '@/components/ui/PullQuote';
 import { LeaderboardBackdrop } from '@/components/illustrations/LeaderboardBackdrop';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import {
-  wolfChoiceLabel,
-  wolfOutcomeLabel,
+  wolfChoiceKey,
+  wolfOutcomeKey,
   wolfOutcomeClass,
 } from '@/lib/wolf/holeLabels';
 import type { WolfResult, WolfHoleRow } from '@/lib/scoring/modes/types';
@@ -81,6 +82,9 @@ export function WolfView({
   backHref = '/',
   chromeless = false,
 }: WolfViewProps): JSX.Element {
+  const t = useTranslations('leaderboard');
+  const tc = useTranslations('leaderboard.common');
+
   const isRevealHidden =
     scoreVisibility === 'reveal' && gameStatus !== 'finished';
 
@@ -89,7 +93,7 @@ export function WolfView({
       <Shell chromeless={chromeless}>
         {!chromeless && <Header gameName={gameName} backHref={backHref} />}
         <p className="mt-12 text-center text-sm text-muted">
-          Ingen spillere å vise.
+          {tc('noPlayersToShow')}
         </p>
       </Shell>
     );
@@ -104,21 +108,21 @@ export function WolfView({
           className="mx-4 mt-12 rounded-2xl border border-dashed border-border bg-surface px-5 py-8 text-center"
         >
           <p className="font-serif text-[18px] font-medium text-text">
-            Resultatene avsløres etter runden
+            {tc('revealHiddenTitle')}
           </p>
           <p className="mt-2 font-sans text-xs text-muted">
-            Wolf-poeng holdes hemmelig til admin avslutter spillet.
+            {t('wolf.revealHiddenSub')}
           </p>
         </div>
-        <PullQuote className="px-6 pt-4 pb-4">Lykke til.</PullQuote>
+        <PullQuote className="px-6 pt-4 pb-4">{tc('goodLuck')}</PullQuote>
       </Shell>
     );
   }
 
   const subtitleParts = [
-    gameStatus === 'finished' ? 'Etter 18 hull' : 'Live',
+    gameStatus === 'finished' ? tc('after18Holes') : tc('live'),
     'Wolf',
-    result.scoring === 'net' ? 'Netto' : 'Brutto',
+    result.scoring === 'net' ? tc('netto') : tc('brutto'),
   ];
 
   return (
@@ -127,7 +131,7 @@ export function WolfView({
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          Leaderboard
+          {tc('leaderboardHeading')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
           {subtitleParts.join(' · ')}
@@ -143,7 +147,7 @@ export function WolfView({
           const info = playersById.get(player.userId);
           const displayName = info
             ? formatRevealName(info.name, info.nickname)
-            : '(ukjent spiller)';
+            : tc('unknownPlayerFull');
           return (
             <PlayerRow
               key={player.userId}
@@ -153,6 +157,7 @@ export function WolfView({
               wolfHolesPlayed={player.wolfHolesPlayed}
               blindWolfWins={player.blindWolfWins}
               staggerIndex={i}
+              tWolf={t}
             />
           );
         })}
@@ -161,7 +166,7 @@ export function WolfView({
       {/* Per-hull-liste — sekundær drilldown for hvordan poengene ble fordelt. */}
       <section className="px-3.5 pt-2 pb-3.5">
         <Kicker tone="muted" className="px-1 pb-2">
-          PER HULL
+          {tc('perHullKicker')}
         </Kicker>
         <ul
           data-testid="wolf-hole-list"
@@ -172,12 +177,14 @@ export function WolfView({
               key={hole.holeNumber}
               hole={hole}
               playersById={playersById}
+              t={t}
+              tc={tc}
             />
           ))}
         </ul>
       </section>
 
-      <PullQuote className="px-6 pt-1 pb-4">Lykke til.</PullQuote>
+      <PullQuote className="px-6 pt-1 pb-4">{tc('goodLuck')}</PullQuote>
     </Shell>
   );
 }
@@ -236,6 +243,7 @@ function PlayerRow({
   wolfHolesPlayed,
   blindWolfWins,
   staggerIndex,
+  tWolf,
 }: {
   rank: number;
   displayName: string;
@@ -243,6 +251,7 @@ function PlayerRow({
   wolfHolesPlayed: number;
   blindWolfWins: number;
   staggerIndex: number;
+  tWolf: ReturnType<typeof useTranslations>;
 }) {
   const isPodium = rank >= 1 && rank <= 3;
   const cardClass =
@@ -271,10 +280,10 @@ function PlayerRow({
             {displayName}
           </p>
           <p className="mt-0.5 text-[12px] text-muted tabular-nums">
-            {wolfHolesPlayed} Wolf-hull
+            {tWolf('wolf.wolfHullPlayed', { count: wolfHolesPlayed })}
             {blindWolfWins > 0 && (
               <span className="ml-1 text-muted/80">
-                · {blindWolfWins} Blind Wolf-pott
+                · {tWolf('wolf.blindWolfPott', { count: blindWolfWins })}
               </span>
             )}
           </p>
@@ -285,7 +294,7 @@ function PlayerRow({
             {totalPoints}
           </span>
           <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-            poeng
+            {tWolf('wolf.poengLabel')}
           </span>
         </div>
       </Card>
@@ -296,14 +305,18 @@ function PlayerRow({
 function HoleRow({
   hole,
   playersById,
+  t,
+  tc,
 }: {
   hole: WolfHoleRow;
   playersById: Map<string, WolfPlayerInfo>;
+  t: ReturnType<typeof useTranslations>;
+  tc: ReturnType<typeof useTranslations>;
 }) {
   const wolfInfo = playersById.get(hole.wolfUserId);
   const wolfName = wolfInfo
     ? formatRevealName(wolfInfo.name, wolfInfo.nickname)
-    : '(ukjent)';
+    : tc('unknownPlayer');
   const partnerInfo = hole.partnerUserId
     ? playersById.get(hole.partnerUserId)
     : null;
@@ -312,8 +325,16 @@ function HoleRow({
     : hole.partnerUserId
       ? '?'
       : null;
-  const choice = wolfChoiceLabel(hole.choice, partnerName);
-  const outcome = wolfOutcomeLabel(hole.outcome);
+
+  const choiceKey = wolfChoiceKey(hole.choice);
+  const choiceLabel =
+    choiceKey === 'choicePartner'
+      ? t(`wolf.${choiceKey}`, { partnerName: partnerName ?? '?' })
+      : t(`wolf.${choiceKey}`);
+
+  const outcomeKey = wolfOutcomeKey(hole.outcome);
+  const outcomeLabel = t(`wolf.${outcomeKey}`);
+
   const points = Object.entries(hole.pointsByPlayer).filter(
     ([, pts]) => pts > 0,
   );
@@ -342,18 +363,18 @@ function HoleRow({
 
         <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[12px] text-muted">
           <span>
-            <span className="text-muted/80">Wolf:</span>{' '}
+            <span className="text-muted/80">{t('wolf.wolfLabel')}</span>{' '}
             <span className="text-text">{wolfName}</span>
           </span>
           <span aria-hidden className="text-muted/40">
             ·
           </span>
-          <span className="text-text">{choice}</span>
+          <span className="text-text">{choiceLabel}</span>
           <span aria-hidden className="text-muted/40">
             ·
           </span>
           <span className={`font-medium ${wolfOutcomeClass(hole.outcome)}`}>
-            {outcome}
+            {outcomeLabel}
           </span>
         </div>
 

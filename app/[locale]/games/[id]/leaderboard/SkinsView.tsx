@@ -1,4 +1,5 @@
 import type { JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
@@ -84,6 +85,9 @@ export function SkinsView({
   backHref = '/',
   chromeless = false,
 }: SkinsViewProps): JSX.Element {
+  const t = useTranslations('leaderboard');
+  const tc = useTranslations('leaderboard.common');
+
   const isRevealHidden =
     scoreVisibility === 'reveal' && gameStatus !== 'finished';
 
@@ -92,7 +96,7 @@ export function SkinsView({
       <Shell chromeless={chromeless}>
         {!chromeless && <Header gameName={gameName} backHref={backHref} />}
         <p className="mt-12 text-center text-sm text-muted">
-          Ingen spillere å vise.
+          {tc('noPlayersToShow')}
         </p>
       </Shell>
     );
@@ -107,21 +111,21 @@ export function SkinsView({
           className="mx-4 mt-12 rounded-2xl border border-dashed border-border bg-surface px-5 py-8 text-center"
         >
           <p className="font-serif text-[18px] font-medium text-text">
-            Resultatene avsløres etter runden
+            {tc('revealHiddenTitle')}
           </p>
           <p className="mt-2 font-sans text-xs text-muted">
-            Skins-potten holdes hemmelig til admin avslutter spillet.
+            {t('skins.revealHiddenSub')}
           </p>
         </div>
-        <PullQuote className="px-6 pt-4 pb-4">Lykke til.</PullQuote>
+        <PullQuote className="px-6 pt-4 pb-4">{tc('goodLuck')}</PullQuote>
       </Shell>
     );
   }
 
   const subtitleParts = [
-    gameStatus === 'finished' ? 'Etter 18 hull' : 'Live',
+    gameStatus === 'finished' ? tc('after18Holes') : tc('live'),
     'Skins',
-    result.scoring === 'net' ? 'Netto' : 'Brutto',
+    result.scoring === 'net' ? tc('netto') : tc('brutto'),
   ];
 
   // Henger-skins: scoring-modulen eksponerer den rå hengende potten (carriedPot)
@@ -154,7 +158,7 @@ export function SkinsView({
           const info = playersById.get(player.userId);
           const displayName = info
             ? formatRevealName(info.name, info.nickname)
-            : '(ukjent spiller)';
+            : tc('unknownPlayerFull');
           return (
             <PlayerRow
               key={player.userId}
@@ -164,6 +168,7 @@ export function SkinsView({
               holesWon={player.holesWon}
               tiedWith={player.tiedWith}
               staggerIndex={i}
+              t={t}
             />
           );
         })}
@@ -177,10 +182,9 @@ export function SkinsView({
         >
           <p className="font-sans text-[13px] text-muted">
             <span className="font-semibold tabular-nums text-text">
-              {result.carriedPot}{' '}
-              {result.carriedPot === 1 ? 'skin' : 'skins'}
+              {t('skins.skinCount', { count: result.carriedPot })}
             </span>{' '}
-            ikke vunnet. Siste spilte hull ble delt.
+            {t('skins.unwonNote')}
           </p>
         </div>
       )}
@@ -188,7 +192,7 @@ export function SkinsView({
       {/* Per-hull-tabell — sekundær drilldown for carryover-kjeden. */}
       <section className="px-3.5 pt-2 pb-3.5">
         <Kicker tone="muted" className="px-1 pb-2">
-          PER HULL
+          {tc('perHullKicker')}
         </Kicker>
         <ul
           data-testid="skins-hole-list"
@@ -199,12 +203,13 @@ export function SkinsView({
               key={hole.holeNumber}
               hole={hole}
               playersById={playersById}
+              t={t}
             />
           ))}
         </ul>
       </section>
 
-      <PullQuote className="px-6 pt-1 pb-4">Lykke til.</PullQuote>
+      <PullQuote className="px-6 pt-1 pb-4">{tc('goodLuck')}</PullQuote>
     </Shell>
   );
 }
@@ -263,6 +268,7 @@ function PlayerRow({
   holesWon,
   tiedWith,
   staggerIndex,
+  t,
 }: {
   rank: number;
   displayName: string;
@@ -270,6 +276,7 @@ function PlayerRow({
   holesWon: number;
   tiedWith: string[];
   staggerIndex: number;
+  t: ReturnType<typeof useTranslations>;
 }) {
   const isPodium = rank >= 1 && rank <= 3;
   const isTied = tiedWith.length > 0;
@@ -300,7 +307,7 @@ function PlayerRow({
             {displayName}
           </p>
           <p className="mt-0.5 text-[12px] text-muted tabular-nums">
-            {holesWon} {holesWon === 1 ? 'hull vunnet' : 'hull vunnet'}
+            {t('skins.holesWonCount', { count: holesWon })}
           </p>
         </div>
 
@@ -309,23 +316,12 @@ function PlayerRow({
             {totalSkins}
           </span>
           <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-            {totalSkins === 1 ? 'skin' : 'skins'}
+            {t('skins.skinLabel', { count: totalSkins })}
           </span>
         </div>
       </Card>
     </li>
   );
-}
-
-function outcomeLabel(hole: SkinsHoleRow): string {
-  switch (hole.outcome) {
-    case 'won':
-      return `Vunnet`;
-    case 'carryover':
-      return 'Delt';
-    default:
-      return 'Venter på score';
-  }
 }
 
 function outcomeClass(outcome: SkinsHoleRow['outcome']): string {
@@ -342,9 +338,11 @@ function outcomeClass(outcome: SkinsHoleRow['outcome']): string {
 function HoleRow({
   hole,
   playersById,
+  t,
 }: {
   hole: SkinsHoleRow;
   playersById: Map<string, SkinsPlayerInfo>;
+  t: ReturnType<typeof useTranslations>;
 }) {
   const winnerInfo = hole.winnerUserId
     ? playersById.get(hole.winnerUserId)
@@ -353,10 +351,7 @@ function HoleRow({
     ? formatRevealName(winnerInfo.name, winnerInfo.nickname)
     : null;
 
-  const atStakeLabel =
-    hole.atStake === 1
-      ? '1 skin på spill'
-      : `${hole.atStake} skins på spill`;
+  const atStakeLabel = t('skins.atStakeLabel', { count: hole.atStake });
 
   return (
     <li
@@ -385,7 +380,11 @@ function HoleRow({
 
         <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[12px] text-muted">
           <span className={`font-medium ${outcomeClass(hole.outcome)}`}>
-            {outcomeLabel(hole)}
+            {hole.outcome === 'won'
+              ? t('skins.outcomeWon')
+              : hole.outcome === 'carryover'
+                ? t('skins.outcomeCarryover')
+                : t('skins.outcomePending')}
           </span>
 
           {hole.outcome === 'won' && winnerName && (
@@ -399,7 +398,7 @@ function HoleRow({
               </span>
               <span className="tabular-nums text-accent font-medium">
                 +{hole.skinsAwarded}{' '}
-                {hole.skinsAwarded === 1 ? 'skin' : 'skins'}
+                {t('skins.skinLabel', { count: hole.skinsAwarded })}
               </span>
             </>
           )}
@@ -409,7 +408,7 @@ function HoleRow({
               <span aria-hidden className="text-muted/40">
                 ·
               </span>
-              <span className="text-muted">ruller videre</span>
+              <span className="text-muted">{t('skins.carriedForward')}</span>
             </>
           )}
         </div>
@@ -418,8 +417,7 @@ function HoleRow({
             slik at det er åpenbart hvor potten samlet seg opp til dette hullet. */}
         {hole.carriedIn > 0 && (
           <p className="mt-1 text-[11px] tabular-nums text-muted/70">
-            {hole.carriedIn}{' '}
-            {hole.carriedIn === 1 ? 'skin' : 'skins'} rullet inn
+            {t('skins.carriedInLabel', { count: hole.carriedIn })}
           </p>
         )}
       </Card>

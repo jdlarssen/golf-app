@@ -1,31 +1,51 @@
 import type { WolfChoice, WolfHoleOutcome } from '@/lib/scoring/modes/types';
 
 /**
- * Delte Wolf-per-hull-labels (epic #496). Trukket ut av WolfView slik at både
- * leaderboardets PER HULL og «Hull for hull»-flaten (WolfHolesView) bruker de
- * samme norske strengene — ingen kopi-lim. Rene funksjoner: caller resolver
- * partner-navnet (via `formatRevealName`) og sender det inn.
+ * Delte Wolf-per-hull-labels (epic #496, i18n-refaktor #554). Trukket ut av
+ * WolfView slik at både leaderboardets PER HULL og «Hull for hull»-flaten
+ * (WolfHolesView) bruker de samme katalog-nøklene — ingen kopi-lim.
+ *
+ * Funksjonene returnerer nå stabile semantiske nøkler som komponent-siden
+ * oversetter via `t('leaderboard.wolf.<key>')`. wolfOutcomeClass returnerer
+ * fortsatt CSS-klassenavn (ingen bruker-tekst).
  */
-export function wolfChoiceLabel(
-  choice: WolfChoice | null,
-  partnerName: string | null,
-): string {
-  if (choice === null) return 'Venter…';
-  if (choice === 'partner') return `Partner: ${partnerName ?? '?'}`;
-  if (choice === 'lone') return 'Lone Wolf';
-  return 'Blind Wolf';
+
+export type WolfChoiceKey =
+  | 'choiceWaiting'
+  | 'choicePartner'
+  | 'choiceLone'
+  | 'choiceBlind';
+
+export type WolfOutcomeKey =
+  | 'outcomeWolfVant'
+  | 'outcomeAndreVant'
+  | 'outcomeLik'
+  | 'outcomeVenter';
+
+/**
+ * Returnerer katalog-nøkkel (under leaderboard.wolf.*) for Wolf-valget.
+ * Merk: 'choicePartner' krever ICU-interpolasjon {partnerName} hos kalleren.
+ */
+export function wolfChoiceKey(choice: WolfChoice | null): WolfChoiceKey {
+  if (choice === null) return 'choiceWaiting';
+  if (choice === 'partner') return 'choicePartner';
+  if (choice === 'lone') return 'choiceLone';
+  return 'choiceBlind';
 }
 
-export function wolfOutcomeLabel(outcome: WolfHoleOutcome): string {
+/**
+ * Returnerer katalog-nøkkel (under leaderboard.wolf.*) for utfallet av et hull.
+ */
+export function wolfOutcomeKey(outcome: WolfHoleOutcome): WolfOutcomeKey {
   switch (outcome) {
     case 'wolf_side_wins':
-      return 'Wolf vant';
+      return 'outcomeWolfVant';
     case 'opp_side_wins':
-      return 'Andre vant';
+      return 'outcomeAndreVant';
     case 'tied':
-      return 'Lik';
+      return 'outcomeLik';
     default:
-      return 'Venter';
+      return 'outcomeVenter';
   }
 }
 

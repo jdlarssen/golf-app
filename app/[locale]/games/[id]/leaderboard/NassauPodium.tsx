@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Kicker } from '@/components/ui/Kicker';
@@ -16,14 +17,9 @@ import type { NassauPlayerInfo } from './NassauView';
 // 'nassau' så vi ikke kolliderer med solo-stableford/solo-strokeplay/wolf.
 const STORAGE_PREFIX = 'torny-nassau-podium-confetti-seen-';
 
-/**
- * Sweep-celebration-tekst. Brukt når en spiller har `units === 3` (tok alle
- * tre seksjoner alene). «Hele tavla» er den naturlige norske vendingen for
- * å feie hele bordet — idiomatisk, kompis-ethos, ingen engelsk-borrow.
- * Holdes som modul-konstant så test-en kan referere strengen direkte.
- */
-const SWEEP_LABEL = 'Hele tavla!';
-const SWEEP_SUBTITLE = 'Tok alle tre seksjoner';
+// SWEEP_LABEL and SWEEP_SUBTITLE are now in the i18n catalog under
+// leaderboard.nassau.sweepLabel / leaderboard.nassau.sweepSubtitle.
+// Tests asserting on these strings use the Norwegian catalog values.
 
 export interface NassauPodiumProps {
   /** Spill-id — brukes til sessionStorage-nøkkel + drilldown. */
@@ -63,6 +59,9 @@ export function NassauPodium({
   playersById,
   backHref = '/',
 }: NassauPodiumProps): JSX.Element {
+  const t = useTranslations('leaderboard');
+  const tc = useTranslations('leaderboard.common');
+
   const [replayKey, setReplayKey] = useState(0);
 
   useEffect(() => {
@@ -82,7 +81,7 @@ export function NassauPodium({
       <Shell>
         <Header gameName={gameName} backHref={backHref} />
         <p className="mt-12 text-center text-sm text-muted">
-          Ingen spillere å vise.
+          {tc('noPlayersToShow')}
         </p>
       </Shell>
     );
@@ -103,10 +102,10 @@ export function NassauPodium({
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <Kicker tone="accent">PODIUM</Kicker>
         <h1 className="mt-2 font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          Vinneren er kåret
+          {tc('winnerAnnounced')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          Nassau · {result.scoring === 'net' ? 'Netto' : 'Brutto'}
+          Nassau · {result.scoring === 'net' ? tc('netto') : tc('brutto')}
         </p>
       </div>
 
@@ -116,10 +115,10 @@ export function NassauPodium({
           className="mx-4 mb-3 rounded-2xl border border-accent bg-accent/[0.08] px-4 py-3 text-center shadow-[0_2px_12px_rgba(201,169,97,0.18)]"
         >
           <p className="font-serif text-[18px] font-medium leading-tight text-accent">
-            {SWEEP_LABEL}
+            {t('nassau.sweepLabel')}
           </p>
           <p className="mt-1 text-[12px] tabular-nums text-muted">
-            {playerLabel(sweeper.userId, playersById)} · {SWEEP_SUBTITLE}
+            {playerLabel(sweeper.userId, playersById)} · {t('nassau.sweepSubtitle')}
           </p>
         </div>
       )}
@@ -139,6 +138,7 @@ export function NassauPodium({
                 playerInfo={playersById.get(second.userId)}
                 tier="silver"
                 staggerIndex={1}
+                t={t}
               />
             )}
           </div>
@@ -150,6 +150,7 @@ export function NassauPodium({
               playerInfo={playersById.get(first.userId)}
               tier="champagne"
               staggerIndex={0}
+              t={t}
             />
           </div>
 
@@ -161,6 +162,7 @@ export function NassauPodium({
                 playerInfo={playersById.get(third.userId)}
                 tier="bronze"
                 staggerIndex={2}
+                t={t}
               />
             )}
           </div>
@@ -173,7 +175,7 @@ export function NassauPodium({
           className="mx-4 mt-4 rounded-2xl border border-border bg-surface px-4 py-3"
         >
           <summary className="cursor-pointer list-none font-serif text-[15px] font-medium tracking-[-0.005em] text-text marker:hidden">
-            Se hele rangeringen ({result.players.length} spillere)
+            {tc('showFullRankingPlayers', { count: result.players.length })}
             <span aria-hidden className="ml-1 text-muted">
               ›
             </span>
@@ -204,7 +206,7 @@ export function NassauPodium({
                         {player.units}
                       </span>
                       <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
-                        {unitsLabel(player.units)}
+                        {player.units === 1 ? t('nassau.seier') : t('nassau.seire')}
                       </span>
                     </div>
                   </div>
@@ -215,13 +217,9 @@ export function NassauPodium({
         </details>
       )}
 
-      <PullQuote className="px-6 pt-4 pb-4">Gratulerer.</PullQuote>
+      <PullQuote className="px-6 pt-4 pb-4">{tc('congratulations')}</PullQuote>
     </Shell>
   );
-}
-
-function unitsLabel(units: number): string {
-  return units === 1 ? 'seier' : 'seire';
 }
 
 function playerLabel(
@@ -286,12 +284,14 @@ function PodiumStep({
   playerInfo,
   tier,
   staggerIndex,
+  t,
 }: {
   rank: 1 | 2 | 3;
   player: NassauUnitLine;
   playerInfo: NassauPlayerInfo | undefined;
   tier: PodiumTier;
   staggerIndex: number;
+  t: ReturnType<typeof useTranslations>;
 }) {
   const displayName = playerInfo
     ? formatRevealName(playerInfo.name, playerInfo.nickname)
@@ -326,7 +326,7 @@ function PodiumStep({
           {player.units}
         </span>
         <span className="mt-1 block text-[9px] font-semibold uppercase tracking-[0.16em] text-muted">
-          {unitsLabel(player.units)}
+          {player.units === 1 ? t('nassau.seier') : t('nassau.seire')}
         </span>
       </div>
 

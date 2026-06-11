@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Kicker } from '@/components/ui/Kicker';
@@ -51,6 +52,9 @@ export function SkinsPodium({
   playersById,
   backHref = '/',
 }: SkinsPodiumProps): JSX.Element {
+  const t = useTranslations('leaderboard');
+  const tc = useTranslations('leaderboard.common');
+
   const [replayKey, setReplayKey] = useState(0);
 
   useEffect(() => {
@@ -70,7 +74,7 @@ export function SkinsPodium({
       <Shell>
         <Header gameName={gameName} backHref={backHref} />
         <p className="mt-12 text-center text-sm text-muted">
-          Ingen spillere å vise.
+          {tc('noPlayersToShow')}
         </p>
       </Shell>
     );
@@ -89,10 +93,10 @@ export function SkinsPodium({
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <Kicker tone="accent">PODIUM</Kicker>
         <h1 className="mt-2 font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          Skins-vinneren kåret
+          {t('skins.skinsWinnerKronet')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          Skins · {result.scoring === 'net' ? 'Netto' : 'Brutto'}
+          {t('skins.skinsWinnerSubtitle', { scoring: result.scoring === 'net' ? tc('netto') : tc('brutto') })}
         </p>
       </div>
 
@@ -111,6 +115,7 @@ export function SkinsPodium({
                 playerInfo={playersById.get(second.userId)}
                 tier="silver"
                 staggerIndex={1}
+                t={t}
               />
             )}
           </div>
@@ -122,6 +127,7 @@ export function SkinsPodium({
               playerInfo={playersById.get(first.userId)}
               tier="champagne"
               staggerIndex={0}
+              t={t}
             />
           </div>
 
@@ -133,6 +139,7 @@ export function SkinsPodium({
                 playerInfo={playersById.get(third.userId)}
                 tier="bronze"
                 staggerIndex={2}
+                t={t}
               />
             )}
           </div>
@@ -160,7 +167,7 @@ export function SkinsPodium({
                       {displayName}
                     </p>
                     <p className="mt-0.5 text-[12px] text-muted tabular-nums">
-                      {player.holesWon} hull vunnet
+                      {t('skins.holesWonCount', { count: player.holesWon })}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
@@ -168,7 +175,7 @@ export function SkinsPodium({
                       {player.totalSkins}
                     </span>
                     <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
-                      {player.totalSkins === 1 ? 'skin' : 'skins'}
+                      {t('skins.skinLabel', { count: player.totalSkins })}
                     </span>
                   </div>
                 </div>
@@ -178,7 +185,7 @@ export function SkinsPodium({
         </ul>
       )}
 
-      <PullQuote className="px-6 pt-4 pb-4">Gratulerer.</PullQuote>
+      <PullQuote className="px-6 pt-4 pb-4">{tc('congratulations')}</PullQuote>
     </Shell>
   );
 }
@@ -237,12 +244,14 @@ function PodiumStep({
   playerInfo,
   tier,
   staggerIndex,
+  t,
 }: {
   rank: 1 | 2 | 3;
   player: SkinsPlayerLine;
   playerInfo: SkinsPlayerInfo | undefined;
   tier: PodiumTier;
   staggerIndex: number;
+  t: ReturnType<typeof useTranslations>;
 }) {
   const displayName = playerInfo
     ? formatRevealName(playerInfo.name, playerInfo.nickname)
@@ -277,12 +286,12 @@ function PodiumStep({
           {player.totalSkins}
         </span>
         <span className="mt-1 block text-[9px] font-semibold uppercase tracking-[0.16em] text-muted">
-          {player.totalSkins === 1 ? 'skin' : 'skins'}
+          {t('skins.skinLabel', { count: player.totalSkins })}
         </span>
       </div>
 
       <p className="text-[10px] tabular-nums text-muted">
-        {player.holesWon} hull vunnet
+        {t('skins.holesWonCount', { count: player.holesWon })}
       </p>
     </div>
   );

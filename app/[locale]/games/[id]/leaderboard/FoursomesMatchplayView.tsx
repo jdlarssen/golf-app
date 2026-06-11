@@ -1,4 +1,5 @@
 import type { JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
@@ -93,17 +94,19 @@ export function FoursomesMatchplayView({
   gameStatus: _gameStatus,
   backHref = '/',
 }: FoursomesMatchplayViewProps): JSX.Element {
+  const t = useTranslations('leaderboard');
+  const tc = useTranslations('leaderboard.common');
+
   if (result.holes.length === 0) {
     return (
       <Shell>
         <Header gameName={gameName} backHref={backHref} />
         <Card className="mx-4 mt-12 px-5 py-6 text-center">
           <p className="font-serif text-[16px] font-medium text-text">
-            Matchen kan ikke vises
+            {t('matchplay.matchCannotShow')}
           </p>
           <p className="mt-2 font-sans text-xs text-muted">
-            Spillere er ikke korrekt fordelt på to lag med to spillere hver.
-            Sjekk admin-flyten.
+            {t('matchplay.teamDistribution')}
           </p>
         </Card>
       </Shell>
@@ -123,7 +126,7 @@ export function FoursomesMatchplayView({
           {formatLabel}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          2 mot 2 · Vekselslag
+          {t('matchplay.subtitle2v2alternate')}
         </p>
       </div>
 
@@ -138,11 +141,11 @@ export function FoursomesMatchplayView({
           testIdPrefix="foursomes"
           sideA={{
             label: side1Label,
-            sublines: sideSublines(side1, playerInfo),
+            sublines: sideSublines(side1, playerInfo, t),
           }}
           sideB={{
             label: side2Label,
-            sublines: sideSublines(side2, playerInfo),
+            sublines: sideSublines(side2, playerInfo, t),
           }}
           holeResults={result.holes.map((h) => h.result)}
           holesUp={result.holesUp}
@@ -154,17 +157,18 @@ export function FoursomesMatchplayView({
       {/* 2. Per-hull-grid — viser lag-netto per side */}
       <section className="px-3.5 pt-4 pb-2">
         <div className="px-2 pb-2 text-center">
-          <Kicker tone="muted">PER HULL</Kicker>
+          <Kicker tone="muted">{tc('perHullKicker')}</Kicker>
         </div>
         <HoleGrid
           holes={result.holes}
           side1Label={side1Label}
           side2Label={side2Label}
+          t={t}
         />
       </section>
 
       <PullQuote className="px-6 pt-4 pb-4">
-        {hasDecidedWinner ? 'Gratulerer.' : 'Lykke til.'}
+        {hasDecidedWinner ? tc('congratulations') : tc('goodLuck')}
       </PullQuote>
     </Shell>
   );
@@ -184,14 +188,15 @@ function displayNameFor(info: FoursomesPlayerInfo | undefined): string {
 function sideSublines(
   side: FoursomesMatchplayResult['sides'][0],
   playerInfo: Record<string, FoursomesPlayerInfo>,
+  t: ReturnType<typeof useTranslations>,
 ): string[] {
   const extra =
     side.effectiveExtraHandicap > 0
-      ? ` (+${side.effectiveExtraHandicap} slag)`
+      ? t('matchplay.extraHandicap', { n: side.effectiveExtraHandicap })
       : '';
   return [
     ...side.players.map((p) => displayNameFor(playerInfo[p.userId])),
-    `Lag-HCP: ${side.combinedCourseHandicap}${extra}`,
+    t('matchplay.lagHCP', { hcp: side.combinedCourseHandicap, extra }),
   ];
 }
 
@@ -234,10 +239,12 @@ function HoleGrid({
   holes,
   side1Label,
   side2Label,
+  t,
 }: {
   holes: FoursomesHoleRow[];
   side1Label: string;
   side2Label: string;
+  t: ReturnType<typeof useTranslations>;
 }): JSX.Element {
   // Kompakt: vis kun lag-label i header (forkortet).
   const side1Short = side1Label.length > 6 ? `L1` : side1Label;
@@ -256,13 +263,13 @@ function HoleGrid({
               scope="col"
               className="px-2 py-2 text-left font-semibold uppercase tracking-[0.08em] text-[10px] text-muted"
             >
-              Hull
+              {t('matchplay.colHull')}
             </th>
             <th
               scope="col"
               className="px-1 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[10px] text-muted"
             >
-              Par
+              {t('matchplay.colPar')}
             </th>
             <th
               scope="col"
@@ -280,13 +287,13 @@ function HoleGrid({
               scope="col"
               className="px-2 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[10px] text-muted"
             >
-              Vinner
+              {t('matchplay.colVinner')}
             </th>
             <th
               scope="col"
               className="px-2 py-2 text-center font-semibold uppercase tracking-[0.08em] text-[10px] text-muted"
             >
-              Stilling
+              {t('matchplay.colStilling')}
             </th>
           </tr>
         </thead>
