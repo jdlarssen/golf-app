@@ -19,11 +19,11 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ## 1.110.y — Matchplay · duellkort i resultatlista
 
-Issue [#546](https://github.com/jdlarssen/golf-app/issues/546). Hele matchplay-familien får skins-duellens utseende i leaderboarden: vunne hull i hver sin farge, dragkamp-stripe, én rute per hull og en dom som snakker matchplay («3&2», «2up», «AS»). Tabellen viser i tillegg stillingen etter hvert hull.
+Issue [#546](https://github.com/jdlarssen/golf-app/issues/546). Hele matchplay-familien får skins-duellens utseende i leaderboarden: vunne hull i hver sin farge, dragkamp-stripe, én rute per hull og en dom på matchplay-språket («3&2», «2up», «AS»). Tabellen viser i tillegg stillingen etter hvert hull.
 
 ### [1.110.1] - 2026-06-11 · #546
 
-> Lag-matchene har fått samme duell-visning: fourball, foursomes, greensome, chapman og gruesome viser nå lagene mot hverandre med vunne hull, dragkamp-stripe og stilling etter hvert hull.
+> Lagmatchene har fått samme duellvisning: fourball, foursomes, greensome, chapman og gruesome viser nå lagene mot hverandre med vunne hull, dragkamp-stripe og stilling etter hvert hull.
 
 <details>
 <summary>Teknisk</summary>
@@ -38,7 +38,7 @@ Issue [#546](https://github.com/jdlarssen/golf-app/issues/546). Hele matchplay-f
 
 ### [1.110.0] - 2026-06-11 · #546
 
-> Resultatlista for matchplay 1 mot 1 ser nå ut som en duell: vunne hull i hver sin farge, en dragkamp-stripe som viser styrkeforholdet, én rute per hull og dommen («Kari vant 3&2»). Tabellen under forteller stillingen etter hvert hull — 1up, 2up, AS.
+> Resultatlista for matchplay 1 mot 1 ser nå ut som en duell: vunne hull i hver sin farge, en dragkamp-stripe som viser styrkeforholdet, og én rute per hull. Dommen står under («Kari vant 3&2»), og tabellen viser stillingen etter hvert hull: 1up, 2up, AS.
 
 <details>
 <summary>Teknisk</summary>
