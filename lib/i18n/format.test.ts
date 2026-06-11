@@ -13,6 +13,7 @@ import {
   formatTeeOffDateLocale,
   formatShortDateWithYearLocale,
   formatCountdownLocale,
+  formatTeeOffLineLocale,
 } from './format';
 import {
   formatTeeOffTime,
@@ -228,5 +229,68 @@ describe('formatCountdownLocale', () => {
     expect(formatCountdownLocale(36 * 60 * 60_000, 'en')).toBe(
       'Starting in 1 day',
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// formatTeeOffLineLocale (#561 Fase 2b)
+// ---------------------------------------------------------------------------
+// NOTE: process.env.TZ = 'UTC' is set at the top of this file. The input
+// strings are datetime-local (no timezone), so new Date('2026-05-15T09:05')
+// is parsed as UTC midnight + offset in local time — under TZ=UTC that means
+// the date fields (getDate, getMonth, etc.) read back exactly as written.
+// ---------------------------------------------------------------------------
+
+describe('formatTeeOffLineLocale', () => {
+  // 'no' path parametrized over all 12 months + padding edge
+  it.each([
+    ['2026-01-15T09:05', 'no', '15. januar 2026 kl. 09:05'],
+    ['2026-02-15T09:05', 'no', '15. februar 2026 kl. 09:05'],
+    ['2026-03-15T09:05', 'no', '15. mars 2026 kl. 09:05'],
+    ['2026-04-15T09:05', 'no', '15. april 2026 kl. 09:05'],
+    ['2026-05-15T09:05', 'no', '15. mai 2026 kl. 09:05'],
+    ['2026-06-15T09:05', 'no', '15. juni 2026 kl. 09:05'],
+    ['2026-07-15T09:05', 'no', '15. juli 2026 kl. 09:05'],
+    ['2026-08-15T09:05', 'no', '15. august 2026 kl. 09:05'],
+    ['2026-09-15T09:05', 'no', '15. september 2026 kl. 09:05'],
+    ['2026-10-15T09:05', 'no', '15. oktober 2026 kl. 09:05'],
+    ['2026-11-15T09:05', 'no', '15. november 2026 kl. 09:05'],
+    ['2026-12-15T09:05', 'no', '15. desember 2026 kl. 09:05'],
+    // zero-padding edge: hours 09, minutes 05
+    ['2026-05-03T09:05', 'no', '3. mai 2026 kl. 09:05'],
+    // midnight padding
+    ['2026-05-03T00:00', 'no', '3. mai 2026 kl. 00:00'],
+  ] as const)(
+    "'no' %s → %s",
+    (value, locale, expected) => {
+      expect(formatTeeOffLineLocale(value, locale)).toBe(expected);
+    },
+  );
+
+  // 'en' sanity checks
+  it.each([
+    ['2026-05-15T12:30', 'en', '15 May 2026, 12:30'],
+    ['2026-10-03T09:05', 'en', '3 October 2026, 09:05'],
+    ['2026-01-01T00:00', 'en', '1 January 2026, 00:00'],
+    ['2026-12-31T23:59', 'en', '31 December 2026, 23:59'],
+  ] as const)(
+    "'en' %s → %s",
+    (value, locale, expected) => {
+      expect(formatTeeOffLineLocale(value, locale)).toBe(expected);
+    },
+  );
+
+  it('empty string returns null', () => {
+    expect(formatTeeOffLineLocale('', 'no')).toBeNull();
+    expect(formatTeeOffLineLocale('', 'en')).toBeNull();
+  });
+
+  it('whitespace-only string returns null', () => {
+    expect(formatTeeOffLineLocale('   ', 'no')).toBeNull();
+  });
+
+  it('unparseable non-empty string returns the value unchanged', () => {
+    expect(formatTeeOffLineLocale('ikke-en-dato', 'no')).toBe('ikke-en-dato');
+    expect(formatTeeOffLineLocale('not-a-date', 'en')).toBe('not-a-date');
   });
 });

@@ -151,6 +151,69 @@ export function formatShortDateWithYearLocale(
   });
 }
 
+// Norwegian month names for the 'no' path of formatTeeOffLineLocale.
+const NORWEGIAN_MONTHS_TEE_OFF = [
+  'januar',
+  'februar',
+  'mars',
+  'april',
+  'mai',
+  'juni',
+  'juli',
+  'august',
+  'september',
+  'oktober',
+  'november',
+  'desember',
+] as const;
+
+/**
+ * Locale-aware tee-off line string for the ReadyStep summary card.
+ *
+ * Input: a `datetime-local` string (`YYYY-MM-DDTHH:mm`, no timezone).
+ * `new Date(value)` parses it as local time — all field reads use local-time
+ * getters so both 'no' and 'en' paths are consistent.
+ *
+ * Returns `null` for empty/whitespace input.
+ * Returns `value` unchanged for a non-empty but unparseable input (mirrors
+ * the component's current `return value` fallback so the later chunk that
+ * replaces the local helper can stay byte-identical).
+ *
+ * Norwegian ('no'): "${day}. ${month} ${year} kl. ${hh}:${mm}"
+ *   — byte-identical to ReadyStep's current `formatTeeOff` output.
+ *   Example: "15. mai 2026 kl. 09:05"
+ *
+ * English ('en'): "${day} ${Month} ${year}, ${hh}:${mm}"
+ *   — en-GB style, capitalised month via Intl, 24-hour clock.
+ *   Example: "15 May 2026, 09:05"
+ */
+export function formatTeeOffLineLocale(
+  value: string,
+  locale: AppLocale,
+): string | null {
+  if (!value || !value.trim()) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  const day = date.getDate();
+  const year = date.getFullYear();
+  const hh = String(date.getHours()).padStart(2, '0');
+  const mm = String(date.getMinutes()).padStart(2, '0');
+
+  if (locale === 'no') {
+    const month = NORWEGIAN_MONTHS_TEE_OFF[date.getMonth()];
+    return `${day}. ${month} ${year} kl. ${hh}:${mm}`;
+  }
+
+  // Non-Norwegian: derive capitalised month name via Intl (local-time month).
+  const probe = new Date(2000, date.getMonth(), 15);
+  const month = new Intl.DateTimeFormat(intlLocaleTag(locale), {
+    month: 'long',
+  }).format(probe);
+  const monthCap = month.charAt(0).toUpperCase() + month.slice(1);
+  return `${day} ${monthCap} ${year}, ${hh}:${mm}`;
+}
+
 /**
  * Locale-aware countdown string.
  *
