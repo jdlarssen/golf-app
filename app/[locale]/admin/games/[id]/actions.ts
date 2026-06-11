@@ -23,7 +23,10 @@ import { logAdminEvent } from '@/lib/admin/auditLog';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { notify } from '@/lib/notifications/notify';
-import { notifyPlayersGameFinished } from '@/lib/notifications/events';
+import {
+  notifyPlayersGameFinished,
+  notifyPlayersGameStarted,
+} from '@/lib/notifications/events';
 import { supportsWithdrawal } from '@/lib/scoring';
 import {
   isMatchplayMode,
@@ -81,7 +84,7 @@ async function loadAdminOrCreatorContext(gameId: string) {
  * flipping to 'active' so they reflect each player's hcp_index at tee-off.
  */
 export async function startScheduledGameAction(gameId: string) {
-  const { supabase } = await loadAdminContext();
+  const { supabase, user } = await loadAdminContext();
   const detailPath = `/admin/games/${gameId}`;
 
   const result = await startScheduledGame(supabase, gameId);
@@ -94,6 +97,34 @@ export async function startScheduledGameAction(gameId: string) {
       redirect(`${detailPath}?${qs.toString()}`);
     }
     redirect(`${detailPath}?error=${result.reason}`);
+  }
+
+  // #502: the button won the flip → game_started to every active player
+  // except the admin who clicked. started=false means a concurrent cron
+  // sweep or page visit beat us and already owns the fan-out. Best-effort:
+  // the helper swallows notify failures, and a roster/name fetch error just
+  // skips the varsel — the start itself already succeeded.
+  if (result.started) {
+    const [gameRes, rosterRes] = await Promise.all([
+      supabase
+        .from('games')
+        .select('name')
+        .eq('id', gameId)
+        .single<{ name: string }>(),
+      supabase
+        .from('game_players')
+        .select('user_id')
+        .eq('game_id', gameId)
+        .is('withdrawn_at', null)
+        .returns<{ user_id: string }[]>(),
+    ]);
+    if (gameRes.data && rosterRes.data) {
+      await notifyPlayersGameStarted(
+        rosterRes.data.filter((p) => p.user_id !== user.id),
+        { id: gameId, name: gameRes.data.name },
+        'startScheduledGameAction',
+      );
+    }
   }
 
   revalidateTag(`game-${gameId}`, 'max');

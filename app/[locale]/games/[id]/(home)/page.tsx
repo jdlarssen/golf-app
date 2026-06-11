@@ -27,6 +27,7 @@ import { firstName } from '@/lib/firstName';
 import { nameInitials } from '@/lib/names/initials';
 import { formatTeeOffTime, formatTeeOffDate } from '@/lib/format/teeOff';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
+import { notifyPlayersGameStarted } from '@/lib/notifications/events';
 import {
   getGameWithPlayers,
   type GameForHole,
@@ -324,6 +325,23 @@ export default async function GameHomePage({
       after(() => {
         revalidateTag(`game-${id}`, { expire: 0 });
       });
+      // #502: this visit won the flip → tell the other players the round is
+      // live. The visitor is excluded (they're looking at it), withdrawn
+      // players too. Inside after() because notify() calls revalidateTag,
+      // which throws in the render phase. Losers of a cron/admin race have
+      // started=false and skip this — exactly-once fan-out.
+      if (result.started) {
+        const playersToNotify = gwp.players.filter(
+          (p) => p.withdrawn_at == null && p.user_id !== userId,
+        );
+        after(() =>
+          notifyPlayersGameStarted(
+            playersToNotify,
+            { id, name: game.name },
+            'auto-start',
+          ),
+        );
+      }
     }
     // Re-fetch so the rest of this render sees the post-flip state.
     const { data: refreshed, error: refreshError } = await supabase

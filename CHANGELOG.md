@@ -17,7 +17,32 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.110.y — Matchplay · duellkort i resultatlista
+## 1.111.y — Planlagt start · presis på tee-tid
+
+Issue [#502](https://github.com/jdlarssen/golf-app/issues/502). Planlagte spill venter ikke lenger på at noen åpner appen: en bakgrunnsklokke starter runden på tee-tidspunktet, spillerne får beskjed i innboksen, og oppretteren varsles hvis noe står i veien for starten.
+
+### [1.111.0] - 2026-06-11 · #502
+
+> Planlagte spill starter nå presis på tee-tid, helt av seg selv. Alle spillere får et «Runden er i gang»-varsel i innboksen, og kan ikke spillet starte (for eksempel fordi en side mangler folk), får den som opprettet spillet beskjed om hvorfor.
+
+<details>
+<summary>Teknisk</summary>
+
+[#502](https://github.com/jdlarssen/golf-app/issues/502). Tidsstyrt auto-start via pg_cron i Supabase — Vercel Hobby-cron (1×/dag) er for grov for tee-off-presisjon, og handicap-frysingen kan ikke gjøres i ren SQL, så Postgres ringer appen.
+
+#### Added
+- `app/api/cron/start-scheduled-games/route.ts` — POST-endepunkt gated på `CRON_SECRET`-bearer (samme secret som product-update-digesten). Sweeper `status='scheduled'` med passert tee-tid (7-dagers vindu), kjører `startScheduledGame` per spill, `revalidateTag` + `game_started`-fan-out for flip-vinnere, `auto_start_blocked`-varsel for strukturelt blokkerte. `maxDuration = 60`.
+- Migrasjon `0094_scheduled_start_cron.sql`: enabler `pg_cron` + `pg_net`, cron-jobb hvert minutt med EXISTS-gate (HTTP fyres kun når noe faktisk er due) og secret fra Vault, partiell indeks på `games(scheduled_tee_off_at) where status='scheduled'`, ny kolonne `games.auto_start_blocked_notified_at`, CHECK-utvidelse for de to nye varsel-kindene.
+- To nye notification-kinds i `lib/notifications/`: `game_started` (fan-out-helper `notifyPlayersGameStarted` i `events.ts`, kun in-app — push-kandidat når #24 bygges) og `auto_start_blocked` (`autoStartBlocked.ts`, atomisk én-gangs-guard etter deliveryReminder-mønsteret, kun strukturelle årsaker). Kort-rendering + innboks-deeplinks wiret.
+
+#### Changed
+- `lib/games/startScheduledGame.ts`: resultatet bærer nå `started`-flagg (flip-vinneren får `true`, no-op-tapere i kappløp `false`) — varsel-fan-out skjer nøyaktig én gang uansett om cron, side-besøk eller admin-knappen vant.
+- E1-fallbacken på spill-siden og admin «Start runden nå» fan-outer `game_started` til de andre spillerne når de vinner flippen (aktøren ekskluderes).
+
+</details>
+
+<details>
+<summary><strong>1.110.y — Matchplay · duellkort i resultatlista (3 oppføringer)</strong></summary>
 
 Issue [#546](https://github.com/jdlarssen/golf-app/issues/546). Hele matchplay-familien får skins-duellens utseende i leaderboarden: vunne hull i hver sin farge, dragkamp-stripe, én rute per hull og en dom på matchplay-språket («3&2», «2up», «AS»). Tabellen viser i tillegg stillingen etter hvert hull.
 
@@ -62,6 +87,8 @@ Issue [#546](https://github.com/jdlarssen/golf-app/issues/546). Hele matchplay-f
 
 #### Changed
 - `MatchplayMatchView.tsx`: duellkortet erstatter status-banner + side-kort; per-hull-tabellen har ny «Stilling»-kolonne (1up/2up/AS farget mot lederens side-farge, «—» for uspilte hull); meta-raden (Spilt/Igjen/Status) er fjernet — dekkes av kortet og kolonnen. View-en er nå server-komponent (all client-state bor i kortet).
+
+</details>
 
 </details>
 
