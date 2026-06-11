@@ -120,3 +120,14 @@ Routen har allerede `admin` (route.ts:54) men sender den ikke videre; helperen k
 Implementasjonen følger kontrakten tett: cron-endepunkt med korrekt auth-gate, `started`-flagg som garanterer exactly-once `game_started`-fan-out på tvers av tre kappløpende start-stier, atomisk én-gangs `auto_start_blocked`-guard, komplett migrasjon med prod-verifisert CHECK-paritet (19→21 kinds), og urørt vercel.json/proxy.ts/league-sti. Alle 5 ikke-deploy-gatede kriterier PASS, begge deploy-gatede kriterier legitimt utestående med komplett+korrekt migrasjonsfil. Null ship-blockers.
 
 **ACCEPT.**
+
+---
+
+## Appendix: Live prod-verifikasjon (hovedchat, 2026-06-11 etter merge)
+
+- Deploy `dpl_27Nahce…` (commit e27c7a2) READY, aliaset `www.tornygolf.no` + `tornygolf.no`.
+- **Funn under utrulling:** apex-domenet 307-redirecter til www; pg_net følger ikke redirects → cron-URL korrigert til www-host FØR applisering (PR #549). curl-evidens: `POST tornygolf.no/...` → 307 med `location: https://www.tornygolf.no/...`.
+- Live auth-gate: `POST www.tornygolf.no/api/cron/start-scheduled-games` → 401 uten auth, 401 feil bearer.
+- `apply_migration scheduled_start_cron` → success. Prod-state: ext_count=2 (pg_cron+pg_net), col_exists=1, idx_exists=1, job_exists=1, schedule `* * * * *`.
+- Første cron-kjøring: `succeeded` / «0 rows» (due_now=0 → EXISTS-gate holdt HTTP tilbake, som designet).
+- Deploy-gated kriterier 6+7: **PASS**. Gjenstående eier-steg: `cron_secret` i Vault.

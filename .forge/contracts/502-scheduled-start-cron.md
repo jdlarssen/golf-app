@@ -103,8 +103,8 @@ Kopiere `CRON_SECRET`-verdien fra Vercel → kjøre `select vault.create_secret(
 - [x] `startScheduledGame` returnerer `started: true` kun for flip-vinneren — **Evidens:** `lib/games/startScheduledGame.test.ts` «started-flagg (#502)»-describe, 22/22 grønne (vinner true; 0-raders flip false; allerede-aktiv false).
 - [x] `game_started`-varsel komplett — **Evidens:** kind+zod `lib/notifications/types.ts`; CHECK i 0094; rendering `NotificationCard.tsx` («Runden er i gang»); deeplink `InboxClient.tsx`; fan-out gated på `started`: cron `route.ts:88-115`, E1 `app/[locale]/games/[id]/(home)/page.tsx:333-345` (i `after()`, ekskl. besøkende), admin `app/[locale]/admin/games/[id]/actions.ts:104-131` (ekskl. admin).
 - [x] `auto_start_blocked`-varsel én gang, kun strukturelle årsaker — **Evidens:** `lib/notifications/autoStartBlocked.ts` atomisk vinn-raden-update; `autoStartBlocked.test.ts` 9 cases grønne (filter begge veier + vant/tapte raden + null-creator).
-- [ ] Migrasjon komplett og applisert i prod via MCP — **fil komplett (0094), applisering skjer etter merge+deploy (per kontraktens rekkefølge)**
-- [ ] `cron.job` viser jobben scheduled i prod + kjøringer i `cron.job_run_details` — **verifiseres etter applisering**
+- [x] Migrasjon komplett og applisert i prod via MCP — **Evidens (2026-06-11):** `apply_migration` success; verifisert: pg_cron+pg_net installert (ext_count=2), kolonne + partiell indeks finnes. NB: URL korrigert til www-host før applisering (apex 307-redirecter, pg_net følger ikke redirects — PR #549).
+- [x] `cron.job` viser jobben scheduled i prod + kjøringer — **Evidens:** `cron.job` har `start-scheduled-games` med `* * * * *`; første kjøring i `job_run_details`: `succeeded` / «0 rows» (EXISTS-gate korrekt — ingen due games). Live-endepunkt på www: 401 uten/med feil bearer. Gjenstår kun eier-steget: `cron_secret` i Vault (vault_secret_exists=0).
 
 ## Gates
 
