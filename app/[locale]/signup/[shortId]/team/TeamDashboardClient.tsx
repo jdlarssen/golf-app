@@ -306,6 +306,8 @@ function mapError(code: string): string {
       return 'Fant ikke laget eller medspilleren.';
     case 'game_locked':
       return 'Spillet er startet — endringer er ikke tillatt lenger.';
+    case 'signup_closed':
+      return 'Påmeldingen er stengt. Arrangøren gjør de siste justeringene.';
     case 'db_error':
     default:
       return 'Klarte ikke å fullføre handlingen. Prøv igjen om litt.';

@@ -232,6 +232,23 @@ describe('submitTeamRegistration — game-state-gating', () => {
     expect(result).toEqual({ ok: false, error: 'game_locked' });
   });
 
+  it('#543: stengt påmelding → signup_closed', async () => {
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({ signups_closed_at: '2026-06-11T10:00:00Z' }),
+    );
+    const { submitTeamRegistration } = await import('./teamActions');
+    const result = await submitTeamRegistration({
+      shortId: SHORT_ID,
+      teamName: 'Lag A',
+      slots: [
+        { mode: 'email', value: 'a@x' },
+        { mode: 'email', value: 'b@x' },
+        { mode: 'email', value: 'c@x' },
+      ],
+    });
+    expect(result).toEqual({ ok: false, error: 'signup_closed' });
+  });
+
   it('solo-modus (stableford) → mode_does_not_support_teams', async () => {
     getGameByShortIdMock.mockResolvedValue(
       makeGame({
@@ -539,5 +556,45 @@ describe('submitTeamRegistration — happy paths', () => {
     expect(redirectMock).toHaveBeenCalledWith(
       `/login?next=/signup/${SHORT_ID}`,
     );
+  });
+});
+
+describe('#543: stengt påmelding — accept/attach-guards', () => {
+  beforeEach(() => {
+    authedAsCaptain();
+  });
+
+  it('acceptTeamInvite på stengt spill → signup_closed', async () => {
+    // Admin-kø: kun request-raden — guarden treffer før team_number-oppslag.
+    adminMock = buildSupabaseMock([
+      {
+        data: {
+          id: 'req-1',
+          game_id: GAME_ID,
+          user_id: CAPTAIN_ID,
+          status: 'pending',
+          team_request_id: null,
+          team_name: 'Lag A',
+          is_team_captain: false,
+        },
+        error: null,
+      },
+    ]);
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({ signups_closed_at: '2026-06-11T10:00:00Z' }),
+    );
+    const { acceptTeamInvite } = await import('./teamActions');
+    const result = await acceptTeamInvite('req-1', SHORT_ID);
+    expect(result).toEqual({ ok: false, error: 'signup_closed' });
+  });
+
+  it('attachToCaptainTeam på stengt spill → signup_closed', async () => {
+    // Guarden treffer rett etter game-oppslaget — før invitations-querien.
+    getGameByShortIdMock.mockResolvedValue(
+      makeGame({ signups_closed_at: '2026-06-11T10:00:00Z' }),
+    );
+    const { attachToCaptainTeam } = await import('./teamActions');
+    const result = await attachToCaptainTeam('inv-1', SHORT_ID);
+    expect(result).toEqual({ ok: false, error: 'signup_closed' });
   });
 });

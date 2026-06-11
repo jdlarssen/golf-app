@@ -200,6 +200,15 @@ export default async function TeamDashboardPage({
           </h1>
         </header>
 
+        {/* #543: stengt påmelding — aksept-handlinger avvises server-side
+            med signup_closed; banneret forklarer hvorfor på forhånd. */}
+        {game.signups_closed_at != null && game.status === 'scheduled' && (
+          <Banner tone="info">
+            Påmeldingen er stengt. Arrangøren gjør de siste justeringene før
+            start.
+          </Banner>
+        )}
+
         <Card>
           <TeamDashboardClient
             mode={isCaptain ? 'captain' : 'member'}

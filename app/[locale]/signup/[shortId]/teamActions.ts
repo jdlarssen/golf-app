@@ -543,7 +543,15 @@ export async function submitTeamRegistration(
  */
 export type AcceptDeclineResult =
   | { ok: true }
-  | { ok: false; error: 'not_authed' | 'not_found' | 'game_locked' | 'db_error' };
+  | {
+      ok: false;
+      error:
+        | 'not_authed'
+        | 'not_found'
+        | 'game_locked'
+        | 'signup_closed'
+        | 'db_error';
+    };
 
 export async function acceptTeamInvite(
   requestId: string,
@@ -584,6 +592,11 @@ export async function acceptTeamInvite(
   }
   if (game.status !== 'draft' && game.status !== 'scheduled') {
     return { ok: false, error: 'game_locked' };
+  }
+  // #543: stengt påmelding fryser også medspiller-aksept — arrangøren skal
+  // kunne justere flighter/roster uten at laget fylles videre i mellomtiden.
+  if (game.signups_closed_at != null) {
+    return { ok: false, error: 'signup_closed' };
   }
 
   // Hent kapteinens team_number fra game_players hvis det finnes (open-
@@ -868,6 +881,10 @@ export async function attachToCaptainTeam(
   }
   if (game.status !== 'draft' && game.status !== 'scheduled') {
     return { ok: false, error: 'game_locked' };
+  }
+  // #543: stengt påmelding gjelder også e-post-inviterte medspillere.
+  if (game.signups_closed_at != null) {
+    return { ok: false, error: 'signup_closed' };
   }
 
   // Verifiser at invitations-raden tilhører denne brukeren (matching email).

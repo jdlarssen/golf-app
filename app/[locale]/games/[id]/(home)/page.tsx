@@ -53,6 +53,7 @@ import {
   isSingleFlightGame,
   unassignedActivePlayers,
   eligibleForFlightAssignment,
+  MAX_FLIGHT_SIZE,
   type FlightPlayer,
 } from '@/lib/games/flightScope';
 import type { FlightOption } from '../ScheduledWaitingRoom';
@@ -447,7 +448,6 @@ export default async function GameHomePage({
     // flight_number; én ekstra tom flight så spillere kan omfordele 3+3.
     let flightOptions: FlightOption[] | null = null;
     if (showFlightPicker) {
-      const MAX_FLIGHT_SIZE_LOCAL = 4;
       const activePlayers2 = gwp.players.filter((p) => !p.withdrawn_at);
       const buckets = new Map<number, string[]>();
       for (const p of activePlayers2) {
@@ -460,7 +460,7 @@ export default async function GameHomePage({
           buckets.set(p.flight_number, b);
         }
       }
-      const maxFlight = Math.ceil(activePlayers2.length / MAX_FLIGHT_SIZE_LOCAL);
+      const maxFlight = Math.ceil(activePlayers2.length / MAX_FLIGHT_SIZE);
       flightOptions = Array.from({ length: maxFlight + 1 }, (_, i) => {
         const flightNum = i + 1;
         const members = buckets.get(flightNum) ?? [];

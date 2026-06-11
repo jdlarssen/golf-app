@@ -21,6 +21,17 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#543](https://github.com/jdlarssen/golf-app/issues/543). I spill med fire eller færre deltagere går alle i én gruppe — uansett format. Det betyr at du og motstanderen din i en singelmatch kan se og skrive hverandres scorer på direkten, og at spill med wolf alltid behandles som én gruppe.
 
+### [1.112.7] - 2026-06-11 · #543
+
+> Stengt påmelding gjelder nå hele laget: medspillere som svarer på en lag-invitasjon etter at du stengte, får samme beskjed som alle andre.
+
+<details>
+<summary>Teknisk</summary>
+
+[#543](https://github.com/jdlarssen/golf-app/issues/543). Evaluator-funn NIT-1: `acceptTeamInvite` og `attachToCaptainTeam` i `teamActions.ts` manglet `signups_closed_at`-guarden som de øvrige påmeldingsstiene fikk i 1.110.6 — en medspiller kunne fullføre lag-aksept på et stengt spill. Begge stiene returnerer nå `signup_closed`, `AcceptDeclineResult`-unionen og `mapError` i `TeamDashboardClient` har fått koden, og lag-dashboardet viser stengt-banner. NIT-2: `(home)/page.tsx` re-deklarerte flight-størrelsen lokalt i stedet for å importere `MAX_FLIGHT_SIZE` fra `flightScope`. Tre nye guard-tester i `teamActions.test.ts`.
+
+</details>
+
 ### [1.112.6] - 2026-06-11 · #543
 
 > Du kan nå stenge påmeldingen mens du gjør de siste justeringene — spillere som prøver å melde seg på etter det ser en tydelig melding om at påmeldingen er stengt, og du kan åpne den igjen når du vil.
