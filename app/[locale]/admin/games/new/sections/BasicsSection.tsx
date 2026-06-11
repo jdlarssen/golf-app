@@ -9,6 +9,7 @@
  * løfter advanced-blokken inn i AdvancedSettingsSection istedenfor.
  */
 
+import { useTranslations } from 'next-intl';
 import type { CourseOption } from '../GameForm';
 import type { GameFormState } from '../useGameFormState';
 import { Input } from '@/components/ui/Input';
@@ -49,6 +50,7 @@ export function BasicsSection({
   showName = true,
   showAdvancedInline = true,
 }: Props) {
+  const t = useTranslations('wizard.sections.basics');
   const {
     name,
     setName,
@@ -73,14 +75,14 @@ export function BasicsSection({
 
   return (
     <section className="space-y-4">
-      <h2 className="text-sm font-medium text-text">1. Spillet</h2>
+      <h2 className="text-sm font-medium text-text">{t('heading')}</h2>
       {showName && (
         <Input
           id="name"
           name="name"
           type="text"
-          label="Spillnavn"
-          placeholder="f.eks. Stiklestad 17. mai"
+          label={t('gameNameLabel')}
+          placeholder={t('gameNamePlaceholder')}
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
@@ -92,7 +94,7 @@ export function BasicsSection({
           htmlFor="course_id"
           className="block text-sm font-medium text-text mb-1.5"
         >
-          Bane
+          {t('courseLabel')}
         </label>
         <select
           id="course_id"
@@ -102,7 +104,7 @@ export function BasicsSection({
           required
           className="w-full rounded-xl border px-3.5 py-2.5 bg-surface text-text border-border focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
         >
-          <option value="">Velg bane…</option>
+          <option value="">{t('coursePlaceholder')}</option>
           {courses.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -110,19 +112,19 @@ export function BasicsSection({
           ))}
         </select>
         <p className="mt-1.5 text-xs text-muted">
-          Finner du ikke banen?{' '}
+          {t('courseNotFoundHint')}{' '}
           <SmartLink
             href="/opprett-bane"
             className="underline underline-offset-2 hover:text-text"
           >
-            Opprett ny bane
+            {t('courseCreateLink')}
           </SmartLink>
         </p>
       </div>
 
       <div>
         <label htmlFor="tee_box_id" className="block text-sm font-medium text-text mb-1.5">
-          Tee
+          {t('teeLabel')}
         </label>
         <select
           id="tee_box_id"
@@ -136,10 +138,10 @@ export function BasicsSection({
           required
           className="w-full rounded-xl border px-3.5 py-2.5 bg-surface text-text border-border focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150 disabled:opacity-50"
         >
-          <option value="">{selectedCourse ? 'Velg tee-boks…' : 'Velg bane først'}</option>
-          {availableTees.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name} ({formatRatingBadge(t)})
+          <option value="">{selectedCourse ? t('teePlaceholderWithCourse') : t('teePlaceholderNoCourse')}</option>
+          {availableTees.map((tee) => (
+            <option key={tee.id} value={tee.id}>
+              {tee.name} ({formatRatingBadge(tee)})
             </option>
           ))}
         </select>
@@ -152,10 +154,10 @@ export function BasicsSection({
         id="scheduled_tee_off_at"
         name="scheduled_tee_off_at"
         type="datetime-local"
-        label="Tee-off"
+        label={t('teeOffLabel')}
         value={scheduledTeeOffAt}
         onChange={(e) => setScheduledTeeOffAt(e.target.value)}
-        hint="Påkrevd ved publisering. Valgfritt for utkast."
+        hint={t('teeOffHint')}
         // iOS: native datetime-local ignorerer width:100% og strekker seg
         // utenfor kortet. appearance-none + min-w-0 krymper kontrollen til
         // containeren (samme fiks som dato-feltene i CreateLigaForm, #453).
@@ -170,7 +172,7 @@ export function BasicsSection({
               submit; no other UI state needs to react to it. */}
           <fieldset>
             <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-              Synlighet under runden
+              {t('visibilityLegend')}
             </legend>
             <div className="mt-2 space-y-3">
               <label className="flex items-start gap-3 cursor-pointer">
@@ -184,10 +186,10 @@ export function BasicsSection({
                 />
                 <div>
                   <div className="font-serif text-base text-text">
-                    Vis alt under runden
+                    {t('visibilityLiveTitle')}
                   </div>
                   <div className="text-xs text-muted">
-                    Netto-tall synlige fra hull 1 (standard)
+                    {t('visibilityLiveDesc')}
                   </div>
                 </div>
               </label>
@@ -202,21 +204,19 @@ export function BasicsSection({
                 />
                 <div>
                   <div className="font-serif text-base text-text">
-                    Avslør på slutten
+                    {t('visibilityRevealTitle')}
                   </div>
                   <div className="text-xs text-muted">
-                    Brutto under runden, netto avsløres når spillet avsluttes
+                    {t('visibilityRevealDesc')}
                   </div>
                 </div>
               </label>
             </div>
             <p className="mt-2 text-xs text-muted">
-              Reveal-modus skjuler handicap-slag og netto-rangering under runden.
-              Lag med høyere handicap kan slå brutto-lederen, så avsløringen blir
-              et spenningsmoment når du trykker avslutt.
+              {t('visibilityRevealHint')}
               {lockScoreVisibility && (
                 <span className="block mt-1">
-                  <strong>Kan ikke endres etter spill-start.</strong>
+                  <strong>{t('visibilityLockedNote')}</strong>
                 </span>
               )}
             </p>
@@ -225,7 +225,7 @@ export function BasicsSection({
           {/* Section 1c: Side tournament */}
           <fieldset>
             <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-              Sideturnering
+              {t('sideTournamentLegend')}
             </legend>
             <div className="mt-2 space-y-3">
               <label className="flex items-start gap-3 cursor-pointer">
@@ -240,10 +240,10 @@ export function BasicsSection({
                 />
                 <div>
                   <div className="font-serif text-base text-text">
-                    Legg til sideturnering
+                    {t('sideTournamentTitle')}
                   </div>
                   <div className="text-xs text-muted">
-                    Parallell lag-konkurranse med poeng. Vises etter at spillet er avsluttet.
+                    {t('sideTournamentDesc')}
                   </div>
                 </div>
               </label>
@@ -251,8 +251,7 @@ export function BasicsSection({
               {sideEnabled && (
                 <div className="space-y-4 rounded-md border border-border bg-surface-2 p-3">
                   <p className="text-xs text-muted">
-                    Poengfordeling: best netto 18 = 10p, front 9 + back 9 = 5p hver,
-                    hole-win = 2p per hull (kun alene-vinner), longest drive + closest to pin = 2p per vinner.
+                    {t('sideTournamentPointsHint')}
                   </p>
 
                   {/* v1.2.0: kategori-velger. Lever sin egne hidden inputs for
@@ -265,7 +264,7 @@ export function BasicsSection({
 
                   <fieldset>
                     <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-                      Antall longest-drive-vinnere
+                      {t('sideLdLegend')}
                     </legend>
                     <div className="mt-2 flex gap-2">
                       {[0, 1, 2].map((n) => (
@@ -285,7 +284,7 @@ export function BasicsSection({
 
                   <fieldset>
                     <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-                      Antall closest-to-pin-vinnere
+                      {t('sideCtpLegend')}
                     </legend>
                     <div className="mt-2 flex gap-2">
                       {[0, 1, 2].map((n) => (
@@ -305,7 +304,7 @@ export function BasicsSection({
 
                   {lockSideTournament && (
                     <p className="text-xs text-muted">
-                      <strong>Kan ikke endres etter spill-start.</strong>
+                      <strong>{t('sideLockedNote')}</strong>
                     </p>
                   )}
                 </div>

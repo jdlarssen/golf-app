@@ -14,6 +14,7 @@
  * konsistent uten å avhenge av at admin klikker en gyldig kombinasjon manuelt.
  */
 
+import { useTranslations } from 'next-intl';
 import type { GameFormState } from '../useGameFormState';
 import { isDiscoverableRegistrationMode } from '@/lib/games/registration';
 import type {
@@ -31,43 +32,20 @@ type Props = {
   hideHeading?: boolean;
 };
 
-type ModeOption = {
-  value: RegistrationMode;
-  title: string;
-  hint: string;
-};
-
-type TypeOption = {
-  value: RegistrationType;
-  title: string;
-  hint?: string;
-};
-
-const MODE_OPTIONS: readonly ModeOption[] = [
-  {
-    value: 'invite_only',
-    title: 'Bare de jeg inviterer',
-    hint: 'Privat. Vises ikke i Finn turneringer. Du sender invitasjoner selv fra Spillere-fanen.',
-  },
-  {
-    value: 'manual_approval',
-    title: 'Forespørsel — jeg godkjenner',
-    hint: 'Dukker opp i Finn turneringer. Folk ber om plass, og du godkjenner hver enkelt.',
-  },
-  {
-    value: 'open',
-    title: 'Åpen påmelding',
-    hint: 'Dukker opp i Finn turneringer så hvem som helst med lenken kan melde seg på.',
-  },
+const REGISTRATION_MODES: readonly RegistrationMode[] = [
+  'invite_only',
+  'manual_approval',
+  'open',
 ] as const;
 
-const TYPE_OPTIONS: readonly TypeOption[] = [
-  { value: 'solo', title: 'Individuelt' },
-  { value: 'team', title: 'Lag' },
-  { value: 'both', title: 'Begge' },
+const REGISTRATION_TYPES: readonly RegistrationType[] = [
+  'solo',
+  'team',
+  'both',
 ] as const;
 
 export function RegistrationSection({ state, hideHeading = false }: Props) {
+  const t = useTranslations('wizard.sections.registration');
   const {
     registrationMode,
     setRegistrationMode,
@@ -85,45 +63,67 @@ export function RegistrationSection({ state, hideHeading = false }: Props) {
   // til eksisterende påmeldinger.
   const teamRadioDisabled = !registrationModeSupportsTeams || lockGameMode;
   const teamDisabledReason = !registrationModeSupportsTeams
-    ? 'Valgt spillmodus støtter ikke lag-påmelding.'
+    ? t('teamModeDisabledReason')
     : null;
+
+  function modeTitle(mode: RegistrationMode): string {
+    if (mode === 'invite_only') return t('modeInviteTitle');
+    if (mode === 'manual_approval') return t('modeApprovalTitle');
+    return t('modeOpenTitle');
+  }
+
+  function modeHint(mode: RegistrationMode): string {
+    if (mode === 'invite_only') return t('modeInviteHint');
+    if (mode === 'manual_approval') return t('modeApprovalHint');
+    return t('modeOpenHint');
+  }
+
+  function typeTitle(type: RegistrationType): string {
+    if (type === 'solo') return t('typeSoloTitle');
+    if (type === 'team') return t('typeTeamTitle');
+    return t('typeBothTitle');
+  }
 
   return (
     <section className="space-y-4">
       {!hideHeading && (
-        <h2 className="text-sm font-medium text-text">Påmelding</h2>
+        <h2 className="text-sm font-medium text-text">{t('heading')}</h2>
       )}
 
       <fieldset>
         <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          Hvem kan melde seg på?
+          {t('whoLegend')}
         </legend>
         <div className="mt-2 space-y-3">
-          {MODE_OPTIONS.map((opt) => {
-            const discoverable = isDiscoverableRegistrationMode(opt.value);
+          {REGISTRATION_MODES.map((mode) => {
+            const discoverable = isDiscoverableRegistrationMode(mode);
             return (
-              <div key={opt.value}>
+              <div key={mode}>
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input
                     type="radio"
                     name="registration_mode_input"
-                    value={opt.value}
-                    checked={registrationMode === opt.value}
-                    onChange={() => setRegistrationMode(opt.value)}
+                    value={mode}
+                    checked={registrationMode === mode}
+                    onChange={() => setRegistrationMode(mode)}
                     disabled={lockGameMode}
                     className="mt-1 h-5 w-5"
                   />
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-serif text-base text-text">
-                        {opt.title}
+                        {modeTitle(mode)}
                       </span>
-                      <VisibilityBadge discoverable={discoverable} />
+                      <VisibilityBadge
+                        discoverable={discoverable}
+                        labelDiscoverable={t('badgeDiscoverable')}
+                        labelPrivate={t('badgePrivate')}
+                      />
                     </div>
-                    <div className="text-xs text-muted">{opt.hint}</div>
+                    <div className="text-xs text-muted">{modeHint(mode)}</div>
                   </div>
                 </label>
-                {opt.value === 'manual_approval' &&
+                {mode === 'manual_approval' &&
                   registrationMode === 'manual_approval' && (
                     <div className="mt-2 ml-8">
                       <label className="flex items-start gap-2 cursor-pointer">
@@ -138,11 +138,10 @@ export function RegistrationSection({ state, hideHeading = false }: Props) {
                         />
                         <div>
                           <span className="font-sans text-sm text-text">
-                            Slipp venner direkte inn
+                            {t('friendsSkipTitle')}
                           </span>
                           <p className="mt-0.5 text-xs text-muted">
-                            Venner av deg slipper rett inn uten å be om plass.
-                            Andre må fortsatt be om å bli med.
+                            {t('friendsSkipHint')}
                           </p>
                         </div>
                       </label>
@@ -156,15 +155,15 @@ export function RegistrationSection({ state, hideHeading = false }: Props) {
 
       <fieldset>
         <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          Hva melder man på?
+          {t('whatLegend')}
         </legend>
         <div className="mt-2 space-y-3">
-          {TYPE_OPTIONS.map((opt) => {
-            const isTeamOption = opt.value === 'team' || opt.value === 'both';
+          {REGISTRATION_TYPES.map((type) => {
+            const isTeamOption = type === 'team' || type === 'both';
             const disabled = isTeamOption ? teamRadioDisabled : lockGameMode;
             return (
               <label
-                key={opt.value}
+                key={type}
                 className={`flex items-start gap-3 ${
                   disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
                 }`}
@@ -177,19 +176,16 @@ export function RegistrationSection({ state, hideHeading = false }: Props) {
                 <input
                   type="radio"
                   name="registration_type_input"
-                  value={opt.value}
-                  checked={registrationType === opt.value}
-                  onChange={() => setRegistrationType(opt.value)}
+                  value={type}
+                  checked={registrationType === type}
+                  onChange={() => setRegistrationType(type)}
                   disabled={disabled}
                   className="mt-1 h-5 w-5"
                 />
                 <div>
                   <div className="font-serif text-base text-text">
-                    {opt.title}
+                    {typeTitle(type)}
                   </div>
-                  {opt.hint && (
-                    <div className="text-xs text-muted">{opt.hint}</div>
-                  )}
                 </div>
               </label>
             );
@@ -197,16 +193,14 @@ export function RegistrationSection({ state, hideHeading = false }: Props) {
         </div>
         {!registrationModeSupportsTeams && (
           <p className="mt-2 text-xs text-muted">
-            Lag-påmelding er kun tilgjengelig for best ball og Texas
-            scramble. Bytt spillmodus først hvis du vil ta imot lag.
+            {t('teamNotSupportedNote')}
           </p>
         )}
       </fieldset>
 
       {registrationMode !== 'invite_only' && (
         <p className="text-xs text-muted">
-          Du kan også la spillerne melde seg på selv. Lenken får du etter at
-          spillet er opprettet.
+          {t('selfSignupNote')}
         </p>
       )}
     </section>
@@ -219,7 +213,15 @@ export function RegistrationSection({ state, hideHeading = false }: Props) {
  * primær (positivt/synlig), privat = muted (stille). Klassifiseringen kommer
  * fra `isDiscoverableRegistrationMode` så den ikke kan drifte fra discovery.
  */
-function VisibilityBadge({ discoverable }: { discoverable: boolean }) {
+function VisibilityBadge({
+  discoverable,
+  labelDiscoverable,
+  labelPrivate,
+}: {
+  discoverable: boolean;
+  labelDiscoverable: string;
+  labelPrivate: string;
+}) {
   return (
     <span
       className={`inline-block rounded-full px-2 py-0.5 font-sans text-[10px] font-semibold uppercase tracking-[0.12em] ${
@@ -228,7 +230,7 @@ function VisibilityBadge({ discoverable }: { discoverable: boolean }) {
           : 'bg-surface-2 text-muted'
       }`}
     >
-      {discoverable ? 'Oppdagbar' : 'Privat'}
+      {discoverable ? labelDiscoverable : labelPrivate}
     </span>
   );
 }

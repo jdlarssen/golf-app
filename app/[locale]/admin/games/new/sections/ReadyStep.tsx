@@ -14,6 +14,9 @@
  */
 
 import { useState } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
+import type { AppLocale } from '@/i18n/routing';
+import { formatTeeOffLineLocale } from '@/lib/i18n/format';
 import type { GameFormMode } from '../GameForm';
 import type { GameFormState } from '../useGameFormState';
 import { Button } from '@/components/ui/Button';
@@ -39,75 +42,14 @@ type Props = {
   onNameTouched?: () => void;
 };
 
-// Lokal label-map som matcher spec-en sin summary-copy. `MODE_LABELS` i
-// `lib/scoring/modes/types.ts` bruker «Best ball» (kort), men summary-kortet
-// stiller «Best ball» eksplisitt så Jørgen ikke lurer på om det er
-// brutto-varianten.
-const MODE_SUMMARY_LABELS: Record<GameMode, string> = {
-  best_ball: 'Best ball',
-  stableford: 'Stableford',
-  modified_stableford: 'Modifisert Stableford',
-  singles_matchplay: 'Singles matchplay',
-  solo_strokeplay: 'Solo slagspill netto',
-  texas_scramble: 'Texas scramble',
-  ambrose: 'Ambrose',
-  florida_scramble: 'Florida Scramble',
-  fourball_matchplay: 'Four-ball matchplay',
-  foursomes_matchplay: 'Foursomes matchplay',
-  greensome_matchplay: 'Greensome matchplay',
-  chapman_matchplay: 'Chapman matchplay',
-  gruesome_matchplay: 'Gruesome matchplay',
-  wolf: 'Wolf',
-  nassau: 'Nassau',
-  skins: 'Skins',
-  bingo_bango_bongo: 'Bingo Bango Bongo',
-  nines: 'Nines / Split Sixes',
-  round_robin: 'Round Robin',
-  acey_deucey: 'Acey Deucey',
-  shamble: 'Shamble / Champagne Scramble',
-  patsome: 'Patsome',
-};
-
-function teamSizeLabel(size: TeamSize): string {
-  if (size === 1) return 'Solo';
-  if (size === 2) return '2-mannslag';
-  if (size === 3) return '3-mannslag';
-  return '4-mannslag';
-}
-
-const NORWEGIAN_MONTHS = [
-  'januar',
-  'februar',
-  'mars',
-  'april',
-  'mai',
-  'juni',
-  'juli',
-  'august',
-  'september',
-  'oktober',
-  'november',
-  'desember',
-] as const;
-
-function formatTeeOff(value: string): string {
-  if (!value) return 'Ikke satt';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  const day = date.getDate();
-  const month = NORWEGIAN_MONTHS[date.getMonth()];
-  const year = date.getFullYear();
-  const hh = String(date.getHours()).padStart(2, '0');
-  const mm = String(date.getMinutes()).padStart(2, '0');
-  return `${day}. ${month} ${year} kl. ${hh}:${mm}`;
-}
-
 export function ReadyStep({
   state,
   mode,
   onOpenFullForm,
   onNameTouched,
 }: Props) {
+  const t = useTranslations('wizard.ready');
+  const locale = useLocale() as AppLocale;
   const {
     name,
     setName,
@@ -132,14 +74,22 @@ export function ReadyStep({
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [nameEditing, setNameEditing] = useState(false);
 
-  const selectedTeeBox = availableTees.find((t) => t.id === teeBoxId) ?? null;
+  const selectedTeeBox = availableTees.find((tee) => tee.id === teeBoxId) ?? null;
+
+  function teamSizeLabel(size: TeamSize): string {
+    if (size === 1) return t('teamSizeSolo');
+    if (size === 2) return t('teamSize2');
+    if (size === 3) return t('teamSize3');
+    return t('teamSize4');
+  }
 
   // Lag-fordeling-summary per modus. Spec-en ber om kort prosa:
   //   «4 lag à 2 spillere» / «2 lag à 4 spillere» / «1 v 1» / «N spillere».
   function teamsSummary(): string {
     const count = selectedPlayerIds.length;
+    const playerWord = count === 1 ? t('playersSolo', { count }) : t('playersPlural', { count });
     if (isSolo) {
-      return `${count} ${count === 1 ? 'spiller' : 'spillere'}`;
+      return playerWord;
     }
     if (isMatchplay) {
       const side1 = selectedPlayerIds.filter(
@@ -148,24 +98,32 @@ export function ReadyStep({
       const side2 = selectedPlayerIds.filter(
         (pid) => state.teamByPlayer[pid] === 2,
       ).length;
-      return side1 === 1 && side2 === 1 ? '1 v 1' : 'Ikke fordelt';
+      return side1 === 1 && side2 === 1 ? t('players1v1') : t('playersUnassignedMatchplay');
     }
     const teamsCount = TEAM_NUMBERS.filter(
-      (t) => playersByTeam[t].length > 0,
+      (team) => playersByTeam[team].length > 0,
     ).length;
     if (teamsCount === 0) {
-      return `${count} ${count === 1 ? 'spiller' : 'spillere'} (ikke fordelt)`;
+      const base = count === 1 ? t('playersSolo', { count }) : t('playersPlural', { count });
+      return t('playersUnassigned', { count, playerWord: base });
     }
     if (isBestBall) {
-      return `${teamsCount} lag à 2 spillere`;
+      return t('teamsBestBall', { teams: teamsCount });
     }
     if (isParStableford) {
-      return `${teamsCount} lag à 2 spillere`;
+      return t('teamsParStableford', { teams: teamsCount });
     }
     if (isTexas || isAmbrose || isShamble) {
-      return `${teamsCount} lag à ${teamSize} spillere`;
+      return t('teamsScramble', { teams: teamsCount, size: teamSize });
     }
-    return `${count} ${count === 1 ? 'spiller' : 'spillere'}`;
+    return count === 1 ? t('playersSolo', { count }) : t('playersPlural', { count });
+  }
+
+  // Locale-aware tee-off display. Returns the 'Ikke satt' fallback when null.
+  function teeOffDisplay(): string {
+    const result = formatTeeOffLineLocale(scheduledTeeOffAt, locale);
+    if (result === null) return t('notSet');
+    return result;
   }
 
   // Resolve publish + draft-server-actions per mode-kind. Speiler logikken
@@ -188,6 +146,12 @@ export function ReadyStep({
   }
   const actions = resolveActions();
 
+  // MODE_SUMMARY_LABELS — deliberately different wording from lib's MODE_LABELS.
+  // Look up via catalog key so values are locale-aware.
+  function modeSummaryLabel(gm: GameMode): string {
+    return t(`modeSummary.${gm}` as Parameters<typeof t>[0]);
+  }
+
   return (
     <section className="space-y-4">
       {/* Summary-kort — viser alle valg i rad-format. Hver rad har muted
@@ -195,19 +159,19 @@ export function ReadyStep({
           «Ikke valgt»/«Ikke satt» når feltet er tomt. */}
       <div className="space-y-1.5 rounded-lg border border-border bg-surface-2 p-3">
         <SummaryRow
-          label="Format"
-          value={`${MODE_SUMMARY_LABELS[gameMode]} · ${teamSizeLabel(teamSize)}`}
+          label={t('formatLabel')}
+          value={`${modeSummaryLabel(gameMode)} · ${teamSizeLabel(teamSize)}`}
         />
         <SummaryRow
-          label="Bane"
-          value={selectedCourse?.name ?? 'Ikke valgt'}
+          label={t('courseLabel')}
+          value={selectedCourse?.name ?? t('notSelected')}
         />
         <SummaryRow
-          label="Tee"
-          value={selectedTeeBox?.name ?? 'Ikke valgt'}
+          label={t('teeLabel')}
+          value={selectedTeeBox?.name ?? t('notSelected')}
         />
-        <SummaryRow label="Tee-off" value={formatTeeOff(scheduledTeeOffAt)} />
-        <SummaryRow label="Spillere" value={teamsSummary()} />
+        <SummaryRow label={t('teeOffLabel')} value={teeOffDisplay()} />
+        <SummaryRow label={t('playersLabel')} value={teamsSummary()} />
       </div>
 
       {/* Spillnavn — klikk-for-å-redigere over summary. Skjult input
@@ -215,14 +179,14 @@ export function ReadyStep({
           bruker. */}
       <div className="space-y-1.5">
         <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          Spillnavn
+          {t('gameNameLegend')}
         </span>
         {nameEditing ? (
           <Input
             id="name"
             name="name"
             type="text"
-            label="Spillnavn"
+            label={t('gameNameLabel')}
             value={name}
             onChange={(e) => {
               setName(e.target.value);
@@ -238,7 +202,7 @@ export function ReadyStep({
             onClick={() => setNameEditing(true)}
             className="w-full text-left font-serif text-lg text-text rounded-md px-2 py-1 -mx-2 hover:bg-primary-soft/40"
           >
-            {name || <span className="italic text-muted">Trykk for å sette navn</span>}
+            {name || <span className="italic text-muted">{t('gameNamePlaceholder')}</span>}
           </button>
         )}
         {!nameEditing && (
@@ -258,7 +222,7 @@ export function ReadyStep({
           aria-expanded={advancedOpen}
           className="flex w-full items-center justify-between px-3 py-2 text-sm font-medium text-text"
         >
-          <span>Vis avanserte innstillinger</span>
+          <span>{t('advancedToggle')}</span>
           <span aria-hidden="true" className="text-muted">
             {advancedOpen ? '–' : '+'}
           </span>
@@ -288,14 +252,14 @@ export function ReadyStep({
                 : undefined
             }
           >
-            Lagre og publiser
+            {t('publishButton')}
           </Button>
           {!canPublish && missingForPublish.length > 0 && (
             <p
               id="publish-missing"
               className="text-xs text-muted text-center"
             >
-              Mangler: {missingForPublish.join(', ')}
+              {t('missingPrefix', { items: missingForPublish.join(', ') })}
             </p>
           )}
           <Button
@@ -306,14 +270,14 @@ export function ReadyStep({
             className="w-full"
             disabled={name.trim() === ''}
           >
-            Lagre utkast
+            {t('draftButton')}
           </Button>
           <button
             type="button"
             onClick={onOpenFullForm}
             className="block w-full text-center text-xs text-muted underline underline-offset-2 hover:text-text"
           >
-            Tilpass alle detaljer
+            {t('fullFormLink')}
           </button>
         </div>
       )}

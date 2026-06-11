@@ -8,6 +8,7 @@
  * flighter ligger ikke her — det er TeamsAssignmentSection sitt domene.
  */
 
+import { useTranslations } from 'next-intl';
 import type { PlayerOption } from '../GameForm';
 import type { GameFormState } from '../useGameFormState';
 import { PENDING_PLAYER_LABEL } from '../playerDisplay';
@@ -52,6 +53,7 @@ export function PlayersSection({
   heading = '2. Spillere',
   selectableIds,
 }: Props) {
+  const t = useTranslations('wizard.sections.players');
   const {
     selectedPlayerIds,
     togglePlayer,
@@ -75,6 +77,14 @@ export function PlayersSection({
     ? filteredPlayers.filter((p) => selectableIds.has(p.id))
     : filteredPlayers;
 
+  const count = selectedPlayerIds.length;
+
+  // Build the counter string for best-ball / generic modes.
+  function genericCounter(): string {
+    const base = count === 1 ? t('counterSingular', { count }) : t('counterPlural', { count });
+    return base;
+  }
+
   return (
     <section className="space-y-3">
       <div className="flex items-baseline justify-between">
@@ -89,35 +99,32 @@ export function PlayersSection({
             - solo: «X spillere valgt», ingen øvre tak */}
         {isBestBall ? (
           <span
-            className={`text-xs font-medium tabular-nums ${selectedPlayerIds.length >= 2 && selectedPlayerIds.length % 2 === 0 ? 'text-primary' : 'text-muted'}`}
+            className={`text-xs font-medium tabular-nums ${count >= 2 && count % 2 === 0 ? 'text-primary' : 'text-muted'}`}
           >
-            {selectedPlayerIds.length}{' '}
-            {selectedPlayerIds.length === 1 ? 'spiller' : 'spillere'} valgt
-            {selectedPlayerIds.length >= 2 && selectedPlayerIds.length % 2 !== 0 && (
-              <span className="ml-1 text-muted/80">(par à 2)</span>
+            {genericCounter()}
+            {count >= 2 && count % 2 !== 0 && (
+              <span className="ml-1 text-muted/80">{t('teamHintPair')}</span>
             )}
           </span>
         ) : isMatchplay ? (
           <span
-            className={`text-xs font-medium tabular-nums ${selectedPlayerIds.length === 2 ? 'text-primary' : 'text-muted'}`}
+            className={`text-xs font-medium tabular-nums ${count === 2 ? 'text-primary' : 'text-muted'}`}
           >
-            {selectedPlayerIds.length} av 2 spillere valgt
+            {t('counterMatchplay', { count })}
           </span>
         ) : (
           <span
-            className={`text-xs font-medium tabular-nums ${selectedPlayerIds.length > 0 ? 'text-primary' : 'text-muted'}`}
+            className={`text-xs font-medium tabular-nums ${count > 0 ? 'text-primary' : 'text-muted'}`}
           >
-            {selectedPlayerIds.length}{' '}
-            {selectedPlayerIds.length === 1 ? 'spiller' : 'spillere'} valgt
-            {isParStableford && selectedPlayerIds.length >= 2 &&
-              selectedPlayerIds.length % 2 !== 0 && (
-              <span className="ml-1 text-muted/80">(par à 2)</span>
+            {genericCounter()}
+            {isParStableford && count >= 2 && count % 2 !== 0 && (
+              <span className="ml-1 text-muted/80">{t('teamHintPair')}</span>
             )}
             {(isTexas || isAmbrose || isFlorida) &&
-              selectedPlayerIds.length >= teamSize &&
-              selectedPlayerIds.length % teamSize !== 0 && (
+              count >= teamSize &&
+              count % teamSize !== 0 && (
               <span className="ml-1 text-muted/80">
-                (lag à {teamSize})
+                {t('teamHintSize', { size: teamSize })}
               </span>
             )}
           </span>
@@ -125,7 +132,7 @@ export function PlayersSection({
       </div>
       {players.length === 0 ? (
         <p className="text-sm text-muted">
-          Ingen registrerte spillere ennå.
+          {t('noPlayersYet')}
         </p>
       ) : (
         <>
@@ -133,9 +140,9 @@ export function PlayersSection({
               slik at admin ikke mister oversikten når søk filtrerer
               listen under. Tab-rekkefølge: chips først (ÆØÅ-disiplin:
               avvelg via trykk), så søkefeltet, så filtrert liste. */}
-          {selectedPlayerIds.length > 0 && (
+          {count > 0 && (
             <ul
-              aria-label="Valgte spillere"
+              aria-label={t('selectedPlayersAriaLabel')}
               className="flex flex-wrap gap-2"
             >
               {selectedPlayerIds.map((pid) => {
@@ -146,7 +153,7 @@ export function PlayersSection({
                     <button
                       type="button"
                       onClick={() => togglePlayer(pid)}
-                      aria-label={`Fjern ${shortName(p)} fra spill`}
+                      aria-label={t('removePlayerAriaLabel', { name: shortName(p) })}
                       className="inline-flex items-center gap-1.5 min-h-[44px] px-3 py-1.5 rounded-full border border-primary bg-primary-soft text-sm text-text hover:bg-primary/15 transition-colors"
                     >
                       <span className="max-w-[14ch] truncate">
@@ -168,15 +175,15 @@ export function PlayersSection({
               tap-target på mobil. */}
           <div>
             <label htmlFor="player_search" className="sr-only">
-              Søk i spillere
+              {t('searchLabel')}
             </label>
             <input
               id="player_search"
               type="search"
               value={playerSearch}
               onChange={(e) => setPlayerSearch(e.target.value)}
-              placeholder="Søk i spillere…"
-              aria-label="Søk i spillere"
+              placeholder={t('searchPlaceholder')}
+              aria-label={t('searchLabel')}
               autoComplete="off"
               className="w-full min-h-[44px] rounded-xl border px-3.5 py-2.5 bg-surface text-text border-border focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
             />
@@ -185,8 +192,8 @@ export function PlayersSection({
           {visiblePlayers.length === 0 ? (
             <p className="text-sm text-muted px-1">
               {playerSearch.trim() === ''
-                ? 'Alle spillere er valgt.'
-                : 'Ingen treff på søket.'}
+                ? t('allSelectedEmpty')
+                : t('noSearchResults')}
             </p>
           ) : (
             <ul className="space-y-2">
@@ -196,8 +203,8 @@ export function PlayersSection({
                 //  - team-modi (best-ball/par-stableford): 8 (4 lag à 2)
                 //  - solo-stableford: ingen øvre grense
                 const atCap = isMatchplay
-                  ? selectedPlayerIds.length >= 2
-                  : requiresTeams && selectedPlayerIds.length >= 8;
+                  ? count >= 2
+                  : requiresTeams && count >= 8;
                 return (
                   <li key={p.id}>
                     <label
@@ -208,7 +215,7 @@ export function PlayersSection({
                         checked={false}
                         disabled={atCap}
                         onChange={() => togglePlayer(p.id)}
-                        aria-label={`${playerLabel(p)}${p.pending ? ' — venter på å fullføre profil' : ''}`}
+                        aria-label={`${playerLabel(p)}${p.pending ? t('pendingPlayerAriaNote') : ''}`}
                         className="h-5 w-5 rounded border-border text-primary focus:ring-accent/40"
                       />
                       <span className="flex-1 min-w-0 truncate text-sm text-text">

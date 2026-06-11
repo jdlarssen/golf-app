@@ -17,6 +17,7 @@
  * stepper-tittel.
  */
 
+import { useTranslations } from 'next-intl';
 import type { PlayerOption } from '../GameForm';
 import { PENDING_PLAYER_LABEL } from '../playerDisplay';
 import type { GameFormState } from '../useGameFormState';
@@ -45,6 +46,7 @@ export function TeamsAssignmentSection({
   players,
   hideNumbering = false,
 }: Props) {
+  const t = useTranslations('wizard.sections.teams');
   const {
     selectedPlayerIds,
     teamByPlayer,
@@ -86,6 +88,20 @@ export function TeamsAssignmentSection({
       ? '5. '
       : '4. ';
 
+  function teamsDescription(): string {
+    if (isParStableford) return t('teamsDescParStableford');
+    if (isTexas || isAmbrose || isFlorida) {
+      if (teamSize === 2) return t('teamsDescTexas2');
+      if (teamSize === 3) return t('teamsDescTexas3');
+      return t('teamsDescTexas4');
+    }
+    if (isShamble) {
+      if (teamSize === 3) return t('teamsDescShamble3');
+      return t('teamsDescShamble4');
+    }
+    return t('teamsDescBestBall');
+  }
+
   return (
     <>
       {/* Section 4 — Matchplay: side-tilordning. Vises så snart admin har
@@ -96,11 +112,10 @@ export function TeamsAssignmentSection({
       {isMatchplay && selectedPlayerIds.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-text">
-            {numberPrefix('4')}Sider
+            {numberPrefix('4')}{t('sidesHeading')}
           </h2>
           <p className="text-xs text-muted">
-            Matchplay er 1v1. Tilordne én spiller til Side 1 og én til Side 2.
-            Spillere uten side er ikke med i matchen.
+            {t('sidesDescription')}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {([1, 2] as const).map((side) => {
@@ -121,13 +136,13 @@ export function TeamsAssignmentSection({
                   className="border border-border rounded-lg p-3 space-y-2"
                 >
                   <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                    Side {side}
+                    {t('sideLabel', { side })}
                   </p>
                   <label
                     htmlFor={`matchplay_side_${side}`}
                     className="sr-only"
                   >
-                    Velg spiller for Side {side}
+                    {t('sideSrLabel', { side })}
                   </label>
                   <select
                     id={`matchplay_side_${side}`}
@@ -137,7 +152,7 @@ export function TeamsAssignmentSection({
                     }
                     className="w-full rounded-xl border px-3 py-2 bg-surface text-sm text-text border-border focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
                   >
-                    <option value="">— Tom plass —</option>
+                    <option value="">{t('emptySlotOption')}</option>
                     {options.map((p) => (
                       <option key={p.id} value={p.id}>
                         {shortName(p)}
@@ -169,32 +184,11 @@ export function TeamsAssignmentSection({
           (isShamble && selectedPlayerIds.length >= teamSize)) && (
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-text">
-            {numberPrefix('4')}Lag
+            {numberPrefix('4')}{t('teamsHeading')}
           </h2>
-          {isParStableford ? (
-            <p className="text-xs text-muted">
-              Inntil 4 lag à 2 spillere. Hvert lag må ha enten 0 eller 2
-              spillere. Tomme lag publiseres ikke.
-            </p>
-          ) : isTexas || isAmbrose || isFlorida ? (
-            <p className="text-xs text-muted">
-              {teamSize === 2
-                ? 'Inntil 4 lag à 2 spillere. Hvert lag må ha enten 0 eller 2 spillere. Tomme lag publiseres ikke.'
-                : teamSize === 3
-                  ? 'Inntil 2 lag à 3 spillere. Hvert lag må ha enten 0 eller 3 spillere. Tomme lag publiseres ikke.'
-                  : 'Inntil 2 lag à 4 spillere. Hvert lag må ha enten 0 eller 4 spillere. Tomme lag publiseres ikke.'}
-            </p>
-          ) : isShamble ? (
-            <p className="text-xs text-muted">
-              {teamSize === 3
-                ? 'Inntil 4 lag à 3 spillere. Hvert lag må ha enten 0 eller 3 spillere. Tomme lag publiseres ikke.'
-                : 'Inntil 2 lag à 4 spillere. Hvert lag må ha enten 0 eller 4 spillere. Tomme lag publiseres ikke.'}
-            </p>
-          ) : (
-            <p className="text-xs text-muted">
-              Inntil 4 lag à 2 spillere. Hvert lag må ha enten 0 eller 2 spillere. Tomme lag publiseres ikke.
-            </p>
-          )}
+          <p className="text-xs text-muted">
+            {teamsDescription()}
+          </p>
           {/* «Trekk tilfeldig»/«Tøm lag» — best-ball støtter nå 2/4/6/8 spillere
               (#374); drawRandomTeams bruker det faktiske partall-antallet. */}
           {isBestBall && (
@@ -205,7 +199,7 @@ export function TeamsAssignmentSection({
                 onClick={drawRandomTeams}
                 className="flex-1 text-sm"
               >
-                Trekk tilfeldig
+                {t('drawRandomButton')}
               </Button>
               <Button
                 type="button"
@@ -213,7 +207,7 @@ export function TeamsAssignmentSection({
                 onClick={clearTeams}
                 className="flex-1 text-sm"
               >
-                Tøm lag
+                {t('clearTeamsButton')}
               </Button>
             </div>
           )}
@@ -226,7 +220,7 @@ export function TeamsAssignmentSection({
                 onClick={clearTeams}
                 className="flex-1 text-sm"
               >
-                Tøm lag
+                {t('clearTeamsButton')}
               </Button>
             </div>
           )}
@@ -253,7 +247,7 @@ export function TeamsAssignmentSection({
                   className="border border-border rounded-lg p-3 space-y-2"
                 >
                   <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                    Lag {team}
+                    {t('teamLabel', { team })}
                   </p>
                   {Array.from({ length: slotCount }, (_, slotIndex) => {
                     const occupant = playersByTeam[team as TeamNumber][slotIndex];
@@ -267,7 +261,7 @@ export function TeamsAssignmentSection({
                         }
                         className="w-full rounded-xl border px-3 py-2 bg-surface text-sm text-text border-border focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
                       >
-                        <option value="">— Tom plass —</option>
+                        <option value="">{t('emptySlotOption')}</option>
                         {options.map((p) => (
                           <option key={p.id} value={p.id}>
                             {shortName(p)}
@@ -291,11 +285,10 @@ export function TeamsAssignmentSection({
       {isBestBall && teamsComplete && (
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-text">
-            {numberPrefix('5')}Flights
+            {numberPrefix('5')}{t('flightsHeading')}
           </h2>
           <p className="text-xs text-muted">
-            Standard: lag 1 + 2 = flight 1, lag 3 + 4 = flight 2. Endre per
-            spiller om dere spiller i flere flighter.
+            {t('flightsDescription')}
           </p>
           <div className="space-y-2">
             {TEAM_NUMBERS.flatMap((team) =>
@@ -308,12 +301,12 @@ export function TeamsAssignmentSection({
                     className="flex items-center gap-3 min-h-[44px] px-3 py-2 rounded-lg border border-border"
                   >
                     <span className="text-xs text-muted w-12 shrink-0">
-                      Lag {team}
+                      {t('teamBadge', { team })}
                     </span>
                     <span className="text-sm text-text flex-1 truncate">
                       {shortName(p)}
                     </span>
-                    <div className="flex gap-1" role="group" aria-label="Tee for spiller">
+                    <div className="flex gap-1" role="group" aria-label={t('teeGroupAriaLabel')}>
                       {(['M', 'D', 'J'] as const).map((g) => (
                         <button
                           key={g}
@@ -349,7 +342,7 @@ export function TeamsAssignmentSection({
                     >
                       {FLIGHT_NUMBERS.map((f) => (
                         <option key={f} value={f}>
-                          Flight {f}
+                          {t('flightLabel', { flight: f })}
                         </option>
                       ))}
                     </select>
@@ -379,10 +372,10 @@ export function TeamsAssignmentSection({
         selectedPlayerIds.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-text">
-            {teePerPlayerPrefix}Tee per spiller
+            {teePerPlayerPrefix}{t('teePerPlayerHeading')}
           </h2>
           <p className="text-xs text-muted">
-            Velg tee per spiller. M = herre, D = dame, J = junior.
+            {t('teePerPlayerDescription')}
           </p>
           <div className="space-y-2">
             {selectedPlayerIds.map((pid) => {
@@ -396,7 +389,7 @@ export function TeamsAssignmentSection({
                   <span className="text-sm text-text flex-1 truncate">
                     {shortName(p)}
                   </span>
-                  <div className="flex gap-1" role="group" aria-label="Tee for spiller">
+                  <div className="flex gap-1" role="group" aria-label={t('teeGroupAriaLabel')}>
                     {(['M', 'D', 'J'] as const).map((g) => (
                       <button
                         key={g}

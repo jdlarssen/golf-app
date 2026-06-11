@@ -10,6 +10,7 @@
  * bor i Section 3 (Format) som `AllowanceField`-toggles — flyttet i #266.
  */
 
+import { useTranslations } from 'next-intl';
 import type { GameFormState } from '../useGameFormState';
 import { SideCategoriesPicker } from '@/components/admin/SideCategoriesPicker';
 
@@ -34,6 +35,8 @@ export function AdvancedSettingsSection({
   includeVisibility = false,
   hideHeading = false,
 }: Props) {
+  const tAdv = useTranslations('wizard.sections.advanced');
+  const tBasics = useTranslations('wizard.sections.basics');
   const {
     requirePeerApproval,
     setRequirePeerApproval,
@@ -51,7 +54,7 @@ export function AdvancedSettingsSection({
   return (
     <section className="space-y-4">
       {!hideHeading && (
-        <h2 className="text-sm font-medium text-text">6. Innstillinger</h2>
+        <h2 className="text-sm font-medium text-text">{tAdv('heading')}</h2>
       )}
 
       <label className="flex items-start gap-3 cursor-pointer">
@@ -64,11 +67,10 @@ export function AdvancedSettingsSection({
         />
         <span>
           <span className="block text-sm font-medium text-text">
-            Krev peer-godkjenning
+            {tAdv('peerApprovalTitle')}
           </span>
           <span className="block text-xs text-muted mt-0.5">
-            Hvis på, må en annen i flighten godkjenne scorekortet før
-            innsending.
+            {tAdv('peerApprovalDesc')}
           </span>
         </span>
       </label>
@@ -79,7 +81,7 @@ export function AdvancedSettingsSection({
               GameForm rendrer i BasicsSection. */}
           <fieldset>
             <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-              Synlighet under runden
+              {tBasics('visibilityLegend')}
             </legend>
             <div className="mt-2 space-y-3">
               <label className="flex items-start gap-3 cursor-pointer">
@@ -93,10 +95,10 @@ export function AdvancedSettingsSection({
                 />
                 <div>
                   <div className="font-serif text-base text-text">
-                    Vis alt under runden
+                    {tBasics('visibilityLiveTitle')}
                   </div>
                   <div className="text-xs text-muted">
-                    Netto-tall synlige fra hull 1 (standard)
+                    {tBasics('visibilityLiveDesc')}
                   </div>
                 </div>
               </label>
@@ -111,21 +113,19 @@ export function AdvancedSettingsSection({
                 />
                 <div>
                   <div className="font-serif text-base text-text">
-                    Avslør på slutten
+                    {tBasics('visibilityRevealTitle')}
                   </div>
                   <div className="text-xs text-muted">
-                    Brutto under runden, netto avsløres når spillet avsluttes
+                    {tBasics('visibilityRevealDesc')}
                   </div>
                 </div>
               </label>
             </div>
             <p className="mt-2 text-xs text-muted">
-              Reveal-modus skjuler handicap-slag og netto-rangering under runden.
-              Lag med høyere handicap kan slå brutto-lederen, så avsløringen blir
-              et spenningsmoment når du trykker avslutt.
+              {tBasics('visibilityRevealHint')}
               {lockScoreVisibility && (
                 <span className="block mt-1">
-                  <strong>Kan ikke endres etter spill-start.</strong>
+                  <strong>{tBasics('visibilityLockedNote')}</strong>
                 </span>
               )}
             </p>
@@ -133,7 +133,7 @@ export function AdvancedSettingsSection({
 
           <fieldset>
             <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-              Sideturnering
+              {tBasics('sideTournamentLegend')}
             </legend>
             <div className="mt-2 space-y-3">
               <label className="flex items-start gap-3 cursor-pointer">
@@ -148,10 +148,10 @@ export function AdvancedSettingsSection({
                 />
                 <div>
                   <div className="font-serif text-base text-text">
-                    Legg til sideturnering
+                    {tBasics('sideTournamentTitle')}
                   </div>
                   <div className="text-xs text-muted">
-                    Parallell lag-konkurranse med poeng. Vises etter at spillet er avsluttet.
+                    {tBasics('sideTournamentDesc')}
                   </div>
                 </div>
               </label>
@@ -159,8 +159,7 @@ export function AdvancedSettingsSection({
               {sideEnabled && (
                 <div className="space-y-4 rounded-md border border-border bg-surface-2 p-3">
                   <p className="text-xs text-muted">
-                    Poengfordeling: best netto 18 = 10p, front 9 + back 9 = 5p hver,
-                    hole-win = 2p per hull (kun alene-vinner), longest drive + closest to pin = 2p per vinner.
+                    {tBasics('sideTournamentPointsHint')}
                   </p>
 
                   <SideCategoriesPicker
@@ -170,7 +169,7 @@ export function AdvancedSettingsSection({
 
                   <fieldset>
                     <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-                      Antall longest-drive-vinnere
+                      {tBasics('sideLdLegend')}
                     </legend>
                     <div className="mt-2 flex gap-2">
                       {[0, 1, 2].map((n) => (
@@ -190,7 +189,7 @@ export function AdvancedSettingsSection({
 
                   <fieldset>
                     <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-                      Antall closest-to-pin-vinnere
+                      {tBasics('sideCtpLegend')}
                     </legend>
                     <div className="mt-2 flex gap-2">
                       {[0, 1, 2].map((n) => (
@@ -210,7 +209,7 @@ export function AdvancedSettingsSection({
 
                   {lockSideTournament && (
                     <p className="text-xs text-muted">
-                      <strong>Kan ikke endres etter spill-start.</strong>
+                      <strong>{tBasics('sideLockedNote')}</strong>
                     </p>
                   )}
                 </div>
