@@ -9,6 +9,7 @@ vi.mock('./notify', () => ({
 
 import {
   notifyPlayersGameFinished,
+  notifyPlayersGameStarted,
   notifyParticipantsCupFinished,
   notifyParticipantsCupStarted,
 } from './events';
@@ -236,5 +237,45 @@ describe('notifyParticipantsCupStarted', () => {
 
     expect(result.size).toBe(0);
     expect(notifyMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('notifyPlayersGameStarted (#502)', () => {
+  it('sender game_started til alle oppgitte spillere', async () => {
+    notifyMock.mockResolvedValue({ shouldAlsoSendMail: true });
+
+    await notifyPlayersGameStarted(
+      [{ user_id: 'a' }, { user_id: 'b' }],
+      { id: 'game-1', name: 'Byneset North' },
+      'cron/start-scheduled-games',
+    );
+
+    expect(notifyMock).toHaveBeenCalledTimes(2);
+    expect(notifyMock).toHaveBeenCalledWith({
+      userId: 'a',
+      kind: 'game_started',
+      payload: { game_id: 'game-1', game_name: 'Byneset North' },
+    });
+  });
+
+  it('logger notify-rejection uten å kaste (best-effort)', async () => {
+    const consoleErr = vi.spyOn(console, 'error').mockImplementation(() => {});
+    notifyMock
+      .mockResolvedValueOnce({ shouldAlsoSendMail: false })
+      .mockRejectedValueOnce(new Error('insert failed'));
+
+    await expect(
+      notifyPlayersGameStarted(
+        [{ user_id: 'a' }, { user_id: 'b' }],
+        { id: 'game-1', name: 'X' },
+        'cron/start-scheduled-games',
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(consoleErr).toHaveBeenCalledWith(
+      '[cron/start-scheduled-games] game_started notify failed',
+      expect.any(Error),
+    );
+    consoleErr.mockRestore();
   });
 });

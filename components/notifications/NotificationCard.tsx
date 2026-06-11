@@ -40,6 +40,8 @@ const EMOJI: Record<NotificationKind, string> = {
   friend_request: '👋',
   friend_accepted: '🫂',
   player_added: '🏌️',
+  game_started: '⛳',
+  auto_start_blocked: '⏳',
 };
 
 /**
@@ -264,6 +266,42 @@ function buildCardContent(
         detail: 'Åpne spillet for å bekrefte at du er med.',
       };
     }
+    case 'game_started': {
+      const p = payload as NotificationPayload<'game_started'>;
+      return {
+        title: 'Runden er i gang',
+        detail: p.game_name,
+      };
+    }
+    case 'auto_start_blocked': {
+      const p = payload as NotificationPayload<'auto_start_blocked'>;
+      return {
+        title: 'Runden kom ikke i gang',
+        detail: `${p.game_name}: ${blockReasonText(p.reason)}`,
+      };
+    }
+  }
+}
+
+/**
+ * Oversetter blokkeringsårsaken fra startScheduledGame til noe oppretteren
+ * kan handle på. Generisk fallback for ukjente/fremtidige reasons — payload-
+ * skjemaet er bevisst løst typet (se types.ts).
+ */
+function blockReasonText(reason: string): string {
+  switch (reason) {
+    case 'incomplete_sides':
+      return 'sidene mangler spillere';
+    case 'pending_players':
+      return 'noen spillere har ikke fullført profilen';
+    case 'no_players':
+      return 'ingen spillere er med';
+    case 'tee_missing':
+      return 'spillet mangler tee';
+    case 'tee_missing_rating':
+      return 'tee-en mangler rating';
+    default:
+      return 'åpne spillet for å se hva som mangler';
   }
 }
 

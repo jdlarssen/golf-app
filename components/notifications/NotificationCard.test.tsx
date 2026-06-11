@@ -213,4 +213,51 @@ describe('NotificationCard', () => {
     expect(screen.getByText(/Nytt scorekort levert/)).toBeInTheDocument();
     expect(screen.getByText(/Maja leverte/)).toBeInTheDocument();
   });
+
+  it('rendrer game_started-tittel og detalj', () => {
+    render(
+      <NotificationCard
+        notification={{
+          id: 'n-6',
+          kind: 'game_started',
+          payload: {
+            game_id: '11111111-1111-1111-1111-111111111111',
+            game_name: 'Byneset North',
+          },
+          read_at: null,
+          created_at: '2026-05-24T13:30:00Z',
+        }}
+      />,
+    );
+    expect(screen.getByText(/Runden er i gang/)).toBeInTheDocument();
+    expect(screen.getByText('Byneset North')).toBeInTheDocument();
+  });
+
+  it('rendrer auto_start_blocked med årsaks-tekst og generisk fallback', () => {
+    const make = (reason: string): NotificationRow => ({
+      id: `n-${reason}`,
+      kind: 'auto_start_blocked',
+      payload: {
+        game_id: '11111111-1111-1111-1111-111111111111',
+        game_name: 'Lørdagsmatch',
+        reason,
+      },
+      read_at: null,
+      created_at: '2026-05-24T13:30:00Z',
+    });
+
+    const { rerender } = render(
+      <NotificationCard notification={make('incomplete_sides')} />,
+    );
+    expect(screen.getByText(/Runden kom ikke i gang/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Lørdagsmatch: sidene mangler spillere/),
+    ).toBeInTheDocument();
+
+    // Ukjent/fremtidig reason → generisk handlings-orientert fallback
+    rerender(<NotificationCard notification={make('something_new')} />);
+    expect(
+      screen.getByText(/Lørdagsmatch: åpne spillet for å se hva som mangler/),
+    ).toBeInTheDocument();
+  });
 });

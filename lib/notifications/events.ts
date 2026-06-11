@@ -43,6 +43,44 @@ export async function notifyPlayersGameFinished(
 }
 
 /**
+ * Best-effort `game_started`-varsel til spillere når et planlagt spill
+ * flippes til aktivt (#502). Start-søsteren til `notifyPlayersGameFinished`,
+ * men bevisst KUN in-app — ingen mail-backup: start-øyeblikket er
+ * tidskritisk på minutt-nivå, og mail-latens gjør backup-en verdiløs.
+ * Kindene blir push-kandidater når Web Push (#24) bygges.
+ *
+ * Caller-kontrakt:
+ *  - kall kun når `startScheduledGame` returnerte `started: true`
+ *    (flip-vinneren) — ellers dobles varslene i kappløp cron/E1/admin
+ *  - filtrer bort trukkede spillere og evt. aktøren som selv utløste
+ *    starten før kallet
+ */
+export async function notifyPlayersGameStarted(
+  players: Array<{ user_id: string }>,
+  game: { id: string; name: string },
+  logPrefix: string,
+): Promise<void> {
+  const results = await Promise.allSettled(
+    players.map((p) =>
+      notify({
+        userId: p.user_id,
+        kind: 'game_started',
+        payload: {
+          game_id: game.id,
+          game_name: game.name,
+        },
+      }),
+    ),
+  );
+
+  for (const r of results) {
+    if (r.status === 'rejected') {
+      console.error(`[${logPrefix}] game_started notify failed`, r.reason);
+    }
+  }
+}
+
+/**
  * Best-effort `cup_finished`-varsel til alle deltakere i en cup (tournament
  * av matcher). Cup-analogen til `notifyPlayersGameFinished` — samme
  * in-app-først + off-app-mail-prinsipp: `notify()` inserter alltid in-app,

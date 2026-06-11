@@ -198,5 +198,15 @@ function buildDeeplink(notification: NotificationRow): string {
       const p = notification.payload as NotificationPayload<'player_added'>;
       return `/games/${p.game_id}`;
     }
+    case 'game_started': {
+      const p = notification.payload as NotificationPayload<'game_started'>;
+      return `/games/${p.game_id}`;
+    }
+    case 'auto_start_blocked': {
+      // Oppretteren lander på spill-siden der #544-venter-banneret og
+      // roster-status viser hva som mangler.
+      const p = notification.payload as NotificationPayload<'auto_start_blocked'>;
+      return `/games/${p.game_id}`;
+    }
   }
 }

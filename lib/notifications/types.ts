@@ -24,7 +24,9 @@ export type NotificationKind =
   | 'club_role_changed'
   | 'friend_request'
   | 'friend_accepted'
-  | 'player_added';
+  | 'player_added'
+  | 'game_started'
+  | 'auto_start_blocked';
 
 // `z.guid()` aksepterer enhver UUID-shaped string (8-4-4-4-12 hex), inkludert
 // nil-UUID og ikke-versjonerte kanoniske test-sentinels som "11111111-...".
@@ -194,6 +196,27 @@ const playerAddedSchema = z.object({
   added_by_name: z.string().min(1),
 });
 
+// game_started: et planlagt spill flippet til aktivt (#502). Fyres til alle
+// aktive spillere fra stien som vant status-flippen (cron-sweep, E1-fallback
+// eller admin-knappen) — kun in-app, ingen mail (start-øyeblikket er
+// tidskritisk på minutt-nivå; blir push-kandidat når #24 bygges). Samme
+// slanke payload som game_finished, deeplinker til /games/[game_id].
+const gameStartedSchema = z.object({
+  game_id: uuid,
+  game_name: z.string().min(1),
+});
+
+// auto_start_blocked: cron-sweepen fikk ikke startet spillet på tee-tid
+// (#502). Fyres maks én gang per spill til oppretteren, med årsaken fra
+// startScheduledGame (incomplete_sides, pending_players, …). `reason` er
+// bevisst løst typet — kortet oversetter kjente verdier og har generisk
+// fallback, så nye reasons ikke krever schema-endring.
+const autoStartBlockedSchema = z.object({
+  game_id: uuid,
+  game_name: z.string().min(1),
+  reason: z.string().min(1),
+});
+
 const schemas = {
   invite: inviteSchema,
   peer_approval_request: peerApprovalRequestSchema,
@@ -214,6 +237,8 @@ const schemas = {
   friend_request: friendRequestSchema,
   friend_accepted: friendAcceptedSchema,
   player_added: playerAddedSchema,
+  game_started: gameStartedSchema,
+  auto_start_blocked: autoStartBlockedSchema,
 } as const;
 
 export type NotificationPayload<K extends NotificationKind = NotificationKind> =

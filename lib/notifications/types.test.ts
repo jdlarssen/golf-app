@@ -187,4 +187,35 @@ describe('parseNotificationPayload', () => {
       ).toThrow();
     });
   });
+
+  describe('game_started + auto_start_blocked (#502)', () => {
+    const validUuid = '11111111-1111-1111-1111-111111111111';
+
+    it('aksepterer gyldig game_started-payload', () => {
+      const result = parseNotificationPayload('game_started', {
+        game_id: validUuid,
+        game_name: 'Byneset North',
+      });
+      expect(result.kind).toBe('game_started');
+      expect(result.payload.game_name).toBe('Byneset North');
+    });
+
+    it('aksepterer gyldig auto_start_blocked-payload', () => {
+      const result = parseNotificationPayload('auto_start_blocked', {
+        game_id: validUuid,
+        game_name: 'Byneset North',
+        reason: 'incomplete_sides',
+      });
+      expect(result.payload.reason).toBe('incomplete_sides');
+    });
+
+    it('avviser auto_start_blocked uten reason', () => {
+      expect(() =>
+        parseNotificationPayload('auto_start_blocked', {
+          game_id: validUuid,
+          game_name: 'X',
+        }),
+      ).toThrow();
+    });
+  });
 });
