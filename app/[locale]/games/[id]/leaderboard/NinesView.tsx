@@ -1,4 +1,5 @@
 import type { JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
@@ -76,6 +77,7 @@ export function NinesView({
   backHref = '/',
   chromeless = false,
 }: NinesViewProps): JSX.Element {
+  const t = useTranslations('leaderboard');
   const isRevealHidden =
     scoreVisibility === 'reveal' && gameStatus !== 'finished';
 
@@ -84,7 +86,7 @@ export function NinesView({
       <Shell chromeless={chromeless}>
         {!chromeless && <Header gameName={gameName} backHref={backHref} />}
         <p className="mt-12 text-center text-sm text-muted">
-          Ingen spillere å vise.
+          {t('common.noPlayersToShow')}
         </p>
       </Shell>
     );
@@ -99,21 +101,21 @@ export function NinesView({
           className="mx-4 mt-12 rounded-2xl border border-dashed border-border bg-surface px-5 py-8 text-center"
         >
           <p className="font-serif text-[18px] font-medium text-text">
-            Resultatene avsløres etter runden
+            {t('common.revealHiddenTitle')}
           </p>
           <p className="mt-2 font-sans text-xs text-muted">
-            Poengene holdes hemmelig til admin avslutter spillet.
+            {t('nines.revealHiddenSub')}
           </p>
         </div>
-        <PullQuote className="px-6 pt-4 pb-4">Lykke til.</PullQuote>
+        <PullQuote className="px-6 pt-4 pb-4">{t('common.goodLuck')}</PullQuote>
       </Shell>
     );
   }
 
   const variantLabel =
-    result.variant === 'split_sixes' ? 'Split Sixes' : 'Nines';
-  const scoringLabel = result.scoring === 'net' ? 'Netto' : 'Brutto';
-  const statusLabel = gameStatus === 'finished' ? 'Etter 18 hull' : 'Live';
+    result.variant === 'split_sixes' ? t('nines.variantSplitSixes') : t('nines.variantNines');
+  const scoringLabel = result.scoring === 'net' ? t('common.netto') : t('common.brutto');
+  const statusLabel = gameStatus === 'finished' ? t('common.after18Holes') : t('common.live');
   const subtitleParts = [statusLabel, variantLabel, scoringLabel];
 
   return (
@@ -122,7 +124,7 @@ export function NinesView({
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          Leaderboard
+          {t('common.leaderboardHeading')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
           {subtitleParts.join(' · ')}
@@ -138,7 +140,7 @@ export function NinesView({
           const info = playersById.get(player.userId);
           const displayName = info
             ? formatRevealName(info.name, info.nickname)
-            : '(ukjent spiller)';
+            : t('common.unknownPlayerFull');
           return (
             <PlayerRow
               key={player.userId}
@@ -156,7 +158,7 @@ export function NinesView({
       {/* Per-hull-rutenett — sekundær drilldown for poengfordeling. */}
       <section className="px-3.5 pt-2 pb-3.5">
         <Kicker tone="muted" className="px-1 pb-2">
-          PER HULL
+          {t('common.perHullKicker')}
         </Kicker>
         <ul
           data-testid="nines-hole-list"
@@ -173,7 +175,7 @@ export function NinesView({
         </ul>
       </section>
 
-      <PullQuote className="px-6 pt-1 pb-4">Lykke til.</PullQuote>
+      <PullQuote className="px-6 pt-1 pb-4">{t('common.goodLuck')}</PullQuote>
     </Shell>
   );
 }
@@ -210,11 +212,12 @@ function Header({
   gameName: string;
   backHref: string;
 }) {
+  const t = useTranslations('leaderboard');
   return (
     <header className="mb-2 flex items-center justify-between gap-4">
       <SmartLink
         href={backHref}
-        aria-label="Tilbake"
+        aria-label={t('common.backAriaLabel')}
         className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
       >
         ‹
@@ -240,6 +243,7 @@ function PlayerRow({
   tiedWith: string[];
   staggerIndex: number;
 }) {
+  const t = useTranslations('leaderboard');
   const isPodium = rank >= 1 && rank <= 3;
   const isTied = tiedWith.length > 0;
   const rankLabel = isTied ? `T${rank}` : `${rank}`;
@@ -269,11 +273,11 @@ function PlayerRow({
             {displayName}
           </p>
           <p className="mt-0.5 text-[12px] text-muted tabular-nums">
-            {holesScored} hull scoret
+            {t('nines.holesScored', { count: holesScored })}
           </p>
           {isTied && (
             <p className="text-[11px] text-muted mt-0.5" data-testid={`nines-tied-${rank}`}>
-              Delt {rank}. plass
+              {t('common.tiedRank', { rank })}
             </p>
           )}
         </div>
@@ -289,7 +293,7 @@ function PlayerRow({
             {totalPoints}
           </span>
           <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-            poeng
+            {t('common.poengLabel')}
           </span>
         </div>
       </Card>
@@ -306,6 +310,7 @@ function HoleRow({
   players: NinesPlayerLine[];
   playersById: Map<string, NinesPlayerInfo>;
 }) {
+  const t = useTranslations('leaderboard');
   return (
     <li
       className="list-none"
@@ -316,14 +321,14 @@ function HoleRow({
         <div className="flex items-baseline justify-between gap-3">
           <div className="flex items-baseline gap-2">
             <span className="font-serif text-[15px] font-medium tabular-nums text-text">
-              Hull {hole.holeNumber}
+              {t('common.hullNumber', { number: hole.holeNumber })}
             </span>
             <span className="text-[10.5px] tabular-nums text-muted">
               Par {hole.par} · SI {hole.strokeIndex}
             </span>
           </div>
           {hole.pending && (
-            <span className="text-[10.5px] text-muted/70">Venter på score</span>
+            <span className="text-[10.5px] text-muted/70">{t('nines.ventePaaScore')}</span>
           )}
         </div>
 
@@ -336,7 +341,7 @@ function HoleRow({
             const info = playersById.get(playerLine.userId);
             const displayName = info
               ? formatRevealName(info.name, info.nickname)
-              : '(ukjent)';
+              : t('common.unknownPlayer');
             const points = entry?.points ?? 0;
             const isPending = hole.pending || entry == null;
 

@@ -539,7 +539,8 @@
       "hullForHullHeading": "Hole by hole",
       "hullForHullRevealSub": "Hole by hole opens when the admin ends the round.",
       "leaderboardHeading": "Leaderboard",
-      "teamLeaderboardHeading": "Team leaderboard"
+      "teamLeaderboardHeading": "Team leaderboard",
+      "hullNumber": "Hole {number}"
     },
     "tabs": {
       "tablistAriaLabel": "Leaderboard tab",
@@ -754,6 +755,58 @@
       "playerScoreAria": "{initial}, gross {gross}, +{extra} strokes, net {net}",
       "parAsideTitle": "This hole has a different par for other genders. {genders}.",
       "parAsideAriaLabel": "Different par for other genders. {genders}."
+    },
+    "bingoBangoBongo": {
+      "revealHiddenSub": "Bingo Bango Bongo scores are hidden until the admin ends the game.",
+      "subtitle": "Bingo Bango Bongo",
+      "podiumSubtitle": "Bingo Bango Bongo · Points",
+      "holesSubtitle": "Bingo Bango Bongo",
+      "feietChip": "★ Sweep!",
+      "ingenPrestasjoner": "No achievements recorded yet.",
+      "ikkeSatt": "not claimed",
+      "firstOnGreen": "first on the green",
+      "nearestPin": "nearest the pin",
+      "firstInHole": "first in the hole"
+    },
+    "nines": {
+      "revealHiddenSub": "Scores are hidden until the admin ends the game.",
+      "variantNines": "Nines",
+      "variantSplitSixes": "Split Sixes",
+      "holesScored": "{count} holes scored",
+      "ventePaaScore": "Waiting for score",
+      "bruttoLabel": "gross {gross}",
+      "potLabel": "{pot} pts",
+      "podiumHullScored": "{count} holes"
+    },
+    "roundRobin": {
+      "revealHiddenSub": "Round Robin scores are hidden until the admin ends the game.",
+      "subtitle": "Round Robin · {allowancePct}% handicap",
+      "hullLabel": "holes",
+      "slotLabel": "Slot {slot}",
+      "tiedInline": "· Tied {rank}",
+      "segmentSummaryKicker": "SEGMENT SUMMARY",
+      "segmentLabel": "Segment {number} · {holes}",
+      "medLabel": "with {partner}",
+      "vsLabel": "vs",
+      "hullSeireLabel": "{count} holes won",
+      "podiumSubtitle": "Round Robin · Holes won",
+      "vantHulletLabel": "Won the hole",
+      "bruttoLabel": "gross {gross}",
+      "segmentHoles1": "Holes 1–6",
+      "segmentHoles2": "Holes 7–12",
+      "segmentHoles3": "Holes 13–18",
+      "hullWinTitle": "{won} won · {lost} lost · {halved} halved",
+      "outcomeChipTied": "Halved",
+      "outcomeChipVenter": "Pending",
+      "tapetLabel": "{count} lost"
+    },
+    "aceyDeucey": {
+      "revealHiddenSub": "Acey Deucey scores are hidden until the admin ends the game.",
+      "subtitle": "Acey Deucey · {scoring}",
+      "podiumSubtitle": "Acey Deucey · {scoring}",
+      "aceDeuce": "{aces} ace · {deuces} deuce",
+      "deltLabel": "Tied",
+      "bruttoLabel": "gross {gross}"
     }
   },
   "auth": {

@@ -1,4 +1,5 @@
 import type { JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
@@ -66,6 +67,7 @@ export function BingoBangoBongoView({
   backHref = '/',
   chromeless = false,
 }: BingoBangoBongoViewProps): JSX.Element {
+  const t = useTranslations('leaderboard');
   const isRevealHidden =
     scoreVisibility === 'reveal' && gameStatus !== 'finished';
 
@@ -74,7 +76,7 @@ export function BingoBangoBongoView({
       <Shell chromeless={chromeless}>
         {!chromeless && <Header gameName={gameName} backHref={backHref} />}
         <p className="mt-12 text-center text-sm text-muted">
-          Ingen spillere å vise.
+          {t('common.noPlayersToShow')}
         </p>
       </Shell>
     );
@@ -89,18 +91,18 @@ export function BingoBangoBongoView({
           className="mx-4 mt-12 rounded-2xl border border-dashed border-border bg-surface px-5 py-8 text-center"
         >
           <p className="font-serif text-[18px] font-medium text-text">
-            Resultatene avsløres etter runden
+            {t('common.revealHiddenTitle')}
           </p>
           <p className="mt-2 font-sans text-xs text-muted">
-            Bingo Bango Bongo-poeng holdes hemmelig til admin avslutter spillet.
+            {t('bingoBangoBongo.revealHiddenSub')}
           </p>
         </div>
-        <PullQuote className="px-6 pt-4 pb-4">Lykke til.</PullQuote>
+        <PullQuote className="px-6 pt-4 pb-4">{t('common.goodLuck')}</PullQuote>
       </Shell>
     );
   }
 
-  const statusLabel = gameStatus === 'finished' ? 'Etter 18 hull' : 'Live';
+  const statusLabel = gameStatus === 'finished' ? t('common.after18Holes') : t('common.live');
 
   return (
     <Shell chromeless={chromeless}>
@@ -108,10 +110,10 @@ export function BingoBangoBongoView({
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          Leaderboard
+          {t('common.leaderboardHeading')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          {statusLabel} · Bingo Bango Bongo
+          {statusLabel} · {t('bingoBangoBongo.subtitle')}
         </p>
       </div>
 
@@ -124,7 +126,7 @@ export function BingoBangoBongoView({
           const info = playersById.get(player.userId);
           const displayName = info
             ? formatRevealName(info.name, info.nickname)
-            : '(ukjent spiller)';
+            : t('common.unknownPlayerFull');
           return (
             <PlayerRow
               key={player.userId}
@@ -141,7 +143,7 @@ export function BingoBangoBongoView({
         })}
       </ul>
 
-      <PullQuote className="px-6 pt-1 pb-4">Lykke til.</PullQuote>
+      <PullQuote className="px-6 pt-1 pb-4">{t('common.goodLuck')}</PullQuote>
     </Shell>
   );
 }
@@ -178,11 +180,12 @@ function Header({
   gameName: string;
   backHref: string;
 }) {
+  const t = useTranslations('leaderboard');
   return (
     <header className="mb-2 flex items-center justify-between gap-4">
       <SmartLink
         href={backHref}
-        aria-label="Tilbake"
+        aria-label={t('common.backAriaLabel')}
         className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
       >
         ‹
@@ -212,6 +215,7 @@ function PlayerRow({
   tiedWith: string[];
   staggerIndex: number;
 }) {
+  const t = useTranslations('leaderboard');
   const isPodium = rank >= 1 && rank <= 3;
   const isLeader = rank === 1;
   const cardClass = isLeader
@@ -240,15 +244,15 @@ function PlayerRow({
           </p>
           {/* Bingo / Bango / Bongo breakdown */}
           <p className="mt-0.5 text-[12px] text-muted tabular-nums">
-            <span title="Bingo — først på green">B1 {bingos}</span>
+            <span title={`Bingo — ${t('bingoBangoBongo.firstOnGreen')}`}>B1 {bingos}</span>
             <span className="mx-1 text-muted/40" aria-hidden>·</span>
-            <span title="Bango — nærmest hullet">B2 {bangos}</span>
+            <span title={`Bango — ${t('bingoBangoBongo.nearestPin')}`}>B2 {bangos}</span>
             <span className="mx-1 text-muted/40" aria-hidden>·</span>
-            <span title="Bongo — først i hull">B3 {bongos}</span>
+            <span title={`Bongo — ${t('bingoBangoBongo.firstInHole')}`}>B3 {bongos}</span>
           </p>
           {tiedWith.length > 0 && (
             <p className="text-[11px] text-muted mt-0.5">
-              Delt {rank}. plass
+              {t('common.tiedRank', { rank })}
             </p>
           )}
         </div>
@@ -262,7 +266,7 @@ function PlayerRow({
             {totalPoints}
           </span>
           <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-            poeng
+            {t('common.poengLabel')}
           </span>
         </div>
       </Card>

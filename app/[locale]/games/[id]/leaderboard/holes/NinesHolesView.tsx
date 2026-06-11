@@ -1,4 +1,5 @@
 import type { JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
@@ -52,6 +53,7 @@ export function NinesHolesView({
   scoreVisibility,
   gameStatus,
 }: NinesHolesViewProps): JSX.Element {
+  const t = useTranslations('leaderboard');
   const isRevealHidden =
     scoreVisibility === 'reveal' && gameStatus !== 'finished';
 
@@ -64,19 +66,19 @@ export function NinesHolesView({
           className="mx-4 mt-12 rounded-2xl border border-dashed border-border bg-surface px-5 py-8 text-center"
         >
           <p className="font-serif text-[18px] font-medium text-text">
-            Resultatene avsløres etter runden
+            {t('common.revealHiddenTitle')}
           </p>
           <p className="mt-2 font-sans text-xs text-muted">
-            Hull for hull åpnes når admin avslutter spillet.
+            {t('common.hullForHullRevealSub')}
           </p>
         </div>
-        <PullQuote className="px-6 pt-4 pb-4">Lykke til.</PullQuote>
+        <PullQuote className="px-6 pt-4 pb-4">{t('common.goodLuck')}</PullQuote>
       </Shell>
     );
   }
 
   const variantLabel =
-    result.variant === 'split_sixes' ? 'Split Sixes' : 'Nines';
+    result.variant === 'split_sixes' ? t('nines.variantSplitSixes') : t('nines.variantNines');
 
   return (
     <Shell>
@@ -84,10 +86,10 @@ export function NinesHolesView({
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          Hull for hull
+          {t('common.hullForHullHeading')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          {variantLabel} · {result.scoring === 'net' ? 'Netto' : 'Brutto'}
+          {variantLabel} · {result.scoring === 'net' ? t('common.netto') : t('common.brutto')}
         </p>
       </div>
 
@@ -106,7 +108,7 @@ export function NinesHolesView({
         ))}
       </ul>
 
-      <PullQuote className="px-6 pt-1 pb-4">Godt spilt.</PullQuote>
+      <PullQuote className="px-6 pt-1 pb-4">{t('common.wellPlayed')}</PullQuote>
     </Shell>
   );
 }
@@ -123,11 +125,12 @@ function Shell({ children }: { children: React.ReactNode }) {
 }
 
 function Header({ gameName, gameId }: { gameName: string; gameId: string }) {
+  const t = useTranslations('leaderboard');
   return (
     <header className="mb-2 flex items-center justify-between gap-4">
       <SmartLink
         href={`/games/${gameId}`}
-        aria-label="Tilbake"
+        aria-label={t('common.backAriaLabel')}
         className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
       >
         ‹
@@ -185,6 +188,7 @@ function HoleCard({
   scoring: NinesResult['scoring'];
   playersById: Map<string, NinesPlayerInfo>;
 }) {
+  const t = useTranslations('leaderboard');
   const placements = placementByPlayer(hole);
 
   // Best score øverst (lavest effective = flest poeng). Pending/manglende
@@ -205,17 +209,17 @@ function HoleCard({
         <div className="flex items-baseline justify-between gap-3">
           <div className="flex items-baseline gap-2">
             <span className="font-serif text-[15px] font-medium tabular-nums text-text">
-              Hull {hole.holeNumber}
+              {t('common.hullNumber', { number: hole.holeNumber })}
             </span>
             <span className="text-[10.5px] tabular-nums text-muted">
               Par {hole.par} · SI {hole.strokeIndex}
             </span>
           </div>
           {hole.pending ? (
-            <span className="text-[10.5px] text-muted/70">Venter på score</span>
+            <span className="text-[10.5px] text-muted/70">{t('nines.ventePaaScore')}</span>
           ) : (
             <span className="rounded-full border border-accent/40 bg-accent/[0.08] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-accent tabular-nums">
-              {potTotal(variant)} poeng
+              {t('nines.potLabel', { pot: potTotal(variant) })}
             </span>
           )}
         </div>
@@ -226,7 +230,7 @@ function HoleCard({
             const info = playersById.get(cell.userId);
             const name = info
               ? formatRevealName(info.name, info.nickname)
-              : '(ukjent spiller)';
+              : t('common.unknownPlayerFull');
             const placement = placements.get(cell.userId) ?? null;
             const isLeader = placement === 1;
             const pts = hole.pointsByPlayer[cell.userId] ?? 0;
@@ -271,9 +275,9 @@ function HoleCard({
                       +{formatPoints(pts)}
                     </span>
                   )}
-                  {showGross && (
+                  {showGross && cell.gross != null && (
                     <span className="text-[10.5px] text-muted/70">
-                      brutto {cell.gross}
+                      {t('nines.bruttoLabel', { gross: cell.gross })}
                     </span>
                   )}
                   <span

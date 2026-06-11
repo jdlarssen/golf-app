@@ -1,4 +1,5 @@
 import type { JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
@@ -30,14 +31,6 @@ export interface RoundRobinHolesViewProps {
   /** `games.status` — styrer reveal-flow sammen med `scoreVisibility`. */
   gameStatus: 'active' | 'finished';
 }
-
-// Lokal kopi av RoundRobinView sin segment→hull-label (3-entry, ikke verdt en
-// delt import). Holder de to flatene visuelt synkrone.
-const SEGMENT_HOLES: Record<1 | 2 | 3, string> = {
-  1: 'Hull 1–6',
-  2: 'Hull 7–12',
-  3: 'Hull 13–18',
-};
 
 function nameOf(
   userId: string,
@@ -71,6 +64,7 @@ export function RoundRobinHolesView({
   scoreVisibility,
   gameStatus,
 }: RoundRobinHolesViewProps): JSX.Element {
+  const t = useTranslations('leaderboard');
   const isRevealHidden =
     scoreVisibility === 'reveal' && gameStatus !== 'finished';
 
@@ -83,13 +77,13 @@ export function RoundRobinHolesView({
           className="mx-4 mt-12 rounded-2xl border border-dashed border-border bg-surface px-5 py-8 text-center"
         >
           <p className="font-serif text-[18px] font-medium text-text">
-            Resultatene avsløres etter runden
+            {t('common.revealHiddenTitle')}
           </p>
           <p className="mt-2 font-sans text-xs text-muted">
-            Hull for hull åpnes når admin avslutter spillet.
+            {t('common.hullForHullRevealSub')}
           </p>
         </div>
-        <PullQuote className="px-6 pt-4 pb-4">Lykke til.</PullQuote>
+        <PullQuote className="px-6 pt-4 pb-4">{t('common.goodLuck')}</PullQuote>
       </Shell>
     );
   }
@@ -110,7 +104,7 @@ export function RoundRobinHolesView({
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          Hull for hull
+          {t('common.hullForHullHeading')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">Round Robin</p>
       </div>
@@ -129,7 +123,7 @@ export function RoundRobinHolesView({
         ))}
       </div>
 
-      <PullQuote className="px-6 pt-1 pb-4">Godt spilt.</PullQuote>
+      <PullQuote className="px-6 pt-1 pb-4">{t('common.wellPlayed')}</PullQuote>
     </Shell>
   );
 }
@@ -146,11 +140,12 @@ function Shell({ children }: { children: React.ReactNode }) {
 }
 
 function Header({ gameName, gameId }: { gameName: string; gameId: string }) {
+  const t = useTranslations('leaderboard');
   return (
     <header className="mb-2 flex items-center justify-between gap-4">
       <SmartLink
         href={`/games/${gameId}`}
-        aria-label="Tilbake"
+        aria-label={t('common.backAriaLabel')}
         className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
       >
         ‹
@@ -170,6 +165,14 @@ function SegmentBlock({
   holes: RoundRobinHoleRow[];
   playersById: Map<string, RoundRobinPlayerInfo>;
 }) {
+  const t = useTranslations('leaderboard');
+
+  const SEGMENT_HOLES: Record<1 | 2 | 3, string> = {
+    1: t('roundRobin.segmentHoles1'),
+    2: t('roundRobin.segmentHoles2'),
+    3: t('roundRobin.segmentHoles3'),
+  };
+
   const first = holes[0]!;
   const side1 = sideNames(first.side1PlayerIds, playersById);
   const side2 = sideNames(first.side2PlayerIds, playersById);
@@ -179,12 +182,12 @@ function SegmentBlock({
       {/* Konstellasjons-header: hvem som er partnere DETTE segmentet. */}
       <div className="px-1 pb-2">
         <Kicker tone="muted" className="pb-1">
-          {`Segment ${segment} · ${SEGMENT_HOLES[segment]}`}
+          {t('roundRobin.segmentLabel', { number: segment, holes: SEGMENT_HOLES[segment] })}
         </Kicker>
         <p className="text-[12.5px] text-muted">
           <span className="text-text">{side1}</span>
           <span className="mx-1.5 text-muted/40" aria-hidden>
-            mot
+            {t('roundRobin.vsLabel')}
           </span>
           <span className="text-text">{side2}</span>
         </p>
@@ -199,15 +202,18 @@ function SegmentBlock({
   );
 }
 
-function outcomeChip(result: RoundRobinHoleRow['result']): {
+function outcomeChip(
+  result: RoundRobinHoleRow['result'],
+  t: ReturnType<typeof useTranslations<'leaderboard'>>,
+): {
   label: string;
   className: string;
 } | null {
   switch (result) {
     case 'tied':
-      return { label: 'Delt', className: 'text-muted' };
+      return { label: t('roundRobin.outcomeChipTied'), className: 'text-muted' };
     case 'unplayed':
-      return { label: 'Venter', className: 'text-muted/70' };
+      return { label: t('roundRobin.outcomeChipVenter'), className: 'text-muted/70' };
     default:
       // side1_wins / side2_wins markeres på selve siden, ingen topp-chip.
       return null;
@@ -221,7 +227,8 @@ function HoleCard({
   hole: RoundRobinHoleRow;
   playersById: Map<string, RoundRobinPlayerInfo>;
 }) {
-  const chip = outcomeChip(hole.result);
+  const t = useTranslations('leaderboard');
+  const chip = outcomeChip(hole.result, t);
 
   return (
     <li
@@ -233,7 +240,7 @@ function HoleCard({
         <div className="flex items-baseline justify-between gap-3">
           <div className="flex items-baseline gap-2">
             <span className="font-serif text-[15px] font-medium tabular-nums text-text">
-              Hull {hole.holeNumber}
+              {t('common.hullNumber', { number: hole.holeNumber })}
             </span>
             <span className="text-[10.5px] tabular-nums text-muted">
               Par {hole.par} · SI {hole.strokeIndex}
@@ -275,6 +282,7 @@ function SideBlock({
   isWinner: boolean;
   playersById: Map<string, RoundRobinPlayerInfo>;
 }) {
+  const t = useTranslations('leaderboard');
   return (
     <div
       className={`rounded-xl px-2.5 py-1.5 ${
@@ -285,7 +293,7 @@ function SideBlock({
     >
       {isWinner && (
         <span className="mb-0.5 block text-[9.5px] font-semibold uppercase tracking-[0.14em] text-accent">
-          Vant hullet
+          {t('roundRobin.vantHulletLabel')}
         </span>
       )}
       <ul className="flex flex-col gap-1 list-none">
@@ -319,9 +327,9 @@ function SideBlock({
                 </span>
               </span>
               <span className="flex shrink-0 items-baseline gap-1.5 tabular-nums">
-                {showGross && (
+                {showGross && cell.gross != null && (
                   <span className="text-[10.5px] text-muted/70">
-                    brutto {cell.gross}
+                    {t('roundRobin.bruttoLabel', { gross: cell.gross })}
                   </span>
                 )}
                 <span

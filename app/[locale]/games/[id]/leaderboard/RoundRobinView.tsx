@@ -1,4 +1,5 @@
 import type { JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
@@ -54,11 +55,6 @@ export interface RoundRobinViewProps {
 }
 
 const SLOT_LABEL: Record<number, string> = { 1: 'A', 2: 'B', 3: 'C', 4: 'D' };
-const SEGMENT_HOLES: Record<1 | 2 | 3, string> = {
-  1: 'Hull 1–6',
-  2: 'Hull 7–12',
-  3: 'Hull 13–18',
-};
 
 function playerLabel(
   userId: string,
@@ -92,6 +88,7 @@ export function RoundRobinView({
   backHref = '/',
   chromeless = false,
 }: RoundRobinViewProps): JSX.Element {
+  const t = useTranslations('leaderboard');
   const isRevealHidden =
     scoreVisibility === 'reveal' && gameStatus !== 'finished';
 
@@ -100,7 +97,7 @@ export function RoundRobinView({
       <Shell chromeless={chromeless}>
         {!chromeless && <Header gameName={gameName} backHref={backHref} />}
         <p className="mt-12 text-center text-sm text-muted">
-          Ingen spillere å vise.
+          {t('common.noPlayersToShow')}
         </p>
       </Shell>
     );
@@ -115,18 +112,18 @@ export function RoundRobinView({
           className="mx-4 mt-12 rounded-2xl border border-dashed border-border bg-surface px-5 py-8 text-center"
         >
           <p className="font-serif text-[18px] font-medium text-text">
-            Resultatene avsløres etter runden
+            {t('common.revealHiddenTitle')}
           </p>
           <p className="mt-2 font-sans text-xs text-muted">
-            Round Robin-poeng holdes hemmelig til admin avslutter spillet.
+            {t('roundRobin.revealHiddenSub')}
           </p>
         </div>
-        <PullQuote className="px-6 pt-4 pb-4">Lykke til.</PullQuote>
+        <PullQuote className="px-6 pt-4 pb-4">{t('common.goodLuck')}</PullQuote>
       </Shell>
     );
   }
 
-  const statusLabel = gameStatus === 'finished' ? 'Etter 18 hull' : 'Live';
+  const statusLabel = gameStatus === 'finished' ? t('common.after18Holes') : t('common.live');
 
   return (
     <Shell chromeless={chromeless}>
@@ -134,10 +131,10 @@ export function RoundRobinView({
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          Leaderboard
+          {t('common.leaderboardHeading')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          {statusLabel} · Round Robin · {result.allowancePct}% handicap
+          {statusLabel} · {t('roundRobin.subtitle', { allowancePct: result.allowancePct })}
         </p>
       </div>
 
@@ -150,7 +147,7 @@ export function RoundRobinView({
           const info = playersById.get(player.userId);
           const displayName = info
             ? formatRevealName(info.name, info.nickname)
-            : '(ukjent spiller)';
+            : t('common.unknownPlayerFull');
           return (
             <PlayerRow
               key={player.userId}
@@ -165,7 +162,7 @@ export function RoundRobinView({
       {/* Segment-sammendrag: de 3 roterende konstellasjonene per spiller. */}
       <section className="px-3.5 pt-2 pb-3.5">
         <Kicker tone="muted" className="px-1 pb-2">
-          SEGMENT-SAMMENDRAG
+          {t('roundRobin.segmentSummaryKicker')}
         </Kicker>
         <ul
           data-testid="round-robin-segment-summary"
@@ -175,7 +172,7 @@ export function RoundRobinView({
             const info = playersById.get(player.userId);
             const displayName = info
               ? formatRevealName(info.name, info.nickname)
-              : '(ukjent spiller)';
+              : t('common.unknownPlayerFull');
             return (
               <SegmentCard
                 key={player.userId}
@@ -188,7 +185,7 @@ export function RoundRobinView({
         </ul>
       </section>
 
-      <PullQuote className="px-6 pt-1 pb-4">Lykke til.</PullQuote>
+      <PullQuote className="px-6 pt-1 pb-4">{t('common.goodLuck')}</PullQuote>
     </Shell>
   );
 }
@@ -202,6 +199,7 @@ function PlayerRow({
   displayName: string;
   staggerIndex: number;
 }) {
+  const t = useTranslations('leaderboard');
   const isPodium = player.rank >= 1 && player.rank <= 3;
   const isLeader = player.rank === 1;
   const cardClass = isLeader
@@ -231,9 +229,9 @@ function PlayerRow({
             {displayName}
           </p>
           <p className="mt-0.5 text-[12px] text-muted tabular-nums">
-            Slot {slotLabel}
+            {t('roundRobin.slotLabel', { slot: slotLabel })}
             {player.tiedWith.length > 0 && (
-              <span className="ml-1 text-muted/80">· Delt {player.rank}. plass</span>
+              <span className="ml-1 text-muted/80">{t('roundRobin.tiedInline', { rank: player.rank })}</span>
             )}
           </p>
         </div>
@@ -247,7 +245,7 @@ function PlayerRow({
             {player.totalHoleWins}
           </span>
           <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-            hull
+            {t('roundRobin.hullLabel')}
           </span>
         </div>
       </Card>
@@ -291,6 +289,14 @@ function SegmentRow({
   seg: RoundRobinSegmentLine;
   playersById: Map<string, RoundRobinPlayerInfo>;
 }) {
+  const t = useTranslations('leaderboard');
+
+  const SEGMENT_HOLES: Record<1 | 2 | 3, string> = {
+    1: t('roundRobin.segmentHoles1'),
+    2: t('roundRobin.segmentHoles2'),
+    3: t('roundRobin.segmentHoles3'),
+  };
+
   const partnerName = playerLabel(seg.partnerUserId, playersById);
   const oppNames = seg.opponentUserIds
     .map((id) => playerLabel(id, playersById))
@@ -310,16 +316,16 @@ function SegmentRow({
         <div className="min-w-0">
           <span className="text-muted">{holeLabel}:</span>{' '}
           <span className="text-text">
-            med {partnerName}
+            {t('roundRobin.medLabel', { partner: partnerName })}
           </span>
           <span className="mx-1 text-muted/40" aria-hidden>
-            vs
+            {t('roundRobin.vsLabel')}
           </span>
           <span className="text-muted">{oppNames}</span>
         </div>
         <div
           className={`shrink-0 tabular-nums ${resultClass}`}
-          title={`${seg.holesWon} vunnet · ${seg.holesLost} tapt · ${seg.holesHalved} delt`}
+          title={t('roundRobin.hullWinTitle', { won: seg.holesWon, lost: seg.holesLost, halved: seg.holesHalved })}
         >
           {seg.holesWon}–{seg.holesLost}
           {seg.holesHalved > 0 && (
@@ -363,11 +369,12 @@ function Header({
   gameName: string;
   backHref: string;
 }) {
+  const t = useTranslations('leaderboard');
   return (
     <header className="mb-2 flex items-center justify-between gap-4">
       <SmartLink
         href={backHref}
-        aria-label="Tilbake"
+        aria-label={t('common.backAriaLabel')}
         className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
       >
         ‹

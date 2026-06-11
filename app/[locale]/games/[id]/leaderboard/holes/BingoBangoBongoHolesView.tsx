@@ -1,4 +1,5 @@
 import type { JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
@@ -30,13 +31,6 @@ export interface BingoBangoBongoHolesViewProps {
   gameStatus: 'active' | 'finished';
 }
 
-/** De tre prestasjonene per hull, i fast rekkefølge. */
-const CATEGORIES = [
-  { key: 'bingo', label: 'Bingo', hint: 'først på green' },
-  { key: 'bango', label: 'Bango', hint: 'nærmest hullet' },
-  { key: 'bongo', label: 'Bongo', hint: 'først i hull' },
-] as const;
-
 /**
  * Format-bevisst «Hull for hull» for Bingo Bango Bongo (epic #496, PR 6).
  * Erstatter det generiske best-ball lag-scorekortet med en BBB-riktig per-hull-
@@ -53,8 +47,16 @@ export function BingoBangoBongoHolesView({
   scoreVisibility,
   gameStatus,
 }: BingoBangoBongoHolesViewProps): JSX.Element {
+  const t = useTranslations('leaderboard');
   const isRevealHidden =
     scoreVisibility === 'reveal' && gameStatus !== 'finished';
+
+  /** De tre prestasjonene per hull, i fast rekkefølge. */
+  const CATEGORIES = [
+    { key: 'bingo' as const, label: 'Bingo', hint: t('bingoBangoBongo.firstOnGreen') },
+    { key: 'bango' as const, label: 'Bango', hint: t('bingoBangoBongo.nearestPin') },
+    { key: 'bongo' as const, label: 'Bongo', hint: t('bingoBangoBongo.firstInHole') },
+  ];
 
   if (isRevealHidden) {
     return (
@@ -65,13 +67,13 @@ export function BingoBangoBongoHolesView({
           className="mx-4 mt-12 rounded-2xl border border-dashed border-border bg-surface px-5 py-8 text-center"
         >
           <p className="font-serif text-[18px] font-medium text-text">
-            Resultatene avsløres etter runden
+            {t('common.revealHiddenTitle')}
           </p>
           <p className="mt-2 font-sans text-xs text-muted">
-            Hull for hull åpnes når admin avslutter spillet.
+            {t('common.hullForHullRevealSub')}
           </p>
         </div>
-        <PullQuote className="px-6 pt-4 pb-4">Lykke til.</PullQuote>
+        <PullQuote className="px-6 pt-4 pb-4">{t('common.goodLuck')}</PullQuote>
       </Shell>
     );
   }
@@ -82,10 +84,10 @@ export function BingoBangoBongoHolesView({
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          Hull for hull
+          {t('common.hullForHullHeading')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          Bingo Bango Bongo
+          {t('bingoBangoBongo.holesSubtitle')}
         </p>
       </div>
 
@@ -98,11 +100,12 @@ export function BingoBangoBongoHolesView({
             key={hole.holeNumber}
             hole={hole}
             playersById={playersById}
+            categories={CATEGORIES}
           />
         ))}
       </ul>
 
-      <PullQuote className="px-6 pt-1 pb-4">Godt spilt.</PullQuote>
+      <PullQuote className="px-6 pt-1 pb-4">{t('common.wellPlayed')}</PullQuote>
     </Shell>
   );
 }
@@ -119,11 +122,12 @@ function Shell({ children }: { children: React.ReactNode }) {
 }
 
 function Header({ gameName, gameId }: { gameName: string; gameId: string }) {
+  const t = useTranslations('leaderboard');
   return (
     <header className="mb-2 flex items-center justify-between gap-4">
       <SmartLink
         href={`/games/${gameId}`}
-        aria-label="Tilbake"
+        aria-label={t('common.backAriaLabel')}
         className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
       >
         ‹
@@ -134,13 +138,19 @@ function Header({ gameName, gameId }: { gameName: string; gameId: string }) {
   );
 }
 
+type BbbCategory = { key: 'bingo' | 'bango' | 'bongo'; label: string; hint: string };
+
 function HoleCard({
   hole,
   playersById,
+  categories,
 }: {
   hole: BingoBangoBongoHoleRow;
   playersById: Map<string, BingoBangoBongoPlayerInfo>;
+  categories: BbbCategory[];
 }) {
+  const t = useTranslations('leaderboard');
+
   const winnerByKey: Record<'bingo' | 'bango' | 'bongo', string | null> = {
     bingo: hole.bingoUserId,
     bango: hole.bangoUserId,
@@ -166,7 +176,7 @@ function HoleCard({
 
   const nameFor = (uid: string): string => {
     const info = playersById.get(uid);
-    return info ? formatRevealName(info.name, info.nickname) : '(ukjent spiller)';
+    return info ? formatRevealName(info.name, info.nickname) : t('common.unknownPlayerFull');
   };
 
   return (
@@ -178,26 +188,26 @@ function HoleCard({
         {/* Hode: hull-nummer venstre, Venter/Feiet høyre */}
         <div className="flex items-baseline justify-between gap-3">
           <span className="font-serif text-[15px] font-medium tabular-nums text-text">
-            Hull {hole.holeNumber}
+            {t('common.hullNumber', { number: hole.holeNumber })}
           </span>
           {sweptAll ? (
             <span className="rounded-full border border-accent/40 bg-accent/[0.08] px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-accent">
-              ★ Feiet!
+              {t('bingoBangoBongo.feietChip')}
             </span>
           ) : isPending ? (
             <span className="text-[11px] uppercase tracking-[0.1em] text-muted">
-              Venter
+              {t('common.venter')}
             </span>
           ) : null}
         </div>
 
         {isPending ? (
           <p className="mt-1.5 text-[12.5px] text-muted">
-            Ingen prestasjoner registrert ennå.
+            {t('bingoBangoBongo.ingenPrestasjoner')}
           </p>
         ) : (
           <ul className="mt-2 flex flex-col gap-1 list-none">
-            {CATEGORIES.map((cat) => {
+            {categories.map((cat) => {
               const uid = winnerByKey[cat.key];
               const isSweeper = uid != null && uid === sweepId;
               return (
@@ -230,7 +240,7 @@ function HoleCard({
                     </span>
                   ) : (
                     <span className="shrink-0 text-[12.5px] text-muted">
-                      ikke satt
+                      {t('bingoBangoBongo.ikkeSatt')}
                     </span>
                   )}
                 </li>

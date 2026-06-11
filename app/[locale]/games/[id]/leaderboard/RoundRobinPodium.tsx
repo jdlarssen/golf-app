@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type JSX } from 'react';
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { Kicker } from '@/components/ui/Kicker';
@@ -47,6 +48,7 @@ export function RoundRobinPodium({
   playersById,
   backHref = '/',
 }: RoundRobinPodiumProps): JSX.Element {
+  const t = useTranslations('leaderboard');
   const [replayKey, setReplayKey] = useState(0);
 
   useEffect(() => {
@@ -66,7 +68,7 @@ export function RoundRobinPodium({
       <Shell>
         <Header gameName={gameName} backHref={backHref} />
         <p className="mt-12 text-center text-sm text-muted">
-          Ingen spillere å vise.
+          {t('common.noPlayersToShow')}
         </p>
       </Shell>
     );
@@ -85,10 +87,10 @@ export function RoundRobinPodium({
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <Kicker tone="accent">PODIUM</Kicker>
         <h1 className="mt-2 font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
-          Vinner kåret
+          {t('common.winnerAnnounced')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          Round Robin · Hull-seire
+          {t('roundRobin.podiumSubtitle')}
         </p>
       </div>
 
@@ -144,7 +146,7 @@ export function RoundRobinPodium({
             const info = playersById.get(player.userId);
             const displayName = info
               ? formatRevealName(info.name, info.nickname)
-              : '(ukjent spiller)';
+              : t('common.unknownPlayerFull');
             return (
               <li key={player.userId} className="list-none">
                 <div className="flex items-center gap-3.5 rounded-2xl border border-border bg-surface px-4 py-3">
@@ -156,7 +158,7 @@ export function RoundRobinPodium({
                       {displayName}
                     </p>
                     <p className="mt-0.5 text-[12px] text-muted tabular-nums">
-                      {player.totalHoleWins} hull-seire
+                      {t('roundRobin.hullSeireLabel', { count: player.totalHoleWins })}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
@@ -164,7 +166,7 @@ export function RoundRobinPodium({
                       {player.totalHoleWins}
                     </span>
                     <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
-                      hull
+                      {t('roundRobin.hullLabel')}
                     </span>
                   </div>
                 </div>
@@ -174,7 +176,7 @@ export function RoundRobinPodium({
         </ul>
       )}
 
-      <PullQuote className="px-6 pt-4 pb-4">Gratulerer.</PullQuote>
+      <PullQuote className="px-6 pt-4 pb-4">{t('common.congratulations')}</PullQuote>
     </Shell>
   );
 }
@@ -197,11 +199,12 @@ function Header({
   gameName: string;
   backHref: string;
 }) {
+  const t = useTranslations('leaderboard');
   return (
     <header className="mb-2 flex items-center justify-between gap-4">
       <SmartLink
         href={backHref}
-        aria-label="Tilbake"
+        aria-label={t('common.backAriaLabel')}
         className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
       >
         ‹
@@ -240,9 +243,10 @@ function PodiumStep({
   tier: PodiumTier;
   staggerIndex: number;
 }) {
+  const t = useTranslations('leaderboard');
   const displayName = playerInfo
     ? formatRevealName(playerInfo.name, playerInfo.nickname)
-    : '(ukjent spiller)';
+    : t('common.unknownPlayerFull');
 
   const tierClass = TIER_ACCENT[tier];
   const heightClass = TIER_HEIGHTS[tier];
@@ -273,12 +277,12 @@ function PodiumStep({
           {player.totalHoleWins}
         </span>
         <span className="mt-1 block text-[9px] font-semibold uppercase tracking-[0.16em] text-muted">
-          hull
+          {t('roundRobin.hullLabel')}
         </span>
       </div>
 
       <p className="text-[10px] tabular-nums text-muted">
-        {player.totalHolesLost} tapt
+        {t('roundRobin.tapetLabel', { count: player.totalHolesLost })}
       </p>
     </div>
   );

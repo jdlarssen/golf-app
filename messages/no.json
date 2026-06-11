@@ -539,7 +539,8 @@
       "hullForHullHeading": "Hull for hull",
       "hullForHullRevealSub": "Hull for hull åpnes når admin avslutter spillet.",
       "leaderboardHeading": "Leaderboard",
-      "teamLeaderboardHeading": "Lag-leaderboard"
+      "teamLeaderboardHeading": "Lag-leaderboard",
+      "hullNumber": "Hull {number}"
     },
     "tabs": {
       "tablistAriaLabel": "Leaderboard-fane",
@@ -754,6 +755,58 @@
       "playerScoreAria": "{initial}, brutto {gross}, +{extra} slag, netto {net}",
       "parAsideTitle": "Dette hullet har annerledes par for andre kjønn. {genders}.",
       "parAsideAriaLabel": "Avvikende par for andre kjønn. {genders}."
+    },
+    "bingoBangoBongo": {
+      "revealHiddenSub": "Bingo Bango Bongo-poeng holdes hemmelig til admin avslutter spillet.",
+      "subtitle": "Bingo Bango Bongo",
+      "podiumSubtitle": "Bingo Bango Bongo · Poeng",
+      "holesSubtitle": "Bingo Bango Bongo",
+      "feietChip": "★ Feiet!",
+      "ingenPrestasjoner": "Ingen prestasjoner registrert ennå.",
+      "ikkeSatt": "ikke satt",
+      "firstOnGreen": "først på green",
+      "nearestPin": "nærmest hullet",
+      "firstInHole": "først i hull"
+    },
+    "nines": {
+      "revealHiddenSub": "Poengene holdes hemmelig til admin avslutter spillet.",
+      "variantNines": "Nines",
+      "variantSplitSixes": "Split Sixes",
+      "holesScored": "{count} hull scoret",
+      "ventePaaScore": "Venter på score",
+      "bruttoLabel": "brutto {gross}",
+      "potLabel": "{pot} poeng",
+      "podiumHullScored": "{count} hull"
+    },
+    "roundRobin": {
+      "revealHiddenSub": "Round Robin-poeng holdes hemmelig til admin avslutter spillet.",
+      "subtitle": "Round Robin · {allowancePct}% handicap",
+      "hullLabel": "hull",
+      "slotLabel": "Slot {slot}",
+      "tiedInline": "· Delt {rank}. plass",
+      "segmentSummaryKicker": "SEGMENT-SAMMENDRAG",
+      "segmentLabel": "Segment {number} · {holes}",
+      "medLabel": "med {partner}",
+      "vsLabel": "vs",
+      "hullSeireLabel": "{count} hull-seire",
+      "podiumSubtitle": "Round Robin · Hull-seire",
+      "vantHulletLabel": "Vant hullet",
+      "bruttoLabel": "brutto {gross}",
+      "segmentHoles1": "Hull 1–6",
+      "segmentHoles2": "Hull 7–12",
+      "segmentHoles3": "Hull 13–18",
+      "hullWinTitle": "{won} vunnet · {lost} tapt · {halved} delt",
+      "outcomeChipTied": "Delt",
+      "outcomeChipVenter": "Venter",
+      "tapetLabel": "{count} tapt"
+    },
+    "aceyDeucey": {
+      "revealHiddenSub": "Acey Deucey-poeng holdes hemmelig til admin avslutter spillet.",
+      "subtitle": "Acey Deucey · {scoring}",
+      "podiumSubtitle": "Acey Deucey · {scoring}",
+      "aceDeuce": "{aces} ace · {deuces} deuce",
+      "deltLabel": "Delt",
+      "bruttoLabel": "brutto {gross}"
     }
   },
   "auth": {
