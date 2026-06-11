@@ -249,7 +249,7 @@ function HoleCard({
                 <span className="flex shrink-0 items-baseline gap-1.5 tabular-nums">
                   {showGross && (
                     <span className="text-[10.5px] text-muted/70">
-                      {tc('grossBrutto', { count: cell.gross ?? 0 })}
+                      {t('skins.bruttoLabel', { count: cell.gross ?? 0 })}
                     </span>
                   )}
                   <span

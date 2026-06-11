@@ -653,7 +653,8 @@
       "skinsWinnerKronet": "Skins winner crowned",
       "skinsWinnerSubtitle": "Skins · {scoring}",
       "holesWonCount": "{count, plural, one {# hole won} other {# holes won}}",
-      "drattVidere": "Halved → carried over"
+      "drattVidere": "Halved → carried over",
+      "bruttoLabel": "gross {count}"
     },
     "matchplay": {
       "matchCannotShow": "Match cannot be displayed",

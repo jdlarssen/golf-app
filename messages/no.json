@@ -653,7 +653,8 @@
       "skinsWinnerKronet": "Skins-vinneren kåret",
       "skinsWinnerSubtitle": "Skins · {scoring}",
       "holesWonCount": "{count, plural, one {# hull vunnet} other {# hull vunnet}}",
-      "drattVidere": "Delt → dratt videre"
+      "drattVidere": "Delt → dratt videre",
+      "bruttoLabel": "brutto {count}"
     },
     "matchplay": {
       "matchCannotShow": "Matchen kan ikke vises",
