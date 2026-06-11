@@ -15,8 +15,9 @@ import { PlayersSection } from './sections/PlayersSection';
 import { TeamsAssignmentSection } from './sections/TeamsAssignmentSection';
 import { AdvancedSettingsSection } from './sections/AdvancedSettingsSection';
 import { RegistrationSection } from './sections/RegistrationSection';
+import { useTranslations } from 'next-intl';
 import { AllowanceField } from '@/components/admin/AllowanceField';
-import { bruttoHelperFor } from '@/lib/games/allowanceCopy';
+import { bruttoHelperKeyFor } from '@/lib/games/allowanceCopy';
 import { WolfSetup } from './sections/WolfSetup';
 import { NassauSetup } from './sections/NassauSetup';
 import { SkinsSetup } from './sections/SkinsSetup';
@@ -286,6 +287,8 @@ type Props = {
  * uendret.
  */
 export function GameForm({ courses, players, mode, initialValues }: Props) {
+  const t = useTranslations('wizard.form');
+  const tAllowance = useTranslations('allowance');
   const state = useGameFormState({ initialValues, players, courses });
   const {
     name,
@@ -515,7 +518,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           skjulte hidden-input ved bunnen av form. */}
       <section className="space-y-4">
         <h2 className="text-sm font-medium text-text">
-          3. Format
+          {t('formatHeading')}
         </h2>
         <ModeSelector
           value={gameMode}
@@ -534,10 +537,10 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           <AllowanceField
             fieldName="fourball_allowance_pct"
             defaultPct={85}
-            legend="Scoring for fourball-matches"
-            description="Styrer handicap for fourball-matches. Netto bruker en andel av hver spillers handicap, brutto teller laveste gross per hull per side."
-            nettoHelperText="Andel av hver spillers handicap som teller. WHS-standard for four-ball matchplay er 85."
-            bruttoHelperText="Ingen handicap — laveste gross-score per hull per side vinner. Vanlig format på ekte Ryder Cup."
+            legend={t('fourball.legend')}
+            description={t('fourball.description')}
+            nettoHelperText={t('fourball.nettoHelper')}
+            bruttoHelperText={t('fourball.bruttoHelper')}
             value={fourballAllowancePct}
             onChange={setFourballAllowancePct}
             hideHiddenInput
@@ -547,10 +550,10 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           <AllowanceField
             fieldName="foursomes_allowance_pct"
             defaultPct={50}
-            legend="Scoring for foursomes-matches"
-            description="Styrer handicap for foursomes-matches (alternate shot). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets gross-slag."
-            nettoHelperText="Andel av differansen i lagenes summerte handicap. WHS-standard for foursomes matchplay er 50."
-            bruttoHelperText="Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+            legend={t('foursomes.legend')}
+            description={t('foursomes.description')}
+            nettoHelperText={t('foursomes.nettoHelper')}
+            bruttoHelperText={t('foursomes.bruttoHelper')}
             value={foursomesAllowancePct}
             onChange={setFoursomesAllowancePct}
             hideHiddenInput
@@ -560,10 +563,10 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           <AllowanceField
             fieldName="greensome_allowance_pct"
             defaultPct={100}
-            legend="Scoring for greensome-matches"
-            description="Styrer handicap for greensome-matches (velg-beste-tee + alternate shot). Netto gir høyeste lag en andel av differansen mellom lagenes 60/40-blandede handicap; brutto teller bare lagets gross-slag."
-            nettoHelperText="Andel av differansen mellom lagenes 60/40-blandede handicap. WHS-standard for greensome er 100."
-            bruttoHelperText="Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+            legend={t('greensome.legend')}
+            description={t('greensome.description')}
+            nettoHelperText={t('greensome.nettoHelper')}
+            bruttoHelperText={t('greensome.bruttoHelper')}
             value={greensomeAllowancePct}
             onChange={setGreensomeAllowancePct}
             hideHiddenInput
@@ -573,10 +576,10 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           <AllowanceField
             fieldName="chapman_allowance_pct"
             defaultPct={100}
-            legend="Scoring for chapman-matches"
-            description="Styrer handicap for chapman-matches (dobbel tee, bytt ball, velg beste + alternate). Hvert lag får et handicap på 60 % av laveste pluss 40 % av høyeste. Netto gir høyeste lag en andel av differansen mellom lagene; brutto teller bare lagets gross-slag."
-            nettoHelperText="Andel av differansen mellom lagenes 60/40-handicap. 100 gir hele differansen (WHS-standard for chapman matchplay)."
-            bruttoHelperText="Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+            legend={t('chapman.legend')}
+            description={t('chapman.description')}
+            nettoHelperText={t('chapman.nettoHelper')}
+            bruttoHelperText={t('chapman.bruttoHelper')}
             value={chapmanAllowancePct}
             onChange={setChapmanAllowancePct}
             hideHiddenInput
@@ -586,10 +589,10 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           <AllowanceField
             fieldName="gruesome_allowance_pct"
             defaultPct={50}
-            legend="Scoring for gruesome-matches"
-            description="Styrer handicap for gruesome-matches (begge teer ut, motstanderlaget velger ballen + alternate). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets gross-slag."
-            nettoHelperText="Andel av differansen i lagenes summerte handicap. WHS-standard for gruesome matchplay er 50 (identisk med foursomes)."
-            bruttoHelperText="Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+            legend={t('gruesome.legend')}
+            description={t('gruesome.description')}
+            nettoHelperText={t('gruesome.nettoHelper')}
+            bruttoHelperText={t('gruesome.bruttoHelper')}
             value={gruesomeAllowancePct}
             onChange={setGruesomeAllowancePct}
             hideHiddenInput
@@ -606,10 +609,10 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
           <AllowanceField
             fieldName="hcp_allowance_pct"
             defaultPct={100}
-            legend="Scoring"
-            description="Styrer hvor stor andel av handicap som regnes med. Brutto = ingen handicap, kun gross."
-            nettoHelperText="Andel av spillerens handicap som teller. 100 = fullt course handicap (standard)."
-            bruttoHelperText={bruttoHelperFor(gameMode)}
+            legend={t('scoring.legend')}
+            description={t('scoring.description')}
+            nettoHelperText={t('scoring.nettoHelper')}
+            bruttoHelperText={tAllowance(bruttoHelperKeyFor(gameMode) as Parameters<typeof tAllowance>[0])}
             value={hcpAllowance}
             onChange={setHcpAllowance}
           />
@@ -627,15 +630,15 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
               key={teamSize}
               fieldName="texas_team_handicap_pct"
               defaultPct={texasHandicapPct}
-              legend="Lag-handicap"
-              description="Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = laveste lag-gross per hull vinner."
+              legend={t('teamHandicap.legend')}
+              description={t('teamHandicap.description')}
               nettoHelperText={
                 teamSize === 2
-                  ? 'NGF-standard: 25 % av summen av spillernes spille-HCP for 2-mannslag.'
-                  : 'NGF-standard: 10 % av summen av spillernes spille-HCP for 4-mannslag.'
+                  ? t('teamHandicap.texasNetto2')
+                  : t('teamHandicap.texasNetto4')
               }
-              bruttoHelperText="Ingen lag-handicap — laveste gross-score per hull per lag vinner. Scratch-format."
-              inputLabel="Lag-handicap (%)"
+              bruttoHelperText={t('teamHandicap.bruttoHelper')}
+              inputLabel={t('teamHandicap.inputLabel')}
               value={texasHandicapPct}
               onChange={setTexasHandicapPct}
             />
@@ -652,15 +655,15 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
               key={teamSize}
               fieldName="ambrose_team_handicap_pct"
               defaultPct={ambroseHandicapPct}
-              legend="Lag-handicap"
-              description="Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = laveste lag-gross per hull vinner."
+              legend={t('teamHandicap.legend')}
+              description={t('teamHandicap.description')}
               nettoHelperText={
                 teamSize === 2
-                  ? 'Standard Ambrose: 25 % av summen av spillernes spille-HCP for 2-mannslag.'
-                  : 'Standard Ambrose: 12,5 % av summen av spillernes spille-HCP for 4-mannslag.'
+                  ? t('teamHandicap.ambroseNetto2')
+                  : t('teamHandicap.ambroseNetto4')
               }
-              bruttoHelperText="Ingen lag-handicap — laveste gross-score per hull per lag vinner. Scratch-format."
-              inputLabel="Lag-handicap (%)"
+              bruttoHelperText={t('teamHandicap.bruttoHelper')}
+              inputLabel={t('teamHandicap.inputLabel')}
               value={ambroseHandicapPct}
               onChange={setAmbroseHandicapPct}
             />
@@ -677,15 +680,15 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
               key={teamSize}
               fieldName="florida_team_handicap_pct"
               defaultPct={floridaHandicapPct}
-              legend="Lag-handicap"
-              description="Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = laveste lag-gross per hull vinner."
+              legend={t('teamHandicap.legend')}
+              description={t('teamHandicap.description')}
               nettoHelperText={
                 teamSize === 3
-                  ? 'NGF-standard: 15 % av summen av spillernes spille-HCP for 3-mannslag.'
-                  : 'NGF-standard: 10 % av summen av spillernes spille-HCP for 4-mannslag.'
+                  ? t('teamHandicap.floridaNetto3')
+                  : t('teamHandicap.floridaNetto4')
               }
-              bruttoHelperText="Ingen lag-handicap — laveste gross-score per hull per lag vinner. Scratch-format."
-              inputLabel="Lag-handicap (%)"
+              bruttoHelperText={t('teamHandicap.bruttoHelper')}
+              inputLabel={t('teamHandicap.inputLabel')}
               value={floridaHandicapPct}
               onChange={setFloridaHandicapPct}
             />
@@ -703,10 +706,10 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             <AllowanceField
               fieldName="round_robin_allowance_pct"
               defaultPct={85}
-              legend="Scoring for Round Robin"
-              description="Styrer handicap for Round Robin-matchplay. Netto bruker en andel av hver spillers handicap per hull, brutto teller laveste gross per side."
-              nettoHelperText="Andel av hver spillers handicap som teller. WHS-standard for four-ball matchplay er 85."
-              bruttoHelperText="Ingen handicap — laveste gross-score per hull per side avgjør. Ren brutto-runde."
+              legend={t('roundRobin.legend')}
+              description={t('roundRobin.description')}
+              nettoHelperText={t('roundRobin.nettoHelper')}
+              bruttoHelperText={t('roundRobin.bruttoHelper')}
               value={state.roundRobinAllowancePct}
               onChange={state.setRoundRobinAllowancePct}
             />
@@ -768,7 +771,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
         )}
         {lockGameMode && (
           <p className="text-xs text-muted">
-            <strong>Kan ikke endres etter spill-start.</strong>
+            <strong>{t('modeLockedNote')}</strong>
           </p>
         )}
       </section>
@@ -797,7 +800,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
             className="w-full"
             disabled={!canPublish}
           >
-            Lagre endringer
+            {t('saveChangesButton')}
           </Button>
         )}
 
@@ -817,14 +820,14 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
                   : undefined
               }
             >
-              Publiser
+              {t('publishButton')}
             </Button>
             {!canPublish && missingForPublish.length > 0 && (
               <p
                 id="publish-missing"
                 className="text-xs text-muted text-center"
               >
-                Mangler: {missingForPublish.join(', ')}
+                {t('missingPrefix', { items: missingForPublish.join(', ') })}
               </p>
             )}
             <Button
@@ -835,7 +838,7 @@ export function GameForm({ courses, players, mode, initialValues }: Props) {
               className="w-full"
               disabled={name.trim() === ''}
             >
-              Lagre utkast
+              {t('saveDraftButton')}
             </Button>
           </>
         )}
