@@ -316,6 +316,7 @@
       },
       "players": {
         "headingDefault": "2. Spillere",
+        "pendingLabel": "Invitert spiller",
         "waitingChip": "Venter",
         "searchLabel": "Søk i spillere",
         "searchPlaceholder": "Søk i spillere…",
@@ -414,6 +415,108 @@
         "shamble": "Shamble / Champagne Scramble",
         "patsome": "Patsome"
       }
+    },
+    "form": {
+      "formatHeading": "3. Format",
+      "modeLockedNote": "Kan ikke endres etter spill-start.",
+      "saveChangesButton": "Lagre endringer",
+      "publishButton": "Publiser",
+      "missingPrefix": "Mangler: {items}",
+      "saveDraftButton": "Lagre utkast",
+      "fourball": {
+        "legend": "Scoring for fourball-matches",
+        "description": "Styrer handicap for fourball-matches. Netto bruker en andel av hver spillers handicap, brutto teller laveste gross per hull per side.",
+        "nettoHelper": "Andel av hver spillers handicap som teller. WHS-standard for four-ball matchplay er 85.",
+        "bruttoHelper": "Ingen handicap — laveste gross-score per hull per side vinner. Vanlig format på ekte Ryder Cup."
+      },
+      "foursomes": {
+        "legend": "Scoring for foursomes-matches",
+        "description": "Styrer handicap for foursomes-matches (alternate shot). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets gross-slag.",
+        "nettoHelper": "Andel av differansen i lagenes summerte handicap. WHS-standard for foursomes matchplay er 50.",
+        "bruttoHelper": "Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+      },
+      "greensome": {
+        "legend": "Scoring for greensome-matches",
+        "description": "Styrer handicap for greensome-matches (velg-beste-tee + alternate shot). Netto gir høyeste lag en andel av differansen mellom lagenes 60/40-blandede handicap; brutto teller bare lagets gross-slag.",
+        "nettoHelper": "Andel av differansen mellom lagenes 60/40-blandede handicap. WHS-standard for greensome er 100.",
+        "bruttoHelper": "Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+      },
+      "chapman": {
+        "legend": "Scoring for chapman-matches",
+        "description": "Styrer handicap for chapman-matches (dobbel tee, bytt ball, velg beste + alternate). Hvert lag får et handicap på 60 % av laveste pluss 40 % av høyeste. Netto gir høyeste lag en andel av differansen mellom lagene; brutto teller bare lagets gross-slag.",
+        "nettoHelper": "Andel av differansen mellom lagenes 60/40-handicap. 100 gir hele differansen (WHS-standard for chapman matchplay).",
+        "bruttoHelper": "Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+      },
+      "gruesome": {
+        "legend": "Scoring for gruesome-matches",
+        "description": "Styrer handicap for gruesome-matches (begge teer ut, motstanderlaget velger ballen + alternate). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets gross-slag.",
+        "nettoHelper": "Andel av differansen i lagenes summerte handicap. WHS-standard for gruesome matchplay er 50 (identisk med foursomes).",
+        "bruttoHelper": "Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+      },
+      "scoring": {
+        "legend": "Scoring",
+        "description": "Styrer hvor stor andel av handicap som regnes med. Brutto = ingen handicap, kun gross.",
+        "nettoHelper": "Andel av spillerens handicap som teller. 100 = fullt course handicap (standard)."
+      },
+      "teamHandicap": {
+        "legend": "Lag-handicap",
+        "description": "Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = laveste lag-gross per hull vinner.",
+        "texasNetto2": "NGF-standard: 25 % av summen av spillernes spille-HCP for 2-mannslag.",
+        "texasNetto4": "NGF-standard: 10 % av summen av spillernes spille-HCP for 4-mannslag.",
+        "ambroseNetto2": "Standard Ambrose: 25 % av summen av spillernes spille-HCP for 2-mannslag.",
+        "ambroseNetto4": "Standard Ambrose: 12,5 % av summen av spillernes spille-HCP for 4-mannslag.",
+        "floridaNetto3": "NGF-standard: 15 % av summen av spillernes spille-HCP for 3-mannslag.",
+        "floridaNetto4": "NGF-standard: 10 % av summen av spillernes spille-HCP for 4-mannslag.",
+        "bruttoHelper": "Ingen lag-handicap — laveste gross-score per hull per lag vinner. Scratch-format.",
+        "inputLabel": "Lag-handicap (%)"
+      },
+      "roundRobin": {
+        "legend": "Scoring for Round Robin",
+        "description": "Styrer handicap for Round Robin-matchplay. Netto bruker en andel av hver spillers handicap per hull, brutto teller laveste gross per side.",
+        "nettoHelper": "Andel av hver spillers handicap som teller. WHS-standard for four-ball matchplay er 85.",
+        "bruttoHelper": "Ingen handicap — laveste gross-score per hull per side avgjør. Ren brutto-runde."
+      },
+      "missing": {
+        "course": "bane",
+        "teeBox": "tee-boks",
+        "teeOffTime": "tee-off-tid",
+        "twoPlayers": "2 spillere",
+        "oneMorePlayer": "1 spiller til",
+        "tooManyMatchplay": "for mange spillere — matchplay krever nøyaktig 2",
+        "onePerSide": "én spiller på hver side",
+        "bestBallMin": "minst 2 spillere (partall, fordelt 2 per lag)",
+        "bestBallOdd": "partall antall spillere (2, 4, 6 eller 8)",
+        "bestBallAssign": "lag-fordeling (2 per lag)",
+        "flightAssign": "flight-fordeling",
+        "min2players": "minst 2 spillere",
+        "evenCount": "partall antall spillere",
+        "parAssign": "lag-fordeling (par à 2)",
+        "minCountPlayers": "minst {count} spillere",
+        "teamOdd2": "partall antall spillere (lag á 2)",
+        "teamOdd4": "antall spillere delelig på 4 (lag á 4)",
+        "teamOdd3": "antall spillere delelig på 3 (lag á 3)",
+        "teamAssign2": "lag-fordeling (lag á 2)",
+        "teamAssign4": "lag-fordeling (lag á 4)",
+        "teamAssign3": "lag-fordeling (lag á 3)",
+        "teamHandicapPct": "lag-handicap-prosent (0-100)",
+        "wolfUnderMin": "{remaining} {remaining, plural, one {spiller} other {spillere}} til (minst 3)",
+        "wolfTooMany": "for mange spillere — Wolf tar 3 til 5",
+        "nassauMin": "{remaining, plural, one {minst 1 spiller til} other {minst 2 spillere}}",
+        "nassauTooMany": "for mange spillere — Nassau tar maks 16",
+        "skinsTooMany": "for mange spillere — Skins tar maks 16",
+        "bbbTooMany": "for mange spillere — Bingo Bango Bongo tar maks 16",
+        "ninesUnderMin": "{remaining, plural, one {1 spiller til} other {{remaining} spillere til}}",
+        "ninesTooMany": "for mange spillere — Nines krever nøyaktig 3",
+        "rrUnderMin": "{remaining} {remaining, plural, one {spiller til} other {spillere til}}",
+        "rrTooMany": "for mange spillere — Round Robin krever nøyaktig 4",
+        "rrHandicap": "gyldig handicap-prosent (0-100)",
+        "aceyTooMany": "for mange spillere — Acey Deucey krever nøyaktig 4",
+        "patsomeUnderMin": "{remaining, plural, one {minst 1 spiller til} other {minst {remaining} spillere til}}",
+        "patsomeOdd": "partall antall spillere (lag à 2)",
+        "patsomeAssign": "lag-fordeling (lag à 2)",
+        "soloMin": "minst én spiller",
+        "invalidAllowance": "gyldig HCP-allowance"
+      }
     }
   },
   "formatGuide": {
@@ -425,7 +528,31 @@
   "allowance": {
     "nettoLabel": "Netto",
     "bruttoLabel": "Brutto",
-    "inputLabelDefault": "Allowance (%)"
+    "inputLabelDefault": "Allowance (%)",
+    "bruttoHelper": {
+      "best_ball": "Ingen handicap — laveste gross-score per hull per lag vinner.",
+      "stableford": "Stableford-poeng beregnes på gross-score mot par. Scratch-format.",
+      "modified_stableford": "Modified-stableford-poeng beregnes på gross-score mot par (pro-skala). Scratch-format.",
+      "singles_matchplay": "Scratch-matchplay — laveste gross-score per hull vinner.",
+      "solo_strokeplay": "Scratch-slagspill — lavest sum av gross-slag vinner.",
+      "fourball_matchplay": "Ingen handicap — kun gross teller.",
+      "foursomes_matchplay": "Ingen handicap — kun gross teller.",
+      "greensome_matchplay": "Ingen handicap — kun gross teller.",
+      "chapman_matchplay": "Ingen handicap — kun gross teller.",
+      "gruesome_matchplay": "Ingen handicap — kun gross teller.",
+      "texas_scramble": "Ingen handicap — kun gross teller.",
+      "ambrose": "Ingen handicap — kun gross teller.",
+      "florida_scramble": "Ingen handicap — kun gross teller.",
+      "wolf": "Ingen handicap — point-utdeling bruker gross-score.",
+      "nassau": "Ingen handicap — slag-sum per seksjon bruker gross-score.",
+      "skins": "Ingen handicap — lavest gross-score per hull vinner skinnet.",
+      "bingo_bango_bongo": "Ingen handicap — Bingo Bango Bongo-poeng teller uavhengig av slag.",
+      "nines": "Ingen handicap — lavest gross-score per hull gir flest poeng.",
+      "round_robin": "Ingen handicap — besteball matchplay bruker gross-score per hull.",
+      "acey_deucey": "Ingen handicap — per-hull-poeng bruker gross-score.",
+      "shamble": "Ingen handicap — de laveste gross-scorene per hull teller for laget.",
+      "patsome": "Ingen handicap — stableford-poeng regnes på gross-score i alle tre segmentene."
+    }
   },
   "modes": {
     "playStyle": {

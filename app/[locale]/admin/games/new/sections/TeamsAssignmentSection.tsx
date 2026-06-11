@@ -19,7 +19,6 @@
 
 import { useTranslations } from 'next-intl';
 import type { PlayerOption } from '../GameForm';
-import { PENDING_PLAYER_LABEL } from '../playerDisplay';
 import type { GameFormState } from '../useGameFormState';
 import { Button } from '@/components/ui/Button';
 import { FLIGHT_NUMBERS, TEAM_NUMBERS, type TeamNumber } from '../useGameFormState';
@@ -35,18 +34,20 @@ type Props = {
   hideNumbering?: boolean;
 };
 
-function shortName(p: PlayerOption): string {
-  if (p.pending) return p.email ?? PENDING_PLAYER_LABEL;
-  const displayName = p.name ?? p.email ?? PENDING_PLAYER_LABEL;
-  return p.nickname ? `${displayName} «${p.nickname}»` : displayName;
-}
-
 export function TeamsAssignmentSection({
   state,
   players,
   hideNumbering = false,
 }: Props) {
   const t = useTranslations('wizard.sections.teams');
+  const tPlayers = useTranslations('wizard.sections.players');
+  const pendingLabel = tPlayers('pendingLabel');
+
+  function shortName(p: PlayerOption): string {
+    if (p.pending) return p.email ?? pendingLabel;
+    const displayName = p.name ?? p.email ?? pendingLabel;
+    return p.nickname ? `${displayName} «${p.nickname}»` : displayName;
+  }
   const {
     selectedPlayerIds,
     teamByPlayer,

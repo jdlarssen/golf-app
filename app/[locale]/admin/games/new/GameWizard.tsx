@@ -55,8 +55,9 @@ import { RoundRobinSetup } from './sections/RoundRobinSetup';
 import { AceyDeuceySetup } from './sections/AceyDeuceySetup';
 import { ShambleSetup } from './sections/ShambleSetup';
 import { PatsomeSetup } from './sections/PatsomeSetup';
+import { useTranslations } from 'next-intl';
 import { AllowanceField } from '@/components/admin/AllowanceField';
-import { bruttoHelperFor } from '@/lib/games/allowanceCopy';
+import { bruttoHelperKeyFor } from '@/lib/games/allowanceCopy';
 import {
   GameForm,
   type CourseOption,
@@ -167,6 +168,7 @@ export function GameWizard({
   isClubAdmin = false,
   formatGuide = [],
 }: Props) {
+  const tAllowance = useTranslations('allowance');
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -735,7 +737,7 @@ export function GameWizard({
                   legend="Scoring"
                   description="Styrer hvor stor andel av handicap som regnes med. Brutto = ingen handicap, kun gross."
                   nettoHelperText="Andel av spillerens handicap som teller. 100 = fullt course handicap (standard)."
-                  bruttoHelperText={bruttoHelperFor(state.gameMode)}
+                  bruttoHelperText={tAllowance(bruttoHelperKeyFor(state.gameMode) as Parameters<typeof tAllowance>[0])}
                   value={state.hcpAllowance}
                   onChange={state.setHcpAllowance}
                   hideHiddenInput

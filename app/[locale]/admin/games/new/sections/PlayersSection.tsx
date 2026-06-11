@@ -11,7 +11,6 @@
 import { useTranslations } from 'next-intl';
 import type { PlayerOption } from '../GameForm';
 import type { GameFormState } from '../useGameFormState';
-import { PENDING_PLAYER_LABEL } from '../playerDisplay';
 import { StatusChip } from '@/components/ui/StatusChip';
 
 type Props = {
@@ -31,22 +30,6 @@ type Props = {
   selectableIds?: ReadonlySet<string>;
 };
 
-function playerLabel(p: PlayerOption): string {
-  if (p.pending) {
-    return p.email ?? PENDING_PLAYER_LABEL;
-  }
-  const displayName = p.name ?? p.email ?? PENDING_PLAYER_LABEL; // defensive — non-pending should always have name
-  const hcp = p.hcp_index.toFixed(1);
-  if (p.nickname) return `${displayName} «${p.nickname}» — HCP ${hcp}`;
-  return `${displayName} — HCP ${hcp}`;
-}
-
-function shortName(p: PlayerOption): string {
-  if (p.pending) return p.email ?? PENDING_PLAYER_LABEL;
-  const displayName = p.name ?? p.email ?? PENDING_PLAYER_LABEL;
-  return p.nickname ? `${displayName} «${p.nickname}»` : displayName;
-}
-
 export function PlayersSection({
   state,
   players,
@@ -54,6 +37,23 @@ export function PlayersSection({
   selectableIds,
 }: Props) {
   const t = useTranslations('wizard.sections.players');
+  const pendingLabel = t('pendingLabel');
+
+  function playerLabel(p: PlayerOption): string {
+    if (p.pending) {
+      return p.email ?? pendingLabel;
+    }
+    const displayName = p.name ?? p.email ?? pendingLabel; // defensive — non-pending should always have name
+    const hcp = p.hcp_index.toFixed(1);
+    if (p.nickname) return `${displayName} «${p.nickname}» — HCP ${hcp}`;
+    return `${displayName} — HCP ${hcp}`;
+  }
+
+  function shortName(p: PlayerOption): string {
+    if (p.pending) return p.email ?? pendingLabel;
+    const displayName = p.name ?? p.email ?? pendingLabel;
+    return p.nickname ? `${displayName} «${p.nickname}»` : displayName;
+  }
   const resolvedHeading = heading ?? t('headingDefault');
   const {
     selectedPlayerIds,

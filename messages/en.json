@@ -316,6 +316,7 @@
       },
       "players": {
         "headingDefault": "2. Players",
+        "pendingLabel": "Invited player",
         "waitingChip": "Waiting",
         "searchLabel": "Search players",
         "searchPlaceholder": "Search players…",
@@ -414,6 +415,108 @@
         "shamble": "Shamble / Champagne Scramble",
         "patsome": "Patsome"
       }
+    },
+    "form": {
+      "formatHeading": "3. Format",
+      "modeLockedNote": "Cannot be changed after the game has started.",
+      "saveChangesButton": "Save changes",
+      "publishButton": "Publish",
+      "missingPrefix": "Missing: {items}",
+      "saveDraftButton": "Save draft",
+      "fourball": {
+        "legend": "Scoring for four-ball matches",
+        "description": "Controls handicaps for four-ball matches. Net uses a share of each player's handicap; gross counts the lowest gross score per hole per side.",
+        "nettoHelper": "The share of each player's handicap that counts. The WHS standard for four-ball match play is 85.",
+        "bruttoHelper": "No handicaps — the lowest gross score per hole per side wins. The usual format in the real Ryder Cup."
+      },
+      "foursomes": {
+        "legend": "Scoring for foursomes matches",
+        "description": "Controls handicaps for foursomes matches (alternate shot). Net gives the higher-handicap team a share of the difference between the teams' combined handicaps; gross counts only the team's gross strokes.",
+        "nettoHelper": "The share of the difference between the teams' combined handicaps. The WHS standard for foursomes match play is 50.",
+        "bruttoHelper": "No handicaps — the team's gross score per hole decides, no extra strokes."
+      },
+      "greensome": {
+        "legend": "Scoring for greensome matches",
+        "description": "Controls handicaps for greensome matches (pick-best-drive + alternate shot). Net gives the higher-handicap team a share of the difference between the teams' 60/40-blended handicaps; gross counts only the team's gross strokes.",
+        "nettoHelper": "The share of the difference between the teams' 60/40-blended handicaps. The WHS standard for greensome is 100.",
+        "bruttoHelper": "No handicaps — the team's gross score per hole decides, no extra strokes."
+      },
+      "chapman": {
+        "legend": "Scoring for Chapman matches",
+        "description": "Controls handicaps for Chapman matches (double tee, swap balls, pick best + alternate). Each team receives a handicap of 60% of the lower plus 40% of the higher. Net gives the higher team a share of the difference; gross counts only the team's gross strokes.",
+        "nettoHelper": "The share of the difference between the teams' 60/40 handicaps. 100 gives the full difference (WHS standard for Chapman match play).",
+        "bruttoHelper": "No handicaps — the team's gross score per hole decides, no extra strokes."
+      },
+      "gruesome": {
+        "legend": "Scoring for Gruesome matches",
+        "description": "Controls handicaps for Gruesome matches (both tee off, opponents pick the ball + alternate). Net gives the higher-handicap team a share of the difference between the teams' combined handicaps; gross counts only the team's gross strokes.",
+        "nettoHelper": "The share of the difference between the teams' combined handicaps. The WHS standard for Gruesome match play is 50 (same as foursomes).",
+        "bruttoHelper": "No handicaps — the team's gross score per hole decides, no extra strokes."
+      },
+      "scoring": {
+        "legend": "Scoring",
+        "description": "Controls what share of handicap is counted. Gross = no handicap, gross scores only.",
+        "nettoHelper": "The share of the player's handicap that counts. 100 = full course handicap (standard)."
+      },
+      "teamHandicap": {
+        "legend": "Team handicap",
+        "description": "Controls what share of the sum of team members' playing handicaps counts as the effective team handicap. Gross = lowest team gross per hole wins.",
+        "texasNetto2": "NGF standard: 25% of the sum of players' playing handicaps for 2-player teams.",
+        "texasNetto4": "NGF standard: 10% of the sum of players' playing handicaps for 4-player teams.",
+        "ambroseNetto2": "Standard Ambrose: 25% of the sum of players' playing handicaps for 2-player teams.",
+        "ambroseNetto4": "Standard Ambrose: 12.5% of the sum of players' playing handicaps for 4-player teams.",
+        "floridaNetto3": "NGF standard: 15% of the sum of players' playing handicaps for 3-player teams.",
+        "floridaNetto4": "NGF standard: 10% of the sum of players' playing handicaps for 4-player teams.",
+        "bruttoHelper": "No team handicap — lowest gross score per hole per team wins. Scratch format.",
+        "inputLabel": "Team handicap (%)"
+      },
+      "roundRobin": {
+        "legend": "Scoring for Round Robin",
+        "description": "Controls handicaps for Round Robin match play. Net uses a share of each player's handicap per hole; gross counts the lowest gross per side.",
+        "nettoHelper": "The share of each player's handicap that counts. The WHS standard for four-ball match play is 85.",
+        "bruttoHelper": "No handicaps — lowest gross score per hole per side decides. Pure gross round."
+      },
+      "missing": {
+        "course": "course",
+        "teeBox": "tee box",
+        "teeOffTime": "tee-off time",
+        "twoPlayers": "2 players",
+        "oneMorePlayer": "1 more player",
+        "tooManyMatchplay": "too many players — match play requires exactly 2",
+        "onePerSide": "one player per side",
+        "bestBallMin": "at least 2 players (even number, 2 per team)",
+        "bestBallOdd": "even number of players (2, 4, 6, or 8)",
+        "bestBallAssign": "team assignment (2 per team)",
+        "flightAssign": "flight assignment",
+        "min2players": "at least 2 players",
+        "evenCount": "even number of players",
+        "parAssign": "team assignment (pairs of 2)",
+        "minCountPlayers": "at least {count} players",
+        "teamOdd2": "even number of players (teams of 2)",
+        "teamOdd4": "number of players divisible by 4 (teams of 4)",
+        "teamOdd3": "number of players divisible by 3 (teams of 3)",
+        "teamAssign2": "team assignment (teams of 2)",
+        "teamAssign4": "team assignment (teams of 4)",
+        "teamAssign3": "team assignment (teams of 3)",
+        "teamHandicapPct": "team handicap percentage (0–100)",
+        "wolfUnderMin": "{remaining} {remaining, plural, one {more player} other {more players}} needed (minimum 3)",
+        "wolfTooMany": "too many players — Wolf takes 3 to 5",
+        "nassauMin": "{remaining, plural, one {at least 1 more player} other {at least 2 players}}",
+        "nassauTooMany": "too many players — Nassau takes a maximum of 16",
+        "skinsTooMany": "too many players — Skins takes a maximum of 16",
+        "bbbTooMany": "too many players — Bingo Bango Bongo takes a maximum of 16",
+        "ninesUnderMin": "{remaining, plural, one {1 more player} other {{remaining} more players}}",
+        "ninesTooMany": "too many players — Nines requires exactly 3",
+        "rrUnderMin": "{remaining} {remaining, plural, one {more player} other {more players}}",
+        "rrTooMany": "too many players — Round Robin requires exactly 4",
+        "rrHandicap": "valid handicap percentage (0–100)",
+        "aceyTooMany": "too many players — Acey Deucey requires exactly 4",
+        "patsomeUnderMin": "{remaining, plural, one {at least 1 more player} other {at least {remaining} more players}}",
+        "patsomeOdd": "even number of players (teams of 2)",
+        "patsomeAssign": "team assignment (teams of 2)",
+        "soloMin": "at least one player",
+        "invalidAllowance": "valid HCP allowance"
+      }
     }
   },
   "formatGuide": {
@@ -425,7 +528,31 @@
   "allowance": {
     "nettoLabel": "Net",
     "bruttoLabel": "Gross",
-    "inputLabelDefault": "Allowance (%)"
+    "inputLabelDefault": "Allowance (%)",
+    "bruttoHelper": {
+      "best_ball": "No handicap — lowest gross score per hole per team wins.",
+      "stableford": "Stableford points are calculated on gross score against par. Scratch format.",
+      "modified_stableford": "Modified Stableford points are calculated on gross score against par (pro scale). Scratch format.",
+      "singles_matchplay": "Scratch match play — lowest gross score per hole wins.",
+      "solo_strokeplay": "Scratch stroke play — lowest total gross strokes wins.",
+      "fourball_matchplay": "No handicap — gross only.",
+      "foursomes_matchplay": "No handicap — gross only.",
+      "greensome_matchplay": "No handicap — gross only.",
+      "chapman_matchplay": "No handicap — gross only.",
+      "gruesome_matchplay": "No handicap — gross only.",
+      "texas_scramble": "No handicap — gross only.",
+      "ambrose": "No handicap — gross only.",
+      "florida_scramble": "No handicap — gross only.",
+      "wolf": "No handicap — point allocation uses gross scores.",
+      "nassau": "No handicap — stroke totals per section use gross scores.",
+      "skins": "No handicap — lowest gross score per hole wins the skin.",
+      "bingo_bango_bongo": "No handicap — Bingo Bango Bongo points count regardless of strokes.",
+      "nines": "No handicap — lowest gross score per hole earns the most points.",
+      "round_robin": "No handicap — best-ball match play uses gross scores per hole.",
+      "acey_deucey": "No handicap — per-hole points use gross scores.",
+      "shamble": "No handicap — the lowest gross scores per hole count for the team.",
+      "patsome": "No handicap — Stableford points are calculated on gross score across all three segments."
+    }
   },
   "modes": {
     "playStyle": {

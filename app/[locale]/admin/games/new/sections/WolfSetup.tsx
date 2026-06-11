@@ -2,7 +2,6 @@
 
 import { useTranslations } from 'next-intl';
 import type { PlayerOption } from '../GameForm';
-import { PENDING_PLAYER_LABEL } from '../playerDisplay';
 
 export type WolfScoring = 'gross' | 'net';
 
@@ -54,6 +53,12 @@ export function WolfSetup({
   disabled = false,
 }: WolfSetupProps) {
   const t = useTranslations('wizard.sections.wolf');
+  const tPlayers = useTranslations('wizard.sections.players');
+  const pendingLabel = tPlayers('pendingLabel');
+
+  function playerLabel(p: PlayerOption): string {
+    return p.nickname || p.name || p.email || pendingLabel;
+  }
   const n = wolfOrder.length;
   const hasRotation = n >= 3 && n <= 5;
   const R = hasRotation ? Math.floor(18 / n) * n : 0;
@@ -178,6 +183,3 @@ export function WolfSetup({
   );
 }
 
-function playerLabel(p: PlayerOption): string {
-  return p.nickname || p.name || p.email || PENDING_PLAYER_LABEL;
-}

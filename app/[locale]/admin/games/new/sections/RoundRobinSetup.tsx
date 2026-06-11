@@ -2,7 +2,6 @@
 
 import { useTranslations } from 'next-intl';
 import type { PlayerOption } from '../GameForm';
-import { PENDING_PLAYER_LABEL } from '../playerDisplay';
 
 interface RoundRobinSetupProps {
   /**
@@ -47,6 +46,12 @@ export function RoundRobinSetup({
   disabled = false,
 }: RoundRobinSetupProps) {
   const t = useTranslations('wizard.sections.roundRobin');
+  const tPlayers = useTranslations('wizard.sections.players');
+  const pendingLabel = tPlayers('pendingLabel');
+
+  function playerLabel(p: PlayerOption): string {
+    return p.nickname || p.name || p.email || pendingLabel;
+  }
   const slots = [1, 2, 3, 4] as const;
 
   return (
@@ -105,6 +110,3 @@ export function RoundRobinSetup({
   );
 }
 
-function playerLabel(p: PlayerOption): string {
-  return p.nickname || p.name || p.email || PENDING_PLAYER_LABEL;
-}
