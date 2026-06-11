@@ -619,6 +619,7 @@ export type Database = {
       }
       games: {
         Row: {
+          auto_start_blocked_notified_at: string | null
           course_id: string | null
           created_at: string
           created_by: string | null
@@ -651,6 +652,7 @@ export type Database = {
           tournament_match_label: string | null
         }
         Insert: {
+          auto_start_blocked_notified_at?: string | null
           course_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -683,6 +685,7 @@ export type Database = {
           tournament_match_label?: string | null
         }
         Update: {
+          auto_start_blocked_notified_at?: string | null
           course_id?: string | null
           created_at?: string
           created_by?: string | null
