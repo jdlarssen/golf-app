@@ -17,7 +17,33 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.111.y — Planlagt start · presis på tee-tid
+## 1.112.y — Flighter · én gruppe i små spill
+
+Issue [#543](https://github.com/jdlarssen/golf-app/issues/543). I spill med fire eller færre deltagere går alle i én gruppe — uansett format. Det betyr at du og motstanderen din i en singelmatch kan se og skrive hverandres scorer på direkten, og at spill med wolf alltid behandles som én gruppe.
+
+### [1.112.0] - 2026-06-11 · #543
+
+> I singelmatch og andre spill med inntil fire spillere ser og fører dere scorer for hverandre — uten ekstra oppsett.
+
+<details>
+<summary>Teknisk</summary>
+
+[#543](https://github.com/jdlarssen/golf-app/issues/543). Én-flight-regelen og fundament for flight-inndeling i store spill.
+
+#### Added
+- `lib/games/flightScope.ts` (ny): ren TypeScript-modul med `isSingleFlightGame`, `needsFlightAssignment`, `unassignedActivePlayers`, `suggestFlightSplit`, `flightBuckets` og `MAX_FLIGHT_SIZE`. Wolf er alltid én gruppe; ellers er ≤4 aktive spillere grensen. 32 unit-tester.
+- `supabase/migrations/0094_flight_single_group_and_assignment.sql`: erstatter `can_score_for` og `same_flight_or_solo` med én-flight-logikk (≤4 aktive ELLER wolf → ubegrenset kryss-skriv og kryss-les, uavhengig av `flight_number`-verdier). Fjerner øvre grense på `flight_number`-CHECK (`>= 1` i stedet for `BETWEEN 1 AND 4`). Ny kolonne `games.signups_closed_at timestamptz null`.
+- `supabase/tests/flight_scope_rls_test.sql`: pgTAP-suite (12 asserts) som verifiserer de fire RLS-invariantene: singelmatch kryss-skriv/-les tillatt, wolf 5 spillere tillatt, 6-spillers flight-løst spill blokkert, 6-spillers med flighter — samme-flight tillatt/kryss blokkert.
+- `lib/database.types.ts`: `signups_closed_at: string | null` i `games.Row`; valgfri i `Insert`/`Update`.
+
+#### Changed
+- `lib/games/startScheduledGame.ts`: `flight_number` hentes nå fra `game_players`-spørringen; ny `unassigned_flights`-vakt etter `incomplete_sides`-vakta — store solo-spill (>4 aktive, ikke wolf) starter ikke før alle spillere har flight. `StartScheduledGameResult` får `'unassigned_flights'` som ny `reason`.
+- `lib/admin/gameErrorMessages.ts`: norsk melding for `unassigned_flights` i `ERROR_MESSAGES_EXISTING_GAME`.
+
+</details>
+
+<details>
+<summary><strong>1.111.y — Planlagt start · presis på tee-tid (1 oppføring)</strong></summary>
 
 Issue [#502](https://github.com/jdlarssen/golf-app/issues/502). Planlagte spill venter ikke lenger på at noen åpner appen: en bakgrunnsklokke starter runden på tee-tidspunktet, spillerne får beskjed i innboksen, og oppretteren varsles hvis noe står i veien for starten.
 
@@ -38,6 +64,8 @@ Issue [#502](https://github.com/jdlarssen/golf-app/issues/502). Planlagte spill 
 #### Changed
 - `lib/games/startScheduledGame.ts`: resultatet bærer nå `started`-flagg (flip-vinneren får `true`, no-op-tapere i kappløp `false`) — varsel-fan-out skjer nøyaktig én gang uansett om cron, side-besøk eller admin-knappen vant.
 - E1-fallbacken på spill-siden og admin «Start runden nå» fan-outer `game_started` til de andre spillerne når de vinner flippen (aktøren ekskluderes).
+
+</details>
 
 </details>
 

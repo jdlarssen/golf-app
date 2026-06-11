@@ -645,6 +645,7 @@ export type Database = {
           side_disabled_categories: string[]
           side_ld_count: number
           side_tournament_enabled: boolean
+          signups_closed_at: string | null
           started_at: string | null
           status: Database["public"]["Enums"]["game_status"]
           tee_box_id: string | null
@@ -678,6 +679,7 @@ export type Database = {
           side_disabled_categories?: string[]
           side_ld_count?: number
           side_tournament_enabled?: boolean
+          signups_closed_at?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           tee_box_id?: string | null
@@ -711,6 +713,7 @@ export type Database = {
           side_disabled_categories?: string[]
           side_ld_count?: number
           side_tournament_enabled?: boolean
+          signups_closed_at?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["game_status"]
           tee_box_id?: string | null
