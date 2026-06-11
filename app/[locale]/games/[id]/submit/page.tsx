@@ -238,7 +238,7 @@ async function ReviewBody({
     // Active-game invariant: publish-gate guarantees no pending players in roster,
     // so name is non-null in practice. Coalesce defensively.
     for (const u of nameRows ?? []) {
-      const name = u.name ?? '(ukjent spiller)';
+      const name = u.name ?? t('unknownPlayer');
       namesById.set(u.id, u.nickname ? `${name} «${u.nickname}»` : name);
     }
   }

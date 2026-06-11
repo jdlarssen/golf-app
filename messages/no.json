@@ -188,7 +188,8 @@
       "submitButton": "Lever ✓",
       "submitPending": "Leverer …",
       "confirmBase": "Levere scorekortet? Dette kan ikke angres uten admin.",
-      "confirmMissing": "{count, plural, one {1 hull mangler og blir lagret som ikke spilt.} other {# hull mangler og blir lagret som ikke spilt.}}"
+      "confirmMissing": "{count, plural, one {1 hull mangler og blir lagret som ikke spilt.} other {# hull mangler og blir lagret som ikke spilt.}}",
+      "unknownPlayer": "(ukjent spiller)"
     },
     "approve": {
       "kicker": "Godkjenning",
@@ -217,7 +218,8 @@
       "cancelButton": "Avbryt",
       "sendRejection": "Send avvisning",
       "rejectPending": "Avviser …",
-      "rejectWithoutReasonConfirm": "Avvise {name} uten begrunnelse? Skriv gjerne en kort grunn først."
+      "rejectWithoutReasonConfirm": "Avvise {name} uten begrunnelse? Skriv gjerne en kort grunn først.",
+      "unknownPlayer": "(ukjent spiller)"
     },
     "finish": {
       "kicker": "Avslutt spillet",

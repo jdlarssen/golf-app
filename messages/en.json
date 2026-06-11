@@ -188,7 +188,8 @@
       "submitButton": "Submit ✓",
       "submitPending": "Submitting …",
       "confirmBase": "Submit the scorecard? This cannot be undone without admin.",
-      "confirmMissing": "{count, plural, one {1 hole is missing and will be saved as not played.} other {# holes are missing and will be saved as not played.}}"
+      "confirmMissing": "{count, plural, one {1 hole is missing and will be saved as not played.} other {# holes are missing and will be saved as not played.}}",
+      "unknownPlayer": "(unknown player)"
     },
     "approve": {
       "kicker": "Approval",
@@ -217,7 +218,8 @@
       "cancelButton": "Cancel",
       "sendRejection": "Send rejection",
       "rejectPending": "Rejecting …",
-      "rejectWithoutReasonConfirm": "Reject {name} without a reason? Please add a brief explanation first."
+      "rejectWithoutReasonConfirm": "Reject {name} without a reason? Please add a brief explanation first.",
+      "unknownPlayer": "(unknown player)"
     },
     "finish": {
       "kicker": "Finish game",

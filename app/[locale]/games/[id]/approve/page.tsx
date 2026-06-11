@@ -203,10 +203,10 @@ async function PendingApprovals({
   }
 
   function displayName(p: PlayerForHole): string {
-    if (!p.users) return '(ukjent spiller)';
+    if (!p.users) return t('unknownPlayer');
     // Should be non-null here per the invariant above, but coalesce so TS
     // (and any future flow that loosens the invariant) stays honest.
-    const name = p.users.name ?? '(ukjent spiller)';
+    const name = p.users.name ?? t('unknownPlayer');
     return p.users.nickname ? `${name} «${p.users.nickname}»` : name;
   }
 
