@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
+import { useTranslations } from 'next-intl';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { Banner } from '@/components/ui/Banner';
 import { startLeague, finishLeague, type LeagueActionError } from '@/lib/league/actions';
@@ -16,6 +17,8 @@ type Props = {
 const INITIAL: LeagueActionError = { error: '' };
 
 export function LigaStatusActions({ leagueId, status, canStart, canFinish, startHint }: Props) {
+  const t = useTranslations('liga.statusActions');
+
   const [startState, startAction] = useActionState(
     async (_prev: LeagueActionError, formData: FormData) =>
       startLeague(formData) as Promise<LeagueActionError>,
@@ -35,16 +38,16 @@ export function LigaStatusActions({ leagueId, status, canStart, canFinish, start
             <Banner tone="info">{startHint}</Banner>
           )}
           {startState.error && startState.error !== '' && (
-            <Banner tone="error">Klarte ikke å starte ligaen.</Banner>
+            <Banner tone="error">{t('startError')}</Banner>
           )}
           <form action={startAction}>
             <input type="hidden" name="league_id" value={leagueId} />
             <SubmitButton
               className="w-full"
               disabled={!canStart}
-              pendingLabel="Starter …"
+              pendingLabel={t('startPending')}
             >
-              Start ligaen
+              {t('startButton')}
             </SubmitButton>
           </form>
         </>
@@ -53,16 +56,16 @@ export function LigaStatusActions({ leagueId, status, canStart, canFinish, start
       {status === 'active' && (
         <>
           {finishState.error && finishState.error !== '' && (
-            <Banner tone="error">Klarte ikke å avslutte ligaen.</Banner>
+            <Banner tone="error">{t('finishError')}</Banner>
           )}
           <form action={finishAction}>
             <input type="hidden" name="league_id" value={leagueId} />
             <SubmitButton
               className="w-full"
               disabled={!canFinish}
-              pendingLabel="Avslutter …"
+              pendingLabel={t('finishPending')}
             >
-              Avslutt ligaen
+              {t('finishButton')}
             </SubmitButton>
           </form>
         </>

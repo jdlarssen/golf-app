@@ -1,7 +1,8 @@
 'use client';
 
 import { useActionState, useState } from 'react';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { addLeaguePlayers, type LeagueActionError } from '@/lib/league/actions';
 import type { PlayerOption } from '@/app/[locale]/admin/games/new/GameForm';
@@ -16,11 +17,13 @@ type Props = {
 
 const INITIAL: LeagueActionError = { error: '' };
 
-function preferredName(p: PlayerOption): string {
-  return p.nickname?.trim() || p.name?.trim() || 'Ukjent spiller';
+function preferredName(p: PlayerOption, unknownLabel: string): string {
+  return p.nickname?.trim() || p.name?.trim() || unknownLabel;
 }
 
 export function LigaAddPlayers({ leagueId, players, participantIds, isClubLeague }: Props) {
+  const t = useTranslations('liga.addPlayers');
+
   const [state, formAction] = useActionState(
     async (_prev: LeagueActionError, formData: FormData) =>
       addLeaguePlayers(formData) as Promise<LeagueActionError>,
@@ -45,23 +48,23 @@ export function LigaAddPlayers({ leagueId, players, participantIds, isClubLeague
       return (
         <p className="font-sans text-[12px] text-muted">
           {players.length === 0
-            ? 'Ingen andre medlemmer i klubben ennå.'
-            : 'Alle klubbmedlemmene er allerede deltakere.'}
+            ? t('noClubMembersYet')
+            : t('allClubMembersAdded')}
         </p>
       );
     }
     // Skill «ingen venner ennå» (vis lenke til vennegrafen) fra «alle er med».
     return players.length === 0 ? (
       <p className="font-sans text-[12px] text-muted">
-        Du har ingen venner på Tørny ennå.{' '}
+        {t('noFriendsYet')}{' '}
         <Link href="/profile/venner" className="text-primary underline">
-          Legg til venner
+          {t('addFriendsLink')}
         </Link>{' '}
-        så dukker de opp her.
+        {t('addFriendsSuffix')}
       </p>
     ) : (
       <p className="font-sans text-[12px] text-muted">
-        Alle vennene dine er allerede deltakere.
+        {t('allFriendsAdded')}
       </p>
     );
   }
@@ -87,9 +90,9 @@ export function LigaAddPlayers({ leagueId, players, participantIds, isClubLeague
               />
               <span className="flex-1 min-w-0">
                 <span className="block font-sans text-[14px] text-text truncate">
-                  {preferredName(p)}
+                  {preferredName(p, t('unknownPlayer'))}
                   {p.pending && (
-                    <span className="ml-1.5 font-sans text-[10px] text-muted">(venter)</span>
+                    <span className="ml-1.5 font-sans text-[10px] text-muted">{t('pendingLabel')}</span>
                   )}
                 </span>
                 <span className="block font-sans text-[11px] tabular-nums text-muted">
@@ -109,9 +112,11 @@ export function LigaAddPlayers({ leagueId, players, participantIds, isClubLeague
         variant="secondary"
         className="w-full text-sm min-h-[44px]"
         disabled={selectedIds.size === 0}
-        pendingLabel="Legger til …"
+        pendingLabel={t('addPending')}
       >
-        Legg til{selectedIds.size > 0 ? ` ${selectedIds.size} spiller${selectedIds.size === 1 ? '' : 'e'}` : ' spillere'}
+        {selectedIds.size > 0
+          ? t('addButton', { count: selectedIds.size })
+          : t('addButtonEmpty')}
       </SubmitButton>
     </form>
   );

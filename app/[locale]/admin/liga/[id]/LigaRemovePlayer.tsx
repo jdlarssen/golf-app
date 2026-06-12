@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
+import { useTranslations } from 'next-intl';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { removeLeaguePlayer, type LeagueActionError } from '@/lib/league/actions';
 
@@ -12,6 +13,8 @@ type Props = {
 const INITIAL: LeagueActionError = { error: '' };
 
 export function LigaRemovePlayer({ leagueId, userId }: Props) {
+  const t = useTranslations('liga.removePlayer');
+
   const [state, formAction] = useActionState(
     async (_prev: LeagueActionError, formData: FormData) =>
       removeLeaguePlayer(formData) as Promise<LeagueActionError>,
@@ -28,9 +31,9 @@ export function LigaRemovePlayer({ leagueId, userId }: Props) {
       <SubmitButton
         variant="ghost"
         className="text-danger text-[12px] px-2 py-1 min-h-[44px] rounded-lg"
-        pendingLabel="…"
+        pendingLabel={t('removePending')}
       >
-        Fjern
+        {t('removeButton')}
       </SubmitButton>
     </form>
   );

@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { getTranslations, getLocale } from 'next-intl/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { AppShell } from '@/components/ui/AppShell';
@@ -13,7 +14,8 @@ import { getNewGameFormData } from '@/lib/games/newGameFormData';
 import { getFriendPlayerOptions } from '@/lib/friends/getFriendPlayerOptions';
 import { getClubMemberOptionsForClub } from '@/lib/clubs/getClubMemberOptionsForClub';
 import type { PlayerOption } from '@/app/[locale]/admin/games/new/GameForm';
-import { formatShortDateNb } from '@/lib/format/date';
+import { formatShortDateLocale } from '@/lib/i18n/format';
+import type { AppLocale } from '@/i18n/routing';
 import { LigaRoundRow } from './LigaRoundRow';
 import { LigaAddRound } from './LigaAddRound';
 import { LigaAddPlayers } from './LigaAddPlayers';
@@ -42,44 +44,11 @@ const STATUS_TO_CHIP: Record<'draft' | 'active' | 'finished', StatusChipTone> = 
   finished: 'signert',
 };
 
-const STATUS_LABEL: Record<'draft' | 'active' | 'finished', string> = {
-  draft: 'Utkast',
-  active: 'Pågående',
-  finished: 'Avsluttet',
-};
-
-const SCOPE_LABEL: Record<string, string> = {
-  single_course_single_tee: 'Fast bane og tee',
-  single_course: 'Fast bane, tee per runde',
-  multi_course: 'Valgfri bane og tee per runde',
-};
-
-const STANDINGS_LABEL: Record<string, string> = {
-  total: 'Total',
-  average: 'Snitt per runde',
-  best_n: 'Beste N runder',
-  points: 'Poeng per plassering',
-};
-
-const SCORING_LABEL: Record<string, string> = {
-  net: 'Netto',
-  gross: 'Brutto',
-  both: 'Netto og brutto',
-};
-
-const FORMAT_LABEL: Record<string, string> = {
-  stroke: 'Slagspill',
-  stableford: 'Stableford',
-  modified_stableford: 'Modifisert Stableford',
-};
-
-const MISSED_LABEL: Record<string, string> = {
-  penalty: 'Straffescore',
-  must_play_all: 'Må spille alle',
-};
-
-function preferredName(p: { name: string | null; nickname: string | null }): string {
-  return p.nickname?.trim() || p.name?.trim() || 'Ukjent spiller';
+function preferredName(
+  p: { name: string | null; nickname: string | null },
+  unknownLabel: string,
+): string {
+  return p.nickname?.trim() || p.name?.trim() || unknownLabel;
 }
 
 export type LigaManagementVariant = 'admin' | 'club';
@@ -93,9 +62,11 @@ export async function LigaManagement({
   userId: string;
   variant: LigaManagementVariant;
 }) {
-  const [snapshot, { courses }] = await Promise.all([
+  const [snapshot, { courses }, t, locale] = await Promise.all([
     getLigaSnapshot(leagueId),
     getNewGameFormData(),
+    getTranslations('liga'),
+    getLocale(),
   ]);
 
   if (!snapshot) notFound();
@@ -124,7 +95,7 @@ export async function LigaManagement({
 
   const status = league.status as 'draft' | 'active' | 'finished';
   const chipTone = STATUS_TO_CHIP[status];
-  const statusLabel = STATUS_LABEL[status];
+  const statusLabel = t(`status.${status}`);
 
   // Mirror the server guard in startLeague: ≥1 round + ≥2 participants
   // (the marker rule needs two players to ever produce a counted result).
@@ -132,7 +103,7 @@ export async function LigaManagement({
   const canFinish = status === 'active';
   const startHint =
     status === 'draft' && (rounds.length < 1 || participants.length < 2)
-      ? 'Du trenger minst 1 runde og 2 deltakere for å starte ligaen.'
+      ? t('manage.startHint')
       : undefined;
 
   const participantIds = new Set(participants.map((p) => p.userId));
@@ -148,13 +119,31 @@ export async function LigaManagement({
       ? `/klubber/${groupId}/liga/${leagueId}/slett`
       : `/admin/liga/${leagueId}/slett`;
 
+  const brassRibbon = groupId
+    ? t('manage.brassRibbonClub', { status: statusLabel })
+    : t('manage.brassRibbonStandalone', { status: statusLabel });
+
+  const standingsModelText = (() => {
+    const base = t(`manage.standingsModelLabel.${league.standings_model}` as `manage.standingsModelLabel.${'total' | 'average' | 'best_n' | 'points'}`);
+    if (league.standings_model === 'total') {
+      const unit = league.format === 'stroke'
+        ? t('manage.infoStandingsUnitPar')
+        : t('manage.infoStandingsUnitPoints');
+      return `${base}${t('manage.infoStandingsModelSuffix', { unit })}`;
+    }
+    if (league.standings_model === 'best_n' && league.best_n_count) {
+      return `${base} (${league.best_n_count})`;
+    }
+    return base;
+  })();
+
   return (
     <Shell>
-      <TopBar backHref={backHref} kicker={clubName ?? 'Klubbhuset'} />
-      <BrassRibbon kicker={`${groupId ? 'Klubb-liga' : 'Liga'} · ${statusLabel}`} />
+      <TopBar backHref={backHref} kicker={clubName ?? t('ledger.kicker')} />
+      <BrassRibbon kicker={brassRibbon} />
       <PageHeader
         title={league.name}
-        subtitle={`${formatShortDateNb(league.season_start)} – ${formatShortDateNb(league.season_end)}`}
+        subtitle={`${formatShortDateLocale(league.season_start, locale as AppLocale)} – ${formatShortDateLocale(league.season_end, locale as AppLocale)}`}
         action={<StatusChip tone={chipTone} label={statusLabel} />}
       />
 
@@ -162,41 +151,41 @@ export async function LigaManagement({
       <Card className="mb-5">
         <dl className="space-y-2 font-sans text-[13px]">
           <div className="flex justify-between gap-2">
-            <dt className="text-muted">Spillform</dt>
-            <dd className="text-text font-medium">{FORMAT_LABEL[league.format] ?? league.format}</dd>
-          </div>
-          <div className="flex justify-between gap-2">
-            <dt className="text-muted">Tabell</dt>
-            <dd className="text-text font-medium">{SCORING_LABEL[league.scoring] ?? league.scoring}</dd>
-          </div>
-          <div className="flex justify-between gap-2">
-            <dt className="text-muted">Sesong-modell</dt>
+            <dt className="text-muted">{t('manage.infoFormat')}</dt>
             <dd className="text-text font-medium">
-              {STANDINGS_LABEL[league.standings_model] ?? league.standings_model}
-              {league.standings_model === 'total'
-                ? ` (sum ${league.format === 'stroke' ? 'mot par' : 'poeng'})`
-                : ''}
-              {league.standings_model === 'best_n' && league.best_n_count
-                ? ` (${league.best_n_count})`
-                : ''}
+              {t(`manage.formatLabel.${league.format}` as `manage.formatLabel.${'stroke' | 'stableford' | 'modified_stableford'}`) ?? league.format}
             </dd>
+          </div>
+          <div className="flex justify-between gap-2">
+            <dt className="text-muted">{t('manage.infoScoring')}</dt>
+            <dd className="text-text font-medium">
+              {t(`manage.scoringLabel.${league.scoring}` as `manage.scoringLabel.${'net' | 'gross' | 'both'}`) ?? league.scoring}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-2">
+            <dt className="text-muted">{t('manage.infoStandingsModel')}</dt>
+            <dd className="text-text font-medium">{standingsModelText}</dd>
           </div>
           {league.standings_model === 'total' && (
             <div className="flex justify-between gap-2">
-              <dt className="text-muted">Manglende runde</dt>
-              <dd className="text-text font-medium">{MISSED_LABEL[league.missed_round_policy] ?? league.missed_round_policy}</dd>
+              <dt className="text-muted">{t('manage.infoMissed')}</dt>
+              <dd className="text-text font-medium">
+                {t(`manage.missedLabel.${league.missed_round_policy}` as `manage.missedLabel.${'penalty' | 'must_play_all'}`) ?? league.missed_round_policy}
+              </dd>
             </div>
           )}
           <div className="flex justify-between gap-2">
-            <dt className="text-muted">Bane-omfang</dt>
-            <dd className="text-text font-medium">{SCOPE_LABEL[league.course_scope] ?? league.course_scope}</dd>
+            <dt className="text-muted">{t('manage.infoCourseScope')}</dt>
+            <dd className="text-text font-medium">
+              {t(`manage.scopeLabel.${league.course_scope}` as `manage.scopeLabel.${'single_course_single_tee' | 'single_course' | 'multi_course'}`) ?? league.course_scope}
+            </dd>
           </div>
           <div className="flex justify-between gap-2">
-            <dt className="text-muted">Runder</dt>
+            <dt className="text-muted">{t('manage.infoRounds')}</dt>
             <dd className="tabular-nums text-text font-medium">{rounds.length}</dd>
           </div>
           <div className="flex justify-between gap-2">
-            <dt className="text-muted">Deltakere</dt>
+            <dt className="text-muted">{t('manage.infoParticipants')}</dt>
             <dd className="tabular-nums text-text font-medium">{participants.length}</dd>
           </div>
         </dl>
@@ -205,7 +194,7 @@ export async function LigaManagement({
             href={`/liga/${leagueId}`}
             className="text-sm text-primary underline-offset-2 hover:underline"
           >
-            Se sesong-tabellen →
+            {t('manage.standingsLink')}
           </SmartLink>
         </div>
       </Card>
@@ -226,12 +215,12 @@ export async function LigaManagement({
       {/* Runder */}
       <section className="mb-5">
         <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-3">
-          Runder
+          {t('manage.roundsHeading')}
         </h2>
         {rounds.length === 0 ? (
           <Card>
             <p className="text-sm text-muted">
-              Ingen runder generert. Ligaen ble opprettet med egendefinert frekvens, eller frekvensen ga ingen vinduer i sesong-spennet.
+              {t('manage.noRoundsYet')}
             </p>
           </Card>
         ) : (
@@ -256,11 +245,11 @@ export async function LigaManagement({
       {/* Deltakere */}
       <section className="mb-5">
         <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-3">
-          Deltakere
+          {t('manage.participantsHeading')}
         </h2>
         <Card>
           {participants.length === 0 ? (
-            <p className="text-sm text-muted mb-4">Ingen deltakere ennå.</p>
+            <p className="text-sm text-muted mb-4">{t('manage.noParticipantsYet')}</p>
           ) : (
             <ul className="space-y-1 mb-4">
               {participants.map((p) => (
@@ -269,7 +258,7 @@ export async function LigaManagement({
                   className="flex items-center justify-between gap-2 py-1.5"
                 >
                   <span className="font-sans text-[14px] text-text">
-                    {preferredName(p)}
+                    {preferredName(p, t('manage.unknownPlayer'))}
                   </span>
                   <LigaRemovePlayer leagueId={leagueId} userId={p.userId} />
                 </li>
@@ -280,7 +269,7 @@ export async function LigaManagement({
           {status !== 'finished' && (
             <>
               <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-3">
-                Legg til deltakere
+                {t('manage.addParticipantsHeading')}
               </p>
               <LigaAddPlayers
                 leagueId={leagueId}
@@ -299,7 +288,7 @@ export async function LigaManagement({
           href={deleteHref}
           className="text-xs text-danger underline-offset-2 hover:underline"
         >
-          Slett ligaen
+          {t('manage.deleteLink')}
         </SmartLink>
       </section>
     </Shell>

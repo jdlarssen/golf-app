@@ -1,17 +1,11 @@
 'use client';
 
 import { useActionState } from 'react';
+import { useTranslations } from 'next-intl';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { addLeagueRound, type LeagueActionError } from '@/lib/league/actions';
 
 const INITIAL: LeagueActionError = { error: '' };
-
-const ERRORS: Record<string, string> = {
-  missing: 'Fyll inn både start og frist.',
-  window: 'Fristen må være etter starten.',
-  not_found: 'Fant ikke ligaen.',
-  insert_failed: 'Klarte ikke å legge til runden. Prøv igjen.',
-};
 
 /**
  * Manual "add round" control — complements the frequency-generated rounds and
@@ -19,29 +13,40 @@ const ERRORS: Record<string, string> = {
  * the league per scope; refine the tee on the round afterwards.
  */
 export function LigaAddRound({ leagueId }: { leagueId: string }) {
+  const t = useTranslations('liga.addRound');
+
   const [state, action] = useActionState(
     async (_prev: LeagueActionError, formData: FormData) =>
       addLeagueRound(formData) as Promise<LeagueActionError>,
     INITIAL,
   );
-  const error = state.error ? (ERRORS[state.error] ?? 'Noe gikk galt.') : null;
+
+  const errorKey = state.error as keyof ReturnType<typeof useTranslations<'liga.addRound'>> | '';
+  const error = state.error
+    ? (['missing', 'window', 'not_found', 'insert_failed'] as const).includes(
+        state.error as 'missing' | 'window' | 'not_found' | 'insert_failed',
+      )
+      ? t(`errors.${state.error as 'missing' | 'window' | 'not_found' | 'insert_failed'}`)
+      : t('errors.fallback')
+    : null;
+  void errorKey;
 
   return (
     <details className="rounded-xl border border-dashed border-border bg-surface/50 p-4">
       <summary className="cursor-pointer font-sans text-[13px] font-medium text-primary list-none">
-        + Legg til runde
+        {t('summaryLabel')}
       </summary>
       <form action={action} className="mt-3 space-y-3">
         <input type="hidden" name="league_id" value={leagueId} />
         <div>
           <label className="block font-sans text-[12px] font-medium text-text mb-1">
-            Navn (valgfritt)
+            {t('nameLabel')}
           </label>
           <input
             type="text"
             name="label"
             maxLength={80}
-            placeholder="Runde"
+            placeholder={t('namePlaceholder')}
             className="w-full rounded-xl border border-border bg-bg px-3 py-2 font-sans text-[14px] text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px]"
           />
         </div>
@@ -51,7 +56,7 @@ export function LigaAddRound({ leagueId }: { leagueId: string }) {
         <div className="grid grid-cols-2 gap-3">
           <div className="min-w-0">
             <label className="block font-sans text-[12px] font-medium text-text mb-1">
-              Åpner
+              {t('opensLabel')}
             </label>
             <input
               type="datetime-local"
@@ -62,7 +67,7 @@ export function LigaAddRound({ leagueId }: { leagueId: string }) {
           </div>
           <div className="min-w-0">
             <label className="block font-sans text-[12px] font-medium text-text mb-1">
-              Stenger
+              {t('closesLabel')}
             </label>
             <input
               type="datetime-local"
@@ -73,8 +78,8 @@ export function LigaAddRound({ leagueId }: { leagueId: string }) {
           </div>
         </div>
         {error && <p className="font-sans text-[12px] text-danger">{error}</p>}
-        <SubmitButton variant="secondary" className="text-sm px-4 py-2 min-h-[44px]" pendingLabel="Legger til …">
-          Legg til runde
+        <SubmitButton variant="secondary" className="text-sm px-4 py-2 min-h-[44px]" pendingLabel={t('addPending')}>
+          {t('addButton')}
         </SubmitButton>
       </form>
     </details>
