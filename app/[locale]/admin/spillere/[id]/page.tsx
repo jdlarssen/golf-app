@@ -1,3 +1,5 @@
+import { useTranslations } from 'next-intl';
+import { getTranslations, getLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
@@ -9,7 +11,8 @@ import { Input } from '@/components/ui/Input';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
-import { formatShortDateNbWithYear } from '@/lib/format/date';
+import { formatShortDateWithYearLocale } from '@/lib/i18n/format';
+import type { AppLocale } from '@/i18n/routing';
 import { updateUser } from './actions';
 
 type Params = Promise<{ id: string }>;
@@ -18,43 +21,47 @@ type SearchParams = Promise<{
   error?: string | string[];
 }>;
 
-const ERROR_MESSAGES: Record<string, string> = {
-  name_required: 'Navn må fylles ut.',
-  hcp_out_of_range: 'Handicap må være mellom -10 og 54.',
-  gender_required: 'Velg kjønn.',
-  level_invalid: 'Ugyldig spillerklasse.',
-  update_failed: 'Klarte ikke lagre endringene.',
-  not_admin: 'Du har ikke tilgang.',
-  self_delete_forbidden: 'Du kan ikke slette din egen konto.',
-  still_has_games: 'Spilleren har spillhistorikk og kan ikke slettes.',
-  auth_delete_failed:
-    'Klarte ikke slette kontoen. Den har sannsynligvis data knyttet til seg (invitasjoner sendt, baner opprettet eller scores skrevet) som blokkerer sletting. Sjekk Vercel-loggene.',
-  email_invalid: 'Ugyldig e-postadresse.',
-  email_in_use: 'E-postadressen er allerede registrert.',
-  email_update_failed: 'Klarte ikke oppdatere e-postadressen. Prøv igjen.',
-  email_change_blocked_active_game:
-    'Kan ikke endre e-post mens spilleren er i et aktivt spill.',
-};
+type ProfileT = ReturnType<typeof useTranslations<'admin.players.profile'>>;
+
+/**
+ * Locale-aware relative time for player activity.
+ *
+ * Granularity is deliberately different from formatRelativeLocale (no weeks,
+ * uses singular/plural forms for hours/days/months). Norwegian output is
+ * byte-identical to the old hand-rolled relativeNb() function.
+ */
+function makeRelative(t: ProfileT) {
+  return function relative(iso: string | null | undefined): string {
+    if (!iso) return t('relativeNb.never');
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60_000);
+    if (mins < 2) return t('relativeNb.justNow');
+    if (mins < 60) return t('relativeNb.minutesAgo', { count: mins });
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) {
+      return hours === 1
+        ? t('relativeNb.hourAgo')
+        : t('relativeNb.hoursAgo', { count: hours });
+    }
+    const days = Math.floor(hours / 24);
+    if (days < 30) {
+      return days === 1
+        ? t('relativeNb.dayAgo')
+        : t('relativeNb.daysAgo', { count: days });
+    }
+    const months = Math.floor(days / 30);
+    if (months < 12) {
+      return months === 1
+        ? t('relativeNb.monthAgo')
+        : t('relativeNb.monthsAgo', { count: months });
+    }
+    const years = Math.floor(months / 12);
+    return t('relativeNb.yearsAgo', { count: years });
+  };
+}
 
 function first(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
-}
-
-/** Relative time in Norwegian, e.g. "3 minutter siden", "2 dager siden" */
-function relativeNb(iso: string | null | undefined): string {
-  if (!iso) return 'Aldri';
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 2) return 'Akkurat nå';
-  if (mins < 60) return `${mins} minutter siden`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} ${hours === 1 ? 'time' : 'timer'} siden`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days} ${days === 1 ? 'dag' : 'dager'} siden`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return `${months} ${months === 1 ? 'måned' : 'måneder'} siden`;
-  const years = Math.floor(months / 12);
-  return `${years} ${years === 1 ? 'år' : 'år'} siden`;
 }
 
 export default async function PlayerDetailPage({
@@ -68,12 +75,22 @@ export default async function PlayerDetailPage({
   const sp = await searchParams;
   const status = first(sp.status);
   const errorCode = first(sp.error);
-  const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
 
   const supabase = await getServerClient();
   // Self-gate for Fase 4 chunk 2 layout-loosening (#223).
   await requireAdmin(supabase);
   const adminUserId = await getProxyVerifiedUserId();
+
+  const [t, locale] = await Promise.all([
+    getTranslations('admin.players'),
+    getLocale() as Promise<AppLocale>,
+  ]);
+  const tProfile = await getTranslations('admin.players.profile');
+  const relative = makeRelative(tProfile as unknown as ProfileT);
+
+  const errorMessage = errorCode
+    ? tProfile(`errors.${errorCode}` as Parameters<typeof tProfile>[0])
+    : undefined;
 
   const { data: target, error } = await supabase
     .from('users')
@@ -97,12 +114,13 @@ export default async function PlayerDetailPage({
   const displayName = target.name?.trim() || target.email;
 
   let deleteBlockReason: string | null = null;
-  if (isSelf) deleteBlockReason = 'Du kan ikke slette din egen konto.';
+  if (isSelf) deleteBlockReason = tProfile('deleteBlockSelf');
   else if (hasPlayed) {
     const firstName = target.name?.trim().split(/\s+/)[0] || 'Spilleren';
-    deleteBlockReason = `${firstName} har spilt ${gamePlayerCount} ${
-      gamePlayerCount === 1 ? 'runde' : 'runder'
-    }. Slett spillene først hvis du vil fjerne kontoen.`;
+    deleteBlockReason = tProfile('deleteBlockHasPlayed', {
+      firstName,
+      count: gamePlayerCount ?? 0,
+    });
   }
 
   return (
@@ -112,7 +130,7 @@ export default async function PlayerDetailPage({
         kicker="Klubbhuset"
       />
 
-      <BrassRibbon kicker="Spillerprofil" />
+      <BrassRibbon kicker={tProfile('brassRibbon')} />
 
       <div className="px-1">
         <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
@@ -124,15 +142,15 @@ export default async function PlayerDetailPage({
           </p>
         )}
         <p className="mt-1 font-sans text-[11.5px] tabular-nums text-muted">
-          {target.email} · Registrert {formatShortDateNbWithYear(target.created_at)}
-          {target.is_admin && ' · Super-admin'}
+          {target.email} · {tProfile('registeredAt', { date: formatShortDateWithYearLocale(target.created_at, locale) })}
+          {target.is_admin && ` · ${tProfile('superAdmin')}`}
         </p>
       </div>
 
       {(status === 'updated' || errorMessage) && (
         <div className="mt-4 space-y-2">
           {status === 'updated' && (
-            <Banner tone="success">Endringene er lagret.</Banner>
+            <Banner tone="success">{tProfile('updatedBanner')}</Banner>
           )}
           {errorMessage && <Banner tone="error">{errorMessage}</Banner>}
         </div>
@@ -141,7 +159,7 @@ export default async function PlayerDetailPage({
       {/* Activity section */}
       <section className="mt-5">
         <p className="mb-1.5 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          Aktivitet
+          {tProfile('activitySection')}
         </p>
         <div
           className="rounded-xl border border-border bg-surface px-4 py-3.5"
@@ -149,13 +167,13 @@ export default async function PlayerDetailPage({
         >
           <dl className="space-y-1.5">
             <div className="flex items-baseline justify-between">
-              <dt className="font-sans text-[13px] text-muted">Sist innlogget</dt>
+              <dt className="font-sans text-[13px] text-muted">{tProfile('lastSeenLabel')}</dt>
               <dd className="font-sans text-[13px] tabular-nums text-text">
-                {relativeNb(target.last_seen_at)}
+                {relative(target.last_seen_at)}
               </dd>
             </div>
             <div className="flex items-baseline justify-between">
-              <dt className="font-sans text-[13px] text-muted">Antall spill</dt>
+              <dt className="font-sans text-[13px] text-muted">{tProfile('gameCountLabel')}</dt>
               <dd className="font-sans text-[13px] tabular-nums text-text">
                 {gamePlayerCount ?? 0}
               </dd>
@@ -175,22 +193,22 @@ export default async function PlayerDetailPage({
             <Input
               id="name"
               name="name"
-              label="Navn"
+              label={tProfile('formName')}
               defaultValue={target.name ?? ''}
               required
             />
             <Input
               id="nickname"
               name="nickname"
-              label="Kallenavn"
+              label={tProfile('formNickname')}
               defaultValue={target.nickname ?? ''}
-              placeholder="Valgfritt"
+              placeholder={tProfile('formNicknamePlaceholder')}
             />
             <Input
               id="email"
               name="email"
               type="email"
-              label="E-post"
+              label={tProfile('formEmail')}
               defaultValue={target.email}
               required
             />
@@ -201,13 +219,13 @@ export default async function PlayerDetailPage({
               step="0.1"
               min="-10"
               max="54"
-              label="Handicap-indeks"
+              label={tProfile('formHcp')}
               defaultValue={target.hcp_index.toString()}
               required
             />
             <fieldset>
               <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-                Kjønn
+                {tProfile('formGenderLegend')}
               </legend>
               <div className="mt-2 flex gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -218,7 +236,7 @@ export default async function PlayerDetailPage({
                     defaultChecked={target.gender === 'mens'}
                     required
                   />
-                  <span className="font-serif text-base text-text">Herre</span>
+                  <span className="font-serif text-base text-text">{tProfile('genderMens')}</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -228,16 +246,16 @@ export default async function PlayerDetailPage({
                     defaultChecked={target.gender === 'ladies'}
                     required
                   />
-                  <span className="font-serif text-base text-text">Dame</span>
+                  <span className="font-serif text-base text-text">{tProfile('genderLadies')}</span>
                 </label>
               </div>
               <p className="mt-1 text-xs text-muted">
-                Brukes til å foreslå riktig tee i game-wizard.
+                {tProfile('genderHint')}
               </p>
             </fieldset>
             <fieldset>
               <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-                Spillerklasse
+                {tProfile('formLevelLegend')}
               </legend>
               <div className="mt-2 flex gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -247,7 +265,7 @@ export default async function PlayerDetailPage({
                     value="junior"
                     defaultChecked={target.level === 'junior'}
                   />
-                  <span className="font-serif text-base text-text">Junior</span>
+                  <span className="font-serif text-base text-text">{tProfile('levelJunior')}</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -256,7 +274,7 @@ export default async function PlayerDetailPage({
                     value="normal"
                     defaultChecked={target.level === 'normal'}
                   />
-                  <span className="font-serif text-base text-text">Voksen</span>
+                  <span className="font-serif text-base text-text">{tProfile('levelNormal')}</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -265,15 +283,15 @@ export default async function PlayerDetailPage({
                     value="senior"
                     defaultChecked={target.level === 'senior'}
                   />
-                  <span className="font-serif text-base text-text">Senior</span>
+                  <span className="font-serif text-base text-text">{tProfile('levelSenior')}</span>
                 </label>
               </div>
               <p className="mt-1 text-xs text-muted">
-                Junior gir juniortee når banen har en. Senior er en informasjons-tag for nå.
+                {tProfile('levelHint')}
               </p>
             </fieldset>
-            <SubmitButton className="w-full" pendingLabel="Lagrer …">
-              Lagre endringer
+            <SubmitButton className="w-full" pendingLabel={tProfile('savingBusy')}>
+              {tProfile('saveButton')}
             </SubmitButton>
           </form>
         </div>
@@ -281,7 +299,7 @@ export default async function PlayerDetailPage({
 
       <section className="mt-6">
         <p className="mb-1.5 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          Faresone
+          {tProfile('dangerZone')}
         </p>
         <div
           className="rounded-xl border bg-surface px-4 py-3.5"
@@ -297,7 +315,7 @@ export default async function PlayerDetailPage({
                 className="font-sans text-[13px] font-medium"
                 style={{ color: 'var(--danger-deep)' }}
               >
-                Slett spilleren
+                {tProfile('deleteLink')}
               </SmartLink>
             </div>
           ) : (
