@@ -21,6 +21,11 @@ const redirectMock = makeRedirectMock();
 vi.mock('@/i18n/navigation', () => ({
   redirect: ({ href }: { href: string }) => redirectMock(href),
 }));
+// requireAdminOrClubAdminOfCup (lib/admin/auth) still redirects via
+// next/navigation — both mocks must feed the same redirectMock.
+vi.mock('next/navigation', () => ({
+  redirect: (url: string) => redirectMock(url),
+}));
 vi.mock('next-intl/server', () => ({
   getLocale: async () => 'no',
 }));
