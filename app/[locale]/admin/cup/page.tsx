@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getRoleContext } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
@@ -15,24 +16,10 @@ type SearchParams = Promise<{
   name?: string | string[];
 }>;
 
-const STATUS_MESSAGES: Record<string, (name?: string) => string> = {
-  deleted: (name) => `Cupen «${name ?? ''}» er slettet.`,
-};
-
-const ERROR_MESSAGES: Record<string, string> = {
-  not_found: 'Cupen finnes ikke.',
-};
-
 const STATUS_TO_CHIP: Record<'draft' | 'active' | 'finished', StatusChipTone> = {
   draft: 'utkast',
   active: 'aktiv',
   finished: 'signert',
-};
-
-const STATUS_LABEL: Record<'draft' | 'active' | 'finished', string> = {
-  draft: 'Utkast',
-  active: 'Pågående',
-  finished: 'Avsluttet',
 };
 
 function first(v: string | string[] | undefined): string | undefined {
@@ -44,14 +31,15 @@ export default async function CupListPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const sp = await searchParams;
+  const [sp, t] = await Promise.all([searchParams, getTranslations('cup')]);
   const errorCode = first(sp.error);
   const statusCode = first(sp.status);
   const name = first(sp.name);
-  const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
-  const statusMessage = statusCode
-    ? STATUS_MESSAGES[statusCode]?.(name)
-    : undefined;
+  const errorMessage = errorCode ? t(`manage.errors.${errorCode}` as Parameters<typeof t>[0]) : undefined;
+  const statusMessage =
+    statusCode === 'deleted' && name
+      ? t('manage.deletedMessage', { name })
+      : undefined;
 
   const supabase = await getServerClient();
   // #526: lista er reachable for alle (admin-layout er auth-only per #392).
@@ -83,10 +71,10 @@ export default async function CupListPage({
   return (
     <AdminShell>
       <TopBar backHref="/admin" kicker="Klubbhuset" />
-      <BrassRibbon kicker="Cuper" />
+      <BrassRibbon kicker={t('ledger.kicker')} />
       <PageHeader
-        title="Cuper"
-        subtitle="Multi-match-turneringer i Ryder Cup-stil."
+        title={t('ledger.pageTitle')}
+        subtitle={t('ledger.pageSubtitle')}
       />
 
       {errorMessage && (
@@ -103,12 +91,12 @@ export default async function CupListPage({
       {rows.length === 0 ? (
         <Card>
           <p className="text-sm text-muted">
-            Du har ingen cuper ennå.{' '}
+            {t('ledger.emptyText')}{' '}
             <SmartLink
               href="/admin/games/new?intent=cup"
               className="text-text underline hover:no-underline"
             >
-              Sett opp en cup
+              {t('ledger.emptyLink')}
             </SmartLink>{' '}
             for å komme i gang.
           </p>
@@ -125,13 +113,16 @@ export default async function CupListPage({
                         {cup.name}
                       </p>
                       <p className="text-xs text-muted mt-1">
-                        {cup.team_1_name} mot {cup.team_2_name} · først til{' '}
-                        {String(cup.points_to_win).replace('.', ',')} point
+                        {t('ledger.rowSubtitle', {
+                          team1: cup.team_1_name,
+                          team2: cup.team_2_name,
+                          points: String(cup.points_to_win).replace('.', ','),
+                        })}
                       </p>
                     </div>
                     <StatusChip
                       tone={STATUS_TO_CHIP[cup.status]}
-                      label={STATUS_LABEL[cup.status]}
+                      label={t(`status.${cup.status}`)}
                     />
                   </div>
                 </Card>

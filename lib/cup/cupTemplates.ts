@@ -18,10 +18,6 @@ export type CupSessionFormat =
 
 export type CupPreset = {
   id: string;
-  /** Bruker-rettet norsk navn. */
-  name: string;
-  /** Kort norsk forklaring vist i wizarden. */
-  description: string;
   /** Ordnede sesjoner — ett format per sesjon, i spille-rekkefølge. */
   sessions: CupSessionFormat[];
   /** Minste lagstørrelse (per lag) for at preset-en gir mening. */
@@ -40,23 +36,16 @@ export type SessionPlan = {
 export const CUP_PRESETS: CupPreset[] = [
   {
     id: 'klassisk',
-    name: 'Klassisk cup',
-    description:
-      'Foursomes, four-ball og singler — som en ekte Ryder Cup. Alle spiller flere matcher.',
     sessions: ['foursomes_matchplay', 'fourball_matchplay', 'singles_matchplay'],
     minPerTeam: 2,
   },
   {
     id: 'fourball-singler',
-    name: 'Four-ball + singler',
-    description: 'En four-ball-økt og en single-økt. Trenger ikke foursomes.',
     sessions: ['fourball_matchplay', 'singles_matchplay'],
     minPerTeam: 2,
   },
   {
     id: 'singler',
-    name: 'Bare singler',
-    description: 'Alle møter én motspiller. Funker uansett hvor mange dere er.',
     sessions: ['singles_matchplay'],
     minPerTeam: 1,
   },

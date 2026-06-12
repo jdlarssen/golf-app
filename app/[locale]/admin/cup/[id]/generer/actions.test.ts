@@ -18,8 +18,11 @@ import type { PlannedMatch } from '@/lib/cup/cupPairing';
  */
 
 const redirectMock = makeRedirectMock();
-vi.mock('next/navigation', () => ({
-  redirect: (url: string) => redirectMock(url),
+vi.mock('@/i18n/navigation', () => ({
+  redirect: ({ href }: { href: string }) => redirectMock(href),
+}));
+vi.mock('next-intl/server', () => ({
+  getLocale: async () => 'no',
 }));
 
 vi.mock('next/cache', () => ({

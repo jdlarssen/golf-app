@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
@@ -47,27 +48,22 @@ type Step = 1 | 2 | 3 | 4 | 5;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const FORMAT_LABELS: Record<CupSessionFormat, string> = {
-  foursomes_matchplay: 'Foursomes',
-  fourball_matchplay: 'Four-ball',
-  singles_matchplay: 'Singel',
-};
-
-const ERROR_MESSAGES: Record<string, string> = {
-  not_draft: 'Cupen er allerede startet.',
-  missing_course: 'Velg bane og tee.',
-  no_matches: 'Ingen matcher å opprette.',
-  insert_failed: 'Klarte ikke å opprette matchene. Prøv igjen.',
-  too_many_matches: `En personlig cup tar maks ${MAX_PERSONAL_CUP_MATCHES} matcher. Vil du ha flere, lag en klubb-cup.`,
-  too_many_players: `En personlig cup tar maks ${MAX_PERSONAL_CUP_PLAYERS} spillere. Vil du ha flere, lag en klubb-cup.`,
-};
-
 // ─── Step indicator ───────────────────────────────────────────────────────────
 
-function StepIndicator({ current, total }: { current: number; total: number }) {
+function StepIndicator({
+  current,
+  total,
+  t,
+}: {
+  current: number;
+  total: number;
+  t: ReturnType<typeof useTranslations<'cup'>>;
+}) {
   return (
     <div className="flex items-center justify-between mb-6">
-      <p className="font-sans text-xs text-muted">{`Steg ${current} av ${total}`}</p>
+      <p className="font-sans text-xs text-muted">
+        {t('generate.stepIndicator', { current, total })}
+      </p>
       <div className="flex gap-1">
         {Array.from({ length: total }, (_, i) => (
           <div
@@ -100,12 +96,14 @@ function Step1Roster({
   team2Name,
   assignments,
   onChange,
+  t,
 }: {
   players: WizardPlayer[];
   team1Name: string;
   team2Name: string;
   assignments: Record<string, TeamAssignment>;
   onChange: (id: string, val: TeamAssignment) => void;
+  t: ReturnType<typeof useTranslations<'cup'>>;
 }) {
   const team1Count = Object.values(assignments).filter((v) => v === 'team1').length;
   const team2Count = Object.values(assignments).filter((v) => v === 'team2').length;
@@ -113,11 +111,11 @@ function Step1Roster({
 
   return (
     <div>
-      <SectionHeading>Fordel spillere på lag</SectionHeading>
+      <SectionHeading>{t('generate.step1Heading')}</SectionHeading>
       {diff >= 2 && team1Count > 0 && team2Count > 0 && (
         <div className="mb-4">
           <Banner tone="warning">
-            Lagene er ujevne ({team1Count} vs {team2Count}). Kun de minste lagets antall matcher genereres.
+            {t('generate.unevenTeamsWarning', { count1: team1Count, count2: team2Count })}
           </Banner>
         </div>
       )}
@@ -186,21 +184,23 @@ function Step2Course({
   teeBoxId,
   onCourseChange,
   onTeeChange,
+  t,
 }: {
   courses: WizardCourse[];
   courseId: string;
   teeBoxId: string;
   onCourseChange: (id: string) => void;
   onTeeChange: (id: string) => void;
+  t: ReturnType<typeof useTranslations<'cup'>>;
 }) {
   const selectedCourse = courses.find((c) => c.id === courseId);
 
   return (
     <div className="space-y-5">
       <div>
-        <SectionHeading>Bane</SectionHeading>
+        <SectionHeading>{t('generate.step2BaneHeading')}</SectionHeading>
         <label htmlFor="generer-course" className="block text-sm font-medium text-text mb-1.5">
-          Velg bane
+          {t('generate.step2CourseLabel')}
         </label>
         <select
           id="generer-course"
@@ -208,7 +208,7 @@ function Step2Course({
           onChange={(e) => onCourseChange(e.target.value)}
           className="w-full rounded-xl border border-border px-3.5 py-3 bg-surface text-text focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
         >
-          <option value="">— velg bane —</option>
+          <option value="">{t('generate.step2CoursePlaceholder')}</option>
           {courses.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -219,9 +219,9 @@ function Step2Course({
 
       {selectedCourse && (
         <div>
-          <SectionHeading>Tee</SectionHeading>
+          <SectionHeading>{t('generate.step2TeeHeading')}</SectionHeading>
           <label htmlFor="generer-tee" className="block text-sm font-medium text-text mb-1.5">
-            Velg tee
+            {t('generate.step2TeeLabel')}
           </label>
           <select
             id="generer-tee"
@@ -229,10 +229,10 @@ function Step2Course({
             onChange={(e) => onTeeChange(e.target.value)}
             className="w-full rounded-xl border border-border px-3.5 py-3 bg-surface text-text focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150"
           >
-            <option value="">— velg tee —</option>
-            {selectedCourse.teeBoxes.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
+            <option value="">{t('generate.step2TeePlaceholder')}</option>
+            {selectedCourse.teeBoxes.map((tb) => (
+              <option key={tb.id} value={tb.id}>
+                {tb.name}
               </option>
             ))}
           </select>
@@ -254,6 +254,7 @@ function Step3Setup({
   strategy,
   onStrategyChange,
   matchCap,
+  t,
 }: {
   team1Count: number;
   team2Count: number;
@@ -264,8 +265,15 @@ function Step3Setup({
   strategy: PairingStrategy;
   onStrategyChange: (s: PairingStrategy) => void;
   matchCap?: number;
+  t: ReturnType<typeof useTranslations<'cup'>>;
 }) {
   const teamSize = Math.min(team1Count, team2Count);
+
+  const FORMAT_LABELS: Record<CupSessionFormat, string> = {
+    foursomes_matchplay: t('generate.formatFoursomes'),
+    fourball_matchplay: t('generate.formatFourball'),
+    singles_matchplay: t('generate.formatSingles'),
+  };
 
   function getSessionsForId(id: string): CupSessionFormat[] {
     if (id === 'tilpasset') return customSessions.map((s) => s.format);
@@ -299,12 +307,12 @@ function Step3Setup({
       {matchCap !== undefined && (
         <Banner tone={overCap ? 'warning' : 'info'}>
           {overCap
-            ? `Oppsettet gir ${totalMatches} matcher. En personlig cup tar maks ${matchCap}. Velg færre sesjoner, eller lag en klubb-cup for flere.`
-            : `Personlig cup: maks ${matchCap} matcher. Trenger dere flere, er det en klubb-cup som gjelder.`}
+            ? t('generate.overCapWarning', { totalMatches, matchCap })
+            : t('generate.capInfoBanner', { matchCap })}
         </Banner>
       )}
       <div>
-        <SectionHeading>Format-oppsett</SectionHeading>
+        <SectionHeading>{t('generate.step3FormatHeading')}</SectionHeading>
         <div className="space-y-2">
           {CUP_PRESETS.map((preset: CupPreset) => (
             <label
@@ -325,22 +333,22 @@ function Step3Setup({
               />
               <div className="min-w-0">
                 <p className="font-sans text-sm font-semibold text-text">
-                  {preset.name}
+                  {t(`presets.${preset.id as 'klassisk' | 'fourball-singler' | 'singler'}.name`)}
                 </p>
                 <p className="font-sans text-xs text-muted mt-0.5">
-                  {preset.description}
+                  {t(`presets.${preset.id as 'klassisk' | 'fourball-singler' | 'singler'}.description`)}
                 </p>
                 {presetId === preset.id && plan.length > 0 && (
                   <p className="font-sans text-xs text-primary mt-1.5">
                     {plan.map((s) => `${s.matchCount} ${FORMAT_LABELS[s.format]}`).join(' · ')}
-                    {' '}= {totalMatches} matcher
+                    {' '}= {totalMatches} {t('generate.matchesLabel').toLowerCase()}
                   </p>
                 )}
               </div>
             </label>
           ))}
 
-          {/* Tilpasset */}
+          {/* Custom */}
           <label
             className={`flex items-start gap-3 rounded-xl border p-4 cursor-pointer transition-colors ${
               presetId === 'tilpasset'
@@ -357,9 +365,11 @@ function Step3Setup({
               className="mt-0.5 accent-primary"
             />
             <div className="min-w-0 flex-1">
-              <p className="font-sans text-sm font-semibold text-text">Tilpasset</p>
+              <p className="font-sans text-sm font-semibold text-text">
+                {t('generate.customPresetName')}
+              </p>
               <p className="font-sans text-xs text-muted mt-0.5">
-                Bygg din egen sesjon-liste.
+                {t('generate.customPresetDescription')}
               </p>
               {presetId === 'tilpasset' && (
                 <div className="mt-3 space-y-2">
@@ -372,9 +382,9 @@ function Step3Setup({
                         }
                         className="flex-1 rounded-lg border border-border px-2.5 py-2 bg-surface text-text text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
                       >
-                        <option value="singles_matchplay">Singel</option>
-                        <option value="fourball_matchplay">Four-ball</option>
-                        <option value="foursomes_matchplay">Foursomes</option>
+                        <option value="singles_matchplay">{t('generate.formatSingles')}</option>
+                        <option value="fourball_matchplay">{t('generate.formatFourball')}</option>
+                        <option value="foursomes_matchplay">{t('generate.formatFoursomes')}</option>
                       </select>
                       <button
                         type="button"
@@ -390,12 +400,12 @@ function Step3Setup({
                     onClick={addCustomSession}
                     className="min-h-[36px] w-full rounded-lg border border-dashed border-border px-3 py-2 text-sm text-muted hover:border-primary hover:text-primary transition-colors"
                   >
-                    + Legg til sesjon
+                    {t('generate.addSessionButton')}
                   </button>
                   {presetId === 'tilpasset' && plan.length > 0 && (
                     <p className="font-sans text-xs text-primary">
                       {plan.map((s) => `${s.matchCount} ${FORMAT_LABELS[s.format]}`).join(' · ')}
-                      {' '}= {totalMatches} matcher
+                      {' '}= {totalMatches} {t('generate.matchesLabel').toLowerCase()}
                     </p>
                   )}
                 </div>
@@ -406,11 +416,11 @@ function Step3Setup({
       </div>
 
       <div>
-        <SectionHeading>Paring-strategi</SectionHeading>
+        <SectionHeading>{t('generate.step3StrategyHeading')}</SectionHeading>
         <div className="space-y-2">
           {([
-            ['handicap', 'Handicap-balansert', 'Sterk møter sterk, svak møter svak — jevnere kamper.'],
-            ['random', 'Tilfeldig', 'Trekning av lag og motstandere.'],
+            ['handicap', t('generate.strategyHandicapLabel'), t('generate.strategyHandicapDescription')],
+            ['random', t('generate.strategyRandomLabel'), t('generate.strategyRandomDescription')],
           ] as [PairingStrategy, string, string][]).map(([val, label, desc]) => (
             <label
               key={val}
@@ -451,6 +461,7 @@ function Step4Preview({
   onRegenerate,
   onMatchChange,
   playerById,
+  t,
 }: {
   matches: PlannedMatch[];
   team1Players: WizardPlayer[];
@@ -460,6 +471,7 @@ function Step4Preview({
   onRegenerate: () => void;
   onMatchChange: (matchId: string, side: 'side1' | 'side2', idx: number, userId: string) => void;
   playerById: Map<string, WizardPlayer>;
+  t: ReturnType<typeof useTranslations<'cup'>>;
 }) {
   // Group by format for display
   const byFormat = new Map<CupSessionFormat, PlannedMatch[]>();
@@ -469,6 +481,12 @@ function Step4Preview({
     byFormat.set(m.format, arr);
   }
 
+  const FORMAT_LABELS: Record<CupSessionFormat, string> = {
+    foursomes_matchplay: t('generate.formatFoursomes'),
+    fourball_matchplay: t('generate.formatFourball'),
+    singles_matchplay: t('generate.formatSingles'),
+  };
+
   function usedIdsInSide(match: PlannedMatch, side: 'side1' | 'side2'): Set<string> {
     const arr = side === 'side1' ? match.side1 : match.side2;
     return new Set(arr);
@@ -477,13 +495,13 @@ function Step4Preview({
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <SectionHeading>Forhåndsvis matcher</SectionHeading>
+        <SectionHeading>{t('generate.step4Heading')}</SectionHeading>
         <button
           type="button"
           onClick={onRegenerate}
           className="font-sans text-xs text-primary underline-offset-2 hover:underline min-h-[36px] px-1"
         >
-          Generer på nytt
+          {t('generate.regenerateButton')}
         </button>
       </div>
 
@@ -495,7 +513,6 @@ function Step4Preview({
             </p>
             <div className="space-y-3">
               {formatMatches.map((match) => {
-                const isSingles = match.side1.length === 1;
                 return (
                   <Card key={match.id} className="!p-4">
                     <p className="font-sans text-xs font-semibold text-muted mb-2">
@@ -530,7 +547,9 @@ function Step4Preview({
                         ))}
                       </div>
 
-                      <span className="font-sans text-xs font-bold text-muted">mot</span>
+                      <span className="font-sans text-xs font-bold text-muted">
+                        {t('generate.mot')}
+                      </span>
 
                       {/* Side 2 */}
                       <div className="space-y-1.5">
@@ -580,6 +599,7 @@ function Step5Confirm({
   courses,
   tournamentId,
   onError,
+  t,
 }: {
   matches: PlannedMatch[];
   courseId: string;
@@ -587,10 +607,17 @@ function Step5Confirm({
   courses: WizardCourse[];
   tournamentId: string;
   onError: (msg: string) => void;
+  t: ReturnType<typeof useTranslations<'cup'>>;
 }) {
   const [isPending, startTransition] = useTransition();
   const course = courses.find((c) => c.id === courseId);
-  const tee = course?.teeBoxes.find((t) => t.id === teeBoxId);
+  const tee = course?.teeBoxes.find((tb) => tb.id === teeBoxId);
+
+  const FORMAT_LABELS: Record<CupSessionFormat, string> = {
+    foursomes_matchplay: t('generate.formatFoursomes'),
+    fourball_matchplay: t('generate.formatFourball'),
+    singles_matchplay: t('generate.formatSingles'),
+  };
 
   function handleConfirm() {
     startTransition(async () => {
@@ -601,7 +628,16 @@ function Step5Confirm({
         matches,
       });
       if (result?.error) {
-        onError(ERROR_MESSAGES[result.error] ?? ERROR_MESSAGES.insert_failed);
+        const key = result.error as keyof typeof result.error;
+        const errorMap: Record<string, string> = {
+          not_draft: t('generate.errors.not_draft'),
+          missing_course: t('generate.errors.missing_course'),
+          no_matches: t('generate.errors.no_matches'),
+          insert_failed: t('generate.errors.insert_failed'),
+          too_many_matches: t('generate.errors.too_many_matches', { max: MAX_PERSONAL_CUP_MATCHES }),
+          too_many_players: t('generate.errors.too_many_players', { max: MAX_PERSONAL_CUP_PLAYERS }),
+        };
+        onError(errorMap[result.error] ?? t('generate.errors.insert_failed'));
       }
       // On success, the action redirects automatically (NEXT_REDIRECT)
     });
@@ -616,17 +652,17 @@ function Step5Confirm({
   return (
     <div className="space-y-5">
       <div>
-        <SectionHeading>Oppsummering</SectionHeading>
+        <SectionHeading>{t('generate.step5Heading')}</SectionHeading>
         <Card>
           <div className="space-y-3">
             <div>
-              <p className="font-sans text-xs text-muted">Bane / tee</p>
+              <p className="font-sans text-xs text-muted">{t('generate.courseTeeLabel')}</p>
               <p className="font-sans text-sm font-medium text-text mt-0.5">
                 {course?.name ?? '—'} · {tee?.name ?? '—'}
               </p>
             </div>
             <div>
-              <p className="font-sans text-xs text-muted">Matcher</p>
+              <p className="font-sans text-xs text-muted">{t('generate.matchesLabel')}</p>
               <div className="mt-1 space-y-0.5">
                 {Array.from(byFormat.entries()).map(([format, count]) => (
                   <p key={format} className="font-sans text-sm text-text">
@@ -634,7 +670,7 @@ function Step5Confirm({
                   </p>
                 ))}
                 <p className="font-serif text-base font-medium text-primary mt-1">
-                  {matches.length} matcher totalt
+                  {t('generate.matchesTotalLabel', { count: matches.length })}
                 </p>
               </div>
             </div>
@@ -647,9 +683,9 @@ function Step5Confirm({
         className="w-full"
         onClick={handleConfirm}
         pending={isPending}
-        pendingLabel="Genererer …"
+        pendingLabel={t('generate.confirmPending')}
       >
-        {`Opprett ${matches.length} matcher`}
+        {t('generate.confirmButton', { count: matches.length })}
       </Button>
     </div>
   );
@@ -665,6 +701,7 @@ export function GenerateMatchesWizard({
   courses,
   matchCap,
 }: WizardProps) {
+  const t = useTranslations('cup');
   const TOTAL_STEPS = 5;
 
   // Step
@@ -802,8 +839,10 @@ export function GenerateMatchesWizard({
     if (step !== 1) return null;
     const preset = CUP_PRESETS.find((p) => p.id === presetId);
     const minPerTeam = preset?.minPerTeam ?? 1;
-    if (team1Count < minPerTeam) return `${team1Name} trenger minst ${minPerTeam} spiller${minPerTeam === 1 ? '' : 'e'}.`;
-    if (team2Count < minPerTeam) return `${team2Name} trenger minst ${minPerTeam} spiller${minPerTeam === 1 ? '' : 'e'}.`;
+    if (team1Count < minPerTeam)
+      return t('generate.step1ValidationMin', { team: team1Name, minPerTeam });
+    if (team2Count < minPerTeam)
+      return t('generate.step1ValidationMin', { team: team2Name, minPerTeam });
     return null;
   })();
 
@@ -814,7 +853,7 @@ export function GenerateMatchesWizard({
       )}
 
       <Card>
-        <StepIndicator current={step} total={TOTAL_STEPS} />
+        <StepIndicator current={step} total={TOTAL_STEPS} t={t} />
 
         {step === 1 && (
           <Step1Roster
@@ -823,6 +862,7 @@ export function GenerateMatchesWizard({
             team2Name={team2Name}
             assignments={assignments}
             onChange={handleAssignmentChange}
+            t={t}
           />
         )}
         {step === 2 && (
@@ -832,6 +872,7 @@ export function GenerateMatchesWizard({
             teeBoxId={teeBoxId}
             onCourseChange={handleCourseChange}
             onTeeChange={setTeeBoxId}
+            t={t}
           />
         )}
         {step === 3 && (
@@ -845,6 +886,7 @@ export function GenerateMatchesWizard({
             strategy={strategy}
             onStrategyChange={setStrategy}
             matchCap={matchCap}
+            t={t}
           />
         )}
         {step === 4 && (
@@ -857,6 +899,7 @@ export function GenerateMatchesWizard({
             onRegenerate={runGenerate}
             onMatchChange={handleMatchChange}
             playerById={playerById}
+            t={t}
           />
         )}
         {step === 5 && (
@@ -867,6 +910,7 @@ export function GenerateMatchesWizard({
             courses={courses}
             tournamentId={tournamentId}
             onError={setErrorMsg}
+            t={t}
           />
         )}
 
@@ -884,7 +928,7 @@ export function GenerateMatchesWizard({
                 onClick={handleBack}
                 disabled={step === 1}
               >
-                Forrige
+                {t('generate.prevButton')}
               </Button>
               <Button
                 type="button"
@@ -892,7 +936,7 @@ export function GenerateMatchesWizard({
                 onClick={handleNext}
                 disabled={!canAdvance()}
               >
-                Neste
+                {t('generate.nextButton')}
               </Button>
             </div>
           </div>

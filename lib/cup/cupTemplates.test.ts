@@ -24,13 +24,13 @@ describe('sessionMatchCount', () => {
 });
 
 describe('CUP_PRESETS', () => {
-  it('ships the three documented presets with norsk copy', () => {
+  it('ships the three documented presets with stable ids and sessions', () => {
     const ids = CUP_PRESETS.map((p) => p.id);
     expect(ids).toEqual(['klassisk', 'fourball-singler', 'singler']);
     for (const p of CUP_PRESETS) {
-      expect(p.name.length).toBeGreaterThan(0);
-      expect(p.description.length).toBeGreaterThan(0);
+      expect(p.id.length).toBeGreaterThan(0);
       expect(p.sessions.length).toBeGreaterThan(0);
+      expect(p.minPerTeam).toBeGreaterThan(0);
     }
   });
 

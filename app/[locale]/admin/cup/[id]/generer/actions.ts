@@ -1,6 +1,7 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
 import { revalidateTag } from 'next/cache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
@@ -219,9 +220,13 @@ export async function createCupMatchesFromPlan(
   revalidatePath(`/admin/cup/${tournamentId}`);
   if (groupId) revalidatePath(`/klubber/${groupId}/cup/${tournamentId}`);
   revalidatePath(`/cup/${tournamentId}`);
-  redirect(
-    groupId
+  const locale = await getLocale();
+  redirect({
+    href: groupId
       ? `/klubber/${groupId}/cup/${tournamentId}?status=matches_generated`
       : `/admin/cup/${tournamentId}?status=matches_generated`,
-  );
+    locale,
+  });
+  // redirect() throws NEXT_REDIRECT — unreachable, satisfies return type
+  return { error: '' } as CupBatchError;
 }

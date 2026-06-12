@@ -1,4 +1,5 @@
 import { notFound, redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrClubAdmin } from '@/lib/admin/auth';
 import { getClubDetail } from '@/lib/clubs/getClubDetail';
@@ -13,18 +14,6 @@ import { CupSetup } from '@/app/[locale]/admin/games/new/CupSetup';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;
-
-// Speiler cup-validerings-kodene fra createTournamentDraft (cup_-prefiks).
-const ERROR_MESSAGES: Record<string, string> = {
-  cup_name: 'Cup-navnet må være mellom 1 og 80 tegn.',
-  cup_team_1: 'Navn på lag 1 må være mellom 1 og 40 tegn.',
-  cup_team_2: 'Navn på lag 2 må være mellom 1 og 40 tegn.',
-  cup_team_dup: 'Lagene må ha forskjellige navn.',
-  cup_points: 'Point-målet må være et positivt tall.',
-  cup_allowance: 'Sjekk handicap-andelen for fourball.',
-  cup_foursomes_allowance: 'Sjekk handicap-andelen for foursomes.',
-  cup_insert_failed: 'Klarte ikke å opprette cupen. Prøv igjen.',
-};
 
 function first(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
@@ -46,8 +35,14 @@ export default async function NewKlubbCupPage({
   searchParams: SearchParams;
 }) {
   const { id } = await params;
-  const errorCode = first((await searchParams).error);
-  const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
+  const [{ error: errorParam }, t] = await Promise.all([
+    searchParams,
+    getTranslations('cup'),
+  ]);
+  const errorCode = first(errorParam);
+  const errorMessage = errorCode
+    ? t(`create.errors.${errorCode}` as Parameters<typeof t>[0])
+    : undefined;
 
   const supabase = await getServerClient();
   const { userId } = await requireAdminOrClubAdmin(supabase, id);
@@ -61,10 +56,10 @@ export default async function NewKlubbCupPage({
   return (
     <AppShell>
       <TopBar backHref={`/klubber/${id}`} kicker={detail.club.name} />
-      <BrassRibbon kicker="Ny klubb-cup" />
+      <BrassRibbon kicker={t('create.brassRibbon')} />
       <PageHeader
-        title="Opprett cup"
-        subtitle={`Sett opp en lag-mot-lag-cup for ${detail.club.name}. Kampene legger du til etterpå.`}
+        title={t('create.pageTitle')}
+        subtitle={t('create.pageSubtitle', { clubName: detail.club.name })}
       />
 
       {errorMessage && (

@@ -1,4 +1,7 @@
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { AdminShell } from '@/components/ui/AdminShell';
@@ -71,7 +74,11 @@ export async function GenerateMatches({
   const supabase = await getServerClient();
   const { userId, isAdmin } = await getRoleContext(supabase);
 
-  const snapshot = await getCupSnapshot(tournamentId);
+  const [snapshot, t, locale] = await Promise.all([
+    getCupSnapshot(tournamentId),
+    getTranslations('cup'),
+    getLocale(),
+  ]);
   if (!snapshot) notFound();
 
   const { tournament } = snapshot;
@@ -79,11 +86,13 @@ export async function GenerateMatches({
 
   // Bare generering mens cupen er utkast.
   if (tournament.status !== 'draft') {
-    redirect(
-      variant === 'club' && groupId
-        ? `/klubber/${groupId}/cup/${tournamentId}`
-        : `/admin/cup/${tournamentId}`,
-    );
+    redirect({
+      href:
+        variant === 'club' && groupId
+          ? `/klubber/${groupId}/cup/${tournamentId}`
+          : `/admin/cup/${tournamentId}`,
+      locale,
+    });
   }
 
   const coursesResult = await supabase
@@ -185,8 +194,8 @@ export async function GenerateMatches({
   const kicker = variant === 'club' ? (clubName ?? 'Klubbhuset') : 'Klubbhuset';
   const ribbonKicker =
     variant === 'club'
-      ? `Klubb-cup · ${tournament.name}`
-      : `Cup · ${tournament.name}`;
+      ? t('generate.brassRibbonClub', { name: tournament.name })
+      : t('generate.brassRibbonAdmin', { name: tournament.name });
 
   // #526: personlig cup av en vanlig bruker er capped; admin og klubb-cup er
   // uncapped. Speiler cap-håndhevingen i createCupMatchesFromPlan.
@@ -198,8 +207,8 @@ export async function GenerateMatches({
       <TopBar backHref={backHref} kicker={kicker} />
       <BrassRibbon kicker={ribbonKicker} />
       <PageHeader
-        title="Generer matcher"
-        subtitle={`${tournament.team_1_name} mot ${tournament.team_2_name}`}
+        title={t('generate.pageTitle')}
+        subtitle={`${tournament.team_1_name} ${t('generate.mot')} ${tournament.team_2_name}`}
       />
       <GenerateMatchesWizard
         tournamentId={tournamentId}

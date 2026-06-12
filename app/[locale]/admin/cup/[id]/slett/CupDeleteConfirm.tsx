@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { AdminShell } from '@/components/ui/AdminShell';
@@ -11,18 +12,6 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { deleteTournament } from '@/lib/cup/actions';
 
 export type CupDeleteVariant = 'admin' | 'club';
-
-const ERROR_MESSAGES: Record<string, string> = {
-  delete_failed: 'Slettingen feilet. Prøv igjen, eller sjekk Vercel-loggene.',
-};
-
-const STATUS_WARNINGS: Record<'draft' | 'active' | 'finished', string | null> = {
-  draft: null,
-  active:
-    'Cupen pågår nå. Sletting fjerner cup-en for alltid, men selve matches forblir som frittstående spill.',
-  finished:
-    'Cupen er avsluttet. Resultatet forsvinner fra leaderboardet, men selve matches forblir som frittstående spill.',
-};
 
 /**
  * Delt cup-slett-bekreftelse (#524). Begge slett-ruter (`/admin/cup/[id]/slett`
@@ -39,7 +28,7 @@ export async function CupDeleteConfirm({
   variant: CupDeleteVariant;
   errorCode?: string;
 }) {
-  const supabase = await getServerClient();
+  const [supabase, t] = await Promise.all([getServerClient(), getTranslations('cup')]);
 
   const { data: cup } = await supabase
     .from('tournaments')
@@ -74,8 +63,13 @@ export async function CupDeleteConfirm({
     clubName = (club?.name as string | null | undefined) ?? null;
   }
 
-  const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
-  const warning = STATUS_WARNINGS[cup.status];
+  const errorMessage = errorCode === 'delete_failed' ? t('delete.errors.delete_failed') : undefined;
+  const warningMap: Record<'draft' | 'active' | 'finished', string | null> = {
+    draft: null,
+    active: t('delete.warnings.active'),
+    finished: t('delete.warnings.finished'),
+  };
+  const warning = warningMap[cup.status];
 
   const Shell = isClub ? AppShell : AdminShell;
   const cancelHref =
@@ -87,14 +81,14 @@ export async function CupDeleteConfirm({
   return (
     <Shell>
       <TopBar backHref={cancelHref} kicker={kicker} />
-      <BrassRibbon kicker="Bekreft sletting" />
+      <BrassRibbon kicker={t('delete.brassRibbon')} />
 
       <div className="px-1">
         <h1 className="mb-3 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-          Slett «{cup.name}»?
+          {t('delete.heading', { name: cup.name })}
         </h1>
         <p className="font-sans text-[13px] leading-relaxed text-muted">
-          {cup.team_1_name} mot {cup.team_2_name}
+          {cup.team_1_name} {t('manage.mot')} {cup.team_2_name}
         </p>
       </div>
 
@@ -117,20 +111,19 @@ export async function CupDeleteConfirm({
         style={{ borderColor: 'rgba(180, 60, 60, 0.18)' }}
       >
         <p className="mb-2 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-          Slettes permanent
+          {t('delete.permanentHeading')}
         </p>
         <ul className="space-y-1 font-sans text-[13px] text-text">
-          <li>Cupen «{cup.name}»</li>
-          <li>Lag-roster og master-leaderboard</li>
+          <li>{t('delete.cupEntry', { name: cup.name })}</li>
+          <li>{t('delete.rosterEntry')}</li>
         </ul>
         {(matchCount ?? 0) > 0 && (
           <p className="mt-3 font-sans text-[12px] leading-relaxed text-muted">
-            {matchCount} {matchCount === 1 ? 'match' : 'matches'} forblir som
-            frittstående spill (cup-koblingen fjernes).
+            {t('delete.matchesNote', { count: matchCount ?? 0 })}
           </p>
         )}
         <p className="mt-3 font-sans text-[12px] leading-relaxed text-muted">
-          Handlingen kan ikke angres.
+          {t('delete.irreversibleNote')}
         </p>
       </div>
 
@@ -143,16 +136,16 @@ export async function CupDeleteConfirm({
               background: 'var(--danger-deep)',
               borderColor: 'var(--danger-deep)',
             }}
-            pendingLabel="Sletter …"
+            pendingLabel={t('delete.deletePending')}
           >
-            Slett cupen for alltid
+            {t('delete.deleteButton')}
           </SubmitButton>
         </form>
         <SmartLink
           href={cancelHref}
           className="rounded-full border border-border bg-surface px-3 py-3 text-center font-sans text-[13px] font-medium text-text"
         >
-          Avbryt
+          {t('delete.cancelButton')}
         </SmartLink>
       </div>
     </Shell>

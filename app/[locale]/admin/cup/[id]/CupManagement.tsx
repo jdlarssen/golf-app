@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
+import { Link } from '@/i18n/navigation';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { AppShell } from '@/components/ui/AppShell';
@@ -16,42 +17,10 @@ import { startTournament, finishTournament } from '@/lib/cup/actions';
 
 export type CupManagementVariant = 'admin' | 'club';
 
-const ERROR_MESSAGES: Record<string, string> = {
-  name: 'Cup-navnet må være mellom 1 og 80 tegn.',
-  team_1: 'Navn på lag 1 må være mellom 1 og 40 tegn.',
-  team_2: 'Navn på lag 2 må være mellom 1 og 40 tegn.',
-  team_dup: 'Lagene må ha forskjellige navn.',
-  points: 'Point-målet må være et positivt tall.',
-  update_failed: 'Klarte ikke å oppdatere cupen.',
-  start_failed: 'Klarte ikke å starte cupen.',
-  finish_failed: 'Klarte ikke å avslutte cupen.',
-  too_few_matches: 'Du må opprette minst 2 matches før du kan starte cupen.',
-  wrong_status: 'Cupen er ikke i utkast-status og kan ikke startes.',
-  already_finished: 'Cupen er allerede avsluttet.',
-};
-
-const STATUS_MESSAGES: Record<string, string> = {
-  created: 'Cupen er opprettet. Legg til matches under for å komme i gang.',
-  updated: 'Cupen er oppdatert.',
-  started: 'Cupen er startet. Spillerne får varsel.',
-  finished: 'Cupen er avsluttet. Resultatet er sendt til alle deltakere.',
-  matches_generated: 'Matchene er opprettet. Se gjennom listen under.',
-};
-
-function preferredName(p: CupRosterPlayer): string {
-  return p.nickname?.trim() || p.name?.trim() || 'Ukjent spiller';
-}
-
 const STATUS_TO_CHIP: Record<'draft' | 'active' | 'finished', StatusChipTone> = {
   draft: 'utkast',
   active: 'aktiv',
   finished: 'signert',
-};
-
-const STATUS_LABEL: Record<'draft' | 'active' | 'finished', string> = {
-  draft: 'Utkast',
-  active: 'Pågående',
-  finished: 'Avsluttet',
 };
 
 function formatPoints(n: number): string {
@@ -86,7 +55,10 @@ export async function CupManagement({
   errorCode?: string;
   statusCode?: string;
 }) {
-  const snapshot = await getCupSnapshot(tournamentId);
+  const [snapshot, t] = await Promise.all([
+    getCupSnapshot(tournamentId),
+    getTranslations('cup'),
+  ]);
   if (!snapshot) notFound();
 
   const { tournament, leaderboard, roster } = snapshot;
@@ -103,21 +75,47 @@ export async function CupManagement({
     clubName = (club?.name as string | null | undefined) ?? null;
   }
 
-  const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
-  const statusMessage = statusCode ? STATUS_MESSAGES[statusCode] : undefined;
+  const errorMessageMap: Record<string, string> = {
+    name: t('manage.errors.name'),
+    team_1: t('manage.errors.team_1'),
+    team_2: t('manage.errors.team_2'),
+    team_dup: t('manage.errors.team_dup'),
+    points: t('manage.errors.points'),
+    update_failed: t('manage.errors.update_failed'),
+    start_failed: t('manage.errors.start_failed'),
+    finish_failed: t('manage.errors.finish_failed'),
+    too_few_matches: t('manage.errors.too_few_matches'),
+    wrong_status: t('manage.errors.wrong_status'),
+    already_finished: t('manage.errors.already_finished'),
+  };
+  const statusMessageMap: Record<string, string> = {
+    created: t('manage.statusMessages.created'),
+    updated: t('manage.statusMessages.updated'),
+    started: t('manage.statusMessages.started'),
+    finished: t('manage.statusMessages.finished'),
+    matches_generated: t('manage.statusMessages.matches_generated'),
+  };
+  const errorMessage = errorCode ? errorMessageMap[errorCode] : undefined;
+  const statusMessage = statusCode ? statusMessageMap[statusCode] : undefined;
 
   const chipTone = STATUS_TO_CHIP[tournament.status];
-  const statusLabel = STATUS_LABEL[tournament.status];
+  const statusLabel = t(`status.${tournament.status}`);
 
   const canStart = tournament.status === 'draft' && leaderboard.matches.length >= 2;
   const canFinish = tournament.status === 'active';
   const showStartHint =
     tournament.status === 'draft' && leaderboard.matches.length < 2;
 
+  function preferredName(p: CupRosterPlayer): string {
+    return p.nickname?.trim() || p.name?.trim() || t('manage.unknownPlayer');
+  }
+
   const Shell = isClub ? AppShell : AdminShell;
   const backHref = isClub && groupId ? `/klubber/${groupId}` : '/admin/cup';
   const kicker = isClub ? (clubName ?? 'Klubbhuset') : 'Klubbhuset';
-  const ribbonKicker = isClub ? `Klubb-cup · ${statusLabel}` : `Cup · ${statusLabel}`;
+  const ribbonKicker = isClub
+    ? t('manage.brassRibbonClub', { status: statusLabel })
+    : t('manage.brassRibbonAdmin', { status: statusLabel });
   const genererHref =
     isClub && groupId
       ? `/klubber/${groupId}/cup/${tournamentId}/generer`
@@ -133,7 +131,11 @@ export async function CupManagement({
       <BrassRibbon kicker={ribbonKicker} />
       <PageHeader
         title={tournament.name}
-        subtitle={`${tournament.team_1_name} mot ${tournament.team_2_name} · først til ${formatPoints(tournament.points_to_win)} point`}
+        subtitle={t('manage.headerSubtitle', {
+          team1: tournament.team_1_name,
+          team2: tournament.team_2_name,
+          points: formatPoints(tournament.points_to_win),
+        })}
         action={<StatusChip tone={chipTone} label={statusLabel} />}
       />
 
@@ -169,16 +171,18 @@ export async function CupManagement({
           </div>
         </div>
         <p className="text-center text-xs text-muted mt-3">
-          Først til {formatPoints(tournament.points_to_win)} point ·{' '}
-          {leaderboard.finishedMatches} av {leaderboard.matches.length} matches
-          spilt
+          {t('manage.matchesSummary', {
+            points: formatPoints(tournament.points_to_win),
+            finished: leaderboard.finishedMatches,
+            total: leaderboard.matches.length,
+          })}
         </p>
         <div className="mt-3 text-center">
           <SmartLink
             href={`/cup/${tournamentId}`}
             className="text-xs text-primary underline-offset-2 hover:underline"
           >
-            Åpne offentlig leaderboard →
+            {t('manage.openLeaderboard')}
           </SmartLink>
         </div>
       </Card>
@@ -186,7 +190,7 @@ export async function CupManagement({
       {/* Lag-roster */}
       <section className="mb-5">
         <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-2">
-          Lag-roster
+          {t('manage.rosterHeading')}
         </h2>
         <div className="grid grid-cols-2 gap-3">
           <Card>
@@ -195,7 +199,7 @@ export async function CupManagement({
             </p>
             {roster.team1.length === 0 ? (
               <p className="text-xs text-muted">
-                Ingen spillere. Roster fylles fra matches.
+                {t('manage.emptyRoster')}
               </p>
             ) : (
               <ul className="space-y-1 text-sm text-text">
@@ -211,7 +215,7 @@ export async function CupManagement({
             </p>
             {roster.team2.length === 0 ? (
               <p className="text-xs text-muted">
-                Ingen spillere. Roster fylles fra matches.
+                {t('manage.emptyRoster')}
               </p>
             ) : (
               <ul className="space-y-1 text-sm text-text">
@@ -228,7 +232,7 @@ export async function CupManagement({
       <section className="mb-5">
         <div className="mb-2">
           <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-            Matches
+            {t('manage.matchesHeading')}
           </h2>
         </div>
         {tournament.status === 'draft' && (
@@ -237,7 +241,7 @@ export async function CupManagement({
               href={genererHref}
               className="flex items-center justify-center gap-2 w-full rounded-xl bg-primary text-white px-4 py-3 text-sm font-medium hover:bg-primary/90 transition-colors"
             >
-              Generer matcher
+              {t('manage.generateButton')}
             </Link>
           </div>
         )}
@@ -246,12 +250,12 @@ export async function CupManagement({
         {!isClub && (
           <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {[
-              ['singles_matchplay', '+ Singles match'],
-              ['fourball_matchplay', '+ Fourball match'],
-              ['foursomes_matchplay', '+ Foursomes match'],
-              ['greensome_matchplay', '+ Greensome match'],
-              ['chapman_matchplay', '+ Chapman match'],
-              ['gruesome_matchplay', '+ Gruesome match'],
+              ['singles_matchplay', t('manage.addSingles')],
+              ['fourball_matchplay', t('manage.addFourball')],
+              ['foursomes_matchplay', t('manage.addFoursomes')],
+              ['greensome_matchplay', t('manage.addGreensome')],
+              ['chapman_matchplay', t('manage.addChapman')],
+              ['gruesome_matchplay', t('manage.addGruesome')],
             ].map(([mode, label]) => (
               <Link
                 key={mode}
@@ -266,8 +270,7 @@ export async function CupManagement({
         {leaderboard.matches.length === 0 ? (
           <Card>
             <p className="text-sm text-muted">
-              Ingen matches ennå. Trykk «Generer matcher» over for å legge til
-              kamper.
+              {t('manage.emptyMatches')}
             </p>
           </Card>
         ) : (
@@ -283,13 +286,13 @@ export async function CupManagement({
                       </p>
                       <p className="font-serif text-base text-text mt-1">
                         {m.team1PlayerName}{' '}
-                        <span className="text-muted">mot</span>{' '}
+                        <span className="text-muted">{t('manage.mot')}</span>{' '}
                         {m.team2PlayerName}
                       </p>
                       {m.result && (
                         <p className="text-xs text-muted mt-1">
                           {m.result.winnerSide === 'tied'
-                            ? 'Halvert (AS)'
+                            ? t('manage.matchTied')
                             : m.result.winnerSide === 1
                               ? `${m.result.formatted} til ${
                                   isTeamFormat
@@ -332,13 +335,13 @@ export async function CupManagement({
           <>
             {showStartHint && (
               <Banner tone="info">
-                Du må opprette minst 2 matches før du kan starte cupen.
+                {t('manage.startHint')}
               </Banner>
             )}
             <form action={startTournament}>
               <input type="hidden" name="id" value={tournament.id} />
-              <SubmitButton className="w-full" disabled={!canStart} pendingLabel="Starter …">
-                Start cupen
+              <SubmitButton className="w-full" disabled={!canStart} pendingLabel={t('manage.startPending')}>
+                {t('manage.startButton')}
               </SubmitButton>
             </form>
           </>
@@ -347,8 +350,8 @@ export async function CupManagement({
         {tournament.status === 'active' && (
           <form action={finishTournament}>
             <input type="hidden" name="id" value={tournament.id} />
-            <SubmitButton className="w-full" disabled={!canFinish} pendingLabel="Avslutter …">
-              Avslutt cupen
+            <SubmitButton className="w-full" disabled={!canFinish} pendingLabel={t('manage.finishPending')}>
+              {t('manage.finishButton')}
             </SubmitButton>
           </form>
         )}
@@ -357,7 +360,7 @@ export async function CupManagement({
           href={slettHref}
           className="block text-center text-xs text-danger underline-offset-2 hover:underline pt-2"
         >
-          Slett cupen
+          {t('manage.deleteLink')}
         </SmartLink>
       </section>
     </Shell>
