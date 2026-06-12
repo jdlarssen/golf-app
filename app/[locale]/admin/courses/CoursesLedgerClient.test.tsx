@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useSyncExternalStore } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { createTranslator } from 'use-intl/core';
+import noMessages from '../../../../messages/no.json';
 import {
   CoursesLedgerClient,
   applySortAndFilter,
@@ -8,6 +10,16 @@ import {
   readStateFromParams,
   type CoursesLedgerItem,
 } from './CoursesLedgerClient';
+
+// Translator + locale for rowKicker standalone tests.
+const tCourses = createTranslator<typeof noMessages, 'admin.courses'>({
+  locale: 'no',
+  messages: noMessages,
+  namespace: 'admin.courses',
+  onError: () => {},
+  getMessageFallback: ({ namespace: ns, key }) => (ns ? `${ns}.${key}` : key),
+});
+const NO_LOCALE = 'no' as const;
 
 // Stateful mock for next/navigation: useSearchParams subscribes to a small
 // in-memory store; useRouter().replace mutates the store and triggers a
@@ -38,6 +50,19 @@ const paramsStore = (() => {
 const replaceMock = vi.fn((href: string) => {
   const qs = href.startsWith('?') ? href.slice(1) : href;
   paramsStore.set(new URLSearchParams(qs));
+});
+
+// useRouter migrated to @/i18n/navigation; useSearchParams stays next/navigation.
+vi.mock('@/i18n/navigation', async () => {
+  const { createElement } = await import('react');
+  return {
+    useRouter: () => ({ replace: replaceMock, push: vi.fn() }),
+    usePathname: () => '/',
+    Link: ({ href, children, ...rest }: { href: string; children: unknown; [k: string]: unknown }) =>
+      createElement('a', { href, ...rest }, children as never),
+    redirect: vi.fn(),
+    getPathname: vi.fn(() => '/'),
+  };
 });
 
 vi.mock('next/navigation', () => {
@@ -122,7 +147,7 @@ describe('rowKicker', () => {
       updated_at: '2026-04-01T12:00:30.000Z',
       last_played_at: null,
     });
-    expect(rowKicker(item)).toMatch(/^Lagt til/);
+    expect(rowKicker(item, tCourses, NO_LOCALE)).toMatch(/^Lagt til/);
   });
 
   it('viser «Endret» når updated_at har gått frem mer enn 60s og banen aldri er spilt', () => {
@@ -131,7 +156,7 @@ describe('rowKicker', () => {
       updated_at: '2026-04-01T12:01:30.000Z',
       last_played_at: null,
     });
-    expect(rowKicker(item)).toMatch(/^Endret/);
+    expect(rowKicker(item, tCourses, NO_LOCALE)).toMatch(/^Endret/);
   });
 
   it('viser «Sist spilt» som høyest prioritet når banen har vært spilt', () => {
@@ -140,7 +165,7 @@ describe('rowKicker', () => {
       updated_at: '2026-04-15T12:00:00.000Z',
       last_played_at: '2026-05-12T18:30:00.000Z',
     });
-    expect(rowKicker(item)).toMatch(/^Sist spilt/);
+    expect(rowKicker(item, tCourses, NO_LOCALE)).toMatch(/^Sist spilt/);
   });
 
   it('«Sist spilt» overstyrer «Endret» selv når updated_at er nyere enn last_played_at', () => {
@@ -149,7 +174,7 @@ describe('rowKicker', () => {
       updated_at: '2026-05-20T12:00:00.000Z',
       last_played_at: '2026-04-10T12:00:00.000Z',
     });
-    expect(rowKicker(item)).toMatch(/^Sist spilt/);
+    expect(rowKicker(item, tCourses, NO_LOCALE)).toMatch(/^Sist spilt/);
   });
 });
 

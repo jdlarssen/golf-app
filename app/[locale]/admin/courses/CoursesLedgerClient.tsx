@@ -1,10 +1,13 @@
 'use client';
 
 import { useMemo, useTransition } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
+import { useSearchParams } from 'next/navigation';
+import { useTranslations, useLocale } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { LedgerHeader } from '@/components/admin/LedgerHeader';
-import { formatShortDateNb } from '@/lib/format/date';
+import { formatShortDateLocale } from '@/lib/i18n/format';
+import type { AppLocale } from '@/i18n/routing';
 
 const COURSES_LEDGER_GRID = '1fr 64px 14px';
 
@@ -37,13 +40,6 @@ export type Filters = {
   hasJuniorsTee: boolean;
   activeGames: boolean;
   playedRecently: boolean;
-};
-
-const SORT_LABELS: Record<SortBy, string> = {
-  created_at: 'Nyeste først',
-  updated_at: 'Sist endret',
-  last_played: 'Sist spilt',
-  active_game_count: 'Flest aktive spill',
 };
 
 const SORT_VALUES = new Set<SortBy>([
@@ -86,16 +82,20 @@ export function readStateFromParams(params: URLSearchParams): {
 //   2. «Endret DATO» når updated_at har gått fremover mer enn buffer-en
 //   3. «Lagt til DATO» (default)
 // Eksportert for test-bruk.
-export function rowKicker(item: CoursesLedgerItem): string {
+export function rowKicker(
+  item: CoursesLedgerItem,
+  t: ReturnType<typeof useTranslations<'admin.courses'>>,
+  locale: AppLocale,
+): string {
   if (item.last_played_at !== null) {
-    return `Sist spilt ${formatShortDateNb(item.last_played_at)}`;
+    return t('kickerLastPlayed', { date: formatShortDateLocale(item.last_played_at, locale) });
   }
   const created = new Date(item.created_at).getTime();
   const updated = new Date(item.updated_at).getTime();
   const wasUpdated = updated - created > SAME_TX_BUFFER_MS;
   return wasUpdated
-    ? `Endret ${formatShortDateNb(item.updated_at)}`
-    : `Lagt til ${formatShortDateNb(item.created_at)}`;
+    ? t('kickerUpdated', { date: formatShortDateLocale(item.updated_at, locale) })
+    : t('kickerAdded', { date: formatShortDateLocale(item.created_at, locale) });
 }
 
 // Pure sort+filter — eksportert for testing uavhengig av React.
@@ -163,6 +163,8 @@ export function CoursesLedgerClient({
 }: {
   items: CoursesLedgerItem[];
 }) {
+  const t = useTranslations('admin.courses');
+  const locale = useLocale() as AppLocale;
   const router = useRouter();
   const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
@@ -221,18 +223,25 @@ export function CoursesLedgerClient({
     updateParams({ [paramKey[key]]: filters[key] ? null : '1' });
   }
 
+  const SORT_OPTIONS: { key: SortBy; label: string }[] = [
+    { key: 'created_at', label: t('sortNewest') },
+    { key: 'updated_at', label: t('sortUpdated') },
+    { key: 'last_played', label: t('sortLastPlayed') },
+    { key: 'active_game_count', label: t('sortMostActive') },
+  ];
+
   return (
     <>
       <div className="mt-5">
         <label htmlFor="courses-search" className="sr-only">
-          Søk etter banenavn
+          {t('searchAriaLabel')}
         </label>
         <input
           id="courses-search"
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Søk etter banenavn…"
+          placeholder={t('searchPlaceholder')}
           autoComplete="off"
           className="w-full rounded-xl border border-border bg-surface px-4 py-3 font-sans text-sm text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40"
         />
@@ -243,7 +252,7 @@ export function CoursesLedgerClient({
           htmlFor="courses-sort"
           className="font-sans text-[11px] font-medium uppercase tracking-[0.12em] text-muted"
         >
-          Sortér
+          {t('sortLabel')}
         </label>
         <select
           id="courses-sort"
@@ -251,9 +260,9 @@ export function CoursesLedgerClient({
           onChange={(e) => setSortBy(e.target.value as SortBy)}
           className="rounded-lg border border-border bg-surface px-3 py-1.5 font-sans text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/40"
         >
-          {(Object.keys(SORT_LABELS) as SortBy[]).map((key) => (
+          {SORT_OPTIONS.map(({ key, label }) => (
             <option key={key} value={key}>
-              {SORT_LABELS[key]}
+              {label}
             </option>
           ))}
         </select>
@@ -261,22 +270,22 @@ export function CoursesLedgerClient({
 
       <div className="mt-2 flex flex-wrap gap-2">
         <FilterChip
-          label="Har dame-tee"
+          label={t('filterLadiesTee')}
           active={filters.hasLadiesTee}
           onClick={() => toggleFilter('hasLadiesTee')}
         />
         <FilterChip
-          label="Har junior-tee"
+          label={t('filterJuniorsTee')}
           active={filters.hasJuniorsTee}
           onClick={() => toggleFilter('hasJuniorsTee')}
         />
         <FilterChip
-          label="Aktive spill"
+          label={t('filterActiveGames')}
           active={filters.activeGames}
           onClick={() => toggleFilter('activeGames')}
         />
         <FilterChip
-          label="Spilt siste 30 dager"
+          label={t('filterPlayedRecently')}
           active={filters.playedRecently}
           onClick={() => toggleFilter('playedRecently')}
         />
@@ -285,16 +294,16 @@ export function CoursesLedgerClient({
       {visible.length === 0 ? (
         <p className="mt-6 rounded-2xl border border-border bg-surface px-5 py-8 text-center font-sans text-[13px] text-muted">
           {trimmedQuery !== '' && hasActiveFilter
-            ? `Ingen baner matcher «${trimmedQuery}» og filteret.`
+            ? t('emptyFilterAndQuery', { query: trimmedQuery })
             : trimmedQuery !== ''
-              ? `Ingen baner matcher «${trimmedQuery}».`
-              : `Ingen baner matcher filteret.`}
+              ? t('emptyQuery', { query: trimmedQuery })
+              : t('emptyFilter')}
         </p>
       ) : (
         <div className="mt-5">
           <LedgerHeader
-            leftLabel="Bane"
-            rightLabel="Tees"
+            leftLabel={t('colCourse')}
+            rightLabel={t('colTees')}
             gridTemplateColumns={COURSES_LEDGER_GRID}
           />
 
@@ -324,7 +333,7 @@ export function CoursesLedgerClient({
                       {course.name}
                     </p>
                     <p className="mt-0.5 truncate font-sans text-[11.5px] tabular-nums text-muted">
-                      {rowKicker(course)}
+                      {rowKicker(course, t, locale)}
                     </p>
                   </div>
                   <p className="text-right font-serif text-[15px] font-medium tabular-nums tracking-[-0.005em] text-text">

@@ -1,4 +1,5 @@
 import { Suspense, cache } from 'react';
+import { getTranslations } from 'next-intl/server';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
 import { AdminShell } from '@/components/ui/AdminShell';
@@ -20,21 +21,6 @@ type SearchParams = Promise<{
   name?: string | string[];
   error?: string | string[];
 }>;
-
-const ERROR_MESSAGES: Record<string, string> = {
-  not_found: 'Banen ble ikke funnet.',
-  in_use:
-    'Kan ikke slette banen fordi minst ett spill bruker den. Slett spillene først.',
-  not_owned: 'Du kan kun slette baner du selv har laget.',
-  delete_failed:
-    'Klarte ikke å slette banen. Prøv igjen, eller sjekk Supabase-loggene.',
-};
-
-const STATUS_MESSAGES: Record<string, (name: string) => string> = {
-  created: (name) => `✓ Banen «${name}» ble lagret.`,
-  updated: (name) => `✓ Banen «${name}» ble oppdatert.`,
-  deleted: () => `✓ Banen ble slettet.`,
-};
 
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
@@ -73,14 +59,23 @@ export default async function CoursesPage({
   const supabase = await getServerClient();
   await requireAdminOrTrustedCreator(supabase);
 
+  const t = await getTranslations('admin.courses');
+
   const params = await searchParams;
   const status = first(params.status);
   const name = first(params.name) ?? '';
   const errorCode = first(params.error);
-  const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
+  const errorMessage = errorCode
+    ? t(`errors.${errorCode}` as Parameters<typeof t>[0])
+    : undefined;
 
-  const statusFn = status ? STATUS_MESSAGES[status] : undefined;
-  const statusMessage = statusFn ? statusFn(name) : undefined;
+  const statusMessage = status === 'deleted'
+    ? t('statusMessages.deleted')
+    : status === 'created'
+      ? t('statusMessages.created', { name })
+      : status === 'updated'
+        ? t('statusMessages.updated', { name })
+        : undefined;
 
   return (
     <AdminShell>
@@ -97,11 +92,11 @@ export default async function CoursesPage({
         }
       />
 
-      <BrassRibbon kicker="Baner · katalog" />
+      <BrassRibbon kicker={t('brassRibbonCatalog')} />
 
       <div className="px-1">
         <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-          Registrerte baner
+          {t('heading')}
         </h1>
         <Suspense fallback={<Skeleton className="h-3 w-44" />}>
           <CourseCountLine />
@@ -120,22 +115,24 @@ export default async function CoursesPage({
       </Suspense>
 
       <p className="mt-6 text-center font-serif text-[11px] italic leading-relaxed text-muted">
-        Tap en bane for å redigere katalogen.
+        {t('tapHint')}
       </p>
     </AdminShell>
   );
 }
 
 async function CourseCountLine() {
+  const t = await getTranslations('admin.courses');
   const items = await getCourses();
   return (
     <p className="font-sans text-[11.5px] tabular-nums text-muted">
-      {items.length} {items.length === 1 ? 'bane' : 'baner'} · sortert nyeste først
+      {t('countLine', { n: items.length })}
     </p>
   );
 }
 
 async function CoursesLedger() {
+  const t = await getTranslations('admin.courses');
   const items = await getCourses();
 
   if (items.length === 0) {
@@ -145,10 +142,10 @@ async function CoursesLedger() {
           <BaneIcon width={36} height={36} className="text-primary dark:text-text" />
         </ChampagneMedallion>
         <p className="font-serif text-[16px] font-medium tracking-[-0.005em] text-text">
-          Ingen baner ennå.
+          {t('emptyHeading')}
         </p>
         <p className="mt-1.5 max-w-[280px] font-sans text-[12.5px] leading-relaxed text-muted">
-          Trykk «+ Ny» for å legge til den første banen i katalogen.
+          {t('emptyBody')}
         </p>
       </div>
     );
@@ -157,12 +154,13 @@ async function CoursesLedger() {
   return <CoursesLedgerClient items={items.map(deriveCourseItem)} />;
 }
 
-function CoursesLedgerSkeleton() {
+async function CoursesLedgerSkeleton() {
+  const t = await getTranslations('admin.courses');
   return (
     <>
       <LedgerHeader
-        leftLabel="Bane"
-        rightLabel="Tees"
+        leftLabel={t('colCourse')}
+        rightLabel={t('colTees')}
         gridTemplateColumns={COURSES_LEDGER_GRID}
       />
       <div
