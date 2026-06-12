@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from '@/i18n/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import type { AppLocale } from '@/i18n/routing';
 import {
   NotificationCard,
   type NotificationRow,
@@ -40,13 +41,16 @@ export function InboxClient({
 }) {
   const router = useRouter();
   const t = useTranslations('inbox');
+  const locale = useLocale() as AppLocale;
   const [, startTransition] = useTransition();
   const [markAllPending, startMarkAll] = useTransition();
   const [items, setItems] = useState<NotificationRow[]>(initialNotifications);
 
   const hasUnread = items.some((n) => n.read_at == null);
-  // Pass translated today/yesterday labels so groupByDay stays locale-agnostic
+  // Pass locale + translated today/yesterday labels so groupByDay stays
+  // locale-agnostic (locale drives the «10. des 2025»-style date labels).
   const groups: DayGroup<NotificationRow>[] = groupNotificationsByDay(items, {
+    locale,
     labels: { today: t('today'), yesterday: t('yesterday') },
   });
 

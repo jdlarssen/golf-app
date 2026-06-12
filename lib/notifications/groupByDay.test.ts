@@ -3,6 +3,9 @@ import { groupNotificationsByDay, formatDayLabel } from './groupByDay';
 
 type Item = { id: string; created_at: string };
 
+// Call-site labels (InboxClient passes these from the inbox.* catalog).
+const noLabels = { today: 'I dag', yesterday: 'I går' };
+
 beforeEach(() => {
   // Pin «nå» til en kjent verdi så «I dag»/«I går»-bucketing er deterministisk.
   // 2026-05-24T14:30:00 Europe/Oslo (~12:30 UTC). Mai er sommertid (UTC+2).
@@ -16,7 +19,7 @@ afterEach(() => {
 
 describe('groupNotificationsByDay', () => {
   it('returnerer tom liste for tom input', () => {
-    expect(groupNotificationsByDay<Item>([])).toEqual([]);
+    expect(groupNotificationsByDay<Item>([], { locale: 'no', labels: noLabels })).toEqual([]);
   });
 
   it('grupperer flere varsler fra samme dag under én bucket', () => {
@@ -24,7 +27,7 @@ describe('groupNotificationsByDay', () => {
       { id: 'a', created_at: '2026-05-24T08:00:00Z' },
       { id: 'b', created_at: '2026-05-24T11:00:00Z' },
     ];
-    const groups = groupNotificationsByDay(items);
+    const groups = groupNotificationsByDay(items, { locale: 'no', labels: noLabels });
     expect(groups).toHaveLength(1);
     expect(groups[0].label).toBe('I dag');
     expect(groups[0].items.map((i) => i.id)).toEqual(['a', 'b']);
@@ -36,7 +39,7 @@ describe('groupNotificationsByDay', () => {
       { id: 'b', created_at: '2026-05-23T10:00:00Z' }, // i går
       { id: 'c', created_at: '2026-05-22T10:00:00Z' }, // 22. mai
     ];
-    const groups = groupNotificationsByDay(items);
+    const groups = groupNotificationsByDay(items, { locale: 'no', labels: noLabels });
     expect(groups).toHaveLength(3);
     expect(groups[0].label).toBe('I dag');
     expect(groups[1].label).toBe('I går');
@@ -49,7 +52,7 @@ describe('groupNotificationsByDay', () => {
       { id: 'middle', created_at: '2026-05-24T10:00:00Z' },
       { id: 'oldest', created_at: '2026-05-23T10:00:00Z' },
     ];
-    const groups = groupNotificationsByDay(items);
+    const groups = groupNotificationsByDay(items, { locale: 'no', labels: noLabels });
     expect(groups[0].items.map((i) => i.id)).toEqual(['newest', 'middle']);
     expect(groups[1].items.map((i) => i.id)).toEqual(['oldest']);
   });
@@ -58,22 +61,22 @@ describe('groupNotificationsByDay', () => {
 describe('formatDayLabel', () => {
   it('returnerer «I dag» for samme dato', () => {
     const today = new Date('2026-05-24T08:00:00Z');
-    expect(formatDayLabel(today)).toBe('I dag');
+    expect(formatDayLabel(today, 'no', noLabels)).toBe('I dag');
   });
 
   it('returnerer «I går» for dagen før', () => {
     const yesterday = new Date('2026-05-23T20:00:00Z');
-    expect(formatDayLabel(yesterday)).toBe('I går');
+    expect(formatDayLabel(yesterday, 'no', noLabels)).toBe('I går');
   });
 
   it('returnerer formatert dato for eldre datoer', () => {
     const older = new Date('2026-05-15T10:00:00Z');
-    expect(formatDayLabel(older)).toMatch(/15\.\s*mai/i);
+    expect(formatDayLabel(older, 'no', noLabels)).toMatch(/15\.\s*mai/i);
   });
 
   it('inkluderer år når datoen er fra et tidligere år', () => {
     const lastYear = new Date('2025-12-10T10:00:00Z');
-    expect(formatDayLabel(lastYear)).toMatch(/10\.\s*des\.?\s*2025/i);
+    expect(formatDayLabel(lastYear, 'no', noLabels)).toMatch(/10\.\s*des\.?\s*2025/i);
   });
 });
 

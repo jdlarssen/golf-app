@@ -3,15 +3,13 @@ import { formatShortDateLocale, formatShortDateWithYearLocale } from '@/lib/i18n
 
 /**
  * Labels for the two relative-day buckets («I dag» / «I går»).
- * Passed by the call-site (InboxClient) once it has access to the catalog.
- * Defaults to Norwegian when omitted so the lib stays pure-locale-agnostic.
+ * Passed by the call-site (InboxClient) from the `inbox.*` catalog —
+ * required, so no display copy lives in this module.
  */
 export type DayLabels = {
   today: string;
   yesterday: string;
 };
-
-const DEFAULT_LABELS_NO: DayLabels = { today: 'I dag', yesterday: 'I går' };
 
 /**
  * Returnerer dato-stempel som passer for grupperings-bucket. Tre nivåer:
@@ -26,13 +24,13 @@ const DEFAULT_LABELS_NO: DayLabels = { today: 'I dag', yesterday: 'I går' };
  * presisjon — vi viser når noe skjedde, ikke en eksakt grense-deteksjon.
  *
  * @param d        - Date to format
- * @param locale   - App locale ('no' | 'en'); defaults to 'no' (byte-identical Norwegian output)
- * @param labels   - Translated today/yesterday labels; defaults to Norwegian literals
+ * @param locale   - App locale ('no' | 'en')
+ * @param labels   - Translated today/yesterday labels from the catalog
  */
 export function formatDayLabel(
   d: Date,
-  locale: AppLocale = 'no',
-  labels: DayLabels = DEFAULT_LABELS_NO,
+  locale: AppLocale,
+  labels: DayLabels,
 ): string {
   const now = new Date();
   if (isSameYmd(d, now)) return labels.today;
@@ -71,8 +69,8 @@ export type DayGroup<T> = {
  * Options for groupNotificationsByDay.
  */
 export type GroupByDayOptions = {
-  locale?: AppLocale;
-  labels?: DayLabels;
+  locale: AppLocale;
+  labels: DayLabels;
 };
 
 /**
@@ -84,15 +82,15 @@ export type GroupByDayOptions = {
  * sjelden mer enn ~50 varsler per side i v1).
  *
  * @param items    - List of items with created_at ISO strings
- * @param options  - Optional locale + translated labels (defaults: 'no', Norwegian literals)
+ * @param options  - Active locale + translated labels from the call-site
  */
 export function groupNotificationsByDay<T extends { created_at: string }>(
   items: T[],
-  options: GroupByDayOptions = {},
+  options: GroupByDayOptions,
 ): DayGroup<T>[] {
   if (items.length === 0) return [];
 
-  const { locale = 'no', labels } = options;
+  const { locale, labels } = options;
 
   const groups: DayGroup<T>[] = [];
   for (const item of items) {
