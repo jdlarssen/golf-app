@@ -1,27 +1,11 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
 import { startLeagueRoundFlight } from '@/lib/league/actions';
 import type { LeagueParticipant } from '@/lib/league/getLigaSnapshot';
-
-const ERROR_MAP: Record<string, string> = {
-  need_marker: 'Du må velge minst én medspiller.',
-  outside_window: 'Runden er ikke åpen for spill nå.',
-  already_played: 'Du har allerede spilt denne runden.',
-  round_not_ready: 'Runden mangler bane eller tee — si fra til admin.',
-  not_member: 'En eller flere av de valgte er ikke deltakere i ligaen.',
-  members_failed: 'Klarte ikke å hente deltakerliste. Prøv igjen om litt.',
-  league_not_active: 'Ligaen er ikke aktiv.',
-  round_not_found: 'Fant ikke runden.',
-  league_not_found: 'Fant ikke ligaen.',
-  insert_failed: 'Noe gikk galt under oppretting av flight. Prøv igjen.',
-};
-
-function errorLabel(code: string): string {
-  return ERROR_MAP[code] ?? 'Noe gikk galt, prøv igjen.';
-}
 
 function playerDisplayName(p: LeagueParticipant): string {
   return p.nickname ?? p.name ?? 'Ukjent spiller';
@@ -35,6 +19,7 @@ export function RoundStartClient({
   /** All other league participants (not the current user). */
   coPlayers: LeagueParticipant[];
 }) {
+  const t = useTranslations('liga.player.runde');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -72,12 +57,12 @@ export function RoundStartClient({
       {/* Co-player picker */}
       {coPlayers.length === 0 ? (
         <Banner tone="warning">
-          Ingen andre deltakere i ligaen. Du trenger minst én medspiller (markørregelen).
+          {t('noCoPlayers')}
         </Banner>
       ) : (
         <fieldset className="space-y-2">
           <legend className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-2 block">
-            Velg medspillere
+            {t('coPlayersLegend')}
           </legend>
           <ul className="space-y-2">
             {coPlayers.map((p) => {
@@ -132,7 +117,11 @@ export function RoundStartClient({
       )}
 
       {error && (
-        <Banner tone="error">{errorLabel(error)}</Banner>
+        <Banner tone="error">
+          {t.has(`errorMap.${error}` as Parameters<typeof t>[0])
+            ? t(`errorMap.${error}` as Parameters<typeof t>[0])
+            : t('errorMap.fallback')}
+        </Banner>
       )}
 
       <Button
@@ -141,9 +130,9 @@ export function RoundStartClient({
         className="w-full"
         disabled={selected.size === 0 || isPending || coPlayers.length === 0}
         pending={isPending}
-        pendingLabel="Starter flight …"
+        pendingLabel={t('startPending')}
       >
-        Start flight
+        {t('startButton')}
       </Button>
     </form>
   );

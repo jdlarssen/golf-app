@@ -3070,6 +3070,95 @@
         "active": "The league is currently active. Deleting it removes the league permanently, but the individual flight games remain as standalone games.",
         "finished": "The league has finished. The season standings will be lost, but the individual flight games remain as standalone games."
       }
+    },
+    "player": {
+      "statusLabel": {
+        "draft": "Draft",
+        "active": "Active",
+        "finished": "Finished"
+      },
+      "kicker": "League",
+      "seasonTableHeading": "Season standings",
+      "roundsHeading": "Rounds",
+      "noRoundsYet": "No rounds set up yet.",
+      "roundLabel": "Round {sequence}",
+      "roundFlightCount": "{count, plural, one {# flight} other {# flights}} played",
+      "joinHeading": "Join the league",
+      "joinSubtitle": "You are a club member. Sign up before the league starts.",
+      "joinButton": "Join the league",
+      "joinPending": "Signing up …",
+      "leaveLink": "Withdraw from the league",
+      "notReadyYet": "Not ready yet",
+      "playButton": "Play",
+      "windowChip": {
+        "open": "Open",
+        "upcoming": "Upcoming",
+        "closed": "Closed"
+      },
+      "joinErrors": {
+        "not_draft": "The league has already started. Ask the club admin to add you.",
+        "not_member": "You are not a member of the club.",
+        "not_club_league": "You cannot join this league yourself.",
+        "already_member": "You are already in the league.",
+        "join_failed": "Something went wrong. Please try again."
+      },
+      "meldAv": {
+        "heading": "Withdraw from \"{name}\"?",
+        "subtitle": "You will be removed from the season standings, but you can rejoin as long as the league has not started.",
+        "confirmButton": "Withdraw",
+        "confirmPending": "Withdrawing …",
+        "cancelButton": "Cancel",
+        "errors": {
+          "already_played": "You have already played a round. Ask the club admin to remove you.",
+          "finished": "The league has finished.",
+          "not_member": "You are not in this league.",
+          "not_club_league": "You cannot withdraw from this league yourself.",
+          "leave_failed": "Something went wrong. Please try again."
+        }
+      },
+      "runde": {
+        "kicker": "Start round",
+        "windowUpcoming": "The round is not open yet. Come back when the play window starts.",
+        "windowClosed": "The round is closed for submissions. Contact the admin if you think this is a mistake.",
+        "backToLeague": "Back to league",
+        "missingSetup": "The round is missing a course or tee — the admin will complete the setup soon.",
+        "markerRule": "Select who you are playing with. You need at least one fellow player (marker rule).",
+        "noCoPlayers": "No other participants in the league. You need at least one fellow player (marker rule).",
+        "coPlayersLegend": "Select playing partners",
+        "startButton": "Start flight",
+        "startPending": "Starting flight …",
+        "errorMap": {
+          "need_marker": "You must select at least one playing partner.",
+          "outside_window": "The round is not open for play right now.",
+          "already_played": "You have already played this round.",
+          "round_not_ready": "The round is missing a course or tee — let the admin know.",
+          "not_member": "One or more of the selected players are not participants in the league.",
+          "members_failed": "Could not fetch the participant list. Try again in a moment.",
+          "league_not_active": "The league is not active.",
+          "round_not_found": "Round not found.",
+          "league_not_found": "League not found.",
+          "insert_failed": "Something went wrong while creating the flight. Please try again.",
+          "fallback": "Something went wrong, please try again."
+        }
+      }
+    },
+    "standings": {
+      "net": "Net",
+      "gross": "Gross",
+      "toggleLegend": "Show",
+      "grossOnlyCaption": "Gross",
+      "colRank": "#",
+      "colPlayer": "Player",
+      "colTotal": "Total",
+      "colAverage": "Average",
+      "colBestN": "Best {n}",
+      "colBestNFallback": "Best N",
+      "colPoints": "Points",
+      "emptyState": "No results yet — the first round counts once flights have been submitted.",
+      "unknownPlayer": "Unknown player",
+      "penalisedTitle": "Penalty score (not played)",
+      "flaggedTitle": "Submitted after the original play window",
+      "flaggedAriaLabel": "Submitted outside play window"
     }
   },
   "cup": {
@@ -3232,5 +3321,12 @@
       }
     }
   },
-  "klubbhuset": {}
+  "klubbhuset": {
+    "kicker": "Club House",
+    "pageTitle": "Your games",
+    "pageSubtitle": "The games you are organising. Tap a game to manage it.",
+    "emptyState": "You are not organising any games yet. Set up a round and it will appear here.",
+    "newRoundButton": "Set up new round",
+    "teeOffAt": "at {time}"
+  }
 }

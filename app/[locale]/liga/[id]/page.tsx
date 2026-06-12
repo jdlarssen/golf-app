@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation';
 import { after } from 'next/server';
+import { getTranslations } from 'next-intl/server';
+import { getLocale } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
@@ -17,20 +19,12 @@ import { getServerClient } from '@/lib/supabase/server';
 import { LeagueStandingsPanel } from '@/components/league/LeagueStandingsPanel';
 import { isPointsBasedFormat } from '@/lib/league/flightFormat';
 import type { LeagueFormat } from '@/lib/league/types';
-import { formatShortDateNbWithYear } from '@/lib/format/date';
+import { formatShortDateWithYearLocale } from '@/lib/i18n/format';
+import type { AppLocale } from '@/i18n/routing';
 
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;
-
-/** Join-feilkoder fra join_club_league-RPC-en → norsk melding. */
-const JOIN_ERROR_MESSAGES: Record<string, string> = {
-  not_draft: 'Ligaen har allerede startet. Be klubb-admin om å legge deg til.',
-  not_member: 'Du er ikke medlem av klubben.',
-  not_club_league: 'Denne ligaen kan du ikke bli med i selv.',
-  already_member: 'Du er allerede med i ligaen.',
-  join_failed: 'Noe gikk galt. Prøv igjen.',
-};
 
 function firstParam(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
@@ -48,80 +42,34 @@ function windowStatus(
 }
 
 /**
- * Format an ISO date/timestamp string as a short Norwegian date.
+ * Format an ISO date/timestamp string as a short locale-aware date.
  * For plain YYYY-MM-DD dates (season start/end), we parse as local time by
  * appending T12:00:00 (midday avoids any UTC-midnight edge near DST).
  * For timestamptz strings (round windows), we use them directly.
  */
-function fmtWindow(iso: string): string {
+function fmtWindow(iso: string, locale: AppLocale): string {
   // Plain date: "2026-06-01" — no time component
   const d = iso.length === 10 ? new Date(`${iso}T12:00:00`) : new Date(iso);
-  return formatShortDateNbWithYear(d);
+  return formatShortDateWithYearLocale(d, locale);
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  draft: 'Utkast',
-  active: 'Aktiv',
-  finished: 'Avsluttet',
-};
-
-const WINDOW_CHIP: Record<
+const WINDOW_CHIP_STYLES: Record<
   'open' | 'upcoming' | 'closed',
-  { label: string; style: React.CSSProperties }
+  React.CSSProperties
 > = {
   open: {
-    label: 'Åpen',
-    style: {
-      background: 'var(--score-under-bg)',
-      color: 'var(--score-under-fg)',
-    },
+    background: 'var(--score-under-bg)',
+    color: 'var(--score-under-fg)',
   },
   upcoming: {
-    label: 'Kommer',
-    style: {
-      background: 'var(--score-par-bg)',
-      color: 'var(--score-par-fg)',
-    },
+    background: 'var(--score-par-bg)',
+    color: 'var(--score-par-fg)',
   },
   closed: {
-    label: 'Lukket',
-    style: {
-      background: 'var(--score-over2-bg)',
-      color: 'var(--score-over2-fg)',
-    },
+    background: 'var(--score-over2-bg)',
+    color: 'var(--score-over2-fg)',
   },
 };
-
-function WindowChip({ status }: { status: 'open' | 'upcoming' | 'closed' }) {
-  const { label, style } = WINDOW_CHIP[status];
-  return (
-    <span
-      className="inline-block rounded-full px-2 py-0.5 font-sans text-[10px] font-semibold uppercase"
-      style={{ letterSpacing: '0.14em', ...style }}
-    >
-      {label}
-    </span>
-  );
-}
-
-function StatusChipLeague({ status }: { status: string }) {
-  const label = STATUS_LABELS[status] ?? status;
-  const style: React.CSSProperties =
-    status === 'active'
-      ? { background: 'var(--score-under-bg)', color: 'var(--score-under-fg)' }
-      : status === 'finished'
-        ? { background: 'var(--score-par-bg)', color: 'var(--score-par-fg)' }
-        : { background: 'var(--score-over1-bg)', color: 'var(--score-over1-fg)' };
-
-  return (
-    <span
-      className="inline-block rounded-full px-2 py-0.5 font-sans text-[10px] font-semibold uppercase"
-      style={{ letterSpacing: '0.14em', ...style }}
-    >
-      {label}
-    </span>
-  );
-}
 
 export default async function LigaPublicPage({
   params,
@@ -131,6 +79,10 @@ export default async function LigaPublicPage({
   searchParams: SearchParams;
 }) {
   const { id } = await params;
+  const [t, locale] = await Promise.all([
+    getTranslations('liga.player'),
+    getLocale() as Promise<AppLocale>,
+  ]);
 
   // Load snapshot (admin client — no auth needed for RLS bypass; route is
   // session-gated by proxy.ts already).
@@ -208,11 +160,15 @@ export default async function LigaPublicPage({
   });
   const sp = await searchParams;
   const joinError = firstParam(sp.error);
-  const joinErrorMessage = joinError ? JOIN_ERROR_MESSAGES[joinError] : undefined;
+  const joinErrorMessage = joinError
+    ? (t.has(`joinErrors.${joinError}` as Parameters<typeof t>[0])
+        ? t(`joinErrors.${joinError}` as Parameters<typeof t>[0])
+        : undefined)
+    : undefined;
 
   return (
     <AppShell>
-      <TopBar backHref="/" back="history" kicker="Liga" userId={currentUserId} />
+      <TopBar backHref="/" back="history" kicker={t('kicker')} userId={currentUserId} />
 
       {/* Header */}
       <header className="mb-6">
@@ -220,10 +176,25 @@ export default async function LigaPublicPage({
           <h1 className="font-serif text-2xl text-text leading-tight tracking-[-0.015em]">
             {league.name}
           </h1>
-          <StatusChipLeague status={league.status} />
+          {/* Status chip — player-facing 'Aktiv' (not the admin 'Pågående') */}
+          <span
+            className="inline-block rounded-full px-2 py-0.5 font-sans text-[10px] font-semibold uppercase"
+            style={{
+              letterSpacing: '0.14em',
+              ...(league.status === 'active'
+                ? { background: 'var(--score-under-bg)', color: 'var(--score-under-fg)' }
+                : league.status === 'finished'
+                  ? { background: 'var(--score-par-bg)', color: 'var(--score-par-fg)' }
+                  : { background: 'var(--score-over1-bg)', color: 'var(--score-over1-fg)' }),
+            }}
+          >
+            {t.has(`statusLabel.${league.status}` as Parameters<typeof t>[0])
+              ? t(`statusLabel.${league.status}` as Parameters<typeof t>[0])
+              : league.status}
+          </span>
         </div>
         <p className="mt-1 text-sm text-muted">
-          {fmtWindow(league.season_start)} – {fmtWindow(league.season_end)}
+          {fmtWindow(league.season_start, locale)} – {fmtWindow(league.season_end, locale)}
         </p>
       </header>
 
@@ -236,17 +207,17 @@ export default async function LigaPublicPage({
       {canJoin && (
         <section className="mb-8">
           <Card className="p-4 sm:p-5">
-            <p className="font-serif text-base text-text">Bli med i ligaen</p>
+            <p className="font-serif text-base text-text">{t('joinHeading')}</p>
             <p className="mt-1 mb-3 text-sm text-muted">
-              Du er medlem i klubben. Meld deg på før ligaen starter.
+              {t('joinSubtitle')}
             </p>
             <form action={joinClubLeague}>
               <input type="hidden" name="league_id" value={league.id} />
               <SubmitButton
                 className="w-full sm:w-auto"
-                pendingLabel="Melder deg på …"
+                pendingLabel={t('joinPending')}
               >
-                Bli med i ligaen
+                {t('joinButton')}
               </SubmitButton>
             </form>
           </Card>
@@ -256,7 +227,7 @@ export default async function LigaPublicPage({
       {/* Standings table */}
       <section className="mb-8">
         <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-3">
-          Sesong-tabell
+          {t('seasonTableHeading')}
         </h2>
         <Card className="p-3 sm:p-4">
           <LeagueStandingsPanel
@@ -273,11 +244,11 @@ export default async function LigaPublicPage({
       {/* Rounds list */}
       <section className="mb-6">
         <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-3">
-          Runder
+          {t('roundsHeading')}
         </h2>
         {rounds.length === 0 ? (
           <Card>
-            <p className="text-sm text-muted">Ingen runder er satt opp ennå.</p>
+            <p className="text-sm text-muted">{t('noRoundsYet')}</p>
           </Card>
         ) : (
           <ul className="space-y-3">
@@ -293,20 +264,25 @@ export default async function LigaPublicPage({
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
-                            Runde {round.sequence}
+                            {t('roundLabel', { sequence: round.sequence })}
                           </span>
-                          <WindowChip status={ws} />
+                          {/* Window chip */}
+                          <span
+                            className="inline-block rounded-full px-2 py-0.5 font-sans text-[10px] font-semibold uppercase"
+                            style={{ letterSpacing: '0.14em', ...WINDOW_CHIP_STYLES[ws] }}
+                          >
+                            {t(`windowChip.${ws}` as Parameters<typeof t>[0])}
+                          </span>
                         </div>
                         <p className="font-serif text-base text-text">
                           {round.label}
                         </p>
                         <p className="mt-0.5 text-xs text-muted">
-                          {fmtWindow(round.opensAt)} – {fmtWindow(round.closesAt)}
+                          {fmtWindow(round.opensAt, locale)} – {fmtWindow(round.closesAt, locale)}
                         </p>
                         {round.flightCount > 0 && (
                           <p className="mt-0.5 text-xs text-muted">
-                            {round.flightCount}{' '}
-                            {round.flightCount === 1 ? 'flight' : 'flights'} spilt
+                            {t('roundFlightCount', { count: round.flightCount })}
                           </p>
                         )}
                       </div>
@@ -319,11 +295,11 @@ export default async function LigaPublicPage({
                             variant="primary"
                             className="text-sm px-4 py-2 min-h-[44px]"
                           >
-                            Spill
+                            {t('playButton')}
                           </LinkButton>
                         ) : isParticipant && ws === 'open' && !roundReady ? (
                           <span className="text-xs text-muted italic">
-                            Ikke klar ennå
+                            {t('notReadyYet')}
                           </span>
                         ) : null}
                       </div>
@@ -343,7 +319,7 @@ export default async function LigaPublicPage({
             href={`/liga/${id}/meld-av`}
             className="font-sans text-[13px] text-muted underline underline-offset-2 hover:text-text"
           >
-            Meld deg av ligaen
+            {t('leaveLink')}
           </SmartLink>
         </div>
       )}

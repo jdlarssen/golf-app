@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { SegmentedField } from '@/components/ui/SegmentedField';
 import { LeagueStandingsTable } from './LeagueStandingsTable';
 import type { LeagueStandingsByScoring, StandingsMetric } from '@/lib/league/types';
@@ -28,6 +29,7 @@ export function LeagueStandingsPanel({
   /** #452 Fase 4: stableford-formater viser rå poeng (ikke mot-par) i cellene. */
   pointsBased?: boolean;
 }) {
+  const t = useTranslations('liga.standings');
   const both = standings.net !== null && standings.gross !== null;
   const [metric, setMetric] = useState<StandingsMetric>(standings.net !== null ? 'net' : 'gross');
 
@@ -40,10 +42,10 @@ export function LeagueStandingsPanel({
       {both ? (
         <div className="mb-3">
           <SegmentedField
-            legend="Vis"
+            legend={t('toggleLegend')}
             options={[
-              { value: 'net', label: 'Netto' },
-              { value: 'gross', label: 'Brutto' },
+              { value: 'net', label: t('net') },
+              { value: 'gross', label: t('gross') },
             ]}
             value={metric}
             onChange={(v) => setMetric(v as StandingsMetric)}
@@ -51,7 +53,7 @@ export function LeagueStandingsPanel({
         </div>
       ) : standings.gross !== null ? (
         <p className="mb-2 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          Brutto
+          {t('grossOnlyCaption')}
         </p>
       ) : null}
 

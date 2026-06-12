@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl';
 import type { LeagueStandingRow, LeagueStandingCell } from '@/lib/league/types';
 import type { LeagueRoundView, LeagueParticipant } from '@/lib/league/getLigaSnapshot';
 import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
@@ -38,10 +39,12 @@ function RoundCell({
   cell,
   model,
   pointsBased,
+  t,
 }: {
   cell: LeagueStandingCell | undefined;
   model: string;
   pointsBased: boolean;
+  t: ReturnType<typeof useTranslations<'liga.standings'>>;
 }) {
   const isPoints = model === 'points';
   const raw = cell ? (isPoints ? cell.points : cell.value) : null;
@@ -66,9 +69,9 @@ function RoundCell({
       ].join(' ')}
       title={
         isFlagged
-          ? 'Levert etter opprinnelig vindu'
+          ? t('flaggedTitle')
           : isPenalty
-            ? 'Straffescore (ikke spilt)'
+            ? t('penalisedTitle')
             : undefined
       }
     >
@@ -77,7 +80,7 @@ function RoundCell({
         <span
           className="ml-0.5 inline-block h-1 w-1 rounded-full align-middle"
           style={{ background: 'var(--accent)' }}
-          aria-label="Levert utenfor vindu"
+          aria-label={t('flaggedAriaLabel')}
         />
       )}
     </td>
@@ -100,10 +103,12 @@ export function LeagueStandingsTable({
   /** #452 Fase 4: stableford-formater viser rå poeng (høyest best) i cellene. */
   pointsBased?: boolean;
 }) {
+  const t = useTranslations('liga.standings');
+
   if (rows.length === 0) {
     return (
       <p data-testid="liga-standings-empty" className="text-sm text-muted text-center py-4">
-        Ingen resultater ennå — første runde teller når flights er levert.
+        {t('emptyState')}
       </p>
     );
   }
@@ -117,14 +122,14 @@ export function LeagueStandingsTable({
 
   const valueHeader =
     standingsModel === 'points'
-      ? 'Poeng'
+      ? t('colPoints')
       : standingsModel === 'average'
-        ? 'Snitt'
+        ? t('colAverage')
         : standingsModel === 'best_n'
           ? bestNCount
-            ? `Beste ${bestNCount}`
-            : 'Beste N'
-          : 'Totalt';
+            ? t('colBestN', { n: bestNCount })
+            : t('colBestNFallback')
+          : t('colTotal');
 
   return (
     <div className="w-full overflow-x-auto -mx-1">
@@ -136,10 +141,10 @@ export function LeagueStandingsTable({
         <thead>
           <tr className="border-b border-border">
             <th className="w-8 px-2 py-2 text-left font-sans text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
-              #
+              {t('colRank')}
             </th>
             <th className="px-2 py-2 text-left font-sans text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
-              Spiller
+              {t('colPlayer')}
             </th>
             {rounds.map((r) => (
               <th
@@ -157,7 +162,7 @@ export function LeagueStandingsTable({
         <tbody>
           {ordered.map((row, idx) => {
             const participant = participantMap.get(row.userId);
-            const name = participant ? playerName(participant) : 'Ukjent spiller';
+            const name = participant ? playerName(participant) : t('unknownPlayer');
             const isFirst = row.rank === 1;
             const isUnranked = !row.ranked;
 
@@ -207,7 +212,7 @@ export function LeagueStandingsTable({
                 {rounds.map((r) => {
                   const cell = row.perRound.find((c) => c.roundId === r.id);
                   return (
-                    <RoundCell key={r.id} cell={cell} model={standingsModel} pointsBased={pointsBased} />
+                    <RoundCell key={r.id} cell={cell} model={standingsModel} pointsBased={pointsBased} t={t} />
                   );
                 })}
 

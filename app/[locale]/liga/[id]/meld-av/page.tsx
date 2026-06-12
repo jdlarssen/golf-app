@@ -1,4 +1,7 @@
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getLigaSnapshot } from '@/lib/league/getLigaSnapshot';
 import { leagueSelfServiceState } from '@/lib/league/selfService';
@@ -9,19 +12,11 @@ import { Banner } from '@/components/ui/Banner';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { leaveClubLeague } from '@/lib/league/actions';
+import type { AppLocale } from '@/i18n/routing';
 
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;
-
-/** Leave-feilkoder fra leave_club_league-RPC-en → norsk melding. */
-const LEAVE_ERROR_MESSAGES: Record<string, string> = {
-  already_played: 'Du har allerede spilt en runde. Be klubb-admin om å fjerne deg.',
-  finished: 'Ligaen er avsluttet.',
-  not_member: 'Du er ikke med i denne ligaen.',
-  not_club_league: 'Denne ligaen kan du ikke melde deg av selv.',
-  leave_failed: 'Noe gikk galt. Prøv igjen.',
-};
 
 function firstParam(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
@@ -44,18 +39,22 @@ export default async function MeldAvLigaPage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
+  const [t, locale] = await Promise.all([
+    getTranslations('liga.player.meldAv'),
+    getLocale() as Promise<AppLocale>,
+  ]);
 
   const supabase = await getServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect(`/login?next=/liga/${id}/meld-av`);
+  if (!user) redirect({ href: `/login?next=/liga/${id}/meld-av`, locale });
 
   const snapshot = await getLigaSnapshot(id);
   if (!snapshot) notFound();
   const { league, participants } = snapshot;
 
-  const me = participants.find((p) => p.userId === user.id);
+  const me = participants.find((p) => p.userId === user!.id);
   const { canLeave } = leagueSelfServiceState({
     groupId: league.group_id,
     status: league.status as LeagueStatus,
@@ -63,10 +62,14 @@ export default async function MeldAvLigaPage({
     isParticipant: me !== undefined,
     hasPlayed: me?.hasPlayed ?? false,
   });
-  if (!canLeave) redirect(`/liga/${id}`);
+  if (!canLeave) redirect({ href: `/liga/${id}`, locale });
 
   const errorCode = firstParam(sp.error);
-  const errorMessage = errorCode ? LEAVE_ERROR_MESSAGES[errorCode] : undefined;
+  const errorMessage = errorCode
+    ? (t.has(`errors.${errorCode}` as Parameters<typeof t>[0])
+        ? t(`errors.${errorCode}` as Parameters<typeof t>[0])
+        : undefined)
+    : undefined;
 
   return (
     <AppShell>
@@ -81,11 +84,10 @@ export default async function MeldAvLigaPage({
       <div className="space-y-6">
         <div className="px-1">
           <h1 className="mb-2 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-            Meld deg av «{league.name}»?
+            {t('heading', { name: league.name })}
           </h1>
           <p className="font-sans text-[13px] leading-relaxed text-muted">
-            Du tas ut av sesong-tabellen, men kan bli med igjen så lenge ligaen
-            ikke har startet.
+            {t('subtitle')}
           </p>
         </div>
 
@@ -95,16 +97,16 @@ export default async function MeldAvLigaPage({
             <SubmitButton
               variant="danger"
               className="w-full"
-              pendingLabel="Melder deg av …"
+              pendingLabel={t('confirmPending')}
             >
-              Meld meg av
+              {t('confirmButton')}
             </SubmitButton>
           </form>
           <SmartLink
             href={`/liga/${id}`}
             className="rounded-full border border-border bg-surface px-4 py-3 text-center font-sans text-[13px] font-medium text-text min-h-[44px] flex items-center justify-center"
           >
-            Avbryt
+            {t('cancelButton')}
           </SmartLink>
         </div>
       </div>

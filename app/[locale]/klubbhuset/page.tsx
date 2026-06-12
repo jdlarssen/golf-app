@@ -1,4 +1,6 @@
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
@@ -7,8 +9,9 @@ import { Card } from '@/components/ui/Card';
 import { LinkButton } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
-import { formatTeeOffDate, formatTeeOffTime } from '@/lib/format/teeOff';
+import { formatTeeOffDateLocale, formatTeeOffTimeLocale } from '@/lib/i18n/format';
 import type { GameStatus } from '@/lib/games/status';
+import type { AppLocale } from '@/i18n/routing';
 
 type CreatedGame = {
   id: string;
@@ -37,16 +40,20 @@ const STATUS_TO_TONE: Record<GameStatus, StatusChipTone> = {
  * «Styr spillere» / Rediger / Avslutt arranger controls live.
  */
 export default async function KlubbhusetPage() {
+  const [t, locale] = await Promise.all([
+    getTranslations('klubbhuset'),
+    getLocale() as Promise<AppLocale>,
+  ]);
   const supabase = await getServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  if (!user) redirect({ href: '/login', locale });
 
   const { data: games } = await supabase
     .from('games')
     .select('id, name, status, scheduled_tee_off_at, courses(name)')
-    .eq('created_by', user.id)
+    .eq('created_by', user!.id)
     .order('created_at', { ascending: false })
     .returns<CreatedGame[]>();
 
@@ -54,20 +61,19 @@ export default async function KlubbhusetPage() {
 
   return (
     <AppShell>
-      <TopBar backHref="/admin" kicker="Klubbhuset" />
+      <TopBar backHref="/admin" kicker={t('kicker')} />
       <PageHeader
-        title="Spillene dine"
-        subtitle="Spillene du arrangerer. Trykk et spill for å styre det."
+        title={t('pageTitle')}
+        subtitle={t('pageSubtitle')}
       />
 
       {created.length === 0 ? (
         <div className="space-y-5 text-center">
           <p className="text-sm text-muted">
-            Du arrangerer ingen spill ennå. Sett opp en runde, så dukker den opp
-            her.
+            {t('emptyState')}
           </p>
           <LinkButton href="/opprett-spill" full>
-            Sett opp ny runde
+            {t('newRoundButton')}
           </LinkButton>
         </div>
       ) : (
@@ -91,7 +97,7 @@ export default async function KlubbhusetPage() {
                       )}
                       {teeOff && (
                         <span className="mt-1 block truncate text-xs tabular-nums text-muted">
-                          {formatTeeOffDate(teeOff)} kl. {formatTeeOffTime(teeOff)}
+                          {formatTeeOffDateLocale(teeOff, locale)} {t('teeOffAt', { time: formatTeeOffTimeLocale(teeOff, locale) })}
                         </span>
                       )}
                     </div>
