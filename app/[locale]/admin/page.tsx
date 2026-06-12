@@ -1,4 +1,5 @@
 import { Suspense, cache } from 'react';
+import { getTranslations, getLocale } from 'next-intl/server';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
 import { AdminShell } from '@/components/ui/AdminShell';
@@ -18,7 +19,8 @@ import {
 } from '@/components/icons';
 import { firstName } from '@/lib/firstName';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
-import { formatShortDateNb } from '@/lib/format/date';
+import { formatShortDateLocale } from '@/lib/i18n/format';
+import type { AppLocale } from '@/i18n/routing';
 import { displayName, type DisplayNameUser } from '@/lib/format/displayName';
 import { getRoleContext, type AdminRoleContext } from '@/lib/admin/auth';
 
@@ -39,14 +41,6 @@ const getRole = cache(async () => {
   return getRoleContext(supabase);
 });
 
-function greeting(d: Date): string {
-  const h = d.getHours();
-  if (h < 10) return 'morgen';
-  if (h < 12) return 'formiddag';
-  if (h < 18) return 'ettermiddag';
-  return 'kveld';
-}
-
 function isoWeek(d: Date): number {
   const target = new Date(d.valueOf());
   const dayNr = (d.getDay() + 6) % 7;
@@ -57,10 +51,6 @@ function isoWeek(d: Date): number {
     target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
   }
   return 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
-}
-
-function formatDateNb(d: Date): string {
-  return `${formatShortDateNb(d)} · uke ${isoWeek(d)}`;
 }
 
 function formatHHMM(iso: string): string {
@@ -90,9 +80,14 @@ export default async function KlubbhusetPage() {
   const role = await getRole();
   if (!role.isAdmin) return <PlayerKlubbhus role={role} />;
 
+  const t = await getTranslations('admin.dashboard');
+  const locale = await getLocale();
+
   const now = new Date();
-  const dateLine = formatDateNb(now);
-  const timeOfDay = greeting(now);
+  const week = isoWeek(now);
+  const dateLine = t('dateLine', { date: formatShortDateLocale(now, locale as AppLocale), week });
+  const timeOfDay = getTimeOfDay(now);
+  const timeOfDayWord = t(timeOfDay);
 
   return (
     <AdminShell>
@@ -101,7 +96,7 @@ export default async function KlubbhusetPage() {
       <TopBar backHref="/" kicker="Klubbhuset" />
 
       <Suspense fallback={<GreetingSkeleton dateLine={dateLine} />}>
-        <GreetingCard dateLine={dateLine} timeOfDay={timeOfDay} />
+        <GreetingCard dateLine={dateLine} timeOfDayWord={timeOfDayWord} />
       </Suspense>
 
       <Suspense fallback={<TilesSkeleton />}>
@@ -109,7 +104,7 @@ export default async function KlubbhusetPage() {
       </Suspense>
 
       <p className="mt-6 mb-1.5 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-        Siste hendelser
+        {t('sectionLabel')}
       </p>
       <Suspense fallback={<LedgerSkeleton />}>
         <ActivityLedger />
@@ -120,16 +115,26 @@ export default async function KlubbhusetPage() {
   );
 }
 
+/** Returns the translation key name for the current time-of-day word. */
+function getTimeOfDay(d: Date): 'timeOfDayMorgen' | 'timeOfDayFormiddag' | 'timeOfDayEttermiddag' | 'timeOfDayKveld' {
+  const h = d.getHours();
+  if (h < 10) return 'timeOfDayMorgen';
+  if (h < 12) return 'timeOfDayFormiddag';
+  if (h < 18) return 'timeOfDayEttermiddag';
+  return 'timeOfDayKveld';
+}
+
 // ─── Greeting card ───────────────────────────────────────────────────────
 
 async function GreetingCard({
   dateLine,
-  timeOfDay,
+  timeOfDayWord,
 }: {
   dateLine: string;
-  timeOfDay: string;
+  timeOfDayWord: string;
 }) {
   const { supabase, userId } = await getAdminContext();
+  const t = await getTranslations('admin.dashboard');
   const { data: profile } = await supabase
     .from('users')
     .select('name')
@@ -147,10 +152,10 @@ async function GreetingCard({
       }}
     >
       <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-        Saksbehandler
+        {t('saksbehandlerLabel')}
       </p>
       <h1 className="mt-1 font-serif text-[22px] font-medium leading-snug tracking-[-0.015em] text-text">
-        God {timeOfDay}, {firstNameValue}.
+        {t('greetingHeading', { timeOfDay: timeOfDayWord, name: firstNameValue })}
       </h1>
       <p className="mt-1.5 font-sans text-xs tabular-nums text-muted">
         {dateLine}
@@ -198,6 +203,8 @@ async function TilesGrid() {
   // here, so these counts (all games / all users / all courses) only ever run
   // for an admin.
   const { supabase } = await getAdminContext();
+  const t = await getTranslations('admin.dashboard');
+  const locale = await getLocale();
   const now = new Date();
 
   const [
@@ -264,86 +271,88 @@ async function TilesGrid() {
 
   const tiles: Tile[] = [
     {
-      label: 'Spill',
+      label: t('tilesSpill'),
       href: '/admin/games',
-      meta: `${activeCount} aktive · ${plannedCount} planlagte`,
+      meta: t('metaActiveAndPlanned', { active: activeCount, planned: plannedCount }),
       icon: 'flagg',
       accent: true,
     },
     {
-      label: 'Spillere',
+      label: t('tilesSpillere'),
       href: '/admin/spillere',
       meta:
         userCount === 0
-          ? 'Ingen registrerte ennå'
-          : `${userCount} registrert${pendingInvites > 0 ? ` · ${pendingInvites} venter` : ''}`,
+          ? t('metaNoneRegistered')
+          : pendingInvites > 0
+            ? t('metaRegisteredPending', { n: userCount, pending: pendingInvites })
+            : t('metaRegistered', { n: userCount }),
       icon: 'konvolutt',
     },
     {
-      label: 'Baner',
+      label: t('tilesBaner'),
       href: '/admin/courses',
       meta:
         courseCount === 0
-          ? 'Ingen registrerte ennå'
-          : `${courseCount} registrert${courseCount === 1 ? '' : 'e'}`,
+          ? t('metaNoneRegistered')
+          : t('metaRegistered', { n: courseCount }),
       icon: 'bane',
     },
     {
-      label: 'Resultatprotokoll',
+      label: t('tilesProtokoll'),
       href: '/admin/games?status=finished',
       meta: lastFinishedAt
-        ? `Sist signert ${formatShortDateNb(lastFinishedAt)}`
-        : 'Ingen signerte runder',
+        ? t('metaLastSigned', { date: formatShortDateLocale(lastFinishedAt, locale as AppLocale) })
+        : t('metaNoneSigned'),
       icon: 'pokal',
     },
     {
-      label: 'Lanseringer',
+      label: t('tilesLanseringer'),
       href: '/admin/lanseringer',
       meta: lastPublishedAt
-        ? `Sist publisert ${formatShortDateNb(lastPublishedAt)}`
-        : 'Ingen publisert ennå',
+        ? t('metaLastPublished', { date: formatShortDateLocale(lastPublishedAt, locale as AppLocale) })
+        : t('metaNonePublished'),
       icon: 'sparkle',
     },
     {
-      label: 'Cuper',
+      label: t('tilesCuper'),
       href: '/admin/cup',
       meta:
         activeCupCount === 0
-          ? 'Ingen aktive'
-          : `${activeCupCount} aktiv${activeCupCount === 1 ? '' : 'e'}`,
+          ? t('metaNoneActive')
+          : t('metaActive', { n: activeCupCount }),
       icon: 'pokal',
     },
     {
-      label: 'Ligaer',
+      label: t('tilesLigaer'),
       href: '/admin/liga',
       meta:
         activeLeagueCount === 0
-          ? 'Ingen aktive'
-          : `${activeLeagueCount} aktiv${activeLeagueCount === 1 ? '' : 'e'}`,
+          ? t('metaNoneActive')
+          : t('metaActive', { n: activeLeagueCount }),
       icon: 'pokal',
     },
     // F3 (#273): admin format-mapping. Mappings + cup-eligibility +
     // active-flagg styres herfra. Meta er statisk (vi har ingen tellbar
     // KPI per d.d. — kan utvides hvis vi vil vise antall aktive formats).
     {
-      label: 'Formats',
+      label: t('tilesFormats'),
       href: '/admin/formats',
-      meta: 'Styr spillformene i wizarden',
+      meta: t('metaFormats'),
       icon: 'formats',
     },
     // #50: klubber — admin governance (opprett og styr klubber).
     {
-      label: 'Klubber',
+      label: t('tilesKlubber'),
       href: '/admin/klubber',
-      meta: 'Opprett og styr klubber',
+      meta: t('metaKlubber'),
       icon: 'laurbaer',
     },
     // #500: oppslagsverket — et rolig sted å lese om formatene (flyttet hit fra
     // Hjem; den raske «slik funker det» bor bak «?» i veiviseren).
     {
-      label: 'Spillformater',
+      label: t('tilesSpillformater'),
       href: '/spillformater',
-      meta: 'Bli kjent med formatene',
+      meta: t('metaSpillformater'),
       icon: 'spillformater',
     },
   ];
@@ -413,6 +422,7 @@ function TileGridView({ tiles }: { tiles: Tile[] }) {
  */
 async function PlayerKlubbhus({ role }: { role: AdminRoleContext }) {
   const { supabase } = await getAdminContext();
+  const t = await getTranslations('admin.dashboard');
   const { data: profile } = await supabase
     .from('users')
     .select('name')
@@ -422,40 +432,40 @@ async function PlayerKlubbhus({ role }: { role: AdminRoleContext }) {
 
   const banerTile: Tile = role.isTrusted
     ? {
-        label: 'Baner',
+        label: t('playerBaner'),
         href: '/admin/courses',
-        meta: 'Se og legg til baner',
+        meta: t('playerBanerTrustedMeta'),
         icon: 'bane',
       }
     : {
-        label: 'Baner',
+        label: t('playerBaner'),
         href: '/opprett-bane',
-        meta: 'Legg til en bane',
+        meta: t('playerBanerMeta'),
         icon: 'bane',
       };
 
   const tiles: Tile[] = [
     {
-      label: 'Spill',
+      label: t('playerSpill'),
       href: '/klubbhuset',
-      meta: 'Spillene du arrangerer',
+      meta: t('playerSpillMeta'),
       icon: 'flagg',
       accent: true,
     },
     banerTile,
     // #442: klubber — opprett og styr klubber.
     {
-      label: 'Klubber',
+      label: t('playerKlubber'),
       href: '/klubber',
-      meta: 'Klubbene dine',
+      meta: t('playerKlubberMeta'),
       icon: 'laurbaer',
     },
     // #500: oppslagsverket — også for vanlige spillere, så de beholder browse-
     // tilgang til formatene når format-kortet fjernes fra Hjem.
     {
-      label: 'Spillformater',
+      label: t('playerSpillformater'),
       href: '/spillformater',
-      meta: 'Bli kjent med formatene',
+      meta: t('playerSpillformaterMeta'),
       icon: 'spillformater',
     },
   ];
@@ -473,13 +483,13 @@ async function PlayerKlubbhus({ role }: { role: AdminRoleContext }) {
         }}
       >
         <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          Klubbhuset
+          {t('klubbhusLabel')}
         </p>
         <h1 className="mt-1 font-serif text-[22px] font-medium leading-snug tracking-[-0.015em] text-text">
-          Hei, {firstNameValue}.
+          {t('playerGreeting', { name: firstNameValue })}
         </h1>
         <p className="mt-1.5 font-sans text-xs text-muted">
-          Sett opp en runde eller legg til en bane.
+          {t('playerSubtitle')}
         </p>
         <ClubStamp className="absolute right-[14px] top-[14px]" />
       </section>
@@ -487,7 +497,7 @@ async function PlayerKlubbhus({ role }: { role: AdminRoleContext }) {
       <TileGridView tiles={tiles} />
 
       <PullQuote className="mt-6">
-        En god runde begynner med god planlegging.
+        {t('playerPullQuote')}
       </PullQuote>
     </AdminShell>
   );
@@ -514,6 +524,7 @@ function TilesSkeleton() {
 
 async function ActivityLedger() {
   const { supabase } = await getAdminContext();
+  const t = await getTranslations('admin.dashboard');
   // eslint-disable-next-line react-hooks/purity
   const nowMs = Date.now();
   const sinceIso = new Date(nowMs - 14 * 24 * 60 * 60 * 1000).toISOString();
@@ -596,7 +607,7 @@ async function ActivityLedger() {
     activity.push({
       ts: r.submitted_at,
       who: shortName(r.users?.name),
-      action: 'leverte scorekort',
+      action: t('actionsSubmitted'),
       ref: r.games?.name ?? '(spill)',
     });
   }
@@ -604,7 +615,7 @@ async function ActivityLedger() {
     activity.push({
       ts: r.approved_at,
       who: shortName(r.users?.name),
-      action: 'fikk scorekort signert',
+      action: t('actionsApproved'),
       ref: r.games?.name ?? '(spill)',
     });
   }
@@ -612,16 +623,16 @@ async function ActivityLedger() {
     if (g.started_at && g.started_at >= sinceIso) {
       activity.push({
         ts: g.started_at,
-        who: 'Sekretariatet',
-        action: 'startet runden',
+        who: t('actionsSecretary'),
+        action: t('actionsStarted'),
         ref: g.name,
       });
     }
     if (g.ended_at && g.ended_at >= sinceIso) {
       activity.push({
         ts: g.ended_at,
-        who: 'Sekretariatet',
-        action: 'signerte protokollen',
+        who: t('actionsSecretary'),
+        action: t('actionsSigned'),
         ref: g.name,
       });
     }
@@ -629,8 +640,8 @@ async function ActivityLedger() {
   for (const c of coursesEvRes.data ?? []) {
     activity.push({
       ts: c.created_at,
-      who: displayName(c.created_by_user) ?? 'Sekretariatet',
-      action: 'registrerte ny bane',
+      who: displayName(c.created_by_user) ?? t('actionsSecretary'),
+      action: t('actionsNewCourse'),
       ref: c.name,
     });
   }
@@ -638,7 +649,7 @@ async function ActivityLedger() {
     activity.push({
       ts: inv.accepted_at,
       who: shortName(inv.email.split('@')[0]),
-      action: 'tok imot invitasjon',
+      action: t('actionsAcceptedInvite'),
       ref: inv.games?.name ?? 'klubbinvitasjon',
     });
   }
@@ -649,7 +660,7 @@ async function ActivityLedger() {
     <div className="overflow-hidden rounded-2xl border border-border bg-surface">
       {ledger.length === 0 ? (
         <p className="px-4 py-5 text-center text-sm text-muted">
-          Ingen aktivitet siste 14 dager.
+          {t('noActivity')}
         </p>
       ) : (
         ledger.map((row, i) => (

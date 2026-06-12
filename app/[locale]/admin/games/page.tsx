@@ -1,4 +1,5 @@
 import { Suspense, cache } from 'react';
+import { getTranslations, getLocale } from 'next-intl/server';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
@@ -14,8 +15,8 @@ import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { TopBar } from '@/components/ui/TopBar';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
-import { formatShortDateNb } from '@/lib/format/date';
-import { CREATE_GAME_LABEL } from '@/lib/games/createGameLabel';
+import { formatShortDateLocale } from '@/lib/i18n/format';
+import type { AppLocale } from '@/i18n/routing';
 
 const GAMES_LEDGER_GRID = '1fr 84px 14px';
 
@@ -25,24 +26,9 @@ type SearchParams = Promise<{
   error?: string | string[];
 }>;
 
-const ERROR_MESSAGES: Record<string, string> = {
-  not_found: 'Spillet ble ikke funnet.',
-};
-
-const STATUS_MESSAGES: Record<string, (name: string) => string> = {
-  created: (name) => `✓ Spillet «${name}» ble lagret som utkast.`,
-  started: (name) => `✓ Spillet «${name}» er startet.`,
-  deleted: (name) => `✓ Spillet «${name}» er slettet.`,
-};
-
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
   return value;
-}
-
-function shortNb(iso: string | null): string | null {
-  if (!iso) return null;
-  return formatShortDateNb(iso);
 }
 
 const STATUS_TO_TONE: Record<GameStatus, StatusChipTone> = {
@@ -87,25 +73,27 @@ export default async function GamesPage({
   const { supabase } = await getAdminGamesContext();
   await requireAdmin(supabase);
 
+  const t = await getTranslations('admin.games');
   const params = await searchParams;
   const statusFilter = first(params.status);
   const name = first(params.name) ?? '';
   const errorCode = first(params.error);
-  const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
+  const errorMessage = errorCode ? t(`errors.${errorCode}` as 'errors.not_found') : undefined;
 
   // Banner messages are keyed by the `status=` param emitted from form actions
   // (created/started). The same `status` param is also used as a filter when
   // it carries a game-status value (finished). Branch on the known message
   // keys to keep both behaviours from colliding.
+  const STATUS_MESSAGE_KEYS = ['created', 'started', 'deleted'] as const;
+  type StatusMessageKey = (typeof STATUS_MESSAGE_KEYS)[number];
   const isBannerStatus = statusFilter
-    ? Object.prototype.hasOwnProperty.call(STATUS_MESSAGES, statusFilter)
+    ? STATUS_MESSAGE_KEYS.includes(statusFilter as StatusMessageKey)
     : false;
-  const statusFn = isBannerStatus
-    ? STATUS_MESSAGES[statusFilter as keyof typeof STATUS_MESSAGES]
+  const statusMessage = isBannerStatus
+    ? t(`statusMessages.${statusFilter as StatusMessageKey}`, { name })
     : undefined;
-  const statusMessage = statusFn ? statusFn(name) : undefined;
   const filterFinished = !isBannerStatus && statusFilter === 'finished';
-  const heading = filterFinished ? 'Resultatprotokoll' : 'Pågående og kommende';
+  const heading = filterFinished ? t('headingProtocol') : t('headingOngoing');
 
   return (
     <AdminShell>
@@ -122,13 +110,13 @@ export default async function GamesPage({
               href="/admin/games/new"
               className="rounded-full border border-border bg-surface-2/50 px-2.5 py-[5px] font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-text"
             >
-              {CREATE_GAME_LABEL}
+              {t('createLabel')}
             </SmartLink>
           )
         }
       />
 
-      <BrassRibbon kicker="Spill · protokoll" />
+      <BrassRibbon kicker={t('brassRibbon')} />
 
       <div className="px-1">
         <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
@@ -151,7 +139,7 @@ export default async function GamesPage({
       </Suspense>
 
       <p className="mt-6 text-center font-serif text-[11px] italic leading-relaxed text-muted">
-        Tap et spill for å redigere protokollen.
+        {t('tapHint')}
       </p>
     </AdminShell>
   );
@@ -183,11 +171,10 @@ async function fetchGames(filterFinished: boolean) {
 async function Subtitle({ filterFinished }: { filterFinished: boolean }) {
   const games = await fetchGames(filterFinished);
   const n = games.length;
-  // «spill» (no/bokmål) er identisk i ubestemt entall og flertall, så vi
-  // bøyer ikke der. «runde» → «runder» og «signert» → «signerte» i flertall.
+  const t = await getTranslations('admin.games');
   const subtitle = filterFinished
-    ? `${n} signert${n === 1 ? '' : 'e'} runde${n === 1 ? '' : 'r'}`
-    : `${n} spill · sortert nyeste først`;
+    ? t('subtitleFinished', { n })
+    : t('subtitleOngoing', { n });
   return (
     <p className="font-sans text-[11.5px] tabular-nums text-muted">
       {subtitle}
@@ -203,6 +190,8 @@ async function GamesLedger({ filterFinished }: { filterFinished: boolean }) {
   const { supabase } = await getAdminGamesContext();
   const games = await fetchGames(filterFinished);
   const gameIds = games.map((g) => g.id);
+  const t = await getTranslations('admin.games');
+  const locale = await getLocale();
 
   // Player counts per game in one round-trip. group-by not supported in the
   // PostgREST builder; fetch raw game_id rows and count in TS — bounded
@@ -230,13 +219,13 @@ async function GamesLedger({ filterFinished }: { filterFinished: boolean }) {
         </ChampagneMedallion>
         <p className="font-serif text-[16px] font-medium tracking-[-0.005em] text-text">
           {filterFinished
-            ? 'Ingen signerte runder ennå.'
-            : 'Ingen spill ennå.'}
+            ? t('emptyFinishedHeading')
+            : t('emptyOngoingHeading')}
         </p>
         <p className="mt-1.5 max-w-[280px] font-sans text-[12.5px] leading-relaxed text-muted">
           {filterFinished
-            ? 'Resultatene fra avsluttede spill samles her etterhvert som rundene fullføres.'
-            : `Trykk «${CREATE_GAME_LABEL}» for å sette opp den første runden.`}
+            ? t('emptyFinishedBody')
+            : t('emptyOngoingBody', { createLabel: t('createLabel') })}
         </p>
       </div>
     );
@@ -245,8 +234,8 @@ async function GamesLedger({ filterFinished }: { filterFinished: boolean }) {
   return (
     <>
       <LedgerHeader
-        leftLabel="Spill"
-        rightLabel="Status"
+        leftLabel={t('colGames')}
+        rightLabel={t('colStatus')}
         gridTemplateColumns={GAMES_LEDGER_GRID}
       />
 
@@ -260,14 +249,16 @@ async function GamesLedger({ filterFinished }: { filterFinished: boolean }) {
       >
         {games.map((g, i) => {
           const courseName = g.courses?.name ?? '(ukjent bane)';
+          const shortDate = (iso: string | null) =>
+            iso ? formatShortDateLocale(iso, locale as AppLocale) : null;
           const dateLine =
             g.status === 'draft'
-              ? 'Utkast'
+              ? t('draftWord')
               : g.status === 'finished'
-                ? shortNb(g.ended_at)
+                ? shortDate(g.ended_at)
                 : g.status === 'scheduled'
-                  ? shortNb(g.scheduled_tee_off_at) ?? shortNb(g.created_at)
-                  : shortNb(g.started_at) ?? shortNb(g.created_at);
+                  ? shortDate(g.scheduled_tee_off_at) ?? shortDate(g.created_at)
+                  : shortDate(g.started_at) ?? shortDate(g.created_at);
           const players = playerCounts.get(g.id) ?? 0;
           const meta = [
             dateLine,
