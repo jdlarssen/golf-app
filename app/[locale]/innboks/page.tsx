@@ -1,4 +1,5 @@
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { getServerClient } from '@/lib/supabase/server';
@@ -6,6 +7,7 @@ import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { InboxClient } from './InboxClient';
 import { MonthlyDigestToggle } from './MonthlyDigestToggle';
 import type { NotificationRow } from '@/components/notifications/NotificationCard';
+import type { AppLocale } from '@/i18n/routing';
 
 // /innboks-flaten lever ved siden av spill-rutene — TopBar med chevron
 // tilbake til /, kicker «INNBOKS». RLS sørger for at vi kun ser egne
@@ -13,8 +15,14 @@ import type { NotificationRow } from '@/components/notifications/NotificationCar
 // vi inkluderer den slik at partial-indexen `notifications_user_unread_
 // created` brukes.
 export default async function InboxPage() {
+  const locale = (await getLocale()) as AppLocale;
+  const t = await getTranslations('inbox');
+
   const userId = await getProxyVerifiedUserId();
-  if (!userId) redirect('/login');
+  if (!userId) {
+    redirect({ href: '/login', locale });
+    return;
+  }
 
   const supabase = await getServerClient();
   const { data: rows } = await supabase
@@ -38,8 +46,8 @@ export default async function InboxPage() {
     <AppShell>
       <TopBar
         backHref="/"
-        backLabel="Tilbake til hjem"
-        kicker="Innboks"
+        backLabel={t('backLabel')}
+        kicker={t('kicker')}
       />
       <div className="mb-4">
         <MonthlyDigestToggle initialOptIn={monthlyOptIn} />

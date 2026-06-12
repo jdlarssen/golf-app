@@ -1,10 +1,12 @@
 'use client';
 
+import { useTranslations, useLocale } from 'next-intl';
 import type {
   NotificationKind,
   NotificationPayload,
 } from '@/lib/notifications/types';
-import { formatRelativeNb } from '@/lib/format/relativeTimeNb';
+import { formatRelativeLocale } from '@/lib/i18n/format';
+import type { AppLocale } from '@/i18n/routing';
 
 /**
  * Generisk shape for en notifications-rad fra DB. Vi unngår direkte
@@ -51,7 +53,7 @@ const EMOJI: Record<NotificationKind, string> = {
  *  - Champagne-stripe på venstre kant for uleste (4px wide, --accent)
  *  - Emoji-bobble på venstre (lookup per kind)
  *  - Tittel (font-medium hvis ulest, normal hvis lest) + 1-linjes detalj
- *  - Relativ tidsstempel på norsk («for 1 time siden», «i går» osv.) til høyre
+ *  - Relativ tidsstempel i aktiv locale til høyre
  *
  * Caller styrer `onTap` — typisk: marker som lest i DB, deretter naviger
  * til kortets deeplink. Selve navigeringen håndteres av parent (caller har
@@ -66,9 +68,11 @@ export function NotificationCard({
   notification: NotificationRow;
   onTap?: () => void;
 }) {
+  const t = useTranslations('inbox');
+  const locale = useLocale() as AppLocale;
   const { kind, payload, read_at, created_at } = notification;
   const isUnread = read_at == null;
-  const { title, detail } = buildCardContent(kind, payload);
+  const { title, detail } = buildCardContent(kind, payload, t);
 
   return (
     <button
@@ -111,59 +115,72 @@ export function NotificationCard({
         dateTime={created_at}
         className="ml-1 shrink-0 self-start whitespace-nowrap pt-0.5 font-sans text-[11px] tabular-nums text-muted"
       >
-        {formatRelativeNb(created_at)}
+        {formatRelativeLocale(created_at, locale)}
       </time>
     </button>
   );
 }
 
+type Translator = ReturnType<typeof useTranslations<'inbox'>>;
+
 /**
  * Bygger tittel og 1-linjes detalj per kind. Tittel-en er handlings-orientert
  * («Per inviterte deg»), detalj-en konkretiserer mål-spillet eller -aksjonen.
- * Norsk bokmål, sporty kompis-tone per brand-stemmen.
+ * Alle strenger leses fra katalog via t() — Norwegian/English per aktiv locale.
  */
 function buildCardContent(
   kind: NotificationKind,
   payload: NotificationPayload,
+  t: Translator,
 ): { title: string; detail: string } {
   switch (kind) {
     case 'invite': {
       const p = payload as NotificationPayload<'invite'>;
       return {
-        title: `${p.invited_by_name} inviterte deg`,
-        detail: p.game_name,
+        title: t('kinds.invite.title', { invitedByName: p.invited_by_name }),
+        detail: t('kinds.invite.detail', { gameName: p.game_name }),
       };
     }
     case 'peer_approval_request': {
       const p = payload as NotificationPayload<'peer_approval_request'>;
       return {
-        title: 'Godkjenning trengs',
-        detail: `${p.submitter_name} leverte scorekortet i ${p.game_name}`,
+        title: t('kinds.peerApprovalRequest.title'),
+        detail: t('kinds.peerApprovalRequest.detail', {
+          submitterName: p.submitter_name,
+          gameName: p.game_name,
+        }),
       };
     }
     case 'scorecard_submitted': {
       const p = payload as NotificationPayload<'scorecard_submitted'>;
       return {
-        title: 'Nytt scorekort levert',
-        detail: `${p.player_name} leverte i ${p.game_name}`,
+        title: t('kinds.scorecardSubmitted.title'),
+        detail: t('kinds.scorecardSubmitted.detail', {
+          playerName: p.player_name,
+          gameName: p.game_name,
+        }),
       };
     }
     case 'scorecard_approved': {
       const p = payload as NotificationPayload<'scorecard_approved'>;
       return {
-        title: 'Scorekortet er godkjent',
-        detail: `${p.approver_name} godkjente kortet i ${p.game_name}`,
+        title: t('kinds.scorecardApproved.title'),
+        detail: t('kinds.scorecardApproved.detail', {
+          approverName: p.approver_name,
+          gameName: p.game_name,
+        }),
       };
     }
     case 'game_finished': {
       const p = payload as NotificationPayload<'game_finished'>;
       return {
-        title: 'Resultatet er klart',
-        detail: p.game_name,
+        title: t('kinds.gameFinished.title'),
+        detail: t('kinds.gameFinished.detail', { gameName: p.game_name }),
       };
     }
     case 'product_update': {
       const p = payload as NotificationPayload<'product_update'>;
+      // product_update title/body are DB content — render verbatim in both locales
       return {
         title: p.title,
         detail: p.body,
@@ -172,136 +189,152 @@ function buildCardContent(
     case 'team_invite': {
       const p = payload as NotificationPayload<'team_invite'>;
       return {
-        title: `${p.invited_by_name} vil ha deg i ${p.team_name}`,
-        detail: p.game_name,
+        title: t('kinds.teamInvite.title', {
+          invitedByName: p.invited_by_name,
+          teamName: p.team_name,
+        }),
+        detail: t('kinds.teamInvite.detail', { gameName: p.game_name }),
       };
     }
     case 'registration_request': {
       const p = payload as NotificationPayload<'registration_request'>;
       return {
-        title: `${p.requester_name} vil bli med`,
-        detail: p.game_name,
+        title: t('kinds.registrationRequest.title', { requesterName: p.requester_name }),
+        detail: t('kinds.registrationRequest.detail', { gameName: p.game_name }),
       };
     }
     case 'registration_approved': {
       const p = payload as NotificationPayload<'registration_approved'>;
       return {
-        title: `Du er med i ${p.game_name}`,
-        detail: 'Påmeldingen er godkjent',
+        title: t('kinds.registrationApproved.title', { gameName: p.game_name }),
+        detail: t('kinds.registrationApproved.detail'),
       };
     }
     case 'registration_rejected': {
       const p = payload as NotificationPayload<'registration_rejected'>;
       return {
-        title: `Søknad til ${p.game_name}`,
-        detail: p.reason ?? 'Påmeldingen ble dessverre ikke godkjent',
+        title: t('kinds.registrationRejected.title', { gameName: p.game_name }),
+        // reason is DB content — render verbatim; use catalog fallback when absent
+        detail: p.reason ?? t('kinds.registrationRejected.defaultReason'),
       };
     }
     case 'team_member_withdrew': {
       const p = payload as NotificationPayload<'team_member_withdrew'>;
       return {
-        title: `${p.withdrawn_player_name} trakk seg`,
-        detail: `${p.team_name} i ${p.game_name}`,
+        title: t('kinds.teamMemberWithdrew.title', { withdrawnPlayerName: p.withdrawn_player_name }),
+        detail: t('kinds.teamMemberWithdrew.detail', {
+          teamName: p.team_name,
+          gameName: p.game_name,
+        }),
       };
     }
     case 'deliver_reminder': {
       const p = payload as NotificationPayload<'deliver_reminder'>;
       return {
-        title: 'Husk å levere scorekortet',
-        detail: `Du er ferdig i ${p.game_name}`,
+        title: t('kinds.deliverReminder.title'),
+        detail: t('kinds.deliverReminder.detail', { gameName: p.game_name }),
       };
     }
     case 'cup_finished': {
       const p = payload as NotificationPayload<'cup_finished'>;
       return {
-        title: 'Cupen er ferdigspilt',
-        detail: p.tournament_name,
+        title: t('kinds.cupFinished.title'),
+        detail: t('kinds.cupFinished.detail', { tournamentName: p.tournament_name }),
       };
     }
     case 'cup_started': {
       const p = payload as NotificationPayload<'cup_started'>;
       return {
-        title: 'Cupen har startet',
-        detail: p.tournament_name,
+        title: t('kinds.cupStarted.title'),
+        detail: t('kinds.cupStarted.detail', { tournamentName: p.tournament_name }),
       };
     }
     case 'club_join_request': {
       const p = payload as NotificationPayload<'club_join_request'>;
       return {
-        title: `${p.requester_name} vil bli med i klubben`,
-        detail: p.group_name,
+        title: t('kinds.clubJoinRequest.title', { requesterName: p.requester_name }),
+        detail: t('kinds.clubJoinRequest.detail', { groupName: p.group_name }),
       };
     }
     case 'club_role_changed': {
       const p = payload as NotificationPayload<'club_role_changed'>;
-      const roleText =
+      const detail =
         p.new_role === 'owner'
-          ? `Du er nå eier av ${p.group_name}`
+          ? t('kinds.clubRoleChanged.detailOwner', { groupName: p.group_name })
           : p.new_role === 'admin'
-            ? `Du er nå admin i ${p.group_name}`
-            : `Rollen din i ${p.group_name} er nå medlem`;
+            ? t('kinds.clubRoleChanged.detailAdmin', { groupName: p.group_name })
+            : t('kinds.clubRoleChanged.detailMember', { groupName: p.group_name });
       return {
-        title: 'Rollen din er endret',
-        detail: roleText,
+        title: t('kinds.clubRoleChanged.title'),
+        detail,
       };
     }
     case 'friend_request': {
       const p = payload as NotificationPayload<'friend_request'>;
       return {
-        title: `${p.actor_name} vil bli venn`,
-        detail: 'Godta eller avslå i vennelista',
+        title: t('kinds.friendRequest.title', {
+          actorName: p.actor_name ?? t('someoneFallback'),
+        }),
+        detail: t('kinds.friendRequest.detail'),
       };
     }
     case 'friend_accepted': {
       const p = payload as NotificationPayload<'friend_accepted'>;
       return {
-        title: `${p.actor_name} ble venn med deg`,
-        detail: 'Dere er venner nå',
+        title: t('kinds.friendAccepted.title', {
+          actorName: p.actor_name ?? t('someoneFallback'),
+        }),
+        detail: t('kinds.friendAccepted.detail'),
       };
     }
     case 'player_added': {
       const p = payload as NotificationPayload<'player_added'>;
       return {
-        title: `${p.added_by_name} la deg til i ${p.game_name}`,
-        detail: 'Åpne spillet for å bekrefte at du er med.',
+        title: t('kinds.playerAdded.title', {
+          addedByName: p.added_by_name,
+          gameName: p.game_name,
+        }),
+        detail: t('kinds.playerAdded.detail'),
       };
     }
     case 'game_started': {
       const p = payload as NotificationPayload<'game_started'>;
       return {
-        title: 'Runden er i gang',
-        detail: p.game_name,
+        title: t('kinds.gameStarted.title'),
+        detail: t('kinds.gameStarted.detail', { gameName: p.game_name }),
       };
     }
     case 'auto_start_blocked': {
       const p = payload as NotificationPayload<'auto_start_blocked'>;
       return {
-        title: 'Runden kom ikke i gang',
-        detail: `${p.game_name}: ${blockReasonText(p.reason)}`,
+        title: t('kinds.autoStartBlocked.title'),
+        detail: t('kinds.autoStartBlocked.detail', {
+          gameName: p.game_name,
+          reason: blockReasonText(p.reason, t),
+        }),
       };
     }
   }
 }
+
+type BlockReasonKey = 'incomplete_sides' | 'pending_players' | 'no_players' | 'tee_missing' | 'tee_missing_rating';
+
+const KNOWN_BLOCK_REASONS: ReadonlySet<string> = new Set<BlockReasonKey>([
+  'incomplete_sides',
+  'pending_players',
+  'no_players',
+  'tee_missing',
+  'tee_missing_rating',
+]);
 
 /**
  * Oversetter blokkeringsårsaken fra startScheduledGame til noe oppretteren
  * kan handle på. Generisk fallback for ukjente/fremtidige reasons — payload-
  * skjemaet er bevisst løst typet (se types.ts).
  */
-function blockReasonText(reason: string): string {
-  switch (reason) {
-    case 'incomplete_sides':
-      return 'sidene mangler spillere';
-    case 'pending_players':
-      return 'noen spillere har ikke fullført profilen';
-    case 'no_players':
-      return 'ingen spillere er med';
-    case 'tee_missing':
-      return 'spillet mangler tee';
-    case 'tee_missing_rating':
-      return 'tee-en mangler rating';
-    default:
-      return 'åpne spillet for å se hva som mangler';
+function blockReasonText(reason: string, t: Translator): string {
+  if (KNOWN_BLOCK_REASONS.has(reason)) {
+    return t(`blockReasons.${reason as BlockReasonKey}`);
   }
+  return t('blockReasons.default');
 }
-

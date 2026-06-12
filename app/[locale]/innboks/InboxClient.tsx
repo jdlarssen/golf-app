@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import {
   NotificationCard,
   type NotificationRow,
@@ -38,12 +39,16 @@ export function InboxClient({
   initialNotifications: NotificationRow[];
 }) {
   const router = useRouter();
+  const t = useTranslations('inbox');
   const [, startTransition] = useTransition();
   const [markAllPending, startMarkAll] = useTransition();
   const [items, setItems] = useState<NotificationRow[]>(initialNotifications);
 
   const hasUnread = items.some((n) => n.read_at == null);
-  const groups: DayGroup<NotificationRow>[] = groupNotificationsByDay(items);
+  // Pass translated today/yesterday labels so groupByDay stays locale-agnostic
+  const groups: DayGroup<NotificationRow>[] = groupNotificationsByDay(items, {
+    labels: { today: t('today'), yesterday: t('yesterday') },
+  });
 
   function handleTap(notification: NotificationRow) {
     const wasUnread = notification.read_at == null;
@@ -77,13 +82,12 @@ export function InboxClient({
       <div className="mt-2">
         <Card className="flex flex-col items-center text-center">
           <MailEnvelope size={56} className="text-primary" />
-          <p className="mt-3 font-serif text-base text-text">Ingen nye varsler.</p>
+          <p className="mt-3 font-serif text-base text-text">{t('emptyHeading')}</p>
           <p className="mt-1 font-sans text-[12px] text-muted">
-            Når noen inviterer deg, leverer kort eller avslutter et spill du
-            er med i, dukker varselet opp her.
+            {t('emptyBody')}
           </p>
         </Card>
-        <PullQuote className="mt-6">Innboksen er ren.</PullQuote>
+        <PullQuote className="mt-6">{t('cleanPullQuote')}</PullQuote>
       </div>
     );
   }
@@ -97,10 +101,10 @@ export function InboxClient({
             variant="ghost"
             onClick={handleMarkAll}
             pending={markAllPending}
-            pendingLabel="Markerer …"
+            pendingLabel={t('markingPending')}
             className="min-h-0 rounded-full border border-border bg-surface-2/50 px-3 py-1.5 font-sans text-[11px] font-medium text-text transition-colors hover:bg-surface-2 active:bg-surface-2"
           >
-            Marker alle som lest
+            {t('markAllAsRead')}
           </Button>
         </div>
       )}

@@ -28,6 +28,25 @@ vi.mock('next/navigation', async () => {
   };
 });
 
+// InboxClient uses @/i18n/navigation (locale-aware wrapper); wire the same
+// routerPushMock so navigation assertions work after the i18n migration.
+vi.mock('@/i18n/navigation', () => ({
+  useRouter: () => ({
+    push: routerPushMock,
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+    pathname: '/innboks',
+  }),
+  usePathname: () => '/innboks',
+  Link: ({ children, href }: { children: React.ReactNode; href: string }) =>
+    // eslint-disable-next-line jsx-a11y/anchor-has-content
+    require('react').createElement('a', { href }, children),
+  redirect: vi.fn(),
+}));
+
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-05-24T14:30:00Z'));

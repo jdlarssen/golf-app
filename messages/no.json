@@ -42,7 +42,117 @@
 	},
 	"inbox": {
 		"bellAriaLabel": "Innboks",
-		"bellUnreadAria": "Innboks, {count} {count, plural, one {ulest varsel} other {uleste varsler}}"
+		"bellUnreadAria": "Innboks, {count} {count, plural, one {ulest varsel} other {uleste varsler}}",
+		"kicker": "Innboks",
+		"backLabel": "Tilbake til hjem",
+		"emptyHeading": "Ingen nye varsler.",
+		"emptyBody": "Når noen inviterer deg, leverer kort eller avslutter et spill du er med i, dukker varselet opp her.",
+		"cleanPullQuote": "Innboksen er ren.",
+		"markAllAsRead": "Marker alle som lest",
+		"markingPending": "Markerer …",
+		"today": "I dag",
+		"yesterday": "I går",
+		"monthlyDigestTitle": "Månedsbrev",
+		"monthlyDigestSubtitle": "Nytt i Tørny på e-post",
+		"monthlyDigestAriaLabel": "Månedsbrev på e-post",
+		"someoneFallback": "En venn",
+		"kinds": {
+			"invite": {
+				"title": "{invitedByName} inviterte deg",
+				"detail": "{gameName}"
+			},
+			"peerApprovalRequest": {
+				"title": "Godkjenning trengs",
+				"detail": "{submitterName} leverte scorekortet i {gameName}"
+			},
+			"scorecardSubmitted": {
+				"title": "Nytt scorekort levert",
+				"detail": "{playerName} leverte i {gameName}"
+			},
+			"scorecardApproved": {
+				"title": "Scorekortet er godkjent",
+				"detail": "{approverName} godkjente kortet i {gameName}"
+			},
+			"gameFinished": {
+				"title": "Resultatet er klart",
+				"detail": "{gameName}"
+			},
+			"productUpdate": {
+				"title": "{title}",
+				"detail": "{body}"
+			},
+			"teamInvite": {
+				"title": "{invitedByName} vil ha deg i {teamName}",
+				"detail": "{gameName}"
+			},
+			"registrationRequest": {
+				"title": "{requesterName} vil bli med",
+				"detail": "{gameName}"
+			},
+			"registrationApproved": {
+				"title": "Du er med i {gameName}",
+				"detail": "Påmeldingen er godkjent"
+			},
+			"registrationRejected": {
+				"title": "Søknad til {gameName}",
+				"detail": "{reason}",
+				"defaultReason": "Påmeldingen ble dessverre ikke godkjent"
+			},
+			"teamMemberWithdrew": {
+				"title": "{withdrawnPlayerName} trakk seg",
+				"detail": "{teamName} i {gameName}"
+			},
+			"deliverReminder": {
+				"title": "Husk å levere scorekortet",
+				"detail": "Du er ferdig i {gameName}"
+			},
+			"cupFinished": {
+				"title": "Cupen er ferdigspilt",
+				"detail": "{tournamentName}"
+			},
+			"cupStarted": {
+				"title": "Cupen har startet",
+				"detail": "{tournamentName}"
+			},
+			"clubJoinRequest": {
+				"title": "{requesterName} vil bli med i klubben",
+				"detail": "{groupName}"
+			},
+			"clubRoleChanged": {
+				"title": "Rollen din er endret",
+				"detailOwner": "Du er nå eier av {groupName}",
+				"detailAdmin": "Du er nå admin i {groupName}",
+				"detailMember": "Rollen din i {groupName} er nå medlem"
+			},
+			"friendRequest": {
+				"title": "{actorName} vil bli venn",
+				"detail": "Godta eller avslå i vennelista"
+			},
+			"friendAccepted": {
+				"title": "{actorName} ble venn med deg",
+				"detail": "Dere er venner nå"
+			},
+			"playerAdded": {
+				"title": "{addedByName} la deg til i {gameName}",
+				"detail": "Åpne spillet for å bekrefte at du er med."
+			},
+			"gameStarted": {
+				"title": "Runden er i gang",
+				"detail": "{gameName}"
+			},
+			"autoStartBlocked": {
+				"title": "Runden kom ikke i gang",
+				"detail": "{gameName}: {reason}"
+			}
+		},
+		"blockReasons": {
+			"incomplete_sides": "sidene mangler spillere",
+			"pending_players": "noen spillere har ikke fullført profilen",
+			"no_players": "ingen spillere er med",
+			"tee_missing": "spillet mangler tee",
+			"tee_missing_rating": "tee-en mangler rating",
+			"default": "åpne spillet for å se hva som mangler"
+		}
 	},
 	"profile": {
 		"languageRowLabel": "Språk",

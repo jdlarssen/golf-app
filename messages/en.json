@@ -42,7 +42,117 @@
 	},
 	"inbox": {
 		"bellAriaLabel": "Inbox",
-		"bellUnreadAria": "Inbox, {count} {count, plural, one {unread notification} other {unread notifications}}"
+		"bellUnreadAria": "Inbox, {count} {count, plural, one {unread notification} other {unread notifications}}",
+		"kicker": "Inbox",
+		"backLabel": "Back to home",
+		"emptyHeading": "No new notifications.",
+		"emptyBody": "When someone invites you, submits a scorecard, or finishes a game you''re in, the notification will appear here.",
+		"cleanPullQuote": "Your inbox is clear.",
+		"markAllAsRead": "Mark all as read",
+		"markingPending": "Marking …",
+		"today": "Today",
+		"yesterday": "Yesterday",
+		"monthlyDigestTitle": "Monthly digest",
+		"monthlyDigestSubtitle": "What''s new in Tørny by email",
+		"monthlyDigestAriaLabel": "Monthly digest by email",
+		"someoneFallback": "A friend",
+		"kinds": {
+			"invite": {
+				"title": "{invitedByName} invited you",
+				"detail": "{gameName}"
+			},
+			"peerApprovalRequest": {
+				"title": "Approval needed",
+				"detail": "{submitterName} submitted their scorecard in {gameName}"
+			},
+			"scorecardSubmitted": {
+				"title": "New scorecard submitted",
+				"detail": "{playerName} submitted in {gameName}"
+			},
+			"scorecardApproved": {
+				"title": "Scorecard approved",
+				"detail": "{approverName} approved the scorecard in {gameName}"
+			},
+			"gameFinished": {
+				"title": "Results are in",
+				"detail": "{gameName}"
+			},
+			"productUpdate": {
+				"title": "{title}",
+				"detail": "{body}"
+			},
+			"teamInvite": {
+				"title": "{invitedByName} wants you on {teamName}",
+				"detail": "{gameName}"
+			},
+			"registrationRequest": {
+				"title": "{requesterName} wants to join",
+				"detail": "{gameName}"
+			},
+			"registrationApproved": {
+				"title": "You''re in {gameName}",
+				"detail": "Your registration has been approved"
+			},
+			"registrationRejected": {
+				"title": "Application to {gameName}",
+				"detail": "{reason}",
+				"defaultReason": "Your registration was unfortunately not approved"
+			},
+			"teamMemberWithdrew": {
+				"title": "{withdrawnPlayerName} withdrew",
+				"detail": "{teamName} in {gameName}"
+			},
+			"deliverReminder": {
+				"title": "Remember to submit your scorecard",
+				"detail": "You''re done in {gameName}"
+			},
+			"cupFinished": {
+				"title": "The cup has finished",
+				"detail": "{tournamentName}"
+			},
+			"cupStarted": {
+				"title": "The cup has started",
+				"detail": "{tournamentName}"
+			},
+			"clubJoinRequest": {
+				"title": "{requesterName} wants to join the club",
+				"detail": "{groupName}"
+			},
+			"clubRoleChanged": {
+				"title": "Your role has changed",
+				"detailOwner": "You are now the owner of {groupName}",
+				"detailAdmin": "You are now an admin in {groupName}",
+				"detailMember": "Your role in {groupName} is now member"
+			},
+			"friendRequest": {
+				"title": "{actorName} wants to be friends",
+				"detail": "Accept or decline in your friends list"
+			},
+			"friendAccepted": {
+				"title": "{actorName} became your friend",
+				"detail": "You''re friends now"
+			},
+			"playerAdded": {
+				"title": "{addedByName} added you to {gameName}",
+				"detail": "Open the game to confirm you''re joining."
+			},
+			"gameStarted": {
+				"title": "The round has started",
+				"detail": "{gameName}"
+			},
+			"autoStartBlocked": {
+				"title": "The round didn''t start",
+				"detail": "{gameName}: {reason}"
+			}
+		},
+		"blockReasons": {
+			"incomplete_sides": "sides are missing players",
+			"pending_players": "some players haven''t completed their profile",
+			"no_players": "no players have joined",
+			"tee_missing": "the game is missing a tee",
+			"tee_missing_rating": "the tee is missing a rating",
+			"default": "open the game to see what''s missing"
+		}
 	},
 	"profile": {
 		"languageRowLabel": "Language",
