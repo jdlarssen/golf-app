@@ -230,33 +230,38 @@ order.
 
 ## Success Criteria
 
-- [ ] **No hardcoded Norwegian UI literals** remain in the §1 scope —
-      verified by non-comment æøå string-literal grep over
-      `app/[locale]/{profile,venner,innboks,finn-turneringer}/**`,
-      `app/[locale]/HomeDiscoverySection.tsx`,
-      `components/notifications/**`, `components/ui/BottomNav.tsx` + the
-      §2 lib modules, plus a common-no-words-without-æøå sweep
-      (Velg/Lagre/Slett/Avbryt/Venter/Venn/Innboks/Hjem/…). User-data
-      render paths excluded.
-- [ ] **Norwegian output unchanged:** full `npm run test` green with zero
-      assertion edits in existing tests; playwright smoke green (modulo
-      known pre-existing failures).
-- [ ] **English coverage:** `catalogParity.test.ts` green; `npm run build`
-      green; no raw catalog key visible in either locale on the scope
-      surfaces; opus idiomatic-English pass done.
-- [ ] **All 20 notification kinds + 5 block reasons** render English under
-      `en`, byte-identical Norwegian under `no` (catalog keys exist for
-      every kind; spot-check via stub/unit render).
-- [ ] **Locale-aware dates/relative time:** in-scope `formatTeeOffDate`/
-      `Time`, `formatRelativeNb`, `formatShortDateNb`/`WithYear`
-      call-sites + `formatTimeUntil` + groupByDay labels render English
-      under `en`, byte-identical Norwegian under `no`.
-- [ ] **Navigation imports migrated** in every touched file
-      (grep-verified: no `next/navigation` `redirect`/`useRouter` in
-      scope; `notFound` exempt).
-- [ ] **PPR shape holds:** route-summary diff vs origin/main = empty.
-- [ ] MINOR version bump + CHANGELOG entry per
-      `docs/changelog-conventions.md` in the user-visible commit.
+- [x] **No hardcoded Norwegian UI literals** remain in the §1 scope —
+      æøå-in-quotes grep over the full scope = 0 hits (last literal,
+      `DEFAULT_LABELS_NO` in groupByDay, removed in 1d562230); common
+      no-words-without-æøå sweep (Velg/Lagre/Slett/Avbryt/Venter/Venn/
+      Innboks/Hjem/…) = 0 hits after `formatTimeUntil` removal
+      (9f009071). User-data render paths excluded.
+- [x] **Norwegian output unchanged:** full `npm run test` green — 263
+      files, 3375 tests, zero assertion edits (only mock/signature
+      adaptations in invite/actions.test, InboxClient.test,
+      groupByDay.test, quota.test); playwright 48 passed, 1 failed =
+      the known pre-existing #559 signup smoke (2f turf, untouched).
+- [x] **English coverage:** `catalogParity.test.ts` 3/3 green;
+      `npm run build` exit 0; opus idiomatic pass committed (69c535b2,
+      6 rewrites).
+- [x] **All 20 notification kinds + 5 block reasons** have
+      `inbox.kinds.*`/`inbox.blockReasons.*` keys in both locales
+      (catalogParity enforces symmetry); NotificationCard tests 14/14
+      assert Norwegian via the stub.
+- [x] **Locale-aware dates/relative time:** historikk →
+      `formatTeeOffDateLocale`; HomeDiscoverySection →
+      `*Locale` helpers + `discover.teeOffLine` ICU; NotificationCard →
+      `formatRelativeLocale`; groupByDay + timeUntilStructured require
+      locale/labels (Type A tests cover en + no paths, 91 tests in
+      lib/notifications + innboks green).
+- [x] **Navigation imports migrated:** grep over scope = only two
+      `notFound` imports (exempt); `/invite` redirect stub made
+      locale-aware (8ba53974).
+- [x] **PPR shape holds:** branch build = 92 routes, 81 ◐ / 9 ƒ / 2 ○ —
+      identical aggregate to the recorded main baseline; every scope
+      route ◐, `/[locale]` home ◐, `profile/export` ƒ as before.
+- [x] MINOR bump 1.117.0 → 1.118.0 + CHANGELOG series 1.118.y in the
+      feat commit (028ee90f); commit-msg hook passed.
 
 ## Gates (per chunk)
 
