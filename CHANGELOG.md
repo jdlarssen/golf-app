@@ -17,7 +17,36 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.116.y — i18n · engelsk i Sekretariatet
+## 1.117.y — i18n · engelsk i klubb, liga og cup
+
+Issue [#566](https://github.com/jdlarssen/golf-app/issues/566), del av epic [#60](https://github.com/jdlarssen/golf-app/issues/60). Fase 2d av flerspråkligheten: klubb-, liga- og cup-flatene (admin og spiller) hentes fra omsettbare kataloger og finnes nå på engelsk — klubbrom og medlemskap, ligastyring med tabeller, cup-styring med matchgenerator, og Klubbhuset.
+
+### [1.117.0] - 2026-06-12 · #566
+
+> Bruker du Tørny på engelsk, er klubb-livet nå oversatt: klubbrommet med medlemskap og roller, ligaene med tabell og rundestart, cup-styringen med matchgenerator, og Klubbhuset der du styrer spillene dine. På norsk er alt som før.
+
+<details>
+<summary>Teknisk</summary>
+
+[#566](https://github.com/jdlarssen/golf-app/issues/566). i18n Fase 2d — per-område-ekstraksjon av klubb/liga/cup (~55 filer: `admin/klubber/**`, `admin/liga/**`, `admin/cup/**`, `klubber/**`, `liga/**`, `klubbhuset/page`, `components/league/*`).
+
+#### Added
+- `messages/{no,en}.json`: nye topp-namespaces `klubb.*` (liste, rom, liga-/cup-seksjoner, medlemskapsflytene bli-med/forlat/fjern/rolle, varighet), `liga.*` (protokoll, opprett, styring, slett, spillerside, rundestart, tabell), `cup.*` (protokoll, styring, generer-wizard, slett, opprett, presets) og `klubbhuset.*` — gjennom idiomatisk golf-engelsk-pass.
+- `lib/i18n/format.ts` `shortMonthLocale` + `formatShortUTCDayMonthLocale` — liga-vinduer og runde-forhåndsvisning rendrer engelsk under `/en`, byte-identisk norsk ellers (Type A-paritetstester).
+
+#### Changed
+- Alle filer i omfanget renderer via `useTranslations`/`getTranslations`; norsk output er uendret (full suite grønn uten assertion-endringer).
+- `Link`/`redirect` migrert til `@/i18n/navigation` i hele omfanget; server actions bruker objekt-form med `getLocale()`.
+- `lib/clubs/clubStatus.ts` `getClubStatusBadge` returnerer tone-diskriminert union; etikettene oversettes på call-site. `lib/cup/cupTemplates.ts` `CUP_PRESETS` er copy-frie — navn/beskrivelse rendres via `cup.presets.*` på stabile id-er.
+- Bevisst ulike registre er bevart med separate nøkler: admin-liga «Pågående» vs spillerside-liga «Aktiv».
+
+#### Removed
+- Dupliserte `ROLE_LABELS`-/statusetikett-maps på tvers av 8 filer — sentralisert som katalognøkler.
+
+</details>
+
+<details>
+<summary><strong>1.116.y — i18n · engelsk i Sekretariatet (2 oppføringer)</strong></summary>
 
 Issue [#563](https://github.com/jdlarssen/golf-app/issues/563), del av epic [#60](https://github.com/jdlarssen/golf-app/issues/60). Fase 2c av flerspråkligheten: hele Sekretariatet (admin-flatene) hentes fra omsettbare kataloger og finnes nå på engelsk — resultatprotokollen, spill-styringen, spillere, baner, format-mappingen og lanseringene.
 
@@ -53,6 +82,8 @@ Issue [#563](https://github.com/jdlarssen/golf-app/issues/563), del av epic [#60
 
 #### Removed
 - `lib/admin/gameErrorMessages.ts` + drift-guard-testen og `lib/games/createGameLabel.ts` — siste konsumenter migrert til katalogene (`wizard.errors`, `admin.game.errors`, `admin.games`).
+
+</details>
 
 </details>
 
