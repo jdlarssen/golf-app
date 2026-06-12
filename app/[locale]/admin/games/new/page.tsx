@@ -87,13 +87,10 @@ export default async function NewGamePage({
   ): string | undefined {
     if (!errorCode) return undefined;
     const key = `errors.${errorCode}` as Parameters<typeof t>[0];
-    // Detect unknown codes: t() returns the key path when the key is missing.
-    const msg = t(key);
-    if (msg === key) return undefined;
-    if (errorCode === 'pending_players') {
-      return msg.replace('{list}', emails ? `: ${emails}` : '');
-    }
-    return msg;
+    // Unknown codes render no banner (mirrors the legacy map-lookup miss).
+    if (!t.has(key)) return undefined;
+    // Only pending_players uses {list}; extra values are ignored elsewhere.
+    return t(key, { list: emails ? `: ${emails}` : '' });
   }
 
   const errorMessage = buildErrorMessage(first(sp.error), first(sp.emails));

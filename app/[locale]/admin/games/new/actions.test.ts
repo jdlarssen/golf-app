@@ -39,7 +39,7 @@ vi.mock('@/i18n/navigation', () => ({
     redirectMock(typeof arg === 'string' ? arg : arg.href),
 }));
 vi.mock('next-intl/server', () => ({
-  getLocale: async () => 'nb',
+  getLocale: async () => 'no',
 }));
 
 const notifyInvitedToGameMock = vi.fn<
