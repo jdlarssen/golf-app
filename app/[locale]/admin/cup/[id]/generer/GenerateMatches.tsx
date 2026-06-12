@@ -191,7 +191,7 @@ export async function GenerateMatches({
     variant === 'club' && groupId
       ? `/klubber/${groupId}/cup/${tournamentId}`
       : `/admin/cup/${tournamentId}`;
-  const kicker = variant === 'club' ? (clubName ?? 'Klubbhuset') : 'Klubbhuset';
+  const kicker = variant === 'club' ? (clubName ?? t('ledger.kicker')) : t('ledger.kicker');
   const ribbonKicker =
     variant === 'club'
       ? t('generate.brassRibbonClub', { name: tournament.name })

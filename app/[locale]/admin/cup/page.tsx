@@ -70,7 +70,7 @@ export default async function CupListPage({
 
   return (
     <AdminShell>
-      <TopBar backHref="/admin" kicker="Klubbhuset" />
+      <TopBar backHref="/admin" kicker={t('ledger.kicker')} />
       <BrassRibbon kicker={t('ledger.kicker')} />
       <PageHeader
         title={t('ledger.pageTitle')}

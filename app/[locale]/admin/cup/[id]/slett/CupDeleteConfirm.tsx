@@ -76,7 +76,7 @@ export async function CupDeleteConfirm({
     isClub && groupId
       ? `/klubber/${groupId}/cup/${tournamentId}`
       : `/admin/cup/${tournamentId}`;
-  const kicker = isClub ? (clubName ?? 'Klubbhuset') : 'Klubbhuset';
+  const kicker = isClub ? (clubName ?? t('ledger.kicker')) : t('ledger.kicker');
 
   return (
     <Shell>

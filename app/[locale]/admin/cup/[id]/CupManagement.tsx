@@ -112,7 +112,7 @@ export async function CupManagement({
 
   const Shell = isClub ? AppShell : AdminShell;
   const backHref = isClub && groupId ? `/klubber/${groupId}` : '/admin/cup';
-  const kicker = isClub ? (clubName ?? 'Klubbhuset') : 'Klubbhuset';
+  const kicker = isClub ? (clubName ?? t('ledger.kicker')) : t('ledger.kicker');
   const ribbonKicker = isClub
     ? t('manage.brassRibbonClub', { status: statusLabel })
     : t('manage.brassRibbonAdmin', { status: statusLabel });
