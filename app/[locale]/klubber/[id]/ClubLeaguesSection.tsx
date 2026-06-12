@@ -1,3 +1,6 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { LinkButton } from '@/components/ui/Button';
@@ -6,12 +9,6 @@ export type ClubLeagueRow = {
   id: string;
   name: string;
   status: string;
-};
-
-const LEAGUE_STATUS_LABELS: Record<string, string> = {
-  draft: 'Utkast',
-  active: 'Aktiv',
-  finished: 'Avsluttet',
 };
 
 /**
@@ -34,10 +31,12 @@ export function ClubLeaguesSection({
   /** Owner/admin → may manage existing leagues (start/finish/edit), even frozen. */
   canManage: boolean;
 }) {
+  const t = useTranslations('klubb.leagues');
+
   return (
     <section className="mb-8">
       <h2 className="mb-3 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-        Klubbens ligaer
+        {t('heading')}
       </h2>
       {leagues.length > 0 ? (
         <div className="space-y-2">
@@ -52,14 +51,14 @@ export function ClubLeaguesSection({
                 </SmartLink>
                 <div className="flex shrink-0 items-center gap-2">
                   <span className="rounded-full border border-border px-2.5 py-0.5 font-sans text-xs text-muted">
-                    {LEAGUE_STATUS_LABELS[liga.status] ?? liga.status}
+                    {t(`status.${liga.status}` as Parameters<typeof t>[0])}
                   </span>
                   {canManage && (
                     <SmartLink
                       href={`/klubber/${clubId}/liga/${liga.id}`}
                       className="min-h-[44px] flex items-center font-sans text-xs text-primary hover:underline"
                     >
-                      Styr
+                      {t('manageLink')}
                     </SmartLink>
                   )}
                 </div>
@@ -68,12 +67,12 @@ export function ClubLeaguesSection({
           ))}
         </div>
       ) : (
-        <p className="font-sans text-sm text-muted">Ingen ligaer i klubben ennå.</p>
+        <p className="font-sans text-sm text-muted">{t('empty')}</p>
       )}
       {canCreate && (
         <div className="mt-3">
           <LinkButton href={`/klubber/${clubId}/liga/ny`} full>
-            Ny liga
+            {t('newButton')}
           </LinkButton>
         </div>
       )}

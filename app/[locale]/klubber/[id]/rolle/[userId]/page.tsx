@@ -1,4 +1,7 @@
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getClubDetail } from '@/lib/clubs/getClubDetail';
 import { AppShell } from '@/components/ui/AppShell';
@@ -10,19 +13,6 @@ import { setMemberRole } from './actions';
 
 type Params = Promise<{ id: string; userId: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;
-
-const ROLE_LABELS: Record<'owner' | 'admin' | 'member', string> = {
-  owner: 'Eier',
-  admin: 'Admin',
-  member: 'Medlem',
-};
-
-const ERROR_MESSAGES: Record<string, string> = {
-  last_owner: 'Klubben må ha minst én eier. Gjør et annet medlem til eier først.',
-  not_member: 'Fant ikke medlemmet.',
-  not_auth: 'Bare eieren kan endre roller.',
-  unknown: 'Noe gikk galt. Prøv igjen.',
-};
 
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
@@ -53,28 +43,37 @@ export default async function EndreMedlemsrollePage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  const locale = await getLocale();
+  if (!user) redirect({ href: '/login', locale });
 
-  const detail = await getClubDetail(supabase, id, user.id);
+  const detail = await getClubDetail(supabase, id, user!.id);
   if (!detail) notFound();
 
   const { club, members, myRole } = detail;
 
   // Only the owner may change roles.
   if (myRole !== 'owner') {
-    redirect(`/klubber/${id}`);
+    redirect({ href: `/klubber/${id}`, locale });
   }
 
   // Can't change your own role via this route.
-  if (targetUserId === user.id) {
-    redirect(`/klubber/${id}`);
+  if (targetUserId === user!.id) {
+    redirect({ href: `/klubber/${id}`, locale });
   }
 
   const target = members.find((m) => m.userId === targetUserId);
   if (!target) notFound();
 
   const errorCode = first(sp.error);
-  const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
+
+  const [t, tRoles] = await Promise.all([
+    getTranslations('klubb.role'),
+    getTranslations('klubb.roles'),
+  ]);
+
+  const errorMessage = errorCode
+    ? (t(`errors.${errorCode}` as Parameters<typeof t>[0], undefined as never) ?? undefined)
+    : undefined;
 
   return (
     <AppShell>
@@ -89,19 +88,18 @@ export default async function EndreMedlemsrollePage({
       <div className="space-y-6">
         <div className="px-1">
           <h1 className="mb-2 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-            Endre rolle for {target.name}
+            {t('heading', { name: target.name })}
           </h1>
           <p className="font-sans text-[13px] leading-relaxed text-muted">
-            Eier kan styre alt i klubben. Admin kan legge til og fjerne
-            medlemmer. Medlem kan bli med på klubbens runder.
+            {t('description')}
           </p>
         </div>
 
         <div className="rounded-xl border border-border bg-surface px-4 py-3.5">
           <p className="font-sans text-sm text-muted">
-            Nåværende rolle:{' '}
+            {t('currentRole')}{' '}
             <span className="font-medium text-text">
-              {ROLE_LABELS[target.role]}
+              {tRoles(target.role)}
             </span>
           </p>
         </div>
@@ -112,16 +110,16 @@ export default async function EndreMedlemsrollePage({
 
           <fieldset className="space-y-2">
             <legend className="mb-2 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-              Ny rolle
+              {t('newRoleLegend')}
             </legend>
 
             {(
               [
-                { value: 'member', label: 'Medlem' },
-                { value: 'admin', label: 'Admin' },
-                { value: 'owner', label: 'Eier' },
+                { value: 'member' },
+                { value: 'admin' },
+                { value: 'owner' },
               ] as const
-            ).map(({ value, label }) => (
+            ).map(({ value }) => (
               <label
                 key={value}
                 className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 transition-colors hover:bg-surface-2"
@@ -134,14 +132,14 @@ export default async function EndreMedlemsrollePage({
                   className="h-4 w-4 accent-primary"
                 />
                 <span className="font-sans text-sm font-medium text-text">
-                  {label}
+                  {tRoles(value)}
                 </span>
               </label>
             ))}
           </fieldset>
 
-          <SubmitButton className="w-full" pendingLabel="Lagrer …">
-            Lagre rolle
+          <SubmitButton className="w-full" pendingLabel={t('savePending')}>
+            {t('saveButton')}
           </SubmitButton>
         </form>
 
@@ -149,7 +147,7 @@ export default async function EndreMedlemsrollePage({
           href={`/klubber/${id}`}
           className="block rounded-full border border-border bg-surface px-4 py-3 text-center font-sans text-[13px] font-medium text-text min-h-[44px] flex items-center justify-center"
         >
-          Avbryt
+          {t('cancelLink')}
         </SmartLink>
       </div>
     </AppShell>

@@ -1,5 +1,7 @@
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
 import { formatDate } from '@/lib/i18n/format';
 import { getServerClient } from '@/lib/supabase/server';
 import { getClubDetail } from '@/lib/clubs/getClubDetail';
@@ -26,12 +28,6 @@ type SearchParams = Promise<{
   decided?: string | string[];
   role_changed?: string | string[];
 }>;
-
-const ROLE_LABELS: Record<'owner' | 'admin' | 'member', string> = {
-  owner: 'Eier',
-  admin: 'Admin',
-  member: 'Medlem',
-};
 
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
@@ -65,9 +61,9 @@ export default async function KlubbDetailPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  if (!user) redirect({ href: '/login', locale });
 
-  const detail = await getClubDetail(supabase, id, user.id);
+  const detail = await getClubDetail(supabase, id, user!.id);
   if (!detail) notFound();
 
   const { club, members, myRole, pendingRequests } = detail;
@@ -104,40 +100,53 @@ export default async function KlubbDetailPage({
   const decidedCode = first(sp.decided);
   const roleChanged = first(sp.role_changed);
 
-  const errorMessages: Record<string, string> = {
-    not_found: errorEmail
-      ? `Fant ingen Tørny-bruker med e-posten ${errorEmail}. Be dem opprette konto først.`
-      : 'Fant ingen Tørny-bruker med den e-posten. Be dem opprette konto først.',
-    already: errorEmail
-      ? `${errorEmail} er allerede medlem i klubben.`
-      : 'Denne personen er allerede med i klubben.',
-    not_auth: 'Du har ikke tilgang til å legge til medlemmer.',
-    email_req: 'Fyll inn en e-postadresse.',
-    full: club.member_cap
-      ? `Klubben er full (maks ${club.member_cap} medlemmer).`
-      : 'Klubben er full.',
-    expired: 'Klubben er utløpt. Ta kontakt på klubb@tornygolf.no for å fornye.',
-    unknown: 'Noe gikk galt. Prøv igjen.',
-  };
+  const [t, tRoles] = await Promise.all([
+    getTranslations('klubb.room'),
+    getTranslations('klubb.roles'),
+  ]);
 
-  const decidedMessages: Record<string, { tone: 'success' | 'error'; text: string }> = {
-    approved: { tone: 'success', text: 'Godkjent. Personen er nå medlem av klubben.' },
-    rejected: { tone: 'success', text: 'Forespørselen ble avslått.' },
-    not_auth: { tone: 'error', text: 'Du kan ikke avgjøre denne forespørselen.' },
-    already: { tone: 'error', text: 'Forespørselen var allerede avgjort.' },
-    not_found: { tone: 'error', text: 'Fant ikke forespørselen. Den kan ha blitt trukket tilbake.' },
-    club_full: {
-      tone: 'error',
-      text: club.member_cap
-        ? `Klubben er full (maks ${club.member_cap} medlemmer). Forespørselen står fortsatt åpen.`
-        : 'Klubben er full. Forespørselen står fortsatt åpen.',
-    },
-    club_expired: {
-      tone: 'error',
-      text: 'Klubben er utløpt. Forespørselen kan ikke godkjennes før avtalen fornyes.',
-    },
-    unknown: { tone: 'error', text: 'Noe gikk galt. Prøv igjen.' },
-  };
+  // Build error message for the add-member form.
+  function getErrorMessage(): string {
+    if (!errorCode) return t('errors.fallback');
+    switch (errorCode) {
+      case 'not_found':
+        return errorEmail
+          ? t('errors.not_found', { email: errorEmail })
+          : t('errors.not_found_generic');
+      case 'already':
+        return errorEmail
+          ? t('errors.already', { email: errorEmail })
+          : t('errors.already_generic');
+      case 'full':
+        return club.member_cap
+          ? t('errors.full', { cap: club.member_cap })
+          : t('errors.full_generic');
+      default:
+        return t(`errors.${errorCode}` as Parameters<typeof t>[0], undefined as never) ?? t('errors.fallback');
+    }
+  }
+
+  // Build decided banner message.
+  function getDecidedMessage(): { tone: 'success' | 'error'; text: string } | null {
+    if (!decidedCode) return null;
+    switch (decidedCode) {
+      case 'approved': return { tone: 'success', text: t('decided.approved') };
+      case 'rejected': return { tone: 'success', text: t('decided.rejected') };
+      case 'not_auth': return { tone: 'error', text: t('decided.not_auth') };
+      case 'already': return { tone: 'error', text: t('decided.already') };
+      case 'not_found': return { tone: 'error', text: t('decided.not_found') };
+      case 'club_full': return {
+        tone: 'error',
+        text: club.member_cap
+          ? t('decided.club_full', { cap: club.member_cap })
+          : t('decided.club_full_generic'),
+      };
+      case 'club_expired': return { tone: 'error', text: t('decided.club_expired') };
+      default: return { tone: 'error', text: t('decided.unknown') };
+    }
+  }
+
+  const decidedBanner = getDecidedMessage();
 
   const joinUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://tornygolf.no'}/klubber/bli-med/${club.short_id}`;
 
@@ -148,38 +157,31 @@ export default async function KlubbDetailPage({
 
       {addedEmail && (
         <div className="mb-6">
-          <Banner tone="success">{addedEmail} er lagt til i klubben.</Banner>
+          <Banner tone="success">{t('addedBanner', { email: addedEmail })}</Banner>
         </div>
       )}
 
       {errorCode && (
         <div className="mb-6">
-          <Banner tone="error">
-            {errorMessages[errorCode] ?? 'Noe gikk galt. Prøv igjen.'}
-          </Banner>
+          <Banner tone="error">{getErrorMessage()}</Banner>
         </div>
       )}
 
-      {decidedCode && decidedMessages[decidedCode] && (
+      {decidedBanner && (
         <div className="mb-6">
-          <Banner tone={decidedMessages[decidedCode].tone}>
-            {decidedMessages[decidedCode].text}
-          </Banner>
+          <Banner tone={decidedBanner.tone}>{decidedBanner.text}</Banner>
         </div>
       )}
 
       {roleChanged && (
         <div className="mb-6">
-          <Banner tone="success">Rollen er oppdatert.</Banner>
+          <Banner tone="success">{t('roleChangedBanner')}</Banner>
         </div>
       )}
 
       {frozen && (
         <div className="mb-6">
-          <Banner tone="warning">
-            Denne klubben er utløpt. Ta kontakt på klubb@tornygolf.no for å
-            fornye avtalen. Pågående runder spilles ferdig som normalt.
-          </Banner>
+          <Banner tone="warning">{t('frozenBanner')}</Banner>
         </div>
       )}
 
@@ -187,7 +189,7 @@ export default async function KlubbDetailPage({
       {isAdmin && pendingRequests.length > 0 && (
         <section className="mb-8">
           <h2 className="mb-3 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-            Forespørsler ({pendingRequests.length})
+            {t('requestsHeading', { count: pendingRequests.length })}
           </h2>
           <div className="space-y-2">
             {pendingRequests.map((req) => (
@@ -212,9 +214,9 @@ export default async function KlubbDetailPage({
                       <input type="hidden" name="approve" value="true" />
                       <SubmitButton
                         className="min-h-[44px] px-4 text-sm"
-                        pendingLabel="Godkjenner …"
+                        pendingLabel={t('approvePending')}
                       >
-                        Godkjenn
+                        {t('approveButton')}
                       </SubmitButton>
                     </form>
                     <form action={decideRequest}>
@@ -224,9 +226,9 @@ export default async function KlubbDetailPage({
                       <SubmitButton
                         variant="secondary"
                         className="min-h-[44px] px-4 text-sm"
-                        pendingLabel="Avviser …"
+                        pendingLabel={t('rejectPending')}
                       >
-                        Avslå
+                        {t('rejectButton')}
                       </SubmitButton>
                     </form>
                   </div>
@@ -240,8 +242,9 @@ export default async function KlubbDetailPage({
       {/* Members list */}
       <section className="mb-8">
         <h2 className="mb-3 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-          Medlemmer ({members.length}
-          {club.member_cap != null ? ` / ${club.member_cap}` : ''})
+          {club.member_cap != null
+            ? t('membersHeadingWithCap', { count: members.length, cap: club.member_cap })
+            : t('membersHeading', { count: members.length })}
         </h2>
         <div className="space-y-2">
           {members.map((member) => (
@@ -249,28 +252,28 @@ export default async function KlubbDetailPage({
               <div className="flex items-center justify-between gap-3">
                 <span className="truncate font-sans text-[15px] font-medium text-text">
                   {member.name}
-                  {member.userId === user.id && (
-                    <span className="ml-1.5 text-muted font-normal">(deg)</span>
+                  {member.userId === user!.id && (
+                    <span className="ml-1.5 text-muted font-normal">{t('youSuffix')}</span>
                   )}
                 </span>
                 <div className="flex shrink-0 items-center gap-2">
                   <span className="rounded-full border border-border px-2.5 py-0.5 font-sans text-xs text-muted">
-                    {ROLE_LABELS[member.role]}
+                    {tRoles(member.role)}
                   </span>
-                  {myRole === 'owner' && member.userId !== user.id && (
+                  {myRole === 'owner' && member.userId !== user!.id && (
                     <SmartLink
                       href={`/klubber/${club.id}/rolle/${member.userId}`}
                       className="min-h-[44px] flex items-center font-sans text-xs text-primary hover:underline"
                     >
-                      Endre rolle
+                      {t('changeRoleLink')}
                     </SmartLink>
                   )}
-                  {isAdmin && member.userId !== user.id && (
+                  {isAdmin && member.userId !== user!.id && (
                     <SmartLink
                       href={`/klubber/${club.id}/fjern/${member.userId}`}
                       className="min-h-[44px] flex items-center font-sans text-xs text-danger hover:underline"
                     >
-                      Fjern
+                      {t('removeLink')}
                     </SmartLink>
                   )}
                 </div>
@@ -300,7 +303,7 @@ export default async function KlubbDetailPage({
       {!frozen && (
         <section className="mb-8">
           <LinkButton href={`/opprett-spill?klubb=${club.id}`} full>
-            Sett opp en runde for klubben
+            {t('setupRoundButton')}
           </LinkButton>
         </section>
       )}
@@ -311,7 +314,7 @@ export default async function KlubbDetailPage({
           {/* Add member by email */}
           <section className="mb-8">
             <h2 className="mb-3 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-              Legg til medlem
+              {t('addMemberHeading')}
             </h2>
             <Card>
               <form action={addMember} className="space-y-4">
@@ -320,13 +323,13 @@ export default async function KlubbDetailPage({
                   id="member-email"
                   name="email"
                   type="email"
-                  label="E-postadresse"
-                  placeholder="navn@eksempel.no"
+                  label={t('emailLabel')}
+                  placeholder={t('emailPlaceholder')}
                   autoComplete="email"
-                  hint="Personen må ha Tørny-konto fra før."
+                  hint={t('emailHint')}
                 />
-                <SubmitButton className="w-full" pendingLabel="Legger til …">
-                  Legg til
+                <SubmitButton className="w-full" pendingLabel={t('addMemberPending')}>
+                  {t('addMemberButton')}
                 </SubmitButton>
               </form>
             </Card>
@@ -335,12 +338,11 @@ export default async function KlubbDetailPage({
           {/* Join link */}
           <section className="mb-8">
             <h2 className="mb-3 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-              Del klubb-lenke
+              {t('joinLinkHeading')}
             </h2>
             <Card className="space-y-2">
               <p className="font-sans text-sm text-muted">
-                Del denne lenken. Den som åpner den kan be om å bli med, og du
-                godkjenner eller avslår.
+                {t('joinLinkDescription')}
               </p>
               <CopyJoinLinkButton joinUrl={joinUrl} />
             </Card>
@@ -355,7 +357,7 @@ export default async function KlubbDetailPage({
             href={`/klubber/${club.id}/forlat`}
             className="block rounded-full border border-border bg-surface px-4 py-3 text-center font-sans text-[13px] font-medium text-danger min-h-[44px] flex items-center justify-center"
           >
-            Forlat klubb
+            {t('leaveLink')}
           </SmartLink>
         </section>
       )}

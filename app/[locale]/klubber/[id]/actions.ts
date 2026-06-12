@@ -1,6 +1,7 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 
@@ -27,15 +28,16 @@ export async function addMember(formData: FormData) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const locale = await getLocale();
   if (!user) {
-    redirect('/login');
+    redirect({ href: '/login', locale });
   }
 
   const groupId = String(formData.get('groupId') ?? '').trim();
   const email = String(formData.get('email') ?? '').trim();
 
-  if (!groupId) redirect('/klubber');
-  if (!email) redirect(`/klubber/${groupId}?error=email_req`);
+  if (!groupId) redirect({ href: '/klubber', locale });
+  if (!email) redirect({ href: `/klubber/${groupId}?error=email_req`, locale });
 
   const { data, error } = await supabase.rpc('add_club_member_by_email', {
     p_group_id: groupId,
@@ -45,31 +47,31 @@ export async function addMember(formData: FormData) {
   if (error) {
     const msg = error.message ?? '';
     if (msg.includes('not_authorized')) {
-      redirect(`/klubber/${groupId}?error=not_auth`);
+      redirect({ href: `/klubber/${groupId}?error=not_auth`, locale });
     }
     if (msg.includes('email_required')) {
-      redirect(`/klubber/${groupId}?error=email_req`);
+      redirect({ href: `/klubber/${groupId}?error=email_req`, locale });
     }
     console.error('[addMember]', error);
-    redirect(`/klubber/${groupId}?error=unknown`);
+    redirect({ href: `/klubber/${groupId}?error=unknown`, locale });
   }
 
   if (data === 'not_found') {
-    redirect(`/klubber/${groupId}?error=not_found&email=${encodeURIComponent(email)}`);
+    redirect({ href: `/klubber/${groupId}?error=not_found&email=${encodeURIComponent(email)}`, locale });
   }
   if (data === 'already_member') {
-    redirect(`/klubber/${groupId}?error=already&email=${encodeURIComponent(email)}`);
+    redirect({ href: `/klubber/${groupId}?error=already&email=${encodeURIComponent(email)}`, locale });
   }
   if (data === 'club_full') {
-    redirect(`/klubber/${groupId}?error=full`);
+    redirect({ href: `/klubber/${groupId}?error=full`, locale });
   }
   if (data === 'club_expired') {
-    redirect(`/klubber/${groupId}?error=expired`);
+    redirect({ href: `/klubber/${groupId}?error=expired`, locale });
   }
 
   // data === 'added'
   revalidatePath(`/klubber/${groupId}`);
-  redirect(`/klubber/${groupId}?added=${encodeURIComponent(email)}`);
+  redirect({ href: `/klubber/${groupId}?added=${encodeURIComponent(email)}`, locale });
 }
 
 /**
@@ -94,15 +96,16 @@ export async function decideRequest(formData: FormData) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const locale = await getLocale();
   if (!user) {
-    redirect('/login');
+    redirect({ href: '/login', locale });
   }
 
   const requestId = String(formData.get('requestId') ?? '').trim();
   const groupId = String(formData.get('groupId') ?? '').trim();
   const approveStr = String(formData.get('approve') ?? '').trim();
 
-  if (!requestId || !groupId) redirect('/klubber');
+  if (!requestId || !groupId) redirect({ href: '/klubber', locale });
 
   const approve = approveStr === 'true';
 
@@ -114,20 +117,20 @@ export async function decideRequest(formData: FormData) {
   if (error) {
     const msg = error.message ?? '';
     if (msg.includes('not_authorized')) {
-      redirect(`/klubber/${groupId}?decided=not_auth`);
+      redirect({ href: `/klubber/${groupId}?decided=not_auth`, locale });
     }
     if (msg.includes('already_decided')) {
-      redirect(`/klubber/${groupId}?decided=already`);
+      redirect({ href: `/klubber/${groupId}?decided=already`, locale });
     }
     if (msg.includes('request_not_found')) {
-      redirect(`/klubber/${groupId}?decided=not_found`);
+      redirect({ href: `/klubber/${groupId}?decided=not_found`, locale });
     }
     console.error('[decideRequest]', error);
-    redirect(`/klubber/${groupId}?decided=unknown`);
+    redirect({ href: `/klubber/${groupId}?decided=unknown`, locale });
   }
 
   // Invalidate club path so pending-requests list and member list refresh.
   revalidatePath(`/klubber/${groupId}`);
 
-  redirect(`/klubber/${groupId}?decided=${data ?? (approve ? 'approved' : 'rejected')}`);
+  redirect({ href: `/klubber/${groupId}?decided=${data ?? (approve ? 'approved' : 'rejected')}`, locale });
 }

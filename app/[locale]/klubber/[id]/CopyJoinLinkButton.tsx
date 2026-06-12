@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 /**
  * Client component for the «Kopier lenke» button on the club detail page.
@@ -12,6 +13,7 @@ import { useState } from 'react';
  */
 export function CopyJoinLinkButton({ joinUrl }: { joinUrl: string }) {
   const [state, setState] = useState<'idle' | 'copied' | 'error'>('idle');
+  const t = useTranslations('klubb.copyLink');
 
   async function copy() {
     try {
@@ -33,19 +35,19 @@ export function CopyJoinLinkButton({ joinUrl }: { joinUrl: string }) {
           value={joinUrl}
           onFocus={(e) => e.currentTarget.select()}
           className="flex-1 rounded-xl border border-border bg-bg px-3 py-2.5 font-mono text-[12px] tabular-nums text-text"
-          aria-label="Lenke for å bli med i klubben"
+          aria-label={t('ariaLabel')}
         />
         <button
           type="button"
           onClick={copy}
           className="inline-flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-full bg-primary px-4 py-2 text-sm font-medium tracking-tight text-white transition-colors hover:bg-primary-hover dark:text-bg"
         >
-          {state === 'copied' ? '✓ Kopiert' : 'Kopier lenke'}
+          {state === 'copied' ? t('copiedButton') : t('copyButton')}
         </button>
       </div>
       {state === 'error' && (
         <p className="text-xs text-danger">
-          Klarte ikke å kopiere automatisk. Marker lenken og kopier manuelt.
+          {t('copyError')}
         </p>
       )}
     </div>

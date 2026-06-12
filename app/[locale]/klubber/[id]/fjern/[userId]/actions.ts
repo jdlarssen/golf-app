@@ -1,6 +1,7 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -24,12 +25,13 @@ export async function removeMember(formData: FormData) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  const locale = await getLocale();
+  if (!user) redirect({ href: '/login', locale });
 
   const groupId = String(formData.get('groupId') ?? '').trim();
   const targetUserId = String(formData.get('targetUserId') ?? '').trim();
 
-  if (!groupId || !targetUserId) redirect('/klubber');
+  if (!groupId || !targetUserId) redirect({ href: '/klubber', locale });
 
   // Verify caller is admin/owner via admin client.
   const admin = getAdminClient();
@@ -37,12 +39,12 @@ export async function removeMember(formData: FormData) {
     .from('group_members')
     .select('role')
     .eq('group_id', groupId)
-    .eq('user_id', user.id)
+    .eq('user_id', user!.id)
     .maybeSingle();
 
   const callerRole = callerRow?.role;
   if (callerRole !== 'owner' && callerRole !== 'admin') {
-    redirect(`/klubber/${groupId}`);
+    redirect({ href: `/klubber/${groupId}`, locale });
   }
 
   // Last-owner guard: check if target is the sole owner.
@@ -61,9 +63,10 @@ export async function removeMember(formData: FormData) {
       .eq('role', 'owner');
 
     if ((ownerCount ?? 0) <= 1) {
-      redirect(
-        `/klubber/${groupId}/fjern/${targetUserId}?error=sole_owner`,
-      );
+      redirect({
+        href: `/klubber/${groupId}/fjern/${targetUserId}?error=sole_owner`,
+        locale,
+      });
     }
   }
 
@@ -76,9 +79,12 @@ export async function removeMember(formData: FormData) {
 
   if (error) {
     console.error('[removeMember]', error);
-    redirect(`/klubber/${groupId}/fjern/${targetUserId}?error=remove_failed`);
+    redirect({
+      href: `/klubber/${groupId}/fjern/${targetUserId}?error=remove_failed`,
+      locale,
+    });
   }
 
   revalidatePath(`/klubber/${groupId}`);
-  redirect(`/klubber/${groupId}`);
+  redirect({ href: `/klubber/${groupId}`, locale });
 }

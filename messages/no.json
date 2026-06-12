@@ -2678,6 +2678,140 @@
       "infinite": "Uendelig",
       "setEndDate": "Sett sluttdato",
       "endDateHint": "Gjelder til og med midnatt denne dagen."
+    },
+    "list": {
+      "kicker": "Klubbhuset",
+      "pageTitle": "Klubbene dine",
+      "emptyState": "Du er ikke med i noen klubber ennå. Får du en invitasjonslenke, dukker klubben opp her.",
+      "ctaHeading": "Vil du ha en klubb for laget ditt?",
+      "ctaBody": "Send en e-post til {email}, så setter vi den opp for deg."
+    },
+    "room": {
+      "addedBanner": "{email} er lagt til i klubben.",
+      "roleChangedBanner": "Rollen er oppdatert.",
+      "frozenBanner": "Denne klubben er utløpt. Ta kontakt på klubb@tornygolf.no for å fornye avtalen. Pågående runder spilles ferdig som normalt.",
+      "requestsHeading": "Forespørsler ({count})",
+      "membersHeading": "Medlemmer ({count})",
+      "membersHeadingWithCap": "Medlemmer ({count} / {cap})",
+      "youSuffix": "(deg)",
+      "changeRoleLink": "Endre rolle",
+      "removeLink": "Fjern",
+      "setupRoundButton": "Sett opp en runde for klubben",
+      "addMemberHeading": "Legg til medlem",
+      "emailLabel": "E-postadresse",
+      "emailPlaceholder": "navn@eksempel.no",
+      "emailHint": "Personen må ha Tørny-konto fra før.",
+      "addMemberButton": "Legg til",
+      "addMemberPending": "Legger til …",
+      "joinLinkHeading": "Del klubb-lenke",
+      "joinLinkDescription": "Del denne lenken. Den som åpner den kan be om å bli med, og du godkjenner eller avslår.",
+      "leaveLink": "Forlat klubb",
+      "approveButton": "Godkjenn",
+      "approvePending": "Godkjenner …",
+      "rejectButton": "Avslå",
+      "rejectPending": "Avviser …",
+      "errors": {
+        "not_found": "Fant ingen Tørny-bruker med e-posten {email}. Be dem opprette konto først.",
+        "not_found_generic": "Fant ingen Tørny-bruker med den e-posten. Be dem opprette konto først.",
+        "already": "{email} er allerede medlem i klubben.",
+        "already_generic": "Denne personen er allerede med i klubben.",
+        "not_auth": "Du har ikke tilgang til å legge til medlemmer.",
+        "email_req": "Fyll inn en e-postadresse.",
+        "full": "Klubben er full (maks {cap} medlemmer).",
+        "full_generic": "Klubben er full.",
+        "expired": "Klubben er utløpt. Ta kontakt på klubb@tornygolf.no for å fornye.",
+        "unknown": "Noe gikk galt. Prøv igjen.",
+        "fallback": "Noe gikk galt. Prøv igjen."
+      },
+      "decided": {
+        "approved": "Godkjent. Personen er nå medlem av klubben.",
+        "rejected": "Forespørselen ble avslått.",
+        "not_auth": "Du kan ikke avgjøre denne forespørselen.",
+        "already": "Forespørselen var allerede avgjort.",
+        "not_found": "Fant ikke forespørselen. Den kan ha blitt trukket tilbake.",
+        "club_full": "Klubben er full (maks {cap} medlemmer). Forespørselen står fortsatt åpen.",
+        "club_full_generic": "Klubben er full. Forespørselen står fortsatt åpen.",
+        "club_expired": "Klubben er utløpt. Forespørselen kan ikke godkjennes før avtalen fornyes.",
+        "unknown": "Noe gikk galt. Prøv igjen."
+      }
+    },
+    "leagues": {
+      "heading": "Klubbens ligaer",
+      "empty": "Ingen ligaer i klubben ennå.",
+      "newButton": "Ny liga",
+      "manageLink": "Styr",
+      "status": {
+        "draft": "Utkast",
+        "active": "Aktiv",
+        "finished": "Avsluttet"
+      }
+    },
+    "cups": {
+      "heading": "Klubbens cuper",
+      "empty": "Ingen cuper i klubben ennå.",
+      "newButton": "Ny cup",
+      "manageLink": "Styr"
+    },
+    "copyLink": {
+      "ariaLabel": "Lenke for å bli med i klubben",
+      "copyButton": "Kopier lenke",
+      "copiedButton": "✓ Kopiert",
+      "copyError": "Klarte ikke å kopiere automatisk. Marker lenken og kopier manuelt."
+    },
+    "join": {
+      "kicker": "Bli med i klubb",
+      "alreadyMember": "Du er allerede medlem av {name}.",
+      "goToClubButton": "Gå til klubben",
+      "subtitle": "Be om å bli med. Eieren godkjenner deg eller avslår.",
+      "sentBanner": "Forespørselen er sendt. Eieren må godkjenne den før du er med.",
+      "messageLabel": "Hilsen (valgfritt)",
+      "messagePlaceholder": "Kort beskjed til eieren (hvem er du?)",
+      "messageHint": "Maks 200 tegn.",
+      "submitButton": "Be om å bli med",
+      "submitPending": "Sender forespørsel …",
+      "errors": {
+        "unknown": "Noe gikk galt. Prøv igjen.",
+        "fallback": "Noe gikk galt. Prøv igjen."
+      }
+    },
+    "leave": {
+      "heading": "Forlat «{name}»?",
+      "description": "Du mister tilgang til klubbens turneringer. Eieren kan legge deg til igjen om du ber om det.",
+      "confirmText": "Du forlater {name}. Handlingen kan ikke angres.",
+      "leaveButton": "Forlat klubben",
+      "leavePending": "Forlater …",
+      "cancelLink": "Avbryt",
+      "errors": {
+        "sole_owner": "Klubben må ha minst én eier. Overfør eierskap til et annet medlem først.",
+        "leave_failed": "Noe gikk galt. Prøv igjen."
+      }
+    },
+    "remove": {
+      "heading": "Fjern «{name}»?",
+      "description": "{name} mister tilgang til klubbens turneringer med én gang. En eier kan legge dem til igjen.",
+      "confirmText": "Du fjerner {name} fra {clubName}.",
+      "removeButton": "Fjern fra klubben",
+      "removePending": "Fjerner …",
+      "cancelLink": "Avbryt",
+      "errors": {
+        "sole_owner": "Klubben må ha minst én eier. Overfør eierskap til et annet medlem først.",
+        "remove_failed": "Noe gikk galt. Prøv igjen."
+      }
+    },
+    "role": {
+      "heading": "Endre rolle for {name}",
+      "description": "Eier kan styre alt i klubben. Admin kan legge til og fjerne medlemmer. Medlem kan bli med på klubbens runder.",
+      "currentRole": "Nåværende rolle:",
+      "newRoleLegend": "Ny rolle",
+      "saveButton": "Lagre rolle",
+      "savePending": "Lagrer …",
+      "cancelLink": "Avbryt",
+      "errors": {
+        "last_owner": "Klubben må ha minst én eier. Gjør et annet medlem til eier først.",
+        "not_member": "Fant ikke medlemmet.",
+        "not_auth": "Bare eieren kan endre roller.",
+        "unknown": "Noe gikk galt. Prøv igjen."
+      }
     }
   },
   "liga": {

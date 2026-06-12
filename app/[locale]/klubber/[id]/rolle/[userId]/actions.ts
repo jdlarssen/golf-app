@@ -1,6 +1,7 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -30,17 +31,18 @@ export async function setMemberRole(formData: FormData) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  const locale = await getLocale();
+  if (!user) redirect({ href: '/login', locale });
 
   const groupId = String(formData.get('groupId') ?? '').trim();
   const targetUserId = String(formData.get('targetUserId') ?? '').trim();
   const role = String(formData.get('role') ?? '').trim();
 
-  if (!groupId || !targetUserId) redirect('/klubber');
+  if (!groupId || !targetUserId) redirect({ href: '/klubber', locale });
 
   // Validate role value — guard against tampered form data.
   if (!(VALID_ROLES as readonly string[]).includes(role)) {
-    redirect(`/klubber/${groupId}/rolle/${targetUserId}?error=unknown`);
+    redirect({ href: `/klubber/${groupId}/rolle/${targetUserId}?error=unknown`, locale });
   }
 
   const { data, error } = await supabase.rpc('set_club_member_role', {
@@ -52,16 +54,16 @@ export async function setMemberRole(formData: FormData) {
   if (error) {
     const msg = error.message ?? '';
     if (msg.includes('last_owner')) {
-      redirect(`/klubber/${groupId}/rolle/${targetUserId}?error=last_owner`);
+      redirect({ href: `/klubber/${groupId}/rolle/${targetUserId}?error=last_owner`, locale });
     }
     if (msg.includes('not_member')) {
-      redirect(`/klubber/${groupId}/rolle/${targetUserId}?error=not_member`);
+      redirect({ href: `/klubber/${groupId}/rolle/${targetUserId}?error=not_member`, locale });
     }
     if (msg.includes('not_authorized')) {
-      redirect(`/klubber/${groupId}/rolle/${targetUserId}?error=not_auth`);
+      redirect({ href: `/klubber/${groupId}/rolle/${targetUserId}?error=not_auth`, locale });
     }
     console.error('[setMemberRole]', error);
-    redirect(`/klubber/${groupId}/rolle/${targetUserId}?error=unknown`);
+    redirect({ href: `/klubber/${groupId}/rolle/${targetUserId}?error=unknown`, locale });
   }
 
   // Best-effort notify the target about the role change.
@@ -90,5 +92,5 @@ export async function setMemberRole(formData: FormData) {
   }
 
   revalidatePath(`/klubber/${groupId}`);
-  redirect(`/klubber/${groupId}?role_changed=${data ?? role}`);
+  redirect({ href: `/klubber/${groupId}?role_changed=${data ?? role}`, locale });
 }

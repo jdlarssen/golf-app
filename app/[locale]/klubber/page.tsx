@@ -1,4 +1,6 @@
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
@@ -6,12 +8,6 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getMyClubs } from '@/lib/clubs/getMyClubs';
-
-const ROLE_LABELS: Record<'owner' | 'admin' | 'member', string> = {
-  owner: 'Eier',
-  admin: 'Admin',
-  member: 'Medlem',
-};
 
 /**
  * /klubber — the user's club list.
@@ -30,19 +26,24 @@ export default async function KlubbListePage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
 
-  const { clubs } = await getMyClubs(supabase, user.id);
+  const locale = await getLocale();
+  if (!user) redirect({ href: '/login', locale });
+
+  const [{ clubs }, t, tRoles] = await Promise.all([
+    getMyClubs(supabase, user!.id),
+    getTranslations('klubb.list'),
+    getTranslations('klubb.roles'),
+  ]);
 
   return (
     <AppShell>
-      <TopBar backHref="/admin" kicker="Klubbhuset" />
-      <PageHeader title="Klubbene dine" />
+      <TopBar backHref="/admin" kicker={t('kicker')} />
+      <PageHeader title={t('pageTitle')} />
 
       {clubs.length === 0 ? (
         <p className="mb-6 text-center text-sm text-muted">
-          Du er ikke med i noen klubber ennå. Får du en invitasjonslenke, dukker
-          klubben opp her.
+          {t('emptyState')}
         </p>
       ) : (
         <nav className="mb-6 space-y-2">
@@ -55,7 +56,7 @@ export default async function KlubbListePage() {
                   </span>
                   <div className="flex shrink-0 items-center gap-3">
                     <span className="rounded-full border border-border px-2.5 py-0.5 font-sans text-xs text-muted">
-                      {ROLE_LABELS[club.role]}
+                      {tRoles(club.role)}
                     </span>
                     <span aria-hidden className="text-muted">
                       →
@@ -71,17 +72,19 @@ export default async function KlubbListePage() {
       {/* Admin-gated opprettelse (#50): kontakt-vei i stedet for opprett-dør. */}
       <Card className="space-y-1.5 bg-surface/60">
         <p className="font-sans text-sm font-medium text-text">
-          Vil du ha en klubb for laget ditt?
+          {t('ctaHeading')}
         </p>
         <p className="font-sans text-sm text-muted">
-          Send en e-post til{' '}
-          <a
-            href="mailto:klubb@tornygolf.no"
-            className="font-medium text-primary underline underline-offset-2"
-          >
-            klubb@tornygolf.no
-          </a>
-          , så setter vi den opp for deg.
+          {t.rich('ctaBody', {
+            email: (chunks) => (
+              <a
+                href="mailto:klubb@tornygolf.no"
+                className="font-medium text-primary underline underline-offset-2"
+              >
+                {chunks}
+              </a>
+            ),
+          })}
         </p>
       </Card>
     </AppShell>

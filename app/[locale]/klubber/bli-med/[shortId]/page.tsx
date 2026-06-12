@@ -1,4 +1,7 @@
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { AppShell } from '@/components/ui/AppShell';
@@ -51,8 +54,10 @@ export default async function BliMedPage({
     data: { user },
   } = await supabase.auth.getUser();
 
+  const locale = await getLocale();
+
   if (!user) {
-    redirect(`/login?next=/klubber/bli-med/${shortId}`);
+    redirect({ href: `/login?next=/klubber/bli-med/${shortId}`, locale });
   }
 
   const admin = getAdminClient();
@@ -71,24 +76,26 @@ export default async function BliMedPage({
     .from('group_members')
     .select('role')
     .eq('group_id', group.id)
-    .eq('user_id', user.id)
+    .eq('user_id', user!.id)
     .maybeSingle();
+
+  const t = await getTranslations('klubb.join');
 
   if (membership) {
     // Already a member — show confirmation and link to club.
     return (
       <AppShell>
-        <TopBar backHref="/klubber" kicker="Bli med i klubb" />
+        <TopBar backHref="/klubber" kicker={t('kicker')} />
         <PageHeader title={group.name} />
         <Card>
           <p className="font-sans text-[15px] text-text mb-4">
-            Du er allerede medlem av {group.name}.
+            {t('alreadyMember', { name: group.name })}
           </p>
           <SmartLink
             href={`/klubber/${group.id}`}
             className="block rounded-full bg-primary px-4 py-3 text-center font-sans text-[15px] font-semibold text-white min-h-[44px] flex items-center justify-center"
           >
-            Gå til klubben
+            {t('goToClubButton')}
           </SmartLink>
         </Card>
       </AppShell>
@@ -100,32 +107,28 @@ export default async function BliMedPage({
     .from('group_join_requests')
     .select('id, status')
     .eq('group_id', group.id)
-    .eq('user_id', user.id)
+    .eq('user_id', user!.id)
     .maybeSingle<{ id: string; status: string }>();
 
   const hasPendingRequest = existingRequest?.status === 'pending';
   const showSentState = sent || hasPendingRequest;
 
-  const errorMessages: Record<string, string> = {
-    unknown: 'Noe gikk galt. Prøv igjen.',
-  };
-
   return (
     <AppShell>
-      <TopBar backHref="/klubber" kicker="Bli med i klubb" />
+      <TopBar backHref="/klubber" kicker={t('kicker')} />
       <PageHeader
         title={group.name}
         subtitle={
           showSentState
             ? undefined
-            : 'Be om å bli med. Eieren godkjenner deg eller avslår.'
+            : t('subtitle')
         }
       />
 
       {showSentState && (
         <div className="mb-6">
           <Banner tone="success">
-            Forespørselen er sendt. Eieren må godkjenne den før du er med.
+            {t('sentBanner')}
           </Banner>
         </div>
       )}
@@ -133,7 +136,7 @@ export default async function BliMedPage({
       {errorCode && !showSentState && (
         <div className="mb-6">
           <Banner tone="error">
-            {errorMessages[errorCode] ?? 'Noe gikk galt. Prøv igjen.'}
+            {t(`errors.${errorCode}` as Parameters<typeof t>[0], undefined as never) ?? t('errors.fallback')}
           </Banner>
         </div>
       )}
@@ -147,20 +150,20 @@ export default async function BliMedPage({
                 htmlFor="join-message"
                 className="mb-1.5 block font-sans text-[13px] font-medium text-muted"
               >
-                Hilsen (valgfritt)
+                {t('messageLabel')}
               </label>
               <textarea
                 id="join-message"
                 name="message"
                 rows={3}
                 maxLength={200}
-                placeholder="Kort beskjed til eieren (hvem er du?)"
+                placeholder={t('messagePlaceholder')}
                 className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 font-sans text-[15px] text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
               />
-              <p className="mt-1 font-sans text-xs text-muted">Maks 200 tegn.</p>
+              <p className="mt-1 font-sans text-xs text-muted">{t('messageHint')}</p>
             </div>
-            <SubmitButton className="w-full" pendingLabel="Sender forespørsel …">
-              Be om å bli med
+            <SubmitButton className="w-full" pendingLabel={t('submitPending')}>
+              {t('submitButton')}
             </SubmitButton>
           </form>
         </Card>

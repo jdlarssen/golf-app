@@ -1,6 +1,7 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -23,10 +24,11 @@ export async function leaveClub(formData: FormData) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  const locale = await getLocale();
+  if (!user) redirect({ href: '/login', locale });
 
   const groupId = String(formData.get('groupId') ?? '').trim();
-  if (!groupId) redirect('/klubber');
+  if (!groupId) redirect({ href: '/klubber', locale });
 
   // Last-owner guard: count owners via admin client.
   const admin = getAdminClient();
@@ -41,13 +43,13 @@ export async function leaveClub(formData: FormData) {
     .from('group_members')
     .select('role')
     .eq('group_id', groupId)
-    .eq('user_id', user.id)
+    .eq('user_id', user!.id)
     .maybeSingle();
 
   const isOwner = myRow?.role === 'owner';
 
   if (isOwner && (ownerCount ?? 0) <= 1) {
-    redirect(`/klubber/${groupId}/forlat?error=sole_owner`);
+    redirect({ href: `/klubber/${groupId}/forlat?error=sole_owner`, locale });
   }
 
   // Self-delete via request-scoped client (RLS: user_id = auth.uid()).
@@ -55,13 +57,13 @@ export async function leaveClub(formData: FormData) {
     .from('group_members')
     .delete()
     .eq('group_id', groupId)
-    .eq('user_id', user.id);
+    .eq('user_id', user!.id);
 
   if (error) {
     console.error('[leaveClub]', error);
-    redirect(`/klubber/${groupId}/forlat?error=leave_failed`);
+    redirect({ href: `/klubber/${groupId}/forlat?error=leave_failed`, locale });
   }
 
   revalidatePath('/klubber');
-  redirect('/klubber');
+  redirect({ href: '/klubber', locale });
 }

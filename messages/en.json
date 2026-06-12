@@ -2678,6 +2678,140 @@
       "infinite": "Unlimited",
       "setEndDate": "Set end date",
       "endDateHint": "Valid until the end of this day."
+    },
+    "list": {
+      "kicker": "Club House",
+      "pageTitle": "Your clubs",
+      "emptyState": "You are not a member of any clubs yet. If you receive an invite link, the club will appear here.",
+      "ctaHeading": "Want a club for your group?",
+      "ctaBody": "Send an email to {email} and we''ll set it up for you."
+    },
+    "room": {
+      "addedBanner": "{email} has been added to the club.",
+      "roleChangedBanner": "Role updated.",
+      "frozenBanner": "This club has expired. Contact us at klubb@tornygolf.no to renew the agreement. Ongoing rounds continue as normal.",
+      "requestsHeading": "Requests ({count})",
+      "membersHeading": "Members ({count})",
+      "membersHeadingWithCap": "Members ({count} / {cap})",
+      "youSuffix": "(you)",
+      "changeRoleLink": "Change role",
+      "removeLink": "Remove",
+      "setupRoundButton": "Set up a round for the club",
+      "addMemberHeading": "Add member",
+      "emailLabel": "Email address",
+      "emailPlaceholder": "name@example.com",
+      "emailHint": "The person must already have a Tørny account.",
+      "addMemberButton": "Add",
+      "addMemberPending": "Adding…",
+      "joinLinkHeading": "Share club link",
+      "joinLinkDescription": "Share this link. Anyone who opens it can request to join, and you approve or decline.",
+      "leaveLink": "Leave club",
+      "approveButton": "Approve",
+      "approvePending": "Approving…",
+      "rejectButton": "Decline",
+      "rejectPending": "Declining…",
+      "errors": {
+        "not_found": "No Tørny user found with the email {email}. Ask them to create an account first.",
+        "not_found_generic": "No Tørny user found with that email address. Ask them to create an account first.",
+        "already": "{email} is already a member of this club.",
+        "already_generic": "This person is already a member of the club.",
+        "not_auth": "You do not have permission to add members.",
+        "email_req": "Please enter an email address.",
+        "full": "The club is full (max {cap} members).",
+        "full_generic": "The club is full.",
+        "expired": "The club has expired. Contact us at klubb@tornygolf.no to renew.",
+        "unknown": "Something went wrong. Please try again.",
+        "fallback": "Something went wrong. Please try again."
+      },
+      "decided": {
+        "approved": "Approved. The person is now a member of the club.",
+        "rejected": "The request has been declined.",
+        "not_auth": "You cannot decide this request.",
+        "already": "The request has already been decided.",
+        "not_found": "Request not found. It may have been withdrawn.",
+        "club_full": "The club is full (max {cap} members). The request remains open.",
+        "club_full_generic": "The club is full. The request remains open.",
+        "club_expired": "The club has expired. The request cannot be approved until the agreement is renewed.",
+        "unknown": "Something went wrong. Please try again."
+      }
+    },
+    "leagues": {
+      "heading": "Club leagues",
+      "empty": "No leagues in this club yet.",
+      "newButton": "New league",
+      "manageLink": "Manage",
+      "status": {
+        "draft": "Draft",
+        "active": "Active",
+        "finished": "Finished"
+      }
+    },
+    "cups": {
+      "heading": "Club cups",
+      "empty": "No cups in this club yet.",
+      "newButton": "New cup",
+      "manageLink": "Manage"
+    },
+    "copyLink": {
+      "ariaLabel": "Link to join the club",
+      "copyButton": "Copy link",
+      "copiedButton": "✓ Copied",
+      "copyError": "Could not copy automatically. Select the link and copy it manually."
+    },
+    "join": {
+      "kicker": "Join a club",
+      "alreadyMember": "You are already a member of {name}.",
+      "goToClubButton": "Go to club",
+      "subtitle": "Request to join. The owner will approve or decline.",
+      "sentBanner": "Request sent. The owner must approve it before you join.",
+      "messageLabel": "Message (optional)",
+      "messagePlaceholder": "A short note to the owner (who are you?)",
+      "messageHint": "Max 200 characters.",
+      "submitButton": "Request to join",
+      "submitPending": "Sending request…",
+      "errors": {
+        "unknown": "Something went wrong. Please try again.",
+        "fallback": "Something went wrong. Please try again."
+      }
+    },
+    "leave": {
+      "heading": "Leave \"{name}\"?",
+      "description": "You will lose access to the club''s tournaments. The owner can add you again if you ask.",
+      "confirmText": "You are leaving {name}. This action cannot be undone.",
+      "leaveButton": "Leave club",
+      "leavePending": "Leaving…",
+      "cancelLink": "Cancel",
+      "errors": {
+        "sole_owner": "The club must have at least one owner. Transfer ownership to another member first.",
+        "leave_failed": "Something went wrong. Please try again."
+      }
+    },
+    "remove": {
+      "heading": "Remove \"{name}\"?",
+      "description": "{name} will immediately lose access to the club''s tournaments. An owner can add them again.",
+      "confirmText": "You are removing {name} from {clubName}.",
+      "removeButton": "Remove from club",
+      "removePending": "Removing…",
+      "cancelLink": "Cancel",
+      "errors": {
+        "sole_owner": "The club must have at least one owner. Transfer ownership to another member first.",
+        "remove_failed": "Something went wrong. Please try again."
+      }
+    },
+    "role": {
+      "heading": "Change role for {name}",
+      "description": "Owner can manage everything in the club. Admin can add and remove members. Member can join the club''s rounds.",
+      "currentRole": "Current role:",
+      "newRoleLegend": "New role",
+      "saveButton": "Save role",
+      "savePending": "Saving…",
+      "cancelLink": "Cancel",
+      "errors": {
+        "last_owner": "The club must have at least one owner. Make another member an owner first.",
+        "not_member": "Member not found.",
+        "not_auth": "Only the owner can change roles.",
+        "unknown": "Something went wrong. Please try again."
+      }
     }
   },
   "liga": {
