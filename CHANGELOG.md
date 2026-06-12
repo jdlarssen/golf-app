@@ -17,7 +17,35 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.115.y — i18n · engelsk i opprett-flyten
+## 1.116.y — i18n · engelsk i Sekretariatet
+
+Issue [#563](https://github.com/jdlarssen/golf-app/issues/563), del av epic [#60](https://github.com/jdlarssen/golf-app/issues/60). Fase 2c av flerspråkligheten: hele Sekretariatet (admin-flatene) hentes fra omsettbare kataloger og finnes nå på engelsk — resultatprotokollen, spill-styringen, spillere, baner, format-mappingen og lanseringene.
+
+### [1.116.0] - 2026-06-12 · #563
+
+> Styrer du turneringer på engelsk, er hele Sekretariatet nå oversatt: resultatprotokollen, spill-styringen med påmelding, flights og påminnelser, spillere, baner, formater og lanseringer. På norsk er alt som før.
+
+<details>
+<summary>Teknisk</summary>
+
+[#563](https://github.com/jdlarssen/golf-app/issues/563). i18n Fase 2c — per-område-ekstraksjon av admin/Sekretariatet (~40 filer: `admin/page`, `admin/games/**` utenom `new`, `admin/spillere/**`, `admin/courses/**` utenom `CourseForm`/`new`, `admin/formats/**`, `admin/lanseringer/**`).
+
+#### Added
+- `messages/{no,en}.json`: nytt topp-namespace `admin.*` med under-namespaces `nav` (brødsmuler), `dashboard`, `games`, `game.*` (detalj, banners, seksjoner, rader, CTA-er, knapper, invitasjon, påmelding, flights, edit/slett/avslutt/avslutt-likevel/status/signups/trekk), `players.*` (liste, profil, slett, trekk-tilbake, relativ tid), `courses.*` (katalog, edit, arkiverte tees, slett), `formats.*` (chrome + forklarings-editor) og `launches.*` — gjennom idiomatisk golf-/sekretariat-engelsk-pass.
+- `lib/i18n/format.ts` `formatShortDateLocale` + `formatRelativeLocale` — admin-datoer og relativ tid rendrer engelsk under `/en`, byte-identisk norsk ellers (Type A-tester for begge stier). De håndrullede `relativeNb()`/`timeAgo()` beholder sine egne tidsskalaer gjennom katalognøkler.
+
+#### Changed
+- Alle filer i omfanget renderer via `useTranslations`/`getTranslations`; norsk output er uendret (full suite grønn uten assertion-endringer).
+- `Link`/`redirect`/`useRouter` migrert til `@/i18n/navigation` i hele omfanget; server actions bruker objekt-form med `getLocale()`. `lib/admin/auth.ts`-auth-gaten beholder `next/navigation` (utenfor i18n-scope).
+- Feilkode-rendering på admin-sidene bruker `t.has()`-guard mot katalogene; banetabellens edit-feilmeldinger («tee») holdes adskilt fra baneskjemaets («tee-boks»).
+
+#### Removed
+- `lib/admin/gameErrorMessages.ts` + drift-guard-testen og `lib/games/createGameLabel.ts` — siste konsumenter migrert til katalogene (`wizard.errors`, `admin.game.errors`, `admin.games`).
+
+</details>
+
+<details>
+<summary><strong>1.115.y — i18n · engelsk i opprett-flyten (1 oppføring)</strong></summary>
 
 Issue [#561](https://github.com/jdlarssen/golf-app/issues/561), del av epic [#60](https://github.com/jdlarssen/golf-app/issues/60). Fase 2b av flerspråkligheten: hele opprett-flyten (spill-veiviseren, hurtig-oppsettet og baneskjemaet) hentes fra omsettbare kataloger og finnes nå på engelsk.
 
@@ -41,6 +69,8 @@ Issue [#561](https://github.com/jdlarssen/golf-app/issues/561), del av epic [#60
 - `Link`/`redirect`/`useRouter`/`usePathname` migrert til `@/i18n/navigation` i hele omfanget; server actions bruker objekt-form med `getLocale()`.
 - Feilkode-rendering på begge opprett-dørene bruker `t.has()`-guard (ukjente koder gir ingen banner, som før) og ekte ICU `{list}`-interpolasjon for `pending_players`.
 - Norsk flyttet ut av lib: `INTENT_LABELS`/`INTENT_DESCRIPTIONS` (slettet), `bruttoHelperFor` → `bruttoHelperKeyFor` (nøkkel-returnerende), `PENDING_PLAYER_LABEL` → katalog, inline-feilmappene i begge bane-dørene → `courseForm.errors`/`adminErrors`.
+
+</details>
 
 </details>
 
