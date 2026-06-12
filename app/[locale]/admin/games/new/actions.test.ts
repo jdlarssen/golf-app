@@ -34,8 +34,12 @@ import {
  */
 
 const redirectMock = makeRedirectMock();
-vi.mock('next/navigation', () => ({
-  redirect: (url: string) => redirectMock(url),
+vi.mock('@/i18n/navigation', () => ({
+  redirect: (arg: { href: string; locale?: string } | string) =>
+    redirectMock(typeof arg === 'string' ? arg : arg.href),
+}));
+vi.mock('next-intl/server', () => ({
+  getLocale: async () => 'nb',
 }));
 
 const notifyInvitedToGameMock = vi.fn<
