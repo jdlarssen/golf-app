@@ -1,6 +1,7 @@
 'use client';
 
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 
 type SideTournamentConfig = {
@@ -34,6 +35,7 @@ export function EndGameButton({
   disabled = false,
   sideTournament,
 }: Props) {
+  const t = useTranslations('admin.game.buttons');
   const needsWizard =
     !!sideTournament?.enabled &&
     sideTournament.ldCount + sideTournament.ctpCount > 0;
@@ -46,7 +48,7 @@ export function EndGameButton({
         tabIndex={disabled ? -1 : undefined}
         className={`${LINK_CLASSES} ${disabled ? LINK_DISABLED_CLASSES : ''}`}
       >
-        Avslutt spillet
+        {t('endGame')}
       </Link>
     );
   }
@@ -55,16 +57,14 @@ export function EndGameButton({
     <form
       action={endAction}
       onSubmit={(event) => {
-        const ok = window.confirm(
-          'Avslutte spillet? Alle deltakere ser leaderboard etterpå.',
-        );
+        const ok = window.confirm(t('endGameConfirm'));
         if (!ok) {
           event.preventDefault();
         }
       }}
     >
-      <SubmitButton className="w-full" disabled={disabled} pendingLabel="Avslutter …">
-        Avslutt spillet
+      <SubmitButton className="w-full" disabled={disabled} pendingLabel={t('endingGame')}>
+        {t('endGame')}
       </SubmitButton>
     </form>
   );

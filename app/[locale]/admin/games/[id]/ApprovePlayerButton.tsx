@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 
 type Props = {
@@ -8,21 +9,18 @@ type Props = {
 };
 
 export function ApprovePlayerButton({ approveAction, playerName }: Props) {
+  const t = useTranslations('admin.game.buttons');
   return (
     <form
       action={approveAction}
       onSubmit={(event) => {
-        if (
-          !window.confirm(
-            `Godkjenne scorekortet til ${playerName} på vegne av flighten?`,
-          )
-        ) {
+        if (!window.confirm(t('approveConfirm', { name: playerName }))) {
           event.preventDefault();
         }
       }}
     >
-      <SubmitButton className="whitespace-nowrap text-sm" pendingLabel="Godkjenner …">
-        Godkjenn på vegne av flight
+      <SubmitButton className="whitespace-nowrap text-sm" pendingLabel={t('approvingBusy')}>
+        {t('approveOnBehalf')}
       </SubmitButton>
     </form>
   );

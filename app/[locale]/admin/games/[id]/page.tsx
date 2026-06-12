@@ -1,6 +1,7 @@
 import { Suspense, cache } from 'react';
 import { getLocale, getTranslations } from 'next-intl/server';
-import { formatDateTime } from '@/lib/i18n/format';
+import { formatDateTime, formatShortDateLocale } from '@/lib/i18n/format';
+import type { AppLocale } from '@/i18n/routing';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound } from 'next/navigation';
 import { after } from 'next/server';
@@ -23,7 +24,7 @@ import {
   type GameMode,
   type GameModeConfig,
 } from '@/lib/scoring';
-import { formatDisplayLabel } from '@/lib/games/formatLabel';
+import { formatDisplayLabelKey } from '@/lib/games/formatLabel';
 import { StartGameButton } from './StartGameButton';
 import { StartScheduledGameButton } from './StartScheduledGameButton';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
@@ -45,7 +46,6 @@ import {
   getRatingForGender,
   type TeeBoxRatings,
 } from '@/lib/games/teeRating';
-import { formatShortDateNb } from '@/lib/format/date';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
 import { InviteToGameSection } from './InviteToGameSection';
 import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
@@ -70,35 +70,9 @@ const STATUS_TO_TONE: Record<GameStatus, StatusChipTone> = {
   finished: 'signert',
 };
 
-const STATUS_BANNERS: Record<string, string> = {
-  draft_created: '✓ Spillet ble lagret som utkast.',
-  scheduled: '✓ Spillet er publisert. Spillerne ser det nå i Mine spill.',
-  updated: '✓ Endringene er lagret.',
-  started: '✓ Runden er i gang. Spillerne kan taste slag.',
-  admin_approved: '✓ Scorekort godkjent på vegne av flighten.',
-  finished: '✓ Spillet er avsluttet. Leaderboard er åpen for alle.',
-  scorecard_reopened: '✓ Scorekortet er åpnet for redigering.',
-  game_reopened: '✓ Spillet er aktivt igjen.',
-  invite_added: '✓ Spilleren er lagt til på rosteren.',
-  invite_sent: '✓ Invitasjon sendt.',
-  player_withdrawn: '✓ Spilleren er trukket fra rangeringen.',
-  player_reinstated: '✓ Spilleren er gjeninnsatt i rangeringen.',
-  // #543
-  flight_suggested: '✓ Inndeling er foreslått og lagret.',
-  flight_updated: '✓ Spillerens flight er oppdatert.',
-  signups_closed: '✓ Påmeldingen er stengt. Nye søknader avvises.',
-  signups_reopened: '✓ Påmeldingen er gjenåpnet.',
-};
-
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
   return value;
-}
-
-
-function shortNb(iso: string | null | undefined): string | null {
-  if (!iso) return null;
-  return formatShortDateNb(iso);
 }
 
 type GameRow = {
@@ -192,9 +166,15 @@ export default async function GameDetailPage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  const statusBanner = STATUS_BANNERS[first(sp.status) ?? ''] ?? undefined;
 
   const tErrors = await getTranslations('admin.game.errors');
+  const tBanners = await getTranslations('admin.game.banners');
+  const tDetail = await getTranslations('admin.game.detail');
+  const statusCode = first(sp.status) ?? '';
+  const statusBanner =
+    statusCode && tBanners.has(statusCode as Parameters<typeof tBanners>[0])
+      ? tBanners(statusCode as Parameters<typeof tBanners>[0])
+      : undefined;
   const errorCode = first(sp.error);
   const emails = first(sp.emails);
   function buildErrorMessage(): string | undefined {
@@ -226,12 +206,19 @@ export default async function GameDetailPage({
     notFound();
   }
 
+  const locale = await getLocale();
+
+  function shortDate(iso: string | null | undefined): string | null {
+    if (!iso) return null;
+    return formatShortDateLocale(iso, locale as AppLocale);
+  }
+
   // Date subtitle: best timestamp available for the lifecycle stage.
   const subtitleDate =
-    shortNb(game.ended_at) ??
-    shortNb(game.started_at) ??
-    shortNb(game.scheduled_tee_off_at) ??
-    shortNb(game.created_at);
+    shortDate(game.ended_at) ??
+    shortDate(game.started_at) ??
+    shortDate(game.scheduled_tee_off_at) ??
+    shortDate(game.created_at);
 
   const userId = await getProxyVerifiedUserId();
 
@@ -259,10 +246,10 @@ export default async function GameDetailPage({
     <AdminShell>
       <TopBar
         backHref="/admin/games"
-        kicker="Spill · protokoll"
+        kicker={tDetail('brassRibbon')}
       />
 
-      <BrassRibbon kicker="Spill · protokoll" />
+      <BrassRibbon kicker={tDetail('brassRibbon')} />
 
       {/* Title block */}
       <div className="px-1">
@@ -289,7 +276,7 @@ export default async function GameDetailPage({
       )}
 
       <Suspense fallback={<PlayersSectionsSkeleton />}>
-        <PlayersSections gameId={id} game={game} />
+        <PlayersSections gameId={id} game={game} locale={locale} />
       </Suspense>
 
       <p className="mt-6 text-center font-serif text-[11px] italic leading-relaxed text-muted">
@@ -298,10 +285,10 @@ export default async function GameDetailPage({
         </Suspense>
       </p>
 
-      {/* Faresone — permanent delete */}
+      {/* Danger zone — permanent delete */}
       <section className="mt-6">
         <p className="mb-1.5 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          Faresone
+          {tDetail('dangerZoneLabel')}
         </p>
         <div
           className="rounded-xl border bg-surface px-4 py-3.5"
@@ -316,7 +303,7 @@ export default async function GameDetailPage({
               className="font-sans text-[13px] font-medium"
               style={{ color: 'var(--danger-deep)' }}
             >
-              Slett spillet helt
+              {tDetail('deleteGame')}
             </SmartLink>
           </div>
         </div>
@@ -329,19 +316,28 @@ export default async function GameDetailPage({
 
 async function SakNumber({ createdAt }: { createdAt: string }) {
   const { year, positionInYear } = await getSakNumber(createdAt);
+  const tDetail = await getTranslations('admin.game.detail');
   return (
     <span className="font-sans text-[11px] tabular-nums text-muted">
-      Sak {year}-{String(positionInYear).padStart(3, '0')}
+      {tDetail('sakNumber', {
+        year,
+        n: String(positionInYear).padStart(3, '0'),
+      })}
     </span>
   );
 }
 
 async function CreatedAtFooter({ createdAt }: { createdAt: string }) {
   const { year, positionInYear } = await getSakNumber(createdAt);
+  const tDetail = await getTranslations('admin.game.detail');
+  const locale = await getLocale();
   return (
     <>
-      Opprettet {shortNb(createdAt)} ·{' '}
-      {String(positionInYear).padStart(3, '0')}. sak i {year}.
+      {tDetail('createdAtFooter', {
+        date: formatShortDateLocale(createdAt, locale as AppLocale) ?? '',
+        n: String(positionInYear).padStart(3, '0'),
+        year,
+      })}
     </>
   );
 }
@@ -349,12 +345,18 @@ async function CreatedAtFooter({ createdAt }: { createdAt: string }) {
 async function PlayersSections({
   gameId,
   game,
+  locale,
 }: {
   gameId: string;
   game: GameRow;
+  locale: string;
 }) {
   const { supabase } = await getAdminGameContext();
-  const locale = await getLocale();
+  const tDetail = await getTranslations('admin.game.detail');
+  const tSections = await getTranslations('admin.game.sections');
+  const tRows = await getTranslations('admin.game.rows');
+  const tCta = await getTranslations('admin.game.cta');
+  const tModes = await getTranslations('modes');
 
   // game_players has two FKs to users (user_id and approved_by_user_id), so
   // we must disambiguate via the named constraint.
@@ -419,17 +421,18 @@ async function PlayersSections({
   // siden flight = team mekanisk (validatoren håndhever det).
   const isScramble = isScrambleFamily(game.game_mode);
 
-  // Spillform-label for Format-cardet. Variant-bevisst via formatDisplayLabel:
+  // Spillform-label for Format-cardet. Variant-bevisst via formatDisplayLabelKey:
   // stableford-familien med team_size 2 vises som «4BBB Stableford» (samme navn
   // som chip-en og resten av appen, #282); alt annet faller tilbake til
-  // MODE_LABELS (f.eks. «Matchplay», «Slagspill»).
-  const modeLabel = formatDisplayLabel(game.game_mode, game.mode_config);
+  // modes.<mode> (f.eks. «Matchplay», «Slagspill»).
+  const modeLabelKey = formatDisplayLabelKey(game.game_mode, game.mode_config);
+  const modeLabel = tModes(modeLabelKey as Parameters<typeof tModes>[0]);
 
   // Lag-terminologi: matchplay bruker «Side» i stedet for «Lag» (golf-standard
   // for 1v1-format). Holdt som lokale strings slik at vi ikke trenger å fyre
   // ternary på hver call-site i markup.
-  const teamLabel = isMatchplay ? 'Side' : 'Lag';
-  const teamsTotalLabel = isMatchplay ? 'Antall sider' : 'Antall lag';
+  const teamLabel = isMatchplay ? tDetail('teamLabel') : tDetail('teamLabelDefault');
+  const teamsTotalLabel = isMatchplay ? tDetail('teamsTotalLabel') : tDetail('teamsTotalLabelDefault');
   // Maks-antall lag/sider for «X / Y»-disply i Påmelding-cardet. Best-ball er
   // alltid 4, par-stableford skalerer 1-4 men UX-en viser fortsatt mot 4 for
   // konsistens, matchplay er alltid 2.
@@ -471,7 +474,7 @@ async function PlayersSections({
   }
 
   function displayName(p: GamePlayerRow): string {
-    if (!p.users) return '(ukjent spiller)';
+    if (!p.users) return tDetail('unknownPlayer');
     // Pending invitee — show email until they complete their profile.
     const name = p.users.name ?? p.users.email;
     return p.users.nickname ? `${name} «${p.users.nickname}»` : name;
@@ -515,15 +518,15 @@ async function PlayersSections({
 
   return (
     <>
-      {/* Card 1 — Påmelding */}
-      <SectionCard ribbon="Påmelding">
+      {/* Card 1 — Registration */}
+      <SectionCard ribbon={tSections('registration')}>
         <Row
-          label="Spillere"
+          label={tRows('players')}
           value={`${players.length}`}
           tone={players.length > 0 ? 'full' : undefined}
         />
         <Row
-          label="Levert scorekort"
+          label={tRows('submittedScorecard')}
           value={`${submittedCount} / ${rankablePlayers.length}`}
           sub={
             notSubmittedCount > 0
@@ -536,7 +539,7 @@ async function PlayersSections({
           }
         />
         {!isSolo && (
-          <Row label={teamsTotalLabel} value={`${teamCount} / ${teamsMax}`} />
+          <Row label={isMatchplay ? tRows('teamCount') : tRows('teamCountDefault')} value={`${teamCount} / ${teamsMax}`} />
         )}
       </SectionCard>
 
@@ -553,35 +556,33 @@ async function PlayersSections({
       {game.status === 'scheduled' &&
         (game.registration_mode === 'open' ||
           game.registration_mode === 'manual_approval') && (
-          <SectionCard ribbon="Administrer påmelding">
+          <SectionCard ribbon={tSections('manageSignups')}>
             <div className="px-3.5 pb-3.5 pt-3">
               {game.signups_closed_at ? (
                 <div className="space-y-3">
                   <p className="text-sm text-muted">
-                    Påmeldingen er stengt. Spillerne ser en melding om at
-                    arrangøren gjør siste justeringer.
+                    {tCta('signupsClosedBody')}
                   </p>
                   <form action={toggleSignupsClosed.bind(null, gameId, false)}>
                     <button
                       type="submit"
                       className="block w-full min-h-[44px] rounded-full border border-border bg-surface px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-surface-2"
                     >
-                      Gjenåpne påmeldingen
+                      {tCta('reopenSignupsButton')}
                     </button>
                   </form>
                 </div>
               ) : (
                 <div className="space-y-3">
                   <p className="text-sm text-muted">
-                    Steng påmeldingen mens du gjør de siste justeringene.
-                    Spillere som prøver å melde seg på, får beskjed om å vente.
+                    {tCta('closeSignupsBody')}
                   </p>
                   <form action={toggleSignupsClosed.bind(null, gameId, true)}>
                     <button
                       type="submit"
                       className="block w-full min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover dark:text-bg"
                     >
-                      Steng påmeldingen
+                      {tCta('closeSignupsButton')}
                     </button>
                   </form>
                 </div>
@@ -591,20 +592,20 @@ async function PlayersSections({
         )}
 
       {/* Card 2 — Format */}
-      <SectionCard ribbon="Format">
-        <Row label="Spillform" value={modeLabel} />
+      <SectionCard ribbon={tSections('format')}>
+        <Row label={tRows('gameMode')} value={modeLabel} />
         <Row
-          label="Handicap-justering"
+          label={tRows('hcpAllowance')}
           value={`${game.hcp_allowance_pct} %`}
         />
         <Row
-          label="Peer-godkjenning"
-          value={game.require_peer_approval ? 'På' : 'Av'}
+          label={tRows('peerApproval')}
+          value={game.require_peer_approval ? tRows('peerApprovalOn') : tRows('peerApprovalOff')}
         />
         {game.scheduled_tee_off_at && (
           <Row
-            label="Tee-off"
-            value={formatDateTime(game.scheduled_tee_off_at, locale, {
+            label={tRows('teeOff')}
+            value={formatDateTime(game.scheduled_tee_off_at, locale as AppLocale, {
               day: '2-digit',
               month: 'short',
               hour: '2-digit',
@@ -614,20 +615,20 @@ async function PlayersSections({
         )}
       </SectionCard>
 
-      {/* Card 3 — Banen */}
-      <SectionCard ribbon="Banen">
+      {/* Card 3 — Course */}
+      <SectionCard ribbon={tSections('course')}>
         <Row
-          label="Bane"
-          value={game.courses?.name ?? '(ukjent)'}
+          label={tRows('course')}
+          value={game.courses?.name ?? tRows('unknownCourse')}
         />
         {game.tee_boxes && (
           <>
-            <Row label="Tee" value={game.tee_boxes.name} />
+            <Row label={tRows('tee')} value={game.tee_boxes.name} />
             {(['mens', 'ladies', 'juniors'] as const).map((g) => {
               const rating = getRatingForGender(game.tee_boxes!, g);
               if (!rating) return null;
               const label =
-                g === 'mens' ? 'Herrer' : g === 'ladies' ? 'Damer' : 'Junior';
+                g === 'mens' ? tRows('genderMens') : g === 'ladies' ? tRows('genderLadies') : tRows('genderJuniors');
               return (
                 <Row
                   key={g}
@@ -643,12 +644,12 @@ async function PlayersSections({
       {/* Operational sections — kept full-fidelity ────────────────────── */}
 
       {game.status === 'active' && (
-        <SectionCard ribbon="Fremgang">
+        <SectionCard ribbon={tSections('progress')}>
           <div className="px-3.5 pt-3 pb-3.5">
             <p className="mb-3 text-xs text-muted">
               {isMatchplay
-                ? 'Hvor langt hver side har kommet — uten å avsløre tall.'
-                : 'Hvor langt hver flight har kommet — uten å avsløre tall.'}
+                ? tDetail('progressMatchDesc')
+                : tDetail('progressFlightDesc')}
             </p>
             <ul className="space-y-3.5">
               {[1, 2, 3, 4]
@@ -661,8 +662,8 @@ async function PlayersSections({
                   // Matchplay: flight = side mekanisk, så vi viser «Side N» her
                   // i stedet for «Flight N» for å matche resten av detail-pagen.
                   const groupLabel = isMatchplay
-                    ? `Side ${f}`
-                    : `Flight ${f}`;
+                    ? tDetail('sideN', { n: f })
+                    : tDetail('flightN', { n: f });
                   return (
                     <li key={f}>
                       <div className="mb-1 flex items-center justify-between text-sm">
@@ -671,8 +672,8 @@ async function PlayersSections({
                         </span>
                         <span className="text-xs tabular-nums text-muted">
                           {p && p.maxHole > 0
-                            ? `Hull ${p.maxHole}`
-                            : 'Ikke startet'}
+                            ? tDetail('hullN', { n: p.maxHole })
+                            : tDetail('notStarted')}
                           {' · '}
                           {p ? `${p.filledCells}/${p.totalCells}` : '0/0'}
                         </span>
@@ -692,7 +693,7 @@ async function PlayersSections({
       )}
 
       {!isSolo && (
-        <SectionCard ribbon={isMatchplay ? 'Sider' : 'Lag'}>
+        <SectionCard ribbon={isMatchplay ? tSections('sides') : tSections('teams')}>
           <div className="grid grid-cols-1 gap-2.5 px-3.5 pb-3.5 pt-3 sm:grid-cols-2">
             {/* Par-stableford skalerer 1-4 lag — vis kun lag med spillere, ellers
                 blir gridet dominert av «(tom)»-placeholdere. Best-ball er fast
@@ -715,7 +716,7 @@ async function PlayersSections({
                     {teamLabel} {team}
                   </p>
                   {byTeam[team].length === 0 ? (
-                    <p className="text-sm text-muted">(tom)</p>
+                    <p className="text-sm text-muted">{tDetail('teamEmpty')}</p>
                   ) : (
                     <ul className="space-y-0.5">
                       {byTeam[team].map((p) => (
@@ -738,7 +739,7 @@ async function PlayersSections({
           par-stableford, matchplay og Texas. */}
       {!isSolo && !isParStableford && !isMatchplay && !isScramble &&
         [1, 2, 3, 4].some((f) => byFlight[f].length > 0) && (
-        <SectionCard ribbon="Flights">
+        <SectionCard ribbon={tSections('flights')}>
           <ul className="space-y-2 px-3.5 pb-3.5 pt-3">
             {[1, 2, 3, 4]
               .filter((f) => byFlight[f].length > 0)
@@ -748,7 +749,7 @@ async function PlayersSections({
                   className="rounded-xl border border-border px-3 py-2.5"
                 >
                   <p className="mb-0.5 font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-                    Flight {f}
+                    {tDetail('flightN', { n: f })}
                   </p>
                   <p className="text-sm text-text">
                     {byFlight[f].map(displayName).join(', ')}
@@ -786,12 +787,12 @@ async function PlayersSections({
       })()}
 
       {players.length > 0 && (
-        <SectionCard ribbon="Spillere">
+        <SectionCard ribbon={tSections('players')}>
           <div className="overflow-x-auto px-2 pb-3.5 pt-2">
             <table className="w-full text-sm tabular-nums">
               <thead>
                 <tr className="text-left text-[10px] font-semibold uppercase tracking-widest text-muted">
-                  <th className="px-2 py-1.5 font-semibold">Navn</th>
+                  <th className="px-2 py-1.5 font-semibold">{tDetail('colName')}</th>
                   {/* Par-stableford og matchplay har flight = team mekanisk (gjort i
                       payload-laget). Vis kun Lag/Side-kolonnen — Flight-kolonnen ville
                       gjentatt samme tall. Best-ball kan ha avvik (8 spillere på 4 lag
@@ -801,11 +802,11 @@ async function PlayersSections({
                     <th className="px-2 py-1.5 font-semibold">{teamLabel}</th>
                   )}
                   {isBestBall && (
-                    <th className="px-2 py-1.5 font-semibold">Flight</th>
+                    <th className="px-2 py-1.5 font-semibold">{tDetail('colFlight')}</th>
                   )}
-                  <th className="px-2 py-1.5 text-right font-semibold">CH</th>
+                  <th className="px-2 py-1.5 text-right font-semibold">{tDetail('colCH')}</th>
                   {game.status !== 'draft' && (
-                    <th className="px-2 py-1.5 font-semibold">Status</th>
+                    <th className="px-2 py-1.5 font-semibold">{tDetail('colStatus')}</th>
                   )}
                 </tr>
               </thead>
@@ -815,7 +816,7 @@ async function PlayersSections({
                   let statusClass: string;
                   // Withdrawn (#386): WD takes precedence over all other states.
                   if (p.withdrawn_at) {
-                    statusLabel = 'Trukket';
+                    statusLabel = tDetail('statusWithdrawn');
                     statusClass = 'text-muted';
                   } else if (!p.submitted_at) {
                     // På avsluttet spill leverte spilleren aldri scorekortet
@@ -823,17 +824,17 @@ async function PlayersSections({
                     // fullført») — scorene deres teller fortsatt i resultatet;
                     // det er kun leveringen som mangler.
                     if (game.status === 'finished') {
-                      statusLabel = 'Ikke levert';
+                      statusLabel = tDetail('statusNotSubmitted');
                       statusClass = 'text-muted';
                     } else {
-                      statusLabel = '⏳ Spiller';
+                      statusLabel = tDetail('statusPlaying');
                       statusClass = 'text-muted';
                     }
                   } else if (game.require_peer_approval && !p.approved_at) {
-                    statusLabel = '⏳ Venter';
+                    statusLabel = tDetail('statusWaiting');
                     statusClass = 'text-warning';
                   } else {
-                    statusLabel = '✓ Levert';
+                    statusLabel = tDetail('statusSubmitted');
                     statusClass = 'text-success';
                   }
 
@@ -874,22 +875,22 @@ async function PlayersSections({
                             <span>{statusLabel}</span>
                             {showWdActions && (
                               p.withdrawn_at ? (
-                                // Angre-knapp: liten form-knapp, subtil stil
+                                // Undo-button: small form-button, subtle style
                                 <form action={undoWithdrawAction!}>
                                   <button
                                     type="submit"
                                     className="min-h-[44px] rounded px-2 py-1 font-sans text-[11px] font-medium text-primary underline hover:opacity-70"
                                   >
-                                    Angre
+                                    {tDetail('undoWithdraw')}
                                   </button>
                                 </form>
                               ) : (
-                                // Trekk-lenke til bekreftelses-siden
+                                // Withdraw link to confirmation page
                                 <a
                                   href={`/admin/games/${gameId}/trekk-spiller/${p.user_id}`}
                                   className="min-h-[44px] inline-flex items-center rounded px-2 py-1 font-sans text-[11px] font-medium text-muted underline hover:opacity-70"
                                 >
-                                  Trekk
+                                  {tDetail('withdrawLink')}
                                 </a>
                               )
                             )}
@@ -918,7 +919,7 @@ async function PlayersSections({
         const submitted = players.filter((p) => p.submitted_at != null);
         if (submitted.length === 0) return null;
         return (
-          <SectionCard ribbon="Leverte scorekort" id="leverte-scorekort">
+          <SectionCard ribbon={tSections('submittedScorecards')} id="leverte-scorekort">
             <div className="px-3.5 pb-3.5 pt-3">
               <ul className="-mx-2 divide-y divide-border">
                 {submitted.map((p) => {
@@ -952,13 +953,13 @@ async function PlayersSections({
                           {isSolo
                             ? null
                             : isMatchplay
-                              ? `Side ${p.team_number} · `
+                              ? tDetail('sideLagSuffix', { n: p.team_number })
                               : isParStableford
-                                ? `Lag ${p.team_number} · `
-                                : `Flight ${p.flight_number} · Lag ${p.team_number} · `}
+                                ? tDetail('lagSuffix', { n: p.team_number })
+                                : tDetail('flightLagN', { flight: p.flight_number, team: p.team_number })}
                           {needsApproval
-                            ? '⏳ Venter godkjenning'
-                            : '✓ Godkjent'}
+                            ? tDetail('pendingApproval')
+                            : tDetail('approved')}
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -986,17 +987,16 @@ async function PlayersSections({
 
       {game.status === 'draft' && (
         <>
-          <SectionCard ribbon="Fortsett å planlegge">
+          <SectionCard ribbon={tSections('continuePlanning')}>
             <div className="px-3.5 pb-3.5 pt-3">
               <p className="mb-3 text-sm text-muted">
-                Spillet er fortsatt et utkast, så bare du ser det. Fyll inn
-                det som mangler og publiser når dere er klare.
+                {tCta('draftBody')}
               </p>
               <SmartLink
                 href={`/admin/games/${gameId}/edit`}
                 className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover dark:text-bg"
               >
-                Rediger utkast
+                {tCta('draftEditButton')}
               </SmartLink>
             </div>
           </SectionCard>
@@ -1009,27 +1009,25 @@ async function PlayersSections({
 
       {game.status === 'scheduled' && (
         <>
-          <SectionCard ribbon="Start runden">
+          <SectionCard ribbon={tSections('startRound')}>
             <div className="px-3.5 pb-3.5 pt-3">
               <p className="mb-3 text-sm text-muted">
-                Når du starter runden låses course handicap for hver spiller,
-                redigering stenges, og spillerne kan begynne å taste slag.
+                {tCta('scheduledStartBody')}
               </p>
               <StartScheduledGameButton startAction={startScheduledAction} />
             </div>
           </SectionCard>
 
-          <SectionCard ribbon="Rediger spillet">
+          <SectionCard ribbon={tSections('editGame')}>
             <div className="px-3.5 pb-3.5 pt-3">
               <p className="mb-3 text-sm text-muted">
-                Spillet er i planlagt-fasen. Du kan fortsatt endre bane,
-                tee-off, spillere, lag og innstillinger inntil runden startes.
+                {tCta('scheduledEditBody')}
               </p>
               <SmartLink
                 href={`/admin/games/${gameId}/edit`}
                 className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover dark:text-bg"
               >
-                Rediger spillet
+                {tCta('scheduledEditButton')}
               </SmartLink>
             </div>
           </SectionCard>
@@ -1037,15 +1035,14 @@ async function PlayersSections({
       )}
 
       {game.status === 'active' && (
-        <SectionCard ribbon="Avslutt spillet">
+        <SectionCard ribbon={tSections('endGame')}>
           <div className="px-3.5 pb-3.5 pt-3">
             {everyPlayerReady ? (
               <div className="space-y-3">
                 <p className="text-sm text-muted">
-                  Alle spillere har levert
-                  {game.require_peer_approval && ' og godkjent'} scorekort.
-                  Spillet kan avsluttes — leaderboard blir åpen for alle
-                  deltakere.
+                  {tCta('allReadyBody', {
+                    andApproved: game.require_peer_approval ? tCta('allReadyAndApproved') : '',
+                  })}
                 </p>
                 <EndGameButton
                   endAction={endAction}
@@ -1062,16 +1059,17 @@ async function PlayersSections({
               <div className="space-y-3">
                 <div className="rounded-xl border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning">
                   <p>
-                    {notSubmittedCount} av {rankablePlayers.length} spillere har ikke
-                    levert. Du kan avslutte likevel. De blir stående som «ikke
-                    levert», men scorene deres teller fortsatt i resultatet.
+                    {tCta('missingWarning', {
+                      notSubmitted: notSubmittedCount,
+                      total: rankablePlayers.length,
+                    })}
                   </p>
                 </div>
                 <SmartLink
                   href={avsluttLikevelHref}
                   className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover dark:text-bg"
                 >
-                  Avslutt likevel →
+                  {tCta('forceEndButton')}
                 </SmartLink>
               </div>
             ) : (
@@ -1079,18 +1077,15 @@ async function PlayersSections({
                 <div className="rounded-xl border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning">
                   {notSubmittedCount > 0 && (
                     <p>
-                      {notSubmittedCount} av {rankablePlayers.length} spillere har
-                      ikke levert.
+                      {tCta('notSubmittedWarning', {
+                        notSubmitted: notSubmittedCount,
+                        total: rankablePlayers.length,
+                      })}
                     </p>
                   )}
                   {pendingApprovalCount > 0 && (
                     <p className={notSubmittedCount > 0 ? 'mt-1.5' : undefined}>
-                      {pendingApprovalCount === 1
-                        ? '1 scorekort venter på godkjenning fra flighten.'
-                        : `${pendingApprovalCount} scorekort venter på godkjenning fra flighten.`}{' '}
-                      Får ikke en medspiller godkjent, kan du godkjenne på vegne av
-                      flighten i «Leverte scorekort» over. Da kan du avslutte
-                      spillet.
+                      {tCta('pendingApprovalWarning', { count: pendingApprovalCount })}
                     </p>
                   )}
                 </div>
@@ -1099,7 +1094,7 @@ async function PlayersSections({
                     href="#leverte-scorekort"
                     className="block min-h-[44px] rounded-full border border-border px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-surface-2"
                   >
-                    Til leverte scorekort ↑
+                    {tCta('scrollToScorecardsButton')}
                   </a>
                 )}
               </div>
@@ -1110,8 +1105,9 @@ async function PlayersSections({
                 href={`/admin/games/${gameId}/status`}
                 className="font-sans text-[13px] font-medium text-primary underline underline-offset-2 decoration-primary/30 hover:decoration-primary"
               >
-                Se spillerstatus
-                {notSubmittedCount > 0 ? ' og send påminnelse' : ''} →
+                {notSubmittedCount > 0
+                  ? tCta('viewStatusWithReminderLink')
+                  : tCta('viewStatusLink')}
               </SmartLink>
             </div>
           </div>
@@ -1119,13 +1115,13 @@ async function PlayersSections({
       )}
 
       {game.status === 'finished' && (
-        <SectionCard ribbon="Resultat">
+        <SectionCard ribbon={tSections('result')}>
           <div className="space-y-3 px-3.5 pb-3.5 pt-3">
             <SmartLink
               href={`/games/${gameId}/leaderboard`}
               className="block min-h-[44px] rounded-full bg-primary px-4 py-3 text-center font-medium tracking-tight text-white transition-colors hover:bg-primary-hover dark:text-bg"
             >
-              🏆 Se leaderboard →
+              {tCta('leaderboardButton')}
             </SmartLink>
             <ReopenGameButton reopenAction={reopenGameAction} />
           </div>

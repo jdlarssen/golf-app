@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { MiniRibbon } from '@/components/ui/MiniRibbon';
 import { Banner } from '@/components/ui/Banner';
@@ -39,6 +40,8 @@ export async function InviteToGameSection({
   if (status === 'active' || status === 'finished') return null;
 
   const supabase = await getServerClient();
+  const t = await getTranslations('admin.game.invite');
+  const tCta = await getTranslations('admin.game.cta');
 
   // Hent alle ferdig-profilerte registrerte brukere. Filtrer ut nåværende
   // roster i-app (enklere typer enn å bygge en ekskluderings-where i SQL).
@@ -64,7 +67,7 @@ export async function InviteToGameSection({
 
   return (
     <section className="mt-1.5">
-      <MiniRibbon>Inviter spillere</MiniRibbon>
+      <MiniRibbon>{t('sectionLabel')}</MiniRibbon>
       <div
         className="overflow-hidden rounded-xl border border-border bg-surface"
         style={{ boxShadow: '0 1px 2px rgba(26, 46, 31, 0.03)' }}
@@ -72,8 +75,10 @@ export async function InviteToGameSection({
         <div className="space-y-4 px-3.5 pb-3.5 pt-3.5">
           {isFull && (
             <Banner tone="info">
-              Spillet er fullt ({BEST_BALL_MAX_PLAYERS} av {BEST_BALL_MAX_PLAYERS}).
-              Fjern noen for å invitere flere.
+              {tCta('gameFullBanner', {
+                current: BEST_BALL_MAX_PLAYERS,
+                max: BEST_BALL_MAX_PLAYERS,
+              })}
             </Banner>
           )}
           <InviteToGameClient

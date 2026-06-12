@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 
 type Props = {
@@ -8,15 +9,12 @@ type Props = {
 };
 
 export function ReopenScorecardButton({ reopenAction, playerName }: Props) {
+  const t = useTranslations('admin.game.buttons');
   return (
     <form
       action={reopenAction}
       onSubmit={(event) => {
-        if (
-          !window.confirm(
-            `Åpne scorekortet til ${playerName} for redigering? Eventuell godkjenning fjernes, og spilleren må levere på nytt.`,
-          )
-        ) {
+        if (!window.confirm(t('reopenScorecardConfirm', { name: playerName }))) {
           event.preventDefault();
         }
       }}
@@ -24,9 +22,9 @@ export function ReopenScorecardButton({ reopenAction, playerName }: Props) {
       <SubmitButton
         variant="secondary"
         className="whitespace-nowrap text-sm"
-        pendingLabel="Gjenåpner …"
+        pendingLabel={t('reopeningScorecardBusy')}
       >
-        Åpne for redigering
+        {t('reopenScorecard')}
       </SubmitButton>
     </form>
   );

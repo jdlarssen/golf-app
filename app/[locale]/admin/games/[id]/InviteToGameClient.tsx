@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   addExistingPlayerToGame,
   inviteEmailToGame,
@@ -33,6 +34,7 @@ function displayName(c: Candidate): string {
  * trenger ingen useTransition eller optimistic state-håndtering.
  */
 export function InviteToGameClient({ gameId, candidates, disabled }: Props) {
+  const t = useTranslations('admin.game.invite');
   const [search, setSearch] = useState('');
 
   const filtered = useMemo(() => {
@@ -51,24 +53,24 @@ export function InviteToGameClient({ gameId, candidates, disabled }: Props) {
     <div className="space-y-5">
       <div>
         <h3 className="mb-2 font-sans text-xs font-semibold uppercase tracking-[0.18em] text-muted">
-          Velg fra registrerte
+          {t('registeredHeading')}
         </h3>
         <input
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Søk i registrerte brukere…"
+          placeholder={t('searchPlaceholder')}
           disabled={disabled}
           className="w-full rounded-xl border border-border bg-surface px-3.5 py-3 text-text placeholder-muted/70 transition-[border-color,box-shadow] duration-150 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:opacity-50"
-          aria-label="Søk i registrerte brukere"
+          aria-label={t('searchAriaLabel')}
         />
         {candidates.length === 0 ? (
           <p className="mt-3 text-sm text-muted">
-            Alle registrerte spillere er allerede på rosteren.
+            {t('allOnRoster')}
           </p>
         ) : filtered.length === 0 ? (
           <p className="mt-3 text-sm text-muted">
-            Ingen treff på «{search}».
+            {t('noResults', { query: search })}
           </p>
         ) : (
           <ul className="mt-3 space-y-2">
@@ -90,9 +92,9 @@ export function InviteToGameClient({ gameId, candidates, disabled }: Props) {
                   <SubmitButton
                     disabled={disabled}
                     className="px-4 py-2 text-sm"
-                    pendingLabel="Inviterer …"
+                    pendingLabel={t('addingBusy')}
                   >
-                    + Legg til
+                    {t('addButton')}
                   </SubmitButton>
                 </form>
               </li>
@@ -104,31 +106,31 @@ export function InviteToGameClient({ gameId, candidates, disabled }: Props) {
       <div className="flex items-center gap-3">
         <span className="h-px flex-1 bg-border" />
         <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-muted">
-          eller
+          {t('orSeparator')}
         </span>
         <span className="h-px flex-1 bg-border" />
       </div>
 
       <div>
         <h3 className="mb-2 font-sans text-xs font-semibold uppercase tracking-[0.18em] text-muted">
-          Inviter ny spiller på e-post
+          {t('emailHeading')}
         </h3>
         <form action={inviteAction} className="flex flex-col gap-2 sm:flex-row">
           <input
             type="email"
             name="email"
             required
-            placeholder="eksempel@gmail.no"
+            placeholder={t('emailPlaceholder')}
             disabled={disabled}
             className="flex-1 rounded-xl border border-border bg-surface px-3.5 py-3 text-text placeholder-muted/70 transition-[border-color,box-shadow] duration-150 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:opacity-50"
-            aria-label="E-post"
+            aria-label={t('emailAriaLabel')}
           />
           <SubmitButton
             disabled={disabled}
             className="px-4 py-3"
-            pendingLabel="Sender …"
+            pendingLabel={t('sendingBusy')}
           >
-            Send invitasjon
+            {t('sendInviteButton')}
           </SubmitButton>
         </form>
       </div>

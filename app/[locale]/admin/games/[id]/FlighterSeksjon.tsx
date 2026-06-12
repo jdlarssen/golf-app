@@ -1,6 +1,7 @@
 'use client';
 
 import { useTransition } from 'react';
+import { useTranslations } from 'next-intl';
 import { suggestFlightAssignment, setPlayerFlight } from './flightActions';
 import { MAX_FLIGHT_SIZE } from '@/lib/games/flightScope';
 import { MiniRibbon } from '@/components/ui/MiniRibbon';
@@ -27,6 +28,7 @@ type Props = {
  *      + én tom flight for å muliggjøre 3+3-fordeling istedenfor 4+2).
  */
 export function FlighterSeksjon({ gameId, players }: Props) {
+  const t = useTranslations('admin.game.flights');
   const [isPending, startTransition] = useTransition();
 
   const activePlayers = players; // allerede filtrert på server-side
@@ -51,7 +53,7 @@ export function FlighterSeksjon({ gameId, players }: Props) {
 
   return (
     <section className="mt-1.5">
-      <MiniRibbon>Flighter</MiniRibbon>
+      <MiniRibbon>{t('sectionLabel')}</MiniRibbon>
       <div
         className="overflow-hidden rounded-xl border border-border bg-surface"
         style={{ boxShadow: '0 1px 2px rgba(26, 46, 31, 0.03)' }}
@@ -68,7 +70,7 @@ export function FlighterSeksjon({ gameId, players }: Props) {
                     className="rounded-xl border border-border px-3 py-2.5"
                   >
                     <p className="mb-0.5 font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
-                      Flight {flightNum}{' '}
+                      {t('flightOptionN', { n: flightNum })}{' '}
                       <span className="tabular-nums text-muted">
                         ({members.length}/{MAX_FLIGHT_SIZE})
                       </span>
@@ -85,7 +87,7 @@ export function FlighterSeksjon({ gameId, players }: Props) {
           {unassigned.length > 0 && (
             <div className="rounded-xl border border-warning/30 bg-warning/5 px-3 py-2.5">
               <p className="mb-0.5 font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-warning">
-                Uten flight ({unassigned.length})
+                {t('unassignedLabel', { n: unassigned.length })}
               </p>
               <p className="text-sm text-text">
                 {unassigned.map((m) => m.displayName).join(', ')}
@@ -103,17 +105,17 @@ export function FlighterSeksjon({ gameId, players }: Props) {
           >
             <SubmitButton
               className="w-full"
-              pendingLabel="Deler inn…"
+              pendingLabel={t('suggestingBusy')}
               disabled={isPending}
             >
-              Foreslå inndeling
+              {t('suggestButton')}
             </SubmitButton>
           </form>
 
           {/* Per-spiller-justering */}
           <div>
             <p className="mb-2 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-              Flytt spiller
+              {t('movePlayerLabel')}
             </p>
             <div className="space-y-2">
               {activePlayers.map((player) => {
@@ -139,12 +141,12 @@ export function FlighterSeksjon({ gameId, players }: Props) {
                       defaultValue={player.flight_number ?? ''}
                       className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/30"
                       disabled={isPending}
-                      aria-label={`Flight for ${player.displayName}`}
+                      aria-label={t('flightAriaLabel', { name: player.displayName })}
                     >
                       <option value="">—</option>
                       {flightOptions.map((f) => (
                         <option key={f} value={f}>
-                          Flight {f}
+                          {t('flightOptionN', { n: f })}
                         </option>
                       ))}
                     </select>
@@ -153,7 +155,7 @@ export function FlighterSeksjon({ gameId, players }: Props) {
                       disabled={isPending}
                       className="min-h-[44px] min-w-[44px] rounded-lg border border-border bg-surface px-2.5 py-1.5 font-sans text-xs font-medium text-primary hover:bg-surface-2 disabled:opacity-50"
                     >
-                      Flytt
+                      {t('moveButton')}
                     </button>
                   </form>
                 );

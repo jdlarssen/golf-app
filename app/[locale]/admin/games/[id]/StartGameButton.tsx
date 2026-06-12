@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 
 type Props = {
@@ -10,20 +11,19 @@ type Props = {
 };
 
 export function StartGameButton({ startAction, gameName }: Props) {
+  const t = useTranslations('admin.game.buttons');
   return (
     <form
       action={startAction}
       onSubmit={(event) => {
-        const ok = window.confirm(
-          `Start spillet «${gameName}»? Course handicap blir låst for hver spiller når spillet starter.`,
-        );
+        const ok = window.confirm(t('startGameConfirm', { name: gameName }));
         if (!ok) {
           event.preventDefault();
         }
       }}
     >
-      <SubmitButton className="w-full" pendingLabel="Starter …">
-        Start spillet
+      <SubmitButton className="w-full" pendingLabel={t('startingGame')}>
+        {t('startGame')}
       </SubmitButton>
     </form>
   );

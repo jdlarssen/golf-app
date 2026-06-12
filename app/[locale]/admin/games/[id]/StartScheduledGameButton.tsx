@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 type Props = {
   // Pre-bound server action; submitting the form is enough to invoke it.
   startAction: () => void | Promise<void>;
@@ -12,17 +14,14 @@ type Props = {
  * begin entering strokes.
  */
 export function StartScheduledGameButton({ startAction }: Props) {
+  const t = useTranslations('admin.game.buttons');
   return (
     <form
       action={startAction}
       onSubmit={(e) => {
         // onSubmit is more robust than onClick — catches keyboard Enter
         // and programmatic submit, matching the sibling StartGameButton.
-        if (
-          !confirm(
-            'Starter du runden nå? Spillere kan begynne å taste slag. Redigering låses.',
-          )
-        ) {
+        if (!confirm(t('startRoundConfirm'))) {
           e.preventDefault();
         }
       }}
@@ -31,7 +30,7 @@ export function StartScheduledGameButton({ startAction }: Props) {
         type="submit"
         className="w-full min-h-[44px] bg-primary hover:bg-primary-hover text-white dark:text-bg font-medium rounded-xl px-4 py-3 transition-colors"
       >
-        Start runden nå
+        {t('startRoundNow')}
       </button>
     </form>
   );

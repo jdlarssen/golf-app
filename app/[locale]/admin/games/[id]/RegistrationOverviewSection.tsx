@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { MiniRibbon } from '@/components/ui/MiniRibbon';
 import { SmartLink } from '@/components/ui/SmartLink';
@@ -26,6 +27,7 @@ export async function RegistrationOverviewSection({
   selfRegisteredCount,
 }: Props) {
   const supabase = await getServerClient();
+  const t = await getTranslations('admin.game.registration');
 
   // Pending-telleren gjelder request-modiene (manual_approval + invite_only).
   // For open viser vi i stedet "antall selv-påmeldte spillere" som caller
@@ -49,14 +51,14 @@ export async function RegistrationOverviewSection({
   const shareUrl = `https://tornygolf.no/signup/${shortId}`;
   const modeLabel =
     registrationMode === 'open'
-      ? 'Fri påmelding'
+      ? t('modeFreeSignup')
       : registrationMode === 'invite_only'
-        ? 'Bare inviterte'
-        : 'Manuell godkjenning';
+        ? t('modeInviteOnly')
+        : t('modeManualApproval');
 
   return (
     <section className="mt-1.5">
-      <MiniRibbon>Påmelding</MiniRibbon>
+      <MiniRibbon>{t('sectionLabel')}</MiniRibbon>
       <div
         className="overflow-hidden rounded-xl border border-border bg-surface"
         style={{ boxShadow: '0 1px 2px rgba(26, 46, 31, 0.03)' }}
@@ -65,7 +67,7 @@ export async function RegistrationOverviewSection({
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-                Modus
+                {t('modusLabel')}
               </p>
               <p className="mt-0.5 font-serif text-[15px] text-text">
                 {modeLabel}
@@ -74,7 +76,7 @@ export async function RegistrationOverviewSection({
             {registrationMode !== 'open' ? (
               <div className="text-right">
                 <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-                  Venter
+                  {t('waitingLabel')}
                 </p>
                 <p className="mt-0.5 font-serif text-[20px] font-medium tabular-nums text-text">
                   {pendingCount}
@@ -83,7 +85,7 @@ export async function RegistrationOverviewSection({
             ) : (
               <div className="text-right">
                 <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-                  Påmeldt
+                  {t('enrolledLabel')}
                 </p>
                 <p className="mt-0.5 font-serif text-[20px] font-medium tabular-nums text-text">
                   {selfRegisteredCount}
@@ -102,7 +104,7 @@ export async function RegistrationOverviewSection({
             href={`/admin/games/${gameId}/signups`}
             className="block min-h-[44px] rounded-full border border-border bg-surface px-4 py-3 text-center text-sm font-medium tracking-tight text-text transition-colors hover:bg-primary-soft"
           >
-            Vis alle påmeldinger →
+            {t('viewAllSignups')}
           </SmartLink>
         </div>
       </div>

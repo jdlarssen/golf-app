@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 /**
  * Client-component for «Kopier lenke»-knappen i Påmelding-seksjonen (#199).
@@ -11,6 +12,7 @@ import { useState } from 'react';
  * lar bruker kopiere lenken manuelt fra det viste tekst-feltet.
  */
 export function CopyShareLinkButton({ shareUrl }: { shareUrl: string }) {
+  const t = useTranslations('admin.game.registration');
   const [state, setState] = useState<'idle' | 'copied' | 'error'>('idle');
 
   async function copy() {
@@ -33,20 +35,19 @@ export function CopyShareLinkButton({ shareUrl }: { shareUrl: string }) {
           value={shareUrl}
           onFocus={(e) => e.currentTarget.select()}
           className="flex-1 rounded-xl border border-border bg-bg px-3 py-2.5 font-mono text-[12px] tabular-nums text-text"
-          aria-label="Påmeldings-lenke"
+          aria-label={t('shareUrlAriaLabel')}
         />
         <button
           type="button"
           onClick={copy}
           className="inline-flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-full bg-primary px-4 py-2 text-sm font-medium tracking-tight text-white transition-colors hover:bg-primary-hover dark:text-bg"
         >
-          {state === 'copied' ? '✓ Kopiert' : 'Kopier lenke'}
+          {state === 'copied' ? t('copiedButton') : t('copyButton')}
         </button>
       </div>
       {state === 'error' && (
         <p className="text-xs text-danger">
-          Klarte ikke å kopiere automatisk. Marker lenken over og kopier
-          manuelt.
+          {t('copyFailure')}
         </p>
       )}
     </div>
