@@ -21,6 +21,23 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#566](https://github.com/jdlarssen/golf-app/issues/566), del av epic [#60](https://github.com/jdlarssen/golf-app/issues/60). Fase 2d av flerspråkligheten: klubb-, liga- og cup-flatene (admin og spiller) hentes fra omsettbare kataloger og finnes nå på engelsk — klubbrom og medlemskap, ligastyring med tabeller, cup-styring med matchgenerator, og Klubbhuset.
 
+### [1.117.1] - 2026-06-13 · bug
+
+> Leaderboardet ga serverfeil i mange spillformer (matchplay, skins, nassau og flere) etter en språk-oppdatering tidligere denne uka. Nå virker alle visningene igjen.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+
+- The i18n string extraction (`b7aa8a1a`) left 12 sync render helpers in `leaderboard/page.tsx` calling `useTranslations`. The helpers are invoked directly from the async page component — after the page's first `await`, React's dispatcher is gone, so next-intl threw `` `useTranslations` is not callable within an async component `` and the route errored for singles matchplay, solo strokeplay, texas scramble, shamble, patsome, nassau, skins, nines, round robin, acey-deucey and the live best-ball views (state 3/3.5). All 12 helpers are now `async` and use `await getTranslations(...)`, mirroring the already-correct `renderWolf`/`renderBingoBangoBongo` siblings. Stableford-family and BBB leaderboards were unaffected.
+
+#### Added
+
+- Drift-guard `i18n/serverHelperHooks.test.ts`: fails the suite if any lowercase server helper calls `useTranslations`/`useLocale`/`useFormatter` — the hook form is reserved for components rendered via JSX.
+
+</details>
+
 ### [1.117.0] - 2026-06-12 · #566
 
 > Bruker du Tørny på engelsk, er klubb-livet nå oversatt: klubbrommet med medlemskap og roller, ligaene med tabell og rundestart, cup-styringen med matchgenerator, og Klubbhuset der du styrer spillene dine. På norsk er alt som før.

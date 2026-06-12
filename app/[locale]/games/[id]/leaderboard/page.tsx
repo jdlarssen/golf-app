@@ -1583,7 +1583,7 @@ async function renderStablefordWithSideTournament(opts: {
  * (Record) i stedet for en Map — matchplay-view-en aksesserer på userId
  * direkte og to spillere er liten skala nok at det er trivielt å bygge.
  */
-function renderMatchplay(opts: {
+async function renderMatchplay(opts: {
   gameId: string;
   game: GameForHole;
   gwp: {
@@ -1599,7 +1599,7 @@ function renderMatchplay(opts: {
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
 }) {
-  const tc = useTranslations('leaderboard.common');
+  const tc = await getTranslations('leaderboard.common');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
   const ctx = {
@@ -1929,7 +1929,7 @@ async function renderFoursomesMatchplay(opts: {
  * State #3/#3.5-«venterom» er bevisst skipped — slagspill-spillere ser
  * hverandre umiddelbart (samme RLS-policy som stableford og matchplay).
  */
-function renderSoloStrokeplay(opts: {
+async function renderSoloStrokeplay(opts: {
   gameId: string;
   game: GameForHole;
   gwp: {
@@ -1946,8 +1946,8 @@ function renderSoloStrokeplay(opts: {
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
 }) {
-  const tc = useTranslations('leaderboard.common');
-  const th2h = useTranslations('leaderboard.h2h');
+  const tc = await getTranslations('leaderboard.common');
+  const th2h = await getTranslations('leaderboard.h2h');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
   // WD (#386): build withdrawn list for the display section. The ctx-builder
@@ -2089,7 +2089,7 @@ function renderSoloStrokeplay(opts: {
  * State #3/#3.5-«venterom» bevisst skipped — alle lag-medlemmer ser hverandre
  * umiddelbart (samme RLS-policy som stableford/matchplay/solo-strokeplay).
  */
-function renderTexasScramble(opts: {
+async function renderTexasScramble(opts: {
   gameId: string;
   game: GameForHole;
   gwp: {
@@ -2107,7 +2107,7 @@ function renderTexasScramble(opts: {
   /** Format-label for sub-tittel i view + podium. Gjennomgis fra MODE_LABELS[game.game_mode]. */
   formatLabel?: string;
 }) {
-  const tc = useTranslations('leaderboard.common');
+  const tc = await getTranslations('leaderboard.common');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref, formatLabel } = opts;
 
   const ctx = {
@@ -2320,7 +2320,7 @@ async function renderWolf(opts: {
  * pattern, men view-en håndterer reveal-modus internt (skjuler totaler når
  * score_visibility='reveal' og status='active').
  */
-function renderNassau(opts: {
+async function renderNassau(opts: {
   gameId: string;
   game: GameForHole;
   gwp: {
@@ -2336,8 +2336,8 @@ function renderNassau(opts: {
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
 }) {
-  const tc = useTranslations('leaderboard.common');
-  const tn = useTranslations('leaderboard.nassau');
+  const tc = await getTranslations('leaderboard.common');
+  const tn = await getTranslations('leaderboard.nassau');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
   // Delt context-bygging (epic #496) — samme kilde som «Hull for hull»-flaten
@@ -2500,7 +2500,7 @@ function renderNassau(opts: {
  * Skins trenger ingen ekstra DB-fetch utover scores (carryover er ren funksjon
  * av scores). Speiler Nassau-pattern uten wolfChoices-injeksjon.
  */
-function renderSkins(opts: {
+async function renderSkins(opts: {
   gameId: string;
   game: GameForHole;
   gwp: {
@@ -2516,9 +2516,9 @@ function renderSkins(opts: {
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
 }) {
-  const tc = useTranslations('leaderboard.common');
-  const tsk = useTranslations('leaderboard.skins');
-  const th2h = useTranslations('leaderboard.h2h');
+  const tc = await getTranslations('leaderboard.common');
+  const tsk = await getTranslations('leaderboard.skins');
+  const th2h = await getTranslations('leaderboard.h2h');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
   // Delt context-bygging (epic #496) — samme kilde som «Hull for hull»-flaten
@@ -2837,7 +2837,7 @@ async function renderBingoBangoBongo(opts: {
  * Nines trenger ingen ekstra DB-fetch utover scores (poengfordeling er ren funksjon
  * av scores). Speiler Skins-pattern uten wolfChoices-/bbb-injeksjon.
  */
-function renderNines(opts: {
+async function renderNines(opts: {
   gameId: string;
   game: GameForHole;
   gwp: {
@@ -2853,7 +2853,7 @@ function renderNines(opts: {
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
 }) {
-  const tc = useTranslations('leaderboard.common');
+  const tc = await getTranslations('leaderboard.common');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
   // Bygges via den delte `buildNinesContext`-helperen (epic #496) slik at
@@ -2940,7 +2940,7 @@ function renderNines(opts: {
  * Forskjell fra Wolf: ingen `wolfChoices`-fetch. Scorer + spillere er nok.
  * Speiler `renderBingoBangoBongo` uten per-hull-table-injektion.
  */
-function renderRoundRobin(opts: {
+async function renderRoundRobin(opts: {
   gameId: string;
   game: GameForHole;
   gwp: {
@@ -2956,7 +2956,7 @@ function renderRoundRobin(opts: {
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
 }) {
-  const tc = useTranslations('leaderboard.common');
+  const tc = await getTranslations('leaderboard.common');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
   // Bygges via den delte `buildRoundRobinContext`-helperen (epic #496) slik at
@@ -3042,7 +3042,7 @@ function renderRoundRobin(opts: {
  * Acey Deucey trenger ingen ekstra DB-fetch (rent slag-derivert) — speiler
  * renderSkins-pattern uten carryover-logikk.
  */
-function renderAceyDeucey(opts: {
+async function renderAceyDeucey(opts: {
   gameId: string;
   game: GameForHole;
   gwp: {
@@ -3058,7 +3058,7 @@ function renderAceyDeucey(opts: {
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
 }) {
-  const tc = useTranslations('leaderboard.common');
+  const tc = await getTranslations('leaderboard.common');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
   // Bygges via den delte `buildAceyDeuceyContext`-helperen (epic #496) slik at
@@ -3147,7 +3147,7 @@ function renderAceyDeucey(opts: {
  * scores). Speiler Nines-datasti for ScoringContext-byggingen, men med
  * team_number fra Texas-mønstret.
  */
-function renderShamble(opts: {
+async function renderShamble(opts: {
   gameId: string;
   game: GameForHole;
   gwp: {
@@ -3163,7 +3163,7 @@ function renderShamble(opts: {
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
 }) {
-  const tc = useTranslations('leaderboard.common');
+  const tc = await getTranslations('leaderboard.common');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
   const ctx = {
@@ -3264,7 +3264,7 @@ function renderShamble(opts: {
   );
 }
 
-function renderPatsome(opts: {
+async function renderPatsome(opts: {
   gameId: string;
   game: GameForHole;
   gwp: {
@@ -3280,7 +3280,7 @@ function renderPatsome(opts: {
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
 }) {
-  const tc = useTranslations('leaderboard.common');
+  const tc = await getTranslations('leaderboard.common');
   const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref } = opts;
 
   const ctx = {
@@ -3373,14 +3373,14 @@ function renderPatsome(opts: {
   );
 }
 
-function renderState3(opts: {
+async function renderState3(opts: {
   gameId: string;
   teeOffAt: string | null;
   players: LbPlayer[];
   backHref: string;
 }) {
-  const tc = useTranslations('leaderboard.common');
-  const ts3 = useTranslations('leaderboard.state3');
+  const tc = await getTranslations('leaderboard.common');
+  const ts3 = await getTranslations('leaderboard.state3');
   const { gameId, teeOffAt, players, backHref } = opts;
   const teeOffDate = teeOffAt ? new Date(teeOffAt) : null;
   const teeOffLabel = teeOffDate ? formatTeeOffTime(teeOffDate) : '—';
@@ -3473,7 +3473,7 @@ function renderState3(opts: {
  * view ("3 hull mangler" of the 9). Back 9 stays hidden behind the locked
  * block until status flips to 'finished'.
  */
-function renderState35(opts: {
+async function renderState35(opts: {
   gameId: string;
   mode: LeaderboardMode;
   players: LbPlayer[];
@@ -3481,8 +3481,8 @@ function renderState35(opts: {
   scores: LbScore[];
   backHref: string;
 }) {
-  const tc = useTranslations('leaderboard.common');
-  const ts35 = useTranslations('leaderboard.state35');
+  const tc = await getTranslations('leaderboard.common');
+  const ts35 = await getTranslations('leaderboard.state35');
   const { gameId, mode, players, holes, scores, backHref } = opts;
 
   const frontNineHoles = holes.filter(
