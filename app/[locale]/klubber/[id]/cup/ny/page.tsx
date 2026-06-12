@@ -1,5 +1,6 @@
-import { notFound, redirect } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
+import { notFound } from 'next/navigation';
+import { getLocale, getTranslations } from 'next-intl/server';
+import { redirect } from '@/i18n/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrClubAdmin } from '@/lib/admin/auth';
 import { getClubDetail } from '@/lib/clubs/getClubDetail';
@@ -49,7 +50,9 @@ export default async function NewKlubbCupPage({
 
   const detail = await getClubDetail(supabase, id, userId);
   if (!detail) notFound();
-  if (isClubExpired(detail.club.valid_until)) redirect(`/klubber/${id}`);
+  if (isClubExpired(detail.club.valid_until)) {
+    redirect({ href: `/klubber/${id}`, locale: await getLocale() });
+  }
 
   const cupEligibleFormats = await getCupEligibleFormats();
 
