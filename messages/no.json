@@ -33,6 +33,17 @@
 		"hcpSavedAs": "Lagres som",
 		"hcpPlusshandicap": "plusshandicap"
 	},
+	"nav": {
+		"ariaLabel": "Hovednavigasjon",
+		"home": "Hjem",
+		"inbox": "Innboks",
+		"clubhouse": "Klubbhuset",
+		"profile": "Profil"
+	},
+	"inbox": {
+		"bellAriaLabel": "Innboks",
+		"bellUnreadAria": "Innboks, {count} {count, plural, one {ulest varsel} other {uleste varsler}}"
+	},
 	"profile": {
 		"languageRowLabel": "Språk"
 	},

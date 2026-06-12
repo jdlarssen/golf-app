@@ -33,6 +33,17 @@
     "hcpSavedAs": "Saved as",
     "hcpPlusshandicap": "plus handicap"
   },
+  "nav": {
+    "ariaLabel": "Main navigation",
+    "home": "Home",
+    "inbox": "Inbox",
+    "clubhouse": "Clubhouse",
+    "profile": "Profile"
+  },
+  "inbox": {
+    "bellAriaLabel": "Inbox",
+    "bellUnreadAria": "Inbox, {count} {count, plural, one {unread notification} other {unread notifications}}"
+  },
   "profile": {
     "languageRowLabel": "Language"
   },

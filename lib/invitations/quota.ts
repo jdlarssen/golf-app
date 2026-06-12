@@ -1,12 +1,42 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-export function formatTimeUntil(target: Date): string {
+/**
+ * Structured time-until result — locale-agnostic.
+ * Translated at call-site using catalog keys or inline strings.
+ */
+export type TimeUntilResult =
+  | { kind: 'soon' }
+  | { kind: 'hours'; n: number }
+  | { kind: 'minutes'; n: number };
+
+/**
+ * Returns a structured representation of time remaining until `target`.
+ * Translate the result at the call-site using catalog keys.
+ *
+ * - `{ kind: 'soon' }`        → target is now or past
+ * - `{ kind: 'hours', n }`    → n hours away (floored, n ≥ 1)
+ * - `{ kind: 'minutes', n }`  → n minutes away (ceiled, n ≥ 1)
+ */
+export function timeUntilStructured(target: Date): TimeUntilResult {
   const diffMs = target.getTime() - Date.now();
-  if (diffMs <= 0) return 'snart';
+  if (diffMs <= 0) return { kind: 'soon' };
   const hours = Math.floor(diffMs / (60 * 60 * 1000));
-  if (hours >= 1) return `${hours} t`;
+  if (hours >= 1) return { kind: 'hours', n: hours };
   const minutes = Math.ceil(diffMs / (60 * 1000));
-  return `${minutes} min`;
+  return { kind: 'minutes', n: minutes };
+}
+
+/**
+ * Norwegian string formatting for time-until — kept for backward compatibility
+ * with existing tests and the profile page (migrated to catalog in chunk 3).
+ *
+ * @deprecated Use `timeUntilStructured` + catalog translation at call-site.
+ */
+export function formatTimeUntil(target: Date): string {
+  const result = timeUntilStructured(target);
+  if (result.kind === 'soon') return 'snart';
+  if (result.kind === 'hours') return `${result.n} t`;
+  return `${result.n} min`;
 }
 
 export const DAILY_INVITE_LIMIT = 10;

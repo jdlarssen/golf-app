@@ -76,3 +76,43 @@ describe('formatDayLabel', () => {
     expect(formatDayLabel(lastYear)).toMatch(/10\.\s*des\.?\s*2025/i);
   });
 });
+
+describe('formatDayLabel — en locale', () => {
+  const enLabels = { today: 'Today', yesterday: 'Yesterday' };
+
+  it('returns passed today label for today', () => {
+    const today = new Date('2026-05-24T08:00:00Z');
+    expect(formatDayLabel(today, 'en', enLabels)).toBe('Today');
+  });
+
+  it('returns passed yesterday label for yesterday', () => {
+    const yesterday = new Date('2026-05-23T20:00:00Z');
+    expect(formatDayLabel(yesterday, 'en', enLabels)).toBe('Yesterday');
+  });
+
+  it('returns English short date for older dates within the same year', () => {
+    const older = new Date('2026-05-15T10:00:00Z');
+    // en-GB Intl: «15 May»
+    expect(formatDayLabel(older, 'en', enLabels)).toMatch(/15\s+May/i);
+  });
+
+  it('returns English short date with year for dates from a previous year', () => {
+    const lastYear = new Date('2025-12-10T10:00:00Z');
+    // en-GB Intl: «10 Dec 2025»
+    expect(formatDayLabel(lastYear, 'en', enLabels)).toMatch(/10\s+Dec\.?\s+2025/i);
+  });
+});
+
+describe('groupNotificationsByDay — en locale', () => {
+  const enLabels = { today: 'Today', yesterday: 'Yesterday' };
+
+  it('uses translated labels when locale + labels are passed', () => {
+    const items = [
+      { id: 'a', created_at: '2026-05-24T08:00:00Z' }, // today
+      { id: 'b', created_at: '2026-05-23T08:00:00Z' }, // yesterday
+    ];
+    const groups = groupNotificationsByDay(items, { locale: 'en', labels: enLabels });
+    expect(groups[0].label).toBe('Today');
+    expect(groups[1].label).toBe('Yesterday');
+  });
+});
