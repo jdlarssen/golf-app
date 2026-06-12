@@ -1,5 +1,3 @@
-'use client';
-
 import { useLocale, useTranslations } from 'next-intl';
 import { LinkButton } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
