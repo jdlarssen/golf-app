@@ -1,4 +1,5 @@
-import Link from 'next/link';
+import { getTranslations, getLocale } from 'next-intl/server';
+import { Link } from '@/i18n/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
@@ -9,7 +10,8 @@ import { Banner } from '@/components/ui/Banner';
 import { Card } from '@/components/ui/Card';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
-import { formatShortDateNb } from '@/lib/format/date';
+import { formatShortDateLocale } from '@/lib/i18n/format';
+import type { AppLocale } from '@/i18n/routing';
 
 
 type SearchParams = Promise<{
@@ -26,12 +28,6 @@ const STATUS_TO_CHIP: Record<'draft' | 'active' | 'finished', StatusChipTone> = 
   finished: 'signert',
 };
 
-const STATUS_LABEL: Record<'draft' | 'active' | 'finished', string> = {
-  draft: 'Utkast',
-  active: 'Pågående',
-  finished: 'Avsluttet',
-};
-
 export default async function LigaListPage({
   searchParams,
 }: {
@@ -42,6 +38,11 @@ export default async function LigaListPage({
 
   const supabase = await getServerClient();
   await requireAdmin(supabase);
+
+  const [t, locale] = await Promise.all([
+    getTranslations('liga'),
+    getLocale(),
+  ]);
 
   const { data: leagues } = await supabase
     .from('leagues')
@@ -76,39 +77,39 @@ export default async function LigaListPage({
     <AdminShell>
       <TopBar
         backHref="/admin"
-        kicker="Klubbhuset"
+        kicker={t('ledger.kicker')}
         action={
           <Link
             href="/admin/liga/new"
             className="rounded-full border border-border bg-surface px-2.5 py-[5px] font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-text hover:border-primary/40"
           >
-            + Ny liga
+            {t('ledger.createButton')}
           </Link>
         }
       />
-      <BrassRibbon kicker="Ligaer" />
+      <BrassRibbon kicker={t('ledger.brassRibbon')} />
       <PageHeader
-        title="Ligaer"
-        subtitle="Individuelle sesong-serier med netto slagspill."
+        title={t('ledger.pageTitle')}
+        subtitle={t('ledger.pageSubtitle')}
       />
 
       {statusCode === 'deleted' && (
         <div className="mb-4">
-          <Banner tone="success">Ligaen er slettet.</Banner>
+          <Banner tone="success">{t('ledger.deletedBanner')}</Banner>
         </div>
       )}
 
       {rows.length === 0 ? (
         <Card>
           <p className="text-sm text-muted">
-            Ingen ligaer ennå.{' '}
+            {t('ledger.emptyState')}{' '}
             <SmartLink
               href="/admin/liga/new"
               className="text-text underline hover:no-underline"
             >
-              Opprett en liga
+              {t('ledger.emptyStateLink')}
             </SmartLink>{' '}
-            for å komme i gang.
+            {t('ledger.emptyStateSuffix')}
           </p>
         </Card>
       ) : (
@@ -125,15 +126,14 @@ export default async function LigaListPage({
                           {league.name}
                         </p>
                         <p className="text-xs text-muted mt-1">
-                          {formatShortDateNb(league.season_start)} –{' '}
-                          {formatShortDateNb(league.season_end)} ·{' '}
-                          <span className="tabular-nums">{rounds}</span>{' '}
-                          {rounds === 1 ? 'runde' : 'runder'}
+                          {formatShortDateLocale(league.season_start, locale as AppLocale)} –{' '}
+                          {formatShortDateLocale(league.season_end, locale as AppLocale)} ·{' '}
+                          {t('ledger.roundCount', { count: rounds })}
                         </p>
                       </div>
                       <StatusChip
                         tone={STATUS_TO_CHIP[league.status]}
-                        label={STATUS_LABEL[league.status]}
+                        label={t(`status.${league.status}`)}
                       />
                     </div>
                   </Card>
@@ -149,7 +149,7 @@ export default async function LigaListPage({
           href="/admin/liga/new"
           className="flex items-center justify-center gap-2 w-full rounded-xl bg-primary text-white px-4 py-3 text-sm font-medium hover:bg-primary/90 transition-colors min-h-[44px]"
         >
-          Opprett liga
+          {t('ledger.createLeagueButton')}
         </Link>
       </div>
     </AdminShell>

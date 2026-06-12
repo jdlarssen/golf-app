@@ -1,18 +1,16 @@
 'use client';
 
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { useActionState, useMemo, useState } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { Banner } from '@/components/ui/Banner';
 import { Card } from '@/components/ui/Card';
 import { createLeagueDraft, type LeagueActionError } from '@/lib/league/actions';
 import { generateRounds } from '@/lib/league/generateRounds';
+import { shortMonthLocale } from '@/lib/i18n/format';
+import type { AppLocale } from '@/i18n/routing';
 import type { CourseOption, PlayerOption } from '@/app/[locale]/admin/games/new/GameForm';
-
-const MONTHS_ABBR = [
-  'jan', 'feb', 'mar', 'apr', 'mai', 'jun',
-  'jul', 'aug', 'sep', 'okt', 'nov', 'des',
-];
 
 type Props = {
   courses: CourseOption[];
@@ -26,23 +24,6 @@ type Props = {
   clubName?: string;
 };
 
-const ERROR_MESSAGES: Record<string, string> = {
-  name: 'Liganavnet må være mellom 1 og 80 tegn.',
-  dates: 'Sesong-datoene er ugyldige. Sjekk at sluttdato er etter startdato.',
-  standings_model: 'Velg en sesong-modell.',
-  format: 'Velg en spillform.',
-  course_scope: 'Velg et bane-omfang.',
-  course: 'Bane og tee må velges for dette bane-omfanget.',
-  penalty: 'Straffe-slag over par må være et tall.',
-  best_n: 'Antall beste runder må være et helt tall på minst 1.',
-  scoring: 'Velg hva tabellen skal rangeres på.',
-  players: 'Deltakerlisten er ugyldig.',
-  insert_failed: 'Klarte ikke å opprette ligaen. Prøv igjen.',
-  rounds_failed: 'Ligaen ble opprettet, men noen runder feilet. Sjekk detalj-siden.',
-  players_failed: 'Ligaen ble opprettet, men deltakerne feilet. Sjekk detalj-siden.',
-  missing: 'Noen påkrevde felt mangler.',
-};
-
 type CourseScope = 'single_course_single_tee' | 'single_course' | 'multi_course';
 type Format = 'stroke' | 'stableford' | 'modified_stableford';
 type Scoring = 'net' | 'gross' | 'both';
@@ -51,14 +32,17 @@ type MissedRoundPolicy = 'penalty' | 'must_play_all';
 type PenaltyKind = 'worst_plus_one' | 'fixed';
 type Frequency = 'weekly' | 'biweekly' | 'monthly' | 'custom';
 
-function preferredName(p: PlayerOption): string {
-  return p.nickname?.trim() || p.name?.trim() || 'Ukjent spiller';
+function preferredName(p: PlayerOption, unknownLabel: string): string {
+  return p.nickname?.trim() || p.name?.trim() || unknownLabel;
 }
 
 const INITIAL_STATE: LeagueActionError = { error: '' };
 
 export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Props) {
   const isClubLeague = Boolean(groupId);
+  const t = useTranslations('liga.create');
+  const locale = useLocale() as AppLocale;
+
   const [state, formAction] = useActionState(
     async (_prev: LeagueActionError, formData: FormData) => {
       return createLeagueDraft(formData) as Promise<LeagueActionError>;
@@ -95,7 +79,15 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
     return generateRounds(seasonStart, seasonEnd, frequency);
   }, [seasonStart, seasonEnd, frequency]);
 
-  const errorMessage = state.error ? ERROR_MESSAGES[state.error] ?? `Uventet feil: ${state.error}` : null;
+  const errorMessage = state.error
+    ? state.error in {
+        name: 1, dates: 1, standings_model: 1, format: 1, course_scope: 1,
+        course: 1, penalty: 1, best_n: 1, scoring: 1, players: 1,
+        insert_failed: 1, rounds_failed: 1, players_failed: 1, missing: 1,
+      }
+      ? t(`errors.${state.error as 'name' | 'dates' | 'standings_model' | 'format' | 'course_scope' | 'course' | 'penalty' | 'best_n' | 'scoring' | 'players' | 'insert_failed' | 'rounds_failed' | 'players_failed' | 'missing'}`)
+      : t('errors.unexpected', { code: state.error })
+    : null;
 
   function togglePlayer(id: string) {
     setSelectedPlayerIds((prev) => {
@@ -117,15 +109,14 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
       {/* Klubb-kontekst (#480): ligaen settes opp for en bestemt klubb. */}
       {isClubLeague && clubName && (
         <Banner tone="info">
-          Denne ligaen settes opp for <span className="font-medium">{clubName}</span>.
-          Bare medlemmer i klubben kan være med.
+          {t('clubContextBanner', { clubName })}
         </Banner>
       )}
 
       {/* 1. Grunninfo */}
       <Card>
         <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-4">
-          Grunninfo
+          {t('grundinfoHeading')}
         </h2>
         <div className="space-y-4">
           <div>
@@ -133,7 +124,7 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
               htmlFor="liga-name"
               className="block font-sans text-[12px] font-medium text-text mb-1.5"
             >
-              Navn på ligaen
+              {t('nameLabel')}
             </label>
             <input
               id="liga-name"
@@ -141,7 +132,7 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
               type="text"
               required
               maxLength={80}
-              placeholder="Månedsligaen 2026"
+              placeholder={t('namePlaceholder')}
               className="w-full rounded-xl border border-border bg-bg px-4 py-3 font-sans text-[15px] text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px]"
             />
           </div>
@@ -152,7 +143,7 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
                 htmlFor="liga-season-start"
                 className="block font-sans text-[12px] font-medium text-text mb-1.5"
               >
-                Sesong start
+                {t('seasonStartLabel')}
               </label>
               <input
                 id="liga-season-start"
@@ -169,7 +160,7 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
                 htmlFor="liga-season-end"
                 className="block font-sans text-[12px] font-medium text-text mb-1.5"
               >
-                Sesong slutt
+                {t('seasonEndLabel')}
               </label>
               <input
                 id="liga-season-end"
@@ -188,26 +179,26 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
       {/* 2. Spillform */}
       <Card>
         <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-4">
-          Spillform
+          {t('formatHeading')}
         </h2>
         <fieldset className="space-y-2">
-          <legend className="sr-only">Spillform</legend>
+          <legend className="sr-only">{t('formatLegend')}</legend>
           {(
             [
               {
                 value: 'stroke' as Format,
-                label: 'Slagspill',
-                desc: 'Netto mot par. Lavest sammenlagt vinner.',
+                label: t('formatStrokeLabel'),
+                desc: t('formatStrokeDesc'),
               },
               {
                 value: 'stableford' as Format,
-                label: 'Stableford',
-                desc: 'Poeng per hull etter netto. Høyest sammenlagt vinner.',
+                label: t('formatStablefordLabel'),
+                desc: t('formatStablefordDesc'),
               },
               {
                 value: 'modified_stableford' as Format,
-                label: 'Modifisert Stableford',
-                desc: 'Pro-poeng: birdie og bedre teller mer, svake hull trekker ned. Høyest vinner.',
+                label: t('formatModifiedLabel'),
+                desc: t('formatModifiedDesc'),
               },
             ] as const
           ).map((opt) => (
@@ -243,29 +234,29 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
       {/* 3. Bane-omfang */}
       <Card>
         <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-4">
-          Bane-omfang
+          {t('courseScopeHeading')}
         </h2>
         <input type="hidden" name="course_scope" value={courseScope} />
 
         <fieldset className="space-y-2">
-          <legend className="sr-only">Bane-omfang</legend>
+          <legend className="sr-only">{t('courseScopeLegend')}</legend>
 
           {(
             [
               {
                 value: 'single_course_single_tee' as CourseScope,
-                label: 'Fast bane og tee',
-                desc: 'Alle runder spilles på samme bane og tee.',
+                label: t('scopeFixedBothLabel'),
+                desc: t('scopeFixedBothDesc'),
               },
               {
                 value: 'single_course' as CourseScope,
-                label: 'Fast bane, tee per runde',
-                desc: 'Bane er låst, men tee velges for hver runde.',
+                label: t('scopeFixedCourseLabel'),
+                desc: t('scopeFixedCourseDesc'),
               },
               {
                 value: 'multi_course' as CourseScope,
-                label: 'Valgfri bane og tee',
-                desc: 'Bane og tee velges per runde etterpå.',
+                label: t('scopeMultiLabel'),
+                desc: t('scopeMultiDesc'),
               },
             ] as const
           ).map((opt) => (
@@ -310,7 +301,7 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
                 htmlFor="liga-course"
                 className="block font-sans text-[12px] font-medium text-text mb-1.5"
               >
-                Bane
+                {t('courseLabel')}
               </label>
               <select
                 id="liga-course"
@@ -320,7 +311,7 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
                 onChange={(e) => setSelectedCourseId(e.target.value)}
                 className="w-full rounded-xl border border-border bg-bg px-4 py-3 font-sans text-[15px] text-text focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px]"
               >
-                <option value="">Velg bane …</option>
+                <option value="">{t('coursePlaceholder')}</option>
                 {courses.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -336,7 +327,7 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
                   htmlFor="liga-tee"
                   className="block font-sans text-[12px] font-medium text-text mb-1.5"
                 >
-                  Tee
+                  {t('teeLabel')}
                 </label>
                 <select
                   id="liga-tee"
@@ -345,10 +336,10 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
                   disabled={!selectedCourseId}
                   className="w-full rounded-xl border border-border bg-bg px-4 py-3 font-sans text-[15px] text-text focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[44px] disabled:opacity-50"
                 >
-                  <option value="">Velg tee …</option>
-                  {availableTees.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
+                  <option value="">{t('teePlaceholder')}</option>
+                  {availableTees.map((t_) => (
+                    <option key={t_.id} value={t_.id}>
+                      {t_.name}
                     </option>
                   ))}
                 </select>
@@ -359,7 +350,7 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
 
         {courseScope === 'multi_course' && (
           <p className="mt-3 font-sans text-[12px] text-muted">
-            Bane og tee velges per runde etterpå.
+            {t('multiCourseHint')}
           </p>
         )}
       </Card>
@@ -367,7 +358,7 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
       {/* 3. Oppsett */}
       <Card>
         <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-4">
-          Oppsett
+          {t('setupHeading')}
         </h2>
         <input type="hidden" name="standings_model" value={standingsModel} />
         <input
@@ -380,18 +371,18 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
         {/* Scoring — netto / brutto / begge. Stableford er netto-only. */}
         <div className="space-y-2 mb-4">
           <p className="font-sans text-[12px] font-medium text-text mb-1.5">
-            Tabell
+            {t('standingsLabel')}
           </p>
           {pointsBased ? (
             <p className="rounded-xl border border-border bg-surface px-4 py-3 font-sans text-[12px] text-muted">
-              Stableford rangeres på netto. Høyest sammenlagt vinner.
+              {t('stablefordStandingsLocked')}
             </p>
           ) : (
             (
               [
-                { value: 'net' as Scoring, label: 'Netto', desc: 'Netto mot par (handicap-justert).' },
-                { value: 'gross' as Scoring, label: 'Brutto', desc: 'Brutto mot par (uten handicap).' },
-                { value: 'both' as Scoring, label: 'Begge', desc: 'Begge tabeller, med en Netto/Brutto-bryter.' },
+                { value: 'net' as Scoring, label: t('scoringNetLabel'), desc: t('scoringNetDesc') },
+                { value: 'gross' as Scoring, label: t('scoringGrossLabel'), desc: t('scoringGrossDesc') },
+                { value: 'both' as Scoring, label: t('scoringBothLabel'), desc: t('scoringBothDesc') },
               ] as const
             ).map((opt) => (
               <label
@@ -426,35 +417,35 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
         {/* Sesong-modell */}
         <div className="space-y-2 mb-4">
           <p className="font-sans text-[12px] font-medium text-text mb-1.5">
-            Sesong-modell
+            {t('standingsModelLabel')}
           </p>
           {(
             [
               {
                 value: 'total' as StandingsModel,
-                label: 'Total',
+                label: t('standingsModelTotalLabel'),
                 desc: pointsBased
-                  ? 'Sum av stableford-poeng over alle runder.'
-                  : 'Sum mot par over alle runder.',
+                  ? t('standingsModelTotalDescPoints')
+                  : t('standingsModelTotalDescStroke'),
               },
               {
                 value: 'average' as StandingsModel,
-                label: 'Snitt per runde',
+                label: t('standingsModelAverageLabel'),
                 desc: pointsBased
-                  ? 'Gjennomsnittlig poeng per runde. Ingen straff for uteblitte runder.'
-                  : 'Gjennomsnittlig mot par. Ingen straff for uteblitte runder.',
+                  ? t('standingsModelAverageDescPoints')
+                  : t('standingsModelAverageDescStroke'),
               },
               {
                 value: 'best_n' as StandingsModel,
-                label: 'Beste N runder',
+                label: t('standingsModelBestNLabel'),
                 desc: pointsBased
-                  ? 'Summen av spillerens N beste runder (poeng). Uteblitte runder teller som 0.'
-                  : 'Summen av spillerens N beste runder. Uteblitte runder straffefylles opp til N.',
+                  ? t('standingsModelBestNDescPoints')
+                  : t('standingsModelBestNDescStroke'),
               },
               {
                 value: 'points' as StandingsModel,
-                label: 'Poeng per plassering',
-                desc: 'Vinneren av hver runde får flest poeng (synkende fra antall spillere). Uteblitt runde gir 0 poeng.',
+                label: t('standingsModelPointsLabel'),
+                desc: t('standingsModelPointsDesc'),
               },
             ] as const
           ).map((opt) => (
@@ -493,7 +484,7 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
               htmlFor="liga-best-n"
               className="block font-sans text-[12px] font-medium text-text mb-1.5"
             >
-              Antall beste runder (N)
+              {t('bestNLabel')}
             </label>
             <input
               id="liga-best-n"
@@ -512,21 +503,21 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
         {standingsModel === 'total' && (
           <div className="space-y-2 mb-4">
             <p className="font-sans text-[12px] font-medium text-text mb-1.5">
-              Manglende runde
+              {t('missedRoundLabel')}
             </p>
             {(
               [
                 {
                   value: 'penalty' as MissedRoundPolicy,
-                  label: pointsBased ? 'Teller som 0 poeng' : 'Straffescore',
+                  label: pointsBased ? t('missedPenaltyPointsLabel') : t('missedPenaltyStrokeLabel'),
                   desc: pointsBased
-                    ? 'En uteblitt runde gir 0 poeng. Det er straff nok i seg selv.'
-                    : 'Spillere som ikke leverer en runde får en straffe-score.',
+                    ? t('missedPenaltyPointsDesc')
+                    : t('missedPenaltyStrokeDesc'),
                 },
                 {
                   value: 'must_play_all' as MissedRoundPolicy,
-                  label: 'Må spille alle',
-                  desc: 'Spillere uten komplett historikk rangeres ikke i tabellen.',
+                  label: t('missedMustPlayLabel'),
+                  desc: t('missedMustPlayDesc'),
                 },
               ] as const
             ).map((opt) => (
@@ -566,19 +557,19 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
             standingsModel === 'best_n') && (
           <div className="space-y-2">
             <p className="font-sans text-[12px] font-medium text-text mb-1.5">
-              Straffescore-type
+              {t('penaltyTypeLabel')}
             </p>
             {(
               [
                 {
                   value: 'worst_plus_one' as PenaltyKind,
-                  label: 'Dårligste + 1 slag',
-                  desc: 'Dårligste resultat i runden pluss ett ekstra slag over par.',
+                  label: t('penaltyWorstPlusOneLabel'),
+                  desc: t('penaltyWorstPlusOneDesc'),
                 },
                 {
                   value: 'fixed' as PenaltyKind,
-                  label: 'Fast straffe-score',
-                  desc: 'Et fast antall slag over par for uteblitte runder.',
+                  label: t('penaltyFixedLabel'),
+                  desc: t('penaltyFixedDesc'),
                 },
               ] as const
             ).map((opt) => (
@@ -615,7 +606,7 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
                   htmlFor="liga-penalty-fixed"
                   className="block font-sans text-[12px] font-medium text-text mb-1.5"
                 >
-                  Slag over par
+                  {t('penaltyFixedOverParLabel')}
                 </label>
                 <input
                   id="liga-penalty-fixed"
@@ -636,16 +627,16 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
       {/* 4. Frekvens */}
       <Card>
         <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-4">
-          Frekvens
+          {t('frequencyHeading')}
         </h2>
         <fieldset className="grid grid-cols-2 gap-2">
-          <legend className="sr-only">Runde-frekvens</legend>
+          <legend className="sr-only">{t('frequencyLegend')}</legend>
           {(
             [
-              { value: 'monthly' as Frequency, label: 'Månedlig' },
-              { value: 'biweekly' as Frequency, label: 'Annenhver uke' },
-              { value: 'weekly' as Frequency, label: 'Ukentlig' },
-              { value: 'custom' as Frequency, label: 'Egendefinert' },
+              { value: 'monthly' as Frequency, label: t('frequencyMonthlyLabel') },
+              { value: 'biweekly' as Frequency, label: t('frequencyBiweeklyLabel') },
+              { value: 'weekly' as Frequency, label: t('frequencyWeeklyLabel') },
+              { value: 'custom' as Frequency, label: t('frequencyCustomLabel') },
             ] as const
           ).map((opt) => (
             <label
@@ -668,21 +659,23 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
         </fieldset>
         {frequency === 'custom' ? (
           <p className="mt-2 font-sans text-[12px] text-muted">
-            Egendefinert: du legger til rundene manuelt etterpå.
+            {t('frequencyCustomHint')}
           </p>
         ) : roundPreview && roundPreview.length > 0 ? (
           <p className="mt-2 font-sans text-[12px] text-muted">
-            Dette gir{' '}
-            <span className="font-medium text-text tabular-nums">{roundPreview.length}</span>{' '}
-            {roundPreview.length === 1 ? 'runde' : 'runder'}
+            {t('frequencyPreviewRounds', { count: roundPreview.length })}
             {frequency === 'monthly'
-              ? `: ${roundPreview.map((w) => MONTHS_ABBR[new Date(w.opens_at).getUTCMonth()]).join(', ')}`
-              : ` (${frequency === 'weekly' ? '7' : '14'}-dagers vinduer)`}
-            .
+              ? t('frequencyPreviewMonthly', {
+                  months: roundPreview
+                    .map((w) => shortMonthLocale(new Date(w.opens_at).getUTCMonth(), locale))
+                    .join(', '),
+                })
+              : t('frequencyPreviewWindowed', { days: frequency === 'weekly' ? '7' : '14' })}
+            {t('frequencyPreviewDot')}
           </p>
         ) : (
           <p className="mt-2 font-sans text-[12px] text-muted">
-            Sett sesong-datoene over, så viser vi hvor mange runder det blir.
+            {t('frequencyNoPreview')}
           </p>
         )}
       </Card>
@@ -690,7 +683,7 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
       {/* 5. Deltakere */}
       <Card>
         <h2 className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted mb-4">
-          Deltakere
+          {t('participantsHeading')}
         </h2>
         {/* Hidden JSON field */}
         <input
@@ -701,21 +694,21 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
 
         <p className="font-sans text-[12px] text-muted mb-3">
           {isClubLeague
-            ? 'Velg medlemmene som skal være med i ligaen.'
-            : 'Inviter vennene dine til ligaen. Du kan legge til flere etterpå.'}
+            ? t('participantsClubHint')
+            : t('participantsHint')}
         </p>
         {friendCount === 0 &&
           (isClubLeague ? (
             <p className="font-sans text-[12px] text-muted mb-3">
-              Ingen andre medlemmer i klubben ennå.
+              {t('noClubMembersYet')}
             </p>
           ) : (
             <p className="font-sans text-[12px] text-muted mb-3">
-              Du har ingen venner på Tørny ennå.{' '}
+              {t('noFriendsYet')}{' '}
               <Link href="/profile/venner" className="text-primary underline">
-                Legg til venner
+                {t('addFriendsLink')}
               </Link>{' '}
-              for å invitere dem hit.
+              {t('addFriendsSuffix')}
             </p>
           ))}
         {players.length > 0 && (
@@ -731,13 +724,13 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
                   />
                   <span className="flex-1 min-w-0">
                     <span className="block font-sans text-[14px] text-text truncate">
-                      {preferredName(p)}
+                      {preferredName(p, t('unknownPlayer'))}
                       {p.id === meId && (
-                        <span className="ml-1.5 font-sans text-[10px] text-accent">(deg)</span>
+                        <span className="ml-1.5 font-sans text-[10px] text-accent">{t('youLabel')}</span>
                       )}
                       {p.pending && (
                         <span className="ml-1.5 font-sans text-[10px] text-muted">
-                          (venter)
+                          {t('pendingLabel')}
                         </span>
                       )}
                     </span>
@@ -752,8 +745,7 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
         )}
         {selectedPlayerIds.size > 0 && (
           <p className="mt-2 font-sans text-[12px] text-muted">
-            <span className="tabular-nums font-medium text-text">{selectedPlayerIds.size}</span>{' '}
-            {selectedPlayerIds.size === 1 ? 'deltaker' : 'deltakere'} valgt
+            {t('selectedCount', { count: selectedPlayerIds.size })}
           </p>
         )}
       </Card>
@@ -763,8 +755,8 @@ export function CreateLigaForm({ courses, players, meId, groupId, clubName }: Pr
         <Banner tone="error">{errorMessage}</Banner>
       )}
 
-      <SubmitButton className="w-full" pendingLabel="Oppretter …">
-        Opprett liga
+      <SubmitButton className="w-full" pendingLabel={t('submitPending')}>
+        {t('submitButton')}
       </SubmitButton>
     </form>
   );

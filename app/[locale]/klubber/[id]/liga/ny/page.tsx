@@ -1,4 +1,5 @@
 import { notFound, redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrClubAdmin } from '@/lib/admin/auth';
 import { getClubDetail } from '@/lib/clubs/getClubDetail';
@@ -31,6 +32,8 @@ export default async function NewKlubbLigaPage({ params }: { params: Params }) {
   if (!detail) notFound();
   if (isClubExpired(detail.club.valid_until)) redirect(`/klubber/${id}`);
 
+  const t = await getTranslations('liga.create');
+
   const [{ courses }, members] = await Promise.all([
     getNewGameFormData(),
     getClubMemberOptionsForClub(id),
@@ -46,10 +49,10 @@ export default async function NewKlubbLigaPage({ params }: { params: Params }) {
   return (
     <AppShell>
       <TopBar backHref={`/klubber/${id}`} kicker={detail.club.name} />
-      <BrassRibbon kicker="Ny klubb-liga" />
+      <BrassRibbon kicker={t('klubbLigaBrassRibbon')} />
       <PageHeader
-        title="Opprett liga"
-        subtitle={`Sett opp en sesong-serie med netto slagspill for ${detail.club.name}.`}
+        title={t('pageTitle')}
+        subtitle={t('clubPageSubtitle', { clubName: detail.club.name })}
       />
 
       <CreateLigaForm

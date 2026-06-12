@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
@@ -12,6 +13,8 @@ export default async function NewLigaPage() {
   const supabase = await getServerClient();
   const { userId } = await requireAdmin(supabase);
 
+  const t = await getTranslations('liga.create');
+
   // Non-club leagues invite friends only — it nudges people to add friends on
   // Tørny. The creator is offered too (pre-checked) so they can play in their
   // own league. `courses` still comes from the shared form-data helper.
@@ -24,11 +27,11 @@ export default async function NewLigaPage() {
 
   return (
     <AdminShell>
-      <TopBar backHref="/admin/liga" kicker="Klubbhuset" />
-      <BrassRibbon kicker="Ny liga" />
+      <TopBar backHref="/admin/liga" kicker={t('kicker')} />
+      <BrassRibbon kicker={t('brassRibbon')} />
       <PageHeader
-        title="Opprett liga"
-        subtitle="Sett opp en sesong-serie med netto slagspill. Du inviterer vennene dine."
+        title={t('pageTitle')}
+        subtitle={t('pageSubtitle')}
       />
 
       <CreateLigaForm courses={courses} players={invitable} meId={me?.id ?? null} />
