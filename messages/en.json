@@ -79,7 +79,7 @@
         },
         "singles_matchplay": {
           "title": "Match play",
-          "description": "1v1 hole by hole. Winner decided as 'X up' or 'X&Y'."
+          "description": "1v1 hole by hole. Winner decided as “X up” or “X&Y”."
         },
         "solo_strokeplay": {
           "title": "Stroke play",
@@ -212,14 +212,14 @@
         "slotsLabel": "Player slots",
         "slotsDescription": "Partners rotate every 6 holes — you play with and against everyone else. Add 4 players in step 4 and slots A–D are assigned automatically.",
         "partnerLabel": "With: {p1}·{p2}·{p3}",
-        "rotationSummary": "Holes 1–6 are A+B vs C+D · Holes 7–12 are A+C vs B+D · Holes 13–18 are A+D vs B+C. Best net of the two on your side counts per hole. Most hole wins total wins.",
+        "rotationSummary": "Holes 1–6 are A+B vs C+D · Holes 7–12 are A+C vs B+D · Holes 13–18 are A+D vs B+C. Best net of the two on your side counts per hole. Most holes won overall wins.",
         "rotationHeading": "Rotation:",
         "selectPlayerPlaceholder": "Select a player"
       },
       "aceyDeucey": {
         "legend": "Acey Deucey setup",
         "scoringLabel": "Scoring",
-        "scoringDescription": "With handicap, adjusted scores are compared so a high-handicapper is not automatically the \"deuce\" on every hole. Gross counts raw strokes directly.",
+        "scoringDescription": "With handicap, adjusted scores are compared so a high-handicapper is not automatically the “deuce” on every hole. Gross counts raw strokes directly.",
         "scoringNet": "With handicap (net)",
         "scoringGross": "Gross",
         "scoringAriaLabel": "Acey Deucey scoring"
@@ -616,24 +616,24 @@
       "texas": {
         "legend": "Team handicap",
         "description": "Controls what share of the sum of team members' playing handicaps counts as the effective team handicap. Gross = lowest team gross per hole wins.",
-        "nettoHelper2": "NGF standard: 25 % of the sum of players' playing handicaps for 2-man teams.",
-        "nettoHelper4": "NGF standard: 10 % of the sum of players' playing handicaps for 4-man teams.",
+        "nettoHelper2": "NGF standard: 25% of the sum of players' playing handicaps for 2-player teams.",
+        "nettoHelper4": "NGF standard: 10% of the sum of players' playing handicaps for 4-player teams.",
         "bruttoHelper": "No team handicap — lowest gross score per hole per team wins. Scratch format.",
         "inputLabel": "Team handicap (%)"
       },
       "ambrose": {
         "legend": "Team handicap",
         "description": "Controls what share of the sum of team members' playing handicaps counts as the effective team handicap. Gross = lowest team gross per hole wins.",
-        "nettoHelper2": "Standard Ambrose: 25 % of the sum of players' playing handicaps for 2-man teams.",
-        "nettoHelper4": "Standard Ambrose: 12.5 % of the sum of players' playing handicaps for 4-man teams.",
+        "nettoHelper2": "Standard Ambrose: 25% of the sum of players' playing handicaps for 2-player teams.",
+        "nettoHelper4": "Standard Ambrose: 12.5% of the sum of players' playing handicaps for 4-player teams.",
         "bruttoHelper": "No team handicap — lowest gross score per hole per team wins. Scratch format.",
         "inputLabel": "Team handicap (%)"
       },
       "florida": {
         "legend": "Team handicap",
         "description": "Controls what share of the sum of team members' playing handicaps counts as the effective team handicap. Gross = lowest team gross per hole wins.",
-        "nettoHelper3": "NGF standard: 15 % of the sum of players' playing handicaps for 3-man teams.",
-        "nettoHelper4": "NGF standard: 10 % of the sum of players' playing handicaps for 4-man teams.",
+        "nettoHelper3": "NGF standard: 15% of the sum of players' playing handicaps for 3-player teams.",
+        "nettoHelper4": "NGF standard: 10% of the sum of players' playing handicaps for 4-player teams.",
         "bruttoHelper": "No team handicap — lowest gross score per hole per team wins. Scratch format.",
         "inputLabel": "Team handicap (%)"
       }
@@ -650,7 +650,7 @@
       "team_balance": "Each team must have exactly 2 players.",
       "bad_side_ld_count": "The number of longest-drive winners must be 0, 1 or 2.",
       "bad_side_ctp_count": "The number of closest-to-pin winners must be 0, 1 or 2.",
-      "tee_missing_rating": "The selected tee is missing a rating for a player's gender (M/F/J). Check course administration or change the player's tee gender.",
+      "tee_missing_rating": "The selected tee is missing a rating for a player's gender (M/D/J). Check course administration or change the player's tee gender.",
       "tee_off_required": "Tee-off time is required.",
       "db_game": "Failed to save the game. Please try again, or check the Supabase logs.",
       "db_users": "Failed to read players from the database. Please try again.",
@@ -1863,7 +1863,7 @@
       "typicalHintLadiesCr": "Typical 68–73",
       "typicalHintJuniorsSlope": "Typical 95–125",
       "typicalHintJuniorsCr": "Typical 60–68",
-      "confirmChanges": "The course is used in {games} that is in progress or scheduled. Changing par or stroke index will alter score calculations mid-round for players who have already submitted scorecards. Are you sure you want to continue?",
+      "confirmChanges": "The course is used in {games} currently in progress or scheduled. Changing par or stroke index will alter score calculations mid-round for players who have already submitted scorecards. Are you sure you want to continue?",
       "confirmGames1": "one game",
       "confirmGamesN": "{count} games"
     }
