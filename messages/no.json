@@ -1867,5 +1867,33 @@
       "confirmGames1": "ett spill",
       "confirmGamesN": "{count} spill"
     }
+  },
+  "admin": {
+    "game": {
+      "errors": {
+        "not_found": "Spillet ble ikke funnet.",
+        "not_draft": "Bare utkast kan startes.",
+        "not_scheduled": "Spillet kan ikke startes (det er ikke planlagt).",
+        "not_active": "Spillet er ikke aktivt og kan ikke avsluttes.",
+        "not_editable": "Spillet kan ikke redigeres lenger fordi det allerede er startet eller avsluttet.",
+        "no_players": "Ingen spillere på dette spillet.",
+        "not_all_submitted": "Alle spillere må ha levert scorekort før spillet kan avsluttes.",
+        "not_all_approved": "Alle scorekort må være godkjent før spillet kan avsluttes.",
+        "db_finish": "Klarte ikke å avslutte spillet. Prøv igjen.",
+        "db_tee": "Klarte ikke å lese tee-boksen fra databasen. Prøv igjen.",
+        "tee_missing": "Tee-box mangler. Kan ikke beregne handicap.",
+        "tee_missing_rating": "Den valgte teen mangler rating for en spillers kjønn (M/D/J). Sjekk bane-administrasjon eller endre spillerens tee-kjønn.",
+        "db_roster": "Klarte ikke å lese spillerlisten fra databasen.",
+        "db_players": "Klarte ikke å oppdatere spillerne. Prøv igjen.",
+        "db_game": "Klarte ikke å oppdatere spillet. Prøv igjen.",
+        "not_finished": "Spillet er ikke avsluttet og kan ikke gjenåpnes.",
+        "pending_players": "Disse spillerne har ikke fullført registreringen ennå{list}. De må logge inn og fylle inn navn + HCP før spillet kan startes.",
+        "incomplete_sides": "En eller begge sider mangler spillere. Alle spillere må ha en side og begge sider må være fulltallige før spillet kan startes.",
+        "unassigned_flights": "Spillerne er ikke fordelt i flighter ennå. Del inn flightene før spillet kan startes.",
+        "flight_full": "Den valgte flighten er full (maks 4 spillere). Velg en annen flight.",
+        "signups_not_scheduled": "Kun planlagte spill kan stenge eller gjenåpne påmeldingen.",
+        "bad_flight": "Ugyldig flight-nummer. Velg en positiv flight fra listen."
+      }
+    }
   }
 }

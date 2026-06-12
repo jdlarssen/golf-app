@@ -1867,5 +1867,33 @@
       "confirmGames1": "one game",
       "confirmGamesN": "{count} games"
     }
+  },
+  "admin": {
+    "game": {
+      "errors": {
+        "not_found": "Game not found.",
+        "not_draft": "Only draft games can be started.",
+        "not_scheduled": "The game cannot be started (it is not scheduled).",
+        "not_active": "The game is not active and cannot be ended.",
+        "not_editable": "The game can no longer be edited because it has already been started or ended.",
+        "no_players": "No players on this game.",
+        "not_all_submitted": "All players must have submitted a scorecard before the game can be ended.",
+        "not_all_approved": "All scorecards must be approved before the game can be ended.",
+        "db_finish": "Could not end the game. Please try again.",
+        "db_tee": "Could not read the tee box from the database. Please try again.",
+        "tee_missing": "Tee box missing. Cannot calculate handicap.",
+        "tee_missing_rating": "The selected tee is missing a rating for a player''s gender (M/F/J). Check course administration or change the player''s tee gender.",
+        "db_roster": "Could not read the player list from the database.",
+        "db_players": "Could not update the players. Please try again.",
+        "db_game": "Could not update the game. Please try again.",
+        "not_finished": "The game is not ended and cannot be reopened.",
+        "pending_players": "These players have not completed their registration yet{list}. They must log in and fill in their name and handicap index before the game can be started.",
+        "incomplete_sides": "One or both sides are missing players. All players must have a side and both sides must be complete before the game can be started.",
+        "unassigned_flights": "Players have not yet been assigned to flights. Assign flights before starting the game.",
+        "flight_full": "The selected flight is full (maximum 4 players). Choose a different flight.",
+        "signups_not_scheduled": "Only scheduled games can have signups closed or reopened.",
+        "bad_flight": "Invalid flight number. Choose a positive flight from the list."
+      }
+    }
   }
 }
