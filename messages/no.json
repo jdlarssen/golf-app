@@ -2513,6 +2513,107 @@
           "in_use": "Banen er i bruk i minst ett spill og kan ikke slettes."
         }
       }
+    },
+    "formats": {
+      "kicker": "Format-mapping",
+      "title": "Format-mapping",
+      "subtitle": "Styr hvilke spillformater som vises i wizardens step 2 per arrangement.",
+      "errors": {
+        "missing_slug": "Format-slug mangler i forespørselen.",
+        "bad_intent": "Ugyldig arrangement-type.",
+        "not_found": "Formatet ble ikke funnet.",
+        "last_primary": "Kan ikke fjerne siste primary for dette arrangementet. Aktiver et annet format som primary først.",
+        "demote_first": "Demote stjernen først — et primary-format må være synlig. Avhuk primary-stjernen før du skjuler raden.",
+        "db_error": "Klarte ikke å lagre endringen. Prøv igjen, eller sjekk Vercel-loggene."
+      },
+      "status": {
+        "updated": "Endringen er lagret.",
+        "noop": "Ingen endring (verdien var allerede satt).",
+        "content_saved": "Forklaringen er lagret."
+      },
+      "intentLabels": {
+        "kompis": "Kompis",
+        "klubb": "Klubb",
+        "solo": "Solo"
+      },
+      "showInactive": "Vis inaktive",
+      "visibleLabel": "Synlig",
+      "primaryLabel": "Primary",
+      "cupEligibleHeading": "Cup-eligible formats",
+      "togglesHint": "Toggles oppdateres umiddelbart. Synlige endringer treffer wizarden neste gang den lastes inn.",
+      "rowStatus": {
+        "aktiv": "Aktiv",
+        "inaktiv": "Inaktiv",
+        "ny": "Ny",
+        "ariaLabel": "Status: {label}. Klikk for å bytte aktiv/inaktiv."
+      },
+      "auditLog": {
+        "emptyState": "Ingen endringer logget ennå.",
+        "heading": "Endringslogg (siste {n})",
+        "summaryLabel": "Vis endringslogg ({n} entries)",
+        "changeLabels": {
+          "visibilityOn": "synlig på",
+          "visibilityOff": "synlig av",
+          "primaryOn": "primary på",
+          "primaryOff": "primary av",
+          "cupEligibleOn": "cup-eligible på",
+          "cupEligibleOff": "cup-eligible av",
+          "activated": "aktivert",
+          "deactivated": "deaktivert"
+        }
+      },
+      "contentEditor": {
+        "sectionHeading": "Forklaringstekster",
+        "editedBadge": "Redigert",
+        "summaryLabel": "Kortsammendrag",
+        "defaultPlaceholder": "Bruker standardteksten fra appen",
+        "pointsLabel": "Regelpoints",
+        "pointsHint": "(én per linje)",
+        "longLabel": "Lang forklaring",
+        "longPlaceholder": "Ingen lang forklaring ennå",
+        "exampleLabel": "Konkret eksempel",
+        "examplePlaceholder": "Ingen eksempel ennå",
+        "saveBusy": "Lagrer …",
+        "saveButton": "Lagre forklaring"
+      }
+    },
+    "launches": {
+      "title": "Lanseringer",
+      "subtitle": "Publiser nyheter til brukerne dine — som drypp i appen og månedlig oppsummering på mail.",
+      "errors": {
+        "title_required": "Du må fylle inn en tittel.",
+        "body_required": "Du må fylle inn brødtekst.",
+        "link_must_be_internal": "Lenke må peke til en intern rute (starte med «/»).",
+        "cta_without_link": "Knappe-tekst krever at du også fyller inn en lenke.",
+        "publish_failed": "Klarte ikke å publisere. Sjekk Vercel-loggene.",
+        "digest_failed": "Klarte ikke å sende månedsbrev. Sjekk Vercel-loggene."
+      },
+      "success": {
+        "published": "Lanseringen er ute hos {count} brukere.",
+        "digestSent": "Månedsbrevet gikk ut til {count} mottakere med {updates} oppdateringer.",
+        "digestAlreadySent": "Månedsbrevet er allerede sendt for forrige periode.",
+        "digestNoUpdates": "Ingen lanseringer å sende ut for forrige måned. Hopper over."
+      },
+      "publishSection": "Publiser ny lansering",
+      "titleLabel": "Tittel",
+      "titleHint": "Kort og konkret. Eks: «Texas scramble er ute!»",
+      "bodyLabel": "Brødtekst",
+      "bodyPlaceholder": "Hva er nytt? 1–3 setninger. Forklar på vanlig norsk.",
+      "bodyHint": "Maks 400 tegn. Hold tonen som du ville skrevet til en klubbkompis.",
+      "linkLabel": "Lenke (valgfri)",
+      "linkHint": "Intern rute, må starte med «/». F.eks. /admin/games/new",
+      "ctaLabel": "Knappe-tekst (valgfri)",
+      "ctaHint": "Vises kun når lenke er fylt inn. F.eks. «Prøv det», «Se mer».",
+      "publishButton": "Publiser",
+      "publishingBusy": "Publiserer …",
+      "digestSection": "Månedsbrev",
+      "digestHeading": "Månedsbrev for {periodLabel}",
+      "digestSentLine": "Sendt {date} til {count, plural, one {1 mottaker} other {# mottakere}}.",
+      "digestNotSentYet": "Ikke sendt ennå. Cron sender automatisk 1. i hver måned, men du kan sende manuelt nå hvis du vil.",
+      "sendDigestButton": "Send månedsbrev nå",
+      "sendingBusy": "Sender …",
+      "previousSection": "Tidligere lanseringer",
+      "emptyPrevious": "Ingen lanseringer publisert ennå. Bruk skjemaet over for å publisere den første."
     }
   }
 }

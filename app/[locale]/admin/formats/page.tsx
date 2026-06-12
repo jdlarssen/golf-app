@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
@@ -17,24 +18,6 @@ type SearchParams = Promise<{
   status?: string | string[];
 }>;
 
-const ERROR_MESSAGES: Record<string, string> = {
-  missing_slug: 'Format-slug mangler i forespørselen.',
-  bad_intent: 'Ugyldig arrangement-type.',
-  not_found: 'Formatet ble ikke funnet.',
-  last_primary:
-    'Kan ikke fjerne siste primary for dette arrangementet. Aktiver et annet format som primary først.',
-  demote_first:
-    'Demote stjernen først — et primary-format må være synlig. Avhuk primary-stjernen før du skjuler raden.',
-  db_error:
-    'Klarte ikke å lagre endringen. Prøv igjen, eller sjekk Vercel-loggene.',
-};
-
-const STATUS_MESSAGES: Record<string, string> = {
-  updated: 'Endringen er lagret.',
-  noop: 'Ingen endring (verdien var allerede satt).',
-  content_saved: 'Forklaringen er lagret.',
-};
-
 function first(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
 }
@@ -47,22 +30,27 @@ export default async function AdminFormatsPage({
   const supabase = await getServerClient();
   await requireAdmin(supabase);
 
+  const t = await getTranslations('admin.formats');
+  const tNav = await getTranslations('admin.nav');
+
   const sp = await searchParams;
   const errorCode = first(sp.error);
   const statusCode = first(sp.status);
-  const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
+  const errorMessage = errorCode
+    ? t(`errors.${errorCode}` as Parameters<typeof t>[0])
+    : undefined;
   const statusMessage =
     statusCode && statusCode !== 'noop'
-      ? STATUS_MESSAGES[statusCode]
+      ? t(`status.${statusCode}` as Parameters<typeof t>[0])
       : undefined;
 
   return (
     <AdminShell>
-      <TopBar backHref="/admin" kicker="Klubbhuset" />
-      <BrassRibbon kicker="Format-mapping" />
+      <TopBar backHref="/admin" kicker={tNav('klubbhus')} />
+      <BrassRibbon kicker={t('kicker')} />
       <PageHeader
-        title="Format-mapping"
-        subtitle="Styr hvilke spillformater som vises i wizardens step 2 per arrangement."
+        title={t('title')}
+        subtitle={t('subtitle')}
       />
 
       {errorMessage && (

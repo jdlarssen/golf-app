@@ -1,22 +1,21 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 export type RowStatus = 'aktiv' | 'inaktiv' | 'ny';
 
-const STYLES: Record<RowStatus, { bg: string; fg: string; label: string }> = {
+const STYLES: Record<RowStatus, { bg: string; fg: string }> = {
   aktiv: {
     bg: 'var(--score-under-bg)',
     fg: 'var(--score-under-fg)',
-    label: 'Aktiv',
   },
   inaktiv: {
     bg: 'var(--surface-2)',
     fg: 'var(--text-muted)',
-    label: 'Inaktiv',
   },
   ny: {
     bg: 'var(--score-over1-bg)',
     fg: 'var(--score-over1-fg)',
-    label: 'Ny',
   },
 };
 
@@ -35,21 +34,23 @@ export function RowStatusChip({
   onClick?: () => void;
   disabled?: boolean;
 }) {
-  const t = STYLES[status];
+  const t = useTranslations('admin.formats');
+  const style = STYLES[status];
+  const label = t(`rowStatus.${status}` as Parameters<typeof t>[0]);
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      aria-label={`Status: ${t.label}. Klikk for å bytte aktiv/inaktiv.`}
+      aria-label={t('rowStatus.ariaLabel', { label })}
       className="inline-block rounded-full px-[7px] py-[3px] font-sans text-[9.5px] font-semibold uppercase transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
       style={{
-        background: t.bg,
-        color: t.fg,
+        background: style.bg,
+        color: style.fg,
         letterSpacing: '0.16em',
       }}
     >
-      {t.label}
+      {label}
     </button>
   );
 }

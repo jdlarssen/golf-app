@@ -1,6 +1,7 @@
 'use client';
 
 import { useOptimistic, useState, useTransition } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   MAPPING_INTENTS,
   type FormatWithMappings,
@@ -19,12 +20,6 @@ import {
 
 type Props = {
   initialFormats: FormatWithMappings[];
-};
-
-const INTENT_LABELS: Record<MappingIntent, string> = {
-  kompis: 'Kompis',
-  klubb: 'Klubb',
-  solo: 'Solo',
 };
 
 type Action =
@@ -88,6 +83,7 @@ function deriveStatus(f: FormatWithMappings): RowStatus {
  * optimistic state automatisk av React.
  */
 export function FormatsManager({ initialFormats }: Props) {
+  const t = useTranslations('admin.formats');
   const [, startTransition] = useTransition();
   const [optimisticFormats, addOptimistic] = useOptimistic(
     initialFormats,
@@ -144,8 +140,7 @@ export function FormatsManager({ initialFormats }: Props) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <p className="font-sans text-xs text-muted">
-          Toggles oppdateres umiddelbart. Synlige endringer treffer wizarden
-          neste gang den lastes inn.
+          {t('togglesHint')}
         </p>
         <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-muted">
           <input
@@ -154,7 +149,7 @@ export function FormatsManager({ initialFormats }: Props) {
             onChange={(e) => setShowInactive(e.target.checked)}
             className="h-4 w-4 accent-primary"
           />
-          Vis inaktive
+          {t('showInactive')}
         </label>
       </div>
 
@@ -194,7 +189,7 @@ export function FormatsManager({ initialFormats }: Props) {
                   : 'border-border bg-surface text-text'
               }`}
             >
-              {INTENT_LABELS[intent]}
+              {t(`intentLabels.${intent}` as Parameters<typeof t>[0])}
             </button>
           ))}
         </div>
@@ -234,7 +229,7 @@ export function FormatsManager({ initialFormats }: Props) {
                       }
                       className="h-4 w-4 accent-primary"
                     />
-                    Synlig
+                    {t('visibleLabel')}
                   </label>
                   <label className="inline-flex cursor-pointer items-center gap-2">
                     <input
@@ -246,7 +241,7 @@ export function FormatsManager({ initialFormats }: Props) {
                       }
                       className="h-4 w-4 accent-primary"
                     />
-                    Primary
+                    {t('primaryLabel')}
                   </label>
                 </div>
               </li>
@@ -256,7 +251,7 @@ export function FormatsManager({ initialFormats }: Props) {
 
         <details className="rounded-lg border border-border bg-surface" open>
           <summary className="cursor-pointer px-3 py-2 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-            Cup-eligible formats
+            {t('cupEligibleHeading')}
           </summary>
           <ul className="border-t border-border">
             {cupFormats.map((f) => (
@@ -310,10 +305,11 @@ function ContentEditorSection({
   expandedSlug: string | null;
   onToggle: (slug: string) => void;
 }) {
+  const t = useTranslations('admin.formats');
   return (
     <div className="space-y-2">
       <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-        Forklaringstekster
+        {t('contentEditor.sectionHeading')}
       </p>
       <div className="rounded-lg border border-border bg-surface divide-y divide-border">
         {formats.map((f) => (
@@ -338,6 +334,7 @@ function ContentEditorRow({
   isOpen: boolean;
   onToggle: () => void;
 }) {
+  const t = useTranslations('admin.formats');
   const pointsDefaultValue = format.rules_points
     ? format.rules_points.join('\n')
     : '';
@@ -354,7 +351,7 @@ function ContentEditorRow({
           <span className="font-serif text-sm text-text">{format.display_name}</span>
           {(format.rules_summary || format.rules_points || format.rules_long || format.rules_example) && (
             <span className="rounded-full bg-primary/10 px-1.5 py-0.5 font-sans text-[10px] text-primary">
-              Redigert
+              {t('contentEditor.editedBadge')}
             </span>
           )}
         </span>
@@ -375,14 +372,14 @@ function ContentEditorRow({
               htmlFor={`summary-${format.slug}`}
               className="block font-sans text-xs font-medium text-text"
             >
-              Kortsammendrag
+              {t('contentEditor.summaryLabel')}
             </label>
             <input
               id={`summary-${format.slug}`}
               type="text"
               name="rules_summary"
               defaultValue={format.rules_summary ?? ''}
-              placeholder="Bruker standardteksten fra appen"
+              placeholder={t('contentEditor.defaultPlaceholder')}
               className="w-full rounded-md border border-border bg-bg px-3 py-2 font-sans text-sm text-text placeholder:text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             />
           </div>
@@ -392,15 +389,15 @@ function ContentEditorRow({
               htmlFor={`points-${format.slug}`}
               className="block font-sans text-xs font-medium text-text"
             >
-              Regelpoints{' '}
-              <span className="font-normal text-muted">(én per linje)</span>
+              {t('contentEditor.pointsLabel')}{' '}
+              <span className="font-normal text-muted">{t('contentEditor.pointsHint')}</span>
             </label>
             <textarea
               id={`points-${format.slug}`}
               name="rules_points"
               rows={4}
               defaultValue={pointsDefaultValue}
-              placeholder="Bruker standardteksten fra appen"
+              placeholder={t('contentEditor.defaultPlaceholder')}
               className="w-full rounded-md border border-border bg-bg px-3 py-2 font-sans text-sm text-text placeholder:text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 resize-y"
             />
           </div>
@@ -410,14 +407,14 @@ function ContentEditorRow({
               htmlFor={`long-${format.slug}`}
               className="block font-sans text-xs font-medium text-text"
             >
-              Lang forklaring
+              {t('contentEditor.longLabel')}
             </label>
             <textarea
               id={`long-${format.slug}`}
               name="rules_long"
               rows={5}
               defaultValue={format.rules_long ?? ''}
-              placeholder="Ingen lang forklaring ennå"
+              placeholder={t('contentEditor.longPlaceholder')}
               className="w-full rounded-md border border-border bg-bg px-3 py-2 font-sans text-sm text-text placeholder:text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 resize-y"
             />
           </div>
@@ -427,21 +424,21 @@ function ContentEditorRow({
               htmlFor={`example-${format.slug}`}
               className="block font-sans text-xs font-medium text-text"
             >
-              Konkret eksempel
+              {t('contentEditor.exampleLabel')}
             </label>
             <textarea
               id={`example-${format.slug}`}
               name="rules_example"
               rows={4}
               defaultValue={format.rules_example ?? ''}
-              placeholder="Ingen eksempel ennå"
+              placeholder={t('contentEditor.examplePlaceholder')}
               className="w-full rounded-md border border-border bg-bg px-3 py-2 font-sans text-sm text-text placeholder:text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 resize-y"
             />
           </div>
 
           <div className="flex justify-end">
-            <SubmitButton pendingLabel="Lagrer …">
-              Lagre forklaring
+            <SubmitButton pendingLabel={t('contentEditor.saveBusy')}>
+              {t('contentEditor.saveButton')}
             </SubmitButton>
           </div>
         </form>
@@ -467,6 +464,7 @@ function DesktopMatrix({
   onActive: (slug: string, next: boolean) => void;
   onCupEligible: (slug: string, next: boolean) => void;
 }) {
+  const t = useTranslations('admin.formats');
   return (
     <div className="overflow-x-auto rounded-lg border border-border bg-surface">
       <table className="w-full text-sm">
@@ -483,7 +481,7 @@ function DesktopMatrix({
                 key={intent}
                 className="px-3 py-2 text-center font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-muted"
               >
-                {INTENT_LABELS[intent]}
+                {t(`intentLabels.${intent}` as Parameters<typeof t>[0])}
               </th>
             ))}
             <th className="px-3 py-2 text-center font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
@@ -519,12 +517,13 @@ function DesktopMatrix({
                   const mapping = f.mappings[intent];
                   const visible = mapping?.is_visible ?? false;
                   const primary = mapping?.is_primary ?? false;
+                  const intentLabel = t(`intentLabels.${intent}` as Parameters<typeof t>[0]);
                   return (
                     <td key={intent} className="px-3 py-2 text-center">
                       <div className="inline-flex items-center gap-2">
                         <input
                           type="checkbox"
-                          aria-label={`${f.display_name} ${INTENT_LABELS[intent]} synlig`}
+                          aria-label={`${f.display_name} ${intentLabel} synlig`}
                           checked={visible}
                           disabled={inactive}
                           onChange={(e) =>
@@ -534,7 +533,7 @@ function DesktopMatrix({
                         />
                         <button
                           type="button"
-                          aria-label={`${f.display_name} ${INTENT_LABELS[intent]} primary`}
+                          aria-label={`${f.display_name} ${intentLabel} primary`}
                           aria-pressed={primary}
                           disabled={inactive}
                           onClick={() => onPrimary(f.slug, intent, !primary)}

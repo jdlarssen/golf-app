@@ -1,13 +1,15 @@
 'use server';
 
 import { revalidateTag } from 'next/cache';
-import { redirect } from 'next/navigation';
+import { getLocale } from 'next-intl/server';
+import { redirect } from '@/i18n/navigation';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/admin/auth';
 import { recordFormatMappingChange } from '@/lib/formats/audit';
 import { parsePointsTextarea } from '@/lib/formats/parsePointsTextarea';
 import type { MappingIntent } from '@/lib/formats/getAllFormatsWithMappings';
+import type { AppLocale } from '@/i18n/routing';
 
 const REDIRECT_BASE = '/admin/formats';
 
@@ -31,13 +33,14 @@ function parseNext(raw: string | null): boolean {
  * gå via migrasjon.
  */
 export async function toggleVisibility(formData: FormData): Promise<void> {
+  const locale = (await getLocale()) as AppLocale;
   const slug = String(formData.get('format_slug') ?? '');
   const intentRaw = String(formData.get('intent') ?? '');
   const next = parseNext(String(formData.get('next') ?? ''));
 
-  if (!slug) redirect(`${REDIRECT_BASE}?error=missing_slug`);
-  if (!isMappingIntent(intentRaw)) redirect(`${REDIRECT_BASE}?error=bad_intent`);
-  const intent: MappingIntent = intentRaw;
+  if (!slug) redirect({ href: `${REDIRECT_BASE}?error=missing_slug`, locale });
+  if (!isMappingIntent(intentRaw)) redirect({ href: `${REDIRECT_BASE}?error=bad_intent`, locale });
+  const intent = intentRaw as MappingIntent;
 
   const supabase = await getServerClient();
   const admin = await requireAdmin(supabase);
@@ -54,11 +57,11 @@ export async function toggleVisibility(formData: FormData): Promise<void> {
   if (existing) {
     // Idempotens
     if (existing.is_visible === next) {
-      redirect(`${REDIRECT_BASE}?status=noop`);
+      redirect({ href: `${REDIRECT_BASE}?status=noop`, locale });
     }
     // Validering: primary-rad kan ikke avhukes
     if (next === false && existing.is_primary) {
-      redirect(`${REDIRECT_BASE}?error=demote_first`);
+      redirect({ href: `${REDIRECT_BASE}?error=demote_first`, locale });
     }
 
     const { error } = await adminClient
@@ -68,7 +71,7 @@ export async function toggleVisibility(formData: FormData): Promise<void> {
       .eq('intent', intent);
     if (error) {
       console.error('[toggleVisibility] update failed', { slug, intent, error });
-      redirect(`${REDIRECT_BASE}?error=db_error`);
+      redirect({ href: `${REDIRECT_BASE}?error=db_error`, locale });
     }
 
     await recordFormatMappingChange({
@@ -93,7 +96,7 @@ export async function toggleVisibility(formData: FormData): Promise<void> {
       });
     if (error) {
       console.error('[toggleVisibility] insert failed', { slug, intent, error });
-      redirect(`${REDIRECT_BASE}?error=db_error`);
+      redirect({ href: `${REDIRECT_BASE}?error=db_error`, locale });
     }
 
     await recordFormatMappingChange({
@@ -108,7 +111,7 @@ export async function toggleVisibility(formData: FormData): Promise<void> {
   }
 
   revalidateTag('format-mapping', 'max');
-  redirect(`${REDIRECT_BASE}?status=updated`);
+  redirect({ href: `${REDIRECT_BASE}?status=updated`, locale });
 }
 
 /**
@@ -119,13 +122,14 @@ export async function toggleVisibility(formData: FormData): Promise<void> {
  *   atomically setter is_visible=true samtidig. Aldri brudd på CHECK.
  */
 export async function togglePrimary(formData: FormData): Promise<void> {
+  const locale = (await getLocale()) as AppLocale;
   const slug = String(formData.get('format_slug') ?? '');
   const intentRaw = String(formData.get('intent') ?? '');
   const next = parseNext(String(formData.get('next') ?? ''));
 
-  if (!slug) redirect(`${REDIRECT_BASE}?error=missing_slug`);
-  if (!isMappingIntent(intentRaw)) redirect(`${REDIRECT_BASE}?error=bad_intent`);
-  const intent: MappingIntent = intentRaw;
+  if (!slug) redirect({ href: `${REDIRECT_BASE}?error=missing_slug`, locale });
+  if (!isMappingIntent(intentRaw)) redirect({ href: `${REDIRECT_BASE}?error=bad_intent`, locale });
+  const intent = intentRaw as MappingIntent;
 
   const supabase = await getServerClient();
   const admin = await requireAdmin(supabase);
@@ -146,13 +150,13 @@ export async function togglePrimary(formData: FormData): Promise<void> {
       .eq('intent', intent)
       .eq('is_primary', true);
     if ((count ?? 0) <= 1) {
-      redirect(`${REDIRECT_BASE}?error=last_primary`);
+      redirect({ href: `${REDIRECT_BASE}?error=last_primary`, locale });
     }
   }
 
   if (existing) {
     if (existing.is_primary === next) {
-      redirect(`${REDIRECT_BASE}?status=noop`);
+      redirect({ href: `${REDIRECT_BASE}?status=noop`, locale });
     }
     // Hvis next='on' og raden ikke er synlig: sett is_visible=true samtidig
     // (CHECK `primary_implies_visible` ville ellers rollback-et).
@@ -170,7 +174,7 @@ export async function togglePrimary(formData: FormData): Promise<void> {
       .eq('intent', intent);
     if (error) {
       console.error('[togglePrimary] update failed', { slug, intent, error });
-      redirect(`${REDIRECT_BASE}?error=db_error`);
+      redirect({ href: `${REDIRECT_BASE}?error=db_error`, locale });
     }
 
     await recordFormatMappingChange({
@@ -195,7 +199,7 @@ export async function togglePrimary(formData: FormData): Promise<void> {
       });
     if (error) {
       console.error('[togglePrimary] insert failed', { slug, intent, error });
-      redirect(`${REDIRECT_BASE}?error=db_error`);
+      redirect({ href: `${REDIRECT_BASE}?error=db_error`, locale });
     }
 
     await recordFormatMappingChange({
@@ -210,17 +214,18 @@ export async function togglePrimary(formData: FormData): Promise<void> {
   }
 
   revalidateTag('format-mapping', 'max');
-  redirect(`${REDIRECT_BASE}?status=updated`);
+  redirect({ href: `${REDIRECT_BASE}?status=updated`, locale });
 }
 
 /**
  * Toggle `formats.is_cup_eligible`. Per-format global flag — ikke per-intent.
  */
 export async function toggleCupEligible(formData: FormData): Promise<void> {
+  const locale = (await getLocale()) as AppLocale;
   const slug = String(formData.get('format_slug') ?? '');
   const next = parseNext(String(formData.get('next') ?? ''));
 
-  if (!slug) redirect(`${REDIRECT_BASE}?error=missing_slug`);
+  if (!slug) redirect({ href: `${REDIRECT_BASE}?error=missing_slug`, locale });
 
   const supabase = await getServerClient();
   const admin = await requireAdmin(supabase);
@@ -232,9 +237,9 @@ export async function toggleCupEligible(formData: FormData): Promise<void> {
     .eq('slug', slug)
     .maybeSingle<{ is_cup_eligible: boolean }>();
 
-  if (!existing) redirect(`${REDIRECT_BASE}?error=not_found`);
-  if (existing.is_cup_eligible === next) {
-    redirect(`${REDIRECT_BASE}?status=noop`);
+  if (!existing) redirect({ href: `${REDIRECT_BASE}?error=not_found`, locale });
+  if (existing!.is_cup_eligible === next) {
+    redirect({ href: `${REDIRECT_BASE}?status=noop`, locale });
   }
 
   const { error } = await adminClient
@@ -243,7 +248,7 @@ export async function toggleCupEligible(formData: FormData): Promise<void> {
     .eq('slug', slug);
   if (error) {
     console.error('[toggleCupEligible] update failed', { slug, error });
-    redirect(`${REDIRECT_BASE}?error=db_error`);
+    redirect({ href: `${REDIRECT_BASE}?error=db_error`, locale });
   }
 
   await recordFormatMappingChange({
@@ -252,12 +257,12 @@ export async function toggleCupEligible(formData: FormData): Promise<void> {
     formatSlug: slug,
     intent: null,
     changeType: 'cup_eligible',
-    before: { is_cup_eligible: existing.is_cup_eligible },
+    before: { is_cup_eligible: existing!.is_cup_eligible },
     after: { is_cup_eligible: next },
   });
 
   revalidateTag('format-mapping', 'max');
-  redirect(`${REDIRECT_BASE}?status=updated`);
+  redirect({ href: `${REDIRECT_BASE}?status=updated`, locale });
 }
 
 /**
@@ -266,10 +271,11 @@ export async function toggleCupEligible(formData: FormData): Promise<void> {
  * Historiske games er upåvirket (ingen FK).
  */
 export async function toggleActive(formData: FormData): Promise<void> {
+  const locale = (await getLocale()) as AppLocale;
   const slug = String(formData.get('format_slug') ?? '');
   const next = parseNext(String(formData.get('next') ?? ''));
 
-  if (!slug) redirect(`${REDIRECT_BASE}?error=missing_slug`);
+  if (!slug) redirect({ href: `${REDIRECT_BASE}?error=missing_slug`, locale });
 
   const supabase = await getServerClient();
   const admin = await requireAdmin(supabase);
@@ -281,9 +287,9 @@ export async function toggleActive(formData: FormData): Promise<void> {
     .eq('slug', slug)
     .maybeSingle<{ is_active: boolean }>();
 
-  if (!existing) redirect(`${REDIRECT_BASE}?error=not_found`);
-  if (existing.is_active === next) {
-    redirect(`${REDIRECT_BASE}?status=noop`);
+  if (!existing) redirect({ href: `${REDIRECT_BASE}?error=not_found`, locale });
+  if (existing!.is_active === next) {
+    redirect({ href: `${REDIRECT_BASE}?status=noop`, locale });
   }
 
   const { error } = await adminClient
@@ -292,7 +298,7 @@ export async function toggleActive(formData: FormData): Promise<void> {
     .eq('slug', slug);
   if (error) {
     console.error('[toggleActive] update failed', { slug, error });
-    redirect(`${REDIRECT_BASE}?error=db_error`);
+    redirect({ href: `${REDIRECT_BASE}?error=db_error`, locale });
   }
 
   await recordFormatMappingChange({
@@ -301,12 +307,12 @@ export async function toggleActive(formData: FormData): Promise<void> {
     formatSlug: slug,
     intent: null,
     changeType: 'active',
-    before: { is_active: existing.is_active },
+    before: { is_active: existing!.is_active },
     after: { is_active: next },
   });
 
   revalidateTag('format-mapping', 'max');
-  redirect(`${REDIRECT_BASE}?status=updated`);
+  redirect({ href: `${REDIRECT_BASE}?status=updated`, locale });
 }
 
 /**
@@ -320,8 +326,9 @@ export async function toggleActive(formData: FormData): Promise<void> {
  * endringen uten deploy.
  */
 export async function updateFormatContent(formData: FormData): Promise<void> {
+  const locale = (await getLocale()) as AppLocale;
   const slug = String(formData.get('slug') ?? '').trim();
-  if (!slug) redirect(`${REDIRECT_BASE}?error=missing_slug`);
+  if (!slug) redirect({ href: `${REDIRECT_BASE}?error=missing_slug`, locale });
 
   const supabase = await getServerClient();
   await requireAdmin(supabase);
@@ -344,9 +351,9 @@ export async function updateFormatContent(formData: FormData): Promise<void> {
 
   if (error) {
     console.error('[updateFormatContent] update failed', { slug, error });
-    redirect(`${REDIRECT_BASE}?error=db_error`);
+    redirect({ href: `${REDIRECT_BASE}?error=db_error`, locale });
   }
 
   revalidateTag('format-mapping', 'max');
-  redirect(`${REDIRECT_BASE}?status=content_saved`);
+  redirect({ href: `${REDIRECT_BASE}?status=content_saved`, locale });
 }

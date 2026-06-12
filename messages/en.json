@@ -2513,6 +2513,107 @@
           "in_use": "The course is used in at least one game and cannot be deleted."
         }
       }
+    },
+    "formats": {
+      "kicker": "Format mapping",
+      "title": "Format mapping",
+      "subtitle": "Control which game formats appear in wizard step 2 per intent.",
+      "errors": {
+        "missing_slug": "Format slug is missing from the request.",
+        "bad_intent": "Invalid intent type.",
+        "not_found": "Format not found.",
+        "last_primary": "Cannot remove the last primary for this intent. Activate another format as primary first.",
+        "demote_first": "Demote the star first — a primary format must be visible. Uncheck the primary star before hiding the row.",
+        "db_error": "Could not save the change. Please try again or check the Vercel logs."
+      },
+      "status": {
+        "updated": "Change saved.",
+        "noop": "No change (the value was already set).",
+        "content_saved": "Description saved."
+      },
+      "intentLabels": {
+        "kompis": "Friends",
+        "klubb": "Club",
+        "solo": "Solo"
+      },
+      "showInactive": "Show inactive",
+      "visibleLabel": "Visible",
+      "primaryLabel": "Primary",
+      "cupEligibleHeading": "Cup-eligible formats",
+      "togglesHint": "Toggles update immediately. Visible changes take effect the next time the wizard is loaded.",
+      "rowStatus": {
+        "aktiv": "Active",
+        "inaktiv": "Inactive",
+        "ny": "New",
+        "ariaLabel": "Status: {label}. Click to toggle active/inactive."
+      },
+      "auditLog": {
+        "emptyState": "No changes logged yet.",
+        "heading": "Change log (last {n})",
+        "summaryLabel": "View change log ({n} entries)",
+        "changeLabels": {
+          "visibilityOn": "visible on",
+          "visibilityOff": "visible off",
+          "primaryOn": "primary on",
+          "primaryOff": "primary off",
+          "cupEligibleOn": "cup-eligible on",
+          "cupEligibleOff": "cup-eligible off",
+          "activated": "activated",
+          "deactivated": "deactivated"
+        }
+      },
+      "contentEditor": {
+        "sectionHeading": "Description texts",
+        "editedBadge": "Edited",
+        "summaryLabel": "Short summary",
+        "defaultPlaceholder": "Uses the default app text",
+        "pointsLabel": "Rule points",
+        "pointsHint": "(one per line)",
+        "longLabel": "Long description",
+        "longPlaceholder": "No long description yet",
+        "exampleLabel": "Concrete example",
+        "examplePlaceholder": "No example yet",
+        "saveBusy": "Saving…",
+        "saveButton": "Save description"
+      }
+    },
+    "launches": {
+      "title": "Updates",
+      "subtitle": "Publish news to your users — as in-app nudges and a monthly digest.",
+      "errors": {
+        "title_required": "Title is required.",
+        "body_required": "Body text is required.",
+        "link_must_be_internal": "Link must point to an internal route (must start with «/»).",
+        "cta_without_link": "Button text requires a link to be filled in.",
+        "publish_failed": "Could not publish. Check the Vercel logs.",
+        "digest_failed": "Could not send the monthly digest. Check the Vercel logs."
+      },
+      "success": {
+        "published": "Update live for {count} users.",
+        "digestSent": "Digest sent to {count, plural, one {1 recipient} other {# recipients}} with {updates} updates.",
+        "digestAlreadySent": "The monthly digest has already been sent for the previous period.",
+        "digestNoUpdates": "No updates to send for the previous month. Skipping."
+      },
+      "publishSection": "Publish new update",
+      "titleLabel": "Title",
+      "titleHint": "Short and specific. E.g. «Texas scramble is here!»",
+      "bodyLabel": "Body",
+      "bodyPlaceholder": "What's new? 1–3 sentences. Plain language.",
+      "bodyHint": "Max 400 characters. Write as if texting a club mate.",
+      "linkLabel": "Link (optional)",
+      "linkHint": "Internal route, must start with «/». E.g. /admin/games/new",
+      "ctaLabel": "Button text (optional)",
+      "ctaHint": "Shown only when a link is filled in. E.g. «Try it», «See more».",
+      "publishButton": "Publish",
+      "publishingBusy": "Publishing…",
+      "digestSection": "Monthly digest",
+      "digestHeading": "Digest for {periodLabel}",
+      "digestSentLine": "Sent {date} to {count, plural, one {1 recipient} other {# recipients}}.",
+      "digestNotSentYet": "Not sent yet. The cron job sends automatically on the 1st of each month, but you can send manually now if you like.",
+      "sendDigestButton": "Send digest now",
+      "sendingBusy": "Sending…",
+      "previousSection": "Previous updates",
+      "emptyPrevious": "No updates published yet. Use the form above to publish the first one."
     }
   }
 }
