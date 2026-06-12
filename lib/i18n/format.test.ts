@@ -16,6 +16,8 @@ import {
   formatRelativeLocale,
   formatCountdownLocale,
   formatTeeOffLineLocale,
+  shortMonthLocale,
+  formatShortUTCDayMonthLocale,
 } from './format';
 import {
   formatTeeOffTime,
@@ -333,6 +335,78 @@ describe('formatShortDateLocale', () => {
 // ---------------------------------------------------------------------------
 // formatRelativeLocale (#563 Fase 2c chunk 1)
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// shortMonthLocale + formatShortUTCDayMonthLocale (#566 Fase 2d chunk 1)
+// ---------------------------------------------------------------------------
+
+/** The legacy hand-rolled Norwegian month-abbreviation array used in
+ * LigaRoundRow and CreateLigaForm (and replicated as NO_MONTHS_SHORT in
+ * format.ts). Tests assert byte-identical output for 'no'. */
+const LEGACY_NO_MONTHS_SHORT = [
+  'jan', 'feb', 'mar', 'apr', 'mai', 'jun',
+  'jul', 'aug', 'sep', 'okt', 'nov', 'des',
+] as const;
+
+describe('shortMonthLocale', () => {
+  it.each(
+    LEGACY_NO_MONTHS_SHORT.map((abbr, idx) => [idx, abbr] as const),
+  )(
+    "'no' month %i is byte-identical to legacy array ('%s')",
+    (monthIndex, expected) => {
+      expect(shortMonthLocale(monthIndex, 'no')).toBe(expected);
+    },
+  );
+
+  // en-GB Intl abbreviations (verified against Node's ICU data).
+  // Note: September is 'Sept' (4 chars) in en-GB, not 'Sep'.
+  it.each([
+    [0, 'Jan'],
+    [1, 'Feb'],
+    [2, 'Mar'],
+    [3, 'Apr'],
+    [4, 'May'],
+    [5, 'Jun'],
+    [6, 'Jul'],
+    [7, 'Aug'],
+    [8, 'Sept'],
+    [9, 'Oct'],
+    [10, 'Nov'],
+    [11, 'Dec'],
+  ] as const)('en: month %i → %s', (monthIndex, expected) => {
+    expect(shortMonthLocale(monthIndex, 'en')).toBe(expected);
+  });
+});
+
+describe('formatShortUTCDayMonthLocale', () => {
+  // Reference ISO strings pinned to known UTC day/month combos.
+  const CASES_NO: Array<[string, string]> = LEGACY_NO_MONTHS_SHORT.map((abbr, idx) => {
+    // Use the 12th of each month (avoids month-boundary confusion).
+    const month = String(idx + 1).padStart(2, '0');
+    return [`2026-${month}-12T14:30:00Z`, `12. ${abbr}`];
+  });
+
+  it.each(CASES_NO)(
+    "'no' %s → byte-identical to legacy hand-rolled output ('%s')",
+    (iso, expected) => {
+      expect(formatShortUTCDayMonthLocale(iso, 'no')).toBe(expected);
+    },
+  );
+
+  // Single-digit day: 5th of May → "5. mai"
+  it("'no' single-digit day: '2026-05-05T00:00:00Z' → '5. mai'", () => {
+    expect(formatShortUTCDayMonthLocale('2026-05-05T00:00:00Z', 'no')).toBe('5. mai');
+  });
+
+  it.each([
+    ['2026-05-12T14:30:00Z', '12 May'],
+    ['2026-01-01T00:00:00Z', '1 Jan'],
+    ['2026-12-31T23:59:00Z', '31 Dec'],
+    ['2026-06-03T12:00:00Z', '3 Jun'],
+  ] as const)("'en' %s → %s", (iso, expected) => {
+    expect(formatShortUTCDayMonthLocale(iso, 'en')).toBe(expected);
+  });
+});
 
 describe('formatRelativeLocale', () => {
   // Pin a base time so deltas are reproducible.
