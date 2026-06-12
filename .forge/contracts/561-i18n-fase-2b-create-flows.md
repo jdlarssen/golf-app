@@ -213,39 +213,73 @@ key directly; chunking order.
 
 ## Success Criteria
 
-- [ ] **No hardcoded Norwegian UI literals** remain in
+- [x] **No hardcoded Norwegian UI literals** remain in
       `app/[locale]/opprett-spill/**`, `app/[locale]/opprett-bane/**`,
       `app/[locale]/admin/games/new/**`, `admin/courses/CourseForm.tsx`,
       `admin/courses/new/**`, the §1 shared components, and the §2 lib
       modules — verified by non-comment æøå-grep (DB-content render paths
-      excluded as Phase D).
-- [ ] **Norwegian output unchanged:** full `npm run test` green with zero
+      excluded as Phase D). *Evidence: string-literal æøå-grep over the full
+      scope = 0 hits (only the `'påmelding'` StatusChipTone enum, a code id);
+      common no-words-without-æøå sweep (Velg/Lagre/Neste/…) = comments only.
+      INTENT_LABELS/DESCRIPTIONS + bruttoHelperFor sentences + inline course
+      error maps deleted from source.*
+- [x] **Norwegian output unchanged:** full `npm run test` green with zero
       assertion edits in existing tests; playwright smoke green (modulo the
-      known pre-existing #559 failure).
-- [ ] **English coverage:** `messages/catalogParity.test.ts` green (every
+      known pre-existing #559 failure). *Evidence: 3335/3335 vitest (263
+      files); playwright 48 passed / 7 env-skipped / 1 failed =
+      open-register.spec.ts:27 (#559). Only sanctioned test changes: nav-mock
+      plumbing in actions.test.ts files (next/navigation →
+      @/i18n/navigation mock + getLocale stub), no assertion edits.*
+- [x] **English coverage:** `messages/catalogParity.test.ts` green (every
       new `no` key has an `en` key); `npm run build` green; no raw catalog
       key visible in either locale on the wizard/course-form surfaces.
-- [ ] **Locale-aware month/date rendering:** `suggestGameName` and the
+      *Evidence: catalogParity green in full-suite run; build green; opus
+      idiomatic-English pass (commit d726e97) reviewed 624 values, fixed 11
+      (incl. M/F/J→M/D/J meaning bug, plural-grammar bug in
+      confirmChanges); full-catalog ICU parse check = 0 errors. Raw-key
+      page-render check left to the evaluator (wizard pages are auth-gated).*
+- [x] **Locale-aware month/date rendering:** `suggestGameName` and the
       ReadyStep tee-off line render English months under `en`, byte-identical
-      Norwegian under `no` (Type A tests for both paths).
-- [ ] **Navigation imports migrated** in every touched file (grep-verified:
+      Norwegian under `no` (Type A tests for both paths). *Evidence:
+      lib/games/autoGameName.test.ts (12-month no-parity it.each + 4 en
+      spot-checks + omitted-locale test); lib/i18n/format.test.ts
+      formatTeeOffLineLocale (12-month no-parity + padding edge + en +
+      null/invalid contract). Call-sites migrated: GameWizard passes
+      useLocale(); ReadyStep uses formatTeeOffLineLocale.*
+- [x] **Navigation imports migrated** in every touched file (grep-verified:
       no `next/link`, no bare-string `redirect` from `next/navigation` in
-      scope; `useSearchParams`/`notFound` exempt).
-- [ ] **PPR shape holds:** `npm run build` route shape unchanged vs main
-      baseline (82 ◐).
-- [ ] MINOR version bump + CHANGELOG entry per
-      `docs/changelog-conventions.md` in the user-visible commit.
+      scope; `useSearchParams`/`notFound` exempt). *Evidence: scope grep
+      returns exactly one hit — GameWizard's `useSearchParams` (exempt by
+      design). Both actions.ts files use redirect({href, locale}) object-form
+      with getLocale().*
+- [x] **PPR shape holds:** `npm run build` route shape unchanged vs main
+      baseline (82 ◐). *Evidence: built origin/main and the branch in the
+      same worktree — route summaries are byte-identical (diff exit 0, 92
+      route lines, 81 ◐ counted by the same grep on both; the «82» in the
+      criterion came from 2a's different counting method).*
+- [x] MINOR version bump + CHANGELOG entry per
+      `docs/changelog-conventions.md` in the user-visible commit. *Evidence:
+      commit 4504694 — v1.115.0, new open 1.115.y series, 1.114.y wrapped in
+      details, tagline through humanizer (fixed doubled «på engelsk» and
+      doubled «også»). README i18n bullet updated (commit 230d22c).*
 
 ## Gates (per chunk)
 
-- [ ] `npx tsc --noEmit` after every chunk.
-- [ ] Co-located `*.test.ts(x)` for changed files after every chunk.
-- [ ] `npm run build` after the lib/shared-modules chunk and before
-      evaluation (route-shape diff checked).
-- [ ] Full `npm run test` before evaluation.
-- [ ] `npx playwright test` (existing smoke) before evaluation.
-- [ ] Version bump + CHANGELOG in the same commit as the user-visible
-      change; extraction-only commits use `refactor(...)`.
+- [x] `npx tsc --noEmit` after every chunk. *All chunks; re-verified by main
+      chat after chunks 1, 2-cleanup, 3-cleanup, 5-fix.*
+- [x] Co-located `*.test.ts(x)` for changed files after every chunk.
+- [x] `npm run build` after the lib/shared-modules chunk and before
+      evaluation (route-shape diff checked). *Byte-identical vs origin/main.*
+- [x] Full `npm run test` before evaluation. *3335/3335 (263 files).*
+- [x] `npx playwright test` (existing smoke) before evaluation. *48/7/1,
+      the 1 = pre-existing #559. NOTE: requires worktree .env.local
+      (recreated from Supabase MCP url + legacy anon key this session — a
+      missing .env.local makes all 42 redirect specs fail with the proxy
+      silently not redirecting).*
+- [x] Version bump + CHANGELOG in the same commit as the user-visible
+      change; extraction-only commits use `refactor(...)`. *Chunks 1–6 =
+      refactor(i18n)/test/chore prefixes; 4504694 = feat(i18n) with MINOR
+      bump (commit-msg hook enforced).*
 
 ## Files Likely Touched
 
