@@ -17,7 +17,35 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.114.y — i18n · engelsk i hele kjernesløyfa
+## 1.115.y — i18n · engelsk i opprett-flyten
+
+Issue [#561](https://github.com/jdlarssen/golf-app/issues/561), del av epic [#60](https://github.com/jdlarssen/golf-app/issues/60). Fase 2b av flerspråkligheten: hele opprett-flyten (spill-veiviseren, hurtig-oppsettet og baneskjemaet) hentes fra omsettbare kataloger og finnes nå på engelsk.
+
+### [1.115.0] - 2026-06-12 · #561
+
+> Setter du opp spill eller baner på engelsk, er hele flyten nå oversatt: veiviseren steg for steg, hurtig-oppsettet og baneskjemaet. Til og med navneforslaget følger språket ditt. På norsk er alt som før.
+
+<details>
+<summary>Teknisk</summary>
+
+[#561](https://github.com/jdlarssen/golf-app/issues/561). i18n Fase 2b — per-område-ekstraksjon av create-flowene (~35 filer: `admin/games/new/**`, `opprett-spill`, `opprett-bane`, `admin/courses/{CourseForm,new}` + delte komponenter).
+
+#### Added
+- `messages/{no,en}.json`: nye namespaces `wizard.*` (intent-velger, modus-velger, formatgrid-chrome, lagstørrelse, cup-oppsett, alle seksjoner, oppsummeringssteg, hurtig-oppsett/`form`, side-chrome og feilkoder), `courseForm.*` (skjema, begge dørene, feilkoder), `allowance.*` og `modes.playStyle.*` — ~620 nøkler per språk, gjennom idiomatisk golf-engelsk-pass.
+- `lib/i18n/format.ts` `formatTeeOffLineLocale` + locale-param på `suggestGameName` — navneforslag og oppsummerings-tidspunkt rendrer engelske månedsnavn under `/en`, byte-identisk norsk ellers (Type A-tester for begge stier).
+- Drift-guards (Type A): `ERROR_MESSAGES_NEW_GAME` ↔ `wizard.errors` (mappen består for edit/rediger-sidene til fase 2c) og `PLAY_STYLE_LABELS` ↔ `modes.playStyle`.
+
+#### Changed
+- Alle filer i omfanget renderer via `useTranslations`/`getTranslations`; norsk output er uendret (full suite grønn uten assertion-endringer).
+- Delte komponenter (`AllowanceField`, `FormatStyleBadge`, `FormatGuideSheet`/`-List`-chrome) oversettes i komponenten — liga-sidene og `/spillformater` får engelsk på kjøpet under `/en`.
+- `Link`/`redirect`/`useRouter`/`usePathname` migrert til `@/i18n/navigation` i hele omfanget; server actions bruker objekt-form med `getLocale()`.
+- Feilkode-rendering på begge opprett-dørene bruker `t.has()`-guard (ukjente koder gir ingen banner, som før) og ekte ICU `{list}`-interpolasjon for `pending_players`.
+- Norsk flyttet ut av lib: `INTENT_LABELS`/`INTENT_DESCRIPTIONS` (slettet), `bruttoHelperFor` → `bruttoHelperKeyFor` (nøkkel-returnerende), `PENDING_PLAYER_LABEL` → katalog, inline-feilmappene i begge bane-dørene → `courseForm.errors`/`adminErrors`.
+
+</details>
+
+<details>
+<summary><strong>1.114.y — i18n · engelsk i hele kjernesløyfa (1 oppføring)</strong></summary>
 
 Issue [#554](https://github.com/jdlarssen/golf-app/issues/554), del av epic [#60](https://github.com/jdlarssen/golf-app/issues/60). Fase 2a av flerspråkligheten: hele spilleflaten (spillside, hull-scoring, scorekort, leaderboard og podier) hentes fra omsettbare kataloger og finnes nå på engelsk.
 
@@ -43,6 +71,8 @@ Issue [#554](https://github.com/jdlarssen/golf-app/issues/554), del av epic [#60
 - `lib/games/scorecardTitle.ts` og `lib/wolf/holeLabels.ts` returnerer katalognøkler/id-er; `lib/leaderboard/formatHolesList.ts` tar hull-ordet som parameter.
 - CSV-eksporten (`leaderboard/export/route.ts`) følger brukerens locale i kolonneoverskrifter og feilmeldinger.
 - Engelsk katalog gjennom idiomatisk golf-engelsk-pass; `{suffix}`-interpolasjoner som aldri ble sendt inn erstattet med ICU `selectordinal` (1st/2nd/3rd).
+
+</details>
 
 </details>
 
