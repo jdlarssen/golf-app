@@ -2680,7 +2680,7 @@
       "endDateHint": "Valid until the end of this day."
     },
     "list": {
-      "kicker": "Club House",
+      "kicker": "Clubhouse",
       "pageTitle": "Your clubs",
       "emptyState": "You are not a member of any clubs yet. If you receive an invite link, the club will appear here.",
       "ctaHeading": "Want a club for your group?",
@@ -2775,7 +2775,7 @@
       }
     },
     "leave": {
-      "heading": "Leave \"{name}\"?",
+      "heading": "Leave «{name}»?",
       "description": "You will lose access to the club''s tournaments. The owner can add you again if you ask.",
       "confirmText": "You are leaving {name}. This action cannot be undone.",
       "leaveButton": "Leave club",
@@ -2787,7 +2787,7 @@
       }
     },
     "remove": {
-      "heading": "Remove \"{name}\"?",
+      "heading": "Remove «{name}»?",
       "description": "{name} will immediately lose access to the club''s tournaments. An owner can add them again.",
       "confirmText": "You are removing {name} from {clubName}.",
       "removeButton": "Remove from club",
@@ -2821,7 +2821,7 @@
       "finished": "Finished"
     },
     "ledger": {
-      "kicker": "Club House",
+      "kicker": "Clubhouse",
       "createButton": "+ New league",
       "brassRibbon": "Leagues",
       "pageTitle": "Leagues",
@@ -2834,7 +2834,7 @@
       "createLeagueButton": "Create league"
     },
     "create": {
-      "kicker": "Club House",
+      "kicker": "Clubhouse",
       "brassRibbon": "New league",
       "pageTitle": "Create league",
       "pageSubtitle": "Set up a season series with net stroke play. Invite your friends.",
@@ -2901,7 +2901,7 @@
       "standingsModelAverageDescStroke": "Average against par per round. No penalty for missed rounds.",
       "standingsModelAverageDescPoints": "Average points per round. No penalty for missed rounds.",
       "standingsModelBestNLabel": "Best N rounds",
-      "standingsModelBestNDescStroke": "Sum of the player's N best rounds. Missed rounds are filled with a penalty score up to N.",
+      "standingsModelBestNDescStroke": "Sum of the player''s N best rounds. Missed rounds are filled in with a penalty score, up to N.",
       "standingsModelBestNDescPoints": "Sum of the player's N best rounds (points). Missed rounds count as 0.",
       "standingsModelPointsLabel": "Points per placing",
       "standingsModelPointsDesc": "The winner of each round earns the most points (descending from the number of players). A missed round scores 0 points.",
@@ -2930,7 +2930,7 @@
       "frequencyPreviewMonthly": ": {months}",
       "frequencyPreviewWindowed": " ({days}-day play windows)",
       "frequencyPreviewDot": ".",
-      "frequencyNoPreview": "Set the season dates above and we will show you how many rounds that gives.",
+      "frequencyNoPreview": "Set the season dates above and we''ll show you how many rounds that makes.",
       "participantsHeading": "Participants",
       "participantsHint": "Invite your friends to the league. You can add more afterwards.",
       "participantsClubHint": "Select the members who should take part in the league.",
@@ -3051,7 +3051,7 @@
       "finishPending": "Finishing …"
     },
     "delete": {
-      "kicker": "Club House",
+      "kicker": "Clubhouse",
       "brassRibbon": "Confirm deletion",
       "permanentLabel": "Permanently deleted",
       "confirmTitle": "Delete «{name}»?",
@@ -3103,7 +3103,7 @@
         "join_failed": "Something went wrong. Please try again."
       },
       "meldAv": {
-        "heading": "Withdraw from \"{name}\"?",
+        "heading": "Withdraw from «{name}»?",
         "subtitle": "You will be removed from the season standings, but you can rejoin as long as the league has not started.",
         "confirmButton": "Withdraw",
         "confirmPending": "Withdrawing …",
@@ -3122,9 +3122,9 @@
         "windowClosed": "The round is closed for submissions. Contact the admin if you think this is a mistake.",
         "backToLeague": "Back to league",
         "missingSetup": "The round is missing a course or tee — the admin will complete the setup soon.",
-        "markerRule": "Select who you are playing with. You need at least one fellow player (marker rule).",
-        "noCoPlayers": "No other participants in the league. You need at least one fellow player (marker rule).",
-        "coPlayersLegend": "Select playing partners",
+        "markerRule": "Choose who you''re playing with. You need at least one playing partner (marker rule).",
+        "noCoPlayers": "No other participants in the league. You need at least one playing partner (marker rule).",
+        "coPlayersLegend": "Choose your playing partners",
         "startButton": "Start flight",
         "startPending": "Starting flight …",
         "errorMap": {
@@ -3178,7 +3178,7 @@
       },
       "singler": {
         "name": "Singles only",
-        "description": "Everyone faces one opponent. Works whatever the team size."
+        "description": "Everyone faces one opponent. Works with any team size."
       }
     },
     "ledger": {
@@ -3196,7 +3196,7 @@
       "rosterHeading": "Team roster",
       "matchesHeading": "Matches",
       "emptyRoster": "No players yet. The roster is built from the matches.",
-      "emptyMatches": "No matches yet. Press «Generate matches» above to add fixtures.",
+      "emptyMatches": "No matches yet. Tap «Generate matches» above to add the fixtures.",
       "generateButton": "Generate matches",
       "openLeaderboard": "Open public leaderboard →",
       "matchesSummary": "First to {points} points · {finished} of {total} matches played",
@@ -3204,7 +3204,7 @@
       "mot": "vs",
       "unknownPlayer": "Unknown player",
       "addSingles": "+ Singles match",
-      "addFourball": "+ Fourball match",
+      "addFourball": "+ Four-ball match",
       "addFoursomes": "+ Foursomes match",
       "addGreensome": "+ Greensome match",
       "addChapman": "+ Chapman match",
@@ -3236,7 +3236,7 @@
         "finished": "Cup finished. Results have been sent to all participants.",
         "matches_generated": "Matches created. Review the list below."
       },
-      "deletedMessage": "The cup \"{name}\" has been deleted."
+      "deletedMessage": "The cup «{name}» has been deleted."
     },
     "generate": {
       "pageTitle": "Generate matches",
@@ -3244,7 +3244,7 @@
       "brassRibbonClub": "Club cup · {name}",
       "stepIndicator": "step {current} of {total}",
       "step1Heading": "Assign players to teams",
-      "unevenTeamsWarning": "Teams are uneven ({count1} vs {count2}). Only as many matches as the smaller team can fill will be generated.",
+      "unevenTeamsWarning": "Teams are uneven ({count1} vs {count2}). We''ll only generate as many matches as the smaller team can fill.",
       "step1ValidationMin": "{team} needs at least {minPerTeam} {minPerTeam, plural, one {player} other {players}}.",
       "step2BaneHeading": "Course",
       "step2CourseLabel": "Select course",
@@ -3288,9 +3288,9 @@
     },
     "delete": {
       "brassRibbon": "Confirm deletion",
-      "heading": "Delete \"{name}\"?",
+      "heading": "Delete «{name}»?",
       "permanentHeading": "Permanently deleted",
-      "cupEntry": "The cup \"{name}\"",
+      "cupEntry": "The cup «{name}»",
       "rosterEntry": "Team roster and master leaderboard",
       "matchesNote": "{count} {count, plural, one {match} other {matches}} will remain as standalone games (the cup link is removed).",
       "irreversibleNote": "This action cannot be undone.",
@@ -3322,7 +3322,7 @@
     }
   },
   "klubbhuset": {
-    "kicker": "Club House",
+    "kicker": "Clubhouse",
     "pageTitle": "Your games",
     "pageSubtitle": "The games you are organising. Tap a game to manage it.",
     "emptyState": "You are not organising any games yet. Set up a round and it will appear here.",
