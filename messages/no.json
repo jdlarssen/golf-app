@@ -2420,6 +2420,94 @@
         "withdrawingBusy": "Trekker tilbake …",
         "cancel": "Avbryt"
       }
+    },
+    "courses": {
+      "brassRibbonCatalog": "Baner · katalog",
+      "heading": "Registrerte baner",
+      "countLine": "{n, plural, one {# bane · sortert nyeste først} other {# baner · sortert nyeste først}}",
+      "emptyHeading": "Ingen baner ennå.",
+      "emptyBody": "Trykk «+ Ny» for å legge til den første banen i katalogen.",
+      "colCourse": "Bane",
+      "colTees": "Tees",
+      "tapHint": "Tap en bane for å redigere katalogen.",
+      "errors": {
+        "not_found": "Banen ble ikke funnet.",
+        "in_use": "Kan ikke slette banen fordi minst ett spill bruker den. Slett spillene først.",
+        "not_owned": "Du kan kun slette baner du selv har laget.",
+        "delete_failed": "Klarte ikke å slette banen. Prøv igjen, eller sjekk Supabase-loggene."
+      },
+      "statusMessages": {
+        "created": "✓ Banen «{name}» ble lagret.",
+        "updated": "✓ Banen «{name}» ble oppdatert.",
+        "deleted": "✓ Banen ble slettet."
+      },
+      "sortNewest": "Nyeste først",
+      "sortUpdated": "Sist endret",
+      "sortLastPlayed": "Sist spilt",
+      "sortMostActive": "Flest aktive spill",
+      "filterLadiesTee": "Har dame-tee",
+      "filterJuniorsTee": "Har junior-tee",
+      "filterActiveGames": "Aktive spill",
+      "filterPlayedRecently": "Spilt siste 30 dager",
+      "kickerLastPlayed": "Sist spilt {date}",
+      "kickerUpdated": "Endret {date}",
+      "kickerAdded": "Lagt til {date}",
+      "searchAriaLabel": "Søk etter banenavn",
+      "searchPlaceholder": "Søk etter banenavn…",
+      "sortLabel": "Sortér",
+      "emptyFilterAndQuery": "Ingen baner matcher «{query}» og filteret.",
+      "emptyQuery": "Ingen baner matcher «{query}».",
+      "emptyFilter": "Ingen baner matcher filteret.",
+      "edit": {
+        "brassRibbon": "Rediger bane",
+        "submitLabel": "Lagre endringer",
+        "deleteLink": "Slett bane",
+        "kickerLastUpdatedBy": "Sist endret {date} av {who}",
+        "kickerLastUpdated": "Sist endret {date}",
+        "kickerAddedBy": "Lagt til {date} av {who}",
+        "kickerAdded": "Lagt til {date}",
+        "statusRestored": "Tee gjenåpnet. Den vises i listen igjen og kan velges for nye spill.",
+        "errors": {
+          "name_required": "Banen må ha et navn.",
+          "bad_par": "Par må være et helt tall mellom 3 og 6 på hvert hull.",
+          "bad_si": "Stroke-indeks må være et helt tall mellom 1 og 18 på hvert hull.",
+          "si_duplicate": "Stroke-indeks 1–18 må brukes nøyaktig én gang hver.",
+          "tee_required": "Minst én tee-boks må legges til.",
+          "tee_partial_rating": "Hver tee må ha både slope og CR (eller ingen av dem) per kjønn. Du kan ikke lagre halve sett.",
+          "tee_no_rating": "Hver tee må ha minst ett komplett rating-sett per kjønn (Herrer / Damer / Junior).",
+          "tee_not_found": "Tee-en finnes ikke lenger. Last siden på nytt for å se oppdatert liste.",
+          "tee_not_archived": "Denne tee-en er ikke arkivert, så det er ingenting å gjenåpne.",
+          "db_course": "Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.",
+          "db_holes": "Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.",
+          "db_tees": "Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.",
+          "db_load": "Klarte ikke å lese banen fra databasen. Prøv igjen."
+        }
+      },
+      "archivedTees": {
+        "summaryLabel": "Arkiverte tees ({count})",
+        "body": "Disse tee-ene er fjernet fra aktiv visning, men beholdes for spillene som bruker dem. Gjenåpne en tee for å få den tilbake i edit-formen og i nytt-spill-velgeren.",
+        "archivedDate": "Arkivert {date}",
+        "nameConflict": "Navnekollisjon med aktiv tee. Endre navn etter gjenåpning",
+        "reopenButton": "Gjenåpne",
+        "reopeningBusy": "Gjenåpner …"
+      },
+      "delete": {
+        "brassRibbon": "Bekreft sletting",
+        "heading": "Slett «{name}»?",
+        "permanentLabel": "Slettes permanent",
+        "hullCount": "{count, plural, one {# hull} other {# hull}}",
+        "teeCount": "{count, plural, one {# tee-boks} other {# tee-bokser}}",
+        "cannotUndo": "Handlingen kan ikke angres.",
+        "submitButton": "Slett banen for alltid",
+        "deletingBusy": "Sletter …",
+        "cancel": "Avbryt",
+        "inUseBanner": "Banen er i bruk i {count, plural, one {# spill} other {# spill}} og kan ikke slettes. Slett spillene som bruker den først.",
+        "errors": {
+          "delete_failed": "Slettingen feilet. Prøv igjen, eller sjekk Vercel-loggene.",
+          "not_owned": "Du kan bare slette baner du har laget selv.",
+          "in_use": "Banen er i bruk i minst ett spill og kan ikke slettes."
+        }
+      }
     }
   }
 }

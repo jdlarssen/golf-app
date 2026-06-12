@@ -2420,6 +2420,94 @@
         "withdrawingBusy": "Withdrawing …",
         "cancel": "Cancel"
       }
+    },
+    "courses": {
+      "brassRibbonCatalog": "Courses · catalogue",
+      "heading": "Registered courses",
+      "countLine": "{n, plural, one {# course · sorted newest first} other {# courses · sorted newest first}}",
+      "emptyHeading": "No courses yet.",
+      "emptyBody": "Tap «+ New» to add the first course to the catalogue.",
+      "colCourse": "Course",
+      "colTees": "Tees",
+      "tapHint": "Tap a course to edit the catalogue.",
+      "errors": {
+        "not_found": "Course not found.",
+        "in_use": "Cannot delete the course because at least one game uses it. Delete the games first.",
+        "not_owned": "You can only delete courses you created yourself.",
+        "delete_failed": "Could not delete the course. Please try again or check the Supabase logs."
+      },
+      "statusMessages": {
+        "created": "✓ Course «{name}» was saved.",
+        "updated": "✓ Course «{name}» was updated.",
+        "deleted": "✓ Course was deleted."
+      },
+      "sortNewest": "Newest first",
+      "sortUpdated": "Last modified",
+      "sortLastPlayed": "Last played",
+      "sortMostActive": "Most active games",
+      "filterLadiesTee": "Has ladies tee",
+      "filterJuniorsTee": "Has junior tee",
+      "filterActiveGames": "Active games",
+      "filterPlayedRecently": "Played in last 30 days",
+      "kickerLastPlayed": "Last played {date}",
+      "kickerUpdated": "Modified {date}",
+      "kickerAdded": "Added {date}",
+      "searchAriaLabel": "Search by course name",
+      "searchPlaceholder": "Search by course name…",
+      "sortLabel": "Sort",
+      "emptyFilterAndQuery": "No courses match «{query}» and the filter.",
+      "emptyQuery": "No courses match «{query}».",
+      "emptyFilter": "No courses match the filter.",
+      "edit": {
+        "brassRibbon": "Edit course",
+        "submitLabel": "Save changes",
+        "deleteLink": "Delete course",
+        "kickerLastUpdatedBy": "Last modified {date} by {who}",
+        "kickerLastUpdated": "Last modified {date}",
+        "kickerAddedBy": "Added {date} by {who}",
+        "kickerAdded": "Added {date}",
+        "statusRestored": "Tee reopened. It is visible in the list again and can be selected for new games.",
+        "errors": {
+          "name_required": "The course must have a name.",
+          "bad_par": "Par must be a whole number between 3 and 6 for each hole.",
+          "bad_si": "Stroke index must be a whole number between 1 and 18 for each hole.",
+          "si_duplicate": "Stroke indices 1–18 must each be used exactly once.",
+          "tee_required": "At least one tee must be added.",
+          "tee_partial_rating": "Each tee must have both slope and CR (or neither) per gender. You cannot save partial sets.",
+          "tee_no_rating": "Each tee must have at least one complete rating set per gender (Mens / Ladies / Junior).",
+          "tee_not_found": "The tee no longer exists. Reload the page to see the updated list.",
+          "tee_not_archived": "This tee is not archived, so there is nothing to reopen.",
+          "db_course": "Could not save the course. Please try again or check the Supabase logs.",
+          "db_holes": "Could not save the course. Please try again or check the Supabase logs.",
+          "db_tees": "Could not save the course. Please try again or check the Supabase logs.",
+          "db_load": "Could not read the course from the database. Please try again."
+        }
+      },
+      "archivedTees": {
+        "summaryLabel": "Archived tees ({count})",
+        "body": "These tees have been removed from active display but are retained for games that use them. Reopen a tee to bring it back into the edit form and the new-game selector.",
+        "archivedDate": "Archived {date}",
+        "nameConflict": "Name conflict with an active tee. Rename after reopening",
+        "reopenButton": "Reopen",
+        "reopeningBusy": "Reopening …"
+      },
+      "delete": {
+        "brassRibbon": "Confirm deletion",
+        "heading": "Delete «{name}»?",
+        "permanentLabel": "Will be permanently deleted",
+        "hullCount": "{count, plural, one {# hole} other {# holes}}",
+        "teeCount": "{count, plural, one {# tee box} other {# tee boxes}}",
+        "cannotUndo": "This action cannot be undone.",
+        "submitButton": "Delete course permanently",
+        "deletingBusy": "Deleting …",
+        "cancel": "Cancel",
+        "inUseBanner": "The course is used in {count, plural, one {# game} other {# games}} and cannot be deleted. Delete the games that use it first.",
+        "errors": {
+          "delete_failed": "Deletion failed. Please try again or check the Vercel logs.",
+          "not_owned": "You can only delete courses you created yourself.",
+          "in_use": "The course is used in at least one game and cannot be deleted."
+        }
+      }
     }
   }
 }
