@@ -1,17 +1,20 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
+import type { AppLocale } from '@/i18n/routing';
 
 export async function deleteOwnAccount() {
+  const locale = (await getLocale()) as AppLocale;
   const supabase = await getServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/login');
+    redirect({ href: '/login', locale });
   }
 
   // Block if the user is in any active or scheduled game
@@ -22,7 +25,7 @@ export async function deleteOwnAccount() {
     .in('games.status', ['active', 'scheduled']);
 
   if (activeGames && activeGames.length > 0) {
-    redirect('/profile/slett-konto?error=active_games');
+    redirect({ href: '/profile/slett-konto?error=active_games', locale });
   }
 
   // Delete via service-role. auth.users → public.users cascades via FK.
@@ -32,9 +35,9 @@ export async function deleteOwnAccount() {
     if (error) throw error;
   } catch (err) {
     console.error('[profile/slett-konto] deleteOwnAccount failed', { userId: user.id, err });
-    redirect('/profile/slett-konto?error=delete_failed');
+    redirect({ href: '/profile/slett-konto?error=delete_failed', locale });
   }
 
   // Session is now invalid — redirect to login
-  redirect('/login?melding=konto_slettet');
+  redirect({ href: '/login?melding=konto_slettet', locale });
 }
