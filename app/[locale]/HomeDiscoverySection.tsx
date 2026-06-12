@@ -1,12 +1,19 @@
+'use client';
+
+import { useLocale, useTranslations } from 'next-intl';
 import { LinkButton } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { formatTeeOffDate, formatTeeOffTime } from '@/lib/format/teeOff';
+import {
+  formatTeeOffDateLocale,
+  formatTeeOffTimeLocale,
+} from '@/lib/i18n/format';
 import type {
   DiscoverableClubGame,
   DiscoverableFriendGame,
   DiscoverableOpenGame,
   PendingRequest,
 } from '@/lib/games/getDiscoverableGames';
+import type { AppLocale } from '@/i18n/routing';
 
 /**
  * «Funn turneringer»-seksjon på hjem-siden (#257). Vises kun for non-admin/
@@ -26,6 +33,8 @@ export function HomeDiscoverySection({
     pendingRequests: PendingRequest[];
   };
 }) {
+  const t = useTranslations('discover');
+  const locale = useLocale() as AppLocale;
   const { clubGames, openGames, friendGames, pendingRequests } = data;
 
   return (
@@ -33,12 +42,12 @@ export function HomeDiscoverySection({
       {clubGames.length > 0 && (
         <div className="mb-8">
           <h2 className="mb-3 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-            I dine klubber
+            {t('inYourClubs')}
           </h2>
           <ul className="flex list-none flex-col gap-3 p-0">
             {clubGames.map((game) => (
               <li key={game.id}>
-                <ClubGameCard game={game} />
+                <ClubGameCard game={game} t={t} locale={locale} />
               </li>
             ))}
           </ul>
@@ -48,12 +57,12 @@ export function HomeDiscoverySection({
       {friendGames.length > 0 && (
         <div className="mb-8">
           <h2 className="mb-3 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-            Fra vennene dine
+            {t('fromYourFriends')}
           </h2>
           <ul className="flex list-none flex-col gap-3 p-0">
             {friendGames.map((game) => (
               <li key={game.id}>
-                <FriendGameCard game={game} />
+                <FriendGameCard game={game} t={t} locale={locale} />
               </li>
             ))}
           </ul>
@@ -63,12 +72,12 @@ export function HomeDiscoverySection({
       {openGames.length > 0 && (
         <div className="mb-8">
           <h2 className="mb-3 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-            Åpne turneringer
+            {t('openTournaments')}
           </h2>
           <ul className="flex list-none flex-col gap-3 p-0">
             {openGames.map((game) => (
               <li key={game.id}>
-                <OpenGameCard game={game} />
+                <OpenGameCard game={game} t={t} locale={locale} />
               </li>
             ))}
           </ul>
@@ -78,12 +87,12 @@ export function HomeDiscoverySection({
       {pendingRequests.length > 0 && (
         <div>
           <h2 className="mb-3 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-            Mine forespørsler
+            {t('myRequests')}
           </h2>
           <ul className="flex list-none flex-col gap-3 p-0">
             {pendingRequests.map((request) => (
               <li key={request.id}>
-                <PendingRequestCard request={request} />
+                <PendingRequestCard request={request} t={t} />
               </li>
             ))}
           </ul>
@@ -93,7 +102,27 @@ export function HomeDiscoverySection({
   );
 }
 
-function ClubGameCard({ game }: { game: DiscoverableClubGame }) {
+type T = ReturnType<typeof useTranslations<'discover'>>;
+
+function formatTeeOffLine(
+  teeOff: Date,
+  locale: AppLocale,
+  t: T,
+): string {
+  const date = formatTeeOffDateLocale(teeOff, locale);
+  const time = formatTeeOffTimeLocale(teeOff, locale);
+  return t('teeOffLine', { date, time });
+}
+
+function ClubGameCard({
+  game,
+  t,
+  locale,
+}: {
+  game: DiscoverableClubGame;
+  t: T;
+  locale: AppLocale;
+}) {
   const teeOff = game.scheduled_tee_off_at
     ? new Date(game.scheduled_tee_off_at)
     : null;
@@ -110,12 +139,12 @@ function ClubGameCard({ game }: { game: DiscoverableClubGame }) {
           <p className="mt-1 font-sans text-[12px] text-muted">
             <span className="text-primary">{game.group_name}</span>
             {' · '}
-            {game.course_name ?? 'Bane ikke valgt'}
+            {game.course_name ?? t('courseNotSet')}
             {teeOff && (
               <>
                 {' · '}
                 <span className="tabular-nums">
-                  {formatTeeOffDate(teeOff)} kl. {formatTeeOffTime(teeOff)}
+                  {formatTeeOffLine(teeOff, locale, t)}
                 </span>
               </>
             )}
@@ -124,19 +153,27 @@ function ClubGameCard({ game }: { game: DiscoverableClubGame }) {
       </div>
       <div className="mt-3.5">
         <LinkButton href={`/signup/${game.short_id}`} full>
-          Meld meg på
+          {t('signMeUp')}
         </LinkButton>
       </div>
     </div>
   );
 }
 
-function FriendGameCard({ game }: { game: DiscoverableFriendGame }) {
+function FriendGameCard({
+  game,
+  t,
+  locale,
+}: {
+  game: DiscoverableFriendGame;
+  t: T;
+  locale: AppLocale;
+}) {
   const teeOff = game.scheduled_tee_off_at
     ? new Date(game.scheduled_tee_off_at)
     : null;
   const cta =
-    game.joinMode === 'direct' ? 'Meld meg på' : 'Be om å bli med';
+    game.joinMode === 'direct' ? t('signMeUp') : t('requestToJoin');
 
   return (
     <div className="rounded-2xl border border-border bg-surface px-4 py-3.5">
@@ -146,12 +183,12 @@ function FriendGameCard({ game }: { game: DiscoverableFriendGame }) {
             {game.name}
           </p>
           <p className="mt-1 font-sans text-[12px] text-muted">
-            {game.course_name ?? 'Bane ikke valgt'}
+            {game.course_name ?? t('courseNotSet')}
             {teeOff && (
               <>
                 {' · '}
                 <span className="tabular-nums">
-                  {formatTeeOffDate(teeOff)} kl. {formatTeeOffTime(teeOff)}
+                  {formatTeeOffLine(teeOff, locale, t)}
                 </span>
               </>
             )}
@@ -167,16 +204,24 @@ function FriendGameCard({ game }: { game: DiscoverableFriendGame }) {
   );
 }
 
-function OpenGameCard({ game }: { game: DiscoverableOpenGame }) {
+function OpenGameCard({
+  game,
+  t,
+  locale,
+}: {
+  game: DiscoverableOpenGame;
+  t: T;
+  locale: AppLocale;
+}) {
   const teeOff = game.scheduled_tee_off_at
     ? new Date(game.scheduled_tee_off_at)
     : null;
-  // Påmeldingsmåten ER synligheten (#357): open lar deg melde deg på direkte,
+  // Påmeldingsmåten ER synligheten (#357): open lar deg melde seg på direkte,
   // manual_approval krever at arrangøren godkjenner forespørselen din.
   const cta =
     game.registration_mode === 'manual_approval'
-      ? 'Be om å bli med'
-      : 'Meld meg på';
+      ? t('requestToJoin')
+      : t('signMeUp');
 
   return (
     <div className="rounded-2xl border border-border bg-surface px-4 py-3.5">
@@ -186,12 +231,12 @@ function OpenGameCard({ game }: { game: DiscoverableOpenGame }) {
             {game.name}
           </p>
           <p className="mt-1 font-sans text-[12px] text-muted">
-            {game.course_name ?? 'Bane ikke valgt'}
+            {game.course_name ?? t('courseNotSet')}
             {teeOff && (
               <>
                 {' · '}
                 <span className="tabular-nums">
-                  {formatTeeOffDate(teeOff)} kl. {formatTeeOffTime(teeOff)}
+                  {formatTeeOffLine(teeOff, locale, t)}
                 </span>
               </>
             )}
@@ -209,6 +254,7 @@ function OpenGameCard({ game }: { game: DiscoverableOpenGame }) {
 
 function PendingRequestCard({
   request,
+  t,
 }: {
   request: {
     short_id: string;
@@ -216,6 +262,7 @@ function PendingRequestCard({
     team_name: string | null;
     is_team_captain: boolean;
   };
+  t: T;
 }) {
   const target = request.team_name
     ? `/signup/${request.short_id}/team`
@@ -223,9 +270,9 @@ function PendingRequestCard({
 
   const subtitle = request.team_name
     ? request.is_team_captain
-      ? `Lag «${request.team_name}» (kaptein) — venter på godkjenning`
-      : `Lag «${request.team_name}» — venter på godkjenning`
-    : 'Venter på godkjenning';
+      ? t('pendingApprovalCaptain', { teamName: request.team_name })
+      : t('pendingApprovalMember', { teamName: request.team_name })
+    : t('pendingApproval');
 
   return (
     <SmartLink

@@ -3626,5 +3626,27 @@
 		"emptyState": "You are not organising any games yet. Set up a round and it will appear here.",
 		"newRoundButton": "Set up new round",
 		"teeOffAt": "at {time}"
+	},
+	"discover": {
+		"pageTitle": "Find tournaments",
+		"metaTitle": "Find tournaments",
+		"backLabel": "← Home",
+		"kicker": "FIND TOURNAMENTS",
+		"emptyHeading": "Find tournaments",
+		"emptyBody": "No open tournaments right now. But you don''t need to wait for an invitation to play.",
+		"emptyAction": "Start your own tournament",
+		"emptyPullQuote": "A tournament is just a good excuse to get everyone together.",
+		"pageSubtitle": "Open tournaments you can sign up for or request to join.",
+		"inYourClubs": "In your clubs",
+		"fromYourFriends": "From your friends",
+		"openTournaments": "Open tournaments",
+		"myRequests": "My requests",
+		"courseNotSet": "No course selected",
+		"teeOffLine": "{date}, {time}",
+		"signMeUp": "Sign me up",
+		"requestToJoin": "Request to join",
+		"pendingApproval": "Waiting for approval",
+		"pendingApprovalCaptain": "Team \"{teamName}\" (captain) — waiting for approval",
+		"pendingApprovalMember": "Team \"{teamName}\" — waiting for approval"
 	}
 }

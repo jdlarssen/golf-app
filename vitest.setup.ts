@@ -75,3 +75,21 @@ vi.mock('next-intl', async (importOriginal) => {
     useTranslations: (namespace: string = '') => makeTranslator(namespace),
   };
 });
+
+// Stub next-intl/server so async server components that call getTranslations /
+// getLocale can be rendered in jsdom unit tests (no Next.js request context).
+// Default locale 'no' keeps output byte-identical to pre-i18n assertions.
+vi.mock('next-intl/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('next-intl/server')>();
+  return {
+    ...actual,
+    getLocale: () => Promise.resolve('no'),
+    getTranslations: (namespaceOrOptions: string | { namespace?: string } = '') => {
+      const ns =
+        typeof namespaceOrOptions === 'string'
+          ? namespaceOrOptions
+          : (namespaceOrOptions?.namespace ?? '');
+      return Promise.resolve(makeTranslator(ns));
+    },
+  };
+});

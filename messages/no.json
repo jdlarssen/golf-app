@@ -3626,5 +3626,27 @@
 		"emptyState": "Du arrangerer ingen spill ennå. Sett opp en runde, så dukker den opp her.",
 		"newRoundButton": "Sett opp ny runde",
 		"teeOffAt": "kl. {time}"
+	},
+	"discover": {
+		"pageTitle": "Finn turneringer",
+		"metaTitle": "Finn turneringer",
+		"backLabel": "← Hjem",
+		"kicker": "FINN TURNERINGER",
+		"emptyHeading": "Finn turneringer",
+		"emptyBody": "Ingen åpne turneringer akkurat nå. Men du trenger ikke vente på en invitasjon for å spille.",
+		"emptyAction": "Fyr opp din egen turnering",
+		"emptyPullQuote": "En turnering er bare en god grunn til å samle gjengen.",
+		"pageSubtitle": "Åpne turneringer du kan melde deg på eller be om å bli med i.",
+		"inYourClubs": "I dine klubber",
+		"fromYourFriends": "Fra vennene dine",
+		"openTournaments": "Åpne turneringer",
+		"myRequests": "Mine forespørsler",
+		"courseNotSet": "Bane ikke valgt",
+		"teeOffLine": "{date} kl. {time}",
+		"signMeUp": "Meld meg på",
+		"requestToJoin": "Be om å bli med",
+		"pendingApproval": "Venter på godkjenning",
+		"pendingApprovalCaptain": "Lag «{teamName}» (kaptein) — venter på godkjenning",
+		"pendingApprovalMember": "Lag «{teamName}» — venter på godkjenning"
 	}
 }

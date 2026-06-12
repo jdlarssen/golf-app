@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
-import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { BackLink } from '@/components/ui/BackLink';
 import { LinkButton } from '@/components/ui/Button';
@@ -11,14 +13,29 @@ import { PinFlag } from '@/components/icons/PinFlag';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { getDiscoverableGames } from '@/lib/games/getDiscoverableGames';
 import { HomeDiscoverySection } from '../HomeDiscoverySection';
+import { routing, type AppLocale } from '@/i18n/routing';
 
 // getDiscoverableGames bruker admin-client (service role) ved request-tid.
 // Under cacheComponents (#538) prerendres aldri uncachet IO, så ruta trenger
 // ikke force-dynamic for å holdes ute av builden (samme som /spillformater).
 
-export const metadata: Metadata = {
-  title: 'Finn turneringer',
-};
+type Params = Promise<{ locale: string }>;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Params;
+}): Promise<Metadata> {
+  const { locale: rawLocale } = await params;
+  // Narrow to AppLocale — fall back to default if the param is unrecognised.
+  const locale: AppLocale = routing.locales.includes(rawLocale as AppLocale)
+    ? (rawLocale as AppLocale)
+    : routing.defaultLocale;
+  const t = await getTranslations({ locale, namespace: 'discover' });
+  return {
+    title: t('metaTitle'),
+  };
+}
 
 /**
  * Vedvarende «Finn turneringer»-side (#357). Nådd via et kort på Hjem, så
@@ -27,9 +44,13 @@ export const metadata: Metadata = {
  * invite_only ekskluderes allerede i `getDiscoverableGames`.
  */
 export default async function FinnTurneringerPage() {
+  const locale = (await getLocale()) as AppLocale;
+  const t = await getTranslations('discover');
+
   const userId = await getProxyVerifiedUserId();
   if (!userId) {
-    redirect('/login?next=/finn-turneringer');
+    redirect({ href: '/login?next=/finn-turneringer', locale });
+    return;
   }
 
   const data = await getDiscoverableGames(userId);
@@ -42,8 +63,8 @@ export default async function FinnTurneringerPage() {
   return (
     <AppShell>
       <header className="mb-2 flex items-center justify-between gap-4">
-        <BackLink href="/">← Hjem</BackLink>
-        <Kicker tone="accent">FINN TURNERINGER</Kicker>
+        <BackLink href="/">{t('backLabel')}</BackLink>
+        <Kicker tone="accent">{t('kicker')}</Kicker>
         <span className="w-12" aria-hidden />
       </header>
 
@@ -53,26 +74,25 @@ export default async function FinnTurneringerPage() {
             <PinFlag size={72} className="text-primary dark:text-text" />
           </ChampagneMedallion>
           <h1 className="font-serif text-[30px] font-medium tracking-[-0.02em] leading-tight text-text">
-            Finn turneringer
+            {t('emptyHeading')}
           </h1>
           <p className="mt-3 max-w-[280px] font-sans text-sm leading-relaxed text-muted">
-            Ingen åpne turneringer akkurat nå. Men du trenger ikke vente på en
-            invitasjon for å spille.
+            {t('emptyBody')}
           </p>
           <div className="mt-8 w-full max-w-[280px]">
             <LinkButton href="/opprett-spill" full>
-              Fyr opp din egen turnering
+              {t('emptyAction')}
             </LinkButton>
           </div>
           <PullQuote className="mt-8">
-            En turnering er bare en god grunn til å samle gjengen.
+            {t('emptyPullQuote')}
           </PullQuote>
         </section>
       ) : (
         <>
           <PageHeader
-            title="Finn turneringer"
-            subtitle="Åpne turneringer du kan melde deg på eller be om å bli med i."
+            title={t('pageTitle')}
+            subtitle={t('pageSubtitle')}
           />
           <HomeDiscoverySection data={data} />
         </>
