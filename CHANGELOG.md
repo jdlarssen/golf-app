@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#563](https://github.com/jdlarssen/golf-app/issues/563), del av epic [#60](https://github.com/jdlarssen/golf-app/issues/60). Fase 2c av flerspråkligheten: hele Sekretariatet (admin-flatene) hentes fra omsettbare kataloger og finnes nå på engelsk — resultatprotokollen, spill-styringen, spillere, baner, format-mappingen og lanseringene.
 
+### [1.116.1] - 2026-06-12 · bug
+
+> Dagens språk-oppdatering brakk lagring i appen: å opprette spill (og andre lagre-knapper) ga bare en serverfeil. Det er fikset.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `i18n/request.ts`: locale-oppslaget leste `[locale]`-root-param-en ubetinget, men `next/root-params` kan ikke kalles i Server Actions (Next-feil `E1014`). Dermed 500-et alle server actions som kaller `getLocale()`/`getTranslations()` — deriblant `createGameDraft`/`createAndPublishGame` bak opprett-spill-flyten. Oppslaget faller nå tilbake på next-intls `requestLocale` (header satt av proxyens intl-middleware) når root-param-lesingen kaster. Render-fasen leser fortsatt root-param-en, så PPR-shellene forblir statiske per locale (build-verifisert). Regresjonstester i `i18n/request.test.ts`.
+
+</details>
+
 ### [1.116.0] - 2026-06-12 · #563
 
 > Styrer du turneringer på engelsk, er hele Sekretariatet nå oversatt: resultatprotokollen, spill-styringen med påmelding, flights og påminnelser, spillere, baner, formater og lanseringer. På norsk er alt som før.

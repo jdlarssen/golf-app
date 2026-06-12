@@ -28,13 +28,24 @@ function mergeMessages(base: Messages, overlay: Messages): Messages {
   return out;
 }
 
-export default getRequestConfig(async () => {
+export default getRequestConfig(async ({ requestLocale }) => {
   // Locale comes from the `[locale]` ROOT PARAM, not from a request header.
   // This is the cacheComponents-compatible pattern (Next 16.2 `next/root-params`
   // + `experimental.rootParams`): a route param is part of the prerender cache
   // key, so PPR static shells render per locale — reading next-intl's
   // middleware header here instead would mark every page dynamic (#538).
-  const requested = await rootLocale();
+  //
+  // EXCEPT in Server Actions: root params are unavailable there and the read
+  // throws Next error E1014, which 500'd every action calling getLocale()/
+  // getTranslations() (game creation among them). Fall back to next-intl's
+  // requestLocale — it reads the header set by the proxy's intl middleware,
+  // and a header read in the action phase can't hurt prerendering.
+  let requested: string | undefined;
+  try {
+    requested = await rootLocale();
+  } catch {
+    requested = await requestLocale;
+  }
   const locale = hasLocale(routing.locales, requested)
     ? requested
     : routing.defaultLocale;
