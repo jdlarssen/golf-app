@@ -1,6 +1,7 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import {
   buildGameInsertPayload,
@@ -37,12 +38,13 @@ async function createGameInternal(
   // to (admins use /admin/games/new, everyone else /opprett-spill) and the
   // success destination. created_by = the user; creator-owned RLS (migration
   // 0071) covers the writes, so there's no service-role bypass anymore.
+  const locale = await getLocale();
   const supabase = await getServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-  const userId = user.id;
+  if (!user) redirect({ href: '/login', locale });
+  const userId = (user as NonNullable<typeof user>).id;
   const { data: gateProfile } = await supabase
     .from('users')
     .select('is_admin')
@@ -54,7 +56,7 @@ async function createGameInternal(
   const payload = buildGameInsertPayload(formData, mode);
 
   if (payload.errorCode) {
-    redirect(`${errorBase}?error=${payload.errorCode}`);
+    redirect({ href: `${errorBase}?error=${payload.errorCode}`, locale });
   }
 
   // F2 (#272): valider game_mode-slug mot formats-tabellen. Erstatter den
@@ -64,7 +66,7 @@ async function createGameInternal(
   // opprette ugyldige games.
   const modeValid = await isValidActiveGameMode(payload.game_mode);
   if (!modeValid) {
-    redirect(`${errorBase}?error=invalid_game_mode`);
+    redirect({ href: `${errorBase}?error=invalid_game_mode`, locale });
   }
 
   // Tee-off handling:
@@ -83,26 +85,29 @@ async function createGameInternal(
       // formats). Publish surfaces this as a validation error; draft
       // tolerates it as "no tee-off provided".
       if (mode === 'publish') {
-        redirect(`${errorBase}?error=tee_off_required`);
+        redirect({ href: `${errorBase}?error=tee_off_required`, locale });
       }
       scheduledTeeOffAt = null;
     }
   } else if (mode === 'publish') {
-    redirect(`${errorBase}?error=tee_off_required`);
+    redirect({ href: `${errorBase}?error=tee_off_required`, locale });
   }
 
   // Side-tournament config. Master toggle gates the LD/CTP counts; when off,
   // both counts persist as 0 (matches the DB CHECK in 0024_side_tournament).
   const sideResult = parseSideTournamentFromFormData(formData);
   if (!sideResult.ok) {
-    redirect(`${errorBase}?error=${sideResult.errorCode}`);
+    redirect({ href: `${errorBase}?error=${sideResult.errorCode}`, locale });
   }
+  // TypeScript cannot narrow past next-intl redirect (not declared `never` at
+  // call-site); assert ok branch explicitly.
+  const sidePayload = (sideResult as Extract<typeof sideResult, { ok: true }>).payload;
   const {
     enabled: sideEnabled,
     ldCount: sideLdCount,
     ctpCount: sideCtpCount,
     disabledCategories: sideDisabledCategories,
-  } = sideResult.payload;
+  } = sidePayload;
 
   if (mode === 'publish') {
     // Block publishing a game whose roster still has not-yet-onboarded players
@@ -117,11 +122,11 @@ async function createGameInternal(
     );
 
     if (rosterErr) {
-      redirect(`${errorBase}?error=db_roster`);
+      redirect({ href: `${errorBase}?error=db_roster`, locale });
     }
 
     if ((incomplete ?? []).length > 0) {
-      redirect(`${errorBase}?error=pending_players`);
+      redirect({ href: `${errorBase}?error=pending_players`, locale });
     }
   }
 
@@ -209,7 +214,7 @@ async function createGameInternal(
     .single();
 
   if (gameError || !game) {
-    redirect(`${errorBase}?error=db_game`);
+    redirect({ href: `${errorBase}?error=db_game`, locale });
   }
 
   const rowAcceptedAt = new Date().toISOString();
@@ -230,7 +235,7 @@ async function createGameInternal(
     };
   });
   const { error: gpError } = await supabase.from('game_players').insert(rows);
-  if (gpError) redirect(`${errorBase}?error=db_players`);
+  if (gpError) redirect({ href: `${errorBase}?error=db_players`, locale });
 
   // Best-effort `invite`-varsler for hver tilkommet spiller (skip inviter
   // selv — de vet allerede de opprettet spillet). Promise.allSettled så én
@@ -263,16 +268,17 @@ async function createGameInternal(
     revalidateTag(`tournament-${tournamentId}`, 'max');
     revalidatePath(`/admin/cup/${tournamentId}`);
     revalidatePath(`/cup/${tournamentId}`);
-    redirect(`/admin/cup/${tournamentId}?status=match_added`);
+    redirect({ href: `/admin/cup/${tournamentId}?status=match_added`, locale });
   }
 
   if (isAdmin) {
-    redirect(
-      `/admin/games/${game!.id}?status=${mode === 'publish' ? 'scheduled' : 'draft_created'}`,
-    );
+    redirect({
+      href: `/admin/games/${game!.id}?status=${mode === 'publish' ? 'scheduled' : 'draft_created'}`,
+      locale,
+    });
   }
   // Trusted-non-admin creator (#198): admin-layouten ville bounce-et dem fra
   // /admin/* til `/`, så de aldri så spillet sitt. Send dem rett til game-home
   // (spiller-visningen) i stedet for blindveien (#363).
-  redirect(`/games/${game!.id}`);
+  redirect({ href: `/games/${game!.id}`, locale });
 }

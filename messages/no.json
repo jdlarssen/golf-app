@@ -517,6 +517,191 @@
         "soloMin": "minst én spiller",
         "invalidAllowance": "gyldig HCP-allowance"
       }
+    },
+    "steps": {
+      "1": "Arrangement",
+      "2": "Format",
+      "3": "Bane og tidspunkt",
+      "4": "Spillere",
+      "5": "Klar?"
+    },
+    "stepCounter": "Steg {step} av {total}",
+    "formatGuideAriaLabel": "Spillformater, slik funker de",
+    "stepSubText": {
+      "step1": "Hva slags arrangement?",
+      "step2": "Hva skal dere spille?",
+      "step3": "Hvor og når?",
+      "step4Solo": "Hvem skal spille?",
+      "step4BestBall": "Velg 8 spillere, så fordeler du lag og flights",
+      "step4Matchplay": "Velg 2 spillere og sett én på hver side",
+      "step4ParStableford": "Velg minst 2 spillere fordelt to og to på lag",
+      "step4TeamSize": "Velg minst {teamSize} spillere, så fordeler du lag",
+      "step4Patsome": "Velg minst 4 spillere, fordelt to og to på lag"
+    },
+    "formatLock": {
+      "prefix": "Format:",
+      "lockedNote": "Kan ikke endres etter spill-start."
+    },
+    "disabledHint": {
+      "step1NoIntent": "Velg hva slags arrangement først",
+      "step2NoFormat": "Velg spillform først",
+      "step3NoCourse": "Velg bane først",
+      "step3NoTee": "Velg tee-boks",
+      "step4Prefix": "Mangler: {item}"
+    },
+    "backToQuickSetup": "← Tilbake til hurtig-oppsett",
+    "playerCount": {
+      "legend": "Hvor mange er dere?",
+      "lessAriaLabel": "Færre spillere",
+      "moreAriaLabel": "Flere spillere",
+      "countAriaLabel": "{count} spillere",
+      "showAll": "Vis alle",
+      "hint": "Viser formater som passer for {count} {count, plural, one {spiller} other {spillere}}."
+    },
+    "club": {
+      "legend": "For hvilken klubb?",
+      "noClub": "Ingen klubb",
+      "hint": "Medlemmene kan se og melde seg på alle spill du setter opp for klubben."
+    },
+    "footer": {
+      "prev": "Forrige",
+      "next": "Neste"
+    },
+    "step4": {
+      "selfSignupHint": "Du kan også la spillerne melde seg på selv. Lenken får du etter at spillet er opprettet.",
+      "expectedCountHint": "Dere er {count} spillere. Legg til nøyaktig så mange for best mulig spill."
+    },
+    "pickerSource": {
+      "noClubMembers": "Ingen andre medlemmer i klubben ennå.",
+      "noFriendsPrefix": "Du har ingen venner på Tørny ennå.",
+      "addFriendsLink": "Legg til venner",
+      "noFriendsSuffix": "så dukker de opp her."
+    },
+    "allowanceProps": {
+      "fourball": {
+        "legend": "Scoring for fourball-matches",
+        "description": "Styrer handicap for fourball-matches. Netto bruker en andel av hver spillers handicap, brutto teller laveste gross per hull per side.",
+        "nettoHelper": "Andel av hver spillers handicap som teller. WHS-standard for four-ball matchplay er 85.",
+        "bruttoHelper": "Ingen handicap — laveste gross-score per hull per side vinner. Vanlig format på ekte Ryder Cup."
+      },
+      "foursomes": {
+        "legend": "Scoring for foursomes-matches",
+        "description": "Styrer handicap for foursomes-matches (alternate shot). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets gross-slag.",
+        "nettoHelper": "Andel av differansen i lagenes summerte handicap. WHS-standard for foursomes matchplay er 50.",
+        "bruttoHelper": "Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+      },
+      "greensome": {
+        "legend": "Scoring for greensome-matches",
+        "description": "Styrer handicap for greensome-matches (velg-beste-tee + alternate shot). Netto gir høyeste lag en andel av differansen mellom lagenes 60/40-blandede handicap; brutto teller bare lagets gross-slag.",
+        "nettoHelper": "Andel av differansen mellom lagenes 60/40-blandede handicap. WHS-standard for greensome er 100.",
+        "bruttoHelper": "Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+      },
+      "gruesome": {
+        "legend": "Scoring for gruesome-matches",
+        "description": "Styrer handicap for gruesome-matches (begge teer ut, motstanderlaget velger ballen + alternate). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets gross-slag.",
+        "nettoHelper": "Andel av differansen i lagenes summerte handicap. WHS-standard for gruesome matchplay er 50 (identisk med foursomes).",
+        "bruttoHelper": "Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+      },
+      "roundRobin": {
+        "legend": "Scoring for Round Robin",
+        "description": "Styrer handicap for Round Robin-matchplay. Netto bruker en andel av hver spillers handicap per hull, brutto teller laveste gross per side.",
+        "nettoHelper": "Andel av hver spillers handicap som teller. WHS-standard for four-ball matchplay er 85.",
+        "bruttoHelper": "Ingen handicap — laveste gross-score per hull per side avgjør. Ren brutto-runde."
+      },
+      "scoring": {
+        "legend": "Scoring",
+        "description": "Styrer hvor stor andel av handicap som regnes med. Brutto = ingen handicap, kun gross.",
+        "nettoHelper": "Andel av spillerens handicap som teller. 100 = fullt course handicap (standard)."
+      },
+      "texas": {
+        "legend": "Lag-handicap",
+        "description": "Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = laveste lag-gross per hull vinner.",
+        "nettoHelper2": "NGF-standard: 25 % av summen av spillernes spille-HCP for 2-mannslag.",
+        "nettoHelper4": "NGF-standard: 10 % av summen av spillernes spille-HCP for 4-mannslag.",
+        "bruttoHelper": "Ingen lag-handicap — laveste gross-score per hull per lag vinner. Scratch-format.",
+        "inputLabel": "Lag-handicap (%)"
+      },
+      "ambrose": {
+        "legend": "Lag-handicap",
+        "description": "Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = laveste lag-gross per hull vinner.",
+        "nettoHelper2": "Standard Ambrose: 25 % av summen av spillernes spille-HCP for 2-mannslag.",
+        "nettoHelper4": "Standard Ambrose: 12,5 % av summen av spillernes spille-HCP for 4-mannslag.",
+        "bruttoHelper": "Ingen lag-handicap — laveste gross-score per hull per lag vinner. Scratch-format.",
+        "inputLabel": "Lag-handicap (%)"
+      },
+      "florida": {
+        "legend": "Lag-handicap",
+        "description": "Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = laveste lag-gross per hull vinner.",
+        "nettoHelper3": "NGF-standard: 15 % av summen av spillernes spille-HCP for 3-mannslag.",
+        "nettoHelper4": "NGF-standard: 10 % av summen av spillernes spille-HCP for 4-mannslag.",
+        "bruttoHelper": "Ingen lag-handicap — laveste gross-score per hull per lag vinner. Scratch-format.",
+        "inputLabel": "Lag-handicap (%)"
+      }
+    },
+    "errors": {
+      "name_required": "Spillet må ha et navn.",
+      "course_required": "Velg en bane.",
+      "tee_required": "Velg en tee-boks.",
+      "bad_allowance": "HCP-allowance må være et helt tall mellom 0 og 100.",
+      "players_required": "Du må velge nøyaktig 8 spillere.",
+      "duplicate_player": "Samme spiller kan ikke velges flere ganger.",
+      "bad_team": "Hver spiller må tilhøre et lag (1–4).",
+      "bad_flight": "Hver spiller må tilhøre en flight (1–4).",
+      "team_balance": "Hvert lag må ha nøyaktig 2 spillere.",
+      "bad_side_ld_count": "Antall longest-drive-vinnere må være 0, 1 eller 2.",
+      "bad_side_ctp_count": "Antall closest-to-pin-vinnere må være 0, 1 eller 2.",
+      "tee_missing_rating": "Den valgte teen mangler rating for en spillers kjønn (M/D/J). Sjekk bane-administrasjon eller endre spillerens tee-kjønn.",
+      "tee_off_required": "Tee-off-tidspunkt er påkrevd.",
+      "db_game": "Klarte ikke å lagre spillet. Prøv igjen, eller sjekk Supabase-loggene.",
+      "db_users": "Klarte ikke å lese spillere fra databasen. Prøv igjen.",
+      "db_tee": "Klarte ikke å lese tee-boksen fra databasen. Prøv igjen.",
+      "db_roster": "Klarte ikke å lese spillerlisten fra databasen.",
+      "db_players": "Klarte ikke å lagre spillerne på spillet. Prøv igjen, eller sjekk Supabase-loggene.",
+      "not_editable": "Spillet kan ikke redigeres lenger fordi det allerede er startet eller avsluttet.",
+      "mode_required": "Du må velge en spillmodus før du kan publisere spillet.",
+      "unsupported_mode_size_combo": "Den valgte lagstørrelsen er ikke støttet for denne spillmodusen ennå.",
+      "min_players_for_mode": "Du må velge minst én spiller for å publisere spillet.",
+      "too_many_players_for_mode": "Singles matchplay krever nøyaktig 2 spillere. Fjern de overflødige før du publiserer.",
+      "mode_locked_after_publish": "Spillmodus kan ikke endres etter at spillet er publisert. Slett spillet og opprett et nytt hvis du vil bytte modus.",
+      "invalid_game_mode": "Den valgte spillmodusen er ikke tilgjengelig. Velg en annen modus og prøv igjen.",
+      "cup_name": "Cup-navnet må være mellom 1 og 80 tegn.",
+      "cup_team_1": "Navn på lag 1 må være mellom 1 og 40 tegn.",
+      "cup_team_2": "Navn på lag 2 må være mellom 1 og 40 tegn.",
+      "cup_team_dup": "Lagene må ha forskjellige navn.",
+      "cup_points": "Point-målet må være et positivt tall (typisk 4,5 for 8 matches).",
+      "cup_allowance": "Allowance må være mellom 0 og 100.",
+      "cup_insert_failed": "Klarte ikke å opprette cupen. Prøv igjen, eller sjekk Vercel-loggene.",
+      "pending_players": "Disse spillerne har ikke fullført registreringen ennå{list}. De må logge inn og fylle inn navn + HCP før spillet kan publiseres."
+    },
+    "page": {
+      "kicker": "Spill · protokoll",
+      "heading": "Sett opp ny runde",
+      "subtitle": "Bane, spillere, lag og innstillinger",
+      "brassRibbon": "Nytt spill",
+      "shortageBannerZero": "Du har ingen registrerte spillere.",
+      "shortageBannerSome": "Du har bare {count} registrert{suffix} spiller{plural}.",
+      "shortageBannerNote": "Best ball trenger 8, stableford holder med 1. Inviter flere fra",
+      "shortageBannerLink": "Spillere",
+      "shortageBannerSuffix": "-siden.",
+      "cupBanner": {
+        "linked": "Match-en kobles til cupen {name}.",
+        "fourball": "Spillmodus er låst til four-ball matchplay (2 vs 2).",
+        "foursomes": "Spillmodus er låst til foursomes matchplay (2 vs 2, alternate shot).",
+        "greensome": "Spillmodus er låst til greensome matchplay (2 vs 2, velg-beste-tee + alternate).",
+        "chapman": "Spillmodus er låst til chapman matchplay (2 vs 2, dobbel tee, bytt ball + alternate).",
+        "gruesome": "Spillmodus er låst til gruesome matchplay (2 vs 2, begge teer ut, motstanderlaget velger ball + alternate).",
+        "singles": "Spillmodus er låst til matchplay (1 vs 1)."
+      }
+    },
+    "createDoor": {
+      "kicker": "Nytt spill",
+      "heading": "Sett opp ny runde",
+      "subtitle": "Bane, spillere, lag og innstillinger",
+      "shortageBannerZero": "Du har ingen registrerte spillere.",
+      "shortageBannerSome": "Du har bare {count} registrert{suffix} spiller{plural}.",
+      "shortageBannerNote": "Best ball trenger 8, stableford holder med 1. Be admin invitere flere fra",
+      "shortageBannerLink": "forsiden",
+      "shortageBannerSuffix": "."
     }
   },
   "formatGuide": {

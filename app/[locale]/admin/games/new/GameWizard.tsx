@@ -23,8 +23,9 @@
  */
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { useRouter, usePathname, Link } from '@/i18n/navigation';
+import { useLocale } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import type { Intent } from '@/lib/wizard/intent';
 import { selectablePlayers } from '@/lib/wizard/selectablePlayers';
@@ -32,7 +33,7 @@ import type {
   FormatForIntent,
   CupEligibleFormat,
 } from '@/lib/formats/getFormatsForIntent';
-import { isStablefordFamily, MODE_LABELS, type GameMode } from '@/lib/scoring/modes/types';
+import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 import { IntentSelector } from './IntentSelector';
 import { FormatGrid } from './FormatGrid';
 import { FormatGuideSheet } from '@/components/FormatGuideSheet';
@@ -128,14 +129,6 @@ type Props = {
   formatGuide?: FormatGuideEntry[];
 };
 
-const STEP_TITLES: Record<Step, string> = {
-  1: 'Arrangement',
-  2: 'Format',
-  3: 'Bane og tidspunkt',
-  4: 'Spillere',
-  5: 'Klar?',
-};
-
 const TOTAL_STEPS = 5;
 
 function parseStepFromSearch(sp: URLSearchParams): Step {
@@ -168,7 +161,10 @@ export function GameWizard({
   isClubAdmin = false,
   formatGuide = [],
 }: Props) {
+  const t = useTranslations('wizard');
   const tAllowance = useTranslations('allowance');
+  const tModes = useTranslations('modes');
+  const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -274,6 +270,7 @@ export function GameWizard({
     const suggested = suggestGameName({
       courseName: state.selectedCourse?.name ?? null,
       scheduledTeeOffAt: state.scheduledTeeOffAt,
+      locale: locale as import('@/i18n/routing').AppLocale,
     });
     if (suggested && suggested !== state.name) {
       state.setName(suggested);
@@ -284,29 +281,26 @@ export function GameWizard({
   // Steg-spesifikk sub-tekst under stepper-headeren. Mode-aware for steg 4
   // siden lag/sider/flighter varierer per modus.
   const subText = useMemo<string | null>(() => {
-    if (step === 1) return 'Hva slags arrangement?';
-    if (step === 2) return 'Hva skal dere spille?';
-    if (step === 3) return 'Hvor og når?';
+    if (step === 1) return t('stepSubText.step1');
+    if (step === 2) return t('stepSubText.step2');
+    if (step === 3) return t('stepSubText.step3');
     if (step === 4) {
-      if (state.isSolo) return 'Hvem skal spille?';
-      if (state.isBestBall)
-        return 'Velg 8 spillere, så fordeler du lag og flights';
-      if (state.isMatchplay)
-        return 'Velg 2 spillere og sett én på hver side';
-      if (state.isParStableford)
-        return 'Velg minst 2 spillere fordelt to og to på lag';
+      if (state.isSolo) return t('stepSubText.step4Solo');
+      if (state.isBestBall) return t('stepSubText.step4BestBall');
+      if (state.isMatchplay) return t('stepSubText.step4Matchplay');
+      if (state.isParStableford) return t('stepSubText.step4ParStableford');
       if (state.isTexas)
-        return `Velg minst ${state.teamSize} spillere, så fordeler du lag`;
+        return t('stepSubText.step4TeamSize', { teamSize: state.teamSize });
       if (state.isAmbrose)
-        return `Velg minst ${state.teamSize} spillere, så fordeler du lag`;
+        return t('stepSubText.step4TeamSize', { teamSize: state.teamSize });
       if (state.isShamble)
-        return `Velg minst ${state.teamSize} spillere, så fordeler du lag`;
-      if (state.isPatsome)
-        return 'Velg minst 4 spillere, fordelt to og to på lag';
+        return t('stepSubText.step4TeamSize', { teamSize: state.teamSize });
+      if (state.isPatsome) return t('stepSubText.step4Patsome');
       return null;
     }
     return null;
   }, [
+    t,
     step,
     state.isSolo,
     state.isBestBall,
@@ -350,14 +344,14 @@ export function GameWizard({
 
   function nextDisabledHint(): string | null {
     if (step === 1 && state.intent === undefined) {
-      return 'Velg hva slags arrangement først';
+      return t('disabledHint.step1NoIntent');
     }
     if (step === 2 && !isNewCupFlow && !state.formatChosen) {
-      return 'Velg spillform først';
+      return t('disabledHint.step2NoFormat');
     }
     if (step === 3) {
-      if (state.courseId === '') return 'Velg bane først';
-      if (state.teeBoxId === '') return 'Velg tee-boks';
+      if (state.courseId === '') return t('disabledHint.step3NoCourse');
+      if (state.teeBoxId === '') return t('disabledHint.step3NoTee');
     }
     if (step === 4) {
       // playersValidForMode false → ta første mangel fra liste-en. Filtrer
@@ -365,7 +359,7 @@ export function GameWizard({
       const relevant = state.missingForPublish.filter(
         (m) => m !== 'bane' && m !== 'tee-boks' && m !== 'tee-off-tid',
       );
-      if (relevant.length > 0) return `Mangler: ${relevant[0]}`;
+      if (relevant.length > 0) return t('disabledHint.step4Prefix', { item: relevant[0] });
     }
     return null;
   }
@@ -435,7 +429,7 @@ export function GameWizard({
           onClick={() => setView('wizard')}
           className="block text-sm text-muted underline underline-offset-2 hover:text-text"
         >
-          ← Tilbake til hurtig-oppsett
+          {t('backToQuickSetup')}
         </button>
         <GameForm
           courses={courses}
@@ -460,7 +454,7 @@ export function GameWizard({
       <div className="space-y-6">
         <StepperHeader
           step={step}
-          title={STEP_TITLES[step]}
+          title={t(`steps.${step}` as Parameters<typeof t>[0])}
           subText={subText}
           totalSteps={2}
         />
@@ -506,7 +500,7 @@ export function GameWizard({
     <form className="space-y-6">
       <StepperHeader
         step={step}
-        title={STEP_TITLES[step]}
+        title={t(`steps.${step}` as Parameters<typeof t>[0])}
         subText={subText}
         totalSteps={TOTAL_STEPS}
         action={
@@ -514,7 +508,7 @@ export function GameWizard({
             <button
               type="button"
               onClick={() => openGuide()}
-              aria-label="Spillformater, slik funker de"
+              aria-label={t('formatGuideAriaLabel')}
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-sm font-semibold text-muted hover:bg-primary-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             >
               ?
@@ -540,9 +534,9 @@ export function GameWizard({
           {state.lockGameMode ? (
             <div className="rounded-md border border-border bg-surface-2 px-3 py-2 text-xs text-muted">
               <p>
-                <strong>Format:</strong>{' '}
-                {MODE_LABELS[state.gameMode] ?? state.gameMode}.{' '}
-                Kan ikke endres etter spill-start.
+                <strong>{t('formatLock.prefix')}</strong>{' '}
+                {tModes(state.gameMode as Parameters<typeof tModes>[0])}.{' '}
+                {t('formatLock.lockedNote')}
               </p>
             </div>
           ) : state.intent === 'cup' ? null : (
@@ -666,10 +660,10 @@ export function GameWizard({
                 <AllowanceField
                   fieldName="fourball_allowance_pct"
                   defaultPct={85}
-                  legend="Scoring for fourball-matches"
-                  description="Styrer handicap for fourball-matches. Netto bruker en andel av hver spillers handicap, brutto teller laveste gross per hull per side."
-                  nettoHelperText="Andel av hver spillers handicap som teller. WHS-standard for four-ball matchplay er 85."
-                  bruttoHelperText="Ingen handicap — laveste gross-score per hull per side vinner. Vanlig format på ekte Ryder Cup."
+                  legend={t('allowanceProps.fourball.legend')}
+                  description={t('allowanceProps.fourball.description')}
+                  nettoHelperText={t('allowanceProps.fourball.nettoHelper')}
+                  bruttoHelperText={t('allowanceProps.fourball.bruttoHelper')}
                   value={state.fourballAllowancePct}
                   onChange={state.setFourballAllowancePct}
                   hideHiddenInput
@@ -679,10 +673,10 @@ export function GameWizard({
                 <AllowanceField
                   fieldName="foursomes_allowance_pct"
                   defaultPct={50}
-                  legend="Scoring for foursomes-matches"
-                  description="Styrer handicap for foursomes-matches (alternate shot). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets gross-slag."
-                  nettoHelperText="Andel av differansen i lagenes summerte handicap. WHS-standard for foursomes matchplay er 50."
-                  bruttoHelperText="Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+                  legend={t('allowanceProps.foursomes.legend')}
+                  description={t('allowanceProps.foursomes.description')}
+                  nettoHelperText={t('allowanceProps.foursomes.nettoHelper')}
+                  bruttoHelperText={t('allowanceProps.foursomes.bruttoHelper')}
                   value={state.foursomesAllowancePct}
                   onChange={state.setFoursomesAllowancePct}
                   hideHiddenInput
@@ -692,10 +686,10 @@ export function GameWizard({
                 <AllowanceField
                   fieldName="greensome_allowance_pct"
                   defaultPct={100}
-                  legend="Scoring for greensome-matches"
-                  description="Styrer handicap for greensome-matches (velg-beste-tee + alternate shot). Netto gir høyeste lag en andel av differansen mellom lagenes 60/40-blandede handicap; brutto teller bare lagets gross-slag."
-                  nettoHelperText="Andel av differansen mellom lagenes 60/40-blandede handicap. WHS-standard for greensome er 100."
-                  bruttoHelperText="Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+                  legend={t('allowanceProps.greensome.legend')}
+                  description={t('allowanceProps.greensome.description')}
+                  nettoHelperText={t('allowanceProps.greensome.nettoHelper')}
+                  bruttoHelperText={t('allowanceProps.greensome.bruttoHelper')}
                   value={state.greensomeAllowancePct}
                   onChange={state.setGreensomeAllowancePct}
                   hideHiddenInput
@@ -705,10 +699,10 @@ export function GameWizard({
                 <AllowanceField
                   fieldName="gruesome_allowance_pct"
                   defaultPct={50}
-                  legend="Scoring for gruesome-matches"
-                  description="Styrer handicap for gruesome-matches (begge teer ut, motstanderlaget velger ballen + alternate). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets gross-slag."
-                  nettoHelperText="Andel av differansen i lagenes summerte handicap. WHS-standard for gruesome matchplay er 50 (identisk med foursomes)."
-                  bruttoHelperText="Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+                  legend={t('allowanceProps.gruesome.legend')}
+                  description={t('allowanceProps.gruesome.description')}
+                  nettoHelperText={t('allowanceProps.gruesome.nettoHelper')}
+                  bruttoHelperText={t('allowanceProps.gruesome.bruttoHelper')}
                   value={state.gruesomeAllowancePct}
                   onChange={state.setGruesomeAllowancePct}
                   hideHiddenInput
@@ -718,10 +712,10 @@ export function GameWizard({
                 <AllowanceField
                   fieldName="round_robin_allowance_pct"
                   defaultPct={85}
-                  legend="Scoring for Round Robin"
-                  description="Styrer handicap for Round Robin-matchplay. Netto bruker en andel av hver spillers handicap per hull, brutto teller laveste gross per side."
-                  nettoHelperText="Andel av hver spillers handicap som teller. WHS-standard for four-ball matchplay er 85."
-                  bruttoHelperText="Ingen handicap — laveste gross-score per hull per side avgjør. Ren brutto-runde."
+                  legend={t('allowanceProps.roundRobin.legend')}
+                  description={t('allowanceProps.roundRobin.description')}
+                  nettoHelperText={t('allowanceProps.roundRobin.nettoHelper')}
+                  bruttoHelperText={t('allowanceProps.roundRobin.bruttoHelper')}
                   value={state.roundRobinAllowancePct}
                   onChange={state.setRoundRobinAllowancePct}
                   hideHiddenInput
@@ -734,9 +728,9 @@ export function GameWizard({
                 <AllowanceField
                   fieldName="hcp_allowance_pct"
                   defaultPct={100}
-                  legend="Scoring"
-                  description="Styrer hvor stor andel av handicap som regnes med. Brutto = ingen handicap, kun gross."
-                  nettoHelperText="Andel av spillerens handicap som teller. 100 = fullt course handicap (standard)."
+                  legend={t('allowanceProps.scoring.legend')}
+                  description={t('allowanceProps.scoring.description')}
+                  nettoHelperText={t('allowanceProps.scoring.nettoHelper')}
                   bruttoHelperText={tAllowance(bruttoHelperKeyFor(state.gameMode) as Parameters<typeof tAllowance>[0])}
                   value={state.hcpAllowance}
                   onChange={state.setHcpAllowance}
@@ -748,15 +742,15 @@ export function GameWizard({
                   key={state.teamSize}
                   fieldName="texas_team_handicap_pct"
                   defaultPct={state.texasHandicapPct}
-                  legend="Lag-handicap"
-                  description="Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = laveste lag-gross per hull vinner."
+                  legend={t('allowanceProps.texas.legend')}
+                  description={t('allowanceProps.texas.description')}
                   nettoHelperText={
                     state.teamSize === 2
-                      ? 'NGF-standard: 25 % av summen av spillernes spille-HCP for 2-mannslag.'
-                      : 'NGF-standard: 10 % av summen av spillernes spille-HCP for 4-mannslag.'
+                      ? t('allowanceProps.texas.nettoHelper2')
+                      : t('allowanceProps.texas.nettoHelper4')
                   }
-                  bruttoHelperText="Ingen lag-handicap — laveste gross-score per hull per lag vinner. Scratch-format."
-                  inputLabel="Lag-handicap (%)"
+                  bruttoHelperText={t('allowanceProps.texas.bruttoHelper')}
+                  inputLabel={t('allowanceProps.texas.inputLabel')}
                   value={state.texasHandicapPct}
                   onChange={state.setTexasHandicapPct}
                   hideHiddenInput
@@ -769,15 +763,15 @@ export function GameWizard({
                   key={state.teamSize}
                   fieldName="ambrose_team_handicap_pct"
                   defaultPct={state.ambroseHandicapPct}
-                  legend="Lag-handicap"
-                  description="Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = laveste lag-gross per hull vinner."
+                  legend={t('allowanceProps.ambrose.legend')}
+                  description={t('allowanceProps.ambrose.description')}
                   nettoHelperText={
                     state.teamSize === 2
-                      ? 'Standard Ambrose: 25 % av summen av spillernes spille-HCP for 2-mannslag.'
-                      : 'Standard Ambrose: 12,5 % av summen av spillernes spille-HCP for 4-mannslag.'
+                      ? t('allowanceProps.ambrose.nettoHelper2')
+                      : t('allowanceProps.ambrose.nettoHelper4')
                   }
-                  bruttoHelperText="Ingen lag-handicap — laveste gross-score per hull per lag vinner. Scratch-format."
-                  inputLabel="Lag-handicap (%)"
+                  bruttoHelperText={t('allowanceProps.ambrose.bruttoHelper')}
+                  inputLabel={t('allowanceProps.ambrose.inputLabel')}
                   value={state.ambroseHandicapPct}
                   onChange={state.setAmbroseHandicapPct}
                   hideHiddenInput
@@ -790,15 +784,15 @@ export function GameWizard({
                   key={state.teamSize}
                   fieldName="florida_team_handicap_pct"
                   defaultPct={state.floridaHandicapPct}
-                  legend="Lag-handicap"
-                  description="Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = laveste lag-gross per hull vinner."
+                  legend={t('allowanceProps.florida.legend')}
+                  description={t('allowanceProps.florida.description')}
                   nettoHelperText={
                     state.teamSize === 3
-                      ? 'NGF-standard: 15 % av summen av spillernes spille-HCP for 3-mannslag.'
-                      : 'NGF-standard: 10 % av summen av spillernes spille-HCP for 4-mannslag.'
+                      ? t('allowanceProps.florida.nettoHelper3')
+                      : t('allowanceProps.florida.nettoHelper4')
                   }
-                  bruttoHelperText="Ingen lag-handicap — laveste gross-score per hull per lag vinner. Scratch-format."
-                  inputLabel="Lag-handicap (%)"
+                  bruttoHelperText={t('allowanceProps.florida.bruttoHelper')}
+                  inputLabel={t('allowanceProps.florida.inputLabel')}
                   value={state.floridaHandicapPct}
                   onChange={state.setFloridaHandicapPct}
                   hideHiddenInput
@@ -834,8 +828,7 @@ export function GameWizard({
         <div className="space-y-6">
           {state.playersStepOptional && (
             <p className="rounded-md border border-border bg-surface-2 px-3 py-2 text-xs text-muted">
-              Du kan også la spillerne melde seg på selv. Lenken får du etter at
-              spillet er opprettet.
+              {t('step4.selfSignupHint')}
             </p>
           )}
           {/* #373: hint om antall spillere valgt i steg 2 */}
@@ -843,7 +836,7 @@ export function GameWizard({
             state.intent === 'kompis' &&
             state.expectedPlayerCount !== undefined && (
               <p className="rounded-md border border-border bg-surface-2 px-3 py-2 text-xs text-muted">
-                Dere er {state.expectedPlayerCount} spillere. Legg til nøyaktig så mange for best mulig spill.
+                {t('step4.expectedCountHint', { count: state.expectedPlayerCount })}
               </p>
             )}
           {/* #464: tom-tilstand når picker-kilden ikke har andre enn deg selv
@@ -856,7 +849,7 @@ export function GameWizard({
             state={state}
             players={players}
             selectableIds={pickIds}
-            heading="Spillere"
+            heading={t('sections.players.headingDefault')}
           />
           {/* TeamsAssignmentSection er self-gating per modus — den rendrer
               kun de relevante under-blokkene (matchplay-sider / lag-grid /
@@ -1163,18 +1156,19 @@ function PickerSourceEmptyHint({
   intent: Intent | undefined;
   groupId: string;
 }) {
+  const t = useTranslations('wizard');
   const noClubMembers = intent === 'klubb' && groupId !== '';
   return (
     <p className="rounded-md border border-border bg-surface-2 px-3 py-2 text-xs text-muted">
       {noClubMembers ? (
-        'Ingen andre medlemmer i klubben ennå.'
+        t('pickerSource.noClubMembers')
       ) : (
         <>
-          Du har ingen venner på Tørny ennå.{' '}
+          {t('pickerSource.noFriendsPrefix')}{' '}
           <Link href="/profile/venner" className="text-primary underline">
-            Legg til venner
+            {t('pickerSource.addFriendsLink')}
           </Link>{' '}
-          så dukker de opp her.
+          {t('pickerSource.noFriendsSuffix')}
         </>
       )}
     </p>
@@ -1201,6 +1195,7 @@ function PlayerCountPicker({
   value: number | undefined;
   onChange: (next: number | undefined) => void;
 }) {
+  const t = useTranslations('wizard');
   const count = value ?? PLAYER_COUNT_DEFAULT;
 
   function decrement() {
@@ -1216,12 +1211,12 @@ function PlayerCountPicker({
   return (
     <div className="space-y-2">
       <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-        Hvor mange er dere?
+        {t('playerCount.legend')}
       </p>
       <div className="flex items-center gap-3">
         <button
           type="button"
-          aria-label="Færre spillere"
+          aria-label={t('playerCount.lessAriaLabel')}
           onClick={decrement}
           disabled={count <= PLAYER_COUNT_MIN}
           className="flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-surface text-text transition-colors hover:bg-primary-soft/60 disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
@@ -1230,14 +1225,14 @@ function PlayerCountPicker({
         </button>
         <span
           aria-live="polite"
-          aria-label={`${count} spillere`}
+          aria-label={t('playerCount.countAriaLabel', { count })}
           className="min-w-[3ch] text-center font-serif text-2xl tabular-nums text-text"
         >
           {value !== undefined ? count : '?'}
         </span>
         <button
           type="button"
-          aria-label="Flere spillere"
+          aria-label={t('playerCount.moreAriaLabel')}
           onClick={increment}
           disabled={count >= PLAYER_COUNT_MAX}
           className="flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-surface text-text transition-colors hover:bg-primary-soft/60 disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
@@ -1250,14 +1245,13 @@ function PlayerCountPicker({
             onClick={() => onChange(undefined)}
             className="ml-1 font-sans text-xs text-muted underline underline-offset-2 hover:text-text"
           >
-            Vis alle
+            {t('playerCount.showAll')}
           </button>
         )}
       </div>
       {value !== undefined && (
         <p className="font-sans text-xs text-muted">
-          Viser formater som passer for {count}{' '}
-          {count === 1 ? 'spiller' : 'spillere'}.
+          {t('playerCount.hint', { count })}
         </p>
       )}
     </div>
@@ -1284,11 +1278,12 @@ function StepperHeader({
   /** Valgfri handling til høyre for tittelen (#498: «?»-knapp på steg 2). */
   action?: ReactNode;
 }) {
+  const t = useTranslations('wizard');
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-3 text-sm">
         <span className="text-muted tabular-nums">
-          Steg {step} av {totalSteps}
+          {t('stepCounter', { step, total: totalSteps })}
         </span>
         <div className="flex items-center gap-2">
           <span className="font-serif text-lg text-text">{title}</span>
@@ -1322,17 +1317,18 @@ function ClubPicker({
   value: string;
   onChange: (id: string) => void;
 }) {
+  const t = useTranslations('wizard');
   return (
     <fieldset className="space-y-2">
       <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-        For hvilken klubb?
+        {t('club.legend')}
       </legend>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="w-full min-h-[44px] rounded-lg border border-border bg-surface px-3 py-2 font-sans text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary"
       >
-        <option value="">Ingen klubb</option>
+        <option value="">{t('club.noClub')}</option>
         {clubs.map((c) => (
           <option key={c.id} value={c.id}>
             {c.name}
@@ -1340,7 +1336,7 @@ function ClubPicker({
         ))}
       </select>
       <p className="text-xs text-muted">
-        Medlemmene kan se og melde seg på alle spill du setter opp for klubben.
+        {t('club.hint')}
       </p>
     </fieldset>
   );
@@ -1362,6 +1358,7 @@ function WizardFooter({
   /** Skjul «Neste»-knappen på steg 4 (ReadyStep har publish-knappen). */
   showNext: boolean;
 }) {
+  const t = useTranslations('wizard');
   return (
     <div className="space-y-2 pt-2">
       <div className="flex gap-3">
@@ -1372,7 +1369,7 @@ function WizardFooter({
           disabled={step === 1}
           className="flex-1"
         >
-          Forrige
+          {t('footer.prev')}
         </Button>
         {showNext && (
           <Button
@@ -1381,7 +1378,7 @@ function WizardFooter({
             disabled={!canAdvance}
             className="flex-1"
           >
-            Neste
+            {t('footer.next')}
           </Button>
         )}
       </div>

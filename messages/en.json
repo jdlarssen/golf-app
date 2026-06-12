@@ -517,6 +517,191 @@
         "soloMin": "at least one player",
         "invalidAllowance": "valid HCP allowance"
       }
+    },
+    "steps": {
+      "1": "Arrangement",
+      "2": "Format",
+      "3": "Course & time",
+      "4": "Players",
+      "5": "Ready?"
+    },
+    "stepCounter": "Step {step} of {total}",
+    "formatGuideAriaLabel": "Game formats, how they work",
+    "stepSubText": {
+      "step1": "What kind of event?",
+      "step2": "What will you play?",
+      "step3": "Where and when?",
+      "step4Solo": "Who is playing?",
+      "step4BestBall": "Select 8 players, then assign teams and flights",
+      "step4Matchplay": "Select 2 players and put one on each side",
+      "step4ParStableford": "Select at least 2 players in pairs for each team",
+      "step4TeamSize": "Select at least {teamSize} players, then assign teams",
+      "step4Patsome": "Select at least 4 players in pairs for each team"
+    },
+    "formatLock": {
+      "prefix": "Format:",
+      "lockedNote": "Cannot be changed after the round starts."
+    },
+    "disabledHint": {
+      "step1NoIntent": "Choose the type of event first",
+      "step2NoFormat": "Choose a game format first",
+      "step3NoCourse": "Choose a course first",
+      "step3NoTee": "Choose a tee box",
+      "step4Prefix": "Missing: {item}"
+    },
+    "backToQuickSetup": "← Back to quick setup",
+    "playerCount": {
+      "legend": "How many players?",
+      "lessAriaLabel": "Fewer players",
+      "moreAriaLabel": "More players",
+      "countAriaLabel": "{count} players",
+      "showAll": "Show all",
+      "hint": "Showing formats suitable for {count} {count, plural, one {player} other {players}}."
+    },
+    "club": {
+      "legend": "For which club?",
+      "noClub": "No club",
+      "hint": "Members can see and sign up for all games you set up for the club."
+    },
+    "footer": {
+      "prev": "Previous",
+      "next": "Next"
+    },
+    "step4": {
+      "selfSignupHint": "You can also let players sign up themselves. You will get the link once the game is created.",
+      "expectedCountHint": "You have {count} players. Add exactly that many for the best experience."
+    },
+    "pickerSource": {
+      "noClubMembers": "No other members in the club yet.",
+      "noFriendsPrefix": "You have no friends on Tørny yet.",
+      "addFriendsLink": "Add friends",
+      "noFriendsSuffix": "and they will appear here."
+    },
+    "allowanceProps": {
+      "fourball": {
+        "legend": "Scoring for four-ball matches",
+        "description": "Controls handicap for four-ball matches. Net uses a share of each player's handicap; gross counts the lowest gross score per hole per side.",
+        "nettoHelper": "Share of each player's handicap that counts. WHS standard for four-ball matchplay is 85.",
+        "bruttoHelper": "No handicap — lowest gross score per hole per side wins. Common format in real Ryder Cup events."
+      },
+      "foursomes": {
+        "legend": "Scoring for foursomes matches",
+        "description": "Controls handicap for foursomes matches (alternate shot). Net gives the higher-handicap side a share of the difference in combined team handicaps; gross counts only the team's gross strokes.",
+        "nettoHelper": "Share of the difference in combined team handicaps. WHS standard for foursomes matchplay is 50.",
+        "bruttoHelper": "No handicap — team gross score per hole decides, no extra strokes."
+      },
+      "greensome": {
+        "legend": "Scoring for greensome matches",
+        "description": "Controls handicap for greensome matches (choose-best-tee + alternate shot). Net gives the higher-handicap side a share of the difference between teams' 60/40-blended handicaps; gross counts only the team's gross strokes.",
+        "nettoHelper": "Share of the difference between teams' 60/40-blended handicaps. WHS standard for greensome is 100.",
+        "bruttoHelper": "No handicap — team gross score per hole decides, no extra strokes."
+      },
+      "gruesome": {
+        "legend": "Scoring for gruesome matches",
+        "description": "Controls handicap for gruesome matches (both tee off, opposing team chooses the ball + alternate). Net gives the higher-handicap side a share of the difference in combined team handicaps; gross counts only the team's gross strokes.",
+        "nettoHelper": "Share of the difference in combined team handicaps. WHS standard for gruesome matchplay is 50 (identical to foursomes).",
+        "bruttoHelper": "No handicap — team gross score per hole decides, no extra strokes."
+      },
+      "roundRobin": {
+        "legend": "Scoring for Round Robin",
+        "description": "Controls handicap for Round Robin matchplay. Net uses a share of each player's handicap per hole; gross counts the lowest gross score per side.",
+        "nettoHelper": "Share of each player's handicap that counts. WHS standard for four-ball matchplay is 85.",
+        "bruttoHelper": "No handicap — lowest gross score per hole per side decides. Pure scratch round."
+      },
+      "scoring": {
+        "legend": "Scoring",
+        "description": "Controls how much of the handicap is applied. Gross = no handicap, only gross strokes.",
+        "nettoHelper": "Share of the player's handicap that counts. 100 = full course handicap (standard)."
+      },
+      "texas": {
+        "legend": "Team handicap",
+        "description": "Controls what share of the sum of team members' playing handicaps counts as the effective team handicap. Gross = lowest team gross per hole wins.",
+        "nettoHelper2": "NGF standard: 25 % of the sum of players' playing handicaps for 2-man teams.",
+        "nettoHelper4": "NGF standard: 10 % of the sum of players' playing handicaps for 4-man teams.",
+        "bruttoHelper": "No team handicap — lowest gross score per hole per team wins. Scratch format.",
+        "inputLabel": "Team handicap (%)"
+      },
+      "ambrose": {
+        "legend": "Team handicap",
+        "description": "Controls what share of the sum of team members' playing handicaps counts as the effective team handicap. Gross = lowest team gross per hole wins.",
+        "nettoHelper2": "Standard Ambrose: 25 % of the sum of players' playing handicaps for 2-man teams.",
+        "nettoHelper4": "Standard Ambrose: 12.5 % of the sum of players' playing handicaps for 4-man teams.",
+        "bruttoHelper": "No team handicap — lowest gross score per hole per team wins. Scratch format.",
+        "inputLabel": "Team handicap (%)"
+      },
+      "florida": {
+        "legend": "Team handicap",
+        "description": "Controls what share of the sum of team members' playing handicaps counts as the effective team handicap. Gross = lowest team gross per hole wins.",
+        "nettoHelper3": "NGF standard: 15 % of the sum of players' playing handicaps for 3-man teams.",
+        "nettoHelper4": "NGF standard: 10 % of the sum of players' playing handicaps for 4-man teams.",
+        "bruttoHelper": "No team handicap — lowest gross score per hole per team wins. Scratch format.",
+        "inputLabel": "Team handicap (%)"
+      }
+    },
+    "errors": {
+      "name_required": "The game must have a name.",
+      "course_required": "Choose a course.",
+      "tee_required": "Choose a tee box.",
+      "bad_allowance": "HCP allowance must be a whole number between 0 and 100.",
+      "players_required": "You must select exactly 8 players.",
+      "duplicate_player": "The same player cannot be selected more than once.",
+      "bad_team": "Each player must belong to a team (1–4).",
+      "bad_flight": "Each player must belong to a flight (1–4).",
+      "team_balance": "Each team must have exactly 2 players.",
+      "bad_side_ld_count": "The number of longest-drive winners must be 0, 1 or 2.",
+      "bad_side_ctp_count": "The number of closest-to-pin winners must be 0, 1 or 2.",
+      "tee_missing_rating": "The selected tee is missing a rating for a player's gender (M/F/J). Check course administration or change the player's tee gender.",
+      "tee_off_required": "Tee-off time is required.",
+      "db_game": "Failed to save the game. Please try again, or check the Supabase logs.",
+      "db_users": "Failed to read players from the database. Please try again.",
+      "db_tee": "Failed to read the tee box from the database. Please try again.",
+      "db_roster": "Failed to read the player list from the database.",
+      "db_players": "Failed to save the players to the game. Please try again, or check the Supabase logs.",
+      "not_editable": "The game can no longer be edited because it has already started or finished.",
+      "mode_required": "You must choose a game mode before you can publish the game.",
+      "unsupported_mode_size_combo": "The selected team size is not yet supported for this game mode.",
+      "min_players_for_mode": "You must select at least one player to publish the game.",
+      "too_many_players_for_mode": "Singles matchplay requires exactly 2 players. Remove the extra players before publishing.",
+      "mode_locked_after_publish": "The game mode cannot be changed after the game is published. Delete the game and create a new one if you want to switch modes.",
+      "invalid_game_mode": "The selected game mode is not available. Choose another mode and try again.",
+      "cup_name": "The cup name must be between 1 and 80 characters.",
+      "cup_team_1": "Team 1 name must be between 1 and 40 characters.",
+      "cup_team_2": "Team 2 name must be between 1 and 40 characters.",
+      "cup_team_dup": "The teams must have different names.",
+      "cup_points": "The points target must be a positive number (typically 4.5 for 8 matches).",
+      "cup_allowance": "Allowance must be between 0 and 100.",
+      "cup_insert_failed": "Failed to create the cup. Please try again, or check the Vercel logs.",
+      "pending_players": "These players have not completed registration yet{list}. They must log in and fill in their name and handicap before the game can be published."
+    },
+    "page": {
+      "kicker": "Games · records",
+      "heading": "Set up a new round",
+      "subtitle": "Course, players, teams and settings",
+      "brassRibbon": "New game",
+      "shortageBannerZero": "You have no registered players.",
+      "shortageBannerSome": "You only have {count} registered player{plural}.",
+      "shortageBannerNote": "Best ball needs 8, stableford works with 1. Invite more from the",
+      "shortageBannerLink": "Players",
+      "shortageBannerSuffix": "page.",
+      "cupBanner": {
+        "linked": "This match will be linked to the cup {name}.",
+        "fourball": "Game mode is locked to four-ball matchplay (2 vs 2).",
+        "foursomes": "Game mode is locked to foursomes matchplay (2 vs 2, alternate shot).",
+        "greensome": "Game mode is locked to greensome matchplay (2 vs 2, choose-best-tee + alternate).",
+        "chapman": "Game mode is locked to chapman matchplay (2 vs 2, double tee, switch ball + alternate).",
+        "gruesome": "Game mode is locked to gruesome matchplay (2 vs 2, both tee off, opposing team chooses ball + alternate).",
+        "singles": "Game mode is locked to matchplay (1 vs 1)."
+      }
+    },
+    "createDoor": {
+      "kicker": "New game",
+      "heading": "Set up a new round",
+      "subtitle": "Course, players, teams and settings",
+      "shortageBannerZero": "You have no registered players.",
+      "shortageBannerSome": "You only have {count} registered player{plural}.",
+      "shortageBannerNote": "Best ball needs 8, stableford works with 1. Ask an admin to invite more from the",
+      "shortageBannerLink": "home page",
+      "shortageBannerSuffix": "."
     }
   },
   "formatGuide": {

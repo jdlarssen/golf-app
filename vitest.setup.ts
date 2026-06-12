@@ -21,6 +21,31 @@ vi.mock('next/navigation', () => ({
   useParams: () => ({}),
 }));
 
+// Stub @/i18n/navigation so components that import Link/useRouter/usePathname
+// from the locale-aware wrapper don't fail in unit tests.
+// GameWizard migrated to @/i18n/navigation in i18n phase 2b (#561).
+vi.mock('@/i18n/navigation', async () => {
+  const { createElement } = await import('react');
+  return {
+    useRouter: () => ({
+      push: vi.fn(),
+      replace: vi.fn(),
+      prefetch: vi.fn(),
+      back: vi.fn(),
+      forward: vi.fn(),
+      refresh: vi.fn(),
+      pathname: '/',
+    }),
+    usePathname: () => '/',
+    // Link renders as a plain <a> element in tests.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    Link: ({ href, children, ...rest }: { href: string; children: any; [k: string]: unknown }) =>
+      createElement('a', { href, ...rest }, children),
+    redirect: vi.fn(),
+    getPathname: vi.fn(() => '/'),
+  };
+});
+
 // Stub next-intl's locale hook and useTranslations so components render
 // without a NextIntlClientProvider in unit tests. Default locale 'no' keeps
 // rendered output identical to the pre-i18n snapshots/assertions (#475).

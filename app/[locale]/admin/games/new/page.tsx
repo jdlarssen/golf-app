@@ -8,14 +8,11 @@ import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { GameWizard } from './GameWizard';
 import { createGameDraft, createAndPublishGame } from './actions';
-import {
-  ERROR_MESSAGES_NEW_GAME,
-  buildErrorMessage as buildGameErrorMessage,
-} from '@/lib/admin/gameErrorMessages';
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
 import { getServerClient } from '@/lib/supabase/server';
 import { getRoleContext } from '@/lib/admin/auth';
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { parseIntent, type Intent } from '@/lib/wizard/intent';
 import {
   getFormatsForIntent,
@@ -67,13 +64,6 @@ function first(value: string | string[] | undefined): string | undefined {
   return value;
 }
 
-function buildErrorMessage(
-  errorCode: string | undefined,
-  emails: string | undefined,
-): string | undefined {
-  return buildGameErrorMessage(ERROR_MESSAGES_NEW_GAME, errorCode, emails);
-}
-
 export default async function NewGamePage({
   searchParams,
 }: {
@@ -85,9 +75,27 @@ export default async function NewGamePage({
   // /opprett-spill flow, mirroring the home-page create routing.
   const supabase = await getServerClient();
   const role = await getRoleContext(supabase);
-  if (!role.isAdmin) redirect('/opprett-spill');
+  const locale = await getLocale();
+  if (!role.isAdmin) redirect({ href: '/opprett-spill', locale });
 
   const sp = await searchParams;
+  const t = await getTranslations({ locale, namespace: 'wizard' });
+
+  function buildErrorMessage(
+    errorCode: string | undefined,
+    emails: string | undefined,
+  ): string | undefined {
+    if (!errorCode) return undefined;
+    const key = `errors.${errorCode}` as Parameters<typeof t>[0];
+    // Detect unknown codes: t() returns the key path when the key is missing.
+    const msg = t(key);
+    if (msg === key) return undefined;
+    if (errorCode === 'pending_players') {
+      return msg.replace('{list}', emails ? `: ${emails}` : '');
+    }
+    return msg;
+  }
+
   const errorMessage = buildErrorMessage(first(sp.error), first(sp.emails));
 
   // Cup-link (#47): hvis admin lander via /admin/cup/[id], pre-fyller vi
@@ -114,17 +122,17 @@ export default async function NewGamePage({
     <AdminShell>
       <TopBar
         backHref="/admin/games"
-        kicker="Spill · protokoll"
+        kicker={t('page.kicker')}
       />
 
-      <BrassRibbon kicker="Nytt spill" />
+      <BrassRibbon kicker={t('page.brassRibbon')} />
 
       <div className="px-1">
         <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-          Sett opp ny runde
+          {t('page.heading')}
         </h1>
         <p className="font-sans text-[11.5px] text-muted">
-          Bane, spillere, lag og innstillinger
+          {t('page.subtitle')}
         </p>
       </div>
 
@@ -137,18 +145,18 @@ export default async function NewGamePage({
       {cupContext && (
         <div className="mt-4">
           <Banner tone="info">
-            Match-en kobles til cupen <strong>{cupContext.name}</strong>.{' '}
+            {t('page.cupBanner.linked', { name: cupContext.name })}{' '}
             {cupContext.gameMode === 'fourball_matchplay'
-              ? 'Spillmodus er låst til four-ball matchplay (2 vs 2).'
+              ? t('page.cupBanner.fourball')
               : cupContext.gameMode === 'foursomes_matchplay'
-                ? 'Spillmodus er låst til foursomes matchplay (2 vs 2, alternate shot).'
+                ? t('page.cupBanner.foursomes')
                 : cupContext.gameMode === 'greensome_matchplay'
-                  ? 'Spillmodus er låst til greensome matchplay (2 vs 2, velg-beste-tee + alternate).'
+                  ? t('page.cupBanner.greensome')
                   : cupContext.gameMode === 'chapman_matchplay'
-                    ? 'Spillmodus er låst til chapman matchplay (2 vs 2, dobbel tee, bytt ball + alternate).'
+                    ? t('page.cupBanner.chapman')
                     : cupContext.gameMode === 'gruesome_matchplay'
-                      ? 'Spillmodus er låst til gruesome matchplay (2 vs 2, begge teer ut, motstanderlaget velger ball + alternate).'
-                      : 'Spillmodus er låst til matchplay (1 vs 1).'}
+                      ? t('page.cupBanner.gruesome')
+                      : t('page.cupBanner.singles')}
           </Banner>
         </div>
       )}
@@ -278,20 +286,28 @@ async function PlayerShortageBanner() {
   // /new vet ikke hvilken modus admin lander på (velges i form-en under),
   // så copy-en nevner begge moduser. /edit har eget banner som dropper
   // visning helt for stableford siden modus er låst der.
+  const t = await getTranslations('wizard');
   const isSingular = players.length === 1;
+  const bannerText =
+    players.length === 0
+      ? t('page.shortageBannerZero')
+      : t('page.shortageBannerSome', {
+          count: players.length,
+          suffix: isSingular ? '' : 'e',
+          plural: isSingular ? '' : 'e',
+        });
   return (
     <div className="mt-4">
       <Banner tone="info">
-        Du har {players.length === 0 ? 'ingen' : `bare ${players.length}`}{' '}
-        registrert{isSingular ? '' : 'e'} spiller{isSingular ? '' : 'e'}.
-        Best ball trenger 8, stableford holder med 1. Inviter flere fra{' '}
+        {bannerText}{' '}
+        {t('page.shortageBannerNote')}{' '}
         <SmartLink
           href="/admin/spillere"
           className="underline hover:no-underline"
         >
-          Spillere
+          {t('page.shortageBannerLink')}
         </SmartLink>
-        -siden.
+        {t('page.shortageBannerSuffix')}
       </Banner>
     </div>
   );

@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
@@ -11,10 +12,6 @@ import {
   createGameDraft,
   createAndPublishGame,
 } from '@/app/[locale]/admin/games/new/actions';
-import {
-  ERROR_MESSAGES_NEW_GAME,
-  buildErrorMessage as buildGameErrorMessage,
-} from '@/lib/admin/gameErrorMessages';
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
 import { getServerClient } from '@/lib/supabase/server';
 import { getRoleContext } from '@/lib/admin/auth';
@@ -45,41 +42,51 @@ function first(value: string | string[] | undefined): string | undefined {
   return value;
 }
 
-function buildErrorMessage(
-  errorCode: string | undefined,
-  emails: string | undefined,
-): string | undefined {
-  return buildGameErrorMessage(ERROR_MESSAGES_NEW_GAME, errorCode, emails);
-}
-
 export default async function OpprettSpillPage({
   searchParams,
 }: {
   searchParams: SearchParams;
 }) {
   // Gate FØR vi rendrer noe — enhver innlogget bruker slipper inn (#427).
+  const locale = await getLocale();
   const supabase = await getServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-  const currentUserId = user.id;
+  if (!user) redirect({ href: '/login', locale });
+  const currentUserId = (user as NonNullable<typeof user>).id;
   // #477: «Solo / Test»-arrangementet vises kun for admin i veiviseren.
   const { isAdmin } = await getRoleContext(supabase);
 
   const sp = await searchParams;
+  const t = await getTranslations({ locale, namespace: 'wizard' });
+
+  function buildErrorMessage(
+    errorCode: string | undefined,
+    emails: string | undefined,
+  ): string | undefined {
+    if (!errorCode) return undefined;
+    const key = `errors.${errorCode}` as Parameters<typeof t>[0];
+    const msg = t(key);
+    if (msg === key) return undefined;
+    if (errorCode === 'pending_players') {
+      return msg.replace('{list}', emails ? `: ${emails}` : '');
+    }
+    return msg;
+  }
+
   const errorMessage = buildErrorMessage(first(sp.error), first(sp.emails));
 
   return (
     <AppShell>
-      <TopBar backHref="/" kicker="Nytt spill" />
+      <TopBar backHref="/" kicker={t('createDoor.kicker')} />
 
       <div className="px-1">
         <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-          Sett opp ny runde
+          {t('createDoor.heading')}
         </h1>
         <p className="font-sans text-[11.5px] text-muted">
-          Bane, spillere, lag og innstillinger
+          {t('createDoor.subtitle')}
         </p>
       </div>
 
@@ -114,18 +121,25 @@ async function PlayerShortageBanner() {
   // GameFormBody so React `cache` dedupes the two Suspense reads.
   const { players } = await getNewGameFormData(false);
   if (players.length >= 8) return null;
+  const t = await getTranslations('wizard');
   const isSingular = players.length === 1;
+  const bannerText =
+    players.length === 0
+      ? t('createDoor.shortageBannerZero')
+      : t('createDoor.shortageBannerSome', {
+          count: players.length,
+          suffix: isSingular ? '' : 'e',
+          plural: isSingular ? '' : 'e',
+        });
   return (
     <div className="mt-4">
       <Banner tone="info">
-        Du har {players.length === 0 ? 'ingen' : `bare ${players.length}`}{' '}
-        registrert{isSingular ? '' : 'e'} spiller{isSingular ? '' : 'e'}.
-        Best ball trenger 8, stableford holder med 1. Be admin invitere flere
-        fra{' '}
+        {bannerText}{' '}
+        {t('createDoor.shortageBannerNote')}{' '}
         <SmartLink href="/" className="underline hover:no-underline">
-          forsiden
+          {t('createDoor.shortageBannerLink')}
         </SmartLink>
-        .
+        {t('createDoor.shortageBannerSuffix')}
       </Banner>
     </div>
   );

@@ -32,7 +32,12 @@
  * and `?error=db_players` from actions that fail on a write query.
  */
 
-/** Error messages for the "create new game" page and the "edit game" page. */
+/**
+ * Error messages for the "create new game" page (used by 2c pages still
+ * pending migration: admin/games/[id]/edit and games/[id]/rediger).
+ * @deprecated Replaced by `wizard.errors.*` catalog in new-game pages;
+ * kept here until 2c migrates the edit/rediger pages.
+ */
 export const ERROR_MESSAGES_NEW_GAME: Record<string, string> = {
   name_required: 'Spillet må ha et navn.',
   course_required: 'Velg en bane.',
@@ -47,11 +52,6 @@ export const ERROR_MESSAGES_NEW_GAME: Record<string, string> = {
   bad_side_ctp_count: 'Antall closest-to-pin-vinnere må være 0, 1 eller 2.',
   tee_missing_rating:
     'Den valgte teen mangler rating for en spillers kjønn (M/D/J). Sjekk bane-administrasjon eller endre spillerens tee-kjønn.',
-  /**
-   * The new-game page originally said «ved publisering» while the edit page
-   * said just «er påkrevd». The shared copy uses the broader form so it reads
-   * correctly for both the publish-from-new and the update-scheduled paths.
-   */
   tee_off_required: 'Tee-off-tidspunkt er påkrevd.',
   db_game:
     'Klarte ikke å lagre spillet. Prøv igjen, eller sjekk Supabase-loggene.',
@@ -62,30 +62,16 @@ export const ERROR_MESSAGES_NEW_GAME: Record<string, string> = {
     'Klarte ikke å lagre spillerne på spillet. Prøv igjen, eller sjekk Supabase-loggene.',
   not_editable:
     'Spillet kan ikke redigeres lenger fordi det allerede er startet eller avsluttet.',
-  // Epic #41 — mode-spesifikke feilkoder. Uten disse rendres en tom Banner
-  // når admin trigger en av error-kodene fra payload-validatoren eller
-  // edit-action-mode-lock-guarden.
-  mode_required:
-    'Du må velge en spillmodus før du kan publisere spillet.',
+  mode_required: 'Du må velge en spillmodus før du kan publisere spillet.',
   unsupported_mode_size_combo:
     'Den valgte lagstørrelsen er ikke støttet for denne spillmodusen ennå.',
-  min_players_for_mode:
-    'Du må velge minst én spiller for å publisere spillet.',
-  // Epic #45 — matchplay krever EKSAKT 2 spillere. Egen kode (ikke gjenbruk
-  // av `team_balance`) for å gi en tydeligere norsk feilmelding når admin
-  // har valgt for mange spillere i singles matchplay-flyten.
+  min_players_for_mode: 'Du må velge minst én spiller for å publisere spillet.',
   too_many_players_for_mode:
     'Singles matchplay krever nøyaktig 2 spillere. Fjern de overflødige før du publiserer.',
   mode_locked_after_publish:
     'Spillmodus kan ikke endres etter at spillet er publisert. Slett spillet og opprett et nytt hvis du vil bytte modus.',
-  // F2 (#272): server-action-validering mot formats-tabellen. Trigges hvis
-  // game_mode-slugen i form-en ikke finnes eller er deaktivert. Erstatter
-  // den droppede games_mode_check-DB-constraint.
   invalid_game_mode:
     'Den valgte spillmodusen er ikke tilgjengelig. Velg en annen modus og prøv igjen.',
-  // F2 (#272): Cup-creation-form (CupSetup i wizard step 2) bouncer
-  // validerings-feil tilbake til wizarden. Cup-prefiksede koder unngår
-  // kollisjon med game-spesifikke koder.
   cup_name: 'Cup-navnet må være mellom 1 og 80 tegn.',
   cup_team_1: 'Navn på lag 1 må være mellom 1 og 40 tegn.',
   cup_team_2: 'Navn på lag 2 må være mellom 1 og 40 tegn.',
@@ -94,11 +80,6 @@ export const ERROR_MESSAGES_NEW_GAME: Record<string, string> = {
   cup_allowance: 'Allowance må være mellom 0 og 100.',
   cup_insert_failed:
     'Klarte ikke å opprette cupen. Prøv igjen, eller sjekk Vercel-loggene.',
-  /**
-   * NOTE: «kan publiseres» — used on both new-game and edit-game flows because
-   * both lead to a publish/schedule transition. Compare `ERROR_MESSAGES_EXISTING_GAME`
-   * which uses «kan startes» for the already-scheduled-game start transition.
-   */
   pending_players:
     'Disse spillerne har ikke fullført registreringen ennå{LIST}. De må logge inn og fylle inn navn + HCP før spillet kan publiseres.',
 };
