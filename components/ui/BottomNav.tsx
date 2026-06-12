@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { usePathname } from '@/i18n/navigation';
 import { SmartLink } from '@/components/ui/SmartLink';
 import {
@@ -61,6 +62,7 @@ export function BottomNav({ userId }: { userId: string | null }) {
 }
 
 function BottomNavBar({ userId, pathname }: { userId: string; pathname: string }) {
+  const t = useTranslations('nav');
   const { count } = useUnreadNotificationsCount(userId);
   const hasUnread = count > 0;
 
@@ -74,26 +76,27 @@ function BottomNavBar({ userId, pathname }: { userId: string; pathname: string }
     matchOne(href) || also.some(matchOne);
 
   const tabs = [
-    { href: '/', label: 'Hjem', Icon: HjemIcon, dot: false, also: [] },
-    { href: '/innboks', label: 'Innboks', Icon: KonvoluttIcon, dot: hasUnread, also: [] },
+    { href: '/', labelKey: 'home' as const, Icon: HjemIcon, dot: false, also: [] },
+    { href: '/innboks', labelKey: 'inbox' as const, Icon: KonvoluttIcon, dot: hasUnread, also: [] },
     {
       href: '/admin',
-      label: 'Klubbhuset',
+      labelKey: 'clubhouse' as const,
       Icon: KlubbhusIcon,
       dot: false,
       also: ['/klubbhuset', '/opprett-spill', '/opprett-bane'],
     },
-    { href: '/profile', label: 'Profil', Icon: ProfilIcon, dot: false, also: [] },
+    { href: '/profile', labelKey: 'profile' as const, Icon: ProfilIcon, dot: false, also: [] },
   ] as const;
 
   return (
     <nav
-      aria-label="Hovednavigasjon"
+      aria-label={t('ariaLabel')}
       className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-bg/95 backdrop-blur-sm"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <ul className="mx-auto flex max-w-md items-stretch">
-        {tabs.map(({ href, label, Icon, dot, also }) => {
+        {tabs.map(({ href, labelKey, Icon, dot, also }) => {
+          const label = t(labelKey);
           const active = isActive(href, also);
           return (
             <li key={href} className="flex-1">

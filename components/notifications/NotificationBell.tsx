@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { useUnreadNotificationsCount } from '@/hooks/useUnreadNotificationsCount';
 
@@ -16,14 +17,15 @@ import { useUnreadNotificationsCount } from '@/hooks/useUnreadNotificationsCount
  * Tap-target er minimum 44×44 px (`min-h-11 min-w-11`) per Tørny-konvensjon.
  */
 export function NotificationBell({ userId }: { userId: string | null }) {
+  const t = useTranslations('inbox');
   const { count } = useUnreadNotificationsCount(userId);
 
   if (userId == null) return null;
 
   const hasUnread = count > 0;
   const ariaLabel = hasUnread
-    ? `Innboks, ${count} ${count === 1 ? 'ulest varsel' : 'uleste varsler'}`
-    : 'Innboks';
+    ? t('bellUnreadAria', { count })
+    : t('bellAriaLabel');
 
   return (
     <SmartLink
