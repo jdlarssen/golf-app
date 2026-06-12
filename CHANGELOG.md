@@ -17,7 +17,36 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.117.y — i18n · engelsk i klubb, liga og cup
+## 1.118.y — i18n · engelsk profil, venner, innboks og finn turneringer
+
+Issue [#573](https://github.com/jdlarssen/golf-app/issues/573), del av epic [#60](https://github.com/jdlarssen/golf-app/issues/60). Fase 2e av flerspråkligheten: de personlige flatene hentes fra omsettbare kataloger og finnes nå på engelsk — profilen med statistikk og historikk, vennelista, innboksen med alle varslene, finn turneringer og bunnmenyen.
+
+### [1.118.0] - 2026-06-13 · #573
+
+> Bruker du Tørny på engelsk, er den personlige delen nå oversatt: profilen din med statistikk og historikk, vennelista, innboksen med alle varslene, «Finn turneringer» og bunnmenyen. På norsk er alt som før.
+
+<details>
+<summary>Teknisk</summary>
+
+[#573](https://github.com/jdlarssen/golf-app/issues/573). i18n Fase 2e — per-område-ekstraksjon av de personlige flatene (~25 filer: `profile/**` med slett-konto/historikk/statistikk/venner, `venner/legg-til/**`, `innboks/**` + `components/notifications/*`, `finn-turneringer` + delt `HomeDiscoverySection`, `components/ui/BottomNav`).
+
+#### Added
+- `messages/{no,en}.json`: nye topp-namespaces `nav.*` (bunnmeny + bjelle), `friends.*` (venneliste, statusbannere, legg-til-flyt), `inbox.*` (alle 20 varseltypene under `kinds.*`, blokk-årsaker, dag-etiketter, månedsbrev-toggle) og `discover.*` (finn turneringer + oppdagelses-seksjonen på Hjem); `profile.*` utvidet fra én nøkkel til hele flaten — gjennom idiomatisk engelsk-pass.
+- `finn-turneringer` har epicens første locale-bevisste `generateMetadata` (mønster for 2f).
+
+#### Changed
+- Alle filer i omfanget renderer via `useTranslations`/`getTranslations`; norsk output er uendret (full suite grønn uten assertion-endringer).
+- `redirect`/`useRouter` migrert til `@/i18n/navigation` i hele omfanget; server actions bruker objekt-form med `getLocale()`.
+- `lib/notifications/groupByDay.ts` og `lib/invitations/quota.ts` er copy-frie: locale + etiketter er påkrevde parametre, oversettes på call-site. Dato- og relativ-tid-rendering i innboks og oppdagelses-kort bruker `*Locale`-hjelperne.
+- Varsel-payload-fallbacken «En venn» skrives ikke lenger inn i databasen ved sending; mottakerens locale avgjør teksten ved visning (`inbox.someoneFallback`).
+
+#### Removed
+- `formatTimeUntil` fra `lib/invitations/quota.ts` — profilsiden leser strukturert resultat + katalognøkler.
+
+</details>
+
+<details>
+<summary><strong>1.117.y — i18n · engelsk i klubb, liga og cup (4 oppføringer)</strong></summary>
 
 Issue [#566](https://github.com/jdlarssen/golf-app/issues/566), del av epic [#60](https://github.com/jdlarssen/golf-app/issues/60). Fase 2d av flerspråkligheten: klubb-, liga- og cup-flatene (admin og spiller) hentes fra omsettbare kataloger og finnes nå på engelsk — klubbrom og medlemskap, ligastyring med tabeller, cup-styring med matchgenerator, og Klubbhuset.
 
@@ -89,6 +118,8 @@ Issue [#566](https://github.com/jdlarssen/golf-app/issues/566), del av epic [#60
 
 #### Removed
 - Dupliserte `ROLE_LABELS`-/statusetikett-maps på tvers av 8 filer — sentralisert som katalognøkler.
+
+</details>
 
 </details>
 
