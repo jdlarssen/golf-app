@@ -1,6 +1,7 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
 import { randomUUID } from 'node:crypto';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -10,6 +11,7 @@ import {
   consumeAdminInviteRateLimit,
   getClientIp,
 } from '@/lib/admin/rateLimit';
+import type { AppLocale } from '@/i18n/routing';
 
 /**
  * Self-gate + load `{ supabase, profile }` for the spillere-actions. Wraps
@@ -32,6 +34,7 @@ async function loadAdminContext() {
 }
 
 export async function sendInvitation(formData: FormData) {
+  const locale = (await getLocale()) as AppLocale;
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
 
   // Honeypot — the `website` field is hidden in the form so a real admin
@@ -43,10 +46,10 @@ export async function sendInvitation(formData: FormData) {
   if (honeypot) {
     console.warn('[honeypot] silent reject', { route: 'invite' });
     const qs = new URLSearchParams({ status: 'sent', email });
-    redirect(`/admin/spillere?${qs.toString()}`);
+    redirect({ href: `/admin/spillere?${qs.toString()}`, locale });
   }
 
-  if (!email) redirect('/admin/spillere?error=email_required');
+  if (!email) redirect({ href: '/admin/spillere?error=email_required', locale });
 
   const { supabase, profile } = await loadAdminContext();
   const invitedByName = profile.name?.trim() || 'Admin';
@@ -59,7 +62,7 @@ export async function sendInvitation(formData: FormData) {
   });
   if (!allowed) {
     const qs = new URLSearchParams({ error: 'rate_limited', email });
-    redirect(`/admin/spillere?${qs.toString()}`);
+    redirect({ href: `/admin/spillere?${qs.toString()}`, locale });
   }
 
   // Shared cross-door dedup (#348): email_is_invited is the SECURITY DEFINER
@@ -74,7 +77,7 @@ export async function sendInvitation(formData: FormData) {
   });
   if (alreadyInvited) {
     const qs = new URLSearchParams({ error: 'already_invited', email });
-    redirect(`/admin/spillere?${qs.toString()}`);
+    redirect({ href: `/admin/spillere?${qs.toString()}`, locale });
   }
 
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -84,23 +87,24 @@ export async function sendInvitation(formData: FormData) {
     invited_by: profile.id,
     expires_at: expiresAt,
   });
-  if (insertError) redirect('/admin/spillere?error=log_failed');
+  if (insertError) redirect({ href: '/admin/spillere?error=log_failed', locale });
 
   try {
     await sendInviteNotification({ to: email, invitedByName });
   } catch (err) {
     console.error('[admin/spillere] notification mail failed', err);
     const qs = new URLSearchParams({ error: 'mail_failed', email });
-    redirect(`/admin/spillere?${qs.toString()}`);
+    redirect({ href: `/admin/spillere?${qs.toString()}`, locale });
   }
 
   const qs = new URLSearchParams({ status: 'sent', email });
-  redirect(`/admin/spillere?${qs.toString()}`);
+  redirect({ href: `/admin/spillere?${qs.toString()}`, locale });
 }
 
 export async function resendInvitation(formData: FormData) {
+  const locale = (await getLocale()) as AppLocale;
   const id = String(formData.get('id') ?? '');
-  if (!id) redirect('/admin/spillere?error=unknown');
+  if (!id) redirect({ href: '/admin/spillere?error=unknown', locale });
 
   const { supabase, profile } = await loadAdminContext();
   const invitedByName = profile.name?.trim() || 'Admin';
@@ -112,7 +116,7 @@ export async function resendInvitation(formData: FormData) {
     ip,
   });
   if (!allowed) {
-    redirect('/admin/spillere?error=rate_limited');
+    redirect({ href: '/admin/spillere?error=rate_limited', locale });
   }
 
   const { data: inv, error } = await supabase
@@ -120,24 +124,25 @@ export async function resendInvitation(formData: FormData) {
     .select('email, accepted_at')
     .eq('id', id)
     .single();
-  if (error || !inv) redirect('/admin/spillere?error=resend_failed');
-  if (inv.accepted_at) redirect('/admin/spillere?error=resend_failed');
+  if (error || !inv) redirect({ href: '/admin/spillere?error=resend_failed', locale });
+  if (inv!.accepted_at) redirect({ href: '/admin/spillere?error=resend_failed', locale });
 
   try {
-    await sendInviteNotification({ to: inv.email, invitedByName });
+    await sendInviteNotification({ to: inv!.email, invitedByName });
   } catch (err) {
     console.error('[admin/spillere] resend mail failed', err);
-    const qs = new URLSearchParams({ error: 'mail_failed', email: inv.email });
-    redirect(`/admin/spillere?${qs.toString()}`);
+    const qs = new URLSearchParams({ error: 'mail_failed', email: inv!.email });
+    redirect({ href: `/admin/spillere?${qs.toString()}`, locale });
   }
 
-  const qs = new URLSearchParams({ status: 'resent', email: inv.email });
-  redirect(`/admin/spillere?${qs.toString()}`);
+  const qs = new URLSearchParams({ status: 'resent', email: inv!.email });
+  redirect({ href: `/admin/spillere?${qs.toString()}`, locale });
 }
 
 export async function withdrawInvitation(formData: FormData) {
+  const locale = (await getLocale()) as AppLocale;
   const id = String(formData.get('id') ?? '');
-  if (!id) redirect('/admin/spillere?error=unknown');
+  if (!id) redirect({ href: '/admin/spillere?error=unknown', locale });
 
   const { supabase } = await loadAdminContext();
 
@@ -146,8 +151,8 @@ export async function withdrawInvitation(formData: FormData) {
     .select('email, accepted_at')
     .eq('id', id)
     .single();
-  if (fetchError || !inv) redirect('/admin/spillere?error=withdraw_failed');
-  if (inv.accepted_at) redirect('/admin/spillere?error=withdraw_failed');
+  if (fetchError || !inv) redirect({ href: '/admin/spillere?error=withdraw_failed', locale });
+  if (inv!.accepted_at) redirect({ href: '/admin/spillere?error=withdraw_failed', locale });
 
   // Delete the invitations row via the cookie client (RLS lets admin do it).
   const { error: delError } = await supabase
@@ -156,7 +161,7 @@ export async function withdrawInvitation(formData: FormData) {
     .eq('id', id);
   if (delError) {
     console.error('[admin/spillere] invitation delete failed', delError);
-    redirect('/admin/spillere?error=withdraw_failed');
+    redirect({ href: '/admin/spillere?error=withdraw_failed', locale });
   }
 
   // If the invitee had requested a code (auth.users row exists) but never
@@ -169,7 +174,7 @@ export async function withdrawInvitation(formData: FormData) {
     const admin = getAdminClient();
     const { data: authList } = await admin.auth.admin.listUsers();
     const orphan = authList?.users?.find(
-      (u) => u.email?.toLowerCase() === inv.email.toLowerCase(),
+      (u) => u.email?.toLowerCase() === inv!.email.toLowerCase(),
     );
     if (orphan) {
       const { data: publicRow } = await admin
@@ -189,6 +194,6 @@ export async function withdrawInvitation(formData: FormData) {
     console.error('[admin/spillere] auth orphan cleanup failed', err);
   }
 
-  const qs = new URLSearchParams({ status: 'withdrawn', email: inv.email });
-  redirect(`/admin/spillere?${qs.toString()}`);
+  const qs = new URLSearchParams({ status: 'withdrawn', email: inv!.email });
+  redirect({ href: `/admin/spillere?${qs.toString()}`, locale });
 }

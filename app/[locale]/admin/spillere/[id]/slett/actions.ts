@@ -1,13 +1,16 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/admin/auth';
+import type { AppLocale } from '@/i18n/routing';
 
 export async function deleteUser(formData: FormData) {
+  const locale = (await getLocale()) as AppLocale;
   const id = String(formData.get('id') ?? '');
-  if (!id) redirect('/admin/spillere?error=unknown');
+  if (!id) redirect({ href: '/admin/spillere?error=unknown', locale });
 
   const supabase = await getServerClient();
   // Self-gate for Fase 4 chunk 2 layout-loosening (#223). Replaces the
@@ -16,7 +19,7 @@ export async function deleteUser(formData: FormData) {
 
   // Self-protect
   if (id === actor.userId) {
-    redirect(`/admin/spillere/${id}?error=self_delete_forbidden`);
+    redirect({ href: `/admin/spillere/${id}?error=self_delete_forbidden`, locale });
   }
 
   // Fetch target for banner copy. name can be NULL for pending invitees
@@ -26,8 +29,8 @@ export async function deleteUser(formData: FormData) {
     .select('id, name, email')
     .eq('id', id)
     .maybeSingle();
-  if (!target) redirect('/admin/spillere?error=unknown');
-  const targetName = target.name?.trim() || target.email;
+  if (!target) redirect({ href: '/admin/spillere?error=unknown', locale });
+  const targetName = target!.name?.trim() || target!.email;
 
   // Block hvis spilleren har spilt
   const { count: gpCount } = await supabase
@@ -35,7 +38,7 @@ export async function deleteUser(formData: FormData) {
     .select('game_id', { count: 'exact', head: true })
     .eq('user_id', id);
   if ((gpCount ?? 0) > 0) {
-    redirect(`/admin/spillere/${id}?error=still_has_games`);
+    redirect({ href: `/admin/spillere/${id}?error=still_has_games`, locale });
   }
 
   // Slett via service-role. auth.users → public.users cascades (FK i 0001),
@@ -56,9 +59,9 @@ export async function deleteUser(formData: FormData) {
     if (error) throw error;
   } catch (err) {
     console.error('[admin/spillere] deleteUser failed', { id, err });
-    redirect(`/admin/spillere/${id}?error=auth_delete_failed`);
+    redirect({ href: `/admin/spillere/${id}?error=auth_delete_failed`, locale });
   }
 
   const qs = new URLSearchParams({ status: 'deleted', name: targetName });
-  redirect(`/admin/spillere?${qs.toString()}`);
+  redirect({ href: `/admin/spillere?${qs.toString()}`, locale });
 }

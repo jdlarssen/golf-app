@@ -7,12 +7,15 @@ const LEVELS = ['junior', 'normal', 'senior'] as const;
 type Gender = (typeof GENDERS)[number];
 type Level = (typeof LEVELS)[number];
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/admin/auth';
+import type { AppLocale } from '@/i18n/routing';
 
 export async function updateUser(formData: FormData) {
+  const locale = (await getLocale()) as AppLocale;
   const id = String(formData.get('id') ?? '');
   const name = String(formData.get('name') ?? '').trim();
   const nickname = String(formData.get('nickname') ?? '').trim();
@@ -21,25 +24,25 @@ export async function updateUser(formData: FormData) {
   const genderRaw = String(formData.get('gender') ?? '').trim();
   const levelRaw = String(formData.get('level') ?? 'normal').trim();
 
-  if (!id) redirect('/admin/spillere?error=unknown');
-  if (!name) redirect(`/admin/spillere/${id}?error=name_required`);
+  if (!id) redirect({ href: '/admin/spillere?error=unknown', locale });
+  if (!name) redirect({ href: `/admin/spillere/${id}?error=name_required`, locale });
 
   const hcp = Number.parseFloat(hcpRaw.replace(',', '.'));
   if (!Number.isFinite(hcp) || hcp < HCP_MIN || hcp > HCP_MAX) {
-    redirect(`/admin/spillere/${id}?error=hcp_out_of_range`);
+    redirect({ href: `/admin/spillere/${id}?error=hcp_out_of_range`, locale });
   }
 
   if (!emailRaw || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailRaw)) {
-    redirect(`/admin/spillere/${id}?error=email_invalid`);
+    redirect({ href: `/admin/spillere/${id}?error=email_invalid`, locale });
   }
 
   if (!GENDERS.includes(genderRaw as Gender)) {
-    redirect(`/admin/spillere/${id}?error=gender_required`);
+    redirect({ href: `/admin/spillere/${id}?error=gender_required`, locale });
   }
   const gender = genderRaw as Gender;
 
   if (!LEVELS.includes(levelRaw as Level)) {
-    redirect(`/admin/spillere/${id}?error=level_invalid`);
+    redirect({ href: `/admin/spillere/${id}?error=level_invalid`, locale });
   }
   const level = levelRaw as Level;
 
@@ -77,7 +80,7 @@ export async function updateUser(formData: FormData) {
       );
 
     if ((activeGameCount ?? 0) > 0) {
-      redirect(`/admin/spillere/${id}?error=email_change_blocked_active_game`);
+      redirect({ href: `/admin/spillere/${id}?error=email_change_blocked_active_game`, locale });
     }
 
     // Check both public.users and auth.users for conflicts.
@@ -87,7 +90,7 @@ export async function updateUser(formData: FormData) {
     ]);
 
     if (inPublic || inAuth) {
-      redirect(`/admin/spillere/${id}?error=email_in_use`);
+      redirect({ href: `/admin/spillere/${id}?error=email_in_use`, locale });
     }
 
     // Update auth.users first (service-role). If this fails we abort before
@@ -99,7 +102,7 @@ export async function updateUser(formData: FormData) {
     );
     if (authError) {
       console.error('[admin/spillere] auth email update failed', authError);
-      redirect(`/admin/spillere/${id}?error=email_update_failed`);
+      redirect({ href: `/admin/spillere/${id}?error=email_update_failed`, locale });
     }
   }
 
@@ -127,8 +130,8 @@ export async function updateUser(formData: FormData) {
 
   if (error) {
     console.error('[admin/spillere] updateUser failed', error);
-    redirect(`/admin/spillere/${id}?error=update_failed`);
+    redirect({ href: `/admin/spillere/${id}?error=update_failed`, locale });
   }
 
-  redirect(`/admin/spillere/${id}?status=updated`);
+  redirect({ href: `/admin/spillere/${id}?status=updated`, locale });
 }
