@@ -1,6 +1,7 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { MAX_TEE_BOXES } from '@/app/[locale]/admin/courses/constants';
 
@@ -65,6 +66,7 @@ function appendQuery(base: string, key: string, value: string): string {
 }
 
 export async function createCourse(formData: FormData) {
+  const locale = await getLocale();
   const supabase = await getServerClient();
   // #366: bane-opprettelse er åpen for ALLE innloggede brukere (ikke bare
   // admin/trusted). Vi krever kun en innlogget bruker her; RLS (migrasjon
@@ -74,7 +76,7 @@ export async function createCourse(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect('/login');
+    redirect({ href: '/login', locale });
   }
 
   // Hvor valideringsfeil bouncer / hvor suksess lander. Admin-flyten sender
@@ -89,7 +91,7 @@ export async function createCourse(formData: FormData) {
     '/admin/courses?status=created',
   );
   const fail = (code: string): never =>
-    redirect(appendQuery(errorBase, 'error', code));
+    redirect({ href: appendQuery(errorBase, 'error', code), locale });
 
   const name = String(formData.get('name') ?? '').trim();
   if (!name) {
@@ -231,7 +233,7 @@ export async function createCourse(formData: FormData) {
   // service-role-bypass — created_by = user.id er den eneste tillatte eieren.
   const { data: course, error: courseError } = await supabase
     .from('courses')
-    .insert({ name, created_by: user.id })
+    .insert({ name, created_by: (user as NonNullable<typeof user>).id })
     .select('id')
     .single();
 
@@ -257,5 +259,8 @@ export async function createCourse(formData: FormData) {
     fail('db_tees');
   }
 
-  redirect(appendQuery(successRedirect, 'name', encodeURIComponent(name)));
+  redirect({
+    href: appendQuery(successRedirect, 'name', encodeURIComponent(name)),
+    locale,
+  });
 }

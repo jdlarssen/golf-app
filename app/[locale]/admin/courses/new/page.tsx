@@ -1,3 +1,4 @@
+import { getLocale, getTranslations } from 'next-intl/server';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
@@ -9,24 +10,6 @@ import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
 
 type SearchParams = Promise<{ error?: string | string[] }>;
-
-const ERROR_MESSAGES: Record<string, string> = {
-  name_required: 'Banen må ha et navn.',
-  bad_par: 'Par må være et helt tall mellom 3 og 6 på hvert hull.',
-  bad_si: 'Stroke-indeks må være et helt tall mellom 1 og 18 på hvert hull.',
-  si_duplicate: 'Stroke-indeks 1–18 må brukes nøyaktig én gang hver.',
-  tee_required: 'Minst én tee-boks må legges til.',
-  tee_partial_rating:
-    'Hver tee må ha både slope og CR (eller ingen av dem) per kjønn. Du kan ikke lagre halve sett.',
-  tee_no_rating:
-    'Hver tee må ha minst ett komplett rating-sett per kjønn (Herrer / Damer / Junior).',
-  db_course:
-    'Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.',
-  db_holes:
-    'Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.',
-  db_tees:
-    'Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.',
-};
 
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
@@ -42,25 +25,40 @@ export default async function NewCoursePage({
   const supabase = await getServerClient();
   await requireAdminOrTrustedCreator(supabase);
 
+  const locale = await getLocale();
+  const t = await getTranslations({ locale, namespace: 'courseForm' });
+
   const params = await searchParams;
   const errorCode = first(params.error);
-  const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
+
+  // Admin door uses adminErrors.* for codes that differ from the user door
+  // (tee_required, tee_no_rating, db_*). Shared codes use errors.*.
+  // Unknown codes render no banner.
+  function resolveAdminError(code: string): string | undefined {
+    const adminKey = `adminErrors.${code}` as Parameters<typeof t>[0];
+    if (t.has(adminKey)) return t(adminKey);
+    const sharedKey = `errors.${code}` as Parameters<typeof t>[0];
+    if (t.has(sharedKey)) return t(sharedKey);
+    return undefined;
+  }
+
+  const errorMessage = errorCode ? resolveAdminError(errorCode) : undefined;
 
   return (
     <AdminShell>
       <TopBar
         backHref="/admin/courses"
-        kicker="Baner · protokoll"
+        kicker={t('adminDoor.kicker')}
       />
 
-      <BrassRibbon kicker="Ny bane" />
+      <BrassRibbon kicker={t('adminDoor.brassRibbon')} />
 
       <div className="px-1">
         <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-          Ny bane
+          {t('adminDoor.heading')}
         </h1>
         <p className="font-sans text-[11.5px] text-muted">
-          Hull, par, stroke-indeks og tee-bokser
+          {t('adminDoor.subtitle')}
         </p>
       </div>
 
@@ -72,7 +70,7 @@ export default async function NewCoursePage({
 
       <div className="mt-5">
         <Card>
-          <CourseForm action={createCourse} submitLabel="Lagre bane" />
+          <CourseForm action={createCourse} submitLabel={t('adminDoor.submitLabel')} />
         </Card>
       </div>
     </AdminShell>

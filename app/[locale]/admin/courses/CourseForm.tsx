@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { SubmitButton } from '@/components/ui/SubmitButton';
@@ -79,23 +80,6 @@ const DEFAULT_TEE: TeeBoxData = {
   course_rating_juniors: '',
 };
 
-// Typisk slope/CR-range per kjønn for norske 18-hulls baner. Vises som
-// muted hint-tekst under hvert felt så admin har et anker mot inntastings-feil
-// (f.eks. CR-tall i slope-feltet). Hint-en er statisk — den endrer ikke
-// farge eller blokkerer lagring ved verdier utenfor typisk range.
-const TYPICAL_HINTS: Record<
-  'mens' | 'ladies' | 'juniors',
-  { slope: string; cr: string }
-> = {
-  mens: { slope: 'Typisk 110–135', cr: 'Typisk 67–72' },
-  ladies: { slope: 'Typisk 115–140', cr: 'Typisk 68–73' },
-  juniors: { slope: 'Typisk 95–125', cr: 'Typisk 60–68' },
-};
-
-// MAX_TEE_BOXES re-eksporteres øverst fra ./constants. Server-actions må
-// importere det fra ./constants direkte (ikke fra denne 'use client'-modulen
-// — Next.js 16 wrapper client-exports som throw-funksjoner på serveren).
-
 // Par-valg per hull er begrenset til 3/4/5 — tre tap-knapper i stedet for
 // number-input fjerner 18 tastatur-popups på telefon. Par 6 finnes på
 // enkelte par-6-hull i verden, men ikke på norske baner Tørny støtter i dag.
@@ -143,16 +127,6 @@ export function hasHoleChanges(
   });
 }
 
-function buildHoleChangeConfirmMessage(count: number): string {
-  const games = count === 1 ? 'ett spill' : `${count} spill`;
-  return (
-    `Banen brukes i ${games} som pågår eller er planlagt. ` +
-    `Endring av par eller stroke-indeks vil endre score-beregningen ` +
-    `mid-runde for spillere som allerede har levert scorekort. ` +
-    `Er du sikker på at du vil fortsette?`
-  );
-}
-
 // Sjekker om en tee har lagrede tall for et gitt kjønn — brukes for å
 // avgjøre om dame/junior-blokken skal stå åpen ved mount på edit-flyten.
 function hasGenderData(
@@ -192,6 +166,8 @@ export function CourseForm({
   redirectBase,
   successRedirect,
 }: Props) {
+  const t = useTranslations('courseForm.form');
+
   // Skiller new-flyten (defaults i herrer-blokken) fra edit-flyten (lagrede
   // tall): Tøm-knappen på herrer-blokken skjules på new-flyten så lenge
   // verdiene er identiske med default, men vises alltid på edit-flyten når
@@ -210,10 +186,10 @@ export function CourseForm({
   // står åpen. Initialiseres åpen hvis tee har lagrede tall for det kjønnet
   // (edit-flyten), ellers kollapset.
   const [expandedLadies, setExpandedLadies] = useState<boolean[]>(
-    initialTees.map((t) => hasGenderData(t, 'ladies')),
+    initialTees.map((tee) => hasGenderData(tee, 'ladies')),
   );
   const [expandedJuniors, setExpandedJuniors] = useState<boolean[]>(
-    initialTees.map((t) => hasGenderData(t, 'juniors')),
+    initialTees.map((tee) => hasGenderData(tee, 'juniors')),
   );
 
   // Per-kjønn-par-overstyring: kollapset som standard. Åpen ved mount på
@@ -244,7 +220,7 @@ export function CourseForm({
 
   function updateTee(index: number, patch: Partial<TeeBoxData>) {
     setTeeBoxes((prev) =>
-      prev.map((t, i) => (i === index ? { ...t, ...patch } : t)),
+      prev.map((tee, i) => (i === index ? { ...tee, ...patch } : tee)),
     );
   }
 
@@ -356,6 +332,12 @@ export function CourseForm({
     );
   }
 
+  function buildConfirmMessage(count: number): string {
+    const games =
+      count === 1 ? t('confirmGames1') : t('confirmGamesN', { count });
+    return t('confirmChanges', { games });
+  }
+
   return (
     <form
       action={action}
@@ -364,9 +346,7 @@ export function CourseForm({
           affectedGamesCount > 0 &&
           hasHoleChanges(initialData?.holes, holes)
         ) {
-          const ok = window.confirm(
-            buildHoleChangeConfirmMessage(affectedGamesCount),
-          );
+          const ok = window.confirm(buildConfirmMessage(affectedGamesCount));
           if (!ok) event.preventDefault();
         }
       }}
@@ -382,18 +362,15 @@ export function CourseForm({
         id="name"
         name="name"
         type="text"
-        label="Navn på banen"
-        placeholder="f.eks. Stiklestad Golfbane"
+        label={t('nameLabel')}
+        placeholder={t('namePlaceholder')}
         defaultValue={initialData?.name ?? ''}
         required
       />
 
       <section>
-        <h2 className="text-sm font-medium text-text mb-1">Hull 1–18</h2>
-        <p className="text-xs text-muted mb-3">
-          Velg par 3, 4 eller 5 per hull. Stroke-indeks 1–18 må brukes
-          nøyaktig én gang hver.
-        </p>
+        <h2 className="text-sm font-medium text-text mb-1">{t('holesHeading')}</h2>
+        <p className="text-xs text-muted mb-3">{t('holesHint')}</p>
         <div className="space-y-3">
           {holes.map((hole, index) => (
             <div
@@ -401,12 +378,13 @@ export function CourseForm({
               className="grid grid-cols-[3.5rem_1fr_5.5rem] gap-3 items-end"
             >
               <div className="text-sm font-medium text-text pb-2">
-                Hull {hole.hole_number}
+                {t('holeLabel', { number: hole.hole_number })}
               </div>
               <ParTapButtons
                 holeNumber={hole.hole_number}
                 name={`hole_${hole.hole_number}_par_mens`}
                 value={hole.par_mens}
+                ariaLabel={t('parGroupAriaLabel', { number: hole.hole_number })}
                 onChange={(next) => updateMensPar(index, next)}
               />
               <Input
@@ -417,7 +395,7 @@ export function CourseForm({
                 min={1}
                 max={18}
                 step={1}
-                label="SI"
+                label={t('siLabel')}
                 value={hole.stroke_index}
                 onChange={(e) =>
                   updateHole(index, { stroke_index: e.target.value })
@@ -433,10 +411,18 @@ export function CourseForm({
         {expandedLadiesPar ? (
           <GenderParOverrideSection
             gender="ladies"
-            label="Avvikende par for damer"
-            removeLabel="Fjern dame-overstyring"
+            label={t('ladiesParLabel')}
+            removeLabel={t('ladiesParRemoveLabel')}
+            genderParLabel={t('genderParLadies')}
             holes={holes}
             parTotal={parTotalLadies}
+            parTotalGenderLabel={t('parTotalGenderLabel', { gender: t('genderParLadies') })}
+            parTotalSuffix={t('parTotalSuffix')}
+            genderParHint={t('genderParHint')}
+            holeLabel={(n) => t('holeLabel', { number: n })}
+            parAriaLabel={(n) =>
+              t('parAriaLabelWithGender', { number: n, genderLabel: t('ladiesParLabel').toLowerCase() })
+            }
             onChange={(holeIndex, par) =>
               updateHole(holeIndex, { par_ladies: String(par) })
             }
@@ -448,17 +434,25 @@ export function CourseForm({
             onClick={() => setExpandedLadiesPar(true)}
             className="block w-full rounded-lg border border-dashed border-border/80 px-3 py-2.5 text-sm font-medium text-muted hover:text-text hover:border-border transition-colors"
           >
-            + Legg til avvikende par for damer
+            {t('addLadiesParButton')}
           </button>
         )}
 
         {expandedJuniorsPar ? (
           <GenderParOverrideSection
             gender="juniors"
-            label="Avvikende par for junior"
-            removeLabel="Fjern junior-overstyring"
+            label={t('juniorsParLabel')}
+            removeLabel={t('juniorsParRemoveLabel')}
+            genderParLabel={t('genderParJuniors')}
             holes={holes}
             parTotal={parTotalJuniors}
+            parTotalGenderLabel={t('parTotalGenderLabel', { gender: t('genderParJuniors') })}
+            parTotalSuffix={t('parTotalSuffix')}
+            genderParHint={t('genderParHint')}
+            holeLabel={(n) => t('holeLabel', { number: n })}
+            parAriaLabel={(n) =>
+              t('parAriaLabelWithGender', { number: n, genderLabel: t('juniorsParLabel').toLowerCase() })
+            }
             onChange={(holeIndex, par) =>
               updateHole(holeIndex, { par_juniors: String(par) })
             }
@@ -470,7 +464,7 @@ export function CourseForm({
             onClick={() => setExpandedJuniorsPar(true)}
             className="block w-full rounded-lg border border-dashed border-border/80 px-3 py-2.5 text-sm font-medium text-muted hover:text-text hover:border-border transition-colors"
           >
-            + Legg til avvikende par for junior
+            {t('addJuniorsParButton')}
           </button>
         )}
       </section>
@@ -501,7 +495,7 @@ export function CourseForm({
 
       <section>
         <h2 className="text-sm font-medium text-text mb-3">
-          Tee-bokser ({teeBoxes.length}/{MAX_TEE_BOXES})
+          {t('teeBoxesHeading', { count: teeBoxes.length, max: MAX_TEE_BOXES })}
         </h2>
         <div className="space-y-4">
           {teeBoxes.map((tee, index) => (
@@ -515,7 +509,7 @@ export function CourseForm({
 
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm font-medium text-text">
-                  Tee-boks {index + 1}
+                  {t('teeBoxLabel', { number: index + 1 })}
                 </span>
                 <div className="flex items-center gap-3">
                   {teeBoxes.length < MAX_TEE_BOXES && (
@@ -524,7 +518,7 @@ export function CourseForm({
                       onClick={() => duplicateTee(index)}
                       className="text-xs font-medium text-muted hover:text-text transition-colors"
                     >
-                      Dupliser
+                      {t('duplicateButton')}
                     </button>
                   )}
                   {teeBoxes.length > 1 && (
@@ -533,7 +527,7 @@ export function CourseForm({
                       onClick={() => removeTee(index)}
                       className="text-xs font-medium text-danger hover:opacity-80 transition-opacity"
                     >
-                      Fjern
+                      {t('removeTeeButton')}
                     </button>
                   )}
                 </div>
@@ -543,8 +537,8 @@ export function CourseForm({
                 id={`tee_${index}_name`}
                 name={`tee_${index}_name`}
                 type="text"
-                label="Navn"
-                placeholder="f.eks. Gul eller 57"
+                label={t('teeNameLabel')}
+                placeholder={t('teeNamePlaceholder')}
                 value={tee.name}
                 onChange={(e) => updateTee(index, { name: e.target.value })}
                 required
@@ -558,8 +552,8 @@ export function CourseForm({
                 min={1000}
                 max={12000}
                 step={1}
-                label="Banelengde (m)"
-                hint="Valgfritt. Total bane-lengde fra denne tee-boksen."
+                label={t('teeLengthLabel')}
+                hint={t('teeLengthHint')}
                 warning={getTeeLengthWarning(tee)}
                 placeholder="6124"
                 value={tee.length_meters}
@@ -569,15 +563,19 @@ export function CourseForm({
               />
 
               <div className="space-y-3">
-                <p className="text-xs text-muted">
-                  Fyll inn slope og CR for hvert kjønn som spiller fra denne
-                  teen. Par-total regnes ut fra hullene.
-                </p>
+                <p className="text-xs text-muted">{t('genderRatingHint')}</p>
 
                 <GenderRatingBlock
                   teeIndex={index}
                   gender="mens"
-                  label="Herrer"
+                  label={t('genderMens')}
+                  clearLabel={t('clearGenderButton')}
+                  parTotalLabel={t('parTotalLabel')}
+                  parTotalSuffix={t('parTotalSuffix')}
+                  slopeLabel={t('slopeLabel')}
+                  crLabel={t('crLabel')}
+                  slopeHint={t('typicalHintMensSlope')}
+                  crHint={t('typicalHintMensCr')}
                   slope={tee.slope_mens}
                   cr={tee.course_rating_mens}
                   parTotal={parTotalMens}
@@ -603,7 +601,7 @@ export function CourseForm({
                       onClick={() => copyMensToAllGenders(index)}
                       className="block w-full text-center text-[11px] font-medium text-muted hover:text-text transition-colors py-1.5"
                     >
-                      Kopier til alle kjønn
+                      {t('copyToAllGendersButton')}
                     </button>
                   )}
 
@@ -611,7 +609,14 @@ export function CourseForm({
                   <GenderRatingBlock
                     teeIndex={index}
                     gender="ladies"
-                    label="Damer"
+                    label={t('genderLadies')}
+                    clearLabel={t('clearGenderButton')}
+                    parTotalLabel={t('parTotalLabel')}
+                    parTotalSuffix={t('parTotalSuffix')}
+                    slopeLabel={t('slopeLabel')}
+                    crLabel={t('crLabel')}
+                    slopeHint={t('typicalHintLadiesSlope')}
+                    crHint={t('typicalHintLadiesCr')}
                     slope={tee.slope_ladies}
                     cr={tee.course_rating_ladies}
                     parTotal={parTotalLadies}
@@ -632,7 +637,7 @@ export function CourseForm({
                     onClick={() => expandGender(index, 'ladies')}
                     className="block w-full rounded-lg border border-dashed border-border/80 px-3 py-2.5 text-sm font-medium text-muted hover:text-text hover:border-border transition-colors"
                   >
-                    + Legg til dame-rating
+                    {t('addLadiesRatingButton')}
                   </button>
                 )}
 
@@ -640,7 +645,14 @@ export function CourseForm({
                   <GenderRatingBlock
                     teeIndex={index}
                     gender="juniors"
-                    label="Junior"
+                    label={t('genderJuniors')}
+                    clearLabel={t('clearGenderButton')}
+                    parTotalLabel={t('parTotalLabel')}
+                    parTotalSuffix={t('parTotalSuffix')}
+                    slopeLabel={t('slopeLabel')}
+                    crLabel={t('crLabel')}
+                    slopeHint={t('typicalHintJuniorsSlope')}
+                    crHint={t('typicalHintJuniorsCr')}
                     slope={tee.slope_juniors}
                     cr={tee.course_rating_juniors}
                     parTotal={parTotalJuniors}
@@ -661,7 +673,7 @@ export function CourseForm({
                     onClick={() => expandGender(index, 'juniors')}
                     className="block w-full rounded-lg border border-dashed border-border/80 px-3 py-2.5 text-sm font-medium text-muted hover:text-text hover:border-border transition-colors"
                   >
-                    + Legg til junior-rating
+                    {t('addJuniorsRatingButton')}
                   </button>
                 )}
               </div>
@@ -675,14 +687,14 @@ export function CourseForm({
             onClick={addTee}
             className="mt-3 w-full text-sm"
           >
-            + Legg til tee-boks
+            {t('addTeeBoxButton')}
           </Button>
         )}
       </section>
 
       <SubmitButton
         className="w-full"
-        pendingLabel="Lagrer …"
+        pendingLabel={t('pendingLabel')}
       >
         {submitLabel}
       </SubmitButton>
@@ -709,6 +721,7 @@ function ParTapButtons({
   onChange: (par: ParOption) => void;
   ariaLabel?: string;
 }) {
+  const t = useTranslations('courseForm.form');
   const current = Number(value);
   return (
     <div>
@@ -717,7 +730,7 @@ function ParTapButtons({
       </div>
       <div
         role="radiogroup"
-        aria-label={ariaLabel ?? `Par for hull ${holeNumber}`}
+        aria-label={ariaLabel ?? t('parGroupAriaLabel', { number: holeNumber })}
         className="flex gap-1.5"
       >
         {PAR_OPTIONS.map((p) => {
@@ -751,14 +764,25 @@ function GenderParOverrideSection({
   removeLabel,
   holes,
   parTotal,
+  parTotalGenderLabel,
+  parTotalSuffix,
+  genderParHint,
+  holeLabel,
+  parAriaLabel,
   onChange,
   onRemove,
 }: {
   gender: 'ladies' | 'juniors';
   label: string;
   removeLabel: string;
+  genderParLabel: string;
   holes: HoleData[];
   parTotal: number;
+  parTotalGenderLabel: string;
+  parTotalSuffix: string;
+  genderParHint: string;
+  holeLabel: (n: number) => string;
+  parAriaLabel: (n: number) => string;
   onChange: (holeIndex: number, par: ParOption) => void;
   onRemove: () => void;
 }) {
@@ -777,10 +801,7 @@ function GenderParOverrideSection({
           {removeLabel}
         </button>
       </div>
-      <p className="text-xs text-muted">
-        Velg avvikende par per hull. Hull som er like som hovedraden trenger
-        ingen endring.
-      </p>
+      <p className="text-xs text-muted">{genderParHint}</p>
       <div className="space-y-3">
         {holes.map((hole, index) => (
           <div
@@ -788,22 +809,22 @@ function GenderParOverrideSection({
             className="grid grid-cols-[3.5rem_1fr] gap-3 items-end"
           >
             <div className="text-sm font-medium text-text pb-2">
-              Hull {hole.hole_number}
+              {holeLabel(hole.hole_number)}
             </div>
             <ParTapButtons
               holeNumber={hole.hole_number}
               name={`hole_${hole.hole_number}_par_${gender}`}
               value={hole[key]}
-              ariaLabel={`Par for hull ${hole.hole_number} (${label.toLowerCase()})`}
+              ariaLabel={parAriaLabel(hole.hole_number)}
               onChange={(next) => onChange(index, next)}
             />
           </div>
         ))}
       </div>
       <p className="font-sans text-[11.5px] tabular-nums text-muted">
-        Par-total {gender === 'ladies' ? 'damer' : 'junior'}:{' '}
+        {parTotalGenderLabel}{' '}
         <span className="text-text font-medium">{parTotal}</span>{' '}
-        <span className="text-muted/80">(sum av hullene)</span>
+        <span className="text-muted/80">{parTotalSuffix}</span>
       </p>
     </fieldset>
   );
@@ -813,6 +834,13 @@ function GenderRatingBlock({
   teeIndex,
   gender,
   label,
+  clearLabel,
+  parTotalLabel,
+  parTotalSuffix,
+  slopeLabel,
+  crLabel,
+  slopeHint,
+  crHint,
   slope,
   cr,
   parTotal,
@@ -824,6 +852,13 @@ function GenderRatingBlock({
   teeIndex: number;
   gender: 'mens' | 'ladies' | 'juniors';
   label: string;
+  clearLabel: string;
+  parTotalLabel: string;
+  parTotalSuffix: string;
+  slopeLabel: string;
+  crLabel: string;
+  slopeHint: string;
+  crHint: string;
   slope: string;
   cr: string;
   parTotal: number;
@@ -846,7 +881,7 @@ function GenderRatingBlock({
             onClick={onClear}
             className="text-[11px] font-medium text-muted hover:text-danger transition-colors"
           >
-            Tøm dette kjønnet
+            {clearLabel}
           </button>
         )}
       </div>
@@ -859,9 +894,9 @@ function GenderRatingBlock({
           min={55}
           max={155}
           step={1}
-          label="Slope"
+          label={slopeLabel}
           placeholder={slopePlaceholder}
-          hint={TYPICAL_HINTS[gender].slope}
+          hint={slopeHint}
           value={slope}
           onChange={(e) =>
             onChange({ [`slope_${gender}`]: e.target.value } as Partial<TeeBoxData>)
@@ -875,9 +910,9 @@ function GenderRatingBlock({
           min={50}
           max={80}
           step={0.1}
-          label="CR"
+          label={crLabel}
           placeholder={crPlaceholder}
-          hint={TYPICAL_HINTS[gender].cr}
+          hint={crHint}
           value={cr}
           onChange={(e) =>
             onChange({ [`course_rating_${gender}`]: e.target.value } as Partial<TeeBoxData>)
@@ -885,11 +920,11 @@ function GenderRatingBlock({
         />
       </div>
       <p className="font-sans text-[11.5px] tabular-nums text-muted">
-        Par-total:{' '}
+        {parTotalLabel}{' '}
         <span className="text-text font-medium">
           {showParTotal ? parTotal : '—'}
         </span>{' '}
-        <span className="text-muted/80">(sum av hullene)</span>
+        <span className="text-muted/80">{parTotalSuffix}</span>
       </p>
     </fieldset>
   );

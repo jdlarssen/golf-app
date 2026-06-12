@@ -1,4 +1,5 @@
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
@@ -25,23 +26,6 @@ type SearchParams = Promise<{
   next?: string | string[];
 }>;
 
-// Bruker-vennlige feilmeldinger — bevisst uten admin-jargon (en vanlig bruker
-// har ikke tilgang til Supabase-loggene).
-const COURSE_ERROR_MESSAGES: Record<string, string> = {
-  name_required: 'Banen må ha et navn.',
-  bad_par: 'Par må være et helt tall mellom 3 og 6 på hvert hull.',
-  bad_si: 'Stroke-indeks må være et helt tall mellom 1 og 18 på hvert hull.',
-  si_duplicate: 'Stroke-indeks 1–18 må brukes nøyaktig én gang hver.',
-  tee_required: 'Minst én tee må legges til.',
-  tee_partial_rating:
-    'Hver tee må ha både slope og CR (eller ingen av dem) per kjønn. Du kan ikke lagre halve sett.',
-  tee_no_rating:
-    'Hver tee må ha minst ett komplett rating-sett (slope + CR) per kjønn.',
-  db_course: 'Noe gikk galt under lagring. Prøv igjen.',
-  db_holes: 'Noe gikk galt under lagring. Prøv igjen.',
-  db_tees: 'Noe gikk galt under lagring. Prøv igjen.',
-};
-
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
   return value;
@@ -67,45 +51,54 @@ export default async function OpprettBanePage({
   searchParams: SearchParams;
 }) {
   // Gate: kun innlogget (ingen admin/trusted-krav). Server-action self-gater òg.
+  const locale = await getLocale();
   const supabase = await getServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect('/login');
+    redirect({ href: '/login', locale });
   }
+
+  const t = await getTranslations({ locale, namespace: 'courseForm' });
 
   const sp = await searchParams;
   const next = safeNext(first(sp.next));
   const status = first(sp.status);
   const errorCode = first(sp.error);
-  const errorMessage = errorCode ? COURSE_ERROR_MESSAGES[errorCode] : undefined;
+
+  // Resolve error message from catalog; unknown codes render no banner.
+  const errorKey = errorCode
+    ? (`errors.${errorCode}` as Parameters<typeof t>[0])
+    : undefined;
+  const errorMessage =
+    errorKey && t.has(errorKey) ? t(errorKey) : undefined;
 
   // Suksess-visning: bekreftelse + veier videre. Ingen skjema (rent kort).
   if (status === 'created') {
     const createdName = first(sp.name);
     return (
       <AppShell>
-        <TopBar backHref={next ?? '/'} kicker="Ny bane" />
+        <TopBar backHref={next ?? '/'} kicker={t('door.kicker')} />
         <div className="mt-5">
           <Card>
             <div className="space-y-5 text-center">
               <h1 className="font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-                Banen er lagret
+                {t('door.successHeading')}
               </h1>
               <p className="font-sans text-sm leading-relaxed text-muted">
-                {createdName ? `«${createdName}» ` : 'Banen '}
-                er lagt til i biblioteket, og kan nå velges når noen setter opp
-                en runde.
+                {createdName
+                  ? t('door.successBodyNamed', { name: createdName })
+                  : t('door.successBodyAnon')}
               </p>
               <div className="space-y-3 pt-1">
                 {next ? (
                   <LinkButton href={next} full>
-                    Tilbake til spillet
+                    {t('door.backToGame')}
                   </LinkButton>
                 ) : (
                   <LinkButton href="/" full>
-                    Til forsiden
+                    {t('door.toFrontPage')}
                   </LinkButton>
                 )}
                 <div>
@@ -117,7 +110,7 @@ export default async function OpprettBanePage({
                     }
                     className="inline-flex min-h-[44px] items-center justify-center text-sm text-muted underline underline-offset-4 transition-colors hover:text-text"
                   >
-                    Opprett en bane til
+                    {t('door.createAnother')}
                   </SmartLink>
                 </div>
               </div>
@@ -138,15 +131,14 @@ export default async function OpprettBanePage({
 
   return (
     <AppShell>
-      <TopBar backHref={next ?? '/'} kicker="Ny bane" />
+      <TopBar backHref={next ?? '/'} kicker={t('door.kicker')} />
 
       <div className="px-1">
         <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-          Legg til en bane
+          {t('door.heading')}
         </h1>
         <p className="font-sans text-[11.5px] text-muted">
-          Hull, par, stroke-indeks og tee-bokser. Banen blir tilgjengelig for
-          alle.
+          {t('door.subtitle')}
         </p>
       </div>
 
@@ -160,7 +152,7 @@ export default async function OpprettBanePage({
         <Card>
           <CourseForm
             action={createCourse}
-            submitLabel="Lagre bane"
+            submitLabel={t('door.submitLabel')}
             redirectBase={redirectBase}
             successRedirect={successRedirect}
           />
