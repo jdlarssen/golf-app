@@ -1,6 +1,7 @@
 import { restoreTee } from './actions';
-import { formatShortDateNb } from '@/lib/format/date';
+import { formatShortDateLocale } from '@/lib/i18n/format';
 import { SubmitButton } from '@/components/ui/SubmitButton';
+import type { AppLocale } from '@/i18n/routing';
 
 export type ArchivedTeeRow = {
   id: string;
@@ -8,6 +9,15 @@ export type ArchivedTeeRow = {
   archived_at: string;
   length_meters: number | null;
   has_active_name_conflict: boolean;
+};
+
+export type ArchivedTeesSectionStrings = {
+  summaryLabel: (count: number) => string;
+  body: string;
+  archivedDate: (date: string) => string;
+  nameConflict: string;
+  reopenButton: string;
+  reopeningBusy: string;
 };
 
 /**
@@ -20,25 +30,28 @@ export type ArchivedTeeRow = {
  * Server-component — no client state, no 'use client' boundary. The
  * Gjenåpne-button submits a server-action form, then redirects back to
  * the same edit page where the now-active tee appears in CourseForm.
+ * Translation strings are passed from the parent server page.
  */
 export function ArchivedTeesSection({
   courseId,
   archivedTees,
+  strings,
+  locale,
 }: {
   courseId: string;
   archivedTees: ArchivedTeeRow[];
+  strings: ArchivedTeesSectionStrings;
+  locale: AppLocale;
 }) {
   if (archivedTees.length === 0) return null;
 
   return (
     <details className="rounded-lg border border-border bg-surface p-4">
       <summary className="cursor-pointer font-serif text-base font-medium">
-        Arkiverte tees ({archivedTees.length})
+        {strings.summaryLabel(archivedTees.length)}
       </summary>
       <p className="mt-3 text-sm text-muted">
-        Disse tee-ene er fjernet fra aktiv visning, men beholdes for spillene
-        som bruker dem. Gjenåpne en tee for å få den tilbake i edit-formen og
-        i nytt-spill-velgeren.
+        {strings.body}
       </p>
       <ul className="mt-4 space-y-2">
         {archivedTees.map((tee) => (
@@ -49,21 +62,21 @@ export function ArchivedTeesSection({
             <div className="min-w-0 flex-1">
               <div className="truncate font-medium">{tee.name}</div>
               <div className="text-xs text-muted">
-                Arkivert {formatShortDateNb(tee.archived_at)}
+                {strings.archivedDate(formatShortDateLocale(tee.archived_at, locale))}
                 {tee.length_meters != null && ` · ${tee.length_meters} m`}
               </div>
               {tee.has_active_name_conflict && (
                 <div className="mt-1.5 inline-block rounded border border-warning/40 bg-warning/[0.10] px-2 py-0.5 text-[11px] text-warning">
-                  Navnekollisjon med aktiv tee. Endre navn etter gjenåpning
+                  {strings.nameConflict}
                 </div>
               )}
             </div>
             <form action={restoreTee.bind(null, courseId, tee.id)}>
               <SubmitButton
                 className="rounded-full px-3 py-2 text-sm"
-                pendingLabel="Gjenåpner …"
+                pendingLabel={strings.reopeningBusy}
               >
-                Gjenåpne
+                {strings.reopenButton}
               </SubmitButton>
             </form>
           </li>

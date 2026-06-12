@@ -3,8 +3,8 @@ import { render, screen } from '@testing-library/react';
 import {
   ArchivedTeesSection,
   type ArchivedTeeRow,
+  type ArchivedTeesSectionStrings,
 } from './ArchivedTeesSection';
-
 // restoreTee is a server-action — mock it so the form's `action` prop has a
 // concrete reference. The render-tests don't invoke it; we just need the
 // import to resolve.
@@ -13,6 +13,16 @@ vi.mock('./actions', () => ({
 }));
 
 const courseId = '11111111-1111-1111-1111-111111111111';
+
+// Norwegian strings for tests — mirrors what no.json produces.
+const noStrings: ArchivedTeesSectionStrings = {
+  summaryLabel: (count) => `Arkiverte tees (${count})`,
+  body: 'Disse tee-ene er fjernet fra aktiv visning, men beholdes for spillene som bruker dem. Gjenåpne en tee for å få den tilbake i edit-formen og i nytt-spill-velgeren.',
+  archivedDate: (date) => `Arkivert ${date}`,
+  nameConflict: 'Navnekollisjon med aktiv tee. Endre navn etter gjenåpning',
+  reopenButton: 'Gjenåpne',
+  reopeningBusy: 'Gjenåpner …',
+};
 
 function row(overrides: Partial<ArchivedTeeRow> = {}): ArchivedTeeRow {
   return {
@@ -28,7 +38,7 @@ function row(overrides: Partial<ArchivedTeeRow> = {}): ArchivedTeeRow {
 describe('ArchivedTeesSection', () => {
   it('renders null when there are no archived tees', () => {
     const { container } = render(
-      <ArchivedTeesSection courseId={courseId} archivedTees={[]} />,
+      <ArchivedTeesSection courseId={courseId} archivedTees={[]} strings={noStrings} locale="no" />,
     );
     expect(container.firstChild).toBeNull();
   });
@@ -38,6 +48,8 @@ describe('ArchivedTeesSection', () => {
       <ArchivedTeesSection
         courseId={courseId}
         archivedTees={[row(), row({ id: 'tee-2', name: 'Hvit' })]}
+        strings={noStrings}
+        locale="no"
       />,
     );
     expect(screen.getByText('Arkiverte tees (2)')).toBeInTheDocument();
@@ -48,6 +60,8 @@ describe('ArchivedTeesSection', () => {
       <ArchivedTeesSection
         courseId={courseId}
         archivedTees={[row({ name: 'Gul', length_meters: 5670 })]}
+        strings={noStrings}
+        locale="no"
       />,
     );
     expect(screen.getByText('Gul')).toBeInTheDocument();
@@ -63,6 +77,8 @@ describe('ArchivedTeesSection', () => {
       <ArchivedTeesSection
         courseId={courseId}
         archivedTees={[row({ length_meters: null })]}
+        strings={noStrings}
+        locale="no"
       />,
     );
     expect(screen.queryByText(/ m\b/)).not.toBeInTheDocument();
@@ -73,6 +89,8 @@ describe('ArchivedTeesSection', () => {
       <ArchivedTeesSection
         courseId={courseId}
         archivedTees={[row({ has_active_name_conflict: false })]}
+        strings={noStrings}
+        locale="no"
       />,
     );
     expect(
@@ -83,6 +101,8 @@ describe('ArchivedTeesSection', () => {
       <ArchivedTeesSection
         courseId={courseId}
         archivedTees={[row({ has_active_name_conflict: true })]}
+        strings={noStrings}
+        locale="no"
       />,
     );
     expect(screen.getByText(/Navnekollisjon/)).toBeInTheDocument();
@@ -97,6 +117,8 @@ describe('ArchivedTeesSection', () => {
           row({ id: 'tee-2', name: 'Hvit' }),
           row({ id: 'tee-3', name: 'Rød' }),
         ]}
+        strings={noStrings}
+        locale="no"
       />,
     );
     const buttons = screen.getAllByRole('button', { name: /Gjenåpne/ });

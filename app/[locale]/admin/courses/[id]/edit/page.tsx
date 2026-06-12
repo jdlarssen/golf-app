@@ -1,5 +1,6 @@
 import { Suspense, cache } from 'react';
 import { notFound } from 'next/navigation';
+import { getTranslations, getLocale } from 'next-intl/server';
 import { TopBar } from '@/components/ui/TopBar';
 import { getServerClient } from '@/lib/supabase/server';
 import { AdminShell } from '@/components/ui/AdminShell';
@@ -13,10 +14,12 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import {
   ArchivedTeesSection,
   type ArchivedTeeRow,
+  type ArchivedTeesSectionStrings,
 } from './ArchivedTeesSection';
-import { formatShortDateNb } from '@/lib/format/date';
+import { formatShortDateLocale } from '@/lib/i18n/format';
 import { displayName, type DisplayNameUser } from '@/lib/format/displayName';
 import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
+import type { AppLocale } from '@/i18n/routing';
 
 // Buffer mellom created_at og updated_at som regnes som «samme transaksjon»
 // — eksisterende rader fra før 0037-migrasjonen fikk updated_at = now() ved
@@ -30,57 +33,37 @@ type SearchParams = Promise<{
   status?: string | string[];
 }>;
 
-const ERROR_MESSAGES: Record<string, string> = {
-  name_required: 'Banen må ha et navn.',
-  bad_par: 'Par må være et helt tall mellom 3 og 6 på hvert hull.',
-  bad_si: 'Stroke-indeks må være et helt tall mellom 1 og 18 på hvert hull.',
-  si_duplicate: 'Stroke-indeks 1–18 må brukes nøyaktig én gang hver.',
-  tee_required: 'Minst én tee-boks må legges til.',
-  tee_partial_rating:
-    'Hver tee må ha både slope og CR (eller ingen av dem) per kjønn. Du kan ikke lagre halve sett.',
-  tee_no_rating:
-    'Hver tee må ha minst ett komplett rating-sett per kjønn (Herrer / Damer / Junior).',
-  tee_not_found:
-    'Tee-en finnes ikke lenger. Last siden på nytt for å se oppdatert liste.',
-  tee_not_archived:
-    'Denne tee-en er ikke arkivert, så det er ingenting å gjenåpne.',
-  db_course:
-    'Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.',
-  db_holes:
-    'Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.',
-  db_tees:
-    'Klarte ikke å lagre banen. Prøv igjen, eller sjekk Supabase-loggene.',
-  db_load: 'Klarte ikke å lese banen fra databasen. Prøv igjen.',
-};
-
-const STATUS_MESSAGES: Record<string, string> = {
-  restored:
-    'Tee gjenåpnet. Den vises i listen igjen og kan velges for nye spill.',
-};
-
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
   return value;
 }
 
-function buildAuditKicker(course: {
-  created_at: string;
-  updated_at: string;
-  created_by_user: DisplayNameUser;
-  updated_by_user: DisplayNameUser;
-}): string {
+function buildAuditKicker(
+  course: {
+    created_at: string;
+    updated_at: string;
+    created_by_user: DisplayNameUser;
+    updated_by_user: DisplayNameUser;
+  },
+  t: Awaited<ReturnType<typeof getTranslations<'admin.courses.edit'>>>,
+  locale: AppLocale,
+): string {
   const created = new Date(course.created_at).getTime();
   const updated = new Date(course.updated_at).getTime();
   const wasUpdated = updated - created > SAME_TX_BUFFER_MS;
 
   if (wasUpdated) {
     const who = displayName(course.updated_by_user);
-    const when = formatShortDateNb(course.updated_at);
-    return who ? `Sist endret ${when} av ${who}` : `Sist endret ${when}`;
+    const when = formatShortDateLocale(course.updated_at, locale);
+    return who
+      ? t('kickerLastUpdatedBy', { date: when, who })
+      : t('kickerLastUpdated', { date: when });
   }
   const who = displayName(course.created_by_user);
-  const when = formatShortDateNb(course.created_at);
-  return who ? `Lagt til ${when} av ${who}` : `Lagt til ${when}`;
+  const when = formatShortDateLocale(course.created_at, locale);
+  return who
+    ? t('kickerAddedBy', { date: when, who })
+    : t('kickerAdded', { date: when });
 }
 
 const getEditCourseContext = cache(async () => {
@@ -97,12 +80,17 @@ export default async function EditCoursePage({
 }) {
   const { id } = await params;
   const { error: errorCode, status: statusCode } = await searchParams;
+
+  const t = await getTranslations('admin.courses');
+  const tEdit = await getTranslations('admin.courses.edit');
+  const tArchivedTees = await getTranslations('admin.courses.archivedTees');
+  const locale = (await getLocale()) as AppLocale;
+
   const errorMessage = errorCode
-    ? ERROR_MESSAGES[first(errorCode) ?? '']
+    ? tEdit(`errors.${first(errorCode) ?? ''}` as Parameters<typeof tEdit>[0])
     : undefined;
-  const statusMessage = statusCode
-    ? STATUS_MESSAGES[first(statusCode) ?? '']
-    : undefined;
+  const statusMessage =
+    first(statusCode) === 'restored' ? tEdit('statusRestored') : undefined;
 
   const { supabase } = await getEditCourseContext();
   // Page-level gate: trusted creators are allowed alongside admin (Fase 4).
@@ -126,7 +114,7 @@ export default async function EditCoursePage({
     notFound();
   }
 
-  const kicker = buildAuditKicker(course);
+  const kicker = buildAuditKicker(course, tEdit, locale);
 
   const archivedTees = await getArchivedTees(supabase, id);
 
@@ -137,7 +125,7 @@ export default async function EditCoursePage({
         kicker="Baner · protokoll"
       />
 
-      <BrassRibbon kicker="Rediger bane" />
+      <BrassRibbon kicker={tEdit('brassRibbon')} />
 
       <div className="px-1">
         <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
@@ -161,7 +149,7 @@ export default async function EditCoursePage({
       <div className="mt-5">
         <Card>
           <Suspense fallback={<CourseFormSkeleton />}>
-            <EditCourseFormBody courseId={id} courseName={course.name} />
+            <EditCourseFormBody courseId={id} courseName={course.name} submitLabel={tEdit('submitLabel')} />
           </Suspense>
         </Card>
       </div>
@@ -171,6 +159,15 @@ export default async function EditCoursePage({
           <ArchivedTeesSection
             courseId={id}
             archivedTees={archivedTees}
+            strings={{
+              summaryLabel: (count) => tArchivedTees('summaryLabel', { count }),
+              body: tArchivedTees('body'),
+              archivedDate: (date) => tArchivedTees('archivedDate', { date }),
+              nameConflict: tArchivedTees('nameConflict'),
+              reopenButton: tArchivedTees('reopenButton'),
+              reopeningBusy: tArchivedTees('reopeningBusy'),
+            }}
+            locale={locale}
           />
         </div>
       )}
@@ -184,7 +181,7 @@ export default async function EditCoursePage({
             borderColor: 'rgba(180, 60, 60, 0.3)',
           }}
         >
-          Slett bane
+          {tEdit('deleteLink')}
         </SmartLink>
       </div>
     </AdminShell>
@@ -229,9 +226,11 @@ async function getArchivedTees(
 async function EditCourseFormBody({
   courseId,
   courseName,
+  submitLabel,
 }: {
   courseId: string;
   courseName: string;
+  submitLabel: string;
 }) {
   const { supabase } = await getEditCourseContext();
   const [holesResult, teesResult, affectedGamesResult] = await Promise.all([
@@ -311,7 +310,7 @@ async function EditCourseFormBody({
     <CourseForm
       key={teeSetKey}
       action={updateAction}
-      submitLabel="Lagre endringer"
+      submitLabel={submitLabel}
       affectedGamesCount={affectedGamesCount}
       initialData={{
         name: courseName,

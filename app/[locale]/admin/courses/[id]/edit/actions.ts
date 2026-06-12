@@ -1,11 +1,13 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
 import { MAX_TEE_BOXES } from '@/app/[locale]/admin/courses/constants';
+import type { AppLocale } from '@/i18n/routing';
 
 type GenderRating = {
   slope: number | null;
@@ -49,11 +51,12 @@ function isPartiallyFilled(
 export async function updateCourse(courseId: string, formData: FormData) {
   const supabase = await getServerClient();
   const role = await requireAdminOrTrustedCreator(supabase);
+  const locale = (await getLocale()) as AppLocale;
 
   const editPath = `/admin/courses/${courseId}/edit`;
 
   const name = String(formData.get('name') ?? '').trim();
-  if (!name) redirect(`${editPath}?error=name_required`);
+  if (!name) redirect({ href: `${editPath}?error=name_required`, locale });
 
   const holes: {
     hole_number: number;
@@ -82,11 +85,11 @@ export async function updateCourse(courseId: string, formData: FormData) {
 
     for (const par of [parMens, parLadies, parJuniors]) {
       if (!Number.isInteger(par) || par < 3 || par > 6) {
-        redirect(`${editPath}?error=bad_par`);
+        redirect({ href: `${editPath}?error=bad_par`, locale });
       }
     }
     if (!Number.isInteger(si) || si < 1 || si > 18) {
-      redirect(`${editPath}?error=bad_si`);
+      redirect({ href: `${editPath}?error=bad_si`, locale });
     }
     holes.push({
       hole_number: i,
@@ -98,7 +101,7 @@ export async function updateCourse(courseId: string, formData: FormData) {
   }
 
   const siSet = new Set(holes.map((h) => h.stroke_index));
-  if (siSet.size !== 18) redirect(`${editPath}?error=si_duplicate`);
+  if (siSet.size !== 18) redirect({ href: `${editPath}?error=si_duplicate`, locale });
 
   // par_total per kjønn deriveres fra hullene per kjønn — auto-sync med
   // course_holes-radene som blir insertet. Når et kjønn ikke har avvik
@@ -144,7 +147,7 @@ export async function updateCourse(courseId: string, formData: FormData) {
     // Per-gender rating: each set must be all-filled or all-empty.
     for (const g of ['mens', 'ladies', 'juniors'] as const) {
       if (isPartiallyFilled(formData, i, g)) {
-        redirect(`${editPath}?error=tee_partial_rating`);
+        redirect({ href: `${editPath}?error=tee_partial_rating`, locale });
       }
     }
 
@@ -157,7 +160,7 @@ export async function updateCourse(courseId: string, formData: FormData) {
       !isCompleteRating(ladiesRating) &&
       !isCompleteRating(juniorsRating)
     ) {
-      redirect(`${editPath}?error=tee_no_rating`);
+      redirect({ href: `${editPath}?error=tee_no_rating`, locale });
     }
 
     const teeId = String(formData.get(`tee_${i}_id`) ?? '') || null;
@@ -176,7 +179,7 @@ export async function updateCourse(courseId: string, formData: FormData) {
       par_total_juniors: isCompleteRating(juniorsRating) ? parSumJuniors : null,
     });
   }
-  if (teeBoxes.length === 0) redirect(`${editPath}?error=tee_required`);
+  if (teeBoxes.length === 0) redirect({ href: `${editPath}?error=tee_required`, locale });
 
   // Eksisterende ikke-arkiverte tees. Arkiverte hopes over slik at
   // toDelete-utregningen ikke prøver å «slette» dem på nytt på hver lagring
@@ -186,7 +189,7 @@ export async function updateCourse(courseId: string, formData: FormData) {
     .select('id')
     .eq('course_id', courseId)
     .is('archived_at', null);
-  if (existingTeesError) redirect(`${editPath}?error=db_load`);
+  if (existingTeesError) redirect({ href: `${editPath}?error=db_load`, locale });
 
   const existingIds = new Set((existingTees ?? []).map((t) => t.id));
   const formIds = new Set(teeBoxes.filter((t) => t.id).map((t) => t.id!));
@@ -203,7 +206,7 @@ export async function updateCourse(courseId: string, formData: FormData) {
       .from('games')
       .select('tee_box_id')
       .in('tee_box_id', toDelete);
-    if (gameRefsError) redirect(`${editPath}?error=db_load`);
+    if (gameRefsError) redirect({ href: `${editPath}?error=db_load`, locale });
     const inUseIds = new Set(
       (gameRefs ?? [])
         .map((r) => r.tee_box_id)
@@ -227,7 +230,7 @@ export async function updateCourse(courseId: string, formData: FormData) {
       updated_by: role.userId,
     })
     .eq('id', courseId);
-  if (courseUpdateError) redirect(`${editPath}?error=db_course`);
+  if (courseUpdateError) redirect({ href: `${editPath}?error=db_course`, locale });
 
   // course_holes stays delete-and-reinsert: no FK from games/scores into
   // course_holes (scores use hole_number int), so safe to replace wholesale.
@@ -235,13 +238,13 @@ export async function updateCourse(courseId: string, formData: FormData) {
     .from('course_holes')
     .delete()
     .eq('course_id', courseId);
-  if (deleteHolesError) redirect(`${editPath}?error=db_holes`);
+  if (deleteHolesError) redirect({ href: `${editPath}?error=db_holes`, locale });
 
   const holesToInsert = holes.map((h) => ({ ...h, course_id: courseId }));
   const { error: insertHolesError } = await writeClient
     .from('course_holes')
     .insert(holesToInsert);
-  if (insertHolesError) redirect(`${editPath}?error=db_holes`);
+  if (insertHolesError) redirect({ href: `${editPath}?error=db_holes`, locale });
 
   for (const tee of teeBoxes) {
     const row = {
@@ -263,10 +266,10 @@ export async function updateCourse(courseId: string, formData: FormData) {
         .from('tee_boxes')
         .update(row)
         .eq('id', tee.id);
-      if (error) redirect(`${editPath}?error=db_tees`);
+      if (error) redirect({ href: `${editPath}?error=db_tees`, locale });
     } else {
       const { error } = await writeClient.from('tee_boxes').insert(row);
-      if (error) redirect(`${editPath}?error=db_tees`);
+      if (error) redirect({ href: `${editPath}?error=db_tees`, locale });
     }
   }
 
@@ -275,17 +278,17 @@ export async function updateCourse(courseId: string, formData: FormData) {
       .from('tee_boxes')
       .delete()
       .in('id', toHardDelete);
-    if (error) redirect(`${editPath}?error=db_tees`);
+    if (error) redirect({ href: `${editPath}?error=db_tees`, locale });
   }
   if (toArchive.length > 0) {
     const { error } = await writeClient
       .from('tee_boxes')
       .update({ archived_at: new Date().toISOString() })
       .in('id', toArchive);
-    if (error) redirect(`${editPath}?error=db_tees`);
+    if (error) redirect({ href: `${editPath}?error=db_tees`, locale });
   }
 
-  redirect(`/admin/courses?status=updated&name=${encodeURIComponent(name)}`);
+  redirect({ href: `/admin/courses?status=updated&name=${encodeURIComponent(name)}`, locale });
 }
 
 export async function restoreTee(
@@ -295,6 +298,7 @@ export async function restoreTee(
 ) {
   const supabase = await getServerClient();
   const role = await requireAdminOrTrustedCreator(supabase);
+  const locale = (await getLocale()) as AppLocale;
   const editPath = `/admin/courses/${courseId}/edit`;
 
   // Verify tee belongs to the right course — defends against forged POSTs
@@ -304,9 +308,9 @@ export async function restoreTee(
     .select('id, course_id, archived_at')
     .eq('id', teeId)
     .maybeSingle();
-  if (loadError || !tee) redirect(`${editPath}?error=tee_not_found`);
-  if (tee.course_id !== courseId) redirect(`${editPath}?error=tee_not_found`);
-  if (tee.archived_at === null) redirect(`${editPath}?error=tee_not_archived`);
+  if (loadError || !tee) redirect({ href: `${editPath}?error=tee_not_found`, locale });
+  if (tee!.course_id !== courseId) redirect({ href: `${editPath}?error=tee_not_found`, locale });
+  if (tee!.archived_at === null) redirect({ href: `${editPath}?error=tee_not_archived`, locale });
 
   // Writes bypass RLS via admin-client for trusted-non-admin (same pattern
   // as updateCourse).
@@ -316,7 +320,7 @@ export async function restoreTee(
     .from('tee_boxes')
     .update({ archived_at: null })
     .eq('id', teeId);
-  if (restoreError) redirect(`${editPath}?error=db_tees`);
+  if (restoreError) redirect({ href: `${editPath}?error=db_tees`, locale });
 
   // Restore is a course change → bump audit fields on courses, same pattern
   // as updateCourse.
@@ -327,7 +331,7 @@ export async function restoreTee(
       updated_by: role.userId,
     })
     .eq('id', courseId);
-  if (courseUpdateError) redirect(`${editPath}?error=db_course`);
+  if (courseUpdateError) redirect({ href: `${editPath}?error=db_course`, locale });
 
   // Invalidate route caches so CourseForm's tee-list fetch refetches fresh:
   // without this, the next render of the edit page may serve the cached
@@ -339,12 +343,13 @@ export async function restoreTee(
   revalidatePath('/admin/courses');
   revalidatePath('/admin/games/new');
 
-  redirect(`${editPath}?status=restored`);
+  redirect({ href: `${editPath}?status=restored`, locale });
 }
 
 export async function deleteCourse(courseId: string) {
   const supabase = await getServerClient();
   const role = await requireAdminOrTrustedCreator(supabase);
+  const locale = (await getLocale()) as AppLocale;
 
   // Guard: refuse to delete if any games reference this course. Avoids
   // surprising FK-violation errors and preserves history.
@@ -356,10 +361,10 @@ export async function deleteCourse(courseId: string) {
     .eq('course_id', courseId)
     .limit(1);
   if (gameUsageError) {
-    redirect('/admin/courses?error=delete_failed');
+    redirect({ href: '/admin/courses?error=delete_failed', locale });
   }
   if (gameUsage && gameUsage.length > 0) {
-    redirect('/admin/courses?error=in_use');
+    redirect({ href: '/admin/courses?error=in_use', locale });
   }
 
   // Ownership-check for trusted-non-admin: they can only delete courses
@@ -373,7 +378,7 @@ export async function deleteCourse(courseId: string) {
       .eq('id', courseId)
       .maybeSingle();
     if (!course || course.created_by !== role.userId) {
-      redirect('/admin/courses?error=not_owned');
+      redirect({ href: '/admin/courses?error=not_owned', locale });
     }
   }
 
@@ -387,8 +392,8 @@ export async function deleteCourse(courseId: string) {
     .delete()
     .eq('id', courseId);
   if (deleteError) {
-    redirect('/admin/courses?error=delete_failed');
+    redirect({ href: '/admin/courses?error=delete_failed', locale });
   }
 
-  redirect('/admin/courses?status=deleted');
+  redirect({ href: '/admin/courses?status=deleted', locale });
 }
