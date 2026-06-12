@@ -15,6 +15,7 @@ export async function deleteOwnAccount() {
 
   if (!user) {
     redirect({ href: '/login', locale });
+    return; // unreachable — i18n redirect throws but isn't typed `never`
   }
 
   // Block if the user is in any active or scheduled game

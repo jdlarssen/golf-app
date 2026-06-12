@@ -43,6 +43,7 @@ export async function sendFriendInvite(formData: FormData) {
 
   if (!user) {
     redirect({ href: '/login', locale });
+    return; // unreachable — i18n redirect throws but isn't typed `never`
   }
 
   // Look up inviter profile. If the inviter hasn't completed their own
@@ -57,6 +58,7 @@ export async function sendFriendInvite(formData: FormData) {
 
   if (profileError || !profile) {
     redirect({ href: '/profile?invite_error=unknown', locale });
+    return;
   }
   if (!profile.profile_completed_at) {
     redirect({ href: '/complete-profile', locale });

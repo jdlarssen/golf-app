@@ -66,6 +66,7 @@ export async function updateProfile(formData: FormData) {
 
   if (!user) {
     redirect({ href: '/login', locale });
+    return; // unreachable — i18n redirect throws but isn't typed `never`
   }
 
   // Defence-in-depth: if a user somehow reaches /profile without
