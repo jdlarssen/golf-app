@@ -1,5 +1,5 @@
 import { Suspense, cache } from 'react';
-import { getLocale } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { formatDateTime } from '@/lib/i18n/format';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound } from 'next/navigation';
@@ -41,10 +41,6 @@ import {
   reopenGame,
   adminUndoWithdraw,
 } from './actions';
-import {
-  ERROR_MESSAGES_EXISTING_GAME,
-  buildErrorMessage as buildGameErrorMessage,
-} from '@/lib/admin/gameErrorMessages';
 import {
   getRatingForGender,
   type TeeBoxRatings,
@@ -99,12 +95,6 @@ function first(value: string | string[] | undefined): string | undefined {
   return value;
 }
 
-function buildErrorMessage(
-  errorCode: string | undefined,
-  emails: string | undefined,
-): string | undefined {
-  return buildGameErrorMessage(ERROR_MESSAGES_EXISTING_GAME, errorCode, emails);
-}
 
 function shortNb(iso: string | null | undefined): string | null {
   if (!iso) return null;
@@ -203,7 +193,17 @@ export default async function GameDetailPage({
   const { id } = await params;
   const sp = await searchParams;
   const statusBanner = STATUS_BANNERS[first(sp.status) ?? ''] ?? undefined;
-  const errorMessage = buildErrorMessage(first(sp.error), first(sp.emails));
+
+  const tErrors = await getTranslations('admin.game.errors');
+  const errorCode = first(sp.error);
+  const emails = first(sp.emails);
+  function buildErrorMessage(): string | undefined {
+    if (!errorCode) return undefined;
+    const key = `${errorCode}` as Parameters<typeof tErrors>[0];
+    if (!tErrors.has(key)) return undefined;
+    return tErrors(key, { list: emails ? `: ${emails}` : '' });
+  }
+  const errorMessage = buildErrorMessage();
 
   const { supabase } = await getAdminGameContext();
   // Self-gate for Fase 4 chunk 2 layout-loosening (#223). Runs before the

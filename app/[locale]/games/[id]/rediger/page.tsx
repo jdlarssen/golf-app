@@ -15,10 +15,6 @@ import {
   publishFromDraftAction,
   updateScheduledAction,
 } from '@/app/[locale]/admin/games/[id]/edit/actions';
-import {
-  ERROR_MESSAGES_NEW_GAME,
-  buildErrorMessage as buildGameErrorMessage,
-} from '@/lib/admin/gameErrorMessages';
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
 import {
   buildEditInitialValues,
@@ -66,11 +62,17 @@ export default async function CreatorEditGamePage({
   const sp = await searchParams;
   const t = await getTranslations('game.edit');
   const locale = await getLocale();
-  const errorMessage = buildGameErrorMessage(
-    ERROR_MESSAGES_NEW_GAME,
-    first(sp.error),
-    first(sp.emails),
-  );
+
+  const tErrors = await getTranslations('wizard.errors');
+  const errorCode = first(sp.error);
+  const emails = first(sp.emails);
+  function buildErrorMessage(): string | undefined {
+    if (!errorCode) return undefined;
+    const key = `${errorCode}` as Parameters<typeof tErrors>[0];
+    if (!tErrors.has(key)) return undefined;
+    return tErrors(key, { list: emails ? `: ${emails}` : '' });
+  }
+  const errorMessage = buildErrorMessage();
 
   const supabase = await getServerClient();
   const role = await requireAdminOrCreator(supabase, id);
