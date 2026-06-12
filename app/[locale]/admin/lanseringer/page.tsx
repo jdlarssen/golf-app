@@ -1,4 +1,5 @@
 import { Suspense, cache } from 'react';
+import { getTranslations, getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/admin/auth';
@@ -10,9 +11,10 @@ import { SubmitButton } from '@/components/ui/SubmitButton';
 import { Input } from '@/components/ui/Input';
 import { MiniRibbon } from '@/components/ui/MiniRibbon';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { formatShortDateNbWithYear } from '@/lib/format/date';
+import { formatShortDateWithYearLocale } from '@/lib/i18n/format';
 import { previousMonthPeriod } from '@/lib/productUpdates/digest';
 import { publishProductUpdateAction, sendDigestNowAction } from './actions';
+import type { AppLocale } from '@/i18n/routing';
 
 type SearchParams = Promise<{
   published?: string | string[];
@@ -21,15 +23,6 @@ type SearchParams = Promise<{
   updates?: string | string[];
   error?: string | string[];
 }>;
-
-const ERROR_MESSAGES: Record<string, string> = {
-  title_required: 'Du må fylle inn en tittel.',
-  body_required: 'Du må fylle inn brødtekst.',
-  link_must_be_internal: 'Lenke må peke til en intern rute (starte med «/»).',
-  cta_without_link: 'Knappe-tekst krever at du også fyller inn en lenke.',
-  publish_failed: 'Klarte ikke å publisere. Sjekk Vercel-loggene.',
-  digest_failed: 'Klarte ikke å sende månedsbrev. Sjekk Vercel-loggene.',
-};
 
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
@@ -53,34 +46,41 @@ export default async function LanseringerPage({
   await requireAdminContext();
   const params = await searchParams;
 
+  const t = await getTranslations('admin.launches');
+  const tNav = await getTranslations('admin.nav');
+
   const publishedFlag = first(params.published);
   const publishedCount = first(params.recipients);
   const digestStatus = first(params.digest);
   const digestUpdates = first(params.updates);
   const errorCode = first(params.error);
-  const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
+  const errorMessage = errorCode
+    ? t(`errors.${errorCode}` as Parameters<typeof t>[0])
+    : undefined;
 
   const successMessage = publishedFlag
-    ? `Lanseringen er ute hos ${publishedCount ?? '0'} brukere.`
+    ? t('success.published', { count: Number(publishedCount ?? '0') })
     : digestStatus === 'sent'
-      ? `Månedsbrevet gikk ut til ${publishedCount ?? '0'} mottakere med ${digestUpdates ?? '0'} oppdateringer.`
+      ? t('success.digestSent', {
+          count: Number(publishedCount ?? '0'),
+          updates: Number(digestUpdates ?? '0'),
+        })
       : digestStatus === 'already_sent'
-        ? 'Månedsbrevet er allerede sendt for forrige periode.'
+        ? t('success.digestAlreadySent')
         : digestStatus === 'no_updates'
-          ? 'Ingen lanseringer å sende ut for forrige måned. Hopper over.'
+          ? t('success.digestNoUpdates')
           : undefined;
 
   return (
     <AdminShell>
-      <TopBar backHref="/admin" kicker="Klubbhuset" />
+      <TopBar backHref="/admin" kicker={tNav('klubbhus')} />
 
       <div className="px-1">
         <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-          Lanseringer
+          {t('title')}
         </h1>
         <p className="font-sans text-[11.5px] text-muted">
-          Publiser nyheter til brukerne dine — som drypp i appen og månedlig
-          oppsummering på mail.
+          {t('subtitle')}
         </p>
       </div>
 
@@ -92,15 +92,15 @@ export default async function LanseringerPage({
       )}
 
       <section className="mt-5">
-        <MiniRibbon>Publiser ny lansering</MiniRibbon>
+        <MiniRibbon>{t('publishSection')}</MiniRibbon>
         <Card>
           <form action={publishProductUpdateAction} className="space-y-4">
             <Input
               id="title"
               name="title"
               type="text"
-              label="Tittel"
-              hint="Kort og konkret. Eks: «Texas scramble er ute!»"
+              label={t('titleLabel')}
+              hint={t('titleHint')}
               required
               maxLength={120}
             />
@@ -109,7 +109,7 @@ export default async function LanseringerPage({
                 htmlFor="body"
                 className="block text-sm font-medium text-text mb-1.5"
               >
-                Brødtekst
+                {t('bodyLabel')}
               </label>
               <textarea
                 id="body"
@@ -118,19 +118,18 @@ export default async function LanseringerPage({
                 rows={3}
                 maxLength={400}
                 className="block w-full rounded-lg border border-border bg-surface px-3 py-2 text-text placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
-                placeholder="Hva er nytt? 1–3 setninger. Forklar på vanlig norsk."
+                placeholder={t('bodyPlaceholder')}
               />
               <p className="mt-1.5 text-xs text-muted">
-                Maks 400 tegn. Hold tonen som du ville skrevet til en
-                klubbkompis.
+                {t('bodyHint')}
               </p>
             </div>
             <Input
               id="link"
               name="link"
               type="text"
-              label="Lenke (valgfri)"
-              hint="Intern rute, må starte med «/». F.eks. /admin/games/new"
+              label={t('linkLabel')}
+              hint={t('linkHint')}
               pattern="^/.*"
               maxLength={200}
             />
@@ -138,26 +137,26 @@ export default async function LanseringerPage({
               id="cta_label"
               name="cta_label"
               type="text"
-              label="Knappe-tekst (valgfri)"
-              hint="Vises kun når lenke er fylt inn. F.eks. «Prøv det», «Se mer»."
+              label={t('ctaLabel')}
+              hint={t('ctaHint')}
               maxLength={40}
             />
             <div className="pt-1">
-              <SubmitButton pendingLabel="Publiserer …">Publiser</SubmitButton>
+              <SubmitButton pendingLabel={t('publishingBusy')}>{t('publishButton')}</SubmitButton>
             </div>
           </form>
         </Card>
       </section>
 
       <section className="mt-6">
-        <MiniRibbon>Månedsbrev</MiniRibbon>
+        <MiniRibbon>{t('digestSection')}</MiniRibbon>
         <Suspense fallback={<DigestSkeleton />}>
           <DigestCard />
         </Suspense>
       </section>
 
       <section className="mt-6">
-        <MiniRibbon>Tidligere lanseringer</MiniRibbon>
+        <MiniRibbon>{t('previousSection')}</MiniRibbon>
         <Suspense fallback={<ListSkeleton />}>
           <PreviousUpdatesList />
         </Suspense>
@@ -168,6 +167,8 @@ export default async function LanseringerPage({
 
 async function DigestCard() {
   const admin = getAdminClient();
+  const t = await getTranslations('admin.launches');
+  const locale = (await getLocale()) as AppLocale;
   const { periodStart, periodEnd, periodLabel } = previousMonthPeriod();
 
   const { data: existing } = await admin
@@ -180,22 +181,23 @@ async function DigestCard() {
   return (
     <Card>
       <p className="font-serif text-base font-medium text-text">
-        Månedsbrev for {periodLabel}
+        {t('digestHeading', { periodLabel })}
       </p>
       {existing ? (
         <p className="mt-1 font-sans text-sm text-muted">
-          Sendt {formatShortDateNbWithYear(existing.sent_at)} til{' '}
-          {existing.recipient_count} mottakere.
+          {t('digestSentLine', {
+            date: formatShortDateWithYearLocale(existing.sent_at, locale),
+            count: existing.recipient_count,
+          })}
         </p>
       ) : (
         <p className="mt-1 font-sans text-sm text-muted">
-          Ikke sendt ennå. Cron sender automatisk 1. i hver måned, men du kan
-          sende manuelt nå hvis du vil.
+          {t('digestNotSentYet')}
         </p>
       )}
       {!existing && (
         <form action={sendDigestNowAction} className="mt-4">
-          <SubmitButton pendingLabel="Sender …">Send månedsbrev nå</SubmitButton>
+          <SubmitButton pendingLabel={t('sendingBusy')}>{t('sendDigestButton')}</SubmitButton>
         </form>
       )}
     </Card>
@@ -213,6 +215,8 @@ function DigestSkeleton() {
 
 async function PreviousUpdatesList() {
   const admin = getAdminClient();
+  const t = await getTranslations('admin.launches');
+  const locale = (await getLocale()) as AppLocale;
 
   const { data: updates } = await admin
     .from('product_updates')
@@ -234,8 +238,7 @@ async function PreviousUpdatesList() {
     return (
       <Card>
         <p className="font-sans text-sm text-muted">
-          Ingen lanseringer publisert ennå. Bruk skjemaet over for å publisere
-          den første.
+          {t('emptyPrevious')}
         </p>
       </Card>
     );
@@ -254,7 +257,7 @@ async function PreviousUpdatesList() {
                 dateTime={u.created_at}
                 className="shrink-0 font-sans text-[11px] tabular-nums text-muted"
               >
-                {formatShortDateNbWithYear(u.created_at)}
+                {formatShortDateWithYearLocale(u.created_at, locale)}
               </time>
             </div>
             <p className="mt-1.5 font-sans text-sm text-muted">{u.body}</p>

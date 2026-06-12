@@ -1,11 +1,13 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { getLocale } from 'next-intl/server';
+import { redirect } from '@/i18n/navigation';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
 import { publishProductUpdate } from '@/lib/productUpdates/publish';
 import { sendDigestForPeriod } from '@/lib/productUpdates/digest';
+import type { AppLocale } from '@/i18n/routing';
 
 /**
  * Self-gate + return `{ userId }` for the lanseringer-actions. Wraps the
@@ -19,10 +21,8 @@ async function loadAdminContext() {
   return { userId: role.userId };
 }
 
-const ERROR_REDIRECT = (code: string) =>
-  redirect(`/admin/lanseringer?error=${encodeURIComponent(code)}`);
-
 export async function publishProductUpdateAction(formData: FormData) {
+  const locale = (await getLocale()) as AppLocale;
   const { userId } = await loadAdminContext();
 
   const title = String(formData.get('title') ?? '').trim();
@@ -30,15 +30,15 @@ export async function publishProductUpdateAction(formData: FormData) {
   const linkRaw = String(formData.get('link') ?? '').trim();
   const ctaRaw = String(formData.get('cta_label') ?? '').trim();
 
-  if (!title) ERROR_REDIRECT('title_required');
-  if (!body) ERROR_REDIRECT('body_required');
+  if (!title) redirect({ href: '/admin/lanseringer?error=title_required', locale });
+  if (!body) redirect({ href: '/admin/lanseringer?error=body_required', locale });
 
   // Link, if present, must be internal (starts with '/') — same guard
   // the Zod schema enforces for the notification payload.
-  if (linkRaw && !linkRaw.startsWith('/')) ERROR_REDIRECT('link_must_be_internal');
+  if (linkRaw && !linkRaw.startsWith('/')) redirect({ href: '/admin/lanseringer?error=link_must_be_internal', locale });
 
   // cta_label only meaningful with a link
-  if (ctaRaw && !linkRaw) ERROR_REDIRECT('cta_without_link');
+  if (ctaRaw && !linkRaw) redirect({ href: '/admin/lanseringer?error=cta_without_link', locale });
 
   try {
     const result = await publishProductUpdate({
@@ -50,20 +50,22 @@ export async function publishProductUpdateAction(formData: FormData) {
     });
 
     revalidatePath('/admin/lanseringer');
-    redirect(
-      `/admin/lanseringer?published=1&recipients=${result.recipientCount}`,
-    );
+    redirect({
+      href: `/admin/lanseringer?published=1&recipients=${result.recipientCount}`,
+      locale,
+    });
   } catch (err) {
     // redirect() i Next.js kaster en spesiell error som vi MÅ slippe gjennom.
     if (err instanceof Error && err.message.includes('NEXT_REDIRECT')) {
       throw err;
     }
     console.error('[publishProductUpdateAction]', err);
-    ERROR_REDIRECT('publish_failed');
+    redirect({ href: '/admin/lanseringer?error=publish_failed', locale });
   }
 }
 
 export async function sendDigestNowAction() {
+  const locale = (await getLocale()) as AppLocale;
   const { userId } = await loadAdminContext();
 
   try {
@@ -71,19 +73,23 @@ export async function sendDigestNowAction() {
     revalidatePath('/admin/lanseringer');
 
     if (result.kind === 'already_sent') {
-      redirect(`/admin/lanseringer?digest=already_sent`);
+      redirect({ href: '/admin/lanseringer?digest=already_sent', locale });
     }
     if (result.kind === 'no_updates') {
-      redirect(`/admin/lanseringer?digest=no_updates`);
+      redirect({ href: '/admin/lanseringer?digest=no_updates', locale });
     }
-    redirect(
-      `/admin/lanseringer?digest=sent&recipients=${result.recipientCount}&updates=${result.updateCount}`,
-    );
+    // TypeScript cannot narrow past next-intl redirect (not declared `never`);
+    // assert the `sent` branch explicitly after the two guard redirects above.
+    const sent = result as Extract<typeof result, { kind: 'sent' }>;
+    redirect({
+      href: `/admin/lanseringer?digest=sent&recipients=${sent.recipientCount}&updates=${sent.updateCount}`,
+      locale,
+    });
   } catch (err) {
     if (err instanceof Error && err.message.includes('NEXT_REDIRECT')) {
       throw err;
     }
     console.error('[sendDigestNowAction]', err);
-    ERROR_REDIRECT('digest_failed');
+    redirect({ href: '/admin/lanseringer?error=digest_failed', locale });
   }
 }
