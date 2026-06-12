@@ -20,6 +20,7 @@ import { HandicapChip } from '@/components/handicap/HandicapChip';
 import { firstName } from '@/lib/firstName';
 import { formatTeeOffDate, formatTeeOffTime } from '@/lib/format/teeOff';
 import { STATUS_LABELS } from '@/lib/games/status';
+import { byEndedAtDesc } from '@/lib/games/finishedOrder';
 import { HomeDiscoverySection } from './HomeDiscoverySection';
 import { getDiscoverableGames } from '@/lib/games/getDiscoverableGames';
 
@@ -135,7 +136,6 @@ async function HomeBody() {
       )
       .eq('user_id', userId!)
       .eq('games.status', 'finished')
-      .order('ended_at', { foreignTable: 'games', ascending: false })
       .returns<GameRow[]>(),
   ]);
 
@@ -160,6 +160,8 @@ async function HomeBody() {
       flightNumber: row.flight_number,
     }));
 
+  // Sorted in JS: supabase-js' foreignTable-order is a no-op for to-one
+  // embeds, so the rows arrive in physical Postgres order (#569).
   const finishedGames = (rawFinishedRes.data ?? [])
     .filter((row): row is GameRow & { games: NonNullable<GameRow['games']> } =>
       row.games != null,
@@ -168,7 +170,8 @@ async function HomeBody() {
       ...row.games,
       teamNumber: row.team_number,
       flightNumber: row.flight_number,
-    }));
+    }))
+    .sort(byEndedAtDesc);
 
   const isEmptyState =
     activeGames.length === 0 && finishedGames.length === 0;

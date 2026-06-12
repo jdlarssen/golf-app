@@ -21,6 +21,20 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#566](https://github.com/jdlarssen/golf-app/issues/566), del av epic [#60](https://github.com/jdlarssen/golf-app/issues/60). Fase 2d av flerspråkligheten: klubb-, liga- og cup-flatene (admin og spiller) hentes fra omsettbare kataloger og finnes nå på engelsk — klubbrom og medlemskap, ligastyring med tabeller, cup-styring med matchgenerator, og Klubbhuset.
 
+### [1.117.2] - 2026-06-13 · #569
+
+> «Avsluttede spill» på hjem-siden viser nå nyeste runde øverst. Før sto lista i tilfeldig rekkefølge, så ferske runder kunne havne helt nederst.
+
+<details>
+<summary>Teknisk</summary>
+
+[#569](https://github.com/jdlarssen/golf-app/issues/569). Finished-spørringen i `app/[locale]/page.tsx` brukte `.order('ended_at', { foreignTable: 'games' })`, som per supabase-js kun sorterer rader *inne i* den embeddede ressursen — en no-op for to-one-embeds som `games!inner(...)`. Topp-nivå-radene kom derfor i fysisk Postgres-rekkefølge.
+
+#### Fixed
+- Hjem-sidens «Avsluttede spill» sorteres nå i JS etter fetch via ny ren komparator `byEndedAtDesc` i `lib/games/finishedOrder.ts` (nyeste `ended_at` først, `null` sist), med co-lokalisert Type A-test på prod-fixturen fra issuet. No-op-`order`-kallet er fjernet. Sweep bekreftet at ingen andre spørringer bruker `foreignTable`-order-mønsteret.
+
+</details>
+
 ### [1.117.1] - 2026-06-13 · bug
 
 > Leaderboardet ga serverfeil i mange spillformer (matchplay, skins, nassau og flere) etter en språk-oppdatering tidligere denne uka. Nå virker alle visningene igjen.
