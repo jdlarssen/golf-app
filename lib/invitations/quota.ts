@@ -26,19 +26,6 @@ export function timeUntilStructured(target: Date): TimeUntilResult {
   return { kind: 'minutes', n: minutes };
 }
 
-/**
- * Norwegian string formatting for time-until — kept for backward compatibility
- * with existing tests and the profile page (migrated to catalog in chunk 3).
- *
- * @deprecated Use `timeUntilStructured` + catalog translation at call-site.
- */
-export function formatTimeUntil(target: Date): string {
-  const result = timeUntilStructured(target);
-  if (result.kind === 'soon') return 'snart';
-  if (result.kind === 'hours') return `${result.n} t`;
-  return `${result.n} min`;
-}
-
 export const DAILY_INVITE_LIMIT = 10;
 export const QUOTA_WINDOW_MS = 24 * 60 * 60 * 1000;
 
