@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   buildSupabaseMock,
-  makeRedirectMock,
+  makeLocaleRedirectMock,
   RedirectError,
 } from '@/tests/serverActionMocks';
 
@@ -20,9 +20,13 @@ import {
  *  - inviter-self: no notify.
  */
 
-const redirectMock = makeRedirectMock();
-vi.mock('next/navigation', () => ({
-  redirect: (url: string) => redirectMock(url),
+const redirectMock = makeLocaleRedirectMock();
+vi.mock('@/i18n/navigation', () => ({
+  redirect: (arg: { href: string; locale?: string } | string) =>
+    redirectMock(arg),
+}));
+vi.mock('next-intl/server', () => ({
+  getLocale: async () => 'no',
 }));
 
 const revalidateTagMock = vi.fn();
@@ -75,7 +79,9 @@ const CREATOR_ROLE_READ = {
 const CREATOR_OWNS_GAME = { data: { created_by: CREATOR_ID }, error: null } as const;
 
 function lastRedirect(): string | undefined {
-  return redirectMock.mock.calls.at(-1)?.[0];
+  const arg = redirectMock.mock.calls.at(-1)?.[0];
+  if (!arg) return undefined;
+  return typeof arg === 'string' ? arg : arg.href;
 }
 
 function formData(entries: Record<string, string>): FormData {

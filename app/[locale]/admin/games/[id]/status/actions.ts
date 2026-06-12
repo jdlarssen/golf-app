@@ -1,6 +1,7 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -27,6 +28,7 @@ type PlayerRow = {
  * samme spillerne.
  */
 export async function remindUnsubmittedPlayers(gameId: string) {
+  const locale = await getLocale();
   const supabase = await getServerClient();
   await requireAdmin(supabase);
 
@@ -39,7 +41,7 @@ export async function remindUnsubmittedPlayers(gameId: string) {
     .single<{ id: string; name: string; status: string }>();
 
   if (!game || game.status !== 'active') {
-    redirect(`${statusPath}?error=not_active`);
+    redirect({ href: `${statusPath}?error=not_active`, locale });
   }
 
   const [playersRes, scoresRes] = await Promise.all([
@@ -97,7 +99,7 @@ export async function remindUnsubmittedPlayers(gameId: string) {
   }
 
   revalidatePath(statusPath);
-  redirect(`${statusPath}?status=reminded&count=${targets.length}`);
+  redirect({ href: `${statusPath}?status=reminded&count=${targets.length}`, locale });
 }
 
 type UnconfirmedPlayerRow = {
@@ -115,6 +117,7 @@ type UnconfirmedPlayerRow = {
  * Avbryter aldri på notify-feil.
  */
 export async function remindUnconfirmedPlayers(gameId: string) {
+  const locale = await getLocale();
   const supabase = await getServerClient();
   await requireAdmin(supabase);
 
@@ -127,7 +130,7 @@ export async function remindUnconfirmedPlayers(gameId: string) {
     .single<{ id: string; name: string; created_by: string | null }>();
 
   if (!game) {
-    redirect(`${statusPath}?error=not_found`);
+    redirect({ href: `${statusPath}?error=not_found`, locale });
   }
 
   const { data: players } = await supabase
@@ -143,12 +146,12 @@ export async function remindUnconfirmedPlayers(gameId: string) {
 
   // Lookup creator name for the notification message. Falls back to 'Tørny'.
   let adderName = 'Tørny';
-  if (game.created_by) {
+  if (game!.created_by) {
     const admin = getAdminClient();
     const { data: creator } = await admin
       .from('users')
       .select('name, email')
-      .eq('id', game.created_by)
+      .eq('id', game!.created_by)
       .maybeSingle<{ name: string | null; email: string | null }>();
     if (creator) {
       adderName = creator.name ?? creator.email ?? 'Tørny';
@@ -172,5 +175,5 @@ export async function remindUnconfirmedPlayers(gameId: string) {
   );
 
   revalidatePath(statusPath);
-  redirect(`${statusPath}?status=reminded_unconfirmed&count=${unconfirmed.length}`);
+  redirect({ href: `${statusPath}?status=reminded_unconfirmed&count=${unconfirmed.length}`, locale });
 }

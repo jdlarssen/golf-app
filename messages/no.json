@@ -2145,6 +2145,157 @@
         "moveButton": "Flytt",
         "flightAriaLabel": "Flight for {name}",
         "flightOptionN": "Flight {n}"
+      },
+      "edit": {
+        "kicker": "Rediger spill",
+        "subtitle": "Endre bane, spillere, lag eller innstillinger",
+        "bannerDraft": "Spillet er fortsatt et utkast, så bare du ser det. Fyll inn det som mangler og publiser når dere er klare.",
+        "bannerScheduled": "Spillet er i planlagt-fasen. Spillerne ser endringene neste gang de åpner appen.",
+        "playerShortageBanner": "Du trenger 8 registrerte spillere for best ball. Inviter flere fra <link>Spillere</link>-siden."
+      },
+      "delete": {
+        "kicker": "Bekreft sletting",
+        "heading": "Slett «{name}»?",
+        "permanentLabel": "Slettes permanent",
+        "cannotUndo": "Handlingen kan ikke angres.",
+        "buttonActive": "Slett pågående spill for alltid",
+        "buttonDefault": "Slett spillet for alltid",
+        "deletingBusy": "Sletter …",
+        "cancel": "Avbryt",
+        "errors": {
+          "delete_failed": "Slettingen feilet. Prøv igjen, eller sjekk Vercel-loggene."
+        },
+        "warnings": {
+          "scheduled": "Spillet er planlagt og spillerne er invitert. De får ingen melding om at det er kansellert. Du må evt. si fra selv.",
+          "active": "Spillet pågår nå. Sletting fjerner alle slag som er registrert så langt, og spillerne mister runden sin uten varsel.",
+          "finished": "Spillet er avsluttet. Leaderboard og resultater forsvinner permanent. Spillere som har bokmerket lenken får 404."
+        },
+        "players": "{count, plural, one {# spiller i spillet} other {# spillere i spillet}}",
+        "scoreRows": "{count, plural, one {# slaggerad} other {# slaggerader}}",
+        "invitations": "{count, plural, one {# invitasjon knyttet til spillet} other {# invitasjoner knyttet til spillet}}"
+      },
+      "finish": {
+        "topBarKicker": "Avslutt spillet",
+        "title": "Avslutt spill",
+        "subtitle": "Velg sideturnerings-vinnere for «{name}». Spillet låses når du bekrefter.",
+        "missingHeader": "{count, plural, one {1 spiller har ikke levert:} other {{count} spillere har ikke levert:}}",
+        "missingBody": "Avslutter du nå, blir disse stående som <bold>ikke levert</bold>. Scorene deres teller fortsatt i resultatet."
+      },
+      "sideWinners": {
+        "validationError": "Du må velge vinner i alle feltene før du kan avslutte.",
+        "longestDriveLabel": "Longest drive",
+        "longestDriveSlot": "Longest drive #{pos}",
+        "closestToPinLabel": "Closest to pin",
+        "closestToPinSlot": "Closest to pin #{pos}",
+        "selectWinner": "— Velg vinner —",
+        "noQualified": "Ingen kvalifiserte",
+        "submitButton": "Avslutt spillet og publiser sideturneringen",
+        "submittingBusy": "Lagrer …",
+        "cancel": "Avbryt"
+      },
+      "finishAnyway": {
+        "topBarKicker": "Avslutt spillet",
+        "title": "Avslutt likevel?",
+        "subtitle": "Noen har ikke levert scorekort i «{name}».",
+        "missingHeader": "{count, plural, one {1 spiller har ikke levert:} other {{count} spillere har ikke levert:}}",
+        "markWithdrawn": "Marker som trukket",
+        "bodyWithWd": "Avslutter du nå, blir spillere uten hake stående som <notDelivered>ikke levert</notDelivered>. Scorene de rakk å registrere teller fortsatt i resultatet. Spillere med hake markeres som <withdrawn>Trukket</withdrawn> og teller ikke i rangeringen. Du kan angre trekk etterpå ved å åpne spillet igjen. Resten låses og leaderboard åpnes for alle.",
+        "bodyNoWd": "Avslutter du nå, blir disse stående som <notDelivered>ikke levert</notDelivered>. Scorene de rakk å registrere teller fortsatt i resultatet. Resten låses og leaderboard åpnes for alle.",
+        "submitButton": "Avslutt likevel",
+        "submittingBusy": "Avslutter …",
+        "cancel": "Avbryt"
+      },
+      "status": {
+        "brassRibbon": "Spillerstatus",
+        "topBarKicker": "Spillerstatus",
+        "heading": "Spillere",
+        "deliveredSummary": "Levert {delivered} / {total}",
+        "readyMissingDelivery": "{count, plural, one {· # ferdig mangler levering} other {· # ferdige mangler levering}}",
+        "emptyState": "Ingen spillere ennå.",
+        "lastAction": "Siste registrering {relative}",
+        "noActions": "Ingen registreringer ennå",
+        "hullCount": "{filled}/{total} hull",
+        "reminderSent": "{count, plural, one {✓ Påminnelse sendt til 1 spiller.} other {✓ Påminnelse sendt til {count} spillere.}}",
+        "unconfirmedReminderSent": "{count, plural, one {✓ Bekreftelses-påminnelse sendt til 1 spiller.} other {✓ Bekreftelses-påminnelse sendt til {count} spillere.}}",
+        "notActiveError": "Spillet er ikke aktivt lenger. Du kan ikke sende påminnelser.",
+        "remindReady": "{count, plural, one {1 spiller har gått ferdig, men ikke levert scorekortet. Send en påminnelse om å levere.} other {{count} spillere har gått ferdig, men ikke levert scorekortet. Send en påminnelse om å levere.}}",
+        "remindNone": "Ingen er ferdige uten å ha levert akkurat nå. Spillere får automatisk en påminnelse når de har tastet inn alle {totalHoles} hull.",
+        "remindButton": "{count, plural, one {Send påminnelse til 1 spiller} other {Send påminnelse til {count} spillere}}",
+        "remindConfirm": "{count, plural, one {Sende leverings-påminnelse til 1 spiller?} other {Sende leverings-påminnelse til {count} spillere?}}",
+        "remindUnconfirmed": "{count, plural, one {1 spiller har ikke bekreftet deltakelse ennå. Send en påminnelse.} other {{count} spillere har ikke bekreftet deltakelse ennå. Send en påminnelse.}}",
+        "purreUnconfirmedButton": "{count, plural, one {Purr 1 ubekreftet spiller} other {Purr {count} ubekreftede spillere}}",
+        "purreUnconfirmedConfirm": "{count, plural, one {Sende bekreftelses-påminnelse til 1 spiller?} other {Sende bekreftelses-påminnelse til {count} spillere?}}",
+        "statusLabels": {
+          "ready_not_delivered": "Ferdig, ikke levert",
+          "pending_approval": "Venter godkjenning",
+          "playing": "Spiller",
+          "not_started": "Ikke startet",
+          "delivered": "Levert",
+          "withdrawn": "Trukket"
+        },
+        "sendingBusy": "Sender …"
+      },
+      "signups": {
+        "topBarKicker": "Påmeldinger",
+        "brassRibbon": "Selv-påmelding",
+        "heading": "Påmeldinger",
+        "inviteOnlyBanner": "Dette spillet er invitasjonsbasert og dukker ikke opp i Finn turneringer. Folk som har lenken kan likevel be om å bli med. Forespørslene havner her, så du kan godkjenne eller avslå.",
+        "statusBanners": {
+          "approved": "✓ Påmeldingen er godkjent. Spilleren er lagt til rosteren.",
+          "rejected": "✓ Påmeldingen er avvist. Spilleren får varsel."
+        },
+        "errors": {
+          "not_pending": "Forespørselen er allerede avgjort av en annen administrator. Last siden på nytt.",
+          "game_locked": "Spillet er startet eller avsluttet. Påmeldinger kan ikke endres lenger.",
+          "not_authorized": "Du har ikke tilgang til å avgjøre påmeldinger på dette spillet.",
+          "db_update": "Klarte ikke å lagre avgjørelsen. Prøv igjen.",
+          "db_players": "Klarte ikke å legge spilleren til rosteren. Prøv igjen.",
+          "db_cascade": "Klarte ikke å hente lag-medlemmene. Prøv igjen.",
+          "db_team_slot": "Klarte ikke å finne en ledig lag-plass. Prøv igjen.",
+          "no_team_slot": "Spillet har ingen ledige lag igjen.",
+          "reason_too_long": "Begrunnelsen er for lang (maks 200 tegn)."
+        },
+        "tabs": {
+          "pending": "Venter",
+          "approved": "Godkjent",
+          "rejected": "Avvist",
+          "withdrawn": "Trukket"
+        },
+        "emptyMessages": {
+          "pending": "Ingen påmeldinger venter på godkjenning.",
+          "approved": "Ingen godkjente påmeldinger ennå.",
+          "rejected": "Ingen avviste påmeldinger ennå.",
+          "withdrawn": "Ingen spillere har trukket seg."
+        },
+        "teamLabel": "Lag · {name}",
+        "playerCount": "{count, plural, one {# spiller} other {# spillere}}",
+        "captainBadge": "Kaptein",
+        "registeredAt": "Påmeldt {date}",
+        "decidedAt": "Avgjort {date}",
+        "approveButton": "Godkjenn",
+        "approvingBusy": "Godkjenner …",
+        "rejectButton": "Avvis",
+        "rejectingBusy": "Avviser …",
+        "rejectModalTitle": "Avvis påmelding fra {name}?",
+        "rejectModalTeamCascade": "Hele laget «{name}» blir avvist samtidig.",
+        "rejectReasonLabel": "Valgfri begrunnelse",
+        "rejectReasonPlaceholder": "(valgfritt) — vises i varselet til spilleren",
+        "rejectSubmitButton": "Avvis påmelding",
+        "rejectSubmittingBusy": "Avviser …",
+        "rejectCancelButton": "Avbryt",
+        "rejectionReasonDisplay": "Begrunnelse: {reason}"
+      },
+      "withdraw": {
+        "topBarKicker": "Trekk spiller",
+        "title": "Trekk spiller?",
+        "subtitle": "{name} i «{game}».",
+        "warningBody": "{name} vil bli markert som Trukket.",
+        "warningBold": "Trukket",
+        "bodyText": "Scorene til spilleren teller ikke lenger i rangeringen. Spilleren vises som «Trukket» under leaderboarden og i spillerlisten. Du kan angre dette etterpå så lenge spillet er aktivt.",
+        "submitButton": "Trekk {name}",
+        "submittingBusy": "Trekker tilbake …",
+        "cancel": "Avbryt",
+        "dangerVariant": "danger"
       }
     }
   }

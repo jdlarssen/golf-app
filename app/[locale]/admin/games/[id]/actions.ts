@@ -1,6 +1,7 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
 import { revalidateTag } from 'next/cache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
@@ -84,6 +85,7 @@ async function loadAdminOrCreatorContext(gameId: string) {
  * flipping to 'active' so they reflect each player's hcp_index at tee-off.
  */
 export async function startScheduledGameAction(gameId: string) {
+  const locale = await getLocale();
   const { supabase, user } = await loadAdminContext();
   const detailPath = `/admin/games/${gameId}`;
 
@@ -94,9 +96,9 @@ export async function startScheduledGameAction(gameId: string) {
         error: 'pending_players',
         emails: result.pendingEmails.join(', '),
       });
-      redirect(`${detailPath}?${qs.toString()}`);
+      redirect({ href: `${detailPath}?${qs.toString()}`, locale });
     }
-    redirect(`${detailPath}?error=${result.reason}`);
+    redirect({ href: `${detailPath}?error=${result.reason}`, locale });
   }
 
   // #502: the button won the flip → game_started to every active player
@@ -104,7 +106,9 @@ export async function startScheduledGameAction(gameId: string) {
   // sweep or page visit beat us and already owns the fan-out. Best-effort:
   // the helper swallows notify failures, and a roster/name fetch error just
   // skips the varsel — the start itself already succeeded.
-  if (result.started) {
+  // (result.ok re-checked because next-intl redirect isn't typed `never`,
+  // so TS doesn't narrow the union past the !result.ok guard above.)
+  if (result.ok && result.started) {
     const [gameRes, rosterRes] = await Promise.all([
       supabase
         .from('games')
@@ -130,10 +134,11 @@ export async function startScheduledGameAction(gameId: string) {
   revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/admin/games/${gameId}`);
   revalidatePath(`/games/${gameId}`);
-  redirect(`${detailPath}?status=started`);
+  redirect({ href: `${detailPath}?status=started`, locale });
 }
 
 export async function startGame(gameId: string) {
+  const locale = await getLocale();
   const { supabase } = await loadAdminContext();
   const detailPath = `/admin/games/${gameId}`;
 
@@ -151,8 +156,8 @@ export async function startGame(gameId: string) {
       game_mode: GameMode;
       mode_config: { team_size?: number } | null;
     }>();
-  if (gameError || !game) redirect(`${detailPath}?error=not_found`);
-  if (game!.status !== 'draft') redirect(`${detailPath}?error=not_draft`);
+  if (gameError || !game) redirect({ href: `${detailPath}?error=not_found`, locale });
+  if (game!.status !== 'draft') redirect({ href: `${detailPath}?error=not_draft`, locale });
 
   // team_number + withdrawn_at are fetched alongside hcp fields for the
   // incomplete_sides guard below (mirrors startScheduledGame.ts:91-92).
@@ -169,7 +174,7 @@ export async function startGame(gameId: string) {
         users: { hcp_index: number | string } | null;
       }[]
     >();
-  if (gpError || !gamePlayers) redirect(`${detailPath}?error=db_roster`);
+  if (gpError || !gamePlayers) redirect({ href: `${detailPath}?error=db_roster`, locale });
 
   // The game has one tee with up to three rating-sets. Each player picks
   // which set applies via their tee_gender flag.
@@ -180,7 +185,7 @@ export async function startGame(gameId: string) {
     )
     .eq('id', game!.tee_box_id)
     .single<TeeBoxRatings>();
-  if (teeError || !tee) redirect(`${detailPath}?error=db_tee`);
+  if (teeError || !tee) redirect({ href: `${detailPath}?error=db_tee`, locale });
 
   // Defence-in-depth: refuse to flip a draft to active if any roster player
   // is still pending profile completion. Mirrors the gate in
@@ -191,7 +196,7 @@ export async function startGame(gameId: string) {
     .select('id, email, profile_completed_at')
     .in('id', rosterIds);
   if (rosterUsersError || !rosterUsers) {
-    redirect(`${detailPath}?error=db_roster`);
+    redirect({ href: `${detailPath}?error=db_roster`, locale });
   }
   const pending = findPendingPlayers(rosterUsers!);
   if (pending.length > 0) {
@@ -199,7 +204,7 @@ export async function startGame(gameId: string) {
       error: 'pending_players',
       emails: pending.map((p) => p.email).join(', '),
     });
-    redirect(`${detailPath}?${qs.toString()}`);
+    redirect({ href: `${detailPath}?${qs.toString()}`, locale });
   }
 
   // Guard: matchplay-familien krever eksakt team_size aktive spillere per
@@ -208,7 +213,7 @@ export async function startGame(gameId: string) {
   if (isMatchplayMode(game!.game_mode)) {
     const teamSize = (game!.mode_config as { team_size?: number } | null)?.team_size ?? 1;
     if (!isSideRosterComplete(gamePlayers!, teamSize)) {
-      redirect(`${detailPath}?error=incomplete_sides`);
+      redirect({ href: `${detailPath}?error=incomplete_sides`, locale });
     }
   }
 
@@ -217,7 +222,7 @@ export async function startGame(gameId: string) {
   for (const row of gamePlayers!) {
     if (!row.users) continue;
     const rating = getRatingForGender(tee!, row.tee_gender);
-    if (!rating) redirect(`${detailPath}?error=tee_missing_rating`);
+    if (!rating) redirect({ href: `${detailPath}?error=tee_missing_rating`, locale });
     const raw = calculateCourseHandicap({
       hcpIndex: Number(row.users.hcp_index),
       slope: rating!.slope,
@@ -230,17 +235,17 @@ export async function startGame(gameId: string) {
       .update({ course_handicap: allowed })
       .eq('game_id', gameId)
       .eq('user_id', row.user_id);
-    if (updateError) redirect(`${detailPath}?error=db_players`);
+    if (updateError) redirect({ href: `${detailPath}?error=db_players`, locale });
   }
 
   const { error: statusError } = await supabase
     .from('games')
     .update({ status: 'active', started_at: new Date().toISOString() })
     .eq('id', gameId);
-  if (statusError) redirect(`${detailPath}?error=db_game`);
+  if (statusError) redirect({ href: `${detailPath}?error=db_game`, locale });
 
   revalidateTag(`game-${gameId}`, 'max');
-  redirect(`${detailPath}?status=started`);
+  redirect({ href: `${detailPath}?status=started`, locale });
 }
 
 /**
@@ -254,6 +259,7 @@ export async function adminApproveScorecard(
   gameId: string,
   playerUserId: string,
 ) {
+  const locale = await getLocale();
   const { supabase, user, actorName, detailPath } =
     await loadAdminOrCreatorContext(gameId);
 
@@ -262,9 +268,9 @@ export async function adminApproveScorecard(
     .select('status')
     .eq('id', gameId)
     .single<{ status: 'draft' | 'scheduled' | 'active' | 'finished' }>();
-  if (!game) redirect(`${detailPath}?error=not_found`);
+  if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
   if (game!.status !== 'active') {
-    redirect(`${detailPath}?error=not_active`);
+    redirect({ href: `${detailPath}?error=not_active`, locale });
   }
 
   const { error } = await supabase
@@ -278,7 +284,7 @@ export async function adminApproveScorecard(
     .eq('user_id', playerUserId)
     .not('submitted_at', 'is', null)
     .is('approved_at', null);
-  if (error) redirect(`${detailPath}?error=db_players`);
+  if (error) redirect({ href: `${detailPath}?error=db_players`, locale });
 
   await logAdminEvent({
     actorId: user.id,
@@ -316,7 +322,7 @@ export async function adminApproveScorecard(
   }
 
   revalidateTag(`game-${gameId}`, 'max');
-  redirect(`${detailPath}?status=admin_approved`);
+  redirect({ href: `${detailPath}?status=admin_approved`, locale });
 }
 
 /**
@@ -333,6 +339,7 @@ export async function adminApproveScorecard(
  * unapproved scorecard still blocks, even when forcing.
  */
 export async function endGame(gameId: string, allowMissing = false) {
+  const locale = await getLocale();
   // #427: a game's creator — not just admins — can finish their own game.
   // requireAdminOrCreator gates on is_admin() OR games.created_by; the status
   // flip below runs on the request-scoped client under the creator-UPDATE RLS
@@ -364,7 +371,7 @@ export async function endGame(gameId: string, allowMissing = false) {
       mode_config: GameModeConfig;
     }>();
   if (!game || game.status !== 'active') {
-    redirect(`${detailPath}?error=not_active`);
+    redirect({ href: `${detailPath}?error=not_active`, locale });
   }
 
   // Verify every player has submitted; if require_peer_approval, every
@@ -389,7 +396,7 @@ export async function endGame(gameId: string, allowMissing = false) {
     >();
 
   if (!players || players.length === 0) {
-    redirect(`${detailPath}?error=no_players`);
+    redirect({ href: `${detailPath}?error=no_players`, locale });
   }
   for (const p of players!) {
     // Withdrawn (WD, #386): out of the ranking entirely — never counts as a
@@ -400,12 +407,12 @@ export async function endGame(gameId: string, allowMissing = false) {
       // submitted_at stays null — they show as «ikke levert», never a false
       // levering; their registered scores still count in the leaderboard.
       if (!allowMissing) {
-        redirect(`${detailPath}?error=not_all_submitted`);
+        redirect({ href: `${detailPath}?error=not_all_submitted`, locale });
       }
       continue;
     }
     if (game!.require_peer_approval && !p.approved_at) {
-      redirect(`${detailPath}?error=not_all_approved`);
+      redirect({ href: `${detailPath}?error=not_all_approved`, locale });
     }
   }
 
@@ -414,7 +421,7 @@ export async function endGame(gameId: string, allowMissing = false) {
     .update({ status: 'finished', ended_at: new Date().toISOString() })
     .eq('id', gameId);
 
-  if (error) redirect(`${detailPath}?error=db_finish`);
+  if (error) redirect({ href: `${detailPath}?error=db_finish`, locale });
 
   await logAdminEvent({
     actorId: user.id,
@@ -473,7 +480,7 @@ export async function endGame(gameId: string, allowMissing = false) {
   revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/admin/games/${gameId}`);
   revalidatePath(`/games/${gameId}`);
-  redirect(`${detailPath}?status=finished`);
+  redirect({ href: `${detailPath}?status=finished`, locale });
 }
 
 /**
@@ -485,6 +492,7 @@ export async function endGame(gameId: string, allowMissing = false) {
  * No-op safety: only runs when the row currently has submitted_at set.
  */
 export async function reopenScorecard(gameId: string, playerUserId: string) {
+  const locale = await getLocale();
   const { supabase, user, actorName } = await loadAdminContext();
   const detailPath = `/admin/games/${gameId}`;
 
@@ -493,9 +501,9 @@ export async function reopenScorecard(gameId: string, playerUserId: string) {
     .select('status')
     .eq('id', gameId)
     .single<{ status: GameStatus }>();
-  if (!game) redirect(`${detailPath}?error=not_found`);
+  if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
   if (game!.status !== 'active') {
-    redirect(`${detailPath}?error=not_active`);
+    redirect({ href: `${detailPath}?error=not_active`, locale });
   }
 
   const { error } = await supabase
@@ -509,7 +517,7 @@ export async function reopenScorecard(gameId: string, playerUserId: string) {
     .eq('game_id', gameId)
     .eq('user_id', playerUserId)
     .not('submitted_at', 'is', null);
-  if (error) redirect(`${detailPath}?error=db_players`);
+  if (error) redirect({ href: `${detailPath}?error=db_players`, locale });
 
   await logAdminEvent({
     actorId: user.id,
@@ -523,7 +531,7 @@ export async function reopenScorecard(gameId: string, playerUserId: string) {
   revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/admin/games/${gameId}`);
   revalidatePath(`/games/${gameId}`);
-  redirect(`${detailPath}?status=scorecard_reopened`);
+  redirect({ href: `${detailPath}?status=scorecard_reopened`, locale });
 }
 
 /**
@@ -535,6 +543,7 @@ export async function reopenScorecard(gameId: string, playerUserId: string) {
  * the actor's cockpit on success or on any validation failure.
  */
 export async function adminWithdrawPlayer(gameId: string, userId: string) {
+  const locale = await getLocale();
   const { supabase, user, actorName, detailPath } =
     await loadAdminOrCreatorContext(gameId);
 
@@ -543,9 +552,9 @@ export async function adminWithdrawPlayer(gameId: string, userId: string) {
     .select('id, name, status, game_mode')
     .eq('id', gameId)
     .single<{ id: string; name: string; status: GameStatus; game_mode: GameMode }>();
-  if (!game) redirect(`${detailPath}?error=not_found`);
-  if (game!.status !== 'active') redirect(`${detailPath}?error=not_active`);
-  if (!supportsWithdrawal(game!.game_mode)) redirect(detailPath);
+  if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
+  if (game!.status !== 'active') redirect({ href: `${detailPath}?error=not_active`, locale });
+  if (!supportsWithdrawal(game!.game_mode)) redirect({ href: detailPath, locale });
 
   const { error } = await supabase
     .from('game_players')
@@ -555,7 +564,7 @@ export async function adminWithdrawPlayer(gameId: string, userId: string) {
     })
     .eq('game_id', gameId)
     .eq('user_id', userId);
-  if (error) redirect(`${detailPath}?error=db_players`);
+  if (error) redirect({ href: `${detailPath}?error=db_players`, locale });
 
   await logAdminEvent({
     actorId: user.id,
@@ -572,7 +581,7 @@ export async function adminWithdrawPlayer(gameId: string, userId: string) {
   // record for now.
 
   revalidateTag(`game-${gameId}`, 'max');
-  redirect(`${detailPath}?status=player_withdrawn`);
+  redirect({ href: `${detailPath}?status=player_withdrawn`, locale });
 }
 
 /**
@@ -582,6 +591,7 @@ export async function adminWithdrawPlayer(gameId: string, userId: string) {
  * the game is still active.
  */
 export async function adminUndoWithdraw(gameId: string, userId: string) {
+  const locale = await getLocale();
   const { supabase, user, actorName, detailPath } =
     await loadAdminOrCreatorContext(gameId);
 
@@ -590,9 +600,9 @@ export async function adminUndoWithdraw(gameId: string, userId: string) {
     .select('id, name, status, game_mode')
     .eq('id', gameId)
     .single<{ id: string; name: string; status: GameStatus; game_mode: GameMode }>();
-  if (!game) redirect(`${detailPath}?error=not_found`);
-  if (game!.status !== 'active') redirect(`${detailPath}?error=not_active`);
-  if (!supportsWithdrawal(game!.game_mode)) redirect(detailPath);
+  if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
+  if (game!.status !== 'active') redirect({ href: `${detailPath}?error=not_active`, locale });
+  if (!supportsWithdrawal(game!.game_mode)) redirect({ href: detailPath, locale });
 
   const { error } = await supabase
     .from('game_players')
@@ -602,7 +612,7 @@ export async function adminUndoWithdraw(gameId: string, userId: string) {
     })
     .eq('game_id', gameId)
     .eq('user_id', userId);
-  if (error) redirect(`${detailPath}?error=db_players`);
+  if (error) redirect({ href: `${detailPath}?error=db_players`, locale });
 
   await logAdminEvent({
     actorId: user.id,
@@ -614,7 +624,7 @@ export async function adminUndoWithdraw(gameId: string, userId: string) {
   });
 
   revalidateTag(`game-${gameId}`, 'max');
-  redirect(`${detailPath}?status=player_reinstated`);
+  redirect({ href: `${detailPath}?status=player_reinstated`, locale });
 }
 
 /**
@@ -623,6 +633,7 @@ export async function adminUndoWithdraw(gameId: string, userId: string) {
  * round was ended prematurely or a result needs correction.
  */
 export async function reopenGame(gameId: string) {
+  const locale = await getLocale();
   const { supabase, user, actorName } = await loadAdminContext();
   const detailPath = `/admin/games/${gameId}`;
 
@@ -631,16 +642,16 @@ export async function reopenGame(gameId: string) {
     .select('id, name, status')
     .eq('id', gameId)
     .single<{ id: string; name: string; status: GameStatus }>();
-  if (!game) redirect(`${detailPath}?error=not_found`);
+  if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
   if (game!.status !== 'finished') {
-    redirect(`${detailPath}?error=not_finished`);
+    redirect({ href: `${detailPath}?error=not_finished`, locale });
   }
 
   const { error } = await supabase
     .from('games')
     .update({ status: 'active', ended_at: null })
     .eq('id', gameId);
-  if (error) redirect(`${detailPath}?error=db_game`);
+  if (error) redirect({ href: `${detailPath}?error=db_game`, locale });
 
   await logAdminEvent({
     actorId: user.id,
@@ -655,6 +666,6 @@ export async function reopenGame(gameId: string) {
   revalidatePath(`/admin/games/${gameId}`);
   revalidatePath(`/games/${gameId}`);
   revalidatePath(`/games/${gameId}/leaderboard`);
-  redirect(`${detailPath}?status=game_reopened`);
+  redirect({ href: `${detailPath}?status=game_reopened`, locale });
 }
 

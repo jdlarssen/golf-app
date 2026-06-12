@@ -1,6 +1,7 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
 import { revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -58,6 +59,7 @@ async function loadDecisionContext(requestId: string): Promise<{
   actorId: string;
   actorName: string;
 }> {
+  const locale = await getLocale();
   const supabase = await getServerClient();
   const role = await requireAdminOrTrustedCreator(supabase);
 
@@ -75,7 +77,7 @@ async function loadDecisionContext(requestId: string): Promise<{
     .single<RequestSnapshot>();
 
   if (requestError || !request) {
-    redirect(`/admin/games?error=request_not_found`);
+    redirect({ href: `/admin/games?error=request_not_found`, locale });
   }
 
   const { data: game, error: gameError } = await admin
@@ -85,19 +87,19 @@ async function loadDecisionContext(requestId: string): Promise<{
     .single<GameSnapshot>();
 
   if (gameError || !game) {
-    redirect(`/admin/games?error=game_not_found`);
+    redirect({ href: `/admin/games?error=game_not_found`, locale });
   }
 
   // Defense-in-depth for trusted creators: kun spill-creator (eller admin)
   // kan godkjenne påmeldinger til et spesifikt spill.
   if (!role.isAdmin && game!.created_by !== role.userId) {
-    redirect(`/admin/games/${game!.id}?error=not_authorized`);
+    redirect({ href: `/admin/games/${game!.id}?error=not_authorized`, locale });
   }
 
   // Approve/reject gir bare mening pre-active. Etter at runden er startet
   // er rosteret låst.
   if (game!.status === 'active' || game!.status === 'finished') {
-    redirect(`/admin/games/${game!.id}/signups?error=game_locked`);
+    redirect({ href: `/admin/games/${game!.id}/signups?error=game_locked`, locale });
   }
 
   return {
@@ -114,11 +116,12 @@ async function loadDecisionContext(requestId: string): Promise<{
  * user(s) and fires registration_approved notifications.
  */
 export async function approveRequest(requestId: string): Promise<void> {
+  const locale = await getLocale();
   const { request, game, actorId } = await loadDecisionContext(requestId);
   const detailPath = `/admin/games/${game.id}/signups`;
 
   if (request.status !== 'pending') {
-    redirect(`${detailPath}?error=not_pending`);
+    redirect({ href: `${detailPath}?error=not_pending`, locale });
   }
 
   const admin = getAdminClient();
@@ -136,7 +139,7 @@ export async function approveRequest(requestId: string): Promise<void> {
       .returns<CascadeRow[]>();
     if (childrenError) {
       console.error('[approveRequest] team children fetch failed', childrenError);
-      redirect(`${detailPath}?error=db_cascade`);
+      redirect({ href: `${detailPath}?error=db_cascade`, locale });
     }
     cascadeRows = children ?? [];
   }
@@ -158,7 +161,7 @@ export async function approveRequest(requestId: string): Promise<void> {
       .returns<{ team_number: number }[]>();
     if (existingErr) {
       console.error('[approveRequest] team-slot lookup failed', existingErr);
-      redirect(`${detailPath}?error=db_team_slot`);
+      redirect({ href: `${detailPath}?error=db_team_slot`, locale });
     }
     const taken = new Set((existing ?? []).map((r) => r.team_number));
     for (let slot = 1; slot <= 4; slot += 1) {
@@ -168,7 +171,7 @@ export async function approveRequest(requestId: string): Promise<void> {
       }
     }
     if (teamNumber == null) {
-      redirect(`${detailPath}?error=no_team_slot`);
+      redirect({ href: `${detailPath}?error=no_team_slot`, locale });
     }
   }
 
@@ -187,7 +190,7 @@ export async function approveRequest(requestId: string): Promise<void> {
     .eq('status', 'pending');
   if (updateError) {
     console.error('[approveRequest] status update failed', updateError);
-    redirect(`${detailPath}?error=db_update`);
+    redirect({ href: `${detailPath}?error=db_update`, locale });
   }
 
   // INSERT game_players-rader. Bruker upsert med ignore-duplicates for å
@@ -207,7 +210,7 @@ export async function approveRequest(requestId: string): Promise<void> {
     .upsert(playerRows, { onConflict: 'game_id,user_id', ignoreDuplicates: true });
   if (insertError) {
     console.error('[approveRequest] game_players insert failed', insertError);
-    redirect(`${detailPath}?error=db_players`);
+    redirect({ href: `${detailPath}?error=db_players`, locale });
   }
 
   // Best-effort notifications + mail. Notify-feil swallow-es slik at
@@ -256,7 +259,7 @@ export async function approveRequest(requestId: string): Promise<void> {
   }
 
   revalidateTag(`game-${game.id}`, 'max');
-  redirect(`${detailPath}?status=approved`);
+  redirect({ href: `${detailPath}?status=approved`, locale });
 }
 
 /**
@@ -267,6 +270,7 @@ export async function rejectRequest(
   requestId: string,
   formData: FormData,
 ): Promise<void> {
+  const locale = await getLocale();
   const { request, game, actorId } = await loadDecisionContext(requestId);
   const detailPath = `/admin/games/${game.id}/signups`;
 
@@ -275,16 +279,16 @@ export async function rejectRequest(
   const honeypot = String(formData.get('website') ?? '').trim();
   if (honeypot) {
     console.warn('[honeypot] silent reject', { route: 'rejectRequest' });
-    redirect(`${detailPath}?status=rejected`);
+    redirect({ href: `${detailPath}?status=rejected`, locale });
   }
 
   if (request.status !== 'pending') {
-    redirect(`${detailPath}?error=not_pending`);
+    redirect({ href: `${detailPath}?error=not_pending`, locale });
   }
 
   const rawReason = String(formData.get('reason') ?? '').trim();
   if (rawReason.length > REJECTION_REASON_MAX) {
-    redirect(`${detailPath}?error=reason_too_long`);
+    redirect({ href: `${detailPath}?error=reason_too_long`, locale });
   }
   const reason = rawReason.length > 0 ? rawReason : null;
 
@@ -300,7 +304,7 @@ export async function rejectRequest(
       .returns<CascadeRow[]>();
     if (childrenError) {
       console.error('[rejectRequest] team children fetch failed', childrenError);
-      redirect(`${detailPath}?error=db_cascade`);
+      redirect({ href: `${detailPath}?error=db_cascade`, locale });
     }
     cascadeRows = children ?? [];
   }
@@ -324,7 +328,7 @@ export async function rejectRequest(
 
   if (updateError) {
     console.error('[rejectRequest] status update failed', updateError);
-    redirect(`${detailPath}?error=db_update`);
+    redirect({ href: `${detailPath}?error=db_update`, locale });
   }
 
   const notifyResults = await Promise.allSettled(
@@ -371,5 +375,5 @@ export async function rejectRequest(
   }
 
   revalidateTag(`game-${game.id}`, 'max');
-  redirect(`${detailPath}?status=rejected`);
+  redirect({ href: `${detailPath}?status=rejected`, locale });
 }

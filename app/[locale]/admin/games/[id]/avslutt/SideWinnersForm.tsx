@@ -1,6 +1,7 @@
 'use client';
 
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 
 export type PlayerOption = {
@@ -29,23 +30,25 @@ export function SideWinnersForm({
   error,
   cancelHref,
 }: Props) {
+  const t = useTranslations('admin.game.sideWinners');
+
   return (
     <form action={action} className="space-y-6">
       {error && (
         <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900">
-          Du må velge vinner i alle feltene før du kan avslutte.
+          {t('validationError')}
         </div>
       )}
 
       {ldCount > 0 && (
         <fieldset className="space-y-3">
           <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-            Longest drive
+            {t('longestDriveLabel')}
           </legend>
           {Array.from({ length: ldCount }, (_, i) => i + 1).map((pos) => (
             <label key={`ld-${pos}`} className="block">
               <span className="font-serif text-base text-text">
-                Longest drive #{pos}
+                {t('longestDriveSlot', { pos })}
               </span>
               <select
                 name={`ld_winner_${pos}`}
@@ -54,14 +57,14 @@ export function SideWinnersForm({
                 className="mt-1 block w-full rounded-md border border-border bg-surface px-3 py-2"
               >
                 <option value="" disabled>
-                  — Velg vinner —
+                  {t('selectWinner')}
                 </option>
                 {players.map((p) => (
                   <option key={p.user_id} value={p.user_id}>
                     {p.display_name}
                   </option>
                 ))}
-                <option value="none">Ingen kvalifiserte</option>
+                <option value="none">{t('noQualified')}</option>
               </select>
             </label>
           ))}
@@ -71,12 +74,12 @@ export function SideWinnersForm({
       {ctpCount > 0 && (
         <fieldset className="space-y-3">
           <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-            Closest to pin
+            {t('closestToPinLabel')}
           </legend>
           {Array.from({ length: ctpCount }, (_, i) => i + 1).map((pos) => (
             <label key={`ctp-${pos}`} className="block">
               <span className="font-serif text-base text-text">
-                Closest to pin #{pos}
+                {t('closestToPinSlot', { pos })}
               </span>
               <select
                 name={`ctp_winner_${pos}`}
@@ -85,14 +88,14 @@ export function SideWinnersForm({
                 className="mt-1 block w-full rounded-md border border-border bg-surface px-3 py-2"
               >
                 <option value="" disabled>
-                  — Velg vinner —
+                  {t('selectWinner')}
                 </option>
                 {players.map((p) => (
                   <option key={p.user_id} value={p.user_id}>
                     {p.display_name}
                   </option>
                 ))}
-                <option value="none">Ingen kvalifiserte</option>
+                <option value="none">{t('noQualified')}</option>
               </select>
             </label>
           ))}
@@ -100,14 +103,14 @@ export function SideWinnersForm({
       )}
 
       <div className="flex gap-3">
-        <SubmitButton variant="primary" pendingLabel="Lagrer …">
-          Avslutt spillet og publiser sideturneringen
+        <SubmitButton variant="primary" pendingLabel={t('submittingBusy')}>
+          {t('submitButton')}
         </SubmitButton>
         <Link
           href={cancelHref ?? `/admin/games/${gameId}`}
           className="self-center text-sm text-muted underline"
         >
-          Avbryt
+          {t('cancel')}
         </Link>
       </div>
     </form>

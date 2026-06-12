@@ -1,6 +1,7 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { supportsWithdrawal } from '@/lib/scoring';
@@ -23,6 +24,7 @@ export async function endGameMarkingWithdrawals(
   gameId: string,
   formData: FormData,
 ) {
+  const locale = await getLocale();
   const supabase = await getServerClient();
   const role = await requireAdminOrCreator(supabase, gameId);
 
@@ -60,7 +62,7 @@ export async function endGameMarkingWithdrawals(
       .eq('game_id', gameId)
       .eq('user_id', userId);
     if (error) {
-      redirect(`${detailPath}?error=db_players`);
+      redirect({ href: `${detailPath}?error=db_players`, locale });
     }
   }
 

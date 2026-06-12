@@ -1,5 +1,7 @@
-import { notFound, redirect } from 'next/navigation';
-import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { Link } from '@/i18n/navigation';
+import { getTranslations, getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
@@ -28,6 +30,10 @@ export default async function TrekkSpillerPage({ params }: { params: Params }) {
   const { id: gameId, userId } = await params;
   const detailPath = `/admin/games/${gameId}`;
 
+  const locale = await getLocale();
+  const t = await getTranslations('admin.game.withdraw');
+  const tDetail = await getTranslations('admin.game.detail');
+
   const supabase = await getServerClient();
   await requireAdmin(supabase);
 
@@ -40,11 +46,11 @@ export default async function TrekkSpillerPage({ params }: { params: Params }) {
   if (!game) notFound();
 
   if (game.status !== 'active') {
-    redirect(`${detailPath}?error=not_active`);
+    redirect({ href: `${detailPath}?error=not_active`, locale });
   }
 
   if (!supportsWithdrawal(game.game_mode)) {
-    redirect(detailPath);
+    redirect({ href: detailPath, locale });
   }
 
   // Load the target player — must exist, must not already be withdrawn.
@@ -61,16 +67,16 @@ export default async function TrekkSpillerPage({ params }: { params: Params }) {
     }>();
 
   if (!player) {
-    redirect(detailPath);
+    redirect({ href: detailPath, locale });
   }
 
   // Already withdrawn — nothing to confirm.
-  if (player.withdrawn_at) {
-    redirect(detailPath);
+  if (player!.withdrawn_at) {
+    redirect({ href: detailPath, locale });
   }
 
-  const u = player.users;
-  const baseName = u?.name?.trim() || u?.email || '(ukjent spiller)';
+  const u = player!.users;
+  const baseName = u?.name?.trim() || u?.email || tDetail('unknownPlayer');
   const playerName = u?.nickname ? `${baseName} «${u.nickname}»` : baseName;
 
   const withdrawAction = adminWithdrawPlayer.bind(null, gameId, userId);
@@ -79,29 +85,31 @@ export default async function TrekkSpillerPage({ params }: { params: Params }) {
     <AdminShell>
       <TopBar
         backHref={detailPath}
-        kicker="Trekk spiller"
+        kicker={t('topBarKicker')}
       />
       <PageHeader
-        title="Trekk spiller?"
-        subtitle={`${playerName} i «${game.name}».`}
+        title={t('title')}
+        subtitle={t('subtitle', { name: playerName, game: game.name })}
       />
 
       <div className="space-y-4 px-1">
         <div className="rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-3 text-sm text-warning">
           <p className="font-medium">
-            {playerName} vil bli markert som <strong>Trukket</strong>.
+            {t('warningBody', { name: playerName })}
           </p>
         </div>
 
         <p className="text-sm text-muted">
-          Scorene til spilleren teller ikke lenger i rangeringen. Spilleren
-          vises som «Trukket» under leaderboarden og i spillerlisten. Du kan
-          angre dette etterpå så lenge spillet er aktivt.
+          {t('bodyText')}
         </p>
 
         <form action={withdrawAction}>
-          <SubmitButton className="w-full" variant="danger" pendingLabel="Trekker tilbake …">
-            Trekk {playerName}
+          <SubmitButton
+            className="w-full"
+            variant={t('dangerVariant') as 'danger'}
+            pendingLabel={t('submittingBusy')}
+          >
+            {t('submitButton', { name: playerName })}
           </SubmitButton>
         </form>
 
@@ -109,7 +117,7 @@ export default async function TrekkSpillerPage({ params }: { params: Params }) {
           href={detailPath}
           className="block min-h-[44px] rounded-full border border-border px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-surface-2"
         >
-          Avbryt
+          {t('cancel')}
         </Link>
       </div>
     </AdminShell>

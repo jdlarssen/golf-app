@@ -1,14 +1,16 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
 import { revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
 import type { GameStatus } from '@/lib/games/status';
 
 export async function deleteGame(formData: FormData) {
+  const locale = await getLocale();
   const gameId = String(formData.get('gameId') ?? '');
-  if (!gameId) redirect('/admin/games?error=not_found');
+  if (!gameId) redirect({ href: '/admin/games?error=not_found', locale });
 
   const supabase = await getServerClient();
   // #428: admin OR the game's creator. requireAdminOrCreator reads created_by
@@ -28,15 +30,15 @@ export async function deleteGame(formData: FormData) {
 
   // Only reachable for an admin — a non-admin whose game doesn't exist was
   // already bounced to `/` by the gate above.
-  if (!game) redirect('/admin/games?error=not_found');
+  if (!game) redirect({ href: '/admin/games?error=not_found', locale });
 
   // #428 (eier-beslutning): a creator may only delete a game that hasn't started
   // — draft/scheduled. Once it's active/finished, the round and its (shared)
   // leaderboard belong to every participant, so only an admin can remove it
   // (recovery). The /games/[id]/slett page already gates this; the action
   // self-gates too against a direct POST.
-  if (!ctx.isAdmin && game.status !== 'draft' && game.status !== 'scheduled') {
-    redirect(`/games/${gameId}?error=not_deletable`);
+  if (!ctx.isAdmin && game!.status !== 'draft' && game!.status !== 'scheduled') {
+    redirect({ href: `/games/${gameId}?error=not_deletable`, locale });
   }
 
   // Delete the game row. FK ON DELETE CASCADE handles game_players, scores and
@@ -47,21 +49,22 @@ export async function deleteGame(formData: FormData) {
 
   if (error) {
     console.error('[games] deleteGame failed', { gameId, error });
-    redirect(
-      ctx.isAdmin
+    redirect({
+      href: ctx.isAdmin
         ? `/admin/games/${gameId}/slett?error=delete_failed`
         : `/games/${gameId}/slett?error=delete_failed`,
-    );
+      locale,
+    });
   }
 
   revalidateTag(`game-${gameId}`, 'max');
 
   if (ctx.isAdmin) {
-    const qs = new URLSearchParams({ status: 'deleted', name: game.name });
-    redirect(`/admin/games?${qs.toString()}`);
+    const qs = new URLSearchParams({ status: 'deleted', name: game!.name });
+    redirect({ href: `/admin/games?${qs.toString()}`, locale });
   }
 
   // Creator: no «Mine spill»-hub yet (Fase 3), so land on home with a
   // confirmation banner (eier-beslutning).
-  redirect(`/?deleted=${encodeURIComponent(game.name)}`);
+  redirect({ href: `/?deleted=${encodeURIComponent(game!.name)}`, locale });
 }

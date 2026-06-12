@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { getTranslations, getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
@@ -8,30 +9,11 @@ import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
 import type { GameStatus } from '@/lib/games/status';
-import { formatShortDateNbWithYear } from '@/lib/format/date';
+import { formatShortDateWithYearLocale } from '@/lib/i18n/format';
 import { deleteGame } from './actions';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;
-
-const ERROR_MESSAGES: Record<string, string> = {
-  delete_failed: 'Slettingen feilet. Prøv igjen, eller sjekk Vercel-loggene.',
-};
-
-const STATUS_WARNINGS: Record<GameStatus, string | null> = {
-  draft: null, // utkast — ingen er informert ennå, ingen warning nødvendig
-  scheduled:
-    'Spillet er planlagt og spillerne er invitert. De får ingen melding om at det er kansellert. Du må evt. si fra selv.',
-  active:
-    'Spillet pågår nå. Sletting fjerner alle slag som er registrert så langt, og spillerne mister runden sin uten varsel.',
-  finished:
-    'Spillet er avsluttet. Leaderboard og resultater forsvinner permanent. Spillere som har bokmerket lenken får 404.',
-};
-
-function shortNb(iso: string | null | undefined): string | null {
-  if (!iso) return null;
-  return formatShortDateNbWithYear(iso);
-}
 
 function first(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
@@ -58,7 +40,14 @@ export default async function DeleteGamePage({
   const { id } = await params;
   const sp = await searchParams;
   const errorCode = first(sp.error);
-  const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
+
+  const locale = await getLocale();
+  const t = await getTranslations('admin.game.delete');
+  const errorMessage = errorCode
+    ? t.has(`errors.${errorCode}` as Parameters<typeof t>[0])
+      ? t(`errors.${errorCode}` as Parameters<typeof t>[0])
+      : undefined
+    : undefined;
 
   const supabase = await getServerClient();
   // Self-gate for Fase 4 chunk 2 layout-loosening (#223).
@@ -92,18 +81,29 @@ export default async function DeleteGamePage({
   const scoreCount = scoresRes.count ?? 0;
   const invitationCount = invRes.count ?? 0;
 
+  function shortDate(iso: string | null | undefined): string | null {
+    if (!iso) return null;
+    return formatShortDateWithYearLocale(iso, locale);
+  }
+
   // Best available date line for the summary.
   const dateLine =
-    shortNb(game.ended_at) ??
-    shortNb(game.started_at) ??
-    shortNb(game.scheduled_tee_off_at) ??
-    shortNb(game.created_at);
+    shortDate(game.ended_at) ??
+    shortDate(game.started_at) ??
+    shortDate(game.scheduled_tee_off_at) ??
+    shortDate(game.created_at);
 
-  const warning = STATUS_WARNINGS[game.status];
+  const warning =
+    game.status === 'scheduled'
+      ? t('warnings.scheduled')
+      : game.status === 'active'
+      ? t('warnings.active')
+      : game.status === 'finished'
+      ? t('warnings.finished')
+      : null;
+
   const buttonLabel =
-    game.status === 'active'
-      ? 'Slett pågående spill for alltid'
-      : 'Slett spillet for alltid';
+    game.status === 'active' ? t('buttonActive') : t('buttonDefault');
 
   return (
     <AdminShell>
@@ -112,11 +112,11 @@ export default async function DeleteGamePage({
         kicker="Klubbhuset"
       />
 
-      <BrassRibbon kicker="Bekreft sletting" />
+      <BrassRibbon kicker={t('kicker')} />
 
       <div className="px-1">
         <h1 className="mb-3 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-          Slett «{game.name}»?
+          {t('heading', { name: game.name })}
         </h1>
         <p className="font-sans text-[13px] leading-relaxed text-muted">
           {[game.courses?.name, dateLine].filter(Boolean).join(' · ')}
@@ -142,30 +142,22 @@ export default async function DeleteGamePage({
         style={{ borderColor: 'rgba(180, 60, 60, 0.18)' }}
       >
         <p className="mb-2 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-          Slettes permanent
+          {t('permanentLabel')}
         </p>
         <ul className="space-y-1 font-sans text-[13px] text-text">
-          <li>Spillet «{game.name}»</li>
+          <li>{'«'}{game.name}{'»'}</li>
           {playerCount > 0 && (
-            <li>
-              {playerCount} {playerCount === 1 ? 'spiller' : 'spillere'} i spillet
-            </li>
+            <li>{t('players', { count: playerCount })}</li>
           )}
           {scoreCount > 0 && (
-            <li>
-              {scoreCount} {scoreCount === 1 ? 'slaggerad' : 'slaggerader'}
-            </li>
+            <li>{t('scoreRows', { count: scoreCount })}</li>
           )}
           {invitationCount > 0 && (
-            <li>
-              {invitationCount}{' '}
-              {invitationCount === 1 ? 'invitasjon' : 'invitasjoner'} knyttet til
-              spillet
-            </li>
+            <li>{t('invitations', { count: invitationCount })}</li>
           )}
         </ul>
         <p className="mt-3 font-sans text-[12px] leading-relaxed text-muted">
-          Handlingen kan ikke angres.
+          {t('cannotUndo')}
         </p>
       </div>
 
@@ -175,7 +167,7 @@ export default async function DeleteGamePage({
           <SubmitButton
             className="w-full"
             style={{ background: 'var(--danger-deep)', borderColor: 'var(--danger-deep)' }}
-            pendingLabel="Sletter …"
+            pendingLabel={t('deletingBusy')}
           >
             {buttonLabel}
           </SubmitButton>
@@ -184,7 +176,7 @@ export default async function DeleteGamePage({
           href={`/admin/games/${id}`}
           className="rounded-full border border-border bg-surface px-3 py-3 text-center font-sans text-[13px] font-medium text-text"
         >
-          Avbryt
+          {t('cancel')}
         </SmartLink>
       </div>
     </AdminShell>

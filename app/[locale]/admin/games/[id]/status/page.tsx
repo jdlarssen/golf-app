@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { getTranslations, getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
@@ -6,7 +7,7 @@ import { TopBar } from '@/components/ui/TopBar';
 import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { Banner } from '@/components/ui/Banner';
 import { firstName } from '@/lib/firstName';
-import { formatRelativeNb } from '@/lib/format/relativeTimeNb';
+import { formatRelativeLocale } from '@/lib/i18n/format';
 import {
   classifyDeliveryStatus,
   isDeliveryReminderTarget,
@@ -42,18 +43,6 @@ type PlayerRow = {
 
 type ScoreRow = { user_id: string; hole_number: number; updated_at: string };
 
-// Badge-label + farge per status. Ferdig-men-ikke-levert (purre-kandidaten)
-// får champagne-aksenten så admin ser hvem som mangler med ett blikk.
-const STATUS_META: Record<DeliveryStatus, { label: string; className: string }> =
-  {
-    ready_not_delivered: { label: 'Ferdig, ikke levert', className: 'text-accent' },
-    pending_approval: { label: 'Venter godkjenning', className: 'text-warning' },
-    playing: { label: 'Spiller', className: 'text-muted' },
-    not_started: { label: 'Ikke startet', className: 'text-muted' },
-    delivered: { label: 'Levert', className: 'text-success' },
-    withdrawn: { label: 'Trukket', className: 'text-muted' },
-  };
-
 // Sorter purre-kandidatene øverst, så de som fortsatt spiller, deretter resten.
 const SORT_ORDER: Record<DeliveryStatus, number> = {
   ready_not_delivered: 0,
@@ -77,6 +66,10 @@ export default async function GameStatusPage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
+
+  const locale = await getLocale();
+  const t = await getTranslations('admin.game.status');
+  const tDetail = await getTranslations('admin.game.detail');
 
   const supabase = await getServerClient();
   await requireAdmin(supabase);
@@ -127,7 +120,7 @@ export default async function GameStatusPage({
         withdrawnAt: p.withdrawn_at,
         requirePeerApproval: game.require_peer_approval,
       });
-      const fullName = p.users?.name ?? p.users?.email ?? '(ukjent spiller)';
+      const fullName = p.users?.name ?? p.users?.email ?? tDetail('unknownPlayer');
       return {
         userId: p.user_id,
         name: fullName,
@@ -143,6 +136,15 @@ export default async function GameStatusPage({
         SORT_ORDER[a.status] - SORT_ORDER[b.status] ||
         a.name.localeCompare(b.name, 'nb'),
     );
+
+  const statusLabels: Record<DeliveryStatus, { label: string; className: string }> = {
+    ready_not_delivered: { label: t('statusLabels.ready_not_delivered'), className: 'text-accent' },
+    pending_approval: { label: t('statusLabels.pending_approval'), className: 'text-warning' },
+    playing: { label: t('statusLabels.playing'), className: 'text-muted' },
+    not_started: { label: t('statusLabels.not_started'), className: 'text-muted' },
+    delivered: { label: t('statusLabels.delivered'), className: 'text-success' },
+    withdrawn: { label: t('statusLabels.withdrawn'), className: 'text-muted' },
+  };
 
   const rankable = players.filter((p) => !p.withdrawn_at);
   const deliveredCount = rankable.filter((p) => p.submitted_at != null).length;
@@ -166,43 +168,39 @@ export default async function GameStatusPage({
     <AdminShell>
       <TopBar
         backHref={`/admin/games/${id}`}
-        kicker="Spillerstatus"
+        kicker={t('topBarKicker')}
       />
 
-      <BrassRibbon kicker="Spillerstatus" />
+      <BrassRibbon kicker={t('brassRibbon')} />
 
       <div className="px-1">
         <h1 className="font-serif text-[26px] font-medium leading-snug tracking-[-0.015em] text-text">
           {game.name}
         </h1>
         <p className="mt-1 font-sans text-xs tabular-nums text-muted">
-          Levert {deliveredCount} / {rankable.length}
-          {targetCount > 0 && ` · ${targetCount} ferdige mangler levering`}
+          {t('deliveredSummary', { delivered: deliveredCount, total: rankable.length })}
+          {targetCount > 0 && ` ${t('readyMissingDelivery', { count: targetCount })}`}
         </p>
       </div>
 
       {remindedCount !== undefined && (
         <div className="mt-4">
           <Banner tone="success">
-            {remindedCount === '1'
-              ? '✓ Påminnelse sendt til 1 spiller.'
-              : `✓ Påminnelse sendt til ${remindedCount} spillere.`}
+            {t('reminderSent', { count: Number(remindedCount) })}
           </Banner>
         </div>
       )}
       {unconfirmedRemindedCount !== undefined && (
         <div className="mt-4">
           <Banner tone="success">
-            {unconfirmedRemindedCount === '1'
-              ? '✓ Bekreftelses-påminnelse sendt til 1 spiller.'
-              : `✓ Bekreftelses-påminnelse sendt til ${unconfirmedRemindedCount} spillere.`}
+            {t('unconfirmedReminderSent', { count: Number(unconfirmedRemindedCount) })}
           </Banner>
         </div>
       )}
       {showNotActiveError && (
         <div className="mt-4">
           <Banner tone="error">
-            Spillet er ikke aktivt lenger. Du kan ikke sende påminnelser.
+            {t('notActiveError')}
           </Banner>
         </div>
       )}
@@ -214,17 +212,18 @@ export default async function GameStatusPage({
             {targetCount > 0 ? (
               <>
                 <p className="mb-3 font-sans text-[13px] leading-relaxed text-muted">
-                  {targetCount === 1
-                    ? '1 spiller har gått ferdig, men ikke levert scorekortet. Send en påminnelse om å levere.'
-                    : `${targetCount} spillere har gått ferdig, men ikke levert scorekortet. Send en påminnelse om å levere.`}
+                  {t('remindReady', { count: targetCount })}
                 </p>
-                <RemindButton remindAction={remindAction} count={targetCount} />
+                <RemindButton
+                  remindAction={remindAction}
+                  count={targetCount}
+                  labelKey="remindButton"
+                  confirmKey="remindConfirm"
+                />
               </>
             ) : (
               <p className="font-sans text-[13px] leading-relaxed text-muted">
-                Ingen er ferdige uten å ha levert akkurat nå. Spillere får
-                automatisk en påminnelse når de har tastet inn alle{' '}
-                {TOTAL_HOLES} hull.
+                {t('remindNone', { totalHoles: TOTAL_HOLES })}
               </p>
             )}
           </div>
@@ -236,23 +235,13 @@ export default async function GameStatusPage({
         <section className="mt-3">
           <div className="rounded-xl border border-border bg-surface px-4 py-4">
             <p className="mb-3 font-sans text-[13px] leading-relaxed text-muted">
-              {unconfirmedCount === 1
-                ? '1 spiller har ikke bekreftet deltakelse ennå. Send en påminnelse.'
-                : `${unconfirmedCount} spillere har ikke bekreftet deltakelse ennå. Send en påminnelse.`}
+              {t('remindUnconfirmed', { count: unconfirmedCount })}
             </p>
             <RemindButton
               remindAction={remindUnconfirmedAction}
               count={unconfirmedCount}
-              label={
-                unconfirmedCount === 1
-                  ? 'Purr 1 ubekreftet spiller'
-                  : `Purr ${unconfirmedCount} ubekreftede spillere`
-              }
-              confirmText={
-                unconfirmedCount === 1
-                  ? 'Sende bekreftelses-påminnelse til 1 spiller?'
-                  : `Sende bekreftelses-påminnelse til ${unconfirmedCount} spillere?`
-              }
+              labelKey="purreUnconfirmedButton"
+              confirmKey="purreUnconfirmedConfirm"
             />
           </div>
         </section>
@@ -261,16 +250,16 @@ export default async function GameStatusPage({
       {/* Spiller-liste */}
       <section className="mt-5">
         <p className="mb-1.5 px-1 font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          Spillere
+          {t('heading')}
         </p>
         {rows.length === 0 ? (
           <div className="rounded-xl border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
-            Ingen spillere ennå.
+            {t('emptyState')}
           </div>
         ) : (
           <ul className="overflow-hidden rounded-xl border border-border bg-surface">
             {rows.map((r) => {
-              const meta = STATUS_META[r.status];
+              const meta = statusLabels[r.status];
               const isTarget = isDeliveryReminderTarget(r.status);
               return (
                 <li
@@ -289,8 +278,8 @@ export default async function GameStatusPage({
                     </div>
                     <p className="mt-0.5 font-sans text-[11.5px] text-muted">
                       {r.lastActionAt
-                        ? `Siste registrering ${formatRelativeNb(r.lastActionAt)}`
-                        : 'Ingen registreringer ennå'}
+                        ? t('lastAction', { relative: formatRelativeLocale(r.lastActionAt, locale) })
+                        : t('noActions')}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
@@ -301,7 +290,7 @@ export default async function GameStatusPage({
                       {meta.label}
                     </p>
                     <p className="mt-0.5 font-sans text-[11px] tabular-nums text-muted">
-                      {r.holesFilled}/{TOTAL_HOLES} hull
+                      {t('hullCount', { filled: r.holesFilled, total: TOTAL_HOLES })}
                     </p>
                   </div>
                 </li>

@@ -1,6 +1,7 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
 import { revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
@@ -40,6 +41,7 @@ async function updateGameInternal(
   formData: FormData,
   mode: UpdateMode,
 ) {
+  const locale = await getLocale();
   const supabase = await getServerClient();
   // #428: admins keep their Sekretariat redirects; a game's creator gets the
   // player-facing /games/[id]/rediger flow. Gate up front so every redirect
@@ -57,7 +59,7 @@ async function updateGameInternal(
   const payload = buildGameInsertPayload(formData, payloadMode);
 
   if (payload.errorCode) {
-    redirect(`${editBase}?error=${payload.errorCode}`);
+    redirect({ href: `${editBase}?error=${payload.errorCode}`, locale });
   }
 
   // Tee-off is required when publishing or editing a scheduled game (you
@@ -70,26 +72,29 @@ async function updateGameInternal(
       scheduledTeeOffAt = parseOsloDateTimeLocal(rawTeeOff);
     } catch {
       if (mode !== 'save_draft') {
-        redirect(`${editBase}?error=tee_off_required`);
+        redirect({ href: `${editBase}?error=tee_off_required`, locale });
       }
       scheduledTeeOffAt = null;
     }
   } else if (mode !== 'save_draft') {
-    redirect(`${editBase}?error=tee_off_required`);
+    redirect({ href: `${editBase}?error=tee_off_required`, locale });
   }
 
   // Side-tournament config (parsed up front; persisted below only if the row
   // is still in an editable state).
   const sideResult = parseSideTournamentFromFormData(formData);
   if (!sideResult.ok) {
-    redirect(`${editBase}?error=${sideResult.errorCode}`);
+    redirect({ href: `${editBase}?error=${sideResult.errorCode}`, locale });
   }
+  // TypeScript cannot narrow past next-intl redirect (not declared `never` at
+  // call-site); assert ok branch explicitly.
+  const sidePayload = (sideResult as Extract<typeof sideResult, { ok: true }>).payload;
   const {
     enabled: sideEnabled,
     ldCount: sideLdCount,
     ctpCount: sideCtpCount,
     disabledCategories: sideDisabledCategories,
-  } = sideResult.payload;
+  } = sidePayload;
 
   if (mode === 'publish' || mode === 'update_scheduled') {
     // Pending-profile gate via SECURITY DEFINER RPC (migration 0071), not a
@@ -104,7 +109,7 @@ async function updateGameInternal(
     );
 
     if (rosterErr) {
-      redirect(`${editBase}?error=db_roster`);
+      redirect({ href: `${editBase}?error=db_roster`, locale });
     }
 
     const pendingRows = (pending ?? []) as { id: string; email: string }[];
@@ -113,7 +118,7 @@ async function updateGameInternal(
         error: 'pending_players',
         emails: pendingRows.map((p) => p.email).join(', '),
       });
-      redirect(`${editBase}?${qs.toString()}`);
+      redirect({ href: `${editBase}?${qs.toString()}`, locale });
     }
   }
 
@@ -128,13 +133,13 @@ async function updateGameInternal(
     .eq('id', gameId)
     .single();
   if (existingError || !existing) {
-    redirect(`${detailBase}?error=not_editable`);
+    redirect({ href: `${detailBase}?error=not_editable`, locale });
   }
   if (
-    existing.status !== 'draft' &&
-    existing.game_mode !== payload.game_mode
+    existing!.status !== 'draft' &&
+    existing!.game_mode !== payload.game_mode
   ) {
-    redirect(`${editBase}?error=mode_locked_after_publish`);
+    redirect({ href: `${editBase}?error=mode_locked_after_publish`, locale });
   }
 
   // Optimistic lock: only update if the row's current status matches the
@@ -196,7 +201,7 @@ async function updateGameInternal(
     // Either the optimistic-lock filter excluded the row (status flipped) or
     // a real DB error. In both cases we bounce to the detail page; the user
     // will see the current state and (if applicable) the not_editable banner.
-    redirect(`${detailBase}?error=not_editable`);
+    redirect({ href: `${detailBase}?error=not_editable`, locale });
   }
 
   // Snapshot eksisterende roster FØR delete + insert. Brukes til å regne
@@ -220,7 +225,7 @@ async function updateGameInternal(
     .delete()
     .eq('game_id', gameId);
   if (deleteError) {
-    redirect(`${editBase}?error=db_players`);
+    redirect({ href: `${editBase}?error=db_players`, locale });
   }
 
   if (payload.players.length > 0) {
@@ -241,7 +246,7 @@ async function updateGameInternal(
       .from('game_players')
       .insert(rows);
     if (insertError) {
-      redirect(`${editBase}?error=db_players`);
+      redirect({ href: `${editBase}?error=db_players`, locale });
     }
   }
 
@@ -266,7 +271,5 @@ async function updateGameInternal(
   }
 
   revalidateTag(`game-${gameId}`, 'max');
-  redirect(
-    `${detailBase}?status=${mode === 'publish' ? 'scheduled' : 'updated'}`,
-  );
+  redirect({ href: `${detailBase}?status=${mode === 'publish' ? 'scheduled' : 'updated'}`, locale });
 }

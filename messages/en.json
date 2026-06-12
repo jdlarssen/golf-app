@@ -2145,6 +2145,157 @@
         "moveButton": "Move",
         "flightAriaLabel": "Flight for {name}",
         "flightOptionN": "Flight {n}"
+      },
+      "edit": {
+        "kicker": "Edit game",
+        "subtitle": "Change course, players, teams or settings",
+        "bannerDraft": "The game is still a draft — only you can see it. Fill in the missing details and publish when you are ready.",
+        "bannerScheduled": "The game is in the scheduled phase. Players will see changes the next time they open the app.",
+        "playerShortageBanner": "You need 8 registered players for best ball. Invite more from the <link>Players</link> page."
+      },
+      "delete": {
+        "kicker": "Confirm deletion",
+        "heading": "Delete «{name}»?",
+        "permanentLabel": "Deleted permanently",
+        "cannotUndo": "This action cannot be undone.",
+        "buttonActive": "Delete ongoing game forever",
+        "buttonDefault": "Delete game forever",
+        "deletingBusy": "Deleting …",
+        "cancel": "Cancel",
+        "errors": {
+          "delete_failed": "Deletion failed. Try again, or check the Vercel logs."
+        },
+        "warnings": {
+          "scheduled": "The game is scheduled and players have been invited. They will not receive a cancellation notice — you will need to inform them yourself.",
+          "active": "The game is in progress. Deletion removes all strokes registered so far, and players lose their round without warning.",
+          "finished": "The game is finished. The leaderboard and results will be permanently deleted. Players who have bookmarked the link will get a 404."
+        },
+        "players": "{count, plural, one {# player in the game} other {# players in the game}}",
+        "scoreRows": "{count, plural, one {# score row} other {# score rows}}",
+        "invitations": "{count, plural, one {# invitation linked to the game} other {# invitations linked to the game}}"
+      },
+      "finish": {
+        "topBarKicker": "Finish game",
+        "title": "Finish game",
+        "subtitle": "Select side tournament winners for «{name}». The game will be locked when you confirm.",
+        "missingHeader": "{count, plural, one {1 player has not submitted:} other {{count} players have not submitted:}}",
+        "missingBody": "If you finish now, these players will be listed as <bold>not submitted</bold>. Their scores still count in the result."
+      },
+      "sideWinners": {
+        "validationError": "You must select a winner in all fields before finishing.",
+        "longestDriveLabel": "Longest drive",
+        "longestDriveSlot": "Longest drive #{pos}",
+        "closestToPinLabel": "Closest to pin",
+        "closestToPinSlot": "Closest to pin #{pos}",
+        "selectWinner": "— Select winner —",
+        "noQualified": "No qualified players",
+        "submitButton": "Finish game and publish side tournament",
+        "submittingBusy": "Saving …",
+        "cancel": "Cancel"
+      },
+      "finishAnyway": {
+        "topBarKicker": "Finish game",
+        "title": "Finish anyway?",
+        "subtitle": "Some players have not submitted a scorecard in «{name}».",
+        "missingHeader": "{count, plural, one {1 player has not submitted:} other {{count} players have not submitted:}}",
+        "markWithdrawn": "Mark as withdrawn",
+        "bodyWithWd": "If you finish now, players without a tick will be listed as <notDelivered>not submitted</notDelivered>. Scores they registered still count in the result. Players with a tick are marked as <withdrawn>Withdrawn</withdrawn> and will not count in the rankings. You can undo a withdrawal later as long as the game is active. The rest will be locked and the leaderboard will open for everyone.",
+        "bodyNoWd": "If you finish now, these players will be listed as <notDelivered>not submitted</notDelivered>. Scores they registered still count in the result. The rest will be locked and the leaderboard will open for everyone.",
+        "submitButton": "Finish anyway",
+        "submittingBusy": "Finishing …",
+        "cancel": "Cancel"
+      },
+      "status": {
+        "brassRibbon": "Player status",
+        "topBarKicker": "Player status",
+        "heading": "Players",
+        "deliveredSummary": "Submitted {delivered} / {total}",
+        "readyMissingDelivery": "{count, plural, one {· # ready, not submitted} other {· # ready, not submitted}}",
+        "emptyState": "No players yet.",
+        "lastAction": "Last entry {relative}",
+        "noActions": "No entries yet",
+        "hullCount": "{filled}/{total} holes",
+        "reminderSent": "{count, plural, one {✓ Reminder sent to 1 player.} other {✓ Reminder sent to {count} players.}}",
+        "unconfirmedReminderSent": "{count, plural, one {✓ Confirmation reminder sent to 1 player.} other {✓ Confirmation reminder sent to {count} players.}}",
+        "notActiveError": "The game is no longer active. You cannot send reminders.",
+        "remindReady": "{count, plural, one {1 player has finished but not submitted their scorecard. Send a reminder to submit.} other {{count} players have finished but not submitted their scorecard. Send a reminder to submit.}}",
+        "remindNone": "No one has finished without submitting right now. Players automatically receive a reminder when they have entered all {totalHoles} holes.",
+        "remindButton": "{count, plural, one {Send reminder to 1 player} other {Send reminder to {count} players}}",
+        "remindConfirm": "{count, plural, one {Send submission reminder to 1 player?} other {Send submission reminder to {count} players?}}",
+        "remindUnconfirmed": "{count, plural, one {1 player has not confirmed attendance yet. Send a reminder.} other {{count} players have not confirmed attendance yet. Send a reminder.}}",
+        "purreUnconfirmedButton": "{count, plural, one {Remind 1 unconfirmed player} other {Remind {count} unconfirmed players}}",
+        "purreUnconfirmedConfirm": "{count, plural, one {Send confirmation reminder to 1 player?} other {Send confirmation reminder to {count} players?}}",
+        "statusLabels": {
+          "ready_not_delivered": "Ready, not submitted",
+          "pending_approval": "Awaiting approval",
+          "playing": "Playing",
+          "not_started": "Not started",
+          "delivered": "Submitted",
+          "withdrawn": "Withdrawn"
+        },
+        "sendingBusy": "Sending …"
+      },
+      "signups": {
+        "topBarKicker": "Signups",
+        "brassRibbon": "Self-signup",
+        "heading": "Signups",
+        "inviteOnlyBanner": "This game is invite-only and does not appear in Find tournaments. Anyone with the link can still request to join. Requests will appear here for you to approve or decline.",
+        "statusBanners": {
+          "approved": "✓ Signup approved. Player added to the roster.",
+          "rejected": "✓ Signup declined. Player will be notified."
+        },
+        "errors": {
+          "not_pending": "The request has already been decided by another administrator. Reload the page.",
+          "game_locked": "The game has started or finished. Signups can no longer be changed.",
+          "not_authorized": "You do not have permission to decide signups for this game.",
+          "db_update": "Could not save the decision. Try again.",
+          "db_players": "Could not add the player to the roster. Try again.",
+          "db_cascade": "Could not retrieve team members. Try again.",
+          "db_team_slot": "Could not find a free team slot. Try again.",
+          "no_team_slot": "The game has no available team slots.",
+          "reason_too_long": "The reason is too long (max 200 characters)."
+        },
+        "tabs": {
+          "pending": "Pending",
+          "approved": "Approved",
+          "rejected": "Declined",
+          "withdrawn": "Withdrawn"
+        },
+        "emptyMessages": {
+          "pending": "No signups waiting for approval.",
+          "approved": "No approved signups yet.",
+          "rejected": "No declined signups yet.",
+          "withdrawn": "No players have withdrawn."
+        },
+        "teamLabel": "Team · {name}",
+        "playerCount": "{count, plural, one {# player} other {# players}}",
+        "captainBadge": "Captain",
+        "registeredAt": "Signed up {date}",
+        "decidedAt": "Decided {date}",
+        "approveButton": "Approve",
+        "approvingBusy": "Approving …",
+        "rejectButton": "Decline",
+        "rejectingBusy": "Declining …",
+        "rejectModalTitle": "Decline signup from {name}?",
+        "rejectModalTeamCascade": "The entire team «{name}» will be declined at the same time.",
+        "rejectReasonLabel": "Optional reason",
+        "rejectReasonPlaceholder": "(optional) — shown in the notification to the player",
+        "rejectSubmitButton": "Decline signup",
+        "rejectSubmittingBusy": "Declining …",
+        "rejectCancelButton": "Cancel",
+        "rejectionReasonDisplay": "Reason: {reason}"
+      },
+      "withdraw": {
+        "topBarKicker": "Withdraw player",
+        "title": "Withdraw player?",
+        "subtitle": "{name} in «{game}».",
+        "warningBody": "{name} will be marked as Withdrawn.",
+        "warningBold": "Withdrawn",
+        "bodyText": "The player's scores no longer count in the rankings. The player appears as «Withdrawn» below the leaderboard and in the player list. You can undo this later as long as the game is active.",
+        "submitButton": "Withdraw {name}",
+        "submittingBusy": "Withdrawing …",
+        "cancel": "Cancel",
+        "dangerVariant": "danger"
       }
     }
   }

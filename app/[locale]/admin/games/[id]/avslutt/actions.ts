@@ -1,6 +1,7 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
 import { revalidateTag } from 'next/cache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
@@ -51,6 +52,7 @@ export async function endGameWithSideWinners(
   allowMissing: boolean,
   formData: FormData,
 ) {
+  const locale = await getLocale();
   const { supabase, user, actorName, isAdmin } = await loadFinishContext(gameId);
   const detailPath = isAdmin ? `/admin/games/${gameId}` : `/games/${gameId}`;
   const wizardPath = `${detailPath}/avslutt`;
@@ -78,7 +80,7 @@ export async function endGameWithSideWinners(
     }>();
 
   if (!game || game.status !== 'active') {
-    redirect(`${detailPath}?error=not_active`);
+    redirect({ href: `${detailPath}?error=not_active`, locale });
   }
 
   // Parse winners. Each dropdown is named ld_winner_N / ctp_winner_N where
@@ -95,7 +97,7 @@ export async function endGameWithSideWinners(
   for (let pos = 1; pos <= game!.side_ld_count; pos++) {
     const raw = formData.get(`ld_winner_${pos}`);
     if (typeof raw !== 'string' || raw === '') {
-      redirect(`${wizardPath}?error=missing_ld_${pos}`);
+      redirect({ href: `${wizardPath}?error=missing_ld_${pos}`, locale });
     }
     winners.push({
       category: 'longest_drive',
@@ -106,7 +108,7 @@ export async function endGameWithSideWinners(
   for (let pos = 1; pos <= game!.side_ctp_count; pos++) {
     const raw = formData.get(`ctp_winner_${pos}`);
     if (typeof raw !== 'string' || raw === '') {
-      redirect(`${wizardPath}?error=missing_ctp_${pos}`);
+      redirect({ href: `${wizardPath}?error=missing_ctp_${pos}`, locale });
     }
     winners.push({
       category: 'closest_to_pin',
@@ -135,18 +137,18 @@ export async function endGameWithSideWinners(
     >();
 
   if (!players || players.length === 0) {
-    redirect(`${detailPath}?error=no_players`);
+    redirect({ href: `${detailPath}?error=no_players`, locale });
   }
   for (const p of players!) {
     // Withdrawn (WD, #386): out of the ranking — never blocks the end.
     if (p.withdrawn_at) continue;
     if (!p.submitted_at) {
       // No-show: «avslutt likevel» skips them (submitted_at stays null).
-      if (!allowMissing) redirect(`${detailPath}?error=not_all_submitted`);
+      if (!allowMissing) redirect({ href: `${detailPath}?error=not_all_submitted`, locale });
       continue;
     }
     if (game!.require_peer_approval && !p.approved_at) {
-      redirect(`${detailPath}?error=not_all_approved`);
+      redirect({ href: `${detailPath}?error=not_all_approved`, locale });
     }
   }
 
@@ -166,7 +168,7 @@ export async function endGameWithSideWinners(
         '[endGameWithSideWinners] winners insert failed',
         winnerErr,
       );
-      redirect(`${wizardPath}?error=db_winners`);
+      redirect({ href: `${wizardPath}?error=db_winners`, locale });
     }
   }
 
@@ -175,7 +177,7 @@ export async function endGameWithSideWinners(
     .from('games')
     .update({ status: 'finished', ended_at: new Date().toISOString() })
     .eq('id', gameId);
-  if (statusErr) redirect(`${detailPath}?error=db_finish`);
+  if (statusErr) redirect({ href: `${detailPath}?error=db_finish`, locale });
 
   await logAdminEvent({
     actorId: user.id,
@@ -239,5 +241,5 @@ export async function endGameWithSideWinners(
   revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/admin/games/${gameId}`);
   revalidatePath(`/games/${gameId}`);
-  redirect(`${detailPath}?status=finished`);
+  redirect({ href: `${detailPath}?status=finished`, locale });
 }

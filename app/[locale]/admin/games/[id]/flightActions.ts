@@ -1,6 +1,7 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
 import { revalidateTag } from 'next/cache';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
@@ -63,6 +64,7 @@ async function fetchFlightPlayers(
  * eller ?error=... ved feil.
  */
 export async function suggestFlightAssignment(gameId: string): Promise<void> {
+  const locale = await getLocale();
   const { admin, detailPath } = await loadFlightContext(gameId);
 
   // Verifiser at spillet er scheduled/active og trenger inndeling.
@@ -71,20 +73,22 @@ export async function suggestFlightAssignment(gameId: string): Promise<void> {
     .select('id, status, game_mode')
     .eq('id', gameId)
     .single<{ id: string; status: string; game_mode: GameMode }>();
-  if (!game) redirect(`${detailPath}?error=not_found`);
-  if (game.status !== 'scheduled' && game.status !== 'active') {
-    redirect(`${detailPath}?error=not_active`);
+  if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
+  // TypeScript cannot narrow past next-intl redirect (not declared `never`),
+  // so the post-guard non-null assertions are the established 2b pattern.
+  if (game!.status !== 'scheduled' && game!.status !== 'active') {
+    redirect({ href: `${detailPath}?error=not_active`, locale });
   }
 
   const players = await fetchFlightPlayers(admin, gameId);
-  if (!players) redirect(`${detailPath}?error=db_roster`);
+  if (!players) redirect({ href: `${detailPath}?error=db_roster`, locale });
 
-  if (!eligibleForFlightAssignment(game.game_mode, players)) {
+  if (!eligibleForFlightAssignment(game!.game_mode, players!)) {
     // Spillet er ≤4 aktive eller wolf — ingen inndeling nødvendig.
-    redirect(detailPath);
+    redirect({ href: detailPath, locale });
   }
 
-  const assignments = suggestFlightSplit(players);
+  const assignments = suggestFlightSplit(players!);
 
   for (const { user_id, flight_number } of assignments) {
     const { error } = await admin
@@ -92,12 +96,12 @@ export async function suggestFlightAssignment(gameId: string): Promise<void> {
       .update({ flight_number })
       .eq('game_id', gameId)
       .eq('user_id', user_id);
-    if (error) redirect(`${detailPath}?error=db_players`);
+    if (error) redirect({ href: `${detailPath}?error=db_players`, locale });
   }
 
   revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/admin/games/${gameId}`);
-  redirect(`${detailPath}?status=flight_suggested`);
+  redirect({ href: `${detailPath}?status=flight_suggested`, locale });
 }
 
 /**
@@ -111,11 +115,12 @@ export async function setPlayerFlight(
   targetUserId: string,
   targetFlight: number,
 ): Promise<void> {
+  const locale = await getLocale();
   const { admin, detailPath } = await loadFlightContext(gameId);
 
   // Grunnleggende validering
   if (!Number.isInteger(targetFlight) || targetFlight < 1) {
-    redirect(`${detailPath}?error=bad_flight`);
+    redirect({ href: `${detailPath}?error=bad_flight`, locale });
   }
 
   const { data: game } = await admin
@@ -123,9 +128,9 @@ export async function setPlayerFlight(
     .select('id, status, game_mode')
     .eq('id', gameId)
     .single<{ id: string; status: string; game_mode: GameMode }>();
-  if (!game) redirect(`${detailPath}?error=not_found`);
-  if (game.status !== 'scheduled' && game.status !== 'active') {
-    redirect(`${detailPath}?error=not_active`);
+  if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
+  if (game!.status !== 'scheduled' && game!.status !== 'active') {
+    redirect({ href: `${detailPath}?error=not_active`, locale });
   }
 
   // Kapasitetssjekk: tell aktive spillere i target-flight eksklusive denne spilleren
@@ -136,9 +141,9 @@ export async function setPlayerFlight(
     .eq('flight_number', targetFlight)
     .neq('user_id', targetUserId)
     .is('withdrawn_at', null);
-  if (countError) redirect(`${detailPath}?error=db_roster`);
+  if (countError) redirect({ href: `${detailPath}?error=db_roster`, locale });
   if ((existingCount ?? 0) >= MAX_FLIGHT_SIZE) {
-    redirect(`${detailPath}?error=flight_full`);
+    redirect({ href: `${detailPath}?error=flight_full`, locale });
   }
 
   const { error } = await admin
@@ -146,11 +151,11 @@ export async function setPlayerFlight(
     .update({ flight_number: targetFlight })
     .eq('game_id', gameId)
     .eq('user_id', targetUserId);
-  if (error) redirect(`${detailPath}?error=db_players`);
+  if (error) redirect({ href: `${detailPath}?error=db_players`, locale });
 
   revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/admin/games/${gameId}`);
-  redirect(`${detailPath}?status=flight_updated`);
+  redirect({ href: `${detailPath}?status=flight_updated`, locale });
 }
 
 /**
@@ -163,6 +168,7 @@ export async function toggleSignupsClosed(
   gameId: string,
   closedNow: boolean,
 ): Promise<void> {
+  const locale = await getLocale();
   const { admin, detailPath } = await loadFlightContext(gameId);
 
   const { data: game } = await admin
@@ -174,14 +180,14 @@ export async function toggleSignupsClosed(
       status: string;
       registration_mode: 'invite_only' | 'manual_approval' | 'open';
     }>();
-  if (!game) redirect(`${detailPath}?error=not_found`);
-  if (game.status !== 'scheduled') redirect(`${detailPath}?error=signups_not_scheduled`);
+  if (!game) redirect({ href: `${detailPath}?error=not_found`, locale });
+  if (game!.status !== 'scheduled') redirect({ href: `${detailPath}?error=signups_not_scheduled`, locale });
   if (
-    game.registration_mode !== 'open' &&
-    game.registration_mode !== 'manual_approval'
+    game!.registration_mode !== 'open' &&
+    game!.registration_mode !== 'manual_approval'
   ) {
     // invite_only har ingen registreringsliste å stenge
-    redirect(detailPath);
+    redirect({ href: detailPath, locale });
   }
 
   const signups_closed_at = closedNow ? new Date().toISOString() : null;
@@ -189,12 +195,13 @@ export async function toggleSignupsClosed(
     .from('games')
     .update({ signups_closed_at })
     .eq('id', gameId);
-  if (error) redirect(`${detailPath}?error=db_game`);
+  if (error) redirect({ href: `${detailPath}?error=db_game`, locale });
 
   revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/admin/games/${gameId}`);
   revalidatePath(`/signup`);
-  redirect(
-    `${detailPath}?status=${closedNow ? 'signups_closed' : 'signups_reopened'}`,
-  );
+  redirect({
+    href: `${detailPath}?status=${closedNow ? 'signups_closed' : 'signups_reopened'}`,
+    locale,
+  });
 }

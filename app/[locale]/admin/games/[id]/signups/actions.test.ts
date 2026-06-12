@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   buildSupabaseMock,
-  makeRedirectMock,
+  makeLocaleRedirectMock,
   RedirectError,
 } from '@/tests/serverActionMocks';
 
@@ -17,9 +17,13 @@ import {
  *  - Honeypot-felt på reject-formen silent-rejecter.
  */
 
-const redirectMock = makeRedirectMock();
-vi.mock('next/navigation', () => ({
-  redirect: (url: string) => redirectMock(url),
+const redirectMock = makeLocaleRedirectMock();
+vi.mock('@/i18n/navigation', () => ({
+  redirect: (arg: { href: string; locale?: string } | string) =>
+    redirectMock(arg),
+}));
+vi.mock('next-intl/server', () => ({
+  getLocale: async () => 'no',
 }));
 
 const revalidateTagMock = vi.fn();
@@ -69,7 +73,9 @@ function authedAsAdmin(): void {
 }
 
 function lastRedirect(): string | undefined {
-  return redirectMock.mock.calls.at(-1)?.[0];
+  const arg = redirectMock.mock.calls.at(-1)?.[0];
+  if (!arg) return undefined;
+  return typeof arg === 'string' ? arg : arg.href;
 }
 
 function fd(entries: Record<string, string>): FormData {

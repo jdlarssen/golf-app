@@ -1,6 +1,7 @@
 import { Suspense, cache } from 'react';
 import { getTranslations } from 'next-intl/server';
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
@@ -86,6 +87,7 @@ export default async function EditGamePage({
   const sp = await searchParams;
 
   const tErrors = await getTranslations('wizard.errors');
+  const t = await getTranslations('admin.game.edit');
   const errorCode = first(sp.error);
   const emails = first(sp.emails);
   function buildErrorMessage(): string | undefined {
@@ -96,8 +98,9 @@ export default async function EditGamePage({
   }
   const errorMessage = buildErrorMessage();
 
+  const locale = await getLocale();
   const { supabase, userId } = await getEditContext();
-  if (!userId) redirect('/login');
+  if (!userId) redirect({ href: '/login', locale });
 
   // Self-gate for Fase 4 chunk 2 layout-loosening (#223). Replaces the
   // inline is_admin Promise.all-entry; the game row fetches below now
@@ -114,15 +117,18 @@ export default async function EditGamePage({
     .single<EditGameRow>();
 
   if (gameError || !game) {
-    redirect('/admin/games');
+    redirect({ href: '/admin/games', locale });
   }
 
   // Edits are allowed while the game is still in 'draft' or 'scheduled'.
   // Once it flips to 'active' or 'finished', state changes (handicaps, scores)
   // make the roster and tee-off effectively immutable.
-  if (game.status !== 'draft' && game.status !== 'scheduled') {
-    redirect(`/admin/games/${id}?error=not_editable`);
+  if (game!.status !== 'draft' && game!.status !== 'scheduled') {
+    redirect({ href: `/admin/games/${id}?error=not_editable`, locale });
   }
+
+  // TypeScript cannot narrow past next-intl redirect; use non-null assertion.
+  const g = game!;
 
   return (
     <AdminShell>
@@ -131,33 +137,31 @@ export default async function EditGamePage({
         kicker="Spill · protokoll"
       />
 
-      <BrassRibbon kicker="Rediger spill" />
+      <BrassRibbon kicker={t('kicker')} />
 
       <div className="px-1">
         <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-          {game.name}
+          {g.name}
         </h1>
         <p className="font-sans text-[11.5px] text-muted">
-          Endre bane, spillere, lag eller innstillinger
+          {t('subtitle')}
         </p>
       </div>
 
       <div className="mt-4 space-y-2">
         {errorMessage && <Banner tone="error">{errorMessage}</Banner>}
         <Banner tone="info">
-          {game.status === 'draft'
-            ? 'Spillet er fortsatt et utkast, så bare du ser det. Fyll inn det som mangler og publiser når dere er klare.'
-            : 'Spillet er i planlagt-fasen. Spillerne ser endringene neste gang de åpner appen.'}
+          {g.status === 'draft' ? t('bannerDraft') : t('bannerScheduled')}
         </Banner>
         <Suspense fallback={null}>
-          <PlayerShortageBanner gameMode={game.game_mode} />
+          <PlayerShortageBanner gameMode={g.game_mode} />
         </Suspense>
       </div>
 
       <div className="mt-5">
         <Card>
           <Suspense fallback={<GameFormSkeleton />}>
-            <EditGameFormBody gameId={id} game={game} />
+            <EditGameFormBody gameId={id} game={g} />
           </Suspense>
         </Card>
       </div>
@@ -229,16 +233,16 @@ async function PlayerShortageBanner({ gameMode }: { gameMode: GameMode }) {
   if (isStablefordFamily(gameMode)) return null;
   const { playerOptions } = await getOptions();
   if (playerOptions.length >= 8) return null;
+  const tEdit = await getTranslations('admin.game.edit');
   return (
     <Banner tone="info">
-      Du trenger 8 registrerte spillere for best ball. Inviter flere fra{' '}
-      <SmartLink
-        href="/admin/spillere"
-        className="underline hover:no-underline"
-      >
-        Spillere
-      </SmartLink>
-      -siden.
+      {tEdit.rich('playerShortageBanner', {
+        link: (chunks) => (
+          <SmartLink href="/admin/spillere" className="underline hover:no-underline">
+            {chunks}
+          </SmartLink>
+        ),
+      })}
     </Banner>
   );
 }

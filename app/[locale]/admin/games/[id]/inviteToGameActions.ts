@@ -1,6 +1,7 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
 import { revalidateTag } from 'next/cache';
 import { randomUUID } from 'node:crypto';
 import { getServerClient } from '@/lib/supabase/server';
@@ -33,6 +34,7 @@ export async function addExistingPlayerToGame(
   gameId: string,
   formData: FormData,
 ): Promise<void> {
+  const locale = await getLocale();
   const supabase = await getServerClient();
   const ctx = await requireAdminOrCreator(supabase, gameId);
   const detailPath = ctx.isAdmin
@@ -42,13 +44,13 @@ export async function addExistingPlayerToGame(
 
   const recipientUserId = String(formData.get('recipient_user_id') ?? '').trim();
   if (!recipientUserId) {
-    redirect(`${detailPath}?error=invite_missing_user`);
+    redirect({ href: `${detailPath}?error=invite_missing_user`, locale });
   }
 
   const game = await loadGameForInvite(supabase, gameId, detailPath);
 
   if (game.status === 'active' || game.status === 'finished') {
-    redirect(`${detailPath}?error=game_locked`);
+    redirect({ href: `${detailPath}?error=game_locked`, locale });
   }
 
   if (game.game_mode === 'best_ball') {
@@ -57,7 +59,7 @@ export async function addExistingPlayerToGame(
       .select('user_id', { count: 'exact', head: true })
       .eq('game_id', gameId);
     if ((count ?? 0) >= BEST_BALL_MAX_PLAYERS) {
-      redirect(`${detailPath}?error=game_full`);
+      redirect({ href: `${detailPath}?error=game_full`, locale });
     }
   }
 
@@ -81,7 +83,7 @@ export async function addExistingPlayerToGame(
 
   if (insertError && !duplicate) {
     console.error('[inviteToGame/addExistingPlayer] insert failed', insertError);
-    redirect(`${detailPath}?error=db_players`);
+    redirect({ href: `${detailPath}?error=db_players`, locale });
   }
 
   if (!duplicate && recipientUserId !== inviterUserId) {
@@ -93,7 +95,7 @@ export async function addExistingPlayerToGame(
   }
 
   revalidateTag(`game-${gameId}`, 'max');
-  redirect(`${detailPath}?status=invite_added`);
+  redirect({ href: `${detailPath}?status=invite_added`, locale });
 }
 
 /**
@@ -113,6 +115,7 @@ export async function inviteEmailToGame(
   gameId: string,
   formData: FormData,
 ): Promise<void> {
+  const locale = await getLocale();
   const supabase = await getServerClient();
   const ctx = await requireAdminOrCreator(supabase, gameId);
   const detailPath = ctx.isAdmin
@@ -123,20 +126,20 @@ export async function inviteEmailToGame(
 
   const rawEmail = String(formData.get('email') ?? '').trim().toLowerCase();
   if (!rawEmail || !rawEmail.includes('@')) {
-    redirect(`${detailPath}?error=invite_invalid_email`);
+    redirect({ href: `${detailPath}?error=invite_invalid_email`, locale });
   }
 
   // Disposable-domener blokkeres for arrangører som ikke er admin (#422).
   // Admin og trusted-creators er bevisst u-guardet (kurator-modellen — de
   // inviterer folk de allerede har avklart med).
   if (!ctx.isAdmin && isDisposableEmailDomain(rawEmail)) {
-    redirect(`${detailPath}?error=disposable_email`);
+    redirect({ href: `${detailPath}?error=disposable_email`, locale });
   }
 
   const game = await loadGameForInvite(supabase, gameId, detailPath);
 
   if (game.status === 'active' || game.status === 'finished') {
-    redirect(`${detailPath}?error=game_locked`);
+    redirect({ href: `${detailPath}?error=game_locked`, locale });
   }
 
   if (game.game_mode === 'best_ball') {
@@ -145,7 +148,7 @@ export async function inviteEmailToGame(
       .select('user_id', { count: 'exact', head: true })
       .eq('game_id', gameId);
     if ((count ?? 0) >= BEST_BALL_MAX_PLAYERS) {
-      redirect(`${detailPath}?error=game_full`);
+      redirect({ href: `${detailPath}?error=game_full`, locale });
     }
   }
 
@@ -173,7 +176,7 @@ export async function inviteEmailToGame(
 
     if (insertError && !duplicate) {
       console.error('[inviteToGame/inviteEmail] existing-user insert failed', insertError);
-      redirect(`${detailPath}?error=db_players`);
+      redirect({ href: `${detailPath}?error=db_players`, locale });
     }
 
     if (!duplicate && existingUser.id !== inviterUserId) {
@@ -185,7 +188,7 @@ export async function inviteEmailToGame(
     }
 
     revalidateTag(`game-${gameId}`, 'max');
-    redirect(`${detailPath}?status=invite_added&email=${encodeURIComponent(rawEmail)}`);
+    redirect({ href: `${detailPath}?status=invite_added&email=${encodeURIComponent(rawEmail)}`, locale });
   }
 
   // Ukjent e-post: idempotent insert i invitations.
@@ -199,7 +202,7 @@ export async function inviteEmailToGame(
 
   if (existingInvite) {
     revalidateTag(`game-${gameId}`, 'max');
-    redirect(`${detailPath}?status=invite_sent&email=${encodeURIComponent(rawEmail)}`);
+    redirect({ href: `${detailPath}?status=invite_sent&email=${encodeURIComponent(rawEmail)}`, locale });
   }
 
   const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
@@ -212,7 +215,7 @@ export async function inviteEmailToGame(
   });
   if (insertError) {
     console.error('[inviteToGame/inviteEmail] invitations insert failed', insertError);
-    redirect(`${detailPath}?error=invite_failed`);
+    redirect({ href: `${detailPath}?error=invite_failed`, locale });
   }
 
   const invitedByName =
@@ -226,11 +229,11 @@ export async function inviteEmailToGame(
     });
   } catch (err) {
     console.error('[inviteToGame/inviteEmail] mail failed', err);
-    redirect(`${detailPath}?error=mail_failed&email=${encodeURIComponent(rawEmail)}`);
+    redirect({ href: `${detailPath}?error=mail_failed&email=${encodeURIComponent(rawEmail)}`, locale });
   }
 
   revalidateTag(`game-${gameId}`, 'max');
-  redirect(`${detailPath}?status=invite_sent&email=${encodeURIComponent(rawEmail)}`);
+  redirect({ href: `${detailPath}?status=invite_sent&email=${encodeURIComponent(rawEmail)}`, locale });
 }
 
 async function loadGameForInvite(
@@ -238,6 +241,7 @@ async function loadGameForInvite(
   gameId: string,
   detailPath: string,
 ): Promise<GameSnapshot> {
+  const locale = await getLocale();
   const { data, error } = await supabase
     .from('games')
     .select('id, name, status, game_mode')
@@ -245,7 +249,7 @@ async function loadGameForInvite(
     .single<GameSnapshot>();
 
   if (error || !data) {
-    redirect(`${detailPath}?error=not_found`);
+    redirect({ href: `${detailPath}?error=not_found`, locale });
   }
   return data!;
 }

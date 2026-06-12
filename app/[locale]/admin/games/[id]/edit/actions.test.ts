@@ -29,8 +29,17 @@ import {
  */
 
 const redirectMock = makeRedirectMock();
+vi.mock('@/i18n/navigation', () => ({
+  redirect: (arg: { href: string; locale?: string } | string) =>
+    redirectMock(typeof arg === 'string' ? arg : arg.href),
+}));
+// lib/admin/auth.ts (shared auth gate, out of i18n scope) still redirects via
+// next/navigation — route it to the same spy so auth-gate assertions hold.
 vi.mock('next/navigation', () => ({
   redirect: (url: string) => redirectMock(url),
+}));
+vi.mock('next-intl/server', () => ({
+  getLocale: async () => 'no',
 }));
 
 const revalidateTagMock = vi.fn();

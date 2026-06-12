@@ -1,5 +1,7 @@
-import { notFound, redirect } from 'next/navigation';
-import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { Link } from '@/i18n/navigation';
+import { getTranslations, getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
@@ -40,6 +42,10 @@ export default async function AvsluttLikevelPage({
   const { id: gameId } = await params;
   const detailPath = `/admin/games/${gameId}`;
 
+  const locale = await getLocale();
+  const t = await getTranslations('admin.game.finishAnyway');
+  const tDetail = await getTranslations('admin.game.detail');
+
   const supabase = await getServerClient();
   await requireAdmin(supabase);
 
@@ -62,12 +68,12 @@ export default async function AvsluttLikevelPage({
   if (!game) notFound();
 
   if (game.status !== 'active') {
-    redirect(`${detailPath}?error=not_active`);
+    redirect({ href: `${detailPath}?error=not_active`, locale });
   }
   // Sideturneringsspill må innom vinnervalg-wizarden, som selv håndterer
   // manglende leveringer. Send dem dit i stedet for å duplisere flyten.
   if (game.side_tournament_enabled && game.side_ld_count + game.side_ctp_count > 0) {
-    redirect(`${detailPath}/avslutt`);
+    redirect({ href: `${detailPath}/avslutt`, locale });
   }
 
   const { data: gamePlayers } = await supabase
@@ -95,14 +101,14 @@ export default async function AvsluttLikevelPage({
     .filter((gp) => !gp.submitted_at && !gp.withdrawn_at)
     .map((gp) => {
       const u = gp.users;
-      const base = u?.name?.trim() || u?.email || '(ukjent spiller)';
+      const base = u?.name?.trim() || u?.email || tDetail('unknownPlayer');
       const displayName = u?.nickname ? `${base} «${u.nickname}»` : base;
       return { userId: gp.user_id, displayName };
     });
 
   // Ingen mangler → ingenting å «avslutte likevel». Bruk den vanlige stien.
   if (missing.length === 0) {
-    redirect(detailPath);
+    redirect({ href: detailPath, locale });
   }
 
   // WD tilbys kun for in-scope-modi. For andre format (matchplay/pott) vises
@@ -115,19 +121,17 @@ export default async function AvsluttLikevelPage({
     <AdminShell>
       <TopBar
         backHref={detailPath}
-        kicker="Avslutt spillet"
+        kicker={t('topBarKicker')}
       />
       <PageHeader
-        title="Avslutt likevel?"
-        subtitle={`Noen har ikke levert scorekort i «${game.name}».`}
+        title={t('title')}
+        subtitle={t('subtitle', { name: game.name })}
       />
 
       <div className="space-y-4 px-1">
         <div className="rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-3 text-sm text-warning">
           <p className="font-medium">
-            {missing.length === 1
-              ? '1 spiller har ikke levert:'
-              : `${missing.length} spillere har ikke levert:`}
+            {t('missingHeader', { count: missing.length })}
           </p>
           {/* Per-spiller valg (kun in-scope-modi): default = tell scorene
               (ingen hake), opt-in = marker som trukket. */}
@@ -143,7 +147,7 @@ export default async function AvsluttLikevelPage({
                       className="h-4 w-4 rounded accent-primary"
                     />
                     <span className="text-sm text-text">{displayName}</span>
-                    <span className="ml-auto text-xs text-muted">Marker som trukket</span>
+                    <span className="ml-auto text-xs text-muted">{t('markWithdrawn')}</span>
                   </label>
                 </li>
               ) : (
@@ -156,28 +160,12 @@ export default async function AvsluttLikevelPage({
         </div>
 
         <p className="text-sm text-muted">
-          {allowWd ? (
-            <>
-              Avslutter du nå, blir spillere uten hake stående som{' '}
-              <span className="font-medium text-text">ikke levert</span>. Scorene
-              de rakk å registrere teller fortsatt i resultatet. Spillere med hake
-              markeres som <span className="font-medium text-text">Trukket</span> og
-              teller ikke i rangeringen. Du kan angre trekk etterpå ved å åpne
-              spillet igjen. Resten låses og leaderboard åpnes for alle.
-            </>
-          ) : (
-            <>
-              Avslutter du nå, blir disse stående som{' '}
-              <span className="font-medium text-text">ikke levert</span>. Scorene
-              de rakk å registrere teller fortsatt i resultatet. Resten låses og
-              leaderboard åpnes for alle.
-            </>
-          )}
+          {allowWd ? t('bodyWithWd') : t('bodyNoWd')}
         </p>
 
         <form action={endAnywayAction}>
-          <SubmitButton className="w-full" pendingLabel="Avslutter …">
-            Avslutt likevel
+          <SubmitButton className="w-full" pendingLabel={t('submittingBusy')}>
+            {t('submitButton')}
           </SubmitButton>
         </form>
 
@@ -185,7 +173,7 @@ export default async function AvsluttLikevelPage({
           href={detailPath}
           className="block min-h-[44px] rounded-full border border-border px-4 py-3 text-center font-medium tracking-tight text-text transition-colors hover:bg-surface-2"
         >
-          Avbryt
+          {t('cancel')}
         </Link>
       </div>
     </AdminShell>

@@ -1,4 +1,6 @@
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getTranslations, getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
@@ -36,6 +38,9 @@ export default async function AvsluttPage({
   const { id: gameId } = await params;
   const { error } = await searchParams;
 
+  const locale = await getLocale();
+  const t = await getTranslations('admin.game.finish');
+
   const supabase = await getServerClient();
   // Self-gate for Fase 4 chunk 2 layout-loosening (#223). Replaces the
   // page-local inline `requireAdmin()` wrapper that previously did the
@@ -60,13 +65,13 @@ export default async function AvsluttPage({
   if (!game) notFound();
 
   if (game.status !== 'active') {
-    redirect(`/admin/games/${gameId}?error=not_active`);
+    redirect({ href: `/admin/games/${gameId}?error=not_active`, locale });
   }
   if (
     !game.side_tournament_enabled ||
     game.side_ld_count + game.side_ctp_count === 0
   ) {
-    redirect(`/admin/games/${gameId}`);
+    redirect({ href: `/admin/games/${gameId}`, locale });
   }
 
   const { data: gamePlayers } = await supabase
@@ -106,18 +111,16 @@ export default async function AvsluttPage({
     <AdminShell>
       <TopBar
         backHref={`/admin/games/${gameId}`}
-        kicker="Avslutt spillet"
+        kicker={t('topBarKicker')}
       />
       <PageHeader
-        title="Avslutt spill"
-        subtitle={`Velg sideturnerings-vinnere for «${game.name}». Spillet låses når du bekrefter.`}
+        title={t('title')}
+        subtitle={t('subtitle', { name: game.name })}
       />
       {missing.length > 0 && (
         <div className="mb-4 rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-3 text-sm text-warning">
           <p className="font-medium">
-            {missing.length === 1
-              ? '1 spiller har ikke levert:'
-              : `${missing.length} spillere har ikke levert:`}
+            {t('missingHeader', { count: missing.length })}
           </p>
           <ul className="mt-1.5 list-disc space-y-0.5 pl-5">
             {missing.map((name, i) => (
@@ -125,9 +128,7 @@ export default async function AvsluttPage({
             ))}
           </ul>
           <p className="mt-2 text-text">
-            Avslutter du nå, blir disse stående som{' '}
-            <span className="font-medium">ikke levert</span>. Scorene deres
-            teller fortsatt i resultatet.
+            {t('missingBody')}
           </p>
         </div>
       )}

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   buildSupabaseMock,
-  makeRedirectMock,
+  makeLocaleRedirectMock,
   RedirectError,
 } from '@/tests/serverActionMocks';
 
@@ -19,9 +19,18 @@ import {
  *   8. sendGameFinishedNotification (mocked, allSettled) — én per mottaker
  */
 
-const redirectMock = makeRedirectMock();
+const redirectMock = makeLocaleRedirectMock();
+vi.mock('@/i18n/navigation', () => ({
+  redirect: (arg: { href: string; locale?: string } | string) =>
+    redirectMock(arg),
+}));
+// lib/admin/auth.ts (shared auth gate, out of i18n scope) still redirects via
+// next/navigation — route it to the same spy so auth-gate assertions hold.
 vi.mock('next/navigation', () => ({
   redirect: (url: string) => redirectMock(url),
+}));
+vi.mock('next-intl/server', () => ({
+  getLocale: async () => 'no',
 }));
 
 const revalidatePathMock = vi.fn();
@@ -79,7 +88,9 @@ vi.mock('@/lib/supabase/server', () => ({
 }));
 
 function lastRedirect(): string | undefined {
-  return redirectMock.mock.calls.at(-1)?.[0];
+  const arg = redirectMock.mock.calls.at(-1)?.[0];
+  if (!arg) return undefined;
+  return typeof arg === 'string' ? arg : arg.href;
 }
 
 beforeEach(() => {
@@ -98,7 +109,7 @@ describe('adminWithdrawPlayer', () => {
     const { adminWithdrawPlayer } = await import('./actions');
 
     await expect(adminWithdrawPlayer('game-1', 'user-a')).rejects.toBeInstanceOf(RedirectError);
-    expect(redirectMock).toHaveBeenCalledWith('/login');
+    expect(lastRedirect()).toBe('/login');
   });
 
   it('redirects to / when user is neither admin nor creator (authorization)', async () => {
@@ -339,7 +350,7 @@ describe('endGame', () => {
     const { endGame } = await import('./actions');
 
     await expect(endGame('game-1')).rejects.toBeInstanceOf(RedirectError);
-    expect(redirectMock).toHaveBeenCalledWith('/login');
+    expect(lastRedirect()).toBe('/login');
   });
 
   it('redirects to / when the authenticated user is not an admin (authorization)', async () => {

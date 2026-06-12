@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   buildSupabaseMock,
-  makeRedirectMock,
+  makeLocaleRedirectMock,
   RedirectError,
 } from '@/tests/serverActionMocks';
 
@@ -35,9 +35,18 @@ import {
  *   adminMock[1]: games.update({signups_closed_at}).eq
  */
 
-const redirectMock = makeRedirectMock();
+const redirectMock = makeLocaleRedirectMock();
+vi.mock('@/i18n/navigation', () => ({
+  redirect: (arg: { href: string; locale?: string } | string) =>
+    redirectMock(arg),
+}));
+// lib/admin/auth.ts (shared auth gate, out of i18n scope) still redirects via
+// next/navigation — route it to the same spy so auth-gate assertions hold.
 vi.mock('next/navigation', () => ({
   redirect: (url: string) => redirectMock(url),
+}));
+vi.mock('next-intl/server', () => ({
+  getLocale: async () => 'no',
 }));
 
 const revalidatePathMock = vi.fn();
@@ -91,7 +100,9 @@ function authedNonCreator(): void {
 }
 
 function lastRedirect(): string | undefined {
-  return redirectMock.mock.calls.at(-1)?.[0];
+  const arg = redirectMock.mock.calls.at(-1)?.[0];
+  if (!arg) return undefined;
+  return typeof arg === 'string' ? arg : arg.href;
 }
 
 beforeEach(() => {
@@ -108,7 +119,7 @@ describe('suggestFlightAssignment', () => {
 
     const { suggestFlightAssignment } = await import('./flightActions');
     await expect(suggestFlightAssignment(GAME_ID)).rejects.toBeInstanceOf(RedirectError);
-    expect(redirectMock).toHaveBeenCalledWith('/login');
+    expect(lastRedirect()).toBe('/login');
   });
 
   it('ikke-admin og ikke-oppretter → redirect til /', async () => {
