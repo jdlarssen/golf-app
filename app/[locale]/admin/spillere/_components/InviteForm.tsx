@@ -1,12 +1,15 @@
+import { getTranslations } from 'next-intl/server';
 import { Input } from '@/components/ui/Input';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { sendInvitation } from '../actions';
 
-export function InviteForm() {
+export async function InviteForm() {
+  const t = await getTranslations('admin.players');
+
   return (
     <details className="group">
       <summary className="cursor-pointer list-none text-center font-sans text-[13px] font-medium text-primary hover:underline">
-        + Inviter ny spiller
+        {t('inviteToggle')}
       </summary>
       <div
         className="mt-3 rounded-xl border border-border bg-surface p-4"
@@ -35,13 +38,13 @@ export function InviteForm() {
             id="email"
             name="email"
             type="email"
-            label="E-postadresse"
+            label={t('emailLabel')}
             placeholder="spiller@example.com"
             autoComplete="email"
             required
           />
-          <SubmitButton className="w-full" pendingLabel="Inviterer …">
-            Send invitasjon
+          <SubmitButton className="w-full" pendingLabel={t('invitingBusy')}>
+            {t('inviteSubmit')}
           </SubmitButton>
         </form>
       </div>

@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
 import { Input } from '@/components/ui/Input';
@@ -14,6 +15,8 @@ type User = {
 
 export async function PlayersList({ searchQuery }: { searchQuery: string }) {
   const supabase = await getServerClient();
+  const t = await getTranslations('admin.players');
+
   // Only show fully-onboarded players. Pending invitees have NULL name and
   // profile_completed_at and would otherwise duplicate the entry shown in
   // the pending-invitations list. Picker handles the in-between state.
@@ -45,7 +48,7 @@ export async function PlayersList({ searchQuery }: { searchQuery: string }) {
           name="q"
           type="search"
           label=""
-          placeholder="Søk på navn, kallenavn eller e-post..."
+          placeholder={t('searchPlaceholder')}
           defaultValue={searchQuery}
           autoComplete="off"
         />
@@ -54,8 +57,8 @@ export async function PlayersList({ searchQuery }: { searchQuery: string }) {
       {filtered.length === 0 ? (
         <div className="rounded-xl border border-border bg-surface px-5 py-6 text-center text-sm text-muted">
           {q
-            ? `Ingen treff på "${searchQuery}".`
-            : 'Ingen registrerte spillere ennå.'}
+            ? t('emptyNoMatch', { query: searchQuery })
+            : t('emptyNoPlayers')}
         </div>
       ) : (
         <div

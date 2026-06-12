@@ -1,8 +1,11 @@
+import { useTranslations } from 'next-intl';
+import { getTranslations, getLocale } from 'next-intl/server';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
 import { ChampagneMedallion } from '@/components/ui/ChampagneMedallion';
 import { MailEnvelope } from '@/components/icons';
-import { formatShortDateNb } from '@/lib/format/date';
+import { formatShortDateLocale } from '@/lib/i18n/format';
+import type { AppLocale } from '@/i18n/routing';
 import { resendInvitation } from '../actions';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 
@@ -13,23 +16,40 @@ type PendingInvitation = {
   opened_at: string | null;
 };
 
-/** Human-readable "X siden" relative time for recent timestamps. */
-function timeAgo(iso: string): string {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diffMs / 60_000);
-  if (mins < 1) return 'akkurat nå';
-  if (mins < 60) return `${mins} min siden`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} t siden`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return 'i går';
-  if (days < 7) return `${days} dager siden`;
-  // Fall back to short date for older stamps
-  return formatShortDateNb(iso);
+type PlayersT = ReturnType<typeof useTranslations<'admin.players'>>;
+
+/**
+ * Locale-aware relative time for recent invitation timestamps.
+ *
+ * Granularity is deliberately different from formatRelativeLocale (uses
+ * abbreviated hours "t"/"h", "yesterday", falls back to short date for
+ * > 7 days). Norwegian output is byte-identical to the old hand-rolled
+ * timeAgo() function.
+ */
+function makeTimeAgo(t: PlayersT, locale: AppLocale) {
+  return function timeAgo(iso: string): string {
+    const diffMs = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diffMs / 60_000);
+    if (mins < 1) return t('timeAgo.justNow');
+    if (mins < 60) return t('timeAgo.minutesAgo', { count: mins });
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return t('timeAgo.hoursAgo', { count: hours });
+    const days = Math.floor(hours / 24);
+    if (days === 1) return t('timeAgo.yesterday');
+    if (days < 7) return t('timeAgo.daysAgo', { count: days });
+    // Fall back to short date for older stamps
+    return formatShortDateLocale(iso, locale);
+  };
 }
 
 export async function PendingInvitations() {
   const supabase = await getServerClient();
+  const [t, locale] = await Promise.all([
+    getTranslations('admin.players'),
+    getLocale() as Promise<AppLocale>,
+  ]);
+  const timeAgo = makeTimeAgo(t as unknown as PlayersT, locale);
+
   const { data, error } = await supabase
     .from('invitations')
     .select('id, email, created_at, opened_at')
@@ -47,10 +67,10 @@ export async function PendingInvitations() {
           <MailEnvelope size={32} className="text-primary dark:text-text" />
         </ChampagneMedallion>
         <p className="font-serif text-[15px] font-medium tracking-[-0.005em] text-text">
-          Ingen ventende invitasjoner.
+          {t('emptyPendingHeading')}
         </p>
         <p className="mt-1 max-w-[260px] font-sans text-[12.5px] leading-relaxed text-muted">
-          Inviter en spiller nedenfor, så dukker de opp her i ventelisten.
+          {t('emptyPendingBody')}
         </p>
       </div>
     );
@@ -62,7 +82,19 @@ export async function PendingInvitations() {
       style={{ boxShadow: '0 1px 2px rgba(26, 46, 31, 0.03)' }}
     >
       {items.map((inv, i) => (
-        <PendingRow key={inv.id} inv={inv} index={i} />
+        <PendingRow
+          key={inv.id}
+          inv={inv}
+          index={i}
+          sentDate={t('sentDate', { date: formatShortDateLocale(inv.created_at, locale) })}
+          openedAtLabel={
+            inv.opened_at ? t('openedAt', { relative: timeAgo(inv.opened_at) }) : null
+          }
+          notOpenedLabel={t('notOpened')}
+          resendButton={t('resendButton')}
+          resendingBusy={t('resendingBusy')}
+          withdrawButton={t('withdrawButton')}
+        />
       ))}
     </div>
   );
@@ -71,9 +103,21 @@ export async function PendingInvitations() {
 function PendingRow({
   inv,
   index,
+  sentDate,
+  openedAtLabel,
+  notOpenedLabel,
+  resendButton,
+  resendingBusy,
+  withdrawButton,
 }: {
   inv: PendingInvitation;
   index: number;
+  sentDate: string;
+  openedAtLabel: string | null;
+  notOpenedLabel: string;
+  resendButton: string;
+  resendingBusy: string;
+  withdrawButton: string;
 }) {
   return (
     <div
@@ -88,15 +132,15 @@ function PendingRow({
           {inv.email}
         </p>
         <p className="mt-0.5 font-sans text-[11.5px] tabular-nums text-muted">
-          Sendt {formatShortDateNb(inv.created_at)}
+          {sentDate}
         </p>
         <p className="mt-0.5 font-sans text-[11px] text-muted">
-          {inv.opened_at ? (
+          {openedAtLabel ? (
             <span style={{ color: 'var(--success)' }}>
-              Har bedt om kode {timeAgo(inv.opened_at)}
+              {openedAtLabel}
             </span>
           ) : (
-            <span>Mail sendt, men ikke åpnet ennå</span>
+            <span>{notOpenedLabel}</span>
           )}
         </p>
       </div>
@@ -105,9 +149,9 @@ function PendingRow({
           <input type="hidden" name="id" value={inv.id} />
           <SubmitButton
             className="inline-flex min-h-[44px] items-center rounded-full border border-border bg-surface px-4 py-2 font-sans text-[13px] font-medium text-text transition hover:bg-row-hover"
-            pendingLabel="Sender …"
+            pendingLabel={resendingBusy}
           >
-            Send på nytt
+            {resendButton}
           </SubmitButton>
         </form>
         <SmartLink
@@ -118,7 +162,7 @@ function PendingRow({
             color: 'var(--danger-deep)',
           }}
         >
-          Trekk tilbake
+          {withdrawButton}
         </SmartLink>
       </div>
     </div>

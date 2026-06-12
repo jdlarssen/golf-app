@@ -1,4 +1,5 @@
 import { Suspense, cache } from 'react';
+import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
@@ -17,30 +18,6 @@ type SearchParams = Promise<{
   error?: string | string[];
   q?: string | string[];
 }>;
-
-const ERROR_MESSAGES: Record<string, string> = {
-  email_required: 'Du må fylle inn en e-postadresse.',
-  already_invited:
-    'Det finnes allerede en ventende invitasjon til denne adressen. Bruk "Send på nytt" istedenfor.',
-  log_failed: 'Invitasjonen ble sendt, men loggføring feilet.',
-  mail_failed: 'Mailen kom ikke ut. Sjekk Vercel-loggene for detaljer.',
-  resend_failed: 'Klarte ikke sende invitasjonen på nytt. Prøv igjen.',
-  rate_limited:
-    'For mange invitasjoner på kort tid. Vent et minutt og prøv igjen.',
-  withdraw_failed: 'Klarte ikke trekke tilbake invitasjonen. Prøv igjen.',
-  self_delete_forbidden: 'Du kan ikke slette din egen konto.',
-  still_has_games: 'Spilleren har spillhistorikk og kan ikke slettes.',
-  auth_delete_failed: 'Klarte ikke slette kontoen. Prøv igjen.',
-  unknown: 'Klarte ikke å fullføre handlingen. Prøv igjen.',
-};
-
-const SUCCESS_MESSAGES: Record<string, (arg: string) => string> = {
-  sent: (email) => `✓ Invitasjon sendt til ${email}.`,
-  resent: (email) => `✓ Invitasjon sendt på nytt til ${email}.`,
-  withdrawn: (email) =>
-    `Invitasjonen til ${email} er trukket tilbake. E-posten er ledig igjen.`,
-  deleted: (name) => `${name} er slettet.`,
-};
 
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
@@ -80,15 +57,18 @@ export default async function SpillerePage({
   const supabase = await getServerClient();
   await requireAdmin(supabase);
 
+  const t = await getTranslations('admin.players');
+
   const params = await searchParams;
   const status = first(params.status);
   const email = first(params.email) ?? '';
   const name = first(params.name) ?? '';
   const errorCode = first(params.error);
-  const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
-  const successBuilder = status ? SUCCESS_MESSAGES[status] : undefined;
-  const successMessage = successBuilder
-    ? successBuilder(email || name)
+  const errorMessage = errorCode
+    ? t(`errors.${errorCode}` as Parameters<typeof t>[0])
+    : undefined;
+  const successMessage = status
+    ? t(`success.${status}` as Parameters<typeof t>[0], { email, name })
     : undefined;
   const searchQuery = first(params.q) ?? '';
 
@@ -96,11 +76,11 @@ export default async function SpillerePage({
     <AdminShell>
       <TopBar backHref="/admin" kicker="Klubbhuset" />
 
-      <BrassRibbon kicker="Spillere · klubblisten" />
+      <BrassRibbon kicker={t('brassRibbon')} />
 
       <div className="px-1">
         <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-          Spillere
+          {t('heading')}
         </h1>
         <Suspense fallback={<Skeleton className="h-3 w-64" />}>
           <CountsLine />
@@ -115,14 +95,14 @@ export default async function SpillerePage({
       )}
 
       <section className="mt-5">
-        <MiniRibbon>Registrerte spillere</MiniRibbon>
+        <MiniRibbon>{t('sectionRegistered')}</MiniRibbon>
         <Suspense fallback={<ListSkeleton rows={4} />}>
           <PlayersList searchQuery={searchQuery} />
         </Suspense>
       </section>
 
       <section className="mt-5">
-        <MiniRibbon>Ventende invitasjoner</MiniRibbon>
+        <MiniRibbon>{t('sectionPending')}</MiniRibbon>
         <Suspense fallback={<ListSkeleton rows={2} />}>
           <PendingInvitations />
         </Suspense>
@@ -136,11 +116,12 @@ export default async function SpillerePage({
 }
 
 async function CountsLine() {
+  const t = await getTranslations('admin.players');
   const { userCount, pendingCount } = await getCounts();
   return (
     <p className="font-sans text-[11.5px] tabular-nums text-muted">
-      {userCount} registrert
-      {pendingCount > 0 && ` · ${pendingCount} venter`}
+      {t('countRegistered', { count: userCount })}
+      {pendingCount > 0 && ` ${t('countPending', { count: pendingCount })}`}
     </p>
   );
 }
