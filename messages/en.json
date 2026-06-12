@@ -2615,5 +2615,41 @@
       "previousSection": "Previous updates",
       "emptyPrevious": "No updates published yet. Use the form above to publish the first one."
     }
-  }
+  },
+  "klubb": {
+    "roles": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "member": "Member"
+    }
+  },
+  "liga": {
+    "status": {
+      "draft": "Draft",
+      "active": "In progress",
+      "finished": "Finished"
+    }
+  },
+  "cup": {
+    "status": {
+      "draft": "Draft",
+      "active": "In progress",
+      "finished": "Finished"
+    },
+    "presets": {
+      "klassisk": {
+        "name": "Classic cup",
+        "description": "Foursomes, four-ball and singles — like a real Ryder Cup. Everyone plays multiple matches."
+      },
+      "fourball-singler": {
+        "name": "Four-ball + singles",
+        "description": "One four-ball session and one singles session. No foursomes needed."
+      },
+      "singler": {
+        "name": "Singles only",
+        "description": "Everyone faces one opponent. Works whatever the team size."
+      }
+    }
+  },
+  "klubbhuset": {}
 }

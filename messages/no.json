@@ -2615,5 +2615,41 @@
       "previousSection": "Tidligere lanseringer",
       "emptyPrevious": "Ingen lanseringer publisert ennå. Bruk skjemaet over for å publisere den første."
     }
-  }
+  },
+  "klubb": {
+    "roles": {
+      "owner": "Eier",
+      "admin": "Admin",
+      "member": "Medlem"
+    }
+  },
+  "liga": {
+    "status": {
+      "draft": "Utkast",
+      "active": "Pågående",
+      "finished": "Avsluttet"
+    }
+  },
+  "cup": {
+    "status": {
+      "draft": "Utkast",
+      "active": "Pågående",
+      "finished": "Avsluttet"
+    },
+    "presets": {
+      "klassisk": {
+        "name": "Klassisk cup",
+        "description": "Foursomes, four-ball og singler — som en ekte Ryder Cup. Alle spiller flere matcher."
+      },
+      "fourball-singler": {
+        "name": "Four-ball + singler",
+        "description": "En four-ball-økt og en single-økt. Trenger ikke foursomes."
+      },
+      "singler": {
+        "name": "Bare singler",
+        "description": "Alle møter én motspiller. Funker uansett hvor mange dere er."
+      }
+    }
+  },
+  "klubbhuset": {}
 }
