@@ -12,6 +12,8 @@ import {
   formatTeeOffTimeLocale,
   formatTeeOffDateLocale,
   formatShortDateWithYearLocale,
+  formatShortDateLocale,
+  formatRelativeLocale,
   formatCountdownLocale,
   formatTeeOffLineLocale,
 } from './format';
@@ -19,7 +21,8 @@ import {
   formatTeeOffTime,
   formatTeeOffDate,
 } from '@/lib/format/teeOff';
-import { formatShortDateNbWithYear } from '@/lib/format/date';
+import { formatShortDateNb, formatShortDateNbWithYear } from '@/lib/format/date';
+import { formatRelativeNb } from '@/lib/format/relativeTimeNb';
 import { formatCountdown } from '@/lib/format/countdown';
 
 // 2026-05-08 14:30 UTC — formatted in UTC throughout so tests are
@@ -292,5 +295,118 @@ describe('formatTeeOffLineLocale', () => {
   it('unparseable non-empty string returns the value unchanged', () => {
     expect(formatTeeOffLineLocale('ikke-en-dato', 'no')).toBe('ikke-en-dato');
     expect(formatTeeOffLineLocale('not-a-date', 'en')).toBe('not-a-date');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// formatShortDateLocale (#563 Fase 2c chunk 1)
+// ---------------------------------------------------------------------------
+// process.env.TZ = 'UTC' at top of file — local-TZ reads on Date#getDate etc.
+// mirror the legacy helper under UTC.
+
+describe('formatShortDateLocale', () => {
+  const SHORT_DATE_CASES: Array<[string | Date]> = [
+    [new Date(2026, 4, 14)],   // May 14 (local)
+    [new Date(2026, 0, 1)],    // Jan 1
+    [new Date(2026, 11, 31)],  // Dec 31
+    ['2026-08-15T12:00:00Z'],  // ISO string
+    [new Date(2026, 5, 3)],    // Jun 3 (single-digit day)
+  ];
+
+  it.each(SHORT_DATE_CASES)(
+    "'no' output is byte-identical to legacy formatShortDateNb (%s)",
+    (input) => {
+      expect(formatShortDateLocale(input, 'no')).toBe(formatShortDateNb(input));
+    },
+  );
+
+  it.each([
+    [new Date(2026, 4, 14), '14 May'],
+    [new Date(2026, 0, 1), '1 Jan'],
+    [new Date(2026, 11, 31), '31 Dec'],
+    [new Date(2026, 5, 3), '3 Jun'],
+  ] as const)('en: %s → %s', (date, expected) => {
+    expect(formatShortDateLocale(date, 'en')).toBe(expected);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// formatRelativeLocale (#563 Fase 2c chunk 1)
+// ---------------------------------------------------------------------------
+
+describe('formatRelativeLocale', () => {
+  // Pin a base time so deltas are reproducible.
+  const BASE_ISO = '2026-05-14T12:00:00Z';
+  const BASE_MS = new Date(BASE_ISO).getTime();
+
+  // Representative thresholds covering all 6 tiers of the 30-day ladder.
+  const RELATIVE_CASES: Array<[string, number]> = [
+    // just now / nå: 0 seconds
+    [BASE_ISO, BASE_MS],
+    // ~30 seconds ago
+    [new Date(BASE_MS - 30_000).toISOString(), BASE_MS],
+    // ~5 minutes ago
+    [new Date(BASE_MS - 5 * 60_000).toISOString(), BASE_MS],
+    // ~2 hours ago
+    [new Date(BASE_MS - 2 * 60 * 60_000).toISOString(), BASE_MS],
+    // ~3 days ago (yesterday boundary)
+    [new Date(BASE_MS - 3 * 24 * 60 * 60_000).toISOString(), BASE_MS],
+    // ~2 weeks ago
+    [new Date(BASE_MS - 14 * 24 * 60 * 60_000).toISOString(), BASE_MS],
+    // ~6 weeks ago (month tier)
+    [new Date(BASE_MS - 42 * 24 * 60 * 60_000).toISOString(), BASE_MS],
+  ];
+
+  it.each(RELATIVE_CASES)(
+    "'no' output is byte-identical to legacy formatRelativeNb (%s)",
+    (iso, nowMs) => {
+      expect(formatRelativeLocale(iso, 'no', nowMs)).toBe(
+        formatRelativeNb(iso, nowMs),
+      );
+    },
+  );
+
+  // English spot-checks — same tier boundaries, idiomatic English.
+  it('en: just now (0 ms diff)', () => {
+    expect(formatRelativeLocale(BASE_ISO, 'en', BASE_MS)).toMatch(/now|second/i);
+  });
+
+  it('en: minutes ago', () => {
+    const iso = new Date(BASE_MS - 5 * 60_000).toISOString();
+    const result = formatRelativeLocale(iso, 'en', BASE_MS);
+    expect(result).toMatch(/minut/i);
+  });
+
+  it('en: hours ago', () => {
+    const iso = new Date(BASE_MS - 2 * 60 * 60_000).toISOString();
+    const result = formatRelativeLocale(iso, 'en', BASE_MS);
+    expect(result).toMatch(/hour/i);
+  });
+
+  it('en: days ago', () => {
+    const iso = new Date(BASE_MS - 3 * 24 * 60 * 60_000).toISOString();
+    const result = formatRelativeLocale(iso, 'en', BASE_MS);
+    expect(result).toMatch(/day|yesterday/i);
+  });
+
+  it('en: weeks ago', () => {
+    const iso = new Date(BASE_MS - 14 * 24 * 60 * 60_000).toISOString();
+    const result = formatRelativeLocale(iso, 'en', BASE_MS);
+    expect(result).toMatch(/week/i);
+  });
+
+  it('en: months ago', () => {
+    const iso = new Date(BASE_MS - 42 * 24 * 60 * 60_000).toISOString();
+    const result = formatRelativeLocale(iso, 'en', BASE_MS);
+    expect(result).toMatch(/month/i);
+  });
+
+  it('negative diff (future timestamp) treated as 0', () => {
+    const futureIso = new Date(BASE_MS + 5000).toISOString();
+    // Both locales should return "just now" / "nå nettopp" equivalents
+    const noResult = formatRelativeLocale(futureIso, 'no', BASE_MS);
+    const enResult = formatRelativeLocale(futureIso, 'en', BASE_MS);
+    expect(noResult).toBe(formatRelativeNb(futureIso, BASE_MS));
+    expect(enResult).toMatch(/now|second/i);
   });
 });

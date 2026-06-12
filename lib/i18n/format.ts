@@ -3,8 +3,12 @@ import {
   formatTeeOffDate as formatTeeOffDateNb,
   formatTeeOffTime as formatTeeOffTimeNb,
 } from '@/lib/format/teeOff';
-import { formatShortDateNbWithYear as formatShortDateNbWithYearLegacy } from '@/lib/format/date';
+import {
+  formatShortDateNb as formatShortDateNbLegacy,
+  formatShortDateNbWithYear as formatShortDateNbWithYearLegacy,
+} from '@/lib/format/date';
 import { formatCountdown as formatCountdownNb } from '@/lib/format/countdown';
+import { formatRelativeNb as formatRelativeNbLegacy } from '@/lib/format/relativeTimeNb';
 
 /**
  * Locale-aware date/number formatting (#475).
@@ -212,6 +216,67 @@ export function formatTeeOffLineLocale(
   }).format(probe);
   const monthCap = month.charAt(0).toUpperCase() + month.slice(1);
   return `${day} ${monthCap} ${year}, ${hh}:${mm}`;
+}
+
+/**
+ * Locale-aware short date WITHOUT year.
+ *
+ * Norwegian ('no'): delegates to legacy helper → "14. mai" (byte-identical).
+ * English ('en'):   "14 May" — day numeric, month short (en-GB, no year).
+ *
+ * Note: the legacy helper reads local (server/browser) TZ via Date#getDate etc.
+ * This helper preserves that behaviour for 'no' and mirrors it for 'en'.
+ */
+export function formatShortDateLocale(
+  input: Date | string,
+  locale: AppLocale,
+): string {
+  if (locale === 'no') return formatShortDateNbLegacy(input);
+  const d = input instanceof Date ? input : new Date(input);
+  return d.toLocaleDateString(intlLocaleTag(locale), {
+    day: 'numeric',
+    month: 'short',
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Constants shared between formatRelativeLocale and its tests.
+// ---------------------------------------------------------------------------
+const SECOND_MS = 1_000;
+const MINUTE_MS = 60 * SECOND_MS;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
+const WEEK_MS = 7 * DAY_MS;
+const MONTH_MS = 30 * DAY_MS;
+
+/**
+ * Locale-aware relative time string.
+ *
+ * Norwegian ('no'): delegates byte-identically to `formatRelativeNb` (same
+ * Intl.RelativeTimeFormat thresholds and phrasing).
+ * English ('en'):   mirrors the same 6-tier ladder with idiomatic English
+ * using `Intl.RelativeTimeFormat('en-GB', { numeric: 'auto' })` — e.g.
+ * "just now", "5 minutes ago", "yesterday", "2 weeks ago".
+ *
+ * Both paths floor negative diffs to 0 (server clock-skew safeguard).
+ * `nowMs` defaults to `Date.now()` and is injectable for tests.
+ */
+export function formatRelativeLocale(
+  iso: string,
+  locale: AppLocale,
+  nowMs: number = Date.now(),
+): string {
+  if (locale === 'no') return formatRelativeNbLegacy(iso, nowMs);
+
+  const diff = Math.max(0, nowMs - new Date(iso).getTime());
+  const rtf = new Intl.RelativeTimeFormat('en-GB', { numeric: 'auto' });
+
+  if (diff < MINUTE_MS) return rtf.format(-Math.round(diff / SECOND_MS), 'second');
+  if (diff < HOUR_MS) return rtf.format(-Math.round(diff / MINUTE_MS), 'minute');
+  if (diff < DAY_MS) return rtf.format(-Math.round(diff / HOUR_MS), 'hour');
+  if (diff < WEEK_MS) return rtf.format(-Math.round(diff / DAY_MS), 'day');
+  if (diff < MONTH_MS) return rtf.format(-Math.round(diff / WEEK_MS), 'week');
+  return rtf.format(-Math.round(diff / MONTH_MS), 'month');
 }
 
 /**
