@@ -96,7 +96,7 @@
 			"registrationRejected": {
 				"title": "Application to {gameName}",
 				"detail": "{reason}",
-				"defaultReason": "Your registration was unfortunately not approved"
+				"defaultReason": "Sorry, your registration wasn''t approved"
 			},
 			"teamMemberWithdrew": {
 				"title": "{withdrawnPlayerName} withdrew",
@@ -231,12 +231,12 @@
 		"deleteAccount": {
 			"kicker": "Delete account",
 			"backLabel": "Back to profile",
-			"blockedBanner": "You''re in a game that is either in progress or starting soon. Your account cannot be deleted while you''re enrolled in an active game. Please contact an administrator for help.",
+			"blockedBanner": "You''re in a game that is either in progress or starting soon. You can''t delete your account while you''re signed up to an active game. Contact an administrator for help.",
 			"blockedBackLink": "Back to profile",
 			"deletedHeading": "What will be deleted",
 			"bullet1": "Your user profile (name, nickname, handicap)",
-			"bullet2": "Your email address is released and cannot be used to log in again",
-			"bullet3": "Your association with tournaments and invitations",
+			"bullet2": "Your email address is freed up and can''t be used to log in again",
+			"bullet3": "Your links to tournaments and invitations",
 			"keptHeading": "What is kept",
 			"keptBullet": "Scoring data you have recorded — it belongs to the tournament and cannot be removed without deleting the entire tournament",
 			"confirmParagraph": "You are about to permanently delete <strong>{displayName}</strong>. This action cannot be undone.",
@@ -244,7 +244,7 @@
 			"deletePending": "Deleting …",
 			"cancelButton": "Cancel",
 			"errors": {
-				"active_games": "You''re in a game that is either in progress or hasn''t started yet. Your account cannot be deleted while you''re enrolled in an active game. Please contact an administrator.",
+				"active_games": "You''re in a game that is either in progress or hasn''t started yet. You can''t delete your account while you''re signed up to an active game. Contact an administrator.",
 				"delete_failed": "Something went wrong while deleting. Please try again, or contact an administrator."
 			}
 		},
@@ -3642,7 +3642,7 @@
 		"openTournaments": "Open tournaments",
 		"myRequests": "My requests",
 		"courseNotSet": "No course selected",
-		"teeOffLine": "{date}, {time}",
+		"teeOffLine": "{date} at {time}",
 		"signMeUp": "Sign me up",
 		"requestToJoin": "Request to join",
 		"pendingApproval": "Waiting for approval",
