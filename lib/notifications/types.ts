@@ -176,15 +176,18 @@ const clubRoleChangedSchema = z.object({
 
 // friend_request: noen sendte deg en venneforespørsel. Sendes til mottaker.
 // Vennelista (/profile/venner) samler godta/avslå; actor_name vises i kortet.
+// actor_name is optional (null) — NotificationCard renders the catalog fallback
+// at render time in the correct locale (§4 payload-fallback, i18n phase 2e).
 const friendRequestSchema = z.object({
   actor_id: uuid,
-  actor_name: z.string().min(1),
+  actor_name: z.string().min(1).nullable().optional(),
 });
 
 // friend_accepted: noen godtok venneforespørselen din. Sendes til avsender. (#369)
+// actor_name is optional (null) — same render-time fallback as friend_request.
 const friendAcceptedSchema = z.object({
   actor_id: uuid,
-  actor_name: z.string().min(1),
+  actor_name: z.string().min(1).nullable().optional(),
 });
 
 // player_added: en arrangør la deg til i et spill uten at du meldte deg på

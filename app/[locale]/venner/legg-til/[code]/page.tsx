@@ -1,4 +1,6 @@
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getFriendIds } from '@/lib/friends/getFriendIds';
@@ -10,6 +12,7 @@ import { Banner } from '@/components/ui/Banner';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { connectFriend } from './actions';
+import type { AppLocale } from '@/i18n/routing';
 
 type Params = Promise<{ code: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;
@@ -43,6 +46,10 @@ export default async function LeggTilPage({
   params: Params;
   searchParams: SearchParams;
 }) {
+  const locale = (await getLocale()) as AppLocale;
+  const t = await getTranslations('friends.leggTil');
+  const tf = await getTranslations('friends');
+
   const { code } = await params;
   const { error } = await searchParams;
   const hasError = (Array.isArray(error) ? error[0] : error) === '1';
@@ -51,7 +58,10 @@ export default async function LeggTilPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect(`/login?next=/venner/legg-til/${code}`);
+  if (!user) {
+    redirect({ href: `/login?next=/venner/legg-til/${code}`, locale });
+    return;
+  }
 
   const admin = getAdminClient();
   const { data: owner } = await admin
@@ -68,42 +78,41 @@ export default async function LeggTilPage({
 
   return (
     <AppShell>
-      <TopBar backHref="/profile/venner" backLabel="Til venner" kicker="Legg til venn" />
+      <TopBar backHref="/profile/venner" backLabel={t('backLabel')} kicker={t('kicker')} />
       <PageHeader title={ownerName(owner)} />
 
       {hasError && (
         <div className="mb-4">
-          <Banner tone="error">Noe gikk galt. Prøv igjen.</Banner>
+          <Banner tone="error">{t('errorBanner')}</Banner>
         </div>
       )}
 
       <Card>
         {isSelf ? (
           <p className="font-sans text-[15px] text-text">
-            Dette er din egen lenke. Del den med noen du vil bli venn med.
+            {t('selfCard')}
           </p>
         ) : alreadyFriends ? (
           <>
             <p className="mb-4 font-sans text-[15px] text-text">
-              Dere er allerede venner.
+              {t('alreadyFriendsCard')}
             </p>
             <SmartLink
               href="/profile/venner"
               className="flex min-h-[44px] items-center justify-center rounded-full bg-primary px-4 py-3 text-center font-sans text-[15px] font-semibold text-bg"
             >
-              Til vennene dine
+              {t('toFriendsLink')}
             </SmartLink>
           </>
         ) : (
           <>
             <p className="mb-4 font-sans text-[15px] text-text">
-              Bli venn med {ownerName(owner)}? Da ser dere hverandres spill og
-              kan velge hverandre når dere fyller lag.
+              {tf('leggTil.connectCard', { name: ownerName(owner) })}
             </p>
             <form action={connectFriend}>
               <input type="hidden" name="code" value={code} />
-              <SubmitButton className="w-full" pendingLabel="Blir venner …">
-                Bli venner
+              <SubmitButton className="w-full" pendingLabel={t('connectPending')}>
+                {t('connectButton')}
               </SubmitButton>
             </form>
           </>

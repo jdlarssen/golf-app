@@ -9,7 +9,17 @@ import { SubmitButton as UiSubmitButton } from '@/components/ui/SubmitButton';
  * Kopier-knapp for «legg til meg»-lenken. Bygger absolutt URL klient-side
  * (origin + path) så lenken virker uansett hvilket domene appen kjøres på.
  */
-export function CopyLinkButton({ path }: { path: string }) {
+export function CopyLinkButton({
+  path,
+  copyLabel,
+  copiedLabel,
+  promptFallback,
+}: {
+  path: string;
+  copyLabel: string;
+  copiedLabel: string;
+  promptFallback: string;
+}) {
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -22,13 +32,13 @@ export function CopyLinkButton({ path }: { path: string }) {
     } catch {
       // Clipboard kan være blokkert (eldre Safari/innstilling) — vis lenken
       // i en prompt som fallback så brukeren kan kopiere manuelt.
-      window.prompt('Kopier lenken:', url);
+      window.prompt(promptFallback, url);
     }
   }
 
   return (
     <Button type="button" variant="secondary" onClick={copy} className="shrink-0">
-      {copied ? 'Kopiert!' : 'Kopier lenke'}
+      {copied ? copiedLabel : copyLabel}
     </Button>
   );
 }
@@ -44,12 +54,16 @@ export function ConfirmSubmit({
   hiddenValue,
   idleLabel,
   confirmLabel,
+  cancelLabel,
+  pendingLabel,
 }: {
   action: (formData: FormData) => void;
   hiddenName: string;
   hiddenValue: string;
   idleLabel: string;
   confirmLabel: string;
+  cancelLabel: string;
+  pendingLabel: string;
 }) {
   const [confirming, setConfirming] = useState(false);
 
@@ -74,9 +88,9 @@ export function ConfirmSubmit({
         variant="ghost"
         onClick={() => setConfirming(false)}
       >
-        Avbryt
+        {cancelLabel}
       </Button>
-      <UiSubmitButton variant="danger" pendingLabel="Fjerner …">
+      <UiSubmitButton variant="danger" pendingLabel={pendingLabel}>
         {confirmLabel}
       </UiSubmitButton>
     </form>
@@ -89,8 +103,16 @@ export function ConfirmSubmit({
  */
 export function AddByEmailForm({
   action,
+  label,
+  placeholder,
+  pendingLabel,
+  buttonLabel,
 }: {
   action: (formData: FormData) => void;
+  label: string;
+  placeholder: string;
+  pendingLabel: string;
+  buttonLabel: string;
 }) {
   const [hasEmail, setHasEmail] = useState(false);
 
@@ -110,15 +132,15 @@ export function AddByEmailForm({
           id="friend-email"
           name="email"
           type="email"
-          label="E-post"
+          label={label}
           labelHidden
-          placeholder="venn@epost.no"
+          placeholder={placeholder}
           autoComplete="email"
           required
         />
       </div>
-      <UiSubmitButton className="shrink-0" disabled={!hasEmail} pendingLabel="Sender …">
-        Legg til
+      <UiSubmitButton className="shrink-0" disabled={!hasEmail} pendingLabel={pendingLabel}>
+        {buttonLabel}
       </UiSubmitButton>
     </form>
   );

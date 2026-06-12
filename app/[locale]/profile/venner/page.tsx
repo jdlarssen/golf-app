@@ -1,4 +1,5 @@
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
@@ -20,6 +21,7 @@ import {
   ConfirmSubmit,
   CopyLinkButton,
 } from './VennerClient';
+import type { AppLocale } from '@/i18n/routing';
 
 type SearchParams = Promise<{
   status?: string | string[];
@@ -29,18 +31,6 @@ type SearchParams = Promise<{
 function first(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
-
-const STATUS: Record<string, { tone: 'success' | 'error' | 'info'; text: string }> = {
-  requested: { tone: 'success', text: 'Venneforespørsel sendt.' },
-  accepted: { tone: 'success', text: 'Dere er venner nå!' },
-  already_friends: { tone: 'info', text: 'Dere er allerede venner.' },
-  already_pending: { tone: 'info', text: 'Forespørselen er allerede sendt.' },
-  declined: { tone: 'info', text: 'Forespørselen er avslått.' },
-  removed: { tone: 'info', text: 'Fjernet.' },
-  self: { tone: 'error', text: 'Du kan ikke legge til deg selv.' },
-  email_required: { tone: 'error', text: 'Skriv inn en e-postadresse.' },
-  error: { tone: 'error', text: 'Noe gikk galt. Prøv igjen.' },
-};
 
 function personName(u: FriendUser): string {
   const base = u.name?.trim() || u.email;
@@ -68,13 +58,49 @@ export default async function VennerPage({
 }: {
   searchParams: SearchParams;
 }) {
+  const locale = (await getLocale()) as AppLocale;
+  const t = await getTranslations('friends');
+
   const userId = await getProxyVerifiedUserId();
-  if (!userId) redirect('/login?next=/profile/venner');
+  if (!userId) {
+    redirect({ href: '/login?next=/profile/venner', locale });
+    return;
+  }
 
   const sp = await searchParams;
   const statusCode = first(sp.status);
-  const statusBanner = statusCode ? STATUS[statusCode] : undefined;
   const inviteEmail = first(sp.invite_email);
+
+  const TONE: Record<string, 'success' | 'error' | 'info'> = {
+    requested: 'success',
+    accepted: 'success',
+    already_friends: 'info',
+    already_pending: 'info',
+    declined: 'info',
+    removed: 'info',
+    self: 'error',
+    email_required: 'error',
+    error: 'error',
+  };
+
+  type StatusKey =
+    | 'requested'
+    | 'accepted'
+    | 'already_friends'
+    | 'already_pending'
+    | 'declined'
+    | 'removed'
+    | 'self'
+    | 'email_required'
+    | 'error';
+
+  const statusBanner =
+    statusCode && statusCode in TONE
+      ? {
+          tone: TONE[statusCode] as 'success' | 'error' | 'info',
+          text: t(`status.${statusCode as StatusKey}`),
+        }
+      : undefined;
 
   const supabase = await getServerClient();
   const [{ friends, incoming, outgoing, suggestions }, codeRes] = await Promise.all([
@@ -87,10 +113,10 @@ export default async function VennerPage({
 
   return (
     <AppShell>
-      <TopBar backHref="/profile" backLabel="Tilbake til profil" kicker="Venner" />
+      <TopBar backHref="/profile" backLabel={t('backLabel')} kicker={t('kicker')} />
       <PageHeader
-        title="Venner"
-        subtitle="Venner ser spillene dine og dukker opp når du fyller lag."
+        title={t('kicker')}
+        subtitle={t('subtitle')}
       />
 
       {statusBanner && (
@@ -103,11 +129,13 @@ export default async function VennerPage({
         <div className="mb-4">
           <Card>
             <p className="mb-3 font-sans text-[15px] text-text">
-              {inviteEmail} er ikke på Tørny ennå. Vil du invitere dem?
+              {t('invitePrompt', { email: inviteEmail })}
             </p>
             <form action={sendFriendInvite} className="flex items-center gap-2">
               <input type="hidden" name="email" value={inviteEmail} />
-              <SubmitButton pendingLabel="Inviterer …">Inviter {inviteEmail}</SubmitButton>
+              <SubmitButton pendingLabel={t('invitePending')}>
+                {t('inviteButton', { email: inviteEmail })}
+              </SubmitButton>
             </form>
           </Card>
         </div>
@@ -116,7 +144,7 @@ export default async function VennerPage({
       {/* Innkommende forespørsler */}
       {incoming.length > 0 && (
         <>
-          <SectionTitle>Vil bli venn med deg</SectionTitle>
+          <SectionTitle>{t('incomingSection')}</SectionTitle>
           <Card>
             <ul className="divide-y divide-border">
               {incoming.map((r) => (
@@ -125,12 +153,16 @@ export default async function VennerPage({
                   <form action={respondFriendRequest} className="flex shrink-0 items-center gap-2">
                     <input type="hidden" name="request_id" value={r.id} />
                     <input type="hidden" name="accept" value="0" />
-                    <SubmitButton variant="ghost" pendingLabel="Avslår …">Avslå</SubmitButton>
+                    <SubmitButton variant="ghost" pendingLabel={t('declinePending')}>
+                      {t('declineLabel')}
+                    </SubmitButton>
                   </form>
                   <form action={respondFriendRequest} className="shrink-0">
                     <input type="hidden" name="request_id" value={r.id} />
                     <input type="hidden" name="accept" value="1" />
-                    <SubmitButton pendingLabel="Godtar …">Godta</SubmitButton>
+                    <SubmitButton pendingLabel={t('acceptPending')}>
+                      {t('acceptLabel')}
+                    </SubmitButton>
                   </form>
                 </li>
               ))}
@@ -140,11 +172,11 @@ export default async function VennerPage({
       )}
 
       {/* Vennene dine */}
-      <SectionTitle>Vennene dine</SectionTitle>
+      <SectionTitle>{t('friendsSection')}</SectionTitle>
       <Card>
         {friends.length === 0 ? (
           <p className="font-sans text-[14px] text-muted">
-            Du har ingen venner på Tørny ennå. Legg til noen under.
+            {t('noFriendsYet')}
           </p>
         ) : (
           <ul className="divide-y divide-border">
@@ -155,8 +187,10 @@ export default async function VennerPage({
                   action={removeFriend}
                   hiddenName="other_id"
                   hiddenValue={f.id}
-                  idleLabel="Fjern"
-                  confirmLabel="Fjern venn"
+                  idleLabel={t('removeIdleLabel')}
+                  confirmLabel={t('removeConfirmLabel')}
+                  cancelLabel={t('cancelLabel')}
+                  pendingLabel={t('removePending')}
                 />
               </li>
             ))}
@@ -167,7 +201,7 @@ export default async function VennerPage({
       {/* Utgående forespørsler */}
       {outgoing.length > 0 && (
         <>
-          <SectionTitle>Venter på svar</SectionTitle>
+          <SectionTitle>{t('outgoingSection')}</SectionTitle>
           <Card>
             <ul className="divide-y divide-border">
               {outgoing.map((r) => (
@@ -175,7 +209,9 @@ export default async function VennerPage({
                   <PersonLine name={personName(r.user)} />
                   <form action={removeFriend} className="shrink-0">
                     <input type="hidden" name="other_id" value={r.user.id} />
-                    <SubmitButton variant="ghost" pendingLabel="Trekker …">Trekk tilbake</SubmitButton>
+                    <SubmitButton variant="ghost" pendingLabel={t('withdrawPending')}>
+                      {t('withdrawLabel')}
+                    </SubmitButton>
                   </form>
                 </li>
               ))}
@@ -187,7 +223,7 @@ export default async function VennerPage({
       {/* Forslag fra co-players */}
       {suggestions.length > 0 && (
         <>
-          <SectionTitle>Folk du har spilt med</SectionTitle>
+          <SectionTitle>{t('suggestionsSection')}</SectionTitle>
           <Card>
             <ul className="divide-y divide-border">
               {suggestions.map((s) => (
@@ -195,7 +231,9 @@ export default async function VennerPage({
                   <PersonLine name={personName(s)} />
                   <form action={sendFriendRequest} className="shrink-0">
                     <input type="hidden" name="addressee_id" value={s.id} />
-                    <SubmitButton variant="secondary" pendingLabel="Legger til …">Legg til</SubmitButton>
+                    <SubmitButton variant="secondary" pendingLabel={t('addEmailPending')}>
+                      {t('addEmailButton')}
+                    </SubmitButton>
                   </form>
                 </li>
               ))}
@@ -205,24 +243,34 @@ export default async function VennerPage({
       )}
 
       {/* Legg til på e-post */}
-      <SectionTitle>Legg til på e-post</SectionTitle>
+      <SectionTitle>{t('addByEmailSection')}</SectionTitle>
       <Card>
         <p className="mb-3 font-sans text-[14px] text-muted">
-          Send en venneforespørsel til e-posten. Er de ikke på Tørny, kan du
-          invitere dem.
+          {t('addByEmailSubtitle')}
         </p>
-        <AddByEmailForm action={addFriendByEmail} />
+        <AddByEmailForm
+          action={addFriendByEmail}
+          label={t('addEmailLabel')}
+          placeholder={t('addEmailPlaceholder')}
+          pendingLabel={t('addEmailPending')}
+          buttonLabel={t('addEmailButton')}
+        />
       </Card>
 
       {/* Del lenke */}
       {friendCode && (
         <>
-          <SectionTitle>Del en lenke</SectionTitle>
+          <SectionTitle>{t('shareLinkSection')}</SectionTitle>
           <Card>
             <p className="mb-3 font-sans text-[14px] text-muted">
-              Den som åpner lenken din, blir venn med deg med en gang.
+              {t('shareLinkSubtitle')}
             </p>
-            <CopyLinkButton path={`/venner/legg-til/${friendCode}`} />
+            <CopyLinkButton
+              path={`/venner/legg-til/${friendCode}`}
+              copyLabel={t('copyLinkLabel')}
+              copiedLabel={t('copiedLabel')}
+              promptFallback={t('copyPromptFallback')}
+            />
           </Card>
         </>
       )}
