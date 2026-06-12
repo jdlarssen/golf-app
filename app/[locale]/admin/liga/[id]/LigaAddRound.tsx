@@ -21,7 +21,6 @@ export function LigaAddRound({ leagueId }: { leagueId: string }) {
     INITIAL,
   );
 
-  const errorKey = state.error as keyof ReturnType<typeof useTranslations<'liga.addRound'>> | '';
   const error = state.error
     ? (['missing', 'window', 'not_found', 'insert_failed'] as const).includes(
         state.error as 'missing' | 'window' | 'not_found' | 'insert_failed',
@@ -29,7 +28,6 @@ export function LigaAddRound({ leagueId }: { leagueId: string }) {
       ? t(`errors.${state.error as 'missing' | 'window' | 'not_found' | 'insert_failed'}`)
       : t('errors.fallback')
     : null;
-  void errorKey;
 
   return (
     <details className="rounded-xl border border-dashed border-border bg-surface/50 p-4">

@@ -104,15 +104,10 @@ export async function LigaDeleteConfirm({
       ? `/klubber/${league.group_id}/liga/${leagueId}`
       : `/admin/liga/${leagueId}`;
 
-  // The kicker shows the club name when in club-variant; fall back to the generic kicker.
-  // We don't have the club name here, but the TopBar kicker is minimal chrome — use
-  // the catalog key (same as the admin side uses "Klubbhuset").
-  const tLiga = await getTranslations('liga');
-
   return (
     <Shell>
-      <TopBar backHref={backHref} kicker={tLiga('delete.kicker')} />
-      <BrassRibbon kicker={tLiga('delete.brassRibbon')} />
+      <TopBar backHref={backHref} kicker={t('kicker')} />
+      <BrassRibbon kicker={t('brassRibbon')} />
 
       <div className="px-1">
         <h1 className="mb-3 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
