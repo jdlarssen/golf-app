@@ -2621,6 +2621,63 @@
       "owner": "Eier",
       "admin": "Admin",
       "member": "Medlem"
+    },
+    "status": {
+      "active": "Aktiv",
+      "expired": "Utløpt",
+      "expiresOn": "Utløper {date}"
+    },
+    "manage": {
+      "pageKicker": "Klubber",
+      "pageTitle": "Klubber",
+      "createButton": "Opprett klubb",
+      "emptyState": "Ingen klubber opprettet ennå. Bruk knappen over for å opprette den første.",
+      "noOwner": "Ingen eier",
+      "memberCount": "{count, plural, one {# medlem} other {# medlemmer}}",
+      "memberCountWithCap": "{count} / {cap} {count, plural, one {medlem} other {medlemmer}}",
+      "detailKicker": "Klubber",
+      "updatedBanner": "Avtalen er oppdatert.",
+      "errorBanner": "Noe gikk galt. Prøv igjen.",
+      "membersHeading": "Medlemmer ({count})",
+      "membersHeadingWithCap": "Medlemmer ({count} / {cap})",
+      "noMembers": "Ingen medlemmer ennå.",
+      "avtaleHeading": "Avtale",
+      "statusLabel": "Status:",
+      "memberCapLabel": "Medlemstak (valgfritt)",
+      "memberCapPlaceholder": "F.eks. 150",
+      "memberCapHint": "La stå tom for ubegrenset.",
+      "saveButton": "Lagre avtale",
+      "savePending": "Lagrer …"
+    },
+    "create": {
+      "pageKicker": "Klubber",
+      "pageTitle": "Opprett klubb",
+      "nameLabel": "Klubbnavn",
+      "namePlaceholder": "F.eks. Bærum Golfklubb",
+      "ownerEmailLabel": "Eierens e-post",
+      "ownerEmailPlaceholder": "eier@eksempel.no",
+      "ownerEmailHint": "Personen må ha Tørny-konto fra før.",
+      "memberCapLabel": "Medlemstak (valgfritt)",
+      "memberCapPlaceholder": "F.eks. 150",
+      "memberCapHint": "La stå tom for ubegrenset.",
+      "submitButton": "Opprett klubb",
+      "submitPending": "Oppretter …",
+      "errors": {
+        "not_auth": "Du har ikke tilgang til å opprette klubber.",
+        "name_req": "Fyll inn et klubbnavn.",
+        "too_long": "Klubbnavnet kan ikke være lengre enn 60 tegn.",
+        "email_req": "Fyll inn eierens e-postadresse.",
+        "cap_invalid": "Medlemstaket må være minst 1.",
+        "owner_not_found": "Fant ingen Tørny-bruker med e-posten {email}. Be dem opprette konto først.",
+        "owner_not_found_generic": "Fant ingen Tørny-bruker med den e-posten. Be dem opprette konto først.",
+        "unknown": "Noe gikk galt. Prøv igjen."
+      }
+    },
+    "varighet": {
+      "fieldLabel": "Varighet",
+      "infinite": "Uendelig",
+      "setEndDate": "Sett sluttdato",
+      "endDateHint": "Gjelder til og med midnatt denne dagen."
     }
   },
   "liga": {

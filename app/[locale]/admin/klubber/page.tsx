@@ -1,4 +1,6 @@
 import { cache } from 'react';
+import { getTranslations } from 'next-intl/server';
+import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
 import { getAllClubsForAdmin } from '@/lib/clubs/getAllClubsForAdmin';
@@ -9,6 +11,7 @@ import { Card } from '@/components/ui/Card';
 import { LinkButton } from '@/components/ui/Button';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getClubStatusBadge } from '@/lib/clubs/clubStatus';
+import type { AppLocale } from '@/i18n/routing';
 
 const requireAdminContext = cache(async () => {
   const supabase = await getServerClient();
@@ -27,16 +30,20 @@ const requireAdminContext = cache(async () => {
 export default async function AdminKlubbListePage() {
   await requireAdminContext();
 
-  const clubs = await getAllClubsForAdmin();
+  const [clubs, t, locale] = await Promise.all([
+    getAllClubsForAdmin(),
+    getTranslations('klubb'),
+    getLocale(),
+  ]);
 
   return (
     <AdminShell>
-      <TopBar backHref="/admin" kicker="Klubber" />
+      <TopBar backHref="/admin" kicker={t('manage.pageKicker')} />
       <PageHeader
-        title="Klubber"
+        title={t('manage.pageTitle')}
         action={
           <LinkButton href="/admin/klubber/ny" variant="primary">
-            Opprett klubb
+            {t('manage.createButton')}
           </LinkButton>
         }
       />
@@ -44,13 +51,17 @@ export default async function AdminKlubbListePage() {
       {clubs.length === 0 ? (
         <Card>
           <p className="font-sans text-sm text-muted">
-            Ingen klubber opprettet ennå. Bruk knappen over for å opprette den første.
+            {t('manage.emptyState')}
           </p>
         </Card>
       ) : (
         <div className="space-y-2">
           {clubs.map((club) => {
-            const statusBadge = getClubStatusBadge(club.valid_until);
+            const statusBadge = getClubStatusBadge(club.valid_until, locale as AppLocale);
+            const badgeLabel =
+              statusBadge.tone === 'expiresOn'
+                ? t('status.expiresOn', { date: statusBadge.date })
+                : t(`status.${statusBadge.tone}`);
             return (
               <SmartLink
                 key={club.id}
@@ -66,18 +77,21 @@ export default async function AdminKlubbListePage() {
                       <p className="mt-0.5 font-sans text-xs text-muted truncate">
                         {club.ownerNames.length > 0
                           ? club.ownerNames.join(', ')
-                          : 'Ingen eier'}
+                          : t('manage.noOwner')}
                       </p>
                       <p className="mt-1.5 font-sans text-xs tabular-nums text-muted">
-                        {club.memberCount}
-                        {club.member_cap != null ? ` / ${club.member_cap}` : ''}{' '}
-                        {club.memberCount === 1 ? 'medlem' : 'medlemmer'}
+                        {club.member_cap != null
+                          ? t('manage.memberCountWithCap', {
+                              count: club.memberCount,
+                              cap: club.member_cap,
+                            })
+                          : t('manage.memberCount', { count: club.memberCount })}
                       </p>
                     </div>
                     <span
                       className={`shrink-0 rounded-full border px-2.5 py-0.5 font-sans text-xs font-medium ${statusBadge.className}`}
                     >
-                      {statusBadge.label}
+                      {badgeLabel}
                     </span>
                   </div>
                 </Card>

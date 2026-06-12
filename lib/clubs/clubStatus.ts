@@ -1,4 +1,5 @@
-import { formatShortDateNb } from '@/lib/format/date';
+import type { AppLocale } from '@/i18n/routing';
+import { formatShortDateLocale } from '@/lib/i18n/format';
 
 /**
  * A club is frozen/expired when it has a `valid_until` that is in the past (#50).
@@ -13,28 +14,50 @@ export function isClubExpired(validUntil: string | null): boolean {
   return new Date(validUntil) < new Date();
 }
 
-export type ClubStatusBadge = { label: string; className: string };
+/**
+ * Discriminated union for the club status badge.
+ *
+ * Callers translate the label using the catalog key:
+ *   - 'active'    → t('klubb.status.active')
+ *   - 'expired'   → t('klubb.status.expired')
+ *   - 'expiresOn' → t('klubb.status.expiresOn', { date: formattedDate })
+ *
+ * The className is locale-independent and used directly.
+ */
+export type ClubStatusBadge =
+  | { tone: 'active';    className: string }
+  | { tone: 'expired';   className: string }
+  | { tone: 'expiresOn'; className: string; date: string };
 
 /**
- * Status badge for a club's avtale, used on the admin governance surface
- * (/admin/klubber + /admin/klubber/[id]): Aktiv / Utløper {dato} / Utløpt.
+ * Status badge data for a club's avtale, used on the admin governance surface
+ * (/admin/klubber + /admin/klubber/[id]): Active / Expires {date} / Expired.
+ *
+ * Returns a discriminated union so the call-site can translate via the catalog:
+ *   - tone 'active'    → t('klubb.status.active')
+ *   - tone 'expired'   → t('klubb.status.expired')
+ *   - tone 'expiresOn' → t('klubb.status.expiresOn', { date: badge.date })
  */
-export function getClubStatusBadge(validUntil: string | null): ClubStatusBadge {
+export function getClubStatusBadge(
+  validUntil: string | null,
+  locale: AppLocale,
+): ClubStatusBadge {
   if (!validUntil) {
     return {
-      label: 'Aktiv',
+      tone: 'active',
       className: 'border-success/40 text-success bg-primary-soft',
     };
   }
   const expires = new Date(validUntil);
   if (expires < new Date()) {
     return {
-      label: 'Utløpt',
+      tone: 'expired',
       className: 'border-danger/30 text-danger bg-danger/[0.08]',
     };
   }
   return {
-    label: `Utløper ${formatShortDateNb(expires)}`,
+    tone: 'expiresOn',
+    date: formatShortDateLocale(expires, locale),
     className: 'border-warning/40 text-warning bg-warning/[0.10]',
   };
 }

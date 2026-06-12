@@ -2621,6 +2621,63 @@
       "owner": "Owner",
       "admin": "Admin",
       "member": "Member"
+    },
+    "status": {
+      "active": "Active",
+      "expired": "Expired",
+      "expiresOn": "Expires {date}"
+    },
+    "manage": {
+      "pageKicker": "Clubs",
+      "pageTitle": "Clubs",
+      "createButton": "Create club",
+      "emptyState": "No clubs created yet. Use the button above to create the first one.",
+      "noOwner": "No owner",
+      "memberCount": "{count, plural, one {# member} other {# members}}",
+      "memberCountWithCap": "{count} / {cap} {count, plural, one {member} other {members}}",
+      "detailKicker": "Clubs",
+      "updatedBanner": "The agreement has been updated.",
+      "errorBanner": "Something went wrong. Please try again.",
+      "membersHeading": "Members ({count})",
+      "membersHeadingWithCap": "Members ({count} / {cap})",
+      "noMembers": "No members yet.",
+      "avtaleHeading": "Agreement",
+      "statusLabel": "Status:",
+      "memberCapLabel": "Member cap (optional)",
+      "memberCapPlaceholder": "E.g. 150",
+      "memberCapHint": "Leave empty for unlimited.",
+      "saveButton": "Save agreement",
+      "savePending": "Saving…"
+    },
+    "create": {
+      "pageKicker": "Clubs",
+      "pageTitle": "Create club",
+      "nameLabel": "Club name",
+      "namePlaceholder": "E.g. Bærum Golf Club",
+      "ownerEmailLabel": "Owner''s email",
+      "ownerEmailPlaceholder": "owner@example.com",
+      "ownerEmailHint": "The person must already have a Tørny account.",
+      "memberCapLabel": "Member cap (optional)",
+      "memberCapPlaceholder": "E.g. 150",
+      "memberCapHint": "Leave empty for unlimited.",
+      "submitButton": "Create club",
+      "submitPending": "Creating…",
+      "errors": {
+        "not_auth": "You do not have permission to create clubs.",
+        "name_req": "Please enter a club name.",
+        "too_long": "The club name cannot be longer than 60 characters.",
+        "email_req": "Please enter the owner''s email address.",
+        "cap_invalid": "The member cap must be at least 1.",
+        "owner_not_found": "No Tørny user found with the email {email}. Ask them to create an account first.",
+        "owner_not_found_generic": "No Tørny user found with that email address. Ask them to create an account first.",
+        "unknown": "Something went wrong. Please try again."
+      }
+    },
+    "varighet": {
+      "fieldLabel": "Duration",
+      "infinite": "Unlimited",
+      "setEndDate": "Set end date",
+      "endDateHint": "Valid until the end of this day."
     }
   },
   "liga": {

@@ -279,6 +279,73 @@ export function formatRelativeLocale(
   return rtf.format(-Math.round(diff / MONTH_MS), 'month');
 }
 
+// ---------------------------------------------------------------------------
+// Short UTC day+month helper (#566 Fase 2d prerequisites).
+//
+// Used by LigaRoundRow.formatWindowDate («12. mai, 14:30» style) and by
+// CreateLigaForm's MONTHS_ABBR round-preview sentence.
+//
+// IMPORTANT: Intl nb-NO with { day: 'numeric', month: 'short' } produces
+// 'jan.' (trailing dot) for some months and 'mars'/'juni'/'juli' instead of
+// 'mar'/'jun'/'jul'. Neither matches the legacy hand-rolled array, so the 'no'
+// path replicates it explicitly — byte-identical output is a hard requirement
+// (5 snapshot tests assert exact Norwegian strings, plus LigaRoundRow render).
+// ---------------------------------------------------------------------------
+
+const NO_MONTHS_SHORT = [
+  'jan', 'feb', 'mar', 'apr', 'mai', 'jun',
+  'jul', 'aug', 'sep', 'okt', 'nov', 'des',
+] as const;
+
+/**
+ * Short month abbreviation for the given 0-based month index.
+ *
+ * Norwegian ('no'): uses the legacy hand-rolled array — byte-identical to
+ * the in-file MONTHS_ABBR constant in CreateLigaForm and LigaRoundRow.
+ * English ('en'):   3-letter capitalised abbreviation via en-GB Intl.
+ */
+export function shortMonthLocale(monthIndex: number, locale: AppLocale): string {
+  if (locale === 'no') return NO_MONTHS_SHORT[monthIndex];
+  // Probe a fixed day (15) to avoid month-boundary ambiguity.
+  const probe = new Date(Date.UTC(2000, monthIndex, 15));
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'UTC',
+    month: 'short',
+  }).format(probe);
+}
+
+/**
+ * Locale-aware short day + month string, UTC-based.
+ *
+ * Norwegian ('no'): «12. mai» — byte-identical to LigaRoundRow.formatWindowDate
+ *   and CreateLigaForm month-preview sentence (uses legacy NO_MONTHS_SHORT).
+ * English ('en'):   «12 May» — en-GB Intl, no trailing dot on day.
+ *
+ * Input: ISO timestamp string (e.g. '2026-05-12T14:30:00Z').
+ * UTC date-getters are used so the output matches the stored UTC value
+ * (same as LigaRoundRow's current getUTCDate / getUTCMonth calls).
+ */
+export function formatShortUTCDayMonthLocale(iso: string, locale: AppLocale): string {
+  const d = new Date(iso);
+  const day = d.getUTCDate();
+  const monthIdx = d.getUTCMonth();
+
+  if (locale === 'no') {
+    return `${day}. ${NO_MONTHS_SHORT[monthIdx]}`;
+  }
+
+  // en-GB Intl with timeZone UTC for consistent output.
+  const fmt = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'UTC',
+    day: 'numeric',
+    month: 'short',
+  });
+  const parts = fmt.formatToParts(d);
+  const dayStr = parts.find((p) => p.type === 'day')?.value ?? String(day);
+  const monthStr = parts.find((p) => p.type === 'month')?.value ?? '';
+  return `${dayStr} ${monthStr}`;
+}
+
 /**
  * Locale-aware countdown string.
  *

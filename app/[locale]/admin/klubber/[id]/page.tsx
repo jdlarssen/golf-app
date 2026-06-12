@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
+import { getTranslations } from 'next-intl/server';
+import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
 import { getClubForAdmin } from '@/lib/clubs/getClubForAdmin';
@@ -13,6 +15,7 @@ import { Input } from '@/components/ui/Input';
 import { getClubStatusBadge } from '@/lib/clubs/clubStatus';
 import { VarighetField } from '../VarighetField';
 import { updateClubTerms } from './actions';
+import type { AppLocale } from '@/i18n/routing';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -24,12 +27,6 @@ function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
   return value;
 }
-
-const ROLE_LABELS: Record<'owner' | 'admin' | 'member', string> = {
-  owner: 'Eier',
-  admin: 'Admin',
-  member: 'Medlem',
-};
 
 const requireAdminContext = cache(async () => {
   const supabase = await getServerClient();
@@ -69,7 +66,16 @@ export default async function AdminKlubbDetailPage({
     : '';
   const hasValidUntil = Boolean(club.valid_until);
 
-  const statusBadge = getClubStatusBadge(club.valid_until);
+  const [t, locale] = await Promise.all([
+    getTranslations('klubb'),
+    getLocale(),
+  ]);
+
+  const statusBadge = getClubStatusBadge(club.valid_until, locale as AppLocale);
+  const badgeLabel =
+    statusBadge.tone === 'expiresOn'
+      ? t('status.expiresOn', { date: statusBadge.date })
+      : t(`status.${statusBadge.tone}`);
 
   return (
     <AdminShell>
@@ -78,25 +84,29 @@ export default async function AdminKlubbDetailPage({
 
       {updatedFlag && (
         <div className="mb-6">
-          <Banner tone="success">Avtalen er oppdatert.</Banner>
+          <Banner tone="success">{t('manage.updatedBanner')}</Banner>
         </div>
       )}
 
       {errorCode === 'unknown' && (
         <div className="mb-6">
-          <Banner tone="error">Noe gikk galt. Prøv igjen.</Banner>
+          <Banner tone="error">{t('manage.errorBanner')}</Banner>
         </div>
       )}
 
       {/* Members list */}
       <section className="mb-8">
         <h2 className="mb-3 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-          Medlemmer ({members.length}
-          {club.member_cap != null ? ` / ${club.member_cap}` : ''})
+          {club.member_cap != null
+            ? t('manage.membersHeadingWithCap', {
+                count: members.length,
+                cap: club.member_cap,
+              })
+            : t('manage.membersHeading', { count: members.length })}
         </h2>
         {members.length === 0 ? (
           <Card>
-            <p className="font-sans text-sm text-muted">Ingen medlemmer ennå.</p>
+            <p className="font-sans text-sm text-muted">{t('manage.noMembers')}</p>
           </Card>
         ) : (
           <div className="space-y-2">
@@ -107,7 +117,7 @@ export default async function AdminKlubbDetailPage({
                     {member.name}
                   </span>
                   <span className="shrink-0 rounded-full border border-border px-2.5 py-0.5 font-sans text-xs text-muted">
-                    {ROLE_LABELS[member.role]}
+                    {t(`roles.${member.role}`)}
                   </span>
                 </div>
               </Card>
@@ -119,16 +129,16 @@ export default async function AdminKlubbDetailPage({
       {/* Avtale section */}
       <section className="mb-8">
         <h2 className="mb-3 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-          Avtale
+          {t('manage.avtaleHeading')}
         </h2>
         <Card>
           {/* Status line */}
           <div className="mb-4 flex items-center gap-2">
-            <span className="font-sans text-sm text-muted">Status:</span>
+            <span className="font-sans text-sm text-muted">{t('manage.statusLabel')}</span>
             <span
               className={`rounded-full border px-2.5 py-0.5 font-sans text-xs font-medium ${statusBadge.className}`}
             >
-              {statusBadge.label}
+              {badgeLabel}
             </span>
           </div>
 
@@ -139,11 +149,11 @@ export default async function AdminKlubbDetailPage({
               id="member_cap"
               name="member_cap"
               type="number"
-              label="Medlemstak (valgfritt)"
-              placeholder="F.eks. 150"
+              label={t('manage.memberCapLabel')}
+              placeholder={t('manage.memberCapPlaceholder')}
               min={1}
               defaultValue={club.member_cap ?? ''}
-              hint="La stå tom for ubegrenset."
+              hint={t('manage.memberCapHint')}
             />
 
             <VarighetField
@@ -151,8 +161,8 @@ export default async function AdminKlubbDetailPage({
               defaultDate={currentDateStr}
             />
 
-            <SubmitButton className="w-full" pendingLabel="Lagrer …">
-              Lagre avtale
+            <SubmitButton className="w-full" pendingLabel={t('manage.savePending')}>
+              {t('manage.saveButton')}
             </SubmitButton>
           </form>
         </Card>

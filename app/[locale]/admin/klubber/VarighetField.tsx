@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 /**
  * VarighetField — avtale-varighet for opprett/rediger-klubb (#50).
@@ -23,12 +24,13 @@ export function VarighetField({
   defaultMode: 'uendelig' | 'dato';
   defaultDate: string;
 }) {
+  const t = useTranslations('klubb.varighet');
   const [mode, setMode] = useState<'uendelig' | 'dato'>(defaultMode);
   const [date, setDate] = useState<string>(defaultDate);
 
   return (
     <div>
-      <p className="mb-2 block text-sm font-medium text-text">Varighet</p>
+      <p className="mb-2 block text-sm font-medium text-text">{t('fieldLabel')}</p>
       <div className="space-y-2">
         <label className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl border border-border bg-surface px-3.5 py-3">
           <input
@@ -39,7 +41,7 @@ export function VarighetField({
             onChange={() => setMode('uendelig')}
             className="h-4 w-4 accent-primary"
           />
-          <span className="font-sans text-sm text-text">Uendelig</span>
+          <span className="font-sans text-sm text-text">{t('infinite')}</span>
         </label>
         <label className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl border border-border bg-surface px-3.5 py-3">
           <input
@@ -50,7 +52,7 @@ export function VarighetField({
             onChange={() => setMode('dato')}
             className="h-4 w-4 accent-primary"
           />
-          <span className="font-sans text-sm text-text">Sett sluttdato</span>
+          <span className="font-sans text-sm text-text">{t('setEndDate')}</span>
         </label>
       </div>
 
@@ -66,7 +68,7 @@ export function VarighetField({
             } focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40 transition-[border-color,box-shadow] duration-150`}
           />
           <p className="mt-1.5 text-xs text-muted">
-            Gjelder til og med midnatt denne dagen.
+            {t('endDateHint')}
           </p>
         </div>
       )}

@@ -1,6 +1,7 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 
@@ -26,11 +27,12 @@ import { getServerClient } from '@/lib/supabase/server';
  * Part of #50 (Klubb-eierskap, delegering & tilgangsstyring).
  */
 export async function createClubForAdmin(formData: FormData) {
+  const locale = await getLocale();
   const supabase = await getServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  if (!user) redirect({ href: '/login', locale });
 
   const name = String(formData.get('name') ?? '').trim();
   const ownerEmail = String(formData.get('owner_email') ?? '').trim();
@@ -53,21 +55,22 @@ export async function createClubForAdmin(formData: FormData) {
 
   if (error) {
     const msg = error.message ?? '';
-    if (msg.includes('not_authorized')) redirect('/admin/klubber/ny?error=not_auth');
-    if (msg.includes('name_required')) redirect('/admin/klubber/ny?error=name_req');
-    if (msg.includes('name_too_long')) redirect('/admin/klubber/ny?error=too_long');
-    if (msg.includes('owner_email_required')) redirect('/admin/klubber/ny?error=email_req');
-    if (msg.includes('member_cap_invalid')) redirect('/admin/klubber/ny?error=cap_invalid');
+    if (msg.includes('not_authorized')) redirect({ href: '/admin/klubber/ny?error=not_auth', locale });
+    if (msg.includes('name_required')) redirect({ href: '/admin/klubber/ny?error=name_req', locale });
+    if (msg.includes('name_too_long')) redirect({ href: '/admin/klubber/ny?error=too_long', locale });
+    if (msg.includes('owner_email_required')) redirect({ href: '/admin/klubber/ny?error=email_req', locale });
+    if (msg.includes('member_cap_invalid')) redirect({ href: '/admin/klubber/ny?error=cap_invalid', locale });
     if (msg.includes('owner_not_found')) {
-      redirect(
-        `/admin/klubber/ny?error=owner_not_found&email=${encodeURIComponent(ownerEmail)}`,
-      );
+      redirect({
+        href: `/admin/klubber/ny?error=owner_not_found&email=${encodeURIComponent(ownerEmail)}`,
+        locale,
+      });
     }
     console.error('[createClubForAdmin]', error);
-    redirect('/admin/klubber/ny?error=unknown');
+    redirect({ href: '/admin/klubber/ny?error=unknown', locale });
   }
 
   // data is the new club uuid
   revalidatePath('/admin/klubber');
-  redirect(`/admin/klubber/${data}`);
+  redirect({ href: `/admin/klubber/${data}`, locale });
 }

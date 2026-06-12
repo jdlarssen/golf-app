@@ -1,6 +1,7 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
 import { revalidatePath } from '@/lib/i18n/revalidateLocalePath';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -22,25 +23,27 @@ import { getAdminClient } from '@/lib/supabase/admin';
  * Part of #50 (Klubb-eierskap, delegering & tilgangsstyring).
  */
 export async function updateClubTerms(formData: FormData) {
+  const locale = await getLocale();
   const supabase = await getServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  if (!user) redirect({ href: '/login', locale });
 
   // Gate: verify is_admin in code (admin-client is used below, so RLS won't gate).
+  // next-intl redirect is not typed `never`, so we need the non-null assertion here.
   const { data: profile } = await supabase
     .from('users')
     .select('is_admin')
-    .eq('id', user.id)
+    .eq('id', user!.id)
     .single();
 
   if (!profile?.is_admin) {
-    redirect('/admin');
+    redirect({ href: '/admin', locale });
   }
 
   const groupId = String(formData.get('group_id') ?? '').trim();
-  if (!groupId) redirect('/admin/klubber');
+  if (!groupId) redirect({ href: '/admin/klubber', locale });
 
   const memberCapRaw = String(formData.get('member_cap') ?? '').trim();
   const varighetMode = String(formData.get('varighet_mode') ?? '').trim();
@@ -60,10 +63,10 @@ export async function updateClubTerms(formData: FormData) {
 
   if (error) {
     console.error('[updateClubTerms]', error);
-    redirect(`/admin/klubber/${groupId}?error=unknown`);
+    redirect({ href: `/admin/klubber/${groupId}?error=unknown`, locale });
   }
 
   revalidatePath(`/admin/klubber/${groupId}`);
   revalidatePath('/admin/klubber');
-  redirect(`/admin/klubber/${groupId}?updated=1`);
+  redirect({ href: `/admin/klubber/${groupId}?updated=1`, locale });
 }

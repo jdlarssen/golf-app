@@ -1,4 +1,5 @@
 import { cache } from 'react';
+import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
@@ -45,28 +46,22 @@ export default async function NyKlubbPage({
   const errorCode = first(sp.error);
   const errorEmail = first(sp.email);
 
-  const errorMessages: Record<string, string> = {
-    not_auth: 'Du har ikke tilgang til å opprette klubber.',
-    name_req: 'Fyll inn et klubbnavn.',
-    too_long: 'Klubbnavnet kan ikke være lengre enn 60 tegn.',
-    email_req: 'Fyll inn eierens e-postadresse.',
-    cap_invalid: 'Medlemstaket må være minst 1.',
-    owner_not_found: errorEmail
-      ? `Fant ingen Tørny-bruker med e-posten ${errorEmail}. Be dem opprette konto først.`
-      : 'Fant ingen Tørny-bruker med den e-posten. Be dem opprette konto først.',
-    unknown: 'Noe gikk galt. Prøv igjen.',
-  };
+  const t = await getTranslations('klubb');
+
+  const errorMessage = errorCode
+    ? errorCode === 'owner_not_found' && errorEmail
+      ? t('create.errors.owner_not_found', { email: errorEmail })
+      : t(`create.errors.${errorCode}` as Parameters<typeof t>[0]) ?? t('create.errors.unknown')
+    : undefined;
 
   return (
     <AdminShell>
-      <TopBar backHref="/admin/klubber" kicker="Klubber" />
-      <PageHeader title="Opprett klubb" />
+      <TopBar backHref="/admin/klubber" kicker={t('create.pageKicker')} />
+      <PageHeader title={t('create.pageTitle')} />
 
-      {errorCode && (
+      {errorMessage && (
         <div className="mb-6">
-          <Banner tone="error">
-            {errorMessages[errorCode] ?? 'Noe gikk galt. Prøv igjen.'}
-          </Banner>
+          <Banner tone="error">{errorMessage}</Banner>
         </div>
       )}
 
@@ -76,8 +71,8 @@ export default async function NyKlubbPage({
             id="name"
             name="name"
             type="text"
-            label="Klubbnavn"
-            placeholder="F.eks. Bærum Golfklubb"
+            label={t('create.nameLabel')}
+            placeholder={t('create.namePlaceholder')}
             maxLength={60}
             required
           />
@@ -85,26 +80,26 @@ export default async function NyKlubbPage({
             id="owner_email"
             name="owner_email"
             type="email"
-            label="Eierens e-post"
-            placeholder="eier@eksempel.no"
+            label={t('create.ownerEmailLabel')}
+            placeholder={t('create.ownerEmailPlaceholder')}
             autoComplete="off"
-            hint="Personen må ha Tørny-konto fra før."
+            hint={t('create.ownerEmailHint')}
             required
           />
           <Input
             id="member_cap"
             name="member_cap"
             type="number"
-            label="Medlemstak (valgfritt)"
-            placeholder="F.eks. 150"
+            label={t('create.memberCapLabel')}
+            placeholder={t('create.memberCapPlaceholder')}
             min={1}
-            hint="La stå tom for ubegrenset."
+            hint={t('create.memberCapHint')}
           />
 
           <VarighetField defaultMode="uendelig" defaultDate="" />
 
-          <SubmitButton className="w-full" pendingLabel="Oppretter …">
-            Opprett klubb
+          <SubmitButton className="w-full" pendingLabel={t('create.submitPending')}>
+            {t('create.submitButton')}
           </SubmitButton>
         </form>
       </Card>
