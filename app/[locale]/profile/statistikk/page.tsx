@@ -1,4 +1,5 @@
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
@@ -11,6 +12,7 @@ import {
   type LbScore,
 } from '@/lib/leaderboard';
 import { nameInitials } from '@/lib/names/initials';
+import type { AppLocale } from '@/i18n/routing';
 
 type GameRow = {
   id: string;
@@ -53,9 +55,11 @@ type PlayerStat = {
 };
 
 export default async function StatistikkPage() {
+  const locale = (await getLocale()) as AppLocale;
+  const t = await getTranslations('profile.statistikk');
   const userId = await getProxyVerifiedUserId();
   if (!userId) {
-    redirect('/login');
+    redirect({ href: '/login', locale });
   }
 
   const supabase = await getServerClient();
@@ -71,7 +75,7 @@ export default async function StatistikkPage() {
   const games = gamesRaw ?? [];
 
   if (games.length === 0) {
-    return <EmptyStateView userId={userId} />;
+    return <EmptyStateView />;
   }
 
   const gameIds = games.map((g) => g.id);
@@ -116,6 +120,8 @@ export default async function StatistikkPage() {
   const participationCount = new Map<string, number>();
   const userNames = new Map<string, string>();
 
+  const unknownPlayer = t('unknownPlayer');
+
   for (const game of games) {
     const gamePlayers = playersByGame.get(game.id) ?? [];
     if (gamePlayers.length === 0) {
@@ -138,7 +144,7 @@ export default async function StatistikkPage() {
     // Tied #1 teams all share the win (rank === 1 covers ties via rankTeams).
     const lbPlayers: LbPlayer[] = gamePlayers.map((p) => ({
       userId: p.user_id,
-      name: p.users?.name ?? '(ukjent)',
+      name: p.users?.name ?? unknownPlayer,
       nickname: p.users?.nickname ?? null,
       teamNumber: p.team_number,
       courseHandicap: p.course_handicap ?? 0,
@@ -182,68 +188,69 @@ export default async function StatistikkPage() {
     }
   }
 
-  const winners = toSortedStats(winnerCount, userNames).slice(0, 10);
-  const mostActive = toSortedStats(participationCount, userNames).slice(0, 10);
+  const winners = toSortedStats(winnerCount, userNames, unknownPlayer).slice(0, 10);
+  const mostActive = toSortedStats(participationCount, userNames, unknownPlayer).slice(0, 10);
 
   return (
     <AppShell>
       <TopBar
         backHref="/profile"
-        backLabel="Tilbake til profil"
-        kicker="Statistikk"
+        backLabel={t('backLabel')}
+        kicker={t('kicker')}
       />
 
       <h1 className="font-serif text-2xl font-medium text-text mb-1">
-        Klubbstatistikker
+        {t('heading')}
       </h1>
       <p className="mb-6 font-sans text-sm text-muted">
-        Fra alle ferdigspilte spill i Tørny.
+        {t('subtitle')}
       </p>
 
       <StatSection
-        sectionLabel="Vinnerliste"
-        heading="Flest spill vunnet"
-        subtitle="Antall ganger laget ditt har endt på #1 i best-ball-netto."
+        sectionLabel={t('winnersLabel')}
+        heading={t('winnersHeading')}
+        subtitle={t('winnersSubtitle')}
         stats={winners}
-        unitSingular="seier"
-        unitPlural="seire"
+        unitSingular={t('unitWinSingular')}
+        unitPlural={t('unitWinPlural')}
+        noDataLabel={t('noData')}
       />
 
       <div className="mt-8">
         <StatSection
-          sectionLabel="Mest aktive"
-          heading="Flest spill spilt"
-          subtitle="Antall ferdigspilte spill du har deltatt i."
+          sectionLabel={t('mostActiveLabel')}
+          heading={t('mostActiveHeading')}
+          subtitle={t('mostActiveSubtitle')}
           stats={mostActive}
-          unitSingular="spill"
-          unitPlural="spill"
+          unitSingular={t('unitGameSingular')}
+          unitPlural={t('unitGamePlural')}
+          noDataLabel={t('noData')}
         />
       </div>
     </AppShell>
   );
 }
 
-function EmptyStateView({ userId }: { userId: string }) {
+async function EmptyStateView() {
+  const t = await getTranslations('profile.statistikk');
   return (
     <AppShell>
       <TopBar
         backHref="/profile"
-        backLabel="Tilbake til profil"
-        kicker="Statistikk"
+        backLabel={t('backLabel')}
+        kicker={t('kicker')}
       />
 
       <h1 className="font-serif text-2xl font-medium text-text mb-1">
-        Klubbstatistikker
+        {t('heading')}
       </h1>
       <p className="mb-6 font-sans text-sm text-muted">
-        Fra alle ferdigspilte spill i Tørny.
+        {t('subtitle')}
       </p>
 
       <Card>
         <p className="font-sans text-sm text-muted leading-relaxed">
-          Ingen ferdige spill ennå. Statistikken fylles inn så snart admin
-          avslutter det første spillet — da ser du hvem som har vunnet flest og
-          hvem som har vært med på flest.
+          {t('emptyState')}
         </p>
       </Card>
     </AppShell>
@@ -257,6 +264,7 @@ function StatSection({
   stats,
   unitSingular,
   unitPlural,
+  noDataLabel,
 }: {
   sectionLabel: string;
   heading: string;
@@ -264,6 +272,7 @@ function StatSection({
   stats: PlayerStat[];
   unitSingular: string;
   unitPlural: string;
+  noDataLabel: string;
 }) {
   return (
     <section className="space-y-3">
@@ -280,7 +289,7 @@ function StatSection({
 
         {stats.length === 0 ? (
           <div className="px-5 pb-5 pt-1">
-            <p className="font-sans text-sm text-muted">Ingen data ennå.</p>
+            <p className="font-sans text-sm text-muted">{noDataLabel}</p>
           </div>
         ) : (
           <ol className="border-t border-border">
@@ -354,11 +363,12 @@ function groupBy<T, K>(items: T[], keyFn: (item: T) => K): Map<K, T[]> {
 function toSortedStats(
   counts: Map<string, number>,
   userNames: Map<string, string>,
+  unknownFallback: string,
 ): PlayerStat[] {
   const entries: PlayerStat[] = [];
   for (const [userId, count] of counts.entries()) {
     if (count <= 0) continue;
-    const name = userNames.get(userId) ?? '(ukjent)';
+    const name = userNames.get(userId) ?? unknownFallback;
     entries.push({
       userId,
       name,

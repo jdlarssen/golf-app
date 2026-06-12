@@ -1,11 +1,13 @@
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { formatTeeOffDate } from '@/lib/format/teeOff';
+import { formatTeeOffDateLocale } from '@/lib/i18n/format';
+import type { AppLocale } from '@/i18n/routing';
 
 type GameRow = {
   id: string;
@@ -25,9 +27,11 @@ type GameWithStats = GameRow & {
 };
 
 export default async function HistorikkPage() {
+  const locale = (await getLocale()) as AppLocale;
+  const t = await getTranslations('profile.historikk');
   const userId = await getProxyVerifiedUserId();
   if (!userId) {
-    redirect('/login');
+    redirect({ href: '/login', locale });
   }
 
   const supabase = await getServerClient();
@@ -97,33 +101,27 @@ export default async function HistorikkPage() {
   });
 
   const finishedCount = gamesWithStats.length;
-  const subtitle =
-    finishedCount === 0
-      ? 'Ingen fullførte runder ennå'
-      : finishedCount === 1
-        ? '1 fullført runde'
-        : `${finishedCount} fullførte runder`;
 
   return (
     <AppShell>
       <TopBar
         backHref="/profile"
-        backLabel="Tilbake til profil"
-        kicker="Historikk"
+        backLabel={t('backLabel')}
+        kicker={t('kicker')}
       />
 
-      <p className="mb-4 text-sm text-muted">{subtitle}</p>
+      <p className="mb-4 text-sm text-muted">{t('roundCount', { count: finishedCount })}</p>
 
       {finishedCount === 0 ? (
         <Card>
           <p className="font-sans text-sm text-muted leading-relaxed">
-            Du har ingen fullførte runder ennå. Bli med på et spill først.
+            {t('emptyState')}
           </p>
         </Card>
       ) : (
         <div className="space-y-3">
           {gamesWithStats.map((game) => (
-            <GameHistoryCard key={game.id} game={game} />
+            <GameHistoryCard key={game.id} game={game} locale={locale} colBrutto={t('colBrutto')} colAvgPerHole={t('colAvgPerHole')} resultLink={t('resultLink')} />
           ))}
         </div>
       )}
@@ -131,11 +129,23 @@ export default async function HistorikkPage() {
   );
 }
 
-function GameHistoryCard({ game }: { game: GameWithStats }) {
+function GameHistoryCard({
+  game,
+  locale,
+  colBrutto,
+  colAvgPerHole,
+  resultLink,
+}: {
+  game: GameWithStats;
+  locale: AppLocale;
+  colBrutto: string;
+  colAvgPerHole: string;
+  resultLink: string;
+}) {
   const dateString = game.scheduled_tee_off_at
-    ? formatTeeOffDate(new Date(game.scheduled_tee_off_at))
+    ? formatTeeOffDateLocale(new Date(game.scheduled_tee_off_at), locale)
     : game.ended_at
-      ? formatTeeOffDate(new Date(game.ended_at))
+      ? formatTeeOffDateLocale(new Date(game.ended_at), locale)
       : null;
 
   const avgPerHole =
@@ -162,7 +172,7 @@ function GameHistoryCard({ game }: { game: GameWithStats }) {
           <div className="shrink-0 flex gap-4 items-center">
             <div className="text-right">
               <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-muted leading-none mb-1">
-                Brutto
+                {colBrutto}
               </p>
               <p className="font-sans tabular-nums text-base font-semibold text-text leading-none">
                 {game.bruttoSum !== null ? game.bruttoSum : '—'}
@@ -170,7 +180,7 @@ function GameHistoryCard({ game }: { game: GameWithStats }) {
             </div>
             <div className="text-right">
               <p className="font-sans text-[10px] font-semibold uppercase tracking-[0.12em] text-muted leading-none mb-1">
-                Snitt/hull
+                {colAvgPerHole}
               </p>
               <p className="font-sans tabular-nums text-base font-semibold text-text leading-none">
                 {avgPerHole !== null ? avgPerHole : '—'}
@@ -190,7 +200,7 @@ function GameHistoryCard({ game }: { game: GameWithStats }) {
           href={`/games/${game.id}/leaderboard?from=/profile/historikk`}
           className="flex items-center justify-between px-5 py-3 font-sans text-[13px] font-medium text-muted hover:text-text hover:bg-bg/50 transition-colors"
         >
-          <span>Se resultatliste</span>
+          <span>{resultLink}</span>
           <svg
             width="16"
             height="16"
