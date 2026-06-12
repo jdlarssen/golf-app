@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
@@ -11,12 +12,6 @@ import { deleteCourse } from '../edit/actions';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;
-
-const ERROR_MESSAGES: Record<string, string> = {
-  delete_failed: 'Slettingen feilet. Prøv igjen, eller sjekk Vercel-loggene.',
-  not_owned: 'Du kan bare slette baner du har laget selv.',
-  in_use: 'Banen er i bruk i minst ett spill og kan ikke slettes.',
-};
 
 function first(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
@@ -41,7 +36,12 @@ export default async function SlettBanePage({
   const { id } = await params;
   const sp = await searchParams;
   const errorCode = first(sp.error);
-  const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
+
+  const t = await getTranslations('admin.courses.delete');
+
+  const errorMessage = errorCode
+    ? t(`errors.${errorCode}` as Parameters<typeof t>[0])
+    : undefined;
 
   const supabase = await getServerClient();
   await requireAdminOrTrustedCreator(supabase);
@@ -85,11 +85,11 @@ export default async function SlettBanePage({
         kicker="Klubbhuset"
       />
 
-      <BrassRibbon kicker="Bekreft sletting" />
+      <BrassRibbon kicker={t('brassRibbon')} />
 
       <div className="px-1">
         <h1 className="mb-3 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-          Slett «{course.name}»?
+          {t('heading', { name: course.name })}
         </h1>
       </div>
 
@@ -102,8 +102,7 @@ export default async function SlettBanePage({
       {inUse ? (
         <div className="mt-4">
           <Banner tone="warning">
-            Banen er i bruk i {gameCount} spill og kan ikke slettes. Slett
-            spillene som bruker den først.
+            {t('inUseBanner', { count: gameCount })}
           </Banner>
         </div>
       ) : (
@@ -113,19 +112,17 @@ export default async function SlettBanePage({
             style={{ borderColor: 'rgba(180, 60, 60, 0.18)' }}
           >
             <p className="mb-2 font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-              Slettes permanent
+              {t('permanentLabel')}
             </p>
             <ul className="space-y-1 font-sans text-[13px] text-text">
               <li>Banen «{course.name}»</li>
-              {holeCount > 0 && <li>{holeCount} hull</li>}
+              {holeCount > 0 && <li>{t('hullCount', { count: holeCount })}</li>}
               {teeCount > 0 && (
-                <li>
-                  {teeCount} {teeCount === 1 ? 'tee-boks' : 'tee-bokser'}
-                </li>
+                <li>{t('teeCount', { count: teeCount })}</li>
               )}
             </ul>
             <p className="mt-3 font-sans text-[12px] leading-relaxed text-muted">
-              Handlingen kan ikke angres.
+              {t('cannotUndo')}
             </p>
           </div>
 
@@ -137,16 +134,16 @@ export default async function SlettBanePage({
                   background: 'var(--danger-deep)',
                   borderColor: 'var(--danger-deep)',
                 }}
-                pendingLabel="Sletter …"
+                pendingLabel={t('deletingBusy')}
               >
-                Slett banen for alltid
+                {t('submitButton')}
               </SubmitButton>
             </form>
             <SmartLink
               href={`/admin/courses/${id}/edit`}
               className="rounded-full border border-border bg-surface px-3 py-3 text-center font-sans text-[13px] font-medium text-text"
             >
-              Avbryt
+              {t('cancel')}
             </SmartLink>
           </div>
         </>
