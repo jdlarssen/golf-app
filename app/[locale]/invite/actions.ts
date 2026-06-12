@@ -1,11 +1,13 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
 import { randomUUID } from 'node:crypto';
 import { getServerClient } from '@/lib/supabase/server';
 import { isDisposableEmailDomain } from '@/lib/auth/disposableEmail';
 import { getQuotaState } from '@/lib/invitations/quota';
 import { sendInviteNotification } from '@/lib/mail/inviteNotification';
+import type { AppLocale } from '@/i18n/routing';
 
 // Lightweight format check. We rely on browser `type="email"` + the
 // fact that Supabase will reject malformed addresses too. Just guard
@@ -15,13 +17,14 @@ function looksLikeEmail(value: string): boolean {
 }
 
 export async function sendFriendInvite(formData: FormData) {
+  const locale = (await getLocale()) as AppLocale;
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
 
   if (!email) {
-    redirect('/profile?invite_error=email_required');
+    redirect({ href: '/profile?invite_error=email_required', locale });
   }
   if (!looksLikeEmail(email)) {
-    redirect('/profile?invite_error=invalid_email');
+    redirect({ href: '/profile?invite_error=invalid_email', locale });
   }
   // #422: reject known disposable/throwaway inbox domains on the user-driven
   // invite flows. Unlike the /login block (#365), this is always on — a
@@ -30,7 +33,7 @@ export async function sendFriendInvite(formData: FormData) {
   // leaves a dead invitations row + a wasted notification mail. Admin/trusted-
   // creator invite flows are deliberately not guarded (owner decision, #422).
   if (isDisposableEmailDomain(email)) {
-    redirect('/profile?invite_error=disposable_email');
+    redirect({ href: '/profile?invite_error=disposable_email', locale });
   }
 
   const supabase = await getServerClient();
@@ -39,7 +42,7 @@ export async function sendFriendInvite(formData: FormData) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/login');
+    redirect({ href: '/login', locale });
   }
 
   // Look up inviter profile. If the inviter hasn't completed their own
@@ -53,17 +56,17 @@ export async function sendFriendInvite(formData: FormData) {
     .single<{ name: string | null; profile_completed_at: string | null }>();
 
   if (profileError || !profile) {
-    redirect('/profile?invite_error=unknown');
+    redirect({ href: '/profile?invite_error=unknown', locale });
   }
   if (!profile.profile_completed_at) {
-    redirect('/complete-profile');
+    redirect({ href: '/complete-profile', locale });
   }
 
   // Defensive quota re-check — the /invite page already gates on this,
   // but server-side enforcement is what actually protects the rule.
   const quota = await getQuotaState(supabase, user.id);
   if (quota.isExhausted) {
-    redirect('/profile?invite_error=quota');
+    redirect({ href: '/profile?invite_error=quota', locale });
   }
 
   // Block invites to addresses that already exist anywhere in Tørny.
@@ -87,15 +90,15 @@ export async function sendFriendInvite(formData: FormData) {
   ]);
 
   if (registeredResult.error || inAuthResult.error || invitedResult.error) {
-    redirect('/profile?invite_error=unknown');
+    redirect({ href: '/profile?invite_error=unknown', locale });
   }
   if (registeredResult.data || inAuthResult.data) {
-    redirect('/profile?invite_error=already_user');
+    redirect({ href: '/profile?invite_error=already_user', locale });
   }
   // An open invitation already exists for this address (from the admin door
   // or another friend-invite) — don't send a second invite-mail.
   if (invitedResult.data) {
-    redirect('/profile?invite_error=already_invited');
+    redirect({ href: '/profile?invite_error=already_invited', locale });
   }
 
   const inviterName = profile.name?.trim() || 'En venn';
@@ -113,7 +116,7 @@ export async function sendFriendInvite(formData: FormData) {
   });
 
   if (insertError) {
-    redirect('/profile?invite_error=unknown');
+    redirect({ href: '/profile?invite_error=unknown', locale });
   }
 
   // Send the "you've been invited" notification. The OTP code itself is
@@ -126,5 +129,5 @@ export async function sendFriendInvite(formData: FormData) {
   }
 
   const qs = new URLSearchParams({ invite: 'sent', invite_email: email });
-  redirect(`/profile?${qs.toString()}`);
+  redirect({ href: `/profile?${qs.toString()}`, locale });
 }

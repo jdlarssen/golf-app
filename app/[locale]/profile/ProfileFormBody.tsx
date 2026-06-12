@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { formatDate } from '@/lib/i18n/format';
 import { Input } from '@/components/ui/Input';
 import { SubmitButton } from '@/components/ui/SubmitButton';
@@ -51,16 +51,6 @@ function DisclosureChevron({ open }: { open: boolean }) {
   );
 }
 
-const GENDER_OPTIONS = [
-  { value: 'mens', label: 'Herre' },
-  { value: 'ladies', label: 'Dame' },
-];
-const LEVEL_OPTIONS = [
-  { value: 'junior', label: 'Junior' },
-  { value: 'normal', label: 'Voksen' },
-  { value: 'senior', label: 'Senior' },
-];
-
 const INPUT_CLASS =
   'w-full rounded-xl border border-border bg-surface px-3.5 py-3 text-text placeholder-muted/70 focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-[border-color,box-shadow] duration-150';
 
@@ -82,6 +72,7 @@ export function ProfileFormBody({
   next,
 }: Props) {
   const locale = useLocale();
+  const t = useTranslations('profile.form');
   const initialHcp = useMemo(() => splitInitialHcp(initial.hcpIndex), [initial.hcpIndex]);
 
   const [name, setName] = useState(initial.name);
@@ -133,6 +124,16 @@ export function ProfileFormBody({
         })
       : null;
 
+  const GENDER_OPTIONS = [
+    { value: 'mens', label: t('genderMale') },
+    { value: 'ladies', label: t('genderFemale') },
+  ];
+  const LEVEL_OPTIONS = [
+    { value: 'junior', label: t('levelJunior') },
+    { value: 'normal', label: t('levelAdult') },
+    { value: 'senior', label: t('levelSenior') },
+  ];
+
   return (
     <form action={action} className="space-y-3">
       {next ? <input type="hidden" name="next" value={next} /> : null}
@@ -141,7 +142,7 @@ export function ProfileFormBody({
         id="name"
         name="name"
         type="text"
-        label="Navn"
+        label={t('nameLabel')}
         value={name}
         onChange={(e) => setName(e.target.value)}
         autoComplete="name"
@@ -154,8 +155,8 @@ export function ProfileFormBody({
             id="nickname"
             name="nickname"
             type="text"
-            label="Kallenavn"
-            placeholder="Valgfritt"
+            label={t('nicknameLabel')}
+            placeholder={t('nicknamePlaceholder')}
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
             autoComplete="nickname"
@@ -166,14 +167,14 @@ export function ProfileFormBody({
             htmlFor="hcp_index"
             className="block text-sm font-medium text-text mb-1.5"
           >
-            Handicap
+            {t('handicapLabel')}
           </label>
           <div className="flex gap-1.5">
             <button
               type="button"
               onClick={() => setIsPlus((v) => !v)}
               aria-pressed={isPlus}
-              aria-label="Plusshandicap"
+              aria-label={t('plusHandicapAriaLabel')}
               className={`flex min-h-[46px] w-11 shrink-0 items-center justify-center rounded-xl border text-lg font-semibold transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
                 isPlus
                   ? 'border-primary bg-primary-soft text-text shadow-[inset_0_0_0_1px_var(--primary)]'
@@ -204,19 +205,19 @@ export function ProfileFormBody({
 
       {isPlus && hasMagnitude ? (
         <p className="-mt-1 text-xs text-muted">
-          Lagres som{' '}
+          {t('savedAsPrefix')}{' '}
           <span className="font-medium text-text">
             {formatGolfboxHcp(magnitudeNum, true)}
           </span>{' '}
-          · plusshandicap
+          {t('savedAsSuffix')}
         </p>
       ) : stale ? (
         <p className="-mt-1 text-xs text-warning">
-          ⚠ Handicap ikke oppdatert på over en måned
+          {t('staleWarning')}
         </p>
       ) : oppdatertDato ? (
         <p className="-mt-1 text-xs text-muted">
-          Handicap oppdatert {oppdatertDato}
+          {t('updatedPrefix')} {oppdatertDato}
         </p>
       ) : null}
 
@@ -229,7 +230,7 @@ export function ProfileFormBody({
           className="flex min-h-11 w-full items-center justify-between gap-3 text-left"
         >
           <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-            Golfprofil
+            {t('golfProfileLabel')}
           </span>
           <DisclosureChevron open={showMore} />
         </button>
@@ -240,32 +241,32 @@ export function ProfileFormBody({
         >
           <SegmentedField
             id="kjonn"
-            legend="Kjønn"
+            legend={t('genderLegend')}
             options={GENDER_OPTIONS}
             value={gender}
             onChange={(v) => setGender(v as Gender)}
-            hint="Brukes til å foreslå riktig tee og beregne course handicap."
+            hint={t('genderHint')}
           />
           <input type="hidden" name="gender" value={gender ?? ''} />
 
           <SegmentedField
-            legend="Spillerklasse"
+            legend={t('levelLegend')}
             options={LEVEL_OPTIONS}
             value={level}
             onChange={(v) => setLevel(v as Level)}
-            hint="Junior gir juniortee. Senior er en info-tag for nå."
+            hint={t('levelHint')}
           />
           <input type="hidden" name="level" value={level} />
         </div>
       </div>
 
       <p className="border-t border-border/60 pt-3 text-xs text-muted dark:border-border/80">
-        E-post: <span className="text-text">{email}</span> · kan ikke endres
+        E-post: <span className="text-text">{email}</span> · {t('emailLine')}
       </p>
 
       <div className="pt-2">
-        <SubmitButton pendingLabel="Lagrer …" disabled={!dirty}>
-          Lagre
+        <SubmitButton pendingLabel={t('savePending')} disabled={!dirty}>
+          {t('saveButton')}
         </SubmitButton>
       </div>
     </form>

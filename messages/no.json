@@ -45,7 +45,127 @@
 		"bellUnreadAria": "Innboks, {count} {count, plural, one {ulest varsel} other {uleste varsler}}"
 	},
 	"profile": {
-		"languageRowLabel": "Språk"
+		"languageRowLabel": "Språk",
+		"kicker": "Profil",
+		"backLabel": "Tilbake til hjem",
+		"displayNameFallback": "Profil",
+		"updatedBanner": "✓ Profilen din er oppdatert.",
+		"inviteSentBanner": "✓ Invitasjon sendt{email, select, empty {} other { til {email}}}.",
+		"accountSection": "Konto og mer",
+		"friendsRow": "Venner",
+		"friendsSublabel": "Legg til venner og se spillene deres",
+		"historikkRow": "Min historikk",
+		"statistikkRow": "Klubbstatistikker",
+		"exportRow": "Eksporter mine data",
+		"deleteRow": "Slett konto",
+		"logoutButton": "Logg ut",
+		"logoutPending": "Logger ut …",
+		"errors": {
+			"name_required": "Du må fylle inn navn.",
+			"hcp_invalid": "Handicap-index må være et tall mellom -10 og 54,0.",
+			"gender_required": "Velg kjønn.",
+			"level_invalid": "Ugyldig spillerklasse.",
+			"unknown": "Noe gikk galt. Prøv igjen."
+		},
+		"inviteErrors": {
+			"email_required": "Du må skrive inn en e-postadresse.",
+			"invalid_email": "Ugyldig e-postadresse.",
+			"already_user": "Denne personen er allerede på Tørny. Be admin om å legge dem til et spill.",
+			"already_invited": "Denne adressen er allerede invitert. Du trenger ikke gjøre noe mer.",
+			"disposable_email": "Engangs-e-post går ikke. Be vennen om en vanlig e-postadresse.",
+			"quota": "Du har brukt opp dagens kvote.",
+			"rate_limited": "Vent litt før du prøver igjen.",
+			"unknown": "Noe gikk galt med invitasjonen. Prøv igjen."
+		},
+		"genderPrompt": {
+			"heading": "Velg kjønn for tee-anbefaling",
+			"body": "Tørny vet ikke hvilken tee du normalt spiller fra. Sett det her, så går det raskere når noen oppretter et spill du skal være med på.",
+			"cta": "Sett kjønn"
+		},
+		"invite": {
+			"heading": "Invitér en venn",
+			"exhaustedSubtitle": "Ny invitasjon om ~{timeUntil}",
+			"exhaustedSoon": "snart",
+			"subtitle": "Dra med kompiser inn på Tørny"
+		},
+		"form": {
+			"nameLabel": "Navn",
+			"nicknameLabel": "Kallenavn",
+			"nicknamePlaceholder": "Valgfritt",
+			"handicapLabel": "Handicap",
+			"plusHandicapAriaLabel": "Plusshandicap",
+			"savedAsPrefix": "Lagres som",
+			"savedAsSuffix": "· plusshandicap",
+			"staleWarning": "⚠ Handicap ikke oppdatert på over en måned",
+			"updatedPrefix": "Handicap oppdatert",
+			"emailLine": "kan ikke endres",
+			"golfProfileLabel": "Golfprofil",
+			"genderLegend": "Kjønn",
+			"genderHint": "Brukes til å foreslå riktig tee og beregne course handicap.",
+			"genderMale": "Herre",
+			"genderFemale": "Dame",
+			"levelLegend": "Spillerklasse",
+			"levelHint": "Junior gir juniortee. Senior er en info-tag for nå.",
+			"levelJunior": "Junior",
+			"levelAdult": "Voksen",
+			"levelSenior": "Senior",
+			"savePending": "Lagrer …",
+			"saveButton": "Lagre"
+		},
+		"inviteForm": {
+			"emailLabel": "E-post",
+			"emailPlaceholder": "venn@epost.no",
+			"sendPending": "Sender …",
+			"sendButton": "Send"
+		},
+		"deleteAccount": {
+			"kicker": "Slett konto",
+			"backLabel": "Tilbake til profil",
+			"blockedBanner": "Du er med i et spill som enten pågår eller snart starter. Kontoen kan ikke slettes mens du er påmeldt et aktivt spill. Ta kontakt med administrator for hjelp.",
+			"blockedBackLink": "Tilbake til profil",
+			"deletedHeading": "Dette vil bli slettet",
+			"bullet1": "Brukerprofilen din (navn, kallenavn, handicap)",
+			"bullet2": "E-postadressen din frigis og kan ikke brukes til å logge inn igjen",
+			"bullet3": "Din tilknytning til turneringer og invitasjoner",
+			"keptHeading": "Dette beholdes",
+			"keptBullet": "Scoringsdata du har registrert — det tilhører turneringen og kan ikke fjernes uten at hele turneringen slettes",
+			"confirmParagraph": "Du er i ferd med å slette <strong>{displayName}</strong> permanent. Handlingen kan ikke angres.",
+			"deleteButton": "Slett kontoen min for alltid",
+			"deletePending": "Sletter …",
+			"cancelButton": "Avbryt",
+			"errors": {
+				"active_games": "Du er med i et spill som enten pågår eller ikke har startet ennå. Kontoen kan ikke slettes mens du er påmeldt et aktivt spill. Ta kontakt med administrator.",
+				"delete_failed": "Noe gikk galt ved sletting. Prøv igjen, eller ta kontakt med administrator."
+			}
+		},
+		"historikk": {
+			"kicker": "Historikk",
+			"backLabel": "Tilbake til profil",
+			"roundCount": "{count, plural, =0 {Ingen fullførte runder ennå} one {1 fullført runde} other {{count} fullførte runder}}",
+			"emptyState": "Du har ingen fullførte runder ennå. Bli med på et spill først.",
+			"colBrutto": "Brutto",
+			"colAvgPerHole": "Snitt/hull",
+			"resultLink": "Se resultatliste"
+		},
+		"statistikk": {
+			"kicker": "Statistikk",
+			"backLabel": "Tilbake til profil",
+			"heading": "Klubbstatistikker",
+			"subtitle": "Fra alle ferdigspilte spill i Tørny.",
+			"emptyState": "Ingen ferdige spill ennå. Statistikken fylles inn så snart admin avslutter det første spillet — da ser du hvem som har vunnet flest og hvem som har vært med på flest.",
+			"winnersLabel": "Vinnerliste",
+			"winnersHeading": "Flest spill vunnet",
+			"winnersSubtitle": "Antall ganger laget ditt har endt på #1 i best-ball-netto.",
+			"mostActiveLabel": "Mest aktive",
+			"mostActiveHeading": "Flest spill spilt",
+			"mostActiveSubtitle": "Antall ferdigspilte spill du har deltatt i.",
+			"noData": "Ingen data ennå.",
+			"unitWinSingular": "seier",
+			"unitWinPlural": "seire",
+			"unitGameSingular": "spill",
+			"unitGamePlural": "spill",
+			"unknownPlayer": "(ukjent)"
+		}
 	},
 	"localeSwitcher": {
 		"no": "Norsk",

@@ -45,7 +45,127 @@
     "bellUnreadAria": "Inbox, {count} {count, plural, one {unread notification} other {unread notifications}}"
   },
   "profile": {
-    "languageRowLabel": "Language"
+    "languageRowLabel": "Language",
+    "kicker": "Profile",
+    "backLabel": "Back to home",
+    "displayNameFallback": "Profile",
+    "updatedBanner": "✓ Your profile has been updated.",
+    "inviteSentBanner": "✓ Invitation sent{email, select, empty {} other { to {email}}}.",
+    "accountSection": "Account & more",
+    "friendsRow": "Friends",
+    "friendsSublabel": "Add friends and see their games",
+    "historikkRow": "My history",
+    "statistikkRow": "Club statistics",
+    "exportRow": "Export my data",
+    "deleteRow": "Delete account",
+    "logoutButton": "Log out",
+    "logoutPending": "Logging out …",
+    "errors": {
+      "name_required": "Name is required.",
+      "hcp_invalid": "Handicap index must be a number between -10 and 54.0.",
+      "gender_required": "Please choose a gender.",
+      "level_invalid": "Invalid player class.",
+      "unknown": "Something went wrong. Please try again."
+    },
+    "inviteErrors": {
+      "email_required": "Please enter an email address.",
+      "invalid_email": "Invalid email address.",
+      "already_user": "This person is already on Tørny. Ask an admin to add them to a game.",
+      "already_invited": "This address has already been invited. You don''t need to do anything else.",
+      "disposable_email": "Disposable email addresses aren''t accepted. Ask your friend for a regular email address.",
+      "quota": "You''ve used up today''s invite quota.",
+      "rate_limited": "Please wait a moment before trying again.",
+      "unknown": "Something went wrong with the invitation. Please try again."
+    },
+    "genderPrompt": {
+      "heading": "Choose gender for tee recommendation",
+      "body": "Tørny doesn''t know which tee you normally play from. Set it here and it''ll be quicker when someone creates a game you''re joining.",
+      "cta": "Set gender"
+    },
+    "invite": {
+      "heading": "Invite a friend",
+      "exhaustedSubtitle": "Next invitation in ~{timeUntil}",
+      "exhaustedSoon": "soon",
+      "subtitle": "Bring your mates to Tørny"
+    },
+    "form": {
+      "nameLabel": "Name",
+      "nicknameLabel": "Nickname",
+      "nicknamePlaceholder": "Optional",
+      "handicapLabel": "Handicap",
+      "plusHandicapAriaLabel": "Plus handicap",
+      "savedAsPrefix": "Saved as",
+      "savedAsSuffix": "· plus handicap",
+      "staleWarning": "⚠ Handicap not updated in over a month",
+      "updatedPrefix": "Handicap updated",
+      "emailLine": "cannot be changed",
+      "golfProfileLabel": "Golf profile",
+      "genderLegend": "Gender",
+      "genderHint": "Used to suggest the right tee and calculate your course handicap.",
+      "genderMale": "Male",
+      "genderFemale": "Female",
+      "levelLegend": "Player class",
+      "levelHint": "Junior unlocks junior tees. Senior is an info tag for now.",
+      "levelJunior": "Junior",
+      "levelAdult": "Adult",
+      "levelSenior": "Senior",
+      "savePending": "Saving …",
+      "saveButton": "Save"
+    },
+    "inviteForm": {
+      "emailLabel": "Email",
+      "emailPlaceholder": "friend@email.com",
+      "sendPending": "Sending …",
+      "sendButton": "Send"
+    },
+    "deleteAccount": {
+      "kicker": "Delete account",
+      "backLabel": "Back to profile",
+      "blockedBanner": "You''re in a game that is either in progress or starting soon. Your account cannot be deleted while you''re enrolled in an active game. Please contact an administrator for help.",
+      "blockedBackLink": "Back to profile",
+      "deletedHeading": "What will be deleted",
+      "bullet1": "Your user profile (name, nickname, handicap)",
+      "bullet2": "Your email address is released and cannot be used to log in again",
+      "bullet3": "Your association with tournaments and invitations",
+      "keptHeading": "What is kept",
+      "keptBullet": "Scoring data you have recorded — it belongs to the tournament and cannot be removed without deleting the entire tournament",
+      "confirmParagraph": "You are about to permanently delete <strong>{displayName}</strong>. This action cannot be undone.",
+      "deleteButton": "Delete my account permanently",
+      "deletePending": "Deleting …",
+      "cancelButton": "Cancel",
+      "errors": {
+        "active_games": "You''re in a game that is either in progress or hasn''t started yet. Your account cannot be deleted while you''re enrolled in an active game. Please contact an administrator.",
+        "delete_failed": "Something went wrong while deleting. Please try again, or contact an administrator."
+      }
+    },
+    "historikk": {
+      "kicker": "History",
+      "backLabel": "Back to profile",
+      "roundCount": "{count, plural, =0 {No completed rounds yet} one {1 completed round} other {{count} completed rounds}}",
+      "emptyState": "You have no completed rounds yet. Join a game first.",
+      "colBrutto": "Gross",
+      "colAvgPerHole": "Avg/hole",
+      "resultLink": "View leaderboard"
+    },
+    "statistikk": {
+      "kicker": "Statistics",
+      "backLabel": "Back to profile",
+      "heading": "Club statistics",
+      "subtitle": "From all completed games on Tørny.",
+      "emptyState": "No completed games yet. Statistics will appear as soon as an admin finishes the first game — then you''ll see who has won the most and who has played the most.",
+      "winnersLabel": "Winners",
+      "winnersHeading": "Most games won",
+      "winnersSubtitle": "Number of times your team has finished #1 in best-ball net.",
+      "mostActiveLabel": "Most active",
+      "mostActiveHeading": "Most games played",
+      "mostActiveSubtitle": "Number of completed games you have taken part in.",
+      "noData": "No data yet.",
+      "unitWinSingular": "win",
+      "unitWinPlural": "wins",
+      "unitGameSingular": "game",
+      "unitGamePlural": "games",
+      "unknownPlayer": "(unknown)"
+    }
   },
   "localeSwitcher": {
     "no": "Norsk",

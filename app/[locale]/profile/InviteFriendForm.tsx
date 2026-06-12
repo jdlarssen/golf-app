@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/Input';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 
@@ -9,6 +10,7 @@ type Props = {
 };
 
 export function InviteFriendForm({ action }: Props) {
+  const t = useTranslations('profile.inviteForm');
   const [hasEmail, setHasEmail] = useState(false);
 
   function handleChange(e: FormEvent<HTMLFormElement>) {
@@ -27,15 +29,15 @@ export function InviteFriendForm({ action }: Props) {
           id="email"
           name="email"
           type="email"
-          label="E-post"
+          label={t('emailLabel')}
           labelHidden
-          placeholder="venn@epost.no"
+          placeholder={t('emailPlaceholder')}
           autoComplete="email"
           required
         />
       </div>
-      <SubmitButton className="shrink-0" disabled={!hasEmail} pendingLabel="Sender …">
-        Send
+      <SubmitButton className="shrink-0" disabled={!hasEmail} pendingLabel={t('sendPending')}>
+        {t('sendButton')}
       </SubmitButton>
     </form>
   );

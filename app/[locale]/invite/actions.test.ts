@@ -13,8 +13,15 @@ import {
  */
 
 const redirectMock = makeRedirectMock();
+vi.mock('@/i18n/navigation', () => ({
+  redirect: (arg: { href: string; locale?: string } | string) =>
+    redirectMock(typeof arg === 'string' ? arg : arg.href),
+}));
 vi.mock('next/navigation', () => ({
   redirect: (url: string) => redirectMock(url),
+}));
+vi.mock('next-intl/server', () => ({
+  getLocale: async () => 'no',
 }));
 
 let supabaseMock: ReturnType<typeof buildSupabaseMock>;

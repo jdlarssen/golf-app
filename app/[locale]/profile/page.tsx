@@ -1,6 +1,7 @@
 import { Suspense, cache } from 'react';
-import { redirect } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
+import { notFound } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
@@ -8,7 +9,7 @@ import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { getQuotaState, formatTimeUntil } from '@/lib/invitations/quota';
+import { getQuotaState, timeUntilStructured } from '@/lib/invitations/quota';
 import { updateProfile } from './actions';
 import { safeNextPath } from './safeNext';
 import { sendFriendInvite } from '../invite/actions';
@@ -20,6 +21,7 @@ import { SettingRow, SettingList } from '@/components/ui/SettingRow';
 import { InstallButton } from '@/components/pwa/InstallButton';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { fromSignedHcp, formatGolfboxHcp } from '@/lib/handicap/sign';
+import type { AppLocale } from '@/i18n/routing';
 
 type SearchParams = Promise<{
   error?: string | string[];
@@ -29,26 +31,6 @@ type SearchParams = Promise<{
   invite_email?: string | string[];
   next?: string | string[];
 }>;
-
-const ERROR_MESSAGES: Record<string, string> = {
-  name_required: 'Du må fylle inn navn.',
-  hcp_invalid: 'Handicap-index må være et tall mellom -10 og 54,0.',
-  gender_required: 'Velg kjønn.',
-  level_invalid: 'Ugyldig spillerklasse.',
-  unknown: 'Noe gikk galt. Prøv igjen.',
-};
-
-const INVITE_ERROR_MESSAGES: Record<string, string> = {
-  email_required: 'Du må skrive inn en e-postadresse.',
-  invalid_email: 'Ugyldig e-postadresse.',
-  already_user:
-    'Denne personen er allerede på Tørny. Be admin om å legge dem til et spill.',
-  already_invited: 'Denne adressen er allerede invitert. Du trenger ikke gjøre noe mer.',
-  disposable_email: 'Engangs-e-post går ikke. Be vennen om en vanlig e-postadresse.',
-  quota: 'Du har brukt opp dagens kvote.',
-  rate_limited: 'Vent litt før du prøver igjen.',
-  unknown: 'Noe gikk galt med invitasjonen. Prøv igjen.',
-};
 
 function first(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
@@ -66,38 +48,41 @@ export default async function ProfilePage({
 }: {
   searchParams: SearchParams;
 }) {
-  const tProfile = await getTranslations('profile');
+  const locale = (await getLocale()) as AppLocale;
+  const t = await getTranslations('profile');
   const { userId } = await getProfileContext();
   if (!userId) {
-    redirect('/login');
+    redirect({ href: '/login', locale });
   }
 
   const params = await searchParams;
   const errorCode = first(params.error);
-  const errorMessage = errorCode ? ERROR_MESSAGES[errorCode] : undefined;
+  const errorMessage = errorCode && t.has(`errors.${errorCode}` as Parameters<typeof t>[0])
+    ? t(`errors.${errorCode}` as Parameters<typeof t>[0])
+    : errorCode ? t('errors.unknown') : undefined;
   const profileUpdated = first(params.profile) === 'updated';
   const nextSafe = safeNextPath(first(params.next));
   const inviteSent = first(params.invite) === 'sent';
-  const inviteSentEmail = first(params.invite_email);
+  const inviteSentEmail = first(params.invite_email) ?? '';
   const inviteErrorCode = first(params.invite_error);
-  const inviteErrorMessage = inviteErrorCode
-    ? INVITE_ERROR_MESSAGES[inviteErrorCode]
-    : undefined;
+  const inviteErrorMessage = inviteErrorCode && t.has(`inviteErrors.${inviteErrorCode}` as Parameters<typeof t>[0])
+    ? t(`inviteErrors.${inviteErrorCode}` as Parameters<typeof t>[0])
+    : inviteErrorCode ? t('inviteErrors.unknown') : undefined;
 
   return (
     <AppShell>
-      <TopBar backHref="/" backLabel="Tilbake til hjem" kicker="Profil" />
+      <TopBar backHref="/" backLabel={t('backLabel')} kicker={t('kicker')} />
 
       {profileUpdated && (
         <div className="mb-4">
-          <Banner tone="success">✓ Profilen din er oppdatert.</Banner>
+          <Banner tone="success">{t('updatedBanner')}</Banner>
         </div>
       )}
 
       {inviteSent && (
         <div className="mb-4">
           <Banner tone="success">
-            ✓ Invitasjon sendt{inviteSentEmail ? ` til ${inviteSentEmail}` : ''}.
+            {t('inviteSentBanner', { email: inviteSentEmail || 'empty' })}
           </Banner>
         </div>
       )}
@@ -123,17 +108,17 @@ export default async function ProfilePage({
       </div>
 
       <div className="mt-8">
-        <SettingList ariaLabel="Konto og mer">
+        <SettingList ariaLabel={t('accountSection')}>
           <SettingRow
             href="/profile/venner"
-            label="Venner"
-            sublabel="Legg til venner og se spillene deres"
+            label={t('friendsRow')}
+            sublabel={t('friendsSublabel')}
           />
-          <SettingRow href="/profile/historikk" label="Min historikk" />
-          <SettingRow href="/profile/statistikk" label="Klubbstatistikker" />
+          <SettingRow href="/profile/historikk" label={t('historikkRow')} />
+          <SettingRow href="/profile/statistikk" label={t('statistikkRow')} />
           <div className="flex w-full items-center justify-between gap-3 min-h-[56px] px-5 py-3 border-t border-border first:border-t-0">
             <span className="font-serif text-base font-medium text-text">
-              {tProfile('languageRowLabel')}
+              {t('languageRowLabel')}
             </span>
             <LocaleSwitcher />
           </div>
@@ -141,11 +126,11 @@ export default async function ProfilePage({
           <SettingRow
             href="/profile/export"
             download
-            label="Eksporter mine data"
+            label={t('exportRow')}
           />
           <SettingRow
             href="/profile/slett-konto"
-            label="Slett konto"
+            label={t('deleteRow')}
             tone="danger"
           />
         </SettingList>
@@ -161,12 +146,13 @@ export default async function ProfilePage({
  * bor her. «Sekretariatet» (admin-rommet) ble flyttet til Hjem — der admin
  * lander og lett finner den — så den ligger ikke lenger her (#355-oppfølging).
  */
-function AccountActions() {
+async function AccountActions() {
+  const t = await getTranslations('profile');
   return (
     <div className="mt-8 border-t border-border/60 pt-6 dark:border-border/80">
       <form action="/logout" method="post">
-        <SubmitButton variant="secondary" className="w-full" pendingLabel="Logger ut …">
-          Logg ut
+        <SubmitButton variant="secondary" className="w-full" pendingLabel={t('logoutPending')}>
+          {t('logoutButton')}
         </SubmitButton>
       </form>
     </div>
@@ -180,6 +166,8 @@ async function ProfileFormCard({
   errorMessage: string | undefined;
   next: string | null;
 }) {
+  const locale = (await getLocale()) as AppLocale;
+  const t = await getTranslations('profile');
   const { supabase, userId } = await getProfileContext();
 
   const { data: profile, error: profileError } = await supabase
@@ -196,7 +184,7 @@ async function ProfileFormCard({
     throw profileError;
   }
   if (!profile?.profile_completed_at) {
-    redirect('/complete-profile');
+    redirect({ href: '/complete-profile', locale });
   }
 
   const displayName = profile.name ?? '';
@@ -222,7 +210,7 @@ async function ProfileFormCard({
         </div>
         <div className="min-w-0">
           <p className="font-serif text-lg font-medium text-text leading-tight truncate">
-            {displayName || 'Profil'}
+            {displayName || t('displayNameFallback')}
           </p>
           <p className="text-sm text-muted tabular-nums">hcp {hcpDisplay}</p>
         </div>
@@ -246,6 +234,7 @@ async function ProfileFormCard({
 }
 
 async function GenderSoftPrompt() {
+  const t = await getTranslations('profile');
   const { supabase, userId } = await getProfileContext();
   if (!userId) return null;
   const { data: profile } = await supabase
@@ -259,17 +248,16 @@ async function GenderSoftPrompt() {
     <div className="mb-4">
       <Card>
         <h2 className="font-serif text-base font-medium text-text mb-1">
-          Velg kjønn for tee-anbefaling
+          {t('genderPrompt.heading')}
         </h2>
         <p className="text-sm text-muted mb-3">
-          Tørny vet ikke hvilken tee du normalt spiller fra. Sett det her, så
-          går det raskere når noen oppretter et spill du skal være med på.
+          {t('genderPrompt.body')}
         </p>
         <SmartLink
           href="#kjonn"
           className="inline-flex items-center rounded-full bg-primary px-4 py-2 font-sans text-[13px] font-medium text-bg hover:bg-primary/90 transition-colors"
         >
-          Sett kjønn
+          {t('genderPrompt.cta')}
         </SmartLink>
       </Card>
     </div>
@@ -294,19 +282,32 @@ function ProfileFormSkeleton() {
 }
 
 async function InviteAFriendCard() {
+  const t = await getTranslations('profile');
   const { supabase, userId } = await getProfileContext();
   const quota = await getQuotaState(supabase, userId!);
 
   if (quota.isExhausted) {
+    const timeUntilResult = quota.nextSlotAt
+      ? timeUntilStructured(quota.nextSlotAt)
+      : null;
+
+    let timeUntilStr: string;
+    if (!timeUntilResult || timeUntilResult.kind === 'soon') {
+      timeUntilStr = t('invite.exhaustedSoon');
+    } else if (timeUntilResult.kind === 'hours') {
+      timeUntilStr = `${timeUntilResult.n} t`;
+    } else {
+      timeUntilStr = `${timeUntilResult.n} min`;
+    }
+
     return (
       <Card>
         <div aria-disabled="true" className="opacity-60">
           <h2 className="font-serif text-base font-medium text-text mb-0.5">
-            Invitér en venn
+            {t('invite.heading')}
           </h2>
           <p className="text-sm text-muted">
-            Ny invitasjon om ~
-            {quota.nextSlotAt ? formatTimeUntil(quota.nextSlotAt) : 'snart'}
+            {t('invite.exhaustedSubtitle', { timeUntil: timeUntilStr })}
           </p>
         </div>
       </Card>
@@ -317,12 +318,11 @@ async function InviteAFriendCard() {
     <Card>
       <div className="mb-3">
         <h2 className="font-serif text-base font-medium text-text mb-0.5">
-          Invitér en venn
+          {t('invite.heading')}
         </h2>
-        <p className="text-sm text-muted">Dra med kompiser inn på Tørny</p>
+        <p className="text-sm text-muted">{t('invite.subtitle')}</p>
       </div>
       <InviteFriendForm action={sendFriendInvite} />
     </Card>
   );
 }
-

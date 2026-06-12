@@ -1,9 +1,11 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { safeNextPath } from './safeNext';
 import { toSignedHcp } from '@/lib/handicap/sign';
+import type { AppLocale } from '@/i18n/routing';
 
 const HCP_MIN = -10;
 const HCP_MAX = 54.0;
@@ -13,6 +15,7 @@ type Gender = (typeof GENDERS)[number];
 type Level = (typeof LEVELS)[number];
 
 export async function updateProfile(formData: FormData) {
+  const locale = (await getLocale()) as AppLocale;
   const name = String(formData.get('name') ?? '').trim();
   const nicknameRaw = String(formData.get('nickname') ?? '').trim();
   const nickname = nicknameRaw === '' ? null : nicknameRaw;
@@ -31,25 +34,25 @@ export async function updateProfile(formData: FormData) {
     : '/profile';
 
   if (!name) {
-    redirect(`${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=name_required`);
+    redirect({ href: `${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=name_required`, locale });
   }
 
   const hcpMagnitude = Number.parseFloat(hcpRaw.replace(',', '.'));
   if (!Number.isFinite(hcpMagnitude) || hcpMagnitude < 0 || hcpMagnitude > HCP_MAX) {
-    redirect(`${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=hcp_invalid`);
+    redirect({ href: `${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=hcp_invalid`, locale });
   }
   const hcpParsed = toSignedHcp(hcpMagnitude, hcpPlus);
   if (hcpParsed < HCP_MIN || hcpParsed > HCP_MAX) {
-    redirect(`${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=hcp_invalid`);
+    redirect({ href: `${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=hcp_invalid`, locale });
   }
 
   if (!GENDERS.includes(genderRaw as Gender)) {
-    redirect(`${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=gender_required`);
+    redirect({ href: `${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=gender_required`, locale });
   }
   const gender = genderRaw as Gender;
 
   if (!LEVELS.includes(levelRaw as Level)) {
-    redirect(`${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=level_invalid`);
+    redirect({ href: `${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=level_invalid`, locale });
   }
   const level = levelRaw as Level;
 
@@ -62,7 +65,7 @@ export async function updateProfile(formData: FormData) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/login');
+    redirect({ href: '/login', locale });
   }
 
   // Defence-in-depth: if a user somehow reaches /profile without
@@ -91,8 +94,8 @@ export async function updateProfile(formData: FormData) {
     .eq('id', user.id);
 
   if (error) {
-    redirect(`${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=unknown`);
+    redirect({ href: `${errorBackTo}${errorBackTo.includes('?') ? '&' : '?'}error=unknown`, locale });
   }
 
-  redirect(nextSafe ?? '/profile?profile=updated');
+  redirect({ href: nextSafe ?? '/profile?profile=updated', locale });
 }
