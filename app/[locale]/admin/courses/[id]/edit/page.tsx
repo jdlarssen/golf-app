@@ -82,6 +82,7 @@ export default async function EditCoursePage({
   const { error: errorCode, status: statusCode } = await searchParams;
 
   const t = await getTranslations('admin.courses');
+  const tNav = await getTranslations('admin.nav');
   const tEdit = await getTranslations('admin.courses.edit');
   const tArchivedTees = await getTranslations('admin.courses.archivedTees');
   const locale = (await getLocale()) as AppLocale;
@@ -122,7 +123,7 @@ export default async function EditCoursePage({
     <AdminShell>
       <TopBar
         backHref="/admin/courses"
-        kicker="Baner · protokoll"
+        kicker={tNav('coursesLog')}
       />
 
       <BrassRibbon kicker={tEdit('brassRibbon')} />

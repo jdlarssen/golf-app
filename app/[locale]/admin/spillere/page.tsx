@@ -58,6 +58,7 @@ export default async function SpillerePage({
   await requireAdmin(supabase);
 
   const t = await getTranslations('admin.players');
+  const tNav = await getTranslations('admin.nav');
 
   const params = await searchParams;
   const status = first(params.status);
@@ -74,7 +75,7 @@ export default async function SpillerePage({
 
   return (
     <AdminShell>
-      <TopBar backHref="/admin" kicker="Klubbhuset" />
+      <TopBar backHref="/admin" kicker={tNav('klubbhus')} />
 
       <BrassRibbon kicker={t('brassRibbon')} />
 

@@ -74,6 +74,7 @@ export default async function GamesPage({
   await requireAdmin(supabase);
 
   const t = await getTranslations('admin.games');
+  const tNav = await getTranslations('admin.nav');
   const params = await searchParams;
   const statusFilter = first(params.status);
   const name = first(params.name) ?? '';
@@ -99,7 +100,7 @@ export default async function GamesPage({
     <AdminShell>
       <TopBar
         backHref="/admin"
-        kicker="Klubbhuset"
+        kicker={tNav('klubbhus')}
         action={
           filterFinished ? null : (
             // Resultatprotokoll er et arkiv — å starte et nytt spill herfra

@@ -60,6 +60,7 @@ export default async function CoursesPage({
   await requireAdminOrTrustedCreator(supabase);
 
   const t = await getTranslations('admin.courses');
+  const tNav = await getTranslations('admin.nav');
 
   const params = await searchParams;
   const status = first(params.status);
@@ -81,7 +82,7 @@ export default async function CoursesPage({
     <AdminShell>
       <TopBar
         backHref="/admin"
-        kicker="Klubbhuset"
+        kicker={tNav('klubbhus')}
         action={
           <SmartLink
             href="/admin/courses/new"

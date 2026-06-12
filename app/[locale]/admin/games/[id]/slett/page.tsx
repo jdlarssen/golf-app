@@ -43,6 +43,7 @@ export default async function DeleteGamePage({
 
   const locale = await getLocale();
   const t = await getTranslations('admin.game.delete');
+  const tNav = await getTranslations('admin.nav');
   const errorMessage = errorCode
     ? t.has(`errors.${errorCode}` as Parameters<typeof t>[0])
       ? t(`errors.${errorCode}` as Parameters<typeof t>[0])
@@ -109,7 +110,7 @@ export default async function DeleteGamePage({
     <AdminShell>
       <TopBar
         backHref={`/admin/games/${id}`}
-        kicker="Klubbhuset"
+        kicker={tNav('klubbhus')}
       />
 
       <BrassRibbon kicker={t('kicker')} />

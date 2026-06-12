@@ -81,6 +81,7 @@ export default async function KlubbhusetPage() {
   if (!role.isAdmin) return <PlayerKlubbhus role={role} />;
 
   const t = await getTranslations('admin.dashboard');
+  const tNav = await getTranslations('admin.nav');
   const locale = await getLocale();
 
   const now = new Date();
@@ -93,7 +94,7 @@ export default async function KlubbhusetPage() {
     <AdminShell>
       {/* Bell dropped: the persistent bottom-nav «Innboks»-tab now covers
           notifications inside the room (#392). */}
-      <TopBar backHref="/" kicker="Klubbhuset" />
+      <TopBar backHref="/" kicker={tNav('klubbhus')} />
 
       <Suspense fallback={<GreetingSkeleton dateLine={dateLine} />}>
         <GreetingCard dateLine={dateLine} timeOfDayWord={timeOfDayWord} />
@@ -423,6 +424,7 @@ function TileGridView({ tiles }: { tiles: Tile[] }) {
 async function PlayerKlubbhus({ role }: { role: AdminRoleContext }) {
   const { supabase } = await getAdminContext();
   const t = await getTranslations('admin.dashboard');
+  const tNav = await getTranslations('admin.nav');
   const { data: profile } = await supabase
     .from('users')
     .select('name')
@@ -472,7 +474,7 @@ async function PlayerKlubbhus({ role }: { role: AdminRoleContext }) {
 
   return (
     <AdminShell>
-      <TopBar backHref="/" kicker="Klubbhuset" />
+      <TopBar backHref="/" kicker={tNav('klubbhus')} />
 
       <section
         className="relative mb-4 overflow-hidden rounded-2xl border px-5 py-[18px]"

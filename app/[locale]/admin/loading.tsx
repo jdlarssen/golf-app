@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -7,10 +8,11 @@ import { Skeleton } from '@/components/ui/Skeleton';
 // only blocking step that's visible to the user during navigation into
 // /admin. Matches the admin chrome so there's no shell-shift when the real
 // page commits.
-export default function AdminLoading() {
+export default async function AdminLoading() {
+  const tNav = await getTranslations('admin.nav');
   return (
     <AdminShell>
-      <TopBar backHref="/" kicker="Klubbhuset" />
+      <TopBar backHref="/" kicker={tNav('klubbhus')} />
 
       <Skeleton className="mb-4 h-[88px] rounded-2xl" />
 

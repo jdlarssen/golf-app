@@ -1869,6 +1869,11 @@
     }
   },
   "admin": {
+    "nav": {
+      "klubbhus": "Clubhouse",
+      "gamesLog": "Games · log",
+      "coursesLog": "Courses · log"
+    },
     "games": {
       "brassRibbon": "Games · log",
       "headingProtocol": "Result log",

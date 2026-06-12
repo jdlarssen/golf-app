@@ -1869,6 +1869,11 @@
     }
   },
   "admin": {
+    "nav": {
+      "klubbhus": "Klubbhuset",
+      "gamesLog": "Spill · protokoll",
+      "coursesLog": "Baner · protokoll"
+    },
     "games": {
       "brassRibbon": "Spill · protokoll",
       "headingProtocol": "Resultatprotokoll",

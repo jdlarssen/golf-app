@@ -54,12 +54,13 @@ export default async function DeletePlayerPage({
   const displayName = target!.name?.trim() || target!.email;
   const firstName = target!.name?.trim().split(/\s+/)[0] || 'Spilleren';
   const tDelete = await getTranslations('admin.players.delete');
+  const tNav = await getTranslations('admin.nav');
 
   return (
     <AdminShell>
       <TopBar
         backHref={`/admin/spillere/${id}`}
-        kicker="Klubbhuset"
+        kicker={tNav('klubbhus')}
       />
 
       <BrassRibbon kicker={tDelete('kicker')} />

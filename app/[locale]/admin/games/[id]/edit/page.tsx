@@ -88,6 +88,7 @@ export default async function EditGamePage({
 
   const tErrors = await getTranslations('wizard.errors');
   const t = await getTranslations('admin.game.edit');
+  const tNav = await getTranslations('admin.nav');
   const errorCode = first(sp.error);
   const emails = first(sp.emails);
   function buildErrorMessage(): string | undefined {
@@ -134,7 +135,7 @@ export default async function EditGamePage({
     <AdminShell>
       <TopBar
         backHref={`/admin/games/${id}`}
-        kicker="Spill · protokoll"
+        kicker={tNav('gamesLog')}
       />
 
       <BrassRibbon kicker={t('kicker')} />

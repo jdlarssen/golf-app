@@ -86,6 +86,7 @@ export default async function PlayerDetailPage({
     getLocale() as Promise<AppLocale>,
   ]);
   const tProfile = await getTranslations('admin.players.profile');
+  const tNav = await getTranslations('admin.nav');
   const relative = makeRelative(tProfile as unknown as ProfileT);
 
   const errorMessage = errorCode
@@ -127,7 +128,7 @@ export default async function PlayerDetailPage({
     <AdminShell>
       <TopBar
         backHref="/admin/spillere"
-        kicker="Klubbhuset"
+        kicker={tNav('klubbhus')}
       />
 
       <BrassRibbon kicker={tProfile('brassRibbon')} />

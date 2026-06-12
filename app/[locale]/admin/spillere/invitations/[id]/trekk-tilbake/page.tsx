@@ -25,6 +25,7 @@ export default async function WithdrawInvitationPage({
 
   const locale = (await getLocale()) as AppLocale;
   const t = await getTranslations('admin.players.withdrawInvitation');
+  const tNav = await getTranslations('admin.nav');
 
   const { data: inv } = await supabase
     .from('invitations')
@@ -38,7 +39,7 @@ export default async function WithdrawInvitationPage({
 
   return (
     <AdminShell>
-      <TopBar backHref="/admin/spillere" kicker="Klubbhuset" />
+      <TopBar backHref="/admin/spillere" kicker={tNav('klubbhus')} />
 
       <BrassRibbon kicker={t('kicker')} />
 
