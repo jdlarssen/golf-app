@@ -4223,6 +4223,23 @@
 			"footerText1": "You're receiving this because you're on Tørny.",
 			"footerText2": "Unsubscribe from the monthly digest: {url}",
 			"footerText3": "Or manage it from your profile: {profileUrl}"
+		},
+		"gameFinished": {
+			"subject": "The results are in — {gameName}",
+			"heading": "The results are in",
+			"salutationNamed": "Hi {name}!",
+			"salutationGeneric": "Hi!",
+			"viewLeaderboard": "View leaderboard",
+			"footerHtml": "You're receiving this because you were part of the round. Log in at <link>tornygolf.no</link> for the full overview.",
+			"footerText": "You're receiving this because you were part of the round. Log in at tornygolf.no for the full overview.",
+			"opponentFallback": "your opponent",
+			"listConjunction": "and",
+			"bodyBestBall": "The round in <g>{game}</g> is over — every scorecard is submitted and approved, and the leaderboard is open.",
+			"bodyStablefordSolo": "The round in <g>{game}</g> is over. You finished in <p>{rank, selectordinal, one{#st} two{#nd} few{#rd} other{#th}} place{total, plural, =0{} other{ out of #}}</p> with <pts>{points} {points, plural, one{point} other{points}}</pts>.{kind, select, win{ Congratulations on the win!} solid{ Solid finish!} other{}}",
+			"bodyStablefordTeam": "The round in <g>{game}</g> is over. The team finished in <p>{rank, selectordinal, one{#st} two{#nd} few{#rd} other{#th}} place{total, plural, =0{} other{ out of # teams}}</p> with <pts>{points} {points, plural, one{point} other{points}}</pts>.{kind, select, win{ Congratulations on the win!} solid{ Solid finish!} other{}}{hasPartner, select, yes{ You and <pa>{partnerName}</pa> were teamed up.} other{}}",
+			"bodyMatchplay": "The round in <g>{game}</g> is over. {res, select, won{You won <r>{result}</r> over <o>{opp}</o>. Congratulations on the win!} lost{You lost <r>{result}</r> to <o>{opp}</o>. Well played. Maybe a rematch next round?} other{The match against <o>{opp}</o> ended all square (<r>AS</r>). A close one. Maybe next time.}}",
+			"bodySoloStrokeplay": "The round in <g>{game}</g> is over. You finished in <p>{rank, selectordinal, one{#st} two{#nd} few{#rd} other{#th}} place{total, plural, =0{} other{ out of #}}</p> with <pts>{net} net strokes</pts> ({gross} gross).{kind, select, win{ Congratulations on the win!} solid{ Solid finish!} other{}}",
+			"bodyTexasScramble": "The round in <g>{game}</g> is over. The team finished in <p>{rank, selectordinal, one{#st} two{#nd} few{#rd} other{#th}} place{total, plural, =0{} other{ out of # teams}}</p> with <pts>{net} net strokes</pts> ({gross} gross).{kind, select, win{ Congratulations on the win!} solid{ Solid finish!} other{}}{hasPartners, select, yes{ You played with <pa>{partnerList}</pa>.} other{}}"
 		}
 	}
 }

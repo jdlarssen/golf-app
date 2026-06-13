@@ -694,7 +694,7 @@ describe('sendGameFinishedNotification', () => {
   it('HTML chrome: full template for best_ball-default', async () => {
     const payload = await send(baseParams);
     expect(payload.html).toMatchInlineSnapshot(`
-      "<!DOCTYPE html><html lang="nb">
+      "<!DOCTYPE html><html lang="no">
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -741,4 +741,159 @@ describe('sendGameFinishedNotification', () => {
 
   // Strukturelle Resend-kontrakter (error-propagation, from-format, call-count)
   // konsolidert til lib/mail/__tests__/resend-contract.test.ts (issue #263).
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Engelsk (locale: 'en') — Fase M. Én case per distinkt copy-gren + dekning
+// for engelsk ordinal (1st/2nd/3rd) og plural (1 point / N points). Ikke ×2 på
+// alle 24 norske cases — bare branchene som har egen engelsk copy. Chrome er
+// strukturelt locale-identisk, så ingen egen EN-chrome-lås.
+// ─────────────────────────────────────────────────────────────────────────
+
+describe('sendGameFinishedNotification — engelsk', () => {
+  const en = { ...baseParams, locale: 'en' as const };
+
+  it('best_ball: neutral English copy + /en/-leaderboard-link', async () => {
+    const payload = await send(en);
+    expect(payload.subject).toMatchInlineSnapshot(`"The results are in — Vinter-cup"`);
+    expect(payload.text).toMatchInlineSnapshot(`
+      "The results are in — Vinter-cup
+
+      Hi Ada!
+
+      The round in Vinter-cup is over — every scorecard is submitted and approved, and the leaderboard is open.
+
+      View leaderboard: https://tornygolf.no/en/games/game-1/leaderboard
+
+      Tørny — fire up your golf tournament in a couple of minutes.
+      "
+    `);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"The round in <strong>Vinter-cup</strong> is over — every scorecard is submitted and approved, and the leaderboard is open."`);
+  });
+
+  it('stableford solo: 1st place — ordinal + win celebration', async () => {
+    const payload = await send({
+      ...en,
+      mode: {
+        kind: 'stableford',
+        variant: 'solo',
+        rank: 1,
+        totalPoints: 38,
+        totalPlayers: 5,
+      },
+    });
+    expect(payload.text).toMatchInlineSnapshot(`
+      "The results are in — Vinter-cup
+
+      Hi Ada!
+
+      The round in Vinter-cup is over. You finished in 1st place out of 5 with 38 points. Congratulations on the win!
+
+      View leaderboard: https://tornygolf.no/en/games/game-1/leaderboard
+
+      Tørny — fire up your golf tournament in a couple of minutes.
+      "
+    `);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"The round in <strong>Vinter-cup</strong> is over. You finished in <strong>1st place out of 5</strong> with <strong>38 points</strong>. Congratulations on the win!"`);
+  });
+
+  it('stableford solo: 2nd place, 1 point — ordinal «2nd» + singular «point»', async () => {
+    const payload = await send({
+      ...en,
+      mode: {
+        kind: 'stableford',
+        variant: 'solo',
+        rank: 2,
+        totalPoints: 1,
+        totalPlayers: 8,
+      },
+    });
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"The round in <strong>Vinter-cup</strong> is over. You finished in <strong>2nd place out of 8</strong> with <strong>1 point</strong>. Solid finish!"`);
+  });
+
+  it('stableford team: 1st place + partner «teamed up»', async () => {
+    const payload = await send({
+      ...en,
+      mode: {
+        kind: 'stableford',
+        variant: 'team',
+        teamRank: 1,
+        teamTotalPoints: 56,
+        teamPartnerName: 'Bjørn',
+        totalTeams: 4,
+      },
+    });
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"The round in <strong>Vinter-cup</strong> is over. The team finished in <strong>1st place out of 4 teams</strong> with <strong>56 points</strong>. Congratulations on the win! You and <strong>Bjørn</strong> were teamed up."`);
+  });
+
+  it('matchplay: won', async () => {
+    const payload = await send({
+      ...en,
+      mode: {
+        kind: 'singles_matchplay',
+        matchResult: 'won',
+        formattedResult: '3&2',
+        opponentName: 'Per',
+        selfSide: 1,
+      },
+    });
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"The round in <strong>Vinter-cup</strong> is over. You won <strong>3&amp;2</strong> over <strong>Per</strong>. Congratulations on the win!"`);
+  });
+
+  it('matchplay: lost', async () => {
+    const payload = await send({
+      ...en,
+      mode: {
+        kind: 'singles_matchplay',
+        matchResult: 'lost',
+        formattedResult: '1up',
+        opponentName: 'Per',
+        selfSide: 2,
+      },
+    });
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"The round in <strong>Vinter-cup</strong> is over. You lost <strong>1up</strong> to <strong>Per</strong>. Well played. Maybe a rematch next round?"`);
+  });
+
+  it('matchplay: tied (AS)', async () => {
+    const payload = await send({
+      ...en,
+      mode: {
+        kind: 'singles_matchplay',
+        matchResult: 'tied',
+        formattedResult: 'AS',
+        opponentName: 'Per',
+        selfSide: 1,
+      },
+    });
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"The round in <strong>Vinter-cup</strong> is over. The match against <strong>Per</strong> ended all square (<strong>AS</strong>). A close one. Maybe next time."`);
+  });
+
+  it('solo strokeplay: 3rd place — ordinal «3rd» + net/gross', async () => {
+    const payload = await send({
+      ...en,
+      mode: {
+        kind: 'solo_strokeplay',
+        rank: 3,
+        totalNetStrokes: 72,
+        totalGrossStrokes: 78,
+        totalPlayers: 8,
+      },
+    });
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"The round in <strong>Vinter-cup</strong> is over. You finished in <strong>3rd place out of 8</strong> with <strong>72 net strokes</strong> (78 gross). Solid finish!"`);
+  });
+
+  it('texas scramble: 4-player team — partner list with «and»', async () => {
+    const payload = await send({
+      ...en,
+      mode: {
+        kind: 'texas_scramble',
+        teamRank: 2,
+        teamTotalNet: 72,
+        teamTotalGross: 78,
+        teamPartnerNames: ['Bjørn', 'Carla', 'Dagfinn'],
+        totalTeams: 4,
+      },
+    });
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"The round in <strong>Vinter-cup</strong> is over. The team finished in <strong>2nd place out of 4 teams</strong> with <strong>72 net strokes</strong> (78 gross). Solid finish! You played with <strong>Bjørn, Carla and Dagfinn</strong>."`);
+  });
 });

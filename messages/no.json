@@ -4223,6 +4223,23 @@
 			"footerText1": "Du får denne mailen fordi du er på Tørny.",
 			"footerText2": "Meld deg av månedsbrevet: {url}",
 			"footerText3": "Eller styr det fra profilen din: {profileUrl}"
+		},
+		"gameFinished": {
+			"subject": "Resultatet er klart — {gameName}",
+			"heading": "Resultatet er klart",
+			"salutationNamed": "Hei {name}!",
+			"salutationGeneric": "Hei!",
+			"viewLeaderboard": "Se leaderboard",
+			"footerHtml": "Du får denne meldingen fordi du var med i runden. Logg inn på <link>tornygolf.no</link> for full oversikt.",
+			"footerText": "Du får denne meldingen fordi du var med i runden. Logg inn på tornygolf.no for full oversikt.",
+			"opponentFallback": "motstanderen",
+			"listConjunction": "og",
+			"bodyBestBall": "Runden i <g>{game}</g> er ferdig, alle scorekort er levert og godkjent, og leaderboardet er åpent.",
+			"bodyStablefordSolo": "Runden i <g>{game}</g> er ferdig. Du endte på <p>{rank}. plass{total, plural, =0{} other{ av #}}</p> med <pts>{points} poeng</pts>.{kind, select, win{ Gratulerer med seieren!} solid{ Solid plassering!} other{}}",
+			"bodyStablefordTeam": "Runden i <g>{game}</g> er ferdig. Laget endte på <p>{rank}. plass{total, plural, =0{} other{ av # lag}}</p> med <pts>{points} poeng</pts>.{kind, select, win{ Gratulerer med seieren!} solid{ Solid plassering!} other{}}{hasPartner, select, yes{ Du og <pa>{partnerName}</pa> satt sammen på lag.} other{}}",
+			"bodyMatchplay": "Runden i <g>{game}</g> er ferdig. {res, select, won{Du vant <r>{result}</r> over <o>{opp}</o>. Gratulerer med seieren!} lost{Du tapte <r>{result}</r> mot <o>{opp}</o>. Godt spilt. Kanskje revansje neste runde?} other{Matchen mot <o>{opp}</o> endte uavgjort (<r>AS</r>). En jevn match. Kanskje neste gang.}}",
+			"bodySoloStrokeplay": "Runden i <g>{game}</g> er ferdig. Du endte på <p>{rank}. plass{total, plural, =0{} other{ av #}}</p> med <pts>{net} slag netto</pts> ({gross} brutto).{kind, select, win{ Gratulerer med seieren!} solid{ Solid plassering!} other{}}",
+			"bodyTexasScramble": "Runden i <g>{game}</g> er ferdig. Laget endte på <p>{rank}. plass{total, plural, =0{} other{ av # lag}}</p> med <pts>{net} slag netto</pts> ({gross} brutto).{kind, select, win{ Gratulerer med seieren!} solid{ Solid plassering!} other{}}{hasPartners, select, yes{ Du spilte med <pa>{partnerList}</pa>.} other{}}"
 		}
 	}
 }
