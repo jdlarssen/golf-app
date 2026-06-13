@@ -434,6 +434,7 @@ export type Database = {
           flight_number: number | null
           game_id: string
           rejection_reason: string | null
+          result_summary: Json | null
           submitted_at: string | null
           team_number: number | null
           tee_gender: Database["public"]["Enums"]["player_tee_gender"]
@@ -450,6 +451,7 @@ export type Database = {
           flight_number?: number | null
           game_id: string
           rejection_reason?: string | null
+          result_summary?: Json | null
           submitted_at?: string | null
           team_number?: number | null
           tee_gender?: Database["public"]["Enums"]["player_tee_gender"]
@@ -466,6 +468,7 @@ export type Database = {
           flight_number?: number | null
           game_id?: string
           rejection_reason?: string | null
+          result_summary?: Json | null
           submitted_at?: string | null
           team_number?: number | null
           tee_gender?: Database["public"]["Enums"]["player_tee_gender"]
