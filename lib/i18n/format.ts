@@ -6,6 +6,7 @@ import {
 import {
   formatShortDateNb as formatShortDateNbLegacy,
   formatShortDateNbWithYear as formatShortDateNbWithYearLegacy,
+  formatMonthLongNb,
 } from '@/lib/format/date';
 import { formatCountdown as formatCountdownNb } from '@/lib/format/countdown';
 import { formatRelativeNb as formatRelativeNbLegacy } from '@/lib/format/relativeTimeNb';
@@ -312,6 +313,27 @@ export function shortMonthLocale(monthIndex: number, locale: AppLocale): string 
     timeZone: 'UTC',
     month: 'short',
   }).format(probe);
+}
+
+/**
+ * Locale-aware long month + year, e.g. «juni 2026» / "June 2026". Used for the
+ * spill-arkiv month-group headings (#571).
+ *
+ * Norwegian ('no'): delegates to `formatMonthLongNb` (byte-identical lowercase
+ *   month + year, local date-getters).
+ * English ('en'):   en-GB Intl `month: 'long'` + year, local TZ to match the
+ *   local-getter month bucketing in `groupFinishedByMonth`.
+ */
+export function formatMonthLongLocale(
+  iso: string | Date,
+  locale: AppLocale,
+): string {
+  if (locale === 'no') return formatMonthLongNb(iso);
+  const d = iso instanceof Date ? iso : new Date(iso);
+  return new Intl.DateTimeFormat('en-GB', {
+    month: 'long',
+    year: 'numeric',
+  }).format(d);
 }
 
 /**

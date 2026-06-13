@@ -3690,7 +3690,14 @@
 		"sectionFinishedShowAll": "Vis alle avsluttede spill",
 		"discoverCard": "Se åpne turneringer du kan bli med i",
 		"teeOffSeparator": "kl.",
-		"teamFlight": "Lag {teamNumber} · Flight {flightNumber}"
+		"teamFlight": "Lag {teamNumber} · Flight {flightNumber}",
+		"archiveMetaTitle": "Avsluttede spill",
+		"archiveBackHome": "← Hjem",
+		"archiveKicker": "SPILL-ARKIV",
+		"archiveTitle": "Avsluttede spill",
+		"archiveSubtitle": "Alle rundene dine, nyeste først.",
+		"archiveEmpty": "Du har ingen avsluttede spill enda. Når en runde er ferdigspilt, havner den her.",
+		"archiveNoDate": "Uten dato"
 	},
 	"signup": {
 		"metaTitle": "Påmelding – Tørny",

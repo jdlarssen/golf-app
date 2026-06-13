@@ -1,4 +1,5 @@
-import { formatMonthLongNb } from '@/lib/format/date';
+import { formatMonthLongLocale } from '@/lib/i18n/format';
+import type { AppLocale } from '@/i18n/routing';
 import type { FinishedGame } from './getFinishedGamesForUser';
 
 export type FinishedMonthGroup = {
@@ -17,11 +18,16 @@ export type FinishedMonthGroup = {
  *   keep their incoming order.
  * - `ended_at: null` games collect in a trailing «Uten dato»-bucket (they sort
  *   last via `byEndedAtDesc`, so first-seen order puts the bucket at the end).
- * - Month key/label use LOCAL date getters to match `formatMonthLongNb` and the
- *   card's `formatShortDateLocale` (same local-TZ convention).
+ * - Month key/label use LOCAL date getters to match `formatMonthLongLocale` and
+ *   the card's `formatShortDateLocale` (same local-TZ convention).
+ * - Labels are locale-aware (#60): the month heading via `formatMonthLongLocale`
+ *   and the dateless bucket via the caller-supplied `noDateLabel` (translated at
+ *   the call-site, so this stays pure).
  */
 export function groupFinishedByMonth(
   games: FinishedGame[],
+  locale: AppLocale,
+  noDateLabel: string,
 ): FinishedMonthGroup[] {
   const groups: FinishedMonthGroup[] = [];
   const byKey = new Map<string, FinishedMonthGroup>();
@@ -32,10 +38,10 @@ export function groupFinishedByMonth(
     if (game.ended_at) {
       const d = new Date(game.ended_at);
       key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      label = formatMonthLongNb(d);
+      label = formatMonthLongLocale(d, locale);
     } else {
       key = 'no-date';
-      label = 'Uten dato';
+      label = noDateLabel;
     }
 
     let group = byKey.get(key);

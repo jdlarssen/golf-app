@@ -1,8 +1,9 @@
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
+import type { AppLocale } from '@/i18n/routing';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { Card } from '@/components/ui/Card';
 import { formatShortDateLocale } from '@/lib/i18n/format';
-import { formatDisplayLabel } from '@/lib/games/formatLabel';
+import { formatDisplayLabelKey } from '@/lib/games/formatLabel';
 import { finishedResultBadge } from '@/lib/games/finishedResultBadge';
 import type { FinishedGame } from '@/lib/games/getFinishedGamesForUser';
 
@@ -18,10 +19,14 @@ import type { FinishedGame } from '@/lib/games/getFinishedGamesForUser';
  * før #572). Teksten kommer fra next-intl så den oversettes med #60.
  *
  * Ren server-trygg modul (ingen 'use client') — tappet leder til leaderboardet.
- * `formatShortDateLocale(_, 'no')` matcher den ennå norsk-literale hjem-siden.
+ * Dato og spillform-etikett rendres locale-bevisst (#60): `formatShortDateLocale`
+ * + rute-locale, og spillform via `modes.*`-katalogen (ikke den norsk-only
+ * `formatDisplayLabel`-konstanten).
  */
 export function FinishedGameCard({ game }: { game: FinishedGame }) {
   const t = useTranslations('finishedCard');
+  const tModes = useTranslations('modes');
+  const locale = useLocale() as AppLocale;
   const badge = game.result_summary
     ? finishedResultBadge(game.result_summary)
     : null;
@@ -37,14 +42,19 @@ export function FinishedGameCard({ game }: { game: FinishedGame }) {
             <span className="block text-xs text-muted mt-1 truncate">
               {[
                 game.courses?.name,
-                formatDisplayLabel(game.game_mode, game.mode_config),
+                tModes(
+                  formatDisplayLabelKey(
+                    game.game_mode,
+                    game.mode_config,
+                  ) as Parameters<typeof tModes>[0],
+                ),
               ]
                 .filter(Boolean)
                 .join(' · ')}
             </span>
             {game.ended_at && (
               <span className="block text-xs text-muted mt-1 tabular-nums truncate">
-                {formatShortDateLocale(game.ended_at, 'no')}
+                {formatShortDateLocale(game.ended_at, locale)}
               </span>
             )}
           </div>

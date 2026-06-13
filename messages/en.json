@@ -3690,7 +3690,14 @@
 		"sectionFinishedShowAll": "Show all finished games",
 		"discoverCard": "See open tournaments you can join",
 		"teeOffSeparator": "at",
-		"teamFlight": "Team {teamNumber} · Flight {flightNumber}"
+		"teamFlight": "Team {teamNumber} · Flight {flightNumber}",
+		"archiveMetaTitle": "Finished games",
+		"archiveBackHome": "← Home",
+		"archiveKicker": "GAME ARCHIVE",
+		"archiveTitle": "Finished games",
+		"archiveSubtitle": "All your rounds, newest first.",
+		"archiveEmpty": "You have no finished games yet. When a round wraps up, it shows up here.",
+		"archiveNoDate": "No date"
 	},
 	"signup": {
 		"metaTitle": "Sign up – Tørny",
