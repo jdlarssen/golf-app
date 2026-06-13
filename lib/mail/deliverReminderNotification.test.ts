@@ -108,7 +108,7 @@ describe('sendDeliverReminderNotification', () => {
   it('HTML chrome: full template for default-case', async () => {
     const payload = await send(baseParams);
     expect(payload.html).toMatchInlineSnapshot(`
-      "<!DOCTYPE html><html lang="nb">
+      "<!DOCTYPE html><html lang="no">
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -151,5 +151,27 @@ describe('sendDeliverReminderNotification', () => {
       </body>
       </html>"
     `);
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Engelsk (locale: 'en') — Fase M.
+  // ─────────────────────────────────────────────────────────────────────
+
+  it('locale en: engelsk subject + body + /en/-lenke', async () => {
+    const payload = await send({ ...baseParams, locale: 'en' });
+    expect(payload.subject).toMatchInlineSnapshot(`"Submit your scorecard for Sommercup 2026"`);
+    expect(payload.text).toMatchInlineSnapshot(`
+      "Submit your scorecard for Sommercup 2026
+
+      Hi Per!
+
+      You've finished playing Sommercup 2026 but haven't submitted your scorecard yet. Submit it to be included in the results.
+
+      Submit scorecard: https://tornygolf.no/en/games/11111111-1111-1111-1111-111111111111/submit
+
+      Tørny — fire up your golf tournament in a couple of minutes.
+      "
+    `);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"You've finished playing <strong>Sommercup 2026</strong> but haven't submitted your scorecard yet. Submit it to be included in the results."`);
   });
 });
