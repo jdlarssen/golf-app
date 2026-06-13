@@ -162,13 +162,82 @@ describe('sendInviteNotification', () => {
   });
 
   // ─────────────────────────────────────────────────────────────────────
+  // Engelsk (locale: 'en') — Fase M. Beviser at katalog-rendringen flipper
+  // subject + text + body til engelsk. Chrome er strukturelt locale-identisk,
+  // så ingen egen EN-chrome-lås (den norske over dekker strukturen).
+  // ─────────────────────────────────────────────────────────────────────
+
+  it('locale en, uten gameName: engelsk generisk copy', async () => {
+    const payload = await send({ ...baseParams, locale: 'en' });
+    expect(payload.subject).toMatchInlineSnapshot(`"You're invited to Tørny"`);
+    expect(payload.text).toMatchInlineSnapshot(`
+      "You're invited to Tørny
+
+      Jørgen has invited you to a golf tournament on Tørny.
+
+      Go to https://tornygolf.no/en/login, enter this email address, and log in with the code we send you.
+
+      Tørny — fire up your golf tournament in a couple of minutes.
+      "
+    `);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"<strong>Jørgen</strong> has invited you to a golf tournament on Tørny."`);
+  });
+
+  it('locale en, med gameName: engelsk spill-kontekst', async () => {
+    const payload = await send({
+      ...baseParams,
+      locale: 'en',
+      gameName: 'Stiklestad 25. mai',
+    });
+    expect(payload.subject).toMatchInlineSnapshot(`"You're invited to Stiklestad 25. mai on Tørny"`);
+    expect(payload.text).toMatchInlineSnapshot(`
+      "You're invited to Stiklestad 25. mai on Tørny
+
+      Jørgen has invited you to Stiklestad 25. mai on Tørny.
+
+      Go to https://tornygolf.no/en/login, enter this email address, and log in with the code we send you.
+
+      Tørny — fire up your golf tournament in a couple of minutes.
+      "
+    `);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"<strong>Jørgen</strong> has invited you to <em>Stiklestad 25. mai</em> on Tørny."`);
+  });
+
+  it('locale en, med gameMode: engelsk modus-hint + /en/-lenker', async () => {
+    const payload = await send({
+      ...baseParams,
+      locale: 'en',
+      gameName: 'Stiklestad 25. mai',
+      gameMode: 'best_ball',
+    });
+    expect(payload.text).toMatchInlineSnapshot(`
+      "You're invited to Stiklestad 25. mai on Tørny
+
+      Jørgen has invited you to Stiklestad 25. mai on Tørny.
+
+      Game format: Best ball — You play as a pair, and on each hole only the better net score of the two of you counts.
+      Learn more about the formats: https://tornygolf.no/en/spillformater
+
+      Go to https://tornygolf.no/en/login, enter this email address, and log in with the code we send you.
+
+      Tørny — fire up your golf tournament in a couple of minutes.
+      "
+    `);
+    expect(modeHintHtml(payload.html)).toMatchInlineSnapshot(`
+      "<strong>Game format: Best ball</strong><br>
+                    You play as a pair, and on each hole only the better net score of the two of you counts.<br>
+                    <a href="https://tornygolf.no/en/spillformater" style="color:#1B4332;font-weight:600;text-decoration:underline;">Learn more about the formats</a>"
+    `);
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
   // HTML chrome — låses ÉN gang (uten gameName-grenen).
   // ─────────────────────────────────────────────────────────────────────
 
   it('HTML chrome: full template for uten-gameName-case', async () => {
     const payload = await send(baseParams);
     expect(payload.html).toMatchInlineSnapshot(`
-      "<!DOCTYPE html><html lang="nb">
+      "<!DOCTYPE html><html lang="no">
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -193,9 +262,7 @@ describe('sendInviteNotification', () => {
                     <strong>Jørgen</strong> har invitert deg til en golf-turnering i Tørny.
                   </p>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 32px;">
-                    For å komme i gang: gå til
-                    <a href="https://tornygolf.no/login" style="color:#1B4332;font-weight:600;text-decoration:underline;">tornygolf.no</a>,
-                    skriv inn denne e-posten, og logg inn med koden du får tilsendt.
+                    For å komme i gang: gå til <a href="https://tornygolf.no/login" style="color:#1B4332;font-weight:600;text-decoration:underline;">tornygolf.no</a>, skriv inn denne e-posten, og logg inn med koden du får tilsendt.
                   </p>
                   <div style="margin:32px 0;">
                     <a href="https://tornygolf.no/login" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">

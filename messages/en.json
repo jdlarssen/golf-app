@@ -4104,5 +4104,24 @@
 			"s6Heading": "Contact",
 			"s6Body": "For questions about privacy or to exercise your rights, email <mailto>personvern@tornygolf.no</mailto>."
 		}
+	},
+	"mail": {
+		"common": {
+			"tagline": "Fire up your golf tournament in a couple of minutes.",
+			"footerTagline": "Tørny — fire up your golf tournament in a couple of minutes.",
+			"openButton": "Open Tørny"
+		},
+		"invite": {
+			"subject": "You're invited to Tørny",
+			"subjectGame": "You're invited to {gameName} on Tørny",
+			"heading": "You're invited",
+			"introOpen": "<strong>{name}</strong> has invited you to a golf tournament on Tørny.",
+			"introGame": "<strong>{name}</strong> has invited you to <em>{game}</em> on Tørny.",
+			"formatHint": "Game format: {label}",
+			"formatReadMore": "Learn more about the formats",
+			"footerDisclaimer": "Don't have a golf buddy named {name}? Just ignore this message.",
+			"getStartedHtml": "To get started: go to <link>tornygolf.no</link>, enter this email address, and log in with the code we send you.",
+			"getStartedText": "Go to <link>tornygolf.no</link>, enter this email address, and log in with the code we send you."
+		}
 	}
 }

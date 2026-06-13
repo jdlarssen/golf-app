@@ -7,18 +7,20 @@
 // Best-effort: callers should wrap this in try/catch so a mail
 // failure never aborts the invitation insert. The invitations table
 // is the source of truth — admin can resend manually if needed.
+//
+// Locale-aware (i18n Fase M, #594): user-visible text comes from the `mail`
+// catalog for the recipient's locale. Invitees are account-less, so callers
+// have no `users.locale` to pass — the default is Norwegian, and the language
+// switcher is available once they log in.
 
 import { Resend } from 'resend';
-import { MODE_LABELS, type GameMode } from '@/lib/scoring/modes/types';
-import noMessages from '@/messages/no.json';
-
-// Mode summaries live in the message catalog (i18n Fase D, #592). The invite
-// mail is not yet locale-aware (Phase M), so we read the Norwegian summary
-// directly from no.json — the same byte-identical text the old MODE_GUIDE held.
-const FORMAT_CONTENT = noMessages.formatGuide.content as Record<
-  string,
-  { summary: string }
->;
+import { MODE_LABELS } from '@/lib/scoring/modes/types';
+import {
+  getMailTranslator,
+  getMailMessages,
+  resolveMailLocale,
+  mailUrl,
+} from './i18n';
 
 // RESEND_FROM_EMAIL in our env is the bare address (`noreply@tornygolf.no`).
 // We always want the display name "Tørny" in the From header, so wrap the
@@ -56,58 +58,103 @@ export type InviteNotificationParams = {
    * invitasjoner.
    */
   gameMode?: string;
+  /**
+   * Mottakerens locale (#594). Invitéer er konto-løse, så dette er normalt
+   * udefinert → norsk. Beholdt som param for symmetri med øvrige mail-sendere.
+   */
+  locale?: string | null;
 };
 
 /**
  * Resolverer modus-hint-innholdet defensivt. Returnerer null når mailen ikke er
- * spill-scoped, modus mangler, eller modus ikke er en kjent katalog-modus.
+ * spill-scoped, modus mangler, eller modus ikke er en kjent katalog-modus. Label
+ * og sammendrag leses locale-aware fra den merged'e katalogen.
  */
 function resolveModeHint(
   hasGame: boolean,
   gameMode: string | undefined,
+  messages: ReturnType<typeof getMailMessages>,
 ): { label: string; summary: string } | null {
   if (!hasGame || !gameMode) return null;
   if (!Object.prototype.hasOwnProperty.call(MODE_LABELS, gameMode)) return null;
-  const content = FORMAT_CONTENT[gameMode];
-  if (!content) return null;
-  const mode = gameMode as GameMode;
-  return { label: MODE_LABELS[mode], summary: content.summary };
+  // Runtime-keyed by game_mode → read the merged catalog through a structural
+  // cast (the typed catalog can't index an arbitrary string key).
+  const cat = messages as unknown as {
+    modes: Record<string, string>;
+    formatGuide: { content: Record<string, { summary?: string }> };
+  };
+  const label = cat.modes[gameMode];
+  const summary = cat.formatGuide.content[gameMode]?.summary;
+  if (!label || !summary) return null;
+  return { label, summary };
 }
 
 export async function sendInviteNotification(
   params: InviteNotificationParams,
 ): Promise<void> {
-  const { to, invitedByName, gameName, gameMode } = params;
+  const { to, invitedByName, gameName, gameMode, locale } = params;
+  const loc = resolveMailLocale(locale);
+  const t = getMailTranslator(locale);
+  const messages = getMailMessages(locale);
+
   const hasGame = typeof gameName === 'string' && gameName.length > 0;
-  const modeHint = resolveModeHint(hasGame, gameMode);
+  const modeHint = resolveModeHint(hasGame, gameMode, messages);
+
+  const loginUrl = mailUrl(locale, '/login');
+  const formatsUrl = mailUrl(locale, '/spillformater');
 
   // Modus-hint (#309): kort callout med navn + sammendrag + lenke. Distinkt
   // styling (14px, lys boks) så det ikke kolliderer med intro-linjens regex i
   // approval-testen. Tom streng når ingen hint → mal uendret fra før.
   const modeHintHtml = modeHint
     ? `<p style="font-size:14px;line-height:1.5;margin:0 0 24px;background:#F1EFE8;border-radius:8px;padding:12px 16px;color:#1A1813;">
-              <strong>Spillformat: ${escapeHtml(modeHint.label)}</strong><br>
+              <strong>${t('invite.formatHint', { label: escapeHtml(modeHint.label) })}</strong><br>
               ${escapeHtml(modeHint.summary)}<br>
-              <a href="https://tornygolf.no/spillformater" style="color:#1B4332;font-weight:600;text-decoration:underline;">Les mer om spillformatene</a>
+              <a href="${formatsUrl}" style="color:#1B4332;font-weight:600;text-decoration:underline;">${t('invite.formatReadMore')}</a>
             </p>
             `
     : '';
   const modeHintText = modeHint
-    ? `Spillformat: ${modeHint.label} — ${modeHint.summary}\nLes mer om spillformatene: https://tornygolf.no/spillformater\n\n`
+    ? `${t('invite.formatHint', { label: modeHint.label })} — ${modeHint.summary}\n${t('invite.formatReadMore')}: ${formatsUrl}\n\n`
     : '';
+
   const subject = hasGame
-    ? `Du er invitert til ${gameName} på Tørny`
-    : 'Du er invitert til Tørny';
+    ? t('invite.subjectGame', { gameName: gameName! })
+    : t('invite.subject');
 
   const introLineHtml = hasGame
-    ? `<strong>${escapeHtml(invitedByName)}</strong> har invitert deg til spillet <em>${escapeHtml(gameName!)}</em> på Tørny.`
-    : `<strong>${escapeHtml(invitedByName)}</strong> har invitert deg til en golf-turnering i Tørny.`;
+    ? t.markup('invite.introGame', {
+        name: escapeHtml(invitedByName),
+        game: escapeHtml(gameName!),
+        strong: (c) => `<strong>${c}</strong>`,
+        em: (c) => `<em>${c}</em>`,
+      })
+    : t.markup('invite.introOpen', {
+        name: escapeHtml(invitedByName),
+        strong: (c) => `<strong>${c}</strong>`,
+      });
 
   const introLineText = hasGame
-    ? `${invitedByName} har invitert deg til spillet ${gameName} på Tørny.`
-    : `${invitedByName} har invitert deg til en golf-turnering i Tørny.`;
+    ? t.markup('invite.introGame', {
+        name: invitedByName,
+        game: gameName!,
+        strong: (c) => c,
+        em: (c) => c,
+      })
+    : t.markup('invite.introOpen', {
+        name: invitedByName,
+        strong: (c) => c,
+      });
 
-  const html = `<!DOCTYPE html><html lang="nb">
+  const getStartedHtml = t.markup('invite.getStartedHtml', {
+    link: (c) =>
+      `<a href="${loginUrl}" style="color:#1B4332;font-weight:600;text-decoration:underline;">${c}</a>`,
+  });
+  const getStartedText = t.markup('invite.getStartedText', {
+    link: () => loginUrl,
+  });
+
+  const html = `<!DOCTYPE html><html lang="${loc}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -123,26 +170,24 @@ export async function sendInviteNotification(
               Tørny<span style="color:#C9A961;">.</span>
             </h1>
             <p style="font-size:13px;color:#5C5347;margin:0 0 32px;">
-              Fyr opp golfturneringen på et par minutter.
+              ${t('common.tagline')}
             </p>
             <h2 style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;margin:0 0 16px;color:#1A1813;">
-              Du er invitert
+              ${t('invite.heading')}
             </h2>
             <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
               ${introLineHtml}
             </p>
             ${modeHintHtml}<p style="font-size:16px;line-height:1.5;margin:0 0 32px;">
-              For å komme i gang: gå til
-              <a href="https://tornygolf.no/login" style="color:#1B4332;font-weight:600;text-decoration:underline;">tornygolf.no</a>,
-              skriv inn denne e-posten, og logg inn med koden du får tilsendt.
+              ${getStartedHtml}
             </p>
             <div style="margin:32px 0;">
-              <a href="https://tornygolf.no/login" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
-                Åpne Tørny
+              <a href="${loginUrl}" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
+                ${t('common.openButton')}
               </a>
             </div>
             <p style="font-size:13px;color:#5C5347;line-height:1.5;margin:32px 0 0;border-top:1px solid #E6E2D6;padding-top:24px;">
-              Har du ikke en golfvenn ved navn ${escapeHtml(invitedByName)}? Ignorer denne meldingen.
+              ${t('invite.footerDisclaimer', { name: escapeHtml(invitedByName) })}
             </p>
           </td></tr>
         </table>
@@ -156,8 +201,8 @@ export async function sendInviteNotification(
     `${subject}\n\n` +
     `${introLineText}\n\n` +
     modeHintText +
-    `Gå til https://tornygolf.no/login, skriv inn denne e-posten, og logg inn med koden du får tilsendt.\n\n` +
-    `Tørny — fyr opp golfturneringen på et par minutter.\n`;
+    `${getStartedText}\n\n` +
+    `${t('common.footerTagline')}\n`;
 
   const resend = getClient();
   const result = await resend.emails.send({
