@@ -76,6 +76,20 @@ Issue [#571](https://github.com/jdlarssen/golf-app/issues/571). Hjem-siden skal 
 
 Issue [#573](https://github.com/jdlarssen/golf-app/issues/573), del av epic [#60](https://github.com/jdlarssen/golf-app/issues/60). Fase 2e av flerspråkligheten: de personlige flatene hentes fra omsettbare kataloger og finnes nå på engelsk — profilen med statistikk og historikk, vennelista, innboksen med alle varslene, finn turneringer og bunnmenyen.
 
+### [1.118.1] - 2026-06-13 · #559
+
+> Følger du en påmeldingslenke uten å være logget inn, havner du nå rett på innlogging og kommer tilbake til påmeldingen etterpå. Før kunne en ugyldig eller utløpt lenke gi en 404-side i stedet for å sende deg til innlogging.
+
+<details>
+<summary>Teknisk</summary>
+
+[#559](https://github.com/jdlarssen/golf-app/issues/559). `/signup/[shortId]` ligger i `PUBLIC_PATH_PATTERN` i `proxy.ts`, så proxyen slipper alle gjennom og siden gater selv. Page-handleren kjørte `getGameByShortId` → `notFound()` *før* `auth.getUser()`-redirecten, så en uautentisert bruker med ugyldig shortId fikk 404 i stedet for innlogging — og smoke-testen `e2e/signup/open-register.spec.ts` (som forventer `/login`-redirect) feilet.
+
+#### Fixed
+- Auth-sjekken kjører nå før spill-oppslaget: uautentiserte sendes til `/login?next=/signup/[shortId]` uansett om shortId-en finnes, og `notFound()` gjelder kun innloggede brukere med ugyldig lenke. `next`-param-rundturen er bevart.
+
+</details>
+
 ### [1.118.0] - 2026-06-13 · #573
 
 > Bruker du Tørny på engelsk, er den personlige delen nå oversatt: profilen din med statistikk og historikk, vennelista, innboksen med alle varslene, «Finn turneringer» og bunnmenyen. På norsk er alt som før.

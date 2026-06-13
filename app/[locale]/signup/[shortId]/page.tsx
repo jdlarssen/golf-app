@@ -37,8 +37,9 @@ export async function generateMetadata({ params }: { params: Params }) {
  * `next=/signup/[shortId]` så de havner tilbake etter OTP-verify.
  *
  * Branch-logikken kjører serverside i prioritetsrekkefølge:
- *   1. Ugyldig/manglende short_id → notFound().
- *   2. Ikke logget inn → redirect /login med next-param.
+ *   1. Ikke logget inn → redirect /login med next-param (FØR spill-oppslaget,
+ *      #559 — ellers 404-er en ugyldig lenke i stedet for å gate til login).
+ *   2. Ugyldig/manglende short_id → notFound().
  *   3. Mangler profil_completed_at → redirect /complete-profile.
  *   4. Allerede påmeldt (game_players-rad finnes) → "du er med"-melding.
  *   5. Pending request finnes → "venter på godkjenning"-melding.
@@ -55,11 +56,10 @@ export default async function PåmeldingPage({ params }: { params: Params }) {
   const t = await getTranslations('signup');
   const tModes = await getTranslations('modes');
 
-  const game = await getGameByShortId(shortId);
-  if (!game) {
-    notFound();
-  }
-
+  // #559: auth-sjekk FØR spill-oppslaget. /signup ligger i PUBLIC_PATH_PATTERN
+  // (proxy.ts slipper alle gjennom), så vi gater selv her. Uautentiserte sendes
+  // til /login med next-param uansett om shortId-en finnes — ellers ville en
+  // ugyldig lenke gitt 404 i stedet for å lande brukeren på innlogging.
   const supabase = await getServerClient();
   const {
     data: { user },
@@ -67,6 +67,11 @@ export default async function PåmeldingPage({ params }: { params: Params }) {
 
   if (!user) {
     redirect({ href: `/login?next=/signup/${shortId}`, locale: locale as AppLocale });
+  }
+
+  const game = await getGameByShortId(shortId);
+  if (!game) {
+    notFound();
   }
 
   // Bruk admin-client for profil/membership-sjekker. Vi er allerede authed
