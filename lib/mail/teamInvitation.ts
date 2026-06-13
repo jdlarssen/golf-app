@@ -7,8 +7,12 @@
 // Brukeren går: mail → /login (legger inn samme e-post) → kode → fullfør
 // profil → /signup/[shortId]/team → klikker «Bli med på lag» (per
 // teamActions.attachToCaptainTeam).
+//
+// Locale-aware (i18n Fase M, #594): user-visible text comes from the `mail`
+// catalog for the recipient's locale.
 
 import { Resend } from 'resend';
+import { getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
 
 function resolveFromEmail(): string {
   const raw = process.env.RESEND_FROM_EMAIL?.trim();
@@ -32,19 +36,36 @@ export type TeamInvitationMailParams = {
   teamName: string;
   /** 8-char short_id — brukes til å bygge /signup/[shortId]-deeplink via login. */
   gameShortId: string;
+  /** Mottakerens locale (#594). Normalt udefinert → norsk. */
+  locale?: string | null;
 };
 
 export async function sendTeamInvitationMail(
   params: TeamInvitationMailParams,
 ): Promise<void> {
-  const { to, captainName, gameName, teamName, gameShortId } = params;
-  const subject = `Du er invitert til ${teamName} (${gameName})`;
+  const { to, captainName, gameName, teamName, gameShortId, locale } = params;
+
+  const loc = resolveMailLocale(locale);
+  const t = getMailTranslator(locale);
+
+  const subject = t('teamInvitation.subject', { teamName, gameName });
+
   // Vi sender brukeren til /login med next-param som tar dem til
   // påmeldings-siden etter OTP-verify + profil-fullføring.
+  // mailUrl bygger locale-korrekt base-URL; next-verdien er en path og
+  // endres ikke — bare base-URLen får locale-prefix.
   const next = encodeURIComponent(`/signup/${gameShortId}/team`);
-  const loginUrl = `https://tornygolf.no/login?next=${next}`;
+  const loginUrl = `${mailUrl(locale, '/login')}?next=${next}`;
 
-  const html = `<!DOCTYPE html><html lang="nb">
+  const introHtml = t.markup('teamInvitation.intro', {
+    captainName: escapeHtml(captainName),
+    teamName: escapeHtml(teamName),
+    gameName: escapeHtml(gameName),
+    strong: (c) => `<strong>${c}</strong>`,
+    em: (c) => `<em>${c}</em>`,
+  });
+
+  const html = `<!DOCTYPE html><html lang="${loc}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -60,24 +81,24 @@ export async function sendTeamInvitationMail(
               Tørny<span style="color:#C9A961;">.</span>
             </h1>
             <p style="font-size:13px;color:#4A3F30;margin:0 0 32px;">
-              Fyr opp golfturneringen på et par minutter.
+              ${t('common.tagline')}
             </p>
             <h2 style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;margin:0 0 16px;color:#1A1813;">
-              Du er invitert på lag
+              ${t('teamInvitation.heading')}
             </h2>
             <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-              <strong>${escapeHtml(captainName)}</strong> vil ha deg med på laget <em>${escapeHtml(teamName)}</em> i <strong>${escapeHtml(gameName)}</strong>.
+              ${introHtml}
             </p>
             <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-              For å bli med: gå til Tørny, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Etter pålogging lander du rett på lag-siden hvor du kan bekrefte plassen din.
+              ${escapeHtml(t('teamInvitation.instructionsHtml'))}
             </p>
             <div style="margin:32px 0;">
               <a href="${loginUrl}" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
-                Bli med på laget
+                ${t('teamInvitation.joinButton')}
               </a>
             </div>
             <p style="font-size:13px;color:#4A3F30;line-height:1.5;margin:32px 0 0;border-top:1px solid #E6E2D6;padding-top:24px;">
-              Kjenner du ikke ${escapeHtml(captainName)}? Ignorer denne meldingen — ingenting skjer hvis du ikke logger inn.
+              ${escapeHtml(t('teamInvitation.footer', { captainName }))}
             </p>
           </td></tr>
         </table>
@@ -89,11 +110,11 @@ export async function sendTeamInvitationMail(
 
   const text =
     `${subject}\n\n` +
-    `${captainName} vil ha deg med på laget ${teamName} i ${gameName}.\n\n` +
-    `Gå til Tørny, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Etter pålogging lander du rett på lag-siden hvor du kan bekrefte plassen.\n\n` +
-    `Bli med: ${loginUrl}\n\n` +
-    `Kjenner du ikke ${captainName}? Ignorer denne meldingen.\n\n` +
-    `Tørny — fyr opp golfturneringen på et par minutter.\n`;
+    `${t('teamInvitation.introText', { captainName, teamName, gameName })}\n\n` +
+    `${t('teamInvitation.instructionsText')}\n\n` +
+    `${t('teamInvitation.joinButtonText', { url: loginUrl })}\n\n` +
+    `${t('teamInvitation.footerText', { captainName })}\n\n` +
+    `${t('common.footerTagline')}\n`;
 
   const resend = getClient();
   const result = await resend.emails.send({

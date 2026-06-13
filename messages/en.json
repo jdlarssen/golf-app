@@ -4206,11 +4206,12 @@
 			"heading": "You've been invited to a team",
 			"intro": "<strong>{captainName}</strong> wants you on team <em>{teamName}</em> in <strong>{gameName}</strong>.",
 			"introText": "{captainName} wants you on team {teamName} in {gameName}.",
-			"instructions": "To join: go to Tørny, enter this email address, and log in with the code we send you. After logging in you land straight on the team page where you can confirm your spot.",
 			"joinButton": "Join the team",
 			"joinButtonText": "Join: {url}",
 			"footer": "Don't know {captainName}? Just ignore this message — nothing happens if you don't log in.",
-			"footerText": "Don't know {captainName}? Just ignore this message."
+			"footerText": "Don't know {captainName}? Just ignore this message.",
+			"instructionsHtml": "To join: go to Tørny, enter this email address, and log in with the code we send you. After logging in you land straight on the team page where you can confirm your spot.",
+			"instructionsText": "Go to Tørny, enter this email address, and log in with the code we send you. After logging in you land straight on the team page where you can confirm your spot."
 		},
 		"productUpdate": {
 			"subject": "What's new in Tørny — {periodLabel}",

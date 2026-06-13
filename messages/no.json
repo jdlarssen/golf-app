@@ -4206,11 +4206,12 @@
 			"heading": "Du er invitert på lag",
 			"intro": "<strong>{captainName}</strong> vil ha deg med på laget <em>{teamName}</em> i <strong>{gameName}</strong>.",
 			"introText": "{captainName} vil ha deg med på laget {teamName} i {gameName}.",
-			"instructions": "For å bli med: gå til Tørny, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Etter pålogging lander du rett på lag-siden hvor du kan bekrefte plassen din.",
 			"joinButton": "Bli med på laget",
 			"joinButtonText": "Bli med: {url}",
 			"footer": "Kjenner du ikke {captainName}? Ignorer denne meldingen — ingenting skjer hvis du ikke logger inn.",
-			"footerText": "Kjenner du ikke {captainName}? Ignorer denne meldingen."
+			"footerText": "Kjenner du ikke {captainName}? Ignorer denne meldingen.",
+			"instructionsHtml": "For å bli med: gå til Tørny, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Etter pålogging lander du rett på lag-siden hvor du kan bekrefte plassen din.",
+			"instructionsText": "Gå til Tørny, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Etter pålogging lander du rett på lag-siden hvor du kan bekrefte plassen."
 		},
 		"productUpdate": {
 			"subject": "Nytt i Tørny — {periodLabel}",

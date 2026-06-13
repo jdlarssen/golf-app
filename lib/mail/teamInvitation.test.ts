@@ -105,13 +105,48 @@ describe('sendTeamInvitationMail', () => {
   });
 
   // ─────────────────────────────────────────────────────────────────────
+  // Engelsk (locale: 'en') — Fase M.
+  // ─────────────────────────────────────────────────────────────────────
+
+  it('locale en: engelsk subject + body + /en/-lenke med next-param', async () => {
+    const payload = await send({ ...baseParams, locale: 'en' });
+    expect(payload.subject).toMatchInlineSnapshot(`"You're invited to join Bjørketrærne (Sommercup 2026)"`);
+    expect(payload.text).toMatchInlineSnapshot(`
+      "You're invited to join Bjørketrærne (Sommercup 2026)
+
+      Jørgen wants you on team Bjørketrærne in Sommercup 2026.
+
+      Go to Tørny, enter this email address, and log in with the code we send you. After logging in you land straight on the team page where you can confirm your spot.
+
+      Join: https://tornygolf.no/en/login?next=%2Fsignup%2Fabc12345%2Fteam
+
+      Don't know Jørgen? Just ignore this message.
+
+      Tørny — fire up your golf tournament in a couple of minutes.
+      "
+    `);
+    expect(mainBodyHtml(payload.html)).toMatchInlineSnapshot(`
+      "<p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
+                    <strong>Jørgen</strong> wants you on team <em>Bjørketrærne</em> in <strong>Sommercup 2026</strong>.
+                  </p>
+                  <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
+                    To join: go to Tørny, enter this email address, and log in with the code we send you. After logging in you land straight on the team page where you can confirm your spot.
+                  </p>"
+    `);
+    // next-param must remain locale-agnostic (just a path, not translated)
+    expect(payload.html).toContain(
+      'https://tornygolf.no/en/login?next=%2Fsignup%2Fabc12345%2Fteam',
+    );
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
   // HTML chrome — låses ÉN gang.
   // ─────────────────────────────────────────────────────────────────────
 
   it('HTML chrome: full template for default-case', async () => {
     const payload = await send(baseParams);
     expect(payload.html).toMatchInlineSnapshot(`
-      "<!DOCTYPE html><html lang="nb">
+      "<!DOCTYPE html><html lang="no">
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
