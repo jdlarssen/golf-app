@@ -400,7 +400,7 @@ describe('sendProductUpdateDigest', () => {
       "
     `);
     expect(payload.html).toMatchInlineSnapshot(`
-      "<!DOCTYPE html><html lang="nb">
+      "<!DOCTYPE html><html lang="no">
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -438,9 +438,7 @@ describe('sendProductUpdateDigest', () => {
                     
                   </div>
                   <p style="font-size:13px;color:#4A3F30;line-height:1.5;margin:32px 0 0;border-top:1px solid #E6E2D6;padding-top:24px;">
-                    Du får denne mailen fordi du er på Tørny.
-                    <a href="https://tornygolf.no/api/unsubscribe/product-update?token=fixed-token-for-snapshot" style="color:#1B4332;text-decoration:underline;">Meld deg av månedsbrevet</a>,
-                    eller styr det fra <a href="https://tornygolf.no/profile" style="color:#1B4332;text-decoration:underline;">profilen din</a>.
+                    Du får denne mailen fordi du er på Tørny. <a href="https://tornygolf.no/api/unsubscribe/product-update?token=fixed-token-for-snapshot" style="color:#1B4332;text-decoration:underline;">Meld deg av månedsbrevet</a>, eller styr det fra <a href="https://tornygolf.no/profile" style="color:#1B4332;text-decoration:underline;">profilen din</a>.
                   </p>
                 </td></tr>
               </table>
@@ -449,6 +447,56 @@ describe('sendProductUpdateDigest', () => {
         </table>
       </body>
       </html>"
+    `);
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Engelsk (locale: 'en') — Fase M.
+  // ─────────────────────────────────────────────────────────────────────
+
+  it('locale en: engelsk chrome (salutation, intro, footer) + uoversatt update-innhold', async () => {
+    const payload = await send({
+      to: 'spiller@example.com',
+      recipientFirstName: 'Ada',
+      periodLabel: 'mai 2026',
+      updates: [{ title: 'Texas scramble er ute!', body: 'Ny modus: lag spiller én ball.' }],
+      unsubToken: 'fixed-token',
+      locale: 'en',
+    });
+    expect(payload.subject).toMatchInlineSnapshot(`"What's new in Tørny — mai 2026"`);
+    expect(payload.text).toMatchInlineSnapshot(`
+      "What's new in Tørny — mai 2026
+
+      Hi Ada!
+
+      Here's what was new in Tørny in mai 2026:
+
+      Texas scramble er ute!
+      Ny modus: lag spiller én ball.
+
+      ---
+      You're receiving this because you're on Tørny.
+      Unsubscribe from the monthly digest: https://tornygolf.no/api/unsubscribe/product-update?token=fixed-token
+      Or manage it from your profile: https://tornygolf.no/en/profile
+      "
+    `);
+    expect(mainBodyHtml(payload.html)).toMatchInlineSnapshot(`
+      "<p style="font-size:16px;line-height:1.5;margin:0 0 8px;">
+                    Hi Ada!
+                  </p>
+                  <p style="font-size:16px;line-height:1.5;margin:0 0 28px;">
+                    Here&#39;s what was new in Tørny in mai 2026:
+                  </p>
+                  
+                  <div style="margin:0 0 24px;">
+                    <h3 style="font-family:Georgia,'Times New Roman',serif;font-size:18px;line-height:1.25;margin:0 0 8px;color:#1A1813;">
+                      Texas scramble er ute!
+                    </h3>
+                    <p style="font-size:15px;line-height:1.55;margin:0;color:#1A1813;">
+                      Ny modus: lag spiller én ball.
+                    </p>
+                    
+                  </div>"
     `);
   });
 });

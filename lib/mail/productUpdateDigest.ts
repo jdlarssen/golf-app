@@ -8,8 +8,13 @@
 //
 // Best-effort: caller wraps in Promise.allSettled and never blocks
 // the digest-send on a single recipient's failure.
+//
+// Locale-aware (i18n Fase M, #594): chrome strings (salutation, intro,
+// footer) come from the `mail` catalog. The digest ENTRIES (title/body)
+// are authored content — they are NOT translated and stay as-is.
 
 import { Resend } from 'resend';
+import { getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
 
 const APP_BASE_URL = 'https://tornygolf.no';
 
@@ -45,17 +50,31 @@ export type ProductUpdateDigestParams = {
   updates: ProductUpdateDigestEntry[];
   /** Signed unsub token bound to recipient userId — used in both List-Unsubscribe header and footer link. */
   unsubToken: string;
+  /** Mottakerens locale (#594). Normalt udefinert → norsk. */
+  locale?: string | null;
 };
 
 export async function sendProductUpdateDigest(
   params: ProductUpdateDigestParams,
 ): Promise<void> {
-  const { to, recipientFirstName, periodLabel, updates, unsubToken } = params;
-  const subject = `Nytt i Tørny — ${periodLabel}`;
-  const unsubUrl = `${APP_BASE_URL}/api/unsubscribe/product-update?token=${encodeURIComponent(unsubToken)}`;
-  const profileUrl = `${APP_BASE_URL}/profile`;
-  const salutation = recipientFirstName ? `Hei ${recipientFirstName}!` : 'Hei!';
+  const { to, recipientFirstName, periodLabel, updates, unsubToken, locale } = params;
 
+  const loc = resolveMailLocale(locale);
+  const t = getMailTranslator(locale);
+
+  const subject = t('productUpdate.subject', { periodLabel });
+  // unsubUrl is an API endpoint — no locale prefix needed.
+  const unsubUrl = `${APP_BASE_URL}/api/unsubscribe/product-update?token=${encodeURIComponent(unsubToken)}`;
+  // profileUrl is an app route — locale-aware.
+  const profileUrl = mailUrl(locale, '/profile');
+
+  const salutation = recipientFirstName
+    ? t('productUpdate.salutationNamed', { name: recipientFirstName })
+    : t('productUpdate.salutationGeneric');
+
+  // Update entries are authored content (data) — titles, bodies, and CTAs
+  // are NOT translated. Links use the bare APP_BASE_URL since they're admin-
+  // configured and point to specific in-app content pages.
   const updateBlocksHtml = updates
     .map(
       (u) => `
@@ -79,7 +98,14 @@ export async function sendProductUpdateDigest(
     )
     .join('');
 
-  const html = `<!DOCTYPE html><html lang="nb">
+  const footerHtml = t.markup('productUpdate.footerHtml', {
+    link: (c) =>
+      `<a href="${unsubUrl}" style="color:#1B4332;text-decoration:underline;">${c}</a>`,
+    profile: (c) =>
+      `<a href="${profileUrl}" style="color:#1B4332;text-decoration:underline;">${c}</a>`,
+  });
+
+  const html = `<!DOCTYPE html><html lang="${loc}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -95,22 +121,20 @@ export async function sendProductUpdateDigest(
               Tørny<span style="color:#C9A961;">.</span>
             </h1>
             <p style="font-size:13px;color:#4A3F30;margin:0 0 32px;">
-              Fyr opp golfturneringen på et par minutter.
+              ${t('common.tagline')}
             </p>
             <h2 style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;margin:0 0 16px;color:#1A1813;">
-              Nytt i Tørny — ${escapeHtml(periodLabel)}
+              ${escapeHtml(t('productUpdate.heading', { periodLabel }))}
             </h2>
             <p style="font-size:16px;line-height:1.5;margin:0 0 8px;">
               ${escapeHtml(salutation)}
             </p>
             <p style="font-size:16px;line-height:1.5;margin:0 0 28px;">
-              Dette var nytt i Tørny i ${escapeHtml(periodLabel)}:
+              ${escapeHtml(t('productUpdate.intro', { periodLabel }))}
             </p>
             ${updateBlocksHtml}
             <p style="font-size:13px;color:#4A3F30;line-height:1.5;margin:32px 0 0;border-top:1px solid #E6E2D6;padding-top:24px;">
-              Du får denne mailen fordi du er på Tørny.
-              <a href="${unsubUrl}" style="color:#1B4332;text-decoration:underline;">Meld deg av månedsbrevet</a>,
-              eller styr det fra <a href="${profileUrl}" style="color:#1B4332;text-decoration:underline;">profilen din</a>.
+              ${footerHtml}
             </p>
           </td></tr>
         </table>
@@ -133,12 +157,12 @@ export async function sendProductUpdateDigest(
   const text =
     `${subject}\n\n` +
     `${salutation}\n\n` +
-    `Dette var nytt i Tørny i ${periodLabel}:\n\n` +
+    `${t('productUpdate.intro', { periodLabel })}\n\n` +
     `${updateBlocksText}\n\n` +
     `---\n` +
-    `Du får denne mailen fordi du er på Tørny.\n` +
-    `Meld deg av månedsbrevet: ${unsubUrl}\n` +
-    `Eller styr det fra profilen din: ${profileUrl}\n`;
+    `${t('productUpdate.footerText1')}\n` +
+    `${t('productUpdate.footerText2', { url: unsubUrl })}\n` +
+    `${t('productUpdate.footerText3', { profileUrl })}\n`;
 
   const resend = getClient();
   const result = await resend.emails.send({
