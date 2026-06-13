@@ -154,30 +154,39 @@ ikke til flere språk (eier-beslutning 2026-06-14). Den må redesignes til en
 
 ## Success Criteria
 
-- [ ] **Locale-param:** alle 11 `send*`-funksjoner tar `locale` (default `'no'`) og rendrer
+- [x] **Locale-param:** alle 11 `send*`-funksjoner tar `locale` (default `'no'`) og rendrer
       bruker-synlig tekst fra `mail.*`-katalogen via `getMailTranslator`. Ingen hardkodet
       norsk bruker-synlig streng igjen i `lib/mail/*.ts` (utenom HTML-struktur/attributter).
-- [ ] **EN-rendring:** med `locale: 'en'` rendrer hver mal engelsk `subject` + `text` + body
+      → Eneste æøå igjen i kildene er merkevaren `Tørny` (sender-identitet + wordmark);
+      all oversettbar tekst leses fra katalogen. Verifisert via grep over `lib/mail/*.ts`.
+- [x] **EN-rendring:** med `locale: 'en'` rendrer hver mal engelsk `subject` + `text` + body
       (bevist av engelske snapshot-tester); med `locale: 'no'`/default uendret norsk
-      (eksisterende norske snapshots fortsatt grønne).
-- [ ] **Call-sites:** fan-out-mailer (gameFinished, productUpdateDigest, cup) sender hver
+      (eksisterende norske snapshots fortsatt grønne). → EN default-case-snapshots per mal;
+      `gameFinished` har 9 EN-cases (ordenstall/flertall/select). NO-diff = kun `lang nb→no`.
+- [x] **Call-sites:** fan-out-mailer (gameFinished, productUpdateDigest, cup) sender hver
       mottaker på dens egen `users.locale`; konto-løse invitasjoner faller til `'no'`.
-      `FinishedMailRecipient` bærer `locale`.
-- [ ] **Fallback:** ukjent/`null`/`gd`/`ga`-locale → norsk mal, aldri rå nøkkel eller tom.
-- [ ] **Katalog-paritet:** `mail`-namespacet finnes i både `no.json` og `en.json` med
-      identisk nøkkel-sett (`catalogParity.test.ts` grønn).
-- [ ] **Auth-mail:** `docs/email-templates.md` har den nye språknøytrale kode-mal-copyen
+      `FinishedMailRecipient` bærer `locale`. → `gameFinishedRecipients.ts:30` `locale: string|null`;
+      9 call-site-filer wiret (commit 6644fdba); invite + teamInvitation urørt (default `'no'`).
+- [x] **Fallback:** ukjent/`null`/`gd`/`ga`-locale → norsk mal, aldri rå nøkkel eller tom.
+      → Empirisk: `gd`/`ga`/`sv`/`null`/`undefined` → `'no'`, `'EN'`→`'en'` (case-insensitiv).
+- [x] **Katalog-paritet:** `mail`-namespacet finnes i både `no.json` og `en.json` med
+      identisk nøkkel-sett (`catalogParity.test.ts` grønn). → 127 mail+parity-tester grønne.
+- [x] **Auth-mail:** `docs/email-templates.md` har den nye språknøytrale kode-mal-copyen
       med Dashboard-sti, klar for eier-paste; rasjonalet (skalerer til N språk) dokumentert.
-- [ ] **Ingen regresjon:** `npm run build` + `npx tsc --noEmit` grønn; alle `lib/mail/*.test.ts`
-      grønne; `catalogParity.test.ts` grønn.
+      → Seksjon 1 (Magic Link/Confirm Signup): subject `{{ .Token }} · Tørny`, kun kode +
+      merke + `60 min`. Commit ba8275fc.
+- [x] **Ingen regresjon:** `npm run build` + `npx tsc --noEmit` grønn; alle `lib/mail/*.test.ts`
+      grønne; `catalogParity.test.ts` grønn. → build grønn (placeholder-env), tsc rent, 284
+      tester grønne (mail + parity + cup + productUpdates + notifications).
 
 ## Gates (per chunk)
 
-- [ ] `npx tsc --noEmit` passerer.
-- [ ] `npx vitest run lib/mail messages/catalogParity.test.ts` passerer (scoped til endret).
-- [ ] `npm run build` passerer (sluttgate — exhaustive-switch / `[locale]`-rute-feil).
-- [ ] Versjon-bump + CHANGELOG på den bruker-synlige sluttcommiten (commit-msg-hook
-      håndhever); rene plumbing-chunks bruker `refactor`/`chore`.
+- [x] `npx tsc --noEmit` passerer. → rent.
+- [x] `npx vitest run lib/mail messages/catalogParity.test.ts` passerer. → 127 grønne.
+- [x] `npm run build` passerer (sluttgate). → grønn med placeholder-Supabase-env (alle `◐` PPR-ruter generert).
+- [x] Versjon-bump + CHANGELOG på den bruker-synlige sluttcommiten (commit-msg-hook
+      håndhever); rene plumbing-chunks bruker `refactor`/`chore`. → 1.125.0→1.126.0,
+      ny `## 1.126.y`-serie; template-migrasjons-chunks = `refactor`, aktivering = `feat` (6644fdba), auth-doc = `docs`.
 
 ## Files Likely Touched
 
