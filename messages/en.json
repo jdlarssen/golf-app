@@ -4122,6 +4122,59 @@
 			"footerDisclaimer": "Don't have a golf buddy named {name}? Just ignore this message.",
 			"getStartedHtml": "To get started: go to <link>tornygolf.no</link>, enter this email address, and log in with the code we send you.",
 			"getStartedText": "Go to <link>tornygolf.no</link>, enter this email address, and log in with the code we send you."
+		},
+		"registrationApproved": {
+			"subject": "You're in: {gameName}",
+			"heading": "You're in",
+			"body": "The organiser has approved your registration for <strong>{gameName}</strong>. You're on the list — your scorecard will open at tee-off.",
+			"bodyText": "The organiser has approved your registration for {gameName}. You're on the list — your scorecard will open at tee-off.",
+			"viewGame": "View game",
+			"viewGameText": "View game: {url}",
+			"footer": "Log in at <link>tornygolf.no</link> to see your flight, team and tee-off time.",
+			"footerText": "Log in at tornygolf.no to see your flight, team and tee-off time."
+		},
+		"registrationRejected": {
+			"subject": "Your request for {gameName}",
+			"heading": "Request not approved",
+			"body": "Unfortunately, your request to join <strong>{gameName}</strong> was not approved.",
+			"bodyText": "Unfortunately, your request to join {gameName} was not approved.",
+			"reasonPrefix": "Reason: \"{reason}\"",
+			"closing": "Maybe next time. Good luck on the course anyway.",
+			"footer": "Questions? Contact the organiser directly — Tørny does not relay messages on behalf of admins."
+		},
+		"registrationRequest": {
+			"subject": "New sign-up for {gameName}",
+			"heading": "New registration waiting",
+			"body": "<strong>{requesterName}</strong> wants to join <em>{gameName}</em>.",
+			"bodyText": "{requesterName} wants to join {gameName}.",
+			"messageQuote": "\"{message}\"",
+			"goToSignups": "Go to sign-ups",
+			"goToSignupsText": "Go to sign-ups: {url}",
+			"footer": "You're receiving this because you're the organiser for this game. You can approve or decline the request from Sekretariatet."
+		},
+		"scorecardSubmitted": {
+			"subject": "Scorecard submitted: {playerName} in {gameName}",
+			"heading": "Scorecard submitted",
+			"salutationNamed": "Hi {name}!",
+			"salutationGeneric": "Hi!",
+			"body": "<strong>{playerName}</strong> has submitted their scorecard for <strong>{gameName}</strong>. You can approve it in the admin panel.",
+			"bodyText": "{playerName} has submitted their scorecard for {gameName}. You can approve it in the admin panel.",
+			"openAdmin": "Open admin",
+			"openAdminText": "Open admin: {url}",
+			"footer": "You're receiving this because you're the admin for this game. Log in at <link>tornygolf.no</link> for the full overview.",
+			"footerText": "You're receiving this because you're the admin for this game. Log in at tornygolf.no for the full overview."
+		},
+		"deliverReminder": {
+			"subject": "Submit your scorecard for {gameName}",
+			"heading": "Submit your scorecard",
+			"salutationNamed": "Hi {name}!",
+			"salutationGeneric": "Hi!",
+			"body": "You've finished playing <strong>{gameName}</strong> but haven't submitted your scorecard yet. Submit it to be included in the results.",
+			"bodyText": "You've finished playing {gameName} but haven't submitted your scorecard yet. Submit it to be included in the results.",
+			"submitButton": "Submit scorecard",
+			"submitButtonText": "Submit scorecard: {url}",
+			"footer": "You're receiving this because you're registered for this game. Log in at <link>tornygolf.no</link> to submit.",
+			"footerText": "You're receiving this because you're registered for this game. Log in at tornygolf.no to submit."
 		}
 	}
 }

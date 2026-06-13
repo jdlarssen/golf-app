@@ -4122,6 +4122,59 @@
 			"footerDisclaimer": "Har du ikke en golfvenn ved navn {name}? Ignorer denne meldingen.",
 			"getStartedHtml": "For å komme i gang: gå til <link>tornygolf.no</link>, skriv inn denne e-posten, og logg inn med koden du får tilsendt.",
 			"getStartedText": "Gå til <link>tornygolf.no</link>, skriv inn denne e-posten, og logg inn med koden du får tilsendt."
+		},
+		"registrationApproved": {
+			"subject": "Du er med i {gameName}",
+			"heading": "Du er med",
+			"body": "Arrangøren har godkjent påmeldingen din til <strong>{gameName}</strong>. Du står på lista, og scorekortet åpner ved tee-off.",
+			"bodyText": "Arrangøren har godkjent påmeldingen din til {gameName}. Du står på lista, og scorekortet åpner ved tee-off.",
+			"viewGame": "Se spillet",
+			"viewGameText": "Se spillet: {url}",
+			"footer": "Logg inn på <link>tornygolf.no</link> for å se flight, lag og tee-off.",
+			"footerText": "Logg inn på tornygolf.no for å se flight, lag og tee-off."
+		},
+		"registrationRejected": {
+			"subject": "Søknad til {gameName}",
+			"heading": "Søknad ikke godkjent",
+			"body": "Forespørselen din om å bli med i <strong>{gameName}</strong> ble dessverre ikke godkjent.",
+			"bodyText": "Forespørselen din om å bli med i {gameName} ble dessverre ikke godkjent.",
+			"reasonPrefix": "Begrunnelse: «{reason}»",
+			"closing": "Kanskje neste runde. Lykke til på banen uansett.",
+			"footer": "Spørsmål? Snakk med arrangøren direkte — Tørny formidler ingen meldinger på vegne av admin."
+		},
+		"registrationRequest": {
+			"subject": "Ny påmelding til {gameName}",
+			"heading": "Ny påmelding venter",
+			"body": "<strong>{requesterName}</strong> vil bli med i <em>{gameName}</em>.",
+			"bodyText": "{requesterName} vil bli med i {gameName}.",
+			"messageQuote": "«{message}»",
+			"goToSignups": "Gå til påmeldinger",
+			"goToSignupsText": "Gå til påmeldinger: {url}",
+			"footer": "Du får denne meldingen fordi du er arrangør for spillet. Du kan godkjenne eller avslå forespørselen fra Sekretariatet."
+		},
+		"scorecardSubmitted": {
+			"subject": "Scorekort levert: {playerName} i {gameName}",
+			"heading": "Scorekort levert",
+			"salutationNamed": "Hei {name}!",
+			"salutationGeneric": "Hei!",
+			"body": "<strong>{playerName}</strong> har levert scorekortet sitt i <strong>{gameName}</strong>. Du kan godkjenne det i admin-flaten.",
+			"bodyText": "{playerName} har levert scorekortet sitt i {gameName}. Du kan godkjenne det i admin-flaten.",
+			"openAdmin": "Åpne admin",
+			"openAdminText": "Åpne admin: {url}",
+			"footer": "Du får denne meldingen fordi du er admin for spillet. Logg inn på <link>tornygolf.no</link> for full oversikt.",
+			"footerText": "Du får denne meldingen fordi du er admin for spillet. Logg inn på tornygolf.no for full oversikt."
+		},
+		"deliverReminder": {
+			"subject": "Lever scorekortet i {gameName}",
+			"heading": "Lever scorekortet",
+			"salutationNamed": "Hei {name}!",
+			"salutationGeneric": "Hei!",
+			"body": "Du spilte ferdig <strong>{gameName}</strong>, men har ikke levert scorekortet ennå. Lever det, så er du med i resultatet.",
+			"bodyText": "Du spilte ferdig {gameName}, men har ikke levert scorekortet ennå. Lever det, så er du med i resultatet.",
+			"submitButton": "Lever scorekortet",
+			"submitButtonText": "Lever scorekortet: {url}",
+			"footer": "Du får denne meldingen fordi du er påmeldt spillet. Logg inn på <link>tornygolf.no</link> for å levere.",
+			"footerText": "Du får denne meldingen fordi du er påmeldt spillet. Logg inn på tornygolf.no for å levere."
 		}
 	}
 }

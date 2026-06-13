@@ -99,7 +99,7 @@ describe('sendRegistrationApprovedMail', () => {
   it('HTML chrome: full template for default-case', async () => {
     const payload = await send(baseParams);
     expect(payload.html).toMatchInlineSnapshot(`
-      "<!DOCTYPE html><html lang="nb">
+      "<!DOCTYPE html><html lang="no">
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -139,6 +139,28 @@ describe('sendRegistrationApprovedMail', () => {
       </body>
       </html>"
     `);
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Engelsk (locale: 'en') — Fase M. Beviser at katalog-rendringen flipper
+  // subject + text + body til engelsk. Chrome er strukturelt locale-identisk
+  // og låses ikke på nytt.
+  // ─────────────────────────────────────────────────────────────────────
+
+  it('locale en: engelsk subject + body + /en/-lenke', async () => {
+    const payload = await send({ ...baseParams, locale: 'en' });
+    expect(payload.subject).toMatchInlineSnapshot(`"You're in: Sommercup 2026"`);
+    expect(payload.text).toMatchInlineSnapshot(`
+      "You're in: Sommercup 2026
+
+      The organiser has approved your registration for Sommercup 2026. You're on the list — your scorecard will open at tee-off.
+
+      View game: https://tornygolf.no/en/games/11111111-1111-1111-1111-111111111111
+
+      Tørny — fire up your golf tournament in a couple of minutes.
+      "
+    `);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"The organiser has approved your registration for <strong>Sommercup 2026</strong>. You're on the list — your scorecard will open at tee-off."`);
   });
 
   // Strukturelle Resend-kontrakter (error-propagation, to/from, call-count)
