@@ -5,7 +5,8 @@ import type { PlayerOption } from '@/app/[locale]/admin/games/new/GameForm';
  * Hvilke spillere som er valgbare i «legg til spiller»-pickeren, gitt
  * kontekst (#464). Plukk-lista skal aldri vise hele brukerbasen:
  *
- * - **kompis / cup** → vennene dine
+ * - **kompis / cup** → venne-relasjonene dine (aksepterte venner + folk du har
+ *   en pending venneforespørsel med, begge retninger)
  * - **klubb** m/ valgt klubb → den klubbens medlemmer
  * - **klubb** uten valgt klubb (eller ukjent klubb) → venner (trygt fallback,
  *   aldri hele basen)
@@ -27,7 +28,7 @@ export type SelectablePlayersCtx = {
   selfId: string;
   /** Full/merget roster (superset det filtreres innenfor). */
   players: PlayerOption[];
-  /** Aksepterte venners ids (uten self). */
+  /** Venne-relasjoners ids — aksepterte + pending, uten self. */
   friendIds: ReadonlySet<string>;
   /** clubId → medlemmenes user-ids. */
   clubMemberIdsByClub: Record<string, ReadonlySet<string>>;

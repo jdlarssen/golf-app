@@ -28,6 +28,17 @@ export function friendIdsFromRows(rows: FriendshipRow[], userId: string): string
   return [...new Set(ids)];
 }
 
+/**
+ * Deduplikerte bruker-ider for alle relasjoner — aksepterte OG pending, begge
+ * retninger. Picker-kilden i opprett-veiviseren bruker denne (ikke kun
+ * accepted) så folk du har sendt/mottatt en venneforespørsel til kan legges
+ * til i et spill før forespørselen er besvart. Discovery/signup-gaten holder
+ * seg til `friendIdsFromRows` (kun ekte venner).
+ */
+export function connectedIdsFromRows(rows: FriendshipRow[], userId: string): string[] {
+  return [...new Set(rows.map((r) => otherParty(r, userId)))];
+}
+
 export type Partitioned = {
   friends: { otherId: string }[];
   /** pending der `userId` er addressee — krever svar. */

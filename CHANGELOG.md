@@ -17,6 +17,30 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.123.y — Venner · forespørsler du har sendt i spiller-valget
+
+Issue [#587](https://github.com/jdlarssen/golf-app/issues/587), oppfølging til [#464](https://github.com/jdlarssen/golf-app/issues/464). «Legg til spiller» viste bare aksepterte venner. Nå teller også folk du har en venneforespørsel gående med, så du slipper å vente på svar før du kan sette opp et spill.
+
+### [1.123.0] - 2026-06-13 · #587
+
+> Folk du nettopp har sendt en venneforespørsel til dukker nå opp i «legg til spiller». Du kan sette dem på et spill med en gang, uten å vente til de har svart.
+
+<details>
+<summary>Teknisk</summary>
+
+[#587](https://github.com/jdlarssen/golf-app/issues/587). #464 begrenset picker-kilden i opprett-veiviseren til vennene dine, men kilden (`getFriendIds`/`getFriendPlayerOptions`) returnerte bare `accepted`-vennskap. Pending forespørsler — sendte og mottatte — falt utenfor, så en arrangør som nettopp hadde lagt til kompiser møtte en tom liste.
+
+#### Added
+- `connectedIdsFromRows` i `lib/friends/friendGraph.ts` — ren graf-funksjon som samler bruker-ider for alle relasjoner (accepted + pending, begge retninger), søsken til `friendIdsFromRows` (accepted-only). Dekket av nye Type-A-tester i `friendGraph.test.ts`.
+- `lib/friends/getFriendConnectionIds.ts` — resolver som speiler `getFriendIds`, men uten `status`-filter. Picker-kilden bruker denne.
+
+#### Changed
+- `getFriendPlayerOptions` (ikke-admin opprett-spill, cup-generering, liga) henter nå rader for hele relasjons-settet via `getFriendConnectionIds`.
+- Admin-`app/[locale]/admin/games/new/page.tsx` bytter `getFriendIds` → `getFriendConnectionIds` for picker-id-settet.
+- `getFriendIds` er urørt — discovery, signup-skip-gaten og lag-resolveren beholder accepted-only-semantikken.
+
+</details>
+
 ## 1.122.y — Sideturnering på alle poengformater
 
 Issue [#576](https://github.com/jdlarssen/golf-app/issues/576). Veiviseren tilbød sideturnering (lengste drive / nærmest pinnen) for alle formater, og avslutt-flyten kåret vinnere uansett format — men leaderboardet viste den bare for stableford-familien og best ball. Nå dukker sideturnerings-fanen opp for alle poeng-/podium-formatene.

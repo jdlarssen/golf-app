@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   otherParty,
   friendIdsFromRows,
+  connectedIdsFromRows,
   partitionFriendships,
   suggestionIds,
   distinctInviterIds,
@@ -48,6 +49,29 @@ describe('friendIdsFromRows', () => {
 
   it('returns empty for no accepted rows', () => {
     expect(friendIdsFromRows([], ME)).toEqual([]);
+  });
+});
+
+describe('connectedIdsFromRows', () => {
+  it('collects accepted AND pending relations in both directions', () => {
+    const rows: FriendshipRow[] = [
+      row({ requester_id: ME, addressee_id: A, status: 'accepted' }),
+      row({ requester_id: B, addressee_id: ME, status: 'pending' }), // incoming
+      row({ requester_id: ME, addressee_id: C, status: 'pending' }), // outgoing
+    ];
+    expect(connectedIdsFromRows(rows, ME).sort()).toEqual([A, B, C]);
+  });
+
+  it('dedupes if the same pair appears twice', () => {
+    const rows: FriendshipRow[] = [
+      row({ requester_id: ME, addressee_id: A, status: 'pending' }),
+      { id: 'dup', requester_id: A, addressee_id: ME, status: 'accepted' },
+    ];
+    expect(connectedIdsFromRows(rows, ME)).toEqual([A]);
+  });
+
+  it('returns empty for no rows', () => {
+    expect(connectedIdsFromRows([], ME)).toEqual([]);
   });
 });
 
