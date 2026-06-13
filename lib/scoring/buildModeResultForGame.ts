@@ -100,29 +100,61 @@ export async function buildModeResultForGame(
   if (holesRes.error) throw holesRes.error;
   if (scoresRes.error) throw scoresRes.error;
 
-  const players = (playersRes.data ?? []).map((p) => ({
+  // Wolf/BBB per-hull-valg hentes kun for de to modusene som trenger dem.
+  const extras: ModeResultExtras = {};
+  if (game.game_mode === 'wolf') {
+    extras.wolfChoices = await fetchWolfChoices(client, game.id);
+  } else if (game.game_mode === 'bingo_bango_bongo') {
+    extras.bingoBangoBongoHoles = await fetchBingoBangoBongoHoles(client, game.id);
+  }
+
+  return buildModeResultFromData(
+    game,
+    playersRes.data ?? [],
+    holesRes.data ?? [],
+    scoresRes.data ?? [],
+    extras,
+  );
+}
+
+export interface ModeResultExtras {
+  wolfChoices?: WolfHoleChoice[];
+  bingoBangoBongoHoles?: BingoBangoBongoHoleInput[];
+}
+
+/**
+ * Ren (synkron) `ModeResult`-bygging fra allerede-hentede rader — fetch-fri delen
+ * av `buildModeResultForGame`. Lar konsumenter som allerede har dataene (f.eks.
+ * backfill fra en data-dump) regne uten en live Supabase-klient.
+ */
+export function buildModeResultFromData(
+  game: GameForScoring,
+  rawPlayers: GamePlayerRow[],
+  holesRows: CourseHoleRow[],
+  scoresRows: ScoreRow[],
+  extras: ModeResultExtras = {},
+): ModeResult | null {
+  const players = rawPlayers.map((p) => ({
     ...p,
     team_number: p.team_number ?? 0,
   }));
-  const holesRows = holesRes.data ?? [];
-  const scoresRows = scoresRes.data ?? [];
 
   // Ingen hull eller spillere → ikke noe meningsfullt resultat å lagre.
   if (holesRows.length === 0 || players.length === 0) return null;
 
-  const ctx = await buildContext(client, game, players, holesRows, scoresRows);
+  const ctx = buildContext(game, players, holesRows, scoresRows, extras);
   if (ctx === null) return null;
 
   return computeLeaderboard(ctx);
 }
 
-async function buildContext(
-  client: SupabaseClient,
+function buildContext(
   game: GameForScoring,
   players: GamePlayerRow[],
   holesRows: CourseHoleRow[],
   scoresRows: ScoreRow[],
-): Promise<ScoringContext | null> {
+  extras: ModeResultExtras,
+): ScoringContext | null {
   const mode = game.game_mode;
 
   switch (mode) {
@@ -191,7 +223,7 @@ async function buildContext(
         players,
         holesRows,
         scoresRows,
-        wolfChoices: await fetchWolfChoices(client, game.id),
+        wolfChoices: extras.wolfChoices ?? [],
       });
     case 'bingo_bango_bongo':
       return buildBingoBangoBongoContext({
@@ -200,7 +232,7 @@ async function buildContext(
         players,
         holesRows,
         scoresRows,
-        bingoBangoBongoHoles: await fetchBingoBangoBongoHoles(client, game.id),
+        bingoBangoBongoHoles: extras.bingoBangoBongoHoles ?? [],
       });
     // Lag-/side-format uten dedikert builder — uniform context, team_number er
     // alltid satt på disse, så WD-filtrering + felt-map er nok.
