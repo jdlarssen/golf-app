@@ -118,10 +118,10 @@ export async function sendDigestForPeriod(
   // Opted-in recipients with email.
   const { data: recipients } = await admin
     .from('users')
-    .select('id, name, email')
+    .select('id, name, email, locale')
     .is('product_updates_unsubscribed_at', null)
     .not('email', 'is', null)
-    .returns<{ id: string; name: string | null; email: string }[]>();
+    .returns<{ id: string; name: string | null; email: string; locale: string | null }[]>();
 
   const settled = await Promise.allSettled(
     (recipients ?? []).map((r) =>
@@ -131,6 +131,7 @@ export async function sendDigestForPeriod(
         periodLabel,
         updates: entries,
         unsubToken: signUnsubToken(r.id),
+        locale: r.locale,
       }),
     ),
   );

@@ -17,7 +17,7 @@ import { notify } from './notify';
  * (samme rasjonale som inni notify() — vi vil ikke maile uten in-app).
  */
 export async function sendDeliveryReminder(opts: {
-  player: { userId: string; email: string | null; name: string | null };
+  player: { userId: string; email: string | null; name: string | null; locale?: string | null };
   game: { id: string; name: string };
   logPrefix: string;
 }): Promise<void> {
@@ -43,6 +43,7 @@ export async function sendDeliveryReminder(opts: {
         playerFirstName: firstName(player.name),
         gameName: game.name,
         gameId: game.id,
+        locale: player.locale ?? null,
       });
     } catch (e) {
       console.error(`[${logPrefix}] deliver_reminder mail failed`, e);
@@ -99,12 +100,12 @@ export async function maybeSendDeliveryReminder(opts: {
 
     const { data: u } = await admin
       .from('users')
-      .select('email, name')
+      .select('email, name, locale')
       .eq('id', userId)
-      .maybeSingle<{ email: string | null; name: string | null }>();
+      .maybeSingle<{ email: string | null; name: string | null; locale: string | null }>();
 
     await sendDeliveryReminder({
-      player: { userId, email: u?.email ?? null, name: u?.name ?? null },
+      player: { userId, email: u?.email ?? null, name: u?.name ?? null, locale: u?.locale ?? null },
       game: { id: gameId, name: gameName },
       logPrefix: 'autoDeliverReminder',
     });

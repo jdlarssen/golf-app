@@ -477,6 +477,7 @@ export async function endGame(gameId: string, allowMissing = false) {
           gameName: game!.name,
           gameId,
           mode: r.mode,
+          locale: r.locale,
         }),
       ),
     );

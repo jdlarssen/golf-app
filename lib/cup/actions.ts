@@ -66,7 +66,7 @@ function parseFoursomesAllowancePct(raw: string): number | null {
 async function loadTournamentParticipantEmails(
   supabase: Awaited<ReturnType<typeof getServerClient>>,
   tournamentId: string,
-): Promise<Array<{ user_id: string; email: string; name: string | null }>> {
+): Promise<Array<{ user_id: string; email: string; name: string | null; locale: string | null }>> {
   // Hent alle distinct user_ids via game_players-joine på games med
   // tournament_id = id, deretter email via users-tabellen.
   const { data: gameRows } = await supabase
@@ -78,16 +78,16 @@ async function loadTournamentParticipantEmails(
 
   const { data: playerRows } = await supabase
     .from('game_players')
-    .select('user_id, users!game_players_user_id_fkey(email, name)')
+    .select('user_id, users!game_players_user_id_fkey(email, name, locale)')
     .in('game_id', gameIds);
 
   const seen = new Set<string>();
-  const out: Array<{ user_id: string; email: string; name: string | null }> = [];
+  const out: Array<{ user_id: string; email: string; name: string | null; locale: string | null }> = [];
   // Supabase JS typer FK-joins som array selv på many-to-one. Normaliser med
   // unknown-cast og array-håndtering.
   const rows = (playerRows ?? []) as unknown as Array<{
     user_id: string;
-    users: { email: string; name: string | null } | { email: string; name: string | null }[] | null;
+    users: { email: string; name: string | null; locale: string | null } | { email: string; name: string | null; locale: string | null }[] | null;
   }>;
   for (const row of rows) {
     if (seen.has(row.user_id)) continue;
@@ -95,7 +95,7 @@ async function loadTournamentParticipantEmails(
     const userRel = Array.isArray(row.users) ? row.users[0] : row.users;
     const email = userRel?.email;
     if (!email) continue;
-    out.push({ user_id: row.user_id, email, name: userRel?.name ?? null });
+    out.push({ user_id: row.user_id, email, name: userRel?.name ?? null, locale: userRel?.locale ?? null });
   }
   return out;
 }
@@ -319,6 +319,7 @@ export async function startTournament(formData: FormData) {
           team1Name: current.team_1_name,
           team2Name: current.team_2_name,
           pointsToWin: current.points_to_win,
+          locale: r.locale,
         }),
       ),
     );
@@ -412,6 +413,7 @@ export async function finishTournament(formData: FormData) {
           team1Points: snapshot.leaderboard.team1Points,
           team2Points: snapshot.leaderboard.team2Points,
           winnerTeamName: winnerName,
+          locale: r.locale,
         }),
       ),
     );

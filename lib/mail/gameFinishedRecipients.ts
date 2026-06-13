@@ -26,6 +26,8 @@ export interface FinishedMailRecipient {
   email: string;
   /** Navn fra users-raden — caller mapper til firstName ved behov. */
   name: string | null;
+  /** Mottakerens locale fra users-raden (#594). `null` → mail-laget defaulter til 'no'. */
+  locale: string | null;
   /** Mode-spesifikk personalisering. `undefined` for best-ball-netto. */
   mode?: GameFinishedNotificationMode;
 }
@@ -64,7 +66,7 @@ export async function buildGameFinishedRecipients(
   const { data: playerRows, error: playerErr } = await supabase
     .from('game_players')
     .select(
-      'user_id, team_number, tee_gender, course_handicap, users!game_players_user_id_fkey(email, name)',
+      'user_id, team_number, tee_gender, course_handicap, users!game_players_user_id_fkey(email, name, locale)',
     )
     .eq('game_id', gameId)
     .returns<
@@ -73,7 +75,7 @@ export async function buildGameFinishedRecipients(
         team_number: number | null;
         tee_gender: ScoringGender;
         course_handicap: number | null;
-        users: { email: string | null; name: string | null } | null;
+        users: { email: string | null; name: string | null; locale: string | null } | null;
       }[]
     >();
   if (playerErr || !playerRows) {
@@ -122,13 +124,14 @@ export async function buildGameFinishedRecipients(
     return buildTexasScrambleRecipients(supabase, gameId, game, playerRows);
   }
 
-  // Best-ball-netto: ingen per-spiller-mode, returner kun userId+email+name.
+  // Best-ball-netto: ingen per-spiller-mode, returner kun userId+email+name+locale.
   if (!isStablefordFamily(game.game_mode)) {
     return playerRows
       .map((row) => ({
         userId: row.user_id,
         email: row.users?.email ?? null,
         name: row.users?.name ?? null,
+        locale: row.users?.locale ?? null,
       }))
       .filter((r): r is FinishedMailRecipient => {
         return typeof r.email === 'string' && r.email.length > 0;
@@ -205,6 +208,7 @@ export async function buildGameFinishedRecipients(
         userId: row.user_id,
         email: row.users?.email ?? null,
         name: row.users?.name ?? null,
+        locale: row.users?.locale ?? null,
       }))
       .filter((r): r is FinishedMailRecipient => {
         return typeof r.email === 'string' && r.email.length > 0;
@@ -235,6 +239,7 @@ export async function buildGameFinishedRecipients(
         userId: row.user_id,
         email,
         name: row.users?.name ?? null,
+        locale: row.users?.locale ?? null,
         mode,
       });
     }
@@ -297,6 +302,7 @@ export async function buildGameFinishedRecipients(
       userId: row.user_id,
       email,
       name: row.users?.name ?? null,
+      locale: row.users?.locale ?? null,
       mode,
     });
   }
@@ -330,7 +336,7 @@ async function buildMatchplayRecipients(
     team_number: number | null;
     tee_gender: ScoringGender;
     course_handicap: number | null;
-    users: { email: string | null; name: string | null } | null;
+    users: { email: string | null; name: string | null; locale: string | null } | null;
   }[],
 ): Promise<FinishedMailRecipient[]> {
   const [scoresRes, holesRes] = await Promise.all([
@@ -397,6 +403,7 @@ async function buildMatchplayRecipients(
         userId: row.user_id,
         email: row.users?.email ?? null,
         name: row.users?.name ?? null,
+        locale: row.users?.locale ?? null,
       }))
       .filter((r): r is FinishedMailRecipient => {
         return typeof r.email === 'string' && r.email.length > 0;
@@ -433,6 +440,7 @@ async function buildMatchplayRecipients(
         userId: row.user_id,
         email,
         name: row.users?.name ?? null,
+        locale: row.users?.locale ?? null,
       });
       continue;
     }
@@ -463,6 +471,7 @@ async function buildMatchplayRecipients(
       userId: row.user_id,
       email,
       name: row.users?.name ?? null,
+      locale: row.users?.locale ?? null,
       mode: {
         kind: 'singles_matchplay',
         matchResult: matchResultForSelf,
@@ -497,7 +506,7 @@ async function buildSoloStrokeplayRecipients(
     team_number: number | null;
     tee_gender: ScoringGender;
     course_handicap: number | null;
-    users: { email: string | null; name: string | null } | null;
+    users: { email: string | null; name: string | null; locale: string | null } | null;
   }[],
 ): Promise<FinishedMailRecipient[]> {
   const [scoresRes, holesRes] = await Promise.all([
@@ -564,6 +573,7 @@ async function buildSoloStrokeplayRecipients(
         userId: row.user_id,
         email: row.users?.email ?? null,
         name: row.users?.name ?? null,
+        locale: row.users?.locale ?? null,
       }))
       .filter((r): r is FinishedMailRecipient => {
         return typeof r.email === 'string' && r.email.length > 0;
@@ -591,6 +601,7 @@ async function buildSoloStrokeplayRecipients(
       userId: row.user_id,
       email,
       name: row.users?.name ?? null,
+      locale: row.users?.locale ?? null,
       mode,
     });
   }
@@ -620,7 +631,7 @@ async function buildTexasScrambleRecipients(
     team_number: number | null;
     tee_gender: ScoringGender;
     course_handicap: number | null;
-    users: { email: string | null; name: string | null } | null;
+    users: { email: string | null; name: string | null; locale: string | null } | null;
   }[],
 ): Promise<FinishedMailRecipient[]> {
   const [scoresRes, holesRes] = await Promise.all([
@@ -690,6 +701,7 @@ async function buildTexasScrambleRecipients(
         userId: row.user_id,
         email: row.users?.email ?? null,
         name: row.users?.name ?? null,
+        locale: row.users?.locale ?? null,
       }))
       .filter((r): r is FinishedMailRecipient => {
         return typeof r.email === 'string' && r.email.length > 0;
@@ -751,6 +763,7 @@ async function buildTexasScrambleRecipients(
       userId: row.user_id,
       email,
       name: row.users?.name ?? null,
+      locale: row.users?.locale ?? null,
       mode,
     });
   }

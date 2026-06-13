@@ -14,7 +14,7 @@ type PlayerRow = {
   user_id: string;
   submitted_at: string | null;
   withdrawn_at: string | null;
-  users: { email: string | null; name: string | null } | null;
+  users: { email: string | null; name: string | null; locale: string | null } | null;
 };
 
 /**
@@ -48,7 +48,7 @@ export async function remindUnsubmittedPlayers(gameId: string) {
     supabase
       .from('game_players')
       .select(
-        'user_id, submitted_at, withdrawn_at, users!game_players_user_id_fkey(email, name)',
+        'user_id, submitted_at, withdrawn_at, users!game_players_user_id_fkey(email, name, locale)',
       )
       .eq('game_id', gameId)
       .returns<PlayerRow[]>(),
@@ -79,6 +79,7 @@ export async function remindUnsubmittedPlayers(gameId: string) {
           userId: p.user_id,
           email: p.users?.email ?? null,
           name: p.users?.name ?? null,
+          locale: p.users?.locale ?? null,
         },
         game: { id: game!.id, name: game!.name },
         logPrefix: 'remindUnsubmittedPlayers',

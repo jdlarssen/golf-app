@@ -17,6 +17,30 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.126.y — Mailene på ditt språk
+
+Issue [#594](https://github.com/jdlarssen/golf-app/issues/594), fase M i i18n-epicen [#60](https://github.com/jdlarssen/golf-app/issues/60). Hele grensesnittet og spillform-tekstene er tospråklige, men e-postene fra Tørny gikk fortsatt ut på norsk uansett hvilket språk mottakeren hadde valgt. Nå følger de språkvalget.
+
+### [1.126.0] - 2026-06-14 · #594
+
+> E-postene fra Tørny kommer nå på språket du har valgt i appen. Enten det er en invitasjon, et resultat eller en påminnelse: står appen på engelsk, er e-posten engelsk. På norsk er alt akkurat som før.
+
+<details>
+<summary>Teknisk</summary>
+
+[#594](https://github.com/jdlarssen/golf-app/issues/594). De elleve Resend-malene i `lib/mail/` hadde hardkodet norsk tekst uten noe locale-begrep. Nå tar hver `send*`-funksjon en `locale`-param og rendrer den bruker-synlige teksten fra et nytt `mail`-namespace i `messages/{no,en}.json` via `createTranslator` — mottakerens locale er ikke request-locale, så de request-scopede `getTranslations`/`useTranslations` virker ikke. HTML-strukturen blir i koden; bare teksten ligger i katalogen.
+
+#### Added
+- `lib/mail/i18n.ts`: `getMailTranslator(locale)` (scoped til `mail`-namespacet), `getMailMessages(locale)` for dynamiske oppslag (modus-sammendrag og modus-navn), `mailUrl(locale, path)` for locale-korrekte lenker (`/en/…` for engelske mottakere) og default-locale-fallback for manglende nøkler.
+- `mail.*`-namespace i `messages/{no,en}.json` for alle elleve malene + delt `mail.common`. Norsk er byte-identisk med dagens tekst; engelsk er ny, idiomatisk copy. `gameFinished` rendres fra én ICU-melding per modus-gren, så ordenstall (`1. plass` / `1st place`), flertall (`1 poeng` / `1 point`) og vunnet/tapt/uavgjort lokaliseres uten kode-side-sammensetting.
+- Locale-aware snapshot-tester: engelsk default-case per mal, norske snapshots uendret.
+
+#### Changed
+- Call-sitene som sender mail leser nå mottakerens `users.locale` og sender den videre. Fan-out-malene (gameFinished, produktoppdaterings-digest, cup-start og -slutt) sender hver mottaker på sitt eget språk; admin- og registrerings-malene leser admins/den registrertes locale. `FinishedMailRecipient` bærer `locale`.
+- Konto-løse invitasjoner (invitasjons-mail og lag-invitasjon) faller til norsk — invitéen har ikke valgt språk ennå, og språkvelgeren er tilgjengelig først etter innlogging.
+
+</details>
+
 ## 1.125.y — Spillformene på engelsk
 
 Issue [#592](https://github.com/jdlarssen/golf-app/issues/592), del av i18n-epicen [#60](https://github.com/jdlarssen/golf-app/issues/60). Etter at hele grensesnittet ble tospråklig i fase 2a–2f, lå selve spillform-tekstene fortsatt igjen på norsk uansett språkvalg — de bodde i databasen. Nå er navn, beskrivelser, regler og eksempler flyttet til samme oversettelses-katalog som resten av appen, så de følger språkvelgeren.

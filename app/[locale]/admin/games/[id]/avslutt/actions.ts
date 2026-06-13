@@ -235,6 +235,7 @@ export async function endGameWithSideWinners(
           gameName: game!.name,
           gameId,
           mode: r.mode,
+          locale: r.locale,
         }),
       ),
     );

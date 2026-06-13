@@ -242,15 +242,16 @@ export async function approveRequest(requestId: string): Promise<void> {
   if (userIdsForMail.length > 0) {
     const { data: emailRows } = await admin
       .from('users')
-      .select('id, email')
+      .select('id, email, locale')
       .in('id', userIdsForMail)
-      .returns<{ id: string; email: string }[]>();
+      .returns<{ id: string; email: string; locale: string | null }[]>();
     await Promise.allSettled(
       (emailRows ?? []).map((u) =>
         sendRegistrationApprovedMail({
           to: u.email,
           gameName: game.name,
           gameId: game.id,
+          locale: u.locale,
         }).catch((err) =>
           console.error('[approveRequest] mail failed', err),
         ),
@@ -358,15 +359,16 @@ export async function rejectRequest(
   if (userIdsForMail.length > 0) {
     const { data: emailRows } = await admin
       .from('users')
-      .select('id, email')
+      .select('id, email, locale')
       .in('id', userIdsForMail)
-      .returns<{ id: string; email: string }[]>();
+      .returns<{ id: string; email: string; locale: string | null }[]>();
     await Promise.allSettled(
       (emailRows ?? []).map((u) =>
         sendRegistrationRejectedMail({
           to: u.email,
           gameName: game.name,
           ...(reason ? { reason } : {}),
+          locale: u.locale,
         }).catch((err) =>
           console.error('[rejectRequest] mail failed', err),
         ),

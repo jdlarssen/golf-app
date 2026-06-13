@@ -118,10 +118,10 @@ export async function submitScorecard(gameId: string) {
     }>(),
     supabase
       .from('users')
-      .select('id, email, name')
+      .select('id, email, name, locale')
       .eq('is_admin', true)
       .not('email', 'is', null)
-      .returns<{ id: string; email: string; name: string | null }[]>(),
+      .returns<{ id: string; email: string; name: string | null; locale: string | null }[]>(),
     peersQuery,
   ]);
 
@@ -204,6 +204,7 @@ export async function submitScorecard(gameId: string) {
             playerName,
             gameName: game!.name,
             gameId,
+            locale: a.locale,
           }),
         ),
       );

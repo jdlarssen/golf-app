@@ -60,11 +60,13 @@ describe('buildGameFinishedRecipients', () => {
       userId: 'u1',
       email: 'a@example.com',
       name: 'Ada',
+      locale: null,
     });
     expect(recipients[1]).toEqual({
       userId: 'u2',
       email: 'b@example.com',
       name: 'Bjørn',
+      locale: null,
     });
     expect(recipients.every((r) => r.mode === undefined)).toBe(true);
   });

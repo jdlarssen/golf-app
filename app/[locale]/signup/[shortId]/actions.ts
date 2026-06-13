@@ -432,9 +432,9 @@ export async function requestApproval(
       // selve forespørselen.
       const { data: adminRow } = await admin
         .from('users')
-        .select('email')
+        .select('email, locale')
         .eq('id', game.created_by)
-        .maybeSingle<{ email: string }>();
+        .maybeSingle<{ email: string; locale: string | null }>();
       if (adminRow?.email) {
         await sendRegistrationRequestMail({
           to: adminRow.email,
@@ -442,6 +442,7 @@ export async function requestApproval(
           gameShortId: game.short_id,
           requesterName,
           ...(message ? { message } : {}),
+          locale: adminRow.locale,
         }).catch((err) =>
           console.error('[requestApproval] mail failed', err),
         );
