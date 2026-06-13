@@ -21,6 +21,22 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#566](https://github.com/jdlarssen/golf-app/issues/566), del av epic [#60](https://github.com/jdlarssen/golf-app/issues/60). Fase 2d av flerspråkligheten: klubb-, liga- og cup-flatene (admin og spiller) hentes fra omsettbare kataloger og finnes nå på engelsk — klubbrom og medlemskap, ligastyring med tabeller, cup-styring med matchgenerator, og Klubbhuset.
 
+### [1.117.3] - 2026-06-13 · #570
+
+> Kortene under «Avsluttede spill» på hjem-siden viser nå spillform og sluttdato — «Byneset North · Skins» med «12. jun» under. Før så skins, matchplay og stableford helt like ut, og runder uten dato i navnet hadde ingen tidsforankring.
+
+<details>
+<summary>Teknisk</summary>
+
+[#570](https://github.com/jdlarssen/golf-app/issues/570). Finished-kortene i `HomeBody` (`app/[locale]/page.tsx`) viste bare «<bane> · Leaderboard» + 🏆. `ended_at` ble hentet men aldri rendret, og `game_mode` ble ikke hentet i det hele tatt.
+
+#### Changed
+- Finished-spørringen henter nå `game_mode, mode_config`; den delte `GameRow.games`-typen deklarerer dem (`GameMode` / `GameModeConfig`). Den aktive spørringen er urørt — aktive kort leser aldri modus (samme presedens som `flight_number`-gapet).
+- Kort-undertittelen er nå «<bane> · <spillform>» via variant-bevisst `formatDisplayLabel` (samme helper som `ModeChip` — gir «4BBB Stableford» / «Champagne Scramble» der base-label ville flatet ut varianten). Ordet «Leaderboard» er droppet; 🏆-en + tapp-gjennom kommuniserer allerede destinasjonen.
+- Sluttdatoen «12. jun» vises på egen dempet `tabular-nums`-linje via `formatShortDateLocale(ended_at, 'no')`, kun når `ended_at` finnes. Hardkodet `'no'` siden hele hjem-siden ennå er norsk-literal (ingen `t()`); helperen er den locale-bevisste, så bytte til rute-locale er eneste endring når #60 når hjem.
+
+</details>
+
 ### [1.117.2] - 2026-06-13 · #569
 
 > «Avsluttede spill» på hjem-siden viser nå nyeste runde øverst. Før sto lista i tilfeldig rekkefølge, så ferske runder kunne havne helt nederst.

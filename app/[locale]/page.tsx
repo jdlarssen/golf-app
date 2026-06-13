@@ -19,6 +19,9 @@ import { ProductUpdateBanner } from '@/components/products/ProductUpdateBanner';
 import { HandicapChip } from '@/components/handicap/HandicapChip';
 import { firstName } from '@/lib/firstName';
 import { formatTeeOffDate, formatTeeOffTime } from '@/lib/format/teeOff';
+import { formatShortDateLocale } from '@/lib/i18n/format';
+import { formatDisplayLabel } from '@/lib/games/formatLabel';
+import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { STATUS_LABELS } from '@/lib/games/status';
 import { byEndedAtDesc } from '@/lib/games/finishedOrder';
 import { HomeDiscoverySection } from './HomeDiscoverySection';
@@ -107,6 +110,11 @@ async function HomeBody() {
       status: 'draft' | 'scheduled' | 'active' | 'finished';
       ended_at: string | null;
       scheduled_tee_off_at: string | null;
+      // Selected for finished games only (#570) — variant-aware format label
+      // on the «Avsluttede spill» cards. The active query omits these columns;
+      // active cards never read mode (mirrors the existing flight_number gap).
+      game_mode: GameMode;
+      mode_config: GameModeConfig;
       courses: { name: string } | null;
     } | null;
   };
@@ -132,7 +140,7 @@ async function HomeBody() {
     supabase
       .from('game_players')
       .select(
-        'game_id, team_number, games!inner(id, name, status, ended_at, scheduled_tee_off_at, courses(name))',
+        'game_id, team_number, games!inner(id, name, status, ended_at, scheduled_tee_off_at, game_mode, mode_config, courses(name))',
       )
       .eq('user_id', userId!)
       .eq('games.status', 'finished')
@@ -337,10 +345,18 @@ async function HomeBody() {
                         {g.name}
                       </span>
                       <span className="block text-xs text-muted mt-1 truncate">
-                        {[g.courses?.name, 'Leaderboard']
+                        {[
+                          g.courses?.name,
+                          formatDisplayLabel(g.game_mode, g.mode_config),
+                        ]
                           .filter(Boolean)
                           .join(' · ')}
                       </span>
+                      {g.ended_at && (
+                        <span className="block text-xs text-muted mt-1 tabular-nums truncate">
+                          {formatShortDateLocale(g.ended_at, 'no')}
+                        </span>
+                      )}
                     </div>
                     <span aria-hidden className="text-accent shrink-0">
                       🏆
