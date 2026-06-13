@@ -17,7 +17,32 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.118.y — i18n · engelsk profil, venner, innboks og finn turneringer
+## 1.119.y — Hjem · spill-arkiv og siste runder
+
+Issue [#571](https://github.com/jdlarssen/golf-app/issues/571). Hjem-siden skal være play + discover-navet, ikke et arkiv. «Avsluttede spill» viser nå bare de fem siste rundene; resten ligger i et eget spill-arkiv, gruppert per måned.
+
+### [1.119.0] - 2026-06-13 · #571
+
+> «Avsluttede spill» på hjem-siden viser nå bare de fem siste rundene, med en «Vis alle avsluttede spill»-lenke til et nytt spill-arkiv. Der ligger hele historikken samlet og gruppert per måned, så hjem-siden ikke vokser til en endeløs liste utover sesongen.
+
+<details>
+<summary>Teknisk</summary>
+
+[#571](https://github.com/jdlarssen/golf-app/issues/571). «Avsluttede spill» i `HomeBody` rendret alle ferdigspilte spill uten grense og hentet hver rad ved hver sidevisning.
+
+#### Added
+- `lib/games/getFinishedGamesForUser.ts` — delt fetch (spørring + `byEndedAtDesc`-sortering), én sannhetskilde for «mine avsluttede spill» brukt av både Hjem og arkiv-siden.
+- `components/games/FinishedGameCard.tsx` — kort-renderet løftet ut av `HomeBody` (server-trygt) og delt mellom begge flatene, så de aldri driver fra hverandre visuelt.
+- `lib/games/groupFinishedByMonth.ts` (+ co-lokalisert Type A-test) — ren gruppering per måned, nyeste først, med en «Uten dato»-bøtte sist.
+- Ny side `app/[locale]/spill-arkiv/page.tsx` — hele historikken gruppert per måned, auth-gatet med tilbake-lenke til Hjem og tom-tilstand.
+
+#### Changed
+- `HomeBody` viser nå `finishedGames.slice(0, 5)` via `FinishedGameCard`, med en «Vis alle avsluttede spill →»-lenke til `/spill-arkiv` kun når det finnes flere enn fem. Finished-spørringen er flyttet til den delte helperen, og `game_mode`/`mode_config` er fjernet fra den delte `GameRow`-typen (den aktive spørringen brukte dem aldri).
+
+</details>
+
+<details>
+<summary><strong>1.118.y — i18n · engelsk profil, venner, innboks og finn turneringer (1 oppføring)</strong></summary>
 
 Issue [#573](https://github.com/jdlarssen/golf-app/issues/573), del av epic [#60](https://github.com/jdlarssen/golf-app/issues/60). Fase 2e av flerspråkligheten: de personlige flatene hentes fra omsettbare kataloger og finnes nå på engelsk — profilen med statistikk og historikk, vennelista, innboksen med alle varslene, finn turneringer og bunnmenyen.
 
@@ -42,6 +67,8 @@ Issue [#573](https://github.com/jdlarssen/golf-app/issues/573), del av epic [#60
 
 #### Removed
 - `formatTimeUntil` fra `lib/invitations/quota.ts` — profilsiden leser strukturert resultat + katalognøkler.
+
+</details>
 
 </details>
 

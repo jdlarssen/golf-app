@@ -19,11 +19,9 @@ import { ProductUpdateBanner } from '@/components/products/ProductUpdateBanner';
 import { HandicapChip } from '@/components/handicap/HandicapChip';
 import { firstName } from '@/lib/firstName';
 import { formatTeeOffDate, formatTeeOffTime } from '@/lib/format/teeOff';
-import { formatShortDateLocale } from '@/lib/i18n/format';
-import { formatDisplayLabel } from '@/lib/games/formatLabel';
-import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { STATUS_LABELS } from '@/lib/games/status';
-import { byEndedAtDesc } from '@/lib/games/finishedOrder';
+import { getFinishedGamesForUser } from '@/lib/games/getFinishedGamesForUser';
+import { FinishedGameCard } from '@/components/games/FinishedGameCard';
 import { HomeDiscoverySection } from './HomeDiscoverySection';
 import { getDiscoverableGames } from '@/lib/games/getDiscoverableGames';
 
@@ -110,18 +108,13 @@ async function HomeBody() {
       status: 'draft' | 'scheduled' | 'active' | 'finished';
       ended_at: string | null;
       scheduled_tee_off_at: string | null;
-      // Selected for finished games only (#570) — variant-aware format label
-      // on the «Avsluttede spill» cards. The active query omits these columns;
-      // active cards never read mode (mirrors the existing flight_number gap).
-      game_mode: GameMode;
-      mode_config: GameModeConfig;
       courses: { name: string } | null;
     } | null;
   };
 
   // Parallel-fetch profile, active games, finished games — they don't depend
   // on each other and roughly triple-tripled the latency when run serially.
-  const [profileRes, rawActiveRes, rawFinishedRes] = await Promise.all([
+  const [profileRes, rawActiveRes, finishedGames] = await Promise.all([
     supabase
       .from('users')
       .select(
@@ -137,14 +130,9 @@ async function HomeBody() {
       .eq('user_id', userId!)
       .in('games.status', ['draft', 'scheduled', 'active'])
       .returns<GameRow[]>(),
-    supabase
-      .from('game_players')
-      .select(
-        'game_id, team_number, games!inner(id, name, status, ended_at, scheduled_tee_off_at, game_mode, mode_config, courses(name))',
-      )
-      .eq('user_id', userId!)
-      .eq('games.status', 'finished')
-      .returns<GameRow[]>(),
+    // #571: finished games via the shared helper (same fetch the /spill-arkiv
+    // page uses), already filtered + sorted newest-first (byEndedAtDesc).
+    getFinishedGamesForUser(supabase, userId!),
   ]);
 
   const { data: profile, error: profileError } = profileRes;
@@ -167,19 +155,6 @@ async function HomeBody() {
       teamNumber: row.team_number,
       flightNumber: row.flight_number,
     }));
-
-  // Sorted in JS: supabase-js' foreignTable-order is a no-op for to-one
-  // embeds, so the rows arrive in physical Postgres order (#569).
-  const finishedGames = (rawFinishedRes.data ?? [])
-    .filter((row): row is GameRow & { games: NonNullable<GameRow['games']> } =>
-      row.games != null,
-    )
-    .map((row) => ({
-      ...row.games,
-      teamNumber: row.team_number,
-      flightNumber: row.flight_number,
-    }))
-    .sort(byEndedAtDesc);
 
   const isEmptyState =
     activeGames.length === 0 && finishedGames.length === 0;
@@ -332,39 +307,23 @@ async function HomeBody() {
 
         {finishedGames.length > 0 && (
           <Section label="Avsluttede spill">
-            {finishedGames.map((g) => (
-              <SmartLink
-                key={g.id}
-                href={`/games/${g.id}/leaderboard`}
-                className="block"
-              >
-                <Card className="min-h-[44px] hover:border-primary/30 transition-colors p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <span className="block font-serif text-lg font-medium tracking-tight text-text truncate">
-                        {g.name}
-                      </span>
-                      <span className="block text-xs text-muted mt-1 truncate">
-                        {[
-                          g.courses?.name,
-                          formatDisplayLabel(g.game_mode, g.mode_config),
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </span>
-                      {g.ended_at && (
-                        <span className="block text-xs text-muted mt-1 tabular-nums truncate">
-                          {formatShortDateLocale(g.ended_at, 'no')}
-                        </span>
-                      )}
-                    </div>
-                    <span aria-hidden className="text-accent shrink-0">
-                      🏆
-                    </span>
-                  </div>
+            {/* #571: hjem er play + discover-navet, ikke et arkiv. Vis de
+                siste 5; lenk til /spill-arkiv for resten når det finnes flere. */}
+            {finishedGames.slice(0, 5).map((g) => (
+              <FinishedGameCard key={g.id} game={g} />
+            ))}
+            {finishedGames.length > 5 && (
+              <SmartLink href="/spill-arkiv" className="block">
+                <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
+                  <span className="text-base font-medium text-text">
+                    Vis alle avsluttede spill
+                  </span>
+                  <span aria-hidden className="text-muted">
+                    →
+                  </span>
                 </Card>
               </SmartLink>
-            ))}
+            )}
           </Section>
         )}
 
