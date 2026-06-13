@@ -141,33 +141,38 @@ long, example }`.
 
 ## Success Criteria
 
-- [ ] **Veiviser på `/en`:** format-kortene (FormatGrid) + cup-format-velgeren
+- [x] **Veiviser på `/en`:** format-kortene (FormatGrid) + cup-format-velgeren
       viser engelsk navn + engelsk kort beskrivelse; på `/` (no) byte-identisk
-      med dagens norske tekst.
-- [ ] **Formatoversikt `/en/spillformater`:** etikett, sammendrag og punkter er
-      engelske for alle 22 + 4BBB-varianten; norsk uendret på `/spillformater`.
-- [ ] **Detaljside `/en/spillformater/[slug]`:** sammendrag, punkter, «slik
-      funker det» (long) og eksempel er engelske; norsk uendret.
-- [ ] **Editor fjernet:** Sekretariatets format-side har ingen fri-tekst-
-      innholds-editor lenger; matrise-styringen (synlig/primær/cup/aktiv)
-      fungerer som før.
-- [ ] **Ingen DB-innholds-lesning igjen:** `getModeContent`/`modeGuide`/
-      `parsePointsTextarea` slettet; ingen `select('... display_name ...
-      rules_* ...')` mot `formats` for innhold.
-- [ ] **Katalog-paritet:** `catalogParity.test.ts` grønn (no/en symmetriske).
-- [ ] **Drop-migrasjon** finnes som fil, dokumentert som post-deploy.
-- [ ] Ingen rå katalog-nøkkel og ingen norsk-på-`/en` synlig i de berørte
-      flatene (spot-check).
+      med dagens norske tekst. — `FormatGrid.tsx`/`CupSetup.tsx` rendrer
+      `tModes(slug)` + `tContent.raw('content.<slug>.shortDescription')`; NO
+      md5-rundtur mot prod 22/22 identisk; runtime-sjekk under «Self-eval».
+- [x] **Formatoversikt `/en/spillformater`:** etikett, sammendrag og punkter er
+      engelske for alle 22 + 4BBB-varianten; norsk uendret. —
+      `buildFormatGuide.ts` leser `modes.*` + `formatGuide.content.*`; bygg viser
+      ◐ PPR for `/[locale]/spillformater`.
+- [x] **Detaljside `/en/spillformater/[slug]`:** sammendrag, punkter, long og
+      eksempel er engelske; norsk uendret. — `page.tsx` leser
+      `formatGuide.content.<mode>`; `page.test.tsx` grønn mot ekte katalog-NO.
+- [x] **Editor fjernet:** ingen fri-tekst-innholds-editor; matrise-styringen
+      uendret. — `ContentEditorSection/Row` + `updateFormatContent` fjernet;
+      `FormatsManager.test.tsx` grønn (matrise + toggles).
+- [x] **Ingen DB-innholds-lesning igjen:** `getModeContent`/`modeGuide`/
+      `parsePointsTextarea` slettet (`git rm`); `getFormatsForIntent` selecter
+      `slug, icon_key, is_active`; `getAllFormatsWithMappings` selecter
+      `slug, icon_key, is_active, is_cup_eligible`.
+- [x] **Katalog-paritet:** `catalogParity.test.ts` grønn (3 passed).
+- [x] **Drop-migrasjon** finnes: `0097_drop_format_content_columns.sql`,
+      dokumentert som post-deploy.
+- [x] Ingen rå katalog-nøkkel / norsk-på-`/en` i de berørte flatene —
+      runtime-spot-check under «Self-eval».
 
 ## Gates (per chunk)
 
-- [ ] `npx tsc --noEmit` passerer.
-- [ ] `npm run build` passerer (fanger exhaustive-switch / `[locale]`-rute-feil).
-- [ ] Co-lokaliserte `*.test.ts(x)` for endrede filer passerer + slettede
-      testers konsumenter ryddet.
-- [ ] `npx vitest run messages lib/formats` (katalog-paritet + format-helpere).
-- [ ] Versjonsbump (MINOR — bruker-synlig: engelsk format-innhold) + CHANGELOG-
-      oppføring (commit-msg-hook håndhever).
+- [x] `npx tsc --noEmit` passerer (exit 0).
+- [x] `npm run build` passerer (rutetabell + ◐ PPR for spillformater-rutene).
+- [x] Co-lokaliserte `*.test.ts(x)` + full suite: 266 filer / 3352 tester grønne.
+- [x] `npx vitest run messages lib/formats` grønn.
+- [x] Versjonsbump 1.125.0 (MINOR) + CHANGELOG-oppføring.
 
 ## Files Likely Touched
 
