@@ -3,8 +3,12 @@
 // Promise.allSettled() rundt fan-out så én feilet mottaker ikke blokkerer
 // resten, og selve action-en aldri aborterer på mail-feil — cup-statusen
 // lever i DB-en og leaderboard-en er nåbar i appen uten mailen.
+//
+// Locale-aware (i18n Fase M, #594): user-visible text comes from the `mail`
+// catalog for the recipient's locale.
 
 import { Resend } from 'resend';
+import { getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
 
 function resolveFromEmail(): string {
   const raw = process.env.RESEND_FROM_EMAIL?.trim();
@@ -29,11 +33,14 @@ export type CupStartedNotificationParams = {
   team1Name: string;
   team2Name: string;
   pointsToWin: number;
+  /** Mottakerens locale (#594). Normalt udefinert → norsk. */
+  locale?: string | null;
 };
 
-function formatPoints(n: number): string {
-  // Norsk komma som desimal-separator.
-  return String(n).replace('.', ',');
+function formatPoints(n: number, locale: string): string {
+  // Norsk: komma som desimal-separator. Engelsk: standard punktum.
+  const s = String(n);
+  return locale === 'no' ? s.replace('.', ',') : s;
 }
 
 export async function sendCupStartedNotification(
@@ -47,14 +54,31 @@ export async function sendCupStartedNotification(
     team1Name,
     team2Name,
     pointsToWin,
+    locale,
   } = params;
 
-  const subject = `Cup-en har startet — ${tournamentName}`;
-  const leaderboardUrl = `https://tornygolf.no/cup/${tournamentId}`;
-  const salutation = playerFirstName ? `Hei ${playerFirstName}!` : 'Hei!';
-  const pointsLabel = formatPoints(pointsToWin);
+  const loc = resolveMailLocale(locale);
+  const t = getMailTranslator(locale);
 
-  const html = `<!DOCTYPE html><html lang="nb">
+  const subject = t('cupStarted.subject', { tournamentName });
+  const leaderboardUrl = mailUrl(locale, `/cup/${tournamentId}`);
+  const salutation = playerFirstName
+    ? t('cupStarted.salutationNamed', { name: playerFirstName })
+    : t('cupStarted.salutationGeneric');
+  const pointsLabel = formatPoints(pointsToWin, loc);
+
+  const bodyStartedHtml = t.markup('cupStarted.bodyStarted', {
+    tournamentName: escapeHtml(tournamentName),
+    strong: (c) => `<strong>${c}</strong>`,
+  });
+  const bodyMatchupHtml = t.markup('cupStarted.bodyMatchup', {
+    team1: escapeHtml(team1Name),
+    team2: escapeHtml(team2Name),
+    points: pointsLabel,
+    strong: (c) => `<strong>${c}</strong>`,
+  });
+
+  const html = `<!DOCTYPE html><html lang="${loc}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -70,25 +94,24 @@ export async function sendCupStartedNotification(
               Tørny<span style="color:#C9A961;">.</span>
             </h1>
             <p style="font-size:13px;color:#5C5347;margin:0 0 32px;">
-              Fyr opp golfturneringen på et par minutter.
+              ${t('common.tagline')}
             </p>
             <h2 style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;margin:0 0 16px;color:#1A1813;">
-              ${salutation}
+              ${escapeHtml(salutation)}
             </h2>
             <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-              Cup-en <strong>${escapeHtml(tournamentName)}</strong> har startet.
+              ${bodyStartedHtml}
             </p>
             <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-              <strong>${escapeHtml(team1Name)}</strong> møter <strong>${escapeHtml(team2Name)}</strong>.
-              Først til <strong>${escapeHtml(pointsLabel)}</strong> point vinner.
+              ${bodyMatchupHtml}
             </p>
             <div style="margin:32px 0;">
               <a href="${leaderboardUrl}" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
-                Åpne leaderboard
+                ${t('cupStarted.openLeaderboard')}
               </a>
             </div>
             <p style="font-size:13px;color:#5C5347;line-height:1.5;margin:32px 0 0;border-top:1px solid #E6E2D6;padding-top:24px;">
-              Lykke til på banen!
+              ${t('cupStarted.footer')}
             </p>
           </td></tr>
         </table>
@@ -100,10 +123,10 @@ export async function sendCupStartedNotification(
 
   const text =
     `${salutation}\n\n` +
-    `Cup-en "${tournamentName}" har startet.\n\n` +
-    `${team1Name} møter ${team2Name}. Først til ${pointsLabel} point vinner.\n\n` +
-    `Åpne leaderboard: ${leaderboardUrl}\n\n` +
-    `Lykke til på banen!\n`;
+    `${t('cupStarted.bodyStartedText', { tournamentName })}\n\n` +
+    `${t('cupStarted.bodyMatchupText', { team1: team1Name, team2: team2Name, points: pointsLabel })}\n\n` +
+    `${t('cupStarted.openLeaderboardText', { url: leaderboardUrl })}\n\n` +
+    `${t('cupStarted.footer')}\n`;
 
   const resend = getClient();
   const result = await resend.emails.send({

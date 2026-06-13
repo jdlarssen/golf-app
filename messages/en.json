@@ -4175,6 +4175,53 @@
 			"submitButtonText": "Submit scorecard: {url}",
 			"footer": "You're receiving this because you're registered for this game. Log in at <link>tornygolf.no</link> to submit.",
 			"footerText": "You're receiving this because you're registered for this game. Log in at tornygolf.no to submit."
+		},
+		"cupStarted": {
+			"subject": "The cup has started — {tournamentName}",
+			"salutationNamed": "Hi {name}!",
+			"salutationGeneric": "Hi!",
+			"heading": "{salutation}",
+			"bodyStarted": "The cup <strong>{tournamentName}</strong> has started.",
+			"bodyStartedText": "The cup \"{tournamentName}\" has started.",
+			"bodyMatchup": "<strong>{team1}</strong> vs <strong>{team2}</strong>. First to <strong>{points}</strong> points wins.",
+			"bodyMatchupText": "{team1} vs {team2}. First to {points} points wins.",
+			"openLeaderboard": "Open leaderboard",
+			"openLeaderboardText": "Open leaderboard: {url}",
+			"footer": "Good luck on the course!"
+		},
+		"cupFinished": {
+			"subject": "Result confirmed — {tournamentName}",
+			"salutationNamed": "Hi {name}!",
+			"salutationGeneric": "Hi!",
+			"bodySettled": "The cup <strong>{tournamentName}</strong> is decided.",
+			"bodySettledText": "The cup \"{tournamentName}\" is decided.",
+			"resultWinner": "<strong>{winnerName}</strong> won the cup.",
+			"resultWinnerText": "{winnerName} won the cup.",
+			"resultDraw": "The cup ended in a draw.",
+			"viewLeaderboard": "View full leaderboard",
+			"viewLeaderboardText": "View full leaderboard: {url}"
+		},
+		"teamInvitation": {
+			"subject": "You're invited to join {teamName} ({gameName})",
+			"heading": "You've been invited to a team",
+			"intro": "<strong>{captainName}</strong> wants you on team <em>{teamName}</em> in <strong>{gameName}</strong>.",
+			"introText": "{captainName} wants you on team {teamName} in {gameName}.",
+			"instructions": "To join: go to Tørny, enter this email address, and log in with the code we send you. After logging in you land straight on the team page where you can confirm your spot.",
+			"joinButton": "Join the team",
+			"joinButtonText": "Join: {url}",
+			"footer": "Don't know {captainName}? Just ignore this message — nothing happens if you don't log in.",
+			"footerText": "Don't know {captainName}? Just ignore this message."
+		},
+		"productUpdate": {
+			"subject": "What's new in Tørny — {periodLabel}",
+			"heading": "What's new in Tørny — {periodLabel}",
+			"salutationNamed": "Hi {name}!",
+			"salutationGeneric": "Hi!",
+			"intro": "Here's what was new in Tørny in {periodLabel}:",
+			"footerHtml": "You're receiving this because you're on Tørny. <link>Unsubscribe from the monthly digest</link>, or manage it from your <profile>profile</profile>.",
+			"footerText1": "You're receiving this because you're on Tørny.",
+			"footerText2": "Unsubscribe from the monthly digest: {url}",
+			"footerText3": "Or manage it from your profile: {profileUrl}"
 		}
 	}
 }

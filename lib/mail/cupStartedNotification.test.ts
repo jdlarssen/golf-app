@@ -72,8 +72,7 @@ describe('sendCupStartedNotification', () => {
     `);
     expect(bodyHtml(payload.html)).toMatchInlineSnapshot(`
       "Cup-en <strong>Høst-cup 2026</strong> har startet.
-      <strong>Bjørketrærne</strong> møter <strong>Granskogen</strong>.
-                    Først til <strong>10</strong> point vinner."
+      <strong>Bjørketrærne</strong> møter <strong>Granskogen</strong>. Først til <strong>10</strong> point vinner."
     `);
   });
 
@@ -109,8 +108,32 @@ describe('sendCupStartedNotification', () => {
     `);
     expect(bodyHtml(payload.html)).toMatchInlineSnapshot(`
       "Cup-en <strong>Høst-cup 2026</strong> har startet.
-      <strong>Bjørketrærne</strong> møter <strong>Granskogen</strong>.
-                    Først til <strong>10,5</strong> point vinner."
+      <strong>Bjørketrærne</strong> møter <strong>Granskogen</strong>. Først til <strong>10,5</strong> point vinner."
+    `);
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Engelsk (locale: 'en') — Fase M.
+  // ─────────────────────────────────────────────────────────────────────
+
+  it('locale en: engelsk subject + body + /en/-lenke', async () => {
+    const payload = await send({ ...baseParams, locale: 'en' });
+    expect(payload.subject).toMatchInlineSnapshot(`"The cup has started — Høst-cup 2026"`);
+    expect(payload.text).toMatchInlineSnapshot(`
+      "Hi Per!
+
+      The cup "Høst-cup 2026" has started.
+
+      Bjørketrærne vs Granskogen. First to 10 points wins.
+
+      Open leaderboard: https://tornygolf.no/en/cup/22222222-2222-2222-2222-222222222222
+
+      Good luck on the course!
+      "
+    `);
+    expect(bodyHtml(payload.html)).toMatchInlineSnapshot(`
+      "The cup <strong>Høst-cup 2026</strong> has started.
+      <strong>Bjørketrærne</strong> vs <strong>Granskogen</strong>. First to <strong>10</strong> points wins."
     `);
   });
 
@@ -119,7 +142,7 @@ describe('sendCupStartedNotification', () => {
   it('HTML chrome: full template for default-case', async () => {
     const payload = await send(baseParams);
     expect(payload.html).toMatchInlineSnapshot(`
-      "<!DOCTYPE html><html lang="nb">
+      "<!DOCTYPE html><html lang="no">
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -144,8 +167,7 @@ describe('sendCupStartedNotification', () => {
                     Cup-en <strong>Høst-cup 2026</strong> har startet.
                   </p>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-                    <strong>Bjørketrærne</strong> møter <strong>Granskogen</strong>.
-                    Først til <strong>10</strong> point vinner.
+                    <strong>Bjørketrærne</strong> møter <strong>Granskogen</strong>. Først til <strong>10</strong> point vinner.
                   </p>
                   <div style="margin:32px 0;">
                     <a href="https://tornygolf.no/cup/22222222-2222-2222-2222-222222222222" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">

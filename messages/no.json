@@ -4175,6 +4175,53 @@
 			"submitButtonText": "Lever scorekortet: {url}",
 			"footer": "Du får denne meldingen fordi du er påmeldt spillet. Logg inn på <link>tornygolf.no</link> for å levere.",
 			"footerText": "Du får denne meldingen fordi du er påmeldt spillet. Logg inn på tornygolf.no for å levere."
+		},
+		"cupStarted": {
+			"subject": "Cup-en har startet — {tournamentName}",
+			"salutationNamed": "Hei {name}!",
+			"salutationGeneric": "Hei!",
+			"heading": "{salutation}",
+			"bodyStarted": "Cup-en <strong>{tournamentName}</strong> har startet.",
+			"bodyStartedText": "Cup-en \"{tournamentName}\" har startet.",
+			"bodyMatchup": "<strong>{team1}</strong> møter <strong>{team2}</strong>. Først til <strong>{points}</strong> point vinner.",
+			"bodyMatchupText": "{team1} møter {team2}. Først til {points} point vinner.",
+			"openLeaderboard": "Åpne leaderboard",
+			"openLeaderboardText": "Åpne leaderboard: {url}",
+			"footer": "Lykke til på banen!"
+		},
+		"cupFinished": {
+			"subject": "Resultatet er klart — {tournamentName}",
+			"salutationNamed": "Hei {name}!",
+			"salutationGeneric": "Hei!",
+			"bodySettled": "Cup-en <strong>{tournamentName}</strong> er avgjort.",
+			"bodySettledText": "Cup-en \"{tournamentName}\" er avgjort.",
+			"resultWinner": "<strong>{winnerName}</strong> vant cupen.",
+			"resultWinnerText": "{winnerName} vant cupen.",
+			"resultDraw": "Cupen endte uavgjort.",
+			"viewLeaderboard": "Se hele leaderboardet",
+			"viewLeaderboardText": "Se hele leaderboardet: {url}"
+		},
+		"teamInvitation": {
+			"subject": "Du er invitert til {teamName} ({gameName})",
+			"heading": "Du er invitert på lag",
+			"intro": "<strong>{captainName}</strong> vil ha deg med på laget <em>{teamName}</em> i <strong>{gameName}</strong>.",
+			"introText": "{captainName} vil ha deg med på laget {teamName} i {gameName}.",
+			"instructions": "For å bli med: gå til Tørny, skriv inn denne e-posten, og logg inn med koden du får tilsendt. Etter pålogging lander du rett på lag-siden hvor du kan bekrefte plassen din.",
+			"joinButton": "Bli med på laget",
+			"joinButtonText": "Bli med: {url}",
+			"footer": "Kjenner du ikke {captainName}? Ignorer denne meldingen — ingenting skjer hvis du ikke logger inn.",
+			"footerText": "Kjenner du ikke {captainName}? Ignorer denne meldingen."
+		},
+		"productUpdate": {
+			"subject": "Nytt i Tørny — {periodLabel}",
+			"heading": "Nytt i Tørny — {periodLabel}",
+			"salutationNamed": "Hei {name}!",
+			"salutationGeneric": "Hei!",
+			"intro": "Dette var nytt i Tørny i {periodLabel}:",
+			"footerHtml": "Du får denne mailen fordi du er på Tørny. <link>Meld deg av månedsbrevet</link>, eller styr det fra <profile>profilen din</profile>.",
+			"footerText1": "Du får denne mailen fordi du er på Tørny.",
+			"footerText2": "Meld deg av månedsbrevet: {url}",
+			"footerText3": "Eller styr det fra profilen din: {profileUrl}"
 		}
 	}
 }
