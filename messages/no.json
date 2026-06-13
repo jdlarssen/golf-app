@@ -1016,7 +1016,262 @@
 		"detailKicker": "SPILLFORMAT",
 		"detailFallbackMeta": "Spillformat",
 		"detailHowItWorks": "Slik fungerer det",
-		"detailExample": "Konkret eksempel"
+		"detailExample": "Konkret eksempel",
+		"content": {
+			"stableford": {
+				"shortDescription": "Solo, poeng vs par. Klassisk klubb-format.",
+				"summary": "Du spiller for deg selv og samler poeng på hvert hull. Jo bedre du gjør det mot par, jo flere poeng.",
+				"points": [
+					"Par gir 2 poeng, ett over gir 1, ett under gir 3, og så videre.",
+					"Slagene du får på handikap regnes med før poengene settes.",
+					"Høyest poengsum til slutt vinner."
+				],
+				"long": "Du samler stableford-poeng på hvert hull basert på scoren din mot par etter at handikap-slagene er trukket fra. To poeng er normalen — ett for å fullføre hullet med ett slag over par (bogey), tre for å gjøre birdie. Scorer du dobbeltbogey eller verre, gir du opp hullet og tar ett poeng. Høyest poengsum etter 18 hull vinner.",
+				"example": "Hull 3, par 4, SI 5: du har CH 12 og får ett ekstraslag. Du scorer 5 gross (netto 4) → par → 2 poeng. Hull 15, par 3, SI 17: du scorer 3 gross (netto 3) → par → 2 poeng. Hull 10, par 5, SI 3: du scorer 5 gross (netto 4) → birdie → 3 poeng."
+			},
+			"stableford-4bbb": {
+				"summary": "Dere er to på lag. På hvert hull teller den beste poengsummen av dere to.",
+				"points": [
+					"Begge spiller hele runden og samler stableford-poeng hver for seg.",
+					"På hvert hull tar laget med den høyeste poengsummen av de to.",
+					"Høyest lagtotal vinner."
+				]
+			},
+			"modified_stableford": {
+				"shortDescription": "Solo eller par, poeng vs par med pro-skala. Minuspoeng for blow-ups.",
+				"summary": "Stableford med proff-skala: du blir belønnet hardt for å satse, men straffet for de virkelig dårlige hullene. Her kan poengene gå i minus.",
+				"points": [
+					"Birdie gir 2 poeng, eagle 5, albatross 8. Par gir 0.",
+					"Bogey trekker 1 poeng, dobbeltbogey eller verre trekker 3. Du kan altså havne under null.",
+					"Slagene du får på handikap regnes med, og høyest poengsum vinner."
+				],
+				"long": "Stableford med proff-skala der du premieres tungt for de gode prestasjonene og straffes for de virkelig svake. Eagle gir 5 poeng, birdie 2, par 0. Bogey trekker 1 poeng, dobbeltbogey eller verre trekker 3. Du kan havne under null på totalen. Handikap-slagene regnes inn på vanlig måte, og høyest sum etter 18 hull vinner.",
+				"example": "Hull 6, par 5, SI 1: du har CH 18 og får ett ekstraslag. Du scorer 5 gross (netto 4) → eagle → +5 poeng. Hull 11, par 4: du scorer 7 gross (netto 6) → dobbeltbogey → −3 poeng. Netto for disse to hullene: +5 + (−3) = +2 poeng."
+			},
+			"solo_strokeplay": {
+				"shortDescription": "Individuell, lavest total vinner.",
+				"summary": "Vanlig slagspill: du teller alle slagene dine, og færrest netto-slag vinner.",
+				"points": [
+					"Netto er totalen din minus slagene du får på handikap.",
+					"Du spiller for deg selv, ingen lag.",
+					"Lavest sum etter 18 hull vinner."
+				],
+				"long": "Klassisk slagspill: du teller alle slagene dine gjennom hele runden og trekker fra handikap-slagene til slutt. Ingen lagkamerater, ingen hull-per-hull-oppgjør — bare du mot banen og klokken. Den som ender med færrest netto-slag etter 18 hull, vinner.",
+				"example": "Du spiller en runde med CH 10. Gross-score er 85. Netto = 85 − 10 = 75. Konkurrenten din scorer 83 gross med CH 7, netto 76. Du vinner med netto 75 mot 76. Ett dårlig hull gjør deg ikke ferdig, men alt teller til slutt."
+			},
+			"best_ball": {
+				"shortDescription": "Lag à 2, beste netto per hull.",
+				"summary": "Dere er to på lag, og på hvert hull teller bare den beste netto-scoren av dere to.",
+				"points": [
+					"Begge spiller hele runden, men laget tar med den laveste av de to på hvert hull.",
+					"Netto er antall slag minus slagene du får på hullet.",
+					"Lavest lagtotal vinner."
+				],
+				"long": "Dere er to på lag, og begge spiller hvert hull med sin egen ball. På hvert hull teller bare den laveste netto-scoren av dere to — partneren med den beste scoren «bidrar» og drar laget fremover. Netto regnes ved å trekke fra slagene du får på hullet fra gross-scoren din. Lavest sum av bidragende netto-scorer etter alle 18 hull vinner.",
+				"example": "Hull 7, par 4: du scorer 5 (netto 4 etter ett slag på SI 8), makker scorer 4 (netto 4 uten ekstraslag). Begge er netto 4 — laget tar 4. Hull 12, par 5: du scorer 7 (netto 6), makker scorer 6 (netto 5). Makker bidrar, laget tar 5."
+			},
+			"texas_scramble": {
+				"shortDescription": "Lag à 4. Alle slår, beste velges.",
+				"summary": "Laget spiller én ball: alle slår, dere plukker det beste slaget, og alle slår derfra igjen.",
+				"points": [
+					"Slik fortsetter dere til ballen er i hull. Laget får én score per hull.",
+					"Laget får et felles handikap som trekkes fra.",
+					"Lavest lagtotal vinner."
+				],
+				"long": "Alle på laget slår fra tee, dere samler inn ballene og velger det beste utslaget. Alle legger ned sine baller på det stedet og slår sitt neste slag derfra. Slik fortsetter dere til ballen er i hullet. Laget teller én score per hull, og lag-handicapet (vanligvis 10–25 % av sum-CH) trekkes fra totalen.",
+				"example": "Hull 2, par 4: A slår 200 m rett frem, B slår 185 m i ruff, C slår 220 m på fairway — dere velger C sitt utslagsted. Alle legger ned til 220 m og slår. Beste andreslag ender 4 m fra hullet. Alle legger ned og putter, og den korteste putter inn på 2 putter. Lagets score: 4 (2 slag + 2 putter)."
+			},
+			"ambrose": {
+				"shortDescription": "Lag à 2 eller 4. Alle slår, beste ball velges. Lag-handicap jevner ut forskjellene mellom lagene.",
+				"summary": "En scramble der laget plukker det beste slaget hele veien, men med et lag-handikap som veier inn alle og jevner ut sterke og svake lag.",
+				"points": [
+					"Alle slår fra tee, dere velger det beste slaget, og alle spiller videre derfra.",
+					"Lag-handikapet bygger på alle på laget, så sterke og svake lag stiller likere.",
+					"Lavest lagtotal etter handikap vinner."
+				],
+				"long": "Ambrose er en scramble-variant med et lag-handicap som veier inn alle spillernes nivå. Alle slår fra tee, dere plukker beste utslag og alle slår derfra igjen. Slik fortsetter dere hull for hull. Lag-handicapet beregnes som sum-CH delt på to ganger lagstørrelsen (12,5 % for 4-mannslag), og det trekkes fra lagets brutto-total.",
+				"example": "Lag på 4: CH 8, 12, 16 og 20 → sum-CH 56. Lag-handicap = 56 ÷ (2 × 4) = 7. Hull 5, par 5: alle slår fra tee, beste utslag 240 m på fairway. Dere chipper til 2 m på neste slag (alle spiller derfra). En av spillerne putter inn. Lagets brutto hull-score: 3. Netto etter 18 hull: brutto-total − 7."
+			},
+			"florida_scramble": {
+				"shortDescription": "Lag à 3 eller 4. Alle slår, beste ball velges. Den som slo det valgte slaget, står over neste slag.",
+				"summary": "Som Texas scramble, men med én ekstra regel: den som slo det valgte slaget, står over neste slag. Lag à 3 eller 4.",
+				"points": [
+					"Den som slo det valgte slaget, står over neste slag. Resten av laget slår videre.",
+					"Slik bytter dere på, og alle er med gjennom hullet. Laget får én score per hull.",
+					"Laget får et felles handikap som trekkes fra. Lavest lagtotal vinner."
+				],
+				"long": "Florida Scramble er en Texas-scramble-variant med én viktig regel: den spilleren som slo det valgte slaget, hopper over neste slag. Resten av laget slår, og dere velger igjen det beste blant de gjenværende. Slik rullerer dere gjennom hullet, og alle bidrar. Laget spiller lag à 3 eller 4, og lag-handicapet (10–15 % av sum-CH) trekkes fra totalen.",
+				"example": "Hull 8, par 4, lag på 4 (A, B, C, D): A slår det beste utslaget. A hopper over neste slag — B, C og D slår fra det stedet. C slår best. C hopper over — A, B og D putter fra 3 m. B er best og går i hull. Lagets score: 1 (A sitt utslagslag) + 1 (C sitt andre) + 1 (B putter inn) = 3."
+			},
+			"singles_matchplay": {
+				"shortDescription": "1v1, vinn flest hull.",
+				"summary": "Én mot én, hull for hull. Den som bruker færrest slag på et hull vinner hullet.",
+				"points": [
+					"Det er hull som teller, ikke total score — vinn flere hull enn motstanderen.",
+					"Slagene du får på handikap er med når hullet avgjøres.",
+					"Den som leder med flere hull enn det er igjen å spille, har vunnet."
+				],
+				"long": "Du spiller én mot én, hull for hull. Den som bruker færrest netto-slag på et hull vinner hullet. Det er antall vunne hull som avgjør kampen — ikke total score. Handikap-slagene er med i beregningen, og den spilleren som leder med flere hull enn det er igjen å spille, har vunnet og kampen stoppes der.",
+				"example": "Hull 4, par 4: du scorer 4 (netto 4), motspiller scorer 5 (netto 4 med ett slag). Likt → hull deles. Hull 9, par 3: du scorer 3 (netto 3), motspiller scorer 4 (netto 4). Du vinner hullet og leder 1 up. Etter 16 hull: du leder 3 up med 2 hull igjen → 3&2, kampen er avgjort."
+			},
+			"fourball_matchplay": {
+				"shortDescription": "2 mot 2, hull for hull. Alle spiller egen ball, lagets beste score teller per hull.",
+				"summary": "To mot to, hull for hull. Hver spiller spiller sin egen ball, og lagets beste score teller på hvert hull.",
+				"points": [
+					"Laget med best netto-score vinner hullet.",
+					"Det er antall vunne hull som avgjør, ikke total score.",
+					"Laget som leder med flere hull enn det er igjen, har vunnet."
+				],
+				"long": "To lag på to mot hverandre, og alle fire spiller sin egen ball. På hvert hull er det lagets beste netto-score som teller. Det laget med lavest beste netto vinner hullet. Det er antall vunne hull som avgjør, ikke total score, og laget som leder med flere hull enn det er igjen, har vunnet.",
+				"example": "Hull 5, par 4: side 1 scorer A netto 4, B netto 5 → lagets beste er 4. Side 2 scorer C netto 3, D netto 6 → lagets beste er 3. Side 2 vinner hullet. Hull 10, par 3: begge lag har lagets beste netto 3 → hullet deles. Etter 14 hull leder side 1 med 5 up og 4 hull igjen → 5&4, matchen er avgjort."
+			},
+			"foursomes_matchplay": {
+				"shortDescription": "2v2 alternate shot. Én ball per lag, spillerne alternerer slag.",
+				"summary": "To mot to, men dere deler én ball og slår annenhver gang hele runden.",
+				"points": [
+					"Den ene slår ut på oddetallshull, den andre på partallshull, så bytter dere på.",
+					"Laget med best score vinner hullet — det er hull som teller, ikke total.",
+					"Laget som leder med flere hull enn det er igjen, har vunnet."
+				],
+				"long": "To lag à to, men begge lag deler én ball og slår annenhver gang hele runden. Den ene partneren slår på oddetallshull fra tee, den andre på partallshull. Derfra bytter dere systematisk. Lag-handicapet er basert på halvparten av differansen mellom lagenes sum-CH. Det laget med lavest score vinner hullet, og laget som leder med flere hull enn det er igjen, har vunnet.",
+				"example": "Lag A (spiller 1 og 2) vs. lag B (spiller 3 og 4). Hull 3 (oddetall): spiller 1 slår ut, spiller 2 slår andreslag, spiller 1 tredjeslaget og spiller 2 putter — lagets score 4. Lag B: spiller 3 slår ut, de bytter, spiller 3 putter inn på 3. Lag B vinner hullet. Hull 4 (partall): spiller 2 i lag A slår ut, og slik fortsetter dere annenhver gjennom runden."
+			},
+			"greensome_matchplay": {
+				"shortDescription": "Alternate shot. Begge slår ut, velg beste utslag, spill inn vekselvis.",
+				"summary": "To mot to — begge slår ut, dere velger det beste utslaget og spiller annenhver gang derfra.",
+				"points": [
+					"Begge i paret slår ut på hvert hull. Velg det beste utslaget, og spill alternate derfra.",
+					"Laget med lavest score vinner hullet — hull teller, ikke total.",
+					"Laget som leder med flere hull enn det er igjen, har vunnet."
+				],
+				"long": "To mot to, og begge slår fra tee på hvert hull. Paret velger det beste av de to utslagene, og derfra spiller dere annenhver gang inn til hullet. Partneren til den som eier den valgte ballen, slår andreslaget. Lag-handicap beregnes som 60 % av laveste CH pluss 40 % av høyeste. Det laget med lavest score vinner hullet.",
+				"example": "Hull 6, par 4: A slår 210 m til fairway, B slår 195 m i ruff. Dere velger A sitt utslag. B (partneren) slår neste, 160 m til green. A putter til 1 m, B putter inn. Lagets score: 4. Motstanderlaget velger sitt beste utslag, spiller seg inn og fullfører på 5. Dere vinner hullet."
+			},
+			"chapman_matchplay": {
+				"shortDescription": "Alternate shot. Begge slår ut, bytt ball, velg beste, spill inn vekselvis. Også kjent som Pinehurst.",
+				"summary": "To mot to. Begge slår ut, dere bytter ball, velger den beste og spiller annenhver derfra. Også kjent som Pinehurst.",
+				"points": [
+					"Begge slår ut. Så slår hver av dere partnerens ball som andreslag.",
+					"Velg den beste ballen etter andreslagene, og spill annenhver til hullet er i mål.",
+					"Laget med best score vinner hullet — det er hull som teller, ikke total."
+				],
+				"long": "To mot to, og Chapman — også kjent som Pinehurst — legger inn et ekstra element. Begge slår fra tee, men så bytter dere: du slår partnerens ball som andreslag, og partneren din slår din ball. Etter andreslagene velger dere hvilken ball dere vil gå videre med, og derfra spiller dere annenhver slag til hullet er i mål. Lag-handicap beregnes som greensome-formelen (60/40-blanding).",
+				"example": "Hull 11, par 4: A slår ut til 200 m, B til 215 m. A slår B sin ball som andreslag (185 m), B slår A sin ball (195 m). Dere har nå to baller: A sin på 195 m og B sin på 185 m. Dere velger A sin ball (195 m). B slår tredjeslaget, A putter — lagets score 5."
+			},
+			"gruesome_matchplay": {
+				"shortDescription": "Alternate shot. Begge slår ut, men motstanderlaget velger ballen dere må spille videre med (som regel den verste).",
+				"summary": "To mot to. Begge slår ut, men motstanderlaget velger hvilken av de to tee-ballene dere må spille videre med (som regel den verste). Resten av hullet slår dere vekselvis, som i foursomes.",
+				"points": [
+					"Begge på laget slår ut på hvert hull. Motstanderne peker på ballen dere må spille videre med.",
+					"Partneren til den som eier den valgte ballen slår neste slag, så spiller dere vekselvis derfra.",
+					"Laget med lavest score vinner hullet. I matchplay teller vunne hull, ikke sammenlagt score."
+				],
+				"long": "Gruesome er foursomes med en ekstra utfordring: motstanderlaget velger hvilken av de to tee-ballene dere må spille videre med. De velger typisk den verste. Etter at valget er gjort, slår partneren til den som eier den valgte ballen det neste slaget, og dere spiller annenhver derfra som vanlig foursomes. Lag-handicap beregnes som i foursomes (50 % av sum-CH-differansen).",
+				"example": "Hull 2, par 5: A slår til 230 m på fairway, B slår til 200 m i bunker. Motstanderlaget sier «B sin» (den i bunkeren). A (partneren til B) slår ut av bunkeren, B slår andreslag mot green, A putter. Lagets score: 5. Motstanderlaget, som er i ordinær foursomes-turnus selv, fullfører på 4 og vinner hullet."
+			},
+			"wolf": {
+				"shortDescription": "4 spillere, rotereende Wolf. Velg partner eller gå alene.",
+				"summary": "Tre til fem spillere bytter på å være «ulv». Ulven velger på hvert hull om den vil spille med en partner, eller alene mot de andre.",
+				"points": [
+					"Velger ulven å spille alene og vinner hullet, gir det mest poeng. Men det er også mest å tape.",
+					"Dere bytter på å være ulv gjennom runden.",
+					"Flest poeng til slutt vinner."
+				],
+				"long": "Fire spillere, og rollen som «ulv» roterer gjennom runden: hull 1 er spiller 1 ulv, hull 2 er spiller 2, og så videre. Ulven ser de tre andres utslag og velger underveis hvem som skal bli partner, eller går alene mot de tre andre. Går ulven alene og vinner, gir det dobbelt så mye.",
+				"example": "Hull 4: Petter er ulv. Etter at alle har slått ser han at Lars slo best. Petter peker på Lars som partner. Petter og Lars (2v2) slår best netto 4, motstanderne slår best netto 5. Wolf-side vinner → Petter og Lars får 2 poeng hver, de to andre betaler. Hull 7: Per går lone wolf. Per vinner hullet med netto 3 mot de andres 4 → Per tar 4 poeng, de tre andre betaler 1 hver."
+			},
+			"nassau": {
+				"shortDescription": "Tre konkurranser i én: front 9, back 9, total 18.",
+				"summary": "Én runde, tre oppgjør: de første 9 hullene, de siste 9, og alle 18 samlet.",
+				"points": [
+					"Hvert oppgjør avgjøres for seg. Du kan tape de første 9 og likevel ta de siste.",
+					"Du kan spille det brutto eller netto med handikap, alt etter hva som er valgt.",
+					"Vinner du alle tre, har du gjort rent bord."
+				],
+				"long": "Nassau deler runden i tre separate oppgjør: front nine (hull 1–9), back nine (hull 10–18) og hele 18 hull samlet. Hvert av de tre oppgjørene avgjøres uavhengig av hverandre, slik at du kan tape de første ni og likevel ta de siste ni og sammenlagt. Du kan spille brutto eller netto med handikap, alt etter hva som er avtalt.",
+				"example": "Etter hull 9: du er nede 2 hull på front nine og taper den delen. Hull 10–18: du spiller sterk tilbake og vinner 3 hull mer enn motstanderen, du vinner back nine. Totalscoren: du har 88 netto mot motstanderens 89 netto over 18 hull — du vinner helhetsdelen. Sluttresultat: 1–2 i nassau, du vant to av tre oppgjør."
+			},
+			"skins": {
+				"shortDescription": "Hull for hull: lavest vinner skinnet. Delt hull ruller potten videre.",
+				"summary": "Hvert hull er verdt ett «skin». Den som har lavest score på hullet helt alene, vinner skinnet.",
+				"points": [
+					"Deler to eller flere den laveste scoren, ruller skinnet videre. Neste hull er da verdt to.",
+					"Du kan spille det brutto eller netto med handikap, alt etter hva som er valgt.",
+					"Flest skins til slutt vinner."
+				],
+				"long": "Hvert hull er verdt ett skin. Den spilleren som har lavest score på hullet helt alene — ingen andre deler den scoren — vinner skinnet. Deler to eller flere spillere den laveste scoren, går skinnet ikke til noen, men ruller over til neste hull. Det neste hullet er da verdt to skins. Kjeden kan fortsette, og det kan samle seg store gevinster på et enkelt hull.",
+				"example": "Hull 1: A scorer 3, B scorer 4, C scorer 4, D scorer 5. A vinner alene → A tar skinnet (verdi 1). Hull 2: A scorer 4, B scorer 3, C scorer 3, D scorer 5. B og C deler lavest → ingen vinner, skinnet ruller over. Hull 3 er nå verdt 2 skins. Hull 3: A scorer 4, B scorer 5, C scorer 4, D scorer 3. D vinner alene → D tar 2 skins."
+			},
+			"bingo_bango_bongo": {
+				"shortDescription": "2–4 spillere. Tre poeng per hull: først på green, nærmest, først i hull.",
+				"summary": "Tre poeng er på spill på hvert hull — én for å nå green først, én for å ligge nærmest hullet når alle er på green, og én for å gå i hull først.",
+				"points": [
+					"Du trenger ikke de fleste slagene for å vinne — rekkefølge og presisjon teller.",
+					"Du spiller for deg selv, og alle tre poengene på et hull kan gå til én og samme spiller.",
+					"Flest poeng etter 18 hull vinner."
+				],
+				"long": "Tre poeng er i spill på hvert hull, og de tildeles i rekkefølge. «Bingo» går til den som treffer green først (uansett antall slag). «Bango» går til den som ligger nærmest hullet når alle er på green. «Bongo» går til den som går i hull først. Slagspill-rekkefølgen gjelder: den som ligger lengst fra hullet, slår alltid neste slag. Alle tre poengene kan gå til samme spiller.",
+				"example": "Hull 5, par 4: A chipper opp på green med andreslag (bingo). B og C er i ruff og D er i bunkeren — ingen av dem er på green ennå. Alle kommer på green til slutt. C ligger 60 cm fra hullet, B 1,5 m, D 2 m, A 3 m. C tar bango. Putte-rekkefølge: A putter først (lengst borte), så D og B. C putter sist og går i hull direkte — bongo til C."
+			},
+			"nines": {
+				"shortDescription": "3 spillere, poeng per hull: lavest tar mest. Velg Nines (5-3-1) eller Split Sixes (4-2-0).",
+				"summary": "Tre spillere kjemper om poeng på hvert hull. Lavest score tar mest, høyest tar minst.",
+				"points": [
+					"Nines deler ut ni poeng per hull: fem til lavest, tre til nest, ett til høyest.",
+					"Split Sixes deler ut seks: fire, to og null.",
+					"Likt på et hull? Da deler dere poengene for plassene dere står på.",
+					"Flest poeng sammenlagt vinner."
+				],
+				"long": "Tre spillere konkurrerer om poeng på hvert hull. Den med lavest effektiv score (netto i net-modus) tar størst del av potten: i Nines fordeles 9 poeng per hull med 5–3–1 til henholdsvis laveste, midtre og høyeste score. I Split Sixes fordeles 6 poeng (4–2–0). Deler to spillere en score, legges poengene for de to plassene sammen og deles likt.",
+				"example": "Hull 3, Nines-modus: A scorer netto 3, B netto 4, C netto 5. A tar 5, B tar 3, C tar 1. Hull 7: A netto 4, B netto 4, C netto 5. A og B deler lavest (plass 1 og 2 → 5+3 = 8 delt på to = 4 hver), C tar 1. Hull 12: alle tre scorer netto 4. 5+3+1 = 9 delt på tre = 3 poeng hver."
+			},
+			"round_robin": {
+				"shortDescription": "4 spillere, roterende partnere hvert 6. hull. Flest hullseire vinner.",
+				"summary": "Fire spillere bytter partner hvert sjette hull. Du spiller med og mot alle de tre andre i løpet av runden.",
+				"points": [
+					"Hvert hull spilles som besteball matchplay: lagets beste netto teller, og lavest beste netto vinner hullet.",
+					"Den som vinner hullet for laget sitt, får ett poeng. Delt hull gir ingenting til noen.",
+					"Flest vunne hull etter 18 vinner."
+				],
+				"long": "Fire spillere, og partnerne skifter hvert sjette hull. Slik spiller du med og mot alle de andre i løpet av runden. Hull 1–6 er segment 1, hull 7–12 segment 2, hull 13–18 segment 3 — konstellasjonene er fastlagte og deterministiske. Hvert hull spilles som best ball matchplay: lagets beste netto teller, og det laget med lavest beste netto vinner hullet og får ett poeng hver. Delt hull gir ingen poeng til noen.",
+				"example": "Segment 1 (hull 1–6): A og B mot C og D. Hull 3: A netto 4, B netto 5 → lag A best er 4. C netto 3, D netto 5 → lag C best er 3. C-siden vinner → C og D får 1 poeng hver. Hull 6 delt → ingen poeng. Segment 2 (hull 7–12): A og C mot B og D. A er nå på lag med C som var motspilleren hans i segment 1."
+			},
+			"acey_deucey": {
+				"shortDescription": "4 spillere. Lavest score tar +3, høyest gir −3, midten 0. Delt lavest/høyest gir ingen poeng.",
+				"summary": "Fire spillere. På hvert hull tar den med lavest score tre poeng, ett fra hver av de andre. Den med høyest gir tre poeng fra seg.",
+				"points": [
+					"Lavest score alene gir +3. Høyest score alene gir −3. De to i midten står i ro.",
+					"Deler to eller flere den laveste (eller høyeste) scoren, gir ikke den siden poeng det hullet.",
+					"Du kan spille det brutto eller netto med handikap, alt etter hva som er valgt. Totalen kan bli negativ."
+				],
+				"long": "Fire spillere, og på hvert hull er det to roller i spill: «acey» (lavest score alene) tar tre poeng fra alle de andre. «Deucey» (høyest score alene) gir tre poeng til de andre. De to i midten beveger seg ikke. Deler to eller flere den laveste scoren, gis ace-siden ingen poeng det hullet. Samme gjelder for deuce-siden. Totalen kan bli negativ.",
+				"example": "Hull 4: A netto 3, B netto 4, C netto 4, D netto 6. A er acey (+3) → A tar 3 fra de andre (B −1, C −1, D −1). D er deucey (−3) → D gir 3 til de andre (B +1, C +1, A +1). Nettoeffekt hull 4: A +4, B 0, C 0, D −4. Hull 8: A og B scorer netto 3, C netto 5, D netto 6. Ingen acey (delt lavest). D er deucey → D −3 til de andre."
+			},
+			"shamble": {
+				"shortDescription": "Lag à 3-4: felles beste utslag, så egen ball. De laveste scorene per hull teller. Champagne Scramble: velg antall (1/2/3).",
+				"summary": "Alle slår ut, laget velger det beste utslaget, og så spiller hver spiller sin egen ball inn. De laveste scorene på hullet teller for laget.",
+				"points": [
+					"Etter det felles utslaget fortsetter hver spiller med sin egen ball.",
+					"På hvert hull legges de laveste scorene sammen til lagets resultat — som regel de to beste av fire.",
+					"I Champagne Scramble velger arrangøren om én, to eller tre scorer skal telle.",
+					"Lavest sammenlagt for laget vinner."
+				],
+				"long": "Alle slår fra tee, og laget velger det beste utslaget. Derfra spiller alle sin egen ball inn til hullet. Det er ikke én lag-ball som i scramble — hver spiller scorer for seg. Lagets hull-score settes til summen av de to (eller arrangørvalgt antall) laveste individuelle scorene på hullet. I Champagne Scramble-varianten velger arrangøren om det er én, to eller tre scorer som skal telle.",
+				"example": "Hull 9, par 5, 4-mannslag (shamble-variant, 2 scorer teller): alle slår, C sitt utslagsted velges. A scorer 5, B 6, C 5, D 7 på hullet. To laveste: A og C, begge netto 4 etter handikap. Lag-hull-score = 4 + 4 = 8. Lag 2 på samme hull: to laveste netto er 5 + 4 = 9. Lag 1 vinner hullet i eventuell per-hull-sammenligning."
+			},
+			"patsome": {
+				"shortDescription": "Lag à 2, 18 hull i tre former: 4BBB, greensome, foursomes. Flest stableford-poeng vinner.",
+				"summary": "Dere er på lag à to og spiller 18 hull i tre lagformer, seks hull av hver.",
+				"points": [
+					"Hull 1–6 er 4BBB: begge spiller sin egen ball, og lagets beste stableford-poeng teller.",
+					"Hull 7–12 er greensome: begge slår ut, dere velger det beste utslaget, og så slår dere annenhvert slag.",
+					"Hull 13–18 er foursomes: dere deler én ball og slår annenhvert slag, også fra tee.",
+					"Lagets samlede poeng fra alle tre delene teller. Flest poeng vinner."
+				],
+				"long": "Patsome kombinerer tre spilleformer i én runde. Hull 1–6 spilles som 4BBB-stableford: begge spiller sin ball, lagets beste stableford-poeng per hull teller. Hull 7–12 er greensome: begge slår ut, dere velger beste utslag og spiller annenhver slag derfra. Hull 13–18 er foursomes: dere deler én ball og slår annenhver slag, også fra tee. Lagets totale stableford-poeng fra alle tre segmentene summeres, og flest poeng vinner.",
+				"example": "Hull 4 (4BBB): A tar 3 stableford-poeng (birdie), B tar 2 (par). Laget tar 3. Hull 8 (greensome): A slår best ut, B slår andreslaget, A tredjeslaget, B putter. Lagets score: 4 → 2 stableford-poeng (par). Hull 15 (foursomes): A slår ut, B slår andreslaget, A chipper, B putter inn. Score 4 → 2 poeng. Laget legger alle poengene fra 18 hull sammen."
+			}
+		}
 	},
 	"allowance": {
 		"nettoLabel": "Netto",

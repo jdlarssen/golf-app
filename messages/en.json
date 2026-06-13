@@ -1016,7 +1016,262 @@
 		"detailKicker": "GAME FORMAT",
 		"detailFallbackMeta": "Game format",
 		"detailHowItWorks": "How it works",
-		"detailExample": "An example"
+		"detailExample": "An example",
+		"content": {
+			"stableford": {
+				"shortDescription": "Solo, points vs par. The classic club format.",
+				"summary": "You play for yourself and collect points on every hole. The better you do against par, the more points you score.",
+				"points": [
+					"Par is worth 2 points, one over gives 1, one under gives 3, and so on.",
+					"The strokes you get from your handicap are applied before the points are counted.",
+					"Highest total at the end wins."
+				],
+				"long": "You collect Stableford points on each hole based on your score against par after your handicap strokes are deducted. Two points is the norm — one for finishing the hole one over par (bogey), three for a birdie. Score a double bogey or worse and you pick up, taking one point. Highest total after 18 holes wins.",
+				"example": "Hole 3, par 4, SI 5: you have CH 12 and get one extra stroke. You score 5 gross (net 4) → par → 2 points. Hole 15, par 3, SI 17: you score 3 gross (net 3) → par → 2 points. Hole 10, par 5, SI 3: you score 5 gross (net 4) → birdie → 3 points."
+			},
+			"stableford-4bbb": {
+				"summary": "You play as a pair. On each hole the better of your two point scores counts.",
+				"points": [
+					"Both of you play the whole round and collect Stableford points individually.",
+					"On each hole the team takes the higher of the two point scores.",
+					"Highest team total wins."
+				]
+			},
+			"modified_stableford": {
+				"shortDescription": "Solo or pairs, points vs par on a pro scale. Minus points for blow-ups.",
+				"summary": "Stableford on a pro scale: you are rewarded heavily for going for it, but punished for the really bad holes. Here your points can go negative.",
+				"points": [
+					"Birdie gives 2 points, eagle 5, albatross 8. Par gives 0.",
+					"Bogey costs 1 point, double bogey or worse costs 3. So you can end up below zero.",
+					"The strokes you get from your handicap are applied, and the highest total wins."
+				],
+				"long": "Stableford on a pro scale where you are rewarded heavily for the good holes and punished for the really weak ones. Eagle gives 5 points, birdie 2, par 0. Bogey costs 1 point, double bogey or worse costs 3. Your total can drop below zero. Handicap strokes are applied in the usual way, and the highest total after 18 holes wins.",
+				"example": "Hole 6, par 5, SI 1: you have CH 18 and get one extra stroke. You score 5 gross (net 4) → eagle → +5 points. Hole 11, par 4: you score 7 gross (net 6) → double bogey → −3 points. Net for these two holes: +5 + (−3) = +2 points."
+			},
+			"solo_strokeplay": {
+				"shortDescription": "Individual, lowest total wins.",
+				"summary": "Ordinary stroke play: you count every shot, and the fewest net strokes wins.",
+				"points": [
+					"Net is your total minus the strokes you get from your handicap.",
+					"You play for yourself, no teams.",
+					"Lowest total after 18 holes wins."
+				],
+				"long": "Classic stroke play: you count every shot across the whole round and subtract your handicap strokes at the end. No team-mates, no hole-by-hole duel — just you against the course and the card. Whoever finishes with the fewest net strokes after 18 holes wins.",
+				"example": "You play a round off CH 10. Gross score is 85. Net = 85 − 10 = 75. Your rival scores 83 gross off CH 7, net 76. You win with net 75 to 76. One bad hole does not finish you off, but everything counts in the end."
+			},
+			"best_ball": {
+				"shortDescription": "Pairs, best net per hole.",
+				"summary": "You play as a pair, and on each hole only the better net score of the two of you counts.",
+				"points": [
+					"Both of you play the whole round, but the team takes the lower of the two on each hole.",
+					"Net is your strokes minus the strokes you get on the hole.",
+					"Lowest team total wins."
+				],
+				"long": "You play as a pair, and both of you play each hole with your own ball. On each hole only the lower net score of the two counts — the partner with the better score \"contributes\" and carries the team forward. Net is your gross score minus the strokes you get on the hole. Lowest total of contributing net scores after all 18 holes wins.",
+				"example": "Hole 7, par 4: you score 5 (net 4 after one stroke on SI 8), your partner scores 4 (net 4 with no extra stroke). Both are net 4 — the team takes 4. Hole 12, par 5: you score 7 (net 6), your partner scores 6 (net 5). Your partner contributes, the team takes 5."
+			},
+			"texas_scramble": {
+				"shortDescription": "Teams of 4. Everyone tees off, the best is chosen.",
+				"summary": "The team plays one ball: everyone hits, you pick the best shot, and everyone plays again from there.",
+				"points": [
+					"You carry on like this until the ball is holed. The team records one score per hole.",
+					"The team gets a combined handicap that is deducted.",
+					"Lowest team total wins."
+				],
+				"long": "Everyone on the team tees off, you gather the balls and choose the best drive. Everyone places their ball at that spot and plays their next shot from there. You carry on like this until the ball is holed. The team counts one score per hole, and the team handicap (usually 10–25% of the combined CH) is deducted from the total.",
+				"example": "Hole 2, par 4: A hits 200 m straight, B hits 185 m into the rough, C hits 220 m down the fairway — you choose C's spot. Everyone drops at 220 m and plays. The best second shot finishes 4 m from the hole. Everyone drops and putts, and the closest holes it in 2 putts. Team score: 4 (2 shots + 2 putts)."
+			},
+			"ambrose": {
+				"shortDescription": "Teams of 2 or 4. Everyone tees off, the best ball is chosen. A team handicap evens out the differences between teams.",
+				"summary": "A scramble where the team picks the best shot all the way, but with a team handicap that weighs in everyone and evens out strong and weak teams.",
+				"points": [
+					"Everyone tees off, you choose the best shot, and everyone plays on from there.",
+					"The team handicap is built from everyone on the team, so strong and weak teams line up more evenly.",
+					"Lowest team total after handicap wins."
+				],
+				"long": "Ambrose is a scramble variant with a team handicap that factors in every player's level. Everyone tees off, you pick the best drive and everyone plays from there again. You carry on like this hole by hole. The team handicap is worked out as the combined CH divided by twice the team size (12.5% for a team of four), and it is deducted from the team's gross total.",
+				"example": "Team of 4: CH 8, 12, 16 and 20 → combined CH 56. Team handicap = 56 ÷ (2 × 4) = 7. Hole 5, par 5: everyone tees off, best drive 240 m on the fairway. You chip to 2 m on the next shot (everyone plays from there). One of the players holes the putt. Team gross hole score: 3. Net after 18 holes: gross total − 7."
+			},
+			"florida_scramble": {
+				"shortDescription": "Teams of 3 or 4. Everyone tees off, the best ball is chosen. Whoever hit the chosen shot sits out the next one.",
+				"summary": "Like Texas Scramble, but with one extra rule: whoever hit the chosen shot sits out the next one. Teams of 3 or 4.",
+				"points": [
+					"Whoever hit the chosen shot sits out the next one. The rest of the team plays on.",
+					"You take turns like this, and everyone is involved through the hole. The team records one score per hole.",
+					"The team gets a combined handicap that is deducted. Lowest team total wins."
+				],
+				"long": "Florida Scramble is a Texas Scramble variant with one key rule: the player who hit the chosen shot skips the next one. The rest of the team plays, and you again choose the best among those remaining. You rotate through the hole this way, and everyone contributes. The team plays in groups of 3 or 4, and the team handicap (10–15% of the combined CH) is deducted from the total.",
+				"example": "Hole 8, par 4, team of 4 (A, B, C, D): A hits the best drive. A skips the next shot — B, C and D play from that spot. C hits the best. C skips — A, B and D putt from 3 m. B is best and holes it. Team score: 1 (A's drive) + 1 (C's second) + 1 (B holing out) = 3."
+			},
+			"singles_matchplay": {
+				"shortDescription": "1v1, win the most holes.",
+				"summary": "One against one, hole by hole. Whoever takes the fewest strokes on a hole wins the hole.",
+				"points": [
+					"It is holes that count, not total score — win more holes than your opponent.",
+					"The strokes you get from your handicap are in play when the hole is decided.",
+					"Whoever leads by more holes than are left to play has won."
+				],
+				"long": "You play one against one, hole by hole. Whoever takes the fewest net strokes on a hole wins the hole. It is the number of holes won that decides the match — not total score. Handicap strokes are part of the maths, and the player who leads by more holes than there are left to play has won, and the match stops there.",
+				"example": "Hole 4, par 4: you score 4 (net 4), your opponent scores 5 (net 4 with one stroke). Level → hole halved. Hole 9, par 3: you score 3 (net 3), your opponent scores 4 (net 4). You win the hole and lead 1 up. After 16 holes: you lead 3 up with 2 holes left → 3&2, the match is decided."
+			},
+			"fourball_matchplay": {
+				"shortDescription": "2 against 2, hole by hole. Everyone plays their own ball, the team's best score counts per hole.",
+				"summary": "Two against two, hole by hole. Each player plays their own ball, and the team's best score counts on every hole.",
+				"points": [
+					"The team with the best net score wins the hole.",
+					"It is the number of holes won that decides it, not total score.",
+					"The team that leads by more holes than are left has won."
+				],
+				"long": "Two teams of two against each other, and all four play their own ball. On each hole it is the team's best net score that counts. The team with the lowest best net wins the hole. It is the number of holes won that decides it, not total score, and the team that leads by more holes than are left has won.",
+				"example": "Hole 5, par 4: side 1 scores A net 4, B net 5 → the team's best is 4. Side 2 scores C net 3, D net 6 → the team's best is 3. Side 2 wins the hole. Hole 10, par 3: both teams have a best net of 3 → the hole is halved. After 14 holes side 1 leads 5 up with 4 holes left → 5&4, the match is decided."
+			},
+			"foursomes_matchplay": {
+				"shortDescription": "2v2 alternate shot. One ball per team, the players alternate strokes.",
+				"summary": "Two against two, but you share one ball and alternate shots all the way round.",
+				"points": [
+					"One of you tees off on odd holes, the other on even holes, then you take turns.",
+					"The team with the best score wins the hole — it is holes that count, not total.",
+					"The team that leads by more holes than are left has won."
+				],
+				"long": "Two teams of two, but each team shares one ball and alternates shots all the way round. One partner tees off on odd holes, the other on even holes. From there you take turns systematically. The team handicap is based on half the difference between the teams' combined CH. The team with the lowest score wins the hole, and the team that leads by more holes than are left has won.",
+				"example": "Team A (players 1 and 2) vs. team B (players 3 and 4). Hole 3 (odd): player 1 tees off, player 2 plays the second, player 1 the third and player 2 putts — team score 4. Team B: player 3 tees off, they take turns, player 3 holes out for 3. Team B wins the hole. Hole 4 (even): player 2 on team A tees off, and you carry on alternating through the round."
+			},
+			"greensome_matchplay": {
+				"shortDescription": "Alternate shot. Both tee off, choose the best drive, play in alternately.",
+				"summary": "Two against two — both tee off, you choose the best drive and alternate shots from there.",
+				"points": [
+					"Both in the pair tee off on each hole. Choose the best drive, and play alternate from there.",
+					"The team with the lowest score wins the hole — holes count, not total.",
+					"The team that leads by more holes than are left has won."
+				],
+				"long": "Two against two, and both tee off on each hole. The pair chooses the better of the two drives, and from there you alternate shots in to the hole. The partner of whoever owns the chosen ball plays the second shot. The team handicap is worked out as 60% of the lower CH plus 40% of the higher. The team with the lowest score wins the hole.",
+				"example": "Hole 6, par 4: A hits 210 m to the fairway, B hits 195 m into the rough. You choose A's drive. B (the partner) plays next, 160 m to the green. A putts to 1 m, B holes it. Team score: 4. The opposing team chooses their best drive, plays in and finishes on 5. You win the hole."
+			},
+			"chapman_matchplay": {
+				"shortDescription": "Alternate shot. Both tee off, swap balls, choose the best, play in alternately. Also known as Pinehurst.",
+				"summary": "Two against two. Both tee off, you swap balls, choose the best and alternate from there. Also known as Pinehurst.",
+				"points": [
+					"Both tee off. Then each of you plays your partner's ball as the second shot.",
+					"Choose the best ball after the second shots, and alternate until the hole is done.",
+					"The team with the best score wins the hole — it is holes that count, not total."
+				],
+				"long": "Two against two, and Chapman — also known as Pinehurst — adds an extra element. Both tee off, but then you swap: you play your partner's ball as the second shot, and your partner plays yours. After the second shots you choose which ball to carry on with, and from there you alternate shots until the hole is done. The team handicap is worked out with the greensome formula (a 60/40 blend).",
+				"example": "Hole 11, par 4: A tees off to 200 m, B to 215 m. A plays B's ball as the second shot (185 m), B plays A's ball (195 m). You now have two balls: A's at 195 m and B's at 185 m. You choose A's ball (195 m). B plays the third shot, A putts — team score 5."
+			},
+			"gruesome_matchplay": {
+				"shortDescription": "Alternate shot. Both tee off, but the opposing team picks the ball you must play on with (usually the worst one).",
+				"summary": "Two against two. Both tee off, but the opposing team chooses which of the two tee balls you must play on with (usually the worst one). The rest of the hole you alternate, as in foursomes.",
+				"points": [
+					"Both players on the team tee off on each hole. The opponents point to the ball you must play on with.",
+					"The partner of whoever owns the chosen ball plays the next shot, then you alternate from there.",
+					"The team with the lowest score wins the hole. In match play, holes won count, not total score."
+				],
+				"long": "Gruesome is foursomes with an extra challenge: the opposing team chooses which of the two tee balls you must play on with. They typically pick the worst one. Once the choice is made, the partner of whoever owns the chosen ball plays the next shot, and you alternate from there as in ordinary foursomes. The team handicap is worked out as in foursomes (50% of the combined-CH difference).",
+				"example": "Hole 2, par 5: A hits to 230 m on the fairway, B hits to 200 m in a bunker. The opposing team says \"B's\" (the one in the bunker). A (B's partner) plays out of the bunker, B plays the second towards the green, A putts. Team score: 5. The opposing team, on their own ordinary foursomes rotation, finishes on 4 and wins the hole."
+			},
+			"wolf": {
+				"shortDescription": "4 players, the Wolf rotates. Pick a partner or go it alone.",
+				"summary": "Three to five players take turns being the \"wolf\". On each hole the wolf decides whether to play with a partner or go alone against the others.",
+				"points": [
+					"If the wolf chooses to go alone and wins the hole, that scores the most. But there is also the most to lose.",
+					"You take turns being the wolf through the round.",
+					"Most points at the end wins."
+				],
+				"long": "Four players, and the role of \"wolf\" rotates through the round: on hole 1 player 1 is the wolf, on hole 2 player 2, and so on. The wolf watches the other three tee off and chooses along the way who to take as a partner, or goes alone against the other three. If the wolf goes alone and wins, it scores double.",
+				"example": "Hole 4: Petter is the wolf. After everyone has hit, he sees that Lars drove best. Petter points to Lars as his partner. Petter and Lars (2v2) post the best net of 4, the opponents post a best net of 5. The wolf side wins → Petter and Lars get 2 points each, the other two pay. Hole 7: Per goes lone wolf. Per wins the hole with net 3 against the others' 4 → Per takes 4 points, the other three pay 1 each."
+			},
+			"nassau": {
+				"shortDescription": "Three contests in one: front 9, back 9, total 18.",
+				"summary": "One round, three contests: the first 9 holes, the last 9, and all 18 combined.",
+				"points": [
+					"Each contest is settled on its own. You can lose the first 9 and still take the last.",
+					"You can play it gross or net with handicap, depending on what is chosen.",
+					"Win all three and you have swept the board."
+				],
+				"long": "Nassau splits the round into three separate contests: the front nine (holes 1–9), the back nine (holes 10–18) and all 18 holes combined. Each of the three is decided independently of the others, so you can lose the first nine and still take the last nine and the overall. You can play gross or net with handicap, depending on what is agreed.",
+				"example": "After hole 9: you are 2 holes down on the front nine and lose that one. Holes 10–18: you play strongly back and win 3 more holes than your opponent, taking the back nine. The total score: you have 88 net against your opponent's 89 net over 18 holes — you win the overall. Final result: 1–2 in the Nassau, you won two of the three contests."
+			},
+			"skins": {
+				"shortDescription": "Hole by hole: the lowest wins the skin. A halved hole rolls the pot on.",
+				"summary": "Each hole is worth one \"skin\". Whoever has the lowest score on the hole outright wins the skin.",
+				"points": [
+					"If two or more share the lowest score, the skin rolls on. The next hole is then worth two.",
+					"You can play it gross or net with handicap, depending on what is chosen.",
+					"Most skins at the end wins."
+				],
+				"long": "Each hole is worth one skin. The player with the lowest score on the hole outright — no one else sharing that score — wins the skin. If two or more players share the lowest score, the skin goes to no one but rolls over to the next hole. The next hole is then worth two skins. The chain can continue, and big winnings can build up on a single hole.",
+				"example": "Hole 1: A scores 3, B scores 4, C scores 4, D scores 5. A wins outright → A takes the skin (worth 1). Hole 2: A scores 4, B scores 3, C scores 3, D scores 5. B and C share the lowest → no one wins, the skin rolls over. Hole 3 is now worth 2 skins. Hole 3: A scores 4, B scores 5, C scores 4, D scores 3. D wins outright → D takes 2 skins."
+			},
+			"bingo_bango_bongo": {
+				"shortDescription": "2–4 players. Three points per hole: first on the green, closest, first in the hole.",
+				"summary": "Three points are up for grabs on each hole — one for reaching the green first, one for being closest to the hole once everyone is on the green, and one for holing out first.",
+				"points": [
+					"You do not need the most shots to win — order and precision are what count.",
+					"You play for yourself, and all three points on a hole can go to one and the same player.",
+					"Most points after 18 holes wins."
+				],
+				"long": "Three points are in play on each hole, and they are awarded in order. \"Bingo\" goes to whoever reaches the green first (regardless of the number of shots). \"Bango\" goes to whoever is closest to the hole once everyone is on the green. \"Bongo\" goes to whoever holes out first. Stroke-play order applies: whoever is farthest from the hole always plays the next shot. All three points can go to the same player.",
+				"example": "Hole 5, par 4: A chips onto the green with the second shot (bingo). B and C are in the rough and D is in the bunker — none of them are on the green yet. Everyone reaches the green eventually. C is 60 cm from the hole, B 1.5 m, D 2 m, A 3 m. C takes bango. Putting order: A putts first (farthest away), then D and B. C putts last and holes it straight away — bongo to C."
+			},
+			"nines": {
+				"shortDescription": "3 players, points per hole: the lowest takes the most. Choose Nines (5-3-1) or Split Sixes (4-2-0).",
+				"summary": "Three players compete for points on each hole. The lowest score takes the most, the highest takes the least.",
+				"points": [
+					"Nines hands out nine points per hole: five to the lowest, three to the middle, one to the highest.",
+					"Split Sixes hands out six: four, two and zero.",
+					"Level on a hole? Then you split the points for the places you are on.",
+					"Most points overall wins."
+				],
+				"long": "Three players compete for points on each hole. Whoever has the lowest effective score (net in net mode) takes the biggest share of the pot: in Nines, 9 points per hole are split 5–3–1 to the lowest, middle and highest score respectively. In Split Sixes, 6 points are split (4–2–0). If two players share a score, the points for the two places are added together and divided equally.",
+				"example": "Hole 3, Nines mode: A scores net 3, B net 4, C net 5. A takes 5, B takes 3, C takes 1. Hole 7: A net 4, B net 4, C net 5. A and B share the lowest (places 1 and 2 → 5+3 = 8 split in two = 4 each), C takes 1. Hole 12: all three score net 4. 5+3+1 = 9 split in three = 3 points each."
+			},
+			"round_robin": {
+				"shortDescription": "4 players, partners rotate every 6th hole. Most holes won wins.",
+				"summary": "Four players swap partners every sixth hole. You play with and against all three others over the round.",
+				"points": [
+					"Each hole is played as best-ball match play: the team's best net counts, and the lowest best net wins the hole.",
+					"Whoever wins the hole for their team gets one point. A halved hole gives nothing to anyone.",
+					"Most holes won after 18 wins."
+				],
+				"long": "Four players, and the partners change every sixth hole. That way you play with and against everyone else over the round. Holes 1–6 are segment 1, holes 7–12 segment 2, holes 13–18 segment 3 — the line-ups are fixed and deterministic. Each hole is played as best-ball match play: the team's best net counts, and the team with the lowest best net wins the hole and gets one point each. A halved hole gives no points to anyone.",
+				"example": "Segment 1 (holes 1–6): A and B against C and D. Hole 3: A net 4, B net 5 → team A's best is 4. C net 3, D net 5 → team C's best is 3. The C side wins → C and D get 1 point each. Hole 6 halved → no points. Segment 2 (holes 7–12): A and C against B and D. A is now partnered with C, who was their opponent in segment 1."
+			},
+			"acey_deucey": {
+				"shortDescription": "4 players. The lowest score takes +3, the highest gives −3, the middle 0. A shared lowest/highest scores nothing.",
+				"summary": "Four players. On each hole the lowest score takes three points, one from each of the others. The highest gives three points away.",
+				"points": [
+					"The lowest score outright gives +3. The highest score outright gives −3. The two in the middle stay put.",
+					"If two or more share the lowest (or highest) score, that side scores nothing on the hole.",
+					"You can play it gross or net with handicap, depending on what is chosen. The total can go negative."
+				],
+				"long": "Four players, and on each hole there are two roles in play: the \"acey\" (lowest score outright) takes three points from all the others. The \"deucey\" (highest score outright) gives three points to the others. The two in the middle do not move. If two or more share the lowest score, the ace side scores nothing on the hole. The same goes for the deuce side. The total can go negative.",
+				"example": "Hole 4: A net 3, B net 4, C net 4, D net 6. A is the acey (+3) → A takes 3 from the others (B −1, C −1, D −1). D is the deucey (−3) → D gives 3 to the others (B +1, C +1, A +1). Net effect on hole 4: A +4, B 0, C 0, D −4. Hole 8: A and B score net 3, C net 5, D net 6. No acey (shared lowest). D is the deucey → D −3 to the others."
+			},
+			"shamble": {
+				"shortDescription": "Teams of 3-4: shared best drive, then your own ball. The lowest scores per hole count. Champagne Scramble: choose how many (1/2/3).",
+				"summary": "Everyone tees off, the team chooses the best drive, and then each player plays their own ball in. The lowest scores on the hole count for the team.",
+				"points": [
+					"After the shared drive, each player continues with their own ball.",
+					"On each hole the lowest scores are added together for the team result — usually the best two of four.",
+					"In Champagne Scramble the organiser chooses whether one, two or three scores count.",
+					"Lowest combined for the team wins."
+				],
+				"long": "Everyone tees off, and the team chooses the best drive. From there everyone plays their own ball in to the hole. There is no single team ball as in a scramble — each player scores for themselves. The team's hole score is set to the sum of the two (or the organiser-chosen number of) lowest individual scores on the hole. In the Champagne Scramble variant the organiser chooses whether one, two or three scores count.",
+				"example": "Hole 9, par 5, team of 4 (shamble variant, 2 scores count): everyone tees off, C's spot is chosen. A scores 5, B 6, C 5, D 7 on the hole. The two lowest: A and C, both net 4 after handicap. Team hole score = 4 + 4 = 8. Team 2 on the same hole: the two lowest net are 5 + 4 = 9. Team 1 wins the hole in any per-hole comparison."
+			},
+			"patsome": {
+				"shortDescription": "Pairs, 18 holes in three formats: 4BBB, greensome, foursomes. Most Stableford points wins.",
+				"summary": "You play as a pair over 18 holes in three team formats, six holes of each.",
+				"points": [
+					"Holes 1–6 are 4BBB: both play their own ball, and the team's best Stableford points count.",
+					"Holes 7–12 are greensome: both tee off, you choose the best drive, and then you alternate shots.",
+					"Holes 13–18 are foursomes: you share one ball and alternate shots, including from the tee.",
+					"The team's combined points from all three parts count. Most points wins."
+				],
+				"long": "Patsome combines three formats in one round. Holes 1–6 are played as 4BBB Stableford: both play their ball, the team's best Stableford points per hole count. Holes 7–12 are greensome: both tee off, you choose the best drive and alternate shots from there. Holes 13–18 are foursomes: you share one ball and alternate shots, including from the tee. The team's total Stableford points from all three segments are summed, and most points wins.",
+				"example": "Hole 4 (4BBB): A takes 3 Stableford points (birdie), B takes 2 (par). The team takes 3. Hole 8 (greensome): A hits the best drive, B plays the second, A the third, B putts. Team score: 4 → 2 Stableford points (par). Hole 15 (foursomes): A tees off, B plays the second, A chips, B holes it. Score 4 → 2 points. The team adds up all the points from the 18 holes."
+			}
+		}
 	},
 	"allowance": {
 		"nettoLabel": "Net",
