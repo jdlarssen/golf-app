@@ -117,9 +117,10 @@ export function isAlternateShotMatchplay(mode: GameMode): boolean {
  * reveal-props. Single source of truth for «er dette et matchplay-format» på
  * `game_mode`-baserte routing-/display-sjekker.
  *
- * Brukes til (a) å skjule sideturnering-bryteren i veiviseren for matchplay
- * (duell-kortet har ingen tabs-flate å henge en LD/CTP-fane på — #576 utsatte
- * dette til egen sak) og (b) symmetrisk skip i leaderboard-grenen.
+ * Brukes til å skjule sideturnering-bryteren i veiviseren for matchplay —
+ * duell-kortet har ingen tabs-flate å henge en LD/CTP-fane på (#576 utsatte
+ * dette til egen sak). Leaderboardet trenger ingen eksplisitt skip: matchplay-
+ * grenene returnerer sin egen duell-visning før side-grenen nås.
  */
 export function isMatchplayFamily(mode: GameMode): boolean {
   return (

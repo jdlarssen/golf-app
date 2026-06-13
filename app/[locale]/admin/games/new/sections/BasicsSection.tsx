@@ -67,6 +67,7 @@ export function BasicsSection({
     lockScoreVisibility,
     sideEnabled,
     setSideEnabled,
+    sideTournamentSupported,
     lockSideTournament,
     initialDisabledCategories,
     initialLdCount,
@@ -222,7 +223,9 @@ export function BasicsSection({
             </p>
           </fieldset>
 
-          {/* Section 1c: Side tournament */}
+          {/* Section 1c: Side tournament — skjult for matchplay-familien (#576):
+              duell-kortet har ingen tabs-flate for en LD/CTP-fane (egen sak). */}
+          {sideTournamentSupported && (
           <fieldset>
             <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
               {t('sideTournamentLegend')}
@@ -311,6 +314,7 @@ export function BasicsSection({
               )}
             </div>
           </fieldset>
+          )}
         </>
       )}
     </section>

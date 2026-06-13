@@ -6,7 +6,7 @@ import {
   CLASSIC_DISABLED_CATEGORIES,
   type SideCategoryId,
 } from '@/lib/scoring/sideTournamentConfig';
-import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
+import { isStablefordFamily, isMatchplayFamily, type GameMode } from '@/lib/scoring/modes/types';
 import { ambroseDefaultPct, defaultFloridaHandicapPct } from '@/lib/scoring';
 import type { TeamSize } from './TeamSizeSelector';
 import type { CourseOption, InitialValues, PlayerOption } from './GameForm';
@@ -502,6 +502,12 @@ export function useGameFormState({
   //   et tomt spill når andre kan melde seg på).
   const registrationModeSupportsTeams = gameModeSupportsTeams(gameMode);
   const playersStepOptional = registrationMode !== 'invite_only';
+  // #576: sideturnering støttes ikke for matchplay-familien — duell-kortet har
+  // ingen tabs-flate å henge LD/CTP-fanen på (egen sak vurderer det). Seksjonene
+  // skjuler bryteren basert på dette flagget, og det effektive `sideEnabled`
+  // (se return) tvinges false for matchplay så et stale påslag aldri følger med
+  // i payloaden ved format-bytte.
+  const sideTournamentSupported = !isMatchplayFamily(gameMode);
 
   // Bane-bytte: nullstill tee-boks (tee-id er bane-spesifikk) og re-derive
   // M/D/J-defaultene fra profilen. `playerGenders` er ikke tee-spesifikt —
@@ -1515,8 +1521,12 @@ export function useGameFormState({
     setPatsomeScoring,
     requirePeerApproval,
     setRequirePeerApproval,
-    sideEnabled,
+    // #576: effektiv verdi — tvinges false for matchplay-familien så et stale
+    // påslag fra et tidligere format-valg aldri følger med i payloaden. Rå-staten
+    // bevares (bytter brukeren tilbake til et poeng-format dukker valget opp igjen).
+    sideEnabled: sideEnabled && sideTournamentSupported,
     setSideEnabled,
+    sideTournamentSupported,
     gameMode,
     teamSize,
     formatChosen,

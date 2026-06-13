@@ -41,6 +41,17 @@ Issue [#576](https://github.com/jdlarssen/golf-app/issues/576). Veiviseren tilb�
 
 </details>
 
+### [1.122.1] - 2026-06-13 · #576
+
+> Veiviseren tilbyr ikke lenger sideturnering for matchplay-formatene (singler, fourball, foursomes og de andre vekselslag-spillene). Der vises resultatet som et duell-kort, ikke et leaderboard, så lengste drive / nærmest pinnen hørte ikke hjemme der. Den kommer eventuelt i en egen runde.
+
+<details>
+<summary>Teknisk</summary>
+
+[#576](https://github.com/jdlarssen/golf-app/issues/576). Bryteren ble tidligere tilbudt for alle formater, så en spiller kunne slå den på for et matchplay-spill, få vinnere kåret ved avslutning, men aldri se dem. Nå holdes matchplay-familien utenfor: `useGameFormState` deriverer `sideTournamentSupported = !isMatchplayFamily(gameMode)`, begge wizard-seksjonene (`AdvancedSettingsSection` + `BasicsSection`) skjuler fieldset-et når den er false, og det effektive `sideEnabled` tvinges false for matchplay så et stale påslag aldri følger med i payloaden ved format-bytte (rå-staten bevares ved retur til et poeng-format).
+
+</details>
+
 <details>
 <summary><strong>1.121.y — i18n · engelsk hjem, spillformater, personvern og påmelding (2 oppføringer)</strong></summary>
 

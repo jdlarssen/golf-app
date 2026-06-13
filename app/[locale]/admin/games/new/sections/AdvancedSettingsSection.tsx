@@ -45,6 +45,7 @@ export function AdvancedSettingsSection({
     lockScoreVisibility,
     sideEnabled,
     setSideEnabled,
+    sideTournamentSupported,
     lockSideTournament,
     initialDisabledCategories,
     initialLdCount,
@@ -131,6 +132,9 @@ export function AdvancedSettingsSection({
             </p>
           </fieldset>
 
+          {/* Sideturnering — skjult for matchplay-familien (#576): duell-kortet
+              har ingen tabs-flate for en LD/CTP-fane (egen sak vurderer det). */}
+          {sideTournamentSupported && (
           <fieldset>
             <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
               {tBasics('sideTournamentLegend')}
@@ -216,6 +220,7 @@ export function AdvancedSettingsSection({
               )}
             </div>
           </fieldset>
+          )}
         </>
       )}
     </section>
