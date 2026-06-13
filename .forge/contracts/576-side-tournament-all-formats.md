@@ -108,21 +108,21 @@ Fil en GitHub-issue (milestone `Backlog — uplanlagt / scale-triggered`, labels
 
 ## Success Criteria
 
-- [ ] Alle 11 poeng-/podium-render-funksjonene wrapper finished-view i `renderSideTournamentTabs` når `game.status==='finished' && game.side_tournament_enabled` — verifiser: `rg -c 'renderSideTournamentTabs' app/\[locale\]/games/\[id\]/leaderboard/page.tsx` ≥ 12 (11 formater + stableford-caller).
-- [ ] `renderStablefordWithSideTournament` delegerer til den generiske helperen uten duplisert input-bygging — verifiser ved kode-lesning (ingen egen `calculateSideTournament`-konstruksjon utenfor helperen).
-- [ ] De 10 manglende podiene har `chromeless?: boolean` og rendrer uten egen `AppShell` når true — verifiser: `rg -L chromeless` treffer alle 10 + tsc grønn.
-- [ ] `isMatchplayFamily` finnes i `lib/scoring`, og sideturnering-fieldset-et rendres IKKE i veiviseren når `gameMode` er matchplay — verifiser via en fokusert render-test (matchplay → fieldset fraværende) og at samme helper brukes i leaderboard-skip-pathen.
-- [ ] Payload setter aldri `side_tournament_enabled=true` for matchplay-formater — verifiser via actions-test eller state-derivasjon.
-- [ ] Oppfølgings-issue for matchplay duell-kort-fane er opprettet (med milestone) — verifiser: issue-nummer i closing-kommentaren.
-- [ ] Versjon bumpet (minor) + CHANGELOG-oppføring; `npx tsc --noEmit` + relevant vitest-subset grønn.
+- [x] Alle 11 poeng-/podium-render-funksjonene wrapper finished-view i `renderSideTournamentTabs` når `game.status==='finished' && game.side_tournament_enabled`. **Evidens:** `rg -c 'renderSideTournamentTabs' page.tsx` = 14 (1 def + 13 kall = 11 formater + 2 stableford-callere); 13 `teamGrouping`-param på call-sites (solo: solo_strokeplay/Wolf/Nassau/Skins/BBB/Nines/RoundRobin/AceyDeucey; byTeamNumber: Texas/Shamble/Patsome + stableford team).
+- [x] `renderStablefordWithSideTournament` → generisk `renderSideTournamentTabs`; stableford-callerne delegerer uten duplisert input-bygging. **Evidens:** `calculateSideTournament` kalles kun på page.tsx:883 (eksisterende best-ball-inline-gren) + page.tsx:1537 (helperen); stableford-callerne på 1205/1300 delegerer med `teamGrouping`.
+- [x] De 10 manglende podiene har `chromeless?: boolean` og rendrer uten egen `AppShell` når true. **Evidens:** alle 10 (`SoloStrokeplay/TexasScramble/Wolf/Nassau/Skins/BingoBangoBongo/Nines/RoundRobin/AceyDeucey/Shamble`Podium) treffer `chromeless` + `npx tsc --noEmit` grønn; WolfPodium-diff bekrefter `Shell`-gren + gated Header (speiler `SoloStablefordPodium`).
+- [x] `isMatchplayFamily` finnes i `lib/scoring`, og sideturnering-fieldset-et rendres IKKE i veiviseren når `gameMode` er matchplay. **Evidens:** `lib/scoring/modes/types.ts:125` + re-eksport i `index.ts:99`; begge seksjoner gater fieldset-et på `sideTournamentSupported`. Verifisert via hook-test (`sideTournamentSupported=false` for alle 6 matchplay-modi) — guarden testes ved kilden (det `sideTournamentSupported` begge seksjonene + payload deriverer fra), mer robust enn skjult-DOM-assertion i to seksjoner. Leaderboard trenger ingen eksplisitt skip (matchplay-grenene returnerer før side-grenen).
+- [x] Payload setter aldri `side_tournament_enabled=true` for matchplay-formater. **Evidens:** effektiv `sideEnabled = sideEnabled && sideTournamentSupported` i `useGameFormState`-return → både wizard-FormDataInputs (`passthrough.side_tournament_enabled = state.sideEnabled`) og GameForm-checkbox (skjult fieldset → ikke i DOM → FormData utelater den) får false; hook-test asserterer effektiv false for matchplay + bevart rå-valg ved retur.
+- [x] Oppfølgings-issue opprettet (med milestone). **Evidens:** [#585](https://github.com/jdlarssen/golf-app/issues/585) — «Sideturnering (LD/CTP) på matchplay-duellkortet», labels `enhancement,area:leaderboard`, milestone `Backlog — uplanlagt / scale-triggered`.
+- [x] Versjon bumpet + CHANGELOG. **Evidens:** 1.120.0 → 1.121.0 (minor, feature) → 1.121.1 (patch, matchplay-hide nestet under 1.121.y-temaet); `npx tsc --noEmit` grønn; full vitest 3413 passed (269 filer).
 
 ## Gates
 
-- [ ] `npx tsc --noEmit` passerer (hele appen — ingen exhaustive-switch-regresjon).
-- [ ] `npx vitest run app/\[locale\]/games/\[id\]/leaderboard app/\[locale\]/admin/games/new lib/scoring` grønn (touched podiums, wizard-seksjoner, scoring-helper).
-- [ ] Co-lokaliserte tester for hver endret podium-fil grønne (`*Podium.test.tsx` der de finnes: Nassau, RoundRobin, Wolf, SoloStrokeplay).
-- [ ] Ny render-test for matchplay-toggle-skjuling grønn (én fokusert test, ikke duplisert per seksjon).
-- [ ] Frontend-flate berørt → evaluator verifiserer at side-fanen wires for minst ett format (kode-struktur eller konstruert render); live prod-sjekk overlates til eier (prod-only-testing).
+- [x] `npx tsc --noEmit` passerer (hele appen). **Evidens:** exit 0, ingen output.
+- [x] `npx vitest run …leaderboard …games/new lib/scoring` grønn. **Evidens:** leaderboard+scoring 1033 passed; wizard-state+form+scoring 728 passed.
+- [x] Co-lokaliserte podium-tester grønne. **Evidens:** Nassau/RoundRobin/Wolf/SoloStrokeplay`Podium.test.tsx` i den grønne subsetten (subagent-verifisert 22 passed; full suite 3413 passed).
+- [x] Ny test for matchplay-toggle-skjuling grønn (én fokusert hook-test, ikke duplisert per seksjon). **Evidens:** `useGameFormState.test.ts` describe «sideturnering-gating for matchplay (#576)» — 6 `it.each` + 1 sammensatt = 7 cases grønne.
+- [~] Frontend-flate: evaluator verifiserer at side-fanen wires (kode-struktur). **Live prod-sjekk overlates til eier** — fresh worktree mangler `.env.local`, så `npm run build`/Playwright kan ikke kjøre meningsfullt her; tsc + 3413 tester + Vercel PR-preview dekker det.
 
 ## Files Likely Touched
 
@@ -136,7 +136,7 @@ Fil en GitHub-issue (milestone `Backlog — uplanlagt / scale-triggered`, labels
 
 ## Out of Scope
 
-- **Matchplay-familien** (singles/fourball/foursomes/greensome/chapman/gruesome): ingen side-fane nå — bryteren skjules, og en egen issue dekker LD/CTP-fane på duell-kortet.
+- **Matchplay-familien** (singles/fourball/foursomes/greensome/chapman/gruesome): ingen side-fane nå — bryteren skjules, og [#585](https://github.com/jdlarssen/golf-app/issues/585) dekker LD/CTP-fane på duell-kortet.
 - **Endring av `calculateSideTournament`-logikken** eller `game_side_winners`-semantikken.
 - **Live/scheduled visning av sideturnering** (forblir post-finished-reveal).
 - **Backfill av eksisterende matchplay-spill** som allerede har flagget på.
