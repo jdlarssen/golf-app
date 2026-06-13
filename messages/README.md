@@ -10,8 +10,8 @@ key).
 Top-level key = feature area, matching the app's main surfaces:
 
 `auth`, `wizard`, `leaderboard`, `holes`, `admin`, `klubb`, `liga`, `cup`,
-`klubbhuset`, `profile`, `friends`, `inbox`, `discover`, `nav`, `signup`,
-`formats`, `legal`, `common`
+`klubbhuset`, `profile`, `friends`, `inbox`, `discover`, `nav`, `home`,
+`signup`, `formatGuide`, `legal`, `common`
 
 - `common` is for genuinely shared strings (app name, generic buttons like
   "Avbryt"/"Lagre", error toasts). Don't dump area-specific strings there.
