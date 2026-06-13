@@ -3691,5 +3691,33 @@
 		"discoverCard": "Se åpne turneringer du kan bli med i",
 		"teeOffSeparator": "kl.",
 		"teamFlight": "Lag {teamNumber} · Flight {flightNumber}"
+	},
+	"legal": {
+		"privacy": {
+			"metaTitle": "Personvern – Tørny",
+			"backLabel": "Tilbake",
+			"kicker": "Personvern",
+			"s1Heading": "Hvilke data lagrer Tørny om deg?",
+			"s1Item1": "Navn og e-postadresse",
+			"s1Item2": "Kallenavn",
+			"s1Item3": "Handicap-indeks",
+			"s1Item4": "Scorekort og resultater fra runder du har spilt",
+			"s1Item5": "Invitasjoner du har sendt eller mottatt",
+			"s2Heading": "Hvor lagres dataene?",
+			"s2Body": "Dataene lagres hos <supabase>Supabase</supabase> i EU-regionen. Serverne befinner seg i Frankfurt, Tyskland, og er underlagt EUs personvernregler (GDPR).",
+			"s3Heading": "Hvem ser dataene dine?",
+			"s3Para1": "Andre spillere i samme turnering ser navn, kallenavn, handicap-indeks og spillresultatene dine.",
+			"s3Para2": "Administrator ser i tillegg e-postadressen din og kan slette deg fra appen.",
+			"s4Heading": "Hvor lenge lagres dataene?",
+			"s4Body": "Dataene dine lagres inntil du ber om sletting via «Slett konto»-knappen i profilen (kommer snart), eller ber administrator slette deg fra appen.",
+			"s5Heading": "Dine rettigheter",
+			"s5Intro": "I henhold til GDPR har du rett til:",
+			"s5Right1": "<term>Innsyn</term> — du kan be om å se hvilke data vi har lagret om deg",
+			"s5Right2": "<term>Retting</term> — du kan korrigere feil i profilen din",
+			"s5Right3": "<term>Sletting</term> — du kan be om at dataene dine slettes",
+			"s5Right4": "<term>Dataportabilitet</term> — du kan be om å få utlevert dataene dine i et maskinlesbart format",
+			"s6Heading": "Kontakt",
+			"s6Body": "For spørsmål om personvern eller for å utøve rettighetene dine, send e-post til <mailto>personvern@tornygolf.no</mailto>."
+		}
 	}
 }

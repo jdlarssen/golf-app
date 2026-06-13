@@ -3691,5 +3691,33 @@
 		"discoverCard": "See open tournaments you can join",
 		"teeOffSeparator": "at",
 		"teamFlight": "Team {teamNumber} · Flight {flightNumber}"
+	},
+	"legal": {
+		"privacy": {
+			"metaTitle": "Privacy – Tørny",
+			"backLabel": "Back",
+			"kicker": "Privacy",
+			"s1Heading": "What data does Tørny store about you?",
+			"s1Item1": "Name and email address",
+			"s1Item2": "Nickname",
+			"s1Item3": "Handicap index",
+			"s1Item4": "Scorecards and results from rounds you''ve played",
+			"s1Item5": "Invitations you have sent or received",
+			"s2Heading": "Where is the data stored?",
+			"s2Body": "Data is stored with <supabase>Supabase</supabase> in the EU region. Servers are located in Frankfurt, Germany, and are subject to EU data protection law (GDPR).",
+			"s3Heading": "Who can see your data?",
+			"s3Para1": "Other players in the same tournament can see your name, nickname, handicap index, and game results.",
+			"s3Para2": "Administrators can also see your email address and can remove you from the app.",
+			"s4Heading": "How long is data retained?",
+			"s4Body": "Your data is retained until you request deletion via the Delete account button in your profile (coming soon), or ask an administrator to remove you from the app.",
+			"s5Heading": "Your rights",
+			"s5Intro": "Under GDPR you have the right to:",
+			"s5Right1": "<term>Access</term> — you can request to see the data we hold about you",
+			"s5Right2": "<term>Rectification</term> — you can correct errors in your profile",
+			"s5Right3": "<term>Erasure</term> — you can request that your data be deleted",
+			"s5Right4": "<term>Data portability</term> — you can request your data in a machine-readable format",
+			"s6Heading": "Contact",
+			"s6Body": "For questions about privacy or to exercise your rights, email <mailto>personvern@tornygolf.no</mailto>."
+		}
 	}
 }

@@ -1,17 +1,35 @@
+import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
+import { routing, type AppLocale } from '@/i18n/routing';
 
-export const metadata = {
-  title: 'Personvern – Tørny',
-};
+type Params = Promise<{ locale: string }>;
 
-export default function PrivacyPage() {
+export async function generateMetadata({
+  params,
+}: {
+  params: Params;
+}): Promise<Metadata> {
+  const { locale: rawLocale } = await params;
+  const locale: AppLocale = routing.locales.includes(rawLocale as AppLocale)
+    ? (rawLocale as AppLocale)
+    : routing.defaultLocale;
+  const t = await getTranslations({ locale, namespace: 'legal.privacy' });
+  return {
+    title: t('metaTitle'),
+  };
+}
+
+export default async function PrivacyPage() {
+  const t = await getTranslations('legal.privacy');
+
   return (
     <AppShell>
       <TopBar
         backHref="/"
-        backLabel="Tilbake"
-        kicker="Personvern"
+        backLabel={t('backLabel')}
+        kicker={t('kicker')}
         back="history"
       />
 
@@ -20,81 +38,82 @@ export default function PrivacyPage() {
         {/* Section 1 */}
         <section>
           <h2 className="font-serif text-xl font-medium text-text mb-3">
-            Hvilke data lagrer Tørny om deg?
+            {t('s1Heading')}
           </h2>
           <ul className="list-disc list-outside pl-5 space-y-1 text-text">
-            <li>Navn og e-postadresse</li>
-            <li>Kallenavn</li>
-            <li>Handicap-indeks</li>
-            <li>Scorekort og resultater fra runder du har spilt</li>
-            <li>Invitasjoner du har sendt eller mottatt</li>
+            <li>{t('s1Item1')}</li>
+            <li>{t('s1Item2')}</li>
+            <li>{t('s1Item3')}</li>
+            <li>{t('s1Item4')}</li>
+            <li>{t('s1Item5')}</li>
           </ul>
         </section>
 
         {/* Section 2 */}
         <section>
           <h2 className="font-serif text-xl font-medium text-text mb-3">
-            Hvor lagres dataene?
+            {t('s2Heading')}
           </h2>
           <p className="text-text-muted">
-            Dataene lagres hos{' '}
-            <span className="font-medium text-text">Supabase</span> i EU-regionen.
-            Serverne befinner seg i Frankfurt, Tyskland, og er underlagt EUs
-            personvernregler (GDPR).
+            {t.rich('s2Body', {
+              supabase: (chunks) => (
+                <span className="font-medium text-text">{chunks}</span>
+              ),
+            })}
           </p>
         </section>
 
         {/* Section 3 */}
         <section>
           <h2 className="font-serif text-xl font-medium text-text mb-3">
-            Hvem ser dataene dine?
+            {t('s3Heading')}
           </h2>
-          <p className="text-text-muted mb-2">
-            Andre spillere i samme turnering ser navn, kallenavn, handicap-indeks og
-            spillresultatene dine.
-          </p>
-          <p className="text-text-muted">
-            Administrator ser i tillegg e-postadressen din og kan slette deg fra
-            appen.
-          </p>
+          <p className="text-text-muted mb-2">{t('s3Para1')}</p>
+          <p className="text-text-muted">{t('s3Para2')}</p>
         </section>
 
         {/* Section 4 */}
         <section>
           <h2 className="font-serif text-xl font-medium text-text mb-3">
-            Hvor lenge lagres dataene?
+            {t('s4Heading')}
           </h2>
-          <p className="text-text-muted">
-            Dataene dine lagres inntil du ber om sletting via «Slett konto»-knappen
-            i profilen (kommer snart), eller ber administrator slette deg fra
-            appen.
-          </p>
+          <p className="text-text-muted">{t('s4Body')}</p>
         </section>
 
         {/* Section 5 */}
         <section>
           <h2 className="font-serif text-xl font-medium text-text mb-3">
-            Dine rettigheter
+            {t('s5Heading')}
           </h2>
-          <p className="text-text-muted mb-2">
-            I henhold til GDPR har du rett til:
-          </p>
+          <p className="text-text-muted mb-2">{t('s5Intro')}</p>
           <ul className="list-disc list-outside pl-5 space-y-1 text-text-muted">
             <li>
-              <span className="font-medium text-text">Innsyn</span> — du kan be om
-              å se hvilke data vi har lagret om deg
+              {t.rich('s5Right1', {
+                term: (chunks) => (
+                  <span className="font-medium text-text">{chunks}</span>
+                ),
+              })}
             </li>
             <li>
-              <span className="font-medium text-text">Retting</span> — du kan
-              korrigere feil i profilen din
+              {t.rich('s5Right2', {
+                term: (chunks) => (
+                  <span className="font-medium text-text">{chunks}</span>
+                ),
+              })}
             </li>
             <li>
-              <span className="font-medium text-text">Sletting</span> — du kan be
-              om at dataene dine slettes
+              {t.rich('s5Right3', {
+                term: (chunks) => (
+                  <span className="font-medium text-text">{chunks}</span>
+                ),
+              })}
             </li>
             <li>
-              <span className="font-medium text-text">Dataportabilitet</span> — du
-              kan be om å få utlevert dataene dine i et maskinlesbart format
+              {t.rich('s5Right4', {
+                term: (chunks) => (
+                  <span className="font-medium text-text">{chunks}</span>
+                ),
+              })}
             </li>
           </ul>
         </section>
@@ -102,18 +121,19 @@ export default function PrivacyPage() {
         {/* Section 6 */}
         <section>
           <h2 className="font-serif text-xl font-medium text-text mb-3">
-            Kontakt
+            {t('s6Heading')}
           </h2>
           <p className="text-text-muted">
-            For spørsmål om personvern eller for å utøve rettighetene dine,
-            send e-post til{' '}
-            <a
-              href="mailto:personvern@tornygolf.no"
-              className="font-medium text-primary underline underline-offset-2"
-            >
-              personvern@tornygolf.no
-            </a>
-            .
+            {t.rich('s6Body', {
+              mailto: (chunks) => (
+                <a
+                  href="mailto:personvern@tornygolf.no"
+                  className="font-medium text-primary underline underline-offset-2"
+                >
+                  {chunks}
+                </a>
+              ),
+            })}
           </p>
         </section>
 
