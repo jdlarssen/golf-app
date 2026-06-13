@@ -17,9 +17,64 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.120.y — Ditt resultat på avsluttede spill
+## 1.121.y — i18n · engelsk hjem, spillformater, personvern og påmelding
+
+Issue [#581](https://github.com/jdlarssen/golf-app/issues/581), del av epic [#60](https://github.com/jdlarssen/golf-app/issues/60). Fase 2f av flerspråkligheten, og den siste UI-streng-ekstraksjonen: hjem-skjermen, spillformat-oppslagsverket, personvernsiden og hele selv-påmeldingen finnes nå på engelsk. Etter denne fasen gjenstår bare databaseinnhold (Fase D), e-post (Fase M) og gælisk/irsk (Fase G).
+
+### [1.121.1] - 2026-06-13 · #559
+
+> Følger du en påmeldingslenke uten å være logget inn, beholdes lenken nå korrekt gjennom innloggingen, så du lander tilbake på riktig påmelding etterpå.
+
+<details>
+<summary>Teknisk</summary>
+
+[#559](https://github.com/jdlarssen/golf-app/issues/559) (oppfølging til auth-rekkefølge-fiksen i 1.120.1). Da `/login`-redirecten begynte å fyre, ble det synlig at `next`-parameteren ble sendt ukodet (`next=/signup/[shortId]`). Resten av appen URL-koder `next` (jf. `proxy.ts`-auth-gaten + `login/actions.ts`).
+
+#### Fixed
+- Begge redirectene i `signup/[shortId]/page.tsx` (`/login` og `/complete-profile`) URL-koder nå `next`-verdien via `encodeURIComponent`, i tråd med proxy-konvensjonen. `e2e/signup/open-register.spec.ts` logged-out-smoke er grønn.
+
+</details>
+
+### [1.121.0] - 2026-06-13 · #581
+
+> Bruker du Tørny på engelsk, er nå også hjem-skjermen, spillformat-oppslagsverket, personvernsiden og hele påmeldingsflyten oversatt. Med det er hele appens grensesnitt på engelsk. På norsk er alt som før.
+
+<details>
+<summary>Teknisk</summary>
+
+[#581](https://github.com/jdlarssen/golf-app/issues/581). i18n Fase 2f — den siste per-område-ekstraksjonen av UI-strenger. Fire offentlige/referanse-flater: hjem-chrome (`app/[locale]/page.tsx`), spillformat-oppslagsverket (`spillformater/**`, kun chrome — DB-drevet format-innhold er Fase D), personvern (`legal/privacy`) og hele selv-påmeldingen (`signup/[shortId]/**`).
+
+#### Added
+- `messages/{no,en}.json`: nye topp-namespaces `home.*` (hjem-seksjoner, tom-tilstand, bannere, spill-arkiv), `legal.*` (personvern, alle 6 GDPR-seksjonene med `t.rich`-uthevinger) og `signup.*` (~124 nøkler: gren-bannere, begge skjemaene, `signup.errors.*` + `signup.slotFailReason.*` for validering, `signup.memberStatus.*` for lag-dashbordet); `formatGuide.*` utvidet med side-chrome for spillformater. Gjennom idiomatisk engelsk-pass.
+- `formatMonthLongLocale` i `lib/i18n/format.ts` — locale-bevisst «juni 2026» / "June 2026" til spill-arkivets måneds-grupper.
+
+#### Changed
+- Alle flatene renderer via `useTranslations`/`getTranslations`; norsk output er uendret (full suite grønn uten assertion-endringer utover `teamFormValidation`/slot-reason-signaturene som nå returnerer feilkoder).
+- Modus-navn på spillformater, i påmeldingen og på avsluttet-kortene leses fra `modes.*`-katalogen (ikke `MODE_LABELS`/`formatDisplayLabel`, som var norsk-only); hjem-sidens statusmerker leses fra `gameStatus.*`.
+- Hjem-sidens og `FinishedGameCard`s avsluttet-kort bruker nå rute-locale for sluttdatoen (var hardkodet `'no'`); tee-off-linja bruker `*Locale`-dato-hjelperne. `/spill-arkiv` og `groupFinishedByMonth` er locale-bevisste (locale + `noDateLabel` på call-site).
+- Klient- og server-valideringen i lag-påmeldingen deler nå de samme feilkodene (`signup.errors.*`/`slotFailReason.*`), oversatt på call-site, så inline-feedback og server-feil aldri spriker.
+- `redirect` migrert til `@/i18n/navigation` (objekt-form med `getLocale()`) i hele signup-flyten + `/spill-arkiv`; spillformater-detaljsiden og spill-arkivet fikk locale-bevisst `generateMetadata`.
+
+</details>
+
+<details>
+<summary><strong>1.120.y — Ditt resultat på avsluttede spill (2 oppføringer)</strong></summary>
 
 Issue [#572](https://github.com/jdlarssen/golf-app/issues/572). Hvert avsluttede spill-kort viste samme pokal uansett utfall. Nå viser kortet ditt eget resultat (plassering, matchutfall eller skins), beregnet og lagret når spillet avsluttes, så hjem-siden og arkivet holder seg billige å rendre.
+
+### [1.120.1] - 2026-06-13 · #559
+
+> Følger du en påmeldingslenke uten å være logget inn, havner du nå rett på innlogging og kommer tilbake til påmeldingen etterpå. Før kunne en ugyldig eller utløpt lenke gi en 404-side i stedet.
+
+<details>
+<summary>Teknisk</summary>
+
+[#559](https://github.com/jdlarssen/golf-app/issues/559). `/signup/[shortId]` ligger i `PUBLIC_PATH_PATTERN` i `proxy.ts`, så proxyen slipper alle gjennom og siden gater selv. Page-handleren kjørte `getGameByShortId` → `notFound()` *før* `auth.getUser()`-redirecten, så en uautentisert bruker med ugyldig shortId fikk 404 i stedet for innlogging.
+
+#### Fixed
+- Auth-sjekken kjører nå før spill-oppslaget: uautentiserte sendes til `/login?next=…` uansett om shortId-en finnes, og `notFound()` gjelder kun innloggede brukere med ugyldig lenke.
+
+</details>
 
 ### [1.120.0] - 2026-06-13 · #572
 
@@ -41,6 +96,8 @@ Issue [#572](https://github.com/jdlarssen/golf-app/issues/572). Hvert avsluttede
 
 #### Changed
 - `FinishedGameCard` viser nå resultat-badgen (gull-accent ved egen seier, dempet ellers), med 🏆-fallback når `result_summary` mangler. `getFinishedGamesForUser` tar med spillerens egen `result_summary` fra `game_players`-raden.
+
+</details>
 
 </details>
 
@@ -75,20 +132,6 @@ Issue [#571](https://github.com/jdlarssen/golf-app/issues/571). Hjem-siden skal 
 <summary><strong>1.118.y — i18n · engelsk profil, venner, innboks og finn turneringer (1 oppføring)</strong></summary>
 
 Issue [#573](https://github.com/jdlarssen/golf-app/issues/573), del av epic [#60](https://github.com/jdlarssen/golf-app/issues/60). Fase 2e av flerspråkligheten: de personlige flatene hentes fra omsettbare kataloger og finnes nå på engelsk — profilen med statistikk og historikk, vennelista, innboksen med alle varslene, finn turneringer og bunnmenyen.
-
-### [1.118.1] - 2026-06-13 · #559
-
-> Følger du en påmeldingslenke uten å være logget inn, havner du nå rett på innlogging og kommer tilbake til påmeldingen etterpå. Før kunne en ugyldig eller utløpt lenke gi en 404-side i stedet for å sende deg til innlogging.
-
-<details>
-<summary>Teknisk</summary>
-
-[#559](https://github.com/jdlarssen/golf-app/issues/559). `/signup/[shortId]` ligger i `PUBLIC_PATH_PATTERN` i `proxy.ts`, så proxyen slipper alle gjennom og siden gater selv. Page-handleren kjørte `getGameByShortId` → `notFound()` *før* `auth.getUser()`-redirecten, så en uautentisert bruker med ugyldig shortId fikk 404 i stedet for innlogging — og smoke-testen `e2e/signup/open-register.spec.ts` (som forventer `/login`-redirect) feilet.
-
-#### Fixed
-- Auth-sjekken kjører nå før spill-oppslaget: uautentiserte sendes til `/login?next=/signup/[shortId]` uansett om shortId-en finnes, og `notFound()` gjelder kun innloggede brukere med ugyldig lenke. `next`-param-rundturen er bevart.
-
-</details>
 
 ### [1.118.0] - 2026-06-13 · #573
 
