@@ -35,6 +35,12 @@ export interface NassauPodiumProps {
   playersById: Map<string, NassauPlayerInfo>;
   /** Hvor pilen tilbake skal peke. Defaults til spillets hjem. */
   backHref?: string;
+  /**
+   * Når true, hoppes Shell + Header (back-pil + kicker) over slik at podiet
+   * kan rendres inni `LeaderboardTabs`. Outer-callern eier `AppShell + TopBar`
+   * og er ansvarlig for chrome. Speiler `SoloStablefordPodium`-mønsteret.
+   */
+  chromeless?: boolean;
 }
 
 /**
@@ -58,6 +64,7 @@ export function NassauPodium({
   result,
   playersById,
   backHref = '/',
+  chromeless = false,
 }: NassauPodiumProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const tc = useTranslations('leaderboard.common');
@@ -78,8 +85,8 @@ export function NassauPodium({
 
   if (result.players.length === 0) {
     return (
-      <Shell>
-        <Header gameName={gameName} backHref={backHref} />
+      <Shell chromeless={chromeless}>
+        {!chromeless && <Header gameName={gameName} backHref={backHref} />}
         <p className="mt-12 text-center text-sm text-muted">
           {tc('noPlayersToShow')}
         </p>
@@ -96,8 +103,8 @@ export function NassauPodium({
   const sweeper = first.units === 3 ? first : null;
 
   return (
-    <Shell>
-      <Header gameName={gameName} backHref={backHref} />
+    <Shell chromeless={chromeless}>
+      {!chromeless && <Header gameName={gameName} backHref={backHref} />}
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <Kicker tone="accent">{t('common.podiumKicker')}</Kicker>
@@ -231,7 +238,21 @@ function playerLabel(
   return info ? formatRevealName(info.name, info.nickname) : fallback;
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({
+  children,
+  chromeless = false,
+}: {
+  children: React.ReactNode;
+  chromeless?: boolean;
+}) {
+  if (chromeless) {
+    return (
+      <div className="relative isolate">
+        <LeaderboardBackdrop />
+        <div className="relative">{children}</div>
+      </div>
+    );
+  }
   return (
     <AppShell>
       <div className="relative isolate pb-12">

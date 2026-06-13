@@ -30,6 +30,12 @@ export interface RoundRobinPodiumProps {
   playersById: Map<string, RoundRobinPlayerInfo>;
   /** Hvor pilen tilbake skal peke. Defaults til spillets hjem. */
   backHref?: string;
+  /**
+   * Når true, hoppes Shell + Header (back-pil + kicker) over slik at podiet
+   * kan rendres inni `LeaderboardTabs`. Outer-callern eier `AppShell + TopBar`
+   * og er ansvarlig for chrome. Speiler `SoloStablefordPodium`-mønsteret.
+   */
+  chromeless?: boolean;
 }
 
 /**
@@ -47,6 +53,7 @@ export function RoundRobinPodium({
   result,
   playersById,
   backHref = '/',
+  chromeless = false,
 }: RoundRobinPodiumProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const [replayKey, setReplayKey] = useState(0);
@@ -65,8 +72,8 @@ export function RoundRobinPodium({
 
   if (result.players.length === 0) {
     return (
-      <Shell>
-        <Header gameName={gameName} backHref={backHref} />
+      <Shell chromeless={chromeless}>
+        {!chromeless && <Header gameName={gameName} backHref={backHref} />}
         <p className="mt-12 text-center text-sm text-muted">
           {t('common.noPlayersToShow')}
         </p>
@@ -81,8 +88,8 @@ export function RoundRobinPodium({
   const rest = result.players.slice(3);
 
   return (
-    <Shell>
-      <Header gameName={gameName} backHref={backHref} />
+    <Shell chromeless={chromeless}>
+      {!chromeless && <Header gameName={gameName} backHref={backHref} />}
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <Kicker tone="accent">{t('common.podiumKicker')}</Kicker>
@@ -181,7 +188,21 @@ export function RoundRobinPodium({
   );
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({
+  children,
+  chromeless = false,
+}: {
+  children: React.ReactNode;
+  chromeless?: boolean;
+}) {
+  if (chromeless) {
+    return (
+      <div className="relative isolate">
+        <LeaderboardBackdrop />
+        <div className="relative">{children}</div>
+      </div>
+    );
+  }
   return (
     <AppShell>
       <div className="relative isolate pb-12">
