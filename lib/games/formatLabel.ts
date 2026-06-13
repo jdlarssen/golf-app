@@ -85,3 +85,20 @@ export function formatDisplayLabelKey(
   }
   return mode;
 }
+
+/**
+ * Returns the `formatGuide.content.<key>` catalog key for a mode + team size.
+ *
+ * Mirrors the (now removed) `resolveModeGuide`: the whole stableford family
+ * with team_size 2 maps to the dedicated 4BBB variant content entry
+ * (`stableford-4bbb`), everything else uses the mode code itself. Used by the
+ * format guide, the detail page and the game-home mode card to read the right
+ * summary/points from the message catalog (i18n Fase D, #592).
+ */
+export function resolveFormatContentKey(
+  mode: GameMode,
+  teamSize: number,
+): string {
+  if (isStablefordFamily(mode) && teamSize === 2) return 'stableford-4bbb';
+  return mode;
+}

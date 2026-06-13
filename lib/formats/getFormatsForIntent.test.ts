@@ -61,37 +61,19 @@ describe('getFormatsForIntent', () => {
             format_slug: 'stableford',
             is_primary: true,
             sort_order: 10,
-            formats: {
-              slug: 'stableford',
-              display_name: 'Stableford',
-              icon_key: 'stableford',
-              short_description: 'Solo, poeng vs par.',
-              is_active: true,
-            },
+            formats: { slug: 'stableford', icon_key: 'stableford', is_active: true },
           },
           {
             format_slug: 'best_ball_netto',
             is_primary: true,
             sort_order: 20,
-            formats: {
-              slug: 'best_ball_netto',
-              display_name: 'Best ball',
-              icon_key: 'best_ball_netto',
-              short_description: 'Lag à 2.',
-              is_active: true,
-            },
+            formats: { slug: 'best_ball_netto', icon_key: 'best_ball_netto', is_active: true },
           },
           {
             format_slug: 'singles_matchplay',
             is_primary: false,
             sort_order: 40,
-            formats: {
-              slug: 'singles_matchplay',
-              display_name: 'Matchplay',
-              icon_key: 'singles_matchplay',
-              short_description: '1v1.',
-              is_active: true,
-            },
+            formats: { slug: 'singles_matchplay', icon_key: 'singles_matchplay', is_active: true },
           },
         ],
         error: null,
@@ -147,15 +129,7 @@ describe('getFormatsForIntent', () => {
             format_slug: 'stableford',
             is_primary: true,
             sort_order: 10,
-            formats: [
-              {
-                slug: 'stableford',
-                display_name: 'Stableford',
-                icon_key: 'stableford',
-                short_description: 'Solo, poeng vs par.',
-                is_active: true,
-              },
-            ],
+            formats: [{ slug: 'stableford', icon_key: 'stableford', is_active: true }],
           },
         ],
         error: null,
@@ -166,27 +140,17 @@ describe('getFormatsForIntent', () => {
 
     expect(result).toHaveLength(1);
     expect(result[0].slug).toBe('stableford');
-    expect(result[0].display_name).toBe('Stableford');
+    expect(result[0].icon_key).toBe('stableford');
   });
 });
 
 describe('getCupEligibleFormats', () => {
-  it('returner liste sortert på display_name', async () => {
+  it('returner liste over cup-eligible formats', async () => {
     fromMock.mockImplementation(() =>
       buildCupChain({
         data: [
-          {
-            slug: 'foursomes_matchplay',
-            display_name: 'Foursomes matchplay',
-            icon_key: 'foursomes_matchplay',
-            short_description: '2v2 alternate shot.',
-          },
-          {
-            slug: 'singles_matchplay',
-            display_name: 'Matchplay',
-            icon_key: 'singles_matchplay',
-            short_description: '1v1.',
-          },
+          { slug: 'foursomes_matchplay', icon_key: 'foursomes_matchplay' },
+          { slug: 'singles_matchplay', icon_key: 'singles_matchplay' },
         ],
         error: null,
       }),

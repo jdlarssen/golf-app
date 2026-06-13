@@ -17,18 +17,8 @@ vi.mock('@/lib/cup/actions', () => ({
 }));
 
 const CUP_ELIGIBLE: CupEligibleFormat[] = [
-  {
-    slug: 'singles_matchplay',
-    display_name: 'Matchplay',
-    icon_key: 'singles_matchplay',
-    short_description: '1v1, vinn flest hull.',
-  },
-  {
-    slug: 'fourball_matchplay',
-    display_name: 'Fourball matchplay',
-    icon_key: 'fourball_matchplay',
-    short_description: '2v2 best-ball matchplay.',
-  },
+  { slug: 'singles_matchplay', icon_key: 'singles_matchplay' },
+  { slug: 'fourball_matchplay', icon_key: 'fourball_matchplay' },
 ];
 
 describe('CupSetup', () => {

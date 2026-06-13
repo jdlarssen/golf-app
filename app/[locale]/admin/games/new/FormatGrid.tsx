@@ -36,6 +36,8 @@ export function FormatGrid({
   disabled = false,
 }: Props) {
   const t = useTranslations('wizard.formatGrid');
+  const tModes = useTranslations('modes');
+  const tContent = useTranslations('formatGuide');
   const primary = formats.filter((f) => f.is_primary);
   const secondary = formats.filter((f) => !f.is_primary);
   // Vis gruppe-headere kun når begge gruppene finnes — ellers holder legenden.
@@ -54,8 +56,14 @@ export function FormatGrid({
 
   function renderCard(f: FormatForIntent) {
     const selected = value === f.slug;
+    const name = tModes(f.slug as Parameters<typeof tModes>[0]);
 
     if (selected) {
+      const description = tContent.raw(
+        `content.${f.slug}.shortDescription` as Parameters<
+          typeof tContent.raw
+        >[0],
+      ) as string;
       return (
         <div
           key={f.slug}
@@ -65,7 +73,7 @@ export function FormatGrid({
             type="button"
             role="radio"
             aria-checked={true}
-            aria-label={f.display_name}
+            aria-label={name}
             disabled={disabled}
             onClick={() => {
               if (!disabled) onChange(f.slug);
@@ -73,13 +81,13 @@ export function FormatGrid({
             className="flex w-full min-h-[44px] items-center justify-between gap-2 px-3 py-2.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <span className="font-serif text-base leading-snug text-text">
-              {f.display_name}
+              {name}
             </span>
             <FormatStyleBadge mode={f.slug as GameMode} className="shrink-0" />
           </button>
           <div className="space-y-2 border-t border-primary/25 px-3 pb-3 pt-2">
             <p className="font-sans text-xs leading-snug text-muted">
-              {f.short_description}
+              {description}
             </p>
             {onShowGuide && (
               <button
@@ -101,7 +109,7 @@ export function FormatGrid({
         type="button"
         role="radio"
         aria-checked={false}
-        aria-label={f.display_name}
+        aria-label={name}
         disabled={disabled}
         onClick={() => {
           if (!disabled) onChange(f.slug);
@@ -113,7 +121,7 @@ export function FormatGrid({
             2-kol-celle, så navnet fløt oppå chippen. Stablet unngår det og gir
             lange navn full bredde. */}
         <span className="font-serif text-sm leading-snug text-text">
-          {f.display_name}
+          {name}
         </span>
         <FormatStyleBadge mode={f.slug as GameMode} />
       </button>

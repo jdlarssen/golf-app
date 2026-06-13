@@ -1,24 +1,18 @@
 import 'server-only';
-import {
-  getModeContentMap,
-  mergeModeContent,
-} from '@/lib/formats/getModeContent';
-import {
-  MODE_LABELS,
-  type GameMode,
-  type GameModeConfig,
-} from '@/lib/scoring/modes/types';
-import { formatDisplayLabel } from '@/lib/games/formatLabel';
+import { getTranslations } from 'next-intl/server';
+import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
+import { formatDisplayLabelKey } from '@/lib/games/formatLabel';
 import type { FormatGuideEntry } from '@/components/FormatGuideList';
 
 /**
  * Bygger format-oppslagsverket server-side til serialiserbare rader (#498).
  *
- * Eier den pedagogiske rekkefølgen (CATALOG) + fletter DB-innhold med
- * MODE_GUIDE-fallback via `mergeModeContent`, slik at både oppslagssiden
- * /spillformater og «?»-arket i veiviseren deler én kilde. Resultatet er ren
- * data (ingen server-only-binding), så det kan sendes inn i den klient-rendrede
- * veiviseren som prop.
+ * Eier den pedagogiske rekkefølgen (CATALOG) og leser navn + innhold fra
+ * meldingskatalogen: etiketten fra `modes.*`, sammendrag + punkter fra
+ * `formatGuide.content.<key>` (i18n Fase D, #592). Slik deler både
+ * oppslagssiden /spillformater og «?»-arket i veiviseren én kilde, og innholdet
+ * er tospråklig uten DB-oppslag. Resultatet er ren data (ingen server-only-
+ * binding), så det kan sendes inn i den klient-rendrede veiviseren som prop.
  */
 
 type CatalogEntry = {
@@ -66,28 +60,31 @@ const CATALOG: CatalogEntry[] = [
 ];
 
 export async function getFormatGuideEntries(): Promise<FormatGuideEntry[]> {
-  const modeContentMap = await getModeContentMap();
+  const tModes = await getTranslations('modes');
+  const tContent = await getTranslations('formatGuide');
 
   return CATALOG.map((entry) => {
     const teamSize =
       entry.modeConfig && 'team_size' in entry.modeConfig
         ? entry.modeConfig.team_size
         : 1;
-    const merged = mergeModeContent(
-      modeContentMap[entry.mode] ?? null,
-      entry.mode,
-      teamSize,
-    );
-    const label = entry.modeConfig
-      ? formatDisplayLabel(entry.mode, entry.modeConfig)
-      : (MODE_LABELS[entry.mode] ?? entry.mode);
+    const labelKey = entry.modeConfig
+      ? formatDisplayLabelKey(entry.mode, entry.modeConfig)
+      : entry.mode;
+    const label = tModes(labelKey as Parameters<typeof tModes>[0]);
+    const content = tContent.raw(
+      `content.${entry.key}` as Parameters<typeof tContent.raw>[0],
+    ) as {
+      summary: string;
+      points: string[];
+    };
 
     return {
       key: entry.key,
       mode: entry.mode,
       label,
-      summary: merged.summary,
-      points: merged.points,
+      summary: content.summary,
+      points: content.points,
       playStyleTeamSize: entry.modeConfig ? teamSize : undefined,
     };
   });

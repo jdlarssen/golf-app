@@ -11,7 +11,7 @@
 // er en on-course/honor-system-regel med null scoring-impact: tallet appen
 // lagrer er det samme uansett hvilken tee-ball motstanderen plukker.
 // → Beslutning (bekreftet i kontrakt-diskusjon, #291): appen sporer ikke
-//   valget. Regelen forklares i format-infoen (modeGuide.ts).
+//   valget. Regelen forklares i format-infoen (formatGuide.content-katalogen).
 //
 // Eneste forskjell fra Foursomes er lag-handicapet: Gruesome bruker den
 // samme WHS-handicapen som Foursomes (sum av begge partneres CH) — merk

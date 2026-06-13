@@ -8,9 +8,9 @@ import type { GameMode } from '@/lib/scoring/modes/types';
  * trykker. Valgfri `detailHref` legger til en «Les mer →»-lenke til
  * detaljsiden for modus-en (#308).
  *
- * Ren presentasjonskomponent — caller henter merged content via
- * `mergeModeContent()` + `getModeContentMap()` server-side og sender inn
- * summary/points/label som props. Ingen intern MODE_GUIDE-import.
+ * Ren presentasjonskomponent — caller henter innholdet fra
+ * `formatGuide.content.<key>`-katalogen (i18n Fase D, #592) og sender inn
+ * summary/points/label som props. Ingen intern katalog-/DB-oppslag.
  *
  * Bygd på native `<details>`/`<summary>`: server-renderbart (ingen client-
  * bundle), tastatur-tilgjengelig og reduced-motion-trygt uten JS-animasjon.

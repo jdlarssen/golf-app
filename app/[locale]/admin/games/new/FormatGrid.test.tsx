@@ -5,19 +5,18 @@ import type { FormatForIntent } from '@/lib/formats/getFormatsForIntent';
 
 // Én Type C render-test per docs/test-discipline.md — verifiserer at FormatGrid
 // partisjonerer på is_primary i UI-laget og at klikk på et kort caller
-// onChange med slug.
+// onChange med slug. Navn + kort beskrivelse rendres fra modes.* /
+// formatGuide.content.* (i18n Fase D, #592) — vitest-stubben resolver dem mot
+// no.json, så assertene under treffer ekte norske katalog-navn.
 
 function row(
   slug: string,
-  display_name: string,
   is_primary: boolean,
   sort_order: number,
 ): FormatForIntent {
   return {
     slug,
-    display_name,
     icon_key: slug,
-    short_description: `${display_name} test-beskrivelse`,
     is_primary,
     sort_order,
   };
@@ -27,11 +26,11 @@ function row(
 // texas_scramble, solo_strokeplay alle som primary. Singles_matchplay som
 // sekundær for å verifisere at sekundær-seksjonen renderer.
 const KLUBB_FORMATS: FormatForIntent[] = [
-  row('stableford', 'Stableford', true, 10),
-  row('best_ball', 'Best ball', true, 20),
-  row('texas_scramble', 'Texas scramble', true, 30),
-  row('solo_strokeplay', 'Slagspill', true, 40),
-  row('singles_matchplay', 'Matchplay', false, 50),
+  row('stableford', true, 10),
+  row('best_ball', true, 20),
+  row('texas_scramble', true, 30),
+  row('solo_strokeplay', true, 40),
+  row('singles_matchplay', false, 50),
 ];
 
 describe('FormatGrid', () => {

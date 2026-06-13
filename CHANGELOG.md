@@ -17,6 +17,36 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.125.y — Spillformene på engelsk
+
+Issue [#592](https://github.com/jdlarssen/golf-app/issues/592), del av i18n-epicen [#60](https://github.com/jdlarssen/golf-app/issues/60). Etter at hele grensesnittet ble tospråklig i fase 2a–2f, lå selve spillform-tekstene fortsatt igjen på norsk uansett språkvalg — de bodde i databasen. Nå er navn, beskrivelser, regler og eksempler flyttet til samme oversettelses-katalog som resten av appen, så de følger språkvelgeren.
+
+### [1.125.0] - 2026-06-13 · #592
+
+> Står appen på engelsk, er spillformene nå engelske hele veien: navn, korte beskrivelser, regler og eksempler i veiviseren, i oppslagsverket og på spillsiden. På norsk er alt akkurat som før.
+
+<details>
+<summary>Teknisk</summary>
+
+[#592](https://github.com/jdlarssen/golf-app/issues/592). Spillform-innholdet (`formats.display_name`, `short_description`, `rules_long`, `rules_example` + kode-fallbacken `MODE_GUIDE` for sammendrag og punkter) var norsk-låst og DB-/kode-drevet. Eier-beslutning: innholdet er statisk, så vi hardkoder det i meldingskatalogen framfor å bygge en per-locale DB-editor. Det gir samme mekanisme som resten av epicen, og den DB-drevne innholds-editoren i Sekretariatet kan fjernes.
+
+#### Added
+- `formatGuide.content.<key>` i `messages/{no,en}.json` for alle 22 formater og 4BBB-varianten: `shortDescription`, `summary`, `points`, `long`, `example`. Norsk er byte-identisk med dagens DB-rader og `MODE_GUIDE` (verifisert via md5-rundtur mot prod); engelsk er ny, idiomatisk golf-copy. Leses via `t.raw()` (ingen ICU-args).
+- `resolveFormatContentKey(mode, teamSize)` i `lib/games/formatLabel.ts` — speiler den fjernede `resolveModeGuide` (stableford-familie med team_size 2 → `stableford-4bbb`).
+
+#### Changed
+- `buildFormatGuide`, detaljsiden `/spillformater/[slug]`, spillsidens modus-kort, `FormatGrid` og `CupSetup` leser nå navn fra `modes.*` og innhold fra `formatGuide.content.*` i stedet for DB-oppslag. `/spillformater`-rutene er nå ◐ PPR (ingen ucachet DB-IO).
+- `getFormatsForIntent`, `getCupEligibleFormats` og `getAllFormatsWithMappings` slutter å lese `display_name`/`short_description`/`rules_*`; `FormatsManager` rendrer navn via katalogen. Matrise-styringen (synlig/primær/cup/aktiv) er uendret.
+- `inviteNotification` leser modus-sammendraget fra `no.json` framfor `MODE_GUIDE` (mail er fortsatt norsk til fase M).
+
+#### Removed
+- `lib/formats/getModeContent.ts`, `modeGuide.ts`, `parsePointsTextarea.ts` (med tester) og innholds-editoren i Sekretariatet (`updateFormatContent` + `admin.formats.contentEditor.*`).
+
+#### Migration
+- `0097_drop_format_content_columns.sql` dropper de vestigiale innholds-kolonnene på `formats`. Kjøres **etter deploy** (koden slutter å lese dem først), per format-migrasjons-disiplinen.
+
+</details>
+
 ## 1.124.y — Duell-kortet tilbake med sideturnering
 
 Issue [#589](https://github.com/jdlarssen/golf-app/issues/589), oppfølging til [#576](https://github.com/jdlarssen/golf-app/issues/576). Da sideturneringen ble lagt til, byttet 1-mot-1-spill ut duell-kortet med et podium så det skulle passe i fanene. Nå er duell-kortet tilbake, og sideturneringen ligger i fanen ved siden av.

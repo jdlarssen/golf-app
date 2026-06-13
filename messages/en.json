@@ -3124,20 +3124,6 @@
 					"activated": "activated",
 					"deactivated": "deactivated"
 				}
-			},
-			"contentEditor": {
-				"sectionHeading": "Description texts",
-				"editedBadge": "Edited",
-				"summaryLabel": "Short summary",
-				"defaultPlaceholder": "Uses the default app text",
-				"pointsLabel": "Rule points",
-				"pointsHint": "(one per line)",
-				"longLabel": "Long description",
-				"longPlaceholder": "No long description yet",
-				"exampleLabel": "Concrete example",
-				"examplePlaceholder": "No example yet",
-				"saveBusy": "Saving…",
-				"saveButton": "Save description"
 			}
 		},
 		"launches": {

@@ -7,9 +7,8 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { FormatGuideList } from '@/components/FormatGuideList';
 import { getFormatGuideEntries } from '@/lib/formats/buildFormatGuide';
 import { routing, type AppLocale } from '@/i18n/routing';
-// Content comes from the DB via getModeContentMap (service role) at request
-// time. Under cacheComponents (#538) uncached IO is never prerendered, so no
-// force-dynamic directive is needed to keep it out of the build.
+// Content comes from the message catalog via getFormatGuideEntries (i18n Fase
+// D, #592) — no DB read, fully bilingual.
 
 type Params = Promise<{ locale: string }>;
 
@@ -30,10 +29,10 @@ export async function generateMetadata({
 
 // Oppslagsverk over alle spillformene (#299, #307, #308). Ren lærings-ressurs —
 // ingen per-bruker-data. Hvert format er et utvidbart ModeGuideCard med
-// DB-drevet innhold + lenke til detaljside. Innholdet bygges via
-// getFormatGuideEntries (cached på 'format-mapping'-tag) og rendres med den
-// delte FormatGuideList-komponenten (#498), samme liste som «?»-arket i
-// veiviseren bruker.
+// katalog-drevet innhold + lenke til detaljside. Innholdet bygges via
+// getFormatGuideEntries (i18n Fase D, #592) og rendres med den delte
+// FormatGuideList-komponenten (#498), samme liste som «?»-arket i veiviseren
+// bruker.
 export default async function SpillformaterPage() {
   const t = await getTranslations('formatGuide');
   const entries = await getFormatGuideEntries();

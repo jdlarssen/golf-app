@@ -3124,20 +3124,6 @@
 					"activated": "aktivert",
 					"deactivated": "deaktivert"
 				}
-			},
-			"contentEditor": {
-				"sectionHeading": "Forklaringstekster",
-				"editedBadge": "Redigert",
-				"summaryLabel": "Kortsammendrag",
-				"defaultPlaceholder": "Bruker standardteksten fra appen",
-				"pointsLabel": "Regelpoints",
-				"pointsHint": "(én per linje)",
-				"longLabel": "Lang forklaring",
-				"longPlaceholder": "Ingen lang forklaring ennå",
-				"exampleLabel": "Konkret eksempel",
-				"examplePlaceholder": "Ingen eksempel ennå",
-				"saveBusy": "Lagrer …",
-				"saveButton": "Lagre forklaring"
 			}
 		},
 		"launches": {

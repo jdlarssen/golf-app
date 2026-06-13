@@ -5,7 +5,6 @@ import { AppShell } from '@/components/ui/AppShell';
 import { BackLink } from '@/components/ui/BackLink';
 import { Kicker } from '@/components/ui/Kicker';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { getModeContentMap, mergeModeContent } from '@/lib/formats/getModeContent';
 import { MODE_LABELS, type GameMode } from '@/lib/scoring/modes/types';
 import { routing, type AppLocale } from '@/i18n/routing';
 
@@ -29,14 +28,13 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 }
 
 /**
- * Detaljside per spillform (#308). Viser sammendrag + punkter (fra ModeGuideCard-
- * innholdet) + regler_lang (prosa) + regler_eksempel (konkret eksempel i en
- * markert boks). Innhold er DB-drevet via getModeContentMap, med kode-fallback
- * for summary/points. Detaljsiden er per-slug (én per GameMode) — 4BBB-varianten
- * har ingen egen slug og viser stableford-innholdet.
+ * Detaljside per spillform (#308). Viser sammendrag + punkter + regler_lang
+ * (prosa) + regler_eksempel (konkret eksempel i en markert boks). Innhold er
+ * katalog-drevet via `formatGuide.content.<slug>` (i18n Fase D, #592).
+ * Detaljsiden er per-slug (én per GameMode) — 4BBB-varianten har ingen egen
+ * slug og viser stableford-innholdet.
  *
- * 404 for ugyldig slug. Dynamisk (ingen generateStaticParams) — innhold er
- * admin-redigerbart og skal reflektere revalidateTag-oppdateringer umiddelbart.
+ * 404 for ugyldig slug.
  */
 export default async function SpillformDetailPage({ params }: { params: Params }) {
   const { slug } = await params;
@@ -46,18 +44,27 @@ export default async function SpillformDetailPage({ params }: { params: Params }
   }
 
   const mode = slug as GameMode;
-  const modeContentMap = await getModeContentMap();
-
-  // Detail page always uses team_size 1 (slug-based, no variant config)
-  const merged = mergeModeContent(
-    modeContentMap[mode] ?? null,
-    mode,
-    1,
-  );
 
   const tFg = await getTranslations('formatGuide');
   const tModes = await getTranslations('modes');
   const label = tModes(mode as Parameters<typeof tModes>[0]) ?? slug;
+
+  // Content from the message catalog. Detail page is per-slug (team_size 1),
+  // so the content key is the mode itself — no variant lookup (i18n Fase D).
+  const content = tFg.raw(
+    `content.${mode}` as Parameters<typeof tFg.raw>[0],
+  ) as {
+    summary: string;
+    points: string[];
+    long?: string;
+    example?: string;
+  };
+  const merged = {
+    summary: content.summary,
+    points: content.points,
+    long: content.long ?? null,
+    example: content.example ?? null,
+  };
 
   return (
     <AppShell>

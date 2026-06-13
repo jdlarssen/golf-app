@@ -6,17 +6,12 @@ export type Intent = 'kompis' | 'klubb' | 'solo';
 
 export type FormatForIntent = {
   slug: string;
-  display_name: string;
   icon_key: string;
-  short_description: string;
   is_primary: boolean;
   sort_order: number;
 };
 
-export type CupEligibleFormat = Pick<
-  FormatForIntent,
-  'slug' | 'display_name' | 'icon_key' | 'short_description'
->;
+export type CupEligibleFormat = Pick<FormatForIntent, 'slug' | 'icon_key'>;
 
 // Tag-cached fetch av aktive formats for en gitt wizard-intent.
 // Returnerer alle synlige (is_visible) formats for intent-en, sortert på
@@ -39,7 +34,7 @@ export const getFormatsForIntent = unstable_cache(
         `format_slug,
          is_primary,
          sort_order,
-         formats!inner (slug, display_name, icon_key, short_description, is_active)`,
+         formats!inner (slug, icon_key, is_active)`,
       )
       .eq('intent', intent)
       .eq('is_visible', true)
@@ -58,9 +53,7 @@ export const getFormatsForIntent = unstable_cache(
       const format = Array.isArray(row.formats) ? row.formats[0] : row.formats;
       return {
         slug: format.slug,
-        display_name: format.display_name,
         icon_key: format.icon_key,
-        short_description: format.short_description,
         is_primary: row.is_primary,
         sort_order: row.sort_order,
       };
@@ -77,10 +70,10 @@ export const getCupEligibleFormats = unstable_cache(
     const supabase = getAdminClient();
     const { data, error } = await supabase
       .from('formats')
-      .select('slug, display_name, icon_key, short_description')
+      .select('slug, icon_key')
       .eq('is_active', true)
       .eq('is_cup_eligible', true)
-      .order('display_name', { ascending: true });
+      .order('slug', { ascending: true });
 
     if (error) {
       console.error('[getCupEligibleFormats] query failed', { error });

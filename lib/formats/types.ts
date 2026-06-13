@@ -24,16 +24,9 @@ export type MappingEntry = {
 
 export type FormatWithMappings = {
   slug: string;
-  display_name: string;
   icon_key: string;
-  short_description: string;
   is_active: boolean;
   is_cup_eligible: boolean;
   /** Mapping-rad per intent, eller null hvis ingen rad finnes (= "Ny"). */
   mappings: Record<MappingIntent, MappingEntry | null>;
-  /** Redaksjonelt innhold fra formats-tabellen — null betyr «bruker standardtekst». */
-  rules_summary: string | null;
-  rules_points: string[] | null;
-  rules_long: string | null;
-  rules_example: string | null;
 };

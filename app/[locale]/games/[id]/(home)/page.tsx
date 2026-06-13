@@ -34,7 +34,10 @@ import {
   type GameForHole,
 } from '@/lib/games/getGameWithPlayers';
 import { scorecardTitle } from '@/lib/games/scorecardTitle';
-import { formatDisplayLabelKey } from '@/lib/games/formatLabel';
+import {
+  formatDisplayLabelKey,
+  resolveFormatContentKey,
+} from '@/lib/games/formatLabel';
 import { getRatingForGender, type TeeBoxRatings } from '@/lib/games/teeRating';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
 import { maybeSendDeliveryReminder } from '@/lib/notifications/deliveryReminder';
@@ -43,7 +46,6 @@ import { isHandicapStale } from '@/lib/handicap/staleness';
 import { HandicapConfirmCard } from '@/components/handicap/HandicapConfirmCard';
 import { ModeGuideCard } from '@/components/ModeGuideCard';
 import { ScheduledWaitingRoom } from '../ScheduledWaitingRoom';
-import { getModeContentMap, mergeModeContent } from '@/lib/formats/getModeContent';
 import { submitUndoWithdraw } from '../trekk-fra/actions';
 import { UnconfirmedBadge } from '@/components/ui/UnconfirmedBadge';
 import {
@@ -398,16 +400,16 @@ export default async function GameHomePage({
     ? getRatingForGender(game.tee_boxes, me.tee_gender)
     : null;
 
-  // Fetch mode content (cached on 'format-mapping' tag). One call shared by
-  // both ModeGuideCard call sites in scheduled + active branches below.
-  const modeContentMap = await getModeContentMap();
+  // Mode content from the message catalog (i18n Fase D, #592). One read shared
+  // by both ModeGuideCard call sites in scheduled + active branches below.
   const modeTeamSize =
     (gwp.game.mode_config as { team_size?: number } | null)?.team_size ?? 1;
-  const mergedModeContent = mergeModeContent(
-    modeContentMap[game.game_mode] ?? null,
-    game.game_mode,
-    modeTeamSize,
-  );
+  const tFormatContent = await getTranslations('formatGuide');
+  const mergedModeContent = tFormatContent.raw(
+    `content.${resolveFormatContentKey(game.game_mode, modeTeamSize)}` as Parameters<
+      typeof tFormatContent.raw
+    >[0],
+  ) as { summary: string; points: string[] };
   const modeLabelKey = formatDisplayLabelKey(game.game_mode, game.mode_config);
   const modeLabel = tModes(modeLabelKey as Parameters<typeof tModes>[0]);
   const modeDetailHref = `/spillformater/${game.game_mode}`;

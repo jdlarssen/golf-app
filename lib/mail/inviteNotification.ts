@@ -9,8 +9,16 @@
 // is the source of truth — admin can resend manually if needed.
 
 import { Resend } from 'resend';
-import { MODE_GUIDE } from '@/lib/formats/modeGuide';
 import { MODE_LABELS, type GameMode } from '@/lib/scoring/modes/types';
+import noMessages from '@/messages/no.json';
+
+// Mode summaries live in the message catalog (i18n Fase D, #592). The invite
+// mail is not yet locale-aware (Phase M), so we read the Norwegian summary
+// directly from no.json — the same byte-identical text the old MODE_GUIDE held.
+const FORMAT_CONTENT = noMessages.formatGuide.content as Record<
+  string,
+  { summary: string }
+>;
 
 // RESEND_FROM_EMAIL in our env is the bare address (`noreply@tornygolf.no`).
 // We always want the display name "Tørny" in the From header, so wrap the
@@ -52,16 +60,18 @@ export type InviteNotificationParams = {
 
 /**
  * Resolverer modus-hint-innholdet defensivt. Returnerer null når mailen ikke er
- * spill-scoped, modus mangler, eller modus ikke er en kjent `MODE_GUIDE`-nøkkel.
+ * spill-scoped, modus mangler, eller modus ikke er en kjent katalog-modus.
  */
 function resolveModeHint(
   hasGame: boolean,
   gameMode: string | undefined,
 ): { label: string; summary: string } | null {
   if (!hasGame || !gameMode) return null;
-  if (!Object.prototype.hasOwnProperty.call(MODE_GUIDE, gameMode)) return null;
+  if (!Object.prototype.hasOwnProperty.call(MODE_LABELS, gameMode)) return null;
+  const content = FORMAT_CONTENT[gameMode];
+  if (!content) return null;
   const mode = gameMode as GameMode;
-  return { label: MODE_LABELS[mode], summary: MODE_GUIDE[mode].summary };
+  return { label: MODE_LABELS[mode], summary: content.summary };
 }
 
 export async function sendInviteNotification(

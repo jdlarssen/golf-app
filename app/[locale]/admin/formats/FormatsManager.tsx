@@ -9,13 +9,11 @@ import {
 } from '@/lib/formats/types';
 import { formatIconFor } from '@/lib/formats/icons';
 import { RowStatusChip, type RowStatus } from './RowStatusChip';
-import { SubmitButton } from '@/components/ui/SubmitButton';
 import {
   toggleVisibility,
   togglePrimary,
   toggleCupEligible,
   toggleActive,
-  updateFormatContent,
 } from './actions';
 
 type Props = {
@@ -84,6 +82,7 @@ function deriveStatus(f: FormatWithMappings): RowStatus {
  */
 export function FormatsManager({ initialFormats }: Props) {
   const t = useTranslations('admin.formats');
+  const tModes = useTranslations('modes');
   const [, startTransition] = useTransition();
   const [optimisticFormats, addOptimistic] = useOptimistic(
     initialFormats,
@@ -91,7 +90,6 @@ export function FormatsManager({ initialFormats }: Props) {
   );
   const [activeTab, setActiveTab] = useState<MappingIntent>('kompis');
   const [showInactive, setShowInactive] = useState<boolean>(false);
-  const [expandedEditor, setExpandedEditor] = useState<string | null>(null);
 
   function submit(action: Action, serverFn: typeof toggleVisibility) {
     const fd = new FormData();
@@ -164,15 +162,6 @@ export function FormatsManager({ initialFormats }: Props) {
         />
       </div>
 
-      {/* Content editors */}
-      <ContentEditorSection
-        formats={optimisticFormats}
-        expandedSlug={expandedEditor}
-        onToggle={(slug) =>
-          setExpandedEditor((prev) => (prev === slug ? null : slug))
-        }
-      />
-
       {/* Mobile tabs */}
       <div className="md:hidden space-y-4">
         <div role="tablist" className="grid grid-cols-3 gap-2">
@@ -210,7 +199,7 @@ export function FormatsManager({ initialFormats }: Props) {
                   <div className="flex items-center gap-2">
                     <span className="text-muted">{formatIconFor(f.icon_key, 22)}</span>
                     <span className="font-serif text-sm text-text">
-                      {f.display_name}
+                      {tModes(f.slug as Parameters<typeof tModes>[0])}
                     </span>
                   </div>
                   <RowStatusChip
@@ -264,7 +253,7 @@ export function FormatsManager({ initialFormats }: Props) {
                 <div className="flex items-center gap-2">
                   <span className="text-muted">{formatIconFor(f.icon_key, 20)}</span>
                   <span className="font-serif text-sm text-text">
-                    {f.display_name}
+                    {tModes(f.slug as Parameters<typeof tModes>[0])}
                   </span>
                 </div>
                 <label className="inline-flex cursor-pointer items-center gap-2">
@@ -293,161 +282,6 @@ export function FormatsManager({ initialFormats }: Props) {
 }
 
 // ---------------------------------------------------------------------------
-// Content editor section
-// ---------------------------------------------------------------------------
-
-function ContentEditorSection({
-  formats,
-  expandedSlug,
-  onToggle,
-}: {
-  formats: FormatWithMappings[];
-  expandedSlug: string | null;
-  onToggle: (slug: string) => void;
-}) {
-  const t = useTranslations('admin.formats');
-  return (
-    <div className="space-y-2">
-      <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-        {t('contentEditor.sectionHeading')}
-      </p>
-      <div className="rounded-lg border border-border bg-surface divide-y divide-border">
-        {formats.map((f) => (
-          <ContentEditorRow
-            key={f.slug}
-            format={f}
-            isOpen={expandedSlug === f.slug}
-            onToggle={() => onToggle(f.slug)}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ContentEditorRow({
-  format,
-  isOpen,
-  onToggle,
-}: {
-  format: FormatWithMappings;
-  isOpen: boolean;
-  onToggle: () => void;
-}) {
-  const t = useTranslations('admin.formats');
-  const pointsDefaultValue = format.rules_points
-    ? format.rules_points.join('\n')
-    : '';
-
-  return (
-    <div>
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left hover:bg-surface-2 transition-colors"
-        aria-expanded={isOpen}
-      >
-        <span className="flex items-center gap-2">
-          <span className="font-serif text-sm text-text">{format.display_name}</span>
-          {(format.rules_summary || format.rules_points || format.rules_long || format.rules_example) && (
-            <span className="rounded-full bg-primary/10 px-1.5 py-0.5 font-sans text-[10px] text-primary">
-              {t('contentEditor.editedBadge')}
-            </span>
-          )}
-        </span>
-        <span className="font-sans text-xs text-muted" aria-hidden="true">
-          {isOpen ? '▲' : '▼'}
-        </span>
-      </button>
-
-      {isOpen && (
-        <form
-          action={updateFormatContent}
-          className="border-t border-border px-3 pb-4 pt-3 space-y-4"
-        >
-          <input type="hidden" name="slug" value={format.slug} />
-
-          <div className="space-y-1">
-            <label
-              htmlFor={`summary-${format.slug}`}
-              className="block font-sans text-xs font-medium text-text"
-            >
-              {t('contentEditor.summaryLabel')}
-            </label>
-            <input
-              id={`summary-${format.slug}`}
-              type="text"
-              name="rules_summary"
-              defaultValue={format.rules_summary ?? ''}
-              placeholder={t('contentEditor.defaultPlaceholder')}
-              className="w-full rounded-md border border-border bg-bg px-3 py-2 font-sans text-sm text-text placeholder:text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label
-              htmlFor={`points-${format.slug}`}
-              className="block font-sans text-xs font-medium text-text"
-            >
-              {t('contentEditor.pointsLabel')}{' '}
-              <span className="font-normal text-muted">{t('contentEditor.pointsHint')}</span>
-            </label>
-            <textarea
-              id={`points-${format.slug}`}
-              name="rules_points"
-              rows={4}
-              defaultValue={pointsDefaultValue}
-              placeholder={t('contentEditor.defaultPlaceholder')}
-              className="w-full rounded-md border border-border bg-bg px-3 py-2 font-sans text-sm text-text placeholder:text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 resize-y"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label
-              htmlFor={`long-${format.slug}`}
-              className="block font-sans text-xs font-medium text-text"
-            >
-              {t('contentEditor.longLabel')}
-            </label>
-            <textarea
-              id={`long-${format.slug}`}
-              name="rules_long"
-              rows={5}
-              defaultValue={format.rules_long ?? ''}
-              placeholder={t('contentEditor.longPlaceholder')}
-              className="w-full rounded-md border border-border bg-bg px-3 py-2 font-sans text-sm text-text placeholder:text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 resize-y"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label
-              htmlFor={`example-${format.slug}`}
-              className="block font-sans text-xs font-medium text-text"
-            >
-              {t('contentEditor.exampleLabel')}
-            </label>
-            <textarea
-              id={`example-${format.slug}`}
-              name="rules_example"
-              rows={4}
-              defaultValue={format.rules_example ?? ''}
-              placeholder={t('contentEditor.examplePlaceholder')}
-              className="w-full rounded-md border border-border bg-bg px-3 py-2 font-sans text-sm text-text placeholder:text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 resize-y"
-            />
-          </div>
-
-          <div className="flex justify-end">
-            <SubmitButton pendingLabel={t('contentEditor.saveBusy')}>
-              {t('contentEditor.saveButton')}
-            </SubmitButton>
-          </div>
-        </form>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Desktop matrix
 // ---------------------------------------------------------------------------
 
@@ -465,6 +299,7 @@ function DesktopMatrix({
   onCupEligible: (slug: string, next: boolean) => void;
 }) {
   const t = useTranslations('admin.formats');
+  const tModes = useTranslations('modes');
   return (
     <div className="overflow-x-auto rounded-lg border border-border bg-surface">
       <table className="w-full text-sm">
@@ -492,6 +327,7 @@ function DesktopMatrix({
         <tbody>
           {formats.map((f) => {
             const inactive = !f.is_active;
+            const name = tModes(f.slug as Parameters<typeof tModes>[0]);
             return (
               <tr
                 key={f.slug}
@@ -504,7 +340,7 @@ function DesktopMatrix({
                     <span className="text-muted">
                       {formatIconFor(f.icon_key, 20)}
                     </span>
-                    <span className="font-serif text-text">{f.display_name}</span>
+                    <span className="font-serif text-text">{name}</span>
                   </div>
                 </td>
                 <td className="px-3 py-2">
@@ -523,7 +359,7 @@ function DesktopMatrix({
                       <div className="inline-flex items-center gap-2">
                         <input
                           type="checkbox"
-                          aria-label={`${f.display_name} ${intentLabel} synlig`}
+                          aria-label={`${name} ${intentLabel} synlig`}
                           checked={visible}
                           disabled={inactive}
                           onChange={(e) =>
@@ -533,7 +369,7 @@ function DesktopMatrix({
                         />
                         <button
                           type="button"
-                          aria-label={`${f.display_name} ${intentLabel} primary`}
+                          aria-label={`${name} ${intentLabel} primary`}
                           aria-pressed={primary}
                           disabled={inactive}
                           onClick={() => onPrimary(f.slug, intent, !primary)}
@@ -550,7 +386,7 @@ function DesktopMatrix({
                 <td className="px-3 py-2 text-center">
                   <input
                     type="checkbox"
-                    aria-label={`${f.display_name} cup-eligible`}
+                    aria-label={`${name} cup-eligible`}
                     checked={f.is_cup_eligible}
                     disabled={inactive}
                     onChange={(e) => onCupEligible(f.slug, e.target.checked)}

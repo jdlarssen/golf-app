@@ -25,7 +25,8 @@ export type { MappingIntent, MappingEntry, FormatWithMappings };
  * ikke skiller mellom aktiv og inaktiv på read-policy, men vi unngår
  * cookies-baserte feller (kan ikke kalles inne i unstable_cache).
  *
- * Returnerer alfabetisk sortert på `display_name` for stabil visning.
+ * Returnerer sortert på `slug` for stabil visning; FormatsManager rendrer
+ * lokaliserte navn via `modes.*`-katalogen (i18n Fase D, #592).
  */
 export async function getAllFormatsWithMappings(): Promise<
   FormatWithMappings[]
@@ -35,10 +36,8 @@ export async function getAllFormatsWithMappings(): Promise<
   const [formatsRes, mappingsRes] = await Promise.all([
     supabase
       .from('formats')
-      .select(
-        'slug, display_name, icon_key, short_description, is_active, is_cup_eligible, rules_summary, rules_points, rules_long, rules_example',
-      )
-      .order('display_name', { ascending: true }),
+      .select('slug, icon_key, is_active, is_cup_eligible')
+      .order('slug', { ascending: true }),
     supabase
       .from('format_intent_mapping')
       .select('format_slug, intent, is_visible, is_primary, sort_order'),
@@ -76,9 +75,7 @@ export async function getAllFormatsWithMappings(): Promise<
     const mappings = byFormat.get(f.slug as string) ?? {};
     return {
       slug: f.slug as string,
-      display_name: f.display_name as string,
       icon_key: f.icon_key as string,
-      short_description: f.short_description as string,
       is_active: f.is_active as boolean,
       is_cup_eligible: f.is_cup_eligible as boolean,
       mappings: {
@@ -86,10 +83,6 @@ export async function getAllFormatsWithMappings(): Promise<
         klubb: mappings.klubb ?? null,
         solo: mappings.solo ?? null,
       },
-      rules_summary: (f.rules_summary as string | null) ?? null,
-      rules_points: (f.rules_points as string[] | null) ?? null,
-      rules_long: (f.rules_long as string | null) ?? null,
-      rules_example: (f.rules_example as string | null) ?? null,
     };
   });
 }

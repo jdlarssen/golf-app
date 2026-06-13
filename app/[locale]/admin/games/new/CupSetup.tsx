@@ -41,6 +41,8 @@ export function CupSetup({
   matchCap,
 }: Props) {
   const t = useTranslations('wizard.cupSetup');
+  const tModes = useTranslations('modes');
+  const tContent = useTranslations('formatGuide');
   // Point-mål: vanlig regel = halvparten av tilgjengelige point + 0,5. For en
   // capped personlig cup (maks `matchCap` matcher) blir det en lavere default
   // enn admin/klubb-cupens 8-match-antagelse.
@@ -197,10 +199,16 @@ export function CupSetup({
                   </span>
                   <span className="flex-1">
                     <span className="block font-serif text-sm text-text">
-                      {f.display_name}
+                      {tModes(f.slug as Parameters<typeof tModes>[0])}
                     </span>
                     <span className="block text-xs text-muted">
-                      {f.short_description}
+                      {
+                        tContent.raw(
+                          `content.${f.slug}.shortDescription` as Parameters<
+                            typeof tContent.raw
+                          >[0],
+                        ) as string
+                      }
                     </span>
                   </span>
                 </label>

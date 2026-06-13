@@ -50,17 +50,16 @@ const EIGHT_PLAYERS: PlayerOption[] = Array.from({ length: 8 }, (_, i) =>
 );
 
 // Mini-katalog matchende migrasjon 0047 — kun nødvendige slugs for test-flyt.
+// Navn + beskrivelse rendres fra modes.* / formatGuide.content.* (i18n Fase D,
+// #592); vitest-stubben resolver dem mot no.json.
 function formatRow(
   slug: string,
-  display_name: string,
   is_primary: boolean,
   sort_order: number,
 ): FormatForIntent {
   return {
     slug,
-    display_name,
     icon_key: slug,
-    short_description: `${display_name} test-beskrivelse`,
     is_primary,
     sort_order,
   };
@@ -68,36 +67,26 @@ function formatRow(
 
 const FORMATS_BY_INTENT = {
   kompis: [
-    formatRow('stableford', 'Stableford', true, 10),
-    formatRow('best_ball', 'Best ball', true, 20),
-    formatRow('texas_scramble', 'Texas scramble', false, 30),
-    formatRow('singles_matchplay', 'Matchplay', false, 40),
+    formatRow('stableford', true, 10),
+    formatRow('best_ball', true, 20),
+    formatRow('texas_scramble', false, 30),
+    formatRow('singles_matchplay', false, 40),
   ],
   klubb: [
-    formatRow('stableford', 'Stableford', true, 10),
-    formatRow('best_ball', 'Best ball', true, 20),
-    formatRow('texas_scramble', 'Texas scramble', true, 30),
-    formatRow('solo_strokeplay', 'Slagspill', true, 40),
+    formatRow('stableford', true, 10),
+    formatRow('best_ball', true, 20),
+    formatRow('texas_scramble', true, 30),
+    formatRow('solo_strokeplay', true, 40),
   ],
   solo: [
-    formatRow('stableford', 'Stableford', true, 10),
-    formatRow('solo_strokeplay', 'Slagspill', true, 20),
+    formatRow('stableford', true, 10),
+    formatRow('solo_strokeplay', true, 20),
   ],
 };
 
 const CUP_ELIGIBLE: CupEligibleFormat[] = [
-  {
-    slug: 'singles_matchplay',
-    display_name: 'Matchplay',
-    icon_key: 'singles_matchplay',
-    short_description: '1v1, vinn flest hull.',
-  },
-  {
-    slug: 'fourball_matchplay',
-    display_name: 'Fourball matchplay',
-    icon_key: 'fourball_matchplay',
-    short_description: '2v2 best-ball matchplay.',
-  },
+  { slug: 'singles_matchplay', icon_key: 'singles_matchplay' },
+  { slug: 'fourball_matchplay', icon_key: 'fourball_matchplay' },
 ];
 
 const NO_OP = async () => {};
@@ -317,9 +306,9 @@ describe('GameWizard — best-ball inline team/flight på steg 4', () => {
 const FORMATS_BY_INTENT_WITH_NINES = {
   ...FORMATS_BY_INTENT,
   kompis: [
-    formatRow('stableford', 'Stableford', true, 10),
-    formatRow('best_ball', 'Best ball', true, 20),
-    formatRow('nines', 'Nines', false, 71),
+    formatRow('stableford', true, 10),
+    formatRow('best_ball', true, 20),
+    formatRow('nines', false, 71),
   ],
 };
 
@@ -346,7 +335,7 @@ describe('GameWizard — #373 Kompis teller-filter', () => {
     // Steg 2: default er 4 spillere → best_ball passer (partall 2–8),
     // nines (nøyaktig 3) er filtrert bort fra start
     expect(screen.getByRole('radio', { name: /^best ball$/i })).toBeInTheDocument();
-    expect(screen.queryByRole('radio', { name: /^nines$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /^nines \/ split sixes$/i })).not.toBeInTheDocument();
 
     // Trykk «Flere spillere» to ganger: → 6 (default 4 + 2)
     // Trykk «Færre spillere» tre ganger: → 3
@@ -358,12 +347,12 @@ describe('GameWizard — #373 Kompis teller-filter', () => {
 
     // count=3: best_ball passer ikke (trenger partall ≥2), nines passer (nøyaktig 3)
     expect(screen.queryByRole('radio', { name: /^best ball$/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /^nines$/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /^nines \/ split sixes$/i })).toBeInTheDocument();
 
     // «Vis alle»-lenke viser alt igjen
     fireEvent.click(screen.getByRole('button', { name: /vis alle/i }));
     expect(screen.getByRole('radio', { name: /^best ball$/i })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /^nines$/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /^nines \/ split sixes$/i })).toBeInTheDocument();
   });
 });
 
