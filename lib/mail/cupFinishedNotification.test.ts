@@ -129,12 +129,57 @@ describe('sendCupFinishedNotification', () => {
     `);
   });
 
+  // ─────────────────────────────────────────────────────────────────────
+  // Engelsk (locale: 'en') — Fase M.
+  // ─────────────────────────────────────────────────────────────────────
+
+  it('locale en: engelsk subject + vinner-resultat + /en/-lenke', async () => {
+    const payload = await send({ ...baseParams, locale: 'en' });
+    expect(payload.subject).toMatchInlineSnapshot(`"Result confirmed — Høst-cup 2026"`);
+    expect(payload.text).toMatchInlineSnapshot(`
+      "Hi Per!
+
+      The cup "Høst-cup 2026" is decided.
+
+      Bjørketrærne won the cup.
+      Bjørketrærne 3 — 2 Granskogen
+
+      View full leaderboard: https://tornygolf.no/en/cup/33333333-3333-3333-3333-333333333333
+      "
+    `);
+    expect(resultBlockHtml(payload.html)).toMatchInlineSnapshot(`
+      "<strong>Bjørketrærne</strong> won the cup.
+      Bjørketrærne 3 — 2 Granskogen"
+    `);
+  });
+
+  it('locale en, uavgjort: draw-tekst på engelsk', async () => {
+    const payload = await send({
+      ...baseParams,
+      locale: 'en',
+      team1Points: 2,
+      team2Points: 2,
+      winnerTeamName: null,
+    });
+    expect(payload.text).toMatchInlineSnapshot(`
+      "Hi Per!
+
+      The cup "Høst-cup 2026" is decided.
+
+      The cup ended in a draw.
+      Bjørketrærne 2 — 2 Granskogen
+
+      View full leaderboard: https://tornygolf.no/en/cup/33333333-3333-3333-3333-333333333333
+      "
+    `);
+  });
+
   // HTML chrome — låses ÉN gang. Endres chrome-mal-en må snapshot-en
   // oppdateres bevisst (vitest -u + review).
   it('HTML chrome: full template for default-case', async () => {
     const payload = await send(baseParams);
     expect(payload.html).toMatchInlineSnapshot(`
-      "<!DOCTYPE html><html lang="nb">
+      "<!DOCTYPE html><html lang="no">
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
