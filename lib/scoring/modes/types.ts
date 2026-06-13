@@ -111,6 +111,25 @@ export function isAlternateShotMatchplay(mode: GameMode): boolean {
 }
 
 /**
+ * True for hele matchplay-familien (1v1 singles + 2v2 fourball + alternate-shot-
+ * familien foursomes/greensome/chapman/gruesome). Alle deler duell-baseline:
+ * hull-for-hull W/L/T mellom to sider, ingen podium/leaderboard og bevisst ingen
+ * reveal-props. Single source of truth for «er dette et matchplay-format» på
+ * `game_mode`-baserte routing-/display-sjekker.
+ *
+ * Brukes til (a) å skjule sideturnering-bryteren i veiviseren for matchplay
+ * (duell-kortet har ingen tabs-flate å henge en LD/CTP-fane på — #576 utsatte
+ * dette til egen sak) og (b) symmetrisk skip i leaderboard-grenen.
+ */
+export function isMatchplayFamily(mode: GameMode): boolean {
+  return (
+    mode === 'singles_matchplay' ||
+    mode === 'fourball_matchplay' ||
+    isAlternateShotMatchplay(mode)
+  );
+}
+
+/**
  * True for individuelle formater uten lag-/flight-gruppering — spilleren er en
  * flat deltaker, ikke del av et lag eller en side. Single source of truth for
  * når UI skal skjule «Lag»/«Flight»-rader, vise hele deltaker-lista i stedet

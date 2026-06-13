@@ -1202,7 +1202,7 @@ async function renderStableford(opts: {
       }
       return (
         <>
-          {await renderStablefordWithSideTournament({
+          {await renderSideTournamentTabs({
             gameId,
             game,
             gwp,
@@ -1210,6 +1210,7 @@ async function renderStableford(opts: {
             rawScoresRows,
             backHref,
             mainContent: podium(true),
+            teamGrouping: 'byTeamNumber',
           })}
           {wdSection}
         </>
@@ -1297,7 +1298,7 @@ async function renderStableford(opts: {
     }
     return (
       <>
-        {await renderStablefordWithSideTournament({
+        {await renderSideTournamentTabs({
           gameId,
           game,
           gwp,
@@ -1305,6 +1306,7 @@ async function renderStableford(opts: {
           rawScoresRows,
           backHref,
           mainContent: podium(true),
+          teamGrouping: 'solo',
         })}
         {wdSection}
       </>
@@ -1326,22 +1328,29 @@ async function renderStableford(opts: {
 }
 
 /**
- * Sideturnering for stableford-spill (issue #165). Henter LD/CTP-vinnere fra
- * DB, bygger SideTournamentInput og pakker hoved-podiet + SideTournamentView
- * inn i en LeaderboardTabs-veksler.
+ * Generisk sideturnering-fane (issue #165, generalisert i #576). Henter
+ * LD/CTP-vinnere fra DB, bygger SideTournamentInput og pakker `mainContent`
+ * (formatets ferdig-podium/leaderboard, chromeless) + SideTournamentView inn i
+ * en LeaderboardTabs-veksler. Formatuavhengig: alt den trenger er rå-scores +
+ * course handicap + stroke-index, så den fungerer for ethvert poeng-/podium-
+ * format (stableford, BBB, wolf, skins, nassau, nines, round robin, acey-deucey,
+ * solo strokeplay, scramble-familien, shamble, patsome).
  *
- * Team-modell: par-stableford bruker eksisterende team_number-gruppering; solo
- * mapper hver spiller til en «team of 1» med løpende teamId (1, 2, 3, …) slik
- * at lag-aggregerte sidekategorier (most_birdies_team, etc.) faller bort som
- * forventet (filter `userIds.length >= 2` i sideTournament.ts), mens individ-
- * kategorier + LD/CTP fungerer normalt.
+ * Team-modell styres av `teamGrouping`:
+ *  - `'byTeamNumber'` — grupper på `game_players.team_number` (lag-format:
+ *    scramble-familien, shamble, patsome, par-stableford). Lag-aggregerte
+ *    sidekategorier (most_birdies_team, etc.) gjelder.
+ *  - `'solo'` — hver spiller blir en «team of 1» med løpende teamId (1, 2, 3 …)
+ *    slik at lag-aggregerte kategorier faller bort som forventet (filter
+ *    `userIds.length >= 2` i sideTournament.ts), mens individ-kategorier +
+ *    LD/CTP fungerer normalt.
  *
  * Netto- og brutto-arrays beregnes per spiller fra rå-scores + course handicap
- * + stroke-index. For team-varianten bygger vi «best ball per hull» som
- * MIN av lagets netto per hull — samme logikk som best-ball-grenen lenger oppe
- * i fila, bare uten å gå veien om computeLeaderboard.
+ * + stroke-index. «Best ball per hull» bygges som MIN av lagets netto per hull
+ * (for team-of-1 = spillerens egen netto) — samme logikk som best-ball-grenen
+ * lenger oppe i fila, bare uten å gå veien om computeLeaderboard.
  */
-async function renderStablefordWithSideTournament(opts: {
+async function renderSideTournamentTabs(opts: {
   gameId: string;
   game: GameForHole;
   gwp: {
@@ -1350,8 +1359,9 @@ async function renderStablefordWithSideTournament(opts: {
       team_number: number;
       users: { name: string | null; nickname: string | null } | null;
       course_handicap: number | null;
-      tee_gender: TeeGender;
-      withdrawn_at: string | null;
+      // Optional: kun WD-støttende formater (best ball, stableford-familien,
+      // solo strokeplay) bærer feltet. Fraværende felt = ikke trukket.
+      withdrawn_at?: string | null;
     }[];
   };
   rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
@@ -1361,12 +1371,14 @@ async function renderStablefordWithSideTournament(opts: {
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
   backHref: string;
   mainContent: React.ReactNode;
+  /** Lag-format → 'byTeamNumber'; individuelt/pott-format → 'solo'. */
+  teamGrouping: 'solo' | 'byTeamNumber';
 }) {
   const [tc, { supabase }] = await Promise.all([
     getTranslations('leaderboard.common'),
     getLeaderboardContext(),
   ]);
-  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref, mainContent } = opts;
+  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref, mainContent, teamGrouping } = opts;
 
   const sideWinnersRes = await supabase
     .from('game_side_winners')
@@ -1444,18 +1456,13 @@ async function renderStablefordWithSideTournament(opts: {
   // mapper hver spiller til en team of 1 med løpende teamId. Solo-mapping
   // gjør at SideTournamentView kan rendre én rad per spiller med spillernavn
   // som label, og at lag-aggregerte kategorier faller bort som forventet.
-  const isTeamVariant =
-    (game.mode_config.kind === 'stableford' ||
-      game.mode_config.kind === 'modified_stableford') &&
-    game.mode_config.team_size === 2;
-
   type TeamGroup = {
     teamId: number;
     label: string;
     userIds: string[];
   };
   const teamGroups: TeamGroup[] = [];
-  if (isTeamVariant) {
+  if (teamGrouping === 'byTeamNumber') {
     const byTeam = new Map<number, string[]>();
     for (const p of eligiblePlayers) {
       const t = p.team_number;
