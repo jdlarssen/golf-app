@@ -62,17 +62,34 @@ is an assertion, so tsc stays green and finished rows carry the real values.
 
 ## Success criteria
 
-- [ ] Finished-games query in `HomeBody` selects `game_mode, mode_config`; the
+- [x] Finished-games query in `HomeBody` selects `game_mode, mode_config`; the
       shared `GameRow.games` type declares them (`GameMode` / `GameModeConfig`).
-- [ ] Each finished card's subtitle reads «<bane> · <format>» using
+      — select at `page.tsx:143`, type at `page.tsx:116-117`. `tsc --noEmit` clean.
+- [x] Each finished card's subtitle reads «<bane> · <format>» using
       `formatDisplayLabel(game_mode, mode_config)`; «Leaderboard» is gone.
-- [ ] Each finished card shows the end date «12. jun» via
+      — `page.tsx:348-352` (array `[courses?.name, formatDisplayLabel(...)]`,
+      no «Leaderboard» literal anywhere in the finished card).
+- [x] Each finished card shows the end date «12. jun» via
       `formatShortDateLocale(ended_at, 'no')` on its own muted, tabular-nums
       line, rendered only when `ended_at` is present.
-- [ ] Course-less games degrade gracefully (subtitle is just the format; no
-      leading « · »).
-- [ ] `package.json` bumped to **1.117.3** + CHANGELOG entry nested under the
+      — `page.tsx:355-359` (`{g.ended_at && (<span class="...tabular-nums...">`).
+      `formatShortDateLocale(_, 'no')` → «12. jun» confirmed by `lib/format/date`
+      tests (164 passing) + `MONTH_NAMES_NB[5] === 'jun'`.
+- [x] Course-less games degrade gracefully (subtitle is just the format; no
+      leading « · »). — `.filter(Boolean).join(' · ')` at `page.tsx:351-352`
+      drops the null course; `formatDisplayLabel` never returns empty.
+- [x] `package.json` bumped to **1.117.3** + CHANGELOG entry nested under the
       open `## 1.117.y` theme; commit prefix `feat(home)`.
+      — `package.json` 1.117.3, CHANGELOG `### [1.117.3]` under `## 1.117.y`,
+      commit `2dc87bbc feat(home): …` (commit-msg hook accepted = bump+CHANGELOG present).
+
+### Gate evidence
+- `npx tsc --noEmit` → clean (0 errors after `npm install` restored `next-intl`).
+- `npx vitest run lib/games/formatLabel lib/format/date lib/i18n` → 4 files, 164 tests passed.
+- `npm run build` → succeeded; full route tree + PPR legend printed, `/[locale]` compiled.
+- UI browser-render not feasible: `/` is auth-gated (`page.tsx:54` redirects to
+  `/login` without a session; no login codes available in preview). Verified via
+  types + build + unit-tested helpers + render-wiring read instead.
 
 ## Gates
 
