@@ -124,22 +124,26 @@ Engangs-backfill av alle ferdigspilte spill:
 - Hvorvidt `fieldSize`/`rank` hentes fra ModeResult-linjer eller utledes — bruk det som finnes.
 
 ## Success Criteria
-- [ ] `computeResultSummaries(result)` finnes som ren TS-helper med Type A-tester (`it.each` over alle
+- [x] `computeResultSummaries(result)` finnes som ren TS-helper med Type A-tester (`it.each` over alle
       ModeResult-former: placement-individuell, placement-lag, matchplay win/loss/tie, skins) — alle grønne.
-      *Verifiser:* `npx vitest run` på testfila, grønn.
-- [ ] Migrasjon legger `result_summary jsonb` (nullbar) på `game_players`, applied til prod, og
-      `database.types.ts` inkluderer feltet. *Verifiser:* MCP-SQL viser kolonnen; `npm run build` kompilerer.
-- [ ] Begge ende-spill-actionene (`endGame` + `endGameWithSideWinners`) kaller `persistResultSummaries` ved
-      finish (best-effort). *Verifiser:* kode-referanse (file:line) + et nyavsluttet spill får non-null
-      summaries (MCP-SQL eller Playwright på kort).
-- [ ] `FinishedGameCard` viser mode-naturlig resultat: «🥇 Du vant» (gull) for egen seier, «2. plass av 4»
+      **EVIDENS:** `lib/scoring/resultSummary.ts` + `resultSummary.test.ts` (10 tester grønne, `npx vitest run`).
+- [x] Migrasjon legger `result_summary jsonb` (nullbar) på `game_players`, applied til prod, og
+      `database.types.ts` inkluderer feltet. **EVIDENS:** `0096_game_players_result_summary.sql` applied via MCP;
+      `information_schema`-spørring viser `result_summary jsonb YES`; `lib/database.types.ts:437` har feltet; `tsc` grønn.
+- [x] Begge ende-spill-actionene (`endGame` + `endGameWithSideWinners`) kaller `persistResultSummaries` ved
+      finish (best-effort). **EVIDENS:** `app/[locale]/admin/games/[id]/actions.ts` (etter status-flip) +
+      `.../avslutt/actions.ts` (etter status-flip); `lib/games/persistResultSummaries.ts` (try/catch best-effort).
+- [x] `FinishedGameCard` viser mode-naturlig resultat: «🥇 Du vant» (gull) for egen seier, «2. plass av 4»
       muted ellers, «Du vant 3&2»/«Du tapte 2&1»/«Uavgjort» for matchplay, «N skins» for skins; 🏆 kun når
-      summary er null. *Verifiser:* Playwright/preview-screenshot mot et avsluttet spill.
-- [ ] Nye i18n-nøkler i **både** `messages/no.json` og `en.json`; `catalogParity.test.ts` grønn.
-      *Verifiser:* `npx vitest run messages/catalogParity.test.ts`.
-- [ ] Backfill kjørt: alle ferdig-spill-rader for støttede modi har non-null `result_summary`.
-      *Verifiser:* MCP-SQL `count(*) … where g.status='finished' and gp.result_summary is null` ≈ 0
-      (kun usupporterte/tomme spill igjen, dokumentert).
+      summary er null. **EVIDENS:** `FinishedGameCard.tsx` + `FinishedGameCard.test.tsx` (3 render-tester:
+      win→`.text-accent`, ikke-win→`.text-muted`, null→🏆, grønne). Playwright droppet — hjem-siden krever
+      innlogget økt; render-test dekker wiring uten auth-stillas.
+- [x] Nye i18n-nøkler i **både** `messages/no.json` og `en.json`; `catalogParity.test.ts` grønn.
+      **EVIDENS:** `finishedCard.result.*` i begge katalogene (engelsk ordenstall-ICU); `catalogParity.test.ts` grønn.
+- [x] Backfill kjørt: alle ferdig-spill-rader for støttede modi har non-null `result_summary`.
+      **EVIDENS:** 6 spill / 19 rader backfilled via MCP (dump-checksum verifisert mot prod: n/sum/posSum +
+      handicaps/lag/BBB identiske); `count(*) … where status='finished' and result_summary is null` = **0**,
+      filled = 19. `scripts/backfillResultSummaries.ts` er det reproduserbare verktøyet.
 
 ## Gates
 - [ ] `npm run build` passerer (tsc — alle nye GameMode/ModeResult-switcher er uttømmende, jf.
