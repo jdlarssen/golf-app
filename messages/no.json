@@ -3661,5 +3661,25 @@
 			"skinsWon": "🥇 {count, plural, one {# skin} other {# skins}}",
 			"skins": "{count, plural, one {# skin} other {# skins}}"
 		}
+	},
+	"home": {
+		"profileUpdatedBanner": "✓ Profilen din er oppdatert.",
+		"gameDeletedBanner": "✓ «{name}» er slettet.",
+		"emptyKicker": "KLUBBHUSET ER ÅPENT",
+		"emptyWelcome": "Velkommen, {name}.",
+		"emptyBodyWithDiscovery": "Ingen turneringer enda. Sett opp en runde i Klubbhuset, eller bli med i en åpen turnering under.",
+		"emptyBodyNoDiscovery": "Ingen turneringer enda. Sett opp en runde i Klubbhuset, så er du i gang.",
+		"emptyOpenClubhouse": "Åpne Klubbhuset",
+		"emptyPullQuote": "En god runde begynner med god planlegging.",
+		"greeting": "Hei, {name}.",
+		"playerFallback": "spiller",
+		"sectionInProgress": "Pågår nå",
+		"sectionMyGames": "Mine spill",
+		"sectionFindTournaments": "Finn turneringer",
+		"sectionFinished": "Avsluttede spill",
+		"sectionFinishedShowAll": "Vis alle avsluttede spill",
+		"discoverCard": "Se åpne turneringer du kan bli med i",
+		"teeOffSeparator": "kl.",
+		"teamFlight": "Lag {teamNumber} · Flight {flightNumber}"
 	}
 }

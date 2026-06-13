@@ -3661,5 +3661,25 @@
 			"skinsWon": "🥇 {count, plural, one {# skin} other {# skins}}",
 			"skins": "{count, plural, one {# skin} other {# skins}}"
 		}
+	},
+	"home": {
+		"profileUpdatedBanner": "✓ Your profile has been updated.",
+		"gameDeletedBanner": "✓ \"{name}\" has been deleted.",
+		"emptyKicker": "THE CLUBHOUSE IS OPEN",
+		"emptyWelcome": "Welcome, {name}.",
+		"emptyBodyWithDiscovery": "No tournaments yet. Set up a round in the Clubhouse, or join an open tournament below.",
+		"emptyBodyNoDiscovery": "No tournaments yet. Set up a round in the Clubhouse and you''re off.",
+		"emptyOpenClubhouse": "Open the Clubhouse",
+		"emptyPullQuote": "A great round starts with a good plan.",
+		"greeting": "Hi, {name}.",
+		"playerFallback": "player",
+		"sectionInProgress": "In progress",
+		"sectionMyGames": "My games",
+		"sectionFindTournaments": "Find tournaments",
+		"sectionFinished": "Finished games",
+		"sectionFinishedShowAll": "Show all finished games",
+		"discoverCard": "See open tournaments you can join",
+		"teeOffSeparator": "at",
+		"teamFlight": "Team {teamNumber} · Flight {flightNumber}"
 	}
 }

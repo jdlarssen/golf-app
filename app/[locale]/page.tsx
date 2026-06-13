@@ -1,6 +1,7 @@
 import { Suspense, cache } from 'react';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getTranslations, getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { AppShell } from '@/components/ui/AppShell';
@@ -18,12 +19,15 @@ import { InstallBanner } from '@/components/pwa/InstallBanner';
 import { ProductUpdateBanner } from '@/components/products/ProductUpdateBanner';
 import { HandicapChip } from '@/components/handicap/HandicapChip';
 import { firstName } from '@/lib/firstName';
-import { formatTeeOffDate, formatTeeOffTime } from '@/lib/format/teeOff';
-import { STATUS_LABELS } from '@/lib/games/status';
+import {
+  formatTeeOffDateLocale,
+  formatTeeOffTimeLocale,
+} from '@/lib/i18n/format';
 import { getFinishedGamesForUser } from '@/lib/games/getFinishedGamesForUser';
 import { FinishedGameCard } from '@/components/games/FinishedGameCard';
 import { HomeDiscoverySection } from './HomeDiscoverySection';
 import { getDiscoverableGames } from '@/lib/games/getDiscoverableGames';
+import type { AppLocale } from '@/i18n/routing';
 
 type SearchParams = Promise<{
   profile?: string | string[];
@@ -51,14 +55,17 @@ export default async function Home({
 }: {
   searchParams: SearchParams;
 }) {
+  const locale = (await getLocale()) as AppLocale;
   const { userId } = await getHomeContext();
   if (!userId) {
-    redirect('/login');
+    redirect({ href: '/login', locale });
   }
 
   const params = await searchParams;
   const profileUpdated = first(params.profile) === 'updated';
   const deletedGameName = first(params.deleted);
+
+  const t = await getTranslations('home');
 
   return (
     <AppShell>
@@ -71,18 +78,18 @@ export default async function Home({
       <InstallBanner />
 
       <Suspense fallback={null}>
-        <ProductUpdateBanner userId={userId} />
+        <ProductUpdateBanner userId={userId!} />
       </Suspense>
 
       {profileUpdated && (
         <div className="mb-4">
-          <Banner tone="success">✓ Profilen din er oppdatert.</Banner>
+          <Banner tone="success">{t('profileUpdatedBanner')}</Banner>
         </div>
       )}
 
       {deletedGameName && (
         <div className="mb-4">
-          <Banner tone="success">✓ «{deletedGameName}» er slettet.</Banner>
+          <Banner tone="success">{t('gameDeletedBanner', { name: deletedGameName })}</Banner>
         </div>
       )}
 
@@ -97,6 +104,9 @@ export default async function Home({
 
 async function HomeBody() {
   const { supabase, userId } = await getHomeContext();
+  const locale = (await getLocale()) as AppLocale;
+  const t = await getTranslations('home');
+  const tStatus = await getTranslations('gameStatus');
 
   type GameRow = {
     game_id: string;
@@ -143,7 +153,7 @@ async function HomeBody() {
     throw profileError;
   }
   if (!profile?.profile_completed_at) {
-    redirect('/complete-profile');
+    redirect({ href: '/complete-profile', locale });
   }
 
   const activeGames = (rawActiveRes.data ?? [])
@@ -163,7 +173,7 @@ async function HomeBody() {
   // ett kort blant flere. Splitt på status='active' vs. resten (planlagte).
   const inProgressGames = activeGames.filter((g) => g.status === 'active');
   const upcomingGames = activeGames.filter((g) => g.status !== 'active');
-  const firstNameValue = firstName(profile?.name) ?? 'spiller';
+  const firstNameValue = firstName(profile?.name) ?? t('playerFallback');
   // Always-visible handicap reflection (#209). Only render when we have
   // both fields — defensive against a degraded fetch.
   const handicapChip =
@@ -197,24 +207,24 @@ async function HomeBody() {
             <PinFlag size={72} className="text-primary dark:text-text" />
           </ChampagneMedallion>
           <Kicker tone="accent" className="mb-2.5">
-            KLUBBHUSET ER ÅPENT
+            {t('emptyKicker')}
           </Kicker>
           <h1 className="font-serif text-[30px] font-medium tracking-[-0.02em] leading-tight text-text">
-            Velkommen, {firstNameValue}.
+            {t('emptyWelcome', { name: firstNameValue })}
           </h1>
           <p className="mt-3 font-sans text-sm leading-relaxed text-muted max-w-[280px]">
             {hasDiscoveryContent
-              ? 'Ingen turneringer enda. Sett opp en runde i Klubbhuset, eller bli med i en åpen turnering under.'
-              : 'Ingen turneringer enda. Sett opp en runde i Klubbhuset, så er du i gang.'}
+              ? t('emptyBodyWithDiscovery')
+              : t('emptyBodyNoDiscovery')}
           </p>
           {handicapChip && <div className="mt-5">{handicapChip}</div>}
           <div className="mt-8 w-full max-w-[280px]">
             <LinkButton href="/admin" full>
-              Åpne Klubbhuset
+              {t('emptyOpenClubhouse')}
             </LinkButton>
           </div>
           <PullQuote className="mt-8">
-            En god runde begynner med god planlegging.
+            {t('emptyPullQuote')}
           </PullQuote>
         </section>
 
@@ -249,16 +259,16 @@ async function HomeBody() {
                 const d = new Date(g.scheduled_tee_off_at);
                 return (
                   <span className="block text-xs text-muted mt-1 tabular-nums truncate">
-                    {formatTeeOffDate(d)} kl. {formatTeeOffTime(d)}
+                    {formatTeeOffDateLocale(d, locale)} {t('teeOffSeparator')} {formatTeeOffTimeLocale(d, locale)}
                   </span>
                 );
               })()}
             <span className="block text-xs text-muted mt-1 truncate">
-              Lag {g.teamNumber} · Flight {g.flightNumber}
+              {t('teamFlight', { teamNumber: g.teamNumber, flightNumber: g.flightNumber })}
             </span>
           </div>
           <div className="flex items-center gap-3 shrink-0">
-            <StatusPill status={g.status} label={STATUS_LABELS[g.status]} />
+            <StatusPill status={g.status} label={tStatus(g.status)} />
             <span aria-hidden className="text-muted">
               →
             </span>
@@ -271,19 +281,19 @@ async function HomeBody() {
   return (
     <>
       <PageHeader
-        title={`Hei, ${profile?.name ?? 'spiller'}.`}
+        title={t('greeting', { name: profile?.name ?? t('playerFallback') })}
         action={handicapChip}
       />
 
       <nav className="space-y-6">
         {inProgressGames.length > 0 && (
-          <Section label="Pågår nå">
+          <Section label={t('sectionInProgress')}>
             {inProgressGames.map((g) => renderGameCard(g, true))}
           </Section>
         )}
 
         {upcomingGames.length > 0 && (
-          <Section label="Mine spill">
+          <Section label={t('sectionMyGames')}>
             {upcomingGames.map((g) => renderGameCard(g, false))}
           </Section>
         )}
@@ -292,11 +302,11 @@ async function HomeBody() {
             play + discover-navet (arrangering bor i Klubbhuset), så alle
             innloggede kan oppdage åpne turneringer herfra — rett under egne
             spill, over de avsluttede. */}
-        <Section label="Finn turneringer">
+        <Section label={t('sectionFindTournaments')}>
           <SmartLink href="/finn-turneringer" className="block">
             <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
               <span className="text-base font-medium text-text">
-                Se åpne turneringer du kan bli med i
+                {t('discoverCard')}
               </span>
               <span aria-hidden className="text-muted">
                 →
@@ -306,7 +316,7 @@ async function HomeBody() {
         </Section>
 
         {finishedGames.length > 0 && (
-          <Section label="Avsluttede spill">
+          <Section label={t('sectionFinished')}>
             {/* #571: hjem er play + discover-navet, ikke et arkiv. Vis de
                 siste 5; lenk til /spill-arkiv for resten når det finnes flere. */}
             {finishedGames.slice(0, 5).map((g) => (
@@ -316,7 +326,7 @@ async function HomeBody() {
               <SmartLink href="/spill-arkiv" className="block">
                 <Card className="min-h-[44px] flex items-center justify-between hover:bg-primary-soft transition-colors p-5">
                   <span className="text-base font-medium text-text">
-                    Vis alle avsluttede spill
+                    {t('sectionFinishedShowAll')}
                   </span>
                   <span aria-hidden className="text-muted">
                     →
