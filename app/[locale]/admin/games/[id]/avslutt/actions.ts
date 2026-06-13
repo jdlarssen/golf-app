@@ -8,6 +8,7 @@ import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { sendGameFinishedNotification } from '@/lib/mail/gameFinishedNotification';
 import { buildGameFinishedRecipients } from '@/lib/mail/gameFinishedRecipients';
+import { persistResultSummaries } from '@/lib/games/persistResultSummaries';
 import { firstName } from '@/lib/firstName';
 import { logAdminEvent } from '@/lib/admin/auditLog';
 import type { GameStatus } from '@/lib/games/status';
@@ -178,6 +179,15 @@ export async function endGameWithSideWinners(
     .update({ status: 'finished', ended_at: new Date().toISOString() })
     .eq('id', gameId);
   if (statusErr) redirect({ href: `${detailPath}?error=db_finish`, locale });
+
+  // #572: beregn og lagre per-spiller-resultatet for avsluttede-spill-kortene.
+  // Best-effort — feiler aldri ut av avslutningen (egen try/catch internt).
+  await persistResultSummaries({
+    id: gameId,
+    game_mode: game!.game_mode,
+    mode_config: game!.mode_config,
+    course_id: game!.course_id,
+  });
 
   await logAdminEvent({
     actorId: user.id,
