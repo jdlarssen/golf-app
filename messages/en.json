@@ -4150,7 +4150,7 @@
 			"messageQuote": "\"{message}\"",
 			"goToSignups": "Go to sign-ups",
 			"goToSignupsText": "Go to sign-ups: {url}",
-			"footer": "You're receiving this because you're the organiser for this game. You can approve or decline the request from Sekretariatet."
+			"footer": "You're receiving this because you're the organiser for this game. You can approve or decline the request from Secretariat."
 		},
 		"scorecardSubmitted": {
 			"subject": "Scorecard submitted: {playerName} in {gameName}",
