@@ -3648,5 +3648,18 @@
 		"pendingApproval": "Venter på godkjenning",
 		"pendingApprovalCaptain": "Lag «{teamName}» (kaptein) — venter på godkjenning",
 		"pendingApprovalMember": "Lag «{teamName}» — venter på godkjenning"
+	},
+	"finishedCard": {
+		"result": {
+			"youWon": "🥇 Du vant",
+			"teamWon": "🥇 Laget vant",
+			"placement": "{rank}. plass av {fieldSize}",
+			"teamPlacement": "Laget ble nr {rank} av {fieldSize}",
+			"matchWon": "Du vant {margin}",
+			"matchLost": "Du tapte {margin}",
+			"matchTied": "Uavgjort",
+			"skinsWon": "🥇 {count, plural, one {# skin} other {# skins}}",
+			"skins": "{count, plural, one {# skin} other {# skins}}"
+		}
 	}
 }

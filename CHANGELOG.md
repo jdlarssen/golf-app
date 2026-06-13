@@ -17,7 +17,35 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.119.y — Hjem · spill-arkiv og siste runder
+## 1.120.y — Ditt resultat på avsluttede spill
+
+Issue [#572](https://github.com/jdlarssen/golf-app/issues/572). Hvert avsluttede spill-kort viste samme pokal uansett utfall. Nå viser kortet ditt eget resultat (plassering, matchutfall eller skins), beregnet og lagret når spillet avsluttes, så hjem-siden og arkivet holder seg billige å rendre.
+
+### [1.120.0] - 2026-06-13 · #572
+
+> Hvert avsluttede spill-kort viser nå ditt eget resultat: «🥇 Du vant», «2. plass av 4», «Du vant 3&2» eller «4 skins». Før hadde alle kort samme pokal. Nå ser du med ett blikk hvordan det gikk, uten å åpne leaderboardet.
+
+<details>
+<summary>Teknisk</summary>
+
+[#572](https://github.com/jdlarssen/golf-app/issues/572). Resultater ble aldri lagret: `endGame` flippet bare status, og standings regnes på render-tid per modus. Å regne fullt leaderboard per avsluttet kort per sidevisning er for dyrt, så et kompakt per-spiller-utfall persisteres ved avslutning og leses billig på kortet.
+
+#### Added
+- `supabase/migrations/0096_game_players_result_summary.sql` — nullbar `result_summary jsonb` på `game_players`. Strukturert union (ikke ferdig streng) så kortet kan oversettes med #60.
+- `lib/scoring/resultSummary.ts` (+ Type A-test) — `computeResultSummaries(result)` utleder per-spiller-utfall (placement / matchplay / skins) fra `ModeResult` for alle 20+ modi.
+- `lib/scoring/buildModeResultForGame.ts` — request-kontekst-fri `ModeResult`-bygging som gjenbruker leaderboard-flatens per-modus `build*Context`-helpere, så kort og leaderboard aldri driver.
+- `lib/games/persistResultSummaries.ts` — best-effort persist via service-role-klienten; kalt fra både `endGame` og `endGameWithSideWinners` etter status-flippen.
+- `lib/games/finishedResultBadge.ts` (+ Type A-test) — mapper `ResultSummary` til i18n-nøkkel + `isWin`-flagg (gull-accent til egen seier).
+- `messages/{no,en}.json`: nytt `finishedCard.result.*`-namespace (placement med ordenstall-ICU på engelsk, matchplay-utfall, skins-pluralis).
+- `scripts/backfillResultSummaries.ts` — engangs-backfill av alle eksisterende ferdigspilte spill.
+
+#### Changed
+- `FinishedGameCard` viser nå resultat-badgen (gull-accent ved egen seier, dempet ellers), med 🏆-fallback når `result_summary` mangler. `getFinishedGamesForUser` tar med spillerens egen `result_summary` fra `game_players`-raden.
+
+</details>
+
+<details>
+<summary><strong>1.119.y — Hjem · spill-arkiv og siste runder (1 oppføring)</strong></summary>
 
 Issue [#571](https://github.com/jdlarssen/golf-app/issues/571). Hjem-siden skal være play + discover-navet, ikke et arkiv. «Avsluttede spill» viser nå bare de fem siste rundene; resten ligger i et eget spill-arkiv, gruppert per måned.
 
@@ -38,6 +66,8 @@ Issue [#571](https://github.com/jdlarssen/golf-app/issues/571). Hjem-siden skal 
 
 #### Changed
 - `HomeBody` viser nå `finishedGames.slice(0, 5)` via `FinishedGameCard`, med en «Vis alle avsluttede spill →»-lenke til `/spill-arkiv` kun når det finnes flere enn fem. Finished-spørringen er flyttet til den delte helperen, og `game_mode`/`mode_config` er fjernet fra den delte `GameRow`-typen (den aktive spørringen brukte dem aldri).
+
+</details>
 
 </details>
 

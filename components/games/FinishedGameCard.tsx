@@ -1,19 +1,31 @@
+import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { Card } from '@/components/ui/Card';
 import { formatShortDateLocale } from '@/lib/i18n/format';
 import { formatDisplayLabel } from '@/lib/games/formatLabel';
+import { finishedResultBadge } from '@/lib/games/finishedResultBadge';
 import type { FinishedGame } from '@/lib/games/getFinishedGamesForUser';
 
 /**
  * Kort for et avsluttet spill, delt mellom Hjem («Avsluttede spill», siste 5)
  * og /spill-arkiv (alle, gruppert per måned) så de aldri visuelt driver fra
- * hverandre (#571). Layout per #570: navn / «bane · spillform» / sluttdato / 🏆.
+ * hverandre (#571). Layout per #570: navn / «bane · spillform» / sluttdato +
+ * spillerens eget resultat (#572).
+ *
+ * Resultat-badgen viser ditt utfall: «🥇 Du vant» / «🥇 Laget vant» med gull-
+ * accent for egen seier, «2. plass av 4» / «Du tapte 2&1» / «4 skins» dempet
+ * ellers. Faller tilbake til 🏆 når `result_summary` mangler (spill avsluttet
+ * før #572). Teksten kommer fra next-intl så den oversettes med #60.
  *
  * Ren server-trygg modul (ingen 'use client') — tappet leder til leaderboardet.
- * `formatShortDateLocale(_, 'no')` matcher den ennå norsk-literale hjem-siden;
- * helperen er locale-bevisst for #60-migreringen.
+ * `formatShortDateLocale(_, 'no')` matcher den ennå norsk-literale hjem-siden.
  */
 export function FinishedGameCard({ game }: { game: FinishedGame }) {
+  const t = useTranslations('finishedCard');
+  const badge = game.result_summary
+    ? finishedResultBadge(game.result_summary)
+    : null;
+
   return (
     <SmartLink href={`/games/${game.id}/leaderboard`} className="block">
       <Card className="min-h-[44px] hover:border-primary/30 transition-colors p-5">
@@ -36,9 +48,22 @@ export function FinishedGameCard({ game }: { game: FinishedGame }) {
               </span>
             )}
           </div>
-          <span aria-hidden className="text-accent shrink-0">
-            🏆
-          </span>
+          {badge ? (
+            <span
+              className={`shrink-0 max-w-[45%] text-right text-sm font-medium leading-snug ${
+                badge.isWin ? 'text-accent' : 'text-muted'
+              }`}
+            >
+              {t(
+                badge.key as Parameters<typeof t>[0],
+                badge.values as Parameters<typeof t>[1],
+              )}
+            </span>
+          ) : (
+            <span aria-hidden className="text-accent shrink-0">
+              🏆
+            </span>
+          )}
         </div>
       </Card>
     </SmartLink>

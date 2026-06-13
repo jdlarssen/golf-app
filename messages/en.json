@@ -3648,5 +3648,18 @@
 		"pendingApproval": "Waiting for approval",
 		"pendingApprovalCaptain": "Team \"{teamName}\" (captain) — waiting for approval",
 		"pendingApprovalMember": "Team \"{teamName}\" — waiting for approval"
+	},
+	"finishedCard": {
+		"result": {
+			"youWon": "🥇 You won",
+			"teamWon": "🥇 Your team won",
+			"placement": "{rank, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} of {fieldSize}",
+			"teamPlacement": "Team finished {rank, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} of {fieldSize}",
+			"matchWon": "You won {margin}",
+			"matchLost": "You lost {margin}",
+			"matchTied": "Halved",
+			"skinsWon": "🥇 {count, plural, one {# skin} other {# skins}}",
+			"skins": "{count, plural, one {# skin} other {# skins}}"
+		}
 	}
 }
