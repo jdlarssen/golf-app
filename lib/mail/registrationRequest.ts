@@ -5,8 +5,12 @@
 // Best-effort: caller wrapper i try/catch så en mail-feil aldri ruller
 // tilbake selve forespørselen. game_registration_requests-raden er source
 // of truth — admin ser den i innboks + på godkjennings-siden uansett.
+//
+// Locale-aware (i18n Fase M, #594): user-visible text comes from the `mail`
+// catalog for the recipient's locale.
 
 import { Resend } from 'resend';
+import { getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
 
 function resolveFromEmail(): string {
   const raw = process.env.RESEND_FROM_EMAIL?.trim();
@@ -34,14 +38,27 @@ export type RegistrationRequestMailParams = {
    * blockquote i mail-en hvis satt, droppes ellers.
    */
   message?: string;
+  /** Mottakerens locale (#594). Normalt udefinert → norsk. */
+  locale?: string | null;
 };
 
 export async function sendRegistrationRequestMail(
   params: RegistrationRequestMailParams,
 ): Promise<void> {
-  const { to, gameName, gameShortId, requesterName, message } = params;
-  const subject = `Ny påmelding til ${gameName}`;
-  const approvalUrl = `https://tornygolf.no/signup/${gameShortId}`;
+  const { to, gameName, gameShortId, requesterName, message, locale } = params;
+  const loc = resolveMailLocale(locale);
+  const t = getMailTranslator(locale);
+
+  const subject = t('registrationRequest.subject', { gameName });
+  const approvalUrl = mailUrl(locale, `/signup/${gameShortId}`);
+
+  const bodyHtml = t.markup('registrationRequest.body', {
+    requesterName: escapeHtml(requesterName),
+    gameName: escapeHtml(gameName),
+    strong: (c) => `<strong>${c}</strong>`,
+    em: (c) => `<em>${c}</em>`,
+  });
+  const bodyText = t('registrationRequest.bodyText', { requesterName, gameName });
 
   // Bygg hilsen-blokk kun hvis message er satt — vi vil ikke ha en tom
   // blockquote-ramme som tar opp plass uten innhold.
@@ -50,9 +67,11 @@ export async function sendRegistrationRequestMail(
         message,
       )}</blockquote>`
     : '';
-  const messageText = message ? `\n«${message}»\n` : '';
+  const messageText = message
+    ? `\n${t('registrationRequest.messageQuote', { message })}\n`
+    : '';
 
-  const html = `<!DOCTYPE html><html lang="nb">
+  const html = `<!DOCTYPE html><html lang="${loc}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -68,22 +87,22 @@ export async function sendRegistrationRequestMail(
               Tørny<span style="color:#C9A961;">.</span>
             </h1>
             <p style="font-size:13px;color:#4A3F30;margin:0 0 32px;">
-              Fyr opp golfturneringen på et par minutter.
+              ${t('common.tagline')}
             </p>
             <h2 style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;margin:0 0 16px;color:#1A1813;">
-              Ny påmelding venter
+              ${t('registrationRequest.heading')}
             </h2>
             <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-              <strong>${escapeHtml(requesterName)}</strong> vil bli med i <em>${escapeHtml(gameName)}</em>.
+              ${bodyHtml}
             </p>
             ${messageHtml}
             <div style="margin:32px 0;">
               <a href="${approvalUrl}" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
-                Gå til påmeldinger
+                ${t('registrationRequest.goToSignups')}
               </a>
             </div>
             <p style="font-size:13px;color:#4A3F30;line-height:1.5;margin:32px 0 0;border-top:1px solid #E6E2D6;padding-top:24px;">
-              Du får denne meldingen fordi du er arrangør for spillet. Du kan godkjenne eller avslå forespørselen fra Sekretariatet.
+              ${t('registrationRequest.footer')}
             </p>
           </td></tr>
         </table>
@@ -95,10 +114,10 @@ export async function sendRegistrationRequestMail(
 
   const text =
     `${subject}\n\n` +
-    `${requesterName} vil bli med i ${gameName}.\n` +
+    `${bodyText}\n` +
     `${messageText}` +
-    `\nGå til påmeldinger: ${approvalUrl}\n\n` +
-    `Tørny — fyr opp golfturneringen på et par minutter.\n`;
+    `\n${t('registrationRequest.goToSignupsText', { url: approvalUrl })}\n\n` +
+    `${t('common.footerTagline')}\n`;
 
   const resend = getClient();
   const result = await resend.emails.send({

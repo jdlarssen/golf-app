@@ -135,7 +135,7 @@ describe('sendRegistrationRequestMail', () => {
   it('HTML chrome: full template for uten-message-case', async () => {
     const payload = await send(baseParams);
     expect(payload.html).toMatchInlineSnapshot(`
-      "<!DOCTYPE html><html lang="nb">
+      "<!DOCTYPE html><html lang="no">
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -175,6 +175,30 @@ describe('sendRegistrationRequestMail', () => {
         </table>
       </body>
       </html>"
+    `);
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Engelsk (locale: 'en') — Fase M.
+  // ─────────────────────────────────────────────────────────────────────
+
+  it('locale en: engelsk subject + body + /en/-lenke (uten message)', async () => {
+    const payload = await send({ ...baseParams, locale: 'en' });
+    expect(payload.subject).toMatchInlineSnapshot(`"New sign-up for Sommercup 2026"`);
+    expect(payload.text).toMatchInlineSnapshot(`
+      "New sign-up for Sommercup 2026
+
+      Per Spiller wants to join Sommercup 2026.
+
+      Go to sign-ups: https://tornygolf.no/en/signup/abc12345
+
+      Tørny — fire up your golf tournament in a couple of minutes.
+      "
+    `);
+    expect(mainBodyHtml(payload.html)).toMatchInlineSnapshot(`
+      "<p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
+                    <strong>Per Spiller</strong> wants to join <em>Sommercup 2026</em>.
+                  </p>"
     `);
   });
 
