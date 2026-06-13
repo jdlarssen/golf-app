@@ -1,13 +1,15 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
 import { BackLink } from '@/components/ui/BackLink';
 import { Kicker } from '@/components/ui/Kicker';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { getModeContentMap, mergeModeContent } from '@/lib/formats/getModeContent';
 import { MODE_LABELS, type GameMode } from '@/lib/scoring/modes/types';
+import { routing, type AppLocale } from '@/i18n/routing';
 
-type Params = Promise<{ slug: string }>;
+type Params = Promise<{ slug: string; locale: string }>;
 
 // Gyldige slugs = alle GameMode-verdier, avledet fra MODE_LABELS-nøklene.
 // Avledet (ikke hardkodet liste) så en ny modus automatisk får detaljside —
@@ -15,10 +17,15 @@ type Params = Promise<{ slug: string }>;
 const VALID_MODES = new Set<string>(Object.keys(MODE_LABELS));
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
-  const { slug } = await params;
-  if (!VALID_MODES.has(slug)) return { title: 'Spillformat' };
+  const { slug, locale: rawLocale } = await params;
+  const locale: AppLocale = routing.locales.includes(rawLocale as AppLocale)
+    ? (rawLocale as AppLocale)
+    : routing.defaultLocale;
+  const tFg = await getTranslations({ locale, namespace: 'formatGuide' });
+  if (!VALID_MODES.has(slug)) return { title: tFg('detailFallbackMeta') };
   const mode = slug as GameMode;
-  return { title: MODE_LABELS[mode] ?? slug };
+  const tModes = await getTranslations({ locale, namespace: 'modes' });
+  return { title: tModes(mode as Parameters<typeof tModes>[0]) ?? slug };
 }
 
 /**
@@ -48,16 +55,18 @@ export default async function SpillformDetailPage({ params }: { params: Params }
     1,
   );
 
-  const label = MODE_LABELS[mode] ?? slug;
+  const tFg = await getTranslations('formatGuide');
+  const tModes = await getTranslations('modes');
+  const label = tModes(mode as Parameters<typeof tModes>[0]) ?? slug;
 
   return (
     <AppShell>
       <header className="mb-6 flex items-center gap-3">
-        <BackLink href="/spillformater">← Alle spillformater</BackLink>
+        <BackLink href="/spillformater">{tFg('detailBackLabel')}</BackLink>
       </header>
 
       <Kicker tone="accent" className="mb-2">
-        SPILLFORMAT
+        {tFg('detailKicker')}
       </Kicker>
       <PageHeader title={label} />
 
@@ -81,7 +90,7 @@ export default async function SpillformDetailPage({ params }: { params: Params }
       {merged.long && (
         <div className="mt-6">
           <h2 className="font-serif text-[18px] font-medium tracking-[-0.01em] text-text mb-3">
-            Slik fungerer det
+            {tFg('detailHowItWorks')}
           </h2>
           <div className="text-[15px] text-text leading-relaxed whitespace-pre-line">
             {merged.long}
@@ -93,7 +102,7 @@ export default async function SpillformDetailPage({ params }: { params: Params }
       {merged.example && (
         <div className="mt-6">
           <h2 className="font-serif text-[18px] font-medium tracking-[-0.01em] text-text mb-3">
-            Konkret eksempel
+            {tFg('detailExample')}
           </h2>
           <div className="rounded-2xl border border-border bg-surface px-4 py-4">
             <p className="text-[14px] text-text leading-relaxed whitespace-pre-line">

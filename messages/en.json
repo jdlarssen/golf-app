@@ -1006,7 +1006,17 @@
 		"sheetAriaLabel": "Game formats, how they work",
 		"sheetTitle": "Game formats",
 		"sheetSubtitle": "How they work. Tap to read more.",
-		"closeButton": "Close"
+		"closeButton": "Close",
+		"listMetaTitle": "Game formats",
+		"listBackLabel": "← Home",
+		"listKicker": "GAME FORMATS",
+		"listPageTitle": "Game formats",
+		"listPageSubtitle": "Tap a format to see how it works. You''ll know what you''re in for, no matter what gets set up.",
+		"detailBackLabel": "← All game formats",
+		"detailKicker": "GAME FORMAT",
+		"detailFallbackMeta": "Game format",
+		"detailHowItWorks": "How it works",
+		"detailExample": "A concrete example"
 	},
 	"allowance": {
 		"nettoLabel": "Net",

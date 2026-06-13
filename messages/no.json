@@ -1006,7 +1006,17 @@
 		"sheetAriaLabel": "Spillformater, slik funker de",
 		"sheetTitle": "Spillformater",
 		"sheetSubtitle": "Slik funker de. Trykk for å lese mer.",
-		"closeButton": "Lukk"
+		"closeButton": "Lukk",
+		"listMetaTitle": "Spillformater",
+		"listBackLabel": "← Hjem",
+		"listKicker": "SPILLFORMATER",
+		"listPageTitle": "Spillformater",
+		"listPageSubtitle": "Trykk på et format for å se hvordan det funker. Da tør du å bli med uansett hva som settes opp.",
+		"detailBackLabel": "← Alle spillformater",
+		"detailKicker": "SPILLFORMAT",
+		"detailFallbackMeta": "Spillformat",
+		"detailHowItWorks": "Slik fungerer det",
+		"detailExample": "Konkret eksempel"
 	},
 	"allowance": {
 		"nettoLabel": "Netto",

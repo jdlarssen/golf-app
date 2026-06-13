@@ -34,7 +34,7 @@ vi.mock('@/lib/formats/getModeContent', () => ({
 describe('SpillformDetailPage', () => {
   it('rendrer lang prosa og eksempel når begge er tilstede', async () => {
     const Page = await SpillformDetailPage({
-      params: Promise.resolve({ slug: 'stableford' }),
+      params: Promise.resolve({ slug: 'stableford', locale: 'no' }),
     });
     render(Page as React.ReactElement);
 
