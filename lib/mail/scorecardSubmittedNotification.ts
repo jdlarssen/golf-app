@@ -5,8 +5,12 @@
 // per-admin sends so one failure doesn't block the rest, and the action
 // itself never aborts on mail errors — the submitted state lives in the DB
 // and admin can still see new submissions by opening the app.
+//
+// Locale-aware (i18n Fase M, #594): user-visible text comes from the `mail`
+// catalog for the recipient's locale.
 
 import { Resend } from 'resend';
+import { getMailTranslator, resolveMailLocale, mailUrl } from './i18n';
 
 function resolveFromEmail(): string {
   const raw = process.env.RESEND_FROM_EMAIL?.trim();
@@ -33,17 +37,38 @@ export type ScorecardSubmittedNotificationParams = {
   gameName: string;
   /** Game id — used to build the admin detail URL. */
   gameId: string;
+  /** Mottakerens locale (#594). Normalt udefinert → norsk. */
+  locale?: string | null;
 };
 
 export async function sendScorecardSubmittedNotification(
   params: ScorecardSubmittedNotificationParams,
 ): Promise<void> {
-  const { to, adminFirstName, playerName, gameName, gameId } = params;
-  const subject = `Scorekort levert: ${playerName} i ${gameName}`;
-  const adminUrl = `https://tornygolf.no/admin/games/${gameId}`;
-  const salutation = adminFirstName ? `Hei ${adminFirstName}!` : 'Hei!';
+  const { to, adminFirstName, playerName, gameName, gameId, locale } = params;
+  const loc = resolveMailLocale(locale);
+  const t = getMailTranslator(locale);
 
-  const html = `<!DOCTYPE html><html lang="nb">
+  const subject = t('scorecardSubmitted.subject', { playerName, gameName });
+  const adminUrl = mailUrl(locale, `/admin/games/${gameId}`);
+  const homeUrl = mailUrl(locale, '');
+
+  const salutation = adminFirstName
+    ? t('scorecardSubmitted.salutationNamed', { name: adminFirstName })
+    : t('scorecardSubmitted.salutationGeneric');
+
+  const bodyHtml = t.markup('scorecardSubmitted.body', {
+    playerName: escapeHtml(playerName),
+    gameName: escapeHtml(gameName),
+    strong: (c) => `<strong>${c}</strong>`,
+  });
+  const bodyText = t('scorecardSubmitted.bodyText', { playerName, gameName });
+
+  const footerHtml = t.markup('scorecardSubmitted.footer', {
+    link: (c) =>
+      `<a href="${homeUrl}" style="color:#1B4332;text-decoration:underline;">${c}</a>`,
+  });
+
+  const html = `<!DOCTYPE html><html lang="${loc}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -59,24 +84,24 @@ export async function sendScorecardSubmittedNotification(
               Tørny<span style="color:#C9A961;">.</span>
             </h1>
             <p style="font-size:13px;color:#4A3F30;margin:0 0 32px;">
-              Fyr opp golfturneringen på et par minutter.
+              ${t('common.tagline')}
             </p>
             <h2 style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;margin:0 0 16px;color:#1A1813;">
-              Scorekort levert
+              ${t('scorecardSubmitted.heading')}
             </h2>
             <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
               ${escapeHtml(salutation)}
             </p>
             <p style="font-size:16px;line-height:1.5;margin:0 0 24px;">
-              <strong>${escapeHtml(playerName)}</strong> har levert scorekortet sitt i <strong>${escapeHtml(gameName)}</strong>. Du kan godkjenne det i admin-flaten.
+              ${bodyHtml}
             </p>
             <div style="margin:32px 0;">
               <a href="${adminUrl}" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">
-                Åpne admin
+                ${t('scorecardSubmitted.openAdmin')}
               </a>
             </div>
             <p style="font-size:13px;color:#4A3F30;line-height:1.5;margin:32px 0 0;border-top:1px solid #E6E2D6;padding-top:24px;">
-              Du får denne meldingen fordi du er admin for spillet. Logg inn på <a href="https://tornygolf.no" style="color:#1B4332;text-decoration:underline;">tornygolf.no</a> for full oversikt.
+              ${footerHtml}
             </p>
           </td></tr>
         </table>
@@ -87,11 +112,11 @@ export async function sendScorecardSubmittedNotification(
 </html>`;
 
   const text =
-    `Scorekort levert: ${playerName} i ${gameName}\n\n` +
+    `${subject}\n\n` +
     `${salutation}\n\n` +
-    `${playerName} har levert scorekortet sitt i ${gameName}. Du kan godkjenne det i admin-flaten.\n\n` +
-    `Åpne admin: ${adminUrl}\n\n` +
-    `Tørny — fyr opp golfturneringen på et par minutter.\n`;
+    `${bodyText}\n\n` +
+    `${t('scorecardSubmitted.openAdminText', { url: adminUrl })}\n\n` +
+    `${t('common.footerTagline')}\n`;
 
   const resend = getClient();
   const result = await resend.emails.send({

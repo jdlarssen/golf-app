@@ -102,7 +102,7 @@ describe('sendScorecardSubmittedNotification', () => {
   it('HTML chrome: full template for default-case', async () => {
     const payload = await send(baseParams);
     expect(payload.html).toMatchInlineSnapshot(`
-      "<!DOCTYPE html><html lang="nb">
+      "<!DOCTYPE html><html lang="no">
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -145,5 +145,27 @@ describe('sendScorecardSubmittedNotification', () => {
       </body>
       </html>"
     `);
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Engelsk (locale: 'en') — Fase M.
+  // ─────────────────────────────────────────────────────────────────────
+
+  it('locale en: engelsk subject + body + /en/-lenke', async () => {
+    const payload = await send({ ...baseParams, locale: 'en' });
+    expect(payload.subject).toMatchInlineSnapshot(`"Scorecard submitted: Per Spiller in Sommercup 2026"`);
+    expect(payload.text).toMatchInlineSnapshot(`
+      "Scorecard submitted: Per Spiller in Sommercup 2026
+
+      Hi Jørgen!
+
+      Per Spiller has submitted their scorecard for Sommercup 2026. You can approve it in the admin panel.
+
+      Open admin: https://tornygolf.no/en/admin/games/11111111-1111-1111-1111-111111111111
+
+      Tørny — fire up your golf tournament in a couple of minutes.
+      "
+    `);
+    expect(bodyLineHtml(payload.html)).toMatchInlineSnapshot(`"<strong>Per Spiller</strong> has submitted their scorecard for <strong>Sommercup 2026</strong>. You can approve it in the admin panel."`);
   });
 });
