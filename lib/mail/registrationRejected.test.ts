@@ -135,7 +135,7 @@ describe('sendRegistrationRejectedMail', () => {
   it('HTML chrome: full template for uten-reason-case', async () => {
     const payload = await send(baseParams);
     expect(payload.html).toMatchInlineSnapshot(`
-      "<!DOCTYPE html><html lang="nb">
+      "<!DOCTYPE html><html lang="no">
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -173,6 +173,63 @@ describe('sendRegistrationRejectedMail', () => {
         </table>
       </body>
       </html>"
+    `);
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Engelsk (locale: 'en') — Fase M.
+  // ─────────────────────────────────────────────────────────────────────
+
+  it('locale en: engelsk subject + body (uten reason)', async () => {
+    const payload = await send({ ...baseParams, locale: 'en' });
+    expect(payload.subject).toMatchInlineSnapshot(`"Your request for Sommercup 2026"`);
+    expect(payload.text).toMatchInlineSnapshot(`
+      "Your request for Sommercup 2026
+
+      Unfortunately, your request to join Sommercup 2026 was not approved.
+
+      Maybe next time. Good luck on the course anyway.
+
+      Tørny — fire up your golf tournament in a couple of minutes.
+      "
+    `);
+    expect(mainBodyHtml(payload.html)).toMatchInlineSnapshot(`
+      "<p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
+                    Unfortunately, your request to join <strong>Sommercup 2026</strong> was not approved.
+                  </p>
+                  
+                  <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
+                    Maybe next time. Good luck on the course anyway.
+                  </p>"
+    `);
+  });
+
+  it('locale en, med reason: engelsk begrunnelse-prefix', async () => {
+    const payload = await send({
+      ...baseParams,
+      locale: 'en',
+      reason: 'Fully booked this time',
+    });
+    expect(payload.text).toMatchInlineSnapshot(`
+      "Your request for Sommercup 2026
+
+      Unfortunately, your request to join Sommercup 2026 was not approved.
+
+      Reason: "Fully booked this time"
+
+      Maybe next time. Good luck on the course anyway.
+
+      Tørny — fire up your golf tournament in a couple of minutes.
+      "
+    `);
+    expect(mainBodyHtml(payload.html)).toMatchInlineSnapshot(`
+      "<p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
+                    Unfortunately, your request to join <strong>Sommercup 2026</strong> was not approved.
+                  </p>
+                  <blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #C9A961;background:#F8F6F0;font-size:15px;line-height:1.5;color:#1A1813;">Fully booked this time</blockquote>
+                  <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
+                    Maybe next time. Good luck on the course anyway.
+                  </p>"
     `);
   });
 

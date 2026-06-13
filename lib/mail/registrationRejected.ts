@@ -4,8 +4,12 @@
 //
 // Best-effort: caller wrapper i try/catch. In-app-varselet er allerede
 // inserted — søker vil se det neste gang de åpner appen uansett.
+//
+// Locale-aware (i18n Fase M, #594): user-visible text comes from the `mail`
+// catalog for the recipient's locale.
 
 import { Resend } from 'resend';
+import { getMailTranslator, resolveMailLocale } from './i18n';
 
 function resolveFromEmail(): string {
   const raw = process.env.RESEND_FROM_EMAIL?.trim();
@@ -30,22 +34,35 @@ export type RegistrationRejectedMailParams = {
    * Rendres som blockquote hvis satt, droppes ellers.
    */
   reason?: string;
+  /** Mottakerens locale (#594). Normalt udefinert → norsk. */
+  locale?: string | null;
 };
 
 export async function sendRegistrationRejectedMail(
   params: RegistrationRejectedMailParams,
 ): Promise<void> {
-  const { to, gameName, reason } = params;
-  const subject = `Søknad til ${gameName}`;
+  const { to, gameName, reason, locale } = params;
+  const loc = resolveMailLocale(locale);
+  const t = getMailTranslator(locale);
+
+  const subject = t('registrationRejected.subject', { gameName });
+
+  const bodyHtml = t.markup('registrationRejected.body', {
+    gameName: escapeHtml(gameName),
+    strong: (c) => `<strong>${c}</strong>`,
+  });
+  const bodyText = t('registrationRejected.bodyText', { gameName });
 
   const reasonHtml = reason
     ? `<blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid #C9A961;background:#F8F6F0;font-size:15px;line-height:1.5;color:#1A1813;">${escapeHtml(
         reason,
       )}</blockquote>`
     : '';
-  const reasonText = reason ? `\nBegrunnelse: «${reason}»\n` : '';
+  const reasonText = reason
+    ? `\n${t('registrationRejected.reasonPrefix', { reason })}\n`
+    : '';
 
-  const html = `<!DOCTYPE html><html lang="nb">
+  const html = `<!DOCTYPE html><html lang="${loc}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -61,20 +78,20 @@ export async function sendRegistrationRejectedMail(
               Tørny<span style="color:#C9A961;">.</span>
             </h1>
             <p style="font-size:13px;color:#4A3F30;margin:0 0 32px;">
-              Fyr opp golfturneringen på et par minutter.
+              ${t('common.tagline')}
             </p>
             <h2 style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;margin:0 0 16px;color:#1A1813;">
-              Søknad ikke godkjent
+              ${t('registrationRejected.heading')}
             </h2>
             <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-              Forespørselen din om å bli med i <strong>${escapeHtml(gameName)}</strong> ble dessverre ikke godkjent.
+              ${bodyHtml}
             </p>
             ${reasonHtml}
             <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-              Kanskje neste runde. Lykke til på banen uansett.
+              ${t('registrationRejected.closing')}
             </p>
             <p style="font-size:13px;color:#4A3F30;line-height:1.5;margin:32px 0 0;border-top:1px solid #E6E2D6;padding-top:24px;">
-              Spørsmål? Snakk med arrangøren direkte — Tørny formidler ingen meldinger på vegne av admin.
+              ${t('registrationRejected.footer')}
             </p>
           </td></tr>
         </table>
@@ -86,10 +103,10 @@ export async function sendRegistrationRejectedMail(
 
   const text =
     `${subject}\n\n` +
-    `Forespørselen din om å bli med i ${gameName} ble dessverre ikke godkjent.\n` +
+    `${bodyText}\n` +
     `${reasonText}` +
-    `\nKanskje neste runde. Lykke til på banen uansett.\n\n` +
-    `Tørny — fyr opp golfturneringen på et par minutter.\n`;
+    `\n${t('registrationRejected.closing')}\n\n` +
+    `${t('common.footerTagline')}\n`;
 
   const resend = getClient();
   const result = await resend.emails.send({
