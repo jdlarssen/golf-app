@@ -439,7 +439,7 @@ describe('submitTeamRegistration — happy paths', () => {
     expect(notifyInvitedToTeamMock).not.toHaveBeenCalled();
   });
 
-  it('lookup-modus mot ukjent bruker: slot feiler med "Bruker ikke funnet"', async () => {
+  it('lookup-modus mot ukjent bruker: slot feiler med reason-kode "userNotFound"', async () => {
     getGameByShortIdMock.mockResolvedValue(
       makeGame({
         registration_mode: 'open',
@@ -474,7 +474,7 @@ describe('submitTeamRegistration — happy paths', () => {
     expect(result.slotResults[0]).toEqual({
       ok: false,
       email: 'ukjent@example.com',
-      reason: 'Bruker ikke funnet',
+      reason: 'userNotFound',
     });
   });
 

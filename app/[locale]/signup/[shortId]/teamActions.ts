@@ -65,9 +65,21 @@ export type TeamRegistrationInput = {
   website?: string;
 };
 
+/**
+ * Slot-feil-koder. Rendres locale-bevisst via `signup.slotFailReason.*` på
+ * call-site (TeamRegistrationForm) — server-actionen returnerer koden, ikke
+ * en ferdig-oversatt streng.
+ */
+export type TeamSlotFailReason =
+  | 'userNotFound'
+  | 'alreadyRegistered'
+  | 'dbError'
+  | 'inviteFailed'
+  | 'unexpected';
+
 export type TeamSlotResult =
   | { ok: true; outcome: 'known_added' | 'unknown_invited'; email: string }
-  | { ok: false; email: string; reason: string };
+  | { ok: false; email: string; reason: TeamSlotFailReason };
 
 export type TeamRegistrationResult =
   | {
@@ -369,7 +381,7 @@ export async function submitTeamRegistration(
         slotResults.push({
           ok: false,
           email: slot.value,
-          reason: 'Bruker ikke funnet',
+          reason: 'userNotFound',
         });
         continue;
       }
@@ -396,7 +408,7 @@ export async function submitTeamRegistration(
             slotResults.push({
               ok: false,
               email: slot.value,
-              reason: 'Allerede påmeldt',
+              reason: 'alreadyRegistered',
             });
             continue;
           }
@@ -407,7 +419,7 @@ export async function submitTeamRegistration(
           slotResults.push({
             ok: false,
             email: slot.value,
-            reason: 'DB-feil',
+            reason: 'dbError',
           });
           continue;
         }
@@ -474,7 +486,7 @@ export async function submitTeamRegistration(
           slotResults.push({
             ok: false,
             email: slot.value,
-            reason: 'Kunne ikke sende invitasjon',
+            reason: 'inviteFailed',
           });
           continue;
         }
@@ -504,7 +516,7 @@ export async function submitTeamRegistration(
       slotResults.push({
         ok: false,
         email: slot.value,
-        reason: 'Uventet feil',
+        reason: 'unexpected',
       });
     }
   }

@@ -199,7 +199,10 @@ export function TeamRegistrationForm({
             <ul className="mt-1 list-inside list-disc">
               {failed.map((f) => (
                 <li key={f.email}>
-                  {f.email} — {!f.ok ? f.reason : ''}
+                  {f.email} —{' '}
+                  {!f.ok
+                    ? t(`slotFailReason.${f.reason}` as Parameters<typeof t>[0])
+                    : ''}
                 </li>
               ))}
             </ul>

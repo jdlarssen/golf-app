@@ -3744,6 +3744,13 @@
 		"teamSuccessInvited": "{count} {count, plural, one {ukjent} other {ukjente}} fikk e-post-invitasjon.",
 		"teamSuccessFailedBanner": "Disse plassene kom ikke gjennom:",
 		"teamSuccessFailedFix": "Du kan fikse dem fra lag-oversikten.",
+		"slotFailReason": {
+			"userNotFound": "Bruker ikke funnet",
+			"alreadyRegistered": "Allerede påmeldt",
+			"dbError": "DB-feil",
+			"inviteFailed": "Kunne ikke sende invitasjon",
+			"unexpected": "Uventet feil"
+		},
 		"goToTeamDashboard": "Gå til lag-oversikten",
 		"teamFormAriaLabel": "Lag-påmeldings-skjema",
 		"notFoundKicker": "Påmelding",

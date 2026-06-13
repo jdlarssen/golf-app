@@ -3744,6 +3744,13 @@
 		"teamSuccessInvited": "{count} {count, plural, one {new player} other {new players}} received an email invitation.",
 		"teamSuccessFailedBanner": "These slots didn''t go through:",
 		"teamSuccessFailedFix": "You can fix them from the team dashboard.",
+		"slotFailReason": {
+			"userNotFound": "User not found",
+			"alreadyRegistered": "Already signed up",
+			"dbError": "Database error",
+			"inviteFailed": "Couldn't send the invitation",
+			"unexpected": "Something went wrong"
+		},
 		"goToTeamDashboard": "Go to team dashboard",
 		"teamFormAriaLabel": "Team registration form",
 		"notFoundKicker": "Sign up",
