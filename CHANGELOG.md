@@ -17,6 +17,28 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.124.y — Duell-kortet tilbake med sideturnering
+
+Issue [#589](https://github.com/jdlarssen/golf-app/issues/589), oppfølging til [#576](https://github.com/jdlarssen/golf-app/issues/576). Da sideturneringen ble lagt til, byttet 1-mot-1-spill ut duell-kortet med et podium så det skulle passe i fanene. Nå er duell-kortet tilbake, og sideturneringen ligger i fanen ved siden av.
+
+### [1.124.0] - 2026-06-13 · #589
+
+> Spiller dere én mot én med en sideturnering på, får du nå duell-kortet i stedet for et podium. Versus-oppgjøret og hull-for-hull-stripen er tilbake, og sideturneringen med lengste drive og nærmest pinnen ligger fortsatt i fanen ved siden av.
+
+<details>
+<summary>Teknisk</summary>
+
+[#589](https://github.com/jdlarssen/golf-app/issues/589). #576 wiret sideturnering-fanen inn i poeng-/podium-formatene, men skippet bevisst duell-kortet (`HeadToHeadResult`) ved nøyaktig 2 spillere med sideturnering på — podiet ble brukt i stedet så det passet i `LeaderboardTabs`. Det fjernet den foretrukne 1-mot-1-visningen i det øyeblikket sideturneringen ble skrudd på.
+
+#### Added
+- `chromeless`-prop på `HeadToHeadResult` (speiler `BingoBangoBongoPodium`-skallet): dropper eget `AppShell` + tilbake-header når kortet sitter inni `LeaderboardTabs`, så fanen eier TopBar + tilbake-lenke og vi unngår doble skall.
+
+#### Changed
+- De fem solo-format-grenene i `leaderboard/page.tsx` som har et 2-spiller-duell-kort (stableford, solo strokeplay, Nassau, Skins, Bingo Bango Bongo) mater nå duell-kortet — i stedet for podiet — inn som `mainContent` i sideturnerings-fanen ved nøyaktig 2 spillere. 3+ spillere bruker podiet som før.
+- Matchplay-familien er uberørt (egen `MatchplayMatchView`, sporet i #585).
+
+</details>
+
 ## 1.123.y — Venner · forespørsler du har sendt i spiller-valget
 
 Issue [#587](https://github.com/jdlarssen/golf-app/issues/587), oppfølging til [#464](https://github.com/jdlarssen/golf-app/issues/464). «Legg til spiller» viste bare aksepterte venner. Nå teller også folk du har en venneforespørsel gående med, så du slipper å vente på svar før du kan sette opp et spill.

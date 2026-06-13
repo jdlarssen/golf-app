@@ -56,6 +56,13 @@ export interface HeadToHeadResultProps {
   lowerWins?: boolean;
   /** Hvor pilen tilbake skal peke. Defaults til spillets hjem. */
   backHref?: string;
+  /**
+   * Når true droppes det egne ytre skallet (AppShell + tilbake-header) så
+   * kortet kan ligge inni LeaderboardTabs sammen med sideturneringen (#576).
+   * Fanen leverer da TopBar + tilbake-lenke; kortet beholder sin egen
+   * DUELL-kicker + format-label. Default false → frittstående med eget skall.
+   */
+  chromeless?: boolean;
 }
 
 /**
@@ -78,6 +85,7 @@ export function HeadToHeadResult({
   hangingNote,
   lowerWins = false,
   backHref = '/',
+  chromeless = false,
 }: HeadToHeadResultProps): JSX.Element {
   const t = useTranslations('leaderboard.h2h');
   const [replayKey, setReplayKey] = useState(0);
@@ -149,109 +157,137 @@ export function HeadToHeadResult({
         : t('verdictWin', { winner: winnerName, winnerScore: fmtScore(winnerScore), sep, loserScore: fmtScore(loserScore) });
 
   return (
+    <Shell chromeless={chromeless}>
+      {!chromeless && (
+        <header className="mb-2 flex items-center justify-between gap-4">
+          <SmartLink
+            href={backHref}
+            aria-label={t('backAriaLabel')}
+            className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
+          >
+            ‹
+          </SmartLink>
+          <Kicker tone="accent">{gameName.toUpperCase()}</Kicker>
+          <span className="w-11" aria-hidden />
+        </header>
+      )}
+
+      <div className="px-6 pt-1.5 pb-2 text-center">
+        <Kicker tone="accent">{t('kicker')}</Kicker>
+        <p className="mt-2 text-[11.5px] tabular-nums text-muted">
+          {formatLabel}
+        </p>
+      </div>
+
+      <div
+        data-testid="head-to-head"
+        className="relative isolate mx-3.5 mt-1 rounded-2xl border border-border bg-surface px-4 pt-5 pb-4 shadow-[0_2px_14px_rgba(26,46,31,0.06)]"
+      >
+        {replayKey > 0 && <ConfettiBurst key={replayKey} />}
+
+        {/* Versus-header */}
+        <div className="grid grid-cols-2 gap-3">
+          <SidePanel
+            name={nameA}
+            score={sideA.score}
+            subLabel={sideA.subLabel}
+            unitLabel={unitLabel}
+            colorVar="--player-a"
+            isWinner={winner === 'a'}
+            align="left"
+          />
+          <SidePanel
+            name={nameB}
+            score={sideB.score}
+            subLabel={sideB.subLabel}
+            unitLabel={unitLabel}
+            colorVar="--player-b"
+            isWinner={winner === 'b'}
+            align="right"
+          />
+        </div>
+
+        {/* Tug-of-war: scoren tegnet som forhold mellom de to */}
+        <div
+          data-testid="h2h-bar"
+          className="mt-4 flex h-3 w-full overflow-hidden rounded-full border border-border"
+          role="img"
+          aria-label={t('barAriaLabel', { nameA, scoreA: sideA.score, nameB, scoreB: sideB.score })}
+        >
+          <span
+            className="h-full"
+            style={{ width: `${pctA}%`, background: 'var(--player-a)' }}
+          />
+          <span
+            className="h-full"
+            style={{ width: `${pctB}%`, background: 'var(--player-b)' }}
+          />
+        </div>
+
+        {/* Momentum-strip: ett felt per hull, farget per spiller */}
+        <div
+          data-testid="h2h-strip"
+          className="mt-4 flex flex-wrap justify-center gap-1"
+        >
+          {strip.map((cell, i) => (
+            <span
+              key={i}
+              className={`reveal-up h-2.5 w-2.5 rounded-[3px] ${cellClass(cell)}`}
+              style={{ animationDelay: `${40 + i * 18}ms` }}
+            />
+          ))}
+        </div>
+
+        {/* Tegnforklaring */}
+        <div className="mt-2.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[10.5px] text-muted">
+          <LegendDot colorVar="--player-a" label={nameA} />
+          <LegendDot colorVar="--player-b" label={nameB} />
+          <LegendDot muted label={t('halvedLegend')} />
+        </div>
+
+        {/* Dom */}
+        <p
+          data-testid="h2h-verdict"
+          className="mt-4 text-center font-serif text-[15px] font-medium tracking-[-0.005em] text-text"
+        >
+          {verdict}
+        </p>
+        {hangingNote && (
+          <p className="mt-1 text-center text-[12px] text-muted">
+            {hangingNote}
+          </p>
+        )}
+      </div>
+    </Shell>
+  );
+}
+
+/**
+ * Ytre skall. Frittstående: AppShell + bunn-padding så kortet får luft under
+ * seg på en egen side. Chromeless (inni LeaderboardTabs, #576): bare backdrop
+ * + posisjons-wrapper — fanen eier AppShell og TopBar, så vi dropper begge her
+ * for å unngå doble skall. Speiler `Shell`-mønsteret i BingoBangoBongoPodium.
+ */
+function Shell({
+  children,
+  chromeless = false,
+}: {
+  children: React.ReactNode;
+  chromeless?: boolean;
+}): JSX.Element {
+  if (chromeless) {
+    return (
+      <div className="relative isolate">
+        <LeaderboardBackdrop />
+        <div className="relative">{children}</div>
+      </div>
+    );
+  }
+  return (
     <AppShell>
       <div className="relative isolate pb-12">
         <LeaderboardBackdrop />
-        <div className="relative">
-          <header className="mb-2 flex items-center justify-between gap-4">
-            <SmartLink
-              href={backHref}
-              aria-label={t('backAriaLabel')}
-              className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
-            >
-              ‹
-            </SmartLink>
-            <Kicker tone="accent">{gameName.toUpperCase()}</Kicker>
-            <span className="w-11" aria-hidden />
-          </header>
-
-          <div className="px-6 pt-1.5 pb-2 text-center">
-            <Kicker tone="accent">{t('kicker')}</Kicker>
-            <p className="mt-2 text-[11.5px] tabular-nums text-muted">
-              {formatLabel}
-            </p>
-          </div>
-
-          <div
-            data-testid="head-to-head"
-            className="relative isolate mx-3.5 mt-1 rounded-2xl border border-border bg-surface px-4 pt-5 pb-4 shadow-[0_2px_14px_rgba(26,46,31,0.06)]"
-          >
-            {replayKey > 0 && <ConfettiBurst key={replayKey} />}
-
-            {/* Versus-header */}
-            <div className="grid grid-cols-2 gap-3">
-              <SidePanel
-                name={nameA}
-                score={sideA.score}
-                subLabel={sideA.subLabel}
-                unitLabel={unitLabel}
-                colorVar="--player-a"
-                isWinner={winner === 'a'}
-                align="left"
-              />
-              <SidePanel
-                name={nameB}
-                score={sideB.score}
-                subLabel={sideB.subLabel}
-                unitLabel={unitLabel}
-                colorVar="--player-b"
-                isWinner={winner === 'b'}
-                align="right"
-              />
-            </div>
-
-            {/* Tug-of-war: scoren tegnet som forhold mellom de to */}
-            <div
-              data-testid="h2h-bar"
-              className="mt-4 flex h-3 w-full overflow-hidden rounded-full border border-border"
-              role="img"
-              aria-label={t('barAriaLabel', { nameA, scoreA: sideA.score, nameB, scoreB: sideB.score })}
-            >
-              <span
-                className="h-full"
-                style={{ width: `${pctA}%`, background: 'var(--player-a)' }}
-              />
-              <span
-                className="h-full"
-                style={{ width: `${pctB}%`, background: 'var(--player-b)' }}
-              />
-            </div>
-
-            {/* Momentum-strip: ett felt per hull, farget per spiller */}
-            <div
-              data-testid="h2h-strip"
-              className="mt-4 flex flex-wrap justify-center gap-1"
-            >
-              {strip.map((cell, i) => (
-                <span
-                  key={i}
-                  className={`reveal-up h-2.5 w-2.5 rounded-[3px] ${cellClass(cell)}`}
-                  style={{ animationDelay: `${40 + i * 18}ms` }}
-                />
-              ))}
-            </div>
-
-            {/* Tegnforklaring */}
-            <div className="mt-2.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[10.5px] text-muted">
-              <LegendDot colorVar="--player-a" label={nameA} />
-              <LegendDot colorVar="--player-b" label={nameB} />
-              <LegendDot muted label={t('halvedLegend')} />
-            </div>
-
-            {/* Dom */}
-            <p
-              data-testid="h2h-verdict"
-              className="mt-4 text-center font-serif text-[15px] font-medium tracking-[-0.005em] text-text"
-            >
-              {verdict}
-            </p>
-            {hangingNote && (
-              <p className="mt-1 text-center text-[12px] text-muted">
-                {hangingNote}
-              </p>
-            )}
-          </div>
-        </div>
+        <div className="relative">{children}</div>
       </div>
     </AppShell>
   );

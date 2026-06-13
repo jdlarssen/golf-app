@@ -1232,11 +1232,15 @@ async function renderStableford(opts: {
 
   // Finished → reveal-podium (fase 6). Active/scheduled → flat live-view.
   if (game.status === 'finished') {
-    // Ved nøyaktig 2 spillere uten sideturnering er det en duell → head-to-head-
-    // kort i stedet for podium (epic #496). Stableford er høyest-vinner, så
-    // HeadToHeadResult brukes med default (ingen lowerWins). Sideturnering
-    // beholder podiet (flyten forventer et podium i tabs).
-    if (result.players.length === 2 && !showSideTournament) {
+    // Ved nøyaktig 2 spillere er det en duell → head-to-head-kort i stedet for
+    // podium (epic #496). Stableford er høyest-vinner, så HeadToHeadResult
+    // brukes med default (ingen lowerWins). Med sideturnering (#576) mates
+    // samme reveal (duell eller podium) inn som mainContent i LeaderboardTabs —
+    // duell-kortet beholdes også med sideturnering på (#589).
+    // mainContent tar `chromeless` så samme reveal kan rendres frittstående
+    // ELLER inni sideturnerings-fanen.
+    let mainContent: (chromeless: boolean) => React.ReactNode;
+    if (result.players.length === 2) {
       const order = gwp.players.map((p) => p.user_id);
       const [a, b] = [...result.players].sort(
         (x, y) => order.indexOf(x.userId) - order.indexOf(y.userId),
@@ -1262,39 +1266,38 @@ async function renderStableford(opts: {
       });
       const winnerUserId =
         a.rank === b.rank ? null : a.rank < b.rank ? a.userId : b.userId;
-      return (
-        <>
-          <HeadToHeadResult
-            gameId={gameId}
-            gameName={game.name}
-            formatLabel={
-              stablefordMode === 'modified_stableford'
-                ? 'Modifisert Stableford'
-                : 'Stableford'
-            }
-            unitLabel="poeng"
-            sideA={sideFor(a)}
-            sideB={sideFor(b)}
-            winnerUserId={winnerUserId}
-            strip={strip}
-            backHref={backHref}
-          />
-          {wdSection}
-        </>
+      mainContent = (chromeless) => (
+        <HeadToHeadResult
+          gameId={gameId}
+          gameName={game.name}
+          formatLabel={
+            stablefordMode === 'modified_stableford'
+              ? 'Modifisert Stableford'
+              : 'Stableford'
+          }
+          unitLabel="poeng"
+          sideA={sideFor(a)}
+          sideB={sideFor(b)}
+          winnerUserId={winnerUserId}
+          strip={strip}
+          backHref={backHref}
+          chromeless={chromeless}
+        />
+      );
+    } else {
+      mainContent = (chromeless) => (
+        <SoloStablefordPodium
+          gameId={gameId}
+          gameName={game.name}
+          result={result}
+          playersById={playersById}
+          backHref={backHref}
+          chromeless={chromeless}
+        />
       );
     }
-    const podium = (chromeless: boolean) => (
-      <SoloStablefordPodium
-        gameId={gameId}
-        gameName={game.name}
-        result={result}
-        playersById={playersById}
-        backHref={backHref}
-        chromeless={chromeless}
-      />
-    );
     if (!showSideTournament) {
-      return <>{podium(false)}{wdSection}</>;
+      return <>{mainContent(false)}{wdSection}</>;
     }
     return (
       <>
@@ -1305,7 +1308,7 @@ async function renderStableford(opts: {
           rawHolesRows,
           rawScoresRows,
           backHref,
-          mainContent: podium(true),
+          mainContent: mainContent(true),
           teamGrouping: 'solo',
         })}
         {wdSection}
@@ -2002,11 +2005,15 @@ async function renderSoloStrokeplay(opts: {
   // er det en duell → head-to-head-kort i stedet for podium (epic #496);
   // slagspill er lavest-vinner, så `lowerWins` inverterer baren + dommen.
   // 1 eller 3+ → SoloStrokeplayPodium som før. Active/scheduled → flat live-view.
-  // Med sideturnering (#576): behold alltid podiet (skip duell-kortet) så det
-  // passer i LeaderboardTabs sammen med side-fanen — mirror stableford-presedens.
+  // Med sideturnering (#576) mates samme reveal (duell eller podium) inn som
+  // mainContent i LeaderboardTabs — duell-kortet beholdes også med sideturnering
+  // på (#589).
   if (game.status === 'finished') {
     const showSide = game.side_tournament_enabled;
-    if (result.players.length === 2 && !showSide) {
+    // mainContent: duell-kort (2 spillere) eller podium (1/3+). Tar `chromeless`
+    // så samme reveal kan rendres frittstående ELLER inni sideturnerings-fanen.
+    let mainContent: (chromeless: boolean) => React.ReactNode;
+    if (result.players.length === 2) {
       // Stabil rekkefølge etter game_players (ikke rank), så fargene følger
       // spiller-identitet — ikke hvem som vant.
       const order = gwp.players.map((p) => p.user_id);
@@ -2036,34 +2043,33 @@ async function renderSoloStrokeplay(opts: {
       // deler rank.
       const winnerUserId =
         a.rank === b.rank ? null : a.rank < b.rank ? a.userId : b.userId;
-      return (
-        <>
-          <HeadToHeadResult
-            gameId={gameId}
-            gameName={game.name}
-            formatLabel={`Slagspill · ${tc('netto')}`}
-            unitLabel="slag"
-            lowerWins
-            sideA={sideFor(a)}
-            sideB={sideFor(b)}
-            winnerUserId={winnerUserId}
-            strip={strip}
-            backHref={backHref}
-          />
-          {wdSection}
-        </>
+      mainContent = (chromeless) => (
+        <HeadToHeadResult
+          gameId={gameId}
+          gameName={game.name}
+          formatLabel={`Slagspill · ${tc('netto')}`}
+          unitLabel="slag"
+          lowerWins
+          sideA={sideFor(a)}
+          sideB={sideFor(b)}
+          winnerUserId={winnerUserId}
+          strip={strip}
+          backHref={backHref}
+          chromeless={chromeless}
+        />
+      );
+    } else {
+      mainContent = (chromeless) => (
+        <SoloStrokeplayPodium
+          gameId={gameId}
+          gameName={game.name}
+          result={result}
+          playersById={playersById}
+          backHref={backHref}
+          chromeless={chromeless}
+        />
       );
     }
-    const podium = (chromeless: boolean) => (
-      <SoloStrokeplayPodium
-        gameId={gameId}
-        gameName={game.name}
-        result={result}
-        playersById={playersById}
-        backHref={backHref}
-        chromeless={chromeless}
-      />
-    );
     if (showSide) {
       return (
         <>
@@ -2074,7 +2080,7 @@ async function renderSoloStrokeplay(opts: {
             rawHolesRows,
             rawScoresRows,
             backHref,
-            mainContent: podium(true),
+            mainContent: mainContent(true),
             teamGrouping: 'solo',
           })}
           {wdSection}
@@ -2083,7 +2089,7 @@ async function renderSoloStrokeplay(opts: {
     }
     return (
       <>
-        {podium(false)}
+        {mainContent(false)}
         {wdSection}
       </>
     );
@@ -2438,11 +2444,16 @@ async function renderNassau(opts: {
   // Finished → resultat-flate på toppen + NassauView under (chromeless, så bare
   // én outer shell). Ved nøyaktig 2 spillere er det en duell → head-to-head-
   // kort i stedet for podium (epic #496). 3+ → NassauPodium som før.
-  // Med sideturnering (#576): behold alltid podiet (skip duell-kortet) så det
-  // passer i LeaderboardTabs sammen med side-fanen. Active/scheduled → NassauView alene.
+  // Med sideturnering (#576) mates samme reveal (duell eller podium) inn som
+  // mainContent i LeaderboardTabs — duell-kortet beholdes også med sideturnering
+  // på (#589). Active/scheduled → NassauView alene.
   if (game.status === 'finished') {
     const showSide = game.side_tournament_enabled;
-    if (result.players.length === 2 && !showSide) {
+    // mainContent: duell-kort (2 spillere) eller podium (3+), alltid med
+    // NassauView under. Tar `chromeless` så samme reveal kan rendres
+    // frittstående ELLER inni sideturnerings-fanen.
+    let mainContent: (chromeless: boolean) => React.ReactNode;
+    if (result.players.length === 2) {
       // Stabil rekkefølge etter game_players (ikke rank), så fargene følger
       // spiller-identitet — ikke hvem som vant.
       const order = gwp.players.map((p) => p.user_id);
@@ -2490,7 +2501,7 @@ async function renderNassau(opts: {
         pushed.push(tn('totalLabel'));
       const hangingNote =
         pushed.length > 0 ? tn('pushedNote', { sections: pushed.join(' og ') }) : null;
-      return (
+      mainContent = (chromeless) => (
         <>
           <HeadToHeadResult
             gameId={gameId}
@@ -2503,6 +2514,30 @@ async function renderNassau(opts: {
             strip={strip}
             hangingNote={hangingNote}
             backHref={backHref}
+            chromeless={chromeless}
+          />
+          <NassauView
+            gameId={gameId}
+            gameName={game.name}
+            result={result}
+            playersById={playersById}
+            scoreVisibility={scoreVisibility}
+            gameStatus={game.status}
+            backHref={backHref}
+            chromeless
+          />
+        </>
+      );
+    } else {
+      mainContent = (chromeless) => (
+        <>
+          <NassauPodium
+            gameId={gameId}
+            gameName={game.name}
+            result={result}
+            playersById={playersById}
+            backHref={backHref}
+            chromeless={chromeless}
           />
           <NassauView
             gameId={gameId}
@@ -2517,28 +2552,6 @@ async function renderNassau(opts: {
         </>
       );
     }
-    const finishedView = (podiumChromeless: boolean) => (
-      <>
-        <NassauPodium
-          gameId={gameId}
-          gameName={game.name}
-          result={result}
-          playersById={playersById}
-          backHref={backHref}
-          chromeless={podiumChromeless}
-        />
-        <NassauView
-          gameId={gameId}
-          gameName={game.name}
-          result={result}
-          playersById={playersById}
-          scoreVisibility={scoreVisibility}
-          gameStatus={game.status}
-          backHref={backHref}
-          chromeless
-        />
-      </>
-    );
     if (showSide) {
       return renderSideTournamentTabs({
         gameId,
@@ -2547,11 +2560,11 @@ async function renderNassau(opts: {
         rawHolesRows,
         rawScoresRows,
         backHref,
-        mainContent: finishedView(true),
+        mainContent: mainContent(true),
         teamGrouping: 'solo',
       });
     }
-    return finishedView(false);
+    return mainContent(false);
   }
 
   return (
@@ -2634,11 +2647,16 @@ async function renderSkins(opts: {
   // Finished → resultat-flate på toppen + SkinsView under (chromeless, så bare
   // én outer shell). Ved nøyaktig 2 spillere er det en duell → head-to-head-
   // kort i stedet for podium (epic #496). 3+ → SkinsPodium som før.
-  // Med sideturnering (#576): behold alltid podiet (skip duell-kortet) så det
-  // passer i LeaderboardTabs sammen med side-fanen. Active/scheduled → SkinsView alene.
+  // Med sideturnering (#576) mates samme reveal (duell eller podium) inn som
+  // mainContent i LeaderboardTabs — duell-kortet beholdes også med sideturnering
+  // på (#589). Active/scheduled → SkinsView alene.
   if (game.status === 'finished') {
     const showSide = game.side_tournament_enabled;
-    if (result.players.length === 2 && !showSide) {
+    // mainContent: duell-kort (2 spillere) eller podium (3+), alltid med
+    // SkinsView under. Tar `chromeless` så samme reveal kan rendres
+    // frittstående ELLER inni sideturnerings-fanen.
+    let mainContent: (chromeless: boolean) => React.ReactNode;
+    if (result.players.length === 2) {
       // Stabil rekkefølge etter game_players (ikke rank), så fargene følger
       // spiller-identitet — ikke hvem som vant.
       const order = gwp.players.map((p) => p.user_id);
@@ -2672,7 +2690,7 @@ async function renderSkins(opts: {
         result.carriedPot > 0
           ? tsk('carriedNote', { count: result.carriedPot })
           : null;
-      return (
+      mainContent = (chromeless) => (
         <>
           <HeadToHeadResult
             gameId={gameId}
@@ -2685,6 +2703,30 @@ async function renderSkins(opts: {
             strip={strip}
             hangingNote={hangingNote}
             backHref={backHref}
+            chromeless={chromeless}
+          />
+          <SkinsView
+            gameId={gameId}
+            gameName={game.name}
+            result={result}
+            playersById={playersById}
+            scoreVisibility={scoreVisibility}
+            gameStatus={game.status}
+            backHref={backHref}
+            chromeless
+          />
+        </>
+      );
+    } else {
+      mainContent = (chromeless) => (
+        <>
+          <SkinsPodium
+            gameId={gameId}
+            gameName={game.name}
+            result={result}
+            playersById={playersById}
+            backHref={backHref}
+            chromeless={chromeless}
           />
           <SkinsView
             gameId={gameId}
@@ -2699,28 +2741,6 @@ async function renderSkins(opts: {
         </>
       );
     }
-    const finishedView = (podiumChromeless: boolean) => (
-      <>
-        <SkinsPodium
-          gameId={gameId}
-          gameName={game.name}
-          result={result}
-          playersById={playersById}
-          backHref={backHref}
-          chromeless={podiumChromeless}
-        />
-        <SkinsView
-          gameId={gameId}
-          gameName={game.name}
-          result={result}
-          playersById={playersById}
-          scoreVisibility={scoreVisibility}
-          gameStatus={game.status}
-          backHref={backHref}
-          chromeless
-        />
-      </>
-    );
     if (showSide) {
       return renderSideTournamentTabs({
         gameId,
@@ -2729,11 +2749,11 @@ async function renderSkins(opts: {
         rawHolesRows,
         rawScoresRows,
         backHref,
-        mainContent: finishedView(true),
+        mainContent: mainContent(true),
         teamGrouping: 'solo',
       });
     }
-    return finishedView(false);
+    return mainContent(false);
   }
 
   return (
@@ -2825,12 +2845,16 @@ async function renderBingoBangoBongo(opts: {
   // så bare én outer shell). Ved nøyaktig 2 spillere er det en duell → head-to-
   // head-kort i stedet for podium (epic #496, Stream B). BBB er det siste
   // formatet som kan være 2p, så dette lukker H2H-strømmen. 3+ → BingoBangoBongoPodium
-  // som før. Med sideturnering (#576): behold alltid podiet (skip duell-kortet)
-  // så det passer i LeaderboardTabs sammen med side-fanen. Active/scheduled →
-  // BingoBangoBongoView alene.
+  // som før. Med sideturnering (#576) mates samme reveal (duell eller podium)
+  // inn som mainContent i LeaderboardTabs — duell-kortet beholdes også med
+  // sideturnering på (#589). Active/scheduled → BingoBangoBongoView alene.
   if (game.status === 'finished') {
     const showSide = game.side_tournament_enabled;
-    if (result.players.length === 2 && !showSide) {
+    // mainContent: duell-kort (2 spillere) eller podium (3+), alltid med
+    // BingoBangoBongoView under. Tar `chromeless` så samme reveal kan rendres
+    // frittstående ELLER inni sideturnerings-fanen.
+    let mainContent: (chromeless: boolean) => React.ReactNode;
+    if (result.players.length === 2) {
       // Stabil rekkefølge etter game_players (ikke rank), så fargene følger
       // spiller-identitet — ikke hvem som vant.
       const order = gwp.players.map((p) => p.user_id);
@@ -2861,7 +2885,7 @@ async function renderBingoBangoBongo(opts: {
       // vinner.
       const winnerUserId =
         a.rank === b.rank ? null : a.rank < b.rank ? a.userId : b.userId;
-      return (
+      mainContent = (chromeless) => (
         <>
           <HeadToHeadResult
             gameId={gameId}
@@ -2873,6 +2897,30 @@ async function renderBingoBangoBongo(opts: {
             winnerUserId={winnerUserId}
             strip={strip}
             backHref={backHref}
+            chromeless={chromeless}
+          />
+          <BingoBangoBongoView
+            gameId={gameId}
+            gameName={game.name}
+            result={result}
+            playersById={playersById}
+            scoreVisibility={scoreVisibility}
+            gameStatus={game.status}
+            backHref={backHref}
+            chromeless
+          />
+        </>
+      );
+    } else {
+      mainContent = (chromeless) => (
+        <>
+          <BingoBangoBongoPodium
+            gameId={gameId}
+            gameName={game.name}
+            result={result}
+            playersById={playersById}
+            backHref={backHref}
+            chromeless={chromeless}
           />
           <BingoBangoBongoView
             gameId={gameId}
@@ -2887,28 +2935,6 @@ async function renderBingoBangoBongo(opts: {
         </>
       );
     }
-    const finishedView = (podiumChromeless: boolean) => (
-      <>
-        <BingoBangoBongoPodium
-          gameId={gameId}
-          gameName={game.name}
-          result={result}
-          playersById={playersById}
-          backHref={backHref}
-          chromeless={podiumChromeless}
-        />
-        <BingoBangoBongoView
-          gameId={gameId}
-          gameName={game.name}
-          result={result}
-          playersById={playersById}
-          scoreVisibility={scoreVisibility}
-          gameStatus={game.status}
-          backHref={backHref}
-          chromeless
-        />
-      </>
-    );
     if (showSide) {
       return renderSideTournamentTabs({
         gameId,
@@ -2917,11 +2943,11 @@ async function renderBingoBangoBongo(opts: {
         rawHolesRows,
         rawScoresRows,
         backHref,
-        mainContent: finishedView(true),
+        mainContent: mainContent(true),
         teamGrouping: 'solo',
       });
     }
-    return finishedView(false);
+    return mainContent(false);
   }
 
   return (
