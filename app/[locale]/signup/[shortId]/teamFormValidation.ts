@@ -1,52 +1,65 @@
 /**
- * Rene klientside-validatorer for lag-påmeldings-skjemaet (#362).
+ * Pure client-side validators for the team registration form (#362).
  *
- * Speiler server-action-ens regler ([teamActions.ts]) slik at kapteinen får
- * inline-feil FØR submit i stedet for den misvisende `team_name_invalid`-
- * feilen serveren returnerer når en slot-e-post mangler `@`. Serveren er
- * fortsatt sannhetskilden — dette er bare tidlig, vennlig feedback.
+ * Functions now return error CODES (keys into `signup.errors.*`) + optional
+ * interpolation values instead of raw Norwegian strings, so the consuming
+ * component translates them via `t('signup.errors.<code>', values)`.
+ * Server `teamActions.ts` uses the same code constants so client inline-
+ * feedback and server errors never diverge.
  *
- * Alle funksjoner er rene: tar input, returnerer feilmelding (norsk) eller
- * `null` når feltet er gyldig. Cross-felt-sjekker (duplikat, kaptein-egen-
- * e-post) ligger i `findSlotConflicts` som ser hele slot-lista samtidig.
+ * All functions are pure: take input, return a code+values tuple or `null`
+ * when the field is valid. Cross-field checks (duplicates, captain's own
+ * email) live in `findSlotConflicts` which sees the whole slot list.
  */
 
 export const TEAM_NAME_MIN = 3;
 export const TEAM_NAME_MAX = 40;
 
-/** Pragmatisk e-post-form: ett `@`, tegn rundt, og en prikk i domenet. */
+/** Pragmatic email shape: one `@`, chars around it, a dot in the domain. */
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export function validateTeamName(name: string): string | null {
+export type TeamNameValidationError =
+  | { code: 'teamNameEmpty' }
+  | { code: 'teamNameTooShort'; min: number }
+  | { code: 'teamNameTooLong'; max: number };
+
+export type SlotEmailValidationError =
+  | { code: 'slotEmailEmpty' }
+  | { code: 'slotEmailInvalid' };
+
+export type SlotConflictError =
+  | { code: 'slotEmailSelf' }
+  | { code: 'slotEmailDuplicate' };
+
+export function validateTeamName(name: string): TeamNameValidationError | null {
   const trimmed = name.trim();
-  if (trimmed.length === 0) return 'Skriv inn et lag-navn.';
+  if (trimmed.length === 0) return { code: 'teamNameEmpty' };
   if (trimmed.length < TEAM_NAME_MIN)
-    return `Lag-navnet må være minst ${TEAM_NAME_MIN} tegn.`;
+    return { code: 'teamNameTooShort', min: TEAM_NAME_MIN };
   if (trimmed.length > TEAM_NAME_MAX)
-    return `Lag-navnet kan være maks ${TEAM_NAME_MAX} tegn.`;
+    return { code: 'teamNameTooLong', max: TEAM_NAME_MAX };
   return null;
 }
 
-export function validateSlotEmail(value: string): string | null {
+export function validateSlotEmail(value: string): SlotEmailValidationError | null {
   const trimmed = value.trim();
-  if (trimmed.length === 0) return 'Fyll inn e-post til medspilleren.';
-  if (!EMAIL_RE.test(trimmed)) return 'Skriv inn en gyldig e-postadresse.';
+  if (trimmed.length === 0) return { code: 'slotEmailEmpty' };
+  if (!EMAIL_RE.test(trimmed)) return { code: 'slotEmailInvalid' };
   return null;
 }
 
 /**
- * Cross-felt-sjekker over alle slots samtidig. Returnerer en map fra
- * slot-indeks til feilmelding for slots som kolliderer — duplikat-e-post
- * eller kapteinens egen e-post. Slots uten konflikt (eller tomme) er ikke
- * i map-en.
+ * Cross-field checks over all slots simultaneously. Returns a map from
+ * slot-index to error code for slots that conflict — duplicate email or
+ * captain's own email. Slots without conflict (or empty) are absent.
  *
- * Tar rå (utrimmet) verdier og normaliserer internt (trim + lowercase),
- * samme som server-action-en, så «Ola@x.no» og «ola@x.no» teller som dup.
+ * Takes raw (untrimmed) values and normalises internally (trim + lowercase),
+ * same as the server action, so «Ola@x.no» and «ola@x.no» count as a dup.
  */
 export function findSlotConflicts(
   values: string[],
   captainEmail: string | null,
-): Record<number, string> {
+): Record<number, SlotConflictError> {
   const normalized = values.map((v) => v.trim().toLowerCase());
   const cap = (captainEmail ?? '').trim().toLowerCase();
 
@@ -58,15 +71,15 @@ export function findSlotConflicts(
     indicesByEmail.set(email, arr);
   });
 
-  const errors: Record<number, string> = {};
+  const errors: Record<number, SlotConflictError> = {};
   normalized.forEach((email, i) => {
     if (!email) return;
     if (cap && email === cap) {
-      errors[i] = 'Dette er din egen e-post. Du er allerede med som kaptein.';
+      errors[i] = { code: 'slotEmailSelf' };
       return;
     }
     if ((indicesByEmail.get(email)?.length ?? 0) > 1) {
-      errors[i] = 'Samme e-post er brukt på flere plasser.';
+      errors[i] = { code: 'slotEmailDuplicate' };
     }
   });
   return errors;

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
 import {
@@ -11,26 +12,6 @@ import {
 } from './actions';
 
 type Mode = 'open' | 'manual_approval';
-
-const ERROR_MESSAGES: Record<ActionError, string> = {
-  not_authed: 'Du må logge inn for å melde deg på.',
-  profile_incomplete: 'Du må fylle inn profilen din først.',
-  game_not_found: 'Fant ikke spillet. Lenken kan være feil.',
-  wrong_mode: 'Påmelding er ikke åpen for dette spillet.',
-  game_locked: 'Spillet er startet eller avsluttet — påmelding er stengt.',
-  signup_closed: 'Påmeldingen er stengt. Arrangøren gjør de siste justeringene.',
-  already_registered: 'Du er allerede påmeldt dette spillet.',
-  already_requested: 'Du har allerede sendt en forespørsel.',
-  message_too_long: 'Hilsenen er for lang (maks 200 tegn).',
-  team_not_supported_yet:
-    'Lag-påmelding kommer i neste versjon. Be arrangøren om å invitere deg direkte i mellomtiden.',
-  rate_limited:
-    'Du har gjort for mange påmeldinger den siste tida. Prøv igjen senere.',
-  db_error: 'Klarte ikke å fullføre handlingen. Prøv igjen om litt.',
-  bad_side: 'Velg hvilken side du vil spille på.',
-  side_full: 'Siden ble nettopp full. Velg den andre siden.',
-  game_full: 'Spillet er fullt — alle plassene er tatt.',
-};
 
 const MESSAGE_MAX = 200;
 
@@ -50,6 +31,7 @@ export function RegistrationForm({
   shortId: string;
   sideData?: MatchplaySideData | null;
 }) {
+  const t = useTranslations('signup');
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<ActionResult | null>(null);
   const [message, setMessage] = useState('');
@@ -88,14 +70,16 @@ export function RegistrationForm({
   if (result?.ok && mode === 'manual_approval') {
     return (
       <Banner tone="success">
-        Forespørsel sendt — arrangøren får varsel og bestemmer seg så snart
-        de kan. Du får beskjed via varsel og mail.
+        {t('requestSentBanner')}
       </Banner>
     );
   }
 
-  const errorMessage =
-    result && !result.ok ? ERROR_MESSAGES[result.error] : null;
+  const errorCode =
+    result && !result.ok ? (result.error as ActionError) : null;
+  const errorMessage = errorCode
+    ? t(`errors.${errorCode}` as Parameters<typeof t>[0])
+    : null;
 
   // ── Side-velger for åpne matchplay-spill ──────────────────────────────
   if (sideData && mode === 'open') {
@@ -106,14 +90,14 @@ export function RegistrationForm({
     if (bothFull) {
       return (
         <Banner tone="warning">
-          Spillet er fullt — alle plassene er tatt.
+          {t('gameFullBanner')}
         </Banner>
       );
     }
 
     const spotsLabel = (count: number): string => {
       const spots = sideData.teamSize - count;
-      return spots === 1 ? '1 plass igjen' : `${spots} plasser igjen`;
+      return spots === 1 ? t('sideSpot') : t('sideSpots', { count: spots });
     };
 
     return (
@@ -135,11 +119,11 @@ export function RegistrationForm({
         />
 
         <p className="font-sans text-sm leading-relaxed text-text">
-          Velg hvilken side du vil spille på.
+          {t('sidePickerIntro')}
         </p>
 
         {/* Side-kort: to kort side ved side */}
-        <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Velg side">
+        <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label={t('sidePickerAriaLabel')}>
           {([1, 2] as const).map((sideNum) => {
             const sideInfo = sideNum === 1 ? sideData.side1 : sideData.side2;
             const isFull = sideInfo.count >= sideData.teamSize;
@@ -164,7 +148,7 @@ export function RegistrationForm({
                 ].join(' ')}
               >
                 <span className="font-serif text-[17px] font-medium tracking-[-0.01em] text-text">
-                  Side {sideNum}
+                  {t('sideLabel', { n: sideNum })}
                 </span>
                 {sideInfo.playerNames.length > 0 && (
                   <span className="mt-1 font-sans text-xs text-muted">
@@ -172,7 +156,7 @@ export function RegistrationForm({
                   </span>
                 )}
                 <span className="mt-1.5 font-sans text-[11px] tabular-nums text-muted">
-                  {isFull ? 'Full' : spotsLabel(sideInfo.count)}
+                  {isFull ? t('sideFull') : spotsLabel(sideInfo.count)}
                 </span>
               </button>
             );
@@ -185,10 +169,10 @@ export function RegistrationForm({
           type="submit"
           disabled={activeSide === null}
           pending={isPending}
-          pendingLabel="Melder deg på …"
+          pendingLabel={t('signUpPending')}
           className="w-full"
         >
-          Meld meg på
+          {t('signUpButton')}
         </Button>
       </form>
     );
@@ -219,7 +203,7 @@ export function RegistrationForm({
       {mode === 'manual_approval' && (
         <label className="block">
           <span className="mb-1.5 block font-sans text-xs font-medium tracking-tight text-muted">
-            Valgfri hilsen til arrangøren
+            {t('messageLabel')}
           </span>
           <textarea
             name="message"
@@ -227,7 +211,7 @@ export function RegistrationForm({
             maxLength={MESSAGE_MAX}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder="«Hei! Jeg er kompis av Per — håper det er plass.»"
+            placeholder={t('messagePlaceholder')}
             className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm tracking-tight text-text placeholder:text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
           <span className="mt-1 block text-right font-sans text-[11px] tabular-nums text-muted">
@@ -241,10 +225,10 @@ export function RegistrationForm({
       <Button
         type="submit"
         pending={isPending}
-        pendingLabel={mode === 'open' ? 'Melder deg på …' : 'Sender forespørsel …'}
+        pendingLabel={mode === 'open' ? t('signUpPending') : t('sendRequestPending')}
         className="w-full"
       >
-        {mode === 'open' ? 'Meld meg på' : 'Send forespørsel'}
+        {mode === 'open' ? t('signUpButton') : t('sendRequestButton')}
       </Button>
     </form>
   );

@@ -3,20 +3,28 @@ import {
   validateTeamName,
   validateSlotEmail,
   findSlotConflicts,
+  TEAM_NAME_MIN,
+  TEAM_NAME_MAX,
 } from './teamFormValidation';
+
+/**
+ * Adapted to assert error CODES (not Norwegian strings) after the
+ * teamFormValidation → code-based refactor (i18n phase 2f).
+ * The component translates codes via t('signup.errors.<code>', values).
+ */
 
 describe('validateTeamName', () => {
   it.each([
-    ['', 'Skriv inn et lag-navn.'],
-    ['  ', 'Skriv inn et lag-navn.'],
-    ['ab', 'Lag-navnet må være minst 3 tegn.'],
-    ['x'.repeat(41), 'Lag-navnet kan være maks 40 tegn.'],
-  ])('avviser «%s»', (input, expected) => {
-    expect(validateTeamName(input)).toBe(expected);
+    ['', { code: 'teamNameEmpty' }],
+    ['  ', { code: 'teamNameEmpty' }],
+    ['ab', { code: 'teamNameTooShort', min: TEAM_NAME_MIN }],
+    ['x'.repeat(TEAM_NAME_MAX + 1), { code: 'teamNameTooLong', max: TEAM_NAME_MAX }],
+  ] as const)('rejects «%s»', (input, expected) => {
+    expect(validateTeamName(input)).toEqual(expected);
   });
 
-  it.each([['Birdie-jegerne'], ['abc'], ['x'.repeat(40)]])(
-    'godtar «%s»',
+  it.each([['Birdie-jegerne'], ['abc'], ['x'.repeat(TEAM_NAME_MAX)]])(
+    'accepts «%s»',
     (input) => {
       expect(validateTeamName(input)).toBeNull();
     },
@@ -25,17 +33,17 @@ describe('validateTeamName', () => {
 
 describe('validateSlotEmail', () => {
   it.each([
-    ['', 'Fyll inn e-post til medspilleren.'],
-    ['ola', 'Skriv inn en gyldig e-postadresse.'],
-    ['ola@', 'Skriv inn en gyldig e-postadresse.'],
-    ['ola@gmail', 'Skriv inn en gyldig e-postadresse.'],
-    ['@gmail.com', 'Skriv inn en gyldig e-postadresse.'],
-  ])('avviser «%s»', (input, expected) => {
-    expect(validateSlotEmail(input)).toBe(expected);
+    ['', { code: 'slotEmailEmpty' }],
+    ['ola', { code: 'slotEmailInvalid' }],
+    ['ola@', { code: 'slotEmailInvalid' }],
+    ['ola@gmail', { code: 'slotEmailInvalid' }],
+    ['@gmail.com', { code: 'slotEmailInvalid' }],
+  ] as const)('rejects «%s»', (input, expected) => {
+    expect(validateSlotEmail(input)).toEqual(expected);
   });
 
   it.each([['ola@gmail.com'], ['  Ola@Gmail.com  '], ['a.b+c@x.co.uk']])(
-    'godtar «%s»',
+    'accepts «%s»',
     (input) => {
       expect(validateSlotEmail(input)).toBeNull();
     },
@@ -43,34 +51,30 @@ describe('validateSlotEmail', () => {
 });
 
 describe('findSlotConflicts', () => {
-  it('returnerer tom map når alt er unikt', () => {
+  it('returns empty map when all unique', () => {
     expect(findSlotConflicts(['a@x.no', 'b@x.no'], 'cap@x.no')).toEqual({});
   });
 
-  it('flagger begge plassene ved duplikat (case-insensitivt)', () => {
+  it('flags both slots for duplicate (case-insensitive)', () => {
     expect(findSlotConflicts(['ola@x.no', 'Ola@x.no'], 'cap@x.no')).toEqual({
-      0: 'Samme e-post er brukt på flere plasser.',
-      1: 'Samme e-post er brukt på flere plasser.',
+      0: { code: 'slotEmailDuplicate' },
+      1: { code: 'slotEmailDuplicate' },
     });
   });
 
-  it('flagger kapteinens egen e-post', () => {
+  it("flags captain's own email", () => {
     expect(findSlotConflicts(['cap@x.no'], 'CAP@x.no')).toEqual({
-      0: 'Dette er din egen e-post. Du er allerede med som kaptein.',
+      0: { code: 'slotEmailSelf' },
     });
   });
 
-  it('ignorerer tomme slots', () => {
+  it('ignores empty slots', () => {
     expect(findSlotConflicts(['', 'b@x.no', ''], null)).toEqual({});
   });
 
-  it('prioriterer egen-e-post over duplikat-melding', () => {
+  it("prioritises self-email over duplicate code", () => {
     const res = findSlotConflicts(['cap@x.no', 'cap@x.no'], 'cap@x.no');
-    expect(res[0]).toBe(
-      'Dette er din egen e-post. Du er allerede med som kaptein.',
-    );
-    expect(res[1]).toBe(
-      'Dette er din egen e-post. Du er allerede med som kaptein.',
-    );
+    expect(res[0]).toEqual({ code: 'slotEmailSelf' });
+    expect(res[1]).toEqual({ code: 'slotEmailSelf' });
   });
 });

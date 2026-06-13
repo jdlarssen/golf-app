@@ -1,4 +1,7 @@
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale, getTranslations } from 'next-intl/server';
+import type { AppLocale } from '@/i18n/routing';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
@@ -8,11 +11,13 @@ import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { TeamDashboardClient } from './TeamDashboardClient';
 
-export const metadata = {
-  title: 'Mitt lag – Tørny',
-};
+type Params = Promise<{ shortId: string; locale: string }>;
 
-type Params = Promise<{ shortId: string }>;
+export async function generateMetadata({ params }: { params: Params }) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale: locale as AppLocale, namespace: 'signup' });
+  return { title: t('teamDashMetaTitle') };
+}
 
 type TeamMemberRow = {
   id: string;
@@ -45,6 +50,8 @@ export default async function TeamDashboardPage({
   params: Params;
 }) {
   const { shortId } = await params;
+  const locale = (await getLocale()) as AppLocale;
+  const t = await getTranslations('signup');
   const game = await getGameByShortId(shortId);
   if (!game) {
     notFound();
@@ -60,7 +67,7 @@ export default async function TeamDashboardPage({
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect(`/login?next=/signup/${shortId}/team`);
+    redirect({ href: `/login?next=/signup/${shortId}/team`, locale });
   }
 
   const admin = getAdminClient();
@@ -97,11 +104,10 @@ export default async function TeamDashboardPage({
   if (!myRow && !pendingInvitation) {
     return (
       <AppShell>
-        <TopBar backHref={`/signup/${shortId}`} back="history" kicker="Lag" />
+        <TopBar backHref={`/signup/${shortId}`} back="history" kicker={t('teamDashKicker')} />
         <Card>
           <Banner tone="info">
-            Du har ikke et lag på dette spillet. Be kapteinen om å legge
-            deg til, eller meld på et eget lag fra påmeldings-siden.
+            {t('teamDashNoTeamBanner')}
           </Banner>
         </Card>
       </AppShell>
@@ -114,11 +120,11 @@ export default async function TeamDashboardPage({
   if (!myRow && pendingInvitation) {
     return (
       <AppShell>
-        <TopBar backHref={`/signup/${shortId}`} back="history" kicker="Lag" />
+        <TopBar backHref={`/signup/${shortId}`} back="history" kicker={t('teamDashKicker')} />
         <Card>
           <div className="space-y-4">
             <h2 className="font-serif text-[20px] font-medium text-text">
-              Du er invitert til et lag i «{game.name}»
+              {t('teamDashInvitedHeading', { gameName: game.name })}
             </h2>
             <TeamDashboardClient
               mode="invited_unknown"
@@ -143,10 +149,10 @@ export default async function TeamDashboardPage({
     // men vi gir en vennlig melding hvis det skjer.
     return (
       <AppShell>
-        <TopBar backHref={`/signup/${shortId}`} back="history" kicker="Lag" />
+        <TopBar backHref={`/signup/${shortId}`} back="history" kicker={t('teamDashKicker')} />
         <Card>
           <Banner tone="info">
-            Du er påmeldt som solo-spiller. Det er ikke noe lag å vise her.
+            {t('teamDashSoloPlayerBanner')}
           </Banner>
         </Card>
       </AppShell>
@@ -184,11 +190,11 @@ export default async function TeamDashboardPage({
   );
 
   const isCaptain = myRow!.is_team_captain;
-  const teamName = captainRow?.team_name ?? myRow!.team_name ?? 'Laget';
+  const teamName = captainRow?.team_name ?? myRow!.team_name ?? game.name;
 
   return (
     <AppShell>
-      <TopBar backHref={`/signup/${shortId}`} back="history" kicker="Lag" />
+      <TopBar backHref={`/signup/${shortId}`} back="history" kicker={t('teamDashKicker')} />
 
       <div className="space-y-5">
         <header className="px-1">
@@ -204,8 +210,7 @@ export default async function TeamDashboardPage({
             med signup_closed; banneret forklarer hvorfor på forhånd. */}
         {game.signups_closed_at != null && game.status === 'scheduled' && (
           <Banner tone="info">
-            Påmeldingen er stengt. Arrangøren gjør de siste justeringene før
-            start.
+            {t('teamDashSignupsClosedBanner')}
           </Banner>
         )}
 
@@ -222,7 +227,7 @@ export default async function TeamDashboardPage({
                     requestId: captainRow.id,
                     userId: captainRow.user_id,
                     displayName:
-                      usersById.get(captainRow.user_id)?.name ?? 'Kaptein',
+                      usersById.get(captainRow.user_id)?.name ?? t('teamDashCaptainLabel'),
                     status: captainRow.status,
                   }
                 : null

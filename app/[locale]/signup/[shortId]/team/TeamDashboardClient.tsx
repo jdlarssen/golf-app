@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
 import {
@@ -12,13 +13,6 @@ import {
 } from '../teamActions';
 
 type Status = 'pending' | 'approved' | 'rejected' | 'withdrawn';
-
-const STATUS_LABELS: Record<Status, string> = {
-  pending: 'Venter på svar',
-  approved: 'Med på laget',
-  rejected: 'Avslått',
-  withdrawn: 'Trakk seg',
-};
 
 const STATUS_TONES: Record<Status, 'success' | 'warning' | 'error' | 'info'> = {
   pending: 'info',
@@ -88,6 +82,7 @@ type Props =
  * router.refresh()-er etter handling slik at serveren leverer ny snapshot.
  */
 export function TeamDashboardClient(props: Props) {
+  const t = useTranslations('signup');
   const [isPending, startTransition] = useTransition();
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -122,11 +117,27 @@ export function TeamDashboardClient(props: Props) {
     });
   };
 
+  function mapError(code: string): string {
+    switch (code) {
+      case 'not_authed':
+        return t('errors.teamDashNotAuthed');
+      case 'not_found':
+        return t('errors.teamDashNotFound');
+      case 'game_locked':
+        return t('errors.teamDashGameLocked');
+      case 'signup_closed':
+        return t('errors.teamDashSignupClosed');
+      case 'db_error':
+      default:
+        return t('errors.teamDashDbError');
+    }
+  }
+
   if (props.mode === 'invited_unknown') {
     const nextStep =
       props.joinEffect === 'instant'
-        ? 'Du blir med i spillet med en gang, og får scorekortet når runden starter.'
-        : 'Arrangøren må godkjenne laget før dere er påmeldt. Du får varsel når det er klart.';
+        ? t('teamDashAttachInstant')
+        : t('teamDashAttachApproval');
     return (
       <div className="space-y-3">
         {error && <Banner tone="error">{error}</Banner>}
@@ -135,19 +146,19 @@ export function TeamDashboardClient(props: Props) {
         <Button
           pending={pendingKey === 'attach'}
           disabled={isPending}
-          pendingLabel="Kobler på …"
+          pendingLabel={t('teamDashJoinPending')}
           onClick={() =>
             runAction(
               'attach',
               () => attachToCaptainTeam(props.invitationId, props.shortId),
               props.joinEffect === 'instant'
-                ? 'Du er med på laget. Siden lastes på nytt…'
-                : 'Meldt på laget. Venter på arrangøren. Siden lastes på nytt…',
+                ? t('teamDashJoinSuccessInstant')
+                : t('teamDashJoinSuccessApproval'),
             )
           }
           className="w-full"
         >
-          Bli med på lag
+          {t('teamDashJoinButton')}
         </Button>
       </div>
     );
@@ -165,7 +176,7 @@ export function TeamDashboardClient(props: Props) {
         <div className="flex items-center justify-between rounded-xl border border-border bg-surface/40 px-4 py-3">
           <div>
             <p className="font-sans text-xs uppercase tracking-[0.12em] text-muted">
-              Kaptein
+              {t('teamDashCaptainLabel')}
             </p>
             <p className="font-sans text-sm font-medium text-text">
               {props.captain.displayName}
@@ -178,10 +189,10 @@ export function TeamDashboardClient(props: Props) {
       {/* Medspillere */}
       <div className="space-y-2">
         <p className="font-sans text-xs uppercase tracking-[0.12em] text-muted">
-          Medspillere ({props.members.length})
+          {t('teamDashMembersHeading', { count: props.members.length })}
         </p>
         {props.members.length === 0 ? (
-          <p className="font-sans text-sm text-muted">Ingen medspillere ennå.</p>
+          <p className="font-sans text-sm text-muted">{t('teamDashNoMembers')}</p>
         ) : (
           props.members.map((m) => (
             <div
@@ -198,31 +209,31 @@ export function TeamDashboardClient(props: Props) {
                     variant="secondary"
                     pending={pendingKey === `resend:${m.requestId}`}
                     disabled={isPending}
-                    pendingLabel="Sender …"
+                    pendingLabel={t('teamDashResendPending')}
                     onClick={() =>
                       runAction(
                         `resend:${m.requestId}`,
                         () => resendTeamInvite(m.requestId, props.shortId),
-                        'Påminnelse sendt.',
+                        t('teamDashResendSuccess'),
                       )
                     }
                   >
-                    Send påminnelse
+                    {t('teamDashResendButton')}
                   </Button>
                   <Button
                     variant="danger"
                     pending={pendingKey === `remove:${m.requestId}`}
                     disabled={isPending}
-                    pendingLabel="Fjerner …"
+                    pendingLabel={t('teamDashRemovePending')}
                     onClick={() =>
                       runAction(
                         `remove:${m.requestId}`,
                         () => removeTeamMember(m.requestId, props.shortId),
-                        'Medspiller fjernet.',
+                        t('teamDashRemoveSuccess'),
                       )
                     }
                   >
-                    Fjern
+                    {t('teamDashRemoveButton')}
                   </Button>
                 </div>
               )}
@@ -235,44 +246,44 @@ export function TeamDashboardClient(props: Props) {
       {props.mode === 'member' && props.myStatus === 'pending' && (
         <div className="space-y-2 pt-2">
           <p className="font-sans text-sm text-text">
-            Kapteinen har invitert deg. Vil du være med?
+            {t('teamDashPendingInviteIntro')}
           </p>
           <p className="font-sans text-sm text-muted">
             {props.joinEffect === 'instant'
-              ? 'Sier du ja, er du med i spillet med en gang.'
-              : 'Sier du ja, må arrangøren godkjenne laget før dere er påmeldt. Du får varsel når det er klart.'}
+              ? t('teamDashPendingInstant')
+              : t('teamDashPendingApproval')}
           </p>
           <div className="flex flex-wrap gap-2">
             <Button
               pending={pendingKey === 'accept'}
               disabled={isPending}
-              pendingLabel="Aksepterer …"
+              pendingLabel={t('teamDashAcceptPending')}
               onClick={() =>
                 runAction(
                   'accept',
                   () => acceptTeamInvite(props.myRowId, props.shortId),
                   props.joinEffect === 'instant'
-                    ? 'Du er med på laget. Siden lastes på nytt…'
-                    : 'Meldt på laget. Venter på arrangøren. Siden lastes på nytt…',
+                    ? t('teamDashJoinSuccessInstant')
+                    : t('teamDashJoinSuccessApproval'),
                 )
               }
             >
-              Aksepter
+              {t('teamDashAcceptButton')}
             </Button>
             <Button
               variant="secondary"
               pending={pendingKey === 'decline'}
               disabled={isPending}
-              pendingLabel="Avslår …"
+              pendingLabel={t('teamDashDeclinePending')}
               onClick={() =>
                 runAction(
                   'decline',
                   () => declineTeamInvite(props.myRowId, props.shortId),
-                  'Avslag registrert.',
+                  t('teamDashDeclineSuccess'),
                 )
               }
             >
-              Avslå
+              {t('teamDashDeclineButton')}
             </Button>
           </div>
         </div>
@@ -282,6 +293,7 @@ export function TeamDashboardClient(props: Props) {
 }
 
 function StatusChipMini({ status }: { status: Status }) {
+  const t = useTranslations('signup');
   const tone = STATUS_TONES[status];
   const palette: Record<typeof tone, string> = {
     success: 'bg-primary-soft text-success border-success/40',
@@ -293,23 +305,7 @@ function StatusChipMini({ status }: { status: Status }) {
     <span
       className={`inline-flex items-center rounded-full border px-2.5 py-0.5 font-sans text-[11px] font-medium tracking-tight ${palette[tone]}`}
     >
-      {STATUS_LABELS[status]}
+      {t(`memberStatus.${status}` as Parameters<typeof t>[0])}
     </span>
   );
-}
-
-function mapError(code: string): string {
-  switch (code) {
-    case 'not_authed':
-      return 'Du må logge inn på nytt.';
-    case 'not_found':
-      return 'Fant ikke laget eller medspilleren.';
-    case 'game_locked':
-      return 'Spillet er startet — endringer er ikke tillatt lenger.';
-    case 'signup_closed':
-      return 'Påmeldingen er stengt. Arrangøren gjør de siste justeringene.';
-    case 'db_error':
-    default:
-      return 'Klarte ikke å fullføre handlingen. Prøv igjen om litt.';
-  }
 }

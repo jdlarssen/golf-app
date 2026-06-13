@@ -1,6 +1,8 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale } from 'next-intl/server';
+import type { AppLocale } from '@/i18n/routing';
 import { revalidateTag } from 'next/cache';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
@@ -112,12 +114,13 @@ function isDuplicateError(err: { code?: string; message?: string } | null): bool
 async function requireAuthedUser(
   shortId: string,
 ): Promise<{ id: string; email: string | null }> {
+  const locale = (await getLocale()) as AppLocale;
   const supabase = await getServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect(`/login?next=/signup/${shortId}`);
+    redirect({ href: `/login?next=/signup/${shortId}`, locale });
   }
   const { data: profile } = await supabase
     .from('users')
@@ -125,7 +128,7 @@ async function requireAuthedUser(
     .eq('id', user!.id)
     .maybeSingle<{ profile_completed_at: string | null }>();
   if (!profile?.profile_completed_at) {
-    redirect(`/complete-profile?next=/signup/${shortId}`);
+    redirect({ href: `/complete-profile?next=/signup/${shortId}`, locale });
   }
   return { id: user!.id, email: user!.email ?? null };
 }

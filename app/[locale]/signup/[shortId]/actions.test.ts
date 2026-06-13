@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   buildSupabaseMock,
-  makeRedirectMock,
+  makeLocaleRedirectMock,
   RedirectError,
 } from '@/tests/serverActionMocks';
 
@@ -17,9 +17,9 @@ import {
  *  - Lag-only registration_type → team_not_supported_yet placeholder
  */
 
-const redirectMock = makeRedirectMock();
-vi.mock('next/navigation', () => ({
-  redirect: (url: string) => redirectMock(url),
+const redirectMock = makeLocaleRedirectMock();
+vi.mock('@/i18n/navigation', () => ({
+  redirect: (arg: { href: string; locale?: string } | string) => redirectMock(arg),
 }));
 
 const revalidateTagMock = vi.fn();
@@ -157,7 +157,7 @@ describe('registerForOpenGame', () => {
       registerForOpenGame(fd({ shortId: SHORT_ID })),
     ).rejects.toBeInstanceOf(RedirectError);
     expect(redirectMock).toHaveBeenCalledWith(
-      `/login?next=/signup/${SHORT_ID}`,
+      expect.objectContaining({ href: `/login?next=/signup/${SHORT_ID}` }),
     );
   });
 
@@ -230,7 +230,9 @@ describe('registerForOpenGame', () => {
       registerForOpenGame(fd({ shortId: SHORT_ID })),
     ).rejects.toBeInstanceOf(RedirectError);
 
-    expect(redirectMock).toHaveBeenCalledWith(`/games/${GAME_ID}`);
+    expect(redirectMock).toHaveBeenCalledWith(
+      expect.objectContaining({ href: `/games/${GAME_ID}` }),
+    );
     expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
     expect(notifyMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -353,7 +355,9 @@ describe('registerForOpenGame', () => {
       registerForOpenGame(fd({ shortId: SHORT_ID, side: '2' })),
     ).rejects.toBeInstanceOf(RedirectError);
 
-    expect(redirectMock).toHaveBeenCalledWith(`/games/${GAME_ID}`);
+    expect(redirectMock).toHaveBeenCalledWith(
+      expect.objectContaining({ href: `/games/${GAME_ID}` }),
+    );
     expect(revalidateTagMock).toHaveBeenCalledWith(`game-${GAME_ID}`, 'max');
 
     // SF-3: verifiser insert-payload direkte via __fromCalls
@@ -432,7 +436,9 @@ describe('registerForOpenGame', () => {
     await expect(
       registerForOpenGame(fd({ shortId: SHORT_ID, side: '1' })),
     ).rejects.toBeInstanceOf(RedirectError);
-    expect(redirectMock).toHaveBeenCalledWith(`/games/${GAME_ID}`);
+    expect(redirectMock).toHaveBeenCalledWith(
+      expect.objectContaining({ href: `/games/${GAME_ID}` }),
+    );
 
     // Ingen delete-kall
     const deleteCall = adminMock.__fromCalls.find(
@@ -455,7 +461,9 @@ describe('registerForOpenGame', () => {
       registerForOpenGame(fd({ shortId: SHORT_ID, side: '1' })), // side ignoreres
     ).rejects.toBeInstanceOf(RedirectError);
 
-    expect(redirectMock).toHaveBeenCalledWith(`/games/${GAME_ID}`);
+    expect(redirectMock).toHaveBeenCalledWith(
+      expect.objectContaining({ href: `/games/${GAME_ID}` }),
+    );
 
     // SF-3 regresjonstest: non-matchplay insert har team_number=null, flight_number=null
     const insertCall = adminMock.__fromCalls.find(

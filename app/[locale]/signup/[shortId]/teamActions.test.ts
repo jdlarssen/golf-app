@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   buildSupabaseMock,
-  makeRedirectMock,
+  makeLocaleRedirectMock,
   RedirectError,
 } from '@/tests/serverActionMocks';
 
@@ -18,9 +18,9 @@ import {
  *  - Kaptein-rad opprettelse for open og manual_approval
  */
 
-const redirectMock = makeRedirectMock();
-vi.mock('next/navigation', () => ({
-  redirect: (url: string) => redirectMock(url),
+const redirectMock = makeLocaleRedirectMock();
+vi.mock('@/i18n/navigation', () => ({
+  redirect: (arg: { href: string; locale?: string } | string) => redirectMock(arg),
 }));
 
 const revalidateTagMock = vi.fn();
@@ -554,7 +554,7 @@ describe('submitTeamRegistration — happy paths', () => {
       }),
     ).rejects.toBeInstanceOf(RedirectError);
     expect(redirectMock).toHaveBeenCalledWith(
-      `/login?next=/signup/${SHORT_ID}`,
+      expect.objectContaining({ href: `/login?next=/signup/${SHORT_ID}` }),
     );
   });
 });

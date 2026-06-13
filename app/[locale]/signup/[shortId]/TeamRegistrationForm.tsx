@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useRef, useState, useTransition } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { Banner } from '@/components/ui/Banner';
 import { maskEmail } from '@/lib/users/maskEmail';
@@ -9,6 +10,9 @@ import {
   validateTeamName,
   validateSlotEmail,
   findSlotConflicts,
+  type TeamNameValidationError,
+  type SlotEmailValidationError,
+  type SlotConflictError,
 } from './teamFormValidation';
 import {
   submitTeamRegistration,
@@ -16,28 +20,6 @@ import {
   type TeamRegistrationError,
   type TeamSlotInput,
 } from './teamActions';
-
-const ERROR_MESSAGES: Record<TeamRegistrationError, string> = {
-  not_authed: 'Du må logge inn for å melde deg på.',
-  profile_incomplete: 'Du må fylle inn profilen din først.',
-  game_not_found: 'Fant ikke spillet. Lenken kan være feil.',
-  wrong_type: 'Dette spillet tar ikke imot lag-påmelding.',
-  wrong_mode: 'Påmelding er ikke åpen for dette spillet.',
-  game_locked: 'Spillet er startet eller avsluttet — påmelding er stengt.',
-  signup_closed: 'Påmeldingen er stengt. Arrangøren gjør de siste justeringene.',
-  mode_does_not_support_teams:
-    'Spillmodusen støtter ikke lag. Velg solo-påmelding i stedet.',
-  team_name_invalid: 'Lag-navnet må være 3–40 tegn.',
-  slots_count_wrong: 'Feil antall medspillere. Fyll inn alle plassene.',
-  duplicate_emails: 'Du har lagt inn samme e-post på flere plasser.',
-  self_in_slots: 'Du kan ikke legge til deg selv som medspiller.',
-  disposable_email:
-    'Engangs-e-post går ikke. Bruk en vanlig e-postadresse for medspilleren.',
-  already_registered: 'Du er allerede påmeldt dette spillet.',
-  rate_limited:
-    'Du har gjort for mange påmeldinger den siste tida. Prøv igjen senere.',
-  db_error: 'Klarte ikke å fullføre handlingen. Prøv igjen om litt.',
-};
 
 const MAX_SUGGESTIONS = 6;
 
@@ -55,6 +37,21 @@ function candidateLabel(c: TeamCandidate): string {
   return c.nickname ? `${base} «${c.nickname}»` : base;
 }
 
+/** Translate a validation error code to a user-visible string. */
+function useErrorTranslator() {
+  const t = useTranslations('signup');
+  return {
+    teamNameError: (err: TeamNameValidationError): string => {
+      if (err.code === 'teamNameEmpty') return t('errors.teamNameEmpty');
+      if (err.code === 'teamNameTooShort') return t('errors.teamNameTooShort', { min: err.min });
+      return t('errors.teamNameTooLong', { max: err.max });
+    },
+    slotError: (err: SlotEmailValidationError | SlotConflictError): string => {
+      return t(`errors.${err.code}` as Parameters<typeof t>[0]);
+    },
+  };
+}
+
 export function TeamRegistrationForm({
   shortId,
   teamSize,
@@ -69,9 +66,12 @@ export function TeamRegistrationForm({
   /** Co-players kapteinen kan velge i autocomplete (#362). Tom = ingen treff. */
   candidates?: TeamCandidate[];
 }) {
+  const t = useTranslations('signup');
+  const { teamNameError: translateTeamNameError, slotError: translateSlotError } = useErrorTranslator();
+
   const [isPending, startTransition] = useTransition();
   const [teamName, setTeamName] = useState('');
-  const [teamNameError, setTeamNameError] = useState<string | null>(null);
+  const [teamNameError, setTeamNameError] = useState<TeamNameValidationError | null>(null);
   const [slots, setSlots] = useState<SlotState[]>(() =>
     Array.from({ length: Math.max(teamSize - 1, 0) }, () => ({
       mode: 'lookup' as const,
@@ -80,7 +80,7 @@ export function TeamRegistrationForm({
     })),
   );
   /** Format-feil per slot, satt on-blur og ved submit-forsøk. */
-  const [slotErrors, setSlotErrors] = useState<Record<number, string>>({});
+  const [slotErrors, setSlotErrors] = useState<Record<number, SlotEmailValidationError>>({});
   /** Hvilken slot har åpen autocomplete-liste (null = ingen). */
   const [openSlot, setOpenSlot] = useState<number | null>(null);
   const [result, setResult] = useState<TeamRegistrationResult | null>(null);
@@ -98,7 +98,7 @@ export function TeamRegistrationForm({
     [slots, captainEmail],
   );
 
-  const errorFor = (idx: number): string | null =>
+  const errorFor = (idx: number): SlotEmailValidationError | SlotConflictError | null =>
     slotErrors[idx] ?? conflicts[idx] ?? null;
 
   const updateSlot = (idx: number, patch: Partial<SlotState>) => {
@@ -123,7 +123,7 @@ export function TeamRegistrationForm({
     // første ugyldige felt, i stedet for å sende serveren en input vi vet
     // er ugyldig (som ville gitt en misvisende feilmelding).
     const nameErr = validateTeamName(teamName);
-    const formatErrs: Record<number, string> = {};
+    const formatErrs: Record<number, SlotEmailValidationError> = {};
     slots.forEach((s, i) => {
       if (s.selected) return; // valgt co-player er gyldig per definisjon
       const err = validateSlotEmail(s.value);
@@ -179,23 +179,23 @@ export function TeamRegistrationForm({
     return (
       <div className="space-y-4">
         <Banner tone="success">
-          Laget er opprettet. Du er kaptein for «{teamName.trim()}».
+          {t('teamSuccessBanner', { teamName: teamName.trim() })}
         </Banner>
         {knownAdded.length > 0 && (
           <p className="font-sans text-sm text-text">
-            <strong>{knownAdded.length}</strong> medspiller
-            {knownAdded.length === 1 ? '' : 'e'} er lagt til og får varsel.
+            <strong>{knownAdded.length}</strong>{' '}
+            {t('teamSuccessKnown', { count: knownAdded.length })}
           </p>
         )}
         {invited.length > 0 && (
           <p className="font-sans text-sm text-text">
-            <strong>{invited.length}</strong> ukjent
-            {invited.length === 1 ? '' : 'e'} fikk e-post-invitasjon.
+            <strong>{invited.length}</strong>{' '}
+            {t('teamSuccessInvited', { count: invited.length })}
           </p>
         )}
         {failed.length > 0 && (
           <Banner tone="warning">
-            Disse plassene kom ikke gjennom:
+            {t('teamSuccessFailedBanner')}
             <ul className="mt-1 list-inside list-disc">
               {failed.map((f) => (
                 <li key={f.email}>
@@ -203,21 +203,24 @@ export function TeamRegistrationForm({
                 </li>
               ))}
             </ul>
-            Du kan fikse dem fra lag-oversikten.
+            {t('teamSuccessFailedFix')}
           </Banner>
         )}
         <a
           href={`/signup/${shortId}/team`}
           className="inline-flex min-h-[44px] w-full items-center justify-center rounded-full bg-primary px-[18px] py-2.5 font-medium tracking-tight text-white hover:bg-primary-hover dark:text-bg"
         >
-          Gå til lag-oversikten
+          {t('goToTeamDashboard')}
         </a>
       </div>
     );
   }
 
-  const errorMessage =
-    result && !result.ok ? ERROR_MESSAGES[result.error] : null;
+  const serverErrorCode =
+    result && !result.ok ? (result.error as TeamRegistrationError) : null;
+  const errorMessage = serverErrorCode
+    ? t(`errors.${serverErrorCode}` as Parameters<typeof t>[0])
+    : null;
 
   return (
     <form
@@ -226,7 +229,7 @@ export function TeamRegistrationForm({
         handleSubmit();
       }}
       className="space-y-5"
-      aria-label="Lag-påmeldings-skjema"
+      aria-label={t('teamFormAriaLabel')}
       noValidate
     >
       {/* Honeypot — usynlig for ekte brukere. */}
@@ -243,7 +246,7 @@ export function TeamRegistrationForm({
 
       <label className="block">
         <span className="mb-1.5 block font-sans text-xs font-medium tracking-tight text-muted">
-          Lag-navn (3–40 tegn)
+          {t('teamNameLabel')}
         </span>
         <input
           ref={teamNameRef}
@@ -256,7 +259,7 @@ export function TeamRegistrationForm({
           onBlur={() => setTeamNameError(validateTeamName(teamName))}
           maxLength={40}
           required
-          placeholder="«Birdie-jegerne»"
+          placeholder={t('teamNamePlaceholder')}
           aria-invalid={teamNameError ? true : undefined}
           className={`w-full rounded-xl border bg-surface px-4 py-3 text-sm tracking-tight text-text placeholder:text-muted focus:outline-none focus:ring-2 ${
             teamNameError
@@ -266,14 +269,14 @@ export function TeamRegistrationForm({
         />
         {teamNameError && (
           <span className="mt-1 block font-sans text-xs text-danger">
-            {teamNameError}
+            {translateTeamNameError(teamNameError)}
           </span>
         )}
       </label>
 
       <div className="space-y-3">
         <p className="font-sans text-xs uppercase tracking-[0.12em] text-muted">
-          Medspillere ({slotCount} {slotCount === 1 ? 'plass' : 'plasser'})
+          {t('slotsHeading', { count: slotCount })}
         </p>
         {slots.map((slot, idx) => {
           const slotError = errorFor(idx);
@@ -296,7 +299,7 @@ export function TeamRegistrationForm({
                     }
                     className="h-4 w-4 accent-primary"
                   />
-                  Eksisterende spiller
+                  {t('slotModeExisting')}
                 </label>
                 <label className="flex items-center gap-1.5 font-sans text-xs text-text">
                   <input
@@ -308,7 +311,7 @@ export function TeamRegistrationForm({
                     }
                     className="h-4 w-4 accent-primary"
                   />
-                  Inviter via e-post
+                  {t('slotModeEmail')}
                 </label>
               </div>
 
@@ -327,7 +330,7 @@ export function TeamRegistrationForm({
                     onClick={() =>
                       updateSlot(idx, { selected: null, value: '' })
                     }
-                    aria-label={`Fjern ${slot.selected.name}`}
+                    aria-label={t('slotRemoveAriaLabel', { name: slot.selected.name })}
                     className="shrink-0 text-base leading-none text-muted hover:text-text"
                   >
                     ×
@@ -364,12 +367,12 @@ export function TeamRegistrationForm({
                     }}
                     placeholder={
                       slot.mode === 'lookup'
-                        ? 'Søk på navn eller e-post'
-                        : 'E-post — sender invitasjon'
+                        ? t('slotLookupPlaceholder')
+                        : t('slotEmailPlaceholder')
                     }
                     required
                     autoComplete="off"
-                    aria-label={`Medspiller ${idx + 1}`}
+                    aria-label={t('slotAriaLabel', { n: idx + 1 })}
                     aria-invalid={slotError ? true : undefined}
                     className={`w-full rounded-lg border bg-surface px-3 py-2 text-sm tracking-tight text-text placeholder:text-muted focus:outline-none focus:ring-2 ${
                       slotError
@@ -419,7 +422,7 @@ export function TeamRegistrationForm({
 
               {slotError && (
                 <span className="block font-sans text-xs text-danger">
-                  {slotError}
+                  {translateSlotError(slotError)}
                 </span>
               )}
             </div>
@@ -432,10 +435,10 @@ export function TeamRegistrationForm({
       <Button
         type="submit"
         pending={isPending}
-        pendingLabel="Melder på laget …"
+        pendingLabel={t('teamSubmitPending')}
         className="w-full"
       >
-        Meld på laget
+        {t('teamSubmitButton')}
       </Button>
     </form>
   );

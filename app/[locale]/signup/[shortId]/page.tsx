@@ -1,5 +1,6 @@
-import { notFound, redirect } from 'next/navigation';
-import { getLocale } from 'next-intl/server';
+import { notFound } from 'next/navigation';
+import { redirect } from '@/i18n/navigation';
+import { getLocale, getTranslations } from 'next-intl/server';
 import type { AppLocale } from '@/i18n/routing';
 import { formatDate, formatTime } from '@/lib/i18n/format';
 import { getServerClient } from '@/lib/supabase/server';
@@ -19,11 +20,13 @@ import { getTeamCandidates, type TeamCandidate } from '@/lib/users/getTeamCandid
 import { RegistrationForm, type MatchplaySideData } from './RegistrationForm';
 import { TeamRegistrationForm } from './TeamRegistrationForm';
 
-export const metadata = {
-  title: 'Påmelding – Tørny',
-};
+type Params = Promise<{ shortId: string; locale: string }>;
 
-type Params = Promise<{ shortId: string }>;
+export async function generateMetadata({ params }: { params: Params }) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale: locale as AppLocale, namespace: 'signup' });
+  return { title: t('metaTitle') };
+}
 
 /**
  * Offentlig landing-side for selv-påmelding (#199 chunk 5).
@@ -49,6 +52,8 @@ type Params = Promise<{ shortId: string }>;
 export default async function PåmeldingPage({ params }: { params: Params }) {
   const { shortId } = await params;
   const locale = await getLocale();
+  const t = await getTranslations('signup');
+  const tModes = await getTranslations('modes');
 
   const game = await getGameByShortId(shortId);
   if (!game) {
@@ -61,7 +66,7 @@ export default async function PåmeldingPage({ params }: { params: Params }) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect(`/login?next=/signup/${shortId}`);
+    redirect({ href: `/login?next=/signup/${shortId}`, locale: locale as AppLocale });
   }
 
   // Bruk admin-client for profil/membership-sjekker. Vi er allerede authed
@@ -77,7 +82,7 @@ export default async function PåmeldingPage({ params }: { params: Params }) {
     .maybeSingle<{ profile_completed_at: string | null; email: string }>();
 
   if (!profile?.profile_completed_at) {
-    redirect(`/complete-profile?next=/signup/${shortId}`);
+    redirect({ href: `/complete-profile?next=/signup/${shortId}`, locale: locale as AppLocale });
   }
 
   const { data: existingPlayer } = await admin
@@ -112,11 +117,11 @@ export default async function PåmeldingPage({ params }: { params: Params }) {
   // (matchende email + game_id). Det gir oss fallback-melding "du har en
   // invitasjon" i stedet for generisk "krever invitasjon".
   let hasPendingInvitation = false;
-  if (game.registration_mode === 'invite_only' && profile.email) {
+  if (game.registration_mode === 'invite_only' && profile!.email) {
     const { data: invitation } = await admin
       .from('invitations')
       .select('id')
-      .ilike('email', profile.email)
+      .ilike('email', profile!.email)
       .eq('game_id', game.id)
       .is('accepted_at', null)
       .maybeSingle<{ id: string }>();
@@ -211,21 +216,21 @@ export default async function PåmeldingPage({ params }: { params: Params }) {
 
   return (
     <AppShell>
-      <TopBar backHref="/" back="history" kicker="Påmelding" />
+      <TopBar backHref="/" back="history" kicker={t('kicker')} />
 
       <div className="space-y-5">
         <header className="px-1">
           <p className="font-sans text-xs uppercase tracking-[0.12em] text-muted">
-            {MODE_LABELS[game.game_mode]}
+            {tModes(game.game_mode as Parameters<typeof tModes>[0])}
           </p>
           <h1 className="mt-1 font-serif text-[28px] font-medium leading-snug tracking-[-0.015em] text-text">
             {game.name}
           </h1>
           {game.scheduled_tee_off_at && (
             <p className="mt-1 font-sans text-sm text-muted">
-              Tee-off:{' '}
+              {t('teeOffLabel')}{' '}
               <time dateTime={game.scheduled_tee_off_at}>
-                {formatTeeOff(game.scheduled_tee_off_at, locale)}
+                {formatTeeOff(game.scheduled_tee_off_at, locale as AppLocale)}
               </time>
             </p>
           )}
@@ -233,6 +238,8 @@ export default async function PåmeldingPage({ params }: { params: Params }) {
 
         <Card>
           {renderBody({
+            t,
+            tModes,
             game,
             gameLocked,
             signupsClosed,
@@ -242,7 +249,7 @@ export default async function PåmeldingPage({ params }: { params: Params }) {
             isClubMember,
             viewerIsFriend,
             teamCandidates,
-            captainEmail: profile.email,
+            captainEmail: profile!.email,
             matchplaySideData,
           })}
         </Card>
@@ -252,6 +259,8 @@ export default async function PåmeldingPage({ params }: { params: Params }) {
 }
 
 function renderBody({
+  t,
+  tModes,
   game,
   gameLocked,
   signupsClosed,
@@ -264,6 +273,8 @@ function renderBody({
   captainEmail,
   matchplaySideData,
 }: {
+  t: ReturnType<typeof getTranslations<'signup'>> extends Promise<infer R> ? R : never;
+  tModes: ReturnType<typeof getTranslations<'modes'>> extends Promise<infer R> ? R : never;
   game: NonNullable<Awaited<ReturnType<typeof getGameByShortId>>>;
   gameLocked: boolean;
   signupsClosed: boolean;
@@ -279,9 +290,9 @@ function renderBody({
   if (isAlreadyRegistered) {
     return (
       <div className="space-y-4">
-        <Banner tone="success">Du er allerede påmeldt dette spillet.</Banner>
+        <Banner tone="success">{t('alreadyRegisteredBanner')}</Banner>
         <LinkButton href={`/games/${game.id}`} full>
-          Gå til spillet
+          {t('goToGameButton')}
         </LinkButton>
       </div>
     );
@@ -290,7 +301,7 @@ function renderBody({
   if (hasOpenPendingRequest) {
     return (
       <Banner tone="info">
-        Forespørsel sendt — du får varsel når arrangøren har bestemt seg.
+        {t('pendingRequestBanner')}
       </Banner>
     );
   }
@@ -298,8 +309,9 @@ function renderBody({
   if (gameLocked) {
     return (
       <Banner tone="warning">
-        Påmelding er stengt. Spillet er{' '}
-        {game.status === 'active' ? 'i gang' : 'avsluttet'}.
+        {t('gameLockedBanner', {
+          status: game.status === 'active' ? t('gameLockedActive') : t('gameLockedFinished'),
+        })}
       </Banner>
     );
   }
@@ -309,7 +321,7 @@ function renderBody({
   if (signupsClosed) {
     return (
       <Banner tone="info">
-        Påmeldingen er stengt. Arrangøren gjør de siste justeringene før start.
+        {t('signupsClosedBanner')}
       </Banner>
     );
   }
@@ -321,7 +333,7 @@ function renderBody({
     return (
       <div className="space-y-4">
         <p className="font-sans text-sm leading-relaxed text-text">
-          Du er medlem av klubben, så du kan melde deg på direkte.
+          {t('clubMemberDirectIntro')}
         </p>
         <RegistrationForm
           mode="open"
@@ -343,7 +355,7 @@ function renderBody({
     return (
       <div className="space-y-4">
         <p className="font-sans text-sm leading-relaxed text-text">
-          Arrangøren lar venner melde seg på direkte. Trykk for å bli med.
+          {t('friendSkipGateIntro')}
         </p>
         <RegistrationForm
           mode="open"
@@ -359,11 +371,10 @@ function renderBody({
       return (
         <div className="space-y-4">
           <Banner tone="info">
-            Du har en invitasjon til dette spillet. Sjekk innboksen din for
-            mail med kode, eller åpne /innboks i appen for å godta.
+            {t('inviteHasPendingBanner')}
           </Banner>
           <LinkButton href="/innboks" full variant="secondary">
-            Gå til innboks
+            {t('goToInboxButton')}
           </LinkButton>
         </div>
       );
@@ -373,8 +384,7 @@ function renderBody({
     if (game.registration_type === 'team') {
       return (
         <Banner tone="info">
-          Dette spillet tar imot lag via invitasjon. Be arrangøren invitere
-          laget ditt direkte.
+          {t('inviteTeamOnlyBanner')}
         </Banner>
       );
     }
@@ -384,7 +394,7 @@ function renderBody({
     return (
       <div className="space-y-4">
         <p className="font-sans text-sm leading-relaxed text-text">
-          Du er ikke invitert ennå, men du kan be arrangøren om plass.
+          {t('inviteNotInvitedIntro')}
         </p>
         <RegistrationForm mode="manual_approval" shortId={game.short_id} />
       </div>
@@ -403,8 +413,9 @@ function renderBody({
   if (typeView.kind === 'team_unsupported_mode') {
     return (
       <Banner tone="warning">
-        Spillmodusen «{MODE_LABELS[game.game_mode]}» har ikke lag-konsept.
-        Be arrangøren bytte til solo-påmelding.
+        {t('teamUnsupportedModeBanner', {
+          mode: tModes(game.game_mode as Parameters<typeof tModes>[0]),
+        })}
       </Banner>
     );
   }
@@ -414,17 +425,14 @@ function renderBody({
     if (teamSize < 2) {
       return (
         <Banner tone="warning">
-          Lag-størrelsen er ikke riktig satt opp. Be arrangøren sjekke
-          innstillingene.
+          {t('badTeamSizeBanner')}
         </Banner>
       );
     }
     return (
       <div className="space-y-4">
         <p className="font-sans text-sm leading-relaxed text-text">
-          Du melder på et helt lag som kaptein. Fyll inn lag-navn og
-          medspillere — kjente Tørny-brukere får varsel i appen, ukjente
-          får mail-invitasjon.
+          {t('teamFormIntro')}
         </p>
         <TeamRegistrationForm
           shortId={game.short_id}
@@ -441,13 +449,13 @@ function renderBody({
   const mode = game.registration_mode === 'open' ? 'open' : 'manual_approval';
   return (
     <div className="space-y-4">
-      {/* For matchplay + open mode, sideData drive the side-picker which replaces
+      {/* For matchplay + open mode, sideData drives the side-picker which replaces
           the standard intro text — we skip the generic text in that case. */}
       {!(mode === 'open' && matchplaySideData) && (
         <p className="font-sans text-sm leading-relaxed text-text">
           {mode === 'open'
-            ? 'Trykk «Meld meg på» for å bli med i spillet med en gang.'
-            : 'Send en forespørsel til arrangøren. Du får varsel når den er godkjent.'}
+            ? t('soloOpenIntro')
+            : t('soloManualIntro')}
         </p>
       )}
       <RegistrationForm
@@ -460,9 +468,9 @@ function renderBody({
 }
 
 /**
- * Format ISO-timestamp som «8. mai 2026, 14:30» i aktiv locale, med
- * europeisk 24-timers tid. Faller tilbake til rå-strengen hvis Intl
- * feiler (skal aldri skje for gyldige ISO-strings).
+ * Format ISO-timestamp as «8. mai 2026, 14:30» in the active locale, with
+ * European 24-hour time. Falls back to the raw string if Intl throws
+ * (should never happen for valid ISO strings).
  */
 function formatTeeOff(iso: string, locale: AppLocale): string {
   try {
@@ -480,3 +488,6 @@ function formatTeeOff(iso: string, locale: AppLocale): string {
     return iso;
   }
 }
+
+// Keep MODE_LABELS import for type-safety elsewhere; display now uses tModes.
+export { MODE_LABELS };
