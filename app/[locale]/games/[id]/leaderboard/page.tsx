@@ -2002,8 +2002,11 @@ async function renderSoloStrokeplay(opts: {
   // er det en duell → head-to-head-kort i stedet for podium (epic #496);
   // slagspill er lavest-vinner, så `lowerWins` inverterer baren + dommen.
   // 1 eller 3+ → SoloStrokeplayPodium som før. Active/scheduled → flat live-view.
+  // Med sideturnering (#576): behold alltid podiet (skip duell-kortet) så det
+  // passer i LeaderboardTabs sammen med side-fanen — mirror stableford-presedens.
   if (game.status === 'finished') {
-    if (result.players.length === 2) {
+    const showSide = game.side_tournament_enabled;
+    if (result.players.length === 2 && !showSide) {
       // Stabil rekkefølge etter game_players (ikke rank), så fargene følger
       // spiller-identitet — ikke hvem som vant.
       const order = gwp.players.map((p) => p.user_id);
@@ -2051,15 +2054,36 @@ async function renderSoloStrokeplay(opts: {
         </>
       );
     }
+    const podium = (chromeless: boolean) => (
+      <SoloStrokeplayPodium
+        gameId={gameId}
+        gameName={game.name}
+        result={result}
+        playersById={playersById}
+        backHref={backHref}
+        chromeless={chromeless}
+      />
+    );
+    if (showSide) {
+      return (
+        <>
+          {await renderSideTournamentTabs({
+            gameId,
+            game,
+            gwp,
+            rawHolesRows,
+            rawScoresRows,
+            backHref,
+            mainContent: podium(true),
+            teamGrouping: 'solo',
+          })}
+          {wdSection}
+        </>
+      );
+    }
     return (
       <>
-        <SoloStrokeplayPodium
-          gameId={gameId}
-          gameName={game.name}
-          result={result}
-          playersById={playersById}
-          backHref={backHref}
-        />
+        {podium(false)}
         {wdSection}
       </>
     );
@@ -2174,8 +2198,11 @@ async function renderTexasScramble(opts: {
     });
   }
 
+  // Finished → TexasScramblePodium. Med sideturnering (#576): podiet pakkes
+  // som chromeless mainContent i en LeaderboardTabs-veksler med side-fanen.
+  // Lag-format → 'byTeamNumber' så lag-aggregerte sidekategorier gjelder.
   if (game.status === 'finished') {
-    return (
+    const podium = (chromeless: boolean) => (
       <TexasScramblePodium
         gameId={gameId}
         gameName={game.name}
@@ -2183,8 +2210,22 @@ async function renderTexasScramble(opts: {
         playersById={playersById}
         backHref={backHref}
         formatLabel={formatLabel}
+        chromeless={chromeless}
       />
     );
+    if (game.side_tournament_enabled) {
+      return renderSideTournamentTabs({
+        gameId,
+        game,
+        gwp,
+        rawHolesRows,
+        rawScoresRows,
+        backHref,
+        mainContent: podium(true),
+        teamGrouping: 'byTeamNumber',
+      });
+    }
+    return podium(false);
   }
 
   return (
@@ -2275,9 +2316,11 @@ async function renderWolf(opts: {
     game.score_visibility === 'reveal' ? 'reveal' : 'live';
 
   // Finished → WolfPodium på toppen + WolfView under (chromeless, så bare
-  // én outer shell). Active/scheduled → WolfView alene.
+  // én outer shell). Med sideturnering (#576): podiet + view-en pakkes som
+  // chromeless mainContent i en LeaderboardTabs-veksler med side-fanen.
+  // Active/scheduled → WolfView alene.
   if (game.status === 'finished') {
-    return (
+    const finishedView = (podiumChromeless: boolean) => (
       <>
         <WolfPodium
           gameId={gameId}
@@ -2285,6 +2328,7 @@ async function renderWolf(opts: {
           result={result}
           playersById={playersById}
           backHref={backHref}
+          chromeless={podiumChromeless}
         />
         <WolfView
           gameId={gameId}
@@ -2298,6 +2342,19 @@ async function renderWolf(opts: {
         />
       </>
     );
+    if (game.side_tournament_enabled) {
+      return renderSideTournamentTabs({
+        gameId,
+        game,
+        gwp,
+        rawHolesRows,
+        rawScoresRows,
+        backHref,
+        mainContent: finishedView(true),
+        teamGrouping: 'solo',
+      });
+    }
+    return finishedView(false);
   }
 
   return (
@@ -2381,9 +2438,11 @@ async function renderNassau(opts: {
   // Finished → resultat-flate på toppen + NassauView under (chromeless, så bare
   // én outer shell). Ved nøyaktig 2 spillere er det en duell → head-to-head-
   // kort i stedet for podium (epic #496). 3+ → NassauPodium som før.
-  // Active/scheduled → NassauView alene.
+  // Med sideturnering (#576): behold alltid podiet (skip duell-kortet) så det
+  // passer i LeaderboardTabs sammen med side-fanen. Active/scheduled → NassauView alene.
   if (game.status === 'finished') {
-    if (result.players.length === 2) {
+    const showSide = game.side_tournament_enabled;
+    if (result.players.length === 2 && !showSide) {
       // Stabil rekkefølge etter game_players (ikke rank), så fargene følger
       // spiller-identitet — ikke hvem som vant.
       const order = gwp.players.map((p) => p.user_id);
@@ -2458,7 +2517,7 @@ async function renderNassau(opts: {
         </>
       );
     }
-    return (
+    const finishedView = (podiumChromeless: boolean) => (
       <>
         <NassauPodium
           gameId={gameId}
@@ -2466,6 +2525,7 @@ async function renderNassau(opts: {
           result={result}
           playersById={playersById}
           backHref={backHref}
+          chromeless={podiumChromeless}
         />
         <NassauView
           gameId={gameId}
@@ -2479,6 +2539,19 @@ async function renderNassau(opts: {
         />
       </>
     );
+    if (showSide) {
+      return renderSideTournamentTabs({
+        gameId,
+        game,
+        gwp,
+        rawHolesRows,
+        rawScoresRows,
+        backHref,
+        mainContent: finishedView(true),
+        teamGrouping: 'solo',
+      });
+    }
+    return finishedView(false);
   }
 
   return (
@@ -2561,9 +2634,11 @@ async function renderSkins(opts: {
   // Finished → resultat-flate på toppen + SkinsView under (chromeless, så bare
   // én outer shell). Ved nøyaktig 2 spillere er det en duell → head-to-head-
   // kort i stedet for podium (epic #496). 3+ → SkinsPodium som før.
-  // Active/scheduled → SkinsView alene.
+  // Med sideturnering (#576): behold alltid podiet (skip duell-kortet) så det
+  // passer i LeaderboardTabs sammen med side-fanen. Active/scheduled → SkinsView alene.
   if (game.status === 'finished') {
-    if (result.players.length === 2) {
+    const showSide = game.side_tournament_enabled;
+    if (result.players.length === 2 && !showSide) {
       // Stabil rekkefølge etter game_players (ikke rank), så fargene følger
       // spiller-identitet — ikke hvem som vant.
       const order = gwp.players.map((p) => p.user_id);
@@ -2624,7 +2699,7 @@ async function renderSkins(opts: {
         </>
       );
     }
-    return (
+    const finishedView = (podiumChromeless: boolean) => (
       <>
         <SkinsPodium
           gameId={gameId}
@@ -2632,6 +2707,7 @@ async function renderSkins(opts: {
           result={result}
           playersById={playersById}
           backHref={backHref}
+          chromeless={podiumChromeless}
         />
         <SkinsView
           gameId={gameId}
@@ -2645,6 +2721,19 @@ async function renderSkins(opts: {
         />
       </>
     );
+    if (showSide) {
+      return renderSideTournamentTabs({
+        gameId,
+        game,
+        gwp,
+        rawHolesRows,
+        rawScoresRows,
+        backHref,
+        mainContent: finishedView(true),
+        teamGrouping: 'solo',
+      });
+    }
+    return finishedView(false);
   }
 
   return (
@@ -2736,9 +2825,12 @@ async function renderBingoBangoBongo(opts: {
   // så bare én outer shell). Ved nøyaktig 2 spillere er det en duell → head-to-
   // head-kort i stedet for podium (epic #496, Stream B). BBB er det siste
   // formatet som kan være 2p, så dette lukker H2H-strømmen. 3+ → BingoBangoBongoPodium
-  // som før. Active/scheduled → BingoBangoBongoView alene.
+  // som før. Med sideturnering (#576): behold alltid podiet (skip duell-kortet)
+  // så det passer i LeaderboardTabs sammen med side-fanen. Active/scheduled →
+  // BingoBangoBongoView alene.
   if (game.status === 'finished') {
-    if (result.players.length === 2) {
+    const showSide = game.side_tournament_enabled;
+    if (result.players.length === 2 && !showSide) {
       // Stabil rekkefølge etter game_players (ikke rank), så fargene følger
       // spiller-identitet — ikke hvem som vant.
       const order = gwp.players.map((p) => p.user_id);
@@ -2795,7 +2887,7 @@ async function renderBingoBangoBongo(opts: {
         </>
       );
     }
-    return (
+    const finishedView = (podiumChromeless: boolean) => (
       <>
         <BingoBangoBongoPodium
           gameId={gameId}
@@ -2803,6 +2895,7 @@ async function renderBingoBangoBongo(opts: {
           result={result}
           playersById={playersById}
           backHref={backHref}
+          chromeless={podiumChromeless}
         />
         <BingoBangoBongoView
           gameId={gameId}
@@ -2816,6 +2909,19 @@ async function renderBingoBangoBongo(opts: {
         />
       </>
     );
+    if (showSide) {
+      return renderSideTournamentTabs({
+        gameId,
+        game,
+        gwp,
+        rawHolesRows,
+        rawScoresRows,
+        backHref,
+        mainContent: finishedView(true),
+        teamGrouping: 'solo',
+      });
+    }
+    return finishedView(false);
   }
 
   return (
@@ -2894,9 +3000,10 @@ async function renderNines(opts: {
     game.score_visibility === 'reveal' ? 'reveal' : 'live';
 
   // Finished → NinesPodium på toppen + NinesView under (chromeless, så bare
-  // én outer shell). Active/scheduled → NinesView alene.
+  // én outer shell). Med sideturnering (#576): pakkes i en LeaderboardTabs-
+  // veksler med side-fanen. Active/scheduled → NinesView alene.
   if (game.status === 'finished') {
-    return (
+    const finishedView = (podiumChromeless: boolean) => (
       <>
         <NinesPodium
           gameId={gameId}
@@ -2904,6 +3011,7 @@ async function renderNines(opts: {
           result={result}
           playersById={playersById}
           backHref={backHref}
+          chromeless={podiumChromeless}
         />
         <NinesView
           gameId={gameId}
@@ -2917,6 +3025,19 @@ async function renderNines(opts: {
         />
       </>
     );
+    if (game.side_tournament_enabled) {
+      return renderSideTournamentTabs({
+        gameId,
+        game,
+        gwp,
+        rawHolesRows,
+        rawScoresRows,
+        backHref,
+        mainContent: finishedView(true),
+        teamGrouping: 'solo',
+      });
+    }
+    return finishedView(false);
   }
 
   return (
@@ -2998,9 +3119,10 @@ async function renderRoundRobin(opts: {
     game.score_visibility === 'reveal' ? 'reveal' : 'live';
 
   // Finished → RoundRobinPodium på toppen + RoundRobinView under (chromeless,
-  // så bare én outer shell). Active/scheduled → RoundRobinView alene.
+  // så bare én outer shell). Med sideturnering (#576): pakkes i en
+  // LeaderboardTabs-veksler med side-fanen. Active/scheduled → RoundRobinView alene.
   if (game.status === 'finished') {
-    return (
+    const finishedView = (podiumChromeless: boolean) => (
       <>
         <RoundRobinPodium
           gameId={gameId}
@@ -3008,6 +3130,7 @@ async function renderRoundRobin(opts: {
           result={result}
           playersById={playersById}
           backHref={backHref}
+          chromeless={podiumChromeless}
         />
         <RoundRobinView
           gameId={gameId}
@@ -3021,6 +3144,19 @@ async function renderRoundRobin(opts: {
         />
       </>
     );
+    if (game.side_tournament_enabled) {
+      return renderSideTournamentTabs({
+        gameId,
+        game,
+        gwp,
+        rawHolesRows,
+        rawScoresRows,
+        backHref,
+        mainContent: finishedView(true),
+        teamGrouping: 'solo',
+      });
+    }
+    return finishedView(false);
   }
 
   return (
@@ -3099,9 +3235,10 @@ async function renderAceyDeucey(opts: {
     game.score_visibility === 'reveal' ? 'reveal' : 'live';
 
   // Finished → AceyDeuceyPodium på toppen + AceyDeuceyView under (chromeless,
-  // så bare én outer shell). Active/scheduled → AceyDeuceyView alene.
+  // så bare én outer shell). Med sideturnering (#576): pakkes i en
+  // LeaderboardTabs-veksler med side-fanen. Active/scheduled → AceyDeuceyView alene.
   if (game.status === 'finished') {
-    return (
+    const finishedView = (podiumChromeless: boolean) => (
       <>
         <AceyDeuceyPodium
           gameId={gameId}
@@ -3109,6 +3246,7 @@ async function renderAceyDeucey(opts: {
           result={result}
           playersById={playersById}
           backHref={backHref}
+          chromeless={podiumChromeless}
         />
         <AceyDeuceyView
           gameId={gameId}
@@ -3122,6 +3260,19 @@ async function renderAceyDeucey(opts: {
         />
       </>
     );
+    if (game.side_tournament_enabled) {
+      return renderSideTournamentTabs({
+        gameId,
+        game,
+        gwp,
+        rawHolesRows,
+        rawScoresRows,
+        backHref,
+        mainContent: finishedView(true),
+        teamGrouping: 'solo',
+      });
+    }
+    return finishedView(false);
   }
 
   return (
@@ -3233,9 +3384,11 @@ async function renderShamble(opts: {
     game.score_visibility === 'reveal' ? 'reveal' : 'live';
 
   // Finished → ShamblePodium på toppen + ShambleView under (chromeless, så bare
-  // én outer shell). Active/scheduled → ShambleView alene.
+  // én outer shell). Med sideturnering (#576): pakkes i en LeaderboardTabs-
+  // veksler med side-fanen ('byTeamNumber' — lag-format). Active/scheduled →
+  // ShambleView alene.
   if (game.status === 'finished') {
-    return (
+    const finishedView = (podiumChromeless: boolean) => (
       <>
         <ShamblePodium
           gameId={gameId}
@@ -3243,6 +3396,7 @@ async function renderShamble(opts: {
           result={result}
           playersById={playersById}
           backHref={backHref}
+          chromeless={podiumChromeless}
         />
         <ShambleView
           gameId={gameId}
@@ -3256,6 +3410,19 @@ async function renderShamble(opts: {
         />
       </>
     );
+    if (game.side_tournament_enabled) {
+      return renderSideTournamentTabs({
+        gameId,
+        game,
+        gwp,
+        rawHolesRows,
+        rawScoresRows,
+        backHref,
+        mainContent: finishedView(true),
+        teamGrouping: 'byTeamNumber',
+      });
+    }
+    return finishedView(false);
   }
 
   return (
@@ -3342,9 +3509,11 @@ async function renderPatsome(opts: {
     game.score_visibility === 'reveal' ? 'reveal' : 'live';
 
   // Finished → PatsomePodium på toppen + PatsomeView under (chromeless, så bare
-  // én outer shell). Active/scheduled → PatsomeView alene.
+  // én outer shell). Med sideturnering (#576): pakkes i en LeaderboardTabs-
+  // veksler med side-fanen ('byTeamNumber' — lag-format). Active/scheduled →
+  // PatsomeView alene.
   if (game.status === 'finished') {
-    return (
+    const finishedView = (podiumChromeless: boolean) => (
       <>
         <PatsomePodium
           gameId={gameId}
@@ -3352,6 +3521,7 @@ async function renderPatsome(opts: {
           result={result}
           playersById={playersById}
           backHref={backHref}
+          chromeless={podiumChromeless}
         />
         <PatsomeView
           gameId={gameId}
@@ -3365,6 +3535,19 @@ async function renderPatsome(opts: {
         />
       </>
     );
+    if (game.side_tournament_enabled) {
+      return renderSideTournamentTabs({
+        gameId,
+        game,
+        gwp,
+        rawHolesRows,
+        rawScoresRows,
+        backHref,
+        mainContent: finishedView(true),
+        teamGrouping: 'byTeamNumber',
+      });
+    }
+    return finishedView(false);
   }
 
   return (

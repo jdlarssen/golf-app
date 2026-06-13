@@ -17,7 +17,32 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
-## 1.121.y — i18n · engelsk hjem, spillformater, personvern og påmelding
+## 1.122.y — Sideturnering på alle poengformater
+
+Issue [#576](https://github.com/jdlarssen/golf-app/issues/576). Veiviseren tilbød sideturnering (lengste drive / nærmest pinnen) for alle formater, og avslutt-flyten kåret vinnere uansett format — men leaderboardet viste den bare for stableford-familien og best ball. Nå dukker sideturnerings-fanen opp for alle poeng-/podium-formatene.
+
+### [1.122.0] - 2026-06-13 · #576
+
+> Har du skrudd på en sideturnering, vises den nå på leaderboardet for alle poengformatene — ikke bare stableford og best ball. Spiller dere Bingo Bango Bongo, Wolf, Skins, Nassau, Nines eller et lag-format, dukker fanen med lengste drive og nærmest pinnen opp ved siden av resultatet når runden er avsluttet.
+
+<details>
+<summary>Teknisk</summary>
+
+[#576](https://github.com/jdlarssen/golf-app/issues/576). `leaderboard/page.tsx` rendret bare `SideTournamentView` i best-ball- og stableford-grenene; alle andre format-grener returnerte sin egen view før side-gatingen. Den stableford-spesifikke `renderStablefordWithSideTournament` er generalisert til `renderSideTournamentTabs` — formatuavhengig (rå-scores + course handicap + stroke-index), så hvert poeng-/podium-format gjenbruker den.
+
+#### Added
+- `isMatchplayFamily(mode)` i `lib/scoring/modes/types.ts` — single source of truth for matchplay-formatene, brukt til å holde dem utenfor side-grenen (egen visning på duell-kortet vurderes i egen sak, #585).
+
+#### Changed
+- `renderStablefordWithSideTournament` → generisk `renderSideTournamentTabs(teamGrouping: 'solo' | 'byTeamNumber')`.
+- Sideturnerings-fanen wires nå inn i solo strokeplay, Wolf, Nassau, Skins, Bingo Bango Bongo, Nines, Round Robin, Acey-Deucey, Texas/scramble-familien, Shamble og Patsome (`finished && side_tournament_enabled` → podium/leaderboard chromeless i `LeaderboardTabs` med side-fanen). Solo-format → individuelle + LD/CTP-kategorier; lag-format → også lag-aggregerte kategorier.
+- 10 format-podier fikk en `chromeless`-prop (speiler `SoloStablefordPodium`) så de kan sitte inni fanene.
+- Ved nøyaktig 2 spillere med sideturnering beholdes podiet (duell-kortet skippes) så det passer i fane-layoutet.
+
+</details>
+
+<details>
+<summary><strong>1.121.y — i18n · engelsk hjem, spillformater, personvern og påmelding (2 oppføringer)</strong></summary>
 
 Issue [#581](https://github.com/jdlarssen/golf-app/issues/581), del av epic [#60](https://github.com/jdlarssen/golf-app/issues/60). Fase 2f av flerspråkligheten, og den siste UI-streng-ekstraksjonen: hjem-skjermen, spillformat-oppslagsverket, personvernsiden og hele selv-påmeldingen finnes nå på engelsk. Etter denne fasen gjenstår bare databaseinnhold (Fase D), e-post (Fase M) og gælisk/irsk (Fase G).
 
@@ -54,6 +79,8 @@ Issue [#581](https://github.com/jdlarssen/golf-app/issues/581), del av epic [#60
 - Hjem-sidens og `FinishedGameCard`s avsluttet-kort bruker nå rute-locale for sluttdatoen (var hardkodet `'no'`); tee-off-linja bruker `*Locale`-dato-hjelperne. `/spill-arkiv` og `groupFinishedByMonth` er locale-bevisste (locale + `noDateLabel` på call-site).
 - Klient- og server-valideringen i lag-påmeldingen deler nå de samme feilkodene (`signup.errors.*`/`slotFailReason.*`), oversatt på call-site, så inline-feedback og server-feil aldri spriker.
 - `redirect` migrert til `@/i18n/navigation` (objekt-form med `getLocale()`) i hele signup-flyten + `/spill-arkiv`; spillformater-detaljsiden og spill-arkivet fikk locale-bevisst `generateMetadata`.
+
+</details>
 
 </details>
 
