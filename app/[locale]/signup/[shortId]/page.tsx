@@ -12,7 +12,6 @@ import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { Banner } from '@/components/ui/Banner';
 import { LinkButton } from '@/components/ui/Button';
-import { MODE_LABELS } from '@/lib/scoring/modes/types';
 import { gameModeSupportsTeams } from '@/lib/games/registration';
 import { isMatchplayMode, countSidePlayers } from '@/lib/games/matchplaySides';
 import { resolveRegistrationTypeView } from './registrationTypeView';
@@ -501,6 +500,3 @@ function formatTeeOff(iso: string, locale: AppLocale): string {
     return iso;
   }
 }
-
-// Keep MODE_LABELS import for type-safety elsewhere; display now uses tModes.
-export { MODE_LABELS };
