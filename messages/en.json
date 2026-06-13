@@ -4130,8 +4130,7 @@
 			"bodyText": "The organiser has approved your registration for {gameName}. You're on the list — your scorecard will open at tee-off.",
 			"viewGame": "View game",
 			"viewGameText": "View game: {url}",
-			"footer": "Log in at <link>tornygolf.no</link> to see your flight, team and tee-off time.",
-			"footerText": "Log in at tornygolf.no to see your flight, team and tee-off time."
+			"footer": "Log in at <link>tornygolf.no</link> to see your flight, team and tee-off time."
 		},
 		"registrationRejected": {
 			"subject": "Your request for {gameName}",
@@ -4161,8 +4160,7 @@
 			"bodyText": "{playerName} has submitted their scorecard for {gameName}. You can approve it in the admin panel.",
 			"openAdmin": "Open admin",
 			"openAdminText": "Open admin: {url}",
-			"footer": "You're receiving this because you're the admin for this game. Log in at <link>tornygolf.no</link> for the full overview.",
-			"footerText": "You're receiving this because you're the admin for this game. Log in at tornygolf.no for the full overview."
+			"footer": "You're receiving this because you're the admin for this game. Log in at <link>tornygolf.no</link> for the full overview."
 		},
 		"deliverReminder": {
 			"subject": "Submit your scorecard for {gameName}",
@@ -4173,14 +4171,12 @@
 			"bodyText": "You've finished playing {gameName} but haven't submitted your scorecard yet. Submit it to be included in the results.",
 			"submitButton": "Submit scorecard",
 			"submitButtonText": "Submit scorecard: {url}",
-			"footer": "You're receiving this because you're registered for this game. Log in at <link>tornygolf.no</link> to submit.",
-			"footerText": "You're receiving this because you're registered for this game. Log in at tornygolf.no to submit."
+			"footer": "You're receiving this because you're registered for this game. Log in at <link>tornygolf.no</link> to submit."
 		},
 		"cupStarted": {
 			"subject": "The cup has started — {tournamentName}",
 			"salutationNamed": "Hi {name}!",
 			"salutationGeneric": "Hi!",
-			"heading": "{salutation}",
 			"bodyStarted": "The cup <strong>{tournamentName}</strong> has started.",
 			"bodyStartedText": "The cup \"{tournamentName}\" has started.",
 			"bodyMatchup": "<strong>{team1}</strong> vs <strong>{team2}</strong>. First to <strong>{points}</strong> points wins.",

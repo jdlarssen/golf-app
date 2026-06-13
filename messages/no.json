@@ -4130,8 +4130,7 @@
 			"bodyText": "Arrangøren har godkjent påmeldingen din til {gameName}. Du står på lista, og scorekortet åpner ved tee-off.",
 			"viewGame": "Se spillet",
 			"viewGameText": "Se spillet: {url}",
-			"footer": "Logg inn på <link>tornygolf.no</link> for å se flight, lag og tee-off.",
-			"footerText": "Logg inn på tornygolf.no for å se flight, lag og tee-off."
+			"footer": "Logg inn på <link>tornygolf.no</link> for å se flight, lag og tee-off."
 		},
 		"registrationRejected": {
 			"subject": "Søknad til {gameName}",
@@ -4161,8 +4160,7 @@
 			"bodyText": "{playerName} har levert scorekortet sitt i {gameName}. Du kan godkjenne det i admin-flaten.",
 			"openAdmin": "Åpne admin",
 			"openAdminText": "Åpne admin: {url}",
-			"footer": "Du får denne meldingen fordi du er admin for spillet. Logg inn på <link>tornygolf.no</link> for full oversikt.",
-			"footerText": "Du får denne meldingen fordi du er admin for spillet. Logg inn på tornygolf.no for full oversikt."
+			"footer": "Du får denne meldingen fordi du er admin for spillet. Logg inn på <link>tornygolf.no</link> for full oversikt."
 		},
 		"deliverReminder": {
 			"subject": "Lever scorekortet i {gameName}",
@@ -4173,14 +4171,12 @@
 			"bodyText": "Du spilte ferdig {gameName}, men har ikke levert scorekortet ennå. Lever det, så er du med i resultatet.",
 			"submitButton": "Lever scorekortet",
 			"submitButtonText": "Lever scorekortet: {url}",
-			"footer": "Du får denne meldingen fordi du er påmeldt spillet. Logg inn på <link>tornygolf.no</link> for å levere.",
-			"footerText": "Du får denne meldingen fordi du er påmeldt spillet. Logg inn på tornygolf.no for å levere."
+			"footer": "Du får denne meldingen fordi du er påmeldt spillet. Logg inn på <link>tornygolf.no</link> for å levere."
 		},
 		"cupStarted": {
 			"subject": "Cup-en har startet — {tournamentName}",
 			"salutationNamed": "Hei {name}!",
 			"salutationGeneric": "Hei!",
-			"heading": "{salutation}",
 			"bodyStarted": "Cup-en <strong>{tournamentName}</strong> har startet.",
 			"bodyStartedText": "Cup-en \"{tournamentName}\" har startet.",
 			"bodyMatchup": "<strong>{team1}</strong> møter <strong>{team2}</strong>. Først til <strong>{points}</strong> point vinner.",
