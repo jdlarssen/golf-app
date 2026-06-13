@@ -66,7 +66,12 @@ export default async function PåmeldingPage({ params }: { params: Params }) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect({ href: `/login?next=/signup/${shortId}`, locale: locale as AppLocale });
+    // next-param URL-encodes per the proxy.ts auth-gate convention
+    // (`?next=${encodeURIComponent(...)}`) so /login round-trips it cleanly.
+    redirect({
+      href: `/login?next=${encodeURIComponent(`/signup/${shortId}`)}`,
+      locale: locale as AppLocale,
+    });
   }
 
   const game = await getGameByShortId(shortId);
@@ -87,7 +92,10 @@ export default async function PåmeldingPage({ params }: { params: Params }) {
     .maybeSingle<{ profile_completed_at: string | null; email: string }>();
 
   if (!profile?.profile_completed_at) {
-    redirect({ href: `/complete-profile?next=/signup/${shortId}`, locale: locale as AppLocale });
+    redirect({
+      href: `/complete-profile?next=${encodeURIComponent(`/signup/${shortId}`)}`,
+      locale: locale as AppLocale,
+    });
   }
 
   const { data: existingPlayer } = await admin
