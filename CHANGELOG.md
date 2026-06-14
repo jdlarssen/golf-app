@@ -21,6 +21,21 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#585](https://github.com/jdlarssen/golf-app/issues/585), oppfølging av sideturnering-utrullingen i [#576](https://github.com/jdlarssen/golf-app/issues/576). Matchplay-familien (singles, fourball, foursomes m.fl.) var den eneste som ikke fikk sideturnering, fordi duell-kortet ikke har samme tabs-flate som de andre formatene. Nå vises vinnerne kompakt under duell-resultatet, med hele poenggrunnlaget bak en utvid-knapp.
 
+### [1.127.1] - 2026-06-14 · #602
+
+> I sideturneringen sto det «Flest birdier (?)» i stedet for hvem som faktisk vant kategorien. Nå viser de telle- og brutto-baserte kategoriene navnet på spilleren som tok dem.
+
+<details>
+<summary>Teknisk</summary>
+
+[#602](https://github.com/jdlarssen/golf-app/issues/602). De individuelle sideturnerings-kategoriene satte aldri `winnerUserId` på award-objektet, så `SideTournamentView` falt tilbake til den literale `?`-en når den slo opp vinnernavnet.
+
+#### Fixed
+- `lib/scoring/sideTournament.ts`: 11 individuelle kategorier (`most_birdies/eagles/pars/albatrosses/hole_in_ones_individual`, `best_brutto_18/f9/b9_individual`, `king_par3/4/5_individual`) bærer nå `winnerUserId` fra vinner-løkka. Ved uavgjort får hvert tied lag sin egen award med det lagets representant-spiller. Ren felt-tilføyelse — poeng og standings er uendret.
+- `sideTournament.test.ts`: `winnerUserId`-assertions lagt til på de eksisterende enkelt-vinner-testene for alle 11 kategoriene (test-først; feilet mot gammel kode).
+
+</details>
+
 ### [1.127.0] - 2026-06-14 · #585
 
 > Nå kan du ha sideturnering på matchplay også. Lengste drive og nærmest pinnen kåres som vanlig når du avslutter, og vinnerne vises i en liten seksjon under duell-resultatet. Vil du se hele poenggrunnlaget, folder du det ut.

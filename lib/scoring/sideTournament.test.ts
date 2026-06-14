@@ -450,6 +450,7 @@ describe('calculateSideTournament', () => {
 
       // user-c is on team 2 → team 2 gets the individual award
       expect(t2.awards.find((a) => a.category === 'most_birdies_individual')?.points).toBe(1);
+      expect(t2.awards.find((a) => a.category === 'most_birdies_individual')?.winnerUserId).toBe('user-c');
       expect(t1.awards.find((a) => a.category === 'most_birdies_individual')).toBeUndefined();
     });
 
@@ -649,6 +650,7 @@ describe('calculateSideTournament', () => {
 
       // user-a on team 1 → team 1 gets the award
       expect(t1.awards.find((a) => a.category === 'most_eagles_individual')?.points).toBe(2);
+      expect(t1.awards.find((a) => a.category === 'most_eagles_individual')?.winnerUserId).toBe('user-a');
       expect(t2.awards.find((a) => a.category === 'most_eagles_individual')).toBeUndefined();
     });
 
@@ -845,6 +847,7 @@ describe('calculateSideTournament', () => {
 
       // user-b on team 1 → team 1 gets the award
       expect(t1.awards.find((a) => a.category === 'most_pars_individual')?.points).toBe(1);
+      expect(t1.awards.find((a) => a.category === 'most_pars_individual')?.winnerUserId).toBe('user-b');
       expect(t2.awards.find((a) => a.category === 'most_pars_individual')).toBeUndefined();
     });
 
@@ -1042,6 +1045,7 @@ describe('calculateSideTournament', () => {
 
       // user-c on team 2
       expect(t2.awards.find((a) => a.category === 'best_brutto_18_individual')?.points).toBe(2);
+      expect(t2.awards.find((a) => a.category === 'best_brutto_18_individual')?.winnerUserId).toBe('user-c');
       expect(t1.awards.find((a) => a.category === 'best_brutto_18_individual')).toBeUndefined();
     });
 
@@ -1236,6 +1240,7 @@ describe('calculateSideTournament', () => {
 
       // user-c on team 2
       expect(t2.awards.find((a) => a.category === 'best_brutto_f9_individual')?.points).toBe(1);
+      expect(t2.awards.find((a) => a.category === 'best_brutto_f9_individual')?.winnerUserId).toBe('user-c');
       expect(t1.awards.find((a) => a.category === 'best_brutto_f9_individual')).toBeUndefined();
     });
 
@@ -1430,6 +1435,7 @@ describe('calculateSideTournament', () => {
 
       // user-d on team 2
       expect(t2.awards.find((a) => a.category === 'best_brutto_b9_individual')?.points).toBe(1);
+      expect(t2.awards.find((a) => a.category === 'best_brutto_b9_individual')?.winnerUserId).toBe('user-d');
       expect(t1.awards.find((a) => a.category === 'best_brutto_b9_individual')).toBeUndefined();
     });
 
@@ -1638,6 +1644,7 @@ describe('calculateSideTournament', () => {
 
       // user-c on team 2
       expect(t2.awards.find((a) => a.category === 'king_par3_individual')?.points).toBe(2);
+      expect(t2.awards.find((a) => a.category === 'king_par3_individual')?.winnerUserId).toBe('user-c');
       expect(t1.awards.find((a) => a.category === 'king_par3_individual')).toBeUndefined();
     });
 
@@ -1870,6 +1877,7 @@ describe('calculateSideTournament', () => {
 
       // user-c on team 2
       expect(t2.awards.find((a) => a.category === 'king_par5_individual')?.points).toBe(2);
+      expect(t2.awards.find((a) => a.category === 'king_par5_individual')?.winnerUserId).toBe('user-c');
       expect(t1.awards.find((a) => a.category === 'king_par5_individual')).toBeUndefined();
     });
 
@@ -3749,6 +3757,7 @@ describe('calculateSideTournament', () => {
       const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
       // user-c is on team 2
       expect(t2.awards.find((a) => a.category === 'most_albatrosses_individual')?.points).toBe(2);
+      expect(t2.awards.find((a) => a.category === 'most_albatrosses_individual')?.winnerUserId).toBe('user-c');
       expect(t1.awards.some((a) => a.category === 'most_albatrosses_individual')).toBe(false);
     });
   });
@@ -3810,6 +3819,7 @@ describe('calculateSideTournament', () => {
       const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
       // user-c on team 2
       expect(t2.awards.find((a) => a.category === 'most_hole_in_ones_individual')?.points).toBe(2);
+      expect(t2.awards.find((a) => a.category === 'most_hole_in_ones_individual')?.winnerUserId).toBe('user-c');
       expect(t1.awards.some((a) => a.category === 'most_hole_in_ones_individual')).toBe(false);
     });
 
@@ -3893,6 +3903,7 @@ describe('calculateSideTournament', () => {
       const t2 = result.teamStandings.find((t) => t.teamId === 2)!;
       const t1 = result.teamStandings.find((t) => t.teamId === 1)!;
       expect(t2.awards.find((a) => a.category === 'king_par4_individual')?.points).toBe(2);
+      expect(t2.awards.find((a) => a.category === 'king_par4_individual')?.winnerUserId).toBe('user-c');
       expect(t1.awards.some((a) => a.category === 'king_par4_individual')).toBe(false);
     });
 

@@ -122,10 +122,14 @@ export interface SideCategoryAward {
    */
   score?: number;
   /**
-   * Populated for achievement-style awards where a specific player owns
-   * the streak (`category === 'turkey'` or `category === 'solid'`). The
-   * leaderboard UI uses this to attribute the streak to a player by name.
-   * Absent for team-coordinated bonus awards (see `coordBonus`).
+   * Populated for every individual-owned award so the leaderboard UI can
+   * attribute it to a player by name. Covers streaks (`turkey`, `solid`,
+   * `comeback_kid`, `*_par_round`/`clean_*` etc.) AND the count/sum-based
+   * individual categories (`most_*_individual`, `best_brutto_*_individual`,
+   * `king_par*_individual`) — for those it is the winning player's id (on a
+   * tie, each tied team's award carries that team's representative player).
+   * Absent for team-coordinated bonus awards (see `coordBonus`) and pure
+   * team-aggregate categories (`*_team`).
    */
   winnerUserId?: UserId;
   /**
@@ -557,6 +561,7 @@ export function calculateSideTournament(
               category: 'most_birdies_individual',
               teamId,
               points: SIDE_TOURNAMENT_POINTS.mostBirdiesIndividual,
+              winnerUserId: userId,
             });
           }
         }
@@ -606,6 +611,7 @@ export function calculateSideTournament(
               category: 'most_eagles_individual',
               teamId,
               points: SIDE_TOURNAMENT_POINTS.mostEaglesIndividual,
+              winnerUserId: userId,
             });
           }
         }
@@ -655,6 +661,7 @@ export function calculateSideTournament(
               category: 'most_pars_individual',
               teamId,
               points: SIDE_TOURNAMENT_POINTS.mostParsIndividual,
+              winnerUserId: userId,
             });
           }
         }
@@ -703,6 +710,7 @@ export function calculateSideTournament(
             category: 'best_brutto_18_individual',
             teamId,
             points: SIDE_TOURNAMENT_POINTS.bestBrutto18Individual,
+            winnerUserId: userId,
           });
         }
       }
@@ -748,6 +756,7 @@ export function calculateSideTournament(
             category: 'best_brutto_f9_individual',
             teamId,
             points: SIDE_TOURNAMENT_POINTS.bestBruttoF9Individual,
+            winnerUserId: userId,
           });
         }
       }
@@ -793,6 +802,7 @@ export function calculateSideTournament(
             category: 'best_brutto_b9_individual',
             teamId,
             points: SIDE_TOURNAMENT_POINTS.bestBruttoB9Individual,
+            winnerUserId: userId,
           });
         }
       }
@@ -844,6 +854,7 @@ export function calculateSideTournament(
             category: 'king_par3_individual',
             teamId,
             points: SIDE_TOURNAMENT_POINTS.kingPar3Individual,
+            winnerUserId: userId,
           });
         }
       }
@@ -893,6 +904,7 @@ export function calculateSideTournament(
             category: 'king_par5_individual',
             teamId,
             points: SIDE_TOURNAMENT_POINTS.kingPar5Individual,
+            winnerUserId: userId,
           });
         }
       }
@@ -1195,6 +1207,7 @@ export function calculateSideTournament(
               category: 'most_albatrosses_individual',
               teamId,
               points: SIDE_TOURNAMENT_POINTS.mostAlbatrossesIndividual,
+              winnerUserId: userId,
             });
           }
         }
@@ -1257,6 +1270,7 @@ export function calculateSideTournament(
               category: 'most_hole_in_ones_individual',
               teamId,
               points: SIDE_TOURNAMENT_POINTS.mostHoleInOnesIndividual,
+              winnerUserId: userId,
             });
           }
         }
@@ -1307,6 +1321,7 @@ export function calculateSideTournament(
             category: 'king_par4_individual',
             teamId,
             points: SIDE_TOURNAMENT_POINTS.kingPar4Individual,
+            winnerUserId: userId,
           });
         }
       }
