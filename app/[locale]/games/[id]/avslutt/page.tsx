@@ -12,6 +12,8 @@ import { formatRevealName } from '@/lib/names/formatRevealName';
 import { supportsWithdrawal } from '@/lib/scoring';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode } from '@/lib/scoring/modes/types';
+import type { AppLocale } from '@/i18n/routing';
+import { localizeGameName } from '@/lib/games/autoGameName';
 import {
   SideWinnersForm,
   type PlayerOption,
@@ -60,7 +62,7 @@ export default async function CreatorAvsluttPage({
   const { data: game } = await supabase
     .from('games')
     .select(
-      'id, name, status, require_peer_approval, game_mode, side_tournament_enabled, side_ld_count, side_ctp_count',
+      'id, name, status, require_peer_approval, game_mode, side_tournament_enabled, side_ld_count, side_ctp_count, courses(name)',
     )
     .eq('id', gameId)
     .single<{
@@ -72,6 +74,7 @@ export default async function CreatorAvsluttPage({
       side_tournament_enabled: boolean;
       side_ld_count: number;
       side_ctp_count: number;
+      courses: { name: string } | null;
     }>();
 
   if (!game) notFound();
@@ -255,8 +258,8 @@ export default async function CreatorAvsluttPage({
         title={t('heading')}
         subtitle={
           sideOn
-            ? t('subtitleSide', { name: game.name })
-            : t('subtitlePlain', { name: game.name })
+            ? t('subtitleSide', { name: localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale) })
+            : t('subtitlePlain', { name: localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale) })
         }
       />
       {body}

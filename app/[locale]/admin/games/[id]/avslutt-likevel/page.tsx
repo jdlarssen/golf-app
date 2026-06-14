@@ -10,7 +10,9 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode } from '@/lib/scoring/modes/types';
+import type { AppLocale } from '@/i18n/routing';
 import { supportsWithdrawal } from '@/lib/scoring';
+import { localizeGameName } from '@/lib/games/autoGameName';
 import { endGameMarkingWithdrawals } from './actions';
 
 type Params = Promise<{ id: string }>;
@@ -52,7 +54,7 @@ export default async function AvsluttLikevelPage({
   const { data: game } = await supabase
     .from('games')
     .select(
-      'id, name, status, game_mode, side_tournament_enabled, side_ld_count, side_ctp_count',
+      'id, name, status, game_mode, side_tournament_enabled, side_ld_count, side_ctp_count, courses(name)',
     )
     .eq('id', gameId)
     .single<{
@@ -63,6 +65,7 @@ export default async function AvsluttLikevelPage({
       side_tournament_enabled: boolean;
       side_ld_count: number;
       side_ctp_count: number;
+      courses: { name: string } | null;
     }>();
 
   if (!game) notFound();
@@ -125,7 +128,7 @@ export default async function AvsluttLikevelPage({
       />
       <PageHeader
         title={t('title')}
-        subtitle={t('subtitle', { name: game.name })}
+        subtitle={t('subtitle', { name: localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale) })}
       />
 
       <div className="space-y-4 px-1">

@@ -25,6 +25,8 @@ import type {
 } from '@/lib/scoring/modes/types';
 import { isSingleFlightGame } from '@/lib/games/flightScope';
 import { HoleClient, type ClientPlayer } from './HoleClient';
+import type { AppLocale } from '@/i18n/routing';
+import { localizeGameName } from '@/lib/games/autoGameName';
 import {
   FoursomesTeeStarterBanner,
   FoursomesTeeHint,
@@ -149,6 +151,11 @@ export default async function HolePage({ params }: { params: Params }) {
   // «Dine poeng»-headeren og per-hull-poeng-chip-en. Best-ball-modus dropper
   // disse to ekstra queryene (de er null) for å holde latency lik dagens.
   const supabase = await getServerClient();
+
+  const courseNameRes = game.course_id
+    ? await supabase.from('courses').select('name').eq('id', game.course_id).maybeSingle<{ name: string }>()
+    : { data: null as { name: string } | null };
+  const courseName = courseNameRes.data?.name ?? null;
   const [
     holeRes,
     scoresRes,
@@ -712,7 +719,7 @@ export default async function HolePage({ params }: { params: Params }) {
       {chapmanPhaseSlot && <div className="px-3">{chapmanPhaseSlot}</div>}
       <HoleClient
         gameId={id}
-        gameName={game.name}
+        gameName={localizeGameName(game.name, courseName, locale as AppLocale)}
         gameStatus={game.status}
         gameMode={game.game_mode}
         withdrawn={me.withdrawn_at != null}

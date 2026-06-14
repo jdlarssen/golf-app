@@ -191,7 +191,10 @@ export default async function TeamDashboardPage({
   );
 
   const isCaptain = myRow!.is_team_captain;
-  const teamName = captainRow?.team_name ?? myRow!.team_name ?? game.name;
+  const teamName =
+    captainRow?.team_name ??
+    myRow!.team_name ??
+    localizeGameName(game.name, game.courses?.name ?? null, locale);
 
   return (
     <AppShell>

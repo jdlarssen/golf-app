@@ -8,6 +8,8 @@ import { TopBar } from '@/components/ui/TopBar';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import type { GameStatus } from '@/lib/games/status';
+import type { AppLocale } from '@/i18n/routing';
+import { localizeGameName } from '@/lib/games/autoGameName';
 import { SideWinnersForm, type PlayerOption } from './SideWinnersForm';
 import { endGameWithSideWinners } from './actions';
 
@@ -50,7 +52,7 @@ export default async function AvsluttPage({
   const { data: game } = await supabase
     .from('games')
     .select(
-      'id, name, status, side_tournament_enabled, side_ld_count, side_ctp_count',
+      'id, name, status, side_tournament_enabled, side_ld_count, side_ctp_count, courses(name)',
     )
     .eq('id', gameId)
     .single<{
@@ -60,6 +62,7 @@ export default async function AvsluttPage({
       side_tournament_enabled: boolean;
       side_ld_count: number;
       side_ctp_count: number;
+      courses: { name: string } | null;
     }>();
 
   if (!game) notFound();
@@ -115,7 +118,7 @@ export default async function AvsluttPage({
       />
       <PageHeader
         title={t('title')}
-        subtitle={t('subtitle', { name: game.name })}
+        subtitle={t('subtitle', { name: localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale) })}
       />
       {missing.length > 0 && (
         <div className="mb-4 rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-3 text-sm text-warning">

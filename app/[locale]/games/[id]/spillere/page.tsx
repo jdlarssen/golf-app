@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
+import { getTranslations, getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrCreator } from '@/lib/admin/auth';
 import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
@@ -21,6 +21,7 @@ import { removePlayerFromGame, cancelGameInvitation } from './actions';
 import { CreatorRosterClient } from './CreatorRosterClient';
 import type { PlayerForHole } from '@/lib/games/getGameWithPlayers';
 import type { AppLocale } from '@/i18n/routing';
+import { localizeGameName } from '@/lib/games/autoGameName';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ status?: string; error?: string }>;
@@ -83,6 +84,7 @@ export default async function CreatorSpillerePage({
   const detailPath = `/games/${gameId}`;
 
   const t = await getTranslations('game.players');
+  const locale = (await getLocale()) as AppLocale;
 
   const supabase = await getServerClient();
   const role = await requireAdminOrCreator(supabase, gameId);
@@ -91,6 +93,11 @@ export default async function CreatorSpillerePage({
   if (!gwp) notFound();
 
   const { game, players } = gwp;
+
+  const courseRes = game.course_id
+    ? await supabase.from('courses').select('name').eq('id', game.course_id).maybeSingle<{ name: string }>()
+    : { data: null as { name: string } | null };
+  const courseName = courseRes.data?.name ?? null;
   const status = game.status;
   const isPreStart = status === 'draft' || status === 'scheduled';
   const isActive = status === 'active';
@@ -142,7 +149,7 @@ export default async function CreatorSpillerePage({
       <TopBar backHref={detailPath} kicker={t('kicker')} userId={role.userId} />
       <PageHeader
         title={t('heading')}
-        subtitle={t('subtitle', { name: game.name })}
+        subtitle={t('subtitle', { name: localizeGameName(game.name, courseName, locale) })}
       />
 
       <div className="space-y-6">

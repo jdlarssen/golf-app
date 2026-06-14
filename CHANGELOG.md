@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#616](https://github.com/jdlarssen/golf-app/issues/616). Innboksen kunne bare vokse. Du kunne markere som lest, men ikke fjerne noe, og lange undertekster ble kuttet midt i ordet. Nå kan du arkivere et varsel med ✕, tømme alle leste i ett trykk, og undertekstene får plass på to linjer.
 
+### [1.129.6] - 2026-06-14 · #624
+
+> Spillnavn-fiksen fra forrige versjon dekker nå også resten av spill-sidene: slett, avslutt, spillerlista, godkjenning, scorekort, hull-for-hull og lag-påmelding. Engelske spillnavn er konsekvente overalt nå.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Utvidet #624-sveipen til de gjenværende spill-flatene en skeptisk evaluering fant utenfor issuets opprinnelige liste: player slett (tittel + bekreftelses-liste), admin avslutt + avslutt-likevel, player avslutt, admin trekk-spiller, spillerlista (`spillere`), `approve` + `scorecard` back-label, per-hull-header (`holes/[holeNumber]`), og lag-påmeldingens H1-fallback (`teamName ?? game.name`). Samme mønster: `courses(name)` lagt til der projeksjonen manglet det; for `getGameWithPlayers`-konsumentene (cachet helper joiner bevisst ikke `courses`) en slank parallell course-fetch. Notification-payloads forblir urørt.
+
+</details>
+
 ### [1.129.5] - 2026-06-14 · #624
 
 > #617 fikset spillnavnet på forsiden. Nå gjelder det resten av appen også: leaderboardet, spill-sida, påmeldinger og Sekretariatet. På engelsk står det «12 June», på norsk «12. juni».

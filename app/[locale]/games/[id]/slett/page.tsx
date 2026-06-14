@@ -13,6 +13,7 @@ import { formatShortDateWithYearLocale } from '@/lib/i18n/format';
 import { getLocale } from 'next-intl/server';
 import type { AppLocale } from '@/i18n/routing';
 import { deleteGame } from '@/app/[locale]/admin/games/[id]/slett/actions';
+import { localizeGameName } from '@/lib/games/autoGameName';
 
 /**
  * Creator-facing «Slett spill»-flate (#428) — the non-admin mirror of the admin
@@ -115,7 +116,7 @@ export default async function CreatorDeleteGamePage({
 
       <div className="px-1">
         <h1 className="mb-3 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-          {t('heading', { name: game.name })}
+          {t('heading', { name: localizeGameName(game.name, game.courses?.name ?? null, locale) })}
         </h1>
         <p className="font-sans text-[13px] leading-relaxed text-muted">
           {[game.courses?.name, dateLine].filter(Boolean).join(' · ')}
@@ -142,7 +143,7 @@ export default async function CreatorDeleteGamePage({
           {t('permanentLabel')}
         </p>
         <ul className="space-y-1 font-sans text-[13px] text-text">
-          <li>{t('gameEntry', { name: game.name })}</li>
+          <li>{t('gameEntry', { name: localizeGameName(game.name, game.courses?.name ?? null, locale) })}</li>
           {playerCount > 0 && (
             <li>{t('playerCount', { count: playerCount })}</li>
           )}

@@ -11,6 +11,8 @@ import { SubmitButton } from '@/components/ui/SubmitButton';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { supportsWithdrawal } from '@/lib/scoring';
+import { localizeGameName } from '@/lib/games/autoGameName';
+import type { AppLocale } from '@/i18n/routing';
 import { adminWithdrawPlayer } from '../../actions';
 
 type Params = Promise<{ id: string; userId: string }>;
@@ -39,9 +41,15 @@ export default async function TrekkSpillerPage({ params }: { params: Params }) {
 
   const { data: game } = await supabase
     .from('games')
-    .select('id, name, status, game_mode')
+    .select('id, name, status, game_mode, courses(name)')
     .eq('id', gameId)
-    .single<{ id: string; name: string; status: GameStatus; game_mode: GameMode }>();
+    .single<{
+      id: string;
+      name: string;
+      status: GameStatus;
+      game_mode: GameMode;
+      courses: { name: string } | null;
+    }>();
 
   if (!game) notFound();
 
@@ -89,7 +97,7 @@ export default async function TrekkSpillerPage({ params }: { params: Params }) {
       />
       <PageHeader
         title={t('title')}
-        subtitle={t('subtitle', { name: playerName, game: game.name })}
+        subtitle={t('subtitle', { name: playerName, game: localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale) })}
       />
 
       <div className="space-y-4 px-1">

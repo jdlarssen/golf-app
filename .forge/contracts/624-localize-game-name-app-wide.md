@@ -20,32 +20,32 @@
 ## Success criteria
 
 Group A — surfaces where `courseName` is already in scope (import + wrap only):
-- [ ] `app/[locale]/games/[id]/(home)/page.tsx` — PageHeader title (~729) AND the `.toUpperCase()` Kicker (~494) use `localizeGameName(..., game.courses?.name ?? null, locale)`.
-- [ ] `app/[locale]/games/[id]/submit/page.tsx` (~148) uses helper with `courseTee.courses?.name`.
-- [ ] `app/[locale]/games/[id]/trekk-fra/page.tsx` (~117) localizes name before the `t('heading', { name })` interpolation, with `game.courses?.name`.
-- [ ] `app/[locale]/admin/games/[id]/page.tsx` (~264) uses helper with `game.courses?.name`.
-- [ ] `app/[locale]/admin/games/[id]/slett/page.tsx` (~149) uses helper with `game.courses?.name`.
-- [ ] `app/[locale]/klubbhuset/page.tsx` (~91) uses helper with `g.courses?.name`.
-- [ ] `app/[locale]/HomeDiscoverySection.tsx` (~135/181/229) — all three cards use helper with `game.course_name` (already present on `Discoverable*Game`).
+- [x] `app/[locale]/games/[id]/(home)/page.tsx` — PageHeader title (729) AND `.toUpperCase()` Kicker (494) wrapped with `game.courses?.name`. (commit dc3b05c1)
+- [x] `app/[locale]/games/[id]/submit/page.tsx` (148) wrapped with `courseTee.courses?.name`.
+- [x] `app/[locale]/games/[id]/trekk-fra/page.tsx` (117) localizes inside `t('heading', { name })` with `game.courses?.name`.
+- [x] `app/[locale]/admin/games/[id]/page.tsx` (264) wrapped with `game.courses?.name`; ALSO StartGameButton confirm-dialog name (caught by sweep) wrapped.
+- [x] `app/[locale]/admin/games/[id]/slett/page.tsx` — bullet (149) AND heading interpolation (122, caught by sweep) wrapped with `game.courses?.name`.
+- [x] `app/[locale]/klubbhuset/page.tsx` (91) wrapped with `g.courses?.name`.
+- [x] `app/[locale]/HomeDiscoverySection.tsx` (135/181/229) — all three cards wrapped with `game.course_name`.
 
-Group B — surfaces needing a slim projection extended (add `courses(name)` to the select + type, then wrap):
-- [ ] `app/[locale]/games/[id]/rediger/page.tsx` (~102) — extend `GAME_SELECT` + `EditGameRow` (in `lib/games/editGameInitialValues.ts`) to carry `courses: { name: string } | null`; wrap title.
-- [ ] `app/[locale]/admin/games/[id]/edit/page.tsx` (~145) — same shared `EditGameRow`; extend its local select string too; wrap `<h1>`.
-- [ ] `app/[locale]/admin/games/[id]/status/page.tsx` (~177) — extend select + local `GameRow`; wrap `<h1>`.
-- [ ] `app/[locale]/admin/games/[id]/signups/page.tsx` (~172) — extend select + local `GameRow`, ADD `getLocale()` (not currently called); wrap subtitle.
-- [ ] `app/[locale]/profile/historikk/page.tsx` (~162) — extend nested `games!inner(...)` select + `GameRow` type; `locale` already passed to `GameHistoryCard` (wrap there with `game.courses?.name`).
-- [ ] `app/[locale]/signup/[shortId]/page.tsx` (~239) — extend `getGameByShortId` (`lib/games/getGameByShortId.ts`) select + `ShortIdGame` type to carry course name; wrap `<h1>`.
-- [ ] `app/[locale]/signup/[shortId]/team/page.tsx` (~127 `t()` interpolation, ~202 kicker) — uses same extended `getGameByShortId`; wrap both.
+Group B — surfaces needing a slim projection extended:
+- [x] `app/[locale]/games/[id]/rediger/page.tsx` (102) — `GAME_SELECT` + shared `EditGameRow` extended with `courses`; title wrapped.
+- [x] `app/[locale]/admin/games/[id]/edit/page.tsx` (145) — local select extended; shared `EditGameRow`; `<h1>` wrapped.
+- [x] `app/[locale]/admin/games/[id]/status/page.tsx` (177) — select + local `GameRow` extended; `<h1>` wrapped.
+- [x] `app/[locale]/admin/games/[id]/signups/page.tsx` (172) — select + local `GameRow` extended; `getLocale()` added; subtitle wrapped.
+- [x] `app/[locale]/profile/historikk/page.tsx` (162) — nested `games!inner(...)` select + `GameRow` extended; wrapped in `GameHistoryCard`.
+- [x] `app/[locale]/signup/[shortId]/page.tsx` (239) — `getGameByShortId` + `ShortIdGame` extended; `<h1>` wrapped.
+- [x] `app/[locale]/signup/[shortId]/team/page.tsx` (127 `t()`, 202 kicker) — shared `getGameByShortId`; both wrapped.
 
 Group C — heavy leaderboard surfaces (slim parallel `courses(name)` fetch + localize at source):
-- [ ] `app/[locale]/games/[id]/leaderboard/page.tsx` — fetch `courses(name)` + `locale` in `LeaderboardBody`, compute one `displayName = localizeGameName(game.name, courseName, locale)`, route it to ALL `gameName={...}` props and both `TopBar kicker={...}` sites (so no raw `game.name` reaches a rendered title).
-- [ ] `app/[locale]/games/[id]/leaderboard/holes/page.tsx` — each mode body computes its own `displayName` (slim `courses(name)` fetch + `getLocale()`) and passes it as `gameName`; no raw `game.name` reaches a rendered title.
+- [x] `leaderboard/page.tsx` — `LeaderboardBody` fetches `courses(name)` + `getLocale()` in parallel, shadows the prop with a localized copy (`const game = { ...gameRow, name: localizeGameName(...) }`) BEFORE all branch returns. All 48 `gameName`/`kicker` sites (in body + ~18 render helpers) inherit the localized name with zero per-helper edits. Verified no `gwp.game.name` bypass.
+- [x] `leaderboard/holes/page.tsx` — shared `localizeHolesGameName(game)` helper (cached `getDrilldownContext` + slim `courses(name)` + `getLocale()`); all 9 mode bodies' `gameName={game.name}` → `gameName={await localizeHolesGameName(game)}`.
 
 Cross-cutting:
-- [ ] `/en` shows English month names in game-name titles on EVERY surface above (spot-checked via grep that no rendered `game.name`/`gameName={game.name}`/`{ name: game.name }` title site remains unwrapped in the swept files).
-- [ ] `/no` output is byte-identical (helper early-returns for `'no'`; verified by reading that every wrap passes the real `locale`, never a hardcoded one).
-- [ ] No new render tests added; `lib/games/autoGameName.test.ts` unchanged and green.
-- [ ] `package.json` PATCH bump + `CHANGELOG.md` entry (user-visible i18n fix), per the commit-msg hook.
+- [x] `/en` localizes every display surface — sweep confirms only remaining raw `game.name` are (a) the `notifyPlayersGameStarted` notification payload (home:363, intentionally raw) and (b) leaderboard helpers reading the shadowed localized `game`. tsc clean, build succeeds.
+- [x] `/no` byte-identical — every wrap passes the real `locale` (no hardcoded locale anywhere); helper early-returns for 'no'.
+- [x] No new render tests; `autoGameName.test.ts` unchanged, 46 tests green.
+- [x] `package.json` → 1.129.5 + `CHANGELOG.md` entry under the open `1.129.y` theme; commit-msg hook passed.
 
 ## Gates (run scoped to what changed; full build before final commit)
 
@@ -53,6 +53,20 @@ Cross-cutting:
 - `npx vitest run lib/games/autoGameName.test.ts` — helper coverage stays green (no edits expected). MUST pass.
 - `npx eslint <changed files>` — no new warnings/errors on touched lines.
 - `npx next build` — final gate before declaring done; catches the exhaustive-switch / force-dynamic / PPR traps that `tsc` alone misses.
+
+## Extension wave (post-evaluation, 1.129.6)
+
+The skeptical evaluation (ACCEPT) noted the issue's enumerated list under-covered the owner's chosen "engelsk måned **overalt**" intent. A fresh whole-app sweep found more player-facing `game.name` display surfaces. Since #624 is the app-wide-sweep umbrella, these were wrapped too (same patterns):
+
+- [x] `games/[id]/slett/page.tsx` (player delete) — heading + list bullet (courseName already in scope).
+- [x] `admin/games/[id]/avslutt/page.tsx` + `avslutt-likevel/page.tsx` — subtitle (select + inline type extended).
+- [x] `games/[id]/avslutt/page.tsx` (player) — both side/plain subtitles (select + type extended).
+- [x] `admin/games/[id]/trekk-spiller/[userId]/page.tsx` — subtitle (select + inline type extended).
+- [x] `games/[id]/spillere/page.tsx` — subtitle (slim course fetch; added `getLocale`).
+- [x] `games/[id]/approve/page.tsx` + `scorecard/page.tsx` — back-label (slim course fetch via existing context client).
+- [x] `games/[id]/holes/[holeNumber]/page.tsx` — per-hole header (slim course fetch).
+- [x] `signup/[shortId]/team/page.tsx` — `teamName` H1 fallback `?? game.name` (courseName from extended `getGameByShortId`).
+- Deliberately still raw: `(home)` notification payloads (`notifyPlayersGameStarted`, `maybeSendDeliveryReminder` — recipient-locale, not request-locale), `editGameInitialValues` form value, `leaderboard/export` CSV cell (not a UI title surface).
 
 ## Out of scope
 

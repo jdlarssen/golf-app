@@ -41,6 +41,8 @@ import {
   type HoleParByGender,
 } from '@/lib/games/parDisplay';
 import type { ScoringGender } from '@/lib/scoring/modes/types';
+import type { AppLocale } from '@/i18n/routing';
+import { localizeGameName } from '@/lib/games/autoGameName';
 
 type Params = Promise<{ id: string }>;
 
@@ -114,6 +116,12 @@ export default async function ScorecardPage({ params }: { params: Params }) {
     redirect({ href: `/games/${id}` as string, locale });
   }
 
+  const { supabase: scorecardSupabase } = await getScorecardContext();
+  const courseRes = game.course_id
+    ? await scorecardSupabase.from('courses').select('name').eq('id', game.course_id).maybeSingle<{ name: string }>()
+    : { data: null as { name: string } | null };
+  const courseName = courseRes.data?.name ?? null;
+
   const rating = getRatingForGender(game.tee_box, me.tee_gender);
   const state = revealState(game.score_visibility, game.status);
   const revealActive = state === 'reveal-active';
@@ -138,7 +146,7 @@ export default async function ScorecardPage({ params }: { params: Params }) {
     <AppShell showVersion={false}>
       <TopBar
         backHref={`/games/${id}`}
-        backLabel={tScorecard('backLabel', { name: game.name })}
+        backLabel={tScorecard('backLabel', { name: localizeGameName(game.name, courseName, locale as AppLocale) })}
         kicker={kickerText}
       />
 

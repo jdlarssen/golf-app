@@ -27,6 +27,8 @@ import {
   type HoleParByGender,
 } from '@/lib/games/parDisplay';
 import type { ScoringGender } from '@/lib/scoring/modes/types';
+import type { AppLocale } from '@/i18n/routing';
+import { localizeGameName } from '@/lib/games/autoGameName';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -92,6 +94,12 @@ export default async function ApprovePage({
   const me = players.find((p) => p.user_id === userId);
   if (!me) notFound();
 
+  const { supabase: approveSupabase } = await getApproveContext();
+  const courseRes = game.course_id
+    ? await approveSupabase.from('courses').select('name').eq('id', game.course_id).maybeSingle<{ name: string }>()
+    : { data: null as { name: string } | null };
+  const courseName = courseRes.data?.name ?? null;
+
   // Mark `peer_approval_request`-varsler for dette spillet som lest. Når
   // brukeren først åpner /approve, regnes alle ventende godkjennings-
   // varsler for spillet som «sett», uavhengig av om hen rekker å klikke
@@ -110,7 +118,7 @@ export default async function ApprovePage({
     <AppShell showVersion={false}>
       <TopBar
         backHref={`/games/${id}`}
-        backLabel={tScorecard('backLabel', { name: game.name })}
+        backLabel={tScorecard('backLabel', { name: localizeGameName(game.name, courseName, locale as AppLocale) })}
         kicker={tApprove('kicker')}
       />
 
