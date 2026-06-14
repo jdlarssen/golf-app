@@ -207,7 +207,7 @@ export function ProfileFormBody({
         <p className="-mt-1 text-xs text-muted">
           {t('savedAsPrefix')}{' '}
           <span className="font-medium text-text">
-            {formatGolfboxHcp(magnitudeNum, true)}
+            {formatGolfboxHcp(magnitudeNum, true, locale)}
           </span>{' '}
           {t('savedAsSuffix')}
         </p>

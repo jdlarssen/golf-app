@@ -27,10 +27,20 @@ export function fromSignedHcp(signed: number): {
 
 /**
  * Golfbox-stil visning for live «Lagres som …»-bekreftelsen: «+1,5» for
- * plusshandicap, «12,4» ellers. Norsk desimalkomma.
+ * plusshandicap, «12,4» ellers.
+ *
+ * Echo av det brukeren taster akkurat nå — locale-bevisst desimalskille (norsk
+ * «12,4», engelsk «12.4») men UTEN tvungen én-desimal: i motsetning til
+ * `formatHcpDisplay` (som viser den kanoniske LAGREDE verdien) speiler denne
+ * inputen tro, så «1,25» vises som «1,25», ikke avrundet. `locale` defaulter
+ * til 'no' så eldre kall + norsk visning forblir byte-identiske.
  */
-export function formatGolfboxHcp(magnitude: number, isPlus: boolean): string {
-  const nb = String(magnitude).replace('.', ',');
+export function formatGolfboxHcp(
+  magnitude: number,
+  isPlus: boolean,
+  locale: AppLocale = 'no',
+): string {
+  const nb = formatNumber(magnitude, locale);
   return isPlus && magnitude !== 0 ? `+${nb}` : nb;
 }
 

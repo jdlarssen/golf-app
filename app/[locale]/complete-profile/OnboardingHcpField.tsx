@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
+import type { AppLocale } from '@/i18n/routing';
 import { formatGolfboxHcp } from '@/lib/handicap/sign';
 
 const INPUT_CLASS =
@@ -17,6 +18,7 @@ export function OnboardingHcpField() {
   const [magnitude, setMagnitude] = useState('');
   const [isPlus, setIsPlus] = useState(false);
   const t = useTranslations('onboarding');
+  const locale = useLocale() as AppLocale;
   const num = Number.parseFloat(magnitude.replace(',', '.'));
   const hasMagnitude = Number.isFinite(num);
 
@@ -62,7 +64,7 @@ export function OnboardingHcpField() {
           <>
             {t('hcpSavedAs')}{' '}
             <span className="font-medium text-text">
-              {formatGolfboxHcp(num, true)}
+              {formatGolfboxHcp(num, true, locale)}
             </span>{' '}
             · {t('hcpPlusshandicap')}
           </>

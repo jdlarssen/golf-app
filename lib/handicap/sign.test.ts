@@ -35,6 +35,7 @@ describe('fromSignedHcp', () => {
 });
 
 describe('formatGolfboxHcp', () => {
+  // Default locale ('no'): comma decimal, byte-identical to legacy behaviour.
   it.each([
     [1.5, true, '+1,5'],
     [12.4, false, '12,4'],
@@ -43,6 +44,21 @@ describe('formatGolfboxHcp', () => {
     [0, true, '0'],
   ])('magnitude %s plus=%s → «%s»', (mag, plus, expected) => {
     expect(formatGolfboxHcp(mag, plus)).toBe(expected);
+  });
+
+  // English: period decimal separator, otherwise identical echo semantics —
+  // no forced one-decimal (mirrors what the user is typing).
+  it.each([
+    [1.5, true, '+1.5'],
+    [12.4, false, '12.4'],
+    [25, false, '25'],
+    [0, true, '0'],
+  ])("'en': magnitude %s plus=%s → «%s»", (mag, plus, expected) => {
+    expect(formatGolfboxHcp(mag, plus, 'en')).toBe(expected);
+  });
+
+  it("explicit 'no' locale matches the default", () => {
+    expect(formatGolfboxHcp(12.4, false, 'no')).toBe('12,4');
   });
 });
 

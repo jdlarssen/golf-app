@@ -20,7 +20,7 @@ import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SettingRow, SettingList } from '@/components/ui/SettingRow';
 import { InstallButton } from '@/components/pwa/InstallButton';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
-import { fromSignedHcp, formatGolfboxHcp } from '@/lib/handicap/sign';
+import { formatHcpDisplay } from '@/lib/handicap/sign';
 import type { AppLocale } from '@/i18n/routing';
 
 type SearchParams = Promise<{
@@ -192,10 +192,7 @@ async function ProfileFormCard({
   const hcpDisplay =
     profile.hcp_index == null
       ? '–'
-      : (() => {
-          const { magnitude, isPlus } = fromSignedHcp(profile.hcp_index);
-          return formatGolfboxHcp(magnitude, isPlus);
-        })();
+      : formatHcpDisplay(profile.hcp_index, locale);
 
   return (
     <Card>

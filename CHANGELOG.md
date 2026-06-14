@@ -21,6 +21,19 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#616](https://github.com/jdlarssen/golf-app/issues/616). Innboksen kunne bare vokse. Du kunne markere som lest, men ikke fjerne noe, og lange undertekster ble kuttet midt i ordet. Nå kan du arkivere et varsel med ✕, tømme alle leste i ett trykk, og undertekstene får plass på to linjer.
 
+### [1.129.4] - 2026-06-14 · #621
+
+> Profilen viste handicap med norsk komma (12,4) også i engelsk modus, så tallet stakk seg ut mot resten av siden. Nå bruker den punktum (12.4) på engelsk.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Profil-handicap lokaliseres nå i engelsk modus (#621). Header-visningen av lagret handicap bruker den kanoniske, locale-bevisste `formatHcpDisplay(signed, locale)` (én desimal, riktig desimalskille, «+» på plusshandicap) i stedet for den norsk-hardkodede `formatGolfboxHcp` — samme helper som admin-spillerlista (#615).
+- Den live «Lagres som …»-bekreftelsen (profil-skjema + onboarding) bruker nå locale-bevisst `formatGolfboxHcp(magnitude, isPlus, locale)`. `locale`-parameteren defaulter til 'no', så norsk visning og eldre kall er byte-identiske. Bekreftelsen beholder bevisst sin «echo som tastet»-semantikk (ingen tvungen avrunding) — den speiler input, mens header-en viser den kanoniske lagrede verdien.
+
+</details>
+
 ### [1.129.3] - 2026-06-14 · #617
 
 > Auto-genererte spillnavn viste norsk måned i tittelen selv i engelsk modus, så «Byneset North 12. juni» sto over en engelsk dato. Nå følger måneden i tittelen språket ditt: «12 June» på engelsk, «12. juni» på norsk.
