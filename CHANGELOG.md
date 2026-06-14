@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#616](https://github.com/jdlarssen/golf-app/issues/616). Innboksen kunne bare vokse. Du kunne markere som lest, men ikke fjerne noe, og lange undertekster ble kuttet midt i ordet. Nå kan du arkivere et varsel med ✕, tømme alle leste i ett trykk, og undertekstene får plass på to linjer.
 
+### [1.129.7] - 2026-06-14 · #622
+
+> Noen norske tekster brukte det engelske ordet «roster» («rosteren», «Lag-roster»). Nå står det «spillerliste» overalt, likt resten av appen.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Erstattet anglismen «roster» med «spillerliste(n)» i sju norske UI-strenger (#622, oppfølging av #614 som lot ordet stå bevisst). Berører kun verdier i `messages/no.json`: tre cup-flater (`rosterHeading`, `emptyRoster`, `rosterEntry`, vist i `CupManagement` + `CupDeleteConfirm`) og fire spiller-varsler (`invite_added`, `allOnRoster`, `approved`, `db_players`). Hankjønnsformen `spillerlisten` ble valgt for konsistens med eksisterende `db_roster`-strenger, så fila ikke blander hankjønn og hunkjønn. JSON-nøkler og kode-identifikatorer (`CreatorRosterClient`, `NewGameFormData.roster`) er urørt siden de ikke er bruker-synlige. `en.json` er uendret (korrekt engelsk). Ingen nye tester: ren copy-endring, og catalog-paritet holder fordi bare verdier endret seg.
+
+</details>
+
 ### [1.129.6] - 2026-06-14 · #624
 
 > Spillnavn-fiksen fra forrige versjon dekker nå også resten av spill-sidene: slett, avslutt, spillerlista, godkjenning, scorekort, hull-for-hull og lag-påmelding. Engelske spillnavn er konsekvente overalt nå.
