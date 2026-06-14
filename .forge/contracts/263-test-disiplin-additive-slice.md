@@ -27,13 +27,18 @@ Den eneste genuint verdifulle, additive, helautonome jobben er derfor **course-p
 
 ## Suksesskriterier
 
-- [ ] **K1:** `lib/courses/coursePayload.ts` finnes med pure funksjoner som dekker gjeldende inline-logikk: gender-rating-parsing (slope 55–155 int, CR 50–80 finite), `isCompleteRating`, `isPartiallyFilled`, length-parsing (1000–12000 int el. null), par-validering (int 3–6), SI-validering (int 1–18) + SI-permutasjon (sett-størrelse 18). Ingen FormData/I/O i modulen.
-- [ ] **K2:** Co-lokalisert `lib/courses/coursePayload.test.ts` (Type A, `it.each` på range-kanter: slope 54/55/155/156, CR 49.9/50/80/80.1, par 2/3/6/7, SI 0/1/18/19, permutasjon-duplikat, partial-fill 0/1/2 felt, length 999/1000/12000/12001). RED før modulen finnes, så GREEN.
-- [ ] **K3:** `new/actions.ts` + `[id]/edit/actions.ts` importerer fra `lib/courses/coursePayload.ts`; de dupliserte inline-helperne (`parseGenderRating`, `isCompleteRating`, `isPartiallyFilled` + validerings-løkkene) er erstattet. Atferd uendret.
-- [ ] **K4:** Eksisterende action-tester grønne uendret: `npx vitest run "app/[locale]/admin/courses/new/actions.test.ts" "app/[locale]/admin/courses/[id]/edit/actions.test.ts"`.
-- [ ] **K5:** E2E data-testid-sweep: statiske norske `getByText`-literals i `e2e/auth/login.spec.ts` + `e2e/auth/invitation-flow.spec.ts` byttet til `getByTestId`, med matchende `data-testid` lagt på komponenten. `tsc` grønn; streng-paritet verifisert. (`getByText(hilsen)` i `manual-approval.spec.ts` beholdes — `hilsen` er en dynamisk variabel, ikke en hardkodet copy-lås.)
-- [ ] **K6:** Full gate grønn: `npx tsc --noEmit` (0 feil) + `npm run build` (Vercel-paritet) + full `npx vitest run` (ingen regresjon).
-- [ ] **K7:** Issue-kommentar postet på #263 som dokumenterer hva som er gjort i denne runden + nøyaktig hva som gjenstår (descopede deletions, morning-mail-vurdering, gamePayload-funn), så epicen kan re-triages ærlig.
+- [x] **K1:** `lib/courses/coursePayload.ts` finnes med pure funksjoner som dekker gjeldende inline-logikk: gender-rating-parsing (slope 55–155 int, CR 50–80 finite), `isCompleteRating`, `isPartiallyFilledRating`, length-parsing (1000–12000 int el. null), par-validering (int 3–6), SI-validering (int 1–18) + SI-uniqueness. Ingen FormData/I/O i modulen.
+  _Evidens: `lib/courses/coursePayload.ts` (commit dc94f07c) — 7 eksporter, kun rene funksjoner, ingen `FormData`-referanse._
+- [x] **K2:** Co-lokalisert `lib/courses/coursePayload.test.ts` (Type A, `it.each` på range-kanter). RED før modulen fantes, så GREEN.
+  _Evidens: RED = «Failed to resolve import ./coursePayload»; GREEN = `npx vitest run lib/courses/coursePayload.test.ts` → 36 passed._
+- [x] **K3:** `new/actions.ts` + `[id]/edit/actions.ts` importerer fra `@/lib/courses/coursePayload`; de dupliserte inline-helperne + validerings-løkkene er erstattet. Atferd uendret.
+  _Evidens: commit 188b0bb2, `git diff --stat` = 63 ins / 123 del (−60 netto duplisering)._
+- [x] **K4:** Eksisterende action-tester grønne uendret.
+  _Evidens: `npx vitest run new/actions.test.ts edit/actions.test.ts coursePayload.test.ts` → 3 filer / 58 tester passed._
+- [x] **K5:** E2E data-testid-sweep: statiske norske `getByText`-literals i `login.spec.ts` + `invitation-flow.spec.ts` byttet til `getByTestId` (invite-toggle, success-banner, self-reg-helper), med matchende `data-testid` på komponenten. `tsc` grønn; streng-paritet 1:1 verifisert. Playwright ikke kjørt (ikke runnable i miljøet) → CI er reell gate. (`getByText(hilsen)` i `manual-approval.spec.ts` beholdt — dynamisk variabel, ikke copy-lås.)
+  _Evidens: commit 213ba056; paritet-grep: alle 3 ider component=1/spec=1; «getByText('...')» i swept specs = 0 igjen; SendCodeForm.test.tsx (co-located) fortsatt 3 passed._
+- [x] **K6:** Full gate grønn: `npx tsc --noEmit` (exit 0) + `npm run build` (route-manifest generert) + full `npx vitest run` (268 filer / 3414 tester passed, ingen regresjon).
+- [ ] **K7:** Issue-kommentar postet på #263 som dokumenterer hva som er gjort + nøyaktig hva som gjenstår.
 
 ## Gates (etter hver atomic commit, scoped til endring)
 
