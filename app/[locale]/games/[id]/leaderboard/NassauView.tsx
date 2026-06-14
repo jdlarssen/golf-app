@@ -7,6 +7,7 @@ import { Medallion } from '@/components/ui/Medallion';
 import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
 import { LeaderboardBackdrop } from '@/components/illustrations/LeaderboardBackdrop';
+import { LeaderboardFooter } from './LeaderboardFooter';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import type {
   NassauResult,
@@ -170,7 +171,7 @@ export function NassauView({
         />
       </div>
 
-      <PullQuote className="px-6 pt-1 pb-4">{tc('goodLuck')}</PullQuote>
+      <LeaderboardFooter gameStatus={gameStatus} className="px-6 pt-1 pb-4" />
     </Shell>
   );
 }

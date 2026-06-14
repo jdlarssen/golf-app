@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
 import { LeaderboardBackdrop } from '@/components/illustrations/LeaderboardBackdrop';
+import { LeaderboardFooter } from '../LeaderboardFooter';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import {
   wolfChoiceKey,
@@ -103,7 +104,7 @@ export function WolfHolesView({
         ))}
       </ul>
 
-      <PullQuote className="px-6 pt-1 pb-4">{tc('wellPlayed')}</PullQuote>
+      <LeaderboardFooter gameStatus={gameStatus} className="px-6 pt-1 pb-4" />
     </Shell>
   );
 }

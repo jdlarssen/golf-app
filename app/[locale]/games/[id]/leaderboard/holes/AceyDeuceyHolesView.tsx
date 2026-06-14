@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
 import { LeaderboardBackdrop } from '@/components/illustrations/LeaderboardBackdrop';
+import { LeaderboardFooter } from '../LeaderboardFooter';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import type { AceyDeuceyResult, AceyDeuceyHoleRow } from '@/lib/scoring/modes/types';
 import type { AceyDeuceyPlayerInfo } from '../AceyDeuceyView';
@@ -103,7 +104,7 @@ export function AceyDeuceyHolesView({
         ))}
       </ul>
 
-      <PullQuote className="px-6 pt-1 pb-4">{t('common.wellPlayed')}</PullQuote>
+      <LeaderboardFooter gameStatus={gameStatus} className="px-6 pt-1 pb-4" />
     </Shell>
   );
 }

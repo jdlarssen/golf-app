@@ -21,6 +21,24 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#585](https://github.com/jdlarssen/golf-app/issues/585), oppfølging av sideturnering-utrullingen i [#576](https://github.com/jdlarssen/golf-app/issues/576). Matchplay-familien (singles, fourball, foursomes m.fl.) var den eneste som ikke fikk sideturnering, fordi duell-kortet ikke har samme tabs-flate som de andre formatene. Nå vises vinnerne kompakt under duell-resultatet, med hele poenggrunnlaget bak en utvid-knapp.
 
+### [1.127.4] - 2026-06-14 · #605
+
+> Når runden er ferdig, bytter den lille linja nederst på leaderboarden fra «Lykke til» til «Vel spilt». «Lykke til» passet før start, ikke etter.
+
+<details>
+<summary>Teknisk</summary>
+
+[#605](https://github.com/jdlarssen/golf-app/issues/605). Den dekorative golf-flagg-footeren (`PullQuote`) var ikke status-bevisst i poeng-formatene: leaderboard-viewene hardkodet «Lykke til.» (feil på ferdige spill), mens «Hull for hull»-viewene hardkodet «Godt spilt.» (feil på aktive spill). Matchplay-familien hadde allerede en status-bevisst footer; nå gjør resten det samme.
+
+#### Changed
+- Ny delt `LeaderboardFooter`-komponent (`gameStatus`-bevisst: «Lykke til.» live/kommende, «Vel spilt!» ferdig) erstatter 18 inline-footere — 9 leaderboard-views (BBB, Nassau, Skins, Wolf, Nines, Acey-Deucey, Round Robin, Shamble, Patsome) + 9 «Hull for hull»-views.
+- Den felles ferdig-linja er samlet på «Vel spilt!» / «Well played!» (den eksisterende `wellPlayed`-nøkkelen endret fra «Godt spilt.»), så alle skjermene sier det samme.
+
+#### Added
+- `LeaderboardFooter.test.tsx`: render-test for status→tekst-mappingen.
+
+</details>
+
 ### [1.127.3] - 2026-06-14 · #602
 
 > Også «Lengste bogeyfrie rekke» og «Verste enkelthull» viser nå hvem som tok dem — de hadde samme «(?)»-feil som resten av sideturneringen.

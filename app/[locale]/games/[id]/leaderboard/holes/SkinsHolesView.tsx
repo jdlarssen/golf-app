@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
 import { LeaderboardBackdrop } from '@/components/illustrations/LeaderboardBackdrop';
+import { LeaderboardFooter } from '../LeaderboardFooter';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import type { SkinsResult, SkinsHoleRow } from '@/lib/scoring/modes/types';
 import type { SkinsPlayerInfo } from '../SkinsView';
@@ -119,7 +120,7 @@ export function SkinsHolesView({
         </div>
       )}
 
-      <PullQuote className="px-6 pt-1 pb-4">{tc('wellPlayed')}</PullQuote>
+      <LeaderboardFooter gameStatus={gameStatus} className="px-6 pt-1 pb-4" />
     </Shell>
   );
 }
