@@ -8,45 +8,15 @@ import { getAdminClient } from '@/lib/supabase/admin';
 import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
 import { MAX_TEE_BOXES } from '@/app/[locale]/admin/courses/constants';
 import type { AppLocale } from '@/i18n/routing';
-
-type GenderRating = {
-  slope: number | null;
-  course_rating: number | null;
-};
-
-function parseGenderRating(
-  formData: FormData,
-  teeIndex: number,
-  gender: 'mens' | 'ladies' | 'juniors',
-): GenderRating {
-  const slopeStr = String(formData.get(`tee_${teeIndex}_slope_${gender}`) ?? '').trim();
-  const crStr = String(formData.get(`tee_${teeIndex}_cr_${gender}`) ?? '').trim();
-
-  const slope = slopeStr === '' ? null : Number(slopeStr);
-  const cr = crStr === '' ? null : Number(crStr);
-
-  return {
-    slope: slope !== null && Number.isInteger(slope) && slope >= 55 && slope <= 155 ? slope : null,
-    course_rating: cr !== null && Number.isFinite(cr) && cr >= 50 && cr <= 80 ? cr : null,
-  };
-}
-
-function isCompleteRating(r: GenderRating): boolean {
-  return r.slope !== null && r.course_rating !== null;
-}
-
-// Distinguishes "left blank" from "partially filled" — we only complain about
-// the latter, since admin can legitimately leave any gender empty.
-function isPartiallyFilled(
-  formData: FormData,
-  teeIndex: number,
-  gender: 'mens' | 'ladies' | 'juniors',
-): boolean {
-  const slopeStr = String(formData.get(`tee_${teeIndex}_slope_${gender}`) ?? '').trim();
-  const crStr = String(formData.get(`tee_${teeIndex}_cr_${gender}`) ?? '').trim();
-  const filled = [slopeStr, crStr].filter((s) => s !== '').length;
-  return filled === 1;
-}
+import {
+  parseGenderRating,
+  isCompleteRating,
+  isPartiallyFilledRating,
+  parseLengthMeters,
+  isValidPar,
+  isValidStrokeIndex,
+  allStrokeIndicesUnique,
+} from '@/lib/courses/coursePayload';
 
 export async function updateCourse(courseId: string, formData: FormData) {
   const supabase = await getServerClient();
@@ -84,11 +54,11 @@ export async function updateCourse(courseId: string, formData: FormData) {
     const si = Number(formData.get(`hole_${i}_si`));
 
     for (const par of [parMens, parLadies, parJuniors]) {
-      if (!Number.isInteger(par) || par < 3 || par > 6) {
+      if (!isValidPar(par)) {
         redirect({ href: `${editPath}?error=bad_par`, locale });
       }
     }
-    if (!Number.isInteger(si) || si < 1 || si > 18) {
+    if (!isValidStrokeIndex(si)) {
       redirect({ href: `${editPath}?error=bad_si`, locale });
     }
     holes.push({
@@ -100,8 +70,9 @@ export async function updateCourse(courseId: string, formData: FormData) {
     });
   }
 
-  const siSet = new Set(holes.map((h) => h.stroke_index));
-  if (siSet.size !== 18) redirect({ href: `${editPath}?error=si_duplicate`, locale });
+  if (!allStrokeIndicesUnique(holes.map((h) => h.stroke_index))) {
+    redirect({ href: `${editPath}?error=si_duplicate`, locale });
+  }
 
   // par_total per kjønn deriveres fra hullene per kjønn — auto-sync med
   // course_holes-radene som blir insertet. Når et kjønn ikke har avvik
@@ -129,31 +100,31 @@ export async function updateCourse(courseId: string, formData: FormData) {
     if (!teeName) continue;
 
     // length_meters is optional. Empty / non-integer / out of range → NULL.
-    // The DB has a CHECK between 1000 and 12000; we mirror that here so we
-    // never trip it with garbage from the form.
-    const rawLength = String(formData.get(`tee_${i}_length_meters`) ?? '').trim();
-    let lengthMeters: number | null = null;
-    if (rawLength !== '') {
-      const parsed = Number(rawLength);
-      if (
-        Number.isInteger(parsed) &&
-        parsed >= 1000 &&
-        parsed <= 12000
-      ) {
-        lengthMeters = parsed;
-      }
-    }
+    // The DB has a CHECK between 1000 and 12000; parseLengthMeters mirrors it.
+    const lengthMeters = parseLengthMeters(
+      String(formData.get(`tee_${i}_length_meters`) ?? ''),
+    );
 
+    const ratingFor = (g: 'mens' | 'ladies' | 'juniors') =>
+      parseGenderRating(
+        String(formData.get(`tee_${i}_slope_${g}`) ?? ''),
+        String(formData.get(`tee_${i}_cr_${g}`) ?? ''),
+      );
     // Per-gender rating: each set must be all-filled or all-empty.
     for (const g of ['mens', 'ladies', 'juniors'] as const) {
-      if (isPartiallyFilled(formData, i, g)) {
+      if (
+        isPartiallyFilledRating(
+          String(formData.get(`tee_${i}_slope_${g}`) ?? ''),
+          String(formData.get(`tee_${i}_cr_${g}`) ?? ''),
+        )
+      ) {
         redirect({ href: `${editPath}?error=tee_partial_rating`, locale });
       }
     }
 
-    const mensRating = parseGenderRating(formData, i, 'mens');
-    const ladiesRating = parseGenderRating(formData, i, 'ladies');
-    const juniorsRating = parseGenderRating(formData, i, 'juniors');
+    const mensRating = ratingFor('mens');
+    const ladiesRating = ratingFor('ladies');
+    const juniorsRating = ratingFor('juniors');
 
     if (
       !isCompleteRating(mensRating) &&

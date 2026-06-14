@@ -4,45 +4,15 @@ import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { MAX_TEE_BOXES } from '@/app/[locale]/admin/courses/constants';
-
-type GenderRating = {
-  slope: number | null;
-  course_rating: number | null;
-};
-
-function parseGenderRating(
-  formData: FormData,
-  teeIndex: number,
-  gender: 'mens' | 'ladies' | 'juniors',
-): GenderRating {
-  const slopeStr = String(formData.get(`tee_${teeIndex}_slope_${gender}`) ?? '').trim();
-  const crStr = String(formData.get(`tee_${teeIndex}_cr_${gender}`) ?? '').trim();
-
-  const slope = slopeStr === '' ? null : Number(slopeStr);
-  const cr = crStr === '' ? null : Number(crStr);
-
-  return {
-    slope: slope !== null && Number.isInteger(slope) && slope >= 55 && slope <= 155 ? slope : null,
-    course_rating: cr !== null && Number.isFinite(cr) && cr >= 50 && cr <= 80 ? cr : null,
-  };
-}
-
-function isCompleteRating(r: GenderRating): boolean {
-  return r.slope !== null && r.course_rating !== null;
-}
-
-// Distinguishes "left blank" from "partially filled" — we only complain about
-// the latter, since admin can legitimately leave any gender empty.
-function isPartiallyFilled(
-  formData: FormData,
-  teeIndex: number,
-  gender: 'mens' | 'ladies' | 'juniors',
-): boolean {
-  const slopeStr = String(formData.get(`tee_${teeIndex}_slope_${gender}`) ?? '').trim();
-  const crStr = String(formData.get(`tee_${teeIndex}_cr_${gender}`) ?? '').trim();
-  const filled = [slopeStr, crStr].filter((s) => s !== '').length;
-  return filled === 1;
-}
+import {
+  parseGenderRating,
+  isCompleteRating,
+  isPartiallyFilledRating,
+  parseLengthMeters,
+  isValidPar,
+  isValidStrokeIndex,
+  allStrokeIndicesUnique,
+} from '@/lib/courses/coursePayload';
 
 // Open-redirect-guard: kun interne absolutte stier (start med ett '/', ikke
 // protokoll-relativ '//'). redirect_base/success_redirect er klient-kontrollert
@@ -125,11 +95,11 @@ export async function createCourse(formData: FormData) {
     const si = Number(formData.get(`hole_${i}_si`));
 
     for (const par of [parMens, parLadies, parJuniors]) {
-      if (!Number.isInteger(par) || par < 3 || par > 6) {
+      if (!isValidPar(par)) {
         fail('bad_par');
       }
     }
-    if (!Number.isInteger(si) || si < 1 || si > 18) {
+    if (!isValidStrokeIndex(si)) {
       fail('bad_si');
     }
     holes.push({
@@ -143,8 +113,7 @@ export async function createCourse(formData: FormData) {
 
   // SIs must be a permutation of 1..18 — the schema enforces uniqueness per
   // course but we'd rather show a friendly error than surface a DB constraint.
-  const siSet = new Set(holes.map((h) => h.stroke_index));
-  if (siSet.size !== 18) {
+  if (!allStrokeIndicesUnique(holes.map((h) => h.stroke_index))) {
     fail('si_duplicate');
   }
 
@@ -175,31 +144,31 @@ export async function createCourse(formData: FormData) {
     if (!teeName) continue;
 
     // length_meters is optional. Empty / non-integer / out of range → NULL.
-    // The DB has a CHECK between 1000 and 12000; we mirror that here so we
-    // never trip it with garbage from the form.
-    const rawLength = String(formData.get(`tee_${i}_length_meters`) ?? '').trim();
-    let lengthMeters: number | null = null;
-    if (rawLength !== '') {
-      const parsed = Number(rawLength);
-      if (
-        Number.isInteger(parsed) &&
-        parsed >= 1000 &&
-        parsed <= 12000
-      ) {
-        lengthMeters = parsed;
-      }
-    }
+    // The DB has a CHECK between 1000 and 12000; parseLengthMeters mirrors it.
+    const lengthMeters = parseLengthMeters(
+      String(formData.get(`tee_${i}_length_meters`) ?? ''),
+    );
 
+    const ratingFor = (g: 'mens' | 'ladies' | 'juniors') =>
+      parseGenderRating(
+        String(formData.get(`tee_${i}_slope_${g}`) ?? ''),
+        String(formData.get(`tee_${i}_cr_${g}`) ?? ''),
+      );
     // Per-gender rating: slope + CR må enten begge være satt eller begge tomme.
     for (const g of ['mens', 'ladies', 'juniors'] as const) {
-      if (isPartiallyFilled(formData, i, g)) {
+      if (
+        isPartiallyFilledRating(
+          String(formData.get(`tee_${i}_slope_${g}`) ?? ''),
+          String(formData.get(`tee_${i}_cr_${g}`) ?? ''),
+        )
+      ) {
         fail('tee_partial_rating');
       }
     }
 
-    const mensRating = parseGenderRating(formData, i, 'mens');
-    const ladiesRating = parseGenderRating(formData, i, 'ladies');
-    const juniorsRating = parseGenderRating(formData, i, 'juniors');
+    const mensRating = ratingFor('mens');
+    const ladiesRating = ratingFor('ladies');
+    const juniorsRating = ratingFor('juniors');
 
     if (
       !isCompleteRating(mensRating) &&
