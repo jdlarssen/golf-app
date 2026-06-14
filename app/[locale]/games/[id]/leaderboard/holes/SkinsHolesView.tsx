@@ -1,11 +1,8 @@
 import type { JSX } from 'react';
 import { useTranslations } from 'next-intl';
-import { SmartLink } from '@/components/ui/SmartLink';
-import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
-import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
-import { LeaderboardBackdrop } from '@/components/illustrations/LeaderboardBackdrop';
+import { LeaderboardShell, LeaderboardHeader } from '../LeaderboardChrome';
 import { LeaderboardFooter } from '../LeaderboardFooter';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import type { SkinsResult, SkinsHoleRow } from '@/lib/scoring/modes/types';
@@ -54,8 +51,8 @@ export function SkinsHolesView({
 
   if (isRevealHidden) {
     return (
-      <Shell>
-        <Header gameName={gameName} gameId={gameId} />
+      <LeaderboardShell>
+        <LeaderboardHeader gameName={gameName} backHref={`/games/${gameId}`} />
         <div
           data-testid="skins-holes-reveal-hidden"
           className="mx-4 mt-12 rounded-2xl border border-dashed border-border bg-surface px-5 py-8 text-center"
@@ -68,7 +65,7 @@ export function SkinsHolesView({
           </p>
         </div>
         <PullQuote className="px-6 pt-4 pb-4">{tc('goodLuck')}</PullQuote>
-      </Shell>
+      </LeaderboardShell>
     );
   }
 
@@ -78,8 +75,8 @@ export function SkinsHolesView({
   ];
 
   return (
-    <Shell>
-      <Header gameName={gameName} gameId={gameId} />
+    <LeaderboardShell>
+      <LeaderboardHeader gameName={gameName} backHref={`/games/${gameId}`} />
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
@@ -121,41 +118,7 @@ export function SkinsHolesView({
       )}
 
       <LeaderboardFooter gameStatus={gameStatus} className="px-6 pt-1 pb-4" />
-    </Shell>
-  );
-}
-
-function Shell({ children }: { children: React.ReactNode }) {
-  return (
-    <AppShell>
-      <div className="relative isolate pb-12">
-        <LeaderboardBackdrop />
-        <div className="relative">{children}</div>
-      </div>
-    </AppShell>
-  );
-}
-
-function Header({
-  gameName,
-  gameId,
-}: {
-  gameName: string;
-  gameId: string;
-}) {
-  const tc = useTranslations('leaderboard.common');
-  return (
-    <header className="mb-2 flex items-center justify-between gap-4">
-      <SmartLink
-        href={`/games/${gameId}`}
-        aria-label={tc('backAriaLabel')}
-        className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
-      >
-        ‹
-      </SmartLink>
-      <Kicker tone="accent">{gameName.toUpperCase()}</Kicker>
-      <span className="w-11" aria-hidden />
-    </header>
+    </LeaderboardShell>
   );
 }
 

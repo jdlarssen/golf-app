@@ -1,11 +1,8 @@
 import type { JSX, ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import { SmartLink } from '@/components/ui/SmartLink';
-import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
-import { LeaderboardBackdrop } from '@/components/illustrations/LeaderboardBackdrop';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { firstName } from '@/lib/firstName';
 import type { GameStatus } from '@/lib/games/status';
@@ -17,6 +14,7 @@ import type {
   SinglesMatchplayResult,
   MatchplayHoleRow,
 } from '@/lib/scoring/modes/types';
+import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import { MatchplayDuelCard } from './MatchplayDuelCard';
 
 // Distinkt nøkkel-prefiks slik at konfetti i matchplay-duellen ikke deler
@@ -106,8 +104,8 @@ export function MatchplayMatchView({
   // håndhever 1+1, men draft-state eller halvferdig payload kan trigge dette).
   if (result.holes.length === 0) {
     return (
-      <Shell>
-        <Header gameName={gameName} backHref={backHref} />
+      <LeaderboardShell>
+        <LeaderboardHeader gameName={gameName} backHref={backHref} />
         <Card className="mx-4 mt-12 px-5 py-6 text-center">
           <p className="font-serif text-[16px] font-medium text-text">
             {t('matchplay.matchCannotShow')}
@@ -116,7 +114,7 @@ export function MatchplayMatchView({
             {t('matchplay.singlesDistribution')}
           </p>
         </Card>
-      </Shell>
+      </LeaderboardShell>
     );
   }
 
@@ -131,8 +129,8 @@ export function MatchplayMatchView({
     result.result !== null && result.result.winner !== 'tied';
 
   return (
-    <Shell>
-      <Header gameName={gameName} backHref={backHref} />
+    <LeaderboardShell>
+      <LeaderboardHeader gameName={gameName} backHref={backHref} />
 
       <div className="px-6 pt-1.5 pb-2 text-center">
         <h1 className="font-serif text-[28px] font-medium leading-[1.1] tracking-[-0.02em] text-text">
@@ -192,7 +190,7 @@ export function MatchplayMatchView({
       <PullQuote className="px-6 pt-4 pb-4">
         {hasDecidedWinner ? tc('congratulations') : tc('goodLuck')}
       </PullQuote>
-    </Shell>
+    </LeaderboardShell>
   );
 }
 
@@ -216,41 +214,7 @@ function shortNameFor(info: MatchplayPlayerInfo | undefined): string {
   return formatRevealName(info.name, info.nickname);
 }
 
-// ─── Subcomponents ───────────────────────────────────────────────────────────
 
-function Shell({ children }: { children: React.ReactNode }) {
-  return (
-    <AppShell>
-      <div className="relative isolate pb-12">
-        <LeaderboardBackdrop />
-        <div className="relative">{children}</div>
-      </div>
-    </AppShell>
-  );
-}
-
-function Header({
-  gameName,
-  backHref,
-}: {
-  gameName: string;
-  backHref: string;
-}) {
-  const tc = useTranslations('leaderboard.common');
-  return (
-    <header className="mb-2 flex items-center justify-between gap-4">
-      <SmartLink
-        href={backHref}
-        aria-label={tc('backAriaLabel')}
-        className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
-      >
-        ‹
-      </SmartLink>
-      <Kicker tone="accent">{gameName.toUpperCase()}</Kicker>
-      <span className="w-11" aria-hidden />
-    </header>
-  );
-}
 
 function HoleGrid({
   holes,
