@@ -36,15 +36,15 @@
 - **fallow GitHub Action** (infra-oppfølging) → ikke nå.
 
 ## Suksesskriterier
-- [ ] K1: `playerDisplay.ts` + `confirmActions.ts` slettet; build/tsc grønt (ingen brutte importer).
-- [ ] K2: `getProxyVerifiedUserId`-re-eksport fjernet fra `flightJoinActions.ts`; intern bruk intakt; build grønt.
-- [ ] K3: Ubrukt `const t` fjernet der lint flagget; `npm run lint` gir ingen *nye* `no-unused-vars` på berørte filer.
-- [ ] K4: InviteToGame↔CreatorRoster-dup ekstrahert til delt modul; begge konsumenter bruker den; co-lokerte tester grønne.
-- [ ] K5: login↔complete-profile-dup ekstrahert til delt modul; co-lokerte tester grønne.
-- [ ] K6: courses edit↔new gjenstående dup ekstrahert (eller dokumentert at `coursePayload` allerede dekker alt); co-lokerte tester grønne.
-- [ ] K7: quick-win design-docs slettet; `brand-foundations` + `.gitkeep` beholdt; ingen kode-importer brutt (kun JSDoc-kommentar i `BrandHero.tsx`, peker på beholdt brand-foundations).
-- [ ] K8: Hele gate-suiten grønn (test + tsc + lint + build).
-- [ ] K9: Follow-up-issue opprettet for gatet scoring-dedup (med milestone).
+- [x] K1: `playerDisplay.ts` + `confirmActions.ts` slettet; build/tsc grønt. — commit `ca0e04ab`; `confirmActions` hadde 0 importører (live-flyt bruker `maybeAutoConfirmParticipation` i `lib/`); tsc exit 0.
+- [x] K2: `getProxyVerifiedUserId`-re-eksport fjernet fra `flightJoinActions.ts`; intern bruk intakt. — commit `ca0e04ab`; linje 5-import + linje 33-bruk beholdt; ingen importerte re-eksporten.
+- [x] K3: Ubrukt `const t`/`tScorecard`/`teamsTotalLabel`/`footerText` fjernet (7 spots). — commit `580b31be`; eslint: t/tScorecard/teamsTotalLabel/footerText = 0 (31→23 warnings, kun pre-eksisterende `_`-konvensjon+imports igjen); mail-snapshots 31/31 grønne.
+- [x] K4: InviteToGame↔CreatorRoster: `lib/games/rosterCandidates.ts` (`rosterDisplayName`+`filterRosterCandidates`, generisk så `hcpIndex` bevares); begge bruker den; JSX bevisst per-flate. — commit `9b7eed8d`; ny test 8/8.
+- [x] K5: login↔complete-profile: `lib/url/searchParams.ts` (`first`+`resolveErrorCode`); begge bruker den; «151-linje-klonen» var urelaterte page-bodies (ikke merget). — commit `5aeb2628`; ny test 7/7. `first()` app-bred dup → #629.
+- [x] K6: courses edit↔new: `lib/courses/parseCourseForm.ts` (`parseCourseHolesAndTees`); ~120 linjer dedupet (−276/+21 i actions). — commit `e495cc88`; begge `actions.test.ts` grønne (22/22); ingen redundant parser-test (actions-testene er kontrakten).
+- [x] K7: quick-win design-docs slettet (46 filer), `brand-foundations`+`.gitkeep` beholdt. — commit `f2baf763`; `BrandHero.tsx`-JSDoc peker på beholdt brand-foundations; ingen kode-import brutt.
+- [x] K8: Hele gate-suiten grønn. — `npm run test` 3481/3481 (274 filer); `npx tsc --noEmit` exit 0; `npm run lint` ingen nye warnings; `npm run build` OK (`/icon0` i route-treet → riktig beholdt).
+- [x] K9: Follow-up for gatet scoring-dedup → #628 (Backlog, `refactor`). `first()`-konsolidering → #629.
 
 ## Gates (kjøres scoped til endret, full suite før evaluering)
 - `npm run test` (vitest run)
