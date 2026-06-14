@@ -175,7 +175,10 @@ export async function startGame(gameId: string) {
         users: { hcp_index: number | string } | null;
       }[]
     >();
-  if (gpError || !gamePlayers) redirect({ href: `${detailPath}?error=db_roster`, locale });
+  if (gpError || !gamePlayers) {
+    console.error('[startGame] game_players read failed', gpError);
+    redirect({ href: `${detailPath}?error=db_roster`, locale });
+  }
 
   // The game has one tee with up to three rating-sets. Each player picks
   // which set applies via their tee_gender flag.
@@ -186,7 +189,10 @@ export async function startGame(gameId: string) {
     )
     .eq('id', game!.tee_box_id)
     .single<TeeBoxRatings>();
-  if (teeError || !tee) redirect({ href: `${detailPath}?error=db_tee`, locale });
+  if (teeError || !tee) {
+    console.error('[startGame] tee read failed', teeError);
+    redirect({ href: `${detailPath}?error=db_tee`, locale });
+  }
 
   // Defence-in-depth: refuse to flip a draft to active if any roster player
   // is still pending profile completion. Mirrors the gate in
@@ -197,6 +203,7 @@ export async function startGame(gameId: string) {
     .select('id, email, profile_completed_at')
     .in('id', rosterIds);
   if (rosterUsersError || !rosterUsers) {
+    console.error('[startGame] roster users read failed', rosterUsersError);
     redirect({ href: `${detailPath}?error=db_roster`, locale });
   }
   const pending = findPendingPlayers(rosterUsers!);
@@ -236,14 +243,20 @@ export async function startGame(gameId: string) {
       .update({ course_handicap: allowed })
       .eq('game_id', gameId)
       .eq('user_id', row.user_id);
-    if (updateError) redirect({ href: `${detailPath}?error=db_players`, locale });
+    if (updateError) {
+      console.error('[startGame] course-handicap update failed', updateError);
+      redirect({ href: `${detailPath}?error=db_players`, locale });
+    }
   }
 
   const { error: statusError } = await supabase
     .from('games')
     .update({ status: 'active', started_at: new Date().toISOString() })
     .eq('id', gameId);
-  if (statusError) redirect({ href: `${detailPath}?error=db_game`, locale });
+  if (statusError) {
+    console.error('[startGame] status flip to active failed', statusError);
+    redirect({ href: `${detailPath}?error=db_game`, locale });
+  }
 
   revalidateTag(`game-${gameId}`, 'max');
   redirect({ href: `${detailPath}?status=started`, locale });
@@ -285,7 +298,10 @@ export async function adminApproveScorecard(
     .eq('user_id', playerUserId)
     .not('submitted_at', 'is', null)
     .is('approved_at', null);
-  if (error) redirect({ href: `${detailPath}?error=db_players`, locale });
+  if (error) {
+    console.error('[adminApproveScorecard] approve update failed', error);
+    redirect({ href: `${detailPath}?error=db_players`, locale });
+  }
 
   await logAdminEvent({
     actorId: user.id,
@@ -422,7 +438,10 @@ export async function endGame(gameId: string, allowMissing = false) {
     .update({ status: 'finished', ended_at: new Date().toISOString() })
     .eq('id', gameId);
 
-  if (error) redirect({ href: `${detailPath}?error=db_finish`, locale });
+  if (error) {
+    console.error('[endGame] finish status update failed', error);
+    redirect({ href: `${detailPath}?error=db_finish`, locale });
+  }
 
   // #572: beregn og lagre per-spiller-resultatet for avsluttede-spill-kortene.
   // Best-effort — feiler aldri ut av avslutningen (egen try/catch internt).
@@ -528,7 +547,10 @@ export async function reopenScorecard(gameId: string, playerUserId: string) {
     .eq('game_id', gameId)
     .eq('user_id', playerUserId)
     .not('submitted_at', 'is', null);
-  if (error) redirect({ href: `${detailPath}?error=db_players`, locale });
+  if (error) {
+    console.error('[reopenScorecard] reopen update failed', error);
+    redirect({ href: `${detailPath}?error=db_players`, locale });
+  }
 
   await logAdminEvent({
     actorId: user.id,
@@ -575,7 +597,10 @@ export async function adminWithdrawPlayer(gameId: string, userId: string) {
     })
     .eq('game_id', gameId)
     .eq('user_id', userId);
-  if (error) redirect({ href: `${detailPath}?error=db_players`, locale });
+  if (error) {
+    console.error('[adminWithdrawPlayer] withdraw update failed', error);
+    redirect({ href: `${detailPath}?error=db_players`, locale });
+  }
 
   await logAdminEvent({
     actorId: user.id,
@@ -623,7 +648,10 @@ export async function adminUndoWithdraw(gameId: string, userId: string) {
     })
     .eq('game_id', gameId)
     .eq('user_id', userId);
-  if (error) redirect({ href: `${detailPath}?error=db_players`, locale });
+  if (error) {
+    console.error('[adminUndoWithdraw] undo-withdraw update failed', error);
+    redirect({ href: `${detailPath}?error=db_players`, locale });
+  }
 
   await logAdminEvent({
     actorId: user.id,
@@ -662,7 +690,10 @@ export async function reopenGame(gameId: string) {
     .from('games')
     .update({ status: 'active', ended_at: null })
     .eq('id', gameId);
-  if (error) redirect({ href: `${detailPath}?error=db_game`, locale });
+  if (error) {
+    console.error('[reopenGame] status flip to active failed', error);
+    redirect({ href: `${detailPath}?error=db_game`, locale });
+  }
 
   await logAdminEvent({
     actorId: user.id,
