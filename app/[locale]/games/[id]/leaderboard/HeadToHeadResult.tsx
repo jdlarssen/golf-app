@@ -3,10 +3,9 @@
 import { useEffect, useState, type JSX } from 'react';
 import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
-import { AppShell } from '@/components/ui/AppShell';
 import { Kicker } from '@/components/ui/Kicker';
-import { LeaderboardBackdrop } from '@/components/illustrations/LeaderboardBackdrop';
 import { formatRevealName } from '@/lib/names/formatRevealName';
+import { LeaderboardShell } from './LeaderboardChrome';
 import { ConfettiBurst } from './ConfettiBurst';
 
 // Distinkt sessionStorage-prefiks så duell-konfettien ikke kolliderer med
@@ -157,7 +156,7 @@ export function HeadToHeadResult({
         : t('verdictWin', { winner: winnerName, winnerScore: fmtScore(winnerScore), sep, loserScore: fmtScore(loserScore) });
 
   return (
-    <Shell chromeless={chromeless}>
+    <LeaderboardShell chromeless={chromeless}>
       {!chromeless && (
         <header className="mb-2 flex items-center justify-between gap-4">
           <SmartLink
@@ -258,38 +257,7 @@ export function HeadToHeadResult({
           </p>
         )}
       </div>
-    </Shell>
-  );
-}
-
-/**
- * Ytre skall. Frittstående: AppShell + bunn-padding så kortet får luft under
- * seg på en egen side. Chromeless (inni LeaderboardTabs, #576): bare backdrop
- * + posisjons-wrapper — fanen eier AppShell og TopBar, så vi dropper begge her
- * for å unngå doble skall. Speiler `Shell`-mønsteret i BingoBangoBongoPodium.
- */
-function Shell({
-  children,
-  chromeless = false,
-}: {
-  children: React.ReactNode;
-  chromeless?: boolean;
-}): JSX.Element {
-  if (chromeless) {
-    return (
-      <div className="relative isolate">
-        <LeaderboardBackdrop />
-        <div className="relative">{children}</div>
-      </div>
-    );
-  }
-  return (
-    <AppShell>
-      <div className="relative isolate pb-12">
-        <LeaderboardBackdrop />
-        <div className="relative">{children}</div>
-      </div>
-    </AppShell>
+    </LeaderboardShell>
   );
 }
 

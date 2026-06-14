@@ -2,14 +2,12 @@
 
 import { useEffect, useState, type JSX } from 'react';
 import { useTranslations } from 'next-intl';
-import { SmartLink } from '@/components/ui/SmartLink';
-import { AppShell } from '@/components/ui/AppShell';
 import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
 import { Medallion } from '@/components/ui/Medallion';
-import { LeaderboardBackdrop } from '@/components/illustrations/LeaderboardBackdrop';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import type { NassauResult, NassauUnitLine } from '@/lib/scoring/modes/types';
+import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import { ConfettiBurst } from './ConfettiBurst';
 import type { NassauPlayerInfo } from './NassauView';
 
@@ -85,12 +83,12 @@ export function NassauPodium({
 
   if (result.players.length === 0) {
     return (
-      <Shell chromeless={chromeless}>
-        {!chromeless && <Header gameName={gameName} backHref={backHref} />}
+      <LeaderboardShell chromeless={chromeless}>
+        {!chromeless && <LeaderboardHeader gameName={gameName} backHref={backHref} />}
         <p className="mt-12 text-center text-sm text-muted">
           {tc('noPlayersToShow')}
         </p>
-      </Shell>
+      </LeaderboardShell>
     );
   }
 
@@ -103,8 +101,8 @@ export function NassauPodium({
   const sweeper = first.units === 3 ? first : null;
 
   return (
-    <Shell chromeless={chromeless}>
-      {!chromeless && <Header gameName={gameName} backHref={backHref} />}
+    <LeaderboardShell chromeless={chromeless}>
+      {!chromeless && <LeaderboardHeader gameName={gameName} backHref={backHref} />}
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <Kicker tone="accent">{t('common.podiumKicker')}</Kicker>
@@ -225,7 +223,7 @@ export function NassauPodium({
       )}
 
       <PullQuote className="px-6 pt-4 pb-4">{tc('congratulations')}</PullQuote>
-    </Shell>
+    </LeaderboardShell>
   );
 }
 
@@ -238,53 +236,7 @@ function playerLabel(
   return info ? formatRevealName(info.name, info.nickname) : fallback;
 }
 
-function Shell({
-  children,
-  chromeless = false,
-}: {
-  children: React.ReactNode;
-  chromeless?: boolean;
-}) {
-  if (chromeless) {
-    return (
-      <div className="relative isolate">
-        <LeaderboardBackdrop />
-        <div className="relative">{children}</div>
-      </div>
-    );
-  }
-  return (
-    <AppShell>
-      <div className="relative isolate pb-12">
-        <LeaderboardBackdrop />
-        <div className="relative">{children}</div>
-      </div>
-    </AppShell>
-  );
-}
 
-function Header({
-  gameName,
-  backHref,
-}: {
-  gameName: string;
-  backHref: string;
-}) {
-  const tc = useTranslations('leaderboard.common');
-  return (
-    <header className="mb-2 flex items-center justify-between gap-4">
-      <SmartLink
-        href={backHref}
-        aria-label={tc('backAriaLabel')}
-        className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
-      >
-        ‹
-      </SmartLink>
-      <Kicker tone="accent">{gameName.toUpperCase()}</Kicker>
-      <span className="w-11" aria-hidden />
-    </header>
-  );
-}
 
 type PodiumTier = 'champagne' | 'silver' | 'bronze';
 

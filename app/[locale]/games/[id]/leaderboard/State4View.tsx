@@ -10,7 +10,7 @@ import {
   type LeaderboardMode,
   type TeamLine,
 } from '@/lib/leaderboard';
-import { LeaderboardBackdrop } from '@/components/illustrations/LeaderboardBackdrop';
+import { LeaderboardShell } from './LeaderboardChrome';
 import { ConfettiBurst } from './ConfettiBurst';
 
 const STORAGE_PREFIX = 'torny-leaderboard-confetti-seen-';
@@ -91,12 +91,12 @@ export function State4View({
 
   if (teams.length === 0) {
     return (
-      <Shell chromeless={chromeless}>
+      <LeaderboardShell chromeless={chromeless}>
         {!chromeless && (
           <Header gameName={gameName} onReplay={null} backHref={backHref} t={tc} />
         )}
         <p className="mt-12 text-center text-sm text-muted">{tc('noTeams')}</p>
-      </Shell>
+      </LeaderboardShell>
     );
   }
 
@@ -191,40 +191,6 @@ function ExportLink({ gameId, t }: { gameId: string; t: ReturnType<typeof useTra
       >
         {t('downloadCsv')}
       </a>
-    </div>
-  );
-}
-
-function Shell({
-  children,
-  chromeless = false,
-}: {
-  children: React.ReactNode;
-  chromeless?: boolean;
-}) {
-  // Backdrop wrapper — `relative` so the absolutely-positioned
-  // LeaderboardBackdrop constrains to this container (scrolls with content,
-  // not viewport). `isolate` skaper en stacking context slik at
-  // backdrop-en (z-0) ikke kan klatre opp over andre stacking-naboer på
-  // siden (f.eks. en TopBar med z-index utenfor Shell).
-  //
-  // I chromeless-modus owner ikke Shell sin egen ytre wrapper — TabsParent
-  // gjør det — men vi trenger fortsatt en `relative`-container rundt
-  // backdrop + innhold, så vi pakker dem i én div og kjører ut.
-  if (chromeless) {
-    return (
-      <div className="relative isolate">
-        <LeaderboardBackdrop />
-        <div className="relative">{children}</div>
-      </div>
-    );
-  }
-  return (
-    <div className="min-h-screen bg-bg text-text">
-      <div className="relative isolate mx-auto max-w-md pb-12">
-        <LeaderboardBackdrop />
-        <div className="relative">{children}</div>
-      </div>
     </div>
   );
 }

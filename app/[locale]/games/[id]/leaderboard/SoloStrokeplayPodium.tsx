@@ -2,15 +2,13 @@
 
 import { useEffect, useState, type JSX } from 'react';
 import { useTranslations } from 'next-intl';
-import { SmartLink } from '@/components/ui/SmartLink';
-import { AppShell } from '@/components/ui/AppShell';
 import { Card } from '@/components/ui/Card';
 import { Kicker } from '@/components/ui/Kicker';
 import { PullQuote } from '@/components/ui/PullQuote';
 import { Medallion } from '@/components/ui/Medallion';
-import { LeaderboardBackdrop } from '@/components/illustrations/LeaderboardBackdrop';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import type { SoloStrokeplayResult } from '@/lib/scoring/modes/types';
+import { LeaderboardShell, LeaderboardHeader } from './LeaderboardChrome';
 import { ConfettiBurst } from './ConfettiBurst';
 import type { SoloStrokeplayPlayerInfo } from './SoloStrokeplayView';
 
@@ -92,12 +90,12 @@ export function SoloStrokeplayPodium({
 
   if (result.players.length === 0) {
     return (
-      <Shell chromeless={chromeless}>
-        {!chromeless && <Header gameName={gameName} backHref={backHref} />}
+      <LeaderboardShell chromeless={chromeless}>
+        {!chromeless && <LeaderboardHeader gameName={gameName} backHref={backHref} />}
         <p className="mt-12 text-center text-sm text-muted">
           {t('common.noPlayersToShow')}
         </p>
-      </Shell>
+      </LeaderboardShell>
     );
   }
 
@@ -109,8 +107,8 @@ export function SoloStrokeplayPodium({
   const rest = result.players.slice(3);
 
   return (
-    <Shell chromeless={chromeless}>
-      {!chromeless && <Header gameName={gameName} backHref={backHref} />}
+    <LeaderboardShell chromeless={chromeless}>
+      {!chromeless && <LeaderboardHeader gameName={gameName} backHref={backHref} />}
 
       <div className="px-6 pt-1.5 pb-3.5 text-center">
         <Kicker tone="accent">{t('common.podiumKicker')}</Kicker>
@@ -237,60 +235,11 @@ export function SoloStrokeplayPodium({
       )}
 
       <PullQuote className="px-6 pt-4 pb-4">{t('common.congratulations')}</PullQuote>
-    </Shell>
+    </LeaderboardShell>
   );
 }
 
-function Shell({
-  children,
-  chromeless = false,
-}: {
-  children: React.ReactNode;
-  chromeless?: boolean;
-}) {
-  // I chromeless-modus owner outer-callern AppShell + TopBar. Vi rendrer kun
-  // backdrop + relative-container slik at podiet sitter sammen med konfetti og
-  // tabs uten dobbel pad/scroll. Speiler SoloStablefordPodium.Shell-mønsteret.
-  if (chromeless) {
-    return (
-      <div className="relative isolate">
-        <LeaderboardBackdrop />
-        <div className="relative">{children}</div>
-      </div>
-    );
-  }
-  return (
-    <AppShell>
-      <div className="relative isolate pb-12">
-        <LeaderboardBackdrop />
-        <div className="relative">{children}</div>
-      </div>
-    </AppShell>
-  );
-}
 
-function Header({
-  gameName,
-  backHref,
-}: {
-  gameName: string;
-  backHref: string;
-}) {
-  const t = useTranslations('leaderboard');
-  return (
-    <header className="mb-2 flex items-center justify-between gap-4">
-      <SmartLink
-        href={backHref}
-        aria-label={t('common.backAriaLabel')}
-        className="-ml-2 inline-flex h-11 w-11 items-center justify-center text-lg text-text"
-      >
-        ‹
-      </SmartLink>
-      <Kicker tone="accent">{gameName.toUpperCase()}</Kicker>
-      <span className="w-11" aria-hidden />
-    </header>
-  );
-}
 
 type PodiumTier = 'champagne' | 'silver' | 'bronze';
 
