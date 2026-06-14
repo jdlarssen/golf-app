@@ -93,19 +93,19 @@ Reverser #576-eksklusjonen i `useGameFormState`: `sideTournamentSupported` skal 
 
 ## Success Criteria
 
-- [ ] Veiviseren viser sideturnering-bryteren + config for matchplay-formater igjen. **Verifiser:** `sideTournamentSupported` er `true` for alle 6 matchplay-modi i `useGameFormState`; #576-hook-testen (som i dag asserter `false` for matchplay) er oppdatert til å assert `true`. `npx vitest run useGameFormState` grønn.
-- [ ] `computeSideTournament` (data-kjerne) er ekstraktert fra `renderSideTournamentTabs`; score-formatenes tabs-oppførsel er uendret. **Verifiser:** `renderSideTournamentTabs` kaller `computeSideTournament`; leaderboard-tester for score-formater grønne (ingen regresjon).
-- [ ] De tre matchplay-render-funksjonene bygger og sender en sideturnering-seksjon når `status === 'finished' && side_tournament_enabled`, og `null` ellers. **Verifiser:** kode-ref i page.tsx (renderMatchplay/renderFourballMatchplay/renderFoursomesMatchplay) + `tsc` grønn.
-- [ ] `MatchplaySideTournamentSection` viser LD/CTP-vinnerne minimalt by default og hele `SideTournamentView`-poenggrunnlaget bak en `<details>`-disclosure. **Verifiser:** én fokusert render-test (Type C) — minimal-summary inneholder en LD/CTP-vinner; disclosure-elementet finnes; ekspandert innhold rendrer `SideTournamentView`-strukturen. (assert på role/testid/struktur, ikke norsk copy).
-- [ ] Matchplay-views er byte-identiske når `sideTournamentSection`-proppen er `undefined`. **Verifiser:** eksisterende co-lokaliserte matchplay-view-tester grønne uten endring av deres assertions.
-- [ ] Versjon bumpet (minor — ny bruker-synlig flate) + CHANGELOG-oppføring per `docs/changelog-conventions.md`.
+- [x] Veiviseren viser sideturnering-bryteren + config for matchplay-formater igjen. **Evidens:** `useGameFormState.ts:510` `const sideTournamentSupported = true;` (var `!isMatchplayFamily(gameMode)`); `useGameFormState.test.ts` describe «sideturnering-gating (#585 — på for alle formater)» asserter `true` for alle 6 matchplay-modi + bevart toggle ved format-bytte. Begge seksjoner (`BasicsSection`/`AdvancedSettingsSection`) gater fieldset-et på det nå-true flagget. `npx vitest run useGameFormState` grønn.
+- [x] `computeSideTournament` (data-kjerne) er ekstraktert fra `renderSideTournamentTabs`; score-formatenes tabs-oppførsel er uendret. **Evidens:** commit `dc93208b` — `computeSideTournament` eier henting/beregning, `renderSideTournamentTabs` er nå en tynn caller (`const data = await computeSideTournament(...)` → `<SideTournamentView {...data} />`). 179 leaderboard-tester grønne etter refaktor (ingen regresjon).
+- [x] De tre matchplay-render-funksjonene bygger og sender en sideturnering-seksjon når `status === 'finished' && side_tournament_enabled`, og `undefined` ellers. **Evidens:** delt `renderMatchplaySideSection`-helper (gater på `finished` + `side_tournament_enabled`, returnerer `undefined` ved 0 lag); kalt i `renderMatchplay`/`renderFourballMatchplay`/`renderFoursomesMatchplay`, resultatet sendt som `sideTournamentSection`-prop. `npx tsc --noEmit` exit 0.
+- [x] `MatchplaySideTournamentSection` viser LD/CTP-vinnerne minimalt by default og hele `SideTournamentView`-poenggrunnlaget bak en `<details>`-disclosure. **Evidens:** `MatchplaySideTournamentSection.test.tsx` — asserter `data-testid="matchplay-side-tournament"`, minimal headline (`Lengste drive #1: Alice`, `Nærmest pinnen #1: Bjørn`), `<details>` med «Vis poenggrunnlaget», og ekspandert `SideTournamentView`-struktur («Slik gis poengene» + begge lag-rader). Grønn.
+- [x] Matchplay-views er byte-identiske når `sideTournamentSection`-proppen er `undefined`. **Evidens:** `MatchplayMatchView/FourballMatchplayView/FoursomesMatchplayView.test.tsx` grønne uten assertions-endring (proppen default `undefined`; slottet rendrer `{sideTournamentSection}` = ingenting).
+- [x] Versjon bumpet (minor — ny bruker-synlig flate) + CHANGELOG-oppføring per `docs/changelog-conventions.md`. **Evidens:** 1.126.1 → 1.127.0; nytt tema `## 1.127.y — Sideturnering på matchplay-duellen` med tagline + Teknisk-seksjon. Humanizer kjørt på ny norsk copy (ingen tells).
 
 ## Gates
 
-- [ ] `npx tsc --noEmit` passerer (hele appen — matchplay-views + page.tsx + wizard rører delte typer).
-- [ ] `npx vitest run` scoped til `leaderboard`, `admin/games/new`, `lib/scoring` grønn.
-- [ ] Co-lokaliserte matchplay-view-tester + ny `MatchplaySideTournamentSection`-test + oppdatert `useGameFormState`-test grønne.
-- [ ] Frontend-flate: kode-struktur verifiseres av evaluator. **Live prod-sjekk (matchplay-spill med sideturnering på, sjekk seksjon + expand på tornygolf.no) overlates til eier** — fresh worktree mangler `.env.local`, så `npm run build`/Playwright kjører ikke meningsfullt; tsc + vitest + Vercel PR-preview dekker resten (mirror #576).
+- [x] `npx tsc --noEmit` passerer (hele appen). **Evidens:** exit 0, ingen output.
+- [x] `npx vitest run` scoped til `leaderboard`, `admin/games/new`, `lib/scoring`, `messages` grønn. **Evidens:** 1184 passed (88 filer). Full suite også grønn: 3378 passed (267 filer).
+- [x] Co-lokaliserte matchplay-view-tester + ny `MatchplaySideTournamentSection`-test + oppdatert `useGameFormState`-test + `catalogParity` grønne. **Evidens:** del av subsettene over; catalogParity bekrefter en/no-nøkkel-paritet for `matchplaySide`.
+- [~] Frontend-flate: kode-struktur verifiseres av evaluator. **Live prod-sjekk (matchplay-spill med sideturnering på, sjekk seksjon + expand på tornygolf.no) overlates til eier** — fresh worktree mangler `.env.local`, så `npm run build`/Playwright kjører ikke meningsfullt; tsc + 3378 tester + Vercel PR-preview dekker resten (mirror #576).
 
 ## Files Likely Touched
 
