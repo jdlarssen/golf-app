@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="40" height="48" viewBox="0 0 40 48" fill="none" stroke="#1B4332" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-  <title>Hull / flag pin</title>
-  
-  <line x1="10" y1="46" x2="10" y2="4"></line>
-  
-  <path d="M10 4 L34 12 L10 20 Z" fill="#1B4332" stroke="#1B4332"></path>
-  
-  <line x1="4" y1="46" x2="36" y2="46" stroke="#C9A961" stroke-width="2"></line>
-</svg>
