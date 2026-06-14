@@ -21,6 +21,22 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issues [#612](https://github.com/jdlarssen/golf-app/issues/612) og [#613](https://github.com/jdlarssen/golf-app/issues/613). Et gammelt påmeldings-varsel kunne ta deg til et spill som var avsluttet eller slettet, og da møtte du en svart engelsk feilside uten vei tilbake. Nå har Tørny en egen «finnes ikke»-side på norsk, og innboksen rydder bort varsler som ikke lenger har et sted å ta deg.
 
+### [1.128.1] - 2026-06-14 · #613
+
+> Gamle påmeldings-varsler som peker til et spill som er borte, dukker ikke lenger opp i innboksen. Og varsler uten et sted å ta deg markeres bare som lest når du trykker, i stedet for å se ut som om ingenting skjer.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Varsler som tidligere falt tilbake til `/innboks` (seg selv) — avvist påmelding (`registration_rejected`) og produktnytt uten lenke — navigerer ikke lenger dit ved trykk. `notificationDestination()` returnerer `null` for disse, og `handleTap` hopper over `router.push`. Markering som lest skjer uansett, så et trykk gjør fortsatt noe synlig (ulest-stripen forsvinner).
+- `registration_request`-varsler som peker til et slettet/utilgjengelig spill skjules fra innboks-lista. `/admin/games/[id]/signups` kaller `notFound()` for slike, så varselet var en blindvei. Filtreres ved innlasting via én batched eksistens-spørring (admin-klient, kun id-sjekk). Ikke-destruktivt — radene blir værende i `notifications`-tabellen.
+
+#### Changed
+- `buildDeeplink` flyttet ut av `InboxClient` til ren, enhetstestet `lib/notifications/deeplink.ts` (`notificationDestination`). Ny `lib/notifications/staleNotifications.ts` (`collectSignupGameIds` + `filterStaleSignupNotifications`) for skjul-utdaterte-filteret. Begge dekket av nye Type A-tester.
+
+</details>
+
 ### [1.128.0] - 2026-06-14 · #612
 
 > Lander du på en lenke som ikke finnes lenger, møter du nå en Tørny-side på norsk med vei tilbake, i stedet for en svart engelsk feilmelding som ser ut som om appen har krasjet.

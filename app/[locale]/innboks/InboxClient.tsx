@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/Button';
 import { MailEnvelope } from '@/components/icons/MailEnvelope';
 import { PullQuote } from '@/components/ui/PullQuote';
 import { markOneAsRead, markAllAsRead } from './actions';
-import type { NotificationPayload } from '@/lib/notifications/types';
+import { notificationDestination } from '@/lib/notifications/deeplink';
 
 /**
  * Innboks-client. Tar initial notifications-rader fra server-component,
@@ -68,7 +68,12 @@ export function InboxClient({
       });
     }
 
-    router.push(buildDeeplink(notification));
+    // Naviger kun når varselet har et reelt mål. Varsler uten destinasjon
+    // (avvist påmelding, produktnytt uten lenke) returnerer null og markeres
+    // bare som lest — ingen `router.push('/innboks')` som gir null synlig
+    // endring og får varselet til å føles ødelagt (#613).
+    const dest = notificationDestination(notification);
+    if (dest) router.push(dest);
   }
 
   function handleMarkAll() {
@@ -136,85 +141,6 @@ export function InboxClient({
   );
 }
 
-/**
- * Per-kind deeplink-mapping. Speiler design-doc-en — hver kind har én
- * naturlig mål-rute hvor mark-as-read-helper på sida fanger eventuell
- * mail-deeplink-klikk separat (Phase 3).
- */
-function buildDeeplink(notification: NotificationRow): string {
-  if (notification.kind === 'product_update') {
-    const p = notification.payload as NotificationPayload<'product_update'>;
-    return p.link ?? '/innboks';
-  }
-  switch (notification.kind) {
-    case 'invite':
-    case 'scorecard_approved':
-    case 'registration_approved': {
-      const p = notification.payload as NotificationPayload<'invite'>;
-      return `/games/${p.game_id}`;
-    }
-    case 'peer_approval_request': {
-      const p = notification.payload as NotificationPayload<'peer_approval_request'>;
-      return `/games/${p.game_id}/approve`;
-    }
-    case 'scorecard_submitted': {
-      const p = notification.payload as NotificationPayload<'scorecard_submitted'>;
-      return `/admin/games/${p.game_id}`;
-    }
-    case 'game_finished': {
-      const p = notification.payload as NotificationPayload<'game_finished'>;
-      return `/games/${p.game_id}/leaderboard`;
-    }
-    case 'team_invite': {
-      const p = notification.payload as NotificationPayload<'team_invite'>;
-      return `/signup/${p.game_short_id}/team`;
-    }
-    case 'registration_request': {
-      const p = notification.payload as NotificationPayload<'registration_request'>;
-      return `/admin/games/${p.game_id}/signups`;
-    }
-    case 'registration_rejected':
-      return '/innboks';
-    case 'team_member_withdrew': {
-      const p = notification.payload as NotificationPayload<'team_member_withdrew'>;
-      return `/signup/${p.game_short_id}/team`;
-    }
-    case 'deliver_reminder': {
-      const p = notification.payload as NotificationPayload<'deliver_reminder'>;
-      return `/games/${p.game_id}/submit`;
-    }
-    case 'cup_finished': {
-      const p = notification.payload as NotificationPayload<'cup_finished'>;
-      return `/cup/${p.tournament_id}`;
-    }
-    case 'cup_started': {
-      const p = notification.payload as NotificationPayload<'cup_started'>;
-      return `/cup/${p.tournament_id}`;
-    }
-    case 'club_join_request': {
-      const p = notification.payload as NotificationPayload<'club_join_request'>;
-      return `/klubber/${p.group_id}`;
-    }
-    case 'club_role_changed': {
-      const p = notification.payload as NotificationPayload<'club_role_changed'>;
-      return `/klubber/${p.group_id}`;
-    }
-    case 'friend_request':
-    case 'friend_accepted':
-      return '/profile/venner';
-    case 'player_added': {
-      const p = notification.payload as NotificationPayload<'player_added'>;
-      return `/games/${p.game_id}`;
-    }
-    case 'game_started': {
-      const p = notification.payload as NotificationPayload<'game_started'>;
-      return `/games/${p.game_id}`;
-    }
-    case 'auto_start_blocked': {
-      // Oppretteren lander på spill-siden der #544-venter-banneret og
-      // roster-status viser hva som mangler.
-      const p = notification.payload as NotificationPayload<'auto_start_blocked'>;
-      return `/games/${p.game_id}`;
-    }
-  }
-}
+// Deeplink-mappingen bor nå i `@/lib/notifications/deeplink`
+// (`notificationDestination`) så den kan enhetstestes og dele én sannhetskilde
+// med null-for-selvpekende-varsler-logikken (#613).
