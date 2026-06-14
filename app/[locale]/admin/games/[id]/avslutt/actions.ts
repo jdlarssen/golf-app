@@ -178,7 +178,10 @@ export async function endGameWithSideWinners(
     .from('games')
     .update({ status: 'finished', ended_at: new Date().toISOString() })
     .eq('id', gameId);
-  if (statusErr) redirect({ href: `${detailPath}?error=db_finish`, locale });
+  if (statusErr) {
+    console.error('[endGameWithSideWinners] finish status update failed', statusErr);
+    redirect({ href: `${detailPath}?error=db_finish`, locale });
+  }
 
   // #572: beregn og lagre per-spiller-resultatet for avsluttede-spill-kortene.
   // Best-effort — feiler aldri ut av avslutningen (egen try/catch internt).

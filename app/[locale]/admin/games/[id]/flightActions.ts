@@ -52,7 +52,10 @@ async function fetchFlightPlayers(
         created_at: string | null;
       }[]
     >();
-  if (error) return null;
+  if (error) {
+    console.error('[fetchFlightPlayers] game_players read failed', error);
+    return null;
+  }
   return data ?? [];
 }
 
@@ -80,6 +83,8 @@ export async function suggestFlightAssignment(gameId: string): Promise<void> {
     redirect({ href: `${detailPath}?error=not_active`, locale });
   }
 
+  // Error (if any) is logged at source in fetchFlightPlayers — the call site
+  // only sees null, so logging here would add nothing but a `null`.
   const players = await fetchFlightPlayers(admin, gameId);
   if (!players) redirect({ href: `${detailPath}?error=db_roster`, locale });
 
@@ -96,7 +101,10 @@ export async function suggestFlightAssignment(gameId: string): Promise<void> {
       .update({ flight_number })
       .eq('game_id', gameId)
       .eq('user_id', user_id);
-    if (error) redirect({ href: `${detailPath}?error=db_players`, locale });
+    if (error) {
+      console.error('[suggestFlightAssignment] flight update failed', error);
+      redirect({ href: `${detailPath}?error=db_players`, locale });
+    }
   }
 
   revalidateTag(`game-${gameId}`, 'max');
@@ -141,7 +149,10 @@ export async function setPlayerFlight(
     .eq('flight_number', targetFlight)
     .neq('user_id', targetUserId)
     .is('withdrawn_at', null);
-  if (countError) redirect({ href: `${detailPath}?error=db_roster`, locale });
+  if (countError) {
+    console.error('[setPlayerFlight] flight count read failed', countError);
+    redirect({ href: `${detailPath}?error=db_roster`, locale });
+  }
   if ((existingCount ?? 0) >= MAX_FLIGHT_SIZE) {
     redirect({ href: `${detailPath}?error=flight_full`, locale });
   }
@@ -151,7 +162,10 @@ export async function setPlayerFlight(
     .update({ flight_number: targetFlight })
     .eq('game_id', gameId)
     .eq('user_id', targetUserId);
-  if (error) redirect({ href: `${detailPath}?error=db_players`, locale });
+  if (error) {
+    console.error('[setPlayerFlight] flight update failed', error);
+    redirect({ href: `${detailPath}?error=db_players`, locale });
+  }
 
   revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/admin/games/${gameId}`);
@@ -195,7 +209,10 @@ export async function toggleSignupsClosed(
     .from('games')
     .update({ signups_closed_at })
     .eq('id', gameId);
-  if (error) redirect({ href: `${detailPath}?error=db_game`, locale });
+  if (error) {
+    console.error('[toggleSignupsClosed] signups-closed update failed', error);
+    redirect({ href: `${detailPath}?error=db_game`, locale });
+  }
 
   revalidateTag(`game-${gameId}`, 'max');
   revalidatePath(`/admin/games/${gameId}`);

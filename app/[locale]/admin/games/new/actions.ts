@@ -122,6 +122,7 @@ async function createGameInternal(
     );
 
     if (rosterErr) {
+      console.error('[createGameInternal] roster check failed', rosterErr);
       redirect({ href: `${errorBase}?error=db_roster`, locale });
     }
 
@@ -214,6 +215,7 @@ async function createGameInternal(
     .single();
 
   if (gameError || !game) {
+    console.error('[createGameInternal] game insert failed', gameError);
     redirect({ href: `${errorBase}?error=db_game`, locale });
   }
 
@@ -235,7 +237,10 @@ async function createGameInternal(
     };
   });
   const { error: gpError } = await supabase.from('game_players').insert(rows);
-  if (gpError) redirect({ href: `${errorBase}?error=db_players`, locale });
+  if (gpError) {
+    console.error('[createGameInternal] game_players insert failed', gpError);
+    redirect({ href: `${errorBase}?error=db_players`, locale });
+  }
 
   // Best-effort `invite`-varsler for hver tilkommet spiller (skip inviter
   // selv — de vet allerede de opprettet spillet). Promise.allSettled så én

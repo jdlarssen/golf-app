@@ -189,7 +189,10 @@ export async function updateCourse(courseId: string, formData: FormData) {
     .select('id')
     .eq('course_id', courseId)
     .is('archived_at', null);
-  if (existingTeesError) redirect({ href: `${editPath}?error=db_load`, locale });
+  if (existingTeesError) {
+    console.error('[updateCourse] existing tees read failed', existingTeesError);
+    redirect({ href: `${editPath}?error=db_load`, locale });
+  }
 
   const existingIds = new Set((existingTees ?? []).map((t) => t.id));
   const formIds = new Set(teeBoxes.filter((t) => t.id).map((t) => t.id!));
@@ -206,7 +209,10 @@ export async function updateCourse(courseId: string, formData: FormData) {
       .from('games')
       .select('tee_box_id')
       .in('tee_box_id', toDelete);
-    if (gameRefsError) redirect({ href: `${editPath}?error=db_load`, locale });
+    if (gameRefsError) {
+      console.error('[updateCourse] game refs read failed', gameRefsError);
+      redirect({ href: `${editPath}?error=db_load`, locale });
+    }
     const inUseIds = new Set(
       (gameRefs ?? [])
         .map((r) => r.tee_box_id)
@@ -230,7 +236,10 @@ export async function updateCourse(courseId: string, formData: FormData) {
       updated_by: role.userId,
     })
     .eq('id', courseId);
-  if (courseUpdateError) redirect({ href: `${editPath}?error=db_course`, locale });
+  if (courseUpdateError) {
+    console.error('[updateCourse] course update failed', courseUpdateError);
+    redirect({ href: `${editPath}?error=db_course`, locale });
+  }
 
   // course_holes stays delete-and-reinsert: no FK from games/scores into
   // course_holes (scores use hole_number int), so safe to replace wholesale.
@@ -238,13 +247,19 @@ export async function updateCourse(courseId: string, formData: FormData) {
     .from('course_holes')
     .delete()
     .eq('course_id', courseId);
-  if (deleteHolesError) redirect({ href: `${editPath}?error=db_holes`, locale });
+  if (deleteHolesError) {
+    console.error('[updateCourse] holes delete failed', deleteHolesError);
+    redirect({ href: `${editPath}?error=db_holes`, locale });
+  }
 
   const holesToInsert = holes.map((h) => ({ ...h, course_id: courseId }));
   const { error: insertHolesError } = await writeClient
     .from('course_holes')
     .insert(holesToInsert);
-  if (insertHolesError) redirect({ href: `${editPath}?error=db_holes`, locale });
+  if (insertHolesError) {
+    console.error('[updateCourse] holes insert failed', insertHolesError);
+    redirect({ href: `${editPath}?error=db_holes`, locale });
+  }
 
   for (const tee of teeBoxes) {
     const row = {
@@ -266,10 +281,16 @@ export async function updateCourse(courseId: string, formData: FormData) {
         .from('tee_boxes')
         .update(row)
         .eq('id', tee.id);
-      if (error) redirect({ href: `${editPath}?error=db_tees`, locale });
+      if (error) {
+        console.error('[updateCourse] tee update failed', error);
+        redirect({ href: `${editPath}?error=db_tees`, locale });
+      }
     } else {
       const { error } = await writeClient.from('tee_boxes').insert(row);
-      if (error) redirect({ href: `${editPath}?error=db_tees`, locale });
+      if (error) {
+        console.error('[updateCourse] tee insert failed', error);
+        redirect({ href: `${editPath}?error=db_tees`, locale });
+      }
     }
   }
 
@@ -278,14 +299,20 @@ export async function updateCourse(courseId: string, formData: FormData) {
       .from('tee_boxes')
       .delete()
       .in('id', toHardDelete);
-    if (error) redirect({ href: `${editPath}?error=db_tees`, locale });
+    if (error) {
+      console.error('[updateCourse] tee hard-delete failed', error);
+      redirect({ href: `${editPath}?error=db_tees`, locale });
+    }
   }
   if (toArchive.length > 0) {
     const { error } = await writeClient
       .from('tee_boxes')
       .update({ archived_at: new Date().toISOString() })
       .in('id', toArchive);
-    if (error) redirect({ href: `${editPath}?error=db_tees`, locale });
+    if (error) {
+      console.error('[updateCourse] tee archive failed', error);
+      redirect({ href: `${editPath}?error=db_tees`, locale });
+    }
   }
 
   redirect({ href: `/admin/courses?status=updated&name=${encodeURIComponent(name)}`, locale });
@@ -320,7 +347,10 @@ export async function restoreTee(
     .from('tee_boxes')
     .update({ archived_at: null })
     .eq('id', teeId);
-  if (restoreError) redirect({ href: `${editPath}?error=db_tees`, locale });
+  if (restoreError) {
+    console.error('[restoreTee] tee restore failed', restoreError);
+    redirect({ href: `${editPath}?error=db_tees`, locale });
+  }
 
   // Restore is a course change → bump audit fields on courses, same pattern
   // as updateCourse.
@@ -331,7 +361,10 @@ export async function restoreTee(
       updated_by: role.userId,
     })
     .eq('id', courseId);
-  if (courseUpdateError) redirect({ href: `${editPath}?error=db_course`, locale });
+  if (courseUpdateError) {
+    console.error('[restoreTee] course audit update failed', courseUpdateError);
+    redirect({ href: `${editPath}?error=db_course`, locale });
+  }
 
   // Invalidate route caches so CourseForm's tee-list fetch refetches fresh:
   // without this, the next render of the edit page may serve the cached

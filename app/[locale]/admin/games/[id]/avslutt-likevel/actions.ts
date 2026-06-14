@@ -62,6 +62,7 @@ export async function endGameMarkingWithdrawals(
       .eq('game_id', gameId)
       .eq('user_id', userId);
     if (error) {
+      console.error('[endGameMarkingWithdrawals] withdraw update failed', error);
       redirect({ href: `${detailPath}?error=db_players`, locale });
     }
   }

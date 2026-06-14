@@ -109,6 +109,7 @@ async function updateGameInternal(
     );
 
     if (rosterErr) {
+      console.error('[updateGameInternal] roster check failed', rosterErr);
       redirect({ href: `${editBase}?error=db_roster`, locale });
     }
 
@@ -225,6 +226,7 @@ async function updateGameInternal(
     .delete()
     .eq('game_id', gameId);
   if (deleteError) {
+    console.error('[updateGameInternal] roster delete failed', deleteError);
     redirect({ href: `${editBase}?error=db_players`, locale });
   }
 
@@ -246,6 +248,7 @@ async function updateGameInternal(
       .from('game_players')
       .insert(rows);
     if (insertError) {
+      console.error('[updateGameInternal] roster insert failed', insertError);
       redirect({ href: `${editBase}?error=db_players`, locale });
     }
   }
