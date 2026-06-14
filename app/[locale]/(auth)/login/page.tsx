@@ -6,6 +6,7 @@ import { BrandHero } from '@/components/ui/BrandHero';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { SendCodeForm } from './_components/SendCodeForm';
 import { VerifyCodeForm } from './_components/VerifyCodeForm';
+import { first, resolveErrorCode } from '@/lib/url/searchParams';
 
 type SearchParams = Promise<{
   step?: string | string[];
@@ -27,13 +28,6 @@ const KNOWN_ERROR_CODES = new Set([
   'unknown',
 ] as const);
 
-type ErrorCode = typeof KNOWN_ERROR_CODES extends Set<infer T> ? T : never;
-
-function first(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
-
 export default async function LoginPage({
   searchParams,
 }: {
@@ -45,13 +39,7 @@ export default async function LoginPage({
   const step = first(params.step) === 'verify' ? 'verify' : 'email';
   const email = first(params.email) ?? '';
   const next = first(params.next) ?? '';
-  const errorCodeRaw = first(params.error);
-  const errorCode: ErrorCode | undefined =
-    errorCodeRaw && KNOWN_ERROR_CODES.has(errorCodeRaw as ErrorCode)
-      ? (errorCodeRaw as ErrorCode)
-      : errorCodeRaw
-        ? 'unknown'
-        : undefined;
+  const errorCode = resolveErrorCode(first(params.error), KNOWN_ERROR_CODES, 'unknown');
   const errorMessage = errorCode ? t(`errors.${errorCode}`) : undefined;
 
   const resendQs = new URLSearchParams();
