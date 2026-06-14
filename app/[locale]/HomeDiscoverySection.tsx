@@ -12,6 +12,7 @@ import type {
   PendingRequest,
 } from '@/lib/games/getDiscoverableGames';
 import type { AppLocale } from '@/i18n/routing';
+import { localizeGameName } from '@/lib/games/autoGameName';
 
 /**
  * «Funn turneringer»-seksjon på hjem-siden (#257). Vises kun for non-admin/
@@ -132,7 +133,7 @@ function ClubGameCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="truncate font-serif text-[17px] leading-tight text-text">
-            {game.name}
+            {localizeGameName(game.name, game.course_name, locale)}
           </p>
           <p className="mt-1 font-sans text-[12px] text-muted">
             <span className="text-primary">{game.group_name}</span>
@@ -178,7 +179,7 @@ function FriendGameCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="truncate font-serif text-[17px] leading-tight text-text">
-            {game.name}
+            {localizeGameName(game.name, game.course_name, locale)}
           </p>
           <p className="mt-1 font-sans text-[12px] text-muted">
             {game.course_name ?? t('courseNotSet')}
@@ -226,7 +227,7 @@ function OpenGameCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="truncate font-serif text-[17px] leading-tight text-text">
-            {game.name}
+            {localizeGameName(game.name, game.course_name, locale)}
           </p>
           <p className="mt-1 font-sans text-[12px] text-muted">
             {game.course_name ?? t('courseNotSet')}

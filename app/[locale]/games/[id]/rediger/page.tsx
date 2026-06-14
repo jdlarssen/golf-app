@@ -16,6 +16,8 @@ import {
   updateScheduledAction,
 } from '@/app/[locale]/admin/games/[id]/edit/actions';
 import { getNewGameFormData } from '@/lib/games/newGameFormData';
+import { localizeGameName } from '@/lib/games/autoGameName';
+import type { AppLocale } from '@/i18n/routing';
 import {
   buildEditInitialValues,
   type EditGameRow,
@@ -49,7 +51,7 @@ function first(value: string | string[] | undefined): string | undefined {
 }
 
 const GAME_SELECT =
-  'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, registration_mode, registration_type';
+  'id, name, status, course_id, courses(name), tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, registration_mode, registration_type';
 
 export default async function CreatorEditGamePage({
   params,
@@ -99,7 +101,7 @@ export default async function CreatorEditGamePage({
     <AppShell>
       <TopBar backHref={`/games/${id}`} kicker={t('kicker')} userId={role.userId} />
       <PageHeader
-        title={game.name}
+        title={localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale)}
         subtitle={t('subtitle')}
       />
 

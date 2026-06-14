@@ -105,6 +105,8 @@ import {
   getGameWithPlayers,
   type GameForHole,
 } from '@/lib/games/getGameWithPlayers';
+import { localizeGameName } from '@/lib/games/autoGameName';
+import type { AppLocale } from '@/i18n/routing';
 import type { TeeGender } from '@/lib/games/teeRating';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
 // Mode-router for stableford-stats. Aliaset til `computeModeResult` for å
@@ -307,7 +309,7 @@ export default async function LeaderboardPage({
 
 async function LeaderboardBody({
   gameId,
-  game,
+  game: gameRow,
   mode,
   backHref,
   returnQuery,
@@ -318,19 +320,23 @@ async function LeaderboardBody({
   backHref: string;
   returnQuery: string;
 }) {
-  const [tc, { supabase }] = await Promise.all([
+  const [tc, { supabase }, locale] = await Promise.all([
     getTranslations('leaderboard.common'),
     getLeaderboardContext(),
+    getLocale(),
   ]);
 
   // Players come from the tag-cached helper (cache hit since the outer
   // page already warmed it). Holes + scores stay direct fetches.
-  const [gwp, rawHolesRes, rawScoresRes] = await Promise.all([
+  // #624 — banenavnet hentes slankt parallelt (ikke via den cachede
+  // getGameWithPlayers, som bevisst ikke joiner courses) for å re-lokalisere
+  // det auto-genererte spillnavnet ved visning.
+  const [gwp, rawHolesRes, rawScoresRes, courseRes] = await Promise.all([
     getGameWithPlayers(gameId),
     supabase
       .from('course_holes')
       .select('hole_number, par_mens, par_ladies, par_juniors, stroke_index')
-      .eq('course_id', game.course_id)
+      .eq('course_id', gameRow.course_id)
       .order('hole_number', { ascending: true })
       .returns<CourseHoleRow[]>(),
     supabase
@@ -338,11 +344,31 @@ async function LeaderboardBody({
       .select('user_id, hole_number, strokes')
       .eq('game_id', gameId)
       .returns<ScoreRow[]>(),
+    gameRow.course_id
+      ? supabase
+          .from('courses')
+          .select('name')
+          .eq('id', gameRow.course_id)
+          .maybeSingle<{ name: string }>()
+      : Promise.resolve({ data: null as { name: string } | null }),
   ]);
 
   if (!gwp) notFound();
   if (rawHolesRes.error) throw rawHolesRes.error;
   if (rawScoresRes.error) throw rawScoresRes.error;
+
+  // #624 — lokaliser det frosne spillnavnet én gang ved kilden. Den lokaliserte
+  // kopien flyter ut til alle gameName/kicker-props i view- og podium-grenene,
+  // så ingen rå `game.name` når en rendret tittel. Norsk visning er byte-
+  // identisk (helperen returnerer tidlig for 'no').
+  const game: GameForHole = {
+    ...gameRow,
+    name: localizeGameName(
+      gameRow.name,
+      courseRes.data?.name ?? null,
+      locale as AppLocale,
+    ),
+  };
 
   // Stableford-grenen: solo-modus har null team_number, så best-ball-LbPlayer-
   // shapen (krever teamNumber: number) passer ikke. Rens stableford-data inn

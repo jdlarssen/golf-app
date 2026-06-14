@@ -6,6 +6,7 @@ import { formatDate, formatTime } from '@/lib/i18n/format';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
+import { localizeGameName } from '@/lib/games/autoGameName';
 import { getFriendIds } from '@/lib/friends/getFriendIds';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
@@ -236,7 +237,7 @@ export default async function PåmeldingPage({ params }: { params: Params }) {
             {tModes(game.game_mode as Parameters<typeof tModes>[0])}
           </p>
           <h1 className="mt-1 font-serif text-[28px] font-medium leading-snug tracking-[-0.015em] text-text">
-            {game.name}
+            {localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale)}
           </h1>
           {game.scheduled_tee_off_at && (
             <p className="mt-1 font-sans text-sm text-muted">

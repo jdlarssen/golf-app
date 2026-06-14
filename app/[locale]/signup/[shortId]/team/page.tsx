@@ -5,6 +5,7 @@ import type { AppLocale } from '@/i18n/routing';
 import { getServerClient } from '@/lib/supabase/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { getGameByShortId } from '@/lib/games/getGameByShortId';
+import { localizeGameName } from '@/lib/games/autoGameName';
 import { AppShell } from '@/components/ui/AppShell';
 import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
@@ -124,7 +125,7 @@ export default async function TeamDashboardPage({
         <Card>
           <div className="space-y-4">
             <h2 className="font-serif text-[20px] font-medium text-text">
-              {t('teamDashInvitedHeading', { gameName: game.name })}
+              {t('teamDashInvitedHeading', { gameName: localizeGameName(game.name, game.courses?.name ?? null, locale) })}
             </h2>
             <TeamDashboardClient
               mode="invited_unknown"
@@ -199,7 +200,7 @@ export default async function TeamDashboardPage({
       <div className="space-y-5">
         <header className="px-1">
           <p className="font-sans text-xs uppercase tracking-[0.12em] text-muted">
-            {game.name}
+            {localizeGameName(game.name, game.courses?.name ?? null, locale)}
           </p>
           <h1 className="mt-1 font-serif text-[28px] font-medium leading-snug tracking-[-0.015em] text-text">
             {teamName}

@@ -7,6 +7,7 @@ import { TopBar } from '@/components/ui/TopBar';
 import { Card } from '@/components/ui/Card';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { formatTeeOffDateLocale } from '@/lib/i18n/format';
+import { localizeGameName } from '@/lib/games/autoGameName';
 import type { AppLocale } from '@/i18n/routing';
 
 type GameRow = {
@@ -14,6 +15,8 @@ type GameRow = {
   name: string;
   scheduled_tee_off_at: string | null;
   ended_at: string | null;
+  // #624 — banenavn for re-lokalisering av auto-genererte spillnavn.
+  courses: { name: string } | null;
 };
 
 type ScoreRow = {
@@ -39,7 +42,7 @@ export default async function HistorikkPage() {
   // Round-trip 1: fetch all finished games the user participated in.
   const { data: gamePlayers, error: gpError } = await supabase
     .from('game_players')
-    .select('game_id, games!inner(id, name, scheduled_tee_off_at, ended_at)')
+    .select('game_id, games!inner(id, name, scheduled_tee_off_at, ended_at, courses(name))')
     .eq('user_id', userId)
     .eq('games.status', 'finished')
     .order('games(scheduled_tee_off_at)', { ascending: false });
@@ -159,7 +162,7 @@ function GameHistoryCard({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="font-serif text-base font-medium text-text leading-snug truncate">
-              {game.name}
+              {localizeGameName(game.name, game.courses?.name ?? null, locale)}
             </h2>
             {dateString && (
               <p className="font-sans text-sm text-muted mt-0.5 capitalize">

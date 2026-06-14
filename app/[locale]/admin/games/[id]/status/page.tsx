@@ -8,6 +8,8 @@ import { BrassRibbon } from '@/components/ui/BrassRibbon';
 import { Banner } from '@/components/ui/Banner';
 import { firstName } from '@/lib/firstName';
 import { formatRelativeLocale } from '@/lib/i18n/format';
+import { localizeGameName } from '@/lib/games/autoGameName';
+import type { AppLocale } from '@/i18n/routing';
 import {
   classifyDeliveryStatus,
   isDeliveryReminderTarget,
@@ -30,6 +32,8 @@ type GameRow = {
   name: string;
   status: 'draft' | 'scheduled' | 'active' | 'finished';
   require_peer_approval: boolean;
+  // #624 — banenavn for re-lokalisering av auto-genererte spillnavn.
+  courses: { name: string } | null;
 };
 
 type PlayerRow = {
@@ -76,7 +80,7 @@ export default async function GameStatusPage({
 
   const { data: game, error: gameError } = await supabase
     .from('games')
-    .select('id, name, status, require_peer_approval')
+    .select('id, name, status, require_peer_approval, courses(name)')
     .eq('id', id)
     .single<GameRow>();
   if (gameError || !game) notFound();
@@ -175,7 +179,7 @@ export default async function GameStatusPage({
 
       <div className="px-1">
         <h1 className="font-serif text-[26px] font-medium leading-snug tracking-[-0.015em] text-text">
-          {game.name}
+          {localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale)}
         </h1>
         <p className="mt-1 font-sans text-xs tabular-nums text-muted">
           {t('deliveredSummary', { delivered: deliveredCount, total: rankable.length })}

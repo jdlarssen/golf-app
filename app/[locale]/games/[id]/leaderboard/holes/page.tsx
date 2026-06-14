@@ -22,7 +22,12 @@ import {
 import { revealState, shouldHideNetto } from '@/lib/games/visibility';
 import { formatRevealName } from '@/lib/names/formatRevealName';
 import { nameInitials } from '@/lib/names/initials';
-import { getGameWithPlayers } from '@/lib/games/getGameWithPlayers';
+import {
+  getGameWithPlayers,
+  type GameForHole,
+} from '@/lib/games/getGameWithPlayers';
+import { localizeGameName } from '@/lib/games/autoGameName';
+import type { AppLocale } from '@/i18n/routing';
 import {
   hasParDifference,
   formatOtherGendersPar,
@@ -83,6 +88,33 @@ const getDrilldownContext = cache(async () => {
   const userId = await getProxyVerifiedUserId();
   return { supabase, userId };
 });
+
+/**
+ * #624 — re-lokaliser det frosne, auto-genererte spillnavnet ved visning.
+ * Banenavnet hentes slankt (den cachede `getGameWithPlayers` joiner bevisst
+ * ikke courses). `getDrilldownContext` er `cache()`-wrappet, så context-kallet
+ * er gratis innen requesten; kun én bane-PK-oppslag legges til, og bare den
+ * ene modus-grenen som faktisk rendres kjører den. Norsk visning er byte-
+ * identisk (helperen returnerer tidlig for 'no').
+ */
+async function localizeHolesGameName(game: GameForHole): Promise<string> {
+  const [{ supabase }, locale] = await Promise.all([
+    getDrilldownContext(),
+    getLocale(),
+  ]);
+  const courseRes = game.course_id
+    ? await supabase
+        .from('courses')
+        .select('name')
+        .eq('id', game.course_id)
+        .maybeSingle<{ name: string }>()
+    : { data: null as { name: string } | null };
+  return localizeGameName(
+    game.name,
+    courseRes.data?.name ?? null,
+    locale as AppLocale,
+  );
+}
 
 export default async function LeaderboardHolesPage({
   params,
@@ -297,7 +329,7 @@ async function SkinsHolesBody({
   return (
     <SkinsHolesView
       gameId={gameId}
-      gameName={game.name}
+      gameName={await localizeHolesGameName(game)}
       result={result}
       playersById={playersById}
       scoreVisibility={scoreVisibility}
@@ -372,7 +404,7 @@ async function WolfHolesBody({
   return (
     <WolfHolesView
       gameId={gameId}
-      gameName={game.name}
+      gameName={await localizeHolesGameName(game)}
       result={result}
       playersById={playersById}
       scoreVisibility={scoreVisibility}
@@ -446,7 +478,7 @@ async function NinesHolesBody({
   return (
     <NinesHolesView
       gameId={gameId}
-      gameName={game.name}
+      gameName={await localizeHolesGameName(game)}
       result={result}
       playersById={playersById}
       scoreVisibility={scoreVisibility}
@@ -521,7 +553,7 @@ async function RoundRobinHolesBody({
   return (
     <RoundRobinHolesView
       gameId={gameId}
-      gameName={game.name}
+      gameName={await localizeHolesGameName(game)}
       result={result}
       playersById={playersById}
       scoreVisibility={scoreVisibility}
@@ -595,7 +627,7 @@ async function AceyDeuceyHolesBody({
   return (
     <AceyDeuceyHolesView
       gameId={gameId}
-      gameName={game.name}
+      gameName={await localizeHolesGameName(game)}
       result={result}
       playersById={playersById}
       scoreVisibility={scoreVisibility}
@@ -673,7 +705,7 @@ async function BingoBangoBongoHolesBody({
   return (
     <BingoBangoBongoHolesView
       gameId={gameId}
-      gameName={game.name}
+      gameName={await localizeHolesGameName(game)}
       result={result}
       playersById={playersById}
       scoreVisibility={scoreVisibility}
@@ -747,7 +779,7 @@ async function NassauHolesBody({
   return (
     <NassauHolesView
       gameId={gameId}
-      gameName={game.name}
+      gameName={await localizeHolesGameName(game)}
       result={result}
       playersById={playersById}
       scoreVisibility={scoreVisibility}
@@ -822,7 +854,7 @@ async function SoloStrokeplayHolesBody({
   return (
     <SoloStrokeplayHolesView
       gameId={gameId}
-      gameName={game.name}
+      gameName={await localizeHolesGameName(game)}
       result={result}
       playersById={playersById}
       scoreVisibility={scoreVisibility}
@@ -902,7 +934,7 @@ async function SoloStablefordHolesBody({
   return (
     <SoloStablefordHolesView
       gameId={gameId}
-      gameName={game.name}
+      gameName={await localizeHolesGameName(game)}
       result={result}
       playersById={playersById}
       formatLabel={

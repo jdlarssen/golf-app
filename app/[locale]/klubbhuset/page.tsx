@@ -11,6 +11,7 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { StatusChip, type StatusChipTone } from '@/components/ui/StatusChip';
 import { formatTeeOffDateLocale, formatTeeOffTimeLocale } from '@/lib/i18n/format';
 import type { GameStatus } from '@/lib/games/status';
+import { localizeGameName } from '@/lib/games/autoGameName';
 import type { AppLocale } from '@/i18n/routing';
 
 type CreatedGame = {
@@ -88,7 +89,7 @@ export default async function KlubbhusetPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <span className="block truncate font-serif text-lg font-medium tracking-tight text-text">
-                        {g.name}
+                        {localizeGameName(g.name, g.courses?.name ?? null, locale)}
                       </span>
                       {g.courses?.name && (
                         <span className="mt-1 block truncate text-xs text-muted">

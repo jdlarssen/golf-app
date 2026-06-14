@@ -27,6 +27,8 @@ import {
   type EditGameRow,
   type EditGamePlayerRow,
 } from '@/lib/games/editGameInitialValues';
+import { localizeGameName } from '@/lib/games/autoGameName';
+import type { AppLocale } from '@/i18n/routing';
 import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 
 type Params = Promise<{ id: string }>;
@@ -112,7 +114,7 @@ export default async function EditGamePage({
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, status, course_id, tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, registration_mode, registration_type, let_friends_skip_gate',
+      'id, name, status, course_id, courses(name), tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, registration_mode, registration_type, let_friends_skip_gate',
     )
     .eq('id', id)
     .single<EditGameRow>();
@@ -142,7 +144,7 @@ export default async function EditGamePage({
 
       <div className="px-1">
         <h1 className="mb-0.5 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-          {g.name}
+          {localizeGameName(g.name, g.courses?.name ?? null, locale as AppLocale)}
         </h1>
         <p className="font-sans text-[11.5px] text-muted">
           {t('subtitle')}

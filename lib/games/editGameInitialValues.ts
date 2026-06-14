@@ -18,6 +18,9 @@ import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 export type EditGameRow = {
   id: string;
   name: string;
+  // #624 — banenavn for re-lokalisering av auto-genererte spillnavn ved visning.
+  // Ikke brukt av buildEditInitialValues; kun for sidetittelen i edit-flatene.
+  courses: { name: string } | null;
   status: 'draft' | 'scheduled' | 'active' | 'finished';
   // Nullable since migration 0011 — drafts may not have a course or tee
   // assigned yet.

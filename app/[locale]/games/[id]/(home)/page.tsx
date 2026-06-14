@@ -34,6 +34,7 @@ import {
   type GameForHole,
 } from '@/lib/games/getGameWithPlayers';
 import { scorecardTitle } from '@/lib/games/scorecardTitle';
+import { localizeGameName } from '@/lib/games/autoGameName';
 import {
   formatDisplayLabelKey,
   resolveFormatContentKey,
@@ -491,7 +492,9 @@ export default async function GameHomePage({
       <AppShell>
         <header className="mb-6 flex items-center justify-between gap-4">
           <BackLink href="/">{t('backHome')}</BackLink>
-          <Kicker tone="accent">{game.name.toUpperCase()}</Kicker>
+          <Kicker tone="accent">
+            {localizeGameName(game.name, game.courses?.name ?? null, locale).toUpperCase()}
+          </Kicker>
           <span className="w-12" aria-hidden />
         </header>
 
@@ -726,7 +729,7 @@ export default async function GameHomePage({
         backLabel={t('backToHome')}
         kicker={t('tournamentKicker')}
       />
-      <PageHeader title={game.name} />
+      <PageHeader title={localizeGameName(game.name, game.courses?.name ?? null, locale)} />
 
       <div className="mb-4">
         <StatusChip

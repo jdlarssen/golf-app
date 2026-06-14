@@ -26,6 +26,8 @@ export type ShortIdGame = {
   game_mode: GameMode;
   mode_config: GameModeConfig;
   course_id: string | null;
+  // #624 — banenavn for re-lokalisering av auto-genererte spillnavn ved visning.
+  courses: { name: string } | null;
   scheduled_tee_off_at: string | null;
   created_by: string | null;
   group_id: string | null;
@@ -49,7 +51,7 @@ export async function getGameByShortId(
   const { data, error } = await admin
     .from('games')
     .select(
-      'id, name, short_id, status, registration_mode, registration_type, game_mode, mode_config, course_id, scheduled_tee_off_at, created_by, group_id, let_friends_skip_gate, signups_closed_at',
+      'id, name, short_id, status, registration_mode, registration_type, game_mode, mode_config, course_id, courses(name), scheduled_tee_off_at, created_by, group_id, let_friends_skip_gate, signups_closed_at',
     )
     .eq('short_id', shortId)
     .maybeSingle<ShortIdGame>();

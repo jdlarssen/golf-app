@@ -21,6 +21,22 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#616](https://github.com/jdlarssen/golf-app/issues/616). Innboksen kunne bare vokse. Du kunne markere som lest, men ikke fjerne noe, og lange undertekster ble kuttet midt i ordet. Nå kan du arkivere et varsel med ✕, tømme alle leste i ett trykk, og undertekstene får plass på to linjer.
 
+### [1.129.5] - 2026-06-14 · #624
+
+> #617 fikset spillnavnet på forsiden. Nå gjelder det resten av appen også: leaderboardet, spill-sida, påmeldinger og Sekretariatet. På engelsk står det «12 June», på norsk «12. juni».
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- App-bred sveip av `localizeGameName` (#624, oppfølging av #617). Helperen re-lokaliserer auto-genererte spillnavn ved visning; #617 dekket kun tre flater, dette dekker resten. Norsk visning er byte-identisk (tidlig retur for 'no'); egendefinerte navn passerer urørt.
+- Lette flater (banenavn allerede i scope, ren wrap): spill-hjem (tittel + kicker), levering, trekk-fra, admin spill-detalj, admin slett (tittel + bekreftelses-liste + start-knapp-dialog), Klubbhuset, og de tre Hjem-oppdagelseskortene (klubb/venn/åpne).
+- Slanke projeksjoner utvidet med `courses(name)`: rediger + admin edit (delt `EditGameRow`), admin status, admin påmeldinger (la også til `getLocale()`), profil-historikk, og signup + lag-signup (delt `getGameByShortId`).
+- Leaderboard (hovedvisning + alle hull-for-hull-modus): banenavnet hentes slankt parallelt — ikke via den cachede `getGameWithPlayers`, som bevisst ikke joiner `courses` for å unngå cross-game fan-out på bane-endringer — og spillnavnet lokaliseres én gang ved kilden, så den lokaliserte kopien flyter ut til alle ~50 `gameName`/`kicker`-props uten å røre view- eller podium-komponentene.
+- Bevisst urørt: notification-payloads (`notifyPlayersGameStarted`, `maybeSendDeliveryReminder`) lokaliseres ved mottaker-locale i varsel-laget, ikke request-locale; og form-feltets initialverdi i edit-flyten beholder det rå, lagrede navnet. Ingen nye render-tester (helper-logikken er dekket i `autoGameName.test.ts`).
+
+</details>
+
 ### [1.129.4] - 2026-06-14 · #621
 
 > Profilen viste handicap med norsk komma (12,4) også i engelsk modus, så tallet stakk seg ut mot resten av siden. Nå bruker den punktum (12.4) på engelsk.

@@ -24,6 +24,8 @@ import {
   parForPlayer,
   type HoleParByGender,
 } from '@/lib/games/parDisplay';
+import { localizeGameName } from '@/lib/games/autoGameName';
+import type { AppLocale } from '@/i18n/routing';
 import { isStablefordFamily, type ScoringGender } from '@/lib/scoring/modes/types';
 
 type Params = Promise<{ id: string }>;
@@ -145,7 +147,7 @@ export default async function SubmitPage({
       <div className="space-y-4">
         <Card>
           <p className="font-serif text-[19px] font-medium tracking-[-0.01em] text-text">
-            {game.name}
+            {localizeGameName(game.name, courseTee.courses?.name ?? null, locale as AppLocale)}
           </p>
           <p className="text-xs text-muted mt-1.5">
             {courseTee.courses?.name ?? t('unknownCourse')}

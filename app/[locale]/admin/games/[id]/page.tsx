@@ -54,6 +54,7 @@ import {
   eligibleForFlightAssignment,
   type FlightPlayer,
 } from '@/lib/games/flightScope';
+import { localizeGameName } from '@/lib/games/autoGameName';
 import { toggleSignupsClosed } from './flightActions';
 
 type Params = Promise<{ id: string }>;
@@ -261,7 +262,7 @@ export default async function GameDetailPage({
           </Suspense>
         </div>
         <h1 className="font-serif text-[26px] font-medium leading-snug tracking-[-0.015em] text-text">
-          {game.name}
+          {localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale)}
         </h1>
         <p className="mt-1 font-sans text-xs tabular-nums text-muted">
           {[game.courses?.name, subtitleDate].filter(Boolean).join(' · ')}
@@ -1002,7 +1003,10 @@ async function PlayersSections({
           </SectionCard>
 
           <div className="mt-4">
-            <StartGameButton startAction={startAction} gameName={game.name} />
+            <StartGameButton
+              startAction={startAction}
+              gameName={localizeGameName(game.name, game.courses?.name ?? null, locale as AppLocale)}
+            />
           </div>
         </>
       )}

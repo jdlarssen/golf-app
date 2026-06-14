@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
+import { getTranslations, getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
 import { AdminShell } from '@/components/ui/AdminShell';
@@ -10,6 +10,8 @@ import { MiniRibbon } from '@/components/ui/MiniRibbon';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { PåmeldingerClient } from './PåmeldingerClient';
 import type { RequestStatus, RequestRow, TabKey } from './types';
+import { localizeGameName } from '@/lib/games/autoGameName';
+import type { AppLocale } from '@/i18n/routing';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -30,6 +32,8 @@ type GameRow = {
   status: 'draft' | 'scheduled' | 'active' | 'finished';
   registration_mode: 'invite_only' | 'manual_approval' | 'open';
   registration_type: 'solo' | 'team' | 'both';
+  // #624 — banenavn for re-lokalisering av auto-genererte spillnavn.
+  courses: { name: string } | null;
 };
 
 type RawRequestRow = {
@@ -78,6 +82,7 @@ export default async function PåmeldingerPage({
 
   const t = await getTranslations('admin.game.signups');
   const tDetail = await getTranslations('admin.game.detail');
+  const locale = (await getLocale()) as AppLocale;
 
   const supabase = await getServerClient();
   await requireAdminOrTrustedCreator(supabase);
@@ -85,7 +90,7 @@ export default async function PåmeldingerPage({
   const { data: game, error: gameError } = await supabase
     .from('games')
     .select(
-      'id, name, short_id, status, registration_mode, registration_type',
+      'id, name, short_id, status, registration_mode, registration_type, courses(name)',
     )
     .eq('id', id)
     .single<GameRow>();
@@ -169,7 +174,9 @@ export default async function PåmeldingerPage({
         <h1 className="font-serif text-[26px] font-medium leading-snug tracking-[-0.015em] text-text">
           {t('heading')}
         </h1>
-        <p className="mt-1 font-sans text-xs text-muted">{game.name}</p>
+        <p className="mt-1 font-sans text-xs text-muted">
+          {localizeGameName(game.name, game.courses?.name ?? null, locale)}
+        </p>
       </div>
 
       {(statusBanner || errorMessage) && (

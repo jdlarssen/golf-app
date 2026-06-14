@@ -9,6 +9,7 @@ import { Banner } from '@/components/ui/Banner';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { SmartLink } from '@/components/ui/SmartLink';
 import type { GameStatus } from '@/lib/games/status';
+import { localizeGameName } from '@/lib/games/autoGameName';
 import type { GameMode } from '@/lib/scoring/modes/types';
 import { supportsWithdrawal } from '@/lib/scoring';
 import { formatTeeOffDateLocale } from '@/lib/i18n/format';
@@ -114,7 +115,7 @@ export default async function TrekkFraPage({
 
       <div className="px-1">
         <h1 className="mb-3 font-serif text-2xl font-medium leading-snug tracking-[-0.015em]">
-          {t('heading', { name: game.name })}
+          {t('heading', { name: localizeGameName(game.name, game.courses?.name ?? null, locale) })}
         </h1>
         <p className="font-sans text-[13px] leading-relaxed text-muted">
           {[game.courses?.name, teeOffDate].filter(Boolean).join(' · ')}
