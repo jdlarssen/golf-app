@@ -56,6 +56,8 @@
 		"monthlyDigestSubtitle": "Nytt i Tørny på e-post",
 		"monthlyDigestAriaLabel": "Månedsbrev på e-post",
 		"someoneFallback": "En venn",
+		"somePlayerFallback": "En spiller",
+		"someTeamFallback": "Laget",
 		"kinds": {
 			"invite": {
 				"title": "{invitedByName} inviterte deg",
@@ -87,6 +89,7 @@
 			},
 			"registrationRequest": {
 				"title": "{requesterName} vil bli med",
+				"captainOf": "{name} (kaptein for {teamName})",
 				"detail": "{gameName}"
 			},
 			"registrationApproved": {
@@ -96,7 +99,10 @@
 			"registrationRejected": {
 				"title": "Søknad til {gameName}",
 				"detail": "{reason}",
-				"defaultReason": "Påmeldingen ble dessverre ikke godkjent"
+				"defaultReason": "Påmeldingen ble dessverre ikke godkjent",
+				"reasonCodes": {
+					"team_removed": "Kapteinen fjernet deg fra laget."
+				}
 			},
 			"teamMemberWithdrew": {
 				"title": "{withdrawnPlayerName} trakk seg",

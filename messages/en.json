@@ -56,6 +56,8 @@
 		"monthlyDigestSubtitle": "What''s new in Tørny by email",
 		"monthlyDigestAriaLabel": "Monthly digest by email",
 		"someoneFallback": "A friend",
+		"somePlayerFallback": "A player",
+		"someTeamFallback": "The team",
 		"kinds": {
 			"invite": {
 				"title": "{invitedByName} invited you",
@@ -87,6 +89,7 @@
 			},
 			"registrationRequest": {
 				"title": "{requesterName} wants to join",
+				"captainOf": "{name} (captain of {teamName})",
 				"detail": "{gameName}"
 			},
 			"registrationApproved": {
@@ -96,7 +99,10 @@
 			"registrationRejected": {
 				"title": "Application to {gameName}",
 				"detail": "{reason}",
-				"defaultReason": "Sorry, your registration wasn''t approved"
+				"defaultReason": "Sorry, your registration wasn''t approved",
+				"reasonCodes": {
+					"team_removed": "The captain removed you from the team."
+				}
 			},
 			"teamMemberWithdrew": {
 				"title": "{withdrawnPlayerName} withdrew",
