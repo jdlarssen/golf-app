@@ -108,7 +108,7 @@ export function State4View({
   ];
 
   return (
-    <Shell chromeless={chromeless}>
+    <LeaderboardShell chromeless={chromeless}>
       {!chromeless && (
         <Header gameName={gameName} onReplay={onReplay} backHref={backHref} t={tc} />
       )}
@@ -166,7 +166,7 @@ export function State4View({
       </p>
 
       <ExportLink gameId={gameId} t={tc} />
-    </Shell>
+    </LeaderboardShell>
   );
 }
 
