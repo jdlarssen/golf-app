@@ -12,12 +12,16 @@ const tones: Record<Tone, string> = {
 export function Banner({
   tone,
   children,
+  testId,
 }: {
   tone: Tone;
   children: ReactNode;
+  /** Optional stable hook for E2E locators, so specs don't lock Norwegian copy. */
+  testId?: string;
 }) {
   return (
     <div
+      data-testid={testId}
       className={`border rounded-xl px-4 py-3 text-sm font-medium tracking-tight ${tones[tone]}`}
     >
       {children}

@@ -96,7 +96,7 @@ function FormBody({
         required
       />
       {allowSelfRegistration && (
-        <p className="text-sm text-muted -mt-1">
+        <p data-testid="self-reg-helper" className="text-sm text-muted -mt-1">
           {t('selfRegHelper')}
         </p>
       )}

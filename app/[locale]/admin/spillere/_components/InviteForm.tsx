@@ -8,7 +8,10 @@ export async function InviteForm() {
 
   return (
     <details className="group">
-      <summary className="cursor-pointer list-none text-center font-sans text-[13px] font-medium text-primary hover:underline">
+      <summary
+        data-testid="invite-toggle"
+        className="cursor-pointer list-none text-center font-sans text-[13px] font-medium text-primary hover:underline"
+      >
         {t('inviteToggle')}
       </summary>
       <div

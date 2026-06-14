@@ -90,7 +90,11 @@ export default async function SpillerePage({
 
       {(successMessage || errorMessage) && (
         <div className="mt-4 space-y-2">
-          {successMessage && <Banner tone="success">{successMessage}</Banner>}
+          {successMessage && (
+            <Banner tone="success" testId="success-banner">
+              {successMessage}
+            </Banner>
+          )}
           {errorMessage && <Banner tone="error">{errorMessage}</Banner>}
         </div>
       )}

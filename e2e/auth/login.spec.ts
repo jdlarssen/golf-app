@@ -64,10 +64,6 @@ test.describe('Login form smoke (OTP step 1)', () => {
     page,
   }) => {
     await page.goto('/login');
-    await expect(
-      page.getByText(
-        'Skriv inn e-posten din. Er du ny her, lager vi en konto til deg.',
-      ),
-    ).toHaveCount(0);
+    await expect(page.getByTestId('self-reg-helper')).toHaveCount(0);
   });
 });

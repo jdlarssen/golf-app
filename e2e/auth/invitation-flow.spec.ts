@@ -190,9 +190,7 @@ test.describe('Full invitation flow (admin → OTP → profile → first round)'
       ).toBeVisible();
 
       // InviteForm er pakket i <details> — må klikkes opp før input dukker opp.
-      await adminPage
-        .getByText('+ Inviter ny spiller', { exact: true })
-        .click();
+      await adminPage.getByTestId('invite-toggle').click();
 
       const emailInput = adminPage.getByLabel('E-postadresse');
       await expect(emailInput).toBeVisible();
@@ -200,11 +198,12 @@ test.describe('Full invitation flow (admin → OTP → profile → first round)'
       await adminPage.getByRole('button', { name: 'Send invitasjon' }).click();
 
       // sendInvitation redirecter til /admin/spillere?status=sent&email=...
-      // Banner med "✓ Invitasjon sendt til <email>" bekrefter happy path.
+      // success-banner bekrefter happy path. Banneret inneholder invitee-eposten
+      // (data, ikke copy), så vi asserter den i stedet for den norske teksten.
       await expect(adminPage).toHaveURL(/status=sent/, { timeout: 15_000 });
-      await expect(
-        adminPage.getByText(`Invitasjon sendt til ${INVITEE_EMAIL}`),
-      ).toBeVisible();
+      await expect(adminPage.getByTestId('success-banner')).toContainText(
+        INVITEE_EMAIL,
+      );
     });
 
     await test.step('Phase 3: Verifiser at invitation-rad finnes via service-role', async () => {
