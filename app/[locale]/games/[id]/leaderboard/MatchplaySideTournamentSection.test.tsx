@@ -67,9 +67,10 @@ describe('MatchplaySideTournamentSection', () => {
     const summary = screen.getByText('Vis poenggrunnlaget');
     expect(summary.closest('details')).not.toBeNull();
 
-    // Ekspandert innhold = SideTournamentView (poeng-panel + begge lag-rader).
+    // Ekspandert innhold = SideTournamentView. Singles-sidene er lag-av-1, så
+    // radene viser spillernavnet (displayName) i stedet for «Lag N» (#604).
     expect(section.textContent).toMatch(/Slik gis poengene/);
-    expect(section.textContent).toMatch(/Lag 1/);
-    expect(section.textContent).toMatch(/Lag 2/);
+    expect(section.textContent).toMatch(/Alice Andersen/);
+    expect(section.textContent).toMatch(/Bjørn Berg/);
   });
 });
