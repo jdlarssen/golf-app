@@ -81,10 +81,7 @@ export default async function PlayerDetailPage({
   await requireAdmin(supabase);
   const adminUserId = await getProxyVerifiedUserId();
 
-  const [t, locale] = await Promise.all([
-    getTranslations('admin.players'),
-    getLocale() as Promise<AppLocale>,
-  ]);
+  const locale = (await getLocale()) as AppLocale;
   const tProfile = await getTranslations('admin.players.profile');
   const tNav = await getTranslations('admin.nav');
   const relative = makeRelative(tProfile as unknown as ProfileT);

@@ -433,7 +433,6 @@ async function PlayersSections({
   // for 1v1-format). Holdt som lokale strings slik at vi ikke trenger å fyre
   // ternary på hver call-site i markup.
   const teamLabel = isMatchplay ? tDetail('teamLabel') : tDetail('teamLabelDefault');
-  const teamsTotalLabel = isMatchplay ? tDetail('teamsTotalLabel') : tDetail('teamsTotalLabelDefault');
   // Maks-antall lag/sider for «X / Y»-disply i Påmelding-cardet. Best-ball er
   // alltid 4, par-stableford skalerer 1-4 men UX-en viser fortsatt mot 4 for
   // konsistens, matchplay er alltid 2.

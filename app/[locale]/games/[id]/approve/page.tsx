@@ -159,7 +159,6 @@ async function PendingApprovals({
   flightNumber: number;
 }) {
   const t = await getTranslations('game.approve');
-  const tScorecard = await getTranslations('scorecard');
   const { supabase } = await getApproveContext();
 
   // Flight-mates come from the tag-cached helper (already warm from the

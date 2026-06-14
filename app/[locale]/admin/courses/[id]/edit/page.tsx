@@ -81,7 +81,6 @@ export default async function EditCoursePage({
   const { id } = await params;
   const { error: errorCode, status: statusCode } = await searchParams;
 
-  const t = await getTranslations('admin.courses');
   const tNav = await getTranslations('admin.nav');
   const tEdit = await getTranslations('admin.courses.edit');
   const tArchivedTees = await getTranslations('admin.courses.archivedTees');

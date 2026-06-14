@@ -25,10 +25,7 @@ export default async function DeletePlayerPage({
   await requireAdmin(supabase);
   const adminUserId = await getProxyVerifiedUserId();
 
-  const [t, locale] = await Promise.all([
-    getTranslations('admin.players'),
-    getLocale() as Promise<AppLocale>,
-  ]);
+  const locale = (await getLocale()) as AppLocale;
 
   const { data: target } = await supabase
     .from('users')

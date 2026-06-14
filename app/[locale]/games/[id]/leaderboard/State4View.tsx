@@ -60,7 +60,6 @@ export function State4View({
   backHref = '/',
   chromeless = false,
 }: Props) {
-  const t = useTranslations('leaderboard');
   const tc = useTranslations('leaderboard.common');
   const ts = useTranslations('leaderboard.state4');
   const [replayKey, setReplayKey] = useState(0);

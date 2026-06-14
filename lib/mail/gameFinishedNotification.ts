@@ -294,7 +294,6 @@ export async function sendGameFinishedNotification(
     link: (chunks) =>
       `<a href="${mailUrl(locale, '')}" style="color:#1B4332;text-decoration:underline;">${chunks}</a>`,
   });
-  const footerText = t('gameFinished.footerText');
 
   const html = `<!DOCTYPE html><html lang="${loc}">
 <head>
