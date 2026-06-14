@@ -76,12 +76,16 @@ Ingen endring i: `foursomesMatchplay.ts`, dispatcher (`index.ts`,
 
 ## Suksesskriterier
 
-- [ ] K1: `greensomeMatchplay.ts` importerer og delegerer til `computeFoursomesCore` med `greensomeTeamHandicap`-strategien; ingen duplisert hull-loop/side-bygging igjen i filen.
-- [ ] K2: Eksportert API uendret: `compute` + `greensomeTeamHandicap` finnes fortsatt med samme signaturer.
-- [ ] K3: `greensomeMatchplay.test.ts` grønn — uendret testfil, alle eksisterende assertions passerer (beviser ingen oppførselsendring).
-- [ ] K4: Hele scoring-suiten grønn (`npx vitest run lib/scoring/`) — ingen regresjon i søsken (foursomes/chapman/gruesome/patsome/fourball/singles).
-- [ ] K5: Typecheck rent for de berørte filene (`npx tsc --noEmit`); ingen ubrukt-import-/type-feil.
-- [ ] K6: Netto linjereduksjon i `greensomeMatchplay.ts` (~190 linjer fjernet), ingen ny fil opprettet.
+- [x] K1: `greensomeMatchplay.ts:46` delegerer `return computeFoursomesCore(ctx, readAllowancePct(ctx), greensomeTeamHandicap)`; grep bekrefter null gjenværende dupliserte helpers/importer.
+- [x] K2: `compute(ctx): FoursomesMatchplayResult` + `greensomeTeamHandicap(chA, chB): number` eksporteres fortsatt, byte-identiske signaturer; konsumenter `index.ts:67` + `lib/cup/computeCupMatchResult.ts:4` + test uberørt.
+- [x] K3: `greensomeMatchplay.test.ts` uendret (`git diff 16ddeead` på testfila tom) og grønn — 16 passed.
+- [x] K4: `npx vitest run lib/scoring/` → 36 filer, 854 tester passed, ingen søsken-regresjon.
+- [x] K5: `npx tsc --noEmit` exit 0.
+- [x] K6: 227 → 47 linjer (−180), ingen ny kildefil.
+
+## Evaluering
+
+ACCEPT — fresh-context skeptisk evaluator diffet slettet inline-logikk mot `computeFoursomesCore` steg-for-steg (side-filtrering, empty-shell, allowance-lesing, 60/40, hull-loop, classify, par, result) → byte-identisk. Rapport: `.forge/evaluations/628-greensome-foursomes-dedup.md`.
 
 ## Gates (kjøres scopet til endringen)
 
