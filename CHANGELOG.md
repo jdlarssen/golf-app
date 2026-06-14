@@ -21,6 +21,21 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#616](https://github.com/jdlarssen/golf-app/issues/616). Innboksen kunne bare vokse. Du kunne markere som lest, men ikke fjerne noe, og lange undertekster ble kuttet midt i ordet. Nå kan du arkivere et varsel med ✕, tømme alle leste i ett trykk, og undertekstene får plass på to linjer.
 
+### [1.129.2] - 2026-06-14 · #614
+
+> Norsk-en i veiviseren og Klubbhuset er ryddet. Engelske ord som «Formats», «gross» og «course handicap» er byttet til «Format-styring», «brutto» og «banehandicap», og «Tap et spill» heter nå «Trykk på et spill».
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Copy-kvalitet i veiviser/admin (#614): over 100 norske strenger i `messages/no.json` renset for engelske ord og anglismer. Admin-kortet «Formats» → «Format-styring» (også side-tittelen «Format-mapping»), «wizarden»/«step 2» → «veiviseren»/«steg 2», «Toggles» → «Bryterne», «Primary»/«Cup-eligible formats»/«Demote» → «Primær»/«Cup-kvalifiserte formater»/«Senk», «Allowance (%)» → «Handicap-andel (%)», «Tap et spill»/«Tap en bane» → «Trykk på …», og «Matches»/«point» i cup-flaten → «Matcher»/«poeng».
+- Golf-termer norsket (eier-valg): «gross» → «brutto»/«bruttoscore»/«bruttoslag» i alle scoring-hjelpetekster, «course handicap» → «banehandicap», «strokes»/«extra strokes» → «slag»/«ekstraslag», «alternate shot» → «vekselslag».
+- Bevisst urørt: `{gross}`-ICU-variabelen (er ikke ordet, men et tall-felt), de byte-identiske `gameFinished`-mal-snapshotene (#594), `scratch` og alle format-navn (genuine golf-termer), og lånordet «roster» (gjennomgående app-term — egen vurdering). `en.json` er uendret, allerede korrekt engelsk.
+- Tester: 4 komponent-/snapshot-tester oppdatert til ny copy (AllowanceField-etikett, AuditLog-labels, CupSetup/GameWizard «Poengmål», cupStarted-mail-snapshot «poeng»).
+
+</details>
+
 ### [1.129.1] - 2026-06-14 · #615
 
 > Handicap i admin-spillerlista vises nå med komma (12,2), som ellers i appen. Plusshandicap får pluss foran (+8,0) i stedet for minus.

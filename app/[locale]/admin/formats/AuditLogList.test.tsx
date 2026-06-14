@@ -35,9 +35,9 @@ describe('AuditLogList', () => {
     expect(
       screen.getByRole('heading', { name: /Endringslogg \(siste 2\)/i }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/best_ball\/klubb → primary på/i)).toBeInTheDocument();
+    expect(screen.getByText(/best_ball\/klubb → primær på/i)).toBeInTheDocument();
     expect(
-      screen.getByText(/fourball_matchplay → cup-eligible på/i),
+      screen.getByText(/fourball_matchplay → cup-kvalifisert på/i),
     ).toBeInTheDocument();
 
     // Begge entries refererer Jørgen — antall .font-semibold spans = 2.

@@ -20,14 +20,14 @@ describe('AllowanceField — toggle state machine', () => {
     const { container } = render(<AllowanceField {...baseProps} initialPct={0} />);
     expect(screen.getByText('Ingen handicap')).toBeTruthy();
     // Tall-input skal IKKE vises i brutto-modus
-    expect(screen.queryByLabelText('Allowance (%)')).toBeNull();
+    expect(screen.queryByLabelText('Handicap-andel (%)')).toBeNull();
     const hidden = container.querySelector('input[name="hcp_allowance_pct"]') as HTMLInputElement;
     expect(hidden?.value).toBe('0');
   });
 
   it('initialPct=85 → renderes i netto-modus, hidden field = "85"', () => {
     const { container } = render(<AllowanceField {...baseProps} initialPct={85} />);
-    const input = screen.getByLabelText('Allowance (%)') as HTMLInputElement;
+    const input = screen.getByLabelText('Handicap-andel (%)') as HTMLInputElement;
     expect(input.value).toBe('85');
     const hidden = container.querySelector('input[name="hcp_allowance_pct"]') as HTMLInputElement;
     expect(hidden?.value).toBe('85');
@@ -35,7 +35,7 @@ describe('AllowanceField — toggle state machine', () => {
 
   it('default (ingen initialPct) → bruker defaultPct og starter i netto', () => {
     const { container } = render(<AllowanceField {...baseProps} defaultPct={100} />);
-    const input = screen.getByLabelText('Allowance (%)') as HTMLInputElement;
+    const input = screen.getByLabelText('Handicap-andel (%)') as HTMLInputElement;
     expect(input.value).toBe('100');
     const hidden = container.querySelector('input[name="hcp_allowance_pct"]') as HTMLInputElement;
     expect(hidden?.value).toBe('100');
@@ -44,7 +44,7 @@ describe('AllowanceField — toggle state machine', () => {
   it('klikker brutto → input forsvinner, hidden field = "0"', () => {
     const { container } = render(<AllowanceField {...baseProps} initialPct={85} />);
     fireEvent.click(screen.getByText('Brutto'));
-    expect(screen.queryByLabelText('Allowance (%)')).toBeNull();
+    expect(screen.queryByLabelText('Handicap-andel (%)')).toBeNull();
     const hidden = container.querySelector('input[name="hcp_allowance_pct"]') as HTMLInputElement;
     expect(hidden?.value).toBe('0');
   });
@@ -53,7 +53,7 @@ describe('AllowanceField — toggle state machine', () => {
     const { container } = render(<AllowanceField {...baseProps} initialPct={72} />);
     fireEvent.click(screen.getByText('Brutto'));
     fireEvent.click(screen.getByText('Netto'));
-    const input = screen.getByLabelText('Allowance (%)') as HTMLInputElement;
+    const input = screen.getByLabelText('Handicap-andel (%)') as HTMLInputElement;
     expect(input.value).toBe('72');
     const hidden = container.querySelector('input[name="hcp_allowance_pct"]') as HTMLInputElement;
     expect(hidden?.value).toBe('72');

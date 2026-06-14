@@ -28,7 +28,7 @@ describe('CupSetup', () => {
     expect(screen.getByLabelText(/cup-navn/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^lag 1$/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^lag 2$/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/point-mål/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/poengmål/i)).toBeInTheDocument();
 
     // Multi-select: begge default-valgt. Henter via id for å unngå
     // /matchplay/-regex som matcher to checkboxer.
@@ -57,7 +57,7 @@ describe('CupSetup', () => {
     render(<CupSetup cupEligibleFormats={CUP_ELIGIBLE} matchCap={4} />);
 
     // Point-mål-default følger taket: 4 / 2 + 0,5 = 2,5 (mot admin/klubb-cupens 4,5).
-    expect((screen.getByLabelText(/point-mål/i) as HTMLInputElement).value).toBe('2,5');
+    expect((screen.getByLabelText(/poengmål/i) as HTMLInputElement).value).toBe('2,5');
     // Hinten forklarer regelen mot det personlige taket på 4 matcher.
     expect(screen.getByText(/med 4 matcher blir det 2,5/i)).toBeInTheDocument();
   });

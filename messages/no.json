@@ -22,7 +22,7 @@
 		"nicknameLabel": "Kallenavn",
 		"nicknameHint": "Valgfritt — navnet du går under på banen",
 		"genderLegend": "Kjønn",
-		"genderHint": "Brukes til å foreslå riktig tee og beregne course handicap riktig.",
+		"genderHint": "Brukes til å foreslå riktig tee og beregne banehandicap riktig.",
 		"genderMale": "Herre",
 		"genderFemale": "Dame",
 		"levelLegend": "Spillerklasse",
@@ -225,7 +225,7 @@
 			"emailLine": "kan ikke endres",
 			"golfProfileLabel": "Golfprofil",
 			"genderLegend": "Kjønn",
-			"genderHint": "Brukes til å foreslå riktig tee og beregne course handicap.",
+			"genderHint": "Brukes til å foreslå riktig tee og beregne banehandicap.",
 			"genderMale": "Herre",
 			"genderFemale": "Dame",
 			"levelLegend": "Spillerklasse",
@@ -444,7 +444,7 @@
 			}
 		},
 		"cupSetup": {
-			"noCupFormats": "Ingen cup-eligible formats konfigurert — kontakt admin.",
+			"noCupFormats": "Ingen cup-kvalifiserte formater konfigurert — kontakt admin.",
 			"clubBanner": "Denne cupen settes opp for <strong>{clubName}</strong>. Bare medlemmer i klubben kan være med.",
 			"cupNameLabel": "Cup-navn",
 			"cupNamePlaceholder": "Tørny Cup 2026 — Sommer-runde",
@@ -453,20 +453,20 @@
 			"team1Placeholder": "Team Skog",
 			"team2Label": "Lag 2",
 			"team2Placeholder": "Team Sjø",
-			"pointsToWinLabel": "Point-mål",
-			"pointsHintDefault": "Vanlig regel: halvparten av tilgjengelige point + 0,5. Med 8 matches blir det 4,5.",
-			"pointsHintCapped": "Vanlig regel: halvparten av tilgjengelige point + 0,5. Med {matchCap} matcher blir det {pointsDefault}.",
-			"allowedFormatsLegend": "Tillatte match-formats",
+			"pointsToWinLabel": "Poengmål",
+			"pointsHintDefault": "Vanlig regel: halvparten av tilgjengelige poeng + 0,5. Med 8 matcher blir det 4,5.",
+			"pointsHintCapped": "Vanlig regel: halvparten av tilgjengelige poeng + 0,5. Med {matchCap} matcher blir det {pointsDefault}.",
+			"allowedFormatsLegend": "Tillatte match-formater",
 			"allowedFormatsHint": "Velg hvilke spillformater som er lov i matchene. Du legger til de enkelte matchene etter cupen er opprettet.",
 			"atLeastOneFormatError": "Velg minst ett match-format.",
-			"fourballAllowanceLegend": "Scoring for fourball-matches",
-			"fourballAllowanceDescription": "Styrer handicap for fourball-matches. Netto bruker en andel av hver spillers handicap, brutto teller laveste gross per hull per side.",
+			"fourballAllowanceLegend": "Scoring for fourball-matcher",
+			"fourballAllowanceDescription": "Styrer handicap for fourball-matcher. Netto bruker en andel av hver spillers handicap, brutto teller laveste bruttoscore per hull per side.",
 			"fourballAllowanceNettoHelper": "Andel av hver spillers handicap som teller. WHS-standard for four-ball matchplay er 85.",
-			"fourballAllowanceBruttoHelper": "Ingen handicap — laveste gross-score per hull per side vinner. Vanlig format på ekte Ryder Cup.",
-			"foursomesAllowanceLegend": "Scoring for foursomes-matches",
-			"foursomesAllowanceDescription": "Styrer handicap for foursomes-matches (alternate shot). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets gross-slag uten allowance.",
-			"foursomesAllowanceNettoHelper": "Andel av differansen i lagenes summerte handicap som høyeste lag får som strokes. WHS-standard for foursomes matchplay er 50.",
-			"foursomesAllowanceBruttoHelper": "Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes.",
+			"fourballAllowanceBruttoHelper": "Ingen handicap — laveste bruttoscore per hull per side vinner. Vanlig format på ekte Ryder Cup.",
+			"foursomesAllowanceLegend": "Scoring for foursomes-matcher",
+			"foursomesAllowanceDescription": "Styrer handicap for foursomes-matcher (vekselslag). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets bruttoslag uten handicap-andel.",
+			"foursomesAllowanceNettoHelper": "Andel av differansen i lagenes summerte handicap som høyeste lag får som slag. WHS-standard for foursomes matchplay er 50.",
+			"foursomesAllowanceBruttoHelper": "Ingen handicap — lagets bruttoscore per hull avgjør, ingen ekstraslag.",
 			"submitButton": "Opprett cup"
 		},
 		"sideTournaments": {
@@ -476,7 +476,7 @@
 			"wolf": {
 				"legend": "Wolf-oppsett",
 				"scoringLabel": "Scoring",
-				"scoringDescription": "Velger om Wolf-scoringen bruker spillernes handicap-strokes, eller om beste rene gross-slag avgjør hvert hull.",
+				"scoringDescription": "Velger om Wolf-scoringen bruker spillernes handicap-slag, eller om beste rene bruttoslag avgjør hvert hull.",
 				"scoringNet": "Med handicap (netto)",
 				"scoringGross": "Brutto",
 				"scoringAriaLabel": "Wolf-scoring",
@@ -736,57 +736,57 @@
 			"missingPrefix": "Mangler: {items}",
 			"saveDraftButton": "Lagre utkast",
 			"fourball": {
-				"legend": "Scoring for fourball-matches",
-				"description": "Styrer handicap for fourball-matches. Netto bruker en andel av hver spillers handicap, brutto teller laveste gross per hull per side.",
+				"legend": "Scoring for fourball-matcher",
+				"description": "Styrer handicap for fourball-matcher. Netto bruker en andel av hver spillers handicap, brutto teller laveste bruttoscore per hull per side.",
 				"nettoHelper": "Andel av hver spillers handicap som teller. WHS-standard for four-ball matchplay er 85.",
-				"bruttoHelper": "Ingen handicap — laveste gross-score per hull per side vinner. Vanlig format på ekte Ryder Cup."
+				"bruttoHelper": "Ingen handicap — laveste bruttoscore per hull per side vinner. Vanlig format på ekte Ryder Cup."
 			},
 			"foursomes": {
-				"legend": "Scoring for foursomes-matches",
-				"description": "Styrer handicap for foursomes-matches (alternate shot). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets gross-slag.",
+				"legend": "Scoring for foursomes-matcher",
+				"description": "Styrer handicap for foursomes-matcher (vekselslag). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets bruttoslag.",
 				"nettoHelper": "Andel av differansen i lagenes summerte handicap. WHS-standard for foursomes matchplay er 50.",
-				"bruttoHelper": "Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+				"bruttoHelper": "Ingen handicap — lagets bruttoscore per hull avgjør, ingen ekstraslag."
 			},
 			"greensome": {
-				"legend": "Scoring for greensome-matches",
-				"description": "Styrer handicap for greensome-matches (velg-beste-tee + alternate shot). Netto gir høyeste lag en andel av differansen mellom lagenes 60/40-blandede handicap; brutto teller bare lagets gross-slag.",
+				"legend": "Scoring for greensome-matcher",
+				"description": "Styrer handicap for greensome-matcher (velg-beste-tee + vekselslag). Netto gir høyeste lag en andel av differansen mellom lagenes 60/40-blandede handicap; brutto teller bare lagets bruttoslag.",
 				"nettoHelper": "Andel av differansen mellom lagenes 60/40-blandede handicap. WHS-standard for greensome er 100.",
-				"bruttoHelper": "Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+				"bruttoHelper": "Ingen handicap — lagets bruttoscore per hull avgjør, ingen ekstraslag."
 			},
 			"chapman": {
-				"legend": "Scoring for chapman-matches",
-				"description": "Styrer handicap for chapman-matches (dobbel tee, bytt ball, velg beste + alternate). Hvert lag får et handicap på 60 % av laveste pluss 40 % av høyeste. Netto gir høyeste lag en andel av differansen mellom lagene; brutto teller bare lagets gross-slag.",
+				"legend": "Scoring for chapman-matcher",
+				"description": "Styrer handicap for chapman-matcher (dobbel tee, bytt ball, velg beste + vekselslag). Hvert lag får et handicap på 60 % av laveste pluss 40 % av høyeste. Netto gir høyeste lag en andel av differansen mellom lagene; brutto teller bare lagets bruttoslag.",
 				"nettoHelper": "Andel av differansen mellom lagenes 60/40-handicap. 100 gir hele differansen (WHS-standard for chapman matchplay).",
-				"bruttoHelper": "Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+				"bruttoHelper": "Ingen handicap — lagets bruttoscore per hull avgjør, ingen ekstraslag."
 			},
 			"gruesome": {
-				"legend": "Scoring for gruesome-matches",
-				"description": "Styrer handicap for gruesome-matches (begge teer ut, motstanderlaget velger ballen + alternate). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets gross-slag.",
+				"legend": "Scoring for gruesome-matcher",
+				"description": "Styrer handicap for gruesome-matcher (begge teer ut, motstanderlaget velger ballen + vekselslag). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets bruttoslag.",
 				"nettoHelper": "Andel av differansen i lagenes summerte handicap. WHS-standard for gruesome matchplay er 50 (identisk med foursomes).",
-				"bruttoHelper": "Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+				"bruttoHelper": "Ingen handicap — lagets bruttoscore per hull avgjør, ingen ekstraslag."
 			},
 			"scoring": {
 				"legend": "Scoring",
-				"description": "Styrer hvor stor andel av handicap som regnes med. Brutto = ingen handicap, kun gross.",
-				"nettoHelper": "Andel av spillerens handicap som teller. 100 = fullt course handicap (standard)."
+				"description": "Styrer hvor stor andel av handicap som regnes med. Brutto = ingen handicap, bare bruttoscoren teller.",
+				"nettoHelper": "Andel av spillerens handicap som teller. 100 = fullt banehandicap (standard)."
 			},
 			"teamHandicap": {
 				"legend": "Lag-handicap",
-				"description": "Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = laveste lag-gross per hull vinner.",
+				"description": "Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = lagets laveste bruttoscore per hull vinner.",
 				"texasNetto2": "NGF-standard: 25 % av summen av spillernes spille-HCP for 2-mannslag.",
 				"texasNetto4": "NGF-standard: 10 % av summen av spillernes spille-HCP for 4-mannslag.",
 				"ambroseNetto2": "Standard Ambrose: 25 % av summen av spillernes spille-HCP for 2-mannslag.",
 				"ambroseNetto4": "Standard Ambrose: 12,5 % av summen av spillernes spille-HCP for 4-mannslag.",
 				"floridaNetto3": "NGF-standard: 15 % av summen av spillernes spille-HCP for 3-mannslag.",
 				"floridaNetto4": "NGF-standard: 10 % av summen av spillernes spille-HCP for 4-mannslag.",
-				"bruttoHelper": "Ingen lag-handicap — laveste gross-score per hull per lag vinner. Scratch-format.",
+				"bruttoHelper": "Ingen lag-handicap — laveste bruttoscore per hull per lag vinner. Scratch-format.",
 				"inputLabel": "Lag-handicap (%)"
 			},
 			"roundRobin": {
 				"legend": "Scoring for Round Robin",
-				"description": "Styrer handicap for Round Robin-matchplay. Netto bruker en andel av hver spillers handicap per hull, brutto teller laveste gross per side.",
+				"description": "Styrer handicap for Round Robin-matchplay. Netto bruker en andel av hver spillers handicap per hull, brutto teller laveste bruttoscore per side.",
 				"nettoHelper": "Andel av hver spillers handicap som teller. WHS-standard for four-ball matchplay er 85.",
-				"bruttoHelper": "Ingen handicap — laveste gross-score per hull per side avgjør. Ren brutto-runde."
+				"bruttoHelper": "Ingen handicap — laveste bruttoscore per hull per side avgjør. Ren brutto-runde."
 			},
 			"missing": {
 				"course": "bane",
@@ -827,7 +827,7 @@
 				"patsomeOdd": "partall antall spillere (lag à 2)",
 				"patsomeAssign": "lag-fordeling (lag à 2)",
 				"soloMin": "minst én spiller",
-				"invalidAllowance": "gyldig HCP-allowance"
+				"invalidAllowance": "gyldig HCP-andel"
 			}
 		},
 		"steps": {
@@ -891,62 +891,62 @@
 		},
 		"allowanceProps": {
 			"fourball": {
-				"legend": "Scoring for fourball-matches",
-				"description": "Styrer handicap for fourball-matches. Netto bruker en andel av hver spillers handicap, brutto teller laveste gross per hull per side.",
+				"legend": "Scoring for fourball-matcher",
+				"description": "Styrer handicap for fourball-matcher. Netto bruker en andel av hver spillers handicap, brutto teller laveste bruttoscore per hull per side.",
 				"nettoHelper": "Andel av hver spillers handicap som teller. WHS-standard for four-ball matchplay er 85.",
-				"bruttoHelper": "Ingen handicap — laveste gross-score per hull per side vinner. Vanlig format på ekte Ryder Cup."
+				"bruttoHelper": "Ingen handicap — laveste bruttoscore per hull per side vinner. Vanlig format på ekte Ryder Cup."
 			},
 			"foursomes": {
-				"legend": "Scoring for foursomes-matches",
-				"description": "Styrer handicap for foursomes-matches (alternate shot). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets gross-slag.",
+				"legend": "Scoring for foursomes-matcher",
+				"description": "Styrer handicap for foursomes-matcher (vekselslag). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets bruttoslag.",
 				"nettoHelper": "Andel av differansen i lagenes summerte handicap. WHS-standard for foursomes matchplay er 50.",
-				"bruttoHelper": "Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+				"bruttoHelper": "Ingen handicap — lagets bruttoscore per hull avgjør, ingen ekstraslag."
 			},
 			"greensome": {
-				"legend": "Scoring for greensome-matches",
-				"description": "Styrer handicap for greensome-matches (velg-beste-tee + alternate shot). Netto gir høyeste lag en andel av differansen mellom lagenes 60/40-blandede handicap; brutto teller bare lagets gross-slag.",
+				"legend": "Scoring for greensome-matcher",
+				"description": "Styrer handicap for greensome-matcher (velg-beste-tee + vekselslag). Netto gir høyeste lag en andel av differansen mellom lagenes 60/40-blandede handicap; brutto teller bare lagets bruttoslag.",
 				"nettoHelper": "Andel av differansen mellom lagenes 60/40-blandede handicap. WHS-standard for greensome er 100.",
-				"bruttoHelper": "Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+				"bruttoHelper": "Ingen handicap — lagets bruttoscore per hull avgjør, ingen ekstraslag."
 			},
 			"gruesome": {
-				"legend": "Scoring for gruesome-matches",
-				"description": "Styrer handicap for gruesome-matches (begge teer ut, motstanderlaget velger ballen + alternate). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets gross-slag.",
+				"legend": "Scoring for gruesome-matcher",
+				"description": "Styrer handicap for gruesome-matcher (begge teer ut, motstanderlaget velger ballen + vekselslag). Netto gir høyeste lag en andel av differansen i lagenes summerte handicap; brutto teller bare lagets bruttoslag.",
 				"nettoHelper": "Andel av differansen i lagenes summerte handicap. WHS-standard for gruesome matchplay er 50 (identisk med foursomes).",
-				"bruttoHelper": "Ingen handicap — lagets gross-score per hull avgjør, ingen extra strokes."
+				"bruttoHelper": "Ingen handicap — lagets bruttoscore per hull avgjør, ingen ekstraslag."
 			},
 			"roundRobin": {
 				"legend": "Scoring for Round Robin",
-				"description": "Styrer handicap for Round Robin-matchplay. Netto bruker en andel av hver spillers handicap per hull, brutto teller laveste gross per side.",
+				"description": "Styrer handicap for Round Robin-matchplay. Netto bruker en andel av hver spillers handicap per hull, brutto teller laveste bruttoscore per side.",
 				"nettoHelper": "Andel av hver spillers handicap som teller. WHS-standard for four-ball matchplay er 85.",
-				"bruttoHelper": "Ingen handicap — laveste gross-score per hull per side avgjør. Ren brutto-runde."
+				"bruttoHelper": "Ingen handicap — laveste bruttoscore per hull per side avgjør. Ren brutto-runde."
 			},
 			"scoring": {
 				"legend": "Scoring",
-				"description": "Styrer hvor stor andel av handicap som regnes med. Brutto = ingen handicap, kun gross.",
-				"nettoHelper": "Andel av spillerens handicap som teller. 100 = fullt course handicap (standard)."
+				"description": "Styrer hvor stor andel av handicap som regnes med. Brutto = ingen handicap, bare bruttoscoren teller.",
+				"nettoHelper": "Andel av spillerens handicap som teller. 100 = fullt banehandicap (standard)."
 			},
 			"texas": {
 				"legend": "Lag-handicap",
-				"description": "Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = laveste lag-gross per hull vinner.",
+				"description": "Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = lagets laveste bruttoscore per hull vinner.",
 				"nettoHelper2": "NGF-standard: 25 % av summen av spillernes spille-HCP for 2-mannslag.",
 				"nettoHelper4": "NGF-standard: 10 % av summen av spillernes spille-HCP for 4-mannslag.",
-				"bruttoHelper": "Ingen lag-handicap — laveste gross-score per hull per lag vinner. Scratch-format.",
+				"bruttoHelper": "Ingen lag-handicap — laveste bruttoscore per hull per lag vinner. Scratch-format.",
 				"inputLabel": "Lag-handicap (%)"
 			},
 			"ambrose": {
 				"legend": "Lag-handicap",
-				"description": "Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = laveste lag-gross per hull vinner.",
+				"description": "Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = lagets laveste bruttoscore per hull vinner.",
 				"nettoHelper2": "Standard Ambrose: 25 % av summen av spillernes spille-HCP for 2-mannslag.",
 				"nettoHelper4": "Standard Ambrose: 12,5 % av summen av spillernes spille-HCP for 4-mannslag.",
-				"bruttoHelper": "Ingen lag-handicap — laveste gross-score per hull per lag vinner. Scratch-format.",
+				"bruttoHelper": "Ingen lag-handicap — laveste bruttoscore per hull per lag vinner. Scratch-format.",
 				"inputLabel": "Lag-handicap (%)"
 			},
 			"florida": {
 				"legend": "Lag-handicap",
-				"description": "Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = laveste lag-gross per hull vinner.",
+				"description": "Styrer hvor stor andel av summen av lag-medlemmenes spille-HCP som teller som effektivt lag-handicap. Brutto = lagets laveste bruttoscore per hull vinner.",
 				"nettoHelper3": "NGF-standard: 15 % av summen av spillernes spille-HCP for 3-mannslag.",
 				"nettoHelper4": "NGF-standard: 10 % av summen av spillernes spille-HCP for 4-mannslag.",
-				"bruttoHelper": "Ingen lag-handicap — laveste gross-score per hull per lag vinner. Scratch-format.",
+				"bruttoHelper": "Ingen lag-handicap — laveste bruttoscore per hull per lag vinner. Scratch-format.",
 				"inputLabel": "Lag-handicap (%)"
 			}
 		},
@@ -954,7 +954,7 @@
 			"name_required": "Spillet må ha et navn.",
 			"course_required": "Velg en bane.",
 			"tee_required": "Velg en tee-boks.",
-			"bad_allowance": "HCP-allowance må være et helt tall mellom 0 og 100.",
+			"bad_allowance": "HCP-andelen må være et helt tall mellom 0 og 100.",
 			"players_required": "Du må velge nøyaktig 8 spillere.",
 			"duplicate_player": "Samme spiller kan ikke velges flere ganger.",
 			"bad_team": "Hver spiller må tilhøre et lag (1–4).",
@@ -980,8 +980,8 @@
 			"cup_team_1": "Navn på lag 1 må være mellom 1 og 40 tegn.",
 			"cup_team_2": "Navn på lag 2 må være mellom 1 og 40 tegn.",
 			"cup_team_dup": "Lagene må ha forskjellige navn.",
-			"cup_points": "Point-målet må være et positivt tall (typisk 4,5 for 8 matches).",
-			"cup_allowance": "Allowance må være mellom 0 og 100.",
+			"cup_points": "Poengmålet må være et positivt tall (typisk 4,5 for 8 matcher).",
+			"cup_allowance": "Handicap-andelen må være mellom 0 og 100.",
 			"cup_insert_failed": "Klarte ikke å opprette cupen. Prøv igjen, eller sjekk Vercel-loggene.",
 			"pending_players": "Disse spillerne har ikke fullført registreringen ennå{list}. De må logge inn og fylle inn navn + HCP før spillet kan publiseres."
 		},
@@ -998,10 +998,10 @@
 			"cupBanner": {
 				"linked": "Match-en kobles til cupen {name}.",
 				"fourball": "Spillmodus er låst til four-ball matchplay (2 vs 2).",
-				"foursomes": "Spillmodus er låst til foursomes matchplay (2 vs 2, alternate shot).",
-				"greensome": "Spillmodus er låst til greensome matchplay (2 vs 2, velg-beste-tee + alternate).",
-				"chapman": "Spillmodus er låst til chapman matchplay (2 vs 2, dobbel tee, bytt ball + alternate).",
-				"gruesome": "Spillmodus er låst til gruesome matchplay (2 vs 2, begge teer ut, motstanderlaget velger ball + alternate).",
+				"foursomes": "Spillmodus er låst til foursomes matchplay (2 vs 2, vekselslag).",
+				"greensome": "Spillmodus er låst til greensome matchplay (2 vs 2, velg-beste-tee + vekselslag).",
+				"chapman": "Spillmodus er låst til chapman matchplay (2 vs 2, dobbel tee, bytt ball + vekselslag).",
+				"gruesome": "Spillmodus er låst til gruesome matchplay (2 vs 2, begge teer ut, motstanderlaget velger ball + vekselslag).",
 				"singles": "Spillmodus er låst til matchplay (1 vs 1)."
 			}
 		},
@@ -1041,7 +1041,7 @@
 					"Høyest poengsum til slutt vinner."
 				],
 				"long": "Du samler stableford-poeng på hvert hull basert på scoren din mot par etter at handikap-slagene er trukket fra. To poeng er normalen — ett for å fullføre hullet med ett slag over par (bogey), tre for å gjøre birdie. Scorer du dobbeltbogey eller verre, gir du opp hullet og tar ett poeng. Høyest poengsum etter 18 hull vinner.",
-				"example": "Hull 3, par 4, SI 5: du har CH 12 og får ett ekstraslag. Du scorer 5 gross (netto 4) → par → 2 poeng. Hull 15, par 3, SI 17: du scorer 3 gross (netto 3) → par → 2 poeng. Hull 10, par 5, SI 3: du scorer 5 gross (netto 4) → birdie → 3 poeng."
+				"example": "Hull 3, par 4, SI 5: du har CH 12 og får ett ekstraslag. Du scorer 5 brutto (netto 4) → par → 2 poeng. Hull 15, par 3, SI 17: du scorer 3 brutto (netto 3) → par → 2 poeng. Hull 10, par 5, SI 3: du scorer 5 brutto (netto 4) → birdie → 3 poeng."
 			},
 			"stableford-4bbb": {
 				"summary": "Dere er to på lag. På hvert hull teller den beste poengsummen av dere to.",
@@ -1060,7 +1060,7 @@
 					"Slagene du får på handikap regnes med, og høyest poengsum vinner."
 				],
 				"long": "Stableford med proff-skala der du premieres tungt for de gode prestasjonene og straffes for de virkelig svake. Eagle gir 5 poeng, birdie 2, par 0. Bogey trekker 1 poeng, dobbeltbogey eller verre trekker 3. Du kan havne under null på totalen. Handikap-slagene regnes inn på vanlig måte, og høyest sum etter 18 hull vinner.",
-				"example": "Hull 6, par 5, SI 1: du har CH 18 og får ett ekstraslag. Du scorer 5 gross (netto 4) → eagle → +5 poeng. Hull 11, par 4: du scorer 7 gross (netto 6) → dobbeltbogey → −3 poeng. Netto for disse to hullene: +5 + (−3) = +2 poeng."
+				"example": "Hull 6, par 5, SI 1: du har CH 18 og får ett ekstraslag. Du scorer 5 brutto (netto 4) → eagle → +5 poeng. Hull 11, par 4: du scorer 7 brutto (netto 6) → dobbeltbogey → −3 poeng. Netto for disse to hullene: +5 + (−3) = +2 poeng."
 			},
 			"solo_strokeplay": {
 				"shortDescription": "Individuell, lavest total vinner.",
@@ -1071,7 +1071,7 @@
 					"Lavest sum etter 18 hull vinner."
 				],
 				"long": "Klassisk slagspill: du teller alle slagene dine gjennom hele runden og trekker fra handikap-slagene til slutt. Ingen lagkamerater, ingen hull-per-hull-oppgjør — bare du mot banen og klokken. Den som ender med færrest netto-slag etter 18 hull, vinner.",
-				"example": "Du spiller en runde med CH 10. Gross-score er 85. Netto = 85 − 10 = 75. Konkurrenten din scorer 83 gross med CH 7, netto 76. Du vinner med netto 75 mot 76. Ett dårlig hull gjør deg ikke ferdig, men alt teller til slutt."
+				"example": "Du spiller en runde med CH 10. Bruttoscore er 85. Netto = 85 − 10 = 75. Konkurrenten din scorer 83 brutto med CH 7, netto 76. Du vinner med netto 75 mot 76. Ett dårlig hull gjør deg ikke ferdig, men alt teller til slutt."
 			},
 			"best_ball": {
 				"shortDescription": "Lag à 2, beste netto per hull.",
@@ -1081,7 +1081,7 @@
 					"Netto er antall slag minus slagene du får på hullet.",
 					"Lavest lagtotal vinner."
 				],
-				"long": "Dere er to på lag, og begge spiller hvert hull med sin egen ball. På hvert hull teller bare den laveste netto-scoren av dere to — partneren med den beste scoren «bidrar» og drar laget fremover. Netto regnes ved å trekke fra slagene du får på hullet fra gross-scoren din. Lavest sum av bidragende netto-scorer etter alle 18 hull vinner.",
+				"long": "Dere er to på lag, og begge spiller hvert hull med sin egen ball. På hvert hull teller bare den laveste netto-scoren av dere to — partneren med den beste scoren «bidrar» og drar laget fremover. Netto regnes ved å trekke fra slagene du får på hullet fra bruttoscoren din. Lavest sum av bidragende netto-scorer etter alle 18 hull vinner.",
 				"example": "Hull 7, par 4: du scorer 5 (netto 4 etter ett slag på SI 8), makker scorer 4 (netto 4 uten ekstraslag). Begge er netto 4 — laget tar 4. Hull 12, par 5: du scorer 7 (netto 6), makker scorer 6 (netto 5). Makker bidrar, laget tar 5."
 			},
 			"texas_scramble": {
@@ -1140,7 +1140,7 @@
 				"example": "Hull 5, par 4: side 1 scorer A netto 4, B netto 5 → lagets beste er 4. Side 2 scorer C netto 3, D netto 6 → lagets beste er 3. Side 2 vinner hullet. Hull 10, par 3: begge lag har lagets beste netto 3 → hullet deles. Etter 14 hull leder side 1 med 5 up og 4 hull igjen → 5&4, matchen er avgjort."
 			},
 			"foursomes_matchplay": {
-				"shortDescription": "2v2 alternate shot. Én ball per lag, spillerne alternerer slag.",
+				"shortDescription": "2v2 vekselslag. Én ball per lag, spillerne slår vekselvis.",
 				"summary": "To mot to, men dere deler én ball og slår annenhver gang hele runden.",
 				"points": [
 					"Den ene slår ut på oddetallshull, den andre på partallshull, så bytter dere på.",
@@ -1151,7 +1151,7 @@
 				"example": "Lag A (spiller 1 og 2) vs. lag B (spiller 3 og 4). Hull 3 (oddetall): spiller 1 slår ut, spiller 2 slår andreslag, spiller 1 tredjeslaget og spiller 2 putter — lagets score 4. Lag B: spiller 3 slår ut, de bytter, spiller 3 putter inn på 3. Lag B vinner hullet. Hull 4 (partall): spiller 2 i lag A slår ut, og slik fortsetter dere annenhver gjennom runden."
 			},
 			"greensome_matchplay": {
-				"shortDescription": "Alternate shot. Begge slår ut, velg beste utslag, spill inn vekselvis.",
+				"shortDescription": "Vekselslag: begge slår ut, velg beste utslag, spill inn vekselvis.",
 				"summary": "To mot to — begge slår ut, dere velger det beste utslaget og spiller annenhver gang derfra.",
 				"points": [
 					"Begge i paret slår ut på hvert hull. Velg det beste utslaget, og spill alternate derfra.",
@@ -1162,7 +1162,7 @@
 				"example": "Hull 6, par 4: A slår 210 m til fairway, B slår 195 m i ruff. Dere velger A sitt utslag. B (partneren) slår neste, 160 m til green. A putter til 1 m, B putter inn. Lagets score: 4. Motstanderlaget velger sitt beste utslag, spiller seg inn og fullfører på 5. Dere vinner hullet."
 			},
 			"chapman_matchplay": {
-				"shortDescription": "Alternate shot. Begge slår ut, bytt ball, velg beste, spill inn vekselvis. Også kjent som Pinehurst.",
+				"shortDescription": "Vekselslag: begge slår ut, bytt ball, velg beste, spill inn vekselvis. Også kjent som Pinehurst.",
 				"summary": "To mot to. Begge slår ut, dere bytter ball, velger den beste og spiller annenhver derfra. Også kjent som Pinehurst.",
 				"points": [
 					"Begge slår ut. Så slår hver av dere partnerens ball som andreslag.",
@@ -1173,7 +1173,7 @@
 				"example": "Hull 11, par 4: A slår ut til 200 m, B til 215 m. A slår B sin ball som andreslag (185 m), B slår A sin ball (195 m). Dere har nå to baller: A sin på 195 m og B sin på 185 m. Dere velger A sin ball (195 m). B slår tredjeslaget, A putter — lagets score 5."
 			},
 			"gruesome_matchplay": {
-				"shortDescription": "Alternate shot. Begge slår ut, men motstanderlaget velger ballen dere må spille videre med (som regel den verste).",
+				"shortDescription": "Vekselslag: begge slår ut, men motstanderlaget velger ballen dere må spille videre med (som regel den verste).",
 				"summary": "To mot to. Begge slår ut, men motstanderlaget velger hvilken av de to tee-ballene dere må spille videre med (som regel den verste). Resten av hullet slår dere vekselvis, som i foursomes.",
 				"points": [
 					"Begge på laget slår ut på hvert hull. Motstanderne peker på ballen dere må spille videre med.",
@@ -1290,30 +1290,30 @@
 	"allowance": {
 		"nettoLabel": "Netto",
 		"bruttoLabel": "Brutto",
-		"inputLabelDefault": "Allowance (%)",
+		"inputLabelDefault": "Handicap-andel (%)",
 		"bruttoHelper": {
-			"best_ball": "Ingen handicap — laveste gross-score per hull per lag vinner.",
-			"stableford": "Stableford-poeng beregnes på gross-score mot par. Scratch-format.",
-			"modified_stableford": "Modified-stableford-poeng beregnes på gross-score mot par (pro-skala). Scratch-format.",
-			"singles_matchplay": "Scratch-matchplay — laveste gross-score per hull vinner.",
-			"solo_strokeplay": "Scratch-slagspill — lavest sum av gross-slag vinner.",
-			"fourball_matchplay": "Ingen handicap — kun gross teller.",
-			"foursomes_matchplay": "Ingen handicap — kun gross teller.",
-			"greensome_matchplay": "Ingen handicap — kun gross teller.",
-			"chapman_matchplay": "Ingen handicap — kun gross teller.",
-			"gruesome_matchplay": "Ingen handicap — kun gross teller.",
-			"texas_scramble": "Ingen handicap — kun gross teller.",
-			"ambrose": "Ingen handicap — kun gross teller.",
-			"florida_scramble": "Ingen handicap — kun gross teller.",
-			"wolf": "Ingen handicap — point-utdeling bruker gross-score.",
-			"nassau": "Ingen handicap — slag-sum per seksjon bruker gross-score.",
-			"skins": "Ingen handicap — lavest gross-score per hull vinner skinnet.",
+			"best_ball": "Ingen handicap — laveste bruttoscore per hull per lag vinner.",
+			"stableford": "Stableford-poeng beregnes på bruttoscore mot par. Scratch-format.",
+			"modified_stableford": "Modified-stableford-poeng beregnes på bruttoscore mot par (pro-skala). Scratch-format.",
+			"singles_matchplay": "Scratch-matchplay — laveste bruttoscore per hull vinner.",
+			"solo_strokeplay": "Scratch-slagspill — lavest sum av bruttoslag vinner.",
+			"fourball_matchplay": "Ingen handicap — kun brutto teller.",
+			"foursomes_matchplay": "Ingen handicap — kun brutto teller.",
+			"greensome_matchplay": "Ingen handicap — kun brutto teller.",
+			"chapman_matchplay": "Ingen handicap — kun brutto teller.",
+			"gruesome_matchplay": "Ingen handicap — kun brutto teller.",
+			"texas_scramble": "Ingen handicap — kun brutto teller.",
+			"ambrose": "Ingen handicap — kun brutto teller.",
+			"florida_scramble": "Ingen handicap — kun brutto teller.",
+			"wolf": "Ingen handicap — poeng-utdeling bruker bruttoscore.",
+			"nassau": "Ingen handicap — slag-sum per seksjon bruker bruttoscore.",
+			"skins": "Ingen handicap — lavest bruttoscore per hull vinner skinnet.",
 			"bingo_bango_bongo": "Ingen handicap — Bingo Bango Bongo-poeng teller uavhengig av slag.",
-			"nines": "Ingen handicap — lavest gross-score per hull gir flest poeng.",
-			"round_robin": "Ingen handicap — besteball matchplay bruker gross-score per hull.",
-			"acey_deucey": "Ingen handicap — per-hull-poeng bruker gross-score.",
-			"shamble": "Ingen handicap — de laveste gross-scorene per hull teller for laget.",
-			"patsome": "Ingen handicap — stableford-poeng regnes på gross-score i alle tre segmentene."
+			"nines": "Ingen handicap — lavest bruttoscore per hull gir flest poeng.",
+			"round_robin": "Ingen handicap — besteball matchplay bruker bruttoscore per hull.",
+			"acey_deucey": "Ingen handicap — per-hull-poeng bruker bruttoscore.",
+			"shamble": "Ingen handicap — de laveste bruttoscorene per hull teller for laget.",
+			"patsome": "Ingen handicap — stableford-poeng regnes på bruttoscore i alle tre segmentene."
 		}
 	},
 	"modes": {
@@ -1380,7 +1380,7 @@
 			"teeInfo": "Tee: {teeName}",
 			"infoLabel": "DIN INFO",
 			"soloIndividual": "Individuelt format. Du spiller for deg selv, uten lag.",
-			"courseHandicap": "Course handicap",
+			"courseHandicap": "Banehandicap",
 			"teamLabel": "Lag",
 			"teamValue": "Lag {number}",
 			"flightValue": "Flight {number}",
@@ -2475,7 +2475,7 @@
 			"emptyFinishedBody": "Resultatene fra avsluttede spill samles her etterhvert som rundene fullføres.",
 			"emptyOngoingHeading": "Ingen spill ennå.",
 			"emptyOngoingBody": "Trykk «{createLabel}» for å sette opp den første runden.",
-			"tapHint": "Tap et spill for å redigere protokollen.",
+			"tapHint": "Trykk på et spill for å redigere protokollen.",
 			"errors": {
 				"not_found": "Spillet ble ikke funnet."
 			},
@@ -2510,7 +2510,7 @@
 			"tilesLanseringer": "Lanseringer",
 			"tilesCuper": "Cuper",
 			"tilesLigaer": "Ligaer",
-			"tilesFormats": "Formats",
+			"tilesFormats": "Format-styring",
 			"tilesKlubber": "Klubber",
 			"tilesSpillformater": "Spillformater",
 			"metaActive": "{n, plural, one {# aktiv} other {# aktive}}",
@@ -2524,7 +2524,7 @@
 			"metaNoneSigned": "Ingen signerte runder",
 			"metaLastPublished": "Sist publisert {date}",
 			"metaNonePublished": "Ingen publisert ennå",
-			"metaFormats": "Styr spillformene i wizarden",
+			"metaFormats": "Styr spillformene i veiviseren",
 			"metaKlubber": "Opprett og styr klubber",
 			"metaSpillformater": "Bli kjent med formatene",
 			"playerSpill": "Spill",
@@ -2658,7 +2658,7 @@
 			"cta": {
 				"draftBody": "Spillet er fortsatt et utkast, så bare du ser det. Fyll inn det som mangler og publiser når dere er klare.",
 				"draftEditButton": "Rediger utkast",
-				"scheduledStartBody": "Når du starter runden låses course handicap for hver spiller, redigering stenges, og spillerne kan begynne å taste slag.",
+				"scheduledStartBody": "Når du starter runden låses banehandicap for hver spiller, redigering stenges, og spillerne kan begynne å taste slag.",
 				"scheduledEditBody": "Spillet er i planlagt-fasen. Du kan fortsatt endre bane, tee-off, spillere, lag og innstillinger inntil runden startes.",
 				"scheduledEditButton": "Rediger spillet",
 				"allReadyBody": "Alle spillere har levert{andApproved} scorekort. Spillet kan avsluttes — leaderboard blir åpen for alle deltakere.",
@@ -2682,7 +2682,7 @@
 			"buttons": {
 				"startGame": "Start spillet",
 				"startingGame": "Starter …",
-				"startGameConfirm": "Start spillet «{name}»? Course handicap blir låst for hver spiller når spillet starter.",
+				"startGameConfirm": "Start spillet «{name}»? Banehandicap blir låst for hver spiller når spillet starter.",
 				"startRoundNow": "Start runden nå",
 				"startRoundConfirm": "Starter du runden nå? Spillere kan begynne å taste slag. Redigering låses.",
 				"endGame": "Avslutt spillet",
@@ -2954,7 +2954,7 @@
 				"formGenderLegend": "Kjønn",
 				"genderMens": "Herre",
 				"genderLadies": "Dame",
-				"genderHint": "Brukes til å foreslå riktig tee i game-wizard.",
+				"genderHint": "Brukes til å foreslå riktig tee i veiviseren.",
 				"formLevelLegend": "Spillerklasse",
 				"levelJunior": "Junior",
 				"levelNormal": "Voksen",
@@ -3021,7 +3021,7 @@
 			"emptyBody": "Trykk «+ Ny» for å legge til den første banen i katalogen.",
 			"colCourse": "Bane",
 			"colTees": "Tees",
-			"tapHint": "Tap en bane for å redigere katalogen.",
+			"tapHint": "Trykk på en bane for å redigere katalogen.",
 			"errors": {
 				"not_found": "Banen ble ikke funnet.",
 				"in_use": "Kan ikke slette banen fordi minst ett spill bruker den. Slett spillene først.",
@@ -3102,15 +3102,15 @@
 			}
 		},
 		"formats": {
-			"kicker": "Format-mapping",
-			"title": "Format-mapping",
-			"subtitle": "Styr hvilke spillformater som vises i wizardens step 2 per arrangement.",
+			"kicker": "Format-styring",
+			"title": "Format-styring",
+			"subtitle": "Styr hvilke spillformater som vises i veiviserens steg 2 per arrangement.",
 			"errors": {
 				"missing_slug": "Format-slug mangler i forespørselen.",
 				"bad_intent": "Ugyldig arrangement-type.",
 				"not_found": "Formatet ble ikke funnet.",
-				"last_primary": "Kan ikke fjerne siste primary for dette arrangementet. Aktiver et annet format som primary først.",
-				"demote_first": "Demote stjernen først — et primary-format må være synlig. Avhuk primary-stjernen før du skjuler raden.",
+				"last_primary": "Kan ikke fjerne siste primær-format for dette arrangementet. Aktiver et annet format som primær først.",
+				"demote_first": "Senk stjernen først — et primær-format må være synlig. Avhuk primær-stjernen før du skjuler raden.",
 				"db_error": "Klarte ikke å lagre endringen. Prøv igjen, eller sjekk Vercel-loggene."
 			},
 			"status": {
@@ -3125,9 +3125,9 @@
 			},
 			"showInactive": "Vis inaktive",
 			"visibleLabel": "Synlig",
-			"primaryLabel": "Primary",
-			"cupEligibleHeading": "Cup-eligible formats",
-			"togglesHint": "Toggles oppdateres umiddelbart. Synlige endringer treffer wizarden neste gang den lastes inn.",
+			"primaryLabel": "Primær",
+			"cupEligibleHeading": "Cup-kvalifiserte formater",
+			"togglesHint": "Bryterne oppdateres umiddelbart. Synlige endringer treffer veiviseren neste gang den lastes inn.",
 			"rowStatus": {
 				"aktiv": "Aktiv",
 				"inaktiv": "Inaktiv",
@@ -3141,10 +3141,10 @@
 				"changeLabels": {
 					"visibilityOn": "synlig på",
 					"visibilityOff": "synlig av",
-					"primaryOn": "primary på",
-					"primaryOff": "primary av",
-					"cupEligibleOn": "cup-eligible på",
-					"cupEligibleOff": "cup-eligible av",
+					"primaryOn": "primær på",
+					"primaryOff": "primær av",
+					"cupEligibleOn": "cup-kvalifisert på",
+					"cupEligibleOff": "cup-kvalifisert av",
 					"activated": "aktivert",
 					"deactivated": "deaktivert"
 				}
@@ -3767,12 +3767,12 @@
 			"brassRibbonClub": "Klubb-cup · {status}",
 			"headerSubtitle": "{team1} mot {team2} · først til {points} poeng",
 			"rosterHeading": "Lag-roster",
-			"matchesHeading": "Matches",
-			"emptyRoster": "Ingen spillere. Roster fylles fra matches.",
-			"emptyMatches": "Ingen matches ennå. Trykk «Generer matcher» over for å legge til kamper.",
+			"matchesHeading": "Matcher",
+			"emptyRoster": "Ingen spillere. Rosteren fylles fra matchene.",
+			"emptyMatches": "Ingen matcher ennå. Trykk «Generer matcher» over for å legge til kamper.",
 			"generateButton": "Generer matcher",
 			"openLeaderboard": "Åpne offentlig leaderboard →",
-			"matchesSummary": "Først til {points} poeng · {finished} av {total} matches spilt",
+			"matchesSummary": "Først til {points} poeng · {finished} av {total} matcher spilt",
 			"matchTied": "Halvert (AS)",
 			"mot": "mot",
 			"unknownPlayer": "Ukjent spiller",
@@ -3787,23 +3787,23 @@
 			"finishButton": "Avslutt cupen",
 			"finishPending": "Avslutter …",
 			"deleteLink": "Slett cupen",
-			"startHint": "Du må opprette minst 2 matches før du kan starte cupen.",
+			"startHint": "Du må opprette minst 2 matcher før du kan starte cupen.",
 			"errors": {
 				"name": "Cup-navnet må være mellom 1 og 80 tegn.",
 				"team_1": "Navn på lag 1 må være mellom 1 og 40 tegn.",
 				"team_2": "Navn på lag 2 må være mellom 1 og 40 tegn.",
 				"team_dup": "Lagene må ha forskjellige navn.",
-				"points": "Point-målet må være et positivt tall.",
+				"points": "Poengmålet må være et positivt tall.",
 				"update_failed": "Klarte ikke å oppdatere cupen.",
 				"start_failed": "Klarte ikke å starte cupen.",
 				"finish_failed": "Klarte ikke å avslutte cupen.",
-				"too_few_matches": "Du må opprette minst 2 matches før du kan starte cupen.",
+				"too_few_matches": "Du må opprette minst 2 matcher før du kan starte cupen.",
 				"wrong_status": "Cupen er ikke i utkast-status og kan ikke startes.",
 				"already_finished": "Cupen er allerede avsluttet.",
 				"not_found": "Cupen finnes ikke."
 			},
 			"statusMessages": {
-				"created": "Cupen er opprettet. Legg til matches under for å komme i gang.",
+				"created": "Cupen er opprettet. Legg til matcher under for å komme i gang.",
 				"updated": "Cupen er oppdatert.",
 				"started": "Cupen er startet. Spillerne får varsel.",
 				"finished": "Cupen er avsluttet. Resultatet er sendt til alle deltakere.",
@@ -3865,7 +3865,7 @@
 			"permanentHeading": "Slettes permanent",
 			"cupEntry": "Cupen «{name}»",
 			"rosterEntry": "Lag-roster og master-leaderboard",
-			"matchesNote": "{count} {count, plural, one {match} other {matches}} forblir som frittstående spill (cup-koblingen fjernes).",
+			"matchesNote": "{count} {count, plural, one {match} other {matcher}} forblir som frittstående spill (cup-koblingen fjernes).",
 			"irreversibleNote": "Handlingen kan ikke angres.",
 			"deleteButton": "Slett cupen for alltid",
 			"deletePending": "Sletter …",
@@ -3874,8 +3874,8 @@
 				"delete_failed": "Slettingen feilet. Prøv igjen, eller sjekk Vercel-loggene."
 			},
 			"warnings": {
-				"active": "Cupen pågår nå. Sletting fjerner cup-en for alltid, men selve matches forblir som frittstående spill.",
-				"finished": "Cupen er avsluttet. Resultatet forsvinner fra leaderboardet, men selve matches forblir som frittstående spill."
+				"active": "Cupen pågår nå. Sletting fjerner cup-en for alltid, men selve matchene forblir som frittstående spill.",
+				"finished": "Cupen er avsluttet. Resultatet forsvinner fra leaderboardet, men selve matchene forblir som frittstående spill."
 			}
 		},
 		"create": {
@@ -3887,7 +3887,7 @@
 				"cup_team_1": "Navn på lag 1 må være mellom 1 og 40 tegn.",
 				"cup_team_2": "Navn på lag 2 må være mellom 1 og 40 tegn.",
 				"cup_team_dup": "Lagene må ha forskjellige navn.",
-				"cup_points": "Point-målet må være et positivt tall.",
+				"cup_points": "Poengmålet må være et positivt tall.",
 				"cup_allowance": "Sjekk handicap-andelen for fourball.",
 				"cup_foursomes_allowance": "Sjekk handicap-andelen for foursomes.",
 				"cup_insert_failed": "Klarte ikke å opprette cupen. Prøv igjen."
@@ -4204,8 +4204,8 @@
 			"salutationGeneric": "Hei!",
 			"bodyStarted": "Cup-en <strong>{tournamentName}</strong> har startet.",
 			"bodyStartedText": "Cup-en \"{tournamentName}\" har startet.",
-			"bodyMatchup": "<strong>{team1}</strong> møter <strong>{team2}</strong>. Først til <strong>{points}</strong> point vinner.",
-			"bodyMatchupText": "{team1} møter {team2}. Først til {points} point vinner.",
+			"bodyMatchup": "<strong>{team1}</strong> møter <strong>{team2}</strong>. Først til <strong>{points}</strong> poeng vinner.",
+			"bodyMatchupText": "{team1} møter {team2}. Først til {points} poeng vinner.",
 			"openLeaderboard": "Åpne leaderboard",
 			"openLeaderboardText": "Åpne leaderboard: {url}",
 			"footer": "Lykke til på banen!"

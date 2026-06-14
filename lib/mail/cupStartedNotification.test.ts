@@ -63,7 +63,7 @@ describe('sendCupStartedNotification', () => {
 
       Cup-en "Høst-cup 2026" har startet.
 
-      Bjørketrærne møter Granskogen. Først til 10 point vinner.
+      Bjørketrærne møter Granskogen. Først til 10 poeng vinner.
 
       Åpne leaderboard: https://tornygolf.no/cup/22222222-2222-2222-2222-222222222222
 
@@ -72,7 +72,7 @@ describe('sendCupStartedNotification', () => {
     `);
     expect(bodyHtml(payload.html)).toMatchInlineSnapshot(`
       "Cup-en <strong>Høst-cup 2026</strong> har startet.
-      <strong>Bjørketrærne</strong> møter <strong>Granskogen</strong>. Først til <strong>10</strong> point vinner."
+      <strong>Bjørketrærne</strong> møter <strong>Granskogen</strong>. Først til <strong>10</strong> poeng vinner."
     `);
   });
 
@@ -83,7 +83,7 @@ describe('sendCupStartedNotification', () => {
 
       Cup-en "Høst-cup 2026" har startet.
 
-      Bjørketrærne møter Granskogen. Først til 10 point vinner.
+      Bjørketrærne møter Granskogen. Først til 10 poeng vinner.
 
       Åpne leaderboard: https://tornygolf.no/cup/22222222-2222-2222-2222-222222222222
 
@@ -99,7 +99,7 @@ describe('sendCupStartedNotification', () => {
 
       Cup-en "Høst-cup 2026" har startet.
 
-      Bjørketrærne møter Granskogen. Først til 10,5 point vinner.
+      Bjørketrærne møter Granskogen. Først til 10,5 poeng vinner.
 
       Åpne leaderboard: https://tornygolf.no/cup/22222222-2222-2222-2222-222222222222
 
@@ -108,7 +108,7 @@ describe('sendCupStartedNotification', () => {
     `);
     expect(bodyHtml(payload.html)).toMatchInlineSnapshot(`
       "Cup-en <strong>Høst-cup 2026</strong> har startet.
-      <strong>Bjørketrærne</strong> møter <strong>Granskogen</strong>. Først til <strong>10,5</strong> point vinner."
+      <strong>Bjørketrærne</strong> møter <strong>Granskogen</strong>. Først til <strong>10,5</strong> poeng vinner."
     `);
   });
 
@@ -167,7 +167,7 @@ describe('sendCupStartedNotification', () => {
                     Cup-en <strong>Høst-cup 2026</strong> har startet.
                   </p>
                   <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-                    <strong>Bjørketrærne</strong> møter <strong>Granskogen</strong>. Først til <strong>10</strong> point vinner.
+                    <strong>Bjørketrærne</strong> møter <strong>Granskogen</strong>. Først til <strong>10</strong> poeng vinner.
                   </p>
                   <div style="margin:32px 0;">
                     <a href="https://tornygolf.no/cup/22222222-2222-2222-2222-222222222222" style="display:inline-block;background:#1B4332;color:#F8F6F0;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:600;font-size:15px;">

@@ -562,7 +562,7 @@ describe('GameWizard — Cup-intent flow', () => {
     expect(screen.getByLabelText(/cup-navn/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/lag 1/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/lag 2/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/point-mål/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/poengmål/i)).toBeInTheDocument();
     // Multi-select for cup-eligible formats. Henter ved id-attributt fordi
     // /matchplay/-regex matcher to checkboxer (Matchplay + Fourball matchplay).
     const singlesCheckbox = document.getElementById(
