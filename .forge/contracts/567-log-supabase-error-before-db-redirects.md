@@ -68,9 +68,12 @@ Alle ikke-test-filer med `?error=db_*`-redirects:
 
 ## Akseptansekriterier
 
-- [ ] **K1 — Full dekning:** Hver `?error=db_*`-redirect i de 11 filene har en `console.error`
-      med `[funksjonsnavn]`-prefiks umiddelbart før seg. Verifikasjon: antall `console.error`
-      med `db_`-relatert kontekst ≥ antall `db_*`-sites per fil.
+- [ ] **K1 — Full dekning:** Hvert `?error=db_*`-redirect-feiltilfelle logger det faktiske
+      Supabase-feilobjektet med `[funksjonsnavn]`-prefiks — normalt umiddelbart før redirecten.
+      Unntak: `suggestFlightAssignment`s `db_roster`-redirect gates på `!players` der `players`
+      kommer fra `fetchFlightPlayers`, som svelger feilen internt; loggen legges derfor ved
+      *kilden* (`[fetchFlightPlayers] game_players read failed`, linje 55) — mer diagnostisk
+      enn å logge `null` på call-site.
 - [ ] **K2 — Riktig feilobjekt:** Hver lagt-til `console.error` passerer den faktiske
       Supabase-feilvariabelen fra guarden (ikke en streng alene).
 - [ ] **K3 — Disambiguerte `db_roster`-meldinger:** De to `db_roster`-sitene i
