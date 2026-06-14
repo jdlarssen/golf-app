@@ -7,25 +7,19 @@ import {
   inviteEmailToGame,
 } from './inviteToGameActions';
 import { SubmitButton } from '@/components/ui/SubmitButton';
+import {
+  filterRosterCandidates,
+  rosterDisplayName,
+  type RosterCandidate,
+} from '@/lib/games/rosterCandidates';
 
-type Candidate = {
-  id: string;
-  name: string | null;
-  nickname: string | null;
-  email: string;
-  hcpIndex: number;
-};
+type Candidate = RosterCandidate & { hcpIndex: number };
 
 type Props = {
   gameId: string;
   candidates: Candidate[];
   disabled: boolean;
 };
-
-function displayName(c: Candidate): string {
-  const base = c.name ?? c.email;
-  return c.nickname ? `${base} «${c.nickname}»` : base;
-}
 
 /**
  * Klient-komponenten for invite-card-en. Eier kun lokal-state for søk og
@@ -37,14 +31,10 @@ export function InviteToGameClient({ gameId, candidates, disabled }: Props) {
   const t = useTranslations('admin.game.invite');
   const [search, setSearch] = useState('');
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return candidates.slice(0, 25);
-    return candidates.filter((c) => {
-      const hay = `${c.name ?? ''} ${c.nickname ?? ''} ${c.email}`.toLowerCase();
-      return hay.includes(q);
-    }).slice(0, 25);
-  }, [candidates, search]);
+  const filtered = useMemo(
+    () => filterRosterCandidates(candidates, search),
+    [candidates, search],
+  );
 
   const addAction = addExistingPlayerToGame.bind(null, gameId);
   const inviteAction = inviteEmailToGame.bind(null, gameId);
@@ -81,7 +71,7 @@ export function InviteToGameClient({ gameId, candidates, disabled }: Props) {
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-text">
-                    {displayName(c)}
+                    {rosterDisplayName(c)}
                   </p>
                   <p className="mt-0.5 text-xs tabular-nums text-muted">
                     HCP {c.hcpIndex.toFixed(1)}

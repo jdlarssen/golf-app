@@ -7,24 +7,17 @@ import {
   addExistingPlayerToGame,
   inviteEmailToGame,
 } from '@/app/[locale]/admin/games/[id]/inviteToGameActions';
-
-type Candidate = {
-  id: string;
-  name: string | null;
-  nickname: string | null;
-  email: string;
-};
+import {
+  filterRosterCandidates,
+  rosterDisplayName,
+  type RosterCandidate,
+} from '@/lib/games/rosterCandidates';
 
 type Props = {
   gameId: string;
-  candidates: Candidate[];
+  candidates: RosterCandidate[];
   disabled: boolean;
 };
-
-function displayName(c: Candidate): string {
-  const base = c.name ?? c.email;
-  return c.nickname ? `${base} «${c.nickname}»` : base;
-}
 
 /**
  * Creator-facing roster picker (#429). Mirrors the admin InviteToGameClient,
@@ -38,16 +31,10 @@ export function CreatorRosterClient({ gameId, candidates, disabled }: Props) {
   const t = useTranslations('game.players');
   const [search, setSearch] = useState('');
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return candidates.slice(0, 25);
-    return candidates
-      .filter((c) => {
-        const hay = `${c.name ?? ''} ${c.nickname ?? ''} ${c.email}`.toLowerCase();
-        return hay.includes(q);
-      })
-      .slice(0, 25);
-  }, [candidates, search]);
+  const filtered = useMemo(
+    () => filterRosterCandidates(candidates, search),
+    [candidates, search],
+  );
 
   const addAction = addExistingPlayerToGame.bind(null, gameId);
   const inviteAction = inviteEmailToGame.bind(null, gameId);
@@ -78,7 +65,7 @@ export function CreatorRosterClient({ gameId, candidates, disabled }: Props) {
                   className="flex items-center justify-between gap-3 rounded-xl border border-border bg-bg px-3 py-2.5"
                 >
                   <p className="min-w-0 truncate text-sm font-medium text-text">
-                    {displayName(c)}
+                    {rosterDisplayName(c)}
                   </p>
                   <form action={addAction}>
                     <input type="hidden" name="recipient_user_id" value={c.id} />
