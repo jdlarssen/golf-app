@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
@@ -33,10 +34,6 @@ type SearchParams = Promise<{ error?: string | string[] }>;
 function shortLocale(iso: string | null | undefined, locale: AppLocale): string | null {
   if (!iso) return null;
   return formatShortDateWithYearLocale(iso, locale);
-}
-
-function first(v: string | string[] | undefined): string | undefined {
-  return Array.isArray(v) ? v[0] : v;
 }
 
 type GameRow = {

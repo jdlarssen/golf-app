@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
@@ -17,10 +18,6 @@ import type { AppLocale } from '@/i18n/routing';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;
-
-function firstParam(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
-}
 
 /**
  * /liga/[id]/meld-av — dedikert confirm-side for å melde seg av en klubb-liga
@@ -64,7 +61,7 @@ export default async function MeldAvLigaPage({
   });
   if (!canLeave) redirect({ href: `/liga/${id}`, locale });
 
-  const errorCode = firstParam(sp.error);
+  const errorCode = first(sp.error);
   const errorMessage = errorCode
     ? (t.has(`errors.${errorCode}` as Parameters<typeof t>[0])
         ? t(`errors.${errorCode}` as Parameters<typeof t>[0])

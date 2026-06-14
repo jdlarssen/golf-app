@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { notFound } from 'next/navigation';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
@@ -19,11 +20,6 @@ type SearchParams = Promise<{
   status?: string | string[];
   error?: string | string[];
 }>;
-
-function first(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
 
 type GameRow = {
   id: string;

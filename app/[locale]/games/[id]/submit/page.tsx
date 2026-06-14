@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { Suspense, cache } from 'react';
 import { useTranslations } from 'next-intl';
 import { getTranslations, getLocale } from 'next-intl/server';
@@ -32,11 +33,6 @@ type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
   error?: string | string[];
 }>;
-
-function first(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
 
 
 type CourseTeeRow = {

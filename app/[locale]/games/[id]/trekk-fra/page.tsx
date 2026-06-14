@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
@@ -37,10 +38,6 @@ import { submitWithdraw } from './actions';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;
-
-function first(v: string | string[] | undefined): string | undefined {
-  return Array.isArray(v) ? v[0] : v;
-}
 
 type GameRow = {
   id: string;

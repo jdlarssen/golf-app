@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { Suspense } from 'react';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AdminShell } from '@/components/ui/AdminShell';
@@ -57,11 +58,6 @@ function parseCupGameMode(raw: string | undefined): CupGameMode {
   // Default + singles_matchplay → singles. Bevarer dagens oppførsel (cup-link
   // uten game_mode-parameter trådte tidligere alltid på singles-løypa).
   return 'singles_matchplay';
-}
-
-function first(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0];
-  return value;
 }
 
 export default async function NewGamePage({

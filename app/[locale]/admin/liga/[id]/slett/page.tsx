@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrClubAdminOfLeague } from '@/lib/admin/auth';
 import { LigaDeleteConfirm } from './LigaDeleteConfirm';
@@ -5,10 +6,6 @@ import { LigaDeleteConfirm } from './LigaDeleteConfirm';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;
-
-function first(v: string | string[] | undefined): string | undefined {
-  return Array.isArray(v) ? v[0] : v;
-}
 
 /**
  * /admin/liga/[id]/slett — global-admin delete-confirm door. Klubb-admins use

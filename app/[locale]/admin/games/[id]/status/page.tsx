@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { notFound } from 'next/navigation';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
@@ -56,10 +57,6 @@ const SORT_ORDER: Record<DeliveryStatus, number> = {
   delivered: 4,
   withdrawn: 5,
 };
-
-function first(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
-}
 
 export default async function GameStatusPage({
   params,

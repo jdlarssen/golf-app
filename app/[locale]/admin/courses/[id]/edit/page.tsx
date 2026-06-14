@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { Suspense, cache } from 'react';
 import { notFound } from 'next/navigation';
 import { getTranslations, getLocale } from 'next-intl/server';
@@ -32,11 +33,6 @@ type SearchParams = Promise<{
   error?: string | string[];
   status?: string | string[];
 }>;
-
-function first(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
 
 function buildAuditKicker(
   course: {

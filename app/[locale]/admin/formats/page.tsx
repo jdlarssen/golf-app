@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { Suspense } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
@@ -17,10 +18,6 @@ type SearchParams = Promise<{
   error?: string | string[];
   status?: string | string[];
 }>;
-
-function first(v: string | string[] | undefined): string | undefined {
-  return Array.isArray(v) ? v[0] : v;
-}
 
 export default async function AdminFormatsPage({
   searchParams,

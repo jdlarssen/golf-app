@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { Suspense, cache } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { SmartLink } from '@/components/ui/SmartLink';
@@ -21,11 +22,6 @@ type SearchParams = Promise<{
   name?: string | string[];
   error?: string | string[];
 }>;
-
-function first(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
 
 // Embed-fetch av tee-rader, spill-statuser og spill-datoer for å derivere
 // filter-data (tee-tall, has_ladies_tee, has_juniors_tee, active_game_count,

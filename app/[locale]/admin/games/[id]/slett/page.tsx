@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { notFound } from 'next/navigation';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
@@ -16,10 +17,6 @@ import { deleteGame } from './actions';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;
-
-function first(v: string | string[] | undefined): string | undefined {
-  return Array.isArray(v) ? v[0] : v;
-}
 
 type GameRow = {
   id: string;

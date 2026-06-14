@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { Suspense, cache } from 'react';
 import { useTranslations } from 'next-intl';
 import { getLocale, getTranslations } from 'next-intl/server';
@@ -83,11 +84,6 @@ const STATUS_TONES: Record<GameStatus, StatusChipTone> = {
 const STATUS_BANNER_KEYS: Record<string, string> = {
   submitted: 'bannerSubmitted',
 };
-
-function first(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
 
 type GameRow = {
   id: string;

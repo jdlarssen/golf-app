@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { Suspense, cache } from 'react';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
@@ -23,11 +24,6 @@ type SearchParams = Promise<{
   updates?: string | string[];
   error?: string | string[];
 }>;
-
-function first(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
 
 // Cached so the page-body and any other Suspense bodies share one auth
 // round-trip per request. Routes through the shared `requireAdmin` helper

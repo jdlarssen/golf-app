@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { Suspense, cache } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
@@ -18,11 +19,6 @@ type SearchParams = Promise<{
   error?: string | string[];
   q?: string | string[];
 }>;
-
-function first(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
 
 const getCounts = cache(async () => {
   const supabase = await getServerClient();

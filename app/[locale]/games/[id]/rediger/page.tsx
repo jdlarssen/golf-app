@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { Suspense } from 'react';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { redirect } from '@/i18n/navigation';
@@ -44,11 +45,6 @@ type SearchParams = Promise<{
   error?: string | string[];
   emails?: string | string[];
 }>;
-
-function first(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
 
 const GAME_SELECT =
   'id, name, status, course_id, courses(name), tee_box_id, scheduled_tee_off_at, hcp_allowance_pct, require_peer_approval, score_visibility, side_tournament_enabled, side_ld_count, side_ctp_count, side_disabled_categories, game_mode, mode_config, registration_mode, registration_type';

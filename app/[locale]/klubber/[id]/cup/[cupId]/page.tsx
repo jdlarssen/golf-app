@@ -1,13 +1,10 @@
+import { first } from '@/lib/url/searchParams';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrClubAdminOfCup } from '@/lib/admin/auth';
 import { CupManagement } from '@/app/[locale]/admin/cup/[id]/CupManagement';
 
 type Params = Promise<{ id: string; cupId: string }>;
 type SearchParams = Promise<{ error?: string | string[]; status?: string | string[] }>;
-
-function first(v: string | string[] | undefined): string | undefined {
-  return Array.isArray(v) ? v[0] : v;
-}
 
 /**
  * /klubber/[id]/cup/[cupId] — klubb-cup-styring i klubb-chrome (#524).

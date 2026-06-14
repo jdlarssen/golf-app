@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { Suspense, cache } from 'react';
 import { useTranslations } from 'next-intl';
 import { getTranslations, getLocale } from 'next-intl/server';
@@ -35,11 +36,6 @@ type SearchParams = Promise<{
   status?: string | string[];
   error?: string | string[];
 }>;
-
-function first(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
 
 type HoleRow = {
   hole_number: number;

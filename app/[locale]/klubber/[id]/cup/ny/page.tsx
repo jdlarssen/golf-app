@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { notFound } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { redirect } from '@/i18n/navigation';
@@ -15,10 +16,6 @@ import { CupSetup } from '@/app/[locale]/admin/games/new/CupSetup';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;
-
-function first(v: string | string[] | undefined): string | undefined {
-  return Array.isArray(v) ? v[0] : v;
-}
 
 /**
  * /klubber/[id]/cup/ny — opprett en klubb-scopet cup (#524, #480 Fase 2).

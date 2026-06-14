@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { Suspense, cache } from 'react';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { redirect } from '@/i18n/navigation';
@@ -36,11 +37,6 @@ type SearchParams = Promise<{
   // confirm the deletion here — there's no «Mine spill»-hub to land on yet.
   deleted?: string | string[];
 }>;
-
-function first(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
 
 // Request-scoped Supabase client + verified user id. The user id is forwarded
 // by proxy.ts (which already called auth.getUser to refresh the session) so

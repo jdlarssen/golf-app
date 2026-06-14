@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrClubAdminOfLeague } from '@/lib/admin/auth';
 import { LigaDeleteConfirm } from '@/app/[locale]/admin/liga/[id]/slett/LigaDeleteConfirm';
@@ -5,10 +6,6 @@ import { LigaDeleteConfirm } from '@/app/[locale]/admin/liga/[id]/slett/LigaDele
 
 type Params = Promise<{ id: string; ligaId: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;
-
-function first(v: string | string[] | undefined): string | undefined {
-  return Array.isArray(v) ? v[0] : v;
-}
 
 /**
  * /klubber/[id]/liga/[ligaId]/slett — club-scoped delete-confirm, so a club

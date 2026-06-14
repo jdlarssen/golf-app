@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { Suspense, cache } from 'react';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { SmartLink } from '@/components/ui/SmartLink';
@@ -26,11 +27,6 @@ type SearchParams = Promise<{
   name?: string | string[];
   error?: string | string[];
 }>;
-
-function first(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
 
 const STATUS_TO_TONE: Record<GameStatus, StatusChipTone> = {
   draft: 'utkast',

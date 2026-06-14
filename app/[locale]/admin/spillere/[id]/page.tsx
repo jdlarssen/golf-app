@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { useTranslations } from 'next-intl';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
@@ -58,10 +59,6 @@ function makeRelative(t: ProfileT) {
     const years = Math.floor(months / 12);
     return t('relativeNb.yearsAgo', { count: years });
   };
-}
-
-function first(v: string | string[] | undefined): string | undefined {
-  return Array.isArray(v) ? v[0] : v;
 }
 
 export default async function PlayerDetailPage({

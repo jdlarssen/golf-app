@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { redirect } from '@/i18n/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { AppShell } from '@/components/ui/AppShell';
@@ -25,11 +26,6 @@ type SearchParams = Promise<{
   name?: string | string[];
   next?: string | string[];
 }>;
-
-function first(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
 
 // Bare interne stier slipper gjennom — speiler open-redirect-guarden i
 // createCourse-action.

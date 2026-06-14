@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
 import { getRoleContext } from '@/lib/admin/auth';
@@ -21,10 +22,6 @@ const STATUS_TO_CHIP: Record<'draft' | 'active' | 'finished', StatusChipTone> = 
   active: 'aktiv',
   finished: 'signert',
 };
-
-function first(v: string | string[] | undefined): string | undefined {
-  return Array.isArray(v) ? v[0] : v;
-}
 
 export default async function CupListPage({
   searchParams,

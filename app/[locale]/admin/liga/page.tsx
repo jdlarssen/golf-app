@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { getServerClient } from '@/lib/supabase/server';
@@ -17,10 +18,6 @@ import type { AppLocale } from '@/i18n/routing';
 type SearchParams = Promise<{
   status?: string | string[];
 }>;
-
-function first(v: string | string[] | undefined): string | undefined {
-  return Array.isArray(v) ? v[0] : v;
-}
 
 const STATUS_TO_CHIP: Record<'draft' | 'active' | 'finished', StatusChipTone> = {
   draft: 'utkast',

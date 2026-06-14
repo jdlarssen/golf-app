@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { Suspense, cache } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { redirect } from '@/i18n/navigation';
@@ -36,11 +37,6 @@ type SearchParams = Promise<{
   error?: string | string[];
   emails?: string | string[];
 }>;
-
-function first(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
 
 
 type CourseRow = {

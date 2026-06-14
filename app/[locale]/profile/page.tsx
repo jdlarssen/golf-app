@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { Suspense, cache } from 'react';
 import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
@@ -31,11 +32,6 @@ type SearchParams = Promise<{
   invite_email?: string | string[];
   next?: string | string[];
 }>;
-
-function first(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
 
 const getProfileContext = cache(async () => {
   const supabase = await getServerClient();

@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { Suspense } from 'react';
 import { redirect } from '@/i18n/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
@@ -36,11 +37,6 @@ type SearchParams = Promise<{
   // #442: klubb-side kan dyplenke med forhåndsvalgt klubb.
   klubb?: string | string[];
 }>;
-
-function first(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
 
 export default async function OpprettSpillPage({
   searchParams,

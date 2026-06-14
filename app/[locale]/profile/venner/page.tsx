@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { redirect } from '@/i18n/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { getServerClient } from '@/lib/supabase/server';
@@ -27,10 +28,6 @@ type SearchParams = Promise<{
   status?: string | string[];
   invite_email?: string | string[];
 }>;
-
-function first(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
-}
 
 function personName(u: FriendUser): string {
   const base = u.name?.trim() || u.email;

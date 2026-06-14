@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { notFound } from 'next/navigation';
 import { redirect } from '@/i18n/navigation';
 import { getLocale } from 'next-intl/server';
@@ -13,11 +14,6 @@ import { setMemberRole } from './actions';
 
 type Params = Promise<{ id: string; userId: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;
-
-function first(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
 
 /**
  * /klubber/[id]/rolle/[userId] — change a member's role within the club.

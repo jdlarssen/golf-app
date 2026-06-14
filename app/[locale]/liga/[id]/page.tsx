@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { notFound } from 'next/navigation';
 import { after } from 'next/server';
 import { getTranslations } from 'next-intl/server';
@@ -25,10 +26,6 @@ import type { AppLocale } from '@/i18n/routing';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ error?: string | string[] }>;
-
-function firstParam(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
-}
 
 /** Determine window status relative to now. */
 function windowStatus(
@@ -159,7 +156,7 @@ export default async function LigaPublicPage({
     hasPlayed: me?.hasPlayed ?? false,
   });
   const sp = await searchParams;
-  const joinError = firstParam(sp.error);
+  const joinError = first(sp.error);
   const joinErrorMessage = joinError
     ? (t.has(`joinErrors.${joinError}` as Parameters<typeof t>[0])
         ? t(`joinErrors.${joinError}` as Parameters<typeof t>[0])

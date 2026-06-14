@@ -1,13 +1,10 @@
+import { first } from '@/lib/url/searchParams';
 import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrClubAdminOfCup } from '@/lib/admin/auth';
 import { CupManagement } from './CupManagement';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ error?: string | string[]; status?: string | string[] }>;
-
-function first(v: string | string[] | undefined): string | undefined {
-  return Array.isArray(v) ? v[0] : v;
-}
 
 export default async function CupDetailPage({
   params,

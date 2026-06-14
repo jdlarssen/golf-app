@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { Suspense, cache } from 'react';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { formatDateTime, formatShortDateLocale } from '@/lib/i18n/format';
@@ -70,11 +71,6 @@ const STATUS_TO_TONE: Record<GameStatus, StatusChipTone> = {
   active: 'aktiv',
   finished: 'signert',
 };
-
-function first(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
 
 type GameRow = {
   id: string;

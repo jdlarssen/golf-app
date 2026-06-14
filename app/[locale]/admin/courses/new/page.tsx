@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { AdminShell } from '@/components/ui/AdminShell';
 import { TopBar } from '@/components/ui/TopBar';
@@ -10,11 +11,6 @@ import { getServerClient } from '@/lib/supabase/server';
 import { requireAdminOrTrustedCreator } from '@/lib/admin/auth';
 
 type SearchParams = Promise<{ error?: string | string[] }>;
-
-function first(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
 
 export default async function NewCoursePage({
   searchParams,

@@ -1,3 +1,4 @@
+import { first } from '@/lib/url/searchParams';
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
 import { getTranslations } from 'next-intl/server';
@@ -22,11 +23,6 @@ type SearchParams = Promise<{
   updated?: string | string[];
   error?: string | string[];
 }>;
-
-function first(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
 
 const requireAdminContext = cache(async () => {
   const supabase = await getServerClient();
