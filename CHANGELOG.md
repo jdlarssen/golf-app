@@ -21,6 +21,20 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#585](https://github.com/jdlarssen/golf-app/issues/585), oppfølging av sideturnering-utrullingen i [#576](https://github.com/jdlarssen/golf-app/issues/576). Matchplay-familien (singles, fourball, foursomes m.fl.) var den eneste som ikke fikk sideturnering, fordi duell-kortet ikke har samme tabs-flate som de andre formatene. Nå vises vinnerne kompakt under duell-resultatet, med hele poenggrunnlaget bak en utvid-knapp.
 
+### [1.127.5] - 2026-06-14 · #601
+
+> Bingo Bango Bongo-leaderboarden skrev «B1 10 · B2 8 · B3 10» — nå står det «10 bingo · 8 bango · 10 bongo», samme ord som kortet rett over.
+
+<details>
+<summary>Teknisk</summary>
+
+[#601](https://github.com/jdlarssen/golf-app/issues/601). På BBB-leaderboarden brukte spiller-raden forkortelsen «B1/B2/B3» for de tre poengtypene, mens duellkortet over (ved 2 spillere) staver dem ut. Ingenting på skjermen forklarte at B1 = bingo, så to vokabular for samme tre tall sto rett under hverandre.
+
+#### Changed
+- `BingoBangoBongoView` `PlayerRow` viser nå de hele ordene «{n} bingo · {n} bango · {n} bongo» (samme form som duellkortet i `page.tsx`). `title`-tooltipsene som forklarer hver type (først på green / nærmest hullet / først i hull) er beholdt.
+
+</details>
+
 ### [1.127.4] - 2026-06-14 · #605
 
 > Når runden er ferdig, bytter den lille linja nederst på leaderboarden fra «Lykke til» til «Vel spilt». «Lykke til» passet før start, ikke etter.

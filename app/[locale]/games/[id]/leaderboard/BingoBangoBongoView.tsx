@@ -243,13 +243,14 @@ function PlayerRow({
           <p className="font-serif text-[17px] font-medium tracking-[-0.005em] text-text truncate">
             {displayName}
           </p>
-          {/* Bingo / Bango / Bongo breakdown */}
+          {/* Bingo / Bango / Bongo breakdown — hele ord, samme vokabular som
+              duellkortet (page.tsx). `title` forklarer hva hver står for. */}
           <p className="mt-0.5 text-[12px] text-muted tabular-nums">
-            <span title={`Bingo — ${t('bingoBangoBongo.firstOnGreen')}`}>B1 {bingos}</span>
+            <span title={`Bingo — ${t('bingoBangoBongo.firstOnGreen')}`}>{bingos} bingo</span>
             <span className="mx-1 text-muted/40" aria-hidden>·</span>
-            <span title={`Bango — ${t('bingoBangoBongo.nearestPin')}`}>B2 {bangos}</span>
+            <span title={`Bango — ${t('bingoBangoBongo.nearestPin')}`}>{bangos} bango</span>
             <span className="mx-1 text-muted/40" aria-hidden>·</span>
-            <span title={`Bongo — ${t('bingoBangoBongo.firstInHole')}`}>B3 {bongos}</span>
+            <span title={`Bongo — ${t('bingoBangoBongo.firstInHole')}`}>{bongos} bongo</span>
           </p>
           {tiedWith.length > 0 && (
             <p className="text-[11px] text-muted mt-0.5">
