@@ -2,6 +2,11 @@
 	"common": {
 		"appName": "Tørny"
 	},
+	"notFound": {
+		"heading": "Denne siden finnes ikke",
+		"body": "Lenken peker på noe som er flyttet eller borte. Gå til Hjem, så finner du fram igjen.",
+		"button": "Til Hjem"
+	},
 	"onboarding": {
 		"errors": {
 			"name_required": "Du må fylle inn navn.",

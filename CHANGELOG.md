@@ -17,6 +17,25 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.128.y — Ingen blindveier i innboksen
+
+Issues [#612](https://github.com/jdlarssen/golf-app/issues/612) og [#613](https://github.com/jdlarssen/golf-app/issues/613). Et gammelt påmeldings-varsel kunne ta deg til et spill som var avsluttet eller slettet, og da møtte du en svart engelsk feilside uten vei tilbake. Nå har Tørny en egen «finnes ikke»-side på norsk, og innboksen rydder bort varsler som ikke lenger har et sted å ta deg.
+
+### [1.128.0] - 2026-06-14 · #612
+
+> Lander du på en lenke som ikke finnes lenger, møter du nå en Tørny-side på norsk med vei tilbake, i stedet for en svart engelsk feilmelding som ser ut som om appen har krasjet.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `app/[locale]/not-found.tsx`: app-dekkende, merket 404 i forest-and-champagne (BrandMark + champagne-medaljong med PinFlag + serif-heading + «Til Hjem»-knapp). Rendres inne i `[locale]`-layouten, så den arver `<html lang>`, NextIntl-provideren og den globale bunn-nav-en. Fordi routing er `localePrefix: 'as-needed'` og `proxy.ts` rewriter alle stier til `app/[locale]/…`, fanger denne ene fila både ukjente topp-nivå-stier og `notFound()` fra nestede sider (begge locales).
+- Nytt `notFound`-namespace i `messages/no.json` + `messages/en.json` (heading/body/button), byte-identisk struktur.
+
+</details>
+
+---
+
 ## 1.127.y — Sideturnering på matchplay-duellen
 
 Issue [#585](https://github.com/jdlarssen/golf-app/issues/585), oppfølging av sideturnering-utrullingen i [#576](https://github.com/jdlarssen/golf-app/issues/576). Matchplay-familien (singles, fourball, foursomes m.fl.) var den eneste som ikke fikk sideturnering, fordi duell-kortet ikke har samme tabs-flate som de andre formatene. Nå vises vinnerne kompakt under duell-resultatet, med hele poenggrunnlaget bak en utvid-knapp.
