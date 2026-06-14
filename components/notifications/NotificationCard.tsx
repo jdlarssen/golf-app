@@ -190,16 +190,22 @@ function buildCardContent(
       const p = payload as NotificationPayload<'team_invite'>;
       return {
         title: t('kinds.teamInvite.title', {
-          invitedByName: p.invited_by_name,
-          teamName: p.team_name,
+          invitedByName: p.invited_by_name ?? t('somePlayerFallback'),
+          teamName: p.team_name ?? t('someTeamFallback'),
         }),
         detail: t('kinds.teamInvite.detail', { gameName: p.game_name }),
       };
     }
     case 'registration_request': {
       const p = payload as NotificationPayload<'registration_request'>;
+      // Compose the display name at render time: plain name, optionally wrapped
+      // as «Navn (kaptein for Lag)» when the request is a team captain's (#583).
+      const name = p.requester_name ?? t('somePlayerFallback');
+      const requesterName = p.team_name
+        ? t('kinds.registrationRequest.captainOf', { name, teamName: p.team_name })
+        : name;
       return {
-        title: t('kinds.registrationRequest.title', { requesterName: p.requester_name }),
+        title: t('kinds.registrationRequest.title', { requesterName }),
         detail: t('kinds.registrationRequest.detail', { gameName: p.game_name }),
       };
     }
@@ -214,16 +220,23 @@ function buildCardContent(
       const p = payload as NotificationPayload<'registration_rejected'>;
       return {
         title: t('kinds.registrationRejected.title', { gameName: p.game_name }),
-        // reason is DB content — render verbatim; use catalog fallback when absent
-        detail: p.reason ?? t('kinds.registrationRejected.defaultReason'),
+        // reason = free-text DB content (admin rejection), rendered verbatim.
+        // reason_code = app-generated reason, localised here; else generic fallback (#583).
+        detail:
+          p.reason ??
+          (p.reason_code
+            ? t(`kinds.registrationRejected.reasonCodes.${p.reason_code}`)
+            : t('kinds.registrationRejected.defaultReason')),
       };
     }
     case 'team_member_withdrew': {
       const p = payload as NotificationPayload<'team_member_withdrew'>;
       return {
-        title: t('kinds.teamMemberWithdrew.title', { withdrawnPlayerName: p.withdrawn_player_name }),
+        title: t('kinds.teamMemberWithdrew.title', {
+          withdrawnPlayerName: p.withdrawn_player_name ?? t('somePlayerFallback'),
+        }),
         detail: t('kinds.teamMemberWithdrew.detail', {
-          teamName: p.team_name,
+          teamName: p.team_name ?? t('someTeamFallback'),
           gameName: p.game_name,
         }),
       };

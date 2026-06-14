@@ -211,10 +211,11 @@ export async function withdrawFromGame(
         nickname: string | null;
         email: string;
       }>();
-    const base = userRow?.name?.trim() || userRow?.email || 'En spiller';
-    const withdrawnName = userRow?.nickname
-      ? `${base} «${userRow.nickname}»`
-      : base;
+    // null when the user row is missing — NotificationCard fills the locale
+    // fallback at render time so the payload stays locale-agnostic (#583).
+    const base = userRow?.name?.trim() || userRow?.email || null;
+    const withdrawnName =
+      base && userRow?.nickname ? `${base} «${userRow.nickname}»` : base;
 
     await notify({
       userId: captainUserId,

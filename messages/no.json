@@ -4115,7 +4115,8 @@
 		"common": {
 			"tagline": "Fyr opp golfturneringen på et par minutter.",
 			"footerTagline": "Tørny — fyr opp golfturneringen på et par minutter.",
-			"openButton": "Åpne Tørny"
+			"openButton": "Åpne Tørny",
+			"somePlayerFallback": "En spiller"
 		},
 		"invite": {
 			"subject": "Du er invitert til Tørny",

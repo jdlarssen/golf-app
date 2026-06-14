@@ -21,6 +21,28 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#594](https://github.com/jdlarssen/golf-app/issues/594), fase M i i18n-epicen [#60](https://github.com/jdlarssen/golf-app/issues/60). Hele grensesnittet og spillform-tekstene er tospråklige, men e-postene fra Tørny gikk fortsatt ut på norsk uansett hvilket språk mottakeren hadde valgt. Nå følger de språkvalget.
 
+### [1.126.1] - 2026-06-14 · #583
+
+> Varslene fra lag-påmelding kommer nå på språket du har valgt i appen. Ber noen om å bli med på laget, eller blir du tatt av et lag: står appen på engelsk, er varselet engelsk. På norsk er alt akkurat som før.
+
+<details>
+<summary>Teknisk</summary>
+
+[#583](https://github.com/jdlarssen/golf-app/issues/583), oppfølging av fase 2f. Lag-påmeldingens varsler komponerte norske strenger rett inn i payloaden ved sending — da mottakerens locale ikke er kjent — og `NotificationCard` rendret dem ordrett. En engelsk mottaker så dermed norsk tekst i innboksen. Komposisjonen er flyttet til render-tid, så payloaden holdes språk-nøytral.
+
+#### Changed
+- `requester_name`, `withdrawn_player_name`, `invited_by_name` og `team_name` i varsel-payloadene er nå nullable; `NotificationCard` fyller locale-riktig fallback (`inbox.somePlayerFallback` / `inbox.someTeamFallback`) og komponerer «(kaptein for …)» via den nye `inbox.kinds.registrationRequest.captainOf`-nøkkelen.
+- Lag-fjerning bruker et nytt `reason_code: 'team_removed'`-felt på `registration_rejected` i stedet for en hardkodet norsk grunn; admins fritekst-`reason` (manuell avvisning) rendres fortsatt ordrett.
+- `getCaptainDisplayName` (`teamActions.ts`), `getRequesterName` (`signup/actions.ts`) og navne-oppslaget i `withdrawActions.ts` returnerer nå `null` ved manglende bruker-rad. Mail-tvillingene (`registrationRequest.ts`, `teamInvitation.ts`) tar nullable navn og fyller locale-riktig fallback via `mail.common.somePlayerFallback`, så heller ikke e-post lekker norsk til engelske mottakere.
+
+#### Added
+- Fem nye katalog-nøkler i begge locales (`inbox.somePlayerFallback`, `inbox.someTeamFallback`, `inbox.kinds.registrationRequest.captainOf`, `inbox.kinds.registrationRejected.reasonCodes.team_removed`, `mail.common.somePlayerFallback`). Norsk er byte-identisk med de tidligere literalene. To nye `NotificationCard`-render-tester for komposisjons- og reason_code-grenene.
+
+#### Notes
+- Allerede lagrede varsel-rader rendres ordrett (akseptert legacy, samme prinsipp som fase 2e). `invite/actions.ts` sin `'En venn'`-fallback er bevisst utenfor — egen kind og admin-invite-flyt, hører til den samlede varsel-payload-fasen under [#60](https://github.com/jdlarssen/golf-app/issues/60).
+
+</details>
+
 ### [1.126.0] - 2026-06-14 · #594
 
 > E-postene fra Tørny kommer nå på språket du har valgt i appen. Enten det er en invitasjon, et resultat eller en påminnelse: står appen på engelsk, er e-posten engelsk. På norsk er alt akkurat som før.

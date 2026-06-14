@@ -145,7 +145,7 @@ async function requireAuthedUser(
   return { id: user!.id, email: user!.email ?? null };
 }
 
-async function getCaptainDisplayName(userId: string): Promise<string> {
+async function getCaptainDisplayName(userId: string): Promise<string | null> {
   const admin = getAdminClient();
   const { data } = await admin
     .from('users')
@@ -156,7 +156,9 @@ async function getCaptainDisplayName(userId: string): Promise<string> {
       nickname: string | null;
       email: string;
     }>();
-  if (!data) return 'En spiller';
+  // Return null when the user row is missing — NotificationCard fills the
+  // locale-correct fallback at render time so payloads stay locale-agnostic (#583).
+  if (!data) return null;
   const base = data.name?.trim() || data.email;
   return data.nickname ? `${base} «${data.nickname}»` : base;
 }
@@ -532,7 +534,9 @@ export async function submitTeamRegistration(
       payload: {
         game_id: game.id,
         game_name: game.name,
-        requester_name: `${captainName} (kaptein for ${teamName})`,
+        // Structured fields; «(kaptein for …)» is composed at render time (#583).
+        requester_name: captainName,
+        team_name: teamName,
         request_id: captainRequestId,
       },
     }).catch((err) =>
@@ -765,7 +769,7 @@ export async function declineTeamInvite(
           game_short_id: game.short_id,
           game_name: game.name,
           withdrawn_player_name: declinerName,
-          team_name: captainReq.team_name ?? req.team_name ?? 'Laget',
+          team_name: captainReq.team_name ?? req.team_name,
         },
       }).catch((err) =>
         console.error('[declineTeamInvite] notify failed', err),
@@ -852,7 +856,8 @@ export async function removeTeamMember(
     payload: {
       game_id: game.id,
       game_name: game.name,
-      reason: 'Kapteinen fjernet deg fra laget.',
+      // App-generated reason → localised at render time via catalog (#583).
+      reason_code: 'team_removed',
     },
   }).catch((err) =>
     console.error('[removeTeamMember] notify failed', err),
@@ -1082,7 +1087,7 @@ export async function resendTeamInvite(
     gameShortId: game.short_id,
     gameName: game.name,
     teamRequestId: child.team_request_id,
-    teamName: captainReq.team_name ?? child.team_name ?? 'Laget',
+    teamName: captainReq.team_name ?? child.team_name,
     invitedByName: captainName,
   });
 

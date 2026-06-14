@@ -86,8 +86,10 @@ const teamInviteSchema = z.object({
   game_id: uuid,
   game_short_id: z.string().regex(/^[0-9a-z]{8}$/),
   game_name: z.string().min(1),
-  team_name: z.string().min(1),
-  invited_by_name: z.string().min(1),
+  // team_name + invited_by_name nullable: NotificationCard fills the locale
+  // fallback at render time so payloads stay locale-agnostic (#583).
+  team_name: z.string().min(1).nullable().optional(),
+  invited_by_name: z.string().min(1).nullable().optional(),
   request_id: uuid,
 });
 
@@ -99,7 +101,10 @@ const teamInviteSchema = z.object({
 const registrationRequestSchema = z.object({
   game_id: uuid,
   game_name: z.string().min(1),
-  requester_name: z.string().min(1),
+  // requester_name nullable + optional team_name: the card composes the display
+  // name («Navn (kaptein for Lag)») at render time in the recipient locale (#583).
+  requester_name: z.string().min(1).nullable().optional(),
+  team_name: z.string().min(1).optional(),
   request_id: uuid.optional(),
   message: z.string().optional(),
 });
@@ -114,7 +119,10 @@ const registrationApprovedSchema = z.object({
 const registrationRejectedSchema = z.object({
   game_id: uuid,
   game_name: z.string().min(1),
+  // reason = free-text DB content (admin rejection), rendered verbatim.
+  // reason_code = app-generated reason, localised at render time (#583).
   reason: z.string().optional(),
+  reason_code: z.enum(['team_removed']).optional(),
 });
 
 // team_member_withdrew: medspiller trakk seg pre-start. Til kaptein.
@@ -123,8 +131,9 @@ const teamMemberWithdrewSchema = z.object({
   game_id: uuid,
   game_short_id: z.string().regex(/^[0-9a-z]{8}$/),
   game_name: z.string().min(1),
-  withdrawn_player_name: z.string().min(1),
-  team_name: z.string().min(1),
+  // nullable: NotificationCard fills the locale fallback at render time (#583).
+  withdrawn_player_name: z.string().min(1).nullable().optional(),
+  team_name: z.string().min(1).nullable().optional(),
 });
 
 // deliver_reminder: spilleren har registrert alle 18 hull men ikke levert

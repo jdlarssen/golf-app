@@ -32,7 +32,8 @@ export type RegistrationRequestMailParams = {
   gameName: string;
   /** 8-char short_id — brukes til å bygge deeplink til admin-godkjenningssiden. */
   gameShortId: string;
-  requesterName: string;
+  /** Null når søkerens bruker-rad mangler — locale-riktig fallback fylles her (#583). */
+  requesterName: string | null;
   /**
    * Valgfri hilsen fra søker (max 200 tegn — håndhevet i action). Rendres som
    * blockquote i mail-en hvis satt, droppes ellers.
@@ -49,16 +50,18 @@ export async function sendRegistrationRequestMail(
   const loc = resolveMailLocale(locale);
   const t = getMailTranslator(locale);
 
+  // Locale-riktig fallback når navnet mangler — payloaden holdes språk-nøytral (#583).
+  const name = requesterName ?? t('common.somePlayerFallback');
   const subject = t('registrationRequest.subject', { gameName });
   const approvalUrl = mailUrl(locale, `/signup/${gameShortId}`);
 
   const bodyHtml = t.markup('registrationRequest.body', {
-    requesterName: escapeHtml(requesterName),
+    requesterName: escapeHtml(name),
     gameName: escapeHtml(gameName),
     strong: (c) => `<strong>${c}</strong>`,
     em: (c) => `<em>${c}</em>`,
   });
-  const bodyText = t('registrationRequest.bodyText', { requesterName, gameName });
+  const bodyText = t('registrationRequest.bodyText', { requesterName: name, gameName });
 
   // Bygg hilsen-blokk kun hvis message er satt — vi vil ikke ha en tom
   // blockquote-ramme som tar opp plass uten innhold.

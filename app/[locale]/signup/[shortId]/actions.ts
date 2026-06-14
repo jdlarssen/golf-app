@@ -76,10 +76,11 @@ function isDuplicateError(err: { code?: string; message?: string } | null): bool
 
 /**
  * Slå opp displayName for notify-payload. Bruker name → nickname → email
- * i prioritet. Best-effort: hvis users-raden mangler, returnerer vi fallback
- * "En spiller" — vi vil aldri blokkere selv-påmelding på cosmetic display-feil.
+ * i prioritet. Best-effort: hvis users-raden mangler, returnerer vi null —
+ * NotificationCard fyller locale-riktig fallback ved render-tid, så payloaden
+ * holdes språk-nøytral (#583). Vi blokkerer aldri selv-påmelding på display-feil.
  */
-async function getRequesterName(userId: string): Promise<string> {
+async function getRequesterName(userId: string): Promise<string | null> {
   const admin = getAdminClient();
   const { data } = await admin
     .from('users')
@@ -90,7 +91,7 @@ async function getRequesterName(userId: string): Promise<string> {
       nickname: string | null;
       email: string;
     }>();
-  if (!data) return 'En spiller';
+  if (!data) return null;
   const base = data.name?.trim() || data.email;
   return data.nickname ? `${base} «${data.nickname}»` : base;
 }

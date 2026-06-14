@@ -31,7 +31,8 @@ function getClient(): Resend {
 
 export type TeamInvitationMailParams = {
   to: string;
-  captainName: string;
+  /** Null når kapteinens bruker-rad mangler — locale-riktig fallback fylles her (#583). */
+  captainName: string | null;
   gameName: string;
   teamName: string;
   /** 8-char short_id — brukes til å bygge /signup/[shortId]-deeplink via login. */
@@ -48,6 +49,8 @@ export async function sendTeamInvitationMail(
   const loc = resolveMailLocale(locale);
   const t = getMailTranslator(locale);
 
+  // Locale-riktig fallback når navnet mangler — payloaden holdes språk-nøytral (#583).
+  const name = captainName ?? t('common.somePlayerFallback');
   const subject = t('teamInvitation.subject', { teamName, gameName });
 
   // Vi sender brukeren til /login med next-param som tar dem til
@@ -58,7 +61,7 @@ export async function sendTeamInvitationMail(
   const loginUrl = `${mailUrl(locale, '/login')}?next=${next}`;
 
   const introHtml = t.markup('teamInvitation.intro', {
-    captainName: escapeHtml(captainName),
+    captainName: escapeHtml(name),
     teamName: escapeHtml(teamName),
     gameName: escapeHtml(gameName),
     strong: (c) => `<strong>${c}</strong>`,
@@ -98,7 +101,7 @@ export async function sendTeamInvitationMail(
               </a>
             </div>
             <p style="font-size:13px;color:#4A3F30;line-height:1.5;margin:32px 0 0;border-top:1px solid #E6E2D6;padding-top:24px;">
-              ${escapeHtml(t('teamInvitation.footer', { captainName }))}
+              ${escapeHtml(t('teamInvitation.footer', { captainName: name }))}
             </p>
           </td></tr>
         </table>
@@ -110,10 +113,10 @@ export async function sendTeamInvitationMail(
 
   const text =
     `${subject}\n\n` +
-    `${t('teamInvitation.introText', { captainName, teamName, gameName })}\n\n` +
+    `${t('teamInvitation.introText', { captainName: name, teamName, gameName })}\n\n` +
     `${t('teamInvitation.instructionsText')}\n\n` +
     `${t('teamInvitation.joinButtonText', { url: loginUrl })}\n\n` +
-    `${t('teamInvitation.footerText', { captainName })}\n\n` +
+    `${t('teamInvitation.footerText', { captainName: name })}\n\n` +
     `${t('common.footerTagline')}\n`;
 
   const resend = getClient();

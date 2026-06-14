@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { NotificationCard, type NotificationRow } from './NotificationCard';
+import type { NotificationPayload } from '@/lib/notifications/types';
 
 beforeEach(() => {
   // Pin «nå» så relative tidsstempler er deterministiske i tester.
@@ -259,5 +260,75 @@ describe('NotificationCard', () => {
     expect(
       screen.getByText(/Lørdagsmatch: åpne spillet for å se hva som mangler/),
     ).toBeInTheDocument();
+  });
+
+  // #583: navn + lag-suffiks komponeres på render-tid (ikke i payloaden), så
+  // en engelsk mottaker får engelsk tekst. Her testes nb-grenene.
+  it('komponerer registration_request-navn: lag-kaptein, individuell og fallback', () => {
+    const make = (
+      payload: NotificationPayload<'registration_request'>,
+    ): NotificationRow => ({
+      id: 'n-rr',
+      kind: 'registration_request',
+      payload,
+      read_at: null,
+      created_at: '2026-05-24T13:30:00Z',
+    });
+    const base = {
+      game_id: '11111111-1111-1111-1111-111111111111',
+      game_name: 'Lagcup',
+    };
+
+    // Lag-kaptein → «(kaptein for …)» komponeres via captainOf-nøkkelen
+    const { rerender } = render(
+      <NotificationCard
+        notification={make({ ...base, requester_name: 'Kari', team_name: 'Eagles' })}
+      />,
+    );
+    expect(
+      screen.getByText('Kari (kaptein for Eagles) vil bli med'),
+    ).toBeInTheDocument();
+
+    // Individuell påmelding (intet team_name) → bart navn
+    rerender(
+      <NotificationCard notification={make({ ...base, requester_name: 'Ola' })} />,
+    );
+    expect(screen.getByText('Ola vil bli med')).toBeInTheDocument();
+
+    // Manglende navn → locale-fallback «En spiller»
+    rerender(
+      <NotificationCard notification={make({ ...base, requester_name: null })} />,
+    );
+    expect(screen.getByText('En spiller vil bli med')).toBeInTheDocument();
+  });
+
+  it('rendrer registration_rejected: reason_code lokaliseres, fritekst-reason verbatim', () => {
+    const make = (
+      payload: NotificationPayload<'registration_rejected'>,
+    ): NotificationRow => ({
+      id: 'n-rj',
+      kind: 'registration_rejected',
+      payload,
+      read_at: null,
+      created_at: '2026-05-24T13:30:00Z',
+    });
+    const base = {
+      game_id: '11111111-1111-1111-1111-111111111111',
+      game_name: 'Lagcup',
+    };
+
+    // App-generert grunn via reason_code → katalog-tekst (lag-fjerning)
+    const { rerender } = render(
+      <NotificationCard notification={make({ ...base, reason_code: 'team_removed' })} />,
+    );
+    expect(
+      screen.getByText('Kapteinen fjernet deg fra laget.'),
+    ).toBeInTheDocument();
+
+    // Admin-fritekst → rendres verbatim
+    rerender(
+      <NotificationCard notification={make({ ...base, reason: 'For sent påmeldt' })} />,
+    );
+    expect(screen.getByText('For sent påmeldt')).toBeInTheDocument();
   });
 });
