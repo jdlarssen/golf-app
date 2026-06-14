@@ -154,6 +154,12 @@ export function SideTournamentView({
   const t = useTranslations('leaderboard.sideTournament');
   const sorted = rankByPoints(result.teamStandings);
   const teamById = new Map(teams.map((tm) => [tm.teamId, tm]));
+  // Solo/individuelt format: hvert lag har nøyaktig ett medlem. Da er
+  // lag-vs-individ-skillet meningsløst — lag-kategoriene fyrer aldri (gated på
+  // userIds.length >= 2 i scoring), så «hele laget»-copy og lag-rader i
+  // regel-panelet skjules/skrives om for solo.
+  const isIndividual =
+    teams.length > 0 && teams.every((tm) => tm.members.length === 1);
 
   return (
     <div className="space-y-3 px-4">
@@ -161,12 +167,20 @@ export function SideTournamentView({
         disabledCategories={disabledCategories}
         ldCount={ldCount}
         ctpCount={ctpCount}
+        isIndividual={isIndividual}
       />
       {sorted.map((standing) => {
         const team = teamById.get(standing.teamId);
         const label = team?.label ?? t('teamFallback', { id: standing.teamId });
-        const memberNames =
-          team?.members.map((m) => m.firstName).join(' · ') ?? '';
+        // For et 1-manns-lag (solo) er label = fornavn og det eneste medlemmet
+        // har samme fornavn → dublett. Vis kallenavn-formen (displayName) én
+        // gang i stedet, og drop member-undertittelen.
+        const soloMember =
+          team && team.members.length === 1 ? team.members[0] : null;
+        const title = soloMember ? soloMember.displayName : label;
+        const memberNames = soloMember
+          ? ''
+          : (team?.members.map((m) => m.firstName).join(' · ') ?? '');
         const medal =
           standing.rank === 1
             ? '🥇'
@@ -185,7 +199,7 @@ export function SideTournamentView({
               <div className="min-w-0 flex-1">
                 <div className="font-serif text-base text-text">
                   <span className="mr-2 text-lg">{medal || '·'}</span>
-                  {label}
+                  {title}
                 </div>
                 {memberNames && (
                   <div className="mt-0.5 truncate font-sans text-xs text-muted">
@@ -282,6 +296,10 @@ function TeamAwards({
   if (!myStanding) return null;
 
   const awards = myStanding.awards;
+  // Et 1-manns-lag (solo): «hele laget»-copy på snowman leses feil — bruk
+  // individuell form. Snowman er den eneste lag-flavored awarden som fyrer for
+  // solo (de andre lag-kategoriene er gated på userIds.length >= 2 i scoring).
+  const isSoloTeam = (teamById.get(teamId)?.members.length ?? 0) === 1;
   const rows: Record<GroupId, Array<{ key: string; render: React.ReactNode; points: number; category: string }>> = {
     hovedkonkurranser: [],
     skill: [],
@@ -917,17 +935,20 @@ function TeamAwards({
     const overDelta = sw.score;
     let detail = '?';
     if (hole != null && overDelta != null) {
-      detail = t('snowmanDetail', { delta: overDelta, hole });
+      detail = t(isSoloTeam ? 'snowmanDetailSolo' : 'snowmanDetail', {
+        delta: overDelta,
+        hole,
+      });
     } else if (hole != null) {
       const par = coursePars[hole - 1];
       detail = par != null
-        ? t('snowmanDetailHole', { hole })
+        ? t(isSoloTeam ? 'snowmanDetailHoleSolo' : 'snowmanDetailHole', { hole })
         : t('streakSingle', { hole });
     }
     const key = `snowman_${hole ?? '?'}`;
     push('penalty', 'snowman', pts, key, (
       <AchievementRow
-        rule={t('achievementRules.snowman')}
+        rule={t(isSoloTeam ? 'achievementRules.snowmanSolo' : 'achievementRules.snowman')}
         main={
           <>
             {t('awards.snowman', { detail })}{' '}
@@ -1083,14 +1104,27 @@ function firstNameOf(
  * LD/CTP slots are controlled by game counters, not `disabledCategories`,
  * so they are filtered by `ldCount`/`ctpCount` instead of the disabled set.
  */
+/** Lag-kun-kategorier som aldri fyrer i solo (alle `*_team` + de to rene
+ * coord-bonusene). Brukes til å skjule dem fra regel-panelet for solo. */
+function isTeamOnlyCategory(id: string): boolean {
+  return (
+    id.endsWith('_team') ||
+    id === 'team_all_birdied_bonus' ||
+    id === 'team_no_bogey_hole_coord'
+  );
+}
+
 function ScoringRulesPanel({
   disabledCategories,
   ldCount,
   ctpCount,
+  isIndividual,
 }: {
   disabledCategories: readonly SideCategoryId[];
   ldCount: number;
   ctpCount: number;
+  /** Solo/individuelt format: skjul lag-variant-fragmenter og rene lag-rader. */
+  isIndividual: boolean;
 }) {
   const t = useTranslations('leaderboard.sideTournament');
   const disabledSet = new Set<SideCategoryId>(disabledCategories);
@@ -1193,11 +1227,18 @@ function ScoringRulesPanel({
 
       const activeFragments = row.ids
         .map((id, idx) => ({ id, pointsKey: row.pointsKeys[idx]! }))
-        .filter((entry) => !disabledSet.has(entry.id));
+        .filter((entry) => !disabledSet.has(entry.id))
+        // Solo: lag-variant-fragmenter (og rene lag-rader) fyrer aldri — skjul dem.
+        .filter((entry) => !(isIndividual && isTeamOnlyCategory(entry.id)));
 
       if (activeFragments.length === 0) return [];
       const joined = activeFragments.map((e) => t(e.pointsKey as Parameters<typeof t>[0])).join(' / ');
-      return [{ row, pointsLabel: joined }];
+      // Snowman fyrer for solo, men regelteksten «hele laget …» leses feil der.
+      const ruleKey =
+        isIndividual && row.ruleKey === 'panel.rules.snowman'
+          ? 'panel.rules.snowmanSolo'
+          : row.ruleKey;
+      return [{ row, pointsLabel: joined, ruleKey }];
     });
     return { group, visibleRows };
   }).filter((g) => g.visibleRows.length > 0);
@@ -1230,7 +1271,7 @@ function ScoringRulesPanel({
               )}
             </h3>
             <ul className="space-y-1.5 font-sans text-sm text-text">
-              {visibleRows.map(({ row, pointsLabel }) => (
+              {visibleRows.map(({ row, pointsLabel, ruleKey }) => (
                 <li key={row.key} className="leading-snug">
                   <div className="flex items-baseline justify-between gap-3">
                     <span>{t(row.labelKey as Parameters<typeof t>[0])}</span>
@@ -1239,9 +1280,9 @@ function ScoringRulesPanel({
                       {row.trailer ? ` ${row.trailer}` : ''}
                     </span>
                   </div>
-                  {row.ruleKey && (
+                  {ruleKey && (
                     <p className="mt-0.5 text-xs text-muted leading-tight">
-                      {t(row.ruleKey as Parameters<typeof t>[0])}
+                      {t(ruleKey as Parameters<typeof t>[0])}
                     </p>
                   )}
                 </li>

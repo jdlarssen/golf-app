@@ -21,6 +21,25 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#585](https://github.com/jdlarssen/golf-app/issues/585), oppfølging av sideturnering-utrullingen i [#576](https://github.com/jdlarssen/golf-app/issues/576). Matchplay-familien (singles, fourball, foursomes m.fl.) var den eneste som ikke fikk sideturnering, fordi duell-kortet ikke har samme tabs-flate som de andre formatene. Nå vises vinnerne kompakt under duell-resultatet, med hele poenggrunnlaget bak en utvid-knapp.
 
+### [1.127.2] - 2026-06-14 · #604 #603
+
+> I et spill der hver spiller står for seg selv ryddet vi opp i sideturneringen: navnet ditt står nå én gang med kallenavn (ikke to ganger), og det står ikke lenger «hele laget» når det ikke finnes noe lag.
+
+<details>
+<summary>Teknisk</summary>
+
+[#604](https://github.com/jdlarssen/golf-app/issues/604) + [#603](https://github.com/jdlarssen/golf-app/issues/603). Begge gjelder solo/individuelle formater der hvert «lag» har ett medlem. Funn: lag-aggregerte kategorier fyrer allerede aldri for solo (gated på `userIds.length >= 2` i scoring), så kun visning/copy endres — poeng og standings er uendret.
+
+#### Fixed
+- `SideTournamentView`: solo-raden viser kallenavn-formen (`displayName`) én gang i stedet for fornavnet to ganger (#604). Avledet `isIndividual` (alle lag har ett medlem).
+- Snowman-raden bruker individuell formulering uten «hele laget» i solo (#603), via nye `snowmanDetailSolo`/`snowmanDetailHoleSolo`/`snowmanSolo`-nøkler i begge språk-kataloger.
+- «Slik gis poengene»-panelet skjuler lag-variant-poeng og rene lag-rader (`team_all_birdied_bonus`, `team_no_bogey_hole_coord`) for solo, og viser snowman-regelen i solo-variant.
+
+#### Added
+- `SideTournamentView.test.tsx`: render-test for solo (kallenavn, snowman-copy, panel-filtrering) + lag-regresjon.
+
+</details>
+
 ### [1.127.1] - 2026-06-14 · #602
 
 > I sideturneringen sto det «Flest birdier (?)» i stedet for hvem som faktisk vant kategorien. Nå viser de telle- og brutto-baserte kategoriene navnet på spilleren som tok dem.
