@@ -167,6 +167,18 @@ type SideWinnerRow = {
   winner_user_id: string | null;
 };
 
+// Minste spiller-shape `computeSideTournament` trenger. Matchplay-render-
+// funksjonene passerer sin `gwp.players` (som også bærer `tee_gender`) — ekstra
+// felt er strukturelt OK. `withdrawn_at` er valgfritt: kun WD-støttende formater
+// bærer feltet, fravær = ikke trukket.
+type SideTournamentPlayer = {
+  user_id: string;
+  team_number: number;
+  users: { name: string | null; nickname: string | null } | null;
+  course_handicap: number | null;
+  withdrawn_at?: string | null;
+};
+
 type CourseHoleRow = {
   hole_number: number;
   par_mens: number;
@@ -1353,27 +1365,23 @@ async function renderStableford(opts: {
  * (for team-of-1 = spillerens egen netto) — samme logikk som best-ball-grenen
  * lenger oppe i fila, bare uten å gå veien om computeLeaderboard.
  */
-async function renderSideTournamentTabs(opts: {
+/**
+ * Format-uavhengig data-kjerne for sideturneringen. Henter `game_side_winners`,
+ * bygger per-spiller netto/brutto, grupperer lag (`teamGrouping`), og kjører
+ * `calculateSideTournament`. Returnerer akkurat de propsene `SideTournamentView`
+ * konsumerer — gjenbrukes både av tabs-stien (score-/podium-formater, se
+ * `renderSideTournamentTabs`) og av matchplay-seksjonen (#585), som rendrer
+ * de samme dataene kompakt under duell-kortet i stedet for i en fane.
+ */
+async function computeSideTournament(opts: {
   gameId: string;
   game: GameForHole;
-  gwp: {
-    players: {
-      user_id: string;
-      team_number: number;
-      users: { name: string | null; nickname: string | null } | null;
-      course_handicap: number | null;
-      // Optional: kun WD-støttende formater (best ball, stableford-familien,
-      // solo strokeplay) bærer feltet. Fraværende felt = ikke trukket.
-      withdrawn_at?: string | null;
-    }[];
-  };
+  gwp: { players: SideTournamentPlayer[] };
   rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
   // Scores for the whole game, already fetched once by LeaderboardBody. Passed
   // through here so the side-tournament path reuses them instead of issuing a
   // second identical `scores` query in the same render tree.
   rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
-  backHref: string;
-  mainContent: React.ReactNode;
   /** Lag-format → 'byTeamNumber'; individuelt/pott-format → 'solo'. */
   teamGrouping: 'solo' | 'byTeamNumber';
 }) {
@@ -1381,7 +1389,7 @@ async function renderSideTournamentTabs(opts: {
     getTranslations('leaderboard.common'),
     getLeaderboardContext(),
   ]);
-  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref, mainContent, teamGrouping } = opts;
+  const { gameId, game, gwp, rawHolesRows, rawScoresRows, teamGrouping } = opts;
 
   const sideWinnersRes = await supabase
     .from('game_side_winners')
@@ -1555,27 +1563,50 @@ async function renderSideTournamentTabs(opts: {
     }),
   }));
 
+  return {
+    teams: sideTeams,
+    result: sideResult,
+    ldCount,
+    ctpCount,
+    sideWinners: sideWinnerRows.map((w) => ({
+      category: w.category,
+      position: w.position,
+      winnerUserId: w.winner_user_id,
+    })),
+    coursePars,
+    disabledCategories: game.side_disabled_categories ?? [],
+  };
+}
+
+/**
+ * Tabs-stien for score-/podium-formater: pakker `mainContent` (podium/view) +
+ * `SideTournamentView` i `LeaderboardTabs` under en delt AppShell + TopBar.
+ * Data bygges av `computeSideTournament`; denne eier kun chrome + tabs.
+ */
+async function renderSideTournamentTabs(opts: {
+  gameId: string;
+  game: GameForHole;
+  gwp: { players: SideTournamentPlayer[] };
+  rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
+  rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
+  backHref: string;
+  mainContent: React.ReactNode;
+  /** Lag-format → 'byTeamNumber'; individuelt/pott-format → 'solo'. */
+  teamGrouping: 'solo' | 'byTeamNumber';
+}) {
+  const { gameId, game, gwp, rawHolesRows, rawScoresRows, backHref, mainContent, teamGrouping } = opts;
+  const data = await computeSideTournament({
+    gameId,
+    game,
+    gwp,
+    rawHolesRows,
+    rawScoresRows,
+    teamGrouping,
+  });
   return (
     <AppShell>
       <TopBar backHref={backHref} kicker={game.name} />
-      <LeaderboardTabs
-        mainContent={mainContent}
-        sideContent={
-          <SideTournamentView
-            teams={sideTeams}
-            result={sideResult}
-            ldCount={ldCount}
-            ctpCount={ctpCount}
-            sideWinners={sideWinnerRows.map((w) => ({
-              category: w.category,
-              position: w.position,
-              winnerUserId: w.winner_user_id,
-            }))}
-            coursePars={coursePars}
-            disabledCategories={game.side_disabled_categories ?? []}
-          />
-        }
-      />
+      <LeaderboardTabs mainContent={mainContent} sideContent={<SideTournamentView {...data} />} />
     </AppShell>
   );
 }
