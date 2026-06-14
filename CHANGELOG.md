@@ -21,6 +21,20 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#585](https://github.com/jdlarssen/golf-app/issues/585), oppfølging av sideturnering-utrullingen i [#576](https://github.com/jdlarssen/golf-app/issues/576). Matchplay-familien (singles, fourball, foursomes m.fl.) var den eneste som ikke fikk sideturnering, fordi duell-kortet ikke har samme tabs-flate som de andre formatene. Nå vises vinnerne kompakt under duell-resultatet, med hele poenggrunnlaget bak en utvid-knapp.
 
+### [1.127.6] - 2026-06-14 · #600
+
+> Spiller du to mann i Bingo Bango Bongo, Nassau eller Skins, viste leaderboarden resultatet to ganger rett under hverandre. Nå står duellkortet alene — én gang.
+
+<details>
+<summary>Teknisk</summary>
+
+[#600](https://github.com/jdlarssen/golf-app/issues/600). Ved nøyaktig 2 spillere er et poeng-format en duell, og leaderboarden viser et `HeadToHeadResult`-kort med vinner, totaler, fordeling og 18-hulls-strip. Tre formater rendret i tillegg den fulle leaderboard-viewen rett under kortet med nøyaktig samme tall — ren dobbeltvisning. Stableford og Slagspill viste allerede bare kortet ved 2 spillere; nå følger BBB, Nassau og Skins samme regel.
+
+#### Changed
+- `renderBingoBangoBongo`, `renderNassau` og `renderSkins` (`leaderboard/page.tsx`): i `finished` + nøyaktig 2 spillere rendrer `mainContent` nå kun duellkortet — `BingoBangoBongoView` / `NassauView` / `SkinsView` under kortet er fjernet. 3+ spillere (podium + view), aktiv/kommende standalone-view og sideturnering-stien er uendret.
+
+</details>
+
 ### [1.127.5] - 2026-06-14 · #601
 
 > Bingo Bango Bongo-leaderboarden skrev «B1 10 · B2 8 · B3 10» — nå står det «10 bingo · 8 bango · 10 bongo», samme ord som kortet rett over.

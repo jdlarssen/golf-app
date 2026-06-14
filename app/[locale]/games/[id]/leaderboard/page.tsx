@@ -2582,32 +2582,22 @@ async function renderNassau(opts: {
         pushed.push(tn('totalLabel'));
       const hangingNote =
         pushed.length > 0 ? tn('pushedNote', { sections: pushed.join(' og ') }) : null;
+      // Ved 2 spillere sier duellkortet alt — den fulle NassauView under
+      // ville gjenta samme resultat (#600). Vis kun kortet.
       mainContent = (chromeless) => (
-        <>
-          <HeadToHeadResult
-            gameId={gameId}
-            gameName={game.name}
-            formatLabel={`Nassau · ${result.scoring === 'net' ? tc('netto') : tc('brutto')}`}
-            unitLabel={tn('unitSections')}
-            sideA={sideFor(a)}
-            sideB={sideFor(b)}
-            winnerUserId={winnerUserId}
-            strip={strip}
-            hangingNote={hangingNote}
-            backHref={backHref}
-            chromeless={chromeless}
-          />
-          <NassauView
-            gameId={gameId}
-            gameName={game.name}
-            result={result}
-            playersById={playersById}
-            scoreVisibility={scoreVisibility}
-            gameStatus={game.status}
-            backHref={backHref}
-            chromeless
-          />
-        </>
+        <HeadToHeadResult
+          gameId={gameId}
+          gameName={game.name}
+          formatLabel={`Nassau · ${result.scoring === 'net' ? tc('netto') : tc('brutto')}`}
+          unitLabel={tn('unitSections')}
+          sideA={sideFor(a)}
+          sideB={sideFor(b)}
+          winnerUserId={winnerUserId}
+          strip={strip}
+          hangingNote={hangingNote}
+          backHref={backHref}
+          chromeless={chromeless}
+        />
       );
     } else {
       mainContent = (chromeless) => (
@@ -2771,32 +2761,22 @@ async function renderSkins(opts: {
         result.carriedPot > 0
           ? tsk('carriedNote', { count: result.carriedPot })
           : null;
+      // Ved 2 spillere sier duellkortet alt (inkl. carryover-noten) — den fulle
+      // SkinsView under ville gjenta samme resultat (#600). Vis kun kortet.
       mainContent = (chromeless) => (
-        <>
-          <HeadToHeadResult
-            gameId={gameId}
-            gameName={game.name}
-            formatLabel={`Skins · ${result.scoring === 'net' ? tc('netto') : tc('brutto')}`}
-            unitLabel="skins"
-            sideA={sideFor(a)}
-            sideB={sideFor(b)}
-            winnerUserId={winnerUserId}
-            strip={strip}
-            hangingNote={hangingNote}
-            backHref={backHref}
-            chromeless={chromeless}
-          />
-          <SkinsView
-            gameId={gameId}
-            gameName={game.name}
-            result={result}
-            playersById={playersById}
-            scoreVisibility={scoreVisibility}
-            gameStatus={game.status}
-            backHref={backHref}
-            chromeless
-          />
-        </>
+        <HeadToHeadResult
+          gameId={gameId}
+          gameName={game.name}
+          formatLabel={`Skins · ${result.scoring === 'net' ? tc('netto') : tc('brutto')}`}
+          unitLabel="skins"
+          sideA={sideFor(a)}
+          sideB={sideFor(b)}
+          winnerUserId={winnerUserId}
+          strip={strip}
+          hangingNote={hangingNote}
+          backHref={backHref}
+          chromeless={chromeless}
+        />
       );
     } else {
       mainContent = (chromeless) => (
@@ -2966,31 +2946,22 @@ async function renderBingoBangoBongo(opts: {
       // vinner.
       const winnerUserId =
         a.rank === b.rank ? null : a.rank < b.rank ? a.userId : b.userId;
+      // Ved 2 spillere sier duellkortet alt (vinner, totaler, fordeling,
+      // 18-hulls-strip) — den fulle BingoBangoBongoView under ville gjenta
+      // nøyaktig samme tall (#600). Vis kun kortet, som Stableford/Slagspill.
       mainContent = (chromeless) => (
-        <>
-          <HeadToHeadResult
-            gameId={gameId}
-            gameName={game.name}
-            formatLabel="Bingo Bango Bongo"
-            unitLabel="poeng"
-            sideA={sideFor(a)}
-            sideB={sideFor(b)}
-            winnerUserId={winnerUserId}
-            strip={strip}
-            backHref={backHref}
-            chromeless={chromeless}
-          />
-          <BingoBangoBongoView
-            gameId={gameId}
-            gameName={game.name}
-            result={result}
-            playersById={playersById}
-            scoreVisibility={scoreVisibility}
-            gameStatus={game.status}
-            backHref={backHref}
-            chromeless
-          />
-        </>
+        <HeadToHeadResult
+          gameId={gameId}
+          gameName={game.name}
+          formatLabel="Bingo Bango Bongo"
+          unitLabel="poeng"
+          sideA={sideFor(a)}
+          sideB={sideFor(b)}
+          winnerUserId={winnerUserId}
+          strip={strip}
+          backHref={backHref}
+          chromeless={chromeless}
+        />
       );
     } else {
       mainContent = (chromeless) => (
