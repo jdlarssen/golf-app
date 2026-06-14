@@ -21,6 +21,20 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#616](https://github.com/jdlarssen/golf-app/issues/616). Innboksen kunne bare vokse. Du kunne markere som lest, men ikke fjerne noe, og lange undertekster ble kuttet midt i ordet. Nå kan du arkivere et varsel med ✕, tømme alle leste i ett trykk, og undertekstene får plass på to linjer.
 
+### [1.129.3] - 2026-06-14 · #617
+
+> Auto-genererte spillnavn viste norsk måned i tittelen selv i engelsk modus, så «Byneset North 12. juni» sto over en engelsk dato. Nå følger måneden i tittelen språket ditt: «12 June» på engelsk, «12. juni» på norsk.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Auto-genererte spillnavn lokaliseres nå ved visning (#617). Navnet fryses i opprettelses-språket i `games.name`, så et norsk-opprettet spill viste norsk månedsnavn også på `/en`. Ny ren helper `localizeGameName(name, courseName, locale)` i `lib/games/autoGameName.ts` parser dag + måned ut av den lagrede norske strengen (forankret til banenavnet) og reformaterer for aktiv locale via `suggestGameName`s en-gren. Tidssone-fri ved design (bruker dag/måned fra strengen, ikke et nytt `Date.getDate()`-kall) og uten query-endring (trenger bare navn + banenavn). Egendefinerte navn passerer urørt; norsk visning er byte-identisk.
+- Anvendt på `FinishedGameCard` (Hjem «Avsluttede spill» + `/spill-arkiv`), `renderGameCard` (Hjem «Pågår»/«Mine spill») og admin-`GamesLedger` («Recent activity»).
+- 13 nye enhetstester for `localizeGameName` (no byte-identisk, en-reformatering, egendefinerte navn urørt, regex-escaping, round-trip alle 12 måneder).
+
+</details>
+
 ### [1.129.2] - 2026-06-14 · #614
 
 > Norsk-en i veiviseren og Klubbhuset er ryddet. Engelske ord som «Formats», «gross» og «course handicap» er byttet til «Format-styring», «brutto» og «banehandicap», og «Tap et spill» heter nå «Trykk på et spill».

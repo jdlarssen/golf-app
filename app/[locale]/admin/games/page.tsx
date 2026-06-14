@@ -16,6 +16,7 @@ import { TopBar } from '@/components/ui/TopBar';
 import type { GameStatus } from '@/lib/games/status';
 import type { GameMode, GameModeConfig } from '@/lib/scoring/modes/types';
 import { formatShortDateLocale } from '@/lib/i18n/format';
+import { localizeGameName } from '@/lib/games/autoGameName';
 import type { AppLocale } from '@/i18n/routing';
 
 const GAMES_LEDGER_GRID = '1fr 84px 14px';
@@ -286,7 +287,7 @@ async function GamesLedger({ filterFinished }: { filterFinished: boolean }) {
             >
               <div className="min-w-0">
                 <p className="truncate font-serif text-base font-medium tracking-[-0.005em] text-text">
-                  {g.name}
+                  {localizeGameName(g.name, g.courses?.name ?? null, locale as AppLocale)}
                 </p>
                 <p className="mt-0.5 truncate font-sans text-[11.5px] tabular-nums text-muted">
                   {meta}

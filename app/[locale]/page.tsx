@@ -24,6 +24,7 @@ import {
   formatTeeOffTimeLocale,
 } from '@/lib/i18n/format';
 import { getFinishedGamesForUser } from '@/lib/games/getFinishedGamesForUser';
+import { localizeGameName } from '@/lib/games/autoGameName';
 import { FinishedGameCard } from '@/components/games/FinishedGameCard';
 import { HomeDiscoverySection } from './HomeDiscoverySection';
 import { getDiscoverableGames } from '@/lib/games/getDiscoverableGames';
@@ -247,7 +248,7 @@ async function HomeBody() {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <span className="block font-serif text-lg font-medium tracking-tight text-text truncate">
-              {g.name}
+              {localizeGameName(g.name, g.courses?.name ?? null, locale)}
             </span>
             {g.courses?.name && (
               <span className="block text-xs text-muted mt-1 truncate">

@@ -69,3 +69,47 @@ export function suggestGameName({
   const monthCap = month.charAt(0).toUpperCase() + month.slice(1);
   return `${courseName} ${day} ${monthCap}`;
 }
+
+/**
+ * Re-lokaliser et auto-generert spillnavn ved VISNING (#617).
+ *
+ * Auto-genererte navn fryses i opprettelses-språket (`suggestGameName` kjører
+ * klient-side i veiviseren og lagres som ferdig streng i `games.name`). Et
+ * norsk-opprettet «Byneset North 12. juni» viser derfor norsk måned også i
+ * engelsk modus, mens datolinja rett under er korrekt lokalisert — en blandet
+ * norsk/engelsk overflate. Denne helperen parser dag + måned UT AV den lagrede
+ * norske strengen (forankret til banenavnet) og reformaterer for aktiv locale.
+ *
+ * Hvorfor parse strengen i stedet for å re-formatere fra `scheduled_tee_off_at`:
+ * - **Tidssone-fri** — bruker dag/måned som ligger i strengen, ikke et nytt
+ *   `Date.getDate()`-kall som kunne forskyve dagen mellom opprettelses-TZ
+ *   (klient, Norge) og visnings-TZ (Vercel, UTC).
+ * - **Ingen query-endring** — trenger bare `name` + `courseName`, som alle
+ *   render-sites allerede har (den slanke `getFinishedGamesForUser`-projeksjonen
+ *   henter ikke tee-off).
+ * - **Presis** — forankret til spillets faktiske bane, så kun strenger på det
+ *   eksakte auto-formatet «{bane} {dag}. {måned}» rør`es; egendefinerte navn
+ *   passerer urørt.
+ *
+ * Norsk visning er byte-identisk: tidlig retur for 'no'.
+ */
+export function localizeGameName(
+  name: string,
+  courseName: string | null,
+  locale: AppLocale,
+): string {
+  if (locale === 'no' || !courseName) return name;
+  const prefix = `${courseName} `;
+  if (!name.startsWith(prefix)) return name;
+  const suffix = name.slice(prefix.length);
+  // Auto-formatet er nøyaktig «{dag}. {norsk-måned}» (ingen ekstra suffiks).
+  const match = new RegExp(String.raw`^(\d{1,2})\. (\p{L}+)$`, 'u').exec(suffix);
+  if (!match) return name;
+  const monthIndex = (NORWEGIAN_MONTHS as readonly string[]).indexOf(match[2]);
+  if (monthIndex < 0) return name;
+  const day = Number(match[1]);
+  // Reformater via `suggestGameName` — gjenbruker en-grenens Intl-måned. En
+  // syntetisk kl.12-dato unngår midnatt/DST-rollover i `.getDate()`/`.getMonth()`.
+  const synthetic = `2000-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}T12:00`;
+  return suggestGameName({ courseName, scheduledTeeOffAt: synthetic, locale });
+}

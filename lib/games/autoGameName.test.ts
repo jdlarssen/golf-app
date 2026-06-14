@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { suggestGameName } from './autoGameName';
+import { suggestGameName, localizeGameName } from './autoGameName';
 
 describe('suggestGameName', () => {
   it('returnerer tom streng når courseName er null', () => {
@@ -114,4 +114,77 @@ describe('suggestGameName', () => {
       ).toBe(expected);
     },
   );
+});
+
+describe('localizeGameName', () => {
+  it("returnerer navnet byte-identisk i 'no' (ingen re-lokalisering)", () => {
+    expect(localizeGameName('Byneset North 12. juni', 'Byneset North', 'no')).toBe(
+      'Byneset North 12. juni',
+    );
+  });
+
+  it("re-lokaliserer norsk auto-format til engelsk i 'en'", () => {
+    expect(localizeGameName('Byneset North 12. juni', 'Byneset North', 'en')).toBe(
+      'Byneset North 12 June',
+    );
+  });
+
+  it('lar et egendefinert navn (ikke auto-format) stå urørt', () => {
+    expect(localizeGameName('Sommerfest', 'Byneset North', 'en')).toBe('Sommerfest');
+  });
+
+  it('lar et navn med ekstra suffiks etter måneden stå urørt', () => {
+    expect(localizeGameName('Byneset North 12. juni cup', 'Byneset North', 'en')).toBe(
+      'Byneset North 12. juni cup',
+    );
+  });
+
+  it('rører ikke navn der bane-prefikset ikke matcher', () => {
+    expect(localizeGameName('Annen bane 5. mai', 'Byneset North', 'en')).toBe(
+      'Annen bane 5. mai',
+    );
+  });
+
+  it('rører ikke navn når månedsordet ikke er en kjent norsk måned', () => {
+    expect(localizeGameName('Byneset North 12. blah', 'Byneset North', 'en')).toBe(
+      'Byneset North 12. blah',
+    );
+  });
+
+  it('returnerer navnet uendret når courseName er null', () => {
+    expect(localizeGameName('Byneset North 12. juni', null, 'en')).toBe(
+      'Byneset North 12. juni',
+    );
+  });
+
+  it('returnerer navnet uendret når navnet kun er bane-navn (ingen tee-off)', () => {
+    expect(localizeGameName('Stiklestad', 'Stiklestad', 'en')).toBe('Stiklestad');
+  });
+
+  it('håndterer bane-navn med regex-spesialtegn (escaping)', () => {
+    expect(localizeGameName('A.B (Golf) 3. mars', 'A.B (Golf)', 'en')).toBe(
+      'A.B (Golf) 3 March',
+    );
+  });
+
+  // Round-trip: et navn generert på norsk og re-lokalisert til engelsk skal
+  // matche det engelske auto-formatet direkte, for alle 12 måneder.
+  it.each([
+    '2026-01-15T09:00',
+    '2026-02-15T09:00',
+    '2026-03-15T09:00',
+    '2026-04-15T09:00',
+    '2026-05-15T09:00',
+    '2026-06-15T09:00',
+    '2026-07-15T09:00',
+    '2026-08-15T09:00',
+    '2026-09-15T09:00',
+    '2026-10-15T09:00',
+    '2026-11-15T09:00',
+    '2026-12-15T09:00',
+  ] as const)('round-trip no→en for %s', (teeOffAt) => {
+    const no = suggestGameName({ courseName: 'X', scheduledTeeOffAt: teeOffAt, locale: 'no' });
+    const en = suggestGameName({ courseName: 'X', scheduledTeeOffAt: teeOffAt, locale: 'en' });
+    expect(localizeGameName(no, 'X', 'en')).toBe(en);
+  });
 });

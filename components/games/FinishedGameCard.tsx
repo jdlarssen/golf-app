@@ -4,6 +4,7 @@ import { SmartLink } from '@/components/ui/SmartLink';
 import { Card } from '@/components/ui/Card';
 import { formatShortDateLocale } from '@/lib/i18n/format';
 import { formatDisplayLabelKey } from '@/lib/games/formatLabel';
+import { localizeGameName } from '@/lib/games/autoGameName';
 import { finishedResultBadge } from '@/lib/games/finishedResultBadge';
 import type { FinishedGame } from '@/lib/games/getFinishedGamesForUser';
 
@@ -37,7 +38,7 @@ export function FinishedGameCard({ game }: { game: FinishedGame }) {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <span className="block font-serif text-lg font-medium tracking-tight text-text truncate">
-              {game.name}
+              {localizeGameName(game.name, game.courses?.name ?? null, locale)}
             </span>
             <span className="block text-xs text-muted mt-1 truncate">
               {[
