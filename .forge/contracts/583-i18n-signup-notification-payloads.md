@@ -1,5 +1,9 @@
 # Forge-kontrakt: #583 — i18n signup-varsel-payloads
 
+> **STATUS: ACCEPT** (2026-06-14, skeptisk fresh-context opus-eval). Alle K1–K8
+> PASS, 224 tester grønne, `tsc` + `build` grønn, norsk byte-identisk. Detaljer i
+> `.forge/evaluations/583-i18n-signup-notification-payloads.md`.
+
 > Lag-påmeldingens varsel-payloads skrives med norske strenger til DB ved
 > sending — når mottakerens locale er ukjent. De rendres senere av
 > `NotificationCard` (innboks), så en **engelsk mottaker ser norsk tekst**.
