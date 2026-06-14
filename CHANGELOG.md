@@ -17,6 +17,29 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.127.y — Sideturnering på matchplay-duellen
+
+Issue [#585](https://github.com/jdlarssen/golf-app/issues/585), oppfølging av sideturnering-utrullingen i [#576](https://github.com/jdlarssen/golf-app/issues/576). Matchplay-familien (singles, fourball, foursomes m.fl.) var den eneste som ikke fikk sideturnering, fordi duell-kortet ikke har samme tabs-flate som de andre formatene. Nå vises vinnerne kompakt under duell-resultatet, med hele poenggrunnlaget bak en utvid-knapp.
+
+### [1.127.0] - 2026-06-14 · #585
+
+> Nå kan du ha sideturnering på matchplay også. Lengste drive og nærmest pinnen kåres som vanlig når du avslutter, og vinnerne vises i en liten seksjon under duell-resultatet. Vil du se hele poenggrunnlaget, folder du det ut.
+
+<details>
+<summary>Teknisk</summary>
+
+[#585](https://github.com/jdlarssen/golf-app/issues/585), oppfølging av [#576](https://github.com/jdlarssen/golf-app/issues/576). Data-kjernen for sideturneringen er ekstraktert fra `renderSideTournamentTabs` til en `computeSideTournament`-helper, så både tabs-stien (poeng-/podium-formater) og den nye matchplay-seksjonen deler beregningen. De to duell-sidene grupperes som lag 1 og 2 (`teamGrouping: 'byTeamNumber'` — singles blir to lag-av-1, fourball/foursomes to lag-av-2).
+
+#### Added
+- `MatchplaySideTournamentSection` — kompakt seksjon under duell-kortet med de admin-kårede LD/CTP-vinnerne synlig, og hele `SideTournamentView`-poenggrunnlaget bak en `<details>`-disclosure. Wiret inn i `MatchplayMatchView`, `FourballMatchplayView` og `FoursomesMatchplayView` via en valgfri `sideTournamentSection`-node (server-rendret, kun ved `finished` + sideturnering på).
+- `leaderboard.matchplaySide`-nøkler i begge språk-kataloger.
+
+#### Changed
+- Veiviseren tilbyr sideturnering-bryteren for matchplay-familien igjen (reverserer #576-skjulingen); `sideTournamentSupported` er nå true for alle formater og det rå toggle-valget bevares ved format-bytte.
+- `renderSideTournamentTabs` er nå en tynn caller over `computeSideTournament` — ingen oppførselsendring for poeng-/podium-formater.
+
+</details>
+
 ## 1.126.y — Mailene på ditt språk
 
 Issue [#594](https://github.com/jdlarssen/golf-app/issues/594), fase M i i18n-epicen [#60](https://github.com/jdlarssen/golf-app/issues/60). Hele grensesnittet og spillform-tekstene er tospråklige, men e-postene fra Tørny gikk fortsatt ut på norsk uansett hvilket språk mottakeren hadde valgt. Nå følger de språkvalget.

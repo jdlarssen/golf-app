@@ -1,4 +1,4 @@
-import type { JSX } from 'react';
+import type { JSX, ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
@@ -59,6 +59,11 @@ export interface FourballMatchplayViewProps {
   gameStatus: GameStatus;
   /** Hvor pilen tilbake skal peke. Defaults til spillets hjem. */
   backHref?: string;
+  /**
+   * Sideturnering-seksjon (#585) — ferdig node bygd server-side, rendret
+   * kompakt under duell-resultatet. `undefined` når ikke `finished` + på.
+   */
+  sideTournamentSection?: ReactNode;
 }
 
 /**
@@ -83,6 +88,7 @@ export function FourballMatchplayView({
   side2Label: side2LabelProp,
   gameStatus: _gameStatus,
   backHref = '/',
+  sideTournamentSection,
 }: FourballMatchplayViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const tc = useTranslations('leaderboard.common');
@@ -149,6 +155,9 @@ export function FourballMatchplayView({
           matchResult={result.result}
         />
       </div>
+
+      {/* Sideturnering (#585) — kompakt under duell-resultatet, kun når på */}
+      {sideTournamentSection}
 
       {/* 2. Per-hull-grid — viser lag-best netto per side + contributor-initialer */}
       <section className="px-3.5 pt-4 pb-2">

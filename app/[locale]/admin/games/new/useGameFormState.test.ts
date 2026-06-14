@@ -360,12 +360,12 @@ describe('useGameFormState — solo-format wizard-gating (Nassau / Skins / BBB)'
   }
 });
 
-// #576 — sideturnering støttes ikke for matchplay-familien. `sideTournamentSupported`
-// er kilden begge UI-stiene skjuler bryteren på (AdvancedSettingsSection +
-// BasicsSection gater fieldset-et på den), OG kilden det effektive `sideEnabled`
-// tvinges false på, så et stale påslag aldri følger med i payloaden ved format-bytte.
-// Vi tester guarden ved kilden i stedet for å assertere på skjult DOM i to seksjoner.
-describe('sideturnering-gating for matchplay (#576)', () => {
+// #585 — sideturnering tilbys nå for ALLE formater, også matchplay-familien.
+// #576 skjulte den for matchplay (duell-kortet manglet en flate); #585 ga
+// duell-kortet en kompakt LD/CTP-seksjon, så `sideTournamentSupported` er true
+// overalt og det effektive `sideEnabled` følger den rå toggle-staten uten å
+// tvinges false ved format-bytte til matchplay.
+describe('sideturnering-gating (#585 — på for alle formater)', () => {
   const MATCHPLAY_MODES = [
     'singles_matchplay',
     'fourball_matchplay',
@@ -376,7 +376,7 @@ describe('sideturnering-gating for matchplay (#576)', () => {
   ] as const;
 
   it.each(MATCHPLAY_MODES)(
-    'rapporterer sideTournamentSupported=false for %s',
+    'rapporterer sideTournamentSupported=true for %s',
     (mode) => {
       const { result } = renderHook(() =>
         useGameFormState({ players: PLAYERS, courses: COURSES }),
@@ -384,30 +384,29 @@ describe('sideturnering-gating for matchplay (#576)', () => {
       act(() => {
         result.current.handleModeChange(mode);
       });
-      expect(result.current.sideTournamentSupported).toBe(false);
+      expect(result.current.sideTournamentSupported).toBe(true);
     },
   );
 
-  it('tvinger effektiv sideEnabled=false for matchplay men bevarer rå-valget ved retur til poeng-format', () => {
+  it('beholder sideEnabled-toggle på tvers av bytte til matchplay og tilbake', () => {
     const { result } = renderHook(() =>
       useGameFormState({ players: PLAYERS, courses: COURSES }),
     );
 
-    // Default best_ball → støttet, rå-toggle flyter gjennom.
     act(() => {
       result.current.setSideEnabled(true);
     });
     expect(result.current.sideTournamentSupported).toBe(true);
     expect(result.current.sideEnabled).toBe(true);
 
-    // Bytt til matchplay → ikke støttet, effektiv sideEnabled tvinges false.
+    // Bytt til matchplay → fortsatt støttet, toggle bevares (ikke tvunget false).
     act(() => {
       result.current.handleModeChange('singles_matchplay');
     });
-    expect(result.current.sideTournamentSupported).toBe(false);
-    expect(result.current.sideEnabled).toBe(false);
+    expect(result.current.sideTournamentSupported).toBe(true);
+    expect(result.current.sideEnabled).toBe(true);
 
-    // Tilbake til et poeng-format → rå-valget (true) dukker opp igjen.
+    // Tilbake til et poeng-format → uendret.
     act(() => {
       result.current.handleModeChange('best_ball');
     });

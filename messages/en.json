@@ -1826,6 +1826,12 @@
 			"main": "Main tournament",
 			"side": "Side game"
 		},
+		"matchplaySide": {
+			"heading": "Side game",
+			"longestDrive": "Longest drive #{pos}: {name}",
+			"closestToPin": "Closest to pin #{pos}: {name}",
+			"showBasis": "Show the points basis"
+		},
 		"state4": {
 			"heading": "Leaderboard",
 			"subtitle": "After 18 holes · Best ball · {mode}",

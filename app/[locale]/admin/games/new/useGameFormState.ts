@@ -6,7 +6,7 @@ import {
   CLASSIC_DISABLED_CATEGORIES,
   type SideCategoryId,
 } from '@/lib/scoring/sideTournamentConfig';
-import { isStablefordFamily, isMatchplayFamily, type GameMode } from '@/lib/scoring/modes/types';
+import { isStablefordFamily, type GameMode } from '@/lib/scoring/modes/types';
 import { ambroseDefaultPct, defaultFloridaHandicapPct } from '@/lib/scoring';
 import type { TeamSize } from './TeamSizeSelector';
 import type { CourseOption, InitialValues, PlayerOption } from './GameForm';
@@ -502,12 +502,11 @@ export function useGameFormState({
   //   et tomt spill når andre kan melde seg på).
   const registrationModeSupportsTeams = gameModeSupportsTeams(gameMode);
   const playersStepOptional = registrationMode !== 'invite_only';
-  // #576: sideturnering støttes ikke for matchplay-familien — duell-kortet har
-  // ingen tabs-flate å henge LD/CTP-fanen på (egen sak vurderer det). Seksjonene
-  // skjuler bryteren basert på dette flagget, og det effektive `sideEnabled`
-  // (se return) tvinges false for matchplay så et stale påslag aldri følger med
-  // i payloaden ved format-bytte.
-  const sideTournamentSupported = !isMatchplayFamily(gameMode);
+  // Sideturnering tilbys for alle formater. #576 skjulte den for matchplay
+  // (duell-kortet manglet en flate), men #585 ga matchplay-duellkortet en
+  // kompakt LD/CTP-seksjon, så bryteren vises nå overalt. Flagget beholdes som
+  // en eksplisitt support-grind seksjonene gater på.
+  const sideTournamentSupported = true;
 
   // Bane-bytte: nullstill tee-boks (tee-id er bane-spesifikk) og re-derive
   // M/D/J-defaultene fra profilen. `playerGenders` er ikke tee-spesifikt —
@@ -1521,10 +1520,7 @@ export function useGameFormState({
     setPatsomeScoring,
     requirePeerApproval,
     setRequirePeerApproval,
-    // #576: effektiv verdi — tvinges false for matchplay-familien så et stale
-    // påslag fra et tidligere format-valg aldri følger med i payloaden. Rå-staten
-    // bevares (bytter brukeren tilbake til et poeng-format dukker valget opp igjen).
-    sideEnabled: sideEnabled && sideTournamentSupported,
+    sideEnabled,
     setSideEnabled,
     sideTournamentSupported,
     gameMode,

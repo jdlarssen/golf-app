@@ -1826,6 +1826,12 @@
 			"main": "Hovedturnering",
 			"side": "Sideturnering"
 		},
+		"matchplaySide": {
+			"heading": "Sideturnering",
+			"longestDrive": "Lengste drive #{pos}: {name}",
+			"closestToPin": "Nærmest pinnen #{pos}: {name}",
+			"showBasis": "Vis poenggrunnlaget"
+		},
 		"state4": {
 			"heading": "Leaderboard",
 			"subtitle": "Etter 18 hull · Best ball · {mode}",

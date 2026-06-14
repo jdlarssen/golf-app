@@ -1,4 +1,4 @@
-import type { JSX } from 'react';
+import type { JSX, ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
@@ -63,6 +63,11 @@ export interface FoursomesMatchplayViewProps {
   gameStatus: GameStatus;
   /** Hvor pilen tilbake skal peke. Defaults til spillets hjem. */
   backHref?: string;
+  /**
+   * Sideturnering-seksjon (#585) — ferdig node bygd server-side, rendret
+   * kompakt under duell-resultatet. `undefined` når ikke `finished` + på.
+   */
+  sideTournamentSection?: ReactNode;
 }
 
 /**
@@ -93,6 +98,7 @@ export function FoursomesMatchplayView({
   formatLabel,
   gameStatus: _gameStatus,
   backHref = '/',
+  sideTournamentSection,
 }: FoursomesMatchplayViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const tc = useTranslations('leaderboard.common');
@@ -153,6 +159,9 @@ export function FoursomesMatchplayView({
           matchResult={result.result}
         />
       </div>
+
+      {/* Sideturnering (#585) — kompakt under duell-resultatet, kun når på */}
+      {sideTournamentSection}
 
       {/* 2. Per-hull-grid — viser lag-netto per side */}
       <section className="px-3.5 pt-4 pb-2">

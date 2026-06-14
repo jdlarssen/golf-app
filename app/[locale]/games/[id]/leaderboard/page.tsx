@@ -88,6 +88,7 @@ import {
   SideTournamentView,
   type SideTournamentTeam,
 } from './SideTournamentView';
+import { MatchplaySideTournamentSection } from './MatchplaySideTournamentSection';
 import {
   WithdrawnPlayersSection,
   type WithdrawnPlayer,
@@ -1612,6 +1613,28 @@ async function renderSideTournamentTabs(opts: {
 }
 
 /**
+ * Bygger sideturnering-seksjonen som matchplay-duellkortene rendrer kompakt
+ * under duell-resultatet (#585). De to duell-sidene er lag 1/2
+ * (`teamGrouping: 'byTeamNumber'` — validatoren håndhever `team_number ∈ {1,2}`).
+ * Returnerer `undefined` når spillet ikke er `finished`, ikke har sideturnering
+ * på, eller ingen kvalifiserte lag finnes (f.eks. begge sider trukket) — da er
+ * matchplay-view-en byte-identisk med før.
+ */
+async function renderMatchplaySideSection(opts: {
+  gameId: string;
+  game: GameForHole;
+  gwp: { players: SideTournamentPlayer[] };
+  rawHolesRows: { hole_number: number; par_mens: number; par_ladies: number; par_juniors: number; stroke_index: number }[];
+  rawScoresRows: { user_id: string; hole_number: number; strokes: number | null }[];
+}): Promise<React.ReactNode> {
+  const { game } = opts;
+  if (game.status !== 'finished' || !game.side_tournament_enabled) return undefined;
+  const data = await computeSideTournament({ ...opts, teamGrouping: 'byTeamNumber' });
+  if (data.teams.length === 0) return undefined;
+  return <MatchplaySideTournamentSection {...data} />;
+}
+
+/**
  * Matchplay-grenen — bygger ScoringContext fra rå-rad-ene, kjører mode-router-
  * en (`computeModeResult`) og rendrer `MatchplayMatchView` med både live- og
  * finished-state håndtert av komponenten selv (basert på `result.result`).
@@ -1701,6 +1724,14 @@ async function renderMatchplay(opts: {
     };
   }
 
+  const sideTournamentSection = await renderMatchplaySideSection({
+    gameId,
+    game,
+    gwp,
+    rawHolesRows,
+    rawScoresRows,
+  });
+
   return (
     <MatchplayMatchView
       gameId={gameId}
@@ -1709,6 +1740,7 @@ async function renderMatchplay(opts: {
       playerInfo={playerInfo}
       gameStatus={game.status}
       backHref={backHref}
+      sideTournamentSection={sideTournamentSection}
     />
   );
 }
@@ -1820,6 +1852,14 @@ async function renderFourballMatchplay(opts: {
     }
   }
 
+  const sideTournamentSection = await renderMatchplaySideSection({
+    gameId,
+    game,
+    gwp,
+    rawHolesRows,
+    rawScoresRows,
+  });
+
   return (
     <FourballMatchplayView
       gameId={gameId}
@@ -1830,6 +1870,7 @@ async function renderFourballMatchplay(opts: {
       side2Label={side2Label}
       gameStatus={game.status}
       backHref={backHref}
+      sideTournamentSection={sideTournamentSection}
     />
   );
 }
@@ -1939,6 +1980,14 @@ async function renderFoursomesMatchplay(opts: {
     }
   }
 
+  const sideTournamentSection = await renderMatchplaySideSection({
+    gameId,
+    game,
+    gwp,
+    rawHolesRows,
+    rawScoresRows,
+  });
+
   return (
     <FoursomesMatchplayView
       gameId={gameId}
@@ -1950,6 +1999,7 @@ async function renderFoursomesMatchplay(opts: {
       formatLabel={MODE_LABELS[game.game_mode]}
       gameStatus={game.status}
       backHref={backHref}
+      sideTournamentSection={sideTournamentSection}
     />
   );
 }

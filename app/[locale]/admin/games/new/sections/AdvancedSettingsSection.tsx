@@ -132,8 +132,8 @@ export function AdvancedSettingsSection({
             </p>
           </fieldset>
 
-          {/* Sideturnering — skjult for matchplay-familien (#576): duell-kortet
-              har ingen tabs-flate for en LD/CTP-fane (egen sak vurderer det). */}
+          {/* Sideturnering — tilbys for alle formater. Matchplay viser LD/CTP
+              kompakt under duell-kortet (#585). */}
           {sideTournamentSupported && (
           <fieldset>
             <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">

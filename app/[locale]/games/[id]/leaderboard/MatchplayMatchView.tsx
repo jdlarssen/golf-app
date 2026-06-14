@@ -1,4 +1,4 @@
-import type { JSX } from 'react';
+import type { JSX, ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { AppShell } from '@/components/ui/AppShell';
@@ -60,6 +60,13 @@ export interface MatchplayMatchViewProps {
   gameStatus: GameStatus;
   /** Hvor pilen tilbake skal peke. Defaults til spillets hjem. */
   backHref?: string;
+  /**
+   * Sideturnering-seksjon (#585) — bygd server-side av render-funksjonen og
+   * sendt inn som ferdig node, rendret kompakt under duell-resultatet. Settes
+   * kun når spillet er `finished` og har sideturnering på; `undefined` ellers
+   * → view-en er byte-identisk med før.
+   */
+  sideTournamentSection?: ReactNode;
 }
 
 /**
@@ -89,6 +96,7 @@ export function MatchplayMatchView({
   playerInfo,
   gameStatus: _gameStatus,
   backHref = '/',
+  sideTournamentSection,
 }: MatchplayMatchViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
   const tc = useTranslations('leaderboard.common');
@@ -164,6 +172,9 @@ export function MatchplayMatchView({
           matchResult={result.result}
         />
       </div>
+
+      {/* Sideturnering (#585) — kompakt under duell-resultatet, kun når på */}
+      {sideTournamentSection}
 
       {/* 2. Per-hull-grid */}
       <section className="px-3.5 pt-4 pb-2">
