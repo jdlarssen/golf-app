@@ -1,6 +1,8 @@
-import { getTranslations } from 'next-intl/server';
+import { getTranslations, getLocale } from 'next-intl/server';
+import type { AppLocale } from '@/i18n/routing';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { getServerClient } from '@/lib/supabase/server';
+import { formatHcpDisplay } from '@/lib/handicap/sign';
 import { Input } from '@/components/ui/Input';
 
 type User = {
@@ -16,6 +18,7 @@ type User = {
 export async function PlayersList({ searchQuery }: { searchQuery: string }) {
   const supabase = await getServerClient();
   const t = await getTranslations('admin.players');
+  const locale = (await getLocale()) as AppLocale;
 
   // Only show fully-onboarded players. Pending invitees have NULL name and
   // profile_completed_at and would otherwise duplicate the entry shown in
@@ -91,7 +94,7 @@ export async function PlayersList({ searchQuery }: { searchQuery: string }) {
               </div>
               <div className="shrink-0 text-right">
                 <p className="font-sans text-[12px] tabular-nums text-text">
-                  {u.hcp_index.toFixed(1)}
+                  {formatHcpDisplay(u.hcp_index, locale)}
                 </p>
                 {u.is_admin && (
                   <p

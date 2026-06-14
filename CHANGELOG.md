@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#616](https://github.com/jdlarssen/golf-app/issues/616). Innboksen kunne bare vokse. Du kunne markere som lest, men ikke fjerne noe, og lange undertekster ble kuttet midt i ordet. Nå kan du arkivere et varsel med ✕, tømme alle leste i ett trykk, og undertekstene får plass på to linjer.
 
+### [1.129.1] - 2026-06-14 · #615
+
+> Handicap i admin-spillerlista vises nå med komma (12,2), som ellers i appen. Plusshandicap får pluss foran (+8,0) i stedet for minus.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Admin-spillerlista (`/admin/spillere`) viste handicap via `toFixed(1)`. Det gir alltid punktum («12.2»), uavhengig av språk, og ignorerer plusshandicap-konvensjonen: plusshandicap (lagret som negativt tall) ble vist som «−8.0» i stedet for «+8,0» (#615). Ny ren helper `formatHcpDisplay(signed, locale)` i `lib/handicap/sign.ts` komponerer `fromSignedHcp` + `formatNumber`: locale-riktig desimalskille (norsk komma, engelsk punktum), alltid én desimal, «+» på plusshandicap, ingen fortegn på scratch. `PlayersList` henter aktiv locale via `getLocale()` og bruker helperen. Dekket av Type A-tester i `sign.test.ts`.
+
+</details>
+
 ### [1.129.0] - 2026-06-14 · #616
 
 > Du kan nå arkivere et varsel med ✕, eller tømme alle leste i ett trykk, så innboksen ikke bare vokser. Lange undertekster vises på to linjer i stedet for å bli kuttet av.
