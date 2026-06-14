@@ -17,8 +17,9 @@ import type { AppLocale } from '@/i18n/routing';
 // /innboks-flaten lever ved siden av spill-rutene — TopBar med chevron
 // tilbake til /, kicker «INNBOKS». RLS sørger for at vi kun ser egne
 // notifications-rader; ingen behov for eksplisitt user_id-filter, men
-// vi inkluderer den slik at partial-indexen `notifications_user_unread_
-// created` brukes.
+// vi inkluderer den + `archived_at is null` slik at partial-indexen
+// `notifications_user_active_created` (#616) brukes — arkiverte varsler
+// skjules fra lista (soft-archive, ikke slettet).
 export default async function InboxPage() {
   const locale = (await getLocale()) as AppLocale;
   const t = await getTranslations('inbox');
@@ -34,6 +35,7 @@ export default async function InboxPage() {
     .from('notifications')
     .select('id, kind, payload, read_at, created_at')
     .eq('user_id', userId)
+    .is('archived_at', null)
     .order('created_at', { ascending: false })
     .limit(100)
     .returns<NotificationRow[]>();

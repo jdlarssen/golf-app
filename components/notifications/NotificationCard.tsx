@@ -52,21 +52,27 @@ const EMOJI: Record<NotificationKind, string> = {
  * Layout:
  *  - Champagne-stripe på venstre kant for uleste (4px wide, --accent)
  *  - Emoji-bobble på venstre (lookup per kind)
- *  - Tittel (font-medium hvis ulest, normal hvis lest) + 1-linjes detalj
+ *  - Tittel (font-medium hvis ulest, normal hvis lest) + 2-linjes detalj
  *  - Relativ tidsstempel i aktiv locale til høyre
+ *  - ✕-arkiv-knapp ytterst til høyre når `onArchive` er gitt (#616)
  *
  * Caller styrer `onTap` — typisk: marker som lest i DB, deretter naviger
  * til kortets deeplink. Selve navigeringen håndteres av parent (caller har
  * full kontekst over router-state og kan optimistic-mutere lokal liste).
  *
- * Tap-target: hele kortet er én button, min-h-11 (44px) per design-spec.
+ * Struktur: rot er en `<div>` (ikke `<button>`), så hoved-tap-arealet og
+ * ✕-knappen er søsken-knapper — nestede interaktive elementer er ugyldig
+ * HTML. Klikk på ✕ trigger derfor ikke kort-tappen. Begge har ≥44px
+ * tap-target (hoved: min-h-11, ✕: w-11 + items-stretch).
  */
 export function NotificationCard({
   notification,
   onTap,
+  onArchive,
 }: {
   notification: NotificationRow;
   onTap?: () => void;
+  onArchive?: () => void;
 }) {
   const t = useTranslations('inbox');
   const locale = useLocale() as AppLocale;
@@ -75,10 +81,8 @@ export function NotificationCard({
   const { title, detail } = buildCardContent(kind, payload, t);
 
   return (
-    <button
-      type="button"
-      onClick={onTap}
-      className={`group relative flex w-full items-start gap-3 rounded-xl border border-border bg-surface px-3.5 py-3 text-left min-h-11 transition-colors hover:bg-surface-2 active:bg-surface-2 ${
+    <div
+      className={`group relative flex items-stretch overflow-hidden rounded-xl border border-border bg-surface transition-colors ${
         isUnread ? '' : 'opacity-80'
       }`}
     >
@@ -86,38 +90,80 @@ export function NotificationCard({
         <span
           data-testid="unread-stripe"
           aria-hidden
-          className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full"
+          className="absolute left-0 top-2 bottom-2 z-10 w-1 rounded-r-full"
           style={{ background: 'var(--accent)' }}
         />
       )}
 
-      <span
-        aria-hidden
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-lg leading-none"
+      <button
+        type="button"
+        onClick={onTap}
+        className="flex min-h-11 min-w-0 flex-1 items-start gap-3 px-3.5 py-3 text-left transition-colors hover:bg-surface-2 active:bg-surface-2"
       >
-        {EMOJI[kind]}
-      </span>
-
-      <div className="min-w-0 flex-1">
-        <p
-          className={`font-sans text-[14px] leading-tight text-text ${
-            isUnread ? 'font-medium' : 'font-normal'
-          }`}
+        <span
+          aria-hidden
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-lg leading-none"
         >
-          {title}
-        </p>
-        <p className="mt-1 truncate font-sans text-[12px] text-muted">
-          {detail}
-        </p>
-      </div>
+          {EMOJI[kind]}
+        </span>
 
-      <time
-        dateTime={created_at}
-        className="ml-1 shrink-0 self-start whitespace-nowrap pt-0.5 font-sans text-[11px] tabular-nums text-muted"
-      >
-        {formatRelativeLocale(created_at, locale)}
-      </time>
-    </button>
+        <div className="min-w-0 flex-1">
+          <p
+            className={`font-sans text-[14px] leading-tight text-text ${
+              isUnread ? 'font-medium' : 'font-normal'
+            }`}
+          >
+            {title}
+          </p>
+          <p className="mt-1 line-clamp-2 font-sans text-[12px] text-muted">
+            {detail}
+          </p>
+        </div>
+
+        <time
+          dateTime={created_at}
+          className="ml-1 shrink-0 self-start whitespace-nowrap pt-0.5 font-sans text-[11px] tabular-nums text-muted"
+        >
+          {formatRelativeLocale(created_at, locale)}
+        </time>
+      </button>
+
+      {onArchive && (
+        <button
+          type="button"
+          onClick={onArchive}
+          aria-label={t('archiveAria')}
+          className="flex w-11 shrink-0 items-center justify-center text-muted transition-colors hover:bg-surface-2 hover:text-text active:bg-surface-2"
+        >
+          <XIcon />
+        </button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Liten ✕ for arkiv-knappen. Holdes lokalt her (samme mønster som
+ * NotificationBell's BellIcon) siden den kun brukes på denne ene call-site —
+ * en separat icon-fil ville vært overengineering. currentColor + 1.5 stroke
+ * + round caps, i tråd med components/icons/Icons.tsx-stilen.
+ */
+function XIcon() {
+  return (
+    <svg
+      width={16}
+      height={16}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <line x1="6" y1="6" x2="18" y2="18" />
+      <line x1="18" y1="6" x2="6" y2="18" />
+    </svg>
   );
 }
 

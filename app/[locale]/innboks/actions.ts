@@ -2,6 +2,7 @@
 
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
 import { markNotificationsRead } from '@/lib/notifications/markRead';
+import { archiveNotifications } from '@/lib/notifications/archive';
 import { getServerClient } from '@/lib/supabase/server';
 
 /**
@@ -27,6 +28,30 @@ export async function markAllAsRead(): Promise<void> {
   const userId = await getProxyVerifiedUserId();
   if (!userId) return;
   await markNotificationsRead({ userId });
+}
+
+/**
+ * Arkiver ett spesifikt varsel (✕-knapp per kort, #616). Soft-archive:
+ * raden skjules fra lista men slettes ikke. Setter også `read_at` så en
+ * arkivert-mens-ulest rad ikke etterlater en hengende bunn-nav-prikk.
+ *
+ * UserId hentes via proxy-header, ikke fra klienten — klienten kan ikke be
+ * om å arkivere noen andres varsler.
+ */
+export async function archiveOne(notificationId: string): Promise<void> {
+  const userId = await getProxyVerifiedUserId();
+  if (!userId) return;
+  await archiveNotifications({ userId, notificationId });
+}
+
+/**
+ * Arkiver alle LESTE varsler for current user («Tøm leste»-knapp, #616).
+ * Uleste røres ikke — de blir stående til brukeren leser eller arkiverer dem.
+ */
+export async function clearRead(): Promise<void> {
+  const userId = await getProxyVerifiedUserId();
+  if (!userId) return;
+  await archiveNotifications({ userId });
 }
 
 /**

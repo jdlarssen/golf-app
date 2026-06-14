@@ -16,7 +16,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { MailEnvelope } from '@/components/icons/MailEnvelope';
 import { PullQuote } from '@/components/ui/PullQuote';
-import { markOneAsRead, markAllAsRead } from './actions';
+import { markOneAsRead, markAllAsRead, archiveOne, clearRead } from './actions';
 import { notificationDestination } from '@/lib/notifications/deeplink';
 
 /**
@@ -44,9 +44,12 @@ export function InboxClient({
   const locale = useLocale() as AppLocale;
   const [, startTransition] = useTransition();
   const [markAllPending, startMarkAll] = useTransition();
+  const [, startArchive] = useTransition();
+  const [clearReadPending, startClearRead] = useTransition();
   const [items, setItems] = useState<NotificationRow[]>(initialNotifications);
 
   const hasUnread = items.some((n) => n.read_at == null);
+  const hasRead = items.some((n) => n.read_at != null);
   // Pass locale + translated today/yesterday labels so groupByDay stays
   // locale-agnostic (locale drives the «10. des 2025»-style date labels).
   const groups: DayGroup<NotificationRow>[] = groupNotificationsByDay(items, {
@@ -86,6 +89,23 @@ export function InboxClient({
     });
   }
 
+  function handleArchive(notification: NotificationRow) {
+    // Fjern kortet optimistisk fra lista (soft-archive på server). Vi navigerer
+    // IKKE — ✕ er en ren rydde-handling, ikke en åpne-handling.
+    setItems((prev) => prev.filter((n) => n.id !== notification.id));
+    startArchive(() => {
+      void archiveOne(notification.id);
+    });
+  }
+
+  function handleClearRead() {
+    // Fjern alle leste optimistisk; uleste blir stående.
+    setItems((prev) => prev.filter((n) => n.read_at == null));
+    startClearRead(() => {
+      void clearRead();
+    });
+  }
+
   if (items.length === 0) {
     return (
       <div className="mt-2">
@@ -103,18 +123,32 @@ export function InboxClient({
 
   return (
     <div>
-      {hasUnread && (
-        <div className="mb-3 flex justify-end">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={handleMarkAll}
-            pending={markAllPending}
-            pendingLabel={t('markingPending')}
-            className="min-h-0 rounded-full border border-border bg-surface-2/50 px-3 py-1.5 font-sans text-[11px] font-medium text-text transition-colors hover:bg-surface-2 active:bg-surface-2"
-          >
-            {t('markAllAsRead')}
-          </Button>
+      {(hasUnread || hasRead) && (
+        <div className="mb-3 flex justify-end gap-2">
+          {hasRead && (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={handleClearRead}
+              pending={clearReadPending}
+              pendingLabel={t('clearingPending')}
+              className="min-h-0 rounded-full border border-border bg-surface-2/50 px-3 py-1.5 font-sans text-[11px] font-medium text-text transition-colors hover:bg-surface-2 active:bg-surface-2"
+            >
+              {t('clearRead')}
+            </Button>
+          )}
+          {hasUnread && (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={handleMarkAll}
+              pending={markAllPending}
+              pendingLabel={t('markingPending')}
+              className="min-h-0 rounded-full border border-border bg-surface-2/50 px-3 py-1.5 font-sans text-[11px] font-medium text-text transition-colors hover:bg-surface-2 active:bg-surface-2"
+            >
+              {t('markAllAsRead')}
+            </Button>
+          )}
         </div>
       )}
 
@@ -130,6 +164,7 @@ export function InboxClient({
                   <NotificationCard
                     notification={notification}
                     onTap={() => handleTap(notification)}
+                    onArchive={() => handleArchive(notification)}
                   />
                 </li>
               ))}

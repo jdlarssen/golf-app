@@ -5,11 +5,15 @@ import type { NotificationRow } from '@/components/notifications/NotificationCar
 
 const markOneAsReadMock = vi.fn();
 const markAllAsReadMock = vi.fn();
+const archiveOneMock = vi.fn();
+const clearReadMock = vi.fn();
 const routerPushMock = vi.fn();
 
 vi.mock('./actions', () => ({
   markOneAsRead: (id: string) => markOneAsReadMock(id),
   markAllAsRead: () => markAllAsReadMock(),
+  archiveOne: (id: string) => archiveOneMock(id),
+  clearRead: () => clearReadMock(),
 }));
 
 vi.mock('next/navigation', async () => {
@@ -52,6 +56,8 @@ beforeEach(() => {
   vi.setSystemTime(new Date('2026-05-24T14:30:00Z'));
   markOneAsReadMock.mockReset();
   markAllAsReadMock.mockReset();
+  archiveOneMock.mockReset();
+  clearReadMock.mockReset();
   routerPushMock.mockReset();
 });
 
@@ -218,5 +224,38 @@ describe('InboxClient', () => {
     expect(routerPushMock).toHaveBeenCalledWith(
       '/admin/games/44444444-4444-4444-4444-444444444444',
     );
+  });
+
+  it('arkiverer kortet og navigerer IKKE når ✕ klikkes', () => {
+    render(<InboxClient initialNotifications={[makeInvite('a')]} />);
+    const archive = screen.getByRole('button', { name: /Arkiver varsel/i });
+    fireEvent.click(archive);
+    // Server-action kalles med id-en
+    expect(archiveOneMock).toHaveBeenCalledWith('a');
+    // Kortet fjernes optimistisk fra lista
+    expect(screen.queryByText(/Per inviterte deg/)).not.toBeInTheDocument();
+    // ✕ er en rydde-handling, ikke en åpne-handling — ingen navigering
+    expect(routerPushMock).not.toHaveBeenCalled();
+  });
+
+  it('viser «Tøm leste» og arkiverer alle leste, beholder uleste', () => {
+    render(
+      <InboxClient
+        initialNotifications={[makeInvite('read', true), makeInvite('unread')]}
+      />,
+    );
+    const clearBtn = screen.getByRole('button', { name: /Tøm leste/i });
+    fireEvent.click(clearBtn);
+    expect(clearReadMock).toHaveBeenCalledTimes(1);
+    // Begge er invite-kort med samme tittel; etter rydding skal kun det
+    // uleste (1 stk) stå igjen.
+    expect(screen.getAllByText(/Per inviterte deg/)).toHaveLength(1);
+  });
+
+  it('viser IKKE «Tøm leste» når alt er ulest', () => {
+    render(<InboxClient initialNotifications={[makeInvite('a')]} />);
+    expect(
+      screen.queryByRole('button', { name: /Tøm leste/i }),
+    ).not.toBeInTheDocument();
   });
 });

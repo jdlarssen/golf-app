@@ -17,6 +17,27 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.129.y — Rydd i innboksen
+
+Issue [#616](https://github.com/jdlarssen/golf-app/issues/616). Innboksen kunne bare vokse. Du kunne markere som lest, men ikke fjerne noe, og lange undertekster ble kuttet midt i ordet. Nå kan du arkivere et varsel med ✕, tømme alle leste i ett trykk, og undertekstene får plass på to linjer.
+
+### [1.129.0] - 2026-06-14 · #616
+
+> Du kan nå arkivere et varsel med ✕, eller tømme alle leste i ett trykk, så innboksen ikke bare vokser. Lange undertekster vises på to linjer i stedet for å bli kuttet av.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- Soft-archive av varsler (#616): ny `notifications.archived_at`-kolonne (migrasjon 0098, additiv + partial-indeks `notifications_user_active_created`). ✕-knapp per kort arkiverer ett varsel; «Tøm leste»-knappen arkiverer alle leste i ett trykk. Radene slettes aldri — `archived_at` skjuler dem fra lista, historikken beholdes i DB.
+- Server-helper `lib/notifications/archive.ts` (`archiveNotifications`) + server-actions `archiveOne` og `clearRead` i `innboks/actions.ts`. Arkivering setter `read_at` samtidig, så en arkivert-mens-ulest rad ikke etterlater en hengende bunn-nav-prikk (ulest-telleren teller `read_at is null`).
+
+#### Changed
+- `NotificationCard` gikk fra én `<button>` til en `<div>` med to søsken-knapper (hoved-tap + ✕), så vi unngår nestede interaktive elementer. Detalj-linja bruker `line-clamp-2` i stedet for `truncate` — undertekst bryter til to linjer.
+- `/innboks`-queryen filtrerer `archived_at is null` (bruker den nye partial-indeksen). Behandlingen av «Resultatet er klart»-støy er bevisst latt være: varselet beholdes, og den nye rydde-funksjonen lar deg fjerne det selv.
+
+</details>
+
 ## 1.128.y — Ingen blindveier i innboksen
 
 Issues [#612](https://github.com/jdlarssen/golf-app/issues/612) og [#613](https://github.com/jdlarssen/golf-app/issues/613). Et gammelt påmeldings-varsel kunne ta deg til et spill som var avsluttet eller slettet, og da møtte du en svart engelsk feilside uten vei tilbake. Nå har Tørny en egen «finnes ikke»-side på norsk, og innboksen rydder bort varsler som ikke lenger har et sted å ta deg.
