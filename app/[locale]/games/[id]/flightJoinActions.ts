@@ -112,6 +112,3 @@ export async function joinFlight(
   revalidateTag(`game-${gameId}`, 'max');
   return { ok: true };
 }
-
-// Re-eksport for konveniense (client-komponenten trenger bare denne filen).
-export { getProxyVerifiedUserId };
