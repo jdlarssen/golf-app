@@ -2043,6 +2043,7 @@ describe('calculateSideTournament', () => {
       // user-a on team 1 wins (7 hull)
       const award = t1.awards.find((a) => a.category === 'longest_bogey_free_streak');
       expect(award?.points).toBe(4);
+      expect(award?.winnerUserId).toBe('user-a');
       expect(award?.streakLength).toBe(7);
       expect(award?.streakStartHole).toBe(3); // 1-indexed
       expect(award?.streakEndHole).toBe(9); // 1-indexed
@@ -2217,6 +2218,7 @@ describe('calculateSideTournament', () => {
       // user-c on team 2 wins
       const award = t2.awards.find((a) => a.category === 'lowest_single_hole_brutto');
       expect(award?.points).toBe(2);
+      expect(award?.winnerUserId).toBe('user-c');
       expect(award?.score).toBe(2);
       expect(award?.holeNumber).toBe(5); // 1-indexed
       expect(t1.awards.find((a) => a.category === 'lowest_single_hole_brutto')).toBeUndefined();

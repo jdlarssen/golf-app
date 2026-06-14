@@ -21,6 +21,21 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#585](https://github.com/jdlarssen/golf-app/issues/585), oppfølging av sideturnering-utrullingen i [#576](https://github.com/jdlarssen/golf-app/issues/576). Matchplay-familien (singles, fourball, foursomes m.fl.) var den eneste som ikke fikk sideturnering, fordi duell-kortet ikke har samme tabs-flate som de andre formatene. Nå vises vinnerne kompakt under duell-resultatet, med hele poenggrunnlaget bak en utvid-knapp.
 
+### [1.127.3] - 2026-06-14 · #602
+
+> Også «Lengste bogeyfrie rekke» og «Verste enkelthull» viser nå hvem som tok dem — de hadde samme «(?)»-feil som resten av sideturneringen.
+
+<details>
+<summary>Teknisk</summary>
+
+[#602](https://github.com/jdlarssen/golf-app/issues/602), fullføring. Skeptisk evaluering fant to individuelle kategorier til med samme manglende `winnerUserId` — `longest_bogey_free_streak` og `lowest_single_hole_brutto` — som rendret navn i raden men falt tilbake til «(?)». Samme rotårsak, samme mekaniske fiks.
+
+#### Fixed
+- `lib/scoring/sideTournament.ts`: `winnerUserId: w.userId` på `longest_bogey_free_streak`- og `lowest_single_hole_brutto`-awardene. Ingen poeng-/standings-endring.
+- `sideTournament.test.ts`: `winnerUserId`-assertions på de eksisterende enkelt-vinner-testene for begge (test-først).
+
+</details>
+
 ### [1.127.2] - 2026-06-14 · #604 #603
 
 > I et spill der hver spiller står for seg selv ryddet vi opp i sideturneringen: navnet ditt står nå én gang med kallenavn (ikke to ganger), og det står ikke lenger «hele laget» når det ikke finnes noe lag.

@@ -943,6 +943,7 @@ export function calculateSideTournament(
               category: 'longest_bogey_free_streak',
               teamId,
               points: SIDE_TOURNAMENT_POINTS.longestBogeyFreeStreak,
+              winnerUserId: w.userId,
               streakLength: w.streak.length,
               streakStartHole: w.streak.startHole,
               streakEndHole: w.streak.endHole,
@@ -987,6 +988,7 @@ export function calculateSideTournament(
             category: 'lowest_single_hole_brutto',
             teamId,
             points: SIDE_TOURNAMENT_POINTS.lowestSingleHoleBrutto,
+            winnerUserId: w.userId,
             score: w.score,
             holeNumber: w.holeIdx + 1, // 1-indexed
           });
