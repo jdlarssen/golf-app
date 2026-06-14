@@ -37,13 +37,13 @@ Kun de 7 VERDIENE i `messages/no.json` som inneholder selve ordet endres. JSON-N
 
 ## Success-kriterier
 
-- [ ] **K1:** Alle 7 verdiene i tabellen over er endret i `messages/no.json`, eksakt som spesifisert.
-- [ ] **K2:** Ingen string-VERDI i `messages/no.json` inneholder lenger ordet «roster»/«rosteren» (case-insensitivt). Nøkler kan fortsatt inneholde det.
-- [ ] **K3:** `en.json` er uendret (git diff viser ingen endring i en.json).
-- [ ] **K4:** JSON-nøkler i `no.json` er uendret (samme nøkkel-sett som før → catalogParity grønn).
-- [ ] **K5:** Term-konsistens: kun `spillerliste`/`spillerlisten` (hankjønn), ingen `spillerlista`/`spillerliste`-hunkjønn introdusert.
-- [ ] **K6:** humanizer-skill kjørt på de 7 nye strengene; ingen nye AI-tells.
-- [ ] **K7:** Versjon bumpet PATCH (1.129.6 → 1.129.7) + CHANGELOG-oppføring i samme commit.
+- [x] **K1:** Alle 7 verdiene endret. Evidens: `git diff messages/no.json` viser nøyaktig de 7 før/etter-paret fra tabellen.
+- [x] **K2:** Ingen «roster» i verdier. Evidens: `grep -nE ':\s*"[^"]*[Rr]oster' messages/no.json` → «OK: no roster in any value».
+- [x] **K3:** `en.json` uendret. Evidens: `git diff --stat messages/en.json` → tomt.
+- [x] **K4:** Nøkler uendret → paritet grønn. Evidens: `npx vitest run messages/catalogParity.test.ts` → 3 passed.
+- [x] **K5:** Term-konsistens. Evidens: diff viser kun `spillerliste`/`spillerlisten` (hankjønn); ingen `spillerlista`.
+- [x] **K6:** humanizer kjørt — alle 7 rene, ingen nye AI-tells (form-konsistens OK, idiomatisk «lagt til i spillerlisten»).
+- [x] **K7:** Versjon 1.129.6 → 1.129.7 + CHANGELOG-oppføring under åpen `1.129.y`-serie. Evidens: `package.json` version-felt + CHANGELOG `### [1.129.7]`; commit passerte commit-msg-hook.
 
 ## Gates (scoped til endringen)
 
