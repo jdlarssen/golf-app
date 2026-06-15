@@ -17,6 +17,22 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.130.y — Lag-matchplay uten cup
+
+Issue [#634](https://github.com/jdlarssen/golf-app/issues/634). Lag-matchplay-formatene kunne bare settes opp via en cup. Nå tar opprett-veiviseren dem også.
+
+### [1.130.0] - 2026-06-15 · #634
+
+> Fourball, foursomes, greensome, Chapman og gruesome matchplay kunne før bare settes opp gjennom en cup. Nå velger du dem rett i opprett-veiviseren, fordeler spillerne på to sider à to, og setter i gang.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- Den frittstående opprett-veiviseren støtter nå de fem lag-matchplay-formatene (fourball/foursomes/greensome/chapman/gruesome) med 2v2-side-tildeling. De var synlige i format-grid-en (kompis-intent) men en blindvei på steg 4: `useGameFormState.isMatchplay` dekket kun singles, og `TeamsAssignmentSection` rendret ingen side-grid for dem. Nytt `isTeamMatchplay`-flagg + `teamMatchplayPlayersValid` (eksakt 4 spillere, fordelt 2+2 på side 1/2) gjenbruker lag-slot-grid-maskineriet (samme path som Texas) rendret som to «Side 1/2»-kort à 2 slots. Payload-validatorene fantes allerede og leser `player_${i}_team`, så `gamePayload.ts` er urørt; rader emitteres med `team_number` 1/2 og `flight = team`. Chapman manglet i tillegg hele allowance-wiringen i veiviseren (AllowanceField + submit-felt + hidden input) — lagt til. `TeamSizeSelector` skjules for disse (alltid lag à 2). Type C render-test + nye i18n-nøkler (no/en). Singles matchplay urørt. (#634)
+
+</details>
+
 ## 1.129.y — Rydd i innboksen
 
 Issue [#616](https://github.com/jdlarssen/golf-app/issues/616). Innboksen kunne bare vokse. Du kunne markere som lest, men ikke fjerne noe, og lange undertekster ble kuttet midt i ordet. Nå kan du arkivere et varsel med ✕, tømme alle leste i ett trykk, og undertekstene får plass på to linjer.

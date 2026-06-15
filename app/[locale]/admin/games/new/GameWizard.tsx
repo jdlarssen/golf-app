@@ -403,6 +403,7 @@ export function GameWizard({
       fourball_allowance_pct: state.fourballAllowancePct,
       foursomes_allowance_pct: state.foursomesAllowancePct,
       greensome_allowance_pct: state.greensomeAllowancePct,
+      chapman_allowance_pct: state.chapmanAllowancePct,
       gruesome_allowance_pct: state.gruesomeAllowancePct,
       round_robin_allowance_pct: state.roundRobinAllowancePct,
       wolf_scoring: state.wolfScoring,
@@ -579,7 +580,7 @@ export function GameWizard({
 
           {state.formatChosen && (
             <div className="space-y-4">
-              {!state.isMatchplay && !state.isWolf && !state.isNassau && !state.isSkins && !state.isBingoBangoBongo && !state.isNines && !state.isRoundRobin && !state.isAceyDeucey && !state.isShamble && !state.isPatsome && (
+              {!state.isMatchplay && !state.isTeamMatchplay && !state.isWolf && !state.isNassau && !state.isSkins && !state.isBingoBangoBongo && !state.isNines && !state.isRoundRobin && !state.isAceyDeucey && !state.isShamble && !state.isPatsome && (
                 <TeamSizeSelector
                   mode={state.gameMode}
                   value={state.teamSize}
@@ -692,6 +693,19 @@ export function GameWizard({
                   bruttoHelperText={t('allowanceProps.greensome.bruttoHelper')}
                   value={state.greensomeAllowancePct}
                   onChange={state.setGreensomeAllowancePct}
+                  hideHiddenInput
+                />
+              )}
+              {state.gameMode === 'chapman_matchplay' && (
+                <AllowanceField
+                  fieldName="chapman_allowance_pct"
+                  defaultPct={100}
+                  legend={t('allowanceProps.chapman.legend')}
+                  description={t('allowanceProps.chapman.description')}
+                  nettoHelperText={t('allowanceProps.chapman.nettoHelper')}
+                  bruttoHelperText={t('allowanceProps.chapman.bruttoHelper')}
+                  value={state.chapmanAllowancePct}
+                  onChange={state.setChapmanAllowancePct}
                   hideHiddenInput
                 />
               )}
@@ -942,6 +956,7 @@ function FormDataInputs({
     fourballAllowancePct,
     foursomesAllowancePct,
     greensomeAllowancePct,
+    chapmanAllowancePct,
     gruesomeAllowancePct,
     roundRobinAllowancePct,
     wolfScoring,
@@ -1040,6 +1055,13 @@ function FormDataInputs({
           type="hidden"
           name="greensome_allowance_pct"
           value={String(greensomeAllowancePct)}
+        />
+      )}
+      {gameMode === 'chapman_matchplay' && (
+        <input
+          type="hidden"
+          name="chapman_allowance_pct"
+          value={String(chapmanAllowancePct)}
         />
       )}
       {gameMode === 'gruesome_matchplay' && (

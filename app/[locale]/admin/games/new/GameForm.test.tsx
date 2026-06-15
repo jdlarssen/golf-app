@@ -618,6 +618,71 @@ describe('GameForm — patsome (#633)', () => {
   });
 });
 
+describe('GameForm — lag-matchplay (#634)', () => {
+  // Regresjonsvakt: lag-matchplay (fourball/foursomes/greensome/chapman/
+  // gruesome) er 2v2 — to «Side»-kort à 2 slots. Grid-en gjenbruker
+  // lag-slot-maskineriet (samme path som Texas), men de fem formatene var
+  // tidligere en dead-end uten side-grid. Én Type C render-test (fourball
+  // representativt) beviser at side-grid-en rendrer, pluss en sjekk på at
+  // Chapman fortsatt får sin allowance-toggle.
+  it('fourball-matchplay: side-grid med to «Side»-kort à 2 slots vises når ≥2 spillere er valgt', () => {
+    const { container } = render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+        initialValues={{ game_mode: 'fourball_matchplay' }}
+      />,
+    );
+
+    // Velg 2 spillere → side-grid skal vises (2v2-mønsteret).
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 2/i }));
+
+    // Beskrivelsen for lag-matchplay (to sider à 2).
+    expect(screen.getByText(/to sider à 2 spillere/i)).toBeInTheDocument();
+
+    // Eksakt to «Side N»-kort (lag 3/4 skjult for 2v2).
+    expect(screen.getByText('Side 1')).toBeInTheDocument();
+    expect(screen.getByText('Side 2')).toBeInTheDocument();
+    expect(screen.queryByText('Side 3')).not.toBeInTheDocument();
+
+    // Fire slot-dropdowns totalt (2 sider × 2 slots). Slot-selectene har
+    // «— Tom plass —» som første opsjon; bane-/tee-selectene har det ikke,
+    // så vi filtrerer på det for å telle kun grid-slottene.
+    const slotSelects = Array.from(
+      container.querySelectorAll('select'),
+    ).filter((sel) => sel.querySelector('option')?.textContent === '— Tom plass —');
+    expect(slotSelects).toHaveLength(4);
+  });
+
+  it('chapman-matchplay: allowance-toggle (chapman_allowance_pct) rendres', () => {
+    const { container } = render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+        initialValues={{ game_mode: 'chapman_matchplay' }}
+      />,
+    );
+
+    // AllowanceField for chapman skriver til chapman_allowance_pct via en
+    // skjult input — bevis at feltet er montert (var manglende i veiviseren
+    // før #634, så Chapman var uopprettelig).
+    expect(
+      container.querySelector('input[name="chapman_allowance_pct"]'),
+    ).not.toBeNull();
+  });
+});
+
 describe('GameForm — matchplay singles (epic #45 fase 2)', () => {
   /**
    * Helper: bytter til matchplay-modus via tile-klikk. Defensiv: ingen

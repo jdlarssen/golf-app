@@ -16,6 +16,7 @@ import {
   type RegistrationMode,
   type RegistrationType,
 } from '@/lib/games/registration';
+import { isMatchplayMode } from '@/lib/games/matchplaySides';
 
 // Lag-numre er en bevisst smal union — andre tall (5, 6, …) er ikke meningsfulle
 // i Tørny per d.d. og blir narrower'ed via `isTeamNumber`-guarden under.
@@ -657,6 +658,14 @@ export function useGameFormState({
   //   foursomes). Scoring-toggle (net vs gross). Eget PatsomeSetup-step i
   //   step 2.
   const isPatsome = gameMode === 'patsome';
+  // - isTeamMatchplay: lag-matchplay-familien (fourball/foursomes/greensome/
+  //   chapman/gruesome). 2v2 — to sider à 2 spillere, eksakt 4 spillere totalt.
+  //   Side = team_number (1/2), de to makkerne på en side deler team_number.
+  //   Gjenbruker lag-slot-grid-maskineriet (assignPlayerToSlot/playersByTeam)
+  //   rendret som to «Side 1/2»-kort à 2 slots — samme path som Texas. Singles
+  //   matchplay (isMatchplay) er gjensidig utelukkende og urørt.
+  const isTeamMatchplay =
+    isMatchplayMode(gameMode) && gameMode !== 'singles_matchplay';
 
   // Drafts can be saved without a tee-off; publishing cannot. `canPublish`
   // below combines this with the rest of the validity gates.
@@ -999,7 +1008,7 @@ export function useGameFormState({
     for (const team of TEAM_NUMBERS) {
       for (const pid of playersByTeam[team]) {
         const flight =
-          isParStableford || isTexas || isAmbrose || isShamble || isPatsome
+          isParStableford || isTexas || isAmbrose || isShamble || isPatsome || isTeamMatchplay
             ? team
             : (flightByPlayer[pid] ?? teamDefaultFlight(team));
         rows.push({
@@ -1010,7 +1019,7 @@ export function useGameFormState({
       }
     }
     return rows;
-  }, [isMatchplay, isWolf, isRoundRobin, requiresTeams, selectedPlayerIds, wolfOrder, roundRobinOrder, playersByTeam, teamByPlayer, flightByPlayer, isParStableford, isTexas, isAmbrose, isShamble, isPatsome]);
+  }, [isMatchplay, isWolf, isRoundRobin, requiresTeams, selectedPlayerIds, wolfOrder, roundRobinOrder, playersByTeam, teamByPlayer, flightByPlayer, isParStableford, isTexas, isAmbrose, isShamble, isPatsome, isTeamMatchplay]);
 
   const flightsComplete =
     teamsComplete &&
@@ -1202,6 +1211,20 @@ export function useGameFormState({
     patsomeTeamsBalanced &&
     patsomeHasAtLeastOneTeam;
 
+  // Lag-matchplay-validitet: eksakt 4 spillere, alle tilordnet, fordelt 2+2
+  // på side 1 og side 2 (team_number 1/2). Side 3/4 må være tomme (grid-en
+  // skjuler dem, men vi sjekker eksplisitt mot zombie-state). Speiler
+  // `validateFourball/Foursomes/...Matchplay` i gamePayload.ts (eksakt 4,
+  // 2 per side). Allowance-pct dekkes av validatoren, ikke her.
+  const teamMatchplayPlayersValid =
+    isTeamMatchplay &&
+    selectedPlayerIds.length === 4 &&
+    selectedPlayerIds.every((pid) => teamByPlayer[pid] !== undefined) &&
+    playersByTeam[1].length === 2 &&
+    playersByTeam[2].length === 2 &&
+    playersByTeam[3].length === 0 &&
+    playersByTeam[4].length === 0;
+
   // Modus-spesifikk publish-validitet. Reglene speiler
   // `lib/games/gamePayload.ts` slik at klient og server forteller samme
   // historie til admin når noe mangler:
@@ -1244,7 +1267,9 @@ export function useGameFormState({
                                 ? shamblePlayersValid
                                 : isPatsome
                                   ? patsomePlayersValid
-                                  : false;
+                                  : isTeamMatchplay
+                                    ? teamMatchplayPlayersValid
+                                    : false;
 
   // Round Robin allowance-validitet: 0..100.
   const roundRobinAllowancePctValid =
@@ -1271,7 +1296,7 @@ export function useGameFormState({
     (playersStepOptional || playersValidForMode) &&
     (isRoundRobin
       ? roundRobinAllowancePctValid
-      : isTexas || isAmbrose || isShamble || isWolf || isNassau || isSkins || isBingoBangoBongo || isNines || isAceyDeucey || isPatsome || allowanceValid) &&
+      : isTexas || isAmbrose || isShamble || isWolf || isNassau || isSkins || isBingoBangoBongo || isNines || isAceyDeucey || isPatsome || isTeamMatchplay || allowanceValid) &&
     hasTeeOff;
 
   // Human-readable list of what's still missing for a publish. Mode-aware:
@@ -1447,6 +1472,16 @@ export function useGameFormState({
     } else if (!patsomePlayersValid) {
       missingForPublish.push(tMissing('patsomeAssign'));
     }
+  } else if (isTeamMatchplay) {
+    // Lag-matchplay: eksakt 4 spillere, fordelt 2 per side (2v2).
+    if (selectedPlayerIds.length < 4) {
+      const remaining = 4 - selectedPlayerIds.length;
+      missingForPublish.push(tMissing('teamMatchplayUnderMin', { remaining }));
+    } else if (selectedPlayerIds.length > 4) {
+      missingForPublish.push(tMissing('teamMatchplayTooMany'));
+    } else if (!teamMatchplayPlayersValid) {
+      missingForPublish.push(tMissing('teamMatchplayAssign'));
+    }
   } else if (selectedPlayerIds.length < 1) {
     // isSolo
     missingForPublish.push(tMissing('soloMin'));
@@ -1455,7 +1490,7 @@ export function useGameFormState({
   // Skins, Bingo Bango Bongo, Nines, Round Robin eller Acey Deucey — disse
   // modusene har sin egen scoring-konfig i mode_config. Hopper over allowance-
   // sjekken så admin ikke får mismatch mellom UI-skjult-felt og publish-feilmelding.
-  if (!isTexas && !isAmbrose && !isFlorida && !isShamble && !isWolf && !isNassau && !isSkins && !isBingoBangoBongo && !isNines && !isRoundRobin && !isAceyDeucey && !isPatsome && !allowanceValid)
+  if (!isTexas && !isAmbrose && !isFlorida && !isShamble && !isWolf && !isNassau && !isSkins && !isBingoBangoBongo && !isNines && !isRoundRobin && !isAceyDeucey && !isPatsome && !isTeamMatchplay && !allowanceValid)
     missingForPublish.push(tMissing('invalidAllowance'));
 
   return {
@@ -1569,6 +1604,7 @@ export function useGameFormState({
     isAceyDeucey,
     isShamble,
     isPatsome,
+    isTeamMatchplay,
     hasTeeOff,
     // Memoiserte derivasjoner
     selectedCourse,
@@ -1591,6 +1627,7 @@ export function useGameFormState({
     matchplayPlayersValid,
     ninesPlayersValid,
     patsomePlayersValid,
+    teamMatchplayPlayersValid,
     playersValidForMode,
     canPublish,
     missingForPublish,

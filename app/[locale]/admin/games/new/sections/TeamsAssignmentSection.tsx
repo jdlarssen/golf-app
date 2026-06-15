@@ -65,6 +65,7 @@ export function TeamsAssignmentSection({
     isFlorida,
     isShamble,
     isPatsome,
+    isTeamMatchplay,
     requiresTeams,
     teamSize,
     drawRandomTeams,
@@ -87,11 +88,13 @@ export function TeamsAssignmentSection({
         isAmbrose ||
         isFlorida ||
         isShamble ||
-        isPatsome
+        isPatsome ||
+        isTeamMatchplay
       ? '5. '
       : '4. ';
 
   function teamsDescription(): string {
+    if (isTeamMatchplay) return t('teamsDescTeamMatchplay');
     if (isParStableford) return t('teamsDescParStableford');
     if (isTexas || isAmbrose || isFlorida) {
       if (teamSize === 2) return t('teamsDescTexas2');
@@ -186,7 +189,8 @@ export function TeamsAssignmentSection({
           (isAmbrose && selectedPlayerIds.length >= teamSize) ||
           (isFlorida && selectedPlayerIds.length >= teamSize) ||
           (isShamble && selectedPlayerIds.length >= teamSize) ||
-          (isPatsome && selectedPlayerIds.length >= 2)) && (
+          (isPatsome && selectedPlayerIds.length >= 2) ||
+          (isTeamMatchplay && selectedPlayerIds.length >= 2)) && (
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-text">
             {numberPrefix('4')}{t('teamsHeading')}
@@ -216,7 +220,7 @@ export function TeamsAssignmentSection({
               </Button>
             </div>
           )}
-          {(isParStableford || isTexas || isAmbrose || isFlorida || isShamble || isPatsome) &&
+          {(isParStableford || isTexas || isAmbrose || isFlorida || isShamble || isPatsome || isTeamMatchplay) &&
             selectedPlayerIds.some((pid) => teamByPlayer[pid] !== undefined) && (
             <div className="flex">
               <Button
@@ -244,6 +248,9 @@ export function TeamsAssignmentSection({
               // alle 4 lag siden max er 4×3=12 (skiller seg fra Florida-3,
               // som kun bruker 2 lag).
               if (isShamble && teamSize === 4 && team > 2) return null;
+              // Lag-matchplay er 2v2: kun to sider. Skjul lag 3/4 så admin
+              // ikke kan tilordne en tredje side (samme mønster som Texas-4).
+              if (isTeamMatchplay && team > 2) return null;
               const slotCount =
                 isTexas || isAmbrose || isFlorida || isShamble ? teamSize : 2;
               return (
@@ -252,7 +259,9 @@ export function TeamsAssignmentSection({
                   className="border border-border rounded-lg p-3 space-y-2"
                 >
                   <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                    {t('teamLabel', { team })}
+                    {isTeamMatchplay
+                      ? t('sideTeamLabel', { team })
+                      : t('teamLabel', { team })}
                   </p>
                   {Array.from({ length: slotCount }, (_, slotIndex) => {
                     const occupant = playersByTeam[team as TeamNumber][slotIndex];
@@ -374,7 +383,8 @@ export function TeamsAssignmentSection({
         isAmbrose ||
         isFlorida ||
         isShamble ||
-        isPatsome) &&
+        isPatsome ||
+        isTeamMatchplay) &&
         selectedPlayerIds.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-text">

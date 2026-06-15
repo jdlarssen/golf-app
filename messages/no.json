@@ -649,8 +649,10 @@
 				"sidesDescription": "Matchplay er 1v1. Tilordne én spiller til Side 1 og én til Side 2. Spillere uten side er ikke med i matchen.",
 				"sideLabel": "Side {side}",
 				"sideSrLabel": "Velg spiller for Side {side}",
+				"sideTeamLabel": "Side {team}",
 				"emptySlotOption": "— Tom plass —",
 				"teamsHeading": "Lag",
+				"teamsDescTeamMatchplay": "To sider à 2 spillere. Hver side må ha eksakt 2 spillere.",
 				"teamsDescParStableford": "Inntil 4 lag à 2 spillere. Hvert lag må ha enten 0 eller 2 spillere. Tomme lag publiseres ikke.",
 				"teamsDescTexas2": "Inntil 4 lag à 2 spillere. Hvert lag må ha enten 0 eller 2 spillere. Tomme lag publiseres ikke.",
 				"teamsDescTexas3": "Inntil 2 lag à 3 spillere. Hvert lag må ha enten 0 eller 3 spillere. Tomme lag publiseres ikke.",
@@ -827,6 +829,9 @@
 				"patsomeUnderMin": "{remaining, plural, one {minst 1 spiller til} other {minst {remaining} spillere til}}",
 				"patsomeOdd": "partall antall spillere (lag à 2)",
 				"patsomeAssign": "lag-fordeling (lag à 2)",
+				"teamMatchplayUnderMin": "{remaining, plural, one {1 spiller til} other {{remaining} spillere til}}",
+				"teamMatchplayTooMany": "for mange spillere (2 på hver side)",
+				"teamMatchplayAssign": "side-fordeling (2 på hver side)",
 				"soloMin": "minst én spiller",
 				"invalidAllowance": "gyldig HCP-andel"
 			}
@@ -907,6 +912,12 @@
 				"legend": "Scoring for greensome-matcher",
 				"description": "Styrer handicap for greensome-matcher (velg-beste-tee + vekselslag). Netto gir høyeste lag en andel av differansen mellom lagenes 60/40-blandede handicap; brutto teller bare lagets bruttoslag.",
 				"nettoHelper": "Andel av differansen mellom lagenes 60/40-blandede handicap. WHS-standard for greensome er 100.",
+				"bruttoHelper": "Ingen handicap — lagets bruttoscore per hull avgjør, ingen ekstraslag."
+			},
+			"chapman": {
+				"legend": "Scoring for chapman-matcher",
+				"description": "Styrer handicap for chapman-matcher (dobbel tee, bytt ball, velg beste + vekselslag). Hvert lag får et handicap på 60 % av laveste pluss 40 % av høyeste. Netto gir høyeste lag en andel av differansen mellom lagene; brutto teller bare lagets bruttoslag.",
+				"nettoHelper": "Andel av differansen mellom lagenes 60/40-handicap. 100 gir hele differansen (WHS-standard for chapman matchplay).",
 				"bruttoHelper": "Ingen handicap — lagets bruttoscore per hull avgjør, ingen ekstraslag."
 			},
 			"gruesome": {

@@ -649,8 +649,10 @@
 				"sidesDescription": "Matchplay is 1v1. Assign one player to Side 1 and one to Side 2. Players without a side are not in the match.",
 				"sideLabel": "Side {side}",
 				"sideSrLabel": "Select player for Side {side}",
+				"sideTeamLabel": "Side {team}",
 				"emptySlotOption": "— Empty slot —",
 				"teamsHeading": "Teams",
+				"teamsDescTeamMatchplay": "Two sides of 2 players. Each side must have exactly 2 players.",
 				"teamsDescParStableford": "Up to 4 teams of 2. Each team must have either 0 or 2 players. Empty teams are not published.",
 				"teamsDescTexas2": "Up to 4 teams of 2. Each team must have either 0 or 2 players. Empty teams are not published.",
 				"teamsDescTexas3": "Up to 2 teams of 3. Each team must have either 0 or 3 players. Empty teams are not published.",
@@ -827,6 +829,9 @@
 				"patsomeUnderMin": "{remaining, plural, one {at least 1 more player} other {at least {remaining} more players}}",
 				"patsomeOdd": "even number of players (teams of 2)",
 				"patsomeAssign": "team assignment (teams of 2)",
+				"teamMatchplayUnderMin": "{remaining, plural, one {1 more player} other {{remaining} more players}}",
+				"teamMatchplayTooMany": "too many players (2 per side)",
+				"teamMatchplayAssign": "side assignment (2 per side)",
 				"soloMin": "at least one player",
 				"invalidAllowance": "valid HCP allowance"
 			}
@@ -907,6 +912,12 @@
 				"legend": "Scoring for greensome matches",
 				"description": "Controls handicap for greensome matches (choose-best-tee + alternate shot). Net gives the higher-handicap side a share of the difference between teams' 60/40-blended handicaps; gross counts only the team's gross strokes.",
 				"nettoHelper": "Share of the difference between teams' 60/40-blended handicaps. WHS standard for greensome is 100.",
+				"bruttoHelper": "No handicap — team gross score per hole decides, no extra strokes."
+			},
+			"chapman": {
+				"legend": "Scoring for chapman matches",
+				"description": "Controls handicap for chapman matches (double tee, swap balls, choose best + alternate shot). Each team gets a handicap of 60% of the lower plus 40% of the higher. Net gives the higher-handicap side a share of the difference between teams; gross counts only the team's gross strokes.",
+				"nettoHelper": "Share of the difference between teams' 60/40 handicaps. 100 gives the full difference (WHS standard for chapman matchplay).",
 				"bruttoHelper": "No handicap — team gross score per hole decides, no extra strokes."
 			},
 			"gruesome": {
