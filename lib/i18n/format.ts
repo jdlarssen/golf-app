@@ -376,12 +376,17 @@ export function formatShortUTCDayMonthLocale(iso: string, locale: AppLocale): st
  * Norwegian ('no'): «12. mai» (legacy NO_MONTHS_SHORT, Oslo month index).
  * English ('en'):   «12 May» (en-GB Intl in Oslo).
  *
- * Input: ISO timestamp string. Unlike the UTC variant, the day/month are read
- * in Oslo time — a `00:30Z` instant is «12. mai» here but «12. mai» or earlier
- * under UTC depending on the offset.
+ * Input: ISO timestamp string or a Date. Unlike the UTC variant, the day/month
+ * are read in Oslo time — a `23:32Z` instant in June is «15. jun» here (Oslo has
+ * rolled past midnight) but «14. jun» under UTC. This is why admin surfaces that
+ * must match the organiser's wall-clock (game-protocol date, Klubbhuset greeting,
+ * dashboard «last signed/published») route their dates through here (#637/#646).
  */
-export function formatShortOsloDayMonthLocale(iso: string, locale: AppLocale): string {
-  const d = new Date(iso);
+export function formatShortOsloDayMonthLocale(
+  input: string | Date,
+  locale: AppLocale,
+): string {
+  const d = toDate(input);
   if (locale === 'no') {
     const parts = new Intl.DateTimeFormat('en-GB', {
       timeZone: OSLO,

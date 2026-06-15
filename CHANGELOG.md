@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#634](https://github.com/jdlarssen/golf-app/issues/634). Lag-matchplay-formatene kunne bare settes opp via en cup. Nå tar opprett-veiviseren dem også.
 
+### [1.130.2] - 2026-06-15 · #637
+
+> Tee-off i spill-protokollen viste UTC-tid, to timer feil om sommeren. En runde med tee-off kl. 10:00 sto som «08:00» i protokollen, mens veiviseren og spiller-siden viste 10:00. Nå står samme norske klokkeslett overalt.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Tee-off-tidspunktet på admin-protokollen (`/admin/games/[id]`) rendret i UTC fordi `formatDateTime` (`toLocaleString`) ble kalt uten `timeZone`-opsjon — på en UTC-server (Vercel) ga det server-tid, ikke `Europe/Oslo`. Spiller-siden var allerede korrekt via de Oslo-pinnede `formatTeeOff*Locale`-helperne. Lagt til `timeZone: 'Europe/Oslo'` på tee-off-raden. Samtidig fikset søsken-feltene med identisk rotårsak på samme side: protokoll-undertittelens dato og saksnummer-footerens dato leste lokal-tid via `formatShortDateLocale` (feil dato nær midnatt norsk tid). Begge rutet om til den Oslo-pinnede `formatShortOsloDayMonthLocale` (utvidet til å ta `Date | string`). Tidspunktene lagres uendret som UTC-instant; kun visningen var feil. (#637)
+
+</details>
+
 ### [1.130.1] - 2026-06-15 · #635
 
 > Et lag eller en spiller uten registrerte skår ble rangert som nr. 1 og kåret som vinner i en ferdig runde. Nå havner de sist, der de hører hjemme.

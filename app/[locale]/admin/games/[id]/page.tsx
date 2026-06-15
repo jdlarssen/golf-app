@@ -1,7 +1,7 @@
 import { first } from '@/lib/url/searchParams';
 import { Suspense, cache } from 'react';
 import { getLocale, getTranslations } from 'next-intl/server';
-import { formatDateTime, formatShortDateLocale } from '@/lib/i18n/format';
+import { formatDateTime, formatShortOsloDayMonthLocale } from '@/lib/i18n/format';
 import type { AppLocale } from '@/i18n/routing';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound } from 'next/navigation';
@@ -207,7 +207,9 @@ export default async function GameDetailPage({
 
   function shortDate(iso: string | null | undefined): string | null {
     if (!iso) return null;
-    return formatShortDateLocale(iso, locale as AppLocale);
+    // Oslo-pinned (#637): the protocol subtitle must show the same wall-clock
+    // date the organiser sees everywhere else, not the UTC server date.
+    return formatShortOsloDayMonthLocale(iso, locale as AppLocale);
   }
 
   // Date subtitle: best timestamp available for the lifecycle stage.
@@ -331,7 +333,7 @@ async function CreatedAtFooter({ createdAt }: { createdAt: string }) {
   return (
     <>
       {tDetail('createdAtFooter', {
-        date: formatShortDateLocale(createdAt, locale as AppLocale) ?? '',
+        date: formatShortOsloDayMonthLocale(createdAt, locale as AppLocale) ?? '',
         n: String(positionInYear).padStart(3, '0'),
         year,
       })}
@@ -602,6 +604,9 @@ async function PlayersSections({
           <Row
             label={tRows('teeOff')}
             value={formatDateTime(game.scheduled_tee_off_at, locale as AppLocale, {
+              // Pin to Oslo (#637) — without timeZone, toLocaleString renders in
+              // the server TZ (UTC on Vercel), showing 08:00 for a 10:00 tee-off.
+              timeZone: 'Europe/Oslo',
               day: '2-digit',
               month: 'short',
               hour: '2-digit',

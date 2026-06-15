@@ -422,6 +422,23 @@ describe('formatShortOsloDayMonthLocale (#648)', () => {
     expect(formatShortOsloDayMonthLocale('2026-05-12T22:30:00Z', 'en')).toBe('13 May');
     expect(formatShortOsloDayMonthLocale('2026-06-03T10:00:00Z', 'en')).toBe('3 Jun');
   });
+
+  it('accepts a Date input as well as an ISO string (#637/#646)', () => {
+    // The Klubbhuset greeting passes `new Date()` directly; admin surfaces pass
+    // ISO strings. Both must read the Oslo wall-clock date.
+    expect(formatShortOsloDayMonthLocale(new Date('2026-06-14T23:32:00Z'), 'no')).toBe(
+      '15. jun',
+    );
+    expect(formatShortOsloDayMonthLocale(new Date('2026-06-14T23:32:00Z'), 'en')).toBe(
+      '15 Jun',
+    );
+  });
+
+  it('rolls to the Oslo date in the ~22:00–24:00 window (#646 regression)', () => {
+    // 2026-06-14T23:32:00Z === 01:32 Oslo on 15 Jun. The UTC-reading legacy
+    // helper would say «14. jun»; the Oslo variant must say «15. jun».
+    expect(formatShortOsloDayMonthLocale('2026-06-14T23:32:00Z', 'no')).toBe('15. jun');
+  });
 });
 
 describe('formatRelativeLocale', () => {
