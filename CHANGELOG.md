@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#634](https://github.com/jdlarssen/golf-app/issues/634). Lag-matchplay-formatene kunne bare settes opp via en cup. Nå tar opprett-veiviseren dem også.
 
+### [1.130.4] - 2026-06-15 · #639
+
+> På hull-skjermen tok info-banneret (hvem du spiller med i Round Robin, hvem som er Wolf, og liknende) en hel rad og dyttet det fjerde spillerkortet under skjermkanten på mobil. Nå ligger teksten som en tynn linje rett under hull-nummeret, så alle spillerkortene får plass.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+- De fire modus-kontekst-bannerne på hull-skjermen (Round Robin segment-konstellasjon, Wolf-valg, Florida step-aside-påminnelse, Skins-pott) rendret hver som et frittstående full-bredde, padded og rundet kort mellom hull-headeren og spillerkortene (~44px med margin). Med fire spillere (Round Robin er alltid fire, Wolf 3–5, Skins opptil 16) spiste det en hel rad og dyttet fjerde spillerkort under folden på mobil. Bannerne er gjensidig utelukkende per modus, så de er nå foldet inn i header-zonen via én delt, slank `HoleContextLine`-komponent (flush under `HoleHero`, deler border-stacken, ingen kort-margin/-radius). `data-testid`-ene (`round-robin-badge`, `wolf-badge`, `florida-step-aside-reminder`, `skins-banner`) og tekstinnholdet er uendret. WD-banneret (fare-rad med angre-lenke) er bevisst urørt. (#639)
+
+</details>
+
 ### [1.130.3] - 2026-06-15 · #646
 
 > Hilsekortet i Klubbhuset regnet dato og tid-på-døgnet i UTC. Like etter midnatt norsk tid sto det «God kveld» og gårsdagens dato. Nå følger dato, ukenummer og hilsen norsk tid.

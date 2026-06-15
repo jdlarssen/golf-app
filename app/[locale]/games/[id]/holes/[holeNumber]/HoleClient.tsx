@@ -39,6 +39,7 @@ import { subscribeBingoBangoBongo } from '@/lib/bbb/subscribeBingoBangoBongo';
 import { WolfChoiceModal } from './WolfChoiceModal';
 import { BingoBangoBongoEntry } from './BingoBangoBongoEntry';
 import { RoundRobinBadge } from './RoundRobinBadge';
+import { HoleContextLine } from '@/components/hole/HoleContextLine';
 import { determineWolfForHole } from './wolfRotation';
 import type { RoundRobinConstellationPlayer } from '@/lib/scoring/modes/roundRobin';
 
@@ -677,58 +678,33 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
         strokeIndex={strokeIndex}
       />
 
-      <OnboardingBanner visible={showHint} onDismiss={dismissHint} />
-
+      {/* #639: modus-kontekst-bannerne (Wolf / Skins / Round Robin / Florida) er
+          gjensidig utelukkende per modus og foldes inn i header-zonen som ÉN
+          kompakt underrad flush under HoleHero — i stedet for et frittstående
+          full-bredde kort som dyttet 4. spillerkort under folden på mobil. */}
       {isWolf && wolfBadgeText && (
-        <div
-          data-testid="wolf-badge"
-          style={{
-            margin: '0 14px 8px',
-            padding: '10px 14px',
-            borderRadius: 12,
-            border: '1px solid var(--accent)',
-            background: 'var(--primary-soft)',
-            fontFamily: 'var(--font-sans)',
-            fontSize: 13,
-            fontWeight: 600,
-            color: 'var(--text)',
-            textAlign: 'center',
-          }}
-        >
+        <HoleContextLine testId="wolf-badge" accent>
           {wolfBadgeText}
-        </div>
+        </HoleContextLine>
       )}
 
       {isSkins && skinsAtStake != null && (
-        <div
-          data-testid="skins-banner"
-          style={{
-            margin: '0 14px 8px',
-            padding: '10px 14px',
-            borderRadius: 12,
-            border: '1px solid var(--accent)',
-            background: 'var(--primary-soft)',
-            fontFamily: 'var(--font-sans)',
-            fontSize: 13,
-            fontWeight: 600,
-            color: 'var(--text)',
-            textAlign: 'center',
-          }}
-        >
+        <HoleContextLine testId="skins-banner" accent>
           {t('banners.skinsBanner', { count: skinsAtStake })}
           {skinsCarriedIn != null && skinsCarriedIn > 0 && (
-            <div
+            <span
               style={{
-                marginTop: 4,
+                display: 'block',
+                marginTop: 2,
                 fontWeight: 400,
-                fontSize: 12,
+                fontSize: 11,
                 color: 'var(--text-muted)',
               }}
             >
               {t('banners.skinsCarried')}
-            </div>
+            </span>
           )}
-        </div>
+        </HoleContextLine>
       )}
 
       {isRoundRobin && roundRobinPlayers && (
@@ -742,23 +718,12 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
       {/* Florida Scramble (#283): step-aside-påminnelse — kun for florida,
           ikke for texas eller ambrose. Honor-system; ingen tracking. */}
       {isFlorida && (
-        <div
-          data-testid="florida-step-aside-reminder"
-          style={{
-            margin: '0 14px 8px',
-            padding: '10px 14px',
-            borderRadius: 12,
-            border: '1px solid var(--border)',
-            background: 'var(--surface)',
-            fontFamily: 'var(--font-sans)',
-            fontSize: 12,
-            color: 'var(--text-muted)',
-            textAlign: 'center',
-          }}
-        >
+        <HoleContextLine testId="florida-step-aside-reminder">
           {t('banners.floridaStepAside')}
-        </div>
+        </HoleContextLine>
       )}
+
+      <OnboardingBanner visible={showHint} onDismiss={dismissHint} />
 
       {/* WD-banner: vises øverst i score-lista når innlogget spiller er
           trukket (#386). Lenker til game-home for angre-knapp. */}
