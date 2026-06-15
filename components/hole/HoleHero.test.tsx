@@ -20,4 +20,19 @@ describe('HoleHero', () => {
     expect(screen.getByText('Par 5')).toBeInTheDocument();
     expect(screen.getByText('indeks 3')).toBeInTheDocument();
   });
+
+  it('renders the mode context line in the header centre when provided (#639)', () => {
+    render(
+      <HoleHero
+        holeNumber={4}
+        par={4}
+        strokeIndex={7}
+        contextLine={<span data-testid="ctx">Segment 1/3</span>}
+      />,
+    );
+    expect(screen.getByTestId('ctx')).toHaveTextContent('Segment 1/3');
+    // Hull-tallet og Par/indeks står fortsatt — kontekst-linja erstatter dem ikke.
+    expect(screen.getByText('4')).toBeInTheDocument();
+    expect(screen.getByText('Par 4')).toBeInTheDocument();
+  });
 });

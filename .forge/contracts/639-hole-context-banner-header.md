@@ -29,34 +29,39 @@ opp» — inn i hull-header-zonen (`HoleHero`) som en liten underrad — så den
    verst fold ved opptil 16 spillere) for konsistens — all modus-kontekst skal bo samme sted.
 2. **WD-banneret (`withdrawn-banner`) er UTENFOR scope.** Det er semantisk en fare-/advarsel-rad
    med angre-lenke, ikke modus-kontekst — beholder sin fremtredende plassering og styling.
-3. **Tilnærming:** Én delt, kompakt kontekst-linje i header-zonen (flush under `HoleHero`, deler
-   border-stacken — ingen eget kort-margin/-radius). De fire bannerne ruter gjennom den. Bannerne
-   er gjensidig utelukkende per `gameMode`, så høyst én vises om gangen.
+3. **Tilnærming:** Én delt, kompakt kontekst-linje rutet inn i **midt-kolonnen av `HoleHero`**
+   (mellom hull-tallet og Par/indeks). Den tucker teksten inn i den ledige høyden ved siden av det
+   44px store hull-tallet, så den legger til ~0px i stedet for en egen rad. De fire bannerne ruter
+   gjennom den. Bannerne er gjensidig utelukkende per `gameMode`, så høyst én vises om gangen.
+   *(Eier-avklaring 2. runde: valgte issue-ets FØRSTE opsjon — «på samme linje som hull-nummeret /
+   Par-headeren» — framfor en underrad under headeren, fordi den gjenvinner mest vertikal plass.)*
 4. **Akseptanse-tolkning:** Målet er å gjenvinne den dedikerte banner-raden, ikke en piksel-perfekt
    «null scroll på alle enheter»-garanti (enhetshøyder varierer). Verifiseres visuelt at 4. RR-kort
    kommer vesentlig høyere opp / er nåbart uten den frittstående banner-raden.
 
 ## Tilnærming (implementasjon)
 
-- Ny delt komponent `components/hole/HoleContextLine.tsx`: slim, full-bredde header-underrad
-  (`borderBottom: 1px var(--border)`, ingen radius, ingen 8px-margin-gap, mindre font), med en
-  `accent`-variant (tonet bakgrunn for RR/Wolf/Skins) og en nøytral variant (Florida). Tar `testId`
-  + `children`.
+- Ny delt komponent `components/hole/HoleContextLine.tsx`: liten, sentrert inline-tekst (font 11.5,
+  line-height 1.3, wrapper innenfor tall-høyden), med en `accent`-variant (champagne-tekst
+  `--accent-deep` for RR/Wolf/Skins) og en nøytral variant (muted, Florida). Tar `testId` + `children`.
+- `HoleHero.tsx`: nytt valgfritt `contextLine?: ReactNode`-prop. Rendres som en midt-kolonne
+  (`flex:1, minWidth:0`) mellom venstre (HULL + tall) og høyre (Par/indeks); left/right får
+  `flexShrink:0`. Ingen midt-kolonne når prop-en er undefined.
 - `RoundRobinBadge.tsx`: render gjennom `HoleContextLine` (chromeless-tekst i stedet for eget kort),
   behold `data-testid="round-robin-badge"` og null-retur ved ukjent spiller.
-- `HoleClient.tsx`: erstatt de fire frittstående banner-`<div>`-ene (wolf/skins/florida + RR-badgen)
-  med `HoleContextLine`-instanser plassert i header-zonen (rett etter `HoleHero`), beholder samme
-  `data-testid`-er og samme tekst-innhold (inkl. Skins carried-in-underlinje).
-- `HoleHero.tsx`: uendret API om mulig. (Header-stacken oppnås ved at kontekst-linja rendres flush
-  under HoleHero med matchende border — ikke ved å endre HoleHero-props.)
+- `HoleClient.tsx`: bygg én `holeContextLine`-node (wolf/skins/florida-tekst eller `<RoundRobinBadge>`)
+  og send den til `HoleHero contextLine={…}`; fjern de fire frittstående banner-`<div>`-ene. Behold
+  samme `data-testid`-er og tekst-innhold (inkl. Skins carried-in-underlinje). `OnboardingBanner`
+  tilbake rett etter `HoleHero`.
 
 ## Suksesskriterier
 
 - [x] **K1 — RR foldet:** Round Robin segment-linja rendres IKKE lenger som frittstående full-bredde,
-      padded, rundet kort-rad over spillerkortene; den vises som en kompakt header-underrad (flush
-      under HoleHero, deler border-stacken). *Evidens: `RoundRobinBadge.tsx` returnerer nå
+      padded, rundet kort-rad over spillerkortene; den vises i **midt-kolonnen av HoleHero**, mellom
+      hull-tallet og Par/indeks. *Evidens: `RoundRobinBadge.tsx` returnerer nå
       `<HoleContextLine testId="round-robin-badge" accent>` (chromeless) i stedet for `badgeStyle`-kortet;
-      `HoleContextLine.tsx` bruker `borderBottom`, ingen radius/margin.*
+      `HoleClient.tsx` bygger `holeContextLine` og sender den til `<HoleHero contextLine={…}>`;
+      `HoleHero.tsx` rendrer den som `centerStyle` midt-kolonne mellom left/right.*
 - [x] **K2 — Wolf/Florida/Skins foldet:** Samme for Wolf-banneret, Florida step-aside-påminnelsen og
       Skins-banneret (inkl. carried-in-underlinje når > 0). *Evidens: `HoleClient.tsx` — de tre `<div>`-
       bannerne erstattet med `<HoleContextLine>`-instanser (wolf/skins accent, florida nøytral),
@@ -66,13 +71,13 @@ opp» — inn i hull-header-zonen (`HoleHero`) som en liten underrad — så den
       `data-testid`-ene `round-robin-badge`, `wolf-badge`, `florida-step-aside-reminder`,
       `skins-banner`. *Evidens: testid-ene videreført som `testId`-prop; `RoundRobinBadge.test.tsx`
       grønn (segment/partner/motstander-assertions + null-render); `HoleClient.test.tsx` 22/22 grønn.*
-- [x] **K4 — 4-spiller-RR fitter bedre (strukturelt tilfredsstilt):** Den slanke `borderBottom`-linja
-      erstatter den dedikerte kort-raden (padded + bordered + rundet kort + 8px margin-gap) og sitter
-      flush under `HoleHero` — vertikal-overheaden fra banner-raden er gjenvunnet. *Evidens: kode-diff
-      (kort-styling fjernet) + faithful før/etter-mock ved mobil-bredde (forest-paletten, eksakte
-      element-høyder) viste 4. RR-kort klare folden i «etter». Live Playwright var infeasible (gjenskapt
-      worktree uten `.env.local`/seeded RR-spill); piksel-bekreftelse på enhet utsatt til eiers
-      prod-test, jf. K4-avgrensningen i kontrakten. Evaluator-verdikt: DEFERRED/strukturelt tilfredsstilt.*
+- [x] **K4 — 4-spiller-RR fitter bedre (strukturelt tilfredsstilt):** Kontekst-teksten i midt-kolonnen
+      tucker inn i den ledige høyden ved siden av det 44px store hull-tallet og legger til ~0px — hele
+      den dedikerte banner-raden er gjenvunnet (sterkere enn underrad-varianten). *Evidens: kode-diff
+      (banner-`<div>`-ene fjernet, ingen egen rad igjen) + faithful før/etter-mock ved mobil-bredde
+      (forest-paletten, eksakte element-høyder) viste 4. RR-kort klare folden i «etter». Live Playwright
+      var infeasible (gjenskapt worktree uten `.env.local`/seeded RR-spill); piksel-bekreftelse på enhet
+      utsatt til eiers prod-preview-sjekk, jf. K4-avgrensningen.*
 - [x] **K5 — WD uendret:** WD-banneret (`withdrawn-banner`) er uendret — fortsatt egen fremtredende
       fare-rad med angre-lenke. *Evidens: WD-blokken i `HoleClient.tsx` er urørt i diff-en (kun
       Wolf/Skins/RR/Florida + OnboardingBanner-rekkefølge endret).*

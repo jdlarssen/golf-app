@@ -11,19 +11,20 @@ export interface HoleContextLineProps {
   testId: string;
   /**
    * Tonet variant for «aktiv» modus-kontekst (Round Robin / Wolf / Skins) —
-   * champagne-tonet bakgrunn + sterkere tekst. Florida step-aside-påminnelsen
-   * er en stille regel-note og bruker default (utonet, muted). Default false.
+   * champagne-tonet tekst (`--accent-deep`) + sterkere vekt. Florida
+   * step-aside-påminnelsen er en stille regel-note og bruker default (muted).
+   * Default false.
    */
   accent?: boolean;
   children: ReactNode;
 }
 
 /**
- * Kompakt kontekst-underrad i hull-header-zonen. Rendres flush under
- * `HoleHero` (samme `borderBottom`) slik at modus-kontekst-teksten leser som
- * en del av header-stacken i stedet for et frittstående full-bredde kort med
- * eget margin/-radius. Det gjenvinner den dedikerte banner-raden så 4.
- * spillerkort ikke dyttes under folden på mobil. #639.
+ * Kompakt modus-kontekst-tekst plassert i midt-kolonnen av `HoleHero` (mellom
+ * hull-tallet og Par/indeks). Den tucker teksten inn i den ledige høyden ved
+ * siden av det store hull-tallet i stedet for å ta en egen full-bredde
+ * banner-rad — så 4. spillerkort ikke dyttes under folden på mobil. Liten,
+ * sentrert, wrapper innenfor tall-høyden. #639.
  */
 export function HoleContextLine({
   testId,
@@ -31,14 +32,11 @@ export function HoleContextLine({
   children,
 }: HoleContextLineProps): JSX.Element {
   const style: CSSProperties = {
-    padding: '7px 18px',
-    borderBottom: '1px solid var(--border)',
-    background: accent ? 'var(--primary-soft)' : 'transparent',
     fontFamily: 'var(--font-sans)',
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: accent ? 600 : 400,
-    lineHeight: 1.35,
-    color: accent ? 'var(--text)' : 'var(--text-muted)',
+    lineHeight: 1.3,
+    color: accent ? 'var(--accent-deep)' : 'var(--text-muted)',
     textAlign: 'center',
   };
   return (

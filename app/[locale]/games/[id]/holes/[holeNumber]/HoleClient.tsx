@@ -7,6 +7,7 @@ import {
   useState,
   type CSSProperties,
   type JSX,
+  type ReactNode,
 } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { formatTime } from '@/lib/i18n/format';
@@ -607,6 +608,44 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
         ? `/games/${gameId}/submit`
         : `/games/${gameId}/holes/${next}`;
 
+  // #639: modus-kontekst-linja (Wolf / Skins / Round Robin / Florida) er
+  // gjensidig utelukkende per modus. Den rutes inn i midt-kolonnen av HoleHero
+  // (mellom hull-tallet og Par/indeks) i stedet for å ta en egen full-bredde
+  // banner-rad som dyttet 4. spillerkort under folden på mobil.
+  const holeContextLine: ReactNode = isWolf && wolfBadgeText ? (
+    <HoleContextLine testId="wolf-badge" accent>
+      {wolfBadgeText}
+    </HoleContextLine>
+  ) : isSkins && skinsAtStake != null ? (
+    <HoleContextLine testId="skins-banner" accent>
+      {t('banners.skinsBanner', { count: skinsAtStake })}
+      {skinsCarriedIn != null && skinsCarriedIn > 0 && (
+        <span
+          style={{
+            display: 'block',
+            marginTop: 1,
+            fontWeight: 400,
+            color: 'var(--text-muted)',
+          }}
+        >
+          {t('banners.skinsCarried')}
+        </span>
+      )}
+    </HoleContextLine>
+  ) : isRoundRobin && roundRobinPlayers ? (
+    <RoundRobinBadge
+      holeNumber={currentHole}
+      players={roundRobinPlayers}
+      myUserId={myUserId}
+    />
+  ) : isFlorida ? (
+    // Florida Scramble (#283): step-aside-påminnelse — kun for florida,
+    // ikke for texas eller ambrose. Honor-system; ingen tracking.
+    <HoleContextLine testId="florida-step-aside-reminder">
+      {t('banners.floridaStepAside')}
+    </HoleContextLine>
+  ) : null;
+
   const bottomDisabled = (!roundComplete && !allConfirmed) || disabled;
 
   return (
@@ -676,52 +715,8 @@ export function HoleClient(props: HoleClientProps): JSX.Element {
         parByGender={parByGender}
         playerGender={playerGender}
         strokeIndex={strokeIndex}
+        contextLine={holeContextLine}
       />
-
-      {/* #639: modus-kontekst-bannerne (Wolf / Skins / Round Robin / Florida) er
-          gjensidig utelukkende per modus og foldes inn i header-zonen som ÉN
-          kompakt underrad flush under HoleHero — i stedet for et frittstående
-          full-bredde kort som dyttet 4. spillerkort under folden på mobil. */}
-      {isWolf && wolfBadgeText && (
-        <HoleContextLine testId="wolf-badge" accent>
-          {wolfBadgeText}
-        </HoleContextLine>
-      )}
-
-      {isSkins && skinsAtStake != null && (
-        <HoleContextLine testId="skins-banner" accent>
-          {t('banners.skinsBanner', { count: skinsAtStake })}
-          {skinsCarriedIn != null && skinsCarriedIn > 0 && (
-            <span
-              style={{
-                display: 'block',
-                marginTop: 2,
-                fontWeight: 400,
-                fontSize: 11,
-                color: 'var(--text-muted)',
-              }}
-            >
-              {t('banners.skinsCarried')}
-            </span>
-          )}
-        </HoleContextLine>
-      )}
-
-      {isRoundRobin && roundRobinPlayers && (
-        <RoundRobinBadge
-          holeNumber={currentHole}
-          players={roundRobinPlayers}
-          myUserId={myUserId}
-        />
-      )}
-
-      {/* Florida Scramble (#283): step-aside-påminnelse — kun for florida,
-          ikke for texas eller ambrose. Honor-system; ingen tracking. */}
-      {isFlorida && (
-        <HoleContextLine testId="florida-step-aside-reminder">
-          {t('banners.floridaStepAside')}
-        </HoleContextLine>
-      )}
 
       <OnboardingBanner visible={showHint} onDismiss={dismissHint} />
 

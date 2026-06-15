@@ -101,3 +101,31 @@ Alle harde kriterier (K1, K2, K3, K5, K6, K7) PASS med konkret evidens. K4 er st
 den slanke `HoleContextLine` erstatter genuint det padded+rundede kortet med 8px-margin-gap og ligger flush i
 header-zonen; on-device piksel-bekreftelse ved iPhone-bredde er rimelig utsatt til eierens prod-test (ingen
 live auth/seedet RR-spill tilgjengelig i denne worktreen). Ingen regresjoner funnet i de selvstendige sjekkene.
+
+---
+
+## Addendum — design refinement etter eier-feedback (2026-06-15, post-ACCEPT)
+
+Eier spurte: «Skulle ikke teksten stå MELLOM HULL 1 og Par/indeks?» — dvs. issue-ets første
+opsjon (på selve header-linja), framfor underrad-varianten som ACCEPT-en dekket.
+
+**Endret:** Kontekst-linja flyttet fra en slim full-bredde underrad flush under `HoleHero` til
+**midt-kolonnen INNE i `HoleHero`** (mellom hull-tallet og Par/indeks):
+- `HoleHero.tsx` fikk `contextLine?: ReactNode` + `centerStyle` (flex:1, minWidth:0); left/right får `flexShrink:0`.
+- `HoleContextLine.tsx` restylet fra full-bredde `borderBottom`-strip til liten sentrert inline-tekst
+  (champagne `--accent-deep` for accent, muted for Florida).
+- `HoleClient.tsx` bygger én `holeContextLine`-node og sender den til `HoleHero contextLine={…}`;
+  de fire frittstående banner-`<div>`-ene er borte; `OnboardingBanner` tilbake rett etter `HoleHero`.
+
+**Hvorfor:** den tucker inn i den ledige høyden ved siden av det 44px store tallet → ~0px lagt til
+(sterkere fold-reclaim enn underraden, som la til ~28px).
+
+**Uendret mekanisme (allerede ACCEPT-verifisert):** samme fire `data-testid`-er, samme tekst-innhold
+(i18n-nøkler gjenbrukt 1:1), samme gjensidige modus-utelukkelse, `RoundRobinBadge` returnerer fortsatt
+`null` ved ukjent spiller (→ ingen midt-kolonne), WD-banneret urørt.
+
+**Re-verifiserte gates:** `tsc --noEmit` EXIT=0; `vitest run` på hull-området **91/91 grønne** (10 filer;
+ny `HoleHero` contextLine-render-test lagt til, RoundRobinBadge 1, HoleClient 22). Versjon → 1.130.5.
+
+**Verdikt uendret: ACCEPT** (placement-refinement av den allerede aksepterte mekanismen; K4 piksel-på-enhet
+fortsatt utsatt til eiers prod-preview).

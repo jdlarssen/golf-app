@@ -1,4 +1,4 @@
-import type { CSSProperties, JSX } from 'react';
+import type { CSSProperties, JSX, ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   hasParDifference,
@@ -23,6 +23,14 @@ export interface HoleHeroProps {
    * tooltip-teksten. Default `'mens'` når undefined. #240.
    */
   playerGender?: ScoringGender;
+  /**
+   * Valgfri modus-kontekst-linje (Round Robin segment-konstellasjon, Wolf-valg,
+   * Florida step-aside, Skins-pott) plassert i midt-kolonnen mellom hull-nummeret
+   * og Par/indeks. Den tucker teksten inn i den ledige høyden ved siden av det
+   * 44px store hull-tallet, så banneret ikke tar en egen full-bredde rad og dytter
+   * 4. spillerkort under folden. Undefined for modi uten kontekst. #639.
+   */
+  contextLine?: ReactNode;
 }
 
 const containerStyle: CSSProperties = {
@@ -37,6 +45,16 @@ const leftStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'baseline',
   gap: 10,
+  flexShrink: 0,
+};
+
+// Midt-kolonne for modus-kontekst-linja (#639). flex:1 + minWidth:0 lar den
+// fylle plassen mellom hull-tallet og Par/indeks og wrappe innenfor tall-høyden.
+const centerStyle: CSSProperties = {
+  flex: 1,
+  minWidth: 0,
+  alignSelf: 'center',
+  padding: '0 12px',
 };
 
 const kickerStyle: CSSProperties = {
@@ -58,6 +76,7 @@ const numberStyle: CSSProperties = {
 const rightStyle: CSSProperties = {
   textAlign: 'right',
   lineHeight: 1.4,
+  flexShrink: 0,
 };
 
 const parStyle: CSSProperties = {
@@ -77,7 +96,7 @@ const indexStyle: CSSProperties = {
 };
 
 export function HoleHero(props: HoleHeroProps): JSX.Element {
-  const { holeNumber, par, strokeIndex, parByGender, playerGender } = props;
+  const { holeNumber, par, strokeIndex, parByGender, playerGender, contextLine } = props;
   const t = useTranslations('holes.entry');
   const ts = useTranslations('scorecard');
   const showAside = parByGender ? hasParDifference(parByGender) : false;
@@ -90,6 +109,7 @@ export function HoleHero(props: HoleHeroProps): JSX.Element {
         <div style={kickerStyle}>{t('hullKicker')}</div>
         <div className="score-num" style={numberStyle}>{holeNumber}</div>
       </div>
+      {contextLine && <div style={centerStyle}>{contextLine}</div>}
       <div style={rightStyle}>
         <div style={parStyle}>
           {t('hullPar', { par })}
