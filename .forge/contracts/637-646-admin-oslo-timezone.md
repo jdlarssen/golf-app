@@ -61,16 +61,21 @@ Eksisterende Oslo-primitiv finnes allerede i [`lib/format/teeOff.ts`](lib/format
 
 ## Suksesskriterier
 
-- [ ] **K1 (#637):** Tee-off-tid på admin-protokollen vises i Oslo wall-clock. Et spill med tee-off 10:00 norsk (= 08:00 UTC sommertid) viser «10:00» på `/admin/games/[id]`, ikke «08:00». *Evidens: unit-test på display-helper med UTC-server-TZ + verifisert kallsted.*
-- [ ] **K2:** Admin-protokollens undertittel-dato vises i Oslo-dato (riktig dato i ~22:00–24:00-vinduet). *Evidens: unit-test `formatShortDateOsloLocale` med instant `2026-06-14T23:32:00Z` → «15. jun».*
-- [ ] **K3 (#646 hilsen):** Tid-på-døgnet-hilsenen følger Oslo-time. Instant `2026-06-14T23:32:00Z` (= 01:32 Oslo) gir bøtte `morgen` («God morgen»), ikke `kveld`. *Evidens: unit-test `osloTimeOfDayBucket`.*
-- [ ] **K4 (#646 dato):** Dato-linjen i hilsekortet viser Oslo-dato. Samme instant → «15. jun», ikke «14. jun». *Evidens: dekkes av K2-helperen + verifisert kallsted linje ~89.*
-- [ ] **K5 (#646 uke):** Ukenummeret beregnes fra Oslo-dato. *Evidens: unit-test `osloIsoWeek` (kjent dato + nær-midnatt-instant der Oslo-dato ≠ UTC-dato).*
-- [ ] **K6 (logg):** Aktivitets-loggens klokkeslett vises i Oslo-tid. *Evidens: unit-test `formatHHMMOsloLocale` (UTC 08:00 → Oslo «10:00» sommertid).*
-- [ ] **K7 (meta):** «Sist signert/publisert»-datoene på dashboardet vises i Oslo-dato. *Evidens: samme helper som K2, verifiserte kallsteder linje ~305/313.*
-- [ ] **K8 (engelsk):** 'en'-locale beholder samme TZ-korrekthet (Oslo wall-clock) på alle de samme feltene. *Evidens: 'en'-cases i unit-testene.*
-- [ ] **K9 (ingen regresjon):** Eksisterende tee-off-/dato-tester forblir grønne; ingen byte-endring i `formatTeeOffTime`/`formatTeeOffDate`-output. *Evidens: full vitest-suite grønn.*
-- [ ] **K10 (versjon):** `package.json` bumpet 1.130.1 → 1.130.2 + CHANGELOG-oppføring i samme commit som fiksen; commit-msg-hook passerer uten `--no-verify`.
+- [x] **K1 (#637):** Tee-off-tid på admin-protokollen vises i Oslo wall-clock. *Evidens: `formatDateTime`-kall i [`page.tsx:601`](app/[locale]/admin/games/[id]/page.tsx:601) har nå `timeZone: 'Europe/Oslo'`; unit-test «renders the tee-off time in Oslo wall-clock when timeZone is set (#637)» i `format.test.ts` (08:00Z → «10:00», ikke «08:00») under `process.env.TZ='UTC'`.*
+- [x] **K2:** Admin-protokollens undertittel-dato vises i Oslo-dato. *Evidens: `shortDate()` ([`page.tsx:208`](app/[locale]/admin/games/[id]/page.tsx:208)) ruter til `formatShortOsloDayMonthLocale`; unit-test «rolls to the Oslo date in the ~22:00–24:00 window (#646 regression)» (`2026-06-14T23:32:00Z` → «15. jun»).*
+- [x] **K3 (#646 hilsen):** Tid-på-døgnet følger Oslo-time. *Evidens: unit-test `osloTimeOfDayBucket` «buckets a just-past-midnight Oslo instant as morgen» (`2026-06-14T23:32:00Z` → `morgen`, ikke `kveld`); kallsted [`page.tsx`](app/[locale]/admin/page.tsx) via `TIME_OF_DAY_KEY[osloTimeOfDayBucket(now)]`.*
+- [x] **K4 (#646 dato):** Dato-linjen viser Oslo-dato. *Evidens: kallsted bruker `formatShortOsloDayMonthLocale(now, locale)`; samme helper-test som K2.*
+- [x] **K5 (#646 uke):** Ukenummeret beregnes fra Oslo-dato. *Evidens: unit-test `osloIsoWeek` (kjent dato → 25; nær-midnatt `2026-06-14T23:32:00Z` → 25 i stedet for UTC-uke 24; nyttår → 53).*
+- [x] **K6 (logg):** Aktivitets-loggens klokkeslett vises i Oslo-tid. *Evidens: `formatHHMMOslo(row.ts)` på kallstedet; unit-test «renders 24h HH:MM in Oslo time (summer)» (08:00Z → «10:00»).* (Navngitt `formatHHMMOslo`, locale-uavhengig 24t — avvik fra kontraktens `formatHHMMOsloLocale`, se Avvik.)
+- [x] **K7 (meta):** «Sist signert/publisert»-datoene vises i Oslo-dato. *Evidens: begge `metaLast*`-kall ruter til `formatShortOsloDayMonthLocale` ([`page.tsx:295,303`](app/[locale]/admin/page.tsx:295)).*
+- [x] **K8 (engelsk):** 'en'-locale beholder TZ-korrekthet. *Evidens: 'en'-cases i `format.test.ts` (`formatShortOsloDayMonthLocale(... ,'en')` → «15 Jun»; `formatHHMMOslo` er locale-uavhengig 24t).*
+- [x] **K9 (ingen regresjon):** *Evidens: full vitest-suite grønn — 278 filer / 3517 tester; `tsc --noEmit` rent; `npm run build` ✓ Compiled successfully (256/256 sider). Ingen endring i `formatTeeOffTime`/`formatTeeOffDate`-signatur eller -output.*
+- [x] **K10 (versjon):** *Evidens: bump 1.130.1 → 1.130.2 (#637-commit) → 1.130.3 (#646-commit), hver med CHANGELOG-oppføring i samme commit; commit-msg-hook passerte uten `--no-verify`.*
+
+**Avvik fra kontrakt (kode-org):**
+1. Gjenbrukte eksisterende `formatShortOsloDayMonthLocale` (lagt til for #648) i stedet for å lage ny `formatShortDateOsloLocale` — identisk Oslo-pinnet «15. jun»/«15 Jun»-output, utvidet til å ta `Date | string`. DRY framfor duplikat.
+2. Navnga HH:MM-helperen `formatHHMMOslo(input)` (locale-uavhengig, ingen falsk `locale`-param) i stedet for `formatHHMMOsloLocale` — 24-timers klokke er identisk på tvers av locale.
+3. Utvidet scope-en på admin-protokoll-siden til også saksnummer-footerens dato (linje ~333) — samme rotårsak, samme side, per «klyngen»-beslutningen.
 
 ---
 
