@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#634](https://github.com/jdlarssen/golf-app/issues/634). Lag-matchplay-formatene kunne bare settes opp via en cup. Nå tar opprett-veiviseren dem også.
 
+### [1.130.7] - 2026-06-15 · #638
+
+> Avslutter du en runde tidlig (for eksempel etter to hull via «Avslutt likevel»), sto det «Etter 18 hull» øverst på leaderboarden og podiet selv om bare to var spilt. Nå teller den faktisk spilte hull, så det står «Etter 2 hull».
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Leaderboard- og podium-undertittelen var hardkodet «Etter 18 hull» / «After 18 holes» i i18n-katalogene, uavhengig av hvor mange hull som faktisk var spilt — misvisende når en runde avsluttes tidlig. Ny ren `lib/scoring/holesPlayed.ts` (`maxHolesPlayed`, Type A-testet) regner spillvidt antall spilte hull som den lengst-komne spillerens scorede hull, beregnet én gang per render-helper i `leaderboard/page.tsx` fra `rawScoresRows` og tråded inn som `holesPlayed`-prop til alle berørte view- og podium-komponenter (~18 stk). Den delte nøkkelen `common.after18Holes` ble omdøpt til `common.afterNHoles` med `{holes}`-parameter, og de bespoke `subtitle`/`podiumSubtitle`-nøklene for slagspill, stableford, par-stableford og Texas/scramble fikk «18» byttet ut med `{holes}` (begge språk, katalog-paritet bevart). Matchplay gjorde dette allerede dynamisk og er urørt. Den foreldreløse `bestBall.subtitle`-nøkkelen (uten konsument — best ball rendres via par-stableford-viewet) er bevisst ikke endret. (#638)
+
+</details>
+
 ### [1.130.6] - 2026-06-15 · #645
 
 > Oppretter du en klubb og noe er feil — for eksempel en eier-e-post uten Tørny-konto — tømte skjemaet alle feltene, og du måtte taste klubbnavn, e-post og resten på nytt. Nå står det du skrev igjen, så du bare retter feltet som var galt. Samme på «Legg til medlem» i klubben.

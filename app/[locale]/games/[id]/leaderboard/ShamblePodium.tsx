@@ -28,6 +28,8 @@ export interface ShamblePodiumProps {
   result: ShambleResult;
   /** Spillerinfo per userId for å rendre lag-medlemmenes navn. */
   playersById: Map<string, ShamblePlayerInfo>;
+  /** Antall hull fullført av den ledende spilleren (#638). Brukes i sub-tittel. */
+  holesPlayed: number;
   /** Hvor pilen tilbake skal peke. Defaults til spillets hjem. */
   backHref?: string;
   /**
@@ -52,6 +54,7 @@ export function ShamblePodium({
   gameName,
   result,
   playersById,
+  holesPlayed,
   backHref = '/',
   chromeless = false,
 }: ShamblePodiumProps): JSX.Element {
@@ -102,7 +105,7 @@ export function ShamblePodium({
           {t('common.winnerTeamAnnounced2')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          {variantLabel} · {scoringLabel} · {t('common.after18Holes')}
+          {variantLabel} · {scoringLabel} · {t('common.afterNHoles', { holes: holesPlayed })}
         </p>
       </div>
 

@@ -31,6 +31,8 @@ export interface TeamStablefordPodiumProps {
   result: StablefordTeamResult;
   /** Spillerinfo per userId for å rendre partnernavn på podium-trinnene. */
   playersById: Map<string, SoloStablefordPlayerInfo>;
+  /** Antall hull fullført av den ledende spilleren (#638). Brukes i sub-tittel. */
+  holesPlayed: number;
   /** Hvor pilen tilbake skal peke. Defaults til spillets hjem. */
   backHref?: string;
   /**
@@ -63,6 +65,7 @@ export function TeamStablefordPodium({
   gameName,
   result,
   playersById,
+  holesPlayed,
   backHref = '/',
   chromeless = false,
 }: TeamStablefordPodiumProps): JSX.Element {
@@ -112,7 +115,7 @@ export function TeamStablefordPodium({
           {t('common.winnerTeamAnnounced')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          {t('teamStableford.podiumSubtitle')}
+          {t('teamStableford.podiumSubtitle', { holes: holesPlayed })}
         </p>
       </div>
 

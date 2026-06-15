@@ -45,6 +45,8 @@ export interface SkinsViewProps {
   scoreVisibility: 'live' | 'reveal';
   /** `games.status` — styrer reveal-flow sammen med `scoreVisibility`. */
   gameStatus: 'draft' | 'scheduled' | 'active' | 'finished';
+  /** Antall hull fullført av den ledende spilleren (#638). Brukes i sub-tittel. */
+  holesPlayed: number;
   /** Hvor pilen tilbake skal peke. Defaults til spillets hjem. */
   backHref?: string;
   /**
@@ -81,6 +83,7 @@ export function SkinsView({
   playersById,
   scoreVisibility,
   gameStatus,
+  holesPlayed,
   backHref = '/',
   chromeless = false,
 }: SkinsViewProps): JSX.Element {
@@ -126,7 +129,7 @@ export function SkinsView({
   }
 
   const subtitleParts = [
-    gameStatus === 'finished' ? tc('after18Holes') : tc('live'),
+    gameStatus === 'finished' ? tc('afterNHoles', { holes: holesPlayed }) : tc('live'),
     'Skins',
     result.scoring === 'net' ? tc('netto') : tc('brutto'),
   ];

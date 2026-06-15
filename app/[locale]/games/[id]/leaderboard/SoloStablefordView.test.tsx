@@ -56,6 +56,7 @@ function defaultProps(
       ['u3', 'Camilla Carlsen', null],
       ['u4', 'David Dahl', null],
     ]),
+    holesPlayed: 18,
     backHref: '/games/g1',
     ...overrides,
   };

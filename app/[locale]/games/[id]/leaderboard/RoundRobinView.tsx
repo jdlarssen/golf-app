@@ -44,6 +44,8 @@ export interface RoundRobinViewProps {
   scoreVisibility: 'live' | 'reveal';
   /** `games.status` — styrer reveal-flow sammen med `scoreVisibility`. */
   gameStatus: 'draft' | 'scheduled' | 'active' | 'finished';
+  /** Antall hull fullført av den ledende spilleren (#638). Brukes i sub-tittel. */
+  holesPlayed: number;
   /** Hvor pilen tilbake skal peke. Defaults til spillets hjem. */
   backHref?: string;
   /**
@@ -85,6 +87,7 @@ export function RoundRobinView({
   playersById,
   scoreVisibility,
   gameStatus,
+  holesPlayed,
   backHref = '/',
   chromeless = false,
 }: RoundRobinViewProps): JSX.Element {
@@ -123,7 +126,7 @@ export function RoundRobinView({
     );
   }
 
-  const statusLabel = gameStatus === 'finished' ? t('common.after18Holes') : t('common.live');
+  const statusLabel = gameStatus === 'finished' ? t('common.afterNHoles', { holes: holesPlayed }) : t('common.live');
 
   return (
     <LeaderboardShell chromeless={chromeless}>

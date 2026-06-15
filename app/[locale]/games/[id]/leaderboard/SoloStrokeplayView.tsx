@@ -30,6 +30,8 @@ export interface SoloStrokeplayViewProps {
   result: SoloStrokeplayResult;
   /** Spillerinfo per userId for å rendre navn + kallenavn. */
   playersById: Map<string, SoloStrokeplayPlayerInfo>;
+  /** Antall hull fullført av den ledende spilleren (#638). Brukes i sub-tittel. */
+  holesPlayed: number;
   /** Hvor pilen tilbake skal peke. Defaults til spillets hjem. */
   backHref?: string;
   /**
@@ -60,12 +62,13 @@ export function SoloStrokeplayView({
   gameName,
   result,
   playersById,
+  holesPlayed,
   backHref = '/',
   chromeless = false,
 }: SoloStrokeplayViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
 
-  const subtitle = t('soloStrokeplay.subtitle');
+  const subtitle = t('soloStrokeplay.subtitle', { holes: holesPlayed });
 
   if (result.players.length === 0) {
     return (

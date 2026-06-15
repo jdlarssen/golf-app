@@ -26,6 +26,8 @@ export interface TeamStablefordViewProps {
    * partnerne per lag-rad via `formatRevealName` (samme som solo).
    */
   playersById: Map<string, SoloStablefordPlayerInfo>;
+  /** Antall hull fullført av den ledende spilleren (#638). Brukes i sub-tittel. */
+  holesPlayed: number;
   /** Hvor pilen tilbake skal peke. Defaults til spillets hjem. */
   backHref?: string;
   /**
@@ -51,6 +53,7 @@ export function TeamStablefordView({
   gameName,
   result,
   playersById,
+  holesPlayed,
   backHref = '/',
   chromeless = false,
 }: TeamStablefordViewProps): JSX.Element {
@@ -76,7 +79,7 @@ export function TeamStablefordView({
           {t('common.teamLeaderboardHeading')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          {t('teamStableford.subtitle')}
+          {t('teamStableford.subtitle', { holes: holesPlayed })}
         </p>
       </div>
 

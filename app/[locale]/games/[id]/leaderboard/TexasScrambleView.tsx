@@ -34,6 +34,8 @@ export interface TexasScrambleViewProps {
    * Brukes (fremtidig) inne i LeaderboardTabs ved side-tournament-fane.
    */
   chromeless?: boolean;
+  /** Antall hull fullført av den ledende spilleren (#638). Brukes i sub-tittel. */
+  holesPlayed: number;
   /**
    * Format-navn som vises i sub-tittel. Default «Texas scramble». Settes av
    * caller basert på `game.game_mode` slik at Ambrose-spill viser «Ambrose»
@@ -63,6 +65,7 @@ export function TexasScrambleView({
   gameName,
   result,
   playersById,
+  holesPlayed,
   backHref = '/',
   chromeless = false,
   formatLabel = 'Texas scramble',
@@ -94,7 +97,7 @@ export function TexasScrambleView({
           {t('common.leaderboardHeading')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          {t('texasScramble.subtitle', { format: formatLabel })}
+          {t('texasScramble.subtitle', { holes: holesPlayed, format: formatLabel })}
         </p>
       </div>
 

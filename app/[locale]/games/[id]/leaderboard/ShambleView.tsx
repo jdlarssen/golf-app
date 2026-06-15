@@ -43,6 +43,8 @@ export interface ShambleViewProps {
   scoreVisibility: 'live' | 'reveal';
   /** `games.status` — styrer reveal-flow sammen med `scoreVisibility`. */
   gameStatus: 'draft' | 'scheduled' | 'active' | 'finished';
+  /** Antall hull fullført av den ledende spilleren (#638). Brukes i sub-tittel. */
+  holesPlayed: number;
   /** Hvor pilen tilbake skal peke. Defaults til spillets hjem. */
   backHref?: string;
   /**
@@ -70,6 +72,7 @@ export function ShambleView({
   playersById,
   scoreVisibility,
   gameStatus,
+  holesPlayed,
   backHref = '/',
   chromeless = false,
 }: ShambleViewProps): JSX.Element {
@@ -112,7 +115,7 @@ export function ShambleView({
     result.variant === 'champagne' ? 'Champagne Scramble' : 'Shamble';
   const scoringLabel = result.scoring === 'net' ? t('common.netto') : t('common.brutto');
   const countLabel = `best ${result.count}`;
-  const statusLabel = gameStatus === 'finished' ? t('common.after18Holes') : t('common.live');
+  const statusLabel = gameStatus === 'finished' ? t('common.afterNHoles', { holes: holesPlayed }) : t('common.live');
   const subtitleParts = [statusLabel, variantLabel, countLabel, scoringLabel];
 
   // result.teams er allerede sortert på rank fra scoring-laget.

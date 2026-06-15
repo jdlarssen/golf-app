@@ -56,6 +56,7 @@ function defaultProps(
       ['u3', 'Camilla Carlsen', null],
       ['u4', 'David Dahl', null],
     ]),
+    holesPlayed: 18,
     backHref: '/games/g1',
     ...overrides,
   };
@@ -86,6 +87,13 @@ describe('SoloStrokeplayView', () => {
     const rows = within(list).getAllByRole('listitem');
     expect(rows[0].textContent).toContain('18 hull spilt');
     expect(rows[3].textContent).toContain('17 hull spilt');
+  });
+
+  // #638: undertittelen skal følge faktisk antall spilte hull, ikke hardkodet
+  // 18 — ellers lyver headeren når runden avsluttes tidlig («Avslutt likevel»).
+  it('viser faktisk antall spilte hull i undertittelen (ikke hardkodet 18)', () => {
+    render(<SoloStrokeplayView {...defaultProps({ holesPlayed: 2 })} />);
+    expect(screen.getByText(/Etter 2 hull/)).toBeInTheDocument();
   });
 
   it('viser brutto-total ved siden av hull-spilt per rad', () => {

@@ -115,6 +115,7 @@ function defaultProps(
     ]),
     scoreVisibility: 'live',
     gameStatus: 'finished',
+    holesPlayed: 18,
     backHref: '/games/g1',
     ...overrides,
   };

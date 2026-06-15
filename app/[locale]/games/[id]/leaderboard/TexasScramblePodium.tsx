@@ -29,6 +29,8 @@ export interface TexasScramblePodiumProps {
   result: TexasScrambleResult;
   /** Spillerinfo per userId for å rendre lag-medlemmenes navn. */
   playersById: Map<string, TexasScramblePlayerInfo>;
+  /** Antall hull fullført av den ledende spilleren (#638). Brukes i sub-tittel. */
+  holesPlayed: number;
   backHref?: string;
   /**
    * Format-navn som vises i sub-tittel under podiet. Default «Texas scramble».
@@ -60,6 +62,7 @@ export function TexasScramblePodium({
   gameName,
   result,
   playersById,
+  holesPlayed,
   backHref = '/',
   formatLabel = 'Texas scramble',
   chromeless = false,
@@ -108,7 +111,7 @@ export function TexasScramblePodium({
           {t('common.winnerTeamAnnounced2')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          {t('texasScramble.podiumSubtitle', { format: formatLabel })}
+          {t('texasScramble.podiumSubtitle', { holes: holesPlayed, format: formatLabel })}
         </p>
       </div>
 

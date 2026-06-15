@@ -28,6 +28,8 @@ export interface SoloStablefordViewProps {
   result: StablefordSoloResult;
   /** Spillerinfo per userId for å rendre navn + kallenavn. */
   playersById: Map<string, SoloStablefordPlayerInfo>;
+  /** Antall hull fullført av den ledende spilleren (#638). Brukes i sub-tittel. */
+  holesPlayed: number;
   /** Hvor pilen tilbake skal peke. Defaults til spillets hjem. */
   backHref?: string;
   /**
@@ -55,12 +57,13 @@ export function SoloStablefordView({
   gameName,
   result,
   playersById,
+  holesPlayed,
   backHref = '/',
   chromeless = false,
 }: SoloStablefordViewProps): JSX.Element {
   const t = useTranslations('leaderboard');
 
-  const subtitle = t('soloStableford.subtitle');
+  const subtitle = t('soloStableford.subtitle', { holes: holesPlayed });
 
   if (result.players.length === 0) {
     return (

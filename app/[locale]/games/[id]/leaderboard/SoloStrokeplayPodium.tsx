@@ -29,6 +29,8 @@ export interface SoloStrokeplayPodiumProps {
   result: SoloStrokeplayResult;
   /** Spillerinfo per userId for å rendre navn + kallenavn. */
   playersById: Map<string, SoloStrokeplayPlayerInfo>;
+  /** Antall hull fullført av den ledende spilleren (#638). Brukes i sub-tittel. */
+  holesPlayed: number;
   /** Hvor pilen tilbake skal peke. Defaults til spillets hjem. */
   backHref?: string;
   /**
@@ -67,6 +69,7 @@ export function SoloStrokeplayPodium({
   gameName,
   result,
   playersById,
+  holesPlayed,
   backHref = '/',
   chromeless = false,
 }: SoloStrokeplayPodiumProps): JSX.Element {
@@ -116,7 +119,7 @@ export function SoloStrokeplayPodium({
           {t('common.winnerAnnounced')}
         </h1>
         <p className="mt-1 text-[11.5px] tabular-nums text-muted">
-          {t('soloStrokeplay.podiumSubtitle')}
+          {t('soloStrokeplay.podiumSubtitle', { holes: holesPlayed })}
         </p>
       </div>
 

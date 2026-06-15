@@ -1825,7 +1825,7 @@
 			"winnerAnnounced": "Vinneren er kåret",
 			"winnerTeamAnnounced": "Vinnerlaget er kåret",
 			"winnerTeamAnnounced2": "Vinner-laget er kåret",
-			"after18Holes": "Etter 18 hull",
+			"afterNHoles": "Etter {holes} hull",
 			"live": "Live",
 			"tiedRank": "Delt {rank}. plass",
 			"hullForHullHeading": "Hull for hull",
@@ -2004,22 +2004,22 @@
 			"hullForHullRevealSub": "Hull for hull åpnes når admin avslutter spillet."
 		},
 		"soloStrokeplay": {
-			"subtitle": "Etter 18 hull · Slagspill · Sortert på laveste netto",
+			"subtitle": "Etter {holes} hull · Slagspill · Sortert på laveste netto",
 			"grossHolesRow": "{gross} brutto · {holes} hull spilt",
 			"hullForHullSubtitle": "Slagspill · Netto",
-			"podiumSubtitle": "Slagspill · Etter 18 hull"
+			"podiumSubtitle": "Slagspill · Etter {holes} hull"
 		},
 		"soloStableford": {
-			"subtitle": "Etter 18 hull · Stableford · Poeng",
-			"podiumSubtitle": "Stableford · Etter 18 hull"
+			"subtitle": "Etter {holes} hull · Stableford · Poeng",
+			"podiumSubtitle": "Stableford · Etter {holes} hull"
 		},
 		"teamStableford": {
-			"subtitle": "Etter 18 hull · Par-stableford · Poeng",
-			"podiumSubtitle": "Par-stableford · Etter 18 hull"
+			"subtitle": "Etter {holes} hull · Par-stableford · Poeng",
+			"podiumSubtitle": "Par-stableford · Etter {holes} hull"
 		},
 		"texasScramble": {
-			"subtitle": "Etter 18 hull · {format} · Sortert på laveste lag-netto",
-			"podiumSubtitle": "{format} · Etter 18 hull"
+			"subtitle": "Etter {holes} hull · {format} · Sortert på laveste lag-netto",
+			"podiumSubtitle": "{format} · Etter {holes} hull"
 		},
 		"shamble": {
 			"revealHiddenSub": "Poengsummen holdes hemmelig til admin avslutter spillet.",

@@ -60,6 +60,7 @@ function defaultProps(
       ['u4', 'David Dahl', null],
       ['u5', 'Eva Eide', null],
     ]),
+    holesPlayed: 18,
     backHref: '/games/g1',
     ...overrides,
   };

@@ -123,6 +123,7 @@ import { buildNinesContext } from '@/lib/scoring/context/buildNinesContext';
 import { buildRoundRobinContext } from '@/lib/scoring/context/buildRoundRobinContext';
 import { buildAceyDeuceyContext } from '@/lib/scoring/context/buildAceyDeuceyContext';
 import { buildBingoBangoBongoContext } from '@/lib/scoring/context/buildBingoBangoBongoContext';
+import { maxHolesPlayed } from '@/lib/scoring/holesPlayed';
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{
@@ -1169,6 +1170,7 @@ async function renderStableford(opts: {
   // velger riktig poeng-tabell).
   const stablefordMode: 'stableford' | 'modified_stableford' =
     game.game_mode === 'modified_stableford' ? 'modified_stableford' : 'stableford';
+  const holesPlayed = maxHolesPlayed(rawScoresRows);
 
   // WD (#386): build withdrawn list for the display section. The ctx-builder
   // does its own WD-filtering of players + scores.
@@ -1232,6 +1234,7 @@ async function renderStableford(opts: {
           gameName={game.name}
           result={result}
           playersById={playersById}
+          holesPlayed={holesPlayed}
           backHref={backHref}
           chromeless={chromeless}
         />
@@ -1262,6 +1265,7 @@ async function renderStableford(opts: {
           gameName={game.name}
           result={result}
           playersById={playersById}
+          holesPlayed={holesPlayed}
           backHref={backHref}
         />
         {wdSection}
@@ -1330,6 +1334,7 @@ async function renderStableford(opts: {
           gameName={game.name}
           result={result}
           playersById={playersById}
+          holesPlayed={holesPlayed}
           backHref={backHref}
           chromeless={chromeless}
         />
@@ -1362,6 +1367,7 @@ async function renderStableford(opts: {
         gameName={game.name}
         result={result}
         playersById={playersById}
+        holesPlayed={holesPlayed}
         backHref={backHref}
       />
       {wdSection}
@@ -2079,6 +2085,8 @@ async function renderSoloStrokeplay(opts: {
       display_name: p.users!.name ?? unknownPlayer,
     }));
 
+  const holesPlayed = maxHolesPlayed(rawScoresRows);
+
   // Delt context-bygging (epic #496) — samme kilde som «Hull for hull»-flaten
   // (SoloStrokeplayHolesBody), inkl. WD-filtrering, så map-logikken ikke
   // dupliseres.
@@ -2172,6 +2180,7 @@ async function renderSoloStrokeplay(opts: {
           gameName={game.name}
           result={result}
           playersById={playersById}
+          holesPlayed={holesPlayed}
           backHref={backHref}
           chromeless={chromeless}
         />
@@ -2209,6 +2218,7 @@ async function renderSoloStrokeplay(opts: {
         gameName={game.name}
         result={result}
         playersById={playersById}
+        holesPlayed={holesPlayed}
         backHref={backHref}
       />
       {wdSection}
@@ -2302,6 +2312,7 @@ async function renderTexasScramble(opts: {
   }
 
   const unknownPlayer = tc('unknownPlayer');
+  const holesPlayed = maxHolesPlayed(rawScoresRows);
   const playersById = new Map<string, TexasScramblePlayerInfo>();
   for (const p of gwp.players) {
     if (p.users == null) continue;
@@ -2321,6 +2332,7 @@ async function renderTexasScramble(opts: {
         gameName={game.name}
         result={result}
         playersById={playersById}
+        holesPlayed={holesPlayed}
         backHref={backHref}
         formatLabel={formatLabel}
         chromeless={chromeless}
@@ -2347,6 +2359,7 @@ async function renderTexasScramble(opts: {
       gameName={game.name}
       result={result}
       playersById={playersById}
+      holesPlayed={holesPlayed}
       backHref={backHref}
       formatLabel={formatLabel}
     />
@@ -2414,6 +2427,7 @@ async function renderWolf(opts: {
   }
 
   const unknownPlayer = tc('unknownPlayer');
+  const holesPlayed = maxHolesPlayed(rawScoresRows);
   const playersById = new Map<string, WolfPlayerInfo>();
   for (const p of gwp.players) {
     if (p.users == null) continue;
@@ -2448,6 +2462,7 @@ async function renderWolf(opts: {
           gameName={game.name}
           result={result}
           playersById={playersById}
+          holesPlayed={holesPlayed}
           scoreVisibility={scoreVisibility}
           gameStatus={game.status}
           backHref={backHref}
@@ -2476,6 +2491,7 @@ async function renderWolf(opts: {
       gameName={game.name}
       result={result}
       playersById={playersById}
+      holesPlayed={holesPlayed}
       scoreVisibility={scoreVisibility}
       gameStatus={game.status}
       backHref={backHref}
@@ -2533,6 +2549,7 @@ async function renderNassau(opts: {
   }
 
   const unknownPlayer = tc('unknownPlayer');
+  const holesPlayed = maxHolesPlayed(rawScoresRows);
 
   const playersById = new Map<string, NassauPlayerInfo>();
   for (const p of gwp.players) {
@@ -2641,6 +2658,7 @@ async function renderNassau(opts: {
             gameName={game.name}
             result={result}
             playersById={playersById}
+            holesPlayed={holesPlayed}
             scoreVisibility={scoreVisibility}
             gameStatus={game.status}
             backHref={backHref}
@@ -2670,6 +2688,7 @@ async function renderNassau(opts: {
       gameName={game.name}
       result={result}
       playersById={playersById}
+      holesPlayed={holesPlayed}
       scoreVisibility={scoreVisibility}
       gameStatus={game.status}
       backHref={backHref}
@@ -2727,6 +2746,7 @@ async function renderSkins(opts: {
   }
 
   const unknownPlayer = tc('unknownPlayer');
+  const holesPlayed = maxHolesPlayed(rawScoresRows);
 
   const playersById = new Map<string, SkinsPlayerInfo>();
   for (const p of gwp.players) {
@@ -2820,6 +2840,7 @@ async function renderSkins(opts: {
             gameName={game.name}
             result={result}
             playersById={playersById}
+            holesPlayed={holesPlayed}
             scoreVisibility={scoreVisibility}
             gameStatus={game.status}
             backHref={backHref}
@@ -2849,6 +2870,7 @@ async function renderSkins(opts: {
       gameName={game.name}
       result={result}
       playersById={playersById}
+      holesPlayed={holesPlayed}
       scoreVisibility={scoreVisibility}
       gameStatus={game.status}
       backHref={backHref}
@@ -2915,6 +2937,7 @@ async function renderBingoBangoBongo(opts: {
   }
 
   const unknownPlayer = tc('unknownPlayer');
+  const holesPlayed = maxHolesPlayed(rawScoresRows);
   const playersById = new Map<string, BingoBangoBongoPlayerInfo>();
   for (const p of gwp.players) {
     if (p.users == null) continue;
@@ -3005,6 +3028,7 @@ async function renderBingoBangoBongo(opts: {
             gameName={game.name}
             result={result}
             playersById={playersById}
+            holesPlayed={holesPlayed}
             scoreVisibility={scoreVisibility}
             gameStatus={game.status}
             backHref={backHref}
@@ -3034,6 +3058,7 @@ async function renderBingoBangoBongo(opts: {
       gameName={game.name}
       result={result}
       playersById={playersById}
+      holesPlayed={holesPlayed}
       scoreVisibility={scoreVisibility}
       gameStatus={game.status}
       backHref={backHref}
@@ -3090,6 +3115,7 @@ async function renderNines(opts: {
   }
 
   const unknownPlayer = tc('unknownPlayer');
+  const holesPlayed = maxHolesPlayed(rawScoresRows);
   const playersById = new Map<string, NinesPlayerInfo>();
   for (const p of gwp.players) {
     if (p.users == null) continue;
@@ -3122,6 +3148,7 @@ async function renderNines(opts: {
           gameName={game.name}
           result={result}
           playersById={playersById}
+          holesPlayed={holesPlayed}
           scoreVisibility={scoreVisibility}
           gameStatus={game.status}
           backHref={backHref}
@@ -3150,6 +3177,7 @@ async function renderNines(opts: {
       gameName={game.name}
       result={result}
       playersById={playersById}
+      holesPlayed={holesPlayed}
       scoreVisibility={scoreVisibility}
       gameStatus={game.status}
       backHref={backHref}
@@ -3209,6 +3237,7 @@ async function renderRoundRobin(opts: {
   }
 
   const unknownPlayer = tc('unknownPlayer');
+  const holesPlayed = maxHolesPlayed(rawScoresRows);
   const playersById = new Map<string, RoundRobinPlayerInfo>();
   for (const p of gwp.players) {
     if (p.users == null) continue;
@@ -3241,6 +3270,7 @@ async function renderRoundRobin(opts: {
           gameName={game.name}
           result={result}
           playersById={playersById}
+          holesPlayed={holesPlayed}
           scoreVisibility={scoreVisibility}
           gameStatus={game.status}
           backHref={backHref}
@@ -3269,6 +3299,7 @@ async function renderRoundRobin(opts: {
       gameName={game.name}
       result={result}
       playersById={playersById}
+      holesPlayed={holesPlayed}
       scoreVisibility={scoreVisibility}
       gameStatus={game.status}
       backHref={backHref}
@@ -3325,6 +3356,7 @@ async function renderAceyDeucey(opts: {
   }
 
   const unknownPlayer = tc('unknownPlayer');
+  const holesPlayed = maxHolesPlayed(rawScoresRows);
   const playersById = new Map<string, AceyDeuceyPlayerInfo>();
   for (const p of gwp.players) {
     if (p.users == null) continue;
@@ -3357,6 +3389,7 @@ async function renderAceyDeucey(opts: {
           gameName={game.name}
           result={result}
           playersById={playersById}
+          holesPlayed={holesPlayed}
           scoreVisibility={scoreVisibility}
           gameStatus={game.status}
           backHref={backHref}
@@ -3385,6 +3418,7 @@ async function renderAceyDeucey(opts: {
       gameName={game.name}
       result={result}
       playersById={playersById}
+      holesPlayed={holesPlayed}
       scoreVisibility={scoreVisibility}
       gameStatus={game.status}
       backHref={backHref}
@@ -3474,6 +3508,7 @@ async function renderShamble(opts: {
   }
 
   const unknownPlayer = tc('unknownPlayer');
+  const holesPlayed = maxHolesPlayed(rawScoresRows);
   const playersById = new Map<string, ShamblePlayerInfo>();
   for (const p of gwp.players) {
     if (p.users == null) continue;
@@ -3499,6 +3534,7 @@ async function renderShamble(opts: {
           gameName={game.name}
           result={result}
           playersById={playersById}
+          holesPlayed={holesPlayed}
           backHref={backHref}
           chromeless={podiumChromeless}
         />
@@ -3507,6 +3543,7 @@ async function renderShamble(opts: {
           gameName={game.name}
           result={result}
           playersById={playersById}
+          holesPlayed={holesPlayed}
           scoreVisibility={scoreVisibility}
           gameStatus={game.status}
           backHref={backHref}
@@ -3535,6 +3572,7 @@ async function renderShamble(opts: {
       gameName={game.name}
       result={result}
       playersById={playersById}
+      holesPlayed={holesPlayed}
       scoreVisibility={scoreVisibility}
       gameStatus={game.status}
       backHref={backHref}
@@ -3599,6 +3637,7 @@ async function renderPatsome(opts: {
   }
 
   const unknownPlayer = tc('unknownPlayer');
+  const holesPlayed = maxHolesPlayed(rawScoresRows);
   const playersById = new Map<string, PatsomePlayerInfo>();
   for (const p of gwp.players) {
     if (p.users == null) continue;
@@ -3632,6 +3671,7 @@ async function renderPatsome(opts: {
           gameName={game.name}
           result={result}
           playersById={playersById}
+          holesPlayed={holesPlayed}
           scoreVisibility={scoreVisibility}
           gameStatus={game.status}
           backHref={backHref}
@@ -3660,6 +3700,7 @@ async function renderPatsome(opts: {
       gameName={game.name}
       result={result}
       playersById={playersById}
+      holesPlayed={holesPlayed}
       scoreVisibility={scoreVisibility}
       gameStatus={game.status}
       backHref={backHref}
