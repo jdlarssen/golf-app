@@ -153,12 +153,21 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
           .in('game_id', gameIds),
     games.length === 0
       ? Promise.resolve({
-          data: [] as Array<{ course_id: string; hole_number: number; par: number; stroke_index: number }>,
+          data: [] as Array<{
+            course_id: string;
+            hole_number: number;
+            par_mens: number;
+            par_ladies: number;
+            par_juniors: number;
+            stroke_index: number;
+          }>,
           error: null,
         })
       : supabase
           .from('course_holes')
-          .select('course_id, hole_number, par, stroke_index')
+          // `par` ble droppet i migrasjon 0040 til fordel for per-kjønn-kolonner.
+          // Map til `par` nedstrøms via par_mens (samme som buildModeResultForGame).
+          .select('course_id, hole_number, par_mens, par_ladies, par_juniors, stroke_index')
           .in(
             'course_id',
             Array.from(new Set(games.map((g) => g.course_id).filter((id): id is string => Boolean(id)))),
@@ -174,11 +183,13 @@ export async function getCupSnapshot(tournamentId: string): Promise<CupSnapshot 
   for (const row of (holesByCourseRes.data ?? []) as Array<{
     course_id: string;
     hole_number: number;
-    par: number;
+    par_mens: number;
+    par_ladies: number;
+    par_juniors: number;
     stroke_index: number;
   }>) {
     const arr = holesByCourse.get(row.course_id) ?? [];
-    arr.push({ number: row.hole_number, par: row.par, strokeIndex: row.stroke_index });
+    arr.push({ number: row.hole_number, par: row.par_mens, strokeIndex: row.stroke_index });
     holesByCourse.set(row.course_id, arr);
   }
 

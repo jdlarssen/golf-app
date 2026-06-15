@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#616](https://github.com/jdlarssen/golf-app/issues/616). Innboksen kunne bare vokse. Du kunne markere som lest, men ikke fjerne noe, og lange undertekster ble kuttet midt i ordet. Nå kan du arkivere et varsel med ✕, tømme alle leste i ett trykk, og undertekstene får plass på to linjer.
 
+### [1.129.8] - 2026-06-15 · bug
+
+> Cup-sida og det offentlige cup-resultatet krasjet så snart cupen hadde minst én match. Nå laster de som de skal.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `getCupSnapshot` hentet kolonnen `course_holes.par`, som ble droppet i migrasjon 0040 til fordel for `par_mens`/`par_ladies`/`par_juniors`. Postgres svarte `42703 column course_holes.par does not exist`, og siden hull-spørringen bare kjører når cupen har minst ett match-spill, krasjet både `/admin/cup/[id]`, `/klubber/[id]/cup/[cupId]` og den offentlige `/cup/[id]` med en 500. Select-en bruker nå per-kjønn-kolonnene og mapper `par` fra `par_mens` nedstrøms — samme mønster som den fungerende scoring-stien (`buildModeResultForGame`). Ny regresjonstest (`getCupSnapshot.test.ts`) låser kolonne-navn-kontrakten mot en minimal cup med én match. (#642)
+
+</details>
+
 ### [1.129.7] - 2026-06-14 · #622
 
 > Noen norske tekster brukte det engelske ordet «roster» («rosteren», «Lag-roster»). Nå står det «spillerliste» overalt, likt resten av appen.
