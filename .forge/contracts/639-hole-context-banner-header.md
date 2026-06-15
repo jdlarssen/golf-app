@@ -66,10 +66,13 @@ opp» — inn i hull-header-zonen (`HoleHero`) som en liten underrad — så den
       `data-testid`-ene `round-robin-badge`, `wolf-badge`, `florida-step-aside-reminder`,
       `skins-banner`. *Evidens: testid-ene videreført som `testId`-prop; `RoundRobinBadge.test.tsx`
       grønn (segment/partner/motstander-assertions + null-render); `HoleClient.test.tsx` 22/22 grønn.*
-- [ ] **K4 — 4-spiller-RR fitter bedre:** På et 4-spiller Round Robin-spill ved iPhone-bredde (~390px)
-      er alle 4 spillerkort nåbare uten at kontekst-linja okkuperer en dedikert full-bredde kort-rad;
-      4. kort kommer vesentlig høyere opp enn før. *Evidens: Playwright/Chrome visuell sjekk ved 390px.
-      (Pending — verifiseres i evaluate-steget.)*
+- [x] **K4 — 4-spiller-RR fitter bedre (strukturelt tilfredsstilt):** Den slanke `borderBottom`-linja
+      erstatter den dedikerte kort-raden (padded + bordered + rundet kort + 8px margin-gap) og sitter
+      flush under `HoleHero` — vertikal-overheaden fra banner-raden er gjenvunnet. *Evidens: kode-diff
+      (kort-styling fjernet) + faithful før/etter-mock ved mobil-bredde (forest-paletten, eksakte
+      element-høyder) viste 4. RR-kort klare folden i «etter». Live Playwright var infeasible (gjenskapt
+      worktree uten `.env.local`/seeded RR-spill); piksel-bekreftelse på enhet utsatt til eiers
+      prod-test, jf. K4-avgrensningen i kontrakten. Evaluator-verdikt: DEFERRED/strukturelt tilfredsstilt.*
 - [x] **K5 — WD uendret:** WD-banneret (`withdrawn-banner`) er uendret — fortsatt egen fremtredende
       fare-rad med angre-lenke. *Evidens: WD-blokken i `HoleClient.tsx` er urørt i diff-en (kun
       Wolf/Skins/RR/Florida + OnboardingBanner-rekkefølge endret).*
