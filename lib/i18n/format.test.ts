@@ -96,6 +96,21 @@ describe('formatDateTime', () => {
       WHEN.toLocaleString('nb-NO', options),
     );
   });
+
+  it('renders the tee-off time in Oslo wall-clock when timeZone is set (#637)', () => {
+    // 08:00 UTC = 10:00 Oslo (CEST). The admin protocol omitted timeZone, so on
+    // a UTC server it showed «08:00»; pinning to Europe/Oslo gives «10:00».
+    const teeOff = '2026-06-15T08:00:00Z';
+    const out = formatDateTime(teeOff, 'no', {
+      timeZone: 'Europe/Oslo',
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    expect(out).toContain('10:00');
+    expect(out).not.toContain('08:00');
+  });
 });
 
 describe('formatNumber', () => {
