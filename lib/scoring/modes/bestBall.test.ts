@@ -224,3 +224,42 @@ describe('compute — WD-scenario: redusert lag-størrelse (#386)', () => {
     expect(result.teams[0].teamNumber).toBe(2);
   });
 });
+
+describe('compute — lag uten skår rangeres sist (#635)', () => {
+  it('lag uten registrerte skår rangeres sist, ikke som vinner', () => {
+    const holes = Array.from({ length: 18 }, (_, i) => ({
+      number: i + 1,
+      par: 4,
+      strokeIndex: i + 1,
+    }));
+    // Lag 1 spiller alle 18 hull (best net 4/hull → total 72). Lag 2 har ingen skår.
+    const scores = [];
+    for (let h = 1; h <= 18; h++) {
+      scores.push({ userId: 'a1', holeNumber: h, gross: 4 });
+      scores.push({ userId: 'a2', holeNumber: h, gross: 5 });
+    }
+    const ctx: ScoringContext = {
+      game: {
+        id: 'g1',
+        game_mode: 'best_ball',
+        mode_config: { kind: 'best_ball', team_size: 2, teams_count: 4 },
+      },
+      players: [
+        { userId: 'a1', teamNumber: 1, flightNumber: 1, courseHandicap: 0 },
+        { userId: 'a2', teamNumber: 1, flightNumber: 1, courseHandicap: 0 },
+        { userId: 'b1', teamNumber: 2, flightNumber: 2, courseHandicap: 0 },
+        { userId: 'b2', teamNumber: 2, flightNumber: 2, courseHandicap: 0 },
+      ],
+      holes,
+      scores,
+    };
+    const result = compute(ctx);
+    if (result.kind !== 'best_ball') throw new Error('expected best_ball');
+    const team1 = result.teams.find((t) => t.teamNumber === 1)!;
+    const team2 = result.teams.find((t) => t.teamNumber === 2)!;
+    expect(team1.rank).toBe(1);
+    expect(team2.rank).toBe(2);
+    // Vist total upåvirket av padding.
+    expect(team1.total).toBe(72);
+  });
+});

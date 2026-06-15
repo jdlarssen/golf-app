@@ -626,3 +626,38 @@ describe('texasScramble.compute — per-gender par (#240)', () => {
     expect(result.teams[0].holes[0].par).toBe(4);
   });
 });
+
+describe('texasScramble.compute — lag uten skår rangeres sist (#635)', () => {
+  it('lag uten registrerte skår rangeres sist, ikke som vinner', () => {
+    // Lag 1 spiller 18 hull (netto 72). Lag 2 har ingen skår.
+    // Bug-en var at lag 2 sin tomme ranking-sum (0) tolkes som beste netto.
+    const players: ScoringPlayer[] = [
+      { userId: 'a1', teamNumber: 1, flightNumber: 1, courseHandicap: 0 },
+      { userId: 'a2', teamNumber: 1, flightNumber: 1, courseHandicap: 0 },
+      { userId: 'b1', teamNumber: 2, flightNumber: 2, courseHandicap: 0 },
+      { userId: 'b2', teamNumber: 2, flightNumber: 2, courseHandicap: 0 },
+    ];
+    const scores: ScoringHoleScore[] = [];
+    for (let h = 1; h <= 18; h++) {
+      scores.push({ userId: 'a1', holeNumber: h, gross: 4 });
+    }
+    const ctx = makeCtx({
+      players,
+      holes: par4Holes(18),
+      scores,
+      modeConfig: {
+        kind: 'texas_scramble',
+        team_size: 2,
+        teams_count: 2,
+        team_handicap_pct: 0,
+      },
+    });
+    const result = compute(ctx);
+    const team1 = result.teams.find((t) => t.teamNumber === 1)!;
+    const team2 = result.teams.find((t) => t.teamNumber === 2)!;
+    expect(team1.rank).toBe(1);
+    expect(team2.rank).toBe(2);
+    // Vist total er upåvirket av padding (regnes fra faktiske skår).
+    expect(team1.totalNet).toBe(72);
+  });
+});

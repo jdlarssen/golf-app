@@ -17,7 +17,7 @@
 
 import { pickTeamCaptain } from '@/lib/games/teamCaptain';
 import { strokesForHole } from '../strokeAllocation';
-import { rankTeams } from '../tiebreaker';
+import { rankTeams, UNPLAYED_PADDING } from '../tiebreaker';
 import { parFor } from './parResolver';
 import type {
   ScoringContext,
@@ -158,15 +158,17 @@ export function computeScramble(
     },
   );
 
-  // Bygg 18-lange teamNet-arrays for ranking. Missing-hull padder med 0 —
-  // samme behandling som bestBall. UI bruker missingHoles separat for
-  // å flagge sammenligninger som partial.
+  // Bygg 18-lange teamNet-arrays for ranking. Et lag som har spilt minst ett
+  // hull padder manglende hull med 0 (samme behandling som bestBall; UI bruker
+  // missingHoles for å flagge partial). Et lag uten ETT eneste registrert hull
+  // paddes med UNPLAYED_PADDING — ellers ville sum 0 kåre det som vinner (#635).
   const ranked = rankTeams(
     baseLines.map((l) => {
+      const teamPlayedAny = l.holes.some((h) => h?.teamNet != null);
       const arr: number[] = [];
       for (let i = 0; i < 18; i++) {
         const h = l.holes[i];
-        arr.push(h?.teamNet ?? 0);
+        arr.push(h?.teamNet ?? (teamPlayedAny ? 0 : UNPLAYED_PADDING));
       }
       return { id: l.teamNumber, holes: arr };
     }),

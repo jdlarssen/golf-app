@@ -65,3 +65,20 @@ export function rankTeams(teams: TeamForRanking[]): RankedTeam[] {
     };
   });
 }
+
+/**
+ * Padding-verdi for uspilte hull i ranking-arrays som mates til `rankTeams`.
+ *
+ * `rankTeams` sorterer stigende (lavest sum vinner) og er format-agnostisk —
+ * den vet ikke om et lag/en spiller faktisk har spilt. Uten padding ville en
+ * deltaker uten ett eneste registrert hull fått sum 0 (laveste = best) og blitt
+ * kåret som vinner (#635). Ved å erstatte uspilte hull med en stor verdi
+ * rangeres de som verre enn enhver realistisk score. 999 er trygt: et hull med
+ * 999 slag dominerer alle realistiske sammenligninger.
+ *
+ * `soloStrokeplay`/`nassau` padder ALLE uspilte hull (færre spilte hull
+ * rangerer dårligere). Lag-strokeplay-formatene (best ball, texas/ambrose/
+ * florida, shamble) padder kun lag som har spilt NULL hull, slik at delvis
+ * spilte lag beholder sin eksisterende rangering.
+ */
+export const UNPLAYED_PADDING = 999;

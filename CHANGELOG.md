@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#634](https://github.com/jdlarssen/golf-app/issues/634). Lag-matchplay-formatene kunne bare settes opp via en cup. Nå tar opprett-veiviseren dem også.
 
+### [1.130.1] - 2026-06-15 · #635
+
+> Et lag eller en spiller uten registrerte skår ble rangert som nr. 1 og kåret som vinner i en ferdig runde. Nå havner de sist, der de hører hjemme.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Et lag uten ett eneste registrert hull ble rangert som nr. 1 og kåret som vinner: den tomme ranking-summen (0) ble tolket som beste netto i lavest-vinner-formatene. `rankTeams` er format-agnostisk og kjente ikke til «ikke spilt», så et 0-hulls-lag sorterte øverst. Lag-strokeplay-formatene (best ball, texas/ambrose/florida, shamble) padder nå et lag som har spilt NULL hull med en delt `UNPLAYED_PADDING`-konstant (løftet ut av `soloStrokeplay` til `tiebreaker.ts`), så de rangeres sist. Delvis spilte lag er upåvirket (beholder 0 for manglende hull), og viste totaler er uendret (padding gjelder kun ranking-arrayet). Avvik fra kontrakt: valgte kirurgisk padding (kun 0-hulls-lag) framfor full per-hull-padding, for å unngå å endre rangeringen av delvis spilte lag og holde null regresjon i gull-suiten. Feilende-først Type A-tester per format (texas/bestBall/shamble); full scoring-suite grønn (857 tester). (#635)
+
+</details>
+
 ### [1.130.0] - 2026-06-15 · #634
 
 > Fourball, foursomes, greensome, Chapman og gruesome matchplay kunne før bare settes opp gjennom en cup. Nå velger du dem rett i opprett-veiviseren, fordeler spillerne på to sider à to, og setter i gang.

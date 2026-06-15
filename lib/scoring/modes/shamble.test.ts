@@ -527,3 +527,46 @@ describe('shamble.compute — defensive defaults', () => {
     expect(teamCell(compute(ctx), 1, 1).perPlayer).toHaveLength(3);
   });
 });
+
+describe('shamble.compute — lag uten skår rangeres sist (#635)', () => {
+  it('lag uten registrerte skår rangeres sist, ikke som vinner', () => {
+    // Lag 1 spiller alle 18 hull (best 2 av 4 = 4+4 = 8/hull → total 144).
+    // Lag 2 har ingen skår.
+    const players = [
+      makePlayer('a1', 1),
+      makePlayer('a2', 1),
+      makePlayer('a3', 1),
+      makePlayer('a4', 1),
+      makePlayer('b1', 2),
+      makePlayer('b2', 2),
+      makePlayer('b3', 2),
+      makePlayer('b4', 2),
+    ];
+    const scores: ScoringHoleScore[] = [];
+    for (let h = 1; h <= 18; h++) {
+      scores.push(
+        ...holeScores(h, [
+          ['a1', 4],
+          ['a2', 4],
+          ['a3', 4],
+          ['a4', 4],
+        ]),
+      );
+    }
+    const ctx = makeCtx({
+      players,
+      holes: par4Holes(18),
+      scores,
+      teamSize: 4,
+      count: 2,
+      scoring: 'gross',
+    });
+    const result = compute(ctx);
+    const team1 = teamLine(result, 1);
+    const team2 = teamLine(result, 2);
+    expect(team1.rank).toBe(1);
+    expect(team2.rank).toBe(2);
+    // Vist total upåvirket av padding.
+    expect(team1.totalScore).toBe(144);
+  });
+});

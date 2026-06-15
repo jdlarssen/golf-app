@@ -21,7 +21,7 @@
 // sammenligninger via holesCounted).
 
 import { strokesForHole } from '../strokeAllocation';
-import { rankTeams } from '../tiebreaker';
+import { rankTeams, UNPLAYED_PADDING } from '../tiebreaker';
 import type {
   ScoringContext,
   ScoringHole,
@@ -212,14 +212,17 @@ export function compute(ctx: ScoringContext): ShambleResult {
     ),
   }));
 
-  // Ranking: 18-langt teamScore-array per lag (0-padding for pending/missing,
-  // samme behandling som texasScramble). Lavest sum vinner.
+  // Ranking: 18-langt teamScore-array per lag. Et lag som har spilt minst ett
+  // hull padder pending/missing med 0 (samme behandling som texasScramble).
+  // Et lag uten ETT eneste registrert hull paddes med UNPLAYED_PADDING — ellers
+  // ville sum 0 tolkes som laveste (beste) og laget kåret som vinner (#635).
   const ranked = rankTeams(
     teamNumbers.map((tn) => {
       const cells = cellsByTeam.get(tn) ?? [];
+      const teamPlayedAny = cells.some((c) => c?.teamScore != null);
       const arr: number[] = [];
       for (let i = 0; i < 18; i++) {
-        arr.push(cells[i]?.teamScore ?? 0);
+        arr.push(cells[i]?.teamScore ?? (teamPlayedAny ? 0 : UNPLAYED_PADDING));
       }
       return { id: tn, holes: arr };
     }),

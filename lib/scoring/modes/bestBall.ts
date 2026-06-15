@@ -68,7 +68,7 @@ export function teamTotal(holes: HoleTeamScore[]): { total: number; missingHoles
 // -----------------------------------------------------------------------------
 
 import { strokesForHole } from '../strokeAllocation';
-import { rankTeams } from '../tiebreaker';
+import { rankTeams, UNPLAYED_PADDING } from '../tiebreaker';
 import { parFor } from './parResolver';
 import type {
   ScoringContext,
@@ -164,15 +164,17 @@ export function compute(ctx: ScoringContext): BestBallResult {
     };
   });
 
-  // Bygg 18-lange poeng-arrays for ranking. Missing holes teller 0 her
-  // (samme behandling som lib/leaderboard.ts), men flagges via missingHoles
-  // for at UI kan vise warning.
+  // Bygg 18-lange poeng-arrays for ranking. Et lag som har spilt minst ett
+  // hull teller manglende hull som 0 (flagges via missingHoles for UI-warning).
+  // Et lag uten ETT eneste registrert hull paddes med UNPLAYED_PADDING på alle
+  // hull — ellers ville sum 0 tolkes som beste netto og laget kåret som vinner (#635).
   const ranked = rankTeams(
     baseLines.map((l) => {
+      const teamPlayedAny = l.holes.some((h) => h?.teamNet != null);
       const arr: number[] = [];
       for (let i = 0; i < 18; i++) {
         const h = l.holes[i];
-        arr.push(h?.teamNet ?? 0);
+        arr.push(h?.teamNet ?? (teamPlayedAny ? 0 : UNPLAYED_PADDING));
       }
       return { id: l.teamNumber, holes: arr };
     }),

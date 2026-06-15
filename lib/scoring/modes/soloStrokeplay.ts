@@ -11,7 +11,7 @@
 // på et hull skal ikke få "0 slag" i totalen (det ville premiert dem urettmessig).
 
 import { strokesForHole } from '../strokeAllocation';
-import { rankTeams } from '../tiebreaker';
+import { rankTeams, UNPLAYED_PADDING } from '../tiebreaker';
 import type {
   ScoringContext,
   ScoringHole,
@@ -21,28 +21,10 @@ import type {
   SoloStrokeplayPlayerLine,
 } from './types';
 
-/**
- * Padding-konstant for unplayed-hull i tie-break-cascaden.
- *
- * For å unngå at en spiller som har spilt færre hull får et urettmessig
- * fortrinn i tie-break-cascaden (back-9 / back-6 / back-3 / hole-18), padder
- * vi unplayed-hull med et stort tall — slik at rankTeams ser dem som "verre
- * enn enhver realistisk netto-score". 999 er trygt: et hull med 999 netto-
- * slag dominerer alle realistiske tie-break-sammenligninger.
- *
- * Dette er en pragmatisk forenkling for v1. Det matematisk "korrekte" valget
- * ville vært å sammenligne kun spillere med samme `holesPlayed`, men det
- * komplisererer leaderboard-shape (separate ranking-grupper per hole-count)
- * uten å gi vesentlig bedre brukeropplevelse. Padding-strategien gir
- * intuitive resultater: en spiller som har spilt 18 hull med god total
- * rangerer foran en spiller som har spilt 9 hull med samme total (siden
- * sistnevnte har 9 × 999 unplayed-padding i back-9-summen).
- *
- * Ved sammenligning mellom to spillere som BEGGE har spilt færre enn 18 hull,
- * vil padding-strategien fortsatt være konsistent — begge får 999-padding
- * for unplayed-hull, og cascaden bryter på første hull hvor de differerer.
- */
-const UNPLAYED_PADDING = 999;
+// UNPLAYED_PADDING (delt konstant i tiebreaker) padder uspilte hull i
+// ranking-arrayet. Solo strokeplay padder ALLE uspilte hull, så en spiller
+// som har spilt 18 hull rangerer foran en som har spilt færre ved ellers lik
+// total — og en spiller uten skår havner sist. Se tiebreaker.ts for detaljer.
 
 interface PlayerHoleStrokes {
   userId: string;
