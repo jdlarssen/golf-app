@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#634](https://github.com/jdlarssen/golf-app/issues/634). Lag-matchplay-formatene kunne bare settes opp via en cup. Nå tar opprett-veiviseren dem også.
 
+### [1.130.6] - 2026-06-15 · #645
+
+> Oppretter du en klubb og noe er feil — for eksempel en eier-e-post uten Tørny-konto — tømte skjemaet alle feltene, og du måtte taste klubbnavn, e-post og resten på nytt. Nå står det du skrev igjen, så du bare retter feltet som var galt. Samme på «Legg til medlem» i klubben.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Klubb-skjemaene (`/admin/klubber/ny` og «Legg til medlem» på `/klubber/[id]`) brukte plain `<form action={serverAction}>` som redirecter med `?error=<kode>` ved valideringsfeil. Feltene hadde ingen `defaultValue`, så hele skjemaet nullstilte seg på redirect — kun eier-e-posten ble echoet i URL-en, og den ble ikke engang fylt tilbake. `createClubForAdmin` echoer nå alle innfylte verdier (`name`, `owner_email`, `member_cap`, `varighet_mode`, `sluttdato`) via searchParams på hver feil-gren gjennom en delt `errorHref(code)`-helper, og `ny/page.tsx` mater dem inn som `defaultValue` på `<Input>`-ene + `VarighetField` sine `defaultMode`/`defaultDate`. `addMember` echoer e-posten på alle feil-grener (ikke bare `not_found`/`already`), og e-post-feltet leser den tilbake som `defaultValue`. searchParams-echo valgt framfor cookie/client-component for å holde server-action-grensa, konsistent med eksisterende `?email=`-mønster. (#645)
+
+</details>
+
 ### [1.130.5] - 2026-06-15 · #639
 
 > På hull-skjermen tok info-banneret (hvem du spiller med i Round Robin, hvem som er Wolf, og liknende) en hel rad og dyttet det fjerde spillerkortet under skjermkanten på mobil. Nå står teksten midt i hull-headeren, mellom hull-nummeret og «Par», så alle spillerkortene får plass.

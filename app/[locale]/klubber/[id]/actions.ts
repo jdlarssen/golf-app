@@ -53,7 +53,7 @@ export async function addMember(formData: FormData) {
       redirect({ href: `/klubber/${groupId}?error=email_req`, locale });
     }
     console.error('[addMember]', error);
-    redirect({ href: `/klubber/${groupId}?error=unknown`, locale });
+    redirect({ href: `/klubber/${groupId}?error=unknown&email=${encodeURIComponent(email)}`, locale });
   }
 
   if (data === 'not_found') {
@@ -63,10 +63,10 @@ export async function addMember(formData: FormData) {
     redirect({ href: `/klubber/${groupId}?error=already&email=${encodeURIComponent(email)}`, locale });
   }
   if (data === 'club_full') {
-    redirect({ href: `/klubber/${groupId}?error=full`, locale });
+    redirect({ href: `/klubber/${groupId}?error=full&email=${encodeURIComponent(email)}`, locale });
   }
   if (data === 'club_expired') {
-    redirect({ href: `/klubber/${groupId}?error=expired`, locale });
+    redirect({ href: `/klubber/${groupId}?error=expired&email=${encodeURIComponent(email)}`, locale });
   }
 
   // data === 'added'

@@ -16,6 +16,10 @@ import { createClubForAdmin } from './actions';
 type SearchParams = Promise<{
   error?: string | string[];
   email?: string | string[];
+  name?: string | string[];
+  member_cap?: string | string[];
+  varighet_mode?: string | string[];
+  sluttdato?: string | string[];
 }>;
 
 const requireAdminContext = cache(async () => {
@@ -41,6 +45,12 @@ export default async function NyKlubbPage({
   const sp = await searchParams;
   const errorCode = first(sp.error);
   const errorEmail = first(sp.email);
+  // #645: re-populate the form from the values echoed by the action on a
+  // validation-error redirect, so only the offending field needs fixing.
+  const prevName = first(sp.name) ?? '';
+  const prevMemberCap = first(sp.member_cap) ?? '';
+  const prevVarighetMode = first(sp.varighet_mode) === 'dato' ? 'dato' : 'uendelig';
+  const prevSluttdato = first(sp.sluttdato) ?? '';
 
   const t = await getTranslations('klubb');
 
@@ -69,6 +79,7 @@ export default async function NyKlubbPage({
             type="text"
             label={t('create.nameLabel')}
             placeholder={t('create.namePlaceholder')}
+            defaultValue={prevName}
             maxLength={60}
             required
           />
@@ -78,6 +89,7 @@ export default async function NyKlubbPage({
             type="email"
             label={t('create.ownerEmailLabel')}
             placeholder={t('create.ownerEmailPlaceholder')}
+            defaultValue={errorEmail ?? ''}
             autoComplete="off"
             hint={t('create.ownerEmailHint')}
             required
@@ -88,11 +100,12 @@ export default async function NyKlubbPage({
             type="number"
             label={t('create.memberCapLabel')}
             placeholder={t('create.memberCapPlaceholder')}
+            defaultValue={prevMemberCap}
             min={1}
             hint={t('create.memberCapHint')}
           />
 
-          <VarighetField defaultMode="uendelig" defaultDate="" />
+          <VarighetField defaultMode={prevVarighetMode} defaultDate={prevSluttdato} />
 
           <SubmitButton className="w-full" pendingLabel={t('create.submitPending')}>
             {t('create.submitButton')}

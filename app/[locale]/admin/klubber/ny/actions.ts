@@ -55,19 +55,26 @@ export async function createClubForAdmin(formData: FormData) {
 
   if (error) {
     const msg = error.message ?? '';
-    if (msg.includes('not_authorized')) redirect({ href: '/admin/klubber/ny?error=not_auth', locale });
-    if (msg.includes('name_required')) redirect({ href: '/admin/klubber/ny?error=name_req', locale });
-    if (msg.includes('name_too_long')) redirect({ href: '/admin/klubber/ny?error=too_long', locale });
-    if (msg.includes('owner_email_required')) redirect({ href: '/admin/klubber/ny?error=email_req', locale });
-    if (msg.includes('member_cap_invalid')) redirect({ href: '/admin/klubber/ny?error=cap_invalid', locale });
-    if (msg.includes('owner_not_found')) {
-      redirect({
-        href: `/admin/klubber/ny?error=owner_not_found&email=${encodeURIComponent(ownerEmail)}`,
-        locale,
-      });
-    }
+    // Preserve all entered values across the validation-error redirect (#645)
+    // so the user only re-fixes the offending field. Echoed via searchParams,
+    // matching the codebase's existing ?email= round-trip pattern.
+    const errorHref = (code: string) => {
+      const qs = new URLSearchParams({ error: code });
+      if (name) qs.set('name', name);
+      if (ownerEmail) qs.set('email', ownerEmail);
+      if (memberCapRaw) qs.set('member_cap', memberCapRaw);
+      if (varighetMode) qs.set('varighet_mode', varighetMode);
+      if (sluttdato) qs.set('sluttdato', sluttdato);
+      return `/admin/klubber/ny?${qs.toString()}`;
+    };
+    if (msg.includes('not_authorized')) redirect({ href: errorHref('not_auth'), locale });
+    if (msg.includes('name_required')) redirect({ href: errorHref('name_req'), locale });
+    if (msg.includes('name_too_long')) redirect({ href: errorHref('too_long'), locale });
+    if (msg.includes('owner_email_required')) redirect({ href: errorHref('email_req'), locale });
+    if (msg.includes('member_cap_invalid')) redirect({ href: errorHref('cap_invalid'), locale });
+    if (msg.includes('owner_not_found')) redirect({ href: errorHref('owner_not_found'), locale });
     console.error('[createClubForAdmin]', error);
-    redirect({ href: '/admin/klubber/ny?error=unknown', locale });
+    redirect({ href: errorHref('unknown'), locale });
   }
 
   // data is the new club uuid

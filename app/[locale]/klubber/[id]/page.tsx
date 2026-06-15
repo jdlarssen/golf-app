@@ -321,6 +321,7 @@ export default async function KlubbDetailPage({
                   type="email"
                   label={t('emailLabel')}
                   placeholder={t('emailPlaceholder')}
+                  defaultValue={errorEmail ?? ''}
                   autoComplete="email"
                   hint={t('emailHint')}
                 />
