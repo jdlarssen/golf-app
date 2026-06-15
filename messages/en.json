@@ -1854,7 +1854,7 @@
 		},
 		"state4": {
 			"heading": "Leaderboard",
-			"subtitle": "After 18 holes · Best ball · {mode}",
+			"subtitle": "After {holes} holes · Best ball · {mode}",
 			"leaderBadge": "Leader · {rank, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
 			"totalLabel": "Total {mode}",
 			"vsParLabel": "Vs par",

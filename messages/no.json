@@ -1854,7 +1854,7 @@
 		},
 		"state4": {
 			"heading": "Leaderboard",
-			"subtitle": "Etter 18 hull · Best ball · {mode}",
+			"subtitle": "Etter {holes} hull · Best ball · {mode}",
 			"leaderBadge": "Leder · {rank}. plass",
 			"totalLabel": "Total {mode}",
 			"vsParLabel": "Mot par",

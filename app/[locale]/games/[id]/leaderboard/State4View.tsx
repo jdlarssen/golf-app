@@ -24,6 +24,8 @@ type Props = {
   mode: LeaderboardMode;
   /** Sum of par across all played holes (typically 72). Used for "Mot par". */
   coursePar: number;
+  /** Game-wide holes played — drives the «Etter X hull» subtitle (#638). */
+  holesPlayed: number;
   /** Where the back-arrow should point. Defaults to home ("/"). */
   backHref?: string;
   /**
@@ -57,6 +59,7 @@ export function State4View({
   teams,
   mode,
   coursePar,
+  holesPlayed,
   backHref = '/',
   chromeless = false,
 }: Props) {
@@ -103,7 +106,7 @@ export function State4View({
   const rest = teams.slice(1);
   const modeLabel = mode === 'netto' ? tc('netto') : tc('brutto');
   const subtitleParts = [
-    ts('subtitle', { mode: modeLabel }),
+    ts('subtitle', { holes: holesPlayed, mode: modeLabel }),
   ];
 
   return (

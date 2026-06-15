@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#634](https://github.com/jdlarssen/golf-app/issues/634). Lag-matchplay-formatene kunne bare settes opp via en cup. Nå tar opprett-veiviseren dem også.
 
+### [1.130.8] - 2026-06-15 · #638
+
+> Best ball-leaderboarden manglet i forrige runde: feirings-visningen etter avsluttet runde sa fortsatt «Etter 18 hull». Nå teller også den faktisk spilte hull.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Oppfølging til 1.130.7: best ball-formatets ferdig-reveal (`State4View`, brukt i `renderStableford`-defaultgrenen for `best_ball`) leste `leaderboard.state4.subtitle` = «Etter 18 hull · Best ball · {mode}» — en hardkodet 18 som ble oversett fordi nøkkelen først ble feildiagnostisert som foreldreløs (den heter `state4.subtitle`, ikke `bestBall.subtitle`, og har en reell konsument). `state4.subtitle` er nå `{holes}`-parametrisert i begge språk, `State4View` tar en `holesPlayed`-prop, og begge instansieringene (frittstående + sideturnerings-fanen) får spillvidt antall spilte hull beregnet på samme måte som reveal-active-grenen. (#638)
+
+</details>
+
 ### [1.130.7] - 2026-06-15 · #638
 
 > Avslutter du en runde tidlig (for eksempel etter to hull via «Avslutt likevel»), sto det «Etter 18 hull» øverst på leaderboarden og podiet selv om bare to var spilt. Nå teller den faktisk spilte hull, så det står «Etter 2 hull».

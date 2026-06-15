@@ -744,6 +744,9 @@ async function LeaderboardBody({
   const lines = computeLeaderboard({ mode, players, holes, scores });
   const orderedLines = [...lines].sort((a, b) => a.rank - b.rank);
   const coursePar = holes.reduce((sum, h) => sum + h.par, 0);
+  // #638: game-wide holes played for the State4View subtitle («Etter X hull»),
+  // same count as the reveal-active branch above — not a hardcoded 18.
+  const holesPlayed = new Set(scores.map((s) => s.holeNumber)).size;
 
   // State #4 — full reveal. Designed in quick-win-5; lives in its own client
   // view so the Replay pill and confetti can share state. Used for both
@@ -768,6 +771,7 @@ async function LeaderboardBody({
           teams={orderedLines}
           mode={mode}
           coursePar={coursePar}
+          holesPlayed={holesPlayed}
           backHref={backHref}
         />
         <WithdrawnPlayersSection players={bestBallWithdrawn} />
@@ -939,6 +943,7 @@ async function LeaderboardBody({
               teams={orderedLines}
               mode={mode}
               coursePar={coursePar}
+              holesPlayed={holesPlayed}
               backHref={backHref}
               chromeless
             />
