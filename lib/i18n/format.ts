@@ -408,6 +408,26 @@ export function formatShortOsloDayMonthLocale(
 }
 
 /**
+ * 24-hour «HH:MM» in Europe/Oslo wall-clock (#646). Locale-independent — the
+ * 24-hour clock renders identically for 'no' and 'en' — but pinned to Oslo so
+ * the Klubbhuset activity log shows the time the action actually happened in
+ * Norway, not the UTC server time.
+ */
+export function formatHHMMOslo(input: DateInput): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: OSLO,
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+  }).formatToParts(toDate(input));
+  const hour = parts.find((p) => p.type === 'hour')?.value ?? '00';
+  const minute = parts.find((p) => p.type === 'minute')?.value ?? '00';
+  // Intl may render midnight as '24' on some engines — normalise.
+  const h = hour === '24' ? '00' : hour;
+  return `${h}:${minute}`;
+}
+
+/**
  * Locale-aware countdown string.
  *
  * Norwegian ('no'): delegates to legacy helper (byte-identical output).

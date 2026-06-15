@@ -22,8 +22,17 @@ const MONTH_NAMES = [
   'jul', 'aug', 'sep', 'okt', 'nov', 'des',
 ] as const;
 
-/** Returns the Oslo wall-clock parts (hour, minute, day-of-month, month index 0-11, weekday index 0-6 sun=0). */
-function osloParts(date: Date): {
+/**
+ * Returns the Oslo wall-clock parts of an instant — the shared Europe/Oslo
+ * primitive every Oslo-pinned helper builds on (year, hour, minute,
+ * day-of-month, month index 0-11, weekday index 0-6 sun=0).
+ *
+ * TZ-stable: reads everything via `Intl.DateTimeFormat(..., { timeZone })`,
+ * so it gives Oslo wall-clock regardless of the host TZ (UTC on Vercel).
+ * Never derive user-visible Oslo dates/times from `Date#getHours/getDate/...`.
+ */
+export function osloParts(date: Date): {
+  year: number;
   hour: number;
   minute: number;
   day: number;
@@ -42,13 +51,15 @@ function osloParts(date: Date): {
     minute: '2-digit',
   }).formatToParts(date);
 
+  let year = 1970;
   let hour = 0;
   let minute = 0;
   let day = 1;
   let month = 0; // 0-indexed to match Date#getMonth semantics
   let weekdayShort = 'Sun';
   for (const p of parts) {
-    if (p.type === 'hour') hour = Number(p.value);
+    if (p.type === 'year') year = Number(p.value);
+    else if (p.type === 'hour') hour = Number(p.value);
     else if (p.type === 'minute') minute = Number(p.value);
     else if (p.type === 'day') day = Number(p.value);
     else if (p.type === 'month') month = Number(p.value) - 1;
@@ -70,7 +81,7 @@ function osloParts(date: Date): {
   };
   const weekday = weekdayMap[weekdayShort] ?? 0;
 
-  return { hour, minute, day, month, weekday };
+  return { year, hour, minute, day, month, weekday };
 }
 
 export function formatTeeOffTime(date: Date): string {

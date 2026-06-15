@@ -19,6 +19,7 @@ import {
   shortMonthLocale,
   formatShortUTCDayMonthLocale,
   formatShortOsloDayMonthLocale,
+  formatHHMMOslo,
 } from './format';
 import {
   formatTeeOffTime,
@@ -438,6 +439,26 @@ describe('formatShortOsloDayMonthLocale (#648)', () => {
     // 2026-06-14T23:32:00Z === 01:32 Oslo on 15 Jun. The UTC-reading legacy
     // helper would say «14. jun»; the Oslo variant must say «15. jun».
     expect(formatShortOsloDayMonthLocale('2026-06-14T23:32:00Z', 'no')).toBe('15. jun');
+  });
+});
+
+describe('formatHHMMOslo (#646)', () => {
+  it('renders 24h HH:MM in Oslo time (summer, CEST +02:00)', () => {
+    // 08:00 UTC = 10:00 Oslo. The activity log read UTC before the fix.
+    expect(formatHHMMOslo('2026-06-15T08:00:00Z')).toBe('10:00');
+  });
+
+  it('renders 24h HH:MM in Oslo time (winter, CET +01:00)', () => {
+    expect(formatHHMMOslo('2026-01-15T08:00:00Z')).toBe('09:00');
+  });
+
+  it('accepts a Date as well as an ISO string', () => {
+    expect(formatHHMMOslo(new Date('2026-06-15T08:00:00Z'))).toBe('10:00');
+  });
+
+  it('reads the Oslo wall-clock just past UTC midnight', () => {
+    // 23:32 UTC = 01:32 Oslo next day.
+    expect(formatHHMMOslo('2026-06-14T23:32:00Z')).toBe('01:32');
   });
 });
 

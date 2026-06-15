@@ -19,7 +19,8 @@ import {
 } from '@/components/icons';
 import { firstName } from '@/lib/firstName';
 import { getProxyVerifiedUserId } from '@/lib/auth/userId';
-import { formatShortDateLocale } from '@/lib/i18n/format';
+import { formatShortOsloDayMonthLocale, formatHHMMOslo } from '@/lib/i18n/format';
+import { osloIsoWeek, osloTimeOfDayBucket, type OsloTimeOfDay } from '@/lib/format/osloCalendar';
 import type { AppLocale } from '@/i18n/routing';
 import { displayName, type DisplayNameUser } from '@/lib/format/displayName';
 import { getRoleContext, type AdminRoleContext } from '@/lib/admin/auth';
@@ -41,24 +42,16 @@ const getRole = cache(async () => {
   return getRoleContext(supabase);
 });
 
-function isoWeek(d: Date): number {
-  const target = new Date(d.valueOf());
-  const dayNr = (d.getDay() + 6) % 7;
-  target.setDate(target.getDate() - dayNr + 3);
-  const firstThursday = target.valueOf();
-  target.setMonth(0, 1);
-  if (target.getDay() !== 4) {
-    target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
-  }
-  return 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
-}
-
-function formatHHMM(iso: string): string {
-  const d = new Date(iso);
-  const hh = d.getHours().toString().padStart(2, '0');
-  const mm = d.getMinutes().toString().padStart(2, '0');
-  return `${hh}:${mm}`;
-}
+/** Maps the Oslo time-of-day bucket to its greeting translation key. */
+const TIME_OF_DAY_KEY: Record<
+  OsloTimeOfDay,
+  'timeOfDayMorgen' | 'timeOfDayFormiddag' | 'timeOfDayEttermiddag' | 'timeOfDayKveld'
+> = {
+  morgen: 'timeOfDayMorgen',
+  formiddag: 'timeOfDayFormiddag',
+  ettermiddag: 'timeOfDayEttermiddag',
+  kveld: 'timeOfDayKveld',
+};
 
 type Activity = {
   ts: string;
@@ -84,10 +77,16 @@ export default async function KlubbhusetPage() {
   const tNav = await getTranslations('admin.nav');
   const locale = await getLocale();
 
+  // #646: derive date, ISO week and time-of-day from Oslo wall-clock, not the
+  // server-local (UTC on Vercel) getters that showed yesterday's date and the
+  // wrong greeting just past midnight Norwegian time.
   const now = new Date();
-  const week = isoWeek(now);
-  const dateLine = t('dateLine', { date: formatShortDateLocale(now, locale as AppLocale), week });
-  const timeOfDay = getTimeOfDay(now);
+  const week = osloIsoWeek(now);
+  const dateLine = t('dateLine', {
+    date: formatShortOsloDayMonthLocale(now, locale as AppLocale),
+    week,
+  });
+  const timeOfDay = TIME_OF_DAY_KEY[osloTimeOfDayBucket(now)];
   const timeOfDayWord = t(timeOfDay);
 
   return (
@@ -114,15 +113,6 @@ export default async function KlubbhusetPage() {
       <PullQuote className="mt-6">Orden i protokollen.</PullQuote>
     </AdminShell>
   );
-}
-
-/** Returns the translation key name for the current time-of-day word. */
-function getTimeOfDay(d: Date): 'timeOfDayMorgen' | 'timeOfDayFormiddag' | 'timeOfDayEttermiddag' | 'timeOfDayKveld' {
-  const h = d.getHours();
-  if (h < 10) return 'timeOfDayMorgen';
-  if (h < 12) return 'timeOfDayFormiddag';
-  if (h < 18) return 'timeOfDayEttermiddag';
-  return 'timeOfDayKveld';
 }
 
 // ─── Greeting card ───────────────────────────────────────────────────────
@@ -302,7 +292,7 @@ async function TilesGrid() {
       label: t('tilesProtokoll'),
       href: '/admin/games?status=finished',
       meta: lastFinishedAt
-        ? t('metaLastSigned', { date: formatShortDateLocale(lastFinishedAt, locale as AppLocale) })
+        ? t('metaLastSigned', { date: formatShortOsloDayMonthLocale(lastFinishedAt, locale as AppLocale) })
         : t('metaNoneSigned'),
       icon: 'pokal',
     },
@@ -310,7 +300,7 @@ async function TilesGrid() {
       label: t('tilesLanseringer'),
       href: '/admin/lanseringer',
       meta: lastPublishedAt
-        ? t('metaLastPublished', { date: formatShortDateLocale(lastPublishedAt, locale as AppLocale) })
+        ? t('metaLastPublished', { date: formatShortOsloDayMonthLocale(lastPublishedAt, locale as AppLocale) })
         : t('metaNonePublished'),
       icon: 'sparkle',
     },
@@ -676,7 +666,7 @@ async function ActivityLedger() {
             }}
           >
             <span className="font-serif text-xs font-medium tabular-nums text-muted">
-              {formatHHMM(row.ts)}
+              {formatHHMMOslo(row.ts)}
             </span>
             <div>
               <p className="text-[13px] text-text">

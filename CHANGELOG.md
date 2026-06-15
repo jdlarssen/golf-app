@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#634](https://github.com/jdlarssen/golf-app/issues/634). Lag-matchplay-formatene kunne bare settes opp via en cup. Nå tar opprett-veiviseren dem også.
 
+### [1.130.3] - 2026-06-15 · #646
+
+> Hilsekortet i Klubbhuset regnet dato og tid-på-døgnet i UTC. Like etter midnatt norsk tid sto det «God kveld» og gårsdagens dato. Nå følger dato, ukenummer og hilsen norsk tid.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Klubbhuset-hilsekortet (`/admin`) beregnet dato, ISO-ukenummer og tid-på-døgnet med lokal-tid-getters (`getHours`/`getDate`/`getDay`) — på en UTC-server ble alt UTC, ikke `Europe/Oslo`. Kl. 01:32 norsk tid (= 23:32 UTC) viste kortet «God kveld» og «14. jun» i stedet for «God morgen» og «15. jun». Ny ren `lib/format/osloCalendar.ts` med `osloIsoWeek` (ISO-uke fra Oslo-dato via UTC-konstruert dato) og `osloTimeOfDayBucket` (tid-på-døgnet fra Oslo-time), begge bygd på `osloParts` (eksportert + utvidet med `year`). Dato-linja og «sist signert/publisert»-datoene rutet til `formatShortOsloDayMonthLocale`; aktivitets-loggens klokkeslett til ny `formatHHMMOslo`. Ingen «natt»-hilsen lagt til — 00–10 er fortsatt «morgen» (uendret bøtte-design). Type A-tester pinner `TZ=UTC` for å fange Vercel-regresjonen. (#646)
+
+</details>
+
 ### [1.130.2] - 2026-06-15 · #637
 
 > Tee-off i spill-protokollen viste UTC-tid, to timer feil om sommeren. En runde med tee-off kl. 10:00 sto som «08:00» i protokollen, mens veiviseren og spiller-siden viste 10:00. Nå står samme norske klokkeslett overalt.
