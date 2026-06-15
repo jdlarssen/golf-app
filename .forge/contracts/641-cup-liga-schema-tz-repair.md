@@ -80,17 +80,17 @@ const playerRows = [
 
 ## Suksesskriterier
 
-- [ ] **K1 (#641):** `createCupMatchesFromPlan` skriver `game_players`-rader UTEN `status`, MED `flight_number: 1`, `accepted_at` satt, og `team_number` 1/2 bevart. N planlagte matcher → N `games`-rader, hver med riktig antall spillere. *Evidens: regresjonstest + kode.*
-- [ ] **K2 (#641):** Insert-shapen bryter ikke `game_players_team_flight_consistency` mot prod-skjema. *Evidens: Supabase MCP — bekreft constraint-def + at `(team_number=1, flight_number=1)` er lovlig.*
-- [ ] **K3 (#642):** `getCupSnapshot` selekterer per-kjønn-par-kolonner, refererer ikke bar `par`, og mapper `par: par_mens`. *Evidens: regresjonstest + Supabase MCP-bekreftelse at selecten resolver (ingen 42703).*
-- [ ] **K4 (#647 Bug1+2):** `startLeagueRoundFlight` skriver `game_players` UTEN `status`, MED `team_number: null`. *Evidens: regresjonstest + kode.*
-- [ ] **K5 (#647 Bug3):** `getLigaSnapshot` selekterer per-kjønn-par, ikke bar `par`, mapper `par: par_mens`. *Evidens: regresjonstest + Supabase MCP.*
-- [ ] **K6 (#648 lagring):** Alle `league_rounds`-vindu-skrivere konverterer `datetime-local` via `parseOsloDateTimeLocal`. 06:00 lokal sommertid lagres som `04:00:00+00`. *Evidens: Type A round-trip-test (`parseOsloDateTimeLocal` → `formatOsloDateTimeLocal` = identitet) + kode på hver skriver.*
-- [ ] **K7 (#648 visning):** `LigaRoundRow` viser Oslo wall-clock (datetime-local-prefill OG window-label), ikke UTC-timer. *Evidens: Type A-test for `formatOsloDateTimeLocal` + kode.*
-- [ ] **K8 (gating-konsekvens):** Etter lagrings-fix flipper en runde satt til «åpner 06:00» til ÅPEN kl. 06:00 lokal, ikke 08:00. *Evidens: resonnement + kode (gaten bruker `new Date(opens_at)` mot `Date.now()`, begge nå korrekte instants).*
-- [ ] **K9 (regresjon dekket):** Nye co-located/fokuserte tester for `createCupMatchesFromPlan` (utvid eksisterende `generer/actions.test.ts`), `getCupSnapshot`, `getLigaSnapshot`, `startLeagueRoundFlight`, og Oslo-helper-round-trip. *Evidens: `npx vitest run` grønn på de berørte filene.*
-- [ ] **K10 (gates):** `npx tsc --noEmit` (eller `next build`) ren; berørte + co-located vitest grønn; ingen nye ESLint-feil på endrede filer.
-- [ ] **K11 (disiplin):** `package.json` + `CHANGELOG.md` bumpet for de bruker-synlige fixene (patch under åpent tema); closing-kommentar (Teknisk + Funksjonell) på hver av #641/#642/#647/#648 ved merge.
+- [x] **K1 (#641):** `createCupMatchesFromPlan` skriver `game_players`-rader UTEN `status`, MED `flight_number: 1`, `accepted_at` satt, og `team_number` 1/2 bevart. N matcher → N games. *Evidens: `generer/actions.ts:206-221` (kode); `actions.test.ts` happy-path asserter no-`status`/flight=1/accepted_at + 2 games + 2 game_players-inserts — 11/11 grønn.*
+- [x] **K2 (#641):** Insert-shapen bryter ikke `game_players_team_flight_consistency`. *Evidens: Supabase MCP — constraint = `CHECK ((team_number IS NULL) OR (flight_number IS NOT NULL))`; `(team=1, flight=1)` → `cup_shape_ok=true`.*
+- [x] **K3 (#642):** `getCupSnapshot` selekterer per-kjønn-par, ikke bar `par`, mapper `par: par_mens`. *Evidens: `getCupSnapshot.test.ts` grønn (select-kontrakt); Supabase MCP — `course_holes` har ingen `par`, korrigert select resolver (`course_holes_rows_ok=1`).*
+- [x] **K4 (#647 Bug1+2):** `startLeagueRoundFlight` skriver `game_players` UTEN `status`, MED `team_number: null`. *Evidens: `actions.ts:625-639` (kode); `lib/league/actions.test.ts` asserter no-`status`/team=null + #463-accepted_at — grønn.*
+- [x] **K5 (#647 Bug3):** `getLigaSnapshot` selekterer per-kjønn-par, ikke bar `par`, mapper `par: par_mens`. *Evidens: `getLigaSnapshot.test.ts` grønn; Supabase MCP samme som K3.*
+- [x] **K6 (#648 lagring):** Alle tre `league_rounds`-vindu-skrivere konverterer via `parseOsloDateTimeLocal`. *Evidens: `actions.ts` add/update/override (kode); `gamePayload.test.ts` round-trip `format∘parse = identitet` — grønn.*
+- [x] **K7 (#648 visning):** `LigaRoundRow` viser Oslo wall-clock (prefill via `formatOsloDateTimeLocal`, label via `formatShortOsloDayMonthLocale` + `formatTeeOffTimeLocale`). *Evidens: `LigaRoundRow.tsx:22-35` (kode); `format.test.ts` + `gamePayload.test.ts` Oslo-cases — grønn.*
+- [x] **K8 (gating-konsekvens):** Gaten (`startLeagueRoundFlight:563-566`) bruker `Date.now()` mot `new Date(round.opens_at)` — uendret. Når lagring er korrekt Oslo→UTC blir instanten riktig, så «åpner 06:00» flipper kl. 06:00 lokal. *Evidens: kode + resonnement.*
+- [x] **K9 (regresjon dekket):** 6 berørte test-filer (cup-snapshot, cup-match-gen, liga-flight, liga-snapshot, gamePayload, format). *Evidens: `npx vitest run <6 filer>` → 380/380 grønn.*
+- [x] **K10 (gates):** `npx tsc --noEmit` → exit 0; berørte vitest grønn; `npx eslint <7 endrede filer>` → exit 0.
+- [~] **K11 (disiplin):** `package.json` 1.129.7 → 1.129.11 + 4 CHANGELOG-oppføringer (én per issue, patch under åpent 1.129.y-tema). Closing-kommentarer (Teknisk + Funksjonell) postes ved merge — gjenstår.
 
 ---
 
