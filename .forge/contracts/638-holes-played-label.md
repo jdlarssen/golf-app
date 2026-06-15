@@ -21,13 +21,13 @@ Kilden er hardkodet «18» i i18n-katalogene (`messages/no.json` + `en.json`):
 
 ## Success-kriterier
 
-- [ ] **K1 — Delt nøkkel parametrisert.** `common.after18Holes` → ny dynamisk nøkkel (f.eks. `afterNHoles`: «Etter {holes} hull» / «After {holes} holes») i begge kataloger; alle ~9 konsumenter sender `{holes}`. *Evidens: grep viser 0 gjenværende `after18Holes`-kall uten parameter; file:line per konsument.*
-- [ ] **K2 — Bespoke subtitles parametrisert.** `bestBall`, `soloStrokeplay`, `soloStableford`, `teamStableford`, `texasScramble` sine `subtitle` + `podiumSubtitle` bruker `{holes}` i stedet for «18»; konsumentene sender tallet. *Evidens: grep «18 hull»/«18 holes» i no/en.json viser ingen treff i disse nøklene; file:line.*
-- [ ] **K3 — Spillvidt holesPlayed beregnet og tråded.** `page.tsx` beregner max-holes-played én gang og sender til hver berørt View/Podium. *Evidens: file:line på beregning + minst stikkprøve på 3 formater.*
-- [ ] **K4 — Live OG ferdig korrekt.** Både live-leaderboard-undertittel og ferdig-podium-undertittel viser faktisk antall hull (verifiser via render-test eller komponent-lesning at samme `holesPlayed`-prop brukes i begge stier).
-- [ ] **K5 — Fullt 18-hulls spill uendret.** Når alle 18 er spilt → «Etter 18 hull» (regresjons-sjekk: eksisterende snapshot/tester for 18-hulls fixtures grønne).
-- [ ] **K6 — Katalog-paritet.** `no.json` og `en.json` har samme nøkler (catalogParity-test grønn).
-- [ ] **K7 — Norsk copy humanized.** Nye/endrede norske strenger kjørt gjennom humanizer-mønstrene.
+- [x] **K1 — Delt nøkkel parametrisert.** `common.after18Holes` → `common.afterNHoles` = «Etter {holes} hull» / «After {holes} holes» ([no.json:1828](../../messages/no.json), [en.json:1828](../../messages/en.json)); alle 10 konsumenter (9 views + ShamblePodium) sender `{ holes: holesPlayed }`. *Evidens: `grep -rln after18Holes app lib messages` = 0 treff.*
+- [x] **K2 — Bespoke subtitles parametrisert.** `soloStrokeplay`, `soloStableford`, `teamStableford`, `texasScramble` sine `subtitle` + `podiumSubtitle` bruker `{holes}` (begge språk). *Evidens: grep «subtitle/podiumSubtitle» + «18 hull» = kun den foreldreløse `bestBall.subtitle` (linje 1857, ingen konsument — best ball rendres via `renderStableford`→TeamStableford-viewet), bevisst urørt.*
+- [x] **K3 — Spillvidt holesPlayed beregnet og tråded.** `maxHolesPlayed(rawScoresRows)` i [holesPlayed.ts](../../lib/scoring/holesPlayed.ts), beregnet i hver av 12 render-helpere i [page.tsx](../../app/[locale]/games/[id]/leaderboard/page.tsx). *Evidens: `grep -c maxHolesPlayed page.tsx` = 13 (import + 12), `grep -c "holesPlayed={holesPlayed}"` = 28 instansieringer (live + ferdig).*
+- [x] **K4 — Live OG ferdig korrekt.** Samme `holesPlayed`-prop brukes i View (live) og Podium (ferdig); ny render-test beviser partial-tilfellet: `SoloStrokeplayView` med `holesPlayed={2}` → undertittel «Etter 2 hull» (SoloStrokeplayView.test.tsx, 14/14 grønn).
+- [x] **K5 — Fullt 18-hulls spill uendret.** Alle eksisterende view/podium-tester bruker `holesPlayed: 18`-fixtures → output forblir «Etter 18 hull»; suiten grønn.
+- [x] **K6 — Katalog-paritet.** Full vitest-suite 3529/3529 grønn (catalogParity inkludert).
+- [x] **K7 — Norsk copy.** Endringen er placeholder-bytte («18»→«{holes}») i allerede kanoniske, godkjente strenger; eneste nye streng «Etter {holes} hull» er ren bokmål uten AI-tells. CHANGELOG-tagline skrevet med parens i stedet for em-dash-kjede.
 
 ## Gates (scoped til endrede filer)
 

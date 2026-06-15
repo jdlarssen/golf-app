@@ -21,11 +21,11 @@ Rammer to skjemaer:
 
 ## Success-kriterier
 
-- [ ] **K1 — Opprett klubb beholder alle felt.** Ved enhver valideringsfeil-redirect fra `createClubForAdmin` echoes `name`, `owner_email`, `member_cap`, varighet-mode og varighet-dato i searchParams, og `ny/page.tsx` mater dem inn som `defaultValue`/defaults. *Evidens: les page.tsx + actions.ts; verifiser hver `redirect(...)`-gren bærer feltene og hvert `<Input>` har `defaultValue`.*
-- [ ] **K2 — Legg til medlem beholder e-post.** `addMember`-feil-redirect echoer `email` (gjør den allerede), og `klubber/[id]/page.tsx` mater `?email=` inn som `defaultValue` på e-post-feltet. *Evidens: file:line på `defaultValue={errorEmail ?? ''}` e.l.*
-- [ ] **K3 — Suksess-sti uendret.** Vellykket opprettelse/innmelding redirecter som før (ingen feltene henger igjen i URL etter suksess). *Evidens: suksess-grenene urørt.*
-- [ ] **K4 — Ingen lekkasje av feltverdier til andre tilstander.** Echo-paramene leses kun for å pre-fylle ved feil; tom default ellers. *Evidens: `first(sp.x)`-guard.*
-- [ ] **K5 — Norsk copy uendret/humanized.** Ingen nye bruker-strenger forventet (kun gjenbruk av eksisterende felt-labels). Hvis noen feilmelding endres → humanizer-pass.
+- [x] **K1 — Opprett klubb beholder alle felt.** `createClubForAdmin` har ny `errorHref(code)`-helper som echoer `name`/`email`/`member_cap`/`varighet_mode`/`sluttdato` på ALLE 7 feil-grener ([actions.ts:60-79](../../app/[locale]/admin/klubber/ny/actions.ts)); `ny/page.tsx` leser `prevName`/`prevMemberCap`/`prevVarighetMode`/`prevSluttdato` og setter `defaultValue` på alle tre `<Input>` + `VarighetField defaultMode/defaultDate` ([page.tsx:48-55, 70-100](../../app/[locale]/admin/klubber/ny/page.tsx)).
+- [x] **K2 — Legg til medlem beholder e-post.** `member-email`-Input har nå `defaultValue={errorEmail ?? ''}` ([klubber/[id]/page.tsx:326](../../app/[locale]/klubber/[id]/page.tsx)); `addMember` echoer `email` på alle feil-grener inkl. `full`/`expired`/`unknown` ([actions.ts:56,65,68](../../app/[locale]/klubber/[id]/actions.ts)).
+- [x] **K3 — Suksess-sti uendret.** Suksess-redirectene (`revalidatePath` + `/admin/klubber/{data}` og `/klubber/{groupId}?added=`) er ikke rørt.
+- [x] **K4 — Ingen lekkasje.** Echo-params leses via `first(sp.x) ?? ''`-guard, tom default ellers; ingen verdi vises uten en feiltilstand.
+- [x] **K5 — Norsk copy.** Ingen nye UI-strenger (gjenbruk av eksisterende labels). Eneste nye prosa = CHANGELOG-tagline, skrevet uten AI-tells (parens i stedet for em-dash-kjede).
 
 ## Gates (scoped til endrede filer)
 
