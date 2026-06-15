@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#616](https://github.com/jdlarssen/golf-app/issues/616). Innboksen kunne bare vokse. Du kunne markere som lest, men ikke fjerne noe, og lange undertekster ble kuttet midt i ordet. Nå kan du arkivere et varsel med ✕, tømme alle leste i ett trykk, og undertekstene får plass på to linjer.
 
+### [1.129.11] - 2026-06-15 · bug
+
+> Liga-runder åpnet to timer for sent: du tastet «06:00», men runden låste seg opp først 08:00. Nå åpner og stenger runder på klokkeslettet du faktisk velger.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Liga-runde-vinduene (`opens_at`/`closes_at`) ble lagret feil: `datetime-local`-feltet er vegg-klokke i Oslo-tid, men strengen gikk rå til Postgres og ble tolket som naiv UTC — så «06:00» ble lagret som `06:00+00` (= 08:00 CEST). Visningen var også naiv-UTC, så admin så «06:00» tilbake og merket ikke forskyvningen, mens gating-logikken brukte den reelle instanten og åpnet runden to timer for sent. `addLeagueRound`, `updateLeagueRound` og `overrideRoundWindow` konverterer nå via `parseOsloDateTimeLocal` (samme helper spill-tee-off bruker), og `LigaRoundRow` viser Oslo vegg-klokke via en ny invers-helper `formatOsloDateTimeLocal` + `formatShortOsloDayMonthLocale`. Gating trengte ingen endring — den blir riktig av seg selv når lagringen er korrekt. Frekvens-genererte runder (`generateRounds`) var allerede ekte UTC-instanter og er urørt. Type A-tester for begge nye helpere + round-trip mot `parseOsloDateTimeLocal`. (#648)
+
+</details>
+
 ### [1.129.10] - 2026-06-15 · bug
 
 > Liga var ute av drift: ingen fikk startet en runde, og sesong-tabellen krasjet så snart en runde var levert. Nå kan du spille runder, og tabellen laster som den skal.

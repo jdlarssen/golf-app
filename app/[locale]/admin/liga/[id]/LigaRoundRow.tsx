@@ -4,7 +4,8 @@ import { useActionState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { updateLeagueRound, overrideRoundWindow, type LeagueActionError } from '@/lib/league/actions';
-import { formatShortUTCDayMonthLocale } from '@/lib/i18n/format';
+import { formatShortOsloDayMonthLocale, formatTeeOffTimeLocale } from '@/lib/i18n/format';
+import { formatOsloDateTimeLocal } from '@/lib/games/gamePayload';
 import type { AppLocale } from '@/i18n/routing';
 import type { LeagueRoundView } from '@/lib/league/getLigaSnapshot';
 import type { CourseOption } from '@/app/[locale]/admin/games/new/GameForm';
@@ -18,20 +19,20 @@ type Props = {
 
 const INITIAL: LeagueActionError = { error: '' };
 
-/** Formats a timestamptz ISO string to 'YYYY-MM-DDTHH:mm' for datetime-local input. */
+/**
+ * Formats a stored UTC timestamptz to 'YYYY-MM-DDTHH:mm' for a datetime-local
+ * input — in Oslo wall-clock, the inverse of the storage conversion (#648), so
+ * the admin edits the same time they originally picked.
+ */
 function toDatetimeLocal(iso: string): string {
-  // Slice off the timezone offset — datetime-local inputs use local wall time.
-  // The server stores UTC; we display it without conversion (admin context).
-  return iso.slice(0, 16);
+  return formatOsloDateTimeLocal(iso);
 }
 
-/** Short display: "14. mai, 14:30" (no) / "14 May, 14:30" (en) */
+/** Short display in Oslo wall-clock: "14. mai, 14:30" (no) / "14 May, 14:30" (en). */
 function formatWindowDate(iso: string, locale: AppLocale): string {
-  const d = new Date(iso);
-  const dayMonth = formatShortUTCDayMonthLocale(iso, locale);
-  const hh = String(d.getUTCHours()).padStart(2, '0');
-  const mm = String(d.getUTCMinutes()).padStart(2, '0');
-  return `${dayMonth}, ${hh}:${mm}`;
+  const dayMonth = formatShortOsloDayMonthLocale(iso, locale);
+  const time = formatTeeOffTimeLocale(new Date(iso), locale);
+  return `${dayMonth}, ${time}`;
 }
 
 export function LigaRoundRow({ round, leagueId, courseScope, courses }: Props) {

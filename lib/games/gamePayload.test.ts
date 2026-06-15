@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { buildGameInsertPayload, parseOsloDateTimeLocal } from './gamePayload';
+import {
+  buildGameInsertPayload,
+  parseOsloDateTimeLocal,
+  formatOsloDateTimeLocal,
+} from './gamePayload';
 
 function fd(entries: Record<string, string>): FormData {
   const data = new FormData();
@@ -33,6 +37,28 @@ describe('parseOsloDateTimeLocal', () => {
     expect(parseOsloDateTimeLocal('2026-10-25T02:30')).toBe(
       '2026-10-25T01:30:00.000Z',
     );
+  });
+});
+
+describe('formatOsloDateTimeLocal (#648)', () => {
+  it('formats a UTC instant back to Oslo wall-clock in summer (CEST)', () => {
+    // 07:00 UTC = 09:00 Oslo (CEST)
+    expect(formatOsloDateTimeLocal('2026-06-15T07:00:00.000Z')).toBe('2026-06-15T09:00');
+  });
+
+  it('formats a UTC instant back to Oslo wall-clock in winter (CET)', () => {
+    // 08:00 UTC = 09:00 Oslo (CET)
+    expect(formatOsloDateTimeLocal('2026-12-15T08:00:00.000Z')).toBe('2026-12-15T09:00');
+  });
+
+  it('round-trips with parseOsloDateTimeLocal for any minute-aligned wall-clock', () => {
+    for (const wall of ['2026-06-15T06:00', '2026-12-15T22:30', '2026-03-01T00:15']) {
+      expect(formatOsloDateTimeLocal(parseOsloDateTimeLocal(wall))).toBe(wall);
+    }
+  });
+
+  it('throws on an unparseable ISO string', () => {
+    expect(() => formatOsloDateTimeLocal('not-a-date')).toThrow();
   });
 });
 

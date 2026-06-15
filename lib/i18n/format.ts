@@ -369,6 +369,40 @@ export function formatShortUTCDayMonthLocale(iso: string, locale: AppLocale): st
 }
 
 /**
+ * Oslo-based sibling of `formatShortUTCDayMonthLocale`: short day + month in
+ * Europe/Oslo wall-clock, so it pairs with `formatTeeOffTimeLocale` for an
+ * admin-facing window label that matches the time the admin actually picked.
+ *
+ * Norwegian ('no'): «12. mai» (legacy NO_MONTHS_SHORT, Oslo month index).
+ * English ('en'):   «12 May» (en-GB Intl in Oslo).
+ *
+ * Input: ISO timestamp string. Unlike the UTC variant, the day/month are read
+ * in Oslo time — a `00:30Z` instant is «12. mai» here but «12. mai» or earlier
+ * under UTC depending on the offset.
+ */
+export function formatShortOsloDayMonthLocale(iso: string, locale: AppLocale): string {
+  const d = new Date(iso);
+  if (locale === 'no') {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: OSLO,
+      day: 'numeric',
+      month: 'numeric',
+    }).formatToParts(d);
+    const dayStr = parts.find((p) => p.type === 'day')?.value ?? '';
+    const monthIdx = Number(parts.find((p) => p.type === 'month')?.value ?? '1') - 1;
+    return `${dayStr}. ${NO_MONTHS_SHORT[monthIdx]}`;
+  }
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: OSLO,
+    day: 'numeric',
+    month: 'short',
+  }).formatToParts(d);
+  const dayStr = parts.find((p) => p.type === 'day')?.value ?? '';
+  const monthStr = parts.find((p) => p.type === 'month')?.value ?? '';
+  return `${dayStr} ${monthStr}`;
+}
+
+/**
  * Locale-aware countdown string.
  *
  * Norwegian ('no'): delegates to legacy helper (byte-identical output).

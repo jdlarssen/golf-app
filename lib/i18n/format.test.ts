@@ -18,6 +18,7 @@ import {
   formatTeeOffLineLocale,
   shortMonthLocale,
   formatShortUTCDayMonthLocale,
+  formatShortOsloDayMonthLocale,
 } from './format';
 import {
   formatTeeOffTime,
@@ -405,6 +406,21 @@ describe('formatShortUTCDayMonthLocale', () => {
     ['2026-06-03T12:00:00Z', '3 Jun'],
   ] as const)("'en' %s → %s", (iso, expected) => {
     expect(formatShortUTCDayMonthLocale(iso, 'en')).toBe(expected);
+  });
+});
+
+describe('formatShortOsloDayMonthLocale (#648)', () => {
+  it("'no' formats day/month in Oslo time, not UTC", () => {
+    // 22:30 UTC on May 12 = 00:30 Oslo on May 13 (CEST). The UTC sibling would
+    // say «12. mai»; the Oslo variant must roll over to «13. mai».
+    expect(formatShortOsloDayMonthLocale('2026-05-12T22:30:00Z', 'no')).toBe('13. mai');
+    // Mid-day instant stays on the same date.
+    expect(formatShortOsloDayMonthLocale('2026-05-12T10:00:00Z', 'no')).toBe('12. mai');
+  });
+
+  it("'en' formats day/month in Oslo time", () => {
+    expect(formatShortOsloDayMonthLocale('2026-05-12T22:30:00Z', 'en')).toBe('13 May');
+    expect(formatShortOsloDayMonthLocale('2026-06-03T10:00:00Z', 'en')).toBe('3 Jun');
   });
 });
 

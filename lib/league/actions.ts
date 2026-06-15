@@ -10,6 +10,7 @@ import {
 } from '@/lib/admin/auth';
 import { startScheduledGame } from '@/lib/games/startScheduledGame';
 import { acceptedAtForActor } from '@/lib/games/participantAcceptance';
+import { parseOsloDateTimeLocal } from '@/lib/games/gamePayload';
 import { generateRounds } from './generateRounds';
 import { leagueFlightGameConfig, isPointsBasedFormat } from './flightFormat';
 import type {
@@ -228,10 +229,13 @@ export async function updateLeagueRound(formData: FormData): Promise<LeagueActio
   if (courseId) patch.course_id = courseId;
   const teeBoxId = str(formData, 'tee_box_id');
   if (teeBoxId) patch.tee_box_id = teeBoxId;
+  // datetime-local has no offset — it is Oslo wall-clock. Convert to a real
+  // UTC instant so gating (Date.now vs new Date(opens_at)) and display agree
+  // (#648). Storing the raw string made Postgres read it as naive UTC.
   const opensAt = str(formData, 'opens_at');
-  if (opensAt) patch.opens_at = opensAt;
+  if (opensAt) patch.opens_at = parseOsloDateTimeLocal(opensAt);
   const closesAt = str(formData, 'closes_at');
-  if (closesAt) patch.closes_at = closesAt;
+  if (closesAt) patch.closes_at = parseOsloDateTimeLocal(closesAt);
 
   if (Object.keys(patch).length > 0) {
     const { error } = await supabase.from('league_rounds').update(patch).eq('id', roundId);
@@ -256,10 +260,13 @@ export async function updateLeagueRound(formData: FormData): Promise<LeagueActio
 export async function addLeagueRound(formData: FormData): Promise<LeagueActionError> {
   const supabase = await getServerClient();
   const leagueId = str(formData, 'league_id');
-  const opensAt = str(formData, 'opens_at');
-  const closesAt = str(formData, 'closes_at');
-  if (!leagueId || !opensAt || !closesAt) return { error: 'missing' };
+  const opensAtRaw = str(formData, 'opens_at');
+  const closesAtRaw = str(formData, 'closes_at');
+  if (!leagueId || !opensAtRaw || !closesAtRaw) return { error: 'missing' };
   await requireAdminOrClubAdminOfLeague(supabase, leagueId);
+  // datetime-local is Oslo wall-clock → convert to a real UTC instant (#648).
+  const opensAt = parseOsloDateTimeLocal(opensAtRaw);
+  const closesAt = parseOsloDateTimeLocal(closesAtRaw);
   if (new Date(closesAt).getTime() <= new Date(opensAt).getTime()) return { error: 'window' };
 
   const { data: league } = await supabase
@@ -299,17 +306,18 @@ export async function overrideRoundWindow(formData: FormData): Promise<LeagueAct
   const supabase = await getServerClient();
   const roundId = str(formData, 'round_id');
   const leagueId = str(formData, 'league_id');
-  const closesAt = str(formData, 'closes_at');
-  const opensAt = str(formData, 'opens_at');
-  if (!roundId || !leagueId || !closesAt) return { error: 'missing' };
+  const closesAtRaw = str(formData, 'closes_at');
+  const opensAtRaw = str(formData, 'opens_at');
+  if (!roundId || !leagueId || !closesAtRaw) return { error: 'missing' };
   const { userId } = await requireAdminOrClubAdminOfLeague(supabase, leagueId);
 
+  // datetime-local is Oslo wall-clock → convert to a real UTC instant (#648).
   const patch: Record<string, unknown> = {
-    closes_at: closesAt,
+    closes_at: parseOsloDateTimeLocal(closesAtRaw),
     window_overridden_by: userId,
     window_overridden_at: new Date().toISOString(),
   };
-  if (opensAt) patch.opens_at = opensAt;
+  if (opensAtRaw) patch.opens_at = parseOsloDateTimeLocal(opensAtRaw);
 
   const { error } = await supabase.from('league_rounds').update(patch).eq('id', roundId);
   if (error) return { error: 'update_failed' };

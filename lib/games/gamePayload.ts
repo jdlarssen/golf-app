@@ -54,6 +54,35 @@ export function parseOsloDateTimeLocal(s: string): string {
   return result.toISOString();
 }
 
+/**
+ * Inverse of `parseOsloDateTimeLocal`: format a UTC ISO timestamp as a
+ * `YYYY-MM-DDTHH:mm` wall-clock string in Europe/Oslo, suitable as the
+ * `defaultValue` of an `<input type="datetime-local">`. Round-trips with
+ * `parseOsloDateTimeLocal` for any minute-aligned instant (parse∘format and
+ * format∘parse are both the identity outside the ambiguous fall-back hour).
+ *
+ * Throws RangeError on an unparseable ISO string.
+ */
+export function formatOsloDateTimeLocal(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) {
+    throw new RangeError(`Invalid ISO timestamp: ${iso}`);
+  }
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Oslo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(d);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
+  // Intl may render midnight as '24' on some engines — normalise to '00'.
+  const hour = get('hour') === '24' ? '00' : get('hour');
+  return `${get('year')}-${get('month')}-${get('day')}T${hour}:${get('minute')}`;
+}
+
 export type GamePlayerInput = {
   user_id: string;
   /**
