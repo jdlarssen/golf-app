@@ -583,6 +583,41 @@ describe('GameForm — par-stableford (epic #43 fase 2)', () => {
   });
 });
 
+describe('GameForm — patsome (#633)', () => {
+  // Regresjonsvakt: Patsome er lag à 2 (som par-stableford), men lag-tildelings-
+  // grid-en ble aldri wiret inn i TeamsAssignmentSection (#286 bygde scoring/
+  // hull/leaderboard, men ikke veiviser-tildelingen). Uten grid var formatet
+  // umulig å opprette. Én Type C render-test som beviser at grid-en rendrer.
+  it('patsome: lag-grid vises når ≥2 spillere er valgt', () => {
+    render(
+      <GameForm
+        courses={COURSES}
+        players={EIGHT_PLAYERS}
+        mode={{
+          kind: 'create',
+          createDraftAction: NO_OP,
+          createAndPublishAction: NO_OP,
+        }}
+        initialValues={{ game_mode: 'patsome' }}
+      />,
+    );
+
+    // Med 0 spillere skal lag-headingen ikke vises ennå.
+    expect(
+      screen.queryByRole('heading', { name: /^4\. lag$/i }),
+    ).not.toBeInTheDocument();
+
+    // Velg 2 spillere → lag-grid skal vises (lag à 2-mønsteret).
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 1/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /spiller 2/i }));
+
+    expect(
+      screen.getByRole('heading', { name: /^4\. lag$/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/inntil 4 lag à 2 spillere/i)).toBeInTheDocument();
+  });
+});
+
 describe('GameForm — matchplay singles (epic #45 fase 2)', () => {
   /**
    * Helper: bytter til matchplay-modus via tile-klikk. Defensiv: ingen

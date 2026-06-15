@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#616](https://github.com/jdlarssen/golf-app/issues/616). Innboksen kunne bare vokse. Du kunne markere som lest, men ikke fjerne noe, og lange undertekster ble kuttet midt i ordet. Nå kan du arkivere et varsel med ✕, tømme alle leste i ett trykk, og undertekstene får plass på to linjer.
 
+### [1.129.12] - 2026-06-15 · bug
+
+> Patsome lot seg ikke opprette: lag-fordelingen i veiviseren var helt tom, så «Neste» satt fast. Nå fordeler du spillerne to og to og får runden i gang.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Patsome var umulig å opprette i veiviseren: steg 4 krevde lag-fordeling (lag à 2), men `TeamsAssignmentSection` rendret ingen lag-grid, så «Neste» satt permanent deaktivert med «Mangler: lag-fordeling (lag à 2)». Hull-, scoring- og leaderboard-laget fra #286 var ferdig — kun veiviser-tildelingen ble aldri wiret inn. Hele state-laget (`useGameFormState`) var allerede Patsome-bevisst (`isPatsome`, `patsomePlayersValid`, `missingForPublish`, `canPublish`, `orderedPayload`); gapet lå utelukkende i presentasjons-komponenten, som lister hver lag-modus eksplisitt og aldri fikk `isPatsome`. Behandler nå Patsome som par-stableford (lag à 2, grid ved ≥2 spillere, «Tøm lag», per-spiller-tee + skjulte gender-inputs 4BBB-segmentet trenger) og skjuler den lone `TeamSizeSelector`-flisen i steg 2 (konsistens med shamble/wolf/nassau). Ny `teamsDescPatsome`-i18n-nøkkel + Type C render-test som vakt mot regresjon. (#633)
+
+</details>
+
 ### [1.129.11] - 2026-06-15 · bug
 
 > Liga-runder åpnet to timer for sent: du tastet «06:00», men runden låste seg opp først 08:00. Nå åpner og stenger runder på klokkeslettet du faktisk velger.

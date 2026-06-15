@@ -658,6 +658,7 @@
 				"teamsDescShamble3": "Inntil 4 lag à 3 spillere. Hvert lag må ha enten 0 eller 3 spillere. Tomme lag publiseres ikke.",
 				"teamsDescShamble4": "Inntil 2 lag à 4 spillere. Hvert lag må ha enten 0 eller 4 spillere. Tomme lag publiseres ikke.",
 				"teamsDescBestBall": "Inntil 4 lag à 2 spillere. Hvert lag må ha enten 0 eller 2 spillere. Tomme lag publiseres ikke.",
+				"teamsDescPatsome": "Inntil 4 lag à 2 spillere. Hvert lag må ha enten 0 eller 2 spillere. Tomme lag publiseres ikke.",
 				"drawRandomButton": "Trekk tilfeldig",
 				"clearTeamsButton": "Tøm lag",
 				"teamLabel": "Lag {team}",

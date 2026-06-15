@@ -64,6 +64,7 @@ export function TeamsAssignmentSection({
     isAmbrose,
     isFlorida,
     isShamble,
+    isPatsome,
     requiresTeams,
     teamSize,
     drawRandomTeams,
@@ -85,7 +86,8 @@ export function TeamsAssignmentSection({
         isTexas ||
         isAmbrose ||
         isFlorida ||
-        isShamble
+        isShamble ||
+        isPatsome
       ? '5. '
       : '4. ';
 
@@ -100,6 +102,7 @@ export function TeamsAssignmentSection({
       if (teamSize === 3) return t('teamsDescShamble3');
       return t('teamsDescShamble4');
     }
+    if (isPatsome) return t('teamsDescPatsome');
     return t('teamsDescBestBall');
   }
 
@@ -182,7 +185,8 @@ export function TeamsAssignmentSection({
           (isTexas && selectedPlayerIds.length >= teamSize) ||
           (isAmbrose && selectedPlayerIds.length >= teamSize) ||
           (isFlorida && selectedPlayerIds.length >= teamSize) ||
-          (isShamble && selectedPlayerIds.length >= teamSize)) && (
+          (isShamble && selectedPlayerIds.length >= teamSize) ||
+          (isPatsome && selectedPlayerIds.length >= 2)) && (
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-text">
             {numberPrefix('4')}{t('teamsHeading')}
@@ -212,7 +216,7 @@ export function TeamsAssignmentSection({
               </Button>
             </div>
           )}
-          {(isParStableford || isTexas || isAmbrose || isFlorida || isShamble) &&
+          {(isParStableford || isTexas || isAmbrose || isFlorida || isShamble || isPatsome) &&
             selectedPlayerIds.some((pid) => teamByPlayer[pid] !== undefined) && (
             <div className="flex">
               <Button
@@ -369,7 +373,8 @@ export function TeamsAssignmentSection({
         isTexas ||
         isAmbrose ||
         isFlorida ||
-        isShamble) &&
+        isShamble ||
+        isPatsome) &&
         selectedPlayerIds.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-text">

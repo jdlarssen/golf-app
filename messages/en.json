@@ -658,6 +658,7 @@
 				"teamsDescShamble3": "Up to 4 teams of 3. Each team must have either 0 or 3 players. Empty teams are not published.",
 				"teamsDescShamble4": "Up to 2 teams of 4. Each team must have either 0 or 4 players. Empty teams are not published.",
 				"teamsDescBestBall": "Up to 4 teams of 2. Each team must have either 0 or 2 players. Empty teams are not published.",
+				"teamsDescPatsome": "Up to 4 teams of 2. Each team must have either 0 or 2 players. Empty teams are not published.",
 				"drawRandomButton": "Draw randomly",
 				"clearTeamsButton": "Clear teams",
 				"teamLabel": "Team {team}",
