@@ -178,7 +178,9 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
     courseIds.length
       ? supabase
           .from('course_holes')
-          .select('course_id, hole_number, par, stroke_index')
+          // `par` ble droppet i migrasjon 0040 til fordel for per-kjønn-kolonner.
+          // Map til `par` nedstrøms via par_mens (samme som buildModeResultForGame).
+          .select('course_id, hole_number, par_mens, par_ladies, par_juniors, stroke_index')
           .in('course_id', courseIds)
       : Promise.resolve({ data: [], error: null }),
     teeBoxIds.length
@@ -232,11 +234,13 @@ export async function getLigaSnapshot(leagueId: string): Promise<LeagueSnapshot 
   for (const h of (holesRes.data ?? []) as Array<{
     course_id: string;
     hole_number: number;
-    par: number;
+    par_mens: number;
+    par_ladies: number;
+    par_juniors: number;
     stroke_index: number;
   }>) {
     const arr = holesByCourse.get(h.course_id) ?? [];
-    arr.push({ number: h.hole_number, par: h.par, strokeIndex: h.stroke_index });
+    arr.push({ number: h.hole_number, par: h.par_mens, strokeIndex: h.stroke_index });
     holesByCourse.set(h.course_id, arr);
   }
 

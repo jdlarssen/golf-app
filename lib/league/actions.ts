@@ -626,9 +626,12 @@ export async function startLeagueRoundFlight(
     flightIds.map((uid) => ({
       game_id: gameId,
       user_id: uid,
-      team_number: 1,
+      // Liga er solo → team_number null. team_number 1 uten flight_number brøt
+      // CHECK-constrainten game_players_team_flight_consistency (#647). Og
+      // game_players har INGEN status-kolonne — den lå her før og fikk hele
+      // flight-inserten avvist, så ingen kunne spille en eneste runde.
+      team_number: null,
       tee_gender: teeGenderOf(genderById.get(uid) ?? null),
-      status: 'active',
       // #463: den som starter flighten bekreftes nå; medspillere i flighten
       // er «Ikke bekreftet» til de selv bekrefter / blir aktive.
       accepted_at: acceptedAtForActor(user.id, uid, flightNow),

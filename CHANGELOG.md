@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#616](https://github.com/jdlarssen/golf-app/issues/616). Innboksen kunne bare vokse. Du kunne markere som lest, men ikke fjerne noe, og lange undertekster ble kuttet midt i ordet. Nå kan du arkivere et varsel med ✕, tømme alle leste i ett trykk, og undertekstene får plass på to linjer.
 
+### [1.129.10] - 2026-06-15 · bug
+
+> Liga var ute av drift: ingen fikk startet en runde, og sesong-tabellen krasjet så snart en runde var levert. Nå kan du spille runder, og tabellen laster som den skal.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Tre uavhengige skjema-mismatcher som hver for seg blokkerte liga ende-til-ende (#647). **(1)** `startLeagueRoundFlight` bygde `game_players`-rader med `status: 'active'` — en kolonne tabellen ikke har — så hver flight-insert ble avvist og ingen kunne spille en runde. **(2)** Samme insert satte `team_number: 1` uten `flight_number`, som bryter CHECK-constrainten `game_players_team_flight_consistency`; liga er solo, så `team_number` er nå `null`. **(3)** `getLigaSnapshot` hentet den droppede kolonnen `course_holes.par` (migrasjon 0040 → per-kjønn), så hele `/liga/[id]`-sesong-tabellen krasjet med 500 så snart én runde var ferdig — select-en bruker nå per-kjønn-kolonnene og mapper `par` fra `par_mens`. Nye regresjonstester for både flight-inserten (`actions.test.ts`) og snapshot-selecten (`getLigaSnapshot.test.ts`). `accepted_at`-semantikken fra #463 (den som starter flighten bekreftes, medspillere venter) er bevart. (#647)
+
+</details>
+
 ### [1.129.9] - 2026-06-15 · bug
 
 > Å generere matcher i en cup la ikke inn én eneste spiller — veiviseren ble stående uten feilmelding. Nå får hver match spillerne sine, klare med en gang.
