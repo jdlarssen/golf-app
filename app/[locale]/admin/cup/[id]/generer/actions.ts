@@ -200,6 +200,7 @@ export async function createCupMatchesFromPlan(
     if (gameErr || !game) return { error: 'insert_failed' };
 
     const gameId = (game as { id: string }).id;
+    const acceptedAt = new Date().toISOString();
     const playerRows = [
       ...match.side1.map((uid) => ({ uid, team: 1 })),
       ...match.side2.map((uid) => ({ uid, team: 2 })),
@@ -207,8 +208,15 @@ export async function createCupMatchesFromPlan(
       game_id: gameId,
       user_id: uid,
       team_number: team,
+      // En match = én spillegruppe. Uten flight_number bryter team_number 1/2
+      // CHECK-constraint game_players_team_flight_consistency (team satt ⇒ flight
+      // satt). game_players har INGEN status-kolonne — den lå her før og fikk
+      // hele inserten avvist (#641), så cup-generering opprettet 0 spillere.
+      flight_number: 1,
       tee_gender: teeGenderOf(genderById.get(uid) ?? null),
-      status: 'active',
+      // Admin har bevisst satt opp matchene med valgte spillere → umiddelbart
+      // aktive, ingen «Ikke bekreftet»-gate (eier-beslutning, jf. #641).
+      accepted_at: acceptedAt,
     }));
     const { error: gpErr } = await supabase
       .from('game_players')

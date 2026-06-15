@@ -272,7 +272,13 @@ describe('createCupMatchesFromPlan — happy path', () => {
     });
   });
 
-  it('game_players rows: team_number 1/2, status active, tee_gender from profile', async () => {
+  // #641: the insert previously set `status: 'active'` — a column game_players
+  // does not have — so PostgREST rejected every match's player insert and cup
+  // generation created 0 players. It also set team_number without
+  // flight_number, which trips game_players_team_flight_consistency. The
+  // corrected payload: no `status`, flight_number 1 (one match = one group),
+  // team_number 1/2, accepted_at set (admin-generated = immediately active).
+  it('game_players rows: no status column, flight_number 1, team_number 1/2, accepted, tee_gender', async () => {
     supabaseMock = buildSupabaseMock(happyQueue());
     setUser('admin-1');
     const { createCupMatchesFromPlan } = await import('./actions');
@@ -284,15 +290,18 @@ describe('createCupMatchesFromPlan — happy path', () => {
       (c) => c.table === 'game_players' && c.method === 'insert',
     )!.args[0] as Array<Record<string, unknown>>;
     expect(firstPlayers).toHaveLength(4);
-    expect(firstPlayers.every((r) => r.status === 'active')).toBe(true);
+    // The non-existent `status` column must never be sent again.
+    expect(firstPlayers.every((r) => !('status' in r))).toBe(true);
+    // flight_number satisfies team_flight_consistency for team_number 1/2.
+    expect(firstPlayers.every((r) => r.flight_number === 1)).toBe(true);
+    // Admin-generated → immediately active (accepted_at is a non-null ISO string).
+    expect(firstPlayers.every((r) => typeof r.accepted_at === 'string')).toBe(true);
     expect(firstPlayers.every((r) => r.game_id === 'game-1')).toBe(true);
     const a1 = firstPlayers.find((r) => r.user_id === 'A1')!;
     expect(a1.team_number).toBe(1);
     expect(a1.tee_gender).toBe('mens');
-    const b3IsTeam2 = firstPlayers.find((r) => r.user_id === 'B1')!;
-    expect(b3IsTeam2.team_number).toBe(2);
-    // A3 is female in match 2 (singles); first match has A1/A2/B1/B2 all male
-    expect(a1.tee_gender).toBe('mens');
+    const b1IsTeam2 = firstPlayers.find((r) => r.user_id === 'B1')!;
+    expect(b1IsTeam2.team_number).toBe(2);
   });
 });
 

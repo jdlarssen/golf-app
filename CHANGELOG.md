@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#616](https://github.com/jdlarssen/golf-app/issues/616). Innboksen kunne bare vokse. Du kunne markere som lest, men ikke fjerne noe, og lange undertekster ble kuttet midt i ordet. Nå kan du arkivere et varsel med ✕, tømme alle leste i ett trykk, og undertekstene får plass på to linjer.
 
+### [1.129.9] - 2026-06-15 · bug
+
+> Å generere matcher i en cup la ikke inn én eneste spiller — veiviseren ble stående uten feilmelding. Nå får hver match spillerne sine, klare med en gang.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `createCupMatchesFromPlan` bygde `game_players`-rader med `status: 'active'` — en kolonne tabellen ikke har — så PostgREST avviste hver match-insert og cup-genereringen endte med 0 spillere (bare en foreldreløs game-rad for første match). Inserten satte også `team_number` uten `flight_number`, som bryter CHECK-constrainten `game_players_team_flight_consistency`. Fjernet `status`, la til `flight_number: 1` (én match = én spillegruppe), og setter `accepted_at` med en gang — admin har bevisst satt opp matchene med valgte spillere, så de er umiddelbart aktive uten «Ikke bekreftet»-gate (eier-beslutning). Utvidet regresjonstesten til å låse hele payload-kontrakten. (#641)
+
+</details>
+
 ### [1.129.8] - 2026-06-15 · bug
 
 > Cup-sida og det offentlige cup-resultatet krasjet så snart cupen hadde minst én match. Nå laster de som de skal.
