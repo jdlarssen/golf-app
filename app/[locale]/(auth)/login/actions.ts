@@ -367,6 +367,22 @@ export async function verifyCode(formData: FormData) {
     console.warn('[login/verifyCode] invitation-accept side-effect threw', err);
   }
 
+  // #644: klubb-invitasjon-avstemming. En uregistrert e-post kan ha fått en
+  // ventende club_invitation (admin la dem til via «Legg til medlem på e-post»).
+  // Nå som brukeren er verifisert, gjør accept_club_invitations() dem til medlem
+  // av klubben(e) som inviterte dem (rolle 'member', tak/utløp respektert).
+  // Bruker den request-scopede klienten så RPC-ens auth.uid() er den nettopp
+  // verifiserte brukeren. Separat best-effort-blokk — en feil her må aldri
+  // blokkere innloggingen (som game-avstemmingen over).
+  try {
+    const { error: clubErr } = await supabase.rpc('accept_club_invitations');
+    if (clubErr) {
+      console.error('[login/verifyCode] accept_club_invitations failed', clubErr);
+    }
+  } catch (err) {
+    console.warn('[login/verifyCode] club-invite-accept side-effect threw', err);
+  }
+
   // #356: redirect skjer UTENFOR try/catch-en over — redirect() kaster
   // NEXT_REDIRECT, som ville blitt slukt av catch-en og aldri navigert. Mangler
   // profilen, sender vi via /complete-profile?next=… så den fullføres først, så

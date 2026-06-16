@@ -219,6 +219,54 @@ export type Database = {
           },
         ]
       }
+      club_invitations: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          group_id: string
+          id: string
+          invited_by: string | null
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          group_id: string
+          id?: string
+          invited_by?: string | null
+          token: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          group_id?: string
+          id?: string
+          invited_by?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_invitations_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       course_holes: {
         Row: {
           course_id: string
@@ -1627,6 +1675,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_club_invitations: { Args: never; Returns: number }
       add_club_member_by_email: {
         Args: { p_email: string; p_group_id: string }
         Returns: string
