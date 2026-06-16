@@ -17,6 +17,70 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 ---
 
+## 1.132.y — Småfunn fra modus-gjennomgangen
+
+Issue [#640](https://github.com/jdlarssen/golf-app/issues/640). En samling småfunn fra den visuelle gjennomgangen av spillemodiene: banehandicap som manglet før start, en dobbel-tall-typo i veiviseren, lag-påmelding for alle lag-format, og at norske brukere ikke lenger uventet havner på engelsk.
+
+### [1.132.4] - 2026-06-16 · #640
+
+> Avslutter du en runde der noen ikke har levert, viste noen formater avkrysningsbokser per spiller og andre bare navnene. Det var ikke en feil, men det var forvirrende. På formatene uten bokser sier appen nå tydelig at det formatet ikke trekker enkeltspillere, så du skjønner at du bare avslutter runden, og at de uten levert står som ikke levert.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Changed
+- På avslutt-siden (`app/[locale]/games/[id]/avslutt/page.tsx`) styres «Marker som trukket»-avkrysningsboksene per ikke-levert spiller av `supportsWithdrawal(game.game_mode)` — bevisst av for pott-/scramble-/matchplay-familien (by-design, `lib/scoring/modes/types.ts`). Det QA-en oppfattet som inkonsistens var nettopp denne gatingen. Vi lar predikatet stå, men strammer `explanationNoWd`-copyen (begge språk) så den forklarer at formatet ikke trekker enkeltspillere, og at manglende spillere blir stående som ikke levert mens registrerte scores teller. WD-formatenes flyt (`explanationAllowWd` + boks-listen) er urørt. Ren copy-endring. (#640)
+
+</details>
+
+### [1.132.3] - 2026-06-16 · #640
+
+> Logger du inn og ennå ikke har valgt språk, åpnet appen seg av og til på engelsk hvis nettleseren din står på engelsk. Nå starter du på norsk som standard, og det er bare ditt eget språkvalg (eller en engelsk nettleser når du ikke er logget inn) som flytter deg til engelsk.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `resolveLocale` (`lib/i18n/resolveLocale.ts`) falt tilbake til Accept-Language når `users.locale` var NULL og det ikke fantes locale-cookie. En innlogget bruker med norsk profil, men engelsk-stilt nettleser, havnet dermed på `/en` ved første besøk. La til et `signedIn`-flagg som kortslutter Accept-Language-steget: innloggede uten eksplisitt språkvalg defaulter nå til `routing.defaultLocale` ('no'). `proxy.ts` sender `signedIn: true` (grenen kjører kun for autentiserte brukere — anonyme er allerede redirected). Anonyme besøkende treffer offentlige sider via `handleI18nRouting`, hvis egen next-intl-deteksjon fortsatt respekterer Accept-Language, så de er upåvirket. Unit-tester for `signedIn`-grenen + bevaring av cookie/eksplisitt-valg/anonym-oppførsel. (#640)
+
+</details>
+
+### [1.132.2] - 2026-06-16 · #640
+
+> Lag-påmelding var bare mulig for best ball og Texas scramble. Nå tar alle lag-formatene imot lag: Ambrose, Florida scramble, shamble og patsome også. Setter du opp en av dem med åpen påmelding, kan spillerne melde seg på som lag, ikke bare individuelt.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Added
+- `gameModeSupportsTeams` (`lib/games/registration.ts`) styrer både UI-gatingen (team/begge-radioene i `RegistrationSection`) og server-valideringen (`gamePayload.ts` → `team_registration_unsupported_mode`). Den var en hardkodet liste som bare dekket best ball + Texas (+ en delvis utvidelse til ambrose/florida/patsome). Erstattet med en avledning fra den kanoniske spillestil-klassifiseringen: `formatPlayStyle(mode) === 'team' && !isMatchplayFamily(mode)`. Det fanger hele lag-grid-familien (best ball, Texas/Ambrose/Florida scramble, shamble, patsome) og lar shamble inn som var glemt. Matchplay-familien (2v2-variantene er også `'team'`) holdes bevisst ute — der gjøres lag-påmelding via sider (`matchplaySides`, #544), ikke den generiske team-registreringen. Lag-påmeldings-actionen (`teamActions.ts`) var allerede generisk (`resolveTeamSize` leser `mode_config.team_size`), så payloaden er gyldig for de nye formatene uten videre endring. `teamNotSupportedNote`-copyen («kun best ball og Texas scramble») er gjort generisk i begge språk. Type A-tester i `registration.test.ts` dekker de nye formatene + matchplay/solo-negativene. (#640)
+
+</details>
+
+### [1.132.1] - 2026-06-16 · #640
+
+> Oppsummeringen i opprett-veiviseren skrev antallet spillere to ganger, så det sto «4 4 spillere (ikke fordelt)». Nå står det riktig: «4 spillere (ikke fordelt)».
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `ReadyStep.tsx` (steg 5 i opprett-veiviseren) sendte både `count` og `playerWord` til `playersUnassigned`-malen, men `playerWord` var allerede «{count} spillere» — så malen `{count} {playerWord} (ikke fordelt)` rendret tallet dobbelt. Malen er nå `{playerWord} (ikke fordelt)` i begge språk, og kall-stedet sender ikke lenger den overflødige `count`-argen. Ren copy-fiks; katalog-paritet bevart. (#640)
+
+</details>
+
+### [1.132.0] - 2026-06-16 · #640
+
+> Rett etter at en planlagt runde starter, kunne DIN INFO-kortet vise «Banehandicap —» et lite øyeblikk før tallet kom på plass. Nå regner appen det ut med en gang, så du ser banehandicapen din fra første blikk.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Game-home DIN INFO-kortet (`app/[locale]/games/[id]/(home)/page.tsx`) viste `me.course_handicap ?? '—'`. `course_handicap` fryses først ved auto-start (`startScheduledGame`), og cache-invalideringen kjører i `after()` — så i ett render-pass rett etter start leste det cachede `gwp.players`-snapshotet fortsatt pre-start-NULL og viste «—». Banehandicap er en ren HCP+tee+allowance-funksjon, så vi regner den nå on-the-fly for visning når den frosne verdien ikke er synlig ennå. Ny `displayCourseHandicap` i `lib/scoring/courseHandicap.ts` komponerer nøyaktig samme `calculateCourseHandicap` → `applyAllowance`-pipeline som frysingen bruker (Type A-testet at display- og frossen-verdi aldri spriker), og returnerer `null` ved manglende tee-rating eller ikke-finitt index. Game-home henter `users.hcp_index` + `games.hcp_allowance_pct` med ett ekstra slankt kall kun når `me.course_handicap` er null; når cachen har friskna, vises den frosne verdien uendret uten ekstra fetch. (#640)
+
+</details>
+
 ## 1.131.y — Klubb-invitasjon på e-post
 
 Issue [#644](https://github.com/jdlarssen/golf-app/issues/644). Før måtte folk ha en Tørny-konto før du kunne legge dem til i en klubb. Nå kan du invitere hvem som helst på e-post.
