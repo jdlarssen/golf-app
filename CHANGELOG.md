@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#634](https://github.com/jdlarssen/golf-app/issues/634). Lag-matchplay-formatene kunne bare settes opp via en cup. Nå tar opprett-veiviseren dem også.
 
+### [1.130.10] - 2026-06-16 · #643
+
+> Setter du opp en runde for klubben, spør ikke veiviseren lenger «hvem kan melde seg på?». Den hadde et valg som sa «vises ikke i Finn turneringer» — misvisende, for klubbmedlemmene ser og melder seg på uansett. Nå er det ett tydelig budskap: medlemmene finner runden selv.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- Veiviseren viste påmeldings-modus-valget (`RegistrationSection`, «whoLegend») også for klubb-turneringer, med teksten «Bare de jeg inviterer · Vises ikke i Finn turneringer». Det motsa discovery, som bevisst returnerer klubb-spill til medlemmer uansett `registration_mode` (by-design, `getDiscoverableGames.ts`, #442 — «medlemskap ER invitasjonen»). `useGameFormState` eksponerer nå `isClubScoped` (`groupId !== ''`) og tvinger `registrationMode = 'invite_only'` via en effekt så payloaden er korrekt selv når valget ikke rendres (dekker ferskt klubb-valg, `?klubb=`-deep-link og edit av eldre klubb-spill). `RegistrationSection` tar en `hideModeChoice`-prop som skjuler modus-feltgruppa for klubb-spill; type-valget (solo/lag) beholdes. Type A-tester for state-tvangen i `useGameFormState.test.ts`. (#643)
+
+</details>
+
 ### [1.130.9] - 2026-06-16 · #651
 
 > Saksnummeret øverst i admin-visningen («Sak 2026-001») kunne få feil år for et spill opprettet i timen rundt midnatt på nyttårsaften. Nå følger det norsk tid, så året og løpenummeret stemmer.

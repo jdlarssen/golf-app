@@ -812,7 +812,11 @@ export function GameWizard({
                   hideHiddenInput
                 />
               )}
-              <RegistrationSection state={state} hideHeading />
+              <RegistrationSection
+                state={state}
+                hideHeading
+                hideModeChoice={state.isClubScoped}
+              />
               {/* «For hvilken klubb?» hører kun til klubb-arrangement (#50-fix):
                   en kompis-/solo-runde scopes ikke til en klubb. */}
               {state.intent === 'klubb' && clubs.length > 0 && (

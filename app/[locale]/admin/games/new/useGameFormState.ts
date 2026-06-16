@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   CLASSIC_DISABLED_CATEGORIES,
@@ -493,6 +493,20 @@ export function useGameFormState({
     setIntentRaw(next);
     if (next !== 'klubb') setGroupId('');
   }, []);
+
+  // #643: en klubb-turnering er medlemskaps-styrt — medlemmer ser og melder seg
+  // på via discovery uansett registration_mode (by-design, jf. getDiscoverableGames
+  // #442). Påmeldings-modus-valget skjules derfor i veiviseren for klubb-spill, og
+  // spillet låses til 'invite_only' (medlemmer slipper inn via medlemskapet, ikke-
+  // medlemmer ikke). Vi tvinger verdien så payloaden er korrekt selv om mode-felt-
+  // gruppa ikke rendres — dekker både ferskt klubb-valg, ?klubb=-deep-link og edit
+  // av et eldre klubb-spill med annen modus.
+  const isClubScoped = groupId !== '';
+  useEffect(() => {
+    if (isClubScoped && registrationMode !== 'invite_only') {
+      setRegistrationMode('invite_only');
+    }
+  }, [isClubScoped, registrationMode]);
   // #199 derived flags
   // - registrationModeSupportsTeams: speilet av gameModeSupportsTeams — UI-
   //   et bruker det til å disable 'team'/'both'-radioene når modus ikke
@@ -1577,6 +1591,8 @@ export function useGameFormState({
     // #442: klubb-tilknytning for create-flyten
     groupId,
     setGroupId,
+    // #643: true når et klubb-spill — veiviseren skjuler påmeldings-modus-valget
+    isClubScoped,
     // Initial / lock flags surfaced for components that render them as
     // defaultChecked / disabled (radios + Side-Tournament-fieldset).
     initialScoreVisibility,

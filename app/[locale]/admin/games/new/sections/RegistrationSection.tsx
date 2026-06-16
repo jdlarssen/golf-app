@@ -30,6 +30,13 @@ type Props = {
    * unngås ved å droppe headingen der.
    */
   hideHeading?: boolean;
+  /**
+   * #643: skjul «Hvem kan melde seg på?»-valget (registreringsmodus) for klubb-
+   * turneringer. Medlemskap = invitasjon, så modus er låst til invite_only og
+   * valget er irrelevant/villedende («Vises ikke i Finn turneringer» stemmer
+   * ikke for medlemmer). Type-valget (solo/lag) beholdes — det gjelder fortsatt.
+   */
+  hideModeChoice?: boolean;
 };
 
 const REGISTRATION_MODES: readonly RegistrationMode[] = [
@@ -44,7 +51,11 @@ const REGISTRATION_TYPES: readonly RegistrationType[] = [
   'both',
 ] as const;
 
-export function RegistrationSection({ state, hideHeading = false }: Props) {
+export function RegistrationSection({
+  state,
+  hideHeading = false,
+  hideModeChoice = false,
+}: Props) {
   const t = useTranslations('wizard.sections.registration');
   const {
     registrationMode,
@@ -90,6 +101,7 @@ export function RegistrationSection({ state, hideHeading = false }: Props) {
         <h2 className="text-sm font-medium text-text">{t('heading')}</h2>
       )}
 
+      {!hideModeChoice && (
       <fieldset>
         <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
           {t('whoLegend')}
@@ -152,6 +164,7 @@ export function RegistrationSection({ state, hideHeading = false }: Props) {
           })}
         </div>
       </fieldset>
+      )}
 
       <fieldset>
         <legend className="font-sans text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">

@@ -414,3 +414,53 @@ describe('sideturnering-gating (#585 — på for alle formater)', () => {
     expect(result.current.sideEnabled).toBe(true);
   });
 });
+
+describe('useGameFormState — klubb-turnering låser registreringsmodus (#643)', () => {
+  it('tvinger registrationMode til invite_only når en klubb velges', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES }),
+    );
+
+    // Admin setter modus til 'open' før klubb velges.
+    act(() => {
+      result.current.setRegistrationMode('open');
+    });
+    expect(result.current.registrationMode).toBe('open');
+    expect(result.current.isClubScoped).toBe(false);
+
+    // Velg en klubb → modus skal låses til invite_only (medlemskap = invitasjon).
+    act(() => {
+      result.current.setGroupId('club-1');
+    });
+    expect(result.current.isClubScoped).toBe(true);
+    expect(result.current.registrationMode).toBe('invite_only');
+  });
+
+  it('normaliserer et pre-fylt klubb-spill med ikke-invite-modus ved mount', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({
+        players: PLAYERS,
+        courses: COURSES,
+        initialValues: {
+          group_id: 'club-1',
+          registration_mode: 'open',
+        },
+      }),
+    );
+
+    expect(result.current.isClubScoped).toBe(true);
+    expect(result.current.registrationMode).toBe('invite_only');
+  });
+
+  it('lar ikke-klubb-spill beholde valgt modus (ingen tvang)', () => {
+    const { result } = renderHook(() =>
+      useGameFormState({ players: PLAYERS, courses: COURSES }),
+    );
+
+    act(() => {
+      result.current.setRegistrationMode('open');
+    });
+    expect(result.current.isClubScoped).toBe(false);
+    expect(result.current.registrationMode).toBe('open');
+  });
+});
