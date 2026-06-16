@@ -7,7 +7,11 @@
 // Speilar DB-enumene fra migrasjon 0040. Holdt utenfor scoring-modulene fordi
 // dette er en form-/admin-konsept som ikke berører scoring-pipeline.
 
-import type { GameMode } from '@/lib/scoring/modes/types';
+import {
+  formatPlayStyle,
+  isMatchplayFamily,
+  type GameMode,
+} from '@/lib/scoring/modes/types';
 
 export type RegistrationMode = 'invite_only' | 'manual_approval' | 'open';
 export type RegistrationType = 'solo' | 'team' | 'both';
@@ -25,20 +29,25 @@ export const REGISTRATION_TYPES: readonly RegistrationType[] = [
 ] as const;
 
 /**
- * Hvorvidt en gitt scoring-modus har lag-konsept (slik at registration_type
- * 'team' eller 'both' gir mening). Solo-modi som stableford/solo-strokeplay/
- * singles-matchplay kjører kun individuell scoring og kan ikke ta lag-
- * påmeldinger uten å bryte scoring-modellen.
+ * Hvorvidt en gitt scoring-modus tar generisk lag-påmelding (registration_type
+ * 'team' eller 'both' gir mening). Avledet av den kanoniske spillestil-
+ * klassifiseringen i stedet for en hardkodet liste (#640 item 5): et format
+ * som er `formatPlayStyle === 'team'` har et lag-grid hvor admin fordeler lag
+ * i steg 4 — best ball, hele scramble-familien (Texas/Ambrose/Florida),
+ * shamble og patsome — og alle disse kan ta lag-påmelding.
  *
- * Source of truth her — kontrakt #199 listet best_ball + texas_scramble
- * eksplisitt; stableford er per definisjon solo siden par-stableford
- * persisteres med samme `kind` men forskjellig team_size, og lag-påmelding
- * må vite team-strukturen ved registreringstidspunkt (4BBB-par-stableford
- * krever at vi vet om innkommende registrering er par-rad eller solo-rad).
- * Vi holder den smal i v1 og åpner for stableford senere hvis nødvendig.
+ * Matchplay-familien er også `'team'` (2v2-variantene), men holdes UTE her:
+ * der gjøres lag-påmelding via sider (`matchplaySides`, #544), ikke den
+ * generiske team-registreringen. `isMatchplayFamily`-ekskluderingen sikrer
+ * at vi ikke regresserer den flyten.
+ *
+ * Solo-/individuell-formater (solo slagspill, Wolf, Nassau, Skins, singles-
+ * matchplay) og stableford-familien (`flexible` — par-stableford krever at vi
+ * vet team-strukturen ved registrering, så lag-påmelding er ikke åpnet der)
+ * faller utenfor `'team'` og returnerer dermed false.
  */
 export function gameModeSupportsTeams(mode: GameMode): boolean {
-  return mode === 'best_ball' || mode === 'texas_scramble' || mode === 'ambrose' || mode === 'florida_scramble' || mode === 'patsome';
+  return formatPlayStyle(mode) === 'team' && !isMatchplayFamily(mode);
 }
 
 export function isRegistrationMode(v: unknown): v is RegistrationMode {

@@ -620,7 +620,7 @@
 				"typeSoloTitle": "Individual",
 				"typeTeamTitle": "Team",
 				"typeBothTitle": "Both",
-				"teamNotSupportedNote": "Team registration is only available for best ball and Texas scramble. Switch game mode first if you want to accept teams.",
+				"teamNotSupportedNote": "Team registration is only available for team formats like best ball and scramble. Switch game mode first if you want to accept teams.",
 				"selfSignupNote": "You can also let players sign up themselves. You'll get the link after the game is created.",
 				"badgeDiscoverable": "Discoverable",
 				"badgePrivate": "Private",

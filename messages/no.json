@@ -620,7 +620,7 @@
 				"typeSoloTitle": "Individuelt",
 				"typeTeamTitle": "Lag",
 				"typeBothTitle": "Begge",
-				"teamNotSupportedNote": "Lag-påmelding er kun tilgjengelig for best ball og Texas scramble. Bytt spillmodus først hvis du vil ta imot lag.",
+				"teamNotSupportedNote": "Lag-påmelding er kun tilgjengelig for lag-format som best ball og scramble. Bytt spillmodus først hvis du vil ta imot lag.",
 				"selfSignupNote": "Du kan også la spillerne melde seg på selv. Lenken får du etter at spillet er opprettet.",
 				"badgeDiscoverable": "Oppdagbar",
 				"badgePrivate": "Privat",
