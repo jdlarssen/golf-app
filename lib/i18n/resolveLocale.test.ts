@@ -89,3 +89,46 @@ describe('resolveLocale precedence (users.locale -> cookie -> Accept-Language ->
     ).toBe('en');
   });
 });
+
+describe('resolveLocale signedIn flag (#640 item 6)', () => {
+  // A signed-in user with NULL users.locale should default to the app default
+  // ('no'), NOT their browser's Accept-Language. An English-language browser
+  // was routing a Norwegian-profiled admin to /en on first visit.
+  it('signed-in user with NULL locale defaults to no, ignoring Accept-Language', () => {
+    expect(
+      resolveLocale({
+        userLocale: null,
+        acceptLanguage: 'en-US,en;q=0.9',
+        signedIn: true,
+      }),
+    ).toBe('no');
+  });
+
+  it('signed-in user still honors an explicit users.locale over the default', () => {
+    expect(
+      resolveLocale({
+        userLocale: 'en',
+        acceptLanguage: 'nb-NO',
+        signedIn: true,
+      }),
+    ).toBe('en');
+  });
+
+  it('signed-in user still honors the cookie over the default', () => {
+    expect(
+      resolveLocale({
+        userLocale: null,
+        cookieLocale: 'en',
+        acceptLanguage: 'nb-NO',
+        signedIn: true,
+      }),
+    ).toBe('en');
+  });
+
+  it('anonymous visitor (signedIn false/absent) keeps Accept-Language', () => {
+    expect(
+      resolveLocale({ acceptLanguage: 'en-US,en;q=0.9', signedIn: false }),
+    ).toBe('en');
+    expect(resolveLocale({ acceptLanguage: 'en-US,en;q=0.9' })).toBe('en');
+  });
+});
