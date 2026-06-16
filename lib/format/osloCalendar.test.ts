@@ -4,7 +4,11 @@
 process.env.TZ = 'UTC';
 
 import { describe, it, expect } from 'vitest';
-import { osloIsoWeek, osloTimeOfDayBucket } from './osloCalendar';
+import {
+  osloIsoWeek,
+  osloTimeOfDayBucket,
+  osloYearWindow,
+} from './osloCalendar';
 
 describe('osloIsoWeek', () => {
   it('returns the ISO week of the Oslo-local date for a mid-day instant', () => {
@@ -23,6 +27,45 @@ describe('osloIsoWeek', () => {
     // 2026-12-31T23:30:00Z === 2027-01-01 00:30 Oslo (CET). ISO week 53 of 2026
     // runs into 2027; 1 Jan 2027 (Friday) belongs to week 53.
     expect(osloIsoWeek(new Date('2026-12-31T23:30:00Z'))).toBe(53);
+  });
+});
+
+describe('osloYearWindow', () => {
+  it('returns the Oslo-local year for a mid-day instant', () => {
+    expect(osloYearWindow(new Date('2026-06-15T10:00:00Z')).year).toBe(2026);
+  });
+
+  it('bounds the window at Oslo midnight 1 Jan, expressed as a UTC instant (CET = UTC+1)', () => {
+    // Oslo 2026-01-01 00:00 is 2025-12-31 23:00 UTC; Oslo 2027-01-01 00:00 is
+    // 2026-12-31 23:00 UTC. 1 Jan is always CET in Oslo (DST never covers Jan).
+    const w = osloYearWindow(new Date('2026-06-15T10:00:00Z'));
+    expect(w.startIso).toBe('2025-12-31T23:00:00.000Z');
+    expect(w.endIso).toBe('2026-12-31T23:00:00.000Z');
+  });
+
+  it('uses the Oslo year, not UTC, in the New Year straddle window (#651 regression)', () => {
+    // 2026-12-31T23:30:00Z === 2027-01-01 00:30 Oslo (CET). A naive
+    // getFullYear() on a UTC server reads 2026; the Oslo year is 2027.
+    expect(osloYearWindow(new Date('2026-12-31T23:30:00Z')).year).toBe(2027);
+  });
+
+  it('keeps a just-before-midnight Oslo instant in the old year', () => {
+    // 2025-12-31T22:30:00Z === 2025-12-31 23:30 Oslo (CET) — still 2025.
+    expect(osloYearWindow(new Date('2025-12-31T22:30:00Z')).year).toBe(2025);
+  });
+
+  it('chains windows with no gap or overlap (endIso of Y === startIso of Y+1)', () => {
+    const y2026 = osloYearWindow(new Date('2026-06-15T10:00:00Z'));
+    const y2027 = osloYearWindow(new Date('2027-06-15T10:00:00Z'));
+    expect(y2026.endIso).toBe(y2027.startIso);
+  });
+
+  it('contains the straddle instant within its own (next-year) window', () => {
+    const instant = new Date('2026-12-31T23:30:00Z'); // 2027-01-01 00:30 Oslo
+    const w = osloYearWindow(instant);
+    expect(w.year).toBe(2027);
+    expect(instant.toISOString() >= w.startIso).toBe(true);
+    expect(instant.toISOString() < w.endIso).toBe(true);
   });
 });
 

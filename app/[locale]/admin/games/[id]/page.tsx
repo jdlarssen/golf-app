@@ -2,6 +2,7 @@ import { first } from '@/lib/url/searchParams';
 import { Suspense, cache } from 'react';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { formatDateTime, formatShortOsloDayMonthLocale } from '@/lib/i18n/format';
+import { osloYearWindow } from '@/lib/format/osloCalendar';
 import type { AppLocale } from '@/i18n/routing';
 import { SmartLink } from '@/components/ui/SmartLink';
 import { notFound } from 'next/navigation';
@@ -140,15 +141,16 @@ const getSakNumber = cache(
     createdAt: string,
   ): Promise<{ year: number; positionInYear: number }> => {
     const { supabase } = await getAdminGameContext();
-    const created = new Date(createdAt);
-    const year = created.getFullYear();
-    const yearStartIso = `${year}-01-01T00:00:00Z`;
-    const yearEndIso = `${year + 1}-01-01T00:00:00Z`;
+    // #651: the year label and the count window both follow Oslo wall-clock,
+    // not the UTC Vercel server — otherwise a game created in the New Year
+    // straddle hour (1 Jan 00:30 Oslo = 31 Dec 23:30 UTC) lands in the wrong
+    // year and sequence bucket.
+    const { year, startIso, endIso } = osloYearWindow(new Date(createdAt));
     const { count } = await supabase
       .from('games')
       .select('id', { count: 'exact', head: true })
-      .gte('created_at', yearStartIso)
-      .lt('created_at', yearEndIso)
+      .gte('created_at', startIso)
+      .lt('created_at', endIso)
       .lte('created_at', createdAt);
     return { year, positionInYear: count ?? 1 };
   },

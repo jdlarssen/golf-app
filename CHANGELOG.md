@@ -21,6 +21,18 @@ Regler for når en bump utløses er beskrevet i [CLAUDE.md](CLAUDE.md) under «V
 
 Issue [#634](https://github.com/jdlarssen/golf-app/issues/634). Lag-matchplay-formatene kunne bare settes opp via en cup. Nå tar opprett-veiviseren dem også.
 
+### [1.130.9] - 2026-06-16 · #651
+
+> Saksnummeret øverst i admin-visningen («Sak 2026-001») kunne få feil år for et spill opprettet i timen rundt midnatt på nyttårsaften. Nå følger det norsk tid, så året og løpenummeret stemmer.
+
+<details>
+<summary>Teknisk</summary>
+
+#### Fixed
+- `getSakNumber` i `app/[locale]/admin/games/[id]/page.tsx` regnet saksnummer-året via `created.getFullYear()` (server-lokal = UTC på Vercel) og telte løpenummeret mellom UTC-midnatts-grenser (`${year}-01-01T00:00:00Z`). Et spill opprettet 1. jan 00:30 norsk tid (= 31. des 23:30 UTC) fikk dermed feil år og havnet i feil års sekvens-bøtte. Ny ren `osloYearWindow(date)` i `lib/format/osloCalendar.ts` (Type A-testet, bygger på `osloParts`) gir Oslo-året pluss det halvåpne UTC-instant-vinduet `[startIso, endIso)` for det Oslo-året — grensene er Oslo-midnatt 1. januar, som alltid er CET (UTC+1). `getSakNumber` leser nå året og tellings-grensene fra helperen. Samme rotårsak som #637/#646. (#651)
+
+</details>
+
 ### [1.130.8] - 2026-06-15 · #638
 
 > Best ball-leaderboarden manglet i forrige runde: feirings-visningen etter avsluttet runde sa fortsatt «Etter 18 hull». Nå teller også den faktisk spilte hull.

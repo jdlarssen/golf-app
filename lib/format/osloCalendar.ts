@@ -33,6 +33,36 @@ export function osloIsoWeek(date: Date): number {
   return 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
 }
 
+/**
+ * The Oslo-local calendar year of `date`, plus the half-open UTC instant window
+ * `[startIso, endIso)` that spans that Oslo year — i.e. Oslo midnight 1 January
+ * of the year up to (but not including) Oslo midnight 1 January of the next.
+ *
+ * Used to derive the admin «Sak {YYYY}-{NNN}» number (#651): both the year
+ * label and the count window must follow Oslo wall-clock, not the UTC Vercel
+ * server. A game created at 1 Jan 00:30 Oslo (= 31 Dec 23:30 UTC) belongs to
+ * the new year and its sequence bucket — a naive `getFullYear()` /
+ * `…T00:00:00Z` boundary placed it in the old year.
+ *
+ * 1 January is *always* CET (UTC+1) in Oslo — DST runs late March to late
+ * October and never covers January — so the boundary offset is fixed and needs
+ * no runtime probe; `new Date('YYYY-01-01T00:00:00+01:00')` is exact.
+ */
+export function osloYearWindow(date: Date): {
+  year: number;
+  startIso: string;
+  endIso: string;
+} {
+  const { year } = osloParts(date);
+  const osloNewYearUtc = (y: number) =>
+    new Date(`${y}-01-01T00:00:00+01:00`).toISOString();
+  return {
+    year,
+    startIso: osloNewYearUtc(year),
+    endIso: osloNewYearUtc(year + 1),
+  };
+}
+
 export type OsloTimeOfDay = 'morgen' | 'formiddag' | 'ettermiddag' | 'kveld';
 
 /**
