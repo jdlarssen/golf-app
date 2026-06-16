@@ -16,12 +16,37 @@ describe('gameModeSupportsTeams', () => {
     expect(gameModeSupportsTeams('texas_scramble')).toBe(true);
   });
 
+  // #640 item 5: lag-påmelding utvidet fra best ball + Texas til hele lag-grid-
+  // familien (scramble-familien + shamble + patsome). Admin fordeler fortsatt
+  // lag i steg 4, men «meld på som lag» gir nå mening for alle disse.
+  it.each([
+    'ambrose',
+    'florida_scramble',
+    'shamble',
+    'patsome',
+  ] as const)('returns true for team-grid format %s', (mode) => {
+    expect(gameModeSupportsTeams(mode)).toBe(true);
+  });
+
   it('returns false for stableford (solo-modus i v1)', () => {
     expect(gameModeSupportsTeams('stableford')).toBe(false);
   });
 
   it('returns false for singles_matchplay (1v1, ikke lag-påmelding)', () => {
     expect(gameModeSupportsTeams('singles_matchplay')).toBe(false);
+  });
+
+  // Matchplay-familien er lag-format (formatPlayStyle === 'team' for 2v2-
+  // variantene), men lag-påmelding gjøres via sider (matchplaySides), ikke
+  // den generiske team-registreringen. Hold dem ute så vi ikke regresserer.
+  it.each([
+    'fourball_matchplay',
+    'foursomes_matchplay',
+    'greensome_matchplay',
+    'chapman_matchplay',
+    'gruesome_matchplay',
+  ] as const)('returns false for matchplay-family %s', (mode) => {
+    expect(gameModeSupportsTeams(mode)).toBe(false);
   });
 
   it('returns false for solo_strokeplay', () => {
